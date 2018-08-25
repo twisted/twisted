@@ -14,6 +14,7 @@ from zope.interface import implementer
 from twisted.cred import credentials
 from twisted.web.iweb import ICredentialFactory
 
+
 @implementer(ICredentialFactory)
 class DigestCredentialFactory(object):
     """
@@ -27,9 +28,9 @@ class DigestCredentialFactory(object):
         """
         Create the digest credential factory that this object wraps.
         """
-        self.digest = credentials.DigestCredentialFactory(algorithm,
-                                                          authenticationRealm)
-
+        self.digest = credentials.DigestCredentialFactory(
+            algorithm, authenticationRealm
+        )
 
     def getChallenge(self, request):
         """
@@ -43,7 +44,6 @@ class DigestCredentialFactory(object):
         """
         return self.digest.getChallenge(request.getClientAddress().host)
 
-
     def decode(self, response, request):
         """
         Create a L{twisted.cred.credentials.DigestedCredentials} object
@@ -51,6 +51,6 @@ class DigestCredentialFactory(object):
 
         @see: L{ICredentialFactory.decode}
         """
-        return self.digest.decode(response,
-                                  request.method,
-                                  request.getClientAddress().host)
+        return self.digest.decode(
+            response, request.method, request.getClientAddress().host
+        )

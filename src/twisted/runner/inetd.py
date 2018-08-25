@@ -1,7 +1,7 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-# 
+#
 
 """
 Twisted inetd.
@@ -27,10 +27,11 @@ internalProtocols = {
     'daytime': wire.Daytime,
     'time': wire.Time,
 }
-            
+
 
 class InetdProtocol(Protocol):
     """Forks a child process on connectionMade, passing the socket as fd 0."""
+
     def connectionMade(self):
         sockFD = self.transport.fileno()
         childFDs = {0: sockFD, 1: sockFD}
@@ -55,16 +56,25 @@ class InetdProtocol(Protocol):
         if gid == os.getgid():
             gid = None
 
-        process.Process(None, service.program, service.programArgs, os.environ,
-                        None, None, uid, gid, childFDs)
+        process.Process(
+            None,
+            service.program,
+            service.programArgs,
+            os.environ,
+            None,
+            None,
+            uid,
+            gid,
+            childFDs,
+        )
 
         reactor.removeReader(self.transport)
         reactor.removeWriter(self.transport)
-                        
+
 
 class InetdFactory(ServerFactory):
     protocol = InetdProtocol
     stderrFile = None
-    
+
     def __init__(self, service):
         self.service = service

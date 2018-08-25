@@ -18,15 +18,16 @@ from traceback import extract_tb
 try:
     from inspect import iscoroutine
 except ImportError:
+
     def iscoroutine(*args, **kwargs):
         return False
+
 
 from twisted.python.compat import unicode, nativeString, iteritems
 from twisted.internet.defer import Deferred, ensureDeferred
 from twisted.web._stan import Tag, slot, voidElements, Comment, CDATA, CharRef
 from twisted.web.error import UnfilledSlot, UnsupportedType, FlattenerError
 from twisted.web.iweb import IRenderable
-
 
 
 def escapeForContent(data):
@@ -46,11 +47,8 @@ def escapeForContent(data):
     """
     if isinstance(data, unicode):
         data = data.encode('utf-8')
-    data = data.replace(b'&', b'&amp;'
-        ).replace(b'<', b'&lt;'
-        ).replace(b'>', b'&gt;')
+    data = data.replace(b'&', b'&amp;').replace(b'<', b'&lt;').replace(b'>', b'&gt;')
     return data
-
 
 
 def attributeEscapingDoneOutside(data):
@@ -72,7 +70,6 @@ def attributeEscapingDoneOutside(data):
     if isinstance(data, unicode):
         return data.encode("utf-8")
     return data
-
 
 
 def writeWithAttributeEscaping(write):
@@ -113,10 +110,11 @@ def writeWithAttributeEscaping(write):
 
     @return: A callable that writes data with escaping.
     """
+
     def _write(data):
         write(escapeForContent(data).replace(b'"', b'&quot;'))
-    return _write
 
+    return _write
 
 
 def escapedCDATA(data):
@@ -133,7 +131,6 @@ def escapedCDATA(data):
     if isinstance(data, unicode):
         data = data.encode('utf-8')
     return data.replace(b']]>', b']]]]><![CDATA[>')
-
 
 
 def escapedComment(data):
@@ -155,7 +152,6 @@ def escapedComment(data):
     return data
 
 
-
 def _getSlotValue(name, slotData, default=None):
     """
     Find the value of the named slot in the given stack of slot data.
@@ -169,9 +165,7 @@ def _getSlotValue(name, slotData, default=None):
         raise UnfilledSlot(name)
 
 
-
-def _flattenElement(request, root, write, slotData, renderFactory,
-                    dataEscaper):
+def _flattenElement(request, root, write, slotData, renderFactory, dataEscaper):
     """
     Make C{root} slightly more flat by yielding all its immediate contents as
     strings, deferreds or generators that are recursive calls to itself.
@@ -210,10 +204,14 @@ def _flattenElement(request, root, write, slotData, renderFactory,
     @rtype: An iterator which yields L{bytes}, L{Deferred}, and more iterators
         of the same type.
     """
-    def keepGoing(newRoot, dataEscaper=dataEscaper,
-                  renderFactory=renderFactory, write=write):
-        return _flattenElement(request, newRoot, write, slotData,
-                               renderFactory, dataEscaper)
+
+    def keepGoing(
+        newRoot, dataEscaper=dataEscaper, renderFactory=renderFactory, write=write
+    ):
+        return _flattenElement(
+            request, newRoot, write, slotData, renderFactory, dataEscaper
+        )
+
     if isinstance(root, (bytes, unicode)):
         write(dataEscaper(root))
     elif isinstance(root, slot):
@@ -256,9 +254,8 @@ def _flattenElement(request, root, write, slotData, renderFactory,
             # Serialize the contents of the attribute, wrapping the results of
             # that serialization so that _everything_ is quoted.
             yield keepGoing(
-                v,
-                attributeEscapingDoneOutside,
-                write=writeWithAttributeEscaping(write))
+                v, attributeEscapingDoneOutside, write=writeWithAttributeEscaping(write)
+            )
             write(b'"')
         if root.children or nativeString(tagName) not in voidElements:
             write(b'>')
@@ -290,7 +287,6 @@ def _flattenElement(request, root, write, slotData, renderFactory,
         yield keepGoing(result, renderFactory=root)
     else:
         raise UnsupportedType(root)
-
 
 
 def _flattenTree(request, root, write):
@@ -330,10 +326,12 @@ def _flattenTree(request, root, write):
             raise FlattenerError(e, roots, extract_tb(exc_info()[2]))
         else:
             if isinstance(element, Deferred):
+
                 def cbx(originalAndToFlatten):
                     original, toFlatten = originalAndToFlatten
                     stack.append(toFlatten)
                     return original
+
                 yield element.addCallback(cbx)
             else:
                 stack.append(element)
@@ -365,12 +363,13 @@ def _writeFlattenedData(state, write, result):
         except:
             result.errback()
         else:
+
             def cby(original):
                 _writeFlattenedData(state, write, result)
                 return original
+
             element.addCallbacks(cby, result.errback)
         break
-
 
 
 def flatten(request, root, write):
@@ -400,7 +399,6 @@ def flatten(request, root, write):
     state = _flattenTree(request, root, write)
     _writeFlattenedData(state, write, result)
     return result
-
 
 
 def flattenString(request, root):

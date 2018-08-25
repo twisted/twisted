@@ -24,7 +24,6 @@ from twisted.plugin import getPlugins
 from twisted.python import usage
 
 
-
 class ICheckerFactory(Interface):
     """
     A factory for objects which provide
@@ -33,22 +32,20 @@ class ICheckerFactory(Interface):
     It's implemented by twistd plugins creating checkers.
     """
 
-    authType = Attribute(
-        'A tag that identifies the authentication method.')
-
+    authType = Attribute('A tag that identifies the authentication method.')
 
     authHelp = Attribute(
         'A detailed (potentially multi-line) description of precisely '
-        'what functionality this CheckerFactory provides.')
-
+        'what functionality this CheckerFactory provides.'
+    )
 
     argStringFormat = Attribute(
-        'A short (one-line) description of the argument string format.')
-
+        'A short (one-line) description of the argument string format.'
+    )
 
     credentialInterfaces = Attribute(
-        'A list of credentials interfaces that this factory will support.')
-
+        'A list of credentials interfaces that this factory will support.'
+    )
 
     def generateChecker(argstring):
         """
@@ -57,12 +54,10 @@ class ICheckerFactory(Interface):
         """
 
 
-
 class StrcredException(Exception):
     """
     Base exception class for strcred.
     """
-
 
 
 class InvalidAuthType(StrcredException):
@@ -72,13 +67,11 @@ class InvalidAuthType(StrcredException):
     """
 
 
-
 class InvalidAuthArgumentString(StrcredException):
     """
     Raised by an authentication plugin when the argument string
     provided is formatted incorrectly.
     """
-
 
 
 class UnsupportedInterfaces(StrcredException):
@@ -88,12 +81,9 @@ class UnsupportedInterfaces(StrcredException):
     """
 
 
-
 # This will be used to warn the users whenever they view help for an
 # authType that is not supported by the application.
-notSupportedWarning = ("WARNING: This authType is not supported by "
-                       "this application.")
-
+notSupportedWarning = "WARNING: This authType is not supported by " "this application."
 
 
 def findCheckerFactories():
@@ -101,7 +91,6 @@ def findCheckerFactories():
     Find all objects that implement L{ICheckerFactory}.
     """
     return getPlugins(ICheckerFactory)
-
 
 
 def findCheckerFactory(authType):
@@ -112,7 +101,6 @@ def findCheckerFactory(authType):
         if factory.authType == authType:
             return factory
     raise InvalidAuthType(authType)
-
 
 
 def makeChecker(description):
@@ -127,7 +115,6 @@ def makeChecker(description):
         authType = description
         argstring = ''
     return findCheckerFactory(authType).generateChecker(argstring)
-
 
 
 class AuthOptionMixin:
@@ -158,14 +145,11 @@ class AuthOptionMixin:
     supportedInterfaces = None
     authOutput = sys.stdout
 
-
     def supportsInterface(self, interface):
         """
         Returns whether a particular credentials interface is supported.
         """
-        return (self.supportedInterfaces is None
-                or interface in self.supportedInterfaces)
-
+        return self.supportedInterfaces is None or interface in self.supportedInterfaces
 
     def supportsCheckerFactory(self, factory):
         """
@@ -176,7 +160,6 @@ class AuthOptionMixin:
             if self.supportsInterface(interface):
                 return True
         return False
-
 
     def addChecker(self, checker):
         """
@@ -201,7 +184,6 @@ class AuthOptionMixin:
         for interface in supported:
             self['credInterfaces'].setdefault(interface, []).append(checker)
 
-
     def opt_auth(self, description):
         """
         Specify an authentication method for the server.
@@ -209,14 +191,11 @@ class AuthOptionMixin:
         try:
             self.addChecker(makeChecker(description))
         except UnsupportedInterfaces as e:
-            raise usage.UsageError(
-                'Auth plugin not supported: %s' % e.args[0])
+            raise usage.UsageError('Auth plugin not supported: %s' % e.args[0])
         except InvalidAuthType as e:
-            raise usage.UsageError(
-                'Auth plugin not recognized: %s' % e.args[0])
+            raise usage.UsageError('Auth plugin not recognized: %s' % e.args[0])
         except Exception as e:
             raise usage.UsageError('Unexpected error: %s' % e)
-
 
     def _checkerFactoriesForOptHelpAuth(self):
         """
@@ -228,7 +207,6 @@ class AuthOptionMixin:
                 if self.supportsInterface(interface):
                     yield factory
                     break
-
 
     def opt_help_auth(self):
         """
@@ -247,10 +225,10 @@ class AuthOptionMixin:
         self.authOutput.write(formatString % ('========', '================'))
         for factory in self._checkerFactoriesForOptHelpAuth():
             self.authOutput.write(
-                formatString % (factory.authType, factory.argStringFormat))
+                formatString % (factory.authType, factory.argStringFormat)
+            )
         self.authOutput.write('\n')
         raise SystemExit(0)
-
 
     def opt_help_auth_type(self, authType):
         """

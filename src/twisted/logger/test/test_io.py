@@ -17,7 +17,6 @@ from .._observer import LogPublisher
 from .._io import LoggingFile
 
 
-
 class LoggingFileTests(unittest.TestCase):
     """
     Tests for L{LoggingFile}.
@@ -30,13 +29,11 @@ class LoggingFileTests(unittest.TestCase):
         self.publisher = LogPublisher()
         self.logger = Logger(observer=self.publisher)
 
-
     def test_softspace(self):
         """
         L{LoggingFile.softspace} is 0.
         """
         self.assertEqual(LoggingFile.softspace, 0)
-
 
     def test_readOnlyAttributes(self):
         """
@@ -49,7 +46,6 @@ class LoggingFileTests(unittest.TestCase):
         self.assertRaises(AttributeError, setattr, f, "mode", "r")
         self.assertRaises(AttributeError, setattr, f, "newlines", ["\n"])
         self.assertRaises(AttributeError, setattr, f, "name", "foo")
-
 
     def test_unsupportedMethods(self):
         """
@@ -66,7 +62,6 @@ class LoggingFileTests(unittest.TestCase):
         self.assertRaises(IOError, f.tell)
         self.assertRaises(IOError, f.truncate)
 
-
     def test_level(self):
         """
         Default level is L{LogLevel.info} if not set.
@@ -76,7 +71,6 @@ class LoggingFileTests(unittest.TestCase):
 
         f = LoggingFile(self.logger, level=LogLevel.error)
         self.assertEqual(f.level, LogLevel.error)
-
 
     def test_encoding(self):
         """
@@ -88,14 +82,12 @@ class LoggingFileTests(unittest.TestCase):
         f = LoggingFile(self.logger, encoding="utf-8")
         self.assertEqual(f.encoding, "utf-8")
 
-
     def test_mode(self):
         """
         Reported mode is C{"w"}.
         """
         f = LoggingFile(self.logger)
         self.assertEqual(f.mode, "w")
-
 
     def test_newlines(self):
         """
@@ -104,17 +96,12 @@ class LoggingFileTests(unittest.TestCase):
         f = LoggingFile(self.logger)
         self.assertIsNone(f.newlines)
 
-
     def test_name(self):
         """
         The C{name} attribute is fixed.
         """
         f = LoggingFile(self.logger)
-        self.assertEqual(
-            f.name,
-            "<LoggingFile twisted.logger.test.test_io#info>"
-        )
-
+        self.assertEqual(f.name, "<LoggingFile twisted.logger.test.test_io#info>")
 
     def test_close(self):
         """
@@ -126,14 +113,12 @@ class LoggingFileTests(unittest.TestCase):
         self.assertTrue(f.closed)
         self.assertRaises(ValueError, f.write, "Hello")
 
-
     def test_flush(self):
         """
         L{LoggingFile.flush} does nothing.
         """
         f = LoggingFile(self.logger)
         f.flush()
-
 
     def test_fileno(self):
         """
@@ -142,14 +127,12 @@ class LoggingFileTests(unittest.TestCase):
         f = LoggingFile(self.logger)
         self.assertEqual(f.fileno(), -1)
 
-
     def test_isatty(self):
         """
         L{LoggingFile.isatty} returns C{False}.
         """
         f = LoggingFile(self.logger)
         self.assertFalse(f.isatty())
-
 
     def test_writeBuffering(self):
         """
@@ -161,15 +144,7 @@ class LoggingFileTests(unittest.TestCase):
         f.write(", world!\n")
         self.assertEqual(f.messages, [u"Hello, world!"])
         f.write("It's nice to meet you.\n\nIndeed.")
-        self.assertEqual(
-            f.messages,
-            [
-                u"Hello, world!",
-                u"It's nice to meet you.",
-                u"",
-            ]
-        )
-
+        self.assertEqual(f.messages, [u"Hello, world!", u"It's nice to meet you.", u""])
 
     def test_writeBytesDecoded(self):
         """
@@ -179,7 +154,6 @@ class LoggingFileTests(unittest.TestCase):
         f.write(b"Hello, Mr. S\xc3\xa1nchez\n")
         self.assertEqual(f.messages, [u"Hello, Mr. S\xe1nchez"])
 
-
     def test_writeUnicode(self):
         """
         Unicode is unmodified.
@@ -187,7 +161,6 @@ class LoggingFileTests(unittest.TestCase):
         f = self.observedFile(encoding="utf-8")
         f.write(u"Hello, Mr. S\xe1nchez\n")
         self.assertEqual(f.messages, [u"Hello, Mr. S\xe1nchez"])
-
 
     def test_writeLevel(self):
         """
@@ -203,7 +176,6 @@ class LoggingFileTests(unittest.TestCase):
         self.assertEqual(len(f.events), 1)
         self.assertEqual(f.events[0]["log_level"], LogLevel.error)
 
-
     def test_writeFormat(self):
         """
         Log format is C{u"{message}"}.
@@ -212,7 +184,6 @@ class LoggingFileTests(unittest.TestCase):
         f.write("Hello\n")
         self.assertEqual(len(f.events), 1)
         self.assertEqual(f.events[0]["log_format"], u"{log_io}")
-
 
     def test_writelinesBuffering(self):
         """
@@ -225,15 +196,7 @@ class LoggingFileTests(unittest.TestCase):
         f.writelines(("world!\n",))
         self.assertEqual(f.messages, [u"Hello, world!"])
         f.writelines(("It's nice to meet you.\n\n", "Indeed."))
-        self.assertEqual(
-            f.messages,
-            [
-                u"Hello, world!",
-                u"It's nice to meet you.",
-                u"",
-            ]
-        )
-
+        self.assertEqual(f.messages, [u"Hello, world!", u"It's nice to meet you.", u""])
 
     def test_print(self):
         """
@@ -247,7 +210,6 @@ class LoggingFileTests(unittest.TestCase):
 
         self.assertEqual(f.messages, [u"Hello, world."])
 
-
     def observedFile(self, **kwargs):
         """
         Construct a L{LoggingFile} with a built-in observer.
@@ -260,6 +222,7 @@ class LoggingFileTests(unittest.TestCase):
             event messages into the file's C{messages} attribute (a L{list}).
         @rtype: L{LoggingFile}
         """
+
         def observer(event):
             f.events.append(event)
             if "log_io" in event:

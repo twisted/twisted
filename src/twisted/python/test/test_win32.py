@@ -21,14 +21,12 @@ class CommandLineQuotingTests(unittest.TestCase):
         """
         self.assertEqual(win32.cmdLineQuote('an_argument'), 'an_argument')
 
-
     def test_argWithSpaces(self):
         """
         Calling C{cmdLineQuote} with an argument containing spaces should
         return the argument surrounded by quotes.
         """
         self.assertEqual(win32.cmdLineQuote('An Argument'), '"An Argument"')
-
 
     def test_emptyStringArg(self):
         """

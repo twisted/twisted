@@ -22,9 +22,11 @@ from twisted.python.failure import Failure
 from twisted.trial.unittest import SynchronousTestCase
 from twisted.trial import util
 from twisted.trial.util import (
-    DirtyReactorAggregateError, _Janitor, excInfoOrFailureToExcInfo,
-    acquireAttribute)
-
+    DirtyReactorAggregateError,
+    _Janitor,
+    excInfoOrFailureToExcInfo,
+    acquireAttribute,
+)
 
 
 class MktempTests(SynchronousTestCase):
@@ -32,6 +34,7 @@ class MktempTests(SynchronousTestCase):
     Tests for L{TestCase.mktemp}, a helper function for creating temporary file
     or directory names.
     """
+
     def test_name(self):
         """
         The path name returned by C{mktemp} is directly beneath a directory
@@ -40,8 +43,8 @@ class MktempTests(SynchronousTestCase):
         name = self.mktemp()
         dirs = os.path.dirname(name).split(os.sep)[:-1]
         self.assertEqual(
-            dirs, ['twisted.trial.test.test_util', 'MktempTests', 'test_name'])
-
+            dirs, ['twisted.trial.test.test_util', 'MktempTests', 'test_name']
+        )
 
     def test_unique(self):
         """
@@ -49,7 +52,6 @@ class MktempTests(SynchronousTestCase):
         """
         name = self.mktemp()
         self.assertNotEqual(name, self.mktemp())
-
 
     def test_created(self):
         """
@@ -60,14 +62,12 @@ class MktempTests(SynchronousTestCase):
         self.assertTrue(os.path.exists(dirname))
         self.assertFalse(os.path.exists(name))
 
-
     def test_location(self):
         """
         The path returned by C{mktemp} is beneath the current working directory.
         """
         path = os.path.abspath(self.mktemp())
         self.assertTrue(path.startswith(os.getcwd()))
-
 
 
 class RunSequentiallyTests(SynchronousTestCase):
@@ -95,7 +95,6 @@ class RunSequentiallyTests(SynchronousTestCase):
         d = util._runSequentially([])
         self.assertDeferredResult(d, self.assertEqual, [])
 
-
     def test_singleSynchronousSuccess(self):
         """
         When given a callable that succeeds without returning a Deferred,
@@ -105,20 +104,20 @@ class RunSequentiallyTests(SynchronousTestCase):
         d = util._runSequentially([lambda: None])
         self.assertDeferredResult(d, self.assertEqual, [(defer.SUCCESS, None)])
 
-
     def test_singleSynchronousFailure(self):
         """
         When given a callable that raises an exception, include a Failure for
         that exception in the results list, tagged with a FAILURE flag.
         """
         d = util._runSequentially([lambda: self.fail('foo')])
+
         def check(results):
             [(flag, fail)] = results
             fail.trap(self.failureException)
             self.assertEqual(fail.getErrorMessage(), 'foo')
             self.assertEqual(flag, defer.FAILURE)
-        self.assertDeferredResult(d, check)
 
+        self.assertDeferredResult(d, check)
 
     def test_singleAsynchronousSuccess(self):
         """
@@ -128,20 +127,20 @@ class RunSequentiallyTests(SynchronousTestCase):
         d = util._runSequentially([lambda: defer.succeed(None)])
         self.assertDeferredResult(d, self.assertEqual, [(defer.SUCCESS, None)])
 
-
     def test_singleAsynchronousFailure(self):
         """
         When given a callable that returns a failing Deferred, include the
         failure the results list, tagged with a FAILURE flag.
         """
         d = util._runSequentially([lambda: defer.fail(ValueError('foo'))])
+
         def check(results):
             [(flag, fail)] = results
             fail.trap(ValueError)
             self.assertEqual(fail.getErrorMessage(), 'foo')
             self.assertEqual(flag, defer.FAILURE)
-        self.assertDeferredResult(d, check)
 
+        self.assertDeferredResult(d, check)
 
     def test_callablesCalledInOrder(self):
         """
@@ -157,8 +156,7 @@ class RunSequentiallyTests(SynchronousTestCase):
             deferreds.append(d)
             return d
 
-        util._runSequentially([lambda: append('foo'),
-                               lambda: append('bar')])
+        util._runSequentially([lambda: append('foo'), lambda: append('bar')])
 
         # runSequentially should wait until the Deferred has fired before
         # running the second callable.
@@ -166,13 +164,13 @@ class RunSequentiallyTests(SynchronousTestCase):
         deferreds[-1].callback(None)
         self.assertEqual(log, ['foo', 'bar'])
 
-
     def test_continuesAfterError(self):
         """
         If one of the callables raises an error, then runSequentially continues
         to run the remaining callables.
         """
         d = util._runSequentially([lambda: self.fail('foo'), lambda: 'bar'])
+
         def check(results):
             [(flag1, fail), (flag2, result)] = results
             fail.trap(self.failureException)
@@ -180,23 +178,25 @@ class RunSequentiallyTests(SynchronousTestCase):
             self.assertEqual(fail.getErrorMessage(), 'foo')
             self.assertEqual(flag2, defer.SUCCESS)
             self.assertEqual(result, 'bar')
-        self.assertDeferredResult(d, check)
 
+        self.assertDeferredResult(d, check)
 
     def test_stopOnFirstError(self):
         """
         If the C{stopOnFirstError} option is passed to C{runSequentially}, then
         no further callables are called after the first exception is raised.
         """
-        d = util._runSequentially([lambda: self.fail('foo'), lambda: 'bar'],
-                                  stopOnFirstError=True)
+        d = util._runSequentially(
+            [lambda: self.fail('foo'), lambda: 'bar'], stopOnFirstError=True
+        )
+
         def check(results):
             [(flag1, fail)] = results
             fail.trap(self.failureException)
             self.assertEqual(flag1, defer.FAILURE)
             self.assertEqual(fail.getErrorMessage(), 'foo')
-        self.assertDeferredResult(d, check)
 
+        self.assertDeferredResult(d, check)
 
 
 class DirtyReactorAggregateErrorTests(SynchronousTestCase):
@@ -209,43 +209,45 @@ class DirtyReactorAggregateErrorTests(SynchronousTestCase):
         Delayed calls are formatted nicely.
         """
         error = DirtyReactorAggregateError(["Foo", "bar"])
-        self.assertEqual(str(error),
-                          """\
+        self.assertEqual(
+            str(error),
+            """\
 Reactor was unclean.
 DelayedCalls: (set twisted.internet.base.DelayedCall.debug = True to debug)
 Foo
-bar""")
-
+bar""",
+        )
 
     def test_formatSelectables(self):
         """
         Selectables are formatted nicely.
         """
         error = DirtyReactorAggregateError([], ["selectable 1", "selectable 2"])
-        self.assertEqual(str(error),
-                          """\
+        self.assertEqual(
+            str(error),
+            """\
 Reactor was unclean.
 Selectables:
 selectable 1
-selectable 2""")
-
+selectable 2""",
+        )
 
     def test_formatDelayedCallsAndSelectables(self):
         """
         Both delayed calls and selectables can appear in the same error.
         """
-        error = DirtyReactorAggregateError(["bleck", "Boozo"],
-                                           ["Sel1", "Sel2"])
-        self.assertEqual(str(error),
-                          """\
+        error = DirtyReactorAggregateError(["bleck", "Boozo"], ["Sel1", "Sel2"])
+        self.assertEqual(
+            str(error),
+            """\
 Reactor was unclean.
 DelayedCalls: (set twisted.internet.base.DelayedCall.debug = True to debug)
 bleck
 Boozo
 Selectables:
 Sel1
-Sel2""")
-
+Sel2""",
+        )
 
 
 class StubReactor(object):
@@ -271,13 +273,11 @@ class StubReactor(object):
             selectables = []
         self.selectables = selectables
 
-
     def iterate(self, timeout=None):
         """
         Increment C{self.iterations}.
         """
         self.iterations.append(timeout)
-
 
     def getDelayedCalls(self):
         """
@@ -285,14 +285,12 @@ class StubReactor(object):
         """
         return self.delayedCalls
 
-
     def removeAll(self):
         """
         Increment C{self.removeAllCalled} and return C{self.selectables}.
         """
         self.removeAllCalled += 1
         return self.selectables
-
 
 
 class StubErrorReporter(object):
@@ -307,13 +305,11 @@ class StubErrorReporter(object):
     def __init__(self):
         self.errors = []
 
-
     def addError(self, test, error):
         """
         Record parameters in C{self.errors}.
         """
         self.errors.append((test, error))
-
 
 
 class JanitorTests(SynchronousTestCase):
@@ -333,21 +329,20 @@ class JanitorTests(SynchronousTestCase):
         jan._cleanPending()
         self.assertEqual(reactor.iterations, [0, 0])
 
-
     def test_cleanPendingCancelsCalls(self):
         """
         During pending-call cleanup, the janitor cancels pending timed calls.
         """
+
         def func():
             return "Lulz"
+
         cancelled = []
-        delayedCall = DelayedCall(300, func, (), {},
-                                  cancelled.append, lambda x: None)
+        delayedCall = DelayedCall(300, func, (), {}, cancelled.append, lambda x: None)
         reactor = StubReactor([delayedCall])
         jan = _Janitor(None, None, reactor=reactor)
         jan._cleanPending()
         self.assertEqual(cancelled, [delayedCall])
-
 
     def test_cleanPendingReturnsDelayedCallStrings(self):
         """
@@ -357,15 +352,14 @@ class JanitorTests(SynchronousTestCase):
         call removes critical debugging information from the string
         representation.
         """
-        delayedCall = DelayedCall(300, lambda: None, (), {},
-                                  lambda x: None, lambda x: None,
-                                  seconds=lambda: 0)
+        delayedCall = DelayedCall(
+            300, lambda: None, (), {}, lambda x: None, lambda x: None, seconds=lambda: 0
+        )
         delayedCallString = str(delayedCall)
         reactor = StubReactor([delayedCall])
         jan = _Janitor(None, None, reactor=reactor)
         strings = jan._cleanPending()
         self.assertEqual(strings, [delayedCallString])
-
 
     def test_cleanReactorRemovesSelectables(self):
         """
@@ -376,11 +370,11 @@ class JanitorTests(SynchronousTestCase):
         jan._cleanReactor()
         self.assertEqual(reactor.removeAllCalled, 1)
 
-
     def test_cleanReactorKillsProcesses(self):
         """
         The Janitor will kill processes during reactor cleanup.
         """
+
         @implementer(IProcessTransport)
         class StubProcessTransport(object):
             """
@@ -403,24 +397,24 @@ class JanitorTests(SynchronousTestCase):
         jan._cleanReactor()
         self.assertEqual(pt.signals, ["KILL"])
 
-
     def test_cleanReactorReturnsSelectableStrings(self):
         """
         The Janitor returns string representations of the selectables that it
         cleaned up from the reactor cleanup method.
         """
+
         class Selectable(object):
             """
             A stub Selectable which only has an interesting string
             representation.
             """
+
             def __repr__(self):
                 return "(SELECTABLE!)"
 
         reactor = StubReactor([], [Selectable()])
         jan = _Janitor(None, None, reactor=reactor)
         self.assertEqual(jan._cleanReactor(), ["(SELECTABLE!)"])
-
 
     def test_postCaseCleanupNoErrors(self):
         """
@@ -434,16 +428,15 @@ class JanitorTests(SynchronousTestCase):
         self.assertTrue(jan.postCaseCleanup())
         self.assertEqual(reporter.errors, [])
 
-
     def test_postCaseCleanupWithErrors(self):
         """
         The post-case cleanup method will return False and call C{addError} on
         the result with a L{DirtyReactorAggregateError} Failure if there are
         pending calls.
         """
-        delayedCall = DelayedCall(300, lambda: None, (), {},
-                                  lambda x: None, lambda x: None,
-                                  seconds=lambda: 0)
+        delayedCall = DelayedCall(
+            300, lambda: None, (), {}, lambda x: None, lambda x: None, seconds=lambda: 0
+        )
         delayedCallString = str(delayedCall)
         reactor = StubReactor([delayedCall], [])
         test = object()
@@ -451,9 +444,7 @@ class JanitorTests(SynchronousTestCase):
         jan = _Janitor(test, reporter, reactor=reactor)
         self.assertFalse(jan.postCaseCleanup())
         self.assertEqual(len(reporter.errors), 1)
-        self.assertEqual(reporter.errors[0][1].value.delayedCalls,
-                          [delayedCallString])
-
+        self.assertEqual(reporter.errors[0][1].value.delayedCalls, [delayedCallString])
 
     def test_postClassCleanupNoErrors(self):
         """
@@ -467,15 +458,14 @@ class JanitorTests(SynchronousTestCase):
         jan.postClassCleanup()
         self.assertEqual(reporter.errors, [])
 
-
     def test_postClassCleanupWithPendingCallErrors(self):
         """
         The post-class cleanup method call C{addError} on the result with a
         L{DirtyReactorAggregateError} Failure if there are pending calls.
         """
-        delayedCall = DelayedCall(300, lambda: None, (), {},
-                                  lambda x: None, lambda x: None,
-                                  seconds=lambda: 0)
+        delayedCall = DelayedCall(
+            300, lambda: None, (), {}, lambda x: None, lambda x: None, seconds=lambda: 0
+        )
         delayedCallString = str(delayedCall)
         reactor = StubReactor([delayedCall], [])
         test = object()
@@ -483,9 +473,7 @@ class JanitorTests(SynchronousTestCase):
         jan = _Janitor(test, reporter, reactor=reactor)
         jan.postClassCleanup()
         self.assertEqual(len(reporter.errors), 1)
-        self.assertEqual(reporter.errors[0][1].value.delayedCalls,
-                          [delayedCallString])
-
+        self.assertEqual(reporter.errors[0][1].value.delayedCalls, [delayedCallString])
 
     def test_postClassCleanupWithSelectableErrors(self):
         """
@@ -499,15 +487,14 @@ class JanitorTests(SynchronousTestCase):
         jan = _Janitor(test, reporter, reactor=reactor)
         jan.postClassCleanup()
         self.assertEqual(len(reporter.errors), 1)
-        self.assertEqual(reporter.errors[0][1].value.selectables,
-                          [repr(selectable)])
-
+        self.assertEqual(reporter.errors[0][1].value.selectables, [repr(selectable)])
 
 
 class RemoveSafelyTests(SynchronousTestCase):
     """
     Tests for L{util._removeSafely}.
     """
+
     def test_removeSafelyNoTrialMarker(self):
         """
         If a path doesn't contain a node named C{"_trial_marker"}, that path is
@@ -519,13 +506,13 @@ class RemoveSafelyTests(SynchronousTestCase):
         dirPath = filepath.FilePath(directory)
         self.assertRaises(util._NoTrialMarker, util._removeSafely, dirPath)
 
-
     def test_removeSafelyRemoveFailsMoveSucceeds(self):
         """
         If an L{OSError} is raised while removing a path in
         L{util._removeSafely}, an attempt is made to move the path to a new
         name.
         """
+
         def dummyRemove():
             """
             Raise an C{OSError} to emulate the branch of L{util._removeSafely}
@@ -548,13 +535,13 @@ class RemoveSafelyTests(SynchronousTestCase):
         util._removeSafely(dirPath)
         self.assertIn("could not remove FilePath", out.getvalue())
 
-
     def test_removeSafelyRemoveFailsMoveFails(self):
         """
         If an L{OSError} is raised while removing a path in
         L{util._removeSafely}, an attempt is made to move the path to a new
         name. If that attempt fails, the L{OSError} is re-raised.
         """
+
         def dummyRemove():
             """
             Raise an C{OSError} to emulate the branch of L{util._removeSafely}
@@ -588,11 +575,11 @@ class RemoveSafelyTests(SynchronousTestCase):
         self.assertIn("could not remove FilePath", out.getvalue())
 
 
-
 class ExcInfoTests(SynchronousTestCase):
     """
     Tests for L{excInfoOrFailureToExcInfo}.
     """
+
     def test_excInfo(self):
         """
         L{excInfoOrFailureToExcInfo} returns exactly what it is passed, if it is
@@ -600,7 +587,6 @@ class ExcInfoTests(SynchronousTestCase):
         """
         info = (ValueError, ValueError("foo"), None)
         self.assertTrue(info is excInfoOrFailureToExcInfo(info))
-
 
     def test_failure(self):
         """
@@ -615,11 +601,11 @@ class ExcInfoTests(SynchronousTestCase):
         self.assertEqual((f.type, f.value, f.tb), excInfoOrFailureToExcInfo(f))
 
 
-
 class AcquireAttributeTests(SynchronousTestCase):
     """
     Tests for L{acquireAttribute}.
     """
+
     def test_foundOnEarlierObject(self):
         """
         The value returned by L{acquireAttribute} is the value of the requested
@@ -629,7 +615,6 @@ class AcquireAttributeTests(SynchronousTestCase):
         self.value = value = object()
         self.assertTrue(value is acquireAttribute([self, object()], "value"))
 
-
     def test_foundOnLaterObject(self):
         """
         The same as L{test_foundOnEarlierObject}, but for the case where the 2nd
@@ -638,14 +623,12 @@ class AcquireAttributeTests(SynchronousTestCase):
         self.value = value = object()
         self.assertTrue(value is acquireAttribute([object(), self], "value"))
 
-
     def test_notFoundException(self):
         """
         If none of the objects passed in the list to L{acquireAttribute} have
         the requested attribute, L{AttributeError} is raised.
         """
         self.assertRaises(AttributeError, acquireAttribute, [object()], "foo")
-
 
     def test_notFoundDefault(self):
         """
@@ -655,7 +638,6 @@ class AcquireAttributeTests(SynchronousTestCase):
         """
         default = object()
         self.assertTrue(default is acquireAttribute([object()], "foo", default))
-
 
 
 class ListToPhraseTests(SynchronousTestCase):
@@ -674,7 +656,6 @@ class ListToPhraseTests(SynchronousTestCase):
         result = util._listToPhrase(sample, 'and')
         self.assertEqual(expected, result)
 
-
     def test_oneWord(self):
         """
         With a single item, the item is returned.
@@ -683,7 +664,6 @@ class ListToPhraseTests(SynchronousTestCase):
         expected = 'One'
         result = util._listToPhrase(sample, 'and')
         self.assertEqual(expected, result)
-
 
     def test_twoWords(self):
         """
@@ -694,7 +674,6 @@ class ListToPhraseTests(SynchronousTestCase):
         result = util._listToPhrase(sample, 'and')
         self.assertEqual(expected, result)
 
-
     def test_threeWords(self):
         """
         With more than two words, the first two are separated by the delimiter.
@@ -703,7 +682,6 @@ class ListToPhraseTests(SynchronousTestCase):
         expected = 'One, Two, and Three'
         result = util._listToPhrase(sample, 'and')
         self.assertEqual(expected, result)
-
 
     def test_fourWords(self):
         """
@@ -714,7 +692,6 @@ class ListToPhraseTests(SynchronousTestCase):
         result = util._listToPhrase(sample, 'or', delimiter='; ')
         self.assertEqual(expected, result)
 
-
     def test_notString(self):
         """
         If something in things is not a string, it is converted into one.
@@ -724,7 +701,6 @@ class ListToPhraseTests(SynchronousTestCase):
         result = util._listToPhrase(sample, 'and')
         self.assertEqual(expected, result)
 
-
     def test_stringTypeError(self):
         """
         If things is a string, a TypeError is raised.
@@ -732,7 +708,6 @@ class ListToPhraseTests(SynchronousTestCase):
         sample = "One, two, three"
         error = self.assertRaises(TypeError, util._listToPhrase, sample, 'and')
         self.assertEqual(str(error), "Things must be a list or a tuple")
-
 
     def test_iteratorTypeError(self):
         """
@@ -742,13 +717,14 @@ class ListToPhraseTests(SynchronousTestCase):
         error = self.assertRaises(TypeError, util._listToPhrase, sample, 'and')
         self.assertEqual(str(error), "Things must be a list or a tuple")
 
-
     def test_generatorTypeError(self):
         """
         If things is a generator, a TypeError is raised.
         """
+
         def sample():
             for i in range(2):
                 yield i
+
         error = self.assertRaises(TypeError, util._listToPhrase, sample, 'and')
         self.assertEqual(str(error), "Things must be a list or a tuple")

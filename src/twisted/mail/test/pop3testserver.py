@@ -31,12 +31,7 @@ SLOW_GREETING = False
 """Commands"""
 CONNECTION_MADE = b"+OK POP3 localhost v2003.83 server ready"
 
-CAPABILITIES = [
-b"TOP",
-b"LOGIN-DELAY 180",
-b"USER",
-b"SASL LOGIN"
-]
+CAPABILITIES = [b"TOP", b"LOGIN-DELAY 180", b"USER", b"SASL LOGIN"]
 
 CAPABILITIES_SSL = b"STLS"
 CAPABILITIES_UIDL = b"UIDL"
@@ -56,24 +51,20 @@ CAP_START = b"+OK Capability list follows:"
 
 
 class POP3TestServer(basic.LineReceiver):
-    def __init__(self, contextFactory = None):
+    def __init__(self, contextFactory=None):
         self.loggedIn = False
         self.caps = None
         self.tmpUser = None
         self.ctx = contextFactory
 
-
     def sendSTATResp(self, req):
         self.sendLine(STAT)
-
 
     def sendUIDLResp(self, req):
         self.sendLine(UIDL)
 
-
     def sendLISTResp(self, req):
         self.sendLine(LIST)
-
 
     def sendCapabilities(self):
         if self.caps is None:
@@ -92,7 +83,6 @@ class POP3TestServer(basic.LineReceiver):
 
         self.sendLine(resp)
 
-
     def connectionMade(self):
         if DENY_CONNECTION:
             self.disconnect()
@@ -104,10 +94,8 @@ class POP3TestServer(basic.LineReceiver):
         else:
             self.sendGreeting()
 
-
     def sendGreeting(self):
         self.sendLine(CONNECTION_MADE)
-
 
     def lineReceived(self, line):
         """Error Conditions"""
@@ -196,7 +184,6 @@ class POP3TestServer(basic.LineReceiver):
 
             self.sendLine(UIDL)
 
-
     def startTLS(self):
         if self.ctx is None:
             self.getContext()
@@ -207,16 +194,14 @@ class POP3TestServer(basic.LineReceiver):
         else:
             self.sendLine(b'-ERR TLS not available')
 
-
     def disconnect(self):
         self.transport.loseConnection()
-
 
     def getContext(self):
         try:
             from twisted.internet import ssl
         except ImportError:
-           self.ctx = None
+            self.ctx = None
         else:
             self.ctx = ssl.ClientContextFactory()
             self.ctx.method = ssl.SSL.TLSv1_METHOD
@@ -237,9 +222,9 @@ to_deferred - Do not return a response on a 'Select' request. This
 slow - Wait 20 seconds after the connection is made to return a Server Greeting
 """
 
+
 def printMessage(msg):
     print("Server Starting in %s mode" % msg)
-
 
 
 def processArg(arg):
@@ -307,6 +292,7 @@ def processArg(arg):
         print(usage)
         sys.exit()
 
+
 def main():
 
     if len(sys.argv) < 2:
@@ -321,6 +307,7 @@ def main():
     f.protocol = POP3TestServer
     reactor.listenTCP(PORT, f)
     reactor.run()
+
 
 if __name__ == '__main__':
     main()

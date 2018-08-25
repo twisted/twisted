@@ -15,6 +15,7 @@ from twisted.python import log, failure
 _MIN_PORT = 1
 _MAX_PORT = 2 ** 16 - 1
 
+
 class IdentError(Exception):
     """
     Can't determine connection owner; reason unknown.
@@ -26,14 +27,13 @@ class IdentError(Exception):
         return self.identDescription
 
 
-
 class NoUser(IdentError):
     """
     The connection specified by the port pair is not currently in use or
     currently not owned by an identifiable entity.
     """
-    identDescription = 'NO-USER'
 
+    identDescription = 'NO-USER'
 
 
 class InvalidPort(IdentError):
@@ -43,8 +43,8 @@ class InvalidPort(IdentError):
     port numbers are from 1-65535), negative integers, reals or in any
     fashion not recognized as a non-negative integer.
     """
-    identDescription = 'INVALID-PORT'
 
+    identDescription = 'INVALID-PORT'
 
 
 class HiddenUser(IdentError):
@@ -52,8 +52,8 @@ class HiddenUser(IdentError):
     The server was able to identify the user of this port, but the
     information was not returned at the request of the user.
     """
-    identDescription = 'HIDDEN-USER'
 
+    identDescription = 'HIDDEN-USER'
 
 
 class IdentServer(basic.LineOnlyReceiver):
@@ -79,15 +79,18 @@ class IdentServer(basic.LineOnlyReceiver):
             except ValueError:
                 self.invalidQuery()
             else:
-                if _MIN_PORT <= portOnServer <= _MAX_PORT and _MIN_PORT <= portOnClient <= _MAX_PORT:
+                if (
+                    _MIN_PORT <= portOnServer <= _MAX_PORT
+                    and _MIN_PORT <= portOnClient <= _MAX_PORT
+                ):
                     self.validQuery(portOnServer, portOnClient)
                 else:
-                    self._ebLookup(failure.Failure(InvalidPort()), portOnServer, portOnClient)
-
+                    self._ebLookup(
+                        failure.Failure(InvalidPort()), portOnServer, portOnClient
+                    )
 
     def invalidQuery(self):
         self.transport.loseConnection()
-
 
     def validQuery(self, portOnServer, portOnClient):
         """
@@ -99,24 +102,22 @@ class IdentServer(basic.LineOnlyReceiver):
         """
         serverAddr = self.transport.getHost().host, portOnServer
         clientAddr = self.transport.getPeer().host, portOnClient
-        defer.maybeDeferred(self.lookup, serverAddr, clientAddr
-            ).addCallback(self._cbLookup, portOnServer, portOnClient
-            ).addErrback(self._ebLookup, portOnServer, portOnClient
-            )
-
+        defer.maybeDeferred(self.lookup, serverAddr, clientAddr).addCallback(
+            self._cbLookup, portOnServer, portOnClient
+        ).addErrback(self._ebLookup, portOnServer, portOnClient)
 
     def _cbLookup(self, result, sport, cport):
         (sysName, userId) = result
         self.sendLine('%d, %d : USERID : %s : %s' % (sport, cport, sysName, userId))
-
 
     def _ebLookup(self, failure, sport, cport):
         if failure.check(IdentError):
             self.sendLine('%d, %d : ERROR : %s' % (sport, cport, failure.value))
         else:
             log.err(failure)
-            self.sendLine('%d, %d : ERROR : %s' % (sport, cport, IdentError(failure.value)))
-
+            self.sendLine(
+                '%d, %d : ERROR : %s' % (sport, cport, IdentError(failure.value))
+            )
 
     def lookup(self, serverAddress, clientAddress):
         """
@@ -144,7 +145,6 @@ class IdentServer(basic.LineOnlyReceiver):
         raise IdentError()
 
 
-
 class ProcServerMixin:
     """Implements lookup() to grab entries for responses from /proc/net/tcp
     """
@@ -153,13 +153,15 @@ class ProcServerMixin:
 
     try:
         from pwd import getpwuid
+
         def getUsername(self, uid, getpwuid=getpwuid):
             return getpwuid(uid)[0]
+
         del getpwuid
     except ImportError:
+
         def getUsername(self, uid):
             raise IdentError()
-
 
     def entries(self):
         with open('/proc/net/tcp') as f:
@@ -167,10 +169,10 @@ class ProcServerMixin:
             for L in f:
                 yield L.strip()
 
-
     def dottedQuadFromHexString(self, hexstr):
-        return '.'.join(map(str, struct.unpack('4B', struct.pack('=L', int(hexstr, 16)))))
-
+        return '.'.join(
+            map(str, struct.unpack('4B', struct.pack('=L', int(hexstr, 16))))
+        )
 
     def unpackAddress(self, packed):
         addr, port = packed.split(':')
@@ -178,14 +180,12 @@ class ProcServerMixin:
         port = int(port, 16)
         return addr, port
 
-
     def parseLine(self, line):
         parts = line.strip().split()
         localAddr, localPort = self.unpackAddress(parts[1])
         remoteAddr, remotePort = self.unpackAddress(parts[2])
         uid = int(parts[7])
         return (localAddr, localPort), (remoteAddr, remotePort), uid
-
 
     def lookup(self, serverAddress, clientAddress):
         for ent in self.entries():
@@ -196,14 +196,12 @@ class ProcServerMixin:
         raise NoUser()
 
 
-
 class IdentClient(basic.LineOnlyReceiver):
 
     errorTypes = (IdentError, NoUser, InvalidPort, HiddenUser)
 
     def __init__(self):
         self.queries = []
-
 
     def lookup(self, portOnServer, portOnClient):
         """
@@ -216,7 +214,6 @@ class IdentClient(basic.LineOnlyReceiver):
         self.sendLine('%d, %d' % (portOnServer, portOnClient))
         return self.queries[-1][0]
 
-
     def lineReceived(self, line):
         if not self.queries:
             log.msg("Unexpected server response: %r" % (line,))
@@ -226,12 +223,10 @@ class IdentClient(basic.LineOnlyReceiver):
             if self.queries:
                 self.sendLine('%d, %d' % (self.queries[0][1], self.queries[0][2]))
 
-
     def connectionLost(self, reason):
         for q in self.queries:
             q[0].errback(IdentError(reason))
         self.queries = []
-
 
     def parseResponse(self, deferred, line):
         parts = line.split(':', 2)
@@ -249,7 +244,12 @@ class IdentClient(basic.LineOnlyReceiver):
                 deferred.callback((type, addInfo))
 
 
-
-__all__ = ['IdentError', 'NoUser', 'InvalidPort', 'HiddenUser',
-           'IdentServer', 'IdentClient',
-           'ProcServerMixin']
+__all__ = [
+    'IdentError',
+    'NoUser',
+    'InvalidPort',
+    'HiddenUser',
+    'IdentServer',
+    'IdentClient',
+    'ProcServerMixin',
+]

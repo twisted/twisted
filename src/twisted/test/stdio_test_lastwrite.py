@@ -23,15 +23,12 @@ class LastWriteChild(Protocol):
         self.reactor = reactor
         self.magicString = magicString
 
-
     def connectionMade(self):
         self.transport.write(self.magicString)
         self.transport.loseConnection()
 
-
     def connectionLost(self, reason):
         self.reactor.stop()
-
 
 
 def main(reactor, magicString):
@@ -40,8 +37,8 @@ def main(reactor, magicString):
     reactor.run()
 
 
-
 if __name__ == '__main__':
     namedAny(sys.argv[1]).install()
     from twisted.internet import reactor
+
     main(reactor, sys.argv[2])

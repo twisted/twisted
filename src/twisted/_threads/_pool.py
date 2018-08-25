@@ -10,6 +10,7 @@ L{twisted.python.threadpool}.
 from __future__ import absolute_import, division, print_function
 
 from threading import Thread, Lock, local as LocalStorage
+
 try:
     from Queue import Queue
 except ImportError:
@@ -60,10 +61,9 @@ def pool(currentLimit, threadFactory=Thread):
             return None
         return ThreadWorker(startThread, Queue())
 
-    team = Team(coordinator=LockWorker(Lock(), LocalStorage()),
-                createWorker=limitedWorkerCreator,
-                logException=err)
+    team = Team(
+        coordinator=LockWorker(Lock(), LocalStorage()),
+        createWorker=limitedWorkerCreator,
+        logException=err,
+    )
     return team
-
-
-

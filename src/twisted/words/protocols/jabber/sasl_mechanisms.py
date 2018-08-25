@@ -28,7 +28,6 @@ class ISASLMechanism(Interface):
         @rtype: C{str}.
         """
 
-
     def getResponse(challenge):
         """
         Get the response to a server challenge.
@@ -40,7 +39,6 @@ class ISASLMechanism(Interface):
         """
 
 
-
 @implementer(ISASLMechanism)
 class Anonymous(object):
     """
@@ -48,11 +46,11 @@ class Anonymous(object):
 
     This mechanism is defined in RFC 2245.
     """
+
     name = 'ANONYMOUS'
 
     def getInitialResponse(self):
         return None
-
 
 
 @implementer(ISASLMechanism)
@@ -62,6 +60,7 @@ class Plain(object):
 
     The PLAIN SASL authentication mechanism is defined in RFC 2595.
     """
+
     name = 'PLAIN'
 
     def __init__(self, authzid, authcid, password):
@@ -80,12 +79,14 @@ class Plain(object):
         self.authcid = authcid or u''
         self.password = password or u''
 
-
     def getInitialResponse(self):
-        return (self.authzid.encode('utf-8') + b"\x00" +
-                self.authcid.encode('utf-8') + b"\x00" +
-                self.password.encode('utf-8'))
-
+        return (
+            self.authzid.encode('utf-8')
+            + b"\x00"
+            + self.authcid.encode('utf-8')
+            + b"\x00"
+            + self.password.encode('utf-8')
+        )
 
 
 @implementer(ISASLMechanism)
@@ -95,6 +96,7 @@ class DigestMD5(object):
 
     The DIGEST-MD5 SASL authentication mechanism is defined in RFC 2831.
     """
+
     name = 'DIGEST-MD5'
 
     def __init__(self, serv_type, host, serv_name, username, password):
@@ -126,10 +128,8 @@ class DigestMD5(object):
         if serv_name is not None:
             self.digest_uri += u'/%s' % (serv_name,)
 
-
     def getInitialResponse(self):
         return None
-
 
     def getResponse(self, challenge):
         directives = self._parse(challenge)
@@ -146,10 +146,7 @@ class DigestMD5(object):
         except KeyError:
             realm = self.defaultRealm.encode(charset)
 
-        return self._genResponse(charset,
-                                 realm,
-                                 directives[b'nonce'])
-
+        return self._genResponse(charset, realm, directives[b'nonce'])
 
     def _parse(self, challenge):
         """
@@ -172,7 +169,7 @@ class DigestMD5(object):
             middle = s.index(b"=", cur)
             name = s[cur:middle].lstrip()
             middle += 1
-            if s[middle:middle+1] == b'"':
+            if s[middle : middle + 1] == b'"':
                 middle += 1
                 end = s.index(b'"', middle)
                 value = s[middle:end]
@@ -209,8 +206,15 @@ class DigestMD5(object):
 
         directive_list = []
         for name, value in iteritems(directives):
-            if name in (b'username', b'realm', b'cnonce',
-                        b'nonce', b'digest-uri', b'authzid', b'cipher'):
+            if name in (
+                b'username',
+                b'realm',
+                b'cnonce',
+                b'nonce',
+                b'digest-uri',
+                b'authzid',
+                b'cipher',
+            ):
                 directive = name + b'=' + value
             else:
                 directive = name + b'=' + value
@@ -219,9 +223,7 @@ class DigestMD5(object):
 
         return b','.join(directive_list)
 
-
-    def _calculateResponse(self, cnonce, nc, nonce,
-                            username, password, realm, uri):
+    def _calculateResponse(self, cnonce, nc, nonce, username, password, realm, uri):
         """
         Calculates response with given encoded parameters.
 
@@ -229,6 +231,7 @@ class DigestMD5(object):
             of the given parameters.
         @rtype: L{bytes}
         """
+
         def H(s):
             return md5(s).digest()
 
@@ -238,16 +241,16 @@ class DigestMD5(object):
         def KD(k, s):
             return H(k + b':' + s)
 
-        a1 = (H(username + b":" + realm + b":" + password) + b":" +
-              nonce + b":" +
-              cnonce)
+        a1 = H(username + b":" + realm + b":" + password) + b":" + nonce + b":" + cnonce
         a2 = b"AUTHENTICATE:" + uri
 
-        response = HEX(KD(HEX(H(a1)),
-                       nonce + b":" + nc + b":" + cnonce + b":" +
-                       b"auth" + b":" + HEX(H(a2))))
+        response = HEX(
+            KD(
+                HEX(H(a1)),
+                nonce + b":" + nc + b":" + cnonce + b":" + b"auth" + b":" + HEX(H(a2)),
+            )
+        )
         return response
-
 
     def _genResponse(self, charset, realm, nonce):
         """
@@ -265,27 +268,28 @@ class DigestMD5(object):
             # TODO - add error checking
             raise
 
-        nc = networkString('%08x' % (1,)) # TODO: support subsequent auth.
+        nc = networkString('%08x' % (1,))  # TODO: support subsequent auth.
         cnonce = self._gen_nonce()
         qop = b'auth'
 
         # TODO - add support for authzid
-        response = self._calculateResponse(cnonce, nc, nonce,
-                                           username, password, realm,
-                                           digest_uri)
+        response = self._calculateResponse(
+            cnonce, nc, nonce, username, password, realm, digest_uri
+        )
 
-        directives = {b'username': username,
-                      b'realm' : realm,
-                      b'nonce' : nonce,
-                      b'cnonce' : cnonce,
-                      b'nc' : nc,
-                      b'qop' : qop,
-                      b'digest-uri': digest_uri,
-                      b'response': response,
-                      b'charset': charset.encode('ascii')}
+        directives = {
+            b'username': username,
+            b'realm': realm,
+            b'nonce': nonce,
+            b'cnonce': cnonce,
+            b'nc': nc,
+            b'qop': qop,
+            b'digest-uri': digest_uri,
+            b'response': response,
+            b'charset': charset.encode('ascii'),
+        }
 
         return self._unparse(directives)
-
 
     def _gen_nonce(self):
         nonceString = "%f:%f:%d" % (random.random(), time.time(), os.getpid())

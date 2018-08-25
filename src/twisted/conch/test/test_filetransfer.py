@@ -22,8 +22,11 @@ if cryptography:
     from twisted.conch import avatar
     from twisted.conch.ssh import common, connection, filetransfer, session
 else:
+
     class avatar:
-        class ConchUser: pass
+        class ConchUser:
+            pass
+
 
 from twisted.internet import defer
 from twisted.protocols import loopback
@@ -45,14 +48,13 @@ class TestAvatar(avatar.ConchUser):
             f = [(f, args, kw)]
         for i in f:
             func = i[0]
-            args = len(i)>1 and i[1] or ()
-            kw = len(i)>2 and i[2] or {}
+            args = len(i) > 1 and i[1] or ()
+            kw = len(i) > 2 and i[2] or {}
             r = func(*args, **kw)
         return r
 
 
 class FileTransferTestAvatar(TestAvatar):
-
     def __init__(self, homeDir):
         TestAvatar.__init__(self)
         self.homeDir = homeDir
@@ -62,36 +64,41 @@ class FileTransferTestAvatar(TestAvatar):
 
 
 class ConchSessionForTestAvatar:
-
     def __init__(self, avatar):
         self.avatar = avatar
+
 
 if unix:
     if not hasattr(unix, 'SFTPServerForUnixConchUser'):
         # unix should either be a fully working module, or None.  I'm not sure
         # how this happens, but on win32 it does.  Try to cope.  --spiv.
         import warnings
-        warnings.warn(("twisted.conch.unix imported %r, "
-                       "but doesn't define SFTPServerForUnixConchUser'")
-                      % (unix,))
+
+        warnings.warn(
+            (
+                "twisted.conch.unix imported %r, "
+                "but doesn't define SFTPServerForUnixConchUser'"
+            )
+            % (unix,)
+        )
         unix = None
     else:
-        class FileTransferForTestAvatar(unix.SFTPServerForUnixConchUser):
 
+        class FileTransferForTestAvatar(unix.SFTPServerForUnixConchUser):
             def gotVersion(self, version, otherExt):
-                return {b'conchTest' : b'ext data'}
+                return {b'conchTest': b'ext data'}
 
             def extendedRequest(self, extName, extData):
                 if extName == b'testExtendedRequest':
                     return b'bar'
                 raise NotImplementedError
 
-        components.registerAdapter(FileTransferForTestAvatar,
-                                   TestAvatar,
-                                   filetransfer.ISFTPServer)
+        components.registerAdapter(
+            FileTransferForTestAvatar, TestAvatar, filetransfer.ISFTPServer
+        )
+
 
 class SFTPTestBase(unittest.TestCase):
-
     def setUp(self):
         self.testDir = FilePath(self.mktemp())
         # Give the testDir another level so we can safely "cd .." from it in
@@ -100,9 +107,9 @@ class SFTPTestBase(unittest.TestCase):
         self.testDir.child('testDirectory').makedirs(True)
 
         with self.testDir.child('testfile1').open(mode='wb') as f:
-            f.write(b'a'*10+b'b'*10)
+            f.write(b'a' * 10 + b'b' * 10)
             with open('/dev/urandom', 'rb') as f2:
-                f.write(f2.read(1024*64)) # random data
+                f.write(f2.read(1024 * 64))  # random data
         self.testDir.child('testfile1').chmod(0o644)
         with self.testDir.child('testRemoveFile').open(mode='wb') as f:
             f.write(b'a')
@@ -127,9 +134,11 @@ class OurServerOurClientTests(SFTPTestBase):
         self.client = filetransfer.FileTransferClient()
         self._serverVersion = None
         self._extData = None
+
         def _(serverVersion, extData):
             self._serverVersion = serverVersion
             self._extData = extData
+
         self.client.gotServerVersion = _
         serverTransport = loopback.LoopbackRelay(self.client)
         self.client.makeConnection(clientTransport)
@@ -140,12 +149,10 @@ class OurServerOurClientTests(SFTPTestBase):
 
         self._emptyBuffers()
 
-
     def _emptyBuffers(self):
         while self.serverTransport.buffer or self.clientTransport.buffer:
             self.serverTransport.clearBuffer()
             self.clientTransport.clearBuffer()
-
 
     def tearDown(self):
         self.serverTransport.loseConnection()
@@ -153,11 +160,9 @@ class OurServerOurClientTests(SFTPTestBase):
         self.serverTransport.clearBuffer()
         self.clientTransport.clearBuffer()
 
-
     def test_serverVersion(self):
         self.assertEqual(self._serverVersion, 3)
         self.assertEqual(self._extData, {b'conchTest': b'ext data'})
-
 
     def test_interface_implementation(self):
         """
@@ -165,19 +170,21 @@ class OurServerOurClientTests(SFTPTestBase):
         """
         self.assertTrue(
             filetransfer.ISFTPServer.providedBy(self.server.client),
-            "ISFTPServer not provided by %r" % (self.server.client,))
-
+            "ISFTPServer not provided by %r" % (self.server.client,),
+        )
 
     def test_openedFileClosedWithConnection(self):
         """
         A file opened with C{openFile} is close when the connection is lost.
         """
-        d = self.client.openFile(b"testfile1", filetransfer.FXF_READ |
-                                 filetransfer.FXF_WRITE, {})
+        d = self.client.openFile(
+            b"testfile1", filetransfer.FXF_READ | filetransfer.FXF_WRITE, {}
+        )
         self._emptyBuffers()
 
         oldClose = os.close
         closed = []
+
         def close(fd):
             closed.append(fd)
             oldClose(fd)
@@ -195,7 +202,6 @@ class OurServerOurClientTests(SFTPTestBase):
 
         d.addCallback(_fileOpened)
         return d
-
 
     def test_openedDirectoryClosedWithConnection(self):
         """
@@ -215,10 +221,10 @@ class OurServerOurClientTests(SFTPTestBase):
         d.addCallback(_getFiles)
         return d
 
-
     def test_openFileIO(self):
-        d = self.client.openFile(b"testfile1", filetransfer.FXF_READ |
-                                 filetransfer.FXF_WRITE, {})
+        d = self.client.openFile(
+            b"testfile1", filetransfer.FXF_READ | filetransfer.FXF_WRITE, {}
+        )
         self._emptyBuffers()
 
         def _fileOpened(openFile):
@@ -230,11 +236,11 @@ class OurServerOurClientTests(SFTPTestBase):
         def _readChunk(openFile):
             d = openFile.readChunk(0, 20)
             self._emptyBuffers()
-            d.addCallback(self.assertEqual, b'a'*10 + b'b'*10)
+            d.addCallback(self.assertEqual, b'a' * 10 + b'b' * 10)
             return d
 
         def _writeChunk(_, openFile):
-            d = openFile.writeChunk(20, b'c'*10)
+            d = openFile.writeChunk(20, b'c' * 10)
             self._emptyBuffers()
             d.addCallback(_readChunk2, openFile)
             return d
@@ -242,16 +248,16 @@ class OurServerOurClientTests(SFTPTestBase):
         def _readChunk2(_, openFile):
             d = openFile.readChunk(0, 30)
             self._emptyBuffers()
-            d.addCallback(self.assertEqual, b'a'*10 + b'b'*10 + b'c'*10)
+            d.addCallback(self.assertEqual, b'a' * 10 + b'b' * 10 + b'c' * 10)
             return d
 
         d.addCallback(_fileOpened)
         return d
 
-
     def test_closedFileGetAttrs(self):
-        d = self.client.openFile(b"testfile1", filetransfer.FXF_READ |
-                                 filetransfer.FXF_WRITE, {})
+        d = self.client.openFile(
+            b"testfile1", filetransfer.FXF_READ | filetransfer.FXF_WRITE, {}
+        )
         self._emptyBuffers()
 
         def _getAttrs(_, openFile):
@@ -273,10 +279,10 @@ class OurServerOurClientTests(SFTPTestBase):
         d.addCallback(_close)
         return d
 
-
     def test_openFileAttributes(self):
-        d = self.client.openFile(b"testfile1", filetransfer.FXF_READ |
-                                 filetransfer.FXF_WRITE, {})
+        d = self.client.openFile(
+            b"testfile1", filetransfer.FXF_READ | filetransfer.FXF_WRITE, {}
+        )
         self._emptyBuffers()
 
         def _getAttrs(openFile):
@@ -293,12 +299,12 @@ class OurServerOurClientTests(SFTPTestBase):
 
         return d.addCallback(_getAttrs)
 
-
     def test_openFileSetAttrs(self):
         # XXX test setAttrs
         # Ok, how about this for a start?  It caught a bug :)  -- spiv.
-        d = self.client.openFile(b"testfile1", filetransfer.FXF_READ |
-                                 filetransfer.FXF_WRITE, {})
+        d = self.client.openFile(
+            b"testfile1", filetransfer.FXF_READ | filetransfer.FXF_WRITE, {}
+        )
         self._emptyBuffers()
 
         def _getAttrs(openFile):
@@ -323,7 +329,6 @@ class OurServerOurClientTests(SFTPTestBase):
         d.addCallback(_getAttrs)
         return d
 
-
     def test_openFileExtendedAttributes(self):
         """
         Check that L{filetransfer.FileTransferClient.openFile} can send
@@ -332,20 +337,24 @@ class OurServerOurClientTests(SFTPTestBase):
         """
         savedAttributes = {}
         oldOpenFile = self.server.client.openFile
+
         def openFile(filename, flags, attrs):
             savedAttributes.update(attrs)
             return oldOpenFile(filename, flags, attrs)
+
         self.server.client.openFile = openFile
 
-        d = self.client.openFile(b"testfile1", filetransfer.FXF_READ |
-                filetransfer.FXF_WRITE, {"ext_foo": b"bar"})
+        d = self.client.openFile(
+            b"testfile1",
+            filetransfer.FXF_READ | filetransfer.FXF_WRITE,
+            {"ext_foo": b"bar"},
+        )
         self._emptyBuffers()
 
         def check(ign):
             self.assertEqual(savedAttributes, {"ext_foo": b"bar"})
 
         return d.addCallback(check)
-
 
     def test_removeFile(self):
         d = self.client.getAttrs(b"testRemoveFile")
@@ -359,7 +368,6 @@ class OurServerOurClientTests(SFTPTestBase):
         d.addCallback(_removeFile)
         d.addCallback(_removeFile)
         return self.assertFailure(d, filetransfer.SFTPError)
-
 
     def test_renameFile(self):
         d = self.client.getAttrs(b"testRenameFile")
@@ -378,12 +386,10 @@ class OurServerOurClientTests(SFTPTestBase):
 
         return d.addCallback(_rename)
 
-
     def test_directoryBad(self):
         d = self.client.getAttrs(b"testMakeDirectory")
         self._emptyBuffers()
         return self.assertFailure(d, filetransfer.SFTPError)
-
 
     def test_directoryCreation(self):
         d = self.client.makeDirectory(b"testMakeDirectory", {})
@@ -408,7 +414,6 @@ class OurServerOurClientTests(SFTPTestBase):
         d.addCallback(_getAttrs)
         return self.assertFailure(d, filetransfer.SFTPError)
 
-
     def test_openDirectory(self):
         d = self.client.openDirectory(b'')
         self._emptyBuffers()
@@ -418,6 +423,7 @@ class OurServerOurClientTests(SFTPTestBase):
             def append(f):
                 files.append(f)
                 return openDir
+
             d = defer.maybeDeferred(openDir.next)
             self._emptyBuffers()
             d.addCallback(append)
@@ -428,10 +434,16 @@ class OurServerOurClientTests(SFTPTestBase):
         def _checkFiles(ignored):
             fs = list(list(zip(*files))[0])
             fs.sort()
-            self.assertEqual(fs,
-                                 [b'.testHiddenFile', b'testDirectory',
-                                  b'testRemoveFile', b'testRenameFile',
-                                  b'testfile1'])
+            self.assertEqual(
+                fs,
+                [
+                    b'.testHiddenFile',
+                    b'testDirectory',
+                    b'testRemoveFile',
+                    b'testRenameFile',
+                    b'testfile1',
+                ],
+            )
 
         def _close(_, openDir):
             d = openDir.close()
@@ -442,12 +454,10 @@ class OurServerOurClientTests(SFTPTestBase):
         d.addCallback(_checkFiles)
         return d
 
-
     def test_linkDoesntExist(self):
         d = self.client.getAttrs(b'testLink')
         self._emptyBuffers()
         return self.assertFailure(d, filetransfer.SFTPError)
-
 
     def test_linkSharesAttrs(self):
         d = self.client.makeLink(b'testLink', b'testfile1')
@@ -467,7 +477,6 @@ class OurServerOurClientTests(SFTPTestBase):
         d.addCallback(_getFirstAttrs)
         return d.addCallback(_getSecondAttrs)
 
-
     def test_linkPath(self):
         d = self.client.makeLink(b'testLink', b'testfile1')
         self._emptyBuffers()
@@ -477,9 +486,7 @@ class OurServerOurClientTests(SFTPTestBase):
             self._emptyBuffers()
             testFile = FilePath(os.getcwd()).preauthChild(self.testDir.path)
             testFile = testFile.child('testfile1')
-            d.addCallback(
-                self.assertEqual,
-                testFile.path)
+            d.addCallback(self.assertEqual, testFile.path)
             return d
 
         def _realPath(_):
@@ -487,15 +494,12 @@ class OurServerOurClientTests(SFTPTestBase):
             self._emptyBuffers()
             testLink = FilePath(os.getcwd()).preauthChild(self.testDir.path)
             testLink = testLink.child('testfile1')
-            d.addCallback(
-                self.assertEqual,
-                testLink.path)
+            d.addCallback(self.assertEqual, testLink.path)
             return d
 
         d.addCallback(_readLink)
         d.addCallback(_realPath)
         return d
-
 
     def test_extendedRequest(self):
         d = self.client.extendedRequest(b'testExtendedRequest', b'foo')
@@ -504,12 +508,10 @@ class OurServerOurClientTests(SFTPTestBase):
         d.addCallback(self._cbTestExtendedRequest)
         return d
 
-
     def _cbTestExtendedRequest(self, ignored):
         d = self.client.extendedRequest(b'testBadRequest', b'')
         self._emptyBuffers()
         return self.assertFailure(d, NotImplementedError)
-
 
     @defer.inlineCallbacks
     def test_openDirectoryIterator(self):
@@ -541,11 +543,18 @@ class OurServerOurClientTests(SFTPTestBase):
 
         self._emptyBuffers()
 
-        self.assertEqual(filenames,
-                         set([b'.testHiddenFile', b'testDirectory',
-                              b'testRemoveFile', b'testRenameFile',
-                              b'testfile1']))
-
+        self.assertEqual(
+            filenames,
+            set(
+                [
+                    b'.testHiddenFile',
+                    b'testDirectory',
+                    b'testRemoveFile',
+                    b'testRenameFile',
+                    b'testfile1',
+                ]
+            ),
+        )
 
 
 class FakeConn:
@@ -568,28 +577,31 @@ class FileTransferCloseTests(unittest.TestCase):
         class DummyTransport:
             def __init__(self):
                 self.transport = self
+
             def sendPacket(self, kind, data):
                 pass
+
             def logPrefix(self):
                 return 'dummy transport'
+
         conn.transport = DummyTransport()
         conn.transport.avatar = self.avatar
         return conn
 
-
     def interceptConnectionLost(self, sftpServer):
         self.connectionLostFired = False
         origConnectionLost = sftpServer.connectionLost
+
         def connectionLost(reason):
             self.connectionLostFired = True
             origConnectionLost(reason)
+
         sftpServer.connectionLost = connectionLost
 
-
     def assertSFTPConnectionLost(self):
-        self.assertTrue(self.connectionLostFired,
-                        "sftpServer's connectionLost was not called")
-
+        self.assertTrue(
+            self.connectionLostFired, "sftpServer's connectionLost was not called"
+        )
 
     def test_sessionClose(self):
         """
@@ -610,7 +622,6 @@ class FileTransferCloseTests(unittest.TestCase):
         testSession.closeReceived()
 
         self.assertSFTPConnectionLost()
-
 
     def test_clientClosesChannelOnConnnection(self):
         """
@@ -636,7 +647,6 @@ class FileTransferCloseTests(unittest.TestCase):
 
         self.assertSFTPConnectionLost()
 
-
     def test_stopConnectionServiceClosesChannel(self):
         """
         Closing an SSH connection should close all sessions within it.
@@ -658,7 +668,6 @@ class FileTransferCloseTests(unittest.TestCase):
         self.assertSFTPConnectionLost()
 
 
-
 class ConstantsTests(unittest.TestCase):
     """
     Tests for the constants used by the SFTP protocol implementation.
@@ -668,6 +677,7 @@ class ConstantsTests(unittest.TestCase):
         protocol.  There are more recent drafts of the specification, but this
         one describes version 3, which is what conch (and OpenSSH) implements.
     """
+
     if not cryptography:
         skip = "Cannot run without cryptography"
 
@@ -744,8 +754,8 @@ class ConstantsTests(unittest.TestCase):
                 #define SSH_FX_NO_CONNECTION                 6
                 #define SSH_FX_CONNECTION_LOST               7
                 #define SSH_FX_OP_UNSUPPORTED                8
-        """]
-
+        """,
+    ]
 
     def test_constantsAgainstSpec(self):
         """
@@ -759,10 +769,10 @@ class ConstantsTests(unittest.TestCase):
                 if m:
                     constants[m.group(1)] = long(m.group(2), 0)
         self.assertTrue(
-            len(constants) > 0, "No constants found (the test must be buggy).")
+            len(constants) > 0, "No constants found (the test must be buggy)."
+        )
         for k, v in constants.items():
             self.assertEqual(v, getattr(filetransfer, k))
-
 
 
 class RawPacketDataTests(unittest.TestCase):
@@ -777,7 +787,6 @@ class RawPacketDataTests(unittest.TestCase):
     def setUp(self):
         self.ftc = filetransfer.FileTransferClient()
 
-
     def test_packetSTATUS(self):
         """
         A STATUS packet containing a result code, a message, and a language is
@@ -789,10 +798,13 @@ class RawPacketDataTests(unittest.TestCase):
         d = defer.Deferred()
         d.addCallback(self._cbTestPacketSTATUS)
         self.ftc.openRequests[1] = d
-        data = struct.pack('!LL', 1, filetransfer.FX_OK) + common.NS(b'msg') + common.NS(b'lang')
+        data = (
+            struct.pack('!LL', 1, filetransfer.FX_OK)
+            + common.NS(b'msg')
+            + common.NS(b'lang')
+        )
         self.ftc.packet_STATUS(data)
         return d
-
 
     def _cbTestPacketSTATUS(self, result):
         """
@@ -801,7 +813,6 @@ class RawPacketDataTests(unittest.TestCase):
         """
         self.assertEqual(result[0], b'msg')
         self.assertEqual(result[1], b'lang')
-
 
     def test_packetSTATUSShort(self):
         """
@@ -819,7 +830,6 @@ class RawPacketDataTests(unittest.TestCase):
         self.ftc.packet_STATUS(data)
         return d
 
-
     def _cbTestPacketSTATUSShort(self, result):
         """
         Assert that the result is a two-tuple containing empty strings, since
@@ -827,7 +837,6 @@ class RawPacketDataTests(unittest.TestCase):
         """
         self.assertEqual(result[0], b'')
         self.assertEqual(result[1], b'')
-
 
     def test_packetSTATUSWithoutLang(self):
         """
@@ -845,7 +854,6 @@ class RawPacketDataTests(unittest.TestCase):
         data = struct.pack('!LL', 1, filetransfer.FX_OK) + common.NS(b'msg')
         self.ftc.packet_STATUS(data)
         return d
-
 
     def _cbTestPacketSTATUSWithoutLang(self, result):
         """

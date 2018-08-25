@@ -54,16 +54,21 @@ from zope.interface import implementer
 
 # Win32 imports
 from win32file import FD_READ, FD_CLOSE, FD_ACCEPT, FD_CONNECT, WSAEventSelect
+
 try:
     # WSAEnumNetworkEvents was added in pywin32 215
     from win32file import WSAEnumNetworkEvents
 except ImportError:
     import warnings
+
     warnings.warn(
         'Reliable disconnection notification requires pywin32 215 or later',
-        category=UserWarning)
+        category=UserWarning,
+    )
+
     def WSAEnumNetworkEvents(fd, event):
         return set([FD_READ])
+
 
 from win32event import CreateEvent, MsgWaitForMultipleObjects
 from win32event import WAIT_OBJECT_0, WAIT_TIMEOUT, QS_ALLINPUT
@@ -119,6 +124,7 @@ class Win32Reactor(posixbase.PosixReactorBase):
         will also forget about it.
     @type _closedAndNotReading: C{WeakKeyDictionary}
     """
+
     dummyEvent = CreateEvent(None, 0, 0, None)
 
     def __init__(self):
@@ -129,7 +135,6 @@ class Win32Reactor(posixbase.PosixReactorBase):
         self._closedAndNotReading = WeakKeyDictionary()
         posixbase.PosixReactorBase.__init__(self)
 
-
     def _makeSocketEvent(self, fd, action, why):
         """
         Make a win32 event object for a socket.
@@ -139,13 +144,11 @@ class Win32Reactor(posixbase.PosixReactorBase):
         self._events[event] = (fd, action)
         return event
 
-
     def addEvent(self, event, fd, action):
         """
         Add a new win32 event to the event loop.
         """
         self._events[event] = (fd, action)
-
 
     def removeEvent(self, event):
         """
@@ -153,20 +156,19 @@ class Win32Reactor(posixbase.PosixReactorBase):
         """
         del self._events[event]
 
-
     def addReader(self, reader):
         """
         Add a socket FileDescriptor for notification of data available to read.
         """
         if reader not in self._reads:
             self._reads[reader] = self._makeSocketEvent(
-                reader, 'doRead', FD_READ | FD_ACCEPT | FD_CONNECT | FD_CLOSE)
+                reader, 'doRead', FD_READ | FD_ACCEPT | FD_CONNECT | FD_CLOSE
+            )
             # If the reader is closed, move it over to the dictionary of reading
             # descriptors.
             if reader in self._closedAndNotReading:
                 self._closedAndReading[reader] = True
                 del self._closedAndNotReading[reader]
-
 
     def addWriter(self, writer):
         """
@@ -174,7 +176,6 @@ class Win32Reactor(posixbase.PosixReactorBase):
         """
         if writer not in self._writes:
             self._writes[writer] = 1
-
 
     def removeReader(self, reader):
         """Remove a Selectable for notification of data available to read.
@@ -189,13 +190,11 @@ class Win32Reactor(posixbase.PosixReactorBase):
                 self._closedAndNotReading[reader] = True
                 del self._closedAndReading[reader]
 
-
     def removeWriter(self, writer):
         """Remove a Selectable for notification of data available to write.
         """
         if writer in self._writes:
             del self._writes[writer]
-
 
     def removeAll(self):
         """
@@ -203,14 +202,11 @@ class Win32Reactor(posixbase.PosixReactorBase):
         """
         return self._removeAll(self._reads, self._writes)
 
-
     def getReaders(self):
         return list(self._reads.keys())
 
-
     def getWriters(self):
         return list(self._writes.keys())
-
 
     def doWaitForMultipleEvents(self, timeout):
         log.msg(channel='system', event='iteration', reactor=self)
@@ -276,7 +272,6 @@ class Win32Reactor(posixbase.PosixReactorBase):
                     self._closedAndReading[fd] = True
             log.callWithLogger(fd, self._runAction, action, fd)
 
-
     def _runWrite(self, fd):
         closed = 0
         try:
@@ -307,7 +302,6 @@ class Win32Reactor(posixbase.PosixReactorBase):
     doIteration = doWaitForMultipleEvents
 
 
-
 class _ThreadFDWrapper(object):
     """
     This wraps an event handler and translates notification in the helper
@@ -323,12 +317,12 @@ class _ThreadFDWrapper(object):
     @ivar _logPrefix: The pre-fetched log prefix string for C{_fd}, so that
         C{_fd.logPrefix} does not need to be called in a non-main thread.
     """
+
     def __init__(self, reactor, fd, action, logPrefix):
         self._reactor = reactor
         self._fd = fd
         self._action = action
         self._logPrefix = logPrefix
-
 
     def logPrefix(self):
         """
@@ -336,7 +330,6 @@ class _ThreadFDWrapper(object):
         C{__init__}.
         """
         return self._logPrefix
-
 
     def _execute(self):
         """
@@ -346,8 +339,8 @@ class _ThreadFDWrapper(object):
         be removed from C{self._reactor} if appropriate.
         """
         return blockingCallFromThread(
-            self._reactor, lambda: getattr(self._fd, self._action)())
-
+            self._reactor, lambda: getattr(self._fd, self._action)()
+        )
 
     def connectionLost(self, reason):
         """
@@ -355,7 +348,6 @@ class _ThreadFDWrapper(object):
         instead of the helper C{Win32Reactor} thread.
         """
         self._reactor.callFromThread(self._fd.connectionLost, reason)
-
 
 
 @implementer(IReactorWin32Events)
@@ -374,14 +366,12 @@ class _ThreadedWin32EventsMixin(object):
     _reactor = None
     _reactorThread = None
 
-
     def _unmakeHelperReactor(self):
         """
         Stop and discard the reactor started by C{_makeHelperReactor}.
         """
         self._reactor.callFromThread(self._reactor.stop)
         self._reactor = None
-
 
     def _makeHelperReactor(self):
         """
@@ -392,12 +382,9 @@ class _ThreadedWin32EventsMixin(object):
         # This is a helper reactor, it is not the global reactor and its thread
         # is not "the" I/O thread.  Prevent it from registering it as such.
         self._reactor._registerAsIOThread = False
-        self._reactorThread = Thread(
-            target=self._reactor.run, args=(False,))
-        self.addSystemEventTrigger(
-            'after', 'shutdown', self._unmakeHelperReactor)
+        self._reactorThread = Thread(target=self._reactor.run, args=(False,))
+        self.addSystemEventTrigger('after', 'shutdown', self._unmakeHelperReactor)
         self._reactorThread.start()
-
 
     def addEvent(self, event, fd, action):
         """
@@ -407,9 +394,10 @@ class _ThreadedWin32EventsMixin(object):
             self._makeHelperReactor()
         self._reactor.callFromThread(
             self._reactor.addEvent,
-            event, _ThreadFDWrapper(self, fd, action, fd.logPrefix()),
-            "_execute")
-
+            event,
+            _ThreadFDWrapper(self, fd, action, fd.logPrefix()),
+            "_execute",
+        )
 
     def removeEvent(self, event):
         """
@@ -418,11 +406,11 @@ class _ThreadedWin32EventsMixin(object):
         self._reactor.callFromThread(self._reactor.removeEvent, event)
 
 
-
 def install():
     threadable.init(1)
     r = Win32Reactor()
     from . import main
+
     main.installReactor(r)
 
 

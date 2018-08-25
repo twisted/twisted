@@ -23,8 +23,10 @@ from twisted.python import log
 from twisted.python.compat import iterbytes, long, _bytesChr as chr
 from twisted.python.reflect import fullyQualifiedName
 
+
 class BananaError(Exception):
     pass
+
 
 def int2b128(integer, stream):
     if integer == 0:
@@ -51,24 +53,25 @@ def b1282int(st):
     i = 0
     for char in iterbytes(st):
         n = ord(char)
-        i += (n * e)
+        i += n * e
         e <<= 7
     return i
 
 
 # delimiter characters.
-LIST     = chr(0x80)
-INT      = chr(0x81)
-STRING   = chr(0x82)
-NEG      = chr(0x83)
-FLOAT    = chr(0x84)
+LIST = chr(0x80)
+INT = chr(0x81)
+STRING = chr(0x82)
+NEG = chr(0x83)
+FLOAT = chr(0x84)
 # "optional" -- these might be refused by a low-level implementation.
-LONGINT  = chr(0x85)
-LONGNEG  = chr(0x86)
+LONGINT = chr(0x85)
+LONGNEG = chr(0x86)
 # really optional; this is part of the 'pb' vocabulary
-VOCAB    = chr(0x87)
+VOCAB = chr(0x87)
 
 HIGH_BIT_SET = chr(0x80)
+
 
 def setPrefixLimit(limit):
     """
@@ -85,10 +88,12 @@ def setPrefixLimit(limit):
     global _PREFIX_LIMIT
     _PREFIX_LIMIT = limit
 
+
 _PREFIX_LIMIT = None
 setPrefixLimit(64)
 
-SIZE_LIMIT = 640 * 1024   # 640k is all you'll ever need :-)
+SIZE_LIMIT = 640 * 1024  # 640k is all you'll ever need :-)
+
 
 class Banana(protocol.Protocol, styles.Ephemeral):
     """
@@ -119,17 +124,14 @@ class Banana(protocol.Protocol, styles.Ephemeral):
         self._largestInt = 2 ** 31 - 1
         self._largestLongInt = 2 ** (limit * 7) - 1
 
-
     def connectionReady(self):
         """Surrogate for connectionMade
         Called after protocol negotiation.
         """
 
-
     def _selectDialect(self, dialect):
         self.currentDialect = dialect
         self.connectionReady()
-
 
     def callExpressionReceived(self, obj):
         if self.currentDialect:
@@ -145,25 +147,27 @@ class Banana(protocol.Protocol, styles.Ephemeral):
                         break
                 else:
                     # I can't speak any of those dialects.
-                    log.msg("The client doesn't speak any of the protocols "
-                            "offered by the server: disconnecting.")
+                    log.msg(
+                        "The client doesn't speak any of the protocols "
+                        "offered by the server: disconnecting."
+                    )
                     self.transport.loseConnection()
             else:
                 if obj in self.knownDialects:
                     self._selectDialect(obj)
                 else:
                     # the client just selected a protocol that I did not suggest.
-                    log.msg("The client selected a protocol the server didn't "
-                            "suggest and doesn't know: disconnecting.")
+                    log.msg(
+                        "The client selected a protocol the server didn't "
+                        "suggest and doesn't know: disconnecting."
+                    )
                     self.transport.loseConnection()
-
 
     def connectionMade(self):
         self.setPrefixLimit(_PREFIX_LIMIT)
         self.currentDialect = None
         if not self.isClient:
             self.sendEncoded(self.knownDialects)
-
 
     def gotItem(self, item):
         l = self.listStack
@@ -179,7 +183,10 @@ class Banana(protocol.Protocol, styles.Ephemeral):
         listStack = self.listStack
         gotItem = self.gotItem
         while buffer:
-            assert self.buffer != buffer, "This ain't right: %s %s" % (repr(self.buffer), repr(buffer))
+            assert self.buffer != buffer, "This ain't right: %s %s" % (
+                repr(self.buffer),
+                repr(buffer),
+            )
             self.buffer = buffer
             pos = 0
             for ch in iterbytes(buffer):
@@ -188,13 +195,19 @@ class Banana(protocol.Protocol, styles.Ephemeral):
                 pos = pos + 1
             else:
                 if pos > self.prefixLimit:
-                    raise BananaError("Security precaution: more than %d bytes of prefix" % (self.prefixLimit,))
+                    raise BananaError(
+                        "Security precaution: more than %d bytes of prefix"
+                        % (self.prefixLimit,)
+                    )
                 return
             num = buffer[:pos]
-            typebyte = buffer[pos:pos+1]
-            rest = buffer[pos+1:]
+            typebyte = buffer[pos : pos + 1]
+            rest = buffer[pos + 1 :]
             if len(num) > self.prefixLimit:
-                raise BananaError("Security precaution: longer than %d bytes worth of prefix" % (self.prefixLimit,))
+                raise BananaError(
+                    "Security precaution: longer than %d bytes worth of prefix"
+                    % (self.prefixLimit,)
+                )
             if typebyte == LIST:
                 num = b1282int(num)
                 if num > SIZE_LIMIT:
@@ -235,7 +248,8 @@ class Banana(protocol.Protocol, styles.Ephemeral):
                     gotItem(item)
                 else:
                     raise NotImplementedError(
-                        "Invalid item for pb protocol {0!r}".format(item))
+                        "Invalid item for pb protocol {0!r}".format(item)
+                    )
             elif typebyte == FLOAT:
                 if len(rest) >= 8:
                     buffer = rest[8:]
@@ -249,63 +263,57 @@ class Banana(protocol.Protocol, styles.Ephemeral):
                 gotItem(item)
         self.buffer = b''
 
-
     def expressionReceived(self, lst):
         """Called when an expression (list, string, or int) is received.
         """
         raise NotImplementedError()
 
-
     outgoingVocabulary = {
         # Jelly Data Types
-        b'None'           :  1,
-        b'class'          :  2,
-        b'dereference'    :  3,
-        b'reference'      :  4,
-        b'dictionary'     :  5,
-        b'function'       :  6,
-        b'instance'       :  7,
-        b'list'           :  8,
-        b'module'         :  9,
-        b'persistent'     : 10,
-        b'tuple'          : 11,
-        b'unpersistable'  : 12,
-
+        b'None': 1,
+        b'class': 2,
+        b'dereference': 3,
+        b'reference': 4,
+        b'dictionary': 5,
+        b'function': 6,
+        b'instance': 7,
+        b'list': 8,
+        b'module': 9,
+        b'persistent': 10,
+        b'tuple': 11,
+        b'unpersistable': 12,
         # PB Data Types
-        b'copy'           : 13,
-        b'cache'          : 14,
-        b'cached'         : 15,
-        b'remote'         : 16,
-        b'local'          : 17,
-        b'lcache'         : 18,
-
+        b'copy': 13,
+        b'cache': 14,
+        b'cached': 15,
+        b'remote': 16,
+        b'local': 17,
+        b'lcache': 18,
         # PB Protocol Messages
-        b'version'        : 19,
-        b'login'          : 20,
-        b'password'       : 21,
-        b'challenge'      : 22,
-        b'logged_in'      : 23,
-        b'not_logged_in'  : 24,
-        b'cachemessage'   : 25,
-        b'message'        : 26,
-        b'answer'         : 27,
-        b'error'          : 28,
-        b'decref'         : 29,
-        b'decache'        : 30,
-        b'uncache'        : 31,
-        }
+        b'version': 19,
+        b'login': 20,
+        b'password': 21,
+        b'challenge': 22,
+        b'logged_in': 23,
+        b'not_logged_in': 24,
+        b'cachemessage': 25,
+        b'message': 26,
+        b'answer': 27,
+        b'error': 28,
+        b'decref': 29,
+        b'decache': 30,
+        b'uncache': 31,
+    }
 
     incomingVocabulary = {}
     for k, v in outgoingVocabulary.items():
         incomingVocabulary[v] = k
-
 
     def __init__(self, isClient=1):
         self.listStack = []
         self.outgoingSymbols = copy.copy(self.outgoingVocabulary)
         self.outgoingSymbolCount = 0
         self.isClient = isClient
-
 
     def sendEncoded(self, obj):
         """
@@ -323,20 +331,17 @@ class Banana(protocol.Protocol, styles.Ephemeral):
         value = encodeStream.getvalue()
         self.transport.write(value)
 
-
     def _encode(self, obj, write):
         if isinstance(obj, (list, tuple)):
             if len(obj) > SIZE_LIMIT:
-                raise BananaError(
-                    "list/tuple is too long to send (%d)" % (len(obj),))
+                raise BananaError("list/tuple is too long to send (%d)" % (len(obj),))
             int2b128(len(obj), write)
             write(LIST)
             for elem in obj:
                 self._encode(elem, write)
         elif isinstance(obj, (int, long)):
             if obj < self._smallestLongInt or obj > self._largestLongInt:
-                raise BananaError(
-                    "int/long is too large to send (%d)" % (obj,))
+                raise BananaError("int/long is too large to send (%d)" % (obj,))
             if obj < self._smallestInt:
                 int2b128(-obj, write)
                 write(LONGNEG)
@@ -361,13 +366,17 @@ class Banana(protocol.Protocol, styles.Ephemeral):
             else:
                 if len(obj) > SIZE_LIMIT:
                     raise BananaError(
-                        "byte string is too long to send (%d)" % (len(obj),))
+                        "byte string is too long to send (%d)" % (len(obj),)
+                    )
                 int2b128(len(obj), write)
                 write(STRING)
                 write(obj)
         else:
-            raise BananaError("Banana cannot send {0} objects: {1!r}".format(
-                fullyQualifiedName(type(obj)), obj))
+            raise BananaError(
+                "Banana cannot send {0} objects: {1!r}".format(
+                    fullyQualifiedName(type(obj)), obj
+                )
+            )
 
 
 # For use from the interactive interpreter

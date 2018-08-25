@@ -19,6 +19,7 @@ class DOMHelpersTestsMixin:
     domhelpers functionality based on a DOM creation function provided by a
     subclass.
     """
+
     dom = None
 
     def test_getElementsByTagName(self):
@@ -77,7 +78,6 @@ class DOMHelpersTestsMixin:
         actual = domhelpers.getElementsByTagName(root, 'foo')
         self.assertEqual(actual, expected)
 
-
     def test_gatherTextNodes(self):
         doc1 = self.dom.parseString('<a>foo</a>')
         actual = domhelpers.gatherTextNodes(doc1)
@@ -94,8 +94,10 @@ class DOMHelpersTestsMixin:
         actual = domhelpers.gatherTextNodes(doc2.documentElement)
         self.assertEqual(actual, expected)
 
-        doc3_xml = ('<a>a<b>b<d>d<g>g</g><h>h</h></d><e>e<i>i</i></e></b>' +
-                    '<c>c<f>f<j>j</j></f></c></a>')
+        doc3_xml = (
+            '<a>a<b>b<d>d<g>g</g><h>h</h></d><e>e<i>i</i></e></b>'
+            + '<c>c<f>f<j>j</j></f></c></a>'
+        )
         doc3 = self.dom.parseString(doc3_xml)
         actual = domhelpers.gatherTextNodes(doc3)
         expected = 'abdgheicfj'
@@ -103,14 +105,11 @@ class DOMHelpersTestsMixin:
         actual = domhelpers.gatherTextNodes(doc3.documentElement)
         self.assertEqual(actual, expected)
 
-
     def test_clearNode(self):
         doc1 = self.dom.parseString('<a><b><c><d/></c></b></a>')
         a_node = doc1.documentElement
         domhelpers.clearNode(a_node)
-        self.assertEqual(
-            a_node.toxml(),
-            self.dom.Element('a').toxml())
+        self.assertEqual(a_node.toxml(), self.dom.Element('a').toxml())
 
         doc2 = self.dom.parseString('<a><b><c><d/></c></b></a>')
         b_node = doc2.documentElement.childNodes[0]
@@ -119,7 +118,6 @@ class DOMHelpersTestsMixin:
         expected = self.dom.Element('a')
         expected.appendChild(self.dom.Element('b'))
         self.assertEqual(actual, expected.toxml())
-
 
     def test_get(self):
         doc1 = self.dom.parseString('<a><b id="bar"/><c class="foo"/></a>')
@@ -136,11 +134,7 @@ class DOMHelpersTestsMixin:
         expected.setAttribute('id', 'bar')
         self.assertEqual(actual, expected.toxml())
 
-        self.assertRaises(domhelpers.NodeLookupError,
-                          domhelpers.get,
-                          doc1,
-                          "pzork")
-
+        self.assertRaises(domhelpers.NodeLookupError, domhelpers.get, doc1, "pzork")
 
     def test_getIfExists(self):
         doc1 = self.dom.parseString('<a><b id="bar"/><c class="foo"/></a>')
@@ -154,7 +148,6 @@ class DOMHelpersTestsMixin:
         node = domhelpers.getIfExists(doc1, "pzork")
         self.assertIdentical(node, None)
 
-
     def test_getAndClear(self):
         doc1 = self.dom.parseString('<a><b id="foo"><c></c></b></a>')
         doc = self.dom.Document()
@@ -164,12 +157,12 @@ class DOMHelpersTestsMixin:
         expected.setAttribute('id', 'foo')
         self.assertEqual(actual, expected.toxml())
 
-
     def test_locateNodes(self):
-        doc1 = self.dom.parseString('<a><b foo="olive"><c foo="olive"/></b><d foo="poopy"/></a>')
+        doc1 = self.dom.parseString(
+            '<a><b foo="olive"><c foo="olive"/></b><d foo="poopy"/></a>'
+        )
         doc = self.dom.Document()
-        node_list = domhelpers.locateNodes(
-            doc1.childNodes, 'foo', 'olive', noNesting=1)
+        node_list = domhelpers.locateNodes(doc1.childNodes, 'foo', 'olive', noNesting=1)
         actual = ''.join([node.toxml() for node in node_list])
         expected = doc.createElement('b')
         expected.setAttribute('foo', 'olive')
@@ -179,20 +172,19 @@ class DOMHelpersTestsMixin:
 
         self.assertEqual(actual, expected.toxml())
 
-        node_list = domhelpers.locateNodes(
-            doc1.childNodes, 'foo', 'olive', noNesting=0)
+        node_list = domhelpers.locateNodes(doc1.childNodes, 'foo', 'olive', noNesting=0)
         actual = ''.join([node.toxml() for node in node_list])
         self.assertEqual(actual, expected.toxml() + c.toxml())
-
 
     def test_getParents(self):
         doc1 = self.dom.parseString('<a><b><c><d/></c><e/></b><f/></a>')
         node_list = domhelpers.getParents(
-            doc1.childNodes[0].childNodes[0].childNodes[0])
-        actual = ''.join([node.tagName for node in node_list
-                          if hasattr(node, 'tagName')])
+            doc1.childNodes[0].childNodes[0].childNodes[0]
+        )
+        actual = ''.join(
+            [node.tagName for node in node_list if hasattr(node, 'tagName')]
+        )
         self.assertEqual(actual, 'cba')
-
 
     def test_findElementsWithAttribute(self):
         doc1 = self.dom.parseString('<a foo="1"><b foo="2"/><c foo="1"/><d/></a>')
@@ -204,25 +196,25 @@ class DOMHelpersTestsMixin:
         actual = ''.join([node.tagName for node in node_list])
         self.assertEqual(actual, 'ac')
 
-
     def test_findNodesNamed(self):
         doc1 = self.dom.parseString('<doc><foo/><bar/><foo>a</foo></doc>')
         node_list = domhelpers.findNodesNamed(doc1, 'foo')
         actual = len(node_list)
         self.assertEqual(actual, 2)
 
-
     def test_escape(self):
         j = 'this string " contains many & characters> xml< won\'t like'
-        expected = 'this string &quot; contains many &amp; characters&gt; xml&lt; won\'t like'
+        expected = (
+            'this string &quot; contains many &amp; characters&gt; xml&lt; won\'t like'
+        )
         self.assertEqual(domhelpers.escape(j), expected)
-
 
     def test_unescape(self):
         j = 'this string &quot; has &&amp; entities &gt; &lt; and some characters xml won\'t like<'
-        expected = 'this string " has && entities > < and some characters xml won\'t like<'
+        expected = (
+            'this string " has && entities > < and some characters xml won\'t like<'
+        )
         self.assertEqual(domhelpers.unescape(j), expected)
-
 
     def test_getNodeText(self):
         """
@@ -231,7 +223,6 @@ class DOMHelpersTestsMixin:
         """
         node = self.dom.parseString('<foo><bar>baz</bar><bar>quux</bar></foo>')
         self.assertEqual(domhelpers.getNodeText(node), "bazquux")
-
 
 
 class MicroDOMHelpersTests(DOMHelpersTestsMixin, TestCase):
@@ -257,7 +248,6 @@ class MicroDOMHelpersTests(DOMHelpersTestsMixin, TestCase):
         actual = domhelpers.gatherTextNodes(doc4.documentElement)
         self.assertEqual(actual, expected)
 
-
     def test_textEntitiesNotDecoded(self):
         """
         Microdom does not decode entities in text nodes.
@@ -269,7 +259,6 @@ class MicroDOMHelpersTests(DOMHelpersTestsMixin, TestCase):
         self.assertEqual(actual, expected)
         actual = domhelpers.gatherTextNodes(doc5.documentElement)
         self.assertEqual(actual, expected)
-
 
 
 class MiniDOMHelpersTests(DOMHelpersTestsMixin, TestCase):
@@ -286,7 +275,6 @@ class MiniDOMHelpersTests(DOMHelpersTestsMixin, TestCase):
         self.assertEqual(actual, expected)
         actual = domhelpers.gatherTextNodes(doc5.documentElement)
         self.assertEqual(actual, expected)
-
 
     def test_getNodeUnicodeText(self):
         """

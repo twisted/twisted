@@ -17,6 +17,7 @@ from io import StringIO
 
 from twisted.python.compat import StringType, unicode
 
+
 class LiteralValue(unicode):
     def value(self, elem):
         return self
@@ -72,6 +73,7 @@ class BooleanValue:
     @ivar value: Reference to the method that will calculate the value of
                  this expression given an element.
     """
+
     def __init__(self, lhs, op, rhs):
         self.lhs = lhs
         self.rhs = rhs
@@ -128,7 +130,7 @@ class _text_Function:
 class _Location:
     def __init__(self):
         self.predicates = []
-        self.elementName  = None
+        self.elementName = None
         self.childLocation = None
 
     def matchesPredicates(self, elem):
@@ -205,8 +207,9 @@ class _AnyLocation:
         parentlist.append(elem.name)
 
     def isRootMatch(self, elem):
-        if (self.elementName == None or self.elementName == elem.name) and \
-           self.matchesPredicates(elem):
+        if (
+            self.elementName == None or self.elementName == elem.name
+        ) and self.matchesPredicates(elem):
             if self.childLocation != None:
                 for c in elem.elements():
                     if self.childLocation.matches(c):
@@ -216,8 +219,9 @@ class _AnyLocation:
         return False
 
     def findFirstRootMatch(self, elem):
-        if (self.elementName == None or self.elementName == elem.name) and \
-           self.matchesPredicates(elem):
+        if (
+            self.elementName == None or self.elementName == elem.name
+        ) and self.matchesPredicates(elem):
             # Thus far, the name matches and the predicates match,
             # now check into the children and find the first one
             # that matches the rest of the structure
@@ -254,8 +258,7 @@ class _AnyLocation:
             return False
 
     def queryForString(self, elem, resultbuf):
-        raise NotImplementedError(
-            "queryForString is not implemented for any location")
+        raise NotImplementedError("queryForString is not implemented for any location")
 
     def queryForNodes(self, elem, resultlist):
         # First check to see if _this_ element is a root
@@ -265,7 +268,6 @@ class _AnyLocation:
         # Now check each child
         for c in elem.elements():
             self.queryForNodes(c, resultlist)
-
 
     def queryForStringList(self, elem, resultlist):
         if self.isRootMatch(elem):
@@ -280,8 +282,8 @@ class XPathQuery:
     def __init__(self, queryStr):
         self.queryStr = queryStr
         # Prevent a circular import issue, as xpathparser imports this module.
-        from twisted.words.xish.xpathparser import (XPathParser,
-                                                    XPathParserScanner)
+        from twisted.words.xish.xpathparser import XPathParser, XPathParserScanner
+
         parser = XPathParser(XPathParserScanner(queryStr))
         self.baseLocation = getattr(parser, 'XPATH')()
 
@@ -314,6 +316,7 @@ class XPathQuery:
 
 
 __internedQueries = {}
+
 
 def internQuery(queryString):
     if queryString not in __internedQueries:

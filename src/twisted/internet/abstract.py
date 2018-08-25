@@ -22,6 +22,8 @@ if _PY3:
     # memoryview prevents the slice from copying
     def _concatenate(bObj, offset, bArray):
         return b''.join([memoryview(bObj)[offset:]] + bArray)
+
+
 else:
     from __builtin__ import buffer
 
@@ -29,7 +31,6 @@ else:
         # Avoid one extra string copy by using a buffer to limit what
         # we include in the result.
         return buffer(bObj, offset) + b"".join(bArray)
-
 
 
 class _ConsumerMixin(object):
@@ -70,6 +71,7 @@ class _ConsumerMixin(object):
     @ivar streamingProducer: C{bool} or C{int}
 
     """
+
     producer = None
     producerPaused = False
     streamingProducer = False
@@ -82,7 +84,6 @@ class _ConsumerMixin(object):
         actually close.
         """
         raise NotImplementedError("%r did not implement startWriting")
-
 
     def registerProducer(self, producer, streaming):
         """
@@ -103,7 +104,8 @@ class _ConsumerMixin(object):
         if self.producer is not None:
             raise RuntimeError(
                 "Cannot register producer %s, because producer %s was never "
-                "unregistered." % (producer, self.producer))
+                "unregistered." % (producer, self.producer)
+            )
         if self.disconnected:
             producer.stopProducing()
         else:
@@ -112,7 +114,6 @@ class _ConsumerMixin(object):
             if not streaming:
                 producer.resumeProducing()
 
-
     def unregisterProducer(self):
         """
         Stop consuming data from a producer, without disconnecting.
@@ -120,7 +121,6 @@ class _ConsumerMixin(object):
         self.producer = None
         if self.connected and self.disconnecting:
             self.startWriting()
-
 
 
 @implementer(interfaces.ILoggingContext)
@@ -143,7 +143,6 @@ class _LogOwner(object):
             return applicationObject.logPrefix()
         return applicationObject.__class__.__name__
 
-
     def logPrefix(self):
         """
         Override this method to insert custom logging behavior.  Its
@@ -153,11 +152,13 @@ class _LogOwner(object):
         return "-"
 
 
-
 @implementer(
-    interfaces.IPushProducer, interfaces.IReadWriteDescriptor,
-    interfaces.IConsumer, interfaces.ITransport,
-    interfaces.IHalfCloseableDescriptor)
+    interfaces.IPushProducer,
+    interfaces.IReadWriteDescriptor,
+    interfaces.IConsumer,
+    interfaces.ITransport,
+    interfaces.IHalfCloseableDescriptor,
+)
 class FileDescriptor(_ConsumerMixin, _LogOwner):
     """
     An object which can be operated on by select().
@@ -166,6 +167,7 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
     they are readable or writable; e.g. they have a file-descriptor that is
     valid to be passed to select(2).
     """
+
     connected = 0
     disconnected = 0
     disconnecting = 0
@@ -174,7 +176,7 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
     dataBuffer = b""
     offset = 0
 
-    SEND_LIMIT = 128*1024
+    SEND_LIMIT = 128 * 1024
 
     def __init__(self, reactor=None):
         """
@@ -185,9 +187,8 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
         if not reactor:
             from twisted.internet import reactor
         self.reactor = reactor
-        self._tempDataBuffer = [] # will be added to dataBuffer in doWrite
+        self._tempDataBuffer = []  # will be added to dataBuffer in doWrite
         self._tempDataLen = 0
-
 
     def connectionLost(self, reason):
         """The connection was lost.
@@ -207,7 +208,6 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
         self.stopReading()
         self.stopWriting()
 
-
     def writeSomeData(self, data):
         """
         Write as much as possible of the given data, immediately.
@@ -218,9 +218,9 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
         of bytes written (possibly zero); if an exception, it indicates the
         connection was lost.
         """
-        raise NotImplementedError("%s does not implement writeSomeData" %
-                                  reflect.qual(self.__class__))
-
+        raise NotImplementedError(
+            "%s does not implement writeSomeData" % reflect.qual(self.__class__)
+        )
 
     def doRead(self):
         """
@@ -229,8 +229,9 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
         Subclasses must override this method. The result will be interpreted
         in the same way as a result of doWrite().
         """
-        raise NotImplementedError("%s does not implement doRead" %
-                                  reflect.qual(self.__class__))
+        raise NotImplementedError(
+            "%s does not implement doRead" % reflect.qual(self.__class__)
+        )
 
     def doWrite(self):
         """
@@ -245,7 +246,8 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
             # If there is currently less than SEND_LIMIT bytes left to send
             # in the string, extend it with the array data.
             self.dataBuffer = _concatenate(
-                self.dataBuffer, self.offset, self._tempDataBuffer)
+                self.dataBuffer, self.offset, self._tempDataBuffer
+            )
             self.offset = 0
             self._tempDataBuffer = []
             self._tempDataLen = 0
@@ -270,8 +272,9 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
             # stop writing.
             self.stopWriting()
             # If I've got a producer who is supposed to supply me with data,
-            if self.producer is not None and ((not self.streamingProducer)
-                                              or self.producerPaused):
+            if self.producer is not None and (
+                (not self.streamingProducer) or self.producerPaused
+            ):
                 # tell them to supply some more.
                 self.producerPaused = False
                 self.producer.resumeProducing()
@@ -309,7 +312,6 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
         # override in subclasses
         self.connectionLost(reason)
 
-
     def _isSendBufferFull(self):
         """
         Determine whether the user-space send buffer for this transport is full
@@ -323,7 +325,6 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
         """
         return len(self.dataBuffer) + self._tempDataLen > self.bufferSize
 
-
     def _maybePauseProducer(self):
         """
         Possibly pause a producer, if there is one and the send buffer is full.
@@ -336,7 +337,6 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
                 self.producerPaused = True
                 self.producer.pauseProducing()
 
-
     def write(self, data):
         """Reliably write some data.
 
@@ -345,7 +345,7 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
         buffer and this descriptor has a registered streaming producer, its
         C{pauseProducing()} method will be called.
         """
-        if isinstance(data, unicode): # no, really, I mean it
+        if isinstance(data, unicode):  # no, really, I mean it
             raise TypeError("Data must not be unicode")
         if not self.connected or self._writeDisconnected:
             return
@@ -354,7 +354,6 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
             self._tempDataLen += len(data)
             self._maybePauseProducer()
             self.startWriting()
-
 
     def writeSequence(self, iovec):
         """
@@ -373,7 +372,7 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
         data is written to the underlying file descriptor.
         """
         for i in iovec:
-            if isinstance(i, unicode): # no, really, I mean it
+            if isinstance(i, unicode):  # no, really, I mean it
                 raise TypeError("Data must not be unicode")
         if not self.connected or not iovec or self._writeDisconnected:
             return
@@ -382,7 +381,6 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
             self._tempDataLen += len(i)
         self._maybePauseProducer()
         self.startWriting()
-
 
     def loseConnection(self, _connDone=failure.Failure(main.CONNECTION_DONE)):
         """Close the connection at the next available opportunity.
@@ -448,7 +446,7 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
     # any object you can write to can be a consumer, really.
 
     producer = None
-    bufferSize = 2**2**2**2
+    bufferSize = 2 ** 2 ** 2 ** 2
 
     def stopConsuming(self):
         """Stop consuming data.
@@ -472,7 +470,6 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
     def stopProducing(self):
         self.loseConnection()
 
-
     def fileno(self):
         """File Descriptor number for select().
 
@@ -480,7 +477,6 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
         indicate a valid file descriptor for the operating system.
         """
         return -1
-
 
 
 def isIPAddress(addr, family=AF_INET):
@@ -525,7 +521,6 @@ def isIPAddress(addr, family=AF_INET):
     except (ValueError, error):
         return False
     return True
-
 
 
 def isIPv6Address(addr):

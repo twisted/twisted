@@ -10,7 +10,9 @@ from zope.interface import implementer
 from twisted.plugin import IPlugin
 
 from twisted.internet.endpoints import (
-    quoteStringArgument, serverFromString, IStreamServerEndpointStringParser
+    quoteStringArgument,
+    serverFromString,
+    IStreamServerEndpointStringParser,
 )
 from twisted.python.compat import iteritems
 
@@ -34,13 +36,16 @@ def unparseEndpoint(args, kwargs):
     """
 
     description = ':'.join(
-        [quoteStringArgument(str(arg)) for arg in args] +
-        sorted(['%s=%s' % (quoteStringArgument(str(key)),
-                    quoteStringArgument(str(value)))
-         for key, value in iteritems(kwargs)
-        ]))
+        [quoteStringArgument(str(arg)) for arg in args]
+        + sorted(
+            [
+                '%s=%s'
+                % (quoteStringArgument(str(key)), quoteStringArgument(str(value)))
+                for key, value in iteritems(kwargs)
+            ]
+        )
+    )
     return description
-
 
 
 @implementer(IPlugin, IStreamServerEndpointStringParser)
@@ -50,6 +55,7 @@ class HAProxyServerParser(object):
 
     @ivar prefix: See L{IStreamServerEndpointStringParser.prefix}.
     """
+
     prefix = "haproxy"
 
     def parseStreamServer(self, reactor, *args, **kwargs):

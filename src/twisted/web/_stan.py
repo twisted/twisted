@@ -26,7 +26,6 @@ from __future__ import absolute_import, division
 from twisted.python.compat import iteritems
 
 
-
 class slot(object):
     """
     Marker for markup insertion in a template.
@@ -58,8 +57,9 @@ class slot(object):
         XML file, L{None}.
     """
 
-    def __init__(self, name, default=None, filename=None, lineNumber=None,
-                 columnNumber=None):
+    def __init__(
+        self, name, default=None, filename=None, lineNumber=None, columnNumber=None
+    ):
         self.name = name
         self.children = []
         self.default = default
@@ -67,10 +67,8 @@ class slot(object):
         self.lineNumber = lineNumber
         self.columnNumber = columnNumber
 
-
     def __repr__(self):
         return "slot(%r)" % (self.name,)
-
 
 
 class Tag(object):
@@ -124,8 +122,16 @@ class Tag(object):
     lineNumber = None
     columnNumber = None
 
-    def __init__(self, tagName, attributes=None, children=None, render=None,
-                 filename=None, lineNumber=None, columnNumber=None):
+    def __init__(
+        self,
+        tagName,
+        attributes=None,
+        children=None,
+        render=None,
+        filename=None,
+        lineNumber=None,
+        columnNumber=None,
+    ):
         self.tagName = tagName
         self.render = render
         if attributes is None:
@@ -143,7 +149,6 @@ class Tag(object):
         if columnNumber is not None:
             self.columnNumber = columnNumber
 
-
     def fillSlots(self, **slots):
         """
         Remember the slots provided at this position in the DOM.
@@ -158,7 +163,6 @@ class Tag(object):
             self.slotData = {}
         self.slotData.update(slots)
         return self
-
 
     def __call__(self, *children, **kw):
         """
@@ -197,7 +201,6 @@ class Tag(object):
                 self.attributes[k] = v
         return self
 
-
     def _clone(self, obj, deep):
         """
         Clone an arbitrary object; used by L{Tag.clone}.
@@ -216,7 +219,6 @@ class Tag(object):
             return [self._clone(x, deep) for x in obj]
         else:
             return obj
-
 
     def clone(self, deep=True):
         """
@@ -245,11 +247,11 @@ class Tag(object):
             render=self.render,
             filename=self.filename,
             lineNumber=self.lineNumber,
-            columnNumber=self.columnNumber)
+            columnNumber=self.columnNumber,
+        )
         newtag.slotData = newslotdata
 
         return newtag
-
 
     def clear(self):
         """
@@ -257,7 +259,6 @@ class Tag(object):
         """
         self.children = []
         return self
-
 
     def __repr__(self):
         rstr = ''
@@ -268,10 +269,27 @@ class Tag(object):
         return "Tag(%r%s)" % (self.tagName, rstr)
 
 
-
-voidElements = ('img', 'br', 'hr', 'base', 'meta', 'link', 'param', 'area',
-                'input', 'col', 'basefont', 'isindex', 'frame', 'command',
-                'embed', 'keygen', 'source', 'track', 'wbs')
+voidElements = (
+    'img',
+    'br',
+    'hr',
+    'base',
+    'meta',
+    'link',
+    'param',
+    'area',
+    'input',
+    'col',
+    'basefont',
+    'isindex',
+    'frame',
+    'command',
+    'embed',
+    'keygen',
+    'source',
+    'track',
+    'wbs',
+)
 
 
 class CDATA(object):
@@ -283,13 +301,12 @@ class CDATA(object):
     @ivar data: The data between "C{<![CDATA[}" and "C{]]>}".
     @type data: C{unicode}
     """
+
     def __init__(self, data):
         self.data = data
 
-
     def __repr__(self):
         return 'CDATA(%r)' % (self.data,)
-
 
 
 class Comment(object):
@@ -305,10 +322,8 @@ class Comment(object):
     def __init__(self, data):
         self.data = data
 
-
     def __repr__(self):
         return 'Comment(%r)' % (self.data,)
-
 
 
 class CharRef(object):
@@ -322,9 +337,9 @@ class CharRef(object):
 
     @since: 12.0
     """
+
     def __init__(self, ordinal):
         self.ordinal = ordinal
-
 
     def __repr__(self):
         return "CharRef(%d)" % (self.ordinal,)

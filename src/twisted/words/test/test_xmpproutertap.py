@@ -10,8 +10,8 @@ from twisted.trial import unittest
 from twisted.words import xmpproutertap as tap
 from twisted.words.protocols.jabber import component
 
-class XMPPRouterTapTests(unittest.TestCase):
 
+class XMPPRouterTapTests(unittest.TestCase):
     def test_port(self):
         """
         The port option is recognised as a parameter.
@@ -19,7 +19,6 @@ class XMPPRouterTapTests(unittest.TestCase):
         opt = tap.Options()
         opt.parseOptions(['--port', '7001'])
         self.assertEqual(opt['port'], '7001')
-
 
     def test_portDefault(self):
         """
@@ -29,7 +28,6 @@ class XMPPRouterTapTests(unittest.TestCase):
         opt.parseOptions([])
         self.assertEqual(opt['port'], 'tcp:5347:interface=127.0.0.1')
 
-
     def test_secret(self):
         """
         The secret option is recognised as a parameter.
@@ -37,7 +35,6 @@ class XMPPRouterTapTests(unittest.TestCase):
         opt = tap.Options()
         opt.parseOptions(['--secret', 'hushhush'])
         self.assertEqual(opt['secret'], 'hushhush')
-
 
     def test_secretDefault(self):
         """
@@ -47,7 +44,6 @@ class XMPPRouterTapTests(unittest.TestCase):
         opt.parseOptions([])
         self.assertEqual(opt['secret'], 'secret')
 
-
     def test_verbose(self):
         """
         The verbose option is recognised as a flag.
@@ -55,7 +51,6 @@ class XMPPRouterTapTests(unittest.TestCase):
         opt = tap.Options()
         opt.parseOptions(['--verbose'])
         self.assertTrue(opt['verbose'])
-
 
     def test_makeService(self):
         """
@@ -72,7 +67,6 @@ class XMPPRouterTapTests(unittest.TestCase):
         self.assertIsInstance(factory.router, component.Router)
         self.assertEqual('secret', factory.secret)
         self.assertFalse(factory.logTraffic)
-
 
     def test_makeServiceVerbose(self):
         """

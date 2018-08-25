@@ -26,6 +26,7 @@ else:
         A dummy class to show that this test file was discovered but the tests
         are unable to be ran in this version of Python.
         """
+
         skip = "async/await is not available before Python 3.5"
 
         def test_notAvailable(self):
@@ -49,6 +50,7 @@ else:
         A dummy class to show that this test file was discovered but the tests
         are unable to be ran in this version of Python.
         """
+
         skip = "yield from is not available before Python 3"
 
         def test_notAvailable(self):

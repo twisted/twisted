@@ -16,13 +16,13 @@ class FakeAMProtocol(object):
     """
     A fake C{AMP} implementations to track C{callRemote} calls.
     """
+
     id = 0
     lastCall = None
 
     def callRemote(self, command, **kwargs):
         self.lastCall = command
         self.lastArgs = kwargs
-
 
 
 class WorkerReporterTests(TestCase):
@@ -35,25 +35,20 @@ class WorkerReporterTests(TestCase):
         self.workerReporter = WorkerReporter(self.fakeAMProtocol)
         self.test = TestCase()
 
-
     def test_addSuccess(self):
         """
         L{WorkerReporter.addSuccess} sends a L{managercommands.AddSuccess}
         command.
         """
         self.workerReporter.addSuccess(self.test)
-        self.assertEqual(self.fakeAMProtocol.lastCall,
-                         managercommands.AddSuccess)
-
+        self.assertEqual(self.fakeAMProtocol.lastCall, managercommands.AddSuccess)
 
     def test_addError(self):
         """
         L{WorkerReporter.addError} sends a L{managercommands.AddError} command.
         """
         self.workerReporter.addError(self.test, Failure(RuntimeError('error')))
-        self.assertEqual(self.fakeAMProtocol.lastCall,
-                         managercommands.AddError)
-
+        self.assertEqual(self.fakeAMProtocol.lastCall, managercommands.AddError)
 
     def test_addErrorTuple(self):
         """
@@ -62,21 +57,17 @@ class WorkerReporterTests(TestCase):
         command.
         """
         self.workerReporter.addError(
-            self.test, (RuntimeError, RuntimeError('error'), None))
-        self.assertEqual(self.fakeAMProtocol.lastCall,
-                         managercommands.AddError)
-
+            self.test, (RuntimeError, RuntimeError('error'), None)
+        )
+        self.assertEqual(self.fakeAMProtocol.lastCall, managercommands.AddError)
 
     def test_addFailure(self):
         """
         L{WorkerReporter.addFailure} sends a L{managercommands.AddFailure}
         command.
         """
-        self.workerReporter.addFailure(self.test,
-                                       Failure(RuntimeError('fail')))
-        self.assertEqual(self.fakeAMProtocol.lastCall,
-                         managercommands.AddFailure)
-
+        self.workerReporter.addFailure(self.test, Failure(RuntimeError('fail')))
+        self.assertEqual(self.fakeAMProtocol.lastCall, managercommands.AddFailure)
 
     def test_addFailureTuple(self):
         """
@@ -85,10 +76,9 @@ class WorkerReporterTests(TestCase):
         message.
         """
         self.workerReporter.addFailure(
-            self.test, (RuntimeError, RuntimeError('fail'), None))
-        self.assertEqual(self.fakeAMProtocol.lastCall,
-                         managercommands.AddFailure)
-
+            self.test, (RuntimeError, RuntimeError('fail'), None)
+        )
+        self.assertEqual(self.fakeAMProtocol.lastCall, managercommands.AddFailure)
 
     def test_addFailureNonASCII(self):
         """
@@ -100,28 +90,18 @@ class WorkerReporterTests(TestCase):
         exception = RuntimeError(content)
         failure = Failure(exception)
         self.workerReporter.addFailure(self.test, failure)
-        self.assertEqual(
-            self.fakeAMProtocol.lastCall,
-            managercommands.AddFailure,
-        )
-        self.assertEqual(
-            content,
-            self.fakeAMProtocol.lastArgs["fail"],
-        )
-    if _PY3:
-        test_addFailureNonASCII.skip = (
-            "Exceptions only convert to unicode on Python 3"
-        )
+        self.assertEqual(self.fakeAMProtocol.lastCall, managercommands.AddFailure)
+        self.assertEqual(content, self.fakeAMProtocol.lastArgs["fail"])
 
+    if _PY3:
+        test_addFailureNonASCII.skip = "Exceptions only convert to unicode on Python 3"
 
     def test_addSkip(self):
         """
         L{WorkerReporter.addSkip} sends a L{managercommands.AddSkip} command.
         """
         self.workerReporter.addSkip(self.test, 'reason')
-        self.assertEqual(self.fakeAMProtocol.lastCall,
-                         managercommands.AddSkip)
-
+        self.assertEqual(self.fakeAMProtocol.lastCall, managercommands.AddSkip)
 
     def test_addExpectedFailure(self):
         """
@@ -130,10 +110,11 @@ class WorkerReporterTests(TestCase):
         protocol.
         """
         self.workerReporter.addExpectedFailure(
-            self.test, Failure(RuntimeError('error')), Todo('todo'))
-        self.assertEqual(self.fakeAMProtocol.lastCall,
-                         managercommands.AddExpectedFailure)
-
+            self.test, Failure(RuntimeError('error')), Todo('todo')
+        )
+        self.assertEqual(
+            self.fakeAMProtocol.lastCall, managercommands.AddExpectedFailure
+        )
 
     def test_addExpectedFailureNoTodo(self):
         """
@@ -142,10 +123,11 @@ class WorkerReporterTests(TestCase):
         protocol.
         """
         self.workerReporter.addExpectedFailure(
-            self.test, Failure(RuntimeError('error')))
-        self.assertEqual(self.fakeAMProtocol.lastCall,
-                         managercommands.AddExpectedFailure)
-
+            self.test, Failure(RuntimeError('error'))
+        )
+        self.assertEqual(
+            self.fakeAMProtocol.lastCall, managercommands.AddExpectedFailure
+        )
 
     def test_addUnexpectedSuccess(self):
         """
@@ -153,9 +135,9 @@ class WorkerReporterTests(TestCase):
         L{managercommands.AddUnexpectedSuccess} command.
         """
         self.workerReporter.addUnexpectedSuccess(self.test, Todo('todo'))
-        self.assertEqual(self.fakeAMProtocol.lastCall,
-                         managercommands.AddUnexpectedSuccess)
-
+        self.assertEqual(
+            self.fakeAMProtocol.lastCall, managercommands.AddUnexpectedSuccess
+        )
 
     def test_addUnexpectedSuccessNoTodo(self):
         """
@@ -163,5 +145,6 @@ class WorkerReporterTests(TestCase):
         L{managercommands.AddUnexpectedSuccess} command.
         """
         self.workerReporter.addUnexpectedSuccess(self.test)
-        self.assertEqual(self.fakeAMProtocol.lastCall,
-                         managercommands.AddUnexpectedSuccess)
+        self.assertEqual(
+            self.fakeAMProtocol.lastCall, managercommands.AddUnexpectedSuccess
+        )

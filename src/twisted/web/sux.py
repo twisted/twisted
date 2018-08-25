@@ -27,7 +27,6 @@ from twisted.python.compat import unicode
 from twisted.python.reflect import prefixedMethodNames
 
 
-
 # Elements of the three-tuples in the state table.
 BEGIN_HANDLER = 0
 DO_HANDLER = 1
@@ -35,6 +34,7 @@ END_HANDLER = 2
 
 identChars = '.-_:'
 lenientIdentChars = identChars + ';+#/%~'
+
 
 def nop(*args, **kw):
     "Do nothing."
@@ -57,15 +57,24 @@ def zipfndict(*args, **kw):
 
 
 def prefixedMethodClassDict(clazz, prefix):
-    return dict([(name, getattr(clazz, prefix + name)) for name in prefixedMethodNames(clazz, prefix)])
+    return dict(
+        [
+            (name, getattr(clazz, prefix + name))
+            for name in prefixedMethodNames(clazz, prefix)
+        ]
+    )
 
 
 def prefixedMethodObjDict(obj, prefix):
-    return dict([(name, getattr(obj, prefix + name)) for name in prefixedMethodNames(obj.__class__, prefix)])
+    return dict(
+        [
+            (name, getattr(obj, prefix + name))
+            for name in prefixedMethodNames(obj.__class__, prefix)
+        ]
+    )
 
 
 class ParseError(Exception):
-
     def __init__(self, filename, line, col, message):
         self.filename = filename
         self.line = line
@@ -73,8 +82,8 @@ class ParseError(Exception):
         self.message = message
 
     def __str__(self):
-       return "%s:%s:%s: %s" % (self.filename, self.line, self.col,
-                                self.message)
+        return "%s:%s:%s: %s" % (self.filename, self.line, self.col, self.message)
+
 
 class XMLParser(Protocol):
 
@@ -100,7 +109,7 @@ class XMLParser(Protocol):
         return (self.lineno, self.colno)
 
     def _parseError(self, message):
-        raise ParseError(*((self.filename,)+self.saveMark()+(message,)))
+        raise ParseError(*((self.filename,) + self.saveMark() + (message,)))
 
     def _buildStateTable(self):
         '''Return a dictionary of begin, do, end state function tuples'''
@@ -110,8 +119,11 @@ class XMLParser(Protocol):
         stateTable = getattr(self.__class__, '__stateTable', None)
         if stateTable is None:
             stateTable = self.__class__.__stateTable = zipfndict(
-                *[prefixedMethodObjDict(self, prefix)
-                  for prefix in ('begin_', 'do_', 'end_')])
+                *[
+                    prefixedMethodObjDict(self, prefix)
+                    for prefix in ('begin_', 'do_', 'end_')
+                ]
+            )
         return stateTable
 
     def _decode(self, data):
@@ -135,15 +147,13 @@ class XMLParser(Protocol):
         # lenient behavior, because those may not have </script>
         # -radix
 
-        if (self.tagName == 'script' and 'src' not in self.tagAttributes):
+        if self.tagName == 'script' and 'src' not in self.tagAttributes:
             # we do this ourselves rather than having begin_waitforendscript
             # because that can get called multiple times and we don't want
             # bodydata to get reset other than the first time.
             self.begin_bodydata(None)
             return 'waitforendscript'
         return 'bodydata'
-
-
 
     def dataReceived(self, data):
         stateTable = self._buildStateTable()
@@ -163,8 +173,10 @@ class XMLParser(Protocol):
         curState = self.state
         # replace saveMark with a nested scope function
         _saveMark = self.saveMark
+
         def saveMark():
             return (lineno, colno)
+
         self.saveMark = saveMark
         # fetch functions from the stateTable
         beginFn, doFn, endFn = stateTable[curState]
@@ -189,14 +201,12 @@ class XMLParser(Protocol):
         # state doesn't make sense if there's an exception..
         self.state = curState
 
-
     def connectionLost(self, reason):
         """
         End the last state we were in.
         """
         stateTable = self._buildStateTable()
         stateTable[self.state][END_HANDLER]()
-
 
     # state methods
 
@@ -220,9 +230,9 @@ class XMLParser(Protocol):
             return 'bodydata'
 
     def begin_tagstart(self, byte):
-        self.tagName = ''               # name of the tag
-        self.tagAttributes = {}         # attributes of the tag
-        self.termtag = 0                # is the tag self-terminating
+        self.tagName = ''  # name of the tag
+        self.tagAttributes = {}  # attributes of the tag
+        self.termtag = 0  # is the tag self-terminating
         self.endtag = 0
 
     def do_tagstart(self, byte):
@@ -245,7 +255,9 @@ class XMLParser(Protocol):
                 return 'bodydata'
             else:
                 self.gotTagStart(self.tagName, {})
-                return (not self.beExtremelyLenient) and 'bodydata' or self.maybeBodyData()
+                return (
+                    (not self.beExtremelyLenient) and 'bodydata' or self.maybeBodyData()
+                )
         elif byte == '/':
             if self.tagName:
                 return 'afterslash'
@@ -267,7 +279,7 @@ class XMLParser(Protocol):
             if self.beExtremelyLenient:
                 self.bodydata = '<'
                 return 'unentity'
-            self._parseError('Invalid tag character: %r'% byte)
+            self._parseError('Invalid tag character: %r' % byte)
 
     def begin_unentity(self, byte):
         self.bodydata += byte
@@ -402,12 +414,15 @@ class XMLParser(Protocol):
                 # I saw this in actual HTML once:
                 # <font size=\"3\"><sup>SM</sup></font>
                 return
-        self._parseError("Invalid initial attribute value: %r; Attribute values must be quoted." % byte)
+        self._parseError(
+            "Invalid initial attribute value: %r; Attribute values must be quoted."
+            % byte
+        )
 
     attrname = ''
     attrval = ''
 
-    def begin_beforeeq(self,byte):
+    def begin_beforeeq(self, byte):
         self._beforeeq_termtag = 0
 
     def do_beforeeq(self, byte):
@@ -476,7 +491,7 @@ class XMLParser(Protocol):
     def do_afterslash(self, byte):
         # this state is only after a self-terminating slash, e.g. <foo/>
         if self._after_slash_closed:
-            self._parseError("Mal-formed")#XXX When does this happen??
+            self._parseError("Mal-formed")  # XXX When does this happen??
         if byte != '>':
             if self.beExtremelyLenient:
                 return
@@ -556,10 +571,9 @@ class XMLParser(Protocol):
             self.bodydata += "<" + self.temptagdata
             return 'waitforendscript'
 
-
     def begin_entityref(self, byte):
         self.erefbuf = ''
-        self.erefextra = '' # extra bit for lenient mode
+        self.erefextra = ''  # extra bit for lenient mode
 
     def do_entityref(self, byte):
         if byte.isspace() or byte == "<":
@@ -587,6 +601,7 @@ class XMLParser(Protocol):
     def begin_spacebodydata(self, byte):
         self.bodydata = self.erefextra
         self.erefextra = None
+
     do_spacebodydata = do_bodydata
     end_spacebodydata = end_bodydata
 

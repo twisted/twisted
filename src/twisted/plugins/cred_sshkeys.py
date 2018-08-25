@@ -22,19 +22,18 @@ authorized_keys and authorized_keys2 files in user .ssh/ directories.
 
 
 try:
-    from twisted.conch.checkers import (
-        SSHPublicKeyChecker, UNIXAuthorizedKeysFiles)
+    from twisted.conch.checkers import SSHPublicKeyChecker, UNIXAuthorizedKeysFiles
 
     @implementer(ICheckerFactory, plugin.IPlugin)
     class SSHKeyCheckerFactory(object):
         """
         Generates checkers that will authenticate a SSH public key
         """
+
         authType = 'sshkey'
         authHelp = sshKeyCheckerFactoryHelp
         argStringFormat = 'No argstring required.'
         credentialInterfaces = SSHPublicKeyChecker.credentialInterfaces
-
 
         def generateChecker(self, argstring=''):
             """
@@ -43,8 +42,6 @@ try:
             listed in user .ssh/ directories.
             """
             return SSHPublicKeyChecker(UNIXAuthorizedKeysFiles())
-
-
 
     theSSHKeyCheckerFactory = SSHKeyCheckerFactory()
 

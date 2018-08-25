@@ -12,8 +12,12 @@ import errno
 from attr import attrib, attrs, Factory
 
 from twisted.logger import (
-    LogLevel, LogPublisher, LogBeginner,
-    FileLogObserver, FilteringLogObserver, LogLevelFilterPredicate,
+    LogLevel,
+    LogPublisher,
+    LogBeginner,
+    FileLogObserver,
+    FilteringLogObserver,
+    LogLevelFilterPredicate,
 )
 from twisted.test.proto_helpers import MemoryReactor
 
@@ -24,7 +28,6 @@ from .._runner import Runner
 from .test_pidfile import DummyFilePath
 
 import twisted.trial.unittest
-
 
 
 class RunnerTests(twisted.trial.unittest.TestCase):
@@ -57,14 +60,11 @@ class RunnerTests(twisted.trial.unittest.TestCase):
 
         self.globalLogPublisher = LogPublisher()
         self.globalLogBeginner = LogBeginner(
-            self.globalLogPublisher,
-            self.stdio.stderr, self.stdio,
-            self.warnings,
+            self.globalLogPublisher, self.stdio.stderr, self.stdio, self.warnings
         )
 
         self.patch(_runner, "stderr", self.stderr)
         self.patch(_runner, "globalLogBeginner", self.globalLogBeginner)
-
 
     def test_runInOrder(self):
         """
@@ -75,14 +75,8 @@ class RunnerTests(twisted.trial.unittest.TestCase):
 
         self.assertEqual(
             runner.calledMethods,
-            [
-                "killIfRequested",
-                "startLogging",
-                "startReactor",
-                "reactorExited",
-            ]
+            ["killIfRequested", "startLogging", "startReactor", "reactorExited"],
         )
-
 
     def test_runUsesPIDFile(self):
         """
@@ -100,7 +94,6 @@ class RunnerTests(twisted.trial.unittest.TestCase):
         self.assertTrue(pidFile.entered)
         self.assertTrue(pidFile.exited)
 
-
     def test_runAlreadyRunning(self):
         """
         L{Runner.run} exits with L{ExitStatus.EX_USAGE} and the expected
@@ -116,7 +109,6 @@ class RunnerTests(twisted.trial.unittest.TestCase):
         self.assertEqual(self.exit.status, ExitStatus.EX_CONFIG)
         self.assertEqual(self.exit.message, "Already running.")
 
-
     def test_killNotRequested(self):
         """
         L{Runner.killIfRequested} when C{kill} is false doesn't exit and
@@ -127,7 +119,6 @@ class RunnerTests(twisted.trial.unittest.TestCase):
 
         self.assertEqual(self.kill.calls, [])
         self.assertFalse(self.exit.exited)
-
 
     def test_killRequestedWithoutPIDFile(self):
         """
@@ -142,7 +133,6 @@ class RunnerTests(twisted.trial.unittest.TestCase):
         self.assertEqual(self.exit.status, ExitStatus.EX_USAGE)
         self.assertEqual(self.exit.message, "No PID file specified.")
 
-
     def test_killRequestedWithPIDFile(self):
         """
         L{Runner.killIfRequested} when C{kill} is true and given a C{pidFile}
@@ -155,7 +145,6 @@ class RunnerTests(twisted.trial.unittest.TestCase):
         self.assertEqual(self.kill.calls, [(self.pid, SIGTERM)])
         self.assertEqual(self.exit.status, ExitStatus.EX_OK)
         self.assertIdentical(self.exit.message, None)
-
 
     def test_killRequestedWithPIDFileCantRead(self):
         """
@@ -175,7 +164,6 @@ class RunnerTests(twisted.trial.unittest.TestCase):
         self.assertEqual(self.exit.status, ExitStatus.EX_IOERR)
         self.assertEqual(self.exit.message, "Unable to read PID file.")
 
-
     def test_killRequestedWithPIDFileEmpty(self):
         """
         L{Runner.killIfRequested} when C{kill} is true and given a C{pidFile}
@@ -188,7 +176,6 @@ class RunnerTests(twisted.trial.unittest.TestCase):
         self.assertEqual(self.exit.status, ExitStatus.EX_DATAERR)
         self.assertEqual(self.exit.message, "Invalid PID file.")
 
-
     def test_killRequestedWithPIDFileNotAnInt(self):
         """
         L{Runner.killIfRequested} when C{kill} is true and given a C{pidFile}
@@ -200,7 +187,6 @@ class RunnerTests(twisted.trial.unittest.TestCase):
 
         self.assertEqual(self.exit.status, ExitStatus.EX_DATAERR)
         self.assertEqual(self.exit.message, "Invalid PID file.")
-
 
     def test_startLogging(self):
         """
@@ -223,8 +209,7 @@ class RunnerTests(twisted.trial.unittest.TestCase):
 
         class MockFilteringLogObserver(FilteringLogObserver):
             def __init__(
-                self, observer, predicates,
-                negativeObserver=lambda event: None
+                self, observer, predicates, negativeObserver=lambda event: None
             ):
                 MockFilteringLogObserver.observer = observer
                 MockFilteringLogObserver.predicates = predicates
@@ -257,24 +242,17 @@ class RunnerTests(twisted.trial.unittest.TestCase):
         # Check log level predicate with the correct default log level
         self.assertEqual(len(MockFilteringLogObserver.predicates), 1)
         self.assertIsInstance(
-            MockFilteringLogObserver.predicates[0],
-            LogLevelFilterPredicate
+            MockFilteringLogObserver.predicates[0], LogLevelFilterPredicate
         )
         self.assertIdentical(
-            MockFilteringLogObserver.predicates[0].defaultLogLevel,
-            LogLevel.critical
+            MockFilteringLogObserver.predicates[0].defaultLogLevel, LogLevel.critical
         )
 
         # Check for a file observer attached to the filtering observer
-        self.assertIsInstance(
-            MockFilteringLogObserver.observer, MockFileLogObserver
-        )
+        self.assertIsInstance(MockFilteringLogObserver.observer, MockFileLogObserver)
 
         # Check for the file we gave it
-        self.assertIdentical(
-            MockFilteringLogObserver.observer.outFile, logFile
-        )
-
+        self.assertIdentical(MockFilteringLogObserver.observer.outFile, logFile)
 
     def test_startReactorWithReactor(self):
         """
@@ -287,14 +265,12 @@ class RunnerTests(twisted.trial.unittest.TestCase):
 
         self.assertTrue(reactor.hasRun)
 
-
     def test_startReactorWhenRunning(self):
         """
         L{Runner.startReactor} ensures that C{whenRunning} is called with
         C{whenRunningArguments} when the reactor is running.
         """
         self._testHook("whenRunning", "startReactor")
-
 
     def test_whenRunningWithArguments(self):
         """
@@ -303,14 +279,12 @@ class RunnerTests(twisted.trial.unittest.TestCase):
         """
         self._testHook("whenRunning")
 
-
     def test_reactorExitedWithArguments(self):
         """
         L{Runner.whenRunning} calls C{reactorExited} with
         C{reactorExitedArguments}.
         """
         self._testHook("reactorExited")
-
 
     def _testHook(self, methodName, callerName=None):
         """
@@ -349,7 +323,6 @@ class RunnerTests(twisted.trial.unittest.TestCase):
         self.assertEqual(argumentsSeen[0], arguments)
 
 
-
 @attrs(frozen=True)
 class DummyRunner(Runner):
     """
@@ -360,22 +333,17 @@ class DummyRunner(Runner):
 
     calledMethods = attrib(default=Factory(list))
 
-
     def killIfRequested(self):
         self.calledMethods.append("killIfRequested")
-
 
     def startLogging(self):
         self.calledMethods.append("startLogging")
 
-
     def startReactor(self):
         self.calledMethods.append("startReactor")
 
-
     def reactorExited(self):
         self.calledMethods.append("reactorExited")
-
 
 
 class DummyPIDFile(NonePIDFile):
@@ -384,21 +352,19 @@ class DummyPIDFile(NonePIDFile):
 
     Tracks context manager entry/exit without doing anything.
     """
+
     def __init__(self):
         NonePIDFile.__init__(self)
 
         self.entered = False
-        self.exited  = False
-
+        self.exited = False
 
     def __enter__(self):
         self.entered = True
         return self
 
-
     def __exit__(self, excType, excValue, traceback):
-        self.exited  = True
-
+        self.exited = True
 
 
 class DummyExit(object):
@@ -410,14 +376,12 @@ class DummyExit(object):
     def __init__(self):
         self.exited = False
 
-
     def __call__(self, status, message=None):
         assert not self.exited
 
-        self.status  = status
+        self.status = status
         self.message = message
-        self.exited  = True
-
+        self.exited = True
 
 
 class DummyKill(object):
@@ -429,10 +393,8 @@ class DummyKill(object):
     def __init__(self):
         self.calls = []
 
-
     def __call__(self, pid, sig):
         self.calls.append((pid, sig))
-
 
 
 class DummyStandardIO(object):
@@ -443,7 +405,6 @@ class DummyStandardIO(object):
     def __init__(self, stdout, stderr):
         self.stdout = stdout
         self.stderr = stderr
-
 
 
 class DummyWarningsModule(object):

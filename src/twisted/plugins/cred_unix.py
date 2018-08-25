@@ -20,7 +20,6 @@ from twisted.internet import defer
 from twisted.python.compat import StringType
 
 
-
 def verifyCryptedPassword(crypted, pw):
     """
     Use L{crypt.crypt} to Verify that an unencrypted
@@ -47,7 +46,6 @@ def verifyCryptedPassword(crypted, pw):
     return crypt.crypt(pw, crypted) == crypted
 
 
-
 @implementer(ICredentialsChecker)
 class UNIXChecker(object):
     """
@@ -59,8 +57,8 @@ class UNIXChecker(object):
     Right now this supports Python's pwd and spwd modules, if they are
     installed. It does not support PAM.
     """
-    credentialInterfaces = (IUsernamePassword,)
 
+    credentialInterfaces = (IUsernamePassword,)
 
     def checkPwd(self, pwd, username, password):
         """
@@ -88,7 +86,6 @@ class UNIXChecker(object):
                 return None
             elif verifyCryptedPassword(cryptedPass, password):
                 return defer.succeed(username)
-
 
     def checkSpwd(self, spwd, username, password):
         """
@@ -119,7 +116,6 @@ class UNIXChecker(object):
             if verifyCryptedPassword(cryptedPass, password):
                 return defer.succeed(username)
 
-
     def requestAvatarId(self, credentials):
         username, password = credentials.username, credentials.password
 
@@ -147,7 +143,6 @@ class UNIXChecker(object):
         return defer.fail(UnauthorizedLogin())
 
 
-
 unixCheckerFactoryHelp = """
 This checker will attempt to use every resource available to
 authenticate against the list of users on the local UNIX system.
@@ -167,6 +162,7 @@ class UNIXCheckerFactory(object):
     """
     A factory for L{UNIXChecker}.
     """
+
     authType = 'unix'
     authHelp = unixCheckerFactoryHelp
     argStringFormat = 'No argstring required.'
@@ -179,7 +175,6 @@ class UNIXCheckerFactory(object):
         UNIX environment.
         """
         return UNIXChecker()
-
 
 
 theUnixCheckerFactory = UNIXCheckerFactory()

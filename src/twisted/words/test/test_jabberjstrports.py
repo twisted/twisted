@@ -27,7 +27,6 @@ class JabberStrPortsPlaceHolderTests(unittest.TestCase):
         got = jstrports.parse("tcp:DOMAIN:65535", "Factory")
         self.assertEqual(expected, got)
 
-
     def test_client(self):
         """
         L{jstrports.client} returns a L{TCPClient} service.

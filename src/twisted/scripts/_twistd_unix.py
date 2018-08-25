@@ -11,14 +11,12 @@ import sys
 import traceback
 
 from twisted.python import log, logfile, usage
-from twisted.python.compat import (intToBytes, _bytesRepr, _PY3)
-from twisted.python.util import (
-    switchUID, uidFromString, gidFromString, untilConcludes)
+from twisted.python.compat import intToBytes, _bytesRepr, _PY3
+from twisted.python.util import switchUID, uidFromString, gidFromString, untilConcludes
 from twisted.application import app, service
 from twisted.internet.interfaces import IReactorDaemonize
 from twisted import copyright, logger
 from twisted.python.runtime import platformType
-
 
 
 if platformType == "win32":
@@ -32,53 +30,57 @@ def _umask(value):
 class ServerOptions(app.ServerOptions):
     synopsis = "Usage: twistd [options]"
 
-    optFlags = [['nodaemon', 'n', "don't daemonize, don't use default umask of 0077"],
-                ['originalname', None, "Don't try to change the process name"],
-                ['syslog', None, "Log to syslog, not to file"],
-                ['euid', '',
-                 "Set only effective user-id rather than real user-id. "
-                 "(This option has no effect unless the server is running as "
-                 "root, in which case it means not to shed all privileges "
-                 "after binding ports, retaining the option to regain "
-                 "privileges in cases such as spawning processes. "
-                 "Use with caution.)"],
-               ]
+    optFlags = [
+        ['nodaemon', 'n', "don't daemonize, don't use default umask of 0077"],
+        ['originalname', None, "Don't try to change the process name"],
+        ['syslog', None, "Log to syslog, not to file"],
+        [
+            'euid',
+            '',
+            "Set only effective user-id rather than real user-id. "
+            "(This option has no effect unless the server is running as "
+            "root, in which case it means not to shed all privileges "
+            "after binding ports, retaining the option to regain "
+            "privileges in cases such as spawning processes. "
+            "Use with caution.)",
+        ],
+    ]
 
     optParameters = [
-                     ['prefix', None,'twisted',
-                      "use the given prefix when syslogging"],
-                     ['pidfile','','twistd.pid',
-                      "Name of the pidfile"],
-                     ['chroot', None, None,
-                      'Chroot to a supplied directory before running'],
-                     ['uid', 'u', None, "The uid to run as.", uidFromString],
-                     ['gid', 'g', None,
-                      "The gid to run as.  If not specified, the default gid "
-                      "associated with the specified --uid is used.",
-                      gidFromString],
-                     ['umask', None, None,
-                      "The (octal) file creation mask to apply.", _umask],
-                    ]
+        ['prefix', None, 'twisted', "use the given prefix when syslogging"],
+        ['pidfile', '', 'twistd.pid', "Name of the pidfile"],
+        ['chroot', None, None, 'Chroot to a supplied directory before running'],
+        ['uid', 'u', None, "The uid to run as.", uidFromString],
+        [
+            'gid',
+            'g',
+            None,
+            "The gid to run as.  If not specified, the default gid "
+            "associated with the specified --uid is used.",
+            gidFromString,
+        ],
+        ['umask', None, None, "The (octal) file creation mask to apply.", _umask],
+    ]
 
     compData = usage.Completions(
-        optActions={"pidfile": usage.CompleteFiles("*.pid"),
-                    "chroot": usage.CompleteDirs(descr="chroot directory"),
-                    "gid": usage.CompleteGroups(descr="gid to run as"),
-                    "uid": usage.CompleteUsernames(descr="uid to run as"),
-                    "prefix": usage.Completer(descr="syslog prefix"),
-                    },
-        )
-
+        optActions={
+            "pidfile": usage.CompleteFiles("*.pid"),
+            "chroot": usage.CompleteDirs(descr="chroot directory"),
+            "gid": usage.CompleteGroups(descr="gid to run as"),
+            "uid": usage.CompleteUsernames(descr="uid to run as"),
+            "prefix": usage.Completer(descr="syslog prefix"),
+        }
+    )
 
     def opt_version(self):
         """
         Print version information and exit.
         """
-        print('twistd (the Twisted daemon) {}'.format(copyright.version),
-              file=self.stdout)
+        print(
+            'twistd (the Twisted daemon) {}'.format(copyright.version), file=self.stdout
+        )
         print(copyright.copyright, file=self.stdout)
         sys.exit()
-
 
     def postOptions(self):
         app.ServerOptions.postOptions(self)
@@ -105,15 +107,20 @@ def checkPID(pidfile):
             else:
                 sys.exit(
                     "Can't check status of PID {} from pidfile {}: {}".format(
-                    pid, pidfile, why))
+                        pid, pidfile, why
+                    )
+                )
         else:
-            sys.exit("""\
+            sys.exit(
+                """\
 Another twistd server is running, PID {}\n
 This could either be a previously started instance of your application or a
 different application entirely. To start a new one, either run it in some other
 directory, or use the --pidfile and --logfile parameters to avoid clashes.
-""".format(pid))
-
+""".format(
+                    pid
+                )
+            )
 
 
 class UnixAppLogger(app.AppLogger):
@@ -138,7 +145,6 @@ class UnixAppLogger(app.AppLogger):
         self._syslogPrefix = options.get("prefix", "")
         self._nodaemon = options.get("nodaemon", False)
 
-
     def _getLogObserver(self):
         """
         Create and return a suitable log observer for the given configuration.
@@ -152,6 +158,7 @@ class UnixAppLogger(app.AppLogger):
         """
         if self._syslog:
             from twisted.python import syslog
+
             return syslog.SyslogObserver(self._syslogPrefix).emit
 
         if self._logfilename == '-':
@@ -171,12 +178,14 @@ class UnixAppLogger(app.AppLogger):
             else:
                 # Override if signal is set to None or SIG_DFL (0)
                 if not signal.getsignal(signal.SIGUSR1):
+
                     def rotateLog(signal, frame):
                         from twisted.internet import reactor
+
                         reactor.callFromThread(logFile.rotate)
+
                     signal.signal(signal.SIGUSR1, rotateLog)
         return logger.textFileLogObserver(logFile)
-
 
 
 def launchWithName(name):
@@ -186,12 +195,12 @@ def launchWithName(name):
         os.execv(exe, [name, sys.argv[0], '--originalname'] + sys.argv[1:])
 
 
-
 class UnixApplicationRunner(app.ApplicationRunner):
     """
     An ApplicationRunner which does Unix-specific things, like fork,
     shed privileges, and maintain a PID file.
     """
+
     loggerFactory = UnixAppLogger
 
     def preApplication(self):
@@ -199,11 +208,9 @@ class UnixApplicationRunner(app.ApplicationRunner):
         Do pre-application-creation setup.
         """
         checkPID(self.config['pidfile'])
-        self.config['nodaemon'] = (self.config['nodaemon']
-                                   or self.config['debug'])
+        self.config['nodaemon'] = self.config['nodaemon'] or self.config['debug']
         self.oldstdout = sys.stdout
         self.oldstderr = sys.stderr
-
 
     def _formatChildException(self, exception):
         """
@@ -224,15 +231,15 @@ class UnixApplicationRunner(app.ApplicationRunner):
         """
         # On Python 2 this will encode Unicode messages with the ascii
         # codec and the backslashreplace error handler.
-        exceptionLine = traceback.format_exception_only(exception.__class__,
-                                                        exception)[-1]
+        exceptionLine = traceback.format_exception_only(exception.__class__, exception)[
+            -1
+        ]
         # remove the trailing newline
         formattedMessage = '1 {}'.format(exceptionLine.strip())
         # On Python 3, encode the message the same way Python 2's
         # format_exception_only does
         if _PY3:
-            formattedMessage = formattedMessage.encode('ascii',
-                                                       'backslashreplace')
+            formattedMessage = formattedMessage.encode('ascii', 'backslashreplace')
         # By this point, the message has been encoded, if appropriate,
         # with backslashreplace on both Python 2 and Python 3.
         # Truncating the encoded message won't make it completely
@@ -242,7 +249,6 @@ class UnixApplicationRunner(app.ApplicationRunner):
         # ensuring that the child doesn't block because the pipe's
         # full.  This assumes PIPE_BUF > 100!
         return formattedMessage[:100]
-
 
     def postApplication(self):
         """
@@ -268,7 +274,6 @@ class UnixApplicationRunner(app.ApplicationRunner):
         self.startReactor(None, self.oldstdout, self.oldstderr)
         self.removePID(self.config['pidfile'])
 
-
     def removePID(self, pidfile):
         """
         Remove the specified PID file, if possible.  Errors are logged, not
@@ -288,7 +293,6 @@ class UnixApplicationRunner(app.ApplicationRunner):
                 log.err(e, "Failed to unlink PID file:")
         except:
             log.err(None, "Failed to unlink PID file:")
-
 
     def setupEnvironment(self, chroot, rundir, nodaemon, umask, pidfile):
         """
@@ -325,11 +329,11 @@ class UnixApplicationRunner(app.ApplicationRunner):
             os.umask(umask)
         if daemon:
             from twisted.internet import reactor
+
             self.config["statusPipe"] = self.daemonize(reactor)
         if pidfile:
             with open(pidfile, 'wb') as f:
                 f.write(intToBytes(os.getpid()))
-
 
     def daemonize(self, reactor):
         """
@@ -357,7 +361,7 @@ class UnixApplicationRunner(app.ApplicationRunner):
         if os.fork():  # launch child and...
             code = self._waitForStart(r)
             os.close(r)
-            os._exit(code)   # kill off parent
+            os._exit(code)  # kill off parent
         os.setsid()
         if os.fork():  # launch child and...
             os._exit(0)  # kill off parent again.
@@ -375,7 +379,6 @@ class UnixApplicationRunner(app.ApplicationRunner):
 
         return w
 
-
     def _waitForStart(self, readPipe):
         """
         Wait for the daemonization success.
@@ -389,12 +392,13 @@ class UnixApplicationRunner(app.ApplicationRunner):
         data = untilConcludes(os.read, readPipe, 100)
         dataRepr = _bytesRepr(data[2:])
         if data != b"0":
-            msg = ("An error has occurred: {}\nPlease look at log "
-                   "file for more information.\n".format(dataRepr))
+            msg = (
+                "An error has occurred: {}\nPlease look at log "
+                "file for more information.\n".format(dataRepr)
+            )
             untilConcludes(sys.__stderr__.write, msg)
             return 1
         return 0
-
 
     def shedPrivileges(self, euid, uid, gid):
         """
@@ -416,12 +420,13 @@ class UnixApplicationRunner(app.ApplicationRunner):
             try:
                 switchUID(uid, gid, euid)
             except OSError as e:
-                log.msg('failed to set {}: {} (are you root?) -- '
-                        'exiting.'.format(desc, e))
+                log.msg(
+                    'failed to set {}: {} (are you root?) -- '
+                    'exiting.'.format(desc, e)
+                )
                 sys.exit(1)
             else:
                 log.msg('set {}'.format(desc))
-
 
     def startApplication(self, application):
         """
@@ -435,9 +440,12 @@ class UnixApplicationRunner(app.ApplicationRunner):
         if not self.config['originalname']:
             launchWithName(process.processName)
         self.setupEnvironment(
-            self.config['chroot'], self.config['rundir'],
-            self.config['nodaemon'], self.config['umask'],
-            self.config['pidfile'])
+            self.config['chroot'],
+            self.config['rundir'],
+            self.config['nodaemon'],
+            self.config['umask'],
+            self.config['pidfile'],
+        )
 
         service.IService(application).privilegedStartService()
 

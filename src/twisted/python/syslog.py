@@ -18,7 +18,6 @@ DEFAULT_OPTIONS = 0
 DEFAULT_FACILITY = syslog.LOG_USER
 
 
-
 @_oldStyle
 class SyslogObserver:
     """
@@ -31,11 +30,11 @@ class SyslogObserver:
     facility by setting the 'C{syslogPriority}' and 'C{syslogFacility}' keys in
     the event dict.
     """
+
     openlog = syslog.openlog
     syslog = syslog.syslog
 
-    def __init__(self, prefix, options=DEFAULT_OPTIONS,
-                 facility=DEFAULT_FACILITY):
+    def __init__(self, prefix, options=DEFAULT_OPTIONS, facility=DEFAULT_FACILITY):
         """
         @type prefix: C{str}
         @param prefix: The syslog prefix to use.
@@ -50,7 +49,6 @@ class SyslogObserver:
             classification for messages sent to syslog by this observer).
         """
         self.openlog(prefix, options, facility)
-
 
     def emit(self, eventDict):
         """
@@ -91,13 +89,12 @@ class SyslogObserver:
                 firstLine = False
             else:
                 line = '\t' + line
-            self.syslog(priority | facility,
-                        '[%s] %s' % (eventDict['system'], line))
+            self.syslog(priority | facility, '[%s] %s' % (eventDict['system'], line))
 
 
-
-def startLogging(prefix='Twisted', options=DEFAULT_OPTIONS,
-                 facility=DEFAULT_FACILITY, setStdout=1):
+def startLogging(
+    prefix='Twisted', options=DEFAULT_OPTIONS, facility=DEFAULT_FACILITY, setStdout=1
+):
     """
     Send all Twisted logging output to syslog from now on.
 

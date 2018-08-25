@@ -35,14 +35,12 @@ class BasicCredentialFactory(object):
     def __init__(self, authenticationRealm):
         self.authenticationRealm = authenticationRealm
 
-
     def getChallenge(self, request):
         """
         Return a challenge including the HTTP authentication realm with which
         this factory was created.
         """
         return {'realm': self.authenticationRealm}
-
 
     def decode(self, response, request):
         """

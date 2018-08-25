@@ -39,11 +39,7 @@ from twisted.python.win32 import WindowsError
 
 from twisted.python.util import FancyEqMixin
 
-_CREATE_FLAGS = (os.O_EXCL |
-                 os.O_CREAT |
-                 os.O_RDWR |
-                 O_BINARY)
-
+_CREATE_FLAGS = os.O_EXCL | os.O_CREAT | os.O_RDWR | O_BINARY
 
 
 def _stub_islink(path):
@@ -62,7 +58,6 @@ def _stub_islink(path):
 islink = getattr(os.path, 'islink', _stub_islink)
 randomBytes = os.urandom
 armor = base64.urlsafe_b64encode
-
 
 
 class IFilePath(Interface):
@@ -93,6 +88,7 @@ class IFilePath(Interface):
 
     @since: 12.1
     """
+
     sep = Attribute("The path separator to use in string representations")
 
     def child(name):
@@ -216,13 +212,11 @@ class InsecurePath(Exception):
     """
 
 
-
 class LinkError(Exception):
     """
     An error with symlinks - either that there are cyclical symlinks or that
     symlink are not supported on this platform.
     """
-
 
 
 class UnlistableError(OSError):
@@ -236,6 +230,7 @@ class UnlistableError(OSError):
     @ivar originalException: the actual original exception instance, either an
         L{OSError} or a L{WindowsError}.
     """
+
     def __init__(self, originalException):
         """
         Create an UnlistableError exception.
@@ -244,7 +239,6 @@ class UnlistableError(OSError):
         """
         self.__dict__.update(originalException.__dict__)
         self.originalException = originalException
-
 
 
 class _WindowsUnlistableError(UnlistableError, WindowsError):
@@ -256,7 +250,6 @@ class _WindowsUnlistableError(UnlistableError, WindowsError):
     It is private because all application code may portably catch
     L{UnlistableError} instead.
     """
-
 
 
 def _secureEnoughString(path):
@@ -271,7 +264,6 @@ def _secureEnoughString(path):
     """
     secureishString = armor(randomBytes(16))[:16]
     return _coerceToFilesystemEncoding(path, secureishString)
-
 
 
 class AbstractFilePath(object):
@@ -294,7 +286,6 @@ class AbstractFilePath(object):
         with self.open() as fp:
             return fp.read()
 
-
     def parents(self):
         """
         Retrieve an iterator of all the ancestors of this path.
@@ -309,7 +300,6 @@ class AbstractFilePath(object):
             yield parent
             path = parent
             parent = parent.parent()
-
 
     def children(self):
         """
@@ -363,10 +353,12 @@ class AbstractFilePath(object):
             # ERROR_PATH_NOT_FOUND.  However, in Python 2.5,
             # ERROR_FILE_NOT_FOUND results instead. -exarkun
             winerror = getattr(winErrObj, 'winerror', winErrObj.errno)
-            if winerror not in (ERROR_PATH_NOT_FOUND,
-                                ERROR_FILE_NOT_FOUND,
-                                ERROR_INVALID_NAME,
-                                ERROR_DIRECTORY):
+            if winerror not in (
+                ERROR_PATH_NOT_FOUND,
+                ERROR_FILE_NOT_FOUND,
+                ERROR_INVALID_NAME,
+                ERROR_DIRECTORY,
+            ):
                 raise
             raise _WindowsUnlistableError(winErrObj)
         except OSError as ose:
@@ -399,15 +391,15 @@ class AbstractFilePath(object):
             for c in self.children():
                 # we should first see if it's what we want, then we
                 # can walk through the directory
-                if (descend is None or descend(c)):
+                if descend is None or descend(c):
                     for subc in c.walk(descend):
                         if os.path.realpath(self.path).startswith(
-                            os.path.realpath(subc.path)):
+                            os.path.realpath(subc.path)
+                        ):
                             raise LinkError("Cycle in file graph.")
                         yield subc
                 else:
                     yield c
-
 
     def sibling(self, path):
         """
@@ -421,7 +413,6 @@ class AbstractFilePath(object):
         @rtype: L{FilePath}
         """
         return self.parent().child(path)
-
 
     def descendant(self, segments):
         """
@@ -439,7 +430,6 @@ class AbstractFilePath(object):
         for name in segments:
             path = path.child(name)
         return path
-
 
     def segmentsFrom(self, ancestor):
         """
@@ -471,14 +461,12 @@ class AbstractFilePath(object):
             return segments
         raise ValueError("%r not parent of %r" % (ancestor, self))
 
-
     # new in 8.0
     def __hash__(self):
         """
         Hash the same as another L{FilePath} with the same path as mine.
         """
         return hash((self.__class__, self.path))
-
 
     # pending deprecation in 8.0
     def getmtime(self):
@@ -487,20 +475,17 @@ class AbstractFilePath(object):
         """
         return int(self.getModificationTime())
 
-
     def getatime(self):
         """
         Deprecated.  Use getAccessTime instead.
         """
         return int(self.getAccessTime())
 
-
     def getctime(self):
         """
         Deprecated.  Use getStatusChangeTime instead.
         """
         return int(self.getStatusChangeTime())
-
 
 
 class RWX(FancyEqMixin, object):
@@ -520,17 +505,20 @@ class RWX(FancyEqMixin, object):
 
     @since: 11.1
     """
+
     compareAttributes = ('read', 'write', 'execute')
+
     def __init__(self, readable, writable, executable):
         self.read = readable
         self.write = writable
         self.execute = executable
 
-
     def __repr__(self):
         return "RWX(read=%s, write=%s, execute=%s)" % (
-            self.read, self.write, self.execute)
-
+            self.read,
+            self.write,
+            self.execute,
+        )
 
     def shorthand(self):
         """
@@ -548,7 +536,6 @@ class RWX(FancyEqMixin, object):
                 returnval[i] = '-'
             i += 1
         return ''.join(returnval)
-
 
 
 class Permissions(FancyEqMixin, object):
@@ -571,18 +558,17 @@ class Permissions(FancyEqMixin, object):
     compareAttributes = ('user', 'group', 'other')
 
     def __init__(self, statModeInt):
-        self.user, self.group, self.other = (
-            [RWX(*[statModeInt & bit > 0 for bit in bitGroup]) for bitGroup in
-             [[S_IRUSR, S_IWUSR, S_IXUSR],
-              [S_IRGRP, S_IWGRP, S_IXGRP],
-              [S_IROTH, S_IWOTH, S_IXOTH]]]
-        )
-
+        self.user, self.group, self.other = [
+            RWX(*[statModeInt & bit > 0 for bit in bitGroup])
+            for bitGroup in [
+                [S_IRUSR, S_IWUSR, S_IXUSR],
+                [S_IRGRP, S_IWGRP, S_IXGRP],
+                [S_IROTH, S_IWOTH, S_IXOTH],
+            ]
+        ]
 
     def __repr__(self):
-        return "[%s | %s | %s]" % (
-            str(self.user), str(self.group), str(self.other))
-
+        return "[%s | %s | %s]" % (str(self.user), str(self.group), str(self.other))
 
     def shorthand(self):
         """
@@ -593,8 +579,7 @@ class Permissions(FancyEqMixin, object):
         @return: The shorthand string.
         @rtype: L{str}
         """
-        return "".join(
-            [x.shorthand() for x in (self.user, self.group, self.other)])
+        return "".join([x.shorthand() for x in (self.user, self.group, self.other)])
 
 
 class _SpecialNoValue(object):
@@ -603,8 +588,8 @@ class _SpecialNoValue(object):
 
     Please remove once statinfo is removed.
     """
-    pass
 
+    pass
 
 
 def _asFilesystemBytes(path, encoding=None):
@@ -625,7 +610,6 @@ def _asFilesystemBytes(path, encoding=None):
         if encoding is None:
             encoding = sys.getfilesystemencoding()
         return path.encode(encoding)
-
 
 
 def _asFilesystemText(path, encoding=None):
@@ -649,7 +633,6 @@ def _asFilesystemText(path, encoding=None):
         return path.decode(encoding)
 
 
-
 def _coerceToFilesystemEncoding(path, newpath, encoding=None):
     """
     Return a C{newpath} that is suitable for joining to C{path}.
@@ -662,7 +645,6 @@ def _coerceToFilesystemEncoding(path, newpath, encoding=None):
         return _asFilesystemBytes(newpath, encoding=encoding)
     else:
         return _asFilesystemText(newpath, encoding=encoding)
-
 
 
 @comparable
@@ -724,9 +706,9 @@ class FilePath(AbstractFilePath):
         C{getModificationTime()}, and so on.
     @type statinfo: L{int} or L{None} or L{os.stat_result}
     """
+
     _statinfo = None
     path = None
-
 
     def __init__(self, path, alwaysCreate=False):
         """
@@ -735,7 +717,6 @@ class FilePath(AbstractFilePath):
         """
         self.path = abspath(path)
         self.alwaysCreate = alwaysCreate
-
 
     def __getstate__(self):
         """
@@ -747,7 +728,6 @@ class FilePath(AbstractFilePath):
             del d['_statinfo']
         return d
 
-
     @property
     def sep(self):
         """
@@ -757,7 +737,6 @@ class FilePath(AbstractFilePath):
         @returntype: The same type as C{self.path}.
         """
         return _coerceToFilesystemEncoding(self.path, os.sep)
-
 
     def _asBytesPath(self, encoding=None):
         """
@@ -770,7 +749,6 @@ class FilePath(AbstractFilePath):
         """
         return _asFilesystemBytes(self.path, encoding=encoding)
 
-
     def _asTextPath(self, encoding=None):
         """
         Return the path of this L{FilePath} as text.
@@ -781,7 +759,6 @@ class FilePath(AbstractFilePath):
         @return: L{unicode}
         """
         return _asFilesystemText(self.path, encoding=encoding)
-
 
     def asBytesMode(self, encoding=None):
         """
@@ -796,7 +773,6 @@ class FilePath(AbstractFilePath):
             return self.clonePath(self._asBytesPath(encoding=encoding))
         return self
 
-
     def asTextMode(self, encoding=None):
         """
         Return this L{FilePath} in L{unicode}-mode.
@@ -810,7 +786,6 @@ class FilePath(AbstractFilePath):
             return self.clonePath(self._asTextPath(encoding=encoding))
         return self
 
-
     def _getPathAsSameTypeAs(self, pattern):
         """
         If C{pattern} is C{bytes}, return L{FilePath.path} as L{bytes}.
@@ -823,7 +798,6 @@ class FilePath(AbstractFilePath):
             return self._asBytesPath()
         else:
             return self._asTextPath()
-
 
     def child(self, path):
         """
@@ -841,7 +815,7 @@ class FilePath(AbstractFilePath):
         @rtype: L{FilePath} with a mode equal to the type of C{path}.
         """
         colon = _coerceToFilesystemEncoding(path, ":")
-        sep =  _coerceToFilesystemEncoding(path, os.sep)
+        sep = _coerceToFilesystemEncoding(path, os.sep)
         ourPath = self._getPathAsSameTypeAs(path)
 
         if platform.isWindows() and path.count(colon):
@@ -850,15 +824,12 @@ class FilePath(AbstractFilePath):
 
         norm = normpath(path)
         if sep in norm:
-            raise InsecurePath("%r contains one or more directory separators" %
-                               (path,))
+            raise InsecurePath("%r contains one or more directory separators" % (path,))
 
         newpath = abspath(joinpath(ourPath, norm))
         if not newpath.startswith(ourPath):
-            raise InsecurePath("%r is not a child of %s" %
-                               (newpath, ourPath))
+            raise InsecurePath("%r is not a child of %s" % (newpath, ourPath))
         return self.clonePath(newpath)
-
 
     def preauthChild(self, path):
         """
@@ -875,10 +846,8 @@ class FilePath(AbstractFilePath):
 
         newpath = abspath(joinpath(ourPath, normpath(path)))
         if not newpath.startswith(ourPath):
-            raise InsecurePath("%s is not a child of %s" %
-                               (newpath, ourPath))
+            raise InsecurePath("%s is not a child of %s" % (newpath, ourPath))
         return self.clonePath(newpath)
-
 
     def childSearchPreauth(self, *paths):
         """
@@ -898,7 +867,6 @@ class FilePath(AbstractFilePath):
             jp = joinpath(p, child)
             if exists(jp):
                 return self.clonePath(jp)
-
 
     def siblingExtensionSearch(self, *exts):
         """
@@ -930,7 +898,6 @@ class FilePath(AbstractFilePath):
             if exists(p2):
                 return self.clonePath(p2)
 
-
     def realpath(self):
         """
         Returns the absolute target as a L{FilePath} if self is a link, self
@@ -956,7 +923,6 @@ class FilePath(AbstractFilePath):
             return self.clonePath(result)
         return self
 
-
     def siblingExtension(self, ext):
         """
         Attempt to return a path with my name, given the extension at C{ext}.
@@ -969,7 +935,6 @@ class FilePath(AbstractFilePath):
         """
         ourPath = self._getPathAsSameTypeAs(ext)
         return self.clonePath(ourPath + ext)
-
 
     def linkTo(self, linkFilePath):
         """
@@ -985,7 +950,6 @@ class FilePath(AbstractFilePath):
         @type linkFilePath: L{FilePath}
         """
         os.symlink(self.path, linkFilePath.path)
-
 
     def open(self, mode='r'):
         """
@@ -1003,8 +967,9 @@ class FilePath(AbstractFilePath):
         @return: An open L{file} object.
         """
         if self.alwaysCreate:
-            assert 'a' not in mode, ("Appending not supported when "
-                                     "alwaysCreate == True")
+            assert 'a' not in mode, (
+                "Appending not supported when " "alwaysCreate == True"
+            )
             return self.create()
         # This hack is necessary because of a bug in Python 2.7 on Windows:
         # http://bugs.python.org/issue7686
@@ -1032,7 +997,6 @@ class FilePath(AbstractFilePath):
             if reraise:
                 raise
 
-
     def changed(self):
         """
         Clear any cached information about the state of this path on disk.
@@ -1040,7 +1004,6 @@ class FilePath(AbstractFilePath):
         @since: 10.1.0
         """
         self._statinfo = None
-
 
     def chmod(self, mode):
         """
@@ -1052,7 +1015,6 @@ class FilePath(AbstractFilePath):
         @type mode: L{int}
         """
         os.chmod(self.path, mode)
-
 
     def getsize(self):
         """
@@ -1068,7 +1030,6 @@ class FilePath(AbstractFilePath):
             st = self._statinfo
         return st.st_size
 
-
     def getModificationTime(self):
         """
         Retrieve the time of last access from this file.
@@ -1081,7 +1042,6 @@ class FilePath(AbstractFilePath):
             self.restat()
             st = self._statinfo
         return float(st.st_mtime)
-
 
     def getStatusChangeTime(self):
         """
@@ -1096,7 +1056,6 @@ class FilePath(AbstractFilePath):
             st = self._statinfo
         return float(st.st_ctime)
 
-
     def getAccessTime(self):
         """
         Retrieve the time that this file was last accessed.
@@ -1109,7 +1068,6 @@ class FilePath(AbstractFilePath):
             self.restat()
             st = self._statinfo
         return float(st.st_atime)
-
 
     def getInodeNumber(self):
         """
@@ -1130,7 +1088,6 @@ class FilePath(AbstractFilePath):
             self.restat()
             st = self._statinfo
         return st.st_ino
-
 
     def getDevice(self):
         """
@@ -1154,7 +1111,6 @@ class FilePath(AbstractFilePath):
             self.restat()
             st = self._statinfo
         return st.st_dev
-
 
     def getNumberOfHardLinks(self):
         """
@@ -1181,7 +1137,6 @@ class FilePath(AbstractFilePath):
             st = self._statinfo
         return st.st_nlink
 
-
     def getUserID(self):
         """
         Returns the user ID of the file's owner.
@@ -1200,7 +1155,6 @@ class FilePath(AbstractFilePath):
             self.restat()
             st = self._statinfo
         return st.st_uid
-
 
     def getGroupID(self):
         """
@@ -1221,7 +1175,6 @@ class FilePath(AbstractFilePath):
             st = self._statinfo
         return st.st_gid
 
-
     def getPermissions(self):
         """
         Returns the permissions of the file.  Should also work on Windows,
@@ -1236,7 +1189,6 @@ class FilePath(AbstractFilePath):
             self.restat()
             st = self._statinfo
         return Permissions(S_IMODE(st.st_mode))
-
 
     def exists(self):
         """
@@ -1255,7 +1207,6 @@ class FilePath(AbstractFilePath):
             else:
                 return False
 
-
     def isdir(self):
         """
         Check if this L{FilePath} refers to a directory.
@@ -1271,7 +1222,6 @@ class FilePath(AbstractFilePath):
             if not st:
                 return False
         return S_ISDIR(st.st_mode)
-
 
     def isfile(self):
         """
@@ -1289,7 +1239,6 @@ class FilePath(AbstractFilePath):
                 return False
         return S_ISREG(st.st_mode)
 
-
     def isBlockDevice(self):
         """
         Returns whether the underlying path is a block device.
@@ -1305,7 +1254,6 @@ class FilePath(AbstractFilePath):
             if not st:
                 return False
         return S_ISBLK(st.st_mode)
-
 
     def isSocket(self):
         """
@@ -1323,7 +1271,6 @@ class FilePath(AbstractFilePath):
                 return False
         return S_ISSOCK(st.st_mode)
 
-
     def islink(self):
         """
         Check if this L{FilePath} points to a symbolic link.
@@ -1338,7 +1285,6 @@ class FilePath(AbstractFilePath):
         # it seems unlikely we'd actually save any work that way.  -glyph
         return islink(self.path)
 
-
     def isabs(self):
         """
         Check if this L{FilePath} refers to an absolute path.
@@ -1349,7 +1295,6 @@ class FilePath(AbstractFilePath):
         @rtype: L{bool}
         """
         return isabs(self.path)
-
 
     def listdir(self):
         """
@@ -1365,7 +1310,6 @@ class FilePath(AbstractFilePath):
         """
         return listdir(self.path)
 
-
     def splitext(self):
         """
         Split the file path into a pair C{(root, ext)} such that
@@ -1377,10 +1321,8 @@ class FilePath(AbstractFilePath):
         """
         return splitext(self.path)
 
-
     def __repr__(self):
         return 'FilePath(%r)' % (self.path,)
-
 
     def touch(self):
         """
@@ -1397,7 +1339,6 @@ class FilePath(AbstractFilePath):
             pass
         utime(self.path, None)
 
-
     def remove(self):
         """
         Removes the file or directory that is represented by self.  If
@@ -1411,7 +1352,6 @@ class FilePath(AbstractFilePath):
         else:
             os.remove(self.path)
         self.changed()
-
 
     def makedirs(self, ignoreExistingDirectory=False):
         """
@@ -1428,11 +1368,9 @@ class FilePath(AbstractFilePath):
             return os.makedirs(self.path)
         except OSError as e:
             if not (
-                e.errno == errno.EEXIST and
-                ignoreExistingDirectory and
-                    self.isdir()):
+                e.errno == errno.EEXIST and ignoreExistingDirectory and self.isdir()
+            ):
                 raise
-
 
     def globChildren(self, pattern):
         """
@@ -1449,10 +1387,9 @@ class FilePath(AbstractFilePath):
         ourPath = self._getPathAsSameTypeAs(pattern)
 
         import glob
-        path = ourPath[-1] == sep and ourPath + pattern \
-               or sep.join([ourPath, pattern])
-        return [self.clonePath(p) for p in glob.glob(path)]
 
+        path = ourPath[-1] == sep and ourPath + pattern or sep.join([ourPath, pattern])
+        return [self.clonePath(p) for p in glob.glob(path)]
 
     def basename(self):
         """
@@ -1465,7 +1402,6 @@ class FilePath(AbstractFilePath):
         """
         return basename(self.path)
 
-
     def dirname(self):
         """
         Retrieve all of the components of the L{FilePath}'s path except the
@@ -1477,7 +1413,6 @@ class FilePath(AbstractFilePath):
         """
         return dirname(self.path)
 
-
     def parent(self):
         """
         A file path for the directory containing the file at this file path.
@@ -1487,7 +1422,6 @@ class FilePath(AbstractFilePath):
         @rtype: L{FilePath}
         """
         return self.clonePath(self.dirname())
-
 
     def setContent(self, content, ext=b'.new'):
         """
@@ -1541,12 +1475,10 @@ class FilePath(AbstractFilePath):
             os.unlink(self.path)
         os.rename(sib.path, self.asBytesMode().path)
 
-
     def __cmp__(self, other):
         if not isinstance(other, FilePath):
             return NotImplemented
         return cmp(self.path, other.path)
-
 
     def createDirectory(self):
         """
@@ -1557,7 +1489,6 @@ class FilePath(AbstractFilePath):
         @raise OSError: If the directory cannot be created.
         """
         os.mkdir(self.path)
-
 
     def requireCreate(self, val=1):
         """
@@ -1570,7 +1501,6 @@ class FilePath(AbstractFilePath):
         @return: L{None}
         """
         self.alwaysCreate = val
-
 
     def create(self):
         """
@@ -1585,7 +1515,6 @@ class FilePath(AbstractFilePath):
         # one returned from 'open' by default.  send a patch to Python...
 
         return os.fdopen(fdint, 'w+b')
-
 
     def temporarySibling(self, extension=b""):
         """
@@ -1606,11 +1535,13 @@ class FilePath(AbstractFilePath):
         @rtype: L{FilePath} with a mode equal to the type of C{extension}
         """
         ourPath = self._getPathAsSameTypeAs(extension)
-        sib = self.sibling(_secureEnoughString(ourPath) +
-                           self.clonePath(ourPath).basename() + extension)
+        sib = self.sibling(
+            _secureEnoughString(ourPath)
+            + self.clonePath(ourPath).basename()
+            + extension
+        )
         sib.requireCreate()
         return sib
-
 
     _chunkSize = 2 ** 2 ** 2 ** 2
 
@@ -1683,9 +1614,7 @@ class FilePath(AbstractFilePath):
             # symlinks, fifos, block devices, character devices, or unix
             # sockets, please feel free to add support to do sensible things in
             # reaction to those types!
-            raise NotImplementedError(
-                "Only copying of files and directories supported")
-
+            raise NotImplementedError("Only copying of files and directories supported")
 
     def moveTo(self, destination, followLinks=True):
         """
@@ -1707,8 +1636,7 @@ class FilePath(AbstractFilePath):
             filesystems)
         """
         try:
-            os.rename(self._getPathAsSameTypeAs(destination.path),
-                      destination.path)
+            os.rename(self._getPathAsSameTypeAs(destination.path), destination.path)
         except OSError as ose:
             if ose.errno == errno.EXDEV:
                 # man 2 rename, ubuntu linux 5.10 "breezy":
@@ -1720,19 +1648,18 @@ class FilePath(AbstractFilePath):
 
                 # that means it's time to copy trees of directories!
                 secsib = destination.temporarySibling()
-                self.copyTo(secsib, followLinks) # slow
-                secsib.moveTo(destination, followLinks) # visible
+                self.copyTo(secsib, followLinks)  # slow
+                secsib.moveTo(destination, followLinks)  # visible
 
                 # done creating new stuff.  let's clean me up.
                 mysecsib = self.temporarySibling()
-                self.moveTo(mysecsib, followLinks) # visible
-                mysecsib.remove() # slow
+                self.moveTo(mysecsib, followLinks)  # visible
+                mysecsib.remove()  # slow
             else:
                 raise
         else:
             self.changed()
             destination.changed()
-
 
     def statinfo(self, value=_SpecialNoValue):
         """
@@ -1758,8 +1685,8 @@ class FilePath(AbstractFilePath):
 # This is all a terrible hack to get statinfo deprecated
 _tmp = deprecated(
     Version('Twisted', 15, 0, 0),
-    "other FilePath methods such as getsize(), "
-    "isdir(), getModificationTime(), etc.")(FilePath.statinfo)
+    "other FilePath methods such as getsize(), " "isdir(), getModificationTime(), etc.",
+)(FilePath.statinfo)
 FilePath.statinfo = property(_tmp, _tmp)
 
 

@@ -35,15 +35,12 @@ class Options(usage.Options):
 
     optParameters = [
         ['rpc', 'r', '/etc/rpc', 'DEPRECATED. RPC procedure table file'],
-        ['file', 'f', '/etc/inetd.conf', 'Service configuration file']
+        ['file', 'f', '/etc/inetd.conf', 'Service configuration file'],
     ]
 
     optFlags = [['nointernal', 'i', "Don't run internal services"]]
 
-    compData = usage.Completions(
-        optActions={"file": usage.CompleteFiles('*.conf')}
-        )
-
+    compData = usage.Completions(optActions={"file": usage.CompleteFiles('*.conf')})
 
 
 def makeService(config):
@@ -59,10 +56,11 @@ def makeService(config):
             log.msg('Skipping rpc service due to lack of rpc support')
             continue
 
-        if (protocol, service.socketType) not in [('tcp', 'stream'),
-                                                  ('udp', 'dgram')]:
-            log.msg('Skipping unsupported type/protocol: %s/%s'
-                    % (service.socketType, service.protocol))
+        if (protocol, service.socketType) not in [('tcp', 'stream'), ('udp', 'dgram')]:
+            log.msg(
+                'Skipping unsupported type/protocol: %s/%s'
+                % (service.socketType, service.protocol)
+            )
             continue
 
         # Convert the username into a uid (if necessary)

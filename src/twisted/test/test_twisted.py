@@ -28,34 +28,32 @@ class SetAsideModule(object):
 
     @ivar name: The name of the module to remove.
     """
+
     def __init__(self, name):
         self.name = name
-
 
     def _unimport(self, name):
         """
         Find the given module and all of its hierarchically inferior modules in
         C{sys.modules}, remove them from it, and return whatever was found.
         """
-        modules = dict([
+        modules = dict(
+            [
                 (moduleName, module)
-                for (moduleName, module)
-                in list(sys.modules.items())
-                if (moduleName == self.name or
-                    moduleName.startswith(self.name + "."))])
+                for (moduleName, module) in list(sys.modules.items())
+                if (moduleName == self.name or moduleName.startswith(self.name + "."))
+            ]
+        )
         for name in modules:
             del sys.modules[name]
         return modules
 
-
     def __enter__(self):
         self.modules = self._unimport(self.name)
-
 
     def __exit__(self, excType, excValue, traceback):
         self._unimport(self.name)
         sys.modules.update(self.modules)
-
 
 
 def _install(modules):
@@ -97,7 +95,6 @@ def _install(modules):
     sys.modules.update(result)
 
 
-
 def _makePackages(parent, attributes, result):
     """
     Construct module objects (for either modules or packages).
@@ -137,7 +134,6 @@ def _makePackages(parent, attributes, result):
     return attrs
 
 
-
 class RequirementsTests(TestCase):
     """
     Tests for the import-time requirements checking.
@@ -158,11 +154,11 @@ class RequirementsTests(TestCase):
         supported by Twisted.
     @type supportedPythonVersion: C{tuple}
     """
+
     unsupportedPythonVersion = (2, 6)
     supportedPythonVersion = (2, 7)
     Py3unsupportedPythonVersion = (3, 3)
     Py3supportedPythonVersion = (3, 4)
-
 
     def setUp(self):
         """
@@ -171,13 +167,11 @@ class RequirementsTests(TestCase):
         """
         self.version = sys.version_info
 
-
     def tearDown(self):
         """
         Restore the original values saved in L{setUp}.
         """
         sys.version_info = self.version
-
 
     def test_oldPython(self):
         """
@@ -187,10 +181,10 @@ class RequirementsTests(TestCase):
         sys.version_info = self.unsupportedPythonVersion
         with self.assertRaises(ImportError) as raised:
             _checkPythonVersion()
-        self.assertEqual("Twisted requires Python %d.%d or later."
-                         % self.supportedPythonVersion,
-                         str(raised.exception))
-
+        self.assertEqual(
+            "Twisted requires Python %d.%d or later." % self.supportedPythonVersion,
+            str(raised.exception),
+        )
 
     def test_newPython(self):
         """
@@ -200,7 +194,6 @@ class RequirementsTests(TestCase):
         sys.version_info = self.supportedPythonVersion
         self.assertIsNone(_checkPythonVersion())
 
-
     def test_oldPythonPy3(self):
         """
         L{_checkPythonVersion} raises L{ImportError} when run on a version of
@@ -209,10 +202,11 @@ class RequirementsTests(TestCase):
         sys.version_info = self.Py3unsupportedPythonVersion
         with self.assertRaises(ImportError) as raised:
             _checkPythonVersion()
-        self.assertEqual("Twisted on Python 3 requires Python %d.%d or later."
-                         % self.Py3supportedPythonVersion,
-                         str(raised.exception))
-
+        self.assertEqual(
+            "Twisted on Python 3 requires Python %d.%d or later."
+            % self.Py3supportedPythonVersion,
+            str(raised.exception),
+        )
 
     def test_newPythonPy3(self):
         """
@@ -223,12 +217,12 @@ class RequirementsTests(TestCase):
         self.assertIsNone(_checkPythonVersion())
 
 
-
 class MakePackagesTests(TestCase):
     """
     Tests for L{_makePackages}, a helper for populating C{sys.modules} with
     fictional modules.
     """
+
     def test_nonModule(self):
         """
         A non-C{dict} value in the attributes dictionary passed to L{_makePackages}
@@ -237,7 +231,6 @@ class MakePackagesTests(TestCase):
         modules = {}
         _makePackages(None, dict(reactor='reactor'), modules)
         self.assertEqual(modules, dict(reactor='reactor'))
-
 
     def test_moduleWithAttribute(self):
         """
@@ -251,7 +244,6 @@ class MakePackagesTests(TestCase):
         self.assertIsInstance(modules['twisted'], ModuleType)
         self.assertEqual('twisted', modules['twisted'].__name__)
         self.assertEqual('123', modules['twisted'].version)
-
 
     def test_packageWithModule(self):
         """
@@ -268,12 +260,12 @@ class MakePackagesTests(TestCase):
         self.assertEqual('321', modules['twisted'].web.version)
 
 
-
 class OldSubprojectDeprecationBase(TestCase):
     """
     Base L{TestCase} for verifying each former subproject has a deprecated
     C{__version__} and a removed C{_version.py}.
     """
+
     subproject = None
 
     def test_deprecated(self):
@@ -288,23 +280,21 @@ class OldSubprojectDeprecationBase(TestCase):
         self.assertEqual(
             "twisted.{}.__version__ was deprecated in Twisted 16.0.0: "
             "Use twisted.__version__ instead.".format(self.subproject),
-            warningsShown[0]['message'])
-
+            warningsShown[0]['message'],
+        )
 
     def test_noversionpy(self):
         """
         Former subprojects no longer have an importable C{_version.py}.
         """
         with self.assertRaises(AttributeError):
-            reflect.namedAny(
-                "twisted.{}._version".format(self.subproject))
+            reflect.namedAny("twisted.{}._version".format(self.subproject))
 
 
 if _PY3:
     subprojects = ["conch", "web", "names"]
 else:
-    subprojects = ["mail", "conch", "runner", "web", "words", "names", "news",
-                   "pair"]
+    subprojects = ["mail", "conch", "runner", "web", "words", "names", "news", "pair"]
 
 for subproject in subprojects:
 
@@ -312,18 +302,20 @@ for subproject in subprojects:
         """
         See L{OldSubprojectDeprecationBase}.
         """
+
         subproject = subproject
 
     newName = subproject.title() + "VersionDeprecationTests"
 
     SubprojectTestCase.__name__ = newName
     if _PY3:
-        SubprojectTestCase.__qualname__= ".".join(
-            OldSubprojectDeprecationBase.__qualname__.split()[0:-1] +
-            [newName])
+        SubprojectTestCase.__qualname__ = ".".join(
+            OldSubprojectDeprecationBase.__qualname__.split()[0:-1] + [newName]
+        )
 
-    globals().update({subproject.title() +
-                      "VersionDeprecationTests": SubprojectTestCase})
+    globals().update(
+        {subproject.title() + "VersionDeprecationTests": SubprojectTestCase}
+    )
 
     del SubprojectTestCase
     del newName

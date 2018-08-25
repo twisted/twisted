@@ -16,24 +16,29 @@ from twisted.names import server
 from twisted.names import authority
 from twisted.names import secondary
 
+
 class Options(usage.Options):
     optParameters = [
-        ["interface", "i", "",   "The interface to which to bind"],
-        ["port",      "p", "53", "The port on which to listen"],
-        ["resolv-conf", None, None,
-            "Override location of resolv.conf (implies --recursive)"],
+        ["interface", "i", "", "The interface to which to bind"],
+        ["port", "p", "53", "The port on which to listen"],
+        [
+            "resolv-conf",
+            None,
+            None,
+            "Override location of resolv.conf (implies --recursive)",
+        ],
         ["hosts-file", None, None, "Perform lookups with a hosts file"],
     ]
 
     optFlags = [
-        ["cache",       "c", "Enable record caching"],
-        ["recursive",   "r", "Perform recursive lookups"],
-        ["verbose",     "v", "Log verbosely"],
+        ["cache", "c", "Enable record caching"],
+        ["recursive", "r", "Perform recursive lookups"],
+        ["verbose", "v", "Log verbosely"],
     ]
 
     compData = usage.Completions(
-        optActions={"interface" : usage.CompleteNetInterfaces()}
-        )
+        optActions={"interface": usage.CompleteNetInterfaces()}
+    )
 
     zones = None
     zonefiles = None
@@ -44,7 +49,6 @@ class Options(usage.Options):
         self.bindfiles = []
         self.zonefiles = []
         self.secondaries = []
-
 
     def opt_pyzone(self, filename):
         """Specify the filename of a Python syntax zone definition"""
@@ -57,7 +61,6 @@ class Options(usage.Options):
         if not os.path.exists(filename):
             raise usage.UsageError(filename + ": No such file")
         self.bindfiles.append(filename)
-
 
     def opt_secondary(self, ip_domain):
         """Act as secondary for the specified domain, performing
@@ -74,15 +77,14 @@ class Options(usage.Options):
                 port = int(address[1])
             except ValueError:
                 raise usage.UsageError(
-                    "Specify an integer port number, not %r" % (address[1],))
+                    "Specify an integer port number, not %r" % (address[1],)
+                )
             address = (address[0], port)
         self.secondaries.append((address, [args[1]]))
-
 
     def opt_verbose(self):
         """Increment verbosity level"""
         self['verbose'] += 1
-
 
     def postOptions(self):
         if self['resolv-conf']:

@@ -14,13 +14,11 @@ from twisted.python import reflect
 from twisted.python._oldstyle import _oldStyle
 
 
-
 class NotSupportedError(NotImplementedError):
     """
     An exception meaning that the tree-manipulation operation
     you're attempting to perform is not supported.
     """
-
 
 
 @_oldStyle
@@ -31,9 +29,11 @@ class Request:
     self.write(data) until there is no data left and then calling
     self.finish().
     """
+
     # This attribute should be set to the string name of the protocol being
     # responded to (e.g. HTTP or FTP)
     wireProtocol = None
+
     def write(self, data):
         """Add some data to the response to this request.
         """
@@ -43,7 +43,6 @@ class Request:
         """The response to this request is finished; flush all data to the network stream.
         """
         raise NotImplementedError("%s.finish" % reflect.qual(self.__class__))
-
 
 
 @_oldStyle
@@ -57,13 +56,13 @@ class Entity:
     required, and will be emulated on a per-protocol basis for types which do
     not handle them.
     """
+
     def render(self, request):
         """
         I produce a stream of bytes for the request, by calling request.write()
         and request.finish().
         """
         raise NotImplementedError("%s.render" % reflect.qual(self.__class__))
-
 
 
 @_oldStyle
@@ -164,14 +163,12 @@ class Collection:
         """
         return self.entities.keys()
 
-
     def listDynamicNames(self):
         """Retrieve a list of the names of entities that I store references to.
 
         See getDynamicEntity.
         """
         return []
-
 
     def listNames(self, request):
         """Retrieve a list of all names for entities that I contain.
@@ -247,8 +244,9 @@ class Homogenous(Constrained):
         if isinstance(entity, self.entityType):
             return 1
         else:
-            raise ConstraintViolation("%s of incorrect type (%s)" %
-                                      (entity, self.entityType))
+            raise ConstraintViolation(
+                "%s of incorrect type (%s)" % (entity, self.entityType)
+            )
 
     def getNameType(self):
         return "Name"

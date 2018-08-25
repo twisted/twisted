@@ -16,6 +16,7 @@ from twisted.words.xish import domish
 
 NS_XMPP_SASL = 'urn:ietf:params:xml:ns:xmpp-sasl'
 
+
 def get_mechanisms(xs):
     """
     Parse the SASL feature to extract the available mechanism names.
@@ -44,9 +45,9 @@ class SASLAuthError(SASLError):
     """
     SASL Authentication failed.
     """
+
     def __init__(self, condition=None):
         self.condition = condition
-
 
     def __str__(self):
         return "SASLAuthError with condition %r" % self.condition
@@ -71,7 +72,9 @@ class SASLIncorrectEncodingError(SASLError):
     advised.
     """
 
+
 base64Pattern = re.compile("^[0-9A-Za-z+/]*[0-9A-Za-z+/=]{,2}$")
+
 
 def fromBase64(s):
     """
@@ -91,7 +94,6 @@ def fromBase64(s):
         return b64decode(s)
     except Exception as e:
         raise SASLIncorrectEncodingError(str(e))
-
 
 
 class SASLInitiatingInitializer(xmlstream.BaseFeatureInitiatingInitializer):
@@ -124,8 +126,9 @@ class SASLInitiatingInitializer(xmlstream.BaseFeatureInitiatingInitializer):
         mechanisms = get_mechanisms(self.xmlstream)
         if jid.user is not None:
             if 'DIGEST-MD5' in mechanisms:
-                self.mechanism = sasl_mechanisms.DigestMD5('xmpp', jid.host, None,
-                                                           jid.user, password)
+                self.mechanism = sasl_mechanisms.DigestMD5(
+                    'xmpp', jid.host, None, jid.user, password
+                )
             elif 'PLAIN' in mechanisms:
                 self.mechanism = sasl_mechanisms.Plain(None, jid.user, password)
             else:
@@ -135,7 +138,6 @@ class SASLInitiatingInitializer(xmlstream.BaseFeatureInitiatingInitializer):
                 self.mechanism = sasl_mechanisms.Anonymous()
             else:
                 raise SASLNoAcceptableMechanism()
-
 
     def start(self):
         """
@@ -149,7 +151,6 @@ class SASLInitiatingInitializer(xmlstream.BaseFeatureInitiatingInitializer):
         self.xmlstream.addOnetimeObserver('/failure', self.onFailure)
         self.sendAuth(self.mechanism.getInitialResponse())
         return self._deferred
-
 
     def sendAuth(self, data=None):
         """
@@ -168,7 +169,6 @@ class SASLInitiatingInitializer(xmlstream.BaseFeatureInitiatingInitializer):
             auth.addContent(b64encode(data).decode('ascii') or u'=')
         self.xmlstream.send(auth)
 
-
     def sendResponse(self, data=b''):
         """
         Send response to a challenge.
@@ -181,7 +181,6 @@ class SASLInitiatingInitializer(xmlstream.BaseFeatureInitiatingInitializer):
         if data:
             response.addContent(b64encode(data).decode('ascii'))
         self.xmlstream.send(response)
-
 
     def onChallenge(self, element):
         """
@@ -198,7 +197,6 @@ class SASLInitiatingInitializer(xmlstream.BaseFeatureInitiatingInitializer):
         else:
             self.sendResponse(self.mechanism.getResponse(challenge))
 
-
     def onSuccess(self, success):
         """
         Clean up observers, reset the XML stream and send a new header.
@@ -213,7 +211,6 @@ class SASLInitiatingInitializer(xmlstream.BaseFeatureInitiatingInitializer):
         self.xmlstream.reset()
         self.xmlstream.sendHeader()
         self._deferred.callback(xmlstream.Reset)
-
 
     def onFailure(self, failure):
         """

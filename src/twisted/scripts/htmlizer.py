@@ -29,23 +29,21 @@ footer = """</body>"""
 styleLink = '<link rel="stylesheet" href="%s" type="text/css" />'
 alternateLink = '<link rel="alternate" href="%(source)s" type="text/x-python" />'
 
+
 class Options(usage.Options):
     synopsis = """%s [options] source.py
     """ % (
-        os.path.basename(sys.argv[0]),)
+        os.path.basename(sys.argv[0]),
+    )
 
-    optParameters = [
-        ('stylesheet', 's', None, "URL of stylesheet to link to."),
-        ]
+    optParameters = [('stylesheet', 's', None, "URL of stylesheet to link to.")]
 
     compData = usage.Completions(
         extraActions=[usage.CompleteFiles('*.py', descr='source python file')]
-        )
-
+    )
 
     def parseArgs(self, filename):
         self['filename'] = filename
-
 
 
 def run():
@@ -62,12 +60,12 @@ def run():
         stylesheet = ''
 
     with open(filename + '.html', 'wb') as output:
-        outHeader = (header % {
+        outHeader = header % {
             'title': filename,
             'generator': 'htmlizer/%s' % (copyright.longversion,),
             'alternate': alternateLink % {'source': filename},
-            'stylesheet': stylesheet
-            })
+            'stylesheet': stylesheet,
+        }
         output.write(outHeader.encode("utf-8"))
         with open(filename, 'rb') as f:
             htmlizer.filter(f, output, htmlizer.SmallerHTMLWriter)

@@ -31,8 +31,8 @@ TBFORMAT_MAP = {
     'emacs': 'brief',
     'brief': 'brief',
     'cgitb': 'verbose',
-    'verbose': 'verbose'
-    }
+    'verbose': 'verbose',
+}
 
 
 def _parseLocalVariables(line):
@@ -55,8 +55,7 @@ def _parseLocalVariables(line):
             continue
         split = item.split(':')
         if len(split) != 2:
-            raise ValueError("%r contains invalid declaration %r"
-                             % (line, item))
+            raise ValueError("%r contains invalid declaration %r" % (line, item))
         localVars[split[0].strip()] = split[1].strip()
     return localVars
 
@@ -91,13 +90,11 @@ def isTestFile(filename):
     False otherwise.  Doesn't care whether filename exists.
     """
     basename = os.path.basename(filename)
-    return (basename.startswith('test_')
-            and os.path.splitext(basename)[1] == ('.py'))
+    return basename.startswith('test_') and os.path.splitext(basename)[1] == ('.py')
 
 
 def _reporterAction():
-    return usage.CompleteList([p.longOpt for p in
-                               plugin.getPlugins(itrial.IReporter)])
+    return usage.CompleteList([p.longOpt for p in plugin.getPlugins(itrial.IReporter)])
 
 
 def _maybeFindSourceLine(testThing):
@@ -132,12 +129,14 @@ def _maybeFindSourceLine(testThing):
 
 # orders which can be passed to trial --order
 _runOrders = {
-    "alphabetical" : (
+    "alphabetical": (
         "alphabetical order for test methods, arbitrary order for test cases",
-        runner.name),
-    "toptobottom" : (
-     "attempt to run test cases and methods in the order they were defined",
-     _maybeFindSourceLine),
+        runner.name,
+    ),
+    "toptobottom": (
+        "attempt to run test cases and methods in the order they were defined",
+        _maybeFindSourceLine,
+    ),
 }
 
 
@@ -154,56 +153,86 @@ def _checkKnownRunOrder(order):
     """
     if order not in _runOrders:
         raise usage.UsageError(
-            "--order must be one of: %s. See --help-orders for details" %
-            (", ".join(repr(order) for order in _runOrders),))
+            "--order must be one of: %s. See --help-orders for details"
+            % (", ".join(repr(order) for order in _runOrders),)
+        )
     return order
-
 
 
 class _BasicOptions(object):
     """
     Basic options shared between trial and its local workers.
     """
-    longdesc = ("trial loads and executes a suite of unit tests, obtained "
-                "from modules, packages and files listed on the command line.")
 
-    optFlags = [["help", "h"],
-                ["no-recurse", "N", "Don't recurse into packages"],
-                ['help-orders', None, "Help on available test running orders"],
-                ['help-reporters', None,
-                 "Help on available output plugins (reporters)"],
-                ["rterrors", "e", "realtime errors, print out tracebacks as "
-                 "soon as they occur"],
-                ["unclean-warnings", None,
-                 "Turn dirty reactor errors into warnings"],
-                ["force-gc", None, "Have Trial run gc.collect() before and "
-                 "after each test case."],
-                ["exitfirst", "x",
-                 "Exit after the first non-successful result (cannot be "
-                 "specified along with --jobs)."],
-                ]
+    longdesc = (
+        "trial loads and executes a suite of unit tests, obtained "
+        "from modules, packages and files listed on the command line."
+    )
+
+    optFlags = [
+        ["help", "h"],
+        ["no-recurse", "N", "Don't recurse into packages"],
+        ['help-orders', None, "Help on available test running orders"],
+        ['help-reporters', None, "Help on available output plugins (reporters)"],
+        [
+            "rterrors",
+            "e",
+            "realtime errors, print out tracebacks as " "soon as they occur",
+        ],
+        ["unclean-warnings", None, "Turn dirty reactor errors into warnings"],
+        [
+            "force-gc",
+            None,
+            "Have Trial run gc.collect() before and " "after each test case.",
+        ],
+        [
+            "exitfirst",
+            "x",
+            "Exit after the first non-successful result (cannot be "
+            "specified along with --jobs).",
+        ],
+    ]
 
     optParameters = [
-        ["order", "o", None,
-         "Specify what order to run test cases and methods. "
-         "See --help-orders for more info.", _checkKnownRunOrder],
-        ["random", "z", None,
-         "Run tests in random order using the specified seed"],
-        ['temp-directory', None, '_trial_temp',
-         'Path to use as working directory for tests.'],
-        ['reporter', None, 'verbose',
-         'The reporter to use for this test run.  See --help-reporters for '
-         'more info.']]
+        [
+            "order",
+            "o",
+            None,
+            "Specify what order to run test cases and methods. "
+            "See --help-orders for more info.",
+            _checkKnownRunOrder,
+        ],
+        ["random", "z", None, "Run tests in random order using the specified seed"],
+        [
+            'temp-directory',
+            None,
+            '_trial_temp',
+            'Path to use as working directory for tests.',
+        ],
+        [
+            'reporter',
+            None,
+            'verbose',
+            'The reporter to use for this test run.  See --help-reporters for '
+            'more info.',
+        ],
+    ]
 
     compData = usage.Completions(
-        optActions={"order": usage.CompleteList(_runOrders),
-                    "reporter": _reporterAction,
-                    "logfile": usage.CompleteFiles(descr="log file name"),
-                    "random": usage.Completer(descr="random seed")},
-        extraActions=[usage.CompleteFiles(
-                "*.py", descr="file | module | package | TestCase | testMethod",
-                repeat=True)],
-        )
+        optActions={
+            "order": usage.CompleteList(_runOrders),
+            "reporter": _reporterAction,
+            "logfile": usage.CompleteFiles(descr="log file name"),
+            "random": usage.Completer(descr="random seed"),
+        },
+        extraActions=[
+            usage.CompleteFiles(
+                "*.py",
+                descr="file | module | package | TestCase | testMethod",
+                repeat=True,
+            )
+        ],
+    )
 
     fallbackReporter = reporter.TreeReporter
     tracer = None
@@ -216,11 +245,15 @@ class _BasicOptions(object):
         executableName = reflect.filenameToModuleName(sys.argv[0])
 
         if executableName.endswith('.__main__'):
-            executableName = '{} -m {}'.format(os.path.basename(sys.executable),
-                                               executableName.replace('.__main__', ''))
+            executableName = '{} -m {}'.format(
+                os.path.basename(sys.executable),
+                executableName.replace('.__main__', ''),
+            )
 
         return """%s [options] [[file|package|module|TestCase|testmethod]...]
-        """ % (executableName,)
+        """ % (
+            executableName,
+        )
 
     def coverdir(self):
         """
@@ -231,7 +264,6 @@ class _BasicOptions(object):
         result = FilePath(self['temp-directory']).child(coverdir)
         print("Setting coverage directory to %s." % (result.path,))
         return result
-
 
     # TODO: Some of the opt_* methods on this class have docstrings and some do
     #       not. This is mostly because usage.Options's currently will replace
@@ -247,10 +279,10 @@ class _BasicOptions(object):
         directory specified by the temp-directory option.
         """
         import trace
+
         self.tracer = trace.Trace(count=1, trace=0)
         sys.settrace(self.tracer.globaltrace)
         self['coverage'] = True
-
 
     def opt_testmodule(self, filename):
         """
@@ -275,36 +307,37 @@ class _BasicOptions(object):
         else:
             self['tests'].extend(getTestModules(filename))
 
-
     def opt_spew(self):
         """
         Print an insanely verbose log of everything that happens.  Useful
         when debugging freezes or locks in complex code.
         """
         from twisted.python.util import spewer
+
         sys.settrace(spewer)
 
-
     def opt_help_orders(self):
-        synopsis = ("Trial can attempt to run test cases and their methods in "
-                    "a few different orders. You can select any of the "
-                    "following options using --order=<foo>.\n")
+        synopsis = (
+            "Trial can attempt to run test cases and their methods in "
+            "a few different orders. You can select any of the "
+            "following options using --order=<foo>.\n"
+        )
 
         print(synopsis)
         for name, (description, _) in sorted(_runOrders.items()):
             print('   ', name, '\t', description)
         sys.exit(0)
 
-
     def opt_help_reporters(self):
-        synopsis = ("Trial's output can be customized using plugins called "
-                    "Reporters. You can\nselect any of the following "
-                    "reporters using --reporter=<foo>\n")
+        synopsis = (
+            "Trial's output can be customized using plugins called "
+            "Reporters. You can\nselect any of the following "
+            "reporters using --reporter=<foo>\n"
+        )
         print(synopsis)
         for p in plugin.getPlugins(itrial.IReporter):
             print('   ', p.longOpt, '\t', p.description)
         sys.exit(0)
-
 
     def opt_disablegc(self):
         """
@@ -312,7 +345,6 @@ class _BasicOptions(object):
         """
         self["disablegc"] = True
         gc.disable()
-
 
     def opt_tbformat(self, opt):
         """
@@ -323,9 +355,7 @@ class _BasicOptions(object):
         try:
             self['tbformat'] = TBFORMAT_MAP[opt]
         except KeyError:
-            raise usage.UsageError(
-                "tbformat must be 'plain', 'emacs', or 'cgitb'.")
-
+            raise usage.UsageError("tbformat must be 'plain', 'emacs', or 'cgitb'.")
 
     def opt_recursionlimit(self, arg):
         """
@@ -334,25 +364,22 @@ class _BasicOptions(object):
         try:
             sys.setrecursionlimit(int(arg))
         except (TypeError, ValueError):
-            raise usage.UsageError(
-                "argument to recursionlimit must be an integer")
+            raise usage.UsageError("argument to recursionlimit must be an integer")
         else:
             self["recursionlimit"] = int(arg)
-
 
     def opt_random(self, option):
         try:
             self['random'] = long(option)
         except ValueError:
-            raise usage.UsageError(
-                "Argument to --random must be a positive integer")
+            raise usage.UsageError("Argument to --random must be a positive integer")
         else:
             if self['random'] < 0:
                 raise usage.UsageError(
-                    "Argument to --random must be a positive integer")
+                    "Argument to --random must be a positive integer"
+                )
             elif self['random'] == 0:
                 self['random'] = long(time.time() * 100)
-
 
     def opt_without_module(self, option):
         """
@@ -361,25 +388,25 @@ class _BasicOptions(object):
         self["without-module"] = option
         for module in option.split(","):
             if module in sys.modules:
-                warnings.warn("Module '%s' already imported, "
-                              "disabling anyway." % (module,),
-                              category=RuntimeWarning)
+                warnings.warn(
+                    "Module '%s' already imported, " "disabling anyway." % (module,),
+                    category=RuntimeWarning,
+                )
             sys.modules[module] = None
-
 
     def parseArgs(self, *args):
         self['tests'].extend(args)
-
 
     def _loadReporterByName(self, name):
         for p in plugin.getPlugins(itrial.IReporter):
             qual = "%s.%s" % (p.module, p.klass)
             if p.longOpt == name:
                 return reflect.namedAny(qual)
-        raise usage.UsageError("Only pass names of Reporter plugins to "
-                               "--reporter. See --help-reporters for "
-                               "more info.")
-
+        raise usage.UsageError(
+            "Only pass names of Reporter plugins to "
+            "--reporter. See --help-reporters for "
+            "more info."
+        )
 
     def postOptions(self):
         # Only load reporters now, as opposed to any earlier, to avoid letting
@@ -389,9 +416,7 @@ class _BasicOptions(object):
         if 'tbformat' not in self:
             self['tbformat'] = 'default'
         if self['order'] is not None and self['random'] is not None:
-            raise usage.UsageError(
-                "You can't specify --random when using --order")
-
+            raise usage.UsageError("You can't specify --random when using --order")
 
 
 class Options(_BasicOptions, usage.Options, app.ReactorSelectionMixin):
@@ -410,31 +435,44 @@ class Options(_BasicOptions, usage.Options, app.ReactorSelectionMixin):
     """
 
     optFlags = [
-                ["debug", "b", "Run tests in a debugger. If that debugger is "
-                 "pdb, will load '.pdbrc' from current directory if it exists."
-                ],
-                ["debug-stacktraces", "B", "Report Deferred creation and "
-                 "callback stack traces"],
-                ["nopm", None, "don't automatically jump into debugger for "
-                 "postmorteming of exceptions"],
-                ["dry-run", 'n', "do everything but run the tests"],
-                ["profile", None, "Run tests under the Python profiler"],
-                ["until-failure", "u", "Repeat test until it fails"],
-                ]
+        [
+            "debug",
+            "b",
+            "Run tests in a debugger. If that debugger is "
+            "pdb, will load '.pdbrc' from current directory if it exists.",
+        ],
+        [
+            "debug-stacktraces",
+            "B",
+            "Report Deferred creation and " "callback stack traces",
+        ],
+        [
+            "nopm",
+            None,
+            "don't automatically jump into debugger for " "postmorteming of exceptions",
+        ],
+        ["dry-run", 'n', "do everything but run the tests"],
+        ["profile", None, "Run tests under the Python profiler"],
+        ["until-failure", "u", "Repeat test until it fails"],
+    ]
 
     optParameters = [
-        ["debugger", None, "pdb", "the fully qualified name of a debugger to "
-         "use if --debug is passed"],
+        [
+            "debugger",
+            None,
+            "pdb",
+            "the fully qualified name of a debugger to " "use if --debug is passed",
+        ],
         ["logfile", "l", "test.log", "log file name"],
-        ["jobs", "j", None, "Number of local workers to run"]
-        ]
+        ["jobs", "j", None, "Number of local workers to run"],
+    ]
 
     compData = usage.Completions(
-        optActions = {
+        optActions={
             "tbformat": usage.CompleteList(["plain", "emacs", "cgitb"]),
             "reporter": _reporterAction,
-            },
-        )
+        }
+    )
 
     _workerFlags = ["disablegc", "force-gc", "coverage"]
     _workerParameters = ["recursionlimit", "reactor", "without-module"]
@@ -442,7 +480,6 @@ class Options(_BasicOptions, usage.Options, app.ReactorSelectionMixin):
     fallbackReporter = reporter.TreeReporter
     extra = None
     tracer = None
-
 
     def opt_jobs(self, number):
         """
@@ -452,12 +489,13 @@ class Options(_BasicOptions, usage.Options, app.ReactorSelectionMixin):
             number = int(number)
         except ValueError:
             raise usage.UsageError(
-                "Expecting integer argument to jobs, got '%s'" % number)
+                "Expecting integer argument to jobs, got '%s'" % number
+            )
         if number <= 0:
             raise usage.UsageError(
-                "Argument to jobs must be a strictly positive integer")
+                "Argument to jobs must be a strictly positive integer"
+            )
         self["jobs"] = number
-
 
     def _getWorkerArguments(self):
         """
@@ -473,7 +511,6 @@ class Options(_BasicOptions, usage.Options, app.ReactorSelectionMixin):
                 args.extend(["--%s" % (option,), str(self[option])])
         return args
 
-
     def postOptions(self):
         _BasicOptions.postOptions(self)
         if self['jobs']:
@@ -481,13 +518,12 @@ class Options(_BasicOptions, usage.Options, app.ReactorSelectionMixin):
             for option in conflicts:
                 if self[option]:
                     raise usage.UsageError(
-                        "You can't specify --%s when using --jobs" % option)
+                        "You can't specify --%s when using --jobs" % option
+                    )
         if self['nopm']:
             if not self['debug']:
-                raise usage.UsageError("You must specify --debug when using "
-                                       "--nopm ")
+                raise usage.UsageError("You must specify --debug when using " "--nopm ")
             failure.DO_POST_MORTEM = False
-
 
 
 def _initialDebugSetup(config):
@@ -498,12 +534,10 @@ def _initialDebugSetup(config):
         defer.setDebugging(True)
 
 
-
 def _getSuite(config):
     loader = _getLoader(config)
     recurse = not config['no-recurse']
     return loader.loadByNames(config['tests'], recurse=recurse)
-
 
 
 def _getLoader(config):
@@ -511,7 +545,7 @@ def _getLoader(config):
     if config['random']:
         randomer = random.Random()
         randomer.seed(config['random'])
-        loader.sorter = lambda x : randomer.random()
+        loader.sorter = lambda x: randomer.random()
         print('Running tests shuffled with seed %d\n' % config['random'])
     elif config['order']:
         _, sorter = _runOrders[config['order']]
@@ -553,7 +587,6 @@ class _DebuggerNotFound(Exception):
     """
 
 
-
 def _makeRunner(config):
     """
     Return a trial runner class set up with the parameters extracted from
@@ -564,16 +597,19 @@ def _makeRunner(config):
         configuration.
     """
     cls = runner.TrialRunner
-    args = {'reporterFactory': config['reporter'],
-            'tracebackFormat': config['tbformat'],
-            'realTimeErrors': config['rterrors'],
-            'uncleanWarnings': config['unclean-warnings'],
-            'logfile': config['logfile'],
-            'workingDirectory': config['temp-directory']}
+    args = {
+        'reporterFactory': config['reporter'],
+        'tracebackFormat': config['tbformat'],
+        'realTimeErrors': config['rterrors'],
+        'uncleanWarnings': config['unclean-warnings'],
+        'logfile': config['logfile'],
+        'workingDirectory': config['temp-directory'],
+    }
     if config['dry-run']:
         args['mode'] = runner.TrialRunner.DRY_RUN
     elif config['jobs']:
         from twisted.trial._dist.disttrial import DistTrialRunner
+
         cls = DistTrialRunner
         args['workerNumber'] = config['jobs']
         args['workerArguments'] = config._getWorkerArguments()
@@ -587,7 +623,8 @@ def _makeRunner(config):
                     args['debugger'] = reflect.namedAny(debugger)
                 except reflect.ModuleNotFound:
                     raise _DebuggerNotFound(
-                        '%r debugger could not be found.' % (debugger,))
+                        '%r debugger could not be found.' % (debugger,)
+                    )
             else:
                 args['debugger'] = _wrappedPdb()
 
@@ -596,7 +633,6 @@ def _makeRunner(config):
         args['forceGarbageCollection'] = config['force-gc']
 
     return cls(**args)
-
 
 
 def run():
@@ -622,6 +658,7 @@ def run():
     if config.tracer:
         sys.settrace(None)
         results = config.tracer.results()
-        results.write_results(show_missing=1, summary=False,
-                              coverdir=config.coverdir().path)
+        results.write_results(
+            show_missing=1, summary=False, coverdir=config.coverdir().path
+        )
     sys.exit(not test_result.wasSuccessful())

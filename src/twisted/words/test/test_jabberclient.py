@@ -23,12 +23,12 @@ IQ_BIND_SET = '/iq[@type="set"]/bind[@xmlns="%s"]' % NS_BIND
 NS_SESSION = 'urn:ietf:params:xml:ns:xmpp-session'
 IQ_SESSION_SET = '/iq[@type="set"]/session[@xmlns="%s"]' % NS_SESSION
 
+
 class CheckVersionInitializerTests(unittest.TestCase):
     def setUp(self):
         a = xmlstream.Authenticator()
         xs = xmlstream.XmlStream(a)
         self.init = client.CheckVersionInitializer(xs)
-
 
     def testSupported(self):
         """
@@ -37,7 +37,6 @@ class CheckVersionInitializerTests(unittest.TestCase):
         self.init.xmlstream.version = (1, 0)
         self.init.initialize()
 
-
     def testNotSupported(self):
         """
         Test unsupported version number 0.0, and check exception.
@@ -45,7 +44,6 @@ class CheckVersionInitializerTests(unittest.TestCase):
         self.init.xmlstream.version = (0, 0)
         exc = self.assertRaises(error.StreamError, self.init.initialize)
         self.assertEqual('unsupported-version', exc.condition)
-
 
 
 class InitiatingInitializerHarness(object):
@@ -68,7 +66,6 @@ class InitiatingInitializerHarness(object):
         self.authenticator = xmlstream.ConnectAuthenticator('example.org')
         self.xmlstream.authenticator = self.authenticator
 
-
     def waitFor(self, event, handler):
         """
         Observe an output event, returning a deferred.
@@ -88,7 +85,6 @@ class InitiatingInitializerHarness(object):
         return d
 
 
-
 class IQAuthInitializerTests(InitiatingInitializerHarness, unittest.TestCase):
     """
     Tests for L{client.IQAuthInitializer}.
@@ -99,7 +95,6 @@ class IQAuthInitializerTests(InitiatingInitializerHarness, unittest.TestCase):
         self.init = client.IQAuthInitializer(self.xmlstream)
         self.authenticator.jid = jid.JID('user@example.com/resource')
         self.authenticator.password = u'secret'
-
 
     def testPlainText(self):
         """
@@ -155,7 +150,6 @@ class IQAuthInitializerTests(InitiatingInitializerHarness, unittest.TestCase):
         d2 = self.init.initialize()
         return defer.gatherResults([d1, d2])
 
-
     def testDigest(self):
         """
         Test digest authentication.
@@ -197,8 +191,7 @@ class IQAuthInitializerTests(InitiatingInitializerHarness, unittest.TestCase):
             signalling success.
             """
             self.assertEqual('user', unicode(iq.query.username))
-            self.assertEqual(sha1(b'12345secret').hexdigest(),
-                              unicode(iq.query.digest))
+            self.assertEqual(sha1(b'12345secret').hexdigest(), unicode(iq.query.digest))
             self.assertEqual('resource', unicode(iq.query.resource))
 
             # Send server response
@@ -216,11 +209,11 @@ class IQAuthInitializerTests(InitiatingInitializerHarness, unittest.TestCase):
 
         return defer.gatherResults([d1, d2])
 
-
     def testFailRequestFields(self):
         """
         Test initializer failure of request for fields for authentication.
         """
+
         def onAuthGet(iq):
             """
             Called when the initializer sent a query for authentication methods.
@@ -240,7 +233,6 @@ class IQAuthInitializerTests(InitiatingInitializerHarness, unittest.TestCase):
         self.assertFailure(d2, error.StanzaError)
 
         return defer.gatherResults([d1, d2])
-
 
     def testFailAuth(self):
         """
@@ -292,7 +284,6 @@ class IQAuthInitializerTests(InitiatingInitializerHarness, unittest.TestCase):
         return defer.gatherResults([d1, d2])
 
 
-
 class BindInitializerTests(InitiatingInitializerHarness, unittest.TestCase):
     """
     Tests for L{client.BindInitializer}.
@@ -303,32 +294,32 @@ class BindInitializerTests(InitiatingInitializerHarness, unittest.TestCase):
         self.init = client.BindInitializer(self.xmlstream)
         self.authenticator.jid = jid.JID('user@example.com/resource')
 
-
     def testBasic(self):
         """
         Set up a stream, and act as if resource binding succeeds.
         """
+
         def onBind(iq):
             response = xmlstream.toResponse(iq, 'result')
             response.addElement((NS_BIND, 'bind'))
-            response.bind.addElement('jid',
-                                     content=u'user@example.com/other resource')
+            response.bind.addElement('jid', content=u'user@example.com/other resource')
             self.pipe.source.send(response)
 
         def cb(result):
-            self.assertEqual(jid.JID('user@example.com/other resource'),
-                              self.authenticator.jid)
+            self.assertEqual(
+                jid.JID('user@example.com/other resource'), self.authenticator.jid
+            )
 
         d1 = self.waitFor(IQ_BIND_SET, onBind)
         d2 = self.init.start()
         d2.addCallback(cb)
         return defer.gatherResults([d1, d2])
 
-
     def testFailure(self):
         """
         Set up a stream, and act as if resource binding fails.
         """
+
         def onBind(iq):
             response = error.StanzaError('conflict').toResponse(iq)
             self.pipe.source.send(response)
@@ -339,7 +330,6 @@ class BindInitializerTests(InitiatingInitializerHarness, unittest.TestCase):
         return defer.gatherResults([d1, d2])
 
 
-
 class SessionInitializerTests(InitiatingInitializerHarness, unittest.TestCase):
     """
     Tests for L{client.SessionInitializer}.
@@ -348,7 +338,6 @@ class SessionInitializerTests(InitiatingInitializerHarness, unittest.TestCase):
     def setUp(self):
         super(SessionInitializerTests, self).setUp()
         self.init = client.SessionInitializer(self.xmlstream)
-
 
     def testSuccess(self):
         """
@@ -363,11 +352,11 @@ class SessionInitializerTests(InitiatingInitializerHarness, unittest.TestCase):
         d2 = self.init.start()
         return defer.gatherResults([d1, d2])
 
-
     def testFailure(self):
         """
         Set up a stream, and act as if session establishment fails.
         """
+
         def onSession(iq):
             response = error.StanzaError('forbidden').toResponse(iq)
             self.pipe.source.send(response)
@@ -378,11 +367,11 @@ class SessionInitializerTests(InitiatingInitializerHarness, unittest.TestCase):
         return defer.gatherResults([d1, d2])
 
 
-
 class XMPPAuthenticatorTests(unittest.TestCase):
     """
     Test for both XMPPAuthenticator and XMPPClientFactory.
     """
+
     def testBasic(self):
         """
         Test basic operations.
@@ -396,8 +385,7 @@ class XMPPAuthenticatorTests(unittest.TestCase):
         # Get an XmlStream instance. Note that it gets initialized with the
         # XMPPAuthenticator (that has its associateWithXmlStream called) that
         # is in turn initialized with the arguments to the factory.
-        xs = client.XMPPClientFactory(self.client_jid,
-                                      'secret').buildProtocol(None)
+        xs = client.XMPPClientFactory(self.client_jid, 'secret').buildProtocol(None)
 
         # test authenticator's instance variables
         self.assertEqual('example.com', xs.authenticator.otherHost)

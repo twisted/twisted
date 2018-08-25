@@ -12,9 +12,9 @@ from twisted.plugin import IPlugin
 from twisted.test.test_plugin import ITestPlugin
 
 
-
 @provider(ITestPlugin, IPlugin)
 class FourthTestPlugin:
     def test1():
         pass
+
     test1 = staticmethod(test1)

@@ -39,11 +39,11 @@ forbiddenModules = [
 ]
 
 
-
 class SomeOldStyleClass:
     """
     I am a docstring!
     """
+
     bar = "baz"
 
     def func(self):
@@ -55,12 +55,10 @@ class SomeOldStyleClass:
         return "hi"
 
 
-
 class SomeNewStyleClass(object):
     """
     Some new style class!
     """
-
 
 
 class OldStyleDecoratorTests(unittest.TestCase):
@@ -73,6 +71,7 @@ class OldStyleDecoratorTests(unittest.TestCase):
         L{_oldstyle._oldStyle} wraps an old-style class and returns a new-style
         class that has the same functions, attributes, etc.
         """
+
         class SomeClassThatUsesOldStyle(SomeOldStyleClass):
             pass
 
@@ -82,7 +81,6 @@ class OldStyleDecoratorTests(unittest.TestCase):
         self.assertEqual(updatedClass.__bases__, (SomeOldStyleClass, object))
         self.assertEqual(updatedClass().func(), "hi")
         self.assertEqual(updatedClass().bar, "baz")
-
 
     def test_carriesAttributes(self):
         """
@@ -95,7 +93,6 @@ class OldStyleDecoratorTests(unittest.TestCase):
         self.assertEqual(updatedClass.__doc__, SomeOldStyleClass.__doc__)
         self.assertEqual(updatedClass.__module__, SomeOldStyleClass.__module__)
 
-
     def test_onlyOldStyleMayBeDecorated(self):
         """
         Using L{_oldstyle._oldStyle} on a new-style class on Python 2 will
@@ -106,10 +103,12 @@ class OldStyleDecoratorTests(unittest.TestCase):
 
         self.assertEqual(
             e.exception.args[0],
-            ("twisted.python._oldstyle._oldStyle is being used to decorate a "
-             "new-style class (twisted.test.test_nooldstyle.SomeNewStyleClass)"
-             ". This should only be used to decorate old-style classes."))
-
+            (
+                "twisted.python._oldstyle._oldStyle is being used to decorate a "
+                "new-style class (twisted.test.test_nooldstyle.SomeNewStyleClass)"
+                ". This should only be used to decorate old-style classes."
+            ),
+        )
 
     def test_noOpByDefault(self):
         """
@@ -127,9 +126,9 @@ class OldStyleDecoratorTests(unittest.TestCase):
         test_makesNewStyle.skip = _skip
         test_carriesAttributes.skip = _skip
     else:
-        test_noOpByDefault.skip = ("Only relevant when not running under "
-                                   "TWISTED_NEWSTYLE=1")
-
+        test_noOpByDefault.skip = (
+            "Only relevant when not running under " "TWISTED_NEWSTYLE=1"
+        )
 
 
 class NewStyleOnly(object):
@@ -140,6 +139,7 @@ class NewStyleOnly(object):
     CAVEATS: This is maybe slightly dumb. It doesn't look inside functions, for
     classes defined there, or nested classes.
     """
+
     skip = _skip
 
     def test_newStyleClassesOnly(self):
@@ -154,8 +154,7 @@ class NewStyleOnly(object):
         oldStyleClasses = []
 
         for name, val in inspect.getmembers(module):
-            if hasattr(val, "__module__") \
-               and val.__module__ == self.module:
+            if hasattr(val, "__module__") and val.__module__ == self.module:
                 if isinstance(val, types.ClassType):
                     oldStyleClasses.append(fullyQualifiedName(val))
 
@@ -169,9 +168,9 @@ class NewStyleOnly(object):
 
             raise unittest.FailTest(
                 "Old-style classes in {module}: {val}".format(
-                    module=self.module,
-                    val=", ".join(oldStyleClasses)))
-
+                    module=self.module, val=", ".join(oldStyleClasses)
+                )
+            )
 
 
 def _buildTestClasses(_locals):
@@ -185,7 +184,7 @@ def _buildTestClasses(_locals):
         ignoredModules = [
             "twisted.test.reflect_helper",
             "twisted.internet.test.process_",
-            "twisted.test.process_"
+            "twisted.test.process_",
         ]
 
         isIgnored = [x.name.startswith(ignored) for ignored in ignoredModules]
@@ -193,11 +192,11 @@ def _buildTestClasses(_locals):
         if True in isIgnored:
             continue
 
-
         class Test(NewStyleOnly, unittest.TestCase):
             """
             @see: L{NewStyleOnly}
             """
+
             module = x.name
 
         acceptableName = x.name.replace(".", "_")
@@ -205,7 +204,6 @@ def _buildTestClasses(_locals):
         if hasattr(Test, "__qualname__"):
             Test.__qualname__ = acceptableName
         _locals.update({acceptableName: Test})
-
 
 
 _buildTestClasses(locals())

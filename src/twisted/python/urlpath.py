@@ -9,12 +9,17 @@ L{URLPath}, a representation of a URL.
 from __future__ import division, absolute_import
 
 from twisted.python.compat import (
-    nativeString, unicode, urllib_parse as urlparse, urlunquote, urlquote
+    nativeString,
+    unicode,
+    urllib_parse as urlparse,
+    urlunquote,
+    urlquote,
 )
 
 from hyperlink import URL as _URL
 
 _allascii = b"".join([chr(x).encode('ascii') for x in range(1, 128)])
+
 
 def _rereconstituter(name):
     """
@@ -29,12 +34,15 @@ def _rereconstituter(name):
     privateName = nativeString("_") + name
     return property(
         lambda self: getattr(self, privateName),
-        lambda self, value: (setattr(self, privateName,
-                                     value if isinstance(value, bytes)
-                                     else value.encode("charmap")) or
-                             self._reconstitute())
+        lambda self, value: (
+            setattr(
+                self,
+                privateName,
+                value if isinstance(value, bytes) else value.encode("charmap"),
+            )
+            or self._reconstitute()
+        ),
     )
-
 
 
 class URLPath(object):
@@ -56,8 +64,10 @@ class URLPath(object):
     @ivar fragment: The page fragment (the portion after # in the URL).
     @type fragment: L{bytes}
     """
-    def __init__(self, scheme=b'', netloc=b'localhost', path=b'',
-                 query=b'', fragment=b''):
+
+    def __init__(
+        self, scheme=b'', netloc=b'localhost', path=b'', query=b'', fragment=b''
+    ):
         self._scheme = scheme or b'http'
         self._netloc = netloc
         self._path = path or b'/'
@@ -65,24 +75,23 @@ class URLPath(object):
         self._fragment = fragment
         self._reconstitute()
 
-
     def _reconstitute(self):
         """
         Reconstitute this L{URLPath} from all its given attributes.
         """
         urltext = urlquote(
-            urlparse.urlunsplit((self._scheme, self._netloc,
-                                 self._path, self._query, self._fragment)),
-            safe=_allascii
+            urlparse.urlunsplit(
+                (self._scheme, self._netloc, self._path, self._query, self._fragment)
+            ),
+            safe=_allascii,
         )
         self._url = _URL.fromText(urltext.encode("ascii").decode("ascii"))
 
-    scheme   = _rereconstituter("scheme")
-    netloc   = _rereconstituter("netloc")
-    path     = _rereconstituter("path")
-    query    = _rereconstituter("query")
+    scheme = _rereconstituter("scheme")
+    netloc = _rereconstituter("netloc")
+    path = _rereconstituter("path")
+    query = _rereconstituter("query")
     fragment = _rereconstituter("fragment")
-
 
     @classmethod
     def _fromURL(cls, urlInstance):
@@ -99,14 +108,12 @@ class URLPath(object):
         self._url = urlInstance.replace(path=urlInstance.path or [u""])
         self._scheme = self._url.scheme.encode("ascii")
         self._netloc = self._url.authority().encode("ascii")
-        self._path = (_URL(path=self._url.path,
-                           rooted=True).asURI().asText()
-                      .encode("ascii"))
-        self._query = (_URL(query=self._url.query).asURI().asText()
-                       .encode("ascii"))[1:]
+        self._path = (
+            _URL(path=self._url.path, rooted=True).asURI().asText().encode("ascii")
+        )
+        self._query = (_URL(query=self._url.query).asURI().asText().encode("ascii"))[1:]
         self._fragment = self._url.fragment.encode("ascii")
         return self
-
 
     def pathList(self, unquote=False, copy=True):
         """
@@ -122,9 +129,8 @@ class URLPath(object):
         segments = self._url.path
         mapper = lambda x: x.encode("ascii")
         if unquote:
-            mapper = (lambda x, m=mapper: m(urlunquote(x)))
+            mapper = lambda x, m=mapper: m(urlunquote(x))
         return [b''] + [mapper(segment) for segment in segments]
-
 
     @classmethod
     def fromString(klass, url):
@@ -145,7 +151,6 @@ class URLPath(object):
             # check above.
             return klass.fromBytes(url)
         return klass._fromURL(_URL.fromText(url))
-
 
     @classmethod
     def fromBytes(klass, url):
@@ -169,7 +174,6 @@ class URLPath(object):
             quoted = quoted.decode("ascii")
         return klass.fromString(quoted)
 
-
     @classmethod
     def fromRequest(klass, request):
         """
@@ -182,7 +186,6 @@ class URLPath(object):
         @rtype: L{URLPath}
         """
         return klass.fromBytes(request.prePathURL())
-
 
     def _mod(self, newURL, keepQuery):
         """
@@ -199,10 +202,9 @@ class URLPath(object):
 
         @return: a new L{URLPath}
         """
-        return self._fromURL(newURL.replace(
-            fragment=u'', query=self._url.query if keepQuery else ()
-        ))
-
+        return self._fromURL(
+            newURL.replace(fragment=u'', query=self._url.query if keepQuery else ())
+        )
 
     def sibling(self, path, keepQuery=False):
         """
@@ -220,7 +222,6 @@ class URLPath(object):
         """
         return self._mod(self._url.sibling(path.decode("ascii")), keepQuery)
 
-
     def child(self, path, keepQuery=False):
         """
         Get the child of this L{URLPath}.
@@ -236,7 +237,6 @@ class URLPath(object):
         """
         return self._mod(self._url.child(path.decode("ascii")), keepQuery)
 
-
     def parent(self, keepQuery=False):
         """
         Get the parent directory of this L{URLPath}.
@@ -249,7 +249,6 @@ class URLPath(object):
         """
         return self._mod(self._url.click(u".."), keepQuery)
 
-
     def here(self, keepQuery=False):
         """
         Get the current directory of this L{URLPath}.
@@ -261,7 +260,6 @@ class URLPath(object):
         @return: a new L{URLPath}
         """
         return self._mod(self._url.click(u"."), keepQuery)
-
 
     def click(self, st):
         """
@@ -276,19 +274,21 @@ class URLPath(object):
         """
         return self._fromURL(self._url.click(st.decode("ascii")))
 
-
     def __str__(self):
         """
         The L{str} of a L{URLPath} is its URL text.
         """
         return nativeString(self._url.asURI().asText())
 
-
     def __repr__(self):
         """
         The L{repr} of a L{URLPath} is an eval-able expression which will
         construct a similar L{URLPath}.
         """
-        return ('URLPath(scheme=%r, netloc=%r, path=%r, query=%r, fragment=%r)'
-                % (self.scheme, self.netloc, self.path, self.query,
-                   self.fragment))
+        return 'URLPath(scheme=%r, netloc=%r, path=%r, query=%r, fragment=%r)' % (
+            self.scheme,
+            self.netloc,
+            self.path,
+            self.query,
+            self.fragment,
+        )

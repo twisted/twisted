@@ -17,22 +17,45 @@ class Options(usage.Options):
 
     synopsis = "[procmon options] commandline"
 
-    optParameters = [["threshold", "t", 1, "How long a process has to live "
-                      "before the death is considered instant, in seconds.",
-                      float],
-                     ["killtime", "k", 5, "How long a process being killed "
-                      "has to get its affairs in order before it gets killed "
-                      "with an unmaskable signal.",
-                      float],
-                     ["minrestartdelay", "m", 1, "The minimum time (in "
-                      "seconds) to wait before attempting to restart a "
-                      "process", float],
-                     ["maxrestartdelay", "M", 3600, "The maximum time (in "
-                      "seconds) to wait before attempting to restart a "
-                      "process", float]]
+    optParameters = [
+        [
+            "threshold",
+            "t",
+            1,
+            "How long a process has to live "
+            "before the death is considered instant, in seconds.",
+            float,
+        ],
+        [
+            "killtime",
+            "k",
+            5,
+            "How long a process being killed "
+            "has to get its affairs in order before it gets killed "
+            "with an unmaskable signal.",
+            float,
+        ],
+        [
+            "minrestartdelay",
+            "m",
+            1,
+            "The minimum time (in "
+            "seconds) to wait before attempting to restart a "
+            "process",
+            float,
+        ],
+        [
+            "maxrestartdelay",
+            "M",
+            3600,
+            "The maximum time (in "
+            "seconds) to wait before attempting to restart a "
+            "process",
+            float,
+        ],
+    ]
 
     optFlags = []
-
 
     longdesc = """\
 procmon runs processes, monitors their progress, and restarts them when they
@@ -51,14 +74,12 @@ Eg twistd procmon sleep 10"""
         """
         self['args'] = args
 
-
     def postOptions(self):
         """
         Check for dependencies.
         """
         if len(self["args"]) < 1:
             raise usage.UsageError("Please specify a process commandline")
-
 
 
 def makeService(config):

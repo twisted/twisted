@@ -31,13 +31,13 @@ class Glib2Reactor(gtk2reactor.Gtk2Reactor):
         gtk2reactor.Gtk2Reactor.__init__(self, useGtk=False)
 
 
-
 def install():
     """
     Configure the twisted mainloop to be run inside the glib mainloop.
     """
     reactor = Glib2Reactor()
     from twisted.internet.main import installReactor
+
     installReactor(reactor)
 
 

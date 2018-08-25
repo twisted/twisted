@@ -16,7 +16,6 @@ except ImportError:
     skipReason = "Only runs on Windows with win32com"
 
 
-
 class ShortcutTests(unittest.TestCase):
     skip = skipReason
 
@@ -32,9 +31,7 @@ class ShortcutTests(unittest.TestCase):
         self.assertTrue(os.path.exists(tempname))
         sc = shortcut.open(tempname)
         scPath = sc.GetPath(shell.SLGP_RAWPATH)[0]
-        self.assertEqual(scPath[-len(baseFileName):].lower(),
-                         baseFileName.lower())
-
+        self.assertEqual(scPath[-len(baseFileName) :].lower(), baseFileName.lower())
 
     def test_createPythonShortcut(self):
         """
@@ -51,14 +48,13 @@ class ShortcutTests(unittest.TestCase):
             workingdir=tempDir,
             iconpath=tempDir,
             iconidx=1,
-            )
+        )
         tempname = self.mktemp() + '.lnk'
         s1.save(tempname)
         self.assertTrue(os.path.exists(tempname))
         sc = shortcut.open(tempname)
         scPath = sc.GetPath(shell.SLGP_RAWPATH)[0]
-        self.assertEqual(scPath[-len(baseFileName):].lower(),
-                         baseFileName.lower())
+        self.assertEqual(scPath[-len(baseFileName) :].lower(), baseFileName.lower())
         self.assertEqual(sc.GetDescription(), "The Python executable")
         self.assertEqual(sc.GetWorkingDirectory(), tempDir)
         self.assertEqual(sc.GetIconLocation(), (tempDir, 1))

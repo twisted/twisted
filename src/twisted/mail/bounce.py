@@ -33,9 +33,7 @@ Final-Recipient: RFC822; {failedTo}
 """
 
 
-
-def generateBounce(message, failedFrom, failedTo, transcript='',
-                   encoding='utf-8'):
+def generateBounce(message, failedFrom, failedTo, transcript='', encoding='utf-8'):
     """
     Generate a bounce message for an undeliverable email message.
 
@@ -70,7 +68,9 @@ def generateBounce(message, failedFrom, failedTo, transcript='',
         transcript = u'''\
 I'm sorry, the following address has permanent errors: {failedTo}.
 I've given up, and I will not retry the message again.
-'''.format(failedTo=failedTo)
+'''.format(
+            failedTo=failedTo
+        )
 
     failedAddress = email.utils.parseaddr(failedTo)[1]
     data = {
@@ -83,7 +83,7 @@ I've given up, and I will not retry the message again.
         'messageID': smtp.messageid(uniq='bounce'),
         'message': message,
         'transcript': transcript,
-        }
+    }
 
     fp = StringIO()
     fp.write(BOUNCE_FORMAT.format(**data))

@@ -17,6 +17,7 @@ from twisted.trial import unittest
 from twisted.words import ewords, service
 from twisted.words.protocols import irc
 
+
 class RealmTests(unittest.TestCase):
     def _entityCreationTest(self, kind):
         # Kind is "user" or "group"
@@ -49,14 +50,11 @@ class RealmTests(unittest.TestCase):
         setattr(realm, flag, False)
         self.failureResultOf(get(u"another" + kind.lower())).trap(noSuchExc)
 
-
     def testUserCreation(self):
         return self._entityCreationTest("User")
 
-
     def testGroupCreation(self):
         return self._entityCreationTest("Group")
-
 
     def testUserRetrieval(self):
         realm = service.InMemoryWordsRealm("realmname")
@@ -73,9 +71,7 @@ class RealmTests(unittest.TestCase):
         self.assertIdentical(retrieved, lookedUp)
 
         # Make sure looking up a user who does not exist fails
-        (self.failureResultOf(realm.lookupUser(u"nosuchuser"))
-             .trap(ewords.NoSuchUser))
-
+        (self.failureResultOf(realm.lookupUser(u"nosuchuser")).trap(ewords.NoSuchUser))
 
     def testUserAddition(self):
         realm = service.InMemoryWordsRealm("realmname")
@@ -93,7 +89,6 @@ class RealmTests(unittest.TestCase):
         lookedUp = self.successResultOf(realm.lookupUser(u"testuser"))
         self.assertIdentical(retrieved, lookedUp)
 
-
     def testGroupRetrieval(self):
         realm = service.InMemoryWordsRealm("realmname")
 
@@ -103,9 +98,7 @@ class RealmTests(unittest.TestCase):
 
         self.assertIdentical(group, retrieved)
 
-        (self.failureResultOf(realm.getGroup(u"nosuchgroup"))
-             .trap(ewords.NoSuchGroup))
-
+        (self.failureResultOf(realm.getGroup(u"nosuchgroup")).trap(ewords.NoSuchGroup))
 
     def testGroupAddition(self):
         realm = service.InMemoryWordsRealm("realmname")
@@ -114,7 +107,6 @@ class RealmTests(unittest.TestCase):
         self.successResultOf(realm.addGroup(p))
         group = self.successResultOf(realm.getGroup(u"testGroup"))
         self.assertIdentical(p, group)
-
 
     def testGroupUsernameCollision(self):
         """
@@ -126,7 +118,6 @@ class RealmTests(unittest.TestCase):
 
         self.successResultOf(realm.createUser(u"test"))
         self.successResultOf(realm.createGroup(u"test"))
-
 
     def testEnumeration(self):
         realm = service.InMemoryWordsRealm("realmname")
@@ -141,9 +132,14 @@ class RealmTests(unittest.TestCase):
         self.assertEqual(n, ["groupone", "grouptwo"])
 
 
-
 class TestCaseUserAgg(object):
-    def __init__(self, user, realm, factory, address=address.IPv4Address('TCP', '127.0.0.1', 54321)):
+    def __init__(
+        self,
+        user,
+        realm,
+        factory,
+        address=address.IPv4Address('TCP', '127.0.0.1', 54321),
+    ):
         self.user = user
         self.transport = proto_helpers.StringTransportWithDisconnection()
         self.protocol = factory.buildProtocol(address)
@@ -151,16 +147,24 @@ class TestCaseUserAgg(object):
         self.user.mind = self.protocol
         self.protocol.makeConnection(self.transport)
 
-
     def write(self, stuff):
         self.protocol.dataReceived(stuff)
 
 
 class IRCProtocolTests(unittest.TestCase):
     STATIC_USERS = [
-        u'useruser', u'otheruser', u'someguy', u'firstuser', u'username',
-        u'userone', u'usertwo', u'userthree', 'userfour', b'userfive', u'someuser']
-
+        u'useruser',
+        u'otheruser',
+        u'someguy',
+        u'firstuser',
+        u'username',
+        u'userone',
+        u'usertwo',
+        u'userthree',
+        'userfour',
+        b'userfive',
+        u'someuser',
+    ]
 
     def setUp(self):
         self.realm = service.InMemoryWordsRealm("realmname")
@@ -176,7 +180,6 @@ class IRCProtocolTests(unittest.TestCase):
             self.checker.addUser(nick, nick + u"_password")
         return DeferredList(c)
 
-
     def _assertGreeting(self, user):
         """
         The user has been greeted with the four messages that are (usually)
@@ -186,13 +189,11 @@ class IRCProtocolTests(unittest.TestCase):
         """
         # Make sure we get 1-4 at least
         response = self._response(user)
-        expected = [irc.RPL_WELCOME, irc.RPL_YOURHOST, irc.RPL_CREATED,
-                    irc.RPL_MYINFO]
+        expected = [irc.RPL_WELCOME, irc.RPL_YOURHOST, irc.RPL_CREATED, irc.RPL_MYINFO]
         for (prefix, command, args) in response:
             if command in expected:
                 expected.remove(command)
         self.assertFalse(expected, "Missing responses for %r" % (expected,))
-
 
     def _login(self, user, nick, password=None):
         if password is None:
@@ -200,13 +201,11 @@ class IRCProtocolTests(unittest.TestCase):
         user.write(u'PASS %s\r\n' % (password,))
         user.write(u'NICK %s extrainfo\r\n' % (nick,))
 
-
     def _loggedInUser(self, name):
         user = self.successResultOf(self.realm.lookupUser(name))
         agg = TestCaseUserAgg(user, self.realm, self.factory)
         self._login(agg, name)
         return agg
-
 
     def _response(self, user, messageType=None):
         """
@@ -224,11 +223,9 @@ class IRCProtocolTests(unittest.TestCase):
                 result.append(message)
         return result
 
-
     def testPASSLogin(self):
         user = self._loggedInUser(u'firstuser')
         self._assertGreeting(user)
-
 
     def test_nickServLogin(self):
         """
@@ -250,7 +247,6 @@ class IRCProtocolTests(unittest.TestCase):
         user.write('PRIVMSG nickserv firstuser_password\r\n')
         self._assertGreeting(user)
 
-
     def testFailedLogin(self):
         firstuser = self.successResultOf(self.realm.lookupUser(u'firstuser'))
 
@@ -259,7 +255,6 @@ class IRCProtocolTests(unittest.TestCase):
         response = self._response(user, "PRIVMSG")
         self.assertEqual(len(response), 1)
         self.assertEqual(response[0][2], ['firstuser', 'Login failed.  Goodbye.'])
-
 
     def testLogout(self):
         logout = []
@@ -271,12 +266,10 @@ class IRCProtocolTests(unittest.TestCase):
         user.write('QUIT\r\n')
         self.assertEqual(logout, [True])
 
-
     def testJoin(self):
         firstuser = self.successResultOf(self.realm.lookupUser(u'firstuser'))
 
-        somechannel = self.successResultOf(
-                self.realm.createGroup(u"somechannel"))
+        somechannel = self.successResultOf(self.realm.createGroup(u"somechannel"))
 
         somechannel.meta['topic'] = 'some random topic'
 
@@ -302,7 +295,6 @@ class IRCProtocolTests(unittest.TestCase):
         self.assertEqual(response[3][1], '332')
         self.assertEqual(response[4][1], '333')
 
-
         # Hook up another client!  It is a CHAT SYSTEM!!!!!!!
         other = self._loggedInUser(u'otheruser')
 
@@ -321,11 +313,13 @@ class IRCProtocolTests(unittest.TestCase):
 
         self.assertEqual(response[1][0], 'realmname')
         self.assertEqual(response[1][1], '353')
-        self.assertIn(response[1][2], [
-                      ['otheruser', '=', '#somechannel', 'firstuser otheruser'],
-                      ['otheruser', '=', '#somechannel', 'otheruser firstuser'],
-                      ])
-
+        self.assertIn(
+            response[1][2],
+            [
+                ['otheruser', '=', '#somechannel', 'firstuser otheruser'],
+                ['otheruser', '=', '#somechannel', 'otheruser firstuser'],
+            ],
+        )
 
     def test_joinTopicless(self):
         """
@@ -346,7 +340,6 @@ class IRCProtocolTests(unittest.TestCase):
         responseCodes = [r[1] for r in response]
         self.assertNotIn('332', responseCodes)
         self.assertNotIn('333', responseCodes)
-
 
     def testLeave(self):
         user = self._loggedInUser(u'useruser')
@@ -407,7 +400,6 @@ class IRCProtocolTests(unittest.TestCase):
         self.assertEqual(response[0][2], ['#somechannel', 'goodbye stupidheads1'])
         self.assertEqual(response, event)
 
-
     def testGetTopic(self):
         user = self._loggedInUser(u'useruser')
 
@@ -427,9 +419,13 @@ class IRCProtocolTests(unittest.TestCase):
         self.assertEqual(response[3][1], '332')
 
         # XXX Sigh.  irc.parsemsg() is not as correct as one might hope.
-        self.assertEqual(response[3][2], ['useruser', '#somechannel', 'This is a test topic.'])
+        self.assertEqual(
+            response[3][2], ['useruser', '#somechannel', 'This is a test topic.']
+        )
         self.assertEqual(response[4][1], '333')
-        self.assertEqual(response[4][2], ['useruser', '#somechannel', 'some_fellow', '77777777'])
+        self.assertEqual(
+            response[4][2], ['useruser', '#somechannel', 'some_fellow', '77777777']
+        )
 
         user.transport.clear()
 
@@ -438,16 +434,18 @@ class IRCProtocolTests(unittest.TestCase):
         response = self._response(user)
 
         self.assertEqual(response[0][1], '332')
-        self.assertEqual(response[0][2], ['useruser', '#somechannel', 'This is a test topic.'])
+        self.assertEqual(
+            response[0][2], ['useruser', '#somechannel', 'This is a test topic.']
+        )
         self.assertEqual(response[1][1], '333')
-        self.assertEqual(response[1][2], ['useruser', '#somechannel', 'some_fellow', '77777777'])
-
+        self.assertEqual(
+            response[1][2], ['useruser', '#somechannel', 'some_fellow', '77777777']
+        )
 
     def testSetTopic(self):
         user = self._loggedInUser(u'useruser')
 
-        somechannel = self.successResultOf(
-                self.realm.createGroup(u"somechannel"))
+        somechannel = self.successResultOf(self.realm.createGroup(u"somechannel"))
 
         user.write("JOIN #somechannel\r\n")
 
@@ -476,16 +474,19 @@ class IRCProtocolTests(unittest.TestCase):
 
         response = self._response(other)
         self.assertEqual(response[0][1], '332')
-        self.assertEqual(response[0][2], ['otheruser', '#somechannel', 'This is the new topic.'])
+        self.assertEqual(
+            response[0][2], ['otheruser', '#somechannel', 'This is the new topic.']
+        )
         self.assertEqual(response[1][1], '333')
-        self.assertEqual(response[1][2], ['otheruser', '#somechannel', 'otheruser', '12345'])
+        self.assertEqual(
+            response[1][2], ['otheruser', '#somechannel', 'otheruser', '12345']
+        )
 
         other.transport.clear()
         other.write('TOPIC #asdlkjasd\r\n')
 
         response = self._response(other)
         self.assertEqual(response[0][1], '403')
-
 
     def testGroupMessage(self):
         user = self._loggedInUser(u'useruser')
@@ -511,7 +512,6 @@ class IRCProtocolTests(unittest.TestCase):
         self.assertEqual(event[0][0], 'useruser!useruser@realmname')
         self.assertEqual(event[0][1], 'PRIVMSG', -1)
         self.assertEqual(event[0][2], ['#somechannel', 'Hello, world.'])
-
 
     def testPrivateMessage(self):
         user = self._loggedInUser(u'useruser')
@@ -539,8 +539,9 @@ class IRCProtocolTests(unittest.TestCase):
         self.assertEqual(len(response), 1)
         self.assertEqual(response[0][0], 'realmname')
         self.assertEqual(response[0][1], '401')
-        self.assertEqual(response[0][2], ['useruser', 'nousernamedthis', 'No such nick/channel.'])
-
+        self.assertEqual(
+            response[0][2], ['useruser', 'nousernamedthis', 'No such nick/channel.']
+        )
 
     def testOper(self):
         user = self._loggedInUser(u'useruser')
@@ -551,7 +552,6 @@ class IRCProtocolTests(unittest.TestCase):
 
         self.assertEqual(len(response), 1)
         self.assertEqual(response[0][1], '491')
-
 
     def testGetUserMode(self):
         user = self._loggedInUser(u'useruser')
@@ -565,7 +565,6 @@ class IRCProtocolTests(unittest.TestCase):
         self.assertEqual(response[0][1], '221')
         self.assertEqual(response[0][2], ['useruser', '+'])
 
-
     def testSetUserMode(self):
         user = self._loggedInUser(u'useruser')
 
@@ -575,7 +574,6 @@ class IRCProtocolTests(unittest.TestCase):
         response = self._response(user)
         self.assertEqual(len(response), 1)
         self.assertEqual(response[0][1], '472')
-
 
     def testGetGroupMode(self):
         user = self._loggedInUser(u'useruser')
@@ -591,7 +589,6 @@ class IRCProtocolTests(unittest.TestCase):
         self.assertEqual(len(response), 1)
         self.assertEqual(response[0][1], '324')
 
-
     def testSetGroupMode(self):
         user = self._loggedInUser(u'useruser')
 
@@ -605,7 +602,6 @@ class IRCProtocolTests(unittest.TestCase):
         response = self._response(user)
         self.assertEqual(len(response), 1)
         self.assertEqual(response[0][1], '472')
-
 
     def testWho(self):
         group = service.Group('groupname')
@@ -630,7 +626,16 @@ class IRCProtocolTests(unittest.TestCase):
             self.assertEqual(prefix, 'realmname')
             self.assertEqual(code, '352')
 
-            (myname, group, theirname, theirhost, theirserver, theirnick, flag, extra) = stuff
+            (
+                myname,
+                group,
+                theirname,
+                theirhost,
+                theirserver,
+                theirnick,
+                flag,
+                extra,
+            ) = stuff
             self.assertEqual(myname, 'userone')
             self.assertEqual(group, '#groupname')
             self.assertTrue(theirname in wantusers)
@@ -648,7 +653,6 @@ class IRCProtocolTests(unittest.TestCase):
         self.assertEqual(myname, 'userone')
         self.assertEqual(channel, '#groupname')
         self.assertEqual(extra, 'End of /WHO list.')
-
 
     def testList(self):
         user = self._loggedInUser(u"someuser")
@@ -693,14 +697,13 @@ class IRCProtocolTests(unittest.TestCase):
 
         self.assertEqual(end[1], '323')
 
-
     def testWhois(self):
         user = self._loggedInUser(u'someguy')
 
         otherguy = service.User("otherguy")
-        otherguy.itergroups = lambda: iter([
-            service.Group('groupA'),
-            service.Group('groupB')])
+        otherguy.itergroups = lambda: iter(
+            [service.Group('groupA'), service.Group('groupB')]
+        )
         otherguy.signOn = 10
         otherguy.lastMessage = time.time() - 15
 
@@ -760,17 +763,16 @@ class TestMind(service.PBMind):
     def remote_userJoined(self, user, group):
         self.joins.append((user, group))
 
-
     def remote_userLeft(self, user, group, reason):
         self.parts.append((user, group, reason))
-
 
     def remote_receive(self, sender, recipient, message):
         self.messages.append((sender, recipient, message))
 
-
     def remote_groupMetaUpdate(self, group, meta):
         self.meta.append((group, meta))
+
+
 pb.setUnjellyableForClass(TestMind, service.PBMindReference)
 
 
@@ -778,8 +780,7 @@ class PBProtocolTests(unittest.TestCase):
     def setUp(self):
         self.realm = service.InMemoryWordsRealm("realmname")
         self.checker = checkers.InMemoryUsernamePasswordDatabaseDontUse()
-        self.portal = portal.Portal(
-            self.realm, [self.checker])
+        self.portal = portal.Portal(self.realm, [self.checker])
         self.serverFactory = pb.PBServerFactory(self.portal)
         self.serverFactory.protocol = self._protocolFactory
         self.serverFactory.unsafeTracebacks = True
@@ -787,23 +788,23 @@ class PBProtocolTests(unittest.TestCase):
         self.clientFactory.unsafeTracebacks = True
         self.serverPort = reactor.listenTCP(0, self.serverFactory)
         self.clientConn = reactor.connectTCP(
-            '127.0.0.1',
-            self.serverPort.getHost().port,
-            self.clientFactory)
-
+            '127.0.0.1', self.serverPort.getHost().port, self.clientFactory
+        )
 
     def _protocolFactory(self, *args, **kw):
         self._serverProtocol = pb.Broker(0)
         return self._serverProtocol
 
-
     def tearDown(self):
         d3 = Deferred()
         self._serverProtocol.notifyOnDisconnect(lambda: d3.callback(None))
-        return DeferredList([
-            maybeDeferred(self.serverPort.stopListening),
-            maybeDeferred(self.clientConn.disconnect), d3])
-
+        return DeferredList(
+            [
+                maybeDeferred(self.serverPort.stopListening),
+                maybeDeferred(self.clientConn.disconnect),
+                d3,
+            ]
+        )
 
     def _loggedInAvatar(self, name, password, mind):
         nameBytes = name
@@ -814,7 +815,6 @@ class PBProtocolTests(unittest.TestCase):
         d = self.realm.createUser(name)
         d.addCallback(lambda ign: self.clientFactory.login(creds, mind))
         return d
-
 
     @defer.inlineCallbacks
     def testGroups(self):

@@ -9,7 +9,9 @@ class IProtocolPlugin(Interface):
     """Interface for plugins providing an interface to a Words service
     """
 
-    name = Attribute("A single word describing what kind of interface this is (eg, irc or web)")
+    name = Attribute(
+        "A single word describing what kind of interface this is (eg, irc or web)"
+    )
 
     def getFactory(realm, portal):
         """Retrieve a C{twisted.internet.interfaces.IServerFactory} provider
@@ -82,7 +84,9 @@ class IChatClient(Interface):
     """Interface through which IChatService interacts with clients.
     """
 
-    name = Attribute("A short string, unique among users.  This will be set by the L{IChatService} at login time.")
+    name = Attribute(
+        "A short string, unique among users.  This will be set by the L{IChatService} at login time."
+    )
 
     def receive(sender, recipient, message):
         """
@@ -144,12 +148,20 @@ class IUser(Interface):
     """Interface through which clients interact with IChatService.
     """
 
-    realm = Attribute("A reference to the Realm to which this user belongs.  Set if and only if the user is logged in.")
-    mind = Attribute("A reference to the mind which logged in to this user.  Set if and only if the user is logged in.")
+    realm = Attribute(
+        "A reference to the Realm to which this user belongs.  Set if and only if the user is logged in."
+    )
+    mind = Attribute(
+        "A reference to the mind which logged in to this user.  Set if and only if the user is logged in."
+    )
     name = Attribute("A short string, unique among users.")
 
-    lastMessage = Attribute("A POSIX timestamp indicating the time of the last message received from this user.")
-    signOn = Attribute("A POSIX timestamp indicating this user's most recent sign on time.")
+    lastMessage = Attribute(
+        "A POSIX timestamp indicating the time of the last message received from this user."
+    )
+    signOn = Attribute(
+        "A POSIX timestamp indicating this user's most recent sign on time."
+    )
 
     def loggedIn(realm, mind):
         """Invoked by the associated L{IChatService} when login occurs.
@@ -191,11 +203,13 @@ class IChatService(Interface):
 
     createGroupOnRequest = Attribute(
         "A boolean indicating whether L{getGroup} should implicitly "
-        "create groups which are requested but which do not yet exist.")
+        "create groups which are requested but which do not yet exist."
+    )
 
     createUserOnRequest = Attribute(
         "A boolean indicating whether L{getUser} should implicitly "
-        "create users which are requested but which do not yet exist.")
+        "create users which are requested but which do not yet exist."
+    )
 
     def itergroups():
         """Return all groups available on this service.
@@ -262,6 +276,5 @@ class IChatService(Interface):
         user by that name exists already.
         """
 
-__all__ = [
-    'IGroup', 'IChatClient', 'IUser', 'IChatService',
-    ]
+
+__all__ = ['IGroup', 'IChatClient', 'IUser', 'IChatService']

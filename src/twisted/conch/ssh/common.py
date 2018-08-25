@@ -21,7 +21,6 @@ from twisted.python.versions import Version
 __all__ = ["NS", "getNS", "MP", "getMP", "ffs"]
 
 
-
 def NS(t):
     """
     net string
@@ -31,7 +30,6 @@ def NS(t):
     return struct.pack('!L', len(t)) + t
 
 
-
 def getNS(s, count=1):
     """
     get net string
@@ -39,11 +37,10 @@ def getNS(s, count=1):
     ns = []
     c = 0
     for i in range(count):
-        l, = struct.unpack('!L', s[c:c + 4])
-        ns.append(s[c + 4:4 + l + c])
+        l, = struct.unpack('!L', s[c : c + 4])
+        ns.append(s[c + 4 : 4 + l + c])
         c += 4 + l
     return tuple(ns) + (s[c:],)
-
 
 
 def MP(number):
@@ -54,7 +51,6 @@ def MP(number):
     if ord(bn[0:1]) & 128:
         bn = b'\000' + bn
     return struct.pack('>L', len(bn)) + bn
-
 
 
 def getMP(data, count=1):
@@ -68,11 +64,10 @@ def getMP(data, count=1):
     mp = []
     c = 0
     for i in range(count):
-        length, = struct.unpack('>L', data[c:c + 4])
-        mp.append(int_from_bytes(data[c + 4:c + 4 + length], 'big'))
+        length, = struct.unpack('>L', data[c : c + 4])
+        mp.append(int_from_bytes(data[c + 4 : c + 4 + length], 'big'))
         c += 4 + length
     return tuple(mp) + (data[c:],)
-
 
 
 def _MPpow(x, y, z):
@@ -80,7 +75,6 @@ def _MPpow(x, y, z):
     Return the MP version of C{(x ** y) % z}.
     """
     return MP(pow(x, y, z))
-
 
 
 def ffs(c, s):
@@ -91,7 +85,6 @@ def ffs(c, s):
     for i in c:
         if i in s:
             return i
-
 
 
 @deprecated(Version("Twisted", 16, 5, 0))

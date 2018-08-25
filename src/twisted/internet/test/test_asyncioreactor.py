@@ -16,14 +16,13 @@ except ImportError:
     skipReason = "Requires asyncio."
 
 
-
 class AsyncioSelectorReactorTests(ReactorBuilder, SynchronousTestCase):
     """
     L{AsyncioSelectorReactor} tests.
     """
+
     if AsyncioSelectorReactor is None:
         skip = skipReason
-
 
     def test_defaultEventLoopFromGlobalPolicy(self):
         """

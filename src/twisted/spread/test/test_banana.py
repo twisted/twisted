@@ -22,15 +22,18 @@ else:
 
 class MathTests(unittest.TestCase):
     def test_int2b128(self):
-        funkylist = (list(range(0,100)) + list(range(1000,1100)) +
-                    list(range(1000000,1000100)) + [1024 **10])
+        funkylist = (
+            list(range(0, 100))
+            + list(range(1000, 1100))
+            + list(range(1000000, 1000100))
+            + [1024 ** 10]
+        )
         for i in funkylist:
             x = BytesIO()
             banana.int2b128(i, x.write)
             v = x.getvalue()
             y = banana.b1282int(v)
             self.assertEqual(y, i)
-
 
 
 def selectDialect(protocol, dialect):
@@ -46,7 +49,6 @@ def selectDialect(protocol, dialect):
     # stuff gets in the way (for example, clients and servers have incompatible
     # negotiations for this step).  So use the private API to make this happen.
     protocol._selectDialect(dialect)
-
 
 
 def encode(bananaFactory, obj):
@@ -71,12 +73,12 @@ def encode(bananaFactory, obj):
     return transport.value()
 
 
-
 class BananaTestBase(unittest.TestCase):
     """
     The base for test classes. It defines commonly used things and sets up a
     connection for testing.
     """
+
     encClass = banana.Banana
 
     def setUp(self):
@@ -87,7 +89,6 @@ class BananaTestBase(unittest.TestCase):
         self.enc.expressionReceived = self.putResult
         self.encode = partial(encode, self.encClass)
 
-
     def putResult(self, result):
         """
         Store an expression received by C{self.enc}.
@@ -97,11 +98,9 @@ class BananaTestBase(unittest.TestCase):
         """
         self.result = result
 
-
     def tearDown(self):
         self.enc.connectionLost(failure.Failure(main.CONNECTION_DONE))
         del self.enc
-
 
 
 class BananaTests(BananaTestBase):
@@ -114,7 +113,6 @@ class BananaTests(BananaTestBase):
         self.enc.dataReceived(self.io.getvalue())
         assert self.result == b'hello'
 
-
     def test_unsupportedUnicode(self):
         """
         Banana does not support unicode.  ``Banana.sendEncoded`` raises
@@ -124,7 +122,6 @@ class BananaTests(BananaTestBase):
             self._unsupportedTypeTest(u"hello", "builtins.str")
         else:
             self._unsupportedTypeTest(u"hello", "__builtin__.unicode")
-
 
     def test_unsupportedBuiltinType(self):
         """
@@ -138,7 +135,6 @@ class BananaTests(BananaTestBase):
         else:
             self._unsupportedTypeTest(type, "__builtin__.type")
 
-
     def test_unsupportedUserType(self):
         """
         Banana does not support arbitrary user-defined types (such as those
@@ -146,7 +142,6 @@ class BananaTests(BananaTestBase):
         ``BananaError`` if called with an instance of such a type.
         """
         self._unsupportedTypeTest(MathTests(), __name__ + ".MathTests")
-
 
     def _unsupportedTypeTest(self, obj, name):
         """
@@ -164,7 +159,6 @@ class BananaTests(BananaTestBase):
         exc = self.assertRaises(banana.BananaError, self.enc.sendEncoded, obj)
         self.assertIn("Banana cannot send {0} objects".format(name), str(exc))
 
-
     def test_int(self):
         """
         A positive integer less than 2 ** 32 should round-trip through
@@ -177,7 +171,6 @@ class BananaTests(BananaTestBase):
             self.assertEqual(self.result, 10151)
             self.assertIsInstance(self.result, int)
 
-
     def test_largeLong(self):
         """
         Integers greater than 2 ** 32 and less than -2 ** 32 should
@@ -188,7 +181,7 @@ class BananaTests(BananaTestBase):
         for exp in (32, 64, 128, 256):
             for add in (0, 1):
                 m = 2 ** exp + add
-                for n in (m, -m-1):
+                for n in (m, -m - 1):
                     self.enc.dataReceived(self.encode(n))
                     self.assertEqual(self.result, n)
                     if n > _maxint or n < -_maxint - 1:
@@ -198,8 +191,8 @@ class BananaTests(BananaTestBase):
 
     if _PY3:
         test_largeLong.skip = (
-            "Python 3 has unified int/long into an int type of unlimited size")
-
+            "Python 3 has unified int/long into an int type of unlimited size"
+        )
 
     def _getSmallest(self):
         # How many bytes of prefix our implementation allows
@@ -213,7 +206,6 @@ class BananaTests(BananaTestBase):
         smallest = largest + 1
         return smallest
 
-
     def test_encodeTooLargeLong(self):
         """
         Test that a long above the implementation-specific limit is rejected
@@ -221,7 +213,6 @@ class BananaTests(BananaTestBase):
         """
         smallest = self._getSmallest()
         self.assertRaises(banana.BananaError, self.enc.sendEncoded, smallest)
-
 
     def test_decodeTooLargeLong(self):
         """
@@ -237,10 +228,8 @@ class BananaTests(BananaTestBase):
 
         self.assertRaises(banana.BananaError, self.enc.dataReceived, encoded)
 
-
     def _getLargest(self):
         return -self._getSmallest()
-
 
     def test_encodeTooSmallLong(self):
         """
@@ -249,7 +238,6 @@ class BananaTests(BananaTestBase):
         """
         largest = self._getLargest()
         self.assertRaises(banana.BananaError, self.enc.sendEncoded, largest)
-
 
     def test_decodeTooSmallLong(self):
         """
@@ -265,46 +253,57 @@ class BananaTests(BananaTestBase):
 
         self.assertRaises(banana.BananaError, self.enc.dataReceived, encoded)
 
-
     def test_integer(self):
         self.enc.sendEncoded(1015)
         self.enc.dataReceived(self.io.getvalue())
         self.assertEqual(self.result, 1015)
-
 
     def test_negative(self):
         self.enc.sendEncoded(-1015)
         self.enc.dataReceived(self.io.getvalue())
         self.assertEqual(self.result, -1015)
 
-
     def test_float(self):
         self.enc.sendEncoded(1015.)
         self.enc.dataReceived(self.io.getvalue())
         self.assertEqual(self.result, 1015.0)
 
-
     def test_list(self):
-        foo = ([1, 2, [3, 4], [30.5, 40.2], 5,
-               [b"six", b"seven", [b"eight", 9]], [10], []])
+        foo = [
+            1,
+            2,
+            [3, 4],
+            [30.5, 40.2],
+            5,
+            [b"six", b"seven", [b"eight", 9]],
+            [10],
+            [],
+        ]
         self.enc.sendEncoded(foo)
         self.enc.dataReceived(self.io.getvalue())
         self.assertEqual(self.result, foo)
-
 
     def test_partial(self):
         """
         Test feeding the data byte per byte to the receiver. Normally
         data is not split.
         """
-        foo = [1, 2, [3, 4], [30.5, 40.2], 5,
-               [b"six", b"seven", [b"eight", 9]], [10],
-               # TODO: currently the C implementation's a bit buggy...
-               sys.maxsize * 3, sys.maxsize * 2, sys.maxsize * -2]
+        foo = [
+            1,
+            2,
+            [3, 4],
+            [30.5, 40.2],
+            5,
+            [b"six", b"seven", [b"eight", 9]],
+            [10],
+            # TODO: currently the C implementation's a bit buggy...
+            sys.maxsize * 3,
+            sys.maxsize * 2,
+            sys.maxsize * -2,
+        ]
         self.enc.sendEncoded(foo)
         self.feed(self.io.getvalue())
         self.assertEqual(self.result, foo)
-
 
     def feed(self, data):
         """
@@ -316,18 +315,15 @@ class BananaTests(BananaTestBase):
         for byte in iterbytes(data):
             self.enc.dataReceived(byte)
 
-
     def test_oversizedList(self):
         data = b'\x02\x01\x01\x01\x01\x80'
         # list(size=0x0101010102, about 4.3e9)
         self.assertRaises(banana.BananaError, self.feed, data)
 
-
     def test_oversizedString(self):
         data = b'\x02\x01\x01\x01\x01\x82'
         # string(size=0x0101010102, about 4.3e9)
         self.assertRaises(banana.BananaError, self.feed, data)
-
 
     def test_crashString(self):
         crashString = b'\x00\x00\x00\x00\x04\x80'
@@ -339,9 +335,9 @@ class BananaTests(BananaTestBase):
 
         # This variant doesn't segfault straight out in my environment.
         # Instead, it takes up large amounts of CPU and memory...
-        #crashString = '\x00\x00\x00\x00\x01\x80'
+        # crashString = '\x00\x00\x00\x00\x01\x80'
         # print repr(crashString)
-        #self.failUnlessRaises(Exception, self.enc.dataReceived, crashString)
+        # self.failUnlessRaises(Exception, self.enc.dataReceived, crashString)
         try:
             # should now raise MemoryError
             self.enc.dataReceived(crashString)
@@ -359,7 +355,6 @@ class BananaTests(BananaTestBase):
         self.enc.sendEncoded(-2147483648)
         self.enc.dataReceived(self.io.getvalue())
         self.assertEqual(self.result, -2147483648)
-
 
     def test_sizedIntegerTypes(self):
         """
@@ -391,11 +386,11 @@ class BananaTests(BananaTestBase):
         self.assertEqual(self.encode(baseNegIn - 3), b'\x03' + baseLongNegOut)
 
 
-
 class DialectTests(BananaTestBase):
     """
     Tests for Banana's handling of dialects.
     """
+
     vocab = b'remote'
     legalPbItem = chr(banana.Banana.outgoingVocabulary[vocab]) + banana.VOCAB
     illegalPbItem = chr(122) + banana.VOCAB
@@ -405,10 +400,7 @@ class DialectTests(BananaTestBase):
         If no dialect has been selected and a PB VOCAB item is received,
         L{NotImplementedError} is raised.
         """
-        self.assertRaises(
-            NotImplementedError,
-            self.enc.dataReceived, self.legalPbItem)
-
+        self.assertRaises(NotImplementedError, self.enc.dataReceived, self.legalPbItem)
 
     def test_receivePb(self):
         """
@@ -418,7 +410,6 @@ class DialectTests(BananaTestBase):
         self.enc.dataReceived(self.legalPbItem)
         self.assertEqual(self.result, self.vocab)
 
-
     def test_receiveIllegalPb(self):
         """
         If the PB dialect has been selected and an unrecognized PB VOCAB item
@@ -426,7 +417,6 @@ class DialectTests(BananaTestBase):
         """
         selectDialect(self.enc, b'pb')
         self.assertRaises(KeyError, self.enc.dataReceived, self.illegalPbItem)
-
 
     def test_sendPb(self):
         """
@@ -438,11 +428,11 @@ class DialectTests(BananaTestBase):
         self.assertEqual(self.legalPbItem, self.io.getvalue())
 
 
-
 class GlobalCoderTests(unittest.TestCase):
     """
     Tests for the free functions L{banana.encode} and L{banana.decode}.
     """
+
     def test_statelessDecode(self):
         """
         Calls to L{banana.decode} are independent of each other.

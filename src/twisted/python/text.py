@@ -28,12 +28,13 @@ def stringyString(object, indentation=''):
             value = stringyString(value, indentation + '   ')
             if isMultiline(value):
                 if endsInNewline(value):
-                    value = value[:-len('\n')]
+                    value = value[: -len('\n')]
                 sl.append("%s %s:\n%s" % (indentation, key, value))
             else:
                 # Oops.  Will have to move that indentation.
-                sl.append("%s %s: %s" % (indentation, key,
-                                         value[len(indentation) + 3:]))
+                sl.append(
+                    "%s %s: %s" % (indentation, key, value[len(indentation) + 3 :])
+                )
 
     elif type(object) is tuple or type(object) is list:
         if type(object) is tuple:
@@ -45,14 +46,13 @@ def stringyString(object, indentation=''):
             element = stringyString(element, indentation + ' ')
             sl.append(element.rstrip() + ',')
     else:
-        sl[:] = map(lambda s, i=indentation: i + s,
-                   str(object).split('\n'))
+        sl[:] = map(lambda s, i=indentation: i + s, str(object).split('\n'))
 
     if not sl:
         sl.append(indentation)
 
     if braces:
-        sl[0] = indentation + braces[0] + sl[0][len(indentation) + 1:]
+        sl[0] = indentation + braces[0] + sl[0][len(indentation) + 1 :]
         sl[-1] = sl[-1] + braces[-1]
 
     s = "\n".join(sl)
@@ -67,14 +67,14 @@ def isMultiline(s):
     """
     Returns C{True} if this string has a newline in it.
     """
-    return (s.find('\n') != -1)
+    return s.find('\n') != -1
 
 
 def endsInNewline(s):
     """
     Returns C{True} if this string ends in a newline.
     """
-    return (s[-len('\n'):] == '\n')
+    return s[-len('\n') :] == '\n'
 
 
 def greedyWrap(inString, width=80):
@@ -89,7 +89,7 @@ def greedyWrap(inString, width=80):
 
     outLines = []
 
-    #eww, evil hacks to allow paragraphs delimited by two \ns :(
+    # eww, evil hacks to allow paragraphs delimited by two \ns :(
     if inString.find('\n\n') >= 0:
         paragraphs = inString.split('\n\n')
         for para in paragraphs:
@@ -103,7 +103,7 @@ def greedyWrap(inString, width=80):
         column = column + len(inWords[ptr_line])
         ptr_line = ptr_line + 1
 
-        if (column > width):
+        if column > width:
             if ptr_line == 1:
                 # This single word is too long, it will be the whole line.
                 pass
@@ -143,7 +143,7 @@ def removeLeadingTrailingBlanks(s):
     lines.reverse()
     lines = removeLeadingBlanks(lines)
     lines.reverse()
-    return '\n'.join(lines)+'\n'
+    return '\n'.join(lines) + '\n'
 
 
 def splitQuoted(s):
@@ -188,21 +188,20 @@ def strFile(p, f, caseSensitive=True):
     @rtype: C{bool}
     """
     buf = type(p)()
-    buf_len = max(len(p), 2**2**2**2)
+    buf_len = max(len(p), 2 ** 2 ** 2 ** 2)
     if not caseSensitive:
         p = p.lower()
     while 1:
-        r = f.read(buf_len-len(p))
+        r = f.read(buf_len - len(p))
         if not caseSensitive:
             r = r.lower()
         bytes_read = len(r)
         if bytes_read == 0:
             return False
-        l = len(buf)+bytes_read-buf_len
+        l = len(buf) + bytes_read - buf_len
         if l <= 0:
             buf = buf + r
         else:
             buf = buf[l:] + r
         if buf.find(p) != -1:
             return True
-

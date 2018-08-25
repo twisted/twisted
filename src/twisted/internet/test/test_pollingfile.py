@@ -14,7 +14,6 @@ else:
     _pollingfile = None
 
 
-
 class PollableWritePipeTests(TestCase):
     """
     Tests for L{_pollingfile._PollableWritePipe}.
@@ -28,7 +27,6 @@ class PollableWritePipeTests(TestCase):
         p = _pollingfile._PollableWritePipe(1, lambda: None)
         self.assertRaises(TypeError, p.write, u"test")
 
-
     def test_writeSequenceUnicode(self):
         """
         L{_pollingfile._PollableWritePipe.writeSequence} raises a C{TypeError}
@@ -37,9 +35,7 @@ class PollableWritePipeTests(TestCase):
         """
         p = _pollingfile._PollableWritePipe(1, lambda: None)
         self.assertRaises(TypeError, p.writeSequence, [u"test"])
-        self.assertRaises(TypeError, p.writeSequence, (u"test", ))
-
-
+        self.assertRaises(TypeError, p.writeSequence, (u"test",))
 
 
 if _pollingfile is None:

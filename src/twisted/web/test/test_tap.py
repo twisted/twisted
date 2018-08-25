@@ -32,10 +32,12 @@ from twisted.web.wsgi import WSGIResource
 
 application = object()
 
+
 class ServiceTests(TestCase):
     """
     Tests for the service creation APIs in L{twisted.web.tap}.
     """
+
     def _pathOption(self):
         """
         Helper for the I{--path} tests which creates a directory and creates
@@ -53,7 +55,6 @@ class ServiceTests(TestCase):
         root = options['root']
         return path, root
 
-
     def test_path(self):
         """
         The I{--path} option causes L{Options} to create a root resource
@@ -62,7 +63,6 @@ class ServiceTests(TestCase):
         path, root = self._pathOption()
         self.assertIsInstance(root, File)
         self.assertEqual(root.path, path.path)
-
 
     def test_pathServer(self):
         """
@@ -83,9 +83,7 @@ class ServiceTests(TestCase):
         self.assertTrue(stat.S_ISSOCK(os.stat(port).st_mode))
 
     if not IReactorUNIX.providedBy(reactor):
-        test_pathServer.skip = (
-            "The reactor does not support UNIX domain sockets")
-
+        test_pathServer.skip = "The reactor does not support UNIX domain sockets"
 
     def test_cgiProcessor(self):
         """
@@ -96,7 +94,6 @@ class ServiceTests(TestCase):
         path.child("foo.cgi").setContent(b"")
         self.assertIsInstance(root.getChild("foo.cgi", None), CGIScript)
 
-
     def test_epyProcessor(self):
         """
         The I{--path} option creates a root resource which serves a
@@ -105,7 +102,6 @@ class ServiceTests(TestCase):
         path, root = self._pathOption()
         path.child("foo.epy").setContent(b"")
         self.assertIsInstance(root.getChild("foo.epy", None), PythonScript)
-
 
     def test_rpyProcessor(self):
         """
@@ -116,12 +112,12 @@ class ServiceTests(TestCase):
         path, root = self._pathOption()
         path.child("foo.rpy").setContent(
             b"from twisted.web.static import Data\n"
-            b"resource = Data('content', 'major/minor')\n")
+            b"resource = Data('content', 'major/minor')\n"
+        )
         child = root.getChild("foo.rpy", None)
         self.assertIsInstance(child, Data)
         self.assertEqual(child.data, 'content')
         self.assertEqual(child.type, 'major/minor')
-
 
     def test_makePersonalServerFactory(self):
         """
@@ -135,7 +131,6 @@ class ServiceTests(TestCase):
         self.assertIsInstance(serverFactory, PBServerFactory)
         self.assertIsInstance(serverFactory.root, ResourcePublisher)
         self.assertIdentical(serverFactory.root.site, site)
-
 
     def test_personalServer(self):
         """
@@ -153,9 +148,7 @@ class ServiceTests(TestCase):
         self.assertTrue(stat.S_ISSOCK(os.stat(port).st_mode))
 
     if not IReactorUNIX.providedBy(reactor):
-        test_personalServer.skip = (
-            "The reactor does not support UNIX domain sockets")
-
+        test_personalServer.skip = "The reactor does not support UNIX domain sockets"
 
     def test_defaultPersonalPath(self):
         """
@@ -165,15 +158,13 @@ class ServiceTests(TestCase):
         """
         options = Options()
         options.parseOptions(['--personal'])
-        path = os.path.expanduser(
-            os.path.join('~', UserDirectory.userSocketName))
-        self.assertEqual(options['ports'][0],
-                         'unix:{}'.format(path))
+        path = os.path.expanduser(os.path.join('~', UserDirectory.userSocketName))
+        self.assertEqual(options['ports'][0], 'unix:{}'.format(path))
 
     if not IReactorUNIX.providedBy(reactor):
         test_defaultPersonalPath.skip = (
-            "The reactor does not support UNIX domain sockets")
-
+            "The reactor does not support UNIX domain sockets"
+        )
 
     def test_defaultPort(self):
         """
@@ -183,9 +174,8 @@ class ServiceTests(TestCase):
         options = Options()
         options.parseOptions([])
         self.assertEqual(
-            endpoints._parseServer(options['ports'][0], None)[:2],
-            ('TCP', (8080, None)))
-
+            endpoints._parseServer(options['ports'][0], None)[:2], ('TCP', (8080, None))
+        )
 
     def test_twoPorts(self):
         """
@@ -195,7 +185,6 @@ class ServiceTests(TestCase):
         options.parseOptions(['--listen', 'tcp:8001', '--listen', 'tcp:8002'])
         self.assertIn('8001', options['ports'][0])
         self.assertIn('8002', options['ports'][1])
-
 
     def test_wsgi(self):
         """
@@ -219,7 +208,6 @@ class ServiceTests(TestCase):
         reactor.fireSystemEvent('shutdown')
         self.assertTrue(root._threadpool.joined)
 
-
     def test_invalidApplication(self):
         """
         If I{--wsgi} is given an invalid name, L{Options.parseOptions}
@@ -227,11 +215,8 @@ class ServiceTests(TestCase):
         """
         options = Options()
         for name in [__name__ + '.nosuchthing', 'foo.']:
-            exc = self.assertRaises(
-                UsageError, options.parseOptions, ['--wsgi', name])
-            self.assertEqual(str(exc),
-                             "No such WSGI application: %r" % (name,))
-
+            exc = self.assertRaises(UsageError, options.parseOptions, ['--wsgi', name])
+            self.assertEqual(str(exc), "No such WSGI application: %r" % (name,))
 
     def test_HTTPSFailureOnMissingSSL(self):
         """
@@ -240,14 +225,12 @@ class ServiceTests(TestCase):
         """
         options = Options()
 
-        exception = self.assertRaises(
-            UsageError, options.parseOptions, ['--https=443'])
+        exception = self.assertRaises(UsageError, options.parseOptions, ['--https=443'])
 
         self.assertEqual('SSL support not installed', exception.args[0])
 
     if requireModule('OpenSSL.SSL') is not None:
         test_HTTPSFailureOnMissingSSL.skip = 'SSL module is available.'
-
 
     def test_HTTPSAcceptedOnAvailableSSL(self):
         """
@@ -263,17 +246,13 @@ class ServiceTests(TestCase):
     if requireModule('OpenSSL.SSL') is None:
         test_HTTPSAcceptedOnAvailableSSL.skip = 'SSL module is not available.'
 
-
     def test_add_header_parsing(self):
         """
         When --add-header is specific, the value is parsed.
         """
         options = Options()
-        options.parseOptions(
-            ['--add-header', 'K1: V1', '--add-header', 'K2: V2']
-        )
+        options.parseOptions(['--add-header', 'K1: V1', '--add-header', 'K2: V2'])
         self.assertEqual(options['extraHeaders'], [('K1', 'V1'), ('K2', 'V2')])
-
 
     def test_add_header_resource(self):
         """
@@ -281,15 +260,12 @@ class ServiceTests(TestCase):
         headers.
         """
         options = Options()
-        options.parseOptions(
-            ['--add-header', 'K1: V1', '--add-header', 'K2: V2']
-        )
+        options.parseOptions(['--add-header', 'K1: V1', '--add-header', 'K2: V2'])
         service = makeService(options)
         resource = service.services[0].factory.resource
         self.assertIsInstance(resource, _AddHeadersResource)
         self.assertEqual(resource._headers, [('K1', 'V1'), ('K2', 'V2')])
         self.assertIsInstance(resource._originalResource, demo.Test)
-
 
 
 class AddHeadersResourceTests(TestCase):
@@ -299,9 +275,9 @@ class AddHeadersResourceTests(TestCase):
         response.
         """
         resource = _AddHeadersResource(
-            demo.Test(), [("K1", "V1"), ("K2", "V2"), ("K1", "V3")])
+            demo.Test(), [("K1", "V1"), ("K2", "V2"), ("K1", "V3")]
+        )
         request = DummyRequest([])
         resource.getChildWithDefault("", request)
-        self.assertEqual(
-            request.responseHeaders.getRawHeaders("K1"), ["V1", "V3"])
+        self.assertEqual(request.responseHeaders.getRawHeaders("K1"), ["V1", "V3"])
         self.assertEqual(request.responseHeaders.getRawHeaders("K2"), ["V2"])

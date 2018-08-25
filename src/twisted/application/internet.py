@@ -48,7 +48,11 @@ from twisted.application import service
 from twisted.internet import task
 from twisted.python.failure import Failure
 from twisted.internet.defer import (
-    CancelledError, Deferred, succeed, fail, maybeDeferred
+    CancelledError,
+    Deferred,
+    succeed,
+    fail,
+    maybeDeferred,
 )
 
 from automat import MethodicalMachine
@@ -60,10 +64,10 @@ def _maybeGlobalReactor(maybeReactor):
     """
     if maybeReactor is None:
         from twisted.internet import reactor
+
         return reactor
     else:
         return maybeReactor
-
 
 
 class _VolatileDataService(service.Service):
@@ -76,7 +80,6 @@ class _VolatileDataService(service.Service):
             if attr in d:
                 del d[attr]
         return d
-
 
 
 class _AbstractServer(_VolatileDataService):
@@ -108,17 +111,14 @@ class _AbstractServer(_VolatileDataService):
             self.reactor = kwargs.pop("reactor")
         self.kwargs = kwargs
 
-
     def privilegedStartService(self):
         service.Service.privilegedStartService(self)
         self._port = self._getPort()
-
 
     def startService(self):
         service.Service.startService(self)
         if self._port is None:
             self._port = self._getPort()
-
 
     def stopService(self):
         service.Service.stopService(self)
@@ -129,7 +129,6 @@ class _AbstractServer(_VolatileDataService):
             del self._port
             return d
 
-
     def _getPort(self):
         """
         Wrapper around the appropriate listen method of the reactor.
@@ -138,9 +137,9 @@ class _AbstractServer(_VolatileDataService):
         @rtype: an object providing
             L{twisted.internet.interfaces.IListeningPort}.
         """
-        return getattr(_maybeGlobalReactor(self.reactor),
-                       'listen%s' % (self.method,))(*self.args, **self.kwargs)
-
+        return getattr(_maybeGlobalReactor(self.reactor), 'listen%s' % (self.method,))(
+            *self.args, **self.kwargs
+        )
 
 
 class _AbstractClient(_VolatileDataService):
@@ -172,18 +171,15 @@ class _AbstractClient(_VolatileDataService):
             self.reactor = kwargs.pop("reactor")
         self.kwargs = kwargs
 
-
     def startService(self):
         service.Service.startService(self)
         self._connection = self._getConnection()
-
 
     def stopService(self):
         service.Service.stopService(self)
         if self._connection is not None:
             self._connection.disconnect()
             del self._connection
-
 
     def _getConnection(self):
         """
@@ -192,20 +188,18 @@ class _AbstractClient(_VolatileDataService):
         @return: the port object returned by the connect method.
         @rtype: an object providing L{twisted.internet.interfaces.IConnector}.
         """
-        return getattr(_maybeGlobalReactor(self.reactor),
-                       'connect%s' % (self.method,))(*self.args, **self.kwargs)
+        return getattr(_maybeGlobalReactor(self.reactor), 'connect%s' % (self.method,))(
+            *self.args, **self.kwargs
+        )
 
 
-
-_doc={
-'Client':
-"""Connect to %(tran)s
+_doc = {
+    'Client': """Connect to %(tran)s
 
 Call reactor.connect%(tran)s when the service starts, with the
 arguments given to the constructor.
 """,
-'Server':
-"""Serve %(tran)s clients
+    'Server': """Serve %(tran)s clients
 
 Call reactor.listen%(tran)s when the service starts, with the
 arguments given to the constructor. When the service stops,
@@ -220,12 +214,11 @@ for tran in 'TCP UNIX SSL UDP UNIXDatagram Multicast'.split():
             continue
         if tran == "UDP" and side == "Client":
             continue
-        base = globals()['_Abstract'+side]
+        base = globals()['_Abstract' + side]
         doc = _doc[side] % vars()
 
-        klass = type(tran+side, (base,), {'method': tran, '__doc__': doc})
-        globals()[tran+side] = klass
-
+        klass = type(tran + side, (base,), {'method': tran, '__doc__': doc})
+        globals()[tran + side] = klass
 
 
 class TimerService(_VolatileDataService):
@@ -292,31 +285,26 @@ class TimerService(_VolatileDataService):
         """
         if self._loop.running:
             self._loop.stop()
-        self._loopFinished.addCallback(lambda _:
-                service.Service.stopService(self))
+        self._loopFinished.addCallback(lambda _: service.Service.stopService(self))
         return self._loopFinished
-
 
 
 class CooperatorService(service.Service):
     """
     Simple L{service.IService} which starts and stops a L{twisted.internet.task.Cooperator}.
     """
+
     def __init__(self):
         self.coop = task.Cooperator(started=False)
-
 
     def coiterate(self, iterator):
         return self.coop.coiterate(iterator)
 
-
     def startService(self):
         self.coop.start()
 
-
     def stopService(self):
         self.coop.stop()
-
 
 
 class StreamServerEndpointService(service.Service, object):
@@ -351,7 +339,6 @@ class StreamServerEndpointService(service.Service, object):
         self.factory = factory
         self._waitingForPort = None
 
-
     def privilegedStartService(self):
         """
         Start listening on the endpoint.
@@ -359,16 +346,17 @@ class StreamServerEndpointService(service.Service, object):
         service.Service.privilegedStartService(self)
         self._waitingForPort = self.endpoint.listen(self.factory)
         raisedNow = []
+
         def handleIt(err):
             if self._raiseSynchronously:
                 raisedNow.append(err)
             elif not err.check(CancelledError):
                 log.err(err)
+
         self._waitingForPort.addErrback(handleIt)
         if raisedNow:
             raisedNow[0].raiseException()
         self._raiseSynchronously = False
-
 
     def startService(self):
         """
@@ -379,7 +367,6 @@ class StreamServerEndpointService(service.Service, object):
         if self._waitingForPort is None:
             self.privilegedStartService()
 
-
     def stopService(self):
         """
         Stop listening on the port if it is already listening, otherwise,
@@ -389,16 +376,19 @@ class StreamServerEndpointService(service.Service, object):
             with L{None} when the port has stopped listening.
         """
         self._waitingForPort.cancel()
+
         def stopIt(port):
             if port is not None:
                 return port.stopListening()
+
         d = self._waitingForPort.addCallback(stopIt)
+
         def stop(passthrough):
             self.running = False
             return passthrough
+
         d.addBoth(stop)
         return d
-
 
 
 class _ReconnectingProtocolProxy(object):
@@ -423,7 +413,6 @@ class _ReconnectingProtocolProxy(object):
         self._protocol = protocol
         self._lostNotification = lostNotification
 
-
     def connectionLost(self, reason):
         """
         The connection was lost.  Relay this information.
@@ -437,15 +426,11 @@ class _ReconnectingProtocolProxy(object):
         finally:
             self._lostNotification(reason)
 
-
     def __getattr__(self, item):
         return getattr(self._protocol, item)
 
-
     def __repr__(self):
-        return '<%s wrapping %r>' % (
-            self.__class__.__name__, self._protocol)
-
+        return '<%s wrapping %r>' % (self.__class__.__name__, self._protocol)
 
 
 class _DisconnectFactory(object):
@@ -458,7 +443,6 @@ class _DisconnectFactory(object):
         self._protocolFactory = protocolFactory
         self._protocolDisconnected = protocolDisconnected
 
-
     def buildProtocol(self, addr):
         """
         Create a L{_ReconnectingProtocolProxy} with the disconnect-notification
@@ -470,23 +454,19 @@ class _DisconnectFactory(object):
             C{self._protocolFactory}
         """
         return _ReconnectingProtocolProxy(
-            self._protocolFactory.buildProtocol(addr),
-            self._protocolDisconnected
+            self._protocolFactory.buildProtocol(addr), self._protocolDisconnected
         )
-
 
     def __getattr__(self, item):
         return getattr(self._protocolFactory, item)
 
-
     def __repr__(self):
-        return '<%s wrapping %r>' % (
-            self.__class__.__name__, self._protocolFactory)
+        return '<%s wrapping %r>' % (self.__class__.__name__, self._protocolFactory)
 
 
-
-def backoffPolicy(initialDelay=1.0, maxDelay=60.0, factor=1.5,
-                  jitter=_goodEnoughRandom):
+def backoffPolicy(
+    initialDelay=1.0, maxDelay=60.0, factor=1.5, jitter=_goodEnoughRandom
+):
     """
     A timeout policy for L{ClientService} which computes an exponential backoff
     interval with configurable parameters.
@@ -516,9 +496,12 @@ def backoffPolicy(initialDelay=1.0, maxDelay=60.0, factor=1.5,
         floating point number; the number of seconds to delay.
     @rtype: see L{ClientService.__init__}'s C{retryPolicy} argument.
     """
+
     def policy(attempt):
         return min(initialDelay * (factor ** attempt), maxDelay) + jitter()
+
     return policy
+
 
 _defaultPolicy = backoffPolicy()
 
@@ -538,7 +521,6 @@ def _firstResult(gen):
     return list(gen)[0]
 
 
-
 class _ClientMachine(object):
     """
     State machine for maintaining a single outgoing connection to an endpoint.
@@ -548,8 +530,7 @@ class _ClientMachine(object):
 
     _machine = MethodicalMachine()
 
-    def __init__(self, endpoint, factory, retryPolicy, clock,
-                 prepareConnection, log):
+    def __init__(self, endpoint, factory, retryPolicy, clock, prepareConnection, log):
         """
         @see: L{ClientService.__init__}
 
@@ -574,7 +555,6 @@ class _ClientMachine(object):
 
         self._stopWaiters = []
         self._log = log
-
 
     @_machine.state(initial=True)
     def _init(self):
@@ -630,15 +610,16 @@ class _ClientMachine(object):
         """
         Start a connection attempt.
         """
-        factoryProxy = _DisconnectFactory(self._factory,
-                                          lambda _: self._clientDisconnected())
+        factoryProxy = _DisconnectFactory(
+            self._factory, lambda _: self._clientDisconnected()
+        )
 
         self._connectionInProgress = (
             self._endpoint.connect(factoryProxy)
             .addCallback(self._runPrepareConnection)
             .addCallback(self._connectionMade)
-            .addErrback(self._connectionFailed))
-
+            .addErrback(self._connectionFailed)
+        )
 
     def _runPrepareConnection(self, protocol):
         """
@@ -659,10 +640,10 @@ class _ClientMachine(object):
             - The protocol, when no C{prepareConnection} callback is defined.
         """
         if self._prepareConnection:
-            return (maybeDeferred(self._prepareConnection, protocol)
-                    .addCallback(lambda _: protocol))
+            return maybeDeferred(self._prepareConnection, protocol).addCallback(
+                lambda _: protocol
+            )
         return protocol
-
 
     @_machine.output()
     def _resetFailedAttempts(self):
@@ -670,7 +651,6 @@ class _ClientMachine(object):
         Reset the number of failed attempts.
         """
         self._failedAttempts = 0
-
 
     @_machine.input()
     def stop(self):
@@ -693,14 +673,12 @@ class _ClientMachine(object):
         self._stopWaiters.append(Deferred())
         return self._stopWaiters[-1]
 
-
     @_machine.output()
     def _stopConnecting(self):
         """
         Stop pending connection attempt.
         """
         self._connectionInProgress.cancel()
-
 
     @_machine.output()
     def _stopRetrying(self):
@@ -710,14 +688,12 @@ class _ClientMachine(object):
         self._retryCall.cancel()
         del self._retryCall
 
-
     @_machine.output()
     def _disconnect(self):
         """
         Disconnect the current connection.
         """
         self._currentConnection.transport.loseConnection()
-
 
     @_machine.input()
     def _connectionMade(self, protocol):
@@ -744,13 +720,11 @@ class _ClientMachine(object):
         self._currentConnection = protocol._protocol
         self._unawait(self._currentConnection)
 
-
     @_machine.input()
     def _connectionFailed(self, f):
         """
         The current connection attempt failed.
         """
-
 
     @_machine.output()
     def _wait(self):
@@ -769,11 +743,13 @@ class _ClientMachine(object):
     def _doWait(self):
         self._failedAttempts += 1
         delay = self._timeoutForAttempt(self._failedAttempts)
-        self._log.info("Scheduling retry {attempt} to connect {endpoint} "
-                       "in {delay} seconds.", attempt=self._failedAttempts,
-                       endpoint=self._endpoint, delay=delay)
+        self._log.info(
+            "Scheduling retry {attempt} to connect {endpoint} " "in {delay} seconds.",
+            attempt=self._failedAttempts,
+            endpoint=self._endpoint,
+            delay=delay,
+        )
         self._retryCall = self._clock.callLater(delay, self._reconnect)
-
 
     @_machine.input()
     def _reconnect(self):
@@ -794,7 +770,6 @@ class _ClientMachine(object):
         """
         del self._currentConnection
 
-
     @_machine.output()
     def _cancelConnectWaiters(self):
         """
@@ -810,7 +785,6 @@ class _ClientMachine(object):
         are expected, after ignoring the Failure passed in.
         """
         self._unawait(Failure(CancelledError()))
-
 
     @_machine.output()
     def _finishStopping(self):
@@ -831,7 +805,6 @@ class _ClientMachine(object):
         self._stopWaiters, waiting = [], self._stopWaiters
         for w in waiting:
             w.callback(None)
-
 
     @_machine.input()
     def whenConnected(self, failAfterFailures=None):
@@ -871,7 +844,6 @@ class _ClientMachine(object):
         """
         return succeed(self._currentConnection)
 
-
     @_machine.output()
     def _noConnection(self, failAfterFailures=None):
         """
@@ -880,7 +852,6 @@ class _ClientMachine(object):
         @return: L{Deferred} that is fired with L{CancelledError}.
         """
         return fail(CancelledError())
-
 
     @_machine.output()
     def _awaitingConnection(self, failAfterFailures=None):
@@ -893,7 +864,6 @@ class _ClientMachine(object):
         self._awaitingConnected.append((result, failAfterFailures))
         return result
 
-
     @_machine.output()
     def _deferredSucceededWithNone(self):
         """
@@ -902,7 +872,6 @@ class _ClientMachine(object):
         @return: A L{Deferred} that has already fired with L{None}.
         """
         return succeed(None)
-
 
     def _unawait(self, value):
         """
@@ -930,100 +899,129 @@ class _ClientMachine(object):
             elif remaining <= 1:
                 ready.append(w)
             else:
-                notReady.append((w, remaining-1))
+                notReady.append((w, remaining - 1))
         self._awaitingConnected = notReady
         for w in ready:
             w.callback(f)
 
     # State Transitions
 
-    _init.upon(start, enter=_connecting,
-               outputs=[_connect])
-    _init.upon(stop, enter=_stopped,
-               outputs=[_deferredSucceededWithNone],
-               collector=_firstResult)
+    _init.upon(start, enter=_connecting, outputs=[_connect])
+    _init.upon(
+        stop,
+        enter=_stopped,
+        outputs=[_deferredSucceededWithNone],
+        collector=_firstResult,
+    )
 
     _connecting.upon(start, enter=_connecting, outputs=[])
     # Note that this synchonously triggers _connectionFailed in the
     # _disconnecting state.
-    _connecting.upon(stop, enter=_disconnecting,
-                     outputs=[_waitForStop, _stopConnecting],
-                     collector=_firstResult)
-    _connecting.upon(_connectionMade, enter=_connected,
-                     outputs=[_notifyWaiters])
-    _connecting.upon(_connectionFailed, enter=_waiting,
-                     outputs=[_ignoreAndWait, _deliverConnectionFailure])
+    _connecting.upon(
+        stop,
+        enter=_disconnecting,
+        outputs=[_waitForStop, _stopConnecting],
+        collector=_firstResult,
+    )
+    _connecting.upon(_connectionMade, enter=_connected, outputs=[_notifyWaiters])
+    _connecting.upon(
+        _connectionFailed,
+        enter=_waiting,
+        outputs=[_ignoreAndWait, _deliverConnectionFailure],
+    )
 
-    _waiting.upon(start, enter=_waiting,
-                  outputs=[])
-    _waiting.upon(stop, enter=_stopped,
-                  outputs=[_waitForStop,
-                           _cancelConnectWaiters,
-                           _stopRetrying,
-                           _finishStopping],
-                  collector=_firstResult)
-    _waiting.upon(_reconnect, enter=_connecting,
-                  outputs=[_connect])
+    _waiting.upon(start, enter=_waiting, outputs=[])
+    _waiting.upon(
+        stop,
+        enter=_stopped,
+        outputs=[_waitForStop, _cancelConnectWaiters, _stopRetrying, _finishStopping],
+        collector=_firstResult,
+    )
+    _waiting.upon(_reconnect, enter=_connecting, outputs=[_connect])
 
-    _connected.upon(start, enter=_connected,
-                    outputs=[])
-    _connected.upon(stop, enter=_disconnecting,
-                    outputs=[_waitForStop, _disconnect],
-                    collector=_firstResult)
-    _connected.upon(_clientDisconnected, enter=_waiting,
-                    outputs=[_forgetConnection, _wait])
+    _connected.upon(start, enter=_connected, outputs=[])
+    _connected.upon(
+        stop,
+        enter=_disconnecting,
+        outputs=[_waitForStop, _disconnect],
+        collector=_firstResult,
+    )
+    _connected.upon(
+        _clientDisconnected, enter=_waiting, outputs=[_forgetConnection, _wait]
+    )
 
-    _disconnecting.upon(start, enter=_restarting,
-                        outputs=[_resetFailedAttempts])
-    _disconnecting.upon(stop, enter=_disconnecting,
-                        outputs=[_waitForStop],
-                        collector=_firstResult)
-    _disconnecting.upon(_clientDisconnected, enter=_stopped,
-                        outputs=[_cancelConnectWaiters,
-                                 _finishStopping,
-                                 _forgetConnection])
+    _disconnecting.upon(start, enter=_restarting, outputs=[_resetFailedAttempts])
+    _disconnecting.upon(
+        stop, enter=_disconnecting, outputs=[_waitForStop], collector=_firstResult
+    )
+    _disconnecting.upon(
+        _clientDisconnected,
+        enter=_stopped,
+        outputs=[_cancelConnectWaiters, _finishStopping, _forgetConnection],
+    )
     # Note that this is triggered synchonously with the transition from
     # _connecting
-    _disconnecting.upon(_connectionFailed, enter=_stopped,
-                        outputs=[_ignoreAndCancelConnectWaiters,
-                                 _ignoreAndFinishStopping])
+    _disconnecting.upon(
+        _connectionFailed,
+        enter=_stopped,
+        outputs=[_ignoreAndCancelConnectWaiters, _ignoreAndFinishStopping],
+    )
 
-    _restarting.upon(start, enter=_restarting,
-                     outputs=[])
-    _restarting.upon(stop, enter=_disconnecting,
-                     outputs=[_waitForStop],
-                     collector=_firstResult)
-    _restarting.upon(_clientDisconnected, enter=_connecting,
-                     outputs=[_finishStopping, _connect])
+    _restarting.upon(start, enter=_restarting, outputs=[])
+    _restarting.upon(
+        stop, enter=_disconnecting, outputs=[_waitForStop], collector=_firstResult
+    )
+    _restarting.upon(
+        _clientDisconnected, enter=_connecting, outputs=[_finishStopping, _connect]
+    )
 
-    _stopped.upon(start, enter=_connecting,
-                  outputs=[_connect])
-    _stopped.upon(stop, enter=_stopped,
-                  outputs=[_deferredSucceededWithNone],
-                  collector=_firstResult)
+    _stopped.upon(start, enter=_connecting, outputs=[_connect])
+    _stopped.upon(
+        stop,
+        enter=_stopped,
+        outputs=[_deferredSucceededWithNone],
+        collector=_firstResult,
+    )
 
-    _init.upon(whenConnected, enter=_init,
-               outputs=[_awaitingConnection],
-               collector=_firstResult)
-    _connecting.upon(whenConnected, enter=_connecting,
-                     outputs=[_awaitingConnection],
-                     collector=_firstResult)
-    _waiting.upon(whenConnected, enter=_waiting,
-                  outputs=[_awaitingConnection],
-                  collector=_firstResult)
-    _connected.upon(whenConnected, enter=_connected,
-                    outputs=[_currentConnection],
-                    collector=_firstResult)
-    _disconnecting.upon(whenConnected, enter=_disconnecting,
-                        outputs=[_awaitingConnection],
-                        collector=_firstResult)
-    _restarting.upon(whenConnected, enter=_restarting,
-                     outputs=[_awaitingConnection],
-                     collector=_firstResult)
-    _stopped.upon(whenConnected, enter=_stopped,
-                  outputs=[_noConnection],
-                  collector=_firstResult)
-
+    _init.upon(
+        whenConnected,
+        enter=_init,
+        outputs=[_awaitingConnection],
+        collector=_firstResult,
+    )
+    _connecting.upon(
+        whenConnected,
+        enter=_connecting,
+        outputs=[_awaitingConnection],
+        collector=_firstResult,
+    )
+    _waiting.upon(
+        whenConnected,
+        enter=_waiting,
+        outputs=[_awaitingConnection],
+        collector=_firstResult,
+    )
+    _connected.upon(
+        whenConnected,
+        enter=_connected,
+        outputs=[_currentConnection],
+        collector=_firstResult,
+    )
+    _disconnecting.upon(
+        whenConnected,
+        enter=_disconnecting,
+        outputs=[_awaitingConnection],
+        collector=_firstResult,
+    )
+    _restarting.upon(
+        whenConnected,
+        enter=_restarting,
+        outputs=[_awaitingConnection],
+        collector=_firstResult,
+    )
+    _stopped.upon(
+        whenConnected, enter=_stopped, outputs=[_noConnection], collector=_firstResult
+    )
 
 
 class ClientService(service.Service, object):
@@ -1037,8 +1035,9 @@ class ClientService(service.Service, object):
 
     _log = Logger()
 
-    def __init__(self, endpoint, factory, retryPolicy=None, clock=None,
-                 prepareConnection=None):
+    def __init__(
+        self, endpoint, factory, retryPolicy=None, clock=None, prepareConnection=None
+    ):
         """
         @param endpoint: A L{stream client endpoint
             <interfaces.IStreamClientEndpoint>} provider which will be used to
@@ -1086,10 +1085,13 @@ class ClientService(service.Service, object):
         retryPolicy = _defaultPolicy if retryPolicy is None else retryPolicy
 
         self._machine = _ClientMachine(
-            endpoint, factory, retryPolicy, clock,
-            prepareConnection=prepareConnection, log=self._log,
+            endpoint,
+            factory,
+            retryPolicy,
+            clock,
+            prepareConnection=prepareConnection,
+            log=self._log,
         )
-
 
     def whenConnected(self, failAfterFailures=None):
         """
@@ -1120,7 +1122,6 @@ class ClientService(service.Service, object):
         """
         return self._machine.whenConnected(failAfterFailures)
 
-
     def startService(self):
         """
         Start this L{ClientService}, initiating the connection retry loop.
@@ -1130,7 +1131,6 @@ class ClientService(service.Service, object):
             return
         super(ClientService, self).startService()
         self._machine.start()
-
 
     def stopService(self):
         """
@@ -1143,9 +1143,15 @@ class ClientService(service.Service, object):
         return self._machine.stop()
 
 
-__all__ = (['TimerService', 'CooperatorService', 'MulticastServer',
-            'StreamServerEndpointService', 'UDPServer',
-            'ClientService'] +
-           [tran + side
-            for tran in 'TCP UNIX SSL UNIXDatagram'.split()
-            for side in 'Server Client'.split()])
+__all__ = [
+    'TimerService',
+    'CooperatorService',
+    'MulticastServer',
+    'StreamServerEndpointService',
+    'UDPServer',
+    'ClientService',
+] + [
+    tran + side
+    for tran in 'TCP UNIX SSL UNIXDatagram'.split()
+    for side in 'Server Client'.split()
+]

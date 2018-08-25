@@ -10,7 +10,6 @@ from twisted.names.error import DomainError
 from twisted.names.resolve import ResolverChain
 
 
-
 class ResolverChainTests(TestCase):
     """
     Tests for L{twisted.names.resolve.ResolverChain}
@@ -25,7 +24,6 @@ class ResolverChainTests(TestCase):
         d = r.lookupAddress('www.example.com')
         f = self.failureResultOf(d)
         self.assertIs(f.trap(DomainError), DomainError)
-
 
     def test_emptyResolversListLookupAllRecords(self):
         """

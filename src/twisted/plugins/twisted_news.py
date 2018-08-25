@@ -3,8 +3,4 @@
 
 from twisted.application.service import ServiceMaker
 
-TwistedNews = ServiceMaker(
-    "Twisted News",
-    "twisted.news.tap",
-    "A news server.",
-    "news")
+TwistedNews = ServiceMaker("Twisted News", "twisted.news.tap", "A news server.", "news")

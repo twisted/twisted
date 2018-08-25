@@ -30,6 +30,7 @@ from twisted.words.protocols.jabber.jid import internJID as JID
 
 NS_COMPONENT_ACCEPT = 'jabber:component:accept'
 
+
 def componentFactory(componentid, password):
     """
     XML stream factory for external server-side components.
@@ -41,6 +42,7 @@ def componentFactory(componentid, password):
     """
     a = ConnectComponentAuthenticator(componentid, password)
     return xmlstream.XmlStreamFactory(a)
+
 
 class ComponentInitiatingInitializer(object):
     """
@@ -59,8 +61,8 @@ class ComponentInitiatingInitializer(object):
         xs = self.xmlstream
         hs = domish.Element((self.xmlstream.namespace, "handshake"))
         digest = xmlstream.hashPassword(
-            xs.sid,
-            _coercedUnicode(xs.authenticator.password))
+            xs.sid, _coercedUnicode(xs.authenticator.password)
+        )
         hs.addContent(unicode(digest))
 
         # Setup observer to watch for handshake result
@@ -76,13 +78,13 @@ class ComponentInitiatingInitializer(object):
         self._deferred.callback(None)
 
 
-
 class ConnectComponentAuthenticator(xmlstream.ConnectAuthenticator):
     """
     Authenticator to permit an XmlStream to authenticate against a Jabber
     server as an external component (where the Authenticator is initiating the
     stream).
     """
+
     namespace = NS_COMPONENT_ACCEPT
 
     def __init__(self, componentjid, password):
@@ -104,7 +106,6 @@ class ConnectComponentAuthenticator(xmlstream.ConnectAuthenticator):
         xs.initializers = [ComponentInitiatingInitializer(xs)]
 
 
-
 class ListenComponentAuthenticator(xmlstream.ListenAuthenticator):
     """
     Authenticator for accepting components.
@@ -121,7 +122,6 @@ class ListenComponentAuthenticator(xmlstream.ListenAuthenticator):
         self.secret = secret
         xmlstream.ListenAuthenticator.__init__(self)
 
-
     def associateWithStream(self, xs):
         """
         Associate the authenticator with a stream.
@@ -131,7 +131,6 @@ class ListenComponentAuthenticator(xmlstream.ListenAuthenticator):
         """
         xs.version = (0, 0)
         xmlstream.ListenAuthenticator.associateWithStream(self, xs)
-
 
     def streamStarted(self, rootElement):
         """
@@ -160,7 +159,6 @@ class ListenComponentAuthenticator(xmlstream.ListenAuthenticator):
         self.xmlstream.sendHeader()
         self.xmlstream.addOnetimeObserver('/*', self.onElement)
 
-
     def onElement(self, element):
         """
         Called on incoming XML Stanzas.
@@ -176,7 +174,6 @@ class ListenComponentAuthenticator(xmlstream.ListenAuthenticator):
             exc = error.StreamError('not-authorized')
             self.xmlstream.sendStreamError(exc)
 
-
     def onHandshake(self, handshake):
         """
         Called upon receiving the handshake request.
@@ -186,16 +183,15 @@ class ListenComponentAuthenticator(xmlstream.ListenAuthenticator):
         If the handshake was ok, the stream is authorized, and  XML Stanzas may
         be exchanged.
         """
-        calculatedHash = xmlstream.hashPassword(self.xmlstream.sid,
-                                                unicode(self.secret))
+        calculatedHash = xmlstream.hashPassword(
+            self.xmlstream.sid, unicode(self.secret)
+        )
         if handshake != calculatedHash:
             exc = error.StreamError('not-authorized', text='Invalid hash')
             self.xmlstream.sendStreamError(exc)
         else:
             self.xmlstream.send('<handshake/>')
-            self.xmlstream.dispatch(self.xmlstream,
-                                    xmlstream.STREAM_AUTHD_EVENT)
-
+            self.xmlstream.dispatch(self.xmlstream, xmlstream.STREAM_AUTHD_EVENT)
 
 
 @implementer(ijabber.IService)
@@ -231,6 +227,7 @@ class Service(service.Service):
 
         self.parent.send(obj)
 
+
 class ServiceManager(service.MultiService):
     """
     Business logic for a managed component connection to a Jabber router.
@@ -256,11 +253,9 @@ class ServiceManager(service.MultiService):
 
         # Register some lambda functions to keep the self.xmlstream var up to
         # date
-        self._xsFactory.addBootstrap(xmlstream.STREAM_CONNECTED_EVENT,
-                                     self._connected)
+        self._xsFactory.addBootstrap(xmlstream.STREAM_CONNECTED_EVENT, self._connected)
         self._xsFactory.addBootstrap(xmlstream.STREAM_AUTHD_EVENT, self._authd)
-        self._xsFactory.addBootstrap(xmlstream.STREAM_END_EVENT,
-                                     self._disconnected)
+        self._xsFactory.addBootstrap(xmlstream.STREAM_END_EVENT, self._disconnected)
 
         # Map addBootstrap and removeBootstrap to the underlying factory -- is
         # this right? I have no clue...but it'll work for now, until i can
@@ -314,6 +309,7 @@ class ServiceManager(service.MultiService):
         else:
             self._packetQueue.append(obj)
 
+
 def buildServiceManager(jid, password, strport):
     """
     Constructs a pre-built L{ServiceManager}, using the specified strport
@@ -324,7 +320,6 @@ def buildServiceManager(jid, password, strport):
     client_svc = jstrports.client(strport, svc.getFactory())
     client_svc.setServiceParent(svc)
     return svc
-
 
 
 class Router(object):
@@ -351,7 +346,6 @@ class Router(object):
     def __init__(self):
         self.routes = {}
 
-
     def addRoute(self, destination, xs):
         """
         Add a new route.
@@ -369,7 +363,6 @@ class Router(object):
         self.routes[destination] = xs
         xs.addObserver('/*', self.route)
 
-
     def removeRoute(self, destination, xs):
         """
         Remove a route.
@@ -380,9 +373,8 @@ class Router(object):
         @type xs: L{EventDispatcher<utility.EventDispatcher>}.
         """
         xs.removeObserver('/*', self.route)
-        if (xs == self.routes[destination]):
+        if xs == self.routes[destination]:
             del self.routes[destination]
-
 
     def route(self, stanza):
         """
@@ -399,7 +391,6 @@ class Router(object):
             self.routes[destination.host].send(stanza)
         else:
             self.routes[None].send(stanza)
-
 
 
 class XMPPComponentServerFactory(xmlstream.XmlStreamServerFactory):
@@ -423,13 +414,10 @@ class XMPPComponentServerFactory(xmlstream.XmlStreamServerFactory):
             return ListenComponentAuthenticator(self.secret)
 
         xmlstream.XmlStreamServerFactory.__init__(self, authenticatorFactory)
-        self.addBootstrap(xmlstream.STREAM_CONNECTED_EVENT,
-                          self.onConnectionMade)
-        self.addBootstrap(xmlstream.STREAM_AUTHD_EVENT,
-                          self.onAuthenticated)
+        self.addBootstrap(xmlstream.STREAM_CONNECTED_EVENT, self.onConnectionMade)
+        self.addBootstrap(xmlstream.STREAM_AUTHD_EVENT, self.onAuthenticated)
 
         self.serial = 0
-
 
     def onConnectionMade(self, xs):
         """
@@ -452,7 +440,6 @@ class XMPPComponentServerFactory(xmlstream.XmlStreamServerFactory):
 
         xs.addObserver(xmlstream.STREAM_ERROR_EVENT, self.onError)
 
-
     def onAuthenticated(self, xs):
         """
         Called when a component has successfully authenticated.
@@ -463,13 +450,12 @@ class XMPPComponentServerFactory(xmlstream.XmlStreamServerFactory):
         destination = xs.thisEntity.host
 
         self.router.addRoute(destination, xs)
-        xs.addObserver(xmlstream.STREAM_END_EVENT, self.onConnectionLost, 0,
-                                                   destination, xs)
-
+        xs.addObserver(
+            xmlstream.STREAM_END_EVENT, self.onConnectionLost, 0, destination, xs
+        )
 
     def onError(self, reason):
         log.err(reason, "Stream Error")
-
 
     def onConnectionLost(self, destination, xs, reason):
         self.router.removeRoute(destination, xs)

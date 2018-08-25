@@ -23,20 +23,18 @@ class StringTCPTransport(proto_helpers.StringTransport):
     def getPeer(self):
         return self.peer
 
-
     def getHost(self):
         return address.IPv4Address('TCP', '2.3.4.5', 42)
 
-
     def loseConnection(self):
         self.stringTCPTransport_closing = True
-
 
 
 class FakeResolverReactor:
     """
     Bare-bones reactor with deterministic behavior for the resolve method.
     """
+
     def __init__(self, names):
         """
         @type names: L{dict} containing L{str} keys and L{str} values.
@@ -44,7 +42,6 @@ class FakeResolverReactor:
             stringified dotted quads.
         """
         self.names = names
-
 
     def resolve(self, hostname):
         """
@@ -54,9 +51,10 @@ class FakeResolverReactor:
             return defer.succeed(self.names[hostname])
         except KeyError:
             return defer.fail(
-                DNSLookupError("FakeResolverReactor couldn't find " +
-                                hostname.decode("utf-8")))
-
+                DNSLookupError(
+                    "FakeResolverReactor couldn't find " + hostname.decode("utf-8")
+                )
+            )
 
 
 class SOCKSv4Driver(socks.SOCKSv4):
@@ -75,7 +73,6 @@ class SOCKSv4Driver(socks.SOCKSv4):
         self.driver_outgoing = proto
         return defer.succeed(proto)
 
-
     def listenClass(self, port, klass, *args):
         # fake it
         factory = klass(*args)
@@ -85,50 +82,49 @@ class SOCKSv4Driver(socks.SOCKSv4):
         return defer.succeed(('6.7.8.9', port))
 
 
-
 class ConnectTests(unittest.TestCase):
     """
     Tests for SOCKS and SOCKSv4a connect requests using the L{SOCKSv4} protocol.
     """
+
     def setUp(self):
         self.sock = SOCKSv4Driver()
         self.sock.transport = StringTCPTransport()
         self.sock.connectionMade()
-        self.sock.reactor = FakeResolverReactor({b"localhost":"127.0.0.1"})
-
+        self.sock.reactor = FakeResolverReactor({b"localhost": "127.0.0.1"})
 
     def tearDown(self):
         outgoing = self.sock.driver_outgoing
         if outgoing is not None:
-            self.assertTrue(outgoing.transport.stringTCPTransport_closing,
-                         "Outgoing SOCKS connections need to be closed.")
-
+            self.assertTrue(
+                outgoing.transport.stringTCPTransport_closing,
+                "Outgoing SOCKS connections need to be closed.",
+            )
 
     def test_simple(self):
         self.sock.dataReceived(
             struct.pack('!BBH', 4, 1, 34)
             + socket.inet_aton('1.2.3.4')
             + b'fooBAR'
-            + b'\0')
+            + b'\0'
+        )
         sent = self.sock.transport.value()
         self.sock.transport.clear()
-        self.assertEqual(sent,
-                         struct.pack('!BBH', 0, 90, 34)
-                         + socket.inet_aton('1.2.3.4'))
+        self.assertEqual(
+            sent, struct.pack('!BBH', 0, 90, 34) + socket.inet_aton('1.2.3.4')
+        )
         self.assertFalse(self.sock.transport.stringTCPTransport_closing)
         self.assertIsNotNone(self.sock.driver_outgoing)
 
         # pass some data through
         self.sock.dataReceived(b'hello, world')
-        self.assertEqual(self.sock.driver_outgoing.transport.value(),
-                         b'hello, world')
+        self.assertEqual(self.sock.driver_outgoing.transport.value(), b'hello, world')
 
         # the other way around
         self.sock.driver_outgoing.dataReceived(b'hi there')
         self.assertEqual(self.sock.transport.value(), b'hi there')
 
         self.sock.connectionLost('fake reason')
-
 
     def test_socks4aSuccessfulResolution(self):
         """
@@ -144,7 +140,8 @@ class ConnectTests(unittest.TestCase):
             struct.pack('!BBH', 4, 1, 34)
             + socket.inet_aton('0.0.0.1')
             + b'fooBAZ\0'
-            + b'localhost\0')
+            + b'localhost\0'
+        )
 
         # Deliver the bytes one by one to exercise the protocol's buffering
         # logic. FakeResolverReactor's resolve method is invoked to "resolve"
@@ -158,16 +155,15 @@ class ConnectTests(unittest.TestCase):
         # Verify that the server responded with the address which will be
         # connected to.
         self.assertEqual(
-            sent,
-            struct.pack('!BBH', 0, 90, 34) + socket.inet_aton('127.0.0.1'))
+            sent, struct.pack('!BBH', 0, 90, 34) + socket.inet_aton('127.0.0.1')
+        )
         self.assertFalse(self.sock.transport.stringTCPTransport_closing)
         self.assertIsNotNone(self.sock.driver_outgoing)
 
         # Pass some data through and verify it is forwarded to the outgoing
         # connection.
         self.sock.dataReceived(b'hello, world')
-        self.assertEqual(
-            self.sock.driver_outgoing.transport.value(), b'hello, world')
+        self.assertEqual(self.sock.driver_outgoing.transport.value(), b'hello, world')
 
         # Deliver some data from the output connection and verify it is
         # passed along to the incoming side.
@@ -175,7 +171,6 @@ class ConnectTests(unittest.TestCase):
         self.assertEqual(self.sock.transport.value(), b'hi there')
 
         self.sock.connectionLost('fake reason')
-
 
     def test_socks4aFailedResolution(self):
         """
@@ -187,7 +182,8 @@ class ConnectTests(unittest.TestCase):
             struct.pack('!BBH', 4, 1, 34)
             + socket.inet_aton('0.0.0.1')
             + b'fooBAZ\0'
-            + b'failinghost\0')
+            + b'failinghost\0'
+        )
 
         # Deliver the bytes one by one to exercise the protocol's buffering
         # logic. FakeResolverReactor's resolve method is invoked to "resolve"
@@ -198,13 +194,12 @@ class ConnectTests(unittest.TestCase):
         # Verify that the server responds with a 91 error.
         sent = self.sock.transport.value()
         self.assertEqual(
-            sent,
-            struct.pack('!BBH', 0, 91, 0) + socket.inet_aton('0.0.0.0'))
+            sent, struct.pack('!BBH', 0, 91, 0) + socket.inet_aton('0.0.0.0')
+        )
 
         # A failed resolution causes the transport to drop the connection.
         self.assertTrue(self.sock.transport.stringTCPTransport_closing)
         self.assertIsNone(self.sock.driver_outgoing)
-
 
     def test_accessDenied(self):
         self.sock.authorize = lambda code, server, port, user: 0
@@ -212,78 +207,79 @@ class ConnectTests(unittest.TestCase):
             struct.pack('!BBH', 4, 1, 4242)
             + socket.inet_aton('10.2.3.4')
             + b'fooBAR'
-            + b'\0')
-        self.assertEqual(self.sock.transport.value(),
-                         struct.pack('!BBH', 0, 91, 0)
-                         + socket.inet_aton('0.0.0.0'))
+            + b'\0'
+        )
+        self.assertEqual(
+            self.sock.transport.value(),
+            struct.pack('!BBH', 0, 91, 0) + socket.inet_aton('0.0.0.0'),
+        )
         self.assertTrue(self.sock.transport.stringTCPTransport_closing)
         self.assertIsNone(self.sock.driver_outgoing)
-
 
     def test_eofRemote(self):
         self.sock.dataReceived(
             struct.pack('!BBH', 4, 1, 34)
             + socket.inet_aton('1.2.3.4')
             + b'fooBAR'
-            + b'\0')
+            + b'\0'
+        )
         self.sock.transport.clear()
 
         # pass some data through
         self.sock.dataReceived(b'hello, world')
-        self.assertEqual(self.sock.driver_outgoing.transport.value(),
-                         b'hello, world')
+        self.assertEqual(self.sock.driver_outgoing.transport.value(), b'hello, world')
 
         # now close it from the server side
         self.sock.driver_outgoing.transport.loseConnection()
         self.sock.driver_outgoing.connectionLost('fake reason')
-
 
     def test_eofLocal(self):
         self.sock.dataReceived(
             struct.pack('!BBH', 4, 1, 34)
             + socket.inet_aton('1.2.3.4')
             + b'fooBAR'
-            + b'\0')
+            + b'\0'
+        )
         self.sock.transport.clear()
 
         # pass some data through
         self.sock.dataReceived(b'hello, world')
-        self.assertEqual(self.sock.driver_outgoing.transport.value(),
-                         b'hello, world')
+        self.assertEqual(self.sock.driver_outgoing.transport.value(), b'hello, world')
 
         # now close it from the client side
         self.sock.connectionLost('fake reason')
-
 
 
 class BindTests(unittest.TestCase):
     """
     Tests for SOCKS and SOCKSv4a bind requests using the L{SOCKSv4} protocol.
     """
+
     def setUp(self):
         self.sock = SOCKSv4Driver()
         self.sock.transport = StringTCPTransport()
         self.sock.connectionMade()
-        self.sock.reactor = FakeResolverReactor({b"localhost":"127.0.0.1"})
+        self.sock.reactor = FakeResolverReactor({b"localhost": "127.0.0.1"})
 
-##     def tearDown(self):
-##         # TODO ensure the listen port is closed
-##         listen = self.sock.driver_listen
-##         if listen is not None:
-##             self.assert_(incoming.transport.stringTCPTransport_closing,
-##                     "Incoming SOCKS connections need to be closed.")
+    ##     def tearDown(self):
+    ##         # TODO ensure the listen port is closed
+    ##         listen = self.sock.driver_listen
+    ##         if listen is not None:
+    ##             self.assert_(incoming.transport.stringTCPTransport_closing,
+    ##                     "Incoming SOCKS connections need to be closed.")
 
     def test_simple(self):
         self.sock.dataReceived(
             struct.pack('!BBH', 4, 2, 34)
             + socket.inet_aton('1.2.3.4')
             + b'fooBAR'
-            + b'\0')
+            + b'\0'
+        )
         sent = self.sock.transport.value()
         self.sock.transport.clear()
-        self.assertEqual(sent,
-                         struct.pack('!BBH', 0, 90, 1234)
-                         + socket.inet_aton('6.7.8.9'))
+        self.assertEqual(
+            sent, struct.pack('!BBH', 0, 90, 1234) + socket.inet_aton('6.7.8.9')
+        )
         self.assertFalse(self.sock.transport.stringTCPTransport_closing)
         self.assertIsNotNone(self.sock.driver_listen)
 
@@ -296,22 +292,20 @@ class BindTests(unittest.TestCase):
         # now we should have the second reply packet
         sent = self.sock.transport.value()
         self.sock.transport.clear()
-        self.assertEqual(sent,
-                         struct.pack('!BBH', 0, 90, 0)
-                         + socket.inet_aton('0.0.0.0'))
+        self.assertEqual(
+            sent, struct.pack('!BBH', 0, 90, 0) + socket.inet_aton('0.0.0.0')
+        )
         self.assertFalse(self.sock.transport.stringTCPTransport_closing)
 
         # pass some data through
         self.sock.dataReceived(b'hello, world')
-        self.assertEqual(incoming.transport.value(),
-                         b'hello, world')
+        self.assertEqual(incoming.transport.value(), b'hello, world')
 
         # the other way around
         incoming.dataReceived(b'hi there')
         self.assertEqual(self.sock.transport.value(), b'hi there')
 
         self.sock.connectionLost('fake reason')
-
 
     def test_socks4a(self):
         """
@@ -327,7 +321,8 @@ class BindTests(unittest.TestCase):
             struct.pack('!BBH', 4, 2, 34)
             + socket.inet_aton('0.0.0.1')
             + b'fooBAZ\0'
-            + b'localhost\0')
+            + b'localhost\0'
+        )
 
         # Deliver the bytes one by one to exercise the protocol's buffering
         # logic. FakeResolverReactor's resolve method is invoked to "resolve"
@@ -341,8 +336,8 @@ class BindTests(unittest.TestCase):
         # Verify that the server responded with the address which will be
         # connected to.
         self.assertEqual(
-            sent,
-            struct.pack('!BBH', 0, 90, 1234) + socket.inet_aton('6.7.8.9'))
+            sent, struct.pack('!BBH', 0, 90, 1234) + socket.inet_aton('6.7.8.9')
+        )
         self.assertFalse(self.sock.transport.stringTCPTransport_closing)
         self.assertIsNotNone(self.sock.driver_listen)
 
@@ -355,11 +350,10 @@ class BindTests(unittest.TestCase):
         # now we should have the second reply packet
         sent = self.sock.transport.value()
         self.sock.transport.clear()
-        self.assertEqual(sent,
-                         struct.pack('!BBH', 0, 90, 0)
-                         + socket.inet_aton('0.0.0.0'))
-        self.assertIsNot(
-            self.sock.transport.stringTCPTransport_closing, None)
+        self.assertEqual(
+            sent, struct.pack('!BBH', 0, 90, 0) + socket.inet_aton('0.0.0.0')
+        )
+        self.assertIsNot(self.sock.transport.stringTCPTransport_closing, None)
 
         # Deliver some data from the output connection and verify it is
         # passed along to the incoming side.
@@ -372,7 +366,6 @@ class BindTests(unittest.TestCase):
 
         self.sock.connectionLost('fake reason')
 
-
     def test_socks4aFailedResolution(self):
         """
         Failed hostname resolution on a SOCKSv4a packet results in a 91 error
@@ -383,7 +376,8 @@ class BindTests(unittest.TestCase):
             struct.pack('!BBH', 4, 2, 34)
             + socket.inet_aton('0.0.0.1')
             + b'fooBAZ\0'
-            + b'failinghost\0')
+            + b'failinghost\0'
+        )
 
         # Deliver the bytes one by one to exercise the protocol's buffering
         # logic. FakeResolverReactor's resolve method is invoked to "resolve"
@@ -394,13 +388,12 @@ class BindTests(unittest.TestCase):
         # Verify that the server responds with a 91 error.
         sent = self.sock.transport.value()
         self.assertEqual(
-            sent,
-            struct.pack('!BBH', 0, 91, 0) + socket.inet_aton('0.0.0.0'))
+            sent, struct.pack('!BBH', 0, 91, 0) + socket.inet_aton('0.0.0.0')
+        )
 
         # A failed resolution causes the transport to drop the connection.
         self.assertTrue(self.sock.transport.stringTCPTransport_closing)
         self.assertIsNone(self.sock.driver_outgoing)
-
 
     def test_accessDenied(self):
         self.sock.authorize = lambda code, server, port, user: 0
@@ -408,20 +401,22 @@ class BindTests(unittest.TestCase):
             struct.pack('!BBH', 4, 2, 4242)
             + socket.inet_aton('10.2.3.4')
             + b'fooBAR'
-            + b'\0')
-        self.assertEqual(self.sock.transport.value(),
-                         struct.pack('!BBH', 0, 91, 0)
-                         + socket.inet_aton('0.0.0.0'))
+            + b'\0'
+        )
+        self.assertEqual(
+            self.sock.transport.value(),
+            struct.pack('!BBH', 0, 91, 0) + socket.inet_aton('0.0.0.0'),
+        )
         self.assertTrue(self.sock.transport.stringTCPTransport_closing)
         self.assertIsNone(self.sock.driver_listen)
-
 
     def test_eofRemote(self):
         self.sock.dataReceived(
             struct.pack('!BBH', 4, 2, 34)
             + socket.inet_aton('1.2.3.4')
             + b'fooBAR'
-            + b'\0')
+            + b'\0'
+        )
         sent = self.sock.transport.value()
         self.sock.transport.clear()
 
@@ -434,27 +429,26 @@ class BindTests(unittest.TestCase):
         # now we should have the second reply packet
         sent = self.sock.transport.value()
         self.sock.transport.clear()
-        self.assertEqual(sent,
-                         struct.pack('!BBH', 0, 90, 0)
-                         + socket.inet_aton('0.0.0.0'))
+        self.assertEqual(
+            sent, struct.pack('!BBH', 0, 90, 0) + socket.inet_aton('0.0.0.0')
+        )
         self.assertFalse(self.sock.transport.stringTCPTransport_closing)
 
         # pass some data through
         self.sock.dataReceived(b'hello, world')
-        self.assertEqual(incoming.transport.value(),
-                         b'hello, world')
+        self.assertEqual(incoming.transport.value(), b'hello, world')
 
         # now close it from the server side
         incoming.transport.loseConnection()
         incoming.connectionLost('fake reason')
-
 
     def test_eofLocal(self):
         self.sock.dataReceived(
             struct.pack('!BBH', 4, 2, 34)
             + socket.inet_aton('1.2.3.4')
             + b'fooBAR'
-            + b'\0')
+            + b'\0'
+        )
         sent = self.sock.transport.value()
         self.sock.transport.clear()
 
@@ -467,26 +461,25 @@ class BindTests(unittest.TestCase):
         # now we should have the second reply packet
         sent = self.sock.transport.value()
         self.sock.transport.clear()
-        self.assertEqual(sent,
-                         struct.pack('!BBH', 0, 90, 0)
-                         + socket.inet_aton('0.0.0.0'))
+        self.assertEqual(
+            sent, struct.pack('!BBH', 0, 90, 0) + socket.inet_aton('0.0.0.0')
+        )
         self.assertFalse(self.sock.transport.stringTCPTransport_closing)
 
         # pass some data through
         self.sock.dataReceived(b'hello, world')
-        self.assertEqual(incoming.transport.value(),
-                         b'hello, world')
+        self.assertEqual(incoming.transport.value(), b'hello, world')
 
         # now close it from the client side
         self.sock.connectionLost('fake reason')
-
 
     def test_badSource(self):
         self.sock.dataReceived(
             struct.pack('!BBH', 4, 2, 34)
             + socket.inet_aton('1.2.3.4')
             + b'fooBAR'
-            + b'\0')
+            + b'\0'
+        )
         sent = self.sock.transport.value()
         self.sock.transport.clear()
 
@@ -498,7 +491,7 @@ class BindTests(unittest.TestCase):
         # be a failure. The connection should be closing.
         sent = self.sock.transport.value()
         self.sock.transport.clear()
-        self.assertEqual(sent,
-                         struct.pack('!BBH', 0, 91, 0)
-                         + socket.inet_aton('0.0.0.0'))
+        self.assertEqual(
+            sent, struct.pack('!BBH', 0, 91, 0) + socket.inet_aton('0.0.0.0')
+        )
         self.assertTrue(self.sock.transport.stringTCPTransport_closing)

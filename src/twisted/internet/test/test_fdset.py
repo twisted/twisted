@@ -49,6 +49,7 @@ class ReactorFDSetTestsBuilder(ReactorBuilder):
     """
     Builder defining tests relating to L{IReactorFDSet}.
     """
+
     requiredInterfaces = [IReactorFDSet]
 
     def _connectedPair(self):
@@ -60,7 +61,6 @@ class ReactorFDSetTestsBuilder(ReactorBuilder):
         self.addCleanup(server.close)
         return client, server
 
-
     def _simpleSetup(self):
         reactor = self.buildReactor()
 
@@ -70,7 +70,6 @@ class ReactorFDSetTestsBuilder(ReactorBuilder):
         fd.fileno = client.fileno
 
         return reactor, fd, server
-
 
     def test_addReader(self):
         """
@@ -82,6 +81,7 @@ class ReactorFDSetTestsBuilder(ReactorBuilder):
         def removeAndStop():
             reactor.removeReader(fd)
             reactor.stop()
+
         fd.doRead = removeAndStop
         reactor.addReader(fd)
         server.sendall(b'x')
@@ -89,7 +89,6 @@ class ReactorFDSetTestsBuilder(ReactorBuilder):
         # The reactor will only stop if it calls fd.doRead.
         self.runReactor(reactor)
         # Nothing to assert, just be glad we got this far.
-
 
     def test_removeReader(self):
         """
@@ -101,6 +100,7 @@ class ReactorFDSetTestsBuilder(ReactorBuilder):
 
         def fail():
             self.fail("doRead should not be called")
+
         fd.doRead = fail
 
         reactor.addReader(fd)
@@ -114,7 +114,6 @@ class ReactorFDSetTestsBuilder(ReactorBuilder):
         self.runReactor(reactor)
         # Getting here means the right thing happened probably.
 
-
     def test_addWriter(self):
         """
         C{reactor.addWriter()} accepts an L{IWriteDescriptor} provider and
@@ -126,12 +125,12 @@ class ReactorFDSetTestsBuilder(ReactorBuilder):
         def removeAndStop():
             reactor.removeWriter(fd)
             reactor.stop()
+
         fd.doWrite = removeAndStop
         reactor.addWriter(fd)
 
         self.runReactor(reactor)
         # Getting here is great.
-
 
     def _getFDTest(self, kind):
         """
@@ -155,14 +154,12 @@ class ReactorFDSetTestsBuilder(ReactorBuilder):
         self.assertNotIn(client, get())
         self.assertNotIn(server, get())
 
-
     def test_getReaders(self):
         """
         L{IReactorFDSet.getReaders} reflects the additions and removals made
         with L{IReactorFDSet.addReader} and L{IReactorFDSet.removeReader}.
         """
         self._getFDTest('Reader')
-
 
     def test_removeWriter(self):
         """
@@ -174,6 +171,7 @@ class ReactorFDSetTestsBuilder(ReactorBuilder):
 
         def fail():
             self.fail("doWrite should not be called")
+
         fd.doWrite = fail
 
         reactor.addWriter(fd)
@@ -186,14 +184,12 @@ class ReactorFDSetTestsBuilder(ReactorBuilder):
         self.runReactor(reactor)
         # Getting here means the right thing happened probably.
 
-
     def test_getWriters(self):
         """
         L{IReactorFDSet.getWriters} reflects the additions and removals made
         with L{IReactorFDSet.addWriter} and L{IReactorFDSet.removeWriter}.
         """
         self._getFDTest('Writer')
-
 
     def test_removeAll(self):
         """
@@ -224,7 +220,6 @@ class ReactorFDSetTestsBuilder(ReactorBuilder):
 
         self.assertEqual(removed, [fd])
 
-
     def test_removedFromReactor(self):
         """
         A descriptor's C{fileno} method should not be called after the
@@ -235,7 +230,6 @@ class ReactorFDSetTestsBuilder(ReactorBuilder):
         reactor.callWhenRunning(descriptor.start)
         self.runReactor(reactor)
         self.assertEqual(descriptor.calls, [])
-
 
     def test_negativeOneFileDescriptor(self):
         """
@@ -268,7 +262,6 @@ class ReactorFDSetTestsBuilder(ReactorBuilder):
         self.runReactor(reactor)
         self.assertEqual(descriptor._received, b"x")
 
-
     def test_lostFileDescriptor(self):
         """
         The file descriptor underlying a FileDescriptor may be closed and
@@ -286,8 +279,12 @@ class ReactorFDSetTestsBuilder(ReactorBuilder):
         reactor = self.buildReactor()
 
         name = reactor.__class__.__name__
-        if name in ('EPollReactor', 'KQueueReactor', 'CFReactor',
-                    'AsyncioSelectorReactor'):
+        if name in (
+            'EPollReactor',
+            'KQueueReactor',
+            'CFReactor',
+            'AsyncioSelectorReactor',
+        ):
             # Closing a file descriptor immediately removes it from the epoll
             # set without generating a notification.  That means epollreactor
             # will not call any methods on Victim after the close, so there's
@@ -304,6 +301,7 @@ class ReactorFDSetTestsBuilder(ReactorBuilder):
             objects remember whether they have been closed), so as long as the
             reactor calls the C{fileno} method the problem will be detected.
             """
+
             def fileno(self):
                 return server.fileno()
 
@@ -331,6 +329,7 @@ class ReactorFDSetTestsBuilder(ReactorBuilder):
             server.close()
             os.dup2(newS.fileno(), fileno)
             newC.send(b"x")
+
         reactor.callLater(0, messItUp)
 
         self.runReactor(reactor)
@@ -338,10 +337,9 @@ class ReactorFDSetTestsBuilder(ReactorBuilder):
         # If the implementation feels like logging the exception raised by
         # MessedUp.fileno, that's fine.
         self.flushLoggedErrors(socket.error)
-    if platform.isWindows():
-        test_lostFileDescriptor.skip = (
-            "Cannot duplicate socket filenos on Windows")
 
+    if platform.isWindows():
+        test_lostFileDescriptor.skip = "Cannot duplicate socket filenos on Windows"
 
     def test_connectionLostOnShutdown(self):
         """
@@ -353,6 +351,7 @@ class ReactorFDSetTestsBuilder(ReactorBuilder):
         class DoNothingDescriptor(FileDescriptor):
             def doRead(self):
                 return None
+
             def doWrite(self):
                 return None
 
@@ -371,7 +370,6 @@ class ReactorFDSetTestsBuilder(ReactorBuilder):
         self.assertTrue(fd2.disconnected)
 
 
-
 @implementer(IReadDescriptor)
 class RemovingDescriptor(object):
     """
@@ -386,23 +384,19 @@ class RemovingDescriptor(object):
         C{fileno} when C{insideReactor} is false.
     """
 
-
     def __init__(self, reactor):
         self.reactor = reactor
         self.insideReactor = False
         self.calls = []
         self.read, self.write = socketpair()
 
-
     def start(self):
         self.insideReactor = True
         self.reactor.addReader(self)
         self.write.send(b'a')
 
-
     def logPrefix(self):
         return 'foo'
-
 
     def doRead(self):
         self.reactor.removeReader(self)
@@ -411,17 +405,16 @@ class RemovingDescriptor(object):
         self.read.close()
         self.write.close()
 
-
     def fileno(self):
         if not self.insideReactor:
             self.calls.append(traceback.extract_stack(limit=5)[:-1])
         return self.read.fileno()
-
 
     def connectionLost(self, reason):
         # Ideally we'd close the descriptors here... but actually
         # connectionLost is never called because we remove ourselves from the
         # reactor before it stops.
         pass
+
 
 globals().update(ReactorFDSetTestsBuilder.makeTestCaseClasses())

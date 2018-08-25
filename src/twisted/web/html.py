@@ -12,12 +12,10 @@ from twisted.python.deprecate import deprecated
 from incremental import Version
 
 
-
 @deprecated(Version('Twisted', 15, 3, 0), replacement='twisted.web.template')
 def PRE(text):
     "Wrap <pre> tags around some text and HTML-escape it."
-    return "<pre>"+escape(text)+"</pre>"
-
+    return "<pre>" + escape(text) + "</pre>"
 
 
 @deprecated(Version('Twisted', 15, 3, 0), replacement='twisted.web.template')
@@ -30,7 +28,6 @@ def UL(lst):
     return io.getvalue()
 
 
-
 @deprecated(Version('Twisted', 15, 3, 0), replacement='twisted.web.template')
 def linkList(lst):
     io = StringIO()
@@ -39,7 +36,6 @@ def linkList(lst):
         io.write('<li> <a href="%s">%s</a></li>\n' % (hr, el))
     io.write("</ul>")
     return io.getvalue()
-
 
 
 @deprecated(Version('Twisted', 15, 3, 0), replacement='twisted.web.template')

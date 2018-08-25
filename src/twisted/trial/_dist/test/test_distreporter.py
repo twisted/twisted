@@ -11,7 +11,6 @@ from twisted.trial.unittest import TestCase
 from twisted.trial.reporter import TreeReporter
 
 
-
 class DistReporterTests(TestCase):
     """
     Tests for L{DistReporter}.
@@ -21,7 +20,6 @@ class DistReporterTests(TestCase):
         self.stream = StringIO()
         self.distReporter = DistReporter(TreeReporter(self.stream))
         self.test = TestCase()
-
 
     def test_startSuccessStop(self):
         """
@@ -34,7 +32,6 @@ class DistReporterTests(TestCase):
         self.distReporter.stopTest(self.test)
         self.assertNotEqual(self.stream.getvalue(), "")
 
-
     def test_startErrorStop(self):
         """
         Error output only gets sent to the stream after the test has stopped.
@@ -45,7 +42,6 @@ class DistReporterTests(TestCase):
         self.assertEqual(self.stream.getvalue(), "")
         self.distReporter.stopTest(self.test)
         self.assertNotEqual(self.stream.getvalue(), "")
-
 
     def test_forwardedMethods(self):
         """

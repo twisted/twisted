@@ -24,6 +24,7 @@ except ImportError:
 
 
 if serialport is not None:
+
     class RegularFileSerial(serial.Serial):
         def __init__(self, *args, **kwargs):
             super(RegularFileSerial, self).__init__(*args, **kwargs)
@@ -35,7 +36,6 @@ if serialport is not None:
 
         def _reconfigure_port(self):
             pass
-
 
     class RegularFileSerialPort(serialport.SerialPort):
         _serialFactory = RegularFileSerial
@@ -99,13 +99,13 @@ class Win32SerialPortTests(unittest.TestCase):
         self.assertEqual((self.path,), port._serial.captured_args)
         # Validate kwargs
         kwargs = port._serial.captured_kwargs
-        self.assertEqual(9600,                kwargs["baudrate"])
-        self.assertEqual(serial.EIGHTBITS,    kwargs["bytesize"])
-        self.assertEqual(serial.PARITY_NONE,  kwargs["parity"])
+        self.assertEqual(9600, kwargs["baudrate"])
+        self.assertEqual(serial.EIGHTBITS, kwargs["bytesize"])
+        self.assertEqual(serial.PARITY_NONE, kwargs["parity"])
         self.assertEqual(serial.STOPBITS_ONE, kwargs["stopbits"])
-        self.assertEqual(0,                   kwargs["xonxoff"])
-        self.assertEqual(0,                   kwargs["rtscts"])
-        self.assertEqual(None,                kwargs["timeout"])
+        self.assertEqual(0, kwargs["xonxoff"])
+        self.assertEqual(0, kwargs["rtscts"])
+        self.assertEqual(None, kwargs["timeout"])
         port.connectionLost(Failure(Exception("Cleanup")))
 
     def test_serialPortInitiallyConnected(self):
@@ -113,7 +113,7 @@ class Win32SerialPortTests(unittest.TestCase):
         Test the port is connected at initialization time, and
         C{Protocol.makeConnection} has been called on the desired protocol.
         """
-        self.assertEqual(0,    self.protocol.connected)
+        self.assertEqual(0, self.protocol.connected)
 
         port = RegularFileSerialPort(self.protocol, self.path, self.reactor)
         self.assertEqual(1, port.connected)
@@ -155,9 +155,7 @@ class Win32SerialPortTests(unittest.TestCase):
             cbInQue=cbInQue,
         )
         port.serialReadEvent()
-        self.assertTrue(all(
-            isinstance(d, bytes) for d in protocol.received_data
-        ))
+        self.assertTrue(all(isinstance(d, bytes) for d in protocol.received_data))
         port.connectionLost(Failure(Exception("Cleanup")))
 
     def test_serialPortReturnsBytes_1(self):

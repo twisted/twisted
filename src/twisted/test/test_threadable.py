@@ -21,6 +21,7 @@ from twisted.trial import unittest
 
 from twisted.python import threadable
 
+
 class TestObject:
     synchronized = ['aMethod']
 
@@ -33,7 +34,9 @@ class TestObject:
             self.z = self.x + self.y
             assert self.z == 0, "z == %d, not 0 as expected" % (self.z,)
 
+
 threadable.synchronize(TestObject)
+
 
 class SynchronizationTests(unittest.SynchronousTestCase):
     def setUp(self):
@@ -51,14 +54,12 @@ class SynchronizationTests(unittest.SynchronousTestCase):
                 self.addCleanup(sys.setcheckinterval, sys.getcheckinterval())
                 sys.setcheckinterval(7)
 
-
     def test_synchronizedName(self):
         """
         The name of a synchronized method is inaffected by the synchronization
         decorator.
         """
         self.assertEqual("aMethod", TestObject.aMethod.__name__)
-
 
     def test_isInIOThread(self):
         """
@@ -68,14 +69,14 @@ class SynchronizationTests(unittest.SynchronousTestCase):
         threadable.registerAsIOThread()
         foreignResult = []
         t = threading.Thread(
-            target=lambda: foreignResult.append(threadable.isInIOThread()))
+            target=lambda: foreignResult.append(threadable.isInIOThread())
+        )
         t.start()
         t.join()
-        self.assertFalse(
-            foreignResult[0], "Non-IO thread reported as IO thread")
+        self.assertFalse(foreignResult[0], "Non-IO thread reported as IO thread")
         self.assertTrue(
-            threadable.isInIOThread(), "IO thread reported as not IO thread")
-
+            threadable.isInIOThread(), "IO thread reported as not IO thread"
+        )
 
     def testThreadedSynchronization(self):
         o = TestObject()
@@ -105,12 +106,10 @@ class SynchronizationTests(unittest.SynchronousTestCase):
         testThreadedSynchronization.skip = threadingSkip
         test_isInIOThread.skip = threadingSkip
 
-
     def testUnthreadedSynchronization(self):
         o = TestObject()
         for i in range(1000):
             o.aMethod()
-
 
 
 class SerializationTests(unittest.SynchronousTestCase):
@@ -123,7 +122,6 @@ class SerializationTests(unittest.SynchronousTestCase):
 
     if threadingSkip is not None:
         testPickling.skip = threadingSkip
-
 
     def testUnpickling(self):
         lockPickle = b'ctwisted.python.threadable\nunpickle_lock\np0\n(tp1\nRp2\n.'

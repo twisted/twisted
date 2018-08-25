@@ -16,27 +16,25 @@ from twisted.python import usage, deprecate, versions
 import warnings
 
 
-
 class Options(usage.Options, strcred.AuthOptionMixin):
     synopsis = """[options].
     WARNING: This FTP server is probably INSECURE do not use it.
     """
     optParameters = [
-        ["port", "p", "2121",              "set the port number"],
-        ["root", "r", "/usr/local/ftp",    "define the root of the ftp-site."],
-        ["userAnonymous", "", "anonymous", "Name of the anonymous user."]
+        ["port", "p", "2121", "set the port number"],
+        ["root", "r", "/usr/local/ftp", "define the root of the ftp-site."],
+        ["userAnonymous", "", "anonymous", "Name of the anonymous user."],
     ]
 
     compData = usage.Completions(
         optActions={"root": usage.CompleteDirs(descr="root of the ftp site")}
-        )
+    )
 
     longdesc = ''
 
     def __init__(self, *a, **kw):
         usage.Options.__init__(self, *a, **kw)
         self.addChecker(checkers.AllowAnonymousAccess())
-
 
     def opt_password_file(self, filename):
         """
@@ -45,10 +43,10 @@ class Options(usage.Options, strcred.AuthOptionMixin):
         """
         self['password-file'] = filename
         msg = deprecate.getDeprecationWarningString(
-            self.opt_password_file, versions.Version('Twisted', 11, 1, 0))
+            self.opt_password_file, versions.Version('Twisted', 11, 1, 0)
+        )
         warnings.warn(msg, category=DeprecationWarning, stacklevel=2)
         self.addChecker(checkers.FilePasswordDB(filename, cache=True))
-
 
 
 def makeService(config):

@@ -21,40 +21,59 @@ from twisted.web import distrib
 from twisted.web import resource, server, static, script, demo, wsgi
 from twisted.web import twcgi
 
+
 class Options(usage.Options):
     """
     Define the options accepted by the I{twistd web} plugin.
     """
+
     synopsis = "[web options]"
 
-    optParameters = [["logfile", "l", None,
-                      "Path to web CLF (Combined Log Format) log file."],
-                     ["certificate", "c", "server.pem",
-                      "(DEPRECATED: use --listen) "
-                      "SSL certificate to use for HTTPS. "],
-                     ["privkey", "k", "server.pem",
-                      "(DEPRECATED: use --listen) "
-                      "SSL certificate to use for HTTPS."],
-                     ]
-
-    optFlags = [
-        ["notracebacks", "n", (
-            "Do not display tracebacks in broken web pages. Displaying "
-            "tracebacks to users may be security risk!")],
+    optParameters = [
+        ["logfile", "l", None, "Path to web CLF (Combined Log Format) log file."],
+        [
+            "certificate",
+            "c",
+            "server.pem",
+            "(DEPRECATED: use --listen) " "SSL certificate to use for HTTPS. ",
+        ],
+        [
+            "privkey",
+            "k",
+            "server.pem",
+            "(DEPRECATED: use --listen) " "SSL certificate to use for HTTPS.",
+        ],
     ]
 
-    optFlags.append([
-        "personal", "",
-        "Instead of generating a webserver, generate a "
-        "ResourcePublisher which listens on  the port given by "
-        "--listen, or ~/%s " % (distrib.UserDirectory.userSocketName,) +
-        "if --listen is not specified."])
+    optFlags = [
+        [
+            "notracebacks",
+            "n",
+            (
+                "Do not display tracebacks in broken web pages. Displaying "
+                "tracebacks to users may be security risk!"
+            ),
+        ]
+    ]
+
+    optFlags.append(
+        [
+            "personal",
+            "",
+            "Instead of generating a webserver, generate a "
+            "ResourcePublisher which listens on  the port given by "
+            "--listen, or ~/%s " % (distrib.UserDirectory.userSocketName,)
+            + "if --listen is not specified.",
+        ]
+    )
 
     compData = usage.Completions(
-                   optActions={"logfile" : usage.CompleteFiles("*.log"),
-                               "certificate" : usage.CompleteFiles("*.pem"),
-                               "privkey" : usage.CompleteFiles("*.pem")}
-                   )
+        optActions={
+            "logfile": usage.CompleteFiles("*.log"),
+            "certificate": usage.CompleteFiles("*.pem"),
+            "privkey": usage.CompleteFiles("*.pem"),
+        }
+    )
 
     longdesc = """\
 This starts a webserver.  If you specify no arguments, it will be a
@@ -68,14 +87,14 @@ demo webserver that has the Test class from twisted.web.demo in it."""
         self['ports'] = []
         self['port'] = self['https'] = None
 
-
     def opt_port(self, port):
         """
         (DEPRECATED: use --listen)
         Strports description of port to start the server on
         """
         msg = deprecate.getDeprecationWarningString(
-            self.opt_port, incremental.Version('Twisted', 18, 4, 0))
+            self.opt_port, incremental.Version('Twisted', 18, 4, 0)
+        )
         warnings.warn(msg, category=DeprecationWarning, stacklevel=2)
         self['port'] = port
 
@@ -87,10 +106,10 @@ demo webserver that has the Test class from twisted.web.demo in it."""
         Port to listen on for Secure HTTP.
         """
         msg = deprecate.getDeprecationWarningString(
-            self.opt_https, incremental.Version('Twisted', 18, 4, 0))
+            self.opt_https, incremental.Version('Twisted', 18, 4, 0)
+        )
         warnings.warn(msg, category=DeprecationWarning, stacklevel=2)
         self['https'] = port
-
 
     def opt_listen(self, port):
         """
@@ -98,7 +117,6 @@ demo webserver that has the Test class from twisted.web.demo in it."""
         [default: tcp:8080]
         """
         self['ports'].append(port)
-
 
     def opt_index(self, indexName):
         """
@@ -109,7 +127,6 @@ demo webserver that has the Test class from twisted.web.demo in it."""
 
     opt_i = opt_index
 
-
     def opt_user(self):
         """
         Makes a server with ~/public_html and ~/.twistd-web-pb support for
@@ -118,7 +135,6 @@ demo webserver that has the Test class from twisted.web.demo in it."""
         self['root'] = distrib.UserDirectory()
 
     opt_u = opt_user
-
 
     def opt_path(self, path):
         """
@@ -133,18 +149,15 @@ demo webserver that has the Test class from twisted.web.demo in it."""
         }
         self['root'].processors['.cgi'] = twcgi.CGIScript
 
-
     def opt_processor(self, proc):
         """
         `ext=class' where `class' is added as a Processor for files ending
         with `ext'.
         """
         if not isinstance(self['root'], static.File):
-            raise usage.UsageError(
-                "You can only use --processor after --path.")
+            raise usage.UsageError("You can only use --processor after --path.")
         ext, klass = proc.split('=', 1)
         self['root'].processors[ext] = reflect.namedClass(klass)
-
 
     def opt_class(self, className):
         """
@@ -153,13 +166,11 @@ demo webserver that has the Test class from twisted.web.demo in it."""
         classObj = reflect.namedClass(className)
         self['root'] = classObj()
 
-
     def opt_resource_script(self, name):
         """
         An .rpy file to be used as the root resource of the webserver.
         """
         self['root'] = script.ResourceScriptWrapper(name)
-
 
     def opt_wsgi(self, name):
         """
@@ -175,37 +186,33 @@ demo webserver that has the Test class from twisted.web.demo in it."""
         reactor.addSystemEventTrigger('after', 'shutdown', pool.stop)
         self['root'] = wsgi.WSGIResource(reactor, pool, application)
 
-
     def opt_mime_type(self, defaultType):
         """
         Specify the default mime-type for static files.
         """
         if not isinstance(self['root'], static.File):
-            raise usage.UsageError(
-                "You can only use --mime_type after --path.")
+            raise usage.UsageError("You can only use --mime_type after --path.")
         self['root'].defaultType = defaultType
-    opt_m = opt_mime_type
 
+    opt_m = opt_mime_type
 
     def opt_allow_ignore_ext(self):
         """
         Specify whether or not a request for 'foo' should return 'foo.ext'
         """
         if not isinstance(self['root'], static.File):
-            raise usage.UsageError("You can only use --allow_ignore_ext "
-                                   "after --path.")
+            raise usage.UsageError(
+                "You can only use --allow_ignore_ext " "after --path."
+            )
         self['root'].ignoreExt('*')
-
 
     def opt_ignore_ext(self, ext):
         """
         Specify an extension to ignore.  These will be processed in order.
         """
         if not isinstance(self['root'], static.File):
-            raise usage.UsageError("You can only use --ignore_ext "
-                                   "after --path.")
+            raise usage.UsageError("You can only use --ignore_ext " "after --path.")
         self['root'].ignoreExt(ext)
-
 
     def opt_add_header(self, header):
         """
@@ -214,7 +221,6 @@ demo webserver that has the Test class from twisted.web.demo in it."""
         """
         name, value = header.split(':', 1)
         self['extraHeaders'].append((name.strip(), value.strip()))
-
 
     def postOptions(self):
         """
@@ -234,19 +240,17 @@ demo webserver that has the Test class from twisted.web.demo in it."""
             except ImportError:
                 raise usage.UsageError("SSL support not installed")
             sslStrport = 'ssl:port={}:privateKey={}:certKey={}'.format(
-                             self['https'],
-                             self['privkey'],
-                             self['certificate'],
-                         )
+                self['https'], self['privkey'], self['certificate']
+            )
             self['ports'].append(sslStrport)
         if len(self['ports']) == 0:
             if self['personal']:
                 path = os.path.expanduser(
-                    os.path.join('~', distrib.UserDirectory.userSocketName))
+                    os.path.join('~', distrib.UserDirectory.userSocketName)
+                )
                 self['ports'].append('unix:' + path)
             else:
                 self['ports'].append('tcp:8080')
-
 
 
 def makePersonalServerFactory(site):
@@ -260,18 +264,15 @@ def makePersonalServerFactory(site):
     return pb.PBServerFactory(distrib.ResourcePublisher(site))
 
 
-
 class _AddHeadersResource(resource.Resource):
     def __init__(self, originalResource, headers):
         self._originalResource = originalResource
         self._headers = headers
 
-
     def getChildWithDefault(self, name, request):
         for k, v in self._headers:
             request.responseHeaders.addRawHeader(k, v)
         return self._originalResource.getChildWithDefault(name, request)
-
 
 
 def makeService(config):

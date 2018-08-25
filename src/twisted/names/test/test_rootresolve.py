@@ -16,11 +16,23 @@ from twisted.internet.interfaces import IResolverSimple
 from twisted.names import client, root
 from twisted.names.root import Resolver
 from twisted.names.dns import (
-    IN, HS, A, NS, CNAME, OK, ENAME, Record_CNAME,
-    Name, Query, Message, RRHeader, Record_A, Record_NS)
+    IN,
+    HS,
+    A,
+    NS,
+    CNAME,
+    OK,
+    ENAME,
+    Record_CNAME,
+    Name,
+    Query,
+    Message,
+    RRHeader,
+    Record_A,
+    Record_NS,
+)
 from twisted.names.error import DNSNameError, ResolverError
 from twisted.names.test.test_util import MemoryReactor
-
 
 
 def getOnePayload(results):
@@ -40,11 +52,11 @@ def getOneAddress(results):
     return getOnePayload(results).dottedQuad()
 
 
-
 class RootResolverTests(TestCase):
     """
     Tests for L{twisted.names.root.Resolver}.
     """
+
     def _queryTest(self, filter):
         """
         Invoke L{Resolver._query} and verify that it sends the correct DNS
@@ -57,8 +69,8 @@ class RootResolverTests(TestCase):
         reactor = MemoryReactor()
         resolver = Resolver([], reactor=reactor)
         d = resolver._query(
-            Query(b'foo.example.com', A, IN), [('1.1.2.3', 1053)], (30,),
-            filter)
+            Query(b'foo.example.com', A, IN), [('1.1.2.3', 1053)], (30,), filter
+        )
 
         # A UDP port should have been started.
         portNumber, transport = reactor.udpPorts.popitem()
@@ -82,12 +94,11 @@ class RootResolverTests(TestCase):
         # Once a reply is received, the Deferred should fire.
         del message.queries[:]
         message.answer = 1
-        message.answers.append(RRHeader(
-            b'foo.example.com', payload=Record_A('5.8.13.21')))
-        transport._protocol.datagramReceived(
-            message.toStr(), ('1.1.2.3', 1053))
+        message.answers.append(
+            RRHeader(b'foo.example.com', payload=Record_A('5.8.13.21'))
+        )
+        transport._protocol.datagramReceived(message.toStr(), ('1.1.2.3', 1053))
         return response[0]
-
 
     def test_filteredQuery(self):
         """
@@ -98,11 +109,10 @@ class RootResolverTests(TestCase):
         """
         answer, authority, additional = self._queryTest(True)
         self.assertEqual(
-            answer,
-            [RRHeader(b'foo.example.com', payload=Record_A('5.8.13.21', ttl=0))])
+            answer, [RRHeader(b'foo.example.com', payload=Record_A('5.8.13.21', ttl=0))]
+        )
         self.assertEqual(authority, [])
         self.assertEqual(additional, [])
-
 
     def test_unfilteredQuery(self):
         """
@@ -115,10 +125,10 @@ class RootResolverTests(TestCase):
         self.assertEqual(message.queries, [])
         self.assertEqual(
             message.answers,
-            [RRHeader(b'foo.example.com', payload=Record_A('5.8.13.21', ttl=0))])
+            [RRHeader(b'foo.example.com', payload=Record_A('5.8.13.21', ttl=0))],
+        )
         self.assertEqual(message.authority, [])
         self.assertEqual(message.additional, [])
-
 
     def _respond(self, answers=[], authority=[], additional=[], rCode=OK):
         """
@@ -136,15 +146,20 @@ class RootResolverTests(TestCase):
         @return: A new L{Message} initialized with the given values.
         """
         response = Message(rCode=rCode)
-        for (section, data) in [(response.answers, answers),
-                                (response.authority, authority),
-                                (response.additional, additional)]:
-            section.extend([
-                    RRHeader(name, record.TYPE, getattr(record, 'CLASS', IN),
-                             payload=record)
-                    for (name, record) in data])
+        for (section, data) in [
+            (response.answers, answers),
+            (response.authority, authority),
+            (response.additional, additional),
+        ]:
+            section.extend(
+                [
+                    RRHeader(
+                        name, record.TYPE, getattr(record, 'CLASS', IN), payload=record
+                    )
+                    for (name, record) in data
+                ]
+            )
         return response
-
 
     def _getResolver(self, serverResponses, maximumQueries=10):
         """
@@ -168,9 +183,9 @@ class RootResolverTests(TestCase):
                     continue
                 records = server[query.name.name, query.type]
                 return succeed(self._respond(**records))
+
         resolver._query = query
         return resolver
-
 
     def test_lookupAddress(self):
         """
@@ -184,20 +199,19 @@ class RootResolverTests(TestCase):
                 (b'foo.example.com', A): {
                     'authority': [(b'foo.example.com', Record_NS(b'ns1.example.com'))],
                     'additional': [(b'ns1.example.com', Record_A('34.55.89.144'))],
-                    },
-                },
+                }
+            },
             ('34.55.89.144', 53): {
                 (b'foo.example.com', A): {
-                    'answers': [(b'foo.example.com', Record_A('10.0.0.1'))],
-                    }
-                },
-            }
+                    'answers': [(b'foo.example.com', Record_A('10.0.0.1'))]
+                }
+            },
+        }
         resolver = self._getResolver(servers)
         d = resolver.lookupAddress(b'foo.example.com')
         d.addCallback(getOneAddress)
         d.addCallback(self.assertEqual, '10.0.0.1')
         return d
-
 
     def test_lookupChecksClass(self):
         """
@@ -213,12 +227,12 @@ class RootResolverTests(TestCase):
                     'answers': [(b'foo.example.com', badClass)],
                     'authority': [(b'foo.example.com', Record_NS(b'ns1.example.com'))],
                     'additional': [(b'ns1.example.com', Record_A('10.0.0.2'))],
-                },
+                }
             },
             ('10.0.0.2', 53): {
                 (b'foo.example.com', A): {
-                    'answers': [(b'foo.example.com', Record_A('10.0.0.3'))],
-                },
+                    'answers': [(b'foo.example.com', Record_A('10.0.0.3'))]
+                }
             },
         }
         resolver = self._getResolver(servers)
@@ -226,7 +240,6 @@ class RootResolverTests(TestCase):
         d.addCallback(getOnePayload)
         d.addCallback(self.assertEqual, Record_A('10.0.0.3'))
         return d
-
 
     def test_missingGlue(self):
         """
@@ -238,40 +251,32 @@ class RootResolverTests(TestCase):
                 (b'foo.example.com', A): {
                     'authority': [(b'foo.example.com', Record_NS(b'ns1.example.org'))],
                     # Conspicuous lack of an additional section naming ns1.example.com
-                    },
-                (b'ns1.example.org', A): {
-                    'answers': [(b'ns1.example.org', Record_A('10.0.0.1'))],
-                    },
                 },
+                (b'ns1.example.org', A): {
+                    'answers': [(b'ns1.example.org', Record_A('10.0.0.1'))]
+                },
+            },
             ('10.0.0.1', 53): {
                 (b'foo.example.com', A): {
-                    'answers': [(b'foo.example.com', Record_A('10.0.0.2'))],
-                    },
-                },
-            }
+                    'answers': [(b'foo.example.com', Record_A('10.0.0.2'))]
+                }
+            },
+        }
         resolver = self._getResolver(servers)
         d = resolver.lookupAddress(b'foo.example.com')
         d.addCallback(getOneAddress)
         d.addCallback(self.assertEqual, '10.0.0.2')
         return d
 
-
     def test_missingName(self):
         """
         If a name is missing, L{Resolver.lookupAddress} returns a L{Deferred}
         which fails with L{DNSNameError}.
         """
-        servers = {
-            ('1.1.2.3', 53): {
-                (b'foo.example.com', A): {
-                    'rCode': ENAME,
-                    },
-                },
-            }
+        servers = {('1.1.2.3', 53): {(b'foo.example.com', A): {'rCode': ENAME}}}
         resolver = self._getResolver(servers)
         d = resolver.lookupAddress(b'foo.example.com')
         return self.assertFailure(d, DNSNameError)
-
 
     def test_answerless(self):
         """
@@ -279,16 +284,10 @@ class RootResolverTests(TestCase):
         L{Deferred} returned by L{Resolver.lookupAddress} fires with
         L{ResolverError}.
         """
-        servers = {
-            ('1.1.2.3', 53): {
-                (b'example.com', A): {
-                    },
-                },
-            }
+        servers = {('1.1.2.3', 53): {(b'example.com', A): {}}}
         resolver = self._getResolver(servers)
         d = resolver.lookupAddress(b'example.com')
         return self.assertFailure(d, ResolverError)
-
 
     def test_delegationLookupError(self):
         """
@@ -299,17 +298,14 @@ class RootResolverTests(TestCase):
         servers = {
             ('1.1.2.3', 53): {
                 (b'example.com', A): {
-                    'authority': [(b'example.com', Record_NS(b'ns1.example.com'))],
-                    },
-                (b'ns1.example.com', A): {
-                    'rCode': ENAME,
-                    },
+                    'authority': [(b'example.com', Record_NS(b'ns1.example.com'))]
                 },
+                (b'ns1.example.com', A): {'rCode': ENAME},
             }
+        }
         resolver = self._getResolver(servers)
         d = resolver.lookupAddress(b'example.com')
         return self.assertFailure(d, DNSNameError)
-
 
     def test_delegationLookupEmpty(self):
         """
@@ -320,16 +316,14 @@ class RootResolverTests(TestCase):
         servers = {
             ('1.1.2.3', 53): {
                 (b'example.com', A): {
-                    'authority': [(b'example.com', Record_NS(b'ns1.example.com'))],
-                    },
-                (b'ns1.example.com', A): {
-                    },
+                    'authority': [(b'example.com', Record_NS(b'ns1.example.com'))]
                 },
+                (b'ns1.example.com', A): {},
             }
+        }
         resolver = self._getResolver(servers)
         d = resolver.lookupAddress(b'example.com')
         return self.assertFailure(d, ResolverError)
-
 
     def test_lookupNameservers(self):
         """
@@ -338,23 +332,22 @@ class RootResolverTests(TestCase):
         """
         servers = {
             ('1.1.2.3', 53): {
-                (b'example.com', A): {
-                    'rCode': ENAME,
-                    },
+                (b'example.com', A): {'rCode': ENAME},
                 (b'example.com', NS): {
-                    'answers': [(b'example.com', Record_NS(b'ns1.example.com'))],
-                    },
+                    'answers': [(b'example.com', Record_NS(b'ns1.example.com'))]
                 },
             }
+        }
         resolver = self._getResolver(servers)
         d = resolver.lookupNameservers(b'example.com')
+
         def getOneName(results):
             ans, auth, add = results
             return ans[0].payload.name
+
         d.addCallback(getOneName)
         d.addCallback(self.assertEqual, Name(b'ns1.example.com'))
         return d
-
 
     def test_returnCanonicalName(self):
         """
@@ -364,20 +357,24 @@ class RootResolverTests(TestCase):
         servers = {
             ('1.1.2.3', 53): {
                 (b'example.com', A): {
-                    'answers': [(b'example.com', Record_CNAME(b'example.net')),
-                                (b'example.net', Record_A('10.0.0.7'))],
-                    },
-                },
+                    'answers': [
+                        (b'example.com', Record_CNAME(b'example.net')),
+                        (b'example.net', Record_A('10.0.0.7')),
+                    ]
+                }
             }
+        }
         resolver = self._getResolver(servers)
         d = resolver.lookupAddress(b'example.com')
-        d.addCallback(lambda results: results[0]) # Get the answer section
+        d.addCallback(lambda results: results[0])  # Get the answer section
         d.addCallback(
             self.assertEqual,
-            [RRHeader(b'example.com', CNAME, payload=Record_CNAME(b'example.net')),
-             RRHeader(b'example.net', A, payload=Record_A('10.0.0.7'))])
+            [
+                RRHeader(b'example.com', CNAME, payload=Record_CNAME(b'example.net')),
+                RRHeader(b'example.net', A, payload=Record_A('10.0.0.7')),
+            ],
+        )
         return d
-
 
     def test_followCanonicalName(self):
         """
@@ -388,22 +385,24 @@ class RootResolverTests(TestCase):
         servers = {
             ('1.1.2.3', 53): {
                 (b'example.com', A): {
-                    'answers': [(b'example.com', Record_CNAME(b'example.net'))],
+                    'answers': [(b'example.com', Record_CNAME(b'example.net'))]
                 },
                 (b'example.net', A): {
-                    'answers': [(b'example.net', Record_A('10.0.0.5'))],
+                    'answers': [(b'example.net', Record_A('10.0.0.5'))]
                 },
-            },
+            }
         }
         resolver = self._getResolver(servers)
         d = resolver.lookupAddress(b'example.com')
-        d.addCallback(lambda results: results[0]) # Get the answer section
+        d.addCallback(lambda results: results[0])  # Get the answer section
         d.addCallback(
             self.assertEqual,
-            [RRHeader(b'example.com', CNAME, payload=Record_CNAME(b'example.net')),
-             RRHeader(b'example.net', A, payload=Record_A('10.0.0.5'))])
+            [
+                RRHeader(b'example.com', CNAME, payload=Record_CNAME(b'example.net')),
+                RRHeader(b'example.net', A, payload=Record_A('10.0.0.5')),
+            ],
+        )
         return d
-
 
     def test_detectCanonicalNameLoop(self):
         """
@@ -414,15 +413,16 @@ class RootResolverTests(TestCase):
         servers = {
             ('1.1.2.3', 53): {
                 (b'example.com', A): {
-                    'answers': [(b'example.com', Record_CNAME(b'example.net')),
-                                (b'example.net', Record_CNAME(b'example.com'))],
-                },
-            },
+                    'answers': [
+                        (b'example.com', Record_CNAME(b'example.net')),
+                        (b'example.net', Record_CNAME(b'example.com')),
+                    ]
+                }
+            }
         }
         resolver = self._getResolver(servers)
         d = resolver.lookupAddress(b'example.com')
         return self.assertFailure(d, ResolverError)
-
 
     def test_boundedQueries(self):
         """
@@ -434,12 +434,12 @@ class RootResolverTests(TestCase):
                 # First query - force it to start over with a name lookup of
                 # ns1.example.com
                 (b'example.com', A): {
-                    'authority': [(b'example.com', Record_NS(b'ns1.example.com'))],
+                    'authority': [(b'example.com', Record_NS(b'ns1.example.com'))]
                 },
                 # Second query - let it resume the original lookup with the
                 # address of the nameserver handling the delegation.
                 (b'ns1.example.com', A): {
-                    'answers': [(b'ns1.example.com', Record_A('10.0.0.2'))],
+                    'answers': [(b'ns1.example.com', Record_A('10.0.0.2'))]
                 },
             },
             ('10.0.0.2', 53): {
@@ -449,13 +449,13 @@ class RootResolverTests(TestCase):
                 (b'example.com', A): {
                     'authority': [(b'example.com', Record_NS(b'ns2.example.com'))],
                     'additional': [(b'ns2.example.com', Record_A('10.0.0.3'))],
-                },
+                }
             },
             ('10.0.0.3', 53): {
                 # Fourth query - give it the answer, we're done.
                 (b'example.com', A): {
-                    'answers': [(b'example.com', Record_A('10.0.0.4'))],
-                },
+                    'answers': [(b'example.com', Record_A('10.0.0.4'))]
+                }
             },
         }
 
@@ -463,8 +463,7 @@ class RootResolverTests(TestCase):
         # maximum, and so will fail, and on which may make 4, and so should
         # succeed.
         failer = self._getResolver(servers, 3)
-        failD = self.assertFailure(
-            failer.lookupAddress(b'example.com'), ResolverError)
+        failD = self.assertFailure(failer.lookupAddress(b'example.com'), ResolverError)
 
         succeeder = self._getResolver(servers, 4)
         succeedD = succeeder.lookupAddress(b'example.com')
@@ -474,12 +473,12 @@ class RootResolverTests(TestCase):
         return gatherResults([failD, succeedD])
 
 
-
 class ResolverFactoryArguments(Exception):
     """
     Raised by L{raisingResolverFactory} with the *args and **kwargs passed to
     that function.
     """
+
     def __init__(self, args, kwargs):
         """
         Store the supplied args and kwargs as attributes.
@@ -489,7 +488,6 @@ class ResolverFactoryArguments(Exception):
         """
         self.args = args
         self.kwargs = kwargs
-
 
 
 def raisingResolverFactory(*args, **kwargs):
@@ -506,11 +504,11 @@ def raisingResolverFactory(*args, **kwargs):
     raise ResolverFactoryArguments(args, kwargs)
 
 
-
 class RootResolverResolverFactoryTests(TestCase):
     """
     Tests for L{root.Resolver._resolverFactory}.
     """
+
     def test_resolverFactoryArgumentPresent(self):
         """
         L{root.Resolver.__init__} accepts a C{resolverFactory}
@@ -518,7 +516,6 @@ class RootResolverResolverFactoryTests(TestCase):
         """
         r = Resolver(hints=[None], resolverFactory=raisingResolverFactory)
         self.assertIs(r._resolverFactory, raisingResolverFactory)
-
 
     def test_resolverFactoryArgumentAbsent(self):
         """
@@ -529,25 +526,24 @@ class RootResolverResolverFactoryTests(TestCase):
         r = Resolver(hints=[None])
         self.assertIs(r._resolverFactory, client.Resolver)
 
-
     def test_resolverFactoryOnlyExpectedArguments(self):
         """
         L{root.Resolver._resolverFactory} is supplied with C{reactor} and
         C{servers} keyword arguments.
         """
         dummyReactor = object()
-        r = Resolver(hints=['192.0.2.101'],
-                     resolverFactory=raisingResolverFactory,
-                     reactor=dummyReactor)
+        r = Resolver(
+            hints=['192.0.2.101'],
+            resolverFactory=raisingResolverFactory,
+            reactor=dummyReactor,
+        )
 
-        e = self.assertRaises(ResolverFactoryArguments,
-                              r.lookupAddress, 'example.com')
+        e = self.assertRaises(ResolverFactoryArguments, r.lookupAddress, 'example.com')
 
         self.assertEqual(
             ((), {'reactor': dummyReactor, 'servers': [('192.0.2.101', 53)]}),
-            (e.args, e.kwargs)
+            (e.args, e.kwargs),
         )
-
 
 
 ROOT_SERVERS = [
@@ -563,8 +559,8 @@ ROOT_SERVERS = [
     'j.root-servers.net',
     'k.root-servers.net',
     'l.root-servers.net',
-    'm.root-servers.net']
-
+    'm.root-servers.net',
+]
 
 
 @implementer(IResolverSimple)
@@ -574,6 +570,7 @@ class StubResolver(object):
     calls and their deferred results. The deferred results can be
     accessed and fired synchronously.
     """
+
     def __init__(self):
         """
         @type calls: L{list} of L{tuple} containing C{args} and
@@ -583,7 +580,6 @@ class StubResolver(object):
         """
         self.calls = []
         self.pendingResults = []
-
 
     def getHostByName(self, *args, **kwargs):
         """
@@ -604,15 +600,14 @@ class StubResolver(object):
         return d
 
 
-
 verifyClass(IResolverSimple, StubResolver)
-
 
 
 class BootstrapTests(SynchronousTestCase):
     """
     Tests for L{root.bootstrap}
     """
+
     def test_returnsDeferredResolver(self):
         """
         L{root.bootstrap} returns an object which is initially a
@@ -621,7 +616,6 @@ class BootstrapTests(SynchronousTestCase):
         deferredResolver = root.bootstrap(StubResolver())
         self.assertIsInstance(deferredResolver, root.DeferredResolver)
 
-
     def test_resolves13RootServers(self):
         """
         The L{IResolverSimple} supplied to L{root.bootstrap} is used to lookup
@@ -629,10 +623,7 @@ class BootstrapTests(SynchronousTestCase):
         """
         stubResolver = StubResolver()
         root.bootstrap(stubResolver)
-        self.assertEqual(
-            stubResolver.calls,
-            [((s,), {}) for s in ROOT_SERVERS])
-
+        self.assertEqual(stubResolver.calls, [((s,), {}) for s in ROOT_SERVERS])
 
     def test_becomesResolver(self):
         """
@@ -646,7 +637,6 @@ class BootstrapTests(SynchronousTestCase):
             d.callback('192.0.2.101')
         self.assertIsInstance(deferredResolver, Resolver)
 
-
     def test_resolverReceivesRootHints(self):
         """
         The L{root.Resolver} which eventually replaces L{root.DeferredResolver}
@@ -657,7 +647,6 @@ class BootstrapTests(SynchronousTestCase):
         for d in stubResolver.pendingResults:
             d.callback('192.0.2.101')
         self.assertEqual(deferredResolver.hints, ['192.0.2.101'] * 13)
-
 
     def test_continuesWhenSomeRootHintsFail(self):
         """
@@ -675,8 +664,8 @@ class BootstrapTests(SynchronousTestCase):
 
         def checkHints(res):
             self.assertEqual(deferredResolver.hints, ['192.0.2.101'] * 12)
-        d1.addBoth(checkHints)
 
+        d1.addBoth(checkHints)
 
     def test_continuesWhenAllRootHintsFail(self):
         """
@@ -694,10 +683,10 @@ class BootstrapTests(SynchronousTestCase):
 
         def checkHints(res):
             self.assertEqual(deferredResolver.hints, [])
+
         d1.addBoth(checkHints)
 
         self.addCleanup(self.flushLoggedErrors, TimeoutError)
-
 
     def test_passesResolverFactory(self):
         """
@@ -707,14 +696,13 @@ class BootstrapTests(SynchronousTestCase):
         """
         stubResolver = StubResolver()
         deferredResolver = root.bootstrap(
-            stubResolver, resolverFactory=raisingResolverFactory)
+            stubResolver, resolverFactory=raisingResolverFactory
+        )
 
         for d in stubResolver.pendingResults:
             d.callback('192.0.2.101')
 
-        self.assertIs(
-            deferredResolver._resolverFactory, raisingResolverFactory)
-
+        self.assertIs(deferredResolver._resolverFactory, raisingResolverFactory)
 
 
 class StubDNSDatagramProtocol:
@@ -722,13 +710,15 @@ class StubDNSDatagramProtocol:
     A do-nothing stand-in for L{DNSDatagramProtocol} which can be used to avoid
     network traffic in tests where that kind of thing doesn't matter.
     """
+
     def query(self, *a, **kw):
         return Deferred()
-
 
 
 _retrySuppression = util.suppress(
     category=DeprecationWarning,
     message=(
         'twisted.names.root.retry is deprecated since Twisted 10.0.  Use a '
-        'Resolver object for retry logic.'))
+        'Resolver object for retry logic.'
+    ),
+)

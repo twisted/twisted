@@ -29,7 +29,6 @@ class TokenPrinter:
         """
         self.writer = writer
 
-
     def printtoken(self, type, token, sCoordinates, eCoordinates, line):
         if hasattr(tokenize, "ENCODING") and type == tokenize.ENCODING:
             self.encoding = token
@@ -41,9 +40,9 @@ class TokenPrinter:
         (srow, scol) = sCoordinates
         (erow, ecol) = eCoordinates
         if self.currentLine < srow:
-            self.writer(b'\n' * (srow-self.currentLine))
+            self.writer(b'\n' * (srow - self.currentLine))
             self.currentLine, self.currentCol = srow, 0
-        self.writer(b' ' * (scol-self.currentCol))
+        self.writer(b' ' * (scol - self.currentCol))
         if self.lastIdentifier:
             type = "identifier"
             self.parameters = 1
@@ -67,7 +66,6 @@ class TokenPrinter:
             self.parameters = 0
 
 
-
 @_oldStyle
 class HTMLWriter:
     """
@@ -83,7 +81,6 @@ class HTMLWriter:
         reflect.accumulateClassList(self.__class__, "noSpan", noSpan)
         self.noSpan = noSpan
 
-
     def write(self, token, type=None):
         if isinstance(token, bytes):
             token = token.decode("utf-8")
@@ -93,9 +90,12 @@ class HTMLWriter:
             self.writer(token)
         else:
             self.writer(
-                b'<span class="py-src-' + type.encode("utf-8") + b'">' +
-                token + b'</span>')
-
+                b'<span class="py-src-'
+                + type.encode("utf-8")
+                + b'">'
+                + token
+                + b'</span>'
+            )
 
 
 class SmallerHTMLWriter(HTMLWriter):
@@ -104,8 +104,8 @@ class SmallerHTMLWriter(HTMLWriter):
 
     Results in much smaller HTML output.
     """
-    noSpan = ["endmarker", "indent", "dedent", "op", "newline", "nl"]
 
+    noSpan = ["endmarker", "indent", "dedent", "op", "newline", "nl"]
 
 
 def filter(inp, out, writer=HTMLWriter):
@@ -120,12 +120,13 @@ def filter(inp, out, writer=HTMLWriter):
     out.write(b'</pre>\n')
 
 
-
 def main():
     import sys
+
     stdout = getattr(sys.stdout, "buffer", sys.stdout)
     with open(sys.argv[1], "rb") as f:
         filter(f, stdout)
+
 
 if __name__ == '__main__':
     main()

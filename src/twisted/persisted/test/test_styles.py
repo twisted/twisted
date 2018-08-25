@@ -15,11 +15,11 @@ class Foo:
     """
     Helper class.
     """
+
     def method(self):
         """
         Helper method.
         """
-
 
 
 class Bar:
@@ -28,16 +28,13 @@ class Bar:
     """
 
 
-
 def sampleFunction():
     """
     A sample function for pickling.
     """
 
 
-
 lambdaExample = lambda x: x
-
 
 
 class UniversalPicklingErrorTests(unittest.TestCase):
@@ -51,15 +48,12 @@ class UniversalPicklingErrorTests(unittest.TestCase):
         """
         raise _UniversalPicklingError
 
-
     def test_handledByPickleModule(self):
         """
         Handling L{pickle.PicklingError} handles
         L{_UniversalPicklingError}.
         """
-        self.assertRaises(pickle.PicklingError,
-                          self.raise_UniversalPicklingError)
-
+        self.assertRaises(pickle.PicklingError, self.raise_UniversalPicklingError)
 
     def test_handledBycPickleModule(self):
         """
@@ -71,9 +65,7 @@ class UniversalPicklingErrorTests(unittest.TestCase):
         except ImportError:
             raise unittest.SkipTest("cPickle not available.")
         else:
-            self.assertRaises(cPickle.PicklingError,
-                              self.raise_UniversalPicklingError)
-
+            self.assertRaises(cPickle.PicklingError, self.raise_UniversalPicklingError)
 
 
 class UnpickleMethodTests(unittest.TestCase):
@@ -91,7 +83,6 @@ class UnpickleMethodTests(unittest.TestCase):
         self.assertEqual(m, foo.method)
         self.assertIsNot(m, foo.method)
 
-
     def test_instanceBuildingNameNotPresent(self):
         """
         If the named method is not present in the class,
@@ -103,29 +94,24 @@ class UnpickleMethodTests(unittest.TestCase):
         self.assertEqual(m, foo.method)
         self.assertIsNot(m, foo.method)
 
-
     def test_primeDirective(self):
         """
         We do not contaminate normal function pickling with concerns from
         Twisted.
         """
+
         def expected(n):
-            return "\n".join([
-                    "c" + __name__,
-                    sampleFunction.__name__, "p" + n, "."
-                ]).encode("ascii")
-        self.assertEqual(pickle.dumps(sampleFunction, protocol=0),
-                         expected("0"))
+            return "\n".join(
+                ["c" + __name__, sampleFunction.__name__, "p" + n, "."]
+            ).encode("ascii")
+
+        self.assertEqual(pickle.dumps(sampleFunction, protocol=0), expected("0"))
         try:
             import cPickle
         except:
             pass
         else:
-            self.assertEqual(
-                cPickle.dumps(sampleFunction, protocol=0),
-                expected("1")
-            )
-
+            self.assertEqual(cPickle.dumps(sampleFunction, protocol=0), expected("1"))
 
     def test_lambdaRaisesPicklingError(self):
         """
@@ -137,5 +123,4 @@ class UnpickleMethodTests(unittest.TestCase):
         except:
             pass
         else:
-            self.assertRaises(cPickle.PicklingError, cPickle.dumps,
-                              lambdaExample)
+            self.assertRaises(cPickle.PicklingError, cPickle.dumps, lambdaExample)

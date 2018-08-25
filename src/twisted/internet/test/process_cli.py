@@ -8,6 +8,7 @@ try:
     # so newline characters are munged on writing, interfering with
     # the tests.
     import msvcrt
+
     msvcrt.setmode(sys.stdout.fileno(), os.O_BINARY)
 except ImportError:
     pass

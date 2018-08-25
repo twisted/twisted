@@ -55,11 +55,11 @@ def runCommand(args, **kwargs):
     return check_output(args, **kwargs)
 
 
-
 class IVCSCommand(Interface):
     """
     An interface for VCS commands.
     """
+
     def ensureIsWorkingDirectory(path):
         """
         Ensure that C{path} is a working directory of this VCS.
@@ -67,7 +67,6 @@ class IVCSCommand(Interface):
         @type path: L{twisted.python.filepath.FilePath}
         @param path: The path to check.
         """
-
 
     def isStatusClean(path):
         """
@@ -78,7 +77,6 @@ class IVCSCommand(Interface):
             file.)
         """
 
-
     def remove(path):
         """
         Remove the specified path from a the VCS.
@@ -86,7 +84,6 @@ class IVCSCommand(Interface):
         @type path: L{twisted.python.filepath.FilePath}
         @param path: The path to remove from the repository.
         """
-
 
     def exportTo(fromDir, exportDir):
         """
@@ -102,12 +99,12 @@ class IVCSCommand(Interface):
         """
 
 
-
 @implementer(IVCSCommand)
 class GitCommand(object):
     """
     Subset of Git commands to release Twisted from a Git repository.
     """
+
     @staticmethod
     def ensureIsWorkingDirectory(path):
         """
@@ -120,9 +117,8 @@ class GitCommand(object):
             runCommand(["git", "rev-parse"], cwd=path.path)
         except (CalledProcessError, OSError):
             raise NotWorkingDirectory(
-                "%s does not appear to be a Git repository."
-                % (path.path,))
-
+                "%s does not appear to be a Git repository." % (path.path,)
+            )
 
     @staticmethod
     def isStatusClean(path):
@@ -133,10 +129,8 @@ class GitCommand(object):
         @param path: The path to get the status from (can be a directory or a
             file.)
         """
-        status = runCommand(
-            ["git", "-C", path.path, "status", "--short"]).strip()
+        status = runCommand(["git", "-C", path.path, "status", "--short"]).strip()
         return status == b''
-
 
     @staticmethod
     def remove(path):
@@ -147,7 +141,6 @@ class GitCommand(object):
         @param path: The path to remove from the repository.
         """
         runCommand(["git", "-C", path.dirname(), "rm", path.path])
-
 
     @staticmethod
     def exportTo(fromDir, exportDir):
@@ -162,12 +155,20 @@ class GitCommand(object):
             repository to. This directory doesn't have to exist prior to
             exporting the repository.
         """
-        runCommand(["git", "-C", fromDir.path,
-                    "checkout-index", "--all", "--force",
-                    # prefix has to end up with a "/" so that files get copied
-                    # to a directory whose name is the prefix.
-                    "--prefix", exportDir.path + "/"])
-
+        runCommand(
+            [
+                "git",
+                "-C",
+                fromDir.path,
+                "checkout-index",
+                "--all",
+                "--force",
+                # prefix has to end up with a "/" so that files get copied
+                # to a directory whose name is the prefix.
+                "--prefix",
+                exportDir.path + "/",
+            ]
+        )
 
 
 def getRepositoryCommand(directory):
@@ -191,9 +192,7 @@ def getRepositoryCommand(directory):
         # It's not Git, but that's okay, eat the error
         pass
 
-    raise NotWorkingDirectory("No supported VCS can be found in %s" %
-                              (directory.path,))
-
+    raise NotWorkingDirectory("No supported VCS can be found in %s" % (directory.path,))
 
 
 class Project(object):
@@ -209,11 +208,8 @@ class Project(object):
     def __init__(self, directory):
         self.directory = directory
 
-
     def __repr__(self):
-        return '%s(%r)' % (
-            self.__class__.__name__, self.directory)
-
+        return '%s(%r)' % (self.__class__.__name__, self.directory)
 
     def getVersion(self):
         """
@@ -230,7 +226,6 @@ class Project(object):
             else:
                 execfile(directory.child("_version.py").path, namespace)
         return namespace["__version__"]
-
 
 
 def findTwistedProjects(baseDirectory):
@@ -263,12 +258,10 @@ def replaceInFile(filename, oldToNew):
     os.unlink(filename + '.bak')
 
 
-
 class NoDocumentsFound(Exception):
     """
     Raised when no input documents are found.
     """
-
 
 
 class APIBuilder(object):
@@ -277,8 +270,8 @@ class APIBuilder(object):
     U{pydoctor<https://github.com/twisted/pydoctor>}.  This requires
     pydoctor to be installed and usable.
     """
-    def build(self, projectName, projectURL, sourceURL, packagePath,
-              outputPath):
+
+    def build(self, projectName, projectURL, sourceURL, packagePath, outputPath):
         """
         Call pydoctor's entry point with options which will generate HTML
         documentation for the specified package's API.
@@ -311,6 +304,7 @@ class APIBuilder(object):
 
         # Super awful monkeypatch that will selectively use our templates.
         from pydoctor.templatewriter import util
+
         originalTemplatefile = util.templatefile
 
         def templatefile(filename):
@@ -327,20 +321,29 @@ class APIBuilder(object):
 
         from pydoctor.driver import main
 
-        args = [u"--project-name", projectName,
-                u"--project-url", projectURL,
-                u"--system-class", u"twisted.python._pydoctor.TwistedSystem",
-                u"--project-base-dir", packagePath.parent().path,
-                u"--html-viewsource-base", sourceURL,
-                u"--add-package", packagePath.path,
-                u"--html-output", outputPath.path,
-                u"--html-write-function-pages", u"--quiet", u"--make-html",
-               ] + intersphinxes
+        args = [
+            u"--project-name",
+            projectName,
+            u"--project-url",
+            projectURL,
+            u"--system-class",
+            u"twisted.python._pydoctor.TwistedSystem",
+            u"--project-base-dir",
+            packagePath.parent().path,
+            u"--html-viewsource-base",
+            sourceURL,
+            u"--add-package",
+            packagePath.path,
+            u"--html-output",
+            outputPath.path,
+            u"--html-write-function-pages",
+            u"--quiet",
+            u"--make-html",
+        ] + intersphinxes
         args = [arg.encode("utf-8") for arg in args]
         main(args)
 
         monkeyPatch.restore()
-
 
 
 class SphinxBuilder(object):
@@ -373,7 +376,6 @@ class SphinxBuilder(object):
             sys.stdout.write(u"Unclean build:\n{}\n".format(output))
             raise sys.exit(1)
 
-
     def build(self, docDir, buildDir=None, version=''):
         """
         Build the documentation in C{docDir} with Sphinx.
@@ -398,9 +400,18 @@ class SphinxBuilder(object):
 
         doctreeDir = buildDir.child('doctrees')
 
-        output = runCommand(['sphinx-build', '-q', '-b', 'html',
-                             '-d', doctreeDir.path, docDir.path,
-                             buildDir.path]).decode("utf-8")
+        output = runCommand(
+            [
+                'sphinx-build',
+                '-q',
+                '-b',
+                'html',
+                '-d',
+                doctreeDir.path,
+                docDir.path,
+                buildDir.path,
+            ]
+        ).decode("utf-8")
 
         # Delete the doctrees, as we don't want them after the docs are built
         doctreeDir.remove()
@@ -415,7 +426,6 @@ class SphinxBuilder(object):
                     dest.parent().makedirs()
                 path.copyTo(dest)
         return output
-
 
 
 def filePathDelta(origin, destination):
@@ -446,13 +456,11 @@ def filePathDelta(origin, destination):
     return path + path2[commonItems:]
 
 
-
 class NotWorkingDirectory(Exception):
     """
     Raised when a directory does not appear to be a repository directory of a
     supported VCS.
     """
-
 
 
 class BuildAPIDocsScript(object):
@@ -468,19 +476,20 @@ class BuildAPIDocsScript(object):
             checkout.
         @param output: A L{FilePath} pointing to the desired output directory.
         """
-        version = Project(
-            projectRoot.child("twisted")).getVersion()
+        version = Project(projectRoot.child("twisted")).getVersion()
         versionString = version.base()
-        sourceURL = ("https://github.com/twisted/twisted/tree/"
-                     "twisted-%s" % (versionString,) + "/src")
+        sourceURL = (
+            "https://github.com/twisted/twisted/tree/"
+            "twisted-%s" % (versionString,) + "/src"
+        )
         apiBuilder = APIBuilder()
         apiBuilder.build(
             "Twisted",
             "http://twistedmatrix.com/",
             sourceURL,
             projectRoot.child("twisted"),
-            output)
-
+            output,
+        )
 
     def main(self, args):
         """
@@ -492,19 +501,19 @@ class BuildAPIDocsScript(object):
             path to an output directory.
         """
         if len(args) != 2:
-            sys.exit("Must specify two arguments: "
-                     "Twisted checkout and destination path")
+            sys.exit(
+                "Must specify two arguments: " "Twisted checkout and destination path"
+            )
         self.buildAPIDocs(FilePath(args[0]), FilePath(args[1]))
-
 
 
 class CheckNewsfragmentScript(object):
     """
     A thing for checking whether a checkout has a newsfragment.
     """
+
     def __init__(self, _print):
         self._print = _print
-
 
     def main(self, args):
         """
@@ -520,15 +529,22 @@ class CheckNewsfragmentScript(object):
         encoding = sys.stdout.encoding or 'ascii'
         location = os.path.abspath(args[0])
 
-        branch = runCommand([b"git", b"rev-parse", b"--abbrev-ref",  "HEAD"],
-                            cwd=location).decode(encoding).strip()
+        branch = (
+            runCommand([b"git", b"rev-parse", b"--abbrev-ref", "HEAD"], cwd=location)
+            .decode(encoding)
+            .strip()
+        )
 
-        r = runCommand([b"git", b"diff", b"--name-only", b"origin/trunk..."],
-                       cwd=location).decode(encoding).strip()
+        r = (
+            runCommand(
+                [b"git", b"diff", b"--name-only", b"origin/trunk..."], cwd=location
+            )
+            .decode(encoding)
+            .strip()
+        )
 
         if not r:
-            self._print(
-                "On trunk or no diffs from trunk; no need to look at this.")
+            self._print("On trunk or no diffs from trunk; no need to look at this.")
             sys.exit(0)
 
         files = r.strip().split(os.linesep)

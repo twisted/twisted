@@ -27,8 +27,8 @@ class InstallReactorTests(unittest.SynchronousTestCase):
             newReactor = object()
             installReactor(newReactor)
             from twisted.internet import reactor
-            self.assertIs(newReactor, reactor)
 
+            self.assertIs(newReactor, reactor)
 
     def test_alreadyInstalled(self):
         """
@@ -37,14 +37,11 @@ class InstallReactorTests(unittest.SynchronousTestCase):
         """
         with NoReactor():
             installReactor(object())
-            self.assertRaises(ReactorAlreadyInstalledError, installReactor,
-                              object())
-
+            self.assertRaises(ReactorAlreadyInstalledError, installReactor, object())
 
     def test_errorIsAnAssertionError(self):
         """
         For backwards compatibility, L{ReactorAlreadyInstalledError} is an
         L{AssertionError}.
         """
-        self.assertTrue(issubclass(ReactorAlreadyInstalledError,
-                        AssertionError))
+        self.assertTrue(issubclass(ReactorAlreadyInstalledError, AssertionError))

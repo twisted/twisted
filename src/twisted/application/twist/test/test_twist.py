@@ -21,7 +21,6 @@ from twisted.test.test_twistd import SignalCapturingMemoryReactor
 import twisted.trial.unittest
 
 
-
 class TwistTests(twisted.trial.unittest.TestCase):
     """
     Tests for L{Twist}.
@@ -30,14 +29,12 @@ class TwistTests(twisted.trial.unittest.TestCase):
     def setUp(self):
         self.patchInstallReactor()
 
-
     def patchExit(self):
         """
         Patch L{_twist.exit} so we can capture usage and prevent actual exits.
         """
         self.exit = DummyExit()
         self.patch(_twist, "exit", self.exit)
-
 
     def patchInstallReactor(self):
         """
@@ -53,7 +50,6 @@ class TwistTests(twisted.trial.unittest.TestCase):
 
         self.patch(TwistOptions, "installReactor", installReactor)
 
-
     def patchStartService(self):
         """
         Patch L{MultiService.startService} so we can capture usage and prevent
@@ -66,7 +62,6 @@ class TwistTests(twisted.trial.unittest.TestCase):
 
         self.patch(MultiService, "startService", startService)
 
-
     def test_optionsValidArguments(self):
         """
         L{Twist.options} given valid arguments returns options.
@@ -74,7 +69,6 @@ class TwistTests(twisted.trial.unittest.TestCase):
         options = Twist.options(["twist", "web"])
 
         self.assertIsInstance(options, TwistOptions)
-
 
     def test_optionsInvalidArguments(self):
         """
@@ -87,10 +81,7 @@ class TwistTests(twisted.trial.unittest.TestCase):
 
         self.assertIdentical(self.exit.status, ExitStatus.EX_USAGE)
         self.assertTrue(self.exit.message.startswith("Error: "))
-        self.assertTrue(self.exit.message.endswith(
-            "\n\n{}".format(TwistOptions())
-        ))
-
+        self.assertTrue(self.exit.message.endswith("\n\n{}".format(TwistOptions())))
 
     def test_service(self):
         """
@@ -99,7 +90,6 @@ class TwistTests(twisted.trial.unittest.TestCase):
         options = Twist.options(["twist", "web"])  # web should exist
         service = Twist.service(options.plugins["web"], options.subOptions)
         self.assertTrue(IService.providedBy(service))
-
 
     def test_startService(self):
         """
@@ -110,8 +100,7 @@ class TwistTests(twisted.trial.unittest.TestCase):
 
         reactor = options["reactor"]
         service = Twist.service(
-            plugin=options.plugins[options.subCommand],
-            options=options.subOptions,
+            plugin=options.plugins[options.subCommand], options=options.subOptions
         )
 
         self.patchStartService()
@@ -120,10 +109,8 @@ class TwistTests(twisted.trial.unittest.TestCase):
 
         self.assertEqual(self.serviceStarts, [service])
         self.assertEqual(
-            reactor.triggers["before"]["shutdown"],
-            [(service.stopService, (), {})]
+            reactor.triggers["before"]["shutdown"], [(service.stopService, (), {})]
         )
-
 
     def test_run(self):
         """
@@ -132,16 +119,12 @@ class TwistTests(twisted.trial.unittest.TestCase):
         """
         argsSeen = []
 
-        self.patch(
-            Runner, "__init__", lambda self, **args: argsSeen.append(args)
-        )
-        self.patch(
-            Runner, "run", lambda self: None
-        )
+        self.patch(Runner, "__init__", lambda self, **args: argsSeen.append(args))
+        self.patch(Runner, "run", lambda self: None)
 
-        twistOptions = Twist.options([
-            "twist", "--reactor=default", "--log-format=json", "web"
-        ])
+        twistOptions = Twist.options(
+            ["twist", "--reactor=default", "--log-format=json", "web"]
+        )
         Twist.run(twistOptions)
 
         self.assertEqual(len(argsSeen), 1)
@@ -152,9 +135,8 @@ class TwistTests(twisted.trial.unittest.TestCase):
                 defaultLogLevel=LogLevel.info,
                 logFile=stdout,
                 fileLogObserverFactory=jsonFileLogObserver,
-            )
+            ),
         )
-
 
     def test_main(self):
         """
@@ -176,9 +158,7 @@ class TwistTests(twisted.trial.unittest.TestCase):
 
         self.patch(_twist, "Runner", Runner)
 
-        Twist.main([
-            "twist", "--reactor=default", "--log-format=json", "web"
-        ])
+        Twist.main(["twist", "--reactor=default", "--log-format=json", "web"])
 
         self.assertEqual(len(self.serviceStarts), 1)
         self.assertEqual(len(runners), 1)
@@ -189,10 +169,9 @@ class TwistTests(twisted.trial.unittest.TestCase):
                 defaultLogLevel=LogLevel.info,
                 logFile=stdout,
                 fileLogObserverFactory=jsonFileLogObserver,
-            )
+            ),
         )
         self.assertEqual(runners[0].runs, 1)
-
 
 
 class TwistExitTests(twisted.trial.unittest.TestCase):
@@ -226,7 +205,6 @@ class TwistExitTests(twisted.trial.unittest.TestCase):
 
         self.patch(Runner, 'startLogging', startLogging)
 
-
     def test_twistReactorDoesntExitWithSignal(self):
         """
         _exitWithSignal is not called if the reactor's _exitSignal attribute
@@ -241,7 +219,6 @@ class TwistExitTests(twisted.trial.unittest.TestCase):
         Twist.run(options)
         self.assertFalse(self.exitWithSignalCalled)
 
-
     def test_twistReactorHasNoExitSignalAttr(self):
         """
         _exitWithSignal is not called if the runner's reactor does not
@@ -253,7 +230,6 @@ class TwistExitTests(twisted.trial.unittest.TestCase):
         options["fileLogObserverFactory"] = jsonFileLogObserver
         Twist.run(options)
         self.assertFalse(self.exitWithSignalCalled)
-
 
     def test_twistReactorExitsWithSignal(self):
         """

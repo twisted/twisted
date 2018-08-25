@@ -15,6 +15,7 @@ except ImportError:
     platformSkip = "non-POSIX platform"
 else:
     from twisted.internet import process
+
     platformSkip = None
 
 from twisted.python.compat import range
@@ -25,22 +26,19 @@ class FakeFile(object):
     """
     A dummy file object which records when it is closed.
     """
+
     def __init__(self, testcase, fd):
         self.testcase = testcase
         self.fd = fd
 
-
     def close(self):
         self.testcase._files.remove(self.fd)
-
 
     def __enter__(self):
         return self
 
-
     def __exit__(self, exc_type, exc_value, traceback):
         self.close()
-
 
 
 class FakeResourceModule(object):
@@ -50,11 +48,11 @@ class FakeResourceModule(object):
 
     @ivar _limit: The value to return for the hard limit of number of open files.
     """
+
     RLIMIT_NOFILE = 1
 
     def __init__(self, limit):
         self._limit = limit
-
 
     def getrlimit(self, no):
         """
@@ -63,7 +61,6 @@ class FakeResourceModule(object):
         if no == self.RLIMIT_NOFILE:
             return [0, self._limit]
         return [123, 456]
-
 
 
 class FDDetectorTests(TestCase):
@@ -80,6 +77,7 @@ class FDDetectorTests(TestCase):
     @ivar procfs: A flag indicating whether the filesystem fake will indicate
         that /proc/<pid>/fd exists.
     """
+
     skip = platformSkip
 
     devfs = False
@@ -92,7 +90,6 @@ class FDDetectorTests(TestCase):
         Fake os.getpid, always return the same thing
         """
         return 123
-
 
     def listdir(self, arg):
         """
@@ -109,7 +106,6 @@ class FDDetectorTests(TestCase):
             return ["0", "1", "2"]
         raise OSError()
 
-
     def openfile(self, fname, mode):
         """
         This is a mock for L{open}.  It keeps track of opened files so extra
@@ -124,14 +120,12 @@ class FDDetectorTests(TestCase):
         self._files.append(f.fd)
         return f
 
-
     def hideResourceModule(self):
         """
         Make the L{resource} module unimportable for the remainder of the
         current test method.
         """
         sys.modules['resource'] = None
-
 
     def revealResourceModule(self, limit):
         """
@@ -143,7 +137,6 @@ class FDDetectorTests(TestCase):
             function.
         """
         sys.modules['resource'] = FakeResourceModule(limit)
-
 
     def replaceResourceModule(self, value):
         """
@@ -157,7 +150,6 @@ class FDDetectorTests(TestCase):
         else:
             sys.modules['resource'] = value
 
-
     def setUp(self):
         """
         Set up the tests, giving ourselves a detector object to play with and
@@ -168,9 +160,7 @@ class FDDetectorTests(TestCase):
         self.detector.getpid = self.getpid
         self.detector.openfile = self.openfile
         self._files = [0, 1, 2]
-        self.addCleanup(
-            self.replaceResourceModule, sys.modules.get('resource'))
-
+        self.addCleanup(self.replaceResourceModule, sys.modules.get('resource'))
 
     def test_selectFirstWorking(self):
         """
@@ -178,6 +168,7 @@ class FDDetectorTests(TestCase):
         C{_implementations} list which returns results which reflect a newly
         opened file descriptor.
         """
+
         def failWithException():
             raise ValueError("This does not work")
 
@@ -188,10 +179,12 @@ class FDDetectorTests(TestCase):
             return self._files[:]
 
         self.detector._implementations = [
-            failWithException, failWithWrongResults, correct]
+            failWithException,
+            failWithWrongResults,
+            correct,
+        ]
 
         self.assertIs(correct, self.detector._getImplementation())
-
 
     def test_selectLast(self):
         """
@@ -199,6 +192,7 @@ class FDDetectorTests(TestCase):
         C{_implementations} list if none of the implementations manage to return
         results which reflect a newly opened file descriptor.
         """
+
         def failWithWrongResults():
             return [3, 5, 9]
 
@@ -206,11 +200,11 @@ class FDDetectorTests(TestCase):
             return [0, 1, 2]
 
         self.detector._implementations = [
-            failWithWrongResults, failWithOtherWrongResults]
+            failWithWrongResults,
+            failWithOtherWrongResults,
+        ]
 
-        self.assertIs(
-            failWithOtherWrongResults, self.detector._getImplementation())
-
+        self.assertIs(failWithOtherWrongResults, self.detector._getImplementation())
 
     def test_identityOfListOpenFDsChanges(self):
         """
@@ -231,7 +225,6 @@ class FDDetectorTests(TestCase):
         self.assertNotEqual(first, second)
         self.assertEqual(second, third)
 
-
     def test_devFDImplementation(self):
         """
         L{_FDDetector._devFDImplementation} raises L{OSError} if there is no
@@ -244,7 +237,6 @@ class FDDetectorTests(TestCase):
         self.accurateDevFDResults = False
         self.assertEqual([0, 1, 2], self.detector._devFDImplementation())
 
-
     def test_procFDImplementation(self):
         """
         L{_FDDetector._procFDImplementation} raises L{OSError} if there is no
@@ -256,7 +248,6 @@ class FDDetectorTests(TestCase):
         self.procfs = True
         self.assertEqual([0, 1, 2], self.detector._procFDImplementation())
 
-
     def test_resourceFDImplementation(self):
         """
         L{_FDDetector._fallbackFDImplementation} uses the L{resource} module if
@@ -266,13 +257,14 @@ class FDDetectorTests(TestCase):
         # When the resource module is here, use its value.
         self.revealResourceModule(512)
         self.assertEqual(
-            list(range(512)), list(self.detector._fallbackFDImplementation()))
+            list(range(512)), list(self.detector._fallbackFDImplementation())
+        )
 
         # But limit its value to the arbitrarily selected value 1024.
         self.revealResourceModule(2048)
         self.assertEqual(
-            list(range(1024)), list(self.detector._fallbackFDImplementation()))
-
+            list(range(1024)), list(self.detector._fallbackFDImplementation())
+        )
 
     def test_fallbackFDImplementation(self):
         """
@@ -281,15 +273,16 @@ class FDDetectorTests(TestCase):
         L{resource} module is not importable.
         """
         self.hideResourceModule()
-        self.assertEqual(list(range(1024)),
-                         list(self.detector._fallbackFDImplementation()))
-
+        self.assertEqual(
+            list(range(1024)), list(self.detector._fallbackFDImplementation())
+        )
 
 
 class FileDescriptorTests(TestCase):
     """
     Tests for L{twisted.internet.process._listOpenFDs}
     """
+
     skip = platformSkip
 
     def test_openFDs(self):
@@ -304,10 +297,11 @@ class FileDescriptorTests(TestCase):
                 fcntl.fcntl(fd, fcntl.F_GETFL)
             except IOError as err:
                 self.assertEqual(
-                    errno.EBADF, err.errno,
-                    "fcntl(%d, F_GETFL) failed with unexpected errno %d" % (
-                        fd, err.errno))
-
+                    errno.EBADF,
+                    err.errno,
+                    "fcntl(%d, F_GETFL) failed with unexpected errno %d"
+                    % (fd, err.errno),
+                )
 
     def test_expectedFDs(self):
         """
@@ -338,7 +332,8 @@ class FileDescriptorTests(TestCase):
         # But sanity check that; if it fails the test is invalid.
         self.assertTrue(
             fd > f.fileno(),
-            "Expected duplicate file descriptor to be greater than original")
+            "Expected duplicate file descriptor to be greater than original",
+        )
 
         try:
             # Get rid of the original, creating the hole.  The copy should still

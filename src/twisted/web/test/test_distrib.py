@@ -7,6 +7,7 @@ Tests for L{twisted.web.distrib}.
 
 from os.path import abspath
 from xml.dom.minidom import parseString
+
 try:
     import pwd
 except ImportError:
@@ -39,6 +40,7 @@ class PBServerFactory(pb.PBServerFactory):
     @ivar proto: L{None} or the L{Broker} instance most recently returned
         from C{buildProtocol}.
     """
+
     proto = None
 
     def buildProtocol(self, addr):
@@ -46,12 +48,10 @@ class PBServerFactory(pb.PBServerFactory):
         return self.proto
 
 
-
 class ArbitraryError(Exception):
     """
     An exception for this test.
     """
-
 
 
 class DistribTests(unittest.TestCase):
@@ -71,8 +71,7 @@ class DistribTests(unittest.TestCase):
         else:
             dl[0].callback(None)
         if self.sub is not None and self.sub.publisher is not None:
-            self.sub.publisher.broker.notifyOnDisconnect(
-                lambda: dl[1].callback(None))
+            self.sub.publisher.broker.notifyOnDisconnect(lambda: dl[1].callback(None))
             self.sub.publisher.broker.transport.loseConnection()
         else:
             dl[1].callback(None)
@@ -82,7 +81,6 @@ class DistribTests(unittest.TestCase):
             dl.append(self.port2.stopListening())
         return defer.gatherResults(dl)
 
-
     def testDistrib(self):
         # site1 is the publisher
         r1 = resource.Resource()
@@ -90,21 +88,18 @@ class DistribTests(unittest.TestCase):
         site1 = server.Site(r1)
         self.f1 = PBServerFactory(distrib.ResourcePublisher(site1))
         self.port1 = reactor.listenTCP(0, self.f1)
-        self.sub = distrib.ResourceSubscription("127.0.0.1",
-                                                self.port1.getHost().port)
+        self.sub = distrib.ResourceSubscription("127.0.0.1", self.port1.getHost().port)
         r2 = resource.Resource()
         r2.putChild(b"here", self.sub)
         f2 = MySite(r2)
         self.port2 = reactor.listenTCP(0, f2)
         agent = client.Agent(reactor)
-        url = "http://127.0.0.1:{}/here/there".format(
-            self.port2.getHost().port)
+        url = "http://127.0.0.1:{}/here/there".format(self.port2.getHost().port)
         url = url.encode("ascii")
         d = agent.request(b"GET", url)
         d.addCallback(client.readBody)
         d.addCallback(self.assertEqual, b'root')
         return d
-
 
     def _setupDistribServer(self, child):
         """
@@ -119,21 +114,19 @@ class DistribTests(unittest.TestCase):
         distribRoot.putChild(b"child", child)
         distribSite = server.Site(distribRoot)
         self.f1 = distribFactory = PBServerFactory(
-            distrib.ResourcePublisher(distribSite))
-        distribPort = reactor.listenTCP(
-            0, distribFactory, interface="127.0.0.1")
+            distrib.ResourcePublisher(distribSite)
+        )
+        distribPort = reactor.listenTCP(0, distribFactory, interface="127.0.0.1")
         self.addCleanup(distribPort.stopListening)
         addr = distribPort.getHost()
 
-        self.sub = mainRoot = distrib.ResourceSubscription(
-            addr.host, addr.port)
+        self.sub = mainRoot = distrib.ResourceSubscription(addr.host, addr.port)
         mainSite = server.Site(mainRoot)
         mainPort = reactor.listenTCP(0, mainSite, interface="127.0.0.1")
         self.addCleanup(mainPort.stopListening)
         mainAddr = mainPort.getHost()
 
         return mainPort, mainAddr
-
 
     def _requestTest(self, child, **kwargs):
         """
@@ -153,7 +146,6 @@ class DistribTests(unittest.TestCase):
         d = agent.request(b"GET", url, **kwargs)
         d.addCallback(client.readBody)
         return d
-
 
     def _requestAgentTest(self, child, **kwargs):
         """
@@ -180,9 +172,9 @@ class DistribTests(unittest.TestCase):
             d = protocol.closedDeferred = defer.Deferred()
             d.addCallback(lambda _: (protocol, response))
             return d
+
         d.addCallback(cbCollectBody)
         return d
-
 
     def test_requestHeaders(self):
         """
@@ -194,26 +186,23 @@ class DistribTests(unittest.TestCase):
         globalLogPublisher.addObserver(logObserver)
         req = [None]
 
-
         class ReportRequestHeaders(resource.Resource):
             def render(self, request):
                 req[0] = request
-                requestHeaders.update(dict(
-                    request.requestHeaders.getAllRawHeaders()))
+                requestHeaders.update(dict(request.requestHeaders.getAllRawHeaders()))
                 return b""
 
         def check_logs():
             msgs = [e["log_format"] for e in logObserver]
             self.assertIn('connected to publisher', msgs)
-            self.assertIn(
-                "could not connect to distributed web service: {msg}",
-                msgs
-            )
+            self.assertIn("could not connect to distributed web service: {msg}", msgs)
             self.assertIn(req[0], msgs)
             globalLogPublisher.removeObserver(logObserver)
 
         request = self._requestTest(
-            ReportRequestHeaders(), headers=Headers({'foo': ['bar']}))
+            ReportRequestHeaders(), headers=Headers({'foo': ['bar']})
+        )
+
         def cbRequested(result):
             self.f1.proto.notifyOnDisconnect(check_logs)
             self.assertEqual(requestHeaders[b'Foo'], [b'bar'])
@@ -221,44 +210,47 @@ class DistribTests(unittest.TestCase):
         request.addCallback(cbRequested)
         return request
 
-
     def test_requestResponseCode(self):
         """
         The response code can be set by the request object passed to a
         distributed resource's C{render} method.
         """
+
         class SetResponseCode(resource.Resource):
             def render(self, request):
                 request.setResponseCode(200)
                 return ""
 
         request = self._requestAgentTest(SetResponseCode())
+
         def cbRequested(result):
             self.assertEqual(result[0].data, b"")
             self.assertEqual(result[1].code, 200)
             self.assertEqual(result[1].phrase, b"OK")
+
         request.addCallback(cbRequested)
         return request
-
 
     def test_requestResponseCodeMessage(self):
         """
         The response code and message can be set by the request object passed to
         a distributed resource's C{render} method.
         """
+
         class SetResponseCode(resource.Resource):
             def render(self, request):
                 request.setResponseCode(200, b"some-message")
                 return ""
 
         request = self._requestAgentTest(SetResponseCode())
+
         def cbRequested(result):
             self.assertEqual(result[0].data, b"")
             self.assertEqual(result[1].code, 200)
             self.assertEqual(result[1].phrase, b"some-message")
+
         request.addCallback(cbRequested)
         return request
-
 
     def test_largeWrite(self):
         """
@@ -266,6 +258,7 @@ class DistribTests(unittest.TestCase):
         L{distrib.Request} passed to the remote resource, it is broken into
         smaller strings to be transported over the PB connection.
         """
+
         class LargeWrite(resource.Resource):
             def render(self, request):
                 request.write(b'x' * SIZE_LIMIT + b'y')
@@ -276,12 +269,12 @@ class DistribTests(unittest.TestCase):
         request.addCallback(self.assertEqual, b'x' * SIZE_LIMIT + b'y')
         return request
 
-
     def test_largeReturn(self):
         """
         Like L{test_largeWrite}, but for the case where C{render} returns a
         long string rather than explicitly passing it to L{Request.write}.
         """
+
         class LargeReturn(resource.Resource):
             def render(self, request):
                 return b'x' * SIZE_LIMIT + b'y'
@@ -289,7 +282,6 @@ class DistribTests(unittest.TestCase):
         request = self._requestTest(LargeReturn())
         request.addCallback(self.assertEqual, b'x' * SIZE_LIMIT + b'y')
         return request
-
 
     def test_connectionLost(self):
         """
@@ -302,9 +294,11 @@ class DistribTests(unittest.TestCase):
         self.port1 = serverPort = reactor.listenTCP(0, serverFactory)
 
         self.sub = subscription = distrib.ResourceSubscription(
-            "127.0.0.1", serverPort.getHost().port)
+            "127.0.0.1", serverPort.getHost().port
+        )
         request = DummyRequest([b''])
         d = _render(subscription, request)
+
         def cbRendered(ignored):
             self.assertEqual(request.responseCode, 500)
             # This is the error we caused the request to fail with.  It should
@@ -319,28 +313,26 @@ class DistribTests(unittest.TestCase):
                 b'  <body>',
                 b'    <h1>Server Connection Lost</h1>',
                 b'    <p>Connection to distributed server lost:'
-                    b'<pre>'
-                    b'[Failure instance: Traceback from remote host -- '
+                b'<pre>'
+                b'[Failure instance: Traceback from remote host -- '
                 b'twisted.spread.flavors.NoSuchMethod: '
-                    b'No such method: remote_request',
+                b'No such method: remote_request',
                 b']</pre></p>',
                 b'  </body>',
                 b'</html>',
-                b''
-                ]
+                b'',
+            ]
             self.assertEqual([b'\n'.join(expected)], request.written)
 
         d.addCallback(cbRendered)
         return d
-
 
     def test_logFailed(self):
         """
         When a request fails, the string form of the failure is logged.
         """
         logObserver = proto_helpers.EventLoggingObserver.createWithCleanup(
-            self,
-            globalLogPublisher
+            self, globalLogPublisher
         )
 
         f = failure.Failure(ArbitraryError())
@@ -348,11 +340,7 @@ class DistribTests(unittest.TestCase):
         issue = distrib.Issue(request)
         issue.failed(f)
         self.assertEquals(1, len(logObserver))
-        self.assertIn(
-            "Failure instance",
-            logObserver[0]["log_format"]
-        )
-
+        self.assertIn("Failure instance", logObserver[0]["log_format"])
 
     def test_requestFail(self):
         """
@@ -360,8 +348,7 @@ class DistribTests(unittest.TestCase):
         is logged.
         """
         logObserver = proto_helpers.EventLoggingObserver.createWithCleanup(
-            self,
-            globalLogPublisher
+            self, globalLogPublisher
         )
         err = ArbitraryError()
         f = failure.Failure(err)
@@ -372,15 +359,12 @@ class DistribTests(unittest.TestCase):
         self.assertIs(logObserver[0]["log_failure"], f)
 
 
-
 class _PasswordDatabase:
     def __init__(self, users):
         self._users = users
 
-
     def getpwall(self):
         return iter(self._users)
-
 
     def getpwnam(self, username):
         for user in self._users:
@@ -389,25 +373,23 @@ class _PasswordDatabase:
         raise KeyError()
 
 
-
 class UserDirectoryTests(unittest.TestCase):
     """
     Tests for L{UserDirectory}, a resource for listing all user resources
     available on a system.
     """
+
     def setUp(self):
         self.alice = ('alice', 'x', 123, 456, 'Alice,,,', self.mktemp(), '/bin/sh')
         self.bob = ('bob', 'x', 234, 567, 'Bob,,,', self.mktemp(), '/bin/sh')
         self.database = _PasswordDatabase([self.alice, self.bob])
         self.directory = distrib.UserDirectory(self.database)
 
-
     def test_interface(self):
         """
         L{UserDirectory} instances provide L{resource.IResource}.
         """
         self.assertTrue(verifyObject(resource.IResource, self.directory))
-
 
     def _404Test(self, name):
         """
@@ -417,11 +399,12 @@ class UserDirectoryTests(unittest.TestCase):
         request = DummyRequest([name])
         result = self.directory.getChild(name, request)
         d = _render(result, request)
+
         def cbRendered(ignored):
             self.assertEqual(request.responseCode, 404)
+
         d.addCallback(cbRendered)
         return d
-
 
     def test_getInvalidUser(self):
         """
@@ -431,7 +414,6 @@ class UserDirectoryTests(unittest.TestCase):
         """
         return self._404Test('carol')
 
-
     def test_getUserWithoutResource(self):
         """
         L{UserDirectory.getChild} returns a resource which renders a 404
@@ -439,7 +421,6 @@ class UserDirectoryTests(unittest.TestCase):
         neither a user directory nor a user distrib socket.
         """
         return self._404Test('alice')
-
 
     def test_getPublicHTMLChild(self):
         """
@@ -454,7 +435,6 @@ class UserDirectoryTests(unittest.TestCase):
         result = self.directory.getChild('bob', request)
         self.assertIsInstance(result, static.File)
         self.assertEqual(result.path, public_html.path)
-
 
     def test_getDistribChild(self):
         """
@@ -471,7 +451,6 @@ class UserDirectoryTests(unittest.TestCase):
         self.assertEqual(result.host, 'unix')
         self.assertEqual(abspath(result.port), web.path)
 
-
     def test_invalidMethod(self):
         """
         L{UserDirectory.render} raises L{UnsupportedMethod} in response to a
@@ -479,9 +458,7 @@ class UserDirectoryTests(unittest.TestCase):
         """
         request = DummyRequest([''])
         request.method = 'POST'
-        self.assertRaises(
-            server.UnsupportedMethod, self.directory.render, request)
-
+        self.assertRaises(server.UnsupportedMethod, self.directory.render, request)
 
     def test_render(self):
         """
@@ -499,6 +476,7 @@ class UserDirectoryTests(unittest.TestCase):
 
         request = DummyRequest([''])
         result = _render(self.directory, request)
+
         def cbRendered(ignored):
             document = parseString(b''.join(request.written))
 
@@ -514,7 +492,6 @@ class UserDirectoryTests(unittest.TestCase):
         result.addCallback(cbRendered)
         return result
 
-
     def test_passwordDatabase(self):
         """
         If L{UserDirectory} is instantiated with no arguments, it uses the
@@ -522,6 +499,6 @@ class UserDirectoryTests(unittest.TestCase):
         """
         directory = distrib.UserDirectory()
         self.assertIdentical(directory._pwd, pwd)
+
     if pwd is None:
         test_passwordDatabase.skip = "pwd module required"
-

@@ -7,17 +7,14 @@ from twisted.application import strports
 from twisted.python import usage
 from twisted.words.protocols.jabber import component
 
+
 class Options(usage.Options):
     optParameters = [
-            ('port', None, 'tcp:5347:interface=127.0.0.1',
-                           'Port components connect to'),
-            ('secret', None, 'secret', 'Router secret'),
+        ('port', None, 'tcp:5347:interface=127.0.0.1', 'Port components connect to'),
+        ('secret', None, 'secret', 'Router secret'),
     ]
 
-    optFlags = [
-            ('verbose', 'v', 'Log traffic'),
-    ]
-
+    optFlags = [('verbose', 'v', 'Log traffic')]
 
 
 def makeService(config):

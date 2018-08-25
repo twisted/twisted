@@ -18,7 +18,6 @@ from twisted.python.compat import execfile, nativeString, _PY3
 from twisted.python.filepath import FilePath
 
 
-
 def getSerial(filename='/tmp/twisted-names.serial'):
     """
     Return a monotonically increasing (across program runs) integer.
@@ -55,7 +54,6 @@ def getSerial(filename='/tmp/twisted-names.serial'):
     return serial
 
 
-
 class FileAuthority(common.ResolverBase):
     """
     An Authority that is loaded from a file.
@@ -69,6 +67,7 @@ class FileAuthority(common.ResolverBase):
     @ivar soa: A 2-tuple containing the SOA domain name as a L{bytes} and a
         L{dns.Record_SOA}.
     """
+
     # See https://twistedmatrix.com/trac/ticket/6650
     _ADDITIONAL_PROCESSING_TYPES = (dns.CNAME, dns.MX, dns.NS)
     _ADDRESS_TYPES = (dns.A, dns.AAAA)
@@ -81,10 +80,8 @@ class FileAuthority(common.ResolverBase):
         self.loadFile(filename)
         self._cache = {}
 
-
     def __setstate__(self, state):
         self.__dict__ = state
-
 
     def _additionalRecords(self, answer, authority, ttl):
         """
@@ -113,9 +110,8 @@ class FileAuthority(common.ResolverBase):
                 for rec in self.records.get(name.lower(), ()):
                     if rec.TYPE in self._ADDRESS_TYPES:
                         yield dns.RRHeader(
-                            name, rec.TYPE, dns.IN,
-                            rec.ttl or ttl, rec, auth=True)
-
+                            name, rec.TYPE, dns.IN, rec.ttl or ttl, rec, auth=True
+                        )
 
     def _lookup(self, name, cls, type, timeout=None):
         """
@@ -156,27 +152,20 @@ class FileAuthority(common.ResolverBase):
                 else:
                     ttl = default_ttl
 
-                if (record.TYPE == dns.NS and
-                        name.lower() != self.soa[0].lower()):
+                if record.TYPE == dns.NS and name.lower() != self.soa[0].lower():
                     # NS record belong to a child zone: this is a referral.  As
                     # NS records are authoritative in the child zone, ours here
                     # are not.  RFC 2181, section 6.1.
                     authority.append(
-                        dns.RRHeader(
-                            name, record.TYPE, dns.IN, ttl, record, auth=False
-                        )
+                        dns.RRHeader(name, record.TYPE, dns.IN, ttl, record, auth=False)
                     )
                 elif record.TYPE == type or type == dns.ALL_RECORDS:
                     results.append(
-                        dns.RRHeader(
-                            name, record.TYPE, dns.IN, ttl, record, auth=True
-                        )
+                        dns.RRHeader(name, record.TYPE, dns.IN, ttl, record, auth=True)
                     )
                 if record.TYPE == dns.CNAME:
                     cnames.append(
-                        dns.RRHeader(
-                            name, record.TYPE, dns.IN, ttl, record, auth=True
-                        )
+                        dns.RRHeader(name, record.TYPE, dns.IN, ttl, record, auth=True)
                     )
             if not results:
                 results = cnames
@@ -184,7 +173,8 @@ class FileAuthority(common.ResolverBase):
             # Sort of https://tools.ietf.org/html/rfc1034#section-4.3.2 .
             # See https://twistedmatrix.com/trac/ticket/6732
             additionalInformation = self._additionalRecords(
-                results, authority, default_ttl)
+                results, authority, default_ttl
+            )
             if cnames:
                 results.extend(additionalInformation)
             else:
@@ -196,8 +186,7 @@ class FileAuthority(common.ResolverBase):
                 # section 7.1.
                 authority.append(
                     dns.RRHeader(
-                        self.soa[0], dns.SOA, dns.IN, ttl, self.soa[1],
-                        auth=True
+                        self.soa[0], dns.SOA, dns.IN, ttl, self.soa[1], auth=True
                     )
                 )
             return defer.succeed((results, authority, additional))
@@ -206,15 +195,12 @@ class FileAuthority(common.ResolverBase):
                 # We may be the authority and we didn't find it.
                 # XXX: The QNAME may also be in a delegated child zone. See
                 # #6581 and #6580
-                return defer.fail(
-                    failure.Failure(dns.AuthoritativeDomainError(name))
-                )
+                return defer.fail(failure.Failure(dns.AuthoritativeDomainError(name)))
             else:
                 # The QNAME is not a descendant of this zone. Fail with
                 # DomainError so that the next chained authority or
                 # resolver will be queried.
                 return defer.fail(failure.Failure(error.DomainError(name)))
-
 
     def lookupZone(self, name, timeout=10):
         if self.soa[0].lower() == name.lower():
@@ -226,8 +212,7 @@ class FileAuthority(common.ResolverBase):
                 soa_ttl = default_ttl
             results = [
                 dns.RRHeader(
-                    self.soa[0], dns.SOA, dns.IN, soa_ttl, self.soa[1],
-                    auth=True
+                    self.soa[0], dns.SOA, dns.IN, soa_ttl, self.soa[1], auth=True
                 )
             ]
             for (k, r) in self.records.items():
@@ -238,14 +223,11 @@ class FileAuthority(common.ResolverBase):
                         ttl = default_ttl
                     if rec.TYPE != dns.SOA:
                         results.append(
-                            dns.RRHeader(
-                                k, rec.TYPE, dns.IN, ttl, rec, auth=True
-                            )
+                            dns.RRHeader(k, rec.TYPE, dns.IN, ttl, rec, auth=True)
                         )
             results.append(results[0])
             return defer.succeed((results, (), ()))
         return defer.fail(failure.Failure(dns.DomainError(name)))
-
 
     def _cbAllRecords(self, results):
         ans, auth, add = [], [], []
@@ -257,11 +239,11 @@ class FileAuthority(common.ResolverBase):
         return ans, auth, add
 
 
-
 class PySourceAuthority(FileAuthority):
     """
     A FileAuthority that is built up from Python source code.
     """
+
     def loadFile(self, filename):
         g, l = self.setupConfigNamespace(), {}
         execfile(filename, g, l)
@@ -274,10 +256,8 @@ class PySourceAuthority(FileAuthority):
                 self.soa = rr
             self.records.setdefault(rr[0].lower(), []).append(rr[1])
 
-
     def wrapRecord(self, type):
         return lambda name, *arg, **kw: (name, type(*arg, **kw))
-
 
     def setupConfigNamespace(self):
         r = {}
@@ -285,9 +265,8 @@ class PySourceAuthority(FileAuthority):
         for record in [x for x in items if x.startswith('Record_')]:
             type = getattr(dns, record)
             f = self.wrapRecord(type)
-            r[record[len('Record_'):]] = f
+            r[record[len('Record_') :]] = f
         return r
-
 
 
 class BindAuthority(FileAuthority):
@@ -297,6 +276,7 @@ class BindAuthority(FileAuthority):
 
     Supports only C{$ORIGIN} and C{$TTL} directives.
     """
+
     def loadFile(self, filename):
         """
         Load records from C{filename}.
@@ -314,7 +294,6 @@ class BindAuthority(FileAuthority):
         lines = self.collapseContinuations(lines)
         self.parseLines(lines)
 
-
     def stripComments(self, lines):
         """
         Strip comments from C{lines}.
@@ -325,11 +304,9 @@ class BindAuthority(FileAuthority):
         @return: C{lines} sans comments.
         """
         return (
-            a.find(b';') == -1 and a or a[:a.find(b';')] for a in [
-                b.strip() for b in lines
-            ]
+            a.find(b';') == -1 and a or a[: a.find(b';')]
+            for a in [b.strip() for b in lines]
         )
-
 
     def collapseContinuations(self, lines):
         """
@@ -347,16 +324,15 @@ class BindAuthority(FileAuthority):
                 if line.find(b'(') == -1:
                     l.append(line)
                 else:
-                    l.append(line[:line.find(b'(')])
+                    l.append(line[: line.find(b'(')])
                     state = 1
             else:
                 if line.find(b')') != -1:
-                    l[-1] += b' ' + line[:line.find(b')')]
+                    l[-1] += b' ' + line[: line.find(b')')]
                     state = 0
                 else:
                     l[-1] += b' ' + line
         return filter(None, (line.split() for line in l))
-
 
     def parseLines(self, lines):
         """
@@ -378,15 +354,12 @@ class BindAuthority(FileAuthority):
             elif line[0] == b'$INCLUDE':
                 raise NotImplementedError('$INCLUDE directive not implemented')
             elif line[0] == b'$GENERATE':
-                raise NotImplementedError(
-                    '$GENERATE directive not implemented'
-                )
+                raise NotImplementedError('$GENERATE directive not implemented')
             else:
                 self.parseRecordLine(origin, ttl, line)
 
         # If the origin changed, reflect that within the instance.
         self.origin = origin
-
 
     def addRecord(self, owner, ttl, type, domain, cls, rdata):
         """
@@ -418,10 +391,7 @@ class BindAuthority(FileAuthority):
         if f:
             f(ttl, type, domain, rdata)
         else:
-            raise NotImplementedError(
-                "Record class %r not supported" % (cls,)
-            )
-
+            raise NotImplementedError("Record class %r not supported" % (cls,))
 
     def class_IN(self, ttl, type, domain, rdata):
         """
@@ -452,7 +422,6 @@ class BindAuthority(FileAuthority):
                 "Record type %r not supported" % (nativeString(type),)
             )
 
-
     def parseRecordLine(self, origin, ttl, line):
         """
         Parse a C{line} from a zone file respecting C{origin} and C{ttl}.
@@ -469,12 +438,8 @@ class BindAuthority(FileAuthority):
         @type line: L{list} of L{bytes}
         """
         if _PY3:
-            queryClasses = set(
-                qc.encode("ascii") for qc in dns.QUERY_CLASSES.values()
-            )
-            queryTypes = set(
-                qt.encode("ascii") for qt in dns.QUERY_TYPES.values()
-            )
+            queryClasses = set(qc.encode("ascii") for qc in dns.QUERY_CLASSES.values())
+            queryTypes = set(qt.encode("ascii") for qt in dns.QUERY_TYPES.values())
         else:
             queryClasses = set(dns.QUERY_CLASSES.values())
             queryTypes = set(dns.QUERY_TYPES.values())
@@ -514,6 +479,4 @@ class BindAuthority(FileAuthority):
         type = line[0]
         rdata = line[1:]
 
-        self.addRecord(
-            owner, ttl, nativeString(type), domain, nativeString(cls), rdata
-        )
+        self.addRecord(owner, ttl, nativeString(type), domain, nativeString(cls), rdata)

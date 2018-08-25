@@ -15,11 +15,17 @@ from twisted import plugin
 from twisted.words import iwords, service
 from twisted.cred import checkers, credentials, portal, strcred
 
+
 class Options(usage.Options, strcred.AuthOptionMixin):
     supportedInterfaces = [credentials.IUsernamePassword]
     optParameters = [
-        ('hostname', None, socket.gethostname(),
-         'Name of this server; purely an informative')]
+        (
+            'hostname',
+            None,
+            socket.gethostname(),
+            'Name of this server; purely an informative',
+        )
+    ]
 
     compData = usage.Completions(multiUse=["group"])
 
@@ -28,10 +34,16 @@ class Options(usage.Options, strcred.AuthOptionMixin):
     for plg in plugin.getPlugins(iwords.IProtocolPlugin):
         assert plg.name not in interfacePlugins
         interfacePlugins[plg.name] = plg
-        optParameters.append((
-            plg.name + '-port',
-            None, None,
-            'strports description of the port to bind for the  ' + plg.name + ' server'))
+        optParameters.append(
+            (
+                plg.name + '-port',
+                None,
+                None,
+                'strports description of the port to bind for the  '
+                + plg.name
+                + ' server',
+            )
+        )
     del plg
 
     def __init__(self, *a, **kw):
@@ -51,6 +63,7 @@ class Options(usage.Options, strcred.AuthOptionMixin):
         """
         self.addChecker(checkers.FilePasswordDB(filename))
 
+
 def makeService(config):
     credCheckers = config.get('credCheckers', [])
     wordsRealm = service.InMemoryWordsRealm(config['hostname'])
@@ -62,7 +75,9 @@ def makeService(config):
     for plgName in config.interfacePlugins:
         port = config.get(plgName + '-port')
         if port is not None:
-            factory = config.interfacePlugins[plgName].getFactory(wordsRealm, wordsPortal)
+            factory = config.interfacePlugins[plgName].getFactory(
+                wordsRealm, wordsPortal
+            )
             svc = strports.service(port, factory)
             svc.setServiceParent(msvc)
 

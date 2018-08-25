@@ -19,27 +19,24 @@ class ITestCase(zi.Interface):
     """
 
     failureException = zi.Attribute(
-        "The exception class that is raised by failed assertions")
-
+        "The exception class that is raised by failed assertions"
+    )
 
     def __call__(result):
         """
         Run the test. Should always do exactly the same thing as run().
         """
 
-
     def countTestCases():
         """
         Return the number of tests in this test case. Usually 1.
         """
-
 
     def id():
         """
         Return a unique identifier for the test, usually the fully-qualified
         Python name.
         """
-
 
     def run(result):
         """
@@ -48,12 +45,10 @@ class ITestCase(zi.Interface):
         @param result: A L{TestResult}.
         """
 
-
     def shortDescription():
         """
         Return a short description of the test.
         """
-
 
 
 class IReporter(zi.Interface):
@@ -62,24 +57,25 @@ class IReporter(zi.Interface):
     """
 
     stream = zi.Attribute(
-        "Deprecated in Twisted 8.0. "
-        "The io-stream that this reporter will write to")
+        "Deprecated in Twisted 8.0. " "The io-stream that this reporter will write to"
+    )
     tbformat = zi.Attribute("Either 'default', 'brief', or 'verbose'")
-    args = zi.Attribute(
-        "Additional string argument passed from the command line")
+    args = zi.Attribute("Additional string argument passed from the command line")
     shouldStop = zi.Attribute(
         """
         A boolean indicating that this reporter would like the test run to stop.
-        """)
+        """
+    )
     separator = Attribute(
         "Deprecated in Twisted 8.0. "
-        "A value which will occasionally be passed to the L{write} method.")
+        "A value which will occasionally be passed to the L{write} method."
+    )
     testsRun = Attribute(
         """
         The number of tests that seem to have been run according to this
         reporter.
-        """)
-
+        """
+    )
 
     def startTest(method):
         """
@@ -88,14 +84,12 @@ class IReporter(zi.Interface):
         @param method: an object that is adaptable to ITestMethod
         """
 
-
     def stopTest(method):
         """
         Report the status of a single test method
 
         @param method: an object that is adaptable to ITestMethod
         """
-
 
     def startSuite(name):
         """
@@ -105,7 +99,6 @@ class IReporter(zi.Interface):
         before running their tests.
         """
 
-
     def endSuite(name):
         """
         Deprecated in Twisted 8.0.
@@ -113,7 +106,6 @@ class IReporter(zi.Interface):
         Called at the end of a suite, if and only if that suite has called
         C{startSuite}.
         """
-
 
     def cleanupErrors(errs):
         """
@@ -123,7 +115,6 @@ class IReporter(zi.Interface):
 
         @param errs: a list of L{twisted.python.failure.Failure}s
         """
-
 
     def upDownError(userMeth, warn=True, printStatus=True):
         """
@@ -140,12 +131,10 @@ class IReporter(zi.Interface):
         @type printStatus: Boolean
         """
 
-
     def addSuccess(test):
         """
         Record that test passed.
         """
-
 
     def addError(test, error):
         """
@@ -157,7 +146,6 @@ class IReporter(zi.Interface):
             L{Failure<twisted.python.failure.Failure>} object.
         """
 
-
     def addFailure(test, failure):
         """
         Record that a test has failed with the given failure.
@@ -167,7 +155,6 @@ class IReporter(zi.Interface):
             either be a three-tuple in the style of C{sys.exc_info()}
             or a L{Failure<twisted.python.failure.Failure>} object.
         """
-
 
     def addExpectedFailure(test, failure, todo=None):
         """
@@ -184,7 +171,6 @@ class IReporter(zi.Interface):
             generic reason is used.
         """
 
-
     def addUnexpectedSuccess(test, todo=None):
         """
         Record that the given test failed, and was expected to do so.
@@ -198,7 +184,6 @@ class IReporter(zi.Interface):
             generic reason is used.
         """
 
-
     def addSkip(test, reason):
         """
         Record that a test has been skipped for the given reason.
@@ -208,14 +193,12 @@ class IReporter(zi.Interface):
             for skipping the test.
         """
 
-
     def printSummary():
         """
         Deprecated in Twisted 8.0, use L{done} instead.
 
         Present a summary of the test results.
         """
-
 
     def printErrors():
         """
@@ -225,14 +208,12 @@ class IReporter(zi.Interface):
         will be called after all tests have been run.
         """
 
-
     def write(string):
         """
         Deprecated in Twisted 8.0, use L{done} instead.
 
         Display a string to the user, without appending a new line.
         """
-
 
     def writeln(string):
         """
@@ -246,7 +227,6 @@ class IReporter(zi.Interface):
         Return a boolean indicating whether all test results that were reported
         to this reporter were successful or not.
         """
-
 
     def done():
         """

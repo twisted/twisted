@@ -85,9 +85,9 @@ vals = {x:y for x,y in os.environ.items() if x.startswith("HTTP_")}
 print(json.dumps(vals))
 '''
 
+
 class PythonScript(twcgi.FilteredScript):
     filter = sys.executable
-
 
 
 class CGITests(unittest.TestCase):
@@ -98,7 +98,6 @@ class CGITests(unittest.TestCase):
     if not interfaces.IReactorProcess.providedBy(reactor):
         skip = "CGI tests require a functional reactor.spawnProcess()"
 
-
     def startServer(self, cgi):
         root = resource.Resource()
         cgipath = util.sibpath(__file__, cgi)
@@ -107,18 +106,15 @@ class CGITests(unittest.TestCase):
         self.p = reactor.listenTCP(0, site)
         return self.p.getHost().port
 
-
     def tearDown(self):
         if getattr(self, 'p', None):
             return self.p.stopListening()
-
 
     def writeCGI(self, source):
         cgiFilename = os.path.abspath(self.mktemp())
         with open(cgiFilename, 'wt') as cgiFile:
             cgiFile.write(source)
         return cgiFilename
-
 
     def test_CGI(self):
         cgiFilename = self.writeCGI(DUMMY_CGI)
@@ -131,10 +127,8 @@ class CGITests(unittest.TestCase):
         d.addCallback(self._testCGI_1)
         return d
 
-
     def _testCGI_1(self, res):
         self.assertEqual(res, b"cgi output" + os.linesep.encode("ascii"))
-
 
     def test_protectedServerAndDate(self):
         """
@@ -149,14 +143,13 @@ class CGITests(unittest.TestCase):
         agent = client.Agent(reactor)
         d = agent.request(b"GET", url)
         d.addCallback(discardBody)
+
         def checkResponse(response):
-            self.assertNotIn('monkeys',
-                             response.headers.getRawHeaders('server'))
-            self.assertNotIn('last year',
-                             response.headers.getRawHeaders('date'))
+            self.assertNotIn('monkeys', response.headers.getRawHeaders('server'))
+            self.assertNotIn('last year', response.headers.getRawHeaders('date'))
+
         d.addCallback(checkResponse)
         return d
-
 
     def test_noDuplicateContentTypeHeaders(self):
         """
@@ -171,14 +164,16 @@ class CGITests(unittest.TestCase):
         agent = client.Agent(reactor)
         d = agent.request(b"GET", url)
         d.addCallback(discardBody)
+
         def checkResponse(response):
             self.assertEqual(
                 response.headers.getRawHeaders('content-type'),
-                ['text/cgi-duplicate-test'])
+                ['text/cgi-duplicate-test'],
+            )
             return response
+
         d.addCallback(checkResponse)
         return d
-
 
     def test_noProxyPassthrough(self):
         """
@@ -192,20 +187,21 @@ class CGITests(unittest.TestCase):
 
         agent = client.Agent(reactor)
 
-        headers = http_headers.Headers({b"Proxy": [b"foo"],
-                                        b"X-Innocent-Header": [b"bar"]})
+        headers = http_headers.Headers(
+            {b"Proxy": [b"foo"], b"X-Innocent-Header": [b"bar"]}
+        )
         d = agent.request(b"GET", url, headers=headers)
 
         def checkResponse(response):
             headers = json.loads(response.decode("ascii"))
             self.assertEqual(
                 set(headers.keys()),
-                {"HTTP_HOST", "HTTP_CONNECTION", "HTTP_X_INNOCENT_HEADER"})
+                {"HTTP_HOST", "HTTP_CONNECTION", "HTTP_X_INNOCENT_HEADER"},
+            )
 
         d.addCallback(client.readBody)
         d.addCallback(checkResponse)
         return d
-
 
     def test_duplicateHeaderCGI(self):
         """
@@ -220,12 +216,12 @@ class CGITests(unittest.TestCase):
         agent = client.Agent(reactor)
         d = agent.request(b"GET", url)
         d.addCallback(discardBody)
+
         def checkResponse(response):
-            self.assertEqual(
-                response.headers.getRawHeaders('header'), ['spam', 'eggs'])
+            self.assertEqual(response.headers.getRawHeaders('header'), ['spam', 'eggs'])
+
         d.addCallback(checkResponse)
         return d
-
 
     def test_malformedHeaderCGI(self):
         """
@@ -248,12 +244,12 @@ class CGITests(unittest.TestCase):
         self.addCleanup(log.removeObserver, addMessage)
 
         def checkResponse(ignored):
-            self.assertIn("ignoring malformed CGI header: " + repr(b'XYZ'),
-                          loggedMessages)
+            self.assertIn(
+                "ignoring malformed CGI header: " + repr(b'XYZ'), loggedMessages
+            )
 
         d.addCallback(checkResponse)
         return d
-
 
     def test_ReadEmptyInput(self):
         cgiFilename = os.path.abspath(self.mktemp())
@@ -268,14 +264,13 @@ class CGITests(unittest.TestCase):
         d.addCallback(client.readBody)
         d.addCallback(self._test_ReadEmptyInput_1)
         return d
-    test_ReadEmptyInput.timeout = 5
 
+    test_ReadEmptyInput.timeout = 5
 
     def _test_ReadEmptyInput_1(self, res):
         expected = "readinput ok{}".format(os.linesep)
         expected = expected.encode("ascii")
         self.assertEqual(res, expected)
-
 
     def test_ReadInput(self):
         cgiFilename = os.path.abspath(self.mktemp())
@@ -289,20 +284,18 @@ class CGITests(unittest.TestCase):
         d = agent.request(
             uri=url,
             method=b"POST",
-            bodyProducer=client.FileBodyProducer(
-                BytesIO(b"Here is your stdin")),
+            bodyProducer=client.FileBodyProducer(BytesIO(b"Here is your stdin")),
         )
         d.addCallback(client.readBody)
         d.addCallback(self._test_ReadInput_1)
         return d
-    test_ReadInput.timeout = 5
 
+    test_ReadInput.timeout = 5
 
     def _test_ReadInput_1(self, res):
         expected = "readinput ok{}".format(os.linesep)
         expected = expected.encode("ascii")
         self.assertEqual(res, expected)
-
 
     def test_ReadAllInput(self):
         cgiFilename = os.path.abspath(self.mktemp())
@@ -315,31 +308,32 @@ class CGITests(unittest.TestCase):
         d = client.Agent(reactor).request(
             uri=url,
             method=b"POST",
-            bodyProducer=client.FileBodyProducer(
-                BytesIO(b"Here is your stdin")),
+            bodyProducer=client.FileBodyProducer(BytesIO(b"Here is your stdin")),
         )
         d.addCallback(client.readBody)
         d.addCallback(self._test_ReadAllInput_1)
         return d
-    test_ReadAllInput.timeout = 5
 
+    test_ReadAllInput.timeout = 5
 
     def _test_ReadAllInput_1(self, res):
         expected = "readallinput ok{}".format(os.linesep)
         expected = expected.encode("ascii")
         self.assertEqual(res, expected)
 
-
     def test_useReactorArgument(self):
         """
         L{twcgi.FilteredScript.runProcess} uses the reactor passed as an
         argument to the constructor.
         """
+
         class FakeReactor:
             """
             A fake reactor recording whether spawnProcess is called.
             """
+
             called = False
+
             def spawnProcess(self, *args, **kwargs):
                 """
                 Set the C{called} flag to C{True} if C{spawnProcess} is called.
@@ -358,7 +352,6 @@ class CGITests(unittest.TestCase):
         self.assertTrue(fakeReactor.called)
 
 
-
 class CGIScriptTests(unittest.TestCase):
     """
     Tests for L{twcgi.CGIScript}.
@@ -369,10 +362,12 @@ class CGIScriptTests(unittest.TestCase):
         L{twcgi.CGIScript.render} sets the process environment
         I{PATH_INFO} from the request path.
         """
+
         class FakeReactor:
             """
             A fake reactor recording the environment passed to spawnProcess.
             """
+
             def spawnProcess(self, process, filename, args, env, wdir):
                 """
                 Store the C{env} L{dict} to an instance attribute.
@@ -391,15 +386,14 @@ class CGIScriptTests(unittest.TestCase):
         request.client = address.IPv4Address('TCP', '127.0.0.1', 12345)
         _render(resource, request)
 
-        self.assertEqual(_reactor.process_env["PATH_INFO"],
-                         "/a/b")
-
+        self.assertEqual(_reactor.process_env["PATH_INFO"], "/a/b")
 
 
 class CGIDirectoryTests(unittest.TestCase):
     """
     Tests for L{twcgi.CGIDirectory}.
     """
+
     def test_render(self):
         """
         L{twcgi.CGIDirectory.render} sets the HTTP response code to I{NOT
@@ -408,11 +402,12 @@ class CGIDirectoryTests(unittest.TestCase):
         resource = twcgi.CGIDirectory(self.mktemp())
         request = DummyRequest([''])
         d = _render(resource, request)
+
         def cbRendered(ignored):
             self.assertEqual(request.responseCode, NOT_FOUND)
+
         d.addCallback(cbRendered)
         return d
-
 
     def test_notFoundChild(self):
         """
@@ -427,17 +422,19 @@ class CGIDirectoryTests(unittest.TestCase):
         request = DummyRequest(['foo'])
         child = resource.getChild("foo", request)
         d = _render(child, request)
+
         def cbRendered(ignored):
             self.assertEqual(request.responseCode, NOT_FOUND)
+
         d.addCallback(cbRendered)
         return d
-
 
 
 class CGIProcessProtocolTests(unittest.TestCase):
     """
     Tests for L{twcgi.CGIProcessProtocol}.
     """
+
     def test_prematureEndOfHeaders(self):
         """
         If the process communicating with L{CGIProcessProtocol} ends before
@@ -448,7 +445,6 @@ class CGIProcessProtocolTests(unittest.TestCase):
         protocol = twcgi.CGIProcessProtocol(request)
         protocol.processEnded(failure.Failure(error.ProcessTerminated()))
         self.assertEqual(request.responseCode, INTERNAL_SERVER_ERROR)
-
 
 
 def discardBody(response):

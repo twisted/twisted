@@ -32,7 +32,6 @@ from twisted.cred.credentials import IUsernamePassword, UsernamePassword
 from twisted.trial.unittest import TestCase
 
 
-
 class MakeServiceTests(TestCase):
     """
     Tests for L{tap.makeService}.
@@ -58,7 +57,6 @@ class MakeServiceTests(TestCase):
             f.write(b':'.join(self.usernamePassword))
         self.options = tap.Options()
 
-
     def test_basic(self):
         """
         L{tap.makeService} returns a L{StreamServerEndpointService} instance
@@ -71,7 +69,6 @@ class MakeServiceTests(TestCase):
         self.assertEqual(service.endpoint._port, 22)
         self.assertIsInstance(service.factory, OpenSSHFactory)
 
-
     def test_defaultAuths(self):
         """
         Make sure that if the C{--auth} command-line option is not passed,
@@ -79,13 +76,21 @@ class MakeServiceTests(TestCase):
         """
         numCheckers = 2
 
-        self.assertIn(ISSHPrivateKey, self.options['credInterfaces'],
-            "SSH should be one of the default checkers")
-        self.assertIn(IUsernamePassword, self.options['credInterfaces'],
-            "UNIX should be one of the default checkers")
-        self.assertEqual(numCheckers, len(self.options['credCheckers']),
-            "There should be %d checkers by default" % (numCheckers,))
-
+        self.assertIn(
+            ISSHPrivateKey,
+            self.options['credInterfaces'],
+            "SSH should be one of the default checkers",
+        )
+        self.assertIn(
+            IUsernamePassword,
+            self.options['credInterfaces'],
+            "UNIX should be one of the default checkers",
+        )
+        self.assertEqual(
+            numCheckers,
+            len(self.options['credCheckers']),
+            "There should be %d checkers by default" % (numCheckers,),
+        )
 
     def test_authAdded(self):
         """
@@ -95,17 +100,21 @@ class MakeServiceTests(TestCase):
         self.options.parseOptions(['--auth', 'file:' + self.filename])
         self.assertEqual(len(self.options['credCheckers']), 1)
 
-
     def test_multipleAuthAdded(self):
         """
         Multiple C{--auth} command-line options will add all checkers specified
         to the list ofcheckers, and there should only be the specified auth
         checkers (no default checkers).
         """
-        self.options.parseOptions(['--auth', 'file:' + self.filename,
-                                   '--auth', 'memory:testuser:testpassword'])
+        self.options.parseOptions(
+            [
+                '--auth',
+                'file:' + self.filename,
+                '--auth',
+                'memory:testuser:testpassword',
+            ]
+        )
         self.assertEqual(len(self.options['credCheckers']), 2)
-
 
     def test_authFailure(self):
         """
@@ -118,8 +127,8 @@ class MakeServiceTests(TestCase):
         invalid = UsernamePassword(self.usernamePassword[0], 'fake')
         # Wrong password should raise error
         return self.assertFailure(
-            checker.requestAvatarId(invalid), error.UnauthorizedLogin)
-
+            checker.requestAvatarId(invalid), error.UnauthorizedLogin
+        )
 
     def test_authSuccess(self):
         """
@@ -137,7 +146,6 @@ class MakeServiceTests(TestCase):
 
         return d.addCallback(checkSuccess)
 
-
     def test_checkers(self):
         """
         The L{OpenSSHFactory} built by L{tap.makeService} has a portal with
@@ -148,5 +156,5 @@ class MakeServiceTests(TestCase):
         service = tap.makeService(config)
         portal = service.factory.portal
         self.assertEqual(
-            set(portal.checkers.keys()),
-            set([ISSHPrivateKey, IUsernamePassword]))
+            set(portal.checkers.keys()), set([ISSHPrivateKey, IUsernamePassword])
+        )

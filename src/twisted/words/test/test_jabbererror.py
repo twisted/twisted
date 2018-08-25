@@ -18,8 +18,8 @@ NS_STREAMS = 'http://etherx.jabber.org/streams'
 NS_XMPP_STREAMS = 'urn:ietf:params:xml:ns:xmpp-streams'
 NS_XMPP_STANZAS = 'urn:ietf:params:xml:ns:xmpp-stanzas'
 
-class BaseErrorTests(unittest.TestCase):
 
+class BaseErrorTests(unittest.TestCase):
     def test_getElementPlain(self):
         """
         Test getting an element for a plain error.
@@ -59,8 +59,8 @@ class BaseErrorTests(unittest.TestCase):
         self.assertEqual(len(element.children), 2)
         self.assertEqual(element.myerror, ac)
 
-class StreamErrorTests(unittest.TestCase):
 
+class StreamErrorTests(unittest.TestCase):
     def test_getElementPlain(self):
         """
         Test namespace of the element representation of an error.
@@ -75,7 +75,9 @@ class StreamErrorTests(unittest.TestCase):
         """
         e = error.StreamError('feature-not-implemented')
         element = e.getElement()
-        self.assertEqual(NS_XMPP_STREAMS, getattr(element, 'feature-not-implemented').uri)
+        self.assertEqual(
+            NS_XMPP_STREAMS, getattr(element, 'feature-not-implemented').uri
+        )
 
     def test_getElementTextNamespace(self):
         """
@@ -86,12 +88,10 @@ class StreamErrorTests(unittest.TestCase):
         self.assertEqual(NS_XMPP_STREAMS, element.text.uri)
 
 
-
 class StanzaErrorTests(unittest.TestCase):
     """
     Tests for L{error.StreamError}.
     """
-
 
     def test_typeRemoteServerTimeout(self):
         """
@@ -100,7 +100,6 @@ class StanzaErrorTests(unittest.TestCase):
         e = error.StanzaError('remote-server-timeout')
         self.assertEqual('wait', e.type)
         self.assertEqual('504', e.code)
-
 
     def test_getElementPlain(self):
         """
@@ -112,7 +111,6 @@ class StanzaErrorTests(unittest.TestCase):
         self.assertEqual(element['type'], 'cancel')
         self.assertEqual(element['code'], '501')
 
-
     def test_getElementType(self):
         """
         Test getting an element for a stanza error with a given type.
@@ -123,15 +121,15 @@ class StanzaErrorTests(unittest.TestCase):
         self.assertEqual(element['type'], 'auth')
         self.assertEqual(element['code'], '501')
 
-
     def test_getElementConditionNamespace(self):
         """
         Test that the error condition element has the correct namespace.
         """
         e = error.StanzaError('feature-not-implemented')
         element = e.getElement()
-        self.assertEqual(NS_XMPP_STANZAS, getattr(element, 'feature-not-implemented').uri)
-
+        self.assertEqual(
+            NS_XMPP_STANZAS, getattr(element, 'feature-not-implemented').uri
+        )
 
     def test_getElementTextNamespace(self):
         """
@@ -140,7 +138,6 @@ class StanzaErrorTests(unittest.TestCase):
         e = error.StanzaError('feature-not-implemented', text=u'text')
         element = e.getElement()
         self.assertEqual(NS_XMPP_STANZAS, element.text.uri)
-
 
     def test_toResponse(self):
         """
@@ -160,11 +157,9 @@ class StanzaErrorTests(unittest.TestCase):
         self.assertEqual(response['from'], 'user1@example.com')
         self.assertEqual(response['to'], 'user2@example.com/resource')
         self.assertEqual(response['type'], 'error')
-        self.assertEqual(response.error.children[0].name,
-                         'service-unavailable')
+        self.assertEqual(response.error.children[0].name, 'service-unavailable')
         self.assertEqual(response.error['type'], 'cancel')
         self.assertNotEqual(stanza.children, response.children)
-
 
 
 class ParseErrorTests(unittest.TestCase):
@@ -172,21 +167,18 @@ class ParseErrorTests(unittest.TestCase):
     Tests for L{error._parseError}.
     """
 
-
     def setUp(self):
         self.error = domish.Element((None, 'error'))
-
 
     def test_empty(self):
         """
         Test parsing of the empty error element.
         """
         result = error._parseError(self.error, 'errorns')
-        self.assertEqual({'condition': None,
-                          'text': None,
-                          'textLang': None,
-                          'appCondition': None}, result)
-
+        self.assertEqual(
+            {'condition': None, 'text': None, 'textLang': None, 'appCondition': None},
+            result,
+        )
 
     def test_condition(self):
         """
@@ -195,7 +187,6 @@ class ParseErrorTests(unittest.TestCase):
         self.error.addElement(('errorns', 'bad-request'))
         result = error._parseError(self.error, 'errorns')
         self.assertEqual('bad-request', result['condition'])
-
 
     def test_text(self):
         """
@@ -207,7 +198,6 @@ class ParseErrorTests(unittest.TestCase):
         self.assertEqual('test', result['text'])
         self.assertEqual(None, result['textLang'])
 
-
     def test_textLang(self):
         """
         Test parsing of an error element with a text with a defined language.
@@ -218,7 +208,6 @@ class ParseErrorTests(unittest.TestCase):
         result = error._parseError(self.error, 'errorns')
         self.assertEqual('en_US', result['textLang'])
 
-
     def test_appCondition(self):
         """
         Test parsing of an error element with an app specific condition.
@@ -226,7 +215,6 @@ class ParseErrorTests(unittest.TestCase):
         condition = self.error.addElement(('testns', 'condition'))
         result = error._parseError(self.error, 'errorns')
         self.assertEqual(condition, result['appCondition'])
-
 
     def test_appConditionMultiple(self):
         """
@@ -238,9 +226,7 @@ class ParseErrorTests(unittest.TestCase):
         self.assertEqual(condition, result['appCondition'])
 
 
-
 class ExceptionFromStanzaTests(unittest.TestCase):
-
     def test_basic(self):
         """
         Test basic operations of exceptionFromStanza.
@@ -271,8 +257,7 @@ class ExceptionFromStanzaTests(unittest.TestCase):
         e = stanza.addElement('error')
         e['type'] = 'cancel'
         e.addElement((NS_XMPP_STANZAS, 'feature-not-implemented'))
-        uc = e.addElement(('http://jabber.org/protocol/pubsub#errors',
-                           'unsupported'))
+        uc = e.addElement(('http://jabber.org/protocol/pubsub#errors', 'unsupported'))
         uc['feature'] = 'retrieve-subscriptions'
 
         result = error.exceptionFromStanza(stanza)
@@ -310,8 +295,8 @@ class ExceptionFromStanzaTests(unittest.TestCase):
         self.assertEqual('Unable to resolve hostname.', result.text)
         self.assertEqual([p], result.children)
 
-class ExceptionFromStreamErrorTests(unittest.TestCase):
 
+class ExceptionFromStreamErrorTests(unittest.TestCase):
     def test_basic(self):
         """
         Test basic operations of exceptionFromStreamError.

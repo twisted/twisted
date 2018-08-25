@@ -17,6 +17,7 @@ if requireModule('cryptography') and requireModule('pyasn1'):
     from twisted.conch.client.options import ConchOptions
     from twisted.conch.client import default
     from twisted.conch.ssh.keys import Key
+
     skip = None
 else:
     skip = "cryptography and PyASN1 required for twisted.conch.client.default."
@@ -32,7 +33,8 @@ from twisted.python.runtime import platform
 if platform.isWindows():
     windowsSkip = (
         "genericAnswers and getPassword does not work on Windows."
-        " Should be fixed as part of fixing bug 6409 and 6410")
+        " Should be fixed as part of fixing bug 6409 and 6410"
+    )
 else:
     windowsSkip = skip
 
@@ -41,7 +43,6 @@ if not sys.stdin.isatty():
     ttySkip = "sys.stdin is not an interactive tty"
 if not sys.stdout.isatty():
     ttySkip = "sys.stdout is not an interactive tty"
-
 
 
 class SSHUserAuthClientTests(TestCase):
@@ -60,7 +61,6 @@ class SSHUserAuthClientTests(TestCase):
         self.rsaFile.setContent(keydata.privateRSA_openssh)
         self.tmpdir.child('id_rsa.pub').setContent(keydata.publicRSA_openssh)
 
-
     def test_signDataWithAgent(self):
         """
         When connected to an agent, L{SSHUserAuthClient} can use it to
@@ -75,10 +75,12 @@ class SSHUserAuthClientTests(TestCase):
         client.signData(self.rsaPublic, cleartext)
         self.assertEqual(
             transport.value(),
-            b"\x00\x00\x01\x2d\r\x00\x00\x01\x17" + self.rsaPublic.blob() +
-            b"\x00\x00\x00\t" + cleartext +
-            b"\x00\x00\x00\x00")
-
+            b"\x00\x00\x01\x2d\r\x00\x00\x01\x17"
+            + self.rsaPublic.blob()
+            + b"\x00\x00\x00\t"
+            + cleartext
+            + b"\x00\x00\x00\x00",
+        )
 
     def test_agentGetPublicKey(self):
         """
@@ -94,7 +96,6 @@ class SSHUserAuthClientTests(TestCase):
         self.assertEqual(key, self.rsaPublic)
         self.assertIsNone(agent.getPublicKey())
 
-
     def test_getPublicKeyFromFile(self):
         """
         L{SSHUserAuthClient.getPublicKey()} is able to get a public key from
@@ -103,11 +104,10 @@ class SSHUserAuthClientTests(TestCase):
         """
         options = ConchOptions()
         options.identitys = [self.rsaFile.path]
-        client = SSHUserAuthClient(b"user",  options, None)
+        client = SSHUserAuthClient(b"user", options, None)
         key = client.getPublicKey()
         self.assertTrue(key.isPublic())
         self.assertEqual(key, self.rsaPublic)
-
 
     def test_getPublicKeyAgentFallback(self):
         """
@@ -117,12 +117,11 @@ class SSHUserAuthClientTests(TestCase):
         options = ConchOptions()
         options.identitys = [self.rsaFile.path]
         agent = SSHAgentClient()
-        client = SSHUserAuthClient(b"user",  options, None)
+        client = SSHUserAuthClient(b"user", options, None)
         client.keyAgent = agent
         key = client.getPublicKey()
         self.assertTrue(key.isPublic())
         self.assertEqual(key, self.rsaPublic)
-
 
     def test_getPublicKeyBadKeyError(self):
         """
@@ -136,12 +135,11 @@ class SSHUserAuthClientTests(TestCase):
         dsaFile.setContent(keydata.privateDSA_openssh)
         options.identitys = [self.rsaFile.path, dsaFile.path]
         self.tmpdir.child('id_rsa.pub').setContent(b'not a key!')
-        client = SSHUserAuthClient(b"user",  options, None)
+        client = SSHUserAuthClient(b"user", options, None)
         key = client.getPublicKey()
         self.assertTrue(key.isPublic())
         self.assertEqual(key, Key.fromString(keydata.publicDSA_openssh))
         self.assertEqual(client.usedFiles, [self.rsaFile.path, dsaFile.path])
-
 
     def test_getPrivateKey(self):
         """
@@ -152,7 +150,7 @@ class SSHUserAuthClientTests(TestCase):
         rsaPrivate = Key.fromString(keydata.privateRSA_openssh)
         options = ConchOptions()
         options.identitys = [self.rsaFile.path]
-        client = SSHUserAuthClient(b"user",  options, None)
+        client = SSHUserAuthClient(b"user", options, None)
         # Populate the list of used files
         client.getPublicKey()
 
@@ -161,7 +159,6 @@ class SSHUserAuthClientTests(TestCase):
             self.assertEqual(key, rsaPrivate)
 
         return client.getPrivateKey().addCallback(_cbGetPrivateKey)
-
 
     def test_getPrivateKeyPassphrase(self):
         """
@@ -174,14 +171,14 @@ class SSHUserAuthClientTests(TestCase):
         self.rsaFile.setContent(rsaPrivate.toString('openssh', passphrase))
         options = ConchOptions()
         options.identitys = [self.rsaFile.path]
-        client = SSHUserAuthClient(b"user",  options, None)
+        client = SSHUserAuthClient(b"user", options, None)
         # Populate the list of used files
         client.getPublicKey()
 
         def _getPassword(prompt):
             self.assertEqual(
-                prompt,
-                "Enter passphrase for key '%s': " % (self.rsaFile.path,))
+                prompt, "Enter passphrase for key '%s': " % (self.rsaFile.path,)
+            )
             return nativeString(passphrase)
 
         def _cbGetPrivateKey(key):
@@ -191,21 +188,22 @@ class SSHUserAuthClientTests(TestCase):
         self.patch(client, '_getPassword', _getPassword)
         return client.getPrivateKey().addCallback(_cbGetPrivateKey)
 
-
     def test_getPassword(self):
         """
         Get the password using
         L{twisted.conch.client.default.SSHUserAuthClient.getPassword}
         """
+
         class FakeTransport:
             def __init__(self, host):
                 self.transport = self
                 self.host = host
+
             def getPeer(self):
                 return self
 
         options = ConchOptions()
-        client = SSHUserAuthClient(b"user",  options, None)
+        client = SSHUserAuthClient(b"user", options, None)
         client.transport = FakeTransport("127.0.0.1")
 
         def getpass(prompt):
@@ -219,7 +217,6 @@ class SSHUserAuthClientTests(TestCase):
 
     test_getPassword.skip = windowsSkip or ttySkip
 
-
     def test_getPasswordPrompt(self):
         """
         Get the password using
@@ -227,7 +224,7 @@ class SSHUserAuthClientTests(TestCase):
         using a different prompt.
         """
         options = ConchOptions()
-        client = SSHUserAuthClient(b"user",  options, None)
+        client = SSHUserAuthClient(b"user", options, None)
         prompt = b"Give up your password"
 
         def getpass(p):
@@ -241,7 +238,6 @@ class SSHUserAuthClientTests(TestCase):
 
     test_getPasswordPrompt.skip = windowsSkip or ttySkip
 
-
     def test_getPasswordConchError(self):
         """
         Get the password using
@@ -249,7 +245,7 @@ class SSHUserAuthClientTests(TestCase):
         and trigger a {twisted.conch.error import ConchError}.
         """
         options = ConchOptions()
-        client = SSHUserAuthClient(b"user",  options, None)
+        client = SSHUserAuthClient(b"user", options, None)
 
         def getpass(prompt):
             raise KeyboardInterrupt("User pressed CTRL-C")
@@ -257,22 +253,22 @@ class SSHUserAuthClientTests(TestCase):
         self.patch(default.getpass, 'getpass', getpass)
         stdout, stdin = sys.stdout, sys.stdin
         d = client.getPassword(b'?')
+
         @d.addErrback
         def check_sys(fail):
-            self.assertEqual(
-                [stdout, stdin], [sys.stdout, sys.stdin])
+            self.assertEqual([stdout, stdin], [sys.stdout, sys.stdin])
             return fail
+
         self.assertFailure(d, ConchError)
 
     test_getPasswordConchError.skip = windowsSkip or ttySkip
-
 
     def test_getGenericAnswers(self):
         """
         L{twisted.conch.client.default.SSHUserAuthClient.getGenericAnswers}
         """
         options = ConchOptions()
-        client = SSHUserAuthClient(b"user",  options, None)
+        client = SSHUserAuthClient(b"user", options, None)
 
         def getpass(prompt):
             self.assertEqual(prompt, "pass prompt")
@@ -286,21 +282,21 @@ class SSHUserAuthClientTests(TestCase):
 
         self.patch(default, 'raw_input', raw_input)
         d = client.getGenericAnswers(
-            b"Name", b"Instruction", [
-                (b"pass prompt", False), (b"raw_input prompt", True)])
-        d.addCallback(
-            self.assertListEqual, ["getpass", "raw_input"])
+            b"Name",
+            b"Instruction",
+            [(b"pass prompt", False), (b"raw_input prompt", True)],
+        )
+        d.addCallback(self.assertListEqual, ["getpass", "raw_input"])
         return d
 
     test_getGenericAnswers.skip = windowsSkip or ttySkip
-
-
 
 
 class ConchOptionsParsing(TestCase):
     """
     Options parsing.
     """
+
     def test_macs(self):
         """
         Specify MAC algorithms.
@@ -315,7 +311,6 @@ class ConchOptionsParsing(TestCase):
         self.assertEqual(opts['macs'], [b"hmac-sha2-512"])
         opts.opt_macs("hmac-sha2-256,hmac-sha1,hmac-md5")
         self.assertEqual(opts['macs'], [b"hmac-sha2-256", b"hmac-sha1", b"hmac-md5"])
-
 
     def test_host_key_algorithms(self):
         """

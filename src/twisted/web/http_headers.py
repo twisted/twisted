@@ -24,7 +24,6 @@ def _dashCapitalize(name):
     return b'-'.join([word.capitalize() for word in name.split(b'-')])
 
 
-
 @comparable
 class Headers(object):
     """
@@ -47,6 +46,7 @@ class Headers(object):
     @ivar _rawHeaders: A L{dict} mapping header names as L{bytes} to L{list}s of
         header values as L{bytes}.
     """
+
     _caseMappings = {
         b'content-md5': b'Content-MD5',
         b'dnt': b'DNT',
@@ -54,7 +54,8 @@ class Headers(object):
         b'p3p': b'P3P',
         b'te': b'TE',
         b'www-authenticate': b'WWW-Authenticate',
-        b'x-xss-protection': b'X-XSS-Protection'}
+        b'x-xss-protection': b'X-XSS-Protection',
+    }
 
     def __init__(self, rawHeaders=None):
         self._rawHeaders = {}
@@ -62,13 +63,11 @@ class Headers(object):
             for name, values in rawHeaders.items():
                 self.setRawHeaders(name, values)
 
-
     def __repr__(self):
         """
         Return a string fully describing the headers set on this object.
         """
-        return '%s(%r)' % (self.__class__.__name__, self._rawHeaders,)
-
+        return '%s(%r)' % (self.__class__.__name__, self._rawHeaders)
 
     def __cmp__(self, other):
         """
@@ -77,10 +76,9 @@ class Headers(object):
         """
         if isinstance(other, Headers):
             return cmp(
-                sorted(self._rawHeaders.items()),
-                sorted(other._rawHeaders.items()))
+                sorted(self._rawHeaders.items()), sorted(other._rawHeaders.items())
+            )
         return NotImplemented
-
 
     def _encodeName(self, name):
         """
@@ -97,7 +95,6 @@ class Headers(object):
             return name.lower().encode('iso-8859-1')
         return name.lower()
 
-
     def _encodeValue(self, value):
         """
         Encode a single header value to a UTF-8 encoded bytestring if required.
@@ -111,7 +108,6 @@ class Headers(object):
         if isinstance(value, unicode):
             return value.encode('utf8')
         return value
-
 
     def _encodeValues(self, values):
         """
@@ -130,7 +126,6 @@ class Headers(object):
             newValues.append(self._encodeValue(value))
         return newValues
 
-
     def _decodeValues(self, values):
         """
         Decode a L{list} of header values into a L{list} of Unicode strings.
@@ -147,7 +142,6 @@ class Headers(object):
             newValues.append(value.decode('utf8'))
         return newValues
 
-
     def copy(self):
         """
         Return a copy of itself with the same headers set.
@@ -155,7 +149,6 @@ class Headers(object):
         @return: A new L{Headers}
         """
         return self.__class__(self._rawHeaders)
-
 
     def hasHeader(self, name):
         """
@@ -169,7 +162,6 @@ class Headers(object):
         """
         return self._encodeName(name) in self._rawHeaders
 
-
     def removeHeader(self, name):
         """
         Remove the named header from this header object.
@@ -180,7 +172,6 @@ class Headers(object):
         @return: L{None}
         """
         self._rawHeaders.pop(self._encodeName(name), None)
-
 
     def setRawHeaders(self, name, values):
         """
@@ -196,12 +187,13 @@ class Headers(object):
         @return: L{None}
         """
         if not isinstance(values, list):
-            raise TypeError("Header entry %r should be list but found "
-                            "instance of %r instead" % (name, type(values)))
+            raise TypeError(
+                "Header entry %r should be list but found "
+                "instance of %r instead" % (name, type(values))
+            )
 
         name = self._encodeName(name)
         self._rawHeaders[name] = self._encodeValues(values)
-
 
     def addRawHeader(self, name, value):
         """
@@ -221,7 +213,6 @@ class Headers(object):
             values = [value]
 
         self.setRawHeaders(name, values)
-
 
     def getRawHeaders(self, name, default=None):
         """
@@ -246,7 +237,6 @@ class Headers(object):
             return self._decodeValues(values)
         return values
 
-
     def getAllRawHeaders(self):
         """
         Return an iterator of key, value pairs of all headers contained in this
@@ -255,7 +245,6 @@ class Headers(object):
         """
         for k, v in self._rawHeaders.items():
             yield self._canonicalNameCaps(k), v
-
 
     def _canonicalNameCaps(self, name):
         """
@@ -269,7 +258,6 @@ class Headers(object):
         @return: The canonical name of the header.
         """
         return self._caseMappings.get(name, _dashCapitalize(name))
-
 
 
 __all__ = ['Headers']

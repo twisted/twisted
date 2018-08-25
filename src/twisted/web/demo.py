@@ -12,6 +12,7 @@ from twisted.web import static
 
 class Test(static.Data):
     isLeaf = True
+
     def __init__(self):
         static.Data.__init__(
             self,
@@ -23,4 +24,5 @@ class Test(static.Data):
             </body>
             </html>
             """,
-            "text/html")
+            "text/html",
+        )

@@ -153,9 +153,7 @@ class ThreadedSelectReactor(posixbase.PosixReactorBase):
         writes = self.writes
         while 1:
             try:
-                r, w, ignored = _select(reads.keys(),
-                                        writes.keys(),
-                                        [], timeout)
+                r, w, ignored = _select(reads.keys(), writes.keys(), [], timeout)
                 break
             except ValueError:
                 # Possibly a file descriptor has gone negative?
@@ -189,8 +187,7 @@ class ThreadedSelectReactor(posixbase.PosixReactorBase):
 
         _drdw = self._doReadOrWrite
         _logrun = log.callWithLogger
-        for selectables, method, dct in (
-                (r, "doRead", reads), (w, "doWrite", writes)):
+        for selectables, method, dct in ((r, "doRead", reads), (w, "doWrite", writes)):
             for selectable in selectables:
                 # if this was disconnected in another thread, kill it.
                 if selectable not in dct:
@@ -310,14 +307,11 @@ class ThreadedSelectReactor(posixbase.PosixReactorBase):
     def removeAll(self):
         return self._removeAll(self.reads, self.writes)
 
-
     def getReaders(self):
         return list(self.reads.keys())
 
-
     def getWriters(self):
         return list(self.writes.keys())
-
 
     def stop(self):
         """
@@ -326,7 +320,6 @@ class ThreadedSelectReactor(posixbase.PosixReactorBase):
         """
         posixbase.PosixReactorBase.stop(self)
         self.wakeUp()
-
 
     def run(self, installSignalHandlers=True):
         self.startRunning(installSignalHandlers=installSignalHandlers)
@@ -347,6 +340,7 @@ def install():
     """
     reactor = ThreadedSelectReactor()
     from twisted.internet.main import installReactor
+
     installReactor(reactor)
     return reactor
 

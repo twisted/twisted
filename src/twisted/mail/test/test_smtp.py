@@ -50,7 +50,6 @@ def spameater(*spam, **eggs):
     return None
 
 
-
 @implementer(smtp.IMessage)
 class BrokenMessage(object):
     """
@@ -58,21 +57,18 @@ class BrokenMessage(object):
     from its C{eomReceived} method.  This is useful for creating a server which
     can be used to test client retry behavior.
     """
+
     def __init__(self, user):
         pass
-
 
     def lineReceived(self, line):
         pass
 
-
     def eomReceived(self):
         raise RuntimeError("Some problem, delivery is failing.")
 
-
     def connectionLost(self):
         pass
-
 
 
 class DummyMessage(object):
@@ -83,18 +79,16 @@ class DummyMessage(object):
     @ivar domain: A L{DummyDomain} which will be used to store the message once
         it is received.
     """
+
     def __init__(self, domain, user):
         self.domain = domain
         self.user = user
         self.buffer = []
 
-
     def lineReceived(self, line):
         # Throw away the generated Received: header
-        if not re.match(b'Received: From yyy.com \(\[.*\]\) by localhost;',
-                        line):
+        if not re.match(b'Received: From yyy.com \(\[.*\]\) by localhost;', line):
             self.buffer.append(line)
-
 
     def eomReceived(self):
         message = b'\n'.join(self.buffer) + b'\n'
@@ -104,23 +98,21 @@ class DummyMessage(object):
         return deferred
 
 
-
 class DummyDomain(object):
     """
     L{DummyDomain} is an L{IDomain} which keeps track of messages delivered to
     it in memory.
     """
+
     def __init__(self, names):
         self.messages = {}
         for name in names:
             self.messages[name] = []
 
-
     def exists(self, user):
         if user.dest.local in self.messages:
             return defer.succeed(lambda: DummyMessage(self, user))
         return defer.fail(smtp.SMTPBadRcpt(user))
-
 
 
 mail = b'''\
@@ -129,31 +121,26 @@ Subject: hello
 Goodbye
 '''
 
+
 class MyClient:
     def __init__(self, messageInfo=None):
         if messageInfo is None:
-            messageInfo = (
-                'moshez@foo.bar', ['moshez@foo.bar'], BytesIO(mail))
+            messageInfo = ('moshez@foo.bar', ['moshez@foo.bar'], BytesIO(mail))
         self._sender = messageInfo[0]
         self._recipient = messageInfo[1]
         self._data = messageInfo[2]
 
-
     def getMailFrom(self):
         return self._sender
-
 
     def getMailTo(self):
         return self._recipient
 
-
     def getMailData(self):
         return self._data
 
-
     def sendError(self, exc):
         self._error = exc
-
 
     def sentMail(self, code, resp, numOk, addresses, log):
         # Prevent another mail from being sent.
@@ -162,19 +149,16 @@ class MyClient:
         self._data = None
 
 
-
 class MySMTPClient(MyClient, smtp.SMTPClient):
     def __init__(self, messageInfo=None):
         smtp.SMTPClient.__init__(self, b'foo.baz')
         MyClient.__init__(self, messageInfo)
 
 
-
 class MyESMTPClient(MyClient, smtp.ESMTPClient):
-    def __init__(self, secret = b'', contextFactory = None):
+    def __init__(self, secret=b'', contextFactory=None):
         smtp.ESMTPClient.__init__(self, secret, contextFactory, b'foo.baz')
         MyClient.__init__(self)
-
 
 
 class LoopbackMixin:
@@ -182,12 +166,14 @@ class LoopbackMixin:
         return loopback.loopbackTCP(server, client)
 
 
-
 class FakeSMTPServer(basic.LineReceiver):
 
     clientData = [
-        b'220 hello', b'250 nice to meet you',
-        b'250 great', b'250 great', b'354 go on, lad'
+        b'220 hello',
+        b'250 nice to meet you',
+        b'250 great',
+        b'250 great',
+        b'354 go on, lad',
     ]
 
     def connectionMade(self):
@@ -195,7 +181,6 @@ class FakeSMTPServer(basic.LineReceiver):
         self.clientData = self.clientData[:]
         self.clientData.reverse()
         self.sendLine(self.clientData.pop())
-
 
     def lineReceived(self, line):
         self.buffer.append(line)
@@ -209,7 +194,6 @@ class FakeSMTPServer(basic.LineReceiver):
 
         if self.clientData:
             self.sendLine(self.clientData.pop())
-
 
 
 class SMTPClientTests(unittest.TestCase, LoopbackMixin):
@@ -234,14 +218,20 @@ class SMTPClientTests(unittest.TestCase, LoopbackMixin):
             bytes(errors[0]),
             b"Timeout waiting for SMTP server response\n"
             b"<<< 220 hello\n"
-            b">>> HELO foo.baz\n")
+            b">>> HELO foo.baz\n",
+        )
 
     expected_output = [
-        b'HELO foo.baz', b'MAIL FROM:<moshez@foo.bar>',
-        b'RCPT TO:<moshez@foo.bar>', b'DATA',
-        b'Subject: hello', b'', b'Goodbye', b'.', b'RSET'
+        b'HELO foo.baz',
+        b'MAIL FROM:<moshez@foo.bar>',
+        b'RCPT TO:<moshez@foo.bar>',
+        b'DATA',
+        b'Subject: hello',
+        b'',
+        b'Goodbye',
+        b'.',
+        b'RSET',
     ]
-
 
     def test_messages(self):
         """
@@ -252,10 +242,8 @@ class SMTPClientTests(unittest.TestCase, LoopbackMixin):
         client = MySMTPClient()
         server = FakeSMTPServer()
         d = self.loopback(server, client)
-        d.addCallback(lambda x :
-                      self.assertEqual(server.buffer, self.expected_output))
+        d.addCallback(lambda x: self.assertEqual(server.buffer, self.expected_output))
         return d
-
 
     def test_transferError(self):
         """
@@ -263,16 +251,17 @@ class SMTPClientTests(unittest.TestCase, LoopbackMixin):
         connection, the C{sendError} callback is invoked.
         """
         client = MySMTPClient(
-            ('alice@example.com', ['bob@example.com'], BytesIO(b"foo")))
+            ('alice@example.com', ['bob@example.com'], BytesIO(b"foo"))
+        )
         transport = StringTransport()
         client.makeConnection(transport)
         client.dataReceived(
-            b'220 Ok\r\n' # Greeting
-            b'250 Ok\r\n' # EHLO response
-            b'250 Ok\r\n' # MAIL FROM response
-            b'250 Ok\r\n' # RCPT TO response
-            b'354 Ok\r\n' # DATA response
-            )
+            b'220 Ok\r\n'  # Greeting
+            b'250 Ok\r\n'  # EHLO response
+            b'250 Ok\r\n'  # MAIL FROM response
+            b'250 Ok\r\n'  # RCPT TO response
+            b'354 Ok\r\n'  # DATA response
+        )
 
         # Sanity check - a pull producer should be registered now.
         self.assertNotIdentical(transport.producer, None)
@@ -283,7 +272,6 @@ class SMTPClientTests(unittest.TestCase, LoopbackMixin):
 
         # The sendError hook should have been invoked as a result.
         self.assertIsInstance(client._error, Exception)
-
 
     def test_sendFatalError(self):
         """
@@ -298,7 +286,6 @@ class SMTPClientTests(unittest.TestCase, LoopbackMixin):
         self.assertEqual(transport.value(), b"")
         self.assertTrue(transport.disconnecting)
 
-
     def test_sendNonFatalError(self):
         """
         If L{smtp.SMTPClient.sendError} is called with an L{SMTPClientError}
@@ -311,7 +298,6 @@ class SMTPClientTests(unittest.TestCase, LoopbackMixin):
         client.sendError(smtp.SMTPClientError(123, "foo", isFatal=False))
         self.assertEqual(transport.value(), b"QUIT\r\n")
         self.assertFalse(transport.disconnecting)
-
 
     def test_sendOtherError(self):
         """
@@ -327,18 +313,14 @@ class SMTPClientTests(unittest.TestCase, LoopbackMixin):
         self.assertTrue(transport.disconnecting)
 
 
-
 class DummySMTPMessage(object):
-
     def __init__(self, protocol, users):
         self.protocol = protocol
         self.users = users
         self.buffer = []
 
-
     def lineReceived(self, line):
         self.buffer.append(line)
-
 
     def eomReceived(self):
         message = b'\n'.join(self.buffer) + b'\n'
@@ -346,89 +328,100 @@ class DummySMTPMessage(object):
         recipients = []
         for user in self.users:
             recipients.append(bytes(user))
-        self.protocol.message[tuple(recipients)] = (helo, origin, recipients,
-                                                    message)
+        self.protocol.message[tuple(recipients)] = (helo, origin, recipients, message)
         return defer.succeed(b"saved")
 
 
-
 class DummyProto:
-
     def connectionMade(self):
         self.dummyMixinBase.connectionMade(self)
         self.message = {}
 
-
     def receivedHeader(*spam):
         return None
-
 
     def validateTo(self, user):
         self.delivery = SimpleDelivery(None)
         return lambda: DummySMTPMessage(self, [user])
 
-
     def validateFrom(self, helo, origin):
         return origin
-
 
 
 class DummySMTP(DummyProto, smtp.SMTP):
     dummyMixinBase = smtp.SMTP
 
 
-
 class DummyESMTP(DummyProto, smtp.ESMTP):
     dummyMixinBase = smtp.ESMTP
-
 
 
 class AnotherTestCase:
     serverClass = None
     clientClass = None
 
-    messages = [ (b'foo.com', b'moshez@foo.com', [b'moshez@bar.com'],
-                  b'moshez@foo.com', [b'moshez@bar.com'], b'''\
+    messages = [
+        (
+            b'foo.com',
+            b'moshez@foo.com',
+            [b'moshez@bar.com'],
+            b'moshez@foo.com',
+            [b'moshez@bar.com'],
+            b'''\
 From: Moshe
 To: Moshe
 
 Hi,
 how are you?
-'''),
-                 (b'foo.com', b'tttt@rrr.com', [b'uuu@ooo', b'yyy@eee'],
-                  b'tttt@rrr.com', [b'uuu@ooo', b'yyy@eee'], b'''\
+''',
+        ),
+        (
+            b'foo.com',
+            b'tttt@rrr.com',
+            [b'uuu@ooo', b'yyy@eee'],
+            b'tttt@rrr.com',
+            [b'uuu@ooo', b'yyy@eee'],
+            b'''\
 Subject: pass
 
 ..rrrr..
-'''),
-                 (b'foo.com', b'@this,@is,@ignored:foo@bar.com',
-                  [b'@ignore,@this,@too:bar@foo.com'],
-                  b'foo@bar.com', [b'bar@foo.com'], b'''\
+''',
+        ),
+        (
+            b'foo.com',
+            b'@this,@is,@ignored:foo@bar.com',
+            [b'@ignore,@this,@too:bar@foo.com'],
+            b'foo@bar.com',
+            [b'bar@foo.com'],
+            b'''\
 Subject: apa
 To: foo
 
 123
 .
 456
-'''),
-              ]
+''',
+        ),
+    ]
 
     data = [
         (b'', b'220.*\r\n$', None, None),
         (b'HELO foo.com\r\n', b'250.*\r\n$', None, None),
         (b'RSET\r\n', b'250.*\r\n$', None, None),
-        ]
+    ]
     for helo_, from_, to_, realfrom, realto, msg in messages:
-        data.append((b'MAIL FROM:<' + from_ + b'>\r\n', b'250.*\r\n',
-                     None, None))
+        data.append((b'MAIL FROM:<' + from_ + b'>\r\n', b'250.*\r\n', None, None))
         for rcpt in to_:
-            data.append((b'RCPT TO:<' + rcpt + b'>\r\n', b'250.*\r\n',
-                         None, None))
+            data.append((b'RCPT TO:<' + rcpt + b'>\r\n', b'250.*\r\n', None, None))
 
-        data.append((b'DATA\r\n', b'354.*\r\n',
-                     msg, (b'250.*\r\n',
-                           (helo_, realfrom, realto, msg))))
-
+        data.append(
+            (
+                b'DATA\r\n',
+                b'354.*\r\n',
+                msg,
+                (b'250.*\r\n', (helo_, realfrom, realto, msg)),
+            )
+        )
 
     def test_buffer(self):
         """
@@ -439,6 +432,7 @@ To: foo
         """
         transport = StringTransport()
         a = self.serverClass()
+
         class fooFactory:
             domain = b'foo.com'
 
@@ -467,12 +461,8 @@ To: foo
                 for recip in msgdata[2]:
                     expected = list(msgdata[:])
                     expected[2] = [recip]
-                    self.assertEqual(
-                        a.message[(recip,)],
-                        tuple(expected)
-                    )
+                    self.assertEqual(a.message[(recip,)], tuple(expected))
         a.setTimeout(None)
-
 
 
 class AnotherESMTPTests(AnotherTestCase, unittest.TestCase):
@@ -480,21 +470,19 @@ class AnotherESMTPTests(AnotherTestCase, unittest.TestCase):
     clientClass = MyESMTPClient
 
 
-
 class AnotherSMTPTests(AnotherTestCase, unittest.TestCase):
     serverClass = DummySMTP
     clientClass = MySMTPClient
 
 
-
 @implementer(cred.checkers.ICredentialsChecker)
 class DummyChecker:
-    users = {
-        b'testuser': b'testpassword'
-    }
+    users = {b'testuser': b'testpassword'}
 
-    credentialInterfaces = (cred.credentials.IUsernamePassword,
-                            cred.credentials.IUsernameHashedPassword)
+    credentialInterfaces = (
+        cred.credentials.IUsernamePassword,
+        cred.credentials.IUsernameHashedPassword,
+    )
 
     def requestAvatarId(self, credentials):
         return defer.maybeDeferred(
@@ -507,34 +495,29 @@ class DummyChecker:
         raise cred.error.UnauthorizedLogin()
 
 
-
 @implementer(smtp.IMessageDelivery)
 class SimpleDelivery(object):
     """
     L{SimpleDelivery} is a message delivery factory with no interesting
     behavior.
     """
+
     def __init__(self, messageFactory):
         self._messageFactory = messageFactory
-
 
     def receivedHeader(self, helo, origin, recipients):
         return None
 
-
     def validateFrom(self, helo, origin):
         return origin
-
 
     def validateTo(self, user):
         return lambda: self._messageFactory(user)
 
 
-
 class DummyRealm:
     def requestAvatar(self, avatarId, mind, *interfaces):
         return smtp.IMessageDelivery, SimpleDelivery(None), lambda: None
-
 
 
 class AuthTests(unittest.TestCase, LoopbackMixin):
@@ -559,7 +542,6 @@ class AuthTests(unittest.TestCase, LoopbackMixin):
         d.addCallback(lambda x: self.assertEqual(server.authenticated, 1))
         return d
 
-
     def test_loginAuth(self):
         """
         L{ESMTPClient} can authenticate using the I{LOGIN} SASL mechanism.
@@ -580,7 +562,6 @@ class AuthTests(unittest.TestCase, LoopbackMixin):
         d = self.loopback(server, client)
         d.addCallback(lambda x: self.assertTrue(server.authenticated))
         return d
-
 
     def test_loginAgainstWeirdServer(self):
         """
@@ -605,7 +586,6 @@ class AuthTests(unittest.TestCase, LoopbackMixin):
         return d
 
 
-
 class SMTPHelperTests(unittest.TestCase):
     def testMessageID(self):
         d = {}
@@ -613,7 +593,6 @@ class SMTPHelperTests(unittest.TestCase):
             m = smtp.messageid('testcase')
             self.assertFalse(m in d)
             d[m] = None
-
 
     def testQuoteAddr(self):
         cases = [
@@ -627,27 +606,23 @@ class SMTPHelperTests(unittest.TestCase):
         for (c, e) in cases:
             self.assertEqual(smtp.quoteaddr(c), e)
 
-
     def testUser(self):
         u = smtp.User(b'user@host', b'helo.host.name', None, None)
         self.assertEqual(str(u), 'user@host')
-
 
     def testXtextEncoding(self):
         cases = [
             (u'Hello world', b'Hello+20world'),
             (u'Hello+world', b'Hello+2Bworld'),
             (u'\0\1\2\3\4\5', b'+00+01+02+03+04+05'),
-            (u'e=mc2@example.com', b'e+3Dmc2@example.com')
+            (u'e=mc2@example.com', b'e+3Dmc2@example.com'),
         ]
 
         for (case, expected) in cases:
             self.assertEqual(smtp.xtext_encode(case), (expected, len(case)))
             self.assertEqual(case.encode('xtext'), expected)
-            self.assertEqual(
-                smtp.xtext_decode(expected), (case, len(expected)))
+            self.assertEqual(smtp.xtext_decode(expected), (case, len(expected)))
             self.assertEqual(expected.decode('xtext'), case)
-
 
     def test_encodeWithErrors(self):
         """
@@ -657,12 +632,9 @@ class SMTPHelperTests(unittest.TestCase):
         """
         text = u'Hello world'
         self.assertEqual(
-            smtp.xtext_encode(text, 'strict'),
-            (text.encode('xtext'), len(text)))
-        self.assertEqual(
-            text.encode('xtext', 'strict'),
-            text.encode('xtext'))
-
+            smtp.xtext_encode(text, 'strict'), (text.encode('xtext'), len(text))
+        )
+        self.assertEqual(text.encode('xtext', 'strict'), text.encode('xtext'))
 
     def test_decodeWithErrors(self):
         """
@@ -670,28 +642,22 @@ class SMTPHelperTests(unittest.TestCase):
         """
         bytes = b'Hello world'
         self.assertEqual(
-            smtp.xtext_decode(bytes, 'strict'),
-            (bytes.decode('xtext'), len(bytes)))
-        self.assertEqual(
-            bytes.decode('xtext', 'strict'),
-            bytes.decode('xtext'))
-
+            smtp.xtext_decode(bytes, 'strict'), (bytes.decode('xtext'), len(bytes))
+        )
+        self.assertEqual(bytes.decode('xtext', 'strict'), bytes.decode('xtext'))
 
 
 class NoticeTLSClient(MyESMTPClient):
     tls = False
-
 
     def esmtpState_starttls(self, code, resp):
         MyESMTPClient.esmtpState_starttls(self, code, resp)
         self.tls = True
 
 
-
 class TLSTests(unittest.TestCase, LoopbackMixin):
     if sslSkip is not None:
         skip = sslSkip
-
 
     def testTLS(self):
         clientCTX = ClientTLSContext()
@@ -706,14 +672,13 @@ class TLSTests(unittest.TestCase, LoopbackMixin):
 
         return self.loopback(server, client).addCallback(check)
 
+
 if not interfaces.IReactorSSL.providedBy(reactor):
     for case in (TLSTests,):
         case.skip = "Reactor doesn't support SSL"
 
 
-
 class EmptyLineTests(unittest.TestCase):
-
     def test_emptyLineSyntaxError(self):
         """
         If L{smtp.SMTP} receives an empty line, it responds with a 500 error
@@ -731,7 +696,6 @@ class EmptyLineTests(unittest.TestCase):
         self.assertEqual(out[1], b"500 Error: bad syntax")
 
 
-
 class TimeoutTests(unittest.TestCase, LoopbackMixin):
     """
     Check that SMTP client factories correctly use the timeout.
@@ -743,21 +707,22 @@ class TimeoutTests(unittest.TestCase, LoopbackMixin):
         """
         clock = task.Clock()
         client = clientFactory.buildProtocol(
-            address.IPv4Address('TCP', 'example.net', 25))
+            address.IPv4Address('TCP', 'example.net', 25)
+        )
         client.callLater = clock.callLater
         t = StringTransport()
         client.makeConnection(t)
         t.protocol = client
+
         def check(ign):
             self.assertEqual(clock.seconds(), 0.5)
-        d = self.assertFailure(onDone, smtp.SMTPTimeoutError
-            ).addCallback(check)
+
+        d = self.assertFailure(onDone, smtp.SMTPTimeoutError).addCallback(check)
         # The first call should not trigger the timeout
         clock.advance(0.1)
         # But this one should
         clock.advance(0.4)
         return d
-
 
     def test_SMTPClientRecipientBytes(self):
         """
@@ -766,11 +731,14 @@ class TimeoutTests(unittest.TestCase, LoopbackMixin):
         """
         onDone = defer.Deferred()
         clientFactory = smtp.SMTPSenderFactory(
-            'source@address', b'recipient@address',
-            BytesIO(b"Message body"), onDone,
-            retries=0, timeout=0.5)
+            'source@address',
+            b'recipient@address',
+            BytesIO(b"Message body"),
+            onDone,
+            retries=0,
+            timeout=0.5,
+        )
         return self._timeoutTest(onDone, clientFactory)
-
 
     def test_SMTPClientRecipientUnicode(self):
         """
@@ -778,11 +746,14 @@ class TimeoutTests(unittest.TestCase, LoopbackMixin):
         """
         onDone = defer.Deferred()
         clientFactory = smtp.SMTPSenderFactory(
-            'source@address', u'recipient@address',
-            BytesIO(b"Message body"), onDone,
-            retries=0, timeout=0.5)
+            'source@address',
+            u'recipient@address',
+            BytesIO(b"Message body"),
+            onDone,
+            retries=0,
+            timeout=0.5,
+        )
         return self._timeoutTest(onDone, clientFactory)
-
 
     def test_SMTPClientRecipientList(self):
         """
@@ -790,11 +761,14 @@ class TimeoutTests(unittest.TestCase, LoopbackMixin):
         """
         onDone = defer.Deferred()
         clientFactory = smtp.SMTPSenderFactory(
-            'source@address', (u'recipient1@address', b'recipient2@address'),
-            BytesIO(b"Message body"), onDone,
-            retries=0, timeout=0.5)
+            'source@address',
+            (u'recipient1@address', b'recipient2@address'),
+            BytesIO(b"Message body"),
+            onDone,
+            retries=0,
+            timeout=0.5,
+        )
         return self._timeoutTest(onDone, clientFactory)
-
 
     def test_ESMTPClient(self):
         """
@@ -803,23 +777,29 @@ class TimeoutTests(unittest.TestCase, LoopbackMixin):
         """
         onDone = defer.Deferred()
         clientFactory = smtp.ESMTPSenderFactory(
-            'username', 'password',
-            'source@address', 'recipient@address',
-            BytesIO(b"Message body"), onDone,
-            retries=0, timeout=0.5)
+            'username',
+            'password',
+            'source@address',
+            'recipient@address',
+            BytesIO(b"Message body"),
+            onDone,
+            retries=0,
+            timeout=0.5,
+        )
         return self._timeoutTest(onDone, clientFactory)
-
 
     def test_resetTimeoutWhileSending(self):
         """
         The timeout is not allowed to expire after the server has accepted a
         DATA command and the client is actively sending data to it.
         """
+
         class SlowFile:
             """
             A file-like which returns one byte from each read call until the
             specified number of bytes have been returned.
             """
+
             def __init__(self, size):
                 self._size = size
 
@@ -833,23 +813,29 @@ class TimeoutTests(unittest.TestCase, LoopbackMixin):
         onDone = defer.Deferred()
         onDone.addErrback(failed.append)
         clientFactory = smtp.SMTPSenderFactory(
-            'source@address', 'recipient@address',
-            SlowFile(1), onDone, retries=0, timeout=3)
+            'source@address',
+            'recipient@address',
+            SlowFile(1),
+            onDone,
+            retries=0,
+            timeout=3,
+        )
         clientFactory.domain = b"example.org"
         clock = task.Clock()
         client = clientFactory.buildProtocol(
-            address.IPv4Address('TCP', 'example.net', 25))
+            address.IPv4Address('TCP', 'example.net', 25)
+        )
         client.callLater = clock.callLater
         transport = StringTransport()
         client.makeConnection(transport)
 
         client.dataReceived(
-            b"220 Ok\r\n" # Greet the client
-            b"250 Ok\r\n" # Respond to HELO
-            b"250 Ok\r\n" # Respond to MAIL FROM
-            b"250 Ok\r\n" # Respond to RCPT TO
-            b"354 Ok\r\n" # Respond to DATA
-            )
+            b"220 Ok\r\n"  # Greet the client
+            b"250 Ok\r\n"  # Respond to HELO
+            b"250 Ok\r\n"  # Respond to MAIL FROM
+            b"250 Ok\r\n"  # Respond to RCPT TO
+            b"354 Ok\r\n"  # Respond to DATA
+        )
 
         # Now the client is producing data to the server.  Any time
         # resumeProducing is called on the producer, the timeout should be
@@ -888,8 +874,8 @@ class TimeoutTests(unittest.TestCase, LoopbackMixin):
             b".\r\n"
             # This RSET is just an implementation detail.  It's nice, but this
             # test doesn't really care about it.
-            b"RSET\r\n")
-
+            b"RSET\r\n",
+        )
 
 
 class MultipleDeliveryFactorySMTPServerFactory(protocol.ServerFactory):
@@ -899,9 +885,9 @@ class MultipleDeliveryFactorySMTPServerFactory(protocol.ServerFactory):
     factory is used for one connection and then discarded.  Factories are used
     in the order they are supplied.
     """
+
     def __init__(self, messageFactories):
         self._messageFactories = messageFactories
-
 
     def buildProtocol(self, addr):
         p = protocol.ServerFactory.buildProtocol(self, addr)
@@ -909,11 +895,11 @@ class MultipleDeliveryFactorySMTPServerFactory(protocol.ServerFactory):
         return p
 
 
-
 class SMTPSenderFactoryTests(unittest.TestCase):
     """
     Tests for L{smtp.SMTPSenderFactory}.
     """
+
     def test_removeCurrentProtocolWhenClientConnectionLost(self):
         """
         L{smtp.SMTPSenderFactory} removes the current protocol when the client
@@ -922,14 +908,12 @@ class SMTPSenderFactoryTests(unittest.TestCase):
         reactor = MemoryReactor()
         sentDeferred = defer.Deferred()
         clientFactory = smtp.SMTPSenderFactory(
-            "source@address", "recipient@address",
-            BytesIO(b"message"), sentDeferred)
+            "source@address", "recipient@address", BytesIO(b"message"), sentDeferred
+        )
         connector = reactor.connectTCP("localhost", 25, clientFactory)
         clientFactory.buildProtocol(None)
-        clientFactory.clientConnectionLost(connector,
-                                           error.ConnectionDone("Bye."))
+        clientFactory.clientConnectionLost(connector, error.ConnectionDone("Bye."))
         self.assertEqual(clientFactory.currentProtocol, None)
-
 
     def test_removeCurrentProtocolWhenClientConnectionFailed(self):
         """
@@ -939,20 +923,19 @@ class SMTPSenderFactoryTests(unittest.TestCase):
         reactor = MemoryReactor()
         sentDeferred = defer.Deferred()
         clientFactory = smtp.SMTPSenderFactory(
-            "source@address", "recipient@address",
-            BytesIO(b"message"), sentDeferred)
+            "source@address", "recipient@address", BytesIO(b"message"), sentDeferred
+        )
         connector = reactor.connectTCP("localhost", 25, clientFactory)
         clientFactory.buildProtocol(None)
-        clientFactory.clientConnectionFailed(connector,
-                                             error.ConnectionDone("Bye."))
+        clientFactory.clientConnectionFailed(connector, error.ConnectionDone("Bye."))
         self.assertEqual(clientFactory.currentProtocol, None)
-
 
 
 class SMTPSenderFactoryRetryTests(unittest.TestCase):
     """
     Tests for the retry behavior of L{smtp.SMTPSenderFactory}.
     """
+
     def test_retryAfterDisconnect(self):
         """
         If the protocol created by L{SMTPSenderFactory} loses its connection
@@ -968,6 +951,7 @@ class SMTPSenderFactoryRetryTests(unittest.TestCase):
             An SMTP subclass which ensures that its transport will be
             disconnected before the test ends.
             """
+
             def makeConnection(innerSelf, transport):
                 self.addCleanup(transport.loseConnection)
                 smtp.SMTP.makeConnection(innerSelf, transport)
@@ -975,9 +959,9 @@ class SMTPSenderFactoryRetryTests(unittest.TestCase):
         # Create a server which will fail the first message deliver attempt to
         # it with a 500 and a disconnect, but which will accept a message
         # delivered over the 2nd connection to it.
-        serverFactory = MultipleDeliveryFactorySMTPServerFactory([
-                BrokenMessage,
-                lambda user: DummyMessage(domain, user)])
+        serverFactory = MultipleDeliveryFactorySMTPServerFactory(
+            [BrokenMessage, lambda user: DummyMessage(domain, user)]
+        )
         serverFactory.protocol = CleanSMTP
         serverPort = reactor.listenTCP(0, serverFactory, interface='127.0.0.1')
         serverHost = serverPort.getHost()
@@ -987,11 +971,15 @@ class SMTPSenderFactoryRetryTests(unittest.TestCase):
         # server.
         sentDeferred = defer.Deferred()
         clientFactory = smtp.SMTPSenderFactory(
-            b"bob@example.org", recipient + b"@example.com",
-            BytesIO(message), sentDeferred)
+            b"bob@example.org",
+            recipient + b"@example.com",
+            BytesIO(message),
+            sentDeferred,
+        )
         clientFactory.domain = b"example.org"
         clientConnector = reactor.connectTCP(
-            serverHost.host, serverHost.port, clientFactory)
+            serverHost.host, serverHost.port, clientFactory
+        )
         self.addCleanup(clientConnector.disconnect)
 
         def cbSent(ignored):
@@ -999,14 +987,12 @@ class SMTPSenderFactoryRetryTests(unittest.TestCase):
             Verify that the message was successfully delivered and flush the
             error which caused the first attempt to fail.
             """
-            self.assertEqual(
-                domain.messages,
-                {recipient: [b"\n" + message + b"\n"]})
+            self.assertEqual(domain.messages, {recipient: [b"\n" + message + b"\n"]})
             # Flush the RuntimeError that BrokenMessage caused to be logged.
             self.assertEqual(len(self.flushLoggedErrors(RuntimeError)), 1)
+
         sentDeferred.addCallback(cbSent)
         return sentDeferred
-
 
 
 @implementer(IRealm)
@@ -1015,16 +1001,15 @@ class SingletonRealm(object):
     Trivial realm implementation which is constructed with an interface and an
     avatar and returns that avatar when asked for that interface.
     """
+
     def __init__(self, interface, avatar):
         self.interface = interface
         self.avatar = avatar
-
 
     def requestAvatar(self, avatarId, mind, *interfaces):
         for iface in interfaces:
             if iface is self.interface:
                 return iface, self.avatar, lambda: None
-
 
 
 class NotImplementedDelivery(object):
@@ -1033,17 +1018,15 @@ class NotImplementedDelivery(object):
     raise L{NotImplementedError}.  Subclassed by various tests to provide the
     particular behavior being tested.
     """
+
     def validateFrom(self, helo, origin):
         raise NotImplementedError("This oughtn't be called in the course of this test.")
-
 
     def validateTo(self, user):
         raise NotImplementedError("This oughtn't be called in the course of this test.")
 
-
     def receivedHeader(self, helo, origin, recipients):
         raise NotImplementedError("This oughtn't be called in the course of this test.")
-
 
 
 class SMTPServerTests(unittest.TestCase):
@@ -1051,6 +1034,7 @@ class SMTPServerTests(unittest.TestCase):
     Test various behaviors of L{twisted.mail.smtp.SMTP} and
     L{twisted.mail.smtp.ESMTP}.
     """
+
     def testSMTPGreetingHost(self, serverClass=smtp.SMTP):
         """
         Test that the specified hostname shows up in the SMTP server's
@@ -1062,7 +1046,6 @@ class SMTPServerTests(unittest.TestCase):
         s.makeConnection(t)
         s.connectionLost(error.ConnectionDone())
         self.assertIn(b"example.com", t.value())
-
 
     def testSMTPGreetingNotExtended(self):
         """
@@ -1076,13 +1059,11 @@ class SMTPServerTests(unittest.TestCase):
         s.connectionLost(error.ConnectionDone())
         self.assertNotIn(b"ESMTP", t.value())
 
-
     def testESMTPGreetingHost(self):
         """
         Similar to testSMTPGreetingHost, but for the L{smtp.ESMTP} class.
         """
         self.testSMTPGreetingHost(smtp.ESMTP)
-
 
     def testESMTPGreetingExtended(self):
         """
@@ -1096,7 +1077,6 @@ class SMTPServerTests(unittest.TestCase):
         s.connectionLost(error.ConnectionDone())
         self.assertIn(b"ESMTP", t.value())
 
-
     def test_SMTPUnknownCommand(self):
         """
         Sending an unimplemented command is responded to with a 500.
@@ -1108,16 +1088,17 @@ class SMTPServerTests(unittest.TestCase):
         s.connectionLost(error.ConnectionDone())
         self.assertIn(b"500 Command not implemented", t.value())
 
-
     def test_acceptSenderAddress(self):
         """
         Test that a C{MAIL FROM} command with an acceptable address is
         responded to with the correct success code.
         """
+
         class AcceptanceDelivery(NotImplementedDelivery):
             """
             Delivery object which accepts all senders as valid.
             """
+
             def validateFrom(self, helo, origin):
                 return origin
 
@@ -1140,10 +1121,7 @@ class SMTPServerTests(unittest.TestCase):
         proto.connectionLost(error.ConnectionLost())
 
         # Make sure that we received exactly the correct response
-        self.assertEqual(
-            trans.value(),
-            b'250 Sender address accepted\r\n')
-
+        self.assertEqual(trans.value(), b'250 Sender address accepted\r\n')
 
     def test_deliveryRejectedSenderAddress(self):
         """
@@ -1151,10 +1129,12 @@ class SMTPServerTests(unittest.TestCase):
         L{smtp.IMessageDelivery} instance is responded to with the correct
         error code.
         """
+
         class RejectionDelivery(NotImplementedDelivery):
             """
             Delivery object which rejects all senders as invalid.
             """
+
             def validateFrom(self, helo, origin):
                 raise smtp.SMTPBadSender(origin)
 
@@ -1180,8 +1160,8 @@ class SMTPServerTests(unittest.TestCase):
         self.assertEqual(
             trans.value(),
             b'550 Cannot receive from specified address '
-            b'<alice@example.com>: Sender not acceptable\r\n')
-
+            b'<alice@example.com>: Sender not acceptable\r\n',
+        )
 
     @implementer(ICredentialsChecker)
     def test_portalRejectedSenderAddress(self):
@@ -1190,10 +1170,12 @@ class SMTPServerTests(unittest.TestCase):
         L{smtp.SMTP} instance's portal is responded to with the correct error
         code.
         """
+
         class DisallowAnonymousAccess(object):
             """
             Checker for L{IAnonymous} which rejects authentication attempts.
             """
+
             credentialInterfaces = (IAnonymous,)
 
             def requestAvatarId(self, credentials):
@@ -1221,8 +1203,8 @@ class SMTPServerTests(unittest.TestCase):
         self.assertEqual(
             trans.value(),
             b'550 Cannot receive from specified address '
-            b'<alice@example.com>: Sender not acceptable\r\n')
-
+            b'<alice@example.com>: Sender not acceptable\r\n',
+        )
 
     def test_portalRejectedAnonymousSender(self):
         """
@@ -1252,8 +1234,8 @@ class SMTPServerTests(unittest.TestCase):
         self.assertEqual(
             trans.value(),
             b'550 Cannot receive from specified address '
-            b'<alice@example.com>: Unauthenticated senders not allowed\r\n')
-
+            b'<alice@example.com>: Unauthenticated senders not allowed\r\n',
+        )
 
 
 class ESMTPAuthenticationTests(unittest.TestCase):
@@ -1267,13 +1249,11 @@ class ESMTPAuthenticationTests(unittest.TestCase):
         """
         self.transport.clear()
         self.server.dataReceived(bytes)
-        self.assertEqual(
-            response,
-            self.transport.value().splitlines())
+        self.assertEqual(response, self.transport.value().splitlines())
 
-
-    def assertServerAuthenticated(self, loginArgs, username=b"username",
-                                  password=b"password"):
+    def assertServerAuthenticated(
+        self, loginArgs, username=b"username", password=b"password"
+    ):
         """
         Assert that a login attempt has been made, that the credentials and
         interfaces passed to it are correct, and that when the login request
@@ -1286,7 +1266,9 @@ class ESMTPAuthenticationTests(unittest.TestCase):
         """
         d, credentials, mind, interfaces = loginArgs.pop()
         self.assertEqual(loginArgs, [])
-        self.assertTrue(twisted.cred.credentials.IUsernamePassword.providedBy(credentials))
+        self.assertTrue(
+            twisted.cred.credentials.IUsernamePassword.providedBy(credentials)
+        )
         self.assertEqual(credentials.username, username)
         self.assertTrue(credentials.checkPassword(password))
         self.assertIn(smtp.IMessageDeliveryFactory, interfaces)
@@ -1294,21 +1276,19 @@ class ESMTPAuthenticationTests(unittest.TestCase):
         d.callback((smtp.IMessageDeliveryFactory, None, lambda: None))
 
         self.assertEqual(
-            [b"235 Authentication successful."],
-            self.transport.value().splitlines())
-
+            [b"235 Authentication successful."], self.transport.value().splitlines()
+        )
 
     def setUp(self):
         """
         Create an ESMTP instance attached to a StringTransport.
         """
-        self.server = smtp.ESMTP({
-                b'LOGIN': LOGINCredentials})
+        self.server = smtp.ESMTP({b'LOGIN': LOGINCredentials})
         self.server.host = b'localhost'
         self.transport = StringTransport(
-            peerAddress=address.IPv4Address('TCP', '127.0.0.1', 12345))
+            peerAddress=address.IPv4Address('TCP', '127.0.0.1', 12345)
+        )
         self.server.makeConnection(self.transport)
-
 
     def tearDown(self):
         """
@@ -1316,15 +1296,14 @@ class ESMTPAuthenticationTests(unittest.TestCase):
         """
         self.server.connectionLost(error.ConnectionDone())
 
-
     def portalFactory(self, loginList):
         class DummyPortal:
             def login(self, credentials, mind, *interfaces):
                 d = defer.Deferred()
                 loginList.append((d, credentials, mind, interfaces))
                 return d
-        return DummyPortal()
 
+        return DummyPortal()
 
     def test_authenticationCapabilityAdvertised(self):
         """
@@ -1334,13 +1313,10 @@ class ESMTPAuthenticationTests(unittest.TestCase):
         self.server.dataReceived(b'EHLO\r\n')
         responseLines = self.transport.value().splitlines()
         self.assertEqual(
-            responseLines[0],
-            b"250-localhost Hello 127.0.0.1, nice to meet you")
-        self.assertEqual(
-            responseLines[1],
-            b"250 AUTH LOGIN")
+            responseLines[0], b"250-localhost Hello 127.0.0.1, nice to meet you"
+        )
+        self.assertEqual(responseLines[1], b"250 AUTH LOGIN")
         self.assertEqual(len(responseLines), 2)
-
 
     def test_plainAuthentication(self):
         """
@@ -1353,19 +1329,17 @@ class ESMTPAuthenticationTests(unittest.TestCase):
         self.transport.clear()
 
         self.assertServerResponse(
-            b'AUTH LOGIN\r\n',
-            [b"334 " + base64.b64encode(b"User Name\0").strip()])
+            b'AUTH LOGIN\r\n', [b"334 " + base64.b64encode(b"User Name\0").strip()]
+        )
 
         self.assertServerResponse(
             base64.b64encode(b'username') + b'\r\n',
-            [b"334 " + base64.b64encode(b"Password\0").strip()])
+            [b"334 " + base64.b64encode(b"Password\0").strip()],
+        )
 
-        self.assertServerResponse(
-            base64.b64encode(b'password').strip() + b'\r\n',
-            [])
+        self.assertServerResponse(base64.b64encode(b'password').strip() + b'\r\n', [])
 
         self.assertServerAuthenticated(loginArgs)
-
 
     def test_plainAuthenticationEmptyPassword(self):
         """
@@ -1378,16 +1352,16 @@ class ESMTPAuthenticationTests(unittest.TestCase):
         self.transport.clear()
 
         self.assertServerResponse(
-            b'AUTH LOGIN\r\n',
-            [b"334 " + base64.b64encode(b"User Name\0").strip()])
+            b'AUTH LOGIN\r\n', [b"334 " + base64.b64encode(b"User Name\0").strip()]
+        )
 
         self.assertServerResponse(
             base64.b64encode(b'username') + b'\r\n',
-            [b"334 " + base64.b64encode(b"Password\0").strip()])
+            [b"334 " + base64.b64encode(b"Password\0").strip()],
+        )
 
         self.assertServerResponse(b'\r\n', [])
         self.assertServerAuthenticated(loginArgs, password=b'')
-
 
     def test_plainAuthenticationInitialResponse(self):
         """
@@ -1402,14 +1376,12 @@ class ESMTPAuthenticationTests(unittest.TestCase):
 
         self.assertServerResponse(
             b'AUTH LOGIN ' + base64.b64encode(b"username").strip() + b'\r\n',
-            [b"334 " + base64.b64encode(b"Password\0").strip()])
+            [b"334 " + base64.b64encode(b"Password\0").strip()],
+        )
 
-        self.assertServerResponse(
-            base64.b64encode(b'password').strip() + b'\r\n',
-            [])
+        self.assertServerResponse(base64.b64encode(b'password').strip() + b'\r\n', [])
 
         self.assertServerAuthenticated(loginArgs)
-
 
     def test_abortAuthentication(self):
         """
@@ -1421,10 +1393,7 @@ class ESMTPAuthenticationTests(unittest.TestCase):
         self.server.dataReceived(b'EHLO\r\n')
         self.server.dataReceived(b'AUTH LOGIN\r\n')
 
-        self.assertServerResponse(
-            b'*\r\n',
-            [b'501 Authentication aborted'])
-
+        self.assertServerResponse(b'*\r\n', [b'501 Authentication aborted'])
 
     def test_invalidBase64EncodedResponse(self):
         """
@@ -1438,11 +1407,10 @@ class ESMTPAuthenticationTests(unittest.TestCase):
         self.server.dataReceived(b'AUTH LOGIN\r\n')
 
         self.assertServerResponse(
-            b'x\r\n',
-            [b'501 Syntax error in parameters or arguments'])
+            b'x\r\n', [b'501 Syntax error in parameters or arguments']
+        )
 
         self.assertEqual(loginArgs, [])
-
 
     def test_invalidBase64EncodedInitialResponse(self):
         """
@@ -1454,11 +1422,10 @@ class ESMTPAuthenticationTests(unittest.TestCase):
 
         self.server.dataReceived(b'EHLO\r\n')
         self.assertServerResponse(
-            b'AUTH LOGIN x\r\n',
-            [b'501 Syntax error in parameters or arguments'])
+            b'AUTH LOGIN x\r\n', [b'501 Syntax error in parameters or arguments']
+        )
 
         self.assertEqual(loginArgs, [])
-
 
     def test_unexpectedLoginFailure(self):
         """
@@ -1475,26 +1442,26 @@ class ESMTPAuthenticationTests(unittest.TestCase):
 
         self.assertServerResponse(
             b'AUTH LOGIN ' + base64.b64encode(b'username').strip() + b'\r\n',
-            [b'334 ' + base64.b64encode(b'Password\0').strip()])
-        self.assertServerResponse(
-            base64.b64encode(b'password').strip() + b'\r\n',
-            [])
+            [b'334 ' + base64.b64encode(b'Password\0').strip()],
+        )
+        self.assertServerResponse(base64.b64encode(b'password').strip() + b'\r\n', [])
 
         d, credentials, mind, interfaces = loginArgs.pop()
         d.errback(RuntimeError("Something wrong with the server"))
 
         self.assertEqual(
             b'451 Requested action aborted: local error in processing\r\n',
-            self.transport.value())
+            self.transport.value(),
+        )
 
         self.assertEqual(len(self.flushLoggedErrors(RuntimeError)), 1)
-
 
 
 class SMTPClientErrorTests(unittest.TestCase):
     """
     Tests for L{smtp.SMTPClientError}.
     """
+
     def test_str(self):
         """
         The string representation of a L{SMTPClientError} instance includes
@@ -1503,7 +1470,6 @@ class SMTPClientErrorTests(unittest.TestCase):
         err = smtp.SMTPClientError(123, "some text")
         self.assertEqual(str(err), "123 some text")
 
-
     def test_strWithNegativeCode(self):
         """
         If the response code supplied to L{SMTPClientError} is negative, it
@@ -1511,7 +1477,6 @@ class SMTPClientErrorTests(unittest.TestCase):
         """
         err = smtp.SMTPClientError(-1, b"foo bar")
         self.assertEqual(str(err), "foo bar")
-
 
     def test_strWithLog(self):
         """
@@ -1522,12 +1487,7 @@ class SMTPClientErrorTests(unittest.TestCase):
         log.append(b"testlog")
         log.append(b"secondline")
         err = smtp.SMTPClientError(100, "test error", log=log.str())
-        self.assertEqual(
-            str(err),
-            "100 test error\n"
-            "testlog\n"
-            "secondline\n")
-
+        self.assertEqual(str(err), "100 test error\n" "testlog\n" "secondline\n")
 
 
 class SenderMixinSentMailTests(unittest.TestCase):
@@ -1535,39 +1495,48 @@ class SenderMixinSentMailTests(unittest.TestCase):
     Tests for L{smtp.SenderMixin.sentMail}, used in particular by
     L{smtp.SMTPSenderFactory} and L{smtp.ESMTPSenderFactory}.
     """
+
     def test_onlyLogFailedAddresses(self):
         """
         L{smtp.SenderMixin.sentMail} adds only the addresses with failing
         SMTP response codes to the log passed to the factory's errback.
         """
         onDone = self.assertFailure(defer.Deferred(), smtp.SMTPDeliveryError)
-        onDone.addCallback(lambda e: self.assertEqual(
-                e.log, b"bob@example.com: 199 Error in sending.\n"))
+        onDone.addCallback(
+            lambda e: self.assertEqual(
+                e.log, b"bob@example.com: 199 Error in sending.\n"
+            )
+        )
 
         clientFactory = smtp.SMTPSenderFactory(
-            'source@address', 'recipient@address',
-            BytesIO(b"Message body"), onDone,
-            retries=0, timeout=0.5)
+            'source@address',
+            'recipient@address',
+            BytesIO(b"Message body"),
+            onDone,
+            retries=0,
+            timeout=0.5,
+        )
 
         client = clientFactory.buildProtocol(
-            address.IPv4Address('TCP', 'example.net', 25))
+            address.IPv4Address('TCP', 'example.net', 25)
+        )
 
-        addresses = [(b"alice@example.com", 200, b"No errors here!"),
-                     (b"bob@example.com", 199, b"Error in sending.")]
+        addresses = [
+            (b"alice@example.com", 200, b"No errors here!"),
+            (b"bob@example.com", 199, b"Error in sending."),
+        ]
         client.sentMail(199, b"Test response", 1, addresses, client.log)
 
         return onDone
-
 
 
 class ESMTPDowngradeTestCase(unittest.TestCase):
     """
     Tests for the ESMTP -> SMTP downgrade functionality in L{smtp.ESMTPClient}.
     """
-    def setUp(self):
-        self.clientProtocol = smtp.ESMTPClient(
-            b"testpassword", None, b"testuser")
 
+    def setUp(self):
+        self.clientProtocol = smtp.ESMTPClient(b"testpassword", None, b"testuser")
 
     def test_requireHELOFallbackOperates(self):
         """
@@ -1585,7 +1554,6 @@ class ESMTPDowngradeTestCase(unittest.TestCase):
         self.clientProtocol.dataReceived(b"500 not an esmtp server\r\n")
         self.assertEqual(b"HELO testuser\r\n", transport.value())
 
-
     def test_requireAuthFailsHELOFallback(self):
         """
         If authentication is required, and HELO fallback is on, HELO fallback
@@ -1602,7 +1570,6 @@ class ESMTPDowngradeTestCase(unittest.TestCase):
         self.clientProtocol.dataReceived(b"500 not an esmtp server\r\n")
         self.assertEqual(b"QUIT\r\n", transport.value())
 
-
     def test_requireTLSFailsHELOFallback(self):
         """
         If TLS is required and the connection is insecure, HELO fallback must
@@ -1618,7 +1585,6 @@ class ESMTPDowngradeTestCase(unittest.TestCase):
         transport.clear()
         self.clientProtocol.dataReceived(b"500 not an esmtp server\r\n")
         self.assertEqual(b"QUIT\r\n", transport.value())
-
 
     def test_requireTLSAndHELOFallbackSucceedsIfOverTLS(self):
         """
@@ -1638,11 +1604,11 @@ class ESMTPDowngradeTestCase(unittest.TestCase):
         self.assertEqual(b"HELO testuser\r\n", transport.value())
 
 
-
 class SSLTestCase(unittest.TestCase):
     """
     Tests for the TLS negotiation done by L{smtp.ESMTPClient}.
     """
+
     if sslSkip is not None:
         skip = sslSkip
 
@@ -1651,10 +1617,10 @@ class SSLTestCase(unittest.TestCase):
 
     def setUp(self):
         self.clientProtocol = smtp.ESMTPClient(
-            b"testpassword", ClientTLSContext(), b"testuser")
+            b"testpassword", ClientTLSContext(), b"testuser"
+        )
         self.clientProtocol.requireTransportSecurity = True
         self.clientProtocol.getMailFrom = lambda: "test@example.org"
-
 
     def _requireTransportSecurityOverSSLTest(self, capabilities):
         """
@@ -1685,10 +1651,7 @@ class SSLTestCase(unittest.TestCase):
 
         # The client should now try to send a message - without first trying to
         # negotiate TLS, since the transport is already secure.
-        self.assertEqual(
-            b"MAIL FROM:<test@example.org>\r\n",
-            transport.value())
-
+        self.assertEqual(b"MAIL FROM:<test@example.org>\r\n", transport.value())
 
     def test_requireTransportSecurityOverSSL(self):
         """
@@ -1696,7 +1659,6 @@ class SSLTestCase(unittest.TestCase):
         over an SSL transport, mail may be delivered.
         """
         self._requireTransportSecurityOverSSLTest(b"250 AUTH LOGIN\r\n")
-
 
     def test_requireTransportSecurityTLSOffered(self):
         """
@@ -1713,13 +1675,11 @@ class SSLTestCase(unittest.TestCase):
 
         # Tell the client about the server's capabilities - including STARTTLS
         self.clientProtocol.dataReceived(
-            self.EHLO_RESPONSE +
-            b"250-AUTH LOGIN\r\n"
-            b"250 STARTTLS\r\n")
+            self.EHLO_RESPONSE + b"250-AUTH LOGIN\r\n" b"250 STARTTLS\r\n"
+        )
 
         # The client should try to start TLS before sending the message.
         self.assertEqual(b"STARTTLS\r\n", transport.value())
-
 
     def test_requireTransportSecurityTLSOfferedOverSSL(self):
         """
@@ -1728,9 +1688,8 @@ class SSLTestCase(unittest.TestCase):
         extension, it is not used before mail is delivered.
         """
         self._requireTransportSecurityOverSSLTest(
-            b"250-AUTH LOGIN\r\n"
-            b"250 STARTTLS\r\n")
-
+            b"250-AUTH LOGIN\r\n" b"250 STARTTLS\r\n"
+        )
 
     def test_requireTransportSecurityTLSNotOffered(self):
         """
@@ -1746,13 +1705,10 @@ class SSLTestCase(unittest.TestCase):
         transport.clear()
 
         # Tell the client about the server's capabilities - excluding STARTTLS
-        self.clientProtocol.dataReceived(
-            self.EHLO_RESPONSE +
-            b"250 AUTH LOGIN\r\n")
+        self.clientProtocol.dataReceived(self.EHLO_RESPONSE + b"250 AUTH LOGIN\r\n")
 
         # The client give up
         self.assertEqual(b"QUIT\r\n", transport.value())
-
 
     def test_esmtpClientTlsModeDeprecationGet(self):
         """
@@ -1761,24 +1717,22 @@ class SSLTestCase(unittest.TestCase):
         val = self.clientProtocol.tlsMode
         del val
         warningsShown = self.flushWarnings(
-            offendingFunctions=[self.test_esmtpClientTlsModeDeprecationGet])
+            offendingFunctions=[self.test_esmtpClientTlsModeDeprecationGet]
+        )
         self.assertEqual(len(warningsShown), 1)
-        self.assertIdentical(
-            warningsShown[0]['category'], DeprecationWarning)
+        self.assertIdentical(warningsShown[0]['category'], DeprecationWarning)
         self.assertEqual(
             warningsShown[0]['message'],
             "tlsMode attribute of twisted.mail.smtp.ESMTPClient "
-            "is deprecated since Twisted 13.0")
-
+            "is deprecated since Twisted 13.0",
+        )
 
     def test_esmtpClientTlsModeDeprecationGetAttributeError(self):
         """
         L{smtp.ESMTPClient.__getattr__} raises an attribute error for other
         attribute names which do not exist.
         """
-        self.assertRaises(
-            AttributeError, lambda: self.clientProtocol.doesNotExist)
-
+        self.assertRaises(AttributeError, lambda: self.clientProtocol.doesNotExist)
 
     def test_esmtpClientTlsModeDeprecationSet(self):
         """
@@ -1786,24 +1740,24 @@ class SSLTestCase(unittest.TestCase):
         """
         self.clientProtocol.tlsMode = False
         warningsShown = self.flushWarnings(
-            offendingFunctions=[self.test_esmtpClientTlsModeDeprecationSet])
+            offendingFunctions=[self.test_esmtpClientTlsModeDeprecationSet]
+        )
         self.assertEqual(len(warningsShown), 1)
-        self.assertIdentical(
-            warningsShown[0]['category'], DeprecationWarning)
+        self.assertIdentical(warningsShown[0]['category'], DeprecationWarning)
         self.assertEqual(
             warningsShown[0]['message'],
             "tlsMode attribute of twisted.mail.smtp.ESMTPClient "
-            "is deprecated since Twisted 13.0")
-
+            "is deprecated since Twisted 13.0",
+        )
 
 
 class AbortableStringTransport(StringTransport):
     """
     A version of L{StringTransport} that supports C{abortConnection}.
     """
+
     # This should be replaced by a common version in #6530.
     aborting = False
-
 
     def abortConnection(self):
         """
@@ -1816,11 +1770,11 @@ class AbortableStringTransport(StringTransport):
         self.loseConnection()
 
 
-
 class SendmailTests(unittest.TestCase):
     """
     Tests for L{twisted.mail.smtp.sendmail}.
     """
+
     def test_defaultReactorIsGlobalReactor(self):
         """
         The default C{reactor} parameter of L{twisted.mail.smtp.sendmail} is
@@ -1829,23 +1783,28 @@ class SendmailTests(unittest.TestCase):
         args, varArgs, keywords, defaults = inspect.getargspec(smtp.sendmail)
         self.assertEqual(reactor, defaults[2])
 
-
     def _honorsESMTPArguments(self, username, password):
         """
         L{twisted.mail.smtp.sendmail} creates the ESMTP factory with the ESMTP
         arguments.
         """
         reactor = MemoryReactor()
-        smtp.sendmail("localhost", "source@address", "recipient@address",
-                      b"message", reactor=reactor, username=username,
-                      password=password, requireTransportSecurity=True,
-                      requireAuthentication=True)
+        smtp.sendmail(
+            "localhost",
+            "source@address",
+            "recipient@address",
+            b"message",
+            reactor=reactor,
+            username=username,
+            password=password,
+            requireTransportSecurity=True,
+            requireAuthentication=True,
+        )
         factory = reactor.tcpClients[0][2]
         self.assertEqual(factory._requireTransportSecurity, True)
         self.assertEqual(factory._requireAuthentication, True)
         self.assertEqual(factory.username, b"foo")
         self.assertEqual(factory.password, b"bar")
-
 
     def test_honorsESMTPArgumentsUnicodeUserPW(self):
         """
@@ -1854,14 +1813,12 @@ class SendmailTests(unittest.TestCase):
         """
         return self._honorsESMTPArguments(username=u"foo", password=u"bar")
 
-
     def test_honorsESMTPArgumentsBytesUserPW(self):
         """
         L{twisted.mail.smtp.sendmail} should accept C{username} and C{password}
         which are L{bytes}.
         """
         return self._honorsESMTPArguments(username=b"foo", password=b"bar")
-
 
     def test_messageFilePassthrough(self):
         """
@@ -1871,11 +1828,15 @@ class SendmailTests(unittest.TestCase):
         reactor = MemoryReactor()
         messageFile = BytesIO(b"File!")
 
-        smtp.sendmail("localhost", "source@address", "recipient@address",
-                      messageFile, reactor=reactor)
+        smtp.sendmail(
+            "localhost",
+            "source@address",
+            "recipient@address",
+            messageFile,
+            reactor=reactor,
+        )
         factory = reactor.tcpClients[0][2]
         self.assertIs(factory.file, messageFile)
-
 
     def test_messageStringMadeFile(self):
         """
@@ -1883,13 +1844,17 @@ class SendmailTests(unittest.TestCase):
         (eg. strings) into file-like objects before sending.
         """
         reactor = MemoryReactor()
-        smtp.sendmail("localhost", "source@address", "recipient@address",
-                      b"message", reactor=reactor)
+        smtp.sendmail(
+            "localhost",
+            "source@address",
+            "recipient@address",
+            b"message",
+            reactor=reactor,
+        )
         factory = reactor.tcpClients[0][2]
         messageFile = factory.file
         messageFile.seek(0)
         self.assertEqual(messageFile.read(), b"message")
-
 
     def test_senderDomainName(self):
         """
@@ -1897,11 +1862,16 @@ class SendmailTests(unittest.TestCase):
         provided.
         """
         reactor = MemoryReactor()
-        smtp.sendmail("localhost", "source@address", "recipient@address",
-                      b"message", reactor=reactor, senderDomainName="foo")
+        smtp.sendmail(
+            "localhost",
+            "source@address",
+            "recipient@address",
+            b"message",
+            reactor=reactor,
+            senderDomainName="foo",
+        )
         factory = reactor.tcpClients[0][2]
         self.assertEqual(factory.domain, b"foo")
-
 
     def test_cancelBeforeConnectionMade(self):
         """
@@ -1910,13 +1880,17 @@ class SendmailTests(unittest.TestCase):
         L{twisted.internet.interfaces.IConnector.disconnect}.
         """
         reactor = MemoryReactor()
-        d = smtp.sendmail("localhost", "source@address", "recipient@address",
-                          b"message", reactor=reactor)
+        d = smtp.sendmail(
+            "localhost",
+            "source@address",
+            "recipient@address",
+            b"message",
+            reactor=reactor,
+        )
         d.cancel()
         self.assertEqual(reactor.connectors[0]._disconnected, True)
         failure = self.failureResultOf(d)
         failure.trap(defer.CancelledError)
-
 
     def test_cancelAfterConnectionMade(self):
         """
@@ -1926,8 +1900,13 @@ class SendmailTests(unittest.TestCase):
         """
         reactor = MemoryReactor()
         transport = AbortableStringTransport()
-        d = smtp.sendmail("localhost", "source@address", "recipient@address",
-                          b"message", reactor=reactor)
+        d = smtp.sendmail(
+            "localhost",
+            "source@address",
+            "recipient@address",
+            b"message",
+            reactor=reactor,
+        )
         factory = reactor.tcpClients[0][2]
         p = factory.buildProtocol(None)
         p.makeConnection(transport)

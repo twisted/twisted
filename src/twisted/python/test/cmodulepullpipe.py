@@ -7,6 +7,7 @@ from struct import unpack
 
 from twisted.python.sendmsg import recv1msg
 
+
 def recvfd(socketfd):
     """
     Receive a file descriptor from a L{send1msg} message on the given C{AF_UNIX}

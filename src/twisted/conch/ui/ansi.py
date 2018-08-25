@@ -12,6 +12,7 @@ import string
 # Twisted imports
 from twisted.python import log
 
+
 class ColorText:
     """
     Represents an element of text along with the texts colors and
@@ -25,7 +26,14 @@ class ColorText:
 
     # Color names
     COLOR_NAMES = (
-        'Black', 'Red', 'Green', 'Yellow', 'Blue', 'Magenta', 'Cyan', 'White'
+        'Black',
+        'Red',
+        'Green',
+        'Yellow',
+        'Blue',
+        'Magenta',
+        'Cyan',
+        'White',
     )
 
     def __init__(self, text, fg, bg, display, bold, underline, flash, reverse):
@@ -45,7 +53,7 @@ class AnsiParser:
     """
 
     # Terminators for cursor movement ansi controls - unsupported
-    CURSOR_SET = ('H', 'f', 'A', 'B', 'C', 'D', 'R', 's', 'u', 'd','G')
+    CURSOR_SET = ('H', 'f', 'A', 'B', 'C', 'D', 'R', 's', 'u', 'd', 'G')
 
     # Terminators for erasure ansi controls - unsupported
     ERASE_SET = ('J', 'K', 'P')
@@ -67,7 +75,6 @@ class AnsiParser:
         self.bold, self.flash, self.underline, self.reverse = 0, 0, 0, 0
         self.display = 1
         self.prepend = ''
-
 
     def stripEscapes(self, string):
         """
@@ -113,19 +120,19 @@ class AnsiParser:
                 i = 0
                 type = None
                 while i < L:
-                    if s[i] not in string.digits+'[;?':
+                    if s[i] not in string.digits + '[;?':
                         break
-                    i+=1
+                    i += 1
                 if not s:
                     self.prepend = '\x1b'
                     return
-                if s[0]!='[':
-                    self.writeString(self.formatText(s[i+1:]))
+                if s[0] != '[':
+                    self.writeString(self.formatText(s[i + 1 :]))
                     continue
                 else:
-                    s=s[1:]
-                    i-=1
-                if i==L-1:
+                    s = s[1:]
+                    i -= 1
+                if i == L - 1:
                     self.prepend = '\x1b['
                     return
                 type = _setmap.get(s[i], None)
@@ -133,26 +140,26 @@ class AnsiParser:
                     continue
 
                 if type == AnsiParser.COLOR_SET:
-                    self.parseColor(s[:i + 1])
-                    s = s[i + 1:]
+                    self.parseColor(s[: i + 1])
+                    s = s[i + 1 :]
                     self.writeString(self.formatText(s))
                 elif type == AnsiParser.CURSOR_SET:
-                    cursor, s = s[:i+1], s[i+1:]
+                    cursor, s = s[: i + 1], s[i + 1 :]
                     self.parseCursor(cursor)
                     self.writeString(self.formatText(s))
                 elif type == AnsiParser.ERASE_SET:
-                    erase, s = s[:i+1], s[i+1:]
+                    erase, s = s[: i + 1], s[i + 1 :]
                     self.parseErase(erase)
                     self.writeString(self.formatText(s))
                 elif type == AnsiParser.MODE_SET:
-                    s = s[i+1:]
-                    #self.parseErase('2J')
+                    s = s[i + 1 :]
+                    # self.parseErase('2J')
                     self.writeString(self.formatText(s))
                 elif i == L:
                     self.prepend = '\x1B[' + s
                 else:
                     log.msg('Unhandled ANSI control type: %c' % (s[i],))
-                    s = s[i + 1:]
+                    s = s[i + 1 :]
                     self.writeString(self.formatText(s))
 
     def parseColor(self, str):
@@ -214,20 +221,22 @@ class AnsiParser:
     def parseErase(self, erase):
         pass
 
-
-    def pickColor(self, value, mode, BOLD = ColorText.BOLD_COLORS):
+    def pickColor(self, value, mode, BOLD=ColorText.BOLD_COLORS):
         if mode:
             return ColorText.COLORS[value]
         else:
             return self.bold and BOLD[value] or ColorText.COLORS[value]
-
 
     def formatText(self, text):
         return ColorText(
             text,
             self.pickColor(self.currentFG, 0),
             self.pickColor(self.currentBG, 1),
-            self.display, self.bold, self.underline, self.flash, self.reverse
+            self.display,
+            self.bold,
+            self.underline,
+            self.flash,
+            self.reverse,
         )
 
 

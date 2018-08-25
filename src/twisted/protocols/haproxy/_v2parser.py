@@ -17,27 +17,31 @@ from twisted.internet import address
 from twisted.python import compat
 
 from ._exceptions import (
-    convertError, InvalidProxyHeader, InvalidNetworkProtocol,
-    MissingAddressData
+    convertError,
+    InvalidProxyHeader,
+    InvalidNetworkProtocol,
+    MissingAddressData,
 )
 from . import _info
 from . import _interfaces
+
 
 class NetFamily(Values):
     """
     Values for the 'family' field.
     """
+
     UNSPEC = ValueConstant(0x00)
     INET = ValueConstant(0x10)
     INET6 = ValueConstant(0x20)
     UNIX = ValueConstant(0x30)
 
 
-
 class NetProtocol(Values):
     """
     Values for 'protocol' field.
     """
+
     UNSPEC = ValueConstant(0)
     STREAM = ValueConstant(1)
     DGRAM = ValueConstant(2)
@@ -47,6 +51,7 @@ _HIGH = 0b11110000
 _LOW = 0b00001111
 _LOCALCOMMAND = 'LOCAL'
 _PROXYCOMMAND = 'PROXY'
+
 
 @implementer(_interfaces.IProxyParser)
 class V2Parser(object):
@@ -73,7 +78,6 @@ class V2Parser(object):
 
     def __init__(self):
         self.buffer = b''
-
 
     def feed(self, data):
         """
@@ -103,7 +107,6 @@ class V2Parser(object):
         info = self.parse(header)
         return (info, remaining)
 
-
     @staticmethod
     def _bytesToIPv4(bytestring):
         """
@@ -117,10 +120,8 @@ class V2Parser(object):
         @rtype: L{bytes}
         """
         return b'.'.join(
-            ('%i' % (ord(b),)).encode('ascii')
-            for b in compat.iterbytes(bytestring)
+            ('%i' % (ord(b),)).encode('ascii') for b in compat.iterbytes(bytestring)
         )
-
 
     @staticmethod
     def _bytesToIPv6(bytestring):
@@ -136,10 +137,9 @@ class V2Parser(object):
         """
         hexString = binascii.b2a_hex(bytestring)
         return b':'.join(
-            ('%x' % (int(hexString[b:b+4], 16),)).encode('ascii')
+            ('%x' % (int(hexString[b : b + 4], 16),)).encode('ascii')
             for b in range(0, 32, 4)
         )
-
 
     @classmethod
     def parse(cls, line):
@@ -178,14 +178,11 @@ class V2Parser(object):
         with convertError(ValueError, InvalidNetworkProtocol):
             family = NetFamily.lookupByValue(family)
             netproto = NetProtocol.lookupByValue(netproto)
-        if (
-                family is NetFamily.UNSPEC or
-                netproto is NetProtocol.UNSPEC
-        ):
+        if family is NetFamily.UNSPEC or netproto is NetProtocol.UNSPEC:
             return _info.ProxyInfo(line, None, None)
 
         addressFormat = cls.ADDRESSFORMATS[familyProto]
-        addrInfo = line[16:16+struct.calcsize(addressFormat)]
+        addrInfo = line[16 : 16 + struct.calcsize(addressFormat)]
         if family is NetFamily.UNIX:
             with convertError(struct.error, MissingAddressData):
                 source, dest = struct.unpack(addressFormat, addrInfo)

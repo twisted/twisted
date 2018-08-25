@@ -13,12 +13,10 @@ class InvalidConfError(Exception):
     """
 
 
-
 class InvalidInetdConfError(InvalidConfError):
     """
     Invalid inetd.conf file
     """
-
 
 
 class InvalidServicesConfError(InvalidConfError):
@@ -27,12 +25,10 @@ class InvalidServicesConfError(InvalidConfError):
     """
 
 
-
 class UnknownService(Exception):
     """
     Unknown service name
     """
-
 
 
 class SimpleConfFile:
@@ -57,7 +53,7 @@ class SimpleConfFile:
         """
         close = False
         if file is None and self.defaultFilename:
-            file = open(self.defaultFilename,'r')
+            file = open(self.defaultFilename, 'r')
             close = True
 
         try:
@@ -79,7 +75,6 @@ class SimpleConfFile:
             if close:
                 file.close()
 
-
     def parseLine(self, line):
         """
         Override this.
@@ -92,18 +87,17 @@ class SimpleConfFile:
         except ValueError:
             raise InvalidInetdConfError('Invalid line: ' + repr(line))
 
-
     def parseFields(self, *fields):
         """
         Override this.
         """
 
 
-
 class InetdService:
     """
     A simple description of an inetd service.
     """
+
     name = None
     port = None
     socketType = None
@@ -114,8 +108,9 @@ class InetdService:
     program = None
     programArgs = None
 
-    def __init__(self, name, port, socketType, protocol, wait, user, group,
-                 program, programArgs):
+    def __init__(
+        self, name, port, socketType, protocol, wait, user, group, program, programArgs
+    ):
         self.name = name
         self.port = port
         self.socketType = socketType
@@ -125,7 +120,6 @@ class InetdService:
         self.group = group
         self.program = program
         self.programArgs = programArgs
-
 
 
 class InetdConf(SimpleConfFile):
@@ -143,9 +137,9 @@ class InetdConf(SimpleConfFile):
             knownServices.parseFile()
         self.knownServices = knownServices
 
-
-    def parseFields(self, serviceName, socketType, protocol, wait, user,
-                    program, *programArgs):
+    def parseFields(
+        self, serviceName, socketType, protocol, wait, user, program, *programArgs
+    ):
         """
         Parse an inetd.conf file.
 
@@ -163,13 +157,23 @@ class InetdConf(SimpleConfFile):
                 port = int(serviceName)
                 serviceName = 'unknown'
             except:
-                raise UnknownService("Unknown service: %s (%s)" % (
-                    serviceName, protocol))
+                raise UnknownService(
+                    "Unknown service: %s (%s)" % (serviceName, protocol)
+                )
 
-        self.services.append(InetdService(serviceName, port, socketType,
-                                          protocol, wait, user, group, program,
-                                          programArgs))
-
+        self.services.append(
+            InetdService(
+                serviceName,
+                port,
+                socketType,
+                protocol,
+                wait,
+                user,
+                group,
+                program,
+                programArgs,
+            )
+        )
 
 
 class ServicesConf(SimpleConfFile):
@@ -184,14 +188,14 @@ class ServicesConf(SimpleConfFile):
     def __init__(self):
         self.services = {}
 
-
     def parseFields(self, name, portAndProtocol, *aliases):
         try:
             port, protocol = portAndProtocol.split('/')
             port = int(port)
         except:
             raise InvalidServicesConfError(
-                'Invalid port/protocol: %s' % (repr(portAndProtocol),))
+                'Invalid port/protocol: %s' % (repr(portAndProtocol),)
+            )
 
         self.services[(name, protocol)] = port
         for alias in aliases:

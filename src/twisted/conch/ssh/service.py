@@ -12,10 +12,11 @@ from __future__ import division, absolute_import
 
 from twisted.python import log
 
+
 class SSHService(log.Logger):
-    name = None # this is the ssh name for the service
-    protocolMessages = {} # these map #'s -> protocol names
-    transport = None # gets set later
+    name = None  # this is the ssh name for the service
+    protocolMessages = {}  # these map #'s -> protocol names
+    transport = None  # gets set later
 
     def serviceStarted(self):
         """
@@ -29,18 +30,16 @@ class SSHService(log.Logger):
         """
 
     def logPrefix(self):
-        return "SSHService %r on %s" % (self.name,
-                self.transport.transport.logPrefix())
+        return "SSHService %r on %s" % (self.name, self.transport.transport.logPrefix())
 
     def packetReceived(self, messageNum, packet):
         """
         called when we receive a packet on the transport
         """
-        #print self.protocolMessages
+        # print self.protocolMessages
         if messageNum in self.protocolMessages:
             messageType = self.protocolMessages[messageNum]
-            f = getattr(self,'ssh_%s' % messageType[4:],
-                        None)
+            f = getattr(self, 'ssh_%s' % messageType[4:], None)
             if f is not None:
                 return f(packet)
         log.msg("couldn't handle %r" % messageNum)

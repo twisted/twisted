@@ -48,7 +48,6 @@ def prefixedMethodNames(classObj, prefix):
     return list(dct.keys())
 
 
-
 def addMethodNamesToDict(classObj, dict, prefix, baseClass=None):
     """
     This goes through C{classObj} (and its bases) and puts method names
@@ -82,12 +81,13 @@ def addMethodNamesToDict(classObj, dict, prefix, baseClass=None):
 
     if baseClass is None or baseClass in classObj.__bases__:
         for name, method in classObj.__dict__.items():
-            optName = name[len(prefix):]
-            if ((type(method) is types.FunctionType)
-                and (name[:len(prefix)] == prefix)
-                and (len(optName))):
+            optName = name[len(prefix) :]
+            if (
+                (type(method) is types.FunctionType)
+                and (name[: len(prefix)] == prefix)
+                and (len(optName))
+            ):
                 dict[optName] = 1
-
 
 
 def prefixedMethods(obj, prefix=''):
@@ -107,7 +107,6 @@ def prefixedMethods(obj, prefix=''):
     dct = {}
     accumulateMethods(obj, dct, prefix)
     return list(dct.values())
-
 
 
 def accumulateMethods(obj, dict, prefix='', curClass=None):
@@ -144,12 +143,13 @@ def accumulateMethods(obj, dict, prefix='', curClass=None):
             accumulateMethods(obj, dict, prefix, base)
 
     for name, method in curClass.__dict__.items():
-        optName = name[len(prefix):]
-        if ((type(method) is types.FunctionType)
-            and (name[:len(prefix)] == prefix)
-            and (len(optName))):
+        optName = name[len(prefix) :]
+        if (
+            (type(method) is types.FunctionType)
+            and (name[: len(prefix)] == prefix)
+            and (len(optName))
+        ):
             dict[optName] = getattr(obj, name)
-
 
 
 def namedModule(name):
@@ -164,7 +164,6 @@ def namedModule(name):
     return m
 
 
-
 def namedObject(name):
     """
     Get a fully named module-global object.
@@ -173,8 +172,8 @@ def namedObject(name):
     module = namedModule('.'.join(classSplit[:-1]))
     return getattr(module, classSplit[-1])
 
-namedClass = namedObject # backwards compat
 
+namedClass = namedObject  # backwards compat
 
 
 def requireModule(name, default=None):
@@ -196,19 +195,16 @@ def requireModule(name, default=None):
         return default
 
 
-
 class _NoModuleFound(Exception):
     """
     No module was found because none exists.
     """
 
 
-
 class InvalidName(ValueError):
     """
     The given name is not a dot-separated list of Python objects.
     """
-
 
 
 class ModuleNotFound(InvalidName):
@@ -218,13 +214,11 @@ class ModuleNotFound(InvalidName):
     """
 
 
-
 class ObjectNotFound(InvalidName):
     """
     The object associated with the given name doesn't exist and it can't be
     imported.
     """
-
 
 
 def _importAndCheckStack(importName):
@@ -255,7 +249,6 @@ def _importAndCheckStack(importName):
                 reraise(excValue, excTraceback)
             excTraceback = excTraceback.tb_next
         raise _NoModuleFound()
-
 
 
 def namedAny(name):
@@ -297,7 +290,8 @@ def namedAny(name):
     if '' in names:
         raise InvalidName(
             "name must be a string giving a '.'-separated list of Python "
-            "identifiers, not %r" % (name,))
+            "identifiers, not %r" % (name,)
+        )
 
     topLevelPackage = None
     moduleNames = names[:]
@@ -319,7 +313,6 @@ def namedAny(name):
         obj = getattr(obj, n)
 
     return obj
-
 
 
 def filenameToModuleName(fn):
@@ -353,11 +346,11 @@ def filenameToModuleName(fn):
         if os.path.exists(os.path.join(fullName, initPy)):
             modName = "%s.%s" % (
                 nativeString(os.path.basename(fullName)),
-                nativeString(modName))
+                nativeString(modName),
+            )
         else:
             break
     return modName
-
 
 
 def qual(clazz):
@@ -367,13 +360,11 @@ def qual(clazz):
     return clazz.__module__ + '.' + clazz.__name__
 
 
-
 def _determineClass(x):
     try:
         return x.__class__
     except:
         return type(x)
-
 
 
 def _determineClassName(x):
@@ -385,7 +376,6 @@ def _determineClassName(x):
             return str(c)
         except:
             return '<BROKEN CLASS AT 0x%x>' % id(c)
-
 
 
 def _safeFormat(formatter, o):
@@ -408,8 +398,11 @@ def _safeFormat(formatter, o):
     className = _determineClassName(o)
     tbValue = io.getvalue()
     return "<%s instance at 0x%x with %s error:\n %s>" % (
-        className, id(o), formatter.__name__, tbValue)
-
+        className,
+        id(o),
+        formatter.__name__,
+        tbValue,
+    )
 
 
 def safe_repr(o):
@@ -425,7 +418,6 @@ def safe_repr(o):
         return repr(o)
     except:
         return _safeFormat(repr, o)
-
 
 
 def safe_str(o):
@@ -450,26 +442,25 @@ def safe_str(o):
         return _safeFormat(str, o)
 
 
-
 @_oldStyle
 class QueueMethod:
     """
     I represent a method that doesn't exist yet.
     """
+
     def __init__(self, name, calls):
         self.name = name
         self.calls = calls
+
     def __call__(self, *args):
         self.calls.append((self.name, args))
 
 
-
 def fullFuncName(func):
-    qualName = (str(pickle.whichmodule(func, func.__name__)) + '.' + func.__name__)
+    qualName = str(pickle.whichmodule(func, func.__name__)) + '.' + func.__name__
     if namedObject(qualName) is not func:
         raise Exception("Couldn't find %s as %s." % (func, qualName))
     return qualName
-
 
 
 def getClass(obj):
@@ -481,7 +472,6 @@ def getClass(obj):
         return obj.__class__
     else:
         return type(obj)
-
 
 
 def accumulateClassDict(classObj, attr, adict, baseClass=None):
@@ -534,11 +524,11 @@ def accumulateClassList(classObj, attr, listObj, baseClass=None):
 
 
 def isSame(a, b):
-    return (a is b)
+    return a is b
 
 
 def isLike(a, b):
-    return (a == b)
+    return a == b
 
 
 def modgrep(goal):
@@ -546,9 +536,9 @@ def modgrep(goal):
 
 
 def isOfType(start, goal):
-    return ((type(start) is goal) or
-            (isinstance(start, compat.InstanceType) and
-             start.__class__ is goal))
+    return (type(start) is goal) or (
+        isinstance(start, compat.InstanceType) and start.__class__ is goal
+    )
 
 
 def findInstances(start, t):
@@ -561,8 +551,16 @@ if not _PY3:
     # twisted.python.reflect is quite important and objgrep is not used in
     # Twisted itself, so in #5929, we decided to port everything but objgrep()
     # and to finish the porting in #6986
-    def objgrep(start, goal, eq=isLike, path='', paths=None, seen=None,
-                showUnknowns=0, maxDepth=None):
+    def objgrep(
+        start,
+        goal,
+        eq=isLike,
+        path='',
+        paths=None,
+        seen=None,
+        showUnknowns=0,
+        maxDepth=None,
+    ):
         """
         An insanely CPU-intensive process for finding stuff.
         """
@@ -585,48 +583,78 @@ if not _PY3:
         args = (paths, seen, showUnknowns, maxDepth)
         if isinstance(start, dict):
             for k, v in start.items():
-                objgrep(k, goal, eq, path+'{'+repr(v)+'}', *args)
-                objgrep(v, goal, eq, path+'['+repr(k)+']', *args)
+                objgrep(k, goal, eq, path + '{' + repr(v) + '}', *args)
+                objgrep(v, goal, eq, path + '[' + repr(k) + ']', *args)
         elif isinstance(start, (list, tuple, deque)):
             for idx, _elem in enumerate(start):
-                objgrep(start[idx], goal, eq, path+'['+str(idx)+']', *args)
+                objgrep(start[idx], goal, eq, path + '[' + str(idx) + ']', *args)
         elif isinstance(start, types.MethodType):
-            objgrep(start.__self__, goal, eq, path+'.__self__', *args)
-            objgrep(start.__func__, goal, eq, path+'.__func__', *args)
-            objgrep(start.__self__.__class__, goal, eq,
-                    path+'.__self__.__class__', *args)
+            objgrep(start.__self__, goal, eq, path + '.__self__', *args)
+            objgrep(start.__func__, goal, eq, path + '.__func__', *args)
+            objgrep(
+                start.__self__.__class__, goal, eq, path + '.__self__.__class__', *args
+            )
         elif hasattr(start, '__dict__'):
             for k, v in start.__dict__.items():
-                objgrep(v, goal, eq, path+'.'+k, *args)
+                objgrep(v, goal, eq, path + '.' + k, *args)
             if isinstance(start, compat.InstanceType):
-                objgrep(start.__class__, goal, eq, path+'.__class__', *args)
+                objgrep(start.__class__, goal, eq, path + '.__class__', *args)
         elif isinstance(start, weakref.ReferenceType):
-            objgrep(start(), goal, eq, path+'()', *args)
-        elif (isinstance(start, (compat.StringType,
-                        int, types.FunctionType,
-                         types.BuiltinMethodType, RegexType, float,
-                         type(None), compat.FileType)) or
-              type(start).__name__ in ('wrapper_descriptor',
-                                       'method_descriptor', 'member_descriptor',
-                                       'getset_descriptor')):
+            objgrep(start(), goal, eq, path + '()', *args)
+        elif isinstance(
+            start,
+            (
+                compat.StringType,
+                int,
+                types.FunctionType,
+                types.BuiltinMethodType,
+                RegexType,
+                float,
+                type(None),
+                compat.FileType,
+            ),
+        ) or type(start).__name__ in (
+            'wrapper_descriptor',
+            'method_descriptor',
+            'member_descriptor',
+            'getset_descriptor',
+        ):
             pass
         elif showUnknowns:
             print('unknown type', type(start), start)
         return paths
 
 
-
 __all__ = [
-    'InvalidName', 'ModuleNotFound', 'ObjectNotFound',
-
+    'InvalidName',
+    'ModuleNotFound',
+    'ObjectNotFound',
     'QueueMethod',
-
-    'namedModule', 'namedObject', 'namedClass', 'namedAny', 'requireModule',
-    'safe_repr', 'safe_str', 'prefixedMethodNames', 'addMethodNamesToDict',
-    'prefixedMethods', 'accumulateMethods', 'fullFuncName', 'qual', 'getClass',
-    'accumulateClassDict', 'accumulateClassList', 'isSame', 'isLike',
-    'modgrep', 'isOfType', 'findInstances', 'objgrep', 'filenameToModuleName',
-    'fullyQualifiedName']
+    'namedModule',
+    'namedObject',
+    'namedClass',
+    'namedAny',
+    'requireModule',
+    'safe_repr',
+    'safe_str',
+    'prefixedMethodNames',
+    'addMethodNamesToDict',
+    'prefixedMethods',
+    'accumulateMethods',
+    'fullFuncName',
+    'qual',
+    'getClass',
+    'accumulateClassDict',
+    'accumulateClassList',
+    'isSame',
+    'isLike',
+    'modgrep',
+    'isOfType',
+    'findInstances',
+    'objgrep',
+    'filenameToModuleName',
+    'fullyQualifiedName',
+]
 
 
 if _PY3:

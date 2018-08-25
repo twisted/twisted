@@ -6,8 +6,8 @@
 
 from twisted.protocols import basic
 
-class Finger(basic.LineReceiver):
 
+class Finger(basic.LineReceiver):
     def lineReceived(self, line):
         parts = line.split()
         if not parts:
@@ -20,7 +20,7 @@ class Finger(basic.LineReceiver):
         if b'@' in user:
             hostPlace = user.rfind(b'@')
             user = user[:hostPlace]
-            host = user[hostPlace+1:]
+            host = user[hostPlace + 1 :]
             return self.forwardQuery(slash_w, user, host)
         if user:
             return self.getUser(slash_w, user)

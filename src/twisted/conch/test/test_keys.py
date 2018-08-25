@@ -29,14 +29,12 @@ from twisted.python.compat import long
 from twisted.python.filepath import FilePath
 
 
-
 class KeyTests(unittest.TestCase):
 
     if cryptography is None:
         skip = skipCryptography
     if pyasn1 is None:
         skip = "Cannot run without PyASN1"
-
 
     def setUp(self):
         self.rsaObj = keys.Key._fromRSAComponents(
@@ -46,31 +44,31 @@ class KeyTests(unittest.TestCase):
             p=keydata.RSAData['p'],
             q=keydata.RSAData['q'],
             u=keydata.RSAData['u'],
-            )._keyObject
+        )._keyObject
         self.dsaObj = keys.Key._fromDSAComponents(
             y=keydata.DSAData['y'],
             p=keydata.DSAData['p'],
             q=keydata.DSAData['q'],
             g=keydata.DSAData['g'],
             x=keydata.DSAData['x'],
-            )._keyObject
+        )._keyObject
         self.ecObj = keys.Key._fromECComponents(
             x=keydata.ECDatanistp256['x'],
             y=keydata.ECDatanistp256['y'],
             privateValue=keydata.ECDatanistp256['privateValue'],
-            curve=keydata.ECDatanistp256['curve']
+            curve=keydata.ECDatanistp256['curve'],
         )._keyObject
         self.ecObj384 = keys.Key._fromECComponents(
             x=keydata.ECDatanistp384['x'],
             y=keydata.ECDatanistp384['y'],
             privateValue=keydata.ECDatanistp384['privateValue'],
-            curve=keydata.ECDatanistp384['curve']
+            curve=keydata.ECDatanistp384['curve'],
         )._keyObject
         self.ecObj521 = keys.Key._fromECComponents(
             x=keydata.ECDatanistp521['x'],
             y=keydata.ECDatanistp521['y'],
             privateValue=keydata.ECDatanistp521['privateValue'],
-            curve=keydata.ECDatanistp521['curve']
+            curve=keydata.ECDatanistp521['curve'],
         )._keyObject
         self.rsaSignature = (
             b"\x00\x00\x00\x07ssh-rsa\x00\x00\x01\x00~Y\xa3\xd7\xfdW\xc6pu@"
@@ -97,7 +95,6 @@ class KeyTests(unittest.TestCase):
         with open(self.keyFile, 'wb') as f:
             f.write(keydata.privateRSA_lsh)
 
-
     def tearDown(self):
         os.unlink(self.keyFile)
 
@@ -111,46 +108,52 @@ class KeyTests(unittest.TestCase):
         self.assertEqual(keys.Key(self.ecObj384).size(), 384)
         self.assertEqual(keys.Key(self.ecObj521).size(), 521)
 
-
-
     def test__guessStringType(self):
         """
         Test that the _guessStringType method guesses string types
         correctly.
         """
-        self.assertEqual(keys.Key._guessStringType(keydata.publicRSA_openssh),
-                'public_openssh')
-        self.assertEqual(keys.Key._guessStringType(keydata.publicDSA_openssh),
-                'public_openssh')
-        self.assertEqual(keys.Key._guessStringType(keydata.publicECDSA_openssh),
-                'public_openssh')
-        self.assertEqual(keys.Key._guessStringType(
-            keydata.privateRSA_openssh), 'private_openssh')
-        self.assertEqual(keys.Key._guessStringType(
-            keydata.privateDSA_openssh), 'private_openssh')
-        self.assertEqual(keys.Key._guessStringType(
-            keydata.privateECDSA_openssh), 'private_openssh')
-        self.assertEqual(keys.Key._guessStringType(keydata.publicRSA_lsh),
-                'public_lsh')
-        self.assertEqual(keys.Key._guessStringType(keydata.publicDSA_lsh),
-                'public_lsh')
-        self.assertEqual(keys.Key._guessStringType(keydata.privateRSA_lsh),
-                'private_lsh')
-        self.assertEqual(keys.Key._guessStringType(keydata.privateDSA_lsh),
-                'private_lsh')
-        self.assertEqual(keys.Key._guessStringType(
-            keydata.privateRSA_agentv3), 'agentv3')
-        self.assertEqual(keys.Key._guessStringType(
-            keydata.privateDSA_agentv3), 'agentv3')
-        self.assertEqual(keys.Key._guessStringType(
-            b'\x00\x00\x00\x07ssh-rsa\x00\x00\x00\x01\x01'),
-            'blob')
-        self.assertEqual(keys.Key._guessStringType(
-            b'\x00\x00\x00\x07ssh-dss\x00\x00\x00\x01\x01'),
-            'blob')
-        self.assertEqual(keys.Key._guessStringType(b'not a key'),
-                None)
-
+        self.assertEqual(
+            keys.Key._guessStringType(keydata.publicRSA_openssh), 'public_openssh'
+        )
+        self.assertEqual(
+            keys.Key._guessStringType(keydata.publicDSA_openssh), 'public_openssh'
+        )
+        self.assertEqual(
+            keys.Key._guessStringType(keydata.publicECDSA_openssh), 'public_openssh'
+        )
+        self.assertEqual(
+            keys.Key._guessStringType(keydata.privateRSA_openssh), 'private_openssh'
+        )
+        self.assertEqual(
+            keys.Key._guessStringType(keydata.privateDSA_openssh), 'private_openssh'
+        )
+        self.assertEqual(
+            keys.Key._guessStringType(keydata.privateECDSA_openssh), 'private_openssh'
+        )
+        self.assertEqual(keys.Key._guessStringType(keydata.publicRSA_lsh), 'public_lsh')
+        self.assertEqual(keys.Key._guessStringType(keydata.publicDSA_lsh), 'public_lsh')
+        self.assertEqual(
+            keys.Key._guessStringType(keydata.privateRSA_lsh), 'private_lsh'
+        )
+        self.assertEqual(
+            keys.Key._guessStringType(keydata.privateDSA_lsh), 'private_lsh'
+        )
+        self.assertEqual(
+            keys.Key._guessStringType(keydata.privateRSA_agentv3), 'agentv3'
+        )
+        self.assertEqual(
+            keys.Key._guessStringType(keydata.privateDSA_agentv3), 'agentv3'
+        )
+        self.assertEqual(
+            keys.Key._guessStringType(b'\x00\x00\x00\x07ssh-rsa\x00\x00\x00\x01\x01'),
+            'blob',
+        )
+        self.assertEqual(
+            keys.Key._guessStringType(b'\x00\x00\x00\x07ssh-dss\x00\x00\x00\x01\x01'),
+            'blob',
+        )
+        self.assertEqual(keys.Key._guessStringType(b'not a key'), None)
 
     def test_public(self):
         """
@@ -171,7 +174,6 @@ class KeyTests(unittest.TestCase):
         publicECDSAKey = keys.Key.fromString(keydata.publicECDSA_openssh)
         self.assertEqual(privateECDSAKey.public(), publicECDSAKey.public())
 
-
     def test_isPublic(self):
         """
         The L{keys.Key.isPublic} method returns True for public keys
@@ -187,12 +189,9 @@ class KeyTests(unittest.TestCase):
         self.assertTrue(ecdsaKey.public().isPublic())
         self.assertFalse(ecdsaKey.isPublic())
 
-
-
     def _testPublicPrivateFromString(self, public, private, type, data):
         self._testPublicFromString(public, type, data)
         self._testPrivateFromString(private, type, data)
-
 
     def _testPublicFromString(self, public, type, data):
         publicKey = keys.Key.fromString(public)
@@ -201,7 +200,6 @@ class KeyTests(unittest.TestCase):
         for k, v in publicKey.data().items():
             self.assertEqual(data[k], v)
 
-
     def _testPrivateFromString(self, private, type, data):
         privateKey = keys.Key.fromString(private)
         self.assertFalse(privateKey.isPublic())
@@ -209,24 +207,38 @@ class KeyTests(unittest.TestCase):
         for k, v in data.items():
             self.assertEqual(privateKey.data()[k], v)
 
-
     def test_fromOpenSSH(self):
         """
         Test that keys are correctly generated from OpenSSH strings.
         """
-        self._testPublicPrivateFromString(keydata.publicECDSA_openssh,
-                keydata.privateECDSA_openssh, 'EC', keydata.ECDatanistp256)
-        self._testPublicPrivateFromString(keydata.publicRSA_openssh,
-                keydata.privateRSA_openssh, 'RSA', keydata.RSAData)
-        self.assertEqual(keys.Key.fromString(
-            keydata.privateRSA_openssh_encrypted,
-            passphrase=b'encrypted'),
-            keys.Key.fromString(keydata.privateRSA_openssh))
-        self.assertEqual(keys.Key.fromString(
-            keydata.privateRSA_openssh_alternate),
-            keys.Key.fromString(keydata.privateRSA_openssh))
-        self._testPublicPrivateFromString(keydata.publicDSA_openssh,
-                keydata.privateDSA_openssh, 'DSA', keydata.DSAData)
+        self._testPublicPrivateFromString(
+            keydata.publicECDSA_openssh,
+            keydata.privateECDSA_openssh,
+            'EC',
+            keydata.ECDatanistp256,
+        )
+        self._testPublicPrivateFromString(
+            keydata.publicRSA_openssh,
+            keydata.privateRSA_openssh,
+            'RSA',
+            keydata.RSAData,
+        )
+        self.assertEqual(
+            keys.Key.fromString(
+                keydata.privateRSA_openssh_encrypted, passphrase=b'encrypted'
+            ),
+            keys.Key.fromString(keydata.privateRSA_openssh),
+        )
+        self.assertEqual(
+            keys.Key.fromString(keydata.privateRSA_openssh_alternate),
+            keys.Key.fromString(keydata.privateRSA_openssh),
+        )
+        self._testPublicPrivateFromString(
+            keydata.publicDSA_openssh,
+            keydata.privateDSA_openssh,
+            'DSA',
+            keydata.DSAData,
+        )
 
     def test_fromOpenSSHErrors(self):
         """
@@ -238,9 +250,9 @@ LLl5RtOQpbWgBwYFK4EEACKhZANiAATU17sA9P5FRwSknKcFsjjsk0+E3CeXPYX0
 Tk/M0HK3PpWQWgrO8JdRHP9eFE9O/23P8BumwFt7F/AvPlCzVd35VfraFT0o4cCW
 G0RqpQ+np31aKmeJshkcYALEchnU+tQ=
 -----END EC PRIVATE KEY-----"""
-        self.assertRaises(keys.BadKeyError,
-            keys.Key._fromString_PRIVATE_OPENSSH, badKey, None)
-
+        self.assertRaises(
+            keys.BadKeyError, keys.Key._fromString_PRIVATE_OPENSSH, badKey, None
+        )
 
     def test_fromOpenSSH_with_whitespace(self):
         """
@@ -260,23 +272,24 @@ C7R0eKcDHHLMYO39aPnCwXjscisnInEhYGNblTDyPyiyNxAOXuC8x7luTmwzMbNJ
 /ow0IqSj0VF72VJN9uSoPpFd4lLT0zN8v42RWja0M8ohWNf+YNJluPgCFE0PT4Vm
 SUrCyZXsNh6VXwjs3gKQ
 -----END DSA PRIVATE KEY-----"""
-        self.assertEqual(keys.Key.fromString(privateDSAData),
-                         keys.Key.fromString(privateDSAData + b'\n'))
-
+        self.assertEqual(
+            keys.Key.fromString(privateDSAData),
+            keys.Key.fromString(privateDSAData + b'\n'),
+        )
 
     def test_fromNewerOpenSSH(self):
         """
         Newer versions of OpenSSH generate encrypted keys which have a longer
         IV than the older versions.  These newer keys are also loaded.
         """
-        key = keys.Key.fromString(keydata.privateRSA_openssh_encrypted_aes,
-                                  passphrase=b'testxp')
+        key = keys.Key.fromString(
+            keydata.privateRSA_openssh_encrypted_aes, passphrase=b'testxp'
+        )
         self.assertEqual(key.type(), 'RSA')
         key2 = keys.Key.fromString(
-            keydata.privateRSA_openssh_encrypted_aes + b'\n',
-            passphrase=b'testxp')
+            keydata.privateRSA_openssh_encrypted_aes + b'\n', passphrase=b'testxp'
+        )
         self.assertEqual(key, key2)
-
 
     def test_fromOpenSSH_windows_line_endings(self):
         """
@@ -297,8 +310,8 @@ SUrCyZXsNh6VXwjs3gKQ
 -----END DSA PRIVATE KEY-----"""
         self.assertEqual(
             keys.Key.fromString(privateDSAData),
-            keys.Key.fromString(privateDSAData.replace(b'\n', b'\r\n')))
-
+            keys.Key.fromString(privateDSAData.replace(b'\n', b'\r\n')),
+        )
 
     def test_fromLSHPublicUnsupportedType(self):
         """
@@ -309,9 +322,9 @@ SUrCyZXsNh6VXwjs3gKQ
 
         self.assertRaises(
             keys.BadKeyError,
-            keys.Key.fromString, data=b'{' + base64.encodestring(sexp) + b'}',
-            )
-
+            keys.Key.fromString,
+            data=b'{' + base64.encodestring(sexp) + b'}',
+        )
 
     def test_fromLSHPrivateUnsupportedType(self):
         """
@@ -320,47 +333,35 @@ SUrCyZXsNh6VXwjs3gKQ
         """
         sexp = sexpy.pack([[b'private-key', [b'bad-key', [b'p', b'2']]]])
 
-        self.assertRaises(
-            keys.BadKeyError,
-            keys.Key.fromString, sexp,
-            )
-
+        self.assertRaises(keys.BadKeyError, keys.Key.fromString, sexp)
 
     def test_fromLSHRSA(self):
         """
         RSA public and private keys can be generated from a LSH strings.
         """
         self._testPublicPrivateFromString(
-            keydata.publicRSA_lsh,
-            keydata.privateRSA_lsh,
-            'RSA',
-            keydata.RSAData,
-            )
-
+            keydata.publicRSA_lsh, keydata.privateRSA_lsh, 'RSA', keydata.RSAData
+        )
 
     def test_fromLSHDSA(self):
         """
         DSA public and private key can be generated from LSHs.
         """
         self._testPublicPrivateFromString(
-            keydata.publicDSA_lsh,
-            keydata.privateDSA_lsh,
-            'DSA',
-            keydata.DSAData,
-            )
-
+            keydata.publicDSA_lsh, keydata.privateDSA_lsh, 'DSA', keydata.DSAData
+        )
 
     def test_fromAgentv3(self):
         """
         Test that keys are correctly generated from Agent v3 strings.
         """
-        self._testPrivateFromString(keydata.privateRSA_agentv3, 'RSA',
-                keydata.RSAData)
-        self._testPrivateFromString(keydata.privateDSA_agentv3, 'DSA',
-                keydata.DSAData)
-        self.assertRaises(keys.BadKeyError, keys.Key.fromString,
-                b'\x00\x00\x00\x07ssh-foo'+ b'\x00\x00\x00\x01\x01'*5)
-
+        self._testPrivateFromString(keydata.privateRSA_agentv3, 'RSA', keydata.RSAData)
+        self._testPrivateFromString(keydata.privateDSA_agentv3, 'DSA', keydata.DSAData)
+        self.assertRaises(
+            keys.BadKeyError,
+            keys.Key.fromString,
+            b'\x00\x00\x00\x07ssh-foo' + b'\x00\x00\x00\x01\x01' * 5,
+        )
 
     def test_fromStringErrors(self):
         """
@@ -368,20 +369,28 @@ SUrCyZXsNh6VXwjs3gKQ
         """
         self.assertRaises(keys.BadKeyError, keys.Key.fromString, b'')
         # no key data with a bad key type
-        self.assertRaises(keys.BadKeyError, keys.Key.fromString, b'',
-                'bad_type')
+        self.assertRaises(keys.BadKeyError, keys.Key.fromString, b'', 'bad_type')
         # trying to decrypt a key which doesn't support encryption
-        self.assertRaises(keys.BadKeyError, keys.Key.fromString,
-                keydata.publicRSA_lsh, passphrase = b'unencrypted')
+        self.assertRaises(
+            keys.BadKeyError,
+            keys.Key.fromString,
+            keydata.publicRSA_lsh,
+            passphrase=b'unencrypted',
+        )
         # trying to decrypt a key with the wrong passphrase
-        self.assertRaises(keys.EncryptedKeyError, keys.Key.fromString,
-                keys.Key(self.rsaObj).toString('openssh', b'encrypted'))
+        self.assertRaises(
+            keys.EncryptedKeyError,
+            keys.Key.fromString,
+            keys.Key(self.rsaObj).toString('openssh', b'encrypted'),
+        )
         # key with no key data
-        self.assertRaises(keys.BadKeyError, keys.Key.fromString,
-                b'-----BEGIN RSA KEY-----\nwA==\n')
+        self.assertRaises(
+            keys.BadKeyError, keys.Key.fromString, b'-----BEGIN RSA KEY-----\nwA==\n'
+        )
         # key with invalid DEK Info
         self.assertRaises(
-            keys.BadKeyError, keys.Key.fromString,
+            keys.BadKeyError,
+            keys.Key.fromString,
             b"""-----BEGIN ENCRYPTED RSA KEY-----
 Proc-Type: 4,ENCRYPTED
 DEK-Info: weird type
@@ -411,10 +420,13 @@ gccf8Cqf6XWqiwlWd0B7BR3SymeHIaSymC45wmbgdstrbk7Ppa2Tp9AZku8M2Y7c
 SEJVJ+gmTKdRLYORJKyqhDet6g7kAxs4EoJ25WsOnX5nNr00rit+NkMPA7xbJT+7
 CfI51GQLw7pUPeO2WNt6yZO/YkzZrqvTj5FEwybkUyBv7L0gkqu9wjfDdUw0fVHE
 xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
------END RSA PRIVATE KEY-----""", passphrase='encrypted')
+-----END RSA PRIVATE KEY-----""",
+            passphrase='encrypted',
+        )
         # key with invalid encryption type
         self.assertRaises(
-            keys.BadKeyError, keys.Key.fromString,
+            keys.BadKeyError,
+            keys.Key.fromString,
             b"""-----BEGIN ENCRYPTED RSA KEY-----
 Proc-Type: 4,ENCRYPTED
 DEK-Info: FOO-123-BAR,01234567
@@ -444,10 +456,13 @@ gccf8Cqf6XWqiwlWd0B7BR3SymeHIaSymC45wmbgdstrbk7Ppa2Tp9AZku8M2Y7c
 SEJVJ+gmTKdRLYORJKyqhDet6g7kAxs4EoJ25WsOnX5nNr00rit+NkMPA7xbJT+7
 CfI51GQLw7pUPeO2WNt6yZO/YkzZrqvTj5FEwybkUyBv7L0gkqu9wjfDdUw0fVHE
 xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
------END RSA PRIVATE KEY-----""", passphrase='encrypted')
+-----END RSA PRIVATE KEY-----""",
+            passphrase='encrypted',
+        )
         # key with bad IV (AES)
         self.assertRaises(
-            keys.BadKeyError, keys.Key.fromString,
+            keys.BadKeyError,
+            keys.Key.fromString,
             b"""-----BEGIN ENCRYPTED RSA KEY-----
 Proc-Type: 4,ENCRYPTED
 DEK-Info: AES-128-CBC,01234
@@ -477,10 +492,13 @@ gccf8Cqf6XWqiwlWd0B7BR3SymeHIaSymC45wmbgdstrbk7Ppa2Tp9AZku8M2Y7c
 SEJVJ+gmTKdRLYORJKyqhDet6g7kAxs4EoJ25WsOnX5nNr00rit+NkMPA7xbJT+7
 CfI51GQLw7pUPeO2WNt6yZO/YkzZrqvTj5FEwybkUyBv7L0gkqu9wjfDdUw0fVHE
 xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
------END RSA PRIVATE KEY-----""", passphrase='encrypted')
+-----END RSA PRIVATE KEY-----""",
+            passphrase='encrypted',
+        )
         # key with bad IV (DES3)
         self.assertRaises(
-            keys.BadKeyError, keys.Key.fromString,
+            keys.BadKeyError,
+            keys.Key.fromString,
             b"""-----BEGIN ENCRYPTED RSA KEY-----
 Proc-Type: 4,ENCRYPTED
 DEK-Info: DES-EDE3-CBC,01234
@@ -510,20 +528,21 @@ gccf8Cqf6XWqiwlWd0B7BR3SymeHIaSymC45wmbgdstrbk7Ppa2Tp9AZku8M2Y7c
 SEJVJ+gmTKdRLYORJKyqhDet6g7kAxs4EoJ25WsOnX5nNr00rit+NkMPA7xbJT+7
 CfI51GQLw7pUPeO2WNt6yZO/YkzZrqvTj5FEwybkUyBv7L0gkqu9wjfDdUw0fVHE
 xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
------END RSA PRIVATE KEY-----""", passphrase='encrypted')
-
+-----END RSA PRIVATE KEY-----""",
+            passphrase='encrypted',
+        )
 
     def test_fromFile(self):
         """
         Test that fromFile works correctly.
         """
-        self.assertEqual(keys.Key.fromFile(self.keyFile),
-                keys.Key.fromString(keydata.privateRSA_lsh))
-        self.assertRaises(keys.BadKeyError, keys.Key.fromFile,
-                self.keyFile, 'bad_type')
-        self.assertRaises(keys.BadKeyError, keys.Key.fromFile,
-                self.keyFile, passphrase='unencrypted')
-
+        self.assertEqual(
+            keys.Key.fromFile(self.keyFile), keys.Key.fromString(keydata.privateRSA_lsh)
+        )
+        self.assertRaises(keys.BadKeyError, keys.Key.fromFile, self.keyFile, 'bad_type')
+        self.assertRaises(
+            keys.BadKeyError, keys.Key.fromFile, self.keyFile, passphrase='unencrypted'
+        )
 
     def test_init(self):
         """
@@ -533,15 +552,13 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
         key = keys.Key(obj)
         self.assertEqual(key._keyObject, obj)
 
-
     def test_equal(self):
         """
         Test that Key objects are compared correctly.
         """
         rsa1 = keys.Key(self.rsaObj)
         rsa2 = keys.Key(self.rsaObj)
-        rsa3 = keys.Key(
-            keys.Key._fromRSAComponents(n=long(5), e=long(3))._keyObject)
+        rsa3 = keys.Key(keys.Key._fromRSAComponents(n=long(5), e=long(3))._keyObject)
         dsa = keys.Key(self.dsaObj)
         self.assertTrue(rsa1 == rsa2)
         self.assertFalse(rsa1 == rsa3)
@@ -549,22 +566,19 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
         self.assertFalse(rsa1 == object)
         self.assertFalse(rsa1 == None)
 
-
     def test_notEqual(self):
         """
         Test that Key objects are not-compared correctly.
         """
         rsa1 = keys.Key(self.rsaObj)
         rsa2 = keys.Key(self.rsaObj)
-        rsa3 = keys.Key(
-            keys.Key._fromRSAComponents(n=long(5), e=long(3))._keyObject)
+        rsa3 = keys.Key(keys.Key._fromRSAComponents(n=long(5), e=long(3))._keyObject)
         dsa = keys.Key(self.dsaObj)
         self.assertFalse(rsa1 != rsa2)
         self.assertTrue(rsa1 != rsa3)
         self.assertTrue(rsa1 != dsa)
         self.assertTrue(rsa1 != object)
         self.assertTrue(rsa1 != None)
-
 
     def test_dataError(self):
         """
@@ -573,17 +587,19 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
         badKey = keys.Key(b'')
         self.assertRaises(RuntimeError, badKey.data)
 
-
     def test_fingerprintdefault(self):
         """
         Test that the fingerprint method returns fingerprint in
         L{FingerprintFormats.MD5-HEX} format by default.
         """
-        self.assertEqual(keys.Key(self.rsaObj).fingerprint(),
-            '85:25:04:32:58:55:96:9f:57:ee:fb:a8:1a:ea:69:da')
-        self.assertEqual(keys.Key(self.dsaObj).fingerprint(),
-            '63:15:b3:0e:e6:4f:50:de:91:48:3d:01:6b:b3:13:c1')
-
+        self.assertEqual(
+            keys.Key(self.rsaObj).fingerprint(),
+            '85:25:04:32:58:55:96:9f:57:ee:fb:a8:1a:ea:69:da',
+        )
+        self.assertEqual(
+            keys.Key(self.dsaObj).fingerprint(),
+            '63:15:b3:0e:e6:4f:50:de:91:48:3d:01:6b:b3:13:c1',
+        )
 
     def test_fingerprint_md5_hex(self):
         """
@@ -591,14 +607,13 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
         L{FingerprintFormats.MD5-HEX} format if explicitly specified.
         """
         self.assertEqual(
-            keys.Key(self.rsaObj).fingerprint(
-                keys.FingerprintFormats.MD5_HEX),
-            '85:25:04:32:58:55:96:9f:57:ee:fb:a8:1a:ea:69:da')
+            keys.Key(self.rsaObj).fingerprint(keys.FingerprintFormats.MD5_HEX),
+            '85:25:04:32:58:55:96:9f:57:ee:fb:a8:1a:ea:69:da',
+        )
         self.assertEqual(
-            keys.Key(self.dsaObj).fingerprint(
-                keys.FingerprintFormats.MD5_HEX),
-            '63:15:b3:0e:e6:4f:50:de:91:48:3d:01:6b:b3:13:c1')
-
+            keys.Key(self.dsaObj).fingerprint(keys.FingerprintFormats.MD5_HEX),
+            '63:15:b3:0e:e6:4f:50:de:91:48:3d:01:6b:b3:13:c1',
+        )
 
     def test_fingerprintsha256(self):
         """
@@ -606,14 +621,13 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
         L{FingerprintFormats.SHA256-BASE64} format if explicitly specified.
         """
         self.assertEqual(
-            keys.Key(self.rsaObj).fingerprint(
-                keys.FingerprintFormats.SHA256_BASE64),
-            'FBTCOoknq0mHy+kpfnY9tDdcAJuWtCpuQMaV3EsvbUI=')
+            keys.Key(self.rsaObj).fingerprint(keys.FingerprintFormats.SHA256_BASE64),
+            'FBTCOoknq0mHy+kpfnY9tDdcAJuWtCpuQMaV3EsvbUI=',
+        )
         self.assertEqual(
-            keys.Key(self.dsaObj).fingerprint(
-                keys.FingerprintFormats.SHA256_BASE64),
-            'Wz5o2YbKyxOEcJn1au/UaALSVruUzfz0vaLI1xiIGyY=')
-
+            keys.Key(self.dsaObj).fingerprint(keys.FingerprintFormats.SHA256_BASE64),
+            'Wz5o2YbKyxOEcJn1au/UaALSVruUzfz0vaLI1xiIGyY=',
+        )
 
     def test_fingerprintBadFormat(self):
         """
@@ -622,9 +636,9 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
         """
         with self.assertRaises(keys.BadFingerPrintFormat) as em:
             keys.Key(self.rsaObj).fingerprint('sha256-base')
-        self.assertEqual('Unsupported fingerprint format: sha256-base',
-            em.exception.args[0])
-
+        self.assertEqual(
+            'Unsupported fingerprint format: sha256-base', em.exception.args[0]
+        )
 
     def test_type(self):
         """
@@ -635,8 +649,9 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
         self.assertEqual(keys.Key(self.dsaObj).type(), 'DSA')
         self.assertEqual(keys.Key(self.dsaObj).sshType(), b'ssh-dss')
         self.assertEqual(keys.Key(self.ecObj).type(), 'EC')
-        self.assertEqual(keys.Key(self.ecObj).sshType(),
-                        keydata.ECDatanistp256['curve'])
+        self.assertEqual(
+            keys.Key(self.ecObj).sshType(), keydata.ECDatanistp256['curve']
+        )
         self.assertRaises(RuntimeError, keys.Key(None).type)
         self.assertRaises(RuntimeError, keys.Key(None).sshType)
         self.assertRaises(RuntimeError, keys.Key(self).type)
@@ -649,28 +664,23 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
         """
         badBlob = common.NS(b'ssh-bad')
 
-        self.assertRaises(keys.BadKeyError,
-                keys.Key.fromString, badBlob)
+        self.assertRaises(keys.BadKeyError, keys.Key.fromString, badBlob)
 
     def test_fromBlobRSA(self):
         """
         A public RSA key is correctly generated from a public key blob.
         """
-        rsaPublicData = {
-            'n': keydata.RSAData['n'],
-            'e': keydata.RSAData['e'],
-            }
+        rsaPublicData = {'n': keydata.RSAData['n'], 'e': keydata.RSAData['e']}
         rsaBlob = (
-            common.NS(b'ssh-rsa') +
-            common.MP(rsaPublicData['e']) +
-            common.MP(rsaPublicData['n'])
-            )
+            common.NS(b'ssh-rsa')
+            + common.MP(rsaPublicData['e'])
+            + common.MP(rsaPublicData['n'])
+        )
 
         rsaKey = keys.Key.fromString(rsaBlob)
 
         self.assertTrue(rsaKey.isPublic())
         self.assertEqual(rsaPublicData, rsaKey.data())
-
 
     def test_fromBlobDSA(self):
         """
@@ -681,14 +691,14 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
             'q': keydata.DSAData['q'],
             'g': keydata.DSAData['g'],
             'y': keydata.DSAData['y'],
-            }
+        }
         dsaBlob = (
-            common.NS(b'ssh-dss') +
-            common.MP(dsaPublicData['p']) +
-            common.MP(dsaPublicData['q']) +
-            common.MP(dsaPublicData['g']) +
-            common.MP(dsaPublicData['y'])
-            )
+            common.NS(b'ssh-dss')
+            + common.MP(dsaPublicData['p'])
+            + common.MP(dsaPublicData['q'])
+            + common.MP(dsaPublicData['g'])
+            + common.MP(dsaPublicData['y'])
+        )
 
         dsaKey = keys.Key.fromString(dsaBlob)
 
@@ -704,15 +714,18 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
         ecPublicData = {
             'x': keydata.ECDatanistp256['x'],
             'y': keydata.ECDatanistp256['y'],
-            'curve': keydata.ECDatanistp256['curve']
-            }
+            'curve': keydata.ECDatanistp256['curve'],
+        }
 
-        ecblob = (common.NS(ecPublicData['curve']) +
-                  common.NS(ecPublicData['curve'][-8:]) +
-                  common.NS(b'\x04' +
-                    utils.int_to_bytes(ecPublicData['x'],  32) +
-                    utils.int_to_bytes(ecPublicData['y'],  32))
+        ecblob = (
+            common.NS(ecPublicData['curve'])
+            + common.NS(ecPublicData['curve'][-8:])
+            + common.NS(
+                b'\x04'
+                + utils.int_to_bytes(ecPublicData['x'], 32)
+                + utils.int_to_bytes(ecPublicData['y'], 32)
             )
+        )
 
         eckey = keys.Key.fromString(ecblob)
         self.assertTrue(eckey.isPublic())
@@ -725,65 +738,60 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
         """
         badBlob = common.NS(b'ssh-bad')
 
-        self.assertRaises(
-            keys.BadKeyError, keys.Key._fromString_PRIVATE_BLOB, badBlob)
-
+        self.assertRaises(keys.BadKeyError, keys.Key._fromString_PRIVATE_BLOB, badBlob)
 
     def test_fromPrivateBlobRSA(self):
         """
         A private RSA key is correctly generated from a private key blob.
         """
         rsaBlob = (
-            common.NS(b'ssh-rsa') +
-            common.MP(keydata.RSAData['n']) +
-            common.MP(keydata.RSAData['e']) +
-            common.MP(keydata.RSAData['d']) +
-            common.MP(keydata.RSAData['u']) +
-            common.MP(keydata.RSAData['p']) +
-            common.MP(keydata.RSAData['q'])
-            )
+            common.NS(b'ssh-rsa')
+            + common.MP(keydata.RSAData['n'])
+            + common.MP(keydata.RSAData['e'])
+            + common.MP(keydata.RSAData['d'])
+            + common.MP(keydata.RSAData['u'])
+            + common.MP(keydata.RSAData['p'])
+            + common.MP(keydata.RSAData['q'])
+        )
 
         rsaKey = keys.Key._fromString_PRIVATE_BLOB(rsaBlob)
 
         self.assertFalse(rsaKey.isPublic())
         self.assertEqual(keydata.RSAData, rsaKey.data())
 
-
     def test_fromPrivateBlobDSA(self):
         """
         A private DSA key is correctly generated from a private key blob.
         """
         dsaBlob = (
-            common.NS(b'ssh-dss') +
-            common.MP(keydata.DSAData['p']) +
-            common.MP(keydata.DSAData['q']) +
-            common.MP(keydata.DSAData['g']) +
-            common.MP(keydata.DSAData['y']) +
-            common.MP(keydata.DSAData['x'])
-            )
+            common.NS(b'ssh-dss')
+            + common.MP(keydata.DSAData['p'])
+            + common.MP(keydata.DSAData['q'])
+            + common.MP(keydata.DSAData['g'])
+            + common.MP(keydata.DSAData['y'])
+            + common.MP(keydata.DSAData['x'])
+        )
 
         dsaKey = keys.Key._fromString_PRIVATE_BLOB(dsaBlob)
 
         self.assertFalse(dsaKey.isPublic())
         self.assertEqual(keydata.DSAData, dsaKey.data())
 
-
     def test_fromPrivateBlobECDSA(self):
         """
         A private EC key is correctly generated from a private key blob.
         """
         ecblob = (
-            common.NS(keydata.ECDatanistp256['curve']) +
-            common.MP(keydata.ECDatanistp256['x']) +
-            common.MP(keydata.ECDatanistp256['y']) +
-            common.MP(keydata.ECDatanistp256['privateValue'])
-            )
+            common.NS(keydata.ECDatanistp256['curve'])
+            + common.MP(keydata.ECDatanistp256['x'])
+            + common.MP(keydata.ECDatanistp256['y'])
+            + common.MP(keydata.ECDatanistp256['privateValue'])
+        )
 
         eckey = keys.Key._fromString_PRIVATE_BLOB(ecblob)
 
         self.assertFalse(eckey.isPublic())
         self.assertEqual(keydata.ECDatanistp256, eckey.data())
-
 
     def test_blobRSA(self):
         """
@@ -791,11 +799,10 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
         """
         self.assertEqual(
             keys.Key(self.rsaObj).blob(),
-            common.NS(b'ssh-rsa') +
-            common.MP(self.rsaObj.private_numbers().public_numbers.e) +
-            common.MP(self.rsaObj.private_numbers().public_numbers.n)
-            )
-
+            common.NS(b'ssh-rsa')
+            + common.MP(self.rsaObj.private_numbers().public_numbers.e)
+            + common.MP(self.rsaObj.private_numbers().public_numbers.n),
+        )
 
     def test_blobDSA(self):
         """
@@ -805,13 +812,12 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
 
         self.assertEqual(
             keys.Key(self.dsaObj).blob(),
-            common.NS(b'ssh-dss') +
-            common.MP(publicNumbers.parameter_numbers.p) +
-            common.MP(publicNumbers.parameter_numbers.q) +
-            common.MP(publicNumbers.parameter_numbers.g) +
-            common.MP(publicNumbers.y)
-            )
-
+            common.NS(b'ssh-dss')
+            + common.MP(publicNumbers.parameter_numbers.p)
+            + common.MP(publicNumbers.parameter_numbers.q)
+            + common.MP(publicNumbers.parameter_numbers.g)
+            + common.MP(publicNumbers.y),
+        )
 
     def test_blobEC(self):
         """
@@ -822,15 +828,18 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
         byteLength = (self.ecObj.curve.key_size + 7) // 8
         self.assertEqual(
             keys.Key(self.ecObj).blob(),
-            common.NS(keydata.ECDatanistp256['curve']) +
-            common.NS(keydata.ECDatanistp256['curve'][-8:]) +
-            common.NS(b'\x04' +
-               utils.int_to_bytes(
-                 self.ecObj.private_numbers().public_numbers.x, byteLength) +
-                   utils.int_to_bytes(
-                   self.ecObj.private_numbers().public_numbers.y, byteLength))
-            )
-
+            common.NS(keydata.ECDatanistp256['curve'])
+            + common.NS(keydata.ECDatanistp256['curve'][-8:])
+            + common.NS(
+                b'\x04'
+                + utils.int_to_bytes(
+                    self.ecObj.private_numbers().public_numbers.x, byteLength
+                )
+                + utils.int_to_bytes(
+                    self.ecObj.private_numbers().public_numbers.y, byteLength
+                )
+            ),
+        )
 
     def test_blobNoKey(self):
         """
@@ -841,26 +850,25 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
 
         self.assertRaises(RuntimeError, badKey.blob)
 
-
     def test_privateBlobRSA(self):
         """
         L{keys.Key.privateBlob} returns the SSH protocol-level format of an
         RSA private key.
         """
         from cryptography.hazmat.primitives.asymmetric import rsa
+
         numbers = self.rsaObj.private_numbers()
         u = rsa.rsa_crt_iqmp(numbers.q, numbers.p)
         self.assertEqual(
             keys.Key(self.rsaObj).privateBlob(),
-            common.NS(b'ssh-rsa') +
-            common.MP(self.rsaObj.private_numbers().public_numbers.n) +
-            common.MP(self.rsaObj.private_numbers().public_numbers.e) +
-            common.MP(self.rsaObj.private_numbers().d) +
-            common.MP(u) +
-            common.MP(self.rsaObj.private_numbers().p) +
-            common.MP(self.rsaObj.private_numbers().q)
-            )
-
+            common.NS(b'ssh-rsa')
+            + common.MP(self.rsaObj.private_numbers().public_numbers.n)
+            + common.MP(self.rsaObj.private_numbers().public_numbers.e)
+            + common.MP(self.rsaObj.private_numbers().d)
+            + common.MP(u)
+            + common.MP(self.rsaObj.private_numbers().p)
+            + common.MP(self.rsaObj.private_numbers().q),
+        )
 
     def test_privateBlobDSA(self):
         """
@@ -871,14 +879,13 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
 
         self.assertEqual(
             keys.Key(self.dsaObj).privateBlob(),
-            common.NS(b'ssh-dss') +
-            common.MP(publicNumbers.parameter_numbers.p) +
-            common.MP(publicNumbers.parameter_numbers.q) +
-            common.MP(publicNumbers.parameter_numbers.g) +
-            common.MP(publicNumbers.y) +
-            common.MP(self.dsaObj.private_numbers().x)
-            )
-
+            common.NS(b'ssh-dss')
+            + common.MP(publicNumbers.parameter_numbers.p)
+            + common.MP(publicNumbers.parameter_numbers.q)
+            + common.MP(publicNumbers.parameter_numbers.g)
+            + common.MP(publicNumbers.y)
+            + common.MP(self.dsaObj.private_numbers().x),
+        )
 
     def test_privateBlobEC(self):
         """
@@ -887,12 +894,11 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
         """
         self.assertEqual(
             keys.Key(self.ecObj).privateBlob(),
-            common.NS(keydata.ECDatanistp256['curve']) +
-            common.MP(self.ecObj.private_numbers().public_numbers.x) +
-            common.MP(self.ecObj.private_numbers().public_numbers.y) +
-            common.MP(self.ecObj.private_numbers().private_value)
-            )
-
+            common.NS(keydata.ECDatanistp256['curve'])
+            + common.MP(self.ecObj.private_numbers().public_numbers.x)
+            + common.MP(self.ecObj.private_numbers().public_numbers.y)
+            + common.MP(self.ecObj.private_numbers().private_value),
+        )
 
     def test_privateBlobNoKeyObject(self):
         """
@@ -902,20 +908,21 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
 
         self.assertRaises(RuntimeError, badKey.privateBlob)
 
-
     def test_toOpenSSHRSA(self):
         """
         L{keys.Key.toString} serializes an RSA key in OpenSSH format.
         """
         key = keys.Key.fromString(keydata.privateRSA_agentv3)
         self.assertEqual(key.toString('openssh'), keydata.privateRSA_openssh)
-        self.assertEqual(key.toString('openssh', b'encrypted'),
-                keydata.privateRSA_openssh_encrypted)
-        self.assertEqual(key.public().toString('openssh'),
-                keydata.publicRSA_openssh[:-8]) # no comment
-        self.assertEqual(key.public().toString('openssh', b'comment'),
-                keydata.publicRSA_openssh)
-
+        self.assertEqual(
+            key.toString('openssh', b'encrypted'), keydata.privateRSA_openssh_encrypted
+        )
+        self.assertEqual(
+            key.public().toString('openssh'), keydata.publicRSA_openssh[:-8]
+        )  # no comment
+        self.assertEqual(
+            key.public().toString('openssh', b'comment'), keydata.publicRSA_openssh
+        )
 
     def test_toOpenSSHDSA(self):
         """
@@ -923,22 +930,24 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
         """
         key = keys.Key.fromString(keydata.privateDSA_lsh)
         self.assertEqual(key.toString('openssh'), keydata.privateDSA_openssh)
-        self.assertEqual(key.public().toString('openssh', b'comment'),
-                keydata.publicDSA_openssh)
-        self.assertEqual(key.public().toString('openssh'),
-                keydata.publicDSA_openssh[:-8]) # no comment
-
+        self.assertEqual(
+            key.public().toString('openssh', b'comment'), keydata.publicDSA_openssh
+        )
+        self.assertEqual(
+            key.public().toString('openssh'), keydata.publicDSA_openssh[:-8]
+        )  # no comment
 
     def test_toOpenSSHECDSA(self):
         """
         L{keys.Key.toString} serializes a ECDSA key in OpenSSH format.
         """
         key = keys.Key.fromString(keydata.privateECDSA_openssh)
-        self.assertEqual(key.public().toString('openssh', b'comment'),
-                keydata.publicECDSA_openssh)
-        self.assertEqual(key.public().toString('openssh'),
-                keydata.publicECDSA_openssh[:-8]) # no comment
-
+        self.assertEqual(
+            key.public().toString('openssh', b'comment'), keydata.publicECDSA_openssh
+        )
+        self.assertEqual(
+            key.public().toString('openssh'), keydata.publicECDSA_openssh[:-8]
+        )  # no comment
 
     def test_toLSHRSA(self):
         """
@@ -946,9 +955,7 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
         """
         key = keys.Key.fromString(keydata.privateRSA_openssh)
         self.assertEqual(key.toString('lsh'), keydata.privateRSA_lsh)
-        self.assertEqual(key.public().toString('lsh'),
-                keydata.publicRSA_lsh)
-
+        self.assertEqual(key.public().toString('lsh'), keydata.publicRSA_lsh)
 
     def test_toLSHDSA(self):
         """
@@ -956,9 +963,7 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
         """
         key = keys.Key.fromString(keydata.privateDSA_openssh)
         self.assertEqual(key.toString('lsh'), keydata.privateDSA_lsh)
-        self.assertEqual(key.public().toString('lsh'),
-                keydata.publicDSA_lsh)
-
+        self.assertEqual(key.public().toString('lsh'), keydata.publicDSA_lsh)
 
     def test_toAgentv3RSA(self):
         """
@@ -967,7 +972,6 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
         key = keys.Key.fromString(keydata.privateRSA_openssh)
         self.assertEqual(key.toString('agentv3'), keydata.privateRSA_agentv3)
 
-
     def test_toAgentv3DSA(self):
         """
         L{keys.Key.toString} serializes a DSA key in Agent v3 format.
@@ -975,15 +979,12 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
         key = keys.Key.fromString(keydata.privateDSA_openssh)
         self.assertEqual(key.toString('agentv3'), keydata.privateDSA_agentv3)
 
-
     def test_toStringErrors(self):
         """
         L{keys.Key.toString} raises L{keys.BadKeyError} when passed an invalid
         format type.
         """
-        self.assertRaises(keys.BadKeyError, keys.Key(self.rsaObj).toString,
-                'bad_type')
-
+        self.assertRaises(keys.BadKeyError, keys.Key(self.rsaObj).toString, 'bad_type')
 
     def test_signAndVerifyRSA(self):
         """
@@ -995,7 +996,6 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
         self.assertTrue(key.public().verify(signature, data))
         self.assertTrue(key.verify(signature, data))
 
-
     def test_signAndVerifyDSA(self):
         """
         Signed data can be verified using DSA.
@@ -1005,7 +1005,6 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
         signature = key.sign(data)
         self.assertTrue(key.public().verify(signature, data))
         self.assertTrue(key.verify(signature, data))
-
 
     def test_signAndVerifyEC(self):
         """
@@ -1028,7 +1027,6 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
         self.assertTrue(key521.public().verify(signature521, data))
         self.assertTrue(key521.verify(signature521, data))
 
-
     def test_verifyRSA(self):
         """
         A known-good RSA signature verifies successfully.
@@ -1037,7 +1035,6 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
         self.assertTrue(key.verify(self.rsaSignature, b''))
         self.assertFalse(key.verify(self.rsaSignature, b'a'))
         self.assertFalse(key.verify(self.dsaSignature, b''))
-
 
     def test_verifyDSA(self):
         """
@@ -1048,7 +1045,6 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
         self.assertFalse(key.verify(self.dsaSignature, b'a'))
         self.assertFalse(key.verify(self.rsaSignature, b''))
 
-
     def test_verifyDSANoPrefix(self):
         """
         Some commercial SSH servers send DSA keys as 2 20-byte numbers;
@@ -1057,14 +1053,14 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
         key = keys.Key.fromString(keydata.publicDSA_openssh)
         self.assertTrue(key.verify(self.dsaSignature[-40:], b''))
 
-
     def test_reprPrivateRSA(self):
         """
         The repr of a L{keys.Key} contains all of the RSA components for an RSA
         private key.
         """
-        self.assertEqual(repr(keys.Key(self.rsaObj)),
-"""<RSA Private Key (2048 bits)
+        self.assertEqual(
+            repr(keys.Key(self.rsaObj)),
+            """<RSA Private Key (2048 bits)
 attr d:
 \t21:4c:08:66:a2:28:d5:b4:fb:8e:0f:72:1b:85:09:
 \t00:b9:f2:4e:37:f0:1c:57:4b:e3:51:7f:9e:23:a7:
@@ -1134,16 +1130,17 @@ attr u:
 \tfe:6a:d6:fd:48:72:ae:46:fa:7b:c3:d3:19:60:44:
 \t1d:a5:13:a7:80:f5:63:29:d4:7a:5d:06:07:16:5d:
 \tf6:8b:3d:cb:64:3a:e2:84:5a:4d:8c:06:2d:2d:9d:
-\t1c:eb:83:4c:78:3d:79:54:ce>""")
-
+\t1c:eb:83:4c:78:3d:79:54:ce>""",
+        )
 
     def test_reprPublicRSA(self):
         """
         The repr of a L{keys.Key} contains all of the RSA components for an RSA
         public key.
         """
-        self.assertEqual(repr(keys.Key(self.rsaObj).public()),
-"""<RSA Public Key (2048 bits)
+        self.assertEqual(
+            repr(keys.Key(self.rsaObj).public()),
+            """<RSA Public Key (2048 bits)
 attr e:
 \t01:00:01
 attr n:
@@ -1164,42 +1161,44 @@ attr n:
 \ta4:2a:6e:43:c3:e4:04:9f:35:a3:47:8e:46:ed:33:
 \ta5:65:bd:bc:3b:29:6e:02:0b:57:df:74:e8:13:b4:
 \t37:35:7e:83:5f:20:26:60:a6:dc:ad:8b:c6:6c:79:
-\t98:f7>""")
-
+\t98:f7>""",
+        )
 
     def test_reprPublicECDSA(self):
         """
         The repr of a L{keys.Key} contains all the OpenSSH format for an ECDSA
         public key.
         """
-        self.assertEqual(repr(keys.Key(self.ecObj).public()),
-"""<Elliptic Curve Public Key (256 bits)
+        self.assertEqual(
+            repr(keys.Key(self.ecObj).public()),
+            """<Elliptic Curve Public Key (256 bits)
 curve:
 \tecdsa-sha2-nistp256
 x:
 \t76282513020392096317118503144964731774299773481750550543382904345687059013883
-y:""" +
-"\n\t8154319786460285263226566476944164753434437589431431968106113715931064" +
-"6683104>\n")
-
+y:"""
+            + "\n\t8154319786460285263226566476944164753434437589431431968106113715931064"
+            + "6683104>\n",
+        )
 
     def test_reprPrivateECDSA(self):
         """
         The repr of a L{keys.Key} contains all the OpenSSH format for an ECDSA
         private key.
         """
-        self.assertEqual(repr(keys.Key(self.ecObj)),
-"""<Elliptic Curve Private Key (256 bits)
+        self.assertEqual(
+            repr(keys.Key(self.ecObj)),
+            """<Elliptic Curve Private Key (256 bits)
 curve:
 \tecdsa-sha2-nistp256
 privateValue:
 \t34638743477210341700964008455655698253555655678826059678074967909361042656500
 x:
 \t76282513020392096317118503144964731774299773481750550543382904345687059013883
-y:""" +
-"\n\t8154319786460285263226566476944164753434437589431431968106113715931064" +
-"6683104>\n")
-
+y:"""
+            + "\n\t8154319786460285263226566476944164753434437589431431968106113715931064"
+            + "6683104>\n",
+        )
 
 
 class PersistentRSAKeyTests(unittest.TestCase):
@@ -1209,7 +1208,6 @@ class PersistentRSAKeyTests(unittest.TestCase):
 
     if cryptography is None:
         skip = skipCryptography
-
 
     def test_providedArguments(self):
         """
@@ -1222,7 +1220,6 @@ class PersistentRSAKeyTests(unittest.TestCase):
         key = keys._getPersistentRSAKey(keyFile, keySize=512)
         self.assertEqual(key.size(), 512)
         self.assertTrue(keyFile.exists())
-
 
     def test_noRegeneration(self):
         """
@@ -1243,7 +1240,6 @@ class PersistentRSAKeyTests(unittest.TestCase):
         self.assertEqual(key.size(), 512)
         self.assertEqual(keyFile.getContent(), keyContent)
 
-
     def test_keySizeZero(self):
         """
         If the key generated by L{keys.getPersistentRSAKey} is set to None
@@ -1254,4 +1250,4 @@ class PersistentRSAKeyTests(unittest.TestCase):
 
         key = keys._getPersistentRSAKey(keyFile, keySize=512)
         key._keyObject = None
-        self.assertEqual( key.size(), 0)
+        self.assertEqual(key.size(), 0)

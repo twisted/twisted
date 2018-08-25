@@ -34,9 +34,7 @@ if requireModule("OpenSSL"):
     from cryptography.hazmat.backends import default_backend
     from cryptography.hazmat.primitives import hashes
     from cryptography.hazmat.primitives.asymmetric import rsa
-    from cryptography.hazmat.primitives.serialization import (
-        PrivateFormat, NoEncryption
-    )
+    from cryptography.hazmat.primitives.serialization import PrivateFormat, NoEncryption
 
     from cryptography.x509.oid import NameOID
     from cryptography.hazmat.primitives.serialization import Encoding
@@ -133,14 +131,13 @@ def counter(counter=itertools.count()):
     return next(counter)
 
 
-
 def makeCertificate(**kw):
     keypair = PKey()
     keypair.generate_key(TYPE_RSA, 1024)
 
     certificate = X509()
     certificate.gmtime_adj_notBefore(0)
-    certificate.gmtime_adj_notAfter(60 * 60 * 24 * 365) # One year
+    certificate.gmtime_adj_notAfter(60 * 60 * 24 * 365)  # One year
     for xname in certificate.get_issuer(), certificate.get_subject():
         for (k, v) in kw.items():
             setattr(xname, k, nativeString(v))
@@ -150,7 +147,6 @@ def makeCertificate(**kw):
     certificate.sign(keypair, "md5")
 
     return keypair, certificate
-
 
 
 def certificatesForAuthorityAndServer(serviceIdentity=u'example.com'):
@@ -174,9 +170,7 @@ def certificatesForAuthorityAndServer(serviceIdentity=u'example.com'):
     )
     oneDay = datetime.timedelta(1, 0, 0)
     privateKeyForCA = rsa.generate_private_key(
-        public_exponent=65537,
-        key_size=4096,
-        backend=default_backend()
+        public_exponent=65537, key_size=4096, backend=default_backend()
     )
     publicKeyForCA = privateKeyForCA.public_key()
     caCertificate = (
@@ -187,19 +181,16 @@ def certificatesForAuthorityAndServer(serviceIdentity=u'example.com'):
         .not_valid_after(datetime.datetime.today() + oneDay)
         .serial_number(x509.random_serial_number())
         .public_key(publicKeyForCA)
-        .add_extension(
-            x509.BasicConstraints(ca=True, path_length=9), critical=True,
-        )
+        .add_extension(x509.BasicConstraints(ca=True, path_length=9), critical=True)
         .sign(
-            private_key=privateKeyForCA, algorithm=hashes.SHA256(),
-            backend=default_backend()
+            private_key=privateKeyForCA,
+            algorithm=hashes.SHA256(),
+            backend=default_backend(),
         )
     )
 
     privateKeyForServer = rsa.generate_private_key(
-        public_exponent=65537,
-        key_size=4096,
-        backend=default_backend()
+        public_exponent=65537, key_size=4096, backend=default_backend()
     )
     publicKeyForServer = privateKeyForServer.public_key()
 
@@ -218,34 +209,29 @@ def certificatesForAuthorityAndServer(serviceIdentity=u'example.com'):
         .not_valid_after(datetime.datetime.today() + oneDay)
         .serial_number(x509.random_serial_number())
         .public_key(publicKeyForServer)
+        .add_extension(x509.BasicConstraints(ca=False, path_length=None), critical=True)
         .add_extension(
-            x509.BasicConstraints(ca=False, path_length=None), critical=True,
-        )
-        .add_extension(
-            x509.SubjectAlternativeName(
-                subjectAlternativeNames
-            ),
-            critical=True,
+            x509.SubjectAlternativeName(subjectAlternativeNames), critical=True
         )
         .sign(
-            private_key=privateKeyForCA, algorithm=hashes.SHA256(),
-            backend=default_backend()
+            private_key=privateKeyForCA,
+            algorithm=hashes.SHA256(),
+            backend=default_backend(),
         )
     )
-    caSelfCert = sslverify.Certificate.loadPEM(
-        caCertificate.public_bytes(Encoding.PEM)
-    )
+    caSelfCert = sslverify.Certificate.loadPEM(caCertificate.public_bytes(Encoding.PEM))
     serverCert = sslverify.PrivateCertificate.loadPEM(
-        b"\n".join([privateKeyForServer.private_bytes(
-                        Encoding.PEM,
-                        PrivateFormat.TraditionalOpenSSL,
-                        NoEncryption(),
-                    ),
-                    serverCertificate.public_bytes(Encoding.PEM)])
+        b"\n".join(
+            [
+                privateKeyForServer.private_bytes(
+                    Encoding.PEM, PrivateFormat.TraditionalOpenSSL, NoEncryption()
+                ),
+                serverCertificate.public_bytes(Encoding.PEM),
+            ]
+        )
     )
 
     return caSelfCert, serverCert
-
 
 
 def _loopbackTLSConnection(serverOpts, clientOpts):
@@ -266,16 +252,20 @@ def _loopbackTLSConnection(serverOpts, clientOpts):
         client-tls-protocol, client-inner-protocol and L{IOPump}
     @rtype: L{tuple}
     """
+
     class GreetingServer(protocol.Protocol):
         greeting = b"greetings!"
+
         def connectionMade(self):
             self.transport.write(self.greeting)
 
     class ListeningClient(protocol.Protocol):
         data = b''
         lostReason = None
+
         def dataReceived(self, data):
             self.data += data
+
         def connectionLost(self, reason):
             self.lostReason = reason
 
@@ -288,20 +278,17 @@ def _loopbackTLSConnection(serverOpts, clientOpts):
     plainServerFactory.protocol = lambda: serverWrappedProto
 
     clientFactory = TLSMemoryBIOFactory(
-        clientOpts, isClient=True,
-        wrappedFactory=plainServerFactory
+        clientOpts, isClient=True, wrappedFactory=plainServerFactory
     )
     serverFactory = TLSMemoryBIOFactory(
-        serverOpts, isClient=False,
-        wrappedFactory=plainClientFactory
+        serverOpts, isClient=False, wrappedFactory=plainClientFactory
     )
 
     sProto, cProto, pump = connectedServerAndClient(
         lambda: serverFactory.buildProtocol(None),
-        lambda: clientFactory.buildProtocol(None)
+        lambda: clientFactory.buildProtocol(None),
     )
     return sProto, cProto, serverWrappedProto, clientWrappedProto, pump
-
 
 
 def loopbackTLSConnection(trustRoot, privateKeyFile, chainedCertFile=None):
@@ -321,6 +308,7 @@ def loopbackTLSConnection(trustRoot, privateKeyFile, chainedCertFile=None):
     @return: 3-tuple of server-protocol, client-protocol, and L{IOPump}
     @rtype: L{tuple}
     """
+
     class ContextFactory(object):
         def getContext(self):
             """
@@ -343,11 +331,14 @@ def loopbackTLSConnection(trustRoot, privateKeyFile, chainedCertFile=None):
     return _loopbackTLSConnection(serverOpts, clientOpts)
 
 
-
-def loopbackTLSConnectionInMemory(trustRoot, privateKey,
-                                  serverCertificate, clientProtocols=None,
-                                  serverProtocols=None,
-                                  clientOptions=None):
+def loopbackTLSConnectionInMemory(
+    trustRoot,
+    privateKey,
+    serverCertificate,
+    clientProtocols=None,
+    serverProtocols=None,
+    clientOptions=None,
+):
     """
     Create a loopback TLS connection with the given trust and keys. Like
     L{loopbackTLSConnection}, but using in-memory certificates and keys rather
@@ -379,8 +370,7 @@ def loopbackTLSConnectionInMemory(trustRoot, privateKey,
         clientOptions = sslverify.OpenSSLCertificateOptions
 
     clientCertOpts = clientOptions(
-        trustRoot=trustRoot,
-        acceptableProtocols=clientProtocols
+        trustRoot=trustRoot, acceptableProtocols=clientProtocols
     )
     serverCertOpts = sslverify.OpenSSLCertificateOptions(
         privateKey=privateKey,
@@ -389,7 +379,6 @@ def loopbackTLSConnectionInMemory(trustRoot, privateKey,
     )
 
     return _loopbackTLSConnection(serverCertOpts, clientCertOpts)
-
 
 
 def pathContainingDumpOf(testCase, *dumpables):
@@ -417,7 +406,6 @@ def pathContainingDumpOf(testCase, *dumpables):
     return fname
 
 
-
 class DataCallbackProtocol(protocol.Protocol):
     def dataReceived(self, data):
         d, self.factory.onData = self.factory.onData, None
@@ -429,14 +417,15 @@ class DataCallbackProtocol(protocol.Protocol):
         if d is not None:
             d.errback(reason)
 
+
 class WritingProtocol(protocol.Protocol):
     byte = b'x'
+
     def connectionMade(self):
         self.transport.write(self.byte)
 
     def connectionLost(self, reason):
         self.factory.onLost.errback(reason)
-
 
 
 class FakeContext(object):
@@ -475,6 +464,7 @@ class FakeContext(object):
 
     @ivar _ecCurve: Set by L{set_tmp_ecdh}
     """
+
     _options = 0
 
     def __init__(self, method):
@@ -483,22 +473,17 @@ class FakeContext(object):
         self._defaultVerifyPathsSet = False
         self._ecCurve = None
 
-
     def set_options(self, options):
         self._options |= options
-
 
     def use_certificate(self, certificate):
         self._certificate = certificate
 
-
     def use_privatekey(self, privateKey):
         self._privateKey = privateKey
 
-
     def check_privatekey(self):
         return None
-
 
     def set_mode(self, mode):
         """
@@ -508,37 +493,29 @@ class FakeContext(object):
         """
         self._mode = mode
 
-
     def set_verify(self, flags, callback):
         self._verify = flags, callback
-
 
     def set_verify_depth(self, depth):
         self._verifyDepth = depth
 
-
     def set_session_id(self, sessionID):
         self._sessionID = sessionID
-
 
     def add_extra_chain_cert(self, cert):
         self._extraCertChain.append(cert)
 
-
     def set_cipher_list(self, cipherList):
         self._cipherList = cipherList
 
-
     def load_tmp_dh(self, dhfilename):
         self._dhFilename = dhfilename
-
 
     def set_default_verify_paths(self):
         """
         Set the default paths for the platform.
         """
         self._defaultVerifyPathsSet = True
-
 
     def set_tmp_ecdh(self, curve):
         """
@@ -550,11 +527,11 @@ class FakeContext(object):
         self._ecCurve = curve
 
 
-
 class ClientOptionsTests(unittest.SynchronousTestCase):
     """
     Tests for L{sslverify.optionsForClientTLS}.
     """
+
     if skipSSL:
         skip = skipSSL
 
@@ -567,14 +544,14 @@ class ClientOptionsTests(unittest.SynchronousTestCase):
         error = self.assertRaises(
             TypeError,
             sslverify.optionsForClientTLS,
-            hostname=u'alpha', someRandomThing=u'beta',
+            hostname=u'alpha',
+            someRandomThing=u'beta',
         )
         self.assertEqual(
             str(error),
             "optionsForClientTLS() got an unexpected keyword argument "
-            "'someRandomThing'"
+            "'someRandomThing'",
         )
-
 
     def test_bytesFailFast(self):
         """
@@ -582,15 +559,12 @@ class ClientOptionsTests(unittest.SynchronousTestCase):
         L{sslverify.optionsForClientTLS} it immediately raises a L{TypeError}.
         """
         error = self.assertRaises(
-            TypeError,
-            sslverify.optionsForClientTLS, b'not-actually-a-hostname.com'
+            TypeError, sslverify.optionsForClientTLS, b'not-actually-a-hostname.com'
         )
         expectedText = (
-            "optionsForClientTLS requires text for host names, not " +
-            bytes.__name__
+            "optionsForClientTLS requires text for host names, not " + bytes.__name__
         )
         self.assertEqual(str(error), expectedText)
-
 
     def test_dNSNameHostname(self):
         """
@@ -600,7 +574,6 @@ class ClientOptionsTests(unittest.SynchronousTestCase):
         options = sslverify.optionsForClientTLS(u'example.com')
         self.assertTrue(options._sendSNI)
 
-
     def test_IPv4AddressHostname(self):
         """
         If you pass an IPv4 address to L{sslverify.optionsForClientTLS}
@@ -609,7 +582,6 @@ class ClientOptionsTests(unittest.SynchronousTestCase):
         options = sslverify.optionsForClientTLS(u'127.0.0.1')
         self.assertFalse(options._sendSNI)
 
-
     def test_IPv6AddressHostname(self):
         """
         If you pass an IPv6 address to L{sslverify.optionsForClientTLS}
@@ -617,7 +589,6 @@ class ClientOptionsTests(unittest.SynchronousTestCase):
         """
         options = sslverify.optionsForClientTLS(u'::1')
         self.assertFalse(options._sendSNI)
-
 
 
 class FakeChooseDiffieHellmanEllipticCurve(object):
@@ -630,7 +601,6 @@ class FakeChooseDiffieHellmanEllipticCurve(object):
         A no-op constructor.
         """
 
-
     def configureECDHCurve(self, ctx):
         """
         A null configuration.
@@ -640,39 +610,33 @@ class FakeChooseDiffieHellmanEllipticCurve(object):
         """
 
 
-
 class OpenSSLOptionsTestsMixin(object):
     """
     A mixin for L{OpenSSLOptions} test cases creates client and server
     certificates, signs them with a CA, and provides a L{loopback}
     that creates TLS a connections with them.
     """
+
     if skipSSL:
         skip = skipSSL
 
     serverPort = clientConn = None
     onServerLost = onClientLost = None
 
-
     def setUp(self):
         """
         Create class variables of client and server certificates.
         """
         self.sKey, self.sCert = makeCertificate(
-            O=b"Server Test Certificate",
-            CN=b"server")
+            O=b"Server Test Certificate", CN=b"server"
+        )
         self.cKey, self.cCert = makeCertificate(
-            O=b"Client Test Certificate",
-            CN=b"client")
-        self.caCert1 = makeCertificate(
-            O=b"CA Test Certificate 1",
-            CN=b"ca1")[1]
-        self.caCert2 = makeCertificate(
-            O=b"CA Test Certificate",
-            CN=b"ca2")[1]
+            O=b"Client Test Certificate", CN=b"client"
+        )
+        self.caCert1 = makeCertificate(O=b"CA Test Certificate 1", CN=b"ca1")[1]
+        self.caCert2 = makeCertificate(O=b"CA Test Certificate", CN=b"ca2")[1]
         self.caCerts = [self.caCert1, self.caCert2]
         self.extraCertChain = self.caCerts
-
 
     def tearDown(self):
         if self.serverPort is not None:
@@ -688,9 +652,14 @@ class OpenSSLOptionsTestsMixin(object):
 
         return defer.DeferredList(L, consumeErrors=True)
 
-
-    def loopback(self, serverCertOpts, clientCertOpts,
-                 onServerLost=None, onClientLost=None, onData=None):
+    def loopback(
+        self,
+        serverCertOpts,
+        clientCertOpts,
+        onServerLost=None,
+        onClientLost=None,
+        onData=None,
+    ):
         if onServerLost is None:
             self.onServerLost = onServerLost = defer.Deferred()
         if onClientLost is None:
@@ -708,9 +677,9 @@ class OpenSSLOptionsTestsMixin(object):
         clientFactory.onLost = onClientLost
 
         self.serverPort = reactor.listenSSL(0, serverFactory, serverCertOpts)
-        self.clientConn = reactor.connectSSL('127.0.0.1',
-                self.serverPort.getHost().port, clientFactory, clientCertOpts)
-
+        self.clientConn = reactor.connectSSL(
+            '127.0.0.1', self.serverPort.getHost().port, clientFactory, clientCertOpts
+        )
 
 
 class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, unittest.TestCase):
@@ -724,40 +693,38 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, unittest.TestCase):
         L{sslverify._ChooseDiffieHellmanEllipticCurve}.
         """
         super(OpenSSLOptionsTests, self).setUp()
-        self.patch(sslverify, "_ChooseDiffieHellmanEllipticCurve",
-                   FakeChooseDiffieHellmanEllipticCurve)
-
+        self.patch(
+            sslverify,
+            "_ChooseDiffieHellmanEllipticCurve",
+            FakeChooseDiffieHellmanEllipticCurve,
+        )
 
     def test_constructorWithOnlyPrivateKey(self):
         """
         C{privateKey} and C{certificate} make only sense if both are set.
         """
         self.assertRaises(
-            ValueError,
-            sslverify.OpenSSLCertificateOptions, privateKey=self.sKey
+            ValueError, sslverify.OpenSSLCertificateOptions, privateKey=self.sKey
         )
-
 
     def test_constructorWithOnlyCertificate(self):
         """
         C{privateKey} and C{certificate} make only sense if both are set.
         """
         self.assertRaises(
-            ValueError,
-            sslverify.OpenSSLCertificateOptions, certificate=self.sCert
+            ValueError, sslverify.OpenSSLCertificateOptions, certificate=self.sCert
         )
-
 
     def test_constructorWithCertificateAndPrivateKey(self):
         """
         Specifying C{privateKey} and C{certificate} initializes correctly.
         """
-        opts = sslverify.OpenSSLCertificateOptions(privateKey=self.sKey,
-                                                   certificate=self.sCert)
+        opts = sslverify.OpenSSLCertificateOptions(
+            privateKey=self.sKey, certificate=self.sCert
+        )
         self.assertEqual(opts.privateKey, self.sKey)
         self.assertEqual(opts.certificate, self.sCert)
         self.assertEqual(opts.extraCertChain, [])
-
 
     def test_constructorDoesNotAllowVerifyWithoutCACerts(self):
         """
@@ -766,9 +733,10 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, unittest.TestCase):
         self.assertRaises(
             ValueError,
             sslverify.OpenSSLCertificateOptions,
-            privateKey=self.sKey, certificate=self.sCert, verify=True
+            privateKey=self.sKey,
+            certificate=self.sCert,
+            verify=True,
         )
-
 
     def test_constructorDoesNotAllowLegacyWithTrustRoot(self):
         """
@@ -779,39 +747,43 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, unittest.TestCase):
         self.assertRaises(
             TypeError,
             sslverify.OpenSSLCertificateOptions,
-            privateKey=self.sKey, certificate=self.sCert,
-            verify=True, trustRoot=None, caCerts=self.caCerts,
+            privateKey=self.sKey,
+            certificate=self.sCert,
+            verify=True,
+            trustRoot=None,
+            caCerts=self.caCerts,
         )
         self.assertRaises(
             TypeError,
             sslverify.OpenSSLCertificateOptions,
-            privateKey=self.sKey, certificate=self.sCert,
-            trustRoot=None, requireCertificate=True,
+            privateKey=self.sKey,
+            certificate=self.sCert,
+            trustRoot=None,
+            requireCertificate=True,
         )
-
 
     def test_constructorAllowsCACertsWithoutVerify(self):
         """
         It's currently a NOP, but valid.
         """
-        opts = sslverify.OpenSSLCertificateOptions(privateKey=self.sKey,
-                                                   certificate=self.sCert,
-                                                   caCerts=self.caCerts)
+        opts = sslverify.OpenSSLCertificateOptions(
+            privateKey=self.sKey, certificate=self.sCert, caCerts=self.caCerts
+        )
         self.assertFalse(opts.verify)
         self.assertEqual(self.caCerts, opts.caCerts)
-
 
     def test_constructorWithVerifyAndCACerts(self):
         """
         Specifying C{verify} and C{caCerts} initializes correctly.
         """
-        opts = sslverify.OpenSSLCertificateOptions(privateKey=self.sKey,
-                                                   certificate=self.sCert,
-                                                   verify=True,
-                                                   caCerts=self.caCerts)
+        opts = sslverify.OpenSSLCertificateOptions(
+            privateKey=self.sKey,
+            certificate=self.sCert,
+            verify=True,
+            caCerts=self.caCerts,
+        )
         self.assertTrue(opts.verify)
         self.assertEqual(self.caCerts, opts.caCerts)
-
 
     def test_constructorSetsExtraChain(self):
         """
@@ -825,7 +797,6 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, unittest.TestCase):
         )
         self.assertEqual(self.extraCertChain, opts.extraCertChain)
 
-
     def test_constructorDoesNotAllowExtraChainWithoutPrivateKey(self):
         """
         A C{extraCertChain} without C{privateKey} doesn't make sense and is
@@ -838,7 +809,6 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, unittest.TestCase):
             extraCertChain=self.extraCertChain,
         )
 
-
     def test_constructorDoesNotAllowExtraChainWithOutPrivateKey(self):
         """
         A C{extraCertChain} without C{certificate} doesn't make sense and is
@@ -850,7 +820,6 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, unittest.TestCase):
             privateKey=self.sKey,
             extraCertChain=self.extraCertChain,
         )
-
 
     def test_extraChainFilesAreAddedIfSupplied(self):
         """
@@ -869,7 +838,6 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, unittest.TestCase):
         self.assertEqual(self.sCert, ctx._certificate)
         self.assertEqual(self.extraCertChain, ctx._extraCertChain)
 
-
     def test_extraChainDoesNotBreakPyOpenSSL(self):
         """
         C{extraCertChain} doesn't break C{OpenSSL.SSL.Context} creation.
@@ -882,7 +850,6 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, unittest.TestCase):
         ctx = opts.getContext()
         self.assertIsInstance(ctx, SSL.Context)
 
-
     def test_acceptableCiphersAreAlwaysSet(self):
         """
         If the user doesn't supply custom acceptable ciphers, a shipped secure
@@ -890,13 +857,11 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, unittest.TestCase):
         cipher string we set varies with platforms.
         """
         opts = sslverify.OpenSSLCertificateOptions(
-            privateKey=self.sKey,
-            certificate=self.sCert,
+            privateKey=self.sKey, certificate=self.sCert
         )
         opts._contextFactory = FakeContext
         ctx = opts.getContext()
         self.assertEqual(opts._cipherString.encode('ascii'), ctx._cipherList)
-
 
     def test_givesMeaningfulErrorMessageIfNoCipherMatches(self):
         """
@@ -908,15 +873,16 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, unittest.TestCase):
             sslverify.OpenSSLCertificateOptions,
             privateKey=self.sKey,
             certificate=self.sCert,
-            acceptableCiphers=
-            sslverify.OpenSSLAcceptableCiphers.fromOpenSSLCipherString('')
+            acceptableCiphers=sslverify.OpenSSLAcceptableCiphers.fromOpenSSLCipherString(
+                ''
+            ),
         )
-
 
     def test_honorsAcceptableCiphersArgument(self):
         """
         If acceptable ciphers are passed, they are used.
         """
+
         @implementer(interfaces.IAcceptableCiphers)
         class FakeAcceptableCiphers(object):
             def selectCiphers(self, _):
@@ -931,35 +897,31 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, unittest.TestCase):
         ctx = opts.getContext()
         self.assertEqual(b'sentinel', ctx._cipherList)
 
-
     def test_basicSecurityOptionsAreSet(self):
         """
         Every context must have C{OP_NO_SSLv2}, C{OP_NO_COMPRESSION}, and
         C{OP_CIPHER_SERVER_PREFERENCE} set.
         """
         opts = sslverify.OpenSSLCertificateOptions(
-            privateKey=self.sKey,
-            certificate=self.sCert,
+            privateKey=self.sKey, certificate=self.sCert
         )
         opts._contextFactory = FakeContext
         ctx = opts.getContext()
-        options = (SSL.OP_NO_SSLv2 | SSL.OP_NO_COMPRESSION |
-                   SSL.OP_CIPHER_SERVER_PREFERENCE)
+        options = (
+            SSL.OP_NO_SSLv2 | SSL.OP_NO_COMPRESSION | SSL.OP_CIPHER_SERVER_PREFERENCE
+        )
         self.assertEqual(options, ctx._options & options)
-
 
     def test_modeIsSet(self):
         """
         Every context must be in C{MODE_RELEASE_BUFFERS} mode.
         """
         opts = sslverify.OpenSSLCertificateOptions(
-            privateKey=self.sKey,
-            certificate=self.sCert,
+            privateKey=self.sKey, certificate=self.sCert
         )
         opts._contextFactory = FakeContext
         ctx = opts.getContext()
         self.assertEqual(SSL.MODE_RELEASE_BUFFERS, ctx._mode)
-
 
     def test_singleUseKeys(self):
         """
@@ -967,15 +929,12 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, unittest.TestCase):
         C{OP_SINGLE_DH_USE} and C{OP_SINGLE_ECDH_USE} set.
         """
         opts = sslverify.OpenSSLCertificateOptions(
-            privateKey=self.sKey,
-            certificate=self.sCert,
-            enableSingleUseKeys=True,
+            privateKey=self.sKey, certificate=self.sCert, enableSingleUseKeys=True
         )
         opts._contextFactory = FakeContext
         ctx = opts.getContext()
         options = SSL.OP_SINGLE_DH_USE | SSL.OP_SINGLE_ECDH_USE
         self.assertEqual(options, ctx._options & options)
-
 
     def test_methodIsDeprecated(self):
         """
@@ -983,22 +942,21 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, unittest.TestCase):
         deprecated.
         """
         sslverify.OpenSSLCertificateOptions(
-            privateKey=self.sKey,
-            certificate=self.sCert,
-            method=SSL.SSLv23_METHOD,
+            privateKey=self.sKey, certificate=self.sCert, method=SSL.SSLv23_METHOD
         )
 
-        message = ("Passing method to twisted.internet.ssl.CertificateOptions "
-                   "was deprecated in Twisted 17.1.0. Please use a "
-                   "combination of insecurelyLowerMinimumTo, raiseMinimumTo, "
-                   "and lowerMaximumSecurityTo instead, as Twisted will "
-                   "correctly configure the method.")
+        message = (
+            "Passing method to twisted.internet.ssl.CertificateOptions "
+            "was deprecated in Twisted 17.1.0. Please use a "
+            "combination of insecurelyLowerMinimumTo, raiseMinimumTo, "
+            "and lowerMaximumSecurityTo instead, as Twisted will "
+            "correctly configure the method."
+        )
 
         warnings = self.flushWarnings([self.test_methodIsDeprecated])
         self.assertEqual(1, len(warnings))
         self.assertEqual(DeprecationWarning, warnings[0]['category'])
         self.assertEqual(message, warnings[0]['message'])
-
 
     def test_tlsv1ByDefault(self):
         """
@@ -1007,15 +965,17 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, unittest.TestCase):
         given.
         """
         opts = sslverify.OpenSSLCertificateOptions(
-            privateKey=self.sKey,
-            certificate=self.sCert
+            privateKey=self.sKey, certificate=self.sCert
         )
         opts._contextFactory = FakeContext
         ctx = opts.getContext()
-        options = (SSL.OP_NO_SSLv2 | SSL.OP_NO_COMPRESSION |
-                   SSL.OP_CIPHER_SERVER_PREFERENCE | SSL.OP_NO_SSLv3)
+        options = (
+            SSL.OP_NO_SSLv2
+            | SSL.OP_NO_COMPRESSION
+            | SSL.OP_CIPHER_SERVER_PREFERENCE
+            | SSL.OP_NO_SSLv3
+        )
         self.assertEqual(options, ctx._options & options)
-
 
     def test_tlsProtocolsAtLeastWithMinimum(self):
         """
@@ -1034,7 +994,6 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, unittest.TestCase):
         # Best error message
         self.assertEqual(e.exception.args, ("nope",))
 
-
     def test_tlsProtocolsNoMethodWithAtLeast(self):
         """
         Passing C{raiseMinimumTo} along with C{method} to
@@ -1051,7 +1010,6 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, unittest.TestCase):
 
         # Best error message
         self.assertEqual(e.exception.args, ("nope",))
-
 
     def test_tlsProtocolsNoMethodWithMinimum(self):
         """
@@ -1070,7 +1028,6 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, unittest.TestCase):
         # Best error message
         self.assertEqual(e.exception.args, ("nope",))
 
-
     def test_tlsProtocolsNoMethodWithMaximum(self):
         """
         Passing C{lowerMaximumSecurityTo} along with C{method} to
@@ -1088,7 +1045,6 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, unittest.TestCase):
         # Best error message
         self.assertEqual(e.exception.args, ("nope",))
 
-
     def test_tlsVersionRangeInOrder(self):
         """
         Passing out of order TLS versions to C{insecurelyLowerMinimumTo} and
@@ -1099,12 +1055,18 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, unittest.TestCase):
                 privateKey=self.sKey,
                 certificate=self.sCert,
                 insecurelyLowerMinimumTo=sslverify.TLSVersion.TLSv1_0,
-                lowerMaximumSecurityTo=sslverify.TLSVersion.SSLv3)
+                lowerMaximumSecurityTo=sslverify.TLSVersion.SSLv3,
+            )
 
-        self.assertEqual(e.exception.args, (
-            ("insecurelyLowerMinimumTo needs to be lower than "
-             "lowerMaximumSecurityTo"),))
-
+        self.assertEqual(
+            e.exception.args,
+            (
+                (
+                    "insecurelyLowerMinimumTo needs to be lower than "
+                    "lowerMaximumSecurityTo"
+                ),
+            ),
+        )
 
     def test_tlsVersionRangeInOrderAtLeast(self):
         """
@@ -1116,12 +1078,13 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, unittest.TestCase):
                 privateKey=self.sKey,
                 certificate=self.sCert,
                 raiseMinimumTo=sslverify.TLSVersion.TLSv1_0,
-                lowerMaximumSecurityTo=sslverify.TLSVersion.SSLv3)
+                lowerMaximumSecurityTo=sslverify.TLSVersion.SSLv3,
+            )
 
-        self.assertEqual(e.exception.args, (
-            ("raiseMinimumTo needs to be lower than "
-             "lowerMaximumSecurityTo"),))
-
+        self.assertEqual(
+            e.exception.args,
+            (("raiseMinimumTo needs to be lower than " "lowerMaximumSecurityTo"),),
+        )
 
     def test_tlsProtocolsreduceToMaxWithoutMin(self):
         """
@@ -1137,11 +1100,16 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, unittest.TestCase):
         )
         opts._contextFactory = FakeContext
         ctx = opts.getContext()
-        options = (SSL.OP_NO_SSLv2 | SSL.OP_NO_COMPRESSION |
-                   SSL.OP_CIPHER_SERVER_PREFERENCE | SSL.OP_NO_TLSv1 |
-                   SSL.OP_NO_TLSv1_1 | SSL.OP_NO_TLSv1_2 | opts._OP_NO_TLSv1_3)
+        options = (
+            SSL.OP_NO_SSLv2
+            | SSL.OP_NO_COMPRESSION
+            | SSL.OP_CIPHER_SERVER_PREFERENCE
+            | SSL.OP_NO_TLSv1
+            | SSL.OP_NO_TLSv1_1
+            | SSL.OP_NO_TLSv1_2
+            | opts._OP_NO_TLSv1_3
+        )
         self.assertEqual(options, ctx._options & options)
-
 
     def test_tlsProtocolsSSLv3Only(self):
         """
@@ -1157,11 +1125,16 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, unittest.TestCase):
         )
         opts._contextFactory = FakeContext
         ctx = opts.getContext()
-        options = (SSL.OP_NO_SSLv2 | SSL.OP_NO_COMPRESSION |
-                   SSL.OP_CIPHER_SERVER_PREFERENCE | SSL.OP_NO_TLSv1 |
-                   SSL.OP_NO_TLSv1_1 | SSL.OP_NO_TLSv1_2 | opts._OP_NO_TLSv1_3)
+        options = (
+            SSL.OP_NO_SSLv2
+            | SSL.OP_NO_COMPRESSION
+            | SSL.OP_CIPHER_SERVER_PREFERENCE
+            | SSL.OP_NO_TLSv1
+            | SSL.OP_NO_TLSv1_1
+            | SSL.OP_NO_TLSv1_2
+            | opts._OP_NO_TLSv1_3
+        )
         self.assertEqual(options, ctx._options & options)
-
 
     def test_tlsProtocolsTLSv1Point0Only(self):
         """
@@ -1177,11 +1150,16 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, unittest.TestCase):
         )
         opts._contextFactory = FakeContext
         ctx = opts.getContext()
-        options = (SSL.OP_NO_SSLv2 | SSL.OP_NO_COMPRESSION |
-                   SSL.OP_CIPHER_SERVER_PREFERENCE | SSL.OP_NO_SSLv3 |
-                   SSL.OP_NO_TLSv1_1 | SSL.OP_NO_TLSv1_2 | opts._OP_NO_TLSv1_3)
+        options = (
+            SSL.OP_NO_SSLv2
+            | SSL.OP_NO_COMPRESSION
+            | SSL.OP_CIPHER_SERVER_PREFERENCE
+            | SSL.OP_NO_SSLv3
+            | SSL.OP_NO_TLSv1_1
+            | SSL.OP_NO_TLSv1_2
+            | opts._OP_NO_TLSv1_3
+        )
         self.assertEqual(options, ctx._options & options)
-
 
     def test_tlsProtocolsTLSv1Point1Only(self):
         """
@@ -1197,11 +1175,16 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, unittest.TestCase):
         )
         opts._contextFactory = FakeContext
         ctx = opts.getContext()
-        options = (SSL.OP_NO_SSLv2 | SSL.OP_NO_COMPRESSION |
-                   SSL.OP_CIPHER_SERVER_PREFERENCE | SSL.OP_NO_SSLv3 |
-                   SSL.OP_NO_TLSv1 | SSL.OP_NO_TLSv1_2 | opts._OP_NO_TLSv1_3)
+        options = (
+            SSL.OP_NO_SSLv2
+            | SSL.OP_NO_COMPRESSION
+            | SSL.OP_CIPHER_SERVER_PREFERENCE
+            | SSL.OP_NO_SSLv3
+            | SSL.OP_NO_TLSv1
+            | SSL.OP_NO_TLSv1_2
+            | opts._OP_NO_TLSv1_3
+        )
         self.assertEqual(options, ctx._options & options)
-
 
     def test_tlsProtocolsTLSv1Point2Only(self):
         """
@@ -1217,11 +1200,16 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, unittest.TestCase):
         )
         opts._contextFactory = FakeContext
         ctx = opts.getContext()
-        options = (SSL.OP_NO_SSLv2 | SSL.OP_NO_COMPRESSION |
-                   SSL.OP_CIPHER_SERVER_PREFERENCE | SSL.OP_NO_SSLv3 |
-                   SSL.OP_NO_TLSv1 | SSL.OP_NO_TLSv1_1 | opts._OP_NO_TLSv1_3)
+        options = (
+            SSL.OP_NO_SSLv2
+            | SSL.OP_NO_COMPRESSION
+            | SSL.OP_CIPHER_SERVER_PREFERENCE
+            | SSL.OP_NO_SSLv3
+            | SSL.OP_NO_TLSv1
+            | SSL.OP_NO_TLSv1_1
+            | opts._OP_NO_TLSv1_3
+        )
         self.assertEqual(options, ctx._options & options)
-
 
     def test_tlsProtocolsAllModernTLS(self):
         """
@@ -1238,11 +1226,14 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, unittest.TestCase):
         )
         opts._contextFactory = FakeContext
         ctx = opts.getContext()
-        options = (SSL.OP_NO_SSLv2 | SSL.OP_NO_COMPRESSION |
-                   SSL.OP_CIPHER_SERVER_PREFERENCE | SSL.OP_NO_SSLv3 |
-                   opts._OP_NO_TLSv1_3)
+        options = (
+            SSL.OP_NO_SSLv2
+            | SSL.OP_NO_COMPRESSION
+            | SSL.OP_CIPHER_SERVER_PREFERENCE
+            | SSL.OP_NO_SSLv3
+            | opts._OP_NO_TLSv1_3
+        )
         self.assertEqual(options, ctx._options & options)
-
 
     def test_tlsProtocolsAtLeastAllSecureTLS(self):
         """
@@ -1253,15 +1244,19 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, unittest.TestCase):
         opts = sslverify.OpenSSLCertificateOptions(
             privateKey=self.sKey,
             certificate=self.sCert,
-            raiseMinimumTo=sslverify.TLSVersion.TLSv1_2
+            raiseMinimumTo=sslverify.TLSVersion.TLSv1_2,
         )
         opts._contextFactory = FakeContext
         ctx = opts.getContext()
-        options = (SSL.OP_NO_SSLv2 | SSL.OP_NO_COMPRESSION |
-                   SSL.OP_CIPHER_SERVER_PREFERENCE | SSL.OP_NO_SSLv3 |
-                   SSL.OP_NO_TLSv1 | SSL.OP_NO_TLSv1_1)
+        options = (
+            SSL.OP_NO_SSLv2
+            | SSL.OP_NO_COMPRESSION
+            | SSL.OP_CIPHER_SERVER_PREFERENCE
+            | SSL.OP_NO_SSLv3
+            | SSL.OP_NO_TLSv1
+            | SSL.OP_NO_TLSv1_1
+        )
         self.assertEqual(options, ctx._options & options)
-
 
     def test_tlsProtocolsAtLeastWillAcceptHigherDefault(self):
         """
@@ -1272,19 +1267,21 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, unittest.TestCase):
         opts = sslverify.OpenSSLCertificateOptions(
             privateKey=self.sKey,
             certificate=self.sCert,
-            raiseMinimumTo=sslverify.TLSVersion.SSLv3
+            raiseMinimumTo=sslverify.TLSVersion.SSLv3,
         )
         opts._contextFactory = FakeContext
         ctx = opts.getContext()
         # Future maintainer warning: this will break if we change our default
         # up, so you should change it to add the relevant OP_NO flags when we
         # do make that change and this test fails.
-        options = (SSL.OP_NO_SSLv2 | SSL.OP_NO_COMPRESSION |
-                   SSL.OP_CIPHER_SERVER_PREFERENCE | SSL.OP_NO_SSLv3)
+        options = (
+            SSL.OP_NO_SSLv2
+            | SSL.OP_NO_COMPRESSION
+            | SSL.OP_CIPHER_SERVER_PREFERENCE
+            | SSL.OP_NO_SSLv3
+        )
         self.assertEqual(options, ctx._options & options)
-        self.assertEqual(opts._defaultMinimumTLSVersion,
-                         sslverify.TLSVersion.TLSv1_0)
-
+        self.assertEqual(opts._defaultMinimumTLSVersion, sslverify.TLSVersion.TLSv1_0)
 
     def test_tlsProtocolsAllSecureTLS(self):
         """
@@ -1295,36 +1292,35 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, unittest.TestCase):
         opts = sslverify.OpenSSLCertificateOptions(
             privateKey=self.sKey,
             certificate=self.sCert,
-            insecurelyLowerMinimumTo=sslverify.TLSVersion.TLSv1_2
+            insecurelyLowerMinimumTo=sslverify.TLSVersion.TLSv1_2,
         )
         opts._contextFactory = FakeContext
         ctx = opts.getContext()
-        options = (SSL.OP_NO_SSLv2 | SSL.OP_NO_COMPRESSION |
-                   SSL.OP_CIPHER_SERVER_PREFERENCE | SSL.OP_NO_SSLv3 |
-                   SSL.OP_NO_TLSv1 | SSL.OP_NO_TLSv1_1)
+        options = (
+            SSL.OP_NO_SSLv2
+            | SSL.OP_NO_COMPRESSION
+            | SSL.OP_CIPHER_SERVER_PREFERENCE
+            | SSL.OP_NO_SSLv3
+            | SSL.OP_NO_TLSv1
+            | SSL.OP_NO_TLSv1_1
+        )
         self.assertEqual(options, ctx._options & options)
-
 
     def test_dhParams(self):
         """
         If C{dhParams} is set, they are loaded into each new context.
         """
+
         class FakeDiffieHellmanParameters(object):
             _dhFile = FilePath(b'dh.params')
 
         dhParams = FakeDiffieHellmanParameters()
         opts = sslverify.OpenSSLCertificateOptions(
-            privateKey=self.sKey,
-            certificate=self.sCert,
-            dhParameters=dhParams,
+            privateKey=self.sKey, certificate=self.sCert, dhParameters=dhParams
         )
         opts._contextFactory = FakeContext
         ctx = opts.getContext()
-        self.assertEqual(
-            FakeDiffieHellmanParameters._dhFile.path,
-            ctx._dhFilename
-        )
-
+        self.assertEqual(FakeDiffieHellmanParameters._dhFile.path, ctx._dhFilename)
 
     def test_abbreviatingDistinguishedNames(self):
         """
@@ -1332,27 +1328,31 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, unittest.TestCase):
         complete names.
         """
         self.assertEqual(
-                sslverify.DN(CN=b'a', OU=b'hello'),
-                sslverify.DistinguishedName(commonName=b'a',
-                                            organizationalUnitName=b'hello'))
+            sslverify.DN(CN=b'a', OU=b'hello'),
+            sslverify.DistinguishedName(
+                commonName=b'a', organizationalUnitName=b'hello'
+            ),
+        )
         self.assertNotEqual(
-                sslverify.DN(CN=b'a', OU=b'hello'),
-                sslverify.DN(CN=b'a', OU=b'hello', emailAddress=b'xxx'))
+            sslverify.DN(CN=b'a', OU=b'hello'),
+            sslverify.DN(CN=b'a', OU=b'hello', emailAddress=b'xxx'),
+        )
         dn = sslverify.DN(CN=b'abcdefg')
         self.assertRaises(AttributeError, setattr, dn, 'Cn', b'x')
         self.assertEqual(dn.CN, dn.commonName)
         dn.CN = b'bcdefga'
         self.assertEqual(dn.CN, dn.commonName)
 
-
     def testInspectDistinguishedName(self):
-        n = sslverify.DN(commonName=b'common name',
-                         organizationName=b'organization name',
-                         organizationalUnitName=b'organizational unit name',
-                         localityName=b'locality name',
-                         stateOrProvinceName=b'state or province name',
-                         countryName=b'country name',
-                         emailAddress=b'email address')
+        n = sslverify.DN(
+            commonName=b'common name',
+            organizationName=b'organization name',
+            organizationalUnitName=b'organizational unit name',
+            localityName=b'locality name',
+            stateOrProvinceName=b'state or province name',
+            countryName=b'country name',
+            emailAddress=b'email address',
+        )
         s = n.inspect()
         for k in [
             'common name',
@@ -1361,10 +1361,10 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, unittest.TestCase):
             'locality name',
             'state or province name',
             'country name',
-            'email address']:
+            'email address',
+        ]:
             self.assertIn(k, s, "%r was not in inspect output." % (k,))
             self.assertIn(k.title(), s, "%r was not in inspect output." % (k,))
-
 
     def testInspectDistinguishedNameWithoutAllFields(self):
         n = sslverify.DN(localityName=b'locality name')
@@ -1375,12 +1375,12 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, unittest.TestCase):
             'organizational unit name',
             'state or province name',
             'country name',
-            'email address']:
+            'email address',
+        ]:
             self.assertNotIn(k, s, "%r was in inspect output." % (k,))
             self.assertNotIn(k.title(), s, "%r was in inspect output." % (k,))
         self.assertIn('locality name', s)
         self.assertIn('Locality Name', s)
-
 
     def test_inspectCertificate(self):
         """
@@ -1400,28 +1400,30 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, unittest.TestCase):
         # computing it here.
         self.assertEqual(
             c.inspect().split('\n'),
-            ["Certificate For Subject:",
-             "               Common Name: example.twistedmatrix.com",
-             "              Country Name: US",
-             "             Email Address: nobody@twistedmatrix.com",
-             "             Locality Name: Boston",
-             "         Organization Name: Twisted Matrix Labs",
-             "  Organizational Unit Name: Security",
-             "    State Or Province Name: Massachusetts",
-             "",
-             "Issuer:",
-             "               Common Name: example.twistedmatrix.com",
-             "              Country Name: US",
-             "             Email Address: nobody@twistedmatrix.com",
-             "             Locality Name: Boston",
-             "         Organization Name: Twisted Matrix Labs",
-             "  Organizational Unit Name: Security",
-             "    State Or Province Name: Massachusetts",
-             "",
-             "Serial Number: 12345",
-             "Digest: C4:96:11:00:30:C3:EC:EE:A3:55:AA:ED:8C:84:85:18",
-             "Public Key with Hash: " + keyHash])
-
+            [
+                "Certificate For Subject:",
+                "               Common Name: example.twistedmatrix.com",
+                "              Country Name: US",
+                "             Email Address: nobody@twistedmatrix.com",
+                "             Locality Name: Boston",
+                "         Organization Name: Twisted Matrix Labs",
+                "  Organizational Unit Name: Security",
+                "    State Or Province Name: Massachusetts",
+                "",
+                "Issuer:",
+                "               Common Name: example.twistedmatrix.com",
+                "              Country Name: US",
+                "             Email Address: nobody@twistedmatrix.com",
+                "             Locality Name: Boston",
+                "         Organization Name: Twisted Matrix Labs",
+                "  Organizational Unit Name: Security",
+                "    State Or Province Name: Massachusetts",
+                "",
+                "Serial Number: 12345",
+                "Digest: C4:96:11:00:30:C3:EC:EE:A3:55:AA:ED:8C:84:85:18",
+                "Public Key with Hash: " + keyHash,
+            ],
+        )
 
     def test_publicKeyMatching(self):
         """
@@ -1435,7 +1437,6 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, unittest.TestCase):
 
         self.assertTrue(hostA.getPublicKey().matches(hostB.getPublicKey()))
         self.assertFalse(peerA.getPublicKey().matches(hostA.getPublicKey()))
-
 
     def test_certificateOptionsSerialization(self):
         """
@@ -1453,7 +1454,8 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, unittest.TestCase):
             enableSingleUseKeys=False,
             enableSessions=False,
             fixBrokenPeers=True,
-            enableSessionTickets=True)
+            enableSessionTickets=True,
+        )
         context = firstOpts.getContext()
         self.assertIs(context, firstOpts._context)
         self.assertIsNotNone(context)
@@ -1476,9 +1478,11 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, unittest.TestCase):
         self.assertTrue(opts.enableSessionTickets)
 
     test_certificateOptionsSerialization.suppress = [
-        util.suppress(category = DeprecationWarning,
-            message='twisted\.internet\._sslverify\.*__[gs]etstate__')]
-
+        util.suppress(
+            category=DeprecationWarning,
+            message='twisted\.internet\._sslverify\.*__[gs]etstate__',
+        )
+    ]
 
     def test_certificateOptionsSessionTickets(self):
         """
@@ -1488,7 +1492,6 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, unittest.TestCase):
         ctx = opts.getContext()
         self.assertEqual(0, ctx.set_options(0) & 0x00004000)
 
-
     def test_certificateOptionsSessionTicketsDisabled(self):
         """
         Enabling session tickets should set the OP_NO_TICKET option.
@@ -1497,22 +1500,23 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, unittest.TestCase):
         ctx = opts.getContext()
         self.assertEqual(0x00004000, ctx.set_options(0) & 0x00004000)
 
-
     def test_allowedAnonymousClientConnection(self):
         """
         Check that anonymous connections are allowed when certificates aren't
         required on the server.
         """
         onData = defer.Deferred()
-        self.loopback(sslverify.OpenSSLCertificateOptions(privateKey=self.sKey,
-                            certificate=self.sCert, requireCertificate=False),
-                      sslverify.OpenSSLCertificateOptions(
-                          requireCertificate=False),
-                      onData=onData)
+        self.loopback(
+            sslverify.OpenSSLCertificateOptions(
+                privateKey=self.sKey, certificate=self.sCert, requireCertificate=False
+            ),
+            sslverify.OpenSSLCertificateOptions(requireCertificate=False),
+            onData=onData,
+        )
 
         return onData.addCallback(
-            lambda result: self.assertEqual(result, WritingProtocol.byte))
-
+            lambda result: self.assertEqual(result, WritingProtocol.byte)
+        )
 
     def test_refusedAnonymousClientConnection(self):
         """
@@ -1521,17 +1525,20 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, unittest.TestCase):
         """
         onServerLost = defer.Deferred()
         onClientLost = defer.Deferred()
-        self.loopback(sslverify.OpenSSLCertificateOptions(privateKey=self.sKey,
-                            certificate=self.sCert, verify=True,
-                            caCerts=[self.sCert], requireCertificate=True),
-                      sslverify.OpenSSLCertificateOptions(
-                          requireCertificate=False),
-                      onServerLost=onServerLost,
-                      onClientLost=onClientLost)
+        self.loopback(
+            sslverify.OpenSSLCertificateOptions(
+                privateKey=self.sKey,
+                certificate=self.sCert,
+                verify=True,
+                caCerts=[self.sCert],
+                requireCertificate=True,
+            ),
+            sslverify.OpenSSLCertificateOptions(requireCertificate=False),
+            onServerLost=onServerLost,
+            onClientLost=onClientLost,
+        )
 
-        d = defer.DeferredList([onClientLost, onServerLost],
-                               consumeErrors=True)
-
+        d = defer.DeferredList([onClientLost, onServerLost], consumeErrors=True)
 
         def afterLost(result):
             ((cSuccess, cResult), (sSuccess, sResult)) = result
@@ -1552,16 +1559,22 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, unittest.TestCase):
         """
         onServerLost = defer.Deferred()
         onClientLost = defer.Deferred()
-        self.loopback(sslverify.OpenSSLCertificateOptions(privateKey=self.sKey,
-                            certificate=self.sCert, verify=False,
-                            requireCertificate=False),
-                      sslverify.OpenSSLCertificateOptions(verify=True,
-                            requireCertificate=False, caCerts=[self.cCert]),
-                      onServerLost=onServerLost,
-                      onClientLost=onClientLost)
+        self.loopback(
+            sslverify.OpenSSLCertificateOptions(
+                privateKey=self.sKey,
+                certificate=self.sCert,
+                verify=False,
+                requireCertificate=False,
+            ),
+            sslverify.OpenSSLCertificateOptions(
+                verify=True, requireCertificate=False, caCerts=[self.cCert]
+            ),
+            onServerLost=onServerLost,
+            onClientLost=onClientLost,
+        )
 
-        d = defer.DeferredList([onClientLost, onServerLost],
-                               consumeErrors=True)
+        d = defer.DeferredList([onClientLost, onServerLost], consumeErrors=True)
+
         def afterLost(result):
             ((cSuccess, cResult), (sSuccess, sResult)) = result
             self.assertFalse(cSuccess)
@@ -1575,15 +1588,22 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, unittest.TestCase):
         server side.
         """
         onData = defer.Deferred()
-        self.loopback(sslverify.OpenSSLCertificateOptions(privateKey=self.sKey,
-                            certificate=self.sCert, verify=False,
-                            requireCertificate=False),
-                      sslverify.OpenSSLCertificateOptions(verify=True,
-                            requireCertificate=True, caCerts=[self.sCert]),
-                      onData=onData)
+        self.loopback(
+            sslverify.OpenSSLCertificateOptions(
+                privateKey=self.sKey,
+                certificate=self.sCert,
+                verify=False,
+                requireCertificate=False,
+            ),
+            sslverify.OpenSSLCertificateOptions(
+                verify=True, requireCertificate=True, caCerts=[self.sCert]
+            ),
+            onData=onData,
+        )
 
         return onData.addCallback(
-                lambda result: self.assertEqual(result, WritingProtocol.byte))
+            lambda result: self.assertEqual(result, WritingProtocol.byte)
+        )
 
     def test_successfulSymmetricSelfSignedCertificateVerification(self):
         """
@@ -1591,16 +1611,27 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, unittest.TestCase):
         sides.
         """
         onData = defer.Deferred()
-        self.loopback(sslverify.OpenSSLCertificateOptions(privateKey=self.sKey,
-                            certificate=self.sCert, verify=True,
-                            requireCertificate=True, caCerts=[self.cCert]),
-                      sslverify.OpenSSLCertificateOptions(privateKey=self.cKey,
-                            certificate=self.cCert, verify=True,
-                            requireCertificate=True, caCerts=[self.sCert]),
-                      onData=onData)
+        self.loopback(
+            sslverify.OpenSSLCertificateOptions(
+                privateKey=self.sKey,
+                certificate=self.sCert,
+                verify=True,
+                requireCertificate=True,
+                caCerts=[self.cCert],
+            ),
+            sslverify.OpenSSLCertificateOptions(
+                privateKey=self.cKey,
+                certificate=self.cCert,
+                verify=True,
+                requireCertificate=True,
+                caCerts=[self.sCert],
+            ),
+            onData=onData,
+        )
 
         return onData.addCallback(
-                lambda result: self.assertEqual(result, WritingProtocol.byte))
+            lambda result: self.assertEqual(result, WritingProtocol.byte)
+        )
 
     def test_verification(self):
         """
@@ -1616,20 +1647,24 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, unittest.TestCase):
 
         clientSelfCertReq = clientKey.certificateRequest(clientDN)
         clientSelfCertData = clientKey.signCertificateRequest(
-                clientDN, clientSelfCertReq, lambda dn: True, 132)
+            clientDN, clientSelfCertReq, lambda dn: True, 132
+        )
         clientSelfCert = clientKey.newCertificate(clientSelfCertData)
 
         serverSelfCertReq = serverKey.certificateRequest(serverDN)
         serverSelfCertData = serverKey.signCertificateRequest(
-                serverDN, serverSelfCertReq, lambda dn: True, 516)
+            serverDN, serverSelfCertReq, lambda dn: True, 516
+        )
         serverSelfCert = serverKey.newCertificate(serverSelfCertData)
 
         clientCertData = serverKey.signCertificateRequest(
-                serverDN, clientCertReq, lambda dn: True, 7)
+            serverDN, clientCertReq, lambda dn: True, 7
+        )
         clientCert = clientKey.newCertificate(clientCertData)
 
         serverCertData = clientKey.signCertificateRequest(
-                clientDN, serverCertReq, lambda dn: True, 42)
+            clientDN, serverCertReq, lambda dn: True, 42
+        )
         serverCert = serverKey.newCertificate(serverCertData)
 
         onData = defer.Deferred()
@@ -1637,17 +1672,14 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, unittest.TestCase):
         serverOpts = serverCert.options(serverSelfCert)
         clientOpts = clientCert.options(clientSelfCert)
 
-        self.loopback(serverOpts,
-                      clientOpts,
-                      onData=onData)
+        self.loopback(serverOpts, clientOpts, onData=onData)
 
         return onData.addCallback(
-                lambda result: self.assertEqual(result, WritingProtocol.byte))
+            lambda result: self.assertEqual(result, WritingProtocol.byte)
+        )
 
 
-
-class OpenSSLOptionsECDHIntegrationTests(
-        OpenSSLOptionsTestsMixin, unittest.TestCase):
+class OpenSSLOptionsECDHIntegrationTests(OpenSSLOptionsTestsMixin, unittest.TestCase):
     """
     ECDH-related integration tests for L{OpenSSLOptions}.
     """
@@ -1660,11 +1692,13 @@ class OpenSSLOptionsECDHIntegrationTests(
             raise unittest.SkipTest("OpenSSL does not support ECDH.")
 
         onData = defer.Deferred()
-        self.loopback(sslverify.OpenSSLCertificateOptions(privateKey=self.sKey,
-                            certificate=self.sCert, requireCertificate=False),
-                      sslverify.OpenSSLCertificateOptions(
-                          requireCertificate=False),
-                      onData=onData)
+        self.loopback(
+            sslverify.OpenSSLCertificateOptions(
+                privateKey=self.sKey, certificate=self.sCert, requireCertificate=False
+            ),
+            sslverify.OpenSSLCertificateOptions(requireCertificate=False),
+            onData=onData,
+        )
 
         @onData.addCallback
         def assertECDH(_):
@@ -1676,12 +1710,12 @@ class OpenSSLOptionsECDHIntegrationTests(
         return onData
 
 
-
 class DeprecationTests(unittest.SynchronousTestCase):
     """
     Tests for deprecation of L{sslverify.OpenSSLCertificateOptions}'s support
     of the pickle protocol.
     """
+
     if skipSSL:
         skip = skipSSL
 
@@ -1691,8 +1725,8 @@ class DeprecationTests(unittest.SynchronousTestCase):
         """
         self.callDeprecated(
             (Version("Twisted", 15, 0, 0), "a real persistence system"),
-            sslverify.OpenSSLCertificateOptions().__getstate__)
-
+            sslverify.OpenSSLCertificateOptions().__getstate__,
+        )
 
     def test_setstateDeprecation(self):
         """
@@ -1700,8 +1734,9 @@ class DeprecationTests(unittest.SynchronousTestCase):
         """
         self.callDeprecated(
             (Version("Twisted", 15, 0, 0), "a real persistence system"),
-            sslverify.OpenSSLCertificateOptions().__setstate__, {})
-
+            sslverify.OpenSSLCertificateOptions().__setstate__,
+            {},
+        )
 
 
 class TrustRootTests(unittest.TestCase):
@@ -1709,17 +1744,19 @@ class TrustRootTests(unittest.TestCase):
     Tests for L{sslverify.OpenSSLCertificateOptions}' C{trustRoot} argument,
     L{sslverify.platformTrust}, and their interactions.
     """
+
     if skipSSL:
         skip = skipSSL
-
 
     def setUp(self):
         """
         Patch L{sslverify._ChooseDiffieHellmanEllipticCurve}.
         """
-        self.patch(sslverify, "_ChooseDiffieHellmanEllipticCurve",
-                   FakeChooseDiffieHellmanEllipticCurve)
-
+        self.patch(
+            sslverify,
+            "_ChooseDiffieHellmanEllipticCurve",
+            FakeChooseDiffieHellmanEllipticCurve,
+        )
 
     def test_caCertsPlatformDefaults(self):
         """
@@ -1728,13 +1765,12 @@ class TrustRootTests(unittest.TestCase):
         platform-provided trusted certificates via C{set_default_verify_paths}.
         """
         opts = sslverify.OpenSSLCertificateOptions(
-            trustRoot=sslverify.OpenSSLDefaultPaths(),
+            trustRoot=sslverify.OpenSSLDefaultPaths()
         )
         fc = FakeContext(SSL.TLSv1_METHOD)
         opts._contextFactory = lambda method: fc
         opts.getContext()
         self.assertTrue(fc._defaultVerifyPathsSet)
-
 
     def test_trustRootPlatformRejectsUntrustedCA(self):
         """
@@ -1767,7 +1803,6 @@ class TrustRootTests(unittest.TestCase):
         err = cWrapped.lostReason.value
         self.assertEqual(err.args[0][0][2], 'tlsv1 alert unknown ca')
 
-
     def test_trustRootSpecificCertificate(self):
         """
         Specifying a L{Certificate} object for L{trustRoot} will result in that
@@ -1782,9 +1817,7 @@ class TrustRootTests(unittest.TestCase):
         )
         pump.flush()
         self.assertIsNone(cWrapped.lostReason)
-        self.assertEqual(cWrapped.data,
-                         sWrapped.greeting)
-
+        self.assertEqual(cWrapped.data, sWrapped.greeting)
 
 
 class ServiceIdentityTests(unittest.SynchronousTestCase):
@@ -1796,15 +1829,19 @@ class ServiceIdentityTests(unittest.SynchronousTestCase):
     if skipSSL:
         skip = skipSSL
 
-    def serviceIdentitySetup(self, clientHostname, serverHostname,
-                             serverContextSetup=lambda ctx: None,
-                             validCertificate=True,
-                             clientPresentsCertificate=False,
-                             validClientCertificate=True,
-                             serverVerifies=False,
-                             buggyInfoCallback=False,
-                             fakePlatformTrust=False,
-                             useDefaultTrust=False):
+    def serviceIdentitySetup(
+        self,
+        clientHostname,
+        serverHostname,
+        serverContextSetup=lambda ctx: None,
+        validCertificate=True,
+        clientPresentsCertificate=False,
+        validClientCertificate=True,
+        serverVerifies=False,
+        buggyInfoCallback=False,
+        fakePlatformTrust=False,
+        useDefaultTrust=False,
+    ):
         """
         Connect a server and a client.
 
@@ -1860,9 +1897,7 @@ class ServiceIdentityTests(unittest.SynchronousTestCase):
             protocol instances
         @rtype: 5-L{tuple} of 4 L{IProtocol}s and L{IOPump}
         """
-        serverCA, serverCert = certificatesForAuthorityAndServer(
-            serverHostname
-        )
+        serverCA, serverCert = certificatesForAuthorityAndServer(serverHostname)
         other = {}
         passClientCert = None
         clientCA, clientCert = certificatesForAuthorityAndServer(u'client')
@@ -1883,10 +1918,9 @@ class ServiceIdentityTests(unittest.SynchronousTestCase):
         )
         serverContextSetup(serverOpts.getContext())
         if not validCertificate:
-            serverCA, otherServer = certificatesForAuthorityAndServer(
-                serverHostname
-            )
+            serverCA, otherServer = certificatesForAuthorityAndServer(serverHostname)
         if buggyInfoCallback:
+
             def broken(*a, **k):
                 """
                 Raise an exception.
@@ -1896,9 +1930,9 @@ class ServiceIdentityTests(unittest.SynchronousTestCase):
                 @param k: Keyword arguments for an C{info_callback}
                 """
                 1 / 0
+
             self.patch(
-                sslverify.ClientTLSOptions, "_identityVerifyingInfoCallback",
-                broken,
+                sslverify.ClientTLSOptions, "_identityVerifyingInfoCallback", broken
             )
 
         signature = {'hostname': clientHostname}
@@ -1915,10 +1949,13 @@ class ServiceIdentityTests(unittest.SynchronousTestCase):
             greeting = b"greetings!"
             lostReason = None
             data = b''
+
             def connectionMade(self):
                 self.transport.write(self.greeting)
+
             def dataReceived(self, data):
                 self.data += data
+
             def connectionLost(self, reason):
                 self.lostReason = reason
 
@@ -1926,10 +1963,13 @@ class ServiceIdentityTests(unittest.SynchronousTestCase):
             greeting = b'cheerio!'
             data = b''
             lostReason = None
+
             def connectionMade(self):
                 self.transport.write(self.greeting)
+
             def dataReceived(self, data):
                 self.data += data
+
             def connectionLost(self, reason):
                 self.lostReason = reason
 
@@ -1945,12 +1985,10 @@ class ServiceIdentityTests(unittest.SynchronousTestCase):
         self.clientOpts = clientOpts
 
         clientTLSFactory = TLSMemoryBIOFactory(
-            clientOpts, isClient=True,
-            wrappedFactory=clientFactory
+            clientOpts, isClient=True, wrappedFactory=clientFactory
         )
         serverTLSFactory = TLSMemoryBIOFactory(
-            serverOpts, isClient=False,
-            wrappedFactory=serverFactory
+            serverOpts, isClient=False, wrappedFactory=serverFactory
         )
 
         cProto, sProto, pump = connectedServerAndClient(
@@ -1959,15 +1997,13 @@ class ServiceIdentityTests(unittest.SynchronousTestCase):
         )
         return cProto, sProto, clientWrappedProto, serverWrappedProto, pump
 
-
     def test_invalidHostname(self):
         """
         When a certificate containing an invalid hostname is received from the
         server, the connection is immediately dropped.
         """
         cProto, sProto, cWrapped, sWrapped, pump = self.serviceIdentitySetup(
-            u"wrong-host.example.com",
-            u"correct-host.example.com",
+            u"wrong-host.example.com", u"correct-host.example.com"
         )
         self.assertEqual(cWrapped.data, b'')
         self.assertEqual(sWrapped.data, b'')
@@ -1978,24 +2014,20 @@ class ServiceIdentityTests(unittest.SynchronousTestCase):
         self.assertIsInstance(cErr, VerificationError)
         self.assertIsInstance(sErr, ConnectionClosed)
 
-
     def test_validHostname(self):
         """
         Whenever a valid certificate containing a valid hostname is received,
         connection proceeds normally.
         """
         cProto, sProto, cWrapped, sWrapped, pump = self.serviceIdentitySetup(
-            u"valid.example.com",
-            u"valid.example.com",
+            u"valid.example.com", u"valid.example.com"
         )
-        self.assertEqual(cWrapped.data,
-                         b'greetings!')
+        self.assertEqual(cWrapped.data, b'greetings!')
 
         cErr = cWrapped.lostReason
         sErr = sWrapped.lostReason
         self.assertIsNone(cErr)
         self.assertIsNone(sErr)
-
 
     def test_validHostnameInvalidCertificate(self):
         """
@@ -2003,9 +2035,7 @@ class ServiceIdentityTests(unittest.SynchronousTestCase):
         received, the connection is aborted with an OpenSSL error.
         """
         cProto, sProto, cWrapped, sWrapped, pump = self.serviceIdentitySetup(
-            u"valid.example.com",
-            u"valid.example.com",
-            validCertificate=False,
+            u"valid.example.com", u"valid.example.com", validCertificate=False
         )
 
         self.assertEqual(cWrapped.data, b'')
@@ -2016,7 +2046,6 @@ class ServiceIdentityTests(unittest.SynchronousTestCase):
 
         self.assertIsInstance(cErr, SSL.Error)
         self.assertIsInstance(sErr, SSL.Error)
-
 
     def test_realCAsBetterNotSignOurBogusTestCerts(self):
         """
@@ -2039,7 +2068,6 @@ class ServiceIdentityTests(unittest.SynchronousTestCase):
         self.assertIsInstance(cErr, SSL.Error)
         self.assertIsInstance(sErr, SSL.Error)
 
-
     def test_butIfTheyDidItWouldWork(self):
         """
         L{ssl.optionsForClientTLS} should be using L{ssl.platformTrust} by
@@ -2051,14 +2079,12 @@ class ServiceIdentityTests(unittest.SynchronousTestCase):
             useDefaultTrust=True,
             fakePlatformTrust=True,
         )
-        self.assertEqual(cWrapped.data,
-                         b'greetings!')
+        self.assertEqual(cWrapped.data, b'greetings!')
 
         cErr = cWrapped.lostReason
         sErr = sWrapped.lostReason
         self.assertIsNone(cErr)
         self.assertIsNone(sErr)
-
 
     def test_clientPresentsCertificate(self):
         """
@@ -2074,14 +2100,12 @@ class ServiceIdentityTests(unittest.SynchronousTestCase):
             clientPresentsCertificate=True,
         )
 
-        self.assertEqual(cWrapped.data,
-                         b'greetings!')
+        self.assertEqual(cWrapped.data, b'greetings!')
 
         cErr = cWrapped.lostReason
         sErr = sWrapped.lostReason
         self.assertIsNone(cErr)
         self.assertIsNone(sErr)
-
 
     def test_clientPresentsBadCertificate(self):
         """
@@ -2099,15 +2123,13 @@ class ServiceIdentityTests(unittest.SynchronousTestCase):
             clientPresentsCertificate=True,
         )
 
-        self.assertEqual(cWrapped.data,
-                         b'')
+        self.assertEqual(cWrapped.data, b'')
 
         cErr = cWrapped.lostReason.value
         sErr = sWrapped.lostReason.value
 
         self.assertIsInstance(cErr, SSL.Error)
         self.assertIsInstance(sErr, SSL.Error)
-
 
     def test_hostnameIsIndicated(self):
         """
@@ -2117,20 +2139,20 @@ class ServiceIdentityTests(unittest.SynchronousTestCase):
         field to the correct value.
         """
         names = []
+
         def setupServerContext(ctx):
             def servername_received(conn):
                 names.append(conn.get_servername().decode("ascii"))
+
             ctx.set_tlsext_servername_callback(servername_received)
+
         cProto, sProto, cWrapped, sWrapped, pump = self.serviceIdentitySetup(
-            u"valid.example.com",
-            u"valid.example.com",
-            setupServerContext
+            u"valid.example.com", u"valid.example.com", setupServerContext
         )
         self.assertEqual(names, [u"valid.example.com"])
 
     if skipSNI is not None:
         test_hostnameIsIndicated.skip = skipSNI
-
 
     def test_hostnameEncoding(self):
         """
@@ -2138,17 +2160,19 @@ class ServiceIdentityTests(unittest.SynchronousTestCase):
         """
         names = []
         hello = u"h\N{LATIN SMALL LETTER A WITH ACUTE}llo.example.com"
+
         def setupServerContext(ctx):
             def servername_received(conn):
                 serverIDNA = _idnaText(conn.get_servername())
                 names.append(serverIDNA)
+
             ctx.set_tlsext_servername_callback(servername_received)
+
         cProto, sProto, cWrapped, sWrapped, pump = self.serviceIdentitySetup(
             hello, hello, setupServerContext
         )
         self.assertEqual(names, [hello])
-        self.assertEqual(cWrapped.data,
-                         b'greetings!')
+        self.assertEqual(cWrapped.data, b'greetings!')
 
         cErr = cWrapped.lostReason
         sErr = sWrapped.lostReason
@@ -2158,7 +2182,6 @@ class ServiceIdentityTests(unittest.SynchronousTestCase):
     if skipSNI is not None:
         test_hostnameEncoding.skip = skipSNI
 
-
     def test_fallback(self):
         """
         L{sslverify.simpleVerifyHostname} checks string equality on the
@@ -2166,6 +2189,7 @@ class ServiceIdentityTests(unittest.SynchronousTestCase):
         matches and raising L{VerificationError} if it doesn't.
         """
         name = 'something.example.com'
+
         class Connection(object):
             def get_peer_certificate(self):
                 """
@@ -2177,14 +2201,16 @@ class ServiceIdentityTests(unittest.SynchronousTestCase):
                 cert = X509()
                 cert.get_subject().commonName = name
                 return cert
+
         conn = Connection()
         self.assertIs(
-            sslverify.simpleVerifyHostname(conn, u'something.example.com'),
-            None
+            sslverify.simpleVerifyHostname(conn, u'something.example.com'), None
         )
         self.assertRaises(
             sslverify.SimpleVerificationError,
-            sslverify.simpleVerifyHostname, conn, u'nonsense'
+            sslverify.simpleVerifyHostname,
+            conn,
+            u'nonsense',
         )
 
     def test_surpriseFromInfoCallback(self):
@@ -2212,10 +2238,7 @@ class ServiceIdentityTests(unittest.SynchronousTestCase):
         self.assertTrue(errors)
 
 
-
-def negotiateProtocol(serverProtocols,
-                      clientProtocols,
-                      clientOptions=None):
+def negotiateProtocol(serverProtocols, clientProtocols, clientOptions=None):
     """
     Create the TLS connection and negotiate a next protocol.
 
@@ -2227,9 +2250,7 @@ def negotiateProtocol(serverProtocols,
         connection was lost.
     """
     caCertificate, serverCertificate = certificatesForAuthorityAndServer()
-    trustRoot = sslverify.OpenSSLCertificateAuthorities([
-        caCertificate.original,
-    ])
+    trustRoot = sslverify.OpenSSLCertificateAuthorities([caCertificate.original])
 
     sProto, cProto, sWrapped, cWrapped, pump = loopbackTLSConnectionInMemory(
         trustRoot=trustRoot,
@@ -2244,7 +2265,6 @@ def negotiateProtocol(serverProtocols,
     return (cProto.negotiatedProtocol, cWrapped.lostReason)
 
 
-
 class NPNOrALPNTests(unittest.TestCase):
     """
     NPN and ALPN protocol selection.
@@ -2252,6 +2272,7 @@ class NPNOrALPNTests(unittest.TestCase):
     These tests only run on platforms that have a PyOpenSSL version >= 0.15,
     and OpenSSL version 1.0.1 or later.
     """
+
     if skipSSL:
         skip = skipSSL
     elif skipNPN:
@@ -2263,10 +2284,7 @@ class NPNOrALPNTests(unittest.TestCase):
         supported negotiation protocols.
         """
         supportedProtocols = sslverify.protocolNegotiationMechanisms()
-        self.assertTrue(
-            sslverify.ProtocolNegotiationSupport.NPN in supportedProtocols
-        )
-
+        self.assertTrue(sslverify.ProtocolNegotiationSupport.NPN in supportedProtocols)
 
     def test_NPNAndALPNSuccess(self):
         """
@@ -2276,12 +2294,10 @@ class NPNOrALPNTests(unittest.TestCase):
         """
         protocols = [b'h2', b'http/1.1']
         negotiatedProtocol, lostReason = negotiateProtocol(
-            clientProtocols=protocols,
-            serverProtocols=protocols,
+            clientProtocols=protocols, serverProtocols=protocols
         )
         self.assertEqual(negotiatedProtocol, b'h2')
         self.assertIsNone(lostReason)
-
 
     def test_NPNAndALPNDifferent(self):
         """
@@ -2291,12 +2307,10 @@ class NPNOrALPNTests(unittest.TestCase):
         serverProtocols = [b'h2', b'http/1.1', b'spdy/2']
         clientProtocols = [b'spdy/3', b'http/1.1']
         negotiatedProtocol, lostReason = negotiateProtocol(
-            clientProtocols=clientProtocols,
-            serverProtocols=serverProtocols,
+            clientProtocols=clientProtocols, serverProtocols=serverProtocols
         )
         self.assertEqual(negotiatedProtocol, b'http/1.1')
         self.assertIsNone(lostReason)
-
 
     def test_NPNAndALPNNoAdvertise(self):
         """
@@ -2305,12 +2319,10 @@ class NPNOrALPNTests(unittest.TestCase):
         """
         protocols = [b'h2', b'http/1.1']
         negotiatedProtocol, lostReason = negotiateProtocol(
-            clientProtocols=protocols,
-            serverProtocols=[],
+            clientProtocols=protocols, serverProtocols=[]
         )
         self.assertIsNone(negotiatedProtocol)
         self.assertIsNone(lostReason)
-
 
     def test_NPNAndALPNNoOverlap(self):
         """
@@ -2320,12 +2332,10 @@ class NPNOrALPNTests(unittest.TestCase):
         clientProtocols = [b'h2', b'http/1.1']
         serverProtocols = [b'spdy/3']
         negotiatedProtocol, lostReason = negotiateProtocol(
-            serverProtocols=clientProtocols,
-            clientProtocols=serverProtocols,
+            serverProtocols=clientProtocols, clientProtocols=serverProtocols
         )
         self.assertIsNone(negotiatedProtocol)
         self.assertEqual(lostReason.type, SSL.Error)
-
 
 
 class ALPNTests(unittest.TestCase):
@@ -2338,11 +2348,11 @@ class ALPNTests(unittest.TestCase):
     This covers only the ALPN specific logic, as any platform that has ALPN
     will also have NPN and so will run the NPNAndALPNTest suite as well.
     """
+
     if skipSSL:
         skip = skipSSL
     elif skipALPN:
         skip = skipALPN
-
 
     def test_nextProtocolMechanismsALPNIsSupported(self):
         """
@@ -2350,11 +2360,7 @@ class ALPNTests(unittest.TestCase):
         includes ALPN in the suported protocols.
         """
         supportedProtocols = sslverify.protocolNegotiationMechanisms()
-        self.assertTrue(
-            sslverify.ProtocolNegotiationSupport.ALPN in
-            supportedProtocols
-        )
-
+        self.assertTrue(sslverify.ProtocolNegotiationSupport.ALPN in supportedProtocols)
 
 
 class NPNAndALPNAbsentTests(unittest.TestCase):
@@ -2364,11 +2370,11 @@ class NPNAndALPNAbsentTests(unittest.TestCase):
     These tests only run on platforms that have a PyOpenSSL version < 0.15,
     or an OpenSSL version earlier than 1.0.1
     """
+
     if skipSSL:
         skip = skipSSL
     elif not skipNPN:
         skip = "NPN/ALPN is present on this platform"
-
 
     def test_nextProtocolMechanismsNoNegotiationSupported(self):
         """
@@ -2377,7 +2383,6 @@ class NPNAndALPNAbsentTests(unittest.TestCase):
         """
         supportedProtocols = sslverify.protocolNegotiationMechanisms()
         self.assertFalse(supportedProtocols)
-
 
     def test_NPNAndALPNNotImplemented(self):
         """
@@ -2392,7 +2397,6 @@ class NPNAndALPNAbsentTests(unittest.TestCase):
             clientProtocols=protocols,
         )
 
-
     def test_NegotiatedProtocolReturnsNone(self):
         """
         negotiatedProtocol return L{None} even when NPN/ALPN aren't supported.
@@ -2402,18 +2406,15 @@ class NPNAndALPNAbsentTests(unittest.TestCase):
         serverProtocols = None
         clientProtocols = None
         negotiatedProtocol, lostReason = negotiateProtocol(
-            clientProtocols=clientProtocols,
-            serverProtocols=serverProtocols,
+            clientProtocols=clientProtocols, serverProtocols=serverProtocols
         )
         self.assertIsNone(negotiatedProtocol)
         self.assertIsNone(lostReason)
 
 
-
 class _NotSSLTransport:
     def getHandle(self):
         return self
-
 
 
 class _MaybeSSLTransport:
@@ -2427,7 +2428,6 @@ class _MaybeSSLTransport:
         return None
 
 
-
 class _ActualSSLTransport:
     def getHandle(self):
         return self
@@ -2439,7 +2439,6 @@ class _ActualSSLTransport:
         return sslverify.Certificate.loadPEM(A_PEER_CERTIFICATE_PEM).original
 
 
-
 class ConstructorsTests(unittest.TestCase):
     if skipSSL:
         skip = skipSSL
@@ -2449,44 +2448,48 @@ class ConstructorsTests(unittest.TestCase):
         Verify that peerFromTransport raises an exception if the transport
         passed is not actually an SSL transport.
         """
-        x = self.assertRaises(CertificateError,
-                              sslverify.Certificate.peerFromTransport,
-                              _NotSSLTransport())
+        x = self.assertRaises(
+            CertificateError,
+            sslverify.Certificate.peerFromTransport,
+            _NotSSLTransport(),
+        )
         self.assertTrue(str(x).startswith("non-TLS"))
-
 
     def test_peerFromBlankSSLTransport(self):
         """
         Verify that peerFromTransport raises an exception if the transport
         passed is an SSL transport, but doesn't have a peer certificate.
         """
-        x = self.assertRaises(CertificateError,
-                              sslverify.Certificate.peerFromTransport,
-                              _MaybeSSLTransport())
+        x = self.assertRaises(
+            CertificateError,
+            sslverify.Certificate.peerFromTransport,
+            _MaybeSSLTransport(),
+        )
         self.assertTrue(str(x).startswith("TLS"))
-
 
     def test_hostFromNonSSLTransport(self):
         """
         Verify that hostFromTransport raises an exception if the transport
         passed is not actually an SSL transport.
         """
-        x = self.assertRaises(CertificateError,
-                              sslverify.Certificate.hostFromTransport,
-                              _NotSSLTransport())
+        x = self.assertRaises(
+            CertificateError,
+            sslverify.Certificate.hostFromTransport,
+            _NotSSLTransport(),
+        )
         self.assertTrue(str(x).startswith("non-TLS"))
-
 
     def test_hostFromBlankSSLTransport(self):
         """
         Verify that hostFromTransport raises an exception if the transport
         passed is an SSL transport, but doesn't have a host certificate.
         """
-        x = self.assertRaises(CertificateError,
-                              sslverify.Certificate.hostFromTransport,
-                              _MaybeSSLTransport())
+        x = self.assertRaises(
+            CertificateError,
+            sslverify.Certificate.hostFromTransport,
+            _MaybeSSLTransport(),
+        )
         self.assertTrue(str(x).startswith("TLS"))
-
 
     def test_hostFromSSLTransport(self):
         """
@@ -2495,9 +2498,10 @@ class ConstructorsTests(unittest.TestCase):
         """
         self.assertEqual(
             sslverify.Certificate.hostFromTransport(
-                _ActualSSLTransport()).serialNumber(),
-            12345)
-
+                _ActualSSLTransport()
+            ).serialNumber(),
+            12345,
+        )
 
     def test_peerFromSSLTransport(self):
         """
@@ -2506,9 +2510,10 @@ class ConstructorsTests(unittest.TestCase):
         """
         self.assertEqual(
             sslverify.Certificate.peerFromTransport(
-                _ActualSSLTransport()).serialNumber(),
-            12346)
-
+                _ActualSSLTransport()
+            ).serialNumber(),
+            12346,
+        )
 
 
 class MultipleCertificateTrustRootTests(unittest.TestCase):
@@ -2518,7 +2523,6 @@ class MultipleCertificateTrustRootTests(unittest.TestCase):
 
     if skipSSL:
         skip = skipSSL
-
 
     def test_trustRootFromCertificatesPrivatePublic(self):
         """
@@ -2542,7 +2546,6 @@ class MultipleCertificateTrustRootTests(unittest.TestCase):
         self.assertEqual(cWrap.data, b'greetings!')
         self.assertIsNone(cWrap.lostReason)
 
-
     def test_trustRootSelfSignedServerCertificate(self):
         """
         L{trustRootFromCertificates} called with a single self-signed
@@ -2551,8 +2554,7 @@ class MultipleCertificateTrustRootTests(unittest.TestCase):
         """
         key, cert = makeCertificate(O=b"Server Test Certificate", CN=b"server")
         selfSigned = sslverify.PrivateCertificate.fromCertificateAndKeyPair(
-            sslverify.Certificate(cert),
-            sslverify.KeyPair(key),
+            sslverify.Certificate(cert), sslverify.KeyPair(key)
         )
 
         trust = sslverify.trustRootFromCertificates([selfSigned])
@@ -2566,7 +2568,6 @@ class MultipleCertificateTrustRootTests(unittest.TestCase):
         )
         self.assertEqual(cWrap.data, b'greetings!')
         self.assertIsNone(cWrap.lostReason)
-
 
     def test_trustRootCertificateAuthorityTrustsConnection(self):
         """
@@ -2588,7 +2589,6 @@ class MultipleCertificateTrustRootTests(unittest.TestCase):
         self.assertEqual(cWrap.data, b'greetings!')
         self.assertIsNone(cWrap.lostReason)
 
-
     def test_trustRootFromCertificatesUntrusted(self):
         """
         L{trustRootFromCertificates} called with certificate A will cause
@@ -2597,8 +2597,7 @@ class MultipleCertificateTrustRootTests(unittest.TestCase):
         """
         key, cert = makeCertificate(O=b"Server Test Certificate", CN=b"server")
         serverCert = sslverify.PrivateCertificate.fromCertificateAndKeyPair(
-            sslverify.Certificate(cert),
-            sslverify.KeyPair(key),
+            sslverify.Certificate(cert), sslverify.KeyPair(key)
         )
         untrustedCert = sslverify.Certificate(
             makeCertificate(O=b"CA Test Certificate", CN=b"unknown CA")[1]
@@ -2624,7 +2623,6 @@ class MultipleCertificateTrustRootTests(unittest.TestCase):
         err = cWrap.lostReason.value
         self.assertEqual(err.args[0][0][2], 'tlsv1 alert unknown ca')
 
-
     def test_trustRootFromCertificatesOpenSSLObjects(self):
         """
         L{trustRootFromCertificates} rejects any L{OpenSSL.crypto.X509}
@@ -2634,21 +2632,19 @@ class MultipleCertificateTrustRootTests(unittest.TestCase):
         certX509 = private.original
 
         exception = self.assertRaises(
-            TypeError,
-            sslverify.trustRootFromCertificates, [certX509],
+            TypeError, sslverify.trustRootFromCertificates, [certX509]
         )
         self.assertEqual(
-            "certificates items must be twisted.internet.ssl.CertBase "
-            "instances",
+            "certificates items must be twisted.internet.ssl.CertBase " "instances",
             exception.args[0],
         )
-
 
 
 class OpenSSLCipherTests(unittest.TestCase):
     """
     Tests for twisted.internet._sslverify.OpenSSLCipher.
     """
+
     if skipSSL:
         skip = skipSSL
 
@@ -2659,10 +2655,8 @@ class OpenSSLCipherTests(unittest.TestCase):
         The first argument passed to the constructor becomes the full name.
         """
         self.assertEqual(
-            self.cipherName,
-            sslverify.OpenSSLCipher(self.cipherName).fullName
+            self.cipherName, sslverify.OpenSSLCipher(self.cipherName).fullName
         )
-
 
     def test_repr(self):
         """
@@ -2670,10 +2664,8 @@ class OpenSSLCipherTests(unittest.TestCase):
         """
         cipher = sslverify.OpenSSLCipher(self.cipherName)
         self.assertEqual(
-            cipher,
-            eval(repr(cipher), {'OpenSSLCipher': sslverify.OpenSSLCipher})
+            cipher, eval(repr(cipher), {'OpenSSLCipher': sslverify.OpenSSLCipher})
         )
-
 
     def test_eqSameClass(self):
         """
@@ -2683,26 +2675,23 @@ class OpenSSLCipherTests(unittest.TestCase):
         cipher2 = sslverify.OpenSSLCipher(self.cipherName)
         self.assertEqual(cipher1, cipher2)
 
-
     def test_eqSameNameDifferentType(self):
         """
         If ciphers have the same name but different types, they're still
         different.
         """
+
         class DifferentCipher(object):
             fullName = self.cipherName
 
-        self.assertNotEqual(
-            sslverify.OpenSSLCipher(self.cipherName),
-            DifferentCipher(),
-        )
-
+        self.assertNotEqual(sslverify.OpenSSLCipher(self.cipherName), DifferentCipher())
 
 
 class ExpandCipherStringTests(unittest.TestCase):
     """
     Tests for twisted.internet._sslverify._expandCipherString.
     """
+
     if skipSSL:
         skip = skipSSL
 
@@ -2710,29 +2699,25 @@ class ExpandCipherStringTests(unittest.TestCase):
         """
         If the expanded cipher list is empty, an empty L{list} is returned.
         """
-        self.assertEqual(
-            [],
-            sslverify._expandCipherString(u'', SSL.SSLv23_METHOD, 0)
-        )
-
+        self.assertEqual([], sslverify._expandCipherString(u'', SSL.SSLv23_METHOD, 0))
 
     def test_doesNotSwallowOtherSSLErrors(self):
         """
         Only no cipher matches get swallowed, every other SSL error gets
         propagated.
         """
+
         def raiser(_):
             # Unfortunately, there seems to be no way to trigger a real SSL
             # error artificially.
             raise SSL.Error([['', '', '']])
+
         ctx = FakeContext(SSL.SSLv23_METHOD)
         ctx.set_cipher_list = raiser
         self.patch(sslverify.SSL, 'Context', lambda _: ctx)
         self.assertRaises(
-            SSL.Error,
-            sslverify._expandCipherString, u'ALL', SSL.SSLv23_METHOD, 0
+            SSL.Error, sslverify._expandCipherString, u'ALL', SSL.SSLv23_METHOD, 0
         )
-
 
     def test_returnsListOfICiphers(self):
         """
@@ -2749,11 +2734,11 @@ class ExpandCipherStringTests(unittest.TestCase):
         self.assertEqual([], bogus)
 
 
-
 class AcceptableCiphersTests(unittest.TestCase):
     """
     Tests for twisted.internet._sslverify.OpenSSLAcceptableCiphers.
     """
+
     if skipSSL:
         skip = skipSSL
 
@@ -2764,20 +2749,20 @@ class AcceptableCiphersTests(unittest.TestCase):
         ac = sslverify.OpenSSLAcceptableCiphers([])
         self.assertEqual([], ac.selectCiphers([]))
 
-
     def test_selectReturnsOnlyFromAvailable(self):
         """
         Select only returns a cross section of what is available and what is
         desirable.
         """
-        ac = sslverify.OpenSSLAcceptableCiphers([
-            sslverify.OpenSSLCipher('A'),
-            sslverify.OpenSSLCipher('B'),
-        ])
-        self.assertEqual([sslverify.OpenSSLCipher('B')],
-                         ac.selectCiphers([sslverify.OpenSSLCipher('B'),
-                                           sslverify.OpenSSLCipher('C')]))
-
+        ac = sslverify.OpenSSLAcceptableCiphers(
+            [sslverify.OpenSSLCipher('A'), sslverify.OpenSSLCipher('B')]
+        )
+        self.assertEqual(
+            [sslverify.OpenSSLCipher('B')],
+            ac.selectCiphers(
+                [sslverify.OpenSSLCipher('B'), sslverify.OpenSSLCipher('C')]
+            ),
+        )
 
     def test_fromOpenSSLCipherStringExpandsToListOfCiphers(self):
         """
@@ -2786,15 +2771,14 @@ class AcceptableCiphersTests(unittest.TestCase):
         """
         ac = sslverify.OpenSSLAcceptableCiphers.fromOpenSSLCipherString('ALL')
         self.assertIsInstance(ac._ciphers, list)
-        self.assertTrue(all(sslverify.ICipher.providedBy(c)
-                            for c in ac._ciphers))
-
+        self.assertTrue(all(sslverify.ICipher.providedBy(c) for c in ac._ciphers))
 
 
 class DiffieHellmanParametersTests(unittest.TestCase):
     """
     Tests for twisted.internet._sslverify.OpenSSLDHParameters.
     """
+
     if skipSSL:
         skip = skipSSL
     filePath = FilePath(b'dh.params')
@@ -2804,11 +2788,8 @@ class DiffieHellmanParametersTests(unittest.TestCase):
         Calling C{fromFile} with a filename returns an instance with that file
         name saved.
         """
-        params = sslverify.OpenSSLDiffieHellmanParameters.fromFile(
-            self.filePath
-        )
+        params = sslverify.OpenSSLDiffieHellmanParameters.fromFile(self.filePath)
         self.assertEqual(self.filePath, params._dhFile)
-
 
 
 class FakeLibState(object):
@@ -2827,13 +2808,13 @@ class FakeLibState(object):
         L{FakeLib.SSL_CTX_set_ecdh_auto} was called
     @type ecdhValues: L{list} of L{boolean}s
     """
+
     __slots__ = ("setECDHAutoRaises", "ecdhContexts", "ecdhValues")
 
     def __init__(self, setECDHAutoRaises):
         self.setECDHAutoRaises = setECDHAutoRaises
         self.ecdhContexts = []
         self.ecdhValues = []
-
 
 
 class FakeLib(object):
@@ -2843,9 +2824,9 @@ class FakeLib(object):
     @param state: A L{FakeLibState} instance that contains this fake's
         state.
     """
+
     def __init__(self, state):
         self._state = state
-
 
     def SSL_CTX_set_ecdh_auto(self, ctx, value):
         """
@@ -2864,7 +2845,6 @@ class FakeLib(object):
         self._state.ecdhValues.append(value)
         if self._state.setECDHAutoRaises is not None:
             raise self._state.setECDHAutoRaises
-
 
 
 class FakeLibTests(unittest.TestCase):
@@ -2887,7 +2867,6 @@ class FakeLibTests(unittest.TestCase):
         self.assertEqual(state.ecdhContexts, [context])
         self.assertEqual(state.ecdhValues, [True])
 
-
     def test_SSL_CTX_set_ecdh_autoRaises(self):
         """
         L{FakeLib.SSL_CTX_set_ecdh_auto} raises the exception provided
@@ -2899,12 +2878,9 @@ class FakeLibTests(unittest.TestCase):
         self.assertNot(state.ecdhValues)
 
         context, value = "CONTEXT", True
-        self.assertRaises(
-            ValueError, lib.SSL_CTX_set_ecdh_auto, context, value
-        )
+        self.assertRaises(ValueError, lib.SSL_CTX_set_ecdh_auto, context, value)
         self.assertEqual(state.ecdhContexts, [context])
         self.assertEqual(state.ecdhValues, [True])
-
 
 
 class FakeCryptoState(object):
@@ -2922,21 +2898,17 @@ class FakeCryptoState(object):
         L{FakeCrypto.get_elliptic_curve} has been called.
     @type getEllipticCurveCalls: L{list}
     """
+
     __slots__ = (
         "getEllipticCurveRaises",
         "getEllipticCurveReturns",
         "getEllipticCurveCalls",
     )
 
-    def __init__(
-            self,
-            getEllipticCurveRaises,
-            getEllipticCurveReturns,
-    ):
+    def __init__(self, getEllipticCurveRaises, getEllipticCurveReturns):
         self.getEllipticCurveRaises = getEllipticCurveRaises
         self.getEllipticCurveReturns = getEllipticCurveReturns
         self.getEllipticCurveCalls = []
-
 
 
 class FakeCrypto(object):
@@ -2948,7 +2920,6 @@ class FakeCrypto(object):
 
     def __init__(self, state):
         self._state = state
-
 
     def get_elliptic_curve(self, curve):
         """
@@ -2965,7 +2936,6 @@ class FakeCrypto(object):
         return self._state.getEllipticCurveReturns
 
 
-
 class FakeCryptoTests(unittest.SynchronousTestCase):
     """
     Tests for L{FakeCrypto}.
@@ -2977,13 +2947,11 @@ class FakeCryptoTests(unittest.SynchronousTestCase):
         which it was called.
         """
         state = FakeCryptoState(
-            getEllipticCurveRaises=None,
-            getEllipticCurveReturns=None,
+            getEllipticCurveRaises=None, getEllipticCurveReturns=None
         )
         crypto = FakeCrypto(state)
         crypto.get_elliptic_curve("a curve name")
         self.assertEqual(state.getEllipticCurveCalls, ["a curve name"])
-
 
     def test_get_elliptic_curveReturns(self):
         """
@@ -2993,19 +2961,11 @@ class FakeCryptoTests(unittest.SynchronousTestCase):
         """
         returnValue = "object"
         state = FakeCryptoState(
-            getEllipticCurveRaises=None,
-            getEllipticCurveReturns=returnValue,
+            getEllipticCurveRaises=None, getEllipticCurveReturns=returnValue
         )
         crypto = FakeCrypto(state)
-        self.assertIs(
-            crypto.get_elliptic_curve("another curve name"),
-            returnValue,
-        )
-        self.assertEqual(
-            state.getEllipticCurveCalls,
-            ["another curve name"]
-        )
-
+        self.assertIs(crypto.get_elliptic_curve("another curve name"), returnValue)
+        self.assertEqual(state.getEllipticCurveCalls, ["another curve name"])
 
     def test_get_elliptic_curveRaises(self):
         """
@@ -3013,19 +2973,13 @@ class FakeCryptoTests(unittest.SynchronousTestCase):
         specified by its state object.
         """
         state = FakeCryptoState(
-            getEllipticCurveRaises=ValueError,
-            getEllipticCurveReturns=None
+            getEllipticCurveRaises=ValueError, getEllipticCurveReturns=None
         )
         crypto = FakeCrypto(state)
         self.assertRaises(
-            ValueError,
-            crypto.get_elliptic_curve, "yet another curve name",
+            ValueError, crypto.get_elliptic_curve, "yet another curve name"
         )
-        self.assertEqual(
-            state.getEllipticCurveCalls,
-            ["yet another curve name"],
-        )
-
+        self.assertEqual(state.getEllipticCurveCalls, ["yet another curve name"])
 
 
 class ChooseDiffieHellmanEllipticCurveTests(unittest.SynchronousTestCase):
@@ -3041,6 +2995,7 @@ class ChooseDiffieHellmanEllipticCurveTests(unittest.SynchronousTestCase):
     @see:
         U{https://wiki.openssl.org/index.php/Manual:OPENSSL_VERSION_NUMBER(3)}
     """
+
     if skipSSL:
         skip = skipSSL
 
@@ -3048,18 +3003,15 @@ class ChooseDiffieHellmanEllipticCurveTests(unittest.SynchronousTestCase):
     OPENSSL_102 = 0x100020ef
     OPENSSL_101 = 0x1000114f
 
-
     def setUp(self):
         self.libState = FakeLibState(setECDHAutoRaises=False)
         self.lib = FakeLib(self.libState)
 
         self.cryptoState = FakeCryptoState(
-            getEllipticCurveReturns=None,
-            getEllipticCurveRaises=None
+            getEllipticCurveReturns=None, getEllipticCurveRaises=None
         )
         self.crypto = FakeCrypto(self.cryptoState)
         self.context = FakeContext(SSL.SSLv23_METHOD)
-
 
     def test_openSSL110(self):
         """
@@ -3069,9 +3021,7 @@ class ChooseDiffieHellmanEllipticCurveTests(unittest.SynchronousTestCase):
         @see: U{http://twistedmatrix.com/trac/ticket/9210}
         """
         chooser = sslverify._ChooseDiffieHellmanEllipticCurve(
-            self.OPENSSL_110,
-            openSSLlib=self.lib,
-            openSSLcrypto=self.crypto,
+            self.OPENSSL_110, openSSLlib=self.lib, openSSLcrypto=self.crypto
         )
         chooser.configureECDHCurve(self.context)
 
@@ -3079,7 +3029,6 @@ class ChooseDiffieHellmanEllipticCurveTests(unittest.SynchronousTestCase):
         self.assertFalse(self.libState.ecdhValues)
         self.assertFalse(self.cryptoState.getEllipticCurveCalls)
         self.assertIsNone(self.context._ecCurve)
-
 
     def test_openSSL102(self):
         """
@@ -3089,9 +3038,7 @@ class ChooseDiffieHellmanEllipticCurveTests(unittest.SynchronousTestCase):
         """
         context = SSL.Context(SSL.SSLv23_METHOD)
         chooser = sslverify._ChooseDiffieHellmanEllipticCurve(
-            self.OPENSSL_102,
-            openSSLlib=self.lib,
-            openSSLcrypto=self.crypto,
+            self.OPENSSL_102, openSSLlib=self.lib, openSSLcrypto=self.crypto
         )
         chooser.configureECDHCurve(context)
 
@@ -3099,7 +3046,6 @@ class ChooseDiffieHellmanEllipticCurveTests(unittest.SynchronousTestCase):
         self.assertEqual(self.libState.ecdhValues, [True])
         self.assertFalse(self.cryptoState.getEllipticCurveCalls)
         self.assertIsNone(self.context._ecCurve)
-
 
     def test_openSSL102SetECDHAutoRaises(self):
         """
@@ -3109,16 +3055,13 @@ class ChooseDiffieHellmanEllipticCurveTests(unittest.SynchronousTestCase):
         self.libState.setECDHAutoRaises = BaseException
         context = SSL.Context(SSL.SSLv23_METHOD)
         chooser = sslverify._ChooseDiffieHellmanEllipticCurve(
-            self.OPENSSL_102,
-            openSSLlib=self.lib,
-            openSSLcrypto=self.crypto,
+            self.OPENSSL_102, openSSLlib=self.lib, openSSLcrypto=self.crypto
         )
         chooser.configureECDHCurve(context)
 
         self.assertEqual(self.libState.ecdhContexts, [context._context])
         self.assertEqual(self.libState.ecdhValues, [True])
         self.assertFalse(self.cryptoState.getEllipticCurveCalls)
-
 
     def test_openSSL101(self):
         """
@@ -3128,45 +3071,38 @@ class ChooseDiffieHellmanEllipticCurveTests(unittest.SynchronousTestCase):
         """
         self.cryptoState.getEllipticCurveReturns = curve = "curve object"
         chooser = sslverify._ChooseDiffieHellmanEllipticCurve(
-            self.OPENSSL_101,
-            openSSLlib=self.lib,
-            openSSLcrypto=self.crypto,
+            self.OPENSSL_101, openSSLlib=self.lib, openSSLcrypto=self.crypto
         )
         chooser.configureECDHCurve(self.context)
 
         self.assertFalse(self.libState.ecdhContexts)
         self.assertFalse(self.libState.ecdhValues)
         self.assertEqual(
-            self.cryptoState.getEllipticCurveCalls,
-            [sslverify._defaultCurveName],
+            self.cryptoState.getEllipticCurveCalls, [sslverify._defaultCurveName]
         )
         self.assertIs(self.context._ecCurve, curve)
-
 
     def test_openSSL101SetECDHRaises(self):
         """
         An exception raised by L{OpenSSL.SSL.Context.set_tmp_ecdh}
         under OpenSSL 1.0.1 is suppressed because ECHDE is best-effort.
         """
+
         def set_tmp_ecdh(ctx):
             raise BaseException
 
         self.context.set_tmp_ecdh = set_tmp_ecdh
 
         chooser = sslverify._ChooseDiffieHellmanEllipticCurve(
-            self.OPENSSL_101,
-            openSSLlib=self.lib,
-            openSSLcrypto=self.crypto,
+            self.OPENSSL_101, openSSLlib=self.lib, openSSLcrypto=self.crypto
         )
         chooser.configureECDHCurve(self.context)
 
         self.assertFalse(self.libState.ecdhContexts)
         self.assertFalse(self.libState.ecdhValues)
         self.assertEqual(
-            self.cryptoState.getEllipticCurveCalls,
-            [sslverify._defaultCurveName],
+            self.cryptoState.getEllipticCurveCalls, [sslverify._defaultCurveName]
         )
-
 
     def test_openSSL101NoECC(self):
         """
@@ -3175,9 +3111,7 @@ class ChooseDiffieHellmanEllipticCurveTests(unittest.SynchronousTestCase):
         """
         self.cryptoState.getEllipticCurveRaises = ValueError
         chooser = sslverify._ChooseDiffieHellmanEllipticCurve(
-            self.OPENSSL_101,
-            openSSLlib=self.lib,
-            openSSLcrypto=self.crypto,
+            self.OPENSSL_101, openSSLlib=self.lib, openSSLcrypto=self.crypto
         )
         chooser.configureECDHCurve(self.context)
 
@@ -3186,11 +3120,11 @@ class ChooseDiffieHellmanEllipticCurveTests(unittest.SynchronousTestCase):
         self.assertIsNone(self.context._ecCurve)
 
 
-
 class KeyPairTests(unittest.TestCase):
     """
     Tests for L{sslverify.KeyPair}.
     """
+
     if skipSSL:
         skip = skipSSL
 
@@ -3198,10 +3132,7 @@ class KeyPairTests(unittest.TestCase):
         """
         Create test certificate.
         """
-        self.sKey = makeCertificate(
-            O=b"Server Test Certificate",
-            CN=b"server")[0]
-
+        self.sKey = makeCertificate(O=b"Server Test Certificate", CN=b"server")[0]
 
     def test_getstateDeprecation(self):
         """
@@ -3209,8 +3140,8 @@ class KeyPairTests(unittest.TestCase):
         """
         self.callDeprecated(
             (Version("Twisted", 15, 0, 0), "a real persistence system"),
-            sslverify.KeyPair(self.sKey).__getstate__)
-
+            sslverify.KeyPair(self.sKey).__getstate__,
+        )
 
     def test_setstateDeprecation(self):
         """
@@ -3219,26 +3150,26 @@ class KeyPairTests(unittest.TestCase):
         state = sslverify.KeyPair(self.sKey).dump()
         self.callDeprecated(
             (Version("Twisted", 15, 0, 0), "a real persistence system"),
-            sslverify.KeyPair(self.sKey).__setstate__, state)
-
+            sslverify.KeyPair(self.sKey).__setstate__,
+            state,
+        )
 
     def test_noTrailingNewlinePemCert(self):
-        noTrailingNewlineKeyPemPath = getModule(
-            "twisted.test").filePath.sibling(
-            "cert.pem.no_trailing_newline")
+        noTrailingNewlineKeyPemPath = getModule("twisted.test").filePath.sibling(
+            "cert.pem.no_trailing_newline"
+        )
 
         certPEM = noTrailingNewlineKeyPemPath.getContent()
         ssl.Certificate.loadPEM(certPEM)
-
 
 
 class SelectVerifyImplementationTests(unittest.SynchronousTestCase):
     """
     Tests for L{_selectVerifyImplementation}.
     """
+
     if skipSSL is not None:
         skip = skipSSL
-
 
     def test_dependencyMissing(self):
         """
@@ -3252,16 +3183,18 @@ class SelectVerifyImplementationTests(unittest.SynchronousTestCase):
             result = sslverify._selectVerifyImplementation()
             expected = (
                 sslverify.simpleVerifyHostname,
-                sslverify.SimpleVerificationError)
+                sslverify.SimpleVerificationError,
+            )
             self.assertEqual(expected, result)
+
     test_dependencyMissing.suppress = [
         util.suppress(
             message=(
                 "You do not have a working installation of the "
-                "service_identity module"),
-            ),
-        ]
-
+                "service_identity module"
+            )
+        )
+    ]
 
     def test_dependencyMissingWarning(self):
         """
@@ -3276,9 +3209,9 @@ class SelectVerifyImplementationTests(unittest.SynchronousTestCase):
 
         [warning] = list(
             warning
-            for warning
-            in self.flushWarnings()
-            if warning["category"] == UserWarning)
+            for warning in self.flushWarnings()
+            if warning["category"] == UserWarning
+        )
 
         importErrors = [
             # Python 3.6.3
@@ -3286,7 +3219,7 @@ class SelectVerifyImplementationTests(unittest.SynchronousTestCase):
             # Python 3
             "'import of 'service_identity' halted; None in sys.modules'",
             # Python 2
-            "'No module named service_identity'"
+            "'No module named service_identity'",
         ]
 
         expectedMessages = []
@@ -3299,7 +3232,9 @@ class SelectVerifyImplementationTests(unittest.SynchronousTestCase):
                 "Without the service_identity module, Twisted can perform only"
                 " rudimentary TLS client hostname verification.  Many valid "
                 "certificate/hostname mappings may be rejected.".format(
-                message=importError))
+                    message=importError
+                )
+            )
 
         self.assertIn(warning["message"], expectedMessages)
 

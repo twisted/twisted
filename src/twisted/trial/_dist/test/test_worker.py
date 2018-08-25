@@ -12,7 +12,11 @@ from zope.interface.verify import verifyObject
 from twisted.trial.reporter import TestResult
 from twisted.trial.unittest import TestCase
 from twisted.trial._dist.worker import (
-    LocalWorker, LocalWorkerAMP, LocalWorkerTransport, WorkerProtocol)
+    LocalWorker,
+    LocalWorkerAMP,
+    LocalWorkerTransport,
+    WorkerProtocol,
+)
 from twisted.trial._dist import managercommands, workercommands
 
 from twisted.scripts import trial
@@ -35,7 +39,6 @@ class FakeAMP(AMP):
     """
 
 
-
 class WorkerProtocolTests(TestCase):
     """
     Tests for L{WorkerProtocol}.
@@ -51,7 +54,6 @@ class WorkerProtocolTests(TestCase):
         self.server.makeConnection(self.serverTransport)
         self.client = FakeAMP()
         self.client.makeConnection(self.clientTransport)
-
 
     def test_run(self):
         """
@@ -70,7 +72,6 @@ class WorkerProtocolTests(TestCase):
         self.serverTransport.clear()
         return d
 
-
     def test_start(self):
         """
         The C{start} command changes the current path.
@@ -79,7 +80,6 @@ class WorkerProtocolTests(TestCase):
         self.addCleanup(os.chdir, curdir)
         self.server.start('..')
         self.assertNotEqual(os.path.realpath(os.path.curdir), curdir)
-
 
 
 class LocalWorkerAMPTests(TestCase):
@@ -104,7 +104,6 @@ class LocalWorkerAMPTests(TestCase):
         self.managerAMP.run(self.testCase, self.result)
         self.managerTransport.clear()
 
-
     def pumpTransports(self):
         """
         Sends data from C{self.workerTransport} to C{self.managerAMP}, and then
@@ -114,20 +113,17 @@ class LocalWorkerAMPTests(TestCase):
         self.workerTransport.clear()
         self.worker.dataReceived(self.managerTransport.value())
 
-
     def test_runSuccess(self):
         """
         Run a test, and succeed.
         """
         results = []
 
-        d = self.worker.callRemote(managercommands.AddSuccess,
-                                   testName=self.testName)
+        d = self.worker.callRemote(managercommands.AddSuccess, testName=self.testName)
         d.addCallback(lambda result: results.append(result['success']))
         self.pumpTransports()
 
         self.assertTrue(results)
-
 
     def test_runExpectedFailure(self):
         """
@@ -135,15 +131,17 @@ class LocalWorkerAMPTests(TestCase):
         """
         results = []
 
-        d = self.worker.callRemote(managercommands.AddExpectedFailure,
-                                   testName=self.testName, error='error',
-                                   todo='todoReason')
+        d = self.worker.callRemote(
+            managercommands.AddExpectedFailure,
+            testName=self.testName,
+            error='error',
+            todo='todoReason',
+        )
         d.addCallback(lambda result: results.append(result['success']))
         self.pumpTransports()
 
         self.assertEqual(self.testCase, self.result.expectedFailures[0][0])
         self.assertTrue(results)
-
 
     def test_runError(self):
         """
@@ -151,16 +149,18 @@ class LocalWorkerAMPTests(TestCase):
         """
         results = []
         errorClass = fullyQualifiedName(ValueError)
-        d = self.worker.callRemote(managercommands.AddError,
-                                   testName=self.testName, error='error',
-                                   errorClass=errorClass,
-                                   frames=[])
+        d = self.worker.callRemote(
+            managercommands.AddError,
+            testName=self.testName,
+            error='error',
+            errorClass=errorClass,
+            frames=[],
+        )
         d.addCallback(lambda result: results.append(result['success']))
         self.pumpTransports()
 
         self.assertEqual(self.testCase, self.result.errors[0][0])
         self.assertTrue(results)
-
 
     def test_runErrorWithFrames(self):
         """
@@ -169,19 +169,21 @@ class LocalWorkerAMPTests(TestCase):
         """
         results = []
         errorClass = fullyQualifiedName(ValueError)
-        d = self.worker.callRemote(managercommands.AddError,
-                                   testName=self.testName, error='error',
-                                   errorClass=errorClass,
-                                   frames=["file.py", "invalid code", "3"])
+        d = self.worker.callRemote(
+            managercommands.AddError,
+            testName=self.testName,
+            error='error',
+            errorClass=errorClass,
+            frames=["file.py", "invalid code", "3"],
+        )
         d.addCallback(lambda result: results.append(result['success']))
         self.pumpTransports()
 
         self.assertEqual(self.testCase, self.result.errors[0][0])
         self.assertEqual(
-            [('file.py', 'invalid code', 3, [], [])],
-            self.result.errors[0][1].frames)
+            [('file.py', 'invalid code', 3, [], [])], self.result.errors[0][1].frames
+        )
         self.assertTrue(results)
-
 
     def test_runFailure(self):
         """
@@ -189,16 +191,18 @@ class LocalWorkerAMPTests(TestCase):
         """
         results = []
         failClass = fullyQualifiedName(RuntimeError)
-        d = self.worker.callRemote(managercommands.AddFailure,
-                                   testName=self.testName, fail='fail',
-                                   failClass=failClass,
-                                   frames=[])
+        d = self.worker.callRemote(
+            managercommands.AddFailure,
+            testName=self.testName,
+            fail='fail',
+            failClass=failClass,
+            frames=[],
+        )
         d.addCallback(lambda result: results.append(result['success']))
         self.pumpTransports()
 
         self.assertEqual(self.testCase, self.result.failures[0][0])
         self.assertTrue(results)
-
 
     def test_runSkip(self):
         """
@@ -206,14 +210,14 @@ class LocalWorkerAMPTests(TestCase):
         """
         results = []
 
-        d = self.worker.callRemote(managercommands.AddSkip,
-                                   testName=self.testName, reason='reason')
+        d = self.worker.callRemote(
+            managercommands.AddSkip, testName=self.testName, reason='reason'
+        )
         d.addCallback(lambda result: results.append(result['success']))
         self.pumpTransports()
 
         self.assertEqual(self.testCase, self.result.skips[0][0])
         self.assertTrue(results)
-
 
     def test_runUnexpectedSuccesses(self):
         """
@@ -221,15 +225,14 @@ class LocalWorkerAMPTests(TestCase):
         """
         results = []
 
-        d = self.worker.callRemote(managercommands.AddUnexpectedSuccess,
-                                   testName=self.testName,
-                                   todo='todo')
+        d = self.worker.callRemote(
+            managercommands.AddUnexpectedSuccess, testName=self.testName, todo='todo'
+        )
         d.addCallback(lambda result: results.append(result['success']))
         self.pumpTransports()
 
         self.assertEqual(self.testCase, self.result.unexpectedSuccesses[0][0])
         self.assertTrue(results)
-
 
     def test_testWrite(self):
         """
@@ -241,14 +244,12 @@ class LocalWorkerAMPTests(TestCase):
         self.managerAMP.setTestStream(stream)
 
         command = managercommands.TestWrite
-        d = self.worker.callRemote(command,
-                                   out="Some output")
+        d = self.worker.callRemote(command, out="Some output")
         d.addCallback(lambda result: results.append(result['success']))
         self.pumpTransports()
 
         self.assertEqual("Some output\n", stream.getvalue())
         self.assertTrue(results)
-
 
     def test_stopAfterRun(self):
         """
@@ -264,47 +265,42 @@ class LocalWorkerAMPTests(TestCase):
         self.managerAMP.callRemote = fakeCallRemote
 
         class StopTestResult(TestResult):
-
             def stopTest(self, test):
                 stopped.append(test)
-
 
         d = self.managerAMP.run(self.testCase, StopTestResult())
         self.assertEqual([self.testCase], stopped)
         return d.addCallback(self.assertIdentical, result)
 
 
-
 class FakeAMProtocol(AMP):
     """
     A fake implementation of L{AMP} for testing.
     """
+
     id = 0
     dataString = b""
 
     def dataReceived(self, data):
         self.dataString += data
 
-
     def setTestStream(self, stream):
         self.testStream = stream
-
 
 
 class FakeTransport(object):
     """
     A fake process transport implementation for testing.
     """
+
     dataString = b""
     calls = 0
 
     def writeToChild(self, fd, data):
         self.dataString += data
 
-
     def loseConnection(self):
         self.calls += 1
-
 
 
 class LocalWorkerTests(TestCase):
@@ -330,7 +326,6 @@ class LocalWorkerTests(TestCase):
         self.addCleanup(worker._errLog.close)
         return worker
 
-
     def test_childDataReceived(self):
         """
         L{LocalWorker.childDataReceived} forwards the received data to linked
@@ -344,7 +339,6 @@ class LocalWorkerTests(TestCase):
         self.assertEqual(b"foo", localWorker._ampProtocol.dataString)
         self.assertEqual(b"bar", localWorker._outLog.getvalue())
 
-
     def test_outReceived(self):
         """
         L{LocalWorker.outReceived} logs the output into its C{_outLog} log
@@ -355,7 +349,6 @@ class LocalWorkerTests(TestCase):
         data = b"The quick brown fox jumps over the lazy dog"
         localWorker.outReceived(data)
         self.assertEqual(data, localWorker._outLog.getvalue())
-
 
     def test_errReceived(self):
         """
@@ -368,7 +361,6 @@ class LocalWorkerTests(TestCase):
         localWorker.errReceived(data)
         self.assertEqual(data, localWorker._errLog.getvalue())
 
-
     def test_write(self):
         """
         L{LocalWorkerTransport.write} forwards the written data to the given
@@ -379,7 +371,6 @@ class LocalWorkerTests(TestCase):
         data = b"The quick brown fox jumps over the lazy dog"
         localTransport.write(data)
         self.assertEqual(data, transport.dataString)
-
 
     def test_writeSequence(self):
         """
@@ -392,7 +383,6 @@ class LocalWorkerTests(TestCase):
         localTransport.writeSequence(data)
         self.assertEqual(b"".join(data), transport.dataString)
 
-
     def test_loseConnection(self):
         """
         L{LocalWorkerTransport.loseConnection} forwards the call to the given
@@ -404,7 +394,6 @@ class LocalWorkerTests(TestCase):
 
         self.assertEqual(transport.calls, 1)
 
-
     def test_connectionLost(self):
         """
         L{LocalWorker.connectionLost} closes the log streams.
@@ -415,7 +404,6 @@ class LocalWorkerTests(TestCase):
         self.assertTrue(localWorker._outLog.closed)
         self.assertTrue(localWorker._errLog.closed)
         self.assertTrue(localWorker._testLog.closed)
-
 
     def test_processEnded(self):
         """
@@ -434,7 +422,6 @@ class LocalWorkerTests(TestCase):
         self.assertIdentical(None, protocol.transport)
         return self.assertFailure(localWorker.endDeferred, ConnectionDone)
 
-
     def test_addresses(self):
         """
         L{LocalWorkerTransport.getPeer} and L{LocalWorkerTransport.getHost}
@@ -444,7 +431,6 @@ class LocalWorkerTests(TestCase):
         self.assertTrue(verifyObject(IAddress, localTransport.getPeer()))
         self.assertTrue(verifyObject(IAddress, localTransport.getHost()))
 
-
     def test_transport(self):
         """
         L{LocalWorkerTransport} implements L{ITransport} to be able to be used
@@ -452,7 +438,6 @@ class LocalWorkerTests(TestCase):
         """
         localTransport = LocalWorkerTransport(None)
         self.assertTrue(verifyObject(ITransport, localTransport))
-
 
     def test_startError(self):
         """

@@ -15,7 +15,6 @@ import os
 import errno
 
 
-
 def _setupPath(environ):
     """
     Override C{sys.path} with what the parent passed in B{TRIAL_PYTHONPATH}.
@@ -35,7 +34,6 @@ from twisted.trial._dist.options import WorkerOptions
 from twisted.trial._dist import _WORKER_AMP_STDIN, _WORKER_AMP_STDOUT
 
 
-
 class WorkerLogObserver(object):
     """
     A log observer that forward its output to a C{AMP} protocol.
@@ -48,17 +46,16 @@ class WorkerLogObserver(object):
         """
         self.protocol = protocol
 
-
     def emit(self, eventDict):
         """
         Produce a log output.
         """
         from twisted.trial._dist import managercommands
+
         text = textFromEventDict(eventDict)
         if text is None:
             return
         self.protocol.callRemote(managercommands.TestWrite, out=text)
-
 
 
 def main(_fdopen=os.fdopen):
@@ -72,6 +69,7 @@ def main(_fdopen=os.fdopen):
     config.parseOptions()
 
     from twisted.trial._dist.worker import WorkerProtocol
+
     workerProtocol = WorkerProtocol(config['force-gc'])
 
     protocolIn = _fdopen(_WORKER_AMP_STDIN, 'rb')
@@ -102,9 +100,9 @@ def main(_fdopen=os.fdopen):
     if config.tracer:
         sys.settrace(None)
         results = config.tracer.results()
-        results.write_results(show_missing=True, summary=False,
-                              coverdir=config.coverdir().path)
-
+        results.write_results(
+            show_missing=True, summary=False, coverdir=config.coverdir().path
+        )
 
 
 if __name__ == '__main__':

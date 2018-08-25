@@ -5,6 +5,7 @@
 # support.
 from __future__ import division, absolute_import
 
+
 class Counter(object):
     """a simple counter object for testing trial's doctest support
 
@@ -23,6 +24,7 @@ class Counter(object):
          True
 
     """
+
     _count = 0
 
     def __init__(self, initialValue=0, maxval=None):

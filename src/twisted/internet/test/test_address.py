@@ -37,7 +37,6 @@ class AddressTestCaseMixin(object):
         self.assertTrue(self.buildAddress() == self.buildAddress())
         self.assertFalse(self.buildAddress() != self.buildAddress())
 
-
     def test_hash(self):
         """
         C{__hash__} can be used to get a hash of an address, allowing
@@ -46,7 +45,6 @@ class AddressTestCaseMixin(object):
         addr = self.buildAddress()
         d = {addr: True}
         self.assertTrue(d[self.buildAddress()])
-
 
     def test_differentNamesComparison(self):
         """
@@ -59,7 +57,6 @@ class AddressTestCaseMixin(object):
         self.assertTrue(self.buildAddress() != self.buildDifferentAddress())
         self.assertTrue(self.buildDifferentAddress() != self.buildAddress())
 
-
     def assertDeprecations(self, testMethod, message):
         """
         Assert that the a DeprecationWarning with the given message was
@@ -71,16 +68,15 @@ class AddressTestCaseMixin(object):
         self.assertEqual(len(warnings), 1)
 
 
-
 class IPv4AddressTestCaseMixin(AddressTestCaseMixin):
     addressArgSpec = (("type", "%s"), ("host", "%r"), ("port", "%d"))
-
 
 
 class HostnameAddressTests(unittest.TestCase, AddressTestCaseMixin):
     """
     Test case for L{HostnameAddress}.
     """
+
     addressArgSpec = (("hostname", "%s"), ("port", "%d"))
 
     def buildAddress(self):
@@ -91,7 +87,6 @@ class HostnameAddressTests(unittest.TestCase, AddressTestCaseMixin):
         """
         return HostnameAddress(b"example.com", 0)
 
-
     def buildDifferentAddress(self):
         """
         Like L{buildAddress}, but with a different hostname.
@@ -101,9 +96,7 @@ class HostnameAddressTests(unittest.TestCase, AddressTestCaseMixin):
         return HostnameAddress(b"example.net", 0)
 
 
-
-class IPv4AddressTCPTests(unittest.SynchronousTestCase,
-                          IPv4AddressTestCaseMixin):
+class IPv4AddressTCPTests(unittest.SynchronousTestCase, IPv4AddressTestCaseMixin):
     def buildAddress(self):
         """
         Create an arbitrary new L{IPv4Address} instance with a C{"TCP"}
@@ -112,7 +105,6 @@ class IPv4AddressTCPTests(unittest.SynchronousTestCase,
         """
         return IPv4Address("TCP", "127.0.0.1", 0)
 
-
     def buildDifferentAddress(self):
         """
         Like L{buildAddress}, but with a different fixed address.
@@ -120,9 +112,7 @@ class IPv4AddressTCPTests(unittest.SynchronousTestCase,
         return IPv4Address("TCP", "127.0.0.2", 0)
 
 
-
-class IPv4AddressUDPTests(unittest.SynchronousTestCase,
-                          IPv4AddressTestCaseMixin):
+class IPv4AddressUDPTests(unittest.SynchronousTestCase, IPv4AddressTestCaseMixin):
     def buildAddress(self):
         """
         Create an arbitrary new L{IPv4Address} instance with a C{"UDP"}
@@ -131,13 +121,11 @@ class IPv4AddressUDPTests(unittest.SynchronousTestCase,
         """
         return IPv4Address("UDP", "127.0.0.1", 0)
 
-
     def buildDifferentAddress(self):
         """
         Like L{buildAddress}, but with a different fixed address.
         """
         return IPv4Address("UDP", "127.0.0.2", 0)
-
 
 
 class IPv6AddressTests(unittest.SynchronousTestCase, AddressTestCaseMixin):
@@ -151,13 +139,11 @@ class IPv6AddressTests(unittest.SynchronousTestCase, AddressTestCaseMixin):
         """
         return IPv6Address("TCP", "::1", 0)
 
-
     def buildDifferentAddress(self):
         """
         Like L{buildAddress}, but with a different fixed address.
         """
         return IPv6Address("TCP", "::2", 0)
-
 
 
 class UNIXAddressTests(unittest.SynchronousTestCase):
@@ -168,7 +154,6 @@ class UNIXAddressTests(unittest.SynchronousTestCase):
         self._socketAddress = self.mktemp()
         self._otherAddress = self.mktemp()
 
-
     def buildAddress(self):
         """
         Create an arbitrary new L{UNIXAddress} instance.  A new instance is
@@ -176,22 +161,21 @@ class UNIXAddressTests(unittest.SynchronousTestCase):
         """
         return UNIXAddress(self._socketAddress)
 
-
     def buildDifferentAddress(self):
         """
         Like L{buildAddress}, but with a different fixed address.
         """
         return UNIXAddress(self._otherAddress)
 
-
     def test_repr(self):
         """
         The repr of L{UNIXAddress} returns with the filename that the
         L{UNIXAddress} is for.
         """
-        self.assertEqual(repr(self.buildAddress()), "UNIXAddress('%s')" % (
-            nativeString(self._socketAddress)))
-
+        self.assertEqual(
+            repr(self.buildAddress()),
+            "UNIXAddress('%s')" % (nativeString(self._socketAddress)),
+        )
 
     def test_comparisonOfLinkedFiles(self):
         """
@@ -200,13 +184,11 @@ class UNIXAddressTests(unittest.SynchronousTestCase):
         linkName = self.mktemp()
         with open(self._socketAddress, 'w') as self.fd:
             os.symlink(os.path.abspath(self._socketAddress), linkName)
-            self.assertEqual(UNIXAddress(self._socketAddress),
-                             UNIXAddress(linkName))
-            self.assertEqual(UNIXAddress(linkName),
-                             UNIXAddress(self._socketAddress))
+            self.assertEqual(UNIXAddress(self._socketAddress), UNIXAddress(linkName))
+            self.assertEqual(UNIXAddress(linkName), UNIXAddress(self._socketAddress))
+
     if not unixSkip:
         test_comparisonOfLinkedFiles.skip = symlinkSkip
-
 
     def test_hashOfLinkedFiles(self):
         """
@@ -215,24 +197,24 @@ class UNIXAddressTests(unittest.SynchronousTestCase):
         linkName = self.mktemp()
         with open(self._socketAddress, 'w') as self.fd:
             os.symlink(os.path.abspath(self._socketAddress), linkName)
-            self.assertEqual(hash(UNIXAddress(self._socketAddress)),
-                            hash(UNIXAddress(linkName)))
+            self.assertEqual(
+                hash(UNIXAddress(self._socketAddress)), hash(UNIXAddress(linkName))
+            )
+
     if not unixSkip:
         test_hashOfLinkedFiles.skip = symlinkSkip
 
 
-
-class EmptyUNIXAddressTests(unittest.SynchronousTestCase,
-                            AddressTestCaseMixin):
+class EmptyUNIXAddressTests(unittest.SynchronousTestCase, AddressTestCaseMixin):
     """
     Tests for L{UNIXAddress} operations involving a L{None} address.
     """
+
     skip = unixSkip
     addressArgSpec = (("name", "%r"),)
 
     def setUp(self):
         self._socketAddress = self.mktemp()
-
 
     def buildAddress(self):
         """
@@ -242,13 +224,11 @@ class EmptyUNIXAddressTests(unittest.SynchronousTestCase,
         """
         return UNIXAddress(None)
 
-
     def buildDifferentAddress(self):
         """
         Like L{buildAddress}, but with a random temporary directory.
         """
         return UNIXAddress(self._socketAddress)
-
 
     def test_comparisonOfLinkedFiles(self):
         """
@@ -258,13 +238,11 @@ class EmptyUNIXAddressTests(unittest.SynchronousTestCase,
         linkName = self.mktemp()
         with open(self._socketAddress, 'w') as self.fd:
             os.symlink(os.path.abspath(self._socketAddress), linkName)
-            self.assertNotEqual(UNIXAddress(self._socketAddress),
-                                UNIXAddress(None))
-            self.assertNotEqual(UNIXAddress(None),
-                                UNIXAddress(self._socketAddress))
+            self.assertNotEqual(UNIXAddress(self._socketAddress), UNIXAddress(None))
+            self.assertNotEqual(UNIXAddress(None), UNIXAddress(self._socketAddress))
+
     if not unixSkip:
         test_comparisonOfLinkedFiles.skip = symlinkSkip
-
 
     def test_emptyHash(self):
         """

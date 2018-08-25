@@ -7,22 +7,29 @@ Exception definitions for L{twisted.web}.
 """
 
 from __future__ import division, absolute_import
+
 try:
     from future_builtins import ascii
 except ImportError:
     pass
 
 __all__ = [
-    'Error', 'PageRedirect', 'InfiniteRedirection', 'RenderError',
-    'MissingRenderMethod', 'MissingTemplateLoader', 'UnexposedMethodError',
-    'UnfilledSlot', 'UnsupportedType', 'FlattenerError',
+    'Error',
+    'PageRedirect',
+    'InfiniteRedirection',
+    'RenderError',
+    'MissingRenderMethod',
+    'MissingTemplateLoader',
+    'UnexposedMethodError',
+    'UnfilledSlot',
+    'UnsupportedType',
+    'FlattenerError',
     'RedirectWithNoLocation',
-    ]
+]
 
 
 from twisted.web._responses import RESPONSES
 from twisted.python.compat import unicode, nativeString, intToBytes, Sequence
-
 
 
 def _codeToMessage(code):
@@ -55,6 +62,7 @@ class Error(Exception):
     @type response: L{bytes}
     @ivar response: A complete HTML document for an error page.
     """
+
     def __init__(self, code, message=None, response=None):
         """
         Initializes a basic exception.
@@ -85,10 +93,8 @@ class Error(Exception):
         self.message = message
         self.response = response
 
-
     def __str__(self):
         return nativeString(self.status + b" " + self.message)
-
 
 
 class PageRedirect(Error):
@@ -98,6 +104,7 @@ class PageRedirect(Error):
     @type location: L{bytes}
     @ivar location: The location of the redirect which was not followed.
     """
+
     def __init__(self, code, message=None, response=None, location=None):
         """
         Initializes a page redirect exception.
@@ -124,7 +131,6 @@ class PageRedirect(Error):
         self.location = location
 
 
-
 class InfiniteRedirection(Error):
     """
     HTTP redirection is occurring endlessly.
@@ -133,6 +139,7 @@ class InfiniteRedirection(Error):
     @ivar location: The first URL in the series of redirections which was
         not followed.
     """
+
     def __init__(self, code, message=None, response=None, location=None):
         """
         Initializes an infinite redirection exception.
@@ -157,7 +164,6 @@ class InfiniteRedirection(Error):
         if self.message and location:
             self.message = self.message + b" to " + location
         self.location = location
-
 
 
 class RedirectWithNoLocation(Error):
@@ -193,7 +199,6 @@ class RedirectWithNoLocation(Error):
         self.uri = uri
 
 
-
 class UnsupportedMethod(Exception):
     """
     Raised by a resource when faced with a strange request method.
@@ -219,19 +224,17 @@ class UnsupportedMethod(Exception):
         if not isinstance(allowedMethods, Sequence):
             raise TypeError(
                 "First argument must be a sequence of supported methods, "
-                "but my first argument is not a sequence.")
-
+                "but my first argument is not a sequence."
+            )
 
     def __str__(self):
         return "Expected one of %r" % (self.allowedMethods,)
-
 
 
 class SchemeNotSupported(Exception):
     """
     The scheme of a URI was not one of the supported values.
     """
-
 
 
 class RenderError(Exception):
@@ -241,7 +244,6 @@ class RenderError(Exception):
     """
 
 
-
 class MissingRenderMethod(RenderError):
     """
     Tried to use a render method which does not exist.
@@ -249,16 +251,18 @@ class MissingRenderMethod(RenderError):
     @ivar element: The element which did not have the render method.
     @ivar renderName: The name of the renderer which could not be found.
     """
+
     def __init__(self, element, renderName):
         RenderError.__init__(self, element, renderName)
         self.element = element
         self.renderName = renderName
 
-
     def __repr__(self):
         return '%r: %r had no render method named %r' % (
-            self.__class__.__name__, self.element, self.renderName)
-
+            self.__class__.__name__,
+            self.element,
+            self.renderName,
+        )
 
 
 class MissingTemplateLoader(RenderError):
@@ -268,15 +272,13 @@ class MissingTemplateLoader(RenderError):
 
     @ivar element: The Element which did not have a document factory.
     """
+
     def __init__(self, element):
         RenderError.__init__(self, element)
         self.element = element
 
-
     def __repr__(self):
-        return '%r: %r had no loader' % (self.__class__.__name__,
-                                         self.element)
-
+        return '%r: %r had no loader' % (self.__class__.__name__, self.element)
 
 
 class UnexposedMethodError(Exception):
@@ -285,12 +287,10 @@ class UnexposedMethodError(Exception):
     """
 
 
-
 class UnfilledSlot(Exception):
     """
     During flattening, a slot with no associated data was encountered.
     """
-
 
 
 class UnsupportedType(Exception):
@@ -298,7 +298,6 @@ class UnsupportedType(Exception):
     During flattening, an object of a type which cannot be flattened was
     encountered.
     """
-
 
 
 class FlattenerError(Exception):
@@ -309,12 +308,12 @@ class FlattenerError(Exception):
         the unflattenable object was encountered.  The first element is least
         deeply nested object and the last element is the most deeply nested.
     """
+
     def __init__(self, exception, roots, traceback):
         self._exception = exception
         self._roots = roots
         self._traceback = traceback
         Exception.__init__(self, exception, roots, traceback)
-
 
     def _formatRoot(self, obj):
         """
@@ -352,11 +351,13 @@ class FlattenerError(Exception):
                 return 'Tag <' + obj.tagName + '>'
             else:
                 return "File \"%s\", line %d, column %d, in \"%s\"" % (
-                    obj.filename, obj.lineNumber,
-                    obj.columnNumber, obj.tagName)
+                    obj.filename,
+                    obj.lineNumber,
+                    obj.columnNumber,
+                    obj.tagName,
+                )
         else:
             return ascii(obj)
-
 
     def __repr__(self):
         """
@@ -368,28 +369,38 @@ class FlattenerError(Exception):
         # since this is an 'error' module we should be extra paranoid about
         # that.
         from traceback import format_list
+
         if self._roots:
-            roots = '  ' + '\n  '.join([
-                    self._formatRoot(r) for r in self._roots]) + '\n'
+            roots = (
+                '  ' + '\n  '.join([self._formatRoot(r) for r in self._roots]) + '\n'
+            )
         else:
             roots = ''
         if self._traceback:
-            traceback = '\n'.join([
-                    line
-                    for entry in format_list(self._traceback)
-                    for line in entry.splitlines()]) + '\n'
+            traceback = (
+                '\n'.join(
+                    [
+                        line
+                        for entry in format_list(self._traceback)
+                        for line in entry.splitlines()
+                    ]
+                )
+                + '\n'
+            )
         else:
             traceback = ''
         return (
-            'Exception while flattening:\n' +
-            roots + traceback +
-            self._exception.__class__.__name__ + ': ' +
-            str(self._exception) + '\n')
-
+            'Exception while flattening:\n'
+            + roots
+            + traceback
+            + self._exception.__class__.__name__
+            + ': '
+            + str(self._exception)
+            + '\n'
+        )
 
     def __str__(self):
         return repr(self)
-
 
 
 class UnsupportedSpecialHeader(Exception):

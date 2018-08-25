@@ -19,6 +19,7 @@ class ModulesToInstallTests(TestCase):
     """
     Tests for L{notPortedModules}.
     """
+
     def test_exist(self):
         """
         All modules listed in L{notPortedModules} exist on Py2.
@@ -30,9 +31,10 @@ class ModulesToInstallTests(TestCase):
             path = os.path.join(root, *segments)
             alternateSegments = module.split(".") + ["__init__.py"]
             packagePath = os.path.join(root, *alternateSegments)
-            self.assertTrue(os.path.exists(path) or
-                            os.path.exists(packagePath),
-                            "Module {0} does not exist".format(module))
+            self.assertTrue(
+                os.path.exists(path) or os.path.exists(packagePath),
+                "Module {0} does not exist".format(module),
+            )
 
     def test_notexist(self):
         """
@@ -45,9 +47,10 @@ class ModulesToInstallTests(TestCase):
             path = os.path.join(root, *segments)
             alternateSegments = module.split(".") + ["__init__.py"]
             packagePath = os.path.join(root, *alternateSegments)
-            self.assertFalse(os.path.exists(path) or
-                             os.path.exists(packagePath),
-                             "Module {0} exists".format(module))
+            self.assertFalse(
+                os.path.exists(path) or os.path.exists(packagePath),
+                "Module {0} exists".format(module),
+            )
 
     if _PY3:
         test_exist.skip = "Only on Python 2"

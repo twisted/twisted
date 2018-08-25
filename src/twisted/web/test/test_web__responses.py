@@ -12,8 +12,8 @@ import string
 from twisted.trial import unittest
 from twisted.web import _responses
 
-class ResponseTests(unittest.TestCase):
 
+class ResponseTests(unittest.TestCase):
     def test_constants(self):
         """
         All constants besides C{RESPONSES} defined in L{_response} are

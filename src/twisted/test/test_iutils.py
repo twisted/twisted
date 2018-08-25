@@ -40,13 +40,13 @@ class ProcessUtilsTests(unittest.TestCase):
             scriptFile.write(os.linesep.join(sourceLines) + os.linesep)
         return os.path.abspath(script)
 
-
     def test_output(self):
         """
         L{getProcessOutput} returns a L{Deferred} which fires with the complete
         output of the process it runs after that process exits.
         """
-        scriptFile = self.makeSourceFile([
+        scriptFile = self.makeSourceFile(
+            [
                 "import sys",
                 "for s in b'hello world\\n':",
                 "    if hasattr(sys.stdout, 'buffer'):",
@@ -56,10 +56,11 @@ class ProcessUtilsTests(unittest.TestCase):
                 "    else:",
                 "        # Python 2",
                 "        sys.stdout.write(s)",
-                "    sys.stdout.flush()"])
+                "    sys.stdout.flush()",
+            ]
+        )
         d = utils.getProcessOutput(self.exe, ['-u', scriptFile])
         return d.addCallback(self.assertEqual, b"hello world\n")
-
 
     def test_outputWithErrorIgnored(self):
         """
@@ -67,18 +68,18 @@ class ProcessUtilsTests(unittest.TestCase):
         L{IOError} L{Failure} if the child process writes to stderr.
         """
         # make sure stderr raises an error normally
-        scriptFile = self.makeSourceFile([
-            'import sys',
-            'sys.stderr.write("hello world\\n")'
-            ])
+        scriptFile = self.makeSourceFile(
+            ['import sys', 'sys.stderr.write("hello world\\n")']
+        )
 
         d = utils.getProcessOutput(self.exe, ['-u', scriptFile])
         d = self.assertFailure(d, IOError)
+
         def cbFailed(err):
             return self.assertFailure(err.processEnded, error.ProcessDone)
+
         d.addCallback(cbFailed)
         return d
-
 
     def test_outputWithErrorCollected(self):
         """
@@ -86,18 +87,20 @@ class ProcessUtilsTests(unittest.TestCase):
         L{getProcessOutput}, the returned L{Deferred} fires with the child's
         stderr output as well as its stdout output.
         """
-        scriptFile = self.makeSourceFile([
-            'import sys',
-            # Write the same value to both because ordering isn't guaranteed so
-            # this simplifies the test.
-            'sys.stdout.write("foo")',
-            'sys.stdout.flush()',
-            'sys.stderr.write("foo")',
-            'sys.stderr.flush()'])
+        scriptFile = self.makeSourceFile(
+            [
+                'import sys',
+                # Write the same value to both because ordering isn't guaranteed so
+                # this simplifies the test.
+                'sys.stdout.write("foo")',
+                'sys.stdout.flush()',
+                'sys.stderr.write("foo")',
+                'sys.stderr.flush()',
+            ]
+        )
 
         d = utils.getProcessOutput(self.exe, ['-u', scriptFile], errortoo=True)
         return d.addCallback(self.assertEqual, b"foofoo")
-
 
     def test_value(self):
         """
@@ -109,7 +112,6 @@ class ProcessUtilsTests(unittest.TestCase):
         d = utils.getProcessValue(self.exe, ['-u', scriptFile])
         return d.addCallback(self.assertEqual, 1)
 
-
     def test_outputAndValue(self):
         """
         The L{Deferred} returned by L{getProcessOutputAndValue} fires with a
@@ -117,18 +119,20 @@ class ProcessUtilsTests(unittest.TestCase):
         stdout, the data written to the child's stderr, and the exit status of
         the child.
         """
-        scriptFile = self.makeSourceFile([
-            "import sys",
-            "if hasattr(sys.stdout, 'buffer'):",
-            "    # Python 3",
-            "    sys.stdout.buffer.write(b'hello world!\\n')",
-            "    sys.stderr.buffer.write(b'goodbye world!\\n')",
-            "else:",
-            "    # Python 2",
-            "    sys.stdout.write(b'hello world!\\n')",
-            "    sys.stderr.write(b'goodbye world!\\n')",
-            "sys.exit(1)"
-            ])
+        scriptFile = self.makeSourceFile(
+            [
+                "import sys",
+                "if hasattr(sys.stdout, 'buffer'):",
+                "    # Python 3",
+                "    sys.stdout.buffer.write(b'hello world!\\n')",
+                "    sys.stderr.buffer.write(b'goodbye world!\\n')",
+                "else:",
+                "    # Python 2",
+                "    sys.stdout.write(b'hello world!\\n')",
+                "    sys.stderr.write(b'goodbye world!\\n')",
+                "sys.exit(1)",
+            ]
+        )
 
         def gotOutputAndValue(out_err_code):
             out, err, code = out_err_code
@@ -136,12 +140,11 @@ class ProcessUtilsTests(unittest.TestCase):
             if _PY3:
                 self.assertEqual(err, b"goodbye world!\n")
             else:
-                self.assertEqual(err, b"goodbye world!" +
-                                      os.linesep)
+                self.assertEqual(err, b"goodbye world!" + os.linesep)
             self.assertEqual(code, 1)
+
         d = utils.getProcessOutputAndValue(self.exe, ["-u", scriptFile])
         return d.addCallback(gotOutputAndValue)
-
 
     def test_outputSignal(self):
         """
@@ -153,13 +156,16 @@ class ProcessUtilsTests(unittest.TestCase):
         # Use SIGKILL here because it's guaranteed to be delivered. Using
         # SIGHUP might not work in, e.g., a buildbot slave run under the
         # 'nohup' command.
-        scriptFile = self.makeSourceFile([
-            "import sys, os, signal",
-            "sys.stdout.write('stdout bytes\\n')",
-            "sys.stderr.write('stderr bytes\\n')",
-            "sys.stdout.flush()",
-            "sys.stderr.flush()",
-            "os.kill(os.getpid(), signal.SIGKILL)"])
+        scriptFile = self.makeSourceFile(
+            [
+                "import sys, os, signal",
+                "sys.stdout.write('stdout bytes\\n')",
+                "sys.stderr.write('stderr bytes\\n')",
+                "sys.stdout.flush()",
+                "sys.stderr.flush()",
+                "os.kill(os.getpid(), signal.SIGKILL)",
+            ]
+        )
 
         def gotOutputAndValue(out_err_sig):
             out, err, sig = out_err_sig
@@ -170,20 +176,19 @@ class ProcessUtilsTests(unittest.TestCase):
         d = utils.getProcessOutputAndValue(self.exe, ['-u', scriptFile])
         d = self.assertFailure(d, tuple)
         return d.addCallback(gotOutputAndValue)
+
     if platform.isWindows():
         test_outputSignal.skip = "Windows doesn't have real signals."
-
 
     def _pathTest(self, utilFunc, check):
         dir = os.path.abspath(self.mktemp())
         os.makedirs(dir)
-        scriptFile = self.makeSourceFile([
-                "import os, sys",
-                "sys.stdout.write(os.getcwd())"])
+        scriptFile = self.makeSourceFile(
+            ["import os, sys", "sys.stdout.write(os.getcwd())"]
+        )
         d = utilFunc(self.exe, ['-u', scriptFile], path=dir)
         d.addCallback(check, dir.encode(sys.getfilesystemencoding()))
         return d
-
 
     def test_getProcessOutputPath(self):
         """
@@ -192,41 +197,45 @@ class ProcessUtilsTests(unittest.TestCase):
         """
         return self._pathTest(utils.getProcessOutput, self.assertEqual)
 
-
     def test_getProcessValuePath(self):
         """
         L{getProcessValue} runs the given command with the working directory
         given by the C{path} parameter.
         """
+
         def check(result, ignored):
             self.assertEqual(result, 0)
-        return self._pathTest(utils.getProcessValue, check)
 
+        return self._pathTest(utils.getProcessValue, check)
 
     def test_getProcessOutputAndValuePath(self):
         """
         L{getProcessOutputAndValue} runs the given command with the working
         directory given by the C{path} parameter.
         """
+
         def check(out_err_status, dir):
             out, err, status = out_err_status
             self.assertEqual(out, dir)
             self.assertEqual(status, 0)
-        return self._pathTest(utils.getProcessOutputAndValue, check)
 
+        return self._pathTest(utils.getProcessOutputAndValue, check)
 
     def _defaultPathTest(self, utilFunc, check):
         # Make another directory to mess around with.
         dir = os.path.abspath(self.mktemp())
         os.makedirs(dir)
 
-        scriptFile = self.makeSourceFile([
+        scriptFile = self.makeSourceFile(
+            [
                 "import os, sys, stat",
                 # Fix the permissions so we can report the working directory.
                 # On macOS (and maybe elsewhere), os.getcwd() fails with EACCES
                 # if +x is missing from the working directory.
                 "os.chmod(%r, stat.S_IXUSR)" % (dir,),
-                "sys.stdout.write(os.getcwd())"])
+                "sys.stdout.write(os.getcwd())",
+            ]
+        )
 
         # Switch to it, but make sure we switch back
         self.addCleanup(os.chdir, os.getcwd())
@@ -235,8 +244,7 @@ class ProcessUtilsTests(unittest.TestCase):
         # Get rid of all its permissions, but make sure they get cleaned up
         # later, because otherwise it might be hard to delete the trial
         # temporary directory.
-        self.addCleanup(
-            os.chmod, dir, stat.S_IMODE(os.stat('.').st_mode))
+        self.addCleanup(os.chmod, dir, stat.S_IMODE(os.stat('.').st_mode))
         os.chmod(dir, 0)
 
         # Pass in -S so that if run using the coverage .pth trick, it won't be
@@ -245,7 +253,6 @@ class ProcessUtilsTests(unittest.TestCase):
         d = utilFunc(self.exe, ['-S', '-u', scriptFile])
         d.addCallback(check, dir.encode(sys.getfilesystemencoding()))
         return d
-
 
     def test_getProcessOutputDefaultPath(self):
         """
@@ -256,7 +263,6 @@ class ProcessUtilsTests(unittest.TestCase):
         """
         return self._defaultPathTest(utils.getProcessOutput, self.assertEqual)
 
-
     def test_getProcessValueDefaultPath(self):
         """
         If no value is supplied for the C{path} parameter, L{getProcessValue}
@@ -264,10 +270,11 @@ class ProcessUtilsTests(unittest.TestCase):
         process and succeeds even if the current working directory is not
         accessible.
         """
+
         def check(result, ignored):
             self.assertEqual(result, 0)
-        return self._defaultPathTest(utils.getProcessValue, check)
 
+        return self._defaultPathTest(utils.getProcessValue, check)
 
     def test_getProcessOutputAndValueDefaultPath(self):
         """
@@ -276,31 +283,35 @@ class ProcessUtilsTests(unittest.TestCase):
         directory as the parent process and succeeds even if the current
         working directory is not accessible.
         """
+
         def check(out_err_status, dir):
             out, err, status = out_err_status
             self.assertEqual(out, dir)
             self.assertEqual(status, 0)
-        return self._defaultPathTest(
-            utils.getProcessOutputAndValue, check)
 
+        return self._defaultPathTest(utils.getProcessOutputAndValue, check)
 
 
 class SuppressWarningsTests(unittest.SynchronousTestCase):
     """
     Tests for L{utils.suppressWarnings}.
     """
+
     def test_suppressWarnings(self):
         """
         L{utils.suppressWarnings} decorates a function so that the given
         warnings are suppressed.
         """
         result = []
+
         def showwarning(self, *a, **kw):
             result.append((a, kw))
+
         self.patch(warnings, "showwarning", showwarning)
 
         def f(msg):
             warnings.warn(msg)
+
         g = utils.suppressWarnings(f, (('ignore',), dict(message="This is message")))
 
         # Start off with a sanity check - calling the original function
@@ -319,12 +330,12 @@ class SuppressWarningsTests(unittest.SynchronousTestCase):
         self.assertEqual(len(result), 2)
 
 
-
 class DeferredSuppressedWarningsTests(SuppressedWarningsTests):
     """
     Tests for L{utils.runWithWarningsSuppressed}, the version that supports
     Deferreds.
     """
+
     # Override the non-Deferred-supporting function from the base class with
     # the function we are testing in this class:
     runWithWarningsSuppressed = staticmethod(utils.runWithWarningsSuppressed)
@@ -335,16 +346,13 @@ class DeferredSuppressedWarningsTests(SuppressedWarningsTests):
         C{Deferred}, the warning filters aren't removed until the Deferred
         fires.
         """
-        filters = [(("ignore", ".*foo.*"), {}),
-                   (("ignore", ".*bar.*"), {})]
+        filters = [(("ignore", ".*foo.*"), {}), (("ignore", ".*bar.*"), {})]
         result = Deferred()
         self.runWithWarningsSuppressed(filters, lambda: result)
         warnings.warn("ignore foo")
         result.callback(3)
         warnings.warn("ignore foo 2")
-        self.assertEqual(
-            ["ignore foo 2"], [w['message'] for w in self.flushWarnings()])
-
+        self.assertEqual(["ignore foo 2"], [w['message'] for w in self.flushWarnings()])
 
     def test_deferredErrback(self):
         """
@@ -352,13 +360,11 @@ class DeferredSuppressedWarningsTests(SuppressedWarningsTests):
         C{Deferred}, the warning filters aren't removed until the Deferred
         fires with an errback.
         """
-        filters = [(("ignore", ".*foo.*"), {}),
-                   (("ignore", ".*bar.*"), {})]
+        filters = [(("ignore", ".*foo.*"), {}), (("ignore", ".*bar.*"), {})]
         result = Deferred()
         d = self.runWithWarningsSuppressed(filters, lambda: result)
         warnings.warn("ignore foo")
         result.errback(ZeroDivisionError())
         d.addErrback(lambda f: f.trap(ZeroDivisionError))
         warnings.warn("ignore foo 2")
-        self.assertEqual(
-            ["ignore foo 2"], [w['message'] for w in self.flushWarnings()])
+        self.assertEqual(["ignore foo 2"], [w['message'] for w in self.flushWarnings()])

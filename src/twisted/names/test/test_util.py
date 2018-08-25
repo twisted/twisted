@@ -18,7 +18,6 @@ from twisted.internet.task import Clock
 from twisted.internet.interfaces import IReactorUDP, IUDPTransport
 
 
-
 @implementer(IUDPTransport)
 class MemoryDatagramTransport(object):
     """
@@ -36,13 +35,13 @@ class MemoryDatagramTransport(object):
     @ivar _maxPacketSize: An C{int} giving the maximum length of a datagram
         which will be successfully handled by C{write}.
     """
+
     def __init__(self, host, protocol, maxPacketSize):
         self._host = host
         self._protocol = protocol
         self._sentPackets = []
         self._connectedTo = None
         self._maxPacketSize = maxPacketSize
-
 
     def getHost(self):
         """
@@ -51,7 +50,6 @@ class MemoryDatagramTransport(object):
         """
         return IPv4Address('UDP', *self._host)
 
-
     def connect(self, host, port):
         """
         Connect this transport to the given address.
@@ -59,7 +57,6 @@ class MemoryDatagramTransport(object):
         if self._connectedTo is not None:
             raise ValueError("Already connected")
         self._connectedTo = (host, port)
-
 
     def write(self, datagram, addr=None):
         """
@@ -73,7 +70,6 @@ class MemoryDatagramTransport(object):
             raise ValueError("Packet too big")
         self._sentPackets.append((datagram, addr))
 
-
     def stopListening(self):
         """
         Shut down this transport.
@@ -81,13 +77,11 @@ class MemoryDatagramTransport(object):
         self._protocol.stopProtocol()
         return succeed(None)
 
-
     def setBroadcastAllowed(self, enabled):
         """
         Dummy implementation to satisfy L{IUDPTransport}.
         """
         pass
-
 
     def getBroadcastAllowed(self):
         """
@@ -97,7 +91,6 @@ class MemoryDatagramTransport(object):
 
 
 verifyClass(IUDPTransport, MemoryDatagramTransport)
-
 
 
 @implementer(IReactorUDP)
@@ -112,10 +105,10 @@ class MemoryReactor(Clock):
     @ivar udpPorts: A C{dict} mapping port numbers to instances of
         L{MemoryDatagramTransport}.
     """
+
     def __init__(self):
         Clock.__init__(self)
         self.udpPorts = {}
-
 
     def listenUDP(self, port, protocol, interface='', maxPacketSize=8192):
         """
@@ -128,10 +121,10 @@ class MemoryReactor(Clock):
                     break
         if port in self.udpPorts:
             raise ValueError("Address in use")
-        transport = MemoryDatagramTransport(
-            (interface, port), protocol, maxPacketSize)
+        transport = MemoryDatagramTransport((interface, port), protocol, maxPacketSize)
         self.udpPorts[port] = transport
         protocol.makeConnection(transport)
         return transport
+
 
 verifyClass(IReactorUDP, MemoryReactor)

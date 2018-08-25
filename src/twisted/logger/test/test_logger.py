@@ -14,7 +14,6 @@ from .._logger import Logger
 from .._global import globalLogPublisher
 
 
-
 class TestLogger(Logger):
     """
     L{Logger} with an overridden C{emit} method that keeps track of received
@@ -31,27 +30,21 @@ class TestLogger(Logger):
         finally:
             globalLogPublisher.removeObserver(observer)
 
-        self.emitted = {
-            "level": level,
-            "format": format,
-            "kwargs": kwargs,
-        }
-
+        self.emitted = {"level": level, "format": format, "kwargs": kwargs}
 
 
 class LogComposedObject(object):
     """
     A regular object, with a logger attached.
     """
+
     log = TestLogger()
 
     def __init__(self, state=None):
         self.state = state
 
-
     def __str__(self):
         return "<LogComposedObject {state}>".format(state=self.state)
-
 
 
 class LoggerTests(unittest.TestCase):
@@ -67,14 +60,12 @@ class LoggerTests(unittest.TestCase):
         log = Logger(namespace)
         self.assertEqual(repr(log), "<Logger {0}>".format(repr(namespace)))
 
-
     def test_namespaceDefault(self):
         """
         Default namespace is module name.
         """
         log = Logger()
         self.assertEqual(log.namespace, __name__)
-
 
     def test_namespaceOMGItsTooHard(self):
         """
@@ -83,12 +74,8 @@ class LoggerTests(unittest.TestCase):
         was specified.
         """
         result = []
-        exec(
-            "result.append(Logger())",
-            dict(Logger=Logger), locals(),
-        )
+        exec("result.append(Logger())", dict(Logger=Logger), locals())
         self.assertEqual(result[0].namespace, "<unknown>")
-
 
     def test_namespaceAttribute(self):
         """
@@ -96,16 +83,12 @@ class LoggerTests(unittest.TestCase):
         class name they were retrieved from.
         """
         obj = LogComposedObject()
-        expectedNamespace = "{0}.{1}".format(
-            obj.__module__,
-            obj.__class__.__name__,
-        )
+        expectedNamespace = "{0}.{1}".format(obj.__module__, obj.__class__.__name__)
         self.assertEqual(obj.log.namespace, expectedNamespace)
         self.assertEqual(LogComposedObject.log.namespace, expectedNamespace)
         self.assertIs(LogComposedObject.log.source, LogComposedObject)
         self.assertIs(obj.log.source, obj)
         self.assertIsNone(Logger().source)
-
 
     def test_descriptorObserver(self):
         """
@@ -119,7 +102,6 @@ class LoggerTests(unittest.TestCase):
         MyObject.log.info("hello")
         self.assertEqual(len(observed), 1)
         self.assertEqual(observed[0]['log_format'], "hello")
-
 
     def test_sourceAvailableForFormatting(self):
         """
@@ -135,7 +117,6 @@ class LoggerTests(unittest.TestCase):
 
         stuff = formatEvent(log.event)
         self.assertIn("Hello, <LogComposedObject hello>.", stuff)
-
 
     def test_basicLogger(self):
         """
@@ -166,11 +147,11 @@ class LoggerTests(unittest.TestCase):
 
             self.assertEqual(formatEvent(log.event), message)
 
-
     def test_sourceOnClass(self):
         """
         C{log_source} event key refers to the class.
         """
+
         def observer(event):
             self.assertEqual(event["log_source"], Thingo)
 
@@ -179,11 +160,11 @@ class LoggerTests(unittest.TestCase):
 
         Thingo.log.info()
 
-
     def test_sourceOnInstance(self):
         """
         C{log_source} event key refers to the instance.
         """
+
         def observer(event):
             self.assertEqual(event["log_source"], thingo)
 
@@ -193,17 +174,16 @@ class LoggerTests(unittest.TestCase):
         thingo = Thingo()
         thingo.log.info()
 
-
     def test_sourceUnbound(self):
         """
         C{log_source} event key is L{None}.
         """
+
         def observer(event):
             self.assertIsNone(event["log_source"])
 
         log = TestLogger(observer=observer)
         log.info()
-
 
     def test_defaultFailure(self):
         """
@@ -220,7 +200,6 @@ class LoggerTests(unittest.TestCase):
 
         self.assertEqual(log.emitted["level"], LogLevel.critical)
         self.assertEqual(log.emitted["format"], "Whoops")
-
 
     def test_conflictingKwargs(self):
         """
@@ -241,7 +220,6 @@ class LoggerTests(unittest.TestCase):
         self.assertEqual(log.event["log_namespace"], log.namespace)
         self.assertIsNone(log.event["log_source"])
 
-
     def test_logInvalidLogLevel(self):
         """
         Test passing in a bogus log level to C{emit()}.
@@ -253,11 +231,11 @@ class LoggerTests(unittest.TestCase):
         errors = self.flushLoggedErrors(InvalidLogLevelError)
         self.assertEqual(len(errors), 1)
 
-
     def test_trace(self):
         """
         Tracing keeps track of forwarding to the publisher.
         """
+
         def publisher(event):
             observer(event)
 

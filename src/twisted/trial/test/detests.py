@@ -111,11 +111,16 @@ class DeferredTests(unittest.TestCase):
     def test_passGenerated(self):
         self._touchClass(None)
         yield None
-    test_passGenerated = runWithWarningsSuppressed(
-        [ SUPPRESS(message="twisted.internet.defer.deferredGenerator was "
-                          "deprecated") ],
-        defer.deferredGenerator, test_passGenerated)
 
+    test_passGenerated = runWithWarningsSuppressed(
+        [
+            SUPPRESS(
+                message="twisted.internet.defer.deferredGenerator was " "deprecated"
+            )
+        ],
+        defer.deferredGenerator,
+        test_passGenerated,
+    )
 
     @defer.inlineCallbacks
     def test_passInlineCallbacks(self):
@@ -145,12 +150,13 @@ class DeferredTests(unittest.TestCase):
         return d
 
     def test_thread(self):
-        return threads.deferToThread(lambda : None)
+        return threads.deferToThread(lambda: None)
 
     def test_expectedFailure(self):
         d = defer.succeed('todo')
         d.addCallback(self._cb_error)
         return d
+
     test_expectedFailure.todo = "Expected failure"
 
 
@@ -161,6 +167,7 @@ class TimeoutTests(unittest.TestCase):
         d = defer.Deferred()
         reactor.callLater(0, d.callback, 'hoorj!')
         return d
+
     test_pass.timeout = 2
 
     def test_passDefault(self):
@@ -171,19 +178,23 @@ class TimeoutTests(unittest.TestCase):
 
     def test_timeout(self):
         return defer.Deferred()
+
     test_timeout.timeout = 0.1
 
     def test_timeoutZero(self):
         return defer.Deferred()
+
     test_timeoutZero.timeout = 0
 
     def test_expectedFailure(self):
         return defer.Deferred()
+
     test_expectedFailure.timeout = 0.1
     test_expectedFailure.todo = "i will get it right, eventually"
 
     def test_skip(self):
         return defer.Deferred()
+
     test_skip.timeout = 0.1
     test_skip.skip = "i will get it right, eventually"
 
@@ -191,18 +202,23 @@ class TimeoutTests(unittest.TestCase):
         def timedOut(err):
             self.__class__.timedOut = err
             return err
+
         d = defer.Deferred()
         d.addErrback(timedOut)
         return d
+
     test_errorPropagation.timeout = 0.1
 
     def test_calledButNeverCallback(self):
         d = defer.Deferred()
+
         def neverFire(r):
             return defer.Deferred()
+
         d.addCallback(neverFire)
         d.callback(1)
         return d
+
     test_calledButNeverCallback.timeout = 0.1
 
 

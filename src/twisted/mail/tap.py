@@ -59,33 +59,30 @@ class Options(usage.Options, strcred.AuthOptionMixin):
     @type last_domain: L{IDomain} provider or L{None}
     @ivar last_domain: The most recently specified domain.
     """
+
     synopsis = "[options]"
 
     optParameters = [
-        ["relay", "R", None,
-         "Relay messages according to their envelope 'To', using "
-         "the given path as a queue directory."],
-
-        ["hostname", "H", None,
-         "The hostname by which to identify this server."],
+        [
+            "relay",
+            "R",
+            None,
+            "Relay messages according to their envelope 'To', using "
+            "the given path as a queue directory.",
+        ],
+        ["hostname", "H", None, "The hostname by which to identify this server."],
     ]
 
     optFlags = [
         ["esmtp", "E", "Use RFC 1425/1869 SMTP extensions"],
-        ["disable-anonymous", None,
-         "Disallow non-authenticated SMTP connections"],
+        ["disable-anonymous", None, "Disallow non-authenticated SMTP connections"],
         ["no-pop3", None, "Disable the default POP3 server."],
         ["no-smtp", None, "Disable the default SMTP server."],
     ]
 
-    _protoDefaults = {
-        "pop3": 8110,
-        "smtp": 8025,
-    }
+    _protoDefaults = {"pop3": 8110, "smtp": 8025}
 
-    compData = usage.Completions(
-                   optActions={"hostname": usage.CompleteHostnames()}
-                   )
+    compData = usage.Completions(optActions={"hostname": usage.CompleteHostnames()})
 
     longdesc = """
     An SMTP / POP3 email server plugin for twistd.
@@ -123,7 +120,6 @@ class Options(usage.Options, strcred.AuthOptionMixin):
         for service in self._protoDefaults:
             self[service] = []
 
-
     def addEndpoint(self, service, description):
         """
         Add an endpoint to a service.
@@ -136,8 +132,8 @@ class Options(usage.Options, strcred.AuthOptionMixin):
             number.
         """
         from twisted.internet import reactor
-        self[service].append(endpoints.serverFromString(reactor, description))
 
+        self[service].append(endpoints.serverFromString(reactor, description))
 
     def opt_pop3(self, description):
         """
@@ -146,8 +142,8 @@ class Options(usage.Options, strcred.AuthOptionMixin):
         You can listen on multiple ports by specifying multiple --pop3 options.
         """
         self.addEndpoint('pop3', description)
-    opt_p = opt_pop3
 
+    opt_p = opt_pop3
 
     def opt_smtp(self, description):
         """
@@ -156,8 +152,8 @@ class Options(usage.Options, strcred.AuthOptionMixin):
         You can listen on multiple ports by specifying multiple --smtp options.
         """
         self.addEndpoint('smtp', description)
-    opt_s = opt_smtp
 
+    opt_s = opt_smtp
 
     def opt_default(self):
         """
@@ -167,8 +163,8 @@ class Options(usage.Options, strcred.AuthOptionMixin):
             self.service.addDomain('', self.last_domain)
         else:
             raise usage.UsageError("Specify a domain before specifying using --default")
-    opt_D = opt_default
 
+    opt_D = opt_default
 
     def opt_maildirdbmdomain(self, domain):
         """
@@ -182,10 +178,15 @@ class Options(usage.Options, strcred.AuthOptionMixin):
         try:
             name, path = domain.split('=')
         except ValueError:
-            raise usage.UsageError("Argument to --maildirdbmdomain must be of the form 'name=path'")
+            raise usage.UsageError(
+                "Argument to --maildirdbmdomain must be of the form 'name=path'"
+            )
 
-        self.last_domain = maildir.MaildirDirdbmDomain(self.service, os.path.abspath(path))
+        self.last_domain = maildir.MaildirDirdbmDomain(
+            self.service, os.path.abspath(path)
+        )
         self.service.addDomain(name, self.last_domain)
+
     opt_d = opt_maildirdbmdomain
 
     def opt_user(self, user_pass):
@@ -195,21 +196,23 @@ class Options(usage.Options, strcred.AuthOptionMixin):
         try:
             user, password = user_pass.split('=', 1)
         except ValueError:
-            raise usage.UsageError("Argument to --user must be of the form 'user=password'")
+            raise usage.UsageError(
+                "Argument to --user must be of the form 'user=password'"
+            )
         if self.last_domain:
             self.last_domain.addUser(user, password)
         else:
             raise usage.UsageError("Specify a domain before specifying users")
-    opt_u = opt_user
 
+    opt_u = opt_user
 
     def opt_bounce_to_postmaster(self):
         """
         Send undeliverable messages to the postmaster.
         """
         self.last_domain.postmaster = 1
-    opt_b = opt_bounce_to_postmaster
 
+    opt_b = opt_bounce_to_postmaster
 
     def opt_aliases(self, filename):
         """
@@ -220,19 +223,17 @@ class Options(usage.Options, strcred.AuthOptionMixin):
                 aliases = alias.loadAliasFile(self.service.domains, filename)
                 self.last_domain.setAliasGroup(aliases)
                 self.service.monitor.monitorFile(
-                    filename,
-                    AliasUpdater(self.service.domains, self.last_domain)
+                    filename, AliasUpdater(self.service.domains, self.last_domain)
                 )
             else:
                 raise usage.UsageError(
-                    "%s does not support alias files" % (
-                        self.last_domain.__class__.__name__,
-                    )
+                    "%s does not support alias files"
+                    % (self.last_domain.__class__.__name__,)
                 )
         else:
             raise usage.UsageError("Specify a domain before specifying aliases")
-    opt_A = opt_aliases
 
+    opt_A = opt_aliases
 
     def _getEndpoints(self, reactor, service):
         """
@@ -266,10 +267,7 @@ class Options(usage.Options, strcred.AuthOptionMixin):
             return []
         else:
             # Otherwise, return the old default service.
-            return [
-                endpoints.TCP4ServerEndpoint(
-                    reactor, self._protoDefaults[service])]
-
+            return [endpoints.TCP4ServerEndpoint(reactor, self._protoDefaults[service])]
 
     def postOptions(self):
         """
@@ -302,7 +300,6 @@ class Options(usage.Options, strcred.AuthOptionMixin):
             raise usage.UsageError("You cannot disable all protocols")
 
 
-
 class AliasUpdater:
     """
     A callable object which updates the aliases for a domain from an aliases(5)
@@ -311,6 +308,7 @@ class AliasUpdater:
     @ivar domains: See L{__init__}.
     @ivar domain: See L{__init__}.
     """
+
     def __init__(self, domains, domain):
         """
         @type domains: L{dict} mapping L{bytes} to L{IDomain} provider
@@ -322,7 +320,6 @@ class AliasUpdater:
         self.domains = domains
         self.domain = domain
 
-
     def __call__(self, new):
         """
         Update the aliases for a domain from an aliases(5) file.
@@ -331,7 +328,6 @@ class AliasUpdater:
         @param new: The name of an aliases(5) file.
         """
         self.domain.setAliasGroup(alias.loadAliasFile(self.domains, new))
-
 
 
 def makeService(config):

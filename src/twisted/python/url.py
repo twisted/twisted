@@ -10,6 +10,4 @@ URL parsing, construction and rendering.
 
 from hyperlink import URL
 
-__all__ = [
-    "URL",
-]
+__all__ = ["URL"]

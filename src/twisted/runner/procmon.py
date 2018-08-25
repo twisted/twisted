@@ -13,6 +13,7 @@ from twisted.internet import error, protocol, reactor as _reactor
 from twisted.application import service
 from twisted.protocols import basic
 
+
 @attr.s(frozen=True)
 class _Process(object):
     """
@@ -62,11 +63,14 @@ class _Process(object):
         """
         return (self.args, self.uid, self.gid, self.env)
 
+
 class DummyTransport:
 
     disconnecting = 0
 
+
 transport = DummyTransport()
+
 
 class LineLogger(basic.LineReceiver):
 
@@ -92,13 +96,11 @@ class LoggingProtocol(protocol.ProcessProtocol):
         self.output.tag = self.name
         self.output.makeConnection(transport)
 
-
     def outReceived(self, data):
         self.output.dataReceived(data)
         self.empty = data[-1] == b'\n'
 
     errReceived = outReceived
-
 
     def processEnded(self, reason):
         if not self.empty:
@@ -146,11 +148,11 @@ class ProcessMonitor(service.Service):
         which will be used to spawn processes and register delayed calls.
 
     """
+
     threshold = 1
     killTime = 5
     minRestartDelay = 1
     maxRestartDelay = 3600
-
 
     def __init__(self, reactor=_reactor):
         self._reactor = reactor
@@ -162,7 +164,6 @@ class ProcessMonitor(service.Service):
         self.murder = {}
         self.restart = {}
 
-
     @deprecate.deprecatedProperty(incremental.Version('Twisted', 18, 7, 0))
     def processes(self):
         """
@@ -170,9 +171,7 @@ class ProcessMonitor(service.Service):
 
         @return: Dict of process name to monitored processes as tuples
         """
-        return {name: process.toTuple()
-                for name, process in self._processes.items()}
-
+        return {name: process.toTuple() for name, process in self._processes.items()}
 
     @deprecate.deprecated(incremental.Version('Twisted', 18, 7, 0))
     def __getstate__(self):
@@ -186,7 +185,6 @@ class ProcessMonitor(service.Service):
         del dct['_processes']
         dct['processes'] = self.processes
         return dct
-
 
     def addProcess(self, name, args, uid=None, gid=None, env={}, cwd=None):
         """
@@ -224,7 +222,6 @@ class ProcessMonitor(service.Service):
         if self.running:
             self.startProcess(name)
 
-
     def removeProcess(self, name):
         """
         Stop the named process and remove it from the list of monitored
@@ -236,7 +233,6 @@ class ProcessMonitor(service.Service):
         self.stopProcess(name)
         del self._processes[name]
 
-
     def startService(self):
         """
         Start all monitored processes.
@@ -244,7 +240,6 @@ class ProcessMonitor(service.Service):
         service.Service.startService(self)
         for name in list(self._processes):
             self.startProcess(name)
-
 
     def stopService(self):
         """
@@ -259,7 +254,6 @@ class ProcessMonitor(service.Service):
 
         for name in list(self._processes):
             self.stopProcess(name)
-
 
     def connectionLost(self, name):
         """
@@ -299,10 +293,9 @@ class ProcessMonitor(service.Service):
 
         # Schedule a process restart if the service is running
         if self.running and name in self._processes:
-            self.restart[name] = self._reactor.callLater(nextDelay,
-                                                         self.startProcess,
-                                                         name)
-
+            self.restart[name] = self._reactor.callLater(
+                nextDelay, self.startProcess, name
+            )
 
     def startProcess(self, name):
         """
@@ -320,10 +313,15 @@ class ProcessMonitor(service.Service):
         proto.name = name
         self.protocols[name] = proto
         self.timeStarted[name] = self._reactor.seconds()
-        self._reactor.spawnProcess(proto, process.args[0], process.args,
-                                          uid=process.uid, gid=process.gid,
-                                          env=process.env, path=process.cwd)
-
+        self._reactor.spawnProcess(
+            proto,
+            process.args[0],
+            process.args,
+            uid=process.uid,
+            gid=process.gid,
+            env=process.env,
+            path=process.cwd,
+        )
 
     def _forceStopProcess(self, proc):
         """
@@ -333,7 +331,6 @@ class ProcessMonitor(service.Service):
             proc.signalProcess('KILL')
         except error.ProcessExitedAlready:
             pass
-
 
     def stopProcess(self, name):
         """
@@ -351,9 +348,8 @@ class ProcessMonitor(service.Service):
                 pass
             else:
                 self.murder[name] = self._reactor.callLater(
-                                            self.killTime,
-                                            self._forceStopProcess, proc)
-
+                    self.killTime, self._forceStopProcess, proc
+                )
 
     def restartAll(self):
         """
@@ -365,7 +361,6 @@ class ProcessMonitor(service.Service):
         for name in self._processes:
             self.stopProcess(name)
 
-
     def __repr__(self):
         l = []
         for name, proc in self._processes.items():
@@ -373,11 +368,9 @@ class ProcessMonitor(service.Service):
             if proc.uid is not None:
                 uidgid = str(proc.uid)
             if proc.gid is not None:
-                uidgid += ':'+str(proc.gid)
+                uidgid += ':' + str(proc.gid)
 
             if uidgid:
                 uidgid = '(' + uidgid + ')'
             l.append('%r%s: %r' % (name, uidgid, proc.args))
-        return ('<' + self.__class__.__name__ + ' '
-                + ' '.join(l)
-                + '>')
+        return '<' + self.__class__.__name__ + ' ' + ' '.join(l) + '>'

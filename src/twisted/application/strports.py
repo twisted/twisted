@@ -37,10 +37,10 @@ def service(description, factory, reactor=None):
         from twisted.internet import reactor
 
     svc = StreamServerEndpointService(
-        endpoints.serverFromString(reactor, description), factory)
+        endpoints.serverFromString(reactor, description), factory
+    )
     svc._raiseSynchronously = True
     return svc
-
 
 
 def listen(description, factory):
@@ -62,9 +62,9 @@ def listen(description, factory):
     @see: L{twisted.internet.endpoints.serverFromString}
     """
     from twisted.internet import reactor
+
     name, args, kw = endpoints._parseServer(description, factory)
     return getattr(reactor, 'listen' + name)(*args, **kw)
-
 
 
 __all__ = ['service', 'listen']

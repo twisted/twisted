@@ -17,12 +17,12 @@ from twisted.python.usage import UsageError
 from twisted.trial.unittest import SynchronousTestCase
 
 
-
 class OptionsTests(SynchronousTestCase):
     """
     Tests for L{Options}, defining how command line arguments for the DNS server
     are parsed.
     """
+
     def test_malformedSecondary(self):
         """
         If the value supplied for an I{--secondary} option does not provide a
@@ -30,16 +30,16 @@ class OptionsTests(SynchronousTestCase):
         L{Options.parseOptions} raises L{UsageError}.
         """
         options = Options()
+        self.assertRaises(UsageError, options.parseOptions, ['--secondary', ''])
+        self.assertRaises(UsageError, options.parseOptions, ['--secondary', '1.2.3.4'])
         self.assertRaises(
-            UsageError, options.parseOptions, ['--secondary', ''])
+            UsageError, options.parseOptions, ['--secondary', '1.2.3.4:hello']
+        )
         self.assertRaises(
-            UsageError, options.parseOptions, ['--secondary', '1.2.3.4'])
-        self.assertRaises(
-            UsageError, options.parseOptions, ['--secondary', '1.2.3.4:hello'])
-        self.assertRaises(
-            UsageError, options.parseOptions,
-            ['--secondary', '1.2.3.4:hello/example.com'])
-
+            UsageError,
+            options.parseOptions,
+            ['--secondary', '1.2.3.4:hello/example.com'],
+        )
 
     def test_secondary(self):
         """
@@ -49,9 +49,7 @@ class OptionsTests(SynchronousTestCase):
         """
         options = Options()
         options.parseOptions(['--secondary', '1.2.3.4/example.com'])
-        self.assertEqual(
-            [(('1.2.3.4', PORT), ['example.com'])], options.secondaries)
-
+        self.assertEqual([(('1.2.3.4', PORT), ['example.com'])], options.secondaries)
 
     def test_secondaryExplicitPort(self):
         """
@@ -60,9 +58,7 @@ class OptionsTests(SynchronousTestCase):
         """
         options = Options()
         options.parseOptions(['--secondary', '1.2.3.4:5353/example.com'])
-        self.assertEqual(
-            [(('1.2.3.4', 5353), ['example.com'])], options.secondaries)
-
+        self.assertEqual([(('1.2.3.4', 5353), ['example.com'])], options.secondaries)
 
     def test_secondaryAuthorityServices(self):
         """
@@ -70,8 +66,14 @@ class OptionsTests(SynchronousTestCase):
         L{SecondaryAuthorityService} instance for each configured secondary.
         """
         options = Options()
-        options.parseOptions(['--secondary', '1.2.3.4:5353/example.com',
-                              '--secondary', '1.2.3.5:5354/example.com'])
+        options.parseOptions(
+            [
+                '--secondary',
+                '1.2.3.4:5353/example.com',
+                '--secondary',
+                '1.2.3.5:5354/example.com',
+            ]
+        )
         self.assertEqual(len(options.svcs), 2)
         secondary = options.svcs[0]
         self.assertIsInstance(options.svcs[0], SecondaryAuthorityService)
@@ -81,7 +83,6 @@ class OptionsTests(SynchronousTestCase):
         self.assertIsInstance(options.svcs[1], SecondaryAuthorityService)
         self.assertEqual(secondary.primary, '1.2.3.5')
         self.assertEqual(secondary._port, 5354)
-
 
     def test_recursiveConfiguration(self):
         """
@@ -111,13 +112,14 @@ class OptionsTests(SynchronousTestCase):
             # We want the delayed calls on the reactor, which should be all of
             # ours from the threaded resolver cleanup
             from twisted.internet import reactor
+
             for x in reactor._newTimedCalls:
                 if _PY3:
-                    self.assertEqual(x.func.__func__,
-                                     ThreadedResolver._cleanup)
+                    self.assertEqual(x.func.__func__, ThreadedResolver._cleanup)
                 else:
-                    self.assertEqual(x.func.__func__,
-                                     ThreadedResolver._cleanup.__func__)
+                    self.assertEqual(
+                        x.func.__func__, ThreadedResolver._cleanup.__func__
+                    )
                 x.cancel()
 
         self.assertIsInstance(cl[-1], ResolverChain)

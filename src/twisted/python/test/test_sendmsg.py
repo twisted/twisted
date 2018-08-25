@@ -31,6 +31,7 @@ from twisted.trial.unittest import TestCase
 
 if platform.isLinux():
     from socket import MSG_DONTWAIT
+
     dontWaitSkip = None
 else:
     # It would be nice to be able to test flags on more platforms, but finding
@@ -56,11 +57,11 @@ else:
     CModuleImportSkip = None
 
 
-
 class _FDHolder(object):
     """
     A wrapper around a FD that will remember if it has been closed or not.
     """
+
     def __init__(self, fd):
         self._fd = fd
 
@@ -85,8 +86,7 @@ class _FDHolder(object):
         if self._fd:
             if not _PY3:
                 ResourceWarning = Warning
-            warnings.warn("FD %s was not closed!" % (self._fd,),
-                          ResourceWarning)
+            warnings.warn("FD %s was not closed!" % (self._fd,), ResourceWarning)
             self.close()
 
     def __enter__(self):
@@ -104,7 +104,6 @@ def _makePipe():
     return (_FDHolder(r), _FDHolder(w))
 
 
-
 class ExitedWithStderr(Exception):
     """
     A process exited with some stderr.
@@ -118,7 +117,6 @@ class ExitedWithStderr(Exception):
         if _PY3:
             result = repr(result)
         return result
-
 
 
 class StartStopProcessProtocol(ProcessProtocol):
@@ -136,32 +134,27 @@ class StartStopProcessProtocol(ProcessProtocol):
 
     @ivar errors: A C{str} used to accumulate standard error.
     """
+
     def __init__(self):
         self.started = Deferred()
         self.stopped = Deferred()
         self.output = b''
         self.errors = b''
 
-
     def connectionMade(self):
         self.started.callback(self.transport)
-
 
     def outReceived(self, data):
         self.output += data
 
-
     def errReceived(self, data):
         self.errors += data
-
 
     def processEnded(self, reason):
         if reason.check(ProcessDone):
             self.stopped.callback(self.output)
         else:
-            self.stopped.errback(ExitedWithStderr(
-                    self.errors, self.output))
-
+            self.stopped.errback(ExitedWithStderr(self.errors, self.output))
 
 
 def _spawn(script, outputFD):
@@ -176,20 +169,20 @@ def _spawn(script, outputFD):
     """
     pyExe = FilePath(sys.executable).asBytesMode().path
     env = bytesEnviron()
-    env[b"PYTHONPATH"] = FilePath(
-        pathsep.join(sys.path)).asBytesMode().path
+    env[b"PYTHONPATH"] = FilePath(pathsep.join(sys.path)).asBytesMode().path
     sspp = StartStopProcessProtocol()
     reactor.spawnProcess(
-        sspp, pyExe, [
+        sspp,
+        pyExe,
+        [
             pyExe,
             FilePath(__file__).sibling(script + ".py").asBytesMode().path,
             intToBytes(outputFD),
         ],
         env=env,
-        childFDs={0: "w", 1: "r", 2: "r", outputFD: outputFD}
+        childFDs={0: "w", 1: "r", 2: "r", outputFD: outputFD},
     )
     return sspp
-
 
 
 class BadList(list):
@@ -205,6 +198,7 @@ class BadList(list):
         will allow iteration over itself or not.  If C{False}, an attempt to
         iterate over the instance will raise an exception.
     """
+
     iterate = True
 
     def __iter__(self):
@@ -221,7 +215,6 @@ class BadList(list):
         raise RuntimeError("Something bad happened")
 
 
-
 class WorseList(list):
     """
     A list which at first gives the appearance of being iterable, but then
@@ -229,16 +222,18 @@ class WorseList(list):
 
     See L{BadList} for a warning about not writing code like this.
     """
+
     def __iter__(self):
         """
         Return an iterator which will raise an exception as soon as C{next} is
         called on it.
         """
+
         class BadIterator(object):
             def next(self):
                 raise RuntimeError("This is a really bad case.")
-        return BadIterator()
 
+        return BadIterator()
 
 
 class CModuleSendmsgTests(TestCase):
@@ -246,6 +241,7 @@ class CModuleSendmsgTests(TestCase):
     Tests for sendmsg extension module and associated file-descriptor sending
     functionality.
     """
+
     if nonUNIXSkip is not None:
         skip = nonUNIXSkip
     elif CModuleImportSkip is not None:
@@ -257,14 +253,12 @@ class CModuleSendmsgTests(TestCase):
         """
         self.input, self.output = socketpair(AF_UNIX)
 
-
     def tearDown(self):
         """
         Close the sockets opened by setUp.
         """
         self.input.close()
         self.output.close()
-
 
     def test_sendmsgBadArguments(self):
         """
@@ -282,15 +276,13 @@ class CModuleSendmsgTests(TestCase):
         # Exercise the wrong number of arguments cases
         self.assertRaises(TypeError, send1msg)
         self.assertRaises(TypeError, send1msg, 1)
-        self.assertRaises(TypeError, send1msg,
-                          1, "hello world", 2, [], object())
+        self.assertRaises(TypeError, send1msg, 1, "hello world", 2, [], object())
 
         # Exercise the wrong type of arguments cases
         self.assertRaises(TypeError, send1msg, object(), "hello world", 2, [])
         self.assertRaises(TypeError, send1msg, 1, object(), 2, [])
         self.assertRaises(TypeError, send1msg, 1, "hello world", object(), [])
         self.assertRaises(TypeError, send1msg, 1, "hello world", 2, object())
-
 
     def test_badAncillaryIter(self):
         """
@@ -308,7 +300,6 @@ class CModuleSendmsgTests(TestCase):
         badList.iterate = True
         self.assertRaises(RuntimeError, send1msg, 1, "hello world", 2, badList)
 
-
     def test_badAncillaryNext(self):
         """
         If iteration over the ancillary data list fails (at the point of a
@@ -316,9 +307,7 @@ class CModuleSendmsgTests(TestCase):
         caller of L{send1msg}.
         """
         worseList = WorseList()
-        self.assertRaises(RuntimeError, send1msg,
-                          1, "hello world", 2,worseList)
-
+        self.assertRaises(RuntimeError, send1msg, 1, "hello world", 2, worseList)
 
     def test_sendmsgBadAncillaryItem(self):
         """
@@ -336,26 +325,22 @@ class CModuleSendmsgTests(TestCase):
         self.assertRaises(TypeError, send1msg, 1, "hello world", 2, [(1,)])
         self.assertRaises(TypeError, send1msg, 1, "hello world", 2, [(1, 2)])
         self.assertRaises(
-            TypeError,
-            send1msg, 1, "hello world", 2, [(1, 2, "goodbye", object())])
+            TypeError, send1msg, 1, "hello world", 2, [(1, 2, "goodbye", object())]
+        )
 
         # Exercise the wrong type of arguments cases
-        exc = self.assertRaises(
-            TypeError, send1msg, 1, "hello world", 2, [object()])
+        exc = self.assertRaises(TypeError, send1msg, 1, "hello world", 2, [object()])
         self.assertEqual(
-            "send1msg argument 3 expected list of tuple, "
-            "got list containing object",
-            str(exc))
+            "send1msg argument 3 expected list of tuple, " "got list containing object",
+            str(exc),
+        )
         self.assertRaises(
-            TypeError,
-            send1msg, 1, "hello world", 2, [(object(), 1, "goodbye")])
+            TypeError, send1msg, 1, "hello world", 2, [(object(), 1, "goodbye")]
+        )
         self.assertRaises(
-            TypeError,
-            send1msg, 1, "hello world", 2, [(1, object(), "goodbye")])
-        self.assertRaises(
-            TypeError,
-            send1msg, 1, "hello world", 2, [(1, 1, object())])
-
+            TypeError, send1msg, 1, "hello world", 2, [(1, object(), "goodbye")]
+        )
+        self.assertRaises(TypeError, send1msg, 1, "hello world", 2, [(1, 1, object())])
 
     def test_syscallError(self):
         """
@@ -367,7 +352,6 @@ class CModuleSendmsgTests(TestCase):
         exc = self.assertRaises(error, send1msg, fd, "hello, world")
         self.assertEqual(exc.args[0], errno.EBADF)
 
-
     def test_syscallErrorWithControlMessage(self):
         """
         The behavior when the underlying C{sendmsg} call fails is the same
@@ -376,22 +360,19 @@ class CModuleSendmsgTests(TestCase):
         with open(devnull) as probe:
             fd = probe.fileno()
         exc = self.assertRaises(
-            error, send1msg, fd, "hello, world", 0, [(0, 0, "0123")])
+            error, send1msg, fd, "hello, world", 0, [(0, 0, "0123")]
+        )
         self.assertEqual(exc.args[0], errno.EBADF)
-
 
     def test_roundtrip(self):
         """
         L{recv1msg} will retrieve a message sent via L{send1msg}.
         """
         message = "hello, world!"
-        self.assertEqual(
-            len(message),
-            send1msg(self.input.fileno(), message, 0))
+        self.assertEqual(len(message), send1msg(self.input.fileno(), message, 0))
 
         result = recv1msg(fd=self.output.fileno())
         self.assertEqual(result, (message, 0, []))
-
 
     def test_roundtripEmptyAncillary(self):
         """
@@ -402,7 +383,6 @@ class CModuleSendmsgTests(TestCase):
 
         result = recv1msg(fd=self.output.fileno())
         self.assertEqual(result, ("hello, world!", 0, []))
-
 
     def test_flags(self):
         """
@@ -422,22 +402,21 @@ class CModuleSendmsgTests(TestCase):
         else:
             self.fail(
                 "Failed to fill up the send buffer, "
-                "or maybe send1msg blocked for a while")
+                "or maybe send1msg blocked for a while"
+            )
+
     if dontWaitSkip is not None:
         test_flags.skip = dontWaitSkip
-
 
     def test_wrongTypeAncillary(self):
         """
         L{send1msg} will show a helpful exception message when given the wrong
         type of object for the 'ancillary' argument.
         """
-        error = self.assertRaises(TypeError,
-                                  send1msg, self.input.fileno(),
-                                  "hello, world!", 0, 4321)
-        self.assertEqual(str(error),
-                         "send1msg argument 3 expected list, got int")
-
+        error = self.assertRaises(
+            TypeError, send1msg, self.input.fileno(), "hello, world!", 0, 4321
+        )
+        self.assertEqual(str(error), "send1msg argument 3 expected list, got int")
 
     @inlineCallbacks
     def test_sendSubProcessFD(self):
@@ -454,15 +433,16 @@ class CModuleSendmsgTests(TestCase):
 
         with pipeIn:
             send1msg(
-                self.input.fileno(), "blonk", 0,
-                [(SOL_SOCKET, SCM_RIGHTS, pack("i", pipeIn.fileno()))])
+                self.input.fileno(),
+                "blonk",
+                0,
+                [(SOL_SOCKET, SCM_RIGHTS, pack("i", pipeIn.fileno()))],
+            )
 
         yield sspp.stopped
-        self.assertEqual(read(pipeOut.fileno(), 1024),
-                         "Test fixture data: blonk.\n")
+        self.assertEqual(read(pipeOut.fileno(), 1024), "Test fixture data: blonk.\n")
         # Make sure that the pipe is actually closed now.
         self.assertEqual(read(pipeOut.fileno(), 1024), "")
-
 
     def test_sendmsgTwoAncillaryDoesNotSegfault(self):
         """
@@ -480,11 +460,11 @@ class CModuleSendmsgTests(TestCase):
             pass
 
 
-
 class CModuleRecvmsgTests(TestCase):
     """
     Tests for L{recv1msg} (primarily error handling cases).
     """
+
     if CModuleImportSkip is not None:
         skip = CModuleImportSkip
 
@@ -512,14 +492,12 @@ class CModuleRecvmsgTests(TestCase):
         self.assertRaises(TypeError, recv1msg, 1, 2, object(), 4)
         self.assertRaises(TypeError, recv1msg, 1, 2, 3, object())
 
-
     def test_cmsgSpaceOverflow(self):
         """
         L{recv1msg} raises L{OverflowError} if passed a value for the
         C{cmsg_size} argument which exceeds C{SOCKLEN_MAX}.
         """
         self.assertRaises(OverflowError, recv1msg, 0, 0, 0, 0x7FFFFFFF)
-
 
     def test_syscallError(self):
         """
@@ -531,7 +509,6 @@ class CModuleRecvmsgTests(TestCase):
         exc = self.assertRaises(error, recv1msg, fd)
         self.assertEqual(exc.args[0], errno.EBADF)
 
-
     def test_flags(self):
         """
         The C{flags} argument to L{recv1msg} is passed on to the underlying
@@ -540,12 +517,11 @@ class CModuleRecvmsgTests(TestCase):
         """
         # See test_flags in SendmsgTests
         reader, writer = socketpair(AF_UNIX)
-        exc = self.assertRaises(
-            error, recv1msg, reader.fileno(), MSG_DONTWAIT)
+        exc = self.assertRaises(error, recv1msg, reader.fileno(), MSG_DONTWAIT)
         self.assertEqual(exc.args[0], errno.EAGAIN)
+
     if dontWaitSkip is not None:
         test_flags.skip = dontWaitSkip
-
 
 
 class CModuleGetSocketFamilyTests(TestCase):
@@ -553,6 +529,7 @@ class CModuleGetSocketFamilyTests(TestCase):
     Tests for L{getsockfam}, a helper which reveals the address family of an
     arbitrary socket.
     """
+
     if CModuleImportSkip is not None:
         skip = CModuleImportSkip
 
@@ -566,7 +543,6 @@ class CModuleGetSocketFamilyTests(TestCase):
         self.addCleanup(s.close)
         return s.fileno()
 
-
     def test_badArguments(self):
         """
         L{getsockfam} accepts a single C{int} argument.  If it is called in
@@ -575,7 +551,6 @@ class CModuleGetSocketFamilyTests(TestCase):
         self.assertRaises(TypeError, getsockfam)
         self.assertRaises(TypeError, getsockfam, 1, 2)
         self.assertRaises(TypeError, getsockfam, object())
-
 
     def test_syscallError(self):
         """
@@ -587,14 +562,12 @@ class CModuleGetSocketFamilyTests(TestCase):
         exc = self.assertRaises(error, getsockfam, fd)
         self.assertEqual(errno.EBADF, exc.args[0])
 
-
     def test_inet(self):
         """
         When passed the file descriptor of a socket created with the C{AF_INET}
         address family, L{getsockfam} returns C{AF_INET}.
         """
         self.assertEqual(AF_INET, getsockfam(self._socket(AF_INET)))
-
 
     def test_inet6(self):
         """
@@ -603,22 +576,22 @@ class CModuleGetSocketFamilyTests(TestCase):
         """
         self.assertEqual(AF_INET6, getsockfam(self._socket(AF_INET6)))
 
-
     def test_unix(self):
         """
         When passed the file descriptor of a socket created with the C{AF_UNIX}
         address family, L{getsockfam} returns C{AF_UNIX}.
         """
         self.assertEqual(AF_UNIX, getsockfam(self._socket(AF_UNIX)))
+
     if nonUNIXSkip is not None:
         test_unix.skip = nonUNIXSkip
-
 
 
 class SendmsgTests(TestCase):
     """
     Tests for the Python2/3 compatible L{sendmsg} interface.
     """
+
     if importSkip is not None:
         skip = importSkip
 
@@ -628,14 +601,12 @@ class SendmsgTests(TestCase):
         """
         self.input, self.output = socketpair(AF_UNIX)
 
-
     def tearDown(self):
         """
         Close the sockets opened by setUp.
         """
         self.input.close()
         self.output.close()
-
 
     def test_syscallError(self):
         """
@@ -646,7 +617,6 @@ class SendmsgTests(TestCase):
         exc = self.assertRaises(error, sendmsg, self.input, b"hello, world")
         self.assertEqual(exc.args[0], errno.EBADF)
 
-
     def test_syscallErrorWithControlMessage(self):
         """
         The behavior when the underlying C{sendmsg} call fails is the same
@@ -654,24 +624,21 @@ class SendmsgTests(TestCase):
         """
         self.input.close()
         exc = self.assertRaises(
-            error, sendmsg, self.input, b"hello, world", [(0, 0, b"0123")], 0)
+            error, sendmsg, self.input, b"hello, world", [(0, 0, b"0123")], 0
+        )
         self.assertEqual(exc.args[0], errno.EBADF)
-
 
     def test_roundtrip(self):
         """
         L{recvmsg} will retrieve a message sent via L{sendmsg}.
         """
         message = b"hello, world!"
-        self.assertEqual(
-            len(message),
-            sendmsg(self.input, message))
+        self.assertEqual(len(message), sendmsg(self.input, message))
 
         result = recvmsg(self.output)
         self.assertEqual(result.data, b"hello, world!")
         self.assertEqual(result.flags, 0)
         self.assertEqual(result.ancillary, [])
-
 
     def test_shortsend(self):
         """
@@ -688,7 +655,6 @@ class SendmsgTests(TestCase):
         received = recvmsg(self.output, len(message))
         self.assertEqual(len(received[0]), sent)
 
-
     def test_roundtripEmptyAncillary(self):
         """
         L{sendmsg} treats an empty ancillary data list the same way it treats
@@ -698,7 +664,6 @@ class SendmsgTests(TestCase):
 
         result = recvmsg(self.output)
         self.assertEqual(result, (b"hello, world!", [], 0))
-
 
     def test_flags(self):
         """
@@ -718,10 +683,11 @@ class SendmsgTests(TestCase):
         else:
             self.fail(
                 "Failed to fill up the send buffer, "
-                "or maybe send1msg blocked for a while")
+                "or maybe send1msg blocked for a while"
+            )
+
     if dontWaitSkip is not None:
         test_flags.skip = dontWaitSkip
-
 
     @inlineCallbacks
     def test_sendSubProcessFD(self):
@@ -738,21 +704,22 @@ class SendmsgTests(TestCase):
 
         with pipeIn:
             sendmsg(
-                self.input, b"blonk",
-                [(SOL_SOCKET, SCM_RIGHTS, pack("i", pipeIn.fileno()))])
+                self.input,
+                b"blonk",
+                [(SOL_SOCKET, SCM_RIGHTS, pack("i", pipeIn.fileno()))],
+            )
 
         yield sspp.stopped
-        self.assertEqual(read(pipeOut.fileno(), 1024),
-                         b"Test fixture data: blonk.\n")
+        self.assertEqual(read(pipeOut.fileno(), 1024), b"Test fixture data: blonk.\n")
         # Make sure that the pipe is actually closed now.
         self.assertEqual(read(pipeOut.fileno(), 1024), b"")
-
 
 
 class GetSocketFamilyTests(TestCase):
     """
     Tests for L{getSocketFamily}.
     """
+
     if importSkip is not None:
         skip = importSkip
 
@@ -766,14 +733,12 @@ class GetSocketFamilyTests(TestCase):
         self.addCleanup(s.close)
         return s
 
-
     def test_inet(self):
         """
         When passed the file descriptor of a socket created with the C{AF_INET}
         address family, L{getSocketFamily} returns C{AF_INET}.
         """
         self.assertEqual(AF_INET, getSocketFamily(self._socket(AF_INET)))
-
 
     def test_inet6(self):
         """
@@ -782,12 +747,12 @@ class GetSocketFamilyTests(TestCase):
         """
         self.assertEqual(AF_INET6, getSocketFamily(self._socket(AF_INET6)))
 
-
     def test_unix(self):
         """
         When passed the file descriptor of a socket created with the C{AF_UNIX}
         address family, L{getSocketFamily} returns C{AF_UNIX}.
         """
         self.assertEqual(AF_UNIX, getSocketFamily(self._socket(AF_UNIX)))
+
     if nonUNIXSkip is not None:
         test_unix.skip = nonUNIXSkip

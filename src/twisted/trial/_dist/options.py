@@ -15,12 +15,10 @@ from twisted.scripts.trial import _BasicOptions
 from twisted.application.app import ReactorSelectionMixin
 
 
-
 class WorkerOptions(_BasicOptions, Options, ReactorSelectionMixin):
     """
     Options forwarded to the trial distributed worker.
     """
-
 
     def coverdir(self):
         """

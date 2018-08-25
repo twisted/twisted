@@ -56,27 +56,25 @@ def _fsdecode(x):
         return x
 
 
-
 def debug(msg):
     print(msg)
     sys.stdout.flush()
 
 
-
 class _Reaper(_pollingfile._PollableResource):
-
     def __init__(self, proc):
         self.proc = proc
 
-
     def checkWork(self):
-        if win32event.WaitForSingleObject(self.proc.hProcess, 0) != win32event.WAIT_OBJECT_0:
+        if (
+            win32event.WaitForSingleObject(self.proc.hProcess, 0)
+            != win32event.WAIT_OBJECT_0
+        ):
             return 0
         exitCode = win32process.GetExitCodeProcess(self.proc.hProcess)
         self.deactivate()
         self.proc.processEnded(exitCode)
         return 0
-
 
 
 def _findShebang(filename):
@@ -106,7 +104,6 @@ def _findShebang(filename):
             return exe
 
 
-
 def _invalidWin32App(pywinerr):
     """
     Determine if a pywintypes.error is telling us that the given process is
@@ -122,7 +119,6 @@ def _invalidWin32App(pywinerr):
     # win32process module that represents 193.
 
     return pywinerr.args[0] == 193
-
 
 
 @implementer(IProcessTransport, IConsumer, IProducer)
@@ -145,6 +141,7 @@ class Process(_pollingfile._PollingTimer, BaseProcess):
         msvcrt.setmode(sys.stderr.fileno(), os.O_BINARY)
 
     """
+
     closedNotifies = 0
 
     def __init__(self, reactor, protocol, command, args, environment, path):
@@ -161,35 +158,37 @@ class Process(_pollingfile._PollingTimer, BaseProcess):
         # create the pipes which will connect to the secondary process
         self.hStdoutR, hStdoutW = win32pipe.CreatePipe(sAttrs, 0)
         self.hStderrR, hStderrW = win32pipe.CreatePipe(sAttrs, 0)
-        hStdinR, self.hStdinW  = win32pipe.CreatePipe(sAttrs, 0)
+        hStdinR, self.hStdinW = win32pipe.CreatePipe(sAttrs, 0)
 
-        win32pipe.SetNamedPipeHandleState(self.hStdinW,
-                                          win32pipe.PIPE_NOWAIT,
-                                          None,
-                                          None)
+        win32pipe.SetNamedPipeHandleState(
+            self.hStdinW, win32pipe.PIPE_NOWAIT, None, None
+        )
 
         # set the info structure for the new process.
         StartupInfo = win32process.STARTUPINFO()
         StartupInfo.hStdOutput = hStdoutW
-        StartupInfo.hStdError  = hStderrW
-        StartupInfo.hStdInput  = hStdinR
+        StartupInfo.hStdError = hStderrW
+        StartupInfo.hStdInput = hStdinR
         StartupInfo.dwFlags = win32process.STARTF_USESTDHANDLES
 
         # Create new handles whose inheritance property is false
         currentPid = win32api.GetCurrentProcess()
 
-        tmp = win32api.DuplicateHandle(currentPid, self.hStdoutR, currentPid, 0, 0,
-                                       win32con.DUPLICATE_SAME_ACCESS)
+        tmp = win32api.DuplicateHandle(
+            currentPid, self.hStdoutR, currentPid, 0, 0, win32con.DUPLICATE_SAME_ACCESS
+        )
         win32file.CloseHandle(self.hStdoutR)
         self.hStdoutR = tmp
 
-        tmp = win32api.DuplicateHandle(currentPid, self.hStderrR, currentPid, 0, 0,
-                                       win32con.DUPLICATE_SAME_ACCESS)
+        tmp = win32api.DuplicateHandle(
+            currentPid, self.hStderrR, currentPid, 0, 0, win32con.DUPLICATE_SAME_ACCESS
+        )
         win32file.CloseHandle(self.hStderrR)
         self.hStderrR = tmp
 
-        tmp = win32api.DuplicateHandle(currentPid, self.hStdinW, currentPid, 0, 0,
-                                       win32con.DUPLICATE_SAME_ACCESS)
+        tmp = win32api.DuplicateHandle(
+            currentPid, self.hStdinW, currentPid, 0, 0, win32con.DUPLICATE_SAME_ACCESS
+        )
         win32file.CloseHandle(self.hStdinW)
         self.hStdinW = tmp
 
@@ -222,7 +221,9 @@ class Process(_pollingfile._PollingTimer, BaseProcess):
         def doCreate():
             flags = win32con.CREATE_NO_WINDOW
             self.hProcess, self.hThread, self.pid, dwTid = win32process.CreateProcess(
-                command, cmdline, None, None, 1, flags, env, path, StartupInfo)
+                command, cmdline, None, None, 1, flags, env, path, StartupInfo
+            )
+
         try:
             doCreate()
         except pywintypes.error as pwte:
@@ -237,7 +238,8 @@ class Process(_pollingfile._PollingTimer, BaseProcess):
                 if sheb is None:
                     raise OSError(
                         "%r is neither a Windows executable, "
-                        "nor a script with a shebang line" % command)
+                        "nor a script with a shebang line" % command
+                    )
                 else:
                     args = list(args)
                     args.insert(0, command)
@@ -252,8 +254,8 @@ class Process(_pollingfile._PollingTimer, BaseProcess):
                         if _invalidWin32App(pwte2):
                             raise OSError(
                                 "%r has an invalid shebang line: "
-                                "%r is not a valid executable" % (
-                                    origcmd, sheb))
+                                "%r is not a valid executable" % (origcmd, sheb)
+                            )
                         raise OSError(pwte2)
 
         # close handles which only the child will use
@@ -265,15 +267,18 @@ class Process(_pollingfile._PollingTimer, BaseProcess):
         self.stdout = _pollingfile._PollableReadPipe(
             self.hStdoutR,
             lambda data: self.proto.childDataReceived(1, data),
-            self.outConnectionLost)
+            self.outConnectionLost,
+        )
 
         self.stderr = _pollingfile._PollableReadPipe(
-                self.hStderrR,
-                lambda data: self.proto.childDataReceived(2, data),
-                self.errConnectionLost)
+            self.hStderrR,
+            lambda data: self.proto.childDataReceived(2, data),
+            self.errConnectionLost,
+        )
 
         self.stdin = _pollingfile._PollableWritePipe(
-            self.hStdinW, self.inConnectionLost)
+            self.hStdinW, self.inConnectionLost
+        )
 
         for pipewatcher in self.stdout, self.stderr, self.stdin:
             self._addPollableResource(pipewatcher)
@@ -283,19 +288,16 @@ class Process(_pollingfile._PollingTimer, BaseProcess):
 
         self._addPollableResource(_Reaper(self))
 
-
     def signalProcess(self, signalID):
         if self.pid is None:
             raise error.ProcessExitedAlready()
         if signalID in ("INT", "TERM", "KILL"):
             win32process.TerminateProcess(self.hProcess, 1)
 
-
     def _getReason(self, status):
         if status == 0:
             return error.ProcessDone(status)
         return error.ProcessTerminated(status)
-
 
     def write(self, data):
         """
@@ -305,7 +307,6 @@ class Process(_pollingfile._PollingTimer, BaseProcess):
         """
         self.stdin.write(data)
 
-
     def writeSequence(self, seq):
         """
         Write data to the process' stdin.
@@ -313,7 +314,6 @@ class Process(_pollingfile._PollingTimer, BaseProcess):
         @type data: C{list} of C{bytes}
         """
         self.stdin.writeSequence(seq)
-
 
     def writeToChild(self, fd, data):
         """
@@ -339,7 +339,6 @@ class Process(_pollingfile._PollingTimer, BaseProcess):
         else:
             raise KeyError(fd)
 
-
     def closeChildFD(self, fd):
         if fd == 0:
             self.closeStdin()
@@ -348,22 +347,20 @@ class Process(_pollingfile._PollingTimer, BaseProcess):
         elif fd == 2:
             self.closeStderr()
         else:
-            raise NotImplementedError("Only standard-IO file descriptors available on win32")
-
+            raise NotImplementedError(
+                "Only standard-IO file descriptors available on win32"
+            )
 
     def closeStdin(self):
         """Close the process' stdin.
         """
         self.stdin.close()
 
-
     def closeStderr(self):
         self.stderr.close()
 
-
     def closeStdout(self):
         self.stdout.close()
-
 
     def loseConnection(self):
         """
@@ -373,21 +370,17 @@ class Process(_pollingfile._PollingTimer, BaseProcess):
         self.closeStdout()
         self.closeStderr()
 
-
     def outConnectionLost(self):
         self.proto.childConnectionLost(1)
         self.connectionLostNotify()
-
 
     def errConnectionLost(self):
         self.proto.childConnectionLost(2)
         self.connectionLostNotify()
 
-
     def inConnectionLost(self):
         self.proto.childConnectionLost(0)
         self.connectionLostNotify()
-
 
     def connectionLostNotify(self):
         """
@@ -395,7 +388,6 @@ class Process(_pollingfile._PollingTimer, BaseProcess):
         """
         self.closedNotifies += 1
         self.maybeCallProcessEnded()
-
 
     def maybeCallProcessEnded(self):
         if self.closedNotifies == 3 and self.lostProcess:
@@ -409,7 +401,6 @@ class Process(_pollingfile._PollingTimer, BaseProcess):
     def registerProducer(self, producer, streaming):
         self.stdin.registerProducer(producer, streaming)
 
-
     def unregisterProducer(self):
         self.stdin.unregisterProducer()
 
@@ -417,14 +408,11 @@ class Process(_pollingfile._PollingTimer, BaseProcess):
     def pauseProducing(self):
         self._pause()
 
-
     def resumeProducing(self):
         self._unpause()
 
-
     def stopProducing(self):
         self.loseConnection()
-
 
     def __repr__(self):
         """

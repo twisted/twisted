@@ -28,11 +28,15 @@ from zope.interface import implementer, directlyProvides, provider
 from twisted.internet import interfaces, defer, error, fdesc, threads
 from twisted.internet.abstract import isIPv6Address, isIPAddress
 from twisted.internet.address import (
-    _ProcessAddress, HostnameAddress, IPv4Address, IPv6Address
+    _ProcessAddress,
+    HostnameAddress,
+    IPv4Address,
+    IPv6Address,
 )
 from twisted.internet.interfaces import (
     IStreamServerEndpointStringParser,
-    IStreamClientEndpointStringParserWithReactor, IResolutionReceiver,
+    IStreamClientEndpointStringParserWithReactor,
+    IResolutionReceiver,
     IReactorPluggableNameResolver,
     IHostnameResolver,
 )
@@ -57,23 +61,36 @@ from ._idna import _idnaBytes, _idnaText
 try:
     from twisted.protocols.tls import TLSMemoryBIOFactory
     from twisted.internet.ssl import (
-        optionsForClientTLS, PrivateCertificate, Certificate, KeyPair,
-        CertificateOptions, trustRootFromCertificates
+        optionsForClientTLS,
+        PrivateCertificate,
+        Certificate,
+        KeyPair,
+        CertificateOptions,
+        trustRootFromCertificates,
     )
     from OpenSSL.SSL import Error as SSLError
 except ImportError:
     TLSMemoryBIOFactory = None
 
-__all__ = ["clientFromString", "serverFromString",
-           "TCP4ServerEndpoint", "TCP6ServerEndpoint",
-           "TCP4ClientEndpoint", "TCP6ClientEndpoint",
-           "UNIXServerEndpoint", "UNIXClientEndpoint",
-           "SSL4ServerEndpoint", "SSL4ClientEndpoint",
-           "AdoptedStreamServerEndpoint", "StandardIOEndpoint",
-           "ProcessEndpoint", "HostnameEndpoint",
-           "StandardErrorBehavior", "connectProtocol",
-           "wrapClientTLS"]
-
+__all__ = [
+    "clientFromString",
+    "serverFromString",
+    "TCP4ServerEndpoint",
+    "TCP6ServerEndpoint",
+    "TCP4ClientEndpoint",
+    "TCP6ClientEndpoint",
+    "UNIXServerEndpoint",
+    "UNIXClientEndpoint",
+    "SSL4ServerEndpoint",
+    "SSL4ClientEndpoint",
+    "AdoptedStreamServerEndpoint",
+    "StandardIOEndpoint",
+    "ProcessEndpoint",
+    "HostnameEndpoint",
+    "StandardErrorBehavior",
+    "connectProtocol",
+    "wrapClientTLS",
+]
 
 
 class _WrappingProtocol(Protocol):
@@ -93,12 +110,13 @@ class _WrappingProtocol(Protocol):
         self._connectedDeferred = connectedDeferred
         self._wrappedProtocol = wrappedProtocol
 
-        for iface in [interfaces.IHalfCloseableProtocol,
-                      interfaces.IFileDescriptorReceiver,
-                      interfaces.IHandshakeListener]:
+        for iface in [
+            interfaces.IHalfCloseableProtocol,
+            interfaces.IFileDescriptorReceiver,
+            interfaces.IHandshakeListener,
+        ]:
             if iface.providedBy(self._wrappedProtocol):
                 directlyProvides(self, iface)
-
 
     def logPrefix(self):
         """
@@ -108,7 +126,6 @@ class _WrappingProtocol(Protocol):
             return self._wrappedProtocol.logPrefix()
         return self._wrappedProtocol.__class__.__name__
 
-
     def connectionMade(self):
         """
         Connect the C{self._wrappedProtocol} to our C{self.transport} and
@@ -117,13 +134,11 @@ class _WrappingProtocol(Protocol):
         self._wrappedProtocol.makeConnection(self.transport)
         self._connectedDeferred.callback(self._wrappedProtocol)
 
-
     def dataReceived(self, data):
         """
         Proxy C{dataReceived} calls to our C{self._wrappedProtocol}
         """
         return self._wrappedProtocol.dataReceived(data)
-
 
     def fileDescriptorReceived(self, descriptor):
         """
@@ -131,13 +146,11 @@ class _WrappingProtocol(Protocol):
         """
         return self._wrappedProtocol.fileDescriptorReceived(descriptor)
 
-
     def connectionLost(self, reason):
         """
         Proxy C{connectionLost} calls to our C{self._wrappedProtocol}
         """
         return self._wrappedProtocol.connectionLost(reason)
-
 
     def readConnectionLost(self):
         """
@@ -146,7 +159,6 @@ class _WrappingProtocol(Protocol):
         """
         self._wrappedProtocol.readConnectionLost()
 
-
     def writeConnectionLost(self):
         """
         Proxy L{IHalfCloseableProtocol.writeConnectionLost} to our
@@ -154,14 +166,12 @@ class _WrappingProtocol(Protocol):
         """
         self._wrappedProtocol.writeConnectionLost()
 
-
     def handshakeCompleted(self):
         """
         Proxy L{interfaces.IHandshakeListener} to our
         C{self._wrappedProtocol}.
         """
         self._wrappedProtocol.handshakeCompleted()
-
 
 
 class _WrappingFactory(ClientFactory):
@@ -177,6 +187,7 @@ class _WrappingFactory(ClientFactory):
     @ivar _connector: A L{connector <twisted.internet.interfaces.IConnector>}
         that is managing the current or previous connection attempt.
     """
+
     protocol = _WrappingProtocol
 
     def __init__(self, wrappedFactory):
@@ -188,14 +199,12 @@ class _WrappingFactory(ClientFactory):
         self._wrappedFactory = wrappedFactory
         self._onConnection = defer.Deferred(canceller=self._canceller)
 
-
     def startedConnecting(self, connector):
         """
         A connection attempt was started.  Remember the connector which started
         said attempt, for use later.
         """
         self._connector = connector
-
 
     def _canceller(self, deferred):
         """
@@ -217,10 +226,9 @@ class _WrappingFactory(ClientFactory):
         @return: L{None}
         """
         deferred.errback(
-            error.ConnectingCancelledError(
-                self._connector.getDestination()))
+            error.ConnectingCancelledError(self._connector.getDestination())
+        )
         self._connector.stopConnecting()
-
 
     def doStart(self):
         """
@@ -228,13 +236,11 @@ class _WrappingFactory(ClientFactory):
         """
         self._wrappedFactory.doStart()
 
-
     def doStop(self):
         """
         Stop notifications are passed straight through to the wrapped factory.
         """
         self._wrappedFactory.doStop()
-
 
     def buildProtocol(self, addr):
         """
@@ -253,7 +259,6 @@ class _WrappingFactory(ClientFactory):
         else:
             return self.protocol(self._onConnection, proto)
 
-
     def clientConnectionFailed(self, connector, reason):
         """
         Errback the C{self._onConnection} L{Deferred} when the
@@ -261,7 +266,6 @@ class _WrappingFactory(ClientFactory):
         """
         if not self._onConnection.called:
             self._onConnection.errback(reason)
-
 
 
 @implementer(interfaces.IStreamServerEndpoint)
@@ -282,20 +286,20 @@ class StandardIOEndpoint(object):
         """
         self._reactor = reactor
 
-
     def listen(self, stdioProtocolFactory):
         """
         Implement L{IStreamServerEndpoint.listen} to listen on stdin/stdout
         """
-        return defer.execute(self._stdio,
-                             stdioProtocolFactory.buildProtocol(PipeAddress()),
-                             reactor=self._reactor)
+        return defer.execute(
+            self._stdio,
+            stdioProtocolFactory.buildProtocol(PipeAddress()),
+            reactor=self._reactor,
+        )
 
 
-
-class _IProcessTransportWithConsumerAndProducer(interfaces.IProcessTransport,
-                                                interfaces.IConsumer,
-                                                interfaces.IPushProducer):
+class _IProcessTransportWithConsumerAndProducer(
+    interfaces.IProcessTransport, interfaces.IConsumer, interfaces.IPushProducer
+):
     """
     An L{_IProcessTransportWithConsumerAndProducer} combines various interfaces
     to work around the issue that L{interfaces.IProcessTransport} is
@@ -304,10 +308,9 @@ class _IProcessTransportWithConsumerAndProducer(interfaces.IProcessTransport,
     """
 
 
-
 class _ProcessEndpointTransport(
-        proxyForInterface(_IProcessTransportWithConsumerAndProducer,
-                          '_process')):
+    proxyForInterface(_IProcessTransportWithConsumerAndProducer, '_process')
+):
     """
     An L{ITransport}, L{IProcessTransport}, L{IConsumer}, and L{IPushProducer}
     provider for the L{IProtocol} instance passed to the process endpoint.
@@ -316,7 +319,6 @@ class _ProcessEndpointTransport(
         methods on this object to write data to a child process.
     @type _process: L{interfaces.IProcessTransport} provider
     """
-
 
 
 class _WrapIProtocol(ProcessProtocol):
@@ -340,7 +342,6 @@ class _WrapIProtocol(ProcessProtocol):
         self.errFlag = errFlag
         self.executable = executable
 
-
     def makeConnection(self, process):
         """
         Call L{IProtocol} provider's makeConnection method with an
@@ -350,7 +351,6 @@ class _WrapIProtocol(ProcessProtocol):
         """
         self.transport = _ProcessEndpointTransport(process)
         return self.protocol.makeConnection(self.transport)
-
 
     def childDataReceived(self, childFD, data):
         """
@@ -363,10 +363,11 @@ class _WrapIProtocol(ProcessProtocol):
         elif childFD == 2 and self.errFlag == StandardErrorBehavior.LOG:
             log.msg(
                 format="Process %(executable)r wrote stderr unhandled by "
-                       "%(protocol)s: %(data)s",
-                executable=self.executable, protocol=self.protocol,
-                data=data)
-
+                "%(protocol)s: %(data)s",
+                executable=self.executable,
+                protocol=self.protocol,
+                data=data,
+            )
 
     def processEnded(self, reason):
         """
@@ -377,12 +378,11 @@ class _WrapIProtocol(ProcessProtocol):
         @see: L{ProcessProtocol.processEnded}
         """
         if (reason.check(error.ProcessDone) == error.ProcessDone) and (
-                reason.value.status == 0):
-            return self.protocol.connectionLost(
-                Failure(error.ConnectionDone()))
+            reason.value.status == 0
+        ):
+            return self.protocol.connectionLost(Failure(error.ConnectionDone()))
         else:
             return self.protocol.connectionLost(reason)
-
 
 
 class StandardErrorBehavior(Names):
@@ -394,9 +394,9 @@ class StandardErrorBehavior(Names):
 
     @since: 13.1
     """
+
     LOG = NamedConstant()
     DROP = NamedConstant()
-
 
 
 @implementer(interfaces.IStreamClientEndpoint)
@@ -408,9 +408,20 @@ class ProcessEndpoint(object):
 
     @since: 13.1
     """
-    def __init__(self, reactor, executable, args=(), env={}, path=None,
-                 uid=None, gid=None, usePTY=0, childFDs=None,
-                 errFlag=StandardErrorBehavior.LOG):
+
+    def __init__(
+        self,
+        reactor,
+        executable,
+        args=(),
+        env={},
+        path=None,
+        uid=None,
+        gid=None,
+        usePTY=0,
+        childFDs=None,
+        errFlag=StandardErrorBehavior.LOG,
+    ):
         """
         See L{IReactorProcess.spawnProcess}.
 
@@ -429,7 +440,6 @@ class ProcessEndpoint(object):
         self._errFlag = errFlag
         self._spawnProcess = self._reactor.spawnProcess
 
-
     def connect(self, protocolFactory):
         """
         Implement L{IStreamClientEndpoint.connect} to launch a child process
@@ -442,13 +452,19 @@ class ProcessEndpoint(object):
         try:
             self._spawnProcess(
                 _WrapIProtocol(proto, self._executable, self._errFlag),
-                self._executable, self._args, self._env, self._path, self._uid,
-                self._gid, self._usePTY, self._childFDs)
+                self._executable,
+                self._args,
+                self._env,
+                self._path,
+                self._uid,
+                self._gid,
+                self._usePTY,
+                self._childFDs,
+            )
         except:
             return defer.fail()
         else:
             return defer.succeed(proto)
-
 
 
 @implementer(interfaces.IStreamServerEndpoint)
@@ -475,24 +491,25 @@ class _TCPServerEndpoint(object):
         self._backlog = backlog
         self._interface = interface
 
-
     def listen(self, protocolFactory):
         """
         Implement L{IStreamServerEndpoint.listen} to listen on a TCP
         socket
         """
-        return defer.execute(self._reactor.listenTCP,
-                             self._port,
-                             protocolFactory,
-                             backlog=self._backlog,
-                             interface=self._interface)
-
+        return defer.execute(
+            self._reactor.listenTCP,
+            self._port,
+            protocolFactory,
+            backlog=self._backlog,
+            interface=self._interface,
+        )
 
 
 class TCP4ServerEndpoint(_TCPServerEndpoint):
     """
     Implements TCP server endpoint with an IPv4 configuration
     """
+
     def __init__(self, reactor, port, backlog=50, interface=''):
         """
         @param reactor: An L{IReactorTCP} provider.
@@ -509,11 +526,11 @@ class TCP4ServerEndpoint(_TCPServerEndpoint):
         _TCPServerEndpoint.__init__(self, reactor, port, backlog, interface)
 
 
-
 class TCP6ServerEndpoint(_TCPServerEndpoint):
     """
     Implements TCP server endpoint with an IPv6 configuration
     """
+
     def __init__(self, reactor, port, backlog=50, interface='::'):
         """
         @param reactor: An L{IReactorTCP} provider.
@@ -528,7 +545,6 @@ class TCP6ServerEndpoint(_TCPServerEndpoint):
         @type interface: str
         """
         _TCPServerEndpoint.__init__(self, reactor, port, backlog, interface)
-
 
 
 @implementer(interfaces.IStreamClientEndpoint)
@@ -561,7 +577,6 @@ class TCP4ClientEndpoint(object):
         self._timeout = timeout
         self._bindAddress = bindAddress
 
-
     def connect(self, protocolFactory):
         """
         Implement L{IStreamClientEndpoint.connect} to connect via TCP.
@@ -569,12 +584,15 @@ class TCP4ClientEndpoint(object):
         try:
             wf = _WrappingFactory(protocolFactory)
             self._reactor.connectTCP(
-                self._host, self._port, wf,
-                timeout=self._timeout, bindAddress=self._bindAddress)
+                self._host,
+                self._port,
+                wf,
+                timeout=self._timeout,
+                bindAddress=self._bindAddress,
+            )
             return wf._onConnection
         except:
             return defer.fail()
-
 
 
 @implementer(interfaces.IStreamClientEndpoint)
@@ -611,7 +629,6 @@ class TCP6ClientEndpoint(object):
         self._timeout = timeout
         self._bindAddress = bindAddress
 
-
     def connect(self, protocolFactory):
         """
         Implement L{IStreamClientEndpoint.connect} to connect via TCP,
@@ -621,20 +638,18 @@ class TCP6ClientEndpoint(object):
             d = self._resolvedHostConnect(self._host, protocolFactory)
         else:
             d = self._nameResolution(self._host)
-            d.addCallback(lambda result: result[0][self._GAI_ADDRESS]
-                          [self._GAI_ADDRESS_HOST])
+            d.addCallback(
+                lambda result: result[0][self._GAI_ADDRESS][self._GAI_ADDRESS_HOST]
+            )
             d.addCallback(self._resolvedHostConnect, protocolFactory)
         return d
-
 
     def _nameResolution(self, host):
         """
         Resolve the hostname string into a tuple containing the host
         IPv6 address.
         """
-        return self._deferToThread(
-            self._getaddrinfo, host, 0, socket.AF_INET6)
-
+        return self._deferToThread(self._getaddrinfo, host, 0, socket.AF_INET6)
 
     def _resolvedHostConnect(self, resolvedHost, protocolFactory):
         """
@@ -642,12 +657,16 @@ class TCP6ClientEndpoint(object):
         """
         try:
             wf = _WrappingFactory(protocolFactory)
-            self._reactor.connectTCP(resolvedHost, self._port, wf,
-                timeout=self._timeout, bindAddress=self._bindAddress)
+            self._reactor.connectTCP(
+                resolvedHost,
+                self._port,
+                wf,
+                timeout=self._timeout,
+                bindAddress=self._bindAddress,
+            )
             return wf._onConnection
         except:
             return defer.fail()
-
 
 
 @implementer(IHostnameResolver)
@@ -662,6 +681,7 @@ class _SimpleHostnameResolver(object):
         the host to resolve and the port number to include in the
         result.
     """
+
     _log = Logger()
 
     def __init__(self, nameResolution):
@@ -670,12 +690,14 @@ class _SimpleHostnameResolver(object):
         """
         self._nameResolution = nameResolution
 
-
-    def resolveHostName(self, resolutionReceiver,
-                        hostName,
-                        portNumber=0,
-                        addressTypes=None,
-                        transportSemantics='TCP'):
+    def resolveHostName(
+        self,
+        resolutionReceiver,
+        hostName,
+        portNumber=0,
+        addressTypes=None,
+        transportSemantics='TCP',
+    ):
         """
         Initiate a hostname resolution.
 
@@ -700,24 +722,22 @@ class _SimpleHostnameResolver(object):
         def cbDeliver(gairesult):
             for family, socktype, proto, canonname, sockaddr in gairesult:
                 if family == socket.AF_INET6:
-                    resolutionReceiver.addressResolved(
-                        IPv6Address('TCP', *sockaddr))
+                    resolutionReceiver.addressResolved(IPv6Address('TCP', *sockaddr))
                 elif family == socket.AF_INET:
-                    resolutionReceiver.addressResolved(
-                        IPv4Address('TCP', *sockaddr))
-
+                    resolutionReceiver.addressResolved(IPv4Address('TCP', *sockaddr))
 
         def ebLog(error):
-            self._log.failure("while looking up {name} with {callable}",
-                              error, name=hostName,
-                              callable=self._nameResolution)
+            self._log.failure(
+                "while looking up {name} with {callable}",
+                error,
+                name=hostName,
+                callable=self._nameResolution,
+            )
 
         d.addCallback(cbDeliver)
         d.addErrback(ebLog)
         d.addBoth(lambda ignored: resolutionReceiver.resolutionComplete())
         return resolutionReceiver
-
-
 
 
 @implementer(interfaces.IStreamClientEndpoint)
@@ -748,12 +768,14 @@ class HostnameEndpoint(object):
         hostname that isn't valid IDNA, or non-ASCII bytes.
     @type _badHostname: L{bool}
     """
+
     _getaddrinfo = staticmethod(socket.getaddrinfo)
     _deferToThread = staticmethod(threads.deferToThread)
     _DEFAULT_ATTEMPT_DELAY = 0.3
 
-    def __init__(self, reactor, host, port, timeout=30, bindAddress=None,
-                 attemptDelay=None):
+    def __init__(
+        self, reactor, host, port, timeout=30, bindAddress=None, attemptDelay=None
+    ):
         """
         Create a L{HostnameEndpoint}.
 
@@ -784,8 +806,8 @@ class HostnameEndpoint(object):
 
         self._reactor = reactor
         self._nameResolver = self._getNameResolverAndMaybeWarn(reactor)
-        [self._badHostname, self._hostBytes, self._hostText] = (
-            self._hostAsBytesAndText(host)
+        [self._badHostname, self._hostBytes, self._hostText] = self._hostAsBytesAndText(
+            host
         )
         self._hostStr = self._hostBytes if bytes is str else self._hostText
         self._port = port
@@ -794,7 +816,6 @@ class HostnameEndpoint(object):
         if attemptDelay is None:
             attemptDelay = self._DEFAULT_ATTEMPT_DELAY
         self._attemptDelay = attemptDelay
-
 
     def __repr__(self):
         """
@@ -816,7 +837,6 @@ class HostnameEndpoint(object):
             host = nativeString(self._hostBytes)
         return "".join(["<HostnameEndpoint ", host, ":", str(self._port), ">"])
 
-
     def _getNameResolverAndMaybeWarn(self, reactor):
         """
         Retrieve a C{nameResolver} callable and warn the caller's
@@ -831,16 +851,18 @@ class HostnameEndpoint(object):
             warningString = deprecate.getDeprecationWarningString(
                 reactor.__class__,
                 Version('Twisted', 17, 5, 0),
-                format=("Passing HostnameEndpoint a reactor that does not"
-                        " provide IReactorPluggableNameResolver (%(fqpn)s)"
-                        " was deprecated in %(version)s"),
-                replacement=("a reactor that provides"
-                             " IReactorPluggableNameResolver"),
+                format=(
+                    "Passing HostnameEndpoint a reactor that does not"
+                    " provide IReactorPluggableNameResolver (%(fqpn)s)"
+                    " was deprecated in %(version)s"
+                ),
+                replacement=(
+                    "a reactor that provides" " IReactorPluggableNameResolver"
+                ),
             )
             warnings.warn(warningString, DeprecationWarning, stacklevel=3)
             return _SimpleHostnameResolver(self._fallbackNameResolution)
         return reactor.nameResolver
-
 
     @staticmethod
     def _hostAsBytesAndText(host):
@@ -887,7 +909,6 @@ class HostnameEndpoint(object):
         asciibytes = host.encode('ascii', 'backslashreplace')
         return True, asciibytes, asciibytes.decode('ascii')
 
-
     def connect(self, protocolFactory):
         """
         Attempts a connection to each resolved address, and returns a
@@ -902,20 +923,21 @@ class HostnameEndpoint(object):
             or fails a connection-related error.
         """
         if self._badHostname:
-            return defer.fail(
-                ValueError("invalid hostname: {}".format(self._hostStr))
-            )
+            return defer.fail(ValueError("invalid hostname: {}".format(self._hostStr)))
 
         d = Deferred()
         addresses = []
+
         @provider(IResolutionReceiver)
         class EndpointReceiver(object):
             @staticmethod
             def resolutionBegan(resolutionInProgress):
                 pass
+
             @staticmethod
             def addressResolved(address):
                 addresses.append(address)
+
             @staticmethod
             def resolutionComplete():
                 d.callback(addresses)
@@ -924,22 +946,35 @@ class HostnameEndpoint(object):
             EndpointReceiver, self._hostText, portNumber=self._port
         )
 
-        d.addErrback(lambda ignored: defer.fail(error.DNSLookupError(
-            "Couldn't find the hostname '{}'".format(self._hostStr))))
+        d.addErrback(
+            lambda ignored: defer.fail(
+                error.DNSLookupError(
+                    "Couldn't find the hostname '{}'".format(self._hostStr)
+                )
+            )
+        )
+
         @d.addCallback
         def resolvedAddressesToEndpoints(addresses):
             # Yield an endpoint for every address resolved from the name.
             for eachAddress in addresses:
                 if isinstance(eachAddress, IPv6Address):
                     yield TCP6ClientEndpoint(
-                        self._reactor, eachAddress.host, eachAddress.port,
-                        self._timeout, self._bindAddress
+                        self._reactor,
+                        eachAddress.host,
+                        eachAddress.port,
+                        self._timeout,
+                        self._bindAddress,
                     )
                 if isinstance(eachAddress, IPv4Address):
                     yield TCP4ClientEndpoint(
-                        self._reactor, eachAddress.host, eachAddress.port,
-                        self._timeout, self._bindAddress
+                        self._reactor,
+                        eachAddress.host,
+                        eachAddress.port,
+                        self._timeout,
+                        self._bindAddress,
                     )
+
         d.addCallback(list)
 
         def _canceller(d):
@@ -948,8 +983,11 @@ class HostnameEndpoint(object):
             # participate in cycles with their cancellers; that would create a
             # potentially problematic circular reference and possibly
             # gc.garbage.
-            d.errback(error.ConnectingCancelledError(
-                HostnameAddress(self._hostBytes, self._port)))
+            d.errback(
+                error.ConnectingCancelledError(
+                    HostnameAddress(self._hostBytes, self._port)
+                )
+            )
 
         @d.addCallback
         def startConnectionAttempts(endpoints):
@@ -983,6 +1021,7 @@ class HostnameEndpoint(object):
                 if pending or checkDone.completed or checkDone.endpointsLeft:
                     return
                 winner.errback(failures.pop())
+
             checkDone.completed = False
             checkDone.endpointsLeft = True
 
@@ -997,13 +1036,16 @@ class HostnameEndpoint(object):
 
                 eachAttempt = endpoint.connect(protocolFactory)
                 pending.append(eachAttempt)
+
                 @eachAttempt.addBoth
                 def noLongerPending(result):
                     pending.remove(eachAttempt)
                     return result
+
                 @eachAttempt.addCallback
                 def succeeded(result):
                     winner.callback(result)
+
                 @eachAttempt.addErrback
                 def failed(reason):
                     failures.append(reason)
@@ -1020,10 +1062,10 @@ class HostnameEndpoint(object):
                 if iterateEndpoint.running:
                     iterateEndpoint.stop()
                 return result
+
             return winner
 
         return d
-
 
     def _fallbackNameResolution(self, host, port):
         """
@@ -1038,9 +1080,7 @@ class HostnameEndpoint(object):
         @return: A L{Deferred} that fires with L{_getaddrinfo}'s
             return value.
         """
-        return self._deferToThread(self._getaddrinfo, host, port, 0,
-                socket.SOCK_STREAM)
-
+        return self._deferToThread(self._getaddrinfo, host, port, 0, socket.SOCK_STREAM)
 
 
 @implementer(interfaces.IStreamServerEndpoint)
@@ -1049,8 +1089,7 @@ class SSL4ServerEndpoint(object):
     SSL secured TCP server endpoint with an IPv4 configuration.
     """
 
-    def __init__(self, reactor, port, sslContextFactory,
-                 backlog=50, interface=''):
+    def __init__(self, reactor, port, sslContextFactory, backlog=50, interface=''):
         """
         @param reactor: An L{IReactorSSL} provider.
 
@@ -1072,18 +1111,19 @@ class SSL4ServerEndpoint(object):
         self._backlog = backlog
         self._interface = interface
 
-
     def listen(self, protocolFactory):
         """
         Implement L{IStreamServerEndpoint.listen} to listen for SSL on a
         TCP socket.
         """
-        return defer.execute(self._reactor.listenSSL, self._port,
-                             protocolFactory,
-                             contextFactory=self._sslContextFactory,
-                             backlog=self._backlog,
-                             interface=self._interface)
-
+        return defer.execute(
+            self._reactor.listenSSL,
+            self._port,
+            protocolFactory,
+            contextFactory=self._sslContextFactory,
+            backlog=self._backlog,
+            interface=self._interface,
+        )
 
 
 @implementer(interfaces.IStreamClientEndpoint)
@@ -1092,8 +1132,9 @@ class SSL4ClientEndpoint(object):
     SSL secured TCP client endpoint with an IPv4 configuration
     """
 
-    def __init__(self, reactor, host, port, sslContextFactory,
-                 timeout=30, bindAddress=None):
+    def __init__(
+        self, reactor, host, port, sslContextFactory, timeout=30, bindAddress=None
+    ):
         """
         @param reactor: An L{IReactorSSL} provider.
 
@@ -1121,7 +1162,6 @@ class SSL4ClientEndpoint(object):
         self._timeout = timeout
         self._bindAddress = bindAddress
 
-
     def connect(self, protocolFactory):
         """
         Implement L{IStreamClientEndpoint.connect} to connect with SSL over
@@ -1130,12 +1170,16 @@ class SSL4ClientEndpoint(object):
         try:
             wf = _WrappingFactory(protocolFactory)
             self._reactor.connectSSL(
-                self._host, self._port, wf, self._sslContextFactory,
-                timeout=self._timeout, bindAddress=self._bindAddress)
+                self._host,
+                self._port,
+                wf,
+                self._sslContextFactory,
+                timeout=self._timeout,
+                bindAddress=self._bindAddress,
+            )
             return wf._onConnection
         except:
             return defer.fail()
-
 
 
 @implementer(interfaces.IStreamServerEndpoint)
@@ -1143,6 +1187,7 @@ class UNIXServerEndpoint(object):
     """
     UnixSocket server endpoint.
     """
+
     def __init__(self, reactor, address, backlog=50, mode=0o666, wantPID=0):
         """
         @param reactor: An L{IReactorUNIX} provider.
@@ -1159,17 +1204,18 @@ class UNIXServerEndpoint(object):
         self._mode = mode
         self._wantPID = wantPID
 
-
     def listen(self, protocolFactory):
         """
         Implement L{IStreamServerEndpoint.listen} to listen on a UNIX socket.
         """
-        return defer.execute(self._reactor.listenUNIX, self._address,
-                             protocolFactory,
-                             backlog=self._backlog,
-                             mode=self._mode,
-                             wantPID=self._wantPID)
-
+        return defer.execute(
+            self._reactor.listenUNIX,
+            self._address,
+            protocolFactory,
+            backlog=self._backlog,
+            mode=self._mode,
+            wantPID=self._wantPID,
+        )
 
 
 @implementer(interfaces.IStreamClientEndpoint)
@@ -1177,6 +1223,7 @@ class UNIXClientEndpoint(object):
     """
     UnixSocket client endpoint.
     """
+
     def __init__(self, reactor, path, timeout=30, checkPID=0):
         """
         @param reactor: An L{IReactorUNIX} provider.
@@ -1197,7 +1244,6 @@ class UNIXClientEndpoint(object):
         self._timeout = timeout
         self._checkPID = checkPID
 
-
     def connect(self, protocolFactory):
         """
         Implement L{IStreamClientEndpoint.connect} to connect via a
@@ -1206,13 +1252,11 @@ class UNIXClientEndpoint(object):
         try:
             wf = _WrappingFactory(protocolFactory)
             self._reactor.connectUNIX(
-                self._path, wf,
-                timeout=self._timeout,
-                checkPID=self._checkPID)
+                self._path, wf, timeout=self._timeout, checkPID=self._checkPID
+            )
             return wf._onConnection
         except:
             return defer.fail()
-
 
 
 @implementer(interfaces.IStreamServerEndpoint)
@@ -1224,6 +1268,7 @@ class AdoptedStreamServerEndpoint(object):
     @ivar _used: A C{bool} indicating whether this endpoint has been used to
         listen with a factory yet.  C{True} if so.
     """
+
     _close = os.close
     _setNonBlocking = staticmethod(fdesc.setNonBlocking)
 
@@ -1242,7 +1287,6 @@ class AdoptedStreamServerEndpoint(object):
         self.addressFamily = addressFamily
         self._used = False
 
-
     def listen(self, factory):
         """
         Implement L{IStreamServerEndpoint.listen} to start listening on, and
@@ -1255,12 +1299,12 @@ class AdoptedStreamServerEndpoint(object):
         try:
             self._setNonBlocking(self.fileno)
             port = self.reactor.adoptStreamPort(
-                self.fileno, self.addressFamily, factory)
+                self.fileno, self.addressFamily, factory
+            )
             self._close(self.fileno)
         except:
             return defer.fail()
         return defer.succeed(port)
-
 
 
 def _parseTCP(factory, port, interface="", backlog=50):
@@ -1285,9 +1329,7 @@ def _parseTCP(factory, port, interface="", backlog=50):
         L{IReactorTCP.listenTCP} (or, modulo argument 2, the factory, arguments
         to L{TCP4ServerEndpoint}.
     """
-    return (int(port), factory), {'interface': interface,
-                                  'backlog': int(backlog)}
-
+    return (int(port), factory), {'interface': interface, 'backlog': int(backlog)}
 
 
 def _parseUNIX(factory, address, mode='666', backlog=50, lockfile=True):
@@ -1317,14 +1359,21 @@ def _parseUNIX(factory, address, mode='666', backlog=50, lockfile=True):
     """
     return (
         (address, factory),
-        {'mode': int(mode, 8), 'backlog': int(backlog),
-         'wantPID': bool(int(lockfile))})
+        {'mode': int(mode, 8), 'backlog': int(backlog), 'wantPID': bool(int(lockfile))},
+    )
 
 
-
-def _parseSSL(factory, port, privateKey="server.pem", certKey=None,
-              sslmethod=None, interface='', backlog=50, extraCertChain=None,
-              dhParameters=None):
+def _parseSSL(
+    factory,
+    port,
+    privateKey="server.pem",
+    certKey=None,
+    sslmethod=None,
+    interface='',
+    backlog=50,
+    extraCertChain=None,
+    dhParameters=None,
+):
     """
     Internal parser function for L{_parseServer} to convert the string
     arguments for an SSL (over TCP/IPv4) stream endpoint into the structured
@@ -1368,6 +1417,7 @@ def _parseSSL(factory, port, privateKey="server.pem", certKey=None,
         to L{SSL4ServerEndpoint}.
     """
     from twisted.internet import ssl
+
     if certKey is None:
         certKey = privateKey
     kw = {}
@@ -1375,16 +1425,16 @@ def _parseSSL(factory, port, privateKey="server.pem", certKey=None,
         kw['method'] = getattr(ssl.SSL, sslmethod)
     certPEM = FilePath(certKey).getContent()
     keyPEM = FilePath(privateKey).getContent()
-    privateCertificate = ssl.PrivateCertificate.loadPEM(
-        certPEM + b'\n' + keyPEM)
+    privateCertificate = ssl.PrivateCertificate.loadPEM(certPEM + b'\n' + keyPEM)
     if extraCertChain is not None:
         matches = re.findall(
             r'(-----BEGIN CERTIFICATE-----\n.+?\n-----END CERTIFICATE-----)',
             nativeString(FilePath(extraCertChain).getContent()),
-            flags=re.DOTALL
+            flags=re.DOTALL,
         )
-        chainCertificates = [ssl.Certificate.loadPEM(chainCertPEM).original
-                             for chainCertPEM in matches]
+        chainCertificates = [
+            ssl.Certificate.loadPEM(chainCertPEM).original for chainCertPEM in matches
+        ]
         if not chainCertificates:
             raise ValueError(
                 "Specified chain file '%s' doesn't contain any valid "
@@ -1393,9 +1443,7 @@ def _parseSSL(factory, port, privateKey="server.pem", certKey=None,
     else:
         chainCertificates = None
     if dhParameters is not None:
-        dhParameters = ssl.DiffieHellmanParameters.fromFile(
-            FilePath(dhParameters),
-        )
+        dhParameters = ssl.DiffieHellmanParameters.fromFile(FilePath(dhParameters))
 
     cf = ssl.CertificateOptions(
         privateKey=privateCertificate.privateKey.original,
@@ -1404,9 +1452,7 @@ def _parseSSL(factory, port, privateKey="server.pem", certKey=None,
         dhParameters=dhParameters,
         **kw
     )
-    return ((int(port), factory, cf),
-            {'interface': interface, 'backlog': int(backlog)})
-
+    return ((int(port), factory, cf), {'interface': interface, 'backlog': int(backlog)})
 
 
 @implementer(IPlugin, IStreamServerEndpointStringParser)
@@ -1416,6 +1462,7 @@ class _StandardIOParser(object):
 
     @ivar prefix: See L{IStreamServerEndpointStringParser.prefix}.
     """
+
     prefix = "stdio"
 
     def _parseServer(self, reactor):
@@ -1427,12 +1474,10 @@ class _StandardIOParser(object):
         """
         return StandardIOEndpoint(reactor)
 
-
     def parseStreamServer(self, reactor, *args, **kwargs):
         # Redirects to another function (self._parseServer), tricks zope.interface
         # into believing the interface is correctly implemented.
         return self._parseServer(reactor)
-
 
 
 @implementer(IPlugin, IStreamServerEndpointStringParser)
@@ -1445,6 +1490,7 @@ class _SystemdParser(object):
     @ivar _sddaemon: A L{ListenFDs} instance used to translate an index into an
         actual file descriptor.
     """
+
     _sddaemon = ListenFDs.fromEnvironment()
 
     prefix = "systemd"
@@ -1476,13 +1522,11 @@ class _SystemdParser(object):
         addressFamily = getattr(socket, 'AF_' + domain)
         return AdoptedStreamServerEndpoint(reactor, fileno, addressFamily)
 
-
     def parseStreamServer(self, reactor, *args, **kwargs):
         # Delegate to another function with a sane signature.  This function has
         # an insane signature to trick zope.interface into believing the
         # interface is correctly implemented.
         return self._parseServer(reactor, *args, **kwargs)
-
 
 
 @implementer(IPlugin, IStreamServerEndpointStringParser)
@@ -1492,7 +1536,10 @@ class _TCP6ServerParser(object):
 
     @ivar prefix: See L{IStreamServerEndpointStringParser.prefix}.
     """
-    prefix = "tcp6"     # Used in _parseServer to identify the plugin with the endpoint type
+
+    prefix = (
+        "tcp6"
+    )  # Used in _parseServer to identify the plugin with the endpoint type
 
     def _parseServer(self, reactor, port, backlog=50, interface='::'):
         """
@@ -1514,20 +1561,16 @@ class _TCP6ServerParser(object):
         backlog = int(backlog)
         return TCP6ServerEndpoint(reactor, port, backlog, interface)
 
-
     def parseStreamServer(self, reactor, *args, **kwargs):
         # Redirects to another function (self._parseServer), tricks zope.interface
         # into believing the interface is correctly implemented.
         return self._parseServer(reactor, *args, **kwargs)
 
 
-
-_serverParsers = {"tcp": _parseTCP,
-                  "unix": _parseUNIX,
-                  "ssl": _parseSSL,
-                  }
+_serverParsers = {"tcp": _parseTCP, "unix": _parseUNIX, "ssl": _parseSSL}
 
 _OP, _STRING = range(2)
+
 
 def _tokenize(description):
     """
@@ -1571,7 +1614,6 @@ def _tokenize(description):
     yield _STRING, current
 
 
-
 def _parse(description):
     """
     Convert a description string into a list of positional and keyword
@@ -1587,11 +1629,13 @@ def _parse(description):
     """
     args, kw = [], {}
     colon = _matchingString(u':', description)
+
     def add(sofar):
         if len(sofar) == 1:
             args.append(sofar[0])
         else:
             kw[nativeString(sofar[0])] = sofar[1]
+
     sofar = ()
     for (type, value) in _tokenize(description):
         if type is _STRING:
@@ -1608,13 +1652,13 @@ _endpointServerFactories = {
     'TCP': TCP4ServerEndpoint,
     'SSL': SSL4ServerEndpoint,
     'UNIX': UNIXServerEndpoint,
-    }
+}
 
 _endpointClientFactories = {
     'TCP': TCP4ClientEndpoint,
     'SSL': SSL4ClientEndpoint,
     'UNIX': UNIXClientEndpoint,
-    }
+}
 
 
 def _parseServer(description, factory):
@@ -1645,18 +1689,15 @@ def _parseServer(description, factory):
     return (endpointType.upper(),) + parser(factory, *args[1:], **kw)
 
 
-
 def _matchPluginToPrefix(plugins, endpointType):
     """
     Match plugin to prefix.
     """
     endpointType = endpointType.lower()
     for plugin in plugins:
-        if (_matchingString(plugin.prefix.lower(),
-                            endpointType) == endpointType):
+        if _matchingString(plugin.prefix.lower(), endpointType) == endpointType:
             return plugin
     raise ValueError("Unknown endpoint type: '%s'" % (endpointType,))
-
 
 
 def serverFromString(reactor, description):
@@ -1732,7 +1773,6 @@ def serverFromString(reactor, description):
     return _endpointServerFactories[name](reactor, *args, **kw)
 
 
-
 def quoteStringArgument(argument):
     """
     Quote an argument to L{serverFromString} and L{clientFromString}.  Since
@@ -1766,7 +1806,6 @@ def quoteStringArgument(argument):
     for c in backslash, colon:
         argument = argument.replace(c, backslash + c)
     return argument
-
 
 
 def _parseClientTCP(*args, **kwargs):
@@ -1808,7 +1847,6 @@ def _parseClientTCP(*args, **kwargs):
     return kwargs
 
 
-
 def _loadCAsFromDir(directoryPath):
     """
     Load certificate-authority certificate objects in a given directory.
@@ -1837,7 +1875,6 @@ def _loadCAsFromDir(directoryPath):
     return trustRootFromCertificates(caCerts.values())
 
 
-
 def _parseTrustRootPath(pathName):
     """
     Parse a string referring to a directory full of certificate authorities
@@ -1851,7 +1888,6 @@ def _parseTrustRootPath(pathName):
     if pathName is None:
         return None
     return _loadCAsFromDir(FilePath(pathName))
-
 
 
 def _privateCertFromPaths(certificatePath, keyPath):
@@ -1875,9 +1911,8 @@ def _privateCertFromPaths(certificatePath, keyPath):
     else:
         return PrivateCertificate.fromCertificateAndKeyPair(
             Certificate.loadPEM(certBytes),
-            KeyPair.load(FilePath(keyPath).getContent(), 1)
+            KeyPair.load(FilePath(keyPath).getContent(), 1),
         )
-
 
 
 def _parseClientSSLOptions(kwargs):
@@ -1893,13 +1928,15 @@ def _parseClientSSLOptions(kwargs):
     @return: The remaining arguments, including a new key C{sslContextFactory}.
     """
     hostname = kwargs.pop('hostname', None)
-    clientCertificate = _privateCertFromPaths(kwargs.pop('certKey', None),
-                                              kwargs.pop('privateKey', None))
+    clientCertificate = _privateCertFromPaths(
+        kwargs.pop('certKey', None), kwargs.pop('privateKey', None)
+    )
     trustRoot = _parseTrustRootPath(kwargs.pop('caCertsDir', None))
     if hostname is not None:
         configuration = optionsForClientTLS(
-            _idnaText(hostname), trustRoot=trustRoot,
-            clientCertificate=clientCertificate
+            _idnaText(hostname),
+            trustRoot=trustRoot,
+            clientCertificate=clientCertificate,
         )
     else:
         # _really_ though, you should specify a hostname.
@@ -1916,7 +1953,6 @@ def _parseClientSSLOptions(kwargs):
         )
     kwargs['sslContextFactory'] = configuration
     return kwargs
-
 
 
 def _parseClientSSL(*args, **kwargs):
@@ -1949,7 +1985,6 @@ def _parseClientSSL(*args, **kwargs):
     return _parseClientSSLOptions(kwargs)
 
 
-
 def _parseClientUNIX(*args, **kwargs):
     """
     Perform any argument value coercion necessary for UNIX client parameters.
@@ -1975,12 +2010,12 @@ def _parseClientUNIX(*args, **kwargs):
         pass
     return kwargs
 
+
 _clientParsers = {
     'TCP': _parseClientTCP,
     'SSL': _parseClientSSL,
     'UNIX': _parseClientUNIX,
-    }
-
+}
 
 
 def clientFromString(reactor, description):
@@ -2067,7 +2102,6 @@ def clientFromString(reactor, description):
     return _endpointClientFactories[name](reactor, **kwargs)
 
 
-
 def connectProtocol(endpoint, protocol):
     """
     Connect a protocol instance to an endpoint.
@@ -2084,11 +2118,12 @@ def connectProtocol(endpoint, protocol):
 
     @since: 13.1
     """
+
     class OneShotFactory(Factory):
         def buildProtocol(self, addr):
             return protocol
-    return endpoint.connect(OneShotFactory())
 
+    return endpoint.connect(OneShotFactory())
 
 
 @implementer(interfaces.IStreamClientEndpoint)
@@ -2104,7 +2139,6 @@ class _WrapperEndpoint(object):
         self._wrappedEndpoint = wrappedEndpoint
         self._wrapperFactory = wrapperFactory
 
-
     def connect(self, protocolFactory):
         """
         Connect the given protocol factory and unwrap its result.
@@ -2112,7 +2146,6 @@ class _WrapperEndpoint(object):
         return self._wrappedEndpoint.connect(
             self._wrapperFactory(protocolFactory)
         ).addCallback(lambda protocol: protocol.wrappedProtocol)
-
 
 
 @implementer(interfaces.IStreamServerEndpoint)
@@ -2128,15 +2161,11 @@ class _WrapperServerEndpoint(object):
         self._wrappedEndpoint = wrappedEndpoint
         self._wrapperFactory = wrapperFactory
 
-
     def listen(self, protocolFactory):
         """
         Connect the given protocol factory and unwrap its result.
         """
-        return self._wrappedEndpoint.listen(
-            self._wrapperFactory(protocolFactory)
-        )
-
+        return self._wrappedEndpoint.listen(self._wrapperFactory(protocolFactory))
 
 
 def wrapClientTLS(connectionCreator, wrappedEndpoint):
@@ -2164,15 +2193,24 @@ def wrapClientTLS(connectionCreator, wrappedEndpoint):
         )
     return _WrapperEndpoint(
         wrappedEndpoint,
-        lambda protocolFactory:
-        TLSMemoryBIOFactory(connectionCreator, True, protocolFactory)
+        lambda protocolFactory: TLSMemoryBIOFactory(
+            connectionCreator, True, protocolFactory
+        ),
     )
 
 
-
-def _parseClientTLS(reactor, host, port, timeout=b'30', bindAddress=None,
-                    certificate=None, privateKey=None, trustRoots=None,
-                    endpoint=None, **kwargs):
+def _parseClientTLS(
+    reactor,
+    host,
+    port,
+    timeout=b'30',
+    bindAddress=None,
+    certificate=None,
+    privateKey=None,
+    trustRoots=None,
+    endpoint=None,
+    **kwargs
+):
     """
     Internal method to construct an endpoint from string parameters.
 
@@ -2208,24 +2246,25 @@ def _parseClientTLS(reactor, host, port, timeout=b'30', bindAddress=None,
     @rtype: L{IStreamClientEndpoint}
     """
     if kwargs:
-        raise TypeError('unrecognized keyword arguments present',
-                        list(kwargs.keys()))
+        raise TypeError('unrecognized keyword arguments present', list(kwargs.keys()))
     host = host if isinstance(host, unicode) else host.decode("utf-8")
-    bindAddress = (bindAddress
-                   if isinstance(bindAddress, unicode) or bindAddress is None
-                   else bindAddress.decode("utf-8"))
+    bindAddress = (
+        bindAddress
+        if isinstance(bindAddress, unicode) or bindAddress is None
+        else bindAddress.decode("utf-8")
+    )
     port = int(port)
     timeout = int(timeout)
     return wrapClientTLS(
         optionsForClientTLS(
-            host, trustRoot=_parseTrustRootPath(trustRoots),
-            clientCertificate=_privateCertFromPaths(certificate,
-                                                    privateKey)),
-        clientFromString(reactor, endpoint) if endpoint is not None
-        else HostnameEndpoint(reactor, _idnaBytes(host), port, timeout,
-                              bindAddress)
+            host,
+            trustRoot=_parseTrustRootPath(trustRoots),
+            clientCertificate=_privateCertFromPaths(certificate, privateKey),
+        ),
+        clientFromString(reactor, endpoint)
+        if endpoint is not None
+        else HostnameEndpoint(reactor, _idnaBytes(host), port, timeout, bindAddress),
     )
-
 
 
 @implementer(IPlugin, IStreamClientEndpointStringParserWithReactor)
@@ -2237,6 +2276,7 @@ class _TLSClientEndpointParser(object):
     @ivar prefix: See
         L{IStreamClientEndpointStringParserWithReactor.prefix}.
     """
+
     prefix = 'tls'
 
     @staticmethod

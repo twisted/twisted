@@ -24,11 +24,7 @@ class ProxyInfo(object):
     @type destination: L{twisted.internet.interfaces.IAddress}
     """
 
-    __slots__ = (
-        'header',
-        'source',
-        'destination',
-    )
+    __slots__ = ('header', 'source', 'destination')
 
     def __init__(self, header, source, destination):
         self.header = header

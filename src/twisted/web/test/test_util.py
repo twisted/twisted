@@ -25,7 +25,6 @@ from twisted.web.util import _StackElement, FailureElement, formatFailure
 from twisted.web.util import redirectTo, _SourceLineElement
 
 
-
 class RedirectToTests(TestCase):
     """
     Tests for L{redirectTo}.
@@ -43,13 +42,14 @@ class RedirectToTests(TestCase):
         redirectTo(targetURL, request)
         self.assertEqual(request.code, FOUND)
         self.assertEqual(
-            request.responseHeaders.getRawHeaders(b'location'), [targetURL])
+            request.responseHeaders.getRawHeaders(b'location'), [targetURL]
+        )
         self.assertEqual(
             request.responseHeaders.getRawHeaders(b'content-type'),
-            [b'text/html; charset=utf-8'])
+            [b'text/html; charset=utf-8'],
+        )
 
-
-    def test_redirectToUnicodeURL(self) :
+    def test_redirectToUnicodeURL(self):
         """
         L{redirectTo} will raise TypeError if unicode object is passed in URL
         """
@@ -59,19 +59,21 @@ class RedirectToTests(TestCase):
         self.assertRaises(TypeError, redirectTo, targetURL, request)
 
 
-
 class FailureElementTests(TestCase):
     """
     Tests for L{FailureElement} and related helpers which can render a
     L{Failure} as an HTML string.
     """
+
     def setUp(self):
         """
         Create a L{Failure} which can be used by the rendering tests.
         """
+
         def lineNumberProbeAlsoBroken():
             message = "This is a problem"
             raise Exception(message)
+
         # Figure out the line number from which the exception will be raised.
         self.base = lineNumberProbeAlsoBroken.__code__.co_firstlineno + 1
 
@@ -81,24 +83,24 @@ class FailureElementTests(TestCase):
             self.failure = Failure(captureVars=True)
             self.frame = self.failure.frames[-1]
 
-
     def test_sourceLineElement(self):
         """
         L{_SourceLineElement} renders a source line and line number.
         """
         element = _SourceLineElement(
-            TagLoader(tags.div(
-                    tags.span(render="lineNumber"),
-                    tags.span(render="sourceLine"))),
-            50, "    print 'hello'")
+            TagLoader(
+                tags.div(tags.span(render="lineNumber"), tags.span(render="sourceLine"))
+            ),
+            50,
+            "    print 'hello'",
+        )
         d = flattenString(None, element)
         expected = (
             u"<div><span>50</span><span>"
-            u" \N{NO-BREAK SPACE} \N{NO-BREAK SPACE}print 'hello'</span></div>")
-        d.addCallback(
-            self.assertEqual, expected.encode('utf-8'))
+            u" \N{NO-BREAK SPACE} \N{NO-BREAK SPACE}print 'hello'</span></div>"
+        )
+        d.addCallback(self.assertEqual, expected.encode('utf-8'))
         return d
-
 
     def test_sourceFragmentElement(self):
         """
@@ -106,44 +108,53 @@ class FailureElementTests(TestCase):
         number indicated by a frame object.
         """
         element = _SourceFragmentElement(
-            TagLoader(tags.div(
+            TagLoader(
+                tags.div(
                     tags.span(render="lineNumber"),
                     tags.span(render="sourceLine"),
-                    render="sourceLines")),
-            self.frame)
+                    render="sourceLines",
+                )
+            ),
+            self.frame,
+        )
 
         source = [
-            u' \N{NO-BREAK SPACE} \N{NO-BREAK SPACE}message = '
-            u'"This is a problem"',
-
+            u' \N{NO-BREAK SPACE} \N{NO-BREAK SPACE}message = ' u'"This is a problem"',
             u' \N{NO-BREAK SPACE} \N{NO-BREAK SPACE}raise Exception(message)',
             u'# Figure out the line number from which the exception will be '
             u'raised.',
         ]
         d = flattenString(None, element)
         if _PY3:
-            stringToCheckFor = ''.join([
-                '<div class="snippet%sLine"><span>%d</span><span>%s</span>'
-                '</div>' % (
-                    ["", "Highlight"][lineNumber == 1],
-                    self.base + lineNumber,
-                    (u" \N{NO-BREAK SPACE}" * 4 + sourceLine))
-                for (lineNumber, sourceLine)
-                in enumerate(source)]).encode("utf8")
+            stringToCheckFor = ''.join(
+                [
+                    '<div class="snippet%sLine"><span>%d</span><span>%s</span>'
+                    '</div>'
+                    % (
+                        ["", "Highlight"][lineNumber == 1],
+                        self.base + lineNumber,
+                        (u" \N{NO-BREAK SPACE}" * 4 + sourceLine),
+                    )
+                    for (lineNumber, sourceLine) in enumerate(source)
+                ]
+            ).encode("utf8")
 
         else:
-            stringToCheckFor = ''.join([
-                '<div class="snippet%sLine"><span>%d</span><span>%s</span>'
-                '</div>' % (
-                    ["", "Highlight"][lineNumber == 1],
-                    self.base + lineNumber,
-                    (u" \N{NO-BREAK SPACE}" * 4 + sourceLine).encode('utf8'))
-                for (lineNumber, sourceLine)
-                in enumerate(source)])
+            stringToCheckFor = ''.join(
+                [
+                    '<div class="snippet%sLine"><span>%d</span><span>%s</span>'
+                    '</div>'
+                    % (
+                        ["", "Highlight"][lineNumber == 1],
+                        self.base + lineNumber,
+                        (u" \N{NO-BREAK SPACE}" * 4 + sourceLine).encode('utf8'),
+                    )
+                    for (lineNumber, sourceLine) in enumerate(source)
+                ]
+            )
 
         d.addCallback(self.assertEqual, stringToCheckFor)
         return d
-
 
     def test_frameElementFilename(self):
         """
@@ -151,17 +162,15 @@ class FailureElementTests(TestCase):
         associated with the frame object used to initialize the
         L{_FrameElement}.
         """
-        element = _FrameElement(
-            TagLoader(tags.span(render="filename")),
-            self.frame)
+        element = _FrameElement(TagLoader(tags.span(render="filename")), self.frame)
         d = flattenString(None, element)
         d.addCallback(
             # __file__ differs depending on whether an up-to-date .pyc file
             # already existed.
             self.assertEqual,
-            b"<span>" + networkString(__file__.rstrip('c')) + b"</span>")
+            b"<span>" + networkString(__file__.rstrip('c')) + b"</span>",
+        )
         return d
-
 
     def test_frameElementLineNumber(self):
         """
@@ -169,14 +178,12 @@ class FailureElementTests(TestCase):
         associated with the frame object used to initialize the
         L{_FrameElement}.
         """
-        element = _FrameElement(
-            TagLoader(tags.span(render="lineNumber")),
-            self.frame)
+        element = _FrameElement(TagLoader(tags.span(render="lineNumber")), self.frame)
         d = flattenString(None, element)
         d.addCallback(
-            self.assertEqual, b"<span>" + intToBytes(self.base + 1) + b"</span>")
+            self.assertEqual, b"<span>" + intToBytes(self.base + 1) + b"</span>"
+        )
         return d
-
 
     def test_frameElementFunction(self):
         """
@@ -184,14 +191,10 @@ class FailureElementTests(TestCase):
         associated with the frame object used to initialize the
         L{_FrameElement}.
         """
-        element = _FrameElement(
-            TagLoader(tags.span(render="function")),
-            self.frame)
+        element = _FrameElement(TagLoader(tags.span(render="function")), self.frame)
         d = flattenString(None, element)
-        d.addCallback(
-            self.assertEqual, b"<span>lineNumberProbeAlsoBroken</span>")
+        d.addCallback(self.assertEqual, b"<span>lineNumberProbeAlsoBroken</span>")
         return d
-
 
     def test_frameElementSource(self):
         """
@@ -206,7 +209,6 @@ class FailureElementTests(TestCase):
         self.assertIsInstance(result, _SourceFragmentElement)
         self.assertIdentical(result.frame, self.frame)
         self.assertEqual([tag], result.loader.load())
-
 
     def test_stackElement(self):
         """
@@ -226,7 +228,6 @@ class FailureElementTests(TestCase):
         self.assertNotEqual(result[0].loader.load(), result[1].loader.load())
         self.assertEqual(2, len(result))
 
-
     def test_failureElementTraceback(self):
         """
         The I{traceback} renderer of L{FailureElement} renders the failure's
@@ -240,36 +241,29 @@ class FailureElementTests(TestCase):
         self.assertIdentical(result.stackFrames, self.failure.frames)
         self.assertEqual([tag], result.loader.load())
 
-
     def test_failureElementType(self):
         """
         The I{type} renderer of L{FailureElement} renders the failure's
         exception type.
         """
-        element = FailureElement(
-            self.failure, TagLoader(tags.span(render="type")))
+        element = FailureElement(self.failure, TagLoader(tags.span(render="type")))
         d = flattenString(None, element)
         if _PY3:
             exc = b"builtins.Exception"
         else:
             exc = b"exceptions.Exception"
-        d.addCallback(
-            self.assertEqual, b"<span>" + exc + b"</span>")
+        d.addCallback(self.assertEqual, b"<span>" + exc + b"</span>")
         return d
-
 
     def test_failureElementValue(self):
         """
         The I{value} renderer of L{FailureElement} renders the value's exception
         value.
         """
-        element = FailureElement(
-            self.failure, TagLoader(tags.span(render="value")))
+        element = FailureElement(self.failure, TagLoader(tags.span(render="value")))
         d = flattenString(None, element)
-        d.addCallback(
-            self.assertEqual, b'<span>This is a problem</span>')
+        d.addCallback(self.assertEqual, b'<span>This is a problem</span>')
         return d
-
 
 
 class FormatFailureTests(TestCase):
@@ -277,13 +271,13 @@ class FormatFailureTests(TestCase):
     Tests for L{twisted.web.util.formatFailure} which returns an HTML string
     representing the L{Failure} instance passed to it.
     """
+
     def test_flattenerError(self):
         """
         If there is an error flattening the L{Failure} instance,
         L{formatFailure} raises L{FlattenerError}.
         """
         self.assertRaises(FlattenerError, formatFailure, object())
-
 
     def test_returnsBytes(self):
         """
@@ -305,17 +299,14 @@ class FormatFailureTests(TestCase):
         self.assertIn(b"&#160;", result)
 
 
-
 class SDResource(resource.Resource):
-    def __init__(self,default):
+    def __init__(self, default):
         self.default = default
-
 
     def getChildWithDefault(self, name, request):
         d = defer.succeed(self.default)
         resource = util.DeferredResource(d)
         return resource.getChildWithDefault(name, request)
-
 
 
 class DeferredResourceTests(SynchronousTestCase):
@@ -331,7 +322,6 @@ class DeferredResourceTests(SynchronousTestCase):
         resource.getChildForRequest(s, d)
         self.assertEqual(d.postpath, ['bar', 'baz'])
 
-
     def test_render(self):
         """
         L{DeferredResource} uses the request object's C{render} method to
@@ -346,7 +336,6 @@ class DeferredResourceTests(SynchronousTestCase):
         deferredResource = DeferredResource(defer.succeed(result))
         deferredResource.render(request)
         self.assertEqual(rendered, [result])
-
 
     def test_renderNoFailure(self):
         """

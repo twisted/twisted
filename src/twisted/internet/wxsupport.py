@@ -22,11 +22,11 @@ Maintainer: Itamar Shtull-Trauring
 """
 
 import warnings
+
 warnings.warn("wxsupport is not fully functional on Windows, wxreactor is better.")
 
 from twisted.python._oldstyle import _oldStyle
 from twisted.internet import reactor
-
 
 
 @_oldStyle

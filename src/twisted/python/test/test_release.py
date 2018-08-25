@@ -32,10 +32,20 @@ from incremental import Version
 from subprocess import CalledProcessError
 
 from twisted.python._release import (
-    findTwistedProjects, replaceInFile, Project, filePathDelta,
-    APIBuilder, BuildAPIDocsScript, CheckNewsfragmentScript,
-    runCommand, NotWorkingDirectory, SphinxBuilder,
-    GitCommand, getRepositoryCommand, IVCSCommand)
+    findTwistedProjects,
+    replaceInFile,
+    Project,
+    filePathDelta,
+    APIBuilder,
+    BuildAPIDocsScript,
+    CheckNewsfragmentScript,
+    runCommand,
+    NotWorkingDirectory,
+    SphinxBuilder,
+    GitCommand,
+    getRepositoryCommand,
+    IVCSCommand,
+)
 
 if os.name != 'posix':
     skip = "Release toolchain only supported on POSIX."
@@ -46,6 +56,7 @@ testingSphinxConf = u"master_doc = 'index'\n"
 
 try:
     import pydoctor.driver
+
     # it might not be installed, or it might use syntax not available in
     # this version of Python.
 except (ImportError, SyntaxError):
@@ -75,12 +86,12 @@ else:
     gitSkip = u"git is not present."
 
 
-
 class ExternalTempdirTestCase(TestCase):
     """
     A test case which has mkdir make directories outside of the usual spot, so
     that Git commands don't interfere with the Twisted checkout.
     """
+
     def mktemp(self):
         """
         Make our own directory.
@@ -88,7 +99,6 @@ class ExternalTempdirTestCase(TestCase):
         newDir = tempfile.mkdtemp(dir=u"/tmp/")
         self.addCleanup(shutil.rmtree, newDir)
         return newDir
-
 
 
 def _gitConfig(path):
@@ -99,13 +109,26 @@ def _gitConfig(path):
     @param path: The path to the Git repository.
     @type path: L{FilePath}
     """
-    runCommand(["git", "config",
-                "--file", path.child(".git").child("config").path,
-                "user.name", '"someone"'])
-    runCommand(["git", "config",
-                "--file", path.child(".git").child("config").path,
-                "user.email", '"someone@someplace.com"'])
-
+    runCommand(
+        [
+            "git",
+            "config",
+            "--file",
+            path.child(".git").child("config").path,
+            "user.name",
+            '"someone"',
+        ]
+    )
+    runCommand(
+        [
+            "git",
+            "config",
+            "--file",
+            path.child(".git").child("config").path,
+            "user.email",
+            '"someone@someplace.com"',
+        ]
+    )
 
 
 def _gitInit(path):
@@ -120,7 +143,6 @@ def _gitInit(path):
     _gitConfig(path)
 
 
-
 def genVersion(*args, **kwargs):
     """
     A convenience for generating _version.py data.
@@ -128,9 +150,9 @@ def genVersion(*args, **kwargs):
     @param args: Arguments to pass to L{Version}.
     @param kwargs: Keyword arguments to pass to L{Version}.
     """
-    return (u"from incremental import Version\n__version__={!r}".format(
-        Version(*args, **kwargs)))
-
+    return u"from incremental import Version\n__version__={!r}".format(
+        Version(*args, **kwargs)
+    )
 
 
 class StructureAssertingMixin(object):
@@ -139,6 +161,7 @@ class StructureAssertingMixin(object):
     asserting the structure and contents of directories and files on the
     filesystem.
     """
+
     def createStructure(self, root, dirDict):
         """
         Create a set of directories and files given a dict defining their
@@ -184,17 +207,14 @@ class StructureAssertingMixin(object):
             if callable(expectation):
                 self.assertTrue(expectation(child))
             elif isinstance(expectation, dict):
-                self.assertTrue(child.isdir(), "{} is not a dir!".format(
-                                child.path))
+                self.assertTrue(child.isdir(), "{} is not a dir!".format(child.path))
                 self.assertStructure(child, expectation)
             else:
                 actual = child.getContent().decode("utf-8").replace(os.linesep, u'\n')
                 self.assertEqual(actual, expectation)
             children.remove(pathSegment)
         if children:
-            self.fail("There were extra children in %s: %s"
-                      % (root.path, children))
-
+            self.fail("There were extra children in %s: %s" % (root.path, children))
 
 
 class ProjectTests(ExternalTempdirTestCase):
@@ -207,13 +227,14 @@ class ProjectTests(ExternalTempdirTestCase):
         Assert that two lists of L{Project}s are equal.
         """
         self.assertEqual(len(observedProjects), len(expectedProjects))
-        observedProjects = sorted(observedProjects,
-                                  key=operator.attrgetter('directory'))
-        expectedProjects = sorted(expectedProjects,
-                                  key=operator.attrgetter('directory'))
+        observedProjects = sorted(
+            observedProjects, key=operator.attrgetter('directory')
+        )
+        expectedProjects = sorted(
+            expectedProjects, key=operator.attrgetter('directory')
+        )
         for observed, expected in zip(observedProjects, expectedProjects):
             self.assertEqual(observed.directory, expected.directory)
-
 
     def makeProject(self, version, baseDirectory=None):
         """
@@ -237,7 +258,6 @@ class ProjectTests(ExternalTempdirTestCase):
         directory.child('_version.py').setContent(genVersion(*version).encode("utf-8"))
         return Project(directory)
 
-
     def makeProjects(self, *versions):
         """
         Create a series of projects underneath a temporary base directory.
@@ -249,7 +269,6 @@ class ProjectTests(ExternalTempdirTestCase):
             self.makeProject(version, baseDirectory)
         return baseDirectory
 
-
     def test_getVersion(self):
         """
         Project objects know their version.
@@ -258,15 +277,12 @@ class ProjectTests(ExternalTempdirTestCase):
         project = self.makeProject(version)
         self.assertEqual(project.getVersion(), Version(*version))
 
-
     def test_repr(self):
         """
         The representation of a Project is Project(directory).
         """
         foo = Project(FilePath('bar'))
-        self.assertEqual(
-            repr(foo), 'Project(%r)' % (foo.directory))
-
+        self.assertEqual(repr(foo), 'Project(%r)' % (foo.directory))
 
     def test_findTwistedStyleProjects(self):
         """
@@ -274,14 +290,15 @@ class ProjectTests(ExternalTempdirTestCase):
         directory. A 'project' is defined by the existence of a 'newsfragments'
         directory and is returned as a Project object.
         """
-        baseDirectory = self.makeProjects(
-            ('foo', 2, 3, 0), ('foo.bar', 0, 7, 4))
+        baseDirectory = self.makeProjects(('foo', 2, 3, 0), ('foo.bar', 0, 7, 4))
         projects = findTwistedProjects(baseDirectory)
         self.assertProjectsEqual(
             projects,
-            [Project(baseDirectory.child('foo')),
-             Project(baseDirectory.child('foo').child('bar'))])
-
+            [
+                Project(baseDirectory.child('foo')),
+                Project(baseDirectory.child('foo').child('bar')),
+            ],
+        )
 
 
 class UtilityTests(ExternalTempdirTestCase):
@@ -302,11 +319,8 @@ class UtilityTests(ExternalTempdirTestCase):
             os.chdir('releaseCh')
             1 // 0
 
-        self.assertRaises(ZeroDivisionError,
-                          release.runChdirSafe, chAndBreak)
+        self.assertRaises(ZeroDivisionError, release.runChdirSafe, chAndBreak)
         self.assertEqual(cwd, os.getcwd())
-
-
 
     def test_replaceInFile(self):
         """
@@ -323,12 +337,10 @@ class UtilityTests(ExternalTempdirTestCase):
         with open('release.replace') as f:
             self.assertEqual(f.read(), expected)
 
-
         expected = expected.replace('2.0.0', '3.0.0')
         replaceInFile('release.replace', {'2.0.0': '3.0.0'})
         with open('release.replace') as f:
             self.assertEqual(f.read(), expected)
-
 
 
 def doNotFailOnNetworkError(func):
@@ -342,6 +354,7 @@ def doNotFailOnNetworkError(func):
     @return: A decorated function which won't fail if the object inventory
         fetching fails.
     """
+
     @functools.wraps(func)
     def wrapper(*a, **kw):
         try:
@@ -349,11 +362,14 @@ def doNotFailOnNetworkError(func):
         except FailTest as e:
             if e.args[0].startswith("'Failed to get object inventory from "):
                 raise SkipTest(
-                    ("This test is prone to intermittent network errors. "
-                     "See ticket 8753. Exception was: {!r}").format(e))
+                    (
+                        "This test is prone to intermittent network errors. "
+                        "See ticket 8753. Exception was: {!r}"
+                    ).format(e)
+                )
             raise
-    return wrapper
 
+    return wrapper
 
 
 class DoNotFailTests(TestCase):
@@ -367,6 +383,7 @@ class DoNotFailTests(TestCase):
         "'Failed to get object inventory from ", the test will be skipped
         instead.
         """
+
         @doNotFailOnNetworkError
         def inner():
             self.assertEqual("Failed to get object inventory from blah", "")
@@ -376,12 +393,12 @@ class DoNotFailTests(TestCase):
         except Exception as e:
             self.assertIsInstance(e, SkipTest)
 
-
     def test_doesNotSkipOnDifferentError(self):
         """
         If there is a L{FailTest} that is not the intersphinx fetching error,
         it will be passed through.
         """
+
         @doNotFailOnNetworkError
         def inner():
             self.assertEqual("Error!!!!", "")
@@ -392,11 +409,11 @@ class DoNotFailTests(TestCase):
             self.assertIsInstance(e, FailTest)
 
 
-
 class APIBuilderTests(ExternalTempdirTestCase):
     """
     Tests for L{APIBuilder}.
     """
+
     skip = pydoctorSkip
 
     @doNotFailOnNetworkError
@@ -421,45 +438,50 @@ class APIBuilderTests(ExternalTempdirTestCase):
             u"def foo():\n"
             u"    '{}'\n"
             u"def _bar():\n"
-            u"    '{}'".format(docstring, privateDocstring).encode("utf-8"))
+            u"    '{}'".format(docstring, privateDocstring).encode("utf-8")
+        )
 
         outputPath = FilePath(self.mktemp())
 
         builder = APIBuilder()
-        builder.build(projectName, projectURL, sourceURL, inputPath,
-                      outputPath)
+        builder.build(projectName, projectURL, sourceURL, inputPath, outputPath)
 
         indexPath = outputPath.child("index.html")
 
         self.assertTrue(
-            indexPath.exists(),
-            "API index %r did not exist." % (outputPath.path,))
+            indexPath.exists(), "API index %r did not exist." % (outputPath.path,)
+        )
         self.assertIn(
             '<a href="%s">%s</a>' % (projectURL, projectName),
             indexPath.getContent(),
-            "Project name/location not in file contents.")
+            "Project name/location not in file contents.",
+        )
 
         quuxPath = outputPath.child("quux.html")
         self.assertTrue(
             quuxPath.exists(),
-            "Package documentation file %r did not exist." % (quuxPath.path,))
+            "Package documentation file %r did not exist." % (quuxPath.path,),
+        )
         self.assertIn(
-            docstring, quuxPath.getContent(),
-            "Docstring not in package documentation file.")
+            docstring,
+            quuxPath.getContent(),
+            "Docstring not in package documentation file.",
+        )
         self.assertIn(
             '<a href="%s/%s">View Source</a>' % (sourceURL, packageName),
-            quuxPath.getContent())
+            quuxPath.getContent(),
+        )
         self.assertIn(
-            '<a class="functionSourceLink" href="%s/%s/__init__.py#L1">' % (
-                sourceURL, packageName),
-            quuxPath.getContent())
+            '<a class="functionSourceLink" href="%s/%s/__init__.py#L1">'
+            % (sourceURL, packageName),
+            quuxPath.getContent(),
+        )
         self.assertIn(privateDocstring, quuxPath.getContent())
 
         # There should also be a page for the foo function in quux.
         self.assertTrue(quuxPath.sibling('quux.foo.html').exists())
 
         self.assertEqual(stdout.getvalue(), '')
-
 
     @doNotFailOnNetworkError
     def test_buildWithPolicy(self):
@@ -475,10 +497,9 @@ class APIBuilderTests(ExternalTempdirTestCase):
         packagePath = projectRoot.child("twisted")
         packagePath.makedirs()
         packagePath.child("__init__.py").setContent(
-            u"def foo():\n"
-            u"    '{}'\n".format(docstring).encode("utf-8"))
-        packagePath.child("_version.py").setContent(
-            genVersion("twisted", 1, 0, 0))
+            u"def foo():\n" u"    '{}'\n".format(docstring).encode("utf-8")
+        )
+        packagePath.child("_version.py").setContent(genVersion("twisted", 1, 0, 0))
         outputPath = FilePath(self.mktemp())
 
         script = BuildAPIDocsScript()
@@ -486,30 +507,33 @@ class APIBuilderTests(ExternalTempdirTestCase):
 
         indexPath = outputPath.child("index.html")
         self.assertTrue(
-            indexPath.exists(),
-            u"API index {} did not exist.".format(outputPath.path))
+            indexPath.exists(), u"API index {} did not exist.".format(outputPath.path)
+        )
         self.assertIn(
             b'<a href="http://twistedmatrix.com/">Twisted</a>',
             indexPath.getContent(),
-            "Project name/location not in file contents.")
+            "Project name/location not in file contents.",
+        )
 
         twistedPath = outputPath.child("twisted.html")
         self.assertTrue(
             twistedPath.exists(),
-            u"Package documentation file %r did not exist.".format(
-            twistedPath.path))
+            u"Package documentation file %r did not exist.".format(twistedPath.path),
+        )
         self.assertIn(
-            docstring, twistedPath.getContent(),
-            "Docstring not in package documentation file.")
-        #Here we check that it figured out the correct version based on the
-        #source code.
+            docstring,
+            twistedPath.getContent(),
+            "Docstring not in package documentation file.",
+        )
+        # Here we check that it figured out the correct version based on the
+        # source code.
         self.assertIn(
             b'<a href="https://github.com/twisted/twisted/tree/'
             b'twisted-1.0.0/src/twisted">View Source</a>',
-            twistedPath.getContent())
+            twistedPath.getContent(),
+        )
 
         self.assertEqual(stdout.getvalue(), b'')
-
 
     @doNotFailOnNetworkError
     def test_buildWithDeprecated(self):
@@ -543,28 +567,30 @@ class APIBuilderTests(ExternalTempdirTestCase):
             u"@deprecated(Version('Twisted', 14, 2, 3), replacement='stuff')\n"
             u"class Baz(object):\n"
             u"    pass"
-            u"".format(docstring, privateDocstring).encode("utf-8"))
+            u"".format(docstring, privateDocstring).encode("utf-8")
+        )
 
         outputPath = FilePath(self.mktemp())
 
         builder = APIBuilder()
-        builder.build(projectName, projectURL, sourceURL, inputPath,
-                      outputPath)
+        builder.build(projectName, projectURL, sourceURL, inputPath, outputPath)
 
         quuxPath = outputPath.child("quux.html")
         self.assertTrue(
             quuxPath.exists(),
-            "Package documentation file %r did not exist." % (quuxPath.path,))
+            "Package documentation file %r did not exist." % (quuxPath.path,),
+        )
 
         self.assertIn(
-            docstring, quuxPath.getContent(),
-            "Docstring not in package documentation file.")
+            docstring,
+            quuxPath.getContent(),
+            "Docstring not in package documentation file.",
+        )
         self.assertIn(
             'foo was deprecated in Twisted 15.0.0; please use Baz instead.',
-            quuxPath.getContent())
-        self.assertIn(
-            '_bar was deprecated in Twisted 16.0.0.',
-            quuxPath.getContent())
+            quuxPath.getContent(),
+        )
+        self.assertIn('_bar was deprecated in Twisted 16.0.0.', quuxPath.getContent())
         self.assertIn(privateDocstring, quuxPath.getContent())
 
         # There should also be a page for the foo function in quux.
@@ -572,15 +598,15 @@ class APIBuilderTests(ExternalTempdirTestCase):
 
         self.assertIn(
             'foo was deprecated in Twisted 15.0.0; please use Baz instead.',
-            quuxPath.sibling('quux.foo.html').getContent())
+            quuxPath.sibling('quux.foo.html').getContent(),
+        )
 
         self.assertIn(
             'Baz was deprecated in Twisted 14.2.3; please use stuff instead.',
-            quuxPath.sibling('quux.Baz.html').getContent())
-
+            quuxPath.sibling('quux.Baz.html').getContent(),
+        )
 
         self.assertEqual(stdout.getvalue(), '')
-
 
     def test_apiBuilderScriptMainRequiresTwoArguments(self):
         """
@@ -591,7 +617,6 @@ class APIBuilderTests(ExternalTempdirTestCase):
         self.assertRaises(SystemExit, script.main, [])
         self.assertRaises(SystemExit, script.main, ["foo"])
         self.assertRaises(SystemExit, script.main, ["foo", "bar", "baz"])
-
 
     def test_apiBuilderScriptMain(self):
         """
@@ -605,7 +630,6 @@ class APIBuilderTests(ExternalTempdirTestCase):
         self.assertEqual(calls, [(FilePath("hello"), FilePath("there"))])
 
 
-
 class FilePathDeltaTests(TestCase):
     """
     Tests for L{filePathDelta}.
@@ -615,40 +639,38 @@ class FilePathDeltaTests(TestCase):
         """
         L{filePathDelta} can create a simple relative path to a child path.
         """
-        self.assertEqual(filePathDelta(FilePath("/foo/bar"),
-                                       FilePath("/foo/bar/baz")),
-                         ["baz"])
-
+        self.assertEqual(
+            filePathDelta(FilePath("/foo/bar"), FilePath("/foo/bar/baz")), ["baz"]
+        )
 
     def test_filePathDeltaSiblingDir(self):
         """
         L{filePathDelta} can traverse upwards to create relative paths to
         siblings.
         """
-        self.assertEqual(filePathDelta(FilePath("/foo/bar"),
-                                       FilePath("/foo/baz")),
-                         ["..", "baz"])
-
+        self.assertEqual(
+            filePathDelta(FilePath("/foo/bar"), FilePath("/foo/baz")), ["..", "baz"]
+        )
 
     def test_filePathNoCommonElements(self):
         """
         L{filePathDelta} can create relative paths to totally unrelated paths
         for maximum portability.
         """
-        self.assertEqual(filePathDelta(FilePath("/foo/bar"),
-                                       FilePath("/baz/quux")),
-                         ["..", "..", "baz", "quux"])
-
+        self.assertEqual(
+            filePathDelta(FilePath("/foo/bar"), FilePath("/baz/quux")),
+            ["..", "..", "baz", "quux"],
+        )
 
     def test_filePathDeltaSimilarEndElements(self):
         """
         L{filePathDelta} doesn't take into account final elements when
         comparing 2 paths, but stops at the first difference.
         """
-        self.assertEqual(filePathDelta(FilePath("/foo/bar/bar/spam"),
-                                       FilePath("/foo/bar/baz/spam")),
-                         ["..", "..", "baz", "spam"])
-
+        self.assertEqual(
+            filePathDelta(FilePath("/foo/bar/bar/spam"), FilePath("/foo/bar/baz/spam")),
+            ["..", "..", "baz", "spam"],
+        )
 
 
 class SphinxBuilderTests(TestCase):
@@ -669,6 +691,7 @@ class SphinxBuilderTests(TestCase):
     @ivar sourceDir: A L{FilePath} representing a directory to be used for
         containing the source files for a Sphinx project.
     """
+
     skip = sphinxSkip
 
     confContent = u"""\
@@ -689,7 +712,6 @@ class SphinxBuilderTests(TestCase):
                    """
     indexContent = textwrap.dedent(indexContent)
 
-
     def setUp(self):
         """
         Set up a few instance variables that will be useful.
@@ -702,7 +724,6 @@ class SphinxBuilderTests(TestCase):
         self.sphinxDir.makedirs()
         self.sourceDir = self.sphinxDir
 
-
     def createFakeSphinxProject(self):
         """
         Create a fake Sphinx project for test purposes.
@@ -713,7 +734,6 @@ class SphinxBuilderTests(TestCase):
         """
         self.sourceDir.child("conf.py").setContent(self.confContent.encode("utf-8"))
         self.sourceDir.child("index.rst").setContent(self.indexContent.encode("utf-8"))
-
 
     def verifyFileExists(self, fileDir, fileName):
         """
@@ -752,7 +772,6 @@ class SphinxBuilderTests(TestCase):
         if fpath.path.endswith('.html'):
             self.assertIn(b"<body", fcontents)
 
-
     def test_build(self):
         """
         Creates and builds a fake Sphinx project using a L{SphinxBuilder}.
@@ -761,7 +780,6 @@ class SphinxBuilderTests(TestCase):
         self.builder.build(self.sphinxDir)
         self.verifyBuilt()
 
-
     def test_main(self):
         """
         Creates and builds a fake Sphinx project as if via the command line.
@@ -769,7 +787,6 @@ class SphinxBuilderTests(TestCase):
         self.createFakeSphinxProject()
         self.builder.main([self.sphinxDir.parent().path])
         self.verifyBuilt()
-
 
     def test_warningsAreErrors(self):
         """
@@ -782,13 +799,11 @@ class SphinxBuilderTests(TestCase):
         with self.sphinxDir.child("index.rst").open("a") as f:
             f.write(b"\n.. _malformed-link-target\n")
         exception = self.assertRaises(
-            SystemExit,
-            self.builder.main, [self.sphinxDir.parent().path]
+            SystemExit, self.builder.main, [self.sphinxDir.parent().path]
         )
         self.assertEqual(exception.code, 1)
         self.assertIn("malformed hyperlink target", output.getvalue())
         self.verifyBuilt()
-
 
     def verifyBuilt(self):
         """
@@ -805,26 +820,22 @@ class SphinxBuilderTests(TestCase):
         self.verifyFileExists(htmlDir, 'search.html')
         self.verifyFileExists(htmlDir, 'searchindex.js')
 
-
     def test_failToBuild(self):
         """
         Check that SphinxBuilder.build fails when run against a non-sphinx
         directory.
         """
         # note no fake sphinx project is created
-        self.assertRaises(CalledProcessError,
-                          self.builder.build,
-                          self.sphinxDir)
-
+        self.assertRaises(CalledProcessError, self.builder.build, self.sphinxDir)
 
 
 class CommandsTestMixin(StructureAssertingMixin):
     """
     Test mixin for the VCS commands used by the release scripts.
     """
+
     def setUp(self):
         self.tmpDir = FilePath(self.mktemp())
-
 
     def test_ensureIsWorkingDirectoryWithWorkingDirectory(self):
         """
@@ -832,19 +843,18 @@ class CommandsTestMixin(StructureAssertingMixin):
         working directory doesn't produce any error.
         """
         reposDir = self.makeRepository(self.tmpDir)
-        self.assertIsNone(
-                         self.createCommand.ensureIsWorkingDirectory(reposDir))
-
+        self.assertIsNone(self.createCommand.ensureIsWorkingDirectory(reposDir))
 
     def test_ensureIsWorkingDirectoryWithNonWorkingDirectory(self):
         """
         Calling the C{ensureIsWorkingDirectory} VCS command's method on an
         invalid working directory raises a L{NotWorkingDirectory} exception.
         """
-        self.assertRaises(NotWorkingDirectory,
-                          self.createCommand.ensureIsWorkingDirectory,
-                          self.tmpDir)
-
+        self.assertRaises(
+            NotWorkingDirectory,
+            self.createCommand.ensureIsWorkingDirectory,
+            self.tmpDir,
+        )
 
     def test_statusClean(self):
         """
@@ -854,7 +864,6 @@ class CommandsTestMixin(StructureAssertingMixin):
         reposDir = self.makeRepository(self.tmpDir)
         self.assertTrue(self.createCommand.isStatusClean(reposDir))
 
-
     def test_statusNotClean(self):
         """
         Calling the C{isStatusClean} VCS command's method on a repository with
@@ -863,7 +872,6 @@ class CommandsTestMixin(StructureAssertingMixin):
         reposDir = self.makeRepository(self.tmpDir)
         reposDir.child('some-file').setContent(b"something")
         self.assertFalse(self.createCommand.isStatusClean(reposDir))
-
 
     def test_remove(self):
         """
@@ -877,9 +885,8 @@ class CommandsTestMixin(StructureAssertingMixin):
         self.assertTrue(testFile.exists())
 
         self.createCommand.remove(testFile)
-        testFile.restat(False) # Refresh the file information
+        testFile.restat(False)  # Refresh the file information
         self.assertFalse(testFile.exists(), "File still exists")
-
 
     def test_export(self):
         """
@@ -889,13 +896,14 @@ class CommandsTestMixin(StructureAssertingMixin):
         structure = {
             "README.rst": u"Hi this is 1.0.0.",
             "twisted": {
-                "newsfragments": {
-                    "README": u"Hi this is 1.0.0"},
+                "newsfragments": {"README": u"Hi this is 1.0.0"},
                 "_version.py": genVersion("twisted", 1, 0, 0),
                 "web": {
-                    "newsfragments": {
-                        "README": u"Hi this is 1.0.0"},
-                    "_version.py": genVersion("twisted.web", 1, 0, 0)}}}
+                    "newsfragments": {"README": u"Hi this is 1.0.0"},
+                    "_version.py": genVersion("twisted.web", 1, 0, 0),
+                },
+            },
+        }
         reposDir = self.makeRepository(self.tmpDir)
         self.createStructure(reposDir, structure)
         self.commitRepository(reposDir)
@@ -905,15 +913,14 @@ class CommandsTestMixin(StructureAssertingMixin):
         self.assertStructure(exportDir, structure)
 
 
-
 class GitCommandTest(CommandsTestMixin, ExternalTempdirTestCase):
     """
     Specific L{CommandsTestMixin} related to Git repositories through
     L{GitCommand}.
     """
+
     createCommand = GitCommand
     skip = gitSkip
-
 
     def makeRepository(self, root):
         """
@@ -928,7 +935,6 @@ class GitCommandTest(CommandsTestMixin, ExternalTempdirTestCase):
         _gitInit(root)
         return root
 
-
     def commitRepository(self, repository):
         """
         Add and commit all the files from the Git repository specified.
@@ -936,10 +942,10 @@ class GitCommandTest(CommandsTestMixin, ExternalTempdirTestCase):
         @type repository: L{FilePath}
         @params repository: The Git repository to commit into.
         """
-        runCommand(["git", "-C", repository.path, "add"] +
-                   glob.glob(repository.path + "/*"))
+        runCommand(
+            ["git", "-C", repository.path, "add"] + glob.glob(repository.path + "/*")
+        )
         runCommand(["git", "-C", repository.path, "commit", "-m", "hop"])
-
 
 
 class RepositoryCommandDetectionTest(ExternalTempdirTestCase):
@@ -947,11 +953,11 @@ class RepositoryCommandDetectionTest(ExternalTempdirTestCase):
     Test the L{getRepositoryCommand} to access the right set of VCS commands
     depending on the repository manipulated.
     """
+
     skip = gitSkip
 
     def setUp(self):
         self.repos = FilePath(self.mktemp())
-
 
     def test_git(self):
         """
@@ -961,21 +967,19 @@ class RepositoryCommandDetectionTest(ExternalTempdirTestCase):
         cmd = getRepositoryCommand(self.repos)
         self.assertIs(cmd, GitCommand)
 
-
     def test_unknownRepository(self):
         """
         L{getRepositoryCommand} from a directory which doesn't look like a Git
         repository produces a L{NotWorkingDirectory} exception.
         """
-        self.assertRaises(NotWorkingDirectory, getRepositoryCommand,
-                          self.repos)
-
+        self.assertRaises(NotWorkingDirectory, getRepositoryCommand, self.repos)
 
 
 class VCSCommandInterfaceTests(TestCase):
     """
     Test that the VCS command classes implement their interface.
     """
+
     def test_git(self):
         """
         L{GitCommand} implements L{IVCSCommand}.
@@ -983,29 +987,25 @@ class VCSCommandInterfaceTests(TestCase):
         self.assertTrue(IVCSCommand.implementedBy(GitCommand))
 
 
-
 class CheckNewsfragmentScriptTests(ExternalTempdirTestCase):
     """
     L{CheckNewsfragmentScript}.
     """
+
     skip = gitSkip
 
     def setUp(self):
         self.origin = FilePath(self.mktemp())
         _gitInit(self.origin)
-        runCommand(["git", "checkout", "-b", "trunk"],
-                   cwd=self.origin.path)
+        runCommand(["git", "checkout", "-b", "trunk"], cwd=self.origin.path)
         self.origin.child("test").setContent(b"test!")
-        runCommand(["git", "add", self.origin.child("test").path],
-                   cwd=self.origin.path)
-        runCommand(["git", "commit", "-m", "initial"],
-                   cwd=self.origin.path)
+        runCommand(["git", "add", self.origin.child("test").path], cwd=self.origin.path)
+        runCommand(["git", "commit", "-m", "initial"], cwd=self.origin.path)
 
         self.repo = FilePath(self.mktemp())
 
         runCommand(["git", "clone", self.origin.path, self.repo.path])
         _gitConfig(self.repo)
-
 
     def test_noArgs(self):
         """
@@ -1016,23 +1016,21 @@ class CheckNewsfragmentScriptTests(ExternalTempdirTestCase):
         with self.assertRaises(SystemExit) as e:
             CheckNewsfragmentScript(logs.append).main([])
 
-        self.assertEqual(e.exception.args,
-                         ("Must specify one argument: the Twisted checkout",))
+        self.assertEqual(
+            e.exception.args, ("Must specify one argument: the Twisted checkout",)
+        )
 
     def test_diffFromTrunkNoNewsfragments(self):
         """
         If there are changes from trunk, then there should also be a
         newsfragment.
         """
-        runCommand(["git", "checkout", "-b", "mypatch"],
-                   cwd=self.repo.path)
+        runCommand(["git", "checkout", "-b", "mypatch"], cwd=self.repo.path)
         somefile = self.repo.child("somefile")
         somefile.setContent(b"change")
 
-        runCommand(["git", "add", somefile.path, somefile.path],
-                   cwd=self.repo.path)
-        runCommand(["git", "commit", "-m", "some file"],
-                   cwd=self.repo.path)
+        runCommand(["git", "add", somefile.path, somefile.path], cwd=self.repo.path)
+        runCommand(["git", "commit", "-m", "some file"], cwd=self.repo.path)
 
         logs = []
 
@@ -1040,17 +1038,14 @@ class CheckNewsfragmentScriptTests(ExternalTempdirTestCase):
             CheckNewsfragmentScript(logs.append).main([self.repo.path])
 
         self.assertEqual(e.exception.args, (1,))
-        self.assertEqual(logs[-1],
-                         "No newsfragment found. Have you committed it?")
-
+        self.assertEqual(logs[-1], "No newsfragment found. Have you committed it?")
 
     def test_noChangeFromTrunk(self):
         """
         If there are no changes from trunk, then no need to check the
         newsfragments
         """
-        runCommand(["git", "checkout", "-b", "mypatch"],
-                   cwd=self.repo.path)
+        runCommand(["git", "checkout", "-b", "mypatch"], cwd=self.repo.path)
 
         logs = []
 
@@ -1059,9 +1054,8 @@ class CheckNewsfragmentScriptTests(ExternalTempdirTestCase):
 
         self.assertEqual(e.exception.args, (0,))
         self.assertEqual(
-            logs[-1],
-            "On trunk or no diffs from trunk; no need to look at this.")
-
+            logs[-1], "On trunk or no diffs from trunk; no need to look at this."
+        )
 
     def test_trunk(self):
         """
@@ -1074,25 +1068,23 @@ class CheckNewsfragmentScriptTests(ExternalTempdirTestCase):
 
         self.assertEqual(e.exception.args, (0,))
         self.assertEqual(
-            logs[-1],
-            "On trunk or no diffs from trunk; no need to look at this.")
-
+            logs[-1], "On trunk or no diffs from trunk; no need to look at this."
+        )
 
     def test_release(self):
         """
         Running it on a release branch returns green if there is no
         newsfragments even if there are changes.
         """
-        runCommand(["git", "checkout", "-b", "release-16.11111-9001"],
-                   cwd=self.repo.path)
+        runCommand(
+            ["git", "checkout", "-b", "release-16.11111-9001"], cwd=self.repo.path
+        )
 
         somefile = self.repo.child("somefile")
         somefile.setContent(b"change")
 
-        runCommand(["git", "add", somefile.path, somefile.path],
-                   cwd=self.repo.path)
-        runCommand(["git", "commit", "-m", "some file"],
-                   cwd=self.repo.path)
+        runCommand(["git", "add", somefile.path, somefile.path], cwd=self.repo.path)
+        runCommand(["git", "commit", "-m", "some file"], cwd=self.repo.path)
 
         logs = []
 
@@ -1100,17 +1092,16 @@ class CheckNewsfragmentScriptTests(ExternalTempdirTestCase):
             CheckNewsfragmentScript(logs.append).main([self.repo.path])
 
         self.assertEqual(e.exception.args, (0,))
-        self.assertEqual(logs[-1],
-                         "Release branch with no newsfragments, all good.")
-
+        self.assertEqual(logs[-1], "Release branch with no newsfragments, all good.")
 
     def test_releaseWithNewsfragments(self):
         """
         Running it on a release branch returns red if there are new
         newsfragments.
         """
-        runCommand(["git", "checkout", "-b", "release-16.11111-9001"],
-                   cwd=self.repo.path)
+        runCommand(
+            ["git", "checkout", "-b", "release-16.11111-9001"], cwd=self.repo.path
+        )
 
         newsfragments = self.repo.child("twisted").child("newsfragments")
         newsfragments.makedirs()
@@ -1120,10 +1111,8 @@ class CheckNewsfragmentScriptTests(ExternalTempdirTestCase):
         unrelated = self.repo.child("somefile")
         unrelated.setContent(b"Boo")
 
-        runCommand(["git", "add", fragment.path, unrelated.path],
-                   cwd=self.repo.path)
-        runCommand(["git", "commit", "-m", "fragment"],
-                   cwd=self.repo.path)
+        runCommand(["git", "add", fragment.path, unrelated.path], cwd=self.repo.path)
+        runCommand(["git", "commit", "-m", "fragment"], cwd=self.repo.path)
 
         logs = []
 
@@ -1131,26 +1120,21 @@ class CheckNewsfragmentScriptTests(ExternalTempdirTestCase):
             CheckNewsfragmentScript(logs.append).main([self.repo.path])
 
         self.assertEqual(e.exception.args, (1,))
-        self.assertEqual(logs[-1],
-                         "No newsfragments should be on the release branch.")
-
+        self.assertEqual(logs[-1], "No newsfragments should be on the release branch.")
 
     def test_onlyQuotes(self):
         """
         Running it on a branch with only a quotefile change gives green.
         """
-        runCommand(["git", "checkout", "-b", "quotefile"],
-                   cwd=self.repo.path)
+        runCommand(["git", "checkout", "-b", "quotefile"], cwd=self.repo.path)
 
         fun = self.repo.child("docs").child("fun")
         fun.makedirs()
         quotes = fun.child("Twisted.Quotes")
         quotes.setContent(b"Beep boop")
 
-        runCommand(["git", "add", quotes.path],
-                   cwd=self.repo.path)
-        runCommand(["git", "commit", "-m", "quotes"],
-                   cwd=self.repo.path)
+        runCommand(["git", "add", quotes.path], cwd=self.repo.path)
+        runCommand(["git", "commit", "-m", "quotes"], cwd=self.repo.path)
 
         logs = []
 
@@ -1158,17 +1142,14 @@ class CheckNewsfragmentScriptTests(ExternalTempdirTestCase):
             CheckNewsfragmentScript(logs.append).main([self.repo.path])
 
         self.assertEqual(e.exception.args, (0,))
-        self.assertEqual(logs[-1],
-                         "Quotes change only; no newsfragment needed.")
-
+        self.assertEqual(logs[-1], "Quotes change only; no newsfragment needed.")
 
     def test_newsfragmentAdded(self):
         """
         Running it on a branch with a fragment in the newsfragments dir added
         returns green.
         """
-        runCommand(["git", "checkout", "-b", "quotefile"],
-                   cwd=self.repo.path)
+        runCommand(["git", "checkout", "-b", "quotefile"], cwd=self.repo.path)
 
         newsfragments = self.repo.child("twisted").child("newsfragments")
         newsfragments.makedirs()
@@ -1178,10 +1159,8 @@ class CheckNewsfragmentScriptTests(ExternalTempdirTestCase):
         unrelated = self.repo.child("somefile")
         unrelated.setContent(b"Boo")
 
-        runCommand(["git", "add", fragment.path, unrelated.path],
-                   cwd=self.repo.path)
-        runCommand(["git", "commit", "-m", "newsfragment"],
-                   cwd=self.repo.path)
+        runCommand(["git", "add", fragment.path, unrelated.path], cwd=self.repo.path)
+        runCommand(["git", "commit", "-m", "newsfragment"], cwd=self.repo.path)
 
         logs = []
 
@@ -1191,14 +1170,12 @@ class CheckNewsfragmentScriptTests(ExternalTempdirTestCase):
         self.assertEqual(e.exception.args, (0,))
         self.assertEqual(logs[-1], "Found twisted/newsfragments/1234.misc")
 
-
     def test_topfileButNotFragmentAdded(self):
         """
         Running it on a branch with a non-fragment in the topfiles dir does not
         return green.
         """
-        runCommand(["git", "checkout", "-b", "quotefile"],
-                   cwd=self.repo.path)
+        runCommand(["git", "checkout", "-b", "quotefile"], cwd=self.repo.path)
 
         topfiles = self.repo.child("twisted").child("topfiles")
         topfiles.makedirs()
@@ -1208,10 +1185,8 @@ class CheckNewsfragmentScriptTests(ExternalTempdirTestCase):
         unrelated = self.repo.child("somefile")
         unrelated.setContent(b"Boo")
 
-        runCommand(["git", "add", notFragment.path, unrelated.path],
-                   cwd=self.repo.path)
-        runCommand(["git", "commit", "-m", "not topfile"],
-                   cwd=self.repo.path)
+        runCommand(["git", "add", notFragment.path, unrelated.path], cwd=self.repo.path)
+        runCommand(["git", "commit", "-m", "not topfile"], cwd=self.repo.path)
 
         logs = []
 
@@ -1219,17 +1194,14 @@ class CheckNewsfragmentScriptTests(ExternalTempdirTestCase):
             CheckNewsfragmentScript(logs.append).main([self.repo.path])
 
         self.assertEqual(e.exception.args, (1,))
-        self.assertEqual(logs[-1],
-                         "No newsfragment found. Have you committed it?")
-
+        self.assertEqual(logs[-1], "No newsfragment found. Have you committed it?")
 
     def test_newsfragmentAddedButWithOtherNewsfragments(self):
         """
         Running it on a branch with a fragment in the topfiles dir added
         returns green, even if there are other files in the topfiles dir.
         """
-        runCommand(["git", "checkout", "-b", "quotefile"],
-                   cwd=self.repo.path)
+        runCommand(["git", "checkout", "-b", "quotefile"], cwd=self.repo.path)
 
         newsfragments = self.repo.child("twisted").child("newsfragments")
         newsfragments.makedirs()
@@ -1239,10 +1211,8 @@ class CheckNewsfragmentScriptTests(ExternalTempdirTestCase):
         unrelated = newsfragments.child("somefile")
         unrelated.setContent(b"Boo")
 
-        runCommand(["git", "add", fragment.path, unrelated.path],
-                   cwd=self.repo.path)
-        runCommand(["git", "commit", "-m", "newsfragment"],
-                   cwd=self.repo.path)
+        runCommand(["git", "add", fragment.path, unrelated.path], cwd=self.repo.path)
+        runCommand(["git", "commit", "-m", "newsfragment"], cwd=self.repo.path)
 
         logs = []
 

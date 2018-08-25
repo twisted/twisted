@@ -10,17 +10,12 @@ from twisted.words import iwords
 
 
 NewTwistedWords = ServiceMaker(
-    "New Twisted Words",
-    "twisted.words.tap",
-    "A modern words server",
-    "words")
+    "New Twisted Words", "twisted.words.tap", "A modern words server", "words"
+)
 
 TwistedXMPPRouter = ServiceMaker(
-    "XMPP Router",
-    "twisted.words.xmpproutertap",
-    "An XMPP Router server",
-    "xmpp-router")
-
+    "XMPP Router", "twisted.words.xmpproutertap", "An XMPP Router server", "xmpp-router"
+)
 
 
 @provider(IPlugin, iwords.IProtocolPlugin)
@@ -30,9 +25,10 @@ class RelayChatInterface(object):
 
     def getFactory(cls, realm, portal):
         from twisted.words import service
-        return service.IRCFactory(realm, portal)
-    getFactory = classmethod(getFactory)
 
+        return service.IRCFactory(realm, portal)
+
+    getFactory = classmethod(getFactory)
 
 
 @provider(IPlugin, iwords.IProtocolPlugin)
@@ -42,6 +38,7 @@ class PBChatInterface(object):
 
     def getFactory(cls, realm, portal):
         from twisted.spread import pb
-        return pb.PBServerFactory(portal, True)
-    getFactory = classmethod(getFactory)
 
+        return pb.PBServerFactory(portal, True)
+
+    getFactory = classmethod(getFactory)

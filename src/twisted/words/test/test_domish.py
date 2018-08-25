@@ -26,7 +26,6 @@ class ElementTests(unittest.TestCase):
         """
         verifyObject(domish.IElement, domish.Element((None, u"foo")))
 
-
     def test_escaping(self):
         """
         The built-in entity references are properly encoded.
@@ -35,14 +34,12 @@ class ElementTests(unittest.TestCase):
         self.assertEqual(domish.escapeToXml(s), "&amp;&lt;&gt;'\"")
         self.assertEqual(domish.escapeToXml(s, 1), "&amp;&lt;&gt;&apos;&quot;")
 
-
     def test_namespace(self):
         """
         An attribute on L{domish.Namespace} yields a qualified name.
         """
         ns = domish.Namespace("testns")
         self.assertEqual(ns.foo, ("testns", "foo"))
-
 
     def test_elementInit(self):
         """
@@ -70,7 +67,6 @@ class ElementTests(unittest.TestCase):
         self.assertEqual(e.name, "foo")
         self.assertEqual(e.uri, "testns")
         self.assertEqual(e.defaultUri, "test2ns")
-
 
     def test_childOps(self):
         """
@@ -105,7 +101,6 @@ class ElementTests(unittest.TestCase):
         self.assertEqual(e.hasAttribute("attrib2"), 0)
         self.assertEqual(e[("testns2", "attrib2")], "value2")
 
-
     def test_characterData(self):
         """
         Extract character data using L{unicode}.
@@ -116,7 +111,6 @@ class ElementTests(unittest.TestCase):
         text = unicode(element)
         self.assertEqual(u"somecontent", text)
         self.assertIsInstance(text, unicode)
-
 
     def test_characterDataNativeString(self):
         """
@@ -129,7 +123,6 @@ class ElementTests(unittest.TestCase):
         self.assertEqual("somecontent", text)
         self.assertIsInstance(text, str)
 
-
     def test_characterDataUnicode(self):
         """
         Extract character data using L{unicode}.
@@ -140,7 +133,6 @@ class ElementTests(unittest.TestCase):
         text = unicode(element)
         self.assertEqual(u"\N{SNOWMAN}", text)
         self.assertIsInstance(text, unicode)
-
 
     def test_characterDataBytes(self):
         """
@@ -153,7 +145,6 @@ class ElementTests(unittest.TestCase):
         self.assertEqual(u"\N{SNOWMAN}".encode('utf-8'), text)
         self.assertIsInstance(text, bytes)
 
-
     def test_characterDataMixed(self):
         """
         Mixing addChild with cdata and element, the first cdata is returned.
@@ -164,7 +155,6 @@ class ElementTests(unittest.TestCase):
         element.addChild(u"def")
         self.assertEqual(u"abc", unicode(element))
 
-
     def test_addContent(self):
         """
         Unicode strings passed to C{addContent} become the character data.
@@ -172,7 +162,6 @@ class ElementTests(unittest.TestCase):
         element = domish.Element((u"testns", u"foo"))
         element.addContent(u'unicode')
         self.assertEqual(u"unicode", unicode(element))
-
 
     def test_addContentNativeStringASCII(self):
         """
@@ -182,17 +171,17 @@ class ElementTests(unittest.TestCase):
         element.addContent('native')
         self.assertEqual(u"native", unicode(element))
 
-
     def test_addContentBytes(self):
         """
         Byte strings passed to C{addContent} are not acceptable on Python 3.
         """
         element = domish.Element((u"testns", u"foo"))
         self.assertRaises(TypeError, element.addContent, b'bytes')
+
     if not _PY3:
         test_addContentBytes.skip = (
-            "Bytes behavior of addContent only provided on Python 3.")
-
+            "Bytes behavior of addContent only provided on Python 3."
+        )
 
     def test_addContentBytesNonASCII(self):
         """
@@ -200,10 +189,11 @@ class ElementTests(unittest.TestCase):
         """
         element = domish.Element((u"testns", u"foo"))
         self.assertRaises(UnicodeError, element.addContent, b'\xe2\x98\x83')
+
     if _PY3:
         test_addContentBytesNonASCII.skip = (
-            "Bytes behavior of addContent only provided on Python 2.")
-
+            "Bytes behavior of addContent only provided on Python 2."
+        )
 
     def test_addElementContent(self):
         """
@@ -212,7 +202,6 @@ class ElementTests(unittest.TestCase):
         element = domish.Element((u"testns", u"foo"))
         child = element.addElement("bar", content=u"abc")
         self.assertEqual(u"abc", unicode(child))
-
 
     def test_elements(self):
         """
@@ -231,7 +220,6 @@ class ElementTests(unittest.TestCase):
         self.assertIn(c2, elts)
         self.assertIn(c3, elts)
         self.assertIn(c4, elts)
-
 
     def test_elementsWithQN(self):
         """
@@ -252,7 +240,6 @@ class ElementTests(unittest.TestCase):
         self.assertIn(c4, elts)
 
 
-
 class DomishStreamTestsMixin:
     """
     Mixin defining tests for different stream implementations.
@@ -261,6 +248,7 @@ class DomishStreamTestsMixin:
         XML parser which can produce a stream of elements from incremental
         input.
     """
+
     def setUp(self):
         self.doc_started = False
         self.doc_ended = False
@@ -291,11 +279,13 @@ class DomishStreamTestsMixin:
         self.assertEqual(self.doc_ended, True)
 
     def testBasic(self):
-        xml = b"<stream:stream xmlns:stream='etherx' xmlns='jabber'>\n" + \
-              b"  <message to='bar'>" + \
-              b"    <x xmlns='xdelay'>some&amp;data&gt;</x>" + \
-              b"  </message>" + \
-              b"</stream:stream>"
+        xml = (
+            b"<stream:stream xmlns:stream='etherx' xmlns='jabber'>\n"
+            + b"  <message to='bar'>"
+            + b"    <x xmlns='xdelay'>some&amp;data&gt;</x>"
+            + b"  </message>"
+            + b"</stream:stream>"
+        )
 
         self.stream.parse(xml)
         self.assertEqual(self.root.name, 'stream')
@@ -337,7 +327,6 @@ class DomishStreamTestsMixin:
         self.stream.parse(xml)
         self.assertEqual(self.elements[0].child2.uri, '')
 
-
     def test_namespaceWithWhitespace(self):
         """
         Whitespace in an xmlns value is preserved in the resulting node's C{uri}
@@ -346,9 +335,7 @@ class DomishStreamTestsMixin:
         xml = b"<root xmlns:foo=' bar baz '><foo:bar foo:baz='quux'/></root>"
         self.stream.parse(xml)
         self.assertEqual(self.elements[0].uri, " bar baz ")
-        self.assertEqual(
-            self.elements[0].attributes, {(" bar baz ", "baz"): "quux"})
-
+        self.assertEqual(self.elements[0].attributes, {(" bar baz ", "baz"): "quux"})
 
     def testChildPrefix(self):
         xml = b"<root xmlns='testns' xmlns:foo='testns2'><foo:child/></root>"
@@ -358,8 +345,9 @@ class DomishStreamTestsMixin:
         self.assertEqual(self.elements[0].uri, 'testns2')
 
     def testUnclosedElement(self):
-        self.assertRaises(domish.ParserError, self.stream.parse,
-                                              b"<root><error></root>")
+        self.assertRaises(
+            domish.ParserError, self.stream.parse, b"<root><error></root>"
+        )
 
     def test_namespaceReuse(self):
         """
@@ -387,12 +375,12 @@ class DomishStreamTestsMixin:
         self.assertEqual({}, self.elements[1].localPrefixes)
 
 
-
 class DomishExpatStreamTests(DomishStreamTestsMixin, unittest.TestCase):
     """
     Tests for L{domish.ExpatElementStream}, the expat-based element stream
     implementation.
     """
+
     streamClass = domish.ExpatElementStream
 
     if requireModule('pyexpat', default=None) is None:
@@ -401,21 +389,20 @@ class DomishExpatStreamTests(DomishStreamTestsMixin, unittest.TestCase):
         skip = None
 
 
-
 class DomishSuxStreamTests(DomishStreamTestsMixin, unittest.TestCase):
     """
     Tests for L{domish.SuxElementStream}, the L{twisted.web.sux}-based element
     stream implementation.
     """
-    streamClass = domish.SuxElementStream
 
+    streamClass = domish.SuxElementStream
 
 
 class SerializerTests(unittest.TestCase):
     def testNoNamespace(self):
         e = domish.Element((None, "foo"))
         self.assertEqual(e.toXml(), "<foo/>")
-        self.assertEqual(e.toXml(closeElement = 0), "<foo>")
+        self.assertEqual(e.toXml(closeElement=0), "<foo>")
 
     def testDefaultNamespace(self):
         e = domish.Element(("testns", "foo"))
@@ -423,8 +410,9 @@ class SerializerTests(unittest.TestCase):
 
     def testOtherNamespace(self):
         e = domish.Element(("testns", "foo"), "testns2")
-        self.assertEqual(e.toXml({'testns': 'bar'}),
-                          "<bar:foo xmlns:bar='testns' xmlns='testns2'/>")
+        self.assertEqual(
+            e.toXml({'testns': 'bar'}), "<bar:foo xmlns:bar='testns' xmlns='testns2'/>"
+        )
 
     def testChildDefaultNamespace(self):
         e = domish.Element(("testns", "foo"))
@@ -459,17 +447,19 @@ class SerializerTests(unittest.TestCase):
     def testChildInDefaultNamespace(self):
         e = domish.Element(("testns", "foo"), "testns2")
         e.addElement(("testns2", "bar"))
-        self.assertEqual(e.toXml(), "<xn0:foo xmlns:xn0='testns' xmlns='testns2'><bar/></xn0:foo>")
+        self.assertEqual(
+            e.toXml(), "<xn0:foo xmlns:xn0='testns' xmlns='testns2'><bar/></xn0:foo>"
+        )
 
     def testQualifiedAttribute(self):
-        e = domish.Element((None, "foo"),
-                           attribs = {("testns2", "bar"): "baz"})
+        e = domish.Element((None, "foo"), attribs={("testns2", "bar"): "baz"})
         self.assertEqual(e.toXml(), "<foo xmlns:xn0='testns2' xn0:bar='baz'/>")
 
     def testQualifiedAttributeDefaultNS(self):
-        e = domish.Element(("testns", "foo"),
-                           attribs = {("testns", "bar"): "baz"})
-        self.assertEqual(e.toXml(), "<foo xmlns='testns' xmlns:xn0='testns' xn0:bar='baz'/>")
+        e = domish.Element(("testns", "foo"), attribs={("testns", "bar"): "baz"})
+        self.assertEqual(
+            e.toXml(), "<foo xmlns='testns' xmlns:xn0='testns' xn0:bar='baz'/>"
+        )
 
     def testTwoChilds(self):
         e = domish.Element(('', "foo"))
@@ -477,43 +467,51 @@ class SerializerTests(unittest.TestCase):
         child1.addElement(('testns2', 'quux'))
         child2 = e.addElement(("testns3", "baz"), "testns4")
         child2.addElement(('testns', 'quux'))
-        self.assertEqual(e.toXml(), "<foo><xn0:bar xmlns:xn0='testns' xmlns='testns2'><quux/></xn0:bar><xn1:baz xmlns:xn1='testns3' xmlns='testns4'><xn0:quux xmlns:xn0='testns'/></xn1:baz></foo>")
+        self.assertEqual(
+            e.toXml(),
+            "<foo><xn0:bar xmlns:xn0='testns' xmlns='testns2'><quux/></xn0:bar><xn1:baz xmlns:xn1='testns3' xmlns='testns4'><xn0:quux xmlns:xn0='testns'/></xn1:baz></foo>",
+        )
 
     def testXMLNamespace(self):
-        e = domish.Element((None, "foo"),
-                           attribs = {("http://www.w3.org/XML/1998/namespace",
-                                       "lang"): "en_US"})
+        e = domish.Element(
+            (None, "foo"),
+            attribs={("http://www.w3.org/XML/1998/namespace", "lang"): "en_US"},
+        )
         self.assertEqual(e.toXml(), "<foo xml:lang='en_US'/>")
 
     def testQualifiedAttributeGivenListOfPrefixes(self):
-        e = domish.Element((None, "foo"),
-                           attribs = {("testns2", "bar"): "baz"})
-        self.assertEqual(e.toXml({"testns2": "qux"}),
-                          "<foo xmlns:qux='testns2' qux:bar='baz'/>")
+        e = domish.Element((None, "foo"), attribs={("testns2", "bar"): "baz"})
+        self.assertEqual(
+            e.toXml({"testns2": "qux"}), "<foo xmlns:qux='testns2' qux:bar='baz'/>"
+        )
 
     def testNSPrefix(self):
-        e = domish.Element((None, "foo"),
-                           attribs = {("testns2", "bar"): "baz"})
+        e = domish.Element((None, "foo"), attribs={("testns2", "bar"): "baz"})
         c = e.addElement(("testns2", "qux"))
         c[("testns2", "bar")] = "quux"
 
-        self.assertEqual(e.toXml(), "<foo xmlns:xn0='testns2' xn0:bar='baz'><xn0:qux xn0:bar='quux'/></foo>")
+        self.assertEqual(
+            e.toXml(),
+            "<foo xmlns:xn0='testns2' xn0:bar='baz'><xn0:qux xn0:bar='quux'/></foo>",
+        )
 
     def testDefaultNSPrefix(self):
-        e = domish.Element((None, "foo"),
-                           attribs = {("testns2", "bar"): "baz"})
+        e = domish.Element((None, "foo"), attribs={("testns2", "bar"): "baz"})
         c = e.addElement(("testns2", "qux"))
         c[("testns2", "bar")] = "quux"
         c.addElement('foo')
 
-        self.assertEqual(e.toXml(), "<foo xmlns:xn0='testns2' xn0:bar='baz'><xn0:qux xn0:bar='quux'><xn0:foo/></xn0:qux></foo>")
+        self.assertEqual(
+            e.toXml(),
+            "<foo xmlns:xn0='testns2' xn0:bar='baz'><xn0:qux xn0:bar='quux'><xn0:foo/></xn0:qux></foo>",
+        )
 
     def testPrefixScope(self):
         e = domish.Element(('testns', 'foo'))
 
-        self.assertEqual(e.toXml(prefixes={'testns': 'bar'},
-                                  prefixesInScope=['bar']),
-                          "<bar:foo/>")
+        self.assertEqual(
+            e.toXml(prefixes={'testns': 'bar'}, prefixesInScope=['bar']), "<bar:foo/>"
+        )
 
     def testLocalPrefixes(self):
         e = domish.Element(('testns', 'foo'), localPrefixes={'bar': 'testns'})
@@ -541,13 +539,10 @@ class SerializerTests(unittest.TestCase):
         self.assertNotIdentical(prefixes, s.prefixes)
 
         # test proper serialization on prefixes reuse
-        e = domish.Element(('testns2', 'foo'),
-                           localPrefixes={'quux': 'testns2'})
-        self.assertEqual("<quux:foo xmlns:quux='testns2'/>",
-                          e.toXml(prefixes=prefixes))
+        e = domish.Element(('testns2', 'foo'), localPrefixes={'quux': 'testns2'})
+        self.assertEqual("<quux:foo xmlns:quux='testns2'/>", e.toXml(prefixes=prefixes))
         e = domish.Element(('testns2', 'foo'))
-        self.assertEqual("<foo xmlns='testns2'/>",
-                          e.toXml(prefixes=prefixes))
+        self.assertEqual("<foo xmlns='testns2'/>", e.toXml(prefixes=prefixes))
 
     def testRawXMLSerialization(self):
         e = domish.Element((None, "foo"))
@@ -566,5 +561,6 @@ class SerializerTests(unittest.TestCase):
         e = domish.Element((None, "foo"))
         e["test"] = u"my value\u0221e"
         e.addContent(u"A degree symbol...\u00B0")
-        self.assertEqual(e.toXml(),
-                          u"<foo test='my value\u0221e'>A degree symbol...\u00B0</foo>")
+        self.assertEqual(
+            e.toXml(), u"<foo test='my value\u0221e'>A degree symbol...\u00B0</foo>"
+        )

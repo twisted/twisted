@@ -57,7 +57,6 @@ else:
     _PYPY = False
 
 
-
 def _shouldEnableNewStyle():
     """
     Returns whether or not we should enable the new-style conversion of
@@ -94,7 +93,6 @@ def currentframe(n=0):
     for x in range(n + 1):
         f = f.f_back
     return f
-
 
 
 def inet_pton(af, addr):
@@ -138,7 +136,7 @@ def inet_pton(af, addr):
                 parts[-2:] = zeros
             else:
                 idx = parts.index('')
-                parts[idx:idx+1] = zeros
+                parts[idx : idx + 1] = zeros
 
             if len(parts) != 8 - ipv4Component:
                 raise ValueError("Syntactically invalid address")
@@ -157,7 +155,6 @@ def inet_pton(af, addr):
         return struct.pack('!8H', *parts)
     else:
         raise socket.error(97, 'Address family not supported by protocol')
-
 
 
 def inet_ntop(af, addr):
@@ -186,7 +183,7 @@ def inet_ntop(af, addr):
             bestLen = curLen
         parts = [hex(x)[2:] for x in parts]
         if bestBase is not None:
-            parts[bestBase:bestBase + bestLen] = ['']
+            parts[bestBase : bestBase + bestLen] = ['']
         if parts[0] == '':
             parts.insert(0, '')
         if parts[-1] == '':
@@ -194,6 +191,7 @@ def inet_ntop(af, addr):
         return ':'.join(parts)
     else:
         raise socket.error(97, 'Address family not supported by protocol')
+
 
 try:
     socket.AF_INET6
@@ -210,7 +208,6 @@ except (AttributeError, NameError, socket.error):
 adict = dict
 
 
-
 if _PY3:
     # These are actually useless in Python 2 as well, but we need to go
     # through deprecation process there (ticket #5895):
@@ -225,7 +222,6 @@ try:
     from functools import reduce
 except ImportError:
     reduce = reduce
-
 
 
 def execfile(filename, globals, locals=None):
@@ -250,6 +246,7 @@ def execfile(filename, globals, locals=None):
 try:
     cmp = cmp
 except NameError:
+
     def cmp(a, b):
         """
         Compare two objects.
@@ -265,7 +262,6 @@ except NameError:
             return 1
 
 
-
 def comparable(klass):
     """
     Class decorator that ensures support for the special C{__cmp__} method.
@@ -279,13 +275,11 @@ def comparable(klass):
     if not _PY3:
         return klass
 
-
     def __eq__(self, other):
         c = self.__cmp__(other)
         if c is NotImplemented:
             return c
         return c == 0
-
 
     def __ne__(self, other):
         c = self.__cmp__(other)
@@ -293,13 +287,11 @@ def comparable(klass):
             return c
         return c != 0
 
-
     def __lt__(self, other):
         c = self.__cmp__(other)
         if c is NotImplemented:
             return c
         return c < 0
-
 
     def __le__(self, other):
         c = self.__cmp__(other)
@@ -307,13 +299,11 @@ def comparable(klass):
             return c
         return c <= 0
 
-
     def __gt__(self, other):
         c = self.__cmp__(other)
         if c is NotImplemented:
             return c
         return c > 0
-
 
     def __ge__(self, other):
         c = self.__cmp__(other)
@@ -330,14 +320,12 @@ def comparable(klass):
     return klass
 
 
-
 if _PY3:
     unicode = str
     long = int
 else:
     unicode = unicode
     long = long
-
 
 
 def ioType(fileIshObject, default=unicode):
@@ -378,6 +366,7 @@ def ioType(fileIshObject, default=unicode):
         return bytes
     encoding = getattr(fileIshObject, 'encoding', None)
     import codecs
+
     if isinstance(fileIshObject, (codecs.StreamReader, codecs.StreamWriter)):
         # On StreamReaderWriter, the 'encoding' attribute has special meaning;
         # it is unambiguously unicode.
@@ -395,10 +384,10 @@ def ioType(fileIshObject, default=unicode):
                 return bytes
         from cStringIO import InputType, OutputType
         from StringIO import StringIO
+
         if isinstance(fileIshObject, (StringIO, InputType, OutputType)):
             return bytes
     return default
-
 
 
 def nativeString(s):
@@ -424,7 +413,6 @@ def nativeString(s):
             # Ensure we're limited to ASCII subset:
             s.decode("ascii")
     return s
-
 
 
 def _matchingString(constantString, inputString):
@@ -458,13 +446,17 @@ def _matchingString(constantString, inputString):
         return otherType
 
 
-
 if _PY3:
+
     def reraise(exception, traceback):
         raise exception.with_traceback(traceback)
+
+
 else:
-    exec("""def reraise(exception, traceback):
-        raise exception.__class__, exception, traceback""")
+    exec(
+        """def reraise(exception, traceback):
+        raise exception.__class__, exception, traceback"""
+    )
 
 reraise.__doc__ = """
 Re-raise an exception, with an optional traceback, in a way that is compatible
@@ -478,25 +470,22 @@ C{__traceback__} attribute being set.
 """
 
 
-
 if _PY3:
     from io import StringIO as NativeStringIO
 else:
     from io import BytesIO as NativeStringIO
 
 
-
 # Functions for dealing with Python 3's bytes type, which is somewhat
 # different than Python 2's:
 if _PY3:
+
     def iterbytes(originalBytes):
         for i in range(len(originalBytes)):
-            yield originalBytes[i:i+1]
-
+            yield originalBytes[i : i + 1]
 
     def intToBytes(i):
         return ("%d" % i).encode("ascii")
-
 
     def lazyByteSlice(object, offset=0, size=None):
         """
@@ -516,17 +505,18 @@ if _PY3:
         if size is None:
             return view[offset:]
         else:
-            return view[offset:(offset + size)]
-
+            return view[offset : (offset + size)]
 
     def networkString(s):
         if not isinstance(s, unicode):
             raise TypeError("Can only convert text to bytes on Python 3")
         return s.encode('ascii')
+
+
 else:
+
     def iterbytes(originalBytes):
         return originalBytes
-
 
     def intToBytes(i):
         return b"%d" % i
@@ -539,6 +529,7 @@ else:
         # Ensure we're limited to ASCII subset:
         s.decode('ascii')
         return s
+
 
 iterbytes.__doc__ = """
 Return an iterable wrapper for a C{bytes} object that provides the behavior of
@@ -613,13 +604,12 @@ else:
 
 # Dealing with the differences in items/iteritems
 if _PY3:
+
     def iteritems(d):
         return d.items()
 
-
     def itervalues(d):
         return d.values()
-
 
     def items(d):
         return list(d.items())
@@ -628,13 +618,12 @@ if _PY3:
     xrange = range
     izip = zip
 else:
+
     def iteritems(d):
         return d.iteritems()
 
-
     def itervalues(d):
         return d.itervalues()
-
 
     def items(d):
         return d.items()
@@ -642,7 +631,8 @@ else:
     range = xrange
     xrange = xrange
     from itertools import izip
-    izip # shh pyflakes
+
+    izip  # shh pyflakes
 
 
 iteritems.__doc__ = """
@@ -666,6 +656,7 @@ Return a list of the items of C{d}.
 @rtype: L{list}
 """
 
+
 def _keys(d):
     """
     Return a list of the keys of C{d}.
@@ -677,7 +668,6 @@ def _keys(d):
         return list(d.keys())
     else:
         return d.keys()
-
 
 
 def bytesEnviron():
@@ -697,7 +687,6 @@ def bytesEnviron():
         target[os.environ.encodekey(x)] = os.environ.encodevalue(y)
 
     return target
-
 
 
 def _constructMethod(cls, name, self):
@@ -722,7 +711,6 @@ def _constructMethod(cls, name, self):
     return _MethodType(func, self, cls)
 
 
-
 from incremental import Version
 from twisted.python.deprecate import deprecatedModuleAttribute
 
@@ -732,7 +720,8 @@ deprecatedModuleAttribute(
     Version("Twisted", 15, 5, 0),
     "Use collections.OrderedDict instead.",
     "twisted.python.compat",
-    "OrderedDict")
+    "OrderedDict",
+)
 
 if _PY3:
     from base64 import encodebytes as _b64encodebytes
@@ -740,7 +729,6 @@ if _PY3:
 else:
     from base64 import encodestring as _b64encodebytes
     from base64 import decodestring as _b64decodebytes
-
 
 
 def _bytesChr(i):
@@ -758,12 +746,10 @@ def _bytesChr(i):
         return chr(i)
 
 
-
 try:
     from sys import intern
 except ImportError:
     intern = intern
-
 
 
 def _coercedUnicode(s):
@@ -791,14 +777,12 @@ def _coercedUnicode(s):
         return s
 
 
-
 if _PY3:
     unichr = chr
     raw_input = input
 else:
     unichr = unichr
     raw_input = raw_input
-
 
 
 def _bytesRepr(bytestring):
@@ -834,7 +818,6 @@ except ImportError:
     from collections import Sequence
 
 
-
 def _get_async_param(isAsync=None, **kwargs):
     """
     Provide a backwards-compatible way to get async param value that does not
@@ -854,13 +837,14 @@ def _get_async_param(isAsync=None, **kwargs):
     if 'async' in kwargs:
         warnings.warn(
             "'async' keyword argument is deprecated, please use isAsync",
-            DeprecationWarning, stacklevel=2)
+            DeprecationWarning,
+            stacklevel=2,
+        )
     if isAsync is None and 'async' in kwargs:
         isAsync = kwargs.pop('async')
     if kwargs:
         raise TypeError
     return bool(isAsync)
-
 
 
 __all__ = [

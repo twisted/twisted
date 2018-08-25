@@ -11,6 +11,7 @@ from twisted.trial import unittest
 
 from twisted.web import client
 
+
 @implementer(interfaces.IStreamClientEndpoint)
 class DummyEndPoint(object):
 
@@ -24,6 +25,7 @@ class DummyEndPoint(object):
 
     def connect(self, factory):
         return defer.succeed(dict(factory=factory))
+
 
 class HTTPConnectionPoolTests(unittest.TestCase):
     """

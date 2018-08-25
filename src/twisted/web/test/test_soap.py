@@ -9,9 +9,14 @@ try:
     import SOAPpy
 except ImportError:
     SOAPpy = None
-    class SOAPPublisher: pass
+
+    class SOAPPublisher:
+        pass
+
+
 else:
     from twisted.web import soap
+
     SOAPPublisher = soap.SOAPPublisher
 
 from twisted.trial import unittest
@@ -20,13 +25,13 @@ from twisted.internet import reactor, defer
 
 
 class Test(SOAPPublisher):
-
     def soap_add(self, a, b):
         return a + b
 
     def soap_kwargs(self, a=1, b=2):
         return a + b
-    soap_kwargs.useKeywords=True
+
+    soap_kwargs.useKeywords = True
 
     def soap_triple(self, string, num):
         return [string, num, None]
@@ -54,11 +59,11 @@ class Test(SOAPPublisher):
 
 
 class SOAPTests(unittest.TestCase):
-
     def setUp(self):
         self.publisher = Test()
-        self.p = reactor.listenTCP(0, server.Site(self.publisher),
-                                   interface="127.0.0.1")
+        self.p = reactor.listenTCP(
+            0, server.Site(self.publisher), interface="127.0.0.1"
+        )
         self.port = self.p.getHost().port
 
     def tearDown(self):
@@ -72,7 +77,8 @@ class SOAPTests(unittest.TestCase):
             ("add", (2, 3), 5),
             ("defer", ("a",), "a"),
             ("dict", ({"a": 1}, "a"), 1),
-            ("triple", ("a", 1), ["a", 1, None])]
+            ("triple", ("a", 1), ["a", 1, None]),
+        ]
 
         dl = []
         for meth, args, outp in inputOutput:
@@ -95,8 +101,10 @@ class SOAPTests(unittest.TestCase):
         """
         d = self.proxy().callRemote('doesntexist')
         self.assertFailure(d, error.Error)
+
         def cb(err):
             self.assertEqual(int(err.status), 500)
+
         d.addCallback(cb)
         return d
 
@@ -109,6 +117,6 @@ class SOAPTests(unittest.TestCase):
         self.assertTrue(self.publisher.lookupFunction("fail"))
         self.assertFalse(self.publisher.lookupFunction("foobar"))
 
+
 if not SOAPpy:
     SOAPTests.skip = "SOAPpy not installed"
-

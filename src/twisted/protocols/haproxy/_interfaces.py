@@ -15,7 +15,7 @@ class IProxyInfo(zope.interface.Interface):
     """
 
     header = zope.interface.Attribute(
-        "The raw byestring that represents the PROXY protocol header.",
+        "The raw byestring that represents the PROXY protocol header."
     )
     source = zope.interface.Attribute(
         "An L{twisted.internet.interfaces.IAddress} representing the "
@@ -25,7 +25,6 @@ class IProxyInfo(zope.interface.Interface):
         "An L{twisted.internet.interfaces.IAddress} representing the "
         "connection destination."
     )
-
 
 
 class IProxyParser(zope.interface.Interface):
@@ -47,7 +46,6 @@ class IProxyParser(zope.interface.Interface):
         @raises InvalidProxyHeader: If the bytes fed to the parser create an
             invalid PROXY header.
         """
-
 
     def parse(self, line):
         """

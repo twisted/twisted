@@ -19,9 +19,17 @@ from twisted.internet import error, udp, tcp
 from twisted.internet.base import ReactorBase, _SignalReactorMixin
 from twisted.internet.main import CONNECTION_DONE, CONNECTION_LOST
 from twisted.internet.interfaces import (
-    IReactorUNIX, IReactorUNIXDatagram, IReactorTCP, IReactorUDP, IReactorSSL,
-    IReactorSocket, IHalfCloseableDescriptor, IReactorProcess,
-    IReactorMulticast, IReactorFDSet)
+    IReactorUNIX,
+    IReactorUNIXDatagram,
+    IReactorTCP,
+    IReactorUDP,
+    IReactorSSL,
+    IReactorSocket,
+    IHalfCloseableDescriptor,
+    IReactorProcess,
+    IReactorMulticast,
+    IReactorFDSet,
+)
 
 from twisted.python import log, failure, util
 from twisted.python.runtime import platformType, platform
@@ -40,18 +48,20 @@ except ImportError:
     except ImportError:
         ssl = None
 
-unixEnabled = (platformType == 'posix')
+unixEnabled = platformType == 'posix'
 
 processEnabled = False
 if unixEnabled:
     from twisted.internet import fdesc, unix
     from twisted.internet import process, _signals
+
     processEnabled = True
 
 
 if platform.isWindows():
     try:
         import win32process
+
         processEnabled = True
     except ImportError:
         win32process = None
@@ -64,6 +74,7 @@ class _SocketWaker(log.Logger):
     select() on Windows for pipes), used to wake up the main loop from
     another thread.
     """
+
     disconnected = 0
 
     def __init__(self, reactor):
@@ -106,7 +117,6 @@ class _SocketWaker(log.Logger):
         self.w.close()
 
 
-
 class _FDWaker(log.Logger, object):
     """
     The I{self-pipe trick<http://cr.yp.to/docs/selfpipe.html>}, used to wake
@@ -121,6 +131,7 @@ class _FDWaker(log.Logger, object):
     @ivar i: The file descriptor which should be monitored in order to
         be awoken by this waker.
     """
+
     disconnected = 0
 
     i = None
@@ -137,13 +148,11 @@ class _FDWaker(log.Logger, object):
         fdesc._setCloseOnExec(self.o)
         self.fileno = lambda: self.i
 
-
     def doRead(self):
         """
         Read some bytes from the pipe and discard them.
         """
         fdesc.readFromFD(self.fileno(), lambda data: None)
-
 
     def connectionLost(self, reason):
         """Close both ends of my pipe.
@@ -156,7 +165,6 @@ class _FDWaker(log.Logger, object):
             except IOError:
                 pass
         del self.i, self.o
-
 
 
 class _UnixWaker(_FDWaker):
@@ -181,7 +189,6 @@ class _UnixWaker(_FDWaker):
                     raise
 
 
-
 if platformType == 'posix':
     _Waker = _UnixWaker
 else:
@@ -196,9 +203,9 @@ class _SIGCHLDWaker(_FDWaker):
 
     @see: L{twisted.internet._signals}
     """
+
     def __init__(self, reactor):
         _FDWaker.__init__(self, reactor)
-
 
     def install(self):
         """
@@ -206,13 +213,11 @@ class _SIGCHLDWaker(_FDWaker):
         """
         _signals.installHandler(self.o)
 
-
     def uninstall(self):
         """
         Remove the handler which makes this waker active.
         """
         _signals.installHandler(-1)
-
 
     def doRead(self):
         """
@@ -227,17 +232,21 @@ class _SIGCHLDWaker(_FDWaker):
         process.reapAllProcesses()
 
 
-
-
 class _DisconnectSelectableMixin(object):
     """
     Mixin providing the C{_disconnectSelectable} method.
     """
 
-    def _disconnectSelectable(self, selectable, why, isRead, faildict={
-        error.ConnectionDone: failure.Failure(error.ConnectionDone()),
-        error.ConnectionLost: failure.Failure(error.ConnectionLost())
-        }):
+    def _disconnectSelectable(
+        self,
+        selectable,
+        why,
+        isRead,
+        faildict={
+            error.ConnectionDone: failure.Failure(error.ConnectionDone()),
+            error.ConnectionLost: failure.Failure(error.ConnectionLost()),
+        },
+    ):
         """
         Utility function for disconnecting a selectable.
 
@@ -247,8 +256,11 @@ class _DisconnectSelectableMixin(object):
         self.removeReader(selectable)
         f = faildict.get(why.__class__)
         if f:
-            if (isRead and why.__class__ ==  error.ConnectionDone
-                and IHalfCloseableDescriptor.providedBy(selectable)):
+            if (
+                isRead
+                and why.__class__ == error.ConnectionDone
+                and IHalfCloseableDescriptor.providedBy(selectable)
+            ):
                 selectable.readConnectionLost(f)
             else:
                 self.removeWriter(selectable)
@@ -258,10 +270,8 @@ class _DisconnectSelectableMixin(object):
             selectable.connectionLost(failure.Failure(why))
 
 
-
 @implementer(IReactorTCP, IReactorUDP, IReactorMulticast)
-class PosixReactorBase(_SignalReactorMixin, _DisconnectSelectableMixin,
-                       ReactorBase):
+class PosixReactorBase(_SignalReactorMixin, _DisconnectSelectableMixin, ReactorBase):
     """
     A basis for reactors that use file descriptors.
 
@@ -285,8 +295,8 @@ class PosixReactorBase(_SignalReactorMixin, _DisconnectSelectableMixin,
             self._internalReaders.add(self.waker)
             self.addReader(self.waker)
 
-
     _childWaker = None
+
     def _handleSignals(self):
         """
         Extend the basic signal handling logic to also support
@@ -325,19 +335,40 @@ class PosixReactorBase(_SignalReactorMixin, _DisconnectSelectableMixin,
 
     # IReactorProcess
 
-    def spawnProcess(self, processProtocol, executable, args=(),
-                     env={}, path=None,
-                     uid=None, gid=None, usePTY=0, childFDs=None):
+    def spawnProcess(
+        self,
+        processProtocol,
+        executable,
+        args=(),
+        env={},
+        path=None,
+        uid=None,
+        gid=None,
+        usePTY=0,
+        childFDs=None,
+    ):
         args, env = self._checkProcessArgs(args, env)
         if platformType == 'posix':
             if usePTY:
                 if childFDs is not None:
-                    raise ValueError("Using childFDs is not supported with usePTY=True.")
-                return process.PTYProcess(self, executable, args, env, path,
-                                          processProtocol, uid, gid, usePTY)
+                    raise ValueError(
+                        "Using childFDs is not supported with usePTY=True."
+                    )
+                return process.PTYProcess(
+                    self, executable, args, env, path, processProtocol, uid, gid, usePTY
+                )
             else:
-                return process.Process(self, executable, args, env, path,
-                                       processProtocol, uid, gid, childFDs)
+                return process.Process(
+                    self,
+                    executable,
+                    args,
+                    env,
+                    path,
+                    processProtocol,
+                    uid,
+                    gid,
+                    childFDs,
+                )
         elif platformType == "win32":
             if uid is not None:
                 raise ValueError("Setting UID is unsupported on this platform.")
@@ -350,13 +381,16 @@ class PosixReactorBase(_SignalReactorMixin, _DisconnectSelectableMixin,
 
             if win32process:
                 from twisted.internet._dumbwin32proc import Process
+
                 return Process(self, processProtocol, executable, args, env, path)
             else:
                 raise NotImplementedError(
-                    "spawnProcess not available since pywin32 is not installed.")
+                    "spawnProcess not available since pywin32 is not installed."
+                )
         else:
             raise NotImplementedError(
-                "spawnProcess only available on Windows or POSIX.")
+                "spawnProcess only available on Windows or POSIX."
+            )
 
     # IReactorUDP
 
@@ -371,17 +405,20 @@ class PosixReactorBase(_SignalReactorMixin, _DisconnectSelectableMixin,
 
     # IReactorMulticast
 
-    def listenMulticast(self, port, protocol, interface='', maxPacketSize=8192, listenMultiple=False):
+    def listenMulticast(
+        self, port, protocol, interface='', maxPacketSize=8192, listenMultiple=False
+    ):
         """Connects a given DatagramProtocol to the given numeric UDP port.
 
         EXPERIMENTAL.
 
         @returns: object conforming to IListeningPort.
         """
-        p = udp.MulticastPort(port, protocol, interface, maxPacketSize, self, listenMultiple)
+        p = udp.MulticastPort(
+            port, protocol, interface, maxPacketSize, self, listenMultiple
+        )
         p.startListening()
         return p
-
 
     # IReactorUNIX
 
@@ -397,11 +434,9 @@ class PosixReactorBase(_SignalReactorMixin, _DisconnectSelectableMixin,
         p.startListening()
         return p
 
-
     # IReactorUNIXDatagram
 
-    def listenUNIXDatagram(self, address, protocol, maxPacketSize=8192,
-                           mode=0o666):
+    def listenUNIXDatagram(self, address, protocol, maxPacketSize=8192, mode=0o666):
         """
         Connects a given L{DatagramProtocol} to the given path.
 
@@ -414,29 +449,27 @@ class PosixReactorBase(_SignalReactorMixin, _DisconnectSelectableMixin,
         p.startListening()
         return p
 
-    def connectUNIXDatagram(self, address, protocol, maxPacketSize=8192,
-                            mode=0o666, bindAddress=None):
+    def connectUNIXDatagram(
+        self, address, protocol, maxPacketSize=8192, mode=0o666, bindAddress=None
+    ):
         """
         Connects a L{ConnectedDatagramProtocol} instance to a path.
 
         EXPERIMENTAL.
         """
         assert unixEnabled, "UNIX support is not present"
-        p = unix.ConnectedDatagramPort(address, protocol, maxPacketSize, mode, bindAddress, self)
+        p = unix.ConnectedDatagramPort(
+            address, protocol, maxPacketSize, mode, bindAddress, self
+        )
         p.startListening()
         return p
-
 
     # IReactorSocket (no AF_UNIX on Windows)
 
     if unixEnabled:
-        _supportedAddressFamilies = (
-            socket.AF_INET, socket.AF_INET6, socket.AF_UNIX,
-        )
+        _supportedAddressFamilies = (socket.AF_INET, socket.AF_INET6, socket.AF_UNIX)
     else:
-        _supportedAddressFamilies = (
-            socket.AF_INET, socket.AF_INET6,
-        )
+        _supportedAddressFamilies = (socket.AF_INET, socket.AF_INET6)
 
     def adoptStreamPort(self, fileDescriptor, addressFamily, factory):
         """
@@ -451,11 +484,11 @@ class PosixReactorBase(_SignalReactorMixin, _DisconnectSelectableMixin,
             raise error.UnsupportedAddressFamily(addressFamily)
 
         if unixEnabled and addressFamily == socket.AF_UNIX:
-            p = unix.Port._fromListeningDescriptor(
-                self, fileDescriptor, factory)
+            p = unix.Port._fromListeningDescriptor(self, fileDescriptor, factory)
         else:
             p = tcp.Port._fromListeningDescriptor(
-                self, fileDescriptor, addressFamily, factory)
+                self, fileDescriptor, addressFamily, factory
+            )
         p.startListening()
         return p
 
@@ -468,25 +501,23 @@ class PosixReactorBase(_SignalReactorMixin, _DisconnectSelectableMixin,
             raise error.UnsupportedAddressFamily(addressFamily)
 
         if unixEnabled and addressFamily == socket.AF_UNIX:
-            return unix.Server._fromConnectedSocket(
-                fileDescriptor, factory, self)
+            return unix.Server._fromConnectedSocket(fileDescriptor, factory, self)
         else:
             return tcp.Server._fromConnectedSocket(
-                fileDescriptor, addressFamily, factory, self)
+                fileDescriptor, addressFamily, factory, self
+            )
 
-
-    def adoptDatagramPort(self, fileDescriptor, addressFamily, protocol,
-                          maxPacketSize=8192):
+    def adoptDatagramPort(
+        self, fileDescriptor, addressFamily, protocol, maxPacketSize=8192
+    ):
         if addressFamily not in (socket.AF_INET, socket.AF_INET6):
             raise error.UnsupportedAddressFamily(addressFamily)
 
         p = udp.Port._fromListeningDescriptor(
-            self, fileDescriptor, addressFamily, protocol,
-            maxPacketSize=maxPacketSize)
+            self, fileDescriptor, addressFamily, protocol, maxPacketSize=maxPacketSize
+        )
         p.startListening()
         return p
-
-
 
     # IReactorTCP
 
@@ -502,19 +533,20 @@ class PosixReactorBase(_SignalReactorMixin, _DisconnectSelectableMixin,
 
     # IReactorSSL (sometimes, not implemented)
 
-    def connectSSL(self, host, port, factory, contextFactory, timeout=30, bindAddress=None):
+    def connectSSL(
+        self, host, port, factory, contextFactory, timeout=30, bindAddress=None
+    ):
         if tls is not None:
             tlsFactory = tls.TLSMemoryBIOFactory(contextFactory, True, factory)
             return self.connectTCP(host, port, tlsFactory, timeout, bindAddress)
         elif ssl is not None:
             c = ssl.Connector(
-                host, port, factory, contextFactory, timeout, bindAddress, self)
+                host, port, factory, contextFactory, timeout, bindAddress, self
+            )
             c.connect()
             return c
         else:
             assert False, "SSL support is not present"
-
-
 
     def listenSSL(self, port, factory, contextFactory, backlog=50, interface=''):
         if tls is not None:
@@ -523,13 +555,11 @@ class PosixReactorBase(_SignalReactorMixin, _DisconnectSelectableMixin,
             port._type = 'TLS'
             return port
         elif ssl is not None:
-            p = ssl.Port(
-                port, factory, contextFactory, backlog, interface, self)
+            p = ssl.Port(port, factory, contextFactory, backlog, interface, self)
             p.startListening()
             return p
         else:
             assert False, "SSL support is not present"
-
 
     def _removeAll(self, readers, writers):
         """
@@ -627,7 +657,6 @@ class _PollLikeMixin(object):
             self._disconnectSelectable(selectable, why, inRead)
 
 
-
 @implementer(IReactorFDSet)
 class _ContinuousPolling(_PollLikeMixin, _DisconnectSelectableMixin):
     """
@@ -656,13 +685,11 @@ class _ContinuousPolling(_PollLikeMixin, _DisconnectSelectableMixin):
     _POLL_IN = 2
     _POLL_OUT = 4
 
-
     def __init__(self, reactor):
         self._reactor = reactor
         self._loop = None
         self._readers = set()
         self._writers = set()
-
 
     def _checkLoop(self):
         """
@@ -672,6 +699,7 @@ class _ContinuousPolling(_PollLikeMixin, _DisconnectSelectableMixin):
         if self._readers or self._writers:
             if self._loop is None:
                 from twisted.internet.task import LoopingCall, _EPSILON
+
                 self._loop = LoopingCall(self.iterate)
                 self._loop.clock = self._reactor
                 # LoopingCall seems unhappy with timeout of 0, so use very
@@ -680,7 +708,6 @@ class _ContinuousPolling(_PollLikeMixin, _DisconnectSelectableMixin):
         elif self._loop:
             self._loop.stop()
             self._loop = None
-
 
     def iterate(self):
         """
@@ -691,7 +718,6 @@ class _ContinuousPolling(_PollLikeMixin, _DisconnectSelectableMixin):
         for writer in list(self._writers):
             self._doReadOrWrite(writer, writer, self._POLL_OUT)
 
-
     def addReader(self, reader):
         """
         Add a C{FileDescriptor} for notification of data available to read.
@@ -699,14 +725,12 @@ class _ContinuousPolling(_PollLikeMixin, _DisconnectSelectableMixin):
         self._readers.add(reader)
         self._checkLoop()
 
-
     def addWriter(self, writer):
         """
         Add a C{FileDescriptor} for notification of data available to write.
         """
         self._writers.add(writer)
         self._checkLoop()
-
 
     def removeReader(self, reader):
         """
@@ -717,7 +741,6 @@ class _ContinuousPolling(_PollLikeMixin, _DisconnectSelectableMixin):
         except KeyError:
             return
         self._checkLoop()
-
 
     def removeWriter(self, writer):
         """
@@ -730,7 +753,6 @@ class _ContinuousPolling(_PollLikeMixin, _DisconnectSelectableMixin):
             return
         self._checkLoop()
 
-
     def removeAll(self):
         """
         Remove all readers and writers.
@@ -742,20 +764,17 @@ class _ContinuousPolling(_PollLikeMixin, _DisconnectSelectableMixin):
         self._writers.clear()
         return result
 
-
     def getReaders(self):
         """
         Return a list of the readers.
         """
         return list(self._readers)
 
-
     def getWriters(self):
         """
         Return a list of the writers.
         """
         return list(self._writers)
-
 
     def isReading(self, fd):
         """
@@ -770,7 +789,6 @@ class _ContinuousPolling(_PollLikeMixin, _DisconnectSelectableMixin):
         """
         return fd in self._readers
 
-
     def isWriting(self, fd):
         """
         Checks if the file descriptor is currently being observed for write
@@ -783,7 +801,6 @@ class _ContinuousPolling(_PollLikeMixin, _DisconnectSelectableMixin):
         @rtype: C{bool}
         """
         return fd in self._writers
-
 
 
 if tls is not None or ssl is not None:

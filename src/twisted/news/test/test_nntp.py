@@ -7,7 +7,7 @@ from twisted.news import nntp
 from twisted.protocols import loopback
 from twisted.test import proto_helpers
 
-ALL_GROUPS = ('alt.test.nntp', 0, 1, 'y'),
+ALL_GROUPS = (('alt.test.nntp', 0, 1, 'y'),)
 GROUP = ('0', '1', '0', 'alt.test.nntp', 'group', 'selected')
 SUBSCRIPTIONS = ['alt.test.nntp', 'news.testgroup']
 
@@ -33,17 +33,18 @@ moo
  10:56pm up 4 days, 4:42, 1 user, load average: 0.08, 0.08, 0.12
 """
 
+
 class TestNNTPClient(nntp.NNTPClient):
     def __init__(self):
         nntp.NNTPClient.__init__(self)
 
     def assertEqual(self, foo, bar):
-        if foo != bar: raise AssertionError("%r != %r!" % (foo, bar))
+        if foo != bar:
+            raise AssertionError("%r != %r!" % (foo, bar))
 
     def connectionMade(self):
         nntp.NNTPClient.connectionMade(self)
         self.fetchSubscriptions()
-
 
     def gotSubscriptions(self, subscriptions):
         self.assertEqual(len(subscriptions), len(SUBSCRIPTIONS))
@@ -58,10 +59,8 @@ class TestNNTPClient(nntp.NNTPClient):
 
         self.fetchGroup('alt.test.nntp')
 
-
     def getAllGroupsFailed(self, error):
         raise AssertionError("fetchGroups() failed: %s" % (error,))
-
 
     def gotGroup(self, info):
         self.assertEqual(len(info), 6)
@@ -69,22 +68,17 @@ class TestNNTPClient(nntp.NNTPClient):
 
         self.postArticle(POST_STRING)
 
-
     def getSubscriptionsFailed(self, error):
         raise AssertionError("fetchSubscriptions() failed: %s" % (error,))
-
 
     def getGroupFailed(self, error):
         raise AssertionError("fetchGroup() failed: %s" % (error,))
 
-
     def postFailed(self, error):
         raise AssertionError("postArticle() failed: %s" % (error,))
 
-
     def postedOk(self):
         self.fetchArticle(1)
-
 
     def gotArticle(self, info):
         origBody = POST_STRING.split('\n\n')[1]
@@ -94,7 +88,6 @@ class TestNNTPClient(nntp.NNTPClient):
 
         # We're done
         self.transport.loseConnection()
-
 
     def getArticleFailed(self, error):
         raise AssertionError("fetchArticle() failed: %s" % (error,))
@@ -125,17 +118,15 @@ class NNTPTests(unittest.TestCase):
         #         reactor.iterate(1) # fetchGroup()
         #         reactor.iterate(1) # postArticle()
 
-
     def test_connectionMade(self):
         """
         When L{NNTPServer} is connected, it sends a server greeting to the
         client.
         """
         self.assertEqual(
-            self.transport.value().split('\r\n'), [
-                '200 server ready - posting allowed',
-                ''])
-
+            self.transport.value().split('\r\n'),
+            ['200 server ready - posting allowed', ''],
+        )
 
     def test_LIST(self):
         """
@@ -145,12 +136,14 @@ class NNTPTests(unittest.TestCase):
         self.transport.clear()
         self.server.do_LIST()
         self.assertEqual(
-            self.transport.value().split('\r\n'), [
+            self.transport.value().split('\r\n'),
+            [
                 '215 newsgroups in form "group high low flags"',
                 'alt.test.nntp 0 1 y',
                 '.',
-                ''])
-
+                '',
+            ],
+        )
 
     def test_GROUP(self):
         """
@@ -160,10 +153,9 @@ class NNTPTests(unittest.TestCase):
         self.transport.clear()
         self.server.do_GROUP('alt.test.nntp')
         self.assertEqual(
-            self.transport.value().split('\r\n'), [
-                '211 0 1 0 alt.test.nntp group selected',
-                ''])
-
+            self.transport.value().split('\r\n'),
+            ['211 0 1 0 alt.test.nntp group selected', ''],
+        )
 
     def test_LISTGROUP(self):
         """
@@ -174,11 +166,9 @@ class NNTPTests(unittest.TestCase):
         self.transport.clear()
         self.server.do_LISTGROUP('alt.test.nntp')
         self.assertEqual(
-            self.transport.value().split('\r\n'), [
-                '211 list of article numbers follow',
-                '.',
-                ''])
-
+            self.transport.value().split('\r\n'),
+            ['211 list of article numbers follow', '.', ''],
+        )
 
     def test_XROVER(self):
         """
@@ -191,7 +181,5 @@ class NNTPTests(unittest.TestCase):
 
         self.server.do_XROVER()
         self.assertEqual(
-            self.transport.value().split('\r\n'), [
-                '221 Header follows',
-                '.',
-                ''])
+            self.transport.value().split('\r\n'), ['221 Header follows', '.', '']
+        )

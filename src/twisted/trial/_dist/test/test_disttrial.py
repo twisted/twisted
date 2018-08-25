@@ -32,7 +32,6 @@ from twisted.trial._dist.worker import LocalWorker
 from zope.interface import implementer, verify
 
 
-
 class FakeTransport(object):
     """
     A simple fake process transport.
@@ -44,13 +43,13 @@ class FakeTransport(object):
         """
 
 
-
 @implementer(interfaces.IReactorProcess)
 class CountingReactor(MemoryReactorClock):
     """
     A fake reactor that counts the calls to L{IReactorCore.run},
     L{IReactorCore.stop}, and L{IReactorProcess.spawnProcess}.
     """
+
     spawnCount = 0
     stopCount = 0
     runCount = 0
@@ -58,7 +57,6 @@ class CountingReactor(MemoryReactorClock):
     def __init__(self, workers):
         MemoryReactorClock.__init__(self)
         self._workers = workers
-
 
     def spawnProcess(self, worker, *args, **kwargs):
         """
@@ -72,14 +70,12 @@ class CountingReactor(MemoryReactorClock):
         worker.makeConnection(FakeTransport())
         self.spawnCount += 1
 
-
     def stop(self):
         """
         See L{IReactorCore.stop}.
         """
         MemoryReactorClock.stop(self)
         self.stopCount += 1
-
 
     def run(self):
         """
@@ -95,7 +91,6 @@ class CountingReactor(MemoryReactorClock):
             f(*args, **kwargs)
 
 
-
 class CountingReactorTests(SynchronousTestCase):
     """
     Tests for L{CountingReactor}.
@@ -105,13 +100,11 @@ class CountingReactorTests(SynchronousTestCase):
         self.workers = []
         self.reactor = CountingReactor(self.workers)
 
-
     def test_providesIReactorProcess(self):
         """
         L{CountingReactor} instances provide L{IReactorProcess}.
         """
         verify.verifyObject(interfaces.IReactorProcess, self.reactor)
-
 
     def test_spawnProcess(self):
         """
@@ -123,12 +116,10 @@ class CountingReactorTests(SynchronousTestCase):
 
         proto = Protocol()
         for count in [1, 2]:
-            self.reactor.spawnProcess(proto, sys.executable,
-                                      arg=[sys.executable])
+            self.reactor.spawnProcess(proto, sys.executable, arg=[sys.executable])
             self.assertTrue(proto.transport)
             self.assertEqual(self.workers, [proto] * count)
             self.assertEqual(self.reactor.spawnCount, count)
-
 
     def test_stop(self):
         """
@@ -138,7 +129,6 @@ class CountingReactorTests(SynchronousTestCase):
         for count in [1, 2]:
             self.reactor.stop()
             self.assertEqual(self.reactor.stopCount, count)
-
 
     def test_run(self):
         """
@@ -157,7 +147,6 @@ class CountingReactorTests(SynchronousTestCase):
             self.assertEqual(len(whenRunningCalls), count)
 
 
-
 class EternalTerminationPredicateFactory(object):
     """
     A rigged terminationPredicateFactory for which time never pass.
@@ -170,7 +159,6 @@ class EternalTerminationPredicateFactory(object):
         return False
 
 
-
 class DistTrialRunnerTests(TestCase):
     """
     Tests for L{DistTrialRunner}.
@@ -180,10 +168,10 @@ class DistTrialRunnerTests(TestCase):
         """
         Create a runner for testing.
         """
-        self.runner = DistTrialRunner(TreeReporter, 4, [],
-                                      workingDirectory=self.mktemp())
+        self.runner = DistTrialRunner(
+            TreeReporter, 4, [], workingDirectory=self.mktemp()
+        )
         self.runner._stream = StringIO()
-
 
     def reap(self, workers):
         """
@@ -198,7 +186,6 @@ class DistTrialRunnerTests(TestCase):
             worker.endDeferred.addErrback(Failure.trap, error.ConnectionDone)
             worker.processEnded(Failure(CONNECTION_DONE))
 
-
     def getFakeSchedulerAndEternalCooperator(self):
         """
         Helper to create fake scheduler and cooperator in tests.
@@ -212,9 +199,8 @@ class DistTrialRunnerTests(TestCase):
         cooperator = Cooperator(
             scheduler=scheduler,
             terminationPredicateFactory=EternalTerminationPredicateFactory,
-            )
+        )
         return scheduler, cooperator
-
 
     def test_writeResults(self):
         """
@@ -225,7 +211,6 @@ class DistTrialRunnerTests(TestCase):
         result = DistReporter(Reporter(stringIO))
         self.runner.writeResults(result)
         self.assertTrue(stringIO.tell() > 0)
-
 
     def test_createLocalWorkers(self):
         """
@@ -238,7 +223,6 @@ class DistTrialRunnerTests(TestCase):
             self.assertIsInstance(s, LocalWorker)
         self.assertEqual(4, len(workers))
 
-
     def test_launchWorkerProcesses(self):
         """
         Given a C{spawnProcess} function, C{launchWorkerProcess} launches a
@@ -248,21 +232,26 @@ class DistTrialRunnerTests(TestCase):
         arguments = []
         environment = {}
 
-        def fakeSpawnProcess(processProtocol, executable, args=(), env={},
-                             path=None, uid=None, gid=None, usePTY=0,
-                             childFDs=None):
+        def fakeSpawnProcess(
+            processProtocol,
+            executable,
+            args=(),
+            env={},
+            path=None,
+            uid=None,
+            gid=None,
+            usePTY=0,
+            childFDs=None,
+        ):
             arguments.append(executable)
             arguments.extend(args)
             environment.update(env)
 
-        self.runner.launchWorkerProcesses(
-            fakeSpawnProcess, protocols, ["foo"])
+        self.runner.launchWorkerProcesses(fakeSpawnProcess, protocols, ["foo"])
         self.assertEqual(arguments[0], arguments[1])
         self.assertTrue(os.path.exists(arguments[2]))
         self.assertEqual("foo", arguments[3])
-        self.assertEqual(os.pathsep.join(sys.path),
-                         environment["TRIAL_PYTHONPATH"])
-
+        self.assertEqual(os.pathsep.join(sys.path), environment["TRIAL_PYTHONPATH"])
 
     def test_run(self):
         """
@@ -280,7 +269,6 @@ class DistTrialRunnerTests(TestCase):
         self.assertEqual(fakeReactor.runCount, 1)
         self.assertEqual(fakeReactor.spawnCount, self.runner._workerNumber)
 
-
     def test_runUsedDirectory(self):
         """
         L{DistTrialRunner} checks if the test directory is already locked, and
@@ -288,13 +276,14 @@ class DistTrialRunnerTests(TestCase):
         """
 
         class CountingReactorWithLock(CountingReactor):
-
             def spawnProcess(oself, worker, *args, **kwargs):
                 oself._workers.append(worker)
-                self.assertEqual(os.path.abspath(worker._logDirectory),
-                                 os.path.abspath(
-                                     os.path.join(workingDirectory + "-1",
-                                                  str(oself.spawnCount))))
+                self.assertEqual(
+                    os.path.abspath(worker._logDirectory),
+                    os.path.abspath(
+                        os.path.join(workingDirectory + "-1", str(oself.spawnCount))
+                    ),
+                )
                 localLock = FilesystemLock(workingDirectory + "-1.lock")
                 self.assertFalse(localLock.lock())
                 oself.spawnCount += 1
@@ -320,7 +309,6 @@ class DistTrialRunnerTests(TestCase):
 
         self.runner.run(suite, fakeReactor)
 
-
     def test_minimalWorker(self):
         """
         L{DistTrialRunner} doesn't try to start more workers than the number of
@@ -334,7 +322,6 @@ class DistTrialRunnerTests(TestCase):
         self.assertEqual(fakeReactor.runCount, 1)
         self.assertEqual(fakeReactor.spawnCount, 1)
 
-
     def test_runUncleanWarnings(self):
         """
         Running with the C{unclean-warnings} option makes L{DistTrialRunner}
@@ -347,9 +334,7 @@ class DistTrialRunnerTests(TestCase):
         self.runner._uncleanWarnings = True
         result = self.runner.run(TestCase(), fakeReactor)
         self.assertIsInstance(result, DistReporter)
-        self.assertIsInstance(result.original,
-                              UncleanWarningsReporterWrapper)
-
+        self.assertIsInstance(result.original, UncleanWarningsReporterWrapper)
 
     def test_runWithoutTest(self):
         """
@@ -363,7 +348,6 @@ class DistTrialRunnerTests(TestCase):
         output = self.runner._stream.getvalue()
         self.assertIn("Running 0 test", output)
         self.assertIn("PASSED", output)
-
 
     def test_runWithoutTestButWithAnError(self):
         """
@@ -382,7 +366,6 @@ class DistTrialRunnerTests(TestCase):
         self.assertIn("errors=1", output)
         self.assertIn("FAILED", output)
 
-
     def test_runUnexpectedError(self):
         """
         If for some reasons we can't connect to the worker process, the test
@@ -390,7 +373,6 @@ class DistTrialRunnerTests(TestCase):
         """
 
         class CountingReactorWithFail(CountingReactor):
-
             def spawnProcess(self, worker, *args, **kwargs):
                 self._workers.append(worker)
                 worker.makeConnection(FakeTransport())
@@ -406,21 +388,19 @@ class DistTrialRunnerTests(TestCase):
         fakeReactor = CountingReactorWithFail(workers)
         self.addCleanup(self.reap, workers)
 
-        result = self.runner.run(TestCase(), fakeReactor,
-                                 cooperator.cooperate)
+        result = self.runner.run(TestCase(), fakeReactor, cooperator.cooperate)
         self.assertEqual(fakeReactor.runCount, 1)
         self.assertEqual(fakeReactor.spawnCount, 1)
         scheduler.pump()
         self.assertEqual(1, len(result.original.failures))
-
 
     def test_runStopAfterTests(self):
         """
         L{DistTrialRunner} calls C{reactor.stop} and unlocks the test directory
         once the tests have run.
         """
-        class CountingReactorWithSuccess(CountingReactor):
 
+        class CountingReactorWithSuccess(CountingReactor):
             def spawnProcess(self, worker, *args, **kwargs):
                 self._workers.append(worker)
                 worker.makeConnection(FakeTransport())
@@ -448,7 +428,6 @@ class DistTrialRunnerTests(TestCase):
 
         return deferLater(reactor, 0, check)
 
-
     def test_runWaitForProcessesDeferreds(self):
         """
         L{DistTrialRunner} waits for the worker processes to stop when the
@@ -475,11 +454,12 @@ class DistTrialRunnerTests(TestCase):
         self.assertEqual(list(fakeReactor.triggers["before"]), ["shutdown"])
         self.reap(workers)
 
-        return gatherResults([
-            maybeDeferred(f, *a, **kw)
-            for f, a, kw in fakeReactor.triggers["before"]["shutdown"]
-        ]).addCallback(check)
-
+        return gatherResults(
+            [
+                maybeDeferred(f, *a, **kw)
+                for f, a, kw in fakeReactor.triggers["before"]["shutdown"]
+            ]
+        ).addCallback(check)
 
     def test_runUntilFailure(self):
         """
@@ -489,7 +469,6 @@ class DistTrialRunnerTests(TestCase):
         called = []
 
         class CountingReactorWithSuccess(CountingReactor):
-
             def spawnProcess(self, worker, *args, **kwargs):
                 self._workers.append(worker)
                 worker.makeConnection(FakeTransport())
@@ -509,8 +488,8 @@ class DistTrialRunnerTests(TestCase):
         scheduler, cooperator = self.getFakeSchedulerAndEternalCooperator()
 
         result = self.runner.run(
-            TestCase(), fakeReactor, cooperate=cooperator.cooperate,
-            untilFailure=True)
+            TestCase(), fakeReactor, cooperate=cooperator.cooperate, untilFailure=True
+        )
         scheduler.pump()
         self.assertEqual(5, len(called))
         self.assertFalse(result.wasSuccessful())

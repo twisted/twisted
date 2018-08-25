@@ -19,6 +19,7 @@ from twisted.trial.unittest import TestCase
 
 class MainTests(TestCase):
     """Test that twisted scripts can be invoked as modules."""
+
     def test_twisted(self):
         """Invoking python -m twisted should execute twist."""
         cmd = sys.executable
@@ -29,6 +30,7 @@ class MainTests(TestCase):
 
         # Fix up our sys args to match the command we issued
         from twisted import __main__
+
         self.patch(sys, 'argv', [__main__.__file__, '--help'])
 
         def processEnded(ign):
@@ -38,6 +40,7 @@ class MainTests(TestCase):
             options = TwistOptions()
             message = '{}\n'.format(options).encode('utf-8')
             self.assertEqual(output, message)
+
         return d.addCallback(processEnded)
 
     def test_trial(self):
@@ -50,15 +53,17 @@ class MainTests(TestCase):
 
         # Fix up our sys args to match the command we issued
         from twisted.trial import __main__
+
         self.patch(sys, 'argv', [__main__.__file__, '--help'])
 
         def processEnded(ign):
             f = p.outF
             output = f.getvalue().replace(b'\r\n', b'\n')
-            
+
             options = trial.Options()
             message = '{}\n'.format(options).encode('utf-8')
             self.assertEqual(output, message)
+
         return d.addCallback(processEnded)
 
     def test_twisted_import(self):
@@ -67,6 +72,7 @@ class MainTests(TestCase):
         monkey = self.patch(sys, 'stdout', output)
 
         import twisted.__main__
+
         self.assertTrue(twisted.__main__)  # Appease pyflakes
 
         monkey.restore()

@@ -10,12 +10,25 @@ from twisted.python import rebuild
 from twisted.python.compat import _PY3
 
 from . import crash_test_dummy
+
 f = crash_test_dummy.foo
 
-class Foo: pass
-class Bar(Foo): pass
-class Baz(object): pass
-class Buz(Bar, Baz): pass
+
+class Foo:
+    pass
+
+
+class Bar(Foo):
+    pass
+
+
+class Baz(object):
+    pass
+
+
+class Buz(Bar, Baz):
+    pass
+
 
 class HashRaisesRuntimeError:
     """
@@ -24,45 +37,45 @@ class HashRaisesRuntimeError:
 
     @ivar hashCalled: C{bool} set to True when __hash__ is called.
     """
+
     def __init__(self):
         self.hashCalled = False
-
 
     def __hash__(self):
         self.hashCalled = True
         raise RuntimeError('not a TypeError!')
 
 
-
 # Set in test_hashException
 unhashableObject = None
-
 
 
 class RebuildTests(unittest.TestCase):
     """
     Simple testcase for rebuilding, to at least exercise the code.
     """
+
     def setUp(self):
         self.libPath = self.mktemp()
         os.mkdir(self.libPath)
-        self.fakelibPath = os.path.join(self.libPath,
-                                        'twisted_rebuild_fakelib')
+        self.fakelibPath = os.path.join(self.libPath, 'twisted_rebuild_fakelib')
         os.mkdir(self.fakelibPath)
         open(os.path.join(self.fakelibPath, '__init__.py'), 'w').close()
         sys.path.insert(0, self.libPath)
 
-
     def tearDown(self):
         sys.path.remove(self.libPath)
-
 
     def test_FileRebuild(self):
         from twisted.python.util import sibpath
         import shutil, time
-        shutil.copyfile(sibpath(__file__, "myrebuilder1.py"),
-                        os.path.join(self.fakelibPath, "myrebuilder.py"))
+
+        shutil.copyfile(
+            sibpath(__file__, "myrebuilder1.py"),
+            os.path.join(self.fakelibPath, "myrebuilder.py"),
+        )
         from twisted_rebuild_fakelib import myrebuilder
+
         a = myrebuilder.A()
         b = myrebuilder.B()
         i = myrebuilder.Inherit()
@@ -71,15 +84,16 @@ class RebuildTests(unittest.TestCase):
         # by in unix.  This sucks, but it's not often that you'll be doing more
         # than one reload per second.
         time.sleep(1.1)
-        shutil.copyfile(sibpath(__file__, "myrebuilder2.py"),
-                        os.path.join(self.fakelibPath, "myrebuilder.py"))
+        shutil.copyfile(
+            sibpath(__file__, "myrebuilder2.py"),
+            os.path.join(self.fakelibPath, "myrebuilder.py"),
+        )
         rebuild.rebuild(myrebuilder)
         b2 = myrebuilder.B()
         self.assertEqual(b2.b(), 'c')
         self.assertEqual(b.b(), 'c')
         self.assertEqual(i.a(), 'd')
         self.assertEqual(a.a(), 'b')
-
 
     def test_Rebuild(self):
         """
@@ -98,7 +112,6 @@ class RebuildTests(unittest.TestCase):
 
         self.assertEqual(f, crash_test_dummy.foo)
 
-
     def test_ComponentInteraction(self):
         x = crash_test_dummy.XComponent()
         x.setAdapter(crash_test_dummy.IX, crash_test_dummy.XA)
@@ -112,10 +125,14 @@ class RebuildTests(unittest.TestCase):
 
         # Test that a duplicate registerAdapter is not allowed
         from twisted.python import components
-        self.assertRaises(ValueError, components.registerAdapter,
-                              crash_test_dummy.XA, crash_test_dummy.X,
-                              crash_test_dummy.IX)
 
+        self.assertRaises(
+            ValueError,
+            components.registerAdapter,
+            crash_test_dummy.XA,
+            crash_test_dummy.X,
+            crash_test_dummy.IX,
+        )
 
     def test_UpdateInstance(self):
         global Foo, Buz
@@ -135,12 +152,11 @@ class RebuildTests(unittest.TestCase):
         assert hasattr(b, 'foo'), "Missing method on rebuilt instance"
         assert hasattr(b, 'x'), "Missing class attribute on rebuilt instance"
 
-
     def test_BananaInteraction(self):
         from twisted.python import rebuild
         from twisted.spread import banana
-        rebuild.latestClass(banana.Banana)
 
+        rebuild.latestClass(banana.Banana)
 
     def test_hashException(self):
         """
@@ -149,13 +165,14 @@ class RebuildTests(unittest.TestCase):
         """
         global unhashableObject
         unhashableObject = HashRaisesRuntimeError()
+
         def _cleanup():
             global unhashableObject
             unhashableObject = None
+
         self.addCleanup(_cleanup)
         rebuild.rebuild(rebuild)
         self.assertTrue(unhashableObject.hashCalled)
-
 
     def test_Sensitive(self):
         """
@@ -183,14 +200,17 @@ class RebuildTests(unittest.TestCase):
         self.assertEqual(newException, testSensitive.latestVersionOf(newException))
 
         # Test types.MethodType on method in class
-        self.assertEqual(TestSensitive.test_method,
-            testSensitive.latestVersionOf(TestSensitive.test_method))
+        self.assertEqual(
+            TestSensitive.test_method,
+            testSensitive.latestVersionOf(TestSensitive.test_method),
+        )
         # Test types.MethodType on method in instance of class
-        self.assertEqual(testSensitive.test_method,
-            testSensitive.latestVersionOf(testSensitive.test_method))
+        self.assertEqual(
+            testSensitive.test_method,
+            testSensitive.latestVersionOf(testSensitive.test_method),
+        )
         # Test a class
-        self.assertEqual(TestSensitive,
-            testSensitive.latestVersionOf(TestSensitive))
+        self.assertEqual(TestSensitive, testSensitive.latestVersionOf(TestSensitive))
 
         class Foo:
             """
@@ -211,28 +231,24 @@ class RebuildTests(unittest.TestCase):
         self.assertEqual(myFunction, testSensitive.latestVersionOf(myFunction))
 
 
-
 class NewStyleTests(unittest.TestCase):
     """
     Tests for rebuilding new-style classes of various sorts.
     """
+
     def setUp(self):
         self.m = types.ModuleType('whipping')
         sys.modules['whipping'] = self.m
-
 
     def tearDown(self):
         del sys.modules['whipping']
         del self.m
 
-
     def test_slots(self):
         """
         Try to rebuild a new style class with slots defined.
         """
-        classDefinition = (
-            "class SlottedClass(object):\n"
-            "    __slots__ = ['a']\n")
+        classDefinition = "class SlottedClass(object):\n" "    __slots__ = ['a']\n"
 
         exec(classDefinition, self.m.__dict__)
         inst = self.m.SlottedClass()
@@ -242,14 +258,11 @@ class NewStyleTests(unittest.TestCase):
         self.assertEqual(inst.a, 7)
         self.assertIs(type(inst), self.m.SlottedClass)
 
-
     def test_typeSubclass(self):
         """
         Try to rebuild a base type subclass.
         """
-        classDefinition = (
-            "class ListSubclass(list):\n"
-            "    pass\n")
+        classDefinition = "class ListSubclass(list):\n" "    pass\n"
 
         exec(classDefinition, self.m.__dict__)
         inst = self.m.ListSubclass()
@@ -259,22 +272,17 @@ class NewStyleTests(unittest.TestCase):
         self.assertEqual(inst[0], 2)
         self.assertIs(type(inst), self.m.ListSubclass)
 
-
     def test_instanceSlots(self):
         """
         Test that when rebuilding an instance with a __slots__ attribute, it
         fails accurately instead of giving a L{rebuild.RebuildError}.
         """
-        classDefinition = (
-            "class NotSlottedClass(object):\n"
-            "    pass\n")
+        classDefinition = "class NotSlottedClass(object):\n" "    pass\n"
 
         exec(classDefinition, self.m.__dict__)
         inst = self.m.NotSlottedClass()
         inst.__slots__ = ['a']
-        classDefinition = (
-            "class NotSlottedClass:\n"
-            "    pass\n")
+        classDefinition = "class NotSlottedClass:\n" "    pass\n"
         exec(classDefinition, self.m.__dict__)
         # Moving from new-style class to old-style should fail.
         self.assertRaises(TypeError, rebuild.updateInstance, inst)

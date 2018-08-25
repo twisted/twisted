@@ -34,10 +34,10 @@ class IPv4Address(object):
     @ivar port: An integer representing the port number.
     @type port: C{int}
     """
+
     type = attr.ib(validator=attr.validators.in_(["TCP", "UDP"]))
     host = attr.ib()
     port = attr.ib()
-
 
 
 @implementer(IAddress)
@@ -64,6 +64,7 @@ class IPv6Address(object):
         interface traffic destined for this address must be transmitted over.
     @type scopeID: L{int} or L{str}
     """
+
     type = attr.ib(validator=attr.validators.in_(["TCP", "UDP"]))
     host = attr.ib()
     port = attr.ib()
@@ -71,13 +72,11 @@ class IPv6Address(object):
     scopeID = attr.ib(default=0)
 
 
-
 @implementer(IAddress)
 class _ProcessAddress(object):
     """
     An L{interfaces.IAddress} provider for process transports.
     """
-
 
 
 @attr.s(hash=True)
@@ -97,7 +96,6 @@ class HostnameAddress(object):
     port = attr.ib()
 
 
-
 @attr.s(hash=False, repr=False, cmp=False)
 @implementer(IAddress)
 class UNIXAddress(object):
@@ -111,6 +109,7 @@ class UNIXAddress(object):
     name = attr.ib(converter=attr.converters.optional(_asFilesystemBytes))
 
     if getattr(os.path, 'samefile', None) is not None:
+
         def __eq__(self, other):
             """
             Overriding C{attrs} to ensure the os level samefile
@@ -131,25 +130,24 @@ class UNIXAddress(object):
                     if not _PY3 and not platform.isLinux():
                         raise e
             return res
+
     else:
+
         def __eq__(self, other):
             if isinstance(other, self.__class__):
                 return self.name == other.name
             return False
-
 
     def __ne__(self, other):
         if isinstance(other, self.__class__):
             return not self.__eq__(other)
         return True
 
-
     def __repr__(self):
         name = self.name
         if name:
             name = _coerceToFilesystemEncoding('', self.name)
         return 'UNIXAddress(%r)' % (name,)
-
 
     def __hash__(self):
         if self.name is None:
@@ -161,17 +159,20 @@ class UNIXAddress(object):
             return hash(self.name)
 
 
-
 # These are for buildFactory backwards compatibility due to
 # stupidity-induced inconsistency.
+
 
 class _ServerFactoryIPv4Address(IPv4Address):
     """Backwards compatibility hack. Just like IPv4Address in practice."""
 
     def __eq__(self, other):
         if isinstance(other, tuple):
-            warnings.warn("IPv4Address.__getitem__ is deprecated.  Use attributes instead.",
-                          category=DeprecationWarning, stacklevel=2)
+            warnings.warn(
+                "IPv4Address.__getitem__ is deprecated.  Use attributes instead.",
+                category=DeprecationWarning,
+                stacklevel=2,
+            )
             return (self.host, self.port) == other
         elif isinstance(other, IPv4Address):
             a = (self.type, self.host, self.port)

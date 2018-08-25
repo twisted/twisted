@@ -24,11 +24,11 @@ from twisted import plugin
 if _PY3:
     from importlib import invalidate_caches as invalidateImportCaches
 else:
+
     def invalidateImportCaches():
         """
         On python 2, import caches don't need to be invalidated.
         """
-
 
 
 class ITestPlugin(Interface):
@@ -39,12 +39,10 @@ class ITestPlugin(Interface):
     """
 
 
-
 class ITestPlugin2(Interface):
     """
     See L{ITestPlugin}.
     """
-
 
 
 class PluginTests(unittest.TestCase):
@@ -66,15 +64,16 @@ class PluginTests(unittest.TestCase):
         self.package.createDirectory()
         self.package.child('__init__.py').setContent(b"")
 
-        FilePath(__file__).sibling('plugin_basic.py'
-            ).copyTo(self.package.child('testplugin.py'))
+        FilePath(__file__).sibling('plugin_basic.py').copyTo(
+            self.package.child('testplugin.py')
+        )
 
         self.originalPlugin = "testplugin"
 
         sys.path.insert(0, self.root.path)
         import mypackage
-        self.module = mypackage
 
+        self.module = mypackage
 
     def tearDown(self):
         """
@@ -83,7 +82,6 @@ class PluginTests(unittest.TestCase):
         sys.path[:] = self.originalPath
         sys.modules.clear()
         sys.modules.update(self.savedModules)
-
 
     def _unimportPythonModule(self, module, deleteSource=False):
         modulePath = module.__name__.split('.')
@@ -99,13 +97,11 @@ class PluginTests(unittest.TestCase):
                 if ose.errno != errno.ENOENT:
                     raise
 
-
     def _clearCache(self):
         """
         Remove the plugins B{droping.cache} file.
         """
         self.package.child('dropin.cache').remove()
-
 
     def _withCacheness(meth):
         """
@@ -114,6 +110,7 @@ class PluginTests(unittest.TestCase):
         plugin system behaves correctly no matter what the state of the cache
         is.
         """
+
         @functools.wraps(meth)
         def wrapped(self):
             meth(self)
@@ -123,7 +120,6 @@ class PluginTests(unittest.TestCase):
             meth(self)
 
         return wrapped
-
 
     def test_cache(self):
         """
@@ -135,8 +131,7 @@ class PluginTests(unittest.TestCase):
         cache = plugin.getCache(self.module)
 
         dropin = cache[self.originalPlugin]
-        self.assertEqual(dropin.moduleName,
-                          'mypackage.%s' % (self.originalPlugin,))
+        self.assertEqual(dropin.moduleName, 'mypackage.%s' % (self.originalPlugin,))
         self.assertIn("I'm a test drop-in.", dropin.description)
 
         # Note, not the preferred way to get a plugin by its interface.
@@ -147,21 +142,21 @@ class PluginTests(unittest.TestCase):
         # Check the content of the description comes from the plugin module
         # docstring
         self.assertEqual(
-            p1.description.strip(),
-            "A plugin used solely for testing purposes.")
+            p1.description.strip(), "A plugin used solely for testing purposes."
+        )
         self.assertEqual(p1.provided, [ITestPlugin, plugin.IPlugin])
         realPlugin = p1.load()
         # The plugin should match the class present in sys.modules
         self.assertIs(
-            realPlugin,
-            sys.modules['mypackage.%s' % (self.originalPlugin,)].TestPlugin)
+            realPlugin, sys.modules['mypackage.%s' % (self.originalPlugin,)].TestPlugin
+        )
 
         # And it should also match if we import it classicly
         import mypackage.testplugin as tp
+
         self.assertIs(realPlugin, tp.TestPlugin)
 
     test_cache = _withCacheness(test_cache)
-
 
     def test_cacheRepr(self):
         """
@@ -169,14 +164,14 @@ class PluginTests(unittest.TestCase):
         information about it.
         """
         cachedDropin = plugin.getCache(self.module)[self.originalPlugin]
-        cachedPlugin = list(p for p in cachedDropin.plugins
-                            if p.name == 'TestPlugin')[0]
+        cachedPlugin = list(p for p in cachedDropin.plugins if p.name == 'TestPlugin')[
+            0
+        ]
         self.assertEqual(
             repr(cachedPlugin),
             "<CachedPlugin 'TestPlugin'/'mypackage.testplugin' "
-            "(provides 'ITestPlugin, IPlugin')>"
+            "(provides 'ITestPlugin, IPlugin')>",
         )
-
 
     def test_plugins(self):
         """
@@ -196,19 +191,21 @@ class PluginTests(unittest.TestCase):
 
     test_plugins = _withCacheness(test_plugins)
 
-
     def test_detectNewFiles(self):
         """
         Check that L{plugin.getPlugins} is able to detect plugins added at
         runtime.
         """
-        FilePath(__file__).sibling('plugin_extra1.py'
-            ).copyTo(self.package.child('pluginextra.py'))
+        FilePath(__file__).sibling('plugin_extra1.py').copyTo(
+            self.package.child('pluginextra.py')
+        )
         try:
             # Check that the current situation is clean
             self.failIfIn('mypackage.pluginextra', sys.modules)
-            self.assertFalse(hasattr(sys.modules['mypackage'], 'pluginextra'),
-                        "mypackage still has pluginextra module")
+            self.assertFalse(
+                hasattr(sys.modules['mypackage'], 'pluginextra'),
+                "mypackage still has pluginextra module",
+            )
 
             plgs = list(plugin.getPlugins(ITestPlugin, self.module))
 
@@ -221,27 +218,26 @@ class PluginTests(unittest.TestCase):
                 names.remove(p.__name__)
                 p.test1()
         finally:
-            self._unimportPythonModule(
-                sys.modules['mypackage.pluginextra'],
-                True)
+            self._unimportPythonModule(sys.modules['mypackage.pluginextra'], True)
 
     test_detectNewFiles = _withCacheness(test_detectNewFiles)
-
 
     def test_detectFilesChanged(self):
         """
         Check that if the content of a plugin change, L{plugin.getPlugins} is
         able to detect the new plugins added.
         """
-        FilePath(__file__).sibling('plugin_extra1.py'
-            ).copyTo(self.package.child('pluginextra.py'))
+        FilePath(__file__).sibling('plugin_extra1.py').copyTo(
+            self.package.child('pluginextra.py')
+        )
         try:
             plgs = list(plugin.getPlugins(ITestPlugin, self.module))
             # Sanity check
             self.assertEqual(len(plgs), 2)
 
-            FilePath(__file__).sibling('plugin_extra2.py'
-                ).copyTo(self.package.child('pluginextra.py'))
+            FilePath(__file__).sibling('plugin_extra2.py').copyTo(
+                self.package.child('pluginextra.py')
+            )
 
             # Fake out Python.
             self._unimportPythonModule(sys.modules['mypackage.pluginextra'])
@@ -256,33 +252,28 @@ class PluginTests(unittest.TestCase):
                 names.remove(p.__name__)
                 p.test1()
         finally:
-            self._unimportPythonModule(
-                sys.modules['mypackage.pluginextra'],
-                True)
+            self._unimportPythonModule(sys.modules['mypackage.pluginextra'], True)
 
     test_detectFilesChanged = _withCacheness(test_detectFilesChanged)
-
 
     def test_detectFilesRemoved(self):
         """
         Check that when a dropin file is removed, L{plugin.getPlugins} doesn't
         return it anymore.
         """
-        FilePath(__file__).sibling('plugin_extra1.py'
-            ).copyTo(self.package.child('pluginextra.py'))
+        FilePath(__file__).sibling('plugin_extra1.py').copyTo(
+            self.package.child('pluginextra.py')
+        )
         try:
             # Generate a cache with pluginextra in it.
             list(plugin.getPlugins(ITestPlugin, self.module))
 
         finally:
-            self._unimportPythonModule(
-                sys.modules['mypackage.pluginextra'],
-                True)
+            self._unimportPythonModule(sys.modules['mypackage.pluginextra'], True)
         plgs = list(plugin.getPlugins(ITestPlugin, self.module))
         self.assertEqual(1, len(plgs))
 
     test_detectFilesRemoved = _withCacheness(test_detectFilesRemoved)
-
 
     def test_nonexistentPathEntry(self):
         """
@@ -300,7 +291,6 @@ class PluginTests(unittest.TestCase):
             self.module.__path__.remove(path)
 
     test_nonexistentPathEntry = _withCacheness(test_nonexistentPathEntry)
-
 
     def test_nonDirectoryChildEntry(self):
         """
@@ -320,7 +310,6 @@ class PluginTests(unittest.TestCase):
 
     test_nonDirectoryChildEntry = _withCacheness(test_nonDirectoryChildEntry)
 
-
     def test_deployedMode(self):
         """
         The C{dropin.cache} file may not be writable: the cache should still be
@@ -333,8 +322,9 @@ class PluginTests(unittest.TestCase):
         cachepath = self.package.child('dropin.cache')
 
         # Add a new plugin
-        FilePath(__file__).sibling('plugin_extra1.py'
-            ).copyTo(self.package.child('pluginextra.py'))
+        FilePath(__file__).sibling('plugin_extra1.py').copyTo(
+            self.package.child('pluginextra.py')
+        )
         invalidateImportCaches()
 
         os.chmod(self.package.path, 0o500)
@@ -355,15 +345,17 @@ class PluginTests(unittest.TestCase):
 
         # Make sure something was logged about the cache.
         expected = "Unable to write to plugin cache %s: error number %d" % (
-            cachepath.path, errno.EPERM)
+            cachepath.path,
+            errno.EPERM,
+        )
         for event in events:
             if expected in textFromEventDict(event):
                 break
         else:
             self.fail(
                 "Did not observe unwriteable cache warning in log "
-                "events: %r" % (events,))
-
+                "events: %r" % (events,)
+            )
 
 
 # This is something like the Twisted plugins file.
@@ -373,16 +365,21 @@ __path__.extend(pluginPackagePaths(__name__))
 __all__ = []
 """
 
+
 def pluginFileContents(name):
     return (
-        "from zope.interface import provider\n"
-        "from twisted.plugin import IPlugin\n"
-        "from twisted.test.test_plugin import ITestPlugin\n"
-        "\n"
-        "@provider(IPlugin, ITestPlugin)\n"
-        "class {0}(object):\n"
-        "    pass\n"
-    ).format(name).encode('ascii')
+        (
+            "from zope.interface import provider\n"
+            "from twisted.plugin import IPlugin\n"
+            "from twisted.test.test_plugin import ITestPlugin\n"
+            "\n"
+            "@provider(IPlugin, ITestPlugin)\n"
+            "class {0}(object):\n"
+            "    pass\n"
+        )
+        .format(name)
+        .encode('ascii')
+    )
 
 
 def _createPluginDummy(entrypath, pluginContent, real, pluginModule):
@@ -400,7 +397,6 @@ def _createPluginDummy(entrypath, pluginContent, real, pluginModule):
         plugs.child('__init__.py').setContent(pluginInitFile)
     plugs.child(pluginModule + '.py').setContent(pluginContent)
     return plugs
-
 
 
 class DeveloperSetupTests(unittest.TestCase):
@@ -425,18 +421,17 @@ class DeveloperSetupTests(unittest.TestCase):
         self.devPath = self.fakeRoot.child('development_path')
         self.appPath = self.fakeRoot.child('application_path')
         self.systemPackage = _createPluginDummy(
-            self.systemPath, pluginFileContents('system'),
-            True, 'plugindummy_builtin')
+            self.systemPath, pluginFileContents('system'), True, 'plugindummy_builtin'
+        )
         self.devPackage = _createPluginDummy(
-            self.devPath, pluginFileContents('dev'),
-            True, 'plugindummy_builtin')
+            self.devPath, pluginFileContents('dev'), True, 'plugindummy_builtin'
+        )
         self.appPackage = _createPluginDummy(
-            self.appPath, pluginFileContents('app'),
-            False, 'plugindummy_app')
+            self.appPath, pluginFileContents('app'), False, 'plugindummy_app'
+        )
 
         # Now we're going to do the system installation.
-        sys.path.extend([x.path for x in [self.systemPath,
-                                          self.appPath]])
+        sys.path.extend([x.path for x in [self.systemPath, self.appPath]])
         # Run all the way through the plugins list to cause the
         # L{plugin.getPlugins} generator to write cache files for the system
         # installation.
@@ -446,15 +441,12 @@ class DeveloperSetupTests(unittest.TestCase):
         # Make sure there's a nice big difference in modification times so that
         # we won't re-build the system cache.
         now = time.time()
-        os.utime(
-            self.sysplug.child('plugindummy_builtin.py').path,
-            (now - 5000,) * 2)
+        os.utime(self.sysplug.child('plugindummy_builtin.py').path, (now - 5000,) * 2)
         os.utime(self.syscache.path, (now - 2000,) * 2)
         # For extra realism, let's make sure that the system path is no longer
         # writable.
         self.lockSystem()
         self.resetEnvironment()
-
 
     def lockSystem(self):
         """
@@ -463,14 +455,12 @@ class DeveloperSetupTests(unittest.TestCase):
         os.chmod(self.sysplug.path, 0o555)
         os.chmod(self.syscache.path, 0o555)
 
-
     def unlockSystem(self):
         """
         Unlock the system directories, as if they were writable by this user.
         """
         os.chmod(self.sysplug.path, 0o777)
         os.chmod(self.syscache.path, 0o777)
-
 
     def getAllPlugins(self):
         """
@@ -480,9 +470,9 @@ class DeveloperSetupTests(unittest.TestCase):
         # Import the module we just added to our path.  (Local scope because
         # this package doesn't exist outside of this test.)
         import plugindummy.plugins
+
         x = list(plugin.getPlugins(ITestPlugin, plugindummy.plugins))
         return [plug.__name__ for plug in x]
-
 
     def resetEnvironment(self):
         """
@@ -490,9 +480,7 @@ class DeveloperSetupTests(unittest.TestCase):
         starting.
         """
         self.unsetEnvironment()
-        sys.path.extend([x.path for x in [self.devPath,
-                                          self.systemPath,
-                                          self.appPath]])
+        sys.path.extend([x.path for x in [self.devPath, self.systemPath, self.appPath]])
 
     def unsetEnvironment(self):
         """
@@ -503,7 +491,6 @@ class DeveloperSetupTests(unittest.TestCase):
         sys.modules.clear()
         sys.modules.update(self.savedModules)
         sys.path[:] = self.savedPath
-
 
     def tearDown(self):
         """
@@ -518,7 +505,6 @@ class DeveloperSetupTests(unittest.TestCase):
         # couldn't delete, and that would be bad.
         self.unlockSystem()
 
-
     def test_developmentPluginAvailability(self):
         """
         Plugins added in the development path should be loadable, even when
@@ -532,7 +518,6 @@ class DeveloperSetupTests(unittest.TestCase):
             names = self.getAllPlugins()
             names.sort()
             self.assertEqual(names, ['app', 'dev'])
-
 
     def test_freshPyReplacesStalePyc(self):
         """
@@ -572,8 +557,8 @@ class DeveloperSetupTests(unittest.TestCase):
 
     if _PYPY and not _PY3:
         test_freshPyReplacesStalePyc.skip = (
-            "PyPy2 will not normally import lone .pyc files.")
-
+            "PyPy2 will not normally import lone .pyc files."
+        )
 
     def test_newPluginsOnReadOnlyPath(self):
         """
@@ -601,15 +586,17 @@ class DeveloperSetupTests(unittest.TestCase):
 
         # Make sure something was logged about the cache.
         expected = "Unable to write to plugin cache %s: error number %d" % (
-            self.syscache.path, errno.EPERM)
+            self.syscache.path,
+            errno.EPERM,
+        )
         for event in events:
             if expected in textFromEventDict(event):
                 break
         else:
             self.fail(
                 "Did not observe unwriteable cache warning in log "
-                "events: %r" % (events,))
-
+                "events: %r" % (events,)
+            )
 
 
 class AdjacentPackageTests(unittest.TestCase):
@@ -625,7 +612,6 @@ class AdjacentPackageTests(unittest.TestCase):
         self.originalPath = sys.path[:]
         self.savedModules = sys.modules.copy()
 
-
     def tearDown(self):
         """
         Restore C{sys.path} and C{sys.modules} to their original values.
@@ -633,7 +619,6 @@ class AdjacentPackageTests(unittest.TestCase):
         sys.path[:] = self.originalPath
         sys.modules.clear()
         sys.modules.update(self.savedModules)
-
 
     def createDummyPackage(self, root, name, pluginName):
         """
@@ -666,7 +651,6 @@ class AdjacentPackageTests(unittest.TestCase):
         pluginModule.setContent(pluginFileContents(name))
         return directory
 
-
     def test_hiddenPackageSamePluginModuleNameObscured(self):
         """
         Only plugins from the first package in sys.path should be returned by
@@ -686,7 +670,6 @@ class AdjacentPackageTests(unittest.TestCase):
 
         plugins = list(plugin.getPlugins(ITestPlugin, dummy.plugins))
         self.assertEqual(['first'], [p.__name__ for p in plugins])
-
 
     def test_hiddenPackageDifferentPluginModuleNameObscured(self):
         """
@@ -709,7 +692,6 @@ class AdjacentPackageTests(unittest.TestCase):
         self.assertEqual(['first'], [p.__name__ for p in plugins])
 
 
-
 class PackagePathTests(unittest.TestCase):
     """
     Tests for L{plugin.pluginPackagePaths} which constructs search paths for
@@ -722,13 +704,11 @@ class PackagePathTests(unittest.TestCase):
         """
         self.originalPath = sys.path[:]
 
-
     def tearDown(self):
         """
         Restore C{sys.path} to its original value.
         """
         sys.path[:] = self.originalPath
-
 
     def test_pluginDirectories(self):
         """
@@ -741,9 +721,11 @@ class PackagePathTests(unittest.TestCase):
         sys.path = [foo.path, bar.path]
         self.assertEqual(
             plugin.pluginPackagePaths('dummy.plugins'),
-            [foo.child('dummy').child('plugins').path,
-             bar.child('dummy').child('plugins').path])
-
+            [
+                foo.child('dummy').child('plugins').path,
+                bar.child('dummy').child('plugins').path,
+            ],
+        )
 
     def test_pluginPackagesExcluded(self):
         """
@@ -761,4 +743,5 @@ class PackagePathTests(unittest.TestCase):
         sys.path = [root.child('foo').path, root.child('bar').path]
         self.assertEqual(
             plugin.pluginPackagePaths('dummy.plugins'),
-            [root.child('bar').child('dummy').child('plugins').path])
+            [root.child('bar').child('dummy').child('plugins').path],
+        )

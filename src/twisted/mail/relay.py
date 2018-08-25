@@ -18,7 +18,6 @@ except ImportError:
     import pickle
 
 
-
 class DomainQueuer:
     """
     An SMTP domain which add messages to a queue intended for relaying.
@@ -27,7 +26,6 @@ class DomainQueuer:
     def __init__(self, service, authenticated=False):
         self.service = service
         self.authed = authenticated
-
 
     def exists(self, user):
         """
@@ -51,7 +49,6 @@ class DomainQueuer:
                 return lambda: self.startMessage(user)
         raise smtp.SMTPBadRcpt(user)
 
-
     def willRelay(self, address, protocol):
         """
         Check whether we agree to relay.
@@ -60,9 +57,7 @@ class DomainQueuer:
         sockets and all connections from localhost.
         """
         peer = protocol.transport.getPeer()
-        return (self.authed or isinstance(peer, UNIXAddress) or
-            peer.host == '127.0.0.1')
-
+        return self.authed or isinstance(peer, UNIXAddress) or peer.host == '127.0.0.1'
 
     def startMessage(self, user):
         """
@@ -77,11 +72,9 @@ class DomainQueuer:
         queue = self.service.queue
         envelopeFile, smtpMessage = queue.createNewMessage()
         with envelopeFile:
-            log.msg('Queueing mail %r -> %r' % (str(user.orig),
-                str(user.dest)))
+            log.msg('Queueing mail %r -> %r' % (str(user.orig), str(user.dest)))
             pickle.dump([str(user.orig), str(user.dest)], envelopeFile)
         return smtpMessage
-
 
 
 class RelayerMixin:
@@ -101,24 +94,20 @@ class RelayerMixin:
             self.messages.append(messageContents)
             self.names.append(message)
 
-
     def getMailFrom(self):
         if not self.messages:
             return None
         return self.messages[0][0]
-
 
     def getMailTo(self):
         if not self.messages:
             return None
         return [self.messages[0][1]]
 
-
     def getMailData(self):
         if not self.messages:
             return None
         return self.messages[0][2]
-
 
     def sentMail(self, code, resp, numOk, addresses, log):
         """Since we only use one recipient per envelope, this
@@ -133,11 +122,11 @@ class RelayerMixin:
         del self.names[0]
 
 
-
 class SMTPRelayer(RelayerMixin, smtp.SMTPClient):
     """
     A base class for SMTP relayers.
     """
+
     def __init__(self, messagePaths, *args, **kw):
         """
         @type messagePaths: L{list} of L{bytes}
@@ -154,11 +143,11 @@ class SMTPRelayer(RelayerMixin, smtp.SMTPClient):
         self.loadMessages(messagePaths)
 
 
-
 class ESMTPRelayer(RelayerMixin, smtp.ESMTPClient):
     """
     A base class for ESMTP relayers.
     """
+
     def __init__(self, messagePaths, *args, **kw):
         """
         @type messagePaths: L{list} of L{bytes}

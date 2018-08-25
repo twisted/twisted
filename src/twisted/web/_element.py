@@ -23,9 +23,9 @@ class Expose(object):
     @ivar attributeName: The attribute with which exposed methods will be
     tracked.
     """
+
     def __init__(self, doc=None):
         self.doc = doc
-
 
     def __call__(self, *funcObjs):
         """
@@ -62,8 +62,8 @@ class Expose(object):
             fObj.exposedThrough.append(self)
         return funcObjs[0]
 
-
     _nodefault = object()
+
     def get(self, instance, methodName, default=_nodefault):
         """
         Retrieve an exposed method with the given name from the given instance.
@@ -82,7 +82,6 @@ class Expose(object):
             return default
         return method
 
-
     @classmethod
     def _withDocumentation(cls, thunk):
         """
@@ -97,6 +96,7 @@ class Expose(object):
 # Avoid exposing the ugly, private classmethod name in the docs.  Luckily this
 # namespace is private already so this doesn't leak further.
 exposer = Expose._withDocumentation
+
 
 @exposer
 def renderer():
@@ -120,7 +120,6 @@ def renderer():
             <span>Hello, world.</span>
         </div>
     """
-
 
 
 @implementer(IRenderable)
@@ -151,12 +150,12 @@ class Element(object):
     @ivar loader: The factory which will be used to load documents to
         return from C{render}.
     """
+
     loader = None
 
     def __init__(self, loader=None):
         if loader is not None:
             self.loader = loader
-
 
     def lookupRenderMethod(self, name):
         """
@@ -166,7 +165,6 @@ class Element(object):
         if method is None:
             raise MissingRenderMethod(self, name)
         return method
-
 
     def render(self, request):
         """

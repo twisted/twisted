@@ -11,12 +11,13 @@ from zope.interface import implementer
 from twisted.internet import address
 
 from ._exceptions import (
-    convertError, InvalidProxyHeader, InvalidNetworkProtocol,
-    MissingAddressData
+    convertError,
+    InvalidProxyHeader,
+    InvalidNetworkProtocol,
+    MissingAddressData,
 )
 from . import _info
 from . import _interfaces
-
 
 
 @implementer(_interfaces.IProxyParser)
@@ -33,16 +34,11 @@ class V1Parser(object):
     UNKNOWN_PROTO = b'UNKNOWN'
     TCP4_PROTO = b'TCP4'
     TCP6_PROTO = b'TCP6'
-    ALLOWED_NET_PROTOS = (
-        TCP4_PROTO,
-        TCP6_PROTO,
-        UNKNOWN_PROTO,
-    )
+    ALLOWED_NET_PROTOS = (TCP4_PROTO, TCP6_PROTO, UNKNOWN_PROTO)
     NEWLINE = b'\r\n'
 
     def __init__(self):
         self.buffer = b''
-
 
     def feed(self, data):
         """
@@ -70,7 +66,6 @@ class V1Parser(object):
         header = lines.pop()
         info = self.parse(header)
         return (info, remaining)
-
 
     @classmethod
     def parse(cls, line):

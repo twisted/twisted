@@ -21,8 +21,7 @@ from twisted.python._setup import (
     getSetupArgs,
     ConditionalExtension,
     _EXTRAS_REQUIRE,
-    )
-
+)
 
 
 class SetupTests(TestCase):
@@ -35,10 +34,12 @@ class SetupTests(TestCase):
         Will return the arguments with a custom build_ext which knows how to
         check whether they should be built.
         """
-        good_ext = ConditionalExtension("whatever", ["whatever.c"],
-                                        condition=lambda b: True)
-        bad_ext = ConditionalExtension("whatever", ["whatever.c"],
-                                        condition=lambda b: False)
+        good_ext = ConditionalExtension(
+            "whatever", ["whatever.c"], condition=lambda b: True
+        )
+        bad_ext = ConditionalExtension(
+            "whatever", ["whatever.c"], condition=lambda b: False
+        )
 
         args = getSetupArgs(extensions=[good_ext, bad_ext])
 
@@ -51,14 +52,14 @@ class SetupTests(TestCase):
         builder.prepare_extensions()
         self.assertEqual(builder.extensions, [good_ext])
 
-
     def test_win32Definition(self):
         """
         When building on Windows NT, the WIN32 macro will be defined as 1 on
         the extensions.
         """
-        ext = ConditionalExtension("whatever", ["whatever.c"],
-                                   define_macros=[("whatever", 2)])
+        ext = ConditionalExtension(
+            "whatever", ["whatever.c"], define_macros=[("whatever", 2)]
+        )
 
         args = getSetupArgs(extensions=[ext])
 
@@ -66,7 +67,6 @@ class SetupTests(TestCase):
         self.patch(os, "name", "nt")
         builder.prepare_extensions()
         self.assertEqual(ext.define_macros, [("whatever", 2), ("WIN32", 1)])
-
 
 
 class OptionalDependenciesTests(TestCase):
@@ -103,10 +103,8 @@ class OptionalDependenciesTests(TestCase):
             return parsedExtras
 
         self.assertEqual(
-            canonicalizeExtras(extras),
-            canonicalizeExtras(distribution.extras_require)
+            canonicalizeExtras(extras), canonicalizeExtras(distribution.extras_require)
         )
-
 
     def test_extrasRequireDictContainsKeys(self):
         """
@@ -125,7 +123,6 @@ class OptionalDependenciesTests(TestCase):
         self.assertIn('windows_platform', _EXTRAS_REQUIRE)
         self.assertIn('http2', _EXTRAS_REQUIRE)
 
-
     def test_extrasRequiresDevDeps(self):
         """
         L{_EXTRAS_REQUIRE}'s C{dev} extra contains setuptools requirements for
@@ -140,7 +137,6 @@ class OptionalDependenciesTests(TestCase):
             self.assertIn('twistedchecker >= 0.4.0', deps)
             self.assertIn('pydoctor >= 16.2.0', deps)
 
-
     def test_extrasRequiresTlsDeps(self):
         """
         L{_EXTRAS_REQUIRE}'s C{tls} extra contains setuptools requirements for
@@ -151,7 +147,6 @@ class OptionalDependenciesTests(TestCase):
         self.assertIn('pyopenssl >= 16.0.0', deps)
         self.assertIn('service_identity', deps)
         self.assertIn('idna >= 0.6, != 2.3', deps)
-
 
     def test_extrasRequiresConchDeps(self):
         """
@@ -164,28 +159,19 @@ class OptionalDependenciesTests(TestCase):
         self.assertIn('cryptography >= 1.5', deps)
         self.assertIn('appdirs >= 1.4.0', deps)
 
-
     def test_extrasRequiresSoapDeps(self):
         """
         L{_EXTRAS_REQUIRE}' C{soap} extra contains setuptools requirements for
         the packages required to make the C{twisted.web.soap} module function.
         """
-        self.assertIn(
-            'soappy',
-            _EXTRAS_REQUIRE['soap']
-        )
-
+        self.assertIn('soappy', _EXTRAS_REQUIRE['soap'])
 
     def test_extrasRequiresSerialDeps(self):
         """
         L{_EXTRAS_REQUIRE}'s C{serial} extra contains setuptools requirements
         for the packages required to make Twisted's serial support work.
         """
-        self.assertIn(
-            'pyserial >= 3.0',
-            _EXTRAS_REQUIRE['serial']
-        )
-
+        self.assertIn('pyserial >= 3.0', _EXTRAS_REQUIRE['serial'])
 
     def test_extrasRequiresHttp2Deps(self):
         """
@@ -195,7 +181,6 @@ class OptionalDependenciesTests(TestCase):
         deps = _EXTRAS_REQUIRE['http2']
         self.assertIn('h2 >= 3.0, < 4.0', deps)
         self.assertIn('priority >= 1.1.0, < 2.0', deps)
-
 
     def test_extrasRequiresAllNonPlatformDeps(self):
         """
@@ -215,7 +200,6 @@ class OptionalDependenciesTests(TestCase):
         self.assertIn('h2 >= 3.0, < 4.0', deps)
         self.assertIn('priority >= 1.1.0, < 2.0', deps)
 
-
     def test_extrasRequiresMacosPlatformDeps(self):
         """
         L{_EXTRAS_REQUIRE}'s C{macos_platform} extra contains setuptools
@@ -234,14 +218,13 @@ class OptionalDependenciesTests(TestCase):
         self.assertIn('priority >= 1.1.0, < 2.0', deps)
         self.assertIn('pyobjc-core', deps)
 
-
     def test_extrasRequireMacOSXPlatformDeps(self):
         """
         L{_EXTRAS_REQUIRE}'s C{osx_platform} is an alias to C{macos_platform}.
         """
-        self.assertEqual(_EXTRAS_REQUIRE['macos_platform'],
-                         _EXTRAS_REQUIRE['osx_platform'])
-
+        self.assertEqual(
+            _EXTRAS_REQUIRE['macos_platform'], _EXTRAS_REQUIRE['osx_platform']
+        )
 
     def test_extrasRequiresWindowsPlatformDeps(self):
         """
@@ -262,11 +245,11 @@ class OptionalDependenciesTests(TestCase):
         self.assertIn('pywin32', deps)
 
 
-
 class FakeModule(object):
     """
     A fake module, suitable for dependency injection in testing.
     """
+
     def __init__(self, attrs):
         """
         Initializes a fake module.
@@ -275,7 +258,6 @@ class FakeModule(object):
         @type attrs: C{dict} of C{str} (Python names) to objects
         """
         self._attrs = attrs
-
 
     def __getattr__(self, name):
         """
@@ -289,23 +271,21 @@ class FakeModule(object):
             raise AttributeError()
 
 
-
 fakeCPythonPlatform = FakeModule({"python_implementation": lambda: "CPython"})
 fakeOtherPlatform = FakeModule({"python_implementation": lambda: "lvhpy"})
-
 
 
 class WithPlatformTests(TestCase):
     """
     Tests for L{_checkCPython} when used with a (fake) C{platform} module.
     """
+
     def test_cpython(self):
         """
         L{_checkCPython} returns C{True} when C{platform.python_implementation}
         says we're running on CPython.
         """
         self.assertTrue(_setup._checkCPython(platform=fakeCPythonPlatform))
-
 
     def test_other(self):
         """
@@ -315,11 +295,11 @@ class WithPlatformTests(TestCase):
         self.assertFalse(_setup._checkCPython(platform=fakeOtherPlatform))
 
 
-
 class BuildPy3Tests(TestCase):
     """
     Tests for L{BuildPy3}.
     """
+
     maxDiff = None
 
     if not _PY3:
@@ -338,28 +318,36 @@ class BuildPy3Tests(TestCase):
         # Rig the dist3 data so that we can reduce the scope of this test and
         # reduce the risk of getting false failures, while doing a minimum
         # level of patching.
-        self.patch(
-            _setup,
-            'notPortedModules',
-            [
-                "twisted.spread.test.test_pbfailure",
-            ],
-            )
+        self.patch(_setup, 'notPortedModules', ["twisted.spread.test.test_pbfailure"])
         twistedPackageDir = filepath.FilePath(twisted.__file__).parent()
         packageDir = twistedPackageDir.child("spread").child("test")
 
-        result = builder.find_package_modules('twisted.spread.test',
-                                              packageDir.path)
+        result = builder.find_package_modules('twisted.spread.test', packageDir.path)
 
-        self.assertEqual(sorted([
-            ('twisted.spread.test', '__init__',
-                packageDir.child('__init__.py').path),
-            ('twisted.spread.test', 'test_banana',
-                packageDir.child('test_banana.py').path),
-            ('twisted.spread.test', 'test_jelly',
-                packageDir.child('test_jelly.py').path),
-            ('twisted.spread.test', 'test_pb',
-                packageDir.child('test_pb.py').path),
-            ]),
+        self.assertEqual(
+            sorted(
+                [
+                    (
+                        'twisted.spread.test',
+                        '__init__',
+                        packageDir.child('__init__.py').path,
+                    ),
+                    (
+                        'twisted.spread.test',
+                        'test_banana',
+                        packageDir.child('test_banana.py').path,
+                    ),
+                    (
+                        'twisted.spread.test',
+                        'test_jelly',
+                        packageDir.child('test_jelly.py').path,
+                    ),
+                    (
+                        'twisted.spread.test',
+                        'test_pb',
+                        packageDir.child('test_pb.py').path,
+                    ),
+                ]
+            ),
             sorted(result),
         )

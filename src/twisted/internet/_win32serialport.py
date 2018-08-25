@@ -30,13 +30,28 @@ class SerialPort(BaseSerialPort, abstract.FileDescriptor):
 
     connected = 1
 
-    def __init__(self, protocol, deviceNameOrPortNumber, reactor, 
-        baudrate = 9600, bytesize = EIGHTBITS, parity = PARITY_NONE,
-        stopbits = STOPBITS_ONE, xonxoff = 0, rtscts = 0):
+    def __init__(
+        self,
+        protocol,
+        deviceNameOrPortNumber,
+        reactor,
+        baudrate=9600,
+        bytesize=EIGHTBITS,
+        parity=PARITY_NONE,
+        stopbits=STOPBITS_ONE,
+        xonxoff=0,
+        rtscts=0,
+    ):
         self._serial = self._serialFactory(
-            deviceNameOrPortNumber, baudrate=baudrate, bytesize=bytesize,
-            parity=parity, stopbits=stopbits, timeout=None,
-            xonxoff=xonxoff, rtscts=rtscts)
+            deviceNameOrPortNumber,
+            baudrate=baudrate,
+            bytesize=bytesize,
+            parity=parity,
+            stopbits=stopbits,
+            timeout=None,
+            xonxoff=xonxoff,
+            rtscts=rtscts,
+        )
         self.flushInput()
         self.flushOutput()
         self.reactor = reactor
@@ -58,7 +73,6 @@ class SerialPort(BaseSerialPort, abstract.FileDescriptor):
         self.protocol.makeConnection(self)
         self._finishPortSetup()
 
-
     def _finishPortSetup(self):
         """
         Finish setting up the serial port.
@@ -66,39 +80,46 @@ class SerialPort(BaseSerialPort, abstract.FileDescriptor):
         This is a separate method to facilitate testing.
         """
         flags, comstat = self._clearCommError()
-        rc, self.read_buf = win32file.ReadFile(self._serial._port_handle,
-                                               win32file.AllocateReadBuffer(1),
-                                               self._overlappedRead)
-
+        rc, self.read_buf = win32file.ReadFile(
+            self._serial._port_handle,
+            win32file.AllocateReadBuffer(1),
+            self._overlappedRead,
+        )
 
     def _clearCommError(self):
         return win32file.ClearCommError(self._serial._port_handle)
 
-
     def serialReadEvent(self):
-        #get that character we set up
-        n = win32file.GetOverlappedResult(self._serial._port_handle, self._overlappedRead, 0)
+        # get that character we set up
+        n = win32file.GetOverlappedResult(
+            self._serial._port_handle, self._overlappedRead, 0
+        )
         first = to_bytes(self.read_buf[:n])
-        #now we should get everything that is already in the buffer
+        # now we should get everything that is already in the buffer
         flags, comstat = self._clearCommError()
         if comstat.cbInQue:
             win32event.ResetEvent(self._overlappedRead.hEvent)
-            rc, buf = win32file.ReadFile(self._serial._port_handle,
-                                         win32file.AllocateReadBuffer(comstat.cbInQue),
-                                         self._overlappedRead)
-            n = win32file.GetOverlappedResult(self._serial._port_handle, self._overlappedRead, 1)
-            #handle all the received data:
+            rc, buf = win32file.ReadFile(
+                self._serial._port_handle,
+                win32file.AllocateReadBuffer(comstat.cbInQue),
+                self._overlappedRead,
+            )
+            n = win32file.GetOverlappedResult(
+                self._serial._port_handle, self._overlappedRead, 1
+            )
+            # handle all the received data:
             self.protocol.dataReceived(first + to_bytes(buf[:n]))
         else:
-            #handle all the received data:
+            # handle all the received data:
             self.protocol.dataReceived(first)
 
-        #set up next one
+        # set up next one
         win32event.ResetEvent(self._overlappedRead.hEvent)
-        rc, self.read_buf = win32file.ReadFile(self._serial._port_handle,
-                                               win32file.AllocateReadBuffer(1),
-                                               self._overlappedRead)
-
+        rc, self.read_buf = win32file.ReadFile(
+            self._serial._port_handle,
+            win32file.AllocateReadBuffer(1),
+            self._overlappedRead,
+        )
 
     def write(self, data):
         if data:
@@ -106,8 +127,9 @@ class SerialPort(BaseSerialPort, abstract.FileDescriptor):
                 self.outQueue.append(data)
             else:
                 self.writeInProgress = 1
-                win32file.WriteFile(self._serial._port_handle, data, self._overlappedWrite)
-
+                win32file.WriteFile(
+                    self._serial._port_handle, data, self._overlappedWrite
+                )
 
     def serialWriteEvent(self):
         try:
@@ -116,8 +138,9 @@ class SerialPort(BaseSerialPort, abstract.FileDescriptor):
             self.writeInProgress = 0
             return
         else:
-            win32file.WriteFile(self._serial._port_handle, dataToWrite, self._overlappedWrite)
-
+            win32file.WriteFile(
+                self._serial._port_handle, dataToWrite, self._overlappedWrite
+            )
 
     def connectionLost(self, reason):
         """

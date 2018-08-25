@@ -24,8 +24,10 @@ from twisted.python import log, failure
 from twisted.logger.test.test_stdlib import handlerAndBytesIO
 from twisted.python.log import LogPublisher
 from twisted.logger import (
-    LoggingFile, LogLevel as NewLogLevel, LogBeginner,
-    LogPublisher as NewLogPublisher
+    LoggingFile,
+    LogLevel as NewLogLevel,
+    LogBeginner,
+    LogPublisher as NewLogPublisher,
 )
 
 
@@ -34,7 +36,6 @@ class FakeWarning(Warning):
     A unique L{Warning} subclass used by tests for interactions of
     L{twisted.python.log} with the L{warnings} module.
     """
-
 
 
 class TextFromEventDictTests(unittest.SynchronousTestCase):
@@ -51,19 +52,13 @@ class TextFromEventDictTests(unittest.SynchronousTestCase):
         text = log.textFromEventDict(eventDict)
         self.assertEqual(text, "a b c")
 
-
-
     def test_format(self):
         """
         The C{"format"} value, when specified, is used to format the message.
         """
-        eventDict = dict(
-            message=(), isError=0, format="Hello, %(foo)s!", foo="dude"
-        )
+        eventDict = dict(message=(), isError=0, format="Hello, %(foo)s!", foo="dude")
         text = log.textFromEventDict(eventDict)
         self.assertEqual(text, "Hello, dude!")
-
-
 
     def test_noMessageNoFormat(self):
         """
@@ -73,8 +68,6 @@ class TextFromEventDictTests(unittest.SynchronousTestCase):
         eventDict = dict(message=(), isError=0)
         text = log.textFromEventDict(eventDict)
         self.assertIsNone(text)
-
-
 
     def test_whySpecified(self):
         """
@@ -89,7 +82,6 @@ class TextFromEventDictTests(unittest.SynchronousTestCase):
             text = log.textFromEventDict(eventDict)
             self.assertTrue(text.startswith("foo\n"))
 
-
     def test_whyDefault(self):
         """
         The C{"why"} value, when unspecified, defaults to C{"Unhandled Error"}.
@@ -100,7 +92,6 @@ class TextFromEventDictTests(unittest.SynchronousTestCase):
             eventDict = dict(message=(), isError=1, failure=failure.Failure())
             text = log.textFromEventDict(eventDict)
             self.assertTrue(text.startswith("Unhandled Error\n"))
-
 
     def test_noTracebackForYou(self):
         """
@@ -113,15 +104,12 @@ class TextFromEventDictTests(unittest.SynchronousTestCase):
         self.assertIn("\n(unable to obtain traceback)", text)
 
 
-
 class LogTests(unittest.SynchronousTestCase):
-
     def setUp(self):
         self.catcher = []
         self.observer = self.catcher.append
         log.addObserver(self.observer)
         self.addCleanup(log.removeObserver, self.observer)
-
 
     def testObservation(self):
         catcher = self.catcher
@@ -132,41 +120,44 @@ class LogTests(unittest.SynchronousTestCase):
         self.assertIn("time", i)
         self.assertEqual(len(catcher), 0)
 
-
     def testContext(self):
         catcher = self.catcher
-        log.callWithContext({"subsystem": "not the default",
-                             "subsubsystem": "a",
-                             "other": "c"},
-                            log.callWithContext,
-                            {"subsubsystem": "b"}, log.msg, "foo", other="d")
+        log.callWithContext(
+            {"subsystem": "not the default", "subsubsystem": "a", "other": "c"},
+            log.callWithContext,
+            {"subsubsystem": "b"},
+            log.msg,
+            "foo",
+            other="d",
+        )
         i = catcher.pop()
         self.assertEqual(i['subsubsystem'], 'b')
         self.assertEqual(i['subsystem'], 'not the default')
         self.assertEqual(i['other'], 'd')
         self.assertEqual(i['message'][0], 'foo')
 
-
     def testErrors(self):
-        for e, ig in [("hello world", "hello world"),
-                      (KeyError(), KeyError),
-                      (failure.Failure(RuntimeError()), RuntimeError)]:
+        for e, ig in [
+            ("hello world", "hello world"),
+            (KeyError(), KeyError),
+            (failure.Failure(RuntimeError()), RuntimeError),
+        ]:
             log.err(e)
             i = self.catcher.pop()
             self.assertEqual(i['isError'], 1)
             self.flushLoggedErrors(ig)
 
-
     def testErrorsWithWhy(self):
-        for e, ig in [("hello world", "hello world"),
-                      (KeyError(), KeyError),
-                      (failure.Failure(RuntimeError()), RuntimeError)]:
+        for e, ig in [
+            ("hello world", "hello world"),
+            (KeyError(), KeyError),
+            (failure.Failure(RuntimeError()), RuntimeError),
+        ]:
             log.err(e, 'foobar')
             i = self.catcher.pop()
             self.assertEqual(i['isError'], 1)
             self.assertEqual(i['why'], 'foobar')
             self.flushLoggedErrors(ig)
-
 
     def test_erroneousErrors(self):
         """
@@ -207,7 +198,6 @@ class LogTests(unittest.SynchronousTestCase):
             self.assertEqual(L1[0]['message'], ("Howdy, y'all.",))
             self.assertEqual(L2[0]['message'], ("Howdy, y'all.",))
 
-
     def test_showwarning(self):
         """
         L{twisted.python.log.showwarning} emits the warning as a message
@@ -217,28 +207,36 @@ class LogTests(unittest.SynchronousTestCase):
         publisher.addObserver(self.observer)
 
         publisher.showwarning(
-            FakeWarning("unique warning message"), FakeWarning,
-            "warning-filename.py", 27)
+            FakeWarning("unique warning message"),
+            FakeWarning,
+            "warning-filename.py",
+            27,
+        )
         event = self.catcher.pop()
         self.assertEqual(
             event['format'] % event,
             'warning-filename.py:27: twisted.test.test_log.FakeWarning: '
-            'unique warning message')
+            'unique warning message',
+        )
         self.assertEqual(self.catcher, [])
 
         # Python 2.6 requires that any function used to override the
         # warnings.showwarning API accept a "line" parameter or a
         # deprecation warning is emitted.
         publisher.showwarning(
-            FakeWarning("unique warning message"), FakeWarning,
-            "warning-filename.py", 27, line=object())
+            FakeWarning("unique warning message"),
+            FakeWarning,
+            "warning-filename.py",
+            27,
+            line=object(),
+        )
         event = self.catcher.pop()
         self.assertEqual(
             event['format'] % event,
             'warning-filename.py:27: twisted.test.test_log.FakeWarning: '
-            'unique warning message')
+            'unique warning message',
+        )
         self.assertEqual(self.catcher, [])
-
 
     def test_warningToFile(self):
         """
@@ -255,21 +253,20 @@ class LogTests(unittest.SynchronousTestCase):
 
         self.assertEqual(
             output.getvalue(),
-            warnings.formatwarning(message, category, filename, lineno))
+            warnings.formatwarning(message, category, filename, lineno),
+        )
 
         # In Python 2.6 and higher, warnings.showwarning accepts
         # a "line" argument which gives the source line the warning
         # message is to include.
         line = "hello world"
         output = StringIO()
-        log.showwarning(message, category, filename, lineno, file=output,
-                        line=line)
+        log.showwarning(message, category, filename, lineno, file=output, line=line)
 
         self.assertEqual(
             output.getvalue(),
-            warnings.formatwarning(message, category, filename, lineno,
-                                   line))
-
+            warnings.formatwarning(message, category, filename, lineno, line),
+        )
 
     def test_publisherReportsBrokenObserversPrivately(self):
         """
@@ -295,12 +292,9 @@ class LogTests(unittest.SynchronousTestCase):
         self.assertIsInstance(errors[0], RuntimeError)
 
 
-
 class FakeFile(list):
-
     def write(self, bytes):
         self.append(bytes)
-
 
     def flush(self):
         pass
@@ -309,26 +303,21 @@ class FakeFile(list):
 IOBase.register(FakeFile)
 
 
-
 class EvilStr:
     def __str__(self):
         1 // 0
-
 
 
 class EvilRepr:
     def __str__(self):
         return "Happy Evil Repr"
 
-
     def __repr__(self):
         1 // 0
 
 
-
 class EvilReprStr(EvilStr, EvilRepr):
     pass
-
 
 
 class LogPublisherTestCaseMixin:
@@ -357,7 +346,6 @@ class LogPublisherTestCaseMixin:
             self._origEncoding = sys.getdefaultencoding()
             sys.setdefaultencoding('ascii')
 
-
     def tearDown(self):
         """
         Verify that everything written to the fake file C{self.out} was a
@@ -365,21 +353,17 @@ class LogPublisherTestCaseMixin:
         setting, if it was modified by L{setUp}.
         """
         for chunk in self.out:
-            self.assertIsInstance(chunk, str,
-                            "%r was not a string" % (chunk,))
+            self.assertIsInstance(chunk, str, "%r was not a string" % (chunk,))
 
         if self._origEncoding is not None:
             sys.setdefaultencoding(self._origEncoding)
             del sys.setdefaultencoding
 
 
-
-class LogPublisherTests(LogPublisherTestCaseMixin,
-                        unittest.SynchronousTestCase):
+class LogPublisherTests(LogPublisherTestCaseMixin, unittest.SynchronousTestCase):
     def testSingleString(self):
         self.lp.msg("Hello, world.")
         self.assertEqual(len(self.out), 1)
-
 
     def testMultipleString(self):
         # Test some stupid behavior that will be deprecated real soon.
@@ -387,7 +371,6 @@ class LogPublisherTests(LogPublisherTestCaseMixin,
         # system works, *do not use this feature*.
         self.lp.msg("Hello, ", "world.")
         self.assertEqual(len(self.out), 1)
-
 
     def test_singleUnicode(self):
         """
@@ -407,17 +390,14 @@ class LogPublisherTests(LogPublisherTestCaseMixin,
             self.assertIn('UnicodeEncodeError', self.out[0])
 
 
-
-class FileObserverTests(LogPublisherTestCaseMixin,
-                        unittest.SynchronousTestCase):
+class FileObserverTests(LogPublisherTestCaseMixin, unittest.SynchronousTestCase):
     """
     Tests for L{log.FileObserver}.
     """
+
     ERROR_INVALID_FORMAT = 'Invalid format string'
     ERROR_UNFORMATTABLE_OBJECT = 'UNFORMATTABLE OBJECT'
-    ERROR_FORMAT = (
-        'Invalid format string or unformattable object in log message'
-    )
+    ERROR_FORMAT = 'Invalid format string or unformattable object in log message'
     ERROR_PATHOLOGICAL = 'PATHOLOGICAL ERROR'
 
     ERROR_NO_FORMAT = 'Unable to format event'
@@ -444,7 +424,8 @@ class FileObserverTests(LogPublisherTestCaseMixin,
         if getattr(time, 'tzset', None) is None:
             raise unittest.SkipTest(
                 "Platform cannot change timezone, cannot verify correct "
-                "offsets in well-known timezones.")
+                "offsets in well-known timezones."
+            )
 
         originalTimezone = os.environ.get('TZ', None)
         try:
@@ -466,16 +447,18 @@ class FileObserverTests(LogPublisherTestCaseMixin,
             standard = time.mktime(localStandardTuple)
 
             self.assertEqual(
-                (self.flo.getTimezoneOffset(daylight),
-                 self.flo.getTimezoneOffset(standard)),
-                (daylightOffset, standardOffset))
+                (
+                    self.flo.getTimezoneOffset(daylight),
+                    self.flo.getTimezoneOffset(standard),
+                ),
+                (daylightOffset, standardOffset),
+            )
         finally:
             if originalTimezone is None:
                 del os.environ['TZ']
             else:
                 os.environ['TZ'] = originalTimezone
             time.tzset()
-
 
     def test_getTimezoneOffsetWestOfUTC(self):
         """
@@ -486,7 +469,6 @@ class FileObserverTests(LogPublisherTestCaseMixin,
         """
         self._getTimezoneOffsetTest("America/New_York", 14400, 18000)
 
-
     def test_getTimezoneOffsetEastOfUTC(self):
         """
         Attempt to verify that L{FileLogObserver.getTimezoneOffset} returns
@@ -495,7 +477,6 @@ class FileObserverTests(LogPublisherTestCaseMixin,
         (and should produce negative results).
         """
         self._getTimezoneOffsetTest("Europe/Berlin", -7200, -3600)
-
 
     def test_getTimezoneOffsetWithoutDaylightSavingTime(self):
         """
@@ -509,7 +490,6 @@ class FileObserverTests(LogPublisherTestCaseMixin,
         # available for testing seem happy to produce results for this even
         # though it's not entirely valid.
         self._getTimezoneOffsetTest("Africa/Johannesburg", -7200, -7200)
-
 
     def test_timeFormatting(self):
         """
@@ -554,7 +534,6 @@ class FileObserverTests(LogPublisherTestCaseMixin,
         self.flo.timeFormat = '%Y %m'
         self.assertEqual(self.flo.formatTime(when), '2001 02')
 
-
     def test_microsecondTimestampFormatting(self):
         """
         L{FileLogObserver.formatTime} supports a value of C{timeFormat} which
@@ -563,7 +542,6 @@ class FileObserverTests(LogPublisherTestCaseMixin,
         self.flo.timeFormat = '%f'
         self.assertEqual("600000", self.flo.formatTime(112345.6))
 
-
     def test_loggingAnObjectWithBroken__str__(self):
         # HELLO, MCFLY
         self.lp.msg(EvilStr())
@@ -571,48 +549,40 @@ class FileObserverTests(LogPublisherTestCaseMixin,
         # Logging system shouldn't need to crap itself for this trivial case
         self.assertNotIn(self.ERROR_UNFORMATTABLE_OBJECT, self.out[0])
 
-
     def test_formattingAnObjectWithBroken__str__(self):
         self.lp.msg(format='%(blat)s', blat=EvilStr())
         self.assertEqual(len(self.out), 1)
         self.assertIn(self.ERROR_INVALID_FORMAT, self.out[0])
-
 
     def test_brokenSystem__str__(self):
         self.lp.msg('huh', system=EvilStr())
         self.assertEqual(len(self.out), 1)
         self.assertIn(self.ERROR_FORMAT, self.out[0])
 
-
     def test_formattingAnObjectWithBroken__repr__Indirect(self):
         self.lp.msg(format='%(blat)s', blat=[EvilRepr()])
         self.assertEqual(len(self.out), 1)
         self.assertIn(self.ERROR_UNFORMATTABLE_OBJECT, self.out[0])
-
 
     def test_systemWithBroker__repr__Indirect(self):
         self.lp.msg('huh', system=[EvilRepr()])
         self.assertEqual(len(self.out), 1)
         self.assertIn(self.ERROR_UNFORMATTABLE_OBJECT, self.out[0])
 
-
     def test_simpleBrokenFormat(self):
         self.lp.msg(format='hooj %s %s', blat=1)
         self.assertEqual(len(self.out), 1)
         self.assertIn(self.ERROR_INVALID_FORMAT, self.out[0])
-
 
     def test_ridiculousFormat(self):
         self.lp.msg(format=42, blat=1)
         self.assertEqual(len(self.out), 1)
         self.assertIn(self.ERROR_INVALID_FORMAT, self.out[0])
 
-
     def test_evilFormat__repr__And__str__(self):
         self.lp.msg(format=EvilReprStr(), blat=1)
         self.assertEqual(len(self.out), 1)
         self.assertIn(self.ERROR_PATHOLOGICAL, self.out[0])
-
 
     def test_strangeEventDict(self):
         """
@@ -620,7 +590,6 @@ class FileObserverTests(LogPublisherTestCaseMixin,
         """
         self.lp.msg(message='', isError=False)
         self.assertEqual(len(self.out), 0)
-
 
     def _startLoggingCleanup(self):
         """
@@ -630,7 +599,6 @@ class FileObserverTests(LogPublisherTestCaseMixin,
         self.addCleanup(log.theLogPublisher._stopLogging)
         self.addCleanup(setattr, sys, 'stdout', sys.stdout)
         self.addCleanup(setattr, sys, 'stderr', sys.stderr)
-
 
     def test_printToStderrSetsIsError(self):
         """
@@ -643,12 +611,12 @@ class FileObserverTests(LogPublisherTestCaseMixin,
 
         def observe(event):
             observed.append(event)
+
         observed = []
         log.addObserver(observe)
 
         print("Hello, world.", file=sys.stderr)
         self.assertEqual(observed[0]["isError"], 1)
-
 
     def test_startLogging(self):
         """
@@ -676,7 +644,6 @@ class FileObserverTests(LogPublisherTestCaseMixin,
             encoding = sys.getdefaultencoding()
         self.assertEqual(sys.stderr.encoding.upper(), encoding.upper())
 
-
     def test_startLoggingTwice(self):
         """
         There are some obscure error conditions that can occur when logging is
@@ -703,7 +670,6 @@ class FileObserverTests(LogPublisherTestCaseMixin,
         observer = log.startLogging(sys.stdout)
         self.assertIs(sys.stdout, fakeStdout)
 
-
     def test_startLoggingOverridesWarning(self):
         """
         startLogging() overrides global C{warnings.showwarning} such that
@@ -717,9 +683,9 @@ class FileObserverTests(LogPublisherTestCaseMixin,
             stderr = object()
 
         tempLogPublisher = LogPublisher(
-            newPublisher, newPublisher,
-            logBeginner=LogBeginner(newPublisher, StringIO(), SysModule,
-                                    warnings)
+            newPublisher,
+            newPublisher,
+            logBeginner=LogBeginner(newPublisher, StringIO(), SysModule, warnings),
         )
         # Trial reports warnings in two ways.  First, it intercepts the global
         # 'showwarning' function *itself*, after starting logging (by way of
@@ -754,7 +720,6 @@ class FileObserverTests(LogPublisherTestCaseMixin,
         output = fakeFile.getvalue()
         self.assertIn("UserWarning: hello!", output)
 
-
     def test_emitPrefix(self):
         """
         FileLogObserver.emit() will add a timestamp and system prefix to its
@@ -778,14 +743,13 @@ class FileObserverTests(LogPublisherTestCaseMixin,
 
         result = output.getvalue()
         prefix = "{time} [{system}] ".format(
-            time=flo.formatTime(event["time"]), system=event["system"],
+            time=flo.formatTime(event["time"]), system=event["system"]
         )
 
         self.assertTrue(
             result.startswith(prefix),
-            "{0!r} does not start with {1!r}".format(result, prefix)
+            "{0!r} does not start with {1!r}".format(result, prefix),
         )
-
 
     def test_emitNewline(self):
         """
@@ -804,15 +768,15 @@ class FileObserverTests(LogPublisherTestCaseMixin,
 
         self.assertTrue(
             result.endswith(suffix),
-            "{0!r} does not end with {1!r}".format(result, suffix)
+            "{0!r} does not end with {1!r}".format(result, suffix),
         )
-
 
 
 class PythonLoggingObserverTests(unittest.SynchronousTestCase):
     """
     Test the bridge with python logging module.
     """
+
     def setUp(self):
         rootLogger = logging.getLogger("")
         originalLevel = rootLogger.getEffectiveLevel()
@@ -821,6 +785,7 @@ class PythonLoggingObserverTests(unittest.SynchronousTestCase):
         @self.addCleanup
         def restoreLevel():
             rootLogger.setLevel(originalLevel)
+
         self.hdlr, self.out = handlerAndBytesIO()
         rootLogger.addHandler(self.hdlr)
 
@@ -833,7 +798,6 @@ class PythonLoggingObserverTests(unittest.SynchronousTestCase):
         self.obs = log.PythonLoggingObserver()
         self.lp.addObserver(self.obs.emit)
 
-
     def test_singleString(self):
         """
         Test simple output, and default log level.
@@ -841,7 +805,6 @@ class PythonLoggingObserverTests(unittest.SynchronousTestCase):
         self.lp.msg("Hello, world.")
         self.assertIn(b"Hello, world.", self.out.getvalue())
         self.assertIn(b"INFO", self.out.getvalue())
-
 
     def test_errorString(self):
         """
@@ -853,9 +816,8 @@ class PythonLoggingObserverTests(unittest.SynchronousTestCase):
         output = self.out.getvalue()
         self.assertTrue(
             output.startswith(prefix),
-            "Does not start with {0!r}: {1!r}".format(prefix, output)
+            "Does not start with {0!r}: {1!r}".format(prefix, output),
         )
-
 
     def test_formatString(self):
         """
@@ -863,7 +825,6 @@ class PythonLoggingObserverTests(unittest.SynchronousTestCase):
         """
         self.lp.msg(format="%(bar)s oo %(foo)s", bar="Hello", foo="world")
         self.assertIn(b"Hello oo world", self.out.getvalue())
-
 
     def test_customLevel(self):
         """
@@ -878,7 +839,6 @@ class PythonLoggingObserverTests(unittest.SynchronousTestCase):
         self.assertIn(b"Foo bar.", self.out.getvalue())
         self.assertIn(b"WARNING", self.out.getvalue())
 
-
     def test_strangeEventDict(self):
         """
         Verify that an event dictionary which is not an error and has an empty
@@ -886,7 +846,6 @@ class PythonLoggingObserverTests(unittest.SynchronousTestCase):
         """
         self.lp.msg(message='', isError=False)
         self.assertEqual(self.out.getvalue(), b'')
-
 
 
 class PythonLoggingIntegrationTests(unittest.SynchronousTestCase):
@@ -914,16 +873,17 @@ class PythonLoggingIntegrationTests(unittest.SynchronousTestCase):
             log.addObserver = oldAddObserver
             log.removeObserver = oldRemoveObserver
 
-
     def test_inheritance(self):
         """
         Test that we can inherit L{log.PythonLoggingObserver} and use super:
         that's basically a validation that L{log.PythonLoggingObserver} is
         new-style class.
         """
+
         class MyObserver(log.PythonLoggingObserver):
             def emit(self, eventDict):
                 super(MyObserver, self).emit(eventDict)
+
         obs = MyObserver()
         l = []
         oldEmit = log.PythonLoggingObserver.emit
@@ -933,7 +893,6 @@ class PythonLoggingIntegrationTests(unittest.SynchronousTestCase):
             self.assertEqual(len(l), 1)
         finally:
             log.PythonLoggingObserver.emit = oldEmit
-
 
 
 class DefaultObserverTests(unittest.SynchronousTestCase):
@@ -963,12 +922,12 @@ class DefaultObserverTests(unittest.SynchronousTestCase):
         self.assertIn(reason, obs.stderr.getvalue())
         self.assertEqual(len(errors), 1)
 
-
     def test_emitEventWithBrokenRepr(self):
         """
         DefaultObserver.emit() does not raise when it observes an error event
         with a message that causes L{repr} to raise.
         """
+
         class Ouch(object):
             def __repr__(self):
                 return str(1 / 0)
@@ -983,7 +942,6 @@ class DefaultObserverTests(unittest.SynchronousTestCase):
             self.assertTrue(output.getvalue().startswith("foo <Ouch instance"))
 
 
-
 class StdioOnnaStickTests(unittest.SynchronousTestCase):
     """
     StdioOnnaStick should act like the normal sys.stdout object.
@@ -993,14 +951,11 @@ class StdioOnnaStickTests(unittest.SynchronousTestCase):
         self.resultLogs = []
         log.addObserver(self.resultLogs.append)
 
-
     def tearDown(self):
         log.removeObserver(self.resultLogs.append)
 
-
     def getLogMessages(self):
         return ["".join(d['message']) for d in self.resultLogs]
-
 
     def test_write(self):
         """
@@ -1012,9 +967,7 @@ class StdioOnnaStickTests(unittest.SynchronousTestCase):
         stdio.write("Hello there\nThis is a test")
         self.assertEqual(self.getLogMessages(), ["Hello there"])
         stdio.write("!\n")
-        self.assertEqual(self.getLogMessages(),
-                         ["Hello there", "This is a test!"])
-
+        self.assertEqual(self.getLogMessages(), ["Hello there", "This is a test!"])
 
     def test_metadata(self):
         """
@@ -1026,7 +979,6 @@ class StdioOnnaStickTests(unittest.SynchronousTestCase):
         self.assertFalse(self.resultLogs[0]['isError'])
         self.assertTrue(self.resultLogs[0]['printed'])
 
-
     def test_writeLines(self):
         """
         Writing lines to a StdioOnnaStick results in Twisted log messages.
@@ -1034,7 +986,6 @@ class StdioOnnaStickTests(unittest.SynchronousTestCase):
         stdio = log.StdioOnnaStick()
         stdio.writelines(["log 1", "log 2"])
         self.assertEqual(self.getLogMessages(), ["log 1", "log 2"])
-
 
     def test_print(self):
         """
@@ -1047,7 +998,6 @@ class StdioOnnaStickTests(unittest.SynchronousTestCase):
         print("is a test")
         self.assertEqual(self.getLogMessages(), ["This is a test"])
 
-
     def test_error(self):
         """
         StdioOnnaStick created with isError=True log messages as errors.
@@ -1055,7 +1005,6 @@ class StdioOnnaStickTests(unittest.SynchronousTestCase):
         stdio = log.StdioOnnaStick(isError=True)
         stdio.write("log 1\n")
         self.assertTrue(self.resultLogs[0]['isError'])
-
 
     def test_unicode(self):
         """
@@ -1075,12 +1024,16 @@ class StdioOnnaStickTests(unittest.SynchronousTestCase):
         # This should go to the log, utf-8 encoded too:
         print(unicodeString)
         if _PY3:
-            self.assertEqual(self.getLogMessages(),
-                             [unicodeString,
-                              u"Also, " + unicodeString,
-                              unicodeString])
+            self.assertEqual(
+                self.getLogMessages(),
+                [unicodeString, u"Also, " + unicodeString, unicodeString],
+            )
         else:
-            self.assertEqual(self.getLogMessages(),
-                             [unicodeString.encode("utf-8"),
-                              (u"Also, " + unicodeString).encode("utf-8"),
-                              unicodeString.encode("utf-8")])
+            self.assertEqual(
+                self.getLogMessages(),
+                [
+                    unicodeString.encode("utf-8"),
+                    (u"Also, " + unicodeString).encode("utf-8"),
+                    unicodeString.encode("utf-8"),
+                ],
+            )

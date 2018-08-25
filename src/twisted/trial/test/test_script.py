@@ -30,7 +30,6 @@ def sibpath(filename):
     return util.sibpath(__file__, filename)
 
 
-
 class ForceGarbageCollectionTests(unittest.SynchronousTestCase):
     """
     Tests for the --force-gc option.
@@ -43,20 +42,17 @@ class ForceGarbageCollectionTests(unittest.SynchronousTestCase):
         test = pyunit.FunctionTestCase(self.simpleTest)
         self.test = TestSuite([test, test])
 
-
     def simpleTest(self):
         """
         A simple test method that records that it was run.
         """
         self.log.append('test')
 
-
     def collect(self):
         """
         A replacement for gc.collect that logs calls to itself.
         """
         self.log.append('collect')
-
 
     def makeRunner(self):
         """
@@ -65,7 +61,6 @@ class ForceGarbageCollectionTests(unittest.SynchronousTestCase):
         runner = trial._makeRunner(self.config)
         runner.stream = NativeStringIO()
         return runner
-
 
     def test_forceGc(self):
         """
@@ -76,9 +71,9 @@ class ForceGarbageCollectionTests(unittest.SynchronousTestCase):
         self.config.postOptions()
         runner = self.makeRunner()
         runner.run(self.test)
-        self.assertEqual(self.log, ['collect', 'test', 'collect',
-                                    'collect', 'test', 'collect'])
-
+        self.assertEqual(
+            self.log, ['collect', 'test', 'collect', 'collect', 'test', 'collect']
+        )
 
     def test_unforceGc(self):
         """
@@ -88,7 +83,6 @@ class ForceGarbageCollectionTests(unittest.SynchronousTestCase):
         runner = self.makeRunner()
         runner.run(self.test)
         self.assertEqual(self.log, ['test', 'test'])
-
 
 
 class SuiteUsedTests(unittest.SynchronousTestCase):
@@ -102,14 +96,12 @@ class SuiteUsedTests(unittest.SynchronousTestCase):
         """
         self.config = trial.Options()
 
-
     def test_defaultSuite(self):
         """
         By default, the loader should use L{DestructiveTestSuite}
         """
         loader = trial._getLoader(self.config)
         self.assertEqual(loader.suiteFactory, DestructiveTestSuite)
-
 
     def test_untilFailureSuite(self):
         """
@@ -119,7 +111,6 @@ class SuiteUsedTests(unittest.SynchronousTestCase):
         self.config['until-failure'] = True
         loader = trial._getLoader(self.config)
         self.assertEqual(loader.suiteFactory, TestSuite)
-
 
 
 class TestModuleTests(unittest.SynchronousTestCase):
@@ -153,8 +144,9 @@ class TestModuleTests(unittest.SynchronousTestCase):
         referred to in test-case-name inside its parameter.
         """
         self.config.opt_testmodule(sibpath('moduletest.py'))
-        self.assertSuitesEqual(trial._getSuite(self.config),
-                               ['twisted.trial.test.test_log'])
+        self.assertSuitesEqual(
+            trial._getSuite(self.config), ['twisted.trial.test.test_log']
+        )
 
     def test_testmoduleTwice(self):
         """
@@ -163,8 +155,9 @@ class TestModuleTests(unittest.SynchronousTestCase):
         """
         self.config.opt_testmodule(sibpath('moduletest.py'))
         self.config.opt_testmodule(sibpath('moduletest.py'))
-        self.assertSuitesEqual(trial._getSuite(self.config),
-                               ['twisted.trial.test.test_log'])
+        self.assertSuitesEqual(
+            trial._getSuite(self.config), ['twisted.trial.test.test_log']
+        )
 
     def test_testmoduleOnSourceAndTarget(self):
         """
@@ -174,8 +167,9 @@ class TestModuleTests(unittest.SynchronousTestCase):
         """
         self.config.opt_testmodule(sibpath('moduletest.py'))
         self.config.opt_testmodule(sibpath('test_log.py'))
-        self.assertSuitesEqual(trial._getSuite(self.config),
-                               ['twisted.trial.test.test_log'])
+        self.assertSuitesEqual(
+            trial._getSuite(self.config), ['twisted.trial.test.test_log']
+        )
 
     def test_testmoduleOnSelfModule(self):
         """
@@ -183,8 +177,9 @@ class TestModuleTests(unittest.SynchronousTestCase):
         variable, check that --testmodule only adds the tests once.
         """
         self.config.opt_testmodule(sibpath('moduleself.py'))
-        self.assertSuitesEqual(trial._getSuite(self.config),
-                               ['twisted.trial.test.moduleself'])
+        self.assertSuitesEqual(
+            trial._getSuite(self.config), ['twisted.trial.test.moduleself']
+        )
 
     def test_testmoduleOnScript(self):
         """
@@ -192,9 +187,10 @@ class TestModuleTests(unittest.SynchronousTestCase):
         buffer variables.
         """
         self.config.opt_testmodule(sibpath('scripttest.py'))
-        self.assertSuitesEqual(trial._getSuite(self.config),
-                               ['twisted.trial.test.test_log',
-                                'twisted.trial.test.test_runner'])
+        self.assertSuitesEqual(
+            trial._getSuite(self.config),
+            ['twisted.trial.test.test_log', 'twisted.trial.test.test_runner'],
+        )
 
     def test_testmoduleOnNonexistentFile(self):
         """
@@ -207,8 +203,7 @@ class TestModuleTests(unittest.SynchronousTestCase):
         try:
             self.config.opt_testmodule(filename)
             self.assertEqual(0, len(self.config['tests']))
-            self.assertEqual("File %r doesn't exist\n" % (filename,),
-                                 buffy.getvalue())
+            self.assertEqual("File %r doesn't exist\n" % (filename,), buffy.getvalue())
         finally:
             sys.stderr = stderr
 
@@ -231,59 +226,51 @@ class TestModuleTests(unittest.SynchronousTestCase):
         try:
             self.config.opt_testmodule(moduleName)
             self.assertEqual(0, len(self.config['tests']))
-            self.assertEqual("File %r doesn't exist\n" % (moduleName,),
-                                 buffy.getvalue())
+            self.assertEqual(
+                "File %r doesn't exist\n" % (moduleName,), buffy.getvalue()
+            )
         finally:
             sys.stderr = stderr
 
     def test_parseLocalVariable(self):
         declaration = '-*- test-case-name: twisted.trial.test.test_tests -*-'
         localVars = trial._parseLocalVariables(declaration)
-        self.assertEqual({'test-case-name':
-                              'twisted.trial.test.test_tests'},
-                             localVars)
+        self.assertEqual({'test-case-name': 'twisted.trial.test.test_tests'}, localVars)
 
     def test_trailingSemicolon(self):
         declaration = '-*- test-case-name: twisted.trial.test.test_tests; -*-'
         localVars = trial._parseLocalVariables(declaration)
-        self.assertEqual({'test-case-name':
-                              'twisted.trial.test.test_tests'},
-                             localVars)
+        self.assertEqual({'test-case-name': 'twisted.trial.test.test_tests'}, localVars)
 
     def test_parseLocalVariables(self):
-        declaration = ('-*- test-case-name: twisted.trial.test.test_tests; '
-                       'foo: bar -*-')
+        declaration = (
+            '-*- test-case-name: twisted.trial.test.test_tests; ' 'foo: bar -*-'
+        )
         localVars = trial._parseLocalVariables(declaration)
-        self.assertEqual({'test-case-name':
-                              'twisted.trial.test.test_tests',
-                              'foo': 'bar'},
-                             localVars)
+        self.assertEqual(
+            {'test-case-name': 'twisted.trial.test.test_tests', 'foo': 'bar'}, localVars
+        )
 
     def test_surroundingGuff(self):
-        declaration = ('## -*- test-case-name: '
-                       'twisted.trial.test.test_tests -*- #')
+        declaration = '## -*- test-case-name: ' 'twisted.trial.test.test_tests -*- #'
         localVars = trial._parseLocalVariables(declaration)
-        self.assertEqual({'test-case-name':
-                              'twisted.trial.test.test_tests'},
-                             localVars)
+        self.assertEqual({'test-case-name': 'twisted.trial.test.test_tests'}, localVars)
 
     def test_invalidLine(self):
-        self.assertRaises(ValueError, trial._parseLocalVariables,
-                              'foo')
+        self.assertRaises(ValueError, trial._parseLocalVariables, 'foo')
 
     def test_invalidDeclaration(self):
-        self.assertRaises(ValueError, trial._parseLocalVariables,
-                              '-*- foo -*-')
-        self.assertRaises(ValueError, trial._parseLocalVariables,
-                              '-*- foo: bar; qux -*-')
-        self.assertRaises(ValueError, trial._parseLocalVariables,
-                              '-*- foo: bar: baz; qux: qax -*-')
+        self.assertRaises(ValueError, trial._parseLocalVariables, '-*- foo -*-')
+        self.assertRaises(
+            ValueError, trial._parseLocalVariables, '-*- foo: bar; qux -*-'
+        )
+        self.assertRaises(
+            ValueError, trial._parseLocalVariables, '-*- foo: bar: baz; qux: qax -*-'
+        )
 
     def test_variablesFromFile(self):
         localVars = trial.loadLocalVariables(sibpath('moduletest.py'))
-        self.assertEqual({'test-case-name':
-                              'twisted.trial.test.test_log'},
-                             localVars)
+        self.assertEqual({'test-case-name': 'twisted.trial.test.test_log'}, localVars)
 
     def test_noVariablesInFile(self):
         localVars = trial.loadLocalVariables(sibpath('novars.py'))
@@ -292,9 +279,13 @@ class TestModuleTests(unittest.SynchronousTestCase):
     def test_variablesFromScript(self):
         localVars = trial.loadLocalVariables(sibpath('scripttest.py'))
         self.assertEqual(
-            {'test-case-name': ('twisted.trial.test.test_log,'
-                                'twisted.trial.test.test_runner')},
-            localVars)
+            {
+                'test-case-name': (
+                    'twisted.trial.test.test_log,' 'twisted.trial.test.test_runner'
+                )
+            },
+            localVars,
+        )
 
     def test_getTestModules(self):
         modules = trial.getTestModules(sibpath('moduletest.py'))
@@ -306,18 +297,25 @@ class TestModuleTests(unittest.SynchronousTestCase):
 
     def test_getTestModules_multiple(self):
         modules = trial.getTestModules(sibpath('scripttest.py'))
-        self.assertEqual(set(modules),
-                             set(['twisted.trial.test.test_log',
-                                  'twisted.trial.test.test_runner']))
+        self.assertEqual(
+            set(modules),
+            set(['twisted.trial.test.test_log', 'twisted.trial.test.test_runner']),
+        )
 
     def test_looksLikeTestModule(self):
         for filename in ['test_script.py', 'twisted/trial/test/test_script.py']:
-            self.assertTrue(trial.isTestFile(filename),
-                            "%r should be a test file" % (filename,))
-        for filename in ['twisted/trial/test/moduletest.py',
-                         sibpath('scripttest.py'), sibpath('test_foo.bat')]:
-            self.assertFalse(trial.isTestFile(filename),
-                        "%r should *not* be a test file" % (filename,))
+            self.assertTrue(
+                trial.isTestFile(filename), "%r should be a test file" % (filename,)
+            )
+        for filename in [
+            'twisted/trial/test/moduletest.py',
+            sibpath('scripttest.py'),
+            sibpath('test_foo.bat'),
+        ]:
+            self.assertFalse(
+                trial.isTestFile(filename),
+                "%r should *not* be a test file" % (filename,),
+            )
 
 
 class WithoutModuleTests(unittest.SynchronousTestCase):
@@ -333,7 +331,6 @@ class WithoutModuleTests(unittest.SynchronousTestCase):
         self.config = trial.Options()
         self.savedModules = dict(sys.modules)
 
-
     def tearDown(self):
         """
         Restore C{sys.modules}.
@@ -344,22 +341,21 @@ class WithoutModuleTests(unittest.SynchronousTestCase):
             else:
                 sys.modules.pop(module, None)
 
-
     def _checkSMTP(self):
         """
         Try to import the C{smtplib} module, and return it.
         """
         import smtplib
-        return smtplib
 
+        return smtplib
 
     def _checkIMAP(self):
         """
         Try to import the C{imaplib} module, and return it.
         """
         import imaplib
-        return imaplib
 
+        return imaplib
 
     def test_disableOneModule(self):
         """
@@ -371,7 +367,6 @@ class WithoutModuleTests(unittest.SynchronousTestCase):
         del sys.modules["smtplib"]
         # Then the function should succeed
         self.assertIsInstance(self._checkSMTP(), types.ModuleType)
-
 
     def test_disableMultipleModules(self):
         """
@@ -387,27 +382,28 @@ class WithoutModuleTests(unittest.SynchronousTestCase):
         self.assertIsInstance(self._checkSMTP(), types.ModuleType)
         self.assertIsInstance(self._checkIMAP(), types.ModuleType)
 
-
     def test_disableAlreadyImportedModule(self):
         """
         Disabling an already imported module should produce a warning.
         """
         self.assertIsInstance(self._checkSMTP(), types.ModuleType)
-        self.assertWarns(RuntimeWarning,
-                "Module 'smtplib' already imported, disabling anyway.",
-                trial.__file__,
-                self.config.parseOptions, ["--without-module", "smtplib"])
+        self.assertWarns(
+            RuntimeWarning,
+            "Module 'smtplib' already imported, disabling anyway.",
+            trial.__file__,
+            self.config.parseOptions,
+            ["--without-module", "smtplib"],
+        )
         self.assertRaises(ImportError, self._checkSMTP)
-
 
 
 class CoverageTests(unittest.SynchronousTestCase):
     """
     Tests for the I{coverage} option.
     """
+
     if getattr(sys, 'gettrace', None) is None:
-        skip = (
-            "Cannot test trace hook installation without inspection API.")
+        skip = "Cannot test trace hook installation without inspection API."
 
     def setUp(self):
         """
@@ -415,7 +411,6 @@ class CoverageTests(unittest.SynchronousTestCase):
         test is complete.
         """
         self.addCleanup(sys.settrace, sys.gettrace())
-
 
     def test_tracerInstalled(self):
         """
@@ -426,7 +421,6 @@ class CoverageTests(unittest.SynchronousTestCase):
         options.parseOptions(["--coverage"])
         self.assertEqual(sys.gettrace(), options.tracer.globaltrace)
 
-
     def test_coverdirDefault(self):
         """
         L{trial.Options.coverdir} returns a L{FilePath} based on the default
@@ -435,8 +429,8 @@ class CoverageTests(unittest.SynchronousTestCase):
         options = trial.Options()
         self.assertEqual(
             options.coverdir(),
-            FilePath(".").descendant([options["temp-directory"], "coverage"]))
-
+            FilePath(".").descendant([options["temp-directory"], "coverage"]),
+        )
 
     def test_coverdirOverridden(self):
         """
@@ -446,9 +440,7 @@ class CoverageTests(unittest.SynchronousTestCase):
         path = self.mktemp()
         options = trial.Options()
         options.parseOptions(["--temp-directory", path])
-        self.assertEqual(
-            options.coverdir(), FilePath(path).child("coverage"))
-
+        self.assertEqual(options.coverdir(), FilePath(path).child("coverage"))
 
 
 class OptionsTests(unittest.TestCase):
@@ -462,7 +454,6 @@ class OptionsTests(unittest.TestCase):
         """
         self.options = trial.Options()
 
-
     def test_getWorkerArguments(self):
         """
         C{_getWorkerArguments} discards options like C{random} as they only
@@ -473,13 +464,13 @@ class OptionsTests(unittest.TestCase):
         if gc.isenabled():
             self.addCleanup(gc.enable)
 
-        self.options.parseOptions(["--recursionlimit", "2000", "--random",
-                                   "4", "--disablegc"])
+        self.options.parseOptions(
+            ["--recursionlimit", "2000", "--random", "4", "--disablegc"]
+        )
         args = self.options._getWorkerArguments()
         self.assertIn("--disablegc", args)
         args.remove("--disablegc")
         self.assertEqual(["--recursionlimit", "2000"], args)
-
 
     def test_jobsConflictWithDebug(self):
         """
@@ -489,10 +480,9 @@ class OptionsTests(unittest.TestCase):
         @see: U{http://twistedmatrix.com/trac/ticket/5825}
         """
         error = self.assertRaises(
-            UsageError, self.options.parseOptions, ["--jobs", "4", "--debug"])
-        self.assertEqual("You can't specify --debug when using --jobs",
-                         str(error))
-
+            UsageError, self.options.parseOptions, ["--jobs", "4", "--debug"]
+        )
+        self.assertEqual("You can't specify --debug when using --jobs", str(error))
 
     def test_jobsConflictWithProfile(self):
         """
@@ -502,11 +492,9 @@ class OptionsTests(unittest.TestCase):
         @see: U{http://twistedmatrix.com/trac/ticket/5827}
         """
         error = self.assertRaises(
-            UsageError, self.options.parseOptions,
-            ["--jobs", "4", "--profile"])
-        self.assertEqual("You can't specify --profile when using --jobs",
-                         str(error))
-
+            UsageError, self.options.parseOptions, ["--jobs", "4", "--profile"]
+        )
+        self.assertEqual("You can't specify --profile when using --jobs", str(error))
 
     def test_jobsConflictWithDebugStackTraces(self):
         """
@@ -516,12 +504,13 @@ class OptionsTests(unittest.TestCase):
         @see: U{http://twistedmatrix.com/trac/ticket/5826}
         """
         error = self.assertRaises(
-            UsageError, self.options.parseOptions,
-            ["--jobs", "4", "--debug-stacktraces"])
+            UsageError,
+            self.options.parseOptions,
+            ["--jobs", "4", "--debug-stacktraces"],
+        )
         self.assertEqual(
-            "You can't specify --debug-stacktraces when using --jobs",
-            str(error))
-
+            "You can't specify --debug-stacktraces when using --jobs", str(error)
+        )
 
     def test_jobsConflictWithExitFirst(self):
         """
@@ -531,12 +520,9 @@ class OptionsTests(unittest.TestCase):
         @see: U{http://twistedmatrix.com/trac/ticket/6436}
         """
         error = self.assertRaises(
-            UsageError, self.options.parseOptions,
-            ["--jobs", "4", "--exitfirst"])
-        self.assertEqual(
-            "You can't specify --exitfirst when using --jobs",
-            str(error))
-
+            UsageError, self.options.parseOptions, ["--jobs", "4", "--exitfirst"]
+        )
+        self.assertEqual("You can't specify --exitfirst when using --jobs", str(error))
 
     def test_orderConflictWithRandom(self):
         """
@@ -546,10 +532,9 @@ class OptionsTests(unittest.TestCase):
         error = self.assertRaises(
             UsageError,
             self.options.parseOptions,
-            ["--order", "alphabetical", "--random", "1234"])
-        self.assertEqual("You can't specify --random when using --order",
-                         str(error))
-
+            ["--order", "alphabetical", "--random", "1234"],
+        )
+        self.assertEqual("You can't specify --random when using --order", str(error))
 
 
 class MakeRunnerTests(unittest.TestCase):
@@ -572,7 +557,6 @@ class MakeRunnerTests(unittest.TestCase):
         self.assertEqual(4, runner._workerNumber)
         self.assertEqual(["--force-gc"], runner._workerArguments)
 
-
     def test_dryRunWithJobs(self):
         """
         L{_makeRunner} returns a L{TrialRunner} instance in C{DRY_RUN} mode
@@ -582,7 +566,6 @@ class MakeRunnerTests(unittest.TestCase):
         runner = trial._makeRunner(self.options)
         self.assertIsInstance(runner, TrialRunner)
         self.assertEqual(TrialRunner.DRY_RUN, runner.mode)
-
 
     def test_DebuggerNotFound(self):
         namedAny = trial.reflect.namedAny
@@ -598,7 +581,6 @@ class MakeRunnerTests(unittest.TestCase):
         options.parseOptions(["--debug", "--debugger", "doNotFind"])
 
         self.assertRaises(trial._DebuggerNotFound, trial._makeRunner, options)
-
 
     def test_exitfirst(self):
         """
@@ -620,7 +602,6 @@ class RunTests(unittest.TestCase):
         # the test run trial will try to restart the (already running) reactor
         self.patch(trial.Options, "parseOptions", lambda self: None)
 
-
     def test_debuggerNotFound(self):
         """
         When a debugger is not found, an error message is printed to the user.
@@ -629,6 +610,7 @@ class RunTests(unittest.TestCase):
 
         def _makeRunner(*args, **kwargs):
             raise trial._DebuggerNotFound('foo')
+
         self.patch(trial, "_makeRunner", _makeRunner)
 
         try:
@@ -637,7 +619,6 @@ class RunTests(unittest.TestCase):
             self.assertIn("foo", str(e))
         else:
             self.fail("Should have exited due to non-existent debugger!")
-
 
 
 class TestArgumentOrderTests(unittest.TestCase):
@@ -649,7 +630,6 @@ class TestArgumentOrderTests(unittest.TestCase):
         self.config = trial.Options()
         self.loader = TestLoader()
 
-
     def test_preserveArgumentOrder(self):
         """
         Multiple tests passed on the command line are not reordered.
@@ -658,7 +638,7 @@ class TestArgumentOrderTests(unittest.TestCase):
             "twisted.trial.test.test_tests",
             "twisted.trial.test.test_assertions",
             "twisted.trial.test.test_deferred",
-            ]
+        ]
         self.config.parseOptions(tests)
 
         suite = trial._getSuite(self.config)
@@ -670,62 +650,65 @@ class TestArgumentOrderTests(unittest.TestCase):
         self.assertEqual(names, expectedNames)
 
 
-
 class OrderTests(unittest.TestCase):
     """
     Tests for the --order option.
     """
+
     def setUp(self):
         self.config = trial.Options()
-
 
     def test_alphabetical(self):
         """
         --order=alphabetical causes trial to run tests alphabetically within
         each test case.
         """
-        self.config.parseOptions([
-            "--order", "alphabetical",
-            "twisted.trial.test.ordertests.FooTest"])
+        self.config.parseOptions(
+            ["--order", "alphabetical", "twisted.trial.test.ordertests.FooTest"]
+        )
 
         loader = trial._getLoader(self.config)
         suite = loader.loadByNames(self.config['tests'])
 
         self.assertEqual(
-            testNames(suite), [
-            'twisted.trial.test.ordertests.FooTest.test_first',
-            'twisted.trial.test.ordertests.FooTest.test_fourth',
-            'twisted.trial.test.ordertests.FooTest.test_second',
-            'twisted.trial.test.ordertests.FooTest.test_third'])
-
+            testNames(suite),
+            [
+                'twisted.trial.test.ordertests.FooTest.test_first',
+                'twisted.trial.test.ordertests.FooTest.test_fourth',
+                'twisted.trial.test.ordertests.FooTest.test_second',
+                'twisted.trial.test.ordertests.FooTest.test_third',
+            ],
+        )
 
     def test_alphabeticalModule(self):
         """
         --order=alphabetical causes trial to run test classes within a given
         module alphabetically.
         """
-        self.config.parseOptions([
-            "--order", "alphabetical", "twisted.trial.test.ordertests"])
+        self.config.parseOptions(
+            ["--order", "alphabetical", "twisted.trial.test.ordertests"]
+        )
         loader = trial._getLoader(self.config)
         suite = loader.loadByNames(self.config['tests'])
 
         self.assertEqual(
-            testNames(suite), [
-            'twisted.trial.test.ordertests.BarTest.test_bar',
-            'twisted.trial.test.ordertests.BazTest.test_baz',
-            'twisted.trial.test.ordertests.FooTest.test_first',
-            'twisted.trial.test.ordertests.FooTest.test_fourth',
-            'twisted.trial.test.ordertests.FooTest.test_second',
-            'twisted.trial.test.ordertests.FooTest.test_third'])
-
+            testNames(suite),
+            [
+                'twisted.trial.test.ordertests.BarTest.test_bar',
+                'twisted.trial.test.ordertests.BazTest.test_baz',
+                'twisted.trial.test.ordertests.FooTest.test_first',
+                'twisted.trial.test.ordertests.FooTest.test_fourth',
+                'twisted.trial.test.ordertests.FooTest.test_second',
+                'twisted.trial.test.ordertests.FooTest.test_third',
+            ],
+        )
 
     def test_alphabeticalPackage(self):
         """
         --order=alphabetical causes trial to run test modules within a given
         package alphabetically, with tests within each module alphabetized.
         """
-        self.config.parseOptions([
-            "--order", "alphabetical", "twisted.trial.test"])
+        self.config.parseOptions(["--order", "alphabetical", "twisted.trial.test"])
         loader = trial._getLoader(self.config)
         suite = loader.loadByNames(self.config['tests'])
 
@@ -733,47 +716,51 @@ class OrderTests(unittest.TestCase):
         self.assertTrue(names, msg="Failed to load any tests!")
         self.assertEqual(names, sorted(names))
 
-
     def test_toptobottom(self):
         """
         --order=toptobottom causes trial to run test methods within a given
         test case from top to bottom as they are defined in the body of the
         class.
         """
-        self.config.parseOptions([
-            "--order", "toptobottom",
-            "twisted.trial.test.ordertests.FooTest"])
+        self.config.parseOptions(
+            ["--order", "toptobottom", "twisted.trial.test.ordertests.FooTest"]
+        )
 
         loader = trial._getLoader(self.config)
         suite = loader.loadByNames(self.config['tests'])
 
         self.assertEqual(
-            testNames(suite), [
-            'twisted.trial.test.ordertests.FooTest.test_first',
-            'twisted.trial.test.ordertests.FooTest.test_second',
-            'twisted.trial.test.ordertests.FooTest.test_third',
-            'twisted.trial.test.ordertests.FooTest.test_fourth'])
-
+            testNames(suite),
+            [
+                'twisted.trial.test.ordertests.FooTest.test_first',
+                'twisted.trial.test.ordertests.FooTest.test_second',
+                'twisted.trial.test.ordertests.FooTest.test_third',
+                'twisted.trial.test.ordertests.FooTest.test_fourth',
+            ],
+        )
 
     def test_toptobottomModule(self):
         """
         --order=toptobottom causes trial to run test classes within a given
         module from top to bottom as they are defined in the module's source.
         """
-        self.config.parseOptions([
-            "--order", "toptobottom", "twisted.trial.test.ordertests"])
+        self.config.parseOptions(
+            ["--order", "toptobottom", "twisted.trial.test.ordertests"]
+        )
         loader = trial._getLoader(self.config)
         suite = loader.loadByNames(self.config['tests'])
 
         self.assertEqual(
-            testNames(suite), [
-            'twisted.trial.test.ordertests.FooTest.test_first',
-            'twisted.trial.test.ordertests.FooTest.test_second',
-            'twisted.trial.test.ordertests.FooTest.test_third',
-            'twisted.trial.test.ordertests.FooTest.test_fourth',
-            'twisted.trial.test.ordertests.BazTest.test_baz',
-            'twisted.trial.test.ordertests.BarTest.test_bar'])
-
+            testNames(suite),
+            [
+                'twisted.trial.test.ordertests.FooTest.test_first',
+                'twisted.trial.test.ordertests.FooTest.test_second',
+                'twisted.trial.test.ordertests.FooTest.test_third',
+                'twisted.trial.test.ordertests.FooTest.test_fourth',
+                'twisted.trial.test.ordertests.BazTest.test_baz',
+                'twisted.trial.test.ordertests.BarTest.test_bar',
+            ],
+        )
 
     def test_toptobottomPackage(self):
         """
@@ -781,18 +768,14 @@ class OrderTests(unittest.TestCase):
         package alphabetically, with tests within each module run top to
         bottom.
         """
-        self.config.parseOptions([
-            "--order", "toptobottom", "twisted.trial.test"])
+        self.config.parseOptions(["--order", "toptobottom", "twisted.trial.test"])
         loader = trial._getLoader(self.config)
         suite = loader.loadByNames(self.config['tests'])
 
         names = testNames(suite)
         # twisted.trial.test.test_module, so split and key on the first 4 to
         # get stable alphabetical sort on those
-        self.assertEqual(
-            names, sorted(names, key=lambda name : name.split(".")[:4]),
-        )
-
+        self.assertEqual(names, sorted(names, key=lambda name: name.split(".")[:4]))
 
     def test_toptobottomMissingSource(self):
         """
@@ -803,34 +786,42 @@ class OrderTests(unittest.TestCase):
         package = FilePath(tempdir).child('twisted_toptobottom_temp')
         package.makedirs()
         package.child('__init__.py').setContent(b'')
-        package.child('test_missing.py').setContent(textwrap.dedent('''
+        package.child('test_missing.py').setContent(
+            textwrap.dedent(
+                '''
         from twisted.trial.unittest import TestCase
         class TestMissing(TestCase):
             def test_second(self): pass
             def test_third(self): pass
             def test_fourth(self): pass
             def test_first(self): pass
-        ''').encode('utf8'))
+        '''
+            ).encode('utf8')
+        )
         pathEntry = package.parent().path
         sys.path.insert(0, pathEntry)
         self.addCleanup(sys.path.remove, pathEntry)
         from twisted_toptobottom_temp import test_missing
+
         self.addCleanup(sys.modules.pop, 'twisted_toptobottom_temp')
         self.addCleanup(sys.modules.pop, test_missing.__name__)
         package.child('test_missing.py').remove()
 
-        self.config.parseOptions([
-            "--order", "toptobottom", "twisted.trial.test.ordertests"])
+        self.config.parseOptions(
+            ["--order", "toptobottom", "twisted.trial.test.ordertests"]
+        )
         loader = trial._getLoader(self.config)
         suite = loader.loadModule(test_missing)
 
         self.assertEqual(
-            testNames(suite), [
-            'twisted_toptobottom_temp.test_missing.TestMissing.test_second',
-            'twisted_toptobottom_temp.test_missing.TestMissing.test_third',
-            'twisted_toptobottom_temp.test_missing.TestMissing.test_fourth',
-            'twisted_toptobottom_temp.test_missing.TestMissing.test_first'])
-
+            testNames(suite),
+            [
+                'twisted_toptobottom_temp.test_missing.TestMissing.test_second',
+                'twisted_toptobottom_temp.test_missing.TestMissing.test_third',
+                'twisted_toptobottom_temp.test_missing.TestMissing.test_fourth',
+                'twisted_toptobottom_temp.test_missing.TestMissing.test_first',
+            ],
+        )
 
     def test_unknownOrder(self):
         """
@@ -838,14 +829,15 @@ class OrderTests(unittest.TestCase):
         """
 
         self.assertRaises(
-            UsageError, self.config.parseOptions, ["--order", "I don't exist"])
-
+            UsageError, self.config.parseOptions, ["--order", "I don't exist"]
+        )
 
 
 class HelpOrderTests(unittest.TestCase):
     """
     Tests for the --help-orders flag.
     """
+
     def test_help_ordersPrintsSynopsisAndQuits(self):
         """
         --help-orders prints each of the available orders and then exits.
@@ -853,7 +845,8 @@ class HelpOrderTests(unittest.TestCase):
         self.patch(sys, "stdout", NativeStringIO())
 
         exc = self.assertRaises(
-            SystemExit, trial.Options().parseOptions, ["--help-orders"])
+            SystemExit, trial.Options().parseOptions, ["--help-orders"]
+        )
         self.assertEqual(exc.code, 0)
 
         output = sys.stdout.getvalue()
@@ -861,8 +854,7 @@ class HelpOrderTests(unittest.TestCase):
         msg = "%r with its description not properly described in %r"
         for orderName, (orderDesc, _) in trial._runOrders.items():
             match = re.search(
-                "%s.*%s" % (re.escape(orderName), re.escape(orderDesc)),
-                output,
+                "%s.*%s" % (re.escape(orderName), re.escape(orderDesc)), output
             )
 
             self.assertTrue(match, msg=msg % (orderName, output))

@@ -16,16 +16,18 @@ from twisted.test.proto_helpers import StringTransport
 from twisted.trial.unittest import TestCase
 from twisted.trial._dist.workertrial import WorkerLogObserver, main, _setupPath
 from twisted.trial._dist import (
-    workertrial, _WORKER_AMP_STDIN, _WORKER_AMP_STDOUT, workercommands,
-    managercommands)
-
+    workertrial,
+    _WORKER_AMP_STDIN,
+    _WORKER_AMP_STDOUT,
+    workercommands,
+    managercommands,
+)
 
 
 class FakeAMP(AMP):
     """
     A fake amp protocol.
     """
-
 
 
 class WorkerLogObserverTests(TestCase):
@@ -40,15 +42,12 @@ class WorkerLogObserverTests(TestCase):
         calls = []
 
         class FakeClient(object):
-
             def callRemote(self, method, **kwargs):
                 calls.append((method, kwargs))
 
         observer = WorkerLogObserver(FakeClient())
         observer.emit({'message': ['Some log']})
-        self.assertEqual(
-            calls, [(managercommands.TestWrite, {'out': 'Some log'})])
-
+        self.assertEqual(calls, [(managercommands.TestWrite, {'out': 'Some log'})])
 
 
 class MainTests(TestCase):
@@ -59,11 +58,11 @@ class MainTests(TestCase):
     def setUp(self):
         self.readStream = BytesIO()
         self.writeStream = BytesIO()
-        self.patch(workertrial, 'startLoggingWithObserver',
-                   self.startLoggingWithObserver)
+        self.patch(
+            workertrial, 'startLoggingWithObserver', self.startLoggingWithObserver
+        )
         self.addCleanup(setattr, sys, "argv", sys.argv)
         sys.argv = ["trial"]
-
 
     def fdopen(self, fd, mode=None):
         """
@@ -79,13 +78,11 @@ class MainTests(TestCase):
         else:
             raise AssertionError("Unexpected fd %r" % (fd,))
 
-
     def startLoggingWithObserver(self, emit, setStdout):
         """
         Override C{startLoggingWithObserver} for not starting logging.
         """
         self.assertFalse(setStdout)
-
 
     def test_empty(self):
         """
@@ -93,7 +90,6 @@ class MainTests(TestCase):
         """
         main(self.fdopen)
         self.assertEqual(b'', self.writeStream.getvalue())
-
 
     def test_forwardCommand(self):
         """
@@ -107,9 +103,7 @@ class MainTests(TestCase):
         self.readStream = clientTransport.io
         self.readStream.seek(0, 0)
         main(self.fdopen)
-        self.assertIn(
-            b"No module named 'doesntexist'", self.writeStream.getvalue())
-
+        self.assertIn(b"No module named 'doesntexist'", self.writeStream.getvalue())
 
     def test_readInterrupted(self):
         """
@@ -134,7 +128,6 @@ class MainTests(TestCase):
         self.assertEqual(b'', self.writeStream.getvalue())
         self.assertEqual([(None, None, None)], excInfos)
 
-
     def test_otherReadError(self):
         """
         L{main} only ignores C{IOError} with C{EINTR} errno: otherwise, the
@@ -154,7 +147,6 @@ class MainTests(TestCase):
         self.assertRaises(IOError, main, self.fdopen)
 
 
-
 class SetupPathTests(TestCase):
     """
     Tests for L{_setupPath} C{sys.path} manipulation.
@@ -162,7 +154,6 @@ class SetupPathTests(TestCase):
 
     def setUp(self):
         self.addCleanup(setattr, sys, "path", sys.path[:])
-
 
     def test_overridePath(self):
         """
@@ -172,7 +163,6 @@ class SetupPathTests(TestCase):
         environ = {"TRIAL_PYTHONPATH": os.pathsep.join(["foo", "bar"])}
         _setupPath(environ)
         self.assertEqual(["foo", "bar"], sys.path)
-
 
     def test_noVariable(self):
         """

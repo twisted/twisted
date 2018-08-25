@@ -50,7 +50,6 @@ def handle(result, line, filename, lineNo):
         result.setdefault(user.strip(), []).extend(map(str.strip, alias.split(',')))
 
 
-
 def loadAliasFile(domains, filename=None, fp=None):
     """
     Load a file containing email aliases.
@@ -123,7 +122,6 @@ def loadAliasFile(domains, filename=None, fp=None):
     return result
 
 
-
 class AliasBase:
     """
     The default base class for aliases.
@@ -133,6 +131,7 @@ class AliasBase:
     @type original: L{Address}
     @ivar original: The original address being aliased.
     """
+
     def __init__(self, domains, original):
         """
         @type domains: L{dict} mapping L{bytes} to L{IDomain} provider
@@ -144,7 +143,6 @@ class AliasBase:
         self.domains = domains
         self.original = smtp.Address(original)
 
-
     def domain(self):
         """
         Return the domain associated with original address.
@@ -153,7 +151,6 @@ class AliasBase:
         @return: The domain for the original address.
         """
         return self.domains[self.original.domain]
-
 
     def resolve(self, aliasmap, memo=None):
         """
@@ -179,7 +176,6 @@ class AliasBase:
         return self.createMessageReceiver()
 
 
-
 @implementer(IAlias)
 class AddressAlias(AliasBase):
     """
@@ -188,6 +184,7 @@ class AddressAlias(AliasBase):
     @type alias : L{Address}
     @ivar alias: The destination address.
     """
+
     def __init__(self, alias, *args):
         """
         @type alias: L{Address}, L{User}, L{bytes} or object which can be
@@ -201,7 +198,6 @@ class AddressAlias(AliasBase):
         AliasBase.__init__(self, *args)
         self.alias = smtp.Address(alias)
 
-
     def __str__(self):
         """
         Build a string representation of this L{AddressAlias} instance.
@@ -210,7 +206,6 @@ class AddressAlias(AliasBase):
         @return: A string containing the destination address.
         """
         return '<Address %s>' % (self.alias,)
-
 
     def createMessageReceiver(self):
         """
@@ -221,7 +216,6 @@ class AddressAlias(AliasBase):
         @return: A message receiver.
         """
         return self.domain().exists(str(self.alias))
-
 
     def resolve(self, aliasmap, memo=None):
         """
@@ -253,7 +247,6 @@ class AddressAlias(AliasBase):
         return None
 
 
-
 @implementer(smtp.IMessage)
 class FileWrapper:
     """
@@ -266,6 +259,7 @@ class FileWrapper:
     @ivar finalname: The name of the file in which the message should be
         stored.
     """
+
     def __init__(self, filename):
         """
         @type filename: L{bytes}
@@ -275,7 +269,6 @@ class FileWrapper:
         self.fp = tempfile.TemporaryFile()
         self.finalname = filename
 
-
     def lineReceived(self, line):
         """
         Write a received line to the temporary file.
@@ -284,7 +277,6 @@ class FileWrapper:
         @param line: A received line of the message.
         """
         self.fp.write(line + '\n')
-
 
     def eomReceived(self):
         """
@@ -308,14 +300,12 @@ class FileWrapper:
 
         return defer.succeed(self.finalname)
 
-
     def connectionLost(self):
         """
         Close the temporary file when the connection is lost.
         """
         self.fp.close()
         self.fp = None
-
 
     def __str__(self):
         """
@@ -327,7 +317,6 @@ class FileWrapper:
         return '<FileWrapper %s>' % (self.finalname,)
 
 
-
 @implementer(IAlias)
 class FileAlias(AliasBase):
     """
@@ -335,6 +324,7 @@ class FileAlias(AliasBase):
 
     @ivar filename: See L{__init__}.
     """
+
     def __init__(self, filename, *args):
         """
         @type filename: L{bytes}
@@ -347,7 +337,6 @@ class FileAlias(AliasBase):
         AliasBase.__init__(self, *args)
         self.filename = filename
 
-
     def __str__(self):
         """
         Build a string representation of this L{FileAlias} instance.
@@ -356,7 +345,6 @@ class FileAlias(AliasBase):
         @return: A string containing the name of the file.
         """
         return '<File %s>' % (self.filename,)
-
 
     def createMessageReceiver(self):
         """
@@ -368,13 +356,11 @@ class FileAlias(AliasBase):
         return FileWrapper(self.filename)
 
 
-
 class ProcessAliasTimeout(Exception):
     """
     An error indicating that a timeout occurred while waiting for a process
     to complete.
     """
-
 
 
 @implementer(smtp.IMessage)
@@ -408,6 +394,7 @@ class MessageWrapper:
     @ivar completion: The deferred which will be triggered by the protocol
         when the child process exits.
     """
+
     done = False
 
     completionTimeout = 60
@@ -436,7 +423,6 @@ class MessageWrapper:
         if reactor is not None:
             self.reactor = reactor
 
-
     def _processEnded(self, result):
         """
         Record process termination and cancel the timeout call if it is active.
@@ -459,7 +445,6 @@ class MessageWrapper:
             # error.
             return result
 
-
     def lineReceived(self, line):
         """
         Write a received line to the child process.
@@ -470,7 +455,6 @@ class MessageWrapper:
         if self.done:
             return
         self.protocol.transport.write(line + '\n')
-
 
     def eomReceived(self):
         """
@@ -484,9 +468,9 @@ class MessageWrapper:
         if not self.done:
             self.protocol.transport.loseConnection()
             self._timeoutCallID = self.reactor.callLater(
-                self.completionTimeout, self._completionCancel)
+                self.completionTimeout, self._completionCancel
+            )
         return self.completion
-
 
     def _completionCancel(self):
         """
@@ -497,16 +481,15 @@ class MessageWrapper:
         self._timeoutCallID = None
         self.protocol.transport.signalProcess('KILL')
         exc = ProcessAliasTimeout(
-            "No answer after %s seconds" % (self.completionTimeout,))
+            "No answer after %s seconds" % (self.completionTimeout,)
+        )
         self.protocol.onEnd = None
         self.completion.errback(failure.Failure(exc))
-
 
     def connectionLost(self):
         """
         Ignore notification of lost connection.
         """
-
 
     def __str__(self):
         """
@@ -518,7 +501,6 @@ class MessageWrapper:
         return '<ProcessWrapper %s>' % (self.processName,)
 
 
-
 class ProcessAliasProtocol(protocol.ProcessProtocol):
     """
     A process protocol which errbacks a deferred when the associated
@@ -527,6 +509,7 @@ class ProcessAliasProtocol(protocol.ProcessProtocol):
     @type onEnd: L{None} or L{Deferred <defer.Deferred>}
     @ivar onEnd: If set, a deferred on which to errback when the process ends.
     """
+
     onEnd = None
 
     def processEnded(self, reason):
@@ -538,7 +521,6 @@ class ProcessAliasProtocol(protocol.ProcessProtocol):
         """
         if self.onEnd is not None:
             self.onEnd.errback(reason)
-
 
 
 @implementer(IAlias)
@@ -559,6 +541,7 @@ class ProcessAlias(AliasBase):
     @ivar reactor: A reactor which will be used to create and timeout the
         child process.
     """
+
     reactor = reactor
 
     def __init__(self, path, *args):
@@ -576,7 +559,6 @@ class ProcessAlias(AliasBase):
         self.path = path.split()
         self.program = self.path[0]
 
-
     def __str__(self):
         """
         Build a string representation of this L{ProcessAlias} instance.
@@ -585,7 +567,6 @@ class ProcessAlias(AliasBase):
         @return: A string containing the command used to invoke the process.
         """
         return '<Process %s>' % (self.path,)
-
 
     def spawnProcess(self, proto, program, path):
         """
@@ -613,7 +594,6 @@ class ProcessAlias(AliasBase):
         """
         return self.reactor.spawnProcess(proto, program, path)
 
-
     def createMessageReceiver(self):
         """
         Launch a process and create a message receiver to pass a message
@@ -628,7 +608,6 @@ class ProcessAlias(AliasBase):
         return m
 
 
-
 @implementer(smtp.IMessage)
 class MultiWrapper:
     """
@@ -637,6 +616,7 @@ class MultiWrapper:
 
     @ivar objs: See L{__init__}.
     """
+
     def __init__(self, objs):
         """
         @type objs: L{list} of L{IMessage <smtp.IMessage>} provider
@@ -644,7 +624,6 @@ class MultiWrapper:
             directed.
         """
         self.objs = objs
-
 
     def lineReceived(self, line):
         """
@@ -656,7 +635,6 @@ class MultiWrapper:
         for o in self.objs:
             o.lineReceived(line)
 
-
     def eomReceived(self):
         """
         Pass the end of message along to the message receivers.
@@ -666,10 +644,7 @@ class MultiWrapper:
         @return: A deferred list which triggers when all of the message
             receivers have finished handling their end of message.
         """
-        return defer.DeferredList([
-            o.eomReceived() for o in self.objs
-        ])
-
+        return defer.DeferredList([o.eomReceived() for o in self.objs])
 
     def connectionLost(self):
         """
@@ -677,7 +652,6 @@ class MultiWrapper:
         """
         for o in self.objs:
             o.connectionLost()
-
 
     def __str__(self):
         """
@@ -687,7 +661,6 @@ class MultiWrapper:
         @return: A string containing a list of the message receivers.
         """
         return '<GroupWrapper %r>' % (map(str, self.objs),)
-
 
 
 @implementer(IAlias)
@@ -702,6 +675,7 @@ class AliasGroup(AliasBase):
     @type aliases: L{list} of L{AliasBase} which implements L{IAlias}
     @ivar aliases: The destination aliases.
     """
+
     processAliasFactory = ProcessAlias
 
     def __init__(self, items, *args):
@@ -742,7 +716,6 @@ class AliasGroup(AliasBase):
             else:
                 self.aliases.append(AddressAlias(addr, *args))
 
-
     def __len__(self):
         """
         Return the number of aliases in the group.
@@ -752,7 +725,6 @@ class AliasGroup(AliasBase):
         """
         return len(self.aliases)
 
-
     def __str__(self):
         """
         Build a string representation of this L{AliasGroup} instance.
@@ -761,7 +733,6 @@ class AliasGroup(AliasBase):
         @return: A string containing the aliases in the group.
         """
         return '<AliasGroup [%s]>' % (', '.join(map(str, self.aliases)))
-
 
     def createMessageReceiver(self):
         """
@@ -773,7 +744,6 @@ class AliasGroup(AliasBase):
             receivers for each alias in the group.
         """
         return MultiWrapper([a.createMessageReceiver() for a in self.aliases])
-
 
     def resolve(self, aliasmap, memo=None):
         """

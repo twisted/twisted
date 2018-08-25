@@ -34,12 +34,9 @@ class PollReactorTests(SynchronousTestCase):
         if poll() is unavailable.
         """
         if hasattr(select, "poll"):
-            self.assertEqual(
-                install.__module__, 'twisted.internet.pollreactor')
+            self.assertEqual(install.__module__, 'twisted.internet.pollreactor')
         else:
-            self.assertEqual(
-                install.__module__, 'twisted.internet.selectreactor')
-
+            self.assertEqual(install.__module__, 'twisted.internet.selectreactor')
 
     def test_unix(self):
         """
@@ -48,7 +45,6 @@ class PollReactorTests(SynchronousTestCase):
         """
         install = _getInstallFunction(unix)
         self.assertIsPoll(install)
-
 
     def test_linux(self):
         """
@@ -59,9 +55,7 @@ class PollReactorTests(SynchronousTestCase):
         if requireModule('twisted.internet.epollreactor') is None:
             self.assertIsPoll(install)
         else:
-            self.assertEqual(
-                install.__module__, 'twisted.internet.epollreactor')
-
+            self.assertEqual(install.__module__, 'twisted.internet.epollreactor')
 
 
 class SelectReactorTests(SynchronousTestCase):
@@ -69,23 +63,20 @@ class SelectReactorTests(SynchronousTestCase):
     Tests for the cases of L{twisted.internet.default._getInstallFunction}
     in which it picks the select(2)-based reactor.
     """
+
     def test_osx(self):
         """
         L{_getInstallFunction} chooses the select reactor on macOS.
         """
         install = _getInstallFunction(osx)
-        self.assertEqual(
-            install.__module__, 'twisted.internet.selectreactor')
-
+        self.assertEqual(install.__module__, 'twisted.internet.selectreactor')
 
     def test_windows(self):
         """
         L{_getInstallFunction} chooses the select reactor on Windows.
         """
         install = _getInstallFunction(windows)
-        self.assertEqual(
-            install.__module__, 'twisted.internet.selectreactor')
-
+        self.assertEqual(install.__module__, 'twisted.internet.selectreactor')
 
 
 class InstallationTests(SynchronousTestCase):
@@ -101,19 +92,21 @@ class InstallationTests(SynchronousTestCase):
             install()
             self.assertIn("twisted.internet.reactor", sys.modules)
 
-
     def test_reactor(self):
         """
         Importing L{twisted.internet.reactor} installs the default reactor if
         none is installed.
         """
         installed = []
+
         def installer():
             installed.append(True)
             return install()
+
         self.patch(default, "install", installer)
 
         with NoReactor():
             from twisted.internet import reactor
+
             self.assertTrue(IReactorCore.providedBy(reactor))
             self.assertEqual(installed, [True])

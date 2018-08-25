@@ -28,7 +28,6 @@ from twisted.web.server import NOT_DONE_YET
 from twisted.web.http import HTTPClient, Request, HTTPChannel, _QUEUED_SENTINEL
 
 
-
 class ProxyClient(HTTPClient):
     """
     Used by ProxyClientFactory to implement a simple web proxy.
@@ -36,6 +35,7 @@ class ProxyClient(HTTPClient):
     @ivar _finished: A flag which indicates whether or not the original request
         has been finished yet.
     """
+
     _finished = False
 
     def __init__(self, command, rest, version, headers, data, father):
@@ -49,7 +49,6 @@ class ProxyClient(HTTPClient):
         self.headers = headers
         self.data = data
 
-
     def connectionMade(self):
         self.sendCommand(self.command, self.rest)
         for header, value in self.headers.items():
@@ -57,10 +56,8 @@ class ProxyClient(HTTPClient):
         self.endHeaders()
         self.transport.write(self.data)
 
-
     def handleStatus(self, version, code, message):
         self.father.setResponseCode(int(code), message)
-
 
     def handleHeader(self, key, value):
         # t.web.server.Request sets default values for these headers in its
@@ -72,10 +69,8 @@ class ProxyClient(HTTPClient):
         else:
             self.father.responseHeaders.addRawHeader(key, value)
 
-
     def handleResponsePart(self, buffer):
         self.father.write(buffer)
-
 
     def handleResponseEnd(self):
         """
@@ -88,14 +83,12 @@ class ProxyClient(HTTPClient):
             self.transport.loseConnection()
 
 
-
 class ProxyClientFactory(ClientFactory):
     """
     Used by ProxyRequest to implement a simple web proxy.
     """
 
     protocol = ProxyClient
-
 
     def __init__(self, command, rest, version, headers, data, father):
         self.father = father
@@ -105,11 +98,10 @@ class ProxyClientFactory(ClientFactory):
         self.data = data
         self.version = version
 
-
     def buildProtocol(self, addr):
-        return self.protocol(self.command, self.rest, self.version,
-                             self.headers, self.data, self.father)
-
+        return self.protocol(
+            self.command, self.rest, self.version, self.headers, self.data, self.father
+        )
 
     def clientConnectionFailed(self, connector, reason):
         """
@@ -120,7 +112,6 @@ class ProxyClientFactory(ClientFactory):
         self.father.responseHeaders.addRawHeader(b"Content-Type", b"text/html")
         self.father.write(b"<H1>Could not connect</H1>")
         self.father.finish()
-
 
 
 class ProxyRequest(Request):
@@ -137,7 +128,6 @@ class ProxyRequest(Request):
     def __init__(self, channel, queued=_QUEUED_SENTINEL, reactor=reactor):
         Request.__init__(self, channel, queued)
         self.reactor = reactor
-
 
     def process(self):
         parsed = urllib_parse.urlparse(self.uri)
@@ -156,10 +146,8 @@ class ProxyRequest(Request):
             headers[b'host'] = host.encode('ascii')
         self.content.seek(0, 0)
         s = self.content.read()
-        clientFactory = class_(self.method, rest, self.clientproto, headers,
-                               s, self)
+        clientFactory = class_(self.method, rest, self.clientproto, headers, s, self)
         self.reactor.connectTCP(host, port, clientFactory)
-
 
 
 class Proxy(HTTPChannel):
@@ -180,7 +168,6 @@ class Proxy(HTTPChannel):
     requestFactory = ProxyRequest
 
 
-
 class ReverseProxyRequest(Request):
     """
     Used by ReverseProxy to implement a simple reverse proxy.
@@ -199,21 +186,22 @@ class ReverseProxyRequest(Request):
         Request.__init__(self, channel, queued)
         self.reactor = reactor
 
-
     def process(self):
         """
         Handle this request by connecting to the proxied server and forwarding
         it there, then forwarding the response back as the response to this
         request.
         """
-        self.requestHeaders.setRawHeaders(b"host",
-                                          [self.factory.host.encode('ascii')])
+        self.requestHeaders.setRawHeaders(b"host", [self.factory.host.encode('ascii')])
         clientFactory = self.proxyClientFactoryClass(
-            self.method, self.uri, self.clientproto, self.getAllHeaders(),
-            self.content.read(), self)
-        self.reactor.connectTCP(self.factory.host, self.factory.port,
-                                clientFactory)
-
+            self.method,
+            self.uri,
+            self.clientproto,
+            self.getAllHeaders(),
+            self.content.read(),
+            self,
+        )
+        self.reactor.connectTCP(self.factory.host, self.factory.port, clientFactory)
 
 
 class ReverseProxy(HTTPChannel):
@@ -224,7 +212,6 @@ class ReverseProxy(HTTPChannel):
     """
 
     requestFactory = ReverseProxyRequest
-
 
 
 class ReverseProxyResource(Resource):
@@ -243,7 +230,6 @@ class ReverseProxyResource(Resource):
     """
 
     proxyClientFactoryClass = ProxyClientFactory
-
 
     def __init__(self, host, port, path, reactor=reactor):
         """
@@ -267,7 +253,6 @@ class ReverseProxyResource(Resource):
         self.path = path
         self.reactor = reactor
 
-
     def getChild(self, path, request):
         """
         Create and return a proxy resource with the same proxy configuration
@@ -275,9 +260,11 @@ class ReverseProxyResource(Resource):
         C{path} at the end.
         """
         return ReverseProxyResource(
-            self.host, self.port, self.path + b'/' + urlquote(path, safe=b"").encode('utf-8'),
-            self.reactor)
-
+            self.host,
+            self.port,
+            self.path + b'/' + urlquote(path, safe=b"").encode('utf-8'),
+            self.reactor,
+        )
 
     def render(self, request):
         """
@@ -297,7 +284,12 @@ class ReverseProxyResource(Resource):
         else:
             rest = self.path
         clientFactory = self.proxyClientFactoryClass(
-            request.method, rest, request.clientproto,
-            request.getAllHeaders(), request.content.read(), request)
+            request.method,
+            rest,
+            request.clientproto,
+            request.getAllHeaders(),
+            request.content.read(),
+            request,
+        )
         self.reactor.connectTCP(self.host, self.port, clientFactory)
         return NOT_DONE_YET

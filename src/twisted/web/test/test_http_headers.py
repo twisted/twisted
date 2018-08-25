@@ -11,10 +11,12 @@ from twisted.trial.unittest import TestCase
 from twisted.python.compat import _PY3, unicode
 from twisted.web.http_headers import Headers
 
+
 class BytesHeadersTests(TestCase):
     """
     Tests for L{Headers}, using L{bytes} arguments for methods.
     """
+
     def test_initializer(self):
         """
         The header values passed to L{Headers.__init__} can be retrieved via
@@ -22,7 +24,6 @@ class BytesHeadersTests(TestCase):
         """
         h = Headers({b'Foo': [b'bar']})
         self.assertEqual(h.getRawHeaders(b'foo'), [b'bar'])
-
 
     def test_setRawHeaders(self):
         """
@@ -36,14 +37,12 @@ class BytesHeadersTests(TestCase):
         self.assertTrue(h.hasHeader(b"Test"))
         self.assertEqual(h.getRawHeaders(b"test"), rawValue)
 
-
     def test_rawHeadersTypeChecking(self):
         """
         L{Headers.setRawHeaders} requires values to be of type list.
         """
         h = Headers()
         self.assertRaises(TypeError, h.setRawHeaders, b'key', {b'Foo': b'bar'})
-
 
     def test_addRawHeader(self):
         """
@@ -55,14 +54,12 @@ class BytesHeadersTests(TestCase):
         h.addRawHeader(b"test", b"panda")
         self.assertEqual(h.getRawHeaders(b"test"), [b"lemur", b"panda"])
 
-
     def test_getRawHeadersNoDefault(self):
         """
         L{Headers.getRawHeaders} returns L{None} if the header is not found and
         no default is specified.
         """
         self.assertIsNone(Headers().getRawHeaders(b"test"))
-
 
     def test_getRawHeadersDefaultValue(self):
         """
@@ -72,7 +69,6 @@ class BytesHeadersTests(TestCase):
         h = Headers()
         default = object()
         self.assertIdentical(h.getRawHeaders(b"test", default), default)
-
 
     def test_getRawHeadersWithDefaultMatchingValue(self):
         """
@@ -86,7 +82,6 @@ class BytesHeadersTests(TestCase):
         self.assertIsInstance(h.getRawHeaders(b"key", default)[0], bytes)
         self.assertEqual(h.getRawHeaders(b"key", default), [b"value"])
 
-
     def test_getRawHeaders(self):
         """
         L{Headers.getRawHeaders} returns the values which have been set for a
@@ -96,7 +91,6 @@ class BytesHeadersTests(TestCase):
         h.setRawHeaders(b"test", [b"lemur"])
         self.assertEqual(h.getRawHeaders(b"test"), [b"lemur"])
         self.assertEqual(h.getRawHeaders(b"Test"), [b"lemur"])
-
 
     def test_hasHeaderTrue(self):
         """
@@ -108,14 +102,12 @@ class BytesHeadersTests(TestCase):
         self.assertTrue(h.hasHeader(b"test"))
         self.assertTrue(h.hasHeader(b"Test"))
 
-
     def test_hasHeaderFalse(self):
         """
         L{Headers.hasHeader} returns C{False} when the given header is not
         found.
         """
         self.assertFalse(Headers().hasHeader(b"test"))
-
 
     def test_removeHeader(self):
         """
@@ -133,7 +125,6 @@ class BytesHeadersTests(TestCase):
         h.removeHeader(b"Bar")
         self.assertFalse(h.hasHeader(b"bar"))
 
-
     def test_removeHeaderDoesntExist(self):
         """
         L{Headers.removeHeader} is a no-operation when the specified header is
@@ -142,7 +133,6 @@ class BytesHeadersTests(TestCase):
         h = Headers()
         h.removeHeader(b"test")
         self.assertEqual(list(h.getAllRawHeaders()), [])
-
 
     def test_canonicalNameCaps(self):
         """
@@ -157,11 +147,8 @@ class BytesHeadersTests(TestCase):
         self.assertEqual(h._canonicalNameCaps(b"etag"), b"ETag")
         self.assertEqual(h._canonicalNameCaps(b"p3p"), b"P3P")
         self.assertEqual(h._canonicalNameCaps(b"te"), b"TE")
-        self.assertEqual(h._canonicalNameCaps(b"www-authenticate"),
-                          b"WWW-Authenticate")
-        self.assertEqual(h._canonicalNameCaps(b"x-xss-protection"),
-                          b"X-XSS-Protection")
-
+        self.assertEqual(h._canonicalNameCaps(b"www-authenticate"), b"WWW-Authenticate")
+        self.assertEqual(h._canonicalNameCaps(b"x-xss-protection"), b"X-XSS-Protection")
 
     def test_getAllRawHeaders(self):
         """
@@ -175,10 +162,12 @@ class BytesHeadersTests(TestCase):
 
         allHeaders = set([(k, tuple(v)) for k, v in h.getAllRawHeaders()])
 
-        self.assertEqual(allHeaders,
-                          set([(b"WWW-Authenticate", (b"basic aksljdlk=",)),
-                               (b"Test", (b"lemurs",))]))
-
+        self.assertEqual(
+            allHeaders,
+            set(
+                [(b"WWW-Authenticate", (b"basic aksljdlk=",)), (b"Test", (b"lemurs",))]
+            ),
+        )
 
     def test_headersComparison(self):
         """
@@ -195,7 +184,6 @@ class BytesHeadersTests(TestCase):
         self.assertEqual(first, second)
         self.assertNotEqual(first, third)
 
-
     def test_otherComparison(self):
         """
         An instance of L{Headers} does not compare equal to other unrelated
@@ -205,7 +193,6 @@ class BytesHeadersTests(TestCase):
         self.assertNotEqual(h, ())
         self.assertNotEqual(h, object())
         self.assertNotEqual(h, b"foo")
-
 
     def test_repr(self):
         """
@@ -217,8 +204,8 @@ class BytesHeadersTests(TestCase):
         baz = b"baz"
         self.assertEqual(
             repr(Headers({foo: [bar, baz]})),
-            "Headers({%r: [%r, %r]})" % (foo, bar, baz))
-
+            "Headers({%r: [%r, %r]})" % (foo, bar, baz),
+        )
 
     def test_reprWithRawBytes(self):
         """
@@ -234,8 +221,8 @@ class BytesHeadersTests(TestCase):
         baz = b"baz\xe1"
         self.assertEqual(
             repr(Headers({foo: [bar, baz]})),
-            "Headers({%r: [%r, %r]})" % (foo, bar, baz))
-
+            "Headers({%r: [%r, %r]})" % (foo, bar, baz),
+        )
 
     def test_subclassRepr(self):
         """
@@ -245,12 +232,14 @@ class BytesHeadersTests(TestCase):
         foo = b"foo"
         bar = b"bar"
         baz = b"baz"
+
         class FunnyHeaders(Headers):
             pass
+
         self.assertEqual(
             repr(FunnyHeaders({foo: [bar, baz]})),
-            "FunnyHeaders({%r: [%r, %r]})" % (foo, bar, baz))
-
+            "FunnyHeaders({%r: [%r, %r]})" % (foo, bar, baz),
+        )
 
     def test_copy(self):
         """
@@ -268,11 +257,11 @@ class BytesHeadersTests(TestCase):
         self.assertEqual(h.getRawHeaders(b'test'), [b'foo', b'bar'])
 
 
-
 class UnicodeHeadersTests(TestCase):
     """
     Tests for L{Headers}, using L{unicode} arguments for methods.
     """
+
     def test_initializer(self):
         """
         The header values passed to L{Headers.__init__} can be retrieved via
@@ -284,7 +273,6 @@ class UnicodeHeadersTests(TestCase):
         h = Headers({u'Foo': [u'bar']})
         self.assertEqual(h.getRawHeaders(b'foo'), [b'bar'])
         self.assertEqual(h.getRawHeaders(u'foo'), [u'bar'])
-
 
     def test_setRawHeaders(self):
         """
@@ -302,7 +290,6 @@ class UnicodeHeadersTests(TestCase):
         self.assertEqual(h.getRawHeaders("test"), rawValue)
         self.assertEqual(h.getRawHeaders(b"test"), rawEncodedValue)
 
-
     def test_nameNotEncodable(self):
         """
         Passing L{unicode} to any function that takes a header name will encode
@@ -317,7 +304,6 @@ class UnicodeHeadersTests(TestCase):
 
         with self.assertRaises(UnicodeEncodeError):
             h.hasHeader(u"\u2603")
-
 
     def test_nameEncoding(self):
         """
@@ -336,7 +322,6 @@ class UnicodeHeadersTests(TestCase):
         # We can still access it using the Unicode string..
         self.assertTrue(h.hasHeader(u"\u00E1"))
 
-
     def test_rawHeadersValueEncoding(self):
         """
         Passing L{unicode} to L{Headers.setRawHeaders} will encode the name as
@@ -347,14 +332,12 @@ class UnicodeHeadersTests(TestCase):
         self.assertTrue(h.hasHeader(b"\xe1"))
         self.assertEqual(h.getRawHeaders(b"\xe1"), [b'\xe2\x98\x83', b'foo'])
 
-
     def test_rawHeadersTypeChecking(self):
         """
         L{Headers.setRawHeaders} requires values to be of type list.
         """
         h = Headers()
         self.assertRaises(TypeError, h.setRawHeaders, u'key', {u'Foo': u'bar'})
-
 
     def test_addRawHeader(self):
         """
@@ -367,14 +350,12 @@ class UnicodeHeadersTests(TestCase):
         self.assertEqual(h.getRawHeaders(u"test"), [u"lemur", u"panda"])
         self.assertEqual(h.getRawHeaders(b"test"), [b"lemur", b"panda"])
 
-
     def test_getRawHeadersNoDefault(self):
         """
         L{Headers.getRawHeaders} returns L{None} if the header is not found and
         no default is specified.
         """
         self.assertIsNone(Headers().getRawHeaders(u"test"))
-
 
     def test_getRawHeadersDefaultValue(self):
         """
@@ -386,11 +367,7 @@ class UnicodeHeadersTests(TestCase):
         self.assertIdentical(h.getRawHeaders(u"test", default), default)
         self.assertIdentical(h.getRawHeaders(u"test", None), None)
         self.assertEqual(h.getRawHeaders(u"test", [None]), [None])
-        self.assertEqual(
-            h.getRawHeaders(u"test", [u"\N{SNOWMAN}"]),
-            [u"\N{SNOWMAN}"],
-        )
-
+        self.assertEqual(h.getRawHeaders(u"test", [u"\N{SNOWMAN}"]), [u"\N{SNOWMAN}"])
 
     def test_getRawHeadersWithDefaultMatchingValue(self):
         """
@@ -404,7 +381,6 @@ class UnicodeHeadersTests(TestCase):
         self.assertIsInstance(h.getRawHeaders(u"key", default)[0], unicode)
         self.assertEqual(h.getRawHeaders(u"key", default), [u"value"])
 
-
     def test_getRawHeaders(self):
         """
         L{Headers.getRawHeaders} returns the values which have been set for a
@@ -416,7 +392,6 @@ class UnicodeHeadersTests(TestCase):
         self.assertEqual(h.getRawHeaders(u"Test\u00E1"), [u"lemur"])
         self.assertEqual(h.getRawHeaders(b"test\xe1"), [b"lemur"])
         self.assertEqual(h.getRawHeaders(b"Test\xe1"), [b"lemur"])
-
 
     def test_hasHeaderTrue(self):
         """
@@ -430,14 +405,12 @@ class UnicodeHeadersTests(TestCase):
         self.assertTrue(h.hasHeader(b"test\xe1"))
         self.assertTrue(h.hasHeader(b"Test\xe1"))
 
-
     def test_hasHeaderFalse(self):
         """
         L{Headers.hasHeader} returns C{False} when the given header is not
         found.
         """
         self.assertFalse(Headers().hasHeader(u"test\u00E1"))
-
 
     def test_removeHeader(self):
         """
@@ -457,7 +430,6 @@ class UnicodeHeadersTests(TestCase):
         self.assertFalse(h.hasHeader(u"bar"))
         self.assertFalse(h.hasHeader(b"bar"))
 
-
     def test_removeHeaderDoesntExist(self):
         """
         L{Headers.removeHeader} is a no-operation when the specified header is
@@ -466,7 +438,6 @@ class UnicodeHeadersTests(TestCase):
         h = Headers()
         h.removeHeader(u"test")
         self.assertEqual(list(h.getAllRawHeaders()), [])
-
 
     def test_getAllRawHeaders(self):
         """
@@ -481,11 +452,16 @@ class UnicodeHeadersTests(TestCase):
 
         allHeaders = set([(k, tuple(v)) for k, v in h.getAllRawHeaders()])
 
-        self.assertEqual(allHeaders,
-                          set([(b"WWW-Authenticate", (b"basic aksljdlk=",)),
-                               (b"Content-MD5", (b"kjdfdfgdfgnsd",)),
-                               (b"Test\xe1", (b"lemurs",))]))
-
+        self.assertEqual(
+            allHeaders,
+            set(
+                [
+                    (b"WWW-Authenticate", (b"basic aksljdlk=",)),
+                    (b"Content-MD5", (b"kjdfdfgdfgnsd",)),
+                    (b"Test\xe1", (b"lemurs",)),
+                ]
+            ),
+        )
 
     def test_headersComparison(self):
         """
@@ -515,7 +491,6 @@ class UnicodeHeadersTests(TestCase):
         self.assertEqual(second, secondBytes)
         self.assertEqual(third, thirdBytes)
 
-
     def test_otherComparison(self):
         """
         An instance of L{Headers} does not compare equal to other unrelated
@@ -525,7 +500,6 @@ class UnicodeHeadersTests(TestCase):
         self.assertNotEqual(h, ())
         self.assertNotEqual(h, object())
         self.assertNotEqual(h, u"foo")
-
 
     def test_repr(self):
         """
@@ -543,10 +517,8 @@ class UnicodeHeadersTests(TestCase):
             barEncoded = "b" + barEncoded
         self.assertEqual(
             repr(Headers({foo: [bar, baz]})),
-            "Headers({%s: [%s, %r]})" % (fooEncoded,
-                                         barEncoded,
-                                         baz.encode('utf8')))
-
+            "Headers({%s: [%s, %r]})" % (fooEncoded, barEncoded, baz.encode('utf8')),
+        )
 
     def test_subclassRepr(self):
         """
@@ -561,14 +533,15 @@ class UnicodeHeadersTests(TestCase):
         if _PY3:
             fooEncoded = "b" + fooEncoded
             barEncoded = "b" + barEncoded
+
         class FunnyHeaders(Headers):
             pass
+
         self.assertEqual(
             repr(FunnyHeaders({foo: [bar, baz]})),
-            "FunnyHeaders({%s: [%s, %r]})" % (fooEncoded,
-                                              barEncoded,
-                                              baz.encode('utf8')))
-
+            "FunnyHeaders({%s: [%s, %r]})"
+            % (fooEncoded, barEncoded, baz.encode('utf8')),
+        )
 
     def test_copy(self):
         """
@@ -595,7 +568,5 @@ class UnicodeHeadersTests(TestCase):
         i.addRawHeader(u'test\u00E1', b'baz')
 
         # Verify that the orignal does not have it
-        self.assertEqual(
-            h.getRawHeaders(u'test\u00E1'), [u'foo\u2603', u'bar'])
-        self.assertEqual(
-            h.getRawHeaders(b'test\xe1'), [b'foo\xe2\x98\x83', b'bar'])
+        self.assertEqual(h.getRawHeaders(u'test\u00E1'), [u'foo\u2603', u'bar'])
+        self.assertEqual(h.getRawHeaders(b'test\xe1'), [b'foo\xe2\x98\x83', b'bar'])

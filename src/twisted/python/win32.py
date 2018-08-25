@@ -25,11 +25,13 @@ ERROR_DIRECTORY = 267
 
 O_BINARY = getattr(os, "O_BINARY", 0)
 
+
 class FakeWindowsError(OSError):
     """
     Stand-in for sometimes-builtin exception on platforms for which it
     is missing.
     """
+
 
 try:
     WindowsError = WindowsError
@@ -39,6 +41,8 @@ except NameError:
 
 _cmdLineQuoteRe = re.compile(r'(\\*)"')
 _cmdLineQuoteRe2 = re.compile(r'(\\+)\Z')
+
+
 def cmdLineQuote(s):
     """
     Internal method for quoting a single command-line argument.
@@ -52,7 +56,12 @@ def cmdLineQuote(s):
     @rtype: C{str}
     """
     quote = ((" " in s) or ("\t" in s) or ('"' in s) or s == '') and '"' or ''
-    return quote + _cmdLineQuoteRe2.sub(r"\1\1", _cmdLineQuoteRe.sub(r'\1\1\\"', s)) + quote
+    return (
+        quote
+        + _cmdLineQuoteRe2.sub(r"\1\1", _cmdLineQuoteRe.sub(r'\1\1\\"', s))
+        + quote
+    )
+
 
 def quoteArguments(arguments):
     """
@@ -82,6 +91,7 @@ class _ErrorFormatter(object):
     @ivar errorTab: A mapping from integer error numbers to C{str} messages
         which correspond to those erorrs (like I{socket.errorTab}).
     """
+
     def __init__(self, WinError, FormatMessage, errorTab):
         self.winError = WinError
         self.formatMessage = FormatMessage
@@ -105,8 +115,8 @@ class _ErrorFormatter(object):
         except ImportError:
             errorTab = None
         return cls(WinError, FormatMessage, errorTab)
-    fromEnvironment = classmethod(fromEnvironment)
 
+    fromEnvironment = classmethod(fromEnvironment)
 
     def formatError(self, errorcode):
         """
@@ -132,5 +142,6 @@ class _ErrorFormatter(object):
             if result is not None:
                 return result
         return os.strerror(errorcode)
+
 
 formatError = _ErrorFormatter.fromEnvironment().formatError

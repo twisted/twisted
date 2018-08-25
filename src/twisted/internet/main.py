@@ -18,7 +18,6 @@ CONNECTION_DONE = error.ConnectionDone('Connection done')
 CONNECTION_LOST = error.ConnectionLost('Connection lost')
 
 
-
 def installReactor(reactor):
     """
     Install reactor C{reactor}.
@@ -28,6 +27,7 @@ def installReactor(reactor):
     # this stuff should be common to all reactors.
     import twisted.internet
     import sys
+
     if 'twisted.internet.reactor' in sys.modules:
         raise error.ReactorAlreadyInstalledError("reactor already installed")
     twisted.internet.reactor = reactor

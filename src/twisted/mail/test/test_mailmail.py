@@ -22,13 +22,13 @@ from twisted.test.proto_helpers import MemoryReactor
 from twisted.trial.unittest import TestCase
 
 
-
 class OptionsTests(TestCase):
     """
     Tests for L{parseOptions} which parses command line arguments and reads
     message text from stdin to produce an L{Options} instance which can be
     used to send a message.
     """
+
     memoryReactor = MemoryReactor()
 
     def setUp(self):
@@ -39,6 +39,7 @@ class OptionsTests(TestCase):
         self.out = NativeStringIO()
         # Override the mailmail logger, so we capture stderr output
         from twisted.logger import textFileLogObserver, Logger
+
         logObserver = textFileLogObserver(self.out)
         self.patch(mailmail, '_log', Logger(observer=logObserver))
         self.host = None
@@ -50,11 +51,15 @@ class OptionsTests(TestCase):
             self.host = host
             self.options = options
             self.ident = ident
-            return smtp.sendmail(host, options.sender, options.to,
-                                 options.body, reactor=self.memoryReactor)
+            return smtp.sendmail(
+                host,
+                options.sender,
+                options.to,
+                options.body,
+                reactor=self.memoryReactor,
+            )
 
         self.patch(mailmail, 'sendmail', sendmail)
-
 
     def test_unspecifiedRecipients(self):
         """
@@ -62,13 +67,11 @@ class OptionsTests(TestCase):
         recipient header in the message text, L{parseOptions} raises
         L{SystemExit} with a string describing the problem.
         """
-        self.patch(sys, 'stdin', NativeStringIO(
-            'Subject: foo\n'
-            '\n'
-            'Hello, goodbye.\n'))
+        self.patch(
+            sys, 'stdin', NativeStringIO('Subject: foo\n' '\n' 'Hello, goodbye.\n')
+        )
         exc = self.assertRaises(SystemExit, parseOptions, [])
         self.assertEqual(exc.args, ('No recipients specified.',))
-
 
     def test_listQueueInformation(self):
         """
@@ -78,7 +81,6 @@ class OptionsTests(TestCase):
         exc = self.assertRaises(SystemExit, parseOptions, ['-bp'])
         self.assertEqual(exc.args, ("Unsupported option.",))
 
-
     def test_stdioTransport(self):
         """
         The I{-bs} option for using stdin and stdout as the SMTP transport
@@ -87,7 +89,6 @@ class OptionsTests(TestCase):
         """
         exc = self.assertRaises(SystemExit, parseOptions, ['-bs'])
         self.assertEqual(exc.args, ("Unsupported option.",))
-
 
     def test_ignoreFullStop(self):
         """
@@ -100,7 +101,6 @@ class OptionsTests(TestCase):
         exc = self.assertRaises(SystemExit, parseOptions, ['-oi'])
         self.assertEqual(exc.args, ("Unsupported option.",))
 
-
     def test_copyAliasedSender(self):
         """
         The I{-om} option for copying the sender if they appear in an alias
@@ -110,7 +110,6 @@ class OptionsTests(TestCase):
         exc = self.assertRaises(SystemExit, parseOptions, ['-om'])
         self.assertEqual(exc.args, ("Unsupported option.",))
 
-
     def test_version(self):
         """
         The I{--version} option displays the version and raises
@@ -118,13 +117,11 @@ class OptionsTests(TestCase):
         """
         out = NativeStringIO()
         self.patch(sys, 'stdout', out)
-        systemExitCode = self.assertRaises(SystemExit, parseOptions,
-                                           '--version')
+        systemExitCode = self.assertRaises(SystemExit, parseOptions, '--version')
         # SystemExit.code is None on success
         self.assertEqual(systemExitCode.code, None)
         data = out.getvalue()
         self.assertEqual(data, "mailmail version: {}\n".format(version))
-
 
     def test_backgroundDelivery(self):
         """
@@ -135,7 +132,6 @@ class OptionsTests(TestCase):
         o = parseOptions("-odb")
         self.assertTrue(o.background)
 
-
     def test_foregroundDelivery(self):
         """
         The I{-odf} flags specifies foreground delivery.
@@ -144,7 +140,6 @@ class OptionsTests(TestCase):
         self.patch(sys, 'stdin', stdin)
         o = parseOptions("-odf")
         self.assertFalse(o.background)
-
 
     def test_recipientsFromHeaders(self):
         """
@@ -156,11 +151,11 @@ class OptionsTests(TestCase):
             'Cc: Larry <invaliduser1@example.com>\n'
             'Bcc: Moe <invaliduser3@example.com>\n'
             '\n'
-            'Oh, a wise guy?\n')
+            'Oh, a wise guy?\n'
+        )
         self.patch(sys, 'stdin', stdin)
         o = parseOptions("-t")
         self.assertEqual(len(o.to), 3)
-
 
     def test_setFrom(self):
         """
@@ -168,12 +163,11 @@ class OptionsTests(TestCase):
         specified with the I{-F} flag.
         """
         stdin = NativeStringIO(
-            'To: invaliduser2@example.com\n'
-            'Subject: A wise guy?\n\n')
+            'To: invaliduser2@example.com\n' 'Subject: A wise guy?\n\n'
+        )
         self.patch(sys, 'stdin', stdin)
         o = parseOptions(["-F", "Larry <invaliduser1@example.com>", "-t"])
         self.assertEqual(o.sender, "Larry <invaliduser1@example.com>")
-
 
     def test_overrideFromFlagByFromHeader(self):
         """
@@ -182,11 +176,11 @@ class OptionsTests(TestCase):
         """
         stdin = NativeStringIO(
             'To: Curly <invaliduser4@example.com>\n'
-            'From: Shemp <invaliduser4@example.com>\n')
+            'From: Shemp <invaliduser4@example.com>\n'
+        )
         self.patch(sys, 'stdin', stdin)
         o = parseOptions(["-F", "Groucho <invaliduser5@example.com>", "-t"])
         self.assertEqual(o.sender, "invaliduser4@example.com")
-
 
     def test_runErrorsToStderr(self):
         """
@@ -209,8 +203,8 @@ class OptionsTests(TestCase):
     if platformType == "win32":
         test_runErrorsToStderr.skip = (
             "mailmail.run() does not work on win32 due to lack of support for"
-            " getuid()")
-
+            " getuid()"
+        )
 
     def test_readInvalidConfig(self):
         """
@@ -226,19 +220,21 @@ class OptionsTests(TestCase):
 
         with open(filename, "w") as f:
             # Create a config file with some invalid values
-            f.write("[useraccess]\n"
-                    "allow=invaliduser2,invaliduser1\n"
-                    "deny=invaliduser3,invaliduser4,{}\n"
-                    "order=allow,deny\n"
-                    "[groupaccess]\n"
-                    "allow=invalidgid1,invalidgid2\n"
-                    "deny=invalidgid1,invalidgid2,{}\n"
-                    "order=deny,allow\n"
-                    "[identity]\n"
-                    "localhost=funny\n"
-                    "[addresses]\n"
-                    "smarthost=localhost\n"
-                    "default_domain=example.com\n".format(myUid, myGid))
+            f.write(
+                "[useraccess]\n"
+                "allow=invaliduser2,invaliduser1\n"
+                "deny=invaliduser3,invaliduser4,{}\n"
+                "order=allow,deny\n"
+                "[groupaccess]\n"
+                "allow=invalidgid1,invalidgid2\n"
+                "deny=invalidgid1,invalidgid2,{}\n"
+                "order=deny,allow\n"
+                "[identity]\n"
+                "localhost=funny\n"
+                "[addresses]\n"
+                "smarthost=localhost\n"
+                "default_domain=example.com\n".format(myUid, myGid)
+            )
 
         # The mailmail script looks in
         # the twisted.mail.scripts.GLOBAL_CFG variable
@@ -252,19 +248,23 @@ class OptionsTests(TestCase):
         argv = ("test_mailmail.py", "invaliduser2@example.com", "-oep")
         self.patch(sys, 'argv', argv)
         mailmail.run()
-        self.assertRegex(self.out.getvalue(),
-                         "Illegal UID in \\[useraccess\\] section: "
-                         "invaliduser1")
-        self.assertRegex(self.out.getvalue(),
-                         "Illegal GID in \\[groupaccess\\] section: "
-                         "invalidgid1")
-        self.assertRegex(self.out.getvalue(),
-                         'Illegal entry in \\[identity\\] section: funny')
+        self.assertRegex(
+            self.out.getvalue(),
+            "Illegal UID in \\[useraccess\\] section: " "invaliduser1",
+        )
+        self.assertRegex(
+            self.out.getvalue(),
+            "Illegal GID in \\[groupaccess\\] section: " "invalidgid1",
+        )
+        self.assertRegex(
+            self.out.getvalue(), 'Illegal entry in \\[identity\\] section: funny'
+        )
 
     if platformType == "win32":
-        test_readInvalidConfig.skip = ("mailmail.run() does not work on win32"
-                                       " due to lack of support for getuid()")
-
+        test_readInvalidConfig.skip = (
+            "mailmail.run() does not work on win32"
+            " due to lack of support for getuid()"
+        )
 
     def getConfigFromFile(self, config):
         """
@@ -290,82 +290,101 @@ class OptionsTests(TestCase):
 
         return loadConfig(filename)
 
-
     def test_loadConfig(self):
         """
         L{twisted.mail.scripts.mailmail.loadConfig}
         parses the config file for mailmail.
         """
-        config = self.getConfigFromFile("""
+        config = self.getConfigFromFile(
+            """
 [addresses]
-smarthost=localhost""")
+smarthost=localhost"""
+        )
         self.assertEqual(config.smarthost, "localhost")
 
-        config = self.getConfigFromFile("""
+        config = self.getConfigFromFile(
+            """
 [addresses]
-default_domain=example.com""")
+default_domain=example.com"""
+        )
         self.assertEqual(config.domain, "example.com")
 
-        config = self.getConfigFromFile("""
+        config = self.getConfigFromFile(
+            """
 [addresses]
 smarthost=localhost
-default_domain=example.com""")
+default_domain=example.com"""
+        )
         self.assertEqual(config.smarthost, "localhost")
         self.assertEqual(config.domain, "example.com")
 
-        config = self.getConfigFromFile("""
+        config = self.getConfigFromFile(
+            """
 [identity]
 host1=invalid
-host2=username:password""")
+host2=username:password"""
+        )
         self.assertNotIn("host1", config.identities)
         self.assertEqual(config.identities["host2"], ["username", "password"])
 
-        config = self.getConfigFromFile("""
+        config = self.getConfigFromFile(
+            """
 [useraccess]
 allow=invalid1,35
-order=allow""")
+order=allow"""
+        )
         self.assertEqual(config.allowUIDs, [35])
 
-        config = self.getConfigFromFile("""
+        config = self.getConfigFromFile(
+            """
 [useraccess]
 deny=35,36
-order=deny""")
+order=deny"""
+        )
         self.assertEqual(config.denyUIDs, [35, 36])
 
-        config = self.getConfigFromFile("""
+        config = self.getConfigFromFile(
+            """
 [useraccess]
 allow=35,36
 deny=37,38
-order=deny""")
+order=deny"""
+        )
         self.assertEqual(config.allowUIDs, [35, 36])
         self.assertEqual(config.denyUIDs, [37, 38])
 
-        config = self.getConfigFromFile("""
+        config = self.getConfigFromFile(
+            """
 [groupaccess]
 allow=gid1,41
-order=allow""")
+order=allow"""
+        )
         self.assertEqual(config.allowGIDs, [41])
 
-        config = self.getConfigFromFile("""
+        config = self.getConfigFromFile(
+            """
 [groupaccess]
 deny=41
-order=deny""")
+order=deny"""
+        )
         self.assertEqual(config.denyGIDs, [41])
 
-        config = self.getConfigFromFile("""
+        config = self.getConfigFromFile(
+            """
 [groupaccess]
 allow=41,42
 deny=43,44
-order=allow,deny""")
+order=allow,deny"""
+        )
         self.assertEqual(config.allowGIDs, [41, 42])
         self.assertEqual(config.denyGIDs, [43, 44])
-
 
     def test_senderror(self):
         """
         L{twisted.mail.scripts.mailmail.senderror} sends mail back to the
         sender if an error occurs while sending mail to the recipient.
         """
+
         def sendmail(host, sender, recipient, body):
             self.assertRegex(sender, "postmaster@")
             self.assertEqual(recipient, ["testsender"])

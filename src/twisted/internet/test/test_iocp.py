@@ -18,7 +18,11 @@ from twisted.internet.interfaces import IPushProducer
 
 try:
     from twisted.internet.iocpreactor import iocpsupport as _iocp, tcp, udp
-    from twisted.internet.iocpreactor.reactor import IOCPReactor, EVENTS_PER_LOOP, KEY_NORMAL
+    from twisted.internet.iocpreactor.reactor import (
+        IOCPReactor,
+        EVENTS_PER_LOOP,
+        KEY_NORMAL,
+    )
     from twisted.internet.iocpreactor.interfaces import IReadWriteHandle
     from twisted.internet.iocpreactor.const import SO_UPDATE_ACCEPT_CONTEXT
     from twisted.internet.iocpreactor.abstract import FileHandle
@@ -32,11 +36,13 @@ except error as e:
 else:
     ipv6Skip = None
 
+
 class SupportTests(unittest.TestCase):
     """
     Tests for L{twisted.internet.iocpreactor.iocpsupport}, low-level reactor
     implementation helpers.
     """
+
     def _acceptAddressTest(self, family, localhost):
         """
         Create a C{SOCK_STREAM} connection to localhost using a socket with an
@@ -60,14 +66,14 @@ class SupportTests(unittest.TestCase):
         server = socket(family, SOCK_STREAM)
         self.addCleanup(server.close)
         buff = array('B', b'\0' * 256)
-        self.assertEqual(
-            0, _iocp.accept(port.fileno(), server.fileno(), buff, None))
+        self.assertEqual(0, _iocp.accept(port.fileno(), server.fileno(), buff, None))
         server.setsockopt(
-            SOL_SOCKET, SO_UPDATE_ACCEPT_CONTEXT, pack('P', port.fileno()))
+            SOL_SOCKET, SO_UPDATE_ACCEPT_CONTEXT, pack('P', port.fileno())
+        )
         self.assertEqual(
             (family, client.getpeername()[:2], client.getsockname()[:2]),
-            _iocp.get_accept_addrs(server.fileno(), buff))
-
+            _iocp.get_accept_addrs(server.fileno(), buff),
+        )
 
     def test_ipv4AcceptAddress(self):
         """
@@ -83,7 +89,6 @@ class SupportTests(unittest.TestCase):
         """
         self._acceptAddressTest(AF_INET, '127.0.0.1')
 
-
     def test_ipv6AcceptAddress(self):
         """
         Like L{test_ipv4AcceptAddress}, but for IPv6 connections.  In this case:
@@ -95,9 +100,9 @@ class SupportTests(unittest.TestCase):
             connection
         """
         self._acceptAddressTest(AF_INET6, '::1')
+
     if ipv6Skip is not None:
         test_ipv6AcceptAddress.skip = ipv6Skip
-
 
 
 class IOCPReactorTests(unittest.TestCase):
@@ -110,7 +115,6 @@ class IOCPReactorTests(unittest.TestCase):
         ir.wakeUp()
         self.assertFalse(ir.doIteration(None))
 
-
     def test_reactorInterfaces(self):
         """
         Verify that IOCP socket-representing classes implement IReadWriteHandle
@@ -118,23 +122,24 @@ class IOCPReactorTests(unittest.TestCase):
         self.assertTrue(verifyClass(IReadWriteHandle, tcp.Connection))
         self.assertTrue(verifyClass(IReadWriteHandle, udp.Port))
 
-
     def test_fileHandleInterfaces(self):
         """
         Verify that L{Filehandle} implements L{IPushProducer}.
         """
         self.assertTrue(verifyClass(IPushProducer, FileHandle))
 
-
     def test_maxEventsPerIteration(self):
         """
         Verify that we don't lose an event when more than EVENTS_PER_LOOP
         events occur in the same reactor iteration
         """
+
         class FakeFD:
             counter = 0
+
             def logPrefix(self):
                 return 'FakeFD'
+
             def cb(self, rc, bytes, evt):
                 self.counter += 1
 
@@ -147,4 +152,3 @@ class IOCPReactorTests(unittest.TestCase):
         self.assertEqual(fd.counter, EVENTS_PER_LOOP)
         ir.doIteration(0)
         self.assertEqual(fd.counter, EVENTS_PER_LOOP + 1)
-

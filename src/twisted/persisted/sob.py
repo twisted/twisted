@@ -23,7 +23,6 @@ from twisted.persisted import styles
 from zope.interface import implementer, Interface
 
 
-
 class IPersistable(Interface):
 
     """An object which can be saved in several formats to a file"""
@@ -78,10 +77,13 @@ class Persistent:
     def _getStyle(self):
         if self.style == "source":
             from twisted.persisted.aot import jellyToSource as dumpFunc
+
             ext = "tas"
         else:
+
             def dumpFunc(obj, file):
                 pickle.dump(obj, file, 2)
+
             ext = "tap"
         return ext, dumpFunc
 
@@ -97,15 +99,17 @@ class Persistent:
             raise TypeError("passphrase must be None")
             ext = 'e' + ext
         finalname, filename = self._getFilename(filename, ext, tag)
-        log.msg("Saving "+self.name+" application to "+finalname+"...")
+        log.msg("Saving " + self.name + " application to " + finalname + "...")
         self._saveTemp(filename, dumpFunc)
         if runtime.platformType == "win32" and os.path.isfile(finalname):
             os.remove(finalname)
         os.rename(filename, finalname)
         log.msg("Saved.")
 
+
 # "Persistant" has been present since 1.0.7, so retain it for compatibility
 Persistant = Persistent
+
 
 class _EverythingEphemeral(styles.Ephemeral):
 
@@ -137,7 +141,7 @@ def load(filename, style):
     @param style: string (one of 'pickle' or 'source')
     """
     mode = 'r'
-    if style=='source':
+    if style == 'source':
         from twisted.persisted.aot import unjellyFromSource as _load
     else:
         _load, mode = pickle.load, 'rb'
@@ -178,17 +182,25 @@ def loadValueFromFile(filename, variable):
     value = d[variable]
     return value
 
+
 def guessType(filename):
     ext = os.path.splitext(filename)[1]
     return {
-        '.tac':  'python',
-        '.etac':  'python',
-        '.py':  'python',
+        '.tac': 'python',
+        '.etac': 'python',
+        '.py': 'python',
         '.tap': 'pickle',
         '.etap': 'pickle',
         '.tas': 'source',
         '.etas': 'source',
     }[ext]
 
-__all__ = ['loadValueFromFile', 'load', 'Persistent', 'Persistant',
-           'IPersistable', 'guessType']
+
+__all__ = [
+    'loadValueFromFile',
+    'load',
+    'Persistent',
+    'Persistant',
+    'IPersistable',
+    'guessType',
+]

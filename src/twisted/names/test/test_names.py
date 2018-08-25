@@ -20,20 +20,23 @@ from twisted.trial import unittest
 from twisted.internet import reactor, defer, error
 from twisted.internet.defer import succeed
 from twisted.names import client, server, common, authority, dns
-from twisted.names.dns import (
-    SOA, Message, RRHeader, Record_A, Record_SOA, Query)
+from twisted.names.dns import SOA, Message, RRHeader, Record_A, Record_SOA, Query
 from twisted.names.error import DomainError
 from twisted.names.client import Resolver
-from twisted.names.secondary import (
-    SecondaryAuthorityService, SecondaryAuthority)
+from twisted.names.secondary import SecondaryAuthorityService, SecondaryAuthority
 from twisted.python.compat import nativeString
 from twisted.python.filepath import FilePath
 
 from twisted.test.proto_helpers import (
-    StringTransport, MemoryReactorClock, waitUntilAllDisconnected)
+    StringTransport,
+    MemoryReactorClock,
+    waitUntilAllDisconnected,
+)
+
 
 def justPayload(results):
     return [r.payload for r in results[0]]
+
 
 class NoFileAuthority(authority.FileAuthority):
     def __init__(self, soa, records):
@@ -43,47 +46,46 @@ class NoFileAuthority(authority.FileAuthority):
 
 
 soa_record = dns.Record_SOA(
-                    mname = b'test-domain.com',
-                    rname = u'root.test-domain.com',
-                    serial = 100,
-                    refresh = 1234,
-                    minimum = 7654,
-                    expire = 19283784,
-                    retry = 15,
-                    ttl=1
-                )
+    mname=b'test-domain.com',
+    rname=u'root.test-domain.com',
+    serial=100,
+    refresh=1234,
+    minimum=7654,
+    expire=19283784,
+    retry=15,
+    ttl=1,
+)
 
 reverse_soa = dns.Record_SOA(
-                     mname = b'93.84.28.in-addr.arpa',
-                     rname = b'93.84.28.in-addr.arpa',
-                     serial = 120,
-                     refresh = 54321,
-                     minimum = 382,
-                     expire = 11193983,
-                     retry = 30,
-                     ttl=3
-                )
+    mname=b'93.84.28.in-addr.arpa',
+    rname=b'93.84.28.in-addr.arpa',
+    serial=120,
+    refresh=54321,
+    minimum=382,
+    expire=11193983,
+    retry=30,
+    ttl=3,
+)
 
 my_soa = dns.Record_SOA(
-    mname = u'my-domain.com',
-    rname = b'postmaster.test-domain.com',
-    serial = 130,
-    refresh = 12345,
-    minimum = 1,
-    expire = 999999,
-    retry = 100,
-    )
+    mname=u'my-domain.com',
+    rname=b'postmaster.test-domain.com',
+    serial=130,
+    refresh=12345,
+    minimum=1,
+    expire=999999,
+    retry=100,
+)
 
 test_domain_com = NoFileAuthority(
-    soa = (b'test-domain.com', soa_record),
-    records = {
+    soa=(b'test-domain.com', soa_record),
+    records={
         b'test-domain.com': [
             soa_record,
             dns.Record_A(b'127.0.0.1'),
             dns.Record_NS(b'39.28.189.39'),
             dns.Record_SPF(b'v=spf1 mx/30 mx:example.org/30 -all'),
-            dns.Record_SPF(b'v=spf1 +mx a:\0colo',
-                           b'.example.com/28 -all not valid'),
+            dns.Record_SPF(b'v=spf1 +mx a:\0colo', b'.example.com/28 -all not valid'),
             dns.Record_MX(10, u'host.test-domain.com'),
             dns.Record_HINFO(os=b'Linux', cpu=b'A Fast One, Dontcha know'),
             dns.Record_CNAME(b'canonical.name.com'),
@@ -92,18 +94,20 @@ test_domain_com = NoFileAuthority(
             dns.Record_TXT(b'A First piece of Text', b'a SecoNd piece'),
             dns.Record_A6(0, b'ABCD::4321', b''),
             dns.Record_A6(12, b'0:0069::0', b'some.network.tld'),
-            dns.Record_A6(8, b'0:5634:1294:AFCB:56AC:48EF:34C3:01FF',
-                          b'tra.la.la.net'),
+            dns.Record_A6(8, b'0:5634:1294:AFCB:56AC:48EF:34C3:01FF', b'tra.la.la.net'),
             dns.Record_TXT(b'Some more text, haha!  Yes.  \0  Still here?'),
             dns.Record_MR(b'mail.redirect.or.whatever'),
             dns.Record_MINFO(rmailbx=b'r mail box', emailbx=b'e mail box'),
             dns.Record_AFSDB(subtype=1, hostname=b'afsdb.test-domain.com'),
             dns.Record_RP(mbox=b'whatever.i.dunno', txt=b'some.more.text'),
-            dns.Record_WKS(b'12.54.78.12', socket.IPPROTO_TCP,
-                           b'\x12\x01\x16\xfe\xc1\x00\x01'),
-            dns.Record_NAPTR(100, 10, b"u", b"sip+E2U",
-                             b"!^.*$!sip:information@domain.tld!"),
-            dns.Record_AAAA(b'AF43:5634:1294:AFCB:56AC:48EF:34C3:01FF')],
+            dns.Record_WKS(
+                b'12.54.78.12', socket.IPPROTO_TCP, b'\x12\x01\x16\xfe\xc1\x00\x01'
+            ),
+            dns.Record_NAPTR(
+                100, 10, b"u", b"sip+E2U", b"!^.*$!sip:information@domain.tld!"
+            ),
+            dns.Record_AAAA(b'AF43:5634:1294:AFCB:56AC:48EF:34C3:01FF'),
+        ],
         b'http.tcp.test-domain.com': [
             dns.Record_SRV(257, 16383, 43690, b'some.other.place.fool')
         ],
@@ -112,45 +116,41 @@ test_domain_com = NoFileAuthority(
             dns.Record_A(b'0.255.0.255'),
         ],
         b'host-two.test-domain.com': [
-#
-#  Python bug
-#           dns.Record_A('255.255.255.255'),
-#
+            #
+            #  Python bug
+            #           dns.Record_A('255.255.255.255'),
+            #
             dns.Record_A(b'255.255.255.254'),
-            dns.Record_A(b'0.0.0.0')
+            dns.Record_A(b'0.0.0.0'),
         ],
-        b'cname.test-domain.com': [
-            dns.Record_CNAME(b'test-domain.com')
-        ],
-        b'anothertest-domain.com': [
-            dns.Record_A(b'1.2.3.4')],
-    }
+        b'cname.test-domain.com': [dns.Record_CNAME(b'test-domain.com')],
+        b'anothertest-domain.com': [dns.Record_A(b'1.2.3.4')],
+    },
 )
 
 reverse_domain = NoFileAuthority(
-    soa = (b'93.84.28.in-addr.arpa', reverse_soa),
-    records = {
+    soa=(b'93.84.28.in-addr.arpa', reverse_soa),
+    records={
         b'123.93.84.28.in-addr.arpa': [
-             dns.Record_PTR(b'test.host-reverse.lookup.com'),
-             reverse_soa
+            dns.Record_PTR(b'test.host-reverse.lookup.com'),
+            reverse_soa,
         ]
-    }
+    },
 )
 
 
 my_domain_com = NoFileAuthority(
-    soa = (b'my-domain.com', my_soa),
-    records = {
+    soa=(b'my-domain.com', my_soa),
+    records={
         b'my-domain.com': [
             my_soa,
             dns.Record_A(b'1.2.3.4', ttl='1S'),
             dns.Record_NS(b'ns1.domain', ttl=b'2M'),
             dns.Record_NS(b'ns2.domain', ttl='3H'),
-            dns.Record_SRV(257, 16383, 43690, b'some.other.place.fool',
-                           ttl='4D')
-            ]
-        }
-    )
+            dns.Record_SRV(257, 16383, 43690, b'some.other.place.fool', ttl='4D'),
+        ]
+    },
+)
 
 
 class ServerDNSTests(unittest.TestCase):
@@ -159,9 +159,9 @@ class ServerDNSTests(unittest.TestCase):
     """
 
     def setUp(self):
-        self.factory = server.DNSServerFactory([
-            test_domain_com, reverse_domain, my_domain_com
-        ], verbose=2)
+        self.factory = server.DNSServerFactory(
+            [test_domain_com, reverse_domain, my_domain_com], verbose=2
+        )
 
         p = dns.DNSDatagramProtocol(self.factory)
 
@@ -188,7 +188,6 @@ class ServerDNSTests(unittest.TestCase):
         self.listenerUDP = listenerUDP
         self.resolver = client.Resolver(servers=[('127.0.0.1', port)])
 
-
     def tearDown(self):
         """
         Clean up any server connections associated with the
@@ -201,7 +200,6 @@ class ServerDNSTests(unittest.TestCase):
             conn.transport.loseConnection()
 
         return waitUntilAllDisconnected(reactor, self.factory.connections[:])
-
 
     def namesTest(self, querying, expectedRecords):
         """
@@ -218,6 +216,7 @@ class ServerDNSTests(unittest.TestCase):
             fires with a success result if the assertion succeeds and with a
             L{Failure} if it fails.
         """
+
         def checkResults(response):
             receivedRecords = justPayload(response)
             self.assertEqual(set(expectedRecords), set(receivedRecords))
@@ -225,39 +224,38 @@ class ServerDNSTests(unittest.TestCase):
         querying.addCallback(checkResults)
         return querying
 
-
     def test_addressRecord1(self):
         """Test simple DNS 'A' record queries"""
         return self.namesTest(
             self.resolver.lookupAddress('test-domain.com'),
-            [dns.Record_A('127.0.0.1', ttl=19283784)]
+            [dns.Record_A('127.0.0.1', ttl=19283784)],
         )
-
 
     def test_addressRecord2(self):
         """Test DNS 'A' record queries with multiple answers"""
         return self.namesTest(
             self.resolver.lookupAddress('host.test-domain.com'),
-            [dns.Record_A('123.242.1.5', ttl=19283784),
-             dns.Record_A('0.255.0.255', ttl=19283784)]
+            [
+                dns.Record_A('123.242.1.5', ttl=19283784),
+                dns.Record_A('0.255.0.255', ttl=19283784),
+            ],
         )
-
 
     def test_addressRecord3(self):
         """Test DNS 'A' record queries with edge cases"""
         return self.namesTest(
             self.resolver.lookupAddress('host-two.test-domain.com'),
-            [dns.Record_A('255.255.255.254', ttl=19283784), dns.Record_A('0.0.0.0', ttl=19283784)]
+            [
+                dns.Record_A('255.255.255.254', ttl=19283784),
+                dns.Record_A('0.0.0.0', ttl=19283784),
+            ],
         )
-
 
     def test_authority(self):
         """Test DNS 'SOA' record queries"""
         return self.namesTest(
-            self.resolver.lookupAuthority('test-domain.com'),
-            [soa_record]
+            self.resolver.lookupAuthority('test-domain.com'), [soa_record]
         )
-
 
     def test_mailExchangeRecord(self):
         """
@@ -266,107 +264,119 @@ class ServerDNSTests(unittest.TestCase):
         """
         return self.namesTest(
             self.resolver.lookupMailExchange(b"test-domain.com"),
-            [dns.Record_MX(10, b"host.test-domain.com", ttl=19283784),
-             dns.Record_A(b"123.242.1.5", ttl=19283784),
-             dns.Record_A(b"0.255.0.255", ttl=19283784)])
-
+            [
+                dns.Record_MX(10, b"host.test-domain.com", ttl=19283784),
+                dns.Record_A(b"123.242.1.5", ttl=19283784),
+                dns.Record_A(b"0.255.0.255", ttl=19283784),
+            ],
+        )
 
     def test_nameserver(self):
         """Test DNS 'NS' record queries"""
         return self.namesTest(
             self.resolver.lookupNameservers('test-domain.com'),
-            [dns.Record_NS('39.28.189.39', ttl=19283784)]
+            [dns.Record_NS('39.28.189.39', ttl=19283784)],
         )
-
 
     def test_HINFO(self):
         """Test DNS 'HINFO' record queries"""
         return self.namesTest(
             self.resolver.lookupHostInfo('test-domain.com'),
-            [dns.Record_HINFO(os=b'Linux', cpu=b'A Fast One, Dontcha know',
-                              ttl=19283784)]
+            [
+                dns.Record_HINFO(
+                    os=b'Linux', cpu=b'A Fast One, Dontcha know', ttl=19283784
+                )
+            ],
         )
 
     def test_PTR(self):
         """Test DNS 'PTR' record queries"""
         return self.namesTest(
             self.resolver.lookupPointer('123.93.84.28.in-addr.arpa'),
-            [dns.Record_PTR('test.host-reverse.lookup.com', ttl=11193983)]
+            [dns.Record_PTR('test.host-reverse.lookup.com', ttl=11193983)],
         )
-
 
     def test_CNAME(self):
         """Test DNS 'CNAME' record queries"""
         return self.namesTest(
             self.resolver.lookupCanonicalName('test-domain.com'),
-            [dns.Record_CNAME('canonical.name.com', ttl=19283784)]
+            [dns.Record_CNAME('canonical.name.com', ttl=19283784)],
         )
 
     def test_MB(self):
         """Test DNS 'MB' record queries"""
         return self.namesTest(
             self.resolver.lookupMailBox('test-domain.com'),
-            [dns.Record_MB('mailbox.test-domain.com', ttl=19283784)]
+            [dns.Record_MB('mailbox.test-domain.com', ttl=19283784)],
         )
-
 
     def test_MG(self):
         """Test DNS 'MG' record queries"""
         return self.namesTest(
             self.resolver.lookupMailGroup('test-domain.com'),
-            [dns.Record_MG('mail.group.someplace', ttl=19283784)]
+            [dns.Record_MG('mail.group.someplace', ttl=19283784)],
         )
-
 
     def test_MR(self):
         """Test DNS 'MR' record queries"""
         return self.namesTest(
             self.resolver.lookupMailRename('test-domain.com'),
-            [dns.Record_MR('mail.redirect.or.whatever', ttl=19283784)]
+            [dns.Record_MR('mail.redirect.or.whatever', ttl=19283784)],
         )
-
 
     def test_MINFO(self):
         """Test DNS 'MINFO' record queries"""
         return self.namesTest(
             self.resolver.lookupMailboxInfo('test-domain.com'),
-            [dns.Record_MINFO(rmailbx='r mail box', emailbx='e mail box', ttl=19283784)]
+            [
+                dns.Record_MINFO(
+                    rmailbx='r mail box', emailbx='e mail box', ttl=19283784
+                )
+            ],
         )
-
 
     def test_SRV(self):
         """Test DNS 'SRV' record queries"""
         return self.namesTest(
             self.resolver.lookupService('http.tcp.test-domain.com'),
-            [dns.Record_SRV(257, 16383, 43690, 'some.other.place.fool', ttl=19283784)]
+            [dns.Record_SRV(257, 16383, 43690, 'some.other.place.fool', ttl=19283784)],
         )
 
     def test_AFSDB(self):
         """Test DNS 'AFSDB' record queries"""
         return self.namesTest(
             self.resolver.lookupAFSDatabase('test-domain.com'),
-            [dns.Record_AFSDB(subtype=1, hostname='afsdb.test-domain.com', ttl=19283784)]
+            [
+                dns.Record_AFSDB(
+                    subtype=1, hostname='afsdb.test-domain.com', ttl=19283784
+                )
+            ],
         )
-
 
     def test_RP(self):
         """Test DNS 'RP' record queries"""
         return self.namesTest(
             self.resolver.lookupResponsibility('test-domain.com'),
-            [dns.Record_RP(mbox='whatever.i.dunno', txt='some.more.text', ttl=19283784)]
+            [
+                dns.Record_RP(
+                    mbox='whatever.i.dunno', txt='some.more.text', ttl=19283784
+                )
+            ],
         )
-
 
     def test_TXT(self):
         """Test DNS 'TXT' record queries"""
         return self.namesTest(
             self.resolver.lookupText('test-domain.com'),
-            [dns.Record_TXT(b'A First piece of Text', b'a SecoNd piece',
-                            ttl=19283784),
-             dns.Record_TXT(b'Some more text, haha!  Yes.  \0  Still here?',
-                            ttl=19283784)]
+            [
+                dns.Record_TXT(
+                    b'A First piece of Text', b'a SecoNd piece', ttl=19283784
+                ),
+                dns.Record_TXT(
+                    b'Some more text, haha!  Yes.  \0  Still here?', ttl=19283784
+                ),
+            ],
         )
-
 
     def test_spf(self):
         """
@@ -374,64 +384,83 @@ class ServerDNSTests(unittest.TestCase):
         """
         return self.namesTest(
             self.resolver.lookupSenderPolicy('test-domain.com'),
-            [dns.Record_SPF(b'v=spf1 mx/30 mx:example.org/30 -all',
-                            ttl=19283784),
-            dns.Record_SPF(b'v=spf1 +mx a:\0colo',
-                           b'.example.com/28 -all not valid', ttl=19283784)]
+            [
+                dns.Record_SPF(b'v=spf1 mx/30 mx:example.org/30 -all', ttl=19283784),
+                dns.Record_SPF(
+                    b'v=spf1 +mx a:\0colo',
+                    b'.example.com/28 -all not valid',
+                    ttl=19283784,
+                ),
+            ],
         )
-
 
     def test_WKS(self):
         """Test DNS 'WKS' record queries"""
         return self.namesTest(
             self.resolver.lookupWellKnownServices('test-domain.com'),
-            [dns.Record_WKS('12.54.78.12', socket.IPPROTO_TCP,
-                            b'\x12\x01\x16\xfe\xc1\x00\x01', ttl=19283784)]
+            [
+                dns.Record_WKS(
+                    '12.54.78.12',
+                    socket.IPPROTO_TCP,
+                    b'\x12\x01\x16\xfe\xc1\x00\x01',
+                    ttl=19283784,
+                )
+            ],
         )
-
 
     def test_someRecordsWithTTLs(self):
         result_soa = copy.copy(my_soa)
         result_soa.ttl = my_soa.expire
         return self.namesTest(
             self.resolver.lookupAllRecords('my-domain.com'),
-            [result_soa,
-             dns.Record_A('1.2.3.4', ttl='1S'),
-             dns.Record_NS('ns1.domain', ttl='2M'),
-             dns.Record_NS('ns2.domain', ttl='3H'),
-             dns.Record_SRV(257, 16383, 43690, 'some.other.place.fool', ttl='4D')]
-            )
-
+            [
+                result_soa,
+                dns.Record_A('1.2.3.4', ttl='1S'),
+                dns.Record_NS('ns1.domain', ttl='2M'),
+                dns.Record_NS('ns2.domain', ttl='3H'),
+                dns.Record_SRV(257, 16383, 43690, 'some.other.place.fool', ttl='4D'),
+            ],
+        )
 
     def test_AAAA(self):
         """Test DNS 'AAAA' record queries (IPv6)"""
         return self.namesTest(
             self.resolver.lookupIPV6Address('test-domain.com'),
-            [dns.Record_AAAA('AF43:5634:1294:AFCB:56AC:48EF:34C3:01FF', ttl=19283784)]
+            [dns.Record_AAAA('AF43:5634:1294:AFCB:56AC:48EF:34C3:01FF', ttl=19283784)],
         )
 
     def test_A6(self):
         """Test DNS 'A6' record queries (IPv6)"""
         return self.namesTest(
             self.resolver.lookupAddress6('test-domain.com'),
-            [dns.Record_A6(0, 'ABCD::4321', '', ttl=19283784),
-             dns.Record_A6(12, '0:0069::0', 'some.network.tld', ttl=19283784),
-             dns.Record_A6(8, '0:5634:1294:AFCB:56AC:48EF:34C3:01FF', 'tra.la.la.net', ttl=19283784)]
-         )
-
+            [
+                dns.Record_A6(0, 'ABCD::4321', '', ttl=19283784),
+                dns.Record_A6(12, '0:0069::0', 'some.network.tld', ttl=19283784),
+                dns.Record_A6(
+                    8,
+                    '0:5634:1294:AFCB:56AC:48EF:34C3:01FF',
+                    'tra.la.la.net',
+                    ttl=19283784,
+                ),
+            ],
+        )
 
     def test_zoneTransfer(self):
         """
         Test DNS 'AXFR' queries (Zone transfer)
         """
         default_ttl = soa_record.expire
-        results = [copy.copy(r) for r in reduce(operator.add, test_domain_com.records.values())]
+        results = [
+            copy.copy(r) for r in reduce(operator.add, test_domain_com.records.values())
+        ]
         for r in results:
             if r.ttl is None:
                 r.ttl = default_ttl
         return self.namesTest(
-            self.resolver.lookupZone('test-domain.com').addCallback(lambda r: (r[0][:-1],)),
-            results
+            self.resolver.lookupZone('test-domain.com').addCallback(
+                lambda r: (r[0][:-1],)
+            ),
+            results,
         )
 
     def test_zoneTransferConnectionFails(self):
@@ -440,17 +469,16 @@ class ServerDNSTests(unittest.TestCase):
         from L{Resolver.lookupZone}.
         """
         resolver = Resolver(servers=[("nameserver.invalid", 53)])
-        return self.assertFailure(resolver.lookupZone("impossible.invalid"),
-                                  error.DNSLookupError)
-
+        return self.assertFailure(
+            resolver.lookupZone("impossible.invalid"), error.DNSLookupError
+        )
 
     def test_similarZonesDontInterfere(self):
         """Tests that unrelated zones don't mess with each other."""
         return self.namesTest(
             self.resolver.lookupAddress("anothertest-domain.com"),
-            [dns.Record_A('1.2.3.4', ttl=19283784)]
+            [dns.Record_A('1.2.3.4', ttl=19283784)],
         )
-
 
     def test_NAPTR(self):
         """
@@ -458,10 +486,17 @@ class ServerDNSTests(unittest.TestCase):
         """
         return self.namesTest(
             self.resolver.lookupNamingAuthorityPointer('test-domain.com'),
-            [dns.Record_NAPTR(100, 10, b"u", b"sip+E2U",
-                              b"!^.*$!sip:information@domain.tld!",
-                              ttl=19283784)])
-
+            [
+                dns.Record_NAPTR(
+                    100,
+                    10,
+                    b"u",
+                    b"sip+E2U",
+                    b"!^.*$!sip:information@domain.tld!",
+                    ttl=19283784,
+                )
+            ],
+        )
 
 
 class HelperTests(unittest.TestCase):
@@ -481,32 +516,66 @@ class AXFRTests(unittest.TestCase):
         self.d.addCallback(self._gotResults)
         self.controller = client.AXFRController('fooby.com', self.d)
 
-        self.soa = dns.RRHeader(name='fooby.com', type=dns.SOA, cls=dns.IN, ttl=86400, auth=False,
-                                payload=dns.Record_SOA(mname='fooby.com',
-                                                       rname='hooj.fooby.com',
-                                                       serial=100,
-                                                       refresh=200,
-                                                       retry=300,
-                                                       expire=400,
-                                                       minimum=500,
-                                                       ttl=600))
+        self.soa = dns.RRHeader(
+            name='fooby.com',
+            type=dns.SOA,
+            cls=dns.IN,
+            ttl=86400,
+            auth=False,
+            payload=dns.Record_SOA(
+                mname='fooby.com',
+                rname='hooj.fooby.com',
+                serial=100,
+                refresh=200,
+                retry=300,
+                expire=400,
+                minimum=500,
+                ttl=600,
+            ),
+        )
 
         self.records = [
             self.soa,
-            dns.RRHeader(name='fooby.com', type=dns.NS, cls=dns.IN, ttl=700, auth=False,
-                         payload=dns.Record_NS(name='ns.twistedmatrix.com', ttl=700)),
-
-            dns.RRHeader(name='fooby.com', type=dns.MX, cls=dns.IN, ttl=700, auth=False,
-                         payload=dns.Record_MX(preference=10, exchange='mail.mv3d.com', ttl=700)),
-
-            dns.RRHeader(name='fooby.com', type=dns.A, cls=dns.IN, ttl=700, auth=False,
-                         payload=dns.Record_A(address='64.123.27.105', ttl=700)),
-            self.soa
-            ]
+            dns.RRHeader(
+                name='fooby.com',
+                type=dns.NS,
+                cls=dns.IN,
+                ttl=700,
+                auth=False,
+                payload=dns.Record_NS(name='ns.twistedmatrix.com', ttl=700),
+            ),
+            dns.RRHeader(
+                name='fooby.com',
+                type=dns.MX,
+                cls=dns.IN,
+                ttl=700,
+                auth=False,
+                payload=dns.Record_MX(preference=10, exchange='mail.mv3d.com', ttl=700),
+            ),
+            dns.RRHeader(
+                name='fooby.com',
+                type=dns.A,
+                cls=dns.IN,
+                ttl=700,
+                auth=False,
+                payload=dns.Record_A(address='64.123.27.105', ttl=700),
+            ),
+            self.soa,
+        ]
 
     def _makeMessage(self):
         # hooray they all have the same message format
-        return dns.Message(id=999, answer=1, opCode=0, recDes=0, recAv=1, auth=1, rCode=0, trunc=0, maxSize=0)
+        return dns.Message(
+            id=999,
+            answer=1,
+            opCode=0,
+            recDes=0,
+            recAv=1,
+            auth=1,
+            rCode=0,
+            trunc=0,
+            maxSize=0,
+        )
 
     def test_bindAndTNamesStyle(self):
         # Bind style = One big single message
@@ -524,11 +593,10 @@ class AXFRTests(unittest.TestCase):
         records = self.records[:]
         while records:
             m = self._makeMessage()
-            m.queries = [] # DJB *doesn't* specify any queries.. hmm..
+            m.queries = []  # DJB *doesn't* specify any queries.. hmm..
             m.answers = [records.pop(0)]
             self.controller.messageReceived(m, None)
         self.assertEqual(self.results, self.records)
-
 
 
 class ResolvConfHandlingTests(unittest.TestCase):
@@ -544,7 +612,6 @@ class ResolvConfHandlingTests(unittest.TestCase):
         r = client.Resolver(resolv=resolvConf)
         self.assertEqual(r.dynServers, [('127.0.0.1', 53)])
         r._parseCall.cancel()
-
 
 
 class AuthorityTests(unittest.TestCase):
@@ -566,7 +633,6 @@ class AuthorityTests(unittest.TestCase):
         f = self.failureResultOf(testDomain.lookupAddress(testDomainName))
         self.assertIsInstance(f.value, DomainError)
 
-
     def test_recordMissing(self):
         """
         If a L{FileAuthority} has a zone which includes an I{NS} record for a
@@ -576,24 +642,26 @@ class AuthorityTests(unittest.TestCase):
         """
         authority = NoFileAuthority(
             soa=(str(soa_record.mname), soa_record),
-            records={
-                str(soa_record.mname): [
-                    soa_record,
-                    dns.Record_NS('1.2.3.4'),
-                    ]})
+            records={str(soa_record.mname): [soa_record, dns.Record_NS('1.2.3.4')]},
+        )
         d = authority.lookupAddress(str(soa_record.mname))
         result = []
         d.addCallback(result.append)
         answer, authority, additional = result[0]
         self.assertEqual(answer, [])
         self.assertEqual(
-            authority, [
+            authority,
+            [
                 dns.RRHeader(
-                    str(soa_record.mname), soa_record.TYPE,
-                    ttl=soa_record.expire, payload=soa_record,
-                    auth=True)])
+                    str(soa_record.mname),
+                    soa_record.TYPE,
+                    ttl=soa_record.expire,
+                    payload=soa_record,
+                    auth=True,
+                )
+            ],
+        )
         self.assertEqual(additional, [])
-
 
     def test_unknownTypeNXDOMAIN(self):
         """
@@ -604,9 +672,9 @@ class AuthorityTests(unittest.TestCase):
         testDomainName = b'nonexistent.prefix-' + testDomain.soa[0]
         unknownType = max(common.typeToMethod) + 1
         f = self.failureResultOf(
-            testDomain.query(Query(name=testDomainName, type=unknownType)))
+            testDomain.query(Query(name=testDomainName, type=unknownType))
+        )
         self.assertIsInstance(f.value, DomainError)
-
 
     def test_unknownTypeMissing(self):
         """
@@ -615,10 +683,9 @@ class AuthorityTests(unittest.TestCase):
         """
         unknownType = max(common.typeToMethod) + 1
         answer, authority, additional = self.successResultOf(
-            my_domain_com.query(
-                Query(name=u'my-domain.com', type=unknownType)))
+            my_domain_com.query(Query(name=u'my-domain.com', type=unknownType))
+        )
         self.assertEqual(answer, [])
-
 
     def _referralTest(self, method):
         """
@@ -629,20 +696,24 @@ class AuthorityTests(unittest.TestCase):
         subdomain = 'example.' + str(soa_record.mname)
         nameserver = dns.Record_NS('1.2.3.4')
         authority = NoFileAuthority(
-            soa=(str(soa_record.mname), soa_record),
-            records={
-                subdomain: [
-                    nameserver,
-                    ]})
+            soa=(str(soa_record.mname), soa_record), records={subdomain: [nameserver]}
+        )
         d = getattr(authority, method)(subdomain)
         answer, authority, additional = self.successResultOf(d)
         self.assertEqual(answer, [])
         self.assertEqual(
-            authority, [dns.RRHeader(
-                    subdomain, dns.NS, ttl=soa_record.expire,
-                    payload=nameserver, auth=False)])
+            authority,
+            [
+                dns.RRHeader(
+                    subdomain,
+                    dns.NS,
+                    ttl=soa_record.expire,
+                    payload=nameserver,
+                    auth=False,
+                )
+            ],
+        )
         self.assertEqual(additional, [])
-
 
     def test_referral(self):
         """
@@ -653,7 +724,6 @@ class AuthorityTests(unittest.TestCase):
         """
         self._referralTest('lookupAddress')
 
-
     def test_allRecordsReferral(self):
         """
         A referral is also generated for a request of type C{ALL_RECORDS}.
@@ -661,12 +731,12 @@ class AuthorityTests(unittest.TestCase):
         self._referralTest('lookupAllRecords')
 
 
-
 class AdditionalProcessingTests(unittest.TestCase):
     """
     Tests for L{FileAuthority}'s additional processing for those record types
     which require it (MX, CNAME, etc).
     """
+
     _A = dns.Record_A(b"10.0.0.1")
     _AAAA = dns.Record_AAAA(b"f080::1")
 
@@ -701,13 +771,9 @@ class AdditionalProcessingTests(unittest.TestCase):
         """
         authority = NoFileAuthority(
             soa=(soa.mname.name, soa),
-            records={
-                soa.mname.name: [makeRecord(target)],
-                target: addresses,
-                },
-            )
+            records={soa.mname.name: [makeRecord(target)], target: addresses},
+        )
         return getattr(authority, method)(soa_record.mname.name)
-
 
     def assertRecordsMatch(self, expected, computed):
         """
@@ -730,7 +796,6 @@ class AdditionalProcessingTests(unittest.TestCase):
         key = lambda rr: rr.type
         self.assertEqual(sorted(expected, key=key), sorted(computed, key=key))
 
-
     def _additionalTest(self, method, makeRecord, addresses):
         """
         Verify that certain address records are included in the I{additional}
@@ -749,17 +814,22 @@ class AdditionalProcessingTests(unittest.TestCase):
             C{addresses}.
         """
         target = b"mail." + soa_record.mname.name
-        d = self._lookupSomeRecords(
-            method, soa_record, makeRecord, target, addresses)
+        d = self._lookupSomeRecords(method, soa_record, makeRecord, target, addresses)
         answer, authority, additional = self.successResultOf(d)
 
         self.assertRecordsMatch(
-            [dns.RRHeader(
-                    target, address.TYPE, ttl=soa_record.expire, payload=address,
-                    auth=True)
-             for address in addresses],
-            additional)
-
+            [
+                dns.RRHeader(
+                    target,
+                    address.TYPE,
+                    ttl=soa_record.expire,
+                    payload=address,
+                    auth=True,
+                )
+                for address in addresses
+            ],
+            additional,
+        )
 
     def _additionalMXTest(self, addresses):
         """
@@ -769,8 +839,8 @@ class AdditionalProcessingTests(unittest.TestCase):
         @param addresses: See C{_additionalTest}
         """
         self._additionalTest(
-            "lookupMailExchange", partial(dns.Record_MX, 10), addresses)
-
+            "lookupMailExchange", partial(dns.Record_MX, 10), addresses
+        )
 
     def test_mailExchangeAdditionalA(self):
         """
@@ -779,14 +849,12 @@ class AdditionalProcessingTests(unittest.TestCase):
         """
         self._additionalMXTest([self._A])
 
-
     def test_mailExchangeAdditionalAAAA(self):
         """
         If the name of the MX response has AAAA records, they are included in
         the additional section of the response.
         """
         self._additionalMXTest([self._AAAA])
-
 
     def test_mailExchangeAdditionalBoth(self):
         """
@@ -795,7 +863,6 @@ class AdditionalProcessingTests(unittest.TestCase):
         """
         self._additionalMXTest([self._A, self._AAAA])
 
-
     def _additionalNSTest(self, addresses):
         """
         Verify that a response to an NS query has certain records in the
@@ -803,9 +870,7 @@ class AdditionalProcessingTests(unittest.TestCase):
 
         @param addresses: See C{_additionalTest}
         """
-        self._additionalTest(
-            "lookupNameservers", dns.Record_NS, addresses)
-
+        self._additionalTest("lookupNameservers", dns.Record_NS, addresses)
 
     def test_nameserverAdditionalA(self):
         """
@@ -814,7 +879,6 @@ class AdditionalProcessingTests(unittest.TestCase):
         """
         self._additionalNSTest([self._A])
 
-
     def test_nameserverAdditionalAAAA(self):
         """
         If the name of the NS response has AAAA records, they are included in
@@ -822,14 +886,12 @@ class AdditionalProcessingTests(unittest.TestCase):
         """
         self._additionalNSTest([self._AAAA])
 
-
     def test_nameserverAdditionalBoth(self):
         """
         If the name of the NS response has both A and AAAA records, they are
         all included in the additional section of the response.
         """
         self._additionalNSTest([self._A, self._AAAA])
-
 
     def _answerCNAMETest(self, addresses):
         """
@@ -840,20 +902,31 @@ class AdditionalProcessingTests(unittest.TestCase):
         """
         target = b"www." + soa_record.mname.name
         d = self._lookupSomeRecords(
-            "lookupCanonicalName", soa_record, dns.Record_CNAME, target,
-            addresses)
+            "lookupCanonicalName", soa_record, dns.Record_CNAME, target, addresses
+        )
         answer, authority, additional = self.successResultOf(d)
 
         alias = dns.RRHeader(
-            soa_record.mname.name, dns.CNAME, ttl=soa_record.expire,
-            payload=dns.Record_CNAME(target), auth=True)
+            soa_record.mname.name,
+            dns.CNAME,
+            ttl=soa_record.expire,
+            payload=dns.Record_CNAME(target),
+            auth=True,
+        )
         self.assertRecordsMatch(
-            [dns.RRHeader(
-                    target, address.TYPE, ttl=soa_record.expire, payload=address,
-                    auth=True)
-             for address in addresses] + [alias],
-            answer)
-
+            [
+                dns.RRHeader(
+                    target,
+                    address.TYPE,
+                    ttl=soa_record.expire,
+                    payload=address,
+                    auth=True,
+                )
+                for address in addresses
+            ]
+            + [alias],
+            answer,
+        )
 
     def test_canonicalNameAnswerA(self):
         """
@@ -862,14 +935,12 @@ class AdditionalProcessingTests(unittest.TestCase):
         """
         self._answerCNAMETest([self._A])
 
-
     def test_canonicalNameAnswerAAAA(self):
         """
         If the name of the CNAME response has AAAA records, they are included
         in the answer section of the response.
         """
         self._answerCNAMETest([self._AAAA])
-
 
     def test_canonicalNameAnswerBoth(self):
         """
@@ -879,9 +950,7 @@ class AdditionalProcessingTests(unittest.TestCase):
         self._answerCNAMETest([self._A, self._AAAA])
 
 
-
 class NoInitialResponseTests(unittest.TestCase):
-
     def test_noAnswer(self):
         """
         If a request returns a L{dns.NS} response, but we can't connect to the
@@ -904,17 +973,29 @@ class NoInitialResponseTests(unittest.TestCase):
         self.patch(dns.DNSDatagramProtocol, "query", queryProtocol)
 
         records = [
-            dns.RRHeader(name='fooba.com', type=dns.NS, cls=dns.IN, ttl=700,
-                         auth=False,
-                         payload=dns.Record_NS(name='ns.twistedmatrix.com',
-                         ttl=700))]
-        m = dns.Message(id=999, answer=1, opCode=0, recDes=0, recAv=1, auth=1,
-                        rCode=0, trunc=0, maxSize=0)
+            dns.RRHeader(
+                name='fooba.com',
+                type=dns.NS,
+                cls=dns.IN,
+                ttl=700,
+                auth=False,
+                payload=dns.Record_NS(name='ns.twistedmatrix.com', ttl=700),
+            )
+        ]
+        m = dns.Message(
+            id=999,
+            answer=1,
+            opCode=0,
+            recDes=0,
+            recAv=1,
+            auth=1,
+            rCode=0,
+            trunc=0,
+            maxSize=0,
+        )
         m.answers = records
         messages.append(m)
-        return self.assertFailure(
-            resolver.getHostByName("fooby.com"), socket.gaierror)
-
+        return self.assertFailure(resolver.getHostByName("fooby.com"), socket.gaierror)
 
 
 class SecondaryAuthorityServiceTests(unittest.TestCase):
@@ -931,8 +1012,7 @@ class SecondaryAuthorityServiceTests(unittest.TestCase):
         the default DNS port.
         """
         primary = '192.168.1.2'
-        service = SecondaryAuthorityService(
-            primary, ['example.com', 'example.org'])
+        service = SecondaryAuthorityService(primary, ['example.com', 'example.org'])
         self.assertEqual(service.primary, primary)
         self.assertEqual(service._port, 53)
 
@@ -943,7 +1023,6 @@ class SecondaryAuthorityServiceTests(unittest.TestCase):
         self.assertEqual(service.domains[1].primary, primary)
         self.assertEqual(service.domains[1]._port, 53)
         self.assertEqual(service.domains[1].domain, 'example.org')
-
 
     def test_constructAuthorityFromHostAndPort(self):
         """
@@ -956,7 +1035,8 @@ class SecondaryAuthorityServiceTests(unittest.TestCase):
         primary = '192.168.1.3'
         port = 5335
         service = SecondaryAuthorityService.fromServerAddressAndDomains(
-            (primary, port), ['example.net', 'example.edu'])
+            (primary, port), ['example.net', 'example.edu']
+        )
         self.assertEqual(service.primary, primary)
         self.assertEqual(service._port, 5335)
 
@@ -967,7 +1047,6 @@ class SecondaryAuthorityServiceTests(unittest.TestCase):
         self.assertEqual(service.domains[1].primary, primary)
         self.assertEqual(service.domains[1]._port, port)
         self.assertEqual(service.domains[1].domain, 'example.edu')
-
 
 
 class SecondaryAuthorityTests(unittest.TestCase):
@@ -986,18 +1065,17 @@ class SecondaryAuthorityTests(unittest.TestCase):
         self.assertEqual(secondary._port, 53)
         self.assertEqual(secondary.domain, 'inside.com')
 
-
     def test_explicitPort(self):
         """
         When constructed using L{SecondaryAuthority.fromServerAddressAndDomain},
         the specified port is used.
         """
         secondary = SecondaryAuthority.fromServerAddressAndDomain(
-            ('192.168.1.1', 5353), 'inside.com')
+            ('192.168.1.1', 5353), 'inside.com'
+        )
         self.assertEqual(secondary.primary, '192.168.1.1')
         self.assertEqual(secondary._port, 5353)
         self.assertEqual(secondary.domain, 'inside.com')
-
 
     def test_transfer(self):
         """
@@ -1006,7 +1084,8 @@ class SecondaryAuthorityTests(unittest.TestCase):
         was constructed with when L{SecondaryAuthority.transfer} is called.
         """
         secondary = SecondaryAuthority.fromServerAddressAndDomain(
-            ('192.168.1.2', 1234), 'example.com')
+            ('192.168.1.2', 1234), 'example.com'
+        )
         secondary._reactor = reactor = MemoryReactorClock()
 
         secondary.transfer()
@@ -1026,9 +1105,7 @@ class SecondaryAuthorityTests(unittest.TestCase):
         # 2 byte message length to the buffered value.
         msg.decode(BytesIO(transport.value()[2:]))
 
-        self.assertEqual(
-            [dns.Query('example.com', dns.AXFR, dns.IN)], msg.queries)
-
+        self.assertEqual([dns.Query('example.com', dns.AXFR, dns.IN)], msg.queries)
 
     def test_lookupAddress(self):
         """
@@ -1036,7 +1113,8 @@ class SecondaryAuthorityTests(unittest.TestCase):
         with the I{A} records the authority has cached from the primary.
         """
         secondary = SecondaryAuthority.fromServerAddressAndDomain(
-            ('192.168.1.2', 1234), b'example.com')
+            ('192.168.1.2', 1234), b'example.com'
+        )
         secondary._reactor = reactor = MemoryReactorClock()
 
         secondary.transfer()
@@ -1060,22 +1138,24 @@ class SecondaryAuthorityTests(unittest.TestCase):
             expire=7200,
             retry=9600,
             ttl=12000,
-            )
+        )
         a = Record_A(b'192.168.1.2', ttl=0)
         answer = Message(id=query.id, answer=1, auth=1)
-        answer.answers.extend([
+        answer.answers.extend(
+            [
                 RRHeader(b'example.com', type=SOA, payload=soa),
                 RRHeader(b'example.com', payload=a),
                 RRHeader(b'example.com', type=SOA, payload=soa),
-                ])
+            ]
+        )
 
         data = answer.toStr()
         proto.dataReceived(pack('!H', len(data)) + data)
 
         result = self.successResultOf(secondary.lookupAddress('example.com'))
-        self.assertEqual((
-                [RRHeader(b'example.com', payload=a, auth=True)], [], []), result)
-
+        self.assertEqual(
+            ([RRHeader(b'example.com', payload=a, auth=True)], [], []), result
+        )
 
 
 sampleBindZone = b"""\
@@ -1097,11 +1177,11 @@ not-fqdn           IN MX 10 mx.example.com
 www                IN CNAME example.com"""
 
 
-
 class BindAuthorityTests(unittest.TestCase):
     """
     Tests for L{twisted.names.authority.BindAuthority}.
     """
+
     def loadBindString(self, s):
         """
         Create a new L{twisted.names.authority.BindAuthority} from C{s}.
@@ -1117,10 +1197,8 @@ class BindAuthorityTests(unittest.TestCase):
 
         return authority.BindAuthority(fp.path)
 
-
     def setUp(self):
         self.auth = self.loadBindString(sampleBindZone)
-
 
     def test_ttl(self):
         """
@@ -1128,56 +1206,32 @@ class BindAuthorityTests(unittest.TestCase):
         """
         for dom in self.auth.records.keys():
             for rec in self.auth.records[dom]:
-                self.assertTrue(
-                    604800 == rec.ttl
-                )
-
+                self.assertTrue(604800 == rec.ttl)
 
     def test_originFromFile(self):
         """
         Loads the default $ORIGIN.
         """
-        self.assertEqual(
-            b"example.com.", self.auth.origin,
-        )
-        self.assertIn(
-            b"not-fqdn.example.com", self.auth.records,
-        )
-
+        self.assertEqual(b"example.com.", self.auth.origin)
+        self.assertIn(b"not-fqdn.example.com", self.auth.records)
 
     def test_aRecords(self):
         """
         A records are loaded.
         """
-        for dom, ip in [(b"example.com", u"10.0.0.1"),
-                        (b"no-in.example.com", u"10.0.0.2")]:
-            rr = self.successResultOf(
-                self.auth.lookupAddress(dom)
-            )[0][0]
-            self.assertEqual(
-                dns.Record_A(
-                    ip,
-                    604800,
-                ),
-                rr.payload,
-            )
-
+        for dom, ip in [
+            (b"example.com", u"10.0.0.1"),
+            (b"no-in.example.com", u"10.0.0.2"),
+        ]:
+            rr = self.successResultOf(self.auth.lookupAddress(dom))[0][0]
+            self.assertEqual(dns.Record_A(ip, 604800), rr.payload)
 
     def test_aaaaRecords(self):
         """
         AAAA records are loaded.
         """
-        rr = self.successResultOf(
-            self.auth.lookupIPV6Address(b"example.com")
-        )[0][0]
-        self.assertEqual(
-            dns.Record_AAAA(
-                u"2001:db8:10::1",
-                604800,
-            ),
-            rr.payload,
-        )
-
+        rr = self.successResultOf(self.auth.lookupIPV6Address(b"example.com"))[0][0]
+        self.assertEqual(dns.Record_AAAA(u"2001:db8:10::1", 604800), rr.payload)
 
     def test_mxRecords(self):
         """
@@ -1187,40 +1241,23 @@ class BindAuthorityTests(unittest.TestCase):
             self.auth.lookupMailExchange(b"not-fqdn.example.com")
         )[0][0]
         self.assertEqual(
-            dns.Record_MX(
-                preference=10, name="mx.example.com", ttl=604800,
-            ),
-            rr.payload,
+            dns.Record_MX(preference=10, name="mx.example.com", ttl=604800), rr.payload
         )
-
 
     def test_cnameRecords(self):
         """
         CNAME records are loaded.
         """
-        rr = self.successResultOf(
-            self.auth.lookupIPV6Address(b"www.example.com")
-        )[0][0]
-        self.assertEqual(
-            dns.Record_CNAME(
-                name="example.com", ttl=604800,
-            ),
-            rr.payload,
-        )
-
+        rr = self.successResultOf(self.auth.lookupIPV6Address(b"www.example.com"))[0][0]
+        self.assertEqual(dns.Record_CNAME(name="example.com", ttl=604800), rr.payload)
 
     def test_invalidRecordClass(self):
         """
         loadBindString raises NotImplementedError on invalid records.
         """
         with self.assertRaises(NotImplementedError) as e:
-            self.loadBindString(
-                b"example.com. IN LOL 192.168.0.1"
-            )
-        self.assertEqual(
-            "Record type 'LOL' not supported", e.exception.args[0]
-        )
-
+            self.loadBindString(b"example.com. IN LOL 192.168.0.1")
+        self.assertEqual("Record type 'LOL' not supported", e.exception.args[0])
 
     def test_invalidDirectives(self):
         """
@@ -1231,5 +1268,5 @@ class BindAuthorityTests(unittest.TestCase):
                 self.loadBindString(directive + b" doesNotMatter")
             self.assertEqual(
                 nativeString(directive + b" directive not implemented"),
-                e.exception.args[0]
+                e.exception.args[0],
             )

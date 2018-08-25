@@ -16,7 +16,6 @@ from twisted.web._flatten import flattenString
 from twisted.web.error import FlattenerError
 
 
-
 def _render(resource, request):
     result = resource.render(request)
     if isinstance(result, bytes):
@@ -32,11 +31,11 @@ def _render(resource, request):
         raise ValueError("Unexpected return value: %r" % (result,))
 
 
-
 class FlattenTestCase(TestCase):
     """
     A test case that assists with testing L{twisted.web._flatten}.
     """
+
     def assertFlattensTo(self, root, target):
         """
         Assert that a root element, when flattened, is equal to a string.
@@ -44,7 +43,6 @@ class FlattenTestCase(TestCase):
         d = flattenString(None, root)
         d.addCallback(lambda s: self.assertEqual(s, target))
         return d
-
 
     def assertFlattensImmediately(self, root, target):
         """
@@ -70,7 +68,6 @@ class FlattenTestCase(TestCase):
         if isinstance(result, Failure):
             result.raiseException()
         return results[0]
-
 
     def assertFlatteningRaises(self, root, exn):
         """

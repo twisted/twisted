@@ -34,28 +34,24 @@ class _LoopbackQueue(object):
     def __init__(self):
         self._queue = []
 
-
     def put(self, v):
         self._queue.append(v)
         if self._notificationDeferred is not None:
             d, self._notificationDeferred = self._notificationDeferred, None
             d.callback(None)
 
-
     def __nonzero__(self):
         return bool(self._queue)
-    __bool__ = __nonzero__
 
+    __bool__ = __nonzero__
 
     def get(self):
         return self._queue.pop(0)
 
 
-
 @implementer(IAddress)
 class _LoopbackAddress(object):
     pass
-
 
 
 @implementer(interfaces.ITransport, interfaces.IConsumer)
@@ -79,13 +75,11 @@ class _LoopbackTransport(object):
         self.q.disconnect = True
         self.q.put(None)
 
-
     def abortConnection(self):
         """
         Abort the connection. Same as L{loseConnection}.
         """
         self.loseConnection()
-
 
     def getPeer(self):
         return _LoopbackAddress()
@@ -109,7 +103,6 @@ class _LoopbackTransport(object):
             self.producer.resumeProducing()
 
 
-
 def identityPumpPolicy(queue, target):
     """
     L{identityPumpPolicy} is a policy which delivers each chunk of data written
@@ -124,7 +117,6 @@ def identityPumpPolicy(queue, target):
         if bytes is None:
             break
         target.dataReceived(bytes)
-
 
 
 def collapsingPumpPolicy(queue, target):
@@ -142,7 +134,6 @@ def collapsingPumpPolicy(queue, target):
         bytes.append(chunk)
     if bytes:
         target.dataReceived(b''.join(bytes))
-
 
 
 def loopbackAsync(server, client, pumpPolicy=identityPumpPolicy):
@@ -179,12 +170,11 @@ def loopbackAsync(server, client, pumpPolicy=identityPumpPolicy):
     client.makeConnection(_LoopbackTransport(clientToServer))
 
     return _loopbackAsyncBody(
-        server, serverToClient, client, clientToServer, pumpPolicy)
+        server, serverToClient, client, clientToServer, pumpPolicy
+    )
 
 
-
-def _loopbackAsyncBody(server, serverToClient, client, clientToServer,
-                       pumpPolicy):
+def _loopbackAsyncBody(server, serverToClient, client, clientToServer, pumpPolicy):
     """
     Transfer bytes from the output queue of each protocol to the input of the other.
 
@@ -203,6 +193,7 @@ def _loopbackAsyncBody(server, serverToClient, client, clientToServer,
     @return: A L{Deferred} which fires when the connection has been closed and
         both sides have received notification of this.
     """
+
     def pump(source, q, target):
         sent = False
         if q:
@@ -230,7 +221,12 @@ def _loopbackAsyncBody(server, serverToClient, client, clientToServer,
             serverToClient._notificationDeferred = d
             d.addCallback(
                 _loopbackAsyncContinue,
-                server, serverToClient, client, clientToServer, pumpPolicy)
+                server,
+                serverToClient,
+                client,
+                clientToServer,
+                pumpPolicy,
+            )
             return d
         if serverToClient.disconnect:
             # The server wants to drop the connection.  Flush any remaining
@@ -249,9 +245,9 @@ def _loopbackAsyncBody(server, serverToClient, client, clientToServer,
             return defer.succeed(None)
 
 
-
-def _loopbackAsyncContinue(ignored, server, serverToClient, client,
-                           clientToServer, pumpPolicy):
+def _loopbackAsyncContinue(
+    ignored, server, serverToClient, client, clientToServer, pumpPolicy
+):
     # Clear the Deferred from each message queue, since it has already fired
     # and cannot be used again.
     clientToServer._notificationDeferred = None
@@ -262,11 +258,17 @@ def _loopbackAsyncContinue(ignored, server, serverToClient, client,
     # a result of calling write, and doing this synchronously could result
     # in that.
     from twisted.internet import reactor
-    return deferLater(
-        reactor, 0,
-        _loopbackAsyncBody,
-        server, serverToClient, client, clientToServer, pumpPolicy)
 
+    return deferLater(
+        reactor,
+        0,
+        _loopbackAsyncBody,
+        server,
+        serverToClient,
+        client,
+        clientToServer,
+        pumpPolicy,
+    )
 
 
 @implementer(interfaces.ITransport, interfaces.IConsumer)
@@ -324,9 +326,7 @@ class LoopbackRelay:
         return 'Loopback(%r)' % (self.target.__class__.__name__,)
 
 
-
 class LoopbackClientFactory(protocol.ClientFactory):
-
     def __init__(self, protocol):
         self.disconnected = 0
         self.deferred = defer.Deferred()
@@ -353,6 +353,7 @@ class _FireOnClose(policies.ProtocolWrapper):
 def loopbackTCP(server, client, port=0, noisy=True):
     """Run session between server and client protocol instances over TCP."""
     from twisted.internet import reactor
+
     f = policies.WrappingFactory(protocol.Factory())
     serverWrapper = _FireOnClose(f, server)
     f.noisy = noisy
@@ -371,6 +372,7 @@ def loopbackUNIX(server, client, noisy=True):
     """Run session between server and client protocol instances over UNIX socket."""
     path = tempfile.mktemp()
     from twisted.internet import reactor
+
     f = policies.WrappingFactory(protocol.Factory())
     serverWrapper = _FireOnClose(f, server)
     f.noisy = noisy

@@ -10,9 +10,6 @@ numeric, and bit flag values.
 from __future__ import division, absolute_import
 
 # Import and re-export Constantly
-from constantly import (NamedConstant, ValueConstant, FlagConstant, Names,
-                        Values, Flags)
+from constantly import NamedConstant, ValueConstant, FlagConstant, Names, Values, Flags
 
-__all__ = [
-    'NamedConstant', 'ValueConstant', 'FlagConstant',
-    'Names', 'Values', 'Flags']
+__all__ = ['NamedConstant', 'ValueConstant', 'FlagConstant', 'Names', 'Values', 'Flags']

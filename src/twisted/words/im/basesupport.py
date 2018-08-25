@@ -19,6 +19,7 @@ from twisted.persisted import styles
 
 from twisted.internet import error
 
+
 class AbstractGroup:
     def __init__(self, name, account):
         self.name = name
@@ -59,6 +60,7 @@ class AbstractGroup:
     def __str__(self):
         return '%s@%s' % (self.name, self.account.accountName)
 
+
 class AbstractPerson:
     def __init__(self, name, baseAccount):
         self.name = name
@@ -85,6 +87,7 @@ class AbstractPerson:
     def __str__(self):
         return '%s@%s' % (self.name, self.account.accountName)
 
+
 class AbstractClientMixin:
     """Designed to be mixed in to a Protocol implementing class.
 
@@ -92,6 +95,7 @@ class AbstractClientMixin:
 
     @ivar _logonDeferred: Fired when I am done logging in.
     """
+
     def __init__(self, account, chatui, logonDeferred):
         for base in self.__class__.__bases__:
             if issubclass(base, Protocol):
@@ -252,7 +256,7 @@ class AbstractAccount(styles.Versioned):
         @returntype: Failure
         """
         self._isConnecting = 0
-        self._isOnline = 0 # just in case
+        self._isOnline = 0  # just in case
         return reason
 
     def _clientLost(self, client, reason):
@@ -262,8 +266,10 @@ class AbstractAccount(styles.Versioned):
         return reason
 
     def __repr__(self):
-        return "<%s: %s (%s@%s:%s)>" % (self.__class__,
-                                        self.accountName,
-                                        self.username,
-                                        self.host,
-                                        self.port)
+        return "<%s: %s (%s@%s:%s)>" % (
+            self.__class__,
+            self.accountName,
+            self.username,
+            self.host,
+            self.port,
+        )

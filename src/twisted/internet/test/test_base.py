@@ -6,6 +6,7 @@ Tests for L{twisted.internet.base}.
 """
 
 import socket
+
 try:
     from Queue import Queue
 except ImportError:
@@ -14,8 +15,7 @@ except ImportError:
 from zope.interface import implementer
 
 from twisted.python.threadpool import ThreadPool
-from twisted.internet.interfaces import (IReactorTime, IReactorThreads,
-                                         IResolverSimple)
+from twisted.internet.interfaces import IReactorTime, IReactorThreads, IResolverSimple
 from twisted.internet.error import DNSLookupError
 from twisted.internet._resolver import FirstOneWins
 from twisted.internet.defer import Deferred
@@ -41,25 +41,22 @@ class FakeReactor(object):
 
         self._threadCalls = Queue()
 
-
     def callFromThread(self, f, *args, **kwargs):
         self._threadCalls.put((f, args, kwargs))
-
 
     def _runThreadCalls(self):
         f, args, kwargs = self._threadCalls.get()
         f(*args, **kwargs)
 
-
     def _stop(self):
         self._threadpool.stop()
-
 
 
 class ThreadedResolverTests(TestCase):
     """
     Tests for L{ThreadedResolver}.
     """
+
     def test_success(self):
         """
         L{ThreadedResolver.getHostByName} returns a L{Deferred} which fires
@@ -75,6 +72,7 @@ class ThreadedResolverTests(TestCase):
 
         lookedUp = []
         resolvedTo = []
+
         def fakeGetHostByName(name):
             lookedUp.append(name)
             return ip
@@ -93,7 +91,6 @@ class ThreadedResolverTests(TestCase):
         # Make sure that any timeout-related stuff gets cleaned up.
         reactor._clock.advance(timeout + 1)
         self.assertEqual(reactor._clock.calls, [])
-
 
     def test_failure(self):
         """
@@ -124,7 +121,6 @@ class ThreadedResolverTests(TestCase):
         reactor._clock.advance(timeout + 1)
         self.assertEqual(reactor._clock.calls, [])
 
-
     def test_timeout(self):
         """
         If L{socket.gethostbyname} does not complete before the specified
@@ -137,6 +133,7 @@ class ThreadedResolverTests(TestCase):
         self.addCleanup(reactor._stop)
 
         result = Queue()
+
         def fakeGetHostByName(name):
             raise result.get()
 
@@ -156,7 +153,6 @@ class ThreadedResolverTests(TestCase):
         # Eventually the socket.gethostbyname does finish - in this case, with
         # an exception.  Nobody cares, though.
         result.put(IOError("The I/O was errorful"))
-
 
     def test_resolverGivenStr(self):
         """
@@ -179,25 +175,19 @@ class ThreadedResolverTests(TestCase):
         reactor = JustEnoughReactor()
         reactor.installResolver(fake)
         rec = FirstOneWins(Deferred())
-        reactor.nameResolver.resolveHostName(
-            rec, u"example.example")
-        reactor.nameResolver.resolveHostName(
-            rec, "example.example")
-        reactor.nameResolver.resolveHostName(
-            rec, u"v\xe4\xe4ntynyt.example")
-        reactor.nameResolver.resolveHostName(
-            rec, u"\u0440\u0444.example")
-        reactor.nameResolver.resolveHostName(
-            rec, "xn----7sbb4ac0ad0be6cf.xn--p1ai")
+        reactor.nameResolver.resolveHostName(rec, u"example.example")
+        reactor.nameResolver.resolveHostName(rec, "example.example")
+        reactor.nameResolver.resolveHostName(rec, u"v\xe4\xe4ntynyt.example")
+        reactor.nameResolver.resolveHostName(rec, u"\u0440\u0444.example")
+        reactor.nameResolver.resolveHostName(rec, "xn----7sbb4ac0ad0be6cf.xn--p1ai")
 
         self.assertEqual(len(calls), 5)
-        self.assertEqual(list(map(type, calls)), [str]*5)
+        self.assertEqual(list(map(type, calls)), [str] * 5)
         self.assertEqual("example.example", calls[0])
         self.assertEqual("example.example", calls[1])
         self.assertEqual("xn--vntynyt-5waa.example", calls[2])
         self.assertEqual("xn--p1ai.example", calls[3])
         self.assertEqual("xn----7sbb4ac0ad0be6cf.xn--p1ai", calls[4])
-
 
 
 def nothing():
@@ -206,11 +196,11 @@ def nothing():
     """
 
 
-
 class DelayedCallMixin(object):
     """
     L{DelayedCall}
     """
+
     def _getDelayedCallAt(self, time):
         """
         Get a L{DelayedCall} instance at a given C{time}.
@@ -218,10 +208,11 @@ class DelayedCallMixin(object):
         @param time: The absolute time at which the returned L{DelayedCall}
             will be scheduled.
         """
+
         def noop(call):
             pass
-        return DelayedCall(time, lambda: None, (), {}, noop, noop, None)
 
+        return DelayedCall(time, lambda: None, (), {}, noop, noop, None)
 
     def setUp(self):
         """
@@ -231,19 +222,18 @@ class DelayedCallMixin(object):
         self.zero = self._getDelayedCallAt(0)
         self.one = self._getDelayedCallAt(1)
 
-
     def test_str(self):
         """
         The string representation of a L{DelayedCall} instance, as returned by
         L{str}, includes the unsigned id of the instance, as well as its state,
         the function to be called, and the function arguments.
         """
-        dc = DelayedCall(12, nothing, (3, ), {"A": 5}, None, None, lambda: 1.5)
+        dc = DelayedCall(12, nothing, (3,), {"A": 5}, None, None, lambda: 1.5)
         self.assertEqual(
             str(dc),
             "<DelayedCall 0x%x [10.5s] called=0 cancelled=0 nothing(3, A=5)>"
-                % (id(dc),))
-
+            % (id(dc),),
+        )
 
     def test_lt(self):
         """
@@ -255,7 +245,6 @@ class DelayedCallMixin(object):
         self.assertFalse(one < zero)
         self.assertFalse(zero < zero)
         self.assertFalse(one < one)
-
 
     def test_le(self):
         """
@@ -269,7 +258,6 @@ class DelayedCallMixin(object):
         self.assertTrue(zero <= zero)
         self.assertTrue(one <= one)
 
-
     def test_gt(self):
         """
         For two instances of L{DelayedCall} C{a} and C{b}, C{a > b} is true
@@ -280,7 +268,6 @@ class DelayedCallMixin(object):
         self.assertFalse(zero > one)
         self.assertFalse(zero > zero)
         self.assertFalse(one > one)
-
 
     def test_ge(self):
         """
@@ -294,7 +281,6 @@ class DelayedCallMixin(object):
         self.assertTrue(zero >= zero)
         self.assertTrue(one >= one)
 
-
     def test_eq(self):
         """
         A L{DelayedCall} instance is only equal to itself.
@@ -304,7 +290,6 @@ class DelayedCallMixin(object):
         self.assertFalse(self.zero == self.one)
         self.assertTrue(self.zero == self.zero)
         self.assertTrue(self.one == self.one)
-
 
     def test_ne(self):
         """
@@ -317,11 +302,11 @@ class DelayedCallMixin(object):
         self.assertFalse(self.one != self.one)
 
 
-
 class DelayedCallNoDebugTests(DelayedCallMixin, TestCase):
     """
     L{DelayedCall}
     """
+
     def setUp(self):
         """
         Turn debug off.
@@ -329,25 +314,25 @@ class DelayedCallNoDebugTests(DelayedCallMixin, TestCase):
         self.patch(DelayedCall, 'debug', False)
         DelayedCallMixin.setUp(self)
 
-
     def test_str(self):
         """
         The string representation of a L{DelayedCall} instance, as returned by
         L{str}, includes the unsigned id of the instance, as well as its state,
         the function to be called, and the function arguments.
         """
-        dc = DelayedCall(12, nothing, (3, ), {"A": 5}, None, None, lambda: 1.5)
+        dc = DelayedCall(12, nothing, (3,), {"A": 5}, None, None, lambda: 1.5)
         expected = (
             "<DelayedCall 0x{:x} [10.5s] called=0 cancelled=0 "
-            "nothing(3, A=5)>".format(id(dc)))
+            "nothing(3, A=5)>".format(id(dc))
+        )
         self.assertEqual(str(dc), expected)
-
 
 
 class DelayedCallDebugTests(DelayedCallMixin, TestCase):
     """
     L{DelayedCall}
     """
+
     def setUp(self):
         """
         Turn debug on.
@@ -355,21 +340,19 @@ class DelayedCallDebugTests(DelayedCallMixin, TestCase):
         self.patch(DelayedCall, 'debug', True)
         DelayedCallMixin.setUp(self)
 
-
     def test_str(self):
         """
         The string representation of a L{DelayedCall} instance, as returned by
         L{str}, includes the unsigned id of the instance, as well as its state,
         the function to be called, and the function arguments.
         """
-        dc = DelayedCall(12, nothing, (3, ), {"A": 5}, None, None, lambda: 1.5)
+        dc = DelayedCall(12, nothing, (3,), {"A": 5}, None, None, lambda: 1.5)
         expectedRegexp = (
             "<DelayedCall 0x{:x} \\[10.5s\\] called=0 cancelled=0 "
             "nothing\\(3, A=5\\)\n\n"
-            "traceback at creation:".format(id(dc)))
-        self.assertRegex(
-            str(dc), expectedRegexp)
-
+            "traceback at creation:".format(id(dc))
+        )
+        self.assertRegex(str(dc), expectedRegexp)
 
 
 class TestSpySignalCapturingReactor(ReactorBase):
@@ -385,7 +368,6 @@ class TestSpySignalCapturingReactor(ReactorBase):
         """
 
 
-
 class ReactorBaseSignalTests(TestCase):
 
     """
@@ -399,7 +381,6 @@ class ReactorBaseSignalTests(TestCase):
         reactor = TestSpySignalCapturingReactor()
         self.assertIs(None, reactor._exitSignal)
 
-
     def test_captureSIGINT(self):
         """
         ReactorBase's SIGINT handler saves the value of SIGINT to the
@@ -409,7 +390,6 @@ class ReactorBaseSignalTests(TestCase):
         reactor.sigInt(signal.SIGINT, None)
         self.assertEquals(signal.SIGINT, reactor._exitSignal)
 
-
     def test_captureSIGTERM(self):
         """
         ReactorBase's SIGTERM handler saves the value of SIGTERM to the
@@ -418,7 +398,6 @@ class ReactorBaseSignalTests(TestCase):
         reactor = TestSpySignalCapturingReactor()
         reactor.sigTerm(signal.SIGTERM, None)
         self.assertEquals(signal.SIGTERM, reactor._exitSignal)
-
 
     def test_captureSIGBREAK(self):
         """
@@ -431,7 +410,6 @@ class ReactorBaseSignalTests(TestCase):
         reactor = TestSpySignalCapturingReactor()
         reactor.sigBreak(signal.SIGBREAK, None)
         self.assertEquals(signal.SIGBREAK, reactor._exitSignal)
-
 
 
 try:

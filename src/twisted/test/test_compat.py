@@ -13,14 +13,31 @@ import socket, sys, traceback, io, codecs
 from twisted.trial import unittest
 
 from twisted.python.compat import (
-    reduce, execfile, _PY3, _PYPY, comparable, cmp, nativeString,
-    networkString, unicode as unicodeCompat, lazyByteSlice, reraise,
-    NativeStringIO, iterbytes, intToBytes, ioType, bytesEnviron, iteritems,
-    _coercedUnicode, unichr, raw_input, _bytesRepr, _get_async_param,
+    reduce,
+    execfile,
+    _PY3,
+    _PYPY,
+    comparable,
+    cmp,
+    nativeString,
+    networkString,
+    unicode as unicodeCompat,
+    lazyByteSlice,
+    reraise,
+    NativeStringIO,
+    iterbytes,
+    intToBytes,
+    ioType,
+    bytesEnviron,
+    iteritems,
+    _coercedUnicode,
+    unichr,
+    raw_input,
+    _bytesRepr,
+    _get_async_param,
 )
 from twisted.python.filepath import FilePath
 from twisted.python.runtime import platform
-
 
 
 class IOTypeTests(unittest.SynchronousTestCase):
@@ -34,13 +51,11 @@ class IOTypeTests(unittest.SynchronousTestCase):
         """
         self.assertEqual(ioType(io.StringIO()), unicodeCompat)
 
-
     def test_3BytesIO(self):
         """
         An L{io.BytesIO} accepts and returns bytes.
         """
         self.assertEqual(ioType(io.BytesIO()), bytes)
-
 
     def test_3openTextMode(self):
         """
@@ -49,7 +64,6 @@ class IOTypeTests(unittest.SynchronousTestCase):
         with io.open(self.mktemp(), "w") as f:
             self.assertEqual(ioType(f), unicodeCompat)
 
-
     def test_3openBinaryMode(self):
         """
         A file opened via 'io.open' in binary mode accepts and returns bytes.
@@ -57,13 +71,13 @@ class IOTypeTests(unittest.SynchronousTestCase):
         with io.open(self.mktemp(), "wb") as f:
             self.assertEqual(ioType(f), bytes)
 
-
     def test_2openTextMode(self):
         """
         The special built-in console file in Python 2 which has an 'encoding'
         attribute should qualify as a special type, since it accepts both bytes
         and text faithfully.
         """
+
         class VerySpecificLie(file):
             """
             In their infinite wisdom, the CPython developers saw fit not to
@@ -73,11 +87,10 @@ class IOTypeTests(unittest.SynchronousTestCase):
 
             Pretend they did not do that.
             """
+
             encoding = 'utf-8'
 
-        self.assertEqual(ioType(VerySpecificLie(self.mktemp(), "wb")),
-                          basestring)
-
+        self.assertEqual(ioType(VerySpecificLie(self.mktemp(), "wb")), basestring)
 
     def test_2StringIO(self):
         """
@@ -85,9 +98,9 @@ class IOTypeTests(unittest.SynchronousTestCase):
         """
         from cStringIO import StringIO as cStringIO
         from StringIO import StringIO
+
         self.assertEqual(ioType(StringIO()), bytes)
         self.assertEqual(ioType(cStringIO()), bytes)
-
 
     def test_2openBinaryMode(self):
         """
@@ -99,9 +112,10 @@ class IOTypeTests(unittest.SynchronousTestCase):
     if _PY3:
         test_2openTextMode.skip = "The 'file' type is no longer available."
         test_2openBinaryMode.skip = "'io.open' is now the same as 'open'."
-        test_2StringIO.skip = ("The 'StringIO' and 'cStringIO' modules were "
-                               "subsumed by the 'io' module.")
-
+        test_2StringIO.skip = (
+            "The 'StringIO' and 'cStringIO' modules were "
+            "subsumed by the 'io' module."
+        )
 
     def test_codecsOpenBytes(self):
         """
@@ -111,7 +125,6 @@ class IOTypeTests(unittest.SynchronousTestCase):
         with codecs.open(self.mktemp(), 'wb') as f:
             self.assertEqual(ioType(f), bytes)
 
-
     def test_codecsOpenText(self):
         """
         When passed an encoding, however, the L{codecs} module returns unicode.
@@ -119,14 +132,12 @@ class IOTypeTests(unittest.SynchronousTestCase):
         with codecs.open(self.mktemp(), 'wb', encoding='utf-8') as f:
             self.assertEqual(ioType(f), unicodeCompat)
 
-
     def test_defaultToText(self):
         """
         When passed an object about which no sensible decision can be made, err
         on the side of unicode.
         """
         self.assertEqual(ioType(object()), unicodeCompat)
-
 
 
 class CompatTests(unittest.SynchronousTestCase):
@@ -159,7 +170,6 @@ class CompatTests(unittest.SynchronousTestCase):
         b.sort()
         self.assertEqual(b, ['a', 'c', 'r', 's'])
 
-
     def test_frozenset(self):
         """
         L{frozenset} should behave like the expected frozenset interface.
@@ -174,14 +184,12 @@ class CompatTests(unittest.SynchronousTestCase):
         b.sort()
         self.assertEqual(b, ['a', 'b', 'r', 's'])
 
-
     def test_reduce(self):
         """
         L{reduce} should behave like the builtin reduce.
         """
         self.assertEqual(15, reduce(lambda x, y: x + y, [1, 2, 3, 4, 5]))
         self.assertEqual(16, reduce(lambda x, y: x + y, [1, 2, 3, 4, 5], 1))
-
 
 
 class IPv6Tests(unittest.SynchronousTestCase):
@@ -199,8 +207,8 @@ class IPv6Tests(unittest.SynchronousTestCase):
         self.assertEqual('::1', f('\x00' * 15 + '\x01'))
         self.assertEqual(
             'aef:b01:506:1001:ffff:9997:55:170',
-            f('\x0a\xef\x0b\x01\x05\x06\x10\x01\xff\xff\x99\x97\x00\x55\x01'
-              '\x70'))
+            f('\x0a\xef\x0b\x01\x05\x06\x10\x01\xff\xff\x99\x97\x00\x55\x01' '\x70'),
+        )
 
         self.assertEqual('1.0.1.0', g('\x01\x00\x01\x00'))
         self.assertEqual('170.85.170.85', g('\xaa\x55\xaa\x55'))
@@ -208,7 +216,6 @@ class IPv6Tests(unittest.SynchronousTestCase):
 
         self.assertEqual('100::', f('\x01' + '\x00' * 15))
         self.assertEqual('100::1', f('\x01' + '\x00' * 14 + '\x01'))
-
 
     def testPToN(self):
         """
@@ -229,28 +236,41 @@ class IPv6Tests(unittest.SynchronousTestCase):
         self.assertEqual('\x00\x01' + '\x00' * 14, f('1::'))
         self.assertEqual(
             '\x45\xef\x76\xcb\x00\x1a\x56\xef\xaf\xeb\x0b\xac\x19\x24\xae\xae',
-            f('45ef:76cb:1a:56ef:afeb:bac:1924:aeae'))
+            f('45ef:76cb:1a:56ef:afeb:bac:1924:aeae'),
+        )
         # Scope ID doesn't affect the binary representation.
         self.assertEqual(
             '\x45\xef\x76\xcb\x00\x1a\x56\xef\xaf\xeb\x0b\xac\x19\x24\xae\xae',
-            f('45ef:76cb:1a:56ef:afeb:bac:1924:aeae%en0'))
+            f('45ef:76cb:1a:56ef:afeb:bac:1924:aeae%en0'),
+        )
 
         self.assertEqual('\x00' * 14 + '\x00\x01', f('::1'))
         self.assertEqual('\x00' * 12 + '\x01\x02\x03\x04', f('::1.2.3.4'))
         self.assertEqual(
             '\x00\x01\x00\x02\x00\x03\x00\x04\x00\x05\x00\x06\x01\x02\x03\xff',
-            f('1:2:3:4:5:6:1.2.3.255'))
+            f('1:2:3:4:5:6:1.2.3.255'),
+        )
 
-        for badaddr in ['1:2:3:4:5:6:7:8:', ':1:2:3:4:5:6:7:8', '1::2::3',
-                        '1:::3', ':::', '1:2', '::1.2', '1.2.3.4::',
-                        'abcd:1.2.3.4:abcd:abcd:abcd:abcd:abcd',
-                        '1234:1.2.3.4:1234:1234:1234:1234:1234:1234',
-                        '1.2.3.4', '', '%eth0']:
+        for badaddr in [
+            '1:2:3:4:5:6:7:8:',
+            ':1:2:3:4:5:6:7:8',
+            '1::2::3',
+            '1:::3',
+            ':::',
+            '1:2',
+            '::1.2',
+            '1.2.3.4::',
+            'abcd:1.2.3.4:abcd:abcd:abcd:abcd:abcd',
+            '1234:1.2.3.4:1234:1234:1234:1234:1234:1234',
+            '1.2.3.4',
+            '',
+            '%eth0',
+        ]:
             self.assertRaises(ValueError, f, badaddr)
+
 
 if _PY3:
     IPv6Tests.skip = "These tests are only relevant to old versions of Python"
-
 
 
 class ExecfileCompatTests(unittest.SynchronousTestCase):
@@ -268,7 +288,6 @@ class ExecfileCompatTests(unittest.SynchronousTestCase):
             f.write(content.encode("ascii"))
         return FilePath(path.encode("utf-8"))
 
-
     def test_execfileGlobals(self):
         """
         L{execfile} executes the specified file in the given global namespace.
@@ -277,7 +296,6 @@ class ExecfileCompatTests(unittest.SynchronousTestCase):
         globalNamespace = {"foo": 1}
         execfile(script.path, globalNamespace)
         self.assertEqual(2, globalNamespace["foo"])
-
 
     def test_execfileGlobalsAndLocals(self):
         """
@@ -291,7 +309,6 @@ class ExecfileCompatTests(unittest.SynchronousTestCase):
         self.assertEqual(10, globalNamespace["foo"])
         self.assertEqual(21, localNamespace["foo"])
 
-
     def test_execfileUniversalNewlines(self):
         """
         L{execfile} reads in the specified file using universal newlines so
@@ -302,7 +319,6 @@ class ExecfileCompatTests(unittest.SynchronousTestCase):
             globalNamespace = {"foo": None}
             execfile(script.path, globalNamespace)
             self.assertEqual("okay", globalNamespace["foo"])
-
 
 
 class PY3Tests(unittest.SynchronousTestCase):
@@ -317,14 +333,12 @@ class PY3Tests(unittest.SynchronousTestCase):
         if sys.version.startswith("2."):
             self.assertFalse(_PY3)
 
-
     def test_python3(self):
         """
         On Python 3, C{_PY3} is True.
         """
         if sys.version.startswith("3."):
             self.assertTrue(_PY3)
-
 
 
 class PYPYTest(unittest.SynchronousTestCase):
@@ -342,21 +356,19 @@ class PYPYTest(unittest.SynchronousTestCase):
             self.assertFalse(_PYPY)
 
 
-
 @comparable
 class Comparable(object):
     """
     Objects that can be compared to each other, but not others.
     """
+
     def __init__(self, value):
         self.value = value
-
 
     def __cmp__(self, other):
         if not isinstance(other, Comparable):
             return NotImplemented
         return cmp(self.value, other.value)
-
 
 
 class ComparableTests(unittest.SynchronousTestCase):
@@ -373,7 +385,6 @@ class ComparableTests(unittest.SynchronousTestCase):
         self.assertTrue(Comparable(1) == Comparable(1))
         self.assertFalse(Comparable(2) == Comparable(1))
 
-
     def test_nonEquality(self):
         """
         Instances of a class that is decorated by C{comparable} support
@@ -383,7 +394,6 @@ class ComparableTests(unittest.SynchronousTestCase):
         self.assertFalse(Comparable(1) != Comparable(1))
         self.assertTrue(Comparable(2) != Comparable(1))
 
-
     def test_greaterThan(self):
         """
         Instances of a class that is decorated by C{comparable} support
@@ -391,7 +401,6 @@ class ComparableTests(unittest.SynchronousTestCase):
         """
         self.assertTrue(Comparable(2) > Comparable(1))
         self.assertFalse(Comparable(0) > Comparable(3))
-
 
     def test_greaterThanOrEqual(self):
         """
@@ -402,7 +411,6 @@ class ComparableTests(unittest.SynchronousTestCase):
         self.assertTrue(Comparable(2) >= Comparable(1))
         self.assertFalse(Comparable(0) >= Comparable(3))
 
-
     def test_lessThan(self):
         """
         Instances of a class that is decorated by C{comparable} support
@@ -410,7 +418,6 @@ class ComparableTests(unittest.SynchronousTestCase):
         """
         self.assertTrue(Comparable(0) < Comparable(3))
         self.assertFalse(Comparable(2) < Comparable(0))
-
 
     def test_lessThanOrEqual(self):
         """
@@ -420,7 +427,6 @@ class ComparableTests(unittest.SynchronousTestCase):
         self.assertTrue(Comparable(3) <= Comparable(3))
         self.assertTrue(Comparable(0) <= Comparable(3))
         self.assertFalse(Comparable(2) <= Comparable(0))
-
 
 
 class Python3ComparableTests(unittest.SynchronousTestCase):
@@ -436,7 +442,6 @@ class Python3ComparableTests(unittest.SynchronousTestCase):
         """
         self.assertEqual(Comparable(1).__eq__(object()), NotImplemented)
 
-
     def test_notImplementedNotEquals(self):
         """
         Instances of a class that is decorated by C{comparable} support
@@ -444,7 +449,6 @@ class Python3ComparableTests(unittest.SynchronousTestCase):
         underlying C{__cmp__} call.
         """
         self.assertEqual(Comparable(1).__ne__(object()), NotImplemented)
-
 
     def test_notImplementedGreaterThan(self):
         """
@@ -454,7 +458,6 @@ class Python3ComparableTests(unittest.SynchronousTestCase):
         """
         self.assertEqual(Comparable(1).__gt__(object()), NotImplemented)
 
-
     def test_notImplementedLessThan(self):
         """
         Instances of a class that is decorated by C{comparable} support
@@ -462,7 +465,6 @@ class Python3ComparableTests(unittest.SynchronousTestCase):
         underlying C{__cmp__} call.
         """
         self.assertEqual(Comparable(1).__lt__(object()), NotImplemented)
-
 
     def test_notImplementedGreaterThanEquals(self):
         """
@@ -472,7 +474,6 @@ class Python3ComparableTests(unittest.SynchronousTestCase):
         """
         self.assertEqual(Comparable(1).__ge__(object()), NotImplemented)
 
-
     def test_notImplementedLessThanEquals(self):
         """
         Instances of a class that is decorated by C{comparable} support
@@ -481,11 +482,11 @@ class Python3ComparableTests(unittest.SynchronousTestCase):
         """
         self.assertEqual(Comparable(1).__le__(object()), NotImplemented)
 
+
 if not _PY3:
     # On Python 2, we just use __cmp__ directly, so checking detailed
     # comparison methods doesn't makes sense.
     Python3ComparableTests.skip = "Python 3 only."
-
 
 
 class CmpTests(unittest.SynchronousTestCase):
@@ -501,7 +502,6 @@ class CmpTests(unittest.SynchronousTestCase):
         self.assertEqual(cmp(1, 1), 0)
         self.assertEqual(cmp([1], [1]), 0)
 
-
     def test_greaterThan(self):
         """
         L{cmp} returns 1 if its first argument is bigger than its second.
@@ -509,14 +509,12 @@ class CmpTests(unittest.SynchronousTestCase):
         self.assertEqual(cmp(4, 0), 1)
         self.assertEqual(cmp(b"z", b"a"), 1)
 
-
     def test_lessThan(self):
         """
         L{cmp} returns -1 if its first argument is smaller than its second.
         """
         self.assertEqual(cmp(0.1, 2.3), -1)
         self.assertEqual(cmp(b"a", b"d"), -1)
-
 
 
 class StringTests(unittest.SynchronousTestCase):
@@ -533,14 +531,12 @@ class StringTests(unittest.SynchronousTestCase):
         self.assertEqual(nativeString(original), expected)
         self.assertIsInstance(nativeString(original), str)
 
-
     def test_nonASCIIBytesToString(self):
         """
         C{nativeString} raises a C{UnicodeError} if input bytes are not ASCII
         decodable.
         """
         self.assertRaises(UnicodeError, nativeString, b"\xFF")
-
 
     def test_nonASCIIUnicodeToString(self):
         """
@@ -549,14 +545,12 @@ class StringTests(unittest.SynchronousTestCase):
         """
         self.assertRaises(UnicodeError, nativeString, u"\u1234")
 
-
     def test_bytesToString(self):
         """
         C{nativeString} converts bytes to the native string format, assuming
         an ASCII encoding if applicable.
         """
         self.assertNativeString(b"hello", "hello")
-
 
     def test_unicodeToString(self):
         """
@@ -565,13 +559,11 @@ class StringTests(unittest.SynchronousTestCase):
         """
         self.assertNativeString(u"Good day", "Good day")
 
-
     def test_stringToString(self):
         """
         C{nativeString} leaves native strings as native strings.
         """
         self.assertNativeString("Hello!", "Hello!")
-
 
     def test_unexpectedType(self):
         """
@@ -579,7 +571,6 @@ class StringTests(unittest.SynchronousTestCase):
         string of some sort.
         """
         self.assertRaises(TypeError, nativeString, 1)
-
 
     def test_unicode(self):
         """
@@ -590,7 +581,6 @@ class StringTests(unittest.SynchronousTestCase):
         else:
             expected = unicode
         self.assertIs(unicodeCompat, expected)
-
 
     def test_nativeStringIO(self):
         """
@@ -603,29 +593,28 @@ class StringTests(unittest.SynchronousTestCase):
         self.assertEqual(f.getvalue(), "hello there")
 
 
-
 class NetworkStringTests(unittest.SynchronousTestCase):
     """
     Tests for L{networkString}.
     """
+
     def test_bytes(self):
         """
         L{networkString} returns a C{bytes} object passed to it unmodified.
         """
         self.assertEqual(b"foo", networkString(b"foo"))
 
-
     def test_bytesOutOfRange(self):
         """
         L{networkString} raises C{UnicodeError} if passed a C{bytes} instance
         containing bytes not used by ASCII.
         """
-        self.assertRaises(
-            UnicodeError, networkString, u"\N{SNOWMAN}".encode('utf-8'))
-    if _PY3:
-        test_bytes.skip = test_bytesOutOfRange.skip = (
-            "Bytes behavior of networkString only provided on Python 2.")
+        self.assertRaises(UnicodeError, networkString, u"\N{SNOWMAN}".encode('utf-8'))
 
+    if _PY3:
+        test_bytes.skip = (
+            test_bytesOutOfRange.skip
+        ) = "Bytes behavior of networkString only provided on Python 2."
 
     def test_unicode(self):
         """
@@ -634,18 +623,17 @@ class NetworkStringTests(unittest.SynchronousTestCase):
         """
         self.assertEqual(b"foo", networkString(u"foo"))
 
-
     def test_unicodeOutOfRange(self):
         """
         L{networkString} raises L{UnicodeError} if passed a C{unicode} instance
         containing characters not encodable in ASCII.
         """
-        self.assertRaises(
-            UnicodeError, networkString, u"\N{SNOWMAN}")
-    if not _PY3:
-        test_unicode.skip = test_unicodeOutOfRange.skip = (
-            "Unicode behavior of networkString only provided on Python 3.")
+        self.assertRaises(UnicodeError, networkString, u"\N{SNOWMAN}")
 
+    if not _PY3:
+        test_unicode.skip = (
+            test_unicodeOutOfRange.skip
+        ) = "Unicode behavior of networkString only provided on Python 3."
 
     def test_nonString(self):
         """
@@ -659,7 +647,6 @@ class NetworkStringTests(unittest.SynchronousTestCase):
             self.assertRaises(TypeError, networkString, u"text")
 
 
-
 class ReraiseTests(unittest.SynchronousTestCase):
     """
     L{reraise} re-raises exceptions on both Python 2 and Python 3.
@@ -671,7 +658,7 @@ class ReraiseTests(unittest.SynchronousTestCase):
         L{None} re-raises it with a new traceback.
         """
         try:
-            1/0
+            1 / 0
         except:
             typ, value, tb = sys.exc_info()
         try:
@@ -680,11 +667,11 @@ class ReraiseTests(unittest.SynchronousTestCase):
             typ2, value2, tb2 = sys.exc_info()
             self.assertEqual(typ2, ZeroDivisionError)
             self.assertIs(value, value2)
-            self.assertNotEqual(traceback.format_tb(tb)[-1],
-                                traceback.format_tb(tb2)[-1])
+            self.assertNotEqual(
+                traceback.format_tb(tb)[-1], traceback.format_tb(tb2)[-1]
+            )
         else:
             self.fail("The exception was not raised.")
-
 
     def test_reraiseWithTraceback(self):
         """
@@ -692,7 +679,7 @@ class ReraiseTests(unittest.SynchronousTestCase):
         re-raises the exception with the given traceback.
         """
         try:
-            1/0
+            1 / 0
         except:
             typ, value, tb = sys.exc_info()
         try:
@@ -701,11 +688,9 @@ class ReraiseTests(unittest.SynchronousTestCase):
             typ2, value2, tb2 = sys.exc_info()
             self.assertEqual(typ2, ZeroDivisionError)
             self.assertIs(value, value2)
-            self.assertEqual(traceback.format_tb(tb)[-1],
-                             traceback.format_tb(tb2)[-1])
+            self.assertEqual(traceback.format_tb(tb)[-1], traceback.format_tb(tb2)[-1])
         else:
             self.fail("The exception was not raised.")
-
 
 
 class Python3BytesTests(unittest.SynchronousTestCase):
@@ -723,14 +708,12 @@ class Python3BytesTests(unittest.SynchronousTestCase):
         result = list(iterbytes(input))
         self.assertEqual(result, [b'a', b'b', b'c', b'd'])
 
-
     def test_intToBytes(self):
         """
         When L{intToBytes} is called with an integer, the result is an
         ASCII-encoded string representation of the number.
         """
         self.assertEqual(intToBytes(213), b"213")
-
 
     def test_lazyByteSliceNoOffset(self):
         """
@@ -740,7 +723,6 @@ class Python3BytesTests(unittest.SynchronousTestCase):
         data = b'123XYZ'
         self.assertEqual(bytes(lazyByteSlice(data)), data)
 
-
     def test_lazyByteSliceOffset(self):
         """
         L{lazyByteSlice} called with some bytes and an offset returns a
@@ -748,7 +730,6 @@ class Python3BytesTests(unittest.SynchronousTestCase):
         """
         data = b'123XYZ'
         self.assertEqual(bytes(lazyByteSlice(data, 2)), data[2:])
-
 
     def test_lazyByteSliceOffsetAndLength(self):
         """
@@ -760,11 +741,11 @@ class Python3BytesTests(unittest.SynchronousTestCase):
         self.assertEqual(bytes(lazyByteSlice(data, 2, 3)), data[2:5])
 
 
-
 class BytesEnvironTests(unittest.TestCase):
     """
     Tests for L{BytesEnviron}.
     """
+
     def test_alwaysBytes(self):
         """
         The output of L{BytesEnviron} should always be a L{dict} with L{bytes}
@@ -783,27 +764,27 @@ class BytesEnvironTests(unittest.TestCase):
         test_alwaysBytes.skip = "Environment vars are always str on Windows."
 
 
-
 class OrderedDictTests(unittest.TestCase):
     """
     Tests for L{twisted.python.compat.OrderedDict}.
     """
+
     def test_deprecated(self):
         """
         L{twisted.python.compat.OrderedDict} is deprecated.
         """
         from twisted.python.compat import OrderedDict
-        OrderedDict # Shh pyflakes
 
-        currentWarnings = self.flushWarnings(offendingFunctions=[
-            self.test_deprecated])
+        OrderedDict  # Shh pyflakes
+
+        currentWarnings = self.flushWarnings(offendingFunctions=[self.test_deprecated])
         self.assertEqual(
             currentWarnings[0]['message'],
             "twisted.python.compat.OrderedDict was deprecated in Twisted "
-            "15.5.0: Use collections.OrderedDict instead.")
+            "15.5.0: Use collections.OrderedDict instead.",
+        )
         self.assertEqual(currentWarnings[0]['category'], DeprecationWarning)
         self.assertEqual(len(currentWarnings), 1)
-
 
 
 class CoercedUnicodeTests(unittest.TestCase):
@@ -819,7 +800,6 @@ class CoercedUnicodeTests(unittest.TestCase):
         self.assertEqual(result, u'text')
         self.assertIsInstance(result, unicodeCompat)
 
-
     def test_unicodeNonASCII(self):
         """
         Unicode strings with non-ASCII code points are unchanged.
@@ -827,7 +807,6 @@ class CoercedUnicodeTests(unittest.TestCase):
         result = _coercedUnicode(u'\N{SNOWMAN}')
         self.assertEqual(result, u'\N{SNOWMAN}')
         self.assertIsInstance(result, unicodeCompat)
-
 
     def test_nativeASCII(self):
         """
@@ -840,27 +819,28 @@ class CoercedUnicodeTests(unittest.TestCase):
         self.assertEqual(result, u'text')
         self.assertIsInstance(result, unicodeCompat)
 
-
     def test_bytesPy3(self):
         """
         Byte strings are not accceptable in Python 3.
         """
         exc = self.assertRaises(TypeError, _coercedUnicode, b'bytes')
         self.assertEqual(str(exc), "Expected str not b'bytes' (bytes)")
+
     if not _PY3:
         test_bytesPy3.skip = (
-            "Bytes behavior of _coercedUnicode only provided on Python 2.")
-
+            "Bytes behavior of _coercedUnicode only provided on Python 2."
+        )
 
     def test_bytesNonASCII(self):
         """
         Byte strings with non-ASCII code points raise an exception.
         """
         self.assertRaises(UnicodeError, _coercedUnicode, b'\xe2\x98\x83')
+
     if _PY3:
         test_bytesNonASCII.skip = (
-            "Bytes behavior of _coercedUnicode only provided on Python 2.")
-
+            "Bytes behavior of _coercedUnicode only provided on Python 2."
+        )
 
 
 class UnichrTests(unittest.TestCase):
@@ -879,16 +859,19 @@ class RawInputTests(unittest.TestCase):
     """
     Tests for L{raw_input}
     """
+
     def test_raw_input(self):
         """
         L{twisted.python.compat.raw_input}
         """
+
         class FakeStdin:
             def readline(self):
                 return "User input\n"
 
         class FakeStdout:
             data = ""
+
             def write(self, data):
                 self.data += data
 
@@ -897,7 +880,6 @@ class RawInputTests(unittest.TestCase):
         self.patch(sys, "stdout", stdout)
         self.assertEqual(raw_input("Prompt"), "User input")
         self.assertEqual(stdout.data, "Prompt")
-
 
 
 class FutureBytesReprTests(unittest.TestCase):
@@ -914,14 +896,12 @@ class FutureBytesReprTests(unittest.TestCase):
         exc = self.assertRaises(TypeError, _bytesRepr, ["not bytes"])
         self.assertEquals(str(exc), "Expected bytes not ['not bytes']")
 
-
     def test_bytesReprPrefix(self):
         """
         L{twisted.python.compat._bytesRepr} always prepends
         ``b`` to the returned repr on both Python 2 and 3.
         """
         self.assertEqual(_bytesRepr(b'\x00'), "b'\\x00'")
-
 
 
 class GetAsyncParamTests(unittest.SynchronousTestCase):
@@ -936,22 +916,20 @@ class GetAsyncParamTests(unittest.SynchronousTestCase):
         """
         self.assertEqual(_get_async_param(isAsync=False), False)
         self.assertEqual(_get_async_param(isAsync=True), True)
-        self.assertEqual(
-            _get_async_param(isAsync=None, **{'async': False}), False)
-        self.assertEqual(
-            _get_async_param(isAsync=None, **{'async': True}), True)
+        self.assertEqual(_get_async_param(isAsync=None, **{'async': False}), False)
+        self.assertEqual(_get_async_param(isAsync=None, **{'async': True}), True)
         self.assertRaises(TypeError, _get_async_param, False, {'async': False})
-
 
     def test_get_async_param_deprecation(self):
         """
         L{twisted.python.compat._get_async_param} raises a deprecation
         warning if async keyword argument is passed.
         """
-        self.assertEqual(
-            _get_async_param(isAsync=None, **{'async': False}), False)
+        self.assertEqual(_get_async_param(isAsync=None, **{'async': False}), False)
         currentWarnings = self.flushWarnings(
-            offendingFunctions=[self.test_get_async_param_deprecation])
+            offendingFunctions=[self.test_get_async_param_deprecation]
+        )
         self.assertEqual(
             currentWarnings[0]['message'],
-            "'async' keyword argument is deprecated, please use isAsync")
+            "'async' keyword argument is deprecated, please use isAsync",
+        )

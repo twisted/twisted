@@ -28,6 +28,7 @@ from twisted.conch.ssh import common, channel, connection
 class SSHSession(channel.SSHChannel):
 
     name = b'session'
+
     def __init__(self, *args, **kw):
         channel.SSHChannel.__init__(self, *args, **kw)
         self.buf = b''
@@ -35,7 +36,7 @@ class SSHSession(channel.SSHChannel):
         self.session = None
 
     def request_subsystem(self, data):
-        subsystem, ignored= common.getNS(data)
+        subsystem, ignored = common.getNS(data)
         log.msg('asking for subsystem "%s"' % subsystem)
         client = self.avatar.lookupSubsystem(subsystem, data)
         if client:
@@ -66,7 +67,7 @@ class SSHSession(channel.SSHChannel):
     def request_exec(self, data):
         if not self.session:
             self.session = ISession(self.avatar)
-        f,data = common.getNS(data)
+        f, data = common.getNS(data)
         log.msg('executing command "%s"' % f)
         try:
             pp = SSHSessionProcessProtocol(self)
@@ -106,7 +107,7 @@ class SSHSession(channel.SSHChannel):
 
     def dataReceived(self, data):
         if not self.client:
-            #self.conn.sendClose(self)
+            # self.conn.sendClose(self)
             self.buf += data
             return
         self.client.transport.write(data)
@@ -116,7 +117,7 @@ class SSHSession(channel.SSHChannel):
             if self.client and hasattr(self.client.transport, 'writeErr'):
                 self.client.transport.writeErr(data)
         else:
-            log.msg('weird extended data: %s'%dataType)
+            log.msg('weird extended data: %s' % dataType)
 
     def eofReceived(self):
         if self.session:
@@ -130,7 +131,7 @@ class SSHSession(channel.SSHChannel):
         elif self.client:
             self.client.transport.loseConnection()
 
-    #def closeReceived(self):
+    # def closeReceived(self):
     #    self.loseConnection() # don't know what to do with this
 
     def loseConnection(self):
@@ -138,21 +139,26 @@ class SSHSession(channel.SSHChannel):
             self.client.transport.loseConnection()
         channel.SSHChannel.loseConnection(self)
 
+
 class _ProtocolWrapper(protocol.ProcessProtocol):
     """
     This class wraps a L{Protocol} instance in a L{ProcessProtocol} instance.
     """
+
     def __init__(self, proto):
         self.proto = proto
 
-    def connectionMade(self): self.proto.connectionMade()
+    def connectionMade(self):
+        self.proto.connectionMade()
 
-    def outReceived(self, data): self.proto.dataReceived(data)
+    def outReceived(self, data):
+        self.proto.dataReceived(data)
 
-    def processEnded(self, reason): self.proto.connectionLost(reason)
+    def processEnded(self, reason):
+        self.proto.connectionLost(reason)
+
 
 class _DummyTransport:
-
     def __init__(self, proto):
         self.proto = proto
 
@@ -168,22 +174,35 @@ class _DummyTransport:
     def loseConnection(self):
         self.proto.connectionLost(protocol.connectionDone)
 
+
 def wrapProcessProtocol(inst):
     if isinstance(inst, protocol.Protocol):
         return _ProtocolWrapper(inst)
     else:
         return inst
 
+
 def wrapProtocol(proto):
     return _DummyTransport(proto)
 
 
-
 # SUPPORTED_SIGNALS is a list of signals that every session channel is supposed
 # to accept.  See RFC 4254
-SUPPORTED_SIGNALS = ["ABRT", "ALRM", "FPE", "HUP", "ILL", "INT", "KILL",
-                     "PIPE", "QUIT", "SEGV", "TERM", "USR1", "USR2"]
-
+SUPPORTED_SIGNALS = [
+    "ABRT",
+    "ALRM",
+    "FPE",
+    "HUP",
+    "ILL",
+    "INT",
+    "KILL",
+    "PIPE",
+    "QUIT",
+    "SEGV",
+    "TERM",
+    "USR1",
+    "USR2",
+]
 
 
 @implementer(interfaces.ITransport)
@@ -228,9 +247,8 @@ class SSHSessionProcessProtocol(protocol.ProcessProtocol):
         """
         self.outConnectionLost()
 
-    def connectionLost(self, reason = None):
+    def connectionLost(self, reason=None):
         self.session.loseConnection()
-
 
     def _getSignalName(self, signum):
         """
@@ -252,7 +270,6 @@ class SSHSessionProcessProtocol(protocol.ProcessProtocol):
                         self._signalValuesToNames[v] = k + '@' + sys.platform
         return self._signalValuesToNames[signum]
 
-
     def processEnded(self, reason=None):
         """
         When we are told the process ended, try to notify the other side about
@@ -263,23 +280,28 @@ class SSHSessionProcessProtocol(protocol.ProcessProtocol):
             err = reason.value
             if err.signal is not None:
                 signame = self._getSignalName(err.signal)
-                if (getattr(os, 'WCOREDUMP', None) is not None and
-                    os.WCOREDUMP(err.status)):
+                if getattr(os, 'WCOREDUMP', None) is not None and os.WCOREDUMP(
+                    err.status
+                ):
                     log.msg('exitSignal: %s (core dumped)' % (signame,))
                     coreDumped = 1
                 else:
                     log.msg('exitSignal: %s' % (signame,))
                     coreDumped = 0
                 self.session.conn.sendRequest(
-                    self.session, b'exit-signal',
-                    common.NS(networkString(signame[3:])) + chr(coreDumped) +
-                    common.NS(b'') + common.NS(b''))
+                    self.session,
+                    b'exit-signal',
+                    common.NS(networkString(signame[3:]))
+                    + chr(coreDumped)
+                    + common.NS(b'')
+                    + common.NS(b''),
+                )
             elif err.exitCode is not None:
                 log.msg('exitCode: %r' % (err.exitCode,))
-                self.session.conn.sendRequest(self.session, b'exit-status',
-                        struct.pack('>L', err.exitCode))
+                self.session.conn.sendRequest(
+                    self.session, b'exit-status', struct.pack('>L', err.exitCode)
+                )
         self.session.loseConnection()
-
 
     def getHost(self):
         """
@@ -287,32 +309,27 @@ class SSHSessionProcessProtocol(protocol.ProcessProtocol):
         """
         return self.session.conn.transport.getHost()
 
-
     def getPeer(self):
         """
         Return the peer from my session's transport.
         """
         return self.session.conn.transport.getPeer()
 
-
     def write(self, data):
         self.session.write(data)
 
-
     def writeSequence(self, seq):
         self.session.write(b''.join(seq))
-
 
     def loseConnection(self):
         self.session.loseConnection()
 
 
-
 class SSHSessionClient(protocol.Protocol):
-
     def dataReceived(self, data):
         if self.transport:
             self.transport.write(data)
+
 
 # methods factored out to make live easier on server writers
 def parseRequest_pty_req(data):
@@ -321,12 +338,15 @@ def parseRequest_pty_req(data):
     @returns: a tuple of (terminal type, (rows, cols, xpixel, ypixel), modes)
     """
     term, rest = common.getNS(data)
-    cols, rows, xpixel, ypixel = struct.unpack('>4L', rest[: 16])
-    modes, ignored= common.getNS(rest[16:])
+    cols, rows, xpixel, ypixel = struct.unpack('>4L', rest[:16])
+    modes, ignored = common.getNS(rest[16:])
     winSize = (rows, cols, xpixel, ypixel)
-    modes = [(ord(modes[i:i+1]), struct.unpack('>L', modes[i+1: i+5])[0])
-             for i in range(0, len(modes)-1, 5)]
+    modes = [
+        (ord(modes[i : i + 1]), struct.unpack('>L', modes[i + 1 : i + 5])[0])
+        for i in range(0, len(modes) - 1, 5)
+    ]
     return term, winSize, modes
+
 
 def packRequest_pty_req(term, geometry, modes):
     """
@@ -340,8 +360,9 @@ def packRequest_pty_req(term, geometry, modes):
     (rows, cols, xpixel, ypixel) = geometry
     termPacked = common.NS(term)
     winSizePacked = struct.pack('>4L', cols, rows, xpixel, ypixel)
-    modesPacked = common.NS(modes) # depend on the client packing modes
+    modesPacked = common.NS(modes)  # depend on the client packing modes
     return termPacked + winSizePacked + modesPacked
+
 
 def parseRequest_window_change(data):
     """Parse the data from a window-change request into usuable data.
@@ -350,6 +371,7 @@ def parseRequest_window_change(data):
     """
     cols, rows, xpixel, ypixel = struct.unpack('>4L', data)
     return rows, cols, xpixel, ypixel
+
 
 def packRequest_window_change(geometry):
     """

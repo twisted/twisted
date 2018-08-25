@@ -44,47 +44,47 @@ second example, it would be C{some.module.Foo}.
 
 __all__ = [
     # From ._levels
-    "InvalidLogLevelError", "LogLevel",
-
+    "InvalidLogLevelError",
+    "LogLevel",
     # From ._format
-    "formatEvent", "formatEventAsClassicLogText",
-    "formatTime", "timeFormatRFC3339",
+    "formatEvent",
+    "formatEventAsClassicLogText",
+    "formatTime",
+    "timeFormatRFC3339",
     "eventAsText",
-
     # From ._flatten
     "extractField",
-
     # From ._logger
-    "Logger", "_loggerFor",
-
+    "Logger",
+    "_loggerFor",
     # From ._observer
-    "ILogObserver", "LogPublisher",
-
+    "ILogObserver",
+    "LogPublisher",
     # From ._buffer
     "LimitedHistoryLogObserver",
-
     # From ._file
-    "FileLogObserver", "textFileLogObserver",
-
+    "FileLogObserver",
+    "textFileLogObserver",
     # From ._filter
-    "PredicateResult", "ILogFilterPredicate",
-    "FilteringLogObserver", "LogLevelFilterPredicate",
-
+    "PredicateResult",
+    "ILogFilterPredicate",
+    "FilteringLogObserver",
+    "LogLevelFilterPredicate",
     # From ._stdlib
     "STDLibLogObserver",
-
     # From ._io
     "LoggingFile",
-
     # From ._legacy
     "LegacyLogObserverWrapper",
-
     # From ._global
-    "globalLogPublisher", "globalLogBeginner", "LogBeginner",
-
+    "globalLogPublisher",
+    "globalLogBeginner",
+    "LogBeginner",
     # From ._json
-    "eventAsJSON", "eventFromJSON",
-    "jsonFileLogObserver", "eventsFromJSONLogFile",
+    "eventAsJSON",
+    "eventFromJSON",
+    "jsonFileLogObserver",
+    "eventsFromJSONLogFile",
 ]
 
 from ._levels import InvalidLogLevelError, LogLevel
@@ -92,8 +92,11 @@ from ._levels import InvalidLogLevelError, LogLevel
 from ._flatten import extractField
 
 from ._format import (
-    formatEvent, formatEventAsClassicLogText, formatTime, timeFormatRFC3339,
-    eventAsText
+    formatEvent,
+    formatEventAsClassicLogText,
+    formatTime,
+    timeFormatRFC3339,
+    eventAsText,
 )
 
 from ._logger import Logger, _loggerFor
@@ -105,8 +108,10 @@ from ._buffer import LimitedHistoryLogObserver
 from ._file import FileLogObserver, textFileLogObserver
 
 from ._filter import (
-    PredicateResult, ILogFilterPredicate, FilteringLogObserver,
-    LogLevelFilterPredicate
+    PredicateResult,
+    ILogFilterPredicate,
+    FilteringLogObserver,
+    LogLevelFilterPredicate,
 )
 
 from ._stdlib import STDLibLogObserver
@@ -115,11 +120,11 @@ from ._io import LoggingFile
 
 from ._legacy import LegacyLogObserverWrapper
 
-from ._global import (
-    globalLogPublisher, globalLogBeginner, LogBeginner
-)
+from ._global import globalLogPublisher, globalLogBeginner, LogBeginner
 
 from ._json import (
-    eventAsJSON, eventFromJSON,
-    jsonFileLogObserver, eventsFromJSONLogFile
+    eventAsJSON,
+    eventFromJSON,
+    jsonFileLogObserver,
+    eventsFromJSONLogFile,
 )

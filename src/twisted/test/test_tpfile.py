@@ -10,21 +10,23 @@ from twisted.internet import protocol, abstract
 
 from io import BytesIO
 
+
 class BufferingServer(protocol.Protocol):
     buffer = b''
 
     def dataReceived(self, data):
         self.buffer += data
 
+
 class FileSendingClient(protocol.Protocol):
     def __init__(self, f):
         self.f = f
-
 
     def connectionMade(self):
         s = basic.FileSender()
         d = s.beginFileTransfer(self.f, self.transport, lambda x: x)
         d.addCallback(lambda r: self.transport.loseConnection())
+
 
 class FileSenderTests(unittest.TestCase):
     def testSendingFile(self):
@@ -33,9 +35,8 @@ class FileSenderTests(unittest.TestCase):
         c = FileSendingClient(BytesIO(testStr))
 
         d = loopback.loopbackTCP(s, c)
-        d.addCallback(lambda x : self.assertEqual(s.buffer, testStr))
+        d.addCallback(lambda x: self.assertEqual(s.buffer, testStr))
         return d
-
 
     def testSendingEmptyFile(self):
         fileSender = basic.FileSender()
@@ -50,6 +51,4 @@ class FileSenderTests(unittest.TestCase):
         self.assertIsNone(consumer.producer)
 
         # Which means the Deferred from FileSender should have been called
-        self.assertTrue(d.called, 
-                        'producer unregistered with deferred being called')
-
+        self.assertTrue(d.called, 'producer unregistered with deferred being called')

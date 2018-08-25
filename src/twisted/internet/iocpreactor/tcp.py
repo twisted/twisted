@@ -13,8 +13,14 @@ from twisted.internet import interfaces, error, address, main, defer
 from twisted.internet.protocol import Protocol
 from twisted.internet.abstract import _LogOwner, isIPv6Address
 from twisted.internet.tcp import (
-    _SocketCloser, Connector as TCPConnector, _AbortingMixin, _BaseBaseClient,
-    _BaseTCPClient, _resolveIPv6, _getsockname)
+    _SocketCloser,
+    Connector as TCPConnector,
+    _AbortingMixin,
+    _BaseBaseClient,
+    _BaseTCPClient,
+    _resolveIPv6,
+    _getsockname,
+)
 from twisted.python import log, failure, reflect
 from twisted.python.compat import _PY3, nativeString
 
@@ -33,20 +39,20 @@ except ImportError:
 
 # ConnectEx returns these. XXX: find out what it does for timeout
 connectExErrors = {
-        ERROR_CONNECTION_REFUSED: errno.WSAECONNREFUSED,
-        ERROR_NETWORK_UNREACHABLE: errno.WSAENETUNREACH,
-        }
+    ERROR_CONNECTION_REFUSED: errno.WSAECONNREFUSED,
+    ERROR_NETWORK_UNREACHABLE: errno.WSAENETUNREACH,
+}
 
-@implementer(IReadWriteHandle, interfaces.ITCPTransport,
-             interfaces.ISystemHandle)
+
+@implementer(IReadWriteHandle, interfaces.ITCPTransport, interfaces.ISystemHandle)
 class Connection(abstract.FileHandle, _SocketCloser, _AbortingMixin):
     """
     @ivar TLS: C{False} to indicate the connection is in normal TCP mode,
         C{True} to indicate that TLS has been started and that operations must
         be routed through the L{TLSMemoryBIOProtocol} instance.
     """
-    TLS = False
 
+    TLS = False
 
     def __init__(self, sock, proto, reactor=None):
         abstract.FileHandle.__init__(self, reactor)
@@ -54,10 +60,8 @@ class Connection(abstract.FileHandle, _SocketCloser, _AbortingMixin):
         self.getFileHandle = sock.fileno
         self.protocol = proto
 
-
     def getHandle(self):
         return self.socket
-
 
     def dataReceived(self, rbuffer):
         """
@@ -70,15 +74,12 @@ class Connection(abstract.FileHandle, _SocketCloser, _AbortingMixin):
             # XXX: some day, we'll have protocols that can handle raw buffers
             rbuffer = bytes(rbuffer)
         else:
-            raise TypeError("data must be bytes or bytearray, not " +
-                            type(rbuffer))
+            raise TypeError("data must be bytes or bytearray, not " + type(rbuffer))
 
         self.protocol.dataReceived(rbuffer)
 
-
     def readFromHandle(self, bufflist, evt):
         return _iocp.recv(self.getFileHandle(), bufflist, evt)
-
 
     def writeToHandle(self, buff, evt):
         """
@@ -86,9 +87,9 @@ class Connection(abstract.FileHandle, _SocketCloser, _AbortingMixin):
         sent is limited to a size of C{self.SEND_LIMIT}.
         """
         writeView = memoryview(buff)
-        return _iocp.send(self.getFileHandle(),
-            writeView[0:self.SEND_LIMIT].tobytes(), evt)
-
+        return _iocp.send(
+            self.getFileHandle(), writeView[0 : self.SEND_LIMIT].tobytes(), evt
+        )
 
     def _closeWriteConnection(self):
         try:
@@ -104,7 +105,6 @@ class Connection(abstract.FileHandle, _SocketCloser, _AbortingMixin):
                 log.err()
                 self.connectionLost(f)
 
-
     def readConnectionLost(self, reason):
         p = interfaces.IHalfCloseableProtocol(self.protocol, None)
         if p:
@@ -116,13 +116,11 @@ class Connection(abstract.FileHandle, _SocketCloser, _AbortingMixin):
         else:
             self.connectionLost(reason)
 
-
     def connectionLost(self, reason):
         if self.disconnected:
             return
         abstract.FileHandle.connectionLost(self, reason)
-        isClean = (reason is None or
-                   not reason.check(error.ConnectionAborted))
+        isClean = reason is None or not reason.check(error.ConnectionAborted)
         self._closeSocket(isClean)
         protocol = self.protocol
         del self.protocol
@@ -130,39 +128,35 @@ class Connection(abstract.FileHandle, _SocketCloser, _AbortingMixin):
         del self.getFileHandle
         protocol.connectionLost(reason)
 
-
     def logPrefix(self):
         """
         Return the prefix to log with when I own the logging thread.
         """
         return self.logstr
 
-
     def getTcpNoDelay(self):
-        return operator.truth(self.socket.getsockopt(socket.IPPROTO_TCP,
-                                                     socket.TCP_NODELAY))
-
+        return operator.truth(
+            self.socket.getsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY)
+        )
 
     def setTcpNoDelay(self, enabled):
         self.socket.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, enabled)
 
-
     def getTcpKeepAlive(self):
-        return operator.truth(self.socket.getsockopt(socket.SOL_SOCKET,
-                                                     socket.SO_KEEPALIVE))
-
+        return operator.truth(
+            self.socket.getsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE)
+        )
 
     def setTcpKeepAlive(self, enabled):
         self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, enabled)
 
-
     if _startTLS is not None:
+
         def startTLS(self, contextFactory, normal=True):
             """
             @see: L{ITLSTransport.startTLS}
             """
             _startTLS(self, contextFactory, normal, abstract.FileHandle)
-
 
     def write(self, data):
         """
@@ -179,7 +173,6 @@ class Connection(abstract.FileHandle, _SocketCloser, _AbortingMixin):
         else:
             abstract.FileHandle.write(self, data)
 
-
     def writeSequence(self, iovec):
         """
         Write some data, either directly to the underlying handle or, if TLS
@@ -195,7 +188,6 @@ class Connection(abstract.FileHandle, _SocketCloser, _AbortingMixin):
         else:
             abstract.FileHandle.writeSequence(self, iovec)
 
-
     def loseConnection(self, reason=None):
         """
         Close the underlying handle or, if TLS has been started, first shut it
@@ -208,7 +200,6 @@ class Connection(abstract.FileHandle, _SocketCloser, _AbortingMixin):
                 self.protocol.loseConnection()
         else:
             abstract.FileHandle.loseConnection(self, reason)
-
 
     def registerProducer(self, producer, streaming):
         """
@@ -225,7 +216,6 @@ class Connection(abstract.FileHandle, _SocketCloser, _AbortingMixin):
         else:
             abstract.FileHandle.registerProducer(self, producer, streaming)
 
-
     def unregisterProducer(self):
         """
         Unregister a producer.
@@ -237,9 +227,9 @@ class Connection(abstract.FileHandle, _SocketCloser, _AbortingMixin):
         else:
             abstract.FileHandle.unregisterProducer(self)
 
+
 if _startTLS is not None:
     classImplements(Connection, interfaces.ITLSTransport)
-
 
 
 class Client(_BaseBaseClient, _BaseTCPClient, Connection):
@@ -248,6 +238,7 @@ class Client(_BaseBaseClient, _BaseTCPClient, Connection):
         connection, and by default when TLS is negotiated this class will act as
         a TLS client.
     """
+
     addressFamily = socket.AF_INET
     socketType = socket.SOCK_STREAM
 
@@ -258,10 +249,8 @@ class Client(_BaseBaseClient, _BaseTCPClient, Connection):
         # ConnectEx documentation says socket _has_ to be bound
         if bindAddress is None:
             bindAddress = ('', 0)
-        self.reactor = reactor # createInternetSocket needs this
-        _BaseTCPClient.__init__(self, host, port, bindAddress, connector,
-                                reactor)
-
+        self.reactor = reactor  # createInternetSocket needs this
+        _BaseTCPClient.__init__(self, host, port, bindAddress, connector, reactor)
 
     def createInternetSocket(self):
         """
@@ -270,7 +259,6 @@ class Client(_BaseBaseClient, _BaseTCPClient, Connection):
         @see: L{_BaseTCPClient}
         """
         return self.reactor.createSocket(self.addressFamily, self.socketType)
-
 
     def _collectSocketDetails(self):
         """
@@ -281,7 +269,6 @@ class Client(_BaseBaseClient, _BaseTCPClient, Connection):
         """
         del self.socket, self.getFileHandle
 
-
     def _stopReadingAndWriting(self):
         """
         Remove the active handle from the reactor.
@@ -290,16 +277,18 @@ class Client(_BaseBaseClient, _BaseTCPClient, Connection):
         """
         self.reactor.removeActiveHandle(self)
 
-
     def cbConnect(self, rc, data, evt):
         if rc:
             rc = connectExErrors.get(rc, rc)
-            self.failIfNotConnected(error.getConnectError((rc,
-                                    errno.errorcode.get(rc, 'Unknown error'))))
+            self.failIfNotConnected(
+                error.getConnectError((rc, errno.errorcode.get(rc, 'Unknown error')))
+            )
         else:
             self.socket.setsockopt(
-                socket.SOL_SOCKET, SO_UPDATE_CONNECT_CONTEXT,
-                struct.pack('P', self.socket.fileno()))
+                socket.SOL_SOCKET,
+                SO_UPDATE_CONNECT_CONTEXT,
+                struct.pack('P', self.socket.fileno()),
+            )
             self.protocol = self.connector.buildProtocol(self.getPeer())
             self.connected = True
             logPrefix = self._getLogPrefix(self.protocol)
@@ -318,7 +307,6 @@ class Client(_BaseBaseClient, _BaseTCPClient, Connection):
                 self.protocol.makeConnection(self)
                 self.startReading()
 
-
     def doConnect(self):
         if not hasattr(self, "connector"):
             # this happens if we connector.stopConnecting in
@@ -331,7 +319,6 @@ class Client(_BaseBaseClient, _BaseTCPClient, Connection):
         rc = _iocp.connect(self.socket.fileno(), self.realAddress, evt)
         if rc and rc != ERROR_IO_PENDING:
             self.cbConnect(rc, 0, evt)
-
 
 
 class Server(Connection):
@@ -348,7 +335,6 @@ class Server(Connection):
 
     _tlsClientDefault = False
 
-
     def __init__(self, sock, protocol, clientAddr, serverAddr, sessionno, reactor):
         """
         Server(sock, protocol, client, server, sessionno)
@@ -363,18 +349,19 @@ class Server(Connection):
         self.sessionno = sessionno
         logPrefix = self._getLogPrefix(self.protocol)
         self.logstr = "%s,%s,%s" % (logPrefix, sessionno, self.clientAddr.host)
-        self.repstr = "<%s #%s on %s>" % (self.protocol.__class__.__name__,
-                                          self.sessionno, self.serverAddr.port)
+        self.repstr = "<%s #%s on %s>" % (
+            self.protocol.__class__.__name__,
+            self.sessionno,
+            self.serverAddr.port,
+        )
         self.connected = True
         self.startReading()
-
 
     def __repr__(self):
         """
         A string representation of this connection.
         """
         return self.repstr
-
 
     def getHost(self):
         """
@@ -383,7 +370,6 @@ class Server(Connection):
         This indicates the server's address.
         """
         return self.serverAddr
-
 
     def getPeer(self):
         """
@@ -394,12 +380,9 @@ class Server(Connection):
         return self.clientAddr
 
 
-
 class Connector(TCPConnector):
     def _makeTransport(self):
-        return Client(self.host, self.port, self.bindAddress, self,
-                      self.reactor)
-
+        return Client(self.host, self.port, self.bindAddress, self, self.reactor)
 
 
 @implementer(interfaces.IListeningPort)
@@ -433,21 +416,22 @@ class Port(_SocketCloser, _LogOwner):
             self.addressFamily = socket.AF_INET6
             self._addressType = address.IPv6Address
 
-
     def __repr__(self):
         if self._realPortNumber is not None:
-            return "<%s of %s on %s>" % (self.__class__,
-                                         self.factory.__class__,
-                                         self._realPortNumber)
+            return "<%s of %s on %s>" % (
+                self.__class__,
+                self.factory.__class__,
+                self._realPortNumber,
+            )
         else:
-            return "<%s of %s (not listening)>" % (self.__class__,
-                                                   self.factory.__class__)
-
+            return "<%s of %s (not listening)>" % (
+                self.__class__,
+                self.factory.__class__,
+            )
 
     def startListening(self):
         try:
-            skt = self.reactor.createSocket(self.addressFamily,
-                                            self.socketType)
+            skt = self.reactor.createSocket(self.addressFamily, self.socketType)
             # TODO: resolve self.interface if necessary
             if self.addressFamily == socket.AF_INET6:
                 addr = _resolveIPv6(self.interface, self.port)
@@ -463,8 +447,10 @@ class Port(_SocketCloser, _LogOwner):
         # reflect what the OS actually assigned us.
         self._realPortNumber = skt.getsockname()[1]
 
-        log.msg("%s starting on %s" % (self._getLogPrefix(self.factory),
-                                       self._realPortNumber))
+        log.msg(
+            "%s starting on %s"
+            % (self._getLogPrefix(self.factory), self._realPortNumber)
+        )
 
         self.factory.doStart()
         skt.listen(self.backlog)
@@ -474,7 +460,6 @@ class Port(_SocketCloser, _LogOwner):
         self.socket = skt
         self.getFileHandle = self.socket.fileno
         self.doAccept()
-
 
     def loseConnection(self, connDone=failure.Failure(main.CONNECTION_DONE)):
         """
@@ -492,13 +477,11 @@ class Port(_SocketCloser, _LogOwner):
 
     stopListening = loseConnection
 
-
     def _logConnectionLostMsg(self):
         """
         Log message for closing port
         """
         log.msg('(%s Port %s Closed)' % (self._type, self._realPortNumber))
-
 
     def connectionLost(self, reason):
         """
@@ -531,13 +514,11 @@ class Port(_SocketCloser, _LogOwner):
             if d is not None:
                 d.callback(None)
 
-
     def logPrefix(self):
         """
         Returns the name of my class, to prefix log entries with.
         """
         return reflect.qual(self.factory.__class__)
-
 
     def getHost(self):
         """
@@ -547,12 +528,10 @@ class Port(_SocketCloser, _LogOwner):
         """
         return self._addressType('TCP', *_getsockname(self.socket))
 
-
     def cbAccept(self, rc, data, evt):
         self.handleAccept(rc, evt)
         if not (self.disconnecting or self.disconnected):
             self.doAccept()
-
 
     def handleAccept(self, rc, evt):
         if self.disconnecting or self.disconnected:
@@ -561,15 +540,18 @@ class Port(_SocketCloser, _LogOwner):
         # possible errors:
         # (WSAEMFILE, WSAENOBUFS, WSAENFILE, WSAENOMEM, WSAECONNABORTED)
         if rc:
-            log.msg("Could not accept new connection -- %s (%s)" %
-                    (errno.errorcode.get(rc, 'unknown error'), rc))
+            log.msg(
+                "Could not accept new connection -- %s (%s)"
+                % (errno.errorcode.get(rc, 'unknown error'), rc)
+            )
             return False
         else:
             evt.newskt.setsockopt(
-                socket.SOL_SOCKET, SO_UPDATE_ACCEPT_CONTEXT,
-                struct.pack('P', self.socket.fileno()))
-            family, lAddr, rAddr = _iocp.get_accept_addrs(evt.newskt.fileno(),
-                                                          evt.buff)
+                socket.SOL_SOCKET,
+                SO_UPDATE_ACCEPT_CONTEXT,
+                struct.pack('P', self.socket.fileno()),
+            )
+            family, lAddr, rAddr = _iocp.get_accept_addrs(evt.newskt.fileno(), evt.buff)
             if not _PY3:
                 # In _makesockaddr(), we use the Win32 API which
                 # gives us an address of the form: (unicode host, port).
@@ -588,20 +570,22 @@ class Port(_SocketCloser, _LogOwner):
                 scope = int(rAddr[0].split("%")[1])
                 rAddr = (rAddr[0], rAddr[1], 0, scope)
 
-            protocol = self.factory.buildProtocol(
-                self._addressType('TCP', *rAddr))
+            protocol = self.factory.buildProtocol(self._addressType('TCP', *rAddr))
             if protocol is None:
                 evt.newskt.close()
             else:
                 s = self.sessionno
-                self.sessionno = s+1
-                transport = Server(evt.newskt, protocol,
-                        self._addressType('TCP', *rAddr),
-                        self._addressType('TCP', *lAddr),
-                        s, self.reactor)
+                self.sessionno = s + 1
+                transport = Server(
+                    evt.newskt,
+                    protocol,
+                    self._addressType('TCP', *rAddr),
+                    self._addressType('TCP', *lAddr),
+                    s,
+                    self.reactor,
+                )
                 protocol.makeConnection(transport)
             return True
-
 
     def doAccept(self):
         evt = _iocp.Event(self.cbAccept, self)
@@ -609,8 +593,9 @@ class Port(_SocketCloser, _LogOwner):
         # see AcceptEx documentation
         evt.buff = buff = bytearray(2 * (self.addrLen + 16))
 
-        evt.newskt = newskt = self.reactor.createSocket(self.addressFamily,
-                                                        self.socketType)
+        evt.newskt = newskt = self.reactor.createSocket(
+            self.addressFamily, self.socketType
+        )
         rc = _iocp.accept(self.socket.fileno(), newskt.fileno(), buff, evt)
 
         if rc and rc != ERROR_IO_PENDING:

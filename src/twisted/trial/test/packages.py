@@ -20,10 +20,12 @@ if _PY3:
     # invalidate_caches clears it out for us.
     from importlib import invalidate_caches as invalidateImportCaches
 else:
+
     def invalidateImportCaches():
         """
         On python 2, import caches don't need to be invalidated.
         """
+
 
 testModule = """
 from twisted.trial import unittest
@@ -98,6 +100,7 @@ class B(unittest.SynchronousTestCase, X):
 
 """
 
+
 class PackageTest(unittest.SynchronousTestCase):
     files = [
         ('badpackage/__init__.py', 'frotz\n'),
@@ -106,8 +109,7 @@ class PackageTest(unittest.SynchronousTestCase):
         ('package2/test_module.py', 'import frotz\n'),
         ('package/__init__.py', ''),
         ('package/frotz.py', 'frotz\n'),
-        ('package/test_bad_module.py',
-         'raise ZeroDivisionError("fake error")'),
+        ('package/test_bad_module.py', 'raise ZeroDivisionError("fake error")'),
         ('package/test_dos_module.py', dosModule),
         ('package/test_import_module.py', 'import frotz'),
         ('package/test_module.py', testModule),
@@ -117,8 +119,7 @@ class PackageTest(unittest.SynchronousTestCase):
         ('goodpackage/sub/test_sample.py', testSample),
         ('inheritancepackage/__init__.py', ''),
         ('inheritancepackage/test_x.py', testInheritanceSample),
-        ]
-
+    ]
 
     def _toModuleName(self, filename):
         name = os.path.splitext(filename)[0]
@@ -127,13 +128,11 @@ class PackageTest(unittest.SynchronousTestCase):
             segs = segs[:-1]
         return '.'.join(segs)
 
-
     def getModules(self):
         """
         Return matching module names for files listed in C{self.files}.
         """
         return [self._toModuleName(filename) for (filename, code) in self.files]
-
 
     def cleanUpModules(self):
         modules = self.getModules()
@@ -145,7 +144,6 @@ class PackageTest(unittest.SynchronousTestCase):
             except KeyError:
                 pass
 
-
     def createFiles(self, files, parentDir='.'):
         for filename, contents in self.files:
             filename = os.path.join(parentDir, filename)
@@ -153,12 +151,10 @@ class PackageTest(unittest.SynchronousTestCase):
             with open(filename, 'w') as fd:
                 fd.write(contents)
 
-
     def _createDirectory(self, filename):
         directory = os.path.dirname(filename)
         if not os.path.exists(directory):
             os.makedirs(directory)
-
 
     def setUp(self, parentDir=None):
         invalidateImportCaches()
@@ -167,10 +163,8 @@ class PackageTest(unittest.SynchronousTestCase):
         self.parent = parentDir
         self.createFiles(self.files, parentDir)
 
-
     def tearDown(self):
         self.cleanUpModules()
-
 
 
 class SysPathManglingTest(PackageTest):
@@ -184,11 +178,9 @@ class SysPathManglingTest(PackageTest):
         self.newPath.append(self.parent)
         self.mangleSysPath(self.newPath)
 
-
     def tearDown(self):
         PackageTest.tearDown(self)
         self.mangleSysPath(self.oldPath)
-
 
     def mangleSysPath(self, pathVar):
         sys.path[:] = pathVar

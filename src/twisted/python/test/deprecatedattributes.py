@@ -21,8 +21,4 @@ version = Version('Twisted', 8, 0, 0)
 message = 'Oh noes!'
 
 
-deprecatedModuleAttribute(
-    version,
-    message,
-    __name__,
-    'DEPRECATED_ATTRIBUTE')
+deprecatedModuleAttribute(version, message, __name__, 'DEPRECATED_ATTRIBUTE')

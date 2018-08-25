@@ -10,11 +10,15 @@ from __future__ import division, absolute_import
 
 # Define the public API from the two implementation modules
 from twisted.trial._synctest import (
-    FailTest, SkipTest, SynchronousTestCase, PyUnitResultAdapter, Todo,
-    makeTodo)
+    FailTest,
+    SkipTest,
+    SynchronousTestCase,
+    PyUnitResultAdapter,
+    Todo,
+    makeTodo,
+)
 from twisted.trial._asynctest import TestCase
-from twisted.trial._asyncrunner import (
-    TestSuite, TestDecorator, decorate)
+from twisted.trial._asyncrunner import TestSuite, TestDecorator, decorate
 
 # Further obscure the origins of these objects, to reduce surprise (and this is
 # what the values were before code got shuffled around between files, but was
@@ -32,4 +36,4 @@ __all__ = [
     'TestDecorator',
     'TestSuite',
     'Todo',
-    ]
+]

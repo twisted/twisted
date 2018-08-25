@@ -23,13 +23,11 @@ from ._io import LoggingFile
 from ._file import FileLogObserver
 
 
-
 MORE_THAN_ONCE_WARNING = (
     "Warning: primary log target selected twice at <{fileNow}:{lineNow}> - "
     "previously selected at <{fileThen}:{lineThen}>.  Remove one of the calls "
     "to beginLoggingTo."
 )
-
 
 
 class LogBeginner(object):
@@ -80,8 +78,7 @@ class LogBeginner(object):
     _DEFAULT_BUFFER_SIZE = 200
 
     def __init__(
-        self, publisher, errorStream, stdio, warningsModule,
-        initialBufferSize=None,
+        self, publisher, errorStream, stdio, warningsModule, initialBufferSize=None
     ):
         """
         Initialize this L{LogBeginner}.
@@ -104,21 +101,17 @@ class LogBeginner(object):
                 FileLogObserver(
                     errorStream,
                     lambda event: eventAsText(
-                        event,
-                        includeTimestamp=False,
-                        includeSystem=False,
-                    ) + '\n'
+                        event, includeTimestamp=False, includeSystem=False
+                    )
+                    + '\n',
                 ),
-                [LogLevelFilterPredicate(defaultLogLevel=LogLevel.critical)]
-            )
+                [LogLevelFilterPredicate(defaultLogLevel=LogLevel.critical)],
+            ),
         )
         publisher.addObserver(self._temporaryObserver)
         self._oldshowwarning = warningsModule.showwarning
 
-
-    def beginLoggingTo(
-        self, observers, discardBuffer=False, redirectStandardIO=True
-    ):
+    def beginLoggingTo(self, observers, discardBuffer=False, redirectStandardIO=True):
         """
         Begin logging to the given set of observers.  This will:
 
@@ -170,8 +163,10 @@ class LogBeginner(object):
             previousFile, previousLine = self._previousBegin
             self._log.warn(
                 MORE_THAN_ONCE_WARNING,
-                fileNow=filename, lineNow=lineno,
-                fileThen=previousFile, lineThen=previousLine,
+                fileNow=filename,
+                lineNow=lineno,
+                fileThen=previousFile,
+                lineThen=previousLine,
             )
 
         self._previousBegin = filename, lineno
@@ -189,10 +184,7 @@ class LogBeginner(object):
             )
             setattr(self._stdio, stream, loggingFile)
 
-
-    def showwarning(
-        self, message, category, filename, lineno, file=None, line=None
-    ):
+    def showwarning(self, message, category, filename, lineno, file=None, line=None):
         """
         Twisted-enabled wrapper around L{warnings.showwarning}.
 
@@ -226,14 +218,13 @@ class LogBeginner(object):
         if file is None:
             self._log.warn(
                 "{filename}:{lineno}: {category}: {warning}",
-                warning=message, category=qual(category),
-                filename=filename, lineno=lineno,
+                warning=message,
+                category=qual(category),
+                filename=filename,
+                lineno=lineno,
             )
         else:
-            self._oldshowwarning(
-                message, category, filename, lineno, file, line
-            )
-
+            self._oldshowwarning(message, category, filename, lineno, file, line)
 
 
 globalLogPublisher = LogPublisher()

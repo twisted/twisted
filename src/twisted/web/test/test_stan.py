@@ -12,6 +12,7 @@ from twisted.web.template import Comment, CDATA, CharRef, Tag
 from twisted.trial.unittest import TestCase
 from twisted.python.compat import _PY3
 
+
 def proto(*a, **kw):
     """
     Produce a new tag for testing.
@@ -23,13 +24,13 @@ class TagTests(TestCase):
     """
     Tests for L{Tag}.
     """
+
     def test_fillSlots(self):
         """
         L{Tag.fillSlots} returns self.
         """
         tag = proto()
         self.assertIdentical(tag, tag.fillSlots(test='test'))
-
 
     def test_cloneShallow(self):
         """
@@ -38,8 +39,7 @@ class TagTests(TestCase):
         stops.
         """
         innerList = ["inner list"]
-        tag = proto("How are you", innerList,
-                    hello="world", render="aSampleMethod")
+        tag = proto("How are you", innerList, hello="world", render="aSampleMethod")
         tag.fillSlots(foo='bar')
         tag.filename = "foo/bar"
         tag.lineNumber = 6
@@ -57,7 +57,6 @@ class TagTests(TestCase):
         self.assertEqual(clone.columnNumber, 12)
         self.assertEqual(clone.render, "aSampleMethod")
 
-
     def test_cloneDeep(self):
         """
         L{Tag.clone} copies all attributes and children of a tag, including its
@@ -66,8 +65,9 @@ class TagTests(TestCase):
         """
         innerTag = proto("inner")
         innerList = ["inner list"]
-        tag = proto("How are you", innerTag, innerList,
-                    hello="world", render="aSampleMethod")
+        tag = proto(
+            "How are you", innerTag, innerList, hello="world", render="aSampleMethod"
+        )
         tag.fillSlots(foo='bar')
         tag.filename = "foo/bar"
         tag.lineNumber = 6
@@ -91,7 +91,6 @@ class TagTests(TestCase):
         self.assertEqual(clone.columnNumber, 12)
         self.assertEqual(clone.render, "aSampleMethod")
 
-
     def test_clear(self):
         """
         L{Tag.clear} removes all children from a tag, but leaves its attributes
@@ -101,7 +100,6 @@ class TagTests(TestCase):
         tag.clear()
         self.assertEqual(tag.children, [])
         self.assertEqual(tag.attributes, {'andSoIs': 'this-attribute'})
-
 
     def test_suffix(self):
         """
@@ -113,41 +111,33 @@ class TagTests(TestCase):
         tag(class_='a')
         self.assertEqual(tag.attributes, {'class': 'a'})
 
-
     def test_commentReprPy2(self):
         """
         L{Comment.__repr__} returns a value which makes it easy to see what's
         in the comment.
         """
-        self.assertEqual(repr(Comment(u"hello there")),
-                          "Comment(u'hello there')")
-
+        self.assertEqual(repr(Comment(u"hello there")), "Comment(u'hello there')")
 
     def test_cdataReprPy2(self):
         """
         L{CDATA.__repr__} returns a value which makes it easy to see what's in
         the comment.
         """
-        self.assertEqual(repr(CDATA(u"test data")),
-                          "CDATA(u'test data')")
-
+        self.assertEqual(repr(CDATA(u"test data")), "CDATA(u'test data')")
 
     def test_commentReprPy3(self):
         """
         L{Comment.__repr__} returns a value which makes it easy to see what's
         in the comment.
         """
-        self.assertEqual(repr(Comment(u"hello there")),
-                          "Comment('hello there')")
-
+        self.assertEqual(repr(Comment(u"hello there")), "Comment('hello there')")
 
     def test_cdataReprPy3(self):
         """
         L{CDATA.__repr__} returns a value which makes it easy to see what's in
         the comment.
         """
-        self.assertEqual(repr(CDATA(u"test data")),
-                          "CDATA('test data')")
+        self.assertEqual(repr(CDATA(u"test data")), "CDATA('test data')")
 
     if not _PY3:
         test_commentReprPy3.skip = "Only relevant on Python 3."
@@ -155,7 +145,6 @@ class TagTests(TestCase):
     else:
         test_commentReprPy2.skip = "Only relevant on Python 2."
         test_cdataReprPy2.skip = "Only relevant on Python 2."
-
 
     def test_charrefRepr(self):
         """

@@ -27,7 +27,6 @@ class RunnersTests(unittest.SynchronousTestCase):
         for test in suite._tests:
             self.assertIn(idPrefix, itrial.ITestCase(test).id())
 
-
     def test_basicTrialIntegration(self):
         """
         L{loadDoctests} loads all of the doctests in the given module.
@@ -35,7 +34,6 @@ class RunnersTests(unittest.SynchronousTestCase):
         loader = runner.TestLoader()
         suite = loader.loadDoctests(mockdoctest)
         self.assertEqual(7, suite.countTestCases())
-
 
     def _testRun(self, suite):
         """
@@ -46,14 +44,12 @@ class RunnersTests(unittest.SynchronousTestCase):
         self.assertEqual(5, result.successes)
         self.assertEqual(2, len(result.failures))
 
-
     def test_expectedResults(self, count=1):
         """
         Trial can correctly run doctests with its xUnit test APIs.
         """
         suite = runner.TestLoader().loadDoctests(mockdoctest)
         self._testRun(suite)
-
 
     def test_repeatable(self):
         """

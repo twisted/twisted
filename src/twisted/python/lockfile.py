@@ -17,8 +17,10 @@ from time import time as _uniquefloat
 from twisted.python.runtime import platform
 from twisted.python.compat import _PY3
 
+
 def unique():
     return str(int(_uniquefloat() * 1000))
+
 
 from os import rename
 
@@ -27,6 +29,7 @@ if not platform.isWindows():
     from os import symlink
     from os import readlink
     from os import remove as rmlink
+
     _windows = False
 else:
     _windows = True
@@ -65,7 +68,6 @@ else:
     # For monkeypatching in tests
     _open = open
 
-
     def symlink(value, filename):
         """
         Write a file at C{filename} with the contents of C{value}. See the
@@ -94,7 +96,6 @@ else:
             os.rmdir(newlinkname)
             raise
 
-
     def readlink(filename):
         """
         Read the contents of C{filename}. See the above comment block as to why
@@ -111,11 +112,9 @@ else:
                 result = fObj.read()
             return result
 
-
     def rmlink(filename):
         os.remove(os.path.join(filename, 'symlink'))
         os.rmdir(filename)
-
 
 
 class FilesystemLock(object):
@@ -142,7 +141,6 @@ class FilesystemLock(object):
 
     def __init__(self, name):
         self.name = name
-
 
     def lock(self):
         """
@@ -205,7 +203,6 @@ class FilesystemLock(object):
             self.clean = clean
             return True
 
-
     def unlock(self):
         """
         Release this lock.
@@ -217,11 +214,9 @@ class FilesystemLock(object):
         """
         pid = readlink(self.name)
         if int(pid) != os.getpid():
-            raise ValueError(
-                "Lock %r not owned by this process" % (self.name,))
+            raise ValueError("Lock %r not owned by this process" % (self.name,))
         rmlink(self.name)
         self.locked = False
-
 
 
 def isLocked(name):
@@ -242,7 +237,6 @@ def isLocked(name):
         if result:
             l.unlock()
     return not result
-
 
 
 __all__ = ['FilesystemLock', 'isLocked']

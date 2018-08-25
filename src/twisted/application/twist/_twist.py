@@ -17,7 +17,6 @@ from twisted.application.app import _exitWithSignal
 from twisted.internet.interfaces import _ISupportsExitSignalCapturing
 
 
-
 class Twist(object):
     """
     Run a Twisted application.
@@ -43,7 +42,6 @@ class Twist(object):
 
         return options
 
-
     @staticmethod
     def service(plugin, options):
         """
@@ -65,7 +63,6 @@ class Twist(object):
 
         return IService(application)
 
-
     @staticmethod
     def startService(reactor, service):
         """
@@ -80,10 +77,7 @@ class Twist(object):
         service.startService()
 
         # Ask the reactor to stop the service before shutting down
-        reactor.addSystemEventTrigger(
-            "before", "shutdown", service.stopService
-        )
-
+        reactor.addSystemEventTrigger("before", "shutdown", service.stopService)
 
     @staticmethod
     def run(twistOptions):
@@ -106,7 +100,6 @@ class Twist(object):
             if reactor._exitSignal is not None:
                 _exitWithSignal(reactor._exitSignal)
 
-
     @classmethod
     def main(cls, argv=sys.argv):
         """
@@ -120,8 +113,7 @@ class Twist(object):
 
         reactor = options["reactor"]
         service = cls.service(
-            plugin=options.plugins[options.subCommand],
-            options=options.subOptions,
+            plugin=options.plugins[options.subCommand], options=options.subOptions
         )
 
         cls.startService(reactor, service)

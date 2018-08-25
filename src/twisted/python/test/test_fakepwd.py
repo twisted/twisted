@@ -23,6 +23,7 @@ from twisted.python.fakepwd import UserDatabase, ShadowDatabase
 
 SYSTEM_UID_MAX = 999
 
+
 def findInvalidUID():
     """
     By convention, UIDs less than 1000 are reserved for the system.  A system
@@ -46,9 +47,7 @@ def findInvalidUID():
     return guess
 
 
-
 INVALID_UID = findInvalidUID()
-
 
 
 class UserDatabaseTestsMixin(object):
@@ -59,6 +58,7 @@ class UserDatabaseTestsMixin(object):
     C{getExistingUserInfo} to return information about a user (such information
     should be unique per test method).
     """
+
     def test_getpwuid(self):
         """
         I{getpwuid} accepts a uid and returns the user record associated with
@@ -78,14 +78,12 @@ class UserDatabaseTestsMixin(object):
             self.assertEqual(entry.pw_dir, dir)
             self.assertEqual(entry.pw_shell, shell)
 
-
     def test_noSuchUID(self):
         """
         I{getpwuid} raises L{KeyError} when passed a uid which does not exist
         in the user database.
         """
         self.assertRaises(KeyError, self.database.getpwuid, INVALID_UID)
-
 
     def test_getpwnam(self):
         """
@@ -106,17 +104,30 @@ class UserDatabaseTestsMixin(object):
             self.assertEqual(entry.pw_dir, dir)
             self.assertEqual(entry.pw_shell, shell)
 
-
     def test_noSuchName(self):
         """
         I{getpwnam} raises L{KeyError} when passed a username which does not
         exist in the user database.
         """
         self.assertRaises(
-            KeyError, self.database.getpwnam,
-            'no' 'such' 'user' 'exists' 'the' 'name' 'is' 'too' 'long' 'and' 'has'
-            '\1' 'in' 'it' 'too')
-
+            KeyError,
+            self.database.getpwnam,
+            'no'
+            'such'
+            'user'
+            'exists'
+            'the'
+            'name'
+            'is'
+            'too'
+            'long'
+            'and'
+            'has'
+            '\1'
+            'in'
+            'it'
+            'too',
+        )
 
     def test_recordLength(self):
         """
@@ -128,7 +139,6 @@ class UserDatabaseTestsMixin(object):
         for entry in [db.getpwuid(uid), db.getpwnam(username), db.getpwall()[0]]:
             self.assertIsInstance(len(entry), int)
             self.assertEqual(len(entry), 7)
-
 
     def test_recordIndexable(self):
         """
@@ -152,18 +162,17 @@ class UserDatabaseTestsMixin(object):
             self.assertRaises(IndexError, getitem, entry, 7)
 
 
-
 class UserDatabaseTests(TestCase, UserDatabaseTestsMixin):
     """
     Tests for L{UserDatabase}.
     """
+
     def setUp(self):
         """
         Create a L{UserDatabase} with no user data in it.
         """
         self.database = UserDatabase()
         self._counter = SYSTEM_UID_MAX + 1
-
 
     def getExistingUserInfo(self):
         """
@@ -181,7 +190,6 @@ class UserDatabaseTests(TestCase, UserDatabaseTestsMixin):
 
         self.database.addUser(username, password, uid, gid, gecos, dir, shell)
         return (username, password, uid, gid, gecos, dir, shell)
-
 
     def test_addUser(self):
         """
@@ -201,8 +209,7 @@ class UserDatabaseTests(TestCase, UserDatabaseTestsMixin):
         db = self.database
         db.addUser(username, password, uid, gid, gecos, home, shell)
 
-        for [entry] in [[db.getpwuid(uid)], [db.getpwnam(username)],
-                        db.getpwall()]:
+        for [entry] in [[db.getpwuid(uid)], [db.getpwnam(username)], db.getpwall()]:
             self.assertEqual(entry.pw_name, username)
             self.assertEqual(entry.pw_passwd, password)
             self.assertEqual(entry.pw_uid, uid)
@@ -212,13 +219,13 @@ class UserDatabaseTests(TestCase, UserDatabaseTestsMixin):
             self.assertEqual(entry.pw_shell, shell)
 
 
-
 class PwdModuleTests(TestCase, UserDatabaseTestsMixin):
     """
     L{PwdModuleTests} runs the tests defined by L{UserDatabaseTestsMixin}
     against the built-in C{pwd} module.  This serves to verify that
     L{UserDatabase} is really a fake of that API.
     """
+
     if pwd is None:
         skip = "Cannot verify UserDatabase against pwd without pwd"
     else:
@@ -227,7 +234,6 @@ class PwdModuleTests(TestCase, UserDatabaseTestsMixin):
     def setUp(self):
         self._users = iter(self.database.getpwall())
         self._uids = set()
-
 
     def getExistingUserInfo(self):
         """
@@ -243,7 +249,6 @@ class PwdModuleTests(TestCase, UserDatabaseTestsMixin):
                 return entry
 
 
-
 class ShadowDatabaseTestsMixin(object):
     """
     L{ShadowDatabaseTestsMixin} defines tests which apply to any shadow user
@@ -252,6 +257,7 @@ class ShadowDatabaseTestsMixin(object):
     implement C{getExistingUserInfo} to return information about a user (such
     information should be unique per test method).
     """
+
     def test_getspnam(self):
         """
         L{getspnam} accepts a username and returns the user record associated
@@ -259,8 +265,17 @@ class ShadowDatabaseTestsMixin(object):
         """
         for i in range(2):
             # Get some user which exists in the database.
-            (username, password, lastChange, min, max, warn, inact, expire,
-             flag) = self.getExistingUserInfo()
+            (
+                username,
+                password,
+                lastChange,
+                min,
+                max,
+                warn,
+                inact,
+                expire,
+                flag,
+            ) = self.getExistingUserInfo()
 
             entry = self.database.getspnam(username)
             self.assertEqual(entry.sp_nam, username)
@@ -273,14 +288,12 @@ class ShadowDatabaseTestsMixin(object):
             self.assertEqual(entry.sp_expire, expire)
             self.assertEqual(entry.sp_flag, flag)
 
-
     def test_noSuchName(self):
         """
         I{getspnam} raises L{KeyError} when passed a username which does not
         exist in the user database.
         """
         self.assertRaises(KeyError, self.database.getspnam, "alice")
-
 
     def test_recordLength(self):
         """
@@ -293,7 +306,6 @@ class ShadowDatabaseTestsMixin(object):
             self.assertIsInstance(len(entry), int)
             self.assertEqual(len(entry), 9)
 
-
     def test_recordIndexable(self):
         """
         The shadow user record returned by I{getpwnam} and I{getspall} is
@@ -303,8 +315,17 @@ class ShadowDatabaseTestsMixin(object):
         respectively.
         """
         db = self.database
-        (username, password, lastChange, min, max, warn, inact, expire,
-         flag) = self.getExistingUserInfo()
+        (
+            username,
+            password,
+            lastChange,
+            min,
+            max,
+            warn,
+            inact,
+            expire,
+            flag,
+        ) = self.getExistingUserInfo()
         for entry in [db.getspnam(username), db.getspall()[0]]:
             self.assertEqual(entry[0], username)
             self.assertEqual(entry[1], password)
@@ -320,18 +341,17 @@ class ShadowDatabaseTestsMixin(object):
             self.assertRaises(IndexError, getitem, entry, 9)
 
 
-
 class ShadowDatabaseTests(TestCase, ShadowDatabaseTestsMixin):
     """
     Tests for L{ShadowDatabase}.
     """
+
     def setUp(self):
         """
         Create a L{ShadowDatabase} with no user data in it.
         """
         self.database = ShadowDatabase()
         self._counter = 0
-
 
     def getExistingUserInfo(self):
         """
@@ -349,11 +369,10 @@ class ShadowDatabaseTests(TestCase, ShadowDatabaseTestsMixin):
         expire = self._counter + 6
         flag = self._counter + 7
 
-        self.database.addUser(username, password, lastChange, min, max, warn,
-                              inact, expire, flag)
-        return (username, password, lastChange, min, max, warn, inact,
-                expire, flag)
-
+        self.database.addUser(
+            username, password, lastChange, min, max, warn, inact, expire, flag
+        )
+        return (username, password, lastChange, min, max, warn, inact, expire, flag)
 
     def test_addUser(self):
         """
@@ -373,8 +392,7 @@ class ShadowDatabaseTests(TestCase, ShadowDatabaseTestsMixin):
         flag = 3
 
         db = self.database
-        db.addUser(username, password, lastChange, min, max, warn, inact,
-                   expire, flag)
+        db.addUser(username, password, lastChange, min, max, warn, inact, expire, flag)
 
         for [entry] in [[db.getspnam(username)], db.getspall()]:
             self.assertEqual(entry.sp_nam, username)
@@ -388,13 +406,13 @@ class ShadowDatabaseTests(TestCase, ShadowDatabaseTestsMixin):
             self.assertEqual(entry.sp_flag, flag)
 
 
-
 class SPwdModuleTests(TestCase, ShadowDatabaseTestsMixin):
     """
     L{SPwdModuleTests} runs the tests defined by L{ShadowDatabaseTestsMixin}
     against the built-in C{spwd} module.  This serves to verify that
     L{ShadowDatabase} is really a fake of that API.
     """
+
     if spwd is None:
         skip = "Cannot verify ShadowDatabase against spwd without spwd"
     elif os.getuid() != 0:
@@ -404,7 +422,6 @@ class SPwdModuleTests(TestCase, ShadowDatabaseTestsMixin):
 
     def setUp(self):
         self._users = iter(self.database.getspall())
-
 
     def getExistingUserInfo(self):
         """

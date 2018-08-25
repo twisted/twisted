@@ -18,9 +18,11 @@ class Enum:
 class StatusEnum(Enum):
     group = 'Status'
 
+
 OFFLINE = Enum('Offline')
 ONLINE = Enum('Online')
 AWAY = Enum('Away')
+
 
 class OfflineError(Exception):
     """The requested action can't happen while offline."""

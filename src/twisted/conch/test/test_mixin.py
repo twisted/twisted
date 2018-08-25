@@ -11,13 +11,13 @@ from twisted.conch import mixin
 class TestBufferingProto(mixin.BufferingMixin):
     scheduled = False
     rescheduled = 0
+
     def schedule(self):
         self.scheduled = True
         return object()
 
     def reschedule(self, token):
         self.rescheduled += 1
-
 
 
 class BufferingTests(unittest.TestCase):

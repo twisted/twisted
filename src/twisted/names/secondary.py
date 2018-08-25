@@ -16,6 +16,7 @@ from twisted.names.authority import FileAuthority
 from twisted.python import log, failure
 from twisted.application import service
 
+
 class SecondaryAuthorityService(service.Service):
     calls = None
 
@@ -33,7 +34,6 @@ class SecondaryAuthorityService(service.Service):
         """
         self.primary = primary
         self.domains = [SecondaryAuthority(primary, d) for d in domains]
-
 
     @classmethod
     def fromServerAddressAndDomains(cls, serverAddress, domains):
@@ -56,9 +56,9 @@ class SecondaryAuthorityService(service.Service):
         service._port = serverAddress[1]
         service.domains = [
             SecondaryAuthority.fromServerAddressAndDomain(serverAddress, d)
-            for d in domains]
+            for d in domains
+        ]
         return service
-
 
     def getAuthority(self):
         return resolve.ResolverChain(self.domains)
@@ -68,6 +68,7 @@ class SecondaryAuthorityService(service.Service):
         self.calls = [task.LoopingCall(d.transfer) for d in self.domains]
         i = 0
         from twisted.internet import reactor
+
         for c in self.calls:
             # XXX Add errbacks, respect proper timeouts
             reactor.callLater(i, c.start, 60 * 60)
@@ -77,7 +78,6 @@ class SecondaryAuthorityService(service.Service):
         service.Service.stopService(self)
         for c in self.calls:
             c.stop()
-
 
 
 class SecondaryAuthority(FileAuthority):
@@ -114,7 +114,6 @@ class SecondaryAuthority(FileAuthority):
         self.primary = primaryIP
         self.domain = domain
 
-
     @classmethod
     def fromServerAddressAndDomain(cls, serverAddress, domain):
         """
@@ -137,7 +136,6 @@ class SecondaryAuthority(FileAuthority):
         secondary.domain = domain
         return secondary
 
-
     def transfer(self):
         if self.transferring:
             return
@@ -148,18 +146,18 @@ class SecondaryAuthority(FileAuthority):
             from twisted.internet import reactor
 
         resolver = client.Resolver(
-            servers=[(self.primary, self._port)], reactor=reactor)
-        return resolver.lookupZone(self.domain
-            ).addCallback(self._cbZone
-            ).addErrback(self._ebZone
-            )
-
+            servers=[(self.primary, self._port)], reactor=reactor
+        )
+        return (
+            resolver.lookupZone(self.domain)
+            .addCallback(self._cbZone)
+            .addErrback(self._ebZone)
+        )
 
     def _lookup(self, name, cls, type, timeout=None):
         if not self.soa or not self.records:
             return defer.fail(failure.Failure(dns.DomainError(name)))
         return FileAuthority._lookup(self, name, cls, type, timeout)
-
 
     def _cbZone(self, zone):
         ans, _, _ = zone
@@ -170,21 +168,23 @@ class SecondaryAuthority(FileAuthority):
             else:
                 r.setdefault(str(rec.name).lower(), []).append(rec.payload)
 
-
     def _ebZone(self, failure):
-        log.msg("Updating %s from %s failed during zone transfer" % (self.domain, self.primary))
+        log.msg(
+            "Updating %s from %s failed during zone transfer"
+            % (self.domain, self.primary)
+        )
         log.err(failure)
-
 
     def update(self):
         self.transfer().addCallbacks(self._cbTransferred, self._ebTransferred)
 
-
     def _cbTransferred(self, result):
         self.transferring = False
 
-
     def _ebTransferred(self, failure):
         self.transferred = False
-        log.msg("Transferring %s from %s failed after zone transfer" % (self.domain, self.primary))
+        log.msg(
+            "Transferring %s from %s failed after zone transfer"
+            % (self.domain, self.primary)
+        )
         log.err(failure)

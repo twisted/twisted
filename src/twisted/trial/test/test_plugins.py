@@ -25,14 +25,14 @@ class PluginsTests(unittest.SynchronousTestCase):
         IndexError.
         """
         plugins = [
-            plugin for plugin in getPlugins(IReporter)
-            if plugin.longOpt == longOption]
+            plugin for plugin in getPlugins(IReporter) if plugin.longOpt == longOption
+        ]
         if len(plugins) > 1:
             raise ValueError(
                 "More than one plugin found with long option %r: %r"
-                % (longOption, plugins))
+                % (longOption, plugins)
+            )
         return plugins[0]
-
 
     def test_subunitPlugin(self):
         """

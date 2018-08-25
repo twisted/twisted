@@ -49,12 +49,12 @@ class TopWindowTests(TestCase):
         self.assertEqual(len(scheduled), 1)
 
 
-
 class ScrolledAreaTests(TestCase):
     """
     Tests for L{ScrolledArea}, a widget which creates a viewport containing
     another widget and can reposition that viewport using scrollbars.
     """
+
     def test_parent(self):
         """
         The parent of the widget passed to L{ScrolledArea} is set to a new

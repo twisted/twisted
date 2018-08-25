@@ -27,6 +27,7 @@ Various other classes in this module support this usage:
 """
 
 from __future__ import division, absolute_import
+
 __metaclass__ = type
 
 from zope.interface import implementer
@@ -62,7 +63,6 @@ class BadHeaders(Exception):
     """
 
 
-
 class ExcessWrite(Exception):
     """
     The body L{IBodyProducer} for a request tried to write data after
@@ -76,17 +76,16 @@ class ParseError(Exception):
 
     @ivar data: The string which could not be parsed.
     """
+
     def __init__(self, reason, data):
         Exception.__init__(self, reason, data)
         self.data = data
-
 
 
 class BadResponseVersion(ParseError):
     """
     The version string in a status line was unparsable.
     """
-
 
 
 class _WrapperException(Exception):
@@ -97,10 +96,10 @@ class _WrapperException(Exception):
     @ivar reasons: A L{list} of one or more L{Failure} instances encountered
         during an HTTP request.  See subclass documentation for more details.
     """
+
     def __init__(self, reasons):
         Exception.__init__(self, reasons)
         self.reasons = reasons
-
 
 
 class RequestGenerationFailed(_WrapperException):
@@ -112,7 +111,6 @@ class RequestGenerationFailed(_WrapperException):
     """
 
 
-
 class RequestTransmissionFailed(_WrapperException):
     """
     There was an error while sending the bytes which make up a request.
@@ -122,12 +120,10 @@ class RequestTransmissionFailed(_WrapperException):
     """
 
 
-
 class ConnectionAborted(Exception):
     """
     The connection was explicitly aborted by application code.
     """
-
 
 
 class WrongBodyLength(Exception):
@@ -138,14 +134,12 @@ class WrongBodyLength(Exception):
     """
 
 
-
 class ResponseDone(Exception):
     """
     L{ResponseDone} may be passed to L{IProtocol.connectionLost} on the
     protocol passed to L{Response.deliverBody} and indicates that the entire
     response has been delivered.
     """
-
 
 
 class ResponseFailed(_WrapperException):
@@ -165,12 +159,10 @@ class ResponseFailed(_WrapperException):
         self.response = response
 
 
-
 class ResponseNeverReceived(ResponseFailed):
     """
     A L{ResponseFailed} that knows no response bytes at all have been received.
     """
-
 
 
 class RequestNotSent(Exception):
@@ -181,7 +173,6 @@ class RequestNotSent(Exception):
     to send a request using a protocol which is no longer connected to a
     server.
     """
-
 
 
 def _callAppFunction(function):
@@ -195,10 +186,8 @@ def _callAppFunction(function):
         function()
     except:
         _moduleLog.failure(
-            u"Unexpected exception from {name}",
-            name=fullyQualifiedName(function)
+            u"Unexpected exception from {name}", name=fullyQualifiedName(function)
         )
-
 
 
 class HTTPParser(LineReceiver):
@@ -240,17 +229,24 @@ class HTTPParser(LineReceiver):
     # HTTP headers delimited by \n instead of \r\n.
     delimiter = b'\n'
 
-    CONNECTION_CONTROL_HEADERS = set([
-            b'content-length', b'connection', b'keep-alive', b'te',
-            b'trailers', b'transfer-encoding', b'upgrade',
-            b'proxy-connection'])
+    CONNECTION_CONTROL_HEADERS = set(
+        [
+            b'content-length',
+            b'connection',
+            b'keep-alive',
+            b'te',
+            b'trailers',
+            b'transfer-encoding',
+            b'upgrade',
+            b'proxy-connection',
+        ]
+    )
 
     def connectionMade(self):
         self.headers = Headers()
         self.connHeaders = Headers()
         self.state = STATUS
         self._partialHeader = None
-
 
     def switchToBodyMode(self, decoder):
         """
@@ -263,7 +259,6 @@ class HTTPParser(LineReceiver):
         self.bodyDecoder = decoder
         self.state = BODY
         self.setRawMode()
-
 
     def lineReceived(self, line):
         """
@@ -294,13 +289,11 @@ class HTTPParser(LineReceiver):
                 # begun on a previous line.
                 self._partialHeader.append(line)
 
-
     def rawDataReceived(self, data):
         """
         Pass data from the message body to the body decoder object.
         """
         self.bodyDecoder.dataReceived(data)
-
 
     def isConnectionControlHeader(self, name):
         """
@@ -314,7 +307,6 @@ class HTTPParser(LineReceiver):
         """
         return name in self.CONNECTION_CONTROL_HEADERS
 
-
     def statusReceived(self, status):
         """
         Callback invoked whenever the first line of a new message is received.
@@ -324,7 +316,6 @@ class HTTPParser(LineReceiver):
             without trailing I{CR LF}.
         @type status: C{bytes}
         """
-
 
     def headerReceived(self, name, value):
         """
@@ -337,14 +328,12 @@ class HTTPParser(LineReceiver):
             headers = self.headers
         headers.addRawHeader(name, value)
 
-
     def allHeadersReceived(self):
         """
         Callback invoked after the last header is passed to C{headerReceived}.
         Override this to change to the C{BODY} or C{DONE} state.
         """
         self.switchToBodyMode(None)
-
 
 
 class HTTPClientParser(HTTPParser):
@@ -365,11 +354,10 @@ class HTTPClientParser(HTTPParser):
 
     @ivar _everReceivedData: C{True} if any bytes have been received.
     """
+
     NO_BODY_CODES = set([NO_CONTENT, NOT_MODIFIED])
 
-    _transferDecoders = {
-        b'chunked': _ChunkedTransferDecoder,
-        }
+    _transferDecoders = {b'chunked': _ChunkedTransferDecoder}
 
     bodyDecoder = None
     _log = Logger()
@@ -380,14 +368,12 @@ class HTTPClientParser(HTTPParser):
         self._responseDeferred = Deferred()
         self._everReceivedData = False
 
-
     def dataReceived(self, data):
         """
         Override so that we know if any response has been received.
         """
         self._everReceivedData = True
         HTTPParser.dataReceived(self, data)
-
 
     def parseVersion(self, strversion):
         """
@@ -402,10 +388,8 @@ class HTTPClientParser(HTTPParser):
         except ValueError as e:
             raise BadResponseVersion(str(e), strversion)
         if major < 0 or minor < 0:
-            raise BadResponseVersion(u"version may not be negative",
-                strversion)
+            raise BadResponseVersion(u"version may not be negative", strversion)
         return (proto, major, minor)
-
 
     def statusReceived(self, status):
         """
@@ -439,7 +423,6 @@ class HTTPClientParser(HTTPParser):
             self.request,
         )
 
-
     def _finished(self, rest):
         """
         Called to indicate that an entire response has been received.  No more
@@ -453,7 +436,6 @@ class HTTPClientParser(HTTPParser):
         self.state = DONE
         self.finisher(rest)
 
-
     def isConnectionControlHeader(self, name):
         """
         Content-Length in the response to a HEAD request is an entity header,
@@ -462,7 +444,6 @@ class HTTPClientParser(HTTPParser):
         if self.request.method == b'HEAD' and name == b'content-length':
             return False
         return HTTPParser.isConnectionControlHeader(self, name)
-
 
     def allHeadersReceived(self):
         """
@@ -476,15 +457,13 @@ class HTTPClientParser(HTTPParser):
             # _everReceivedData in its True state because we have, in fact,
             # received data.
             self._log.info(
-                "Ignoring unexpected {code} response",
-                code=self.response.code
+                "Ignoring unexpected {code} response", code=self.response.code
             )
             self.connectionMade()
             del self.response
             return
 
-        if (self.response.code in self.NO_BODY_CODES
-            or self.request.method == b'HEAD'):
+        if self.response.code in self.NO_BODY_CODES or self.request.method == b'HEAD':
             self.response.length = 0
             # The order of the next two lines might be of interest when adding
             # support for pipelining.
@@ -492,7 +471,8 @@ class HTTPClientParser(HTTPParser):
             self.response._bodyDataFinished()
         else:
             transferEncodingHeaders = self.connHeaders.getRawHeaders(
-                b'transfer-encoding')
+                b'transfer-encoding'
+            )
             if transferEncodingHeaders:
 
                 # This could be a KeyError.  However, that would mean we do not
@@ -500,7 +480,9 @@ class HTTPClientParser(HTTPParser):
                 # is as good a behavior as any.  Perhaps someday we will want
                 # to normalize/document/test this specifically, but failing
                 # seems fine to me for now.
-                transferDecoder = self._transferDecoders[transferEncodingHeaders[0].lower()]
+                transferDecoder = self._transferDecoders[
+                    transferEncodingHeaders[0].lower()
+                ]
 
                 # If anyone ever invents a transfer encoding other than
                 # chunked (yea right), and that transfer encoding can predict
@@ -508,8 +490,7 @@ class HTTPClientParser(HTTPParser):
                 # allow the transfer decoder to set the response object's
                 # length attribute.
             else:
-                contentLengthHeaders = self.connHeaders.getRawHeaders(
-                    b'content-length')
+                contentLengthHeaders = self.connHeaders.getRawHeaders(b'content-length')
                 if contentLengthHeaders is None:
                     contentLength = None
                 elif len(contentLengthHeaders) == 1:
@@ -518,15 +499,17 @@ class HTTPClientParser(HTTPParser):
                 else:
                     # "HTTP Message Splitting" or "HTTP Response Smuggling"
                     # potentially happening.  Or it's just a buggy server.
-                    raise ValueError(u"Too many Content-Length headers; "
-                                     u"response is invalid")
+                    raise ValueError(
+                        u"Too many Content-Length headers; " u"response is invalid"
+                    )
 
                 if contentLength == 0:
                     self._finished(self.clearLineBuffer())
                     transferDecoder = None
                 else:
                     transferDecoder = lambda x, y: _IdentityTransferDecoder(
-                        contentLength, x, y)
+                        contentLength, x, y
+                    )
 
             if transferDecoder is None:
                 self.response._bodyDataFinished()
@@ -537,9 +520,9 @@ class HTTPClientParser(HTTPParser):
                 # (probably because an application gave it a way to interpret
                 # them).
                 self.transport.pauseProducing()
-                self.switchToBodyMode(transferDecoder(
-                        self.response._bodyDataReceived,
-                        self._finished))
+                self.switchToBodyMode(
+                    transferDecoder(self.response._bodyDataReceived, self._finished)
+                )
 
         # This must be last.  If it were first, then application code might
         # change some state (for example, registering a protocol to receive the
@@ -548,7 +531,6 @@ class HTTPClientParser(HTTPParser):
         # the transport.
         self._responseDeferred.callback(self.response)
         del self._responseDeferred
-
 
     def connectionLost(self, reason):
         if self.bodyDecoder is not None:
@@ -559,8 +541,8 @@ class HTTPClientParser(HTTPParser):
                     self.response._bodyDataFinished(Failure())
                 except _DataLoss:
                     self.response._bodyDataFinished(
-                        Failure(ResponseFailed([reason, Failure()],
-                                               self.response)))
+                        Failure(ResponseFailed([reason, Failure()], self.response))
+                    )
                 else:
                     self.response._bodyDataFinished()
             except:
@@ -578,7 +560,6 @@ class HTTPClientParser(HTTPParser):
             del self._responseDeferred
 
 
-
 @implementer(IClientRequest)
 class Request:
     """
@@ -594,6 +575,7 @@ class Request:
     @ivar _parsedURI: Parsed I{URI} for the request, or L{None}.
     @type _parsedURI: L{twisted.web.client.URI} or L{None}
     """
+
     _log = Logger()
 
     def __init__(self, method, uri, headers, bodyProducer, persistent=False):
@@ -625,10 +607,10 @@ class Request:
         self.persistent = persistent
         self._parsedURI = None
 
-
     @classmethod
-    def _construct(cls, method, uri, headers, bodyProducer, persistent=False,
-                   parsedURI=None):
+    def _construct(
+        cls, method, uri, headers, bodyProducer, persistent=False, parsedURI=None
+    ):
         """
         Private constructor.
 
@@ -645,7 +627,6 @@ class Request:
         request._parsedURI = parsedURI
         return request
 
-
     @property
     def absoluteURI(self):
         """
@@ -653,7 +634,6 @@ class Request:
         absolute URI cannot be determined.
         """
         return getattr(self._parsedURI, 'toBytes', lambda: None)()
-
 
     def _writeHeaders(self, transport, TEorCL):
         hosts = self.headers.getRawHeaders(b'host', ())
@@ -664,8 +644,7 @@ class Request:
         # method would probably be good.  It would be nice if this method
         # weren't limited to issuing HTTP/1.1 requests.
         requestLines = []
-        requestLines.append(b' '.join([self.method, self.uri,
-            b'HTTP/1.1\r\n']))
+        requestLines.append(b' '.join([self.method, self.uri, b'HTTP/1.1\r\n']))
         if not self.persistent:
             requestLines.append(b'Connection: close\r\n')
         if TEorCL is not None:
@@ -674,7 +653,6 @@ class Request:
             requestLines.extend([name + b': ' + v + b'\r\n' for v in values])
         requestLines.append(b'\r\n')
         transport.writeSequence(requestLines)
-
 
     def _writeToBodyProducerChunked(self, transport):
         """
@@ -691,6 +669,7 @@ class Request:
 
         def cbProduced(ignored):
             encoder.unregisterProducer()
+
         def ebProduced(err):
             encoder._allowNoMoreWrites()
             # Don't call the encoder's unregisterProducer because it will write
@@ -699,9 +678,9 @@ class Request:
             # don't want to do that.
             transport.unregisterProducer()
             return err
+
         d.addCallbacks(cbProduced, ebProduced)
         return d
-
 
     def _writeToBodyProducerContentLength(self, transport):
         """
@@ -713,8 +692,8 @@ class Request:
         """
         self._writeHeaders(
             transport,
-            networkString(
-                'Content-Length: %d\r\n' % (self.bodyProducer.length,)))
+            networkString('Content-Length: %d\r\n' % (self.bodyProducer.length,)),
+        )
 
         # This Deferred is used to signal an error in the data written to the
         # encoder below.  It can only errback and it will only do so before too
@@ -725,7 +704,8 @@ class Request:
         # This makes sure the producer writes the correct number of bytes for
         # the request body.
         encoder = LengthEnforcingConsumer(
-            self.bodyProducer, transport, finishedConsuming)
+            self.bodyProducer, transport, finishedConsuming
+        )
 
         transport.registerProducer(self.bodyProducer, True)
 
@@ -737,6 +717,7 @@ class Request:
             # cancellation to the producer.
             def cancelConsuming(ign):
                 finishedProducing.cancel()
+
             ultimate = Deferred(cancelConsuming)
 
             # Keep track of what has happened so far.  This initially
@@ -765,7 +746,7 @@ class Request:
                         u"ebConsuming called",
                         failure=err,
                         request=repr(self),
-                        state=state[0]
+                        state=state[0],
                     )
 
             def cbProducing(result):
@@ -812,15 +793,16 @@ class Request:
             return ultimate
 
         d = combine(finishedConsuming, finishedProducing)
+
         def f(passthrough):
             # Regardless of what happens with the overall Deferred, once it
             # fires, the producer registered way up above the definition of
             # combine should be unregistered.
             transport.unregisterProducer()
             return passthrough
+
         d.addBoth(f)
         return d
-
 
     def _writeToEmptyBodyContentLength(self, transport):
         """
@@ -832,7 +814,6 @@ class Request:
         """
         self._writeHeaders(transport, b"Content-Length: 0\r\n")
         return succeed(None)
-
 
     def writeTo(self, transport):
         """
@@ -860,7 +841,6 @@ class Request:
         else:
             return self._writeToBodyProducerContentLength(transport)
 
-
     def stopWriting(self):
         """
         Stop writing this request to the transport.  This can only be called
@@ -872,7 +852,6 @@ class Request:
         # If bodyProducer is None, then the Deferred returned by writeTo has
         # fired already and this method cannot be called.
         _callAppFunction(self.bodyProducer.stopProducing)
-
 
 
 class LengthEnforcingConsumer:
@@ -891,12 +870,12 @@ class LengthEnforcingConsumer:
     @ivar _finished: A L{Deferred} which will be fired with a L{Failure} if too
         many bytes are written to this consumer.
     """
+
     def __init__(self, producer, consumer, finished):
         self._length = producer.length
         self._producer = producer
         self._consumer = consumer
         self._finished = finished
-
 
     def _allowNoMoreWrites(self):
         """
@@ -904,7 +883,6 @@ class LengthEnforcingConsumer:
         after calling this method will be met with an exception.
         """
         self._finished = None
-
 
     def write(self, bytes):
         """
@@ -934,7 +912,6 @@ class LengthEnforcingConsumer:
             self._finished.errback(WrongBodyLength(u"too many bytes written"))
             self._allowNoMoreWrites()
 
-
     def _noMoreWritesExpected(self):
         """
         Called to indicate no more bytes will be written to this consumer.
@@ -946,7 +923,6 @@ class LengthEnforcingConsumer:
             self._allowNoMoreWrites()
             if self._length:
                 raise WrongBodyLength(u"too few bytes written")
-
 
 
 def makeStatefulDispatcher(name, template):
@@ -965,15 +941,17 @@ def makeStatefulDispatcher(name, template):
 
     @return: The dispatcher function.
     """
+
     def dispatcher(self, *args, **kwargs):
         func = getattr(self, '_' + name + '_' + self._state, None)
         if func is None:
             raise RuntimeError(
-                u"%r has no %s method in state %s" % (self, name, self._state))
+                u"%r has no %s method in state %s" % (self, name, self._state)
+            )
         return func(*args, **kwargs)
+
     dispatcher.__doc__ = template.__doc__
     return dispatcher
-
 
 
 # This proxy class is used only in the private constructor of the Response
@@ -981,7 +959,6 @@ def makeStatefulDispatcher(name, template):
 # concrete request object: they can only use what is provided by
 # IClientRequest.
 _ClientRequestProxy = proxyForInterface(IClientRequest)
-
 
 
 @implementer(IResponse)
@@ -1061,7 +1038,6 @@ class Response:
         self.request = None
         self.previousResponse = None
 
-
     @classmethod
     def _construct(cls, version, code, phrase, headers, _transport, request):
         """
@@ -1080,18 +1056,16 @@ class Response:
         response.request = _ClientRequestProxy(request)
         return response
 
-
     def setPreviousResponse(self, previousResponse):
         self.previousResponse = previousResponse
-
 
     def deliverBody(self, protocol):
         """
         Dispatch the given L{IProtocol} depending of the current state of the
         response.
         """
-    deliverBody = makeStatefulDispatcher('deliverBody', deliverBody)
 
+    deliverBody = makeStatefulDispatcher('deliverBody', deliverBody)
 
     def _deliverBody_INITIAL(self, protocol):
         """
@@ -1113,7 +1087,6 @@ class Response:
         # being delivered, or even the body completing.
         self._transport.resumeProducing()
 
-
     def _deliverBody_CONNECTED(self, protocol):
         """
         It is invalid to attempt to deliver data to a protocol when it is
@@ -1121,8 +1094,8 @@ class Response:
         """
         raise RuntimeError(
             u"Response already has protocol %r, cannot deliverBody "
-            u"again" % (self._bodyProtocol,))
-
+            u"again" % (self._bodyProtocol,)
+        )
 
     def _deliverBody_DEFERRED_CLOSE(self, protocol):
         """
@@ -1142,15 +1115,12 @@ class Response:
         protocol.connectionLost(self._reason)
         self._state = 'FINISHED'
 
-
     def _deliverBody_FINISHED(self, protocol):
         """
         It is invalid to attempt to deliver data to a protocol after the
         response body has been delivered to another protocol.
         """
-        raise RuntimeError(
-            u"Response already finished, cannot deliverBody now.")
-
+        raise RuntimeError(u"Response already finished, cannot deliverBody now.")
 
     def _bodyDataReceived(self, data):
         """
@@ -1158,9 +1128,8 @@ class Response:
         They will be buffered or delivered to the protocol passed to
         deliverBody.
         """
-    _bodyDataReceived = makeStatefulDispatcher('bodyDataReceived',
-                                               _bodyDataReceived)
 
+    _bodyDataReceived = makeStatefulDispatcher('bodyDataReceived', _bodyDataReceived)
 
     def _bodyDataReceived_INITIAL(self, data):
         """
@@ -1173,14 +1142,12 @@ class Response:
         """
         self._bodyBuffer.append(data)
 
-
     def _bodyDataReceived_CONNECTED(self, data):
         """
         Deliver any data received to the protocol to which this L{Response}
         is connected.
         """
         self._bodyProtocol.dataReceived(data)
-
 
     def _bodyDataReceived_DEFERRED_CLOSE(self, data):
         """
@@ -1189,15 +1156,12 @@ class Response:
         """
         raise RuntimeError(u"Cannot receive body data after _bodyDataFinished")
 
-
     def _bodyDataReceived_FINISHED(self, data):
         """
         It is invalid for data to be delivered after the response body has
         been delivered to a protocol.
         """
-        raise RuntimeError(u"Cannot receive body data after "
-                           u"protocol disconnected")
-
+        raise RuntimeError(u"Cannot receive body data after " u"protocol disconnected")
 
     def _bodyDataFinished(self, reason=None):
         """
@@ -1205,9 +1169,8 @@ class Response:
         optional reason is supplied, this indicates a problem or potential
         problem receiving all of the response body.
         """
-    _bodyDataFinished = makeStatefulDispatcher('bodyDataFinished',
-                                               _bodyDataFinished)
 
+    _bodyDataFinished = makeStatefulDispatcher('bodyDataFinished', _bodyDataFinished)
 
     def _bodyDataFinished_INITIAL(self, reason=None):
         """
@@ -1219,7 +1182,6 @@ class Response:
             reason = Failure(ResponseDone(u"Response body fully received"))
         self._reason = reason
 
-
     def _bodyDataFinished_CONNECTED(self, reason=None):
         """
         Disconnect the protocol and move to the C{'FINISHED'} state.
@@ -1230,7 +1192,6 @@ class Response:
         self._bodyProtocol = None
         self._state = 'FINISHED'
 
-
     def _bodyDataFinished_DEFERRED_CLOSE(self):
         """
         It is invalid to attempt to notify the L{Response} of the end of the
@@ -1238,15 +1199,12 @@ class Response:
         """
         raise RuntimeError(u"Cannot finish body data more than once")
 
-
     def _bodyDataFinished_FINISHED(self):
         """
         It is invalid to attempt to notify the L{Response} of the end of the
         response body data more than once.
         """
-        raise RuntimeError(u"Cannot finish body data after "
-                           u"protocol disconnected")
-
+        raise RuntimeError(u"Cannot finish body data after " u"protocol disconnected")
 
 
 @implementer(IConsumer)
@@ -1259,7 +1217,6 @@ class ChunkedEncoder:
     def __init__(self, transport):
         self.transport = transport
 
-
     def _allowNoMoreWrites(self):
         """
         Indicate that no additional writes are allowed.  Attempts to write
@@ -1267,13 +1224,11 @@ class ChunkedEncoder:
         """
         self.transport = None
 
-
     def registerProducer(self, producer, streaming):
         """
         Register the given producer with C{self.transport}.
         """
         self.transport.registerProducer(producer, streaming)
-
 
     def write(self, data):
         """
@@ -1284,9 +1239,9 @@ class ChunkedEncoder:
         """
         if self.transport is None:
             raise ExcessWrite()
-        self.transport.writeSequence((networkString("%x\r\n" % len(data)),
-            data, b"\r\n"))
-
+        self.transport.writeSequence(
+            (networkString("%x\r\n" % len(data)), data, b"\r\n")
+        )
 
     def unregisterProducer(self):
         """
@@ -1295,7 +1250,6 @@ class ChunkedEncoder:
         self.write(b'')
         self.transport.unregisterProducer()
         self._allowNoMoreWrites()
-
 
 
 @implementer(IPushProducer)
@@ -1319,7 +1273,6 @@ class TransportProxyProducer:
     def __init__(self, producer):
         self._producer = producer
 
-
     def stopProxying(self):
         """
         Stop forwarding calls of L{twisted.internet.interfaces.IPushProducer}
@@ -1327,7 +1280,6 @@ class TransportProxyProducer:
         provider.
         """
         self._producer = None
-
 
     def stopProducing(self):
         """
@@ -1337,7 +1289,6 @@ class TransportProxyProducer:
         if self._producer is not None:
             self._producer.stopProducing()
 
-
     def resumeProducing(self):
         """
         Proxy the resumption to the underlying producer, unless this proxy has
@@ -1345,7 +1296,6 @@ class TransportProxyProducer:
         """
         if self._producer is not None:
             self._producer.resumeProducing()
-
 
     def pauseProducing(self):
         """
@@ -1355,7 +1305,6 @@ class TransportProxyProducer:
         if self._producer is not None:
             self._producer.pauseProducing()
 
-
     def loseConnection(self):
         """
         Proxy the request to lose the connection to the underlying producer,
@@ -1363,7 +1312,6 @@ class TransportProxyProducer:
         """
         if self._producer is not None:
             self._producer.loseConnection()
-
 
 
 class HTTP11ClientProtocol(Protocol):
@@ -1427,6 +1375,7 @@ class HTTP11ClientProtocol(Protocol):
     @ivar _abortDeferreds: A list of C{Deferred} instances that will fire when
         the connection is lost.
     """
+
     _state = 'QUIESCENT'
     _parser = None
     _finishedRequest = None
@@ -1435,16 +1384,13 @@ class HTTP11ClientProtocol(Protocol):
     _responseDeferred = None
     _log = Logger()
 
-
     def __init__(self, quiescentCallback=lambda c: None):
         self._quiescentCallback = quiescentCallback
         self._abortDeferreds = []
 
-
     @property
     def state(self):
         return self._state
-
 
     def request(self, request):
         """
@@ -1474,12 +1420,12 @@ class HTTP11ClientProtocol(Protocol):
         def cancelRequest(ign):
             # Explicitly cancel the request's deferred if it's still trying to
             # write when this request is cancelled.
-            if self._state in (
-                    'TRANSMITTING', 'TRANSMITTING_AFTER_RECEIVING_RESPONSE'):
+            if self._state in ('TRANSMITTING', 'TRANSMITTING_AFTER_RECEIVING_RESPONSE'):
                 _requestDeferred.cancel()
             else:
                 self.transport.abortConnection()
                 self._disconnectParser(Failure(CancelledError()))
+
         self._finishedRequest = Deferred(cancelRequest)
 
         # Keep track of the Request object in case we need to call stopWriting
@@ -1500,20 +1446,18 @@ class HTTP11ClientProtocol(Protocol):
             if self._state == 'TRANSMITTING':
                 self._state = 'GENERATION_FAILED'
                 self.transport.abortConnection()
-                self._finishedRequest.errback(
-                    Failure(RequestGenerationFailed([err])))
+                self._finishedRequest.errback(Failure(RequestGenerationFailed([err])))
             else:
                 self._log.failure(
                     u'Error writing request, but not in valid state '
                     u'to finalize request: {state}',
                     failure=err,
-                    state=self._state
+                    state=self._state,
                 )
 
         _requestDeferred.addCallbacks(cbRequestWritten, ebRequestWriting)
 
         return self._finishedRequest
-
 
     def _finishResponse(self, rest):
         """
@@ -1524,8 +1468,8 @@ class HTTP11ClientProtocol(Protocol):
             the L{HTTPClientParser} which were not part of the response it
             was parsing.
         """
-    _finishResponse = makeStatefulDispatcher('finishResponse', _finishResponse)
 
+    _finishResponse = makeStatefulDispatcher('finishResponse', _finishResponse)
 
     def _finishResponse_WAITING(self, rest):
         # Currently the rest parameter is ignored. Don't forget to use it if
@@ -1550,8 +1494,11 @@ class HTTP11ClientProtocol(Protocol):
 
         reason = ConnectionDone(u"synthetic!")
         connHeaders = self._parser.connHeaders.getRawHeaders(b'connection', ())
-        if ((b'close' in connHeaders) or self._state != "QUIESCENT" or
-            not self._currentRequest.persistent):
+        if (
+            (b'close' in connHeaders)
+            or self._state != "QUIESCENT"
+            or not self._currentRequest.persistent
+        ):
             self._giveUp(Failure(reason))
         else:
             # Just in case we had paused the transport, resume it before
@@ -1569,9 +1516,7 @@ class HTTP11ClientProtocol(Protocol):
                 self.transport.loseConnection()
             self._disconnectParser(reason)
 
-
     _finishResponse_TRANSMITTING = _finishResponse_WAITING
-
 
     def _disconnectParser(self, reason):
         """
@@ -1595,7 +1540,6 @@ class HTTP11ClientProtocol(Protocol):
             self._transportProxy = None
             parser.connectionLost(reason)
 
-
     def _giveUp(self, reason):
         """
         Lose the underlying connection and disconnect the parser with the given
@@ -1607,7 +1551,6 @@ class HTTP11ClientProtocol(Protocol):
         self.transport.loseConnection()
         self._disconnectParser(reason)
 
-
     def dataReceived(self, bytes):
         """
         Handle some stuff from some place.
@@ -1617,14 +1560,13 @@ class HTTP11ClientProtocol(Protocol):
         except:
             self._giveUp(Failure())
 
-
     def connectionLost(self, reason):
         """
         The underlying transport went away.  If appropriate, notify the parser
         object.
         """
-    connectionLost = makeStatefulDispatcher('connectionLost', connectionLost)
 
+    connectionLost = makeStatefulDispatcher('connectionLost', connectionLost)
 
     def _connectionLost_QUIESCENT(self, reason):
         """
@@ -1633,14 +1575,12 @@ class HTTP11ClientProtocol(Protocol):
         """
         self._state = 'CONNECTION_LOST'
 
-
     def _connectionLost_GENERATION_FAILED(self, reason):
         """
         The connection was in an inconsistent state.  Move to the
         C{'CONNECTION_LOST'} state but otherwise do nothing.
         """
         self._state = 'CONNECTION_LOST'
-
 
     def _connectionLost_TRANSMITTING(self, reason):
         """
@@ -1649,20 +1589,17 @@ class HTTP11ClientProtocol(Protocol):
         move to the C{'CONNECTION_LOST'} state.
         """
         self._state = 'CONNECTION_LOST'
-        self._finishedRequest.errback(
-            Failure(RequestTransmissionFailed([reason])))
+        self._finishedRequest.errback(Failure(RequestTransmissionFailed([reason])))
         del self._finishedRequest
 
         # Tell the request that it should stop bothering now.
         self._currentRequest.stopWriting()
-
 
     def _connectionLost_TRANSMITTING_AFTER_RECEIVING_RESPONSE(self, reason):
         """
         Move to the C{'CONNECTION_LOST'} state.
         """
         self._state = 'CONNECTION_LOST'
-
 
     def _connectionLost_WAITING(self, reason):
         """
@@ -1674,7 +1611,6 @@ class HTTP11ClientProtocol(Protocol):
         self._disconnectParser(reason)
         self._state = 'CONNECTION_LOST'
 
-
     def _connectionLost_ABORTING(self, reason):
         """
         Disconnect the response parser with a L{ConnectionAborted} failure, and
@@ -1685,7 +1621,6 @@ class HTTP11ClientProtocol(Protocol):
         for d in self._abortDeferreds:
             d.callback(None)
         self._abortDeferreds = []
-
 
     def abort(self):
         """

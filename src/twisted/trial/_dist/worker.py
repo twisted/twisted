@@ -26,7 +26,6 @@ from twisted.trial._dist import _WORKER_AMP_STDIN, _WORKER_AMP_STDOUT
 from twisted.trial._dist.workerreporter import WorkerReporter
 
 
-
 class WorkerProtocol(AMP):
     """
     The worker-side trial distributed protocol.
@@ -36,7 +35,6 @@ class WorkerProtocol(AMP):
         self._loader = TestLoader()
         self._result = WorkerReporter(self)
         self._forceGarbageCollection = forceGarbageCollection
-
 
     def run(self, testCase):
         """
@@ -49,7 +47,6 @@ class WorkerProtocol(AMP):
 
     workercommands.Run.responder(run)
 
-
     def start(self, directory):
         """
         Set up the worker, moving into given directory for tests to run in
@@ -59,7 +56,6 @@ class WorkerProtocol(AMP):
         return {'success': True}
 
     workercommands.Start.responder(start)
-
 
 
 class LocalWorkerAMP(AMP):
@@ -75,7 +71,6 @@ class LocalWorkerAMP(AMP):
         return {'success': True}
 
     managercommands.AddSuccess.responder(addSuccess)
-
 
     def _buildFailure(self, error, errorClass, frames):
         """
@@ -95,9 +90,9 @@ class LocalWorkerAMP(AMP):
         failure = Failure(error, errorType)
         for i in range(0, len(frames), 3):
             failure.frames.append(
-                (frames[i], frames[i + 1], int(frames[i + 2]), [], []))
+                (frames[i], frames[i + 1], int(frames[i + 2]), [], [])
+            )
         return failure
-
 
     def addError(self, testName, error, errorClass, frames):
         """
@@ -109,7 +104,6 @@ class LocalWorkerAMP(AMP):
 
     managercommands.AddError.responder(addError)
 
-
     def addFailure(self, testName, fail, failClass, frames):
         """
         Add a failure to the reporter.
@@ -120,7 +114,6 @@ class LocalWorkerAMP(AMP):
 
     managercommands.AddFailure.responder(addFailure)
 
-
     def addSkip(self, testName, reason):
         """
         Add a skip to the reporter.
@@ -129,7 +122,6 @@ class LocalWorkerAMP(AMP):
         return {'success': True}
 
     managercommands.AddSkip.responder(addSkip)
-
 
     def addExpectedFailure(self, testName, error, todo):
         """
@@ -141,7 +133,6 @@ class LocalWorkerAMP(AMP):
 
     managercommands.AddExpectedFailure.responder(addExpectedFailure)
 
-
     def addUnexpectedSuccess(self, testName, todo):
         """
         Add an unexpected success to the reporter.
@@ -150,7 +141,6 @@ class LocalWorkerAMP(AMP):
         return {'success': True}
 
     managercommands.AddUnexpectedSuccess.responder(addUnexpectedSuccess)
-
 
     def testWrite(self, out):
         """
@@ -162,14 +152,12 @@ class LocalWorkerAMP(AMP):
 
     managercommands.TestWrite.responder(testWrite)
 
-
     def _stopTest(self, result):
         """
         Stop the current running test case, forwarding the result.
         """
         self._result.stopTest(self._testCase)
         return result
-
 
     def run(self, testCase, result):
         """
@@ -182,13 +170,11 @@ class LocalWorkerAMP(AMP):
         d = self.callRemote(workercommands.Run, testCase=testCaseId)
         return d.addCallback(self._stopTest)
 
-
     def setTestStream(self, stream):
         """
         Set the stream used to log output from tests.
         """
         self._testStream = stream
-
 
 
 @implementer(IAddress)
@@ -197,7 +183,6 @@ class LocalWorkerAddress(object):
     A L{IAddress} implementation meant to provide stub addresses for
     L{ITransport.getPeer} and L{ITransport.getHost}.
     """
-
 
 
 @implementer(ITransport)
@@ -210,13 +195,11 @@ class LocalWorkerTransport(object):
     def __init__(self, transport):
         self._transport = transport
 
-
     def write(self, data):
         """
         Forward data to transport.
         """
         self._transport.writeToChild(_WORKER_AMP_STDIN, data)
-
 
     def writeSequence(self, sequence):
         """
@@ -225,13 +208,11 @@ class LocalWorkerTransport(object):
         for data in sequence:
             self._transport.writeToChild(_WORKER_AMP_STDIN, data)
 
-
     def loseConnection(self):
         """
         Closes the transport.
         """
         self._transport.loseConnection()
-
 
     def getHost(self):
         """
@@ -239,13 +220,11 @@ class LocalWorkerTransport(object):
         """
         return LocalWorkerAddress()
 
-
     def getPeer(self):
         """
         Return a L{LocalWorkerAddress} instance.
         """
         return LocalWorkerAddress()
-
 
 
 class LocalWorker(ProcessProtocol):
@@ -267,7 +246,6 @@ class LocalWorker(ProcessProtocol):
         self._logFile = logFile
         self.endDeferred = Deferred()
 
-
     def connectionMade(self):
         """
         When connection is made, create the AMP protocol instance.
@@ -277,16 +255,13 @@ class LocalWorker(ProcessProtocol):
             os.makedirs(self._logDirectory)
         self._outLog = open(os.path.join(self._logDirectory, 'out.log'), 'wb')
         self._errLog = open(os.path.join(self._logDirectory, 'err.log'), 'wb')
-        self._testLog = open(
-            os.path.join(self._logDirectory, self._logFile), 'w')
+        self._testLog = open(os.path.join(self._logDirectory, self._logFile), 'w')
         self._ampProtocol.setTestStream(self._testLog)
         logDirectory = self._logDirectory
-        d = self._ampProtocol.callRemote(workercommands.Start,
-                                         directory=logDirectory)
+        d = self._ampProtocol.callRemote(workercommands.Start, directory=logDirectory)
         # Ignore the potential errors, the test suite will fail properly and it
         # would just print garbage.
         d.addErrback(lambda x: None)
-
 
     def connectionLost(self, reason):
         """
@@ -297,7 +272,6 @@ class LocalWorker(ProcessProtocol):
         self._errLog.close()
         self._testLog.close()
 
-
     def processEnded(self, reason):
         """
         When the process closes, call C{connectionLost} for cleanup purposes
@@ -307,7 +281,6 @@ class LocalWorker(ProcessProtocol):
         self._ampProtocol.connectionLost(reason)
         self.endDeferred.callback(reason)
 
-
     def outReceived(self, data):
         """
         Send data received from stdout to log.
@@ -315,13 +288,11 @@ class LocalWorker(ProcessProtocol):
 
         self._outLog.write(data)
 
-
     def errReceived(self, data):
         """
         Write error data to log.
         """
         self._errLog.write(data)
-
 
     def childDataReceived(self, childFD, data):
         """

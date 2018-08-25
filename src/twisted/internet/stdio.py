@@ -28,6 +28,7 @@ from twisted.python.runtime import platform
 
 if platform.isWindows():
     from twisted.internet import _win32stdio
+
     StandardIO = _win32stdio.StandardIO
     PipeAddress = _win32stdio.Win32PipeAddress
 

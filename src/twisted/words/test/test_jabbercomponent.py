@@ -16,12 +16,14 @@ from twisted.words.protocols.jabber.jid import JID
 from twisted.words.xish import domish
 from twisted.words.xish.utility import XmlPipe
 
+
 class DummyTransport:
     def __init__(self, list):
         self.list = list
 
     def write(self, bytes):
         self.list.append(bytes)
+
 
 class ComponentInitiatingInitializerTests(unittest.TestCase):
     def setUp(self):
@@ -34,9 +36,10 @@ class ComponentInitiatingInitializerTests(unittest.TestCase):
         self.xmlstream.send = self.output.append
         self.xmlstream.connectionMade()
         self.xmlstream.dataReceived(
-                "<stream:stream xmlns='test:component' "
-                "xmlns:stream='http://etherx.jabber.org/streams' "
-                "from='example.com' id='12345' version='1.0'>")
+            "<stream:stream xmlns='test:component' "
+            "xmlns:stream='http://etherx.jabber.org/streams' "
+            "from='example.com' id='12345' version='1.0'>"
+        )
         self.xmlstream.sid = u'12345'
         self.init = component.ComponentInitiatingInitializer(self.xmlstream)
 
@@ -52,8 +55,7 @@ class ComponentInitiatingInitializerTests(unittest.TestCase):
         handshake = self.output[-1]
         self.assertEqual('handshake', handshake.name)
         self.assertEqual('test:component', handshake.uri)
-        self.assertEqual(sha1(b'12345' + b'secret').hexdigest(),
-                         unicode(handshake))
+        self.assertEqual(sha1(b'12345' + b'secret').hexdigest(), unicode(handshake))
 
         # successful authentication
 
@@ -61,6 +63,7 @@ class ComponentInitiatingInitializerTests(unittest.TestCase):
         self.xmlstream.dataReceived(handshake.toXml())
 
         return d
+
 
 class ComponentAuthTests(unittest.TestCase):
     def authPassed(self, stream):
@@ -74,12 +77,13 @@ class ComponentAuthTests(unittest.TestCase):
         xs = xmlstream.XmlStream(ca)
         xs.transport = DummyTransport(outlist)
 
-        xs.addObserver(xmlstream.STREAM_AUTHD_EVENT,
-                       self.authPassed)
+        xs.addObserver(xmlstream.STREAM_AUTHD_EVENT, self.authPassed)
 
         # Go...
         xs.connectionMade()
-        xs.dataReceived(b"<stream:stream xmlns='jabber:component:accept' xmlns:stream='http://etherx.jabber.org/streams' from='cjid' id='12345'>")
+        xs.dataReceived(
+            b"<stream:stream xmlns='jabber:component:accept' xmlns:stream='http://etherx.jabber.org/streams' from='cjid' id='12345'>"
+        )
 
         # Calculate what we expect the handshake value to be
         hv = sha1(b"12345" + b"secret").hexdigest().encode('ascii')
@@ -89,7 +93,6 @@ class ComponentAuthTests(unittest.TestCase):
         xs.dataReceived("<handshake/>")
 
         self.assertEqual(self.authComplete, True)
-
 
 
 class ServiceTests(unittest.TestCase):
@@ -103,7 +106,6 @@ class ServiceTests(unittest.TestCase):
         """
         service = component.Service()
         verifyObject(ijabber.IService, service)
-
 
 
 class JabberServiceHarness(component.Service):
@@ -156,7 +158,6 @@ class JabberServiceManagerTests(unittest.TestCase):
         self.assertEqual(True, svc.componentDisconnectedFlag)
 
 
-
 class RouterTests(unittest.TestCase):
     """
     Tests for L{component.Router}.
@@ -179,7 +180,6 @@ class RouterTests(unittest.TestCase):
         pipe.source.send(element)
         self.assertEqual([element], routed)
 
-
     def test_route(self):
         """
         Test routing of a message.
@@ -191,14 +191,12 @@ class RouterTests(unittest.TestCase):
         router.addRoute('component2.example.org', component2.sink)
 
         outgoing = []
-        component2.source.addObserver('/*',
-                                      lambda element: outgoing.append(element))
+        component2.source.addObserver('/*', lambda element: outgoing.append(element))
         stanza = domish.Element((None, 'presence'))
         stanza['from'] = 'component1.example.org'
         stanza['to'] = 'component2.example.org'
         component1.source.send(stanza)
         self.assertEqual([stanza], outgoing)
-
 
     def test_routeDefault(self):
         """
@@ -223,7 +221,6 @@ class RouterTests(unittest.TestCase):
         self.assertEqual([stanza], outgoing)
 
 
-
 class ListenComponentAuthenticatorTests(unittest.TestCase):
     """
     Tests for L{component.ListenComponentAuthenticator}.
@@ -235,13 +232,11 @@ class ListenComponentAuthenticatorTests(unittest.TestCase):
         self.xmlstream = xmlstream.XmlStream(authenticator)
         self.xmlstream.send = self.output.append
 
-
     def loseConnection(self):
         """
         Stub loseConnection because we are a transport.
         """
         self.xmlstream.connectionLost("no reason")
-
 
     def test_streamStarted(self):
         """
@@ -259,14 +254,15 @@ class ListenComponentAuthenticatorTests(unittest.TestCase):
         self.assertIdentical(None, xs.sid)
         self.assertFalse(xs._headerSent)
 
-        xs.dataReceived("<stream:stream xmlns='jabber:component:accept' "
-                         "xmlns:stream='http://etherx.jabber.org/streams' "
-                         "to='component.example.org'>")
+        xs.dataReceived(
+            "<stream:stream xmlns='jabber:component:accept' "
+            "xmlns:stream='http://etherx.jabber.org/streams' "
+            "to='component.example.org'>"
+        )
         self.assertEqual((0, 0), xs.version)
         self.assertNotIdentical(None, xs.sid)
         self.assertTrue(xs._headerSent)
         self.assertEqual(('/*', xs.authenticator.onElement), observers[-1])
-
 
     def test_streamStartedWrongNamespace(self):
         """
@@ -277,12 +273,13 @@ class ListenComponentAuthenticatorTests(unittest.TestCase):
         xs = self.xmlstream
         xs.sendStreamError = streamErrors.append
         xs.makeConnection(self)
-        xs.dataReceived("<stream:stream xmlns='jabber:client' "
-                         "xmlns:stream='http://etherx.jabber.org/streams' "
-                         "to='component.example.org'>")
+        xs.dataReceived(
+            "<stream:stream xmlns='jabber:client' "
+            "xmlns:stream='http://etherx.jabber.org/streams' "
+            "to='component.example.org'>"
+        )
         self.assertEqual(1, len(streamErrors))
         self.assertEqual('invalid-namespace', streamErrors[-1].condition)
-
 
     def test_streamStartedNoTo(self):
         """
@@ -293,11 +290,12 @@ class ListenComponentAuthenticatorTests(unittest.TestCase):
         xs = self.xmlstream
         xs.sendStreamError = streamErrors.append
         xs.makeConnection(self)
-        xs.dataReceived("<stream:stream xmlns='jabber:component:accept' "
-                         "xmlns:stream='http://etherx.jabber.org/streams'>")
+        xs.dataReceived(
+            "<stream:stream xmlns='jabber:component:accept' "
+            "xmlns:stream='http://etherx.jabber.org/streams'>"
+        )
         self.assertEqual(1, len(streamErrors))
         self.assertEqual('improper-addressing', streamErrors[-1].condition)
-
 
     def test_onElement(self):
         """
@@ -329,7 +327,6 @@ class ListenComponentAuthenticatorTests(unittest.TestCase):
         self.assertFalse(handshakes)
         self.assertEqual('not-authorized', streamErrors[-1].condition)
 
-
     def test_onHandshake(self):
         """
         Receiving a handshake matching the secret authenticates the stream.
@@ -346,7 +343,6 @@ class ListenComponentAuthenticatorTests(unittest.TestCase):
         xs.authenticator.onHandshake(theHash)
         self.assertEqual('<handshake/>', self.output[-1])
         self.assertEqual(1, len(authd))
-
 
     def test_onHandshakeWrongHash(self):
         """
@@ -369,7 +365,6 @@ class ListenComponentAuthenticatorTests(unittest.TestCase):
         self.assertEqual(0, len(authd))
 
 
-
 class XMPPComponentServerFactoryTests(unittest.TestCase):
     """
     Tests for L{component.XMPPComponentServerFactory}.
@@ -377,41 +372,34 @@ class XMPPComponentServerFactoryTests(unittest.TestCase):
 
     def setUp(self):
         self.router = component.Router()
-        self.factory = component.XMPPComponentServerFactory(self.router,
-                                                            'secret')
+        self.factory = component.XMPPComponentServerFactory(self.router, 'secret')
         self.xmlstream = self.factory.buildProtocol(None)
         self.xmlstream.thisEntity = JID('component.example.org')
-
 
     def test_makeConnection(self):
         """
         A new connection increases the stream serial count. No logs by default.
         """
-        self.xmlstream.dispatch(self.xmlstream,
-                                xmlstream.STREAM_CONNECTED_EVENT)
+        self.xmlstream.dispatch(self.xmlstream, xmlstream.STREAM_CONNECTED_EVENT)
         self.assertEqual(0, self.xmlstream.serial)
         self.assertEqual(1, self.factory.serial)
         self.assertIdentical(None, self.xmlstream.rawDataInFn)
         self.assertIdentical(None, self.xmlstream.rawDataOutFn)
-
 
     def test_makeConnectionLogTraffic(self):
         """
         Setting logTraffic should set up raw data loggers.
         """
         self.factory.logTraffic = True
-        self.xmlstream.dispatch(self.xmlstream,
-                                xmlstream.STREAM_CONNECTED_EVENT)
+        self.xmlstream.dispatch(self.xmlstream, xmlstream.STREAM_CONNECTED_EVENT)
         self.assertNotIdentical(None, self.xmlstream.rawDataInFn)
         self.assertNotIdentical(None, self.xmlstream.rawDataOutFn)
-
 
     def test_onError(self):
         """
         An observer for stream errors should trigger onError to log it.
         """
-        self.xmlstream.dispatch(self.xmlstream,
-                                xmlstream.STREAM_CONNECTED_EVENT)
+        self.xmlstream.dispatch(self.xmlstream, xmlstream.STREAM_CONNECTED_EVENT)
 
         class TestError(Exception):
             pass
@@ -420,16 +408,15 @@ class XMPPComponentServerFactoryTests(unittest.TestCase):
         self.xmlstream.dispatch(reason, xmlstream.STREAM_ERROR_EVENT)
         self.assertEqual(1, len(self.flushLoggedErrors(TestError)))
 
-
     def test_connectionInitialized(self):
         """
         Make sure a new stream is added to the routing table.
         """
         self.xmlstream.dispatch(self.xmlstream, xmlstream.STREAM_AUTHD_EVENT)
         self.assertIn('component.example.org', self.router.routes)
-        self.assertIdentical(self.xmlstream,
-                             self.router.routes['component.example.org'])
-
+        self.assertIdentical(
+            self.xmlstream, self.router.routes['component.example.org']
+        )
 
     def test_connectionLost(self):
         """

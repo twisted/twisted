@@ -14,20 +14,16 @@ from twisted.python import components
 from twisted.persisted.styles import Ephemeral
 
 
-
 class Dummy(components.Componentized):
     pass
 
-objects = [
-1,
-"hello",
-(1, "hello"),
-[1, "hello"],
-{1:"hello"},
-]
+
+objects = [1, "hello", (1, "hello"), [1, "hello"], {1: "hello"}]
+
 
 class FakeModule(object):
     pass
+
 
 class PersistTests(unittest.TestCase):
     def testStyles(self):
@@ -35,8 +31,8 @@ class PersistTests(unittest.TestCase):
             p = sob.Persistent(o, '')
             for style in 'source pickle'.split():
                 p.setStyle(style)
-                p.save(filename='persisttest.'+style)
-                o1 = sob.load('persisttest.'+style, style)
+                p.save(filename='persisttest.' + style)
+                o1 = sob.load('persisttest.' + style, style)
                 self.assertEqual(o, o1)
 
     def testStylesBeingSet(self):
@@ -45,41 +41,36 @@ class PersistTests(unittest.TestCase):
         o.setComponent(sob.IPersistable, sob.Persistent(o, 'lala'))
         for style in 'source pickle'.split():
             sob.IPersistable(o).setStyle(style)
-            sob.IPersistable(o).save(filename='lala.'+style)
-            o1 = sob.load('lala.'+style, style)
+            sob.IPersistable(o).save(filename='lala.' + style)
+            o1 = sob.load('lala.' + style, style)
             self.assertEqual(o.foo, o1.foo)
             self.assertEqual(sob.IPersistable(o1).style, style)
-
 
     def testPassphraseError(self):
         """
         Calling save() with a passphrase is an error.
         """
         p = sob.Persistant(None, 'object')
-        self.assertRaises(
-            TypeError, p.save, 'filename.pickle', passphrase='abc')
-
+        self.assertRaises(TypeError, p.save, 'filename.pickle', passphrase='abc')
 
     def testNames(self):
-        o = [1,2,3]
+        o = [1, 2, 3]
         p = sob.Persistent(o, 'object')
         for style in 'source pickle'.split():
             p.setStyle(style)
             p.save()
-            o1 = sob.load('object.ta'+style[0], style)
+            o1 = sob.load('object.ta' + style[0], style)
             self.assertEqual(o, o1)
             for tag in 'lala lolo'.split():
                 p.save(tag)
-                o1 = sob.load('object-'+tag+'.ta'+style[0], style)
+                o1 = sob.load('object-' + tag + '.ta' + style[0], style)
                 self.assertEqual(o, o1)
-
 
     def testPython(self):
         with open("persisttest.python", 'w') as f:
             f.write('foo=[1,2,3] ')
         o = sob.loadValueFromFile('persisttest.python', 'foo')
-        self.assertEqual(o, [1,2,3])
-
+        self.assertEqual(o, [1, 2, 3])
 
     def testTypeGuesser(self):
         self.assertRaises(KeyError, sob.guessType, "file.blah")
@@ -107,7 +98,9 @@ class PersistTests(unittest.TestCase):
         global mainWhileLoading
         mainWhileLoading = None
         with open(filename, "w") as f:
-            f.write(dedent("""
+            f.write(
+                dedent(
+                    """
             app = []
             import __main__
             app.append(__main__.testMainModGetattr == 1)
@@ -119,7 +112,9 @@ class PersistTests(unittest.TestCase):
                 app.append(False)
             from twisted.test import test_sob
             test_sob.mainWhileLoading = __main__
-            """))
+            """
+                )
+            )
 
         loaded = sob.load(filename, 'source')
         self.assertIsInstance(loaded, list)
@@ -128,7 +123,6 @@ class PersistTests(unittest.TestCase):
         self.assertIsInstance(mainWhileLoading, Ephemeral)
         self.assertIsInstance(mainWhileLoading.somethingElse, Ephemeral)
         del mainWhileLoading
-
 
     def testEverythingEphemeralSetattr(self):
         """

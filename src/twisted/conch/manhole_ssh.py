@@ -24,13 +24,12 @@ class _Glue:
     This should be replaced with a real class at some point, probably.
     Try not to write new code that uses it.
     """
+
     def __init__(self, **kw):
         self.__dict__.update(kw)
 
-
     def __getattr__(self, name):
         raise AttributeError(self.name, "has no attribute", name)
-
 
 
 class TerminalSessionTransport:
@@ -42,17 +41,23 @@ class TerminalSessionTransport:
         protoSession = self.proto.session
 
         self.proto.makeConnection(
-            _Glue(write=self.chainedProtocol.dataReceived,
-                  loseConnection=lambda: avatar.conn.sendClose(protoSession),
-                  name="SSH Proto Transport"))
+            _Glue(
+                write=self.chainedProtocol.dataReceived,
+                loseConnection=lambda: avatar.conn.sendClose(protoSession),
+                name="SSH Proto Transport",
+            )
+        )
 
         def loseConnection():
             self.proto.loseConnection()
 
         self.chainedProtocol.makeConnection(
-            _Glue(write=self.proto.write,
-                  loseConnection=loseConnection,
-                  name="Chained Proto Transport"))
+            _Glue(
+                write=self.proto.write,
+                loseConnection=loseConnection,
+                name="Chained Proto Transport",
+            )
+        )
 
         # XXX TODO
         # chainedProtocol is supposed to be an ITerminalTransport,
@@ -63,7 +68,6 @@ class TerminalSessionTransport:
         self.chainedProtocol.terminalProtocol.terminalSize(width, height)
 
 
-
 @implementer(iconch.ISession)
 class TerminalSession(components.Adapter):
     transportFactory = TerminalSessionTransport
@@ -72,21 +76,20 @@ class TerminalSession(components.Adapter):
     def getPty(self, term, windowSize, attrs):
         self.height, self.width = windowSize[:2]
 
-
     def openShell(self, proto):
         self.transportFactory(
-            proto, self.chainedProtocolFactory(),
+            proto,
+            self.chainedProtocolFactory(),
             iconch.IConchUser(self.original),
-            self.width, self.height)
-
+            self.width,
+            self.height,
+        )
 
     def execCommand(self, proto, cmd):
         raise econch.ConchError("Cannot execute commands")
 
-
     def closed(self):
         pass
-
 
 
 class TerminalUser(avatar.ConchUser, components.Adapter):
@@ -94,7 +97,6 @@ class TerminalUser(avatar.ConchUser, components.Adapter):
         components.Adapter.__init__(self, original)
         avatar.ConchUser.__init__(self)
         self.channelLookup[b'session'] = session.SSHSession
-
 
 
 class TerminalRealm:
@@ -117,20 +119,15 @@ class TerminalRealm:
 
         return user
 
-
     def __init__(self, transportFactory=None):
         if transportFactory is not None:
             self.transportFactory = transportFactory
 
-
     def requestAvatar(self, avatarId, mind, *interfaces):
         for i in interfaces:
             if i is iconch.IConchUser:
-                return (iconch.IConchUser,
-                        self._getAvatar(avatarId),
-                        lambda: None)
+                return (iconch.IConchUser, self._getAvatar(avatarId), lambda: None)
         raise NotImplementedError()
-
 
 
 class ConchFactory(factory.SSHFactory):

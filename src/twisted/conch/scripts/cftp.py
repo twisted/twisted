@@ -18,26 +18,32 @@ from twisted.internet import reactor, stdio, defer, utils
 from twisted.python import log, usage, failure
 from twisted.python.filepath import FilePath
 
+
 class ClientOptions(options.ConchOptions):
 
     synopsis = """Usage:   cftp [options] [user@]host
          cftp [options] [user@]host[:dir[/]]
          cftp [options] [user@]host[:file [localfile]]
 """
-    longdesc = ("cftp is a client for logging into a remote machine and "
-                "executing commands to send and receive file information")
+    longdesc = (
+        "cftp is a client for logging into a remote machine and "
+        "executing commands to send and receive file information"
+    )
 
     optParameters = [
-                    ['buffersize', 'B', 32768, 'Size of the buffer to use for sending/receiving.'],
-                    ['batchfile', 'b', None, 'File to read commands from, or \'-\' for stdin.'],
-                    ['requests', 'R', 5, 'Number of requests to make before waiting for a reply.'],
-                    ['subsystem', 's', 'sftp', 'Subsystem/server program to connect to.']]
+        ['buffersize', 'B', 32768, 'Size of the buffer to use for sending/receiving.'],
+        ['batchfile', 'b', None, 'File to read commands from, or \'-\' for stdin.'],
+        ['requests', 'R', 5, 'Number of requests to make before waiting for a reply.'],
+        ['subsystem', 's', 'sftp', 'Subsystem/server program to connect to.'],
+    ]
 
     compData = usage.Completions(
-        descriptions={
-            "buffersize": "Size of send/receive buffer (default: 32768)"},
-        extraActions=[usage.CompleteUserAtHost(),
-                      usage.CompleteFiles(descr="local file")])
+        descriptions={"buffersize": "Size of send/receive buffer (default: 32768)"},
+        extraActions=[
+            usage.CompleteUserAtHost(),
+            usage.CompleteFiles(descr="local file"),
+        ],
+    )
 
     def parseArgs(self, host, localPath=None):
         self['remotePath'] = ''
@@ -47,15 +53,16 @@ class ClientOptions(options.ConchOptions):
         self['host'] = host
         self['localPath'] = localPath
 
+
 def run():
-#    import hotshot
-#    prof = hotshot.Profile('cftp.prof')
-#    prof.start()
+    #    import hotshot
+    #    prof = hotshot.Profile('cftp.prof')
+    #    prof.start()
     args = sys.argv[1:]
-    if '-l' in args: # cvs is an idiot
+    if '-l' in args:  # cvs is an idiot
         i = args.index('-l')
-        args = args[i:i+2]+args
-        del args[i+2:i+4]
+        args = args[i : i + 2] + args
+        del args[i + 2 : i + 4]
     options = ClientOptions()
     try:
         options.parseOptions(args)
@@ -70,22 +77,27 @@ def run():
         log.discardLogs()
     doConnect(options)
     reactor.run()
+
+
 #    prof.stop()
 #    prof.close()
+
 
 def handleError():
     global exitStatus
     exitStatus = 2
     try:
         reactor.stop()
-    except: pass
+    except:
+        pass
     log.err(failure.Failure())
     raise
 
+
 def doConnect(options):
-#    log.deferr = handleError # HACK
+    #    log.deferr = handleError # HACK
     if '@' in options['host']:
-        options['user'], options['host'] = options['host'].split('@',1)
+        options['user'], options['host'] = options['host'].split('@', 1)
     host = options['host']
     if not options['user']:
         options['user'] = getpass.getuser()
@@ -101,30 +113,35 @@ def doConnect(options):
     uao = default.SSHUserAuthClient(options['user'], options, conn)
     connect.connect(host, port, options, vhk, uao).addErrback(_ebExit)
 
+
 def _ebExit(f):
-    #global exitStatus
+    # global exitStatus
     if hasattr(f.value, 'value'):
         s = f.value.value
     else:
         s = str(f)
     print(s)
-    #exitStatus = "conch: exiting with error %s" % f
+    # exitStatus = "conch: exiting with error %s" % f
     try:
         reactor.stop()
-    except: pass
+    except:
+        pass
 
-def _ignore(*args): pass
+
+def _ignore(*args):
+    pass
+
 
 class FileWrapper:
-
     def __init__(self, f):
         self.f = f
         self.total = 0.0
-        f.seek(0, 2) # seek to the end
+        f.seek(0, 2)  # seek to the end
         self.size = f.tell()
 
     def __getattr__(self, attr):
         return getattr(self.f, attr)
+
 
 class StdioClient(basic.LineReceiver):
 
@@ -135,7 +152,7 @@ class StdioClient(basic.LineReceiver):
 
     reactor = reactor
 
-    def __init__(self, client, f = None):
+    def __init__(self, client, f=None):
         self.client = client
         self.currentDirectory = ''
         self.file = f
@@ -173,14 +190,13 @@ class StdioClient(basic.LineReceiver):
             d.addCallback(self._cbCommand)
             d.addErrback(self._ebCommand)
 
-
     def _dispatchCommand(self, line):
         if ' ' in line:
             command, rest = line.split(' ', 1)
             rest = rest.lstrip()
         else:
             command, rest = line, ''
-        if command.startswith('!'): # command
+        if command.startswith('!'):  # command
             f = self.cmd_EXEC
             rest = (command[1:] + ' ' + rest).strip()
         else:
@@ -265,7 +281,7 @@ class StdioClient(basic.LineReceiver):
         mod, rest = rest.split(None, 1)
         path, rest = self._getFilename(rest)
         mod = int(mod, 8)
-        d = self.client.setAttrs(path, {'permissions':mod})
+        d = self.client.setAttrs(path, {'permissions': mod})
         d.addCallback(_ignore)
         return d
 
@@ -287,7 +303,7 @@ class StdioClient(basic.LineReceiver):
 
     def cmd_GET(self, rest):
         remote, rest = self._getFilename(rest)
-        if '*' in remote or '?' in remote: # wildcard
+        if '*' in remote or '?' in remote:  # wildcard
             if rest:
                 local, rest = self._getFilename(rest)
                 if not os.path.isdir(local):
@@ -310,7 +326,7 @@ class StdioClient(basic.LineReceiver):
         return d
 
     def _cbGetMultiple(self, files, local):
-        #if self._useProgressBar: # one at a time
+        # if self._useProgressBar: # one at a time
         # XXX this can be optimized for times w/o progress bar
         return self._cbGetMultipleNext(None, files, local)
 
@@ -362,7 +378,7 @@ class StdioClient(basic.LineReceiver):
         end = 0
         for chunk in chunks:
             if end == 'eof':
-                return # nothing more to get
+                return  # nothing more to get
             if end != chunk[0]:
                 i = chunks.index(chunk)
                 chunks.insert(i, (end, chunk[0]))
@@ -385,8 +401,7 @@ class StdioClient(basic.LineReceiver):
             lf.seek(start)
             lf.write(data)
             if len(data) != size:
-                log.msg('got less than we asked for: %i < %i' %
-                        (len(data), size))
+                log.msg('got less than we asked for: %i < %i' % (len(data), size))
                 i = chunks.index((start, start + size))
                 del chunks[i]
                 chunks.insert(i, (start, start + len(data)))
@@ -398,7 +413,7 @@ class StdioClient(basic.LineReceiver):
             return
         else:
             start, length = chunk
-        log.msg('asking for %i -> %i' % (start, start+length))
+        log.msg('asking for %i -> %i' % (start, start + length))
         d = rf.readChunk(start, length)
         d.addBoth(self._cbGetRead, rf, lf, chunks, start, length, startTime)
         return d
@@ -410,7 +425,6 @@ class StdioClient(basic.LineReceiver):
         if self.useProgressBar:
             self._writeToTransport('\n')
         return "Transferred %s to %s" % (rf.name, lf.name)
-
 
     def cmd_PUT(self, rest):
         """
@@ -443,7 +457,6 @@ class StdioClient(basic.LineReceiver):
                 remote = os.path.split(local)[1]
             return self._putSingleFile(local, remote)
 
-
     def _putSingleFile(self, local, remote):
         """
         Perform an upload for a single file.
@@ -458,7 +471,6 @@ class StdioClient(basic.LineReceiver):
         @return: A deferred which fires when transfer is done.
         """
         return self._cbPutMultipleNext(None, [local], remote, single=True)
-
 
     def _putMultipleFiles(self, files, remote):
         """
@@ -475,9 +487,7 @@ class StdioClient(basic.LineReceiver):
         """
         return self._cbPutMultipleNext(None, files, remote)
 
-
-    def _cbPutMultipleNext(
-            self, previousResult, files, remotePath, single=False):
+    def _cbPutMultipleNext(self, previousResult, files, remotePath, single=False):
         """
         Perform an upload for the next file in the list of local files.
 
@@ -530,7 +540,6 @@ class StdioClient(basic.LineReceiver):
         d.addBoth(self._cbPutMultipleNext, files, remotePath)
         return d
 
-
     def _putRemoteFile(self, localStream, remotePath):
         """
         Do an upload request.
@@ -544,16 +553,11 @@ class StdioClient(basic.LineReceiver):
         @return: A deferred which fires when transfer is done.
         """
         remote = os.path.join(self.currentDirectory, remotePath)
-        flags = (
-            filetransfer.FXF_WRITE |
-            filetransfer.FXF_CREAT |
-            filetransfer.FXF_TRUNC
-            )
+        flags = filetransfer.FXF_WRITE | filetransfer.FXF_CREAT | filetransfer.FXF_TRUNC
         d = self.client.openFile(remote, flags, {})
         d.addCallback(self._cbPutOpenFile, localStream)
         d.addErrback(self._ebCloseLf, localStream)
         return d
-
 
     def _cbPutOpenFile(self, rf, lf):
         numRequests = self.client.transport.conn.options['requests']
@@ -599,8 +603,8 @@ class StdioClient(basic.LineReceiver):
         linkpath, rest = self._getFilename(rest)
         targetpath, rest = self._getFilename(rest)
         linkpath, targetpath = map(
-                lambda x: os.path.join(self.currentDirectory, x),
-                (linkpath, targetpath))
+            lambda x: os.path.join(self.currentDirectory, x), (linkpath, targetpath)
+        )
         return self.client.makeLink(linkpath, targetpath).addCallback(_ignore)
 
     def cmd_LS(self, rest):
@@ -665,9 +669,9 @@ class StdioClient(basic.LineReceiver):
     def cmd_RENAME(self, rest):
         oldpath, rest = self._getFilename(rest)
         newpath, rest = self._getFilename(rest)
-        oldpath, newpath = map (
-                lambda x: os.path.join(self.currentDirectory, x),
-                (oldpath, newpath))
+        oldpath, newpath = map(
+            lambda x: os.path.join(self.currentDirectory, x), (oldpath, newpath)
+        )
         return self.client.renameFile(oldpath, newpath).addCallback(_ignore)
 
     def cmd_EXIT(self, ignored):
@@ -741,7 +745,7 @@ version                         Print the SFTP version.
             glob = 1
         else:
             glob = 0
-        if tail and not glob: # could be file or directory
+        if tail and not glob:  # could be file or directory
             # try directory first
             d = self.client.openDirectory(fullPath)
             d.addCallback(self._cbOpenList, '')
@@ -782,31 +786,30 @@ version                         Print the SFTP version.
     def _abbrevSize(self, size):
         # from http://mail.python.org/pipermail/python-list/1999-December/018395.html
         _abbrevs = [
-            (1<<50, 'PB'),
-            (1<<40, 'TB'),
-            (1<<30, 'GB'),
-            (1<<20, 'MB'),
-            (1<<10, 'kB'),
-            (1, 'B')
-            ]
+            (1 << 50, 'PB'),
+            (1 << 40, 'TB'),
+            (1 << 30, 'GB'),
+            (1 << 20, 'MB'),
+            (1 << 10, 'kB'),
+            (1, 'B'),
+        ]
 
         for factor, suffix in _abbrevs:
             if size > factor:
                 break
-        return '%.1f' % (size/factor) + suffix
+        return '%.1f' % (size / factor) + suffix
 
     def _abbrevTime(self, t):
-        if t > 3600: # 1 hour
+        if t > 3600:  # 1 hour
             hours = int(t / 3600)
-            t -= (3600 * hours)
+            t -= 3600 * hours
             mins = int(t / 60)
-            t -= (60 * mins)
+            t -= 60 * mins
             return "%i:%02i:%02i" % (hours, mins, t)
         else:
-            mins = int(t/60)
-            t -= (60 * mins)
+            mins = int(t / 60)
+            t -= 60 * mins
             return "%02i:%02i" % (mins, t)
-
 
     def _printProgressBar(self, f, startTime):
         """
@@ -824,8 +827,7 @@ version                         Print the SFTP version.
         diff = self.reactor.seconds() - startTime
         total = f.total
         try:
-            winSize = struct.unpack('4H',
-                fcntl.ioctl(0, tty.TIOCGWINSZ, '12345679'))
+            winSize = struct.unpack('4H', fcntl.ioctl(0, tty.TIOCGWINSZ, '12345679'))
         except IOError:
             winSize = [None, 80]
         if diff == 0.0:
@@ -841,14 +843,15 @@ version                         Print the SFTP version.
             percentage = (total / f.size) * 100
         else:
             percentage = 100
-        back = '%3i%% %s %sps %s ' % (percentage,
-                                      self._abbrevSize(total),
-                                      self._abbrevSize(speed),
-                                      self._abbrevTime(timeLeft))
+        back = '%3i%% %s %sps %s ' % (
+            percentage,
+            self._abbrevSize(total),
+            self._abbrevSize(speed),
+            self._abbrevTime(timeLeft),
+        )
         spaces = (winSize[1] - (len(front) + len(back) + 1)) * ' '
         command = '\r%s%s%s' % (front, spaces, back)
         self._writeToTransport(command)
-
 
     def _getFilename(self, line):
         """
@@ -868,11 +871,11 @@ version                         Print the SFTP version.
             ret = []
             line = list(line)
             try:
-                for i in range(1,len(line)):
+                for i in range(1, len(line)):
                     c = line[i]
                     if c == line[0]:
-                        return ''.join(ret), ''.join(line[i+1:]).lstrip()
-                    elif c == '\\': # quoted character
+                        return ''.join(ret), ''.join(line[i + 1 :]).lstrip()
+                    elif c == '\\':  # quoted character
                         del line[i]
                         if line[i] not in '\'"\\':
                             raise IndexError("bad quote: \\%s" % (line[i],))
@@ -887,11 +890,14 @@ version                         Print the SFTP version.
         else:
             return ret[0], ret[1]
 
+
 setattr(StdioClient, 'cmd_?', StdioClient.cmd_HELP)
+
 
 class SSHConnection(connection.SSHConnection):
     def serviceStarted(self):
         self.openChannel(SSHSession())
+
 
 class SSHSession(channel.SSHChannel):
 
@@ -903,8 +909,9 @@ class SSHSession(channel.SSHChannel):
             request = 'exec'
         else:
             request = 'subsystem'
-        d = self.conn.sendRequest(self, request, \
-            common.NS(self.conn.options['subsystem']), wantReply=1)
+        d = self.conn.sendRequest(
+            self, request, common.NS(self.conn.options['subsystem']), wantReply=1
+        )
         d.addCallback(self._cbSubsystem)
         d.addErrback(_ebExit)
 
@@ -920,7 +927,7 @@ class SSHSession(channel.SSHChannel):
         self.stdio = stdio.StandardIO(StdioClient(self.client, f))
 
     def extReceived(self, t, data):
-        if t==connection.EXTENDED_DATA_STDERR:
+        if t == connection.EXTENDED_DATA_STDERR:
             log.msg('got %s stderr data' % len(data))
             sys.stderr.write(data)
             sys.stderr.flush()
@@ -944,6 +951,7 @@ class SSHSession(channel.SSHChannel):
 
     def startWriting(self):
         self.stdio.resumeProducing()
+
 
 if __name__ == '__main__':
     run()

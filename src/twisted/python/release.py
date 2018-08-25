@@ -18,28 +18,29 @@ from twisted.python.compat import raw_input
 
 # errors
 
+
 class DirectoryExists(OSError):
     """
     Some directory exists when it shouldn't.
     """
-    pass
 
+    pass
 
 
 class DirectoryDoesntExist(OSError):
     """
     Some directory doesn't exist when it should.
     """
-    pass
 
+    pass
 
 
 class CommandFailed(OSError):
     pass
 
 
-
 # utilities
+
 
 def sh(command, null=True, prompt=False):
     """
@@ -56,7 +57,6 @@ def sh(command, null=True, prompt=False):
         command = "%s > /dev/null" % command
     if os.system(command) != 0:
         raise CommandFailed(command)
-
 
 
 def runChdirSafe(f, *args, **kw):

@@ -8,50 +8,55 @@ from twisted.python.compat import unicode
 
 import sys
 
+
 class ConchOptions(usage.Options):
 
-    optParameters = [['user', 'l', None, 'Log in using this user name.'],
-                     ['identity', 'i', None],
-                     ['ciphers', 'c', None],
-                     ['macs', 'm', None],
-                     ['port', 'p', None, 'Connect to this port.  Server must be on the same port.'],
-                     ['option', 'o', None, 'Ignored OpenSSH options'],
-                     ['host-key-algorithms', '', None],
-                     ['known-hosts', '', None, 'File to check for host keys'],
-                     ['user-authentications', '', None, 'Types of user authentications to use.'],
-                     ['logfile', '', None, 'File to log to, or - for stdout'],
-                   ]
+    optParameters = [
+        ['user', 'l', None, 'Log in using this user name.'],
+        ['identity', 'i', None],
+        ['ciphers', 'c', None],
+        ['macs', 'm', None],
+        ['port', 'p', None, 'Connect to this port.  Server must be on the same port.'],
+        ['option', 'o', None, 'Ignored OpenSSH options'],
+        ['host-key-algorithms', '', None],
+        ['known-hosts', '', None, 'File to check for host keys'],
+        ['user-authentications', '', None, 'Types of user authentications to use.'],
+        ['logfile', '', None, 'File to log to, or - for stdout'],
+    ]
 
-    optFlags = [['version', 'V', 'Display version number only.'],
-                ['compress', 'C', 'Enable compression.'],
-                ['log', 'v', 'Enable logging (defaults to stderr)'],
-                ['nox11', 'x', 'Disable X11 connection forwarding (default)'],
-                ['agent', 'A', 'Enable authentication agent forwarding'],
-                ['noagent', 'a', 'Disable authentication agent forwarding (default)'],
-                ['reconnect', 'r', 'Reconnect to the server if the connection is lost.'],
-               ]
+    optFlags = [
+        ['version', 'V', 'Display version number only.'],
+        ['compress', 'C', 'Enable compression.'],
+        ['log', 'v', 'Enable logging (defaults to stderr)'],
+        ['nox11', 'x', 'Disable X11 connection forwarding (default)'],
+        ['agent', 'A', 'Enable authentication agent forwarding'],
+        ['noagent', 'a', 'Disable authentication agent forwarding (default)'],
+        ['reconnect', 'r', 'Reconnect to the server if the connection is lost.'],
+    ]
 
     compData = usage.Completions(
         mutuallyExclusive=[("agent", "noagent")],
         optActions={
             "user": usage.CompleteUsernames(),
             "ciphers": usage.CompleteMultiList(
-                SSHCiphers.cipherMap.keys(),
-                descr='ciphers to choose from'),
+                SSHCiphers.cipherMap.keys(), descr='ciphers to choose from'
+            ),
             "macs": usage.CompleteMultiList(
-                SSHCiphers.macMap.keys(),
-                descr='macs to choose from'),
+                SSHCiphers.macMap.keys(), descr='macs to choose from'
+            ),
             "host-key-algorithms": usage.CompleteMultiList(
                 SSHClientTransport.supportedPublicKeys,
-                descr='host key algorithms to choose from'),
-            #"user-authentications": usage.CompleteMultiList(?
+                descr='host key algorithms to choose from',
+            ),
+            # "user-authentications": usage.CompleteMultiList(?
             # descr='user authentication types' ),
-            },
-        extraActions=[usage.CompleteUserAtHost(),
-                      usage.Completer(descr="command"),
-                      usage.Completer(descr='argument',
-                                      repeat=True)]
-        )
+        },
+        extraActions=[
+            usage.CompleteUserAtHost(),
+            usage.Completer(descr="command"),
+            usage.Completer(descr='argument', repeat=True),
+        ],
+    )
 
     def __init__(self, *args, **kw):
         usage.Options.__init__(self, *args, **kw)
@@ -69,7 +74,6 @@ class ConchOptions(usage.Options):
             if cipher not in SSHCiphers.cipherMap:
                 sys.exit("Unknown cipher type '%s'" % cipher)
         self['ciphers'] = ciphers
-
 
     def opt_macs(self, macs):
         "Specify MAC algorithms"
@@ -96,6 +100,7 @@ class ConchOptions(usage.Options):
         if isinstance(uas, unicode):
             uas = uas.encode("utf-8")
         self['user-authentications'] = uas.split(b',')
+
 
 #    def opt_compress(self):
 #        "Enable compression"

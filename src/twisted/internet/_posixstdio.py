@@ -22,8 +22,12 @@ class PipeAddress(object):
     pass
 
 
-@implementer(interfaces.ITransport, interfaces.IProducer,
-             interfaces.IConsumer, interfaces.IHalfCloseableDescriptor)
+@implementer(
+    interfaces.ITransport,
+    interfaces.IProducer,
+    interfaces.IConsumer,
+    interfaces.IHalfCloseableDescriptor,
+)
 class StandardIO(object):
 
     _reader = None
@@ -71,7 +75,6 @@ class StandardIO(object):
     def getHost(self):
         return PipeAddress()
 
-
     # Callbacks from process.ProcessReader/ProcessWriter
     def childDataReceived(self, fd, data):
         self.protocol.dataReceived(data)
@@ -111,7 +114,7 @@ class StandardIO(object):
             log.err()
 
     def _writeConnectionLost(self, reason):
-        self._writer=None
+        self._writer = None
         if self.disconnecting:
             self.connectionLost(reason)
             return
@@ -125,7 +128,7 @@ class StandardIO(object):
                 self.connectionLost(failure.Failure())
 
     def _readConnectionLost(self, reason):
-        self._reader=None
+        self._reader = None
         p = interfaces.IHalfCloseableProtocol(self.protocol, None)
         if p:
             try:

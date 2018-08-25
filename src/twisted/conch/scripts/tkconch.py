@@ -26,6 +26,7 @@ if _PY3:
 else:
     import Tkinter, tkFileDialog, tkMessageBox
 
+
 class TkConchMenu(Tkinter.Frame):
     def __init__(self, *args, **params):
         ## Standard heading: initialization
@@ -35,64 +36,91 @@ class TkConchMenu(Tkinter.Frame):
         self.localRemoteVar = Tkinter.StringVar()
         self.localRemoteVar.set('local')
 
-        Tkinter.Label(self, anchor='w', justify='left', text='Hostname').grid(column=1, row=1, sticky='w')
+        Tkinter.Label(self, anchor='w', justify='left', text='Hostname').grid(
+            column=1, row=1, sticky='w'
+        )
         self.host = Tkinter.Entry(self)
         self.host.grid(column=2, columnspan=2, row=1, sticky='nesw')
 
-        Tkinter.Label(self, anchor='w', justify='left', text='Port').grid(column=1, row=2, sticky='w')
+        Tkinter.Label(self, anchor='w', justify='left', text='Port').grid(
+            column=1, row=2, sticky='w'
+        )
         self.port = Tkinter.Entry(self)
         self.port.grid(column=2, columnspan=2, row=2, sticky='nesw')
 
-        Tkinter.Label(self, anchor='w', justify='left', text='Username').grid(column=1, row=3, sticky='w')
+        Tkinter.Label(self, anchor='w', justify='left', text='Username').grid(
+            column=1, row=3, sticky='w'
+        )
         self.user = Tkinter.Entry(self)
         self.user.grid(column=2, columnspan=2, row=3, sticky='nesw')
 
-        Tkinter.Label(self, anchor='w', justify='left', text='Command').grid(column=1, row=4, sticky='w')
+        Tkinter.Label(self, anchor='w', justify='left', text='Command').grid(
+            column=1, row=4, sticky='w'
+        )
         self.command = Tkinter.Entry(self)
         self.command.grid(column=2, columnspan=2, row=4, sticky='nesw')
 
-        Tkinter.Label(self, anchor='w', justify='left', text='Identity').grid(column=1, row=5, sticky='w')
+        Tkinter.Label(self, anchor='w', justify='left', text='Identity').grid(
+            column=1, row=5, sticky='w'
+        )
         self.identity = Tkinter.Entry(self)
         self.identity.grid(column=2, row=5, sticky='nesw')
-        Tkinter.Button(self, command=self.getIdentityFile, text='Browse').grid(column=3, row=5, sticky='nesw')
+        Tkinter.Button(self, command=self.getIdentityFile, text='Browse').grid(
+            column=3, row=5, sticky='nesw'
+        )
 
         Tkinter.Label(self, text='Port Forwarding').grid(column=1, row=6, sticky='w')
         self.forwards = Tkinter.Listbox(self, height=0, width=0)
         self.forwards.grid(column=2, columnspan=2, row=6, sticky='nesw')
         Tkinter.Button(self, text='Add', command=self.addForward).grid(column=1, row=7)
-        Tkinter.Button(self, text='Remove', command=self.removeForward).grid(column=1, row=8)
+        Tkinter.Button(self, text='Remove', command=self.removeForward).grid(
+            column=1, row=8
+        )
         self.forwardPort = Tkinter.Entry(self)
         self.forwardPort.grid(column=2, row=7, sticky='nesw')
         Tkinter.Label(self, text='Port').grid(column=3, row=7, sticky='nesw')
         self.forwardHost = Tkinter.Entry(self)
         self.forwardHost.grid(column=2, row=8, sticky='nesw')
         Tkinter.Label(self, text='Host').grid(column=3, row=8, sticky='nesw')
-        self.localForward = Tkinter.Radiobutton(self, text='Local', variable=self.localRemoteVar, value='local')
+        self.localForward = Tkinter.Radiobutton(
+            self, text='Local', variable=self.localRemoteVar, value='local'
+        )
         self.localForward.grid(column=2, row=9)
-        self.remoteForward = Tkinter.Radiobutton(self, text='Remote', variable=self.localRemoteVar, value='remote')
+        self.remoteForward = Tkinter.Radiobutton(
+            self, text='Remote', variable=self.localRemoteVar, value='remote'
+        )
         self.remoteForward.grid(column=3, row=9)
 
-        Tkinter.Label(self, text='Advanced Options').grid(column=1, columnspan=3, row=10, sticky='nesw')
+        Tkinter.Label(self, text='Advanced Options').grid(
+            column=1, columnspan=3, row=10, sticky='nesw'
+        )
 
-        Tkinter.Label(self, anchor='w', justify='left', text='Cipher').grid(column=1, row=11, sticky='w')
+        Tkinter.Label(self, anchor='w', justify='left', text='Cipher').grid(
+            column=1, row=11, sticky='w'
+        )
         self.cipher = Tkinter.Entry(self, name='cipher')
         self.cipher.grid(column=2, columnspan=2, row=11, sticky='nesw')
 
-        Tkinter.Label(self, anchor='w', justify='left', text='MAC').grid(column=1, row=12, sticky='w')
+        Tkinter.Label(self, anchor='w', justify='left', text='MAC').grid(
+            column=1, row=12, sticky='w'
+        )
         self.mac = Tkinter.Entry(self, name='mac')
         self.mac.grid(column=2, columnspan=2, row=12, sticky='nesw')
 
-        Tkinter.Label(self, anchor='w', justify='left', text='Escape Char').grid(column=1, row=13, sticky='w')
+        Tkinter.Label(self, anchor='w', justify='left', text='Escape Char').grid(
+            column=1, row=13, sticky='w'
+        )
         self.escape = Tkinter.Entry(self, name='escape')
         self.escape.grid(column=2, columnspan=2, row=13, sticky='nesw')
-        Tkinter.Button(self, text='Connect!', command=self.doConnect).grid(column=1, columnspan=3, row=14, sticky='nesw')
+        Tkinter.Button(self, text='Connect!', command=self.doConnect).grid(
+            column=1, columnspan=3, row=14, sticky='nesw'
+        )
 
         # Resize behavior(s)
         self.grid_rowconfigure(6, weight=1, minsize=64)
         self.grid_columnconfigure(2, weight=1, minsize=2)
 
         self.master.protocol("WM_DELETE_WINDOW", sys.exit)
-
 
     def getIdentityFile(self):
         r = tkFileDialog.askopenfilename()
@@ -142,7 +170,7 @@ class TkConchMenu(Tkinter.Frame):
             if escape == 'none':
                 options['escape'] = None
             elif escape[0] == '^' and len(escape) == 2:
-                options['escape'] = chr(ord(escape[1])-64)
+                options['escape'] = chr(ord(escape[1]) - 64)
             elif len(escape) == 1:
                 options['escape'] = escape
             elif finished:
@@ -152,14 +180,14 @@ class TkConchMenu(Tkinter.Frame):
         if self.identity.get():
             options.identitys.append(self.identity.get())
 
-        for line in self.forwards.get(0,Tkinter.END):
-            if line[0]=='L':
+        for line in self.forwards.get(0, Tkinter.END):
+            if line[0] == 'L':
                 options.opt_localforward(line[2:])
             else:
                 options.opt_remoteforward(line[2:])
 
         if '@' in options['host']:
-            options['user'], options['host'] = options['host'].split('@',1)
+            options['user'], options['host'] = options['host'].split('@', 1)
 
         if (not options['host'] or not options['user']) and finished:
             tkMessageBox.showerror('TkConch', 'Missing host or username.')
@@ -173,40 +201,54 @@ class TkConchMenu(Tkinter.Frame):
                 sys.stdout = realout
             else:
                 log.discardLogs()
-            log.deferr = handleError # HACK
+            log.deferr = handleError  # HACK
             if not options.identitys:
                 options.identitys = ['~/.ssh/id_rsa', '~/.ssh/id_dsa']
             host = options['host']
             port = int(options['port'] or 22)
-            log.msg((host,port))
+            log.msg((host, port))
             reactor.connectTCP(host, port, SSHClientFactory())
             frame.master.deiconify()
             frame.master.title('%s@%s - TkConch' % (options['user'], options['host']))
         else:
             self.focus()
 
+
 class GeneralOptions(usage.Options):
     synopsis = """Usage:    tkconch [options] host [command]
  """
 
-    optParameters = [['user', 'l', None, 'Log in using this user name.'],
-                    ['identity', 'i', '~/.ssh/identity', 'Identity for public key authentication'],
-                    ['escape', 'e', '~', "Set escape character; ``none'' = disable"],
-                    ['cipher', 'c', None, 'Select encryption algorithm.'],
-                    ['macs', 'm', None, 'Specify MAC algorithms for protocol version 2.'],
-                    ['port', 'p', None, 'Connect to this port.  Server must be on the same port.'],
-                    ['localforward', 'L', None, 'listen-port:host:port   Forward local port to remote address'],
-                    ['remoteforward', 'R', None, 'listen-port:host:port   Forward remote port to local address'],
-                    ]
+    optParameters = [
+        ['user', 'l', None, 'Log in using this user name.'],
+        ['identity', 'i', '~/.ssh/identity', 'Identity for public key authentication'],
+        ['escape', 'e', '~', "Set escape character; ``none'' = disable"],
+        ['cipher', 'c', None, 'Select encryption algorithm.'],
+        ['macs', 'm', None, 'Specify MAC algorithms for protocol version 2.'],
+        ['port', 'p', None, 'Connect to this port.  Server must be on the same port.'],
+        [
+            'localforward',
+            'L',
+            None,
+            'listen-port:host:port   Forward local port to remote address',
+        ],
+        [
+            'remoteforward',
+            'R',
+            None,
+            'listen-port:host:port   Forward remote port to local address',
+        ],
+    ]
 
-    optFlags = [['tty', 't', 'Tty; allocate a tty even if command is given.'],
-                ['notty', 'T', 'Do not allocate a tty.'],
-                ['version', 'V', 'Display version number only.'],
-                ['compress', 'C', 'Enable compression.'],
-                ['noshell', 'N', 'Do not execute a shell or command.'],
-                ['subsystem', 's', 'Invoke command (mandatory) as SSH2 subsystem.'],
-                ['log', 'v', 'Log to stderr'],
-                ['ansilog', 'a', 'Print the received data to stdout']]
+    optFlags = [
+        ['tty', 't', 'Tty; allocate a tty even if command is given.'],
+        ['notty', 'T', 'Do not allocate a tty.'],
+        ['version', 'V', 'Display version number only.'],
+        ['compress', 'C', 'Enable compression.'],
+        ['noshell', 'N', 'Do not execute a shell or command.'],
+        ['subsystem', 's', 'Invoke command (mandatory) as SSH2 subsystem.'],
+        ['log', 'v', 'Log to stderr'],
+        ['ansilog', 'a', 'Print the received data to stdout'],
+    ]
 
     _ciphers = transport.SSHClientTransport.supportedCiphers
     _macs = transport.SSHClientTransport.supportedMACs
@@ -217,11 +259,14 @@ class GeneralOptions(usage.Options):
             "cipher": usage.CompleteList(_ciphers),
             "macs": usage.CompleteList(_macs),
             "localforward": usage.Completer(descr="listen-port:host:port"),
-            "remoteforward": usage.Completer(descr="listen-port:host:port")},
-        extraActions=[usage.CompleteUserAtHost(),
-                      usage.Completer(descr="command"),
-                      usage.Completer(descr="argument", repeat=True)]
-        )
+            "remoteforward": usage.Completer(descr="listen-port:host:port"),
+        },
+        extraActions=[
+            usage.CompleteUserAtHost(),
+            usage.Completer(descr="command"),
+            usage.Completer(descr="argument", repeat=True),
+        ],
+    )
 
     identitys = []
     localForwards = []
@@ -231,13 +276,13 @@ class GeneralOptions(usage.Options):
         self.identitys.append(i)
 
     def opt_localforward(self, f):
-        localPort, remoteHost, remotePort = f.split(':') # doesn't do v6 yet
+        localPort, remoteHost, remotePort = f.split(':')  # doesn't do v6 yet
         localPort = int(localPort)
         remotePort = int(remotePort)
         self.localForwards.append((localPort, (remoteHost, remotePort)))
 
     def opt_remoteforward(self, f):
-        remotePort, connHost, connPort = f.split(':') # doesn't do v6 yet
+        remotePort, connHost, connPort = f.split(':')  # doesn't do v6 yet
         remotePort = int(remotePort)
         connPort = int(connPort)
         self.remoteForwards.append((remotePort, (connHost, connPort)))
@@ -253,22 +298,26 @@ class GeneralOptions(usage.Options):
             self['host'] = ''
             self['command'] = ''
 
+
 # Rest of code in "run"
 options = None
 menu = None
 exitStatus = 0
 frame = None
 
+
 def deferredAskFrame(question, echo):
     if frame.callback:
         raise ValueError("can't ask 2 questions at once!")
     d = defer.Deferred()
     resp = []
+
     def gotChar(ch, resp=resp):
-        if not ch: return
-        if ch=='\x03': # C-c
+        if not ch:
+            return
+        if ch == '\x03':  # C-c
             reactor.stop()
-        if ch=='\r':
+        if ch == '\r':
             frame.write('\r\n')
             stresp = ''.join(resp)
             del resp
@@ -279,26 +328,29 @@ def deferredAskFrame(question, echo):
             resp.append(ch)
             if echo:
                 frame.write(ch)
-        elif ord(ch) == 8 and resp: # BS
-            if echo: frame.write('\x08 \x08')
+        elif ord(ch) == 8 and resp:  # BS
+            if echo:
+                frame.write('\x08 \x08')
             resp.pop()
+
     frame.callback = gotChar
     frame.write(question)
     frame.canvas.focus_force()
     return d
 
+
 def run():
     global menu, options, frame
     args = sys.argv[1:]
-    if '-l' in args: # cvs is an idiot
+    if '-l' in args:  # cvs is an idiot
         i = args.index('-l')
-        args = args[i:i+2]+args
-        del args[i+2:i+4]
+        args = args[i : i + 2] + args
+        del args[i + 2 : i + 4]
     for arg in args[:]:
         try:
             i = args.index(arg)
-            if arg[:2] == '-o' and args[i+1][0]!='-':
-                args[i:i+2] = [] # suck on it scp
+            if arg[:2] == '-o' and args[i + 1][0] != '-':
+                args[i : i + 2] = []  # suck on it scp
         except ValueError:
             pass
     root = Tkinter.Tk()
@@ -313,9 +365,9 @@ def run():
         print('ERROR: %s' % u)
         options.opt_help()
         sys.exit(1)
-    for k,v in options.items():
+    for k, v in options.items():
         if v and hasattr(menu, k):
-            getattr(menu,k).insert(Tkinter.END, v)
+            getattr(menu, k).insert(Tkinter.END, v)
     for (p, (rh, rp)) in options.localForwards:
         menu.forwards.insert(Tkinter.END, 'L:%s:%s:%s' % (p, rh, rp))
     options.localForwards = []
@@ -323,8 +375,11 @@ def run():
         menu.forwards.insert(Tkinter.END, 'R:%s:%s:%s' % (p, rh, rp))
     options.remoteForwards = []
     frame = tkvt100.VT100Frame(root, callback=None)
-    root.geometry('%dx%d'%(tkvt100.fontWidth*frame.width+3, tkvt100.fontHeight*frame.height+3))
-    frame.pack(side = Tkinter.TOP)
+    root.geometry(
+        '%dx%d'
+        % (tkvt100.fontWidth * frame.width + 3, tkvt100.fontHeight * frame.height + 3)
+    )
+    frame.pack(side=Tkinter.TOP)
     tksupport.install(root)
     root.withdraw()
     if (options['host'] and options['user']) or '@' in options['host']:
@@ -334,13 +389,16 @@ def run():
     reactor.run()
     sys.exit(exitStatus)
 
+
 def handleError():
     from twisted.python import failure
+
     global exitStatus
     exitStatus = 2
     log.err(failure.Failure())
     reactor.stop()
     raise
+
 
 class SSHClientFactory(protocol.ClientFactory):
     noisy = 1
@@ -352,17 +410,26 @@ class SSHClientFactory(protocol.ClientFactory):
         return SSHClientTransport()
 
     def clientConnectionFailed(self, connector, reason):
-        tkMessageBox.showwarning('TkConch','Connection Failed, Reason:\n %s: %s' % (reason.type, reason.value))
+        tkMessageBox.showwarning(
+            'TkConch',
+            'Connection Failed, Reason:\n %s: %s' % (reason.type, reason.value),
+        )
+
 
 class SSHClientTransport(transport.SSHClientTransport):
-
     def receiveError(self, code, desc):
         global exitStatus
-        exitStatus = 'conch:\tRemote side disconnected with error code %i\nconch:\treason: %s' % (code, desc)
+        exitStatus = (
+            'conch:\tRemote side disconnected with error code %i\nconch:\treason: %s'
+            % (code, desc)
+        )
 
     def sendDisconnect(self, code, reason):
         global exitStatus
-        exitStatus = 'conch:\tSending disconnect with error code %i\nconch:\treason: %s' % (code, reason)
+        exitStatus = (
+            'conch:\tSending disconnect with error code %i\nconch:\treason: %s'
+            % (code, reason)
+        )
         transport.SSHClientTransport.sendDisconnect(self, code, reason)
 
     def receiveDebug(self, alwaysDisplay, message, lang):
@@ -371,43 +438,48 @@ class SSHClientTransport(transport.SSHClientTransport):
             log.msg('Received Debug Message: %s' % message)
 
     def verifyHostKey(self, pubKey, fingerprint):
-        #d = defer.Deferred()
-        #d.addCallback(lambda x:defer.succeed(1))
-        #d.callback(2)
-        #return d
+        # d = defer.Deferred()
+        # d.addCallback(lambda x:defer.succeed(1))
+        # d.callback(2)
+        # return d
         goodKey = isInKnownHosts(options['host'], pubKey, {'known-hosts': None})
-        if goodKey == 1: # good key
+        if goodKey == 1:  # good key
             return defer.succeed(1)
-        elif goodKey == 2: # AAHHHHH changed
+        elif goodKey == 2:  # AAHHHHH changed
             return defer.fail(error.ConchError('bad host key'))
         else:
             if options['host'] == self.transport.getPeer().host:
                 host = options['host']
                 khHost = options['host']
             else:
-                host = '%s (%s)' % (options['host'],
-                                    self.transport.getPeer().host)
-                khHost = '%s,%s' % (options['host'],
-                                    self.transport.getPeer().host)
+                host = '%s (%s)' % (options['host'], self.transport.getPeer().host)
+                khHost = '%s,%s' % (options['host'], self.transport.getPeer().host)
             keyType = common.getNS(pubKey)[0]
             ques = """The authenticity of host '%s' can't be established.\r
-%s key fingerprint is %s.""" % (host,
-                                {b'ssh-dss':'DSA', b'ssh-rsa':'RSA'}[keyType],
-                                fingerprint)
-            ques+='\r\nAre you sure you want to continue connecting (yes/no)? '
-            return deferredAskFrame(ques, 1).addCallback(self._cbVerifyHostKey, pubKey, khHost, keyType)
+%s key fingerprint is %s.""" % (
+                host,
+                {b'ssh-dss': 'DSA', b'ssh-rsa': 'RSA'}[keyType],
+                fingerprint,
+            )
+            ques += '\r\nAre you sure you want to continue connecting (yes/no)? '
+            return deferredAskFrame(ques, 1).addCallback(
+                self._cbVerifyHostKey, pubKey, khHost, keyType
+            )
 
     def _cbVerifyHostKey(self, ans, pubKey, khHost, keyType):
         if ans.lower() not in ('yes', 'no'):
-            return deferredAskFrame("Please type  'yes' or 'no': ",1).addCallback(self._cbVerifyHostKey, pubKey, khHost, keyType)
+            return deferredAskFrame("Please type  'yes' or 'no': ", 1).addCallback(
+                self._cbVerifyHostKey, pubKey, khHost, keyType
+            )
         if ans.lower() == 'no':
             frame.write('Host key verification failed.\r\n')
             raise error.ConchError('bad host key')
         try:
             frame.write(
                 "Warning: Permanently added '%s' (%s) to the list of "
-                "known hosts.\r\n" %
-                (khHost, {b'ssh-dss':'DSA', b'ssh-rsa':'RSA'}[keyType]))
+                "known hosts.\r\n"
+                % (khHost, {b'ssh-dss': 'DSA', b'ssh-rsa': 'RSA'}[keyType])
+            )
             with open(os.path.expanduser('~/.ssh/known_hosts'), 'a') as known_hosts:
                 encodedKey = base64.encodestring(pubKey).replace(b'\n', b'')
                 known_hosts.write('\n%s %s %s' % (khHost, keyType, encodedKey))
@@ -422,13 +494,14 @@ class SSHClientTransport(transport.SSHClientTransport):
             user = getpass.getuser()
         self.requestService(SSHUserAuthClient(user, SSHConnection()))
 
+
 class SSHUserAuthClient(userauth.SSHUserAuthClient):
     usedFiles = []
 
-    def getPassword(self, prompt = None):
+    def getPassword(self, prompt=None):
         if not prompt:
             prompt = "%s@%s's password: " % (self.user, options['host'])
-        return deferredAskFrame(prompt,0)
+        return deferredAskFrame(prompt, 0)
 
     def getPublicKey(self):
         files = [x for x in options.identitys if x not in self.usedFiles]
@@ -444,7 +517,7 @@ class SSHUserAuthClient(userauth.SSHUserAuthClient):
         try:
             return keys.Key.fromFile(file).blob()
         except:
-            return self.getPublicKey() # try again
+            return self.getPublicKey()  # try again
 
     def getPrivateKey(self):
         file = os.path.expanduser(self.usedFiles[-1])
@@ -454,19 +527,21 @@ class SSHUserAuthClient(userauth.SSHUserAuthClient):
             return defer.succeed(keys.Key.fromFile(file).keyObject)
         except keys.BadKeyError as e:
             if e.args[0] == 'encrypted key with no password':
-                prompt = "Enter passphrase for key '%s': " % \
-                       self.usedFiles[-1]
+                prompt = "Enter passphrase for key '%s': " % self.usedFiles[-1]
                 return deferredAskFrame(prompt, 0).addCallback(self._cbGetPrivateKey, 0)
+
     def _cbGetPrivateKey(self, ans, count):
         file = os.path.expanduser(self.usedFiles[-1])
         try:
-            return keys.Key.fromFile(file, password = ans).keyObject
+            return keys.Key.fromFile(file, password=ans).keyObject
         except keys.BadKeyError:
             if count == 2:
                 raise
-            prompt = "Enter passphrase for key '%s': " % \
-                   self.usedFiles[-1]
-            return deferredAskFrame(prompt, 0).addCallback(self._cbGetPrivateKey, count+1)
+            prompt = "Enter passphrase for key '%s': " % self.usedFiles[-1]
+            return deferredAskFrame(prompt, 0).addCallback(
+                self._cbGetPrivateKey, count + 1
+            )
+
 
 class SSHConnection(connection.SSHConnection):
     def serviceStarted(self):
@@ -474,26 +549,29 @@ class SSHConnection(connection.SSHConnection):
             self.openChannel(SSHSession())
         if options.localForwards:
             for localPort, hostport in options.localForwards:
-                reactor.listenTCP(localPort,
-                            forwarding.SSHListenForwardingFactory(self,
-                                hostport,
-                                forwarding.SSHListenClientForwardingChannel))
+                reactor.listenTCP(
+                    localPort,
+                    forwarding.SSHListenForwardingFactory(
+                        self, hostport, forwarding.SSHListenClientForwardingChannel
+                    ),
+                )
         if options.remoteForwards:
             for remotePort, hostport in options.remoteForwards:
-                log.msg('asking for remote forwarding for %s:%s' %
-                        (remotePort, hostport))
-                data = forwarding.packGlobal_tcpip_forward(
-                    ('0.0.0.0', remotePort))
+                log.msg(
+                    'asking for remote forwarding for %s:%s' % (remotePort, hostport)
+                )
+                data = forwarding.packGlobal_tcpip_forward(('0.0.0.0', remotePort))
                 self.sendGlobalRequest('tcpip-forward', data)
                 self.remoteForwards[remotePort] = hostport
+
 
 class SSHSession(channel.SSHChannel):
 
     name = b'session'
 
     def channelOpen(self, foo):
-        #global globalSession
-        #globalSession = self
+        # global globalSession
+        # globalSession = self
         # turn off local echo
         self.escapeMode = 1
         c = session.SSHSessionClient()
@@ -505,45 +583,43 @@ class SSHSession(channel.SSHChannel):
         frame.callback = c.dataReceived
         frame.canvas.focus_force()
         if options['subsystem']:
-            self.conn.sendRequest(self, b'subsystem', \
-                common.NS(options['command']))
+            self.conn.sendRequest(self, b'subsystem', common.NS(options['command']))
         elif options['command']:
             if options['tty']:
                 term = os.environ.get('TERM', 'xterm')
-                #winsz = fcntl.ioctl(fd, tty.TIOCGWINSZ, '12345678')
-                winSize = (25,80,0,0) #struct.unpack('4H', winsz)
+                # winsz = fcntl.ioctl(fd, tty.TIOCGWINSZ, '12345678')
+                winSize = (25, 80, 0, 0)  # struct.unpack('4H', winsz)
                 ptyReqData = session.packRequest_pty_req(term, winSize, '')
                 self.conn.sendRequest(self, b'pty-req', ptyReqData)
-            self.conn.sendRequest(self, 'exec', \
-                common.NS(options['command']))
+            self.conn.sendRequest(self, 'exec', common.NS(options['command']))
         else:
             if not options['notty']:
                 term = os.environ.get('TERM', 'xterm')
-                #winsz = fcntl.ioctl(fd, tty.TIOCGWINSZ, '12345678')
-                winSize = (25,80,0,0) #struct.unpack('4H', winsz)
+                # winsz = fcntl.ioctl(fd, tty.TIOCGWINSZ, '12345678')
+                winSize = (25, 80, 0, 0)  # struct.unpack('4H', winsz)
                 ptyReqData = session.packRequest_pty_req(term, winSize, '')
                 self.conn.sendRequest(self, b'pty-req', ptyReqData)
             self.conn.sendRequest(self, b'shell', b'')
         self.conn.transport.transport.setTcpNoDelay(1)
 
     def handleInput(self, char):
-        #log.msg('handling %s' % repr(char))
+        # log.msg('handling %s' % repr(char))
         if char in ('\n', '\r'):
             self.escapeMode = 1
             self.write(char)
         elif self.escapeMode == 1 and char == options['escape']:
             self.escapeMode = 2
         elif self.escapeMode == 2:
-            self.escapeMode = 1 # so we can chain escapes together
-            if char == '.': # disconnect
+            self.escapeMode = 1  # so we can chain escapes together
+            if char == '.':  # disconnect
                 log.msg('disconnecting from escape')
                 reactor.stop()
                 return
-            elif char == '\x1a': # ^Z, suspend
+            elif char == '\x1a':  # ^Z, suspend
                 # following line courtesy of Erwin@freenode
                 os.kill(os.getpid(), signal.SIGSTOP)
                 return
-            elif char == 'R': # rekey connection
+            elif char == 'R':  # rekey connection
                 log.msg('rekeying connection')
                 self.conn.transport.sendKexInit()
                 return
@@ -560,7 +636,7 @@ class SSHSession(channel.SSHChannel):
         frame.write(data)
 
     def extReceived(self, t, data):
-        if t==connection.EXTENDED_DATA_STDERR:
+        if t == connection.EXTENDED_DATA_STDERR:
             log.msg('got %s stderr data' % len(data))
             sys.stderr.write(data)
             sys.stderr.flush()
@@ -571,7 +647,7 @@ class SSHSession(channel.SSHChannel):
 
     def closed(self):
         log.msg('closed %s' % self)
-        if len(self.conn.channels) == 1: # just us left
+        if len(self.conn.channels) == 1:  # just us left
             reactor.stop()
 
     def request_exit_status(self, data):
@@ -582,5 +658,6 @@ class SSHSession(channel.SSHChannel):
     def sendEOF(self):
         self.conn.sendEOF(self)
 
-if __name__=="__main__":
+
+if __name__ == "__main__":
     run()

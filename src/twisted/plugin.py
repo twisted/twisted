@@ -17,16 +17,20 @@ import sys
 
 from zope.interface import Interface, providedBy
 
+
 def _determinePickleModule():
     """
     Determine which 'pickle' API module to use.
     """
     try:
         import cPickle
+
         return cPickle
     except ImportError:
         import pickle
+
         return pickle
+
 
 pickle = _determinePickleModule()
 
@@ -35,7 +39,6 @@ from twisted.python.reflect import namedAny
 from twisted.python import log
 from twisted.python.modules import getModule
 from twisted.python.compat import iteritems
-
 
 
 class IPlugin(Interface):
@@ -48,7 +51,6 @@ class IPlugin(Interface):
     """
 
 
-
 class CachedPlugin(object):
     def __init__(self, dropin, name, description, provided):
         self.dropin = dropin
@@ -59,8 +61,10 @@ class CachedPlugin(object):
 
     def __repr__(self):
         return '<CachedPlugin %r/%r (provides %r)>' % (
-            self.name, self.dropin.moduleName,
-            ', '.join([i.__name__ for i in self.provided]))
+            self.name,
+            self.dropin.moduleName,
+            ', '.join([i.__name__ for i in self.provided]),
+        )
 
     def load(self):
         return namedAny(self.dropin.moduleName + '.' + self.name)
@@ -75,7 +79,6 @@ class CachedPlugin(object):
 
     # backwards compat HOORJ
     getComponent = __conform__
-
 
 
 class CachedDropin(object):
@@ -95,16 +98,15 @@ class CachedDropin(object):
     @ivar plugins: The L{CachedPlugin} instances which were loaded from this
         dropin.
     """
+
     def __init__(self, moduleName, description):
         self.moduleName = moduleName
         self.description = description
         self.plugins = []
 
 
-
 def _generateCacheEntry(provider):
-    dropin = CachedDropin(provider.__name__,
-                          provider.__doc__)
+    dropin = CachedDropin(provider.__name__, provider.__doc__)
     for k, v in iteritems(provider.__dict__):
         plugin = IPlugin(v, None)
         if plugin is not None:
@@ -112,15 +114,16 @@ def _generateCacheEntry(provider):
             CachedPlugin(dropin, k, v.__doc__, list(providedBy(plugin)))
     return dropin
 
+
 try:
     fromkeys = dict.fromkeys
 except AttributeError:
+
     def fromkeys(keys, value=None):
         d = {}
         for k in keys:
             d[k] = value
         return d
-
 
 
 def getCache(module):
@@ -164,8 +167,9 @@ def getCache(module):
         for pluginModule in bucket:
             pluginKey = pluginModule.name.split('.')[-1]
             existingKeys[pluginKey] = True
-            if ((pluginKey not in dropinDotCache) or
-                (pluginModule.filePath.getModificationTime() >= lastCached)):
+            if (pluginKey not in dropinDotCache) or (
+                pluginModule.filePath.getModificationTime() >= lastCached
+            ):
                 needsWrite = True
                 try:
                     provider = pluginModule.load()
@@ -187,13 +191,15 @@ def getCache(module):
                 log.msg(
                     format=(
                         "Unable to write to plugin cache %(path)s: error "
-                        "number %(errno)d"),
-                    path=dropinPath.path, errno=e.errno)
+                        "number %(errno)d"
+                    ),
+                    path=dropinPath.path,
+                    errno=e.errno,
+                )
             except:
                 log.err(None, "Unexpected error while writing cache file")
         allCachesCombined.update(dropinDotCache)
     return allCachesCombined
-
 
 
 def getPlugins(interface, package=None):
@@ -251,9 +257,9 @@ def pluginPackagePaths(name):
     # supplementary plugin directory.
     return [
         os.path.abspath(os.path.join(x, *package))
-        for x
-        in sys.path
-        if
-        not os.path.exists(os.path.join(x, *package + ['__init__.py']))]
+        for x in sys.path
+        if not os.path.exists(os.path.join(x, *package + ['__init__.py']))
+    ]
+
 
 __all__ = ['getPlugins', 'pluginPackagePaths']

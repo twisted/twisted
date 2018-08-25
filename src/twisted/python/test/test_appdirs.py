@@ -19,9 +19,9 @@ class AppdirsTests(unittest.TestCase):
     """
     Tests for L{_appdirs}.
     """
+
     if not _appdirs:
         skip = "appdirs package not installed"
-
 
     def test_moduleName(self):
         """
@@ -31,7 +31,6 @@ class AppdirsTests(unittest.TestCase):
         """
         res = _appdirs.getDataDirectory()
         self.assertTrue(res.endswith("twisted.python.test.test_appdirs"))
-
 
     def test_manual(self):
         """

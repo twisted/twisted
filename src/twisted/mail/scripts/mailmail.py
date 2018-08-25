@@ -12,6 +12,7 @@ import email.utils
 import os
 import sys
 import getpass
+
 try:
     # Python 3
     from configparser import ConfigParser
@@ -43,7 +44,6 @@ _logObserver = textFileLogObserver(sys.stderr)
 _log = Logger(observer=_logObserver)
 
 
-
 class Options:
     """
     Store the values of the parsed command-line options to the I{mailmail}
@@ -60,7 +60,6 @@ class Options:
     """
 
 
-
 def getlogin():
     try:
         return os.getlogin()
@@ -69,7 +68,6 @@ def getlogin():
 
 
 _unsupportedOption = SystemExit("Unsupported option.")
-
 
 
 def parseOptions(argv):
@@ -140,13 +138,7 @@ def parseOptions(argv):
         o.recipientsFromHeaders = False
         o.exludeAddresses = []
 
-    requiredHeaders = {
-        'from': [],
-        'to': [],
-        'cc': [],
-        'bcc': [],
-        'date': [],
-    }
+    requiredHeaders = {'from': [], 'to': [], 'cc': [], 'bcc': [], 'date': []}
 
     buffer = NativeStringIO()
     while 1:
@@ -159,9 +151,7 @@ def parseOptions(argv):
 
         hdr = hdrs[0].lower()
         if o.recipientsFromHeaders and hdr in ('to', 'cc', 'bcc'):
-            o.to.extend([
-                email.utils.parseaddr(hdrs[1])[1]
-            ])
+            o.to.extend([email.utils.parseaddr(hdrs[1])[1]])
             if hdr == 'bcc':
                 write = 0
         elif hdr == 'from':
@@ -196,7 +186,6 @@ def parseOptions(argv):
     return o
 
 
-
 class Configuration:
     """
 
@@ -224,6 +213,7 @@ class Configuration:
     @ivar domain: L{None} or the hostname with which to identify ourselves when
     connecting to an MTA.
     """
+
     def __init__(self):
         self.allowUIDs = []
         self.denyUIDs = []
@@ -237,7 +227,6 @@ class Configuration:
         self.domain = None
 
         self.defaultAccess = True
-
 
 
 def loadConfig(path):
@@ -280,13 +269,13 @@ def loadConfig(path):
                                 "Illegal {prefix}ID in "
                                 "[{section}] section: {sectionID}",
                                 prefix=section[0].upper(),
-                                section=section, sectionID=sectionID)
+                                section=section,
+                                sectionID=sectionID,
+                            )
                         else:
                             L.append(sectionID)
             order = p.get(section, 'order')
-            order = [s.split()
-                     for s in [s.lower()
-                               for s in order.split(',')]]
+            order = [s.split() for s in [s.lower() for s in order.split(',')]]
             if order[0] == 'allow':
                 setattr(c, section, 'allow')
             else:
@@ -296,8 +285,7 @@ def loadConfig(path):
         for (host, up) in p.items('identity'):
             parts = up.split(':', 1)
             if len(parts) != 2:
-                _log.error("Illegal entry in [identity] section: {section}",
-                           section=up)
+                _log.error("Illegal entry in [identity] section: {section}", section=up)
                 continue
             c.identities[host] = parts
 
@@ -310,18 +298,17 @@ def loadConfig(path):
     return c
 
 
-
 def success(result):
     reactor.stop()
 
 
-
 failed = None
+
+
 def failure(f):
     global failed
     reactor.stop()
     failed = f
-
 
 
 def sendmail(host, options, ident):
@@ -330,17 +317,16 @@ def sendmail(host, options, ident):
     reactor.run()
 
 
-
 def senderror(failure, options):
     recipient = [options.sender]
     sender = '"Internally Generated Message ({})"<postmaster@{}>'.format(
-             sys.argv[0], smtp.DNSNAME.decode("ascii"))
+        sys.argv[0], smtp.DNSNAME.decode("ascii")
+    )
     error = NativeStringIO()
     failure.printTraceback(file=error)
     body = NativeStringIO(ERROR_FMT % error.getvalue())
     d = smtp.sendmail('localhost', sender, recipient, body)
     d.addBoth(lambda _: reactor.stop())
-
 
 
 def deny(conf):
@@ -370,7 +356,6 @@ def deny(conf):
             return True
 
     return not conf.defaultAccess
-
 
 
 def run():

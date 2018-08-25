@@ -19,11 +19,8 @@ from zope.interface import Interface, implementer
 
 crippled = False
 deprecatedModuleAttribute(
-    Version("Twisted", 13, 1, 0),
-    "crippled is always False",
-    __name__,
-    "crippled")
-
+    Version("Twisted", 13, 1, 0), "crippled is always False", __name__, "crippled"
+)
 
 
 class ILookupTable(Interface):
@@ -37,7 +34,6 @@ class ILookupTable(Interface):
         """
 
 
-
 class IMappingTable(Interface):
     """
     Interface for character mapping classes.
@@ -49,18 +45,14 @@ class IMappingTable(Interface):
         """
 
 
-
 @implementer(ILookupTable)
 class LookupTableFromFunction:
-
     def __init__(self, in_table_function):
         self.lookup = in_table_function
 
 
-
 @implementer(ILookupTable)
 class LookupTable:
-
     def __init__(self, table):
         self._table = table
 
@@ -68,18 +60,14 @@ class LookupTable:
         return c in self._table
 
 
-
 @implementer(IMappingTable)
 class MappingTableFromFunction:
-
     def __init__(self, map_table_function):
         self.map = map_table_function
 
 
-
 @implementer(IMappingTable)
 class EmptyMappingTable:
-
     def __init__(self, in_table_function):
         self._in_table_function = in_table_function
 
@@ -90,10 +78,15 @@ class EmptyMappingTable:
             return c
 
 
-
 class Profile:
-    def __init__(self, mappings=[],  normalize=True, prohibiteds=[],
-                       check_unassigneds=True, check_bidi=True):
+    def __init__(
+        self,
+        mappings=[],
+        normalize=True,
+        prohibiteds=[],
+        check_unassigneds=True,
+        check_bidi=True,
+    ):
         self.mappings = mappings
         self.normalize = normalize
         self.prohibiteds = prohibiteds
@@ -151,8 +144,9 @@ class Profile:
         if found_LCat and found_RandALCat:
             raise UnicodeError("Violation of BIDI Requirement 2")
 
-        if found_RandALCat and not (stringprep.in_table_d1(string[0]) and
-                                    stringprep.in_table_d1(string[-1])):
+        if found_RandALCat and not (
+            stringprep.in_table_d1(string[0]) and stringprep.in_table_d1(string[-1])
+        ):
             raise UnicodeError("Violation of BIDI Requirement 3")
 
 
@@ -179,11 +173,16 @@ class NamePrep:
     """
 
     # Prohibited characters.
-    prohibiteds = [unichr(n) for n in chain(range(0x00, 0x2c + 1),
-                                            range(0x2e, 0x2f + 1),
-                                            range(0x3a, 0x40 + 1),
-                                            range(0x5b, 0x60 + 1),
-                                            range(0x7b, 0x7f + 1))]
+    prohibiteds = [
+        unichr(n)
+        for n in chain(
+            range(0x00, 0x2c + 1),
+            range(0x2e, 0x2f + 1),
+            range(0x3a, 0x40 + 1),
+            range(0x5b, 0x60 + 1),
+            range(0x7b, 0x7f + 1),
+        )
+    ]
 
     def prepare(self, string):
         result = []
@@ -203,8 +202,8 @@ class NamePrep:
 
     def check_prohibiteds(self, string):
         for c in string:
-           if c in self.prohibiteds:
-               raise UnicodeError("Invalid character %s" % repr(c))
+            if c in self.prohibiteds:
+                raise UnicodeError("Invalid character %s" % repr(c))
 
     def nameprep(self, label):
         label = idna.nameprep(label)
@@ -231,14 +230,26 @@ C_9 = LookupTableFromFunction(stringprep.in_table_c9)
 B_1 = EmptyMappingTable(stringprep.in_table_b1)
 B_2 = MappingTableFromFunction(stringprep.map_table_b2)
 
-nodeprep = Profile(mappings=[B_1, B_2],
-                   prohibiteds=[C_11, C_12, C_21, C_22,
-                                C_3, C_4, C_5, C_6, C_7, C_8, C_9,
-                                LookupTable([u'"', u'&', u"'", u'/',
-                                             u':', u'<', u'>', u'@'])])
+nodeprep = Profile(
+    mappings=[B_1, B_2],
+    prohibiteds=[
+        C_11,
+        C_12,
+        C_21,
+        C_22,
+        C_3,
+        C_4,
+        C_5,
+        C_6,
+        C_7,
+        C_8,
+        C_9,
+        LookupTable([u'"', u'&', u"'", u'/', u':', u'<', u'>', u'@']),
+    ],
+)
 
-resourceprep = Profile(mappings=[B_1,],
-                       prohibiteds=[C_12, C_21, C_22,
-                                    C_3, C_4, C_5, C_6, C_7, C_8, C_9])
+resourceprep = Profile(
+    mappings=[B_1], prohibiteds=[C_12, C_21, C_22, C_3, C_4, C_5, C_6, C_7, C_8, C_9]
+)
 
 nameprep = NamePrep()

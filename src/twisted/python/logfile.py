@@ -17,7 +17,6 @@ from twisted.python._oldstyle import _oldStyle
 from twisted.python.compat import unicode
 
 
-
 @_oldStyle
 class BaseLogFile:
     """
@@ -44,16 +43,14 @@ class BaseLogFile:
             self.defaultMode = defaultMode
         self._openFile()
 
-
     def fromFullPath(cls, filename, *args, **kwargs):
         """
         Construct a log file from a full file path.
         """
         logPath = os.path.abspath(filename)
-        return cls(os.path.basename(logPath),
-                   os.path.dirname(logPath), *args, **kwargs)
-    fromFullPath = classmethod(fromFullPath)
+        return cls(os.path.basename(logPath), os.path.dirname(logPath), *args, **kwargs)
 
+    fromFullPath = classmethod(fromFullPath)
 
     def shouldRotate(self):
         """
@@ -61,7 +58,6 @@ class BaseLogFile:
         should be rotated.
         """
         raise NotImplementedError
-
 
     def _openFile(self):
         """
@@ -90,7 +86,6 @@ class BaseLogFile:
                 # Probably /dev/null or something?
                 pass
 
-
     def write(self, data):
         """
         Write some data to the file.
@@ -105,13 +100,11 @@ class BaseLogFile:
             data = data.encode('utf8')
         self._file.write(data)
 
-
     def flush(self):
         """
         Flush the file.
         """
         self._file.flush()
-
 
     def close(self):
         """
@@ -123,7 +116,6 @@ class BaseLogFile:
         self._file.close()
         self._file = None
 
-
     def reopen(self):
         """
         Reopen the log file. This is mainly useful if you use an external log
@@ -134,7 +126,6 @@ class BaseLogFile:
         """
         self.close()
         self._openFile()
-
 
     def getCurrentLog(self):
         """
@@ -149,8 +140,15 @@ class LogFile(BaseLogFile):
 
     A rotateLength of None disables automatic log rotation.
     """
-    def __init__(self, name, directory, rotateLength=1000000, defaultMode=None,
-                 maxRotatedFiles=None):
+
+    def __init__(
+        self,
+        name,
+        directory,
+        rotateLength=1000000,
+        defaultMode=None,
+        maxRotatedFiles=None,
+    ):
         """
         Create a log file rotating on length.
 
@@ -237,13 +235,14 @@ class LogFile(BaseLogFile):
         del state["size"]
         return state
 
-threadable.synchronize(LogFile)
 
+threadable.synchronize(LogFile)
 
 
 class DailyLogFile(BaseLogFile):
     """A log file that is rotated daily (at or after midnight localtime)
     """
+
     def _openFile(self):
         BaseLogFile._openFile(self)
         self.lastDate = self.toDate(os.stat(self.path)[8])
@@ -306,6 +305,7 @@ class DailyLogFile(BaseLogFile):
         state = BaseLogFile.__getstate__(self)
         del state["lastDate"]
         return state
+
 
 threadable.synchronize(DailyLogFile)
 

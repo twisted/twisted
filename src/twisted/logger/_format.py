@@ -18,7 +18,6 @@ from ._flatten import flatFormat, aFormatter
 timeFormatRFC3339 = "%Y-%m-%dT%H:%M:%S%z"
 
 
-
 def formatEvent(event):
     """
     Formats an event as a L{unicode}, using the format in
@@ -35,12 +34,8 @@ def formatEvent(event):
     @rtype: L{unicode}
     """
     return eventAsText(
-        event,
-        includeTraceback=False,
-        includeTimestamp=False,
-        includeSystem=False,
+        event, includeTraceback=False, includeTimestamp=False, includeSystem=False
     )
-
 
 
 def formatUnformattableEvent(event, error):
@@ -58,9 +53,8 @@ def formatUnformattableEvent(event, error):
     @rtype: L{unicode}
     """
     try:
-        return (
-            u"Unable to format event {event!r}: {error}"
-            .format(event=event, error=error)
+        return u"Unable to format event {event!r}: {error}".format(
+            event=event, error=error
         )
     except BaseException:
         # Yikes, something really nasty happened.
@@ -78,10 +72,10 @@ def formatUnformattableEvent(event, error):
         return (
             u"MESSAGE LOST: unformattable object logged: {error}\n"
             u"Recoverable data: {text}\n"
-            u"Exception during formatting:\n{failure}"
-            .format(error=safe_repr(error), failure=failure, text=text)
+            u"Exception during formatting:\n{failure}".format(
+                error=safe_repr(error), failure=failure, text=text
+            )
         )
-
 
 
 def formatTime(when, timeFormat=timeFormatRFC3339, default=u"-"):
@@ -112,13 +106,12 @@ def formatTime(when, timeFormat=timeFormatRFC3339, default=u"-"):
     @return: A formatted time.
     @rtype: L{unicode}
     """
-    if (timeFormat is None or when is None):
+    if timeFormat is None or when is None:
         return default
     else:
         tz = FixedOffsetTimeZone.fromLocalTimeStamp(when)
         datetime = DateTime.fromtimestamp(when, tz)
         return unicode(datetime.strftime(timeFormat))
-
 
 
 def formatEventAsClassicLogText(event, formatTime=formatTime):
@@ -179,7 +172,6 @@ def formatEventAsClassicLogText(event, formatTime=formatTime):
     return eventText + u"\n"
 
 
-
 class CallMapping(object):
     """
     Read-only mapping that turns a C{()}-suffix in key names into an invocation
@@ -187,13 +179,13 @@ class CallMapping(object):
 
     Implementation support for L{formatWithCall}.
     """
+
     def __init__(self, submapping):
         """
         @param submapping: Another read-only mapping which will be used to look
             up items.
         """
         self._submapping = submapping
-
 
     def __getitem__(self, key):
         """
@@ -206,7 +198,6 @@ class CallMapping(object):
         if callit:
             value = value()
         return value
-
 
 
 def formatWithCall(formatString, mapping):
@@ -235,10 +226,7 @@ def formatWithCall(formatString, mapping):
     @return: The string with formatted values interpolated.
     @rtype: L{unicode}
     """
-    return unicode(
-        aFormatter.vformat(formatString, (), CallMapping(mapping))
-    )
-
+    return unicode(aFormatter.vformat(formatString, (), CallMapping(mapping)))
 
 
 def _formatEvent(event):
@@ -279,7 +267,6 @@ def _formatEvent(event):
         return formatUnformattableEvent(event, e)
 
 
-
 def _formatTraceback(failure):
     """
     Format a failure traceback, assuming UTF-8 and using a replacement
@@ -298,11 +285,8 @@ def _formatTraceback(failure):
         if isinstance(traceback, bytes):
             traceback = traceback.decode('utf-8', errors='replace')
     except BaseException as e:
-        traceback = (
-            u"(UNABLE TO OBTAIN TRACEBACK FROM EVENT):" + unicode(e)
-        )
+        traceback = u"(UNABLE TO OBTAIN TRACEBACK FROM EVENT):" + unicode(e)
     return traceback
-
 
 
 def _formatSystem(event):
@@ -327,8 +311,7 @@ def _formatSystem(event):
             levelName = level.name
 
         system = u"{namespace}#{level}".format(
-            namespace=event.get("log_namespace", u"-"),
-            level=levelName,
+            namespace=event.get("log_namespace", u"-"), level=levelName
         )
     else:
         try:
@@ -338,13 +321,12 @@ def _formatSystem(event):
     return system
 
 
-
 def eventAsText(
-        event,
-        includeTraceback=True,
-        includeTimestamp=True,
-        includeSystem=True,
-        formatTime=formatTime,
+    event,
+    includeTraceback=True,
+    includeTimestamp=True,
+    includeSystem=True,
+    formatTime=formatTime,
 ):
     """
     Format an event as a unicode string.  Optionally, attach timestamp,
@@ -407,15 +389,8 @@ def eventAsText(
 
     system = u""
     if includeSystem:
-        system = u"".join([
-            u"[",
-            _formatSystem(event),
-            u"]",
-            u" "
-        ])
+        system = u"".join([u"[", _formatSystem(event), u"]", u" "])
 
     return u"{timeStamp}{system}{eventText}".format(
-        timeStamp=timeStamp,
-        system=system,
-        eventText=eventText,
+        timeStamp=timeStamp, system=system, eventText=eventText
     )

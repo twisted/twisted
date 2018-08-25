@@ -3,7 +3,6 @@
 # See LICENSE for details.
 
 
-
 """
 I define support for hookable instance methods.
 
@@ -37,8 +36,10 @@ which they are added.
 
 ### Public Interface
 
+
 class HookError(Exception):
     "An error which will fire when an invariant is violated."
+
 
 def addPre(klass, name, func):
     """hook.addPre(klass, name, func) -> None
@@ -48,12 +49,14 @@ def addPre(klass, name, func):
 
     _addHook(klass, name, PRE, func)
 
+
 def addPost(klass, name, func):
     """hook.addPost(klass, name, func) -> None
 
     Add a function to be called after the method klass.name is invoked.
     """
     _addHook(klass, name, POST, func)
+
 
 def removePre(klass, name, func):
     """hook.removePre(klass, name, func) -> None
@@ -64,6 +67,7 @@ def removePre(klass, name, func):
 
     _removeHook(klass, name, PRE, func)
 
+
 def removePost(klass, name, func):
     """hook.removePre(klass, name, func) -> None
 
@@ -71,6 +75,7 @@ def removePost(klass, name, func):
     is no longer executed after klass.name.
     """
     _removeHook(klass, name, POST, func)
+
 
 ### "Helper" functions.
 
@@ -94,24 +99,27 @@ _POST = '__hook_post_%s_%s_%s__'
 _ORIG = '__hook_orig_%s_%s_%s__'
 
 
-def _XXX(k,n,s):
+def _XXX(k, n, s):
     """
     String manipulation garbage.
     """
     x = s % (k.__module__.replace('.', '_'), k.__name__, n)
     return x
 
-def PRE(k,n):
+
+def PRE(k, n):
     "(private) munging to turn a method name into a pre-hook-method-name"
-    return _XXX(k,n,_PRE)
+    return _XXX(k, n, _PRE)
 
-def POST(k,n):
+
+def POST(k, n):
     "(private) munging to turn a method name into a post-hook-method-name"
-    return _XXX(k,n,_POST)
+    return _XXX(k, n, _POST)
 
-def ORIG(k,n):
+
+def ORIG(k, n):
     "(private) munging to turn a method name into an `original' identifier"
-    return _XXX(k,n,_ORIG)
+    return _XXX(k, n, _ORIG)
 
 
 def _addHook(klass, name, phase, func):
@@ -128,17 +136,18 @@ def _addHook(klass, name, phase, func):
 def _removeHook(klass, name, phase, func):
     "(private) removes a hook from a method on a class"
     phaselistname = phase(klass, name)
-    if not hasattr(klass, ORIG(klass,name)):
+    if not hasattr(klass, ORIG(klass, name)):
         raise HookError("no hooks present!")
 
     phaselist = getattr(klass, phaselistname)
-    try: phaselist.remove(func)
+    try:
+        phaselist.remove(func)
     except ValueError:
-        raise HookError("hook %s not found in removal list for %s"%
-                    (name,klass))
+        raise HookError("hook %s not found in removal list for %s" % (name, klass))
 
-    if not getattr(klass, PRE(klass,name)) and not getattr(klass, POST(klass, name)):
+    if not getattr(klass, PRE(klass, name)) and not getattr(klass, POST(klass, name)):
         _dehook(klass, name)
+
 
 def _enhook(klass, name):
     "(private) causes a certain method name to be hooked on a class"
@@ -153,6 +162,7 @@ def _enhook(klass, name):
         finally:
             for postMethod in getattr(klass, POST(klass, name)):
                 postMethod(*args, **kw)
+
     try:
         newfunc.func_name = name
     except TypeError:
@@ -165,12 +175,13 @@ def _enhook(klass, name):
     setattr(klass, POST(klass, name), [])
     setattr(klass, name, newfunc)
 
+
 def _dehook(klass, name):
     "(private) causes a certain method name no longer to be hooked on a class"
 
     if not hasattr(klass, ORIG(klass, name)):
         raise HookError("Cannot unhook!")
-    setattr(klass, name, getattr(klass, ORIG(klass,name)))
-    delattr(klass, PRE(klass,name))
-    delattr(klass, POST(klass,name))
-    delattr(klass, ORIG(klass,name))
+    setattr(klass, name, getattr(klass, ORIG(klass, name)))
+    delattr(klass, PRE(klass, name))
+    delattr(klass, POST(klass, name))
+    delattr(klass, ORIG(klass, name))

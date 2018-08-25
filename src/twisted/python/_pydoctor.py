@@ -28,7 +28,6 @@ class HeadRequest(urllib2.Request, object):
         return 'HEAD'
 
 
-
 class TwistedSphinxInventory(SphinxInventory):
     """
     Custom SphinxInventory to work around broken external references to
@@ -62,15 +61,15 @@ class TwistedSphinxInventory(SphinxInventory):
             # We get the base URL from IInterface which is assume that is
             # always and already well defined in the Sphinx index.
             baseURL, _ = self._links.get(
-                'zope.interface.interfaces.IInterface',
-                (None, None))
+                'zope.interface.interfaces.IInterface', (None, None)
+            )
 
             if baseURL is None:
                 # Most probably the zope.interface inventory was
                 # not loaded.
                 return None
 
-            if name  == 'zope.interface.adapter.AdapterRegistry':
+            if name == 'zope.interface.adapter.AdapterRegistry':
                 # FIXME:
                 # https://github.com/zopefoundation/zope.interface/issues/41
                 relativeLink = 'adapter.html'
@@ -104,7 +103,6 @@ class TwistedSphinxInventory(SphinxInventory):
 
         return None
 
-
     def _getURLAsHEAD(self, url):
         """
         Get are HEAD response for URL.
@@ -122,7 +120,6 @@ class TwistedSphinxInventory(SphinxInventory):
         except Exception as e:
             print("Error opening {}: {}".format(url, e))
             return None
-
 
 
 def getDeprecated(self, decorators):
@@ -145,17 +142,14 @@ def getDeprecated(self, decorators):
 
             if fn == "twisted.python.deprecate.deprecated":
                 try:
-                    self._deprecated_info = deprecatedToUsefulText(
-                        self.name, decorator)
+                    self._deprecated_info = deprecatedToUsefulText(self.name, decorator)
                 except AttributeError:
                     # It's a reference or something that we can't figure out
                     # from the AST.
                     pass
 
 
-
 class TwistedModuleVisitor(zopeinterface.ZopeInterfaceModuleVisitor):
-
     def visitClass(self, node):
         """
         Called when a class is visited.
@@ -165,7 +159,6 @@ class TwistedModuleVisitor(zopeinterface.ZopeInterfaceModuleVisitor):
         cls = self.builder.current.contents[node.name]
 
         getDeprecated(cls, list(cls.raw_decorators))
-
 
     def visitFunction(self, node):
         """
@@ -179,7 +172,6 @@ class TwistedModuleVisitor(zopeinterface.ZopeInterfaceModuleVisitor):
             getDeprecated(func, list(func.decorators))
 
 
-
 def versionToUsefulObject(version):
     """
     Change an AST C{Version()} to a real one.
@@ -187,7 +179,6 @@ def versionToUsefulObject(version):
     from incremental import Version
 
     return Version(*[x.value for x in version.asList()[1:] if x])
-
 
 
 def deprecatedToUsefulText(name, deprecated):
@@ -208,9 +199,7 @@ def deprecatedToUsefulText(name, deprecated):
     return _getDeprecationWarningString(name, version, replacement=replacement) + "."
 
 
-
 class TwistedFunction(zopeinterface.ZopeInterfaceFunction):
-
     def docsources(self):
 
         if self.decorators:
@@ -220,17 +209,16 @@ class TwistedFunction(zopeinterface.ZopeInterfaceFunction):
             yield x
 
 
-
 class TwistedASTBuilder(zopeinterface.ZopeInterfaceASTBuilder):
     # Vistor is not a typo...
     ModuleVistor = TwistedModuleVisitor
-
 
 
 class TwistedSystem(zopeinterface.ZopeInterfaceSystem):
     """
     A PyDoctor "system" used to generate the docs.
     """
+
     defaultBuilder = TwistedASTBuilder
     Function = TwistedFunction
 
@@ -239,8 +227,8 @@ class TwistedSystem(zopeinterface.ZopeInterfaceSystem):
         # Use custom SphinxInventory so that we can resolve valid L{} markup
         # for which the Sphinx inventory is not published or broken.
         self.intersphinx = TwistedSphinxInventory(
-            logger=self.msg, project_name=self.projectname)
-
+            logger=self.msg, project_name=self.projectname
+        )
 
     def privacyClass(self, documentable):
         """

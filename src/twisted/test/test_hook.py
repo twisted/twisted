@@ -10,10 +10,12 @@ Test cases for twisted.hook module.
 from twisted.python import hook
 from twisted.trial import unittest
 
+
 class BaseClass:
     """
     dummy class to help in testing.
     """
+
     def __init__(self):
         """
         dummy initializer
@@ -35,6 +37,7 @@ class SubClass(BaseClass):
     """
     another dummy class
     """
+
     def __init__(self):
         """
         another dummy initializer
@@ -53,8 +56,10 @@ class SubClass(BaseClass):
         BaseClass.func(self, a, b)
         self.calledSub = self.calledSub + 1
 
+
 _clean_BaseClass = BaseClass.__dict__.copy()
 _clean_SubClass = SubClass.__dict__.copy()
+
 
 def basePre(base, a, b):
     """
@@ -62,11 +67,13 @@ def basePre(base, a, b):
     """
     base.calledBasePre = base.calledBasePre + 1
 
+
 def basePost(base, a, b):
     """
     a post-hook for the base class
     """
     base.calledBasePost = base.calledBasePost + 1
+
 
 def subPre(sub, a, b):
     """
@@ -74,16 +81,19 @@ def subPre(sub, a, b):
     """
     sub.calledSubPre = sub.calledSubPre + 1
 
+
 def subPost(sub, a, b):
     """
     a post-hook for the subclass
     """
     sub.calledSubPost = sub.calledSubPost + 1
 
+
 class HookTests(unittest.TestCase):
     """
     test case to make sure hooks are called
     """
+
     def setUp(self):
         """Make sure we have clean versions of our classes."""
         BaseClass.__dict__.clear()
@@ -97,7 +107,7 @@ class HookTests(unittest.TestCase):
         base = BaseClass()
         self.assertEqual(base.calledBase, 0)
         self.assertEqual(base.calledBasePre, 0)
-        base.func(1,2)
+        base.func(1, 2)
         self.assertEqual(base.calledBase, 1)
         self.assertEqual(base.calledBasePre, 0)
         hook.addPre(BaseClass, "func", basePre)
@@ -146,5 +156,6 @@ class HookTests(unittest.TestCase):
         self.assertEqual(sub.calledBase, 4)
         self.assertEqual(sub.calledSubPre, 2)
         self.assertEqual(sub.calledSub, 3)
+
 
 testCases = [HookTests]

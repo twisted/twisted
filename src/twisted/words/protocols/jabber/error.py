@@ -19,28 +19,28 @@ NS_XMPP_STREAMS = "urn:ietf:params:xml:ns:xmpp-streams"
 NS_XMPP_STANZAS = "urn:ietf:params:xml:ns:xmpp-stanzas"
 
 STANZA_CONDITIONS = {
-    'bad-request':              {'code': '400', 'type': 'modify'},
-    'conflict':                 {'code': '409', 'type': 'cancel'},
-    'feature-not-implemented':  {'code': '501', 'type': 'cancel'},
-    'forbidden':                {'code': '403', 'type': 'auth'},
-    'gone':                     {'code': '302', 'type': 'modify'},
-    'internal-server-error':    {'code': '500', 'type': 'wait'},
-    'item-not-found':           {'code': '404', 'type': 'cancel'},
-    'jid-malformed':            {'code': '400', 'type': 'modify'},
-    'not-acceptable':           {'code': '406', 'type': 'modify'},
-    'not-allowed':              {'code': '405', 'type': 'cancel'},
-    'not-authorized':           {'code': '401', 'type': 'auth'},
-    'payment-required':         {'code': '402', 'type': 'auth'},
-    'recipient-unavailable':    {'code': '404', 'type': 'wait'},
-    'redirect':                 {'code': '302', 'type': 'modify'},
-    'registration-required':    {'code': '407', 'type': 'auth'},
-    'remote-server-not-found':  {'code': '404', 'type': 'cancel'},
-    'remote-server-timeout':    {'code': '504', 'type': 'wait'},
-    'resource-constraint':      {'code': '500', 'type': 'wait'},
-    'service-unavailable':      {'code': '503', 'type': 'cancel'},
-    'subscription-required':    {'code': '407', 'type': 'auth'},
-    'undefined-condition':      {'code': '500', 'type': None},
-    'unexpected-request':       {'code': '400', 'type': 'wait'},
+    'bad-request': {'code': '400', 'type': 'modify'},
+    'conflict': {'code': '409', 'type': 'cancel'},
+    'feature-not-implemented': {'code': '501', 'type': 'cancel'},
+    'forbidden': {'code': '403', 'type': 'auth'},
+    'gone': {'code': '302', 'type': 'modify'},
+    'internal-server-error': {'code': '500', 'type': 'wait'},
+    'item-not-found': {'code': '404', 'type': 'cancel'},
+    'jid-malformed': {'code': '400', 'type': 'modify'},
+    'not-acceptable': {'code': '406', 'type': 'modify'},
+    'not-allowed': {'code': '405', 'type': 'cancel'},
+    'not-authorized': {'code': '401', 'type': 'auth'},
+    'payment-required': {'code': '402', 'type': 'auth'},
+    'recipient-unavailable': {'code': '404', 'type': 'wait'},
+    'redirect': {'code': '302', 'type': 'modify'},
+    'registration-required': {'code': '407', 'type': 'auth'},
+    'remote-server-not-found': {'code': '404', 'type': 'cancel'},
+    'remote-server-timeout': {'code': '504', 'type': 'wait'},
+    'resource-constraint': {'code': '500', 'type': 'wait'},
+    'service-unavailable': {'code': '503', 'type': 'cancel'},
+    'subscription-required': {'code': '407', 'type': 'auth'},
+    'undefined-condition': {'code': '500', 'type': None},
+    'unexpected-request': {'code': '400', 'type': 'wait'},
 }
 
 CODES_TO_CONDITIONS = {
@@ -62,6 +62,7 @@ CODES_TO_CONDITIONS = {
     '504': ('remote-server-timeout', 'wait'),
     '510': ('service-unavailable', 'cancel'),
 }
+
 
 class BaseError(Exception):
     """
@@ -93,16 +94,13 @@ class BaseError(Exception):
         self.textLang = textLang
         self.appCondition = appCondition
 
-
     def __str__(self):
-        message = "%s with condition %r" % (self.__class__.__name__,
-                                            self.condition)
+        message = "%s with condition %r" % (self.__class__.__name__, self.condition)
 
         if self.text:
             message += ': ' + self.text
 
         return message
-
 
     def getElement(self):
         """
@@ -116,14 +114,12 @@ class BaseError(Exception):
         error = domish.Element((None, 'error'))
         error.addElement((self.namespace, self.condition))
         if self.text:
-            text = error.addElement((self.namespace, 'text'),
-                                    content=self.text)
+            text = error.addElement((self.namespace, 'text'), content=self.text)
             if self.textLang:
                 text[(NS_XML, 'lang')] = self.textLang
         if self.appCondition:
             error.addChild(self.appCondition)
         return error
-
 
 
 class StreamError(BaseError):
@@ -151,7 +147,6 @@ class StreamError(BaseError):
         return error
 
 
-
 class StanzaError(BaseError):
     """
     Stanza Error exception.
@@ -168,8 +163,9 @@ class StanzaError(BaseError):
 
     namespace = NS_XMPP_STANZAS
 
-    def __init__(self, condition, type=None, text=None, textLang=None,
-                       appCondition=None):
+    def __init__(
+        self, condition, type=None, text=None, textLang=None, appCondition=None
+    ):
         BaseError.__init__(self, condition, text, textLang, appCondition)
 
         if type is None:
@@ -187,7 +183,6 @@ class StanzaError(BaseError):
         self.children = []
         self.iq = None
 
-
     def getElement(self):
         """
         Get XML representation from self.
@@ -203,7 +198,6 @@ class StanzaError(BaseError):
         if self.code:
             error['code'] = self.code
         return error
-
 
     def toResponse(self, stanza):
         """
@@ -226,11 +220,11 @@ class StanzaError(BaseError):
         @type stanza: L{domish.Element}
         """
         from twisted.words.protocols.jabber.xmlstream import toResponse
+
         response = toResponse(stanza, stanzaType='error')
         response.children = copy.copy(stanza.children)
         response.addChild(self.getElement())
         return response
-
 
 
 def _parseError(error, errorNamespace):
@@ -270,7 +264,6 @@ def _parseError(error, errorNamespace):
     }
 
 
-
 def exceptionFromStreamError(element):
     """
     Build an exception object from a stream error.
@@ -282,13 +275,11 @@ def exceptionFromStreamError(element):
     """
     error = _parseError(element, NS_XMPP_STREAMS)
 
-    exception = StreamError(error['condition'],
-                            error['text'],
-                            error['textLang'],
-                            error['appCondition'])
+    exception = StreamError(
+        error['condition'], error['text'], error['textLang'], error['appCondition']
+    )
 
     return exception
-
 
 
 def exceptionFromStanza(stanza):
@@ -314,8 +305,8 @@ def exceptionFromStanza(stanza):
             appCondition = error['appCondition']
 
             if not condition and code:
-               condition, type = CODES_TO_CONDITIONS[code]
-               text = unicode(stanza.error)
+                condition, type = CODES_TO_CONDITIONS[code]
+                text = unicode(stanza.error)
         else:
             children.append(element)
 

@@ -20,8 +20,8 @@ class ICredentialsChecker(Interface):
     """
 
     credentialInterfaces = Attribute(
-        'A list of sub-interfaces of ICredentials which specifies which I may check.')
-
+        'A list of sub-interfaces of ICredentials which specifies which I may check.'
+    )
 
     def requestAvatarId(credentials):
         """
@@ -35,7 +35,6 @@ class ICredentialsChecker(Interface):
 
         @see: L{twisted.cred.credentials}
         """
-
 
 
 # A note on anonymity - We do not want None as the value for anonymous
@@ -53,11 +52,10 @@ ANONYMOUS = ()
 
 @implementer(ICredentialsChecker)
 class AllowAnonymousAccess:
-    credentialInterfaces = credentials.IAnonymous,
+    credentialInterfaces = (credentials.IAnonymous,)
 
     def requestAvatarId(self, credentials):
         return defer.succeed(ANONYMOUS)
-
 
 
 @implementer(ICredentialsChecker)
@@ -72,16 +70,17 @@ class InMemoryUsernamePasswordDatabaseDontUse(object):
     toy.  If you need a simple credentials checker for a real application,
     see L{FilePasswordDB}.
     """
-    credentialInterfaces = (credentials.IUsernamePassword,
-                            credentials.IUsernameHashedPassword)
+
+    credentialInterfaces = (
+        credentials.IUsernamePassword,
+        credentials.IUsernameHashedPassword,
+    )
 
     def __init__(self, **users):
-        self.users = {x.encode('ascii'):y for x, y in users.items()}
-
+        self.users = {x.encode('ascii'): y for x, y in users.items()}
 
     def addUser(self, username, password):
         self.users[username] = password
-
 
     def _cbPasswordMatch(self, matched, username):
         if matched:
@@ -89,16 +88,13 @@ class InMemoryUsernamePasswordDatabaseDontUse(object):
         else:
             return failure.Failure(error.UnauthorizedLogin())
 
-
     def requestAvatarId(self, credentials):
         if credentials.username in self.users:
             return defer.maybeDeferred(
-                credentials.checkPassword,
-                self.users[credentials.username]).addCallback(
-                self._cbPasswordMatch, credentials.username)
+                credentials.checkPassword, self.users[credentials.username]
+            ).addCallback(self._cbPasswordMatch, credentials.username)
         else:
             return defer.fail(error.UnauthorizedLogin())
-
 
 
 @implementer(ICredentialsChecker)
@@ -121,8 +117,16 @@ class FilePasswordDB:
     _cacheTimestamp = 0
     _log = Logger()
 
-    def __init__(self, filename, delim=b':', usernameField=0, passwordField=1,
-                 caseSensitive=True, hash=None, cache=False):
+    def __init__(
+        self,
+        filename,
+        delim=b':',
+        usernameField=0,
+        passwordField=1,
+        caseSensitive=True,
+        hash=None,
+        cache=False,
+    ):
         """
         @type filename: C{str}
         @param filename: The name of the file from which to read username and
@@ -170,15 +174,12 @@ class FilePasswordDB:
             # plaintext and hashed passwords received over the network.
             self.credentialInterfaces = (
                 credentials.IUsernamePassword,
-                credentials.IUsernameHashedPassword
+                credentials.IUsernameHashedPassword,
             )
         else:
             # The passwords are hashed on disk.  We can support only
             # plaintext passwords received over the network.
-            self.credentialInterfaces = (
-                credentials.IUsernamePassword,
-            )
-
+            self.credentialInterfaces = (credentials.IUsernamePassword,)
 
     def __getstate__(self):
         d = dict(vars(self))
@@ -189,13 +190,11 @@ class FilePasswordDB:
                 pass
         return d
 
-
     def _cbPasswordMatch(self, matched, username):
         if matched:
             return username
         else:
             return failure.Failure(error.UnauthorizedLogin())
-
 
     def _loadCredentials(self):
         """
@@ -223,13 +222,15 @@ class FilePasswordDB:
             self._log.error("Unable to load credentials db: {e!r}", e=e)
             raise error.UnauthorizedLogin()
 
-
     def getUser(self, username):
         if not self.caseSensitive:
             username = username.lower()
 
         if self.cache:
-            if self._credCache is None or os.path.getmtime(self.filename) > self._cacheTimestamp:
+            if (
+                self._credCache is None
+                or os.path.getmtime(self.filename) > self._cacheTimestamp
+            ):
                 self._cacheTimestamp = os.path.getmtime(self.filename)
                 self._credCache = dict(self._loadCredentials())
             return username, self._credCache[username]
@@ -238,7 +239,6 @@ class FilePasswordDB:
                 if u == username:
                     return u, p
             raise KeyError(username)
-
 
     def requestAvatarId(self, c):
         try:
@@ -254,9 +254,9 @@ class FilePasswordDB:
                         return defer.succeed(u)
                 return defer.fail(error.UnauthorizedLogin())
             else:
-                return defer.maybeDeferred(c.checkPassword, p
-                    ).addCallback(self._cbPasswordMatch, u)
-
+                return defer.maybeDeferred(c.checkPassword, p).addCallback(
+                    self._cbPasswordMatch, u
+                )
 
 
 # For backwards compatibility

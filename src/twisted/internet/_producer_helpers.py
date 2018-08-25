@@ -47,11 +47,9 @@ class _PullToPush(object):
 
     _finished = False
 
-
     def __init__(self, pullProducer, consumer):
         self._producer = pullProducer
         self._consumer = consumer
-
 
     def _pull(self):
         """
@@ -65,8 +63,11 @@ class _PullToPush(object):
             try:
                 self._producer.resumeProducing()
             except:
-                log.err(None, "%s failed, producing will be stopped:" %
-                        (safe_str(self._producer),))
+                log.err(
+                    None,
+                    "%s failed, producing will be stopped:"
+                    % (safe_str(self._producer),),
+                )
                 try:
                     self._consumer.unregisterProducer()
                     # The consumer should now call stopStreaming() on us,
@@ -74,12 +75,14 @@ class _PullToPush(object):
                 except:
                     # Since the consumer blew up, we may not have had
                     # stopStreaming() called, so we just stop on our own:
-                    log.err(None, "%s failed to unregister producer:" %
-                            (safe_str(self._consumer),))
+                    log.err(
+                        None,
+                        "%s failed to unregister producer:"
+                        % (safe_str(self._consumer),),
+                    )
                     self._finished = True
                     return
             yield None
-
 
     def startStreaming(self):
         """
@@ -88,7 +91,6 @@ class _PullToPush(object):
         Start streaming data to the consumer.
         """
         self._coopTask = cooperate(self._pull())
-
 
     def stopStreaming(self):
         """
@@ -102,20 +104,17 @@ class _PullToPush(object):
         self._finished = True
         self._coopTask.stop()
 
-
     def pauseProducing(self):
         """
         @see: C{IPushProducer.pauseProducing}
         """
         self._coopTask.pause()
 
-
     def resumeProducing(self):
         """
         @see: C{IPushProducer.resumeProducing}
         """
         self._coopTask.resume()
-
 
     def stopProducing(self):
         """

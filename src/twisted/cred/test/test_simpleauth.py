@@ -17,6 +17,7 @@ class UsernamePasswordTests(TestCase):
     """
     Tests for L{UsernamePassword}.
     """
+
     def test_initialisation(self):
         """
         The initialisation of L{UsernamePassword} will set C{username} and
@@ -26,7 +27,6 @@ class UsernamePasswordTests(TestCase):
         self.assertEqual(creds.username, b"foo")
         self.assertEqual(creds.password, b"bar")
 
-
     def test_correctPassword(self):
         """
         Calling C{checkPassword} on a L{UsernamePassword} will return L{True}
@@ -34,7 +34,6 @@ class UsernamePasswordTests(TestCase):
         """
         creds = UsernamePassword(b"user", b"pass")
         self.assertTrue(creds.checkPassword(b"pass"))
-
 
     def test_wrongPassword(self):
         """
@@ -44,7 +43,6 @@ class UsernamePasswordTests(TestCase):
         creds = UsernamePassword(b"user", b"pass")
         self.assertFalse(creds.checkPassword(b"someotherpass"))
 
-
     def test_interface(self):
         """
         L{UsernamePassword} implements L{IUsernamePassword}.
@@ -52,11 +50,11 @@ class UsernamePasswordTests(TestCase):
         self.assertTrue(IUsernamePassword.implementedBy(UsernamePassword))
 
 
-
 class UsernameHashedPasswordTests(TestCase):
     """
     Tests for L{UsernameHashedPassword}.
     """
+
     def test_initialisation(self):
         """
         The initialisation of L{UsernameHashedPassword} will set C{username}
@@ -66,7 +64,6 @@ class UsernameHashedPasswordTests(TestCase):
         self.assertEqual(creds.username, b"foo")
         self.assertEqual(creds.hashed, b"bar")
 
-
     def test_correctPassword(self):
         """
         Calling C{checkPassword} on a L{UsernameHashedPassword} will return
@@ -74,7 +71,6 @@ class UsernameHashedPasswordTests(TestCase):
         """
         creds = UsernameHashedPassword(b"user", b"pass")
         self.assertTrue(creds.checkPassword(b"pass"))
-
 
     def test_wrongPassword(self):
         """
@@ -84,10 +80,8 @@ class UsernameHashedPasswordTests(TestCase):
         creds = UsernameHashedPassword(b"user", b"pass")
         self.assertFalse(creds.checkPassword(b"someotherpass"))
 
-
     def test_interface(self):
         """
         L{UsernameHashedPassword} implements L{IUsernameHashedPassword}.
         """
-        self.assertTrue(
-            IUsernameHashedPassword.implementedBy(UsernameHashedPassword))
+        self.assertTrue(IUsernameHashedPassword.implementedBy(UsernameHashedPassword))

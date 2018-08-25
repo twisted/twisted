@@ -35,8 +35,8 @@ class _BaseSentence(object):
         sentence.
     @type ALLOWED_ATTRIBUTES: C{set} of C{str}
     """
-    ALLOWED_ATTRIBUTES = set()
 
+    ALLOWED_ATTRIBUTES = set()
 
     def __init__(self, sentenceData):
         """
@@ -46,7 +46,6 @@ class _BaseSentence(object):
         @type sentenceData: C{dict} (C{str} -> C{str} or L{None})
         """
         self._sentenceData = sentenceData
-
 
     @property
     def presentAttributes(self):
@@ -59,7 +58,6 @@ class _BaseSentence(object):
         """
         return iter(self._sentenceData)
 
-
     def __getattr__(self, name):
         """
         Gets an attribute of this sentence.
@@ -70,7 +68,6 @@ class _BaseSentence(object):
             className = self.__class__.__name__
             msg = "%s sentences have no %s attributes" % (className, name)
             raise AttributeError(msg)
-
 
     def __repr__(self):
         """
@@ -89,7 +86,6 @@ class _BaseSentence(object):
         return "<%s (%s) {%s}>" % (className, typeRepr, dataRepr)
 
 
-
 class _PositioningSentenceProducerMixin(object):
     """
     A mixin for certain protocols that produce positioning sentences.
@@ -100,6 +96,7 @@ class _PositioningSentenceProducerMixin(object):
     C{getSentenceAttributes}, which iterates over all sentence types and
     collects the possible sentence attributes.
     """
+
     @classmethod
     def getSentenceAttributes(cls):
         """

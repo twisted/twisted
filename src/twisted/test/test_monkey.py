@@ -18,7 +18,6 @@ class TestObj:
         self.baz = 'baz value'
 
 
-
 class MonkeyPatcherTests(unittest.SynchronousTestCase):
     """
     Tests for L{MonkeyPatcher} monkey-patching class.
@@ -28,7 +27,6 @@ class MonkeyPatcherTests(unittest.SynchronousTestCase):
         self.testObject = TestObj()
         self.originalObject = TestObj()
         self.monkeyPatcher = MonkeyPatcher()
-
 
     def test_empty(self):
         """
@@ -42,19 +40,18 @@ class MonkeyPatcherTests(unittest.SynchronousTestCase):
         self.assertEqual(self.originalObject.bar, self.testObject.bar)
         self.assertEqual(self.originalObject.baz, self.testObject.baz)
 
-
     def test_constructWithPatches(self):
         """
         Constructing a L{MonkeyPatcher} with patches should add all of the
         given patches to the patch list.
         """
-        patcher = MonkeyPatcher((self.testObject, 'foo', 'haha'),
-                                (self.testObject, 'bar', 'hehe'))
+        patcher = MonkeyPatcher(
+            (self.testObject, 'foo', 'haha'), (self.testObject, 'bar', 'hehe')
+        )
         patcher.patch()
         self.assertEqual('haha', self.testObject.foo)
         self.assertEqual('hehe', self.testObject.bar)
         self.assertEqual(self.originalObject.baz, self.testObject.baz)
-
 
     def test_patchExisting(self):
         """
@@ -65,15 +62,12 @@ class MonkeyPatcherTests(unittest.SynchronousTestCase):
         self.monkeyPatcher.patch()
         self.assertEqual(self.testObject.foo, 'haha')
 
-
     def test_patchNonExisting(self):
         """
         Patching a non-existing attribute fails with an C{AttributeError}.
         """
-        self.monkeyPatcher.addPatch(self.testObject, 'nowhere',
-                                    'blow up please')
+        self.monkeyPatcher.addPatch(self.testObject, 'nowhere', 'blow up please')
         self.assertRaises(AttributeError, self.monkeyPatcher.patch)
-
 
     def test_patchAlreadyPatched(self):
         """
@@ -87,7 +81,6 @@ class MonkeyPatcherTests(unittest.SynchronousTestCase):
         self.monkeyPatcher.restore()
         self.assertEqual(self.testObject.foo, self.originalObject.foo)
 
-
     def test_restoreTwiceIsANoOp(self):
         """
         Restoring an already-restored monkey patch is a no-op.
@@ -98,7 +91,6 @@ class MonkeyPatcherTests(unittest.SynchronousTestCase):
         self.assertEqual(self.testObject.foo, self.originalObject.foo)
         self.monkeyPatcher.restore()
         self.assertEqual(self.testObject.foo, self.originalObject.foo)
-
 
     def test_runWithPatchesDecoration(self):
         """
@@ -115,25 +107,24 @@ class MonkeyPatcherTests(unittest.SynchronousTestCase):
         self.assertEqual('foo', result)
         self.assertEqual([(1, 2, 10)], log)
 
-
     def test_repeatedRunWithPatches(self):
         """
         We should be able to call the same function with runWithPatches more
         than once. All patches should apply for each call.
         """
+
         def f():
-            return (self.testObject.foo, self.testObject.bar,
-                    self.testObject.baz)
+            return (self.testObject.foo, self.testObject.bar, self.testObject.baz)
 
         self.monkeyPatcher.addPatch(self.testObject, 'foo', 'haha')
         result = self.monkeyPatcher.runWithPatches(f)
         self.assertEqual(
-            ('haha', self.originalObject.bar, self.originalObject.baz), result)
+            ('haha', self.originalObject.bar, self.originalObject.baz), result
+        )
         result = self.monkeyPatcher.runWithPatches(f)
         self.assertEqual(
-            ('haha', self.originalObject.bar, self.originalObject.baz),
-            result)
-
+            ('haha', self.originalObject.bar, self.originalObject.baz), result
+        )
 
     def test_runWithPatchesRestores(self):
         """
@@ -145,12 +136,12 @@ class MonkeyPatcherTests(unittest.SynchronousTestCase):
         self.monkeyPatcher.runWithPatches(lambda: None)
         self.assertEqual(self.originalObject.foo, self.testObject.foo)
 
-
     def test_runWithPatchesRestoresOnException(self):
         """
         Test runWithPatches restores the original values even when the function
         raises an exception.
         """
+
         def _():
             self.assertEqual(self.testObject.foo, 'haha')
             self.assertEqual(self.testObject.bar, 'blahblah')

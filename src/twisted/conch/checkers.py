@@ -41,8 +41,6 @@ from twisted.python.util import runAsEffectiveUser
 from twisted.python.filepath import FilePath
 
 
-
-
 def verifyCryptedPassword(crypted, pw):
     """
     Check that the password, when crypted, matches the stored crypted password.
@@ -57,7 +55,6 @@ def verifyCryptedPassword(crypted, pw):
     return crypt.crypt(pw, crypted) == crypted
 
 
-
 def _pwdGetByName(username):
     """
     Look up a user in the /etc/passwd database using the pwd module.  If the
@@ -70,7 +67,6 @@ def _pwdGetByName(username):
     if pwd is None:
         return None
     return pwd.getpwnam(username)
-
 
 
 def _shadowGetByName(username):
@@ -89,7 +85,6 @@ def _shadowGetByName(username):
     return runAsEffectiveUser(0, 0, f, username)
 
 
-
 @implementer(ICredentialsChecker)
 class UNIXPasswordDatabase:
     """
@@ -100,13 +95,13 @@ class UNIXPasswordDatabase:
         to valid a user.  The default value is such that the C{/etc/passwd}
         database will be tried first, followed by the C{/etc/shadow} database.
     """
-    credentialInterfaces = IUsernamePassword,
+
+    credentialInterfaces = (IUsernamePassword,)
 
     def __init__(self, getByNameFunctions=None):
         if getByNameFunctions is None:
             getByNameFunctions = [_pwdGetByName, _shadowGetByName]
         self._getByNameFunctions = getByNameFunctions
-
 
     def requestAvatarId(self, credentials):
         # We get bytes, but the Py3 pwd module uses str. So attempt to decode
@@ -135,13 +130,13 @@ class UNIXPasswordDatabase:
         return defer.fail(UnauthorizedLogin("unable to verify password"))
 
 
-
 @implementer(ICredentialsChecker)
 class SSHPublicKeyDatabase:
     """
     Checker that authenticates SSH public keys, based on public keys listed in
     authorized_keys and authorized_keys2 files in user .ssh/ directories.
     """
+
     credentialInterfaces = (ISSHPrivateKey,)
 
     _userdb = pwd
@@ -151,7 +146,6 @@ class SSHPublicKeyDatabase:
         d.addCallback(self._cbRequestAvatarId, credentials)
         d.addErrback(self._ebRequestAvatarId)
         return d
-
 
     def _cbRequestAvatarId(self, validKey, credentials):
         """
@@ -183,11 +177,10 @@ class SSHPublicKeyDatabase:
                 pubKey = keys.Key.fromString(credentials.blob)
                 if pubKey.verify(credentials.signature, credentials.sigData):
                     return credentials.username
-            except: # any error should be treated as a failed login
+            except:  # any error should be treated as a failed login
                 log.err()
                 return failure.Failure(UnauthorizedLogin('error while verifying key'))
         return failure.Failure(UnauthorizedLogin("unable to verify key"))
-
 
     def getAuthorizedKeysFiles(self, credentials):
         """
@@ -209,7 +202,6 @@ class SSHPublicKeyDatabase:
         root = FilePath(pwent.pw_dir).child('.ssh')
         files = ['authorized_keys', 'authorized_keys2']
         return [root.child(f) for f in files]
-
 
     def checkKey(self, credentials):
         """
@@ -239,13 +231,11 @@ class SSHPublicKeyDatabase:
                         continue
         return False
 
-
     def _ebRequestAvatarId(self, f):
         if not f.check(UnauthorizedLogin):
             log.msg(f)
             return failure.Failure(UnauthorizedLogin("unable to get avatar id"))
         return f
-
 
 
 @implementer(ICredentialsChecker)
@@ -265,7 +255,6 @@ class SSHProtocolChecker:
         self.checkers = {}
         self.successfulCredentials = {}
 
-
     def get_credentialInterfaces(self):
         return _keys(self.checkers)
 
@@ -276,7 +265,6 @@ class SSHProtocolChecker:
             credentialInterfaces = checker.credentialInterfaces
         for credentialInterface in credentialInterfaces:
             self.checkers[credentialInterface] = checker
-
 
     def requestAvatarId(self, credentials):
         """
@@ -294,11 +282,12 @@ class SSHProtocolChecker:
             c = self.checkers.get(i)
             if c is not None:
                 d = defer.maybeDeferred(c.requestAvatarId, credentials)
-                return d.addCallback(self._cbGoodAuthentication,
-                        credentials)
-        return defer.fail(UnhandledCredentials("No checker for %s" % \
-            ', '.join(map(reflect.qual, ifac))))
-
+                return d.addCallback(self._cbGoodAuthentication, credentials)
+        return defer.fail(
+            UnhandledCredentials(
+                "No checker for %s" % ', '.join(map(reflect.qual, ifac))
+            )
+        )
 
     def _cbGoodAuthentication(self, avatarId, credentials):
         """
@@ -316,7 +305,6 @@ class SSHProtocolChecker:
         else:
             raise error.NotEnoughAuthentication()
 
-
     def areDone(self, avatarId):
         """
         Override to determine if the authentication is finished for a given
@@ -329,14 +317,16 @@ class SSHProtocolChecker:
         return True
 
 
-
 deprecatedModuleAttribute(
-        Version("Twisted", 15, 0, 0),
-        ("Please use twisted.conch.checkers.SSHPublicKeyChecker, "
-         "initialized with an instance of "
-         "twisted.conch.checkers.UNIXAuthorizedKeysFiles instead."),
-        __name__, "SSHPublicKeyDatabase")
-
+    Version("Twisted", 15, 0, 0),
+    (
+        "Please use twisted.conch.checkers.SSHPublicKeyChecker, "
+        "initialized with an instance of "
+        "twisted.conch.checkers.UNIXAuthorizedKeysFiles instead."
+    ),
+    __name__,
+    "SSHPublicKeyDatabase",
+)
 
 
 class IAuthorizedKeysDB(Interface):
@@ -345,6 +335,7 @@ class IAuthorizedKeysDB(Interface):
 
     @since: 15.0
     """
+
     def getAuthorizedKeys(avatarId):
         """
         Gets an iterable of authorized keys that are valid for the given
@@ -356,7 +347,6 @@ class IAuthorizedKeysDB(Interface):
 
         @return: an iterable of L{twisted.conch.ssh.keys.Key}
         """
-
 
 
 def readAuthorizedKeyFile(fileobj, parseKey=keys.Key.fromString):
@@ -385,9 +375,7 @@ def readAuthorizedKeyFile(fileobj, parseKey=keys.Key.fromString):
             try:
                 yield parseKey(line)
             except keys.BadKeyError as e:
-                log.msg('Unable to parse line "{0}" as a key: {1!s}'
-                        .format(line, e))
-
+                log.msg('Unable to parse line "{0}" as a key: {1!s}'.format(line, e))
 
 
 def _keysFromFilepaths(filepaths, parseKey):
@@ -418,7 +406,6 @@ def _keysFromFilepaths(filepaths, parseKey):
                 log.msg("Unable to read {0}: {1!s}".format(fp.path, e))
 
 
-
 @implementer(IAuthorizedKeysDB)
 class InMemorySSHKeyDB(object):
     """
@@ -427,6 +414,7 @@ class InMemorySSHKeyDB(object):
 
     @since: 15.0
     """
+
     def __init__(self, mapping):
         """
         Initializes a new L{InMemorySSHKeyDB}.
@@ -438,10 +426,8 @@ class InMemorySSHKeyDB(object):
         """
         self._mapping = mapping
 
-
     def getAuthorizedKeys(self, username):
         return self._mapping.get(username, [])
-
 
 
 @implementer(IAuthorizedKeysDB)
@@ -454,6 +440,7 @@ class UNIXAuthorizedKeysFiles(object):
 
     @since: 15.0
     """
+
     def __init__(self, userdb=None, parseKey=keys.Key.fromString):
         """
         Initializes a new L{UNIXAuthorizedKeysFiles}.
@@ -472,7 +459,6 @@ class UNIXAuthorizedKeysFiles(object):
         if userdb is None:
             self._userdb = pwd
 
-
     def getAuthorizedKeys(self, username):
         try:
             passwd = self._userdb.getpwnam(username)
@@ -481,9 +467,7 @@ class UNIXAuthorizedKeysFiles(object):
 
         root = FilePath(passwd.pw_dir).child('.ssh')
         files = ['authorized_keys', 'authorized_keys2']
-        return _keysFromFilepaths((root.child(f) for f in files),
-                                  self._parseKey)
-
+        return _keysFromFilepaths((root.child(f) for f in files), self._parseKey)
 
 
 @implementer(ICredentialsChecker)
@@ -497,6 +481,7 @@ class SSHPublicKeyChecker(object):
 
     @since: 15.0
     """
+
     credentialInterfaces = (ISSHPrivateKey,)
 
     def __init__(self, keydb):
@@ -508,13 +493,11 @@ class SSHPublicKeyChecker(object):
         """
         self._keydb = keydb
 
-
     def requestAvatarId(self, credentials):
         d = defer.maybeDeferred(self._sanityCheckKey, credentials)
         d.addCallback(self._checkKey, credentials)
         d.addCallback(self._verifyKey, credentials)
         return d
-
 
     def _sanityCheckKey(self, credentials):
         """
@@ -538,7 +521,6 @@ class SSHPublicKeyChecker(object):
 
         return keys.Key.fromString(credentials.blob)
 
-
     def _checkKey(self, pubKey, credentials):
         """
         Checks the public key against all authorized keys (if any) for the
@@ -557,12 +539,12 @@ class SSHPublicKeyChecker(object):
         @return: C{pubKey} if the key is authorized
         @rtype: L{twisted.conch.ssh.keys.Key}
         """
-        if any(key == pubKey for key in
-               self._keydb.getAuthorizedKeys(credentials.username)):
+        if any(
+            key == pubKey for key in self._keydb.getAuthorizedKeys(credentials.username)
+        ):
             return pubKey
 
         raise UnauthorizedLogin("Key not authorized")
-
 
     def _verifyKey(self, pubKey, credentials):
         """

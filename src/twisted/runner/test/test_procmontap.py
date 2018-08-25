@@ -24,7 +24,6 @@ class ProcessMonitorTapTests(unittest.TestCase):
         opt = tap.Options()
         self.assertRaises(UsageError, opt.parseOptions, [])
 
-
     def test_threshold(self):
         """
         The threshold option is recognised as a parameter and coerced to
@@ -34,7 +33,6 @@ class ProcessMonitorTapTests(unittest.TestCase):
         opt.parseOptions(['--threshold', '7.5', 'foo'])
         self.assertEqual(opt['threshold'], 7.5)
 
-
     def test_killTime(self):
         """
         The killtime option is recognised as a parameter and coerced to float.
@@ -42,7 +40,6 @@ class ProcessMonitorTapTests(unittest.TestCase):
         opt = tap.Options()
         opt.parseOptions(['--killtime', '7.5', 'foo'])
         self.assertEqual(opt['killtime'], 7.5)
-
 
     def test_minRestartDelay(self):
         """
@@ -53,7 +50,6 @@ class ProcessMonitorTapTests(unittest.TestCase):
         opt.parseOptions(['--minrestartdelay', '7.5', 'foo'])
         self.assertEqual(opt['minrestartdelay'], 7.5)
 
-
     def test_maxRestartDelay(self):
         """
         The maxrestartdelay option is recognised as a parameter and coerced to
@@ -62,7 +58,6 @@ class ProcessMonitorTapTests(unittest.TestCase):
         opt = tap.Options()
         opt.parseOptions(['--maxrestartdelay', '7.5', 'foo'])
         self.assertEqual(opt['maxrestartdelay'], 7.5)
-
 
     def test_parameterDefaults(self):
         """
@@ -74,7 +69,6 @@ class ProcessMonitorTapTests(unittest.TestCase):
         self.assertEqual(opt['killtime'], 5)
         self.assertEqual(opt['minrestartdelay'], 1)
         self.assertEqual(opt['maxrestartdelay'], 3600)
-
 
     def test_makeService(self):
         """

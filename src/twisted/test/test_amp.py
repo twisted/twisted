@@ -19,8 +19,7 @@ from twisted.python.compat import intToBytes
 from twisted.python.failure import Failure
 from twisted.protocols import amp
 from twisted.trial import unittest
-from twisted.internet import (
-    address, protocol, defer, error, reactor, interfaces)
+from twisted.internet import address, protocol, defer, error, reactor, interfaces
 from twisted.test import iosim
 from twisted.test.proto_helpers import StringTransport
 
@@ -39,9 +38,7 @@ else:
     skipSSL = None
 
 
-
 tz = amp._FixedOffsetTZInfo.fromSignHoursMinutes
-
 
 
 class TestProto(protocol.Protocol):
@@ -62,19 +59,15 @@ class TestProto(protocol.Protocol):
         self.instanceId = TestProto.instanceCount
         TestProto.instanceCount = TestProto.instanceCount + 1
 
-
     def connectionMade(self):
         self.data = []
         self.transport.write(self.dataToSend)
 
-
     def dataReceived(self, bytes):
         self.data.append(bytes)
 
-
     def connectionLost(self, reason):
         self.onConnLost.callback(self.data)
-
 
     def __repr__(self):
         """
@@ -89,26 +82,23 @@ class TestProto(protocol.Protocol):
         return "<TestProto #%d>" % (self.instanceId,)
 
 
-
 class SimpleSymmetricProtocol(amp.AMP):
-
     def sendHello(self, text):
-        return self.callRemoteString(
-            b"hello",
-            hello=text)
+        return self.callRemoteString(b"hello", hello=text)
 
     def amp_HELLO(self, box):
         return amp.Box(hello=box[b'hello'])
-
 
 
 class UnfriendlyGreeting(Exception):
     """Greeting was insufficiently kind.
     """
 
+
 class DeathThreat(Exception):
     """Greeting was insufficiently kind.
     """
+
 
 class UnknownProtocol(Exception):
     """Asked to switch to the wrong protocol.
@@ -128,47 +118,50 @@ class TransportPeer(amp.Argument):
         return
 
 
-
 class Hello(amp.Command):
 
     commandName = b'hello'
 
-    arguments = [(b'hello', amp.String()),
-                 (b'optional', amp.Boolean(optional=True)),
-                 (b'print', amp.Unicode(optional=True)),
-                 (b'from', TransportPeer(optional=True)),
-                 (b'mixedCase', amp.String(optional=True)),
-                 (b'dash-arg', amp.String(optional=True)),
-                 (b'underscore_arg', amp.String(optional=True))]
+    arguments = [
+        (b'hello', amp.String()),
+        (b'optional', amp.Boolean(optional=True)),
+        (b'print', amp.Unicode(optional=True)),
+        (b'from', TransportPeer(optional=True)),
+        (b'mixedCase', amp.String(optional=True)),
+        (b'dash-arg', amp.String(optional=True)),
+        (b'underscore_arg', amp.String(optional=True)),
+    ]
 
-    response = [(b'hello', amp.String()),
-                (b'print', amp.Unicode(optional=True))]
+    response = [(b'hello', amp.String()), (b'print', amp.Unicode(optional=True))]
 
     errors = {UnfriendlyGreeting: b'UNFRIENDLY'}
 
     fatalErrors = {DeathThreat: b'DEAD'}
 
+
 class NoAnswerHello(Hello):
     commandName = Hello.commandName
     requiresAnswer = False
 
+
 class FutureHello(amp.Command):
     commandName = b'hello'
 
-    arguments = [(b'hello', amp.String()),
-                 (b'optional', amp.Boolean(optional=True)),
-                 (b'print', amp.Unicode(optional=True)),
-                 (b'from', TransportPeer(optional=True)),
-                 (b'bonus', amp.String(optional=True)), # addt'l arguments
-                                                        # should generally be
-                                                        # added at the end, and
-                                                        # be optional...
-                 ]
+    arguments = [
+        (b'hello', amp.String()),
+        (b'optional', amp.Boolean(optional=True)),
+        (b'print', amp.Unicode(optional=True)),
+        (b'from', TransportPeer(optional=True)),
+        (b'bonus', amp.String(optional=True)),  # addt'l arguments
+        # should generally be
+        # added at the end, and
+        # be optional...
+    ]
 
-    response = [(b'hello', amp.String()),
-                (b'print', amp.Unicode(optional=True))]
+    response = [(b'hello', amp.String()), (b'print', amp.Unicode(optional=True))]
 
     errors = {UnfriendlyGreeting: b'UNFRIENDLY'}
+
 
 class WTF(amp.Command):
     """
@@ -183,38 +176,43 @@ class BrokenReturn(amp.Command):
 
     commandName = b'broken_return'
 
+
 class Goodbye(amp.Command):
     # commandName left blank on purpose: this tests implicit command names.
     response = [(b'goodbye', amp.String())]
     responseType = amp.QuitBox
 
+
 class WaitForever(amp.Command):
     commandName = b'wait_forever'
+
 
 class GetList(amp.Command):
     commandName = b'getlist'
     arguments = [(b'length', amp.Integer())]
     response = [(b'body', amp.AmpList([(b'x', amp.Integer())]))]
 
+
 class DontRejectMe(amp.Command):
     commandName = b'dontrejectme'
     arguments = [
-            (b'magicWord', amp.Unicode()),
-            (b'list', amp.AmpList([(b'name', amp.Unicode())], optional=True)),
-            ]
+        (b'magicWord', amp.Unicode()),
+        (b'list', amp.AmpList([(b'name', amp.Unicode())], optional=True)),
+    ]
     response = [(b'response', amp.Unicode())]
+
 
 class SecuredPing(amp.Command):
     # XXX TODO: actually make this refuse to send over an insecure connection
     response = [(b'pinged', amp.Boolean())]
 
+
 class TestSwitchProto(amp.ProtocolSwitchCommand):
     commandName = b'Switch-Proto'
 
-    arguments = [
-        (b'name', amp.String()),
-        ]
+    arguments = [(b'name', amp.String())]
     errors = {UnknownProtocol: b'UNKNOWN'}
+
 
 class SingleUseFactory(protocol.ClientFactory):
     def __init__(self, proto):
@@ -231,12 +229,17 @@ class SingleUseFactory(protocol.ClientFactory):
         self.reasonFailed = reason
         return
 
+
 THING_I_DONT_UNDERSTAND = b'gwebol nargo'
+
+
 class ThingIDontUnderstandError(Exception):
     pass
 
+
 class FactoryNotifier(amp.AMP):
     factory = None
+
     def connectionMade(self):
         if self.factory is not None:
             self.factory.theProto = self
@@ -245,14 +248,17 @@ class FactoryNotifier(amp.AMP):
 
     def emitpong(self):
         from twisted.internet.interfaces import ISSLTransport
+
         if not ISSLTransport.providedBy(self.transport):
             raise DeathThreat("only send secure pings over secure channels")
         return {'pinged': True}
+
     SecuredPing.responder(emitpong)
 
 
 class SimpleSymmetricCommandProtocol(FactoryNotifier):
     maybeLater = None
+
     def __init__(self, onConnLost=None):
         amp.AMP.__init__(self)
         self.onConnLost = onConnLost
@@ -265,8 +271,16 @@ class SimpleSymmetricCommandProtocol(FactoryNotifier):
 
     greeted = False
 
-    def cmdHello(self, hello, From, optional=None, Print=None,
-                 mixedCase=None, dash_arg=None, underscore_arg=None):
+    def cmdHello(
+        self,
+        hello,
+        From,
+        optional=None,
+        Print=None,
+        mixedCase=None,
+        dash_arg=None,
+        underscore_arg=None,
+    ):
         assert From == self.transport.getPeer()
         if hello == THING_I_DONT_UNDERSTAND:
             raise ThingIDontUnderstandError()
@@ -279,10 +293,12 @@ class SimpleSymmetricCommandProtocol(FactoryNotifier):
             result.update(dict(Print=Print))
         self.greeted = True
         return result
+
     Hello.responder(cmdHello)
 
     def cmdGetlist(self, length):
         return {'body': [dict(x=1)] * length}
+
     GetList.responder(cmdGetlist)
 
     def okiwont(self, magicWord, list=None):
@@ -291,15 +307,18 @@ class SimpleSymmetricCommandProtocol(FactoryNotifier):
         else:
             response = u'%s accepted' % (list[0]['name'])
         return dict(response=response)
+
     DontRejectMe.responder(okiwont)
 
     def waitforit(self):
         self.waiting = defer.Deferred()
         return self.waiting
+
     WaitForever.responder(waitforit)
 
     def saybye(self):
         return dict(goodbye=b"everyone")
+
     Goodbye.responder(saybye)
 
     def switchToTestProtocol(self, fail=False):
@@ -309,17 +328,19 @@ class SimpleSymmetricCommandProtocol(FactoryNotifier):
             name = b'test-proto'
         p = TestProto(self.onConnLost, SWITCH_CLIENT_DATA)
         return self.callRemote(
-            TestSwitchProto,
-            SingleUseFactory(p), name=name).addCallback(lambda ign: p)
+            TestSwitchProto, SingleUseFactory(p), name=name
+        ).addCallback(lambda ign: p)
 
     def switchit(self, name):
         if name == b'test-proto':
             return TestProto(self.onConnLost, SWITCH_SERVER_DATA)
         raise UnknownProtocol(name)
+
     TestSwitchProto.responder(switchit)
 
     def donothing(self):
         return None
+
     BrokenReturn.responder(donothing)
 
 
@@ -329,35 +350,58 @@ class DeferredSymmetricCommandProtocol(SimpleSymmetricCommandProtocol):
             self.maybeLaterProto = TestProto(self.onConnLost, SWITCH_SERVER_DATA)
             self.maybeLater = defer.Deferred()
             return self.maybeLater
+
     TestSwitchProto.responder(switchit)
 
+
 class BadNoAnswerCommandProtocol(SimpleSymmetricCommandProtocol):
-    def badResponder(self, hello, From, optional=None, Print=None,
-                     mixedCase=None, dash_arg=None, underscore_arg=None):
+    def badResponder(
+        self,
+        hello,
+        From,
+        optional=None,
+        Print=None,
+        mixedCase=None,
+        dash_arg=None,
+        underscore_arg=None,
+    ):
         """
         This responder does nothing and forgets to return a dictionary.
         """
+
     NoAnswerHello.responder(badResponder)
 
+
 class NoAnswerCommandProtocol(SimpleSymmetricCommandProtocol):
-    def goodNoAnswerResponder(self, hello, From, optional=None, Print=None,
-                              mixedCase=None, dash_arg=None, underscore_arg=None):
-        return dict(hello=hello+b"-noanswer")
+    def goodNoAnswerResponder(
+        self,
+        hello,
+        From,
+        optional=None,
+        Print=None,
+        mixedCase=None,
+        dash_arg=None,
+        underscore_arg=None,
+    ):
+        return dict(hello=hello + b"-noanswer")
+
     NoAnswerHello.responder(goodNoAnswerResponder)
 
-def connectedServerAndClient(ServerClass=SimpleSymmetricProtocol,
-                             ClientClass=SimpleSymmetricProtocol,
-                             *a, **kw):
+
+def connectedServerAndClient(
+    ServerClass=SimpleSymmetricProtocol, ClientClass=SimpleSymmetricProtocol, *a, **kw
+):
     """Returns a 3-tuple: (client, server, pump)
     """
-    return iosim.connectedServerAndClient(
-        ServerClass, ClientClass,
-        *a, **kw)
+    return iosim.connectedServerAndClient(ServerClass, ClientClass, *a, **kw)
+
 
 class TotallyDumbProtocol(protocol.Protocol):
     buf = b''
+
     def dataReceived(self, data):
         self.buf += data
+
 
 class LiteralAmp(amp.AMP):
     def __init__(self):
@@ -366,7 +410,6 @@ class LiteralAmp(amp.AMP):
     def ampBoxReceived(self, box):
         self.boxes.append(box)
         return
-
 
 
 class AmpBoxTests(unittest.TestCase):
@@ -398,9 +441,7 @@ class AmpBoxTests(unittest.TestCase):
         self.assertRaises(TypeError, a.serialize)
 
 
-
 class ParsingTests(unittest.TestCase):
-
     def test_booleanValues(self):
         """
         Verify that the Boolean parser parses 'True' and 'False', but nothing
@@ -423,9 +464,8 @@ class ParsingTests(unittest.TestCase):
         p = amp.Path()
         s = p.toString(fp)
         v = p.fromString(s)
-        self.assertIsNot(fp, v) # sanity check
+        self.assertIsNot(fp, v)  # sanity check
         self.assertEqual(fp, v)
-
 
     def test_sillyEmptyThing(self):
         """
@@ -435,14 +475,14 @@ class ParsingTests(unittest.TestCase):
         a = amp.AMP()
         return self.assertRaises(amp.NoEmptyBoxes, a.ampBoxReceived, amp.Box())
 
-
     def test_ParsingRoundTrip(self):
         """
         Verify that various kinds of data make it through the encode/parse
         round-trip unharmed.
         """
-        c, s, p = connectedServerAndClient(ClientClass=LiteralAmp,
-                                           ServerClass=LiteralAmp)
+        c, s, p = connectedServerAndClient(
+            ClientClass=LiteralAmp, ServerClass=LiteralAmp
+        )
 
         SIMPLE = (b'simple', b'test')
         CE = (b'ceq', b': ')
@@ -460,8 +500,8 @@ class ParsingTests(unittest.TestCase):
             [SIMPLE, CE, CR, LF],
             [CE, CR, LF],
             [SIMPLE, NEWLINE, CE, NEWLINE2],
-            [BODYTEST, SIMPLE, NEWLINE]
-            ]
+            [BODYTEST, SIMPLE, NEWLINE],
+        ]
 
         for test in testData:
             jb = amp.Box()
@@ -471,18 +511,17 @@ class ParsingTests(unittest.TestCase):
             self.assertEqual(s.boxes[-1], jb)
 
 
-
 class FakeLocator(object):
     """
     This is a fake implementation of the interface implied by
     L{CommandLocator}.
     """
+
     def __init__(self):
         """
         Remember the given keyword arguments as a set of responders.
         """
         self.commands = {}
-
 
     def locateResponder(self, commandName):
         """
@@ -497,6 +536,7 @@ class FakeSender:
     This is a fake implementation of the 'box sender' interface implied by
     L{AMP}.
     """
+
     def __init__(self):
         """
         Create a fake sender and initialize the list of received boxes and
@@ -506,20 +546,17 @@ class FakeSender:
         self.unhandledErrors = []
         self.expectedErrors = 0
 
-
     def expectError(self):
         """
         Expect one error, so that the test doesn't fail.
         """
         self.expectedErrors += 1
 
-
     def sendBox(self, box):
         """
         Accept a box, but don't do anything.
         """
         self.sentBoxes.append(box)
-
 
     def unhandledError(self, failure):
         """
@@ -530,7 +567,6 @@ class FakeSender:
             failure.raiseException()
         else:
             self.unhandledErrors.append(failure)
-
 
 
 class CommandDispatchTests(unittest.TestCase):
@@ -554,23 +590,21 @@ class CommandDispatchTests(unittest.TestCase):
         self.dispatcher = amp.BoxDispatcher(self.locator)
         self.dispatcher.startReceivingBoxes(self.sender)
 
-
     def test_receivedAsk(self):
         """
         L{CommandDispatcher.ampBoxReceived} should locate the appropriate
         command in its responder lookup, based on the '_ask' key.
         """
         received = []
+
         def thunk(box):
             received.append(box)
             return amp.Box({"hello": "goodbye"})
-        input = amp.Box(_command="hello",
-                        _ask="test-command-id",
-                        hello="world")
+
+        input = amp.Box(_command="hello", _ask="test-command-id", hello="world")
         self.locator.commands['hello'] = thunk
         self.dispatcher.ampBoxReceived(input)
         self.assertEqual(received, [input])
-
 
     def test_sendUnhandledError(self):
         """
@@ -583,27 +617,26 @@ class CommandDispatchTests(unittest.TestCase):
         self.assertEqual(len(self.sender.unhandledErrors), 1)
         self.assertEqual(self.sender.unhandledErrors[0].value, err)
 
-
     def test_unhandledSerializationError(self):
         """
         Errors during serialization ought to be relayed to the sender's
         unhandledError method.
         """
         err = RuntimeError("something undefined went wrong")
+
         def thunk(result):
             class BrokenBox(amp.Box):
                 def _sendTo(self, proto):
                     raise err
+
             return BrokenBox()
+
         self.locator.commands['hello'] = thunk
-        input = amp.Box(_command="hello",
-                        _ask="test-command-id",
-                        hello="world")
+        input = amp.Box(_command="hello", _ask="test-command-id", hello="world")
         self.sender.expectError()
         self.dispatcher.ampBoxReceived(input)
         self.assertEqual(len(self.sender.unhandledErrors), 1)
         self.assertEqual(self.sender.unhandledErrors[0].value, err)
-
 
     def test_callRemote(self):
         """
@@ -614,19 +647,17 @@ class CommandDispatchTests(unittest.TestCase):
         de-serialization.
         """
         D = self.dispatcher.callRemote(Hello, hello=b'world')
-        self.assertEqual(self.sender.sentBoxes,
-                          [amp.AmpBox(_command=b"hello",
-                                      _ask=b"1",
-                                      hello=b"world")])
+        self.assertEqual(
+            self.sender.sentBoxes,
+            [amp.AmpBox(_command=b"hello", _ask=b"1", hello=b"world")],
+        )
         answers = []
         D.addCallback(answers.append)
         self.assertEqual(answers, [])
-        self.dispatcher.ampBoxReceived(amp.AmpBox({b'hello': b"yay",
-                                                   b'print': b"ignored",
-                                                   b'_answer': b"1"}))
-        self.assertEqual(answers, [dict(hello=b"yay",
-                                         Print=u"ignored")])
-
+        self.dispatcher.ampBoxReceived(
+            amp.AmpBox({b'hello': b"yay", b'print': b"ignored", b'_answer': b"1"})
+        )
+        self.assertEqual(answers, [dict(hello=b"yay", Print=u"ignored")])
 
     def _localCallbackErrorLoggingTest(self, callResult):
         """
@@ -637,11 +668,9 @@ class CommandDispatchTests(unittest.TestCase):
         callResult.addBoth(finalResult.append)
 
         self.assertEqual(1, len(self.sender.unhandledErrors))
-        self.assertIsInstance(
-            self.sender.unhandledErrors[0].value, ZeroDivisionError)
+        self.assertIsInstance(self.sender.unhandledErrors[0].value, ZeroDivisionError)
 
         self.assertEqual([None], finalResult)
-
 
     def test_callRemoteSuccessLocalCallbackErrorLogging(self):
         """
@@ -654,11 +683,11 @@ class CommandDispatchTests(unittest.TestCase):
         callResult = self.dispatcher.callRemote(Hello, hello=b'world')
         callResult.addCallback(lambda result: 1 // 0)
 
-        self.dispatcher.ampBoxReceived(amp.AmpBox({
-                    b'hello': b"yay", b'print': b"ignored", b'_answer': b"1"}))
+        self.dispatcher.ampBoxReceived(
+            amp.AmpBox({b'hello': b"yay", b'print': b"ignored", b'_answer': b"1"})
+        )
 
         self._localCallbackErrorLoggingTest(callResult)
-
 
     def test_callRemoteErrorLocalCallbackErrorLogging(self):
         """
@@ -670,38 +699,42 @@ class CommandDispatchTests(unittest.TestCase):
         callResult = self.dispatcher.callRemote(Hello, hello=b'world')
         callResult.addErrback(lambda result: 1 // 0)
 
-        self.dispatcher.ampBoxReceived(amp.AmpBox({
-                    b'_error': b'1', b'_error_code': b'bugs',
-                    b'_error_description': b'stuff'}))
+        self.dispatcher.ampBoxReceived(
+            amp.AmpBox(
+                {
+                    b'_error': b'1',
+                    b'_error_code': b'bugs',
+                    b'_error_description': b'stuff',
+                }
+            )
+        )
 
         self._localCallbackErrorLoggingTest(callResult)
-
 
 
 class SimpleGreeting(amp.Command):
     """
     A very simple greeting command that uses a few basic argument types.
     """
-    commandName = b'simple'
-    arguments = [(b'greeting', amp.Unicode()),
-                 (b'cookie', amp.Integer())]
-    response = [(b'cookieplus', amp.Integer())]
 
+    commandName = b'simple'
+    arguments = [(b'greeting', amp.Unicode()), (b'cookie', amp.Integer())]
+    response = [(b'cookieplus', amp.Integer())]
 
 
 class TestLocator(amp.CommandLocator):
     """
     A locator which implements a responder to the 'simple' command.
     """
+
     def __init__(self):
         self.greetings = []
-
 
     def greetingResponder(self, greeting, cookie):
         self.greetings.append((greeting, cookie))
         return dict(cookieplus=cookie + 3)
-    greetingResponder = SimpleGreeting.responder(greetingResponder)
 
+    greetingResponder = SimpleGreeting.responder(greetingResponder)
 
 
 class OverridingLocator(TestLocator):
@@ -715,8 +748,8 @@ class OverridingLocator(TestLocator):
         """
         self.greetings.append((greeting, cookie))
         return dict(cookieplus=cookie + 4)
-    greetingResponder = SimpleGreeting.responder(greetingResponder)
 
+    greetingResponder = SimpleGreeting.responder(greetingResponder)
 
 
 class InheritingLocator(OverridingLocator):
@@ -725,14 +758,12 @@ class InheritingLocator(OverridingLocator):
     """
 
 
-
 class OverrideLocatorAMP(amp.AMP):
     def __init__(self):
         amp.AMP.__init__(self)
         self.customResponder = object()
         self.expectations = {b"custom": self.customResponder}
         self.greetings = []
-
 
     def lookupFunction(self, name):
         """
@@ -744,13 +775,11 @@ class OverrideLocatorAMP(amp.AMP):
         else:
             return super(OverrideLocatorAMP, self).lookupFunction(name)
 
-
     def greetingResponder(self, greeting, cookie):
         self.greetings.append((greeting, cookie))
         return dict(cookieplus=cookie + 3)
+
     greetingResponder = SimpleGreeting.responder(greetingResponder)
-
-
 
 
 class CommandLocatorTests(unittest.TestCase):
@@ -769,10 +798,11 @@ class CommandLocatorTests(unittest.TestCase):
         locator = locatorClass()
         responderCallable = locator.locateResponder(b"simple")
         result = responderCallable(amp.Box(greeting=b"ni hao", cookie=b"5"))
+
         def done(values):
             self.assertEqual(values, amp.AmpBox(cookieplus=intToBytes(expected)))
-        return result.addCallback(done)
 
+        return result.addCallback(done)
 
     def test_responderDecorator(self):
         """
@@ -783,7 +813,6 @@ class CommandLocatorTests(unittest.TestCase):
         """
         return self._checkSimpleGreeting(TestLocator, 8)
 
-
     def test_responderOverriding(self):
         """
         L{CommandLocator} subclasses can override a responder inherited from
@@ -792,14 +821,12 @@ class CommandLocatorTests(unittest.TestCase):
         """
         return self._checkSimpleGreeting(OverridingLocator, 9)
 
-
     def test_responderInheritance(self):
         """
         Responder lookup follows the same rules as normal method lookup
         rules, particularly with respect to inheritance.
         """
         return self._checkSimpleGreeting(InheritingLocator, 9)
-
 
     def test_lookupFunctionDeprecatedOverride(self):
         """
@@ -812,18 +839,23 @@ class CommandLocatorTests(unittest.TestCase):
         customResponderObject = self.assertWarns(
             PendingDeprecationWarning,
             "Override locateResponder, not lookupFunction.",
-            __file__, lambda : locator.locateResponder(b"custom"))
+            __file__,
+            lambda: locator.locateResponder(b"custom"),
+        )
         self.assertEqual(locator.customResponder, customResponderObject)
         # Make sure upcalling works too
         normalResponderObject = self.assertWarns(
             PendingDeprecationWarning,
             "Override locateResponder, not lookupFunction.",
-            __file__, lambda : locator.locateResponder(b"simple"))
+            __file__,
+            lambda: locator.locateResponder(b"simple"),
+        )
         result = normalResponderObject(amp.Box(greeting=b"ni hao", cookie=b"5"))
+
         def done(values):
             self.assertEqual(values, amp.AmpBox(cookieplus=b'8'))
-        return result.addCallback(done)
 
+        return result.addCallback(done)
 
     def test_lookupFunctionDeprecatedInvoke(self):
         """
@@ -833,13 +865,16 @@ class CommandLocatorTests(unittest.TestCase):
         locator = TestLocator()
         responderCallable = self.assertWarns(
             PendingDeprecationWarning,
-            "Call locateResponder, not lookupFunction.", __file__,
-            lambda : locator.lookupFunction(b"simple"))
+            "Call locateResponder, not lookupFunction.",
+            __file__,
+            lambda: locator.lookupFunction(b"simple"),
+        )
         result = responderCallable(amp.Box(greeting=b"ni hao", cookie=b"5"))
+
         def done(values):
             self.assertEqual(values, amp.AmpBox(cookieplus=b'8'))
-        return result.addCallback(done)
 
+        return result.addCallback(done)
 
 
 SWITCH_CLIENT_DATA = b'Success!'
@@ -862,14 +897,12 @@ class BinaryProtocolTests(unittest.TestCase):
         self.boxes = []
         self.data = []
 
-
     def startReceivingBoxes(self, sender):
         """
         Implement L{IBoxReceiver.startReceivingBoxes} to just remember the
         value passed in.
         """
         self._boxSender = sender
-
 
     def ampBoxReceived(self, box):
         """
@@ -878,26 +911,23 @@ class BinaryProtocolTests(unittest.TestCase):
         self.boxes.append(box)
 
     stopReason = None
+
     def stopReceivingBoxes(self, reason):
         """
         Record the reason that we stopped receiving boxes.
         """
         self.stopReason = reason
 
-
     # fake ITransport
     def getPeer(self):
         return 'no peer'
 
-
     def getHost(self):
         return 'no host'
-
 
     def write(self, data):
         self.assertIsInstance(data, bytes)
         self.data.append(data)
-
 
     def test_startReceivingBoxes(self):
         """
@@ -909,7 +939,6 @@ class BinaryProtocolTests(unittest.TestCase):
         protocol.makeConnection(None)
         self.assertIs(self._boxSender, protocol)
 
-
     def test_sendBoxInStartReceivingBoxes(self):
         """
         The L{IBoxReceiver} which is started when L{amp.BinaryBoxProtocol} is
@@ -917,6 +946,7 @@ class BinaryProtocolTests(unittest.TestCase):
         passed to it before C{startReceivingBoxes} returns and have that box
         sent.
         """
+
         class SynchronouslySendingReceiver:
             def startReceivingBoxes(self, sender):
                 sender.sendBox(amp.Box({b'foo': b'bar'}))
@@ -924,10 +954,7 @@ class BinaryProtocolTests(unittest.TestCase):
         transport = StringTransport()
         protocol = amp.BinaryBoxProtocol(SynchronouslySendingReceiver())
         protocol.makeConnection(transport)
-        self.assertEqual(
-            transport.value(),
-            b'\x00\x03foo\x00\x03bar\x00\x00')
-
+        self.assertEqual(transport.value(), b'\x00\x03foo\x00\x03bar\x00\x00')
 
     def test_receiveBoxStateMachine(self):
         """
@@ -943,7 +970,6 @@ class BinaryProtocolTests(unittest.TestCase):
         a.stringReceived(b"")
         self.assertEqual(self.boxes, [amp.AmpBox(hello=b"world")])
 
-
     def test_firstBoxFirstKeyExcessiveLength(self):
         """
         L{amp.BinaryBoxProtocol} drops its connection if the length prefix for
@@ -954,7 +980,6 @@ class BinaryProtocolTests(unittest.TestCase):
         protocol.makeConnection(transport)
         protocol.dataReceived(b'\x01\x00')
         self.assertTrue(transport.disconnecting)
-
 
     def test_firstBoxSubsequentKeyExcessiveLength(self):
         """
@@ -969,7 +994,6 @@ class BinaryProtocolTests(unittest.TestCase):
         protocol.dataReceived(b'\x01\x00')
         self.assertTrue(transport.disconnecting)
 
-
     def test_subsequentBoxFirstKeyExcessiveLength(self):
         """
         L{amp.BinaryBoxProtocol} drops its connection if the length prefix for
@@ -983,7 +1007,6 @@ class BinaryProtocolTests(unittest.TestCase):
         protocol.dataReceived(b'\x01\x00')
         self.assertTrue(transport.disconnecting)
 
-
     def test_excessiveKeyFailure(self):
         """
         If L{amp.BinaryBoxProtocol} disconnects because it received a key
@@ -994,13 +1017,13 @@ class BinaryProtocolTests(unittest.TestCase):
         protocol.makeConnection(StringTransport())
         protocol.dataReceived(b'\x01\x00')
         protocol.connectionLost(
-            Failure(error.ConnectionDone("simulated connection done")))
+            Failure(error.ConnectionDone("simulated connection done"))
+        )
         self.stopReason.trap(amp.TooLong)
         self.assertTrue(self.stopReason.value.isKey)
         self.assertFalse(self.stopReason.value.isLocal)
         self.assertIsNone(self.stopReason.value.value)
         self.assertIsNone(self.stopReason.value.keyName)
-
 
     def test_unhandledErrorWithTransport(self):
         """
@@ -1014,7 +1037,6 @@ class BinaryProtocolTests(unittest.TestCase):
         self.assertEqual(1, len(self.flushLoggedErrors(RuntimeError)))
         self.assertTrue(transport.disconnecting)
 
-
     def test_unhandledErrorWithoutTransport(self):
         """
         L{amp.BinaryBoxProtocol.unhandledError} completes without error when
@@ -1026,26 +1048,28 @@ class BinaryProtocolTests(unittest.TestCase):
         protocol.unhandledError(Failure(RuntimeError("Fake error")))
         self.assertEqual(1, len(self.flushLoggedErrors(RuntimeError)))
 
-
     def test_receiveBoxData(self):
         """
         When a binary box protocol receives the serialized form of an AMP box,
         it should emit a similar box to its boxReceiver.
         """
         a = amp.BinaryBoxProtocol(self)
-        a.dataReceived(amp.Box({b"testKey": b"valueTest",
-                                b"anotherKey": b"anotherValue"}).serialize())
-        self.assertEqual(self.boxes,
-                          [amp.Box({b"testKey": b"valueTest",
-                                    b"anotherKey": b"anotherValue"})])
-
+        a.dataReceived(
+            amp.Box(
+                {b"testKey": b"valueTest", b"anotherKey": b"anotherValue"}
+            ).serialize()
+        )
+        self.assertEqual(
+            self.boxes,
+            [amp.Box({b"testKey": b"valueTest", b"anotherKey": b"anotherValue"})],
+        )
 
     def test_receiveLongerBoxData(self):
         """
         An L{amp.BinaryBoxProtocol} can receive serialized AMP boxes with
         values of up to (2 ** 16 - 1) bytes.
         """
-        length = (2 ** 16 - 1)
+        length = 2 ** 16 - 1
         value = b'x' * length
         transport = StringTransport()
         protocol = amp.BinaryBoxProtocol(self)
@@ -1054,7 +1078,6 @@ class BinaryProtocolTests(unittest.TestCase):
         self.assertEqual(self.boxes, [amp.Box({'k': value})])
         self.assertFalse(transport.disconnecting)
 
-
     def test_sendBox(self):
         """
         When a binary box protocol sends a box, it should emit the serialized
@@ -1062,12 +1085,10 @@ class BinaryProtocolTests(unittest.TestCase):
         """
         a = amp.BinaryBoxProtocol(self)
         a.makeConnection(self)
-        aBox = amp.Box({b"testKey": b"valueTest",
-                        b"someData": b"hello"})
+        aBox = amp.Box({b"testKey": b"valueTest", b"someData": b"hello"})
         a.makeConnection(self)
         a.sendBox(aBox)
         self.assertEqual(b''.join(self.data), aBox.serialize())
-
 
     def test_connectionLostStopSendingBoxes(self):
         """
@@ -1080,7 +1101,6 @@ class BinaryProtocolTests(unittest.TestCase):
         a.connectionLost(connectionFailure)
         self.assertIs(self.stopReason, connectionFailure)
 
-
     def test_protocolSwitch(self):
         """
         L{BinaryBoxProtocol} has the capacity to switch to a different protocol
@@ -1089,19 +1109,21 @@ class BinaryProtocolTests(unittest.TestCase):
         """
         otherProto = TestProto(None, b"outgoing data")
         test = self
+
         class SwitchyReceiver:
             switched = False
+
             def startReceivingBoxes(self, sender):
                 pass
+
             def ampBoxReceived(self, box):
-                test.assertFalse(self.switched,
-                                 "Should only receive one box!")
+                test.assertFalse(self.switched, "Should only receive one box!")
                 self.switched = True
                 a._lockForSwitch()
                 a._switchTo(otherProto)
+
         a = amp.BinaryBoxProtocol(SwitchyReceiver())
-        anyOldBox = amp.Box({b"include": b"lots",
-                             b"of": b"data"})
+        anyOldBox = amp.Box({b"include": b"lots", b"of": b"data"})
         a.makeConnection(self)
         # Include a 0-length box at the beginning of the next protocol's data,
         # to make sure that AMP doesn't eat the data or try to deliver extra
@@ -1112,10 +1134,8 @@ class BinaryProtocolTests(unittest.TestCase):
         self.assertEqual(b"".join(otherProto.data), b"\x00\x00Hello, world!")
         self.assertEqual(self.data, [b"outgoing data"])
         a.dataReceived(b"more data")
-        self.assertEqual(b"".join(otherProto.data),
-                          b"\x00\x00Hello, world!more data")
+        self.assertEqual(b"".join(otherProto.data), b"\x00\x00Hello, world!more data")
         self.assertRaises(amp.ProtocolSwitched, a.sendBox, anyOldBox)
-
 
     def test_protocolSwitchEmptyBuffer(self):
         """
@@ -1128,7 +1148,6 @@ class BinaryProtocolTests(unittest.TestCase):
         otherProto = TestProto(None, b"")
         a._switchTo(otherProto)
         self.assertEqual(otherProto.data, [])
-
 
     def test_protocolSwitchInvalidStates(self):
         """
@@ -1150,16 +1169,18 @@ class BinaryProtocolTests(unittest.TestCase):
         a._switchTo(otherProto)
         self.assertRaises(amp.ProtocolSwitched, a._unlockFromSwitch)
 
-
     def test_protocolSwitchLoseConnection(self):
         """
         When the protocol is switched, it should notify its nested protocol of
         disconnection.
         """
+
         class Loser(protocol.Protocol):
             reason = None
+
             def connectionLost(self, reason):
                 self.reason = reason
+
         connectionLoser = Loser()
         a = amp.BinaryBoxProtocol(self)
         a.makeConnection(self)
@@ -1169,16 +1190,18 @@ class BinaryProtocolTests(unittest.TestCase):
         a.connectionLost(connectionFailure)
         self.assertEqual(connectionLoser.reason, connectionFailure)
 
-
     def test_protocolSwitchLoseClientConnection(self):
         """
         When the protocol is switched, it should notify its nested client
         protocol factory of disconnection.
         """
+
         class ClientLoser:
             reason = None
+
             def clientConnectionLost(self, connector, reason):
                 self.reason = reason
+
         a = amp.BinaryBoxProtocol(self)
         connectionLoser = protocol.Protocol()
         clientLoser = ClientLoser()
@@ -1190,24 +1213,25 @@ class BinaryProtocolTests(unittest.TestCase):
         self.assertEqual(clientLoser.reason, connectionFailure)
 
 
-
 class AMPTests(unittest.TestCase):
-
     def test_interfaceDeclarations(self):
         """
         The classes in the amp module ought to implement the interfaces that
         are declared for their benefit.
         """
-        for interface, implementation in [(amp.IBoxSender, amp.BinaryBoxProtocol),
-                                          (amp.IBoxReceiver, amp.BoxDispatcher),
-                                          (amp.IResponderLocator, amp.CommandLocator),
-                                          (amp.IResponderLocator, amp.SimpleStringLocator),
-                                          (amp.IBoxSender, amp.AMP),
-                                          (amp.IBoxReceiver, amp.AMP),
-                                          (amp.IResponderLocator, amp.AMP)]:
-            self.assertTrue(interface.implementedBy(implementation),
-                            "%s does not implements(%s)" % (implementation, interface))
-
+        for interface, implementation in [
+            (amp.IBoxSender, amp.BinaryBoxProtocol),
+            (amp.IBoxReceiver, amp.BoxDispatcher),
+            (amp.IResponderLocator, amp.CommandLocator),
+            (amp.IResponderLocator, amp.SimpleStringLocator),
+            (amp.IBoxSender, amp.AMP),
+            (amp.IBoxReceiver, amp.AMP),
+            (amp.IResponderLocator, amp.AMP),
+        ]:
+            self.assertTrue(
+                interface.implementedBy(implementation),
+                "%s does not implements(%s)" % (implementation, interface),
+            )
 
     def test_helloWorld(self):
         """
@@ -1221,7 +1245,6 @@ class AMPTests(unittest.TestCase):
         p.flush()
         self.assertEqual(L[0][b'hello'], HELLO)
 
-
     def test_wireFormatRoundTrip(self):
         """
         Verify that mixed-case, underscored and dashed arguments are mapped to
@@ -1234,14 +1257,14 @@ class AMPTests(unittest.TestCase):
         p.flush()
         self.assertEqual(L[0][b'hello'], HELLO)
 
-
     def test_helloWorldUnicode(self):
         """
         Verify that unicode arguments can be encoded and decoded.
         """
         c, s, p = connectedServerAndClient(
             ServerClass=SimpleSymmetricCommandProtocol,
-            ClientClass=SimpleSymmetricCommandProtocol)
+            ClientClass=SimpleSymmetricCommandProtocol,
+        )
         L = []
         HELLO = b'world'
         HELLO_UNICODE = u'wor\u1234ld'
@@ -1249,7 +1272,6 @@ class AMPTests(unittest.TestCase):
         p.flush()
         self.assertEqual(L[0]['hello'], HELLO)
         self.assertEqual(L[0]['Print'], HELLO_UNICODE)
-
 
     def test_callRemoteStringRequiresAnswerFalse(self):
         """
@@ -1260,7 +1282,6 @@ class AMPTests(unittest.TestCase):
         ret = c.callRemoteString(b"WTF", requiresAnswer=False)
         self.assertIsNone(ret)
 
-
     def test_unknownCommandLow(self):
         """
         Verify that unknown commands using low-level APIs will be rejected with an
@@ -1268,12 +1289,14 @@ class AMPTests(unittest.TestCase):
         """
         c, s, p = connectedServerAndClient()
         L = []
+
         def clearAndAdd(e):
             """
             You can't propagate the error...
             """
             e.trap(amp.UnhandledCommand)
             return "OK"
+
         c.callRemoteString(b"WTF").addErrback(clearAndAdd).addCallback(L.append)
         p.flush()
         self.assertEqual(L.pop(), "OK")
@@ -1282,7 +1305,6 @@ class AMPTests(unittest.TestCase):
         p.flush()
         self.assertEqual(L[0][b'hello'], HELLO)
 
-
     def test_unknownCommandHigh(self):
         """
         Verify that unknown commands using high-level APIs will be rejected with an
@@ -1290,12 +1312,14 @@ class AMPTests(unittest.TestCase):
         """
         c, s, p = connectedServerAndClient()
         L = []
+
         def clearAndAdd(e):
             """
             You can't propagate the error...
             """
             e.trap(amp.UnhandledCommand)
             return "OK"
+
         c.callRemote(WTF).addErrback(clearAndAdd).addCallback(L.append)
         p.flush()
         self.assertEqual(L.pop(), "OK")
@@ -1303,7 +1327,6 @@ class AMPTests(unittest.TestCase):
         c.sendHello(HELLO).addCallback(L.append)
         p.flush()
         self.assertEqual(L[0][b'hello'], HELLO)
-
 
     def test_brokenReturnValue(self):
         """
@@ -1315,10 +1338,10 @@ class AMPTests(unittest.TestCase):
         """
         L = []
         SimpleSymmetricCommandProtocol().dispatchCommand(
-            amp.AmpBox(_command=BrokenReturn.commandName)).addErrback(L.append)
+            amp.AmpBox(_command=BrokenReturn.commandName)
+        ).addErrback(L.append)
         L[0].trap(amp.BadLocalReturn)
         self.failUnlessIn('None', repr(L[0].value))
-
 
     def test_unknownArgument(self):
         """
@@ -1327,17 +1350,16 @@ class AMPTests(unittest.TestCase):
         """
         c, s, p = connectedServerAndClient(
             ServerClass=SimpleSymmetricCommandProtocol,
-            ClientClass=SimpleSymmetricCommandProtocol)
+            ClientClass=SimpleSymmetricCommandProtocol,
+        )
         L = []
         HELLO = b'world'
         # c.sendHello(HELLO).addCallback(L.append)
-        c.callRemote(FutureHello,
-                     hello=HELLO,
-                     bonus=b"I'm not in the book!").addCallback(
-            L.append)
+        c.callRemote(
+            FutureHello, hello=HELLO, bonus=b"I'm not in the book!"
+        ).addCallback(L.append)
         p.flush()
         self.assertEqual(L[0]['hello'], HELLO)
-
 
     def test_simpleReprs(self):
         """
@@ -1348,7 +1370,6 @@ class AMPTests(unittest.TestCase):
         self.assertEqual(type(repr(amp.AmpBox())), str)
         self.assertIn("AmpBox", repr(amp.AmpBox()))
 
-
     def test_innerProtocolInRepr(self):
         """
         Verify that L{AMP} objects output their innerProtocol when set.
@@ -1358,9 +1379,9 @@ class AMPTests(unittest.TestCase):
         a.innerProtocol = otherProto
 
         self.assertEqual(
-            repr(a), "<AMP inner <TestProto #%d> at 0x%x>" % (
-                otherProto.instanceId, id(a)))
-
+            repr(a),
+            "<AMP inner <TestProto #%d> at 0x%x>" % (otherProto.instanceId, id(a)),
+        )
 
     def test_innerProtocolNotInRepr(self):
         """
@@ -1370,7 +1391,6 @@ class AMPTests(unittest.TestCase):
         a = amp.AMP()
         self.assertEqual(repr(a), "<AMP at 0x%x>" % (id(a),))
 
-
     def test_simpleSSLRepr(self):
         """
         L{amp._TLSBox.__repr__} returns a string.
@@ -1379,17 +1399,14 @@ class AMPTests(unittest.TestCase):
 
     test_simpleSSLRepr.skip = skipSSL
 
-
     def test_keyTooLong(self):
         """
         Verify that a key that is too long will immediately raise a synchronous
         exception.
         """
         c, s, p = connectedServerAndClient()
-        x = "H" * (0xff+1)
-        tl = self.assertRaises(amp.TooLong,
-                               c.callRemoteString, b"Hello",
-                               **{x: b"hi"})
+        x = "H" * (0xff + 1)
+        tl = self.assertRaises(amp.TooLong, c.callRemoteString, b"Hello", **{x: b"hi"})
         self.assertTrue(tl.isKey)
         self.assertTrue(tl.isLocal)
         self.assertIsNone(tl.keyName)
@@ -1397,14 +1414,13 @@ class AMPTests(unittest.TestCase):
         self.assertIn(str(len(x)), repr(tl))
         self.assertIn("key", repr(tl))
 
-
     def test_valueTooLong(self):
         """
         Verify that attempting to send value longer than 64k will immediately
         raise an exception.
         """
         c, s, p = connectedServerAndClient()
-        x = b"H" * (0xffff+1)
+        x = b"H" * (0xffff + 1)
         tl = self.assertRaises(amp.TooLong, c.sendHello, x)
         p.flush()
         self.assertFalse(tl.isKey)
@@ -1415,7 +1431,6 @@ class AMPTests(unittest.TestCase):
         self.assertIn("value", repr(tl))
         self.assertIn('hello', repr(tl))
 
-
     def test_helloWorldCommand(self):
         """
         Verify that a simple command can be sent and its response received with
@@ -1423,13 +1438,13 @@ class AMPTests(unittest.TestCase):
         """
         c, s, p = connectedServerAndClient(
             ServerClass=SimpleSymmetricCommandProtocol,
-            ClientClass=SimpleSymmetricCommandProtocol)
+            ClientClass=SimpleSymmetricCommandProtocol,
+        )
         L = []
         HELLO = b'world'
         c.sendHello(HELLO).addCallback(L.append)
         p.flush()
         self.assertEqual(L[0]['hello'], HELLO)
-
 
     def test_helloErrorHandling(self):
         """
@@ -1437,16 +1452,16 @@ class AMPTests(unittest.TestCase):
         properly relayed to the other end of the connection and translated into
         an exception, and no error will be logged.
         """
-        L=[]
+        L = []
         c, s, p = connectedServerAndClient(
             ServerClass=SimpleSymmetricCommandProtocol,
-            ClientClass=SimpleSymmetricCommandProtocol)
+            ClientClass=SimpleSymmetricCommandProtocol,
+        )
         HELLO = b'fuck you'
         c.sendHello(HELLO).addErrback(L.append)
         p.flush()
         L[0].trap(UnfriendlyGreeting)
         self.assertEqual(str(L[0].value), "Don't be a dick.")
-
 
     def test_helloFatalErrorHandling(self):
         """
@@ -1455,10 +1470,11 @@ class AMPTests(unittest.TestCase):
         into an exception, no error will be logged, and the connection will be
         terminated.
         """
-        L=[]
+        L = []
         c, s, p = connectedServerAndClient(
             ServerClass=SimpleSymmetricCommandProtocol,
-            ClientClass=SimpleSymmetricCommandProtocol)
+            ClientClass=SimpleSymmetricCommandProtocol,
+        )
         HELLO = b'die'
         c.sendHello(HELLO).addErrback(L.append)
         p.flush()
@@ -1467,18 +1483,17 @@ class AMPTests(unittest.TestCase):
         p.flush()
         L.pop().trap(error.ConnectionDone)
 
-
-
     def test_helloNoErrorHandling(self):
         """
         Verify that if an unknown error type is raised, it will be relayed to
         the other end of the connection and translated into an exception, it
         will be logged, and then the connection will be dropped.
         """
-        L=[]
+        L = []
         c, s, p = connectedServerAndClient(
             ServerClass=SimpleSymmetricCommandProtocol,
-            ClientClass=SimpleSymmetricCommandProtocol)
+            ClientClass=SimpleSymmetricCommandProtocol,
+        )
         HELLO = THING_I_DONT_UNDERSTAND
         c.sendHello(HELLO).addErrback(L.append)
         p.flush()
@@ -1490,8 +1505,6 @@ class AMPTests(unittest.TestCase):
         # The exception should have been logged.
         self.assertTrue(self.flushLoggedErrors(ThingIDontUnderstandError))
 
-
-
     def test_lateAnswer(self):
         """
         Verify that a command that does not get answered until after the
@@ -1499,7 +1512,8 @@ class AMPTests(unittest.TestCase):
         """
         c, s, p = connectedServerAndClient(
             ServerClass=SimpleSymmetricCommandProtocol,
-            ClientClass=SimpleSymmetricCommandProtocol)
+            ClientClass=SimpleSymmetricCommandProtocol,
+        )
         L = []
         c.callRemote(WaitForever).addErrback(L.append)
         p.flush()
@@ -1511,28 +1525,28 @@ class AMPTests(unittest.TestCase):
         s.waiting.callback({})
         return s.waiting
 
-
     def test_requiresNoAnswer(self):
         """
         Verify that a command that requires no answer is run.
         """
         c, s, p = connectedServerAndClient(
             ServerClass=SimpleSymmetricCommandProtocol,
-            ClientClass=SimpleSymmetricCommandProtocol)
+            ClientClass=SimpleSymmetricCommandProtocol,
+        )
         HELLO = b'world'
         c.callRemote(NoAnswerHello, hello=HELLO)
         p.flush()
         self.assertTrue(s.greeted)
 
-
     def test_requiresNoAnswerFail(self):
         """
         Verify that commands sent after a failed no-answer request do not complete.
         """
-        L=[]
+        L = []
         c, s, p = connectedServerAndClient(
             ServerClass=SimpleSymmetricCommandProtocol,
-            ClientClass=SimpleSymmetricCommandProtocol)
+            ClientClass=SimpleSymmetricCommandProtocol,
+        )
         HELLO = b'fuck you'
         c.callRemote(NoAnswerHello, hello=HELLO)
         p.flush()
@@ -1543,7 +1557,6 @@ class AMPTests(unittest.TestCase):
         p.flush()
         L.pop().trap(error.ConnectionDone)
         self.assertFalse(s.greeted)
-
 
     def test_noAnswerResponderBadAnswer(self):
         """
@@ -1556,12 +1569,12 @@ class AMPTests(unittest.TestCase):
         """
         c, s, p = connectedServerAndClient(
             ServerClass=BadNoAnswerCommandProtocol,
-            ClientClass=SimpleSymmetricCommandProtocol)
+            ClientClass=SimpleSymmetricCommandProtocol,
+        )
         c.callRemote(NoAnswerHello, hello=b"hello")
         p.flush()
         le = self.flushLoggedErrors(amp.BadLocalReturn)
         self.assertEqual(len(le), 1)
-
 
     def test_noAnswerResponderAskedForAnswer(self):
         """
@@ -1571,14 +1584,15 @@ class AMPTests(unittest.TestCase):
         """
         c, s, p = connectedServerAndClient(
             ServerClass=NoAnswerCommandProtocol,
-            ClientClass=SimpleSymmetricCommandProtocol)
+            ClientClass=SimpleSymmetricCommandProtocol,
+        )
         L = []
         c.callRemote(Hello, hello=b"Hello!").addCallback(L.append)
         p.flush()
         self.assertEqual(len(L), 1)
-        self.assertEqual(L, [dict(hello=b"Hello!-noanswer",
-                                   Print=None)])  # Optional response argument
-
+        self.assertEqual(
+            L, [dict(hello=b"Hello!-noanswer", Print=None)]
+        )  # Optional response argument
 
     def test_ampListCommand(self):
         """
@@ -1586,13 +1600,13 @@ class AMPTests(unittest.TestCase):
         """
         c, s, p = connectedServerAndClient(
             ServerClass=SimpleSymmetricCommandProtocol,
-            ClientClass=SimpleSymmetricCommandProtocol)
+            ClientClass=SimpleSymmetricCommandProtocol,
+        )
         L = []
         c.callRemote(GetList, length=10).addCallback(L.append)
         p.flush()
         values = L.pop().get('body')
         self.assertEqual(values, [{'x': 1}] * 10)
-
 
     def test_optionalAmpListOmitted(self):
         """
@@ -1601,13 +1615,13 @@ class AMPTests(unittest.TestCase):
         """
         c, s, p = connectedServerAndClient(
             ServerClass=SimpleSymmetricCommandProtocol,
-            ClientClass=SimpleSymmetricCommandProtocol)
+            ClientClass=SimpleSymmetricCommandProtocol,
+        )
         L = []
         c.callRemote(DontRejectMe, magicWord=u'please').addCallback(L.append)
         p.flush()
         response = L.pop().get('response')
         self.assertEqual(response, 'list omitted')
-
 
     def test_optionalAmpListPresent(self):
         """
@@ -1615,14 +1629,15 @@ class AMPTests(unittest.TestCase):
         """
         c, s, p = connectedServerAndClient(
             ServerClass=SimpleSymmetricCommandProtocol,
-            ClientClass=SimpleSymmetricCommandProtocol)
+            ClientClass=SimpleSymmetricCommandProtocol,
+        )
         L = []
-        c.callRemote(DontRejectMe, magicWord=u'please',
-                list=[{'name': u'foo'}]).addCallback(L.append)
+        c.callRemote(
+            DontRejectMe, magicWord=u'please', list=[{'name': u'foo'}]
+        ).addCallback(L.append)
         p.flush()
         response = L.pop().get('response')
         self.assertEqual(response, 'foo accepted')
-
 
     def test_failEarlyOnArgSending(self):
         """
@@ -1630,7 +1645,6 @@ class AMPTests(unittest.TestCase):
         an exception will be raised.
         """
         self.assertRaises(amp.InvalidSignature, Hello)
-
 
     def test_doubleProtocolSwitch(self):
         """
@@ -1642,19 +1656,24 @@ class AMPTests(unittest.TestCase):
         serverProto = SimpleSymmetricCommandProtocol(serverDeferred)
         clientDeferred = defer.Deferred()
         clientProto = SimpleSymmetricCommandProtocol(clientDeferred)
-        c, s, p = connectedServerAndClient(ServerClass=lambda: serverProto,
-                                           ClientClass=lambda: clientProto)
+        c, s, p = connectedServerAndClient(
+            ServerClass=lambda: serverProto, ClientClass=lambda: clientProto
+        )
+
         def switched(result):
             self.assertRaises(amp.ProtocolSwitched, c.switchToTestProtocol)
             self.testSucceeded = True
+
         c.switchToTestProtocol().addCallback(switched)
         p.flush()
         self.assertTrue(self.testSucceeded)
 
-
-    def test_protocolSwitch(self, switcher=SimpleSymmetricCommandProtocol,
-                            spuriousTraffic=False,
-                            spuriousError=False):
+    def test_protocolSwitch(
+        self,
+        switcher=SimpleSymmetricCommandProtocol,
+        spuriousTraffic=False,
+        spuriousError=False,
+    ):
         """
         Verify that it is possible to switch to another protocol mid-connection and
         send data to it successfully.
@@ -1665,11 +1684,12 @@ class AMPTests(unittest.TestCase):
         serverProto = switcher(serverDeferred)
         clientDeferred = defer.Deferred()
         clientProto = switcher(clientDeferred)
-        c, s, p = connectedServerAndClient(ServerClass=lambda: serverProto,
-                                           ClientClass=lambda: clientProto)
+        c, s, p = connectedServerAndClient(
+            ServerClass=lambda: serverProto, ClientClass=lambda: clientProto
+        )
 
         if spuriousTraffic:
-            wfdr = []           # remote
+            wfdr = []  # remote
             c.callRemote(WaitForever).addErrback(wfdr.append)
         switchDeferred = c.switchToTestProtocol()
         if spuriousTraffic:
@@ -1684,8 +1704,9 @@ class AMPTests(unittest.TestCase):
             self.testSucceeded = True
 
         def cbSwitch(proto):
-            return defer.DeferredList(
-                [serverDeferred, clientDeferred]).addCallback(cbConnsLost)
+            return defer.DeferredList([serverDeferred, clientDeferred]).addCallback(
+                cbConnsLost
+            )
 
         switchDeferred.addCallback(cbSwitch)
         p.flush()
@@ -1696,16 +1717,17 @@ class AMPTests(unittest.TestCase):
             # switch is done here; do this here to make sure that if we're
             # going to corrupt the connection, we do it before it's closed.
             if spuriousError:
-                s.waiting.errback(amp.RemoteAmpError(
-                        b"SPURIOUS",
-                        "Here's some traffic in the form of an error."))
+                s.waiting.errback(
+                    amp.RemoteAmpError(
+                        b"SPURIOUS", "Here's some traffic in the form of an error."
+                    )
+                )
             else:
                 s.waiting.callback({})
             p.flush()
-        c.transport.loseConnection() # close it
+        c.transport.loseConnection()  # close it
         p.flush()
         self.assertTrue(self.testSucceeded)
-
 
     def test_protocolSwitchDeferred(self):
         """
@@ -1713,7 +1735,6 @@ class AMPTests(unittest.TestCase):
         the command that does the switch is deferred.
         """
         return self.test_protocolSwitch(switcher=DeferredSymmetricCommandProtocol)
-
 
     def test_protocolSwitchFail(self, switcher=SimpleSymmetricCommandProtocol):
         """
@@ -1726,8 +1747,9 @@ class AMPTests(unittest.TestCase):
         serverProto = switcher(serverDeferred)
         clientDeferred = defer.Deferred()
         clientProto = switcher(clientDeferred)
-        c, s, p = connectedServerAndClient(ServerClass=lambda: serverProto,
-                                           ClientClass=lambda: clientProto)
+        c, s, p = connectedServerAndClient(
+            ServerClass=lambda: serverProto, ClientClass=lambda: clientProto
+        )
         L = []
         c.switchToTestProtocol(fail=True).addErrback(L.append)
         p.flush()
@@ -1739,7 +1761,6 @@ class AMPTests(unittest.TestCase):
         p.flush()
         self.assertEqual(L.pop()['hello'], b'world')
 
-
     def test_trafficAfterSwitch(self):
         """
         Verify that attempts to send traffic after a switch will not corrupt
@@ -1747,15 +1768,12 @@ class AMPTests(unittest.TestCase):
         """
         return self.test_protocolSwitch(spuriousTraffic=True)
 
-
     def test_errorAfterSwitch(self):
         """
         Returning an error after a protocol switch should record the underlying
         error.
         """
-        return self.test_protocolSwitch(spuriousTraffic=True,
-                                        spuriousError=True)
-
+        return self.test_protocolSwitch(spuriousTraffic=True, spuriousError=True)
 
     def test_quitBoxQuits(self):
         """
@@ -1764,7 +1782,8 @@ class AMPTests(unittest.TestCase):
         """
         c, s, p = connectedServerAndClient(
             ServerClass=SimpleSymmetricCommandProtocol,
-            ClientClass=SimpleSymmetricCommandProtocol)
+            ClientClass=SimpleSymmetricCommandProtocol,
+        )
 
         L = []
         HELLO = b'world'
@@ -1778,7 +1797,6 @@ class AMPTests(unittest.TestCase):
         c.sendHello(HELLO).addErrback(L.append)
         L.pop().trap(error.ConnectionDone)
 
-
     def test_basicLiteralEmit(self):
         """
         Verify that the command dictionaries for a callRemoteN look correct
@@ -1787,19 +1805,25 @@ class AMPTests(unittest.TestCase):
         c, s, p = connectedServerAndClient()
         L = []
         s.ampBoxReceived = L.append
-        c.callRemote(Hello, hello=b'hello test', mixedCase=b'mixed case arg test',
-                     dash_arg=b'x', underscore_arg=b'y')
+        c.callRemote(
+            Hello,
+            hello=b'hello test',
+            mixedCase=b'mixed case arg test',
+            dash_arg=b'x',
+            underscore_arg=b'y',
+        )
         p.flush()
         self.assertEqual(len(L), 1)
-        for k, v in [(b'_command', Hello.commandName),
-                     (b'hello', b'hello test'),
-                     (b'mixedCase', b'mixed case arg test'),
-                     (b'dash-arg', b'x'),
-                     (b'underscore_arg', b'y')]:
+        for k, v in [
+            (b'_command', Hello.commandName),
+            (b'hello', b'hello test'),
+            (b'mixedCase', b'mixed case arg test'),
+            (b'dash-arg', b'x'),
+            (b'underscore_arg', b'y'),
+        ]:
             self.assertEqual(L[-1].pop(k), v)
         L[-1].pop(b'_ask')
         self.assertEqual(L[-1], {})
-
 
     def test_basicStructuredEmit(self):
         """
@@ -1808,35 +1832,49 @@ class AMPTests(unittest.TestCase):
         names are correctly handled.
         """
         L = []
+
         class StructuredHello(amp.AMP):
             def h(self, *a, **k):
                 L.append((a, k))
                 return dict(hello=b'aaa')
+
             Hello.responder(h)
+
         c, s, p = connectedServerAndClient(ServerClass=StructuredHello)
-        c.callRemote(Hello, hello=b'hello test', mixedCase=b'mixed case arg test',
-                     dash_arg=b'x', underscore_arg=b'y').addCallback(L.append)
+        c.callRemote(
+            Hello,
+            hello=b'hello test',
+            mixedCase=b'mixed case arg test',
+            dash_arg=b'x',
+            underscore_arg=b'y',
+        ).addCallback(L.append)
         p.flush()
         self.assertEqual(len(L), 2)
-        self.assertEqual(L[0],
-                          ((), dict(
+        self.assertEqual(
+            L[0],
+            (
+                (),
+                dict(
                     hello=b'hello test',
                     mixedCase=b'mixed case arg test',
                     dash_arg=b'x',
                     underscore_arg=b'y',
                     From=s.transport.getPeer(),
-
                     # XXX - should optional arguments just not be passed?
                     # passing None seems a little odd, looking at the way it
                     # turns out here... -glyph
                     Print=None,
                     optional=None,
-                    )))
+                ),
+            ),
+        )
         self.assertEqual(L[1], dict(Print=None, hello=b'aaa'))
+
 
 class PretendRemoteCertificateAuthority:
     def checkIsPretendRemote(self):
         return True
+
 
 class IOSimCert:
     verifyCount = 0
@@ -1855,15 +1893,18 @@ class IOSimCert:
         self.verifyCount += 1
         return True
 
+
 class OKCert(IOSimCert):
     def options(self, x):
         assert x.checkIsPretendRemote()
         return self
 
+
 class GrumpyCert(IOSimCert):
     def iosimVerify(self, otherCert):
         self.verifyCount += 1
         return False
+
 
 class DroppyCert(IOSimCert):
     def __init__(self, toDrop):
@@ -1873,6 +1914,7 @@ class DroppyCert(IOSimCert):
         self.verifyCount += 1
         self.toDrop.loseConnection()
         return True
+
 
 class SecurableProto(FactoryNotifier):
 
@@ -1884,11 +1926,9 @@ class SecurableProto(FactoryNotifier):
     def getTLSVars(self):
         cert = self.certFactory()
         verify = self.verifyFactory()
-        return dict(
-            tls_localCertificate=cert,
-            tls_verifyAuthorities=verify)
-    amp.StartTLS.responder(getTLSVars)
+        return dict(tls_localCertificate=cert, tls_verifyAuthorities=verify)
 
+    amp.StartTLS.responder(getTLSVars)
 
 
 class TLSTests(unittest.TestCase):
@@ -1898,15 +1938,17 @@ class TLSTests(unittest.TestCase):
         notifications to all the right places.
         """
         cli, svr, p = connectedServerAndClient(
-            ServerClass=SecurableProto,
-            ClientClass=SecurableProto)
+            ServerClass=SecurableProto, ClientClass=SecurableProto
+        )
 
         okc = OKCert()
-        svr.certFactory = lambda : okc
+        svr.certFactory = lambda: okc
 
         cli.callRemote(
-            amp.StartTLS, tls_localCertificate=okc,
-            tls_verifyAuthorities=[PretendRemoteCertificateAuthority()])
+            amp.StartTLS,
+            tls_localCertificate=okc,
+            tls_verifyAuthorities=[PretendRemoteCertificateAuthority()],
+        )
 
         # let's buffer something to be delivered securely
         L = []
@@ -1919,31 +1961,32 @@ class TLSTests(unittest.TestCase):
         p.flush()
         self.assertEqual(L[0], {'pinged': True})
 
-
     def test_startTooManyTimes(self):
         """
         Verify that the protocol will complain if we attempt to renegotiate TLS,
         which we don't support.
         """
         cli, svr, p = connectedServerAndClient(
-            ServerClass=SecurableProto,
-            ClientClass=SecurableProto)
+            ServerClass=SecurableProto, ClientClass=SecurableProto
+        )
 
         okc = OKCert()
-        svr.certFactory = lambda : okc
+        svr.certFactory = lambda: okc
 
-        cli.callRemote(amp.StartTLS,
-                       tls_localCertificate=okc,
-                       tls_verifyAuthorities=[PretendRemoteCertificateAuthority()])
+        cli.callRemote(
+            amp.StartTLS,
+            tls_localCertificate=okc,
+            tls_verifyAuthorities=[PretendRemoteCertificateAuthority()],
+        )
         p.flush()
-        cli.noPeerCertificate = True # this is totally fake
+        cli.noPeerCertificate = True  # this is totally fake
         self.assertRaises(
             amp.OnlyOneTLS,
             cli.callRemote,
             amp.StartTLS,
             tls_localCertificate=okc,
-            tls_verifyAuthorities=[PretendRemoteCertificateAuthority()])
-
+            tls_verifyAuthorities=[PretendRemoteCertificateAuthority()],
+        )
 
     def test_negotiationFailed(self):
         """
@@ -1954,12 +1997,11 @@ class TLSTests(unittest.TestCase):
         badCert = GrumpyCert()
 
         cli, svr, p = connectedServerAndClient(
-            ServerClass=SecurableProto,
-            ClientClass=SecurableProto)
-        svr.certFactory = lambda : badCert
+            ServerClass=SecurableProto, ClientClass=SecurableProto
+        )
+        svr.certFactory = lambda: badCert
 
-        cli.callRemote(amp.StartTLS,
-                       tls_localCertificate=badCert)
+        cli.callRemote(amp.StartTLS, tls_localCertificate=badCert)
 
         p.flush()
         # once for client once for server - but both fail
@@ -1968,7 +2010,6 @@ class TLSTests(unittest.TestCase):
         p.flush()
         self.assertFailure(d, iosim.NativeOpenSSLError)
 
-
     def test_negotiationFailedByClosing(self):
         """
         Verify that starting TLS and failing by way of a lost connection
@@ -1976,10 +2017,10 @@ class TLSTests(unittest.TestCase):
         """
 
         cli, svr, p = connectedServerAndClient(
-            ServerClass=SecurableProto,
-            ClientClass=SecurableProto)
+            ServerClass=SecurableProto, ClientClass=SecurableProto
+        )
         droppyCert = DroppyCert(svr.transport)
-        svr.certFactory = lambda : droppyCert
+        svr.certFactory = lambda: droppyCert
 
         cli.callRemote(amp.StartTLS, tls_localCertificate=droppyCert)
 
@@ -1997,7 +2038,6 @@ class TLSTests(unittest.TestCase):
     skip = skipSSL
 
 
-
 class TLSNotAvailableTests(unittest.TestCase):
     """
     Tests what happened when ssl is not available in current installation.
@@ -2010,13 +2050,11 @@ class TLSNotAvailableTests(unittest.TestCase):
         self.ssl = amp.ssl
         amp.ssl = None
 
-
     def tearDown(self):
         """
         Restore ssl module.
         """
         amp.ssl = self.ssl
-
 
     def test_callRemoteError(self):
         """
@@ -2024,17 +2062,20 @@ class TLSNotAvailableTests(unittest.TestCase):
         L{amp.StartTLS}.
         """
         cli, svr, p = connectedServerAndClient(
-            ServerClass=SecurableProto,
-            ClientClass=SecurableProto)
+            ServerClass=SecurableProto, ClientClass=SecurableProto
+        )
 
         okc = OKCert()
-        svr.certFactory = lambda : okc
+        svr.certFactory = lambda: okc
 
-        return self.assertFailure(cli.callRemote(
-            amp.StartTLS, tls_localCertificate=okc,
-            tls_verifyAuthorities=[PretendRemoteCertificateAuthority()]),
-            RuntimeError)
-
+        return self.assertFailure(
+            cli.callRemote(
+                amp.StartTLS,
+                tls_localCertificate=okc,
+                tls_verifyAuthorities=[PretendRemoteCertificateAuthority()],
+            ),
+            RuntimeError,
+        )
 
     def test_messageReceivedError(self):
         """
@@ -2043,7 +2084,7 @@ class TLSNotAvailableTests(unittest.TestCase):
         """
         svr = SecurableProto()
         okc = OKCert()
-        svr.certFactory = lambda : okc
+        svr.certFactory = lambda: okc
         box = amp.Box()
         box[b'_command'] = b'StartTLS'
         box[b'_ask'] = b'1'
@@ -2051,11 +2092,16 @@ class TLSNotAvailableTests(unittest.TestCase):
         svr.sendBox = boxes.append
         svr.makeConnection(StringTransport())
         svr.ampBoxReceived(box)
-        self.assertEqual(boxes,
-            [{b'_error_code': b'TLS_ERROR',
-              b'_error': b'1',
-              b'_error_description': b'TLS not available'}])
-
+        self.assertEqual(
+            boxes,
+            [
+                {
+                    b'_error_code': b'TLS_ERROR',
+                    b'_error': b'1',
+                    b'_error_description': b'TLS not available',
+                }
+            ],
+        )
 
 
 class InheritedError(Exception):
@@ -2064,20 +2110,18 @@ class InheritedError(Exception):
     """
 
 
-
 class OtherInheritedError(Exception):
     """
     This is a distinct error for checking inheritance.
     """
 
 
-
 class BaseCommand(amp.Command):
     """
     This provides a command that will be subclassed.
     """
-    errors = {InheritedError: b'INHERITED_ERROR'}
 
+    errors = {InheritedError: b'INHERITED_ERROR'}
 
 
 class InheritedCommand(BaseCommand):
@@ -2087,15 +2131,14 @@ class InheritedCommand(BaseCommand):
     """
 
 
-
 class AddErrorsCommand(BaseCommand):
     """
     This is a command which subclasses another command but adds errors to the
     list.
     """
+
     arguments = [(b'other', amp.Boolean())]
     errors = {OtherInheritedError: b'OTHER_INHERITED_ERROR'}
-
 
 
 class NormalCommandProtocol(amp.AMP):
@@ -2103,10 +2146,11 @@ class NormalCommandProtocol(amp.AMP):
     This is a protocol which responds to L{BaseCommand}, and is used to test
     that inheritance does not interfere with the normal handling of errors.
     """
+
     def resp(self):
         raise InheritedError()
-    BaseCommand.responder(resp)
 
+    BaseCommand.responder(resp)
 
 
 class InheritedCommandProtocol(amp.AMP):
@@ -2115,10 +2159,11 @@ class InheritedCommandProtocol(amp.AMP):
     test that inherited commands inherit their bases' errors if they do not
     respond to any of their own.
     """
+
     def resp(self):
         raise InheritedError()
-    InheritedCommand.responder(resp)
 
+    InheritedCommand.responder(resp)
 
 
 class AddedCommandProtocol(amp.AMP):
@@ -2127,13 +2172,14 @@ class AddedCommandProtocol(amp.AMP):
     test that inherited commands can add their own new types of errors, but
     still respond in the same way to their parents types of errors.
     """
+
     def resp(self, other):
         if other:
             raise OtherInheritedError()
         else:
             raise InheritedError()
-    AddErrorsCommand.responder(resp)
 
+    AddErrorsCommand.responder(resp)
 
 
 class CommandInheritanceTests(unittest.TestCase):
@@ -2146,22 +2192,18 @@ class CommandInheritanceTests(unittest.TestCase):
         Check that the appropriate kind of error is raised when a given command
         is sent to a given protocol.
         """
-        c, s, p = connectedServerAndClient(ServerClass=proto,
-                                           ClientClass=proto)
+        c, s, p = connectedServerAndClient(ServerClass=proto, ClientClass=proto)
         d = c.callRemote(cmd, **kw)
         d2 = self.failUnlessFailure(d, err)
         p.flush()
         return d2
-
 
     def test_basicErrorPropagation(self):
         """
         Verify that errors specified in a superclass are respected normally
         even if it has subclasses.
         """
-        return self.errorCheck(
-            InheritedError, NormalCommandProtocol, BaseCommand)
-
+        return self.errorCheck(InheritedError, NormalCommandProtocol, BaseCommand)
 
     def test_inheritedErrorPropagation(self):
         """
@@ -2169,8 +2211,8 @@ class CommandInheritanceTests(unittest.TestCase):
         its subclasses.
         """
         return self.errorCheck(
-            InheritedError, InheritedCommandProtocol, InheritedCommand)
-
+            InheritedError, InheritedCommandProtocol, InheritedCommand
+        )
 
     def test_inheritedErrorAddition(self):
         """
@@ -2178,8 +2220,8 @@ class CommandInheritanceTests(unittest.TestCase):
         are honored even if the superclass defines some errors.
         """
         return self.errorCheck(
-            OtherInheritedError, AddedCommandProtocol, AddErrorsCommand, other=True)
-
+            OtherInheritedError, AddedCommandProtocol, AddErrorsCommand, other=True
+        )
 
     def test_additionWithOriginalError(self):
         """
@@ -2187,7 +2229,8 @@ class CommandInheritanceTests(unittest.TestCase):
         even if that command defines new errors itself.
         """
         return self.errorCheck(
-            InheritedError, AddedCommandProtocol, AddErrorsCommand, other=False)
+            InheritedError, AddedCommandProtocol, AddErrorsCommand, other=False
+        )
 
 
 def _loseAndPass(err, proto):
@@ -2207,6 +2250,7 @@ class LiveFireBase:
         Create an amp server and connect a client to it.
         """
         from twisted.internet import reactor
+
         self.serverFactory = protocol.ServerFactory()
         self.serverFactory.protocol = self.serverProto
         self.clientFactory = protocol.ClientFactory()
@@ -2216,14 +2260,15 @@ class LiveFireBase:
         self.serverPort = reactor.listenTCP(0, self.serverFactory)
         self.addCleanup(self.serverPort.stopListening)
         self.clientConn = reactor.connectTCP(
-            '127.0.0.1', self.serverPort.getHost().port,
-            self.clientFactory)
+            '127.0.0.1', self.serverPort.getHost().port, self.clientFactory
+        )
         self.addCleanup(self.clientConn.disconnect)
+
         def getProtos(rlst):
             self.cli = self.clientFactory.theProto
             self.svr = self.serverFactory.theProto
-        dl = defer.DeferredList([self.clientFactory.onMade,
-                                 self.serverFactory.onMade])
+
+        dl = defer.DeferredList([self.clientFactory.onMade, self.serverFactory.onMade])
         return dl.addCallback(getProtos)
 
     def tearDown(self):
@@ -2239,13 +2284,13 @@ class LiveFireBase:
                 conn.connectionLost = d.errback
                 conn.transport.loseConnection()
                 L.append(d)
-        return defer.gatherResults(L
-            ).addErrback(lambda first: first.value.subFailure)
+        return defer.gatherResults(L).addErrback(lambda first: first.value.subFailure)
 
 
 def show(x):
     import sys
-    sys.stdout.write(x+'\n')
+
+    sys.stdout.write(x + '\n')
     sys.stdout.flush()
 
 
@@ -2255,10 +2300,10 @@ def tempSelfSigned():
     sharedDN = ssl.DN(CN='shared')
     key = ssl.KeyPair.generate()
     cr = key.certificateRequest(sharedDN)
-    sscrd = key.signCertificateRequest(
-        sharedDN, cr, lambda dn: True, 1234567)
+    sscrd = key.signCertificateRequest(sharedDN, cr, lambda dn: True, 1234567)
     cert = key.newCertificate(sscrd)
     return cert
+
 
 if ssl is not None:
     tempcert = tempSelfSigned()
@@ -2267,6 +2312,7 @@ if ssl is not None:
 class LiveFireTLSTests(LiveFireBase, unittest.TestCase):
     clientProto = SecurableProto
     serverProto = SecurableProto
+
     def test_liveFireCustomTLS(self):
         """
         Using real, live TLS, actually negotiate a connection.
@@ -2279,12 +2325,13 @@ class LiveFireTLSTests(LiveFireBase, unittest.TestCase):
 
         cert = tempcert
 
-        self.svr.verifyFactory = lambda : [cert]
-        self.svr.certFactory = lambda : cert
+        self.svr.verifyFactory = lambda: [cert]
+        self.svr.certFactory = lambda: cert
         # only needed on the server, we specify the client below.
 
         def secured(rslt):
             x = cert.digest()
+
             def pinged(rslt2):
                 # Interesting.  OpenSSL won't even _tell_ us about the peer
                 # cert until we negotiate.  we should be able to do this in
@@ -2294,13 +2341,14 @@ class LiveFireTLSTests(LiveFireBase, unittest.TestCase):
                 self.assertEqual(x, self.cli.peerCertificate.digest())
                 self.assertEqual(x, self.svr.hostCertificate.digest())
                 self.assertEqual(x, self.svr.peerCertificate.digest())
+
             return self.cli.callRemote(SecuredPing).addCallback(pinged)
-        return self.cli.callRemote(amp.StartTLS,
-                                   tls_localCertificate=cert,
-                                   tls_verifyAuthorities=[cert]).addCallback(secured)
+
+        return self.cli.callRemote(
+            amp.StartTLS, tls_localCertificate=cert, tls_verifyAuthorities=[cert]
+        ).addCallback(secured)
 
     skip = skipSSL
-
 
 
 class SlightlySmartTLS(SimpleSymmetricCommandProtocol):
@@ -2308,11 +2356,13 @@ class SlightlySmartTLS(SimpleSymmetricCommandProtocol):
     Specific implementation of server side protocol with different
     management of TLS.
     """
+
     def getTLSVars(self):
         """
         @return: the global C{tempcert} certificate as local certificate.
         """
         return dict(tls_localCertificate=tempcert)
+
     amp.StartTLS.responder(getTLSVars)
 
 
@@ -2326,12 +2376,13 @@ class PlainVanillaLiveFireTests(LiveFireBase, unittest.TestCase):
         Verify that out of the box, we can start TLS to at least encrypt the
         connection, even if we don't have any certificates to use.
         """
+
         def secured(result):
             return self.cli.callRemote(SecuredPing)
+
         return self.cli.callRemote(amp.StartTLS).addCallback(secured)
 
     skip = skipSSL
-
 
 
 class WithServerTLSVerificationTests(LiveFireBase, unittest.TestCase):
@@ -2342,14 +2393,15 @@ class WithServerTLSVerificationTests(LiveFireBase, unittest.TestCase):
         """
         Verify that anonymous clients can verify server certificates.
         """
+
         def secured(result):
             return self.cli.callRemote(SecuredPing)
-        return self.cli.callRemote(amp.StartTLS,
-                                   tls_verifyAuthorities=[tempcert]
-            ).addCallback(secured)
+
+        return self.cli.callRemote(
+            amp.StartTLS, tls_verifyAuthorities=[tempcert]
+        ).addCallback(secured)
 
     skip = skipSSL
-
 
 
 class ProtocolIncludingArgument(amp.Argument):
@@ -2379,15 +2431,14 @@ class ProtocolIncludingArgument(amp.Argument):
         return ident.encode("ascii")
 
 
-
 class ProtocolIncludingCommand(amp.Command):
     """
     A command that has argument and response schemas which use
     L{ProtocolIncludingArgument}.
     """
+
     arguments = [(b'weird', ProtocolIncludingArgument())]
     response = [(b'weird', ProtocolIncludingArgument())]
-
 
 
 class MagicSchemaCommand(amp.Command):
@@ -2395,6 +2446,7 @@ class MagicSchemaCommand(amp.Command):
     A command which overrides L{parseResponse}, L{parseArguments}, and
     L{makeResponse}.
     """
+
     def parseResponse(self, strings, protocol):
         """
         Don't do any parsing, just jam the input strings and protocol
@@ -2403,8 +2455,8 @@ class MagicSchemaCommand(amp.Command):
         """
         protocol.parseResponseArguments = (strings, protocol)
         return strings
-    parseResponse = classmethod(parseResponse)
 
+    parseResponse = classmethod(parseResponse)
 
     def parseArguments(cls, strings, protocol):
         """
@@ -2414,8 +2466,8 @@ class MagicSchemaCommand(amp.Command):
         """
         protocol.parseArgumentsArguments = (strings, protocol)
         return strings
-    parseArguments = classmethod(parseArguments)
 
+    parseArguments = classmethod(parseArguments)
 
     def makeArguments(cls, objects, protocol):
         """
@@ -2425,8 +2477,8 @@ class MagicSchemaCommand(amp.Command):
         """
         protocol.makeArgumentsArguments = (objects, protocol)
         return objects
-    makeArguments = classmethod(makeArguments)
 
+    makeArguments = classmethod(makeArguments)
 
 
 class NoNetworkProtocol(amp.AMP):
@@ -2448,6 +2500,7 @@ class NoNetworkProtocol(amp.AMP):
     L{MagicSchemaCommand}, if L{MagicSchemaCommand} has been handled by
     this protocol.
     """
+
     def _sendBoxCommand(self, commandName, strings, requiresAnswer):
         """
         Return a Deferred which fires with the original strings.
@@ -2457,33 +2510,30 @@ class NoNetworkProtocol(amp.AMP):
     MagicSchemaCommand.responder(lambda s, weird: {})
 
 
-
 class MyBox(dict):
     """
     A unique dict subclass.
     """
 
 
-
-class ProtocolIncludingCommandWithDifferentCommandType(
-    ProtocolIncludingCommand):
+class ProtocolIncludingCommandWithDifferentCommandType(ProtocolIncludingCommand):
     """
     A L{ProtocolIncludingCommand} subclass whose commandType is L{MyBox}
     """
-    commandType = MyBox
 
+    commandType = MyBox
 
 
 class CommandTests(unittest.TestCase):
     """
     Tests for L{amp.Argument} and L{amp.Command}.
     """
+
     def test_argumentInterface(self):
         """
         L{Argument} instances provide L{amp.IArgumentType}.
         """
         self.assertTrue(verifyObject(amp.IArgumentType, amp.Argument()))
-
 
     def test_parseResponse(self):
         """
@@ -2497,8 +2547,8 @@ class CommandTests(unittest.TestCase):
         strings = {b'weird': result}
         self.assertEqual(
             ProtocolIncludingCommand.parseResponse(strings, protocol),
-            {'weird': (result, protocol)})
-
+            {'weird': (result, protocol)},
+        )
 
     def test_callRemoteCallsParseResponse(self):
         """
@@ -2509,12 +2559,12 @@ class CommandTests(unittest.TestCase):
         client = NoNetworkProtocol()
         thingy = b"weeoo"
         response = client.callRemote(MagicSchemaCommand, weird=thingy)
+
         def gotResponse(ign):
-            self.assertEqual(client.parseResponseArguments,
-                              ({"weird": thingy}, client))
+            self.assertEqual(client.parseResponseArguments, ({"weird": thingy}, client))
+
         response.addCallback(gotResponse)
         return response
-
 
     def test_parseArguments(self):
         """
@@ -2528,8 +2578,8 @@ class CommandTests(unittest.TestCase):
         strings = {b'weird': result}
         self.assertEqual(
             ProtocolIncludingCommand.parseArguments(strings, protocol),
-            {'weird': (result, protocol)})
-
+            {'weird': (result, protocol)},
+        )
 
     def test_responderCallsParseArguments(self):
         """
@@ -2542,10 +2592,11 @@ class CommandTests(unittest.TestCase):
         argument = object()
         response = responder(dict(weird=argument))
         response.addCallback(
-            lambda ign: self.assertEqual(protocol.parseArgumentsArguments,
-                                         ({"weird": argument}, protocol)))
+            lambda ign: self.assertEqual(
+                protocol.parseArgumentsArguments, ({"weird": argument}, protocol)
+            )
+        )
         return response
-
 
     def test_makeArguments(self):
         """
@@ -2560,8 +2611,8 @@ class CommandTests(unittest.TestCase):
         ident = u"%d:%d" % (id(argument), id(protocol))
         self.assertEqual(
             ProtocolIncludingCommand.makeArguments(objects, protocol),
-            {b'weird': ident.encode("ascii")})
-
+            {b'weird': ident.encode("ascii")},
+        )
 
     def test_makeArgumentsUsesCommandType(self):
         """
@@ -2572,9 +2623,9 @@ class CommandTests(unittest.TestCase):
         objects = {"weird": b"whatever"}
 
         result = ProtocolIncludingCommandWithDifferentCommandType.makeArguments(
-            objects, protocol)
+            objects, protocol
+        )
         self.assertIs(type(result), MyBox)
-
 
     def test_callRemoteCallsMakeArguments(self):
         """
@@ -2585,12 +2636,14 @@ class CommandTests(unittest.TestCase):
         client = NoNetworkProtocol()
         argument = object()
         response = client.callRemote(MagicSchemaCommand, weird=argument)
+
         def gotResponse(ign):
-            self.assertEqual(client.makeArgumentsArguments,
-                             ({"weird": argument}, client))
+            self.assertEqual(
+                client.makeArgumentsArguments, ({"weird": argument}, client)
+            )
+
         response.addCallback(gotResponse)
         return response
-
 
     def test_extraArgumentsDisallowed(self):
         """
@@ -2601,8 +2654,9 @@ class CommandTests(unittest.TestCase):
         self.assertRaises(
             amp.InvalidSignature,
             Hello.makeArguments,
-            dict(hello="hello", bogusArgument=object()), None)
-
+            dict(hello="hello", bogusArgument=object()),
+            None,
+        )
 
     def test_wireSpellingDisallowed(self):
         """
@@ -2619,14 +2673,15 @@ class CommandTests(unittest.TestCase):
             amp.InvalidSignature,
             Hello.makeArguments,
             dict(hello="required", **{"print": "print value"}),
-            None)
-
+            None,
+        )
 
     def test_commandNameDefaultsToClassNameAsByteString(self):
         """
         A L{Command} subclass without a defined C{commandName} that's
         not a byte string.
         """
+
         class NewCommand(amp.Command):
             """
             A new command.
@@ -2634,75 +2689,80 @@ class CommandTests(unittest.TestCase):
 
         self.assertEqual(b"NewCommand", NewCommand.commandName)
 
-
     def test_commandNameMustBeAByteString(self):
         """
         A L{Command} subclass cannot be defined with a C{commandName} that's
         not a byte string.
         """
         error = self.assertRaises(
-            TypeError, type, "NewCommand", (amp.Command, ),
-            {"commandName": u"FOO"})
+            TypeError, type, "NewCommand", (amp.Command,), {"commandName": u"FOO"}
+        )
         self.assertRegex(
-            str(error), "^Command names must be byte strings, got: u?'FOO'$")
-
+            str(error), "^Command names must be byte strings, got: u?'FOO'$"
+        )
 
     def test_commandArgumentsMustBeNamedWithByteStrings(self):
         """
         A L{Command} subclass's C{arguments} must have byte string names.
         """
         error = self.assertRaises(
-            TypeError, type, "NewCommand", (amp.Command, ),
-            {"arguments": [(u"foo", None)]})
+            TypeError,
+            type,
+            "NewCommand",
+            (amp.Command,),
+            {"arguments": [(u"foo", None)]},
+        )
         self.assertRegex(
-            str(error), "^Argument names must be byte strings, got: u?'foo'$")
-
+            str(error), "^Argument names must be byte strings, got: u?'foo'$"
+        )
 
     def test_commandResponseMustBeNamedWithByteStrings(self):
         """
         A L{Command} subclass's C{response} must have byte string names.
         """
         error = self.assertRaises(
-            TypeError, type, "NewCommand", (amp.Command, ),
-            {"response": [(u"foo", None)]})
+            TypeError,
+            type,
+            "NewCommand",
+            (amp.Command,),
+            {"response": [(u"foo", None)]},
+        )
         self.assertRegex(
-            str(error), "^Response names must be byte strings, got: u?'foo'$")
-
+            str(error), "^Response names must be byte strings, got: u?'foo'$"
+        )
 
     def test_commandErrorsIsConvertedToDict(self):
         """
         A L{Command} subclass's C{errors} is coerced into a C{dict}.
         """
+
         class NewCommand(amp.Command):
             errors = [(ZeroDivisionError, b"ZDE")]
 
-        self.assertEqual(
-            {ZeroDivisionError: b"ZDE"},
-            NewCommand.errors)
-
+        self.assertEqual({ZeroDivisionError: b"ZDE"}, NewCommand.errors)
 
     def test_commandErrorsMustUseBytesForOnWireRepresentation(self):
         """
         A L{Command} subclass's C{errors} must map exceptions to byte strings.
         """
         error = self.assertRaises(
-            TypeError, type, "NewCommand", (amp.Command, ),
-            {"errors": [(ZeroDivisionError, u"foo")]})
-        self.assertRegex(
-            str(error), "^Error names must be byte strings, got: u?'foo'$")
-
+            TypeError,
+            type,
+            "NewCommand",
+            (amp.Command,),
+            {"errors": [(ZeroDivisionError, u"foo")]},
+        )
+        self.assertRegex(str(error), "^Error names must be byte strings, got: u?'foo'$")
 
     def test_commandFatalErrorsIsConvertedToDict(self):
         """
         A L{Command} subclass's C{fatalErrors} is coerced into a C{dict}.
         """
+
         class NewCommand(amp.Command):
             fatalErrors = [(ZeroDivisionError, b"ZDE")]
 
-        self.assertEqual(
-            {ZeroDivisionError: b"ZDE"},
-            NewCommand.fatalErrors)
-
+        self.assertEqual({ZeroDivisionError: b"ZDE"}, NewCommand.fatalErrors)
 
     def test_commandFatalErrorsMustUseBytesForOnWireRepresentation(self):
         """
@@ -2710,12 +2770,15 @@ class CommandTests(unittest.TestCase):
         strings.
         """
         error = self.assertRaises(
-            TypeError, type, "NewCommand", (amp.Command, ),
-            {"fatalErrors": [(ZeroDivisionError, u"foo")]})
+            TypeError,
+            type,
+            "NewCommand",
+            (amp.Command,),
+            {"fatalErrors": [(ZeroDivisionError, u"foo")]},
+        )
         self.assertRegex(
-            str(error), "^Fatal error names must be byte strings, "
-            "got: u?'foo'$")
-
+            str(error), "^Fatal error names must be byte strings, " "got: u?'foo'$"
+        )
 
 
 class ListOfTestsMixin:
@@ -2736,6 +2799,7 @@ class ListOfTestsMixin:
         the lists which should serialize to the values in the C{strings}
         dictionary.
     """
+
     def test_toBox(self):
         """
         L{ListOf.toBox} extracts the list of objects from the C{objects}
@@ -2748,10 +2812,8 @@ class ListOfTestsMixin:
         stringList = amp.ListOf(self.elementType)
         strings = amp.AmpBox()
         for key in self.objects:
-            stringList.toBox(
-                key.encode("ascii"), strings, self.objects.copy(), None)
+            stringList.toBox(key.encode("ascii"), strings, self.objects.copy(), None)
         self.assertEqual(strings, self.strings)
-
 
     def test_fromBox(self):
         """
@@ -2764,72 +2826,76 @@ class ListOfTestsMixin:
         self.assertEqual(objects, self.objects)
 
 
-
 class ListOfStringsTests(unittest.TestCase, ListOfTestsMixin):
     """
     Tests for L{ListOf} combined with L{amp.String}.
     """
+
     elementType = amp.String()
 
     strings = {
         b"empty": b"",
         b"single": b"\x00\x03foo",
-        b"multiple": b"\x00\x03bar\x00\x03baz\x00\x04quux"}
+        b"multiple": b"\x00\x03bar\x00\x03baz\x00\x04quux",
+    }
 
-    objects = {
-        "empty": [],
-        "single": [b"foo"],
-        "multiple": [b"bar", b"baz", b"quux"]}
+    objects = {"empty": [], "single": [b"foo"], "multiple": [b"bar", b"baz", b"quux"]}
 
 
 class ListOfIntegersTests(unittest.TestCase, ListOfTestsMixin):
     """
     Tests for L{ListOf} combined with L{amp.Integer}.
     """
+
     elementType = amp.Integer()
 
     huge = (
-        9999999999999999999999999999999999999999999999999999999999 *
-        9999999999999999999999999999999999999999999999999999999999)
+        9999999999999999999999999999999999999999999999999999999999
+        * 9999999999999999999999999999999999999999999999999999999999
+    )
 
     strings = {
         b"empty": b"",
         b"single": b"\x00\x0210",
         b"multiple": b"\x00\x011\x00\x0220\x00\x03500",
         b"huge": b"\x00\x74" + intToBytes(huge),
-        b"negative": b"\x00\x02-1"}
+        b"negative": b"\x00\x02-1",
+    }
 
     objects = {
         "empty": [],
         "single": [10],
         "multiple": [1, 20, 500],
         "huge": [huge],
-        "negative": [-1]}
-
+        "negative": [-1],
+    }
 
 
 class ListOfUnicodeTests(unittest.TestCase, ListOfTestsMixin):
     """
     Tests for L{ListOf} combined with L{amp.Unicode}.
     """
+
     elementType = amp.Unicode()
 
     strings = {
         b"empty": b"",
         b"single": b"\x00\x03foo",
-        b"multiple": b"\x00\x03\xe2\x98\x83\x00\x05Hello\x00\x05world"}
+        b"multiple": b"\x00\x03\xe2\x98\x83\x00\x05Hello\x00\x05world",
+    }
 
     objects = {
         "empty": [],
         "single": [u"foo"],
-        "multiple": [u"\N{SNOWMAN}", u"Hello", u"world"]}
-
+        "multiple": [u"\N{SNOWMAN}", u"Hello", u"world"],
+    }
 
 
 class ListOfDecimalTests(unittest.TestCase, ListOfTestsMixin):
     """
     Tests for L{ListOf} combined with L{amp.Decimal}.
     """
+
     elementType = amp.Decimal()
 
     strings = {
@@ -2837,21 +2903,19 @@ class ListOfDecimalTests(unittest.TestCase, ListOfTestsMixin):
         b"single": b"\x00\x031.1",
         b"extreme": b"\x00\x08Infinity\x00\x09-Infinity",
         b"scientist": b"\x00\x083.141E+5\x00\x0a0.00003141\x00\x083.141E-7"
-                      b"\x00\x09-3.141E+5\x00\x0b-0.00003141\x00\x09-3.141E-7",
+        b"\x00\x09-3.141E+5\x00\x0b-0.00003141\x00\x09-3.141E-7",
         b"engineer": (
-            b"\x00\x04" +
-            decimal.Decimal("0e6").to_eng_string().encode("ascii") +
-            b"\x00\x06" +
-            decimal.Decimal("1.5E-9").to_eng_string().encode("ascii")),
+            b"\x00\x04"
+            + decimal.Decimal("0e6").to_eng_string().encode("ascii")
+            + b"\x00\x06"
+            + decimal.Decimal("1.5E-9").to_eng_string().encode("ascii")
+        ),
     }
 
     objects = {
         "empty": [],
         "single": [decimal.Decimal("1.1")],
-        "extreme": [
-            decimal.Decimal("Infinity"),
-            decimal.Decimal("-Infinity"),
-        ],
+        "extreme": [decimal.Decimal("Infinity"), decimal.Decimal("-Infinity")],
         # exarkun objected to AMP supporting engineering notation because
         # it was redundant, until we realised that 1E6 has less precision
         # than 1000000 and is represented differently.  But they compare
@@ -2864,23 +2928,18 @@ class ListOfDecimalTests(unittest.TestCase, ListOfTestsMixin):
             decimal.Decimal("-3.141E-5"),
             decimal.Decimal("-3.141e-7"),
         ],
-        "engineer": [
-            decimal.Decimal("0e6"),
-            decimal.Decimal("1.5E-9"),
-        ],
-     }
-
+        "engineer": [decimal.Decimal("0e6"), decimal.Decimal("1.5E-9")],
+    }
 
 
 class ListOfDecimalNanTests(unittest.TestCase, ListOfTestsMixin):
     """
     Tests for L{ListOf} combined with L{amp.Decimal} for not-a-number values.
     """
+
     elementType = amp.Decimal()
 
-    strings = {
-        b"nan": b"\x00\x03NaN\x00\x04-NaN\x00\x04sNaN\x00\x05-sNaN",
-    }
+    strings = {b"nan": b"\x00\x03NaN\x00\x04-NaN\x00\x04sNaN\x00\x05-sNaN"}
 
     objects = {
         "nan": [
@@ -2920,11 +2979,11 @@ class ListOfDecimalNanTests(unittest.TestCase, ListOfTestsMixin):
         self.assertTrue(is_snan(n[3]) and is_signed(n[3]))
 
 
-
 class DecimalTests(unittest.TestCase):
     """
     Tests for L{amp.Decimal}.
     """
+
     def test_nonDecimal(self):
         """
         L{amp.Decimal.toString} raises L{ValueError} if passed an object which
@@ -2936,11 +2995,11 @@ class DecimalTests(unittest.TestCase):
         self.assertRaises(ValueError, argument.toString, 1234)
 
 
-
 class FloatTests(unittest.TestCase):
     """
     Tests for L{amp.Float}.
     """
+
     def test_nonFloat(self):
         """
         L{amp.Float.toString} raises L{ValueError} if passed an object which
@@ -2951,7 +3010,6 @@ class FloatTests(unittest.TestCase):
         self.assertRaises(ValueError, argument.toString, b"1.234")
         self.assertRaises(ValueError, argument.toString, 1234)
 
-
     def test_float(self):
         """
         L{amp.Float.toString} returns a bytestring when it is given a L{float}.
@@ -2960,21 +3018,21 @@ class FloatTests(unittest.TestCase):
         self.assertEqual(argument.toString(1.234), b"1.234")
 
 
-
 class ListOfDateTimeTests(unittest.TestCase, ListOfTestsMixin):
     """
     Tests for L{ListOf} combined with L{amp.DateTime}.
     """
+
     elementType = amp.DateTime()
 
     strings = {
         b"christmas": b"\x00\x202010-12-25T00:00:00.000000-00:00"
-                      b"\x00\x202010-12-25T00:00:00.000000-00:00",
+        b"\x00\x202010-12-25T00:00:00.000000-00:00",
         b"christmas in eu": b"\x00\x202010-12-25T00:00:00.000000+01:00",
         b"christmas in iran": b"\x00\x202010-12-25T00:00:00.000000+03:30",
         b"christmas in nyc": b"\x00\x202010-12-25T00:00:00.000000-05:00",
         b"previous tests": b"\x00\x202010-12-25T00:00:00.000000+03:19"
-                           b"\x00\x202010-12-25T00:00:00.000000-06:59",
+        b"\x00\x202010-12-25T00:00:00.000000-06:59",
     }
 
     objects = {
@@ -2983,13 +3041,13 @@ class ListOfDateTimeTests(unittest.TestCase, ListOfTestsMixin):
             datetime.datetime(2010, 12, 25, 0, 0, 0, tzinfo=tz('+', 0, 0)),
         ],
         "christmas in eu": [
-            datetime.datetime(2010, 12, 25, 0, 0, 0, tzinfo=tz('+', 1, 0)),
+            datetime.datetime(2010, 12, 25, 0, 0, 0, tzinfo=tz('+', 1, 0))
         ],
         "christmas in iran": [
-            datetime.datetime(2010, 12, 25, 0, 0, 0, tzinfo=tz('+', 3, 30)),
+            datetime.datetime(2010, 12, 25, 0, 0, 0, tzinfo=tz('+', 3, 30))
         ],
         "christmas in nyc": [
-            datetime.datetime(2010, 12, 25, 0, 0, 0, tzinfo=tz('-', 5, 0)),
+            datetime.datetime(2010, 12, 25, 0, 0, 0, tzinfo=tz('-', 5, 0))
         ],
         "previous tests": [
             datetime.datetime(2010, 12, 25, 0, 0, 0, tzinfo=tz('+', 3, 19)),
@@ -2998,12 +3056,12 @@ class ListOfDateTimeTests(unittest.TestCase, ListOfTestsMixin):
     }
 
 
-
 class ListOfOptionalTests(unittest.TestCase):
     """
     Tests to ensure L{ListOf} AMP arguments can be omitted from AMP commands
     via the 'optional' flag.
     """
+
     def test_requiredArgumentWithNoneValueRaisesTypeError(self):
         """
         L{ListOf.toBox} raises C{TypeError} when passed a value of L{None}
@@ -3011,9 +3069,13 @@ class ListOfOptionalTests(unittest.TestCase):
         """
         stringList = amp.ListOf(amp.Integer())
         self.assertRaises(
-            TypeError, stringList.toBox, b'omitted', amp.AmpBox(),
-            {'omitted': None}, None)
-
+            TypeError,
+            stringList.toBox,
+            b'omitted',
+            amp.AmpBox(),
+            {'omitted': None},
+            None,
+        )
 
     def test_optionalArgumentWithNoneValueOmitted(self):
         """
@@ -3025,7 +3087,6 @@ class ListOfOptionalTests(unittest.TestCase):
         stringList.toBox(b'omitted', strings, {b'omitted': None}, None)
         self.assertEqual(strings, {})
 
-
     def test_requiredArgumentWithKeyMissingRaisesKeyError(self):
         """
         L{ListOf.toBox} raises C{KeyError} if the argument's key is not
@@ -3033,9 +3094,13 @@ class ListOfOptionalTests(unittest.TestCase):
         """
         stringList = amp.ListOf(amp.Integer())
         self.assertRaises(
-            KeyError, stringList.toBox, b'ommited', amp.AmpBox(),
-            {'someOtherKey': 0}, None)
-
+            KeyError,
+            stringList.toBox,
+            b'ommited',
+            amp.AmpBox(),
+            {'someOtherKey': 0},
+            None,
+        )
 
     def test_optionalArgumentWithKeyMissingOmitted(self):
         """
@@ -3044,7 +3109,6 @@ class ListOfOptionalTests(unittest.TestCase):
         """
         stringList = amp.ListOf(amp.Integer(), optional=True)
         stringList.toBox(b'ommited', amp.AmpBox(), {b'someOtherKey': 0}, None)
-
 
     def test_omittedOptionalArgumentDeserializesAsNone(self):
         """
@@ -3055,7 +3119,6 @@ class ListOfOptionalTests(unittest.TestCase):
         objects = {}
         stringList.fromBox(b'omitted', {}, objects, None)
         self.assertEqual(objects, {'omitted': None})
-
 
 
 @implementer(interfaces.IUNIXTransport)
@@ -3077,31 +3140,25 @@ class UNIXStringTransport(object):
         self._fuzz = descriptorFuzz
         self._queue = []
 
-
     def sendFileDescriptor(self, descriptor):
-        self._queue.append((
-                'fileDescriptorReceived', descriptor + self._fuzz))
-
+        self._queue.append(('fileDescriptorReceived', descriptor + self._fuzz))
 
     def write(self, data):
         self._queue.append(('dataReceived', data))
-
 
     def writeSequence(self, seq):
         for data in seq:
             self.write(data)
 
-
     def loseConnection(self):
         self._queue.append(('connectionLost', Failure(error.ConnectionLost())))
-
 
     def getHost(self):
         return address.UNIXAddress('/tmp/some-path')
 
-
     def getPeer(self):
         return address.UNIXAddress('/tmp/another-path')
+
 
 # Minimal evidence that we got the signatures right
 verifyClass(interfaces.ITransport, UNIXStringTransport)
@@ -3113,13 +3170,12 @@ class DescriptorTests(unittest.TestCase):
     Tests for L{amp.Descriptor}, an argument type for passing a file descriptor
     over an AMP connection over a UNIX domain socket.
     """
+
     def setUp(self):
         self.fuzz = 3
         self.transport = UNIXStringTransport(descriptorFuzz=self.fuzz)
-        self.protocol = amp.BinaryBoxProtocol(
-            amp.BoxDispatcher(amp.CommandLocator()))
+        self.protocol = amp.BinaryBoxProtocol(amp.BoxDispatcher(amp.CommandLocator()))
         self.protocol.makeConnection(self.transport)
-
 
     def test_fromStringProto(self):
         """
@@ -3135,14 +3191,10 @@ class DescriptorTests(unittest.TestCase):
         self.protocol.fileDescriptorReceived(5)
         self.protocol.fileDescriptorReceived(3)
         self.protocol.fileDescriptorReceived(1)
-        self.assertEqual(
-            5, argument.fromStringProto("0", self.protocol))
-        self.assertEqual(
-            3, argument.fromStringProto("1", self.protocol))
-        self.assertEqual(
-            1, argument.fromStringProto("2", self.protocol))
+        self.assertEqual(5, argument.fromStringProto("0", self.protocol))
+        self.assertEqual(3, argument.fromStringProto("1", self.protocol))
+        self.assertEqual(1, argument.fromStringProto("2", self.protocol))
         self.assertEqual({}, self.protocol._descriptors)
-
 
     def test_toStringProto(self):
         """
@@ -3159,15 +3211,17 @@ class DescriptorTests(unittest.TestCase):
         argument = amp.Descriptor()
         self.assertEqual(b"0", argument.toStringProto(2, self.protocol))
         self.assertEqual(
-            ("fileDescriptorReceived", 2 + self.fuzz), self.transport._queue.pop(0))
+            ("fileDescriptorReceived", 2 + self.fuzz), self.transport._queue.pop(0)
+        )
         self.assertEqual(b"1", argument.toStringProto(4, self.protocol))
         self.assertEqual(
-            ("fileDescriptorReceived", 4 + self.fuzz), self.transport._queue.pop(0))
+            ("fileDescriptorReceived", 4 + self.fuzz), self.transport._queue.pop(0)
+        )
         self.assertEqual(b"2", argument.toStringProto(6, self.protocol))
         self.assertEqual(
-            ("fileDescriptorReceived", 6 + self.fuzz), self.transport._queue.pop(0))
+            ("fileDescriptorReceived", 6 + self.fuzz), self.transport._queue.pop(0)
+        )
         self.assertEqual({}, self.protocol._descriptors)
-
 
     def test_roundTrip(self):
         """
@@ -3183,14 +3237,12 @@ class DescriptorTests(unittest.TestCase):
         argument = amp.Descriptor()
         argument.toBox(nameAsBytes, strings, sendObjects.copy(), self.protocol)
 
-        receiver = amp.BinaryBoxProtocol(
-            amp.BoxDispatcher(amp.CommandLocator()))
+        receiver = amp.BinaryBoxProtocol(amp.BoxDispatcher(amp.CommandLocator()))
         for event in self.transport._queue:
             getattr(receiver, event[0])(*event[1:])
 
         receiveObjects = {}
-        argument.fromBox(
-            nameAsBytes, strings.copy(), receiveObjects, receiver)
+        argument.fromBox(nameAsBytes, strings.copy(), receiveObjects, receiver)
 
         # Make sure we got the descriptor.  Adjust by fuzz to be more convincing
         # of having gone through L{IUNIXTransport.sendFileDescriptor}, not just
@@ -3198,11 +3250,11 @@ class DescriptorTests(unittest.TestCase):
         self.assertEqual(descriptor + self.fuzz, receiveObjects[name])
 
 
-
 class DateTimeTests(unittest.TestCase):
     """
     Tests for L{amp.DateTime}, L{amp._FixedOffsetTZInfo}, and L{amp.utc}.
     """
+
     string = b'9876-01-23T12:34:56.054321-01:23'
     tzinfo = tz('-', 1, 23)
     object = datetime.datetime(9876, 1, 23, 12, 34, 56, 54321, tzinfo)
@@ -3215,16 +3267,15 @@ class DateTimeTests(unittest.TestCase):
         d = amp.DateTime()
         self.assertRaises(ValueError, d.fromString, 'abc')
 
-
     def test_invalidDatetime(self):
         """
         L{amp.DateTime.toString} raises L{ValueError} when passed a naive
         datetime (a datetime with no timezone information).
         """
         d = amp.DateTime()
-        self.assertRaises(ValueError, d.toString,
-            datetime.datetime(2010, 12, 25, 0, 0, 0))
-
+        self.assertRaises(
+            ValueError, d.toString, datetime.datetime(2010, 12, 25, 0, 0, 0)
+        )
 
     def test_fromString(self):
         """
@@ -3235,7 +3286,6 @@ class DateTimeTests(unittest.TestCase):
         value = argument.fromString(self.string)
         self.assertEqual(value, self.object)
 
-
     def test_toString(self):
         """
         L{amp.DateTime.toString} returns a C{str} in the wire format including
@@ -3245,7 +3295,6 @@ class DateTimeTests(unittest.TestCase):
         argument = amp.DateTime()
         value = argument.toString(self.object)
         self.assertEqual(value, self.string)
-
 
 
 class UTCTests(unittest.TestCase):
@@ -3259,13 +3308,11 @@ class UTCTests(unittest.TestCase):
         """
         self.assertEqual(amp.utc.tzname(None), '+00:00')
 
-
     def test_dst(self):
         """
         L{amp.utc.dst} returns a zero timedelta.
         """
         self.assertEqual(amp.utc.dst(None), datetime.timedelta(0))
-
 
     def test_utcoffset(self):
         """
@@ -3273,14 +3320,12 @@ class UTCTests(unittest.TestCase):
         """
         self.assertEqual(amp.utc.utcoffset(None), datetime.timedelta(0))
 
-
     def test_badSign(self):
         """
         L{amp._FixedOffsetTZInfo.fromSignHoursMinutes} raises L{ValueError} if
         passed an offset sign other than C{'+'} or C{'-'}.
         """
         self.assertRaises(ValueError, tz, '?', 0, 0)
-
 
 
 class RemoteAmpErrorTests(unittest.TestCase):
@@ -3296,7 +3341,6 @@ class RemoteAmpErrorTests(unittest.TestCase):
         error = amp.RemoteAmpError(b"BROKEN", "Something has broken")
         self.assertEqual("Code<BROKEN>: Something has broken", str(error))
 
-
     def test_stringMessageReplacesNonAsciiText(self):
         """
         When C{errorCode} contains non-ASCII characters, L{amp.RemoteAmpError}
@@ -3305,22 +3349,21 @@ class RemoteAmpErrorTests(unittest.TestCase):
         error = amp.RemoteAmpError(b"BROKEN-\xff", "Something has broken")
         self.assertEqual("Code<BROKEN-\\xff>: Something has broken", str(error))
 
-
     def test_stringMessageWithLocalFailure(self):
         """
         L{amp.RemoteAmpError} renders local errors with a "(local)" marker and
         a brief traceback.
         """
         failure = Failure(Exception("Something came loose"))
-        error = amp.RemoteAmpError(
-            b"BROKEN", "Something has broken", local=failure)
+        error = amp.RemoteAmpError(b"BROKEN", "Something has broken", local=failure)
         self.assertRegex(
-            str(error), (
+            str(error),
+            (
                 "^Code<BROKEN> [(]local[)]: Something has broken\n"
                 "Traceback [(]failure with no frames[)]: "
                 "<.+Exception.>: Something came loose\n"
-            ))
-
+            ),
+        )
 
 
 if not interfaces.IReactorSSL.providedBy(reactor):

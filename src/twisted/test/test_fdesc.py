@@ -19,7 +19,6 @@ from twisted.python.util import untilConcludes
 from twisted.trial import unittest
 
 
-
 class NonBlockingTests(unittest.SynchronousTestCase):
     """
     Tests for L{fdesc.setNonBlocking} and L{fdesc.setBlocking}.
@@ -36,7 +35,6 @@ class NonBlockingTests(unittest.SynchronousTestCase):
         fdesc.setNonBlocking(r)
         self.assertTrue(fcntl.fcntl(r, fcntl.F_GETFL) & os.O_NONBLOCK)
 
-
     def test_setBlocking(self):
         """
         L{fdesc.setBlocking} sets a file description to blocking.
@@ -47,7 +45,6 @@ class NonBlockingTests(unittest.SynchronousTestCase):
         fdesc.setNonBlocking(r)
         fdesc.setBlocking(r)
         self.assertFalse(fcntl.fcntl(r, fcntl.F_GETFL) & os.O_NONBLOCK)
-
 
 
 class ReadWriteTests(unittest.SynchronousTestCase):
@@ -63,7 +60,6 @@ class ReadWriteTests(unittest.SynchronousTestCase):
         fdesc.setNonBlocking(self.r)
         fdesc.setNonBlocking(self.w)
 
-
     def tearDown(self):
         """
         Close pipes.
@@ -77,13 +73,11 @@ class ReadWriteTests(unittest.SynchronousTestCase):
         except OSError:
             pass
 
-
     def write(self, d):
         """
         Write data to the pipe.
         """
         return fdesc.writeToFD(self.w, d)
-
 
     def read(self):
         """
@@ -99,7 +93,6 @@ class ReadWriteTests(unittest.SynchronousTestCase):
         else:
             return res
 
-
     def test_writeAndRead(self):
         """
         Test that the number of bytes L{fdesc.writeToFD} reports as written
@@ -110,7 +103,6 @@ class ReadWriteTests(unittest.SynchronousTestCase):
         s = self.read()
         self.assertEqual(len(s), n)
         self.assertEqual(b"hello"[:n], s)
-
 
     def test_writeAndReadLarge(self):
         """
@@ -132,7 +124,6 @@ class ReadWriteTests(unittest.SynchronousTestCase):
         self.assertEqual(len(result), written)
         self.assertEqual(orig[:written], result)
 
-
     def test_readFromEmpty(self):
         """
         Verify that reading from a file descriptor with no data does not raise
@@ -143,7 +134,6 @@ class ReadWriteTests(unittest.SynchronousTestCase):
         self.assertEqual(l, [])
         self.assertIsNone(result)
 
-
     def test_readFromCleanClose(self):
         """
         Test that using L{fdesc.readFromFD} on a cleanly closed file descriptor
@@ -151,7 +141,6 @@ class ReadWriteTests(unittest.SynchronousTestCase):
         """
         os.close(self.w)
         self.assertEqual(self.read(), fdesc.CONNECTION_DONE)
-
 
     def test_writeToClosed(self):
         """
@@ -161,7 +150,6 @@ class ReadWriteTests(unittest.SynchronousTestCase):
         os.close(self.r)
         self.assertEqual(self.write(b"s"), fdesc.CONNECTION_LOST)
 
-
     def test_readFromInvalid(self):
         """
         Verify that reading with L{fdesc.readFromFD} when the read end is
@@ -169,7 +157,6 @@ class ReadWriteTests(unittest.SynchronousTestCase):
         """
         os.close(self.r)
         self.assertEqual(self.read(), fdesc.CONNECTION_LOST)
-
 
     def test_writeToInvalid(self):
         """
@@ -179,16 +166,17 @@ class ReadWriteTests(unittest.SynchronousTestCase):
         os.close(self.w)
         self.assertEqual(self.write(b"s"), fdesc.CONNECTION_LOST)
 
-
     def test_writeErrors(self):
         """
         Test error path for L{fdesc.writeTod}.
         """
         oldOsWrite = os.write
+
         def eagainWrite(fd, data):
             err = OSError()
             err.errno = errno.EAGAIN
             raise err
+
         os.write = eagainWrite
         try:
             self.assertEqual(self.write(b"s"), 0)
@@ -199,6 +187,7 @@ class ReadWriteTests(unittest.SynchronousTestCase):
             err = OSError()
             err.errno = errno.EINTR
             raise err
+
         os.write = eintrWrite
         try:
             self.assertEqual(self.write(b"s"), 0)
@@ -206,11 +195,11 @@ class ReadWriteTests(unittest.SynchronousTestCase):
             os.write = oldOsWrite
 
 
-
 class CloseOnExecTests(unittest.SynchronousTestCase):
     """
     Tests for L{fdesc._setCloseOnExec} and L{fdesc._unsetCloseOnExec}.
     """
+
     program = '''
 import os, errno
 try:
@@ -229,16 +218,19 @@ else:
         pid = os.fork()
         if pid == 0:
             try:
-                os.execv(sys.executable, [sys.executable, '-c', self.program % (fObj.fileno(),)])
+                os.execv(
+                    sys.executable,
+                    [sys.executable, '-c', self.program % (fObj.fileno(),)],
+                )
             except:
                 import traceback
+
                 traceback.print_exc()
                 os._exit(30)
         else:
             # On Linux wait(2) doesn't seem ever able to fail with EINTR but
             # POSIX seems to allow it and on macOS it happens quite a lot.
             return untilConcludes(os.waitpid, pid, 0)[1]
-
 
     def test_setCloseOnExec(self):
         """
@@ -251,7 +243,6 @@ else:
             status = self._execWithFileDescriptor(fObj)
             self.assertTrue(os.WIFEXITED(status))
             self.assertEqual(os.WEXITSTATUS(status), 0)
-
 
     def test_unsetCloseOnExec(self):
         """

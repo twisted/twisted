@@ -17,11 +17,16 @@ class PostfixTCPMapQuoteTests(unittest.TestCase):
         (b'foo bar', b'foo%20bar'),
         (b'foo\tbar', b'foo%09bar'),
         (b'foo\nbar', b'foo%0Abar', b'foo%0abar'),
-        (b'foo\r\nbar', b'foo%0D%0Abar', b'foo%0D%0abar', b'foo%0d%0Abar', b'foo%0d%0abar'),
+        (
+            b'foo\r\nbar',
+            b'foo%0D%0Abar',
+            b'foo%0D%0abar',
+            b'foo%0d%0Abar',
+            b'foo%0d%0abar',
+        ),
         (b'foo ', b'foo%20'),
         (b' foo', b'%20foo'),
-        ]
-
+    ]
 
     def testData(self):
         for entry in self.data:
@@ -33,16 +38,14 @@ class PostfixTCPMapQuoteTests(unittest.TestCase):
                 self.assertEqual(postfix.unquote(q), raw)
 
 
-
 class PostfixTCPMapServerTestCase(object):
     data = {
         # 'key': 'value',
-        }
+    }
 
     chat = [
         # (input, expected_output),
-        ]
-
+    ]
 
     def test_chat(self):
         """
@@ -61,12 +64,13 @@ class PostfixTCPMapServerTestCase(object):
         for input, expected_output in self.chat:
             protocol.lineReceived(input)
             self.assertEqual(
-                transport.value(), expected_output,
-                'For %r, expected %r but got %r' % (
-                    input, expected_output, transport.value()))
+                transport.value(),
+                expected_output,
+                'For %r, expected %r but got %r'
+                % (input, expected_output, transport.value()),
+            )
             transport.clear()
         protocol.setTimeout(None)
-
 
     def test_deferredChat(self):
         """
@@ -85,22 +89,26 @@ class PostfixTCPMapServerTestCase(object):
         for input, expected_output in self.chat:
             protocol.lineReceived(input)
             self.assertEqual(
-                transport.value(), expected_output,
+                transport.value(),
+                expected_output,
                 'For {!r}, expected {!r} but got {!r}'.format(
-                    input, expected_output, transport.value()))
+                    input, expected_output, transport.value()
+                ),
+            )
             transport.clear()
         protocol.setTimeout(None)
-
 
     def test_getException(self):
         """
         If the factory throws an exception,
         error code 400 must be returned.
         """
+
         class ErrorFactory:
             """
             Factory that raises an error on key lookup.
             """
+
             def get(self, key):
                 raise Exception('This is a test error')
 
@@ -108,16 +116,11 @@ class PostfixTCPMapServerTestCase(object):
         server.factory = ErrorFactory()
         server.transport = StringTransport()
         server.lineReceived(b'get example')
-        self.assertEqual(server.transport.value(),
-            b'400 This is a test error\n')
-
+        self.assertEqual(server.transport.value(), b'400 This is a test error\n')
 
 
 class ValidTests(PostfixTCPMapServerTestCase, unittest.TestCase):
-    data = {
-        b'foo': b'ThisIs Foo',
-        b'bar': b' bar really is found\r\n',
-        }
+    data = {b'foo': b'ThisIs Foo', b'bar': b' bar really is found\r\n'}
     chat = [
         (b'get', b"400 Command 'get' takes 1 parameters.\n"),
         (b'get foo bar', b"500 \n"),
@@ -129,4 +132,4 @@ class ValidTests(PostfixTCPMapServerTestCase, unittest.TestCase):
         (b'get bar', b'200 %20bar%20really%20is%20found%0D%0A\n'),
         (b'get baz', b'500 \n'),
         (b'foo', b'400 unknown command\n'),
-        ]
+    ]

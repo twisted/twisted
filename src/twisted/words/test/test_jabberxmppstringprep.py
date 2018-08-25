@@ -4,29 +4,32 @@
 from twisted.trial import unittest
 
 from twisted.words.protocols.jabber.xmpp_stringprep import (
-    nodeprep, resourceprep, nameprep)
-
+    nodeprep,
+    resourceprep,
+    nameprep,
+)
 
 
 class DeprecationTests(unittest.TestCase):
     """
     Deprecations in L{twisted.words.protocols.jabber.xmpp_stringprep}.
     """
+
     def test_crippled(self):
         """
         L{xmpp_stringprep.crippled} is deprecated and always returns C{False}.
         """
         from twisted.words.protocols.jabber.xmpp_stringprep import crippled
-        warnings = self.flushWarnings(
-            offendingFunctions=[self.test_crippled])
+
+        warnings = self.flushWarnings(offendingFunctions=[self.test_crippled])
         self.assertEqual(DeprecationWarning, warnings[0]['category'])
         self.assertEqual(
             "twisted.words.protocols.jabber.xmpp_stringprep.crippled was "
             "deprecated in Twisted 13.1.0: crippled is always False",
-            warnings[0]['message'])
+            warnings[0]['message'],
+        )
         self.assertEqual(1, len(warnings))
         self.assertEqual(crippled, False)
-
 
 
 class XMPPStringPrepTests(unittest.TestCase):
@@ -50,10 +53,14 @@ class XMPPStringPrepTests(unittest.TestCase):
         self.assertEqual(resourceprep.prepare(u' '), u' ')
 
         self.assertEqual(resourceprep.prepare(u'Henry \u2163'), u'Henry IV')
-        self.assertEqual(resourceprep.prepare(u'foo\xad\u034f\u1806\u180b'
-                                               u'bar\u200b\u2060'
-                                               u'baz\ufe00\ufe08\ufe0f\ufeff'),
-                          u'foobarbaz')
+        self.assertEqual(
+            resourceprep.prepare(
+                u'foo\xad\u034f\u1806\u180b'
+                u'bar\u200b\u2060'
+                u'baz\ufe00\ufe08\ufe0f\ufeff'
+            ),
+            u'foobarbaz',
+        )
         self.assertEqual(resourceprep.prepare(u'\u00a0'), u' ')
         self.assertRaises(UnicodeError, resourceprep.prepare, u'\u1680')
         self.assertEqual(resourceprep.prepare(u'\u2000'), u' ')
@@ -77,26 +84,22 @@ class XMPPStringPrepTests(unittest.TestCase):
         self.assertRaises(UnicodeError, resourceprep.prepare, u'\U000e0042')
         self.assertRaises(UnicodeError, resourceprep.prepare, u'foo\u05bebar')
         self.assertRaises(UnicodeError, resourceprep.prepare, u'foo\ufd50bar')
-        #self.assertEqual(resourceprep.prepare(u'foo\ufb38bar'),
+        # self.assertEqual(resourceprep.prepare(u'foo\ufb38bar'),
         #                  u'foo\u064ebar')
         self.assertRaises(UnicodeError, resourceprep.prepare, u'\u06271')
-        self.assertEqual(resourceprep.prepare(u'\u06271\u0628'),
-                          u'\u06271\u0628')
+        self.assertEqual(resourceprep.prepare(u'\u06271\u0628'), u'\u06271\u0628')
         self.assertRaises(UnicodeError, resourceprep.prepare, u'\U000e0002')
-
 
     def testNodePrep(self):
         self.assertEqual(nodeprep.prepare(u'user'), u'user')
         self.assertEqual(nodeprep.prepare(u'User'), u'user')
         self.assertRaises(UnicodeError, nodeprep.prepare, u'us&er')
 
-
     def test_nodeprepUnassignedInUnicode32(self):
         """
         Make sure unassigned code points from Unicode 3.2 are rejected.
         """
         self.assertRaises(UnicodeError, nodeprep.prepare, u'\u1d39')
-
 
     def testNamePrep(self):
         self.assertEqual(nameprep.prepare(u'example.com'), u'example.com')
@@ -105,8 +108,9 @@ class XMPPStringPrepTests(unittest.TestCase):
         self.assertRaises(UnicodeError, nameprep.prepare, u'-example.com')
         self.assertRaises(UnicodeError, nameprep.prepare, u'example-.com')
 
-        self.assertEqual(nameprep.prepare(u'stra\u00dfe.example.com'),
-                          u'strasse.example.com')
+        self.assertEqual(
+            nameprep.prepare(u'stra\u00dfe.example.com'), u'strasse.example.com'
+        )
 
     def test_nameprepTrailingDot(self):
         """

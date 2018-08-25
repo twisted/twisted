@@ -35,18 +35,21 @@ class IServiceMaker(Interface):
     L{twisted.plugin.IPlugin}, and will most often be used by the
     'twistd' command.
     """
+
     tapname = Attribute(
         "A short string naming this Twisted plugin, for example 'web' or "
-        "'pencil'. This name will be used as the subcommand of 'twistd'.")
+        "'pencil'. This name will be used as the subcommand of 'twistd'."
+    )
 
     description = Attribute(
         "A brief summary of the features provided by this "
-        "Twisted application plugin.")
+        "Twisted application plugin."
+    )
 
     options = Attribute(
         "A C{twisted.python.usage.Options} subclass defining the "
-        "configuration options for this application.")
-
+        "configuration options for this application."
+    )
 
     def makeService(options):
         """
@@ -59,32 +62,33 @@ class IServiceMaker(Interface):
         """
 
 
-
 @implementer(IPlugin, IServiceMaker)
 class ServiceMaker(object):
     """
     Utility class to simplify the definition of L{IServiceMaker} plugins.
     """
+
     def __init__(self, name, module, description, tapname):
         self.name = name
         self.module = module
         self.description = description
         self.tapname = tapname
 
-
     def options():
         def get(self):
             return namedAny(self.module).Options
-        return get,
-    options = property(*options())
 
+        return (get,)
+
+    options = property(*options())
 
     def makeService():
         def get(self):
             return namedAny(self.module).makeService
-        return get,
-    makeService = property(*makeService())
 
+        return (get,)
+
+    makeService = property(*makeService())
 
 
 class IService(Interface):
@@ -94,14 +98,11 @@ class IService(Interface):
     Run start-up and shut-down code at the appropriate times.
     """
 
-    name = Attribute(
-        "A C{str} which is the name of the service or C{None}.")
+    name = Attribute("A C{str} which is the name of the service or C{None}.")
 
-    running = Attribute(
-        "A C{boolean} which indicates whether the service is running.")
+    running = Attribute("A C{boolean} which indicates whether the service is running.")
 
-    parent = Attribute(
-        "An C{IServiceCollection} which is the parent or C{None}.")
+    parent = Attribute("An C{IServiceCollection} which is the parent or C{None}.")
 
     def setName(name):
         """
@@ -159,7 +160,6 @@ class IService(Interface):
         """
 
 
-
 @implementer(IService)
 class Service(object):
     """
@@ -205,7 +205,6 @@ class Service(object):
 
     def stopService(self):
         self.running = 0
-
 
 
 class IServiceCollection(Interface):
@@ -260,7 +259,6 @@ class IServiceCollection(Interface):
         """
 
 
-
 @implementer(IServiceCollection)
 class MultiService(Service):
     """
@@ -305,8 +303,9 @@ class MultiService(Service):
     def addService(self, service):
         if service.name is not None:
             if service.name in self.namedServices:
-                raise RuntimeError("cannot have two services with same name"
-                                   " '%s'" % service.name)
+                raise RuntimeError(
+                    "cannot have two services with same name" " '%s'" % service.name
+                )
             self.namedServices[service.name] = service
         self.services.append(service)
         if self.running:
@@ -326,31 +325,33 @@ class MultiService(Service):
             return None
 
 
-
 class IProcess(Interface):
     """
     Process running parameters.
 
     Represents parameters for how processes should be run.
     """
+
     processName = Attribute(
         """
         A C{str} giving the name the process should have in ps (or L{None}
         to leave the name alone).
-        """)
+        """
+    )
 
     uid = Attribute(
         """
         An C{int} giving the user id as which the process should run (or
         L{None} to leave the UID alone).
-        """)
+        """
+    )
 
     gid = Attribute(
         """
         An C{int} giving the group id as which the process should run (or
         L{None} to leave the GID alone).
-        """)
-
+        """
+    )
 
 
 @implementer(IProcess)
@@ -362,6 +363,7 @@ class Process:
     Sets up uid/gid in the constructor, and has a default
     of L{None} as C{processName}.
     """
+
     processName = None
 
     def __init__(self, uid=None, gid=None):
@@ -378,7 +380,6 @@ class Process:
         self.gid = gid
 
 
-
 def Application(name, uid=None, gid=None):
     """
     Return a compound class.
@@ -389,14 +390,12 @@ def Application(name, uid=None, gid=None):
     one of the interfaces.
     """
     ret = components.Componentized()
-    availableComponents = [MultiService(), Process(uid, gid),
-                           sob.Persistent(ret, name)]
+    availableComponents = [MultiService(), Process(uid, gid), sob.Persistent(ret, name)]
 
     for comp in availableComponents:
         ret.addComponent(comp, ignoreClass=1)
     IService(ret).setName(name)
     return ret
-
 
 
 def loadApplication(filename, kind, passphrase=None):
@@ -419,6 +418,14 @@ def loadApplication(filename, kind, passphrase=None):
     return application
 
 
-__all__ = ['IServiceMaker', 'IService', 'Service',
-           'IServiceCollection', 'MultiService',
-           'IProcess', 'Process', 'Application', 'loadApplication']
+__all__ = [
+    'IServiceMaker',
+    'IService',
+    'Service',
+    'IServiceCollection',
+    'MultiService',
+    'IProcess',
+    'Process',
+    'Application',
+    'loadApplication',
+]

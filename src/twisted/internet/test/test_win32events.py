@@ -41,42 +41,38 @@ class Listener(object):
     @ivar _finished: The L{Deferred} which will be fired when the event callback
         is called.
     """
+
     success = False
     logThreadID = eventThreadID = connLostThreadID = None
 
     def __init__(self, finished):
         self._finished = finished
 
-
     def logPrefix(self):
         self.logThreadID = getThreadID()
         return 'Listener'
-
 
     def occurred(self):
         self.success = True
         self.eventThreadID = getThreadID()
         self._finished.callback(None)
 
-
     def brokenOccurred(self):
         raise RuntimeError("Some problem")
 
-
     def returnValueOccurred(self):
         return EnvironmentError("Entirely different problem")
-
 
     def connectionLost(self, reason):
         self.connLostThreadID = getThreadID()
         self._finished.errback(reason)
 
 
-
 class Win32EventsTestsBuilder(ReactorBuilder):
     """
     Builder defining tests relating to L{IReactorWin32Events}.
     """
+
     requiredInterfaces = [IReactorWin32Events]
 
     def test_interface(self):
@@ -86,7 +82,6 @@ class Win32EventsTestsBuilder(ReactorBuilder):
         """
         reactor = self.buildReactor()
         verifyObject(IReactorWin32Events, reactor)
-
 
     def test_addEvent(self):
         """
@@ -106,16 +101,17 @@ class Win32EventsTestsBuilder(ReactorBuilder):
         self.assertEqual(reactorThreadID, listener.logThreadID)
         self.assertEqual(reactorThreadID, listener.eventThreadID)
 
-
     def test_ioThreadDoesNotChange(self):
         """
         Using L{IReactorWin32Events.addEvent} does not change which thread is
         reported as the I/O thread.
         """
         results = []
+
         def check(ignored):
             results.append(isInIOThread())
             reactor.stop()
+
         reactor = self.buildReactor()
         event = win32event.CreateEvent(None, False, False, None)
         finished = Deferred()
@@ -126,7 +122,6 @@ class Win32EventsTestsBuilder(ReactorBuilder):
         self.runReactor(reactor)
         self.assertTrue(listener.success)
         self.assertEqual([True], results)
-
 
     def test_disconnectedOnError(self):
         """
@@ -154,7 +149,6 @@ class Win32EventsTestsBuilder(ReactorBuilder):
         self.assertEqual(reactorThreadID, listener.connLostThreadID)
         self.assertEqual(1, len(self.flushLoggedErrors(RuntimeError)))
 
-
     def test_disconnectOnReturnValue(self):
         """
         If the event handler returns a value, the event is removed from the
@@ -180,7 +174,6 @@ class Win32EventsTestsBuilder(ReactorBuilder):
 
         self.assertEqual(reactorThreadID, listener.connLostThreadID)
 
-
     def test_notDisconnectedOnShutdown(self):
         """
         Event handlers added with L{IReactorWin32Events.addEvent} do not have
@@ -195,5 +188,6 @@ class Win32EventsTestsBuilder(ReactorBuilder):
         reactor.callWhenRunning(reactor.stop)
         self.runReactor(reactor)
         self.assertIsNone(listener.connLostThreadID)
+
 
 globals().update(Win32EventsTestsBuilder.makeTestCaseClasses())

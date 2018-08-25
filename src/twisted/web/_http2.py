@@ -34,7 +34,11 @@ import h2.exceptions
 from twisted.internet.defer import Deferred
 from twisted.internet.error import ConnectionLost
 from twisted.internet.interfaces import (
-    IProtocol, ITransport, IConsumer, IPushProducer, ISSLTransport
+    IProtocol,
+    ITransport,
+    IConsumer,
+    IPushProducer,
+    ISSLTransport,
 )
 from twisted.internet._producer_helpers import _PullToPush
 from twisted.internet.protocol import Protocol
@@ -61,7 +65,6 @@ if sys.version_info < (2, 7, 4):
         stacklevel=2,
     )
     raise ImportError("HTTP/2 not supported on this Python version.")
-
 
 
 @implementer(IProtocol, IPushProducer)
@@ -117,6 +120,7 @@ class H2Connection(Protocol, TimeoutMixin):
         used to forcibly close the transport if it doesn't close cleanly.
     @type _abortingCall: L{twisted.internet.base.DelayedCall}
     """
+
     factory = None
     site = None
     abortTimeout = 15
@@ -125,9 +129,7 @@ class H2Connection(Protocol, TimeoutMixin):
     _abortingCall = None
 
     def __init__(self, reactor=None):
-        config = h2.config.H2Configuration(
-            client_side=False, header_encoding=None
-        )
+        config = h2.config.H2Configuration(client_side=False, header_encoding=None)
         self.conn = h2.connection.H2Connection(config=config)
         self.streams = {}
 
@@ -145,7 +147,6 @@ class H2Connection(Protocol, TimeoutMixin):
         # Start the data sending function.
         self._reactor.callLater(0, self._sendPrioritisedData)
 
-
     # Implementation of IProtocol
     def connectionMade(self):
         """
@@ -156,7 +157,6 @@ class H2Connection(Protocol, TimeoutMixin):
         self.setTimeout(self.timeOut)
         self.conn.initiate_connection()
         self.transport.write(self.conn.data_to_send())
-
 
     def dataReceived(self, data):
         """
@@ -198,7 +198,6 @@ class H2Connection(Protocol, TimeoutMixin):
         if dataToSend:
             self.transport.write(dataToSend)
 
-
     def timeoutConnection(self):
         """
         Called when the connection has been inactive for
@@ -213,15 +212,12 @@ class H2Connection(Protocol, TimeoutMixin):
            being terminated, and whether it was clean or not. We have to do this
            before the connection is torn down.
         """
-        self._log.info(
-            "Timing out client {client}", client=self.transport.getPeer()
-        )
+        self._log.info("Timing out client {client}", client=self.transport.getPeer())
 
         # Check whether there are open streams. If there are, we're going to
         # want to use the error code PROTOCOL_ERROR. If there aren't, use
         # NO_ERROR.
-        if (self.conn.open_outbound_streams > 0 or
-                self.conn.open_inbound_streams > 0):
+        if self.conn.open_outbound_streams > 0 or self.conn.open_inbound_streams > 0:
             error_code = h2.errors.ErrorCodes.PROTOCOL_ERROR
         else:
             error_code = h2.errors.ErrorCodes.NO_ERROR
@@ -241,7 +237,6 @@ class H2Connection(Protocol, TimeoutMixin):
         # We're done, throw the connection away.
         self.transport.loseConnection()
 
-
     def forceAbortClient(self):
         """
         Called if C{abortTimeout} seconds have passed since the timeout fired,
@@ -250,14 +245,12 @@ class H2Connection(Protocol, TimeoutMixin):
         to keep connections open.
         """
         self._log.info(
-            "Forcibly timing out client: {client}",
-            client=self.transport.getPeer()
+            "Forcibly timing out client: {client}", client=self.transport.getPeer()
         )
         # We want to lose track of the _abortingCall so that no-one tries to
         # cancel it.
         self._abortingCall = None
         self.transport.abortConnection()
-
 
     def connectionLost(self, reason):
         """
@@ -279,7 +272,6 @@ class H2Connection(Protocol, TimeoutMixin):
         if self._abortingCall is not None:
             self._abortingCall.cancel()
             self._abortingCall = None
-
 
     # Implementation of IPushProducer
     #
@@ -334,7 +326,6 @@ class H2Connection(Protocol, TimeoutMixin):
         """
         self.connectionLost(ConnectionLost("Producing stopped"))
 
-
     def pauseProducing(self):
         """
         Pause producing data.
@@ -343,7 +334,6 @@ class H2Connection(Protocol, TimeoutMixin):
         for the time being, and to stop until resumeProducing() is called.
         """
         self._consumerBlocked = Deferred()
-
 
     def resumeProducing(self):
         """
@@ -356,7 +346,6 @@ class H2Connection(Protocol, TimeoutMixin):
             d = self._consumerBlocked
             self._consumerBlocked = None
             d.callback(None)
-
 
     def _sendPrioritisedData(self, *args):
         """
@@ -434,7 +423,6 @@ class H2Connection(Protocol, TimeoutMixin):
 
         self._reactor.callLater(0, self._sendPrioritisedData)
 
-
     # Internal functions.
     def _requestReceived(self, event):
         """
@@ -446,10 +434,11 @@ class H2Connection(Protocol, TimeoutMixin):
         """
         stream = H2Stream(
             event.stream_id,
-            self, event.headers,
+            self,
+            event.headers,
             self.requestFactory,
             self.site,
-            self.factory
+            self.factory,
         )
         self.streams[event.stream_id] = stream
         self._streamCleanupCallbacks[event.stream_id] = Deferred()
@@ -466,7 +455,6 @@ class H2Connection(Protocol, TimeoutMixin):
         else:
             self.priority.block(event.stream_id)
 
-
     def _requestDataReceived(self, event):
         """
         Internal handler for when a chunk of data is received for a given
@@ -479,7 +467,6 @@ class H2Connection(Protocol, TimeoutMixin):
         stream = self.streams[event.stream_id]
         stream.receiveDataChunk(event.data, event.flow_controlled_length)
 
-
     def _requestEnded(self, event):
         """
         Internal handler for when a request is complete, and we expect no
@@ -491,7 +478,6 @@ class H2Connection(Protocol, TimeoutMixin):
         """
         stream = self.streams[event.stream_id]
         stream.requestComplete()
-
 
     def _requestAborted(self, event):
         """
@@ -506,7 +492,6 @@ class H2Connection(Protocol, TimeoutMixin):
             ConnectionLost("Stream reset with code %s" % event.error_code)
         )
         self._requestDone(event.stream_id)
-
 
     def _handlePriorityUpdate(self, event):
         """
@@ -534,7 +519,6 @@ class H2Connection(Protocol, TimeoutMixin):
                 exclusive=event.exclusive,
             )
             self.priority.block(event.stream_id)
-
 
     def writeHeaders(self, version, code, reason, headers, streamID):
         """
@@ -568,7 +552,6 @@ class H2Connection(Protocol, TimeoutMixin):
         else:
             self.transport.write(self.conn.data_to_send())
 
-
     def writeDataToStream(self, streamID, data):
         """
         May be called by L{H2Stream} objects to write response data to a given
@@ -595,7 +578,6 @@ class H2Connection(Protocol, TimeoutMixin):
         if self.remainingOutboundWindow(streamID) <= 0:
             self.streams[streamID].flowControlBlocked()
 
-
     def endRequest(self, streamID):
         """
         Called by L{H2Stream} objects to signal completion of a response.
@@ -610,7 +592,6 @@ class H2Connection(Protocol, TimeoutMixin):
             self._sendingDeferred = None
             d.callback(streamID)
 
-
     def abortRequest(self, streamID):
         """
         Called by L{H2Stream} objects to request early termination of a stream.
@@ -622,7 +603,6 @@ class H2Connection(Protocol, TimeoutMixin):
         self.conn.reset_stream(streamID)
         self.transport.write(self.conn.data_to_send())
         self._requestDone(streamID)
-
 
     def _requestDone(self, streamID):
         """
@@ -637,7 +617,6 @@ class H2Connection(Protocol, TimeoutMixin):
         del self.streams[streamID]
         cleanupCallback = self._streamCleanupCallbacks.pop(streamID)
         cleanupCallback.callback(streamID)
-
 
     def remainingOutboundWindow(self, streamID):
         """
@@ -657,12 +636,10 @@ class H2Connection(Protocol, TimeoutMixin):
         windowSize = self.conn.local_flow_control_window(streamID)
         sendQueue = self._outboundStreamQueues[streamID]
         alreadyConsumed = sum(
-            len(chunk) for chunk in sendQueue
-            if chunk is not _END_STREAM_SENTINEL
+            len(chunk) for chunk in sendQueue if chunk is not _END_STREAM_SENTINEL
         )
 
         return windowSize - alreadyConsumed
-
 
     def _handleWindowUpdate(self, event):
         """
@@ -700,7 +677,6 @@ class H2Connection(Protocol, TimeoutMixin):
                 if self._outboundStreamQueues.get(stream.streamID):
                     self.priority.unblock(stream.streamID)
 
-
     def getPeer(self):
         """
         Get the remote address of this connection.
@@ -714,7 +690,6 @@ class H2Connection(Protocol, TimeoutMixin):
         """
         return self.transport.getPeer()
 
-
     def getHost(self):
         """
         Similar to getPeer, but returns an address describing this side of the
@@ -723,7 +698,6 @@ class H2Connection(Protocol, TimeoutMixin):
         @return: An L{IAddress} provider.
         """
         return self.transport.getHost()
-
 
     def openStreamWindow(self, streamID, increment):
         """
@@ -741,7 +715,6 @@ class H2Connection(Protocol, TimeoutMixin):
         if data:
             self.transport.write(data)
 
-
     def _isSecure(self):
         """
         Returns L{True} if this channel is using a secure transport.
@@ -751,7 +724,6 @@ class H2Connection(Protocol, TimeoutMixin):
         """
         # A channel is secure if its transport is ISSLTransport.
         return ISSLTransport(self.transport, None) is not None
-
 
     def _send100Continue(self, streamID):
         """
@@ -765,7 +737,6 @@ class H2Connection(Protocol, TimeoutMixin):
         headers = [(b':status', b'100')]
         self.conn.send_headers(headers=headers, stream_id=streamID)
         self.transport.write(self.conn.data_to_send())
-
 
     def _respondToBadRequestAndDisconnect(self, streamID):
         """
@@ -784,17 +755,12 @@ class H2Connection(Protocol, TimeoutMixin):
         @type streamID: L{int}
         """
         headers = [(b':status', b'400')]
-        self.conn.send_headers(
-            headers=headers,
-            stream_id=streamID,
-            end_stream=True
-        )
+        self.conn.send_headers(headers=headers, stream_id=streamID, end_stream=True)
         self.transport.write(self.conn.data_to_send())
 
         stream = self.streams[streamID]
         stream.connectionLost(ConnectionLost("Invalid request"))
         self._requestDone(streamID)
-
 
     def _streamIsActive(self, streamID):
         """
@@ -808,7 +774,6 @@ class H2Connection(Protocol, TimeoutMixin):
         @rtype: L{bool}
         """
         return streamID in self.streams
-
 
 
 @implementer(ITransport, IConsumer, IPushProducer)
@@ -866,13 +831,12 @@ class H2Stream(object):
         not be sent on the network at this time.
     @type _buffer: L{io.BytesIO}
     """
+
     # We need a transport property for t.w.h.Request, but HTTP/2 doesn't want
     # to expose it. So we just set it to None.
     transport = None
 
-
-    def __init__(self, streamID, connection, headers,
-                 requestFactory, site, factory):
+    def __init__(self, streamID, connection, headers, requestFactory, site, factory):
         """
         Initialize this HTTP/2 stream.
 
@@ -917,7 +881,6 @@ class H2Stream(object):
 
         self._convertHeaders(headers)
 
-
     def _convertHeaders(self, headers):
         """
         This method converts the HTTP/2 header set into something that looks
@@ -932,9 +895,7 @@ class H2Stream(object):
 
         for header in headers:
             if not header[0].startswith(b':'):
-                gotLength = (
-                    _addHeaderToRequest(self._request, header) or gotLength
-                )
+                gotLength = _addHeaderToRequest(self._request, header) or gotLength
             elif header[0] == b':method':
                 self.command = header[1]
             elif header[0] == b':path':
@@ -953,7 +914,6 @@ class H2Stream(object):
         expectContinue = self._request.requestHeaders.getRawHeaders(b'expect')
         if expectContinue and expectContinue[0].lower() == b'100-continue':
             self._send100Continue()
-
 
     # Methods called by the H2Connection
     def receiveDataChunk(self, data, flowControlledLength):
@@ -978,7 +938,6 @@ class H2Stream(object):
             self._request.handleContentChunk(data)
             self._conn.openStreamWindow(self.streamID, flowControlledLength)
 
-
     def requestComplete(self):
         """
         Called by the L{H2Connection} when the all data for a request has been
@@ -991,7 +950,6 @@ class H2Stream(object):
         else:
             self._inboundDataBuffer.append((_END_STREAM_SENTINEL, None))
 
-
     def connectionLost(self, reason):
         """
         Called by the L{H2Connection} when a connection is lost or a stream is
@@ -1001,7 +959,6 @@ class H2Stream(object):
         @type reason: L{str}
         """
         self._request.connectionLost(reason)
-
 
     def windowUpdated(self):
         """
@@ -1028,7 +985,6 @@ class H2Stream(object):
         self._producerProducing = True
         self.producer.resumeProducing()
 
-
     def flowControlBlocked(self):
         """
         Called by the L{H2Connection} when this stream's flow control window
@@ -1040,7 +996,6 @@ class H2Stream(object):
         if self._producerProducing:
             self.producer.pauseProducing()
             self._producerProducing = False
-
 
     # Methods called by the consumer (usually an IRequest).
     def writeHeaders(self, version, code, reason, headers):
@@ -1062,7 +1017,6 @@ class H2Stream(object):
         """
         self._conn.writeHeaders(version, code, reason, headers, self.streamID)
 
-
     def requestDone(self, request):
         """
         Called by a consumer to clean up whatever permanent state is in use.
@@ -1072,14 +1026,12 @@ class H2Stream(object):
         """
         self._conn.endRequest(self.streamID)
 
-
     def _send100Continue(self):
         """
         Sends a 100 Continue response, used to signal to clients that further
         processing will be performed.
         """
         self._conn._send100Continue(self.streamID)
-
 
     def _respondToBadRequestAndDisconnect(self):
         """
@@ -1095,7 +1047,6 @@ class H2Stream(object):
         """
         self._conn._respondToBadRequestAndDisconnect(self.streamID)
 
-
     # Implementation: ITransport
     def write(self, data):
         """
@@ -1107,7 +1058,6 @@ class H2Stream(object):
         self._conn.writeDataToStream(self.streamID, data)
         return
 
-
     def writeSequence(self, iovec):
         """
         Write a sequence of chunks of data into data frames.
@@ -1118,13 +1068,11 @@ class H2Stream(object):
         for chunk in iovec:
             self.write(chunk)
 
-
     def loseConnection(self):
         """
         Close the connection after writing all pending data.
         """
         self._conn.endRequest(self.streamID)
-
 
     def abortConnection(self):
         """
@@ -1132,20 +1080,17 @@ class H2Stream(object):
         """
         self._conn.abortRequest(self.streamID)
 
-
     def getPeer(self):
         """
         Get information about the peer.
         """
         return self._conn.getPeer()
 
-
     def getHost(self):
         """
         Similar to getPeer, but for this side of the connection.
         """
         return self._conn.getHost()
-
 
     def isSecure(self):
         """
@@ -1155,7 +1100,6 @@ class H2Stream(object):
         @rtype: L{bool}
         """
         return self._conn._isSecure()
-
 
     # Implementation: IConsumer
     def registerProducer(self, producer, streaming):
@@ -1188,7 +1132,8 @@ class H2Stream(object):
         if self.producer:
             raise ValueError(
                 "registering producer %s before previous one (%s) was "
-                "unregistered" % (producer, self.producer))
+                "unregistered" % (producer, self.producer)
+            )
 
         if not streaming:
             self.hasStreamingProducer = False
@@ -1199,7 +1144,6 @@ class H2Stream(object):
 
         self.producer = producer
         self._producerProducing = True
-
 
     def unregisterProducer(self):
         """
@@ -1213,7 +1157,6 @@ class H2Stream(object):
         self.producer = None
         self.hasStreamingProducer = None
 
-
     # Implementation: IPushProducer
     def stopProducing(self):
         """
@@ -1222,13 +1165,11 @@ class H2Stream(object):
         self.producing = False
         self.abortConnection()
 
-
     def pauseProducing(self):
         """
         @see: L{IPushProducer.pauseProducing}
         """
         self.producing = False
-
 
     def resumeProducing(self):
         """
@@ -1249,7 +1190,6 @@ class H2Stream(object):
                 self._request.handleContentChunk(chunk)
 
         self._conn.openStreamWindow(self.streamID, consumedLength)
-
 
 
 def _addHeaderToRequest(request, header):

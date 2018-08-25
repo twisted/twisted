@@ -44,7 +44,6 @@ class AlmostService(object):
         self.parent = parent
         self.running = running
 
-
     def makeInvalidByDeletingName(self):
         """
         Probably not a wise method to call.
@@ -53,7 +52,6 @@ class AlmostService(object):
         which has to exist in IService classes.
         """
         del self.name
-
 
     def makeInvalidByDeletingParent(self):
         """
@@ -64,7 +62,6 @@ class AlmostService(object):
         """
         del self.parent
 
-
     def makeInvalidByDeletingRunning(self):
         """
         Probably not a wise method to call.
@@ -74,14 +71,12 @@ class AlmostService(object):
         """
         del self.running
 
-
     def setName(self, name):
         """
         See L{twisted.application.service.IService}.
 
         @param name: ignored
         """
-
 
     def setServiceParent(self, parent):
         """
@@ -90,24 +85,20 @@ class AlmostService(object):
         @param parent: ignored
         """
 
-
     def disownServiceParent(self):
         """
         See L{twisted.application.service.IService}.
         """
-
 
     def privilegedStartService(self):
         """
         See L{twisted.application.service.IService}.
         """
 
-
     def startService(self):
         """
         See L{twisted.application.service.IService}.
         """
-
 
     def stopService(self):
         """
@@ -115,18 +106,16 @@ class AlmostService(object):
         """
 
 
-
 class ServiceInterfaceTests(TestCase):
     """
     Tests for L{twisted.application.service.IService} implementation.
     """
+
     def setUp(self):
         """
         Build something that implements IService.
         """
-        self.almostService = AlmostService(parent=None, running=False,
-                                           name=None)
-
+        self.almostService = AlmostService(parent=None, running=False, name=None)
 
     def test_realService(self):
         """
@@ -135,13 +124,11 @@ class ServiceInterfaceTests(TestCase):
         myService = Service()
         verifyObject(IService, myService)
 
-
     def test_hasAll(self):
         """
         AlmostService implements IService.
         """
         verifyObject(IService, self.almostService)
-
 
     def test_noName(self):
         """
@@ -151,7 +138,6 @@ class ServiceInterfaceTests(TestCase):
         with self.assertRaises(BrokenImplementation):
             verifyObject(IService, self.almostService)
 
-
     def test_noParent(self):
         """
         AlmostService with no parent does not implement IService.
@@ -159,7 +145,6 @@ class ServiceInterfaceTests(TestCase):
         self.almostService.makeInvalidByDeletingParent()
         with self.assertRaises(BrokenImplementation):
             verifyObject(IService, self.almostService)
-
 
     def test_noRunning(self):
         """
@@ -170,11 +155,11 @@ class ServiceInterfaceTests(TestCase):
             verifyObject(IService, self.almostService)
 
 
-
 class ApplicationTests(TestCase):
     """
     Tests for L{twisted.application.service.Application}.
     """
+
     def test_applicationComponents(self):
         """
         Check L{twisted.application.service.Application} instantiation.
@@ -182,7 +167,6 @@ class ApplicationTests(TestCase):
         app = Application('app-name')
 
         self.assertTrue(verifyObject(IService, IService(app)))
-        self.assertTrue(
-            verifyObject(IServiceCollection, IServiceCollection(app)))
+        self.assertTrue(verifyObject(IServiceCollection, IServiceCollection(app)))
         self.assertTrue(verifyObject(IProcess, IProcess(app)))
         self.assertTrue(verifyObject(IPersistable, IPersistable(app)))

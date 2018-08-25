@@ -21,6 +21,7 @@ from twisted.spread import banana, jelly, flavors
 class Publishable(flavors.Cacheable):
     """An object whose cached state persists across sessions.
     """
+
     def __init__(self, publishedID):
         self.republish()
         self.publishedID = publishedID
@@ -33,7 +34,7 @@ class Publishable(flavors.Cacheable):
     def view_getStateToPublish(self, perspective):
         '(internal)'
         return self.getStateToPublishFor(perspective)
-    
+
     def getStateToPublishFor(self, perspective):
         """Implement me to special-case your state for a perspective.
         """
@@ -54,21 +55,30 @@ class Publishable(flavors.Cacheable):
             pname = "None"
             sname = "None"
 
-        return {"remote": flavors.ViewPoint(perspective, self),
-                "publishedID": self.publishedID,
-                "perspective": pname,
-                "service": sname,
-                "timestamp": self.timestamp}
+        return {
+            "remote": flavors.ViewPoint(perspective, self),
+            "publishedID": self.publishedID,
+            "perspective": pname,
+            "service": sname,
+            "timestamp": self.timestamp,
+        }
+
 
 class RemotePublished(flavors.RemoteCache):
     """The local representation of remote Publishable object.
     """
+
     isActivated = 0
     _wasCleanWhenLoaded = 0
+
     def getFileName(self, ext='pub'):
-        return ("%s-%s-%s.%s" %
-                (self.service, self.perspective, str(self.publishedID), ext))
-    
+        return "%s-%s-%s.%s" % (
+            self.service,
+            self.perspective,
+            str(self.publishedID),
+            ext,
+        )
+
     def setCopyableState(self, state):
         self.__dict__.update(state)
         self._activationListeners = []
@@ -79,7 +89,7 @@ class RemotePublished(flavors.RemoteCache):
             recent = 0
         else:
             newself = jelly.unjelly(banana.decode(data))
-            recent = (newself.timestamp == self.timestamp)
+            recent = newself.timestamp == self.timestamp
         if recent:
             self._cbGotUpdate(newself.__dict__)
             self._wasCleanWhenLoaded = 1
@@ -108,12 +118,11 @@ class RemotePublished(flavors.RemoteCache):
         with open(self.getFileName(), "wb") as dataFile:
             dataFile.write(banana.encode(jelly.jelly(self)))
 
-
     def activated(self):
         """Implement this method if you want to be notified when your
         publishable subclass is activated.
         """
-        
+
     def callWhenActivated(self, callback):
         """Externally register for notification when this publishable has received all relevant data.
         """
@@ -121,6 +130,7 @@ class RemotePublished(flavors.RemoteCache):
             callback(self)
         else:
             self._activationListeners.append(callback)
+
 
 def whenReady(d):
     """
@@ -133,9 +143,9 @@ def whenReady(d):
         publish.whenReady(serverObject.getMeAPublishable()).addCallback(lookAtThePublishable)
     """
     d2 = defer.Deferred()
-    d.addCallbacks(_pubReady, d2.errback,
-                   callbackArgs=(d2,))
+    d.addCallbacks(_pubReady, d2.errback, callbackArgs=(d2,))
     return d2
+
 
 def _pubReady(result, d2):
     '(internal)'

@@ -18,9 +18,11 @@ NS_IQ_AUTH_FEATURE = 'http://jabber.org/features/iq-auth'
 DigestAuthQry = xpath.internQuery("/iq/query/digest")
 PlaintextAuthQry = xpath.internQuery("/iq/query/password")
 
+
 def basicClientFactory(jid, secret):
     a = BasicAuthenticator(jid, secret)
     return xmlstream.XmlStreamFactory(a)
+
 
 class IQ(domish.Element):
     """
@@ -34,7 +36,8 @@ class IQ(domish.Element):
     @cvar callbacks: Callback list to be notified when response comes back
 
     """
-    def __init__(self, xmlstream, type = "set"):
+
+    def __init__(self, xmlstream, type="set"):
         """
         @type xmlstream: L{xmlstream.XmlStream}
         @param xmlstream: XmlStream to use for transmission of this IQ
@@ -56,7 +59,7 @@ class IQ(domish.Element):
 
         self.callbacks.addCallback(True, fn, *args, **kwargs)
 
-    def send(self, to = None):
+    def send(self, to=None):
         """
         Call this method to send this IQ request via the associated XmlStream.
 
@@ -68,14 +71,14 @@ class IQ(domish.Element):
         """
         if to != None:
             self["to"] = to
-        self._xmlstream.addOnetimeObserver("/iq[@id='%s']" % self["id"], \
-                                                             self._resultEvent)
+        self._xmlstream.addOnetimeObserver(
+            "/iq[@id='%s']" % self["id"], self._resultEvent
+        )
         self._xmlstream.send(self)
 
     def _resultEvent(self, iq):
         self.callbacks.callback(iq)
         self.callbacks = None
-
 
 
 class IQAuthInitializer(object):
@@ -95,24 +98,22 @@ class IQAuthInitializer(object):
     @type AUTH_FAILED_EVENT: L{str}
     """
 
-    INVALID_USER_EVENT    = "//event/client/basicauth/invaliduser"
-    AUTH_FAILED_EVENT     = "//event/client/basicauth/authfailed"
+    INVALID_USER_EVENT = "//event/client/basicauth/invaliduser"
+    AUTH_FAILED_EVENT = "//event/client/basicauth/authfailed"
 
     def __init__(self, xs):
         self.xmlstream = xs
-
 
     def initialize(self):
         # Send request for auth fields
         iq = xmlstream.IQ(self.xmlstream, "get")
         iq.addElement(("jabber:iq:auth", "query"))
         jid = self.xmlstream.authenticator.jid
-        iq.query.addElement("username", content = jid.user)
+        iq.query.addElement("username", content=jid.user)
 
         d = iq.send()
         d.addCallbacks(self._cbAuthQuery, self._ebAuthQuery)
         return d
-
 
     def _cbAuthQuery(self, iq):
         jid = self.xmlstream.authenticator.jid
@@ -121,20 +122,19 @@ class IQAuthInitializer(object):
         # Construct auth request
         reply = xmlstream.IQ(self.xmlstream, "set")
         reply.addElement(("jabber:iq:auth", "query"))
-        reply.query.addElement("username", content = jid.user)
-        reply.query.addElement("resource", content = jid.resource)
+        reply.query.addElement("username", content=jid.user)
+        reply.query.addElement("resource", content=jid.resource)
 
         # Prefer digest over plaintext
         if DigestAuthQry.matches(iq):
             digest = xmlstream.hashPassword(self.xmlstream.sid, password)
             reply.query.addElement("digest", content=unicode(digest))
         else:
-            reply.query.addElement("password", content = password)
+            reply.query.addElement("password", content=password)
 
         d = reply.send()
         d.addCallbacks(self._cbAuth, self._ebAuth)
         return d
-
 
     def _ebAuthQuery(self, failure):
         failure.trap(error.StanzaError)
@@ -146,16 +146,13 @@ class IQAuthInitializer(object):
 
         return failure
 
-
     def _cbAuth(self, iq):
         pass
-
 
     def _ebAuth(self, failure):
         failure.trap(error.StanzaError)
         self.xmlstream.dispatch(failure.value.stanza, self.AUTH_FAILED_EVENT)
         return failure
-
 
 
 class BasicAuthenticator(xmlstream.ConnectAuthenticator):
@@ -206,9 +203,7 @@ class BasicAuthenticator(xmlstream.ConnectAuthenticator):
         xs.version = (0, 0)
         xmlstream.ConnectAuthenticator.associateWithStream(self, xs)
 
-        inits = [ (xmlstream.TLSInitiatingInitializer, False),
-                  (IQAuthInitializer, True),
-                ]
+        inits = [(xmlstream.TLSInitiatingInitializer, False), (IQAuthInitializer, True)]
 
         for initClass, required in inits:
             init = initClass(xs)
@@ -217,7 +212,7 @@ class BasicAuthenticator(xmlstream.ConnectAuthenticator):
 
     # TODO: move registration into an Initializer?
 
-    def registerAccount(self, username = None, password = None):
+    def registerAccount(self, username=None, password=None):
         if username:
             self.jid.user = username
         if password:
@@ -225,8 +220,8 @@ class BasicAuthenticator(xmlstream.ConnectAuthenticator):
 
         iq = IQ(self.xmlstream, "set")
         iq.addElement(("jabber:iq:register", "query"))
-        iq.query.addElement("username", content = self.jid.user)
-        iq.query.addElement("password", content = self.password)
+        iq.query.addElement("username", content=self.jid.user)
+        iq.query.addElement("password", content=self.password)
 
         iq.addCallback(self._registerResultEvent)
 
@@ -241,7 +236,6 @@ class BasicAuthenticator(xmlstream.ConnectAuthenticator):
             self.xmlstream.dispatch(iq, self.REGISTER_FAILED_EVENT)
 
 
-
 class CheckVersionInitializer(object):
     """
     Initializer that checks if the minimum common stream version number is 1.0.
@@ -250,11 +244,9 @@ class CheckVersionInitializer(object):
     def __init__(self, xs):
         self.xmlstream = xs
 
-
     def initialize(self):
         if self.xmlstream.version < (1, 0):
             raise error.StreamError('unsupported-version')
-
 
 
 class BindInitializer(xmlstream.BaseFeatureInitiatingInitializer):
@@ -277,11 +269,9 @@ class BindInitializer(xmlstream.BaseFeatureInitiatingInitializer):
         d.addCallback(self.onBind)
         return d
 
-
     def onBind(self, iq):
         if iq.bind:
             self.xmlstream.authenticator.jid = JID(unicode(iq.bind.jid))
-
 
 
 class SessionInitializer(xmlstream.BaseFeatureInitiatingInitializer):
@@ -299,7 +289,6 @@ class SessionInitializer(xmlstream.BaseFeatureInitiatingInitializer):
         iq = xmlstream.IQ(self.xmlstream, 'set')
         iq.addElement((NS_XMPP_SESSION, 'session'))
         return iq.send()
-
 
 
 def XMPPClientFactory(jid, password):
@@ -321,7 +310,6 @@ def XMPPClientFactory(jid, password):
     """
     a = XMPPAuthenticator(jid, password)
     return xmlstream.XmlStreamFactory(a)
-
 
 
 class XMPPAuthenticator(xmlstream.ConnectAuthenticator):
@@ -365,7 +353,6 @@ class XMPPAuthenticator(xmlstream.ConnectAuthenticator):
         self.jid = jid
         self.password = password
 
-
     def associateWithStream(self, xs):
         """
         Register with the XML stream.
@@ -378,11 +365,12 @@ class XMPPAuthenticator(xmlstream.ConnectAuthenticator):
         xmlstream.ConnectAuthenticator.associateWithStream(self, xs)
 
         xs.initializers = [CheckVersionInitializer(xs)]
-        inits = [ (xmlstream.TLSInitiatingInitializer, False),
-                  (sasl.SASLInitiatingInitializer, True),
-                  (BindInitializer, False),
-                  (SessionInitializer, False),
-                ]
+        inits = [
+            (xmlstream.TLSInitiatingInitializer, False),
+            (sasl.SASLInitiatingInitializer, True),
+            (BindInitializer, False),
+            (SessionInitializer, False),
+        ]
 
         for initClass, required in inits:
             init = initClass(xs)

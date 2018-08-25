@@ -27,6 +27,7 @@ import textwrap
 from twisted.python import reflect, util
 from twisted.python.compat import _PY3
 
+
 class UsageError(Exception):
     pass
 
@@ -38,6 +39,7 @@ class CoerceParameter(object):
     """
     Utility class that can corce a parameter before storing it.
     """
+
     def __init__(self, options, coerce):
         """
         @param options: parent Options object
@@ -53,8 +55,7 @@ class CoerceParameter(object):
         returned value.
         """
         if value is None:
-            raise UsageError("Parameter '%s' requires an argument."
-                             % (parameterName,))
+            raise UsageError("Parameter '%s' requires an argument." % (parameterName,))
         try:
             value = self.coerce(value)
         except ValueError as e:
@@ -154,7 +155,8 @@ class Options(dict):
     defaultSubCommand = None
     parent = None
     completionData = None
-    _shellCompFile = sys.stdout # file to use if shell completion is requested
+    _shellCompFile = sys.stdout  # file to use if shell completion is requested
+
     def __init__(self):
         super(Options, self).__init__()
 
@@ -168,12 +170,11 @@ class Options(dict):
         self.synonyms = {}
         self._dispatch = {}
 
-
         collectors = [
             self._gather_flags,
             self._gather_parameters,
             self._gather_handlers,
-            ]
+        ]
 
         for c in collectors:
             (longOpt, shortOpt, docs, settings, synonyms, dispatch) = c()
@@ -187,9 +188,7 @@ class Options(dict):
             self.synonyms.update(synonyms)
             self._dispatch.update(dispatch)
 
-
     __hash__ = object.__hash__
-
 
     def opt_help(self):
         """
@@ -203,10 +202,11 @@ class Options(dict):
         Display Twisted version and exit.
         """
         from twisted import copyright
+
         print("Twisted version:", copyright.version)
         sys.exit(0)
 
-    #opt_h = opt_help # this conflicted with existing 'host' options.
+    # opt_h = opt_help # this conflicted with existing 'host' options.
 
     def parseOptions(self, options=None):
         """
@@ -225,14 +225,13 @@ class Options(dict):
         # tab-completion while they are editing an unfinished command-line.
         if len(options) > 1 and options[-2] == "--_shell-completion":
             from twisted.python import _shellcomp
+
             cmdName = path.basename(sys.argv[0])
-            _shellcomp.shellComplete(self, cmdName, options,
-                                     self._shellCompFile)
+            _shellcomp.shellComplete(self, cmdName, options, self._shellCompFile)
             sys.exit(0)
 
         try:
-            opts, args = getopt.getopt(options,
-                                       self.shortOpt, self.longOpt)
+            opts, args = getopt.getopt(options, self.shortOpt, self.longOpt)
         except getopt.error as e:
             raise UsageError(str(e))
 
@@ -254,8 +253,9 @@ class Options(dict):
             else:
                 self._dispatch[optMangled](optMangled, arg)
 
-        if (getattr(self, 'subCommands', None)
-            and (args or self.defaultSubCommand is not None)):
+        if getattr(self, 'subCommands', None) and (
+            args or self.defaultSubCommand is not None
+        ):
             if not args:
                 args = [self.defaultSubCommand]
             sub, rest = args[0], args[1:]
@@ -302,8 +302,9 @@ class Options(dict):
 
     def _generic_flag(self, flagName, value=None):
         if value not in ('', None):
-            raise UsageError("Flag '%s' takes no argument."
-                             " Not even \"%s\"." % (flagName, value))
+            raise UsageError(
+                "Flag '%s' takes no argument." " Not even \"%s\"." % (flagName, value)
+            )
 
         self.opts[flagName] = 1
 
@@ -343,8 +344,7 @@ class Options(dict):
 
         parameters = []
 
-        reflect.accumulateClassList(self.__class__, 'optParameters',
-                                    parameters)
+        reflect.accumulateClassList(self.__class__, 'optParameters', parameters)
 
         synonyms = {}
 
@@ -367,7 +367,6 @@ class Options(dict):
 
         return longOpt, shortOpt, docs, settings, synonyms, dispatch
 
-
     def _gather_handlers(self):
         """
         Gather up options with their own handler methods.
@@ -389,7 +388,7 @@ class Options(dict):
         reflect.addMethodNamesToDict(self.__class__, dct, "opt_")
 
         for name in dct.keys():
-            method = getattr(self, 'opt_'+name)
+            method = getattr(self, 'opt_' + name)
 
             takesArg = not flagFunction(method, name)
 
@@ -397,7 +396,7 @@ class Options(dict):
             doc = getattr(method, '__doc__', None)
             if doc:
                 ## Only use the first line.
-                #docs[name] = doc.split('\n')[0]
+                # docs[name] = doc.split('\n')[0]
                 docs[prettyName] = doc
             else:
                 docs[prettyName] = self.docs.get(prettyName)
@@ -442,7 +441,6 @@ class Options(dict):
 
         return longOpt, shortOpt, docs, settings, synonyms, dispatch
 
-
     def __str__(self):
         return self.getSynopsis() + '\n' + self.getUsage(width=None)
 
@@ -454,11 +452,16 @@ class Options(dict):
         executableName = reflect.filenameToModuleName(sys.argv[0])
 
         if executableName.endswith('.__main__'):
-            executableName = '{} -m {}'.format(os.path.basename(sys.executable), executableName.replace('.__main__', ''))
+            executableName = '{} -m {}'.format(
+                os.path.basename(sys.executable),
+                executableName.replace('.__main__', ''),
+            )
 
         if self.parent is None:
-            default = "Usage: %s%s" % (executableName,
-                                       (self.longOpt and " [options]") or '')
+            default = "Usage: %s%s" % (
+                executableName,
+                (self.longOpt and " [options]") or '',
+            )
         else:
             default = '%s' % ((self.longOpt and "[options]") or '')
         synopsis = getattr(self, "synopsis", default)
@@ -466,8 +469,9 @@ class Options(dict):
         synopsis = synopsis.rstrip()
 
         if self.parent is not None:
-            synopsis = ' '.join((self.parent.getSynopsis(),
-                                 self.parent.subCommand, synopsis))
+            synopsis = ' '.join(
+                (self.parent.getSynopsis(), self.parent.subCommand, synopsis)
+            )
         return synopsis
 
     def getUsage(self, width=None):
@@ -483,12 +487,14 @@ class Options(dict):
             cmdDicts = []
             for (cmd, short, parser, desc) in self.subCommands:
                 cmdDicts.append(
-                    {'long': cmd,
-                     'short': short,
-                     'doc': desc,
-                     'optType': 'command',
-                     'default': None
-                    })
+                    {
+                        'long': cmd,
+                        'short': short,
+                        'doc': desc,
+                        'optType': 'command',
+                        'default': None,
+                    }
+                )
             chunks = docMakeChunks(cmdDicts, width)
             commands = 'Commands:\n' + ''.join(chunks)
         else:
@@ -514,27 +520,28 @@ class Options(dict):
                 optType = 'flag'
 
             optDicts.append(
-                {'long': opt,
-                 'short': longToShort[opt],
-                 'doc': self.docs[opt],
-                 'optType': optType,
-                 'default': self.defaults.get(opt, None),
-                 'dispatch': self._dispatch.get(opt, None)
-                 })
+                {
+                    'long': opt,
+                    'short': longToShort[opt],
+                    'doc': self.docs[opt],
+                    'optType': optType,
+                    'default': self.defaults.get(opt, None),
+                    'dispatch': self._dispatch.get(opt, None),
+                }
+            )
 
         if not (getattr(self, "longdesc", None) is None):
             longdesc = self.longdesc
         else:
             import __main__
+
             if getattr(__main__, '__doc__', None):
                 longdesc = __main__.__doc__
             else:
                 longdesc = ''
 
         if longdesc:
-            longdesc = ('\n' +
-                        '\n'.join(textwrap.wrap(longdesc, width)).strip()
-                        + '\n')
+            longdesc = '\n' + '\n'.join(textwrap.wrap(longdesc, width)).strip() + '\n'
 
         if optDicts:
             chunks = docMakeChunks(optDicts, width)
@@ -544,13 +551,14 @@ class Options(dict):
 
         return s + longdesc + commands
 
-    #def __repr__(self):
+    # def __repr__(self):
     #    XXX: It'd be cool if we could return a succinct representation
     #        of which flags and options are set here.
 
 
 _ZSH = 'zsh'
 _BASH = 'bash'
+
 
 class Completer(object):
     """
@@ -561,7 +569,9 @@ class Completer(object):
     This class produces no completion matches itself - see the various
     subclasses for specific completion functionality.
     """
+
     _descr = None
+
     def __init__(self, descr=None, repeat=False):
         """
         @type descr: C{str}
@@ -579,21 +589,19 @@ class Completer(object):
             self._descr = descr
         self._repeat = repeat
 
-
     def _getRepeatFlag(self):
         if self._repeat:
             return "*"
         else:
             return ""
-    _repeatFlag = property(_getRepeatFlag)
 
+    _repeatFlag = property(_getRepeatFlag)
 
     def _description(self, optName):
         if self._descr is not None:
             return self._descr
         else:
             return optName
-
 
     def _shellCode(self, optName, shellType):
         """
@@ -609,20 +617,18 @@ class Completer(object):
             C{twisted.python.usage._ZSH}
         """
         if shellType == _ZSH:
-            return "%s:%s:" % (self._repeatFlag,
-                               self._description(optName))
+            return "%s:%s:" % (self._repeatFlag, self._description(optName))
         raise NotImplementedError("Unknown shellType %r" % (shellType,))
-
 
 
 class CompleteFiles(Completer):
     """
     Completes file names based on a glob pattern
     """
+
     def __init__(self, globPattern='*', **kw):
         Completer.__init__(self, **kw)
         self._globPattern = globPattern
-
 
     def _description(self, optName):
         if self._descr is not None:
@@ -630,98 +636,99 @@ class CompleteFiles(Completer):
         else:
             return "%s (%s)" % (optName, self._globPattern)
 
-
     def _shellCode(self, optName, shellType):
         if shellType == _ZSH:
-            return "%s:%s:_files -g \"%s\"" % (self._repeatFlag,
-                                               self._description(optName),
-                                               self._globPattern,)
+            return "%s:%s:_files -g \"%s\"" % (
+                self._repeatFlag,
+                self._description(optName),
+                self._globPattern,
+            )
         raise NotImplementedError("Unknown shellType %r" % (shellType,))
-
 
 
 class CompleteDirs(Completer):
     """
     Completes directory names
     """
+
     def _shellCode(self, optName, shellType):
         if shellType == _ZSH:
-            return "%s:%s:_directories" % (self._repeatFlag,
-                                           self._description(optName))
+            return "%s:%s:_directories" % (self._repeatFlag, self._description(optName))
         raise NotImplementedError("Unknown shellType %r" % (shellType,))
-
 
 
 class CompleteList(Completer):
     """
     Completes based on a fixed list of words
     """
+
     def __init__(self, items, **kw):
         Completer.__init__(self, **kw)
         self._items = items
 
     def _shellCode(self, optName, shellType):
         if shellType == _ZSH:
-            return "%s:%s:(%s)" % (self._repeatFlag,
-                                   self._description(optName),
-                                   " ".join(self._items,))
+            return "%s:%s:(%s)" % (
+                self._repeatFlag,
+                self._description(optName),
+                " ".join(self._items),
+            )
         raise NotImplementedError("Unknown shellType %r" % (shellType,))
-
 
 
 class CompleteMultiList(Completer):
     """
     Completes multiple comma-separated items based on a fixed list of words
     """
+
     def __init__(self, items, **kw):
         Completer.__init__(self, **kw)
         self._items = items
 
     def _shellCode(self, optName, shellType):
         if shellType == _ZSH:
-            return "%s:%s:_values -s , '%s' %s" % (self._repeatFlag,
-                                                   self._description(optName),
-                                                   self._description(optName),
-                                                   " ".join(self._items))
+            return "%s:%s:_values -s , '%s' %s" % (
+                self._repeatFlag,
+                self._description(optName),
+                self._description(optName),
+                " ".join(self._items),
+            )
         raise NotImplementedError("Unknown shellType %r" % (shellType,))
-
 
 
 class CompleteUsernames(Completer):
     """
     Complete usernames
     """
+
     def _shellCode(self, optName, shellType):
         if shellType == _ZSH:
-            return "%s:%s:_users" % (self._repeatFlag,
-                                     self._description(optName))
+            return "%s:%s:_users" % (self._repeatFlag, self._description(optName))
         raise NotImplementedError("Unknown shellType %r" % (shellType,))
-
 
 
 class CompleteGroups(Completer):
     """
     Complete system group names
     """
+
     _descr = 'group'
+
     def _shellCode(self, optName, shellType):
         if shellType == _ZSH:
-            return "%s:%s:_groups" % (self._repeatFlag,
-                                      self._description(optName))
+            return "%s:%s:_groups" % (self._repeatFlag, self._description(optName))
         raise NotImplementedError("Unknown shellType %r" % (shellType,))
-
 
 
 class CompleteHostnames(Completer):
     """
     Complete hostnames
     """
+
     def _shellCode(self, optName, shellType):
         if shellType == _ZSH:
-            return "%s:%s:_hosts" % (self._repeatFlag,
-                                     self._description(optName))
+            return "%s:%s:_hosts" % (self._repeatFlag, self._description(optName))
         raise NotImplementedError("Unknown shellType %r" % (shellType,))
-
 
 
 class CompleteUserAtHost(Completer):
@@ -731,34 +738,38 @@ class CompleteUserAtHost(Completer):
         <hostname>
         <username>@<hostname>
     """
+
     _descr = 'host | user@host'
+
     def _shellCode(self, optName, shellType):
         if shellType == _ZSH:
             # Yes this looks insane but it does work. For bonus points
             # add code to grep 'Hostname' lines from ~/.ssh/config
-            return ('%s:%s:{_ssh;if compset -P "*@"; '
-                    'then _wanted hosts expl "remote host name" _ssh_hosts '
-                    '&& ret=0 elif compset -S "@*"; then _wanted users '
-                    'expl "login name" _ssh_users -S "" && ret=0 '
-                    'else if (( $+opt_args[-l] )); then tmp=() '
-                    'else tmp=( "users:login name:_ssh_users -qS@" ) fi; '
-                    '_alternative "hosts:remote host name:_ssh_hosts" "$tmp[@]"'
-                    ' && ret=0 fi}' % (self._repeatFlag,
-                                       self._description(optName)))
+            return (
+                '%s:%s:{_ssh;if compset -P "*@"; '
+                'then _wanted hosts expl "remote host name" _ssh_hosts '
+                '&& ret=0 elif compset -S "@*"; then _wanted users '
+                'expl "login name" _ssh_users -S "" && ret=0 '
+                'else if (( $+opt_args[-l] )); then tmp=() '
+                'else tmp=( "users:login name:_ssh_users -qS@" ) fi; '
+                '_alternative "hosts:remote host name:_ssh_hosts" "$tmp[@]"'
+                ' && ret=0 fi}' % (self._repeatFlag, self._description(optName))
+            )
         raise NotImplementedError("Unknown shellType %r" % (shellType,))
-
 
 
 class CompleteNetInterfaces(Completer):
     """
     Complete network interface names
     """
+
     def _shellCode(self, optName, shellType):
         if shellType == _ZSH:
-            return "%s:%s:_net_interfaces" % (self._repeatFlag,
-                                              self._description(optName))
+            return "%s:%s:_net_interfaces" % (
+                self._repeatFlag,
+                self._description(optName),
+            )
         raise NotImplementedError("Unknown shellType %r" % (shellType,))
-
 
 
 class Completions(object):
@@ -844,14 +855,20 @@ class Completions(object):
         to be re-used for subsequent command-line words. See the C{Completer}
         docstring for details.
     """
-    def __init__(self, descriptions={}, multiUse=[],
-                 mutuallyExclusive=[], optActions={}, extraActions=[]):
+
+    def __init__(
+        self,
+        descriptions={},
+        multiUse=[],
+        mutuallyExclusive=[],
+        optActions={},
+        extraActions=[],
+    ):
         self.descriptions = descriptions
         self.multiUse = multiUse
         self.mutuallyExclusive = mutuallyExclusive
         self.optActions = optActions
         self.extraActions = extraActions
-
 
 
 def docMakeChunks(optList, width=80):
@@ -925,12 +942,14 @@ def docMakeChunks(optList, width=80):
         else:
             doc = ''
 
-        if (opt.get("optType", None) == "parameter") \
-           and not (opt.get('default', None) is None):
+        if (opt.get("optType", None) == "parameter") and not (
+            opt.get('default', None) is None
+        ):
             doc = "%s [default: %s]" % (doc, opt['default'])
 
-        if (opt.get("optType", None) == "parameter") \
-           and opt.get('dispatch', None) is not None:
+        if (opt.get("optType", None) == "parameter") and opt.get(
+            'dispatch', None
+        ) is not None:
             d = opt['dispatch']
             if isinstance(d, CoerceParameter) and d.doc:
                 doc = "%s. %s" % (doc, d.doc)
@@ -948,7 +967,6 @@ def docMakeChunks(optList, width=80):
         optChunks.append(''.join(optLines))
 
     return optChunks
-
 
 
 def flagFunction(method, name=None):
@@ -975,19 +993,20 @@ def flagFunction(method, name=None):
     if _PY3:
         reqArgs = len(inspect.signature(method).parameters)
         if reqArgs > 1:
-            raise UsageError('Invalid Option function for %s' %
-                             (name or method.__name__))
+            raise UsageError(
+                'Invalid Option function for %s' % (name or method.__name__)
+            )
         if reqArgs == 1:
             return False
     else:
         reqArgs = len(inspect.getargspec(method).args)
         if reqArgs > 2:
-            raise UsageError('Invalid Option function for %s' %
-                             (name or method.__name__))
+            raise UsageError(
+                'Invalid Option function for %s' % (name or method.__name__)
+            )
         if reqArgs == 2:
             return False
     return True
-
 
 
 def portCoerce(value):
@@ -998,4 +1017,6 @@ def portCoerce(value):
     if value < 0 or value > 65535:
         raise ValueError("Port number not in range: %s" % (value,))
     return value
+
+
 portCoerce.coerceDoc = "Must be an int between 0 and 65535."

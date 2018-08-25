@@ -120,9 +120,10 @@ class DeferredTests(TestTester):
         self.assertTrue(result.wasSuccessful())
         self.assertEqual(result.testsRun, 1)
         self.assertTrue(detests.DeferredTests.touched)
-    test_passGenerated.supress = [util.suppress(
-        message="twisted.internet.defer.deferredGenerator is deprecated")]
 
+    test_passGenerated.supress = [
+        util.suppress(message="twisted.internet.defer.deferredGenerator is deprecated")
+    ]
 
     def test_passInlineCallbacks(self):
         """
@@ -172,14 +173,12 @@ class DeferredTests(TestTester):
         self.assertTrue(result.wasSuccessful(), result.errors)
 
 
-
 class TimeoutTests(TestTester):
     def getTest(self, name):
         return detests.TimeoutTests(name)
 
     def _wasTimeout(self, error):
-        self.assertEqual(error.check(defer.TimeoutError),
-                             defer.TimeoutError)
+        self.assertEqual(error.check(defer.TimeoutError), defer.TimeoutError)
 
     def test_pass(self):
         result = self.runTest('test_pass')
@@ -233,9 +232,10 @@ class TimeoutTests(TestTester):
         self._wasTimeout(result.errors[0][1])
 
     def test_callbackReturnsNonCallingDeferred(self):
-        #hacky timeout
+        # hacky timeout
         # raises KeyboardInterrupt because Trial sucks
         from twisted.internet import reactor
+
         call = reactor.callLater(2, reactor.crash)
         result = self.runTest('test_calledButNeverCallback')
         if call.active():

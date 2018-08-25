@@ -23,10 +23,8 @@ class FakeConnector(object):
     def stopConnecting(self):
         pass
 
-
     def connect(self):
         pass
-
 
 
 class ReconnectingFactoryTests(TestCase):
@@ -40,9 +38,11 @@ class ReconnectingFactoryTests(TestCase):
         connected, it does not subsequently attempt to reconnect if the
         connection is later lost.
         """
+
         class NoConnectConnector(object):
             def stopConnecting(self):
                 raise RuntimeError("Shouldn't be called, we're connected.")
+
             def connect(self):
                 raise RuntimeError("Shouldn't be reconnecting.")
 
@@ -55,12 +55,12 @@ class ReconnectingFactoryTests(TestCase):
         c.clientConnectionLost(NoConnectConnector(), None)
         self.assertFalse(c.continueTrying)
 
-
     def test_stopTryingDoesNotReconnect(self):
         """
         Calling stopTrying on a L{ReconnectingClientFactory} doesn't attempt a
         retry on any active connector.
         """
+
         class FactoryAwareFakeConnector(FakeConnector):
             attemptedRetry = False
 
@@ -90,7 +90,6 @@ class ReconnectingFactoryTests(TestCase):
         self.assertFalse(f.connector.attemptedRetry)
         self.assertFalse(f.clock.getDelayedCalls())
 
-
     def test_serializeUnused(self):
         """
         A L{ReconnectingClientFactory} which hasn't been used for anything
@@ -99,7 +98,6 @@ class ReconnectingFactoryTests(TestCase):
         original = ReconnectingClientFactory()
         reconstituted = pickle.loads(pickle.dumps(original))
         self.assertEqual(original.__dict__, reconstituted.__dict__)
-
 
     def test_serializeWithClock(self):
         """
@@ -111,7 +109,6 @@ class ReconnectingFactoryTests(TestCase):
         original.clock = clock
         reconstituted = pickle.loads(pickle.dumps(original))
         self.assertIsNone(reconstituted.clock)
-
 
     def test_deserializationResetsParameters(self):
         """
@@ -130,7 +127,6 @@ class ReconnectingFactoryTests(TestCase):
         self.assertEqual(unserialized.retries, 0)
         self.assertEqual(unserialized.delay, factory.initialDelay)
         self.assertTrue(unserialized.continueTrying)
-
 
     def test_parametrizedClock(self):
         """

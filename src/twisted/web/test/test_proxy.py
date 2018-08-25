@@ -38,9 +38,7 @@ class ReverseProxyResourceTests(TestCase):
         # Clear the timeout if the tests failed
         self.addCleanup(channel.connectionLost, None)
 
-        channel.dataReceived(b"GET " +
-                             uri +
-                             b" HTTP/1.1\r\nAccept: text/html\r\n\r\n")
+        channel.dataReceived(b"GET " + uri + b" HTTP/1.1\r\nAccept: text/html\r\n\r\n")
 
         # Check that one connection has been created, to the good host/port
         self.assertEqual(len(reactor.tcpClients), 1)
@@ -53,7 +51,6 @@ class ReverseProxyResourceTests(TestCase):
         self.assertEqual(factory.rest, expectedURI)
         self.assertEqual(factory.headers[b"host"], b"127.0.0.1:1234")
 
-
     def test_render(self):
         """
         Test that L{ReverseProxyResource.render} initiates a connection to the
@@ -61,14 +58,12 @@ class ReverseProxyResourceTests(TestCase):
         """
         return self._testRender(b"/index", b"/path")
 
-
     def test_renderWithQuery(self):
         """
         Test that L{ReverseProxyResource.render} passes query parameters to the
         created factory.
         """
         return self._testRender(b"/index?foo=bar", b"/path?foo=bar")
-
 
     def test_getChild(self):
         """
@@ -87,7 +82,6 @@ class ReverseProxyResourceTests(TestCase):
         self.assertEqual(child.host, u"127.0.0.1")
         self.assertIdentical(child.reactor, resource.reactor)
 
-
     def test_getChildWithSpecial(self):
         """
         The L{ReverseProxyResource} return by C{getChild} has a path which has
@@ -96,7 +90,6 @@ class ReverseProxyResourceTests(TestCase):
         resource = ReverseProxyResource(u"127.0.0.1", 1234, b"/path")
         child = resource.getChild(b' /%', None)
         self.assertEqual(child.path, b"/path/%20%2F%25")
-
 
 
 class DummyChannel(object):
@@ -115,13 +108,11 @@ class DummyChannel(object):
         self.transport = transport
         self.lostReason = None
 
-
     def connectionLost(self, reason):
         """
         Keep track of the connection lost reason.
         """
         self.lostReason = reason
-
 
     def getPeer(self):
         """
@@ -129,13 +120,11 @@ class DummyChannel(object):
         """
         return self.transport.getPeer()
 
-
     def getHost(self):
         """
         Get host information from the transport.
         """
         return self.transport.getHost()
-
 
 
 class ProxyClientTests(TestCase):
@@ -155,9 +144,7 @@ class ProxyClientTests(TestCase):
         headers, body = content.split(b'\r\n\r\n')
         headers = headers.split(b'\r\n')
         requestLine = headers.pop(0)
-        return (
-            requestLine, dict(header.split(b': ') for header in headers), body)
-
+        return (requestLine, dict(header.split(b': ') for header in headers), body)
 
     def makeRequest(self, path):
         """
@@ -168,9 +155,7 @@ class ProxyClientTests(TestCase):
         """
         return DummyRequest(path)
 
-
-    def makeProxyClient(self, request, method=b"GET", headers=None,
-                        requestBody=b""):
+    def makeProxyClient(self, request, method=b"GET", headers=None, requestBody=b""):
         """
         Make a L{ProxyClient} object used for testing.
 
@@ -185,9 +170,7 @@ class ProxyClientTests(TestCase):
         if headers is None:
             headers = {b"accept": b"text/html"}
         path = b'/' + request.postpath
-        return ProxyClient(
-            method, path, b'HTTP/1.0', headers, requestBody, request)
-
+        return ProxyClient(method, path, b'HTTP/1.0', headers, requestBody, request)
 
     def connectProxy(self, proxyClient):
         """
@@ -201,7 +184,6 @@ class ProxyClientTests(TestCase):
         proxyClient.makeConnection(clientTransport)
         return clientTransport
 
-
     def assertForwardsHeaders(self, proxyClient, requestLine, headers):
         """
         Assert that C{proxyClient} sends C{headers} when it connects.
@@ -214,12 +196,10 @@ class ProxyClientTests(TestCase):
         """
         self.connectProxy(proxyClient)
         requestContent = proxyClient.transport.value()
-        receivedLine, receivedHeaders, body = self._parseOutHeaders(
-            requestContent)
+        receivedLine, receivedHeaders, body = self._parseOutHeaders(requestContent)
         self.assertEqual(receivedLine, requestLine)
         self.assertEqual(receivedHeaders, headers)
         return body
-
 
     def makeResponseBytes(self, code, message, headers, body):
         lines = [b"HTTP/1.0 " + str(code).encode('ascii') + b' ' + message]
@@ -228,7 +208,6 @@ class ProxyClientTests(TestCase):
                 lines.append(header + b': ' + value)
         lines.extend([b'', body])
         return b'\r\n'.join(lines)
-
 
     def assertForwardsResponse(self, request, code, message, headers, body):
         """
@@ -249,26 +228,35 @@ class ProxyClientTests(TestCase):
         self.assertEqual(receivedHeaders, expectedHeaders)
         self.assertEqual(b''.join(request.written), body)
 
-
-    def _testDataForward(self, code, message, headers, body, method=b"GET",
-                         requestBody=b"", loseConnection=True):
+    def _testDataForward(
+        self,
+        code,
+        message,
+        headers,
+        body,
+        method=b"GET",
+        requestBody=b"",
+        loseConnection=True,
+    ):
         """
         Build a fake proxy connection, and send C{data} over it, checking that
         it's forwarded to the originating request.
         """
         request = self.makeRequest(b'foo')
         client = self.makeProxyClient(
-            request, method, {b'accept': b'text/html'}, requestBody)
+            request, method, {b'accept': b'text/html'}, requestBody
+        )
 
         receivedBody = self.assertForwardsHeaders(
-            client, method + b' /foo HTTP/1.0',
-            {b'connection': b'close', b'accept': b'text/html'})
+            client,
+            method + b' /foo HTTP/1.0',
+            {b'connection': b'close', b'accept': b'text/html'},
+        )
 
         self.assertEqual(receivedBody, requestBody)
 
         # Fake an answer
-        client.dataReceived(
-            self.makeResponseBytes(code, message, headers, body))
+        client.dataReceived(self.makeResponseBytes(code, message, headers, body))
 
         # Check that the response data has been forwarded back to the original
         # requester.
@@ -284,7 +272,6 @@ class ProxyClientTests(TestCase):
         self.assertFalse(client.transport.connected)
         self.assertEqual(request.finished, 1)
 
-
     def test_forward(self):
         """
         When connected to the server, L{ProxyClient} should send the saved
@@ -292,8 +279,8 @@ class ProxyClientTests(TestCase):
         to the parent request.
         """
         return self._testDataForward(
-            200, b"OK", [(b"Foo", [b"bar", b"baz"])], b"Some data\r\n")
-
+            200, b"OK", [(b"Foo", [b"bar", b"baz"])], b"Some data\r\n"
+        )
 
     def test_postData(self):
         """
@@ -301,17 +288,15 @@ class ProxyClientTests(TestCase):
         forward the body of the request.
         """
         return self._testDataForward(
-            200, b"OK", [(b"Foo", [b"bar"])], b"Some data\r\n", b"POST", b"Some content")
-
+            200, b"OK", [(b"Foo", [b"bar"])], b"Some data\r\n", b"POST", b"Some content"
+        )
 
     def test_statusWithMessage(self):
         """
         If the response contains a status with a message, it should be
         forwarded to the parent request with all the information.
         """
-        return self._testDataForward(
-            404, b"Not Found", [], b"")
-
+        return self._testDataForward(404, b"Not Found", [], b"")
 
     def test_contentLength(self):
         """
@@ -320,11 +305,8 @@ class ProxyClientTests(TestCase):
         """
         data = b"foo bar baz"
         return self._testDataForward(
-            200,
-            b"OK",
-            [(b"Content-Length", [str(len(data)).encode('ascii')])],
-            data)
-
+            200, b"OK", [(b"Content-Length", [str(len(data)).encode('ascii')])], data
+        )
 
     def test_losesConnection(self):
         """
@@ -337,8 +319,8 @@ class ProxyClientTests(TestCase):
             b"OK",
             [(b"Content-Length", [str(len(data)).encode('ascii')])],
             data,
-            loseConnection=False)
-
+            loseConnection=False,
+        )
 
     def test_headersCleanups(self):
         """
@@ -346,11 +328,17 @@ class ProxyClientTests(TestCase):
         B{proxy-connection} should be removed if present, and B{connection}
         should be added.
         """
-        client = ProxyClient(b'GET', b'/foo', b'HTTP/1.0',
-            {b"accept": b"text/html", b"proxy-connection": b"foo"}, b'', None)
-        self.assertEqual(client.headers,
-            {b"accept": b"text/html", b"connection": b"close"})
-
+        client = ProxyClient(
+            b'GET',
+            b'/foo',
+            b'HTTP/1.0',
+            {b"accept": b"text/html", b"proxy-connection": b"foo"},
+            b'',
+            None,
+        )
+        self.assertEqual(
+            client.headers, {b"accept": b"text/html", b"connection": b"close"}
+        )
 
     def test_keepaliveNotForwarded(self):
         """
@@ -362,14 +350,12 @@ class ProxyClientTests(TestCase):
             b"accept": b"text/html",
             b'keep-alive': b'300',
             b'connection': b'keep-alive',
-            }
+        }
         expectedHeaders = headers.copy()
         expectedHeaders[b'connection'] = b'close'
         del expectedHeaders[b'keep-alive']
         client = ProxyClient(b'GET', b'/foo', b'HTTP/1.0', headers, b'', None)
-        self.assertForwardsHeaders(
-            client, b'GET /foo HTTP/1.0', expectedHeaders)
-
+        self.assertForwardsHeaders(client, b'GET /foo HTTP/1.0', expectedHeaders)
 
     def test_defaultHeadersOverridden(self):
         """
@@ -387,12 +373,9 @@ class ProxyClientTests(TestCase):
             b'Server': [b'bar'],
             b'Date': [b'2010-01-01'],
             b'Content-Type': [b'application/x-baz'],
-            }
-        client.dataReceived(
-            self.makeResponseBytes(200, b"OK", headers.items(), b''))
-        self.assertForwardsResponse(
-            request, 200, b'OK', list(headers.items()), b'')
-
+        }
+        client.dataReceived(self.makeResponseBytes(200, b"OK", headers.items(), b''))
+        self.assertForwardsResponse(request, 200, b'OK', list(headers.items()), b'')
 
 
 class ProxyClientFactoryTests(TestCase):
@@ -406,37 +389,36 @@ class ProxyClientFactoryTests(TestCase):
         a B{501} response to the parent request.
         """
         request = DummyRequest([b'foo'])
-        factory = ProxyClientFactory(b'GET', b'/foo', b'HTTP/1.0',
-                                     {b"accept": b"text/html"}, '', request)
+        factory = ProxyClientFactory(
+            b'GET', b'/foo', b'HTTP/1.0', {b"accept": b"text/html"}, '', request
+        )
 
         factory.clientConnectionFailed(None, None)
         self.assertEqual(request.responseCode, 501)
         self.assertEqual(request.responseMessage, b"Gateway error")
         self.assertEqual(
             list(request.responseHeaders.getAllRawHeaders()),
-            [(b"Content-Type", [b"text/html"])])
-        self.assertEqual(
-            b''.join(request.written),
-            b"<H1>Could not connect</H1>")
+            [(b"Content-Type", [b"text/html"])],
+        )
+        self.assertEqual(b''.join(request.written), b"<H1>Could not connect</H1>")
         self.assertEqual(request.finished, 1)
-
 
     def test_buildProtocol(self):
         """
         L{ProxyClientFactory.buildProtocol} should produce a L{ProxyClient}
         with the same values of attributes (with updates on the headers).
         """
-        factory = ProxyClientFactory(b'GET', b'/foo', b'HTTP/1.0',
-                                     {b"accept": b"text/html"}, b'Some data',
-                                     None)
+        factory = ProxyClientFactory(
+            b'GET', b'/foo', b'HTTP/1.0', {b"accept": b"text/html"}, b'Some data', None
+        )
         proto = factory.buildProtocol(None)
         self.assertIsInstance(proto, ProxyClient)
         self.assertEqual(proto.command, b'GET')
         self.assertEqual(proto.rest, b'/foo')
         self.assertEqual(proto.data, b'Some data')
-        self.assertEqual(proto.headers,
-                          {b"accept": b"text/html", b"connection": b"close"})
-
+        self.assertEqual(
+            proto.headers, {b"accept": b"text/html", b"connection": b"close"}
+        )
 
 
 class ProxyRequestTests(TestCase):
@@ -455,8 +437,7 @@ class ProxyRequestTests(TestCase):
         request = ProxyRequest(channel, False, reactor)
         request.gotLength(len(data))
         request.handleContentChunk(data)
-        request.requestReceived(method, b'http://example.com' + uri,
-                                b'HTTP/1.0')
+        request.requestReceived(method, b'http://example.com' + uri, b'HTTP/1.0')
 
         self.assertEqual(len(reactor.tcpClients), 1)
         self.assertEqual(reactor.tcpClients[0][0], u"example.com")
@@ -471,7 +452,6 @@ class ProxyRequestTests(TestCase):
         self.assertEqual(factory.rest, expectedURI)
         self.assertEqual(factory.father, request)
 
-
     def test_process(self):
         """
         L{ProxyRequest.process} should create a connection to the given server,
@@ -484,7 +464,6 @@ class ProxyRequestTests(TestCase):
         """
         return self._testProcess(b"/foo/bar", b"/foo/bar")
 
-
     def test_processWithoutTrailingSlash(self):
         """
         If the incoming request doesn't contain a slash,
@@ -493,15 +472,12 @@ class ProxyRequestTests(TestCase):
         """
         return self._testProcess(b"", b"/")
 
-
     def test_processWithData(self):
         """
         L{ProxyRequest.process} should be able to retrieve request body and
         to forward it.
         """
-        return self._testProcess(
-            b"/foo/bar", b"/foo/bar", b"POST", b"Some content")
-
+        return self._testProcess(b"/foo/bar", b"/foo/bar", b"POST", b"Some content")
 
     def test_processWithPort(self):
         """
@@ -513,14 +489,12 @@ class ProxyRequestTests(TestCase):
         reactor = MemoryReactor()
         request = ProxyRequest(channel, False, reactor)
         request.gotLength(0)
-        request.requestReceived(b'GET', b'http://example.com:1234/foo/bar',
-                                b'HTTP/1.0')
+        request.requestReceived(b'GET', b'http://example.com:1234/foo/bar', b'HTTP/1.0')
 
         # That should create one connection, with the port parsed from the URL
         self.assertEqual(len(reactor.tcpClients), 1)
         self.assertEqual(reactor.tcpClients[0][0], u"example.com")
         self.assertEqual(reactor.tcpClients[0][1], 1234)
-
 
 
 class DummyFactory(object):
@@ -531,7 +505,6 @@ class DummyFactory(object):
     def __init__(self, host, port):
         self.host = host
         self.port = port
-
 
 
 class ReverseProxyRequestTests(TestCase):

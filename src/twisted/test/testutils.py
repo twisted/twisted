@@ -19,12 +19,12 @@ from xml.dom import minidom as dom
 from twisted.internet.protocol import FileWrapper
 
 
-
 class IOPump:
     """Utility to pump data between clients and servers for protocol testing.
 
     Perhaps this is a utility worthy of being in protocol.py?
     """
+
     def __init__(self, client, server, clientIO, serverIO):
         self.client = client
         self.server = server
@@ -59,7 +59,6 @@ class IOPump:
             return 0
 
 
-
 def returnConnected(server, client):
     """Take two Protocol instances and connect them.
     """
@@ -73,7 +72,6 @@ def returnConnected(server, client):
     # Uh...
     pump.flush()
     return pump
-
 
 
 class XMLAssertionMixin(object):
@@ -94,35 +92,32 @@ class XMLAssertionMixin(object):
         @type second: L{bytes}
         """
         self.assertEqual(
-            dom.parseString(first).toxml(),
-            dom.parseString(second).toxml())
-
+            dom.parseString(first).toxml(), dom.parseString(second).toxml()
+        )
 
 
 class _Equal(object):
     """
     A class the instances of which are equal to anything and everything.
     """
+
     def __eq__(self, other):
         return True
 
-
     def __ne__(self, other):
         return False
-
 
 
 class _NotEqual(object):
     """
     A class the instances of which are equal to nothing.
     """
+
     def __eq__(self, other):
         return False
 
-
     def __ne__(self, other):
         return True
-
 
 
 class ComparisonTestsMixin(object):
@@ -138,8 +133,10 @@ class ComparisonTestsMixin(object):
           implement the comparison
         - The object implements not-equal as the opposite of equal
     """
-    def assertNormalEqualityImplementation(self, firstValueOne, secondValueOne,
-                                           valueTwo):
+
+    def assertNormalEqualityImplementation(
+        self, firstValueOne, secondValueOne, valueTwo
+    ):
         """
         Assert that C{firstValueOne} is equal to C{secondValueOne} but not
         equal to C{valueOne} and that it defines equality cooperatively with

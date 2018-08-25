@@ -45,8 +45,9 @@ class InterruptInTestTests(TrialTest):
         runner.TrialSuite([self.suite]).run(self.reporter)
         self.assertTrue(self.reporter.shouldStop)
         self.assertEqual(2, self.reporter.testsRun)
-        self.assertFalse(InterruptInTestTests.test_03_doNothing_run,
-                    "test_03_doNothing ran.")
+        self.assertFalse(
+            InterruptInTestTests.test_03_doNothing_run, "test_03_doNothing ran."
+        )
 
 
 class InterruptInSetUpTests(TrialTest):
@@ -66,8 +67,7 @@ class InterruptInSetUpTests(TrialTest):
 
     def setUp(self):
         super(InterruptInSetUpTests, self).setUp()
-        self.suite = self.loader.loadClass(
-            InterruptInSetUpTests.InterruptedTest)
+        self.suite = self.loader.loadClass(InterruptInSetUpTests.InterruptedTest)
         InterruptInSetUpTests.test_02_run = False
         InterruptInSetUpTests.testsRun = 0
 
@@ -81,8 +81,7 @@ class InterruptInSetUpTests(TrialTest):
         runner.TrialSuite([self.suite]).run(self.reporter)
         self.assertTrue(self.reporter.shouldStop)
         self.assertEqual(2, self.reporter.testsRun)
-        self.assertFalse(InterruptInSetUpTests.test_02_run,
-                    "test_02 ran")
+        self.assertFalse(InterruptInSetUpTests.test_02_run, "test_02 ran")
 
 
 class InterruptInTearDownTests(TrialTest):
@@ -102,8 +101,7 @@ class InterruptInTearDownTests(TrialTest):
 
     def setUp(self):
         super(InterruptInTearDownTests, self).setUp()
-        self.suite = self.loader.loadClass(
-            InterruptInTearDownTests.InterruptedTest)
+        self.suite = self.loader.loadClass(InterruptInTearDownTests.InterruptedTest)
         InterruptInTearDownTests.testsRun = 0
         InterruptInTearDownTests.test_02_run = False
 
@@ -117,5 +115,4 @@ class InterruptInTearDownTests(TrialTest):
         runner.TrialSuite([self.suite]).run(self.reporter)
         self.assertEqual(1, self.reporter.testsRun)
         self.assertTrue(self.reporter.shouldStop)
-        self.assertFalse(InterruptInTearDownTests.test_02_run,
-                    "test_02 ran")
+        self.assertFalse(InterruptInTearDownTests.test_02_run, "test_02 ran")

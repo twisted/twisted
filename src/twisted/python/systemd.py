@@ -32,6 +32,7 @@ class ListenFDs(object):
     @ivar _descriptors: A C{list} of C{int} giving the descriptors which were
         inherited.
     """
+
     _START = 3
 
     def __init__(self, descriptors):
@@ -40,7 +41,6 @@ class ListenFDs(object):
             C{inheritedDescriptors}.
         """
         self._descriptors = descriptors
-
 
     @classmethod
     def fromEnvironment(cls, environ=None, start=None):
@@ -80,7 +80,6 @@ class ListenFDs(object):
                     del environ['LISTEN_PID'], environ['LISTEN_FDS']
 
         return cls(descriptors)
-
 
     def inheritedDescriptors(self):
         """

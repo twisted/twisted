@@ -15,6 +15,7 @@ class IPositioningReceiver(Interface):
     """
     An interface for positioning providers.
     """
+
     def positionReceived(latitude, longitude):
         """
         Method called when a position is received.
@@ -24,7 +25,6 @@ class IPositioningReceiver(Interface):
         @param longitude: The longitude of the received position.
         @type longitude: L{twisted.positioning.base.Coordinate}
         """
-
 
     def positionErrorReceived(positionError):
         """
@@ -43,7 +43,6 @@ class IPositioningReceiver(Interface):
         @type time: L{datetime.datetime}
         """
 
-
     def headingReceived(heading):
         """
         Method called when a true heading is received.
@@ -51,7 +50,6 @@ class IPositioningReceiver(Interface):
         @param heading: The heading.
         @type heading: L{twisted.positioning.base.Heading}
         """
-
 
     def altitudeReceived(altitude):
         """
@@ -61,7 +59,6 @@ class IPositioningReceiver(Interface):
         @type altitude: L{twisted.positioning.base.Altitude}
         """
 
-
     def speedReceived(speed):
         """
         Method called when the speed is received.
@@ -69,7 +66,6 @@ class IPositioningReceiver(Interface):
         @param speed: The speed of a mobile object.
         @type speed: L{twisted.positioning.base.Speed}
         """
-
 
     def climbReceived(climb):
         """
@@ -88,23 +84,24 @@ class IPositioningReceiver(Interface):
         """
 
 
-
 class IPositioningBeacon(Interface):
     """
     A positioning beacon.
     """
+
     identifier = Attribute(
         """
         A unique identifier for this beacon. The type is dependent on the
         implementation, but must be immutable.
-        """)
-
+        """
+    )
 
 
 class INMEAReceiver(Interface):
     """
     An object that can receive NMEA data.
     """
+
     def sentenceReceived(sentence):
         """
         Method called when a sentence is received.
@@ -114,9 +111,4 @@ class INMEAReceiver(Interface):
         """
 
 
-
-__all__ = [
-    "IPositioningReceiver",
-    "IPositioningBeacon",
-    "INMEAReceiver"
-]
+__all__ = ["IPositioningReceiver", "IPositioningBeacon", "INMEAReceiver"]

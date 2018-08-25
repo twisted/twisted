@@ -33,14 +33,17 @@ UNIQUE_LAST_WRITE_STRING = b'xyz123abc Twisted is great!'
 skipWindowsNopywin32 = None
 if platform.isWindows():
     if requireModule('win32process') is None:
-        skipWindowsNopywin32 = ("On windows, spawnProcess is not available "
-                                "in the absence of win32process.")
+        skipWindowsNopywin32 = (
+            "On windows, spawnProcess is not available "
+            "in the absence of win32process."
+        )
     properEnv = dict(os.environ)
     properEnv["PYTHONPATH"] = os.pathsep.join(sys.path)
 else:
     properEnv = bytesEnviron()
     properEnv[b"PYTHONPATH"] = os.pathsep.join(sys.path).encode(
-        sys.getfilesystemencoding())
+        sys.getfilesystemencoding()
+    )
 
 
 class StandardIOTestProcessProtocol(protocol.ProcessProtocol):
@@ -61,6 +64,7 @@ class StandardIOTestProcessProtocol(protocol.ProcessProtocol):
     @ivar data: A C{dict} mapping file descriptors to strings containing all
     bytes received from the child process on each file descriptor.
     """
+
     onDataReceived = None
 
     def __init__(self):
@@ -68,10 +72,8 @@ class StandardIOTestProcessProtocol(protocol.ProcessProtocol):
         self.onCompletion = defer.Deferred()
         self.data = {}
 
-
     def connectionMade(self):
         self.onConnection.callback(None)
-
 
     def childDataReceived(self, name, bytes):
         """
@@ -83,10 +85,8 @@ class StandardIOTestProcessProtocol(protocol.ProcessProtocol):
             d, self.onDataReceived = self.onDataReceived, None
             d.callback(self)
 
-
     def processEnded(self, reason):
         self.onCompletion.callback(reason)
-
 
 
 class StandardInputOutputTests(unittest.TestCase):
@@ -111,24 +111,22 @@ class StandardInputOutputTests(unittest.TestCase):
 
         @return: The L{IProcessTransport} provider for the spawned process.
         """
-        args = [sys.executable,
-                b"-m", b"twisted.test." + sibling,
-                reactor.__class__.__module__] + list(args)
-        return reactor.spawnProcess(
-            proto,
+        args = [
             sys.executable,
-            args,
-            env=properEnv,
-            **kw)
-
+            b"-m",
+            b"twisted.test." + sibling,
+            reactor.__class__.__module__,
+        ] + list(args)
+        return reactor.spawnProcess(proto, sys.executable, args, env=properEnv, **kw)
 
     def _requireFailure(self, d, callback):
         def cb(result):
             self.fail("Process terminated with non-Failure: %r" % (result,))
+
         def eb(err):
             return callback(err)
-        return d.addCallbacks(cb, eb)
 
+        return d.addCallbacks(cb, eb)
 
     def test_loseConnection(self):
         """
@@ -149,8 +147,8 @@ class StandardInputOutputTests(unittest.TestCase):
 
             self.failIfIn(1, p.data)
             reason.trap(error.ProcessDone)
-        return self._requireFailure(d, processEnded)
 
+        return self._requireFailure(d, processEnded)
 
     def test_readConnectionLost(self):
         """
@@ -167,16 +165,16 @@ class StandardInputOutputTests(unittest.TestCase):
             d = p.onCompletion
             p.transport.closeStdin()
             return d
+
         p.onDataReceived.addCallback(cbBytes)
 
         def processEnded(reason):
             reason.trap(error.ProcessDone)
+
         d = self._requireFailure(p.onDataReceived, processEnded)
 
-        self._spawnProcess(
-            p, b'stdio_test_halfclose', errorLogFile)
+        self._spawnProcess(p, b'stdio_test_halfclose', errorLogFile)
         return d
-
 
     def test_lastWriteReceived(self):
         """
@@ -198,8 +196,8 @@ class StandardInputOutputTests(unittest.TestCase):
 
         try:
             self._spawnProcess(
-                p, b'stdio_test_lastwrite', UNIQUE_LAST_WRITE_STRING,
-                usePTY=True)
+                p, b'stdio_test_lastwrite', UNIQUE_LAST_WRITE_STRING, usePTY=True
+            )
         except ValueError as e:
             # Some platforms don't work with usePTY=True
             raise unittest.SkipTest(str(e))
@@ -211,11 +209,11 @@ class StandardInputOutputTests(unittest.TestCase):
             """
             self.assertTrue(
                 p.data[1].endswith(UNIQUE_LAST_WRITE_STRING),
-                "Received %r from child, did not find expected bytes." % (
-                    p.data,))
+                "Received %r from child, did not find expected bytes." % (p.data,),
+            )
             reason.trap(error.ProcessDone)
-        return self._requireFailure(p.onCompletion, processEnded)
 
+        return self._requireFailure(p.onCompletion, processEnded)
 
     def test_hostAndPeer(self):
         """
@@ -231,8 +229,8 @@ class StandardInputOutputTests(unittest.TestCase):
             self.assertTrue(host)
             self.assertTrue(peer)
             reason.trap(error.ProcessDone)
-        return self._requireFailure(d, processEnded)
 
+        return self._requireFailure(d, processEnded)
 
     def test_write(self):
         """
@@ -247,8 +245,8 @@ class StandardInputOutputTests(unittest.TestCase):
         def processEnded(reason):
             self.assertEqual(p.data[1], b'ok!')
             reason.trap(error.ProcessDone)
-        return self._requireFailure(d, processEnded)
 
+        return self._requireFailure(d, processEnded)
 
     def test_writeSequence(self):
         """
@@ -263,8 +261,8 @@ class StandardInputOutputTests(unittest.TestCase):
         def processEnded(reason):
             self.assertEqual(p.data[1], b'ok!')
             reason.trap(error.ProcessDone)
-        return self._requireFailure(d, processEnded)
 
+        return self._requireFailure(d, processEnded)
 
     def _junkPath(self):
         junkPath = self.mktemp()
@@ -272,7 +270,6 @@ class StandardInputOutputTests(unittest.TestCase):
             for i in range(1024):
                 junkFile.write(intToBytes(i) + b'\n')
         return junkPath
-
 
     def test_producer(self):
         """
@@ -298,11 +295,11 @@ class StandardInputOutputTests(unittest.TestCase):
         def processEnded(reason):
             self.assertEqual(p.data[1], b''.join(written))
             self.assertFalse(
-                toWrite,
-                "Connection lost with %d writes left to go." % (len(toWrite),))
+                toWrite, "Connection lost with %d writes left to go." % (len(toWrite),)
+            )
             reason.trap(error.ProcessDone)
-        return self._requireFailure(d, processEnded)
 
+        return self._requireFailure(d, processEnded)
 
     def test_consumer(self):
         """
@@ -320,8 +317,8 @@ class StandardInputOutputTests(unittest.TestCase):
             with open(junkPath, 'rb') as f:
                 self.assertEqual(p.data[1], f.read())
             reason.trap(error.ProcessDone)
-        return self._requireFailure(d, processEnded)
 
+        return self._requireFailure(d, processEnded)
 
     def test_normalFileStandardOut(self):
         """
@@ -362,6 +359,7 @@ class StandardInputOutputTests(unittest.TestCase):
                 connection.write(intToBytes(value))
                 break
             reactor.callLater(0, spin)
+
         reactor.callLater(0, spin)
 
         # Once the connection is lost, make sure the counter is at the
@@ -369,12 +367,14 @@ class StandardInputOutputTests(unittest.TestCase):
         def cbLost(reason):
             self.assertEqual(next(count), howMany + 1)
             self.assertEqual(
-                path.getContent(),
-                b''.join(map(intToBytes, range(howMany))))
+                path.getContent(), b''.join(map(intToBytes, range(howMany)))
+            )
+
         onConnLost.addCallback(cbLost)
         return onConnLost
 
     if platform.isWindows():
         test_normalFileStandardOut.skip = (
             "StandardIO does not accept stdout as an argument to Windows.  "
-            "Testing redirection to a file is therefore harder.")
+            "Testing redirection to a file is therefore harder."
+        )

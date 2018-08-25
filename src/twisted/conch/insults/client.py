@@ -6,6 +6,7 @@ from __future__ import print_function
 
 from twisted.internet import protocol
 
+
 class InsultsClient(protocol.Protocol):
 
     escapeTimeout = 0.2
@@ -27,6 +28,7 @@ class InsultsClient(protocol.Protocol):
 
     def dataReceived(self, data):
         from twisted.internet import reactor
+
         for ch in data:
             if ch == '\x1b':
                 if self.inEscape:
@@ -34,8 +36,9 @@ class InsultsClient(protocol.Protocol):
                     self.inEscape = ''
                 else:
                     self.inEscape = ch
-                    self.escapeCall = reactor.callLater(self.escapeTimeout,
-                                                        self.endEscape)
+                    self.escapeCall = reactor.callLater(
+                        self.escapeTimeout, self.endEscape
+                    )
             elif ch in 'ABCD' and self.inEscape:
                 self.inEscape = ''
                 self.escapeCall.cancel()
@@ -79,11 +82,11 @@ class InsultsClient(protocol.Protocol):
         """Write a string to the screen.  This does not wrap a the edge of the
         screen, and stops at \\r and \\n.
         """
-        s = s[:self.width-self.xpos]
+        s = s[: self.width - self.xpos]
         if '\n' in s:
-            s=s[:s.find('\n')]
+            s = s[: s.find('\n')]
         if '\r' in s:
-            s=s[:s.find('\r')]
+            s = s[: s.find('\r')]
         self.commandQueue.append(('write', s))
         self.xpos += len(s)
 
@@ -96,7 +99,7 @@ class InsultsClient(protocol.Protocol):
         """Erase from the current position to the end of the screen.
         """
         self.commandQueue.append(('eraseeos',))
-    
+
     def clearScreen(self):
         """Clear the screen, and return the cursor to 0, 0.
         """
@@ -114,7 +117,7 @@ class InsultsClient(protocol.Protocol):
         redraw = ''
         for command in self.commandQueue:
             if command[0] == 'gotoxy':
-                redraw += '\x1b[%i;%iH' % (command[2]+1, command[1]+1)
+                redraw += '\x1b[%i;%iH' % (command[2] + 1, command[1] + 1)
             elif command[0] == 'write':
                 redraw += command[1]
             elif command[0] == 'eraseeol':

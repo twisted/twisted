@@ -14,7 +14,6 @@ from functools import wraps
 from twisted.python.compat import _shouldEnableNewStyle, _PY3
 
 
-
 def _replaceIf(condition, alternative):
     """
     If C{condition}, replace this function with C{alternative}.
@@ -26,6 +25,7 @@ def _replaceIf(condition, alternative):
 
     @return: A decorator.
     """
+
     def decorator(func):
 
         if condition is True:
@@ -33,8 +33,11 @@ def _replaceIf(condition, alternative):
         elif condition is False:
             call = func
         else:
-            raise ValueError(("condition argument to _replaceIf requires a "
-                              "bool, not {}").format(repr(condition)))
+            raise ValueError(
+                ("condition argument to _replaceIf requires a " "bool, not {}").format(
+                    repr(condition)
+                )
+            )
 
         @wraps(func)
         def wrapped(*args, **kwargs):
@@ -43,7 +46,6 @@ def _replaceIf(condition, alternative):
         return wrapped
 
     return decorator
-
 
 
 def passthru(arg):
@@ -55,7 +57,6 @@ def passthru(arg):
     @return: C{arg}
     """
     return arg
-
 
 
 def _ensureOldClass(cls):
@@ -71,13 +72,14 @@ def _ensureOldClass(cls):
         from twisted.python.reflect import fullyQualifiedName
 
         raise ValueError(
-            ("twisted.python._oldstyle._oldStyle is being used to decorate a "
-             "new-style class ({cls}). This should only be used to "
-             "decorate old-style classes.").format(
-                 cls=fullyQualifiedName(cls)))
+            (
+                "twisted.python._oldstyle._oldStyle is being used to decorate a "
+                "new-style class ({cls}). This should only be used to "
+                "decorate old-style classes."
+            ).format(cls=fullyQualifiedName(cls))
+        )
 
     return cls
-
 
 
 @_replaceIf(_PY3, passthru)
