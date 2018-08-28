@@ -40,7 +40,13 @@ matrix:
     - python: 3.6
       env: TOXENV=py36-alldeps-withcov-posix,codecov-publish DISABLE_IPV6=yes
       sudo: true
-
+    - sudo: true
+      services:
+        - docker
+      env: PIP=pip TOXENV=wheels
+    - os: osx
+      language: generic
+      env: PIP=pip2 TOXENV=wheels
 
 addons:
   apt:
