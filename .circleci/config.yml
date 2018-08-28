@@ -37,6 +37,9 @@ jobs:
           command: |
             tox -r -e wheels
 
+      - store_artifacts:
+          path: wheelhouse/
+
   static_checkers:
     working_directory: ~/static-checkers
     docker:
