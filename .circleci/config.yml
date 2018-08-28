@@ -31,7 +31,7 @@ jobs:
             pip install -q --user --ignore-installed --upgrade virtualenv
             pip install -q tox --user
             ln -f -s $HOME/Library/Python/2.7/bin/virtualenv /usr/local/bin/virtualenv
-            echo 'export PATH=~/.local/bin:/usr/local/bin:$PATH:/Users/distiller/Library/Python/2.7/bin' >> $BASH_ENV
+            echo 'export PATH=/usr/local/bin:$PATH:/Users/distiller/Library/Python/2.7/bin' >> $BASH_ENV
 
       - run:
           name: Build the OSX wheels.
