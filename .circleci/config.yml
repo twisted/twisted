@@ -33,7 +33,7 @@ jobs:
             echo 'export PATH=~/.local/bin:$PATH' >> $BASH_ENV
 
       - run:
-          name: Build the linux wheels.
+          name: Build the OSX wheels.
           command: |
             tox -r -e wheels
 
