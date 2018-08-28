@@ -48,6 +48,7 @@ environment:
       PYTHON_VERSION: "3.6"
       PYTHON_ARCH: "64"
       TOXENV: wheels
+      CIBW_SKIP: cp33
 
     # IOCPReactor tests
     - PYTHON_HOME: C:\\Python27-x64
