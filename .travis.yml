@@ -23,6 +23,10 @@ env:
 
 matrix:
   include:
+    - sudo: true
+      services:
+        - docker
+      env: PIP=pip TOXENV=wheels CIBW_SKIP=cp33
     - python: 2.7
       env: TOXENV=py27-alldeps-withcov-posix,codecov-publish
     - python: 2.7
@@ -40,10 +44,6 @@ matrix:
     - python: 3.6
       env: TOXENV=py36-alldeps-withcov-posix,codecov-publish DISABLE_IPV6=yes
       sudo: true
-    - sudo: true
-      services:
-        - docker
-      env: PIP=pip TOXENV=wheels CIBW_SKIP=cp33
 
 addons:
   apt:

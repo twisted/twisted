@@ -34,6 +34,11 @@ environment:
   # a later point release.
   # See: http://www.appveyor.com/docs/installed-software#python
   matrix:
+    - PYTHON_HOME: C:\\PYTHON36-x64
+      PYTHON_VERSION: "3.6"
+      PYTHON_ARCH: "64"
+      TOXENV: wheels
+
     - PYTHON_HOME: C:\\Python27-x64
       PYTHON_VERSION: "2.7"
       PYTHON_ARCH: "64"
@@ -44,10 +49,6 @@ environment:
       PYTHON_ARCH: "64"
       TOXENV: py36-alldeps-withcov-windows,codecov-publish
       TWISTED_REACTOR: "select"
-    - PYTHON_HOME: C:\\PYTHON36-x64
-      PYTHON_VERSION: "3.6"
-      PYTHON_ARCH: "64"
-      TOXENV: wheels
 
     # IOCPReactor tests
     - PYTHON_HOME: C:\\Python27-x64
