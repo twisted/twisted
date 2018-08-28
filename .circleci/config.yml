@@ -18,8 +18,8 @@ version: 2
 jobs:
   wheels:
     working_directory: ~/wheels
-    docker:
-      - image: circleci/python:2.7
+    macos:
+      xcode: "9.2"
     steps:
       # Get the source.
       - checkout
