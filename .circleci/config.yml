@@ -30,7 +30,7 @@ jobs:
             python --version
             pip install -q --user --ignore-installed --upgrade virtualenv
             pip install -q tox --user
-            ln -s $HOME/Library/Python/2.7/bin/virtualenv /usr/local/bin/virtualenv
+            ln --force -s $HOME/Library/Python/2.7/bin/virtualenv /usr/local/bin/virtualenv
             echo 'export PATH=~/.local/bin:/usr/local/bin:$PATH:/Users/distiller/Library/Python/2.7/bin' >> $BASH_ENV
 
       - run:
