@@ -44,9 +44,6 @@ matrix:
       services:
         - docker
       env: PIP=pip TOXENV=wheels CIBW_SKIP=cp33
-    - os: osx
-      language: generic
-      env: PIP=pip2 TOXENV=wheels CIBW_SKIP=cp33
 
 addons:
   apt:
