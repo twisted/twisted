@@ -19,7 +19,7 @@ jobs:
   wheels:
     working_directory: ~/wheels
     macos:
-      xcode: "9.2"
+      xcode: "10.0.0"
     steps:
       # Get the source.
       - checkout
