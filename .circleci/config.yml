@@ -74,9 +74,31 @@ jobs:
           command: |
             tox -r -e apidocs
 
+  wheels:
+    working_directory: ~/wheels
+    docker:
+      - image: circleci/python:2.7
+    steps:
+      # Get the source.
+      - checkout
+
+      - run:
+          name: Prepare the environment.
+          command: |
+            python --version
+            pip install -q --user --ignore-installed --upgrade virtualenv
+            pip install -q tox --user
+            echo 'export PATH=~/.local/bin:$PATH' >> $BASH_ENV
+
+      - run:
+          name: Build the linux wheels.
+          command: |
+            tox -r -e wheels
+
 workflows:
   version: 2
   all-tests:
     jobs:
       - static_checkers
       - documentation
+      - wheels
