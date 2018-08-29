@@ -130,4 +130,5 @@ workflows:
     jobs:
       - static_checkers
       - documentation
-      - wheels
+      - linux-wheels
+      - osx-wheels
