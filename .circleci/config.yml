@@ -49,6 +49,7 @@ jobs:
     steps:
       # Get the source.
       - checkout
+      - setup_remote_docker
 
       - run:
           name: Prepare the environment.
