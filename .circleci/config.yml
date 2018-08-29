@@ -32,6 +32,7 @@ jobs:
             pip install -q tox --user
             ln -f -s $HOME/Library/Python/2.7/bin/virtualenv /usr/local/bin/virtualenv
             echo 'export PATH=/usr/local/bin:$PATH:/Users/distiller/Library/Python/2.7/bin' >> $BASH_ENV
+            echo 'export CIBW_PLATFORM=macos' >> $BASH_ENV
 
       - run:
           name: Build the OSX wheels.
