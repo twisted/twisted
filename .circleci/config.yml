@@ -56,6 +56,7 @@ jobs:
             python --version
             pip install -q --user --ignore-installed --upgrade virtualenv
             pip install -q tox --user
+            echo 'export PATH=~/.local/bin:$PATH' >> $BASH_ENV
             echo 'export CIBW_PLATFORM=linux' >> $BASH_ENV
 
       - run:
