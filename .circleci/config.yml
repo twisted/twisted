@@ -16,8 +16,8 @@
 version: 2
 
 jobs:
-  wheels:
-    working_directory: ~/wheels
+  osx-wheels:
+    working_directory: ~/osx-wheels
     macos:
       xcode: "10.0.0"
     steps:
@@ -36,6 +36,30 @@ jobs:
 
       - run:
           name: Build the OSX wheels.
+          command: |
+            tox -r -e wheels
+
+      - store_artifacts:
+          path: wheelhouse/
+
+  linux-wheels:
+    working_directory: ~/linux-wheels
+    docker:
+      - image: circleci/python:3.6
+    steps:
+      # Get the source.
+      - checkout
+
+      - run:
+          name: Prepare the environment.
+          command: |
+            python --version
+            pip install -q --user --ignore-installed --upgrade virtualenv
+            pip install -q tox --user
+            echo 'export CIBW_PLATFORM=linux' >> $BASH_ENV
+
+      - run:
+          name: Build the Linux wheels.
           command: |
             tox -r -e wheels
 
