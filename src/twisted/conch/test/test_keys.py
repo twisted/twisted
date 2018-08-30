@@ -127,9 +127,15 @@ class KeyTests(unittest.TestCase):
         self.assertEqual(keys.Key._guessStringType(
             keydata.privateRSA_openssh), 'private_openssh')
         self.assertEqual(keys.Key._guessStringType(
+            keydata.privateRSA_openssh_new), 'private_openssh')
+        self.assertEqual(keys.Key._guessStringType(
             keydata.privateDSA_openssh), 'private_openssh')
         self.assertEqual(keys.Key._guessStringType(
+            keydata.privateDSA_openssh_new), 'private_openssh')
+        self.assertEqual(keys.Key._guessStringType(
             keydata.privateECDSA_openssh), 'private_openssh')
+        self.assertEqual(keys.Key._guessStringType(
+            keydata.privateECDSA_openssh_new), 'private_openssh')
         self.assertEqual(keys.Key._guessStringType(keydata.publicRSA_lsh),
                 'public_lsh')
         self.assertEqual(keys.Key._guessStringType(keydata.publicDSA_lsh),
@@ -276,6 +282,33 @@ SUrCyZXsNh6VXwjs3gKQ
             keydata.privateRSA_openssh_encrypted_aes + b'\n',
             passphrase=b'testxp')
         self.assertEqual(key, key2)
+
+
+    def test_fromOpenSSH_v1_format(self):
+        """
+        OpenSSH 6.5 introduced a newer "openssh-key-v1" private key format
+        (made the default in OpenSSH 7.8).  Loading keys in this format
+        produces identical results to loading the same keys in the old
+        PEM-based format.
+        """
+        for old, new in (
+                (keydata.privateRSA_openssh, keydata.privateRSA_openssh_new),
+                (keydata.privateDSA_openssh, keydata.privateDSA_openssh_new),
+                (keydata.privateECDSA_openssh,
+                 keydata.privateECDSA_openssh_new),
+                (keydata.privateECDSA_openssh384,
+                 keydata.privateECDSA_openssh384_new),
+                (keydata.privateECDSA_openssh521,
+                 keydata.privateECDSA_openssh521_new)):
+            self.assertEqual(
+                keys.Key.fromString(new), keys.Key.fromString(old))
+        self.assertEqual(
+            keys.Key.fromString(
+                keydata.privateRSA_openssh_encrypted_new,
+                passphrase=b'encrypted'),
+            keys.Key.fromString(
+                keydata.privateRSA_openssh_encrypted,
+                passphrase=b'encrypted'))
 
 
     def test_fromOpenSSH_windows_line_endings(self):

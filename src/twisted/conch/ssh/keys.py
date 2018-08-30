@@ -13,7 +13,9 @@ import itertools
 
 from hashlib import md5, sha256
 import base64
+import struct
 
+import bcrypt
 from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes, serialization
@@ -318,14 +320,100 @@ class Key(object):
         blob = decodebytes(data.split()[1])
         return cls._fromString_BLOB(blob)
 
+
     @classmethod
-    def _fromString_PRIVATE_OPENSSH(cls, data, passphrase):
+    def _fromPrivateOpenSSH_v1(cls, data, passphrase):
         """
         Return a private key object corresponding to this OpenSSH private key
-        string.  If the key is encrypted, passphrase MUST be provided.
-        Providing a passphrase for an unencrypted key is an error.
+        string, in the "openssh-key-v1" format introduced in OpenSSH 6.5.
 
-        The format of an OpenSSH private key string is::
+        The format of an openssh-key-v1 private key string is::
+            -----BEGIN OPENSSH PRIVATE KEY-----
+            <base64-encoded SSH protocol string>
+            -----END OPENSSH PRIVATE KEY-----
+
+        The SSH protocol string is as described in
+        U{PROTOCOL.key<https://cvsweb.openbsd.org/cgi-bin/cvsweb/src/usr.bin/ssh/PROTOCOL.key>}.
+
+        @type data: L{bytes}
+        @param data: The key data.
+
+        @type passphrase: L{bytes} or L{None}
+        @param passphrase: The passphrase the key is encrypted with, or L{None}
+        if it is not encrypted.
+
+        @return: A new key.
+        @rtype: L{twisted.conch.ssh.keys.Key}
+        @raises BadKeyError: if
+            * a passphrase is provided for an unencrypted key
+            * the SSH protocol encoding is incorrect
+        @raises EncryptedKeyError: if
+            * a passphrase is not provided for an encrypted key
+        """
+        lines = data.strip().splitlines()
+        keyList = decodebytes(b''.join(lines[1:-1]))
+        if not keyList.startswith(b'openssh-key-v1\0'):
+            raise BadKeyError('invalid new-format OpenSSH private key')
+        keyList = keyList[len(b'openssh-key-v1\0'):]
+        cipher, rest = common.getNS(keyList)
+        kdf, rest = common.getNS(rest)
+        kdfOptions, rest = common.getNS(rest)
+        n = struct.unpack('!L', rest[:4])[0]
+        if n != 1:
+            raise BadKeyError('only OpenSSH private key files containing '
+                              'a single key are supported')
+        # Ignore public key
+        _, encPrivKeyList, _ = common.getNS(rest[4:], 2)
+        if cipher != b'none':
+            if not passphrase:
+                raise EncryptedKeyError('Passphrase must be provided '
+                                        'for an encrypted key')
+            # Determine cipher
+            if cipher in (b'aes128-ctr', b'aes192-ctr', b'aes256-ctr'):
+                algorithmClass = algorithms.AES
+                blockSize = 16
+                keySize = int(int(cipher[3:6])/8)
+                ivSize = blockSize
+            else:
+                raise BadKeyError('unknown encryption type %r' % (cipher,))
+            if kdf == b'bcrypt':
+                salt, rest = common.getNS(kdfOptions)
+                rounds = struct.unpack('!L', rest[:4])[0]
+                decKey = bcrypt.kdf(
+                    passphrase, salt, keySize + ivSize, rounds,
+                    # We can only use the number of rounds that OpenSSH used.
+                    ignore_few_rounds=True)
+            else:
+                raise BadKeyError('unknown KDF type %r' % (kdf,))
+            if (len(encPrivKeyList) % blockSize) != 0:
+                raise BadKeyError('bad padding')
+            decryptor = Cipher(
+                algorithmClass(decKey[:keySize]),
+                modes.CTR(decKey[keySize:keySize + ivSize]),
+                backend=default_backend()
+            ).decryptor()
+            privKeyList = (
+                decryptor.update(encPrivKeyList) + decryptor.finalize())
+        else:
+            if kdf != b'none':
+                raise BadKeyError('private key specifies KDF %r but no '
+                                  'cipher' % (kdf,))
+            privKeyList = encPrivKeyList
+        check1 = struct.unpack('!L', privKeyList[:4])[0]
+        check2 = struct.unpack('!L', privKeyList[4:8])[0]
+        if check1 != check2:
+            raise BadKeyError('check values do not match: %d != %d' %
+                              (check1, check2))
+        return cls._fromString_PRIVATE_BLOB(privKeyList[8:])
+
+
+    @classmethod
+    def _fromPrivateOpenSSH_PEM(cls, data, passphrase):
+        """
+        Return a private key object corresponding to this OpenSSH private key
+        string, in the old PEM-based format.
+
+        The format of a PEM-based OpenSSH private key string is::
             -----BEGIN <key type> PRIVATE KEY-----
             [Proc-Type: 4,ENCRYPTED
             DEK-Info: DES-EDE3-CBC,<initialization value>]
@@ -453,6 +541,36 @@ class Key(object):
             )
         else:
             raise BadKeyError("unknown key type %s" % (kind,))
+
+
+    @classmethod
+    def _fromString_PRIVATE_OPENSSH(cls, data, passphrase):
+        """
+        Return a private key object corresponding to this OpenSSH private key
+        string.  If the key is encrypted, passphrase MUST be provided.
+        Providing a passphrase for an unencrypted key is an error.
+
+        @type data: L{bytes}
+        @param data: The key data.
+
+        @type passphrase: L{bytes} or L{None}
+        @param passphrase: The passphrase the key is encrypted with, or L{None}
+        if it is not encrypted.
+
+        @return: A new key.
+        @rtype: L{twisted.conch.ssh.keys.Key}
+        @raises BadKeyError: if
+            * a passphrase is provided for an unencrypted key
+            * the encoding is incorrect
+        @raises EncryptedKeyError: if
+            * a passphrase is not provided for an encrypted key
+        """
+        if data.strip().splitlines()[0][11:-17] == b'OPENSSH':
+            # New-format (openssh-key-v1) key
+            return cls._fromPrivateOpenSSH_v1(data, passphrase)
+        else:
+            # Old-format (PEM) key
+            return cls._fromPrivateOpenSSH_PEM(data, passphrase)
 
     @classmethod
     def _fromString_PUBLIC_LSH(cls, data):
