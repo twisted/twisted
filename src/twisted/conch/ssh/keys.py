@@ -416,8 +416,6 @@ class Key(object):
             n, e, d, p, q, dmp1, dmq1, iqmp = [
                 long(value) for value in decodedKey[1:9]
                 ]
-            if p > q:  # Make p smaller than q
-                p, q = q, p
             return cls(
                 rsa.RSAPrivateNumbers(
                     p=p,
