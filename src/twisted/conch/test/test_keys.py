@@ -772,10 +772,14 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
         """
         A private EC key is correctly generated from a private key blob.
         """
+        from cryptography.hazmat.primitives.asymmetric import ec
+        publicNumbers = ec.EllipticCurvePublicNumbers(
+            x=keydata.ECDatanistp256['x'], y=keydata.ECDatanistp256['y'],
+            curve=ec.SECP256R1())
         ecblob = (
             common.NS(keydata.ECDatanistp256['curve']) +
-            common.MP(keydata.ECDatanistp256['x']) +
-            common.MP(keydata.ECDatanistp256['y']) +
+            common.NS(keydata.ECDatanistp256['curve'][-8:]) +
+            common.NS(publicNumbers.encode_point()) +
             common.MP(keydata.ECDatanistp256['privateValue'])
             )
 

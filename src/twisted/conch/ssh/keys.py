@@ -260,8 +260,8 @@ class Key(object):
 
         EC keys::
             string 'ecdsa-sha2-[identifier]'
-            integer x
-            integer y
+            string identifier
+            string q
             integer privateValue
 
             identifier is the standard NIST curve name.
@@ -272,7 +272,9 @@ class Key(object):
 
         @return: A new key.
         @rtype: L{twisted.conch.ssh.keys.Key}
-        @raises BadKeyError: if the key type (the first string) is unknown.
+        @raises BadKeyError: if
+            * the key type (the first string) is unknown
+            * the curve name of an ECDSA key does not match the key type
         """
         keyType, rest = common.getNS(blob)
 
@@ -282,10 +284,15 @@ class Key(object):
         elif keyType == b'ssh-dss':
             p, q, g, y, x, rest = common.getMP(rest, 5)
             return cls._fromDSAComponents(y=y, g=g, p=p, q=q, x=x)
-        elif keyType in [curve for curve in list(_curveTable.keys())]:
-            x, y, privateValue, rest = common.getMP(rest, 3)
-            return cls._fromECComponents(x=x, y=y, curve=keyType,
-                privateValue=privateValue)
+        elif keyType in _curveTable:
+            curve = _curveTable[keyType]
+            curveName, q, rest = common.getNS(rest, 2)
+            if curveName != _secToNist[curve.name.encode('ascii')]:
+                raise BadKeyError('ECDSA curve name %r does not match key '
+                                  'type %r' % (curveName, keyType))
+            privateValue, rest = common.getMP(rest)
+            return cls._fromECEncodedPoint(
+                encodedPoint=q, curve=keyType, privateValue=privateValue)
         else:
             raise BadKeyError('unknown blob type: %s' % (keyType,))
 
@@ -691,6 +698,34 @@ class Key(object):
 
         publicNumbers = ec.EllipticCurvePublicNumbers(
             x=x, y=y, curve=_curveTable[curve])
+        if privateValue is None:
+            # We have public components.
+            keyObject = publicNumbers.public_key(default_backend())
+        else:
+            privateNumbers = ec.EllipticCurvePrivateNumbers(
+                private_value=privateValue, public_numbers=publicNumbers)
+            keyObject = privateNumbers.private_key(default_backend())
+
+        return cls(keyObject)
+
+    @classmethod
+    def _fromECEncodedPoint(cls, encodedPoint, curve, privateValue=None):
+        """
+        Build a key from an EC encoded point.
+
+        @param encodedPoint: The public point encoded as in SEC 1 v2.0
+        section 2.3.3.
+        @type encodedPoint: L{bytes}
+
+        @param curve: NIST name of elliptic curve.
+        @type curve: L{bytes}
+
+        @param privateValue: The private value.
+        @type privateValue: L{int}
+        """
+
+        publicNumbers = ec.EllipticCurvePublicNumbers.from_encoded_point(
+            _curveTable[curve], encodedPoint)
         if privateValue is None:
             # We have public components.
             keyObject = publicNumbers.public_key(default_backend())
