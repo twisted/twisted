@@ -1108,8 +1108,8 @@ class Key(object):
                                b' PRIVATE KEY-----'))]
             if self.type() == 'RSA':
                 p, q = data['p'], data['q']
-                objData = (0, data['n'], data['e'], data['d'], q, p,
-                           data['d'] % (q - 1), data['d'] % (p - 1),
+                objData = (0, data['n'], data['e'], data['d'], p, q,
+                           data['d'] % (p - 1), data['d'] % (q - 1),
                            data['u'])
             else:
                 objData = (0, data['p'], data['q'], data['g'], data['y'],
