@@ -1426,6 +1426,7 @@ class LargeBufferTests(unittest.TestCase):
         reactor.connectTCP("127.0.0.1", n, wrappedClientF)
 
         d = defer.gatherResults([wrappedF.deferred, wrappedClientF.deferred])
+
         def check(ignored):
             self.assertTrue(f.done, "writer didn't finish, it probably died")
             self.assertTrue(clientF.len >= self.datalen,
