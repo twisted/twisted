@@ -2666,7 +2666,7 @@ class _XForwardedForAddress(object):
 class _XForwardedForRequest(proxyForInterface(IRequest, "_request")):
     """
     Add a layer on top of another request that only uses the value of an
-    X-Forwarded-For header as the result of C{getClientIP}.
+    X-Forwarded-For header as the result of C{getClientAddress}.
     """
     def getClientAddress(self):
         """
