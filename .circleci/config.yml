@@ -131,7 +131,7 @@ workflows:
       - static_checkers
       - documentation
       - linux-wheels
-      - osx-wheels
+      - osx-wheels:
         requires:
           - static_checkers
           - documentation
