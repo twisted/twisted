@@ -14,10 +14,10 @@ from hashlib import md5
 from OpenSSL import SSL, crypto
 from OpenSSL._util import lib as pyOpenSSLlib
 
+from twisted.internet.abstract import isIPAddress, isIPv6Address
 from twisted.python import log
 from twisted.python._oldstyle import _oldStyle
 from ._idna import _idnaBytes
-
 
 
 
@@ -1136,6 +1136,11 @@ class ClientTLSOptions(object):
         than working with Python's built-in (but sometimes broken) IDNA
         encoding.  ASCII values, however, will always work.
     @type _hostnameASCII: L{unicode}
+
+    @ivar _sendSNI: Whether or not to send the SNI with the handshake.
+        Will be L{False} if C{_hostname} is an IP address or L{True} if
+        C{_hostname} is a DNSName
+    @type _sendSNI: L{bool}
     """
 
     def __init__(self, hostname, ctx):
@@ -1150,7 +1155,14 @@ class ClientTLSOptions(object):
         """
         self._ctx = ctx
         self._hostname = hostname
-        self._hostnameBytes = _idnaBytes(hostname)
+
+        if isIPAddress(hostname) or isIPv6Address(hostname):
+            self._hostnameBytes = hostname.encode('ascii')
+            self._sendSNI = False
+        else:
+            self._hostnameBytes = _idnaBytes(hostname)
+            self._sendSNI = True
+
         self._hostnameASCII = self._hostnameBytes.decode("ascii")
         ctx.set_info_callback(
             _tolerateErrors(self._identityVerifyingInfoCallback)
@@ -1195,7 +1207,9 @@ class ClientTLSOptions(object):
         @param ret: ignored
         @type ret: ignored
         """
-        if where & SSL.SSL_CB_HANDSHAKE_START:
+        # Literal IPv4 and IPv6 addresses are not permitted
+        # as host names according to the RFCs
+        if where & SSL.SSL_CB_HANDSHAKE_START and self._sendSNI:
             connection.set_tlsext_host_name(self._hostnameBytes)
         elif where & SSL.SSL_CB_HANDSHAKE_DONE:
             try:
