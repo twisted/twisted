@@ -26,7 +26,7 @@ matrix:
     - sudo: true
       services:
         - docker
-      env: PIP=pip TOXENV=wheels CIBW_SKIP=cp33
+      env: PIP=pip TOXENV=wheels
     - python: 2.7
       env: TOXENV=py27-alldeps-withcov-posix,codecov-publish
     - python: 2.7
