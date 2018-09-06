@@ -844,9 +844,18 @@ class ErrorHolderTestsMixin(object):
         L{runner.ErrorHolder.__repr__} returns a string describing the error it
         holds.
         """
-        self.assertEqual(repr(self.holder),
-            "<ErrorHolder description='description' "
-            "error=ZeroDivisionError('integer division or modulo by zero',)>")
+        if sys.version_info < (3, 7):
+            expected = (
+                "<ErrorHolder description='description' error="
+                "ZeroDivisionError('integer division or modulo by zero',)>"
+            )
+        else:
+            expected = (
+                "<ErrorHolder description='description' error="
+                "ZeroDivisionError('integer division or modulo by zero')>"
+            )
+
+        self.assertEqual(repr(self.holder), expected)
 
 
 
