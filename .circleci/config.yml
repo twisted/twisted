@@ -101,6 +101,33 @@ jobs:
           command: |
             tox -r -e py27-alldeps-withcov-posix twisted
 
+  #
+  # MacOS with Python3.7 and default reactor.
+  #
+  macos_py37_default_reactor:
+    macos:
+      # We don't use the xcode, but we need to put something here.
+      xcode: "9.0"
+
+    working_directory: ~/repo
+    steps:
+      # Get the source.
+      - checkout
+
+      - run:
+          name: Prepare the macOS environment.
+          command: |
+            python3 --version
+            pip3 install -q --user --ignore-installed --upgrade virtualenv
+            pip3 install -q tox --user
+            echo 'export PATH=/usr/local/bin:$PATH:/Users/distiller/Library/Python/3.7/bin' >> $BASH_ENV
+
+      # Run tests with tox without any cached dependencies.
+      - run:
+          name: Test with the default reactor.
+          command: |
+            tox -r -e py37-alldeps-withcov-posix twisted
+
 
 # First we run the static checkers, and only if they pass we spin the macOS.
 # in this way we should save some macOS minutes as we only have 1000h per month.
@@ -111,6 +138,10 @@ workflows:
       - static_checkers
       - documentation
       - macos_py27_default_reactor:
+          requires:
+            - static_checkers
+            - documentation
+      - macos_py37_default_reactor:
           requires:
             - static_checkers
             - documentation
