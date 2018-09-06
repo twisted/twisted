@@ -90,10 +90,10 @@ jobs:
       - run:
           name: Prepare the macOS environment.
           command: |
+            echo 'export PATH=/usr/local/bin:$PATH:/Users/distiller/Library/Python/2.7/bin' >> $BASH_ENV
             python2 --version
             pip2 install -q --user --ignore-installed --upgrade virtualenv
             pip2 install -q tox --user
-            echo 'export PATH=/usr/local/bin:$PATH:/Users/distiller/Library/Python/2.7/bin' >> $BASH_ENV
 
       # Run tests with tox without any cached dependencies.
       - run:
@@ -117,10 +117,10 @@ jobs:
       - run:
           name: Prepare the macOS environment.
           command: |
+            echo 'export PATH=/usr/local/bin:$PATH:/Users/distiller/Library/Python/3.7/bin' >> $BASH_ENV
             python3 --version
             pip3 install -q --user --ignore-installed --upgrade virtualenv
             pip3 install -q tox --user
-            echo 'export PATH=/usr/local/bin:$PATH:/Users/distiller/Library/Python/3.7/bin' >> $BASH_ENV
 
       # Run tests with tox without any cached dependencies.
       - run:
