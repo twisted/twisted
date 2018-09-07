@@ -246,13 +246,15 @@ class ZipstreamTests(unittest.TestCase):
         """
         readfile() should skip over 'extra' data present in the zip metadata.
         """
-        if sys.version_info >= (3, 7):
-            raise unittest.SkipTest("likely unused and broken in Python 3.7")
-
         fn = self.mktemp()
         with zipfile.ZipFile(fn, 'w') as zf:
             zi = zipfile.ZipInfo("0")
-            zi.extra = b"hello, extra"
+            extra_data = b"hello, extra"
+            zi.extra = (
+                (42).to_bytes(2, 'little')
+                + len(extra_data).to_bytes(2, 'little')
+                + extra_data
+            )
             zf.writestr(zi, b"the real data")
         with zipstream.ChunkingZipFile(fn) as czf, czf.readfile("0") as zfe:
             self.assertEqual(zfe.read(), b"the real data")
