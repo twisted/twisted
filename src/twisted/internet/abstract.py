@@ -521,7 +521,7 @@ def isIPAddress(addr, family=AF_INET):
     try:
         # This might be a native implementation or the one from
         # twisted.python.compat.
-        inet_pton(family, addr)
+        inet_pton(family, addr.strip())
     except (ValueError, error):
         return False
     return True
