@@ -6,7 +6,6 @@ Tests for L{twisted.python.zipstream}
 """
 
 import random
-import sys
 import zipfile
 from hashlib import md5
 
