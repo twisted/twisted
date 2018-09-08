@@ -6,6 +6,7 @@ Tests for L{twisted.python.zipstream}
 """
 
 import random
+import struct
 import zipfile
 from hashlib import md5
 
@@ -250,8 +251,7 @@ class ZipstreamTests(unittest.TestCase):
             zi = zipfile.ZipInfo("0")
             extra_data = b"hello, extra"
             zi.extra = (
-                (42).to_bytes(2, 'little')
-                + len(extra_data).to_bytes(2, 'little')
+                struct.pack('<hh', 42, len(extra_data))
                 + extra_data
             )
             zf.writestr(zi, b"the real data")
