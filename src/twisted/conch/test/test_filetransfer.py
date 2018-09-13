@@ -573,7 +573,6 @@ class OurServerOurClientTests(SFTPTestBase):
 
 
 
-
 class FakeConn:
     def sendClose(self, channel):
         pass
