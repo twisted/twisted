@@ -1415,7 +1415,12 @@ def _inlineCallbacks(result, g, status):
             if isFailure:
                 result = result.throwExceptionIntoGenerator(g)
             else:
-                result = g.send(result)
+                try:
+                    result = g.send(result)
+                except RuntimeError as e:
+                    if 'StopIteration' not in str(e):
+                        raise
+                    raise StopIteration()
         except StopIteration as e:
             # fell off the end, or "return" statement
             status.deferred.callback(getattr(e, "value", None))
