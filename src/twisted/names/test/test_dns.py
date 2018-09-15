@@ -634,7 +634,7 @@ class RoundtripDNSTests(unittest.TestCase):
         mac = (b'\x00\x01\x02\x03\x10\x11\x12\x13'
                b'\x20\x21\x22\x23\x30\x31\x32\x33')
         rr = dns.Record_TSIG(algorithm='hmac-md5.sig-alg.reg.int',
-                             time=1515548975,
+                             timeSigned=1515548975,
                              originalID=42, fudge=5,
                              MAC=mac)
         self._recordRoundtripTest(rr)
@@ -644,7 +644,7 @@ class RoundtripDNSTests(unittest.TestCase):
         self.assertEncodedFormat(rdata, rr)
 
         rr = dns.Record_TSIG(algorithm='hmac-sha256',
-                             time=4511798055,  # More than 32 bits
+                             timeSigned=4511798055,  # More than 32 bits
                              originalID=65535,
                              error=dns.EBADTIME,
                              otherData=b'\x80\x00\x00\x00\x00\x08',
@@ -2272,11 +2272,11 @@ class EqualityTests(ComparisonTestsMixin, unittest.TestCase):
         L{dns.Record_TSIG} instances compare equal if and only if they have the
         same RDATA (algorithm, timestamp, MAC, etc.) and ttl.
         """
-        baseargs = {'algorithm': 'hmac-sha224', 'time': 1515548975,
+        baseargs = {'algorithm': 'hmac-sha224', 'timeSigned': 1515548975,
                     'fudge': 5,
                     'MAC': b'\x01\x02\x03\x04\x05', 'originalID': 99,
                     'error': dns.OK, 'otherData': b'', 'ttl': 40}
-        altargs = {'algorithm': 'hmac-sha512', 'time': 1515548875,
+        altargs = {'algorithm': 'hmac-sha512', 'timeSigned': 1515548875,
                    'fudge': 0,
                    'MAC': b'\x05\x04\x03\x02\x01', 'originalID': 65437,
                    'error': dns.EBADTIME, 'otherData': b'\x00\x00',

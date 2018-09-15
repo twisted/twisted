@@ -2105,8 +2105,8 @@ class Record_TSIG(tputil.FancyEqMixin, tputil.FancyStrMixin):
     @type algorithm: L{Name}
     @ivar algorithm: The name of the signature or MAC algorithm.
 
-    @type time: L{int}
-    @ivar time: Signing time, as seconds from the POSIX epoch.
+    @type timeSigned: L{int}
+    @ivar timeSigned: Signing time, as seconds from the POSIX epoch.
 
     @type fudge: L{int}
     @ivar fudge: Allowable time skew, in seconds.
@@ -2126,14 +2126,14 @@ class Record_TSIG(tputil.FancyEqMixin, tputil.FancyStrMixin):
 
     """
     fancybasename = "TSIG"
-    compareAttributes = ('algorithm', 'time', 'fudge',
+    compareAttributes = ('algorithm', 'timeSigned', 'fudge',
                          'MAC', 'originalID', 'error', 'otherData',
                          'ttl')
-    showAttributes = ['algorithm', 'time', 'MAC', 'error', 'otherData']
+    showAttributes = ['algorithm', 'timeSigned', 'MAC', 'error', 'otherData']
 
     TYPE = TSIG
 
-    def __init__(self, algorithm=None, time=None,
+    def __init__(self, algorithm=None, timeSigned=None,
                  fudge=5, MAC=None, originalID=0,
                  error=OK, otherData=b'', ttl=0):
         # All of our init arguments have to have defaults, because of
@@ -2142,7 +2142,7 @@ class Record_TSIG(tputil.FancyEqMixin, tputil.FancyStrMixin):
         # invalid values here to prevent a user of this class from
         # relying on what's really an internal implementation detail.
         self.algorithm = None if algorithm is None else Name(algorithm)
-        self.time = time
+        self.timeSigned = timeSigned
         self.fudge = str2time(fudge)
         self.MAC = MAC
         self.originalID = originalID
@@ -2153,7 +2153,7 @@ class Record_TSIG(tputil.FancyEqMixin, tputil.FancyStrMixin):
 
     def encode(self, strio, compDict=None):
         self.algorithm.encode(strio, compDict)
-        strio.write(struct.pack('!Q', self.time)[2:])  # 48-bit number
+        strio.write(struct.pack('!Q', self.timeSigned)[2:])  # 48-bit number
         strio.write(struct.pack('!HH', self.fudge, len(self.MAC)))
         strio.write(self.MAC)
         strio.write(struct.pack('!HHH',
@@ -2167,7 +2167,7 @@ class Record_TSIG(tputil.FancyEqMixin, tputil.FancyStrMixin):
         algorithm.decode(strio)
         self.algorithm = algorithm
         fields = struct.unpack('!QHH', b'\x00\x00' + readPrecisely(strio, 10))
-        self.time, self.fudge, macLength = fields
+        self.timeSigned, self.fudge, macLength = fields
         self.MAC = readPrecisely(strio, macLength)
         fields = struct.unpack('!HHH', readPrecisely(strio, 6))
         self.originalID, self.error, otherLength = fields
@@ -2175,7 +2175,7 @@ class Record_TSIG(tputil.FancyEqMixin, tputil.FancyStrMixin):
 
 
     def __hash__(self):
-        return hash((self.algorithm, self.time,
+        return hash((self.algorithm, self.timeSigned,
                      self.MAC, self.originalID))
 
 
