@@ -20,8 +20,6 @@ def main():
         extras = '[{}]'.format(','.join(args.extras))
     subprocess.check_call(['pip', 'install', '{}{}'.format(wheel, extras)])
 
-    shutil.move(wheel, os.path.join(args.directory, 'twisted.whl'))
-
 
 if __name__ == '__main__':
     sys.exit(main())
