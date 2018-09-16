@@ -18,7 +18,7 @@ def main():
         extras = ''
     else:
         extras = '[{}]'.format(','.join(args.extras))
-    subprocess.check_call(['pip', 'install', '{}[{}]'.format(wheel, extras)])
+    subprocess.check_call(['pip', 'install', '{}{}'.format(wheel, extras)])
 
     shutil.move(wheel, os.path.join(args.directory, 'twisted.whl'))
 
