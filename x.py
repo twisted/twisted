@@ -9,7 +9,7 @@ import sys
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--directory')
-    parser.add_argument('--extra', action='append', metavar='extras')
+    parser.add_argument('--extra', action='append', metavar='extras', default=[])
 
     args = parser.parse_args()
 
