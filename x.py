@@ -14,7 +14,11 @@ def main():
     args = parser.parse_args()
 
     wheel, = glob.glob(os.path.join(args.directory, '*.whl'))
-    subprocess.check_call(['pip', 'install', '{}[{}]'.format(wheel, ','.join(args.extras))])
+    if len(args.extras) == 0:
+        extras = ''
+    else:
+        extras = '[{}]'.format(','.join(args.extras))
+    subprocess.check_call(['pip', 'install', '{}[{}]'.format(wheel, extras)])
 
     shutil.move(wheel, os.path.join(args.directory, 'twisted.whl'))
 
