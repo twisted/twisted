@@ -182,6 +182,12 @@ class DelayedCall:
 
 
     def __str__(self):
+        """
+        Implement C{str()} and C{repr()} for L{DelayedCall} instances.
+
+        @rtype: C{str}
+        @returns: String containing details of the L{DelayedCall}.
+        """
         if self._str is not None:
             return self._str
         if hasattr(self, 'func'):
@@ -217,6 +223,9 @@ class DelayedCall:
         L.append('>')
 
         return "".join(L)
+
+
+    __repr__ = __str__
 
 
 
