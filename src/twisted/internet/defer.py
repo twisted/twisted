@@ -805,7 +805,7 @@ class Deferred:
         @note: This creates a L{Deferred} from a L{asyncio.Future}, I{not} from
             a C{coroutine}; in other words, you will need to call
             L{asyncio.async}, L{asyncio.ensure_future},
-            L{asyncio.AbstractEventLoop.create_task} or create an
+            L{asyncio.loop.create_task} or create an
             L{asyncio.Task} yourself to get from a C{coroutine} to a
             L{asyncio.Future} if what you have is an awaitable coroutine and
             not a L{asyncio.Future}.  (The length of this list of techniques is
