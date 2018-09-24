@@ -230,7 +230,7 @@ class DelayedCall:
         Implement C{repr()} in terms of C{str()} for backwards compatibility.
 
         @rtype: C{str}
-        @returns: String containing details of the L{DelayedCall}
+        @returns: String containing details of the L{DelayedCall}.
         """
         return self.__str__()
 
