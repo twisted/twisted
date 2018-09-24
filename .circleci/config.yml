@@ -20,6 +20,8 @@ jobs:
     working_directory: ~/osx-wheels
     macos:
       xcode: "10.0.0"
+    environment:
+      PYTHON: python3
     steps:
       # Get the source.
       - checkout
@@ -27,16 +29,12 @@ jobs:
       - run:
           name: Prepare the environment.
           command: |
-            python --version
-            pip install -q --user --ignore-installed --upgrade virtualenv
-            pip install -q tox --user
-            ln -f -s $HOME/Library/Python/2.7/bin/virtualenv /usr/local/bin/virtualenv
-            echo 'export PATH=/usr/local/bin:$PATH:/Users/distiller/Library/Python/2.7/bin' >> $BASH_ENV
+            bash .circleci/prepare.sh
 
       - run:
           name: Build the OSX wheels.
           command: |
-            tox -r -e wheels
+            venv/bin/tox -r -e wheels
 
       - store_artifacts:
           path: wheelhouse/
@@ -45,6 +43,8 @@ jobs:
     working_directory: ~/linux-wheels
     docker:
       - image: circleci/python:3.6
+    environment:
+      PYTHON: python3
     steps:
       # Get the source.
       - checkout
@@ -53,15 +53,12 @@ jobs:
       - run:
           name: Prepare the environment.
           command: |
-            python --version
-            pip install -q --user --ignore-installed --upgrade virtualenv
-            pip install -q tox --user
-            echo 'export PATH=~/.local/bin:$PATH' >> $BASH_ENV
+            bash .circleci/prepare.sh
 
       - run:
           name: Build the Linux wheels.
           command: |
-            tox -r -e wheels
+            venv/bin/tox -r -e wheels
 
       - store_artifacts:
           path: wheelhouse/
@@ -70,6 +67,8 @@ jobs:
     working_directory: ~/static-checkers
     docker:
       - image: circleci/python:2.7
+    environment:
+      PYTHON: python2
     steps:
       # Get the source.
       - checkout
@@ -77,10 +76,7 @@ jobs:
       - run:
           name: Prepare the environment.
           command: |
-            python --version
-            pip install -q --user --ignore-installed --upgrade virtualenv
-            pip install -q tox --user
-            echo 'export PATH=~/.local/bin:$PATH' >> $BASH_ENV
+            bash .circleci/prepare.sh
 
       # Run each checker in a separate step, but always run all steps to get
       # a the results from each step.
@@ -88,12 +84,12 @@ jobs:
           name: Check newsfragment.
           when: always
           command: |
-            tox -r -e newsfragment
+            venv/bin/tox -r -e newsfragment
       - run:
           name: Check manifest-checker.
           when: always
           command: |
-            tox -r -e manifest-checker
+            venv/bin/tox -r -e manifest-checker
 
   #
   # Documentation tests are slow so we execute them in a separate job.
@@ -102,6 +98,8 @@ jobs:
     working_directory: ~/documentation
     docker:
       - image: circleci/python:2.7
+    environment:
+      PYTHON: python2
     steps:
       # Get the source.
       - checkout
@@ -109,20 +107,17 @@ jobs:
       - run:
           name: Prepare the environment.
           command: |
-            python --version
-            pip install -q --user --ignore-installed --upgrade virtualenv
-            pip install -q tox --user
-            echo 'export PATH=~/.local/bin:$PATH' >> $BASH_ENV
+            bash .circleci/prepare.sh
 
       - run:
           name: Check the narrative documentation.
           command: |
-            tox -r -e narrativedocs
+            venv/bin/tox -r -e narrativedocs
 
       - run:
           name: Check the API documentation.
           command: |
-            tox -r -e apidocs
+            venv/bin/tox -r -e apidocs
 
 workflows:
   version: 2
