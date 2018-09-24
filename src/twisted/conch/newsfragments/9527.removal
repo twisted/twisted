@@ -1,1 +1,1 @@
-twisted.conch.ssh.filetransfer.ClientDirectory's use as a iterator has been deprecated.
+twisted.conch.ssh.filetransfer.ClientDirectory's use as an iterator has been deprecated.
