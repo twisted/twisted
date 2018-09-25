@@ -129,10 +129,12 @@ CrFSJNqy1ITQxW4u0W+THKBmpDvXahl7Ay+oqTG2ExCDHNKka1EFyaQvtGpn3j7XygAAAA
 ABAg==
 -----END OPENSSH PRIVATE KEY-----"""
 
-publicECDSA_openssh521 = (b"ecdsa-sha2-nistp521 AAAAE2VjZHNhLXNoYTItbmlzdHA"
-b"1MjEAAAAIbmlzdHA1MjEAAACFBAFpX/6BmxxglwD+VpEvw0hcyxVzLxNnMGzxZGF7xmNj8nlF7"
-b"M+TQctdlR2Xv/J+AgIeVGmBj2p84bkV9jBzrUNJEACsJjttZw8NbUrhxjkLT/3rMNtuwjE4vLja"
-b"0P7DMTE0EV8Xf09ETdku/z/1tOSSrSvRwmUcM9nQUJtHHAZlr5Q0fw== comment")
+publicECDSA_openssh521 = (
+    b"ecdsa-sha2-nistp521 AAAAE2VjZHNhLXNoYTItbmlzdHA1MjEAAAAIbmlzdHA1MjEAAACF"
+    b"BAFpX/6BmxxglwD+VpEvw0hcyxVzLxNnMGzxZGF7xmNj8nlF7M+TQctdlR2Xv/J+AgIeVGmB"
+    b"j2p84bkV9jBzrUNJEACsJjttZw8NbUrhxjkLT/3rMNtuwjE4vLja0P7DMTE0EV8Xf09ETdku"
+    b"/z/1tOSSrSvRwmUcM9nQUJtHHAZlr5Q0fw== comment"
+)
 
 privateECDSA_openssh384 = b"""-----BEGIN EC PRIVATE KEY-----
 MIGkAgEBBDAtAi7I8j73WCX20qUM5hhHwHuFzYWYYILs2Sh8UZ+awNkARZ/Fu2LU
@@ -153,13 +155,17 @@ ibIZHGACxHIZ1PrUAAAAMC0CLsjyPvdYJfbSpQzmGEfAe4XNhZhgguzZKHxRn5rA2QBFn8
 W7YtQsuXlG05CltQAAAAA=
 -----END OPENSSH PRIVATE KEY-----"""
 
-publicECDSA_openssh384 = (b"ecdsa-sha2-nistp384 AAAAE2VjZHNhLXNoYTItbmlzdHAzOD"
-b"QAAAAIbmlzdHAzODQAAABhBNTXuwD0/kVHBKScpwWyOOyTT4TcJ5c9hfROT8zQcrc+lZBaCs7wl"
-b"1Ec/14UT07/bc/wG6bAW3sX8C8+ULNV3flV+toVPSjhwJYbRGqlD6enfVoqZ4myGRxgAsRyGdT61A== comment")
+publicECDSA_openssh384 = (
+    b"ecdsa-sha2-nistp384 AAAAE2VjZHNhLXNoYTItbmlzdHAzODQAAAAIbmlzdHAzODQAAABh"
+    b"BNTXuwD0/kVHBKScpwWyOOyTT4TcJ5c9hfROT8zQcrc+lZBaCs7wl1Ec/14UT07/bc/wG6bA"
+    b"W3sX8C8+ULNV3flV+toVPSjhwJYbRGqlD6enfVoqZ4myGRxgAsRyGdT61A== comment"
+)
 
-publicECDSA_openssh = (b"ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAA"
-b"AAIbmlzdHAyNTYAAABBBKimX1DZ7+Qj0SpfePMbo1pb6yGkAb5l7duC1l855yD7tEfQfqk7bc7v"
-b"46We1hLMyz6ObUBYgkN/34n42F4vpeA= comment")
+publicECDSA_openssh = (
+    b"ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABB"
+    b"BKimX1DZ7+Qj0SpfePMbo1pb6yGkAb5l7duC1l855yD7tEfQfqk7bc7v46We1hLMyz6ObUBY"
+    b"gkN/34n42F4vpeA= comment"
+)
 
 privateECDSA_openssh = b"""-----BEGIN EC PRIVATE KEY-----
 MHcCAQEEIEyU1YOT2JxxofwbJXIjGftdNcJK55aQdNrhIt2xYQz0oAoGCCqGSM49
@@ -177,12 +183,14 @@ ePMbo1pb6yGkAb5l7duC1l855yD7tEfQfqk7bc7v46We1hLMyz6ObUBYgkN/34n42F4vpe
 AAAAAgTJTVg5PYnHGh/BslciMZ+101wkrnlpB02uEi3bFhDPQAAAAA
 -----END OPENSSH PRIVATE KEY-----"""
 
-publicRSA_openssh = (b"ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDVaqx4I9bWG+wloV"
-b"DEd2NQhEUBVUIUKirg0GDu1OmjrUr6OQZehFV1XwA2v2+qKj+DJjfBaS5b/fDz0n3WmM06QHjVy"
-b"qgYwBGTJAkMgUyP95ztExZqpATpSXfD5FVks3loniwI66zoBC0hdwWnju9TMA2l5bs9auIJNm/9"
-b"NNN9b0b/h9qpKSeq/631heY+Grh6HUqx6sBa9zDfH8Kk5O8/kUmWQNUZdy03w17snaY6RKXCpCn"
-b"d1bqcPUWzxiwYZNW6Pd+rf81CrKfxGAugWBViC6QqbkPD5ASfNaNHjkbtM6Vlvbw7KW4CC1ffdO"
-b"gTtDc1foNfICZgptyti8ZseZj3 comment")
+publicRSA_openssh = (
+    b"ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDVaqx4I9bWG+wloVDEd2NQhEUBVUIUKirg"
+    b"0GDu1OmjrUr6OQZehFV1XwA2v2+qKj+DJjfBaS5b/fDz0n3WmM06QHjVyqgYwBGTJAkMgUyP"
+    b"95ztExZqpATpSXfD5FVks3loniwI66zoBC0hdwWnju9TMA2l5bs9auIJNm/9NNN9b0b/h9qp"
+    b"KSeq/631heY+Grh6HUqx6sBa9zDfH8Kk5O8/kUmWQNUZdy03w17snaY6RKXCpCnd1bqcPUWz"
+    b"xiwYZNW6Pd+rf81CrKfxGAugWBViC6QqbkPD5ASfNaNHjkbtM6Vlvbw7KW4CC1ffdOgTtDc1"
+    b"foNfICZgptyti8ZseZj3 comment"
+)
 
 privateRSA_openssh = b'''-----BEGIN RSA PRIVATE KEY-----
 MIIEowIBAAKCAQEA1WqseCPW1hvsJaFQxHdjUIRFAVVCFCoq4NBg7tTpo61K+jkG
