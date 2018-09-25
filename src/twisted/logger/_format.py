@@ -346,7 +346,7 @@ def eventAsText(
         includeSystem=True,
         formatTime=formatTime,
 ):
-    """
+    r"""
     Format an event as a unicode string.  Optionally, attach timestamp,
     traceback, and system information.
 
