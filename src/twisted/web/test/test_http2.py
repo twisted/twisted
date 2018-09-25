@@ -2706,7 +2706,7 @@ class HTTP2TimeoutTests(unittest.TestCase, HTTP2TestHelpers):
         self.assertTrue(transport.disconnecting)
 
 
-    def test_timeoutResetByData(self):
+    def test_timeoutResetByRequestData(self):
         """
         When a L{H2Connection} receives data, the timeout is reset.
         """
@@ -2738,6 +2738,50 @@ class HTTP2TimeoutTests(unittest.TestCase, HTTP2TestHelpers):
             lastStreamID=0
         )
         self.assertTrue(transport.disconnecting)
+
+
+    def test_timeoutResetByResponseData(self):
+        """
+        When a L{H2Connection} sends data, the timeout is reset.
+        """
+        # Don't send any initial data, we'll send the preamble manually.
+        frameFactory = FrameFactory()
+        initialData = b''
+        requests = []
+
+        frames = buildRequestFrames(self.getRequestHeaders, [], frameFactory)
+        initialData = frameFactory.clientConnectionPreface()
+        initialData += b''.join(f.serialize() for f in frames)
+
+        def saveRequest(stream, queued):
+            req = DelayedHTTPHandler(stream, queued=queued)
+            requests.append(req)
+            return req
+
+        reactor, conn, transport = self.initiateH2Connection(
+            initialData, requestFactory=saveRequest,
+        )
+
+        conn.dataReceived(frameFactory.clientConnectionPreface())
+
+        # Advance the clock.
+        reactor.advance(99)
+        self.assertEquals(len(requests), 1)
+
+        for x in range(10):
+            # It doesn't time out as it's being written...
+            requests[0].write(b'some bytes')
+            reactor.advance(99)
+            self.assertFalse(transport.disconnecting)
+
+        # but the timer is still running, and it times out when it idles.
+        reactor.advance(2)
+        self.assertTimedOut(
+            transport.value(),
+            frameCount=13,
+            errorCode=h2.errors.ErrorCodes.PROTOCOL_ERROR,
+            lastStreamID=1
+        )
 
 
     def test_timeoutWithProtocolErrorIfStreamsOpen(self):
