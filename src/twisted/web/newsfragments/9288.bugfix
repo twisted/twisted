@@ -1,2 +1,0 @@
-twisted.web.server.Request.getSession now returns a new session if the
-previous session has expired.
