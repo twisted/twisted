@@ -73,11 +73,6 @@ environment:
       TWISTED_REACTOR: "iocp"
 
 
-matrix:
-  allow_failures:
-    - PYTHON_VERSION: "3.7"
-
-
 install:
   # Install OpenSSH through chocolatey
   - "choco install openssh -confirm"
