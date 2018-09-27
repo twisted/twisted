@@ -48,8 +48,6 @@ matrix:
     - python: 3.6
       env: TOXENV=py36-alldeps-withcov-posix,codecov-publish DISABLE_IPV6=yes
       sudo: true
-  allow_failures:
-    - python: 3.7
 
 addons:
   apt:
