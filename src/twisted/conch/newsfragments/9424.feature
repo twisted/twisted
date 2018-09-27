@@ -1,1 +1,0 @@
-twisted.conch.ssh.transport.SSHTransportBase now includes Twisted's version in the software version string it sends to the server, allowing servers to apply compatibility workarounds for bugs in particular client versions.

@@ -17,7 +17,7 @@ from ._buffer import LimitedHistoryLogObserver
 from ._observer import LogPublisher
 from ._filter import FilteringLogObserver, LogLevelFilterPredicate
 from ._logger import Logger
-from ._format import formatEvent
+from ._format import eventAsText
 from ._levels import LogLevel
 from ._io import LoggingFile
 from ._file import FileLogObserver
@@ -102,7 +102,12 @@ class LogBeginner(object):
             self._initialBuffer,
             FilteringLogObserver(
                 FileLogObserver(
-                    errorStream, lambda event: formatEvent(event) + u"\n"
+                    errorStream,
+                    lambda event: eventAsText(
+                        event,
+                        includeTimestamp=False,
+                        includeSystem=False,
+                    ) + '\n'
                 ),
                 [LogLevelFilterPredicate(defaultLogLevel=LogLevel.critical)]
             )

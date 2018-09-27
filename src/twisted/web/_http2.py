@@ -395,6 +395,8 @@ class H2Connection(Protocol, TimeoutMixin):
             self._consumerBlocked.addCallback(self._sendPrioritisedData)
             return
 
+        self.resetTimeout()
+
         remainingWindow = self.conn.local_flow_control_window(stream)
         frameData = self._outboundStreamQueues[stream].popleft()
         maxFrameSize = min(self.conn.max_outbound_frame_size, remainingWindow)
