@@ -1,1 +1,0 @@
-If the command run by twisted.conch.endpoints.SSHCommandClientEndpoint exits because of a delivered signal, the client protocol's connectionLost is now called with a ProcessTerminated exception instead of a ConnectionDone exception.
