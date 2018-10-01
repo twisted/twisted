@@ -327,9 +327,12 @@ class PosixReactorBase(_SignalReactorMixin, _DisconnectSelectableMixin,
 
     def spawnProcess(self, processProtocol, executable, args=(),
                      env={}, path=None,
-                     uid=None, gid=None, usePTY=0, childFDs=None):
+                     uid=None, gid=None, usePTY=0, childFDs=None,
+                     creationFlags=None):
         args, env = self._checkProcessArgs(args, env)
         if platformType == 'posix':
+            if creationFlags is not None:
+                raise ValueError("Setting creation flags is unsupported on this platform.")
             if usePTY:
                 if childFDs is not None:
                     raise ValueError("Using childFDs is not supported with usePTY=True.")
@@ -350,7 +353,8 @@ class PosixReactorBase(_SignalReactorMixin, _DisconnectSelectableMixin,
 
             if win32process:
                 from twisted.internet._dumbwin32proc import Process
-                return Process(self, processProtocol, executable, args, env, path)
+                return Process(self, processProtocol, executable, args, env, path,
+                    creationFlags=creationFlags)
             else:
                 raise NotImplementedError(
                     "spawnProcess not available since pywin32 is not installed.")

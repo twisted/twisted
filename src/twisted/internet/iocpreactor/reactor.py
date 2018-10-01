@@ -240,7 +240,8 @@ class IOCPReactor(base._SignalReactorMixin, base.ReactorBase,
 
 
     def spawnProcess(self, processProtocol, executable, args=(), env={},
-                     path=None, uid=None, gid=None, usePTY=0, childFDs=None):
+                     path=None, uid=None, gid=None, usePTY=0, childFDs=None,
+                     creationFlags=None):
         """
         Spawn a process.
         """
@@ -255,7 +256,8 @@ class IOCPReactor(base._SignalReactorMixin, base.ReactorBase,
                 "Custom child file descriptor mappings are unsupported on "
                 "this platform.")
         args, env = self._checkProcessArgs(args, env)
-        return Process(self, processProtocol, executable, args, env, path)
+        return Process(self, processProtocol, executable, args, env, path,
+            creationFlags=creationFlags)
 
 
     def removeAll(self):
