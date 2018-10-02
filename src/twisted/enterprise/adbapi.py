@@ -425,7 +425,7 @@ class ConnectionPool:
             if self.noisy:
                 log.msg('adbapi connecting: %s' % (self.dbapiName,))
             conn = self.dbapi.connect(*self.connargs, **self.connkw)
-            if self.openfun != None:
+            if self.openfun is not None:
                 self.openfun(conn)
             self.connections[tid] = conn
         return conn
