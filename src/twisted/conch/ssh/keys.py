@@ -372,7 +372,7 @@ class Key(object):
             if cipher in (b'aes128-ctr', b'aes192-ctr', b'aes256-ctr'):
                 algorithmClass = algorithms.AES
                 blockSize = 16
-                keySize = int(int(cipher[3:6])/8)
+                keySize = int(cipher[3:6]) // 8
                 ivSize = blockSize
             else:
                 raise BadKeyError('unknown encryption type %r' % (cipher,))
@@ -460,7 +460,7 @@ class Key(object):
 
             if cipher in (b'AES-128-CBC', b'AES-256-CBC'):
                 algorithmClass = algorithms.AES
-                keySize = int(int(cipher.split(b'-')[1])/8)
+                keySize = int(cipher.split(b'-')[1]) // 8
                 if len(ivdata) != 32:
                     raise BadKeyError('AES encrypted key with a bad IV')
             elif cipher == b'DES-EDE3-CBC':
