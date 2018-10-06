@@ -13,6 +13,17 @@ import string
 import struct
 import types
 
+from hashlib import md5, sha1, sha256, sha384, sha512
+from twisted import __version__ as twisted_version
+from twisted.trial import unittest
+from twisted.internet import defer
+from twisted.protocols import loopback
+from twisted.python import randbytes
+from twisted.python.randbytes import insecureRandom
+from twisted.python.compat import iterbytes, _bytesChr as chr
+from twisted.conch.ssh import address, service, _kex
+from twisted.conch.error import ConchError
+from twisted.test import proto_helpers
 from twisted.python.reflect import requireModule
 
 pyasn1 = requireModule("pyasn1")
@@ -46,18 +57,6 @@ else:
         @classmethod
         def NS(self, arg): return b''
 
-from hashlib import md5, sha1, sha256, sha384, sha512
-from twisted import __version__ as twisted_version
-from twisted.trial import unittest
-from twisted.internet import defer
-from twisted.protocols import loopback
-from twisted.python import randbytes
-from twisted.python.randbytes import insecureRandom
-from twisted.python.compat import iterbytes, _bytesChr as chr
-from twisted.conch.ssh import address, service, _kex
-from twisted.test import proto_helpers
-
-from twisted.conch.error import ConchError
 
 
 def _MPpow(x, y, z):
@@ -65,6 +64,7 @@ def _MPpow(x, y, z):
     Return the MP version of C{(x ** y) % z}.
     """
     return common.MP(pow(x, y, z))
+
 
 
 class MockTransportBase(transport.SSHTransportBase):
@@ -300,14 +300,16 @@ class MockFactory(factory.SSHFactory):
         @rtype: L{dict} mapping the key size to a C{list} of
             C{(generator, prime)} tuple.
         """
-        # In these tests, we hardwire the prime values to those defined by the
-        # diffie-hellman-group14-sha1 key exchange algorithm, to avoid requiring
-        # a moduli file when running tests.
+        # In these tests, we hardwire the prime values to those
+        # defined by the diffie-hellman-group14-sha1 key exchange
+        # algorithm, to avoid requiring a moduli file when running
+        # tests.
         # See OpenSSHFactory.getPrimes.
         group14 = _kex.getDHGeneratorAndPrime(b'diffie-hellman-group14-sha1')
         return {
             2048: (group14,),
             4096: ((5, 7),)}
+
 
 
 class MockOldFactoryPublicKeys(MockFactory):
@@ -371,6 +373,8 @@ def generatePredictableKey(transport):
         .y
     )
 
+
+
 class TransportTestCase(unittest.TestCase):
     """
     Base class for transport test cases.
@@ -393,8 +397,10 @@ class TransportTestCase(unittest.TestCase):
         self.patch(randbytes, 'secureRandom', secureRandom)
         self.proto._startEphemeralDH = types.MethodType(
             generatePredictableKey, self.proto)
+
         def stubSendPacket(messageType, payload):
             self.packets.append((messageType, payload))
+
         self.proto.makeConnection(self.transport)
         # we just let the kex packet go into the transport
         self.proto.sendPacket = stubSendPacket
@@ -2180,7 +2186,7 @@ class ClientSSHTransportDHGroupExchangeBaseCase(ClientSSHTransportBaseCase):
         self.assertEqual(self.proto.dhSecretKeyPublicMP,
                          common.MP(pow(2, x, 65267)))
         self.assertEqual(self.packets[1:], [(transport.MSG_KEX_DH_GEX_INIT,
-                                              self.proto.dhSecretKeyPublicMP)])
+                                             self.proto.dhSecretKeyPublicMP)])
 
 
     def begin_KEX_DH_GEX_REPLY(self):
