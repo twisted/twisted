@@ -6,6 +6,7 @@ Tests for L{twisted.python.zipstream}
 """
 
 import random
+import struct
 import zipfile
 from hashlib import md5
 
@@ -248,7 +249,11 @@ class ZipstreamTests(unittest.TestCase):
         fn = self.mktemp()
         with zipfile.ZipFile(fn, 'w') as zf:
             zi = zipfile.ZipInfo("0")
-            zi.extra = b"hello, extra"
+            extra_data = b"hello, extra"
+            zi.extra = (
+                struct.pack('<hh', 42, len(extra_data))
+                + extra_data
+            )
             zf.writestr(zi, b"the real data")
         with zipstream.ChunkingZipFile(fn) as czf, czf.readfile("0") as zfe:
             self.assertEqual(zfe.read(), b"the real data")
