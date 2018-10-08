@@ -19,7 +19,24 @@ from twisted.python.randbytes import secureRandom
 from twisted.python._oldstyle import _oldStyle
 from ._idna import _idnaBytes
 
+from zope.interface import Interface, implementer
+from constantly import Flags, FlagConstant
+from incremental import Version
 
+from twisted.internet.defer import Deferred
+from twisted.internet.error import VerifyError, CertificateError
+from twisted.internet.interfaces import (
+    IAcceptableCiphers, ICipher, IOpenSSLClientConnectionCreator,
+    IOpenSSLContextFactory
+)
+
+from twisted.python import util
+from twisted.python.deprecate import _mutuallyExclusiveArguments
+from twisted.python.compat import nativeString, unicode
+from twisted.python.failure import Failure
+from twisted.python.util import FancyEqMixin
+
+from twisted.python.deprecate import deprecated
 
 class TLSVersion(Names):
     """
@@ -156,27 +173,6 @@ def _selectVerifyImplementation():
 
 
 verifyHostname, VerificationError = _selectVerifyImplementation()
-
-
-from zope.interface import Interface, implementer
-from constantly import Flags, FlagConstant
-from incremental import Version
-
-from twisted.internet.defer import Deferred
-from twisted.internet.error import VerifyError, CertificateError
-from twisted.internet.interfaces import (
-    IAcceptableCiphers, ICipher, IOpenSSLClientConnectionCreator,
-    IOpenSSLContextFactory
-)
-
-from twisted.python import util
-from twisted.python.deprecate import _mutuallyExclusiveArguments
-from twisted.python.compat import nativeString, unicode
-from twisted.python.failure import Failure
-from twisted.python.util import FancyEqMixin
-
-from twisted.python.deprecate import deprecated
-
 
 class ProtocolNegotiationSupport(Flags):
     """
