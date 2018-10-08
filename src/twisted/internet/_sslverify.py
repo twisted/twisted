@@ -38,6 +38,8 @@ from twisted.python.util import FancyEqMixin
 
 from twisted.python.deprecate import deprecated
 
+
+
 class TLSVersion(Names):
     """
     TLS versions that we can negotiate with the client/server.
@@ -172,7 +174,10 @@ def _selectVerifyImplementation():
     return simpleVerifyHostname, SimpleVerificationError
 
 
+
 verifyHostname, VerificationError = _selectVerifyImplementation()
+
+
 
 class ProtocolNegotiationSupport(Flags):
     """
