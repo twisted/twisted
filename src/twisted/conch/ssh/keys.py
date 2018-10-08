@@ -353,7 +353,7 @@ class Key(object):
         lines = data.strip().splitlines()
         keyList = decodebytes(b''.join(lines[1:-1]))
         if not keyList.startswith(b'openssh-key-v1\0'):
-            raise BadKeyError('invalid new-format OpenSSH private key')
+            raise BadKeyError('unknown OpenSSH private key format')
         keyList = keyList[len(b'openssh-key-v1\0'):]
         cipher, kdf, kdfOptions, rest = common.getNS(keyList, 3)
         n = struct.unpack('!L', rest[:4])[0]
