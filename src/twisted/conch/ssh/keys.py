@@ -355,9 +355,7 @@ class Key(object):
         if not keyList.startswith(b'openssh-key-v1\0'):
             raise BadKeyError('invalid new-format OpenSSH private key')
         keyList = keyList[len(b'openssh-key-v1\0'):]
-        cipher, rest = common.getNS(keyList)
-        kdf, rest = common.getNS(rest)
-        kdfOptions, rest = common.getNS(rest)
+        cipher, kdf, kdfOptions, rest = common.getNS(keyList, 3)
         n = struct.unpack('!L', rest[:4])[0]
         if n != 1:
             raise BadKeyError('only OpenSSH private key files containing '
