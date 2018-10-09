@@ -1669,7 +1669,7 @@ class _ConcurrencyPrimitive(object):
         self.release()
         # We return False to indicate that we have not consumed the
         # exception, if any.
-        return defer.succeed(False)
+        return succeed(False)
 
 
 
