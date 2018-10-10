@@ -1,1 +1,0 @@
-HTTP/2 server connections will no longer time out active downloads that take too long.
