@@ -1856,8 +1856,8 @@ class IConsumer(Interface):
         For L{IPushProducer} providers, C{pauseProducing} will be called
         whenever the write buffer fills up and C{resumeProducing} will only be
         called when it empties.  The consumer will only call C{resumeProducing}
-        to balance a previous C{pauseProducing} call; the producer is assumed to
-        start in an un-paused state.
+        to balance a previous C{pauseProducing} call; the producer is assumed
+        to start in an un-paused state.
 
         @type producer: L{IProducer} provider
 
@@ -1930,6 +1930,8 @@ class IPushProducer(IProducer):
         more data for its consumer.
         """
 
+
+
 class IPullProducer(IProducer):
     """
     A pull producer, also known as a non-streaming producer, is
@@ -1947,6 +1949,8 @@ class IPullProducer(IProducer):
         from C{resumeProducing()}, that is, it should not schedule a deferred
         write.
         """
+
+
 
 class IProtocol(Interface):
 
