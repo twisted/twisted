@@ -105,7 +105,8 @@ def filenameToModule(fn):
         # Couldn't find module.  The file 'fn' is not in PYTHONPATH
         return _importFromFile(fn)
 
-    if not hasattr(ret, "__file__"):
+    # >=3.7 has __file__ attribute as None, previously __file__ was not present
+    if getattr(ret, "__file__", None) is None:
         # This isn't a Python module in a package, so import it from a file
         return _importFromFile(fn)
 
