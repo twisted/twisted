@@ -21,6 +21,8 @@ skipNPN = None
 skipALPN = None
 
 if requireModule("OpenSSL"):
+    import ipaddress
+
     from twisted.internet import ssl
 
     from OpenSSL import SSL
@@ -193,12 +195,21 @@ def certificatesForAuthorityAndServer(serviceIdentity=u'example.com'):
             backend=default_backend()
         )
     )
+
     privateKeyForServer = rsa.generate_private_key(
         public_exponent=65537,
         key_size=4096,
         backend=default_backend()
     )
     publicKeyForServer = privateKeyForServer.public_key()
+
+    try:
+        ipAddress = ipaddress.ip_address(serviceIdentity)
+    except ValueError:
+        subjectAlternativeNames = [x509.DNSName(serviceIdentity)]
+    else:
+        subjectAlternativeNames = [x509.IPAddress(ipAddress)]
+
     serverCertificate = (
         x509.CertificateBuilder()
         .subject_name(commonNameForServer)
@@ -212,7 +223,7 @@ def certificatesForAuthorityAndServer(serviceIdentity=u'example.com'):
         )
         .add_extension(
             x509.SubjectAlternativeName(
-                [x509.DNSName(serviceIdentity)]
+                subjectAlternativeNames
             ),
             critical=True,
         )
@@ -579,6 +590,33 @@ class ClientOptionsTests(unittest.SynchronousTestCase):
             bytes.__name__
         )
         self.assertEqual(str(error), expectedText)
+
+
+    def test_dNSNameHostname(self):
+        """
+        If you pass a dNSName to L{sslverify.optionsForClientTLS}
+        L{_sendSNI} will be True
+        """
+        options = sslverify.optionsForClientTLS(u'example.com')
+        self.assertTrue(options._sendSNI)
+
+
+    def test_IPv4AddressHostname(self):
+        """
+        If you pass an IPv4 address to L{sslverify.optionsForClientTLS}
+        L{_sendSNI} will be False
+        """
+        options = sslverify.optionsForClientTLS(u'127.0.0.1')
+        self.assertFalse(options._sendSNI)
+
+
+    def test_IPv6AddressHostname(self):
+        """
+        If you pass an IPv6 address to L{sslverify.optionsForClientTLS}
+        L{_sendSNI} will be False
+        """
+        options = sslverify.optionsForClientTLS(u'::1')
+        self.assertFalse(options._sendSNI)
 
 
 
