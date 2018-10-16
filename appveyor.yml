@@ -108,6 +108,7 @@ install:
   - "python -c \"import struct; print(struct.calcsize('P') * 8)\""
 
   # The build system itself is handled by tox.
+  - "python -m pip install -U pip"
   - "python -m pip install tox"
 
 test_script:
