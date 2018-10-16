@@ -1,1 +1,0 @@
-twisted.conch.keys.Key.public returns the same twisted.conch.keys.Key instance when it is already a public key instead of failing with an exception.
