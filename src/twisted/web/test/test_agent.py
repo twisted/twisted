@@ -68,7 +68,6 @@ else:
     from twisted.protocols.tls import TLSMemoryBIOProtocol, TLSMemoryBIOFactory
 
 
-
     @implementer(IOpenSSLTrustRoot)
     class CustomOpenSSLTrustRoot(object):
         called = False
