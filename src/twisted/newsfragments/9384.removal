@@ -1,4 +1,0 @@
-async keyword argument is deprecated in twisted.conch.manhole
-(ManholeInterpreter.write and Manhole.add) and in
-twisted.main.imap4.IMAP4Server.sendUntaggedResponse,
-isAsync keyword argument is introduced instead.
