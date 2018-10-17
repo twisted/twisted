@@ -148,7 +148,7 @@ class Process(_pollingfile._PollingTimer, BaseProcess):
     closedNotifies = 0
 
     def __init__(self, reactor, protocol, command, args, environment, path,
-        creationFlags=None):
+                 creationFlags=None):
         """
         Create a new child process.
         """
@@ -225,8 +225,9 @@ class Process(_pollingfile._PollingTimer, BaseProcess):
                 flags = win32con.CREATE_NO_WINDOW
             else:
                 flags = creationFlags
-            self.hProcess, self.hThread, self.pid, dwTid = win32process.CreateProcess(
-                command, cmdline, None, None, 1, flags, env, path, StartupInfo)
+            self.hProcess, self.hThread, self.pid, dwTid = \
+                win32process.CreateProcess(command, cmdline, None, None, 1,
+                                           flags, env, path, StartupInfo)
         try:
             doCreate()
         except pywintypes.error as pwte:
