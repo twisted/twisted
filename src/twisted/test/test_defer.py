@@ -8,12 +8,16 @@ Test cases for L{twisted.internet.defer}.
 from __future__ import division, absolute_import
 
 import warnings
-import gc, traceback
+import gc
+import traceback
 import re
 
-from twisted.python import compat
+from twisted.python import compat, failure, log
 from twisted.python.compat import _PY3, _PY35PLUS
 from twisted.trial import unittest
+from twisted.internet import defer, reactor
+from twisted.internet.task import Clock
+
 
 if _PY3:
     from asyncio import new_event_loop, Future, CancelledError
@@ -43,10 +47,6 @@ else:
             A skipped test to show that this was not ran because the Python is
             too old.
             """
-
-from twisted.python import failure, log
-from twisted.internet import defer, reactor
-from twisted.internet.task import Clock
 
 
 
