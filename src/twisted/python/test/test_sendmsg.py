@@ -393,22 +393,6 @@ class CModuleSendmsgTests(TestCase):
         self.assertEqual(result, (message, 0, []))
 
 
-    def test_shortsend(self):
-        """
-        L{send1msg} returns the number of bytes which it was able to send.
-        """
-        message = "x" * 1024 * 1024 * 8
-        self.input.setblocking(False)
-        sent = send1msg(self.input.fileno(), message)
-        # Sanity check - make sure the amount of data we sent was less than the
-        # message, but not the whole message, as we should have filled the send
-        # buffer. This won't work if the send buffer is large enough for
-        # message, though.
-        self.assertTrue(sent < len(message))
-        received = recv1msg(self.output.fileno(), 0, len(message))
-        self.assertEqual(len(received[0]), sent)
-
-
     def test_roundtripEmptyAncillary(self):
         """
         L{send1msg} treats an empty ancillary data list the same way it treats

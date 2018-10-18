@@ -152,6 +152,26 @@ class KeyTests(unittest.TestCase):
                 None)
 
 
+    def test_public(self):
+        """
+        The L{keys.Key.public} method returns a public key for both
+        public and private keys.
+        """
+        # NB: This assumes that the private and public keys correspond
+        # to each other.
+        privateRSAKey = keys.Key.fromString(keydata.privateRSA_openssh)
+        publicRSAKey = keys.Key.fromString(keydata.publicRSA_openssh)
+        self.assertEqual(privateRSAKey.public(), publicRSAKey.public())
+
+        privateDSAKey = keys.Key.fromString(keydata.privateDSA_openssh)
+        publicDSAKey = keys.Key.fromString(keydata.publicDSA_openssh)
+        self.assertEqual(privateDSAKey.public(), publicDSAKey.public())
+
+        privateECDSAKey = keys.Key.fromString(keydata.privateECDSA_openssh)
+        publicECDSAKey = keys.Key.fromString(keydata.publicECDSA_openssh)
+        self.assertEqual(privateECDSAKey.public(), publicECDSAKey.public())
+
+
     def test_isPublic(self):
         """
         The L{keys.Key.isPublic} method returns True for public keys
