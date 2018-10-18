@@ -926,7 +926,7 @@ class ClientDirectory:
     def __next__(self):
         warnings.warn(
             ('Using twisted.conch.ssh.filetransfer.ClientDirectory '
-             'as an iterator was deprecated in Twisted NEXT.'),
+             'as an iterator was deprecated in Twisted 18.9.0.'),
             category=DeprecationWarning,
             stacklevel=2)
         if self.filesCache:
