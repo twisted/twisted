@@ -68,6 +68,7 @@ on event-based network programming and multiprotocol integration.
         "Programming Language :: Python :: 3.4",
         "Programming Language :: Python :: 3.5",
         "Programming Language :: Python :: 3.6",
+        "Programming Language :: Python :: 3.7",
     ],
 )
 
@@ -106,7 +107,7 @@ _EXTRA_OPTIONS = dict(
     macos=['pyobjc-core',
          'pyobjc-framework-CFNetwork',
          'pyobjc-framework-Cocoa'],
-    windows=['pypiwin32'],
+    windows=['pywin32'],
     http2=['h2 >= 3.0, < 4.0',
            'priority >= 1.1.0, < 2.0'],
 )
@@ -238,6 +239,8 @@ def getSetupArgs(extensions=_EXTENSIONS):
         "incremental >= 16.10.1",
         "Automat >= 0.3.0",
         "hyperlink >= 17.1.1",
+        "PyHamcrest >= 1.9.0",
+        "attrs >= 17.4.0",
     ]
 
     arguments.update(dict(

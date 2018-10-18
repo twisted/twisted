@@ -5,10 +5,62 @@
 """
 Support for starting, monitoring, and restarting child process.
 """
-from twisted.python import log
+import attr
+import incremental
+
+from twisted.python import log, deprecate
 from twisted.internet import error, protocol, reactor as _reactor
 from twisted.application import service
 from twisted.protocols import basic
+
+@attr.s(frozen=True)
+class _Process(object):
+    """
+    The parameters of a process to be restarted.
+
+    @ivar args: command-line arguments (including name of command as first one)
+    @type args: C{list}
+
+    @ivar uid: user-id to run process as, or None (which means inherit uid)
+    @type uid: C{int}
+
+    @ivar gid: group-id to run process as, or None (which means inherit gid)
+    @type gid: C{int}
+
+    @ivar env: environment for process
+    @type env: C{dict}
+
+    @ivar cwd: initial working directory for process or None
+               (which means inherit cwd)
+    @type cwd: C{str}
+    """
+
+    args = attr.ib()
+    uid = attr.ib(default=None)
+    gid = attr.ib(default=None)
+    env = attr.ib(default=attr.Factory(dict))
+    cwd = attr.ib(default=None)
+
+    @deprecate.deprecated(incremental.Version('Twisted', 18, 7, 0))
+    def toTuple(self):
+        """
+        Convert process to tuple.
+
+        Convert process to tuple that looks like the legacy structure
+        of processes, for potential users who inspected processes
+        directly.
+
+        This was only an accidental feature, and will be removed. If
+        you need to remember what processes were added to a process monitor,
+        keep track of that when they are added. The process list
+        inside the process monitor is no longer a public API.
+
+        This allows changing the internal structure of the process list,
+        when warranted by bug fixes or additional features.
+
+        @return: tuple representation of process
+        """
+        return (self.args, self.uid, self.gid, self.env)
 
 class DummyTransport:
 
@@ -103,7 +155,7 @@ class ProcessMonitor(service.Service):
     def __init__(self, reactor=_reactor):
         self._reactor = reactor
 
-        self.processes = {}
+        self._processes = {}
         self.protocols = {}
         self.delay = {}
         self.timeStarted = {}
@@ -111,6 +163,18 @@ class ProcessMonitor(service.Service):
         self.restart = {}
 
 
+    @deprecate.deprecatedProperty(incremental.Version('Twisted', 18, 7, 0))
+    def processes(self):
+        """
+        Processes as dict of tuples
+
+        @return: Dict of process name to monitored processes as tuples
+        """
+        return {name: process.toTuple()
+                for name, process in self._processes.items()}
+
+
+    @deprecate.deprecated(incremental.Version('Twisted', 18, 7, 0))
     def __getstate__(self):
         dct = service.Service.__getstate__(self)
         del dct['_reactor']
@@ -119,10 +183,12 @@ class ProcessMonitor(service.Service):
         dct['timeStarted'] = {}
         dct['murder'] = {}
         dct['restart'] = {}
+        del dct['_processes']
+        dct['processes'] = self.processes
         return dct
 
 
-    def addProcess(self, name, args, uid=None, gid=None, env={}):
+    def addProcess(self, name, args, uid=None, gid=None, env={}, cwd=None):
         """
         Add a new monitored process and start it immediately if the
         L{ProcessMonitor} service is running.
@@ -144,12 +210,16 @@ class ProcessMonitor(service.Service):
         @param env: The environment to give to the launched process. See
             L{IReactorProcess.spawnProcess}'s C{env} parameter.
         @type env: C{dict}
+        @param cwd: The initial working directory of the launched process.
+            The default of C{None} means inheriting the laucnhing process's
+            working directory.
+        @type env: C{dict}
         @raises: C{KeyError} if a process with the given name already
             exists
         """
-        if name in self.processes:
+        if name in self._processes:
             raise KeyError("remove %s first" % (name,))
-        self.processes[name] = args, uid, gid, env
+        self._processes[name] = _Process(args, uid, gid, env, cwd)
         self.delay[name] = self.minRestartDelay
         if self.running:
             self.startProcess(name)
@@ -164,7 +234,7 @@ class ProcessMonitor(service.Service):
         @param name: A string that uniquely identifies the process.
         """
         self.stopProcess(name)
-        del self.processes[name]
+        del self._processes[name]
 
 
     def startService(self):
@@ -172,7 +242,7 @@ class ProcessMonitor(service.Service):
         Start all monitored processes.
         """
         service.Service.startService(self)
-        for name in self.processes:
+        for name in list(self._processes):
             self.startProcess(name)
 
 
@@ -183,11 +253,11 @@ class ProcessMonitor(service.Service):
         service.Service.stopService(self)
 
         # Cancel any outstanding restarts
-        for name, delayedCall in self.restart.items():
+        for name, delayedCall in list(self.restart.items()):
             if delayedCall.active():
                 delayedCall.cancel()
 
-        for name in self.processes:
+        for name in list(self._processes):
             self.stopProcess(name)
 
 
@@ -228,7 +298,7 @@ class ProcessMonitor(service.Service):
             self.delay[name] = self.minRestartDelay
 
         # Schedule a process restart if the service is running
-        if self.running and name in self.processes:
+        if self.running and name in self._processes:
             self.restart[name] = self._reactor.callLater(nextDelay,
                                                          self.startProcess,
                                                          name)
@@ -243,15 +313,16 @@ class ProcessMonitor(service.Service):
         if name in self.protocols:
             return
 
-        args, uid, gid, env = self.processes[name]
+        process = self._processes[name]
 
         proto = LoggingProtocol()
         proto.service = self
         proto.name = name
         self.protocols[name] = proto
         self.timeStarted[name] = self._reactor.seconds()
-        self._reactor.spawnProcess(proto, args[0], args, uid=uid,
-                                          gid=gid, env=env)
+        self._reactor.spawnProcess(proto, process.args[0], process.args,
+                                          uid=process.uid, gid=process.gid,
+                                          env=process.env, path=process.cwd)
 
 
     def _forceStopProcess(self, proc):
@@ -268,7 +339,7 @@ class ProcessMonitor(service.Service):
         """
         @param name: The name of the process to be stopped
         """
-        if name not in self.processes:
+        if name not in self._processes:
             raise KeyError('Unrecognized process name: %s' % (name,))
 
         proto = self.protocols.get(name, None)
@@ -291,22 +362,22 @@ class ProcessMonitor(service.Service):
         in circumstances -- for example, a new version of a library is
         installed.
         """
-        for name in self.processes:
+        for name in self._processes:
             self.stopProcess(name)
 
 
     def __repr__(self):
         l = []
-        for name, proc in self.processes.items():
+        for name, proc in self._processes.items():
             uidgid = ''
-            if proc[1] is not None:
-                uidgid = str(proc[1])
-            if proc[2] is not None:
-                uidgid += ':'+str(proc[2])
+            if proc.uid is not None:
+                uidgid = str(proc.uid)
+            if proc.gid is not None:
+                uidgid += ':'+str(proc.gid)
 
             if uidgid:
                 uidgid = '(' + uidgid + ')'
-            l.append('%r%s: %r' % (name, uidgid, proc[0]))
+            l.append('%r%s: %r' % (name, uidgid, proc.args))
         return ('<' + self.__class__.__name__ + ' '
                 + ' '.join(l)
                 + '>')

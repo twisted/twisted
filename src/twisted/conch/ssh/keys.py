@@ -416,8 +416,6 @@ class Key(object):
             n, e, d, p, q, dmp1, dmq1, iqmp = [
                 long(value) for value in decodedKey[1:9]
                 ]
-            if p > q:  # Make p smaller than q
-                p, q = q, p
             return cls(
                 rsa.RSAPrivateNumbers(
                     p=p,
@@ -791,7 +789,10 @@ class Key(object):
         @rtype: L{Key}
         @return: A public key.
         """
-        return Key(self._keyObject.public_key())
+        if self.isPublic():
+            return self
+        else:
+            return Key(self._keyObject.public_key())
 
     def fingerprint(self, format=FingerprintFormats.MD5_HEX):
         """
@@ -1107,8 +1108,8 @@ class Key(object):
                                b' PRIVATE KEY-----'))]
             if self.type() == 'RSA':
                 p, q = data['p'], data['q']
-                objData = (0, data['n'], data['e'], data['d'], q, p,
-                           data['d'] % (q - 1), data['d'] % (p - 1),
+                objData = (0, data['n'], data['e'], data['d'], p, q,
+                           data['d'] % (p - 1), data['d'] % (q - 1),
                            data['u'])
             else:
                 objData = (0, data['p'], data['q'], data['g'], data['y'],

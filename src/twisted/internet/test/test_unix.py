@@ -738,6 +738,24 @@ class SocketUNIXMixin(object):
             portSock.close()
 
 
+    def connectToListener(self, reactor, address, factory):
+        """
+        Connect to a listening UNIX socket.
+
+        @param reactor: The reactor under test.
+        @type reactor: L{IReactorUNIX}
+
+        @param address: The listening's address.
+        @type address: L{UNIXAddress}
+
+        @param factory: The client factory.
+        @type factory: L{ClientFactory}
+
+        @return: The connector
+        """
+        return reactor.connectUNIX(address.name, factory)
+
+
 
 class ListenUNIXMixin(object):
     """
@@ -751,6 +769,24 @@ class ListenUNIXMixin(object):
         # self.mktemp() often returns a path which is too long to be used.
         path = mktemp(suffix='.sock', dir='.')
         return reactor.listenUNIX(path, factory)
+
+
+    def connectToListener(self, reactor, address, factory):
+        """
+        Connect to a listening UNIX socket.
+
+        @param reactor: The reactor under test.
+        @type reactor: L{IReactorUNIX}
+
+        @param address: The listening's address.
+        @type address: L{UNIXAddress}
+
+        @param factory: The client factory.
+        @type factory: L{ClientFactory}
+
+        @return: The connector
+        """
+        return reactor.connectUNIX(address.name, factory)
 
 
 

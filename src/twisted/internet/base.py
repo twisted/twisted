@@ -47,7 +47,7 @@ class DelayedCall:
     # enable .debug to record creator call stack, and it will be logged if
     # an exception occurs while the function is being run
     debug = False
-    _str = None
+    _repr = None
 
     def __init__(self, time, func, args, kw, cancel, reset,
                  seconds=runtimeSeconds):
@@ -101,7 +101,7 @@ class DelayedCall:
             self.canceller(self)
             self.cancelled = 1
             if self.debug:
-                self._str = str(self)
+                self._repr = repr(self)
             del self.func, self.args, self.kw
 
     def reset(self, secondsFromNow):
@@ -181,9 +181,15 @@ class DelayedCall:
         return self.time < other.time
 
 
-    def __str__(self):
-        if self._str is not None:
-            return self._str
+    def __repr__(self):
+        """
+        Implement C{repr()} for L{DelayedCall} instances.
+
+        @rtype: C{str}
+        @returns: String containing details of the L{DelayedCall}.
+        """
+        if self._repr is not None:
+            return self._repr
         if hasattr(self, 'func'):
             # This code should be replaced by a utility function in reflect;
             # see ticket #6066:
@@ -1161,6 +1167,11 @@ class BaseConnector:
         raise NotImplementedError(
             reflect.qual(self.__class__) + " did not implement "
             "getDestination")
+
+    def __repr__(self):
+        return "<%s instance at 0x%x %s %s>" % (
+            reflect.qual(self.__class__), id(self), self.state,
+            self.getDestination())
 
 
 
