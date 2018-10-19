@@ -2562,10 +2562,10 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
             self._checkCookie(cookieValue(outputValue, outputValue),
                               inputValue, inputValue)
             for argument, parameter in arguments:
-                expected = b"; ".join(
-                    [cookieValue(outputValue, outputValue),
-                     cookieValue(parameter, outputValue)
-                    ])
+                expected = b"; ".join([
+                    cookieValue(outputValue, outputValue),
+                    cookieValue(parameter, outputValue),
+                ])
                 self._checkCookie(expected, inputValue, inputValue,
                                   **{argument: inputValue})
 
