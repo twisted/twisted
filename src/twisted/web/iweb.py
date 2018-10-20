@@ -82,11 +82,30 @@ class IRequest(Interface):
         """
         Get the hostname that the user passed in to the request.
 
-        This will either use the Host: header (if it is available) or the
-        host we are listening on if the header is unavailable.
+        This will either use the Host: header (if it is available) or
+        the host we are listening on if the header is unavailable.
+
+        This method is B{deprecated}.  See L{getRequestHost} instead.
 
         @returns: the requested hostname
-        @rtype: C{str}
+
+        @rtype: L{str}
+        """
+
+
+    def getRequestHost():
+        """
+        Get the HTTP host that the client requested.
+
+        This returns the value of the C{Host} header when it is
+        available; otherwise this method will attempt to derive the
+        host from the underlying transport's hostname; transports
+        without hostnames raise
+        L{twisted.web.http.UnsupportedTransport}.
+
+        @returns: the requested hostname
+
+        @rtype: L{str}
         """
 
 

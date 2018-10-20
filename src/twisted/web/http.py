@@ -1359,22 +1359,54 @@ class Request:
         return headers
 
 
+    def getRequestHost(self):
+        """
+        Get the host that the client requested.
+
+        This will use the C{Host} header when it is available;
+        otherwise it will attempt to derive the host from the
+        transport's C{host}; transports that do not have host names,
+        like UNIX domain sockets, will raise L{UnsupportedTransport}.
+
+        @returns: the requested hostname
+
+        @rtype: C{bytes}
+
+        @raises: L{UnsupportedTransport} if there is no C{Host} header
+            and the transport does have a hostname (e.g., when
+            listening on a UNIX socket)
+        """
+        host = self.getHeader(b'host')
+        if host:
+            return host.split(b':', 1)[0]
+        hostAddress = self.getHost()
+        if isinstance(hostAddress, (address.IPv4Address, address.IPv6Address)):
+            return networkString(self.getHost().host)
+        else:
+            raise UnsupportedTransport(
+                "Transport of type {} does not have a hostname.".format(
+                    type(hostAddress)))
+
+
     def getRequestHostname(self):
         """
         Get the hostname that the user passed in to the request.
 
-        This will either use the Host: header (if it is available) or the
-        host we are listening on if the header is unavailable.
+        This will either use the Host: header (if it is available) or
+        the host we are listening on if the header is unavailable.
 
         @returns: the requested hostname
+
         @rtype: C{bytes}
         """
-        # XXX This method probably has no unit tests.  I changed it a ton and
-        # nothing failed.
-        host = self.getHeader(b'host')
-        if host:
-            return host.split(b':', 1)[0]
-        return networkString(self.getHost().host)
+        try:
+            return self.getRequestHost()
+        except UnsupportedTransport:
+            # Mimic the original behavior by accessing a non-exist
+            # host attribute
+            raise AttributeError(
+                "{!r} object has no attribute 'host'".format(
+                        self.getHost().__class__.__name__[:50]))
 
 
     def getHost(self):
@@ -1611,6 +1643,13 @@ Request.noLongerQueued = deprecated(
     Version("Twisted", 16, 3, 0))(Request.noLongerQueued)
 
 
+Request.getRequestHostname = deprecated(
+        Version("Twisted", "NEXT", 0, 0),
+        replacement="getRequestHost",
+)(Request.getRequestHostname)
+
+
+
 class _DataLoss(Exception):
     """
     L{_DataLoss} indicates that not all of a message body was received. This
@@ -1842,6 +1881,14 @@ class _ChunkedTransferDecoder(object):
             raise _DataLoss(
                 "Chunked decoder in %r state, still expecting more data to "
                 "get to 'FINISHED' state." % (self.state,))
+
+
+
+class UnsupportedTransport(Exception):
+    """
+    Raised when a L{Request} is bound to a transport that does not
+    support a given operation.
+    """
 
 
 

@@ -42,7 +42,8 @@ class DummyChannel:
         port = 80
         disconnected = False
 
-        def __init__(self, peer=None):
+        def __init__(self, host=None, peer=None):
+            self._host = host
             if peer is None:
                 peer = IPv4Address("TCP", '192.168.1.1', 12344)
             self._peer = peer
@@ -62,7 +63,10 @@ class DummyChannel:
                 self.write(data)
 
         def getHost(self):
-            return IPv4Address("TCP", '10.0.0.1', self.port)
+            if self._host is None:
+                return IPv4Address("TCP", '10.0.0.1', self.port)
+            else:
+                return self._host
 
         def registerProducer(self, producer, streaming):
             self.producers.append((producer, streaming))
@@ -80,8 +84,8 @@ class DummyChannel:
 
     site = Site(Resource())
 
-    def __init__(self, peer=None):
-        self.transport = self.TCP(peer)
+    def __init__(self, host=None, peer=None):
+        self.transport = self.TCP(host, peer)
 
 
     def requestDone(self, request):
@@ -360,6 +364,16 @@ class DummyRequest(object):
         return self._serverName
 
 
+    def getRequestHost(self):
+        """
+        Get a dummy host associated to the HTTP request.
+
+        @rtype: C{bytes}
+        @returns: a dummy host
+        """
+        return self._serverName
+
+
     def getHost(self):
         """
         Get a dummy transport's host.
@@ -408,6 +422,11 @@ DummyRequest.getClientIP = deprecated(
     Version('Twisted', 18, 4, 0),
     replacement="getClientAddress",
 )(DummyRequest.getClientIP)
+
+DummyRequest.getRequestHostname = deprecated(
+        Version("Twisted", "NEXT", 0, 0),
+        replacement="getRequestHost",
+)(DummyRequest.getRequestHostname)
 
 
 

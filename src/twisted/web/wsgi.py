@@ -307,7 +307,7 @@ class _WSGIResponse:
                 request.getHeader(b'content-type') or ''),
             'CONTENT_LENGTH': _wsgiString(
                 request.getHeader(b'content-length') or ''),
-            'SERVER_NAME': _wsgiString(request.getRequestHostname()),
+            'SERVER_NAME': _wsgiString(request.getRequestHost()),
             'SERVER_PORT': _wsgiString(str(request.getHost().port)),
             'SERVER_PROTOCOL': _wsgiString(request.clientproto)}
 

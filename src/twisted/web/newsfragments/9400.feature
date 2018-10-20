@@ -1,0 +1,1 @@
+twisted.web.http.Request.getRequestHost (and thus the deprecated getRequestHostname; see #9403) raises an UnsupportedTransport exception when called on requests that lack a Host header and are bound to non-TCP transports.
