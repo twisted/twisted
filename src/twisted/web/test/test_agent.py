@@ -333,6 +333,8 @@ class FakeReactorAndConnectMixin:
             u'example.org': [EXAMPLE_ORG_IP],
             u'foo': [FOO_LOCAL_IP],
             u'foo.com': [FOO_COM_IP],
+            u'127.0.0.7': ['127.0.0.7'],
+            u'::7': ['::7'],
         })
 
         # Lots of tests were written expecting MemoryReactorClock and the
@@ -763,12 +765,26 @@ class IntegrationTestingMixin(object):
         self.integrationTest(b'example.com', EXAMPLE_COM_IP, IPv4Address)
 
 
+    def test_integrationTestIPv4Address(self):
+        """
+        L{Agent} works over IPv4 when hostname is an IPv4 address.
+        """
+        self.integrationTest(b'127.0.0.7', '127.0.0.7', IPv4Address)
+
+
     def test_integrationTestIPv6(self):
         """
         L{Agent} works over IPv6.
         """
         self.integrationTest(b'ipv6.example.com', EXAMPLE_COM_V6_IP,
                              IPv6Address)
+
+
+    def test_integrationTestIPv6Address(self):
+        """
+        L{Agent} works over IPv6 when hostname is an IPv6 address.
+        """
+        self.integrationTest(b'[::7]', '::7', IPv6Address)
 
 
     def integrationTest(self, hostName, expectedAddress, addressType,
@@ -827,8 +843,9 @@ class IntegrationTestingMixin(object):
         pump = IOPump(clientProtocol, wrapper,
                       clientTransport, serverTransport, False)
         pump.flush()
+        self.assertNoResult(deferred)
         lines = accumulator.currentProtocol.data.split(b"\r\n")
-        self.assertTrue(lines[0].startswith(b"GET / HTTP"))
+        self.assertTrue(lines[0].startswith(b"GET / HTTP"), lines[0])
         headers = dict([line.split(b": ", 1) for line in lines[1:] if line])
         self.assertEqual(headers[b'Host'], hostName)
         self.assertNoResult(deferred)
@@ -1477,11 +1494,32 @@ class AgentHTTPSTests(TestCase, FakeReactorAndConnectMixin,
         self.assertIs(trustRoot.context, connection.get_context())
 
 
+    def test_integrationTestIPv4Address(self):
+        """
+        L{Agent} works over IPv4 when hostname is an IPv4 address.
+        """
+        super(AgentHTTPSTests, self).test_integrationTestIPv4Address()
+    test_integrationTestIPv4Address.skip = (
+        'service_identity does not support IP address validation yet'
+    )
+
+
+    def test_integrationTestIPv6Address(self):
+        """
+        L{Agent} works over IPv6 when the hostname is an IPv6 address.
+        """
+        super(AgentHTTPSTests, self).test_integrationTestIPv6Address()
+    test_integrationTestIPv6Address.skip = (
+        'service_identity does not support IP address validation yet'
+    )
+
+
     def integrationTest(self, hostName, expectedAddress, addressType):
         """
         Wrap L{AgentTestsMixin.integrationTest} with TLS.
         """
-        authority, server = certificatesForAuthorityAndServer(hostName
+        certHostName = hostName.strip(b'[]')
+        authority, server = certificatesForAuthorityAndServer(certHostName
                                                               .decode('ascii'))
         def tlsify(serverFactory):
             return TLSMemoryBIOFactory(server.options(), False, serverFactory)

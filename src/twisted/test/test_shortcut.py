@@ -15,6 +15,9 @@ try:
 except ImportError:
     skipReason = "Only runs on Windows with win32com"
 
+if sys.version_info[0:2] >= (3, 7):
+    skipReason = "Broken on Python 3.7+."
+
 
 
 class ShortcutTests(unittest.TestCase):

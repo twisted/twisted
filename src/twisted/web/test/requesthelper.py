@@ -17,7 +17,7 @@ from twisted.python.compat import intToBytes
 from twisted.python.deprecate import deprecated
 from incremental import Version
 from twisted.internet.defer import Deferred
-from twisted.internet.address import IPv4Address
+from twisted.internet.address import IPv4Address, IPv6Address
 from twisted.internet.interfaces import ISSLTransport, IAddress
 
 from twisted.trial import unittest
@@ -26,6 +26,20 @@ from twisted.web.http_headers import Headers
 from twisted.web.resource import Resource
 from twisted.web.server import NOT_DONE_YET, Session, Site
 from twisted.web._responses import FOUND
+
+
+
+textLinearWhitespaceComponents = [
+    u"Foo%sbar" % (lw,) for lw in
+    [u'\r', u'\n', u'\r\n']
+]
+
+sanitizedText = "Foo bar"
+bytesLinearWhitespaceComponents = [
+    component.encode('ascii') for component in
+    textLinearWhitespaceComponents
+]
+sanitizedBytes = sanitizedText.encode('ascii')
 
 
 
@@ -333,7 +347,7 @@ class DummyRequest(object):
         Return the IPv4 address of the client which made this request, if there
         is one, otherwise L{None}.
         """
-        if isinstance(self.client, IPv4Address):
+        if isinstance(self.client, (IPv4Address, IPv6Address)):
             return self.client.host
         return None
 
@@ -437,6 +451,18 @@ class DummyRequestTests(unittest.SynchronousTestCase):
              "was deprecated in Twisted 18.4.0; "
              "please use getClientAddress instead"),
         )
+
+
+    def test_getClientIPSupportsIPv6(self):
+        """
+        L{DummyRequest.getClientIP} supports IPv6 addresses, just like
+        L{twisted.web.http.Request.getClientIP}.
+        """
+        request = DummyRequest([])
+        client = IPv6Address("TCP", "::1", 12345)
+        request.client = client
+
+        self.assertEqual("::1", request.getClientIP())
 
 
     def test_getClientAddressWithoutClient(self):
