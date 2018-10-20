@@ -15,6 +15,7 @@ except ImportError:
     from urllib.parse import urlparse, urlunsplit, clear_cache
 
 from io import BytesIO
+from itertools import cycle
 from zope.interface import provider
 from zope.interface.verify import verifyObject
 
@@ -34,7 +35,12 @@ from twisted.protocols import loopback
 from twisted.test.proto_helpers import (StringTransport, NonStreamingProducer,
                                         EventLoggingObserver)
 from twisted.test.test_internet import DummyProducer
-from twisted.web.test.requesthelper import DummyChannel
+from twisted.web.test.requesthelper import (
+    DummyChannel,
+    bytesLinearWhitespaceComponents,
+    sanitizedBytes,
+    textLinearWhitespaceComponents,
+)
 
 from zope.interface import directlyProvides, providedBy
 from twisted.logger import globalLogPublisher
@@ -2453,7 +2459,7 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
 
     def _checkCookie(self, expectedCookieValue, *args, **kwargs):
         """
-        Call L{http.Request.setCookie} with C{*args} and C{**kwargs}, and check
+        Call L{http.Request.addCookie} with C{*args} and C{**kwargs}, and check
         that the cookie value is equal to C{expectedCookieValue}.
         """
         channel = DummyChannel()
@@ -2466,16 +2472,16 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         writtenLines = channel.transport.written.getvalue().split(b"\r\n")
 
         # There should be one Set-Cookie header
-        setCookieLines = [x for x in writtenLines
+        addCookieLines = [x for x in writtenLines
                           if x.startswith(b"Set-Cookie")]
-        self.assertEqual(len(setCookieLines), 1)
-        self.assertEqual(setCookieLines[0],
+        self.assertEqual(len(addCookieLines), 1)
+        self.assertEqual(addCookieLines[0],
                          b"Set-Cookie: " + expectedCookieValue)
 
 
     def test_addCookieWithMinimumArgumentsUnicode(self):
         """
-        L{http.Request.setCookie} adds a new cookie to be sent with the
+        L{http.Request.addCookie} adds a new cookie to be sent with the
         response, and can be called with just a key and a value. L{unicode}
         arguments are encoded using UTF-8.
         """
@@ -2486,7 +2492,7 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
 
     def test_addCookieWithAllArgumentsUnicode(self):
         """
-        L{http.Request.setCookie} adds a new cookie to be sent with the
+        L{http.Request.addCookie} adds a new cookie to be sent with the
         response. L{unicode} arguments are encoded using UTF-8.
         """
         expectedCookieValue = (
@@ -2502,7 +2508,7 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
 
     def test_addCookieWithMinimumArgumentsBytes(self):
         """
-        L{http.Request.setCookie} adds a new cookie to be sent with the
+        L{http.Request.addCookie} adds a new cookie to be sent with the
         response, and can be called with just a key and a value. L{bytes}
         arguments are not decoded.
         """
@@ -2513,7 +2519,7 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
 
     def test_addCookieWithAllArgumentsBytes(self):
         """
-        L{http.Request.setCookie} adds a new cookie to be sent with the
+        L{http.Request.addCookie} adds a new cookie to be sent with the
         response. L{bytes} arguments are not decoded.
         """
         expectedCookieValue = (
@@ -2521,29 +2527,47 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
             b"Domain=.example.com; Path=/; Max-Age=31536000; "
             b"Comment=test; Secure; HttpOnly")
 
-        self._checkCookie(expectedCookieValue,
+        self._checkCookie(
+            expectedCookieValue,
             b"foo", b"bar", expires=b"Fri, 31 Dec 9999 23:59:59 GMT",
             domain=b".example.com", path=b"/", max_age=b"31536000",
             comment=b"test", secure=True, httpOnly=True)
 
 
-    def test_addCookieNonStringArgument(self):
+    def test_addCookieSanitization(self):
         """
-        L{http.Request.setCookie} will raise a L{DeprecationWarning} if
-        non-string (not L{bytes} or L{unicode}) arguments are given, and will
-        call C{str()} on it to preserve past behaviour.
+        L{http.Request.addCookie} replaces linear whitespace and
+        semicolons with single spaces.
         """
-        expectedCookieValue = b"foo=10"
+        def cookieValue(key, value):
+            return b'='.join([key, value])
 
-        self._checkCookie(expectedCookieValue, b"foo", 10)
+        arguments = [('expires', b'Expires'),
+                     ('domain', b'Domain'),
+                     ('path', b'Path'),
+                     ('max_age', b'Max-Age'),
+                     ('comment', b'Comment')]
 
-        warnings = self.flushWarnings([self._checkCookie])
-        self.assertEqual(1, len(warnings))
-        self.assertEqual(warnings[0]['category'], DeprecationWarning)
-        self.assertEqual(
-            warnings[0]['message'],
-            "Passing non-bytes or non-unicode cookie arguments is "
-            "deprecated since Twisted 16.1.")
+        inputsAndOutputs = list(
+            zip(textLinearWhitespaceComponents +
+                bytesLinearWhitespaceComponents,
+                cycle([sanitizedBytes])))
+
+        inputsAndOutputs = [
+            ["Foo; bar", b"Foo  bar"],
+            [b"Foo; bar", b"Foo  bar"],
+        ]
+
+        for inputValue, outputValue in inputsAndOutputs:
+            self._checkCookie(cookieValue(outputValue, outputValue),
+                              inputValue, inputValue)
+            for argument, parameter in arguments:
+                expected = b"; ".join([
+                    cookieValue(outputValue, outputValue),
+                    cookieValue(parameter, outputValue),
+                ])
+                self._checkCookie(expected, inputValue, inputValue,
+                                  **{argument: inputValue})
 
 
     def test_addCookieSameSite(self):
@@ -2584,38 +2608,6 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
             [(b"HTTP/1.0 200 OK",
               b"Test: lemur",
               b"Hello")])
-
-
-    def test_nonByteHeaderValue(self):
-        """
-        L{http.Request.write} casts non-bytes header value to bytes
-        transparently.
-        """
-        channel = DummyChannel()
-        req = http.Request(channel, False)
-        trans = StringTransport()
-
-        channel.transport = trans
-
-        req.setResponseCode(200)
-        req.clientproto = b"HTTP/1.0"
-        req.responseHeaders.setRawHeaders(b"test", [10])
-        req.write(b'Hello')
-
-        self.assertResponseEquals(
-            trans.value(),
-            [(b"HTTP/1.0 200 OK",
-              b"Test: 10",
-              b"Hello")])
-
-        warnings = self.flushWarnings(
-            offendingFunctions=[self.test_nonByteHeaderValue])
-        self.assertEqual(1, len(warnings))
-        self.assertEqual(warnings[0]['category'], DeprecationWarning)
-        self.assertEqual(
-            warnings[0]['message'],
-            "Passing non-bytes header values is deprecated since "
-            "Twisted 12.3. Pass only bytes instead.")
 
 
     def test_firstWriteHTTP11Chunked(self):
@@ -3818,3 +3810,60 @@ class ChannelProductionTests(unittest.TestCase):
         clock.advance(1)
         self.assertIs(transport.producer, None)
         self.assertIs(transport.streaming, None)
+
+
+
+class HTTPChannelSanitizationTests(unittest.SynchronousTestCase):
+    """
+    Test that L{HTTPChannel} sanitizes its output.
+    """
+
+    def test_writeHeadersSanitizesLinearWhitespace(self):
+        """
+        L{HTTPChannel.writeHeaders} removes linear whitespace from the
+        list of header names and values it receives.
+        """
+        for component in bytesLinearWhitespaceComponents:
+            transport = StringTransport()
+            channel = http.HTTPChannel()
+            channel.makeConnection(transport)
+
+            channel.writeHeaders(
+                version=b"HTTP/1.1",
+                code=b"200",
+                reason=b"OK",
+                headers=[(component, component)])
+
+            sanitizedHeaderLine = b": ".join([
+                sanitizedBytes, sanitizedBytes,
+            ]) + b'\r\n'
+
+            self.assertEqual(
+                transport.value(),
+                b"\r\n".join([
+                    b"HTTP/1.1 200 OK",
+                    sanitizedHeaderLine,
+                    b'',
+                ]))
+
+
+
+class HTTPClientSanitizationTests(unittest.SynchronousTestCase):
+    """
+    Test that L{http.HTTPClient} sanitizes its output.
+    """
+
+    def test_sendHeaderSanitizesLinearWhitespace(self):
+        """
+        L{HTTPClient.sendHeader} replaces linear whitespace in its
+        header keys and values with a single space.
+        """
+        for component in bytesLinearWhitespaceComponents:
+            transport = StringTransport()
+            client = http.HTTPClient()
+            client.makeConnection(transport)
+            client.sendHeader(component, component)
+            self.assertEqual(
+                transport.value().splitlines(),
+                [b": ".join([sanitizedBytes, sanitizedBytes])]
+            )
