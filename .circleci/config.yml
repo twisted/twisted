@@ -1,4 +1,4 @@
-# CircleCI 2.0 configuration file for running Python on macOS.
+# CircleCI 2.0 configuration file for running Twisted checks.
 #
 # Email notifications are configured only from web.
 # See "Email Preferences by Organization" in
@@ -44,16 +44,6 @@ jobs:
           when: always
           command: |
             tox -r -e manifest-checker
-      - run:
-          name: Check pyflakes.
-          when: always
-          command: |
-            tox -r -e pyflakes
-      - run:
-          name: Check pycodestyle diff with trunk.
-          when: always
-          command: |
-            tox -r -e pycodestylediff
 
   #
   # Documentation tests are slow so we execute them in a separate job.
@@ -84,73 +74,9 @@ jobs:
           command: |
             tox -r -e apidocs
 
-
-  #
-  # We run pyflakes with Python 3 .
-  #
-  pyflakes3:
-    working_directory: ~/pyflakes3
-    docker:
-      - image: circleci/python:3.6
-    steps:
-      # Get the source.
-      - checkout
-
-      - run:
-          name: Prepare the environment.
-          command: |
-            python --version
-            pip install -q --user --ignore-installed --upgrade virtualenv
-            pip install -q tox --user
-            echo 'export PATH=~/.local/bin:$PATH' >> $BASH_ENV
-
-      - run:
-          name: Check the API documentation.
-          command: |
-            tox -r -e pyflakes3
-
-  #
-  # MacOS with Python2.7 and default reactor.
-  #
-  macos_py27_default_reactor:
-    macos:
-      # We don't use the xcode, but we need to put something here.
-      xcode: "9.0"
-
-    working_directory: ~/repo
-
-    steps:
-      # Get the source.
-      - checkout
-
-      - run:
-          name: Prepare the macOS environment.
-          command: |
-            python --version
-            pip install -q --user --ignore-installed --upgrade virtualenv
-            pip install -q tox --user
-            echo 'export PATH=/usr/local/bin:$PATH:/Users/distiller/Library/Python/2.7/bin' >> $BASH_ENV
-
-      # Run tests with tox without any cached dependencies.
-      - run:
-          name: Test with the default reactor.
-          command: |
-            tox -r -e py27-alldeps-withcov-posix twisted
-
-
-# First we run the static checkers, and only if they pass we spin the macOS.
-# in this way we should save some macOS minutes.
 workflows:
   version: 2
   all-tests:
     jobs:
       - static_checkers
-      - macos_py27_default_reactor:
-          requires:
-            - static_checkers
-      - documentation:
-          requires:
-            - static_checkers
-      - pyflakes3:
-          requires:
-            - static_checkers
+      - documentation
