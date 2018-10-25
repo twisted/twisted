@@ -1077,7 +1077,7 @@ class ClientService(service.Service, object):
             fire. Otherwise its successful return value is consumed, but
             ignored.
 
-            Present Since Twisted NEXT
+            Present Since Twisted 18.7.0
 
         @type prepareConnection: L{callable}
 

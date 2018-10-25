@@ -202,7 +202,7 @@ Format strings
 ~~~~~~~~~~~~~~
 
 
-Format strings provide observers with a standard way to format an event as text suitable for a human being to read, via the function :api:`twisted.logger.formatEvent <formatEvent>` .
+Format strings provide observers with a standard way to format an event as text suitable for a human being to read.  Formatting is accomplished using the function :api:`twisted.logger.eventAsText <eventAsText>`.
 When writing a format string, take care to present it in a manner which would make as much sense as possible to a human reader.
 Particularly, format strings need not be written with an eye towards parseability or machine-readability.
 If you want to save your log events along with their structure and then analyze them later, see the next section, on :ref:`"saving events for later" <core-howto-logger-saving-events-for-later>` .
@@ -321,13 +321,13 @@ That interface simply describes a 1-argument callable that takes a ``dict`` , so
 .. code-block:: python
 
     from zope.interface import provider
-    from twisted.logger import ILogObserver, formatEvent
+    from twisted.logger import ILogObserver, eventAsText
 
     @provider(ILogObserver)
     def simpleObserver(event):
-        print(formatEvent(event))
+        print(eventAsText(event))
 
-The :api:`twisted.logger.formatEvent <formatEvent>` function returns a textual (``unicode`` ) representation of the event.
+The :api:`twisted.logger.eventAsText <eventAsText>` function returns a textual (``unicode`` ) representation of the event.
 
 While it is recommended, in most cases it is not required that observers declare their compliance with :api:`twisted.logger.ILogObserver <ILogObserver>` .
 This flexibility exists to allow for pre-existing callables and lambda expressions to be used as observers.

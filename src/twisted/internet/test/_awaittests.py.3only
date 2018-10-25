@@ -1,3 +1,4 @@
+# -*- test-case-name: twisted.internet.test.test_coroutines -*-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
@@ -9,9 +10,17 @@ These tests can only work and be imported on Python 3.5+!
 
 import types
 
-from twisted.internet.defer import Deferred, ensureDeferred, fail
+from twisted.python.failure import Failure
+from twisted.internet.defer import (
+    Deferred, maybeDeferred, ensureDeferred, fail
+)
 from twisted.trial.unittest import TestCase
 from twisted.test.proto_helpers import Clock
+
+class SampleException(Exception):
+    """
+    A specific sample exception for testing.
+    """
 
 
 class AwaitTests(TestCase):
@@ -87,6 +96,45 @@ class AwaitTests(TestCase):
         res = self.failureResultOf(d)
         self.assertEqual(type(res.value), ValueError)
         self.assertEqual(res.value.args, ("Oh no!",))
+
+
+    def test_synchronousDeferredFailureTraceback(self):
+        """
+        When a Deferred is awaited upon that has already failed with a Failure
+        that has a traceback, both the place that the synchronous traceback
+        comes from and the awaiting line are shown in the traceback.
+        """
+        def raises():
+            raise SampleException()
+        it = maybeDeferred(raises)
+        async def doomed():
+            return await it
+        failure = self.failureResultOf(ensureDeferred(doomed()))
+
+        self.assertIn(", in doomed\n", failure.getTraceback())
+        self.assertIn(", in raises\n", failure.getTraceback())
+
+
+    def test_asyncDeferredFailureTraceback(self):
+        """
+        When a Deferred is awaited upon that later fails with a Failure that
+        has a traceback, both the place that the synchronous traceback comes
+        from and the awaiting line are shown in the traceback.
+        """
+        def returnsFailure():
+            try:
+                raise SampleException()
+            except SampleException:
+                return Failure()
+        it = Deferred()
+        async def doomed():
+            return await it
+        started = ensureDeferred(doomed())
+        self.assertNoResult(started)
+        it.errback(returnsFailure())
+        failure = self.failureResultOf(started)
+        self.assertIn(", in doomed\n", failure.getTraceback())
+        self.assertIn(", in returnsFailure\n", failure.getTraceback())
 
 
     def test_twoDeep(self):
