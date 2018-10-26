@@ -8,7 +8,11 @@ Support for generic select()able objects.
 
 from __future__ import division, absolute_import
 
-from socket import AF_INET, AF_INET6, inet_pton, error
+from socket import AF_INET, AF_INET6, error
+try:
+    from socket import inet_pton
+except ImportError:
+    pass # will pick implementation from twisted.python.compat
 
 from zope.interface import implementer
 
