@@ -7,7 +7,7 @@ Twisted
 |appveyor|_
 |circleci|_
 
-For information on what's new in Twisted 18.4.0, see the `NEWS <NEWS.rst>`_ file that comes with the distribution.
+For information on what's new in Twisted 18.7.0, see the `NEWS <NEWS.rst>`_ file that comes with the distribution.
 
 
 What is this?
@@ -24,7 +24,7 @@ It includes modules for many different purposes, including the following:
 - ``twisted.names``: DNS client and tools for making your own DNS servers
 - ``twisted.trial``: A unit testing framework that integrates well with Twisted-based code.
 
-Twisted supports all major system event loops -- ``select`` (all platforms), ``poll`` (most POSIX platforms), ``epoll`` (Linux), ``kqueue`` (FreeBSD, macOS), IOCP (Windows), and various GUI event loops (GTK+2/3, QT, wxWidgets).
+Twisted supports all major system event loops -- ``select`` (all platforms), ``poll`` (most POSIX platforms), ``epoll`` (Linux), ``kqueue`` (FreeBSD, macOS), IOCP (Windows), and various GUI event loops (GTK+2/3, Qt, wxWidgets).
 Third-party reactors can plug into Twisted, and provide support for additional event loops.
 
 

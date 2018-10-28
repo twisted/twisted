@@ -105,7 +105,7 @@ from twisted.protocols import policies, basic
 
 from twisted.web.iweb import (
     IRequest, IAccessLogFormatter, INonQueuedRequestFactory)
-from twisted.web.http_headers import Headers
+from twisted.web.http_headers import Headers, _sanitizeLinearWhitespace
 
 try:
     from twisted.web._http2 import H2Connection
@@ -528,7 +528,10 @@ class HTTPClient(basic.LineReceiver):
         if not isinstance(value, bytes):
             # XXX Deprecate this case
             value = networkString(str(value))
-        self.transport.writeSequence([name, b': ', value, b'\r\n'])
+        santizedName = _sanitizeLinearWhitespace(name)
+        santizedValue = _sanitizeLinearWhitespace(value)
+        self.transport.writeSequence(
+            [santizedName, b': ', santizedValue, b'\r\n'])
 
     def endHeaders(self):
         self.transport.write(b'\r\n')
@@ -1107,13 +1110,6 @@ class Request:
 
             for name, values in self.responseHeaders.getAllRawHeaders():
                 for value in values:
-                    if not isinstance(value, bytes):
-                        warnings.warn(
-                            "Passing non-bytes header values is deprecated "
-                            "since Twisted 12.3. Pass only bytes instead.",
-                            category=DeprecationWarning, stacklevel=2)
-                        # Backward compatible cast for non-bytes values
-                        value = networkString('%s' % (value,))
                     headers.append((name, value))
 
             for cookie in self.cookies:
@@ -1140,7 +1136,7 @@ class Request:
 
     def addCookie(self, k, v, expires=None, domain=None, path=None,
                   max_age=None, comment=None, secure=None, httpOnly=False,
-                  samesite=None):
+                  sameSite=None):
         """
         Set an outgoing HTTP cookie.
 
@@ -1178,16 +1174,24 @@ class Request:
             other than HTTP (and HTTPS) requests
         @type httpOnly: L{bool}
 
-        @param samesite: direct browsers not to send this cookie on
-            cross-origin requests
-        @type samesite: L{bytes} or L{unicode}
+        @param sameSite: One of L{None} (default), C{'lax'} or C{'strict'}.
+            Direct browsers not to send this cookie on cross-origin requests.
+            Please see:
+            U{https://tools.ietf.org/html/draft-west-first-party-cookies-07}
+        @type sameSite: L{None}, L{bytes} or L{unicode}
 
         @raises: L{DeprecationWarning} if an argument is not L{bytes} or
             L{unicode}.
+            L{ValueError} if the value for C{sameSite} is not supported.
         """
         def _ensureBytes(val):
             """
-            Ensure that C{val} is bytes, encoding using UTF-8 if needed.
+            Ensure that C{val} is bytes, encoding using UTF-8 if
+            needed.
+
+            @param val: L{bytes} or L{unicode}
+
+            @return: L{bytes}
             """
             if val is None:
                 # It's None, so we don't want to touch it
@@ -1195,39 +1199,44 @@ class Request:
 
             if isinstance(val, bytes):
                 return val
-            elif isinstance(val, unicode):
+            else:
                 return val.encode('utf8')
 
-            # Not bytes or unicode, relying on string conversion legacy
-            # str() it, and warn, it's the best we can do
-            warnings.warn(
-                "Passing non-bytes or non-unicode cookie arguments is "
-                "deprecated since Twisted 16.1.",
-                category=DeprecationWarning, stacklevel=3)
 
-            return str(val).encode('utf8')
+        def _sanitize(val):
+            """
+            Replace linear whitespace (C{\r}, C{\n}, C{\r\n}) and
+            semicolons C{;} in C{val} with a single space.
 
-        cookie = _ensureBytes(k) + b"=" + _ensureBytes(v)
+            @param val: L{bytes}
+            @return: L{bytes}
+            """
+            return _sanitizeLinearWhitespace(val).replace(b';', b' ')
+
+        cookie = (
+            _sanitize(_ensureBytes(k)) +
+            b"=" +
+            _sanitize(_ensureBytes(v)))
         if expires is not None:
-            cookie = cookie + b"; Expires=" + _ensureBytes(expires)
+            cookie = cookie + b"; Expires=" + _sanitize(_ensureBytes(expires))
         if domain is not None:
-            cookie = cookie + b"; Domain=" + _ensureBytes(domain)
+            cookie = cookie + b"; Domain=" + _sanitize(_ensureBytes(domain))
         if path is not None:
-            cookie = cookie + b"; Path=" + _ensureBytes(path)
+            cookie = cookie + b"; Path=" + _sanitize(_ensureBytes(path))
         if max_age is not None:
-            cookie = cookie + b"; Max-Age=" + _ensureBytes(max_age)
+            cookie = cookie + b"; Max-Age=" + _sanitize(_ensureBytes(max_age))
         if comment is not None:
-            cookie = cookie + b"; Comment=" + _ensureBytes(comment)
+            cookie = cookie + b"; Comment=" + _sanitize(_ensureBytes(comment))
         if secure:
             cookie = cookie + b"; Secure"
         if httpOnly:
             cookie = cookie + b"; HttpOnly"
-        if samesite:
-            samesite = _ensureBytes(samesite).lower()
-            if samesite not in [b"lax", b"strict"]:
+        if sameSite:
+            sameSite = _ensureBytes(sameSite).lower()
+            if sameSite not in [b"lax", b"strict"]:
                 raise ValueError(
-                    "Invalid value for samesite: " + repr(samesite))
-            cookie += b"; SameSite=" + samesite
+                    "Invalid value for sameSite: " + repr(sameSite))
+            cookie += b"; SameSite=" + sameSite
         self.cookies.append(cookie)
 
     def setResponseCode(self, code, message=None):
@@ -1423,6 +1432,8 @@ class Request:
         """
         Return the IP address of the client who submitted this request.
 
+        This method is B{deprecated}.  Use L{getClientAddress} instead.
+
         @returns: the client IP address
         @rtype: C{str}
         """
@@ -1440,6 +1451,8 @@ class Request:
         a UNIX domain socket will cause this to return
         L{UNIXAddress}).  Callers must check the type of the returned
         address.
+
+        @since: 18.4
 
         @return: the client's address.
         @rtype: L{IAddress}
@@ -1589,7 +1602,7 @@ class Request:
         """
         A C{Request} is hashable so that it can be used as a mapping key.
 
-        @return A C{int} based on the instance's identity.
+        @return: A C{int} based on the instance's identity.
         """
         return id(self)
 
@@ -2369,10 +2382,16 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         @param headers: The headers to write to the transport.
         @type headers: L{twisted.web.http_headers.Headers}
         """
+        sanitizedHeaders = Headers()
+        for name, value in headers:
+            sanitizedHeaders.addRawHeader(name, value)
+
         responseLine = version + b" " + code + b" " + reason + b"\r\n"
         headerSequence = [responseLine]
         headerSequence.extend(
-            name + b': ' + value + b"\r\n" for name, value in headers
+            name + b': ' + value + b"\r\n"
+            for name, values in sanitizedHeaders.getAllRawHeaders()
+            for value in values
         )
         headerSequence.append(b"\r\n")
         self.transport.writeSequence(headerSequence)
@@ -2615,12 +2634,18 @@ def combinedLogFormatter(timestamp, request):
 
     @see: L{IAccessLogFormatter}
     """
+    clientAddr = request.getClientAddress()
+    if isinstance(clientAddr, (address.IPv4Address, address.IPv6Address,
+                               _XForwardedForAddress)):
+        ip = clientAddr.host
+    else:
+        ip = b'-'
     referrer = _escape(request.getHeader(b"referer") or b"-")
     agent = _escape(request.getHeader(b"user-agent") or b"-")
     line = (
         u'"%(ip)s" - - %(timestamp)s "%(method)s %(uri)s %(protocol)s" '
         u'%(code)d %(length)s "%(referrer)s" "%(agent)s"' % dict(
-            ip=_escape(request.getClientIP() or b"-"),
+            ip=_escape(ip),
             timestamp=timestamp,
             method=_escape(request.method),
             uri=_escape(request.uri),
@@ -2634,19 +2659,39 @@ def combinedLogFormatter(timestamp, request):
 
 
 
+@implementer(interfaces.IAddress)
+class _XForwardedForAddress(object):
+    """
+    L{IAddress} which represents the client IP to log for a request, as gleaned
+    from an X-Forwarded-For header.
+
+    @ivar host: An IP address or C{b"-"}.
+    @type host: L{bytes}
+
+    @see: L{proxiedLogFormatter}
+    """
+    def __init__(self, host):
+        self.host = host
+
+
+
 class _XForwardedForRequest(proxyForInterface(IRequest, "_request")):
     """
     Add a layer on top of another request that only uses the value of an
-    X-Forwarded-For header as the result of C{getClientIP}.
+    X-Forwarded-For header as the result of C{getClientAddress}.
     """
-    def getClientIP(self):
+    def getClientAddress(self):
         """
-        @return: The client address (the first address) in the value of the
-            I{X-Forwarded-For header}.  If the header is not present, return
-            C{b"-"}.
+        The client address (the first address) in the value of the
+        I{X-Forwarded-For header}.  If the header is not present, the IP is
+        considered to be C{b"-"}.
+
+        @return: L{_XForwardedForAddress} which wraps the client address as
+            expected by L{combinedLogFormatter}.
         """
-        return self._request.requestHeaders.getRawHeaders(
+        host = self._request.requestHeaders.getRawHeaders(
             b"x-forwarded-for", [b"-"])[0].split(b",")[0].strip()
+        return _XForwardedForAddress(host)
 
     # These are missing from the interface.  Forward them manually.
     @property
@@ -2920,12 +2965,21 @@ class HTTPFactory(protocol.ServerFactory):
     def __init__(self, logPath=None, timeout=_REQUEST_TIMEOUT,
                  logFormatter=None, reactor=None):
         """
+        @param logPath: File path to which access log messages will be written
+            or C{None} to disable logging.
+        @type logPath: L{str} or L{bytes}
+
+        @param timeout: The initial value of L{timeOut}, which defines the idle
+            connection timeout in seconds, or C{None} to disable the idle
+            timeout.
+        @type timeout: L{float}
+
         @param logFormatter: An object to format requests into log lines for
-            the access log.
+            the access log.  L{combinedLogFormatter} when C{None} is passed.
         @type logFormatter: L{IAccessLogFormatter} provider
 
-        @param reactor: A L{IReactorTime} provider used to compute logging
-            timestamps.
+        @param reactor: A L{IReactorTime} provider used to manage connection
+            timeouts and compute logging timestamps.
         """
         if not reactor:
             from twisted.internet import reactor
