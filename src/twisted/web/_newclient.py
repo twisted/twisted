@@ -31,7 +31,6 @@ __metaclass__ = type
 
 from zope.interface import implementer
 
-from twisted.python import log
 from twisted.python.compat import networkString
 from twisted.python.components import proxyForInterface
 from twisted.python.reflect import fullyQualifiedName
@@ -47,12 +46,14 @@ from twisted.web.http_headers import Headers
 from twisted.web.http import NO_CONTENT, NOT_MODIFIED
 from twisted.web.http import _DataLoss, PotentialDataLoss
 from twisted.web.http import _IdentityTransferDecoder, _ChunkedTransferDecoder
+from twisted.logger import Logger
 
 # States HTTPParser can be in
 STATUS = u'STATUS'
 HEADER = u'HEADER'
 BODY = u'BODY'
 DONE = u'DONE'
+_moduleLog = Logger()
 
 
 class BadHeaders(Exception):
@@ -93,8 +94,8 @@ class _WrapperException(Exception):
     L{_WrapperException} is the base exception type for exceptions which
     include one or more other exceptions as the low-level causes.
 
-    @ivar reasons: A list of exceptions.  See subclass documentation for more
-        details.
+    @ivar reasons: A L{list} of one or more L{Failure} instances encountered
+        during an HTTP request.  See subclass documentation for more details.
     """
     def __init__(self, reasons):
         Exception.__init__(self, reasons)
@@ -193,8 +194,10 @@ def _callAppFunction(function):
     try:
         function()
     except:
-        log.err(None, u"Unexpected exception from %s" % (
-                fullyQualifiedName(function),))
+        _moduleLog.failure(
+            u"Unexpected exception from {name}",
+            name=fullyQualifiedName(function)
+        )
 
 
 
@@ -369,6 +372,7 @@ class HTTPClientParser(HTTPParser):
         }
 
     bodyDecoder = None
+    _log = Logger()
 
     def __init__(self, request, finisher):
         self.request = request
@@ -471,8 +475,9 @@ class HTTPClientParser(HTTPParser):
             # going to do. We reset the parser here, but we leave
             # _everReceivedData in its True state because we have, in fact,
             # received data.
-            log.msg(
-                "Ignoring unexpected {} response".format(self.response.code)
+            self._log.info(
+                "Ignoring unexpected {code} response",
+                code=self.response.code
             )
             self.connectionMade()
             del self.response
@@ -563,7 +568,7 @@ class HTTPClientParser(HTTPParser):
                 # suite.  Those functions really shouldn't raise exceptions,
                 # but maybe there's some buggy application code somewhere
                 # making things difficult.
-                log.err()
+                self._log.failure('')
         elif self.state != DONE:
             if self._everReceivedData:
                 exceptionClass = ResponseFailed
@@ -589,6 +594,7 @@ class Request:
     @ivar _parsedURI: Parsed I{URI} for the request, or L{None}.
     @type _parsedURI: L{twisted.web.client.URI} or L{None}
     """
+    _log = Logger()
 
     def __init__(self, method, uri, headers, bodyProducer, persistent=False):
         """
@@ -754,10 +760,13 @@ class Request:
                     # Deferred fired.  This really shouldn't ever happen.
                     # If it does, I goofed.  Log the error anyway, just so
                     # there's a chance someone might notice and complain.
-                    log.err(
-                        err,
-                        u"Buggy state machine in %r/[%d]: "
-                        u"ebConsuming called" % (self, state[0]))
+                    self._log.failure(
+                        u"Buggy state machine in {request}/[{state}]: "
+                        u"ebConsuming called",
+                        failure=err,
+                        request=repr(self),
+                        state=state[0]
+                    )
 
             def cbProducing(result):
                 if state == [None]:
@@ -795,7 +804,7 @@ class Request:
                     # Deferred failed.  It shouldn't have, so it's buggy.
                     # Log the exception in case anyone who can fix the code
                     # is watching.
-                    log.err(err, u"Producer is buggy")
+                    self._log.failure(u"Producer is buggy", failure=err)
 
             consuming.addErrback(ebConsuming)
             producing.addCallbacks(cbProducing, ebProducing)
@@ -1311,7 +1320,7 @@ class TransportProxyProducer:
         self._producer = producer
 
 
-    def _stopProxying(self):
+    def stopProxying(self):
         """
         Stop forwarding calls of L{twisted.internet.interfaces.IPushProducer}
         methods to the underlying L{twisted.internet.interfaces.IPushProducer}
@@ -1345,6 +1354,15 @@ class TransportProxyProducer:
         """
         if self._producer is not None:
             self._producer.pauseProducing()
+
+
+    def loseConnection(self):
+        """
+        Proxy the request to lose the connection to the underlying producer,
+        unless this proxy has been stopped.
+        """
+        if self._producer is not None:
+            self._producer.loseConnection()
 
 
 
@@ -1415,6 +1433,7 @@ class HTTP11ClientProtocol(Protocol):
     _currentRequest = None
     _transportProxy = None
     _responseDeferred = None
+    _log = Logger()
 
 
     def __init__(self, quiescentCallback=lambda c: None):
@@ -1484,8 +1503,12 @@ class HTTP11ClientProtocol(Protocol):
                 self._finishedRequest.errback(
                     Failure(RequestGenerationFailed([err])))
             else:
-                log.err(err, u'Error writing request, but not in valid state '
-                             u'to finalize request: %s' % self._state)
+                self._log.failure(
+                    u'Error writing request, but not in valid state '
+                    u'to finalize request: {state}',
+                    failure=err,
+                    state=self._state
+                )
 
         _requestDeferred.addCallbacks(cbRequestWritten, ebRequestWriting)
 
@@ -1542,7 +1565,7 @@ class HTTP11ClientProtocol(Protocol):
             except:
                 # If callback throws exception, just log it and disconnect;
                 # keeping persistent connections around is an optimisation:
-                log.err()
+                self._log.failure('')
                 self.transport.loseConnection()
             self._disconnectParser(reason)
 
@@ -1568,7 +1591,7 @@ class HTTP11ClientProtocol(Protocol):
             # transport.  Stop proxying from the parser's transport to the real
             # transport before telling the parser it's done so that it can't do
             # anything.
-            self._transportProxy._stopProxying()
+            self._transportProxy.stopProxying()
             self._transportProxy = None
             parser.connectionLost(reason)
 

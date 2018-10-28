@@ -19,10 +19,10 @@ __all__ = [
     'RedirectWithNoLocation',
     ]
 
-from collections import Sequence
 
 from twisted.web._responses import RESPONSES
-from twisted.python.compat import unicode, nativeString, intToBytes
+from twisted.python.compat import unicode, nativeString, intToBytes, Sequence
+
 
 
 def _codeToMessage(code):

@@ -10,22 +10,23 @@ by each subprocess and not by the main web server (i.e. GET, POST etc.).
 """
 
 # System Imports
-import os, copy, cStringIO
+import os, copy
 try:
     import pwd
 except ImportError:
     pwd = None
+from io import BytesIO
 
-from xml.dom.minidom import Element, Text
+from xml.dom.minidom import getDOMImplementation
 
 # Twisted Imports
 from twisted.spread import pb
 from twisted.spread.banana import SIZE_LIMIT
 from twisted.web import http, resource, server, util, static
 from twisted.web.http_headers import Headers
-from twisted.python import log
 from twisted.persisted import styles
 from twisted.internet import address, reactor
+from twisted.logger import Logger
 
 
 class _ReferenceableProducerWrapper(pb.Referenceable):
@@ -62,7 +63,7 @@ class Request(pb.RemoteCopy, server.Request):
         state['requestHeaders'] = Headers(dict(state['requestHeaders']))
         pb.RemoteCopy.setCopyableState(self, state)
         # Emulate the local request interface --
-        self.content = cStringIO.StringIO(self.content_data)
+        self.content = BytesIO(self.content_data)
         self.finish           = self.remote.remoteMethod('finish')
         self.setHeader        = self.remote.remoteMethod('setHeader')
         self.addCookie        = self.remote.remoteMethod('addCookie')
@@ -101,12 +102,14 @@ class Request(pb.RemoteCopy, server.Request):
         self.remote.callRemote("unregisterProducer").addErrback(self.fail)
 
     def fail(self, failure):
-        log.err(failure)
+        self._log.failure('', failure=failure)
 
 
 pb.setUnjellyableForClass(server.Request, Request)
 
 class Issue:
+    _log = Logger()
+
     def __init__(self, request):
         self.request = request
 
@@ -126,12 +129,14 @@ class Issue:
                                util._PRE(failure)).
             render(self.request))
         self.request.finish()
-        log.msg(failure)
+        self._log.info(failure)
 
 
 class ResourceSubscription(resource.Resource):
     isLeaf = 1
     waiting = 0
+    _log = Logger()
+
     def __init__(self, host, port):
         resource.Resource.__init__(self)
         self.host = host
@@ -155,7 +160,7 @@ class ResourceSubscription(resource.Resource):
     def connected(self, publisher):
         """I've connected to a publisher; I'll now send all my requests.
         """
-        log.msg('connected to publisher')
+        self._log.info('connected to publisher')
         publisher.broker.notifyOnDisconnect(self.booted)
         self.publisher = publisher
         self.waiting = 0
@@ -167,7 +172,10 @@ class ResourceSubscription(resource.Resource):
         """I can't connect to a publisher; I'll now reply to all pending
         requests.
         """
-        log.msg("could not connect to distributed web service: %s" % msg)
+        self._log.info(
+            "could not connect to distributed web service: {msg}",
+            msg=msg
+        )
         self.waiting = 0
         self.publisher = None
         for request in self.pending:
@@ -214,6 +222,8 @@ class ResourcePublisher(pb.Root, styles.Versioned):
     @ivar site: The site which will be used for resource lookup.
     @type site: L{twisted.web.server.Site}
     """
+    _log = Logger()
+
     def __init__(self, site):
         self.site = site
 
@@ -235,7 +245,7 @@ class ResourcePublisher(pb.Root, styles.Versioned):
         Look up the resource for the given request and render it.
         """
         res = self.site.getResourceFor(request)
-        log.msg( request )
+        self._log.info(request)
         result = res.render(request)
         if result is not server.NOT_DONE_YET:
             request.write(result)
@@ -330,17 +340,21 @@ class UserDirectory(resource.Resource):
         Render as HTML a listing of all known users with links to their
         personal resources.
         """
-        listing = Element('ul')
+
+        domImpl = getDOMImplementation()
+        newDoc = domImpl.createDocument(None, "ul", None)
+        listing = newDoc.documentElement
         for link, text in self._users():
-            linkElement = Element('a')
+            linkElement = newDoc.createElement('a')
             linkElement.setAttribute('href', link + '/')
-            textNode = Text()
-            textNode.data = text
+            textNode = newDoc.createTextNode(text)
             linkElement.appendChild(textNode)
-            item = Element('li')
+            item = newDoc.createElement('li')
             item.appendChild(linkElement)
             listing.appendChild(item)
-        return self.template % {'users': listing.toxml()}
+
+        htmlDoc = self.template % ({'users': listing.toxml()})
+        return htmlDoc.encode("utf-8")
 
 
     def getChild(self, name, request):

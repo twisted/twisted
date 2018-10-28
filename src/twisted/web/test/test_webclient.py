@@ -22,10 +22,9 @@ from twisted.web.static import Data
 from twisted.web.util import Redirect
 from twisted.internet import reactor, defer, interfaces
 from twisted.python.filepath import FilePath
-from twisted.python.log import msg
 from twisted.protocols.policies import WrappingFactory
 from twisted.test.proto_helpers import (
-    StringTransport, waitUntilAllDisconnected)
+    StringTransport, waitUntilAllDisconnected, EventLoggingObserver)
 
 try:
     from twisted.internet import ssl
@@ -33,6 +32,10 @@ except:
     ssl = None
 
 from twisted import test
+from twisted.logger import (globalLogPublisher, FilteringLogObserver,
+                            LogLevelFilterPredicate, LogLevel, Logger)
+
+
 serverPEM = FilePath(test.__file__).sibling('server.pem')
 serverPEMPath = serverPEM.asBytesMode().path
 
@@ -297,6 +300,7 @@ class HTTPPageGetterTests(unittest.TestCase):
 
 class WebClientTests(unittest.TestCase):
     suppress = [util.suppress(category=DeprecationWarning)]
+    _log = Logger()
 
 
     def _listen(self, site):
@@ -351,7 +355,7 @@ class WebClientTests(unittest.TestCase):
         # the connection and cleaned up after themselves.
         for n in range(min(len(connections), self.cleanupServerConnections)):
             proto = connections.pop()
-            msg("Closing %r" % (proto,))
+            self._log.info("Closing {proto}", proto=proto)
             proto.transport.abortConnection()
         d = self.port.stopListening()
 
@@ -408,22 +412,43 @@ class WebClientTests(unittest.TestCase):
         d.addCallback(cbFailed)
         return d
 
+
     def test_downloadPageLogsFileCloseError(self):
         """
         If there is an exception closing the file being written to after the
         connection is prematurely closed, that exception is logged.
         """
+        exc = IOError(ENOSPC, "No file left on device")
+
         class BrokenFile:
             def write(self, bytes):
                 pass
 
             def close(self):
-                raise IOError(ENOSPC, "No file left on device")
+                raise exc
+
+        logObserver = EventLoggingObserver()
+        filtered = FilteringLogObserver(
+            logObserver,
+            [LogLevelFilterPredicate(defaultLogLevel=LogLevel.critical)]
+        )
+        globalLogPublisher.addObserver(filtered)
+        self.addCleanup(lambda: globalLogPublisher.removeObserver(filtered))
 
         d = client.downloadPage(self.getURL("broken"), BrokenFile())
         d = self.assertFailure(d, client.PartialDownloadError)
+
         def cbFailed(ignored):
+            self.assertEquals(1, len(logObserver))
+            event = logObserver[0]
+            f = event["log_failure"]
+            self.assertIsInstance(f.value, IOError)
+            self.assertEquals(
+                f.value.args,
+                exc.args
+            )
             self.assertEqual(len(self.flushLoggedErrors(IOError)), 1)
+
         d.addCallback(cbFailed)
         return d
 
@@ -958,6 +983,7 @@ class CookieTests(unittest.TestCase):
             b'Set-Cookie: CUSTOMER=WILE_E_COYOTE; path=/; expires=Wednesday, 09-Nov-99 23:12:40 GMT',
             b'Set-Cookie: PART_NUMBER=ROCKET_LAUNCHER_0001; path=/',
             b'Set-Cookie: SHIPPING=FEDEX; path=/foo',
+            b'Set-Cookie: HttpOnly;Secure',
             b'',
             b'body',
             b'more body',

@@ -20,7 +20,8 @@ from twisted.internet import defer, task
 from twisted.python.failure import Failure
 from twisted.python.compat import cookielib, intToBytes
 from twisted.python.components import proxyForInterface
-from twisted.test.proto_helpers import StringTransport, MemoryReactorClock
+from twisted.test.proto_helpers import (StringTransport, MemoryReactorClock,
+                                        EventLoggingObserver)
 from twisted.internet.task import Clock
 from twisted.internet.error import ConnectionRefusedError, ConnectionDone
 from twisted.internet.error import ConnectionLost
@@ -50,6 +51,7 @@ from twisted.test.proto_helpers import AccumulatingProtocol
 from twisted.test.iosim import IOPump, FakeTransport
 from twisted.test.test_sslverify import certificatesForAuthorityAndServer
 from twisted.web.error import SchemeNotSupported
+from twisted.logger import globalLogPublisher
 
 try:
     from twisted.internet import ssl
@@ -331,6 +333,8 @@ class FakeReactorAndConnectMixin:
             u'example.org': [EXAMPLE_ORG_IP],
             u'foo': [FOO_LOCAL_IP],
             u'foo.com': [FOO_COM_IP],
+            u'127.0.0.7': ['127.0.0.7'],
+            u'::7': ['::7'],
         })
 
         # Lots of tests were written expecting MemoryReactorClock and the
@@ -348,7 +352,10 @@ class FakeReactorAndConnectMixin:
         def __init__(self, endpoint, testCase):
             self.endpoint = endpoint
             self.testCase = testCase
-            self.factory = _HTTP11ClientFactory(lambda p: None)
+            def nothing():
+                """this function does nothing"""
+            self.factory = _HTTP11ClientFactory(nothing,
+                                                repr(self.endpoint))
             self.protocol = StubHTTPProtocol()
             self.factory.buildProtocol = lambda addr: self.protocol
 
@@ -408,7 +415,7 @@ class DummyFactory(Factory):
     """
     Create C{StubHTTPProtocol} instances.
     """
-    def __init__(self, quiescentCallback):
+    def __init__(self, quiescentCallback, metadata):
         pass
 
     protocol = StubHTTPProtocol
@@ -619,14 +626,25 @@ class HTTPConnectionPoolTests(TestCase, FakeReactorAndConnectMixin):
         # By default state is QUIESCENT
         self.assertEqual(protocol.state, "QUIESCENT")
 
+        logObserver = EventLoggingObserver.createWithCleanup(
+            self,
+            globalLogPublisher
+        )
+
         protocol.state = "NOTQUIESCENT"
         self.pool._putConnection(("http", b"example.com", 80), protocol)
-        exc, = self.flushLoggedErrors(RuntimeError)
+        self.assertEquals(1, len(logObserver))
+
+        event = logObserver[0]
+        f = event["log_failure"]
+
+        self.assertIsInstance(f.value, RuntimeError)
         self.assertEqual(
-            exc.value.args[0],
+            f.getErrorMessage(),
             "BUG: Non-quiescent protocol added to connection pool.")
         self.assertIdentical(None, self.pool._connections.get(
                 ("http", b"example.com", 80)))
+        self.flushLoggedErrors(RuntimeError)
 
 
     def test_getUsesQuiescentCallback(self):
@@ -747,12 +765,26 @@ class IntegrationTestingMixin(object):
         self.integrationTest(b'example.com', EXAMPLE_COM_IP, IPv4Address)
 
 
+    def test_integrationTestIPv4Address(self):
+        """
+        L{Agent} works over IPv4 when hostname is an IPv4 address.
+        """
+        self.integrationTest(b'127.0.0.7', '127.0.0.7', IPv4Address)
+
+
     def test_integrationTestIPv6(self):
         """
         L{Agent} works over IPv6.
         """
         self.integrationTest(b'ipv6.example.com', EXAMPLE_COM_V6_IP,
                              IPv6Address)
+
+
+    def test_integrationTestIPv6Address(self):
+        """
+        L{Agent} works over IPv6 when hostname is an IPv6 address.
+        """
+        self.integrationTest(b'[::7]', '::7', IPv6Address)
 
 
     def integrationTest(self, hostName, expectedAddress, addressType,
@@ -811,8 +843,9 @@ class IntegrationTestingMixin(object):
         pump = IOPump(clientProtocol, wrapper,
                       clientTransport, serverTransport, False)
         pump.flush()
+        self.assertNoResult(deferred)
         lines = accumulator.currentProtocol.data.split(b"\r\n")
-        self.assertTrue(lines[0].startswith(b"GET / HTTP"))
+        self.assertTrue(lines[0].startswith(b"GET / HTTP"), lines[0])
         headers = dict([line.split(b": ", 1) for line in lines[1:] if line])
         self.assertEqual(headers[b'Host'], hostName)
         self.assertNoResult(deferred)
@@ -1425,7 +1458,7 @@ class AgentHTTPSTests(TestCase, FakeReactorAndConnectMixin,
         WebClientContextFactory} to do it.
         """
         def warnMe():
-            client.Agent(MemoryReactorClock(),
+            client.Agent(deterministicResolvingReactor(MemoryReactorClock()),
                          "does-not-provide-IPolicyForHTTPS")
         warnMe()
         warnings = self.flushWarnings([warnMe])
@@ -1461,11 +1494,32 @@ class AgentHTTPSTests(TestCase, FakeReactorAndConnectMixin,
         self.assertIs(trustRoot.context, connection.get_context())
 
 
+    def test_integrationTestIPv4Address(self):
+        """
+        L{Agent} works over IPv4 when hostname is an IPv4 address.
+        """
+        super(AgentHTTPSTests, self).test_integrationTestIPv4Address()
+    test_integrationTestIPv4Address.skip = (
+        'service_identity does not support IP address validation yet'
+    )
+
+
+    def test_integrationTestIPv6Address(self):
+        """
+        L{Agent} works over IPv6 when the hostname is an IPv6 address.
+        """
+        super(AgentHTTPSTests, self).test_integrationTestIPv6Address()
+    test_integrationTestIPv6Address.skip = (
+        'service_identity does not support IP address validation yet'
+    )
+
+
     def integrationTest(self, hostName, expectedAddress, addressType):
         """
         Wrap L{AgentTestsMixin.integrationTest} with TLS.
         """
-        authority, server = certificatesForAuthorityAndServer(hostName
+        certHostName = hostName.strip(b'[]')
+        authority, server = certificatesForAuthorityAndServer(certHostName
                                                               .decode('ascii'))
         def tlsify(serverFactory):
             return TLSMemoryBIOFactory(server.options(), False, serverFactory)

@@ -42,7 +42,7 @@ from zope.interface import implementer
 
 from twisted.python import log, failure
 from twisted.python.util import switchUID
-from twisted.python.compat import items, xrange, _PY3
+from twisted.python.compat import items, range, _PY3
 from twisted.internet import fdesc, abstract, error
 from twisted.internet.main import CONNECTION_LOST, CONNECTION_DONE
 from twisted.internet._baseprocess import BaseProcess
@@ -238,7 +238,7 @@ class ProcessWriter(abstract.FileDescriptor):
         """
         See abstract.FileDescriptor.connectionLost.
         """
-        # At least on OS X 10.4, exiting while stdout is non-blocking can
+        # At least on macOS 10.4, exiting while stdout is non-blocking can
         # result in data loss.  For some reason putting the file descriptor
         # back into blocking mode seems to resolve this issue.
         fdesc.setBlocking(self.fd)
@@ -390,7 +390,7 @@ class _BaseProcess(BaseProcess, object):
         # that responds to signals normally, we need to reset our
         # child process's signal handling (just) after we fork and
         # before we execvpe.
-        for signalnum in xrange(1, signal.NSIG):
+        for signalnum in range(1, signal.NSIG):
             if signal.getsignal(signalnum) == signal.SIG_IGN:
                 # Reset signal handling to the default
                 signal.signal(signalnum, signal.SIG_DFL)
@@ -481,7 +481,7 @@ class _BaseProcess(BaseProcess, object):
                         traceback.print_exc(file=stderr)
                         stderr.flush()
 
-                        for fd in xrange(3):
+                        for fd in range(3):
                             os.close(fd)
                     except:
                         # Handle all errors during the error-reporting process

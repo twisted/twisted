@@ -1,11 +1,15 @@
 # -*- test-case-name: calculus.test.test_base_3 -*-
 
+from __future__ import division
+
+
 class Calculation(object):
     def _make_ints(self, *args):
         try:
-            return map(int, args)
+            return [int(arg) for arg in args]
         except ValueError:
-            raise TypeError("Couldn't coerce arguments to integers: %s" % args)
+            raise TypeError(
+                "Couldn't coerce arguments to integers: {}".format(*args))
 
     def add(self, a, b):
         a, b = self._make_ints(a, b)
@@ -21,4 +25,4 @@ class Calculation(object):
 
     def divide(self, a, b):
         a, b = self._make_ints(a, b)
-        return a / b
+        return a // b

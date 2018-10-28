@@ -1,0 +1,12 @@
+## Remove this paragraph
+
+Please have a look at our developer documentation before submitting your Pull Request.
+
+https://twistedmatrix.com/trac/wiki/TwistedDevelopment#SubmittingaPatch
+
+## Contributor Checklist:
+
+* [ ] There is an associated ticket in Trac. Create a new one at https://twistedmatrix.com/trac/newticket
+* [ ] The changes pass minimal style checks (see: https://twistedmatrix.com/trac/wiki/TwistedDevelopment#GettingYourPatchAccepted )
+* [ ] I have created a newsfragment in src/twisted/newsfragments/ (see: https://twistedmatrix.com/trac/wiki/ReviewProcess#Newsfiles )
+* [ ] I have updated the automated tests.

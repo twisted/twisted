@@ -21,7 +21,12 @@ skipNPN = None
 skipALPN = None
 
 if requireModule("OpenSSL"):
+    import ipaddress
+
+    from twisted.internet import ssl
+
     from OpenSSL import SSL
+    from OpenSSL.crypto import get_elliptic_curves
     from OpenSSL.crypto import PKey, X509
     from OpenSSL.crypto import TYPE_RSA, FILETYPE_PEM
 
@@ -57,7 +62,7 @@ from twisted.test.test_twisted import SetAsideModule
 from twisted.test.iosim import connectedServerAndClient
 
 from twisted.internet.error import ConnectionClosed
-from twisted.python.compat import nativeString, _PY3
+from twisted.python.compat import nativeString
 from twisted.python.filepath import FilePath
 from twisted.python.modules import getModule
 
@@ -121,7 +126,6 @@ A_PEER_CERTIFICATE_PEM = """
 A_KEYPAIR = getModule(__name__).filePath.sibling('server.pem').getContent()
 
 
-
 def counter(counter=itertools.count()):
     """
     Each time we're called, return the next integer in the natural numbers.
@@ -132,7 +136,7 @@ def counter(counter=itertools.count()):
 
 def makeCertificate(**kw):
     keypair = PKey()
-    keypair.generate_key(TYPE_RSA, 768)
+    keypair.generate_key(TYPE_RSA, 1024)
 
     certificate = X509()
     certificate.gmtime_adj_notBefore(0)
@@ -191,12 +195,21 @@ def certificatesForAuthorityAndServer(serviceIdentity=u'example.com'):
             backend=default_backend()
         )
     )
+
     privateKeyForServer = rsa.generate_private_key(
         public_exponent=65537,
         key_size=4096,
         backend=default_backend()
     )
     publicKeyForServer = privateKeyForServer.public_key()
+
+    try:
+        ipAddress = ipaddress.ip_address(serviceIdentity)
+    except ValueError:
+        subjectAlternativeNames = [x509.DNSName(serviceIdentity)]
+    else:
+        subjectAlternativeNames = [x509.IPAddress(ipAddress)]
+
     serverCertificate = (
         x509.CertificateBuilder()
         .subject_name(commonNameForServer)
@@ -210,7 +223,7 @@ def certificatesForAuthorityAndServer(serviceIdentity=u'example.com'):
         )
         .add_extension(
             x509.SubjectAlternativeName(
-                [x509.DNSName(serviceIdentity)]
+                subjectAlternativeNames
             ),
             critical=True,
         )
@@ -249,7 +262,8 @@ def _loopbackTLSConnection(serverOpts, clientOpts):
     @type clientOpts: C{OpenSSLCertificateOptions}, or any class with an
         equivalent API.
 
-    @return: 3-tuple of server-protocol, client-protocol, and L{IOPump}
+    @return: 5-tuple of server-tls-protocol, server-inner-protocol,
+        client-tls-protocol, client-inner-protocol and L{IOPump}
     @rtype: L{tuple}
     """
     class GreetingServer(protocol.Protocol):
@@ -265,20 +279,28 @@ def _loopbackTLSConnection(serverOpts, clientOpts):
         def connectionLost(self, reason):
             self.lostReason = reason
 
+    clientWrappedProto = ListeningClient()
+    serverWrappedProto = GreetingServer()
+
+    plainClientFactory = protocol.Factory()
+    plainClientFactory.protocol = lambda: clientWrappedProto
+    plainServerFactory = protocol.Factory()
+    plainServerFactory.protocol = lambda: serverWrappedProto
+
     clientFactory = TLSMemoryBIOFactory(
         clientOpts, isClient=True,
-        wrappedFactory=protocol.Factory.forProtocol(GreetingServer)
+        wrappedFactory=plainServerFactory
     )
     serverFactory = TLSMemoryBIOFactory(
         serverOpts, isClient=False,
-        wrappedFactory=protocol.Factory.forProtocol(ListeningClient)
+        wrappedFactory=plainClientFactory
     )
 
     sProto, cProto, pump = connectedServerAndClient(
         lambda: serverFactory.buildProtocol(None),
         lambda: clientFactory.buildProtocol(None)
     )
-    return sProto, cProto, pump
+    return sProto, cProto, serverWrappedProto, clientWrappedProto, pump
 
 
 
@@ -450,6 +472,8 @@ class FakeContext(object):
     @ivar _dhFilename: Set by L{load_tmp_dh}.
 
     @ivar _defaultVerifyPathsSet: Set by L{set_default_verify_paths}
+
+    @ivar _ecCurve: Set by L{set_tmp_ecdh}
     """
     _options = 0
 
@@ -457,6 +481,7 @@ class FakeContext(object):
         self._method = method
         self._extraCertChain = []
         self._defaultVerifyPathsSet = False
+        self._ecCurve = None
 
 
     def set_options(self, options):
@@ -515,6 +540,16 @@ class FakeContext(object):
         self._defaultVerifyPathsSet = True
 
 
+    def set_tmp_ecdh(self, curve):
+        """
+        Set an ECDH curve.  Should only be called by OpenSSL 1.0.1
+        code.
+
+        @param curve: See L{OpenSSL.SSL.Context.set_tmp_ecdh}
+        """
+        self._ecCurve = curve
+
+
 
 class ClientOptionsTests(unittest.SynchronousTestCase):
     """
@@ -557,18 +592,67 @@ class ClientOptionsTests(unittest.SynchronousTestCase):
         self.assertEqual(str(error), expectedText)
 
 
+    def test_dNSNameHostname(self):
+        """
+        If you pass a dNSName to L{sslverify.optionsForClientTLS}
+        L{_sendSNI} will be True
+        """
+        options = sslverify.optionsForClientTLS(u'example.com')
+        self.assertTrue(options._sendSNI)
 
-class OpenSSLOptionsTests(unittest.TestCase):
+
+    def test_IPv4AddressHostname(self):
+        """
+        If you pass an IPv4 address to L{sslverify.optionsForClientTLS}
+        L{_sendSNI} will be False
+        """
+        options = sslverify.optionsForClientTLS(u'127.0.0.1')
+        self.assertFalse(options._sendSNI)
+
+
+    def test_IPv6AddressHostname(self):
+        """
+        If you pass an IPv6 address to L{sslverify.optionsForClientTLS}
+        L{_sendSNI} will be False
+        """
+        options = sslverify.optionsForClientTLS(u'::1')
+        self.assertFalse(options._sendSNI)
+
+
+
+class FakeChooseDiffieHellmanEllipticCurve(object):
+    """
+    A fake implementation of L{_ChooseDiffieHellmanEllipticCurve}
+    """
+
+    def __init__(self, versionNumber, openSSLlib, openSSLcrypto):
+        """
+        A no-op constructor.
+        """
+
+
+    def configureECDHCurve(self, ctx):
+        """
+        A null configuration.
+
+        @param ctx: An L{OpenSSL.SSL.Context} that would be
+            configured.
+        """
+
+
+
+class OpenSSLOptionsTestsMixin(object):
+    """
+    A mixin for L{OpenSSLOptions} test cases creates client and server
+    certificates, signs them with a CA, and provides a L{loopback}
+    that creates TLS a connections with them.
+    """
     if skipSSL:
         skip = skipSSL
 
     serverPort = clientConn = None
     onServerLost = onClientLost = None
 
-    sKey = None
-    sCert = None
-    cKey = None
-    cCert = None
 
     def setUp(self):
         """
@@ -604,6 +688,7 @@ class OpenSSLOptionsTests(unittest.TestCase):
 
         return defer.DeferredList(L, consumeErrors=True)
 
+
     def loopback(self, serverCertOpts, clientCertOpts,
                  onServerLost=None, onClientLost=None, onData=None):
         if onServerLost is None:
@@ -625,6 +710,22 @@ class OpenSSLOptionsTests(unittest.TestCase):
         self.serverPort = reactor.listenSSL(0, serverFactory, serverCertOpts)
         self.clientConn = reactor.connectSSL('127.0.0.1',
                 self.serverPort.getHost().port, clientFactory, clientCertOpts)
+
+
+
+class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, unittest.TestCase):
+    """
+    Tests for L{sslverify.OpenSSLOptions}.
+    """
+
+    def setUp(self):
+        """
+        Same as L{OpenSSLOptionsTestsMixin.setUp}, but it also patches
+        L{sslverify._ChooseDiffieHellmanEllipticCurve}.
+        """
+        super(OpenSSLOptionsTests, self).setUp()
+        self.patch(sslverify, "_ChooseDiffieHellmanEllipticCurve",
+                   FakeChooseDiffieHellmanEllipticCurve)
 
 
     def test_constructorWithOnlyPrivateKey(self):
@@ -1225,58 +1326,6 @@ class OpenSSLOptionsTests(unittest.TestCase):
         )
 
 
-    def test_ecDoesNotBreakConstructor(self):
-        """
-        Missing ECC does not break the constructor and sets C{_ecCurve} to
-        L{None}.
-        """
-        def raiser(self):
-            raise NotImplementedError
-        self.patch(sslverify._OpenSSLECCurve, "_getBinding", raiser)
-
-        opts = sslverify.OpenSSLCertificateOptions(
-            privateKey=self.sKey,
-            certificate=self.sCert,
-        )
-        self.assertIsNone(opts._ecCurve)
-
-
-    def test_ecNeverBreaksGetContext(self):
-        """
-        ECDHE support is best effort only and errors are ignored.
-        """
-        opts = sslverify.OpenSSLCertificateOptions(
-            privateKey=self.sKey,
-            certificate=self.sCert,
-        )
-        opts._ecCurve = object()
-        ctx = opts.getContext()
-        self.assertIsInstance(ctx, SSL.Context)
-
-
-    def test_ecSuccessWithRealBindings(self):
-        """
-        Integration test that checks the positive code path to ensure that we
-        use the API properly.
-        """
-        try:
-            defaultCurve = sslverify._OpenSSLECCurve(
-                sslverify._defaultCurveName
-            )
-        except NotImplementedError:
-            raise unittest.SkipTest(
-                "Underlying pyOpenSSL is not based on cryptography."
-            )
-        opts = sslverify.OpenSSLCertificateOptions(
-            privateKey=self.sKey,
-            certificate=self.sCert,
-        )
-        self.assertEqual(defaultCurve, opts._ecCurve)
-        # Exercise positive code path.  getContext swallows errors so we do it
-        # explicitly by hand.
-        opts._ecCurve.addECKeyToContext(opts.getContext())
-
-
     def test_abbreviatingDistinguishedNames(self):
         """
         Check that abbreviations used in certificates correctly map to
@@ -1597,6 +1646,37 @@ class OpenSSLOptionsTests(unittest.TestCase):
 
 
 
+class OpenSSLOptionsECDHIntegrationTests(
+        OpenSSLOptionsTestsMixin, unittest.TestCase):
+    """
+    ECDH-related integration tests for L{OpenSSLOptions}.
+    """
+
+    def test_ellipticCurveDiffieHellman(self):
+        """
+        Connections use ECDH when OpenSSL supports it.
+        """
+        if not get_elliptic_curves():
+            raise unittest.SkipTest("OpenSSL does not support ECDH.")
+
+        onData = defer.Deferred()
+        self.loopback(sslverify.OpenSSLCertificateOptions(privateKey=self.sKey,
+                            certificate=self.sCert, requireCertificate=False),
+                      sslverify.OpenSSLCertificateOptions(
+                          requireCertificate=False),
+                      onData=onData)
+
+        @onData.addCallback
+        def assertECDH(_):
+            self.assertEqual(len(self.clientConn.factory.protocols), 1)
+            [clientProtocol] = self.clientConn.factory.protocols
+            cipher = clientProtocol.getHandle().get_cipher_name()
+            self.assertIn(u"ECDH", cipher)
+
+        return onData
+
+
+
 class DeprecationTests(unittest.SynchronousTestCase):
     """
     Tests for deprecation of L{sslverify.OpenSSLCertificateOptions}'s support
@@ -1632,6 +1712,15 @@ class TrustRootTests(unittest.TestCase):
     if skipSSL:
         skip = skipSSL
 
+
+    def setUp(self):
+        """
+        Patch L{sslverify._ChooseDiffieHellmanEllipticCurve}.
+        """
+        self.patch(sslverify, "_ChooseDiffieHellmanEllipticCurve",
+                   FakeChooseDiffieHellmanEllipticCurve)
+
+
     def test_caCertsPlatformDefaults(self):
         """
         Specifying a C{trustRoot} of L{sslverify.OpenSSLDefaultPaths} when
@@ -1663,19 +1752,19 @@ class TrustRootTests(unittest.TestCase):
         chainedCert = pathContainingDumpOf(self, serverCert, caSelfCert)
         privateKey = pathContainingDumpOf(self, serverCert.privateKey)
 
-        sProto, cProto, pump = loopbackTLSConnection(
+        sProto, cProto, sWrapped, cWrapped, pump = loopbackTLSConnection(
             trustRoot=platformTrust(),
             privateKeyFile=privateKey,
             chainedCertFile=chainedCert,
         )
         # No data was received.
-        self.assertEqual(cProto.wrappedProtocol.data, b'')
+        self.assertEqual(cWrapped.data, b'')
 
         # It was an L{SSL.Error}.
-        self.assertEqual(cProto.wrappedProtocol.lostReason.type, SSL.Error)
+        self.assertEqual(cWrapped.lostReason.type, SSL.Error)
 
         # Some combination of OpenSSL and PyOpenSSL is bad at reporting errors.
-        err = cProto.wrappedProtocol.lostReason.value
+        err = cWrapped.lostReason.value
         self.assertEqual(err.args[0][0][2], 'tlsv1 alert unknown ca')
 
 
@@ -1686,15 +1775,15 @@ class TrustRootTests(unittest.TestCase):
         """
         caCert, serverCert = certificatesForAuthorityAndServer()
         otherCa, otherServer = certificatesForAuthorityAndServer()
-        sProto, cProto, pump = loopbackTLSConnection(
+        sProto, cProto, sWrapped, cWrapped, pump = loopbackTLSConnection(
             trustRoot=caCert,
             privateKeyFile=pathContainingDumpOf(self, serverCert.privateKey),
             chainedCertFile=pathContainingDumpOf(self, serverCert),
         )
         pump.flush()
-        self.assertIsNone(cProto.wrappedProtocol.lostReason)
-        self.assertEqual(cProto.wrappedProtocol.data,
-                         sProto.wrappedProtocol.greeting)
+        self.assertIsNone(cWrapped.lostReason)
+        self.assertEqual(cWrapped.data,
+                         sWrapped.greeting)
 
 
 
@@ -1764,8 +1853,12 @@ class ServiceIdentityTests(unittest.SynchronousTestCase):
             L{ssl.optionsForClientTLS}?  Defaults to 'no'.
         @type useDefaultTrust: L{bool}
 
-        @return: see L{connectedServerAndClient}.
-        @rtype: see L{connectedServerAndClient}.
+        @return: the client TLS protocol, the client wrapped protocol,
+            the server TLS protocol, the server wrapped protocol and
+            an L{IOPump} which, when its C{pump} and C{flush} methods are
+            called, will move data between the created client and server
+            protocol instances
+        @rtype: 5-L{tuple} of 4 L{IProtocol}s and L{IOPump}
         """
         serverCA, serverCert = certificatesForAuthorityAndServer(
             serverHostname
@@ -1840,21 +1933,31 @@ class ServiceIdentityTests(unittest.SynchronousTestCase):
             def connectionLost(self, reason):
                 self.lostReason = reason
 
+        serverWrappedProto = GreetingServer()
+        clientWrappedProto = GreetingClient()
+
+        clientFactory = protocol.Factory()
+        clientFactory.protocol = lambda: clientWrappedProto
+        serverFactory = protocol.Factory()
+        serverFactory.protocol = lambda: serverWrappedProto
+
         self.serverOpts = serverOpts
         self.clientOpts = clientOpts
 
-        clientFactory = TLSMemoryBIOFactory(
+        clientTLSFactory = TLSMemoryBIOFactory(
             clientOpts, isClient=True,
-            wrappedFactory=protocol.Factory.forProtocol(GreetingClient)
+            wrappedFactory=clientFactory
         )
-        serverFactory = TLSMemoryBIOFactory(
+        serverTLSFactory = TLSMemoryBIOFactory(
             serverOpts, isClient=False,
-            wrappedFactory=protocol.Factory.forProtocol(GreetingServer)
+            wrappedFactory=serverFactory
         )
-        return connectedServerAndClient(
-            lambda: serverFactory.buildProtocol(None),
-            lambda: clientFactory.buildProtocol(None),
+
+        cProto, sProto, pump = connectedServerAndClient(
+            lambda: serverTLSFactory.buildProtocol(None),
+            lambda: clientTLSFactory.buildProtocol(None),
         )
+        return cProto, sProto, clientWrappedProto, serverWrappedProto, pump
 
 
     def test_invalidHostname(self):
@@ -1862,15 +1965,15 @@ class ServiceIdentityTests(unittest.SynchronousTestCase):
         When a certificate containing an invalid hostname is received from the
         server, the connection is immediately dropped.
         """
-        cProto, sProto, pump = self.serviceIdentitySetup(
+        cProto, sProto, cWrapped, sWrapped, pump = self.serviceIdentitySetup(
             u"wrong-host.example.com",
             u"correct-host.example.com",
         )
-        self.assertEqual(cProto.wrappedProtocol.data, b'')
-        self.assertEqual(sProto.wrappedProtocol.data, b'')
+        self.assertEqual(cWrapped.data, b'')
+        self.assertEqual(sWrapped.data, b'')
 
-        cErr = cProto.wrappedProtocol.lostReason.value
-        sErr = sProto.wrappedProtocol.lostReason.value
+        cErr = cWrapped.lostReason.value
+        sErr = sWrapped.lostReason.value
 
         self.assertIsInstance(cErr, VerificationError)
         self.assertIsInstance(sErr, ConnectionClosed)
@@ -1881,15 +1984,15 @@ class ServiceIdentityTests(unittest.SynchronousTestCase):
         Whenever a valid certificate containing a valid hostname is received,
         connection proceeds normally.
         """
-        cProto, sProto, pump = self.serviceIdentitySetup(
+        cProto, sProto, cWrapped, sWrapped, pump = self.serviceIdentitySetup(
             u"valid.example.com",
             u"valid.example.com",
         )
-        self.assertEqual(cProto.wrappedProtocol.data,
+        self.assertEqual(cWrapped.data,
                          b'greetings!')
 
-        cErr = cProto.wrappedProtocol.lostReason
-        sErr = sProto.wrappedProtocol.lostReason
+        cErr = cWrapped.lostReason
+        sErr = sWrapped.lostReason
         self.assertIsNone(cErr)
         self.assertIsNone(sErr)
 
@@ -1899,17 +2002,17 @@ class ServiceIdentityTests(unittest.SynchronousTestCase):
         When an invalid certificate containing a perfectly valid hostname is
         received, the connection is aborted with an OpenSSL error.
         """
-        cProto, sProto, pump = self.serviceIdentitySetup(
+        cProto, sProto, cWrapped, sWrapped, pump = self.serviceIdentitySetup(
             u"valid.example.com",
             u"valid.example.com",
             validCertificate=False,
         )
 
-        self.assertEqual(cProto.wrappedProtocol.data, b'')
-        self.assertEqual(sProto.wrappedProtocol.data, b'')
+        self.assertEqual(cWrapped.data, b'')
+        self.assertEqual(sWrapped.data, b'')
 
-        cErr = cProto.wrappedProtocol.lostReason.value
-        sErr = sProto.wrappedProtocol.lostReason.value
+        cErr = cWrapped.lostReason.value
+        sErr = sWrapped.lostReason.value
 
         self.assertIsInstance(cErr, SSL.Error)
         self.assertIsInstance(sErr, SSL.Error)
@@ -1920,18 +2023,18 @@ class ServiceIdentityTests(unittest.SynchronousTestCase):
         If we use the default trust from the platform, our dinky certificate
         should I{really} fail.
         """
-        cProto, sProto, pump = self.serviceIdentitySetup(
+        cProto, sProto, cWrapped, sWrapped, pump = self.serviceIdentitySetup(
             u"valid.example.com",
             u"valid.example.com",
             validCertificate=False,
             useDefaultTrust=True,
         )
 
-        self.assertEqual(cProto.wrappedProtocol.data, b'')
-        self.assertEqual(sProto.wrappedProtocol.data, b'')
+        self.assertEqual(cWrapped.data, b'')
+        self.assertEqual(sWrapped.data, b'')
 
-        cErr = cProto.wrappedProtocol.lostReason.value
-        sErr = sProto.wrappedProtocol.lostReason.value
+        cErr = cWrapped.lostReason.value
+        sErr = sWrapped.lostReason.value
 
         self.assertIsInstance(cErr, SSL.Error)
         self.assertIsInstance(sErr, SSL.Error)
@@ -1942,17 +2045,17 @@ class ServiceIdentityTests(unittest.SynchronousTestCase):
         L{ssl.optionsForClientTLS} should be using L{ssl.platformTrust} by
         default, so if we fake that out then it should trust ourselves again.
         """
-        cProto, sProto, pump = self.serviceIdentitySetup(
+        cProto, sProto, cWrapped, sWrapped, pump = self.serviceIdentitySetup(
             u"valid.example.com",
             u"valid.example.com",
             useDefaultTrust=True,
             fakePlatformTrust=True,
         )
-        self.assertEqual(cProto.wrappedProtocol.data,
+        self.assertEqual(cWrapped.data,
                          b'greetings!')
 
-        cErr = cProto.wrappedProtocol.lostReason
-        sErr = sProto.wrappedProtocol.lostReason
+        cErr = cWrapped.lostReason
+        sErr = sWrapped.lostReason
         self.assertIsNone(cErr)
         self.assertIsNone(sErr)
 
@@ -1963,7 +2066,7 @@ class ServiceIdentityTests(unittest.SynchronousTestCase):
         for that verification by passing it to
         L{sslverify.optionsForClientTLS}, communication proceeds.
         """
-        cProto, sProto, pump = self.serviceIdentitySetup(
+        cProto, sProto, cWrapped, sWrapped, pump = self.serviceIdentitySetup(
             u"valid.example.com",
             u"valid.example.com",
             validCertificate=True,
@@ -1971,11 +2074,11 @@ class ServiceIdentityTests(unittest.SynchronousTestCase):
             clientPresentsCertificate=True,
         )
 
-        self.assertEqual(cProto.wrappedProtocol.data,
+        self.assertEqual(cWrapped.data,
                          b'greetings!')
 
-        cErr = cProto.wrappedProtocol.lostReason
-        sErr = sProto.wrappedProtocol.lostReason
+        cErr = cWrapped.lostReason
+        sErr = sWrapped.lostReason
         self.assertIsNone(cErr)
         self.assertIsNone(sErr)
 
@@ -1987,7 +2090,7 @@ class ServiceIdentityTests(unittest.SynchronousTestCase):
         L{sslverify.optionsForClientTLS}, the connection cannot be established
         with an SSL error.
         """
-        cProto, sProto, pump = self.serviceIdentitySetup(
+        cProto, sProto, cWrapped, sWrapped, pump = self.serviceIdentitySetup(
             u"valid.example.com",
             u"valid.example.com",
             validCertificate=True,
@@ -1996,11 +2099,11 @@ class ServiceIdentityTests(unittest.SynchronousTestCase):
             clientPresentsCertificate=True,
         )
 
-        self.assertEqual(cProto.wrappedProtocol.data,
+        self.assertEqual(cWrapped.data,
                          b'')
 
-        cErr = cProto.wrappedProtocol.lostReason.value
-        sErr = sProto.wrappedProtocol.lostReason.value
+        cErr = cWrapped.lostReason.value
+        sErr = sWrapped.lostReason.value
 
         self.assertIsInstance(cErr, SSL.Error)
         self.assertIsInstance(sErr, SSL.Error)
@@ -2018,7 +2121,7 @@ class ServiceIdentityTests(unittest.SynchronousTestCase):
             def servername_received(conn):
                 names.append(conn.get_servername().decode("ascii"))
             ctx.set_tlsext_servername_callback(servername_received)
-        cProto, sProto, pump = self.serviceIdentitySetup(
+        cProto, sProto, cWrapped, sWrapped, pump = self.serviceIdentitySetup(
             u"valid.example.com",
             u"valid.example.com",
             setupServerContext
@@ -2040,15 +2143,15 @@ class ServiceIdentityTests(unittest.SynchronousTestCase):
                 serverIDNA = _idnaText(conn.get_servername())
                 names.append(serverIDNA)
             ctx.set_tlsext_servername_callback(servername_received)
-        cProto, sProto, pump = self.serviceIdentitySetup(
+        cProto, sProto, cWrapped, sWrapped, pump = self.serviceIdentitySetup(
             hello, hello, setupServerContext
         )
         self.assertEqual(names, [hello])
-        self.assertEqual(cProto.wrappedProtocol.data,
+        self.assertEqual(cWrapped.data,
                          b'greetings!')
 
-        cErr = cProto.wrappedProtocol.lostReason
-        sErr = sProto.wrappedProtocol.lostReason
+        cErr = cWrapped.lostReason
+        sErr = sWrapped.lostReason
         self.assertIsNone(cErr)
         self.assertIsNone(sErr)
 
@@ -2091,16 +2194,17 @@ class ServiceIdentityTests(unittest.SynchronousTestCase):
         connection should be shut down (if possible, anyway; the app_data could
         be clobbered but there's no point testing for that).
         """
-        cProto, sProto, pump = self.serviceIdentitySetup(
+        cProto, sProto, cWrapped, sWrapped, pump = self.serviceIdentitySetup(
             u"correct-host.example.com",
             u"correct-host.example.com",
             buggyInfoCallback=True,
         )
-        self.assertEqual(cProto.wrappedProtocol.data, b'')
-        self.assertEqual(sProto.wrappedProtocol.data, b'')
 
-        cErr = cProto.wrappedProtocol.lostReason.value
-        sErr = sProto.wrappedProtocol.lostReason.value
+        self.assertEqual(cWrapped.data, b'')
+        self.assertEqual(sWrapped.data, b'')
+
+        cErr = cWrapped.lostReason.value
+        sErr = sWrapped.lostReason.value
 
         self.assertIsInstance(cErr, ZeroDivisionError)
         self.assertIsInstance(sErr, (ConnectionClosed, SSL.Error))
@@ -2127,7 +2231,7 @@ def negotiateProtocol(serverProtocols,
         caCertificate.original,
     ])
 
-    sProto, cProto, pump = loopbackTLSConnectionInMemory(
+    sProto, cProto, sWrapped, cWrapped, pump = loopbackTLSConnectionInMemory(
         trustRoot=trustRoot,
         privateKey=serverCertificate.privateKey.original,
         serverCertificate=serverCertificate.original,
@@ -2137,7 +2241,7 @@ def negotiateProtocol(serverProtocols,
     )
     pump.flush()
 
-    return (cProto.negotiatedProtocol, cProto.wrappedProtocol.lostReason)
+    return (cProto.negotiatedProtocol, cWrapped.lostReason)
 
 
 
@@ -2428,15 +2532,15 @@ class MultipleCertificateTrustRootTests(unittest.TestCase):
 
         # Verify that the returned object acts correctly when used as a
         # trustRoot= param to optionsForClientTLS.
-        sProto, cProto, pump = loopbackTLSConnectionInMemory(
+        sProto, cProto, sWrap, cWrap, pump = loopbackTLSConnectionInMemory(
             trustRoot=mt,
             privateKey=privateCert.privateKey.original,
             serverCertificate=privateCert.original,
         )
 
         # This connection should succeed
-        self.assertEqual(cProto.wrappedProtocol.data, b'greetings!')
-        self.assertIsNone(cProto.wrappedProtocol.lostReason)
+        self.assertEqual(cWrap.data, b'greetings!')
+        self.assertIsNone(cWrap.lostReason)
 
 
     def test_trustRootSelfSignedServerCertificate(self):
@@ -2455,13 +2559,13 @@ class MultipleCertificateTrustRootTests(unittest.TestCase):
 
         # Since we trust this exact certificate, connections to this server
         # should succeed.
-        sProto, cProto, pump = loopbackTLSConnectionInMemory(
+        sProto, cProto, sWrap, cWrap, pump = loopbackTLSConnectionInMemory(
             trustRoot=trust,
             privateKey=selfSigned.privateKey.original,
             serverCertificate=selfSigned.original,
         )
-        self.assertEqual(cProto.wrappedProtocol.data, b'greetings!')
-        self.assertIsNone(cProto.wrappedProtocol.lostReason)
+        self.assertEqual(cWrap.data, b'greetings!')
+        self.assertIsNone(cWrap.lostReason)
 
 
     def test_trustRootCertificateAuthorityTrustsConnection(self):
@@ -2476,13 +2580,13 @@ class MultipleCertificateTrustRootTests(unittest.TestCase):
 
         # Since we've listed the CA's certificate as a trusted cert, a
         # connection to the server certificate it signed should succeed.
-        sProto, cProto, pump = loopbackTLSConnectionInMemory(
+        sProto, cProto, sWrap, cWrap, pump = loopbackTLSConnectionInMemory(
             trustRoot=trust,
             privateKey=serverCert.privateKey.original,
             serverCertificate=serverCert.original,
         )
-        self.assertEqual(cProto.wrappedProtocol.data, b'greetings!')
-        self.assertIsNone(cProto.wrappedProtocol.lostReason)
+        self.assertEqual(cWrap.data, b'greetings!')
+        self.assertIsNone(cWrap.lostReason)
 
 
     def test_trustRootFromCertificatesUntrusted(self):
@@ -2504,20 +2608,20 @@ class MultipleCertificateTrustRootTests(unittest.TestCase):
 
         # Since we only trust 'untrustedCert' which has not signed our
         # server's cert, we should reject this connection
-        sProto, cProto, pump = loopbackTLSConnectionInMemory(
+        sProto, cProto, sWrap, cWrap, pump = loopbackTLSConnectionInMemory(
             trustRoot=trust,
             privateKey=serverCert.privateKey.original,
             serverCertificate=serverCert.original,
         )
 
         # This connection should fail, so no data was received.
-        self.assertEqual(cProto.wrappedProtocol.data, b'')
+        self.assertEqual(cWrap.data, b'')
 
         # It was an L{SSL.Error}.
-        self.assertEqual(cProto.wrappedProtocol.lostReason.type, SSL.Error)
+        self.assertEqual(cWrap.lostReason.type, SSL.Error)
 
         # Some combination of OpenSSL and PyOpenSSL is bad at reporting errors.
-        err = cProto.wrappedProtocol.lostReason.value
+        err = cWrap.lostReason.value
         self.assertEqual(err.args[0][0][2], 'tlsv1 alert unknown ca')
 
 
@@ -2707,25 +2811,28 @@ class DiffieHellmanParametersTests(unittest.TestCase):
 
 
 
-class FakeECKey(object):
+class FakeLibState(object):
     """
-    An introspectable fake of a key.
+    State for L{FakeLib}
 
-    @ivar _nid: A free form nid.
+    @param setECDHAutoRaises: An exception
+        L{FakeLib.SSL_CTX_set_ecdh_auto} should raise; if L{None},
+        nothing is raised.
+
+    @ivar ecdhContexts: A list of SSL contexts with which
+        L{FakeLib.SSL_CTX_set_ecdh_auto} was called
+    @type ecdhContexts: L{list} of L{OpenSSL.SSL.Context}s
+
+    @ivar ecdhValues: A list of boolean values with which
+        L{FakeLib.SSL_CTX_set_ecdh_auto} was called
+    @type ecdhValues: L{list} of L{boolean}s
     """
-    def __init__(self, nid):
-        self._nid = nid
+    __slots__ = ("setECDHAutoRaises", "ecdhContexts", "ecdhValues")
 
-
-
-class FakeNID(object):
-    """
-    An introspectable fake of a NID.
-
-    @ivar _snName: A free form sn name.
-    """
-    def __init__(self, snName):
-        self._snName = snName
+    def __init__(self, setECDHAutoRaises):
+        self.setECDHAutoRaises = setECDHAutoRaises
+        self.ecdhContexts = []
+        self.ecdhValues = []
 
 
 
@@ -2733,227 +2840,350 @@ class FakeLib(object):
     """
     An introspectable fake of cryptography's lib object.
 
-    @ivar _createdKey: A set of keys that have been created by this instance.
-    @type _createdKey: L{set} of L{FakeKey}
-
-    @cvar NID_undef: A symbolic constant for undefined NIDs.
-    @type NID_undef: L{FakeNID}
+    @param state: A L{FakeLibState} instance that contains this fake's
+        state.
     """
-    NID_undef = FakeNID("undef")
-
-    def __init__(self):
-        self._createdKeys = set()
+    def __init__(self, state):
+        self._state = state
 
 
-    def OBJ_sn2nid(self, snName):
+    def SSL_CTX_set_ecdh_auto(self, ctx, value):
         """
-        Create a L{FakeNID} with C{snName} and return it.
+        Record the context and value under in the C{_state} instance
+        variable.
 
-        @param snName: a free form name that gets passed to the constructor
-            of L{FakeNID}.
+        @see: L{FakeLibState}
 
-        @return: a new L{FakeNID}.
-        @rtype: L{FakeNID}.
+        @param ctx: An SSL context.
+        @type ctx: L{OpenSSL.SSL.Context}
+
+        @param value: A boolean value
+        @type value: L{bool}
         """
-        return FakeNID(snName)
-
-
-    def EC_KEY_new_by_curve_name(self, nid):
-        """
-        Create a L{FakeECKey}, save it to C{_createdKeys} and return it.
-
-        @param nid: an arbitrary object that is passed to the constructor of
-            L{FakeECKey}.
-
-        @return: a new L{FakeECKey}
-        @rtype: L{FakeECKey}
-        """
-        key = FakeECKey(nid)
-        self._createdKeys.add(key)
-        return key
-
-
-    def EC_KEY_free(self, key):
-        """
-        Remove C{key} from C{_createdKey}.
-
-        @param key: a key object to be freed; i.e. removed from
-            C{_createdKeys}.
-
-        @raises ValueError: If C{key} is not in C{_createdKeys} and thus not
-            created by us.
-        """
-        try:
-            self._createdKeys.remove(key)
-        except KeyError:
-            raise ValueError("Unallocated EC key attempted to free.")
-
-
-    def SSL_CTX_set_tmp_ecdh(self, ffiContext, key):
-        """
-        Does not do anything.
-
-        @param ffiContext: ignored
-        @param key: ignored
-        """
+        self._state.ecdhContexts.append(ctx)
+        self._state.ecdhValues.append(value)
+        if self._state.setECDHAutoRaises is not None:
+            raise self._state.setECDHAutoRaises
 
 
 
 class FakeLibTests(unittest.TestCase):
     """
-    Tests for FakeLib
+    Tests for L{FakeLib}.
     """
-    def test_objSn2Nid(self):
+
+    def test_SSL_CTX_set_ecdh_auto(self):
         """
-        Returns a L{FakeNID} with correct name.
+        L{FakeLib.SSL_CTX_set_ecdh_auto} records context and value it
+        was called with.
         """
-        nid = FakeNID("test")
-        self.assertEqual("test", nid._snName)
+        state = FakeLibState(setECDHAutoRaises=None)
+        lib = FakeLib(state)
+        self.assertNot(state.ecdhContexts)
+        self.assertNot(state.ecdhValues)
+
+        context, value = "CONTEXT", True
+        lib.SSL_CTX_set_ecdh_auto(context, value)
+        self.assertEqual(state.ecdhContexts, [context])
+        self.assertEqual(state.ecdhValues, [True])
 
 
-    def test_emptyKeys(self):
+    def test_SSL_CTX_set_ecdh_autoRaises(self):
         """
-        A new L{FakeLib} has an empty set for created keys.
+        L{FakeLib.SSL_CTX_set_ecdh_auto} raises the exception provided
+        by its state, while still recording its arguments.
         """
-        self.assertEqual(set(), FakeLib()._createdKeys)
+        state = FakeLibState(setECDHAutoRaises=ValueError)
+        lib = FakeLib(state)
+        self.assertNot(state.ecdhContexts)
+        self.assertNot(state.ecdhValues)
 
-
-    def test_newKey(self):
-        """
-        If a new key is created, it's added to C{_createdKeys}.
-        """
-        lib = FakeLib()
-        key = lib.EC_KEY_new_by_curve_name(FakeNID("name"))
-        self.assertEqual(set([key]), lib._createdKeys)
-
-
-    def test_freeUnknownKey(self):
-        """
-        Raise L{ValueError} if an unknown key is attempted to be freed.
-        """
-        key = FakeECKey(object())
+        context, value = "CONTEXT", True
         self.assertRaises(
-            ValueError,
-            FakeLib().EC_KEY_free, key
+            ValueError, lib.SSL_CTX_set_ecdh_auto, context, value
+        )
+        self.assertEqual(state.ecdhContexts, [context])
+        self.assertEqual(state.ecdhValues, [True])
+
+
+
+class FakeCryptoState(object):
+    """
+    State for L{FakeCrypto}
+
+    @param getEllipticCurveRaises: What
+        L{FakeCrypto.get_elliptic_curve} should raise; L{None} and it
+        won't raise anything
+
+    @param getEllipticCurveReturns: What
+        L{FakeCrypto.get_elliptic_curve} should return.
+
+    @ivar getEllipticCurveCalls: The arguments with which
+        L{FakeCrypto.get_elliptic_curve} has been called.
+    @type getEllipticCurveCalls: L{list}
+    """
+    __slots__ = (
+        "getEllipticCurveRaises",
+        "getEllipticCurveReturns",
+        "getEllipticCurveCalls",
+    )
+
+    def __init__(
+            self,
+            getEllipticCurveRaises,
+            getEllipticCurveReturns,
+    ):
+        self.getEllipticCurveRaises = getEllipticCurveRaises
+        self.getEllipticCurveReturns = getEllipticCurveReturns
+        self.getEllipticCurveCalls = []
+
+
+
+class FakeCrypto(object):
+    """
+    An introspectable fake of pyOpenSSL's L{OpenSSL.crypto} module.
+
+    @ivar state: A L{FakeCryptoState} instance
+    """
+
+    def __init__(self, state):
+        self._state = state
+
+
+    def get_elliptic_curve(self, curve):
+        """
+        A fake that records the curve with which it was called.
+
+        @param curve: see L{crypto.get_elliptic_curve}
+
+        @return: see L{FakeCryptoState.getEllipticCurveReturns}
+        @raises: see L{FakeCryptoState.getEllipticCurveRaises}
+        """
+        self._state.getEllipticCurveCalls.append(curve)
+        if self._state.getEllipticCurveRaises is not None:
+            raise self._state.getEllipticCurveRaises
+        return self._state.getEllipticCurveReturns
+
+
+
+class FakeCryptoTests(unittest.SynchronousTestCase):
+    """
+    Tests for L{FakeCrypto}.
+    """
+
+    def test_get_elliptic_curveRecordsArgument(self):
+        """
+        L{FakeCrypto.test_get_elliptic_curve} records the curve with
+        which it was called.
+        """
+        state = FakeCryptoState(
+            getEllipticCurveRaises=None,
+            getEllipticCurveReturns=None,
+        )
+        crypto = FakeCrypto(state)
+        crypto.get_elliptic_curve("a curve name")
+        self.assertEqual(state.getEllipticCurveCalls, ["a curve name"])
+
+
+    def test_get_elliptic_curveReturns(self):
+        """
+        L{FakeCrypto.test_get_elliptic_curve} returns the value
+        specified by its state object and records what it was called
+        with.
+        """
+        returnValue = "object"
+        state = FakeCryptoState(
+            getEllipticCurveRaises=None,
+            getEllipticCurveReturns=returnValue,
+        )
+        crypto = FakeCrypto(state)
+        self.assertIs(
+            crypto.get_elliptic_curve("another curve name"),
+            returnValue,
+        )
+        self.assertEqual(
+            state.getEllipticCurveCalls,
+            ["another curve name"]
         )
 
 
-    def test_freeKnownKey(self):
+    def test_get_elliptic_curveRaises(self):
         """
-        Freeing an allocated key removes it from C{_createdKeys}.
+        L{FakeCrypto.test_get_elliptic_curve} raises the exception
+        specified by its state object.
         """
-        lib = FakeLib()
-        key = lib.EC_KEY_new_by_curve_name(FakeNID("name"))
-        lib.EC_KEY_free(key)
-        self.assertEqual(set(), lib._createdKeys)
+        state = FakeCryptoState(
+            getEllipticCurveRaises=ValueError,
+            getEllipticCurveReturns=None
+        )
+        crypto = FakeCrypto(state)
+        self.assertRaises(
+            ValueError,
+            crypto.get_elliptic_curve, "yet another curve name",
+        )
+        self.assertEqual(
+            state.getEllipticCurveCalls,
+            ["yet another curve name"],
+        )
 
 
 
-class FakeFFI(object):
+class ChooseDiffieHellmanEllipticCurveTests(unittest.SynchronousTestCase):
     """
-    A fake of a cryptography's ffi object.
+    Tests for L{sslverify._ChooseDiffieHellmanEllipticCurve}.
 
-    @cvar NULL: Symbolic constant for CFFI's NULL objects.
-    """
-    NULL = object()
+    @cvar OPENSSL_110: A version number for OpenSSL 1.1.0
 
+    @cvar OPENSSL_102: A version number for OpenSSL 1.0.2
 
+    @cvar OPENSSL_101: A version number for OpenSSL 1.0.1
 
-class FakeBinding(object):
-    """
-    A fake of cryptography's binding object.
-
-    @type lib: L{FakeLib}
-    @type ffi: L{FakeFFI}
-    """
-    def __init__(self, lib=None, ffi=None):
-        self.lib = lib or FakeLib()
-        self.ffi = ffi or FakeFFI()
-
-
-
-class ECCurveTests(unittest.TestCase):
-    """
-    Tests for twisted.internet._sslverify.OpenSSLECCurve.
+    @see:
+        U{https://wiki.openssl.org/index.php/Manual:OPENSSL_VERSION_NUMBER(3)}
     """
     if skipSSL:
         skip = skipSSL
 
-    def test_missingBinding(self):
+    OPENSSL_110 = 0x1010007f
+    OPENSSL_102 = 0x100020ef
+    OPENSSL_101 = 0x1000114f
+
+
+    def setUp(self):
+        self.libState = FakeLibState(setECDHAutoRaises=False)
+        self.lib = FakeLib(self.libState)
+
+        self.cryptoState = FakeCryptoState(
+            getEllipticCurveReturns=None,
+            getEllipticCurveRaises=None
+        )
+        self.crypto = FakeCrypto(self.cryptoState)
+        self.context = FakeContext(SSL.SSLv23_METHOD)
+
+
+    def test_openSSL110(self):
         """
-        Raise L{NotImplementedError} if pyOpenSSL is not based on cryptography.
+        No configuration of contexts occurs under OpenSSL 1.1.0 and
+        later, because they create contexts with secure ECDH curves.
+
+        @see: U{http://twistedmatrix.com/trac/ticket/9210}
         """
-        def raiser(self):
-            raise NotImplementedError
-        self.patch(sslverify._OpenSSLECCurve, "_getBinding", raiser)
-        self.assertRaises(
-            NotImplementedError,
-            sslverify._OpenSSLECCurve, sslverify._defaultCurveName,
+        chooser = sslverify._ChooseDiffieHellmanEllipticCurve(
+            self.OPENSSL_110,
+            openSSLlib=self.lib,
+            openSSLcrypto=self.crypto,
+        )
+        chooser.configureECDHCurve(self.context)
+
+        self.assertFalse(self.libState.ecdhContexts)
+        self.assertFalse(self.libState.ecdhValues)
+        self.assertFalse(self.cryptoState.getEllipticCurveCalls)
+        self.assertIsNone(self.context._ecCurve)
+
+
+    def test_openSSL102(self):
+        """
+        OpenSSL 1.0.2 does not set ECDH curves by default, but
+        C{SSL_CTX_set_ecdh_auto} requests that a context choose a
+        secure set curves automatically.
+        """
+        context = SSL.Context(SSL.SSLv23_METHOD)
+        chooser = sslverify._ChooseDiffieHellmanEllipticCurve(
+            self.OPENSSL_102,
+            openSSLlib=self.lib,
+            openSSLcrypto=self.crypto,
+        )
+        chooser.configureECDHCurve(context)
+
+        self.assertEqual(self.libState.ecdhContexts, [context._context])
+        self.assertEqual(self.libState.ecdhValues, [True])
+        self.assertFalse(self.cryptoState.getEllipticCurveCalls)
+        self.assertIsNone(self.context._ecCurve)
+
+
+    def test_openSSL102SetECDHAutoRaises(self):
+        """
+        An exception raised by C{SSL_CTX_set_ecdh_auto} under OpenSSL
+        1.0.2 is suppressed because ECDH is best-effort.
+        """
+        self.libState.setECDHAutoRaises = BaseException
+        context = SSL.Context(SSL.SSLv23_METHOD)
+        chooser = sslverify._ChooseDiffieHellmanEllipticCurve(
+            self.OPENSSL_102,
+            openSSLlib=self.lib,
+            openSSLcrypto=self.crypto,
+        )
+        chooser.configureECDHCurve(context)
+
+        self.assertEqual(self.libState.ecdhContexts, [context._context])
+        self.assertEqual(self.libState.ecdhValues, [True])
+        self.assertFalse(self.cryptoState.getEllipticCurveCalls)
+
+
+    def test_openSSL101(self):
+        """
+        OpenSSL 1.0.1 does not set ECDH curves by default, nor does
+        it expose L{SSL_CTX_set_ecdh_auto}.  Instead, a single ECDH
+        curve can be set with L{OpenSSL.SSL.Context.set_tmp_ecdh}.
+        """
+        self.cryptoState.getEllipticCurveReturns = curve = "curve object"
+        chooser = sslverify._ChooseDiffieHellmanEllipticCurve(
+            self.OPENSSL_101,
+            openSSLlib=self.lib,
+            openSSLcrypto=self.crypto,
+        )
+        chooser.configureECDHCurve(self.context)
+
+        self.assertFalse(self.libState.ecdhContexts)
+        self.assertFalse(self.libState.ecdhValues)
+        self.assertEqual(
+            self.cryptoState.getEllipticCurveCalls,
+            [sslverify._defaultCurveName],
+        )
+        self.assertIs(self.context._ecCurve, curve)
+
+
+    def test_openSSL101SetECDHRaises(self):
+        """
+        An exception raised by L{OpenSSL.SSL.Context.set_tmp_ecdh}
+        under OpenSSL 1.0.1 is suppressed because ECHDE is best-effort.
+        """
+        def set_tmp_ecdh(ctx):
+            raise BaseException
+
+        self.context.set_tmp_ecdh = set_tmp_ecdh
+
+        chooser = sslverify._ChooseDiffieHellmanEllipticCurve(
+            self.OPENSSL_101,
+            openSSLlib=self.lib,
+            openSSLcrypto=self.crypto,
+        )
+        chooser.configureECDHCurve(self.context)
+
+        self.assertFalse(self.libState.ecdhContexts)
+        self.assertFalse(self.libState.ecdhValues)
+        self.assertEqual(
+            self.cryptoState.getEllipticCurveCalls,
+            [sslverify._defaultCurveName],
         )
 
 
-    def test_nonECbinding(self):
+    def test_openSSL101NoECC(self):
         """
-        Raise L{NotImplementedError} if pyOpenSSL is based on cryptography but
-        cryptography lacks required EC methods.
+        Contexts created under an OpenSSL 1.0.1 that doesn't support
+        ECC have no configuration applied.
         """
-        def raiser(self):
-            raise AttributeError
-        lib = FakeLib()
-        lib.OBJ_sn2nid = raiser
-        self.patch(sslverify._OpenSSLECCurve,
-                   "_getBinding",
-                   lambda self: FakeBinding(lib=lib))
-        self.assertRaises(
-            NotImplementedError,
-            sslverify._OpenSSLECCurve, sslverify._defaultCurveName,
+        self.cryptoState.getEllipticCurveRaises = ValueError
+        chooser = sslverify._ChooseDiffieHellmanEllipticCurve(
+            self.OPENSSL_101,
+            openSSLlib=self.lib,
+            openSSLcrypto=self.crypto,
         )
+        chooser.configureECDHCurve(self.context)
 
-
-    def test_wrongName(self):
-        """
-        Raise L{ValueError} on unknown sn names.
-        """
-        lib = FakeLib()
-        lib.OBJ_sn2nid = lambda self: FakeLib.NID_undef
-        self.patch(sslverify._OpenSSLECCurve,
-                   "_getBinding",
-                   lambda self: FakeBinding(lib=lib))
-        self.assertRaises(
-            ValueError,
-            sslverify._OpenSSLECCurve, u"doesNotExist",
-        )
-
-
-    def test_keyFails(self):
-        """
-        Raise L{EnvironmentError} if key creation fails.
-        """
-        lib = FakeLib()
-        lib.EC_KEY_new_by_curve_name = lambda *a, **kw: FakeFFI.NULL
-        self.patch(sslverify._OpenSSLECCurve,
-                   "_getBinding",
-                   lambda self: FakeBinding(lib=lib))
-        curve = sslverify._OpenSSLECCurve(sslverify._defaultCurveName)
-        self.assertRaises(
-            EnvironmentError,
-            curve.addECKeyToContext, object()
-        )
-
-
-    def test_keyGetsFreed(self):
-        """
-        Don't leak a key when adding it to a context.
-        """
-        lib = FakeLib()
-        self.patch(sslverify._OpenSSLECCurve,
-                   "_getBinding",
-                   lambda self: FakeBinding(lib=lib))
-        curve = sslverify._OpenSSLECCurve(sslverify._defaultCurveName)
-        ctx = FakeContext(None)
-        ctx._context = None
-        curve.addECKeyToContext(ctx)
-        self.assertEqual(set(), lib._createdKeys)
+        self.assertFalse(self.libState.ecdhContexts)
+        self.assertFalse(self.libState.ecdhValues)
+        self.assertIsNone(self.context._ecCurve)
 
 
 
@@ -2990,6 +3220,15 @@ class KeyPairTests(unittest.TestCase):
         self.callDeprecated(
             (Version("Twisted", 15, 0, 0), "a real persistence system"),
             sslverify.KeyPair(self.sKey).__setstate__, state)
+
+
+    def test_noTrailingNewlinePemCert(self):
+        noTrailingNewlineKeyPemPath = getModule(
+            "twisted.test").filePath.sibling(
+            "cert.pem.no_trailing_newline")
+
+        certPEM = noTrailingNewlineKeyPemPath.getContent()
+        ssl.Certificate.loadPEM(certPEM)
 
 
 
@@ -3041,28 +3280,33 @@ class SelectVerifyImplementationTests(unittest.SynchronousTestCase):
             in self.flushWarnings()
             if warning["category"] == UserWarning)
 
-        if _PY3:
-            importError = (
-                "'import of 'service_identity' halted; None in sys.modules'")
-        else:
-            importError = "'No module named service_identity'"
+        importErrors = [
+            # Python 3.6.3
+            "'import of service_identity halted; None in sys.modules'",
+            # Python 3
+            "'import of 'service_identity' halted; None in sys.modules'",
+            # Python 2
+            "'No module named service_identity'"
+        ]
 
-        expectedMessage = (
-            "You do not have a working installation of the "
-            "service_identity module: {message}.  Please install it from "
-            "<https://pypi.python.org/pypi/service_identity> "
-            "and make sure all of its dependencies are satisfied.  "
-            "Without the service_identity module, Twisted can perform only "
-            "rudimentary TLS client hostname verification.  Many valid "
-            "certificate/hostname mappings may be rejected.").format(
-                message=importError)
+        expectedMessages = []
+        for importError in importErrors:
+            expectedMessages.append(
+                "You do not have a working installation of the "
+                "service_identity module: {message}.  Please install it from "
+                "<https://pypi.python.org/pypi/service_identity> "
+                "and make sure all of its dependencies are satisfied.  "
+                "Without the service_identity module, Twisted can perform only"
+                " rudimentary TLS client hostname verification.  Many valid "
+                "certificate/hostname mappings may be rejected.".format(
+                message=importError))
 
-        self.assertEqual(
-            (warning["message"], warning["filename"], warning["lineno"]),
+        self.assertIn(warning["message"], expectedMessages)
 
-            # Make sure we're abusing the warning system to a sufficient
-            # degree: there is no filename or line number that makes sense for
-            # this warning to "blame" for the problem.  It is a system
-            # misconfiguration.  So the location information should be blank
-            # (or as blank as we can make it).
-            (expectedMessage, "", 0))
+        # Make sure we're abusing the warning system to a sufficient
+        # degree: there is no filename or line number that makes sense for
+        # this warning to "blame" for the problem.  It is a system
+        # misconfiguration.  So the location information should be blank
+        # (or as blank as we can make it).
+        self.assertEqual(warning["filename"], "")
+        self.assertEqual(warning["lineno"], 0)

@@ -6,7 +6,7 @@
 A library for performing interesting tasks with DOM objects.
 """
 
-import StringIO
+from io import StringIO
 
 from twisted.web import microdom
 from twisted.web.microdom import getElementsByTagName, escape, unescape
@@ -247,13 +247,13 @@ def findNodesNamed(parent, name):
 def writeNodeData(node, oldio):
     for subnode in node.childNodes:
         if hasattr(subnode, 'data'):
-            oldio.write(subnode.data)
+            oldio.write(u"" + subnode.data)
         else:
             writeNodeData(subnode, oldio)
 
 
 def getNodeText(node):
-    oldio = StringIO.StringIO()
+    oldio = StringIO()
     writeNodeData(node, oldio)
     return oldio.getvalue()
 

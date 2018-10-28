@@ -12,7 +12,7 @@ from twisted.python.compat import (
     nativeString, unicode, urllib_parse as urlparse, urlunquote, urlquote
 )
 
-from twisted.python.url import URL as _URL
+from hyperlink import URL as _URL
 
 _allascii = b"".join([chr(x).encode('ascii') for x in range(1, 128)])
 

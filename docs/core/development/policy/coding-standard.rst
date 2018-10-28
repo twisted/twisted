@@ -191,7 +191,7 @@ String literals not marked with this are "native/bare strings", and have a diffe
 Bytestrings and text must not be implicitly concatenated, as this causes an invisible ASCII encode/decode on Python 2, and causes an exception on Python 3.
 
 Use ``+`` to combine bytestrings, not string formatting (either "percent formatting" or ``.format()``).
-String formatting is not available on Python 3.3 and 3.4.
+String formatting is not available on Python 3.4.
 
 .. code-block:: python
 
@@ -205,7 +205,7 @@ Utilities are available in :api:`twisted.python.compat <twisted.python.compat>` 
 String Formatting Operations
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-`String formatting operations <https://docs.python.org/2.7/library/stdtypes.html#string-formatting>`_ like ``formatString % values`` should only be used on text strings, not byte strings, as they do not work on Python 3.3 and 3.4.
+`String formatting operations <https://docs.python.org/2.7/library/stdtypes.html#string-formatting>`_ like ``formatString % values`` should only be used on text strings, not byte strings, as they do not work on Python 3.4.
 
 When using "percent formatting", you should always use a tuple if you're using non-mapping ``values``.
 This is to avoid unexpected behavior when you think you're passing in a single value, but the value is unexpectedly a tuple, e.g.:
@@ -344,8 +344,37 @@ Versioning
 ----------
 
 The API documentation should be marked up with version information.
-When a new API is added the class should be marked with the epytext ``@since:`` field including the version number when the change was introduced.
-This version number should be in the form ``x.y`` (for example, ``@since: 15.1``).
+When a new API is added the class should be marked with the epytext `@since: field <http://epydoc.sourceforge.net/manual-fields.html#status>`_ to include the version number when the change was introduced.
+The placeholder string ``Twisted NEXT`` will be `replaced at release time <https://github.com/twisted/incremental#updating>`_ with the appropriate version number.
+For example:
+
+.. code-block:: python
+
+    def bar2baz():
+        """
+        Bazify a bar.
+
+        @since: Twisted NEXT
+        """
+
+The ``@since`` tag cannot be applied to arguments.
+When adding a new argument, indicate the version of introduction on a separate line.
+For example, if the ``swizzle`` keyword argument is added after the release of the above function in Twisted 18.5.0:
+
+.. code-block:: python
+
+    def bar2baz(swizzle=False):
+        """
+        Bazify a bar, with optional swizzling.
+
+        @param swizzle: Activate swizzling.
+
+            Present Since Twisted NEXT
+
+        @type swizzle: L{bool}
+
+        @since: Twisted 18.5.0
+        """
 
 
 Scripts
@@ -371,30 +400,15 @@ This makes the script more portable but note that it is not a foolproof method.
 Always make sure that ``/usr/bin/env`` exists or use a softlink/symbolic link to point it to the correct path.
 Python's distutils will rewrite the shebang line upon installation so this policy only covers the source files in version control.
 
-#. For core scripts, add this Twisted running-from-Git header:
+#. For core scripts, add an entry to ``_CONSOLE_SCRIPTS`` in ``src/twisted/python/_setup.py``:
 
    .. code-block:: python
 
-       import sys
-       try:
-           import _preamble
-       except ImportError:
-           sys.clear_exc()
-
-
-   Or for sub-project scripts, add a modified version which also adjusts ``sys.path``:
-
-   .. code-block:: python
-
-       import sys, os
-       extra = os.path.dirname(os.path.dirname(sys.argv[0]))
-       sys.path.insert(0, extra)
-       try:
-           import _preamble
-       except ImportError:
-           sys.clear_exc()
-       sys.path.remove(extra)
-
+       _CONSOLE_SCRIPTS = [
+           ...
+           "twistd = twisted.scripts.twistd:run",
+           "yourmodule" = "twisted.scripts.yourmodule:run",
+       ]
 
 #. And end with:
 
@@ -407,7 +421,10 @@ Python's distutils will rewrite the shebang line upon installation so this polic
 #. Write a manpage and add it to the ``man`` folder of a subproject's ``doc`` folder.
    On Debian systems you can find a skeleton example of a manpage in ``/usr/share/doc/man-db/examples/manpage.example``.
 
-This will ensure your program will work correctly for users of Git, Windows releases and Debian packages.
+
+This will ensure that your program will have a proper ``console_scripts`` entry point, which
+``setup.py`` will use to generate a console script which will work correctly for users of
+Git, Windows releases and Debian packages.
 
 
 Examples
@@ -499,7 +516,7 @@ Using the Global Reactor
 
 Even though it may be convenient, module-level imports of the global Twisted reactor (``from twisted.internet import reactor``) should be avoided.
 Importing the reactor at the module level means that reactor selection occurs on initial import, and not at the request of the code that originally imported the module.
-Applications may wish to import their own reactor, or otherwise use a reactor different than Twisted's default (for example, using the experimental cfreactor on OS X); importing at the module level means they would have to monkeypatch in the different reactor, or use similar hacks.
+Applications may wish to import their own reactor, or otherwise use a reactor different than Twisted's default (for example, using the experimental cfreactor on macOS); importing at the module level means they would have to monkeypatch in the different reactor, or use similar hacks.
 This is especially apparent in Twisted's own test suite; many tests wish to provide their own reactor which controls the passage of time and simulates timeouts.
 
 Below is an example of the pattern for accepting the user's choice of reactor -- importing the global one if none is specified -- taken (and trimmed for brevity) from existing Twisted source code.
@@ -607,11 +624,11 @@ An attribute (or function, method or class) should be considered private when on
 Python 3
 --------
 
-Twisted is being ported to Python 3, targeting Python 3.3+.
+Twisted is being ported to Python 3, targeting Python 3.4+.
 Please see :doc:`Porting to Python 3 </core/howto/python3>` for details.
 
-All new modules must be Python 2.7 & 3.3+ compatible, and all new code to ported modules must be Python 2.7 & 3.3+ compatible.
-New code in non-ported modules must be written in a 2.7 & 3.3+ compatible way (explicit bytes/unicode strings, new exception raising format, etc) as to prevent extra work when that module is eventually ported.
+All new modules must be Python 2.7 & 3.4+ compatible, and all new code to ported modules must be Python 2.7 & 3.4+ compatible.
+New code in non-ported modules must be written in a 2.7 & 3.4+ compatible way (explicit bytes/unicode strings, new exception raising format, etc) as to prevent extra work when that module is eventually ported.
 Code targeting Python 3 specific features must gracefully fall-back on Python 2 as much as is reasonably possible (for example, Python 2 support for 'async/await' is not reasonably possible and would not be required, but code that uses a Python 3-specific module such as ipaddress should be able to use a backport to 2.7 if available).
 
 
@@ -630,7 +647,7 @@ All SQL keywords should be in upper case.
 C Code
 ------
 
-C code must be optional, and work across multiple platforms (MSVC++9/10/14 for Pythons 2.7, 3.3/3.4, and 3.5 on Windows, as well as recent GCCs and Clangs for Linux, OS X, and FreeBSD).
+C code must be optional, and work across multiple platforms (MSVC++9/10/14 for Pythons 2.7, 3.4, and 3.5 on Windows, as well as recent GCCs and Clangs for Linux, macOS, and FreeBSD).
 
 C code should be kept in external bindings packages which Twisted depends on.
 If creating new C extension modules, using `cffi <https://cffi.readthedocs.io/en/latest/>`_ is highly encouraged, as it will perform well on PyPy and CPython, and be easier to use on Python 2 and 3.

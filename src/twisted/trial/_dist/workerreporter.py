@@ -9,7 +9,6 @@ Test reporter forwarding test results over trial distributed AMP commands.
 @since: 12.3
 """
 
-from twisted.python.compat import unicode
 from twisted.python.failure import Failure
 from twisted.python.reflect import qual
 from twisted.trial.reporter import TestResult
@@ -63,8 +62,6 @@ class WorkerReporter(TestResult):
         """
         super(WorkerReporter, self).addSuccess(test)
         testName = test.id()
-        if isinstance(testName, unicode):
-            testName = testName.encode("utf-8")
         self.ampProtocol.callRemote(managercommands.AddSuccess,
                                     testName=testName)
 
@@ -75,12 +72,10 @@ class WorkerReporter(TestResult):
         """
         super(WorkerReporter, self).addError(test, error)
         testName = test.id()
-        if isinstance(testName, unicode):
-            testName = testName.encode("utf-8")
         failure = self._getFailure(error)
-        error = failure.getErrorMessage().encode("utf-8")
-        errorClass = qual(failure.type).encode("utf-8")
-        frames = [frame.encode("utf-8") for frame in self._getFrames(failure)]
+        error = failure.getErrorMessage()
+        errorClass = qual(failure.type)
+        frames = [frame for frame in self._getFrames(failure)]
         self.ampProtocol.callRemote(managercommands.AddError,
                                     testName=testName,
                                     error=error,
@@ -94,12 +89,10 @@ class WorkerReporter(TestResult):
         """
         super(WorkerReporter, self).addFailure(test, fail)
         testName = test.id()
-        if isinstance(testName, unicode):
-            testName = testName.encode("utf-8")
         failure = self._getFailure(fail)
-        fail = failure.getErrorMessage().encode("utf-8")
-        failClass = qual(failure.type).encode("utf-8")
-        frames = [frame.encode("utf-8") for frame in self._getFrames(failure)]
+        fail = failure.getErrorMessage()
+        failClass = qual(failure.type)
+        frames = [frame for frame in self._getFrames(failure)]
         self.ampProtocol.callRemote(managercommands.AddFailure,
                                     testName=testName,
                                     fail=fail,
@@ -112,10 +105,8 @@ class WorkerReporter(TestResult):
         Send a skip over.
         """
         super(WorkerReporter, self).addSkip(test, reason)
-        reason = str(reason).encode("utf-8")
+        reason = str(reason)
         testName = test.id()
-        if isinstance(testName, unicode):
-            testName = testName.encode("utf-8")
         self.ampProtocol.callRemote(managercommands.AddSkip,
                                     testName=testName,
                                     reason=reason)
@@ -138,10 +129,8 @@ class WorkerReporter(TestResult):
         Send an expected failure over.
         """
         super(WorkerReporter, self).addExpectedFailure(test, error, todo)
-        errorMessage = error.getErrorMessage().encode("utf-8")
+        errorMessage = error.getErrorMessage()
         testName = test.id()
-        if isinstance(testName, unicode):
-            testName = testName.encode("utf-8")
         self.ampProtocol.callRemote(managercommands.AddExpectedFailure,
                                     testName=testName,
                                     error=errorMessage,
@@ -154,8 +143,6 @@ class WorkerReporter(TestResult):
         """
         super(WorkerReporter, self).addUnexpectedSuccess(test, todo)
         testName = test.id()
-        if isinstance(testName, unicode):
-            testName = testName.encode("utf-8")
         self.ampProtocol.callRemote(managercommands.AddUnexpectedSuccess,
                                     testName=testName,
                                     todo=self._getTodoReason(todo))
