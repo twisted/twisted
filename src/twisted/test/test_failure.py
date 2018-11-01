@@ -820,6 +820,7 @@ class FormattableTracebackTests(SynchronousTestCase):
                           ])
 
 
+
 class FrameAttributesTests(SynchronousTestCase):
     """
     _Frame objects should possess some basic attributes that qualify them as

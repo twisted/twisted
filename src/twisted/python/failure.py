@@ -145,6 +145,7 @@ class _TracebackFrame(object):
         self.tb_next = None
 
 
+
 class _Frame(object):
     """
     A fake frame object, used by L{_Traceback}.
