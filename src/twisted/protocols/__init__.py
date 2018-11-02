@@ -13,3 +13,9 @@ deprecatedModuleAttribute(
     Version("Twisted", 16, 0, 0),
     "There is no replacement for this module.",
     "twisted.protocols", "mice")
+
+
+deprecatedModuleAttribute(
+    Version('Twisted', 17, 9, 0),
+    "There is no replacement for this module.",
+    "twisted.protocols", "dict")

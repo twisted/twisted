@@ -50,7 +50,7 @@ from twisted.internet import defer, protocol
 
 def runIterator(reactor, iterator):
     try:
-        iterator.next()
+        next(iterator)
     except StopIteration:
         pass
     else:
@@ -75,12 +75,16 @@ class Numbers(basic.LineReceiver):
     """
     def lineReceived(self, line):
         try:
-            numbers = map(long, line.split())
+            numbers = [int(num) for num in line.split()]
         except ValueError:
-            self.sendLine('Error.')
+            self.sendLine(b'Error.')
             return
         deferred = self.factory.calc(numbers)
-        deferred.addCallback(str)
+
+        def encodeNumber(num):
+            return str(num).encode("ascii")
+
+        deferred.addCallback(encodeNumber)
         deferred.addCallback(self.sendLine)
 
 class Multiplication(protocol.ServerFactory):

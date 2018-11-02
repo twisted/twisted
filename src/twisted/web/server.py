@@ -3,14 +3,21 @@
 # See LICENSE for details.
 
 """
-This is a web-server which integrates with the twisted.internet
-infrastructure.
+This is a web server which integrates with the twisted.internet infrastructure.
+
+@var NOT_DONE_YET: A token value which L{twisted.web.resource.IResource.render}
+    implementations can return to indicate that the application will later call
+    C{.write} and C{.finish} to complete the request, and that the HTTP
+    connection should be left open.
+@type NOT_DONE_YET: Opaque; do not depend on any particular type for this
+    value.
 """
 
 from __future__ import division, absolute_import
 
 import copy
 import os
+import re
 try:
     from urllib import quote
 except ImportError:
@@ -25,18 +32,13 @@ from binascii import hexlify
 
 from zope.interface import implementer
 
-from twisted.python.compat import _PY3, networkString, nativeString, intToBytes
-if _PY3:
-    class Copyable:
-        """
-        Fake mixin, until twisted.spread is ported.
-        """
-else:
-    from twisted.spread.pb import Copyable, ViewPoint
+from twisted.python.compat import networkString, nativeString, intToBytes
+from twisted.spread.pb import Copyable, ViewPoint
 from twisted.internet import address, interfaces
+from twisted.internet.error import AlreadyCalled, AlreadyCancelled
 from twisted.web import iweb, http, util
 from twisted.web.http import unquote
-from twisted.python import log, reflect, failure, components
+from twisted.python import reflect, failure, components
 from twisted import copyright
 from twisted.web import resource
 from twisted.web.error import UnsupportedMethod
@@ -44,6 +46,7 @@ from twisted.web.error import UnsupportedMethod
 from incremental import Version
 from twisted.python.deprecate import deprecatedModuleAttribute
 from twisted.python.compat import escape
+from twisted.logger import Logger
 
 NOT_DONE_YET = 1
 
@@ -109,6 +112,7 @@ class Request(Copyable, http.Request, components.Componentized):
     __pychecker__ = 'unusednames=issuer'
     _inFakeHead = False
     _encoder = None
+    _log = Logger()
 
     def __init__(self, *args, **kw):
         http.Request.__init__(self, *args, **kw)
@@ -181,6 +185,11 @@ class Request(Copyable, http.Request, components.Componentized):
         self.prepath = []
         self.postpath = list(map(unquote, self.path[1:].split(b'/')))
 
+        # Short-circuit for requests whose path is '*'.
+        if self.path == b'*':
+            self._handleStar()
+            return
+
         try:
             resrc = self.site.getResourceFor(self)
             if resource._IEncodingResource.providedBy(resrc):
@@ -200,11 +209,20 @@ class Request(Copyable, http.Request, components.Componentized):
         """
         if not self.startedWriting:
             # Before doing the first write, check to see if a default
-            # Content-Type header should be supplied.
-            modified = self.code != http.NOT_MODIFIED
+            # Content-Type header should be supplied. We omit it on
+            # NOT_MODIFIED and NO_CONTENT responses. We also omit it if there
+            # is a Content-Length header set to 0, as empty bodies don't need
+            # a content-type.
+            needsCT = self.code not in (http.NOT_MODIFIED, http.NO_CONTENT)
             contentType = self.responseHeaders.getRawHeaders(b'content-type')
-            if (modified and contentType is None and
-                self.defaultContentType is not None
+            contentLength = self.responseHeaders.getRawHeaders(
+                b'content-length'
+            )
+            contentLengthZero = contentLength and (contentLength[0] == b'0')
+
+            if (needsCT and contentType is None and
+                self.defaultContentType is not None and
+                not contentLengthZero
                     ):
                 self.responseHeaders.setRawHeaders(
                     b'content-type', [self.defaultContentType])
@@ -246,15 +264,19 @@ class Request(Copyable, http.Request, components.Componentized):
                 # resource doesn't, fake it by giving the resource
                 # a 'GET' request and then return only the headers,
                 # not the body.
-                log.msg("Using GET to fake a HEAD request for %s" %
-                        (resrc,))
+                self._log.info(
+                    "Using GET to fake a HEAD request for {resrc}",
+                    resrc=resrc
+                )
                 self.method = b"GET"
                 self._inFakeHead = True
                 body = resrc.render(self)
 
                 if body is NOT_DONE_YET:
-                    log.msg("Tried to fake a HEAD request for %s, but "
-                            "it got away from me." % resrc)
+                    self._log.info(
+                        "Tried to fake a HEAD request for {resrc}, but "
+                        "it got away from me.", resrc=resrc
+                    )
                     # Oh well, I guess we won't include the content length.
                 else:
                     self.setHeader(b'content-length', intToBytes(len(body)))
@@ -302,10 +324,12 @@ class Request(Copyable, http.Request, components.Componentized):
         if self.method == b"HEAD":
             if len(body) > 0:
                 # This is a Bad Thing (RFC 2616, 9.4)
-                log.msg("Warning: HEAD request %s for resource %s is"
-                        " returning a message body."
-                        "  I think I'll eat it."
-                        % (self, resrc))
+                self._log.info(
+                    "Warning: HEAD request {slf} for resource {resrc} is"
+                    " returning a message body. I think I'll eat it.",
+                    slf=self,
+                    resrc=resrc
+                )
                 self.setHeader(b'content-length',
                                intToBytes(len(body)))
             self.write(b'')
@@ -317,7 +341,17 @@ class Request(Copyable, http.Request, components.Componentized):
 
 
     def processingFailed(self, reason):
-        log.err(reason)
+        """
+        Finish this request with an indication that processing failed and
+        possibly display a traceback.
+
+        @param reason: Reason this request has failed.
+        @type reason: L{twisted.python.failure.Failure}
+
+        @return: The reason passed to this method.
+        @rtype: L{twisted.python.failure.Failure}
+        """
+        self._log.failure('', failure=reason)
         if self.site.displayTracebacks:
             body = (b"<html><head><title>web.Server Traceback"
                     b" (most recent call last)</title></head>"
@@ -439,8 +473,17 @@ class Request(Copyable, http.Request, components.Componentized):
 
         session = getattr(self, sessionAttribute)
 
-        # Session management
-        if not session:
+        if session is not None:
+            # We have a previously created session.
+            try:
+                # Refresh the session, to keep it alive.
+                session.touch()
+            except (AlreadyCalled, AlreadyCancelled):
+                # Session has already expired.
+                session = None
+
+        if session is None:
+            # No session was created yet for this request.
             cookiename = b"_".join([cookieString] + self.sitepath)
             sessionCookie = self.getCookie(cookiename)
             if sessionCookie:
@@ -454,7 +497,6 @@ class Request(Copyable, http.Request, components.Componentized):
                 self.addCookie(cookiename, session.uid, path=b"/",
                                secure=secure)
 
-        session.touch()
         setattr(self, sessionAttribute, session)
 
         if sessionInterface:
@@ -506,6 +548,27 @@ class Request(Copyable, http.Request, components.Componentized):
         return self.appRootURL
 
 
+    def _handleStar(self):
+        """
+        Handle receiving a request whose path is '*'.
+
+        RFC 7231 defines an OPTIONS * request as being something that a client
+        can send as a low-effort way to probe server capabilities or readiness.
+        Rather than bother the user with this, we simply fast-path it back to
+        an empty 200 OK. Any non-OPTIONS verb gets a 405 Method Not Allowed
+        telling the client they can only use OPTIONS.
+        """
+        if self.method == b'OPTIONS':
+            self.setResponseCode(http.OK)
+        else:
+            self.setResponseCode(http.NOT_ALLOWED)
+            self.setHeader(b'Allow', b'OPTIONS')
+
+        # RFC 7231 says we MUST set content-length 0 when responding to this
+        # with no body.
+        self.setHeader(b'Content-Length', b'0')
+        self.finish()
+
 
 @implementer(iweb._IRequestEncoderFactory)
 class GzipEncoderFactory(object):
@@ -515,7 +578,7 @@ class GzipEncoderFactory(object):
 
     @since: 12.3
     """
-
+    _gzipCheckRegex = re.compile(br'(:?^|[\s,])gzip(:?$|[\s,])')
     compressLevel = 9
 
     def encoderForRequest(self, request):
@@ -523,18 +586,17 @@ class GzipEncoderFactory(object):
         Check the headers if the client accepts gzip encoding, and encodes the
         request if so.
         """
-        acceptHeaders = request.requestHeaders.getRawHeaders(
-            'accept-encoding', [])
-        supported = ','.join(acceptHeaders).split(',')
-        if 'gzip' in supported:
+        acceptHeaders = b','.join(
+            request.requestHeaders.getRawHeaders(b'accept-encoding', []))
+        if self._gzipCheckRegex.search(acceptHeaders):
             encoding = request.responseHeaders.getRawHeaders(
-                'content-encoding')
+                b'content-encoding')
             if encoding:
-                encoding = '%s,gzip' % ','.join(encoding)
+                encoding = b','.join(encoding + [b'gzip'])
             else:
-                encoding = 'gzip'
+                encoding = b'gzip'
 
-            request.responseHeaders.setRawHeaders('content-encoding',
+            request.responseHeaders.setRawHeaders(b'content-encoding',
                                                   [encoding])
             return _GzipEncoder(self.compressLevel, request)
 

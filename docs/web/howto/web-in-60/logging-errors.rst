@@ -57,7 +57,7 @@ error passed to it:
     ...
         def _responseFailed(self, failure, call):
             call.cancel()
-            err(failure, "Async response demo interrupted response")
+            err(failure, b"Async response demo interrupted response")
 
 
 
@@ -87,12 +87,12 @@ Here's the full example with the two above modifications:
     
     class DelayedResource(Resource):
         def _delayedRender(self, request):
-            request.write("<html><body>Sorry to keep you waiting.</body></html>")
+            request.write(b"<html><body>Sorry to keep you waiting.</body></html>")
             request.finish()
     
         def _responseFailed(self, failure, call):
             call.cancel()
-            err(failure, "Async response demo interrupted response")
+            err(failure, b"Async response demo interrupted response")
     
         def render_GET(self, request):
             call = reactor.callLater(5, self._delayedRender, request)

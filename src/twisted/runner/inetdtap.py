@@ -14,8 +14,6 @@ import pwd, grp, socket
 
 from twisted.runner import inetd, inetdconf
 from twisted.python import log, usage
-from twisted.python.deprecate import deprecatedModuleAttribute
-from incremental import Version
 from twisted.internet.protocol import ServerFactory
 from twisted.application import internet, service as appservice
 
@@ -45,17 +43,6 @@ class Options(usage.Options):
     compData = usage.Completions(
         optActions={"file": usage.CompleteFiles('*.conf')}
         )
-
-
-
-class RPCServer(internet.TCPServer):
-    """
-    DEPRECATED.
-    """
-    deprecatedModuleAttribute(
-        Version("Twisted", 16, 2, 0),
-        "The RPC server is no longer maintained.",
-        __name__, "RPCServer")
 
 
 

@@ -155,7 +155,7 @@ class ServerParserTests(unittest.TestCase):
         self.assertEqual(L[0], '123, 456 : USERID : SYS : USER')
 
 
-if struct.pack('=L', 1)[0] == '\x01':
+if struct.pack('=L', 1)[0:1] == b'\x01':
     _addr1 = '0100007F'
     _addr2 = '04030201'
 else:

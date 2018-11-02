@@ -5,23 +5,27 @@
 #  - All of the test files, so that the tests can be run on an installed copy.
 # We do not want to include:
 #  - Release management files (e.g. topfiles)
-#  - Things only useful when running from a source checkout (_preamble.py)
+#  - Things only useful when running from a source checkout
 
 # Do not include the old topfiles, or news fragments
 recursive-exclude src/twisted *.misc *.bugfix *.doc *.feature *.removal
-recursive-exclude src/twisted NEWS README topfiles
+recursive-exclude src/twisted NEWS README newsfragments
 exclude src/twisted/topfiles/CREDITS src/twisted/topfiles/ChangeLog.Old
 
 # Include NEWS, READMEs, etc
 recursive-include docs README
-include NEWS README.rst INSTALL.rst CONTRIBUTING LICENSE code_of_conduct.md
+include NEWS.rst README.rst INSTALL.rst CONTRIBUTING LICENSE code_of_conduct.md
 
 # Exclude admin scripts and things only useful when running from a source checkout
+exclude pyproject.toml
 exclude codecov.yml
 exclude appveyor.yml
+exclude .circleci
+recursive-exclude .circleci *
 prune bin
 prune admin
 prune .travis
+prune .github
 
 # Include test-running utilities for downstream packagers
 include tox.ini .coveragerc
@@ -29,8 +33,12 @@ include tox.ini .coveragerc
 # Include our docs templates
 recursive-include src/twisted/python/_pydoctortemplates *.html
 
+# Include all modules, even on a Python we're not installing for
+recursive-include src/twisted *.py
+
 # Some tests stuff
 recursive-include src/twisted *.pem
+recursive-include src/twisted/test *.pem.*
 include src/twisted/internet/test/fake_CAs/*
 include src/twisted/mail/test/rfc822.message
 

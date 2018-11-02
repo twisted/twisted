@@ -184,7 +184,7 @@ def generateCertificateObjects(organization, organizationalUnit):
     @return: a tuple of (key, request, certificate) objects.
     """
     pkey = crypto.PKey()
-    pkey.generate_key(crypto.TYPE_RSA, 512)
+    pkey.generate_key(crypto.TYPE_RSA, 1024)
     req = crypto.X509Req()
     subject = req.get_subject()
     subject.O = organization
@@ -668,7 +668,8 @@ class DefaultOpenSSLContextFactoryTests(unittest.TestCase):
         self.assertEqual(self.context._method, SSL.SSLv23_METHOD)
 
         # And OP_NO_SSLv2 disables the SSLv2 support.
-        self.assertTrue(self.context._options & SSL.OP_NO_SSLv2)
+        self.assertEqual(self.context._options & SSL.OP_NO_SSLv2,
+                         SSL.OP_NO_SSLv2)
 
         # Make sure SSLv3 and TLSv1 aren't disabled though.
         self.assertFalse(self.context._options & SSL.OP_NO_SSLv3)
@@ -714,7 +715,8 @@ class ClientContextFactoryTests(unittest.TestCase):
         SSLv3 or TLSv1 but not SSLv2.
         """
         self.assertEqual(self.context._method, SSL.SSLv23_METHOD)
-        self.assertTrue(self.context._options & SSL.OP_NO_SSLv2)
+        self.assertEqual(self.context._options & SSL.OP_NO_SSLv2,
+                         SSL.OP_NO_SSLv2)
         self.assertFalse(self.context._options & SSL.OP_NO_SSLv3)
         self.assertFalse(self.context._options & SSL.OP_NO_TLSv1)
 

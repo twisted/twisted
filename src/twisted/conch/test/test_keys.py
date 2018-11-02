@@ -7,24 +7,14 @@ Tests for L{twisted.conch.ssh.keys}.
 
 from __future__ import absolute_import, division
 
-try:
-    import cryptography
-except ImportError:
-    cryptography = None
+from twisted.python.reflect import requireModule
+
+cryptography = requireModule("cryptography")
+if cryptography is None:
     skipCryptography = 'Cannot run without cryptography.'
 
-try:
-    import Crypto.Cipher.DES3
-    import Crypto.PublicKey.RSA
-    import Crypto.PublicKey.DSA
-except ImportError:
-    # we'll have to skip some tests without PyCypto
-    Crypto = None
-    skipPyCrypto = 'Cannot run without PyCrypto.'
-try:
-    import pyasn1
-except ImportError:
-    pyasn1 = None
+pyasn1 = requireModule("pyasn1")
+
 
 if cryptography and pyasn1:
     from twisted.conch.ssh import keys, common, sexpy
@@ -35,111 +25,8 @@ import os
 from twisted.conch.test import keydata
 from twisted.python import randbytes
 from twisted.trial import unittest
-from twisted.python.compat import long, _PY3
-from incremental import Version
+from twisted.python.compat import long
 from twisted.python.filepath import FilePath
-
-
-
-class ObjectTypeTests(unittest.TestCase):
-    """
-    Unit tests for the objectType method.
-    """
-
-    if cryptography is None:
-        skip = skipCryptography
-    if Crypto is None:
-        skip = "Cannot run without PyCrypto."
-    if _PY3:
-        skip = "objectType is deprecated and is not being ported to Python 3."
-
-
-    def getRSAKey(self):
-        """
-        Return a PyCrypto RSA key to support the tests.
-
-        @return: The RSA key to support the tests.
-        @rtype: C{Crypto.PublicKey.RSA}
-        """
-        # Use lazy import as PyCrypto will be deprecated.
-        from Crypto.PublicKey import RSA
-
-        return RSA.construct((
-            keydata.RSAData['n'],
-            keydata.RSAData['e'],
-            keydata.RSAData['d'],
-            ))
-
-
-    def getDSAKey(self):
-        """
-        Return a PyCrypto DSA key to support the tests.
-
-        @return: The DSA key to support the tests.
-        @rtype: C{Crypto.PublicKey.DSA}
-        """
-        # Use lazy import as PyCrypto will be deprecated.
-        from Crypto.PublicKey import DSA
-
-        return DSA.construct((
-            keydata.DSAData['y'],
-            keydata.DSAData['g'],
-            keydata.DSAData['p'],
-            keydata.DSAData['q'],
-            keydata.DSAData['x'],
-            ))
-
-
-    def checkDeprecation(self):
-        """
-        Check that we have a deprecation warning for C{objectType}.
-        """
-        warnings = self.flushWarnings()
-        self.assertEqual(1, len(warnings))
-        self.assertIs(DeprecationWarning, warnings[0]['category'])
-        self.assertEqual(
-            'twisted.conch.ssh.keys.objectType was deprecated in '
-            'Twisted 15.5.0',
-            warnings[0]['message'])
-
-
-    def test_objectType_rsa(self):
-        """
-        C{ssh-rsa} is the type of the RSA keys.
-        """
-        key = self.getRSAKey()
-
-        self.assertEqual(keys.objectType(key), b'ssh-rsa')
-        self.checkDeprecation()
-
-
-    def test_objectType_dsa(self):
-        """
-        C{ssh-dss} is the type of the DSA keys.
-        """
-        key = self.getDSAKey()
-
-        self.assertEqual(keys.objectType(key), b'ssh-dss')
-        self.checkDeprecation()
-
-
-    def test_objectKey_none(self):
-        """
-        A BadKeyError is raised when getting the type of L{None}.
-        """
-        self.assertRaises(keys.BadKeyError, keys.objectType, None)
-        self.checkDeprecation()
-
-
-    def test_deprecation(self):
-        """
-        It is deprecated.
-        """
-        key = self.getRSAKey()
-
-        keys.objectType(key)
-
-        self.checkDeprecation()
 
 
 
@@ -185,13 +72,21 @@ class KeyTests(unittest.TestCase):
             privateValue=keydata.ECDatanistp521['privateValue'],
             curve=keydata.ECDatanistp521['curve']
         )._keyObject
-        self.rsaSignature = (b'\x00\x00\x00\x07ssh-rsa\x00'
-            b'\x00\x00`N\xac\xb4@qK\xa0(\xc3\xf2h \xd3\xdd\xee6Np\x9d_'
-            b'\xb0>\xe3\x0c(L\x9d{\txUd|!\xf6m\x9c\xd3\x93\x842\x7fU'
-            b'\x05\xf4\xf7\xfaD\xda\xce\x81\x8ea\x7f=Y\xed*\xb7\xba\x81'
-            b'\xf2\xad\xda\xeb(\x97\x03S\x08\x81\xc7\xb1\xb7\xe6\xe3'
-            b'\xcd*\xd4\xbd\xc0wt\xf7y\xcd\xf0\xb7\x7f\xfb\x1e>\xf9r'
-            b'\x8c\xba')
+        self.rsaSignature = (
+            b"\x00\x00\x00\x07ssh-rsa\x00\x00\x01\x00~Y\xa3\xd7\xfdW\xc6pu@"
+            b"\xd81\xa1S\xf3O\xdaE\xf4/\x1ex\x1d\xf1\x9a\xe1G3\xd9\xd6U\x1f"
+            b"\x8c\xd9\x1b\x8b\x90\x0e\x8a\xc1\x91\xd8\x0cd\xc9\x0c\xe7\xb2"
+            b"\xc9,'=\x15\x1cQg\xe7x\xb5j\xdbI\xc0\xde\xafb\xd7@\xcar\x0b"
+            b"\xce\xa3zM\x151q5\xde\xfa\x0c{wjKN\x88\xcbC\xe5\x89\xc3\xf9i"
+            b"\x96\x91\xdb\xca}\xdbR\x1a\x13T\xf9\x0cDJH\x0b\x06\xcfl\xf3"
+            b"\x13[\x82\xa2\x9d\x93\xfd\x8e\xce|\xfb^n\xd4\xed\xe2\xd1\x8a"
+            b"\xb7aY\x9bB\x8f\xa4\xc7\xbe7\xb5\x0b9j\xa4.\x87\x13\xf7\xf0"
+            b"\xda\xd7\xd2\xf9\x1f9p\xfd?\x18\x0f\xf2N\x9b\xcf/\x1e)\n>A\x19"
+            b"\xc2\xb5j\xf9UW\xd4\xae\x87B\xe6\x99t\xa2y\x90\x98\xa2\xaaf\xcb"
+            b"\x86\xe5k\xe3\xce\xe0u\x1c\xeb\x93\x1aN\x88\xc9\x93Y\xc3.V\xb1L"
+            b"44`C\xc7\xa66\xaf\xfa\x7f\x04Y\x92\xfa\xa4\x1a\x18%\x19\xd5 4^"
+            b"\xb9rY\xba \x01\xf9.\x89%H\xbe\x1c\x83A\x96"
+        )
         self.dsaSignature = (
             b'\x00\x00\x00\x07ssh-dss\x00\x00\x00(?\xc7\xeb\x86;\xd5TFA\xb4'
             b'\xdf\x0c\xc4E@4,d\xbc\t\xd9\xae\xdd[\xed-\x82nQ\x8cf\x9b\xe8\xe1'
@@ -210,7 +105,7 @@ class KeyTests(unittest.TestCase):
         """
         The L{keys.Key.size} method returns the size of key object in bits.
         """
-        self.assertEqual(keys.Key(self.rsaObj).size(), 768)
+        self.assertEqual(keys.Key(self.rsaObj).size(), 2048)
         self.assertEqual(keys.Key(self.dsaObj).size(), 1024)
         self.assertEqual(keys.Key(self.ecObj).size(), 256)
         self.assertEqual(keys.Key(self.ecObj384).size(), 384)
@@ -223,38 +118,74 @@ class KeyTests(unittest.TestCase):
         Test that the _guessStringType method guesses string types
         correctly.
         """
-        self.assertEqual(keys.Key._guessStringType(keydata.publicRSA_openssh),
-                'public_openssh')
-        self.assertEqual(keys.Key._guessStringType(keydata.publicDSA_openssh),
-                'public_openssh')
-        self.assertEqual(keys.Key._guessStringType(keydata.publicECDSA_openssh),
-                'public_openssh')
-        self.assertEqual(keys.Key._guessStringType(
-            keydata.privateRSA_openssh), 'private_openssh')
-        self.assertEqual(keys.Key._guessStringType(
-            keydata.privateDSA_openssh), 'private_openssh')
-        self.assertEqual(keys.Key._guessStringType(
-            keydata.privateECDSA_openssh), 'private_openssh')
-        self.assertEqual(keys.Key._guessStringType(keydata.publicRSA_lsh),
-                'public_lsh')
-        self.assertEqual(keys.Key._guessStringType(keydata.publicDSA_lsh),
-                'public_lsh')
-        self.assertEqual(keys.Key._guessStringType(keydata.privateRSA_lsh),
-                'private_lsh')
-        self.assertEqual(keys.Key._guessStringType(keydata.privateDSA_lsh),
-                'private_lsh')
-        self.assertEqual(keys.Key._guessStringType(
-            keydata.privateRSA_agentv3), 'agentv3')
-        self.assertEqual(keys.Key._guessStringType(
-            keydata.privateDSA_agentv3), 'agentv3')
-        self.assertEqual(keys.Key._guessStringType(
-            b'\x00\x00\x00\x07ssh-rsa\x00\x00\x00\x01\x01'),
+        self.assertEqual(
+            keys.Key._guessStringType(keydata.publicRSA_openssh),
+            'public_openssh')
+        self.assertEqual(
+            keys.Key._guessStringType(keydata.publicDSA_openssh),
+            'public_openssh')
+        self.assertEqual(
+            keys.Key._guessStringType(keydata.publicECDSA_openssh),
+            'public_openssh')
+        self.assertEqual(
+            keys.Key._guessStringType(keydata.privateRSA_openssh),
+            'private_openssh')
+        self.assertEqual(
+            keys.Key._guessStringType(keydata.privateRSA_openssh_new),
+            'private_openssh')
+        self.assertEqual(
+            keys.Key._guessStringType(keydata.privateDSA_openssh),
+            'private_openssh')
+        self.assertEqual(
+            keys.Key._guessStringType(keydata.privateDSA_openssh_new),
+            'private_openssh')
+        self.assertEqual(
+            keys.Key._guessStringType(keydata.privateECDSA_openssh),
+            'private_openssh')
+        self.assertEqual(
+            keys.Key._guessStringType(keydata.privateECDSA_openssh_new),
+            'private_openssh')
+        self.assertEqual(
+            keys.Key._guessStringType(keydata.publicRSA_lsh), 'public_lsh')
+        self.assertEqual(
+            keys.Key._guessStringType(keydata.publicDSA_lsh), 'public_lsh')
+        self.assertEqual(
+            keys.Key._guessStringType(keydata.privateRSA_lsh), 'private_lsh')
+        self.assertEqual(
+            keys.Key._guessStringType(keydata.privateDSA_lsh), 'private_lsh')
+        self.assertEqual(
+            keys.Key._guessStringType(keydata.privateRSA_agentv3), 'agentv3')
+        self.assertEqual(
+            keys.Key._guessStringType(keydata.privateDSA_agentv3), 'agentv3')
+        self.assertEqual(
+            keys.Key._guessStringType(
+                b'\x00\x00\x00\x07ssh-rsa\x00\x00\x00\x01\x01'),
             'blob')
-        self.assertEqual(keys.Key._guessStringType(
-            b'\x00\x00\x00\x07ssh-dss\x00\x00\x00\x01\x01'),
+        self.assertEqual(
+            keys.Key._guessStringType(
+                b'\x00\x00\x00\x07ssh-dss\x00\x00\x00\x01\x01'),
             'blob')
-        self.assertEqual(keys.Key._guessStringType(b'not a key'),
-                None)
+        self.assertEqual(keys.Key._guessStringType(b'not a key'), None)
+
+
+    def test_public(self):
+        """
+        The L{keys.Key.public} method returns a public key for both
+        public and private keys.
+        """
+        # NB: This assumes that the private and public keys correspond
+        # to each other.
+        privateRSAKey = keys.Key.fromString(keydata.privateRSA_openssh)
+        publicRSAKey = keys.Key.fromString(keydata.publicRSA_openssh)
+        self.assertEqual(privateRSAKey.public(), publicRSAKey.public())
+
+        privateDSAKey = keys.Key.fromString(keydata.privateDSA_openssh)
+        publicDSAKey = keys.Key.fromString(keydata.publicDSA_openssh)
+        self.assertEqual(privateDSAKey.public(), publicDSAKey.public())
+
+        privateECDSAKey = keys.Key.fromString(keydata.privateECDSA_openssh)
+        publicECDSAKey = keys.Key.fromString(keydata.publicECDSA_openssh)
+        self.assertEqual(privateECDSAKey.public(), publicECDSAKey.public())
 
 
     def test_isPublic(self):
@@ -363,10 +294,37 @@ SUrCyZXsNh6VXwjs3gKQ
         self.assertEqual(key, key2)
 
 
+    def test_fromOpenSSH_v1_format(self):
+        """
+        OpenSSH 6.5 introduced a newer "openssh-key-v1" private key format
+        (made the default in OpenSSH 7.8).  Loading keys in this format
+        produces identical results to loading the same keys in the old
+        PEM-based format.
+        """
+        for old, new in (
+                (keydata.privateRSA_openssh, keydata.privateRSA_openssh_new),
+                (keydata.privateDSA_openssh, keydata.privateDSA_openssh_new),
+                (keydata.privateECDSA_openssh,
+                 keydata.privateECDSA_openssh_new),
+                (keydata.privateECDSA_openssh384,
+                 keydata.privateECDSA_openssh384_new),
+                (keydata.privateECDSA_openssh521,
+                 keydata.privateECDSA_openssh521_new)):
+            self.assertEqual(
+                keys.Key.fromString(new), keys.Key.fromString(old))
+        self.assertEqual(
+            keys.Key.fromString(
+                keydata.privateRSA_openssh_encrypted_new,
+                passphrase=b'encrypted'),
+            keys.Key.fromString(
+                keydata.privateRSA_openssh_encrypted,
+                passphrase=b'encrypted'))
+
+
     def test_fromOpenSSH_windows_line_endings(self):
         """
-        Test that keys are correctly generated from OpenSSH strings with Windows
-        line endings.
+        Test that keys are correctly generated from OpenSSH strings with
+        Windows line endings.
         """
         privateDSAData = b"""-----BEGIN DSA PRIVATE KEY-----
 MIIBuwIBAAKBgQDylESNuc61jq2yatCzZbenlr9llG+p9LhIpOLUbXhhHcwC6hrh
@@ -665,7 +623,7 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
         L{FingerprintFormats.MD5-HEX} format by default.
         """
         self.assertEqual(keys.Key(self.rsaObj).fingerprint(),
-            '3d:13:5f:cb:c9:79:8a:93:06:27:65:bc:3d:0b:8f:af')
+            '85:25:04:32:58:55:96:9f:57:ee:fb:a8:1a:ea:69:da')
         self.assertEqual(keys.Key(self.dsaObj).fingerprint(),
             '63:15:b3:0e:e6:4f:50:de:91:48:3d:01:6b:b3:13:c1')
 
@@ -678,7 +636,7 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
         self.assertEqual(
             keys.Key(self.rsaObj).fingerprint(
                 keys.FingerprintFormats.MD5_HEX),
-            '3d:13:5f:cb:c9:79:8a:93:06:27:65:bc:3d:0b:8f:af')
+            '85:25:04:32:58:55:96:9f:57:ee:fb:a8:1a:ea:69:da')
         self.assertEqual(
             keys.Key(self.dsaObj).fingerprint(
                 keys.FingerprintFormats.MD5_HEX),
@@ -693,7 +651,7 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
         self.assertEqual(
             keys.Key(self.rsaObj).fingerprint(
                 keys.FingerprintFormats.SHA256_BASE64),
-            'ryaugIFT0B8ItuszldMEU7q14rG/wj9HkRosMeBWkts=')
+            'FBTCOoknq0mHy+kpfnY9tDdcAJuWtCpuQMaV3EsvbUI=')
         self.assertEqual(
             keys.Key(self.dsaObj).fingerprint(
                 keys.FingerprintFormats.SHA256_BASE64),
@@ -857,10 +815,14 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
         """
         A private EC key is correctly generated from a private key blob.
         """
+        from cryptography.hazmat.primitives.asymmetric import ec
+        publicNumbers = ec.EllipticCurvePublicNumbers(
+            x=keydata.ECDatanistp256['x'], y=keydata.ECDatanistp256['y'],
+            curve=ec.SECP256R1())
         ecblob = (
             common.NS(keydata.ECDatanistp256['curve']) +
-            common.MP(keydata.ECDatanistp256['x']) +
-            common.MP(keydata.ECDatanistp256['y']) +
+            common.NS(keydata.ECDatanistp256['curve'][-8:]) +
+            common.NS(publicNumbers.encode_point()) +
             common.MP(keydata.ECDatanistp256['privateValue'])
             )
 
@@ -1149,40 +1111,77 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
         private key.
         """
         self.assertEqual(repr(keys.Key(self.rsaObj)),
-"""<RSA Private Key (768 bits)
+"""<RSA Private Key (2048 bits)
 attr d:
-\t6e:1f:b5:55:97:eb:ed:67:ed:2b:99:6e:ec:c1:ed:
-\ta8:4d:52:d6:f3:d6:65:06:04:df:e5:54:9f:cc:89:
-\t00:3c:9b:67:87:ec:65:a0:ab:cd:6f:65:90:8a:97:
-\t90:4d:c6:21:8f:a8:8d:d8:59:86:43:b5:81:b1:b4:
-\td7:5f:2c:22:0a:61:c1:25:8a:47:12:b4:9a:f8:7a:
-\t11:1c:4a:a8:8b:75:c4:91:09:3b:be:04:ca:45:d9:
-\t57:8a:0d:27:cb:23
+\t21:4c:08:66:a2:28:d5:b4:fb:8e:0f:72:1b:85:09:
+\t00:b9:f2:4e:37:f0:1c:57:4b:e3:51:7f:9e:23:a7:
+\te4:3a:98:55:1b:ea:8b:7a:98:1e:bc:d8:ba:b1:f9:
+\t89:12:18:60:ac:e8:cc:0b:4e:09:5a:40:6a:ba:2f:
+\t99:f8:b3:24:60:84:b9:ce:69:95:9a:f9:e2:fc:1f:
+\t51:4d:27:15:db:2b:27:ad:ef:b4:69:ac:be:7d:10:
+\teb:86:47:70:73:b4:00:87:95:15:3b:37:f9:e7:14:
+\te7:80:bb:68:1e:1b:e6:dd:bb:73:63:b9:67:e6:b2:
+\t27:7f:cf:cf:30:9b:c2:98:fd:d9:18:36:2f:36:2e:
+\tf1:3d:81:7a:9f:e1:03:2d:47:db:34:51:62:39:dd:
+\t4f:e9:ac:a8:8b:d9:d6:f3:84:c4:17:b9:71:9d:06:
+\t08:42:78:4d:bb:c5:2a:f4:c3:58:cd:55:2b:ed:be:
+\t33:5f:04:ea:7b:e6:04:24:63:f2:2d:d7:3d:1b:6c:
+\td5:9c:63:43:2f:92:88:8d:3e:6e:da:18:37:d8:0f:
+\t25:67:89:1d:b9:46:34:5e:c9:ce:c4:8b:ed:92:5a:
+\t33:07:0f:df:86:08:f9:92:e9:db:eb:38:08:36:c9:
+\tcd:cd:0a:01:48:5b:39:3e:7a:ca:c6:80:a9:dc:d4:
+\t39
 attr e:
-\t23
+\t01:00:01
 attr n:
-\t00:af:32:71:f0:e6:0e:9c:99:b3:7f:8b:5f:04:4b:
-\tcb:8b:c0:d5:3e:b2:77:fd:cf:64:d8:8f:c0:cf:ae:
-\t1f:c6:31:df:f6:29:b2:44:96:e2:c6:d4:21:94:7f:
-\t65:7c:d8:d4:23:1f:b8:2e:6a:c9:1f:94:0d:46:c1:
-\t69:a2:b7:07:0c:a3:93:c1:34:d8:2e:1e:4a:99:1a:
-\t6c:96:46:07:46:2b:dc:25:29:1b:87:f0:be:05:1d:
-\tee:b4:34:b9:e7:99:95
+\t00:d5:6a:ac:78:23:d6:d6:1b:ec:25:a1:50:c4:77:
+\t63:50:84:45:01:55:42:14:2a:2a:e0:d0:60:ee:d4:
+\te9:a3:ad:4a:fa:39:06:5e:84:55:75:5f:00:36:bf:
+\t6f:aa:2a:3f:83:26:37:c1:69:2e:5b:fd:f0:f3:d2:
+\t7d:d6:98:cd:3a:40:78:d5:ca:a8:18:c0:11:93:24:
+\t09:0c:81:4c:8f:f7:9c:ed:13:16:6a:a4:04:e9:49:
+\t77:c3:e4:55:64:b3:79:68:9e:2c:08:eb:ac:e8:04:
+\t2d:21:77:05:a7:8e:ef:53:30:0d:a5:e5:bb:3d:6a:
+\te2:09:36:6f:fd:34:d3:7d:6f:46:ff:87:da:a9:29:
+\t27:aa:ff:ad:f5:85:e6:3e:1a:b8:7a:1d:4a:b1:ea:
+\tc0:5a:f7:30:df:1f:c2:a4:e4:ef:3f:91:49:96:40:
+\td5:19:77:2d:37:c3:5e:ec:9d:a6:3a:44:a5:c2:a4:
+\t29:dd:d5:ba:9c:3d:45:b3:c6:2c:18:64:d5:ba:3d:
+\tdf:ab:7f:cd:42:ac:a7:f1:18:0b:a0:58:15:62:0b:
+\ta4:2a:6e:43:c3:e4:04:9f:35:a3:47:8e:46:ed:33:
+\ta5:65:bd:bc:3b:29:6e:02:0b:57:df:74:e8:13:b4:
+\t37:35:7e:83:5f:20:26:60:a6:dc:ad:8b:c6:6c:79:
+\t98:f7
 attr p:
-\t00:cb:4a:4b:d0:40:47:e8:45:52:f7:c7:af:0c:20:
-\t6d:43:0d:b6:39:94:f9:da:a5:e5:03:06:76:83:24:
-\teb:88:a1:55:a2:a8:de:12:3b:77:49:92:8a:a9:71:
-\td2:02:93:ff
+\t00:d9:70:06:d8:e2:bc:d4:78:91:50:94:d4:c1:1b:
+\t89:38:6c:46:64:5a:51:a0:9a:07:3d:48:8f:03:51:
+\tcc:6b:12:8e:7d:1a:b1:65:e7:71:75:39:e0:32:05:
+\t75:8d:18:4c:af:93:b1:49:b1:66:5f:78:62:7a:d1:
+\t0c:ca:e6:4d:43:b3:9c:f4:6b:7d:e6:0c:98:dc:cf:
+\t21:62:8e:d5:2e:12:de:04:ae:d7:24:6e:83:31:a2:
+\t15:a2:44:3d:22:a9:62:26:22:b9:b2:ed:54:0a:9d:
+\t08:83:a7:07:0d:ff:19:18:8e:d8:ab:1d:da:48:9c:
+\t31:68:11:a1:66:6d:e3:d8:1d
 attr q:
-\t00:dc:9f:6b:d9:98:21:56:11:8d:e9:5f:03:9d:0a:
-\td3:93:6e:13:77:41:3c:85:4f:00:70:fd:05:54:ff:
-\tbc:3d:09:bf:83:f6:97:7f:64:10:91:04:fe:a2:67:
-\t47:54:42:6b
+\t00:fb:44:17:8b:a4:36:be:1e:37:1d:a7:f6:61:6c:
+\t04:c4:aa:dd:78:3e:07:8c:1e:33:02:ae:03:14:87:
+\t83:7a:e5:9e:7d:08:67:a8:f2:aa:bf:12:70:cf:72:
+\ta9:a7:c7:0b:1d:88:d5:20:fd:9c:63:ca:47:30:55:
+\t4e:8b:c4:cf:f4:7f:16:a4:92:12:74:a1:09:c2:c4:
+\t6e:9c:8c:33:ef:a5:e5:f7:e0:2b:ad:4f:5c:11:aa:
+\t1a:84:37:5b:fd:7a:ea:c3:cd:7c:b0:c8:e4:1f:54:
+\t63:b5:c7:af:df:f4:09:a7:fc:c7:25:fc:5c:e9:91:
+\td7:92:c5:98:1e:56:d3:b1:23
 attr u:
-\t00:b4:73:97:4b:50:10:a3:17:b3:a8:47:f1:3a:14:
-\t76:52:d1:38:2a:cf:12:14:34:c1:a8:54:4c:29:35:
-\t80:a0:38:b8:f0:fa:4c:c4:c2:85:ab:db:87:82:ba:
-\tdc:eb:db:2a>""")
+\t00:85:4b:1b:7a:9b:12:10:37:9e:1f:ad:5e:da:fe:
+\tc6:96:fe:df:35:6b:b9:34:e2:16:97:92:26:09:bd:
+\tbd:70:20:03:a7:35:bd:2d:1b:a0:d2:07:47:2b:d4:
+\tde:a8:a8:07:07:1b:b8:04:20:a7:27:41:3c:6c:39:
+\t39:e9:41:ce:e7:17:1d:d1:4c:5c:bc:3d:d2:26:26:
+\tfe:6a:d6:fd:48:72:ae:46:fa:7b:c3:d3:19:60:44:
+\t1d:a5:13:a7:80:f5:63:29:d4:7a:5d:06:07:16:5d:
+\tf6:8b:3d:cb:64:3a:e2:84:5a:4d:8c:06:2d:2d:9d:
+\t1c:eb:83:4c:78:3d:79:54:ce>""")
 
 
     def test_reprPublicRSA(self):
@@ -1191,17 +1190,28 @@ attr u:
         public key.
         """
         self.assertEqual(repr(keys.Key(self.rsaObj).public()),
-"""<RSA Public Key (768 bits)
+"""<RSA Public Key (2048 bits)
 attr e:
-\t23
+\t01:00:01
 attr n:
-\t00:af:32:71:f0:e6:0e:9c:99:b3:7f:8b:5f:04:4b:
-\tcb:8b:c0:d5:3e:b2:77:fd:cf:64:d8:8f:c0:cf:ae:
-\t1f:c6:31:df:f6:29:b2:44:96:e2:c6:d4:21:94:7f:
-\t65:7c:d8:d4:23:1f:b8:2e:6a:c9:1f:94:0d:46:c1:
-\t69:a2:b7:07:0c:a3:93:c1:34:d8:2e:1e:4a:99:1a:
-\t6c:96:46:07:46:2b:dc:25:29:1b:87:f0:be:05:1d:
-\tee:b4:34:b9:e7:99:95>""")
+\t00:d5:6a:ac:78:23:d6:d6:1b:ec:25:a1:50:c4:77:
+\t63:50:84:45:01:55:42:14:2a:2a:e0:d0:60:ee:d4:
+\te9:a3:ad:4a:fa:39:06:5e:84:55:75:5f:00:36:bf:
+\t6f:aa:2a:3f:83:26:37:c1:69:2e:5b:fd:f0:f3:d2:
+\t7d:d6:98:cd:3a:40:78:d5:ca:a8:18:c0:11:93:24:
+\t09:0c:81:4c:8f:f7:9c:ed:13:16:6a:a4:04:e9:49:
+\t77:c3:e4:55:64:b3:79:68:9e:2c:08:eb:ac:e8:04:
+\t2d:21:77:05:a7:8e:ef:53:30:0d:a5:e5:bb:3d:6a:
+\te2:09:36:6f:fd:34:d3:7d:6f:46:ff:87:da:a9:29:
+\t27:aa:ff:ad:f5:85:e6:3e:1a:b8:7a:1d:4a:b1:ea:
+\tc0:5a:f7:30:df:1f:c2:a4:e4:ef:3f:91:49:96:40:
+\td5:19:77:2d:37:c3:5e:ec:9d:a6:3a:44:a5:c2:a4:
+\t29:dd:d5:ba:9c:3d:45:b3:c6:2c:18:64:d5:ba:3d:
+\tdf:ab:7f:cd:42:ac:a7:f1:18:0b:a0:58:15:62:0b:
+\ta4:2a:6e:43:c3:e4:04:9f:35:a3:47:8e:46:ed:33:
+\ta5:65:bd:bc:3b:29:6e:02:0b:57:df:74:e8:13:b4:
+\t37:35:7e:83:5f:20:26:60:a6:dc:ad:8b:c6:6c:79:
+\t98:f7>""")
 
 
     def test_reprPublicECDSA(self):
@@ -1236,224 +1246,6 @@ x:
 y:""" +
 "\n\t8154319786460285263226566476944164753434437589431431968106113715931064" +
 "6683104>\n")
-
-
-
-class KeyKeyObjectTests(unittest.TestCase):
-    """
-    The L{keys.Key.keyObject} property provides deprecated access to a PyCrypto
-    key instance of the corresponding type.
-    """
-    if cryptography is None:
-        skip = skipCryptography
-
-    if Crypto is None:
-        skip = skipPyCrypto
-
-
-    def test_deprecation(self):
-        """
-        Accessing the L{keys.Key.keyObject} property emits a deprecation
-        warning.
-        """
-        keys.Key.fromString(keydata.publicRSA_openssh).keyObject
-
-        [warning] = self.flushWarnings([KeyKeyObjectTests.test_deprecation])
-        self.assertIs(warning['category'], DeprecationWarning)
-
-
-    def test_keyObjectGetRSAPublic(self):
-        """
-        The PyCrypto key instance for an RSA public key has the same components
-        as the internal key.
-        """
-        key = keys.Key.fromString(keydata.publicRSA_openssh)
-
-        result = key.keyObject
-
-        self.assertIsInstance(result, Crypto.PublicKey.RSA._RSAobj)
-        self.assertEqual(keydata.RSAData['e'], result.key.e)
-        self.assertEqual(keydata.RSAData['n'], result.key.n)
-
-
-    def test_keyObjectGetRSAPrivate(self):
-        """
-        The PyCrypto key instance for an RSA private key has the same
-        components as the internal key.
-        """
-        key = keys.Key.fromString(keydata.privateRSA_openssh)
-
-        result = key.keyObject
-
-        self.assertIsInstance(result, Crypto.PublicKey.RSA._RSAobj)
-        self.assertEqual(keydata.RSAData['e'], result.key.e)
-        self.assertEqual(keydata.RSAData['n'], result.key.n)
-        self.assertEqual(keydata.RSAData['d'], result.key.d)
-        self.assertEqual(keydata.RSAData['p'], result.key.p)
-        self.assertEqual(keydata.RSAData['q'], result.key.q)
-        self.assertEqual(keydata.RSAData['u'], result.key.u)
-
-
-    def test_keyObjectGetDSAPublic(self):
-        """
-        The PyCrypto key instance for a DSA public key has the same components
-        as the internal key.
-        """
-        key = keys.Key.fromString(keydata.publicDSA_openssh)
-
-        result = key.keyObject
-
-        self.assertIsInstance(result, Crypto.PublicKey.DSA._DSAobj)
-        self.assertEqual(keydata.DSAData['y'], result.key.y)
-        self.assertEqual(keydata.DSAData['g'], result.key.g)
-        self.assertEqual(keydata.DSAData['p'], result.key.p)
-        self.assertEqual(keydata.DSAData['q'], result.key.q)
-
-
-    def test_keyObjectGetDSAPrivate(self):
-        """
-        The PyCrypto key instance for a DSA private key has the same components
-        as the internal key.
-        """
-        key = keys.Key.fromString(keydata.privateDSA_openssh)
-
-        result = key.keyObject
-
-        self.assertIsInstance(result, Crypto.PublicKey.DSA._DSAobj)
-        self.assertEqual(keydata.DSAData['y'], result.key.y)
-        self.assertEqual(keydata.DSAData['g'], result.key.g)
-        self.assertEqual(keydata.DSAData['p'], result.key.p)
-        self.assertEqual(keydata.DSAData['q'], result.key.q)
-        self.assertEqual(keydata.DSAData['x'], result.key.x)
-
-
-    def test_keyObjectSetRSAPublic(self):
-        """
-        Setting the L{keys.Key.keyObject} property to a PyCrypto public RSA key
-        instance updates the internal key.
-        """
-        key = keys.Key.fromString(keydata.publicDSA_openssh)
-        newPyCryptoKey = Crypto.PublicKey.RSA.construct((
-            keydata.RSAData['n'],
-            keydata.RSAData['e'],
-            ))
-        self.assertEqual('DSA', key.type())
-
-        key.keyObject = newPyCryptoKey
-        [warning] = self.flushWarnings([
-            KeyKeyObjectTests.test_keyObjectSetRSAPublic])
-        self.assertIs(warning['category'], DeprecationWarning)
-
-        self.assertEqual('RSA', key.type())
-        self.assertEqual({
-            'n': keydata.RSAData['n'],
-            'e': keydata.RSAData['e'],
-            },
-            key.data())
-
-
-    def test_keyObjectSetRSAPrivate(self):
-        """
-        Setting the L{keys.Key.keyObject} property to a PyCrypto private RSA
-        key instance updates the internal key.
-        """
-        key = keys.Key.fromString(keydata.publicDSA_openssh)
-        newPyCryptoKey = Crypto.PublicKey.RSA.construct((
-            keydata.RSAData['n'],
-            keydata.RSAData['e'],
-            keydata.RSAData['d'],
-            keydata.RSAData['p'],
-            keydata.RSAData['q'],
-            keydata.RSAData['u'],
-            ))
-        self.assertEqual('DSA', key.type())
-
-        key.keyObject = newPyCryptoKey
-
-        self.assertEqual('RSA', key.type())
-        self.assertEqual({
-            'n': keydata.RSAData['n'],
-            'e': keydata.RSAData['e'],
-            'd': keydata.RSAData['d'],
-            'p': keydata.RSAData['p'],
-            'q': keydata.RSAData['q'],
-            'u': keydata.RSAData['u'],
-            },
-            key.data())
-
-
-    def test_keyObjectSetDSAPublic(self):
-        """
-        Setting the L{keys.Key.keyObject} property to a PyCrypto public DSA key
-        instance updates the internal key.
-        """
-        key = keys.Key.fromString(keydata.publicRSA_openssh)
-        newPyCryptoKey = Crypto.PublicKey.DSA.construct((
-            keydata.DSAData['y'],
-            keydata.DSAData['g'],
-            keydata.DSAData['p'],
-            keydata.DSAData['q'],
-            ))
-        self.assertEqual('RSA', key.type())
-
-        key.keyObject = newPyCryptoKey
-
-        self.assertEqual('DSA', key.type())
-        self.assertEqual({
-            'y': keydata.DSAData['y'],
-            'g': keydata.DSAData['g'],
-            'p': keydata.DSAData['p'],
-            'q': keydata.DSAData['q'],
-            },
-            key.data())
-
-
-    def test_keyObjectSetDSAPrivate(self):
-        """
-        Setting the L{keys.Key.keyObject} property to a PyCrypto private DSA
-        key instance updates the internal key.
-        """
-        key = keys.Key.fromString(keydata.publicRSA_openssh)
-        newPyCryptoKey = Crypto.PublicKey.DSA.construct((
-            keydata.DSAData['y'],
-            keydata.DSAData['g'],
-            keydata.DSAData['p'],
-            keydata.DSAData['q'],
-            keydata.DSAData['x'],
-            ))
-        self.assertEqual('RSA', key.type())
-
-        key.keyObject = newPyCryptoKey
-
-        self.assertEqual('DSA', key.type())
-        self.assertEqual({
-            'y': keydata.DSAData['y'],
-            'g': keydata.DSAData['g'],
-            'p': keydata.DSAData['p'],
-            'q': keydata.DSAData['q'],
-            'x': keydata.DSAData['x'],
-            },
-            key.data())
-
-
-    def test_constructorPyCrypto(self):
-        """
-        Passing a PyCrypto key object to L{keys.Key} is deprecated.
-        """
-        pycryptoKey = Crypto.PublicKey.RSA.construct((
-            keydata.RSAData['n'],
-            keydata.RSAData['e']))
-        key = self.callDeprecated(
-            (Version('Twisted', 16, 0, 0),
-             'passing a cryptography key object'),
-            keys.Key,
-            pycryptoKey)
-        self.assertEqual('RSA', key.type())
-        self.assertEqual({
-            'n': keydata.RSAData['n'],
-            'e': keydata.RSAData['e'],
-            },
-            key.data())
 
 
 

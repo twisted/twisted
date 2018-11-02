@@ -19,8 +19,10 @@ from io import BytesIO
 from twisted.conch import recvline
 
 from twisted.internet import defer
-from twisted.python.compat import _tokenize
+from twisted.python.compat import _tokenize, _get_async_param
 from twisted.python.htmlizer import TokenPrinter
+
+
 
 class FileWrapper:
     """
@@ -151,8 +153,9 @@ class ManholeInterpreter(code.InteractiveInterpreter):
         return failure
 
 
-    def write(self, data, async=False):
-        self.handler.addOutput(data, async)
+    def write(self, data, isAsync=None, **kwargs):
+        isAsync = _get_async_param(isAsync, **kwargs)
+        self.handler.addOutput(data, isAsync)
 
 
 
@@ -237,14 +240,16 @@ class Manhole(recvline.HistoricRecvLine):
         return not w.endswith(b'\n') and not w.endswith(b'\x1bE')
 
 
-    def addOutput(self, data, async=False):
-        if async:
+    def addOutput(self, data, isAsync=None, **kwargs):
+        isAsync = _get_async_param(isAsync, **kwargs)
+        if isAsync:
             self.terminal.eraseLine()
-            self.terminal.cursorBackward(len(self.lineBuffer) + len(self.ps[self.pn]))
+            self.terminal.cursorBackward(len(self.lineBuffer) +
+                                         len(self.ps[self.pn]))
 
         self.terminal.write(data)
 
-        if async:
+        if isAsync:
             if self._needsNewline():
                 self.terminal.nextLine()
 
@@ -277,27 +282,27 @@ class VT102Writer:
     """
 
     typeToColor = {
-        'identifier': '\x1b[31m',
-        'keyword': '\x1b[32m',
-        'parameter': '\x1b[33m',
-        'variable': '\x1b[1;33m',
-        'string': '\x1b[35m',
-        'number': '\x1b[36m',
-        'op': '\x1b[37m'}
+        'identifier': b'\x1b[31m',
+        'keyword': b'\x1b[32m',
+        'parameter': b'\x1b[33m',
+        'variable': b'\x1b[1;33m',
+        'string': b'\x1b[35m',
+        'number': b'\x1b[36m',
+        'op': b'\x1b[37m'}
 
-    normalColor = '\x1b[0m'
+    normalColor = b'\x1b[0m'
 
     def __init__(self):
         self.written = []
 
 
     def color(self, type):
-        r = self.typeToColor.get(type, '')
+        r = self.typeToColor.get(type, b'')
         return r
 
 
     def write(self, token, type=None):
-        if token and token != '\r':
+        if token and token != b'\r':
             c = self.color(type)
             if c:
                 self.written.append(c)
@@ -306,9 +311,13 @@ class VT102Writer:
                 self.written.append(self.normalColor)
 
 
-    def __str__(self):
-        s = ''.join(self.written)
-        return s.strip('\n').splitlines()[-1]
+    def __bytes__(self):
+        s = b''.join(self.written)
+        return s.strip(b'\n').splitlines()[-1]
+
+    if bytes == str:
+        # Compat with Python 2.7
+        __str__ = __bytes__
 
 
 
@@ -332,8 +341,7 @@ def lastColorizedLine(source):
         (tokenType, string, start, end, line) = token
         p(tokenType, string, start, end, line)
 
-    line = str(w).encode("utf-8")
-    return line
+    return bytes(w)
 
 
 

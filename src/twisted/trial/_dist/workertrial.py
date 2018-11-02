@@ -14,7 +14,6 @@ import sys
 import os
 import errno
 
-from twisted.python.compat import unicode
 
 
 def _setupPath(environ):
@@ -75,8 +74,8 @@ def main(_fdopen=os.fdopen):
     from twisted.trial._dist.worker import WorkerProtocol
     workerProtocol = WorkerProtocol(config['force-gc'])
 
-    protocolIn = _fdopen(_WORKER_AMP_STDIN)
-    protocolOut = _fdopen(_WORKER_AMP_STDOUT, 'w')
+    protocolIn = _fdopen(_WORKER_AMP_STDIN, 'rb')
+    protocolOut = _fdopen(_WORKER_AMP_STDOUT, 'wb')
     workerProtocol.makeConnection(FileWrapper(protocolOut))
 
     observer = WorkerLogObserver(workerProtocol)
@@ -85,8 +84,6 @@ def main(_fdopen=os.fdopen):
     while True:
         try:
             r = protocolIn.read(1)
-            if isinstance(r, unicode):
-                r = r.encode("utf-8")
         except IOError as e:
             if e.args[0] == errno.EINTR:
                 if sys.version_info < (3, 0):
