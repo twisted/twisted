@@ -322,7 +322,7 @@ def bootstrap(resolver, resolverFactory=None):
     """
     domains = [chr(ord('a') + i) for i in range(13)]
     L = [resolver.getHostByName('%s.root-servers.net' % d) for d in domains]
-    d = defer.DeferredList(L)
+    d = defer.DeferredList(L, consumeErrors=True)
 
     def buildResolver(res):
         return Resolver(

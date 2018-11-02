@@ -31,6 +31,7 @@ import struct
 import sys
 import tokenize
 from types import MethodType as _MethodType
+import warnings
 
 from io import TextIOBase, IOBase
 
@@ -40,15 +41,15 @@ if sys.version_info < (3, 0):
 else:
     _PY3 = True
 
-if sys.version_info >= (3, 4, 0):
-    _PY34PLUS = True
-else:
-    _PY34PLUS = False
-
 if sys.version_info >= (3, 5, 0):
     _PY35PLUS = True
 else:
     _PY35PLUS = False
+
+if sys.version_info >= (3, 7, 0):
+    _PY37PLUS = True
+else:
+    _PY37PLUS = False
 
 if platform.python_implementation() == 'PyPy':
     _PYPY = True
@@ -827,6 +828,39 @@ if _PY3:
 else:
     _tokenize = tokenize.generate_tokens
 
+try:
+    from collections.abc import Sequence
+except ImportError:
+    from collections import Sequence
+
+
+
+def _get_async_param(isAsync=None, **kwargs):
+    """
+    Provide a backwards-compatible way to get async param value that does not
+    cause a syntax error under Python 3.7.
+
+    @param isAsync: isAsync param value (should default to None)
+    @type isAsync: L{bool}
+
+    @param kwargs: keyword arguments of the caller (only async is allowed)
+    @type kwargs: L{dict}
+
+    @raise TypeError: Both isAsync and async specified.
+
+    @return: Final isAsync param value
+    @rtype: L{bool}
+    """
+    if 'async' in kwargs:
+        warnings.warn(
+            "'async' keyword argument is deprecated, please use isAsync",
+            DeprecationWarning, stacklevel=2)
+    if isAsync is None and 'async' in kwargs:
+        isAsync = kwargs.pop('async')
+    if kwargs:
+        raise TypeError
+    return bool(isAsync)
+
 
 
 __all__ = [
@@ -868,5 +902,7 @@ __all__ = [
     "intern",
     "unichr",
     "raw_input",
-    "_tokenize"
+    "_tokenize",
+    "_get_async_param",
+    "Sequence",
 ]

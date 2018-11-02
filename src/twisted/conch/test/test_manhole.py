@@ -120,6 +120,30 @@ class WriterTests(unittest.TestCase):
         manhole.lastColorizedLine("class foo:")
 
 
+    def test_unicode(self):
+        """
+        Colorize a Unicode string.
+        """
+        res = manhole.lastColorizedLine(u"\u0438")
+        self.assertTrue(isinstance(res, bytes))
+
+
+    def test_bytes(self):
+        """
+        Colorize a UTF-8 byte string.
+        """
+        res = manhole.lastColorizedLine(b"\xd0\xb8")
+        self.assertTrue(isinstance(res, bytes))
+
+
+    def test_identicalOutput(self):
+        """
+        The output of UTF-8 bytestrings and Unicode strings are identical.
+        """
+        self.assertEqual(manhole.lastColorizedLine(b"\xd0\xb8"),
+                         manhole.lastColorizedLine(u"\u0438"))
+
+
 
 class ManholeLoopbackMixin:
     serverProtocol = manhole.ColoredManhole

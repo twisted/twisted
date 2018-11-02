@@ -5,18 +5,38 @@
 
 from __future__ import division, absolute_import
 
-import itertools
 import warnings
 
 from constantly import Names, NamedConstant
 from hashlib import md5
 
 from OpenSSL import SSL, crypto
+from OpenSSL._util import lib as pyOpenSSLlib
 
+from twisted.internet.abstract import isIPAddress, isIPv6Address
 from twisted.python import log
+from twisted.python.randbytes import secureRandom
 from twisted.python._oldstyle import _oldStyle
 from ._idna import _idnaBytes
 
+from zope.interface import Interface, implementer
+from constantly import Flags, FlagConstant
+from incremental import Version
+
+from twisted.internet.defer import Deferred
+from twisted.internet.error import VerifyError, CertificateError
+from twisted.internet.interfaces import (
+    IAcceptableCiphers, ICipher, IOpenSSLClientConnectionCreator,
+    IOpenSSLContextFactory
+)
+
+from twisted.python import util
+from twisted.python.deprecate import _mutuallyExclusiveArguments
+from twisted.python.compat import nativeString, unicode
+from twisted.python.failure import Failure
+from twisted.python.util import FancyEqMixin
+
+from twisted.python.deprecate import deprecated
 
 
 
@@ -154,35 +174,8 @@ def _selectVerifyImplementation():
     return simpleVerifyHostname, SimpleVerificationError
 
 
+
 verifyHostname, VerificationError = _selectVerifyImplementation()
-
-
-from zope.interface import Interface, implementer
-from constantly import Flags, FlagConstant
-from incremental import Version
-
-from twisted.internet.defer import Deferred
-from twisted.internet.error import VerifyError, CertificateError
-from twisted.internet.interfaces import (
-    IAcceptableCiphers, ICipher, IOpenSSLClientConnectionCreator,
-    IOpenSSLContextFactory
-)
-
-from twisted.python import reflect, util
-from twisted.python.deprecate import _mutuallyExclusiveArguments
-from twisted.python.compat import nativeString, networkString, unicode
-from twisted.python.failure import Failure
-from twisted.python.util import FancyEqMixin
-
-from twisted.python.deprecate import deprecated
-
-
-def _sessionCounter(counter=itertools.count()):
-    """
-    Private - shared between all OpenSSLCertificateOptions, counts up to
-    provide a unique session id for each context.
-    """
-    return next(counter)
 
 
 
@@ -819,7 +812,7 @@ class KeyPair(PublicKey):
 
 
     @classmethod
-    def generate(Class, kind=crypto.TYPE_RSA, size=1024):
+    def generate(Class, kind=crypto.TYPE_RSA, size=2048):
         pkey = crypto.PKey()
         pkey.generate_key(kind, size)
         return Class(pkey)
@@ -1135,6 +1128,11 @@ class ClientTLSOptions(object):
         than working with Python's built-in (but sometimes broken) IDNA
         encoding.  ASCII values, however, will always work.
     @type _hostnameASCII: L{unicode}
+
+    @ivar _sendSNI: Whether or not to send the SNI with the handshake.
+        Will be L{False} if C{_hostname} is an IP address or L{True} if
+        C{_hostname} is a DNSName
+    @type _sendSNI: L{bool}
     """
 
     def __init__(self, hostname, ctx):
@@ -1149,7 +1147,14 @@ class ClientTLSOptions(object):
         """
         self._ctx = ctx
         self._hostname = hostname
-        self._hostnameBytes = _idnaBytes(hostname)
+
+        if isIPAddress(hostname) or isIPv6Address(hostname):
+            self._hostnameBytes = hostname.encode('ascii')
+            self._sendSNI = False
+        else:
+            self._hostnameBytes = _idnaBytes(hostname)
+            self._sendSNI = True
+
         self._hostnameASCII = self._hostnameBytes.decode("ascii")
         ctx.set_info_callback(
             _tolerateErrors(self._identityVerifyingInfoCallback)
@@ -1194,7 +1199,9 @@ class ClientTLSOptions(object):
         @param ret: ignored
         @type ret: ignored
         """
-        if where & SSL.SSL_CB_HANDSHAKE_START:
+        # Literal IPv4 and IPv6 addresses are not permitted
+        # as host names according to the RFCs
+        if where & SSL.SSL_CB_HANDSHAKE_START and self._sendSNI:
             connection.set_tlsext_host_name(self._hostnameBytes)
         elif where & SSL.SSL_CB_HANDSHAKE_DONE:
             try:
@@ -1318,7 +1325,6 @@ class OpenSSLCertificateOptions(object):
     _OP_NO_TLSv1_3 = _tlsDisableFlags[TLSVersion.TLSv1_3]
 
     _defaultMinimumTLSVersion = TLSVersion.TLSv1_0
-
 
     @_mutuallyExclusiveArguments([
         ['trustRoot', 'requireCertificate'],
@@ -1591,10 +1597,11 @@ class OpenSSLCertificateOptions(object):
             self._options |= SSL.OP_NO_TICKET
         self.dhParameters = dhParameters
 
-        try:
-            self._ecCurve = self._getEllipticCurve(_defaultCurveName)
-        except ValueError:
-            self._ecCurve = None
+        self._ecChooser = _ChooseDiffieHellmanEllipticCurve(
+            SSL.OPENSSL_VERSION_NUMBER,
+            openSSLlib=pyOpenSSLlib,
+            openSSLcrypto=crypto,
+        )
 
         if acceptableCiphers is None:
             acceptableCiphers = defaultCiphers
@@ -1626,18 +1633,6 @@ class OpenSSLCertificateOptions(object):
             )
 
         self._acceptableProtocols = acceptableProtocols
-
-
-    def _getEllipticCurve(self, name):
-        """
-        A patchable wrapper for L{OpenSSL.crypto.get_elliptic_curve}
-
-        @param name: The name of the elliptic curve to look up.
-        @type name: L{unicode}
-
-        @return: A pyOpenSSL elliptic curve object.
-        """
-        return crypto.get_elliptic_curve(name)
 
 
     def __getstate__(self):
@@ -1694,20 +1689,16 @@ class OpenSSLCertificateOptions(object):
             ctx.set_verify_depth(self.verifyDepth)
 
         if self.enableSessions:
-            name = "%s-%d" % (reflect.qual(self.__class__), _sessionCounter())
-            sessionName = md5(networkString(name)).hexdigest()
-
-            ctx.set_session_id(sessionName.encode('ascii'))
+            # 32 bytes is the maximum length supported
+            # Unfortunately pyOpenSSL doesn't provide SSL_MAX_SESSION_ID_LENGTH
+            sessionName = secureRandom(32)
+            ctx.set_session_id(sessionName)
 
         if self.dhParameters:
             ctx.load_tmp_dh(self.dhParameters._dhFile.path)
         ctx.set_cipher_list(self._cipherString.encode('ascii'))
 
-        if self._ecCurve is not None:
-            try:
-                ctx.set_tmp_ecdh(self._ecCurve)
-            except BaseException:
-                pass  # ECDHE support is best effort only.
+        self._ecChooser.configureECDHCurve(ctx)
 
         if self._acceptableProtocols:
             # Try to set NPN and ALPN. _acceptableProtocols cannot be set by
@@ -1850,6 +1841,103 @@ _defaultCurveName = u"prime256v1"
 
 
 
+class _ChooseDiffieHellmanEllipticCurve(object):
+    """
+    Chooses the best elliptic curve for Elliptic Curve Diffie-Hellman
+    key exchange, and provides a C{configureECDHCurve} method to set
+    the curve, when appropriate, on a new L{OpenSSL.SSL.Context}.
+
+    The C{configureECDHCurve} method will be set to one of the
+    following based on the provided OpenSSL version and configuration:
+
+        - L{_configureOpenSSL110}
+
+        - L{_configureOpenSSL102}
+
+        - L{_configureOpenSSL101}
+
+        - L{_configureOpenSSL101NoCurves}.
+
+    @param openSSLVersion: The OpenSSL version number.
+    @type openSSLVersion: L{int}
+
+    @see: L{OpenSSL.SSL.OPENSSL_VERSION_NUMBER}
+
+    @param openSSLlib: The OpenSSL C{cffi} library module.
+    @param openSSLlib: The OpenSSL L{crypto} module.
+
+    @see: L{crypto}
+    """
+
+    def __init__(self, openSSLVersion, openSSLlib, openSSLcrypto):
+        self._openSSLlib = openSSLlib
+        self._openSSLcrypto = openSSLcrypto
+        if openSSLVersion >= 0x10100000:
+            self.configureECDHCurve = self._configureOpenSSL110
+        elif openSSLVersion >= 0x10002000:
+            self.configureECDHCurve = self._configureOpenSSL102
+        else:
+            try:
+                self._ecCurve = openSSLcrypto.get_elliptic_curve(
+                    _defaultCurveName)
+            except ValueError:
+                # The get_elliptic_curve method raises a ValueError
+                # when the curve does not exist.
+                self.configureECDHCurve = self._configureOpenSSL101NoCurves
+            else:
+                self.configureECDHCurve = self._configureOpenSSL101
+
+
+    def _configureOpenSSL110(self, ctx):
+        """
+        OpenSSL 1.1.0 Contexts are preconfigured with an optimal set
+        of ECDH curves.  This method does nothing.
+
+        @param ctx: L{OpenSSL.SSL.Context}
+        """
+
+
+    def _configureOpenSSL102(self, ctx):
+        """
+        Have the context automatically choose elliptic curves for
+        ECDH.  Run on OpenSSL 1.0.2 and OpenSSL 1.1.0+, but only has
+        an effect on OpenSSL 1.0.2.
+
+        @param ctx: The context which .
+        @type ctx: L{OpenSSL.SSL.Context}
+        """
+        ctxPtr = ctx._context
+        try:
+            self._openSSLlib.SSL_CTX_set_ecdh_auto(ctxPtr, True)
+        except:
+            pass
+
+
+    def _configureOpenSSL101(self, ctx):
+        """
+        Set the default elliptic curve for ECDH on the context.  Only
+        run on OpenSSL 1.0.1.
+
+        @param ctx: The context on which to set the ECDH curve.
+        @type ctx: L{OpenSSL.SSL.Context}
+        """
+        try:
+            ctx.set_tmp_ecdh(self._ecCurve)
+        except:
+            pass
+
+
+    def _configureOpenSSL101NoCurves(self, ctx):
+        """
+        No elliptic curves are available on OpenSSL 1.0.1. We can't
+        set anything, so do nothing.
+
+        @param ctx: The context on which to set the ECDH curve.
+        @type ctx: L{OpenSSL.SSL.Context}
+        """
+
+
+
 class OpenSSLDiffieHellmanParameters(object):
     """
     A representation of key generation parameters that are required for
@@ -1867,7 +1955,7 @@ class OpenSSLDiffieHellmanParameters(object):
         Such a file can be generated using the C{openssl} command line tool as
         following:
 
-        C{openssl dhparam -out dh_param_1024.pem -2 1024}
+        C{openssl dhparam -out dh_param_2048.pem -2 2048}
 
         Please refer to U{OpenSSL's C{dhparam} documentation
         <http://www.openssl.org/docs/apps/dhparam.html>} for further details.
