@@ -96,8 +96,7 @@ def runWithProtocol(klass):
     oldSettings = termios.tcgetattr(fd)
     tty.setraw(fd)
     try:
-        p = ServerProtocol(klass)
-        stdio.StandardIO(p)
+        stdio.StandardIO(ServerProtocol(klass))
         reactor.run()
     finally:
         termios.tcsetattr(fd, termios.TCSANOW, oldSettings)

@@ -242,7 +242,17 @@ class DelayedCallMixin(object):
         self.assertEqual(
             str(dc),
             "<DelayedCall 0x%x [10.5s] called=0 cancelled=0 nothing(3, A=5)>"
-                % (id(dc),))
+            % (id(dc),),
+        )
+
+
+    def test_repr(self):
+        """
+        The string representation of a L{DelayedCall} instance, as returned by
+        {repr}, is identical to that returned by L{str}.
+        """
+        dc = DelayedCall(13, nothing, (6, ), {"A": 9}, None, None, lambda: 1.6)
+        self.assertEqual(str(dc), repr(dc))
 
 
     def test_lt(self):
