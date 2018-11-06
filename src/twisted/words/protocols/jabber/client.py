@@ -180,6 +180,9 @@ class BasicAuthenticator(xmlstream.ConnectAuthenticator):
     errors will be generated (again).
 
 
+    @ivar check_certificate: indicates if TLS certificate must be verified
+    @type check_certificate: C{bool}
+
     @cvar INVALID_USER_EVENT: See L{IQAuthInitializer.INVALID_USER_EVENT}.
     @type INVALID_USER_EVENT: L{str}
 
@@ -197,21 +200,25 @@ class BasicAuthenticator(xmlstream.ConnectAuthenticator):
     AUTH_FAILED_EVENT = IQAuthInitializer.AUTH_FAILED_EVENT
     REGISTER_FAILED_EVENT = "//event/client/basicauth/registerfailed"
 
-    def __init__(self, jid, password):
+    def __init__(self, jid, password, check_certificate=True):
         xmlstream.ConnectAuthenticator.__init__(self, jid.host)
         self.jid = jid
         self.password = password
+        self.check_certificate = check_certificate
 
     def associateWithStream(self, xs):
         xs.version = (0, 0)
         xmlstream.ConnectAuthenticator.associateWithStream(self, xs)
 
-        inits = [ (xmlstream.TLSInitiatingInitializer, False),
-                  (IQAuthInitializer, True),
-                ]
+        inits = [(xmlstream.TLSInitiatingInitializer, False,
+                 {"check_certificate": self.check_certificate}),
+                 (IQAuthInitializer, True, {}),
+                 ]
 
-        for initClass, required in inits:
+        for initClass, required, attribs in inits:
             init = initClass(xs)
+            for attrib, value in attribs.items():
+                setattr(init, attrib, value)
             init.required = required
             xs.initializers.append(init)
 
@@ -302,7 +309,7 @@ class SessionInitializer(xmlstream.BaseFeatureInitiatingInitializer):
 
 
 
-def XMPPClientFactory(jid, password):
+def XMPPClientFactory(jid, password, check_certificate=True):
     """
     Client factory for XMPP 1.0 (only).
 
@@ -316,10 +323,12 @@ def XMPPClientFactory(jid, password):
     @type jid: L{jid.JID}
     @param password: password to authenticate with.
     @type password: L{unicode}
+    @param check_certificate: indicates if TLS certificate must be verified
+    @type check_certificate: L{bool}
     @return: XML stream factory.
     @rtype: L{xmlstream.XmlStreamFactory}
     """
-    a = XMPPAuthenticator(jid, password)
+    a = XMPPAuthenticator(jid, password, check_certificate)
     return xmlstream.XmlStreamFactory(a)
 
 
@@ -356,14 +365,17 @@ class XMPPAuthenticator(xmlstream.ConnectAuthenticator):
     @type jid: L{jid.JID}
     @ivar password: password to be used during SASL authentication.
     @type password: L{unicode}
+    @ivar check_certificate: indicates if TLS certificate must be verified
+    @type check_certificate: C{bool}
     """
 
     namespace = 'jabber:client'
 
-    def __init__(self, jid, password):
+    def __init__(self, jid, password, check_certificate=True):
         xmlstream.ConnectAuthenticator.__init__(self, jid.host)
         self.jid = jid
         self.password = password
+        self.check_certificate = check_certificate
 
 
     def associateWithStream(self, xs):
@@ -378,13 +390,16 @@ class XMPPAuthenticator(xmlstream.ConnectAuthenticator):
         xmlstream.ConnectAuthenticator.associateWithStream(self, xs)
 
         xs.initializers = [CheckVersionInitializer(xs)]
-        inits = [ (xmlstream.TLSInitiatingInitializer, False),
-                  (sasl.SASLInitiatingInitializer, True),
-                  (BindInitializer, False),
-                  (SessionInitializer, False),
-                ]
+        inits = [(xmlstream.TLSInitiatingInitializer, False,
+                 {"check_certificate": self.check_certificate}),
+                 (sasl.SASLInitiatingInitializer, True, {}),
+                 (BindInitializer, False, {}),
+                 (SessionInitializer, False, {}),
+                 ]
 
-        for initClass, required in inits:
+        for initClass, required, attribs in inits:
             init = initClass(xs)
+            for attrib, value in attribs.items():
+                setattr(init, attrib, value)
             init.required = required
             xs.initializers.append(init)

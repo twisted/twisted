@@ -402,19 +402,22 @@ class TLSInitiatingInitializer(BaseFeatureInitiatingInitializer):
 
     @cvar wanted: indicates if TLS negotiation is wanted.
     @type wanted: C{bool}
+    @cvar check_certificate: indicates if TLS certificate must be verified
+    @type check_certificate: C{bool}
     """
 
     feature = (NS_XMPP_TLS, 'starttls')
     wanted = True
+    check_certificate = True
     _deferred = None
 
     def onProceed(self, obj):
         """
         Proceed with TLS negotiation and reset the XML stream.
         """
-
         self.xmlstream.removeObserver('/failure', self.onFailure)
-        ctx = ssl.CertificateOptions()
+        trustRoot = ssl.platformTrust() if self.check_certificate else None
+        ctx = ssl.CertificateOptions(trustRoot=trustRoot)
         self.xmlstream.transport.startTLS(ctx)
         self.xmlstream.reset()
         self.xmlstream.sendHeader()

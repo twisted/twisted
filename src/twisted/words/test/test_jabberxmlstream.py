@@ -759,6 +759,45 @@ class TLSInitiatingInitializerTests(unittest.TestCase):
         return d
 
 
+    def _assertCheckCertificate(self, ctx):
+        self.assertTrue(ctx.verify)
+        self.assertIsNotNone(ctx.trustRoot)
+        self.done.append('TLS')
+
+
+    def testCheckCertificate(self):
+        """
+        Check that check_certificate enable certificate validation
+        """
+        self.xmlstream.transport = proto_helpers.StringTransport()
+        self.xmlstream.transport.startTLS = self._assertCheckCertificate
+        self.xmlstream.reset = lambda: self.done.append('reset')
+        self.xmlstream.sendHeader = lambda: self.done.append('header')
+        d = self.init.start()
+        self.xmlstream.dataReceived("<proceed xmlns='%s'/>" % NS_XMPP_TLS)
+        return d
+
+
+    def _assertNoCheckCertificate(self, ctx):
+        self.assertFalse(ctx.verify)
+        self.assertIsNone(ctx.trustRoot)
+        self.done.append('TLS')
+
+
+    def testNoCheckCertificate(self):
+        """
+        Check that check_certificate can be disabled
+        """
+        self.xmlstream.transport = proto_helpers.StringTransport()
+        self.xmlstream.transport.startTLS = self._assertNoCheckCertificate
+        self.xmlstream.reset = lambda: self.done.append('reset')
+        self.xmlstream.sendHeader = lambda: self.done.append('header')
+        self.init.check_certificate = False
+        d = self.init.start()
+        self.xmlstream.dataReceived("<proceed xmlns='%s'/>" % NS_XMPP_TLS)
+        return d
+
+
     def testFailed(self):
         """
         Test failed TLS negotiation.

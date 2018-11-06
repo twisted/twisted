@@ -413,6 +413,13 @@ class XMPPAuthenticatorTests(unittest.TestCase):
         self.assertIsInstance(session, client.SessionInitializer)
 
         self.assertFalse(tls.required)
+        self.assertTrue(tls.check_certificate)
         self.assertTrue(sasl.required)
         self.assertFalse(bind.required)
         self.assertFalse(session.required)
+
+        # we now check that check_certificate can be disabled
+        xs = client.XMPPClientFactory(self.client_jid,
+                                      'secret', False).buildProtocol(None)
+        _, tls, _, _, _ = xs.initializers
+        self.assertFalse(tls.check_certificate)
