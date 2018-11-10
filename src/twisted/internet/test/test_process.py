@@ -844,6 +844,19 @@ class ProcessTestsBuilder(ProcessTestsBuilderBase):
 
         reactor.callWhenRunning(spawnChild)
         self.runReactor(reactor)
+    
+    def test_creationFlagsThrows(self):
+        """
+        L{twisted.internet.process} cannot accept creation flags.
+        """
+        reactor = self.buildReactor()
+        with self.assertRaises(ValueError):
+            reactor.spawnProcess(ProcessProtocol(), 'non-existent', creationFlags=0)
+    
+    if platform.isWindows():
+        test_creationFlagsThrows.skip = "Only relevant on non-Windows " \
+                                        "platforms."
+    
 globals().update(ProcessTestsBuilder.makeTestCaseClasses())
 
 
