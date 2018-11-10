@@ -565,7 +565,7 @@ class OurServerOurClientTests(SFTPTestBase):
         warnings = self.flushWarnings()
         message = (
             'Using twisted.conch.ssh.filetransfer.ClientDirectory'
-            ' as an iterator was deprecated in Twisted NEXT.'
+            ' as an iterator was deprecated in Twisted 18.9.0.'
             )
         self.assertEqual(1, len(warnings))
         self.assertEqual(DeprecationWarning, warnings[0]['category'])
