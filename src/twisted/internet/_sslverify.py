@@ -5,7 +5,6 @@
 
 from __future__ import division, absolute_import
 
-import itertools
 import warnings
 
 from constantly import Names, NamedConstant
@@ -14,10 +13,30 @@ from hashlib import md5
 from OpenSSL import SSL, crypto
 from OpenSSL._util import lib as pyOpenSSLlib
 
+from twisted.internet.abstract import isIPAddress, isIPv6Address
 from twisted.python import log
+from twisted.python.randbytes import secureRandom
 from twisted.python._oldstyle import _oldStyle
 from ._idna import _idnaBytes
 
+from zope.interface import Interface, implementer
+from constantly import Flags, FlagConstant
+from incremental import Version
+
+from twisted.internet.defer import Deferred
+from twisted.internet.error import VerifyError, CertificateError
+from twisted.internet.interfaces import (
+    IAcceptableCiphers, ICipher, IOpenSSLClientConnectionCreator,
+    IOpenSSLContextFactory
+)
+
+from twisted.python import util
+from twisted.python.deprecate import _mutuallyExclusiveArguments
+from twisted.python.compat import nativeString, unicode
+from twisted.python.failure import Failure
+from twisted.python.util import FancyEqMixin
+
+from twisted.python.deprecate import deprecated
 
 
 
@@ -155,35 +174,8 @@ def _selectVerifyImplementation():
     return simpleVerifyHostname, SimpleVerificationError
 
 
+
 verifyHostname, VerificationError = _selectVerifyImplementation()
-
-
-from zope.interface import Interface, implementer
-from constantly import Flags, FlagConstant
-from incremental import Version
-
-from twisted.internet.defer import Deferred
-from twisted.internet.error import VerifyError, CertificateError
-from twisted.internet.interfaces import (
-    IAcceptableCiphers, ICipher, IOpenSSLClientConnectionCreator,
-    IOpenSSLContextFactory
-)
-
-from twisted.python import reflect, util
-from twisted.python.deprecate import _mutuallyExclusiveArguments
-from twisted.python.compat import nativeString, networkString, unicode
-from twisted.python.failure import Failure
-from twisted.python.util import FancyEqMixin
-
-from twisted.python.deprecate import deprecated
-
-
-def _sessionCounter(counter=itertools.count()):
-    """
-    Private - shared between all OpenSSLCertificateOptions, counts up to
-    provide a unique session id for each context.
-    """
-    return next(counter)
 
 
 
@@ -820,7 +812,7 @@ class KeyPair(PublicKey):
 
 
     @classmethod
-    def generate(Class, kind=crypto.TYPE_RSA, size=1024):
+    def generate(Class, kind=crypto.TYPE_RSA, size=2048):
         pkey = crypto.PKey()
         pkey.generate_key(kind, size)
         return Class(pkey)
@@ -1136,6 +1128,11 @@ class ClientTLSOptions(object):
         than working with Python's built-in (but sometimes broken) IDNA
         encoding.  ASCII values, however, will always work.
     @type _hostnameASCII: L{unicode}
+
+    @ivar _sendSNI: Whether or not to send the SNI with the handshake.
+        Will be L{False} if C{_hostname} is an IP address or L{True} if
+        C{_hostname} is a DNSName
+    @type _sendSNI: L{bool}
     """
 
     def __init__(self, hostname, ctx):
@@ -1150,7 +1147,14 @@ class ClientTLSOptions(object):
         """
         self._ctx = ctx
         self._hostname = hostname
-        self._hostnameBytes = _idnaBytes(hostname)
+
+        if isIPAddress(hostname) or isIPv6Address(hostname):
+            self._hostnameBytes = hostname.encode('ascii')
+            self._sendSNI = False
+        else:
+            self._hostnameBytes = _idnaBytes(hostname)
+            self._sendSNI = True
+
         self._hostnameASCII = self._hostnameBytes.decode("ascii")
         ctx.set_info_callback(
             _tolerateErrors(self._identityVerifyingInfoCallback)
@@ -1195,7 +1199,9 @@ class ClientTLSOptions(object):
         @param ret: ignored
         @type ret: ignored
         """
-        if where & SSL.SSL_CB_HANDSHAKE_START:
+        # Literal IPv4 and IPv6 addresses are not permitted
+        # as host names according to the RFCs
+        if where & SSL.SSL_CB_HANDSHAKE_START and self._sendSNI:
             connection.set_tlsext_host_name(self._hostnameBytes)
         elif where & SSL.SSL_CB_HANDSHAKE_DONE:
             try:
@@ -1683,10 +1689,10 @@ class OpenSSLCertificateOptions(object):
             ctx.set_verify_depth(self.verifyDepth)
 
         if self.enableSessions:
-            name = "%s-%d" % (reflect.qual(self.__class__), _sessionCounter())
-            sessionName = md5(networkString(name)).hexdigest()
-
-            ctx.set_session_id(sessionName.encode('ascii'))
+            # 32 bytes is the maximum length supported
+            # Unfortunately pyOpenSSL doesn't provide SSL_MAX_SESSION_ID_LENGTH
+            sessionName = secureRandom(32)
+            ctx.set_session_id(sessionName)
 
         if self.dhParameters:
             ctx.load_tmp_dh(self.dhParameters._dhFile.path)
@@ -1949,7 +1955,7 @@ class OpenSSLDiffieHellmanParameters(object):
         Such a file can be generated using the C{openssl} command line tool as
         following:
 
-        C{openssl dhparam -out dh_param_1024.pem -2 1024}
+        C{openssl dhparam -out dh_param_2048.pem -2 2048}
 
         Please refer to U{OpenSSL's C{dhparam} documentation
         <http://www.openssl.org/docs/apps/dhparam.html>} for further details.

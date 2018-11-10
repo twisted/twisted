@@ -1,1 +1,0 @@
-twisted.enterprise.adbapi.ConnectionPool.runWithConnection and runInteraction now use the reactor that is passed to ConnectionPool's constructor.

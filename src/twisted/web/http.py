@@ -105,7 +105,7 @@ from twisted.protocols import policies, basic
 
 from twisted.web.iweb import (
     IRequest, IAccessLogFormatter, INonQueuedRequestFactory)
-from twisted.web.http_headers import Headers
+from twisted.web.http_headers import Headers, _sanitizeLinearWhitespace
 
 try:
     from twisted.web._http2 import H2Connection
@@ -528,7 +528,10 @@ class HTTPClient(basic.LineReceiver):
         if not isinstance(value, bytes):
             # XXX Deprecate this case
             value = networkString(str(value))
-        self.transport.writeSequence([name, b': ', value, b'\r\n'])
+        santizedName = _sanitizeLinearWhitespace(name)
+        santizedValue = _sanitizeLinearWhitespace(value)
+        self.transport.writeSequence(
+            [santizedName, b': ', santizedValue, b'\r\n'])
 
     def endHeaders(self):
         self.transport.write(b'\r\n')
@@ -1107,13 +1110,6 @@ class Request:
 
             for name, values in self.responseHeaders.getAllRawHeaders():
                 for value in values:
-                    if not isinstance(value, bytes):
-                        warnings.warn(
-                            "Passing non-bytes header values is deprecated "
-                            "since Twisted 12.3. Pass only bytes instead.",
-                            category=DeprecationWarning, stacklevel=2)
-                        # Backward compatible cast for non-bytes values
-                        value = networkString('%s' % (value,))
                     headers.append((name, value))
 
             for cookie in self.cookies:
@@ -1190,7 +1186,12 @@ class Request:
         """
         def _ensureBytes(val):
             """
-            Ensure that C{val} is bytes, encoding using UTF-8 if needed.
+            Ensure that C{val} is bytes, encoding using UTF-8 if
+            needed.
+
+            @param val: L{bytes} or L{unicode}
+
+            @return: L{bytes}
             """
             if val is None:
                 # It's None, so we don't want to touch it
@@ -1198,29 +1199,34 @@ class Request:
 
             if isinstance(val, bytes):
                 return val
-            elif isinstance(val, unicode):
+            else:
                 return val.encode('utf8')
 
-            # Not bytes or unicode, relying on string conversion legacy
-            # str() it, and warn, it's the best we can do
-            warnings.warn(
-                "Passing non-bytes or non-unicode cookie arguments is "
-                "deprecated since Twisted 16.1.",
-                category=DeprecationWarning, stacklevel=3)
 
-            return str(val).encode('utf8')
+        def _sanitize(val):
+            """
+            Replace linear whitespace (C{\r}, C{\n}, C{\r\n}) and
+            semicolons C{;} in C{val} with a single space.
 
-        cookie = _ensureBytes(k) + b"=" + _ensureBytes(v)
+            @param val: L{bytes}
+            @return: L{bytes}
+            """
+            return _sanitizeLinearWhitespace(val).replace(b';', b' ')
+
+        cookie = (
+            _sanitize(_ensureBytes(k)) +
+            b"=" +
+            _sanitize(_ensureBytes(v)))
         if expires is not None:
-            cookie = cookie + b"; Expires=" + _ensureBytes(expires)
+            cookie = cookie + b"; Expires=" + _sanitize(_ensureBytes(expires))
         if domain is not None:
-            cookie = cookie + b"; Domain=" + _ensureBytes(domain)
+            cookie = cookie + b"; Domain=" + _sanitize(_ensureBytes(domain))
         if path is not None:
-            cookie = cookie + b"; Path=" + _ensureBytes(path)
+            cookie = cookie + b"; Path=" + _sanitize(_ensureBytes(path))
         if max_age is not None:
-            cookie = cookie + b"; Max-Age=" + _ensureBytes(max_age)
+            cookie = cookie + b"; Max-Age=" + _sanitize(_ensureBytes(max_age))
         if comment is not None:
-            cookie = cookie + b"; Comment=" + _ensureBytes(comment)
+            cookie = cookie + b"; Comment=" + _sanitize(_ensureBytes(comment))
         if secure:
             cookie = cookie + b"; Secure"
         if httpOnly:
@@ -1596,7 +1602,7 @@ class Request:
         """
         A C{Request} is hashable so that it can be used as a mapping key.
 
-        @return A C{int} based on the instance's identity.
+        @return: A C{int} based on the instance's identity.
         """
         return id(self)
 
@@ -2376,10 +2382,16 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         @param headers: The headers to write to the transport.
         @type headers: L{twisted.web.http_headers.Headers}
         """
+        sanitizedHeaders = Headers()
+        for name, value in headers:
+            sanitizedHeaders.addRawHeader(name, value)
+
         responseLine = version + b" " + code + b" " + reason + b"\r\n"
         headerSequence = [responseLine]
         headerSequence.extend(
-            name + b': ' + value + b"\r\n" for name, value in headers
+            name + b': ' + value + b"\r\n"
+            for name, values in sanitizedHeaders.getAllRawHeaders()
+            for value in values
         )
         headerSequence.append(b"\r\n")
         self.transport.writeSequence(headerSequence)
@@ -2666,7 +2678,7 @@ class _XForwardedForAddress(object):
 class _XForwardedForRequest(proxyForInterface(IRequest, "_request")):
     """
     Add a layer on top of another request that only uses the value of an
-    X-Forwarded-For header as the result of C{getClientIP}.
+    X-Forwarded-For header as the result of C{getClientAddress}.
     """
     def getClientAddress(self):
         """
@@ -2953,12 +2965,21 @@ class HTTPFactory(protocol.ServerFactory):
     def __init__(self, logPath=None, timeout=_REQUEST_TIMEOUT,
                  logFormatter=None, reactor=None):
         """
+        @param logPath: File path to which access log messages will be written
+            or C{None} to disable logging.
+        @type logPath: L{str} or L{bytes}
+
+        @param timeout: The initial value of L{timeOut}, which defines the idle
+            connection timeout in seconds, or C{None} to disable the idle
+            timeout.
+        @type timeout: L{float}
+
         @param logFormatter: An object to format requests into log lines for
-            the access log.
+            the access log.  L{combinedLogFormatter} when C{None} is passed.
         @type logFormatter: L{IAccessLogFormatter} provider
 
-        @param reactor: A L{IReactorTime} provider used to compute logging
-            timestamps.
+        @param reactor: A L{IReactorTime} provider used to manage connection
+            timeouts and compute logging timestamps.
         """
         if not reactor:
             from twisted.internet import reactor

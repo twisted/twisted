@@ -75,14 +75,6 @@ def getMP(data, count=1):
 
 
 
-def _MPpow(x, y, z):
-    """
-    Return the MP version of C{(x ** y) % z}.
-    """
-    return MP(pow(x, y, z))
-
-
-
 def ffs(c, s):
     """
     first from second

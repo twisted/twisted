@@ -7,6 +7,7 @@ from __future__ import division, absolute_import
 
 import errno
 import struct
+import warnings
 
 from zope.interface import implementer
 
@@ -923,6 +924,11 @@ class ClientDirectory:
 
 
     def __next__(self):
+        warnings.warn(
+            ('Using twisted.conch.ssh.filetransfer.ClientDirectory '
+             'as an iterator was deprecated in Twisted 18.9.0.'),
+            category=DeprecationWarning,
+            stacklevel=2)
         if self.filesCache:
             return self.filesCache.pop(0)
         if self.filesCache is None:
