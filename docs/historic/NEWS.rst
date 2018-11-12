@@ -937,7 +937,7 @@ Bugfixes
    values of KEYWORD and UNKEYWORD and also emits them without adding
    quotes (which are also illegal). (#4392)
  - twisted.mail.imap4.IMAP4Client can now interpret the BODY response
-   for multipart/* messages with parts which are also multipart/*.
+   for ``multipart/*`` messages with parts which are also ``multipart/*``.
    (#4631)
 
 Deprecations and Removals
@@ -2060,7 +2060,7 @@ Bugfixes
 
 Deprecations and Removals
 -------------------------
- - The --user option to `twistd manhole' has been removed as it was
+ - The --user option to ``twistd manhole`` has been removed as it was
    dead code with no functionality associated with it. (#5283)
 
 Other
@@ -2248,7 +2248,7 @@ Features
    st_dev, st_nlink, st_uid, and st_gid fields.  This is in
    preparation for the deprecation of FilePath.statinfo. (#4712)
  - IPv4Address and UNIXAddress now have a __hash__ method. (#4783)
- - twisted.protocols.ftp.FTP.ftp_STOR now catches `FTPCmdError`s
+ - twisted.protocols.ftp.FTP.ftp_STOR now catches ``FTPCmdError`` s
    raised by the file writer, and returns the error back to the
    client. (#4909)
 

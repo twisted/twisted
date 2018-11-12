@@ -68,6 +68,7 @@ on event-based network programming and multiprotocol integration.
         "Programming Language :: Python :: 3.4",
         "Programming Language :: Python :: 3.5",
         "Programming Language :: Python :: 3.6",
+        "Programming Language :: Python :: 3.7",
     ],
 )
 
@@ -100,6 +101,7 @@ _EXTRA_OPTIONS = dict(
         'pyasn1',
         'cryptography >= 1.5',
         'appdirs >= 1.4.0',
+        'bcrypt >= 3.0.0',
     ],
     soap=['soappy'],
     serial=['pyserial >= 3.0'],

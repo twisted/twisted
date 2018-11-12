@@ -27,7 +27,7 @@ class _BaseSentence(object):
             \"\"\"
             ALLOWED_ATTRIBUTES = FooProtocol.getSentenceAttributes()
 
-    @ivar presentAttribues: An iterable containing the names of the
+    @ivar presentAttributes: An iterable containing the names of the
         attributes that are present in this sentence.
     @type presentAttributes: iterable of C{str}
 
