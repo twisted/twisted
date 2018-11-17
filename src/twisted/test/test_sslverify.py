@@ -1031,8 +1031,9 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, unittest.TestCase):
                 insecurelyLowerMinimumTo=sslverify.TLSVersion.TLSv1_2,
             )
 
-        # Best error message
-        self.assertEqual(e.exception.args, ("nope",))
+        self.assertIn('raiseMinimumTo', e.exception.args[0])
+        self.assertIn('insecurelyLowerMinimumTo', e.exception.args[0])
+        self.assertIn('exclusive', e.exception.args[0])
 
 
     def test_tlsProtocolsNoMethodWithAtLeast(self):
@@ -1049,8 +1050,9 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, unittest.TestCase):
                 raiseMinimumTo=sslverify.TLSVersion.TLSv1_2,
             )
 
-        # Best error message
-        self.assertEqual(e.exception.args, ("nope",))
+        self.assertIn('method', e.exception.args[0])
+        self.assertIn('raiseMinimumTo', e.exception.args[0])
+        self.assertIn('exclusive', e.exception.args[0])
 
 
     def test_tlsProtocolsNoMethodWithMinimum(self):
@@ -1067,8 +1069,9 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, unittest.TestCase):
                 insecurelyLowerMinimumTo=sslverify.TLSVersion.TLSv1_2,
             )
 
-        # Best error message
-        self.assertEqual(e.exception.args, ("nope",))
+        self.assertIn('method', e.exception.args[0])
+        self.assertIn('insecurelyLowerMinimumTo', e.exception.args[0])
+        self.assertIn('exclusive', e.exception.args[0])
 
 
     def test_tlsProtocolsNoMethodWithMaximum(self):
@@ -1085,8 +1088,9 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, unittest.TestCase):
                 lowerMaximumSecurityTo=sslverify.TLSVersion.TLSv1_2,
             )
 
-        # Best error message
-        self.assertEqual(e.exception.args, ("nope",))
+        self.assertIn('method', e.exception.args[0])
+        self.assertIn('lowerMaximumSecurityTo', e.exception.args[0])
+        self.assertIn('exclusive', e.exception.args[0])
 
 
     def test_tlsVersionRangeInOrder(self):

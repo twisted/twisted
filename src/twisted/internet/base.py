@@ -1168,6 +1168,11 @@ class BaseConnector:
             reflect.qual(self.__class__) + " did not implement "
             "getDestination")
 
+    def __repr__(self):
+        return "<%s instance at 0x%x %s %s>" % (
+            reflect.qual(self.__class__), id(self), self.state,
+            self.getDestination())
+
 
 
 class BasePort(abstract.FileDescriptor):
