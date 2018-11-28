@@ -898,21 +898,6 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, unittest.TestCase):
         self.assertEqual(opts._cipherString.encode('ascii'), ctx._cipherList)
 
 
-    def test_givesMeaningfulErrorMessageIfNoCipherMatches(self):
-        """
-        If there is no valid cipher that matches the user's wishes,
-        a L{ValueError} is raised.
-        """
-        self.assertRaises(
-            ValueError,
-            sslverify.OpenSSLCertificateOptions,
-            privateKey=self.sKey,
-            certificate=self.sCert,
-            acceptableCiphers=
-            sslverify.OpenSSLAcceptableCiphers.fromOpenSSLCipherString('')
-        )
-
-
     def test_honorsAcceptableCiphersArgument(self):
         """
         If acceptable ciphers are passed, they are used.
