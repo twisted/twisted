@@ -1193,7 +1193,12 @@ class ProperlyCloseFilesMixin:
             expectedErrorCode = self.getHandleErrorCode()
             exception = self.assertRaises(
                 self.getHandleExceptionType(), client.handle.send, b'bytes')
-            self.assertEqual(exception.args[0], expectedErrorCode)
+            try:
+                self.assertEqual(exception.args[0][0][0], expectedErrorCode[0][0])
+                self.assertEqual(exception.args[0][0][2], expectedErrorCode[0][2])
+            except TypeError:
+                self.assertEqual(exception.args[0], expectedErrorCode)
+
         clientDeferred.addCallback(clientDisconnected)
 
         def cleanup(passthrough):
