@@ -2710,7 +2710,7 @@ class ExpandCipherStringTests(unittest.TestCase):
     if skipSSL:
         skip = skipSSL
 
-    def test_doesNotStumbleOverEmptyList(self):
+    def _test_doesNotStumbleOverEmptyList(self):
         """
         If the expanded cipher list is empty, an empty L{list} is returned.
         """
