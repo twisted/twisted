@@ -501,6 +501,18 @@ class Deferred:
         self._startRunCallbacks(fail)
 
 
+    def _callbackOnEmpty(self, result):
+        assert not self.called
+        assert not self.callbacks
+
+        self.called = True
+        self.result = result
+        if self.debug:
+            if self._debugInfo is None:
+                self._debugInfo = DebugInfo()
+            self._debugInfo.invoker = traceback.format_stack()[:-2]
+
+
     def pause(self):
         """
         Stop processing on a L{Deferred} until L{unpause}() is called.
@@ -1368,23 +1380,35 @@ class _InlineCallbackStatus(object):
     """
     Status of an L{inlineCallbacks} invocation.
 
+    @ivar deferred: the L{Deferred} to callback or errback when the generator
+        invocation has finished.
+
+    @ivar g: The generator that the L{inlineCallbacks} invocation wraps.
+
     @ivar waitingOn: the L{Deferred} being waited upon (which
         L{_inlineCallbacks} must fill out before returning)
 
-    @ivar deferred: the L{Deferred} to callback or errback when the generator
-        invocation has finished.
+    @ivar waitingOnStatus: The status of L{inlineCallbacks} invocation that
+        needs to be resumed once waitingOn deferred is called. This variable
+        is used only in the cancellation code path.
 
     @ivar waiting: True if the L{inlineCallbacks} loop is waiting for result
 
     @ivar result: The result of the previous deferred in the L{inlineCallbacks}
         loop
+
+    @ivar parentStatus: The status of the parent L{inlineCallbacks} invocation.
+        The attribute is set to non-L{None} value only if we know that there
+        are no intermediate callbacks.
     """
 
     deferred = attr.ib()
     g = attr.ib()
     waitingOn = attr.ib(default=None)
+    waitingOnStatus = attr.ib(default=None)
     waiting = attr.ib(default=True)
     result = attr.ib(default=None)
+    parentStatus = attr.ib(default=None)
 
 
 
@@ -1412,6 +1436,18 @@ def _inlineCallbacks(result, status):
     # arising from repeatedly yielding immediately ready deferreds.  This while
     # loop and the waiting and result variables in L{_InlineCallbackStatus}
     # solve that by manually unfolding the recursion.
+    #
+    # In addition to that we optimize case of inlineCallbacks-decorated
+    # function yielding its result directly to yield of another
+    # inlineCallbacks-decorated function. This way we skip a lot of expensive
+    # computation by sending the result of one generator directly to another.
+    #
+    # The condition that enables this optimized behavior is when we get a
+    # Deferred with _inlineCallbacksStatus attribute set and without callbacks.
+    # If it's been called then we can steal its result directly. If it hasn't
+    # been called, then it means no intermediate callbacks have been added
+    # and the child inlineCallbacks can inject its return value directly to
+    # parent inlineCallbacks loop.
 
     status.waiting = True
     status.result = None
@@ -1426,8 +1462,30 @@ def _inlineCallbacks(result, status):
                 result = status.g.send(result)
         except StopIteration as e:
             # fell off the end, or "return" statement
-            status.deferred.callback(getattr(e, "value", None))
-            return
+            result = getattr(e, "value", None)
+            if not status.deferred.callbacks and \
+                    status.parentStatus is not None:
+                # We know that the deferred returned by this inlineCallbacks
+                # ended in yield of another inlineCallbacks. As an optimization
+                # we steal its result into this loop skipping most of the
+                # overhead in processing the callbacks of a Deferred.
+                status.deferred._callbackOnEmpty(result)
+                status = status.parentStatus
+                status.waiting = True
+                continue
+            elif status.waitingOn is None:
+                # We never exited the first invocation of this inlineCallbacks,
+                # thus the Deferred we'll report results to hasn't even been
+                # returned from _cancellableInlineCallbacks and thus will not
+                # have any callbacks added. This is because the only case
+                # when we exit the loop in inlineCallbacks is when get an
+                # uncalled Deferred and need to wait on it to be fired.
+                # In all such cases we'll set status.waitingOn to something.
+                status.deferred._callbackOnEmpty(result)
+                return
+            else:
+                status.deferred.callback(result)
+                return
         except _DefGen_Return as e:
             # returnValue() was called; time to give a result to the original
             # Deferred.  First though, let's try to identify the potentially
@@ -1437,7 +1495,10 @@ def _inlineCallbacks(result, status):
 
             # The traceback starts in this frame (the one for
             # _inlineCallbacks); the next one down should be the application
-            # code.
+            # code. Note that the traceback info holds references to
+            # potentially a lot of variables; we can't thus put the exception
+            # info into some variable and extract the below code to a separate
+            # function.
             appCodeTrace = exc_info()[2].tb_next
             if isFailure:
                 # If we invoked this generator frame by throwing an exception
@@ -1466,14 +1527,62 @@ def _inlineCallbacks(result, status):
                         ultimateTrace.tb_frame.f_code.co_name,
                         appCodeTrace.tb_frame.f_code.co_name),
                     DeprecationWarning, filename, lineno)
-            status.deferred.callback(e.value)
-            return
+
+            result = e.value
+            if not status.deferred.callbacks and \
+                    status.parentStatus is not None:
+                # see explanation on _callbackOnEmpty on StopIteration
+                # case above
+                status.deferred._callbackOnEmpty(result)
+                status = status.parentStatus
+                status.waiting = True
+                continue
+            elif status.waitingOn is None:
+                # see explanation on _callbackOnEmpty on StopIteration
+                # case above
+                status.deferred._callbackOnEmpty(result)
+                return
+            else:
+                status.deferred.callback(result)
+                return
         except:
-            status.deferred.errback()
-            return
+            if not status.deferred.callbacks and status.parentStatus:
+                result = failure.Failure(captureVars=status.deferred.debug)
+                status = status.parentStatus
+                continue
+            else:
+                status.deferred.errback()
+                return
 
         if isinstance(result, Deferred):
             # a deferred was yielded, get the result.
+
+            childStatus = getattr(result, '_inlineCallbacksStatus', None)
+            if childStatus is not None and len(result.callbacks) == 0:
+                # Optimize the case of stacked inlineCallbacks. If the returned
+                # callback has already been called and has no further callbacks
+                # we can steal its result. If it hasn't been called, and has
+                # no further callbacks, then we know that there are no
+                # intermediate callbacks and the result of the child
+                # inlineCallbacks-decorated function will need to go back to
+                # inlineCallbacks of parent function. We set the parentStatus
+                # attribute so that inlineCallbacks knows to inject the result
+                # value directly into the parent inlineCallbacks loop.
+                if result.called:
+                    resultResult, result.result = result.result, None
+
+                    # Make sure _debugInfo's failure state is updated.
+                    if result._debugInfo is not None:
+                        result._debugInfo.failResult = None
+                    result = resultResult
+                    continue
+                else:
+                    childStatus.parentStatus = status
+                    status.waiting = False
+                    status.waitingOn = result
+                    status.waitingOnStatus = childStatus
+                    return
+
             def gotResult(r):
                 if status.waiting:
                     status.waiting = False
@@ -1491,11 +1600,11 @@ def _inlineCallbacks(result, status):
                 return
 
             result = status.result
+
             # Reset waiting to initial values for next loop.  gotResult uses
-            # waiting, but this isn't a problem because gotResult is only
+            # status.waiting, but this isn't a problem because gotResult is only
             # executed once, and if it hasn't been executed yet, the return
             # branch above would have been taken.
-
             status.waiting = True
             status.result = None
 
@@ -1574,12 +1683,29 @@ def _cancellableInlineCallbacks(g):
 
     """
     def cancel(it):
+        status = getattr(it, '_inlineCallbacksStatus', None)
+        if status is not None and status.waitingOnStatus is not None:
+            # Let's simplify our life by undoing all the customization that
+            # was added for the fast path of stacked inlineCallbacks.
+            # Cancellation won't hopefully be called too often. This allows
+            # us to use the common path without additional complications.
+            status.waitingOnStatus.parentStatus = None
+            status.waitingOnStatus = None
+            def gotResult(r):
+                # this is just a copy of gotResult* in _inlineCallbacks, but
+                # we know that status.waiting is False, as the only way we can
+                # end up in cancel() is when the code has previously
+                # blocked on status.waitingOn deferred.
+                _inlineCallbacks(r, status)
+            status.waitingOn.addBoth(gotResult)
+
         it.callbacks, tmp = [], it.callbacks
         it.addErrback(handleCancel)
         it.callbacks.extend(tmp)
         it.errback(_InternalInlineCallbacksCancelledError())
     deferred = Deferred(cancel)
     status = _InlineCallbackStatus(deferred, g)
+    deferred._inlineCallbacksStatus = status
     def handleCancel(result):
         """
         Propagate the cancellation of an C{@}L{inlineCallbacks} to the
@@ -1607,7 +1733,6 @@ class _InternalInlineCallbacksCancelledError(Exception):
     A unique exception used only in L{_cancellableInlineCallbacks} to verify
     that an L{inlineCallbacks} is being cancelled as expected.
     """
-
 
 
 def inlineCallbacks(f):
