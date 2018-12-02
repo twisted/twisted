@@ -1381,6 +1381,7 @@ class _InlineCallbackStatus(object):
     """
 
     deferred = attr.ib()
+    g = attr.ib()
     waitingOn = attr.ib(default=None)
     waiting = attr.ib(default=True)
     result = attr.ib(default=None)
@@ -1388,7 +1389,7 @@ class _InlineCallbackStatus(object):
 
 
 @failure._extraneous
-def _inlineCallbacks(result, g, status):
+def _inlineCallbacks(result, status):
     """
     Carry out the work of L{inlineCallbacks}.
 
@@ -1420,9 +1421,9 @@ def _inlineCallbacks(result, g, status):
             # Send the last result back as the result of the yield expression.
             isFailure = isinstance(result, failure.Failure)
             if isFailure:
-                result = result.throwExceptionIntoGenerator(g)
+                result = result.throwExceptionIntoGenerator(status.g)
             else:
-                result = g.send(result)
+                result = status.g.send(result)
         except StopIteration as e:
             # fell off the end, or "return" statement
             status.deferred.callback(getattr(e, "value", None))
@@ -1479,7 +1480,7 @@ def _inlineCallbacks(result, g, status):
                     status.result = r
                 else:
                     # We are not waiting for deferred result any more
-                    _inlineCallbacks(r, g, status)
+                    _inlineCallbacks(r, status)
 
             result.addBoth(gotResult)
             if status.waiting:
@@ -1515,7 +1516,7 @@ def _cancellableInlineCallbacks(g):
         it.callbacks.extend(tmp)
         it.errback(_InternalInlineCallbacksCancelledError())
     deferred = Deferred(cancel)
-    status = _InlineCallbackStatus(deferred)
+    status = _InlineCallbackStatus(deferred, g)
     def handleCancel(result):
         """
         Propagate the cancellation of an C{@}L{inlineCallbacks} to the
@@ -1533,7 +1534,7 @@ def _cancellableInlineCallbacks(g):
         awaited = status.waitingOn
         awaited.cancel()
         return status.deferred
-    _inlineCallbacks(None, g, status)
+    _inlineCallbacks(None, status)
     return deferred
 
 
