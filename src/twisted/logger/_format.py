@@ -34,27 +34,12 @@ def formatEvent(event):
     @return: A formatted string.
     @rtype: L{unicode}
     """
-    try:
-        if "log_flattened" in event:
-            return flatFormat(event)
-
-        format = event.get("log_format", None)
-        if format is None:
-            return u""
-
-        # Make sure format is unicode.
-        if isinstance(format, bytes):
-            # If we get bytes, assume it's UTF-8 bytes
-            format = format.decode("utf-8")
-        elif not isinstance(format, unicode):
-            raise TypeError(
-                "Log format must be unicode or bytes, not {0!r}".format(format)
-            )
-
-        return formatWithCall(format, event)
-
-    except Exception as e:
-        return formatUnformattableEvent(event, e)
+    return eventAsText(
+        event,
+        includeTraceback=False,
+        includeTimestamp=False,
+        includeSystem=False,
+    )
 
 
 
@@ -187,45 +172,11 @@ def formatEventAsClassicLogText(event, formatTime=formatTime):
     @return: A formatted event, or L{None} if no output is appropriate.
     @rtype: L{unicode} or L{None}
     """
-    eventText = formatEvent(event)
-
-    if "log_failure" in event:
-        try:
-            traceback = event["log_failure"].getTraceback()
-        except:
-            traceback = u"(UNABLE TO OBTAIN TRACEBACK FROM EVENT)\n"
-        eventText = u"\n".join((eventText, traceback))
-
+    eventText = eventAsText(event, formatTime=formatTime)
     if not eventText:
         return None
-
     eventText = eventText.replace(u"\n", u"\n\t")
-    timeStamp = formatTime(event.get("log_time", None))
-
-    system = event.get("log_system", None)
-
-    if system is None:
-        level = event.get("log_level", None)
-        if level is None:
-            levelName = u"-"
-        else:
-            levelName = level.name
-
-        system = u"{namespace}#{level}".format(
-            namespace=event.get("log_namespace", u"-"),
-            level=levelName,
-        )
-    else:
-        try:
-            system = unicode(system)
-        except Exception:
-            system = u"UNFORMATTABLE"
-
-    return u"{timeStamp} [{system}] {event}\n".format(
-        timeStamp=timeStamp,
-        system=system,
-        event=eventText,
-    )
+    return eventText + u"\n"
 
 
 
@@ -286,4 +237,185 @@ def formatWithCall(formatString, mapping):
     """
     return unicode(
         aFormatter.vformat(formatString, (), CallMapping(mapping))
+    )
+
+
+
+def _formatEvent(event):
+    """
+    Formats an event as a L{unicode}, using the format in
+    C{event["log_format"]}.
+
+    This implementation should never raise an exception; if the formatting
+    cannot be done, the returned string will describe the event generically so
+    that a useful message is emitted regardless.
+
+    @param event: A logging event.
+    @type event: L{dict}
+
+    @return: A formatted string.
+    @rtype: L{unicode}
+    """
+    try:
+        if "log_flattened" in event:
+            return flatFormat(event)
+
+        format = event.get("log_format", None)
+        if format is None:
+            return u""
+
+        # Make sure format is unicode.
+        if isinstance(format, bytes):
+            # If we get bytes, assume it's UTF-8 bytes
+            format = format.decode("utf-8")
+        elif not isinstance(format, unicode):
+            raise TypeError(
+                "Log format must be unicode or bytes, not {0!r}".format(format)
+            )
+
+        return formatWithCall(format, event)
+
+    except BaseException as e:
+        return formatUnformattableEvent(event, e)
+
+
+
+def _formatTraceback(failure):
+    """
+    Format a failure traceback, assuming UTF-8 and using a replacement
+    strategy for errors.  Every effort is made to provide a usable
+    traceback, but should not that not be possible, a message and the
+    captured exception are logged.
+
+    @param failure: The failure to retrieve a traceback from.
+    @type failure: L{twisted.python.failure.Failure}
+
+    @return: The formatted traceback.
+    @rtype: L{unicode}
+    """
+    try:
+        traceback = failure.getTraceback()
+        if isinstance(traceback, bytes):
+            traceback = traceback.decode('utf-8', errors='replace')
+    except BaseException as e:
+        traceback = (
+            u"(UNABLE TO OBTAIN TRACEBACK FROM EVENT):" + unicode(e)
+        )
+    return traceback
+
+
+
+def _formatSystem(event):
+    """
+    Format the system specified in the event in the "log_system" key if set,
+    otherwise the C{"log_namespace"} and C{"log_level"}, joined by a C{u"#"}.
+    Each defaults to C{u"-"} is not set.  If formatting fails completely,
+    "UNFORMATTABLE" is returned.
+
+    @param event: The event containing the system specification.
+    @type event: L{dict}
+
+    @return: A formatted string representing the "log_system" key.
+    @rtype: L{unicode}
+    """
+    system = event.get("log_system", None)
+    if system is None:
+        level = event.get("log_level", None)
+        if level is None:
+            levelName = u"-"
+        else:
+            levelName = level.name
+
+        system = u"{namespace}#{level}".format(
+            namespace=event.get("log_namespace", u"-"),
+            level=levelName,
+        )
+    else:
+        try:
+            system = unicode(system)
+        except Exception:
+            system = u"UNFORMATTABLE"
+    return system
+
+
+
+def eventAsText(
+        event,
+        includeTraceback=True,
+        includeTimestamp=True,
+        includeSystem=True,
+        formatTime=formatTime,
+):
+    r"""
+    Format an event as a unicode string.  Optionally, attach timestamp,
+    traceback, and system information.
+
+    The full output format is:
+    C{u"{timeStamp} [{system}] {event}\n{traceback}\n"} where:
+
+        - C{timeStamp} is the event's C{"log_time"} value formatted with
+          the provided C{formatTime} callable.
+
+        - C{system} is the event's C{"log_system"} value, if set, otherwise,
+          the C{"log_namespace"} and C{"log_level"}, joined by a C{u"#"}.  Each
+          defaults to C{u"-"} is not set.
+
+        - C{event} is the event, as formatted by L{formatEvent}.
+
+        - C{traceback} is the traceback if the event contains a
+          C{"log_failure"} key.  In the event the original traceback cannot
+          be formatted, a message indicating the failure will be substituted.
+
+    If the event cannot be formatted, and no traceback exists, an empty string
+    is returned, even if includeSystem or includeTimestamp are true.
+
+    @param event: A logging event.
+    @type event: L{dict}
+
+    @param includeTraceback: If true and a C{"log_failure"} key exists, append
+        a traceback.
+    @type includeTraceback: L{bool}
+
+    @param includeTimestamp: If true include a formatted timestamp before the
+        event.
+    @type includeTimestamp: L{bool}
+
+    @param includeSystem:  If true, include the event's C{"log_system"} value.
+    @type includeSystem: L{bool}
+
+    @param formatTime: A time formatter
+    @type formatTime: L{callable} that takes an C{event} argument and returns
+        a L{unicode}
+
+    @return: A formatted string with specified options.
+    @rtype: L{unicode}
+
+    @since: Twisted 18.9.0
+    """
+    eventText = _formatEvent(event)
+    if includeTraceback and 'log_failure' in event:
+        f = event['log_failure']
+        traceback = _formatTraceback(f)
+        eventText = u"\n".join((eventText, traceback))
+
+    if not eventText:
+        return eventText
+
+    timeStamp = u""
+    if includeTimestamp:
+        timeStamp = u"".join([formatTime(event.get("log_time", None)), " "])
+
+    system = u""
+    if includeSystem:
+        system = u"".join([
+            u"[",
+            _formatSystem(event),
+            u"]",
+            u" "
+        ])
+
+    return u"{timeStamp}{system}{eventText}".format(
+        timeStamp=timeStamp,
+        system=system,
+        eventText=eventText,
     )

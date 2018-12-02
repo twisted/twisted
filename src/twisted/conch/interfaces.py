@@ -18,40 +18,56 @@ class IConchUser(Interface):
     def lookupChannel(channelType, windowSize, maxPacket, data):
         """
         The other side requested a channel of some sort.
-        channelType is the type of channel being requested,
-        windowSize is the initial size of the remote window,
-        maxPacket is the largest packet we should send,
-        data is any other packet data (often nothing).
+
+        C{channelType} is the type of channel being requested,
+        as an ssh connection protocol channel type.
+        C{data} is any other packet data (often nothing).
 
         We return a subclass of L{SSHChannel<ssh.channel.SSHChannel>}.  If
-        an appropriate channel can not be found, an exception will be
-        raised.  If a L{ConchError<error.ConchError>} is raised, the .value
-        will be the message, and the .data will be the error code.
+        the channel type is unknown, we return C{None}.
 
-        @type channelType:  L{str}
+        For other failures, we raise an exception. If a
+        L{ConchError<error.ConchError>} is raised, the C{.value} will
+        be the message, and the C{.data} will be the error code.
+
+        @param channelType: The requested channel type
+        @type channelType:  L{bytes}
+        @param windowSize:  The initial size of the remote window
         @type windowSize:   L{int}
+        @param maxPacket:   The largest packet we should send
         @type maxPacket:    L{int}
-        @type data:         L{str}
-        @rtype:             subclass of L{SSHChannel}/L{tuple}
+        @param data:        Additional request data
+        @type data:         L{bytes}
+        @rtype:             a subclass of L{SSHChannel} or L{None}
         """
 
     def lookupSubsystem(subsystem, data):
         """
         The other side requested a subsystem.
-        subsystem is the name of the subsystem being requested.
-        data is any other packet data (often nothing).
 
-        We return a L{Protocol}.
+        We return a L{Protocol} implementing the requested subsystem.
+        If the subsystem is not available, we return C{None}.
+
+        @param subsystem: The name of the subsystem being requested
+        @type subsystem: L{bytes}
+        @param data:     Additional request data (often nothing)
+        @type data:      L{bytes}
+        @rtype:          L{Protocol} or L{None}
         """
 
     def gotGlobalRequest(requestType, data):
         """
         A global request was sent from the other side.
 
-        By default, this dispatches to a method 'channel_channelType' with any
-        non-alphanumerics in the channelType replace with _'s.  If it cannot
-        find a suitable method, it returns an OPEN_UNKNOWN_CHANNEL_TYPE error.
-        The method is called with arguments of windowSize, maxPacket, data.
+        We return a true value on success or a false value on failure.
+        If we indicate success by returning a tuple, its second item
+        will be sent to the other side as additional response data.
+
+        @param requestType: The type of the request
+        @type requestType:  L{bytes}
+        @param data:        Additional request data
+        @type data:         L{bytes}
+        @rtype:             boolean or L{tuple}
         """
 
 

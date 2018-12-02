@@ -44,7 +44,7 @@ The following optional dependencies are supported:
 
 * **macos_platform** - **all_non_platform** options and `pyobjc`_ to work with Objective-C apis.
 
-* **windows_platform** - **all_non_platform** options and `pypiwin32`_ to work with Windows's apis.
+* **windows_platform** - **all_non_platform** options and `pywin32`_ to work with Windows's apis.
 
 * **http2** - packages needed for http2 support.
 
@@ -65,7 +65,7 @@ The following optional dependencies are supported:
 .. _SOAPpy: https://pypi.python.org/pypi/SOAPpy
 .. _pyserial: https://pypi.python.org/pypi/pyserial
 .. _pyobjc: https://pypi.python.org/pypi/pyobjc
-.. _pypiwin32: https://pypi.python.org/pypi/pypiwin32
+.. _pywin32: https://pypi.python.org/pypi/pywin32
 .. _`setuptools documentation`: https://pythonhosted.org/setuptools/setuptools.html#declaring-extras-optional-features-with-their-own-dependencies
 .. _`python packaging tutorial`: https://packaging.python.org/en/latest/installing.html#examples
 .. _idna: https://pypi.python.org/pypi/idna

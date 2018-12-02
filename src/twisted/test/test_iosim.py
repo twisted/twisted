@@ -46,6 +46,19 @@ class FakeTransportTests(TestCase):
         self.assertEqual(b"".join(a.stream), b"abcd")
 
 
+    def test_writeAfterClose(self):
+        """
+        L{FakeTransport.write} will accept writes after transport was closed,
+        but the data will be silently discarded.
+        """
+        a = FakeTransport(object(), False)
+        a.write(b"before")
+        a.loseConnection()
+        a.write(b"after")
+
+        self.assertEqual(b"".join(a.stream), b"before")
+
+
 
 @implementer(IPushProducer)
 class StrictPushProducer(object):
