@@ -1364,19 +1364,26 @@ def returnValue(val):
 
 
 @attr.s
-class _CancellationStatus(object):
+class _InlineCallbackStatus(object):
     """
-    Cancellation status of an L{inlineCallbacks} invocation.
+    Status of an L{inlineCallbacks} invocation.
 
     @ivar waitingOn: the L{Deferred} being waited upon (which
         L{_inlineCallbacks} must fill out before returning)
 
     @ivar deferred: the L{Deferred} to callback or errback when the generator
         invocation has finished.
+
+    @ivar waiting: True if the L{inlineCallbacks} loop is waiting for result
+
+    @ivar result: The result of the previous deferred in the L{inlineCallbacks}
+        loop
     """
 
     deferred = attr.ib()
     waitingOn = attr.ib(default=None)
+    waiting = attr.ib(default=True)
+    result = attr.ib(default=None)
 
 
 
@@ -1398,15 +1405,15 @@ def _inlineCallbacks(result, g, status):
     @param g: a generator object returned by calling a function or method
         decorated with C{@}L{inlineCallbacks}
 
-    @param status: a L{_CancellationStatus} tracking the current status of C{g}
+    @param status: a L{_InlineCallbackStatus} tracking the current status of C{g}
     """
     # This function is complicated by the need to prevent unbounded recursion
     # arising from repeatedly yielding immediately ready deferreds.  This while
-    # loop and the waiting variable solve that by manually unfolding the
-    # recursion.
+    # loop and the waiting and result variables in L{_InlineCallbackStatus}
+    # solve that by manually unfolding the recursion.
 
-    waiting = [True, # waiting for result?
-               None] # result
+    status.waiting = True
+    status.result = None
 
     while 1:
         try:
@@ -1467,29 +1474,29 @@ def _inlineCallbacks(result, g, status):
         if isinstance(result, Deferred):
             # a deferred was yielded, get the result.
             def gotResult(r):
-                if waiting[0]:
-                    waiting[0] = False
-                    waiting[1] = r
+                if status.waiting:
+                    status.waiting = False
+                    status.result = r
                 else:
                     # We are not waiting for deferred result any more
                     _inlineCallbacks(r, g, status)
 
             result.addBoth(gotResult)
-            if waiting[0]:
+            if status.waiting:
                 # Haven't called back yet, set flag so that we get reinvoked
                 # and return from the loop
-                waiting[0] = False
+                status.waiting = False
                 status.waitingOn = result
                 return
 
-            result = waiting[1]
+            result = status.result
             # Reset waiting to initial values for next loop.  gotResult uses
             # waiting, but this isn't a problem because gotResult is only
             # executed once, and if it hasn't been executed yet, the return
             # branch above would have been taken.
 
-            waiting[0] = True
-            waiting[1] = None
+            status.waiting = True
+            status.result = None
 
 
 
@@ -1508,7 +1515,7 @@ def _cancellableInlineCallbacks(g):
         it.callbacks.extend(tmp)
         it.errback(_InternalInlineCallbacksCancelledError())
     deferred = Deferred(cancel)
-    status = _CancellationStatus(deferred)
+    status = _InlineCallbackStatus(deferred)
     def handleCancel(result):
         """
         Propagate the cancellation of an C{@}L{inlineCallbacks} to the
