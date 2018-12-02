@@ -1509,6 +1509,69 @@ def _cancellableInlineCallbacks(g):
         decorated with C{@}L{inlineCallbacks}
 
     @return: L{Deferred} for the C{@}L{inlineCallbacks} that is cancellable.
+
+    Calling L{cancel} on the L{Deferred} returned by an L{inlineCallbacks}
+    decorated function only has an effect if that C{Deferred} has no result.
+    That in turn is only possible if the decorated function has yielded a
+    L{Deferred} that itself has no result yet. In that case, status.waiting
+    will be False, and the L{_InlineCallbackStatus} instance's L{waitingOn} will
+    be the yielded result-less L{Deferred}.
+
+    Cancelling L{waitingOn} propagates cancellation to the yielded L{Deferred}
+    as intended. This cancellation either suspends L{waitingOn}'s callback
+    processing by delegating execution to another result-less L{Deferred} or
+    executes L{gotResult} and thus resumes the decorated generator.
+    Now, the generator might emit a final object that L{_inlineCallbacks} has
+    to communicate to the caller, but L{_inlineCallbacks} can't callback or
+    errback its L{_InlineCallbackStatus} instance's L{deferred} because it was
+    just cancelled. The solution is to replace the cancelled deferred
+    attribute with a new L{Deferred} whose cancellation function is cancel
+    that's also returned into L{waitingOn}'s callback chain. The generator
+    then resumes with all the degrees of freedom it had prior to its
+    L{Deferred}'s cancellation; it can return a value or raise an exception
+    that callbacks or errbacks L{status.deferred}, which resumes the previous
+    L{Deferred}'s callback chain; it can even yield a L{Deferred} without a
+    result that can then be cancelled again.
+
+    This explains why waitingOn, which L{_InlineCallbackStatus.__init__} sets to
+    L{None}, is always a L{Deferred} by the time this runs, and why
+    L{status.deferred} has to be replaced by a new L{Deferred} in
+    L{handleCancel}. The reason that L{handleCancel} has to be at the
+    beginning of the callback chain of the L{Deferred} returned by
+    L{inlineCallbacks} is a little more complicated.
+
+    A L{Deferred} waiting on a L{Deferred} pauses its own callback chain until
+    that L{Deferred} fires and propagates cancellation downwards:
+
+    d = Deferred()
+    d.addCallback(lambda _: d.Deferred())
+    d.addErrback(print)
+    d.callback(None)  # <Deferred at 0x1234 waiting on Deferred at 0x5678>
+    d.cancel()  # prints [Failure instance: Traceback (failure with no frames):
+        <class 'twisted.internet.defer.CancelledError'>: ]
+
+    inlineCallbacks, however, contains its own trampoline so that yielding
+    Deferreds with results doesn't overflow the stack., which prevents its
+    L{Deferred} from directly waiting on those yielded by its generator:
+
+    @inlineCallbacks
+    def f():
+        d = Deferred()
+        print(d)  # prints: <Deferred at 0x1234>
+        yield Deferred()
+
+    print(f())  # prints: <Deferred at 0x5678>;
+                # note that it isn't waiting on 0x1234!
+
+    This is indeed the reason cancellation isn't propagated. Mimicking the
+    exact behavior of Deferreds outside of inlineCallbacks would be difficult;
+    at what point in the callback chain should execution be suspended?
+    Fortunately the nature of inlineCallbacks makes the answer easy. Because
+    it's not possible to add callbacks to the L{Deferred} that run before the
+    generator is resumed, propagating cancellation downward should always
+    happen before any callbacks added to the L{inlineCallbacks}'s L{Deferred}.
+    That's why cancel splices L{handleCancel} in at the beginning of callbacks.
+
     """
     def cancel(it):
         it.callbacks, tmp = [], it.callbacks
