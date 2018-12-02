@@ -1,1 +1,1 @@
-more explanation for xmlrpc's queryFactory, and new xmlrpc-debug.py example script for debugging raw XML-RPC traffic.
+twisted.web.xml.Proxy had the documetnation updated for the queryFactory init argument. A new xmlrpc-debug.py example script for debugging raw XML-RPC traffic was added.
