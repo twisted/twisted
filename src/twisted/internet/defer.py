@@ -86,7 +86,7 @@ def succeed(result):
     @rtype: L{Deferred}
     """
     d = Deferred()
-    d.callback(result)
+    d._callbackOnEmpty(result)
     return d
 
 
