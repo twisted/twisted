@@ -18,6 +18,7 @@ from twisted.web.xmlrpc import _QueryFactory
 from twisted.internet import reactor
 
 
+
 class DebuggingQueryFactory(_QueryFactory):
     """ Print the server's raw responses before continuing with parsing. """
     def parseResponse(self, contents):
@@ -25,14 +26,17 @@ class DebuggingQueryFactory(_QueryFactory):
         return _QueryFactory.parseResponse(self, contents)
 
 
+
 def printValue(value):
     print(repr(value))
     reactor.stop()
 
 
+
 def printError(error):
     print('error', error)
     reactor.stop()
+
 
 
 proxy = Proxy('https://bugzilla.redhat.com/xmlrpc.cgi')
