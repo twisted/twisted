@@ -457,7 +457,8 @@ class Deferred:
             called on this L{Deferred}.
         """
         assert not isinstance(result, Deferred)
-        self._startRunCallbacks(result)
+        self._startRunCallbacks(result,
+                                isFailure=isinstance(result, failure.Failure))
 
 
     def errback(self, fail=None):
@@ -498,7 +499,7 @@ class Deferred:
         elif not isinstance(fail, failure.Failure):
             fail = failure.Failure(fail)
 
-        self._startRunCallbacks(fail)
+        self._startRunCallbacks(fail, isFailure=True)
 
 
     def _callbackOnEmpty(self, result):
@@ -507,6 +508,7 @@ class Deferred:
 
         self.called = True
         self.result = result
+        self._resultIsFailure = False
         if self.debug:
             if self._debugInfo is None:
                 self._debugInfo = DebugInfo()
@@ -560,7 +562,7 @@ class Deferred:
             self.result.cancel()
 
 
-    def _startRunCallbacks(self, result):
+    def _startRunCallbacks(self, result, isFailure):
         if self.called:
             if self._suppressAlreadyCalled:
                 self._suppressAlreadyCalled = False
@@ -577,6 +579,7 @@ class Deferred:
             self._debugInfo.invoker = traceback.format_stack()[:-2]
         self.called = True
         self.result = result
+        self._resultIsFailure = isFailure
         self._runCallbacks()
 
 
@@ -638,8 +641,7 @@ class Deferred:
             current._chainedTo = None
             while current.callbacks:
                 item = current.callbacks.pop(0)
-                callback, args, kw = item[
-                    isinstance(current.result, failure.Failure)]
+                callback, args, kw = item[current._resultIsFailure]
                 args = args or ()
                 kw = kw or {}
 
@@ -648,8 +650,12 @@ class Deferred:
                     # Give the waiting Deferred our current result and then
                     # forget about that result ourselves.
                     chainee = args[0]
+
                     chainee.result = current.result
+                    chainee._resultIsFailure = current._resultIsFailure
                     current.result = None
+                    current._resultIsFailure = False
+
                     # Making sure to update _debugInfo
                     if current._debugInfo is not None:
                         current._debugInfo.failResult = None
@@ -664,6 +670,8 @@ class Deferred:
                     current._runningCallbacks = True
                     try:
                         current.result = callback(current.result, *args, **kw)
+                        current._resultIsFailure = isinstance(current.result,
+                                                              failure.Failure)
                         if current.result is current:
                             warnAboutFunction(
                                 callback,
@@ -677,6 +685,7 @@ class Deferred:
                     # Including full frame information in the Failure is quite
                     # expensive, so we avoid it unless self.debug is set.
                     current.result = failure.Failure(captureVars=self.debug)
+                    current._resultIsFailure = True
                 else:
                     if isinstance(current.result, Deferred):
                         # The result is another Deferred.  If it has a result,
@@ -698,6 +707,8 @@ class Deferred:
                             # Make sure _debugInfo's failure state is updated.
                             if current.result._debugInfo is not None:
                                 current.result._debugInfo.failResult = None
+                            current._resultIsFailure = current.result._resultIsFailure
+                            current.result._resultIsFailure = False
                             current.result = resultResult
 
             if finished:
@@ -705,7 +716,7 @@ class Deferred:
                 # processed right now has been.  The current Deferred is waiting on
                 # another Deferred or for more callbacks.  Before finishing with it,
                 # make sure its _debugInfo is in the proper state.
-                if isinstance(current.result, failure.Failure):
+                if current._resultIsFailure:
                     # Stash the Failure in the _debugInfo for unhandled error
                     # reporting.
                     current.result.cleanFailure()
@@ -1395,7 +1406,8 @@ class _InlineCallbackStatus(object):
     @ivar waiting: True if the L{inlineCallbacks} loop is waiting for result
 
     @ivar result: The result of the previous deferred in the L{inlineCallbacks}
-        loop
+        loop. It's a tuple of the result itself and a bool which is L{True}
+        if the result is a failure and L{False} otherwise.
 
     @ivar parentStatus: The status of the parent L{inlineCallbacks} invocation.
         The attribute is set to non-L{None} value only if we know that there
@@ -1413,7 +1425,7 @@ class _InlineCallbackStatus(object):
 
 
 @failure._extraneous
-def _inlineCallbacks(result, status):
+def _inlineCallbacks(result, status, isFailure):
     """
     Carry out the work of L{inlineCallbacks}.
 
@@ -1455,7 +1467,6 @@ def _inlineCallbacks(result, status):
     while 1:
         try:
             # Send the last result back as the result of the yield expression.
-            isFailure = isinstance(result, failure.Failure)
             if isFailure:
                 result = result.throwExceptionIntoGenerator(status.g)
             else:
@@ -1472,6 +1483,7 @@ def _inlineCallbacks(result, status):
                 status.deferred._callbackOnEmpty(result)
                 status = status.parentStatus
                 status.waiting = True
+                isFailure = False
                 continue
             elif status.waitingOn is None:
                 # We never exited the first invocation of this inlineCallbacks,
@@ -1536,6 +1548,7 @@ def _inlineCallbacks(result, status):
                 status.deferred._callbackOnEmpty(result)
                 status = status.parentStatus
                 status.waiting = True
+                isFailure = False
                 continue
             elif status.waitingOn is None:
                 # see explanation on _callbackOnEmpty on StopIteration
@@ -1549,6 +1562,7 @@ def _inlineCallbacks(result, status):
             if not status.deferred.callbacks and status.parentStatus:
                 result = failure.Failure(captureVars=status.deferred.debug)
                 status = status.parentStatus
+                isFailure = True
                 continue
             else:
                 status.deferred.errback()
@@ -1569,7 +1583,10 @@ def _inlineCallbacks(result, status):
                 # attribute so that inlineCallbacks knows to inject the result
                 # value directly into the parent inlineCallbacks loop.
                 if result.called:
-                    resultResult, result.result = result.result, None
+                    resultResult = result.result
+                    isFailure = result._resultIsFailure
+                    result.result = None
+                    result._resultIsFailure = False
 
                     # Make sure _debugInfo's failure state is updated.
                     if result._debugInfo is not None:
@@ -1583,15 +1600,23 @@ def _inlineCallbacks(result, status):
                     status.waitingOnStatus = childStatus
                     return
 
-            def gotResult(r):
+            def gotResultSuccess(r):
                 if status.waiting:
                     status.waiting = False
-                    status.result = r
+                    status.result = (r, False)
                 else:
                     # We are not waiting for deferred result any more
-                    _inlineCallbacks(r, status)
+                    _inlineCallbacks(r, status, False)
 
-            result.addBoth(gotResult)
+            def gotResultFailure(r):
+                if status.waiting:
+                    status.waiting = False
+                    status.result = (r, True)
+                else:
+                    # We are not waiting for deferred result any more
+                    _inlineCallbacks(r, status, True)
+
+            result.addCallbacks(gotResultSuccess, gotResultFailure)
             if status.waiting:
                 # Haven't called back yet, set flag so that we get reinvoked
                 # and return from the loop
@@ -1599,14 +1624,18 @@ def _inlineCallbacks(result, status):
                 status.waitingOn = result
                 return
 
-            result = status.result
+            result, isFailure = status.result
 
-            # Reset waiting to initial values for next loop.  gotResult uses
-            # status.waiting, but this isn't a problem because gotResult is only
-            # executed once, and if it hasn't been executed yet, the return
-            # branch above would have been taken.
+            # Reset waiting to initial values for next loop. gotResultSuccess
+            # and gotSuccessFailure uses status.waiting, but this isn't a
+            # problem because these functions are only executed once, and if
+            # they hasn't been executed yet, the return branch above would have
+            # been taken.
             status.waiting = True
             status.result = None
+
+        else:
+            isFailure = False
 
 
 
@@ -1696,7 +1725,8 @@ def _cancellableInlineCallbacks(g):
                 # we know that status.waiting is False, as the only way we can
                 # end up in cancel() is when the code has previously
                 # blocked on status.waitingOn deferred.
-                _inlineCallbacks(r, status)
+                _inlineCallbacks(r, status,
+                                 isinstance(r, failure.Failure))
             status.waitingOn.addBoth(gotResult)
 
         it.callbacks, tmp = [], it.callbacks
@@ -1723,7 +1753,7 @@ def _cancellableInlineCallbacks(g):
         awaited = status.waitingOn
         awaited.cancel()
         return status.deferred
-    _inlineCallbacks(None, status)
+    _inlineCallbacks(None, status, False)
     return deferred
 
 
