@@ -1475,7 +1475,8 @@ def _inlineCallbacks(result, status, isFailure):
             # fell off the end, or "return" statement
             result = getattr(e, "value", None)
             if not status.deferred.callbacks and \
-                    status.parentStatus is not None:
+                    status.parentStatus is not None and \
+                    not status.deferred.paused:
                 # We know that the deferred returned by this inlineCallbacks
                 # ended in yield of another inlineCallbacks. As an optimization
                 # we steal its result into this loop skipping most of the
@@ -1542,7 +1543,8 @@ def _inlineCallbacks(result, status, isFailure):
 
             result = e.value
             if not status.deferred.callbacks and \
-                    status.parentStatus is not None:
+                    status.parentStatus is not None and \
+                    not status.deferred.paused:
                 # see explanation on _callbackOnEmpty on StopIteration
                 # case above
                 status.deferred._callbackOnEmpty(result)
@@ -1559,7 +1561,9 @@ def _inlineCallbacks(result, status, isFailure):
                 status.deferred.callback(result)
                 return
         except:
-            if not status.deferred.callbacks and status.parentStatus:
+            if not status.deferred.callbacks and \
+                    status.parentStatus is not None and \
+                    not status.deferred.paused:
                 result = failure.Failure(captureVars=status.deferred.debug)
                 status = status.parentStatus
                 isFailure = True
@@ -1572,7 +1576,7 @@ def _inlineCallbacks(result, status, isFailure):
             # a deferred was yielded, get the result.
 
             if result.called:
-                if not result.callbacks:
+                if not result.callbacks and not result.paused:
                     # Steal the result of the returned Deferred if it already
                     # has been called and there are no further callbacks.
                     #
@@ -1593,7 +1597,8 @@ def _inlineCallbacks(result, status, isFailure):
                     continue
             else:
                 childStatus = getattr(result, '_inlineCallbacksStatus', None)
-                if childStatus is not None and not result.callbacks:
+                if childStatus is not None and not result.callbacks and \
+                        not result.paused:
                     # Optimize the case of stacked inlineCallbacks. If the
                     # returned result hasn't been called, and has
                     # no further callbacks, then we know that there are no
