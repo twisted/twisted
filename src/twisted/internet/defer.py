@@ -1571,18 +1571,16 @@ def _inlineCallbacks(result, status, isFailure):
         if isinstance(result, Deferred):
             # a deferred was yielded, get the result.
 
-            childStatus = getattr(result, '_inlineCallbacksStatus', None)
-            if childStatus is not None and len(result.callbacks) == 0:
-                # Optimize the case of stacked inlineCallbacks. If the returned
-                # callback has already been called and has no further callbacks
-                # we can steal its result. If it hasn't been called, and has
-                # no further callbacks, then we know that there are no
-                # intermediate callbacks and the result of the child
-                # inlineCallbacks-decorated function will need to go back to
-                # inlineCallbacks of parent function. We set the parentStatus
-                # attribute so that inlineCallbacks knows to inject the result
-                # value directly into the parent inlineCallbacks loop.
-                if result.called:
+            if result.called:
+                if not result.callbacks:
+                    # Steal the result of the returned Deferred if it already
+                    # has been called and there are no further callbacks.
+                    #
+                    # We don't check result._runningCallbacks because if that's
+                    # True and we still ended up here means that the value of
+                    # result indirectly depends on the value of this
+                    # inlineCallbacks and also the other way round. So in order
+                    # to proceed just take the current value.
                     resultResult = result.result
                     isFailure = result._resultIsFailure
                     result.result = None
@@ -1593,7 +1591,18 @@ def _inlineCallbacks(result, status, isFailure):
                         result._debugInfo.failResult = None
                     result = resultResult
                     continue
-                else:
+            else:
+                childStatus = getattr(result, '_inlineCallbacksStatus', None)
+                if childStatus is not None and not result.callbacks:
+                    # Optimize the case of stacked inlineCallbacks. If the
+                    # returned result hasn't been called, and has
+                    # no further callbacks, then we know that there are no
+                    # intermediate callbacks and the result of the child
+                    # inlineCallbacks-decorated function will need to go back
+                    # to inlineCallbacks of parent function. We set the
+                    # parentStatus attribute so that inlineCallbacks knows to
+                    # inject the result value directly into the parent
+                    # inlineCallbacks loop.
                     childStatus.parentStatus = status
                     status.waiting = False
                     status.waitingOn = result
