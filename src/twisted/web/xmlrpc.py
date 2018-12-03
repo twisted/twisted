@@ -386,7 +386,8 @@ payloadTemplate = """<?xml version="1.0"?>
 """
 
 
-class _QueryFactory(protocol.ClientFactory):
+
+class QueryFactory(protocol.ClientFactory):
     """
     XML-RPC Client Factory
 
@@ -507,7 +508,7 @@ class Proxy:
     @ivar queryFactory: Object returning a factory for XML-RPC protocol. Mainly
         useful for tests.
     """
-    queryFactory = _QueryFactory
+    queryFactory = QueryFactory
 
     def __init__(self, url, user=None, password=None, allowNone=False,
                  useDateTime=False, connectTimeout=30.0, reactor=reactor):
