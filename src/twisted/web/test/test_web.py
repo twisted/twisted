@@ -1549,7 +1549,7 @@ class CombinedLogFormatterTests(unittest.TestCase):
 
         line = http.combinedLogFormatter(timestamp, request)
         self.assertEqual(
-            u'"::1" - - [13/Feb/2009:23:31:30 +0000] '
+            u'::1 - - [13/Feb/2009:23:31:30 +0000] '
             u'"GET /dummy HTTP/1.0" 123 - "-" "-"',
             line)
 
@@ -1573,7 +1573,7 @@ class CombinedLogFormatterTests(unittest.TestCase):
         request.client = UnknowableAddress()
 
         line = http.combinedLogFormatter(timestamp, request)
-        self.assertTrue(line.startswith(u'"-" '))
+        self.assertTrue(line.startswith(u'- '))
 
 
 
