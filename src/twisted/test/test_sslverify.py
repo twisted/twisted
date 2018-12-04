@@ -1635,37 +1635,6 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, unittest.TestCase):
 
 
 
-class OpenSSLOptionsECDHIntegrationTests(
-        OpenSSLOptionsTestsMixin, unittest.TestCase):
-    """
-    ECDH-related integration tests for L{OpenSSLOptions}.
-    """
-
-    def test_ellipticCurveDiffieHellman(self):
-        """
-        Connections use ECDH when OpenSSL supports it.
-        """
-        if not get_elliptic_curves():
-            raise unittest.SkipTest("OpenSSL does not support ECDH.")
-
-        onData = defer.Deferred()
-        self.loopback(sslverify.OpenSSLCertificateOptions(privateKey=self.sKey,
-                            certificate=self.sCert, requireCertificate=False),
-                      sslverify.OpenSSLCertificateOptions(
-                          requireCertificate=False),
-                      onData=onData)
-
-        @onData.addCallback
-        def assertECDH(_):
-            self.assertEqual(len(self.clientConn.factory.protocols), 1)
-            [clientProtocol] = self.clientConn.factory.protocols
-            cipher = clientProtocol.getHandle().get_cipher_name()
-            self.assertIn(u"ECDH", cipher)
-
-        return onData
-
-
-
 class DeprecationTests(unittest.SynchronousTestCase):
     """
     Tests for deprecation of L{sslverify.OpenSSLCertificateOptions}'s support
