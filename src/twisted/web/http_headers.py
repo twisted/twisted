@@ -25,6 +25,22 @@ def _dashCapitalize(name):
 
 
 
+def _sanitizeLinearWhitespace(headerComponent):
+    """
+    Replace linear whitespace (C{\n}, C{\r\n}, C{\r}) in a header key
+    or value with a single space.  If C{headerComponent} is not
+    L{bytes}, it is passed through unchanged.
+
+    @param headerComponent: The header key or value to sanitize.
+    @type headerComponent: L{bytes}
+
+    @return: The sanitized header key or value.
+    @rtype: L{bytes}
+    """
+    return b' '.join(headerComponent.splitlines())
+
+
+
 @comparable
 class Headers(object):
     """
@@ -199,8 +215,11 @@ class Headers(object):
             raise TypeError("Header entry %r should be list but found "
                             "instance of %r instead" % (name, type(values)))
 
-        name = self._encodeName(name)
-        self._rawHeaders[name] = self._encodeValues(values)
+        name = _sanitizeLinearWhitespace(self._encodeName(name))
+        encodedValues = [_sanitizeLinearWhitespace(v)
+                         for v in self._encodeValues(values)]
+
+        self._rawHeaders[name] = self._encodeValues(encodedValues)
 
 
     def addRawHeader(self, name, value):

@@ -101,6 +101,7 @@ _EXTRA_OPTIONS = dict(
         'pyasn1',
         'cryptography >= 1.5',
         'appdirs >= 1.4.0',
+        'bcrypt >= 3.0.0',
     ],
     soap=['soappy'],
     serial=['pyserial >= 3.0'],
