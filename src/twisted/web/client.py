@@ -977,6 +977,8 @@ class HostnameCachingHTTPSPolicy(object):
     @type _cache: L{collections.OrderedDict}
 
     @ivar _cacheSize: See C{cacheSize} parameter of L{__init__}.
+
+    @since: Twisted NEXT
     """
 
     def __init__(self, policyforHTTPS, cacheSize=20):
