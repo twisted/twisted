@@ -270,7 +270,17 @@ class ThreadedResolver(object):
                 userDeferred.callback(result)
 
 
-    def getHostByName(self, name, timeout = (1, 3, 11, 45)):
+    def _resolveName(self, name):
+        """
+        Use IPv6 compatible L{socket.getaddrinfo} to getHostByName.
+        """
+        results = socket.getaddrinfo(name, None)
+        family, sock_type, proto, canonname, sockaddr = results[0]
+        address = sockaddr[0]
+        return address
+
+
+    def getHostByName(self, name, timeout=(1, 3, 11, 45)):
         """
         See L{twisted.internet.interfaces.IResolverSimple.getHostByName}.
 
@@ -285,7 +295,7 @@ class ThreadedResolver(object):
         userDeferred = defer.Deferred()
         lookupDeferred = threads.deferToThreadPool(
             self.reactor, self.reactor.getThreadPool(),
-            socket.gethostbyname, name)
+            self._resolveName, name)
         cancelCall = self.reactor.callLater(
             timeoutDelay, self._cleanup, name, lookupDeferred)
         self._runningQueries[lookupDeferred] = (userDeferred, cancelCall)
