@@ -63,8 +63,9 @@ class ThreadedResolverTests(TestCase):
     def test_success(self):
         """
         L{ThreadedResolver.getHostByName} returns a L{Deferred} which fires
-        with the value returned by the call to L{socket.gethostbyname} in the
-        threadpool of the reactor passed to L{ThreadedResolver.__init__}.
+        with the value extracted from what returned by the call to
+        L{socket.getaddrinfo} in the threadpool of the reactor passed to
+        L{ThreadedResolver.__init__}.
         """
         ip = "10.0.0.17"
         name = "foo.bar.example.com"
@@ -75,11 +76,14 @@ class ThreadedResolverTests(TestCase):
 
         lookedUp = []
         resolvedTo = []
-        def fakeGetHostByName(name):
-            lookedUp.append(name)
-            return ip
 
-        self.patch(socket, 'gethostbyname', fakeGetHostByName)
+        def fakeGetAddrInfo(name, port):
+            lookedUp.append(name)
+            family, _type, proto, canonname, sockaddr = (
+                None, None, None, None, (ip, 0))
+            return [(family, _type, proto, canonname, sockaddr)]
+
+        self.patch(socket, 'getaddrinfo', fakeGetAddrInfo)
 
         resolver = ThreadedResolver(reactor)
         d = resolver.getHostByName(name, (timeout,))
@@ -98,17 +102,17 @@ class ThreadedResolverTests(TestCase):
     def test_failure(self):
         """
         L{ThreadedResolver.getHostByName} returns a L{Deferred} which fires a
-        L{Failure} if the call to L{socket.gethostbyname} raises an exception.
+        L{Failure} if the call to L{socket.getaddrinfo} raises an exception.
         """
         timeout = 30
 
         reactor = FakeReactor()
         self.addCleanup(reactor._stop)
 
-        def fakeGetHostByName(name):
+        def fakeGetAddrInfo(name, port):
             raise IOError("ENOBUFS (this is a funny joke)")
 
-        self.patch(socket, 'gethostbyname', fakeGetHostByName)
+        self.patch(socket, 'getaddrinfo', fakeGetAddrInfo)
 
         failedWith = []
         resolver = ThreadedResolver(reactor)
@@ -127,7 +131,7 @@ class ThreadedResolverTests(TestCase):
 
     def test_timeout(self):
         """
-        If L{socket.gethostbyname} does not complete before the specified
+        If L{socket.getaddrinfo} does not complete before the specified
         timeout elapsed, the L{Deferred} returned by
         L{ThreadedResolver.getHostByName} fails with L{DNSLookupError}.
         """
@@ -137,10 +141,11 @@ class ThreadedResolverTests(TestCase):
         self.addCleanup(reactor._stop)
 
         result = Queue()
-        def fakeGetHostByName(name):
+
+        def fakeGetAddrInfo(name):
             raise result.get()
 
-        self.patch(socket, 'gethostbyname', fakeGetHostByName)
+        self.patch(socket, 'getaddrinfo', fakeGetAddrInfo)
 
         failedWith = []
         resolver = ThreadedResolver(reactor)
@@ -153,7 +158,7 @@ class ThreadedResolverTests(TestCase):
         reactor._clock.advance(1)
         self.assertEqual(len(failedWith), 1)
 
-        # Eventually the socket.gethostbyname does finish - in this case, with
+        # Eventually the socket.getaddrinfo does finish - in this case, with
         # an exception.  Nobody cares, though.
         result.put(IOError("The I/O was errorful"))
 
