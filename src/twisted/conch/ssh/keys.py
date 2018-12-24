@@ -1216,10 +1216,98 @@ class Key(object):
         else:
             return method()
 
+    def _toPublicOpenSSH(self, comment):
+        """
+        Return a public OpenSSH key string.
+
+        See _fromString_PUBLIC_OPENSSH for the string format.
+
+        @type comment: L{bytes} or L{None}
+        @param comment: A comment to include in the key, or L{None} to omit
+        the comment.
+        """
+        if self.type() == 'EC':
+            if not comment:
+                comment = b''
+            return (self._keyObject.public_bytes(
+                serialization.Encoding.OpenSSH,
+                serialization.PublicFormat.OpenSSH
+                ) + b' ' + comment).strip()
+
+        b64Data = encodebytes(self.blob()).replace(b'\n', b'')
+        if not comment:
+            comment = b''
+        return (self.sshType() + b' ' + b64Data + b' ' + comment).strip()
+
+    def _toPrivateOpenSSH_PEM(self, passphrase):
+        """
+        Return a private OpenSSH key string, in the old PEM-based format.
+
+        See _fromPrivateOpenSSH_PEM for the string format.
+
+        @type passphrase: L{bytes} or L{None}
+        @param passphrase: The passphrase to encrypt the key with, or L{None}
+        if it is not encrypted.
+        """
+        if self.type() == 'EC':
+            # EC keys has complex ASN.1 structure hence we do this this way.
+            if not passphrase:
+                # unencrypted private key
+                encryptor = serialization.NoEncryption()
+            else:
+                encryptor = serialization.BestAvailableEncryption(passphrase)
+
+            return self._keyObject.private_bytes(
+                serialization.Encoding.PEM,
+                serialization.PrivateFormat.TraditionalOpenSSL,
+                encryptor)
+
+        data = self.data()
+        lines = [b''.join((b'-----BEGIN ', self.type().encode('ascii'),
+                           b' PRIVATE KEY-----'))]
+        if self.type() == 'RSA':
+            p, q = data['p'], data['q']
+            iqmp = rsa.rsa_crt_iqmp(p, q)
+            objData = (0, data['n'], data['e'], data['d'], p, q,
+                       data['d'] % (p - 1), data['d'] % (q - 1),
+                       iqmp)
+        else:
+            objData = (0, data['p'], data['q'], data['g'], data['y'],
+                       data['x'])
+        asn1Sequence = univ.Sequence()
+        for index, value in izip(itertools.count(), objData):
+            asn1Sequence.setComponentByPosition(index, univ.Integer(value))
+        asn1Data = berEncoder.encode(asn1Sequence)
+        if passphrase:
+            iv = randbytes.secureRandom(8)
+            hexiv = ''.join(['%02X' % (ord(x),) for x in iterbytes(iv)])
+            hexiv = hexiv.encode('ascii')
+            lines.append(b'Proc-Type: 4,ENCRYPTED')
+            lines.append(b'DEK-Info: DES-EDE3-CBC,' + hexiv + b'\n')
+            ba = md5(passphrase + iv).digest()
+            bb = md5(ba + passphrase + iv).digest()
+            encKey = (ba + bb)[:24]
+            padLen = 8 - (len(asn1Data) % 8)
+            asn1Data += (chr(padLen) * padLen).encode('ascii')
+
+            encryptor = Cipher(
+                algorithms.TripleDES(encKey),
+                modes.CBC(iv),
+                backend=default_backend()
+            ).encryptor()
+
+            asn1Data = encryptor.update(asn1Data) + encryptor.finalize()
+
+        b64Data = encodebytes(asn1Data).replace(b'\n', b'')
+        lines += [b64Data[i:i + 64] for i in range(0, len(b64Data), 64)]
+        lines.append(b''.join((b'-----END ', self.type().encode('ascii'),
+                               b' PRIVATE KEY-----')))
+        return b'\n'.join(lines)
+
     def _toString_OPENSSH(self, extra):
         """
         Return a public or private OpenSSH string.  See
-        _fromString_PUBLIC_OPENSSH and _fromString_PRIVATE_OPENSSH for the
+        _fromString_PUBLIC_OPENSSH and _fromPrivateOpenSSH_PEM for the
         string formats.  If extra is present, it represents a comment for a
         public key, or a passphrase for a private key.
 
@@ -1229,75 +1317,10 @@ class Key(object):
 
         @rtype: L{bytes}
         """
-        data = self.data()
         if self.isPublic():
-            if self.type() == 'EC':
-                if not extra:
-                    extra = b''
-                return (self._keyObject.public_bytes(
-                    serialization.Encoding.OpenSSH,
-                    serialization.PublicFormat.OpenSSH
-                    ) + b' ' + extra).strip()
-
-            b64Data = encodebytes(self.blob()).replace(b'\n', b'')
-            if not extra:
-                extra = b''
-            return (self.sshType() + b' ' + b64Data + b' ' + extra).strip()
+            return self._toPublicOpenSSH(comment=extra)
         else:
-
-            if self.type() == 'EC':
-                # EC keys has complex ASN.1 structure hence we do this this way.
-                if not extra:
-                    # unencrypted private key
-                    encryptor = serialization.NoEncryption()
-                else:
-                    encryptor = serialization.BestAvailableEncryption(extra)
-
-                return self._keyObject.private_bytes(
-                    serialization.Encoding.PEM,
-                    serialization.PrivateFormat.TraditionalOpenSSL,
-                    encryptor)
-
-            lines = [b''.join((b'-----BEGIN ', self.type().encode('ascii'),
-                               b' PRIVATE KEY-----'))]
-            if self.type() == 'RSA':
-                p, q = data['p'], data['q']
-                iqmp = rsa.rsa_crt_iqmp(p, q)
-                objData = (0, data['n'], data['e'], data['d'], p, q,
-                           data['d'] % (p - 1), data['d'] % (q - 1),
-                           iqmp)
-            else:
-                objData = (0, data['p'], data['q'], data['g'], data['y'],
-                           data['x'])
-            asn1Sequence = univ.Sequence()
-            for index, value in izip(itertools.count(), objData):
-                asn1Sequence.setComponentByPosition(index, univ.Integer(value))
-            asn1Data = berEncoder.encode(asn1Sequence)
-            if extra:
-                iv = randbytes.secureRandom(8)
-                hexiv = ''.join(['%02X' % (ord(x),) for x in iterbytes(iv)])
-                hexiv = hexiv.encode('ascii')
-                lines.append(b'Proc-Type: 4,ENCRYPTED')
-                lines.append(b'DEK-Info: DES-EDE3-CBC,' + hexiv + b'\n')
-                ba = md5(extra + iv).digest()
-                bb = md5(ba + extra + iv).digest()
-                encKey = (ba + bb)[:24]
-                padLen = 8 - (len(asn1Data) % 8)
-                asn1Data += (chr(padLen) * padLen).encode('ascii')
-
-                encryptor = Cipher(
-                    algorithms.TripleDES(encKey),
-                    modes.CBC(iv),
-                    backend=default_backend()
-                ).encryptor()
-
-                asn1Data = encryptor.update(asn1Data) + encryptor.finalize()
-
-            b64Data = encodebytes(asn1Data).replace(b'\n', b'')
-            lines += [b64Data[i:i + 64] for i in range(0, len(b64Data), 64)]
-            lines.append(b''.join((b'-----END ', self.type().encode('ascii'),
-                                   b' PRIVATE KEY-----')))
-            return b'\n'.join(lines)
+            return self._toPrivateOpenSSH_PEM(passphrase=extra)
 
     def _toString_LSH(self):
         """
