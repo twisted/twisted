@@ -710,8 +710,10 @@ class CancellationTests(SynchronousTestCase):
             second yield in inlineCallbacks
         """
         childResultHolder = ['FAILURE']
+
         def getChildDeferred():
             d = Deferred()
+
             def _eb(result):
                 childResultHolder[0] = result.check(CancelledError)
                 return result

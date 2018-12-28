@@ -707,15 +707,17 @@ class Deferred:
                             # Make sure _debugInfo's failure state is updated.
                             if current.result._debugInfo is not None:
                                 current.result._debugInfo.failResult = None
-                            current._resultIsFailure = current.result._resultIsFailure
+                            current._resultIsFailure = \
+                                current.result._resultIsFailure
                             current.result._resultIsFailure = False
                             current.result = resultResult
 
             if finished:
                 # As much of the callback chain - perhaps all of it - as can be
-                # processed right now has been.  The current Deferred is waiting on
-                # another Deferred or for more callbacks.  Before finishing with it,
-                # make sure its _debugInfo is in the proper state.
+                # processed right now has been.  The current Deferred is
+                # waiting on another Deferred or for more callbacks.  Before
+                # finishing with it, make sure its _debugInfo is in the proper
+                # state.
                 if current._resultIsFailure:
                     # Stash the Failure in the _debugInfo for unhandled error
                     # reporting.
@@ -1442,7 +1444,8 @@ def _inlineCallbacks(result, status, isFailure):
     @param g: a generator object returned by calling a function or method
         decorated with C{@}L{inlineCallbacks}
 
-    @param status: a L{_InlineCallbackStatus} tracking the current status of C{g}
+    @param status: a L{_InlineCallbackStatus} tracking the current status of
+        C{g}
     """
     # This function is complicated by the need to prevent unbounded recursion
     # arising from repeatedly yielding immediately ready deferreds.  This while
@@ -1560,7 +1563,7 @@ def _inlineCallbacks(result, status, isFailure):
             else:
                 status.deferred.callback(result)
                 return
-        except:
+        except:  # noqa: E722
             if not status.deferred.callbacks and \
                     status.parentStatus is not None and \
                     not status.deferred.paused:
@@ -1666,8 +1669,8 @@ def _cancellableInlineCallbacks(g):
     decorated function only has an effect if that C{Deferred} has no result.
     That in turn is only possible if the decorated function has yielded a
     L{Deferred} that itself has no result yet. In that case, status.waiting
-    will be False, and the L{_InlineCallbackStatus} instance's L{waitingOn} will
-    be the yielded result-less L{Deferred}.
+    will be False, and the L{_InlineCallbackStatus} instance's L{waitingOn}
+    will be the yielded result-less L{Deferred}.
 
     Cancelling L{waitingOn} propagates cancellation to the yielded L{Deferred}
     as intended. This cancellation either suspends L{waitingOn}'s callback
@@ -1685,8 +1688,8 @@ def _cancellableInlineCallbacks(g):
     L{Deferred}'s callback chain; it can even yield a L{Deferred} without a
     result that can then be cancelled again.
 
-    This explains why waitingOn, which L{_InlineCallbackStatus.__init__} sets to
-    L{None}, is always a L{Deferred} by the time this runs, and why
+    This explains why waitingOn, which L{_InlineCallbackStatus.__init__} sets
+    to L{None}, is always a L{Deferred} by the time this runs, and why
     L{status.deferred} has to be replaced by a new L{Deferred} in
     L{handleCancel}. The reason that L{handleCancel} has to be at the
     beginning of the callback chain of the L{Deferred} returned by
@@ -1734,6 +1737,7 @@ def _cancellableInlineCallbacks(g):
             # us to use the common path without additional complications.
             status.waitingOnStatus.parentStatus = None
             status.waitingOnStatus = None
+
             def gotResult(r):
                 # this is just a copy of gotResult* in _inlineCallbacks, but
                 # we know that status.waiting is False, as the only way we can
@@ -1750,6 +1754,7 @@ def _cancellableInlineCallbacks(g):
     deferred = Deferred(cancel)
     status = _InlineCallbackStatus(deferred, g)
     deferred._inlineCallbacksStatus = status
+
     def handleCancel(result):
         """
         Propagate the cancellation of an C{@}L{inlineCallbacks} to the
@@ -1777,6 +1782,7 @@ class _InternalInlineCallbacksCancelledError(Exception):
     A unique exception used only in L{_cancellableInlineCallbacks} to verify
     that an L{inlineCallbacks} is being cancelled as expected.
     """
+
 
 
 def inlineCallbacks(f):
