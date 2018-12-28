@@ -1,0 +1,1 @@
+Improved the performance of functions decorated by defer.inlineCallbacks calling other functions decorated by defer.inlineCallbacks by up to two times.
