@@ -253,6 +253,15 @@ class Deferred:
         is not set, just like C{result}.
     @type _resultIsFailure: L{bool}
     """
+    # Internally, a Deferred is always paused whenever we can't progress, i.e.
+    # one of our callbacks returned a L{Deferred} without a result. Thus if
+    # a C{result} attribute is already set and the L{Deferred} is not paused
+    # then either:
+    #
+    #  - C{_runningCallbacks} is C{True} and callback processing is in progress
+    #    and C{callbacks} list is potentially empty.
+    #
+    #  - C{_runningCallbacks} is C{False} and the callbacks list is empty.
 
     called = False
     paused = False
@@ -1584,7 +1593,7 @@ def _inlineCallbacks(result, status, isFailure):
             # a deferred was yielded, get the result.
 
             if result.called:
-                if not result.callbacks and not result.paused:
+                if not result.paused:
                     # Steal the result of the returned Deferred if it already
                     # has been called and there are no further callbacks.
                     #
@@ -1623,17 +1632,7 @@ def _inlineCallbacks(result, status, isFailure):
                     return
 
             # If we end up here we know that calling addCallbacks on the result
-            # will not actually execute any callbacks. We checked the case of
-            # `result.called and not result.callbacks and not result.paused`
-            # above. The cases of `result.called` and `not result.paused` are
-            # obvious. The case of `not result.callbacks` is more tricky. If
-            # `result.called` is `True` it means that any added callback will
-            # be executed right away unless it blocks or `result.paused`
-            # is `True` at the time of addition. Whenever both of these
-            # conditions don't hold anymore, we try to execute callbacks. So
-            # the only way addCallbacks() will execute the callbacks right away
-            # is when there's circular dependency from result back to this
-            # inlineCallbacks which can't happen.
+            # will not actually execute any callbacks
             result.addCallbacks(_inlineCallbacks, _inlineCallbacks,
                                 callbackArgs=(status, False),
                                 errbackArgs=(status, True))
