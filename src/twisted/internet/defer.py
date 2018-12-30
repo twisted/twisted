@@ -1405,8 +1405,6 @@ class _InlineCallbackStatus(object):
         needs to be resumed once waitingOn deferred is called. This variable
         is used only in the cancellation code path.
 
-    @ivar waiting: True if the L{inlineCallbacks} loop is waiting for result
-
     @ivar result: The result of the previous deferred in the L{inlineCallbacks}
         loop. It's a tuple of the result itself and a bool which is L{True}
         if the result is a failure and L{False} otherwise.
@@ -1420,7 +1418,6 @@ class _InlineCallbackStatus(object):
     g = attr.ib()
     waitingOn = attr.ib(default=None)
     waitingOnStatus = attr.ib(default=None)
-    waiting = attr.ib(default=True)
     result = attr.ib(default=None)
     parentStatus = attr.ib(default=None)
 
@@ -1464,7 +1461,6 @@ def _inlineCallbacks(result, status, isFailure):
     # and the child inlineCallbacks can inject its return value directly to
     # parent inlineCallbacks loop.
 
-    status.waiting = True
     status.result = None
 
     while 1:
@@ -1486,7 +1482,6 @@ def _inlineCallbacks(result, status, isFailure):
                 # overhead in processing the callbacks of a Deferred.
                 status.deferred._callbackOnEmpty(result)
                 status = status.parentStatus
-                status.waiting = True
                 isFailure = False
                 continue
             elif status.waitingOn is None:
@@ -1552,7 +1547,6 @@ def _inlineCallbacks(result, status, isFailure):
                 # case above
                 status.deferred._callbackOnEmpty(result)
                 status = status.parentStatus
-                status.waiting = True
                 isFailure = False
                 continue
             elif status.waitingOn is None:
@@ -1586,8 +1580,9 @@ def _inlineCallbacks(result, status, isFailure):
                     # We don't check result._runningCallbacks because if that's
                     # True and we still ended up here means that the value of
                     # result indirectly depends on the value of this
-                    # inlineCallbacks and also the other way round. So in order
-                    # to proceed just take the current value.
+                    # inlineCallbacks and also the other way round which cannot
+                    # happen. So in order to proceed just take the current
+                    # value.
                     resultResult = result.result
                     isFailure = result._resultIsFailure
                     result.result = None
@@ -1612,44 +1607,28 @@ def _inlineCallbacks(result, status, isFailure):
                     # inject the result value directly into the parent
                     # inlineCallbacks loop.
                     childStatus.parentStatus = status
-                    status.waiting = False
                     status.waitingOn = result
                     status.waitingOnStatus = childStatus
                     return
 
-            def gotResultSuccess(r):
-                if status.waiting:
-                    status.waiting = False
-                    status.result = (r, False)
-                else:
-                    # We are not waiting for deferred result any more
-                    _inlineCallbacks(r, status, False)
+            # If we end up here we know that calling addCallbacks on the result
+            # will not actually execute any callbacks. We checked the case of
+            # `result.called and not result.callbacks and not result.paused`
+            # above. The cases of `result.called` and `not result.paused` are
+            # obvious. The case of `not result.callbacks` is more tricky. If
+            # `result.called` is `True` it means that any added callback will
+            # be executed right away unless it blocks or `result.paused`
+            # is `True` at the time of addition. Whenever both of these
+            # conditions don't hold anymore, we try to execute callbacks. So
+            # the only way addCallbacks() will execute the callbacks right away
+            # is when there's circular dependency from result back to this
+            # inlineCallbacks which can't happen.
+            result.addCallbacks(_inlineCallbacks, _inlineCallbacks,
+                                callbackArgs=(status, False),
+                                errbackArgs=(status, True))
 
-            def gotResultFailure(r):
-                if status.waiting:
-                    status.waiting = False
-                    status.result = (r, True)
-                else:
-                    # We are not waiting for deferred result any more
-                    _inlineCallbacks(r, status, True)
-
-            result.addCallbacks(gotResultSuccess, gotResultFailure)
-            if status.waiting:
-                # Haven't called back yet, set flag so that we get reinvoked
-                # and return from the loop
-                status.waiting = False
-                status.waitingOn = result
-                return
-
-            result, isFailure = status.result
-
-            # Reset waiting to initial values for next loop. gotResultSuccess
-            # and gotSuccessFailure uses status.waiting, but this isn't a
-            # problem because these functions are only executed once, and if
-            # they hasn't been executed yet, the return branch above would have
-            # been taken.
-            status.waiting = True
-            status.result = None
+            status.waitingOn = result
+            return
 
         else:
             isFailure = False
@@ -1668,9 +1647,9 @@ def _cancellableInlineCallbacks(g):
     Calling L{cancel} on the L{Deferred} returned by an L{inlineCallbacks}
     decorated function only has an effect if that C{Deferred} has no result.
     That in turn is only possible if the decorated function has yielded a
-    L{Deferred} that itself has no result yet. In that case, status.waiting
-    will be False, and the L{_InlineCallbackStatus} instance's L{waitingOn}
-    will be the yielded result-less L{Deferred}.
+    L{Deferred} that itself has no result yet. In that case, the
+    L{_InlineCallbackStatus} instance's L{waitingOn} will be the yielded
+    result-less L{Deferred}.
 
     Cancelling L{waitingOn} propagates cancellation to the yielded L{Deferred}
     as intended. This cancellation either suspends L{waitingOn}'s callback
@@ -1738,14 +1717,11 @@ def _cancellableInlineCallbacks(g):
             status.waitingOnStatus.parentStatus = None
             status.waitingOnStatus = None
 
-            def gotResult(r):
-                # this is just a copy of gotResult* in _inlineCallbacks, but
-                # we know that status.waiting is False, as the only way we can
-                # end up in cancel() is when the code has previously
-                # blocked on status.waitingOn deferred.
-                _inlineCallbacks(r, status,
-                                 isinstance(r, failure.Failure))
-            status.waitingOn.addBoth(gotResult)
+            # The only way we can end up in cancel() is when the code has
+            # previously blocked on status.waitingOn deferred.
+            status.waitingOn.addCallbacks(_inlineCallbacks, _inlineCallbacks,
+                                          callbackArgs=(status, False),
+                                          errbackArgs=(status, True))
 
         it.callbacks, tmp = [], it.callbacks
         it.addErrback(handleCancel)
