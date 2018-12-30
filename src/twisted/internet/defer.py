@@ -241,6 +241,17 @@ class Deferred:
     @ivar _chainedTo: If this L{Deferred} is waiting for the result of another
         L{Deferred}, this is a reference to the other Deferred.  Otherwise,
         L{None}.
+
+    @ivar result: The result of the callback chain at the current point. This
+        variable is internal to the implementation of L{Deferred}, don't use
+        it. Use either C{addCallbacks} family of functions to retrieve it or
+        C{called} to check whether it's set at all. By default, the attribute
+        is not set.
+
+    @ivar _resultIsFailure: Whether C{result} is a L{Failure} or not. This
+        invariant is guaranteed to hold at all times. By default the attribute
+        is not set, just like C{result}.
+    @type _resultIsFailure: L{bool}
     """
 
     called = False
@@ -1780,12 +1791,27 @@ def inlineCallbacks(f):
     will be resumed with the same object sent back. This means C{yield}
     performs an operation roughly equivalent to L{maybeDeferred}.
 
-    Your inlineCallbacks-enabled generator will return a L{Deferred} object, which
-    will result in the return value of the generator (or will fail with a
-    failure object if your generator raises an unhandled exception). Note that
-    you can't use C{return result} to return a value; use C{returnValue(result)}
-    instead. Falling off the end of the generator, or simply using C{return}
-    will cause the L{Deferred} to have a result of L{None}.
+    Your inlineCallbacks-enabled generator will return a L{Deferred} object,
+    which will result in the return value of the generator (or will fail with a
+    failure object if your generator raises an unhandled exception).
+
+    You can use C{return result} on Python 3.3 and newer and
+    C{returnValue(result)} on older versions. For example::
+
+        @inlineCallbacks
+        def loadData(url):
+            response = yield makeRequest(url)
+            return json.loads(response)
+
+        And::
+
+        @inlineCallbacks
+        def loadData(url):
+            response = yield makeRequest(url)
+            returnValue(json.loads(response))
+
+    Falling off the end of the generator, or simply using C{return} will cause
+    the L{Deferred} to have a result of L{None}.
 
     Be aware that L{returnValue} will not accept a L{Deferred} as a parameter.
     If you believe the thing you'd like to return could be a L{Deferred}, do
@@ -1807,18 +1833,18 @@ def inlineCallbacks(f):
                 # will trigger an errback
                 raise Exception('DESTROY ALL LIFE')
 
-    It is possible to use the C{return} statement instead of L{returnValue}::
-
-        @inlineCallbacks
-        def loadData(url):
-            response = yield makeRequest(url)
-            return json.loads(response)
-
     You can cancel the L{Deferred} returned from your L{inlineCallbacks}
     generator before it is fired by your generator completing (either by
     reaching its end, a C{return} statement, or by calling L{returnValue}).
     A C{CancelledError} will be raised from the C{yielde}ed L{Deferred} that
     has been cancelled if that C{Deferred} does not otherwise suppress it.
+
+    C{inlineCallbacks} can be used on C{async def} functions on Python 3.5 and
+    newer.
+
+    If rewriting code from C{addCallback} style to C{inlineCallbacks} allows
+    omission of at least one C{addCallback} call then the code will be
+    generally faster.
     """
     @wraps(f)
     def unwindGenerator(*args, **kwargs):
