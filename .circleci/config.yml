@@ -15,6 +15,20 @@
 #
 version: 2
 
+aliases:
+  - &preparation_run_group
+    run:
+      name: Prepare the virtualenv.
+      command:
+        - \"$PYTHON\" --version
+        - \"$PYTHON\" -m pip --version
+        - \"$PYTHON\" -m pip install -q --user --ignore-installed --upgrade virtualenv
+        - \"$PYTHON\" -m virtualenv -p \"$PYTHON\" venv
+        - venv/bin/pip install -U pip
+        - venv/bin/python -m pip install tox
+        - venv/bin/python -m pip freeze
+        - venv/bin/python --version
+
 jobs:
   osx-wheels:
     working_directory: ~/osx-wheels
@@ -26,10 +40,7 @@ jobs:
       # Get the source.
       - checkout
 
-      - run:
-          name: Prepare the environment.
-          command: |
-            bash .circleci/prepare.sh
+      - <<: *preparation_run_group
 
       - run:
           name: Build the OSX wheels.
@@ -50,10 +61,7 @@ jobs:
       - checkout
       - setup_remote_docker
 
-      - run:
-          name: Prepare the environment.
-          command: |
-            bash .circleci/prepare.sh
+      - <<: *preparation_run_group
 
       - run:
           name: Build the Linux wheels.
@@ -73,10 +81,7 @@ jobs:
       # Get the source.
       - checkout
 
-      - run:
-          name: Prepare the environment.
-          command: |
-            bash .circleci/prepare.sh
+      - <<: *preparation_run_group
 
       # Run each checker in a separate step, but always run all steps to get
       # a the results from each step.
@@ -104,10 +109,7 @@ jobs:
       # Get the source.
       - checkout
 
-      - run:
-          name: Prepare the environment.
-          command: |
-            bash .circleci/prepare.sh
+      - <<: *preparation_run_group
 
       - run:
           name: Check the narrative documentation.
