@@ -185,6 +185,9 @@ class ExampleSession(object):
 
 components.registerAdapter(ExampleSession, ExampleAvatar, session.ISession)
 
+passwdDB = InMemoryUsernamePasswordDatabaseDontUse(user='password')
+sshDB = SSHPublicKeyChecker(InMemorySSHKeyDB(
+    {b'user': [keys.Key.fromFile(CLIENT_RSA_PUBLIC)]}))
 
 
 class ExampleFactory(factory.SSHFactory):
@@ -201,6 +204,7 @@ class ExampleFactory(factory.SSHFactory):
     * L{userauth.SSHUserAuthServer} handlers requests for the user
       authentication service.
     """
+    portal = portal.Portal(ExampleRealm(), [passwdDB, sshDB])
     protocol = SSHServerTransport
     # Server's host keys.
     # To simplify the example this server is defined only with a host key of
@@ -223,15 +227,6 @@ class ExampleFactory(factory.SSHFactory):
         """
         return PRIMES
 
-
-portal = portal.Portal(ExampleRealm())
-passwdDB = InMemoryUsernamePasswordDatabaseDontUse()
-passwdDB.addUser(b'user', b'password')
-sshDB = SSHPublicKeyChecker(InMemorySSHKeyDB(
-    {b'user': [keys.Key.fromFile(CLIENT_RSA_PUBLIC)]}))
-portal.registerChecker(passwdDB)
-portal.registerChecker(sshDB)
-ExampleFactory.portal = portal
 
 if __name__ == '__main__':
     reactor.listenTCP(5022, ExampleFactory())
