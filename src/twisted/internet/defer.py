@@ -1560,11 +1560,11 @@ def inlineCallbacks(f):
 
     Your inlineCallbacks-enabled generator will return a L{Deferred} object, which
     will result in the return value of the generator (or will fail with a
-    failure object if your generator raises an unhandled exception). Note that
-    you can't use C{return result} to return a value; use C{returnValue(result)}
-    instead. Falling off the end of the generator, or simply using C{return}
+    failure object if your generator raises an unhandled exception).
+    Falling off the end of the generator, or simply using C{return}
     will cause the L{Deferred} to have a result of L{None}.
 
+    You can return a value by passing it to L{returnValue}.
     Be aware that L{returnValue} will not accept a L{Deferred} as a parameter.
     If you believe the thing you'd like to return could be a L{Deferred}, do
     this::
