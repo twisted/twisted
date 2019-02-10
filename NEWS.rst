@@ -3,6 +3,107 @@ http://twistedmatrix.com/trac/ticket/<number>
 
 .. towncrier release notes start
 
+Twisted 18.9.0 (2018-10-10)
+===========================
+
+Features
+--------
+
+- twisted.internet._sslverify.ClientTLSOptions no longer raises IDNAError when given an IPv6 address as a hostname in a HTTPS URL. (#9433)
+- The repr() of a twisted.internet.base.DelayedCall now encodes the same information as its str(), exposing details of its scheduling and target callable. (#9481)
+- Python 3.7 is now supported. (#9502)
+
+
+Bugfixes
+--------
+
+- twisted.logger.LogBeginner's default critical observer now prints tracebacks for new and legacy log system events through the use of the new eventAsText API.  This API also does not raise an error for non-ascii encoded data in Python2, it attempts as well as possible to format the traceback. (#7927)
+- Syntax error under Python 3.7 fixed for twisted.conch.manhole and
+  twisted.main.imap4. (#9384)
+- `trial -j` reports tracebacks on test failures under Python 3. (#9436)
+- Properly format multi-byte and non-ascii encoded data in a traceback. (#9456)
+- twisted.python.rebuild now functions on Python 3.7. (#9492)
+- HTTP/2 server connections will no longer time out active downloads that take too long. (#9529)
+
+
+Improved Documentation
+----------------------
+
+- Several minor formatting problems in the API documentation have been corrected. (#9461)
+- The documentation of twisted.internet.defer.Deferred.fromFuture() has been updated to reflect upstream changes. (#9539)
+
+
+Deprecations and Removals
+-------------------------
+
+- async keyword argument is deprecated in twisted.conch.manhole
+  (ManholeInterpreter.write and Manhole.add) and in
+  twisted.main.imap4.IMAP4Server.sendUntaggedResponse,
+  isAsync keyword argument is introduced instead. (#9384)
+
+
+Misc
+----
+
+- #9379, #9485, #9489, #9499, #9501, #9511, #9514, #9523, #9524, #9525, #9538
+
+
+Conch
+-----
+
+Bugfixes
+~~~~~~~~
+
+- twisted.conch.keys.Key.public returns the same twisted.conch.keys.Key instance when it is already a public key instead of failing with an exception. (#9441)
+- RSA private keys are no longer corrupted during loading, allowing OpenSSL's fast-path to operate for RSA signing. (#9518)
+
+
+Improved Documentation
+~~~~~~~~~~~~~~~~~~~~~~
+
+- The documentation for IConchUser.gotGlobalRequest() is more accurate. (#9413)
+
+
+Deprecations and Removals
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+- twisted.conch.ssh.filetransfer.ClientDirectory's use as an iterator has been deprecated. (#9527)
+
+
+Web
+---
+
+Bugfixes
+~~~~~~~~
+
+- twisted.web.server.Request.getSession now returns a new session if the
+  previous session has expired. (#9288)
+
+
+Misc
+~~~~
+
+- #9479, #9480, #9482, #9491
+
+
+Mail
+----
+
+No significant changes.
+
+
+Words
+-----
+
+No significant changes.
+
+
+Names
+-----
+
+No significant changes.
+
+
 Twisted 18.7.0 (2018-07-10)
 ===========================
 
