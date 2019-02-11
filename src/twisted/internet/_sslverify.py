@@ -1470,7 +1470,7 @@ class OpenSSLCertificateOptions(object):
         @type raiseMinimumTo: L{TLSVersion} constant
 
         @param insecurelyLowerMinimumTo: The minimum TLS version to use,
-            possibky lower than Twisted's default.  If not specified, it is a
+            possibly lower than Twisted's default.  If not specified, it is a
             generally considered safe default (TLSv1.0).  If you want to raise
             your minimum TLS version to above that of this default, use
             C{raiseMinimumTo}.  DO NOT use this argument unless you are
