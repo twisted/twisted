@@ -813,9 +813,6 @@ class Clock:
         self.rightNow += amount
         while self.calls and self.calls[0].getTime() <= self.seconds():
             call = heapq.heappop(self.calls)
-            if time > self.seconds():
-                break
-            heapq.heappop(self.calls)
             if not call.cancelled:
                 call.called = 1
                 call.func(*call.args, **call.kw)
