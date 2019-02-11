@@ -32,6 +32,8 @@ except ImportError:
 
 from zope.interface import implementer
 
+
+
 class UnintelligentProtocol(basic.LineReceiver):
     """
     @ivar deferred: a deferred that will fire at connection lost.

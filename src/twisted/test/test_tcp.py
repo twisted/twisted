@@ -7,7 +7,9 @@ Tests for implementations of L{IReactorTCP}.
 
 from __future__ import division, absolute_import
 
-import socket, random, errno
+import socket
+import random
+import errno
 import hamcrest
 from functools import wraps
 
