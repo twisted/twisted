@@ -1764,6 +1764,12 @@ def _expandCipherString(cipherString, method, options):
     try:
         ctx.set_cipher_list(cipherString.encode('ascii'))
     except SSL.Error as e:
+        # OpenSSL 1.1.1 turns an invalid cipher list into TLS 1.3
+        # ciphers, so pyOpenSSL >= 19.0.0 raises an artificial Error
+        # that lacks a corresponding OpenSSL error if the cipher list
+        # consists only of these after a call to set_cipher_list.
+        if not e.args[0]:
+            return []
         if e.args[0][0][2] == 'no cipher match':
             return []
         else:
