@@ -15,7 +15,8 @@ from twisted.python.runtime import platform
 from twisted.test.test_tcp import ProperlyCloseFilesMixin
 from twisted.test.proto_helpers import waitUntilAllDisconnected
 
-import os, errno
+import os
+import hamcrest
 
 try:
     from OpenSSL import SSL, crypto
@@ -302,16 +303,26 @@ class StolenTCPTests(ProperlyCloseFilesMixin, unittest.TestCase):
         return SSL.Error
 
 
-    def getHandleErrorCode(self):
+    def getHandleErrorCodeMatcher(self):
         """
-        Return the argument L{OpenSSL.SSL.Error} will be constructed with for
-        this case. This is basically just a random OpenSSL implementation
-        detail. It would be better if this test worked in a way which did not
+        Return a L{hamcrest.core.matcher.Matcher} for the argument
+        L{OpenSSL.SSL.Error} will be constructed with for this case.
+        This is basically just a random OpenSSL implementation detail.
+        It would be better if this test worked in a way which did not
         require this.
         """
-        # Otherwise, we expect an error about how we tried to write to a
-        # shutdown connection.  This is terribly implementation-specific.
-        return [('SSL routines', 'SSL_write', 'protocol is shutdown')]
+        # We expect an error about how we tried to write to a shutdown
+        # connection.  This is terribly implementation-specific.
+        return hamcrest.contains(
+            hamcrest.contains(
+                hamcrest.equal_to('SSL routines'),
+                hamcrest.any_of(
+                    hamcrest.equal_to('SSL_write'),
+                    hamcrest.equal_to('ssl_write_internal'),
+                ),
+                hamcrest.equal_to('protocol is shutdown'),
+            ),
+        )
 
 
 
