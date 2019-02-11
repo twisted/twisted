@@ -790,7 +790,7 @@ class Clock:
                               lambda c: None,
                               lambda c: None,
                               self.seconds)
-        heapq.heappush(self.calls, (dc.getTime(), dc))
+        heapq.heappush(self.calls, dc)
         return dc
 
 
@@ -811,8 +811,8 @@ class Clock:
         time.
         """
         self.rightNow += amount
-        while self.calls:
-            time, call = self.calls[0]  # smallest item
+        while self.calls and self.calls[0].getTime() <= self.seconds():
+            call = heapq.heappop(self.calls)
             if time > self.seconds():
                 break
             heapq.heappop(self.calls)
