@@ -13,7 +13,6 @@ from socket import AF_INET, AF_INET6, inet_ntop
 from ctypes import (
     CDLL, POINTER, Structure, c_char_p, c_ushort, c_int,
     c_uint32, c_uint8, c_void_p, c_ubyte, pointer, cast)
-from ctypes.util import find_library
 
 from twisted.python.compat import _PY3, nativeString
 
@@ -28,7 +27,7 @@ if _PY3:
         return bytes([i])
 
 
-libc = CDLL(find_library("c"))
+libc = CDLL(None)
 
 if sys.platform.startswith('freebsd') or sys.platform == 'darwin':
     _sockaddrCommon = [

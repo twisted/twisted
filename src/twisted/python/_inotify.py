@@ -10,7 +10,6 @@ required.
 """
 
 import ctypes
-import ctypes.util
 
 
 
@@ -103,8 +102,5 @@ def initializeModule(libc):
 
 
 
-name = ctypes.util.find_library('c')
-if not name:
-    raise ImportError("Can't find C library.")
-libc = ctypes.cdll.LoadLibrary(name)
+libc = ctypes.CDLL(None)
 initializeModule(libc)
