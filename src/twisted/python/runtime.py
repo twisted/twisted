@@ -219,9 +219,6 @@ class Platform:
         except ImportError:
             return False
 
-        if self.isDocker():
-            return False
-
         try:
             os.close(init())
         except INotifyError:
