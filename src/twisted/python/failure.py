@@ -91,22 +91,42 @@ class NoCurrentExceptionError(Exception):
 
 
 
-def _Traceback(frames):
+def _Traceback(stackFrames, tbFrames):
     """
     Construct a fake traceback object using a list of frames. Note that
     although frames generally include locals and globals, this information
     is not kept by this method, since locals and globals are not used in
     standard tracebacks.
 
-    @param frames: [(methodname, filename, lineno, locals, globals), ...]
+    @param stackFrames: [(methodname, filename, lineno, locals, globals), ...]
+    @param tbFrames: [(methodname, filename, lineno, locals, globals), ...]
     """
-    assert len(frames) > 0, "Must pass some frames"
+    assert len(tbFrames) > 0, "Must pass some frames"
     # We deliberately avoid using recursion here, as the frames list may be
     # long.
-    tb = None
-    for frame in reversed(frames):
-        tb = _TracebackFrame(frame, tb)
-    return tb
+
+    # 'stackFrames' is a list of frames above (ie, older than) the point the
+    # exception was caught, with oldest at the start. Start by building these
+    # into a linked list of _Frame objects (with the f_back links pointing back
+    # towards the oldest frame).
+    stack = None
+    for sf in stackFrames:
+        stack = _Frame(sf, stack)
+
+    # 'tbFrames' is a list of frames from the point the exception was caught,
+    # down to where it was thrown, with the oldest at the start. Add these to
+    # the linked list of _Frames, but also wrap each one with a _Traceback
+    # frame which is linked in the opposite direction (towards the newest
+    # frame).
+    stack = _Frame(tbFrames[0], stack)
+    firstTb = tb = _TracebackFrame(stack)
+    for sf in tbFrames[1:]:
+        stack = _Frame(sf, stack)
+        tb.tb_next = _TracebackFrame(stack)
+        tb = tb.tb_next
+
+    # Return the first _TracebackFrame.
+    return firstTb
 
 
 
@@ -116,16 +136,13 @@ class _TracebackFrame(object):
     library L{traceback} module.
     """
 
-    def __init__(self, frame, tb_next):
+    def __init__(self, frame):
         """
-        @param frame: (methodname, filename, lineno, locals, globals)
-        @param tb_next: next inner _TracebackFrame object, or None if this
-           is the innermost frame.
+        @param frame: _Frame object
         """
-        name, filename, lineno, localz, globalz = frame
-        self.tb_frame = _Frame(name, filename)
-        self.tb_lineno = lineno
-        self.tb_next = tb_next
+        self.tb_frame = frame
+        self.tb_lineno = frame.f_lineno
+        self.tb_next = None
 
 
 
@@ -134,20 +151,24 @@ class _Frame(object):
     A fake frame object, used by L{_Traceback}.
 
     @ivar f_code: fake L{code<types.CodeType>} object
+    @ivar f_lineno: line number
     @ivar f_globals: fake f_globals dictionary (usually empty)
     @ivar f_locals: fake f_locals dictionary (usually empty)
+    @ivar f_back: previous stack frame (towards the caller)
     """
 
-    def __init__(self, name, filename):
+    def __init__(self, frameinfo, back):
         """
-        @param name: method/function name for this frame.
-        @type name: C{str}
-        @param filename: filename for this frame.
-        @type name: C{str}
+        @param frameinfo: (methodname, filename, lineno, locals, globals)
+        @param back: previous (older) stack frame
+        @type back: C{frame}
         """
+        name, filename, lineno, localz, globalz = frameinfo
         self.f_code = _Code(name, filename)
+        self.f_lineno = lineno
         self.f_globals = {}
         self.f_locals = {}
+        self.f_back = back
 
 
 
@@ -619,7 +640,7 @@ class Failure(BaseException):
         if self.tb is not None:
             return self.tb
         elif len(self.frames) > 0:
-            return _Traceback(self.frames)
+            return _Traceback(self.stack, self.frames)
         else:
             return None
 
