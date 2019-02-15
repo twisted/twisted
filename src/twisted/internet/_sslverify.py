@@ -1470,7 +1470,7 @@ class OpenSSLCertificateOptions(object):
         @type raiseMinimumTo: L{TLSVersion} constant
 
         @param insecurelyLowerMinimumTo: The minimum TLS version to use,
-            possibky lower than Twisted's default.  If not specified, it is a
+            possibly lower than Twisted's default.  If not specified, it is a
             generally considered safe default (TLSv1.0).  If you want to raise
             your minimum TLS version to above that of this default, use
             C{raiseMinimumTo}.  DO NOT use this argument unless you are
@@ -1764,6 +1764,12 @@ def _expandCipherString(cipherString, method, options):
     try:
         ctx.set_cipher_list(cipherString.encode('ascii'))
     except SSL.Error as e:
+        # OpenSSL 1.1.1 turns an invalid cipher list into TLS 1.3
+        # ciphers, so pyOpenSSL >= 19.0.0 raises an artificial Error
+        # that lacks a corresponding OpenSSL error if the cipher list
+        # consists only of these after a call to set_cipher_list.
+        if not e.args[0]:
+            return []
         if e.args[0][0][2] == 'no cipher match':
             return []
         else:
