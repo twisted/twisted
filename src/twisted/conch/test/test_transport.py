@@ -2293,7 +2293,10 @@ class ClientSSHTransportDHGroupExchangeBaseCase(ClientSSHTransportBaseCase):
         thisPriv = ec.generate_private_key(ec.SECP256R1(), default_backend())
         # Get the public key
         thisPub = thisPriv.public_key()
-        encPub = thisPub.public_numbers().encode_point()
+        encPub = thisPub.public_bytes(
+            serialization.Encoding.X962,
+            serialization.PublicFormat.UncompressedPoint
+        )
         self.proto.curve = ec.SECP256R1()
 
         self.proto.kexAlg = b'ecdh-sha2-nistp256'
