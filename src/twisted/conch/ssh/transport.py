@@ -21,6 +21,7 @@ from hashlib import md5, sha1, sha256, sha384, sha512
 
 from cryptography.exceptions import UnsupportedAlgorithm
 from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.ciphers import algorithms, modes, Cipher
 from cryptography.hazmat.primitives.asymmetric import dh, ec
 
@@ -1297,8 +1298,8 @@ class SSHServerTransport(SSHTransportBase):
 
         # Take the provided public key and transform it into
         # a format for the cryptography module
-        theirECPub = ec.EllipticCurvePublicNumbers.from_encoded_point(
-                        curve, pktPub).public_key(default_backend())
+        theirECPub = ec.EllipticCurvePublicKey.from_encoded_point(curve,
+                                                                  pktPub)
 
         # We need to convert to hex,
         # so we can convert to an int
@@ -1594,8 +1595,12 @@ class SSHClientTransport(SSHTransportBase):
 
             # DH_GEX_REQUEST_OLD is the same number we need.
             self.sendPacket(
-                    MSG_KEX_DH_GEX_REQUEST_OLD,
-                    NS(self.ecPub.public_numbers().encode_point()))
+                MSG_KEX_DH_GEX_REQUEST_OLD,
+                NS(self.ecPub.public_bytes(
+                    serialization.Encoding.X962,
+                    serialization.PublicFormat.UncompressedPoint
+                ))
+            )
         elif _kex.isFixedGroup(self.kexAlg):
             # We agreed on a fixed group key exchange algorithm.
             self.g, self.p = _kex.getDHGeneratorAndPrime(self.kexAlg)
@@ -1643,9 +1648,9 @@ class SSHClientTransport(SSHTransportBase):
 
             # Take the provided public key and transform it into a format
             # for the cryptography module
-            theirECPub = ec.EllipticCurvePublicNumbers.from_encoded_point(
-                            self.curve, pubKey).public_key(
-                            default_backend())
+            theirECPub = ec.EllipticCurvePublicKey.from_encoded_point(
+                self.curve, pubKey
+            )
 
             # We need to convert to hex,
             # so we can convert to an int
@@ -1661,7 +1666,10 @@ class SSHClientTransport(SSHTransportBase):
             h.update(NS(self.ourKexInitPayload))
             h.update(NS(self.otherKexInitPayload))
             h.update(NS(theirECHost))
-            h.update(NS(self.ecPub.public_numbers().encode_point()))
+            h.update(NS(self.ecPub.public_bytes(
+                serialization.Encoding.X962,
+                serialization.PublicFormat.UncompressedPoint
+            )))
             h.update(NS(pubKey))
             h.update(sharedSecret)
 
