@@ -1294,7 +1294,10 @@ class SSHServerTransport(SSHTransportBase):
 
         # Get the public key
         ecPub = ecPriv.public_key()
-        encPub = ecPub.public_numbers().encode_point()
+        encPub = ecPub.public_bytes(
+            serialization.Encoding.X962,
+            serialization.PublicFormat.UncompressedPoint
+        )
 
         # Take the provided public key and transform it into
         # a format for the cryptography module
