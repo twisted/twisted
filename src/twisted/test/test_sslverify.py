@@ -206,7 +206,9 @@ def certificatesForAuthorityAndServer(serviceIdentity=u'example.com'):
     try:
         ipAddress = ipaddress.ip_address(serviceIdentity)
     except ValueError:
-        subjectAlternativeNames = [x509.DNSName(serviceIdentity)]
+        subjectAlternativeNames = [
+            x509.DNSName(serviceIdentity.encode("idna").decode("ascii"))
+        ]
     else:
         subjectAlternativeNames = [x509.IPAddress(ipAddress)]
 
