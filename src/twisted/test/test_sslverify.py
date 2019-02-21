@@ -206,7 +206,9 @@ def certificatesForAuthorityAndServer(serviceIdentity=u'example.com'):
     try:
         ipAddress = ipaddress.ip_address(serviceIdentity)
     except ValueError:
-        subjectAlternativeNames = [x509.DNSName(serviceIdentity)]
+        subjectAlternativeNames = [
+            x509.DNSName(serviceIdentity.encode("idna").decode("ascii"))
+        ]
     else:
         subjectAlternativeNames = [x509.IPAddress(ipAddress)]
 
@@ -1031,8 +1033,9 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, unittest.TestCase):
                 insecurelyLowerMinimumTo=sslverify.TLSVersion.TLSv1_2,
             )
 
-        # Best error message
-        self.assertEqual(e.exception.args, ("nope",))
+        self.assertIn('raiseMinimumTo', e.exception.args[0])
+        self.assertIn('insecurelyLowerMinimumTo', e.exception.args[0])
+        self.assertIn('exclusive', e.exception.args[0])
 
 
     def test_tlsProtocolsNoMethodWithAtLeast(self):
@@ -1049,8 +1052,9 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, unittest.TestCase):
                 raiseMinimumTo=sslverify.TLSVersion.TLSv1_2,
             )
 
-        # Best error message
-        self.assertEqual(e.exception.args, ("nope",))
+        self.assertIn('method', e.exception.args[0])
+        self.assertIn('raiseMinimumTo', e.exception.args[0])
+        self.assertIn('exclusive', e.exception.args[0])
 
 
     def test_tlsProtocolsNoMethodWithMinimum(self):
@@ -1067,8 +1071,9 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, unittest.TestCase):
                 insecurelyLowerMinimumTo=sslverify.TLSVersion.TLSv1_2,
             )
 
-        # Best error message
-        self.assertEqual(e.exception.args, ("nope",))
+        self.assertIn('method', e.exception.args[0])
+        self.assertIn('insecurelyLowerMinimumTo', e.exception.args[0])
+        self.assertIn('exclusive', e.exception.args[0])
 
 
     def test_tlsProtocolsNoMethodWithMaximum(self):
@@ -1085,8 +1090,9 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, unittest.TestCase):
                 lowerMaximumSecurityTo=sslverify.TLSVersion.TLSv1_2,
             )
 
-        # Best error message
-        self.assertEqual(e.exception.args, ("nope",))
+        self.assertIn('method', e.exception.args[0])
+        self.assertIn('lowerMaximumSecurityTo', e.exception.args[0])
+        self.assertIn('exclusive', e.exception.args[0])
 
 
     def test_tlsVersionRangeInOrder(self):
@@ -1660,11 +1666,28 @@ class OpenSSLOptionsECDHIntegrationTests(
             raise unittest.SkipTest("OpenSSL does not support ECDH.")
 
         onData = defer.Deferred()
-        self.loopback(sslverify.OpenSSLCertificateOptions(privateKey=self.sKey,
-                            certificate=self.sCert, requireCertificate=False),
-                      sslverify.OpenSSLCertificateOptions(
-                          requireCertificate=False),
-                      onData=onData)
+        # TLS 1.3 cipher suites do not specify the key exchange
+        # mechanism:
+        # https://wiki.openssl.org/index.php/TLS1.3#Differences_with_TLS1.2_and_below
+        #
+        # and OpenSSL only supports ECHDE groups with TLS 1.3:
+        # https://wiki.openssl.org/index.php/TLS1.3#Groups
+        #
+        # so TLS 1.3 implies ECDHE.  Force this test to use TLS 1.2 to
+        # ensure ECDH is selected when it might not be.
+        self.loopback(
+            sslverify.OpenSSLCertificateOptions(
+                privateKey=self.sKey,
+                certificate=self.sCert,
+                requireCertificate=False,
+                lowerMaximumSecurityTo=sslverify.TLSVersion.TLSv1_2
+            ),
+            sslverify.OpenSSLCertificateOptions(
+                requireCertificate=False,
+                lowerMaximumSecurityTo=sslverify.TLSVersion.TLSv1_2,
+            ),
+            onData=onData,
+        )
 
         @onData.addCallback
         def assertECDH(_):
