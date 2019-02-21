@@ -31,6 +31,9 @@ class DeferredTestsAsync(unittest.TestCase):
 
     @ensuringDeferred
     async def test_asyncWithLock(self):
+        """
+        L{defer.DeferredLock} can be used as an asynchronous context manager.
+        """
         lock = defer.DeferredLock()
         async with lock:
             self.assertTrue(lock.locked)
@@ -45,6 +48,9 @@ class DeferredTestsAsync(unittest.TestCase):
 
     @ensuringDeferred
     async def test_asyncWithSemaphore(self):
+        """
+        L{defer.DeferredSemaphore} can be used as an asynchronous context manager.
+        """
         sem = defer.DeferredSemaphore(3)
 
         async with sem:
@@ -64,3 +70,16 @@ class DeferredTestsAsync(unittest.TestCase):
             await d2
             self.assertEqual(sem.tokens, 2)
         self.assertEqual(sem.tokens, 3)
+
+    @ensuringDeferred
+    async def test_asyncWithLockException(self):
+        """
+        C{defer.DeferredLock} correctly propagates exceptions when
+        used as an asynchronous context manager.
+        """
+        lock = defer.DeferredLock()
+        with self.assertRaisesRegexp(Exception, 'some specific exception'):
+            async with lock:
+                self.assertTrue(lock.locked)
+                raise Exception('some specific exception')
+        self.assertFalse(lock.locked)
