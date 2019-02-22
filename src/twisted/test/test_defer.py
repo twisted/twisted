@@ -8,10 +8,16 @@ Test cases for L{twisted.internet.defer}.
 from __future__ import division, absolute_import
 
 import warnings
-import gc, traceback
+import gc
+import traceback
 import re
 
-from twisted.python.compat import _PY3
+from twisted.python import compat, failure, log
+from twisted.python.compat import _PY3, _PY35PLUS
+from twisted.trial import unittest
+from twisted.internet import defer, reactor
+from twisted.internet.task import Clock
+
 
 if _PY3:
     from asyncio import new_event_loop, Future, CancelledError
@@ -20,11 +26,27 @@ else:
     asyncSkip = "asyncio not available before python 3.4"
 
 
+if _PY35PLUS:
+    from twisted.python.filepath import FilePath
 
-from twisted.python import failure, log
-from twisted.internet import defer, reactor
-from twisted.internet.task import Clock
-from twisted.trial import unittest
+    _path = FilePath(__file__).parent().child("test_defer.py.3only")
+
+    _g = {"__name__": __name__ + ".3only"}
+    compat.execfile(_path.path, _g)
+    DeferredTestsAsync = _g["DeferredTestsAsync"]
+else:
+    class DeferredTestsAsync(unittest.TestCase):
+        """
+        A dummy class to show that this test file was discovered but the tests
+        are unable to be ran in this version of Python.
+        """
+        skip = "async/await is not available before Python 3.5"
+
+        def test_notAvailable(self):
+            """
+            A skipped test to show that this was not ran because the Python is
+            too old.
+            """
 
 
 
