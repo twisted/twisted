@@ -1503,9 +1503,6 @@ class AgentHTTPSTests(TestCase, FakeReactorAndConnectMixin,
         L{Agent} works over IPv4 when hostname is an IPv4 address.
         """
         super(AgentHTTPSTests, self).test_integrationTestIPv4Address()
-    test_integrationTestIPv4Address.skip = (
-        'service_identity does not support IP address validation yet'
-    )
 
 
     def test_integrationTestIPv6Address(self):
@@ -1513,9 +1510,6 @@ class AgentHTTPSTests(TestCase, FakeReactorAndConnectMixin,
         L{Agent} works over IPv6 when the hostname is an IPv6 address.
         """
         super(AgentHTTPSTests, self).test_integrationTestIPv6Address()
-    test_integrationTestIPv6Address.skip = (
-        'service_identity does not support IP address validation yet'
-    )
 
 
     def integrationTest(self, hostName, expectedAddress, addressType):

@@ -597,28 +597,28 @@ class ClientOptionsTests(unittest.SynchronousTestCase):
     def test_dNSNameHostname(self):
         """
         If you pass a dNSName to L{sslverify.optionsForClientTLS}
-        L{_sendSNI} will be True
+        L{_hostnameIsDnsName} will be True
         """
         options = sslverify.optionsForClientTLS(u'example.com')
-        self.assertTrue(options._sendSNI)
+        self.assertTrue(options._hostnameIsDnsName)
 
 
     def test_IPv4AddressHostname(self):
         """
         If you pass an IPv4 address to L{sslverify.optionsForClientTLS}
-        L{_sendSNI} will be False
+        L{_hostnameIsDnsName} will be False
         """
         options = sslverify.optionsForClientTLS(u'127.0.0.1')
-        self.assertFalse(options._sendSNI)
+        self.assertFalse(options._hostnameIsDnsName)
 
 
     def test_IPv6AddressHostname(self):
         """
         If you pass an IPv6 address to L{sslverify.optionsForClientTLS}
-        L{_sendSNI} will be False
+        L{_hostnameIsDnsName} will be False
         """
         options = sslverify.optionsForClientTLS(u'::1')
-        self.assertFalse(options._sendSNI)
+        self.assertFalse(options._hostnameIsDnsName)
 
 
 
@@ -3275,6 +3275,7 @@ class SelectVerifyImplementationTests(unittest.SynchronousTestCase):
             result = sslverify._selectVerifyImplementation()
             expected = (
                 sslverify.simpleVerifyHostname,
+                sslverify.simpleVerifyIPAddress,
                 sslverify.SimpleVerificationError)
             self.assertEqual(expected, result)
     test_dependencyMissing.suppress = [
