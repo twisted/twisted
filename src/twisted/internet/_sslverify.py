@@ -126,6 +126,22 @@ def simpleVerifyHostname(connection, hostname):
 
 
 
+def simpleVerifyIPAddress(connection, hostname):
+    """
+    Always fails validation of IP addresses
+
+    @param connection: the OpenSSL connection to verify.
+    @type connection: L{OpenSSL.SSL.Connection}
+
+    @param hostname: The hostname expected by the user.
+    @type hostname: L{unicode}
+
+    @raise twisted.internet.ssl.VerificationError: Always raised
+    """
+    raise SimpleVerificationError("Cannot verify certificate IP addresses")
+
+
+
 def _usablePyOpenSSL(version):
     """
     Check pyOpenSSL version string whether we can use it for host verification.
@@ -158,8 +174,10 @@ def _selectVerifyImplementation():
 
     try:
         from service_identity import VerificationError
-        from service_identity.pyopenssl import verify_hostname
-        return verify_hostname, VerificationError
+        from service_identity.pyopenssl import (
+            verify_hostname, verify_ip_address
+        )
+        return verify_hostname, verify_ip_address, VerificationError
     except ImportError as e:
         warnings.warn_explicit(
             "You do not have a working installation of the "
@@ -171,11 +189,12 @@ def _selectVerifyImplementation():
             # Unfortunately the lineno is required.
             category=UserWarning, filename="", lineno=0)
 
-    return simpleVerifyHostname, SimpleVerificationError
+    return simpleVerifyHostname, simpleVerifyIPAddress, SimpleVerificationError
 
 
 
-verifyHostname, VerificationError = _selectVerifyImplementation()
+verifyHostname, verifyIPAddress, VerificationError = \
+    _selectVerifyImplementation()
 
 
 
@@ -1129,10 +1148,10 @@ class ClientTLSOptions(object):
         encoding.  ASCII values, however, will always work.
     @type _hostnameASCII: L{unicode}
 
-    @ivar _sendSNI: Whether or not to send the SNI with the handshake.
+    @ivar _hostnameIsDnsName: Whether or not the C{_hostname} is a DNSName.
         Will be L{False} if C{_hostname} is an IP address or L{True} if
         C{_hostname} is a DNSName
-    @type _sendSNI: L{bool}
+    @type _hostnameIsDnsName: L{bool}
     """
 
     def __init__(self, hostname, ctx):
@@ -1150,10 +1169,10 @@ class ClientTLSOptions(object):
 
         if isIPAddress(hostname) or isIPv6Address(hostname):
             self._hostnameBytes = hostname.encode('ascii')
-            self._sendSNI = False
+            self._hostnameIsDnsName = False
         else:
             self._hostnameBytes = _idnaBytes(hostname)
-            self._sendSNI = True
+            self._hostnameIsDnsName = True
 
         self._hostnameASCII = self._hostnameBytes.decode("ascii")
         ctx.set_info_callback(
@@ -1201,11 +1220,14 @@ class ClientTLSOptions(object):
         """
         # Literal IPv4 and IPv6 addresses are not permitted
         # as host names according to the RFCs
-        if where & SSL.SSL_CB_HANDSHAKE_START and self._sendSNI:
+        if where & SSL.SSL_CB_HANDSHAKE_START and self._hostnameIsDnsName:
             connection.set_tlsext_host_name(self._hostnameBytes)
         elif where & SSL.SSL_CB_HANDSHAKE_DONE:
             try:
-                verifyHostname(connection, self._hostnameASCII)
+                if self._hostnameIsDnsName:
+                    verifyHostname(connection, self._hostnameASCII)
+                else:
+                    verifyIPAddress(connection, self._hostnameASCII)
             except VerificationError:
                 f = Failure()
                 transport = connection.get_app_data()
