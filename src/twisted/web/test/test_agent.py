@@ -1498,20 +1498,6 @@ class AgentHTTPSTests(TestCase, FakeReactorAndConnectMixin,
         self.assertIs(trustRoot.context, connection.get_context())
 
 
-    def test_integrationTestIPv4Address(self):
-        """
-        L{Agent} works over IPv4 when hostname is an IPv4 address.
-        """
-        super(AgentHTTPSTests, self).test_integrationTestIPv4Address()
-
-
-    def test_integrationTestIPv6Address(self):
-        """
-        L{Agent} works over IPv6 when the hostname is an IPv6 address.
-        """
-        super(AgentHTTPSTests, self).test_integrationTestIPv6Address()
-
-
     def integrationTest(self, hostName, expectedAddress, addressType):
         """
         Wrap L{AgentTestsMixin.integrationTest} with TLS.
