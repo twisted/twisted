@@ -149,7 +149,7 @@ class OptionalDependenciesTests(TestCase):
         """
         deps = _EXTRAS_REQUIRE['tls']
         self.assertIn('pyopenssl >= 16.0.0', deps)
-        self.assertIn('service_identity', deps)
+        self.assertIn('service_identity >= 18.1.0', deps)
         self.assertIn('idna >= 0.6, != 2.3', deps)
 
 
@@ -205,7 +205,7 @@ class OptionalDependenciesTests(TestCase):
         """
         deps = _EXTRAS_REQUIRE['all_non_platform']
         self.assertIn('pyopenssl >= 16.0.0', deps)
-        self.assertIn('service_identity', deps)
+        self.assertIn('service_identity >= 18.1.0', deps)
         self.assertIn('idna >= 0.6, != 2.3', deps)
         self.assertIn('pyasn1', deps)
         self.assertIn('cryptography >= 1.5', deps)
@@ -224,7 +224,7 @@ class OptionalDependenciesTests(TestCase):
         """
         deps = _EXTRAS_REQUIRE['macos_platform']
         self.assertIn('pyopenssl >= 16.0.0', deps)
-        self.assertIn('service_identity', deps)
+        self.assertIn('service_identity >= 18.1.0', deps)
         self.assertIn('idna >= 0.6, != 2.3', deps)
         self.assertIn('pyasn1', deps)
         self.assertIn('cryptography >= 1.5', deps)
@@ -251,7 +251,7 @@ class OptionalDependenciesTests(TestCase):
         """
         deps = _EXTRAS_REQUIRE['windows_platform']
         self.assertIn('pyopenssl >= 16.0.0', deps)
-        self.assertIn('service_identity', deps)
+        self.assertIn('service_identity >= 18.1.0', deps)
         self.assertIn('idna >= 0.6, != 2.3', deps)
         self.assertIn('pyasn1', deps)
         self.assertIn('cryptography >= 1.5', deps)
