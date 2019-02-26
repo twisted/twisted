@@ -214,14 +214,22 @@ class Resource:
         intended to have the root of a folder, e.g. /foo/, you want
         path to be ''.
 
+        @param path: A single path component.
+        @type path: C{bytes}
+
+        @param child: The child resource to register.
+        @type child: L{IResource}
+
         @see: L{IResource.putChild}
         """
         if not isinstance(path, bytes):
             warnings.warn(
                 'Path segment must be bytes; '
-                'passing {0} will raise an exception in the future.'
+                'passing {0} has never worked, and '
+                'will raise an exception in the future.'
                 .format(type(path)),
-                DeprecationWarning, 2)
+                category=DeprecationWarning,
+                stacklevel=2)
 
         self.children[path] = child
         child.server = self.server
