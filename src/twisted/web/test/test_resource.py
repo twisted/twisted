@@ -191,8 +191,9 @@ class ResourceTests(TestCase):
                       warnings[0]['message'])
         if _PY3:
             # We expect an error here because u"foo" != b"foo" on Py3k
-            self.assertIsInstance(resource.getChildWithDefault(b"foo", DummyRequest([])),
-                                  ErrorPage)
+            self.assertIsInstance(
+                resource.getChildWithDefault(b"foo", DummyRequest([])),
+                ErrorPage)
 
         resource.putChild(None, sibling)
         warnings = self.flushWarnings([self.test_staticChildPathType])
