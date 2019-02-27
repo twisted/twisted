@@ -1081,7 +1081,7 @@ class Request:
 
         if self._disconnected:
             # Don't attempt to write any data to a disconnected client.
-            # The RuntimeError exception will be thrown as usual when 
+            # The RuntimeError exception will be thrown as usual when
             # request.finish is called
             return
 
