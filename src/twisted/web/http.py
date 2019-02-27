@@ -1078,6 +1078,13 @@ class Request:
         if self.finished:
             raise RuntimeError('Request.write called on a request after '
                                'Request.finish was called.')
+
+        if self._disconnected:
+            # Don't attempt to write any data to a disconnected client.
+            # The RuntimeError exception will be thrown as usual when 
+            # request.finish is called
+            return
+
         if not self.startedWriting:
             self.startedWriting = 1
             version = self.clientproto
