@@ -1560,7 +1560,8 @@ class Request:
         """
         Pass the loseConnection through to the underlying channel.
         """
-        self.channel.loseConnection()
+        if self.channel:
+            self.channel.loseConnection()
 
 
     def __eq__(self, other):
