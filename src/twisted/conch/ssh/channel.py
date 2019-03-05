@@ -4,7 +4,7 @@
 
 """
 The parent class for all the SSH Channels.  Currently implemented channels
-are session. direct-tcp, and forwarded-tcp.
+are session, direct-tcp, and forwarded-tcp.
 
 Maintainer: Paul Swartz
 """
@@ -43,13 +43,13 @@ class SSHChannel(log.Logger):
     @type remoteMaxPacket: L{int}
     @ivar conn: the connection this channel is multiplexed through.
     @type conn: L{SSHConnection}
-    @ivar data: any data to send to the other size when the channel is
+    @ivar data: any data to send to the other side when the channel is
         requested.
     @type data: L{bytes}
     @ivar avatar: an avatar for the logged-in user (if a server channel)
     @ivar localClosed: True if we aren't accepting more data.
     @type localClosed: L{bool}
-    @ivar remoteClosed: True if the other size isn't accepting more data.
+    @ivar remoteClosed: True if the other side isn't accepting more data.
     @type remoteClosed: L{bool}
     """
 

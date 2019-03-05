@@ -3,8 +3,8 @@
 :LastChangedRevision: $LastChangedRevision$
 :LastChangedBy: $LastChangedBy$
 
-Twisted Mail
-============
+Twisted Mail (SMTP, POP, and IMAP)
+==================================
 
 .. toctree::
    :hidden:

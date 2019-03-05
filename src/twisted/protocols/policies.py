@@ -124,6 +124,8 @@ class ProtocolWrapper(Protocol):
         self.factory.unregisterProtocol(self)
         self.wrappedProtocol.connectionLost(reason)
 
+        # Breaking reference cycle between self and wrappedProtocol.
+        self.wrappedProtocol = None
 
 
 class WrappingFactory(ClientFactory):
@@ -467,13 +469,14 @@ class TimeoutProtocol(ProtocolWrapper):
         """
         Constructor.
 
-        @param factory: An L{protocol.Factory}.
+        @param factory: An L{TimeoutFactory}.
         @param wrappedProtocol: A L{Protocol} to wrapp.
         @param timeoutPeriod: Number of seconds to wait for activity before
             timing out.
         """
         ProtocolWrapper.__init__(self, factory, wrappedProtocol)
         self.timeoutCall = None
+        self.timeoutPeriod = None
         self.setTimeout(timeoutPeriod)
 
 
@@ -487,9 +490,9 @@ class TimeoutProtocol(ProtocolWrapper):
             Otherwise, use the existing value.
         """
         self.cancelTimeout()
+        self.timeoutPeriod = timeoutPeriod
         if timeoutPeriod is not None:
-            self.timeoutPeriod = timeoutPeriod
-        self.timeoutCall = self.factory.callLater(self.timeoutPeriod, self.timeoutFunc)
+            self.timeoutCall = self.factory.callLater(self.timeoutPeriod, self.timeoutFunc)
 
 
     def cancelTimeout(self):
@@ -498,10 +501,11 @@ class TimeoutProtocol(ProtocolWrapper):
 
         If the timeout was already cancelled, this does nothing.
         """
+        self.timeoutPeriod = None
         if self.timeoutCall:
             try:
                 self.timeoutCall.cancel()
-            except error.AlreadyCalled:
+            except (error.AlreadyCalled, error.AlreadyCancelled):
                 pass
             self.timeoutCall = None
 
@@ -721,7 +725,11 @@ class TimeoutMixin:
 
         if self.__timeoutCall is not None:
             if period is None:
-                self.__timeoutCall.cancel()
+                try:
+                    self.__timeoutCall.cancel()
+                except (error.AlreadyCancelled, error.AlreadyCalled):
+                    # Do nothing if the call was already consumed.
+                    pass
                 self.__timeoutCall = None
             else:
                 self.__timeoutCall.reset(period)

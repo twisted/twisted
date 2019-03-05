@@ -4,13 +4,3 @@
 """
 Chat protocols.
 """
-
-from incremental import Version
-from twisted.python.deprecate import deprecatedModuleAttribute
-
-
-deprecatedModuleAttribute(
-    Version("Twisted", 16, 2, 0),
-    "There is no replacement for this module.",
-    "twisted.words.protocols",
-    "oscar")

@@ -18,8 +18,10 @@ import os
 import re
 import socket
 from unicodedata import normalize
+import warnings
 
 from constantly import NamedConstant, Names
+from incremental import Version
 
 from zope.interface import implementer, directlyProvides, provider
 
@@ -30,14 +32,18 @@ from twisted.internet.address import (
 )
 from twisted.internet.interfaces import (
     IStreamServerEndpointStringParser,
-    IStreamClientEndpointStringParserWithReactor, IResolutionReceiver
+    IStreamClientEndpointStringParserWithReactor, IResolutionReceiver,
+    IReactorPluggableNameResolver,
+    IHostnameResolver,
 )
 from twisted.internet.protocol import ClientFactory, Factory
 from twisted.internet.protocol import ProcessProtocol, Protocol
 from twisted.internet.stdio import StandardIO, PipeAddress
 from twisted.internet.task import LoopingCall
+from twisted.internet._resolver import HostResolution
+from twisted.logger import Logger
 from twisted.plugin import IPlugin, getPlugins
-from twisted.python import log
+from twisted.python import deprecate, log
 from twisted.python.compat import nativeString, unicode, _matchingString
 from twisted.python.components import proxyForInterface
 from twisted.python.failure import Failure
@@ -543,7 +549,7 @@ class TCP4ClientEndpoint(object):
 
         @param timeout: The number of seconds to wait before assuming the
             connection has failed.
-        @type timeout: int
+        @type timeout: L{float} or L{int}
 
         @param bindAddress: A (host, port) tuple of local address to bind to,
             or None.
@@ -644,6 +650,76 @@ class TCP6ClientEndpoint(object):
 
 
 
+@implementer(IHostnameResolver)
+class _SimpleHostnameResolver(object):
+    """
+    An L{IHostnameResolver} provider that invokes a provided callable
+    to resolve hostnames.
+
+    @ivar _nameResolution: the callable L{resolveHostName} invokes to
+        resolve hostnames.
+    @type _nameResolution: A L{callable} that accepts two arguments:
+        the host to resolve and the port number to include in the
+        result.
+    """
+    _log = Logger()
+
+    def __init__(self, nameResolution):
+        """
+        Create a L{_SimpleHostnameResolver} instance.
+        """
+        self._nameResolution = nameResolution
+
+
+    def resolveHostName(self, resolutionReceiver,
+                        hostName,
+                        portNumber=0,
+                        addressTypes=None,
+                        transportSemantics='TCP'):
+        """
+        Initiate a hostname resolution.
+
+        @param resolutionReceiver: an object that will receive each resolved
+            address as it arrives.
+        @type resolutionReceiver: L{IResolutionReceiver}
+
+        @param hostName: see interface
+
+        @param portNumber: see interface
+
+        @param addressTypes: Ignored in this implementation.
+
+        @param transportSemantics: Ignored in this implementation.
+
+        @return: The resolution in progress.
+        @rtype: L{IResolutionReceiver}
+        """
+        resolutionReceiver.resolutionBegan(HostResolution(hostName))
+        d = self._nameResolution(hostName, portNumber)
+
+        def cbDeliver(gairesult):
+            for family, socktype, proto, canonname, sockaddr in gairesult:
+                if family == socket.AF_INET6:
+                    resolutionReceiver.addressResolved(
+                        IPv6Address('TCP', *sockaddr))
+                elif family == socket.AF_INET:
+                    resolutionReceiver.addressResolved(
+                        IPv4Address('TCP', *sockaddr))
+
+
+        def ebLog(error):
+            self._log.failure("while looking up {name} with {callable}",
+                              error, name=hostName,
+                              callable=self._nameResolution)
+
+        d.addCallback(cbDeliver)
+        d.addErrback(ebLog)
+        d.addBoth(lambda ignored: resolutionReceiver.resolutionComplete())
+        return resolutionReceiver
+
+
+
+
 @implementer(interfaces.IStreamClientEndpoint)
 class HostnameEndpoint(object):
     """
@@ -672,6 +748,8 @@ class HostnameEndpoint(object):
         hostname that isn't valid IDNA, or non-ASCII bytes.
     @type _badHostname: L{bool}
     """
+    _getaddrinfo = staticmethod(socket.getaddrinfo)
+    _deferToThread = staticmethod(threads.deferToThread)
     _DEFAULT_ATTEMPT_DELAY = 0.3
 
     def __init__(self, reactor, host, port, timeout=30, bindAddress=None,
@@ -691,7 +769,7 @@ class HostnameEndpoint(object):
 
         @param timeout: For each individual connection attempt, the number of
             seconds to wait before assuming the connection has failed.
-        @type timeout: L{int}
+        @type timeout: L{float} or L{int}
 
         @param bindAddress: the local address of the network interface to make
             the connections from.
@@ -703,7 +781,9 @@ class HostnameEndpoint(object):
 
         @see: L{twisted.internet.interfaces.IReactorTCP.connectTCP}
         """
+
         self._reactor = reactor
+        self._nameResolver = self._getNameResolverAndMaybeWarn(reactor)
         [self._badHostname, self._hostBytes, self._hostText] = (
             self._hostAsBytesAndText(host)
         )
@@ -714,6 +794,52 @@ class HostnameEndpoint(object):
         if attemptDelay is None:
             attemptDelay = self._DEFAULT_ATTEMPT_DELAY
         self._attemptDelay = attemptDelay
+
+
+    def __repr__(self):
+        """
+        Produce a string representation of the L{HostnameEndpoint}.
+
+        @return: A L{str}
+        """
+        if self._badHostname:
+            # Use the backslash-encoded version of the string passed to the
+            # constructor, which is already a native string.
+            host = self._hostStr
+        elif isIPv6Address(self._hostStr):
+            host = '[{}]'.format(self._hostStr)
+        else:
+            # Convert the bytes representation to a native string to ensure
+            # that we display the punycoded version of the hostname, which is
+            # more useful than any IDN version as it can be easily copy-pasted
+            # into debugging tools.
+            host = nativeString(self._hostBytes)
+        return "".join(["<HostnameEndpoint ", host, ":", str(self._port), ">"])
+
+
+    def _getNameResolverAndMaybeWarn(self, reactor):
+        """
+        Retrieve a C{nameResolver} callable and warn the caller's
+        caller that using a reactor which doesn't provide
+        L{IReactorPluggableNameResolver} is deprecated.
+
+        @param reactor: The reactor to check.
+
+        @return: A L{IHostnameResolver} provider.
+        """
+        if not IReactorPluggableNameResolver.providedBy(reactor):
+            warningString = deprecate.getDeprecationWarningString(
+                reactor.__class__,
+                Version('Twisted', 17, 5, 0),
+                format=("Passing HostnameEndpoint a reactor that does not"
+                        " provide IReactorPluggableNameResolver (%(fqpn)s)"
+                        " was deprecated in %(version)s"),
+                replacement=("a reactor that provides"
+                             " IReactorPluggableNameResolver"),
+            )
+            warnings.warn(warningString, DeprecationWarning, stacklevel=3)
+            return _SimpleHostnameResolver(self._fallbackNameResolution)
+        return reactor.nameResolver
 
 
     @staticmethod
@@ -764,13 +890,22 @@ class HostnameEndpoint(object):
 
     def connect(self, protocolFactory):
         """
-        Attempts a connection to each address returned by gai, and returns a
+        Attempts a connection to each resolved address, and returns a
         connection which is established first.
+
+        @param protocolFactory: The protocol factory whose protocol
+            will be connected.
+        @type protocolFactory:
+            L{IProtocolFactory<twisted.internet.interfaces.IProtocolFactory>}
+
+        @return: A L{Deferred} that fires with the connected protocol
+            or fails a connection-related error.
         """
         if self._badHostname:
             return defer.fail(
                 ValueError("invalid hostname: {}".format(self._hostStr))
             )
+
         d = Deferred()
         addresses = []
         @provider(IResolutionReceiver)
@@ -784,9 +919,11 @@ class HostnameEndpoint(object):
             @staticmethod
             def resolutionComplete():
                 d.callback(addresses)
-        self._reactor.nameResolver.resolveHostName(
+
+        self._nameResolver.resolveHostName(
             EndpointReceiver, self._hostText, portNumber=self._port
         )
+
         d.addErrback(lambda ignored: defer.fail(error.DNSLookupError(
             "Couldn't find the hostname '{}'".format(self._hostStr))))
         @d.addCallback
@@ -886,6 +1023,23 @@ class HostnameEndpoint(object):
             return winner
 
         return d
+
+
+    def _fallbackNameResolution(self, host, port):
+        """
+        Resolve the hostname string into a tuple containing the host
+        address.  This is method is only used when the reactor does
+        not provide L{IReactorPluggableNameResolver}.
+
+        @param host: A unicode hostname to resolve.
+
+        @param port: The port to include in the resolution.
+
+        @return: A L{Deferred} that fires with L{_getaddrinfo}'s
+            return value.
+        """
+        return self._deferToThread(self._getaddrinfo, host, port, 0,
+                socket.SOCK_STREAM)
 
 
 
@@ -1221,7 +1375,8 @@ def _parseSSL(factory, port, privateKey="server.pem", certKey=None,
         kw['method'] = getattr(ssl.SSL, sslmethod)
     certPEM = FilePath(certKey).getContent()
     keyPEM = FilePath(privateKey).getContent()
-    privateCertificate = ssl.PrivateCertificate.loadPEM(certPEM + keyPEM)
+    privateCertificate = ssl.PrivateCertificate.loadPEM(
+        certPEM + b'\n' + keyPEM)
     if extraCertChain is not None:
         matches = re.findall(
             r'(-----BEGIN CERTIFICATE-----\n.+?\n-----END CERTIFICATE-----)',

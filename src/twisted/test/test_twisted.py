@@ -11,12 +11,12 @@ from __future__ import division, absolute_import
 import sys
 import twisted
 
-from types import ModuleType, FunctionType
+from types import ModuleType
 
-from twisted import _checkRequirements
+from twisted.python._setup import _checkPythonVersion
 from twisted.python.compat import _PY3
 from twisted.python import reflect
-from twisted.trial.unittest import TestCase, SkipTest
+from twisted.trial.unittest import TestCase
 
 
 # This is somewhat generally useful and should probably be part of a public API
@@ -157,15 +157,11 @@ class RequirementsTests(TestCase):
     @ivar Py3supportedPythonVersion: The oldest version of Python 3.x which is
         supported by Twisted.
     @type supportedPythonVersion: C{tuple}
-
-    @ivar Py3supportedZopeInterfaceVersion: The oldest version of
-        C{zope.interface} which is supported by Twisted.
-    @type supportedZopeInterfaceVersion: C{tuple}
     """
     unsupportedPythonVersion = (2, 6)
     supportedPythonVersion = (2, 7)
-    Py3unsupportedPythonVersion = (3, 2)
-    Py3supportedPythonVersion = (3, 3)
+    Py3unsupportedPythonVersion = (3, 3)
+    Py3supportedPythonVersion = (3, 4)
 
 
     def setUp(self):
@@ -185,12 +181,12 @@ class RequirementsTests(TestCase):
 
     def test_oldPython(self):
         """
-        L{_checkRequirements} raises L{ImportError} when run on a version of
+        L{_checkPythonVersion} raises L{ImportError} when run on a version of
         Python that is too old.
         """
         sys.version_info = self.unsupportedPythonVersion
         with self.assertRaises(ImportError) as raised:
-            _checkRequirements()
+            _checkPythonVersion()
         self.assertEqual("Twisted requires Python %d.%d or later."
                          % self.supportedPythonVersion,
                          str(raised.exception))
@@ -198,21 +194,21 @@ class RequirementsTests(TestCase):
 
     def test_newPython(self):
         """
-        L{_checkRequirements} returns L{None} when run on a version of Python
+        L{_checkPythonVersion} returns L{None} when run on a version of Python
         that is sufficiently new.
         """
         sys.version_info = self.supportedPythonVersion
-        self.assertIsNone(_checkRequirements())
+        self.assertIsNone(_checkPythonVersion())
 
 
     def test_oldPythonPy3(self):
         """
-        L{_checkRequirements} raises L{ImportError} when run on a version of
+        L{_checkPythonVersion} raises L{ImportError} when run on a version of
         Python that is too old.
         """
         sys.version_info = self.Py3unsupportedPythonVersion
         with self.assertRaises(ImportError) as raised:
-            _checkRequirements()
+            _checkPythonVersion()
         self.assertEqual("Twisted on Python 3 requires Python %d.%d or later."
                          % self.Py3supportedPythonVersion,
                          str(raised.exception))
@@ -220,11 +216,11 @@ class RequirementsTests(TestCase):
 
     def test_newPythonPy3(self):
         """
-        L{_checkRequirements} returns L{None} when run on a version of Python
+        L{_checkPythonVersion} returns L{None} when run on a version of Python
         that is sufficiently new.
         """
         sys.version_info = self.Py3supportedPythonVersion
-        self.assertIsNone(_checkRequirements())
+        self.assertIsNone(_checkPythonVersion())
 
 
 
@@ -270,235 +266,6 @@ class MakePackagesTests(TestCase):
         self.assertIsInstance(modules['twisted'].web, ModuleType)
         self.assertEqual('twisted.web', modules['twisted'].web.__name__)
         self.assertEqual('321', modules['twisted'].web.version)
-
-
-
-def _functionOnlyImplementer(*interfaces):
-    """
-    A fake implementation of L{zope.interface.implementer} which always behaves
-    like the version of that function provided by zope.interface 3.5 and older.
-    """
-    def check(obj):
-        """
-        If the decorated object is not a function, raise an exception.
-        """
-        if not isinstance(obj, FunctionType):
-            raise TypeError(
-                "Can't use implementer with classes.  "
-                "Use one of the class-declaration functions instead.")
-    return check
-
-
-
-def _classSupportingImplementer(*interfaces):
-    """
-    A fake implementation of L{zope.interface.implementer} which always
-    succeeds.  For the use it is put to, this is like the version of that
-    function provided by zope.interface 3.6 and newer.
-    """
-    def check(obj):
-        """
-        Do nothing at all.
-        """
-    return check
-
-
-
-class _SuccessInterface(object):
-    """
-    A fake implementation of L{zope.interface.Interface} with no behavior.  For
-    the use it is put to, this is equivalent to the behavior of the C{Interface}
-    provided by all versions of zope.interface.
-    """
-
-
-# Definition of a module somewhat like zope.interface 3.5.
-_zope35 = {
-    'zope': {
-        'interface': {
-            'Interface': _SuccessInterface,
-            'implementer': _functionOnlyImplementer,
-            },
-        },
-    }
-
-
-# Definition of a module somewhat like zope.interface 3.6.
-_zope36 = {
-    'zope': {
-        'interface': {
-            'Interface': _SuccessInterface,
-            'implementer': _classSupportingImplementer,
-            },
-        },
-    }
-
-
-class _Zope38OnPython3Module(object):
-    """
-    A pseudo-module which raises an exception when its C{interface} attribute is
-    accessed.  This is like the behavior of zope.interface 3.8 and earlier when
-    used with Python 3.3.
-    """
-    __path__ = []
-    __name__ = 'zope'
-
-    @property
-    def interface(self):
-        raise Exception(
-            "zope.interface.exceptions.InvalidInterface: "
-            "Concrete attribute, __qualname__")
-
-# Definition of a module somewhat like zope.interface 3.8 when it is used on Python 3.
-_zope38 = {
-    'zope': _Zope38OnPython3Module(),
-    }
-
-# Definition of a module somewhat like zope.interface 4.0.
-_zope40 = {
-    'zope': {
-        'interface': {
-            'Interface': _SuccessInterface,
-            'implementer': _classSupportingImplementer,
-            },
-        },
-    }
-
-
-class ZopeInterfaceTestsMixin(object):
-    """
-    Verify the C{zope.interface} fakes, only possible when a specific version of
-    the real C{zope.interface} package is installed on the system.
-
-    Subclass this and override C{install} to properly install and then remove
-    the given version of C{zope.interface}.
-    """
-    def test_zope35(self):
-        """
-        Version 3.5 of L{zope.interface} has a C{implementer} method which
-        cannot be used as a class decorator.
-        """
-        with SetAsideModule("zope"):
-            self.install((3, 5))
-            from zope.interface import Interface, implementer
-            class IDummy(Interface):
-                pass
-            try:
-                @implementer(IDummy)
-                class Dummy(object):
-                    pass
-            except TypeError as exc:
-                self.assertEqual(
-                    "Can't use implementer with classes.  "
-                    "Use one of the class-declaration functions instead.",
-                    str(exc))
-
-
-    def test_zope36(self):
-        """
-        Version 3.6 of L{zope.interface} has a C{implementer} method which can
-        be used as a class decorator.
-        """
-        with SetAsideModule("zope"):
-            self.install((3, 6))
-            from zope.interface import Interface, implementer
-            class IDummy(Interface):
-                pass
-            @implementer(IDummy)
-            class Dummy(object):
-                pass
-
-    if _PY3:
-        def test_zope38(self):
-            """
-            Version 3.8 of L{zope.interface} does not even import on Python 3.
-            """
-            with SetAsideModule("zope"):
-                self.install((3, 8))
-                try:
-                    from zope import interface
-                    # It is imported just to check errors at import so we
-                    # silence the linter.
-                    interface
-                except Exception as exc:
-                    self.assertEqual(
-                        "zope.interface.exceptions.InvalidInterface: "
-                        "Concrete attribute, __qualname__",
-                        str(exc))
-                else:
-                    self.fail(
-                        "InvalidInterface was not raised by zope.interface import")
-
-
-        def test_zope40(self):
-            """
-            Version 4.0 of L{zope.interface} can import on Python 3 and, also on
-            Python 3, has an C{Interface} class which can be subclassed.
-            """
-            with SetAsideModule("zope"):
-                self.install((4, 0))
-                from zope.interface import Interface
-                class IDummy(Interface):
-                    pass
-
-
-class FakeZopeInterfaceTests(TestCase, ZopeInterfaceTestsMixin):
-    """
-    Apply the zope.interface tests to the fakes implemented in this module.
-    """
-    versions = {
-        (3, 5): _zope35,
-        (3, 6): _zope36,
-        (3, 8): _zope38,
-        (4, 0): _zope40,
-        }
-
-    def install(self, version):
-        """
-        Grab one of the fake module implementations and install it into
-        C{sys.modules} for use by the test.
-        """
-        _install(self.versions[version])
-
-
-
-class RealZopeInterfaceTests(TestCase, ZopeInterfaceTestsMixin):
-    """
-    Apply whichever tests from L{ZopeInterfaceTestsMixin} are applicable to the
-    system-installed version of zope.interface.
-    """
-    def install(self, version):
-        """
-        Check to see if the system-installed version of zope.interface matches
-        the version requested.  If so, do nothing.  If not, skip the test (if
-        the desired version is not installed, there is no way to test its
-        behavior).  If the version of zope.interface cannot be determined
-        (because pkg_resources is not installed), skip the test.
-        """
-        # Use an unrelated, but unreliable, route to try to determine what
-        # version of zope.interface is installed on the system.  It's sort of
-        # okay to use this unreliable scheme here, since if it fails it only
-        # means we won't be able to run the tests.  Hopefully someone else
-        # managed to run the tests somewhere else.
-        try:
-            import pkg_resources
-        except ImportError as e:
-            raise SkipTest(
-                "Cannot determine system version of zope.interface: %s" % (e,))
-        else:
-            try:
-                pkg = pkg_resources.get_distribution("zope.interface")
-            except pkg_resources.DistributionNotFound as e:
-                raise SkipTest(
-                    "Cannot determine system version of zope.interface: %s" % (
-                        e,))
-            installed = pkg.version
-            versionTuple = tuple(
-                int(part) for part in installed.split('.')[:len(version)])
-            if versionTuple == version:
-                pass
-            else:
-                raise SkipTest("Mismatched system version of zope.interface")
 
 
 

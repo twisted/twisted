@@ -14,27 +14,28 @@ which must run on multiple platforms (eg the setup.py script).
 
 import os
 import sys
-import textwrap
 
 from zope.interface import Interface, implementer
 
-from datetime import date
 from subprocess import check_output, STDOUT, CalledProcessError
 
+from twisted.python.compat import execfile
 from twisted.python.filepath import FilePath
 from twisted.python.monkey import MonkeyPatcher
 
-# Types of topfiles.
-TOPFILE_TYPES = ["doc", "bugfix", "misc", "feature", "removal"]
+# Types of newsfragments.
+NEWSFRAGMENT_TYPES = ["doc", "bugfix", "misc", "feature", "removal"]
 intersphinxURLs = [
-    "https://docs.python.org/2/objects.inv",
-    "https://docs.python.org/3/objects.inv",
-    "https://pyopenssl.readthedocs.io/en/stable/objects.inv",
-    "https://twisted.github.io/constantly/docs/objects.inv",
-    "https://hawkowl.github.io/incremental/docs/objects.inv",
-    "https://python-hyper.org/h2/en/stable/objects.inv",
-    "https://python-hyper.org/priority/en/stable/objects.inv",
-    "https://docs.zope.org/zope.interface/objects.inv",
+    u"https://docs.python.org/2/objects.inv",
+    u"https://docs.python.org/3/objects.inv",
+    u"https://pyopenssl.readthedocs.io/en/stable/objects.inv",
+    u"https://hyperlink.readthedocs.io/en/stable/objects.inv",
+    u"https://twisted.github.io/constantly/docs/objects.inv",
+    u"https://twisted.github.io/incremental/docs/objects.inv",
+    u"https://python-hyper.org/h2/en/stable/objects.inv",
+    u"https://python-hyper.org/priority/en/stable/objects.inv",
+    u"https://zopeinterface.readthedocs.io/en/latest/objects.inv",
+    u"https://automat.readthedocs.io/en/latest/objects.inv",
 ]
 
 
@@ -44,6 +45,11 @@ def runCommand(args, **kwargs):
     This is a wrapper around L{subprocess.check_output}, so it takes
     the same arguments as L{subprocess.Popen} with one difference: all
     arguments after the vector must be keyword arguments.
+
+    @param args: arguments passed to L{subprocess.check_output}
+    @param kwargs: keyword arguments passed to L{subprocess.check_output}
+    @return: command output
+    @rtype: L{bytes}
     """
     kwargs['stderr'] = STDOUT
     return check_output(args, **kwargs)
@@ -129,7 +135,7 @@ class GitCommand(object):
         """
         status = runCommand(
             ["git", "-C", path.path, "status", "--short"]).strip()
-        return status == ''
+        return status == b''
 
 
     @staticmethod
@@ -196,7 +202,7 @@ class Project(object):
 
     @ivar directory: A L{twisted.python.filepath.FilePath} pointing to the base
         directory of a Twisted-style Python package. The package should contain
-        a C{_version.py} file and a C{topfiles} directory that contains a
+        a C{_version.py} file and a C{newsfragments} directory that contains a
         C{README} file.
     """
 
@@ -236,7 +242,7 @@ def findTwistedProjects(baseDirectory):
     """
     projects = []
     for filePath in baseDirectory.walk():
-        if filePath.basename() == 'topfiles':
+        if filePath.basename() == 'newsfragments':
             projectDirectory = filePath.parent()
             projects.append(Project(projectDirectory))
     return projects
@@ -321,323 +327,19 @@ class APIBuilder(object):
 
         from pydoctor.driver import main
 
-        main(
-            ["--project-name", projectName,
-             "--project-url", projectURL,
-             "--system-class", "twisted.python._pydoctor.TwistedSystem",
-             "--project-base-dir", packagePath.parent().path,
-             "--html-viewsource-base", sourceURL,
-             "--add-package", packagePath.path,
-             "--html-output", outputPath.path,
-             "--html-write-function-pages", "--quiet", "--make-html",
-            ] + intersphinxes)
+        args = [u"--project-name", projectName,
+                u"--project-url", projectURL,
+                u"--system-class", u"twisted.python._pydoctor.TwistedSystem",
+                u"--project-base-dir", packagePath.parent().path,
+                u"--html-viewsource-base", sourceURL,
+                u"--add-package", packagePath.path,
+                u"--html-output", outputPath.path,
+                u"--html-write-function-pages", u"--quiet", u"--make-html",
+               ] + intersphinxes
+        args = [arg.encode("utf-8") for arg in args]
+        main(args)
 
         monkeyPatch.restore()
-
-
-class NewsBuilder(object):
-    """
-    Generate the new section of a NEWS file.
-
-    The C{_FEATURE}, C{_BUGFIX}, C{_DOC}, C{_REMOVAL}, and C{_MISC}
-    attributes of this class are symbolic names for the news entry types
-    which are supported.  Conveniently, they each also take on the value of
-    the file name extension which indicates a news entry of that type.
-
-    @cvar _headings: A C{dict} mapping one of the news entry types to the
-        heading to write out for that type of news entry.
-
-    @cvar _NO_CHANGES: A C{str} giving the text which appears when there are
-        no significant changes in a release.
-
-    @cvar _TICKET_HINT: A C{str} giving the text which appears at the top of
-        each news file and which should be kept at the top, not shifted down
-        with all the other content.  Put another way, this is the text after
-        which the new news text is inserted.
-    """
-
-    _FEATURE = ".feature"
-    _BUGFIX = ".bugfix"
-    _DOC = ".doc"
-    _REMOVAL = ".removal"
-    _MISC = ".misc"
-
-    _headings = {
-        _FEATURE: "Features",
-        _BUGFIX: "Bugfixes",
-        _DOC: "Improved Documentation",
-        _REMOVAL: "Deprecations and Removals",
-        _MISC: "Other"}
-
-    _NO_CHANGES = "No significant changes have been made for this release.\n"
-
-    _TICKET_HINT = (
-        'Ticket numbers in this file can be looked up by visiting\n'
-        'http://twistedmatrix.com/trac/ticket/<number>\n'
-        '\n')
-
-    def _today(self):
-        """
-        Return today's date as a string in YYYY-MM-DD format.
-        """
-        return date.today().strftime('%Y-%m-%d')
-
-
-    def _findChanges(self, path, ticketType):
-        """
-        Load all the feature ticket summaries.
-
-        @param path: A L{FilePath} the direct children of which to search
-            for news entries.
-
-        @param ticketType: The type of news entries to search for.  One of
-            C{NewsBuilder._FEATURE}, C{NewsBuilder._BUGFIX},
-            C{NewsBuilder._REMOVAL}, or C{NewsBuilder._MISC}.
-
-        @return: A C{list} of two-tuples.  The first element is the ticket
-            number as an C{int}.  The second element of each tuple is the
-            description of the feature.
-        """
-        results = []
-        for child in path.children():
-            base, ext = os.path.splitext(child.basename())
-            if ext == ticketType:
-                results.append((
-                    int(base),
-                    ' '.join(child.getContent().splitlines())))
-        results.sort()
-        return results
-
-
-    def _formatHeader(self, header):
-        """
-        Format a header for a NEWS file.
-
-        A header is a title with '=' signs underlining it.
-
-        @param header: The header string to format.
-        @type header: C{str}
-        @return: A C{str} containing C{header}.
-        """
-        return header + '\n' + '=' * len(header) + '\n\n'
-
-
-    def _writeHeader(self, fileObj, header):
-        """
-        Write a version header to the given file.
-
-        @param fileObj: A file-like object to which to write the header.
-        @param header: The header to write to the file.
-        @type header: C{str}
-        """
-        fileObj.write(self._formatHeader(header))
-
-
-    def _writeSection(self, fileObj, header, tickets):
-        """
-        Write out one section (features, bug fixes, etc) to the given file.
-
-        @param fileObj: A file-like object to which to write the news section.
-
-        @param header: The header for the section to write.
-        @type header: C{str}
-
-        @param tickets: A C{list} of ticket information of the sort returned
-            by L{NewsBuilder._findChanges}.
-        """
-        if not tickets:
-            return
-
-        reverse = {}
-        for (ticket, description) in tickets:
-            reverse.setdefault(description, []).append(ticket)
-        for description in reverse:
-            reverse[description].sort()
-        reverse = reverse.items()
-        # result is a tuple of (descr, tickets)
-        reverse.sort(key=lambda result: result[1][0])
-
-        fileObj.write(header + '\n' + '-' * len(header) + '\n')
-        for (description, relatedTickets) in reverse:
-            ticketList = ', '.join([
-                '#' + str(ticket) for ticket in relatedTickets])
-            entry = ' - %s (%s)' % (description, ticketList)
-            entry = textwrap.fill(entry, subsequent_indent='   ')
-            fileObj.write(entry + '\n')
-        fileObj.write('\n')
-
-
-    def _writeMisc(self, fileObj, header, tickets):
-        """
-        Write out a miscellaneous-changes section to the given file.
-
-        @param fileObj: A file-like object to which to write the news section.
-
-        @param header: The header for the section to write.
-        @type header: C{str}
-
-        @param tickets: A C{list} of ticket information of the sort returned
-            by L{NewsBuilder._findChanges}.
-        """
-        if not tickets:
-            return
-
-        fileObj.write(header + '\n' + '-' * len(header) + '\n')
-        formattedTickets = []
-        for (ticket, ignored) in tickets:
-            formattedTickets.append('#' + str(ticket))
-        entry = ' - ' + ', '.join(formattedTickets)
-        entry = textwrap.fill(entry, subsequent_indent='   ')
-        fileObj.write(entry + '\n\n')
-
-
-    def build(self, path, output, header):
-        """
-        Load all of the change information from the given directory and write
-        it out to the given output file.
-
-        @param path: A directory (probably a I{topfiles} directory) containing
-            change information in the form of <ticket>.<change type> files.
-        @type path: L{FilePath}
-
-        @param output: The NEWS file to which the results will be prepended.
-        @type output: L{FilePath}
-
-        @param header: The top-level header to use when writing the news.
-        @type header: L{str}
-
-        @raise NotWorkingDirectory: If the C{path} is not a supported VCS
-            repository.
-        """
-        changes = []
-        for part in (self._FEATURE, self._BUGFIX, self._DOC, self._REMOVAL):
-            tickets = self._findChanges(path, part)
-            if tickets:
-                changes.append((part, tickets))
-        misc = self._findChanges(path, self._MISC)
-
-        oldNews = output.getContent()
-        with output.sibling('NEWS.new').open('w') as newNews:
-            if oldNews.startswith(self._TICKET_HINT):
-                newNews.write(self._TICKET_HINT)
-                oldNews = oldNews[len(self._TICKET_HINT):]
-
-            self._writeHeader(newNews, header)
-            if changes:
-                for (part, tickets) in changes:
-                    self._writeSection(newNews, self._headings.get(part),
-                                       tickets)
-            else:
-                newNews.write(self._NO_CHANGES)
-                newNews.write('\n')
-            self._writeMisc(newNews, self._headings.get(self._MISC), misc)
-            newNews.write('\n')
-            newNews.write(oldNews)
-        output.sibling('NEWS.new').moveTo(output)
-
-
-    def _deleteFragments(self, path):
-        """
-        Delete the change information, to clean up the repository  once the
-        NEWS files have been built. It requires C{path} to be in a supported
-        VCS repository.
-
-        @param path: A directory (probably a I{topfiles} directory) containing
-            change information in the form of <ticket>.<change type> files.
-        @type path: L{FilePath}
-        """
-        cmd = getRepositoryCommand(path)
-        ticketTypes = self._headings.keys()
-        for child in path.children():
-            base, ext = os.path.splitext(child.basename())
-            if ext in ticketTypes:
-                cmd.remove(child)
-
-
-    def _getNewsName(self, project):
-        """
-        Return the name of C{project} that should appear in NEWS.
-
-        @param project: A L{Project}
-        @return: The name of C{project}.
-        """
-        name = project.directory.basename().title()
-        if name == 'Twisted':
-            name = 'Core'
-        return name
-
-
-    def _iterProjects(self, baseDirectory):
-        """
-        Iterate through the Twisted projects in C{baseDirectory}, yielding
-        everything we need to know to build news for them.
-
-        Yields C{topfiles}, C{name}, C{version}, for each sub-project in
-        reverse-alphabetical order. C{topfile} is the L{FilePath} for the
-        topfiles directory, C{name} is the nice name of the project (as should
-        appear in the NEWS file), C{version} is the current version string for
-        that project.
-
-        @param baseDirectory: A L{FilePath} representing the root directory
-            beneath which to find Twisted projects for which to generate
-            news (see L{findTwistedProjects}).
-        @type baseDirectory: L{FilePath}
-        """
-        # Get all the subprojects to generate news for
-        projects = findTwistedProjects(baseDirectory)
-        # And order them alphabetically for ease of reading
-        projects.sort(key=lambda proj: proj.directory.path)
-        # And generate them backwards since we write news by prepending to
-        # files.
-        projects.reverse()
-
-        for project in projects:
-            topfiles = project.directory.child("topfiles")
-            name = self._getNewsName(project)
-            version = project.getVersion()
-            yield topfiles, name, version
-
-
-    def buildAll(self, baseDirectory):
-        """
-        Find all of the Twisted subprojects beneath C{baseDirectory} and update
-        their news files from the ticket change description files in their
-        I{topfiles} directories and update the news file in C{baseDirectory}
-        with all of the news.
-
-        @param baseDirectory: A L{FilePath} representing the root directory
-            beneath which to find Twisted projects for which to generate
-            news (see L{findTwistedProjects}).
-        """
-        cmd = getRepositoryCommand(baseDirectory)
-        cmd.ensureIsWorkingDirectory(baseDirectory)
-
-        today = self._today()
-        for topfiles, name, version in self._iterProjects(baseDirectory):
-            # We first build for the subproject
-            news = topfiles.child("NEWS")
-            header = "Twisted %s %s (%s)" % (name, version.base(), today)
-            self.build(topfiles, news, header)
-            # Then for the global NEWS file
-            news = baseDirectory.child("NEWS")
-            self.build(topfiles, news, header)
-            # Finally, delete the fragments
-            self._deleteFragments(topfiles)
-
-
-    def main(self, args):
-        """
-        Build all news files.
-
-        @param args: The command line arguments to process.  This must contain
-            one string, the path to the base of the Twisted checkout for which
-            to build the news.
-        @type args: C{list} of C{str}
-        """
-        if len(args) != 1:
-            sys.exit("Must specify one argument: the path to the "
-                     "Twisted checkout")
-        self.buildAll(FilePath(args[0]))
 
 
 
@@ -668,7 +370,7 @@ class SphinxBuilder(object):
         """
         output = self.build(FilePath(args[0]).child("docs"))
         if output:
-            sys.stdout.write("Unclean build:\n{}\n".format(output))
+            sys.stdout.write(u"Unclean build:\n{}\n".format(output))
             raise sys.exit(1)
 
 
@@ -698,7 +400,7 @@ class SphinxBuilder(object):
 
         output = runCommand(['sphinx-build', '-q', '-b', 'html',
                              '-d', doctreeDir.path, docDir.path,
-                             buildDir.path])
+                             buildDir.path]).decode("utf-8")
 
         # Delete the doctrees, as we don't want them after the docs are built
         doctreeDir.remove()
@@ -796,9 +498,9 @@ class BuildAPIDocsScript(object):
 
 
 
-class CheckTopfileScript(object):
+class CheckNewsfragmentScript(object):
     """
-    A thing for checking whether a checkout has a topfile.
+    A thing for checking whether a checkout has a newsfragment.
     """
     def __init__(self, _print):
         self._print = _print
@@ -815,13 +517,14 @@ class CheckTopfileScript(object):
         if len(args) != 1:
             sys.exit("Must specify one argument: the Twisted checkout")
 
+        encoding = sys.stdout.encoding or 'ascii'
         location = os.path.abspath(args[0])
 
         branch = runCommand([b"git", b"rev-parse", b"--abbrev-ref",  "HEAD"],
-                            cwd=location).strip()
+                            cwd=location).decode(encoding).strip()
 
         r = runCommand([b"git", b"diff", b"--name-only", b"origin/trunk..."],
-                       cwd=location).strip()
+                       cwd=location).decode(encoding).strip()
 
         if not r:
             self._print(
@@ -837,27 +540,27 @@ class CheckTopfileScript(object):
 
         if len(files) == 1:
             if files[0] == os.sep.join(["docs", "fun", "Twisted.Quotes"]):
-                self._print("Quotes change only; no topfile needed.")
+                self._print("Quotes change only; no newsfragment needed.")
                 sys.exit(0)
 
-        topfiles = []
+        newsfragments = []
 
         for change in files:
-            if os.sep + "topfiles" + os.sep in change:
-                if "." in change and change.rsplit(".", 1)[1] in TOPFILE_TYPES:
-                    topfiles.append(change)
+            if os.sep + "newsfragments" + os.sep in change:
+                if "." in change and change.rsplit(".", 1)[1] in NEWSFRAGMENT_TYPES:
+                    newsfragments.append(change)
 
         if branch.startswith("release-"):
-            if topfiles:
-                self._print("No topfiles should be on the release branch.")
+            if newsfragments:
+                self._print("No newsfragments should be on the release branch.")
                 sys.exit(1)
             else:
-                self._print("Release branch with no topfiles, all good.")
+                self._print("Release branch with no newsfragments, all good.")
                 sys.exit(0)
 
-        for change in topfiles:
+        for change in newsfragments:
             self._print("Found " + change)
             sys.exit(0)
 
-        self._print("No topfile found. Have you committed it?")
+        self._print("No newsfragment found. Have you committed it?")
         sys.exit(1)
