@@ -215,7 +215,7 @@ class Resource:
         path to be ''.
 
         @param path: A single path component.
-        @type path: C{bytes}
+        @type path: L{bytes}
 
         @param child: The child resource to register.
         @type child: L{IResource}
