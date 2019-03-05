@@ -15,6 +15,7 @@ from twisted.python import util
 from twisted.python import log
 from twisted.mail.interfaces import IAliasableDomain, IDomain
 from twisted.cred.portal import Portal
+from twisted.python.compat import itervalues, iteritems
 
 # Sibling imports
 from twisted.mail import protocols, smtp
@@ -235,7 +236,7 @@ class DomainWithDefaultDict:
             (E{2}) L{IDomain} provider or L{None}
         @return: An iterator over the domain name/domain object pairs.
         """
-        return self.domains.iteritems()
+        return iteritems(self.domains)
 
 
     def iterkeys(self):
@@ -249,7 +250,7 @@ class DomainWithDefaultDict:
         @rtype: iterator over L{bytes}
         @return: An iterator over the domain names.
         """
-        return self.domains.iterkeys()
+        return iter(self.domains)
 
 
     def itervalues(self):
@@ -264,7 +265,7 @@ class DomainWithDefaultDict:
             L{None}
         @return: An iterator over the domain objects.
         """
-        return self.domains.itervalues()
+        return itervalues(self.domains)
 
 
     def keys(self):
@@ -275,7 +276,7 @@ class DomainWithDefaultDict:
         @return: The domain names in this dictionary.
 
         """
-        return self.domains.keys()
+        return list(self.domains)
 
 
     def values(self):
@@ -285,7 +286,7 @@ class DomainWithDefaultDict:
         @rtype: L{list} of L{IDomain} provider or L{None}
         @return: The domain objects in this dictionary.
         """
-        return self.domains.values()
+        return list(self.domains.values())
 
 
     def items(self):
@@ -297,7 +298,7 @@ class DomainWithDefaultDict:
             provider or L{None}
         @return: Domain name/domain object pairs in this dictionary.
         """
-        return self.domains.items()
+        return list(self.domains.items())
 
 
     def popitem(self):
