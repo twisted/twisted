@@ -53,18 +53,26 @@ class IRequest(Interface):
         """
         Get an HTTP request header.
 
-        @type key: C{str}
+        @type key: C{bytes} or C{str}
         @param key: The name of the header to get the value of.
 
-        @rtype: C{str} or L{None}
+        @rtype: C{str} or C{bytes} or L{None}
         @return: The value of the specified header, or L{None} if that header
-            was not present in the request.
+            was not present in the request. The string type of the result
+            matches the type of L{key}.
         """
 
 
     def getCookie(key):
         """
         Get a cookie that was sent from the network.
+
+        @type key: C{bytes}
+        @param key: The name of the cookie to get.
+
+        @rtype: C{bytes} or C{None}
+        @returns: The value of the specified cookie, or L{None} if that cookie
+            was not present in the request.
         """
 
 
@@ -236,11 +244,13 @@ class IRequest(Interface):
         Set an HTTP response header.  Overrides any previously set values for
         this header.
 
-        @type name: C{str}
-        @param name: The name of the header for which to set the value.
+        @type k: C{bytes} or C{str}
+        @param k: The name of the header for which to set the value.
 
-        @type value: C{str}
-        @param value: The value to set for the named header.
+        @type v: C{bytes} or C{str}
+        @param v: The value to set for the named header. A C{str} will be
+            UTF-8 encoded, which may not interoperable with other
+            implementations. Avoid passing non-ASCII characters if possible.
         """
 
 
