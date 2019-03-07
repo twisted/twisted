@@ -12,6 +12,12 @@ import os
 import re
 import struct
 
+from twisted.internet import defer
+from twisted.internet.error import ConnectionClosed
+from twisted.protocols import loopback
+from twisted.python import components
+from twisted.python.compat import long, _PY37PLUS
+from twisted.python.filepath import FilePath
 from twisted.python.reflect import requireModule
 from twisted.trial import unittest
 
@@ -23,14 +29,9 @@ if cryptography:
     from twisted.conch.ssh import common, connection, filetransfer, session
 else:
     class avatar:
-        class ConchUser: pass
+        class ConchUser:
+            pass
 
-from twisted.internet import defer
-from twisted.internet.error import ConnectionClosed
-from twisted.protocols import loopback
-from twisted.python import components
-from twisted.python.compat import long, _PY37PLUS
-from twisted.python.filepath import FilePath
 
 
 class TestAvatar(avatar.ConchUser):
