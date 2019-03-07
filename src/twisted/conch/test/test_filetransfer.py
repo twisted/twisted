@@ -26,6 +26,7 @@ else:
         class ConchUser: pass
 
 from twisted.internet import defer
+from twisted.internet.error import ConnectionClosed
 from twisted.protocols import loopback
 from twisted.python import components
 from twisted.python.compat import long, _PY37PLUS
@@ -560,7 +561,9 @@ class OurServerOurClientTests(SFTPTestBase):
         d = self.client.openDirectory(b'')
         self._emptyBuffers()
         openDir = yield d
-        openDir.next()
+        d_ = openDir.next()
+        self._emptyBuffers()
+        yield d_
 
         warnings = self.flushWarnings()
         message = (
@@ -570,6 +573,46 @@ class OurServerOurClientTests(SFTPTestBase):
         self.assertEqual(1, len(warnings))
         self.assertEqual(DeprecationWarning, warnings[0]['category'])
         self.assertEqual(message, warnings[0]['message'])
+
+
+    @defer.inlineCallbacks
+    def test_closedConnectionCancelsRequests(self):
+        """
+        If there are requests outstanding when the connection
+        is closed for any reason, they should fail.
+        """
+
+        d = self.client.openFile(b"testfile1", filetransfer.FXF_READ, {})
+        self._emptyBuffers()
+        fh = yield d
+
+        # Intercept the handling of the read request on the server side
+        gotReadRequest = []
+
+        def _slowRead(offset, length):
+            self.assertEqual(gotReadRequest, [])
+            d = defer.Deferred()
+            gotReadRequest.append(d)
+            return d
+        [serverSideFh] = self.server.openFiles.values()
+        serverSideFh.readChunk = _slowRead
+        del serverSideFh
+
+        # Make a read request, dropping the connection before the reply
+        # is sent
+        d = fh.readChunk(100, 200)
+        self._emptyBuffers()
+        self.assertTrue(gotReadRequest is not None)
+        self.assertFalse(d.called)
+
+        # Lost connection should cause an errback
+        self.serverTransport.loseConnection()
+        self.serverTransport.clearBuffer()
+        self.clientTransport.clearBuffer()
+        self._emptyBuffers()
+
+        self.assertTrue(d.called)
+        self.assertFailure(d, ConnectionClosed)
 
 
 

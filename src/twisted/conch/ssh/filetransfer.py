@@ -498,6 +498,10 @@ class FileTransferServer(FileTransferBase):
         """
         Clean all opened files and directories.
         """
+
+        # On Python2, we're an oldstyle class, so we can't use super().
+        FileTransferBase.connectionLost(self, reason)
+
         for fileObj in self.openFiles.values():
             fileObj.close()
         self.openFiles = {}
@@ -525,6 +529,21 @@ class FileTransferClient(FileTransferBase):
         for (k, v) in itervalues(self.extData):
             data += NS(k) + NS(v)
         self.sendPacket(FXP_INIT, data)
+
+
+    def connectionLost(self, reason):
+        """
+        Abort any pending requests.
+        """
+
+        # On Python2, we're an oldstyle class, so we can't use super().
+        FileTransferBase.connectionLost(self, reason)
+
+        # If there are still requests waiting for responses when the
+        # connection is lost, fail them.
+        while self.openRequests:
+            _, deferred = self.openRequests.popitem()
+            deferred.errback(reason)
 
 
     def _sendRequest(self, msg, data):
