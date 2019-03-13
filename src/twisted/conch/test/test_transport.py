@@ -36,6 +36,7 @@ if pyasn1 is not None and cryptography is not None:
     from cryptography.hazmat.backends import default_backend
     from cryptography.hazmat.primitives.asymmetric import dh, ec
     from cryptography.exceptions import UnsupportedAlgorithm
+    from cryptography.hazmat.primitives import serialization
 else:
     if pyasn1 is None:
         dependencySkip = "Cannot run without PyASN1"
@@ -2110,7 +2111,10 @@ class ClientSSHTransportTests(ClientSSHTransportBaseCase, TransportTestCase):
         thisPriv = ec.generate_private_key(ec.SECP256R1(), default_backend())
         # Get the public key
         thisPub = thisPriv.public_key()
-        encPub = thisPub.public_numbers().encode_point()
+        encPub = thisPub.public_bytes(
+            serialization.Encoding.X962,
+            serialization.PublicFormat.UncompressedPoint
+        )
         self.proto.curve = ec.SECP256R1()
 
         self.proto.kexAlg = b'ecdh-sha2-nistp256'
@@ -2289,7 +2293,10 @@ class ClientSSHTransportDHGroupExchangeBaseCase(ClientSSHTransportBaseCase):
         thisPriv = ec.generate_private_key(ec.SECP256R1(), default_backend())
         # Get the public key
         thisPub = thisPriv.public_key()
-        encPub = thisPub.public_numbers().encode_point()
+        encPub = thisPub.public_bytes(
+            serialization.Encoding.X962,
+            serialization.PublicFormat.UncompressedPoint
+        )
         self.proto.curve = ec.SECP256R1()
 
         self.proto.kexAlg = b'ecdh-sha2-nistp256'
