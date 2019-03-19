@@ -226,13 +226,11 @@ class Key(object):
                 ).public_key(default_backend())
             )
         elif keyType in _curveTable:
-            # First we have to make an EllipticCuvePublicNumbers from the
-            # provided curve and points,
-            # then turn it into a public key object.
             return cls(
-                ec.EllipticCurvePublicNumbers.from_encoded_point(
-                      _curveTable[keyType],
-                       common.getNS(rest, 2)[1]).public_key(default_backend()))
+                ec.EllipticCurvePublicKey.from_encoded_point(
+                    _curveTable[keyType], common.getNS(rest, 2)[1]
+                )
+            )
         else:
             raise BadKeyError('unknown blob type: %s' % (keyType,))
 
@@ -840,15 +838,15 @@ class Key(object):
         @type privateValue: L{int}
         """
 
-        publicNumbers = ec.EllipticCurvePublicNumbers.from_encoded_point(
-            _curveTable[curve], encodedPoint)
         if privateValue is None:
             # We have public components.
-            keyObject = publicNumbers.public_key(default_backend())
+            keyObject = ec.EllipticCurvePublicKey.from_encoded_point(
+                _curveTable[curve], encodedPoint
+            )
         else:
-            privateNumbers = ec.EllipticCurvePrivateNumbers(
-                private_value=privateValue, public_numbers=publicNumbers)
-            keyObject = privateNumbers.private_key(default_backend())
+            keyObject = ec.derive_private_key(
+                privateValue, _curveTable[curve], default_backend()
+            )
 
         return cls(keyObject)
 
