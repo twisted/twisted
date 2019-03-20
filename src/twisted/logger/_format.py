@@ -346,7 +346,7 @@ def eventAsText(
         includeSystem=True,
         formatTime=formatTime,
 ):
-    """
+    r"""
     Format an event as a unicode string.  Optionally, attach timestamp,
     traceback, and system information.
 
@@ -390,7 +390,7 @@ def eventAsText(
     @return: A formatted string with specified options.
     @rtype: L{unicode}
 
-    @since: Twisted NEXT
+    @since: Twisted 18.9.0
     """
     eventText = _formatEvent(event)
     if includeTraceback and 'log_failure' in event:
