@@ -1364,13 +1364,14 @@ class AddressTests(unittest.TestCase):
 
 class LargeBufferWriterProtocol(protocol.Protocol):
     # Win32 sockets cannot handle single huge chunks of bytes.  Write one
-    # massive string to make sure Twisted deals with this fact.
+    # massive string to make sure Twisted deals with this fact. Immediately
+    # follow that with another write to test behaviour under load (see issue
+    # #9446)
 
     def connectionMade(self):
-        # write 60MB
         self.transport.write(b'X'*(self.factory.len-1))
 
-        def finish():   # write last byte separately to check issue #9446
+        def finish():
             self.transport.write(b'X')
             self.factory.done = 1
             self.transport.loseConnection()
