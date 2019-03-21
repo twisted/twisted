@@ -1,0 +1,1 @@
+Passing a path argument to twisted.web.resource.Resource.putChild which is not of type bytes is now deprecated.  In the future, passing a non-bytes argument to putChild will return an error.
