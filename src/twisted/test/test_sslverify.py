@@ -1029,8 +1029,8 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, unittest.TestCase):
             sslverify.OpenSSLCertificateOptions(
                 privateKey=self.sKey,
                 certificate=self.sCert,
-                raiseMinimumTo=sslverify.TLSVersion.TLSv1_2,
-                insecurelyLowerMinimumTo=sslverify.TLSVersion.TLSv1_2,
+                raiseMinimumTo=sslverify.TLSVersion.TLSv1_3,
+                insecurelyLowerMinimumTo=sslverify.TLSVersion.TLSv1_3,
             )
 
         self.assertIn('raiseMinimumTo', e.exception.args[0])
@@ -1049,7 +1049,7 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, unittest.TestCase):
                 privateKey=self.sKey,
                 certificate=self.sCert,
                 method=SSL.SSLv23_METHOD,
-                raiseMinimumTo=sslverify.TLSVersion.TLSv1_2,
+                raiseMinimumTo=sslverify.TLSVersion.TLSv1_3,
             )
 
         self.assertIn('method', e.exception.args[0])
@@ -1068,7 +1068,7 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, unittest.TestCase):
                 privateKey=self.sKey,
                 certificate=self.sCert,
                 method=SSL.SSLv23_METHOD,
-                insecurelyLowerMinimumTo=sslverify.TLSVersion.TLSv1_2,
+                insecurelyLowerMinimumTo=sslverify.TLSVersion.TLSv1_3,
             )
 
         self.assertIn('method', e.exception.args[0])
@@ -1087,7 +1087,7 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, unittest.TestCase):
                 privateKey=self.sKey,
                 certificate=self.sCert,
                 method=SSL.SSLv23_METHOD,
-                lowerMaximumSecurityTo=sslverify.TLSVersion.TLSv1_2,
+                lowerMaximumSecurityTo=sslverify.TLSVersion.TLSv1_3,
             )
 
         self.assertIn('method', e.exception.args[0])
@@ -1229,43 +1229,61 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, unittest.TestCase):
         self.assertEqual(options, ctx._options & options)
 
 
-    def test_tlsProtocolsAllModernTLS(self):
+    def test_tlsProtocolsTLSv1Point3Only(self):
         """
         When calling L{sslverify.OpenSSLCertificateOptions} with
-        C{insecurelyLowerMinimumTo} set to TLSv1.0 and
-        C{lowerMaximumSecurityTo} to TLSv1.2, it will exclude both SSLs and
-        the (unreleased) TLSv1.3.
+        C{insecurelyLowerMinimumTo} and C{lowerMaximumSecurityTo} set to v1.3,
+        it will exclude all others.
         """
         opts = sslverify.OpenSSLCertificateOptions(
             privateKey=self.sKey,
             certificate=self.sCert,
-            insecurelyLowerMinimumTo=sslverify.TLSVersion.TLSv1_0,
-            lowerMaximumSecurityTo=sslverify.TLSVersion.TLSv1_2,
+            insecurelyLowerMinimumTo=sslverify.TLSVersion.TLSv1_3,
+            lowerMaximumSecurityTo=sslverify.TLSVersion.TLSv1_3,
         )
         opts._contextFactory = FakeContext
         ctx = opts.getContext()
         options = (SSL.OP_NO_SSLv2 | SSL.OP_NO_COMPRESSION |
                    SSL.OP_CIPHER_SERVER_PREFERENCE | SSL.OP_NO_SSLv3 |
-                   opts._OP_NO_TLSv1_3)
+                   SSL.OP_NO_TLSv1 | SSL.OP_NO_TLSv1_1 | SSL.OP_NO_TLSv1_2)
+        self.assertEqual(options, ctx._options & options)
+
+
+    def test_tlsProtocolsAllModernTLS(self):
+        """
+        When calling L{sslverify.OpenSSLCertificateOptions} with
+        C{insecurelyLowerMinimumTo} set to TLSv1.0 and
+        C{lowerMaximumSecurityTo} to TLSv1.3, it will exclude SSLs.
+        """
+        opts = sslverify.OpenSSLCertificateOptions(
+            privateKey=self.sKey,
+            certificate=self.sCert,
+            insecurelyLowerMinimumTo=sslverify.TLSVersion.TLSv1_0,
+            lowerMaximumSecurityTo=sslverify.TLSVersion.TLSv1_3,
+        )
+        opts._contextFactory = FakeContext
+        ctx = opts.getContext()
+        options = (SSL.OP_NO_SSLv2 | SSL.OP_NO_COMPRESSION |
+                   SSL.OP_CIPHER_SERVER_PREFERENCE | SSL.OP_NO_SSLv3)
         self.assertEqual(options, ctx._options & options)
 
 
     def test_tlsProtocolsAtLeastAllSecureTLS(self):
         """
         When calling L{sslverify.OpenSSLCertificateOptions} with
-        C{raiseMinimumTo} set to TLSv1.2, it will ignore all TLSs below
-        1.2 and SSL.
+        C{raiseMinimumTo} set to TLSv1.3, it will ignore all TLSs below
+        1.3 and SSL.
         """
         opts = sslverify.OpenSSLCertificateOptions(
             privateKey=self.sKey,
             certificate=self.sCert,
-            raiseMinimumTo=sslverify.TLSVersion.TLSv1_2
+            raiseMinimumTo=sslverify.TLSVersion.TLSv1_3
         )
         opts._contextFactory = FakeContext
         ctx = opts.getContext()
         options = (SSL.OP_NO_SSLv2 | SSL.OP_NO_COMPRESSION |
                    SSL.OP_CIPHER_SERVER_PREFERENCE | SSL.OP_NO_SSLv3 |
-                   SSL.OP_NO_TLSv1 | SSL.OP_NO_TLSv1_1)
+                   SSL.OP_NO_TLSv1 | SSL.OP_NO_TLSv1_1 | SSL.OP_NO_TLSv1_2)
         self.assertEqual(options, ctx._options & options)
 
 
@@ -1295,19 +1313,19 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, unittest.TestCase):
     def test_tlsProtocolsAllSecureTLS(self):
         """
         When calling L{sslverify.OpenSSLCertificateOptions} with
-        C{insecurelyLowerMinimumTo} set to TLSv1.2, it will ignore all TLSs below
-        1.2 and SSL.
+        C{insecurelyLowerMinimumTo} set to TLSv1.3, it will ignore all TLSs below
+        1.3 and SSL.
         """
         opts = sslverify.OpenSSLCertificateOptions(
             privateKey=self.sKey,
             certificate=self.sCert,
-            insecurelyLowerMinimumTo=sslverify.TLSVersion.TLSv1_2
+            insecurelyLowerMinimumTo=sslverify.TLSVersion.TLSv1_3
         )
         opts._contextFactory = FakeContext
         ctx = opts.getContext()
         options = (SSL.OP_NO_SSLv2 | SSL.OP_NO_COMPRESSION |
                    SSL.OP_CIPHER_SERVER_PREFERENCE | SSL.OP_NO_SSLv3 |
-                   SSL.OP_NO_TLSv1 | SSL.OP_NO_TLSv1_1)
+                   SSL.OP_NO_TLSv1 | SSL.OP_NO_TLSv1_1 | SSL.OP_NO_TLSv1_2)
         self.assertEqual(options, ctx._options & options)
 
 
