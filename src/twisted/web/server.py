@@ -311,7 +311,7 @@ class Request(Copyable, http.Request, components.Componentized):
                 body = epage.render(self)
         # end except UnsupportedMethod
 
-        if body == NOT_DONE_YET:
+        if body is NOT_DONE_YET:
             return
         if not isinstance(body, bytes):
             body = resource.ErrorPage(
