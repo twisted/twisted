@@ -489,7 +489,7 @@ class KnownHostsFile(object):
 
                 keytype = key.type()
 
-                if keytype is "EC":
+                if keytype == "EC":
                     keytype = "ECDSA"
 
                 prompt = (
