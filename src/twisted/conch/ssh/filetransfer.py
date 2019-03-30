@@ -13,7 +13,7 @@ from zope.interface import implementer
 
 from twisted.conch.interfaces import ISFTPServer, ISFTPFile
 from twisted.conch.ssh.common import NS, getNS
-from twisted.internet import defer, protocol
+from twisted.internet import defer, protocol, error
 from twisted.python import failure, log
 from twisted.python.compat import (
     _PY3, range, itervalues, nativeString, networkString)
@@ -501,6 +501,9 @@ class FileTransferServer(FileTransferBase):
 
         # On Python2, we're an oldstyle class, so we can't use super().
         FileTransferBase.connectionLost(self, reason)
+        # Not sure why self.connected isn't updated in
+        # t.i.p.Protocol.connectionLost() instead
+        self.connected = False
 
         for fileObj in self.openFiles.values():
             fileObj.close()
@@ -538,12 +541,23 @@ class FileTransferClient(FileTransferBase):
 
         # On Python2, we're an oldstyle class, so we can't use super().
         FileTransferBase.connectionLost(self, reason)
+        # Not sure why self.connected isn't updated in
+        # t.i.p.Protocol.connectionLost() instead
+        self.connected = False
 
         # If there are still requests waiting for responses when the
         # connection is lost, fail them.
-        while self.openRequests:
-            _, deferred = self.openRequests.popitem()
-            deferred.errback(reason)
+        if self.openRequests:
+            if reason.check(error.ConnectionDone):
+                # Even if our transport was lost "cleanly", our
+                # requests were still not cancelled "cleanly".
+                reqreason = failure.Failure(
+                    error.ConnectionLost(str(reason.value)))
+            else:
+                reqreason = reason
+            while self.openRequests:
+                _, deferred = self.openRequests.popitem()
+                deferred.errback(reqreason)
 
 
     def _sendRequest(self, msg, data):

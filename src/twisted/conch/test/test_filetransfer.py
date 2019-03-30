@@ -13,7 +13,7 @@ import re
 import struct
 
 from twisted.internet import defer
-from twisted.internet.error import ConnectionClosed
+from twisted.internet.error import ConnectionLost
 from twisted.protocols import loopback
 from twisted.python import components
 from twisted.python.compat import long, _PY37PLUS
@@ -593,7 +593,7 @@ class OurServerOurClientTests(SFTPTestBase):
         def _slowRead(offset, length):
             self.assertEqual(gotReadRequest, [])
             d = defer.Deferred()
-            gotReadRequest.append(d)
+            gotReadRequest.append(offset)
             return d
         [serverSideFh] = self.server.openFiles.values()
         serverSideFh.readChunk = _slowRead
@@ -603,8 +603,8 @@ class OurServerOurClientTests(SFTPTestBase):
         # is sent
         d = fh.readChunk(100, 200)
         self._emptyBuffers()
-        self.assertTrue(gotReadRequest is not None)
-        self.assertFalse(d.called)
+        self.assertEqual(len(gotReadRequest), 1)
+        self.assertNoResult(d)
 
         # Lost connection should cause an errback
         self.serverTransport.loseConnection()
@@ -612,8 +612,8 @@ class OurServerOurClientTests(SFTPTestBase):
         self.clientTransport.clearBuffer()
         self._emptyBuffers()
 
-        self.assertTrue(d.called)
-        self.assertFailure(d, ConnectionClosed)
+        self.assertFalse(self.client.connected)
+        self.failureResultOf(d, ConnectionLost)
 
 
 
