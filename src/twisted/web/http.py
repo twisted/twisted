@@ -670,9 +670,10 @@ class Request:
     @ivar uri: The full URI that was requested (includes arguments).
     @ivar path: The path only (arguments not included).
     @ivar args: All of the arguments, including URL and POST arguments.
-    @type args: A mapping of strings (the argument names) to lists of values.
+    @type args: A mapping of bytestrings (the argument names) to lists of
+                values.
                 i.e., ?foo=bar&foo=baz&quux=spam results in
-                {'foo': ['bar', 'baz'], 'quux': ['spam']}.
+                {b'foo': [b'bar', b'baz'], b'quux': [b'spam']}.
 
     @ivar cookies: The cookies that will be sent in the response.
     @type cookies: L{list} of L{bytes}

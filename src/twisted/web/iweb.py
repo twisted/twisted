@@ -23,18 +23,29 @@ class IRequest(Interface):
     @since: 9.0
     """
 
-    method = Attribute("A C{str} giving the HTTP method that was used.")
+    method = Attribute("A C{bytes} giving the HTTP method that was used.")
+
     uri = Attribute(
-        "A C{str} giving the full encoded URI which was requested (including "
-        "query arguments).")
+        "A C{bytes} giving the full encoded URI which was requested "
+        "(including query arguments).")
+
     path = Attribute(
-        "A C{str} giving the encoded query path of the request URI.")
+        "A C{bytes} giving the encoded path of the request URI.")
+
     args = Attribute(
-        "A mapping of decoded query argument names as C{str} to "
-        "corresponding query argument values as C{list}s of C{str}.  "
+        "A mapping of decoded query argument names (as C{bytes}) to "
+        "corresponding query argument values (as C{list}s of C{bytes}). "
         "For example, for a URI with C{'foo=bar&foo=baz&quux=spam'} "
         "for its query part, C{args} will be C{{'foo': ['bar', 'baz'], "
         "'quux': ['spam']}}.")
+
+    prepath = Attribute(
+        "The URL path segments which have been processed during resource "
+        "traversal, as a list of {bytes}.")
+
+    postpath = Attribute(
+        "The URL path segments which have not (yet) been processed "
+        "during resource traversal, as a list of L{bytes}.")
 
     requestHeaders = Attribute(
         "A L{http_headers.Headers} instance giving all received HTTP request "
@@ -174,16 +185,21 @@ class IRequest(Interface):
 
     def URLPath():
         """
-        @return: A L{URLPath} instance which identifies the URL for which this
-            request is.
+        @return: A L{URLPath<twisted.python.urlpath.URLPath>} instance
+            which identifies the URL for which this request is.
         """
 
 
     def prePathURL():
         """
-        @return: At any time during resource traversal, a L{str} giving an
-            absolute URL to the most nested resource which has yet been
-            reached.
+        At any time during resource traversal or resource rendering,
+        returns an absolute URL to the most nested resource which has
+        yet been reached.
+
+        @see: {twisted.web.server.Request.prepath}
+
+        @return: An absolute URL.
+        @type: L{bytes}
         """
 
 
@@ -197,6 +213,9 @@ class IRequest(Interface):
     def getRootURL():
         """
         Get a previously-remembered URL.
+
+        @return: An absolute URL.
+        @type: L{bytes}
         """
 
 
