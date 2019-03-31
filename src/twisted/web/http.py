@@ -666,14 +666,6 @@ class Request:
     Subclasses should override the process() method to determine how
     the request will be processed.
 
-    @ivar method: The HTTP method that was used.
-    @ivar uri: The full URI that was requested (includes arguments).
-    @ivar path: The path only (arguments not included).
-    @ivar args: All of the arguments, including URL and POST arguments.
-    @type args: A mapping of strings (the argument names) to lists of values.
-                i.e., ?foo=bar&foo=baz&quux=spam results in
-                {'foo': ['bar', 'baz'], 'quux': ['spam']}.
-
     @ivar cookies: The cookies that will be sent in the response.
     @type cookies: L{list} of L{bytes}
 
@@ -1248,12 +1240,6 @@ class Request:
         self.cookies.append(cookie)
 
     def setResponseCode(self, code, message=None):
-        """
-        Set the HTTP response code.
-
-        @type code: C{int}
-        @type message: C{bytes}
-        """
         if not isinstance(code, _intTypes):
             raise TypeError("HTTP response code must be int or long")
         self.code = code
@@ -1266,18 +1252,6 @@ class Request:
 
 
     def setHeader(self, name, value):
-        """
-        Set an HTTP response header.  Overrides any previously set values for
-        this header.
-
-        @type name: C{bytes} or C{str}
-        @param name: The name of the header for which to set the value.
-
-        @type value: C{bytes} or C{str}
-        @param value: The value to set for the named header. A C{str} will be
-            UTF-8 encoded, which may not interoperable with other
-            implementations. Avoid passing non-ASCII characters if possible.
-        """
         self.responseHeaders.setRawHeaders(name, [value])
 
 
