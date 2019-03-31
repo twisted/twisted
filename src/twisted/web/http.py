@@ -10,9 +10,9 @@ Web server.  It can parse HTTP 1.0 requests and supports many HTTP 1.1
 features as well.  Additionally, some functionality implemented here is
 also useful for HTTP clients (such as the chunked encoding parser).
 
-@var CACHED: A marker value to be returned from cache-related request methods to
-    indicate to the caller that a cached response will be usable and no response
-    body should be generated.
+@var CACHED: A marker value to be returned from cache-related request methods
+    to indicate to the caller that a cached response will be usable and no
+    response body should be generated.
 
 @var FOUND: An HTTP response code indicating a temporary redirect.
 
@@ -668,20 +668,21 @@ class Request:
     Subclasses should override the process() method to determine how
     the request will be processed.
 
-    @ivar method: A L{bytes} giving the HTTP method that was used.
-    @type method L{bytes}
+    @ivar method: The HTTP method that was used, e.g. C{b'GET'}.
+    @type method: L{bytes}
 
-    @ivar uri: A L{bytes} giving the full encoded URI which was requested
-        (including query arguments).
+    @ivar uri: The full encoded URI which was requested (including query
+        arguments), e.g. C{b'/a/b%20/c?q=v'}.
     @type uri: L{bytes}
 
-    @ivar path: A L{bytes} giving the encoded query path of the request URI
-        (not including query arguments).
+    @ivar path: The encoded path of the request URI (not including query
+        arguments), e.g. C{b'/a/b%20/c'}.
+    @type path: L{bytes}
 
     @ivar args: A mapping of decoded query argument names as L{bytes} to
         corresponding query argument values as L{list}s of L{bytes}.
         For example, for a URI with C{foo=bar&foo=baz&quux=spam}
-        for its query part, C{args} will be C{{b'foo': [b'bar', b'baz'],
+        as its query part C{args} will be C{{b'foo': [b'bar', b'baz'],
         b'quux': [b'spam']}}.
     @type args: L{dict} of L{bytes} to L{list} of L{bytes}
 
@@ -1301,10 +1302,10 @@ class Request:
         """
         Utility function that does a redirect.
 
-        Set the response code to 302 Found and the I{Location} header to the
+        Set the response code to L{FOUND} and the I{Location} header to the
         given URL.
 
-        The request should have L{finish()} called after this.
+        The request should have C{finish()} called after this.
 
         @param url: I{Location} header value.
         @type url: L{bytes} or L{str}
