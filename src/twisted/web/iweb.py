@@ -43,7 +43,7 @@ class IRequest(Interface):
 
     content = Attribute(
         "A file-like object giving the request body.  This may be a file on "
-        "disk, a L{BytesIO}, or some other type.  The implementation is free "
+        "disk, a L{io.BytesIO}, or some other type.  The implementation is free "
         "to decide on a per-request basis.")
 
     responseHeaders = Attribute(
