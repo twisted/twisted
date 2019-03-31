@@ -14,6 +14,8 @@ also useful for HTTP clients (such as the chunked encoding parser).
     indicate to the caller that a cached response will be usable and no response
     body should be generated.
 
+@var FOUND: An HTTP response code indicating a temporary redirect.
+
 @var NOT_MODIFIED: An HTTP response code indicating that a requested
     pre-condition (for example, the condition represented by an
     I{If-Modified-Since} header is present in the request) has succeeded.  This
@@ -666,6 +668,28 @@ class Request:
     Subclasses should override the process() method to determine how
     the request will be processed.
 
+    @ivar method: A L{bytes} giving the HTTP method that was used.
+    @type method L{bytes}
+
+    @ivar uri: A L{bytes} giving the full encoded URI which was requested
+        (including query arguments).
+    @type uri: L{bytes}
+
+    @ivar path: A L{bytes} giving the encoded query path of the request URI
+        (not including query arguments).
+
+    @ivar args: A mapping of decoded query argument names as L{bytes} to
+        corresponding query argument values as L{list}s of L{bytes}.
+        For example, for a URI with C{foo=bar&foo=baz&quux=spam}
+        for its query part, C{args} will be C{{b'foo': [b'bar', b'baz'],
+        b'quux': [b'spam']}}.
+    @type args: L{dict} of L{bytes} to L{list} of L{bytes}
+
+    @ivar content: A file-like object giving the request body.  This may be
+        a file on disk, an L{io.BytesIO}, or some other type.  The
+        implementation is free to decide on a per-request basis.
+    @type content: L{typing.BinaryIO}
+
     @ivar cookies: The cookies that will be sent in the response.
     @type cookies: L{list} of L{bytes}
 
@@ -1240,6 +1264,12 @@ class Request:
         self.cookies.append(cookie)
 
     def setResponseCode(self, code, message=None):
+        """
+        Set the HTTP response code.
+
+        @type code: L{int}
+        @type message: L{bytes}
+        """
         if not isinstance(code, _intTypes):
             raise TypeError("HTTP response code must be int or long")
         self.code = code
@@ -1252,6 +1282,18 @@ class Request:
 
 
     def setHeader(self, name, value):
+        """
+        Set an HTTP response header.  Overrides any previously set values for
+        this header.
+
+        @type k: L{bytes} or L{str}
+        @param k: The name of the header for which to set the value.
+
+        @type v: L{bytes} or L{str}
+        @param v: The value to set for the named header. A L{str} will be
+            UTF-8 encoded, which may not interoperable with other
+            implementations. Avoid passing non-ASCII characters if possible.
+        """
         self.responseHeaders.setRawHeaders(name, [value])
 
 
@@ -1259,7 +1301,13 @@ class Request:
         """
         Utility function that does a redirect.
 
-        The request should have finish() called after this.
+        Set the response code to 302 Found and the I{Location} header to the
+        given URL.
+
+        The request should have L{finish()} called after this.
+
+        @param url: I{Location} header value.
+        @type url: L{bytes} or L{str}
         """
         self.setResponseCode(FOUND)
         self.setHeader(b"location", url)
@@ -1279,7 +1327,7 @@ class Request:
         @param when: The last time the resource being returned was
             modified, in seconds since the epoch.
         @type when: number
-        @return: If I am a C{If-Modified-Since} conditional request and
+        @return: If I am a I{If-Modified-Since} conditional request and
             the time given is not newer than the condition, I return
             L{http.CACHED<CACHED>} to indicate that you should write no
             body.  Otherwise, I return a false value.

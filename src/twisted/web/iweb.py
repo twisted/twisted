@@ -31,9 +31,9 @@ class IRequest(Interface):
         "A L{bytes} giving the encoded query path of the request URI (not "
         "including query arguments).")
     args = Attribute(
-        "A mapping of decoded query argument names as L{str} to "
-        "corresponding query argument values as L{list}s of L{str}.  "
-        "For example, for a URI with C{'foo=bar&foo=baz&quux=spam'} "
+        "A mapping of decoded query argument names as L{bytes} to "
+        "corresponding query argument values as L{list}s of L{bytes}.  "
+        "For example, for a URI with C{foo=bar&foo=baz&quux=spam} "
         "for its query part, C{args} will be C{{b'foo': [b'bar', b'baz'], "
         "b'quux': [b'spam']}}.")
 
@@ -43,7 +43,7 @@ class IRequest(Interface):
 
     content = Attribute(
         "A file-like object giving the request body.  This may be a file on "
-        "disk, a L{io.BytesIO}, or some other type.  The implementation is "
+        "disk, an L{io.BytesIO}, or some other type.  The implementation is "
         "free to decide on a per-request basis.")
 
     responseHeaders = Attribute(
@@ -537,7 +537,7 @@ class IResponse(Interface):
     version = Attribute(
         "A three-tuple describing the protocol and protocol version "
         "of the response.  The first element is of type L{str}, the second "
-        "and third are of type L{int}.  For example, C{('HTTP', 1, 1)}.")
+        "and third are of type L{int}.  For example, C{(b'HTTP', 1, 1)}.")
 
 
     code = Attribute("The HTTP status code of this response, as a L{int}.")
