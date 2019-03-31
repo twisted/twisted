@@ -23,18 +23,19 @@ class IRequest(Interface):
     @since: 9.0
     """
 
-    method = Attribute("A C{str} giving the HTTP method that was used.")
+    method = Attribute("A L{bytes} giving the HTTP method that was used.")
     uri = Attribute(
-        "A C{str} giving the full encoded URI which was requested (including "
-        "query arguments).")
+        "A L{bytes} giving the full encoded URI which was requested (including"
+        " query arguments).")
     path = Attribute(
-        "A C{str} giving the encoded query path of the request URI.")
+        "A L{bytes} giving the encoded query path of the request URI (not "
+        "including query arguments).")
     args = Attribute(
-        "A mapping of decoded query argument names as C{str} to "
-        "corresponding query argument values as C{list}s of C{str}.  "
+        "A mapping of decoded query argument names as L{str} to "
+        "corresponding query argument values as L{list}s of L{str}.  "
         "For example, for a URI with C{'foo=bar&foo=baz&quux=spam'} "
-        "for its query part, C{args} will be C{{'foo': ['bar', 'baz'], "
-        "'quux': ['spam']}}.")
+        "for its query part, C{args} will be C{{b'foo': [b'bar', b'baz'], "
+        "b'quux': [b'spam']}}.")
 
     requestHeaders = Attribute(
         "A L{http_headers.Headers} instance giving all received HTTP request "
@@ -42,7 +43,7 @@ class IRequest(Interface):
 
     content = Attribute(
         "A file-like object giving the request body.  This may be a file on "
-        "disk, a C{StringIO}, or some other type.  The implementation is free "
+        "disk, a L{BytesIO}, or some other type.  The implementation is free "
         "to decide on a per-request basis.")
 
     responseHeaders = Attribute(
@@ -53,13 +54,13 @@ class IRequest(Interface):
         """
         Get an HTTP request header.
 
-        @type key: C{bytes} or C{str}
+        @type key: L{bytes} or L{str}
         @param key: The name of the header to get the value of.
 
-        @rtype: C{str} or C{bytes} or L{None}
+        @rtype: L{bytes} or L{str} or L{None}
         @return: The value of the specified header, or L{None} if that header
             was not present in the request. The string type of the result
-            matches the type of L{key}.
+            matches the type of C{key}.
         """
 
 
@@ -67,10 +68,10 @@ class IRequest(Interface):
         """
         Get a cookie that was sent from the network.
 
-        @type key: C{bytes}
+        @type key: L{bytes}
         @param key: The name of the cookie to get.
 
-        @rtype: C{bytes} or C{None}
+        @rtype: L{bytes} or L{None}
         @returns: The value of the specified cookie, or L{None} if that cookie
             was not present in the request.
         """
@@ -94,7 +95,7 @@ class IRequest(Interface):
         host we are listening on if the header is unavailable.
 
         @returns: the requested hostname
-        @rtype: C{str}
+        @rtype: L{str}
         """
 
 
@@ -139,7 +140,7 @@ class IRequest(Interface):
         If no user was supplied, return the empty string.
 
         @returns: the HTTP user, if any
-        @rtype: C{str}
+        @rtype: L{str}
         """
 
 
@@ -150,7 +151,7 @@ class IRequest(Interface):
         If no password was supplied, return the empty string.
 
         @returns: the HTTP password, if any
-        @rtype: C{str}
+        @rtype: L{str}
         """
 
 
@@ -220,6 +221,9 @@ class IRequest(Interface):
         Write some data to the body of the response to this request.  Response
         headers are written the first time this method is called, after which
         new response headers may not be added.
+
+        @param data: Bytes of the response body.
+        @type data: L{bytes}
         """
 
 
@@ -236,6 +240,9 @@ class IRequest(Interface):
     def setResponseCode(code, message=None):
         """
         Set the HTTP response code.
+
+        @type code: L{int}
+        @type message: L{bytes}
         """
 
 
@@ -244,11 +251,11 @@ class IRequest(Interface):
         Set an HTTP response header.  Overrides any previously set values for
         this header.
 
-        @type k: C{bytes} or C{str}
+        @type k: L{bytes} or L{str}
         @param k: The name of the header for which to set the value.
 
-        @type v: C{bytes} or C{str}
-        @param v: The value to set for the named header. A C{str} will be
+        @type v: L{bytes} or L{str}
+        @param v: The value to set for the named header. A L{str} will be
             UTF-8 encoded, which may not interoperable with other
             implementations. Avoid passing non-ASCII characters if possible.
         """
@@ -297,7 +304,7 @@ class IRequest(Interface):
         tag given.
 
         @param etag: The entity tag for the resource being returned.
-        @type etag: C{str}
+        @type etag: L{str}
 
         @return: If I am a C{If-None-Match} conditional request and the tag
             matches one in the request, I return L{CACHED<http.CACHED>} to
@@ -375,7 +382,7 @@ class ICredentialFactory(Interface):
     an authorize requests.
     """
     scheme = Attribute(
-        "A C{str} giving the name of the authentication scheme with which "
+        "A L{str} giving the name of the authentication scheme with which "
         "this factory is associated.  For example, C{'basic'} or C{'digest'}.")
 
 
@@ -387,8 +394,8 @@ class ICredentialFactory(Interface):
         @param peer: The request the response to which this challenge will be
             included.
 
-        @rtype: C{dict}
-        @return: A mapping from C{str} challenge fields to associated C{str}
+        @rtype: L{dict}
+        @return: A mapping from L{str} challenge fields to associated L{str}
             values.
         """
 
@@ -397,7 +404,7 @@ class ICredentialFactory(Interface):
         """
         Create a credentials object from the given response.
 
-        @type response: C{str}
+        @type response: L{str}
         @param response: scheme specific response string
 
         @type request: L{twisted.web.http.Request}
@@ -443,7 +450,7 @@ class IBodyProducer(IPushProducer):
 
     length = Attribute(
         """
-        C{length} is a C{int} indicating how many bytes in total this
+        C{length} is a L{int} indicating how many bytes in total this
         L{IBodyProducer} will write to the consumer or L{UNKNOWN_LENGTH}
         if this is not known in advance.
         """)
@@ -481,7 +488,7 @@ class IRenderable(Interface):
         """
         Look up and return the render method associated with the given name.
 
-        @type name: C{str}
+        @type name: L{str}
         @param name: The value of a render directive encountered in the
             document returned by a call to L{IRenderable.render}.
 
@@ -514,7 +521,7 @@ class ITemplateLoader(Interface):
         """
         Load a template suitable for rendering.
 
-        @return: a C{list} of C{list}s, C{unicode} objects, C{Element}s and
+        @return: a L{list} of L{list}s, C{unicode} objects, C{Element}s and
             other L{IRenderable} providers.
         """
 
@@ -529,22 +536,22 @@ class IResponse(Interface):
 
     version = Attribute(
         "A three-tuple describing the protocol and protocol version "
-        "of the response.  The first element is of type C{str}, the second "
-        "and third are of type C{int}.  For example, C{('HTTP', 1, 1)}.")
+        "of the response.  The first element is of type L{str}, the second "
+        "and third are of type L{int}.  For example, C{('HTTP', 1, 1)}.")
 
 
-    code = Attribute("The HTTP status code of this response, as a C{int}.")
+    code = Attribute("The HTTP status code of this response, as a L{int}.")
 
 
     phrase = Attribute(
-        "The HTTP reason phrase of this response, as a C{str}.")
+        "The HTTP reason phrase of this response, as a L{str}.")
 
 
     headers = Attribute("The HTTP response L{Headers} of this response.")
 
 
     length = Attribute(
-        "The C{int} number of bytes expected to be in the body of this "
+        "The L{int} number of bytes expected to be in the body of this "
         "response or L{UNKNOWN_LENGTH} if the server did not indicate how "
         "many bytes to expect.  For I{HEAD} responses, this will be 0; if "
         "the response includes a I{Content-Length} header, it will be "
@@ -607,10 +614,10 @@ class _IRequestEncoder(Interface):
         Encode the data given and return the result.
 
         @param data: The content to encode.
-        @type data: C{str}
+        @type data: L{str}
 
         @return: The encoded data.
-        @rtype: C{str}
+        @rtype: L{str}
         """
 
 
@@ -620,7 +627,7 @@ class _IRequestEncoder(Interface):
 
         @return: If necessary, the pending data accumulated from previous
             C{encode} calls.
-        @rtype: C{str}
+        @rtype: L{str}
         """
 
 

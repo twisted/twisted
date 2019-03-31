@@ -675,7 +675,7 @@ class Request:
     @type responseHeaders: L{http_headers.Headers}
     @ivar responseHeaders: All HTTP response headers to be sent.
 
-    @ivar notifications: A C{list} of L{Deferred}s which are waiting for
+    @ivar notifications: A L{list} of L{Deferred}s which are waiting for
         notification that the response to this request has been finished
         (successfully or with an error).  Don't use this attribute directly,
         instead use the L{Request.notifyFinish} method.
@@ -683,7 +683,7 @@ class Request:
     @ivar _disconnected: A flag which is C{False} until the connection over
         which this request was received is closed and which is C{True} after
         that.
-    @type _disconnected: C{bool}
+    @type _disconnected: L{bool}
 
     @ivar _log: A logger instance for request related messages.
     @type _log: L{twisted.logger.Logger}
