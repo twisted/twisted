@@ -9,13 +9,10 @@ the code in C{twisted/__init__.py}.
 from __future__ import division, absolute_import
 
 import sys
-import twisted
 
 from types import ModuleType
 
 from twisted.python._setup import _checkPythonVersion
-from twisted.python.compat import _PY3
-from twisted.python import reflect
 from twisted.trial.unittest import TestCase
 
 
