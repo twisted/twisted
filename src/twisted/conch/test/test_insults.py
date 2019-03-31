@@ -2,7 +2,6 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-from twisted.python.reflect import namedAny
 from twisted.trial import unittest
 from twisted.test.proto_helpers import StringTransport
 
