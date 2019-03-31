@@ -521,7 +521,7 @@ class ITemplateLoader(Interface):
         """
         Load a template suitable for rendering.
 
-        @return: a L{list} of L{list}s, C{unicode} objects, C{Element}s and
+        @return: a L{list} of L{list}s, L{unicode} objects, C{Element}s and
             other L{IRenderable} providers.
         """
 
