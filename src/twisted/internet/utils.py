@@ -156,7 +156,9 @@ class _EverythingGetter(protocol.ProcessProtocol):
     def connectionMade(self):
         if self.stdinBytes is not None:
             self.transport.writeToChild(0, self.stdinBytes)
-        self.transport.closeStdin()
+            # The only compelling reason not to _always_ close stdin here is
+            # backwards compatibility.
+            self.transport.closeStdin()
 
     def processEnded(self, reason):
         out = self.outBuf.getvalue()
