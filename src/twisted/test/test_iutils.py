@@ -286,8 +286,8 @@ class ProcessUtilsTests(unittest.TestCase):
 
     def test_get_processOutputAndValueStdin(self):
         """
-        Standard input can be made available to the child process by passing bytes
-        for the `stdinBytes` parameter.
+        Standard input can be made available to the child process by passing
+        bytes for the `stdinBytes` parameter.
         """
         scriptFile = self.makeSourceFile([
             "import sys",
@@ -299,6 +299,7 @@ class ProcessUtilsTests(unittest.TestCase):
             ['-u', scriptFile],
             stdinBytes=stdinBytes,
         )
+
         def gotOutputAndValue(out_err_code):
             out, err, code = out_err_code
             # Avoid making an exact equality comparison in case there is extra
