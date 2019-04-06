@@ -191,7 +191,6 @@ String literals not marked with this are "native/bare strings", and have a diffe
 Bytestrings and text must not be implicitly concatenated, as this causes an invisible ASCII encode/decode on Python 2, and causes an exception on Python 3.
 
 Use ``+`` to combine bytestrings, not string formatting (either "percent formatting" or ``.format()``).
-String formatting is not available on Python 3.4.
 
 .. code-block:: python
 
@@ -204,8 +203,6 @@ Utilities are available in :api:`twisted.python.compat <twisted.python.compat>` 
 
 String Formatting Operations
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-`String formatting operations <https://docs.python.org/2.7/library/stdtypes.html#string-formatting>`_ like ``formatString % values`` should only be used on text strings, not byte strings, as they do not work on Python 3.4.
 
 When using "percent formatting", you should always use a tuple if you're using non-mapping ``values``.
 This is to avoid unexpected behavior when you think you're passing in a single value, but the value is unexpectedly a tuple, e.g.:
