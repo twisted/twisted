@@ -65,7 +65,6 @@ on event-based network programming and multiprotocol integration.
     classifiers=[
         "Programming Language :: Python :: 2.7",
         "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.4",
         "Programming Language :: Python :: 3.5",
         "Programming Language :: Python :: 3.6",
         "Programming Language :: Python :: 3.7",
@@ -202,8 +201,8 @@ def _checkPythonVersion():
     version = getattr(sys, "version_info", (0,))
     if version < (2, 7):
         raise ImportError("Twisted requires Python 2.7 or later.")
-    elif version >= (3, 0) and version < (3, 4):
-        raise ImportError("Twisted on Python 3 requires Python 3.4 or later.")
+    elif version >= (3, 0) and version < (3, 5):
+        raise ImportError("Twisted on Python 3 requires Python 3.5 or later.")
 
 
 
