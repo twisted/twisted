@@ -1,1 +1,0 @@
-twisted.internet.posixbase.PosixReactorBase.adoptStreamPort and twisted.internet.posixbase.PosixReactorBase.adoptStreamConnection now support AF_UNIX SOCK_STREAM sockets.

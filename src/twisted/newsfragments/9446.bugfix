@@ -1,0 +1,1 @@
+twisted.internet.iocpreactor.abstract.FileHandle no longer duplicates/looses outgoing data when .write() is called in rapid succession with large payloads 

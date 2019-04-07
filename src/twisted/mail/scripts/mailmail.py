@@ -8,20 +8,22 @@ Implementation module for the I{mailmail} command.
 
 from __future__ import print_function
 
+import email.utils
 import os
 import sys
-import rfc822
 import getpass
-from ConfigParser import ConfigParser
-
 try:
-    import cStringIO as StringIO
-except:
-    import StringIO
+    # Python 3
+    from configparser import ConfigParser
+except ImportError:
+    # Python 2
+    from ConfigParser import ConfigParser
 
 from twisted.copyright import version
 from twisted.internet import reactor
+from twisted.logger import Logger, textFileLogObserver
 from twisted.mail import smtp
+from twisted.python.compat import NativeStringIO
 
 GLOBAL_CFG = "/etc/mailmail"
 LOCAL_CFG = os.path.expanduser("~/.twisted/mailmail")
@@ -37,17 +39,20 @@ Subject: Failed Message Delivery
 The Twisted sendmail application.
 """
 
-def log(message, *args):
-    sys.stderr.write(str(message) % args + '\n')
+_logObserver = textFileLogObserver(sys.stderr)
+_log = Logger(observer=_logObserver)
 
 
 
 class Options:
     """
-    @type to: C{list} of C{str}
+    Store the values of the parsed command-line options to the I{mailmail}
+    script.
+
+    @type to: L{list} of L{str}
     @ivar to: The addresses to which to deliver this message.
 
-    @type sender: C{str}
+    @type sender: L{str}
     @ivar sender: The address from which this message is being sent.
 
     @type body: C{file}
@@ -124,8 +129,9 @@ def parseOptions(argv):
     if '-om' in argv:
         raise _unsupportedOption
 
-    # -t causes us to pick the recipients of the message from the To, Cc, and Bcc
-    # headers, and to remove the Bcc header if present.
+    # -t causes us to pick the recipients of the message from
+    # the To, Cc, and Bcc headers, and to remove the Bcc header
+    # if present.
     if '-t' in argv:
         o.recipientsFromHeaders = True
         o.excludeAddresses = o.to
@@ -142,7 +148,7 @@ def parseOptions(argv):
         'date': [],
     }
 
-    buffer = StringIO.StringIO()
+    buffer = NativeStringIO()
     while 1:
         write = 1
         line = sys.stdin.readline()
@@ -154,12 +160,12 @@ def parseOptions(argv):
         hdr = hdrs[0].lower()
         if o.recipientsFromHeaders and hdr in ('to', 'cc', 'bcc'):
             o.to.extend([
-                a[1] for a in rfc822.AddressList(hdrs[1]).addresslist
+                email.utils.parseaddr(hdrs[1])[1]
             ])
             if hdr == 'bcc':
                 write = 0
         elif hdr == 'from':
-            o.sender = rfc822.parseaddr(hdrs[1])[1]
+            o.sender = email.utils.parseaddr(hdrs[1])[1]
 
         if hdr in requiredHeaders:
             requiredHeaders[hdr].append(hdrs[1])
@@ -168,13 +174,13 @@ def parseOptions(argv):
             buffer.write(line)
 
     if not requiredHeaders['from']:
-        buffer.write('From: %s\r\n' % (o.sender,))
+        buffer.write('From: {}\r\n'.format(o.sender))
     if not requiredHeaders['to']:
         if not o.to:
             raise SystemExit("No recipients specified.")
-        buffer.write('To: %s\r\n' % (', '.join(o.to),))
+        buffer.write('To: {}\r\n'.format(', '.join(o.to)))
     if not requiredHeaders['date']:
-        buffer.write('Date: %s\r\n' % (smtp.rfc822date(),))
+        buffer.write('Date: {}\r\n'.format(smtp.rfc822date()))
 
     buffer.write(line)
 
@@ -186,21 +192,22 @@ def parseOptions(argv):
                 pass
 
     buffer.seek(0, 0)
-    o.body = StringIO.StringIO(buffer.getvalue() + sys.stdin.read())
+    o.body = NativeStringIO(buffer.getvalue() + sys.stdin.read())
     return o
 
 
 
 class Configuration:
     """
+
     @ivar allowUIDs: A list of UIDs which are allowed to send mail.
     @ivar allowGIDs: A list of GIDs which are allowed to send mail.
     @ivar denyUIDs: A list of UIDs which are not allowed to send mail.
     @ivar denyGIDs: A list of GIDs which are not allowed to send mail.
 
-    @type defaultAccess: C{bool}
-    @ivar defaultAccess: C{True} if access will be allowed when no other access
-    control rule matches or C{False} if it will be denied in that case.
+    @type defaultAccess: L{bool}
+    @ivar defaultAccess: L{True} if access will be allowed when no other access
+    control rule matches or L{False} if it will be denied in that case.
 
     @ivar useraccess: Either C{'allow'} to check C{allowUID} first
     or C{'deny'} to check C{denyUID} first.
@@ -208,7 +215,7 @@ class Configuration:
     @ivar groupaccess: Either C{'allow'} to check C{allowGID} first or
     C{'deny'} to check C{denyGID} first.
 
-    @ivar identities: A C{dict} mapping hostnames to credentials to use when
+    @ivar identities: A L{dict} mapping hostnames to credentials to use when
     sending mail to that host.
 
     @ivar smarthost: L{None} or a hostname through which all outgoing mail will
@@ -223,7 +230,7 @@ class Configuration:
         self.allowGIDs = []
         self.denyGIDs = []
         self.useraccess = 'deny'
-        self.groupaccess= 'deny'
+        self.groupaccess = 'deny'
 
         self.identities = {}
         self.smarthost = None
@@ -265,15 +272,21 @@ def loadConfig(path):
         if p.has_section(section):
             for (mode, L) in (('allow', a), ('deny', d)):
                 if p.has_option(section, mode) and p.get(section, mode):
-                    for id in p.get(section, mode).split(','):
+                    for sectionID in p.get(section, mode).split(','):
                         try:
-                            id = int(id)
+                            sectionID = int(sectionID)
                         except ValueError:
-                            log("Illegal %sID in [%s] section: %s", section[0].upper(), section, id)
+                            _log.error(
+                                "Illegal {prefix}ID in "
+                                "[{section}] section: {sectionID}",
+                                prefix=section[0].upper(),
+                                section=section, sectionID=sectionID)
                         else:
-                            L.append(id)
+                            L.append(sectionID)
             order = p.get(section, 'order')
-            order = map(str.split, map(str.lower, order.split(',')))
+            order = [s.split()
+                     for s in [s.lower()
+                               for s in order.split(',')]]
             if order[0] == 'allow':
                 setattr(c, section, 'allow')
             else:
@@ -283,9 +296,10 @@ def loadConfig(path):
         for (host, up) in p.items('identity'):
             parts = up.split(':', 1)
             if len(parts) != 2:
-                log("Illegal entry in [identity] section: %s", up)
+                _log.error("Illegal entry in [identity] section: {section}",
+                           section=up)
                 continue
-            p.identities[host] = parts
+            c.identities[host] = parts
 
     if p.has_section('addresses'):
         if p.has_option('addresses', 'smarthost'):
@@ -319,11 +333,11 @@ def sendmail(host, options, ident):
 
 def senderror(failure, options):
     recipient = [options.sender]
-    sender = '"Internally Generated Message (%s)"<postmaster@%s>' % (sys.argv[0], smtp.DNSNAME)
-    error = StringIO.StringIO()
+    sender = '"Internally Generated Message ({})"<postmaster@{}>'.format(
+             sys.argv[0], smtp.DNSNAME.decode("ascii"))
+    error = NativeStringIO()
     failure.printTraceback(file=error)
-    body = StringIO.StringIO(ERROR_FMT % error.getvalue())
-
+    body = NativeStringIO(ERROR_FMT % error.getvalue())
     d = smtp.sendmail('localhost', sender, recipient, body)
     d.addBoth(lambda _: reactor.stop())
 
@@ -365,7 +379,7 @@ def run():
     lConf = loadConfig(LOCAL_CFG)
 
     if deny(gConf) or deny(lConf):
-        log("Permission denied")
+        _log.error("Permission denied")
         return
 
     host = lConf.smarthost or gConf.smarthost or SMARTHOST

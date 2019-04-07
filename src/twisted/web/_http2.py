@@ -115,7 +115,7 @@ class H2Connection(Protocol, TimeoutMixin):
 
     @ivar _abortingCall: The L{twisted.internet.base.DelayedCall} that will be
         used to forcibly close the transport if it doesn't close cleanly.
-    @type _abortingCall: L{twisted.internet.base.DelayedCall
+    @type _abortingCall: L{twisted.internet.base.DelayedCall}
     """
     factory = None
     site = None
@@ -394,6 +394,8 @@ class H2Connection(Protocol, TimeoutMixin):
         if self._consumerBlocked is not None:
             self._consumerBlocked.addCallback(self._sendPrioritisedData)
             return
+
+        self.resetTimeout()
 
         remainingWindow = self.conn.local_flow_control_window(stream)
         frameData = self._outboundStreamQueues[stream].popleft()

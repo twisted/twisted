@@ -1501,7 +1501,7 @@ class MockOS(object):
 
     def switchUID(self, uid, gid):
         """
-        Override C{util.switchuid}. Save the action.
+        Override L{util.switchUID}. Save the action.
         """
         self.actions.append(('switchuid', uid, gid))
 
@@ -2637,7 +2637,7 @@ class ClosingPipesTests(unittest.TestCase):
                 # Give the system a bit of time to notice the closed
                 # descriptor.  Another option would be to poll() for HUP
                 # instead of relying on an os.write to fail with SIGPIPE.
-                # However, that wouldn't work on OS X (or Windows?).
+                # However, that wouldn't work on macOS (or Windows?).
                 'for i in range(1000):\n'
                 '    os.write(%d, b"foo\\n")\n'
                 '    time.sleep(0.01)\n'

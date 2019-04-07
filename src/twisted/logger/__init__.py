@@ -49,6 +49,7 @@ __all__ = [
     # From ._format
     "formatEvent", "formatEventAsClassicLogText",
     "formatTime", "timeFormatRFC3339",
+    "eventAsText",
 
     # From ._flatten
     "extractField",
@@ -92,6 +93,7 @@ from ._flatten import extractField
 
 from ._format import (
     formatEvent, formatEventAsClassicLogText, formatTime, timeFormatRFC3339,
+    eventAsText
 )
 
 from ._logger import Logger, _loggerFor

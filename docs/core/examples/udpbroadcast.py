@@ -37,18 +37,20 @@ class PingPongProtocol(DatagramProtocol):
 
     def sendPing(self):
         pingMsg = "PING {0}".format(uuid4().hex)
-        self.transport.write(pingMsg, ('<broadcast>', self.port))
-        log.msg("SEND " + pingMsg)
+        pingMsg = pingMsg.encode("ascii")
+        self.transport.write(pingMsg, ("<broadcast>", self.port))
+        log.msg(b"SEND " + pingMsg)
 
 
     def datagramReceived(self, datagram, addr):
-        if datagram[:4] == "PING":
+        if datagram[:4] == b"PING":
             uuid = datagram[5:]
             pongMsg = "PONG {0}".format(uuid)
-            self.transport.write(pongMsg, ('<broadcast>', self.port))
-            log.msg("RECV " + datagram)
-        elif datagram[:4] == "PONG":
-            log.msg("RECV " + datagram)
+            pongMsg = pongMsg.encode("ascii")
+            self.transport.write(pongMsg, ("<broadcast>", self.port))
+            log.msg(b"RECV " + datagram)
+        elif datagram[:4] == b"PONG":
+            log.msg(b"RECV " + datagram)
 
 
 

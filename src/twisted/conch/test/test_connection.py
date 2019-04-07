@@ -8,8 +8,18 @@ from __future__ import division, absolute_import
 
 import struct
 
+from twisted.python.reflect import requireModule
+
+cryptography = requireModule("cryptography")
+
 from twisted.conch import error
-from twisted.conch.ssh import channel, common, connection
+if cryptography:
+    from twisted.conch.ssh import common, connection
+else:
+    class connection:
+        class SSHConnection: pass
+
+from twisted.conch.ssh import channel
 from twisted.python.compat import long
 from twisted.trial import unittest
 from twisted.conch.test import test_userauth
@@ -152,6 +162,9 @@ class TestConnection(connection.SSHConnection):
     @type channel. C{TestChannel}
     """
 
+    if not cryptography:
+        skip = "Cannot run without cryptography"
+
     def logPrefix(self):
         return "TestConnection"
 
@@ -187,6 +200,8 @@ class TestConnection(connection.SSHConnection):
 
 class ConnectionTests(unittest.TestCase):
 
+    if not cryptography:
+        skip = "Cannot run without cryptography"
     if test_userauth.transport is None:
         skip = "Cannot run without both cryptography and pyasn1"
 
@@ -706,6 +721,9 @@ class CleanConnectionShutdownTests(unittest.TestCase):
     """
     Check whether correct cleanup is performed on connection shutdown.
     """
+    if not cryptography:
+        skip = "Cannot run without cryptography"
+
     if test_userauth.transport is None:
         skip = "Cannot run without both cryptography and pyasn1"
 
