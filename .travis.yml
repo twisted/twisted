@@ -5,7 +5,7 @@
 # way to share the same process between Travis-CI and Buildbot.
 #
 language: python
-sudo: false
+dist: xenial
 
 
 # Only run tests on push on a few branches.
@@ -23,6 +23,9 @@ env:
 
 matrix:
   include:
+    - services:
+        - docker
+      env: PIP=pip TOXENV=wheels
     - python: 2.7
       env: TOXENV=py27-alldeps-withcov-posix,codecov-publish
     - python: 2.7
@@ -35,16 +38,12 @@ matrix:
       env: TOXENV=py36-alldeps-withcov-posix,codecov-publish
     - python: 3.7
       env: TOXENV=py37-alldeps-withcov-posix,codecov-publish
-      dist: xenial
-      sudo: true
     - python: 3.5
       env: TOXENV=lint
     # We need a builder without IPv6. This is going to be slower than all the
     # others, but that's ok.
     - python: 3.6
       env: TOXENV=py36-alldeps-withcov-posix,codecov-publish DISABLE_IPV6=yes
-      sudo: true
-
 
 addons:
   apt:
