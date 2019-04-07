@@ -1,1 +1,0 @@
-twisted.python.failure.Failure.getTracebackObject now returns traceback objects whose frames can be passed into traceback.print_stack for better debugging of where the exception came from.
