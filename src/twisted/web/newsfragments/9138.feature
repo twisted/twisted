@@ -1,0 +1,1 @@
+twisted.web.client.HostnameCachingHTTPSPolicy was added as a new contextFactory option.  The policy caches a specified number of twisted.internet.interfaces.IOpenSSLClientConnectionCreator instances to to avoid the cost of instantiating a connection creator for multiple requests to the same host.

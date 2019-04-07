@@ -788,7 +788,10 @@ def _mutuallyExclusiveArguments(argumentPairs):
             arguments = _passed(spec, args, kwargs)
             for this, that in argumentPairs:
                 if this in arguments and that in arguments:
-                    raise TypeError("nope")
+                    raise TypeError(
+                        ("The %r and %r arguments to %s "
+                         "are mutually exclusive.") %
+                        (this, that, _fullyQualifiedName(wrappee)))
             return wrappee(*args, **kwargs)
         return wrapped
     return wrapper
