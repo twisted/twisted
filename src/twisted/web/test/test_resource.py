@@ -6,6 +6,7 @@ Tests for L{twisted.web.resource}.
 """
 
 from twisted.trial.unittest import TestCase
+from twisted.python.compat import _PY3
 
 from twisted.web.error import UnsupportedMethod
 from twisted.web.resource import (
@@ -173,6 +174,32 @@ class ResourceTests(TestCase):
         self.assertIsInstance(child, DynamicChild)
         self.assertEqual(child.path, path)
         self.assertIdentical(child.request, request)
+
+
+    def test_staticChildPathType(self):
+        """
+        Test that passing the wrong type to putChild results in a warning,
+        and a failure in Python 3
+        """
+        resource = Resource()
+        child = Resource()
+        sibling = Resource()
+        resource.putChild(u"foo", child)
+        warnings = self.flushWarnings([self.test_staticChildPathType])
+        self.assertEqual(len(warnings), 1)
+        self.assertIn("Path segment must be bytes",
+                      warnings[0]['message'])
+        if _PY3:
+            # We expect an error here because u"foo" != b"foo" on Py3k
+            self.assertIsInstance(
+                resource.getChildWithDefault(b"foo", DummyRequest([])),
+                ErrorPage)
+
+        resource.putChild(None, sibling)
+        warnings = self.flushWarnings([self.test_staticChildPathType])
+        self.assertEqual(len(warnings), 1)
+        self.assertIn("Path segment must be bytes",
+                      warnings[0]['message'])
 
 
     def test_defaultHEAD(self):

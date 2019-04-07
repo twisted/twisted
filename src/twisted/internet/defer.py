@@ -1905,6 +1905,20 @@ class _ConcurrencyPrimitive(object):
         return d
 
 
+    def __aenter__(self):
+        """
+        We can be used as an asynchronous context manager.
+        """
+        return self.acquire()
+
+
+    def __aexit__(self, exc_type, exc_val, exc_tb):
+        self.release()
+        # We return False to indicate that we have not consumed the
+        # exception, if any.
+        return succeed(False)
+
+
 
 class DeferredLock(_ConcurrencyPrimitive):
     """
