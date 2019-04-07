@@ -722,6 +722,8 @@ class FindFailureTests(SynchronousTestCase):
         handler that is handling an exception raised by
         raiseException, the new Failure should be chained to that
         original Failure.
+        Means the new failure should still show the same origin frame,
+        but with different complete stack trace (as not thrown at same place).
         """
         f = getDivisionFailure()
         f.cleanFailure()
@@ -729,7 +731,10 @@ class FindFailureTests(SynchronousTestCase):
             f.raiseException()
         except:
             newF = failure.Failure()
-            self.assertEqual(f.getTraceback(), newF.getTraceback())
+            tb = f.getTraceback().splitlines()
+            new_tb = newF.getTraceback().splitlines()
+            self.assertNotEqual(tb, new_tb)
+            self.assertEqual(tb[-3:], new_tb[-3:])
         else:
             self.fail("No exception raised from raiseException!?")
 
@@ -782,7 +787,7 @@ class FormattableTracebackTests(SynchronousTestCase):
         to be passed to L{traceback.extract_tb}, and we should get a singleton
         list containing a (filename, lineno, methodname, line) tuple.
         """
-        tb = failure._Traceback([['method', 'filename.py', 123, {}, {}]])
+        tb = failure._Traceback([], [['method', 'filename.py', 123, {}, {}]])
         # Note that we don't need to test that extract_tb correctly extracts
         # the line's contents. In this case, since filename.py doesn't exist,
         # it will just use None.
@@ -797,11 +802,22 @@ class FormattableTracebackTests(SynchronousTestCase):
         containing a tuple for each frame.
         """
         tb = failure._Traceback([
+            ['caller1', 'filename.py', 7, {}, {}],
+            ['caller2', 'filename.py', 8, {}, {}],
+        ], [
             ['method1', 'filename.py', 123, {}, {}],
-            ['method2', 'filename.py', 235, {}, {}]])
+            ['method2', 'filename.py', 235, {}, {}],
+        ])
         self.assertEqual(traceback.extract_tb(tb),
                          [_tb('filename.py', 123, 'method1', None),
                           _tb('filename.py', 235, 'method2', None)])
+
+        # We should also be able to extract_stack on it
+        self.assertEqual(traceback.extract_stack(tb.tb_frame),
+                         [_tb('filename.py', 7, 'caller1', None),
+                          _tb('filename.py', 8, 'caller2', None),
+                          _tb('filename.py', 123, 'method1', None),
+                          ])
 
 
 
@@ -817,7 +833,9 @@ class FrameAttributesTests(SynchronousTestCase):
         bound to C{dict} instance.  They also have the C{f_code} attribute
         bound to something like a code object.
         """
-        frame = failure._Frame("dummyname", "dummyfilename")
+        frame = failure._Frame(
+            ("dummyname", "dummyfilename", None, None, None), None
+        )
         self.assertIsInstance(frame.f_globals, dict)
         self.assertIsInstance(frame.f_locals, dict)
         self.assertIsInstance(frame.f_code, failure._Code)
@@ -947,6 +965,7 @@ class ExtendedGeneratorTests(SynchronousTestCase):
         """
         f = getDivisionFailure()
         f.cleanFailure()
+        original_failure_str = f.getTraceback()
 
         newFailures = []
 
@@ -962,7 +981,15 @@ class ExtendedGeneratorTests(SynchronousTestCase):
         self._throwIntoGenerator(f, g)
 
         self.assertEqual(len(newFailures), 1)
-        self.assertEqual(newFailures[0].getTraceback(), f.getTraceback())
+
+        # The original failure should not be changed.
+        self.assertEqual(original_failure_str, f.getTraceback())
+
+        # The new failure should be different and contain stack info for
+        # our generator.
+        self.assertNotEqual(newFailures[0].getTraceback(), f.getTraceback())
+        self.assertIn("generator", newFailures[0].getTraceback())
+        self.assertNotIn("generator", f.getTraceback())
 
     def test_ambiguousFailureInGenerator(self):
         """

@@ -16,7 +16,7 @@ from twisted.python.compat import (
     reduce, execfile, _PY3, _PYPY, comparable, cmp, nativeString,
     networkString, unicode as unicodeCompat, lazyByteSlice, reraise,
     NativeStringIO, iterbytes, intToBytes, ioType, bytesEnviron, iteritems,
-    _coercedUnicode, unichr, raw_input, _bytesRepr
+    _coercedUnicode, unichr, raw_input, _bytesRepr, _get_async_param,
 )
 from twisted.python.filepath import FilePath
 from twisted.python.runtime import platform
@@ -921,3 +921,37 @@ class FutureBytesReprTests(unittest.TestCase):
         ``b`` to the returned repr on both Python 2 and 3.
         """
         self.assertEqual(_bytesRepr(b'\x00'), "b'\\x00'")
+
+
+
+class GetAsyncParamTests(unittest.SynchronousTestCase):
+    """
+    Tests for L{twisted.python.compat._get_async_param}
+    """
+
+    def test_get_async_param(self):
+        """
+        L{twisted.python.compat._get_async_param} uses isAsync by default,
+        or deprecated async keyword argument if isAsync is None.
+        """
+        self.assertEqual(_get_async_param(isAsync=False), False)
+        self.assertEqual(_get_async_param(isAsync=True), True)
+        self.assertEqual(
+            _get_async_param(isAsync=None, **{'async': False}), False)
+        self.assertEqual(
+            _get_async_param(isAsync=None, **{'async': True}), True)
+        self.assertRaises(TypeError, _get_async_param, False, {'async': False})
+
+
+    def test_get_async_param_deprecation(self):
+        """
+        L{twisted.python.compat._get_async_param} raises a deprecation
+        warning if async keyword argument is passed.
+        """
+        self.assertEqual(
+            _get_async_param(isAsync=None, **{'async': False}), False)
+        currentWarnings = self.flushWarnings(
+            offendingFunctions=[self.test_get_async_param_deprecation])
+        self.assertEqual(
+            currentWarnings[0]['message'],
+            "'async' keyword argument is deprecated, please use isAsync")

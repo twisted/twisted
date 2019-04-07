@@ -10,11 +10,61 @@ from __future__ import division, absolute_import
 from twisted.trial.unittest import TestCase
 from twisted.python.compat import _PY3, unicode
 from twisted.web.http_headers import Headers
+from twisted.web.test.requesthelper import (
+    bytesLinearWhitespaceComponents,
+    sanitizedBytes,
+    textLinearWhitespaceComponents,
+)
+
+
+
+def assertSanitized(testCase, components, expected):
+    """
+    Assert that the components are sanitized to the expected value as
+    both a header name and value, across all of L{Header}'s setters
+    and getters.
+
+    @param testCase: A test case.
+
+    @param components: A sequence of values that contain linear
+        whitespace to use as header names and values; see
+        C{textLinearWhitespaceComponents} and
+        C{bytesLinearWhitespaceComponents}
+
+    @param expected: The expected sanitized form of the component for
+        both headers names and their values.
+    """
+    for component in components:
+        headers = []
+        headers.append(Headers({component: [component]}))
+
+        added = Headers()
+        added.addRawHeader(component, component)
+        headers.append(added)
+
+        setHeader = Headers()
+        setHeader.setRawHeaders(component, [component])
+        headers.append(setHeader)
+
+        for header in headers:
+            testCase.assertEqual(list(header.getAllRawHeaders()),
+                                 [(expected, [expected])])
+            testCase.assertEqual(header.getRawHeaders(expected), [expected])
+
+
 
 class BytesHeadersTests(TestCase):
     """
     Tests for L{Headers}, using L{bytes} arguments for methods.
     """
+    def test_sanitizeLinearWhitespace(self):
+        """
+        Linear whitespace in header names or values is replaced with a
+        single space.
+        """
+        assertSanitized(self, bytesLinearWhitespaceComponents, sanitizedBytes)
+
+
     def test_initializer(self):
         """
         The header values passed to L{Headers.__init__} can be retrieved via
@@ -273,6 +323,15 @@ class UnicodeHeadersTests(TestCase):
     """
     Tests for L{Headers}, using L{unicode} arguments for methods.
     """
+
+    def test_sanitizeLinearWhitespace(self):
+        """
+        Linear whitespace in header names or values is replaced with a
+        single space.
+        """
+        assertSanitized(self, textLinearWhitespaceComponents, sanitizedBytes)
+
+
     def test_initializer(self):
         """
         The header values passed to L{Headers.__init__} can be retrieved via

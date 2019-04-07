@@ -5,7 +5,6 @@
 
 from __future__ import division, absolute_import
 
-import itertools
 import warnings
 
 from constantly import Names, NamedConstant
@@ -14,10 +13,30 @@ from hashlib import md5
 from OpenSSL import SSL, crypto
 from OpenSSL._util import lib as pyOpenSSLlib
 
+from twisted.internet.abstract import isIPAddress, isIPv6Address
 from twisted.python import log
+from twisted.python.randbytes import secureRandom
 from twisted.python._oldstyle import _oldStyle
 from ._idna import _idnaBytes
 
+from zope.interface import Interface, implementer
+from constantly import Flags, FlagConstant
+from incremental import Version
+
+from twisted.internet.defer import Deferred
+from twisted.internet.error import VerifyError, CertificateError
+from twisted.internet.interfaces import (
+    IAcceptableCiphers, ICipher, IOpenSSLClientConnectionCreator,
+    IOpenSSLContextFactory
+)
+
+from twisted.python import util
+from twisted.python.deprecate import _mutuallyExclusiveArguments
+from twisted.python.compat import nativeString, unicode
+from twisted.python.failure import Failure
+from twisted.python.util import FancyEqMixin
+
+from twisted.python.deprecate import deprecated
 
 
 
@@ -107,6 +126,22 @@ def simpleVerifyHostname(connection, hostname):
 
 
 
+def simpleVerifyIPAddress(connection, hostname):
+    """
+    Always fails validation of IP addresses
+
+    @param connection: the OpenSSL connection to verify.
+    @type connection: L{OpenSSL.SSL.Connection}
+
+    @param hostname: The hostname expected by the user.
+    @type hostname: L{unicode}
+
+    @raise twisted.internet.ssl.VerificationError: Always raised
+    """
+    raise SimpleVerificationError("Cannot verify certificate IP addresses")
+
+
+
 def _usablePyOpenSSL(version):
     """
     Check pyOpenSSL version string whether we can use it for host verification.
@@ -139,8 +174,10 @@ def _selectVerifyImplementation():
 
     try:
         from service_identity import VerificationError
-        from service_identity.pyopenssl import verify_hostname
-        return verify_hostname, VerificationError
+        from service_identity.pyopenssl import (
+            verify_hostname, verify_ip_address
+        )
+        return verify_hostname, verify_ip_address, VerificationError
     except ImportError as e:
         warnings.warn_explicit(
             "You do not have a working installation of the "
@@ -152,38 +189,12 @@ def _selectVerifyImplementation():
             # Unfortunately the lineno is required.
             category=UserWarning, filename="", lineno=0)
 
-    return simpleVerifyHostname, SimpleVerificationError
+    return simpleVerifyHostname, simpleVerifyIPAddress, SimpleVerificationError
 
 
-verifyHostname, VerificationError = _selectVerifyImplementation()
 
-
-from zope.interface import Interface, implementer
-from constantly import Flags, FlagConstant
-from incremental import Version
-
-from twisted.internet.defer import Deferred
-from twisted.internet.error import VerifyError, CertificateError
-from twisted.internet.interfaces import (
-    IAcceptableCiphers, ICipher, IOpenSSLClientConnectionCreator,
-    IOpenSSLContextFactory
-)
-
-from twisted.python import reflect, util
-from twisted.python.deprecate import _mutuallyExclusiveArguments
-from twisted.python.compat import nativeString, networkString, unicode
-from twisted.python.failure import Failure
-from twisted.python.util import FancyEqMixin
-
-from twisted.python.deprecate import deprecated
-
-
-def _sessionCounter(counter=itertools.count()):
-    """
-    Private - shared between all OpenSSLCertificateOptions, counts up to
-    provide a unique session id for each context.
-    """
-    return next(counter)
+verifyHostname, verifyIPAddress, VerificationError = \
+    _selectVerifyImplementation()
 
 
 
@@ -820,7 +831,7 @@ class KeyPair(PublicKey):
 
 
     @classmethod
-    def generate(Class, kind=crypto.TYPE_RSA, size=1024):
+    def generate(Class, kind=crypto.TYPE_RSA, size=2048):
         pkey = crypto.PKey()
         pkey.generate_key(kind, size)
         return Class(pkey)
@@ -1136,6 +1147,11 @@ class ClientTLSOptions(object):
         than working with Python's built-in (but sometimes broken) IDNA
         encoding.  ASCII values, however, will always work.
     @type _hostnameASCII: L{unicode}
+
+    @ivar _hostnameIsDnsName: Whether or not the C{_hostname} is a DNSName.
+        Will be L{False} if C{_hostname} is an IP address or L{True} if
+        C{_hostname} is a DNSName
+    @type _hostnameIsDnsName: L{bool}
     """
 
     def __init__(self, hostname, ctx):
@@ -1150,7 +1166,14 @@ class ClientTLSOptions(object):
         """
         self._ctx = ctx
         self._hostname = hostname
-        self._hostnameBytes = _idnaBytes(hostname)
+
+        if isIPAddress(hostname) or isIPv6Address(hostname):
+            self._hostnameBytes = hostname.encode('ascii')
+            self._hostnameIsDnsName = False
+        else:
+            self._hostnameBytes = _idnaBytes(hostname)
+            self._hostnameIsDnsName = True
+
         self._hostnameASCII = self._hostnameBytes.decode("ascii")
         ctx.set_info_callback(
             _tolerateErrors(self._identityVerifyingInfoCallback)
@@ -1195,11 +1218,16 @@ class ClientTLSOptions(object):
         @param ret: ignored
         @type ret: ignored
         """
-        if where & SSL.SSL_CB_HANDSHAKE_START:
+        # Literal IPv4 and IPv6 addresses are not permitted
+        # as host names according to the RFCs
+        if where & SSL.SSL_CB_HANDSHAKE_START and self._hostnameIsDnsName:
             connection.set_tlsext_host_name(self._hostnameBytes)
         elif where & SSL.SSL_CB_HANDSHAKE_DONE:
             try:
-                verifyHostname(connection, self._hostnameASCII)
+                if self._hostnameIsDnsName:
+                    verifyHostname(connection, self._hostnameASCII)
+                else:
+                    verifyIPAddress(connection, self._hostnameASCII)
             except VerificationError:
                 f = Failure()
                 transport = connection.get_app_data()
@@ -1464,7 +1492,7 @@ class OpenSSLCertificateOptions(object):
         @type raiseMinimumTo: L{TLSVersion} constant
 
         @param insecurelyLowerMinimumTo: The minimum TLS version to use,
-            possibky lower than Twisted's default.  If not specified, it is a
+            possibly lower than Twisted's default.  If not specified, it is a
             generally considered safe default (TLSv1.0).  If you want to raise
             your minimum TLS version to above that of this default, use
             C{raiseMinimumTo}.  DO NOT use this argument unless you are
@@ -1683,10 +1711,10 @@ class OpenSSLCertificateOptions(object):
             ctx.set_verify_depth(self.verifyDepth)
 
         if self.enableSessions:
-            name = "%s-%d" % (reflect.qual(self.__class__), _sessionCounter())
-            sessionName = md5(networkString(name)).hexdigest()
-
-            ctx.set_session_id(sessionName.encode('ascii'))
+            # 32 bytes is the maximum length supported
+            # Unfortunately pyOpenSSL doesn't provide SSL_MAX_SESSION_ID_LENGTH
+            sessionName = secureRandom(32)
+            ctx.set_session_id(sessionName)
 
         if self.dhParameters:
             ctx.load_tmp_dh(self.dhParameters._dhFile.path)
@@ -1758,6 +1786,12 @@ def _expandCipherString(cipherString, method, options):
     try:
         ctx.set_cipher_list(cipherString.encode('ascii'))
     except SSL.Error as e:
+        # OpenSSL 1.1.1 turns an invalid cipher list into TLS 1.3
+        # ciphers, so pyOpenSSL >= 19.0.0 raises an artificial Error
+        # that lacks a corresponding OpenSSL error if the cipher list
+        # consists only of these after a call to set_cipher_list.
+        if not e.args[0]:
+            return []
         if e.args[0][0][2] == 'no cipher match':
             return []
         else:
@@ -1949,7 +1983,7 @@ class OpenSSLDiffieHellmanParameters(object):
         Such a file can be generated using the C{openssl} command line tool as
         following:
 
-        C{openssl dhparam -out dh_param_1024.pem -2 1024}
+        C{openssl dhparam -out dh_param_2048.pem -2 2048}
 
         Please refer to U{OpenSSL's C{dhparam} documentation
         <http://www.openssl.org/docs/apps/dhparam.html>} for further details.

@@ -6,6 +6,11 @@
 Historical Documents
 ====================
 
+.. toctree::
+   :hidden:
+
+   NEWS
+
 Here are documents which contain no pertinent information or documentation.
 People from the Twisted team have published them, and they serve as interesting land marks and thoughts.
 Please don't look here for documentation -- however, if you are interested in the history of Twisted, or want to quote from these documents, feel free.
@@ -111,3 +116,4 @@ Previously
 - `The paper Glyph and Moshe presented in IPC10 <ipc10paper.html>`_
 - `The errata published in IPC10 against the paper. <ipc10errata.html>`_
 - `A paper Moshe wrote about Twisted and Debian. <twisted-debian.html>`_
+- :doc:`NEWS, -2014 <NEWS>`

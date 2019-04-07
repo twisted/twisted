@@ -1,1 +1,0 @@
-twisted.web.http.combinedLogFormatter (used by t.w.http.Server and t.w.server.Site) no longer produces DeprecationWarning about Request.getClientIP.

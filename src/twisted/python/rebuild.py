@@ -150,7 +150,7 @@ def updateInstance(self):
 
 
 
-def __getattr__(self, name):
+def __injectedgetattr__(self, name):
     """
     A getattr method to cause a class to be refreshed.
     """
@@ -241,7 +241,7 @@ def rebuild(module, doLog=1):
                 log.logfile.flush()
             clazz.__bases__ = ()
             clazz.__dict__.clear()
-            clazz.__getattr__ = __getattr__
+            clazz.__getattr__ = __injectedgetattr__
             clazz.__module__ = module.__name__
     if newclasses:
         import gc

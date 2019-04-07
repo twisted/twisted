@@ -286,8 +286,7 @@ class ConnectionPool:
             C{func(Transaction(...), *args, **kw)}, or a
             L{twisted.python.failure.Failure}.
         """
-        from twisted.internet import reactor
-        return threads.deferToThreadPool(reactor, self.threadpool,
+        return threads.deferToThreadPool(self._reactor, self.threadpool,
                                          self._runWithConnection,
                                          func, *args, **kw)
 
@@ -335,8 +334,7 @@ class ConnectionPool:
             C{interaction(Transaction(...), *args, **kw)}, or a
             L{twisted.python.failure.Failure}.
         """
-        from twisted.internet import reactor
-        return threads.deferToThreadPool(reactor, self.threadpool,
+        return threads.deferToThreadPool(self._reactor, self.threadpool,
                                          self._runInteraction,
                                          interaction, *args, **kw)
 
@@ -425,11 +423,9 @@ class ConnectionPool:
         conn = self.connections.get(tid)
         if conn is None:
             if self.noisy:
-                log.msg('adbapi connecting: %s %s%s' % (self.dbapiName,
-                                                        self.connargs or '',
-                                                        self.connkw or ''))
+                log.msg('adbapi connecting: %s' % (self.dbapiName,))
             conn = self.dbapi.connect(*self.connargs, **self.connkw)
-            if self.openfun != None:
+            if self.openfun is not None:
                 self.openfun(conn)
             self.connections[tid] = conn
         return conn

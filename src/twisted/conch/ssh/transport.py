@@ -21,8 +21,9 @@ from hashlib import md5, sha1, sha256, sha384, sha512
 
 from cryptography.exceptions import UnsupportedAlgorithm
 from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.ciphers import algorithms, modes, Cipher
-from cryptography.hazmat.primitives.asymmetric import ec
+from cryptography.hazmat.primitives.asymmetric import dh, ec
 
 from twisted import __version__ as twisted_version
 from twisted.internet import protocol, defer
@@ -34,56 +35,8 @@ from twisted.python.compat import iterbytes, _bytesChr as chr, networkString
 
 from twisted.conch.ssh import address, keys, _kex
 from twisted.conch.ssh.common import (
-    NS, getNS, MP, getMP, _MPpow, ffs, int_from_bytes
+    NS, getNS, MP, getMP, ffs
 )
-
-
-
-def _getRandomNumber(random, bits):
-    """
-    Generate a random number in the range [0, 2 ** bits).
-
-    @type random: L{callable}
-    @param random: A callable taking a count of bytes and returning that many
-    random bytes.
-
-    @type bits: L{int}
-    @param bits: The number of bits in the result.
-
-    @rtype: L{int} or L{long}
-    @return: The newly generated random number.
-
-    @raise ValueError: if C{bits} is not a multiple of 8.
-    """
-    if bits % 8:
-        raise ValueError("bits (%d) must be a multiple of 8" % (bits,))
-    return int_from_bytes(random(bits // 8), 'big')
-
-
-
-def _generateX(random, bits):
-    """
-    Generate a new value for the private key x.
-
-    From RFC 2631, section 2.2::
-
-        X9.42 requires that the private key x be in the interval
-        [2, (q - 2)].  x should be randomly generated in this interval.
-
-    @type random: L{callable}
-    @param random: A callable taking a count of bytes and returning that many
-    random bytes.
-
-    @type bits: L{int}
-    @param bits: The size of the key to generate, in bits.
-
-    @rtype: L{int}
-    @return: A suitable 'x' value.
-    """
-    while True:
-        x = _getRandomNumber(random, bits)
-        if 2 <= x <= (2 ** bits) - 2:
-            return x
 
 
 
@@ -1043,6 +996,53 @@ class SSHTransportBase(protocol.Protocol):
         self.transport.loseConnection()
 
 
+    def _startEphemeralDH(self):
+        """
+        Prepares for a Diffie-Hellman key agreement exchange.
+
+        Creates an ephemeral keypair in the group defined by (self.g,
+        self.p) and stores it.
+        """
+
+        numbers = dh.DHParameterNumbers(self.p, self.g)
+        parameters = numbers.parameters(default_backend())
+        self.dhSecretKey = parameters.generate_private_key()
+        y = self.dhSecretKey.public_key().public_numbers().y
+        self.dhSecretKeyPublicMP = MP(y)
+
+
+    def _finishEphemeralDH(self, remoteDHpublicKey):
+        """
+        Completes the Diffie-Hellman key agreement started by
+        _startEphemeralDH, and forgets the ephemeral secret key.
+
+        @type remoteDHpublicKey: L{int}
+        @rtype: L{bytes}
+        @return: The new shared secret, in SSH C{mpint} format.
+
+        """
+
+        remoteKey = dh.DHPublicNumbers(
+            remoteDHpublicKey,
+            dh.DHParameterNumbers(self.p, self.g)
+        ).public_key(default_backend())
+        secret = self.dhSecretKey.exchange(remoteKey)
+        del self.dhSecretKey
+
+        # The result of a Diffie-Hellman exchange is an integer, but
+        # the Cryptography module returns it as bytes in a form that
+        # is only vaguely documented. We fix it up to match the SSH
+        # MP-integer format as described in RFC4251.
+        secret = secret.lstrip(b'\x00')
+        ch = ord(secret[0:1])
+        if ch & 0x80:  # High bit set?
+            # Make room for the sign bit
+            prefix = struct.pack('>L', len(secret) + 1) + b'\x00'
+        else:
+            prefix = struct.pack('>L', len(secret))
+        return prefix + secret
+
+
     def _getKey(self, c, sharedSecret, exchangeHash):
         """
         Get one of the keys for authentication/encryption.
@@ -1294,12 +1294,15 @@ class SSHServerTransport(SSHTransportBase):
 
         # Get the public key
         ecPub = ecPriv.public_key()
-        encPub = ecPub.public_numbers().encode_point()
+        encPub = ecPub.public_bytes(
+            serialization.Encoding.X962,
+            serialization.PublicFormat.UncompressedPoint
+        )
 
         # Take the provided public key and transform it into
         # a format for the cryptography module
-        theirECPub = ec.EllipticCurvePublicNumbers.from_encoded_point(
-                        curve, pktPub).public_key(default_backend())
+        theirECPub = ec.EllipticCurvePublicKey.from_encoded_point(curve,
+                                                                  pktPub)
 
         # We need to convert to hex,
         # so we can convert to an int
@@ -1347,10 +1350,9 @@ class SSHServerTransport(SSHTransportBase):
         @param packet: The message data.
         """
         clientDHpublicKey, foo = getMP(packet)
-        y = _getRandomNumber(randbytes.secureRandom, 512)
         self.g, self.p = _kex.getDHGeneratorAndPrime(self.kexAlg)
-        serverDHpublicKey = _MPpow(self.g, y, self.p)
-        sharedSecret = _MPpow(clientDHpublicKey, y, self.p)
+        self._startEphemeralDH()
+        sharedSecret = self._finishEphemeralDH(clientDHpublicKey)
         h = sha1()
         h.update(NS(self.otherVersionString))
         h.update(NS(self.ourVersionString))
@@ -1358,13 +1360,13 @@ class SSHServerTransport(SSHTransportBase):
         h.update(NS(self.ourKexInitPayload))
         h.update(NS(self.factory.publicKeys[self.keyAlg].blob()))
         h.update(MP(clientDHpublicKey))
-        h.update(serverDHpublicKey)
+        h.update(self.dhSecretKeyPublicMP)
         h.update(sharedSecret)
         exchangeHash = h.digest()
         self.sendPacket(
             MSG_KEXDH_REPLY,
             NS(self.factory.publicKeys[self.keyAlg].blob()) +
-            serverDHpublicKey +
+            self.dhSecretKeyPublicMP +
             NS(self.factory.privateKeys[self.keyAlg].sign(exchangeHash)))
         self._keySetup(sharedSecret, exchangeHash)
 
@@ -1403,6 +1405,7 @@ class SSHServerTransport(SSHTransportBase):
             self.dhGexRequest = packet
             ideal = struct.unpack('>L', packet)[0]
             self.g, self.p = self.factory.getDHPrime(ideal)
+            self._startEphemeralDH()
             self.sendPacket(MSG_KEX_DH_GEX_GROUP, MP(self.p) + MP(self.g))
 
 
@@ -1429,6 +1432,7 @@ class SSHServerTransport(SSHTransportBase):
         self.dhGexRequest = packet
         min, ideal, max = struct.unpack('>3L', packet)
         self.g, self.p = self.factory.getDHPrime(ideal)
+        self._startEphemeralDH()
         self.sendPacket(MSG_KEX_DH_GEX_GROUP, MP(self.p) + MP(self.g))
 
 
@@ -1451,11 +1455,7 @@ class SSHServerTransport(SSHTransportBase):
         # TODO: This could be computed when self.p is set up
         #  or do as openssh does and scan f for a single '1' bit instead
 
-        pSize = self.p.bit_length()
-        y = _getRandomNumber(randbytes.secureRandom, pSize)
-
-        serverDHpublicKey = _MPpow(self.g, y, self.p)
-        sharedSecret = _MPpow(clientDHpublicKey, y, self.p)
+        sharedSecret = self._finishEphemeralDH(clientDHpublicKey)
         h = _kex.getHashProcessor(self.kexAlg)()
         h.update(NS(self.otherVersionString))
         h.update(NS(self.ourVersionString))
@@ -1466,13 +1466,13 @@ class SSHServerTransport(SSHTransportBase):
         h.update(MP(self.p))
         h.update(MP(self.g))
         h.update(MP(clientDHpublicKey))
-        h.update(serverDHpublicKey)
+        h.update(self.dhSecretKeyPublicMP)
         h.update(sharedSecret)
         exchangeHash = h.digest()
         self.sendPacket(
             MSG_KEX_DH_GEX_REPLY,
             NS(self.factory.publicKeys[self.keyAlg].blob()) +
-            serverDHpublicKey +
+            self.dhSecretKeyPublicMP +
             NS(self.factory.privateKeys[self.keyAlg].sign(exchangeHash)))
         self._keySetup(sharedSecret, exchangeHash)
 
@@ -1598,14 +1598,17 @@ class SSHClientTransport(SSHTransportBase):
 
             # DH_GEX_REQUEST_OLD is the same number we need.
             self.sendPacket(
-                    MSG_KEX_DH_GEX_REQUEST_OLD,
-                    NS(self.ecPub.public_numbers().encode_point()))
+                MSG_KEX_DH_GEX_REQUEST_OLD,
+                NS(self.ecPub.public_bytes(
+                    serialization.Encoding.X962,
+                    serialization.PublicFormat.UncompressedPoint
+                ))
+            )
         elif _kex.isFixedGroup(self.kexAlg):
             # We agreed on a fixed group key exchange algorithm.
-            self.x = _generateX(randbytes.secureRandom, 512)
             self.g, self.p = _kex.getDHGeneratorAndPrime(self.kexAlg)
-            self.e = _MPpow(self.g, self.x, self.p)
-            self.sendPacket(MSG_KEXDH_INIT, self.e)
+            self._startEphemeralDH()
+            self.sendPacket(MSG_KEXDH_INIT, self.dhSecretKeyPublicMP)
         else:
             # We agreed on a dynamic group. Tell the server what range of
             # group sizes we accept, and what size we prefer; the server
@@ -1648,9 +1651,9 @@ class SSHClientTransport(SSHTransportBase):
 
             # Take the provided public key and transform it into a format
             # for the cryptography module
-            theirECPub = ec.EllipticCurvePublicNumbers.from_encoded_point(
-                            self.curve, pubKey).public_key(
-                            default_backend())
+            theirECPub = ec.EllipticCurvePublicKey.from_encoded_point(
+                self.curve, pubKey
+            )
 
             # We need to convert to hex,
             # so we can convert to an int
@@ -1666,7 +1669,10 @@ class SSHClientTransport(SSHTransportBase):
             h.update(NS(self.ourKexInitPayload))
             h.update(NS(self.otherKexInitPayload))
             h.update(NS(theirECHost))
-            h.update(NS(self.ecPub.public_numbers().encode_point()))
+            h.update(NS(self.ecPub.public_bytes(
+                serialization.Encoding.X962,
+                serialization.PublicFormat.UncompressedPoint
+            )))
             h.update(NS(pubKey))
             h.update(sharedSecret)
 
@@ -1755,9 +1761,8 @@ class SSHClientTransport(SSHTransportBase):
         else:
             self.p, rest = getMP(packet)
             self.g, rest = getMP(rest)
-            self.x = _generateX(randbytes.secureRandom, 320)
-            self.e = _MPpow(self.g, self.x, self.p)
-            self.sendPacket(MSG_KEX_DH_GEX_INIT, self.e)
+            self._startEphemeralDH()
+            self.sendPacket(MSG_KEX_DH_GEX_INIT, self.dhSecretKeyPublicMP)
 
 
     def _continueKEXDH_REPLY(self, ignored, pubKey, f, signature):
@@ -1775,14 +1780,14 @@ class SSHClientTransport(SSHTransportBase):
         @type signature: L{str}
         """
         serverKey = keys.Key.fromString(pubKey)
-        sharedSecret = _MPpow(f, self.x, self.p)
+        sharedSecret = self._finishEphemeralDH(f)
         h = sha1()
         h.update(NS(self.ourVersionString))
         h.update(NS(self.otherVersionString))
         h.update(NS(self.ourKexInitPayload))
         h.update(NS(self.otherKexInitPayload))
         h.update(NS(pubKey))
-        h.update(self.e)
+        h.update(self.dhSecretKeyPublicMP)
         h.update(MP(f))
         h.update(sharedSecret)
         exchangeHash = h.digest()
@@ -1835,7 +1840,7 @@ class SSHClientTransport(SSHTransportBase):
         @type signature: L{str}
         """
         serverKey = keys.Key.fromString(pubKey)
-        sharedSecret = _MPpow(f, self.x, self.p)
+        sharedSecret = self._finishEphemeralDH(f)
         h = _kex.getHashProcessor(self.kexAlg)()
         h.update(NS(self.ourVersionString))
         h.update(NS(self.otherVersionString))
@@ -1850,7 +1855,7 @@ class SSHClientTransport(SSHTransportBase):
             ))
         h.update(MP(self.p))
         h.update(MP(self.g))
-        h.update(self.e)
+        h.update(self.dhSecretKeyPublicMP)
         h.update(MP(f))
         h.update(sharedSecret)
         exchangeHash = h.digest()

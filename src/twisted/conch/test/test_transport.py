@@ -11,7 +11,19 @@ import binascii
 import re
 import string
 import struct
+import types
 
+from hashlib import md5, sha1, sha256, sha384, sha512
+from twisted import __version__ as twisted_version
+from twisted.trial import unittest
+from twisted.internet import defer
+from twisted.protocols import loopback
+from twisted.python import randbytes
+from twisted.python.randbytes import insecureRandom
+from twisted.python.compat import iterbytes, _bytesChr as chr
+from twisted.conch.ssh import address, service, _kex
+from twisted.conch.error import ConchError
+from twisted.test import proto_helpers
 from twisted.python.reflect import requireModule
 
 pyasn1 = requireModule("pyasn1")
@@ -22,8 +34,9 @@ if pyasn1 is not None and cryptography is not None:
     from twisted.conch.ssh import common, transport, keys, factory
     from twisted.conch.test import keydata
     from cryptography.hazmat.backends import default_backend
-    from cryptography.hazmat.primitives.asymmetric import ec
+    from cryptography.hazmat.primitives.asymmetric import dh, ec
     from cryptography.exceptions import UnsupportedAlgorithm
+    from cryptography.hazmat.primitives import serialization
 else:
     if pyasn1 is None:
         dependencySkip = "Cannot run without PyASN1"
@@ -45,18 +58,14 @@ else:
         @classmethod
         def NS(self, arg): return b''
 
-from hashlib import md5, sha1, sha256, sha384, sha512
-from twisted import __version__ as twisted_version
-from twisted.trial import unittest
-from twisted.internet import defer
-from twisted.protocols import loopback
-from twisted.python import randbytes
-from twisted.python.randbytes import insecureRandom
-from twisted.python.compat import iterbytes, _bytesChr as chr
-from twisted.conch.ssh import address, service, _kex
-from twisted.test import proto_helpers
 
-from twisted.conch.error import ConchError
+
+def _MPpow(x, y, z):
+    """
+    Return the MP version of C{(x ** y) % z}.
+    """
+    return common.MP(pow(x, y, z))
+
 
 
 class MockTransportBase(transport.SSHTransportBase):
@@ -292,13 +301,14 @@ class MockFactory(factory.SSHFactory):
         @rtype: L{dict} mapping the key size to a C{list} of
             C{(generator, prime)} tuple.
         """
-        # In these tests, we hardwire the prime values to those defined by the
-        # diffie-hellman-group14-sha1 key exchange algorithm, to avoid requiring
-        # a moduli file when running tests.
+        # In these tests, we hardwire the prime values to those
+        # defined by the diffie-hellman-group14-sha1 key exchange
+        # algorithm, to avoid requiring a moduli file when running
+        # tests.
         # See OpenSSHFactory.getPrimes.
+        group14 = _kex.getDHGeneratorAndPrime(b'diffie-hellman-group14-sha1')
         return {
-            2048: ((3, _kex.getDHGeneratorAndPrime(
-                b'diffie-hellman-group14-sha1')[1]),),
+            2048: (group14,),
             4096: ((5, 7),)}
 
 
@@ -337,6 +347,35 @@ class MockOldFactoryPrivateKeys(MockFactory):
 
 
 
+def generatePredictableKey(transport):
+    p = transport.p
+    g = transport.g
+    bits = p.bit_length()
+    x = sum(0x9 << x for x
+            in range(0, bits-3, 4))
+    # The cryptography module doesn't let us create a secret key directly from
+    # an "x" value; we need to compute the public value ourselves.
+    y = pow(g, x, p)
+    try:
+        transport.dhSecretKey = dh.DHPrivateNumbers(
+            x,
+            dh.DHPublicNumbers(
+                y,
+                dh.DHParameterNumbers(p, g)
+            )
+        ).private_key(default_backend())
+    except ValueError:
+        print("\np=%s\ng=%s\nx=%s\n" % (p, g, x))
+        raise
+    transport.dhSecretKeyPublicMP = common.MP(
+        transport.dhSecretKey
+        .public_key()
+        .public_numbers()
+        .y
+    )
+
+
+
 class TransportTestCase(unittest.TestCase):
     """
     Base class for transport test cases.
@@ -357,8 +396,12 @@ class TransportTestCase(unittest.TestCase):
             """
             return b'\x99' * len
         self.patch(randbytes, 'secureRandom', secureRandom)
+        self.proto._startEphemeralDH = types.MethodType(
+            generatePredictableKey, self.proto)
+
         def stubSendPacket(messageType, payload):
             self.packets.append((messageType, payload))
+
         self.proto.makeConnection(self.transport)
         # we just let the kex packet go into the transport
         self.proto.sendPacket = stubSendPacket
@@ -1460,7 +1503,7 @@ class ServerSSHTransportTests(ServerSSHTransportBaseCase, TransportTestCase):
         self.assertEqual(self.packets, [])
 
 
-    def assertKexDHInitResponse(self, kexAlgorithm):
+    def assertKexDHInitResponse(self, kexAlgorithm, bits):
         """
         Test that the KEXDH_INIT packet causes the server to send a
         KEXDH_REPLY with the server's public key and a signature.
@@ -1476,9 +1519,10 @@ class ServerSSHTransportTests(ServerSSHTransportBaseCase, TransportTestCase):
         e = pow(g, 5000, p)
 
         self.proto.ssh_KEX_DH_GEX_REQUEST_OLD(common.MP(e))
-        y = common.getMP(b'\x00\x00\x00\x40' + b'\x99' * 64)[0]
-        f = common._MPpow(self.proto.g, y, self.proto.p)
-        sharedSecret = common._MPpow(e, y, self.proto.p)
+        y = common.getMP(common.NS(b'\x99' * (bits // 8)))[0]
+        f = _MPpow(self.proto.g, y, self.proto.p)
+        self.assertEqual(self.proto.dhSecretKeyPublicMP, f)
+        sharedSecret = _MPpow(e, y, self.proto.p)
 
         h = sha1()
         h.update(common.NS(self.proto.ourVersionString) * 2)
@@ -1541,7 +1585,7 @@ class ServerSSHTransportTests(ServerSSHTransportBaseCase, TransportTestCase):
         KEXDH_INIT messages are processed when the
         diffie-hellman-group14-sha1 key exchange algorithm is requested.
         """
-        self.assertKexDHInitResponse(b'diffie-hellman-group14-sha1')
+        self.assertKexDHInitResponse(b'diffie-hellman-group14-sha1', 2048)
 
 
     def test_keySetup(self):
@@ -1654,8 +1698,8 @@ class ServerSSHTransportDHGroupExchangeBaseCase(ServerSSHTransportBaseCase):
         self.assertEqual(
             self.packets,
             [(transport.MSG_KEX_DH_GEX_GROUP,
-              common.MP(dhPrime) + b'\x00\x00\x00\x01\x03')])
-        self.assertEqual(self.proto.g, 3)
+              common.MP(dhPrime) + b'\x00\x00\x00\x01\x02')])
+        self.assertEqual(self.proto.g, 2)
         self.assertEqual(self.proto.p, dhPrime)
 
 
@@ -1684,8 +1728,8 @@ class ServerSSHTransportDHGroupExchangeBaseCase(ServerSSHTransportBaseCase):
         self.assertEqual(
             self.packets,
             [(transport.MSG_KEX_DH_GEX_GROUP,
-              common.MP(dhPrime) + b'\x00\x00\x00\x01\x03')])
-        self.assertEqual(self.proto.g, 3)
+              common.MP(dhPrime) + b'\x00\x00\x00\x01\x02')])
+        self.assertEqual(self.proto.g, 2)
         self.assertEqual(self.proto.p, dhPrime)
 
 
@@ -1697,9 +1741,11 @@ class ServerSSHTransportDHGroupExchangeBaseCase(ServerSSHTransportBaseCase):
         """
         self.test_KEX_DH_GEX_REQUEST_OLD()
         e = pow(self.proto.g, 3, self.proto.p)
-        y = common.getMP(b'\x00\x00\x01\x00' + b'\x99' * 256)[0]
-        f = common._MPpow(self.proto.g, y, self.proto.p)
-        sharedSecret = common._MPpow(e, y, self.proto.p)
+        y = common.getMP(b'\x00\x00\x01\x00' + b'\x99' * 512)[0]
+        self.assertEqual(self.proto.dhSecretKey.private_numbers().x, y)
+        f = _MPpow(self.proto.g, y, self.proto.p)
+        self.assertEqual(self.proto.dhSecretKeyPublicMP, f)
+        sharedSecret = _MPpow(e, y, self.proto.p)
         h = self.hashProcessor()
         h.update(common.NS(self.proto.ourVersionString) * 2)
         h.update(common.NS(self.proto.ourKexInitPayload) * 2)
@@ -1730,8 +1776,8 @@ class ServerSSHTransportDHGroupExchangeBaseCase(ServerSSHTransportBaseCase):
         self.test_KEX_DH_GEX_REQUEST()
         e = pow(self.proto.g, 3, self.proto.p)
         y = common.getMP(b'\x00\x00\x01\x00' + b'\x99' * 256)[0]
-        f = common._MPpow(self.proto.g, y, self.proto.p)
-        sharedSecret = common._MPpow(e, y, self.proto.p)
+        f = _MPpow(self.proto.g, y, self.proto.p)
+        sharedSecret = _MPpow(e, y, self.proto.p)
 
         h = self.hashProcessor()
 
@@ -1857,7 +1903,7 @@ class ClientSSHTransportTests(ClientSSHTransportBaseCase, TransportTestCase):
         return d.addCallback(self.fail).addErrback(_checkRaises)
 
 
-    def assertKexInitResponseForDH(self, kexAlgorithm):
+    def assertKexInitResponseForDH(self, kexAlgorithm, bits):
         """
         Test that a KEXINIT packet with a group1 or group14 key exchange
         results in a correct KEXDH_INIT response.
@@ -1871,12 +1917,14 @@ class ClientSSHTransportTests(ClientSSHTransportBaseCase, TransportTestCase):
         # in data returned by self.transport.value()
         self.proto.dataReceived(self.transport.value())
 
-        self.assertEqual(common.MP(self.proto.x)[5:], b'\x99' * 64)
+        x = self.proto.dhSecretKey.private_numbers().x
+        self.assertEqual(common.MP(x)[5:], b'\x99' * (bits // 8))
 
         # Data sent to server should be a transport.MSG_KEXDH_INIT
         # message containing our public key.
         self.assertEqual(
-            self.packets, [(transport.MSG_KEXDH_INIT, self.proto.e)])
+            self.packets,
+            [(transport.MSG_KEXDH_INIT, self.proto.dhSecretKeyPublicMP)])
 
 
     def test_KEXINIT_group14(self):
@@ -1884,7 +1932,7 @@ class ClientSSHTransportTests(ClientSSHTransportBaseCase, TransportTestCase):
         KEXINIT messages requesting diffie-hellman-group14-sha1 result in
         KEXDH_INIT responses.
         """
-        self.assertKexInitResponseForDH(b'diffie-hellman-group14-sha1')
+        self.assertKexInitResponseForDH(b'diffie-hellman-group14-sha1', 2048)
 
 
     def test_KEXINIT_badKexAlg(self):
@@ -1898,33 +1946,51 @@ class ClientSSHTransportTests(ClientSSHTransportBaseCase, TransportTestCase):
         self.assertRaises(ConchError, self.proto.dataReceived, data)
 
 
-    def test_KEXDH_REPLY(self):
+    def begin_KEXDH_REPLY(self):
         """
-        Test that the KEXDH_REPLY message verifies the server.
+        Utility for test_KEXDH_REPLY and
+        test_disconnectKEXDH_REPLYBadSignature.
+
+        Begins a Diffie-Hellman key exchange in the named group
+        Group-14 and computes information needed to return either a
+        correct or incorrect signature.
+
         """
         self.test_KEXINIT_group14()
 
-        sharedSecret = common._MPpow(self.proto.g, self.proto.x,
-                                        self.proto.p)
+        f = 2
+        fMP = common.MP(f)
+        x = self.proto.dhSecretKey.private_numbers().x
+        p = self.proto.p
+        sharedSecret = _MPpow(f, x, p)
         h = sha1()
         h.update(common.NS(self.proto.ourVersionString) * 2)
         h.update(common.NS(self.proto.ourKexInitPayload) * 2)
         h.update(common.NS(self.blob))
-        h.update(self.proto.e)
-        h.update(b'\x00\x00\x00\x01\x02') # f
+        h.update(self.proto.dhSecretKeyPublicMP)
+        h.update(fMP)
         h.update(sharedSecret)
         exchangeHash = h.digest()
+
+        signature = self.privObj.sign(exchangeHash)
+
+        return (exchangeHash, signature, common.NS(self.blob) + fMP)
+
+
+    def test_KEXDH_REPLY(self):
+        """
+        Test that the KEXDH_REPLY message verifies the server.
+        """
+        (exchangeHash, signature, packetStart) = self.begin_KEXDH_REPLY()
 
         def _cbTestKEXDH_REPLY(value):
             self.assertIsNone(value)
             self.assertTrue(self.calledVerifyHostKey)
             self.assertEqual(self.proto.sessionID, exchangeHash)
 
-        signature = self.privObj.sign(exchangeHash)
-
         d = self.proto.ssh_KEX_DH_GEX_GROUP(
-            (common.NS(self.blob) + b'\x00\x00\x00\x01\x02' +
-             common.NS(signature)))
+            packetStart + common.NS(signature)
+        )
         d.addCallback(_cbTestKEXDH_REPLY)
 
         return d
@@ -2004,9 +2070,15 @@ class ClientSSHTransportTests(ClientSSHTransportBaseCase, TransportTestCase):
         """
         Test that KEXDH_REPLY disconnects if the signature is bad.
         """
-        self.test_KEXDH_REPLY()
-        self.proto._continueKEXDH_REPLY(None, self.blob, 3, b"bad signature")
-        self.checkDisconnected(transport.DISCONNECT_KEY_EXCHANGE_FAILED)
+        (exchangeHash, signature, packetStart) = self.begin_KEXDH_REPLY()
+
+        d = self.proto.ssh_KEX_DH_GEX_GROUP(
+            packetStart + common.NS(b"bad signature")
+        )
+        return d.addCallback(
+            lambda _: self.checkDisconnected(
+                transport.DISCONNECT_KEY_EXCHANGE_FAILED)
+        )
 
 
     def test_disconnectKEX_ECDH_REPLYBadSignature(self):
@@ -2039,7 +2111,10 @@ class ClientSSHTransportTests(ClientSSHTransportBaseCase, TransportTestCase):
         thisPriv = ec.generate_private_key(ec.SECP256R1(), default_backend())
         # Get the public key
         thisPub = thisPriv.public_key()
-        encPub = thisPub.public_numbers().encode_point()
+        encPub = thisPub.public_bytes(
+            serialization.Encoding.X962,
+            serialization.PublicFormat.UncompressedPoint
+        )
         self.proto.curve = ec.SECP256R1()
 
         self.proto.kexAlg = b'ecdh-sha2-nistp256'
@@ -2107,14 +2182,54 @@ class ClientSSHTransportDHGroupExchangeBaseCase(ClientSSHTransportBaseCase):
         """
         self.test_KEXINIT_groupexchange()
         self.proto.ssh_KEX_DH_GEX_GROUP(
-            b'\x00\x00\x00\x01\x0f\x00\x00\x00\x01\x02')
-        self.assertEqual(self.proto.p, 15)
+            b'\x00\x00\x00\x03\x00\xfe\xf3\x00\x00\x00\x01\x02')
+        self.assertEqual(self.proto.p, 65267)
         self.assertEqual(self.proto.g, 2)
-        self.assertEqual(common.MP(self.proto.x)[5:], b'\x99' * 40)
-        self.assertEqual(self.proto.e,
-                          common.MP(pow(2, self.proto.x, 15)))
+        x = self.proto.dhSecretKey.private_numbers().x
+        self.assertEqual(common.MP(x)[5:], b'\x99' * 2)
+        self.assertEqual(self.proto.dhSecretKeyPublicMP,
+                         common.MP(pow(2, x, 65267)))
         self.assertEqual(self.packets[1:], [(transport.MSG_KEX_DH_GEX_INIT,
-                                              self.proto.e)])
+                                             self.proto.dhSecretKeyPublicMP)])
+
+
+    def begin_KEX_DH_GEX_REPLY(self):
+        """
+        Utility for test_KEX_DH_GEX_REPLY and
+        test_disconnectGEX_REPLYBadSignature.
+
+        Begins a Diffie-Hellman key exchange in an unnamed
+        (server-specified) group and computes information needed to
+        return either a correct or incorrect signature.
+        """
+        self.test_KEX_DH_GEX_GROUP()
+        p = self.proto.p
+        f = 3
+        fMP = common.MP(f)
+        sharedSecret = _MPpow(
+            f,
+            self.proto.dhSecretKey.private_numbers().x,
+            p)
+        h = self.hashProcessor()
+        h.update(common.NS(self.proto.ourVersionString) * 2)
+        h.update(common.NS(self.proto.ourKexInitPayload) * 2)
+        h.update(common.NS(self.blob))
+        # Here is the wire format for advertised min, pref and max DH sizes.
+        h.update(b'\x00\x00\x04\x00\x00\x00\x08\x00\x00\x00\x20\x00')
+        # And the selected group parameters.
+        h.update(b'\x00\x00\x00\x03\x00\xfe\xf3\x00\x00\x00\x01\x02')
+        h.update(self.proto.dhSecretKeyPublicMP)
+        h.update(fMP)
+        h.update(sharedSecret)
+        exchangeHash = h.digest()
+
+        signature = self.privObj.sign(exchangeHash)
+
+        return (
+            exchangeHash,
+            signature,
+            common.NS(self.blob) + fMP
+        )
 
 
     def test_KEX_DH_GEX_REPLY(self):
@@ -2122,31 +2237,14 @@ class ClientSSHTransportDHGroupExchangeBaseCase(ClientSSHTransportBaseCase):
         Test that the KEX_DH_GEX_REPLY message results in a verified
         server.
         """
-        self.test_KEX_DH_GEX_GROUP()
-        sharedSecret = common._MPpow(3, self.proto.x, self.proto.p)
-        h = self.hashProcessor()
-        h.update(common.NS(self.proto.ourVersionString) * 2)
-        h.update(common.NS(self.proto.ourKexInitPayload) * 2)
-        h.update(common.NS(self.blob))
-        # Here is the wire format for advertised min, pref and max DH sizes.
-        h.update(b'\x00\x00\x04\x00\x00\x00\x08\x00\x00\x00\x20\x00')
-        h.update(b'\x00\x00\x00\x01\x0f\x00\x00\x00\x01\x02')
-        h.update(self.proto.e)
-        h.update(b'\x00\x00\x00\x01\x03') # f
-        h.update(sharedSecret)
-        exchangeHash = h.digest()
+        (exchangeHash, signature, packetStart) = self.begin_KEX_DH_GEX_REPLY()
 
         def _cbTestKEX_DH_GEX_REPLY(value):
             self.assertIsNone(value)
             self.assertTrue(self.calledVerifyHostKey)
             self.assertEqual(self.proto.sessionID, exchangeHash)
 
-        signature = self.privObj.sign(exchangeHash)
-
-        d = self.proto.ssh_KEX_DH_GEX_REPLY(
-            common.NS(self.blob) +
-            b'\x00\x00\x00\x01\x03' +
-            common.NS(signature))
+        d = self.proto.ssh_KEX_DH_GEX_REPLY(packetStart + common.NS(signature))
         d.addCallback(_cbTestKEX_DH_GEX_REPLY)
         return d
 
@@ -2155,9 +2253,14 @@ class ClientSSHTransportDHGroupExchangeBaseCase(ClientSSHTransportBaseCase):
         """
         Test that KEX_DH_GEX_REPLY disconnects if the signature is bad.
         """
-        self.test_KEX_DH_GEX_REPLY()
-        self.proto._continueGEX_REPLY(None, self.blob, 3, b"bad signature")
-        self.checkDisconnected(transport.DISCONNECT_KEY_EXCHANGE_FAILED)
+        (exchangeHash, signature, packetStart) = self.begin_KEX_DH_GEX_REPLY()
+
+        d = self.proto.ssh_KEX_DH_GEX_REPLY(
+            packetStart + common.NS(b"bad signature"))
+        return d.addCallback(
+            lambda _: self.checkDisconnected(
+                transport.DISCONNECT_KEY_EXCHANGE_FAILED)
+        )
 
 
     def test_disconnectKEX_ECDH_REPLYBadSignature(self):
@@ -2190,7 +2293,10 @@ class ClientSSHTransportDHGroupExchangeBaseCase(ClientSSHTransportBaseCase):
         thisPriv = ec.generate_private_key(ec.SECP256R1(), default_backend())
         # Get the public key
         thisPub = thisPriv.public_key()
-        encPub = thisPub.public_numbers().encode_point()
+        encPub = thisPub.public_bytes(
+            serialization.Encoding.X962,
+            serialization.PublicFormat.UncompressedPoint
+        )
         self.proto.curve = ec.SECP256R1()
 
         self.proto.kexAlg = b'ecdh-sha2-nistp256'
@@ -2567,66 +2673,3 @@ class TransportLoopbackTests(unittest.TestCase):
                 return proto
             deferreds.append(self._runClientServer(setCompression))
         return defer.DeferredList(deferreds, fireOnOneErrback=True)
-
-
-
-class RandomNumberTests(unittest.TestCase):
-    """
-    Tests for the random number generator L{_getRandomNumber} and private
-    key generator L{_generateX}.
-    """
-    if dependencySkip:
-        skip = dependencySkip
-
-
-    def test_usesSuppliedRandomFunction(self):
-        """
-        L{_getRandomNumber} returns an integer constructed directly from the
-        bytes returned by the random byte generator passed to it.
-        """
-        def random(data):
-            # The number of bytes requested will be the value of each byte
-            # we return.
-            return chr(data) * data
-        self.assertEqual(
-            transport._getRandomNumber(random, 32),
-            4 << 24 | 4 << 16 | 4 << 8 | 4)
-
-
-    def test_rejectsNonByteMultiples(self):
-        """
-        L{_getRandomNumber} raises L{ValueError} if the number of bits
-        passed to L{_getRandomNumber} is not a multiple of 8.
-        """
-        self.assertRaises(
-            ValueError,
-            transport._getRandomNumber, None, 9)
-
-
-    def test_excludesSmall(self):
-        """
-        If the random byte generator passed to L{_generateX} produces bytes
-        which would result in 0 or 1 being returned, these bytes are
-        discarded and another attempt is made to produce a larger value.
-        """
-        results = [chr(0), chr(1), chr(127)]
-        def random(data):
-            return results.pop(0) * data
-        self.assertEqual(
-            transport._generateX(random, 8),
-            127)
-
-
-    def test_excludesLarge(self):
-        """
-        If the random byte generator passed to L{_generateX} produces bytes
-        which would result in C{(2 ** bits) - 1} being returned, these bytes
-        are discarded and another attempt is made to produce a smaller
-        value.
-        """
-        results = [chr(255), chr(64)]
-        def random(data):
-            return results.pop(0) * data
-        self.assertEqual(
-            transport._generateX(random, 8),
-            64)
