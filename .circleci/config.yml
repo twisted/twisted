@@ -140,7 +140,7 @@ jobs:
             echo 'export PATH=/usr/local/bin:$PATH:/Users/distiller/Library/Python/2.7/bin' >> $BASH_ENV
             python2 --version
             pip2 install -q --user --ignore-installed --upgrade virtualenv
-            pip2 install -q tox --user
+            pip2 install -q tox==3.7 --user
 
       # Run tests with tox without any cached dependencies.
       - run:
@@ -167,7 +167,7 @@ jobs:
             echo 'export PATH=/usr/local/bin:$PATH:/Users/distiller/Library/Python/3.7/bin' >> $BASH_ENV
             python3 --version
             pip3 install -q --user --ignore-installed --upgrade virtualenv
-            pip3 install -q tox --user
+            pip3 install -q tox==3.7 --user
 
       # Run tests with tox without any cached dependencies.
       - run:
