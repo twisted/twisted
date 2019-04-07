@@ -18,7 +18,7 @@ from twisted.web._newclient import ResponseNeverReceived, ResponseFailed
 from twisted.web._newclient import PotentialDataLoss
 from twisted.internet import defer, task
 from twisted.python.failure import Failure
-from twisted.python.compat import cookielib, intToBytes
+from twisted.python.compat import cookielib, intToBytes, unicode
 from twisted.python.components import proxyForInterface
 from twisted.test.proto_helpers import (StringTransport, MemoryReactorClock,
                                         EventLoggingObserver)
@@ -44,7 +44,8 @@ from zope.interface.declarations import implementer
 from twisted.web.iweb import IPolicyForHTTPS
 from twisted.python.deprecate import getDeprecationWarningString
 from incremental import Version
-from twisted.web.client import BrowserLikePolicyForHTTPS
+from twisted.web.client import (BrowserLikePolicyForHTTPS,
+                                HostnameCachingHTTPSPolicy)
 from twisted.internet.test.test_endpoints import deterministicResolvingReactor
 from twisted.internet.endpoints import HostnameEndpoint
 from twisted.test.proto_helpers import AccumulatingProtocol
@@ -65,6 +66,16 @@ else:
     from twisted.internet._sslverify import ClientTLSOptions, IOpenSSLTrustRoot
     from twisted.internet.ssl import optionsForClientTLS
     from twisted.protocols.tls import TLSMemoryBIOProtocol, TLSMemoryBIOFactory
+
+
+    @implementer(IOpenSSLTrustRoot)
+    class CustomOpenSSLTrustRoot(object):
+        called = False
+        context = None
+
+        def _addCACertsToContext(self, context):
+            self.called = True
+            self.context = context
 
 
 
@@ -333,6 +344,8 @@ class FakeReactorAndConnectMixin:
             u'example.org': [EXAMPLE_ORG_IP],
             u'foo': [FOO_LOCAL_IP],
             u'foo.com': [FOO_COM_IP],
+            u'127.0.0.7': ['127.0.0.7'],
+            u'::7': ['::7'],
         })
 
         # Lots of tests were written expecting MemoryReactorClock and the
@@ -763,12 +776,26 @@ class IntegrationTestingMixin(object):
         self.integrationTest(b'example.com', EXAMPLE_COM_IP, IPv4Address)
 
 
+    def test_integrationTestIPv4Address(self):
+        """
+        L{Agent} works over IPv4 when hostname is an IPv4 address.
+        """
+        self.integrationTest(b'127.0.0.7', '127.0.0.7', IPv4Address)
+
+
     def test_integrationTestIPv6(self):
         """
         L{Agent} works over IPv6.
         """
         self.integrationTest(b'ipv6.example.com', EXAMPLE_COM_V6_IP,
                              IPv6Address)
+
+
+    def test_integrationTestIPv6Address(self):
+        """
+        L{Agent} works over IPv6 when hostname is an IPv6 address.
+        """
+        self.integrationTest(b'[::7]', '::7', IPv6Address)
 
 
     def integrationTest(self, hostName, expectedAddress, addressType,
@@ -827,8 +854,9 @@ class IntegrationTestingMixin(object):
         pump = IOPump(clientProtocol, wrapper,
                       clientTransport, serverTransport, False)
         pump.flush()
+        self.assertNoResult(deferred)
         lines = accumulator.currentProtocol.data.split(b"\r\n")
-        self.assertTrue(lines[0].startswith(b"GET / HTTP"))
+        self.assertTrue(lines[0].startswith(b"GET / HTTP"), lines[0])
         headers = dict([line.split(b": ", 1) for line in lines[1:] if line])
         self.assertEqual(headers[b'Host'], hostName)
         self.assertNoResult(deferred)
@@ -1462,13 +1490,6 @@ class AgentHTTPSTests(TestCase, FakeReactorAndConnectMixin,
         L{IOpenSSLClientConnectionCreator} provider which will add certificates
         from the given trust root.
         """
-        @implementer(IOpenSSLTrustRoot)
-        class CustomOpenSSLTrustRoot(object):
-            called = False
-            context = None
-            def _addCACertsToContext(self, context):
-                self.called = True
-                self.context = context
         trustRoot = CustomOpenSSLTrustRoot()
         policy = BrowserLikePolicyForHTTPS(trustRoot=trustRoot)
         creator = policy.creatorForNetloc(b"thingy", 4321)
@@ -1481,7 +1502,8 @@ class AgentHTTPSTests(TestCase, FakeReactorAndConnectMixin,
         """
         Wrap L{AgentTestsMixin.integrationTest} with TLS.
         """
-        authority, server = certificatesForAuthorityAndServer(hostName
+        certHostName = hostName.strip(b'[]')
+        authority, server = certificatesForAuthorityAndServer(certHostName
                                                               .decode('ascii'))
         def tlsify(serverFactory):
             return TLSMemoryBIOFactory(server.options(), False, serverFactory)
@@ -3067,3 +3089,98 @@ class ReadBodyTests(TestCase):
 
         warnings = self.flushWarnings()
         self.assertEqual(len(warnings), 0)
+
+
+
+class HostnameCachingHTTPSPolicyTests(TestCase):
+
+    skip = skipWhenNoSSL
+
+    def test_cacheIsUsed(self):
+        """
+        Verify that the connection creator is added to the
+        policy's cache, and that it is reused on subsequent calls
+        to creatorForNetLoc.
+
+        """
+        trustRoot = CustomOpenSSLTrustRoot()
+        wrappedPolicy = BrowserLikePolicyForHTTPS(trustRoot=trustRoot)
+        policy = HostnameCachingHTTPSPolicy(wrappedPolicy)
+        creator = policy.creatorForNetloc(b"foo", 1589)
+        self.assertTrue(trustRoot.called)
+        trustRoot.called = False
+        self.assertEquals(1, len(policy._cache))
+        connection = creator.clientConnectionForTLS(None)
+        self.assertIs(trustRoot.context, connection.get_context())
+
+        policy.creatorForNetloc(b"foo", 1589)
+        self.assertFalse(trustRoot.called)
+
+
+    def test_cacheRemovesOldest(self):
+        """
+        Verify that when the cache is full, and a new entry is added,
+        the oldest entry is removed.
+        """
+        trustRoot = CustomOpenSSLTrustRoot()
+        wrappedPolicy = BrowserLikePolicyForHTTPS(trustRoot=trustRoot)
+        policy = HostnameCachingHTTPSPolicy(wrappedPolicy)
+        for i in range(0, 20):
+            hostname = u"host" + unicode(i)
+            policy.creatorForNetloc(hostname.encode("ascii"), 8675)
+
+        # Force host0, which was the first, to be the most recently used
+        host0 = u"host0"
+        policy.creatorForNetloc(host0.encode("ascii"), 309)
+        self.assertIn(host0, policy._cache)
+        self.assertEquals(20, len(policy._cache))
+
+        hostn = u"new"
+        policy.creatorForNetloc(hostn.encode("ascii"), 309)
+
+        host1 = u"host1"
+        self.assertNotIn(host1, policy._cache)
+        self.assertEquals(20, len(policy._cache))
+
+        self.assertIn(hostn, policy._cache)
+        self.assertIn(host0, policy._cache)
+
+        # Accessing an item repeatedly does not corrupt the LRU.
+        for _ in range(20):
+            policy.creatorForNetloc(host0.encode("ascii"), 8675)
+
+        hostNPlus1 = u"new1"
+
+        policy.creatorForNetloc(hostNPlus1.encode("ascii"), 800)
+
+        self.assertNotIn(u"host2", policy._cache)
+        self.assertEquals(20, len(policy._cache))
+
+        self.assertIn(hostNPlus1, policy._cache)
+        self.assertIn(hostn, policy._cache)
+        self.assertIn(host0, policy._cache)
+
+
+    def test_changeCacheSize(self):
+        """
+        Verify that changing the cache size results in a policy that
+        respects the new cache size and not the default.
+
+        """
+        trustRoot = CustomOpenSSLTrustRoot()
+        wrappedPolicy = BrowserLikePolicyForHTTPS(trustRoot=trustRoot)
+        policy = HostnameCachingHTTPSPolicy(wrappedPolicy, cacheSize=5)
+        for i in range(0, 5):
+            hostname = u"host" + unicode(i)
+            policy.creatorForNetloc(hostname.encode("ascii"), 8675)
+
+        first = u"host0"
+        self.assertIn(first, policy._cache)
+        self.assertEquals(5, len(policy._cache))
+
+        hostn = u"new"
+        policy.creatorForNetloc(hostn.encode("ascii"), 309)
+        self.assertNotIn(first, policy._cache)
+        self.assertEquals(5, len(policy._cache))
+
+        self.assertIn(hostn, policy._cache)

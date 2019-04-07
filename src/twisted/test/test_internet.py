@@ -15,6 +15,7 @@ from twisted.python.compat import _PY3
 from twisted.trial import unittest
 from twisted.internet import reactor, protocol, error, abstract, defer
 from twisted.internet import interfaces, base
+from twisted.internet.tcp import Connector
 
 try:
     from twisted.internet import ssl
@@ -1392,3 +1393,13 @@ class PortStringificationTests(unittest.TestCase):
 
         if _PY3:
             testSSL.skip = ("Re-enable once the Python 3 SSL port is done.")
+
+
+
+class ConnectorReprTests(unittest.TestCase):
+    def test_tcp_repr(self):
+        c = Connector('localhost', 666, object(), 0, object())
+        expect = "<twisted.internet.tcp.Connector instance at 0x%x " \
+            "disconnected %s>"
+        expect = expect % (id(c), c.getDestination())
+        self.assertEqual(repr(c), expect)

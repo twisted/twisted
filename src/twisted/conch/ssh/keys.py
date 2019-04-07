@@ -13,7 +13,9 @@ import itertools
 
 from hashlib import md5, sha256
 import base64
+import struct
 
+import bcrypt
 from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes, serialization
@@ -224,13 +226,11 @@ class Key(object):
                 ).public_key(default_backend())
             )
         elif keyType in _curveTable:
-            # First we have to make an EllipticCuvePublicNumbers from the
-            # provided curve and points,
-            # then turn it into a public key object.
             return cls(
-                ec.EllipticCurvePublicNumbers.from_encoded_point(
-                      _curveTable[keyType],
-                       common.getNS(rest, 2)[1]).public_key(default_backend()))
+                ec.EllipticCurvePublicKey.from_encoded_point(
+                    _curveTable[keyType], common.getNS(rest, 2)[1]
+                )
+            )
         else:
             raise BadKeyError('unknown blob type: %s' % (keyType,))
 
@@ -260,8 +260,8 @@ class Key(object):
 
         EC keys::
             string 'ecdsa-sha2-[identifier]'
-            integer x
-            integer y
+            string identifier
+            string q
             integer privateValue
 
             identifier is the standard NIST curve name.
@@ -272,7 +272,9 @@ class Key(object):
 
         @return: A new key.
         @rtype: L{twisted.conch.ssh.keys.Key}
-        @raises BadKeyError: if the key type (the first string) is unknown.
+        @raises BadKeyError: if
+            * the key type (the first string) is unknown
+            * the curve name of an ECDSA key does not match the key type
         """
         keyType, rest = common.getNS(blob)
 
@@ -282,10 +284,15 @@ class Key(object):
         elif keyType == b'ssh-dss':
             p, q, g, y, x, rest = common.getMP(rest, 5)
             return cls._fromDSAComponents(y=y, g=g, p=p, q=q, x=x)
-        elif keyType in [curve for curve in list(_curveTable.keys())]:
-            x, y, privateValue, rest = common.getMP(rest, 3)
-            return cls._fromECComponents(x=x, y=y, curve=keyType,
-                privateValue=privateValue)
+        elif keyType in _curveTable:
+            curve = _curveTable[keyType]
+            curveName, q, rest = common.getNS(rest, 2)
+            if curveName != _secToNist[curve.name.encode('ascii')]:
+                raise BadKeyError('ECDSA curve name %r does not match key '
+                                  'type %r' % (curveName, keyType))
+            privateValue, rest = common.getMP(rest)
+            return cls._fromECEncodedPoint(
+                encodedPoint=q, curve=keyType, privateValue=privateValue)
         else:
             raise BadKeyError('unknown blob type: %s' % (keyType,))
 
@@ -311,14 +318,98 @@ class Key(object):
         blob = decodebytes(data.split()[1])
         return cls._fromString_BLOB(blob)
 
+
     @classmethod
-    def _fromString_PRIVATE_OPENSSH(cls, data, passphrase):
+    def _fromPrivateOpenSSH_v1(cls, data, passphrase):
         """
         Return a private key object corresponding to this OpenSSH private key
-        string.  If the key is encrypted, passphrase MUST be provided.
-        Providing a passphrase for an unencrypted key is an error.
+        string, in the "openssh-key-v1" format introduced in OpenSSH 6.5.
 
-        The format of an OpenSSH private key string is::
+        The format of an openssh-key-v1 private key string is::
+            -----BEGIN OPENSSH PRIVATE KEY-----
+            <base64-encoded SSH protocol string>
+            -----END OPENSSH PRIVATE KEY-----
+
+        The SSH protocol string is as described in
+        U{PROTOCOL.key<https://cvsweb.openbsd.org/cgi-bin/cvsweb/src/usr.bin/ssh/PROTOCOL.key>}.
+
+        @type data: L{bytes}
+        @param data: The key data.
+
+        @type passphrase: L{bytes} or L{None}
+        @param passphrase: The passphrase the key is encrypted with, or L{None}
+        if it is not encrypted.
+
+        @return: A new key.
+        @rtype: L{twisted.conch.ssh.keys.Key}
+        @raises BadKeyError: if
+            * a passphrase is provided for an unencrypted key
+            * the SSH protocol encoding is incorrect
+        @raises EncryptedKeyError: if
+            * a passphrase is not provided for an encrypted key
+        """
+        lines = data.strip().splitlines()
+        keyList = decodebytes(b''.join(lines[1:-1]))
+        if not keyList.startswith(b'openssh-key-v1\0'):
+            raise BadKeyError('unknown OpenSSH private key format')
+        keyList = keyList[len(b'openssh-key-v1\0'):]
+        cipher, kdf, kdfOptions, rest = common.getNS(keyList, 3)
+        n = struct.unpack('!L', rest[:4])[0]
+        if n != 1:
+            raise BadKeyError('only OpenSSH private key files containing '
+                              'a single key are supported')
+        # Ignore public key
+        _, encPrivKeyList, _ = common.getNS(rest[4:], 2)
+        if cipher != b'none':
+            if not passphrase:
+                raise EncryptedKeyError('Passphrase must be provided '
+                                        'for an encrypted key')
+            # Determine cipher
+            if cipher in (b'aes128-ctr', b'aes192-ctr', b'aes256-ctr'):
+                algorithmClass = algorithms.AES
+                blockSize = 16
+                keySize = int(cipher[3:6]) // 8
+                ivSize = blockSize
+            else:
+                raise BadKeyError('unknown encryption type %r' % (cipher,))
+            if kdf == b'bcrypt':
+                salt, rest = common.getNS(kdfOptions)
+                rounds = struct.unpack('!L', rest[:4])[0]
+                decKey = bcrypt.kdf(
+                    passphrase, salt, keySize + ivSize, rounds,
+                    # We can only use the number of rounds that OpenSSH used.
+                    ignore_few_rounds=True)
+            else:
+                raise BadKeyError('unknown KDF type %r' % (kdf,))
+            if (len(encPrivKeyList) % blockSize) != 0:
+                raise BadKeyError('bad padding')
+            decryptor = Cipher(
+                algorithmClass(decKey[:keySize]),
+                modes.CTR(decKey[keySize:keySize + ivSize]),
+                backend=default_backend()
+            ).decryptor()
+            privKeyList = (
+                decryptor.update(encPrivKeyList) + decryptor.finalize())
+        else:
+            if kdf != b'none':
+                raise BadKeyError('private key specifies KDF %r but no '
+                                  'cipher' % (kdf,))
+            privKeyList = encPrivKeyList
+        check1 = struct.unpack('!L', privKeyList[:4])[0]
+        check2 = struct.unpack('!L', privKeyList[4:8])[0]
+        if check1 != check2:
+            raise BadKeyError('check values do not match: %d != %d' %
+                              (check1, check2))
+        return cls._fromString_PRIVATE_BLOB(privKeyList[8:])
+
+
+    @classmethod
+    def _fromPrivateOpenSSH_PEM(cls, data, passphrase):
+        """
+        Return a private key object corresponding to this OpenSSH private key
+        string, in the old PEM-based format.
+
+        The format of a PEM-based OpenSSH private key string is::
             -----BEGIN <key type> PRIVATE KEY-----
             [Proc-Type: 4,ENCRYPTED
             DEK-Info: DES-EDE3-CBC,<initialization value>]
@@ -365,7 +456,7 @@ class Key(object):
 
             if cipher in (b'AES-128-CBC', b'AES-256-CBC'):
                 algorithmClass = algorithms.AES
-                keySize = int(int(cipher.split(b'-')[1])/8)
+                keySize = int(cipher.split(b'-')[1]) // 8
                 if len(ivdata) != 32:
                     raise BadKeyError('AES encrypted key with a bad IV')
             elif cipher == b'DES-EDE3-CBC':
@@ -416,8 +507,6 @@ class Key(object):
             n, e, d, p, q, dmp1, dmq1, iqmp = [
                 long(value) for value in decodedKey[1:9]
                 ]
-            if p > q:  # Make p smaller than q
-                p, q = q, p
             return cls(
                 rsa.RSAPrivateNumbers(
                     p=p,
@@ -448,6 +537,36 @@ class Key(object):
             )
         else:
             raise BadKeyError("unknown key type %s" % (kind,))
+
+
+    @classmethod
+    def _fromString_PRIVATE_OPENSSH(cls, data, passphrase):
+        """
+        Return a private key object corresponding to this OpenSSH private key
+        string.  If the key is encrypted, passphrase MUST be provided.
+        Providing a passphrase for an unencrypted key is an error.
+
+        @type data: L{bytes}
+        @param data: The key data.
+
+        @type passphrase: L{bytes} or L{None}
+        @param passphrase: The passphrase the key is encrypted with, or L{None}
+        if it is not encrypted.
+
+        @return: A new key.
+        @rtype: L{twisted.conch.ssh.keys.Key}
+        @raises BadKeyError: if
+            * a passphrase is provided for an unencrypted key
+            * the encoding is incorrect
+        @raises EncryptedKeyError: if
+            * a passphrase is not provided for an encrypted key
+        """
+        if data.strip().splitlines()[0][11:-17] == b'OPENSSH':
+            # New-format (openssh-key-v1) key
+            return cls._fromPrivateOpenSSH_v1(data, passphrase)
+        else:
+            # Old-format (PEM) key
+            return cls._fromPrivateOpenSSH_PEM(data, passphrase)
 
     @classmethod
     def _fromString_PUBLIC_LSH(cls, data):
@@ -700,6 +819,34 @@ class Key(object):
             privateNumbers = ec.EllipticCurvePrivateNumbers(
                 private_value=privateValue, public_numbers=publicNumbers)
             keyObject = privateNumbers.private_key(default_backend())
+
+        return cls(keyObject)
+
+    @classmethod
+    def _fromECEncodedPoint(cls, encodedPoint, curve, privateValue=None):
+        """
+        Build a key from an EC encoded point.
+
+        @param encodedPoint: The public point encoded as in SEC 1 v2.0
+        section 2.3.3.
+        @type encodedPoint: L{bytes}
+
+        @param curve: NIST name of elliptic curve.
+        @type curve: L{bytes}
+
+        @param privateValue: The private value.
+        @type privateValue: L{int}
+        """
+
+        if privateValue is None:
+            # We have public components.
+            keyObject = ec.EllipticCurvePublicKey.from_encoded_point(
+                _curveTable[curve], encodedPoint
+            )
+        else:
+            keyObject = ec.derive_private_key(
+                privateValue, _curveTable[curve], default_backend()
+            )
 
         return cls(keyObject)
 
@@ -1110,8 +1257,8 @@ class Key(object):
                                b' PRIVATE KEY-----'))]
             if self.type() == 'RSA':
                 p, q = data['p'], data['q']
-                objData = (0, data['n'], data['e'], data['d'], q, p,
-                           data['d'] % (q - 1), data['d'] % (p - 1),
+                objData = (0, data['n'], data['e'], data['d'], p, q,
+                           data['d'] % (p - 1), data['d'] % (q - 1),
                            data['u'])
             else:
                 objData = (0, data['p'], data['q'], data['g'], data['y'],

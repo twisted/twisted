@@ -15,22 +15,73 @@
 #
 version: 2
 
+aliases:
+  - &preparation_run_group
+    run:
+      name: Prepare the virtualenv.
+      command: |
+        "$PYTHON" --version
+        "$PYTHON" -m pip --version
+        "$PYTHON" -m pip install -q --user --ignore-installed --upgrade virtualenv
+        "$PYTHON" -m virtualenv -p "$PYTHON" venv
+        venv/bin/pip install -U pip
+        venv/bin/python -m pip install tox
+        venv/bin/python -m pip freeze
+        venv/bin/python --version
+
 jobs:
-  static_checkers:
-    working_directory: ~/static-checkers
-    docker:
-      - image: circleci/python:2.7
+  osx-wheels:
+    working_directory: ~/osx-wheels
+    macos:
+      xcode: "10.0.0"
+    environment:
+      PYTHON: python3
     steps:
       # Get the source.
       - checkout
 
+      - <<: *preparation_run_group
+
       - run:
-          name: Prepare the environment.
+          name: Build the OSX wheels.
           command: |
-            python --version
-            pip install -q --user --ignore-installed --upgrade virtualenv
-            pip install -q tox --user
-            echo 'export PATH=~/.local/bin:$PATH' >> $BASH_ENV
+            venv/bin/tox -r -e wheels
+
+      - store_artifacts:
+          path: wheelhouse/
+
+  linux-wheels:
+    working_directory: ~/linux-wheels
+    docker:
+      - image: circleci/python:3.6
+    environment:
+      PYTHON: python3
+    steps:
+      # Get the source.
+      - checkout
+      - setup_remote_docker
+
+      - <<: *preparation_run_group
+
+      - run:
+          name: Build the Linux wheels.
+          command: |
+            venv/bin/tox -r -e wheels
+
+      - store_artifacts:
+          path: wheelhouse/
+
+  static_checkers:
+    working_directory: ~/static-checkers
+    docker:
+      - image: circleci/python:2.7
+    environment:
+      PYTHON: python2
+    steps:
+      # Get the source.
+      - checkout
+
+      - <<: *preparation_run_group
 
       # Run each checker in a separate step, but always run all steps to get
       # a the results from each step.
@@ -38,22 +89,12 @@ jobs:
           name: Check newsfragment.
           when: always
           command: |
-            tox -r -e newsfragment
+            venv/bin/tox -r -e newsfragment
       - run:
           name: Check manifest-checker.
           when: always
           command: |
-            tox -r -e manifest-checker
-      - run:
-          name: Check pyflakes.
-          when: always
-          command: |
-            tox -r -e pyflakes
-      - run:
-          name: Check pycodestyle diff with trunk.
-          when: always
-          command: |
-            tox -r -e pycodestylediff
+            venv/bin/tox -r -e manifest-checker
 
   #
   # Documentation tests are slow so we execute them in a separate job.
@@ -62,58 +103,97 @@ jobs:
     working_directory: ~/documentation
     docker:
       - image: circleci/python:2.7
+    environment:
+      PYTHON: python2
     steps:
       # Get the source.
       - checkout
 
-      - run:
-          name: Prepare the environment.
-          command: |
-            python --version
-            pip install -q --user --ignore-installed --upgrade virtualenv
-            pip install -q tox --user
-            echo 'export PATH=~/.local/bin:$PATH' >> $BASH_ENV
+      - <<: *preparation_run_group
 
       - run:
           name: Check the narrative documentation.
           command: |
-            tox -r -e narrativedocs
+            venv/bin/tox -r -e narrativedocs
 
       - run:
           name: Check the API documentation.
           command: |
-            tox -r -e apidocs
-
+            venv/bin/tox -r -e apidocs
 
   #
-  # We run pyflakes with Python 3 .
+  # MacOS with Python2.7 and default reactor.
   #
-  pyflakes3:
-    working_directory: ~/pyflakes3
-    docker:
-      - image: circleci/python:3.6
+  macos_py27_default_reactor:
+    macos:
+      # We don't use the xcode, but we need to put something here.
+      xcode: "10.0.0"
+
+    working_directory: ~/repo
     steps:
       # Get the source.
       - checkout
 
       - run:
-          name: Prepare the environment.
+          name: Prepare the macOS environment.
           command: |
-            python --version
-            pip install -q --user --ignore-installed --upgrade virtualenv
-            pip install -q tox --user
-            echo 'export PATH=~/.local/bin:$PATH' >> $BASH_ENV
+            echo 'export PATH=/usr/local/bin:$PATH:/Users/distiller/Library/Python/2.7/bin' >> $BASH_ENV
+            python2 --version
+            pip2 install -q --user --ignore-installed --upgrade virtualenv
+            pip2 install -q tox==3.7 --user
+
+      # Run tests with tox without any cached dependencies.
+      - run:
+          name: Test with the default reactor.
+          command: |
+            tox -r -e py27-alldeps-withcov-posix twisted
+
+  #
+  # MacOS with Python3.7 and default reactor.
+  #
+  macos_py37_default_reactor:
+    macos:
+      # We don't use the xcode, but we need to put something here.
+      xcode: "10.0.0"
+
+    working_directory: ~/repo
+    steps:
+      # Get the source.
+      - checkout
 
       - run:
-          name: Check the API documentation.
+          name: Prepare the macOS environment.
           command: |
-            tox -r -e pyflakes3
+            echo 'export PATH=/usr/local/bin:$PATH:/Users/distiller/Library/Python/3.7/bin' >> $BASH_ENV
+            python3 --version
+            pip3 install -q --user --ignore-installed --upgrade virtualenv
+            pip3 install -q tox==3.7 --user
+
+      # Run tests with tox without any cached dependencies.
+      - run:
+          name: Test with the default reactor.
+          command: |
+            tox -r -e py37-alldeps-withcov-posix twisted
 
 
+# First we run the static checkers, and only if they pass we spin the macOS.
+# in this way we should save some macOS minutes as we only have 1000h per month.
 workflows:
   version: 2
   all-tests:
     jobs:
       - static_checkers
       - documentation
-      - pyflakes3
+      - linux-wheels
+      - osx-wheels:
+          requires:
+            - static_checkers
+            - documentation
+      - macos_py27_default_reactor:
+          requires:
+            - static_checkers
+            - documentation
+      - macos_py37_default_reactor:
+          requires:
+            - static_checkers
+            - documentation
