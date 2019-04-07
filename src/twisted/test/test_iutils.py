@@ -284,6 +284,33 @@ class ProcessUtilsTests(unittest.TestCase):
             utils.getProcessOutputAndValue, check)
 
 
+    def test_get_processOutputAndValueStdin(self):
+        """
+        Standard input can be made available to the child process by passing
+        bytes for the `stdinBytes` parameter.
+        """
+        scriptFile = self.makeSourceFile([
+            "import sys",
+            "sys.stdout.write(sys.stdin.read())",
+        ])
+        stdinBytes = b"These are the bytes to see."
+        d = utils.getProcessOutputAndValue(
+            self.exe,
+            ['-u', scriptFile],
+            stdinBytes=stdinBytes,
+        )
+
+        def gotOutputAndValue(out_err_code):
+            out, err, code = out_err_code
+            # Avoid making an exact equality comparison in case there is extra
+            # random output on stdout (warnings, stray print statements,
+            # logging, who knows).
+            self.assertIn(stdinBytes, out)
+            self.assertEqual(0, code)
+        d.addCallback(gotOutputAndValue)
+        return d
+
+
 
 class SuppressWarningsTests(unittest.SynchronousTestCase):
     """
