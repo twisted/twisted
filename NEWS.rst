@@ -3,45 +3,6 @@ http://twistedmatrix.com/trac/ticket/<number>
 
 .. towncrier release notes start
 
-Twisted 19.2.0rc2 (2019-03-27)
-==============================
-
-Features
---------
-
-- Twisted's minimum Cryptography requirement is now 2.5. (#9592)
-
-
-Conch
------
-
-No significant changes.
-
-
-Web
----
-
-No significant changes.
-
-
-Mail
-----
-
-No significant changes.
-
-
-Words
------
-
-No significant changes.
-
-
-Names
------
-
-No significant changes.
-
-
 Twisted 19.2.0rc1 (2019-02-23)
 ==============================
 
