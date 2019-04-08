@@ -20,6 +20,14 @@ class LogCaptureTests(TestCase):
     log = Logger()
 
 
+    def test_eventsCopied(self):
+        """
+        L{LogCapture.asText} returns a copy.
+        """
+        capture = LogCapture()
+        self.assertNotIdentical(capture.events, capture._events)
+
+
     def test_capture(self):
         """
         Events logged within context are captured.

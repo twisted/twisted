@@ -39,7 +39,7 @@ class LogCapture(object):
         @return: the captured events
         @rtype: L{list}
         """
-        return self._events.copy()
+        return list(self._events)
 
 
     def asText(self):
