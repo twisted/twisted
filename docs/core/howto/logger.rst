@@ -277,8 +277,31 @@ System-provided event keys include:
 Avoid mutable event keys
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
-Emitting applications should be cautious about inserting objects into event which may be mutated later.
+Emitting applications should be cautious about inserting objects into events which may be mutated later.
 While observers are called synchronously, it is possible that an observer will do something like queue up the event for later serialization, in which case the serialized object may be different than intended.
+
+
+Capturing log events for testing
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+If you want to test that your code is logging the expected events, you can use the :api:`twisted.logger.LogCapture <LogCapture>` context manager:
+
+.. code-block:: python
+
+    from twisted.logger import Logger, LogCapture, LogLevel
+    from twisted.trial.unittest import TestCase
+
+    class SomeTests(TestCase):
+
+        def test_capture(self):
+            with LogCapture() as capture:
+                self.log.debug("Capture this, please")
+
+                events = capture.events
+
+            self.assertTrue(len(events) == 1)
+            self.assertEqual(events[0]["log_level"], LogLevel.debug)
+            self.assertEqual(events[0]["log_format"], "Capture this, please")
 
 
 .. _core-howto-logger-saving-events-for-later:
