@@ -8,7 +8,7 @@ Context manager for capturing logs.
 
 from io import StringIO
 
-from attr import Factory, attrib, attrs
+from attr import attrib, attrs
 
 from twisted.logger import globalLogPublisher, textFileLogObserver
 
