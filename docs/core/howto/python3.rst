@@ -4,7 +4,7 @@ Porting to Python 3
 Introduction
 ------------
 
-Twisted is currently being ported to work with Python 3.4+.
+Twisted is currently being ported to work with Python 3.5+.
 This document covers Twisted-specific issues in porting your code to Python 3.
 
 Most, but not all, of Twisted has been ported, and therefore only a subset of modules are installed under Python 3.
