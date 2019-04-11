@@ -10,9 +10,11 @@ Web server.  It can parse HTTP 1.0 requests and supports many HTTP 1.1
 features as well.  Additionally, some functionality implemented here is
 also useful for HTTP clients (such as the chunked encoding parser).
 
-@var CACHED: A marker value to be returned from cache-related request methods to
-    indicate to the caller that a cached response will be usable and no response
-    body should be generated.
+@var CACHED: A marker value to be returned from cache-related request methods
+    to indicate to the caller that a cached response will be usable and no
+    response body should be generated.
+
+@var FOUND: An HTTP response code indicating a temporary redirect.
 
 @var NOT_MODIFIED: An HTTP response code indicating that a requested
     pre-condition (for example, the condition represented by an
@@ -666,13 +668,28 @@ class Request:
     Subclasses should override the process() method to determine how
     the request will be processed.
 
-    @ivar method: The HTTP method that was used.
-    @ivar uri: The full URI that was requested (includes arguments).
-    @ivar path: The path only (arguments not included).
-    @ivar args: All of the arguments, including URL and POST arguments.
-    @type args: A mapping of strings (the argument names) to lists of values.
-                i.e., ?foo=bar&foo=baz&quux=spam results in
-                {'foo': ['bar', 'baz'], 'quux': ['spam']}.
+    @ivar method: The HTTP method that was used, e.g. C{b'GET'}.
+    @type method: L{bytes}
+
+    @ivar uri: The full encoded URI which was requested (including query
+        arguments), e.g. C{b'/a/b%20/c?q=v'}.
+    @type uri: L{bytes}
+
+    @ivar path: The encoded path of the request URI (not including query
+        arguments), e.g. C{b'/a/b%20/c'}.
+    @type path: L{bytes}
+
+    @ivar args: A mapping of decoded query argument names as L{bytes} to
+        corresponding query argument values as L{list}s of L{bytes}.
+        For example, for a URI with C{foo=bar&foo=baz&quux=spam}
+        as its query part C{args} will be C{{b'foo': [b'bar', b'baz'],
+        b'quux': [b'spam']}}.
+    @type args: L{dict} of L{bytes} to L{list} of L{bytes}
+
+    @ivar content: A file-like object giving the request body.  This may be
+        a file on disk, an L{io.BytesIO}, or some other type.  The
+        implementation is free to decide on a per-request basis.
+    @type content: L{typing.BinaryIO}
 
     @ivar cookies: The cookies that will be sent in the response.
     @type cookies: L{list} of L{bytes}
@@ -683,7 +700,7 @@ class Request:
     @type responseHeaders: L{http_headers.Headers}
     @ivar responseHeaders: All HTTP response headers to be sent.
 
-    @ivar notifications: A C{list} of L{Deferred}s which are waiting for
+    @ivar notifications: A L{list} of L{Deferred}s which are waiting for
         notification that the response to this request has been finished
         (successfully or with an error).  Don't use this attribute directly,
         instead use the L{Request.notifyFinish} method.
@@ -691,7 +708,7 @@ class Request:
     @ivar _disconnected: A flag which is C{False} until the connection over
         which this request was received is closed and which is C{True} after
         that.
-    @type _disconnected: C{bool}
+    @type _disconnected: L{bool}
 
     @ivar _log: A logger instance for request related messages.
     @type _log: L{twisted.logger.Logger}
@@ -974,12 +991,13 @@ class Request:
         """
         Get an HTTP request header.
 
-        @type key: C{bytes}
+        @type key: C{bytes} or C{str}
         @param key: The name of the header to get the value of.
 
-        @rtype: C{bytes} or L{None}
+        @rtype: C{bytes} or C{str} or L{None}
         @return: The value of the specified header, or L{None} if that header
-            was not present in the request.
+            was not present in the request. The string type of the result
+            matches the type of L{key}.
         """
         value = self.requestHeaders.getRawHeaders(key)
         if value is not None:
@@ -989,6 +1007,13 @@ class Request:
     def getCookie(self, key):
         """
         Get a cookie that was sent from the network.
+
+        @type key: C{bytes}
+        @param key: The name of the cookie to get.
+
+        @rtype: C{bytes} or C{None}
+        @returns: The value of the specified cookie, or L{None} if that cookie
+            was not present in the request.
         """
         return self.received_cookies.get(key)
 
@@ -1243,8 +1268,8 @@ class Request:
         """
         Set the HTTP response code.
 
-        @type code: C{int}
-        @type message: C{bytes}
+        @type code: L{int}
+        @type message: L{bytes}
         """
         if not isinstance(code, _intTypes):
             raise TypeError("HTTP response code must be int or long")
@@ -1262,11 +1287,13 @@ class Request:
         Set an HTTP response header.  Overrides any previously set values for
         this header.
 
-        @type name: C{bytes}
-        @param name: The name of the header for which to set the value.
+        @type k: L{bytes} or L{str}
+        @param k: The name of the header for which to set the value.
 
-        @type value: C{bytes}
-        @param value: The value to set for the named header.
+        @type v: L{bytes} or L{str}
+        @param v: The value to set for the named header. A L{str} will be
+            UTF-8 encoded, which may not interoperable with other
+            implementations. Avoid passing non-ASCII characters if possible.
         """
         self.responseHeaders.setRawHeaders(name, [value])
 
@@ -1275,7 +1302,13 @@ class Request:
         """
         Utility function that does a redirect.
 
-        The request should have finish() called after this.
+        Set the response code to L{FOUND} and the I{Location} header to the
+        given URL.
+
+        The request should have C{finish()} called after this.
+
+        @param url: I{Location} header value.
+        @type url: L{bytes} or L{str}
         """
         self.setResponseCode(FOUND)
         self.setHeader(b"location", url)
@@ -1295,7 +1328,7 @@ class Request:
         @param when: The last time the resource being returned was
             modified, in seconds since the epoch.
         @type when: number
-        @return: If I am a C{If-Modified-Since} conditional request and
+        @return: If I am a I{If-Modified-Since} conditional request and
             the time given is not newer than the condition, I return
             L{http.CACHED<CACHED>} to indicate that you should write no
             body.  Otherwise, I return a false value.
