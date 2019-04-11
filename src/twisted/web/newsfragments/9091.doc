@@ -1,0 +1,1 @@
+The documented type of t.w.iweb.IRequest's "method" and "uri" attributes on Python 3 has been corrected to match the implementation.
