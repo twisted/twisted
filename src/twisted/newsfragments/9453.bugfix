@@ -1,1 +1,0 @@
-twisted.internet.ssl.KeyPair.generate: No longer generate 1024-bit RSA keys by default. Anyone who generated a key with this method using the default value should move to replace it immediately.
