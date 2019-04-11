@@ -284,24 +284,25 @@ While observers are called synchronously, it is possible that an observer will d
 Capturing log events for testing
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-If you want to test that your code is logging the expected events, you can use the :api:`twisted.logger.LogCapture <LogCapture>` context manager:
+If you want to test that your code is logging the expected events, you can use the :api:`twisted.logger.capturedLogs <LogCapture>` context manager:
 
 .. code-block:: python
 
-    from twisted.logger import Logger, LogCapture, LogLevel
+    from twisted.logger import Logger, LogLevel, capturedLogs
     from twisted.trial.unittest import TestCase
 
     class SomeTests(TestCase):
 
         def test_capture(self):
-            with LogCapture() as capture:
-                self.log.debug("Capture this, please")
+            foo = object()
 
-                events = capture.events
+            with capturedLogs() as captured:
+                self.log.debug("Capture this, please", foo=foo)
 
-            self.assertTrue(len(events) == 1)
-            self.assertEqual(events[0]["log_level"], LogLevel.debug)
-            self.assertEqual(events[0]["log_format"], "Capture this, please")
+            self.assertTrue(len(captured) == 1)
+            self.assertEqual(captured[0]["log_format"], "Capture this, please")
+            self.assertEqual(captured[0]["log_level"], LogLevel.debug)
+            self.assertEqual(captured[0]["foo"], foo)
 
 
 .. _core-howto-logger-saving-events-for-later:
