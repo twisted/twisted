@@ -94,7 +94,7 @@ class Request(Copyable, http.Request, components.Componentized):
     """
     An HTTP request.
 
-    @ivar defaultContentType: A C{bytes} giving the default I{Content-Type}
+    @ivar defaultContentType: A L{bytes} giving the default I{Content-Type}
         value to send in responses if no other value is set.  L{None} disables
         the default.
 

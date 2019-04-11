@@ -7,13 +7,13 @@ Twisted
 |appveyor|_
 |circleci|_
 
-For information on what's new in Twisted 18.7.0, see the `NEWS <NEWS.rst>`_ file that comes with the distribution.
+For information on what's new in Twisted 19.2.0, see the `NEWS <NEWS.rst>`_ file that comes with the distribution.
 
 
 What is this?
 -------------
 
-Twisted is an event-based framework for internet applications, supporting Python 2.7 and Python 3.4+.
+Twisted is an event-based framework for internet applications, supporting Python 2.7 and Python 3.5+.
 It includes modules for many different purposes, including the following:
 
 - ``twisted.web``: HTTP clients and servers, HTML templating, and a WSGI server
@@ -56,7 +56,7 @@ Twisted has a comprehensive test suite, which can be run by ``tox``::
 
   $ tox -l            # to view all test environments
   $ tox -e py27-tests # to run the tests for Python 2.7
-  $ tox -e py34-tests # to run the tests for Python 3.4
+  $ tox -e py35-tests # to run the tests for Python 3.5
 
 
 You can test running the test suite under the different reactors with the ``TWISTED_REACTOR`` environment variable::
@@ -74,7 +74,7 @@ Some of these tests may fail if you:
 Copyright
 ---------
 
-All of the code in this distribution is Copyright (c) 2001-2018 Twisted Matrix Laboratories.
+All of the code in this distribution is Copyright (c) 2001-2019 Twisted Matrix Laboratories.
 
 Twisted is made available under the MIT license.
 The included `LICENSE <LICENSE>`_ file describes this in detail.
