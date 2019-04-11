@@ -37,6 +37,14 @@ class IRequest(Interface):
         "for its query part, C{args} will be C{{b'foo': [b'bar', b'baz'], "
         "b'quux': [b'spam']}}.")
 
+    prepath = Attribute(
+        "The URL path segments which have been processed during resource "
+        "traversal, as a list of {bytes}.")
+
+    postpath = Attribute(
+        "The URL path segments which have not (yet) been processed "
+        "during resource traversal, as a list of L{bytes}.")
+
     requestHeaders = Attribute(
         "A L{http_headers.Headers} instance giving all received HTTP request "
         "headers.")
@@ -183,16 +191,21 @@ class IRequest(Interface):
 
     def URLPath():
         """
-        @return: A L{URLPath} instance which identifies the URL for which this
-            request is.
+        @return: A L{URLPath<twisted.python.urlpath.URLPath>} instance
+            which identifies the URL for which this request is.
         """
 
 
     def prePathURL():
         """
-        @return: At any time during resource traversal, a L{str} giving an
-            absolute URL to the most nested resource which has yet been
-            reached.
+        At any time during resource traversal or resource rendering,
+        returns an absolute URL to the most nested resource which has
+        yet been reached.
+
+        @see: {twisted.web.server.Request.prepath}
+
+        @return: An absolute URL.
+        @type: L{bytes}
         """
 
 
@@ -206,6 +219,9 @@ class IRequest(Interface):
     def getRootURL():
         """
         Get a previously-remembered URL.
+
+        @return: An absolute URL.
+        @type: L{bytes}
         """
 
 
