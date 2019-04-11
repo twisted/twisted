@@ -86,8 +86,8 @@ __all__ = [
     "eventAsJSON", "eventFromJSON",
     "jsonFileLogObserver", "eventsFromJSONLogFile",
 
-    # From _capture
-    "LogCapture",
+    # From ._capture
+    "capturedLogs",
 ]
 
 from ._levels import InvalidLogLevelError, LogLevel
@@ -127,4 +127,4 @@ from ._json import (
     jsonFileLogObserver, eventsFromJSONLogFile
 )
 
-from ._capture import LogCapture
+from ._capture import capturedLogs
