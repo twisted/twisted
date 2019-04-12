@@ -6,7 +6,9 @@
 from __future__ import division, absolute_import
 
 import warnings
+import attr
 
+from functools import lru_cache
 from constantly import Names, NamedConstant
 from hashlib import md5
 
@@ -1740,29 +1742,20 @@ OpenSSLCertificateOptions.__setstate__ = deprecated(
 
 
 @implementer(ICipher)
-class OpenSSLCipher(FancyEqMixin, object):
+@attr.s(frozen=True)
+class OpenSSLCipher(object):
     """
     A representation of an OpenSSL cipher.
+
+    @param fullName: The full name of the cipher. For example
+        C{u"ECDHE-RSA-AES256-GCM-SHA384"}.
+    @type fullName: L{unicode}
     """
-    compareAttributes = ('fullName',)
-
-    def __init__(self, fullName):
-        """
-        @param fullName: The full name of the cipher. For example
-            C{u"ECDHE-RSA-AES256-GCM-SHA384"}.
-        @type fullName: L{unicode}
-        """
-        self.fullName = fullName
-
-
-    def __repr__(self):
-        """
-        A runnable representation of the cipher.
-        """
-        return 'OpenSSLCipher({0!r})'.format(self.fullName)
+    fullName = attr.ib()
 
 
 
+@lru_cache(maxsize=32)
 def _expandCipherString(cipherString, method, options):
     """
     Expand C{cipherString} according to C{method} and C{options} to a list
@@ -1805,19 +1798,34 @@ def _expandCipherString(cipherString, method, options):
 
 
 
+@lru_cache(maxsize=128)
+def _selectCiphers(wantedCiphers, availableCiphers):
+    """
+    Caclulate the acceptable list of ciphers from the ciphers we want and the
+    ciphers we have support for.
+
+    @param wantedCiphers: The ciphers we want to use.
+    @type wantedCiphers: L{tuple}
+
+    @param availableCiphers:
+    """
+
+    return [cipher
+            for cipher in self._ciphers
+            if cipher in availableCiphers]
+
+
 @implementer(IAcceptableCiphers)
 class OpenSSLAcceptableCiphers(object):
     """
     A representation of ciphers that are acceptable for TLS connections.
     """
     def __init__(self, ciphers):
-        self._ciphers = ciphers
+        self._ciphers = tuple(ciphers)
 
 
     def selectCiphers(self, availableCiphers):
-        return [cipher
-                for cipher in self._ciphers
-                if cipher in availableCiphers]
+        return _selectCiphers(self._ciphers, tuple(availableCiphers))
 
 
     @classmethod
