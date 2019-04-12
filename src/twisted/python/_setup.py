@@ -104,7 +104,7 @@ _EXTRA_OPTIONS = dict(
         'appdirs >= 1.4.0',
         'bcrypt >= 3.0.0',
     ],
-    soap=['soappy'],
+    soap=[],
     serial=['pyserial >= 3.0'],
     macos=['pyobjc-core',
          'pyobjc-framework-CFNetwork',
@@ -113,6 +113,9 @@ _EXTRA_OPTIONS = dict(
     http2=['h2 >= 3.0, < 4.0',
            'priority >= 1.1.0, < 2.0'],
 )
+
+if not _PY3:
+    _EXTRA_OPTIONS["soap"].append('soappy')
 
 _PLATFORM_INDEPENDENT = (
     _EXTRA_OPTIONS['tls'] +

@@ -1772,7 +1772,7 @@ def _expandCipherString(cipherString, method, options):
 
     @return: The effective list of explicit ciphers that results from the
         arguments on the current platform.
-    @rtype: L{list} of L{ICipher}
+    @rtype: L{tuple} of L{ICipher}
     """
     ctx = SSL.Context(method)
     ctx.set_options(options)
@@ -1784,17 +1784,17 @@ def _expandCipherString(cipherString, method, options):
         # that lacks a corresponding OpenSSL error if the cipher list
         # consists only of these after a call to set_cipher_list.
         if not e.args[0]:
-            return []
+            return tuple()
         if e.args[0][0][2] == 'no cipher match':
-            return []
+            return tuple()
         else:
             raise
     conn = SSL.Connection(ctx, None)
     ciphers = conn.get_cipher_list()
     if isinstance(ciphers[0], unicode):
-        return [OpenSSLCipher(cipher) for cipher in ciphers]
+        return tuple(OpenSSLCipher(cipher) for cipher in ciphers)
     else:
-        return [OpenSSLCipher(cipher.decode('ascii')) for cipher in ciphers]
+        return tuple(OpenSSLCipher(cipher.decode('ascii')) for cipher in ciphers)
 
 
 
@@ -1805,14 +1805,16 @@ def _selectCiphers(wantedCiphers, availableCiphers):
     ciphers we have support for.
 
     @param wantedCiphers: The ciphers we want to use.
-    @type wantedCiphers: L{tuple}
+    @type wantedCiphers: L{tuple} of L{OpenSSLCipher}
 
-    @param availableCiphers:
+    @param availableCiphers: The ciphers we have available to use.
+    @type availableCiphers: L{tuple} of L{OpenSSLCipher}
+
+    @rtype: L{tuple} of L{OpenSSLCipher}
     """
-
-    return [cipher
-            for cipher in self._ciphers
-            if cipher in availableCiphers]
+    return tuple([cipher
+                for cipher in wantedCiphers
+                if cipher in availableCiphers])
 
 
 @implementer(IAcceptableCiphers)
