@@ -191,7 +191,6 @@ String literals not marked with this are "native/bare strings", and have a diffe
 Bytestrings and text must not be implicitly concatenated, as this causes an invisible ASCII encode/decode on Python 2, and causes an exception on Python 3.
 
 Use ``+`` to combine bytestrings, not string formatting (either "percent formatting" or ``.format()``).
-String formatting is not available on Python 3.4.
 
 .. code-block:: python
 
@@ -204,8 +203,6 @@ Utilities are available in :api:`twisted.python.compat <twisted.python.compat>` 
 
 String Formatting Operations
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-`String formatting operations <https://docs.python.org/2.7/library/stdtypes.html#string-formatting>`_ like ``formatString % values`` should only be used on text strings, not byte strings, as they do not work on Python 3.4.
 
 When using "percent formatting", you should always use a tuple if you're using non-mapping ``values``.
 This is to avoid unexpected behavior when you think you're passing in a single value, but the value is unexpectedly a tuple, e.g.:
@@ -624,11 +621,11 @@ An attribute (or function, method or class) should be considered private when on
 Python 3
 --------
 
-Twisted is being ported to Python 3, targeting Python 3.4+.
+Twisted is being ported to Python 3, targeting Python 3.5+.
 Please see :doc:`Porting to Python 3 </core/howto/python3>` for details.
 
-All new modules must be Python 2.7 & 3.4+ compatible, and all new code to ported modules must be Python 2.7 & 3.4+ compatible.
-New code in non-ported modules must be written in a 2.7 & 3.4+ compatible way (explicit bytes/unicode strings, new exception raising format, etc) as to prevent extra work when that module is eventually ported.
+All new modules must be Python 2.7 & 3.5+ compatible, and all new code to ported modules must be Python 2.7 & 3.5+ compatible.
+New code in non-ported modules must be written in a 2.7 & 3.5+ compatible way (explicit bytes/unicode strings, new exception raising format, etc) as to prevent extra work when that module is eventually ported.
 Code targeting Python 3 specific features must gracefully fall-back on Python 2 as much as is reasonably possible (for example, Python 2 support for 'async/await' is not reasonably possible and would not be required, but code that uses a Python 3-specific module such as ipaddress should be able to use a backport to 2.7 if available).
 
 
@@ -647,7 +644,7 @@ All SQL keywords should be in upper case.
 C Code
 ------
 
-C code must be optional, and work across multiple platforms (MSVC++9/10/14 for Pythons 2.7, 3.4, and 3.5 on Windows, as well as recent GCCs and Clangs for Linux, macOS, and FreeBSD).
+C code must be optional, and work across multiple platforms (MSVC++9/10/14 for Pythons 2.7 and 3.5+ on Windows, as well as recent GCCs and Clangs for Linux, macOS, and FreeBSD).
 
 C code should be kept in external bindings packages which Twisted depends on.
 If creating new C extension modules, using `cffi <https://cffi.readthedocs.io/en/latest/>`_ is highly encouraged, as it will perform well on PyPy and CPython, and be easier to use on Python 2 and 3.
