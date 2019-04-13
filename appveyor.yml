@@ -42,39 +42,39 @@ environment:
     - PYTHON_HOME: C:\\Python27-x64
       PYTHON_VERSION: "2.7"
       PYTHON_ARCH: "64"
-      TOXENV: py27-alldeps-withcov-windows,coverage-prepare,codecov-publish,coveralls-publish
+      TOXENV: py27-alldeps-withcov-windows,coverage-prepare,codecov-push,coveralls-push
       TWISTED_REACTOR: "select"
     - PYTHON_HOME: C:\\PYTHON36-x64
       PYTHON_VERSION: "3.6"
       PYTHON_ARCH: "64"
-      TOXENV: py36-alldeps-withcov-windows,coverage-prepare,codecov-publish,coveralls-publish
+      TOXENV: py36-alldeps-withcov-windows,coverage-prepare,codecov-push,coveralls-push
       TWISTED_REACTOR: "select"
     - PYTHON_HOME: C:\\PYTHON37-x64
       PYTHON_VERSION: "3.7"
       PYTHON_ARCH: "64"
-      TOXENV: py37-alldeps-withcov-windows,coverage-prepare,codecov-publish,coveralls-publish
+      TOXENV: py37-alldeps-withcov-windows,coverage-prepare,codecov-push,coveralls-push
       TWISTED_REACTOR: "select"
     - PYTHON_HOME: C:\\PYTHON37-x64
       PYTHON_VERSION: "3.7"
       PYTHON_ARCH: "64"
-      TOXENV: py37-nodeps-withcov-windows,coverage-prepare,codecov-publish,coveralls-publish
+      TOXENV: py37-nodeps-withcov-windows,coverage-prepare,codecov-push,coveralls-push
       TWISTED_REACTOR: "select"
 
     # IOCPReactor tests
     - PYTHON_HOME: C:\\Python27-x64
       PYTHON_VERSION: "2.7"
       PYTHON_ARCH: "64"
-      TOXENV: py27-alldeps-withcov-windows,coverage-prepare,codecov-publish,coveralls-publish
+      TOXENV: py27-alldeps-withcov-windows,coverage-prepare,codecov-push,coveralls-push
       TWISTED_REACTOR: "iocp"
     - PYTHON_HOME: C:\\PYTHON36-x64
       PYTHON_VERSION: "3.6"
       PYTHON_ARCH: "64"
-      TOXENV: py36-alldeps-withcov-windows,coverage-prepare,codecov-publish,coveralls-publish
+      TOXENV: py36-alldeps-withcov-windows,coverage-prepare,codecov-push,coveralls-push
       TWISTED_REACTOR: "iocp"
     - PYTHON_HOME: C:\\PYTHON37-x64
       PYTHON_VERSION: "3.7"
       PYTHON_ARCH: "64"
-      TOXENV: py37-alldeps-withcov-windows,coverage-prepare,codecov-publish,coveralls-publish
+      TOXENV: py37-alldeps-withcov-windows,coverage-prepare,codecov-push,coveralls-push
       TWISTED_REACTOR: "iocp"
 
 
