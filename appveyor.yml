@@ -29,8 +29,8 @@ environment:
     # /E:ON and /V:ON options are not enabled in the batch script intepreter
     # See: http://stackoverflow.com/a/13751649/163740
     CMD_IN_ENV: "cmd /E:ON /V:ON /C .\\bin\\admin\\run_with_env.cmd"
-    COVERALLS_REPO_TOKEN:
-      secure: 8Pz7hs3Yq/ggX017T4MX6qUAUe7u6+fbE8fvgrPII9WLbgLwyB+ESUbjB6zsDP9l
+  COVERALLS_REPO_TOKEN:
+    secure: 8Pz7hs3Yq/ggX017T4MX6qUAUe7u6+fbE8fvgrPII9WLbgLwyB+ESUbjB6zsDP9l
 
   # Only use pre-installed Python versions, which Appveyor may upgrade to
   # a later point release.
