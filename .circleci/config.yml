@@ -148,6 +148,11 @@ jobs:
           command: |
             tox -r -e py27-alldeps-withcov-posix twisted
 
+      - run:
+          name: Upload coverage.
+          command: |
+            tox -r -e coverage-prepare,codecov-push,coveralls-push
+
   #
   # MacOS with Python3.7 and default reactor.
   #
@@ -174,6 +179,11 @@ jobs:
           name: Test with the default reactor.
           command: |
             tox -r -e py37-alldeps-withcov-posix twisted
+
+      - run:
+          name: Upload coverage.
+          command: |
+            tox -r -e coverage-prepare,codecov-push,coveralls-push
 
 
 # First we run the static checkers, and only if they pass we spin the macOS.
