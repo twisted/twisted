@@ -1,0 +1,1 @@
+twisted.names.client.Resolver will no longer infinite loop if it cannot bind a UDP port to use for resolving.
