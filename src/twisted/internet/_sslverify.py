@@ -36,7 +36,6 @@ from twisted.python import util
 from twisted.python.deprecate import _mutuallyExclusiveArguments
 from twisted.python.compat import nativeString, unicode
 from twisted.python.failure import Failure
-from twisted.python.util import FancyEqMixin
 
 from twisted.python.deprecate import deprecated
 
@@ -375,9 +374,11 @@ class DistinguishedName(dict):
             if v is not None:
                 l.append((label, nativeString(v)))
         lablen += 2
-        for n, (label, attr) in enumerate(l):
-            l[n] = (label.rjust(lablen)+': '+ attr)
+        for n, (label, attrib) in enumerate(l):
+            l[n] = (label.rjust(lablen) + ': ' + attrib)
         return '\n'.join(l)
+
+
 
 DN = DistinguishedName
 
@@ -1794,7 +1795,9 @@ def _expandCipherString(cipherString, method, options):
     if isinstance(ciphers[0], unicode):
         return tuple(OpenSSLCipher(cipher) for cipher in ciphers)
     else:
-        return tuple(OpenSSLCipher(cipher.decode('ascii')) for cipher in ciphers)
+        return tuple(
+            OpenSSLCipher(cipher.decode('ascii')) for cipher in ciphers
+        )
 
 
 
@@ -1812,9 +1815,10 @@ def _selectCiphers(wantedCiphers, availableCiphers):
 
     @rtype: L{tuple} of L{OpenSSLCipher}
     """
-    return tuple([cipher
-                for cipher in wantedCiphers
-                if cipher in availableCiphers])
+    return tuple(
+        [cipher for cipher in wantedCiphers if cipher in availableCiphers]
+    )
+
 
 
 @implementer(IAcceptableCiphers)
