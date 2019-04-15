@@ -8,7 +8,11 @@ from __future__ import division, absolute_import
 import warnings
 import attr
 
-from functools import lru_cache
+try:
+    from functools import lru_cache
+except ImportError:
+    from backports.functools_lru_cache import lru_cache
+
 from constantly import Names, NamedConstant
 from hashlib import md5
 
