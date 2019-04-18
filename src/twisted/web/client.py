@@ -978,7 +978,7 @@ class HostnameCachingHTTPSPolicy(object):
 
     @ivar _cacheSize: See C{cacheSize} parameter of L{__init__}.
 
-    @since: Twisted NEXT
+    @since: Twisted 19.2.0
     """
 
     def __init__(self, policyforHTTPS, cacheSize=20):
