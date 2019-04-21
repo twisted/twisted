@@ -1752,7 +1752,7 @@ class OpenSSLCipher(object):
     """
     A representation of an OpenSSL cipher.
 
-    @param fullName: The full name of the cipher. For example
+    @ivar fullName: The full name of the cipher. For example
         C{u"ECDHE-RSA-AES256-GCM-SHA384"}.
     @type fullName: L{unicode}
     """
