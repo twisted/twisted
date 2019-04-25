@@ -460,6 +460,7 @@ class PluggableResolverMixin(object):
     resolver = BlockingResolver()
     _nameResolver = None
 
+    # IReactorPluggableResolver
     def installResolver(self, resolver):
         """
         See L{IReactorPluggableResolver}.
@@ -486,6 +487,7 @@ class PluggableResolverMixin(object):
         return self.resolver.getHostByName(name, timeout)
 
 
+    # IReactorPluggableNameResolver
     def installNameResolver(self, resolver):
         """
         See L{IReactorPluggableNameResolver}.
