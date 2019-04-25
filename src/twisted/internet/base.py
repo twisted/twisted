@@ -458,7 +458,7 @@ class PluggableResolverMixin(object):
     @ivar _nameResolver: The installed L{IHostnameResolver}.
     """
     resolver = BlockingResolver()
-    _nameResolver = None
+    _nameResolver = _SimpleResolverComplexifier(resolver)
 
     # IReactorPluggableResolver
     def installResolver(self, resolver):
