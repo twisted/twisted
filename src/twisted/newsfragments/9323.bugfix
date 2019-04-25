@@ -1,0 +1,1 @@
+twisted.internet.process.Process no longer causes the reactor to hang on Cygwin while waiting for the process's stdin to close.

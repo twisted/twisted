@@ -103,7 +103,7 @@ def unregisterReapProcessHandler(pid, process):
 
 def detectLinuxBrokenPipeBehavior():
     """
-    On some Linux version, write-only pipe are detected as readable. This
+    On some Linux versions, write-only pipe are detected as readable. This
     function is here to check if this bug is present or not.
 
     See L{ProcessWriter.doRead} for a more detailed explanation.
@@ -111,6 +111,10 @@ def detectLinuxBrokenPipeBehavior():
     @return: C{True} if Linux pipe behaviour is broken.
     @rtype : L{bool}
     """
+
+    if not sys.platform.startswith('linux'):
+        return False
+
     r, w = os.pipe()
     os.write(w, b'a')
     reads, writes, exes = select.select([w], [], [], 0)
@@ -126,6 +130,34 @@ def detectLinuxBrokenPipeBehavior():
 
 
 brokenLinuxPipeBehavior = detectLinuxBrokenPipeBehavior()
+
+
+
+def detectCygwinBrokenPipeBehavior():
+    """
+    On Cygwin, polling on the write end of a pipe whose read end has been
+    closed does not set the POLLERR bit.
+
+    In this case we should not use the "enableReadHack" flag of
+    L{ProcessWriter.doRead} or else a select()/poll() on that file descriptor
+    will block.
+
+    @return: C{True} if Cygwin pipe behaviour is broken.
+    @rtype : L{bool}
+    """
+
+    if sys.platform != 'cygwin':
+        return False
+
+    r, w = os.pipe()
+    os.close(r)
+    reads, writes, excs = select.select([w], [], [], 0)
+    os.close(w)
+    return not reads
+
+
+
+brokenCygwinPipeBehavior = detectCygwinBrokenPipeBehavior()
 
 
 
@@ -163,7 +195,7 @@ class ProcessWriter(abstract.FileDescriptor):
             self.enableReadHack = False
         elif forceReadHack:
             self.enableReadHack = True
-        else:
+        elif not brokenCygwinPipeBehavior:
             # Detect if this fd is actually a write-only fd. If it's
             # valid to read, don't try to detect closing via read.
             # This really only means that we cannot detect a TTY's write
@@ -761,7 +793,8 @@ class Process(_BaseProcess):
 
             if childFDs[childFD] == "w":
                 writer = self.processWriterFactory(reactor, self, childFD,
-                                        parentFD, forceReadHack=True)
+                                        parentFD,
+                                        forceReadHack=not brokenCygwinPipeBehavior)
                 self.pipes[childFD] = writer
 
         try:
@@ -980,6 +1013,9 @@ class Process(_BaseProcess):
         #  all readers have indicated EOF
         # This insures that we've gathered all output from the process.
         if self.pipes:
+            if (brokenCygwinPipeBehavior and self.lostProcess and
+                    list(self.pipes.keys()) == [0]):
+                self.closeStdin()
             return
         if not self.lostProcess:
             self.reapProcess()
