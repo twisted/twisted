@@ -476,17 +476,6 @@ class PluggableResolverMixin(object):
         return oldResolver
 
 
-    def resolve(self, name, timeout = (1, 3, 11, 45)):
-        """Return a Deferred that will resolve a hostname.
-        """
-        if not name:
-            # XXX - This is *less than* '::', and will screw up IPv6 servers
-            return defer.succeed('0.0.0.0')
-        if abstract.isIPAddress(name):
-            return defer.succeed(name)
-        return self.resolver.getHostByName(name, timeout)
-
-
     # IReactorPluggableNameResolver
     def installNameResolver(self, resolver):
         """
@@ -637,6 +626,17 @@ class ReactorBase(PluggableResolverMixin):
 
 
     # IReactorCore
+    def resolve(self, name, timeout = (1, 3, 11, 45)):
+        """Return a Deferred that will resolve a hostname.
+        """
+        if not name:
+            # XXX - This is *less than* '::', and will screw up IPv6 servers
+            return defer.succeed('0.0.0.0')
+        if abstract.isIPAddress(name):
+            return defer.succeed(name)
+        return self.resolver.getHostByName(name, timeout)
+
+
     def stop(self):
         """
         See twisted.internet.interfaces.IReactorCore.stop.
