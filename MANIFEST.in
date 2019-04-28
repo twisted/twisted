@@ -20,6 +20,7 @@ include NEWS.rst README.rst INSTALL.rst CONTRIBUTING LICENSE code_of_conduct.md
 exclude pyproject.toml
 exclude codecov.yml
 exclude appveyor.yml
+exclude .coveralls.yml
 exclude .circleci
 recursive-exclude .circleci *
 prune bin

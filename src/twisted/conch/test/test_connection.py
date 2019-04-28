@@ -52,6 +52,7 @@ class TestChannel(channel.SSHChannel):
     """
     name = b"TestChannel"
     gotOpen = False
+    gotClosed = False
 
     def logPrefix(self):
         return "TestChannel %i" % self.id
@@ -241,9 +242,16 @@ class ConnectionTests(unittest.TestCase):
         self.conn.openChannel(channel2)
         self.conn.ssh_CHANNEL_OPEN_CONFIRMATION(b'\x00\x00\x00\x00' * 4)
         self.assertTrue(channel1.gotOpen)
+        self.assertFalse(channel1.gotClosed)
         self.assertFalse(channel2.gotOpen)
+        self.assertFalse(channel2.gotClosed)
         self.conn.serviceStopped()
         self.assertTrue(channel1.gotClosed)
+        self.assertFalse(channel2.gotOpen)
+        self.assertFalse(channel2.gotClosed)
+        from twisted.internet.error import ConnectionLost
+        self.assertIsInstance(channel2.openFailureReason,
+                              ConnectionLost)
 
     def test_GLOBAL_REQUEST(self):
         """
@@ -488,6 +496,9 @@ class ConnectionTests(unittest.TestCase):
         """
         channel = TestChannel()
         self._openChannel(channel)
+        self.assertTrue(channel.gotOpen)
+        self.assertFalse(channel.gotOneClose)
+        self.assertFalse(channel.gotClosed)
         self.conn.sendClose(channel)
         self.conn.ssh_CHANNEL_CLOSE(b'\x00\x00\x00\x00')
         self.assertTrue(channel.gotOneClose)
@@ -673,6 +684,8 @@ class ConnectionTests(unittest.TestCase):
 
         channel2 = TestChannel()
         self._openChannel(channel2)
+        self.assertTrue(channel2.gotOpen)
+        self.assertFalse(channel2.gotClosed)
         channel2.remoteClosed = True
         self.conn.sendClose(channel2)
         self.assertTrue(channel2.gotClosed)

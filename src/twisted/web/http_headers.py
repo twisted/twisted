@@ -26,7 +26,7 @@ def _dashCapitalize(name):
 
 
 def _sanitizeLinearWhitespace(headerComponent):
-    """
+    r"""
     Replace linear whitespace (C{\n}, C{\r\n}, C{\r}) in a header key
     or value with a single space.  If C{headerComponent} is not
     L{bytes}, it is passed through unchanged.
