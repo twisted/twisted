@@ -1,1 +1,1 @@
-twisted.web.http.Request no longer throws an Exception on write when in _disconnected state.
+write() to disconnected twisted.web.http.Request will no longer raise AttributeError.

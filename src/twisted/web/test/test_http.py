@@ -2935,7 +2935,7 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
     def test_writeAfterConnectionLost(self):
         """
         Calling L{Request.write} after L{Request.connectionLost} has been
-        called should not throw an exception. L{RuntimeError} will be raised
+        called does not raise an exception. L{RuntimeError} will be raised
         when finish is called on the request.
         """
         channel = DummyChannel()
