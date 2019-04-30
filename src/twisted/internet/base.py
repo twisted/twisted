@@ -449,6 +449,7 @@ class _ThreePhaseEvent(object):
                     log.err()
 
 
+
 @implementer(IReactorPluggableNameResolver, IReactorPluggableResolver)
 class PluggableResolverMixin(object):
     """
@@ -626,7 +627,7 @@ class ReactorBase(PluggableResolverMixin):
 
 
     # IReactorCore
-    def resolve(self, name, timeout = (1, 3, 11, 45)):
+    def resolve(self, name, timeout=(1, 3, 11, 45)):
         """Return a Deferred that will resolve a hostname.
         """
         if not name:

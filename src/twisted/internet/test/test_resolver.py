@@ -46,6 +46,7 @@ from twisted.internet.base import (
 )
 
 
+
 class DeterministicThreadPool(ThreadPool, object):
     """
     Create a deterministic L{ThreadPool} object.
@@ -573,7 +574,8 @@ class ReactorInstallationTests(UnitTest, object):
 
     def test_installingOldStyleResolver(self):
         """
-        L{PluggableResolverMixin} will wrap an L{IResolverSimple} in a complexifier.
+        L{PluggableResolverMixin} will wrap an L{IResolverSimple} in a
+        complexifier.
         """
         reactor = PluggableResolverMixin()
         it = SillyResolverSimple()
