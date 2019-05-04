@@ -1313,8 +1313,8 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, unittest.TestCase):
     def test_tlsProtocolsAllSecureTLS(self):
         """
         When calling L{sslverify.OpenSSLCertificateOptions} with
-        C{insecurelyLowerMinimumTo} set to TLSv1.3, it will ignore all TLSs below
-        1.3 and SSL.
+        C{insecurelyLowerMinimumTo} set to TLSv1.3, it will ignore all TLSs
+        below 1.3 and SSL.
         """
         opts = sslverify.OpenSSLCertificateOptions(
             privateKey=self.sKey,
