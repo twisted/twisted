@@ -51,6 +51,9 @@
         name = "Misc"
         showcontent = false
 
+[tool.black]
+skip-string-normalization = true
+
 [tool.isort]
 line_length = 79
 sections = "FUTURE,STDLIB,ZOPE,OPENSSL,THIRDPARTY,FIRSTPARTY,LOCALFOLDER"
