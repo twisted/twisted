@@ -96,24 +96,6 @@ jobs:
           command: |
             venv/bin/tox -r -e manifest-checker
 
-static_checkers:
-    working_directory: ~/static-checkers
-    docker:
-      - image: circleci/python:3.6
-    environment:
-      PYTHON: python3.6
-    steps:
-      # Get the source.
-      - checkout
-
-      - <<: *preparation_run_group
-
-      - run:
-          name: Check black
-          when: always
-          command: |
-            venv/bin/tox -r -e black
-
   #
   # Documentation tests are slow so we execute them in a separate job.
   #
