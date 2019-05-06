@@ -47,7 +47,7 @@ class DelayedCall:
     # enable .debug to record creator call stack, and it will be logged if
     # an exception occurs while the function is being run
     debug = False
-    _str = None
+    _repr = None
 
     def __init__(self, time, func, args, kw, cancel, reset,
                  seconds=runtimeSeconds):
@@ -101,7 +101,7 @@ class DelayedCall:
             self.canceller(self)
             self.cancelled = 1
             if self.debug:
-                self._str = str(self)
+                self._repr = repr(self)
             del self.func, self.args, self.kw
 
     def reset(self, secondsFromNow):
@@ -181,9 +181,15 @@ class DelayedCall:
         return self.time < other.time
 
 
-    def __str__(self):
-        if self._str is not None:
-            return self._str
+    def __repr__(self):
+        """
+        Implement C{repr()} for L{DelayedCall} instances.
+
+        @rtype: C{str}
+        @returns: String containing details of the L{DelayedCall}.
+        """
+        if self._repr is not None:
+            return self._repr
         if hasattr(self, 'func'):
             # This code should be replaced by a utility function in reflect;
             # see ticket #6066:
@@ -444,9 +450,60 @@ class _ThreePhaseEvent(object):
 
 
 
-@implementer(IReactorCore, IReactorTime, IReactorPluggableResolver,
-             IReactorPluggableNameResolver, _ISupportsExitSignalCapturing)
-class ReactorBase(object):
+@implementer(IReactorPluggableNameResolver, IReactorPluggableResolver)
+class PluggableResolverMixin(object):
+    """
+    A mixin which implements the pluggable resolver reactor interfaces.
+
+    @ivar resolver: The installed L{IResolverSimple}.
+    @ivar _nameResolver: The installed L{IHostnameResolver}.
+    """
+    resolver = BlockingResolver()
+    _nameResolver = _SimpleResolverComplexifier(resolver)
+
+    # IReactorPluggableResolver
+    def installResolver(self, resolver):
+        """
+        See L{IReactorPluggableResolver}.
+
+        @param resolver: see L{IReactorPluggableResolver}.
+
+        @return: see L{IReactorPluggableResolver}.
+        """
+        assert IResolverSimple.providedBy(resolver)
+        oldResolver = self.resolver
+        self.resolver = resolver
+        self._nameResolver = _SimpleResolverComplexifier(resolver)
+        return oldResolver
+
+
+    # IReactorPluggableNameResolver
+    def installNameResolver(self, resolver):
+        """
+        See L{IReactorPluggableNameResolver}.
+
+        @param resolver: See L{IReactorPluggableNameResolver}.
+
+        @return: see L{IReactorPluggableNameResolver}.
+        """
+        previousNameResolver = self._nameResolver
+        self._nameResolver = resolver
+        self.resolver = _ComplexResolverSimplifier(resolver)
+        return previousNameResolver
+
+
+    @property
+    def nameResolver(self):
+        """
+        Implementation of read-only
+        L{IReactorPluggableNameResolver.nameResolver}.
+        """
+        return self._nameResolver
+
+
+
+@implementer(IReactorCore, IReactorTime, _ISupportsExitSignalCapturing)
+class ReactorBase(PluggableResolverMixin):
     """
     Default base class for Reactors.
 
@@ -482,12 +539,12 @@ class ReactorBase(object):
     _stopped = True
     installed = False
     usingThreads = False
-    resolver = BlockingResolver()
     _exitSignal = None
 
     __name__ = "twisted.internet.reactor"
 
     def __init__(self):
+        super(ReactorBase, self).__init__()
         self.threadCallQueue = []
         self._eventTriggers = {}
         self._pendingTimedCalls = []
@@ -499,7 +556,6 @@ class ReactorBase(object):
         self._startedBefore = False
         # reactor internal readers, e.g. the waker.
         self._internalReaders = set()
-        self._nameResolver = None
         self.waker = None
 
         # Arrange for the running attribute to change to True at the right time
@@ -521,44 +577,6 @@ class ReactorBase(object):
     def installWaker(self):
         raise NotImplementedError(
             reflect.qual(self.__class__) + " did not implement installWaker")
-
-
-    def installResolver(self, resolver):
-        """
-        See L{IReactorPluggableResolver}.
-
-        @param resolver: see L{IReactorPluggableResolver}.
-
-        @return: see L{IReactorPluggableResolver}.
-        """
-        assert IResolverSimple.providedBy(resolver)
-        oldResolver = self.resolver
-        self.resolver = resolver
-        self._nameResolver = _SimpleResolverComplexifier(resolver)
-        return oldResolver
-
-
-    def installNameResolver(self, resolver):
-        """
-        See L{IReactorPluggableNameResolver}.
-
-        @param resolver: See L{IReactorPluggableNameResolver}.
-
-        @return: see L{IReactorPluggableNameResolver}.
-        """
-        previousNameResolver = self._nameResolver
-        self._nameResolver = resolver
-        self.resolver = _ComplexResolverSimplifier(resolver)
-        return previousNameResolver
-
-
-    @property
-    def nameResolver(self):
-        """
-        Implementation of read-only
-        L{IReactorPluggableNameResolver.nameResolver}.
-        """
-        return self._nameResolver
 
 
     def wakeUp(self):
@@ -608,7 +626,8 @@ class ReactorBase(object):
             reflect.qual(self.__class__) + " did not implement getWriters")
 
 
-    def resolve(self, name, timeout = (1, 3, 11, 45)):
+    # IReactorCore
+    def resolve(self, name, timeout=(1, 3, 11, 45)):
         """Return a Deferred that will resolve a hostname.
         """
         if not name:
@@ -618,9 +637,7 @@ class ReactorBase(object):
             return defer.succeed(name)
         return self.resolver.getHostByName(name, timeout)
 
-    # Installation.
 
-    # IReactorCore
     def stop(self):
         """
         See twisted.internet.interfaces.IReactorCore.stop.
@@ -1161,6 +1178,11 @@ class BaseConnector:
         raise NotImplementedError(
             reflect.qual(self.__class__) + " did not implement "
             "getDestination")
+
+    def __repr__(self):
+        return "<%s instance at 0x%x %s %s>" % (
+            reflect.qual(self.__class__), id(self), self.state,
+            self.getDestination())
 
 
 

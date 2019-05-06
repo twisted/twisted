@@ -9,6 +9,7 @@ HTTP client.
 from __future__ import division, absolute_import
 
 import os
+import collections
 import warnings
 
 try:
@@ -954,6 +955,73 @@ deprecatedModuleAttribute(Version("Twisted", 14, 0, 0),
                           .split("; ")[1],
                           WebClientContextFactory.__module__,
                           WebClientContextFactory.__name__)
+
+
+
+@implementer(IPolicyForHTTPS)
+class HostnameCachingHTTPSPolicy(object):
+    """
+    IPolicyForHTTPS that wraps a L{IPolicyForHTTPS} and caches the created
+    L{IOpenSSLClientConnectionCreator}.
+
+    This policy will cache up to C{cacheSize}
+    L{client connection creators <twisted.internet.interfaces.
+    IOpenSSLClientConnectionCreator>} for reuse in subsequent requests to
+    the same hostname.
+
+    @ivar _policyForHTTPS: See C{policyforHTTPS} parameter of L{__init__}.
+
+    @ivar _cache: A cache associating hostnames to their
+        L{client connection creators <twisted.internet.interfaces.
+        IOpenSSLClientConnectionCreator>}.
+    @type _cache: L{collections.OrderedDict}
+
+    @ivar _cacheSize: See C{cacheSize} parameter of L{__init__}.
+
+    @since: Twisted 19.2.0
+    """
+
+    def __init__(self, policyforHTTPS, cacheSize=20):
+        """
+        @param policyforHTTPS: The IPolicyForHTTPS to wrap.
+        @type policyforHTTPS: L{IPolicyForHTTPS}
+
+        @param cacheSize: The maximum size of the hostname cache.
+        @type cacheSize: L{int}
+        """
+        self._policyForHTTPS = policyforHTTPS
+        self._cache = collections.OrderedDict()
+        self._cacheSize = cacheSize
+
+
+    def creatorForNetloc(self, hostname, port):
+        """
+        Create a L{client connection creator
+        <twisted.internet.interfaces.IOpenSSLClientConnectionCreator>} for a
+        given network location and cache it for future use.
+
+        @param hostname: The hostname part of the URI.
+        @type hostname: L{bytes}
+
+        @param port: The port part of the URI.
+        @type port: L{int}
+
+        @return: a connection creator with appropriate verification
+            restrictions set
+        @rtype: L{client connection creator
+            <twisted.internet.interfaces.IOpenSSLClientConnectionCreator>}
+        """
+        host = hostname.decode("ascii")
+        try:
+            creator = self._cache.pop(host)
+        except KeyError:
+            creator = self._policyForHTTPS.creatorForNetloc(hostname, port)
+
+        self._cache[host] = creator
+        if len(self._cache) > self._cacheSize:
+            self._cache.popitem(last=False)
+
+        return creator
 
 
 

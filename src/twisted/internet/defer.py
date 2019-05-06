@@ -732,6 +732,7 @@ class Deferred:
         return self
 
 
+    @failure._extraneous
     def send(self, value=None):
         if self.paused:
             # If we're paused, we have no result to give
@@ -744,6 +745,7 @@ class Deferred:
             # Clear the failure on debugInfo so it doesn't raise "unhandled
             # exception"
             self._debugInfo.failResult = None
+            result.value.__failure__ = result
             raise result.value
         else:
             raise StopIteration(result)
@@ -802,8 +804,8 @@ class Deferred:
 
         @note: This creates a L{Deferred} from a L{asyncio.Future}, I{not} from
             a C{coroutine}; in other words, you will need to call
-            L{asyncio.async}, L{asyncio.ensure_future},
-            L{asyncio.AbstractEventLoop.create_task} or create an
+            L{asyncio.ensure_future},
+            L{asyncio.loop.create_task} or create an
             L{asyncio.Task} yourself to get from a C{coroutine} to a
             L{asyncio.Future} if what you have is an awaitable coroutine and
             not a L{asyncio.Future}.  (The length of this list of techniques is
@@ -1378,6 +1380,7 @@ class _CancellationStatus(object):
 
 
 
+@failure._extraneous
 def _inlineCallbacks(result, g, status):
     """
     Carry out the work of L{inlineCallbacks}.
@@ -1653,6 +1656,20 @@ class _ConcurrencyPrimitive(object):
         d = self.acquire()
         d.addCallback(execute)
         return d
+
+
+    def __aenter__(self):
+        """
+        We can be used as an asynchronous context manager.
+        """
+        return self.acquire()
+
+
+    def __aexit__(self, exc_type, exc_val, exc_tb):
+        self.release()
+        # We return False to indicate that we have not consumed the
+        # exception, if any.
+        return succeed(False)
 
 
 

@@ -65,9 +65,9 @@ on event-based network programming and multiprotocol integration.
     classifiers=[
         "Programming Language :: Python :: 2.7",
         "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.4",
         "Programming Language :: Python :: 3.5",
         "Programming Language :: Python :: 3.6",
+        "Programming Language :: Python :: 3.7",
     ],
 )
 
@@ -91,15 +91,18 @@ _EXTRA_OPTIONS = dict(
     dev=_dev,
     tls=[
         'pyopenssl >= 16.0.0',
-        'service_identity',
+        # service_identity 18.1.0 added support for validating IP addresses in
+        # certificate subjectAltNames
+        'service_identity >= 18.1.0',
         # idna 2.3 introduced some changes that break a few things.  Avoid it.
         # The problems were fixed in 2.4.
         'idna >= 0.6, != 2.3',
     ],
     conch=[
         'pyasn1',
-        'cryptography >= 1.5',
+        'cryptography >= 2.5',
         'appdirs >= 1.4.0',
+        'bcrypt >= 3.0.0',
     ],
     soap=['soappy'],
     serial=['pyserial >= 3.0'],
@@ -198,8 +201,8 @@ def _checkPythonVersion():
     version = getattr(sys, "version_info", (0,))
     if version < (2, 7):
         raise ImportError("Twisted requires Python 2.7 or later.")
-    elif version >= (3, 0) and version < (3, 4):
-        raise ImportError("Twisted on Python 3 requires Python 3.4 or later.")
+    elif version >= (3, 0) and version < (3, 5):
+        raise ImportError("Twisted on Python 3 requires Python 3.5 or later.")
 
 
 
@@ -401,8 +404,6 @@ notPortedModules = [
     "twisted.news.test.test_nntp",
     "twisted.plugins.twisted_mail",
     "twisted.plugins.twisted_news",
-    "twisted.protocols.mice.__init__",
-    "twisted.protocols.mice.mouseman",
     "twisted.protocols.shoutcast",
     "twisted.python._pydoctor",
     "twisted.python.finalize",

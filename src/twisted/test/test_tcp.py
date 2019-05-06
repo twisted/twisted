@@ -7,7 +7,10 @@ Tests for implementations of L{IReactorTCP}.
 
 from __future__ import division, absolute_import
 
-import socket, random, errno
+import socket
+import random
+import errno
+import hamcrest
 from functools import wraps
 
 from zope.interface import implementer
@@ -1135,17 +1138,18 @@ class ProperlyCloseFilesMixin:
         raise NotImplementedError()
 
 
-    def getHandleErrorCode(self):
+    def getHandleErrorCodeMatcher(self):
         """
-        Return the errno expected to result from writing to a closed
-        platform socket handle.
+        Return a L{hamcrest.core.matcher.Matcher} that matches the
+        errno expected to result from writing to a closed platform
+        socket handle.
         """
         # Windows and Python 3: returns WSAENOTSOCK
         # Windows and Python 2: returns EBADF
         # Linux, FreeBSD, macOS: returns EBADF
         if platform.isWindows() and _PY3:
-            return errno.WSAENOTSOCK
-        return errno.EBADF
+            return hamcrest.equal_to(errno.WSAENOTSOCK)
+        return hamcrest.equal_to(errno.EBADF)
 
 
     def test_properlyCloseFiles(self):
@@ -1190,10 +1194,13 @@ class ProperlyCloseFilesMixin:
             if not server.lostConnectionReason.check(error.ConnectionClosed):
                 err(server.lostConnectionReason,
                     "Server lost connection for unexpected reason")
-            expectedErrorCode = self.getHandleErrorCode()
+            errorCodeMatcher = self.getHandleErrorCodeMatcher()
             exception = self.assertRaises(
                 self.getHandleExceptionType(), client.handle.send, b'bytes')
-            self.assertEqual(exception.args[0], expectedErrorCode)
+            hamcrest.assert_that(
+                exception.args[0],
+                errorCodeMatcher,
+            )
         clientDeferred.addCallback(clientDisconnected)
 
         def cleanup(passthrough):
@@ -1356,15 +1363,22 @@ class AddressTests(unittest.TestCase):
 
 
 class LargeBufferWriterProtocol(protocol.Protocol):
-
     # Win32 sockets cannot handle single huge chunks of bytes.  Write one
-    # massive string to make sure Twisted deals with this fact.
+    # massive string to make sure Twisted deals with this fact. Immediately
+    # follow that with another write to test behaviour under load (see issue
+    # #9446)
 
     def connectionMade(self):
-        # write 60MB
-        self.transport.write(b'X'*self.factory.len)
-        self.factory.done = 1
-        self.transport.loseConnection()
+        self.transport.write(b'X'*(self.factory.len-1))
+
+        def finish():
+            self.transport.write(b'X')
+            self.factory.done = 1
+            self.transport.loseConnection()
+
+        reactor.callLater(0.001, finish)
+
+
 
 class LargeBufferReaderProtocol(protocol.Protocol):
     def dataReceived(self, data):
@@ -1420,10 +1434,14 @@ class LargeBufferTests(unittest.TestCase):
         reactor.connectTCP("127.0.0.1", n, wrappedClientF)
 
         d = defer.gatherResults([wrappedF.deferred, wrappedClientF.deferred])
+
         def check(ignored):
             self.assertTrue(f.done, "writer didn't finish, it probably died")
-            self.assertTrue(clientF.len == self.datalen,
+            self.assertTrue(clientF.len >= self.datalen,
                             "client didn't receive all the data it expected "
+                            "(%d != %d)" % (clientF.len, self.datalen))
+            self.assertTrue(clientF.len <= self.datalen,
+                            "client did receive more data than it expected "
                             "(%d != %d)" % (clientF.len, self.datalen))
             self.assertTrue(clientF.done,
                             "client didn't see connection dropped")
