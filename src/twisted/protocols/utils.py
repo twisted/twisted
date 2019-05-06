@@ -11,8 +11,6 @@ from __future__ import division, absolute_import
 from socket import AF_INET, AF_INET6
 from io import BytesIO
 
-import warnings
-
 from zope.interface import implementer, implementedBy
 from zope.interface.verify import verifyClass
 
@@ -33,12 +31,6 @@ from twisted.internet.task import Clock
 from twisted.internet.address import IPv4Address, UNIXAddress, IPv6Address
 from twisted.logger import ILogObserver
 
-from twisted.python.deprecate import (
-    deprecatedModuleAttribute, deprecated
-)
-from twisted.python.versions import Verison
-from twisted.protocols import utils
-
 
 class AccumulatingProtocol(protocol.Protocol):
     """
@@ -54,12 +46,6 @@ class AccumulatingProtocol(protocol.Protocol):
     @ivar closedDeferred: If set to a L{Deferred}, this will be fired when
         C{connectionLost} is called.
     """
-    deprecatedModuleAttribute(
-        Version("Twisted", 19, 3, 0),
-        "Please use twisted.protocols.utils.AccumulatingProtocol instead",
-        "twisted.test.proto_helpers",
-        "AccumulatingProtocol")
-
     made = closed = 0
     closedReason = None
 
@@ -89,13 +75,6 @@ class AccumulatingProtocol(protocol.Protocol):
 
 
 class LineSendingProtocol(basic.LineReceiver):
-
-    deprecatedModuleAttribute(
-        Version("Twisted", 19, 3, 0),
-        "Please use twisted.protocols.utils.LineSendingProtocol instead",
-        "twisted.test.proto_helpers",
-        "LineSendingProtocol")
-
     lostConn = False
 
     def __init__(self, lines, start = True):
@@ -120,12 +99,6 @@ class LineSendingProtocol(basic.LineReceiver):
 
 
 class FakeDatagramTransport:
-    deprecatedModuleAttribute(
-        Version("Twisted", 19, 3, 0),
-        "Please use twisted.protocols.utils.FakeDatagramTransport instead",
-        "twisted.test.proto_helpers",
-        "FakeDatagramTransport")
-
     noAddr = object()
 
     def __init__(self):
@@ -188,11 +161,6 @@ class StringTransport:
         Defaults to L{False}.
     @type lenient: L{bool}
     """
-    deprecatedModuleAttribute(
-        Version("Twisted", 19, 3, 0),
-        "Please use twisted.protocols.utils.StringTransport instead",
-        "twisted.test.proto_helpers",
-        "StringTransport")
 
     disconnecting = False
     disconnected = False
@@ -323,11 +291,6 @@ class StringTransportWithDisconnection(StringTransport):
     A L{StringTransport} which on disconnection will trigger the connection
     lost on the attached protocol.
     """
-    deprecatedModuleAttribute(
-        Version("Twisted", 19, 3, 0),
-        "Please use twisted.protocols.utils.StringTransportWithDisconnection instead",
-        "twisted.test.proto_helpers",
-        "StringTransportWithDisconnection")
 
     def loseConnection(self):
         if self.connected:
@@ -341,12 +304,6 @@ class StringIOWithoutClosing(BytesIO):
     """
     A BytesIO that can't be closed.
     """
-    deprecatedModuleAttribute(
-        Version("Twisted", 19, 3, 0),
-        "Please use twisted.protocols.utils.StringIOWithoutClosing instead",
-        "twisted.test.proto_helpers",
-        "StringIOWithoutClosing")
-
     def close(self):
         """
         Do nothing.
@@ -503,11 +460,6 @@ class MemoryReactor(object):
     @ivar adoptedStreamConnections: Keeps track of stream-oriented
         connections added using C{adoptStreamConnection}.
     """
-    deprecatedModuleAttribute(
-        Version("Twisted", 19, 3, 0),
-        "Please use twisted.protocols.utils.MemoryReactor instead",
-        "twisted.test.proto_helpers",
-        "MemoryReactor")
 
     def __init__(self):
         """
@@ -812,12 +764,6 @@ for iface in implementedBy(MemoryReactor):
 
 
 class MemoryReactorClock(MemoryReactor, Clock):
-    deprecatedModuleAttribute(
-        Version("Twisted", 19, 3, 0),
-        "Please use twisted.protocols.utils.MemoryReactorClock instead",
-        "twisted.test.proto_helpers",
-        "MemoryReactorClock")
-
     def __init__(self):
         MemoryReactor.__init__(self)
         Clock.__init__(self)
@@ -833,11 +779,6 @@ class RaisingMemoryReactor(object):
     @ivar _listenException: An instance of an L{Exception}
     @ivar _connectException: An instance of an L{Exception}
     """
-    deprecatedModuleAttribute(
-        Version("Twisted", 19, 3, 0),
-        "Please use twisted.protocols.utils.RaisingMemoryReactor instead",
-        "twisted.test.proto_helpers",
-        "RaisingMemoryReactor")
 
     def __init__(self, listenException=None, connectException=None):
         """
@@ -913,12 +854,6 @@ class NonStreamingProducer(object):
     counter = 0
     stopped = False
 
-    deprecatedModuleAttribute(
-        Version("Twisted", 19, 3, 0),
-        "Please use twisted.protocols.utils.NonStreamingProducer instead",
-        "twisted.test.proto_helpers",
-        "NonStreamingProducer")
-
     def __init__(self, consumer):
         self.consumer = consumer
         self.result = Deferred()
@@ -964,7 +899,7 @@ class NonStreamingProducer(object):
         self._done()
 
 
-@deprecated(Version("Twisted", 1, 9,3), "twisted.protocols.utils.waitUntilAllDisconnected")
+
 def waitUntilAllDisconnected(reactor, protocols):
     """
     Take a list of disconnecting protocols, callback a L{Deferred} when they're
@@ -1006,12 +941,6 @@ class EventLoggingObserver(Sequence):
     @ivar _events: The events captured by this observer
     @type _events: L{list}
     """
-    deprecatedModuleAttribute(
-        Version("Twisted", 19, 3, 0),
-        "Please use twisted.protocols.utils.EventLoggingObserver instead",
-        "twisted.test.proto_helpers",
-        "EventLoggingObserver")
-
     def __init__(self):
         self._events = []
 
