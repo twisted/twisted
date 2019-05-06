@@ -22,7 +22,6 @@ skip_branch_with_pr: true
 cache:
   - '%LOCALAPPDATA%\pip\Cache'
 
-
 environment:
   global:
     # SDK v7.0 MSVC Express 2008's SetEnv.cmd script will fail if the
