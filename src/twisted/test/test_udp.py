@@ -313,7 +313,7 @@ class UDPTests(unittest.TestCase):
         return d
 
     if os.environ.get("INFRASTRUCTURE") == "AZUREPIPELINES":
-        test_connectionRefused.skip = "Hangs on Azure Pipelines due to firewall"
+        test_connectionRefused.skip = "Hangs on Pipelines due to firewall"
 
 
     def test_badConnect(self):
