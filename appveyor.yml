@@ -78,8 +78,10 @@ install:
   - "python -m pip install -U pip"
   - "python -m pip install tox"
 
+
 test_script:
   - "%CMD_IN_ENV% python -m tox -e %TOXENV%"
+
 
 artifacts:
   - path: "wheelhouse\\*.whl"
