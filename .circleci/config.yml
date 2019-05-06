@@ -134,11 +134,3 @@ workflows:
           requires:
             - static_checkers
             - documentation
-      - macos_py27_default_reactor:
-          requires:
-            - static_checkers
-            - documentation
-      - macos_py37_default_reactor:
-          requires:
-            - static_checkers
-            - documentation
