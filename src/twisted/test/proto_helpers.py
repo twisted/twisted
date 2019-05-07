@@ -31,7 +31,10 @@ from twisted.internet.task import Clock
 from twisted.internet.address import IPv4Address, UNIXAddress, IPv6Address
 from twisted.logger import ILogObserver
 
-from twisted.python.deprecate import deprecated
+from twisted.python.deprecate import (
+    deprecated,
+    deprecatedModuleAttribute
+)
 from twisted.python.versions import Version
 
 
@@ -80,7 +83,7 @@ class AccumulatingProtocol(protocol.Protocol):
 
 
 
-deprecated.deprecatedModuleAttribute(
+deprecatedModuleAttribute(
     Version("Twisted", 19, 3, 0),
     "Please use twisted.protocols.utils.AccumulatingProtocol instead",
     __name__,
@@ -114,7 +117,7 @@ class LineSendingProtocol(basic.LineReceiver):
 
 
 
-deprecated.deprecatedModuleAttribute(
+deprecatedModuleAttribute(
     Version("Twisted", 19, 3, 0),
     "Please use twisted.protocols.utils.LineSendingProtocol instead",
     __name__,
@@ -134,7 +137,7 @@ class FakeDatagramTransport:
 
 
 
-deprecated.deprecatedModuleAttribute(
+deprecatedModuleAttribute(
     Version("Twisted", 19, 3, 0),
     "Please use twisted.protocols.utils.FakeDatagramTransport instead",
     __name__,
@@ -319,7 +322,7 @@ class StringTransport:
 
 
 
-deprecated.deprecatedModuleAttribute(
+deprecatedModuleAttribute(
     Version("Twisted", 19, 3, 0),
     "Please use twisted.protocols.utils.StringTransport instead",
     __name__,
@@ -341,7 +344,7 @@ class StringTransportWithDisconnection(StringTransport):
 
 
 
-deprecated.deprecatedModuleAttribute(
+deprecatedModuleAttribute(
     Version("Twisted", 19, 3, 0),
     "Please use twisted.protocols.utils.StringTransportWithDisconnection"
     " instead",
@@ -362,7 +365,7 @@ class StringIOWithoutClosing(BytesIO):
 
 
 
-deprecated.deprecatedModuleAttribute(
+deprecatedModuleAttribute(
     Version("Twisted", 19, 3, 0),
     "Please use twisted.protocols.utils.StringIOWithoutClosing instead",
     __name__,
@@ -818,7 +821,7 @@ class MemoryReactor(object):
 
 
 
-deprecated.deprecatedModuleAttribute(
+deprecatedModuleAttribute(
     Version("Twisted", 19, 3, 0),
     "Please use twisted.protocols.utils.MemoryReactor instead",
     __name__,
@@ -839,7 +842,7 @@ class MemoryReactorClock(MemoryReactor, Clock):
 
 
 
-deprecated.deprecatedModuleAttribute(
+deprecatedModuleAttribute(
     Version("Twisted", 19, 3, 0),
     "Please use twisted.protocols.utils.MemoryReactorClock instead",
     __name__,
@@ -923,7 +926,7 @@ class RaisingMemoryReactor(object):
 
 
 
-deprecated.deprecatedModuleAttribute(
+deprecatedModuleAttribute(
     Version("Twisted", 19, 3, 0),
     "Please use twisted.protocols.utils.RaisingMemoryReactor instead",
     __name__,
@@ -985,7 +988,7 @@ class NonStreamingProducer(object):
 
 
 
-deprecated.deprecatedModuleAttribute(
+deprecatedModuleAttribute(
     Version("Twisted", 19, 3, 0),
     "Please use twisted.protocols.utils.NonStreamingProducer instead",
     __name__,
@@ -1083,7 +1086,7 @@ class EventLoggingObserver(Sequence):
 
 
 
-deprecated.deprecatedModuleAttribute(
+deprecatedModuleAttribute(
     Version("Twisted", 19, 3, 0),
     "Please use twisted.protocols.utils.EventLoggingObserver instead",
     __name__,
