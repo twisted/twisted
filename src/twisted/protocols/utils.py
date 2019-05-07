@@ -32,6 +32,7 @@ from twisted.internet.address import IPv4Address, UNIXAddress, IPv6Address
 from twisted.logger import ILogObserver
 
 
+
 class AccumulatingProtocol(protocol.Protocol):
     """
     L{AccumulatingProtocol} is an L{IProtocol} implementation which collects
@@ -74,10 +75,11 @@ class AccumulatingProtocol(protocol.Protocol):
             d.callback(None)
 
 
+
 class LineSendingProtocol(basic.LineReceiver):
     lostConn = False
 
-    def __init__(self, lines, start = True):
+    def __init__(self, lines, start=True):
         self.lines = lines[:]
         self.response = []
         self.start = start
@@ -96,6 +98,7 @@ class LineSendingProtocol(basic.LineReceiver):
 
     def connectionLost(self, reason):
         self.lostConn = True
+
 
 
 class FakeDatagramTransport:
@@ -208,7 +211,7 @@ class StringTransport:
 
     # ITransport
     def write(self, data):
-        if isinstance(data, unicode): # no, really, I mean it
+        if isinstance(data, unicode):  # no, really, I mean it
             raise TypeError("Data must not be unicode")
         self.io.write(data)
 
@@ -756,6 +759,7 @@ class MemoryReactor(object):
         """
         self.readers.clear()
         self.writers.clear()
+
 
 
 for iface in implementedBy(MemoryReactor):
