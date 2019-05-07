@@ -507,6 +507,12 @@ class ReactorShutdownInteractionTests(unittest.TestCase):
 
 class MulticastTests(unittest.TestCase):
 
+    if (
+        os.environ.get("INFRASTRUCTURE") == "AZUREPIPELINES" and
+        runtime.platform.isMacOSX()
+    ):
+        skip = "Does not work on Azure Pipelines"
+
     def setUp(self):
         self.server = Server()
         self.client = Client()
