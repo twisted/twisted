@@ -22,7 +22,6 @@ import errno
 import gc
 import os
 import io
-import select
 import signal
 import stat
 import sys
