@@ -14,6 +14,7 @@ from zope.interface.verify import verifyObject
 from twisted.internet import defer, task
 from twisted.internet.error import ConnectionLost
 from twisted.internet.interfaces import IProtocolFactory
+from twisted.internet.ssl import CertificateOptions
 from twisted.internet._sslverify import ClientTLSOptions
 from twisted.python import failure
 from twisted.python.compat import unicode
@@ -722,9 +723,32 @@ class TLSInitiatingInitializerTests(unittest.TestCase):
         return d
 
 
+    def test_certificateVerifyContext(self):
+        """
+        A custom contextFactory is passed through to startTLS.
+        """
+        ctx = CertificateOptions()
+        self.init.contextFactory = ctx
+
+        def fakeStartTLS(contextFactory):
+            self.assertIs(ctx, contextFactory)
+            self.done.append('TLS')
+
+        self.xmlstream.transport = proto_helpers.StringTransport()
+        self.xmlstream.transport.startTLS = fakeStartTLS
+        self.xmlstream.reset = lambda: self.done.append('reset')
+        self.xmlstream.sendHeader = lambda: self.done.append('header')
+
+        d = self.init.start()
+        self.xmlstream.dataReceived("<proceed xmlns='%s'/>" % NS_XMPP_TLS)
+        self.assertEqual(['TLS', 'reset', 'header'], self.done)
+        return d
+
+
     if not xmlstream.ssl:
         testWantedSupported.skip = "SSL not available"
         test_certificateVerify = "SSL not available"
+        test_certificateVerifyContext = "SSL not available"
 
 
     def test_wantedNotSupportedNotRequired(self):

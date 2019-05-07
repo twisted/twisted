@@ -406,6 +406,7 @@ class TLSInitiatingInitializer(BaseFeatureInitiatingInitializer):
 
     feature = (NS_XMPP_TLS, 'starttls')
     wanted = True
+    contextFactory = None
     _deferred = None
 
     def onProceed(self, obj):
@@ -414,7 +415,10 @@ class TLSInitiatingInitializer(BaseFeatureInitiatingInitializer):
         """
 
         self.xmlstream.removeObserver('/failure', self.onFailure)
-        ctx = ssl.optionsForClientTLS(self.xmlstream.otherEntity.host)
+        if self.contextFactory:
+            ctx = self.contextFactory
+        else:
+            ctx = ssl.optionsForClientTLS(self.xmlstream.otherEntity.host)
         self.xmlstream.transport.startTLS(ctx)
         self.xmlstream.reset()
         self.xmlstream.sendHeader()
