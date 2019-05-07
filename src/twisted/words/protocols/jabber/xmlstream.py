@@ -414,7 +414,7 @@ class TLSInitiatingInitializer(BaseFeatureInitiatingInitializer):
         """
 
         self.xmlstream.removeObserver('/failure', self.onFailure)
-        ctx = ssl.CertificateOptions()
+        ctx = ssl.optionsForClientTLS(self.xmlstream.otherEntity.host)
         self.xmlstream.transport.startTLS(ctx)
         self.xmlstream.reset()
         self.xmlstream.sendHeader()
