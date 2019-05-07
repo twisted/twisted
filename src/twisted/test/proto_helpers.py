@@ -11,8 +11,6 @@ from __future__ import division, absolute_import
 from socket import AF_INET, AF_INET6
 from io import BytesIO
 
-import warnings
-
 from zope.interface import implementer, implementedBy
 from zope.interface.verify import verifyClass
 
@@ -34,8 +32,7 @@ from twisted.internet.address import IPv4Address, UNIXAddress, IPv6Address
 from twisted.logger import ILogObserver
 
 from twisted.python.deprecate import deprecate
-from twisted.python.versions import Verison
-from twisted.protocols import utils
+from twisted.python.versions import Version
 
 
 class AccumulatingProtocol(protocol.Protocol):
@@ -969,7 +966,7 @@ deprecate.deprecatedModuleAttribute(
 
 
 @deprecate(Version("Twisted", 1, 9,3),
-           replacement=twisted.protocols.utils.waitUntilAllDisconnected)
+           replacement="twisted.protocols.utils.waitUntilAllDisconnected")
 def waitUntilAllDisconnected(reactor, protocols):
     """
     Take a list of disconnecting protocols, callback a L{Deferred} when they're
