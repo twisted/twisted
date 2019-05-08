@@ -1,0 +1,1 @@
+twisted.internet.process does not fail on import when the process has more than 1024 file descriptors opened.
