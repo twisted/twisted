@@ -402,6 +402,11 @@ class TLSInitiatingInitializer(BaseFeatureInitiatingInitializer):
 
     @cvar wanted: indicates if TLS negotiation is wanted.
     @type wanted: C{bool}
+
+    @cvar contextFactory: An object which creates appropriately configured TLS
+        connections. This is passed to C{startTLS} on the transport and is
+        preferably created using L{twisted.internet.ssl.optionsForClientTLS}.
+    @type contextFactory: L{IOpenSSLClientConnectionCreator}
     """
 
     feature = (NS_XMPP_TLS, 'starttls')
