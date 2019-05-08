@@ -34,44 +34,6 @@ environment:
   # a later point release.
   # See: http://www.appveyor.com/docs/installed-software#python
   matrix:
-    - PYTHON_HOME: C:\\Python27-x64
-      PYTHON_VERSION: "2.7"
-      PYTHON_ARCH: "64"
-      TOXENV: py27-alldeps-withcov-windows,coverage-prepare,codecov-push,coveralls-push
-      TWISTED_REACTOR: "select"
-    - PYTHON_HOME: C:\\PYTHON36-x64
-      PYTHON_VERSION: "3.6"
-      PYTHON_ARCH: "64"
-      TOXENV: py36-alldeps-withcov-windows,coverage-prepare,codecov-push,coveralls-push
-      TWISTED_REACTOR: "select"
-    - PYTHON_HOME: C:\\PYTHON37-x64
-      PYTHON_VERSION: "3.7"
-      PYTHON_ARCH: "64"
-      TOXENV: py37-alldeps-withcov-windows,coverage-prepare,codecov-push,coveralls-push
-      TWISTED_REACTOR: "select"
-    - PYTHON_HOME: C:\\PYTHON37-x64
-      PYTHON_VERSION: "3.7"
-      PYTHON_ARCH: "64"
-      TOXENV: py37-nodeps-withcov-windows,coverage-prepare,codecov-push,coveralls-push
-      TWISTED_REACTOR: "select"
-
-    # IOCPReactor tests
-    - PYTHON_HOME: C:\\Python27-x64
-      PYTHON_VERSION: "2.7"
-      PYTHON_ARCH: "64"
-      TOXENV: py27-alldeps-withcov-windows,coverage-prepare,codecov-push,coveralls-push
-      TWISTED_REACTOR: "iocp"
-    - PYTHON_HOME: C:\\PYTHON36-x64
-      PYTHON_VERSION: "3.6"
-      PYTHON_ARCH: "64"
-      TOXENV: py36-alldeps-withcov-windows,coverage-prepare,codecov-push,coveralls-push
-      TWISTED_REACTOR: "iocp"
-    - PYTHON_HOME: C:\\PYTHON37-x64
-      PYTHON_VERSION: "3.7"
-      PYTHON_ARCH: "64"
-      TOXENV: py37-alldeps-withcov-windows,coverage-prepare,codecov-push,coveralls-push
-      TWISTED_REACTOR: "iocp"
-
     - PYTHON_HOME: C:\\PYTHON36-x64
       PYTHON_VERSION: "3.6"
       PYTHON_ARCH: "64"
@@ -116,8 +78,10 @@ install:
   - "python -m pip install -U pip"
   - "python -m pip install tox"
 
+
 test_script:
   - "%CMD_IN_ENV% python -m tox -e %TOXENV%"
+
 
 artifacts:
   - path: "wheelhouse\\*.whl"
