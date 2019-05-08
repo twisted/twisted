@@ -287,6 +287,9 @@ class SelectReactorTests(TestCase):
         # accept should be tried next.
         self.assertEqual(port.numberAccepts, 1)
 
+    if os.environ.get("INFRASTRUCTURE") == "AZUREPIPELINES":
+        test_acceptScaling.skip = "Hangs on Azure Pipelines due to firewall"
+
 
     def test_permissionFailure(self):
         """
@@ -376,4 +379,3 @@ if not interfaces.IReactorFDSet.providedBy(reactor):
     skipMsg = 'This test only applies to reactors that implement IReactorFDset'
     PlatformAssumptionsTests.skip = skipMsg
     SelectReactorTests.skip = skipMsg
-
