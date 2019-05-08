@@ -76,7 +76,6 @@ class DeprecationTests(unittest.TestCase):
         self.assertEqual(1, len(warnings))
 
 
-
     def test_StringTransportWithDisconnection(self):
         """
         L{proto_helpers.StringTransportWithDisconnection} is deprecated and
