@@ -1,0 +1,1 @@
+Fix the incorrect docstring for twisted.python.components.Componentized.addComponent which stated that the function returned a list of interfaces, even though the function doesn't actually do so.
