@@ -8,6 +8,8 @@ Tests for implementations of L{IReactorUDP} and L{IReactorMulticast}.
 
 from __future__ import division, absolute_import
 
+import os
+
 from twisted.trial import unittest
 
 from twisted.python.compat import intToBytes
@@ -310,6 +312,9 @@ class UDPTests(unittest.TestCase):
         d.addCallback(cbFinished)
         return d
 
+    if os.environ.get("INFRASTRUCTURE") == "AZUREPIPELINES":
+        test_connectionRefused.skip = "Hangs on Pipelines due to firewall"
+
 
     def test_badConnect(self):
         """
@@ -501,6 +506,12 @@ class ReactorShutdownInteractionTests(unittest.TestCase):
 
 
 class MulticastTests(unittest.TestCase):
+
+    if (
+        os.environ.get("INFRASTRUCTURE") == "AZUREPIPELINES" and
+        runtime.platform.isMacOSX()
+    ):
+        skip = "Does not work on Azure Pipelines"
 
     def setUp(self):
         self.server = Server()
