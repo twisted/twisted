@@ -996,8 +996,6 @@ deprecatedModuleAttribute(
 
 
 
-@deprecated(Version("Twisted", 1, 9,3),
-            replacement="twisted.protocols.utils.waitUntilAllDisconnected")
 def waitUntilAllDisconnected(reactor, protocols):
     """
     Take a list of disconnecting protocols, callback a L{Deferred} when they're
@@ -1025,6 +1023,14 @@ def waitUntilAllDisconnected(reactor, protocols):
     lc = task.LoopingCall(_check)
     lc.clock = reactor
     return lc.start(0.01, now=True)
+
+
+
+deprecatedModuleAttribute(
+    Version("Twisted", 19, 3, 0),
+    "Please use twisted.protocols.utils.waitUntilAllDisconnected instead",
+    __name__,
+    "waitUntilAllDisconnected")
 
 
 

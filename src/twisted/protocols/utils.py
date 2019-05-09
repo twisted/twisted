@@ -1,4 +1,4 @@
-# -*- test-case-name: twisted.test.test_stringtransport -*-
+# -*- test-case-name: twisted.protocols.test.test_utils -*-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
