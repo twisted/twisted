@@ -229,8 +229,6 @@ class Componentized:
         Otherwise, an 'appropriate' interface is one for which its class has
         been registered as an adapter for my class according to the rules of
         getComponent.
-
-        @return: the list of appropriate interfaces
         """
         for iface in declarations.providedBy(component):
             if (ignoreClass or
