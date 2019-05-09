@@ -379,6 +379,41 @@ class SessionInitializerTests(InitiatingInitializerHarness, unittest.TestCase):
 
 
 
+class BasicAuthenticatorTests(unittest.TestCase):
+    """
+    Test for both XMPPAuthenticator and XMPPClientFactory.
+    """
+    def testBasic(self):
+        """
+        Test basic operations.
+
+        Setup a basicClientFactory, which sets up a BasicAuthenticator, and let
+        it produce a protocol instance. Then inspect the instance variables of
+        the authenticator and XML stream objects.
+        """
+        self.client_jid = jid.JID('user@example.com/resource')
+
+        # Get an XmlStream instance. Note that it gets initialized with the
+        # XMPPAuthenticator (that has its associateWithXmlStream called) that
+        # is in turn initialized with the arguments to the factory.
+        xs = client.basicClientFactory(self.client_jid,
+                                      'secret').buildProtocol(None)
+
+        # test authenticator's instance variables
+        self.assertEqual('example.com', xs.authenticator.otherHost)
+        self.assertEqual(self.client_jid, xs.authenticator.jid)
+        self.assertEqual('secret', xs.authenticator.password)
+
+        # test list of initializers
+        tls, auth = xs.initializers
+
+        self.assertIsInstance(tls, xmlstream.TLSInitiatingInitializer)
+        self.assertIsInstance(auth, client.IQAuthInitializer)
+
+        self.assertFalse(tls.required)
+
+
+
 class XMPPAuthenticatorTests(unittest.TestCase):
     """
     Test for both XMPPAuthenticator and XMPPClientFactory.
@@ -412,7 +447,7 @@ class XMPPAuthenticatorTests(unittest.TestCase):
         self.assertIsInstance(bind, client.BindInitializer)
         self.assertIsInstance(session, client.SessionInitializer)
 
-        self.assertFalse(tls.required)
+        self.assertTrue(tls.required)
         self.assertTrue(sasl.required)
-        self.assertFalse(bind.required)
+        self.assertTrue(bind.required)
         self.assertFalse(session.required)

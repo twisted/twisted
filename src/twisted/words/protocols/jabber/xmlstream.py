@@ -316,16 +316,17 @@ class BaseFeatureInitiatingInitializer(object):
 
     @cvar feature: tuple of (uri, name) of the stream feature root element.
     @type feature: tuple of (C{str}, C{str})
+
     @ivar required: whether the stream feature is required to be advertized
                     by the receiving entity.
     @type required: C{bool}
     """
 
     feature = None
-    required = False
 
-    def __init__(self, xs):
+    def __init__(self, xs, required=False):
         self.xmlstream = xs
+        self.required = required
 
 
     def initialize(self):
@@ -400,10 +401,10 @@ class TLSInitiatingInitializer(BaseFeatureInitiatingInitializer):
     set the C{wanted} attribute to False instead of removing it from the list
     of initializers, so a proper exception L{TLSRequired} can be raised.
 
-    @cvar wanted: indicates if TLS negotiation is wanted.
+    @ivar wanted: indicates if TLS negotiation is wanted.
     @type wanted: C{bool}
 
-    @cvar contextFactory: An object which creates appropriately configured TLS
+    @ivar contextFactory: An object which creates appropriately configured TLS
         connections. This is passed to C{startTLS} on the transport and is
         preferably created using L{twisted.internet.ssl.optionsForClientTLS}.
     @type contextFactory: L{IOpenSSLClientConnectionCreator}

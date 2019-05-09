@@ -681,6 +681,15 @@ class TLSInitiatingInitializerTests(unittest.TestCase):
         xmlstream.ssl = self.savedSSL
 
 
+    def test_initRequired(self):
+        """
+        Passing required sets the instance variable.
+        """
+        self.init = xmlstream.TLSInitiatingInitializer(self.xmlstream,
+                                                       required=True)
+        self.assertTrue(self.init.required)
+
+
     def test_wantedSupported(self):
         """
         When TLS is wanted and SSL available, StartTLS is initiated.

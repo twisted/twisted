@@ -206,14 +206,10 @@ class BasicAuthenticator(xmlstream.ConnectAuthenticator):
         xs.version = (0, 0)
         xmlstream.ConnectAuthenticator.associateWithStream(self, xs)
 
-        inits = [ (xmlstream.TLSInitiatingInitializer, False),
-                  (IQAuthInitializer, True),
-                ]
-
-        for initClass, required in inits:
-            init = initClass(xs)
-            init.required = required
-            xs.initializers.append(init)
+        xs.initializers = [
+            xmlstream.TLSInitiatingInitializer(xs, required=False),
+            IQAuthInitializer(xs),
+        ]
 
     # TODO: move registration into an Initializer?
 
@@ -377,14 +373,10 @@ class XMPPAuthenticator(xmlstream.ConnectAuthenticator):
         """
         xmlstream.ConnectAuthenticator.associateWithStream(self, xs)
 
-        xs.initializers = [CheckVersionInitializer(xs)]
-        inits = [ (xmlstream.TLSInitiatingInitializer, False),
-                  (sasl.SASLInitiatingInitializer, True),
-                  (BindInitializer, False),
-                  (SessionInitializer, False),
+        xs.initializers = [
+                CheckVersionInitializer(xs),
+                xmlstream.TLSInitiatingInitializer(xs, required=True),
+                sasl.SASLInitiatingInitializer(xs, required=True),
+                BindInitializer(xs, required=True),
+                SessionInitializer(xs, required=False),
                 ]
-
-        for initClass, required in inits:
-            init = initClass(xs)
-            init.required = required
-            xs.initializers.append(init)
