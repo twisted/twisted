@@ -765,6 +765,7 @@ class TLSInitiatingInitializerTests(unittest.TestCase):
         No StartTLS is initiated when wanted, not required, SSL not available.
         """
         xmlstream.ssl = None
+        self.init.required = False
 
         d = self.init.start()
         d.addCallback(self.assertEqual, None)
@@ -810,6 +811,7 @@ class TLSInitiatingInitializerTests(unittest.TestCase):
         tls = domish.Element(('urn:ietf:params:xml:ns:xmpp-tls', 'starttls'))
         self.xmlstream.features = {(tls.uri, tls.name): tls}
         self.init.wanted = False
+        self.init.required = False
 
         d = self.init.start()
         d.addCallback(self.assertEqual, None)
