@@ -407,6 +407,9 @@ class TLSInitiatingInitializer(BaseFeatureInitiatingInitializer):
     @ivar contextFactory: An object which creates appropriately configured TLS
         connections. This is passed to C{startTLS} on the transport and is
         preferably created using L{twisted.internet.ssl.optionsForClientTLS}.
+        If C{None}, the default is to verify the server certificate against
+        the trust roots as provided by the platform. See
+        L{twisted.internet._sslverify.platformTrust}.
     @type contextFactory: L{IOpenSSLClientConnectionCreator}
     """
 
@@ -414,6 +417,12 @@ class TLSInitiatingInitializer(BaseFeatureInitiatingInitializer):
     wanted = True
     contextFactory = None
     _deferred = None
+
+    def __init__(self, xs, required=True, contextFactory=None):
+        super(TLSInitiatingInitializer, self).__init__(
+                xs, required=required)
+        self.contextFactory = contextFactory
+
 
     def onProceed(self, obj):
         """

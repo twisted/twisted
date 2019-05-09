@@ -9,7 +9,7 @@ from __future__ import absolute_import, division
 
 from hashlib import sha1
 
-from twisted.internet import defer
+from twisted.internet import defer, ssl
 from twisted.python.compat import unicode
 from twisted.trial import unittest
 from twisted.words.protocols.jabber import client, error, jid, xmlstream
@@ -381,9 +381,10 @@ class SessionInitializerTests(InitiatingInitializerHarness, unittest.TestCase):
 
 class BasicAuthenticatorTests(unittest.TestCase):
     """
-    Test for both XMPPAuthenticator and XMPPClientFactory.
+    Test for both BasicAuthenticator and basicClientFactory.
     """
-    def testBasic(self):
+
+    def test_basic(self):
         """
         Test basic operations.
 
@@ -418,7 +419,8 @@ class XMPPAuthenticatorTests(unittest.TestCase):
     """
     Test for both XMPPAuthenticator and XMPPClientFactory.
     """
-    def testBasic(self):
+
+    def test_basic(self):
         """
         Test basic operations.
 
@@ -451,3 +453,28 @@ class XMPPAuthenticatorTests(unittest.TestCase):
         self.assertTrue(sasl.required)
         self.assertTrue(bind.required)
         self.assertFalse(session.required)
+
+
+    def test_tlsContextFactory(self):
+        """
+        Test basic operations.
+
+        Setup an XMPPClientFactory, which sets up an XMPPAuthenticator, and let
+        it produce a protocol instance. Then inspect the instance variables of
+        the authenticator and XML stream objects.
+        """
+        self.client_jid = jid.JID('user@example.com/resource')
+
+        # Get an XmlStream instance. Note that it gets initialized with the
+        # XMPPAuthenticator (that has its associateWithXmlStream called) that
+        # is in turn initialized with the arguments to the factory.
+        contextFactory = ssl.CertificateOptions()
+        factory = client.XMPPClientFactory(self.client_jid, 'secret',
+                                           contextFactory=contextFactory)
+        xs = factory.buildProtocol(None)
+
+        # test list of initializers
+        version, tls, sasl, bind, session = xs.initializers
+
+        self.assertIsInstance(tls, xmlstream.TLSInitiatingInitializer)
+        self.assertIs(contextFactory, tls.contextFactory)

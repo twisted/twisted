@@ -298,7 +298,7 @@ class SessionInitializer(xmlstream.BaseFeatureInitiatingInitializer):
 
 
 
-def XMPPClientFactory(jid, password):
+def XMPPClientFactory(jid, password, contextFactory=None):
     """
     Client factory for XMPP 1.0 (only).
 
@@ -310,12 +310,20 @@ def XMPPClientFactory(jid, password):
 
     @param jid: Jabber ID to connect with.
     @type jid: L{jid.JID}
+
     @param password: password to authenticate with.
     @type password: L{unicode}
+
+    @param contextFactory: An object which creates appropriately configured TLS
+        connections. This is passed to C{startTLS} on the transport and is
+        preferably created using L{twisted.internet.ssl.optionsForClientTLS}.
+        See L{xmlstream.TLSInitiatingInitializer} for details.
+    @type contextFactory: L{IOpenSSLClientConnectionCreator}
+
     @return: XML stream factory.
     @rtype: L{xmlstream.XmlStreamFactory}
     """
-    a = XMPPAuthenticator(jid, password)
+    a = XMPPAuthenticator(jid, password, contextFactory=contextFactory)
     return xmlstream.XmlStreamFactory(a)
 
 
@@ -350,16 +358,24 @@ class XMPPAuthenticator(xmlstream.ConnectAuthenticator):
                resource binding step, and this is stored in this instance
                variable.
     @type jid: L{jid.JID}
+
     @ivar password: password to be used during SASL authentication.
     @type password: L{unicode}
+
+    @ivar contextFactory: An object which creates appropriately configured TLS
+        connections. This is passed to C{startTLS} on the transport and is
+        preferably created using L{twisted.internet.ssl.optionsForClientTLS}.
+        See L{xmlstream.TLSInitiatingInitializer} for details.
+    @type contextFactory: L{IOpenSSLClientConnectionCreator}
     """
 
     namespace = 'jabber:client'
 
-    def __init__(self, jid, password):
+    def __init__(self, jid, password, contextFactory=None):
         xmlstream.ConnectAuthenticator.__init__(self, jid.host)
         self.jid = jid
         self.password = password
+        self.contextFactory = contextFactory
 
 
     def associateWithStream(self, xs):
@@ -375,7 +391,8 @@ class XMPPAuthenticator(xmlstream.ConnectAuthenticator):
 
         xs.initializers = [
                 CheckVersionInitializer(xs),
-                xmlstream.TLSInitiatingInitializer(xs, required=True),
+                xmlstream.TLSInitiatingInitializer(
+                    xs, required=True, contextFactory=self.contextFactory),
                 sasl.SASLInitiatingInitializer(xs, required=True),
                 BindInitializer(xs, required=True),
                 SessionInitializer(xs, required=False),
