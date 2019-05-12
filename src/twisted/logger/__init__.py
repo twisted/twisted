@@ -41,6 +41,9 @@ second example, it would be C{some.module.Foo}.
     observer, whether it's a log file, or an observer pointing at stderr.
 @type globalLogBeginner: L{LogBeginner}
 """
+"""
+isort:skip_file
+"""
 
 __all__ = [
     # From ._levels
