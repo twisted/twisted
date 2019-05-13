@@ -9,13 +9,10 @@ the code in C{twisted/__init__.py}.
 from __future__ import division, absolute_import
 
 import sys
-import twisted
 
 from types import ModuleType
 
 from twisted.python._setup import _checkPythonVersion
-from twisted.python.compat import _PY3
-from twisted.python import reflect
 from twisted.trial.unittest import TestCase
 
 
@@ -160,8 +157,8 @@ class RequirementsTests(TestCase):
     """
     unsupportedPythonVersion = (2, 6)
     supportedPythonVersion = (2, 7)
-    Py3unsupportedPythonVersion = (3, 3)
-    Py3supportedPythonVersion = (3, 4)
+    Py3unsupportedPythonVersion = (3, 4)
+    Py3supportedPythonVersion = (3, 5)
 
 
     def setUp(self):
@@ -266,66 +263,3 @@ class MakePackagesTests(TestCase):
         self.assertIsInstance(modules['twisted'].web, ModuleType)
         self.assertEqual('twisted.web', modules['twisted'].web.__name__)
         self.assertEqual('321', modules['twisted'].web.version)
-
-
-
-class OldSubprojectDeprecationBase(TestCase):
-    """
-    Base L{TestCase} for verifying each former subproject has a deprecated
-    C{__version__} and a removed C{_version.py}.
-    """
-    subproject = None
-
-    def test_deprecated(self):
-        """
-        The C{__version__} attribute of former subprojects is deprecated.
-        """
-        module = reflect.namedAny("twisted.{}".format(self.subproject))
-        self.assertEqual(module.__version__, twisted.__version__)
-
-        warningsShown = self.flushWarnings()
-        self.assertEqual(1, len(warningsShown))
-        self.assertEqual(
-            "twisted.{}.__version__ was deprecated in Twisted 16.0.0: "
-            "Use twisted.__version__ instead.".format(self.subproject),
-            warningsShown[0]['message'])
-
-
-    def test_noversionpy(self):
-        """
-        Former subprojects no longer have an importable C{_version.py}.
-        """
-        with self.assertRaises(AttributeError):
-            reflect.namedAny(
-                "twisted.{}._version".format(self.subproject))
-
-
-if _PY3:
-    subprojects = ["conch", "web", "names"]
-else:
-    subprojects = ["mail", "conch", "runner", "web", "words", "names", "news",
-                   "pair"]
-
-for subproject in subprojects:
-
-    class SubprojectTestCase(OldSubprojectDeprecationBase):
-        """
-        See L{OldSubprojectDeprecationBase}.
-        """
-        subproject = subproject
-
-    newName = subproject.title() + "VersionDeprecationTests"
-
-    SubprojectTestCase.__name__ = newName
-    if _PY3:
-        SubprojectTestCase.__qualname__= ".".join(
-            OldSubprojectDeprecationBase.__qualname__.split()[0:-1] +
-            [newName])
-
-    globals().update({subproject.title() +
-                      "VersionDeprecationTests": SubprojectTestCase})
-
-    del SubprojectTestCase
-    del newName
-
-del OldSubprojectDeprecationBase

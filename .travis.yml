@@ -29,27 +29,25 @@ matrix:
     - python: 2.7
       services:
         - docker
-      env: TOXENV=py27-alldeps-withcov-posix,codecov-publish
+      env: TOXENV=py27-alldeps-withcov-posix,coverage-prepare,codecov-push,coveralls-push
     - python: 2.7
       services:
         - docker
-      env: TOXENV=py27-nodeps-withcov-posix,codecov-publish
-    - python: 3.4
+      env: TOXENV=py27-nodeps-withcov-posix,coverage-prepare,codecov-push,coveralls-push
       services:
         - docker
-      env: TOXENV=py34-alldeps-withcov-posix,codecov-publish
     - python: 3.5
       services:
         - docker
-      env: TOXENV=py35-alldeps-withcov-posix,codecov-publish
+      env: TOXENV=py35-alldeps-withcov-posix,coverage-prepare,codecov-push,coveralls-push
     - python: 3.6
       services:
         - docker
-      env: TOXENV=py36-alldeps-withcov-posix,codecov-publish
+      env: TOXENV=py36-alldeps-withcov-posix,coverage-prepare,codecov-push,coveralls-push
     - python: 3.7
       services:
         - docker
-      env: TOXENV=py37-alldeps-withcov-posix,codecov-publish
+      env: TOXENV=py37-alldeps-withcov-posix,coverage-prepare,codecov-push,coveralls-push
       services:
         - docker
     - python: 3.5
@@ -59,7 +57,7 @@ matrix:
     - python: 3.6
       services:
         - docker
-      env: TOXENV=py36-alldeps-withcov-posix,codecov-publish DISABLE_IPV6=yes
+      env: TOXENV=py36-alldeps-withcov-posix,coverage-prepare,codecov-push,coveralls-push DISABLE_IPV6=yes
 
 addons:
   apt:
