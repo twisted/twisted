@@ -14,6 +14,8 @@ class DeprecationTests(unittest.TestCase):
         generates a warning.
         """
         from twisted.test.proto_helpers import AccumulatingProtocol
+        AccumulatingProtocol # shush
+
         warnings = self.flushWarnings(
             [self.test_AccumlatingProtocol])
         self.assertEqual(DeprecationWarning, warnings[0]['category'])
@@ -31,6 +33,8 @@ class DeprecationTests(unittest.TestCase):
         generates a warning.
         """
         from twisted.test.proto_helpers import LineSendingProtocol
+        LineSendingProtocol
+
         warnings = self.flushWarnings(
             [self.test_LineSendingProtocol])
         self.assertEqual(DeprecationWarning, warnings[0]['category'])
@@ -48,6 +52,8 @@ class DeprecationTests(unittest.TestCase):
         generates a warning.
         """
         from twisted.test.proto_helpers import FakeDatagramTransport
+        FakeDatagramTransport
+
         warnings = self.flushWarnings(
             [self.test_FakeDatagramTransport])
         self.assertEqual(DeprecationWarning, warnings[0]['category'])
@@ -65,6 +71,8 @@ class DeprecationTests(unittest.TestCase):
         generates a warning.
         """
         from twisted.test.proto_helpers import StringTransport
+        StringTransport
+
         warnings = self.flushWarnings(
             [self.test_StringTransport])
         self.assertEqual(DeprecationWarning, warnings[0]['category'])
@@ -82,6 +90,8 @@ class DeprecationTests(unittest.TestCase):
         generates a warning.
         """
         from twisted.test.proto_helpers import StringTransportWithDisconnection
+        StringTransportWithDisconnection
+
         warnings = self.flushWarnings(
             [self.test_StringTransportWithDisconnection])
         self.assertEqual(DeprecationWarning, warnings[0]['category'])
@@ -99,6 +109,8 @@ class DeprecationTests(unittest.TestCase):
         generates a warning.
         """
         from twisted.test.proto_helpers import StringIOWithoutClosing
+        StringIOWithoutClosing
+
         warnings = self.flushWarnings(
             [self.test_StringIOWithoutClosing])
         self.assertEqual(DeprecationWarning, warnings[0]['category'])
@@ -116,6 +128,8 @@ class DeprecationTests(unittest.TestCase):
         generates a warning.
         """
         from twisted.test.proto_helpers import MemoryReactor
+        MemoryReactor
+
         warnings = self.flushWarnings(
             [self.test_MemoryReactor])
         self.assertEqual(DeprecationWarning, warnings[0]['category'])
@@ -133,6 +147,8 @@ class DeprecationTests(unittest.TestCase):
         generates a warning.
         """
         from twisted.test.proto_helpers import MemoryReactorClock
+        MemoryReactorClock
+
         warnings = self.flushWarnings(
             [self.test_MemoryReactorClock])
         self.assertEqual(DeprecationWarning, warnings[0]['category'])
@@ -150,6 +166,8 @@ class DeprecationTests(unittest.TestCase):
         generates a warning.
         """
         from twisted.test.proto_helpers import RaisingMemoryReactor
+        RaisingMemoryReactor
+
         warnings = self.flushWarnings(
             [self.test_RaisingMemoryReactor])
         self.assertEqual(DeprecationWarning, warnings[0]['category'])
@@ -167,6 +185,8 @@ class DeprecationTests(unittest.TestCase):
         generates a warning.
         """
         from twisted.test.proto_helpers import NonStreamingProducer
+        NonStreamingProducer
+
         warnings = self.flushWarnings(
             [self.test_NonStreamingProducer])
         self.assertEqual(DeprecationWarning, warnings[0]['category'])
@@ -184,6 +204,8 @@ class DeprecationTests(unittest.TestCase):
         generates a warning.
         """
         from twisted.test.proto_helpers import waitUntilAllDisconnected
+        waitUntilAllDisconnected
+
         warnings = self.flushWarnings(
             [self.test_waitUntilAllDisconnected])
         self.assertEqual(DeprecationWarning, warnings[0]['category'])
@@ -201,6 +223,8 @@ class DeprecationTests(unittest.TestCase):
         generates a warning.
         """
         from twisted.test.proto_helpers import EventLoggingObserver
+        EventLoggingObserver
+
         warnings = self.flushWarnings(
             [self.test_EventLoggingObserver])
         self.assertEqual(DeprecationWarning, warnings[0]['category'])

@@ -31,10 +31,8 @@ from twisted.internet.task import Clock
 from twisted.internet.address import IPv4Address, UNIXAddress, IPv6Address
 from twisted.logger import ILogObserver
 
-from twisted.python.deprecate import (
-    deprecated,
-    deprecatedModuleAttribute
-)
+from twisted.python.deprecate import deprecatedModuleAttribute
+
 from twisted.python.versions import Version
 
 
