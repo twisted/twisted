@@ -1,0 +1,1 @@
+In Python 3.8a4 the PyCode_New() signature changes. We need to regenerate src/twisted/test/raiser.c with Cython 3.0a0 to keep compatibility with newer Python.
