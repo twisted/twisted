@@ -58,8 +58,8 @@ class AccumulatingProtocol(protocol.Protocol):
 
     def connectionMade(self):
         self.made = 1
-        if (self.factory is not None and
-            self.factory.protocolConnectionMade is not None):
+        if (self.factory is not None and self.factory.protocolConnectionMade
+                is not None):
             d = self.factory.protocolConnectionMade
             self.factory.protocolConnectionMade = None
             d.callback(self)
@@ -605,7 +605,8 @@ class MemoryReactor(object):
         """
         Record the given stream connection in C{adoptedStreamConnections}.
 
-        @see: L{twisted.internet.interfaces.IReactorSocket.adoptStreamConnection}
+        @see:
+            L{twisted.internet.interfaces.IReactorSocket.adoptStreamConnection}
         """
         self.adoptedStreamConnections.append((
                 fileDescriptor, addressFamily, factory))
@@ -614,8 +615,8 @@ class MemoryReactor(object):
     def adoptDatagramPort(self, fileno, addressFamily, protocol,
                           maxPacketSize=8192):
         """
-        Fake L{IReactorSocket.adoptDatagramPort}, that logs the call and returns
-        a fake L{IListeningPort}.
+        Fake L{IReactorSocket.adoptDatagramPort}, that logs the call and
+            returns a fake L{IListeningPort}.
 
         @see: L{twisted.internet.interfaces.IReactorSocket.adoptDatagramPort}
         """
@@ -786,11 +787,11 @@ class RaisingMemoryReactor(object):
 
     def __init__(self, listenException=None, connectException=None):
         """
-        @param listenException: An instance of an L{Exception} to raise when any
-            C{listen} method is called.
+        @param listenException: An instance of an L{Exception} to raise
+            when any C{listen} method is called.
 
-        @param connectException: An instance of an L{Exception} to raise when
-            any C{connect} method is called.
+        @param connectException: An instance of an L{Exception} to raise
+            when any C{connect} method is called.
         """
         self._listenException = listenException
         self._connectException = connectException
@@ -925,7 +926,7 @@ def waitUntilAllDisconnected(reactor, protocols):
     lc = None
 
     def _check():
-        if not True in [x.transport.connected for x in protocols]:
+        if True not in [x.transport.connected for x in protocols]:
             lc.stop()
 
     lc = task.LoopingCall(_check)

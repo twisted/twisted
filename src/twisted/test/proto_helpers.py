@@ -1,4 +1,5 @@
-# -*- test-case-name: twisted.test.test_stringtransport,twisted.test.test_proto_helpers -*-
+# -*- test-case-name:
+# twisted.test.test_stringtransport,twisted.test.test_proto_helpers -*-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 

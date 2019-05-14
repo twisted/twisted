@@ -4,6 +4,7 @@
 from twisted.trial import unittest
 
 
+
 class DeprecationTests(unittest.TestCase):
     """
     Deprecations in L{twisted.test.proto_helpers}.
@@ -14,7 +15,7 @@ class DeprecationTests(unittest.TestCase):
         generates a warning.
         """
         from twisted.test.proto_helpers import AccumulatingProtocol
-        AccumulatingProtocol # shush
+        AccumulatingProtocol  # shush
 
         warnings = self.flushWarnings(
             [self.test_AccumlatingProtocol])
