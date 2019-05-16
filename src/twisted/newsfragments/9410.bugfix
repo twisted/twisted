@@ -1,1 +1,1 @@
-write() to disconnected twisted.web.http.Request will no longer raise AttributeError.
+twisted.web.http.Request.write after the channel is disconnected will no longer raise AttributeError.

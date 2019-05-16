@@ -1593,7 +1593,7 @@ class Request:
         """
         Pass the loseConnection through to the underlying channel.
         """
-        if self.channel:
+        if self.channel is not None:
             self.channel.loseConnection()
 
 
