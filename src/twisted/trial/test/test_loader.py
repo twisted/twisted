@@ -73,15 +73,17 @@ class FinderPy2Tests(unittest.SynchronousTestCase):
 
 
     def test_findNonModule(self):
-        self.assertRaises(AttributeError,
-                              self.loader.findByName,
-                              'twisted.trial.test.nonexistent')
+        self.assertRaises(
+            AttributeError, self.loader.findByName,
+            'twisted.trial.test.nonexistent'
+        )
 
 
     def test_findNonPackage(self):
-        self.assertRaises(ValueError,
-                              self.loader.findByName,
-                              'nonextant')
+        self.assertRaises(
+            ValueError, self.loader.findByName,
+            'nonextant'
+        )
 
 
     def test_findNonFile(self):

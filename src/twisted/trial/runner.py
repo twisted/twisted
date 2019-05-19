@@ -724,8 +724,8 @@ class Py3TestLoader(TestLoader):
                 break
 
             except ImportError:
-                # Check to see where the ImportError happened. If it happened in
-                # this file, ignore it.
+                # Check to see where the ImportError happened. If it happened
+                # in this file, ignore it.
                 tb = sys.exc_info()[2]
 
                 # Walk down to the deepest frame, where it actually happened.
@@ -742,7 +742,9 @@ class Py3TestLoader(TestLoader):
                     raise
 
                 if remaining == "":
-                    raise reflect.ModuleNotFound("The module {} does not exist.".format(name))
+                    raise reflect.ModuleNotFound(
+                        "The module {} does not exist.".format(name)
+                    )
 
         if obj is None:
             # If it's none here, we didn't get to import anything.
