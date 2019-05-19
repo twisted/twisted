@@ -101,8 +101,13 @@ class FinderPy3Tests(packages.SysPathManglingTest):
 
 
     def test_findNonModule(self):
+        """
+        findByName, if given something findable up until the last entry, will
+        raise AttributeError (as it cannot tell if 'nonexistent' here is
+        supposed to be a module or a class).
+        """
         self.assertRaises(
-            ModuleNotFound, self.loader.findByName,
+            AttributeError, self.loader.findByName,
             'twisted.trial.test.nonexistent'
         )
 
