@@ -972,9 +972,13 @@ class HelpReactorsTests(unittest.TestCase):
 
 
 class BackoffPolicyTests(unittest.TestCase):
-    """Tests of L{twisted.application.internet.backoffPolicy}"""
+    """
+    Tests of L{twisted.application.internet.backoffPolicy}
+    """
     def test_calculates_correct_values(self):
-        """Test that backoffPolicy() calculates expected values"""
+        """
+        Test that L{backoffPolicy()} calculates expected values
+        """
         pol = backoffPolicy(1.0, 60.0, 1.5, jitter=lambda: 1)
         self.assertAlmostEqual(pol(0), 2)
         self.assertAlmostEqual(pol(1), 2.5)
@@ -983,17 +987,22 @@ class BackoffPolicyTests(unittest.TestCase):
         self.assertEqual(pol(100), 61)
 
     def test_does_not_overflow_on_high_attempts(self):
-        """Test makes sure backoffPolicy() does not fail for large values of
-           the attempt parameter. In previous versions, this test failed
-           when attempt was larger than 1750.
-           See https://twistedmatrix.com/trac/ticket/9476"""
+        """
+        L{backoffPolicy()} does not fail for large values of the attempt
+        parameter. In previous versions, this test failed when attempt was
+        larger than 1750.
+
+        See https://twistedmatrix.com/trac/ticket/9476
+        """
         pol = backoffPolicy(1.0, 60.0, 1.5, jitter=lambda: 1)
         self.assertEqual(pol(1751), 61)
         self.assertEqual(pol(1000000), 61)
 
     def test_does_not_overflow_with_large_factor_value(self):
-        """Test makes sure that even with unusual parameters, any
-           OverflowError within backoffPolicy() will be caught and
-           maxDelay will be returned instead"""
+        """
+        Even with unusual parameters, any L{OverflowError} within
+        L{backoffPolicy()} will be caught and L{maxDelay} will be returned
+        instead
+        """
         pol = backoffPolicy(1.0, 60.0, 1E10, jitter=lambda: 1)
         self.assertEqual(pol(1751), 61)
