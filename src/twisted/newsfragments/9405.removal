@@ -1,0 +1,1 @@
+twisted.news is deprecated on Python 3. It is currently not functional and will be removed when Python 2 support is dropped.
