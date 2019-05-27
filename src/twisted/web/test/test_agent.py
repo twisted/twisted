@@ -994,7 +994,8 @@ class AgentTests(TestCase, FakeReactorAndConnectMixin, AgentTestsMixin,
         L{Agent.request} raises L{TypeError} when the C{method} argument isn't
         L{bytes}.
         """
-        self.assertRaises(TypeError, self.agent.request, u'GET', b'http://foo.example/')
+        self.assertRaises(TypeError, self.agent.request,
+                          u'GET', b'http://foo.example/')
 
 
     def test_unsupportedScheme(self):
