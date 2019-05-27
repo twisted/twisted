@@ -14,8 +14,6 @@ from zope.interface.verify import verifyObject
 from twisted.internet import defer, task
 from twisted.internet.error import ConnectionLost
 from twisted.internet.interfaces import IProtocolFactory
-from twisted.internet.ssl import CertificateOptions
-from twisted.internet._sslverify import ClientTLSOptions
 from twisted.python import failure
 from twisted.python.compat import unicode
 from twisted.test import proto_helpers
@@ -23,7 +21,15 @@ from twisted.words.test.test_xmlstream import GenericXmlStreamFactoryTestsMixin
 from twisted.words.xish import domish
 from twisted.words.protocols.jabber import error, ijabber, jid, xmlstream
 
-
+try:
+   from twisted.internet import ssl
+except ImportError:
+    ssl = None
+    skipWhenNoSSL = "SSL not available"
+else:
+    skipWhenNoSSL = None
+    from twisted.internet.ssl import CertificateOptions
+    from twisted.internet._sslverify import ClientTLSOptions
 
 NS_XMPP_TLS = 'urn:ietf:params:xml:ns:xmpp-tls'
 
@@ -710,6 +716,8 @@ class TLSInitiatingInitializerTests(unittest.TestCase):
 
         return d
 
+    test_wantedSupported.skip = skipWhenNoSSL
+
 
     def test_certificateVerify(self):
         """
@@ -730,6 +738,8 @@ class TLSInitiatingInitializerTests(unittest.TestCase):
         self.xmlstream.dataReceived("<proceed xmlns='%s'/>" % NS_XMPP_TLS)
         self.assertEqual(['TLS', 'reset', 'header'], self.done)
         return d
+
+    test_certificateVerify.skip = skipWhenNoSSL
 
 
     def test_certificateVerifyContext(self):
@@ -753,11 +763,7 @@ class TLSInitiatingInitializerTests(unittest.TestCase):
         self.assertEqual(['TLS', 'reset', 'header'], self.done)
         return d
 
-
-    if not xmlstream.ssl:
-        test_wantedSupported.skip = "SSL not available"
-        test_certificateVerify = "SSL not available"
-        test_certificateVerifyContext = "SSL not available"
+    test_certificateVerifyContext.skip = skipWhenNoSSL
 
 
     def test_wantedNotSupportedNotRequired(self):

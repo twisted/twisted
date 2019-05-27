@@ -9,12 +9,20 @@ from __future__ import absolute_import, division
 
 from hashlib import sha1
 
-from twisted.internet import defer, ssl
+from twisted.internet import defer
 from twisted.python.compat import unicode
 from twisted.trial import unittest
 from twisted.words.protocols.jabber import client, error, jid, xmlstream
 from twisted.words.protocols.jabber.sasl import SASLInitiatingInitializer
 from twisted.words.xish import utility
+
+try:
+   from twisted.internet import ssl
+except ImportError:
+    ssl = None
+    skipWhenNoSSL = "SSL not available"
+else:
+    skipWhenNoSSL = None
 
 IQ_AUTH_GET = '/iq[@type="get"]/query[@xmlns="jabber:iq:auth"]'
 IQ_AUTH_SET = '/iq[@type="set"]/query[@xmlns="jabber:iq:auth"]'
@@ -478,3 +486,5 @@ class XMPPAuthenticatorTests(unittest.TestCase):
 
         self.assertIsInstance(tls, xmlstream.TLSInitiatingInitializer)
         self.assertIs(contextFactory, tls.contextFactory)
+
+    test_tlsContextFactory.skip = skipWhenNoSSL
