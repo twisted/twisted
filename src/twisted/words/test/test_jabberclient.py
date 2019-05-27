@@ -17,7 +17,7 @@ from twisted.words.protocols.jabber.sasl import SASLInitiatingInitializer
 from twisted.words.xish import utility
 
 try:
-   from twisted.internet import ssl
+    from twisted.internet import ssl
 except ImportError:
     ssl = None
     skipWhenNoSSL = "SSL not available"
@@ -406,7 +406,7 @@ class BasicAuthenticatorTests(unittest.TestCase):
         # XMPPAuthenticator (that has its associateWithXmlStream called) that
         # is in turn initialized with the arguments to the factory.
         xs = client.basicClientFactory(self.client_jid,
-                                      'secret').buildProtocol(None)
+                                       'secret').buildProtocol(None)
 
         # test authenticator's instance variables
         self.assertEqual('example.com', xs.authenticator.otherHost)

@@ -22,7 +22,7 @@ from twisted.words.xish import domish
 from twisted.words.protocols.jabber import error, ijabber, jid, xmlstream
 
 try:
-   from twisted.internet import ssl
+    from twisted.internet import ssl
 except ImportError:
     ssl = None
     skipWhenNoSSL = "SSL not available"
