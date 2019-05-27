@@ -989,6 +989,14 @@ class AgentTests(TestCase, FakeReactorAndConnectMixin, AgentTestsMixin,
         self.assertEqual(agent._pool.connected, True)
 
 
+    def test_nonBytesMethod(self):
+        """
+        L{Agent.request} raises L{TypeError} when the C{method} argument isn't
+        L{bytes}.
+        """
+        self.assertRaises(TypeError, self.agent.request, u'GET', b'http://foo.example/')
+
+
     def test_unsupportedScheme(self):
         """
         L{Agent.request} returns a L{Deferred} which fails with

@@ -1714,6 +1714,9 @@ class Agent(_AgentBase):
 
         @see: L{twisted.web.iweb.IAgent.request}
         """
+        if not isinstance(method, bytes):
+            raise TypeError('method={!r} is {}, but must be bytes'.format(
+                    method, type(method)))
         parsedURI = URI.fromBytes(uri)
         try:
             endpoint = self._getEndpoint(parsedURI)
