@@ -755,7 +755,7 @@ class TLSInitiatingInitializerTests(unittest.TestCase):
 
 
     if not xmlstream.ssl:
-        testWantedSupported.skip = "SSL not available"
+        test_wantedSupported.skip = "SSL not available"
         test_certificateVerify = "SSL not available"
         test_certificateVerifyContext = "SSL not available"
 
