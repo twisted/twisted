@@ -723,17 +723,6 @@ def _constructMethod(cls, name, self):
 
 
 
-from incremental import Version
-from twisted.python.deprecate import deprecatedModuleAttribute
-
-from collections import OrderedDict
-
-deprecatedModuleAttribute(
-    Version("Twisted", 15, 5, 0),
-    "Use collections.OrderedDict instead.",
-    "twisted.python.compat",
-    "OrderedDict")
-
 if _PY3:
     from base64 import encodebytes as _b64encodebytes
     from base64 import decodebytes as _b64decodebytes

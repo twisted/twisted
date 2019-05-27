@@ -2932,6 +2932,19 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         self.assertRaises(RuntimeError, req.finish)
 
 
+    def test_writeAfterConnectionLost(self):
+        """
+        Calling L{Request.write} after L{Request.connectionLost} has been
+        called does not raise an exception. L{RuntimeError} will be raised
+        when finish is called on the request.
+        """
+        channel = DummyChannel()
+        req = http.Request(channel, False)
+        req.connectionLost(Failure(ConnectionLost("The end.")))
+        req.write(b'foobar')
+        self.assertRaises(RuntimeError, req.finish)
+
+
     def test_reprUninitialized(self):
         """
         L{Request.__repr__} returns the class name, object address, and

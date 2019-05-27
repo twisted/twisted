@@ -22,7 +22,6 @@ import errno
 import gc
 import os
 import io
-import select
 import signal
 import stat
 import sys
@@ -98,34 +97,6 @@ def unregisterReapProcessHandler(pid, process):
             and reapProcessHandlers[pid] == process):
         raise RuntimeError("Try to unregister a process not registered.")
     del reapProcessHandlers[pid]
-
-
-
-def detectLinuxBrokenPipeBehavior():
-    """
-    On some Linux version, write-only pipe are detected as readable. This
-    function is here to check if this bug is present or not.
-
-    See L{ProcessWriter.doRead} for a more detailed explanation.
-
-    @return: C{True} if Linux pipe behaviour is broken.
-    @rtype : L{bool}
-    """
-    r, w = os.pipe()
-    os.write(w, b'a')
-    reads, writes, exes = select.select([w], [], [], 0)
-    if reads:
-        # Linux < 2.6.11 says a write-only pipe is readable.
-        brokenPipeBehavior = True
-    else:
-        brokenPipeBehavior = False
-    os.close(r)
-    os.close(w)
-    return brokenPipeBehavior
-
-
-
-brokenLinuxPipeBehavior = detectLinuxBrokenPipeBehavior()
 
 
 
@@ -217,19 +188,9 @@ class ProcessWriter(abstract.FileDescriptor):
 
         That's what this funky code is for. If linux was not broken, this
         function could be simply "return CONNECTION_LOST".
-
-        BUG: We call select no matter what the reactor.
-        If the reactor is pollreactor, and the fd is > 1024, this will fail.
-        (only occurs on broken versions of linux, though).
         """
         if self.enableReadHack:
-            if brokenLinuxPipeBehavior:
-                fd = self.fd
-                r, w, x = select.select([fd], [fd], [], 0)
-                if r and w:
-                    return CONNECTION_LOST
-            else:
-                return CONNECTION_LOST
+            return CONNECTION_LOST
         else:
             self.stopReading()
 
