@@ -1490,6 +1490,9 @@ class _AgentBase(object):
         Issue a new request, given the endpoint and the path sent as part of
         the request.
         """
+        if not isinstance(method, bytes):
+            raise TypeError('method={!r} is {}, but must be bytes'.format(
+                    method, type(method)))
         # Create minimal headers, if necessary:
         if headers is None:
             headers = Headers()
@@ -1714,9 +1717,6 @@ class Agent(_AgentBase):
 
         @see: L{twisted.web.iweb.IAgent.request}
         """
-        if not isinstance(method, bytes):
-            raise TypeError('method={!r} is {}, but must be bytes'.format(
-                    method, type(method)))
         parsedURI = URI.fromBytes(uri)
         try:
             endpoint = self._getEndpoint(parsedURI)

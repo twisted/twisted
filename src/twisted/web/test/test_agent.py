@@ -2484,6 +2484,15 @@ class ProxyAgentTests(TestCase, FakeReactorAndConnectMixin, AgentTestsMixin):
         self.agent._proxyEndpoint = self.StubEndpoint(oldEndpoint, self)
 
 
+    def test_nonBytesMethod(self):
+        """
+        L{ProxyAgent.request} raises L{TypeError} when the C{method} argument
+        isn't L{bytes}.
+        """
+        self.assertRaises(TypeError, self.agent.request,
+                          u'GET', b'http://foo.example/')
+
+
     def test_proxyRequest(self):
         """
         L{client.ProxyAgent} issues an HTTP request against the proxy, with the
