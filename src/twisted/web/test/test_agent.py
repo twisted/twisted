@@ -989,6 +989,15 @@ class AgentTests(TestCase, FakeReactorAndConnectMixin, AgentTestsMixin,
         self.assertEqual(agent._pool.connected, True)
 
 
+    def test_nonBytesMethod(self):
+        """
+        L{Agent.request} raises L{TypeError} when the C{method} argument isn't
+        L{bytes}.
+        """
+        self.assertRaises(TypeError, self.agent.request,
+                          u'GET', b'http://foo.example/')
+
+
     def test_unsupportedScheme(self):
         """
         L{Agent.request} returns a L{Deferred} which fails with
@@ -2473,6 +2482,15 @@ class ProxyAgentTests(TestCase, FakeReactorAndConnectMixin, AgentTestsMixin):
             TCP4ClientEndpoint(self.reactor, "bar", 5678), self.reactor)
         oldEndpoint = self.agent._proxyEndpoint
         self.agent._proxyEndpoint = self.StubEndpoint(oldEndpoint, self)
+
+
+    def test_nonBytesMethod(self):
+        """
+        L{ProxyAgent.request} raises L{TypeError} when the C{method} argument
+        isn't L{bytes}.
+        """
+        self.assertRaises(TypeError, self.agent.request,
+                          u'GET', b'http://foo.example/')
 
 
     def test_proxyRequest(self):
