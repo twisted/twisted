@@ -126,7 +126,7 @@ RESPONSE = {
     CLOSING_DATA_CNX:                   '226 Abort successful',
     TXFR_COMPLETE_OK:                   '226 Transfer Complete.',
     ENTERING_PASV_MODE:                 '227 Entering Passive Mode (%s).',
-    ENTERING_EPSV_MODE:                 '229 Entering Extended Passive Mode (|||%s|).', # RFC 2428 section 3
+    ENTERING_EPSV_MODE:                 '229 Entering Extended Passive Mode (|||%s|).',  # RFC 2428 section 3
     USR_LOGGED_IN_PROCEED:              '230 User logged in, proceed',
     GUEST_LOGGED_IN_PROCEED:            '230 Anonymous login ok, access restrictions apply.',
     REQ_FILE_ACTN_COMPLETED_OK:         '250 Requested File Action Completed OK', #i.e. CWD completed ok
@@ -978,7 +978,8 @@ class FTP(basic.LineReceiver, policies.TimeoutMixin, object):
             server is listening on.
         """
         if self.epsvAll:
-            return defer.fail(BadCmdSequenceError('may not send PASV after EPSV ALL'))
+            return defer.fail(BadCmdSequenceError(
+                'may not send PASV after EPSV ALL'))
 
         # if we have a DTP port set up, lose it.
         if self.dtpFactory is not None:
@@ -1065,7 +1066,8 @@ class FTP(basic.LineReceiver, policies.TimeoutMixin, object):
 
     def ftp_PORT(self, address):
         if self.epsvAll:
-            return defer.fail(BadCmdSequenceError('may not send PORT after EPSV ALL'))
+            return defer.fail(BadCmdSequenceError(
+                'may not send PORT after EPSV ALL'))
 
         addr = tuple(map(int, address.split(',')))
         ip = '%d.%d.%d.%d' % tuple(addr[:4])
@@ -1100,7 +1102,8 @@ class FTP(basic.LineReceiver, policies.TimeoutMixin, object):
             transport addresses.
         """
         if self.epsvAll:
-            return defer.fail(BadCmdSequenceError('may not send EPRT after EPSV ALL'))
+            return defer.fail(BadCmdSequenceError(
+                'may not send EPRT after EPSV ALL'))
 
         try:
             protocol, ip, port = decodeExtendedAddress(extendedAddress)
@@ -1116,15 +1119,18 @@ class FTP(basic.LineReceiver, policies.TimeoutMixin, object):
         if self.dtpFactory is not None:
             self.cleanupDTP()
 
-        self.dtpFactory = DTPFactory(pi=self, peerHost=self.transport.getPeer().host)
+        self.dtpFactory = DTPFactory(
+            pi=self, peerHost=self.transport.getPeer().host)
         self.dtpFactory.setTimeout(self.dtpTimeout)
         self.dtpPort = reactor.connectTCP(ip, port, self.dtpFactory)
 
         def connected(ignored):
             return ENTERING_PORT_MODE
+
         def connFailed(err):
             err.trap(PortConnectionError)
             return CANT_OPEN_DATA_CNX
+
         return self.dtpFactory.deferred.addCallbacks(connected, connFailed)
 
 
@@ -2572,6 +2578,7 @@ class SenderProtocol(protocol.Protocol):
         self.transport.loseConnection()
 
 
+
 def decodeHostPort(line):
     """
     Decode an FTP response specifying a host and port.
@@ -2588,9 +2595,13 @@ def decodeHostPort(line):
     port = (int(e) << 8) + int(f)
     return host, port
 
+
+
 def encodeHostPort(host, port):
     numbers = host.split('.') + [str(port >> 8), str(port % 256)]
     return ','.join(numbers)
+
+
 
 def decodeExtendedAddress(address):
     """
@@ -2602,6 +2613,8 @@ def decodeExtendedAddress(address):
     delim = address[0]
     protocol, host, port, _ = address[1:].split(delim)
     return protocol, host, int(port)
+
+
 
 def decodeExtendedAddressLine(line):
     """
@@ -2616,9 +2629,13 @@ def decodeExtendedAddressLine(line):
     else:
         raise ValueError('No extended address found in "%s"' % line)
 
+
+
 def _unwrapFirstError(failure):
     failure.trap(defer.FirstError)
     return failure.value.subFailure
+
+
 
 class FTPDataPortFactory(protocol.ServerFactory):
     """

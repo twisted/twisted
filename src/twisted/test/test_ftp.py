@@ -68,6 +68,7 @@ def skipWithoutIPv6(f):
 
 class Dummy(basic.LineReceiver):
     logname = None
+
     def __init__(self):
         self.lines = []
         self.rawData = []
@@ -542,6 +543,7 @@ class BasicFTPServerTests(FTPServerTestCase):
         d = self._anonymousLogin()
         # Issue a PASV command
         d.addCallback(lambda _: self.client.queueStringCommand('PASV'))
+
         def cb(responseLines):
             """
             Extract the host and port from the resonse, and
@@ -549,6 +551,7 @@ class BasicFTPServerTests(FTPServerTestCase):
             """
             host, port = ftp.decodeHostPort(responseLines[-1][4:])
             self.assertEqual(port, self.serverProtocol.dtpPort.getHost().port)
+
         d.addCallback(cb)
         # Semi-reasonable way to force cleanup
         d.addCallback(lambda _: self.serverProtocol.transport.loseConnection())
@@ -578,6 +581,7 @@ class BasicFTPServerTests(FTPServerTestCase):
         """
         d = self._anonymousLogin()
         d.addCallback(lambda _: self.client.queueStringCommand('EPSV'))
+
         def cb(responseLines):
             """
             Extract the port from the response, and verify the server is
@@ -585,6 +589,7 @@ class BasicFTPServerTests(FTPServerTestCase):
             """
             _, _, port = ftp.decodeExtendedAddressLine(responseLines[-1][4:])
             self.assertEqual(port, self.serverProtocol.dtpPort.getHost().port)
+
         d.addCallback(cb)
         d.addCallback(lambda _: self.serverProtocol.transport.loseConnection())
         return d
@@ -598,6 +603,7 @@ class BasicFTPServerTests(FTPServerTestCase):
         """
         d = self._anonymousLogin()
         d.addCallback(lambda _: self.client.queueStringCommand('EPSV 2'))
+
         def cb(responseLines):
             """
             Extract the port from the response, and verify the server is
@@ -605,6 +611,7 @@ class BasicFTPServerTests(FTPServerTestCase):
             """
             _, _, port = ftp.decodeExtendedAddressLine(responseLines[-1][4:])
             self.assertEqual(port, self.serverProtocol.dtpPort.getHost().port)
+
         d.addCallback(cb)
         d.addCallback(lambda _: self.serverProtocol.transport.loseConnection())
         return d
@@ -634,6 +641,7 @@ class BasicFTPServerTests(FTPServerTestCase):
         self.assertCommandResponse('EPSV ALL', ["200 EPSV ALL OK"],
                                    chainDeferred=d)
         d.addCallback(lambda _: self.client.queueStringCommand('EPSV'))
+
         def cb(responseLines):
             """
             Extract the port from the response, and verify the server is
@@ -641,6 +649,7 @@ class BasicFTPServerTests(FTPServerTestCase):
             """
             _, _, port = ftp.decodeExtendedAddressLine(responseLines[-1][4:])
             self.assertEqual(port, self.serverProtocol.dtpPort.getHost().port)
+
         d.addCallback(cb)
         d.addCallback(lambda _: self.serverProtocol.transport.loseConnection())
         return d
@@ -1380,10 +1389,12 @@ class FTPServerEpsvDataConnectionTests(FTPServerPasvDataConnectionTests):
         @return: L{Deferred.addCallback}
         """
         d = self.client.queueStringCommand('EPSV')
+
         def gotEPSV(responseLines):
             _, _, port = ftp.decodeExtendedAddressLine(responseLines[-1][4:])
             cc = protocol.ClientCreator(reactor, _BufferingProtocol)
             return cc.connectTCP('127.0.0.1', port)
+
         return d.addCallback(gotEPSV)
 
 
@@ -1483,12 +1494,16 @@ class FTPServerEprtDataConnectionTests(FTPServerPasvDataConnectionTests):
         # Establish an active data connection (i.e. server connecting to
         # client).
         deferred = defer.Deferred()
+
         class DataFactory(protocol.ServerFactory):
+
             protocol = _BufferingProtocol
+
             def buildProtocol(self, addr):
                 p = protocol.ServerFactory.buildProtocol(self, addr)
                 reactor.callLater(0, deferred.callback, p)
                 return p
+
         dataPort = reactor.listenTCP(0, DataFactory(), interface='127.0.0.1')
         self.dataPorts.append(dataPort)
         cmd = 'EPRT |1|127.0.0.1|%s|' % dataPort.getHost().port
@@ -1502,12 +1517,12 @@ class FTPServerEprtDataConnectionTests(FTPServerPasvDataConnectionTests):
 
         @return: L{defer.DeferredList}
         """
-        l = [defer.maybeDeferred(port.stopListening)
-             for port in self.dataPorts]
+        dl = [defer.maybeDeferred(port.stopListening)
+              for port in self.dataPorts]
         d = defer.maybeDeferred(
             FTPServerPasvDataConnectionTests.tearDown, self)
-        l.append(d)
-        return defer.DeferredList(l, fireOnOneErrback=True)
+        dl.append(d)
+        return defer.DeferredList(dl, fireOnOneErrback=True)
 
 
     def test_EPRTCannotConnect(self):
