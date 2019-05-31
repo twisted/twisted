@@ -1393,7 +1393,7 @@ class FTPServerEpsvDataConnectionTests(FTPServerPasvDataConnectionTests):
         def gotEPSV(responseLines):
             _, _, port = ftp.decodeExtendedAddressLine(responseLines[-1][4:])
             cc = protocol.ClientCreator(reactor, _BufferingProtocol)
-            return cc.connectTCP('127.0.0.1', port)
+            return cc.connectTCP('::1', port)
 
         return d.addCallback(gotEPSV)
 
