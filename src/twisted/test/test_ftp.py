@@ -453,7 +453,7 @@ class BasicFTPServerTests(FTPServerTestCase):
         return self.assertCommandFailed(
             'RETR foo',
             ["503 Incorrect sequence of commands: "
-             "PORT or PASV required before RETR"],
+             "PORT, PASV, EPRT, or EPSV required before RETR"],
             chainDeferred=d)
 
 
@@ -467,7 +467,7 @@ class BasicFTPServerTests(FTPServerTestCase):
         return self.assertCommandFailed(
             'STOR foo',
             ["503 Incorrect sequence of commands: "
-             "PORT or PASV required before STOR"],
+             "PORT, PASV, EPRT, or EPSV required before STOR"],
             chainDeferred=d)
 
 
@@ -522,6 +522,129 @@ class BasicFTPServerTests(FTPServerTestCase):
         d.addCallback(cb)
         # Semi-reasonable way to force cleanup
         d.addCallback(lambda _: self.serverProtocol.transport.loseConnection())
+        return d
+
+
+    def test_EPSVALLBeforePASV(self):
+        """
+        When the client sends the command C{EPSV ALL}, a subsequent C{PASV}
+        command is rejected.
+        """
+        d = self._anonymousLogin()
+        self.assertCommandResponse('EPSV ALL', ["200 EPSV ALL OK"],
+                                   chainDeferred=d)
+        self.assertCommandFailed(
+            'PASV',
+            ["503 Incorrect sequence of commands: "
+             "may not send PASV after EPSV ALL"],
+            chainDeferred=d)
+        return d
+
+
+    def test_EPSV(self):
+        """
+        When the client sends the command C{EPSV}, the server responds with a
+        port, and is listening on that port.
+        """
+        d = self._anonymousLogin()
+        d.addCallback(lambda _: self.client.queueStringCommand('EPSV'))
+        def cb(responseLines):
+            """
+            Extract the port from the response, and verify the server is
+            listening on the port it claims to be.
+            """
+            _, _, port = ftp.decodeExtendedAddressLine(responseLines[-1][4:])
+            self.assertEqual(port, self.serverProtocol.dtpPort.getHost().port)
+        d.addCallback(cb)
+        d.addCallback(lambda _: self.serverProtocol.transport.loseConnection())
+        return d
+
+
+    def test_EPSVWithProtocol(self):
+        """
+        When the client sends the command C{EPSV} with a network protocol
+        number, the server responds with a port, and is listening on that
+        port.
+        """
+        d = self._anonymousLogin()
+        d.addCallback(lambda _: self.client.queueStringCommand('EPSV 2'))
+        def cb(responseLines):
+            """
+            Extract the port from the response, and verify the server is
+            listening on the port it claims to be.
+            """
+            _, _, port = ftp.decodeExtendedAddressLine(responseLines[-1][4:])
+            self.assertEqual(port, self.serverProtocol.dtpPort.getHost().port)
+        d.addCallback(cb)
+        d.addCallback(lambda _: self.serverProtocol.transport.loseConnection())
+        return d
+
+
+    def test_EPSVWithBadProtocol(self):
+        """
+        Sending EPSV with a bad protocol number returns a suitable error.
+        """
+        d = self._anonymousLogin()
+        self.assertCommandFailed(
+            'EPSV nonsense',
+            ["501 syntax error in argument(s) nonsense."],
+            chainDeferred=d)
+        self.assertCommandFailed(
+            'EPSV 65535',
+            ["522 Network protocol not supported, use (1,2)"],
+            chainDeferred=d)
+        return d
+
+
+    def test_EPSVALLBeforeEPSV(self):
+        """
+        The client may send the command C{EPSV ALL} before C{EPSV}.
+        """
+        d = self._anonymousLogin()
+        self.assertCommandResponse('EPSV ALL', ["200 EPSV ALL OK"],
+                                   chainDeferred=d)
+        d.addCallback(lambda _: self.client.queueStringCommand('EPSV'))
+        def cb(responseLines):
+            """
+            Extract the port from the response, and verify the server is
+            listening on the port it claims to be.
+            """
+            _, _, port = ftp.decodeExtendedAddressLine(responseLines[-1][4:])
+            self.assertEqual(port, self.serverProtocol.dtpPort.getHost().port)
+        d.addCallback(cb)
+        d.addCallback(lambda _: self.serverProtocol.transport.loseConnection())
+        return d
+
+
+    def test_EPSVALLBeforePORT(self):
+        """
+        When the client sends the command C{EPSV ALL}, a subsequent C{PORT}
+        command is rejected.
+        """
+        d = self._anonymousLogin()
+        self.assertCommandResponse('EPSV ALL', ["200 EPSV ALL OK"],
+                                   chainDeferred=d)
+        self.assertCommandFailed(
+            'PORT ' + ftp.encodeHostPort('127.0.0.1', 0),
+            ["503 Incorrect sequence of commands: "
+             "may not send PORT after EPSV ALL"],
+            chainDeferred=d)
+        return d
+
+
+    def test_EPSVALLBeforeEPRT(self):
+        """
+        When the client sends the command C{EPSV ALL}, a subsequent C{EPRT}
+        command is rejected.
+        """
+        d = self._anonymousLogin()
+        self.assertCommandResponse('EPSV ALL', ["200 EPSV ALL OK"],
+                                   chainDeferred=d)
+        self.assertCommandFailed(
+            'EPRT |1|127.0.0.1|0|',
+            ["503 Incorrect sequence of commands: "
+             "may not send EPRT after EPSV ALL"],
+            chainDeferred=d)
         return d
 
 
@@ -586,7 +709,7 @@ class BasicFTPServerTests(FTPServerTestCase):
         Exceptions other than L{error.CannotListenError} which are raised by
         C{listenFactory} should be raised to the caller of L{FTP.getDTPPort}.
         """
-        def listenFactory(portNumber, factory):
+        def listenFactory(portNumber, factory, **kwargs):
             raise RuntimeError()
         self.serverProtocol.listenFactory = listenFactory
 
@@ -601,7 +724,7 @@ class BasicFTPServerTests(FTPServerTestCase):
         be bound, L{error.CannotListenError} should be raised, otherwise the
         first successful result from L{FTP.listenFactory} should be returned.
         """
-        def listenFactory(portNumber, factory):
+        def listenFactory(portNumber, factory, **kwargs):
             if portNumber in (22032, 22033, 22034):
                 raise error.CannotListenError('localhost', portNumber, 'error')
             return portNumber
@@ -1213,6 +1336,27 @@ class FTPServerPasvDataConnectionTests(FTPServerTestCase):
 
 
 
+class FTPServerEpsvDataConnectionTests(FTPServerPasvDataConnectionTests):
+    """
+    EPSV data connection.
+    """
+    def _makeDataConnection(self, ignored=None):
+        """
+        Establish a passive data connection (i.e. client connecting to
+        server).
+
+        @param ignored: ignored
+        @return: L{Deferred.addCallback}
+        """
+        d = self.client.queueStringCommand('EPSV')
+        def gotEPSV(responseLines):
+            _, _, port = ftp.decodeExtendedAddressLine(responseLines[-1][4:])
+            cc = protocol.ClientCreator(reactor, _BufferingProtocol)
+            return cc.connectTCP('127.0.0.1', port)
+        return d.addCallback(gotEPSV)
+
+
+
 class FTPServerPortDataConnectionTests(FTPServerPasvDataConnectionTests):
     def setUp(self):
         self.dataPorts = []
@@ -1295,6 +1439,70 @@ class FTPServerPortDataConnectionTests(FTPServerPasvDataConnectionTests):
             self.assertEqual([b'ceva.txt', b'test.txt'], filenames)
 
         return d.addCallback(checkDownload)
+
+
+
+class FTPServerEprtDataConnectionTests(FTPServerPasvDataConnectionTests):
+    def setUp(self):
+        self.dataPorts = []
+        return FTPServerPasvDataConnectionTests.setUp(self)
+
+
+    def _makeDataConnection(self, ignored=None):
+        # Establish an active data connection (i.e. server connecting to
+        # client).
+        deferred = defer.Deferred()
+        class DataFactory(protocol.ServerFactory):
+            protocol = _BufferingProtocol
+            def buildProtocol(self, addr):
+                p = protocol.ServerFactory.buildProtocol(self, addr)
+                reactor.callLater(0, deferred.callback, p)
+                return p
+        dataPort = reactor.listenTCP(0, DataFactory(), interface='127.0.0.1')
+        self.dataPorts.append(dataPort)
+        cmd = 'EPRT |1|127.0.0.1|%s|' % dataPort.getHost().port
+        self.client.queueStringCommand(cmd)
+        return deferred
+
+
+    def tearDown(self):
+        """
+        Tear down the connection.
+
+        @return: L{defer.DeferredList}
+        """
+        l = [defer.maybeDeferred(port.stopListening)
+             for port in self.dataPorts]
+        d = defer.maybeDeferred(
+            FTPServerPasvDataConnectionTests.tearDown, self)
+        l.append(d)
+        return defer.DeferredList(l, fireOnOneErrback=True)
+
+
+    def test_EPRTCannotConnect(self):
+        """
+        Listen on a port, and immediately stop listening as a way to find a
+        port number that is definitely closed.
+        """
+        # Login
+        d = self._anonymousLogin()
+
+        def loggedIn(ignored):
+            port = reactor.listenTCP(0, protocol.Factory(),
+                                     interface='127.0.0.1')
+            portNum = port.getHost().port
+            d = port.stopListening()
+            d.addCallback(lambda _: portNum)
+            return d
+        d.addCallback(loggedIn)
+
+        # Tell the server to connect to that port with an EPRT command, and
+        # verify that it fails with the right error.
+        def gotPortNum(portNum):
+            return self.assertCommandFailed(
+                'EPRT |1|127.0.0.1|%s|' % portNum,
+                ["425 Can't open data connection."])
+        return d.addCallback(gotPortNum)
 
 
 
