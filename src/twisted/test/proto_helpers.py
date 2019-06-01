@@ -84,7 +84,7 @@ class AccumulatingProtocol(protocol.Protocol):
 
 deprecatedModuleAttribute(
     Version("Twisted", 19, 3, 0),
-    "Please use twisted.protocols.utils.AccumulatingProtocol instead",
+    "Please use twisted.internet.testing.AccumulatingProtocol instead",
     __name__,
     "AccumulatingProtocol")
 
@@ -118,7 +118,7 @@ class LineSendingProtocol(basic.LineReceiver):
 
 deprecatedModuleAttribute(
     Version("Twisted", 19, 3, 0),
-    "Please use twisted.protocols.utils.LineSendingProtocol instead",
+    "Please use twisted.internet.testing.LineSendingProtocol instead",
     __name__,
     "LineSendingProtocol")
 
@@ -138,7 +138,7 @@ class FakeDatagramTransport:
 
 deprecatedModuleAttribute(
     Version("Twisted", 19, 3, 0),
-    "Please use twisted.protocols.utils.FakeDatagramTransport instead",
+    "Please use twisted.internet.testing.FakeDatagramTransport instead",
     __name__,
     "FakeDatagramTransport")
 
@@ -323,7 +323,7 @@ class StringTransport:
 
 deprecatedModuleAttribute(
     Version("Twisted", 19, 3, 0),
-    "Please use twisted.protocols.utils.StringTransport instead",
+    "Please use twisted.internet.testing.StringTransport instead",
     __name__,
     "StringTransport")
 
@@ -345,7 +345,7 @@ class StringTransportWithDisconnection(StringTransport):
 
 deprecatedModuleAttribute(
     Version("Twisted", 19, 3, 0),
-    "Please use twisted.protocols.utils.StringTransportWithDisconnection"
+    "Please use twisted.internet.testing.StringTransportWithDisconnection"
     " instead",
     __name__,
     "StringTransportWithDisconnection")
@@ -366,7 +366,7 @@ class StringIOWithoutClosing(BytesIO):
 
 deprecatedModuleAttribute(
     Version("Twisted", 19, 3, 0),
-    "Please use twisted.protocols.utils.StringIOWithoutClosing instead",
+    "Please use twisted.internet.testing.StringIOWithoutClosing instead",
     __name__,
     "StringIOWithoutClosing")
 
@@ -822,7 +822,7 @@ class MemoryReactor(object):
 
 deprecatedModuleAttribute(
     Version("Twisted", 19, 3, 0),
-    "Please use twisted.protocols.utils.MemoryReactor instead",
+    "Please use twisted.internet.testing.MemoryReactor instead",
     __name__,
     "MemoryReactor")
 
@@ -843,7 +843,7 @@ class MemoryReactorClock(MemoryReactor, Clock):
 
 deprecatedModuleAttribute(
     Version("Twisted", 19, 3, 0),
-    "Please use twisted.protocols.utils.MemoryReactorClock instead",
+    "Please use twisted.internet.testing.MemoryReactorClock instead",
     __name__,
     "MemoryReactorClock")
 
@@ -927,7 +927,7 @@ class RaisingMemoryReactor(object):
 
 deprecatedModuleAttribute(
     Version("Twisted", 19, 3, 0),
-    "Please use twisted.protocols.utils.RaisingMemoryReactor instead",
+    "Please use twisted.internet.testing.RaisingMemoryReactor instead",
     __name__,
     "RaisingMemoryReactor")
 
@@ -989,7 +989,7 @@ class NonStreamingProducer(object):
 
 deprecatedModuleAttribute(
     Version("Twisted", 19, 3, 0),
-    "Please use twisted.protocols.utils.NonStreamingProducer instead",
+    "Please use twisted.internet.testing.NonStreamingProducer instead",
     __name__,
     "NonStreamingProducer")
 
@@ -1027,7 +1027,7 @@ def waitUntilAllDisconnected(reactor, protocols):
 
 deprecatedModuleAttribute(
     Version("Twisted", 19, 3, 0),
-    "Please use twisted.protocols.utils.waitUntilAllDisconnected instead",
+    "Please use twisted.internet.testing.waitUntilAllDisconnected instead",
     __name__,
     "waitUntilAllDisconnected")
 
@@ -1093,6 +1093,6 @@ class EventLoggingObserver(Sequence):
 
 deprecatedModuleAttribute(
     Version("Twisted", 19, 3, 0),
-    "Please use twisted.protocols.utils.EventLoggingObserver instead",
+    "Please use twisted.internet.testing.EventLoggingObserver instead",
     __name__,
     "EventLoggingObserver")

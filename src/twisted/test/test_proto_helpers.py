@@ -23,7 +23,7 @@ class DeprecationTests(unittest.TestCase):
         self.assertEqual(
             "twisted.test.proto_helpers.AccumulatingProtocol was "
             "deprecated in Twisted 19.3.0: Please use "
-            "twisted.protocols.utils.AccumulatingProtocol instead",
+            "twisted.internet.testing.AccumulatingProtocol instead",
             warnings[0]['message'])
         self.assertEqual(1, len(warnings))
 
@@ -42,7 +42,7 @@ class DeprecationTests(unittest.TestCase):
         self.assertEqual(
             "twisted.test.proto_helpers.LineSendingProtocol was "
             "deprecated in Twisted 19.3.0: Please use "
-            "twisted.protocols.utils.LineSendingProtocol instead",
+            "twisted.internet.testing.LineSendingProtocol instead",
             warnings[0]['message'])
         self.assertEqual(1, len(warnings))
 
@@ -61,7 +61,7 @@ class DeprecationTests(unittest.TestCase):
         self.assertEqual(
             "twisted.test.proto_helpers.FakeDatagramTransport was "
             "deprecated in Twisted 19.3.0: Please use "
-            "twisted.protocols.utils.FakeDatagramTransport instead",
+            "twisted.internet.testing.FakeDatagramTransport instead",
             warnings[0]['message'])
         self.assertEqual(1, len(warnings))
 
@@ -80,7 +80,7 @@ class DeprecationTests(unittest.TestCase):
         self.assertEqual(
             "twisted.test.proto_helpers.StringTransport was "
             "deprecated in Twisted 19.3.0: Please use "
-            "twisted.protocols.utils.StringTransport instead",
+            "twisted.internet.testing.StringTransport instead",
             warnings[0]['message'])
         self.assertEqual(1, len(warnings))
 
@@ -99,7 +99,8 @@ class DeprecationTests(unittest.TestCase):
         self.assertEqual(
             "twisted.test.proto_helpers.StringTransportWithDisconnection "
             "was deprecated in Twisted 19.3.0: Please use "
-            "twisted.protocols.utils.StringTransportWithDisconnection instead",
+            "twisted.internet.testing.StringTransportWithDisconnection "
+            "instead",
             warnings[0]['message'])
         self.assertEqual(1, len(warnings))
 
@@ -118,7 +119,7 @@ class DeprecationTests(unittest.TestCase):
         self.assertEqual(
             "twisted.test.proto_helpers.StringIOWithoutClosing "
             "was deprecated in Twisted 19.3.0: Please use "
-            "twisted.protocols.utils.StringIOWithoutClosing instead",
+            "twisted.internet.testing.StringIOWithoutClosing instead",
             warnings[0]['message'])
         self.assertEqual(1, len(warnings))
 
@@ -137,7 +138,7 @@ class DeprecationTests(unittest.TestCase):
         self.assertEqual(
             "twisted.test.proto_helpers.MemoryReactor "
             "was deprecated in Twisted 19.3.0: Please use "
-            "twisted.protocols.utils.MemoryReactor instead",
+            "twisted.internet.testing.MemoryReactor instead",
             warnings[0]['message'])
         self.assertEqual(1, len(warnings))
 
@@ -156,7 +157,7 @@ class DeprecationTests(unittest.TestCase):
         self.assertEqual(
             "twisted.test.proto_helpers.MemoryReactorClock "
             "was deprecated in Twisted 19.3.0: Please use "
-            "twisted.protocols.utils.MemoryReactorClock instead",
+            "twisted.internet.testing.MemoryReactorClock instead",
             warnings[0]['message'])
         self.assertEqual(1, len(warnings))
 
@@ -175,7 +176,7 @@ class DeprecationTests(unittest.TestCase):
         self.assertEqual(
             "twisted.test.proto_helpers.RaisingMemoryReactor "
             "was deprecated in Twisted 19.3.0: Please use "
-            "twisted.protocols.utils.RaisingMemoryReactor instead",
+            "twisted.internet.testing.RaisingMemoryReactor instead",
             warnings[0]['message'])
         self.assertEqual(1, len(warnings))
 
@@ -194,7 +195,7 @@ class DeprecationTests(unittest.TestCase):
         self.assertEqual(
             "twisted.test.proto_helpers.NonStreamingProducer "
             "was deprecated in Twisted 19.3.0: Please use "
-            "twisted.protocols.utils.NonStreamingProducer instead",
+            "twisted.internet.testing.NonStreamingProducer instead",
             warnings[0]['message'])
         self.assertEqual(1, len(warnings))
 
@@ -213,7 +214,7 @@ class DeprecationTests(unittest.TestCase):
         self.assertEqual(
             "twisted.test.proto_helpers.waitUntilAllDisconnected "
             "was deprecated in Twisted 19.3.0: Please use "
-            "twisted.protocols.utils.waitUntilAllDisconnected instead",
+            "twisted.internet.testing.waitUntilAllDisconnected instead",
             warnings[0]['message'])
         self.assertEqual(1, len(warnings))
 
@@ -232,6 +233,6 @@ class DeprecationTests(unittest.TestCase):
         self.assertEqual(
             "twisted.test.proto_helpers.EventLoggingObserver "
             "was deprecated in Twisted 19.3.0: Please use "
-            "twisted.protocols.utils.EventLoggingObserver instead",
+            "twisted.internet.testing.EventLoggingObserver instead",
             warnings[0]['message'])
         self.assertEqual(1, len(warnings))

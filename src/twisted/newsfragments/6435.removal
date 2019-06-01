@@ -1,1 +1,1 @@
-twisted.test.proto_helpers has moved to twisted.protocols.utils, and is deprecated as of Twisted 19.3.0.
+twisted.test.proto_helpers has moved to twisted.internet.testing. twisted.test.proto_helpers is deprecated as of Twisted 19.3.0.

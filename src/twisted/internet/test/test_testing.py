@@ -2,7 +2,7 @@
 # See LICENSE for details.
 
 """
-Tests for L{twisted.test.proto_helpers}.
+Tests for L{twisted.internet.testing}.
 """
 
 from zope.interface.verify import verifyObject
@@ -20,7 +20,7 @@ from twisted.internet.interfaces import (
 )
 from twisted.internet.address import IPv4Address
 from twisted.trial.unittest import TestCase
-from twisted.protocols.utils import (
+from twisted.internet.testing import (
     StringTransport,
     MemoryReactor,
     RaisingMemoryReactor,
@@ -32,7 +32,7 @@ from twisted.internet.protocol import ClientFactory, Factory
 
 class StringTransportTests(TestCase):
     """
-    Tests for L{twisted.test.proto_helpers.StringTransport}.
+    Tests for L{twisted.internet.testing.StringTransport}.
     """
     def setUp(self):
         self.transport = StringTransport()
