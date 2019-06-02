@@ -16,4 +16,3 @@ for obj in proto_helpers.__all__:
         'Please use twisted.internet.testing.{} instead.'.format(obj),
         'twisted.test.proto_helpers',
         obj)
-
