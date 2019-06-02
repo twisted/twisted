@@ -1,5 +1,4 @@
-# -*- test-case-name:
-# twisted.test.test_stringtransport,twisted.test.test_proto_helpers -*-
+# -*- test-case-name: twisted.test.test_stringtransport -*-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
@@ -31,10 +30,6 @@ from twisted.internet import protocol, error, address, task
 from twisted.internet.task import Clock
 from twisted.internet.address import IPv4Address, UNIXAddress, IPv6Address
 from twisted.logger import ILogObserver
-
-from twisted.python.deprecate import deprecatedModuleAttribute
-
-from twisted.python.versions import Version
 
 
 
@@ -82,14 +77,6 @@ class AccumulatingProtocol(protocol.Protocol):
 
 
 
-deprecatedModuleAttribute(
-    Version("Twisted", 19, 3, 0),
-    "Please use twisted.internet.testing.AccumulatingProtocol instead",
-    __name__,
-    "AccumulatingProtocol")
-
-
-
 class LineSendingProtocol(basic.LineReceiver):
 
     lostConn = False
@@ -116,14 +103,6 @@ class LineSendingProtocol(basic.LineReceiver):
 
 
 
-deprecatedModuleAttribute(
-    Version("Twisted", 19, 3, 0),
-    "Please use twisted.internet.testing.LineSendingProtocol instead",
-    __name__,
-    "LineSendingProtocol")
-
-
-
 class FakeDatagramTransport:
 
     noAddr = object()
@@ -133,14 +112,6 @@ class FakeDatagramTransport:
 
     def write(self, packet, addr=noAddr):
         self.written.append((packet, addr))
-
-
-
-deprecatedModuleAttribute(
-    Version("Twisted", 19, 3, 0),
-    "Please use twisted.internet.testing.FakeDatagramTransport instead",
-    __name__,
-    "FakeDatagramTransport")
 
 
 
@@ -321,14 +292,6 @@ class StringTransport:
 
 
 
-deprecatedModuleAttribute(
-    Version("Twisted", 19, 3, 0),
-    "Please use twisted.internet.testing.StringTransport instead",
-    __name__,
-    "StringTransport")
-
-
-
 class StringTransportWithDisconnection(StringTransport):
     """
     A L{StringTransport} which on disconnection will trigger the connection
@@ -343,15 +306,6 @@ class StringTransportWithDisconnection(StringTransport):
 
 
 
-deprecatedModuleAttribute(
-    Version("Twisted", 19, 3, 0),
-    "Please use twisted.internet.testing.StringTransportWithDisconnection"
-    " instead",
-    __name__,
-    "StringTransportWithDisconnection")
-
-
-
 class StringIOWithoutClosing(BytesIO):
     """
     A BytesIO that can't be closed.
@@ -361,14 +315,6 @@ class StringIOWithoutClosing(BytesIO):
         """
         Do nothing.
         """
-
-
-
-deprecatedModuleAttribute(
-    Version("Twisted", 19, 3, 0),
-    "Please use twisted.internet.testing.StringIOWithoutClosing instead",
-    __name__,
-    "StringIOWithoutClosing")
 
 
 
@@ -820,13 +766,6 @@ class MemoryReactor(object):
 
 
 
-deprecatedModuleAttribute(
-    Version("Twisted", 19, 3, 0),
-    "Please use twisted.internet.testing.MemoryReactor instead",
-    __name__,
-    "MemoryReactor")
-
-
 
 for iface in implementedBy(MemoryReactor):
     verifyClass(iface, MemoryReactor)
@@ -838,14 +777,6 @@ class MemoryReactorClock(MemoryReactor, Clock):
     def __init__(self):
         MemoryReactor.__init__(self)
         Clock.__init__(self)
-
-
-
-deprecatedModuleAttribute(
-    Version("Twisted", 19, 3, 0),
-    "Please use twisted.internet.testing.MemoryReactorClock instead",
-    __name__,
-    "MemoryReactorClock")
 
 
 
@@ -925,14 +856,6 @@ class RaisingMemoryReactor(object):
 
 
 
-deprecatedModuleAttribute(
-    Version("Twisted", 19, 3, 0),
-    "Please use twisted.internet.testing.RaisingMemoryReactor instead",
-    __name__,
-    "RaisingMemoryReactor")
-
-
-
 class NonStreamingProducer(object):
     """
     A pull producer which writes 10 times only.
@@ -987,14 +910,6 @@ class NonStreamingProducer(object):
 
 
 
-deprecatedModuleAttribute(
-    Version("Twisted", 19, 3, 0),
-    "Please use twisted.internet.testing.NonStreamingProducer instead",
-    __name__,
-    "NonStreamingProducer")
-
-
-
 def waitUntilAllDisconnected(reactor, protocols):
     """
     Take a list of disconnecting protocols, callback a L{Deferred} when they're
@@ -1022,14 +937,6 @@ def waitUntilAllDisconnected(reactor, protocols):
     lc = task.LoopingCall(_check)
     lc.clock = reactor
     return lc.start(0.01, now=True)
-
-
-
-deprecatedModuleAttribute(
-    Version("Twisted", 19, 3, 0),
-    "Please use twisted.internet.testing.waitUntilAllDisconnected instead",
-    __name__,
-    "waitUntilAllDisconnected")
 
 
 
@@ -1088,11 +995,3 @@ class EventLoggingObserver(Sequence):
         publisher.addObserver(obs)
         testInstance.addCleanup(lambda: publisher.removeObserver(obs))
         return obs
-
-
-
-deprecatedModuleAttribute(
-    Version("Twisted", 19, 3, 0),
-    "Please use twisted.internet.testing.EventLoggingObserver instead",
-    __name__,
-    "EventLoggingObserver")
