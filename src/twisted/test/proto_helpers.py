@@ -783,7 +783,6 @@ class MemoryReactor(object):
 
 
 
-
 for iface in implementedBy(MemoryReactor):
     verifyClass(iface, MemoryReactor)
 
