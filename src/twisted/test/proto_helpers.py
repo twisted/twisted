@@ -33,6 +33,23 @@ from twisted.logger import ILogObserver
 
 
 
+__all__ = [
+    'AccumulatingProtocol',
+    'LineSendingProtocol',
+    'FakeDatagramTransport',
+    'StringTransport',
+    'StringTransportWithDisconnection',
+    'StringIOWithoutClosing',
+    'MemoryReactor',
+    'MemoryReactorClock',
+    'RaisingMemoryReactor',
+    'NonStreamingProducer',
+    'waitUntilAllDisconnected',
+    'EventLoggingObserver'
+]
+
+
+
 class AccumulatingProtocol(protocol.Protocol):
     """
     L{AccumulatingProtocol} is an L{IProtocol} implementation which collects

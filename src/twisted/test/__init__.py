@@ -5,25 +5,12 @@
 Twisted's unit tests.
 """
 
-__all__ = [
-    'AccumulatingProtocol',
-    'LineSendingProtocol',
-    'FakeDatagramTransport',
-    'StringTransport',
-    'StringTransportWithDisconnection',
-    'StringIOWithoutClosing',
-    'MemoryReactor',
-    'MemoryReactorClock',
-    'RaisingMemoryReactor',
-    'NonStreamingProducer',
-    'waitUntilDisconnected',
-    'EventLoggingObserver'
-]
 
 from twisted.python.deprecate import deprecatedModuleAttribute
 from twisted.python.versions import Version
+import proto_helpers
 
-for i in __all__:
+for i in proto_helpers.__all__:
     deprecatedModuleAttribute(
         Version('Twisted', 'NEXT', 0, 0),
         'Please use twisted.internet.testing.{} instead.'.format(i),
