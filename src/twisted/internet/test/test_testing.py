@@ -453,7 +453,7 @@ class DeprecationTests(TestCase):
 
     def test_stringTransportWithDisconnection(self):
         from twisted.test.proto_helpers import (
-            StringTransportWithDosconnection)
+            StringTransportWithDisconnection)
         self.helper(self.test_stringTransportWithDisconnection,
                     StringTransportWithDisconnection)
 
