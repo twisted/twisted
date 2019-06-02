@@ -414,6 +414,7 @@ class NonStreamingProducerTests(TestCase):
         self.assertRaises(RuntimeError, producer.pauseProducing)
 
 
+
 class DeprecationTests(TestCase):
     """
     Deprecations in L{twisted.test.proto_helpers}.
