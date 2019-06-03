@@ -1,0 +1,1 @@
+twisted.web.http.HTTPChannel now rejects malformed requests with whitespace between the header name and colon. It responds 400 Bad Request as required by RFC 7230 and closes the connection.
