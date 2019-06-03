@@ -1485,6 +1485,7 @@ class ParsingTests(unittest.TestCase):
         See RFC 7230 section 3.2.4.
         """
         processed = []
+
         class MyRequest(http.Request):
             def process(self):
                 processed.append(self)
