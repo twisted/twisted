@@ -1493,7 +1493,7 @@ class ParsingTests(unittest.TestCase):
         requestLines = [
             b"GET / HTTP/1.0",
             b"nospace: ",
-            b" nospace",
+            b" nospace\t",
             b"space:space",
             b" space",
             b"spaces: spaces",
@@ -1508,6 +1508,12 @@ class ParsingTests(unittest.TestCase):
 
         self.runRequest(b"\n".join(requestLines), MyRequest, 0)
         [request] = processed
+        # All leading and trailing whitespace is stripped from the
+        # header-value.
+        self.assertEqual(
+            request.requestHeaders.getRawHeaders(b"nospace"),
+            [b"nospace"],
+        )
         self.assertEqual(
             request.requestHeaders.getRawHeaders(b"space"),
             [b"space  space"],
