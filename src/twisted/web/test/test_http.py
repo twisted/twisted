@@ -1538,6 +1538,28 @@ class ParsingTests(unittest.TestCase):
         self.assertEqual(processed, [])
 
 
+    def test_invalidHeaderWhitespaceBeforeColon(self):
+        """
+        L{HTTPChannel} rejects a request containing a header with whitespace
+        between the header name and colon as requried by RFC 7230 section
+        3.2.4. The response is 400 Bad Request.
+        """
+        processed = []
+
+        class MyRequest(http.Request):
+            def process(self):
+                processed.append(self)
+                self.finish()
+
+        requestLines = [b"GET / HTTP/1.0", b"HeaderName : foo", b"", b""]
+        channel = self.runRequest(b"\n".join(requestLines), MyRequest, 0)
+        self.assertEqual(
+            channel.transport.value(),
+            b"HTTP/1.1 400 Bad Request\r\n\r\n")
+        self.assertTrue(channel.transport.disconnecting)
+        self.assertEqual(processed, [])
+
+
     def test_headerLimitPerRequest(self):
         """
         L{HTTPChannel} enforces the limit of C{HTTPChannel.maxHeaders} per
