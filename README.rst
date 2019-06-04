@@ -4,7 +4,6 @@ Twisted
 |pypi|_
 |coverage|_
 |travis|_
-|appveyor|_
 |circleci|_
 
 For information on what's new in Twisted 19.2.0, see the `NEWS <NEWS.rst>`_ file that comes with the distribution.
@@ -104,9 +103,6 @@ Again, see the included `LICENSE <LICENSE>`_ file for specific legal details.
 
 .. |travis| image:: https://travis-ci.org/twisted/twisted.svg?branch=trunk
 .. _travis: https://travis-ci.org/twisted/twisted
-
-.. |appveyor| image:: https://ci.appveyor.com/api/projects/status/x4oyqtl9cqc2i2l8
-.. _appveyor: https://ci.appveyor.com/project/adiroiban/twisted
 
 .. |circleci| image:: https://circleci.com/gh/twisted/twisted.svg?style=svg
 .. _circleci: https://circleci.com/gh/twisted/twisted
