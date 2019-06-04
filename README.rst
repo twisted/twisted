@@ -41,10 +41,10 @@ Additional instructions for installing this software are in `the installation in
 Documentation and Support
 -------------------------
 
-Twisted's documentation is available from the `Twisted Matrix website <http://twistedmatrix.com/documents/current/>`_.
+Twisted's documentation is available from the `Twisted Matrix website <https://twistedmatrix.com/documents/current/>`_.
 This documentation contains how-tos, code examples, and an API reference.
 
-Help is also available on the `Twisted mailing list <http://twistedmatrix.com/cgi-bin/mailman/listinfo/twisted-python>`_.
+Help is also available on the `Twisted mailing list <https://twistedmatrix.com/cgi-bin/mailman/listinfo/twisted-python>`_.
 
 There is also a pair of very lively IRC channels, ``#twisted`` (for general Twisted questions) and ``#twisted.web`` (for Twisted Web), on ``chat.freenode.net``.
 
