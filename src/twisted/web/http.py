@@ -2181,6 +2181,10 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
             self._respondToBadRequestAndDisconnect()
             return False
 
+        if not header or header[-1:].isspace():
+            self._respondToBadRequestAndDisconnect()
+            return False
+
         header = header.lower()
         data = data.strip()
         if header == b'content-length':
