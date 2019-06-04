@@ -8,24 +8,24 @@ Tests for parts of our release automation system.
 
 import os
 
-
 from pkg_resources import parse_requirements
 from setuptools.dist import Distribution
 import twisted
-from twisted.trial.unittest import TestCase
+from twisted.trial.unittest import SynchronousTestCase
 
 from twisted.python import _setup, filepath
 from twisted.python.compat import _PY3
 from twisted.python._setup import (
     BuildPy3,
     getSetupArgs,
+    _longDescriptionArgsFromReadme,
     ConditionalExtension,
     _EXTRAS_REQUIRE,
     )
 
 
 
-class SetupTests(TestCase):
+class SetupTests(SynchronousTestCase):
     """
     Tests for L{getSetupArgs}.
     """
@@ -40,7 +40,7 @@ class SetupTests(TestCase):
         bad_ext = ConditionalExtension("whatever", ["whatever.c"],
                                         condition=lambda b: False)
 
-        args = getSetupArgs(extensions=[good_ext, bad_ext])
+        args = getSetupArgs(extensions=[good_ext, bad_ext], readme=None)
 
         # ext_modules should be set even though it's not used.  See comment
         # in getSetupArgs
@@ -60,7 +60,7 @@ class SetupTests(TestCase):
         ext = ConditionalExtension("whatever", ["whatever.c"],
                                    define_macros=[("whatever", 2)])
 
-        args = getSetupArgs(extensions=[ext])
+        args = getSetupArgs(extensions=[ext], readme=None)
 
         builder = args["cmdclass"]["build_ext"](Distribution())
         self.patch(os, "name", "nt")
@@ -69,7 +69,7 @@ class SetupTests(TestCase):
 
 
 
-class OptionalDependenciesTests(TestCase):
+class OptionalDependenciesTests(SynchronousTestCase):
     """
     Tests for L{_EXTRAS_REQUIRE}
     """
@@ -295,7 +295,7 @@ fakeOtherPlatform = FakeModule({"python_implementation": lambda: "lvhpy"})
 
 
 
-class WithPlatformTests(TestCase):
+class WithPlatformTests(SynchronousTestCase):
     """
     Tests for L{_checkCPython} when used with a (fake) C{platform} module.
     """
@@ -316,7 +316,7 @@ class WithPlatformTests(TestCase):
 
 
 
-class BuildPy3Tests(TestCase):
+class BuildPy3Tests(SynchronousTestCase):
     """
     Tests for L{BuildPy3}.
     """
@@ -363,3 +363,39 @@ class BuildPy3Tests(TestCase):
             ]),
             sorted(result),
         )
+
+
+
+class LongDescriptionTests(SynchronousTestCase):
+    """
+    Tests for C{_getLongDescriptionArgs()}
+
+    Note that the validity of the reStructuredText syntax is tested separately
+    using L{twine check} in L{tox.ini}.
+    """
+    def test_generate(self):
+        """
+        L{_longDescriptionArgsFromReadme()} outputs a L{long_description} in
+        reStructuredText format. Local links are transformed into absolute ones
+        that point at the Twisted GitHub repository.
+        """
+        path = self.mktemp()
+        with open(path, 'w') as f:
+            f.write('\n'.join([
+                'Twisted',
+                '=======',
+                '',
+                'Changes: `NEWS <NEWS.rst>`_.',
+                "Read `the docs <https://twistedmatrix.com/documents/>`_.\n",
+            ]))
+
+        self.assertEqual({
+            'long_description': '''\
+Twisted
+=======
+
+Changes: `NEWS <https://github.com/twisted/twisted/blob/trunk/NEWS.rst>`_.
+Read `the docs <https://twistedmatrix.com/documents/>`_.
+''',
+            'long_description_content_type': 'text/x-rst',
+        }, _longDescriptionArgsFromReadme(path))

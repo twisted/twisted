@@ -33,8 +33,10 @@ here.
 @var notPortedModules: Modules that are not yet ported to Python 3.
 """
 
+import io
 import os
 import platform
+import re
 import sys
 
 from distutils.command import build_ext
@@ -63,10 +65,6 @@ STATIC_PACKAGE_METADATA = dict(
         'Issues': 'https://twistedmatrix.com/trac/report',
     },
     license="MIT",
-    long_description="""\
-An extensible framework for Python programming, with special focus
-on event-based network programming and multiprotocol integration.
-""",
     classifiers=[
         "Programming Language :: Python :: 2.7",
         "Programming Language :: Python :: 3",
@@ -211,15 +209,56 @@ def _checkPythonVersion():
 
 
 
-def getSetupArgs(extensions=_EXTENSIONS):
+def _longDescriptionArgsFromReadme(readme):
     """
+    Generate a PyPI long description from the readme.
 
-    @return: The keyword arguments to be used the the setup method.
+    @param readme: Path to the readme reStructuredText file.
+    @type readme: C{str}
+
+    @return: Keyword arguments to be passed to C{setuptools.setup()}.
+    @rtype: C{str}
+    """
+    with io.open(readme, encoding='utf-8') as f:
+        readmeRst = f.read()
+
+    # Munge links of the form `NEWS <NEWS.rst>`_ to point at the appropriate
+    # location on GitHub so that they function when the long description is
+    # displayed on PyPI.
+    longDesc = re.sub(
+        r'`([^`]+)\s+<(?!https?://)([^>]+)>`_',
+        r'`\1 <https://github.com/twisted/twisted/blob/trunk/\2>`_',
+        readmeRst,
+        flags=re.I,
+    )
+
+    return {
+        'long_description': longDesc,
+        'long_description_content_type': 'text/x-rst',
+    }
+
+
+
+def getSetupArgs(extensions=_EXTENSIONS, readme='README.rst'):
+    """
+    Generate arguments for C{setuptools.setup()}
+
+    @param extensions: C extension modules to maybe build. This argument is to
+        be used for testing.
+    @type extensions: C{list} of C{ConditionalExtension}
+
+    @param readme: Path to the readme reStructuredText file. This argument is
+        to be used for testing.
+    @type readme: C{str}
+
+    @return: The keyword arguments to be used by the setup method.
     @rtype: L{dict}
     """
     _checkPythonVersion()
 
     arguments = STATIC_PACKAGE_METADATA.copy()
+    if readme:
+        arguments.update(_longDescriptionArgsFromReadme(readme))
 
     # This is a workaround for distutils behavior; ext_modules isn't
     # actually used by our custom builder.  distutils deep-down checks
