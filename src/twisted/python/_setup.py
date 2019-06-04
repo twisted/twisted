@@ -56,7 +56,7 @@ STATIC_PACKAGE_METADATA = dict(
     author_email="twisted-python@twistedmatrix.com",
     maintainer="Glyph Lefkowitz",
     maintainer_email="glyph@twistedmatrix.com",
-    url="http://twistedmatrix.com/",
+    url="https://twistedmatrix.com/",
     license="MIT",
     long_description="""\
 An extensible framework for Python programming, with special focus
@@ -307,7 +307,7 @@ class build_ext_twisted(build_ext.build_ext, object):
         # _XOPEN_SOURCE_EXTENDED macros to build in order to gain access to
         # the msg_control, msg_controllen, and msg_flags members in
         # sendmsg.c. (according to
-        # http://stackoverflow.com/questions/1034587).  See the documentation
+        # https://stackoverflow.com/questions/1034587).  See the documentation
         # of X/Open CAE in the standards(5) man page of Solaris.
         if sys.platform.startswith('sunos'):
             self.define_macros.append(('_XOPEN_SOURCE', 1))
