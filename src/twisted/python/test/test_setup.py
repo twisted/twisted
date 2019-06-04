@@ -38,7 +38,7 @@ class SetupTests(SynchronousTestCase):
         good_ext = ConditionalExtension("whatever", ["whatever.c"],
                                         condition=lambda b: True)
         bad_ext = ConditionalExtension("whatever", ["whatever.c"],
-                                        condition=lambda b: False)
+                                       condition=lambda b: False)
 
         args = getSetupArgs(extensions=[good_ext, bad_ext], readme=None)
 
