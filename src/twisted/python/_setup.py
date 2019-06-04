@@ -57,6 +57,11 @@ STATIC_PACKAGE_METADATA = dict(
     maintainer="Glyph Lefkowitz",
     maintainer_email="glyph@twistedmatrix.com",
     url="https://twistedmatrix.com/",
+    project_urls={
+        'Documentation': 'https://twistedmatrix.com/documents/current/',
+        'Source': 'https://github.com/twisted/twisted',
+        'Issues': 'https://twistedmatrix.com/trac/report',
+    },
     license="MIT",
     long_description="""\
 An extensible framework for Python programming, with special focus
