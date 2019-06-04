@@ -1521,7 +1521,12 @@ class ParsingTests(unittest.TestCase):
         a 400 (Bad Request) response is sent to the client and the connection
         is closed.
         """
-        self.assertRequestRejected([b"GET / HTTP/1.0", b"Content-Length: x", b"", b""])
+        self.assertRequestRejected([
+            b"GET / HTTP/1.0",
+            b"Content-Length: x",
+            b"",
+            b"",
+        ])
 
 
     def test_invalidHeaderNoColon(self):
@@ -1529,7 +1534,12 @@ class ParsingTests(unittest.TestCase):
         If a header without colon is received a 400 (Bad Request) response
         is sent to the client and the connection is closed.
         """
-        self.assertRequestRejected([b"GET / HTTP/1.0", b"HeaderName ", b"", b""])
+        self.assertRequestRejected([
+            b"GET / HTTP/1.0",
+            b"HeaderName ",
+            b"",
+            b"",
+        ])
 
 
     def test_invalidHeaderOnlyColon(self):
@@ -1538,7 +1548,12 @@ class ParsingTests(unittest.TestCase):
         nothing before the colon).  It produces a 400 (Bad Request) response is
         generated and closes the connection.
         """
-        self.assertRequestRejected([b"GET / HTTP/1.0", b": foo", b"", b""])
+        self.assertRequestRejected([
+            b"GET / HTTP/1.0",
+            b": foo",
+            b"",
+            b"",
+        ])
 
 
     def test_invalidHeaderWhitespaceBeforeColon(self):
@@ -1548,7 +1563,12 @@ class ParsingTests(unittest.TestCase):
         3.2.4. A 400 (Bad Request) response is generated and the connection
         closed.
         """
-        self.assertRequestRejected([b"GET / HTTP/1.0", b"HeaderName : foo", b"", b""])
+        self.assertRequestRejected([
+            b"GET / HTTP/1.0",
+            b"HeaderName : foo",
+            b"",
+            b"",
+        ])
 
 
     def test_headerLimitPerRequest(self):
