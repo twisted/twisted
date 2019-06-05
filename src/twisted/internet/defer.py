@@ -32,12 +32,9 @@ from twisted.python import lockfile, failure
 from twisted.logger import Logger
 from twisted.python.deprecate import warnAboutFunction, deprecated
 from twisted.python._oldstyle import _oldStyle
+from twisted.internet.error import AlreadyCalled as AlreadyCalledError
 
 log = Logger()
-
-
-class AlreadyCalledError(Exception):
-    pass
 
 
 
