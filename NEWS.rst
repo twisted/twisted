@@ -3,6 +3,45 @@ http://twistedmatrix.com/trac/ticket/<number>
 
 .. towncrier release notes start
 
+Twisted 19.2.1 (2019-06-06)
+===========================
+
+No significant changes.
+
+
+Conch
+-----
+
+No significant changes.
+
+
+Web
+---
+
+Bugfixes
+~~~~~~~~
+
+- All HTTP clients in twisted.web.client now raise a ValueError when called with a method and/or URL that contain invalid characters.  This mitigates CVE-2019-12387.  Thanks to Alex Brasetvik for reporting this vulnerability. (#9647)
+
+
+Mail
+----
+
+No significant changes.
+
+
+Words
+-----
+
+No significant changes.
+
+
+Names
+-----
+
+No significant changes.
+
+
 Twisted 19.2.0 (2019-04-07)
 ===========================
 
