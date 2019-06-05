@@ -584,13 +584,13 @@ class HTTPClientParser(HTTPParser):
 _VALID_METHOD = re.compile(
     br"\A[%s]+\Z" % (
         bytes().join(
-            [
+            (
                 b"!", b"#", b"$", b"%", b"&", b"'", b"*",
                 b"+", b"-", b".", b"^", b"_", b"`", b"|", b"~",
                 b"\x30-\x39",
                 b"\x41-\x5a",
                 b"\x61-\x7A",
-            ],
+            ),
         ),
     ),
 )
@@ -603,8 +603,12 @@ def _ensureValidMethod(method):
     ASCII character that is not a delimiter (i.e. one of
     C{"(),/:;<=>?@[\\]{}}.)
 
-    @param method: The method to check
-    @return: The method if it is valid
+    @param method: the method to check
+    @type method: L{bytes}
+
+    @return: the method if it is valid
+    @rtype: L{bytes}
+
     @raise ValueError: if the method is not valid
 
     @see: U{https://tools.ietf.org/html/rfc7230#section-3.1.1},
@@ -626,6 +630,18 @@ def _ensureValidURI(uri):
     A valid URI cannot contain control characters (i.e., characters
     between 0-32, inclusive and 127) or non-ASCII characters (i.e.,
     characters with values between 128-255, inclusive).
+
+    @param uri: the URI to check
+    @type uri: L{bytes}
+
+    @return: the URI if it is valid
+    @rtype: L{bytes}
+
+    @raise ValueError: if the URI is not valid
+
+    @see: U{https://tools.ietf.org/html/rfc3986#section-3.3},
+        U{https://tools.ietf.org/html/rfc3986#appendix-A},
+        U{https://tools.ietf.org/html/rfc5234#appendix-B.1}
     """
     if _VALID_URI.match(uri):
         return uri
