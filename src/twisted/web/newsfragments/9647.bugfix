@@ -1,0 +1,1 @@
+All HTTP clients in twisted.web.client now raise a ValueError when called with a method and/or URL that contain invalid characters.  This mitigates CVE-2019-12387.  Thanks to Alex Brasetvik for reporting this vulnerability.
