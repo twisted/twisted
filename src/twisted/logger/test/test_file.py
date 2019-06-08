@@ -122,8 +122,8 @@ class TextFileLogObserverTests(TestCase):
         """
         with StringIO() as fileHandle:
             observer = textFileLogObserver(fileHandle, timeFormat=u"%f")
-            observer(dict(log_format=u"XYZZY", log_time=1.23456))
-            self.assertEqual(fileHandle.getvalue(), u"234560 [-#-] XYZZY\n")
+            observer(dict(log_format=u"XYZZY", log_time=112345.6))
+            self.assertEqual(fileHandle.getvalue(), u"600000 [-#-] XYZZY\n")
 
 
     def test_observeFailure(self):

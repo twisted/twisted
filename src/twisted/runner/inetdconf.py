@@ -6,10 +6,6 @@
 Parser for inetd.conf files
 """
 
-from twisted.python.deprecate import deprecatedModuleAttribute
-from incremental import Version
-
-
 # Various exceptions
 class InvalidConfError(Exception):
     """
@@ -29,17 +25,6 @@ class InvalidServicesConfError(InvalidConfError):
     """
     Invalid services file
     """
-
-
-
-class InvalidRPCServicesConfError(InvalidConfError):
-    """
-    DEPRECATED. Invalid rpc services file
-    """
-    deprecatedModuleAttribute(
-        Version("Twisted", 16, 2, 0),
-        "The RPC service configuration is no longer maintained.",
-        __name__, "InvalidRPCServicesConfError")
 
 
 
@@ -211,35 +196,3 @@ class ServicesConf(SimpleConfFile):
         self.services[(name, protocol)] = port
         for alias in aliases:
             self.services[(alias, protocol)] = port
-
-
-
-class RPCServicesConf(SimpleConfFile):
-    """
-    DEPRECATED. /etc/rpc parser
-
-    @ivar self.services: dict mapping rpc service names to rpc ports.
-    """
-    deprecatedModuleAttribute(
-        Version("Twisted", 16, 2, 0),
-        "The RPC service configuration is no longer maintained.",
-        __name__, "RPCServicesConf")
-
-    defaultFilename = '/etc/rpc'
-
-    def __init__(self):
-        self.services = {}
-
-
-    def parseFields(self, name, port, *aliases):
-        try:
-            port = int(port)
-        except:
-            raise InvalidRPCServicesConfError(
-                'Invalid port: %s' % (repr(port),))
-
-        self.services[name] = port
-        for alias in aliases:
-            self.services[alias] = port
-
-

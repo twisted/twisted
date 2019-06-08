@@ -8,8 +8,18 @@ from __future__ import division, absolute_import
 
 import struct
 
+from twisted.python.reflect import requireModule
+
+cryptography = requireModule("cryptography")
+
 from twisted.conch import error
-from twisted.conch.ssh import channel, common, connection
+if cryptography:
+    from twisted.conch.ssh import common, connection
+else:
+    class connection:
+        class SSHConnection: pass
+
+from twisted.conch.ssh import channel
 from twisted.python.compat import long
 from twisted.trial import unittest
 from twisted.conch.test import test_userauth
@@ -42,6 +52,7 @@ class TestChannel(channel.SSHChannel):
     """
     name = b"TestChannel"
     gotOpen = False
+    gotClosed = False
 
     def logPrefix(self):
         return "TestChannel %i" % self.id
@@ -152,6 +163,9 @@ class TestConnection(connection.SSHConnection):
     @type channel. C{TestChannel}
     """
 
+    if not cryptography:
+        skip = "Cannot run without cryptography"
+
     def logPrefix(self):
         return "TestConnection"
 
@@ -187,6 +201,8 @@ class TestConnection(connection.SSHConnection):
 
 class ConnectionTests(unittest.TestCase):
 
+    if not cryptography:
+        skip = "Cannot run without cryptography"
     if test_userauth.transport is None:
         skip = "Cannot run without both cryptography and pyasn1"
 
@@ -226,9 +242,16 @@ class ConnectionTests(unittest.TestCase):
         self.conn.openChannel(channel2)
         self.conn.ssh_CHANNEL_OPEN_CONFIRMATION(b'\x00\x00\x00\x00' * 4)
         self.assertTrue(channel1.gotOpen)
+        self.assertFalse(channel1.gotClosed)
         self.assertFalse(channel2.gotOpen)
+        self.assertFalse(channel2.gotClosed)
         self.conn.serviceStopped()
         self.assertTrue(channel1.gotClosed)
+        self.assertFalse(channel2.gotOpen)
+        self.assertFalse(channel2.gotClosed)
+        from twisted.internet.error import ConnectionLost
+        self.assertIsInstance(channel2.openFailureReason,
+                              ConnectionLost)
 
     def test_GLOBAL_REQUEST(self):
         """
@@ -473,6 +496,9 @@ class ConnectionTests(unittest.TestCase):
         """
         channel = TestChannel()
         self._openChannel(channel)
+        self.assertTrue(channel.gotOpen)
+        self.assertFalse(channel.gotOneClose)
+        self.assertFalse(channel.gotClosed)
         self.conn.sendClose(channel)
         self.conn.ssh_CHANNEL_CLOSE(b'\x00\x00\x00\x00')
         self.assertTrue(channel.gotOneClose)
@@ -658,6 +684,8 @@ class ConnectionTests(unittest.TestCase):
 
         channel2 = TestChannel()
         self._openChannel(channel2)
+        self.assertTrue(channel2.gotOpen)
+        self.assertFalse(channel2.gotClosed)
         channel2.remoteClosed = True
         self.conn.sendClose(channel2)
         self.assertTrue(channel2.gotClosed)
@@ -706,6 +734,9 @@ class CleanConnectionShutdownTests(unittest.TestCase):
     """
     Check whether correct cleanup is performed on connection shutdown.
     """
+    if not cryptography:
+        skip = "Cannot run without cryptography"
+
     if test_userauth.transport is None:
         skip = "Cannot run without both cryptography and pyasn1"
 

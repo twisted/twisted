@@ -1,0 +1,1 @@
+The __version__ attribute of Twisted submodules that were previously packaged separately, deprecated since Twisted 16.0, has been removed.

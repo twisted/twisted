@@ -402,12 +402,15 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
         self.connected = False
         ProtocolWrapper.connectionLost(self, reason)
 
+        # Breaking reference cycle between self._tlsConnection and self.
+        self._tlsConnection = None
+
 
     def loseConnection(self):
         """
         Send a TLS close alert and close the underlying connection.
         """
-        if self.disconnecting:
+        if self.disconnecting or not self.connected:
             return
         # If connection setup has not finished, OpenSSL 1.0.2f+ will not shut
         # down the connection until we write some data to the connection which
@@ -605,6 +608,10 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
 
 
     def unregisterProducer(self):
+        # If we have no producer, we don't need to do anything here.
+        if self._producer is None:
+            return
+
         # If we received a non-streaming producer, we need to stop the
         # streaming wrapper:
         if isinstance(self._producer._producer, _PullToPush):

@@ -740,7 +740,7 @@ class DummyConnectionPool(ConnectionPool):
         """
         Don't forward init call.
         """
-        self.reactor = reactor
+        self._reactor = reactor
 
 
 

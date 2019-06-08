@@ -7,10 +7,18 @@ import subprocess
 from itertools import count
 
 from zope.interface import implementer
+from twisted.python.reflect import requireModule
+
+cryptography = requireModule("cryptography")
 
 from twisted.conch.error import ConchError
-from twisted.conch.avatar import ConchUser
-from twisted.conch.ssh.session import ISession, SSHSession, wrapProtocol
+if cryptography:
+    from twisted.conch.avatar import ConchUser
+    from twisted.conch.ssh.session import ISession, SSHSession, wrapProtocol
+else:
+    from twisted.conch.interfaces import ISession
+    class ConchUser: pass
+
 from twisted.cred import portal
 from twisted.internet import reactor, defer, protocol
 from twisted.internet.error import ProcessExitedAlready
@@ -48,6 +56,25 @@ try:
 except ImportError:
     pyasn1 = None
 
+
+def _has_ipv6():
+    """ Returns True if the system can bind an IPv6 address."""
+    sock = None
+    has_ipv6 = False
+
+    try:
+        sock = socket.socket(socket.AF_INET6)
+        sock.bind(('::1', 0))
+        has_ipv6 = True
+    except socket.error:
+        pass
+
+    if sock:
+        sock.close()
+    return has_ipv6
+
+
+HAS_IPV6 = _has_ipv6()
 
 
 class FakeStdio(object):
@@ -346,8 +373,9 @@ class ConchServerSetupMixin:
                                              interface="127.0.0.1")
         self.echoServer = reactor.listenTCP(0, EchoFactory())
         self.echoPort = self.echoServer.getHost().port
-        self.echoServerV6 = reactor.listenTCP(0, EchoFactory(), interface="::1")
-        self.echoPortV6 = self.echoServerV6.getHost().port
+        if HAS_IPV6:
+            self.echoServerV6 = reactor.listenTCP(0, EchoFactory(), interface="::1")
+            self.echoPortV6 = self.echoServerV6.getHost().port
 
 
     def tearDown(self):
@@ -357,10 +385,13 @@ class ConchServerSetupMixin:
             pass
         else:
             self.conchFactory.proto.transport.loseConnection()
-        return defer.gatherResults([
-                defer.maybeDeferred(self.conchServer.stopListening),
-                defer.maybeDeferred(self.echoServer.stopListening),
-                defer.maybeDeferred(self.echoServerV6.stopListening)])
+        deferreds = [
+            defer.maybeDeferred(self.conchServer.stopListening),
+            defer.maybeDeferred(self.echoServer.stopListening),
+        ]
+        if HAS_IPV6:
+            deferreds.append(defer.maybeDeferred(self.echoServerV6.stopListening))
+        return defer.gatherResults(deferreds)
 
 
 
@@ -631,15 +662,6 @@ class OpenSSHKeyExchangeTests(ConchServerSetupMixin, OpenSSHClientMixin,
             'ecdh-sha2-nistp521')
 
 
-    def test_DH_GROUP1(self):
-        """
-        The diffie-hellman-group1-sha1 key exchange algorithm is compatible
-        with OpenSSH.
-        """
-        return self.assertExecuteWithKexAlgorithm(
-            'diffie-hellman-group1-sha1')
-
-
     def test_DH_GROUP14(self):
         """
         The diffie-hellman-group14-sha1 key exchange algorithm is compatible
@@ -694,6 +716,8 @@ class OpenSSHClientForwardingTests(ForwardingMixin, OpenSSHClientMixin,
                          % (localPort, self.echoPortV6))
         d.addCallback(self.assertEqual, b'test\n')
         return d
+    if not HAS_IPV6:
+        test_localToRemoteForwardingV6.skip = "Requires IPv6 support"
 
 
 

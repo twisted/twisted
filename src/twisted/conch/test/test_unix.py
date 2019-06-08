@@ -10,8 +10,7 @@ from twisted.internet.interfaces import IReactorProcess
 from twisted.python.reflect import requireModule
 from twisted.trial import unittest
 
-from .test_session import StubConnection, StubClient
-
+cryptography = requireModule("cryptography")
 unix = requireModule('twisted.conch.unix')
 
 
@@ -51,6 +50,8 @@ class StubUnixConchUser(object):
     """
 
     def __init__(self, homeDirectory):
+        from .test_session import StubConnection, StubClient
+
         self._homeDirectory = homeDirectory
         self.conn = StubConnection(transport=StubClient())
 
@@ -70,7 +71,9 @@ class StubUnixConchUser(object):
 
 class TestSSHSessionForUnixConchUser(unittest.TestCase):
 
-    if unix is None:
+    if cryptography is None:
+        skip = "Cannot run without cryptography"
+    elif unix is None:
         skip = "Unix system required"
 
 

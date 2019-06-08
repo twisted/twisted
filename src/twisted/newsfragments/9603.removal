@@ -1,0 +1,1 @@
+twisted.conch.insults.client and twisted.conch.insults.colors, deprecated since Twisted 10.1, have been removed.
