@@ -784,28 +784,6 @@ class BytesEnvironTests(unittest.TestCase):
 
 
 
-class OrderedDictTests(unittest.TestCase):
-    """
-    Tests for L{twisted.python.compat.OrderedDict}.
-    """
-    def test_deprecated(self):
-        """
-        L{twisted.python.compat.OrderedDict} is deprecated.
-        """
-        from twisted.python.compat import OrderedDict
-        OrderedDict # Shh pyflakes
-
-        currentWarnings = self.flushWarnings(offendingFunctions=[
-            self.test_deprecated])
-        self.assertEqual(
-            currentWarnings[0]['message'],
-            "twisted.python.compat.OrderedDict was deprecated in Twisted "
-            "15.5.0: Use collections.OrderedDict instead.")
-        self.assertEqual(currentWarnings[0]['category'], DeprecationWarning)
-        self.assertEqual(len(currentWarnings), 1)
-
-
-
 class CoercedUnicodeTests(unittest.TestCase):
     """
     Tests for L{twisted.python.compat._coercedUnicode}.
