@@ -15,8 +15,14 @@ from sys import exc_info
 from types import GeneratorType
 from traceback import extract_tb
 
-from twisted.internet.defer import Deferred
+try:
+    from inspect import iscoroutine
+except ImportError:
+    def iscoroutine(*args, **kwargs):
+        return False
+
 from twisted.python.compat import unicode, nativeString, iteritems
+from twisted.internet.defer import Deferred, ensureDeferred
 from twisted.web._stan import Tag, slot, voidElements, Comment, CDATA, CharRef
 from twisted.web.error import UnfilledSlot, UnsupportedType, FlattenerError
 from twisted.web.iweb import IRenderable
@@ -276,6 +282,9 @@ def _flattenElement(request, root, write, slotData, renderFactory,
         write(escaped.encode('ascii'))
     elif isinstance(root, Deferred):
         yield root.addCallback(lambda result: (result, keepGoing(result)))
+    elif iscoroutine(root):
+        d = ensureDeferred(root)
+        yield d.addCallback(lambda result: (result, keepGoing(result)))
     elif IRenderable.providedBy(root):
         result = root.render(request)
         yield keepGoing(result, renderFactory=root)
@@ -398,7 +407,7 @@ def flattenString(request, root):
     """
     Collate a string representation of C{root} into a single string.
 
-    This is basically gluing L{flatten} to a L{NativeStringIO} and returning
+    This is basically gluing L{flatten} to an L{io.BytesIO} and returning
     the results. See L{flatten} for the exact meanings of C{request} and
     C{root}.
 

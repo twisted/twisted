@@ -22,7 +22,6 @@ import errno
 import gc
 import os
 import io
-import select
 import signal
 import stat
 import sys
@@ -42,7 +41,7 @@ from zope.interface import implementer
 
 from twisted.python import log, failure
 from twisted.python.util import switchUID
-from twisted.python.compat import items, xrange, _PY3
+from twisted.python.compat import items, range, _PY3
 from twisted.internet import fdesc, abstract, error
 from twisted.internet.main import CONNECTION_LOST, CONNECTION_DONE
 from twisted.internet._baseprocess import BaseProcess
@@ -98,34 +97,6 @@ def unregisterReapProcessHandler(pid, process):
             and reapProcessHandlers[pid] == process):
         raise RuntimeError("Try to unregister a process not registered.")
     del reapProcessHandlers[pid]
-
-
-
-def detectLinuxBrokenPipeBehavior():
-    """
-    On some Linux version, write-only pipe are detected as readable. This
-    function is here to check if this bug is present or not.
-
-    See L{ProcessWriter.doRead} for a more detailed explanation.
-
-    @return: C{True} if Linux pipe behaviour is broken.
-    @rtype : L{bool}
-    """
-    r, w = os.pipe()
-    os.write(w, b'a')
-    reads, writes, exes = select.select([w], [], [], 0)
-    if reads:
-        # Linux < 2.6.11 says a write-only pipe is readable.
-        brokenPipeBehavior = True
-    else:
-        brokenPipeBehavior = False
-    os.close(r)
-    os.close(w)
-    return brokenPipeBehavior
-
-
-
-brokenLinuxPipeBehavior = detectLinuxBrokenPipeBehavior()
 
 
 
@@ -217,19 +188,9 @@ class ProcessWriter(abstract.FileDescriptor):
 
         That's what this funky code is for. If linux was not broken, this
         function could be simply "return CONNECTION_LOST".
-
-        BUG: We call select no matter what the reactor.
-        If the reactor is pollreactor, and the fd is > 1024, this will fail.
-        (only occurs on broken versions of linux, though).
         """
         if self.enableReadHack:
-            if brokenLinuxPipeBehavior:
-                fd = self.fd
-                r, w, x = select.select([fd], [fd], [], 0)
-                if r and w:
-                    return CONNECTION_LOST
-            else:
-                return CONNECTION_LOST
+            return CONNECTION_LOST
         else:
             self.stopReading()
 
@@ -238,7 +199,7 @@ class ProcessWriter(abstract.FileDescriptor):
         """
         See abstract.FileDescriptor.connectionLost.
         """
-        # At least on OS X 10.4, exiting while stdout is non-blocking can
+        # At least on macOS 10.4, exiting while stdout is non-blocking can
         # result in data loss.  For some reason putting the file descriptor
         # back into blocking mode seems to resolve this issue.
         fdesc.setBlocking(self.fd)
@@ -390,7 +351,7 @@ class _BaseProcess(BaseProcess, object):
         # that responds to signals normally, we need to reset our
         # child process's signal handling (just) after we fork and
         # before we execvpe.
-        for signalnum in xrange(1, signal.NSIG):
+        for signalnum in range(1, signal.NSIG):
             if signal.getsignal(signalnum) == signal.SIG_IGN:
                 # Reset signal handling to the default
                 signal.signal(signalnum, signal.SIG_DFL)
@@ -481,7 +442,7 @@ class _BaseProcess(BaseProcess, object):
                         traceback.print_exc(file=stderr)
                         stderr.flush()
 
-                        for fd in xrange(3):
+                        for fd in range(3):
                             os.close(fd)
                     except:
                         # Handle all errors during the error-reporting process

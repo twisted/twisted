@@ -33,6 +33,8 @@ from twisted.web.server import NOT_DONE_YET
 from twisted.web.static import Data
 
 from twisted.web.test.test_web import DummyRequest
+from twisted.test.proto_helpers import EventLoggingObserver
+from twisted.logger import globalLogPublisher
 
 
 def b64encode(s):
@@ -127,6 +129,8 @@ class RequestMixin:
         Create a L{DummyRequest} (change me to create a
         L{twisted.web.http.Request} instead).
         """
+        if clientAddress is None:
+            clientAddress = IPv4Address("TCP", "localhost", 1234)
         request = DummyRequest(b'/')
         request.method = method
         request.client = clientAddress
@@ -220,7 +224,7 @@ class DigestAuthTests(RequestMixin, unittest.TestCase):
 
 
 
-class UnauthorizedResourceTests(unittest.TestCase):
+class UnauthorizedResourceTests(RequestMixin, unittest.TestCase):
     """
     Tests for L{UnauthorizedResource}.
     """
@@ -256,7 +260,7 @@ class UnauthorizedResourceTests(unittest.TestCase):
         I{WWW-Authenticate} header and puts a simple unauthorized message
         into the response body.
         """
-        request = DummyRequest([b''])
+        request = self.makeRequest()
         self._unauthorizedRenderTest(request)
         self.assertEqual(b'Unauthorized', b''.join(request.written))
 
@@ -267,8 +271,7 @@ class UnauthorizedResourceTests(unittest.TestCase):
         is like its handling of a I{GET} request, but no response body is
         written.
         """
-        request = DummyRequest([b''])
-        request.method = b'HEAD'
+        request = self.makeRequest(method=b'HEAD')
         self._unauthorizedRenderTest(request)
         self.assertEqual(b'', b''.join(request.written))
 
@@ -281,11 +284,28 @@ class UnauthorizedResourceTests(unittest.TestCase):
         """
         resource = UnauthorizedResource([
                 BasicCredentialFactory('example\\"foo')])
-        request = DummyRequest([b''])
+        request = self.makeRequest()
         request.render(resource)
         self.assertEqual(
             request.responseHeaders.getRawHeaders(b'www-authenticate'),
             [b'basic realm="example\\\\\\"foo"'])
+
+
+    def test_renderQuotesDigest(self):
+        """
+        The digest value included in the I{WWW-Authenticate} header
+        set in the response when L{UnauthorizedResource} is rendered
+        has quotes and backslashes escaped.
+        """
+        resource = UnauthorizedResource([
+                digest.DigestCredentialFactory(b'md5', b'example\\"foo')])
+        request = self.makeRequest()
+        request.render(resource)
+        authHeader = request.responseHeaders.getRawHeaders(
+            b'www-authenticate'
+        )[0]
+        self.assertIn(b'realm="example\\\\\\"foo"', authHeader)
+        self.assertIn(b'hm="md5', authHeader)
 
 
 
@@ -572,6 +592,10 @@ class HTTPAuthHeaderTests(unittest.TestCase):
         method results in a 500 response code and causes the exception to be
         logged.
         """
+        logObserver = EventLoggingObserver.createWithCleanup(
+            self,
+            globalLogPublisher
+        )
         class UnexpectedException(Exception):
             pass
 
@@ -590,6 +614,11 @@ class HTTPAuthHeaderTests(unittest.TestCase):
         child = getChildForRequest(self.wrapper, request)
         request.render(child)
         self.assertEqual(request.responseCode, 500)
+        self.assertEquals(1, len(logObserver))
+        self.assertIsInstance(
+            logObserver[0]["log_failure"].value,
+            UnexpectedException
+        )
         self.assertEqual(len(self.flushLoggedErrors(UnexpectedException)), 1)
 
 
@@ -598,6 +627,10 @@ class HTTPAuthHeaderTests(unittest.TestCase):
         Any unexpected failure from L{Portal.login} results in a 500 response
         code and causes the failure to be logged.
         """
+        logObserver = EventLoggingObserver.createWithCleanup(
+            self,
+            globalLogPublisher
+        )
         class UnexpectedException(Exception):
             pass
 
@@ -613,6 +646,11 @@ class HTTPAuthHeaderTests(unittest.TestCase):
         child = self._authorizedBasicLogin(request)
         request.render(child)
         self.assertEqual(request.responseCode, 500)
+        self.assertEquals(1, len(logObserver))
+        self.assertIsInstance(
+            logObserver[0]["log_failure"].value,
+            UnexpectedException
+        )
         self.assertEqual(len(self.flushLoggedErrors(UnexpectedException)), 1)
 
 

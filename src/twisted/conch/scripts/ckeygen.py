@@ -10,6 +10,8 @@ from __future__ import print_function
 
 import sys, os, getpass, socket
 from functools import wraps
+from imp import reload
+
 if getpass.getpass == getpass.unix_getpass:
     try:
         import termios # hack around broken termios
@@ -187,7 +189,7 @@ def changePassPhrase(options):
             'Enter file in which the key is (%s): ' % filename)
     try:
         key = keys.Key.fromFile(options['filename'])
-    except keys.EncryptedKeyError as e:
+    except keys.EncryptedKeyError:
         # Raised if password not supplied for an encrypted key
         if not options.get('pass'):
             options['pass'] = getpass.getpass('Enter old passphrase: ')

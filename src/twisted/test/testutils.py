@@ -18,6 +18,8 @@ from xml.dom import minidom as dom
 
 from twisted.internet.protocol import FileWrapper
 
+
+
 class IOPump:
     """Utility to pump data between clients and servers for protocol testing.
 
@@ -55,6 +57,7 @@ class IOPump:
             return 1
         else:
             return 0
+
 
 
 def returnConnected(server, client):
@@ -142,8 +145,8 @@ class ComparisonTestsMixin(object):
         equal to C{valueOne} and that it defines equality cooperatively with
         other types it doesn't know about.
 
-        @param firstValueOne: An object which is expected to compare as equal to
-            C{secondValueOne} and not equal to C{valueTwo}.
+        @param firstValueOne: An object which is expected to compare as equal
+            to C{secondValueOne} and not equal to C{valueTwo}.
 
         @param secondValueOne: A different object than C{firstValueOne} but
             which is expected to compare equal to that object.

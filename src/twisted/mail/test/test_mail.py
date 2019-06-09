@@ -20,42 +20,35 @@ from hashlib import md5
 from zope.interface.verify import verifyClass
 from zope.interface import Interface, implementer
 
-from twisted.trial import unittest
-from twisted.mail import smtp
-from twisted.mail import pop3
-from twisted.names import dns
-from twisted.internet import protocol
-from twisted.internet import defer
-from twisted.internet.defer import Deferred
-from twisted.internet import reactor
-from twisted.internet import interfaces
-from twisted.internet import task
-from twisted.internet.error import DNSLookupError, CannotListenError
-from twisted.internet.error import ProcessDone, ProcessTerminated
-from twisted.internet import address
-from twisted.python import failure
-from twisted.python.filepath import FilePath
-from twisted.python import log
-from twisted.mail.relaymanager import _AttemptManager
-from twisted.test.proto_helpers import MemoryReactorClock, StringTransport
-
-from twisted import mail
+import twisted.cred.checkers
+import twisted.cred.credentials
+import twisted.cred.portal
+import twisted.mail.alias
 import twisted.mail.mail
 import twisted.mail.maildir
+import twisted.mail.protocols
 import twisted.mail.relay
 import twisted.mail.relaymanager
-import twisted.mail.protocols
-import twisted.mail.alias
 
-from twisted.names.error import DNSNameError
+from twisted import cred, mail
+from twisted.internet import (address, defer, interfaces, protocol,
+                              reactor, task)
+from twisted.internet.defer import Deferred
+from twisted.internet.error import (DNSLookupError, CannotListenError,
+                                    ProcessDone, ProcessTerminated)
+from twisted.mail import pop3, smtp
+from twisted.mail.relaymanager import _AttemptManager
+from twisted.names import dns
 from twisted.names.dns import RRHeader, Record_CNAME, Record_MX
+from twisted.names.error import DNSNameError
+from twisted.python import failure, log
+from twisted.python.compat import range
+from twisted.python.filepath import FilePath
+from twisted.test.proto_helpers import (LineSendingProtocol,
+                                        MemoryReactorClock, StringTransport)
+from twisted.trial import unittest
 
-from twisted import cred
-import twisted.cred.credentials
-import twisted.cred.checkers
-import twisted.cred.portal
 
-from twisted.test.proto_helpers import LineSendingProtocol
 
 class DomainWithDefaultsTests(unittest.TestCase):
     def testMethods(self):
@@ -63,7 +56,7 @@ class DomainWithDefaultsTests(unittest.TestCase):
         d = mail.mail.DomainWithDefaultDict(d, 'Default')
 
         self.assertEqual(len(d), 10)
-        self.assertEqual(list(iter(d)), range(10))
+        self.assertEqual(list(iter(d)), list(range(10)))
         self.assertEqual(list(d.iterkeys()), list(iter(d)))
 
         items = list(d.iteritems())
@@ -72,7 +65,7 @@ class DomainWithDefaultsTests(unittest.TestCase):
 
         values = list(d.itervalues())
         values.sort()
-        self.assertEqual(values, range(10, 20))
+        self.assertEqual(values, list(range(10, 20)))
 
         items = d.items()
         items.sort()
@@ -80,7 +73,7 @@ class DomainWithDefaultsTests(unittest.TestCase):
 
         values = d.values()
         values.sort()
-        self.assertEqual(values, range(10, 20))
+        self.assertEqual(values, list(range(10, 20)))
 
         for x in range(10):
             self.assertEqual(d[x], x + 10)
@@ -504,7 +497,7 @@ class MaildirAppendStringTests(unittest.TestCase, _AppendTestMixin):
         self.assertEqual(len(mbox.listMessages()), 10)
         self.assertEqual(
             [len(mbox.getMessage(i).read()) for i in range(10)],
-            range(1, 11))
+            list(range(1, 11)))
         # test in the right order: last to first error location.
         self._setState(None, mbox, rename=False)
         d = self._append(None, mbox)
@@ -533,7 +526,7 @@ class MaildirAppendFileTests(unittest.TestCase, _AppendTestMixin):
         """
         mbox = mail.maildir.MaildirMailbox(self.d)
         messages = []
-        for i in xrange(1, 11):
+        for i in range(1, 11):
             temp = tempfile.TemporaryFile()
             temp.write("X" * i)
             temp.seek(0, 0)
@@ -554,7 +547,7 @@ class MaildirAppendFileTests(unittest.TestCase, _AppendTestMixin):
         self.assertEqual(len(mbox.listMessages()), 10)
         self.assertEqual(
             [len(mbox.getMessage(i).read()) for i in range(10)],
-            range(1, 11))
+            list(range(1, 11)))
 
 
 
@@ -623,7 +616,7 @@ class MaildirTests(unittest.TestCase):
             i = i + 1
 
         mb = mail.maildir.MaildirMailbox(self.d)
-        self.assertEqual(mb.listMessages(), range(1, 11))
+        self.assertEqual(mb.listMessages(), list(range(1, 11)))
         self.assertEqual(mb.listMessages(1), 2)
         self.assertEqual(mb.listMessages(5), 6)
 
@@ -1093,7 +1086,7 @@ class Manager:
 class ManagedRelayerTests(unittest.TestCase):
     def setUp(self):
         self.manager = Manager()
-        self.messages = range(0, 20, 2)
+        self.messages = list(range(0, 20, 2))
         self.factory = object()
         self.relay = mail.relaymanager.ManagedRelayerMixin(self.manager)
         self.relay.messages = self.messages[:]

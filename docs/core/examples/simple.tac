@@ -19,9 +19,9 @@ internet.TimerService(5, util.println, "--MARK--").setServiceParent(s)
 
 class Foo(protocol.Protocol):
     def connectionMade(self):
-        self.transport.write('lalala\n')
+        self.transport.write(b'lalala\n')
     def dataReceived(self, data):
-        print(`data`)
+        print(data)
 
 factory = protocol.ClientFactory()
 factory.protocol = Foo
@@ -34,7 +34,7 @@ class FooService(service.Service):
     def stopService(self):
         service.Service.stopService(self)
         print('lala, stopping')
-        print self.parent.getServiceNamed(self.name) is self
+        print(self.parent.getServiceNamed(self.name) is self)
 
 foo = FooService()
 foo.setName('foo')

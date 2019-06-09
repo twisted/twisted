@@ -1,5 +1,8 @@
 # -*- test-case-name: calculus.test.test_base_2 -*-
 
+from __future__ import division
+
+
 class Calculation(object):
     def add(self, a, b):
         return a + b
@@ -11,4 +14,4 @@ class Calculation(object):
         return a * b
 
     def divide(self, a, b):
-        return a / b
+        return a // b

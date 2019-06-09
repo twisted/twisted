@@ -19,10 +19,10 @@ To create a TLS client, use :api:`twisted.internet.endpoints.SSL4ClientEndpoint 
 TLS provides transport layer security, but it's important to understand what "security" means.
 With respect to TLS it means three things:
 
-    1. Identity: TLS servers (and sometimes clients) present a certificate, offering proof of who they are, so that you know who you are talking to.
-    2. Confidentiality: once you know who you are talking to, encryption of the connection ensures that the communications can't be understood by any third parties who might be listening in.
-    3. Integrity: TLS checks the encrypted messages to ensure that they actually came from the party you originally authenticated to.
-       If the messages fail these checks, then they are discarded and your application does not see them.
+#. Identity: TLS servers (and sometimes clients) present a certificate, offering proof of who they are, so that you know who you are talking to.
+#. Confidentiality: once you know who you are talking to, encryption of the connection ensures that the communications can't be understood by any third parties who might be listening in.
+#. Integrity: TLS checks the encrypted messages to ensure that they actually came from the party you originally authenticated to.
+   If the messages fail these checks, then they are discarded and your application does not see them.
 
 Without identity, neither confidentiality nor integrity is possible.
 If you don't know who you're talking to, then you might as easily be talking to your bank or to a thief who wants to steal your bank password.
@@ -30,9 +30,9 @@ Each of the APIs listed above with "SSL" in the name requires a configuration ob
 (Please pardon the somewhat awkward name.)
 The ``contextFactory`` serves three purposes:
 
-    1. It provides the materials to prove your own identity to the other side of the connection: in other words, who you are.
-    2. It expresses your requirements of the other side's identity: in other words, who you would like to talk to (and who you trust to tell you that you're talking to the right party).
-    3. It allows you to specify certain specialized options about the way the TLS protocol itself operates.
+1. It provides the materials to prove your own identity to the other side of the connection: in other words, who you are.
+2. It expresses your requirements of the other side's identity: in other words, who you would like to talk to (and who you trust to tell you that you're talking to the right party).
+3. It allows you to specify certain specialized options about the way the TLS protocol itself operates.
 
 The requirements of clients and servers are slightly different.
 Both *can* provide a certificate to prove their identity, but commonly, TLS *servers* provide a certificate, whereas TLS *clients* check the server's certificate (to make sure they're talking to the right server) and then later identify themselves to the server some other way, often by offering a shared secret such as a password or API key via an application protocol secured with TLS and not as part of TLS itself.
@@ -53,7 +53,7 @@ You may obtain an object suitable to pass as the ``trustRoot=`` parameter with a
 
    Currently, Twisted only supports loading of OpenSSL's default trust roots.
    If you've built OpenSSL yourself, you must take care to include these in the appropriate location.
-   If you're using the OpenSSL shipped as part of Mac OS X 10.5-10.9, this behavior will also be correct.
+   If you're using the OpenSSL shipped as part of macOS 10.5-10.9, this behavior will also be correct.
    If you're using Debian, or one of its derivatives like Ubuntu, install the `ca-certificates` package to ensure you have trust roots available, and this behavior should also be correct.
    Work is ongoing to make :api:`twisted.internet.ssl.platformTrust <platformTrust>` --- the API that :api:`twisted.internet.ssl.optionsForClientTLS <optionsForClientTLS>` uses by default --- more robust.
    For example, :api:`twisted.internet.ssl.platformTrust <platformTrust>` should fall back to `the "certifi" package <http://pypi.python.org/pypi/certifi>`_ if no platform trust roots are available but it doesn't do that yet.

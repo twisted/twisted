@@ -25,12 +25,14 @@ from collections import deque
 from zope.interface import implementer
 
 import priority
+import h2.config
 import h2.connection
 import h2.errors
 import h2.events
 import h2.exceptions
 
 from twisted.internet.defer import Deferred
+from twisted.internet.error import ConnectionLost
 from twisted.internet.interfaces import (
     IProtocol, ITransport, IConsumer, IPushProducer, ISSLTransport
 )
@@ -38,6 +40,7 @@ from twisted.internet._producer_helpers import _PullToPush
 from twisted.internet.protocol import Protocol
 from twisted.logger import Logger
 from twisted.protocols.policies import TimeoutMixin
+from twisted.python.failure import Failure
 
 
 # This API is currently considered private.
@@ -103,16 +106,29 @@ class H2Connection(Protocol, TimeoutMixin):
     @ivar _sender: A handle to the data-sending loop, allowing it to be
         terminated if needed.
     @type _sender: L{twisted.internet.task.LoopingCall}
+
+    @ivar abortTimeout: The number of seconds to wait after we attempt to shut
+        the transport down cleanly to give up and forcibly terminate it. This
+        is only used when we time a connection out, to prevent errors causing
+        the FD to get leaked. If this is L{None}, we will wait forever.
+    @type abortTimeout: L{int}
+
+    @ivar _abortingCall: The L{twisted.internet.base.DelayedCall} that will be
+        used to forcibly close the transport if it doesn't close cleanly.
+    @type _abortingCall: L{twisted.internet.base.DelayedCall}
     """
     factory = None
     site = None
+    abortTimeout = 15
 
     _log = Logger()
+    _abortingCall = None
 
     def __init__(self, reactor=None):
-        self.conn = h2.connection.H2Connection(
+        config = h2.config.H2Configuration(
             client_side=False, header_encoding=None
         )
+        self.conn = h2.connection.H2Connection(config=config)
         self.streams = {}
 
         self.priority = priority.PriorityTree()
@@ -158,7 +174,7 @@ class H2Connection(Protocol, TimeoutMixin):
             dataToSend = self.conn.data_to_send()
             self.transport.write(dataToSend)
             self.transport.loseConnection()
-            self.connectionLost("Protocol error from peer.")
+            self.connectionLost(Failure())
             return
 
         for event in events:
@@ -176,7 +192,7 @@ class H2Connection(Protocol, TimeoutMixin):
                 self._handlePriorityUpdate(event)
             elif isinstance(event, h2.events.ConnectionTerminated):
                 self.transport.loseConnection()
-                self.connectionLost("Shutdown by remote peer")
+                self.connectionLost(ConnectionLost("Remote peer sent GOAWAY"))
 
         dataToSend = self.conn.data_to_send()
         if dataToSend:
@@ -206,15 +222,41 @@ class H2Connection(Protocol, TimeoutMixin):
         # NO_ERROR.
         if (self.conn.open_outbound_streams > 0 or
                 self.conn.open_inbound_streams > 0):
-            error_code = h2.errors.PROTOCOL_ERROR
+            error_code = h2.errors.ErrorCodes.PROTOCOL_ERROR
         else:
-            error_code = h2.errors.NO_ERROR
+            error_code = h2.errors.ErrorCodes.NO_ERROR
 
         self.conn.close_connection(error_code=error_code)
         self.transport.write(self.conn.data_to_send())
 
+        # Don't let the client hold this connection open too long.
+        if self.abortTimeout is not None:
+            # We use self.callLater because that's what TimeoutMixin does, even
+            # though we have a perfectly good reactor sitting around. See
+            # https://twistedmatrix.com/trac/ticket/8488.
+            self._abortingCall = self.callLater(
+                self.abortTimeout, self.forceAbortClient
+            )
+
         # We're done, throw the connection away.
         self.transport.loseConnection()
+
+
+    def forceAbortClient(self):
+        """
+        Called if C{abortTimeout} seconds have passed since the timeout fired,
+        and the connection still hasn't gone away. This can really only happen
+        on extremely bad connections or when clients are maliciously attempting
+        to keep connections open.
+        """
+        self._log.info(
+            "Forcibly timing out client: {client}",
+            client=self.transport.getPeer()
+        )
+        # We want to lose track of the _abortingCall so that no-one tries to
+        # cancel it.
+        self._abortingCall = None
+        self.transport.abortConnection()
 
 
     def connectionLost(self, reason):
@@ -232,6 +274,11 @@ class H2Connection(Protocol, TimeoutMixin):
 
         for streamID in list(self.streams.keys()):
             self._requestDone(streamID)
+
+        # If we were going to force-close the transport, we don't have to now.
+        if self._abortingCall is not None:
+            self._abortingCall.cancel()
+            self._abortingCall = None
 
 
     # Implementation of IPushProducer
@@ -285,7 +332,7 @@ class H2Connection(Protocol, TimeoutMixin):
         This tells the L{H2Connection} that its consumer has died, so it must
         stop producing data for good.
         """
-        self.connectionLost("stopProducing")
+        self.connectionLost(ConnectionLost("Producing stopped"))
 
 
     def pauseProducing(self):
@@ -347,6 +394,8 @@ class H2Connection(Protocol, TimeoutMixin):
         if self._consumerBlocked is not None:
             self._consumerBlocked.addCallback(self._sendPrioritisedData)
             return
+
+        self.resetTimeout()
 
         remainingWindow = self.conn.local_flow_control_window(stream)
         frameData = self._outboundStreamQueues[stream].popleft()
@@ -455,7 +504,9 @@ class H2Connection(Protocol, TimeoutMixin):
         @type event: L{h2.events.StreamReset}
         """
         stream = self.streams[event.stream_id]
-        stream.connectionLost("Stream reset")
+        stream.connectionLost(
+            ConnectionLost("Stream reset with code %s" % event.error_code)
+        )
         self._requestDone(event.stream_id)
 
 
@@ -743,7 +794,7 @@ class H2Connection(Protocol, TimeoutMixin):
         self.transport.write(self.conn.data_to_send())
 
         stream = self.streams[streamID]
-        stream.connectionLost("Stream reset")
+        stream.connectionLost(ConnectionLost("Invalid request"))
         self._requestDone(streamID)
 
 

@@ -14,7 +14,7 @@ from zope.interface import implementer
 from twisted.cred import credentials
 from twisted.python.compat import nativeString
 from twisted.mail._except import IllegalClientResponse
-from twisted.mail.interfaces import IClientAuthentication
+from twisted.mail.interfaces import IClientAuthentication, IChallengeResponse
 
 
 @implementer(IClientAuthentication)
@@ -71,6 +71,7 @@ class PLAINAuthenticator:
 
 
 
+@implementer(IChallengeResponse)
 class LOGINCredentials(credentials.UsernamePassword):
     def __init__(self):
         self.challenges = [b'Password\0', b'User Name\0']
@@ -91,6 +92,7 @@ class LOGINCredentials(credentials.UsernamePassword):
 
 
 
+@implementer(IChallengeResponse)
 class PLAINCredentials(credentials.UsernamePassword):
     def __init__(self):
         credentials.UsernamePassword.__init__(self, None, None)
@@ -110,7 +112,6 @@ class PLAINCredentials(credentials.UsernamePassword):
 
     def moreChallenges(self):
         return False
-
 
 
 __all__ = [

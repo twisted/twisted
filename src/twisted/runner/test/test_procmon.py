@@ -4,6 +4,7 @@
 """
 Tests for L{twisted.runner.procmon}.
 """
+import pickle
 
 from twisted.trial import unittest
 from twisted.runner.procmon import LoggingProtocol, ProcessMonitor
@@ -130,6 +131,31 @@ class ProcmonTests(unittest.TestCase):
         self.pm.threshold = 10
 
 
+    def test_reprLooksGood(self):
+        """
+        Repr includes all details
+        """
+        self.pm.addProcess("foo", ["arg1", "arg2"],
+                           uid=1, gid=2, env={})
+        representation = repr(self.pm)
+        self.assertIn('foo', representation)
+        self.assertIn('1', representation)
+        self.assertIn('2', representation)
+
+
+    def test_simpleReprLooksGood(self):
+        """
+        Repr does not include unneeded details.
+
+        Values of attributes that just mean "inherit from launching
+        process" do not appear in the repr of a process.
+        """
+        self.pm.addProcess("foo", ["arg1", "arg2"], env={})
+        representation = repr(self.pm)
+        self.assertNotIn('(', representation)
+        self.assertNotIn(')', representation)
+
+
     def test_getStateIncludesProcesses(self):
         """
         The list of monitored processes must be included in the pickle state.
@@ -185,6 +211,18 @@ class ProcmonTests(unittest.TestCase):
         self.reactor.advance(0)
         self.assertEqual(
             self.reactor.spawnedProcesses[0]._environment, fakeEnv)
+
+
+    def test_addProcessCwd(self):
+        """
+        L{ProcessMonitor.addProcess} takes an C{cwd} parameter that is passed
+        to L{IReactorProcess.spawnProcess}.
+        """
+        self.pm.startService()
+        self.pm.addProcess("foo", ["foo"], cwd='/mnt/lala')
+        self.reactor.advance(0)
+        self.assertEqual(
+            self.reactor.spawnedProcesses[0]._path, '/mnt/lala')
 
 
     def test_removeProcess(self):
@@ -503,6 +541,22 @@ class ProcmonTests(unittest.TestCase):
         self.assertEqual({}, self.pm.protocols)
 
 
+    def test_restartAllRestartsOneProcess(self):
+        """
+        L{ProcessMonitor.restartAll} succeeds when there is one process.
+        """
+        self.pm.addProcess("foo", ["foo"])
+        self.pm.startService()
+        self.reactor.advance(1)
+        self.pm.restartAll()
+        # Just enough time for the process to die,
+        # not enough time to start a new one.
+        self.reactor.advance(1)
+        processes = list(self.reactor.spawnedProcesses)
+        myProcess = processes.pop()
+        self.assertEquals(processes, [])
+        self.assertIsNone(myProcess.pid)
+
     def test_stopServiceCancelRestarts(self):
         """
         L{ProcessMonitor.stopService} should cancel any scheduled process
@@ -547,3 +601,64 @@ class ProcmonTests(unittest.TestCase):
         # all pending process restarts.
         self.assertEqual(self.pm.protocols, {})
 
+
+
+class DeprecationTests(unittest.SynchronousTestCase):
+
+    """
+    Tests that check functionality that should be deprecated is deprecated.
+    """
+
+    def setUp(self):
+        """
+        Create reactor and process monitor.
+        """
+        self.reactor = DummyProcessReactor()
+        self.pm = ProcessMonitor(reactor=self.reactor)
+
+
+    def test_toTuple(self):
+        """
+        _Process.toTuple is deprecated.
+
+        When getting the deprecated processes property, the actual
+        data (kept in the class _Process) is converted to a tuple --
+        which produces a DeprecationWarning per process so converted.
+        """
+        self.pm.addProcess("foo", ["foo"])
+        myprocesses = self.pm.processes
+        self.assertEquals(len(myprocesses), 1)
+        warnings = self.flushWarnings()
+        foundToTuple = False
+        for warning in warnings:
+            self.assertIs(warning['category'], DeprecationWarning)
+            if 'toTuple' in warning['message']:
+                foundToTuple = True
+        self.assertTrue(foundToTuple,
+                        "no tuple deprecation found:{}".format(repr(warnings)))
+
+
+    def test_processes(self):
+        """
+        Accessing L{ProcessMonitor.processes} results in deprecation warning
+
+        Even when there are no processes, and thus no process is converted
+        to a tuple, accessing the L{ProcessMonitor.processes} property
+        should generate its own DeprecationWarning.
+        """
+        myProcesses = self.pm.processes
+        self.assertEquals(myProcesses, {})
+        warnings = self.flushWarnings()
+        first = warnings.pop(0)
+        self.assertIs(first['category'], DeprecationWarning)
+        self.assertEquals(warnings, [])
+
+
+    def test_getstate(self):
+        """
+        Pickling an L{ProcessMonitor} results in deprecation warnings
+        """
+        pickle.dumps(self.pm)
+        warnings = self.flushWarnings()
+        for warning in warnings:
+            self.assertIs(warning['category'], DeprecationWarning)

@@ -15,7 +15,7 @@ from zope.interface import implementer, implementedBy
 from zope.interface.verify import verifyClass
 
 from twisted.python import failure
-from twisted.python.compat import unicode, intToBytes
+from twisted.python.compat import unicode, intToBytes, Sequence
 from twisted.internet.defer import Deferred
 from twisted.internet.interfaces import (
     ITransport, IConsumer, IPushProducer, IConnector,
@@ -29,6 +29,7 @@ from twisted.internet import protocol, error, address, task
 
 from twisted.internet.task import Clock
 from twisted.internet.address import IPv4Address, UNIXAddress, IPv6Address
+from twisted.logger import ILogObserver
 
 
 class AccumulatingProtocol(protocol.Protocol):
@@ -122,6 +123,9 @@ class StringTransport:
     @ivar disconnecting: A C{bool} which is C{False} until L{loseConnection} is
         called, then C{True}.
 
+    @ivar disconnected: A C{bool} which is C{False} until L{abortConnection} is
+        called, then C{True}.
+
     @ivar producer: If a producer is currently registered, C{producer} is a
         reference to it.  Otherwise, L{None}.
 
@@ -159,6 +163,7 @@ class StringTransport:
     """
 
     disconnecting = False
+    disconnected = False
 
     producer = None
     streaming = None
@@ -222,8 +227,10 @@ class StringTransport:
 
     def abortConnection(self):
         """
-        Abort the connection. Same as C{loseConnection}.
+        Abort the connection. Same as C{loseConnection}, but also toggles the
+        C{aborted} instance variable to C{True}.
         """
+        self.disconnected = True
         self.loseConnection()
 
 
@@ -281,7 +288,8 @@ class StringTransport:
 
 class StringTransportWithDisconnection(StringTransport):
     """
-    A L{StringTransport} which can be disconnected.
+    A L{StringTransport} which on disconnection will trigger the connection
+    lost on the attached protocol.
     """
 
     def loseConnection(self):
@@ -919,3 +927,60 @@ def waitUntilAllDisconnected(reactor, protocols):
     lc = task.LoopingCall(_check)
     lc.clock = reactor
     return lc.start(0.01, now=True)
+
+
+
+@implementer(ILogObserver)
+class EventLoggingObserver(Sequence):
+    """
+    L{ILogObserver} That stores its events in a list for later inspection.
+    This class is similar to L{LimitedHistoryLogObserver} save that the
+    internal buffer is public and intended for external inspection.  The
+    observer implements the sequence protocol to ease iteration of the events.
+
+    @ivar _events: The events captured by this observer
+    @type _events: L{list}
+    """
+    def __init__(self):
+        self._events = []
+
+
+    def __len__(self):
+        return len(self._events)
+
+
+    def __getitem__(self, index):
+        return self._events[index]
+
+
+    def __iter__(self):
+        return iter(self._events)
+
+
+    def __call__(self, event):
+        """
+        @see: L{ILogObserver}
+        """
+        self._events.append(event)
+
+
+    @classmethod
+    def createWithCleanup(cls, testInstance, publisher):
+        """
+        Create an L{EventLoggingObserver} instance that observes the provided
+        publisher and will be cleaned up with addCleanup().
+
+        @param testInstance: Test instance in which this logger is used.
+        @type testInstance: L{twisted.trial.unittest.TestCase}
+
+        @param publisher: Log publisher to observe.
+        @type publisher: twisted.logger.LogPublisher
+
+        @return: An EventLoggingObserver configured to observe the provided
+            publisher.
+        @rtype: L{twisted.test.proto_helpers.EventLoggingObserver}
+        """
+        obs = cls()
+        publisher.addObserver(obs)
+        testInstance.addCleanup(lambda: publisher.removeObserver(obs))
+        return obs

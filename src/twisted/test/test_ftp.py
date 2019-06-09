@@ -15,16 +15,16 @@ import random
 from zope.interface import implementer
 from zope.interface.verify import verifyClass
 
-from twisted.trial import unittest
+from twisted.cred import portal, checkers, credentials
+from twisted.cred.error import UnauthorizedLogin
 from twisted.cred.portal import IRealm
-from twisted.protocols import basic
 from twisted.internet import reactor, task, protocol, defer, error
 from twisted.internet.interfaces import IConsumer
-from twisted.cred.error import UnauthorizedLogin
-from twisted.cred import portal, checkers, credentials
+from twisted.protocols import basic
 from twisted.python import failure, filepath, runtime
-from twisted.python.compat import xrange
+from twisted.python.compat import range
 from twisted.test import proto_helpers
+from twisted.trial import unittest
 
 from twisted.protocols import ftp, loopback
 
@@ -610,11 +610,11 @@ class BasicFTPServerTests(FTPServerTestCase):
         port = self.serverProtocol.getDTPPort(protocol.Factory())
         self.assertEqual(port, 0)
 
-        self.serverProtocol.passivePortRange = xrange(22032, 65536)
+        self.serverProtocol.passivePortRange = range(22032, 65536)
         port = self.serverProtocol.getDTPPort(protocol.Factory())
         self.assertEqual(port, 22035)
 
-        self.serverProtocol.passivePortRange = xrange(22032, 22035)
+        self.serverProtocol.passivePortRange = range(22032, 22035)
         self.assertRaises(error.CannotListenError,
                           self.serverProtocol.getDTPPort,
                           protocol.Factory())
@@ -626,7 +626,7 @@ class BasicFTPServerTests(FTPServerTestCase):
         their C{passivePortRange} attribute set to the same object the
         factory's C{passivePortRange} attribute is set to.
         """
-        portRange = xrange(2017, 2031)
+        portRange = range(2017, 2031)
         self.factory.passivePortRange = portRange
         protocol = self.factory.buildProtocol(None)
         self.assertEqual(portRange, protocol.wrappedProtocol.passivePortRange)

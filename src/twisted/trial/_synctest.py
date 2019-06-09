@@ -167,7 +167,7 @@ def _collectWarnings(observeWarning, f, *args, **kwargs):
     def showWarning(message, category, filename, lineno, file=None, line=None):
         assert isinstance(message, Warning)
         observeWarning(_Warning(
-                message.args[0], category, filename, lineno))
+                str(message), category, filename, lineno))
 
     # Disable the per-module cache for every module otherwise if the warning
     # which the caller is expecting us to collect was already emitted it won't
@@ -1360,25 +1360,23 @@ class SynchronousTestCase(_Assertions):
 
             todo = self.getTodo()
             method = getattr(self, self._testMethodName)
-            if self._run(suppress, todo, method, result):
-                return
+            failed = self._run(suppress, todo, method, result)
         finally:
             self._runCleanups(result)
 
-        if todo:
+        if todo and not failed:
             result.addUnexpectedSuccess(self, todo)
 
         if self._run(suppress, None, self.tearDown, result):
-            return
+            failed = True
 
-        passed = True
         for error in self._observer.getErrors():
             result.addError(self, error)
-            passed = False
+            failed = True
         self._observer.flushErrors()
         self._removeObserver()
 
-        if passed and not todo:
+        if not (failed or todo):
             result.addSuccess(self)
 
 
