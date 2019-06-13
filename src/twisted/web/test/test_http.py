@@ -16,7 +16,11 @@ except ImportError:
 
 from io import BytesIO
 from itertools import cycle
-from zope.interface import provider
+from zope.interface import (
+    provider,
+    directlyProvides,
+    providedBy,
+)
 from zope.interface.verify import verifyObject
 
 from twisted.python.compat import (_PY3, iterbytes, long, networkString,
@@ -42,7 +46,6 @@ from twisted.web.test.requesthelper import (
     textLinearWhitespaceComponents,
 )
 
-from zope.interface import directlyProvides, providedBy
 from twisted.logger import globalLogPublisher
 
 from ._util import (
