@@ -195,7 +195,7 @@ class Request(Copyable, http.Request, components.Componentized):
         try:
             getContentFile = self.channel.site.getContentFile
         except AttributeError:
-            super(Request, self).gotLength(length)
+            http.Request.gotLength(self, length)
         else:
             self.content = getContentFile(length)
 
