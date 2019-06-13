@@ -32,6 +32,7 @@ from ._util import (
 )
 
 
+
 class ResourceTests(unittest.TestCase):
     def testListEntities(self):
         r = resource.Resource()
@@ -927,8 +928,8 @@ class RequestTests(unittest.TestCase):
 
     def test_defaultLargerContentFile(self):
         """
-        L{http.Request} creates a temporary file on the filesystem if the content
-        length is larger and the site doesn't offer to create one.
+        L{http.Request} creates a temporary file on the filesystem if the
+        content length is larger and the site doesn't offer to create one.
         """
         request = server.Request(DummyChannel())
         request.gotLength(100000)
@@ -937,8 +938,8 @@ class RequestTests(unittest.TestCase):
 
     def test_defaultUnknownSizeContentFile(self):
         """
-        L{http.Request} creates a temporary file on the filesystem if the content
-        length is not known and the site doesn't offer to create one.
+        L{http.Request} creates a temporary file on the filesystem if the
+        content length is not known and the site doesn't offer to create one.
         """
         request = server.Request(DummyChannel())
         request.gotLength(None)
@@ -953,6 +954,7 @@ class RequestTests(unittest.TestCase):
         lengths = []
         contentFile = BytesIO()
         site = server.Site(resource.Resource())
+
         def getContentFile(length):
             lengths.append(length)
             return contentFile

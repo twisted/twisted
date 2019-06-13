@@ -53,6 +53,7 @@ from ._util import (
 )
 
 
+
 class _IDeprecatedHTTPChannelToRequestInterfaceProxy(proxyForInterface(
         http._IDeprecatedHTTPChannelToRequestInterface)):
     """
@@ -1996,6 +1997,7 @@ Hello,
         decoder = []
         testcase = self
         class MyRequest(http.Request):
+
             def process(self):
                 content.append(self.content)
                 content.append(self.content.read())

@@ -81,6 +81,7 @@ class FlattenTestCase(TestCase):
         return d
 
 
+
 def assertIsFilesystemTemporary(case, fileObj):
     """
     Assert that C{fileObj} is a temporary file on the filesystem.
