@@ -1996,8 +1996,8 @@ Hello,
         content = []
         decoder = []
         testcase = self
-        class MyRequest(http.Request):
 
+        class MyRequest(http.Request):
             def process(self):
                 content.append(self.content)
                 content.append(self.content.read())
