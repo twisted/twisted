@@ -363,14 +363,44 @@ class ProcmonTests(unittest.TestCase):
         # Process greets
         self.pm.protocols["foo"].outReceived(b'hello world!\n')
         self.assertEquals(len(events), 1)
-
-        line = events[0]['line']
         namespace = events[0]['log_namespace']
+        stream = events[0]['stream']
         tag = events[0]['tag']
-
+        line = events[0]['line']
         self.assertEquals(namespace, 'twisted.runner.procmon.ProcessMonitor')
+        self.assertEquals(stream, 'stdout')
         self.assertEquals(tag, 'foo')
         self.assertEquals(line, u'hello world!')
+
+
+    def test_ouputReceivedCompleteErrLine(self):
+        """
+        Getting a complete output line generates a log message.
+        """
+        events = []
+        self.addCleanup(globalLogPublisher.removeObserver, events.append)
+        globalLogPublisher.addObserver(events.append)
+        self.pm.addProcess("foo", ["foo"])
+        # Schedule the process to start
+        self.pm.startService()
+        # Advance the reactor to start the process
+        self.reactor.advance(0)
+        self.assertIn("foo", self.pm.protocols)
+        # Long time passes
+        self.reactor.advance(self.pm.threshold)
+        # Process greets
+        self.pm.protocols["foo"].errReceived(b'hello world!\n')
+        self.assertEquals(len(events), 1)
+        namespace = events[0]['log_namespace']
+        stream = events[0]['stream']
+        tag = events[0]['tag']
+        line = events[0]['line']
+        self.assertEquals(namespace, 'twisted.runner.procmon.ProcessMonitor')
+        self.assertEquals(stream, 'stderr')
+        self.assertEquals(tag, 'foo')
+        self.assertEquals(line, u'hello world!')
+
+
 
 
     def test_outputReceivedCompleteLineInvalidUTF8(self):
@@ -392,8 +422,12 @@ class ProcmonTests(unittest.TestCase):
         self.pm.protocols["foo"].outReceived(b'\xffhello world!\n')
         self.assertEquals(len(events), 1)
         message = events[0]
+        namespace = message['log_namespace']
+        stream = message['stream']
         tag = message['tag']
         output = message['line']
+        self.assertEquals(namespace, 'twisted.runner.procmon.ProcessMonitor')
+        self.assertEquals(stream, 'stdout')
         self.assertEquals(tag, 'foo')
         self.assertEquals(output, repr(b'\xffhello world!'))
 
@@ -418,8 +452,12 @@ class ProcmonTests(unittest.TestCase):
         self.assertEquals(len(events), 0)
         self.pm.protocols["foo"].processEnded(Failure(ProcessDone(0)))
         self.assertEquals(len(events), 1)
+        namespace = events[0]['log_namespace']
+        stream = events[0]['stream']
         tag = events[0]['tag']
         line = events[0]['line']
+        self.assertEquals(namespace, 'twisted.runner.procmon.ProcessMonitor')
+        self.assertEquals(stream, 'stdout')
         self.assertEquals(tag, 'foo')
         self.assertEquals(line, u'hello world!')
 

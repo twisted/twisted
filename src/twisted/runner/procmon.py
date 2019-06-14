@@ -72,6 +72,7 @@ transport = DummyTransport()
 class LineLogger(basic.LineReceiver):
 
     tag = None
+    stream = None
     delimiter = b'\n'
 
     def lineReceived(self, line):
@@ -79,7 +80,10 @@ class LineLogger(basic.LineReceiver):
             line = line.decode('utf-8')
         except UnicodeDecodeError:
             line = repr(line)
-        ProcessMonitor.log.info(u'[{tag}] {line}', tag=self.tag, line=line)
+        ProcessMonitor.log.info(u'[{tag}] {line}',
+                                tag=self.tag,
+                                line=line,
+                                stream=self.stream)
 
 
 class LoggingProtocol(protocol.ProcessProtocol):
@@ -91,19 +95,31 @@ class LoggingProtocol(protocol.ProcessProtocol):
     def connectionMade(self):
         self.output = LineLogger()
         self.output.tag = self.name
+        self.output.stream = 'stdout'
+        self.outputEmpty = True
+
+        self.error = LineLogger()
+        self.error.tag = self.name
+        self.error.stream = 'stderr'
+        self.errorEmpty = True
+
         self.output.makeConnection(transport)
+        self.error.makeConnection(transport)
 
 
     def outReceived(self, data):
         self.output.dataReceived(data)
-        self.empty = data[-1] == b'\n'
+        self.outputEmpty = data[-1] == b'\n'
 
-    errReceived = outReceived
-
+    def errReceived(self, data):
+        self.error.dataReceived(data)
+        self.errorEmpty = data[-1] == b'\n'
 
     def processEnded(self, reason):
-        if not self.empty:
+        if not self.outputEmpty:
             self.output.dataReceived(b'\n')
+        if not self.errorEmpty:
+            self.error.dataReceived(b'\n')
         self.service.connectionLost(self.name)
 
 
