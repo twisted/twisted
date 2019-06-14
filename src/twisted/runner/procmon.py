@@ -8,10 +8,11 @@ Support for starting, monitoring, and restarting child process.
 import attr
 import incremental
 
-from twisted.python import log, deprecate
+from twisted.python import deprecate
 from twisted.internet import error, protocol, reactor as _reactor
 from twisted.application import service
 from twisted.protocols import basic
+from twisted.logger import Logger
 
 @attr.s(frozen=True)
 class _Process(object):
@@ -78,7 +79,7 @@ class LineLogger(basic.LineReceiver):
             line = line.decode('utf-8')
         except UnicodeDecodeError:
             line = repr(line)
-        log.msg(u'[%s] %s' % (self.tag, line))
+        ProcessMonitor.log.info(u'[{tag}] {line}', tag=self.tag, line=line)
 
 
 class LoggingProtocol(protocol.ProcessProtocol):
@@ -145,11 +146,16 @@ class ProcessMonitor(service.Service):
     @ivar _reactor: A provider of L{IReactorProcess} and L{IReactorTime}
         which will be used to spawn processes and register delayed calls.
 
+    @type log: C{Logger}
+    @ivar log: An instance of twisted.logger.Logger used for propagating
+        log messages from spawned processes.
+
     """
     threshold = 1
     killTime = 5
     minRestartDelay = 1
     maxRestartDelay = 3600
+    log = Logger()
 
 
     def __init__(self, reactor=_reactor):
