@@ -14,6 +14,8 @@ from twisted.application import service
 from twisted.protocols import basic
 from twisted.logger import Logger
 
+
+
 @attr.s(frozen=True)
 class _Process(object):
     """
@@ -67,7 +69,11 @@ class DummyTransport:
 
     disconnecting = 0
 
+
+
 transport = DummyTransport()
+
+
 
 class LineLogger(basic.LineReceiver):
 
@@ -84,6 +90,7 @@ class LineLogger(basic.LineReceiver):
                                 tag=self.tag,
                                 line=line,
                                 stream=self.stream)
+
 
 
 class LoggingProtocol(protocol.ProcessProtocol):
