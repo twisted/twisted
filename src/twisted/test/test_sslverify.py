@@ -2758,7 +2758,7 @@ class ExpandCipherStringTests(unittest.TestCase):
         )
 
 
-    def test_returnsListOfICiphers(self):
+    def test_returnsTupleOfICiphers(self):
         """
         L{sslverify._expandCipherString} always returns a L{tuple} of
         L{interfaces.ICipher}.
@@ -2803,7 +2803,7 @@ class AcceptableCiphersTests(unittest.TestCase):
                                            sslverify.OpenSSLCipher('C')]))
 
 
-    def test_fromOpenSSLCipherStringExpandsToListOfCiphers(self):
+    def test_fromOpenSSLCipherStringExpandsToTupleOfCiphers(self):
         """
         If L{sslverify.OpenSSLAcceptableCiphers.fromOpenSSLCipherString} is
         called it expands the string to a tuple of ciphers.

@@ -1763,7 +1763,7 @@ class OpenSSLCipher(object):
 @lru_cache(maxsize=32)
 def _expandCipherString(cipherString, method, options):
     """
-    Expand C{cipherString} according to C{method} and C{options} to a list
+    Expand C{cipherString} according to C{method} and C{options} to a tuple
     of explicit ciphers that are supported by the current platform.
 
     @param cipherString: An OpenSSL cipher string to expand.

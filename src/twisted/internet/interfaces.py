@@ -2517,10 +2517,10 @@ class IAcceptableCiphers(Interface):
         """
         Choose which ciphers to allow to be negotiated on a TLS connection.
 
-        @param availableCiphers: A L{list} of L{ICipher} which gives the names
+        @param availableCiphers: A L{tuple} of L{ICipher} which gives the names
             of all ciphers supported by the TLS implementation in use.
 
-        @return: A L{list} of L{ICipher} which represents the ciphers
+        @return: A L{tuple} of L{ICipher} which represents the ciphers
             which may be negotiated on the TLS connection.  The result is
             ordered by preference with more preferred ciphers appearing
             earlier.
