@@ -9,6 +9,8 @@ from __future__ import absolute_import, division
 
 import random, cgi, base64, calendar
 
+import attr
+
 try:
     from urlparse import urlparse, urlunsplit, clear_cache
 except ImportError:
@@ -762,6 +764,58 @@ class GenericHTTPChannelTests(unittest.TestCase):
             a.dataReceived(byte)
         a.connectionLost(IOError("all done"))
         return a._negotiatedProtocol
+
+
+    def test_h2_cancels_h1_timeout(self):
+        """
+        When the transport is switched to H2, the HTTPChannel timeouts are
+        cancelled.
+        """
+        @attr.s
+        class FakeDelayedCall(object):
+            period = attr.ib()
+            callback = attr.ib()
+            cancelled = attr.ib(default=False)
+
+            def cancel(self):
+                self.cancelled = True
+
+            def reset(self, period):
+                self.period = period
+
+        delayedCalls = []
+
+        def fakeCallLater(period, callback):
+            c = FakeDelayedCall(period, callback)
+            delayedCalls.append(c)
+            return c
+
+        a = http._genericHTTPChannelProtocolFactory(b'')
+        a.requestFactory = DummyHTTPHandlerProxy
+
+        # Set the original timeout to be 100s
+        a.timeOut = 100
+        a.callLater = fakeCallLater
+
+        b = StringTransport()
+        b.negotiatedProtocol = b'h2'
+        a.makeConnection(b)
+
+        # We've made the connection, but we actually check if we've negotiated
+        # H2 when data arrives. Right now, the HTTPChannel will have set up a
+        # single delayed call.
+        self.assertEqual(len(delayedCalls), 1)
+        self.assertFalse(delayedCalls[0].cancelled)
+
+        # We give it the HTTP data, and it switches out for H2.
+        a.dataReceived(self.requests)
+        self.assertEqual(a._negotiatedProtocol, b'h2')
+
+        # The first delayed call is cancelled, and H2 creates a new one for its
+        # own timeouts.
+        self.assertEqual(len(delayedCalls), 2)
+        self.assertTrue(delayedCalls[0].cancelled)
+        self.assertFalse(delayedCalls[1].cancelled)
 
 
     def test_protocolUnspecified(self):
