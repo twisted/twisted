@@ -65,6 +65,8 @@ class _Process(object):
         """
         return (self.args, self.uid, self.gid, self.env)
 
+
+
 class DummyTransport:
 
     disconnecting = 0
@@ -80,16 +82,18 @@ class LineLogger(basic.LineReceiver):
     tag = None
     stream = None
     delimiter = b'\n'
+    service = None
 
     def lineReceived(self, line):
         try:
             line = line.decode('utf-8')
         except UnicodeDecodeError:
             line = repr(line)
-        ProcessMonitor.log.info(u'[{tag}] {line}',
-                                tag=self.tag,
-                                line=line,
-                                stream=self.stream)
+
+        self.service.log.info(u'[{tag}] {line}',
+                              tag=self.tag,
+                              line=line,
+                              stream=self.stream)
 
 
 
@@ -103,11 +107,13 @@ class LoggingProtocol(protocol.ProcessProtocol):
         self.output = LineLogger()
         self.output.tag = self.name
         self.output.stream = 'stdout'
+        self.output.service = self.service
         self.outputEmpty = True
 
         self.error = LineLogger()
         self.error.tag = self.name
         self.error.stream = 'stderr'
+        self.error.service = self.service
         self.errorEmpty = True
 
         self.output.makeConnection(transport)
