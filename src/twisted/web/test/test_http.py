@@ -808,7 +808,7 @@ class GenericHTTPChannelTests(unittest.TestCase):
         self.assertFalse(delayedCalls[0].cancelled)
 
         # We give it the HTTP data, and it switches out for H2.
-        a.dataReceived(self.requests)
+        a.dataReceived(b'')
         self.assertEqual(a._negotiatedProtocol, b'h2')
 
         # The first delayed call is cancelled, and H2 creates a new one for its
