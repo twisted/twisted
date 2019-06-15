@@ -347,7 +347,7 @@ class ProcmonTests(unittest.TestCase):
 
     def test_outputReceivedCompleteLine(self):
         """
-        Getting a complete output line generates a log message.
+        Getting a complete output line on stdout generates a log message.
         """
         events = []
         self.addCleanup(globalLogPublisher.removeObserver, events.append)
@@ -375,7 +375,7 @@ class ProcmonTests(unittest.TestCase):
 
     def test_ouputReceivedCompleteErrLine(self):
         """
-        Getting a complete output line generates a log message.
+        Getting a complete output line on stderr generates a log message.
         """
         events = []
         self.addCleanup(globalLogPublisher.removeObserver, events.append)
