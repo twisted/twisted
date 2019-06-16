@@ -419,7 +419,8 @@ class TLSInitiatingInitializer(BaseFeatureInitiatingInitializer):
             default is to verify the server certificate against the trust roots
             as provided by the platform. See
             L{twisted.internet._sslverify.platformTrust}.
-        @type configurationForTLS: L{IOpenSSLClientConnectionCreator}
+        @type configurationForTLS: L{IOpenSSLClientConnectionCreator} or
+            C{None}
         """
         super(TLSInitiatingInitializer, self).__init__(
                 xs, required=required)

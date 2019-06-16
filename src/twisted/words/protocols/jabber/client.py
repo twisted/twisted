@@ -317,9 +317,10 @@ def XMPPClientFactory(jid, password, configurationForTLS=None):
     @param configurationForTLS: An object which creates appropriately
         configured TLS connections. This is passed to C{startTLS} on the
         transport and is preferably created using
-        L{twisted.internet.ssl.optionsForClientTLS}.  See
-        L{xmlstream.TLSInitiatingInitializer} for details.
-    @type configurationForTLS: L{IOpenSSLClientConnectionCreator}
+        L{twisted.internet.ssl.optionsForClientTLS}. If C{None}, the default is
+        to verify the server certificate against the trust roots as provided by
+        the platform. See L{twisted.internet._sslverify.platformTrust}.
+    @type configurationForTLS: L{IOpenSSLClientConnectionCreator} or C{None}
 
     @return: XML stream factory.
     @rtype: L{xmlstream.XmlStreamFactory}
@@ -372,9 +373,12 @@ class XMPPAuthenticator(xmlstream.ConnectAuthenticator):
         @param configurationForTLS: An object which creates appropriately
             configured TLS connections. This is passed to C{startTLS} on the
             transport and is preferably created using
-            L{twisted.internet.ssl.optionsForClientTLS}. See
-            L{xmlstream.TLSInitiatingInitializer} for details.
-        @type configurationForTLS: L{IOpenSSLClientConnectionCreator}
+            L{twisted.internet.ssl.optionsForClientTLS}. If C{None}, the
+            default is to verify the server certificate against the trust roots
+            as provided by the platform. See
+            L{twisted.internet._sslverify.platformTrust}.
+        @type configurationForTLS: L{IOpenSSLClientConnectionCreator} or
+            C{None}
         """
         xmlstream.ConnectAuthenticator.__init__(self, jid.host)
         self.jid = jid
