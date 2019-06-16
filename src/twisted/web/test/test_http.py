@@ -7,9 +7,11 @@ Test HTTP support.
 
 from __future__ import absolute_import, division
 
-import random, cgi, base64, calendar
-
 import attr
+import base64
+import calendar
+import cgi
+import random
 
 try:
     from urlparse import urlparse, urlunsplit, clear_cache
@@ -766,7 +768,7 @@ class GenericHTTPChannelTests(unittest.TestCase):
         return a._negotiatedProtocol
 
 
-    def test_h2_cancels_h1_timeout(self):
+    def test_h2CancelsH11Timeout(self):
         """
         When the transport is switched to H2, the HTTPChannel timeouts are
         cancelled.
@@ -816,6 +818,8 @@ class GenericHTTPChannelTests(unittest.TestCase):
         self.assertEqual(len(delayedCalls), 2)
         self.assertTrue(delayedCalls[0].cancelled)
         self.assertFalse(delayedCalls[1].cancelled)
+    if not http.H2_ENABLED:
+        test_h2CancelsH11Timeout.skip = "HTTP/2 support not present"
 
 
     def test_protocolUnspecified(self):
