@@ -423,7 +423,11 @@ class TLSInitiatingInitializer(BaseFeatureInitiatingInitializer):
         """
         super(TLSInitiatingInitializer, self).__init__(
                 xs, required=required)
-        self._configurationForTLS = configurationForTLS
+        if configurationForTLS:
+            self._configurationForTLS = configurationForTLS
+        else:
+            self._configurationForTLS = ssl.optionsForClientTLS(
+                self.xmlstream.authenticator.otherHost)
 
 
     def onProceed(self, obj):
@@ -432,11 +436,7 @@ class TLSInitiatingInitializer(BaseFeatureInitiatingInitializer):
         """
 
         self.xmlstream.removeObserver('/failure', self.onFailure)
-        if self._configurationForTLS:
-            ctx = self._configurationForTLS
-        else:
-            ctx = ssl.optionsForClientTLS(self.xmlstream.otherEntity.host)
-        self.xmlstream.transport.startTLS(ctx)
+        self.xmlstream.transport.startTLS(self._configurationForTLS)
         self.xmlstream.reset()
         self.xmlstream.sendHeader()
         self._deferred.callback(Reset)
