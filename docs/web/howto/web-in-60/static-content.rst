@@ -50,7 +50,7 @@ And that's it. Here's the complete program::
 
     resource = File('/tmp')
     factory = Site(resource)
-    endpoint = endpoints.TCP4ServerEndpoint(reactor, 8888)
+    endpoint = endpoints.TCP4ServerEndpoint(reactor, 8080)
     endpoint.listen(factory)
     reactor.run()
 
