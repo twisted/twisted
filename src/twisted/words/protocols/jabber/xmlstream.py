@@ -403,25 +403,27 @@ class TLSInitiatingInitializer(BaseFeatureInitiatingInitializer):
 
     @ivar wanted: indicates if TLS negotiation is wanted.
     @type wanted: C{bool}
-
-    @ivar contextFactory: An object which creates appropriately configured TLS
-        connections. This is passed to C{startTLS} on the transport and is
-        preferably created using L{twisted.internet.ssl.optionsForClientTLS}.
-        If C{None}, the default is to verify the server certificate against
-        the trust roots as provided by the platform. See
-        L{twisted.internet._sslverify.platformTrust}.
-    @type contextFactory: L{IOpenSSLClientConnectionCreator}
     """
 
     feature = (NS_XMPP_TLS, 'starttls')
     wanted = True
-    contextFactory = None
     _deferred = None
+    _configurationForTLS = None
 
-    def __init__(self, xs, required=True, contextFactory=None):
+    def __init__(self, xs, required=True, configurationForTLS=None):
+        """
+        @param configurationForTLS: An object which creates appropriately
+            configured TLS connections. This is passed to C{startTLS} on the
+            transport and is preferably created using
+            L{twisted.internet.ssl.optionsForClientTLS}.  If C{None}, the
+            default is to verify the server certificate against the trust roots
+            as provided by the platform. See
+            L{twisted.internet._sslverify.platformTrust}.
+        @type configurationForTLS: L{IOpenSSLClientConnectionCreator}
+        """
         super(TLSInitiatingInitializer, self).__init__(
                 xs, required=required)
-        self.contextFactory = contextFactory
+        self._configurationForTLS = configurationForTLS
 
 
     def onProceed(self, obj):
@@ -430,8 +432,8 @@ class TLSInitiatingInitializer(BaseFeatureInitiatingInitializer):
         """
 
         self.xmlstream.removeObserver('/failure', self.onFailure)
-        if self.contextFactory:
-            ctx = self.contextFactory
+        if self._configurationForTLS:
+            ctx = self._configurationForTLS
         else:
             ctx = ssl.optionsForClientTLS(self.xmlstream.otherEntity.host)
         self.xmlstream.transport.startTLS(ctx)

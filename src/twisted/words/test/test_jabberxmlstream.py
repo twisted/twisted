@@ -747,6 +747,9 @@ class TLSInitiatingInitializerTests(unittest.TestCase):
         A custom contextFactory is passed through to startTLS.
         """
         ctx = CertificateOptions()
+        self.init = xmlstream.TLSInitiatingInitializer(
+            self.xmlstream, configurationForTLS=ctx)
+
         self.init.contextFactory = ctx
 
         def fakeStartTLS(contextFactory):

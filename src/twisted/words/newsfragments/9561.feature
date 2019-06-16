@@ -1,1 +1,1 @@
-twisted.words.protocols.jabber.xmlstream.TLSInitiatingInitializer and twisted.words.protocols.jabber.client.XMPPClientFactory now take an optional contextFactory for customizing certificate options for StartTLS.
+twisted.words.protocols.jabber.xmlstream.TLSInitiatingInitializer and twisted.words.protocols.jabber.client.XMPPClientFactory now take an optional configurationForTLS for customizing certificate options for StartTLS.

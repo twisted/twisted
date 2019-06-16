@@ -466,28 +466,32 @@ class XMPPAuthenticatorTests(unittest.TestCase):
         self.assertFalse(session.required)
 
 
-    def test_tlsContextFactory(self):
+    def test_tlsConfiguration(self):
         """
-        Test basic operations.
+        A TLS configuration is passed to the TLS initializer.
+        """
+        configs = []
 
-        Setup an XMPPClientFactory, which sets up an XMPPAuthenticator, and let
-        it produce a protocol instance. Then inspect the instance variables of
-        the authenticator and XML stream objects.
-        """
+        def init(self, xs, required=True, configurationForTLS=None):
+            configs.append(configurationForTLS)
+
         self.client_jid = jid.JID('user@example.com/resource')
 
         # Get an XmlStream instance. Note that it gets initialized with the
         # XMPPAuthenticator (that has its associateWithXmlStream called) that
         # is in turn initialized with the arguments to the factory.
-        contextFactory = ssl.CertificateOptions()
-        factory = client.XMPPClientFactory(self.client_jid, 'secret',
-                                           contextFactory=contextFactory)
+        configurationForTLS = ssl.CertificateOptions()
+        factory = client.XMPPClientFactory(
+            self.client_jid, 'secret',
+            configurationForTLS=configurationForTLS)
+        self.patch(xmlstream.TLSInitiatingInitializer, "__init__", init)
         xs = factory.buildProtocol(None)
 
         # test list of initializers
         version, tls, sasl, bind, session = xs.initializers
 
         self.assertIsInstance(tls, xmlstream.TLSInitiatingInitializer)
-        self.assertIs(contextFactory, tls.contextFactory)
+        self.assertIs(configurationForTLS, configs[0])
 
-    test_tlsContextFactory.skip = skipWhenNoSSL
+
+    test_tlsConfiguration.skip = skipWhenNoSSL
