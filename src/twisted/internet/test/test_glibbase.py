@@ -11,6 +11,22 @@ import sys
 from twisted.trial.unittest import TestCase
 from twisted.internet._glibbase import ensureNotImported
 
+try:
+    from twisted.internet import gireactor
+    from gi.repository import Gio
+except ImportError:
+    gireactor = None
+    gtk3reactor = None
+else:
+    # gtk3reactor may be unavailable even if gireactor is available; in
+    # particular in pygobject 3.4/gtk 3.6, when no X11 DISPLAY is found.
+    try:
+        from twisted.internet import gtk3reactor
+    except ImportError:
+        gtk3reactor = None
+    else:
+        from gi.repository import Gtk
+
 
 
 class EnsureNotImportedTests(TestCase):
@@ -66,3 +82,12 @@ class EnsureNotImportedTests(TestCase):
                               preventImports=["m1", "m2"])
         self.assertEqual(modules, {"m2": module})
         self.assertEqual(e.args, ("A message.",))
+
+class GlibReactorBaseTests(TestCase):
+
+    def test_simulate(self):
+        """
+
+        """
+        gireactor.install()
+        reactor.simulate()
