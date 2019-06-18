@@ -30,4 +30,3 @@ RaisingMemoryReactor = testing.RaisingMemoryReactor
 NonStreamingProducer = testing.NonStreamingProducer
 waitUntilAllDisconnected = testing.waitUntilAllDisconnected
 EventLoggingObserver = testing.EventLoggingObserver
-
