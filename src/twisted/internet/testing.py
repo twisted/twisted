@@ -44,7 +44,7 @@ __all__ = [
     'MemoryReactorClock',
     'RaisingMemoryReactor',
     'NonStreamingProducer',
-    'waitUntilDisconnected',
+    'waitUntilAllDisconnected',
     'EventLoggingObserver'
 ]
 

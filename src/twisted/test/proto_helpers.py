@@ -9,4 +9,23 @@ instead.
 """
 from twisted.internet import testing
 
+
+
 __all__ = testing.__all__
+
+
+
+AccumulatingProtocol = testing.AccumulatingProtocol
+LineSendingProtocol = testing.LineSendingProtocol
+FakeDatagramTransport = testing.FakeDatagramTransport
+StringTransport = testing.StringTransport
+StringTransportWithDisconnection =\
+    testing.StringTransportWithDisconnection
+StringIOWithoutClosing = testing.StringIOWithoutClosing
+MemoryReactor = testing.MemoryReactor
+MemoryReactorClock = testing.MemoryReactorClock
+RaisingMemoryReactor = testing.RaisingMemoryReactor
+NonStreamingProducer = testing.NonStreamingProducer
+waitUntilAllDisconnected = testing.waitUntilAllDisconnected
+EventLoggingObserver = testing.EventLoggingObserver
+
