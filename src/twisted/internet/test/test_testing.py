@@ -27,6 +27,7 @@ from twisted.internet.testing import (
     NonStreamingProducer
 )
 from twisted.internet.protocol import ClientFactory, Factory
+from twisted.python.reflect import namedAny
 
 
 
@@ -426,7 +427,7 @@ class DeprecationTests(TestCase):
         self.assertEqual(DeprecationWarning, warnings[0]['category'])
         self.assertEqual(1, len(warnings))
         self.assertIn(new_path, warnings[0]['message'])
-
+        self.assertIs(obj, namedAny(new_path))
 
     def test_accumulatingProtocol(self):
         from twisted.test.proto_helpers import AccumulatingProtocol
