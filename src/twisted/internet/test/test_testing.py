@@ -466,6 +466,18 @@ class DeprecationTests(TestCase):
                     StringIOWithoutClosing)
 
 
+    def test__fakeConnector(self):
+        from twisted.test.proto_helpers import _FakeConnector
+        self.helper(self.test__fakeConnector,
+                    _FakeConnector)
+
+
+    def test__fakePort(self):
+        from twisted.test.proto_helpers import _FakePort
+        self.helper(self.test__fakePort,
+                    _FakePort)
+
+
     def test_memoryReactor(self):
         from twisted.test.proto_helpers import MemoryReactor
         self.helper(self.test_memoryReactor,

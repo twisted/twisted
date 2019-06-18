@@ -40,6 +40,8 @@ __all__ = [
     'StringTransport',
     'StringTransportWithDisconnection',
     'StringIOWithoutClosing',
+    '_FakeConnector',
+    '_FakePort',
     'MemoryReactor',
     'MemoryReactorClock',
     'RaisingMemoryReactor',

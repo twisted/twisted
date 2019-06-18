@@ -22,6 +22,8 @@ StringTransport = testing.StringTransport
 StringTransportWithDisconnection =\
     testing.StringTransportWithDisconnection
 StringIOWithoutClosing = testing.StringIOWithoutClosing
+_FakeConnector = testing._FakeConnector
+_FakePort = testing._FakePort
 MemoryReactor = testing.MemoryReactor
 MemoryReactorClock = testing.MemoryReactorClock
 RaisingMemoryReactor = testing.RaisingMemoryReactor
