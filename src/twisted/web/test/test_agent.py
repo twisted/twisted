@@ -11,7 +11,7 @@ from io import BytesIO
 
 from zope.interface.verify import verifyObject
 
-from twisted.trial.unittest import TestCase
+from twisted.trial.unittest import TestCase, SynchronousTestCase
 from twisted.web import client, error, http_headers
 from twisted.web._newclient import RequestNotSent, RequestTransmissionFailed
 from twisted.web._newclient import ResponseNeverReceived, ResponseFailed
@@ -51,6 +51,10 @@ from twisted.internet.endpoints import HostnameEndpoint
 from twisted.test.proto_helpers import AccumulatingProtocol
 from twisted.test.iosim import IOPump, FakeTransport
 from twisted.test.test_sslverify import certificatesForAuthorityAndServer
+from twisted.web.test.injectionhelpers import (
+    MethodInjectionTestsMixin,
+    URIInjectionTestsMixin,
+)
 from twisted.web.error import SchemeNotSupported
 from twisted.logger import globalLogPublisher
 
@@ -897,6 +901,7 @@ class AgentTests(TestCase, FakeReactorAndConnectMixin, AgentTestsMixin,
     """
     Tests for the new HTTP client API provided by L{Agent}.
     """
+
     def makeAgent(self):
         """
         @return: a new L{twisted.web.client.Agent} instance
@@ -987,6 +992,15 @@ class AgentTests(TestCase, FakeReactorAndConnectMixin, AgentTestsMixin,
         agent.request(b'GET', b'http://foo/',
                       bodyProducer=bodyProducer, headers=headers)
         self.assertEqual(agent._pool.connected, True)
+
+
+    def test_nonBytesMethod(self):
+        """
+        L{Agent.request} raises L{TypeError} when the C{method} argument isn't
+        L{bytes}.
+        """
+        self.assertRaises(TypeError, self.agent.request,
+                          u'GET', b'http://foo.example/')
 
 
     def test_unsupportedScheme(self):
@@ -1315,6 +1329,48 @@ class AgentTests(TestCase, FakeReactorAndConnectMixin, AgentTestsMixin,
         agent = client.Agent.usingEndpointFactory(
             self.reactor, StubEndpointFactory(), pool)
         self.assertIs(pool, agent._pool)
+
+
+
+class AgentMethodInjectionTests(
+        FakeReactorAndConnectMixin,
+        MethodInjectionTestsMixin,
+        SynchronousTestCase,
+):
+    """
+    Test L{client.Agent} against HTTP method injections.
+    """
+
+    def attemptRequestWithMaliciousMethod(self, method):
+        """
+        Attempt a request with the provided method.
+
+        @param method: see L{MethodInjectionTestsMixin}
+        """
+        agent = client.Agent(self.createReactor())
+        uri = b"http://twisted.invalid"
+        agent.request(method, uri, client.Headers(), None)
+
+
+
+class AgentURIInjectionTests(
+        FakeReactorAndConnectMixin,
+        URIInjectionTestsMixin,
+        SynchronousTestCase,
+):
+    """
+    Test L{client.Agent} against URI injections.
+    """
+
+    def attemptRequestWithMaliciousURI(self, uri):
+        """
+        Attempt a request with the provided method.
+
+        @param uri: see L{URIInjectionTestsMixin}
+        """
+        agent = client.Agent(self.createReactor())
+        method = b"GET"
+        agent.request(method, uri, client.Headers(), None)
 
 
 
@@ -2475,6 +2531,15 @@ class ProxyAgentTests(TestCase, FakeReactorAndConnectMixin, AgentTestsMixin):
         self.agent._proxyEndpoint = self.StubEndpoint(oldEndpoint, self)
 
 
+    def test_nonBytesMethod(self):
+        """
+        L{ProxyAgent.request} raises L{TypeError} when the C{method} argument
+        isn't L{bytes}.
+        """
+        self.assertRaises(TypeError, self.agent.request,
+                          u'GET', b'http://foo.example/')
+
+
     def test_proxyRequest(self):
         """
         L{client.ProxyAgent} issues an HTTP request against the proxy, with the
@@ -3184,3 +3249,101 @@ class HostnameCachingHTTPSPolicyTests(TestCase):
         self.assertEquals(5, len(policy._cache))
 
         self.assertIn(hostn, policy._cache)
+
+
+
+class RequestMethodInjectionTests(
+        MethodInjectionTestsMixin,
+        SynchronousTestCase,
+):
+    """
+    Test L{client.Request} against HTTP method injections.
+    """
+
+    def attemptRequestWithMaliciousMethod(self, method):
+        """
+        Attempt a request with the provided method.
+
+        @param method: see L{MethodInjectionTestsMixin}
+        """
+        client.Request(
+            method=method,
+            uri=b"http://twisted.invalid",
+            headers=http_headers.Headers(),
+            bodyProducer=None,
+        )
+
+
+
+class RequestWriteToMethodInjectionTests(
+        MethodInjectionTestsMixin,
+        SynchronousTestCase,
+):
+    """
+    Test L{client.Request.writeTo} against HTTP method injections.
+    """
+
+    def attemptRequestWithMaliciousMethod(self, method):
+        """
+        Attempt a request with the provided method.
+
+        @param method: see L{MethodInjectionTestsMixin}
+        """
+        headers = http_headers.Headers({b"Host": [b"twisted.invalid"]})
+        req = client.Request(
+            method=b"GET",
+            uri=b"http://twisted.invalid",
+            headers=headers,
+            bodyProducer=None,
+        )
+        req.method = method
+        req.writeTo(StringTransport())
+
+
+
+class RequestURIInjectionTests(
+        URIInjectionTestsMixin,
+        SynchronousTestCase,
+):
+    """
+    Test L{client.Request} against HTTP URI injections.
+    """
+
+    def attemptRequestWithMaliciousURI(self, uri):
+        """
+        Attempt a request with the provided URI.
+
+        @param method: see L{URIInjectionTestsMixin}
+        """
+        client.Request(
+            method=b"GET",
+            uri=uri,
+            headers=http_headers.Headers(),
+            bodyProducer=None,
+        )
+
+
+
+class RequestWriteToURIInjectionTests(
+        URIInjectionTestsMixin,
+        SynchronousTestCase,
+):
+    """
+    Test L{client.Request.writeTo} against HTTP method injections.
+    """
+
+    def attemptRequestWithMaliciousURI(self, uri):
+        """
+        Attempt a request with the provided method.
+
+        @param method: see L{URIInjectionTestsMixin}
+        """
+        headers = http_headers.Headers({b"Host": [b"twisted.invalid"]})
+        req = client.Request(
+            method=b"GET",
+            uri=b"http://twisted.invalid",
+            headers=headers,
+            bodyProducer=None,
+        )
+        req.uri = uri
+        req.writeTo(StringTransport())
