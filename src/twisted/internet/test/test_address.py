@@ -3,7 +3,6 @@
 
 from __future__ import division, absolute_import
 
-import re
 import os
 import socket
 
@@ -37,52 +36,6 @@ class AddressTestCaseMixin(object):
         """
         self.assertTrue(self.buildAddress() == self.buildAddress())
         self.assertFalse(self.buildAddress() != self.buildAddress())
-
-
-    def _stringRepresentation(self, stringFunction):
-        """
-        Verify that the string representation of an address object conforms to a
-        simple pattern (the usual one for Python object reprs) and contains
-        values which accurately reflect the attributes of the address.
-        """
-        addr = self.buildAddress()
-        pattern = "".join([
-           "^",
-           "([^\(]+Address)", # class name,
-           "\(",       # opening bracket,
-           "([^)]+)",  # arguments,
-           "\)",       # closing bracket,
-           "$"
-        ])
-        stringValue = stringFunction(addr)
-        m = re.match(pattern, stringValue)
-        self.assertNotEqual(
-            None, m,
-            "%s does not match the standard __str__ pattern "
-            "ClassName(arg1, arg2, etc)" % (stringValue,))
-        self.assertEqual(addr.__class__.__name__, m.group(1))
-
-        args = [x.strip() for x in m.group(2).split(",")]
-        self.assertEqual(
-            args,
-            [argSpec[1] % (getattr(addr, argSpec[0]),)
-             for argSpec in self.addressArgSpec])
-
-
-    def test_str(self):
-        """
-        C{str} can be used to get a string representation of an address instance
-        containing information about that address.
-        """
-        self._stringRepresentation(str)
-
-
-    def test_repr(self):
-        """
-        C{repr} can be used to get a string representation of an address
-        instance containing information about that address.
-        """
-        self._stringRepresentation(repr)
 
 
     def test_hash(self):
@@ -167,20 +120,6 @@ class IPv4AddressTCPTests(unittest.SynchronousTestCase,
         return IPv4Address("TCP", "127.0.0.2", 0)
 
 
-    def test_bwHackDeprecation(self):
-        """
-        If a value is passed for the C{_bwHack} parameter to L{IPv4Address},
-        a deprecation warning is emitted.
-        """
-        # Construct this for warning side-effects, disregard the actual object.
-        IPv4Address("TCP", "127.0.0.3", 0, _bwHack="TCP")
-
-        message = (
-            "twisted.internet.address.IPv4Address._bwHack is deprecated "
-            "since Twisted 11.0")
-        return self.assertDeprecations(self.test_bwHackDeprecation, message)
-
-
 
 class IPv4AddressUDPTests(unittest.SynchronousTestCase,
                           IPv4AddressTestCaseMixin):
@@ -198,20 +137,6 @@ class IPv4AddressUDPTests(unittest.SynchronousTestCase,
         Like L{buildAddress}, but with a different fixed address.
         """
         return IPv4Address("UDP", "127.0.0.2", 0)
-
-
-    def test_bwHackDeprecation(self):
-        """
-        If a value is passed for the C{_bwHack} parameter to L{IPv4Address},
-        a deprecation warning is emitted.
-        """
-        # Construct this for warning side-effects, disregard the actual object.
-        IPv4Address("UDP", "127.0.0.3", 0, _bwHack="UDP")
-
-        message = (
-            "twisted.internet.address.IPv4Address._bwHack is deprecated "
-            "since Twisted 11.0")
-        return self.assertDeprecations(self.test_bwHackDeprecation, message)
 
 
 
@@ -349,17 +274,3 @@ class EmptyUNIXAddressTests(unittest.SynchronousTestCase,
         addr = self.buildAddress()
         d = {addr: True}
         self.assertTrue(d[self.buildAddress()])
-
-
-    def test_bwHackDeprecation(self):
-        """
-        If a value is passed for the C{_bwHack} parameter to L{UNIXAddress},
-        a deprecation warning is emitted.
-        """
-        # Construct this for warning side-effects, disregard the actual object.
-        UNIXAddress(None, _bwHack='UNIX')
-
-        message = (
-            "twisted.internet.address.UNIXAddress._bwHack is deprecated "
-            "since Twisted 11.0")
-        return self.assertDeprecations(self.test_bwHackDeprecation, message)

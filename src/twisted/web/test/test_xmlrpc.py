@@ -22,8 +22,10 @@ from twisted.internet import reactor, defer
 from twisted.internet.error import ConnectionDone
 from twisted.python import failure
 from twisted.python.reflect import namedModule
-from twisted.test.proto_helpers import MemoryReactor
+from twisted.test.proto_helpers import MemoryReactor, EventLoggingObserver
 from twisted.web.test.test_web import DummyRequest
+from twisted.logger import (globalLogPublisher, FilteringLogObserver,
+                            LogLevelFilterPredicate, LogLevel)
 try:
     namedModule('twisted.internet.ssl')
 except ImportError:
@@ -366,6 +368,13 @@ class XMLRPCTests(unittest.TestCase):
         client-side Deferred is errbacked with an appropriate C{Fault}
         instance.
         """
+        logObserver = EventLoggingObserver()
+        filtered = FilteringLogObserver(
+            logObserver,
+            [LogLevelFilterPredicate(defaultLogLevel=LogLevel.critical)]
+        )
+        globalLogPublisher.addObserver(filtered)
+        self.addCleanup(lambda: globalLogPublisher.removeObserver(filtered))
         dl = []
         for code, methodName in [(666, "fail"), (666, "deferFail"),
                                  (12, "fault"), (23, "noSuchMethod"),
@@ -380,6 +389,16 @@ class XMLRPCTests(unittest.TestCase):
             for factory in self.factories:
                 self.assertEqual(factory.headers[b'content-type'],
                                   b'text/xml; charset=utf-8')
+            self.assertEquals(2, len(logObserver))
+            f1 = logObserver[0]["log_failure"].value
+            f2 = logObserver[1]["log_failure"].value
+
+            if isinstance(f1, TestValueError):
+                self.assertIsInstance(f2, TestRuntimeError)
+            else:
+                self.assertIsInstance(f1, TestRuntimeError)
+                self.assertIsInstance(f2, TestValueError)
+
             self.flushLoggedErrors(TestRuntimeError, TestValueError)
         d.addCallback(cb)
         return d
@@ -429,6 +448,7 @@ class XMLRPCTests(unittest.TestCase):
 
 
     def test_datetimeRoundtrip(self):
+
         """
         If an L{xmlrpclib.DateTime} is passed as an argument to an XML-RPC
         call and then returned by the server unmodified, the result should
@@ -447,6 +467,13 @@ class XMLRPCTests(unittest.TestCase):
         L{Fault}) the exception which prevents the response from being
         generated is logged and the request object is finished anyway.
         """
+        logObserver = EventLoggingObserver()
+        filtered = FilteringLogObserver(
+            logObserver,
+            [LogLevelFilterPredicate(defaultLogLevel=LogLevel.critical)]
+        )
+        globalLogPublisher.addObserver(filtered)
+        self.addCleanup(lambda: globalLogPublisher.removeObserver(filtered))
         d = self.proxy().callRemote("echo", "")
 
         # *Now* break xmlrpclib.dumps.  Hopefully the client already used it.
@@ -461,6 +488,11 @@ class XMLRPCTests(unittest.TestCase):
 
         def cbFailed(ignored):
             # The fakeDumps exception should have been logged.
+            self.assertEquals(1, len(logObserver))
+            self.assertIsInstance(
+                logObserver[0]["log_failure"].value,
+                RuntimeError
+            )
             self.assertEqual(len(self.flushLoggedErrors(RuntimeError)), 1)
         d.addCallback(cbFailed)
         return d

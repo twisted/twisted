@@ -17,6 +17,7 @@ from __future__ import division, absolute_import
 
 import copy
 import os
+import re
 try:
     from urllib import quote
 except ImportError:
@@ -34,9 +35,10 @@ from zope.interface import implementer
 from twisted.python.compat import networkString, nativeString, intToBytes
 from twisted.spread.pb import Copyable, ViewPoint
 from twisted.internet import address, interfaces
+from twisted.internet.error import AlreadyCalled, AlreadyCancelled
 from twisted.web import iweb, http, util
 from twisted.web.http import unquote
-from twisted.python import log, reflect, failure, components
+from twisted.python import reflect, failure, components
 from twisted import copyright
 from twisted.web import resource
 from twisted.web.error import UnsupportedMethod
@@ -44,6 +46,7 @@ from twisted.web.error import UnsupportedMethod
 from incremental import Version
 from twisted.python.deprecate import deprecatedModuleAttribute
 from twisted.python.compat import escape
+from twisted.logger import Logger
 
 NOT_DONE_YET = 1
 
@@ -91,7 +94,7 @@ class Request(Copyable, http.Request, components.Componentized):
     """
     An HTTP request.
 
-    @ivar defaultContentType: A C{bytes} giving the default I{Content-Type}
+    @ivar defaultContentType: A L{bytes} giving the default I{Content-Type}
         value to send in responses if no other value is set.  L{None} disables
         the default.
 
@@ -106,9 +109,11 @@ class Request(Copyable, http.Request, components.Componentized):
 
     site = None
     appRootURL = None
+    prepath = postpath = None
     __pychecker__ = 'unusednames=issuer'
     _inFakeHead = False
     _encoder = None
+    _log = Logger()
 
     def __init__(self, *args, **kw):
         http.Request.__init__(self, *args, **kw)
@@ -142,6 +147,12 @@ class Request(Copyable, http.Request, components.Componentized):
     def sibLink(self, name):
         """
         Return the text that links to a sibling of the requested resource.
+
+        @param name: The sibling resource
+        @type name: C{bytes}
+
+        @return: A relative URL.
+        @rtype: C{bytes}
         """
         if self.postpath:
             return (len(self.postpath)*b"../") + name
@@ -152,6 +163,12 @@ class Request(Copyable, http.Request, components.Componentized):
     def childLink(self, name):
         """
         Return the text that links to a child of the requested resource.
+
+        @param name: The child resource
+        @type name: C{bytes}
+
+        @return: A relative URL.
+        @rtype: C{bytes}
         """
         lpp = len(self.postpath)
         if lpp > 1:
@@ -168,6 +185,11 @@ class Request(Copyable, http.Request, components.Componentized):
     def process(self):
         """
         Process a request.
+
+        Find the addressed resource in this request's L{Site},
+        and call L{self.render()<Request.render()>} with it.
+
+        @see: L{Site.getResourceFor()}
         """
 
         # get site from channel
@@ -202,6 +224,7 @@ class Request(Copyable, http.Request, components.Componentized):
         Write data to the transport (if not responding to a HEAD request).
 
         @param data: A string to write to the response.
+        @type data: L{bytes}
         """
         if not self.startedWriting:
             # Before doing the first write, check to see if a default
@@ -249,7 +272,13 @@ class Request(Copyable, http.Request, components.Componentized):
         """
         Ask a resource to render itself.
 
-        @param resrc: a L{twisted.web.resource.IResource}.
+        If the resource does not support the requested method,
+        generate a C{NOT IMPLEMENTED} or C{NOT ALLOWED} response.
+
+        @param resrc: The resource to render.
+        @type resrc: L{twisted.web.resource.IResource}
+
+        @see: L{IResource.render()<twisted.web.resource.IResource.render()>}
         """
         try:
             body = resrc.render(self)
@@ -260,15 +289,19 @@ class Request(Copyable, http.Request, components.Componentized):
                 # resource doesn't, fake it by giving the resource
                 # a 'GET' request and then return only the headers,
                 # not the body.
-                log.msg("Using GET to fake a HEAD request for %s" %
-                        (resrc,))
+                self._log.info(
+                    "Using GET to fake a HEAD request for {resrc}",
+                    resrc=resrc
+                )
                 self.method = b"GET"
                 self._inFakeHead = True
                 body = resrc.render(self)
 
                 if body is NOT_DONE_YET:
-                    log.msg("Tried to fake a HEAD request for %s, but "
-                            "it got away from me." % resrc)
+                    self._log.info(
+                        "Tried to fake a HEAD request for {resrc}, but "
+                        "it got away from me.", resrc=resrc
+                    )
                     # Oh well, I guess we won't include the content length.
                 else:
                     self.setHeader(b'content-length', intToBytes(len(body)))
@@ -303,7 +336,7 @@ class Request(Copyable, http.Request, components.Componentized):
                 body = epage.render(self)
         # end except UnsupportedMethod
 
-        if body == NOT_DONE_YET:
+        if body is NOT_DONE_YET:
             return
         if not isinstance(body, bytes):
             body = resource.ErrorPage(
@@ -316,10 +349,12 @@ class Request(Copyable, http.Request, components.Componentized):
         if self.method == b"HEAD":
             if len(body) > 0:
                 # This is a Bad Thing (RFC 2616, 9.4)
-                log.msg("Warning: HEAD request %s for resource %s is"
-                        " returning a message body."
-                        "  I think I'll eat it."
-                        % (self, resrc))
+                self._log.info(
+                    "Warning: HEAD request {slf} for resource {resrc} is"
+                    " returning a message body. I think I'll eat it.",
+                    slf=self,
+                    resrc=resrc
+                )
                 self.setHeader(b'content-length',
                                intToBytes(len(body)))
             self.write(b'')
@@ -331,7 +366,17 @@ class Request(Copyable, http.Request, components.Componentized):
 
 
     def processingFailed(self, reason):
-        log.err(reason)
+        """
+        Finish this request with an indication that processing failed and
+        possibly display a traceback.
+
+        @param reason: Reason this request has failed.
+        @type reason: L{twisted.python.failure.Failure}
+
+        @return: The reason passed to this method.
+        @rtype: L{twisted.python.failure.Failure}
+        """
+        self._log.failure('', failure=reason)
         if self.site.displayTracebacks:
             body = (b"<html><head><title>web.Server Traceback"
                     b" (most recent call last)</title></head>"
@@ -453,8 +498,17 @@ class Request(Copyable, http.Request, components.Componentized):
 
         session = getattr(self, sessionAttribute)
 
-        # Session management
-        if not session:
+        if session is not None:
+            # We have a previously created session.
+            try:
+                # Refresh the session, to keep it alive.
+                session.touch()
+            except (AlreadyCalled, AlreadyCancelled):
+                # Session has already expired.
+                session = None
+
+        if session is None:
+            # No session was created yet for this request.
             cookiename = b"_".join([cookieString] + self.sitepath)
             sessionCookie = self.getCookie(cookiename)
             if sessionCookie:
@@ -468,7 +522,6 @@ class Request(Copyable, http.Request, components.Componentized):
                 self.addCookie(cookiename, session.uid, path=b"/",
                                secure=secure)
 
-        session.touch()
         setattr(self, sessionAttribute, session)
 
         if sessionInterface:
@@ -516,6 +569,9 @@ class Request(Copyable, http.Request, components.Componentized):
     def getRootURL(self):
         """
         Get a previously-remembered URL.
+
+        @return: An absolute URL.
+        @rtype: L{bytes}
         """
         return self.appRootURL
 
@@ -550,7 +606,7 @@ class GzipEncoderFactory(object):
 
     @since: 12.3
     """
-
+    _gzipCheckRegex = re.compile(br'(:?^|[\s,])gzip(:?$|[\s,])')
     compressLevel = 9
 
     def encoderForRequest(self, request):
@@ -558,18 +614,17 @@ class GzipEncoderFactory(object):
         Check the headers if the client accepts gzip encoding, and encodes the
         request if so.
         """
-        acceptHeaders = request.requestHeaders.getRawHeaders(
-            'accept-encoding', [])
-        supported = ','.join(acceptHeaders).split(',')
-        if 'gzip' in supported:
+        acceptHeaders = b','.join(
+            request.requestHeaders.getRawHeaders(b'accept-encoding', []))
+        if self._gzipCheckRegex.search(acceptHeaders):
             encoding = request.responseHeaders.getRawHeaders(
-                'content-encoding')
+                b'content-encoding')
             if encoding:
-                encoding = '%s,gzip' % ','.join(encoding)
+                encoding = b','.join(encoding + [b'gzip'])
             else:
-                encoding = 'gzip'
+                encoding = b'gzip'
 
-            request.responseHeaders.setRawHeaders('content-encoding',
+            request.responseHeaders.setRawHeaders(b'content-encoding',
                                                   [encoding])
             return _GzipEncoder(self.compressLevel, request)
 
@@ -713,14 +768,14 @@ class Site(http.HTTPFactory):
     @ivar counter: increment value used for generating unique sessions ID.
     @ivar requestFactory: A factory which is called with (channel)
         and creates L{Request} instances. Default to L{Request}.
-    @ivar displayTracebacks: if set, Twisted internal errors are displayed on
-        rendered pages. Default to C{True}.
+    @ivar displayTracebacks: If set, unhandled exceptions raised during
+        rendering are returned to the client as HTML. Default to C{False}.
     @ivar sessionFactory: factory for sessions objects. Default to L{Session}.
     @ivar sessionCheckTime: Deprecated.  See L{Session.sessionTimeout} instead.
     """
     counter = 0
     requestFactory = Request
-    displayTracebacks = True
+    displayTracebacks = False
     sessionFactory = Session
     sessionCheckTime = 1800
     _entropy = os.urandom

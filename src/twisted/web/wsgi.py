@@ -8,19 +8,18 @@ U{Python Web Server Gateway Interface v1.0.1<http://www.python.org/dev/peps/pep-
 
 __metaclass__ = type
 
-from collections import Sequence
 from sys import exc_info
 from warnings import warn
 
 from zope.interface import implementer
 
 from twisted.internet.threads import blockingCallFromThread
-from twisted.python.compat import reraise
-from twisted.python.log import msg, err
+from twisted.python.compat import reraise, Sequence
 from twisted.python.failure import Failure
 from twisted.web.resource import IResource
 from twisted.web.server import NOT_DONE_YET
 from twisted.web.http import INTERNAL_SERVER_ERROR
+from twisted.logger import Logger
 
 
 
@@ -104,11 +103,12 @@ class _ErrorStream:
     C{'wsgi.errors'} key in the C{environ} dictionary passed to the application
     object.
 
-    This simply passes writes on to L{logging<twisted.python.log>} system as
+    This simply passes writes on to L{logging<twisted.logger>} system as
     error events from the C{'wsgi'} system.  In the future, it may be desirable
     to expose more information in the events it logs, such as the application
     object which generated the message.
     """
+    _log = Logger()
 
     def write(self, data):
         """
@@ -131,7 +131,14 @@ class _ErrorStream:
                     "write() argument must be str, not %r (%s)"
                     % (data, type(data).__name__))
 
-        msg(data, system='wsgi', isError=True)
+        # Note that in old style, message was a tuple.  logger._legacy
+        # will overwrite this value if it is not properly formatted here.
+        self._log.error(
+            data,
+            system='wsgi',
+            isError=True,
+            message=(data,)
+        )
 
 
     def writelines(self, iovec):
@@ -262,6 +269,7 @@ class _WSGIResponse:
     """
 
     _requestFinished = False
+    _log = Logger()
 
     def __init__(self, reactor, threadpool, application, request):
         self.started = False
@@ -291,7 +299,7 @@ class _WSGIResponse:
         # *both* Python 2 and Python 3, so says PEP-3333.
         self.environ = {
             'REQUEST_METHOD': _wsgiString(request.method),
-            'REMOTE_ADDR': _wsgiString(request.getClientIP()),
+            'REMOTE_ADDR': _wsgiString(request.getClientAddress().host),
             'SCRIPT_NAME': _wsgiString(scriptName),
             'PATH_INFO': _wsgiString(pathInfo),
             'QUERY_STRING': _wsgiString(queryString),
@@ -505,7 +513,10 @@ class _WSGIResponse:
                 close()
         except:
             def wsgiError(started, type, value, traceback):
-                err(Failure(value, type, traceback), "WSGI application error")
+                self._log.failure(
+                    "WSGI application error",
+                    failure=Failure(value, type, traceback)
+                )
                 if started:
                     self.request.loseConnection()
                 else:

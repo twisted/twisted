@@ -184,6 +184,14 @@ class ThreadTestsBuilder(ReactorBuilder):
 
         if reactor.__class__.__name__ == "AsyncioSelectorReactor":
             self.assertIsNone(reactor.threadpool)
+            # ReactorBase.__init__ sets self.crash as a 'shutdown'
+            # event, which in turn calls stop on the underlying
+            # asyncio event loop, which in turn sets a _stopping
+            # attribute on it that's only unset after an iteration of
+            # the loop.  Subsequent tests can only reuse the asyncio
+            # loop if it's allowed to run and unset that _stopping
+            # attribute.
+            self.runReactor(reactor)
         else:
             gc.collect()
             self.assertIsNone(threadPoolRef())

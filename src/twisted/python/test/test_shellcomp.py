@@ -137,7 +137,7 @@ class ZshTests(unittest.TestCase):
         picked up correctly?
         """
         opts = FighterAceExtendedOptions()
-        ag = _shellcomp.ZshArgumentsGenerator(opts, 'ace', 'dummy_value')
+        ag = _shellcomp.ZshArgumentsGenerator(opts, 'ace', BytesIO())
 
         descriptions = FighterAceOptions.compData.descriptions.copy()
         descriptions.update(FighterAceExtendedOptions.compData.descriptions)
@@ -173,7 +173,7 @@ class ZshTests(unittest.TestCase):
                                                 'spad', 'bristol']])
 
         opts = OddFighterAceOptions()
-        ag = _shellcomp.ZshArgumentsGenerator(opts, 'ace', 'dummy_value')
+        ag = _shellcomp.ZshArgumentsGenerator(opts, 'ace', BytesIO())
 
         expected = {
              'albatros': set(['anatra', 'b', 'bristol', 'f',
@@ -197,7 +197,7 @@ class ZshTests(unittest.TestCase):
         e.g. def opt_foo(self, foo)
         """
         opts = FighterAceExtendedOptions()
-        ag = _shellcomp.ZshArgumentsGenerator(opts, 'ace', 'dummy_value')
+        ag = _shellcomp.ZshArgumentsGenerator(opts, 'ace', BytesIO())
 
         self.assertIn('nocrash', ag.flagNameToDefinition)
         self.assertIn('nocrash', ag.allOptionsNameToDefinition)
@@ -216,7 +216,7 @@ class ZshTests(unittest.TestCase):
             compData = Completions(optActions={'detaill' : None})
 
         self.assertRaises(ValueError, _shellcomp.ZshArgumentsGenerator,
-                          TmpOptions(), 'ace', 'dummy_value')
+                          TmpOptions(), 'ace', BytesIO())
 
         class TmpOptions2(FighterAceExtendedOptions):
             # Note that 'foo' and 'bar' are not real option
@@ -225,7 +225,7 @@ class ZshTests(unittest.TestCase):
                            mutuallyExclusive=[("foo", "bar")])
 
         self.assertRaises(ValueError, _shellcomp.ZshArgumentsGenerator,
-                          TmpOptions2(), 'ace', 'dummy_value')
+                          TmpOptions2(), 'ace', BytesIO())
 
 
     def test_zshCode(self):

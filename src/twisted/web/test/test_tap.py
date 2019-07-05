@@ -167,9 +167,8 @@ class ServiceTests(TestCase):
         options.parseOptions(['--personal'])
         path = os.path.expanduser(
             os.path.join('~', UserDirectory.userSocketName))
-        self.assertEqual(
-            endpoints._parseServer(options['port'], None)[:2],
-            ('UNIX', (path, None)))
+        self.assertEqual(options['ports'][0],
+                         'unix:{}'.format(path))
 
     if not IReactorUNIX.providedBy(reactor):
         test_defaultPersonalPath.skip = (
@@ -184,8 +183,18 @@ class ServiceTests(TestCase):
         options = Options()
         options.parseOptions([])
         self.assertEqual(
-            endpoints._parseServer(options['port'], None)[:2],
+            endpoints._parseServer(options['ports'][0], None)[:2],
             ('TCP', (8080, None)))
+
+
+    def test_twoPorts(self):
+        """
+        If the I{--http} option is given twice, there are two listeners
+        """
+        options = Options()
+        options.parseOptions(['--listen', 'tcp:8001', '--listen', 'tcp:8002'])
+        self.assertIn('8001', options['ports'][0])
+        self.assertIn('8002', options['ports'][1])
 
 
     def test_wsgi(self):
@@ -248,7 +257,8 @@ class ServiceTests(TestCase):
 
         options.parseOptions(['--https=443'])
 
-        self.assertEqual('443', options['https'])
+        self.assertIn('ssl', options['ports'][0])
+        self.assertIn('443', options['ports'][0])
 
     if requireModule('OpenSSL.SSL') is None:
         test_HTTPSAcceptedOnAvailableSSL.skip = 'SSL module is not available.'
@@ -279,6 +289,45 @@ class ServiceTests(TestCase):
         self.assertIsInstance(resource, _AddHeadersResource)
         self.assertEqual(resource._headers, [('K1', 'V1'), ('K2', 'V2')])
         self.assertIsInstance(resource._originalResource, demo.Test)
+
+
+    def test_noTracebacksDeprecation(self):
+        """
+        Passing --notracebacks is deprecated.
+        """
+        options = Options()
+        options.parseOptions(["--notracebacks"])
+        makeService(options)
+
+        warnings = self.flushWarnings([self.test_noTracebacksDeprecation])
+        self.assertEqual(warnings[0]['category'], DeprecationWarning)
+        self.assertEqual(
+            warnings[0]['message'],
+            "--notracebacks was deprecated in Twisted NEXT"
+        )
+        self.assertEqual(len(warnings), 1)
+
+
+    def test_displayTracebacks(self):
+        """
+        Passing --display-tracebacks will enable traceback rendering on the
+        generated Site.
+        """
+        options = Options()
+        options.parseOptions(["--display-tracebacks"])
+        service = makeService(options)
+        self.assertTrue(service.services[0].factory.displayTracebacks)
+
+
+    def test_displayTracebacksNotGiven(self):
+        """
+        Not passing --display-tracebacks will leave traceback rendering on the
+        generated Site off.
+        """
+        options = Options()
+        options.parseOptions([])
+        service = makeService(options)
+        self.assertFalse(service.services[0].factory.displayTracebacks)
 
 
 

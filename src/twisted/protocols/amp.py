@@ -858,12 +858,7 @@ class BoxDispatcher:
         @return: a string that has not yet been used on this connection.
         """
         self._counter += 1
-        if _PY3:
-            # Python 3.4 cannot do % interpolation on byte strings so we must
-            # work with a Unicode string and then encode.
-            return (u'%x' % (self._counter,)).encode("ascii")
-        else:
-            return (b'%x' % (self._counter,))
+        return (b'%x' % (self._counter,))
 
 
     def _sendBoxCommand(self, command, box, requiresAnswer=True):
