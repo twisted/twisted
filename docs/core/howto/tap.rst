@@ -348,7 +348,7 @@ of the package. You would have to extend the layout of your files like this:
 .. code-block:: python
 
 
-    from distutils.core import setup
+    from setuptools import setup, find_packages
 
     setup(
         name='MyApplication',
@@ -429,7 +429,6 @@ You should now be able to
 - Incorporate authentication into your plugin
 - Use it from your development environment
 - Install it correctly and use it in deployment
-
 
 
 
