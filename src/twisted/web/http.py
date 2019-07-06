@@ -1535,10 +1535,10 @@ class Request:
             upw = base64.decodestring(upw)
             self.user, self.password = upw.split(b':', 1)
         except (binascii.Error, ValueError):
-            self.user = self.password = ""
+            self.user = self.password = b''
         except:
             self._log.failure('')
-            self.user = self.password = ""
+            self.user = self.password = b''
 
 
     def getUser(self):
