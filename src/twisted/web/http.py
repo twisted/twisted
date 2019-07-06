@@ -1527,7 +1527,7 @@ class Request:
         try:
             authh = self.getHeader(b"Authorization")
             if not authh:
-                self.user = self.password = ''
+                self.user = self.password = b''
                 return
             bas, upw = authh.split()
             if bas.lower() != b"basic":
