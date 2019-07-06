@@ -1536,7 +1536,7 @@ class Request:
             self.user, self.password = upw.split(b':', 1)
         except (binascii.Error, ValueError):
             self.user = self.password = b''
-        except:
+        except Exception:
             self._log.failure('')
             self.user = self.password = b''
 
