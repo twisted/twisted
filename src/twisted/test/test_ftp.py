@@ -66,6 +66,43 @@ def skipWithoutIPv6(f):
 
 
 
+def _has_ipv4_mapped_addresses():
+    """Returns True if the system supports IPv4-mapped IPv6 addresses."""
+    if not HAS_IPV6:
+        return False
+    server = None
+    client = None
+    has_ipv4_mapped_addresses = False
+
+    try:
+        server = socket.socket(socket.AF_INET6)
+        server.bind(("::", 0))
+        server.listen(1)
+        client = socket.socket(socket.AF_INET)
+        client.connect(("127.0.0.1", server.getsockname()[1]))
+        has_ipv4_mapped_addresses = True
+    except socket.error:
+        pass
+
+    if client:
+        client.close()
+    if server:
+        server.close()
+    return has_ipv4_mapped_addresses
+
+
+
+HAS_IPV4_MAPPED_ADDRESSES = _has_ipv4_mapped_addresses()
+
+
+
+def skipWithoutIPv4MappedAddresses(f):
+    if not HAS_IPV4_MAPPED_ADDRESSES:
+        f.skip = "Does not work on systems without IPv4-mapped IPv6 addresses."
+    return f
+
+
+
 class Dummy(basic.LineReceiver):
     logname = None
 
@@ -128,6 +165,7 @@ class FTPServerTestCase(unittest.TestCase):
     """
     clientFactory = ftp.FTPClientBasic
     userAnonymous = "anonymous"
+    bindAddress = "127.0.0.1"
 
     def setUp(self):
         # Keep a list of the protocols created so we can make sure they all
@@ -156,7 +194,7 @@ class FTPServerTestCase(unittest.TestCase):
         self.factory = ftp.FTPFactory(portal=p,
                                       userAnonymous=self.userAnonymous)
         self.port = port = reactor.listenTCP(
-            0, self.factory, interface="127.0.0.1")
+            0, self.factory, interface=self.bindAddress)
         self.addCleanup(port.stopListening)
 
         # Hook the server's buildProtocol to make the protocol instance
@@ -1053,6 +1091,13 @@ class FTPServerPasvDataConnectionTests(FTPServerTestCase):
         """
         d = self.client.queueStringCommand('PASV')
         def gotPASV(responseLines):
+            # ftp.decodeHostPort is more lenient than this, but we want to
+            # be extra-careful to ensure that nothing odd sneaks into the
+            # response that might confuse connection-tracking
+            # implementations.
+            self.assertRegex(
+                responseLines[-1],
+                r'^227 Entering Passive Mode \((?:\d+,){5}\d+\)\.$')
             host, port = ftp.decodeHostPort(responseLines[-1][4:])
             cc = protocol.ClientCreator(reactor, _BufferingProtocol)
             return cc.connectTCP('127.0.0.1', port)
@@ -1372,6 +1417,19 @@ class FTPServerPasvDataConnectionTests(FTPServerTestCase):
             filenames = download[:-2].split(b'\r\n')
             self.assertEqual([b'test.txt'], filenames)
         return d.addCallback(checkDownload)
+
+
+
+@skipWithoutIPv4MappedAddresses
+class FTPServerIPv4MappedPasvDataConnectionTests(
+    FTPServerPasvDataConnectionTests):
+    """
+    The C{PASV} command doesn't work for IPv6 connections (that's why
+    C{EPSV} was invented).  However, it's possible to use it from an IPv4
+    client connecting to a dual-stack server using IPv4-mapped addresses, if
+    the system's IPv6 stack supports that.
+    """
+    bindAddress = "::"
 
 
 

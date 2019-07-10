@@ -243,6 +243,7 @@ def getSetupArgs(extensions=_EXTENSIONS):
         "hyperlink >= 17.1.1",
         "PyHamcrest >= 1.9.0",
         "attrs >= 17.4.0",
+        "ipaddress; python_version < '3.0'",
     ]
 
     arguments.update(dict(

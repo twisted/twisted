@@ -13,6 +13,7 @@ import re
 import stat
 import errno
 import fnmatch
+import ipaddress
 
 try:
     import pwd, grp
@@ -27,7 +28,7 @@ from twisted.internet import reactor, interfaces, protocol, error, defer
 from twisted.protocols import basic, policies
 
 from twisted.python import log, failure, filepath
-from twisted.python.compat import range, unicode
+from twisted.python.compat import _coercedUnicode, range, unicode
 from twisted.cred import error as cred_error, portal, credentials, checkers
 
 # constants
@@ -981,6 +982,25 @@ class FTP(basic.LineReceiver, policies.TimeoutMixin, object):
             return defer.fail(BadCmdSequenceError(
                 'may not send PASV after EPSV ALL'))
 
+        host = self.transport.getHost().host
+        try:
+            address = ipaddress.IPv6Address(_coercedUnicode(host))
+        except ipaddress.AddressValueError:
+            pass
+        else:
+            if address.ipv4_mapped is not None:
+                # IPv4-mapped addresses are usable, but we need to make sure
+                # they're encoded as IPv4 in the response.
+                host = str(address.ipv4_mapped)
+            else:
+                # There's no standard defining the behaviour of PASV with
+                # IPv6, so just claim it as unimplemented.  (Some servers
+                # return something like '0,0,0,0' in the host part of the
+                # response in order that at least clients that ignore the
+                # host part can work, and if it becomes necessary then we
+                # could do that too.)
+                return defer.fail(CmdNotImplementedError('PASV'))
+
         # if we have a DTP port set up, lose it.
         if self.dtpFactory is not None:
             # cleanupDTP sets dtpFactory to none.  Later we'll do
@@ -990,7 +1010,6 @@ class FTP(basic.LineReceiver, policies.TimeoutMixin, object):
         self.dtpFactory.setTimeout(self.dtpTimeout)
         self.dtpPort = self.getDTPPort(self.dtpFactory)
 
-        host = self.transport.getHost().host
         port = self.dtpPort.getHost().port
         self.reply(ENTERING_PASV_MODE, encodeHostPort(host, port))
         return self.dtpFactory.deferred.addCallback(lambda ign: None)
