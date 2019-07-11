@@ -596,6 +596,30 @@ class BasicFTPServerTests(FTPServerTestCase):
         return d
 
 
+    @skipWithoutIPv6
+    def test_PASVDeniedIfIPv6(self):
+        """
+        The C{PASV} command is rejected for IPv6 clients.  Use C{EPSV}
+        instead.
+        """
+        port = reactor.listenTCP(0, self.factory, interface='::1')
+        self.addCleanup(port.stopListening)
+        portNum = port.getHost().port
+        clientCreator = protocol.ClientCreator(reactor, self.clientFactory)
+        d = clientCreator.connectTCP('::1', portNum)
+
+        def gotClient(client):
+            self.client = client
+            self.addCleanup(self.client.transport.loseConnection)
+
+        d.addCallback(gotClient)
+        d.addCallback(lambda _: self._anonymousLogin())
+        return self.assertCommandFailed(
+            'PASV',
+            ["502 Command 'PASV' not implemented"],
+            chainDeferred=d)
+
+
     def test_EPSVALLBeforePASV(self):
         """
         When the client sends the command C{EPSV ALL}, a subsequent C{PASV}
