@@ -1090,6 +1090,7 @@ class FTPServerPasvDataConnectionTests(FTPServerTestCase):
         @return: L{Deferred.addCallback}
         """
         d = self.client.queueStringCommand('PASV')
+
         def gotPASV(responseLines):
             # ftp.decodeHostPort is more lenient than this, but we want to
             # be extra-careful to ensure that nothing odd sneaks into the
@@ -1101,6 +1102,7 @@ class FTPServerPasvDataConnectionTests(FTPServerTestCase):
             host, port = ftp.decodeHostPort(responseLines[-1][4:])
             cc = protocol.ClientCreator(reactor, _BufferingProtocol)
             return cc.connectTCP('127.0.0.1', port)
+
         return d.addCallback(gotPASV)
 
 
@@ -1422,7 +1424,7 @@ class FTPServerPasvDataConnectionTests(FTPServerTestCase):
 
 @skipWithoutIPv4MappedAddresses
 class FTPServerIPv4MappedPasvDataConnectionTests(
-    FTPServerPasvDataConnectionTests):
+        FTPServerPasvDataConnectionTests):
     """
     The C{PASV} command doesn't work for IPv6 connections (that's why
     C{EPSV} was invented).  However, it's possible to use it from an IPv4
