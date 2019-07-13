@@ -603,6 +603,39 @@ class RequestTests(unittest.TestCase):
         self.assertEqual(request.prePathURL(), b'http://example.com/foo%2Fbar')
 
 
+    def test_processingFailedNoTracebackByDefault(self):
+        """
+        By default, L{Request.processingFailed} does not write out the failure,
+        but give a generic error message, as L{Site.displayTracebacks} is
+        disabled by default.
+        """
+        logObserver = EventLoggingObserver.createWithCleanup(
+            self,
+            globalLogPublisher
+        )
+
+        d = DummyChannel()
+        request = server.Request(d, 1)
+        request.site = server.Site(resource.Resource())
+        fail = failure.Failure(Exception("Oh no!"))
+        request.processingFailed(fail)
+
+        self.assertNotIn(b"Oh no!", request.transport.written.getvalue())
+        self.assertIn(
+            b"Processing Failed", request.transport.written.getvalue()
+        )
+        self.assertEquals(1, len(logObserver))
+
+        event = logObserver[0]
+        f = event["log_failure"]
+        self.assertIsInstance(f.value, Exception)
+        self.assertEquals(f.getErrorMessage(), "Oh no!")
+
+        # Since we didn't "handle" the exception, flush it to prevent a test
+        # failure
+        self.assertEqual(1, len(self.flushLoggedErrors()))
+
+
     def test_processingFailedNoTraceback(self):
         """
         L{Request.processingFailed} when the site has C{displayTracebacks} set
