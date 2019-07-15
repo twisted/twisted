@@ -1,0 +1,1 @@
+twisted.web.iweb.IRequest's "prepath" and "postpath" attributes, which have existed for a long time, are now documented.
