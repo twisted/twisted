@@ -946,8 +946,9 @@ class HTTP2ServerTests(unittest.TestCase, HTTP2TestHelpers):
         self.assertTrue(request._disconnected)
         self.assertTrue(request.channel is None)
 
-        # An attempt to write should at this point raise an exception.
-        self.assertRaises(AttributeError, request.write, b"third chunk")
+        # This should not raise an exception, the function will just return
+        # immediately, and do nothing
+        request.write(b"third chunk")
 
         # Check that everything is fine.
         # We expect that only the Settings and Headers frames will have been

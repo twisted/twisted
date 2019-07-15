@@ -1475,6 +1475,60 @@ class ParsingTests(unittest.TestCase):
             request.requestHeaders.getRawHeaders(b'bAz'), [b'Quux', b'quux'])
 
 
+    def test_headersMultiline(self):
+        """
+        Line folded headers are handled by L{HTTPChannel} by replacing each
+        fold with a single space by the time they are made available to the
+        L{Request}. Any leading whitespace in the folded lines of the header
+        value is preserved.
+
+        See RFC 7230 section 3.2.4.
+        """
+        processed = []
+
+        class MyRequest(http.Request):
+            def process(self):
+                processed.append(self)
+                self.finish()
+
+        requestLines = [
+            b"GET / HTTP/1.0",
+            b"nospace: ",
+            b" nospace\t",
+            b"space:space",
+            b" space",
+            b"spaces: spaces",
+            b"  spaces",
+            b"   spaces",
+            b"tab: t",
+            b"\ta",
+            b"\tb",
+            b"",
+            b"",
+        ]
+
+        self.runRequest(b"\n".join(requestLines), MyRequest, 0)
+        [request] = processed
+        # All leading and trailing whitespace is stripped from the
+        # header-value.
+        self.assertEqual(
+            request.requestHeaders.getRawHeaders(b"nospace"),
+            [b"nospace"],
+        )
+        self.assertEqual(
+            request.requestHeaders.getRawHeaders(b"space"),
+            [b"space  space"],
+        )
+        self.assertEqual(
+            request.requestHeaders.getRawHeaders(b"spaces"),
+            [b"spaces   spaces    spaces"],
+        )
+        self.assertEqual(
+            request.requestHeaders.getRawHeaders(b"tab"),
+            [b"t \ta \tb"],
+        )
+
+
     def test_tooManyHeaders(self):
         """
         L{HTTPChannel} enforces a limit of C{HTTPChannel.maxHeaders} on the
@@ -2929,6 +2983,19 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         channel = DummyChannel()
         req = http.Request(channel, False)
         req.connectionLost(Failure(ConnectionLost("The end.")))
+        self.assertRaises(RuntimeError, req.finish)
+
+
+    def test_writeAfterConnectionLost(self):
+        """
+        Calling L{Request.write} after L{Request.connectionLost} has been
+        called does not raise an exception. L{RuntimeError} will be raised
+        when finish is called on the request.
+        """
+        channel = DummyChannel()
+        req = http.Request(channel, False)
+        req.connectionLost(Failure(ConnectionLost("The end.")))
+        req.write(b'foobar')
         self.assertRaises(RuntimeError, req.finish)
 
 
