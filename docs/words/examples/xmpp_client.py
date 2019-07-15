@@ -53,8 +53,9 @@ class Client(object):
         xs.rawDataOutFn = self.rawDataOut
 
 
-    def disconnected(self, xs):
+    def disconnected(self, reason):
         print('Disconnected.')
+        print(reason)
 
         self.finished.callback(None)
 
