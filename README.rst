@@ -2,9 +2,7 @@ Twisted
 =======
 
 |pypi|_
-|coverage|_
 |travis|_
-|appveyor|_
 |circleci|_
 
 For information on what's new in Twisted 19.2.0, see the `NEWS <NEWS.rst>`_ file that comes with the distribution.
@@ -41,10 +39,10 @@ Additional instructions for installing this software are in `the installation in
 Documentation and Support
 -------------------------
 
-Twisted's documentation is available from the `Twisted Matrix website <http://twistedmatrix.com/documents/current/>`_.
+Twisted's documentation is available from the `Twisted Matrix website <https://twistedmatrix.com/documents/current/>`_.
 This documentation contains how-tos, code examples, and an API reference.
 
-Help is also available on the `Twisted mailing list <http://twistedmatrix.com/cgi-bin/mailman/listinfo/twisted-python>`_.
+Help is also available on the `Twisted mailing list <https://twistedmatrix.com/cgi-bin/mailman/listinfo/twisted-python>`_.
 
 There is also a pair of very lively IRC channels, ``#twisted`` (for general Twisted questions) and ``#twisted.web`` (for Twisted Web), on ``chat.freenode.net``.
 
@@ -96,17 +94,11 @@ Warranty
 Again, see the included `LICENSE <LICENSE>`_ file for specific legal details.
 
 
-.. |coverage| image:: https://codecov.io/github/twisted/twisted/coverage.svg?branch=trunk
-.. _coverage: https://codecov.io/github/twisted/twisted
-
 .. |pypi| image:: http://img.shields.io/pypi/v/twisted.svg
 .. _pypi: https://pypi.python.org/pypi/twisted
 
 .. |travis| image:: https://travis-ci.org/twisted/twisted.svg?branch=trunk
 .. _travis: https://travis-ci.org/twisted/twisted
-
-.. |appveyor| image:: https://ci.appveyor.com/api/projects/status/x4oyqtl9cqc2i2l8
-.. _appveyor: https://ci.appveyor.com/project/adiroiban/twisted
 
 .. |circleci| image:: https://circleci.com/gh/twisted/twisted.svg?style=svg
 .. _circleci: https://circleci.com/gh/twisted/twisted
