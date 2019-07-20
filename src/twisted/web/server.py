@@ -768,14 +768,14 @@ class Site(http.HTTPFactory):
     @ivar counter: increment value used for generating unique sessions ID.
     @ivar requestFactory: A factory which is called with (channel)
         and creates L{Request} instances. Default to L{Request}.
-    @ivar displayTracebacks: if set, Twisted internal errors are displayed on
-        rendered pages. Default to C{True}.
+    @ivar displayTracebacks: If set, unhandled exceptions raised during
+        rendering are returned to the client as HTML. Default to C{False}.
     @ivar sessionFactory: factory for sessions objects. Default to L{Session}.
     @ivar sessionCheckTime: Deprecated.  See L{Session.sessionTimeout} instead.
     """
     counter = 0
     requestFactory = Request
-    displayTracebacks = True
+    displayTracebacks = False
     sessionFactory = Session
     sessionCheckTime = 1800
     _entropy = os.urandom
