@@ -1063,7 +1063,9 @@ class SSHTransportBase(protocol.Protocol):
         k1 = hashProcessor(sharedSecret + exchangeHash + c + self.sessionID)
         k1 = k1.digest()
         k2 = hashProcessor(sharedSecret + exchangeHash + k1).digest()
-        return k1 + k2
+        k3 = hashProcessor(sharedSecret + exchangeHash + k1 + k2).digest()
+        k4 = hashProcessor(sharedSecret + exchangeHash + k1 + k2 + k3).digest()
+        return k1 + k2 + k3 + k4
 
 
     def _keySetup(self, sharedSecret, exchangeHash):
