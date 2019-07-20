@@ -2,24 +2,38 @@
 # See LICENSE for details.
 
 """
-Tests for L{twisted.test.proto_helpers}.
+Tests for L{twisted.internet.testing}.
 """
 
 from zope.interface.verify import verifyObject
 
-from twisted.internet.interfaces import (ITransport, IPushProducer, IConsumer,
-    IReactorTCP, IReactorSSL, IReactorUNIX, IAddress, IListeningPort,
-    IConnector)
+from twisted.internet.interfaces import (
+    ITransport,
+    IPushProducer,
+    IConsumer,
+    IReactorTCP,
+    IReactorSSL,
+    IReactorUNIX,
+    IAddress,
+    IListeningPort,
+    IConnector
+)
 from twisted.internet.address import IPv4Address
 from twisted.trial.unittest import TestCase
-from twisted.test.proto_helpers import (StringTransport, MemoryReactor,
-    RaisingMemoryReactor, NonStreamingProducer)
+from twisted.internet.testing import (
+    StringTransport,
+    MemoryReactor,
+    RaisingMemoryReactor,
+    NonStreamingProducer
+)
 from twisted.internet.protocol import ClientFactory, Factory
+from twisted.python.reflect import namedAny
+
 
 
 class StringTransportTests(TestCase):
     """
-    Tests for L{twisted.test.proto_helpers.StringTransport}.
+    Tests for L{twisted.internet.testing.StringTransport}.
     """
     def setUp(self):
         self.transport = StringTransport()
@@ -399,3 +413,103 @@ class NonStreamingProducerTests(TestCase):
         producer.resumeProducing()
 
         self.assertRaises(RuntimeError, producer.pauseProducing)
+
+
+
+class DeprecationTests(TestCase):
+    """
+    Deprecations in L{twisted.test.proto_helpers}.
+    """
+    def helper(self, test, obj):
+        new_path = 'twisted.internet.testing.{}'.format(obj.__name__)
+        warnings = self.flushWarnings(
+            [test])
+        self.assertEqual(DeprecationWarning, warnings[0]['category'])
+        self.assertEqual(1, len(warnings))
+        self.assertIn(new_path, warnings[0]['message'])
+        self.assertIs(obj, namedAny(new_path))
+
+    def test_accumulatingProtocol(self):
+        from twisted.test.proto_helpers import AccumulatingProtocol
+        self.helper(self.test_accumulatingProtocol,
+                    AccumulatingProtocol)
+
+
+    def test_lineSendingProtocol(self):
+        from twisted.test.proto_helpers import LineSendingProtocol
+        self.helper(self.test_lineSendingProtocol,
+                    LineSendingProtocol)
+
+
+    def test_fakeDatagramTransport(self):
+        from twisted.test.proto_helpers import FakeDatagramTransport
+        self.helper(self.test_fakeDatagramTransport,
+                    FakeDatagramTransport)
+
+
+    def test_stringTransport(self):
+        from twisted.test.proto_helpers import StringTransport
+        self.helper(self.test_stringTransport,
+                    StringTransport)
+
+
+    def test_stringTransportWithDisconnection(self):
+        from twisted.test.proto_helpers import (
+            StringTransportWithDisconnection)
+        self.helper(self.test_stringTransportWithDisconnection,
+                    StringTransportWithDisconnection)
+
+
+    def test_stringIOWithoutClosing(self):
+        from twisted.test.proto_helpers import StringIOWithoutClosing
+        self.helper(self.test_stringIOWithoutClosing,
+                    StringIOWithoutClosing)
+
+
+    def test__fakeConnector(self):
+        from twisted.test.proto_helpers import _FakeConnector
+        self.helper(self.test__fakeConnector,
+                    _FakeConnector)
+
+
+    def test__fakePort(self):
+        from twisted.test.proto_helpers import _FakePort
+        self.helper(self.test__fakePort,
+                    _FakePort)
+
+
+    def test_memoryReactor(self):
+        from twisted.test.proto_helpers import MemoryReactor
+        self.helper(self.test_memoryReactor,
+                    MemoryReactor)
+
+
+    def test_memoryReactorClock(self):
+        from twisted.test.proto_helpers import MemoryReactorClock
+        self.helper(self.test_memoryReactorClock,
+                    MemoryReactorClock)
+
+
+    def test_raisingMemoryReactor(self):
+        from twisted.test.proto_helpers import RaisingMemoryReactor
+        self.helper(self.test_raisingMemoryReactor,
+                    RaisingMemoryReactor)
+
+
+    def test_nonStreamingProducer(self):
+        from twisted.test.proto_helpers import NonStreamingProducer
+        self.helper(self.test_nonStreamingProducer,
+                    NonStreamingProducer)
+
+
+    def test_waitUntilAllDisconnected(self):
+        from twisted.test.proto_helpers import (
+            waitUntilAllDisconnected)
+        self.helper(self.test_waitUntilAllDisconnected,
+                    waitUntilAllDisconnected)
+
+
+    def test_eventLoggingObserver(self):
+        from twisted.test.proto_helpers import EventLoggingObserver
+        self.helper(self.test_eventLoggingObserver,
+                    EventLoggingObserver)
