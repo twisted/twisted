@@ -724,8 +724,27 @@ class Py3TestLoader(TestLoader):
                 break
 
             except ImportError:
+                # Check to see where the ImportError happened. If it happened
+                # in this file, ignore it.
+                tb = sys.exc_info()[2]
+
+                # Walk down to the deepest frame, where it actually happened.
+                while tb.tb_next is not None:
+                    tb = tb.tb_next
+
+                # Get the filename that the ImportError originated in.
+                filenameWhereHappened = tb.tb_frame.f_code.co_filename
+
+                # If it originated in the reflect file, then it's because it
+                # doesn't exist. If it originates elsewhere, it's because an
+                # ImportError happened in a module that does exist.
+                if filenameWhereHappened != reflect.__file__:
+                    raise
+
                 if remaining == "":
-                    raise reflect.ModuleNotFound("The module {} does not exist.".format(name))
+                    raise reflect.ModuleNotFound(
+                        "The module {} does not exist.".format(name)
+                    )
 
         if obj is None:
             # If it's none here, we didn't get to import anything.
