@@ -1,1 +1,0 @@
-Twisted's minimum Cryptography requirement is now 2.5.
