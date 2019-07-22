@@ -7,6 +7,7 @@ Tests for various parts of L{twisted.web}.
 
 import os
 import zlib
+from io import BytesIO
 
 from zope.interface import implementer
 from zope.interface.verify import verifyObject
@@ -25,6 +26,11 @@ from twisted.web.test.requesthelper import DummyChannel, DummyRequest
 from twisted.web.static import Data
 from twisted.logger import globalLogPublisher, LogLevel
 from twisted.test.proto_helpers import EventLoggingObserver
+
+from ._util import (
+    assertIsFilesystemTemporary,
+)
+
 
 
 class ResourceTests(unittest.TestCase):
@@ -941,6 +947,59 @@ class RequestTests(unittest.TestCase):
         response = request.transport.written.getvalue()
         self.assertTrue(response.startswith(b'HTTP/1.1 204 No Content\r\n'))
         self.assertNotIn(b'content-type', response.lower())
+
+
+    def test_defaultSmallContentFile(self):
+        """
+        L{http.Request} creates a L{BytesIO} if the content length is small and
+        the site doesn't offer to create one.
+        """
+        request = server.Request(DummyChannel())
+        request.gotLength(100000 - 1)
+        self.assertIsInstance(request.content, BytesIO)
+
+
+    def test_defaultLargerContentFile(self):
+        """
+        L{http.Request} creates a temporary file on the filesystem if the
+        content length is larger and the site doesn't offer to create one.
+        """
+        request = server.Request(DummyChannel())
+        request.gotLength(100000)
+        assertIsFilesystemTemporary(self, request.content)
+
+
+    def test_defaultUnknownSizeContentFile(self):
+        """
+        L{http.Request} creates a temporary file on the filesystem if the
+        content length is not known and the site doesn't offer to create one.
+        """
+        request = server.Request(DummyChannel())
+        request.gotLength(None)
+        assertIsFilesystemTemporary(self, request.content)
+
+
+    def test_siteSuppliedContentFile(self):
+        """
+        L{http.Request} uses L{Site.getContentFile}, if it exists, to get a
+        file-like object for the request content.
+        """
+        lengths = []
+        contentFile = BytesIO()
+        site = server.Site(resource.Resource())
+
+        def getContentFile(length):
+            lengths.append(length)
+            return contentFile
+        site.getContentFile = getContentFile
+
+        channel = DummyChannel()
+        channel.site = site
+
+        request = server.Request(channel)
+        request.gotLength(12345)
+        self.assertEqual([12345], lengths)
+        self.assertIs(contentFile, request.content)
 
 
 
