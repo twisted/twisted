@@ -1238,7 +1238,10 @@ class BaseSSHTransportDHGroupExchangeBaseCase(BaseSSHTransportBaseCase):
         k1 = self.hashProcessor(
             b'AB' + b'CD' + b'K' + self.proto.sessionID).digest()
         k2 = self.hashProcessor(b'ABCD' + k1).digest()
-        self.assertEqual(self.proto._getKey(b'K', b'AB', b'CD'), k1 + k2)
+        k3 = self.hashProcessor(b'ABCD' + k1 + k2).digest()
+        k4 = self.hashProcessor(b'ABCD' + k1 + k2 + k3).digest()
+        self.assertEqual(
+            self.proto._getKey(b'K', b'AB', b'CD'), k1 + k2 + k3 + k4)
 
 
 
