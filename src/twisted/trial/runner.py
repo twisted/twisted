@@ -551,6 +551,7 @@ class TestLoader(object):
             warnings.warn("trial only supports doctesting modules")
             return
         extraArgs = {}
+
         # Work around Python issue2604: DocTestCase.tearDown clobbers globs
         def saveGlobals(test):
             """
