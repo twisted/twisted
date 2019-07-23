@@ -822,9 +822,11 @@ class AnotherPOP3Tests(unittest.TestCase):
                                    b'Unknown protocol command: DUMMY'])]
 
         return self.run_PASS(b'testuser', b'testpassword',
-            after_auth_input=extra_input,
-            after_auth_output=extra_output,
-        ).addCallback(self.flushLoggedErrors, pop3.POP3Error)
+                             after_auth_input=extra_input,
+                             after_auth_output=extra_output,
+                             ).addCallback(self.flushLoggedErrors,
+                                           pop3.POP3Error)
+
 
 
 @implementer(pop3.IServerFactory)

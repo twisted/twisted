@@ -886,8 +886,8 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
         self._userIs = None
         password = b' '.join((password,) + words)
         d = defer.maybeDeferred(self.authenticateUserPASS, user, password)
-        d.addCallbacks(self._cbMailbox, self._ebMailbox, callbackArgs=(user,)
-        ).addErrback(self._ebUnexpected)
+        d.addCallbacks(self._cbMailbox, self._ebMailbox,
+                       callbackArgs=(user,)).addErrback(self._ebUnexpected)
 
 
     def _longOperation(self, d):
