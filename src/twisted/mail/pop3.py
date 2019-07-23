@@ -862,7 +862,7 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
         self.successResponse(b'USER accepted, send PASS')
 
 
-    def do_PASS(self, password):
+    def do_PASS(self, password, *words):
         """
         Handle a PASS command.
 
@@ -874,12 +874,16 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
 
         @type password: L{bytes}
         @param password: A password.
+
+        @type words: L{tuple} of L{bytes}
+        @param words: Other parts of the password split by spaces.
         """
         if self._userIs is None:
             self.failResponse(b"USER required before PASS")
             return
         user = self._userIs
         self._userIs = None
+        password = b' '.join((password,) + words)
         d = defer.maybeDeferred(self.authenticateUserPASS, user, password)
         d.addCallbacks(self._cbMailbox, self._ebMailbox, callbackArgs=(user,)
         ).addErrback(self._ebUnexpected)
