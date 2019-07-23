@@ -599,9 +599,7 @@ class AnotherPOP3Tests(unittest.TestCase):
         Sending a command with invalid UTF-8 characters
         will raise a L{pop3.POP3Error}.
         """
-        error = str(b'not authenticated yet: cannot do \x81PASS')
-        if not isinstance(error, bytes):
-            error = error.encode("utf-8")
+        error = b'not authenticated yet: cannot do \x81PASS'
         d = self.runTest(
             [b'\x81PASS',
              b'QUIT'],

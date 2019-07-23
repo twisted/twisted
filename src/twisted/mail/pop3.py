@@ -575,8 +575,9 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
             return self.processCommand(*line.split(b' '))
         except (ValueError, AttributeError, POP3Error, TypeError) as e:
             log.err()
-            self.failResponse('bad protocol or server: {}: {}'.format(
-                e.__class__.__name__, e))
+            self.failResponse(b': '.join([b'bad protocol or server',
+                                          e.__class__.__name__.encode('utf-8'),
+                                          b''.join(e.args)]))
 
 
     def processCommand(self, command, *args):
