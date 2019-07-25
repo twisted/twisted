@@ -22,6 +22,7 @@ import attr
 import traceback
 import types
 import warnings
+from concurrent import futures
 from sys import exc_info, version_info
 from functools import wraps
 from incremental import Version
@@ -821,7 +822,10 @@ class Deferred:
         """
         def adapt(result):
             try:
-                extracted = result.result()
+                try:
+                    extracted = result.result()
+                except futures.CancelledError:
+                    raise CancelledError()
             except:
                 extracted = failure.Failure()
             adapt.actual.callback(extracted)
