@@ -18,11 +18,11 @@ Maintainer: Glyph Lefkowitz
 
 from __future__ import division, absolute_import, print_function
 
+import asyncio
 import attr
 import traceback
 import types
 import warnings
-from concurrent import futures
 from sys import exc_info, version_info
 from functools import wraps
 from incremental import Version
@@ -824,7 +824,7 @@ class Deferred:
             try:
                 try:
                     extracted = result.result()
-                except futures.CancelledError:
+                except asyncio.CancelledError:
                     raise CancelledError()
             except:
                 extracted = failure.Failure()
