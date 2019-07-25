@@ -363,8 +363,8 @@ class IKnownHostEntry(Interface):
         address, you have to resolve it yourself, and pass it in as a dotted
         quad string.
 
-        @param key: The hostname to match against.
-        @type key: L{str}
+        @param hostname: The hostname to match against.
+        @type hostname: L{str}
         """
 
 
