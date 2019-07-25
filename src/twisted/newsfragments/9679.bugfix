@@ -1,1 +1,1 @@
-twisted.internet.defer.Deferred.fromFuture now converts concurrent.futures.CancelledError into twisted.internet.defer.CancelledError
+twisted.internet.defer.Deferred.fromFuture now converts asyncio.CancelledError into twisted.internet.defer.CancelledError
