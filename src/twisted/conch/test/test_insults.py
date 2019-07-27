@@ -2,7 +2,6 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-from twisted.python.reflect import namedAny
 from twisted.trial import unittest
 from twisted.test.proto_helpers import StringTransport
 
@@ -934,40 +933,3 @@ class ServerProtocolOutputTests(unittest.TestCase):
         self.protocol.reportCursorPosition()
         self.assertEqual(self.transport.value(),
                          self.CSI + b'6' + CSFinalByte.DSR.value)
-
-
-
-
-class DeprecationsTests(unittest.TestCase):
-    """
-    Tests to ensure deprecation of L{insults.colors} and L{insults.client}
-    """
-
-    def ensureDeprecated(self, message):
-        """
-        Ensures that the correct deprecation warning was issued.
-        """
-        warnings = self.flushWarnings()
-        self.assertIs(warnings[0]['category'], DeprecationWarning)
-        self.assertEqual(warnings[0]['message'], message)
-        self.assertEqual(len(warnings), 1)
-
-
-    def test_colors(self):
-        """
-        The L{insults.colors} module is deprecated
-        """
-        namedAny('twisted.conch.insults.colors')
-        self.ensureDeprecated("twisted.conch.insults.colors was deprecated "
-                              "in Twisted 10.1.0: Please use "
-                              "twisted.conch.insults.helper instead.")
-
-
-    def test_client(self):
-        """
-        The L{insults.client} module is deprecated
-        """
-        namedAny('twisted.conch.insults.client')
-        self.ensureDeprecated("twisted.conch.insults.client was deprecated "
-                              "in Twisted 10.1.0: Please use "
-                              "twisted.conch.insults.insults instead.")

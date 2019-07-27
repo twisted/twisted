@@ -936,6 +936,19 @@ class DeferLaterTests(unittest.TestCase):
         return d
 
 
+    def test_noCallback(self):
+        """
+        The L{Deferred} returned by L{task.deferLater} fires with C{None}
+        when no callback function is passed.
+        """
+        clock = task.Clock()
+        d = task.deferLater(clock, 2.0)
+        self.assertNoResult(d)
+
+        clock.advance(2.0)
+        self.assertIs(None, self.successResultOf(d))
+
+
 
 class _FakeReactor(object):
 
