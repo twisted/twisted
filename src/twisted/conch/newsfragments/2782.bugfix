@@ -1,1 +1,0 @@
-t.c.ssh.connection.SSHConnection now fails channels that are in the process of opening when the connection is lost.
