@@ -305,7 +305,7 @@ def makeService(config):
     # Deprecate --notracebacks/-n
     if config["notracebacks"]:
         msg = deprecate._getDeprecationWarningString(
-            "--notracebacks", incremental.Version('Twisted', "NEXT", 0, 0))
+            "--notracebacks", incremental.Version('Twisted', 19, 7, 0))
         warnings.warn(msg, category=DeprecationWarning, stacklevel=2)
 
     if config['personal']:
