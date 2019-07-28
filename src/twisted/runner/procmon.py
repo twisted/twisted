@@ -101,39 +101,46 @@ class LoggingProtocol(protocol.ProcessProtocol):
 
     service = None
     name = None
-    empty = 1
 
     def connectionMade(self):
-        self.output = LineLogger()
-        self.output.tag = self.name
-        self.output.stream = 'stdout'
-        self.output.service = self.service
-        self.outputEmpty = True
+        self._output = LineLogger()
+        self._output.tag = self.name
+        self._output.stream = 'stdout'
+        self._output.service = self.service
+        self._outputEmpty = True
 
-        self.error = LineLogger()
-        self.error.tag = self.name
-        self.error.stream = 'stderr'
-        self.error.service = self.service
-        self.errorEmpty = True
+        self._error = LineLogger()
+        self._error.tag = self.name
+        self._error.stream = 'stderr'
+        self._error.service = self.service
+        self._errorEmpty = True
 
-        self.output.makeConnection(transport)
-        self.error.makeConnection(transport)
+        self._output.makeConnection(transport)
+        self._error.makeConnection(transport)
 
 
     def outReceived(self, data):
-        self.output.dataReceived(data)
-        self.outputEmpty = data[-1] == b'\n'
+        self._output.dataReceived(data)
+        self._outputEmpty = data[-1] == b'\n'
 
     def errReceived(self, data):
-        self.error.dataReceived(data)
-        self.errorEmpty = data[-1] == b'\n'
+        self._error.dataReceived(data)
+        self._errorEmpty = data[-1] == b'\n'
 
     def processEnded(self, reason):
-        if not self.outputEmpty:
-            self.output.dataReceived(b'\n')
-        if not self.errorEmpty:
-            self.error.dataReceived(b'\n')
+        if not self._outputEmpty:
+            self._output.dataReceived(b'\n')
+        if not self._errorEmpty:
+            self._error.dataReceived(b'\n')
         self.service.connectionLost(self.name)
+
+    @property
+    def output(self):
+        return self._output
+
+    @property
+    def empty(self):
+        return self._outputEmpty
 
 
 class ProcessMonitor(service.Service):
@@ -175,9 +182,9 @@ class ProcessMonitor(service.Service):
     @ivar _reactor: A provider of L{IReactorProcess} and L{IReactorTime}
         which will be used to spawn processes and register delayed calls.
 
-    @type log: C{Logger}
-    @ivar log: An instance of twisted.logger.Logger used for propagating
-        log messages from spawned processes.
+    @type log: L{Logger}
+    @ivar log: Thye logger used to propagate log messages from spawned
+        processes.
 
     """
     threshold = 1
