@@ -183,7 +183,7 @@ class ProcessMonitor(service.Service):
         which will be used to spawn processes and register delayed calls.
 
     @type log: L{Logger}
-    @ivar log: Thye logger used to propagate log messages from spawned
+    @ivar log: The logger used to propagate log messages from spawned
         processes.
 
     """
