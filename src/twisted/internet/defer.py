@@ -828,7 +828,7 @@ class Deferred:
                     extracted = result.result()
                 except asyncio.CancelledError:
                     raise CancelledError()
-            except:  # pylint: disable=E722
+            except:  # noqa: E722
                 extracted = failure.Failure()
             adapt.actual.callback(extracted)
         futureCancel = object()
