@@ -977,6 +977,25 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
                 keydata.publicRSA_openssh)
 
 
+    def test_toOpenSSHRSA_v1_format(self):
+        """
+        L{keys.Key.toString} serializes an RSA key in OpenSSH's v1 format.
+        """
+        key = keys.Key.fromString(keydata.privateRSA_openssh)
+        new_key_data = key.toString('openssh', subtype='v1')
+        new_enc_key_data = key.toString(
+            'openssh', subtype='v1', passphrase='encrypted')
+        self.assertEqual(
+            b'-----BEGIN OPENSSH PRIVATE KEY-----',
+            new_key_data.splitlines()[0])
+        self.assertEqual(
+            b'-----BEGIN OPENSSH PRIVATE KEY-----',
+            new_enc_key_data.splitlines()[0])
+        self.assertEqual(key, keys.Key.fromString(new_key_data))
+        self.assertEqual(
+            key, keys.Key.fromString(new_enc_key_data, passphrase='encrypted'))
+
+
     def test_toOpenSSHDSA(self):
         """
         L{keys.Key.toString} serializes a DSA key in OpenSSH format.
@@ -989,15 +1008,53 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
                 keydata.publicDSA_openssh[:-8]) # no comment
 
 
+    def test_toOpenSSHDSA_v1_format(self):
+        """
+        L{keys.Key.toString} serializes a DSA key in OpenSSH's v1 format.
+        """
+        key = keys.Key.fromString(keydata.privateDSA_openssh)
+        new_key_data = key.toString('openssh', subtype='v1')
+        new_enc_key_data = key.toString(
+            'openssh', subtype='v1', passphrase='encrypted')
+        self.assertEqual(
+            b'-----BEGIN OPENSSH PRIVATE KEY-----',
+            new_key_data.splitlines()[0])
+        self.assertEqual(
+            b'-----BEGIN OPENSSH PRIVATE KEY-----',
+            new_enc_key_data.splitlines()[0])
+        self.assertEqual(key, keys.Key.fromString(new_key_data))
+        self.assertEqual(
+            key, keys.Key.fromString(new_enc_key_data, passphrase='encrypted'))
+
+
     def test_toOpenSSHECDSA(self):
         """
-        L{keys.Key.toString} serializes a ECDSA key in OpenSSH format.
+        L{keys.Key.toString} serializes an ECDSA key in OpenSSH format.
         """
         key = keys.Key.fromString(keydata.privateECDSA_openssh)
         self.assertEqual(key.public().toString('openssh', b'comment'),
                 keydata.publicECDSA_openssh)
         self.assertEqual(key.public().toString('openssh'),
                 keydata.publicECDSA_openssh[:-8]) # no comment
+
+
+    def test_toOpenSSHECDSA_v1_format(self):
+        """
+        L{keys.Key.toString} serializes an ECDSA key in OpenSSH's v1 format.
+        """
+        key = keys.Key.fromString(keydata.privateECDSA_openssh)
+        new_key_data = key.toString('openssh', subtype='v1')
+        new_enc_key_data = key.toString(
+            'openssh', subtype='v1', passphrase='encrypted')
+        self.assertEqual(
+            b'-----BEGIN OPENSSH PRIVATE KEY-----',
+            new_key_data.splitlines()[0])
+        self.assertEqual(
+            b'-----BEGIN OPENSSH PRIVATE KEY-----',
+            new_enc_key_data.splitlines()[0])
+        self.assertEqual(key, keys.Key.fromString(new_key_data))
+        self.assertEqual(
+            key, keys.Key.fromString(new_enc_key_data, passphrase='encrypted'))
 
 
     def test_toLSHRSA(self):

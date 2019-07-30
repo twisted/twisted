@@ -44,8 +44,10 @@ from twisted.conch.ssh.common import int_from_bytes, int_to_bytes
 from twisted.python import randbytes
 from twisted.python.compat import (
     iterbytes, long, izip, nativeString, unicode, _PY3,
-    _b64decodebytes as decodebytes, _b64encodebytes as encodebytes)
+    _b64decodebytes as decodebytes, _b64encodebytes as encodebytes,
+    _bytesChr as chr)
 from twisted.python.constants import NamedConstant, Names
+from twisted.python.deprecate import _mutuallyExclusiveArguments
 
 # Curve lookup table
 _curveTable = {
@@ -1188,7 +1190,12 @@ class Key(object):
             return (common.NS(data['curve']) + common.NS(data['curve'][-8:]) +
                     common.NS(encPub) + common.MP(data['privateValue']))
 
-    def toString(self, type, extra=None):
+    @_mutuallyExclusiveArguments([
+        ['extra', 'comment'],
+        ['extra', 'passphrase'],
+    ])
+    def toString(self, type, extra=None, subtype=None, comment=None,
+                 passphrase=None):
         """
         Create a string representation of this key.  If the key is a private
         key and you want the representation of its public key, use
@@ -1201,30 +1208,50 @@ class Key(object):
         @param extra: Any extra data supported by the selected format which
             is not part of the key itself.  For public OpenSSH keys, this is
             a comment.  For private OpenSSH keys, this is a passphrase to
-            encrypt with.
+            encrypt with.  (Deprecated; use C{comment} or C{passphrase} as
+            appropriate instead.)
         @type extra: L{bytes} or L{unicode} or L{None}
+
+        @param subtype: A subtype of the requested C{type} to emit.  Only
+            supported for private OpenSSH keys, for which the currently
+            supported subtypes are C{'PEM'} and C{'v1'}.  If not given, an
+            appropriate default is used.
+        @type subtype: L{str} or L{None}
+
+        @param comment: A comment to include with the key.  Only supported
+            for OpenSSH keys.
+        @type comment: L{bytes} or L{unicode} or L{None}
+
+        @param passphrase: A passphrase to encrypt the key with.  Only
+            supported for private OpenSSH keys.
+        @type passphrase: L{bytes} or L{unicode} or L{None}
 
         @rtype: L{bytes}
         """
-        if isinstance(extra, unicode):
-            extra = extra.encode("utf-8")
+        if extra is not None:
+            # Compatibility with old parameter format.
+            if self.isPublic():
+                comment = extra
+            else:
+                passphrase = extra
+        if isinstance(comment, unicode):
+            comment = comment.encode("utf-8")
+        if isinstance(passphrase, unicode):
+            passphrase = passphrase.encode("utf-8")
         method = getattr(self, '_toString_%s' % (type.upper(),), None)
         if method is None:
             raise BadKeyError('unknown key type: %s' % (type,))
-        if method.__code__.co_argcount == 2:
-            return method(extra)
-        else:
-            return method()
+        return method(subtype=subtype, comment=comment, passphrase=passphrase)
 
-    def _toPublicOpenSSH(self, comment):
+    def _toPublicOpenSSH(self, comment=None):
         """
         Return a public OpenSSH key string.
 
         See _fromString_PUBLIC_OPENSSH for the string format.
 
         @type comment: L{bytes} or L{None}
-        @param comment: A comment to include in the key, or L{None} to omit
-        the comment.
+        @param comment: A comment to include with the key, or L{None} to
+        omit the comment.
         """
         if self.type() == 'EC':
             if not comment:
@@ -1239,7 +1266,68 @@ class Key(object):
             comment = b''
         return (self.sshType() + b' ' + b64Data + b' ' + comment).strip()
 
-    def _toPrivateOpenSSH_PEM(self, passphrase):
+    def _toPrivateOpenSSH_v1(self, comment=None, passphrase=None):
+        """
+        Return a private OpenSSH key string, in the "openssh-key-v1" format
+        introduced in OpenSSH 6.5.
+
+        See _fromPrivateOpenSSH_v1 for the string format.
+
+        @type passphrase: L{bytes} or L{None}
+        @param passphrase: The passphrase to encrypt the key with, or L{None}
+        if it is not encrypted.
+        """
+        if passphrase:
+            # For now we just hardcode the cipher to the one used by
+            # OpenSSH.  We could make this configurable later if it's
+            # needed.
+            cipher = algorithms.AES
+            cipherName = b'aes256-ctr'
+            kdfName = b'bcrypt'
+            blockSize = cipher.block_size // 8
+            keySize = 32
+            ivSize = blockSize
+            salt = randbytes.secureRandom(ivSize)
+            rounds = 100
+            kdfOptions = common.NS(salt) + struct.pack('!L', rounds)
+        else:
+            cipherName = b'none'
+            kdfName = b'none'
+            blockSize = 8
+            kdfOptions = b''
+        check = randbytes.secureRandom(4)
+        privKeyList = (
+            check + check + self.privateBlob() + common.NS(comment or b''))
+        padByte = 0
+        while len(privKeyList) % blockSize:
+            padByte += 1
+            privKeyList += chr(padByte & 0xFF)
+        if passphrase:
+            encKey = bcrypt.kdf(passphrase, salt, keySize + ivSize, 100)
+            encryptor = Cipher(
+                cipher(encKey[:keySize]),
+                modes.CTR(encKey[keySize:keySize + ivSize]),
+                backend=default_backend()
+            ).encryptor()
+            encPrivKeyList = (
+                encryptor.update(privKeyList) + encryptor.finalize())
+        else:
+            encPrivKeyList = privKeyList
+        blob = (
+            b'openssh-key-v1\0' +
+            common.NS(cipherName) +
+            common.NS(kdfName) + common.NS(kdfOptions) +
+            struct.pack('!L', 1) +
+            common.NS(self.blob()) +
+            common.NS(encPrivKeyList))
+        b64Data = encodebytes(blob).replace(b'\n', b'')
+        lines = (
+            [b'-----BEGIN OPENSSH PRIVATE KEY-----'] +
+            [b64Data[i:i + 64] for i in range(0, len(b64Data), 64)] +
+            [b'-----END OPENSSH PRIVATE KEY-----'])
+        return b'\n'.join(lines) + b'\n'
+
+    def _toPrivateOpenSSH_PEM(self, passphrase=None):
         """
         Return a private OpenSSH key string, in the old PEM-based format.
 
@@ -1288,7 +1376,7 @@ class Key(object):
             bb = md5(ba + passphrase + iv).digest()
             encKey = (ba + bb)[:24]
             padLen = 8 - (len(asn1Data) % 8)
-            asn1Data += (chr(padLen) * padLen).encode('ascii')
+            asn1Data += chr(padLen) * padLen
 
             encryptor = Cipher(
                 algorithms.TripleDES(encKey),
@@ -1304,7 +1392,7 @@ class Key(object):
                                b' PRIVATE KEY-----')))
         return b'\n'.join(lines)
 
-    def _toString_OPENSSH(self, extra):
+    def _toString_OPENSSH(self, subtype=None, comment=None, passphrase=None):
         """
         Return a public or private OpenSSH string.  See
         _fromString_PUBLIC_OPENSSH and _fromPrivateOpenSSH_PEM for the
@@ -1318,11 +1406,16 @@ class Key(object):
         @rtype: L{bytes}
         """
         if self.isPublic():
-            return self._toPublicOpenSSH(comment=extra)
+            return self._toPublicOpenSSH(comment=comment)
+        elif subtype is None or subtype == 'PEM':
+            return self._toPrivateOpenSSH_PEM(passphrase=passphrase)
+        elif subtype == 'v1':
+            return self._toPrivateOpenSSH_v1(
+                comment=comment, passphrase=passphrase)
         else:
-            return self._toPrivateOpenSSH_PEM(passphrase=extra)
+            raise ValueError('unknown subtype %s' % (subtype,))
 
-    def _toString_LSH(self):
+    def _toString_LSH(self, **kwargs):
         """
         Return a public or private LSH key.  See _fromString_PUBLIC_LSH and
         _fromString_PRIVATE_LSH for the key formats.
@@ -1375,7 +1468,7 @@ class Key(object):
             else:
                 raise BadKeyError("unknown key type %s'" % (type,))
 
-    def _toString_AGENTV3(self):
+    def _toString_AGENTV3(self, **kwargs):
         """
         Return a private Secure Shell Agent v3 key.  See
         _fromString_AGENTV3 for the key format.
