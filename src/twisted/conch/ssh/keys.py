@@ -1179,9 +1179,13 @@ class Key(object):
             return (common.NS(b'ssh-dss') + common.MP(data['p']) +
                     common.MP(data['q']) + common.MP(data['g']) +
                     common.MP(data['y']) + common.MP(data['x']))
-        else: # EC
-            return (common.NS(data['curve']) + common.MP(data['x']) +
-                    common.MP(data['y']) + common.MP(data['privateValue']))
+        else:  # EC
+            encPub = self._keyObject.public_key().public_bytes(
+                serialization.Encoding.X962,
+                serialization.PublicFormat.UncompressedPoint
+            )
+            return (common.NS(data['curve']) + common.NS(data['curve'][-8:]) +
+                    common.NS(encPub) + common.MP(data['privateValue']))
 
     def toString(self, type, extra=None):
         """
