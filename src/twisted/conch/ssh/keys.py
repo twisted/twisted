@@ -1171,9 +1171,10 @@ class Key(object):
         type = self.type()
         data = self.data()
         if type == 'RSA':
+            iqmp = rsa.rsa_crt_iqmp(data['p'], data['q'])
             return (common.NS(b'ssh-rsa') + common.MP(data['n']) +
                     common.MP(data['e']) + common.MP(data['d']) +
-                    common.MP(data['u']) + common.MP(data['p']) +
+                    common.MP(iqmp) + common.MP(data['p']) +
                     common.MP(data['q']))
         elif type == 'DSA':
             return (common.NS(b'ssh-dss') + common.MP(data['p']) +
@@ -1257,9 +1258,10 @@ class Key(object):
                                b' PRIVATE KEY-----'))]
             if self.type() == 'RSA':
                 p, q = data['p'], data['q']
+                iqmp = rsa.rsa_crt_iqmp(p, q)
                 objData = (0, data['n'], data['e'], data['d'], p, q,
                            data['d'] % (p - 1), data['d'] % (q - 1),
-                           data['u'])
+                           iqmp)
             else:
                 objData = (0, data['p'], data['q'], data['g'], data['y'],
                            data['x'])
@@ -1322,6 +1324,7 @@ class Key(object):
         else:
             if type == 'RSA':
                 p, q = data['p'], data['q']
+                iqmp = rsa.rsa_crt_iqmp(p, q)
                 return sexpy.pack([[b'private-key',
                                     [b'rsa-pkcs1',
                                      [b'n', common.MP(data['n'])[4:]],
@@ -1333,7 +1336,7 @@ class Key(object):
                                          data['d'] % (q - 1))[4:]],
                                      [b'b', common.MP(
                                          data['d'] % (p - 1))[4:]],
-                                     [b'c', common.MP(data['u'])[4:]]]]])
+                                     [b'c', common.MP(iqmp)[4:]]]]])
             elif type == 'DSA':
                 return sexpy.pack([[b'private-key',
                                     [b'dsa',
