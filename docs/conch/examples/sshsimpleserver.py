@@ -159,6 +159,12 @@ class ExampleSession(object):
         """
 
 
+    def setEnv(self, name, value):
+        """
+        We don't support setting environment variables.
+        """
+
+
     def execCommand(self, proto, cmd):
         """
         We don't support command execution sessions.

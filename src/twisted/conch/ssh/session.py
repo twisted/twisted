@@ -91,6 +91,23 @@ class SSHSession(channel.SSHChannel):
         else:
             return 1
 
+    def request_env(self, data):
+        """
+        Process a request to pass an environment variable.
+
+        @type data: L{bytes}
+        """
+        if not self.session:
+            self.session = ISession(self.avatar)
+        name, value, data = common.getNS(data, 2)
+        try:
+            self.session.setEnv(name, value)
+        except Exception:
+            log.err()
+            return 0
+        else:
+            return 1
+
     def request_window_change(self, data):
         if not self.session:
             self.session = ISession(self.avatar)

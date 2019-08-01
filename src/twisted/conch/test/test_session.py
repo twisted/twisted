@@ -78,6 +78,8 @@ class StubSessionForStubAvatar(object):
     @ivar avatar: the L{StubAvatar} we are adapting.
     @ivar ptyRequest: if present, the terminal, window size, and modes passed
         to the getPty method.
+    @ivar environ: a L{dict} of environment variables passed to the setEnv
+        method.
     @ivar windowChange: if present, the window size passed to the
         windowChangned method.
     @ivar shellProtocol: if present, the L{SSHSessionProcessProtocol} passed
@@ -99,6 +101,7 @@ class StubSessionForStubAvatar(object):
         """
         self.avatar = avatar
         self.shellProtocol = None
+        self.environ = {}
 
 
     def getPty(self, terminal, window, modes):
@@ -110,6 +113,20 @@ class StubSessionForStubAvatar(object):
             self.ptyRequest = (terminal, window, modes)
         else:
             raise RuntimeError('not getting a pty')
+
+
+    def setEnv(self, name, value):
+        """
+        If the requested environment variable is 'LD_PRELOAD', fail.
+        Otherwise, store the requested environment variable.
+
+        (Real applications should normally implement an allowed list rather
+        than a blocked list.)
+        """
+        if name == b'LD_PRELOAD':
+            raise RuntimeError('disallowed environment variable name')
+        else:
+            self.environ[name] = value
 
 
     def windowChanged(self, window):
@@ -705,10 +722,29 @@ class SessionInterfaceTests(unittest.TestCase):
         self.assertSessionIsStubSession()
         self.assertRequestRaisedRuntimeError()
         # 'good' terminal type succeeds
-        self.assertTrue(self.session.requestReceived(b'pty_req',
+        self.assertTrue(self.session.requestReceived(
+            b'pty_req',
             session.packRequest_pty_req(b'good', (1, 2, 3, 4), b'')))
-        self.assertEqual(self.session.session.ptyRequest,
-                (b'good', (1, 2, 3, 4), []))
+        self.assertEqual(
+            self.session.session.ptyRequest, (b'good', (1, 2, 3, 4), []))
+
+
+    def test_setEnv(self):
+        """
+        When a client requests passing an environment variable, the
+        SSHSession object should make the request by getting an ISession
+        adapter for the avatar, then calling setEnv with the environment
+        variable name and value.
+        """
+        # Blocked environment variable name fails.
+        self.assertFalse(self.session.requestReceived(
+            b'env', common.NS(b'LD_PRELOAD') + common.NS(b'bad')))
+        self.assertSessionIsStubSession()
+        self.assertRequestRaisedRuntimeError()
+        # Allowed environment variable name succeeds.
+        self.assertTrue(self.session.requestReceived(
+            b'env', common.NS(b'NAME') + common.NS(b'value')))
+        self.assertEqual(self.session.session.environ, {b'NAME': b'value'})
 
 
     def test_requestWindowChange(self):
@@ -762,9 +798,9 @@ class SessionInterfaceTests(unittest.TestCase):
 class SessionWithNoAvatarTests(unittest.TestCase):
     """
     Test for the SSHSession interface.  Several of the methods (request_shell,
-    request_exec, request_pty_req, request_window_change) would create a
-    'session' instance variable from the avatar if one didn't exist when they
-    were called.
+    request_exec, request_pty_req, request_env, request_window_change) would
+    create a 'session' instance variable from the avatar if one didn't exist
+    when they were called.
     """
 
     if not cryptography:
@@ -811,6 +847,16 @@ class SessionWithNoAvatarTests(unittest.TestCase):
         self.session.requestReceived(b'pty_req',
                                      session.packRequest_pty_req(
                 b'term', (0, 0, 0, 0), b''))
+        self.assertSessionProvidesISession()
+
+
+    def test_requestEnvGetsSession(self):
+        """
+        If an ISession adapter isn't already present, request_env should get
+        one.
+        """
+        self.session.requestReceived(b'env',
+                                     common.NS(b'NAME') + common.NS(b'value'))
         self.assertSessionProvidesISession()
 
 
