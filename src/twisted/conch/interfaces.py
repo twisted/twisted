@@ -98,6 +98,8 @@ class ISession(Interface):
         @type name: L{bytes}
         @param value: The value of the environment variable to set.
         @type value: L{bytes}
+        @raise ValueError: if setting this environment variable is not
+            permitted.
         """
 
     def openShell(proto):

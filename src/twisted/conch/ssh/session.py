@@ -102,6 +102,8 @@ class SSHSession(channel.SSHChannel):
         name, value, data = common.getNS(data, 2)
         try:
             self.session.setEnv(name, value)
+        except ValueError:
+            return 0
         except Exception:
             log.err()
             return 0

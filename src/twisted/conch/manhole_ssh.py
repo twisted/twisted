@@ -74,7 +74,7 @@ class TerminalSession(components.Adapter):
 
 
     def setEnv(self, name, value):
-        pass
+        raise ValueError("Not setting environment variable")
 
 
     def openShell(self, proto):
