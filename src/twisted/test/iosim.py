@@ -26,6 +26,7 @@ from twisted.internet import interfaces
 from twisted.internet.testing import MemoryReactorClock
 
 
+
 class TLSNegotiation:
     def __init__(self, obj, connectState):
         self.obj = obj
