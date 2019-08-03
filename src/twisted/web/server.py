@@ -94,7 +94,7 @@ class Request(Copyable, http.Request, components.Componentized):
     """
     An HTTP request.
 
-    @ivar defaultContentType: A C{bytes} giving the default I{Content-Type}
+    @ivar defaultContentType: A L{bytes} giving the default I{Content-Type}
         value to send in responses if no other value is set.  L{None} disables
         the default.
 
@@ -109,6 +109,7 @@ class Request(Copyable, http.Request, components.Componentized):
 
     site = None
     appRootURL = None
+    prepath = postpath = None
     __pychecker__ = 'unusednames=issuer'
     _inFakeHead = False
     _encoder = None
@@ -146,6 +147,12 @@ class Request(Copyable, http.Request, components.Componentized):
     def sibLink(self, name):
         """
         Return the text that links to a sibling of the requested resource.
+
+        @param name: The sibling resource
+        @type name: C{bytes}
+
+        @return: A relative URL.
+        @rtype: C{bytes}
         """
         if self.postpath:
             return (len(self.postpath)*b"../") + name
@@ -156,6 +163,12 @@ class Request(Copyable, http.Request, components.Componentized):
     def childLink(self, name):
         """
         Return the text that links to a child of the requested resource.
+
+        @param name: The child resource
+        @type name: C{bytes}
+
+        @return: A relative URL.
+        @rtype: C{bytes}
         """
         lpp = len(self.postpath)
         if lpp > 1:
@@ -169,9 +182,32 @@ class Request(Copyable, http.Request, components.Componentized):
                 return name
 
 
+    def gotLength(self, length):
+        """
+        Called when HTTP channel got length of content in this request.
+
+        This method is not intended for users.
+
+        @param length: The length of the request body, as indicated by the
+            request headers.  L{None} if the request headers do not indicate a
+            length.
+        """
+        try:
+            getContentFile = self.channel.site.getContentFile
+        except AttributeError:
+            http.Request.gotLength(self, length)
+        else:
+            self.content = getContentFile(length)
+
+
     def process(self):
         """
         Process a request.
+
+        Find the addressed resource in this request's L{Site},
+        and call L{self.render()<Request.render()>} with it.
+
+        @see: L{Site.getResourceFor()}
         """
 
         # get site from channel
@@ -206,6 +242,7 @@ class Request(Copyable, http.Request, components.Componentized):
         Write data to the transport (if not responding to a HEAD request).
 
         @param data: A string to write to the response.
+        @type data: L{bytes}
         """
         if not self.startedWriting:
             # Before doing the first write, check to see if a default
@@ -253,7 +290,13 @@ class Request(Copyable, http.Request, components.Componentized):
         """
         Ask a resource to render itself.
 
-        @param resrc: a L{twisted.web.resource.IResource}.
+        If the resource does not support the requested method,
+        generate a C{NOT IMPLEMENTED} or C{NOT ALLOWED} response.
+
+        @param resrc: The resource to render.
+        @type resrc: L{twisted.web.resource.IResource}
+
+        @see: L{IResource.render()<twisted.web.resource.IResource.render()>}
         """
         try:
             body = resrc.render(self)
@@ -311,7 +354,7 @@ class Request(Copyable, http.Request, components.Componentized):
                 body = epage.render(self)
         # end except UnsupportedMethod
 
-        if body == NOT_DONE_YET:
+        if body is NOT_DONE_YET:
             return
         if not isinstance(body, bytes):
             body = resource.ErrorPage(
@@ -544,6 +587,9 @@ class Request(Copyable, http.Request, components.Componentized):
     def getRootURL(self):
         """
         Get a previously-remembered URL.
+
+        @return: An absolute URL.
+        @rtype: L{bytes}
         """
         return self.appRootURL
 
@@ -740,14 +786,14 @@ class Site(http.HTTPFactory):
     @ivar counter: increment value used for generating unique sessions ID.
     @ivar requestFactory: A factory which is called with (channel)
         and creates L{Request} instances. Default to L{Request}.
-    @ivar displayTracebacks: if set, Twisted internal errors are displayed on
-        rendered pages. Default to C{True}.
+    @ivar displayTracebacks: If set, unhandled exceptions raised during
+        rendering are returned to the client as HTML. Default to C{False}.
     @ivar sessionFactory: factory for sessions objects. Default to L{Session}.
     @ivar sessionCheckTime: Deprecated.  See L{Session.sessionTimeout} instead.
     """
     counter = 0
     requestFactory = Request
-    displayTracebacks = True
+    displayTracebacks = False
     sessionFactory = Session
     sessionCheckTime = 1800
     _entropy = os.urandom

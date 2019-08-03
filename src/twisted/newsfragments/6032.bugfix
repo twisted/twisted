@@ -1,0 +1,1 @@
+twisted.internet.endpoints is now importable on Windows when pywin32 is not installed.

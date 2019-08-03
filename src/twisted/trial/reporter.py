@@ -26,12 +26,28 @@ from twisted.python.failure import Failure
 from twisted.python.util import untilConcludes
 from twisted.python.compat import _PY3, items
 from twisted.trial import itrial, util
-from twisted.trial.unittest import makeTodo
 
 try:
     from subunit import TestProtocolClient
 except ImportError:
     TestProtocolClient = None
+
+
+
+def _makeTodo(value):
+    """
+    Return a L{Todo} object built from C{value}.
+
+    This is a synonym for L{twisted.trial.unittest.makeTodo}, but imported
+    locally to avoid circular imports.
+
+    @param value: A string or a tuple of C{(errors, reason)}, where C{errors}
+    is either a single exception class or an iterable of exception classes.
+
+    @return: A L{Todo} object.
+    """
+    from twisted.trial.unittest import makeTodo
+    return makeTodo(value)
 
 
 
@@ -170,7 +186,7 @@ class TestResult(pyunit.TestResult, object):
             message is provided.
         """
         if todo is None:
-            todo = makeTodo(self._DEFAULT_TODO)
+            todo = _makeTodo(self._DEFAULT_TODO)
         self.unexpectedSuccesses.append((test, todo))
 
 
@@ -187,7 +203,7 @@ class TestResult(pyunit.TestResult, object):
             message is provided.
         """
         if todo is None:
-            todo = makeTodo(self._DEFAULT_TODO)
+            todo = _makeTodo(self._DEFAULT_TODO)
         self.expectedFailures.append((test, error, todo))
 
 

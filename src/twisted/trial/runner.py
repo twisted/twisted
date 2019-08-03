@@ -551,17 +551,17 @@ class TestLoader(object):
             warnings.warn("trial only supports doctesting modules")
             return
         extraArgs = {}
-        if sys.version_info > (2, 4):
-            # Work around Python issue2604: DocTestCase.tearDown clobbers globs
-            def saveGlobals(test):
-                """
-                Save C{test.globs} and replace it with a copy so that if
-                necessary, the original will be available for the next test
-                run.
-                """
-                test._savedGlobals = getattr(test, '_savedGlobals', test.globs)
-                test.globs = test._savedGlobals.copy()
-            extraArgs['setUp'] = saveGlobals
+
+        # Work around Python issue2604: DocTestCase.tearDown clobbers globs
+        def saveGlobals(test):
+            """
+            Save C{test.globs} and replace it with a copy so that if
+            necessary, the original will be available for the next test
+            run.
+            """
+            test._savedGlobals = getattr(test, '_savedGlobals', test.globs)
+            test.globs = test._savedGlobals.copy()
+        extraArgs['setUp'] = saveGlobals
         return doctest.DocTestSuite(module, **extraArgs)
 
     def loadAnything(self, thing, recurse=False, parent=None, qualName=None):
@@ -724,8 +724,27 @@ class Py3TestLoader(TestLoader):
                 break
 
             except ImportError:
+                # Check to see where the ImportError happened. If it happened
+                # in this file, ignore it.
+                tb = sys.exc_info()[2]
+
+                # Walk down to the deepest frame, where it actually happened.
+                while tb.tb_next is not None:
+                    tb = tb.tb_next
+
+                # Get the filename that the ImportError originated in.
+                filenameWhereHappened = tb.tb_frame.f_code.co_filename
+
+                # If it originated in the reflect file, then it's because it
+                # doesn't exist. If it originates elsewhere, it's because an
+                # ImportError happened in a module that does exist.
+                if filenameWhereHappened != reflect.__file__:
+                    raise
+
                 if remaining == "":
-                    raise reflect.ModuleNotFound("The module {} does not exist.".format(name))
+                    raise reflect.ModuleNotFound(
+                        "The module {} does not exist.".format(name)
+                    )
 
         if obj is None:
             # If it's none here, we didn't get to import anything.
