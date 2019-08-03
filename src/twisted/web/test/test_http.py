@@ -16,7 +16,11 @@ except ImportError:
 
 from io import BytesIO
 from itertools import cycle
-from zope.interface import provider
+from zope.interface import (
+    provider,
+    directlyProvides,
+    providedBy,
+)
 from zope.interface.verify import verifyObject
 
 from twisted.python.compat import (_PY3, iterbytes, long, networkString,
@@ -42,8 +46,11 @@ from twisted.web.test.requesthelper import (
     textLinearWhitespaceComponents,
 )
 
-from zope.interface import directlyProvides, providedBy
 from twisted.logger import globalLogPublisher
+
+from ._util import (
+    assertIsFilesystemTemporary,
+)
 
 
 
@@ -2022,10 +2029,14 @@ Hello,
         content = []
         decoder = []
         testcase = self
+
         class MyRequest(http.Request):
             def process(self):
-                content.append(self.content.fileno())
+                content.append(self.content)
                 content.append(self.content.read())
+                # Don't let it close the original content object.  We want to
+                # inspect it later.
+                self.content = BytesIO()
                 method.append(self.method)
                 path.append(self.path)
                 decoder.append(self.channel._transferDecoder)
@@ -2033,13 +2044,12 @@ Hello,
                 self.finish()
 
         self.runRequest(httpRequest, MyRequest)
-        # The tempfile API used to create content returns an
-        # instance of a different type depending on what platform
-        # we're running on.  The point here is to verify that the
-        # request body is in a file that's on the filesystem.
-        # Having a fileno method that returns an int is a somewhat
-        # close approximation of this. -exarkun
-        self.assertIsInstance(content[0], int)
+
+        # We took responsibility for closing this when we replaced the request
+        # attribute, above.
+        self.addCleanup(content[0].close)
+
+        assertIsFilesystemTemporary(self, content[0])
         self.assertEqual(content[1], b'Hello, spam,eggs spam spam')
         self.assertEqual(method, [b'GET'])
         self.assertEqual(path, [b'/'])

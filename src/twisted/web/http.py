@@ -659,6 +659,17 @@ NO_BODY_CODES = (204, 304)
 _QUEUED_SENTINEL = object()
 
 
+
+def _getContentFile(length):
+    """
+    Get a writeable file-like object to which request content can be written.
+    """
+    if length is not None and length < 100000:
+        return StringIO()
+    return tempfile.TemporaryFile()
+
+
+
 @implementer(interfaces.IConsumer,
              _IDeprecatedHTTPChannelToRequestInterface)
 class Request:
@@ -812,10 +823,7 @@ class Request:
             request headers.  L{None} if the request headers do not indicate a
             length.
         """
-        if length is not None and length < 100000:
-            self.content = StringIO()
-        else:
-            self.content = tempfile.TemporaryFile()
+        self.content = _getContentFile(length)
 
 
     def parseCookies(self):
