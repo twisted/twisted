@@ -102,6 +102,8 @@ class PackageTest(unittest.SynchronousTestCase):
     files = [
         ('badpackage/__init__.py', 'frotz\n'),
         ('badpackage/test_module.py', ''),
+        ('unimportablepackage/__init__.py', ''),
+        ('unimportablepackage/test_module.py', 'import notarealmoduleok\n'),
         ('package2/__init__.py', ''),
         ('package2/test_module.py', 'import frotz\n'),
         ('package/__init__.py', ''),
