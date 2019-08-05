@@ -269,8 +269,6 @@ class Logger(object):
 
 
 
-# _log = Logger()
-# _loggerFor = lambda obj:_log.__get__(obj, obj.__class__)
 def _loggerFor(obj):
     cls = obj.__class__
     n = ".".join([cls.__module__, cls.__name__])
