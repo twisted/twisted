@@ -121,6 +121,19 @@ class LoggerTests(unittest.TestCase):
         self.assertEqual(observed[0]['log_format'], "hello")
 
 
+    def test_descriptorReturnsSameLoggerInstance(self):
+        """
+        When used as a descriptor, the same logger instance is returned.
+        """
+        myLogger = Logger()
+
+        class MyObject(object):
+            log = myLogger
+
+        self.assertIs(MyObject.log, myLogger)
+        self.assertIs(MyObject().log, myLogger)
+
+
     def test_sourceAvailableForFormatting(self):
         """
         On instances that have a L{Logger} class attribute, the C{log_source}

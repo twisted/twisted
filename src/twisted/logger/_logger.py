@@ -60,6 +60,7 @@ class Logger(object):
             If L{None}, use the L{global log publisher <globalLogPublisher>}.
         @type observer: L{ILogObserver}
         """
+        self._isDescriptor = False
         if namespace is None:
             namespace = self._namespaceFromCallingContext()
 
@@ -92,16 +93,13 @@ class Logger(object):
         C{Something}, and C{Something().log.source} would be an instance of
         C{Something}.
         """
-        if oself is None:
-            source = type
-        else:
-            source = oself
+        if not self._isDescriptor:
+            self.namespace = ".".join([type.__module__, type.__name__])
+            self._isDescriptor = True
 
-        return self.__class__(
-            ".".join([type.__module__, type.__name__]),
-            source,
-            observer=self.observer,
-        )
+        self.source = type if oself is None else oself
+
+        return self
 
 
     def __repr__(self):
@@ -271,5 +269,9 @@ class Logger(object):
 
 
 
-_log = Logger()
-_loggerFor = lambda obj:_log.__get__(obj, obj.__class__)
+# _log = Logger()
+# _loggerFor = lambda obj:_log.__get__(obj, obj.__class__)
+def _loggerFor(obj):
+    cls = obj.__class__
+    n = ".".join([cls.__module__, cls.__name__])
+    return Logger(namespace=n, observer=None, source=obj)
