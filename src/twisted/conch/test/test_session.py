@@ -117,14 +117,17 @@ class StubSessionForStubAvatar(object):
 
     def setEnv(self, name, value):
         """
-        If the requested environment variable is 'LD_PRELOAD', fail.
-        Otherwise, store the requested environment variable.
+        If the requested environment variable is 'LD_PRELOAD', fail.  If it
+        is 'IGNORED', raise ValueError, which should cause it to be silently
+        ignored.  Otherwise, store the requested environment variable.
 
         (Real applications should normally implement an allowed list rather
         than a blocked list.)
         """
         if name == b'LD_PRELOAD':
             raise RuntimeError('disallowed environment variable name')
+        elif name == b'IGNORED':
+            raise ValueError('ignored environment variable name')
         else:
             self.environ[name] = value
 
@@ -741,6 +744,11 @@ class SessionInterfaceTests(unittest.TestCase):
             b'env', common.NS(b'LD_PRELOAD') + common.NS(b'bad')))
         self.assertSessionIsStubSession()
         self.assertRequestRaisedRuntimeError()
+        # An environment variable name for which setEnv raises ValueError is
+        # silently ignored.
+        self.assertFalse(self.session.requestReceived(
+            b'env', common.NS(b'IGNORED') + common.NS(b'ignored')))
+        self.assertEqual(self.flushLoggedErrors(), [])
         # Allowed environment variable name succeeds.
         self.assertTrue(self.session.requestReceived(
             b'env', common.NS(b'NAME') + common.NS(b'value')))
