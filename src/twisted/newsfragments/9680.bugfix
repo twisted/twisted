@@ -1,0 +1,1 @@
+Update twisted.logger._logger.Logger.__get__ to return the same Logger instance, rather than creating a new, identical instance on every attribute access.
