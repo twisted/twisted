@@ -94,6 +94,10 @@ class ISession(Interface):
         variables after the server process has dropped sufficient
         privileges."
 
+        (OpenSSH refuses all environment variables by default, but has an
+        C{AcceptEnv} configuration option to select specific variables to
+        accept.)
+
         @param name: The name of the environment variable to set.
         @type name: L{bytes}
         @param value: The value of the environment variable to set.
