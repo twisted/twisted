@@ -1,8 +1,8 @@
-## Remove this paragraph
+## Remove this section
 
-Please have a look at our developer documentation before submitting your Pull Request.
+Please have a look at [our developer documentation](https://twistedmatrix.com/trac/wiki/TwistedDevelopment#SubmittingaPatch) before submitting your Pull Request.
 
-https://twistedmatrix.com/trac/wiki/TwistedDevelopment#SubmittingaPatch
+Please note that the trac ticket, news fragment, and review submission portions of this process apply to *all* pull requests, no matter how small; if you don't do them, it's likely that nobody will even notice your PR needs a review.
 
 ## Contributor Checklist:
 
