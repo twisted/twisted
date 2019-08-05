@@ -10,4 +10,4 @@ https://twistedmatrix.com/trac/wiki/TwistedDevelopment#SubmittingaPatch
 * [ ] The changes pass minimal style checks (see: https://twistedmatrix.com/trac/wiki/TwistedDevelopment#GettingYourPatchAccepted )
 * [ ] I have created a newsfragment in src/twisted/newsfragments/ (see: https://twistedmatrix.com/trac/wiki/ReviewProcess#Newsfiles )
 * [ ] I have updated the automated tests.
-* [ ] I have submitted the associated Trac ticket for review by adding the word `review` to the keywords field in Trac; it shows up in https://twisted.reviews/ now.
+* [ ] I have submitted the associated Trac ticket for review by adding the word `review` to the keywords field in Trac, and putting a link to this PR in the comment; it shows up in https://twisted.reviews/ now.
