@@ -193,7 +193,7 @@ publicRSA_openssh = (
 )
 
 privateRSA_openssh = b'''-----BEGIN RSA PRIVATE KEY-----
-MIIEowIBAAKCAQEA1WqseCPW1hvsJaFQxHdjUIRFAVVCFCoq4NBg7tTpo61K+jkG
+MIIEogIBAAKCAQEA1WqseCPW1hvsJaFQxHdjUIRFAVVCFCoq4NBg7tTpo61K+jkG
 XoRVdV8ANr9vqio/gyY3wWkuW/3w89J91pjNOkB41cqoGMARkyQJDIFMj/ec7RMW
 aqQE6Ul3w+RVZLN5aJ4sCOus6AQtIXcFp47vUzANpeW7PWriCTZv/TTTfW9G/4fa
 qSknqv+t9YXmPhq4eh1KserAWvcw3x/CpOTvP5FJlkDVGXctN8Ne7J2mOkSlwqQp
@@ -215,9 +215,9 @@ rOvBU4TH4WGoStSi/0ANgB8SqVDAKhh1lAwGmxZQqEvsQc177/dLyXUCaMSYuIaI
 GFpD5wIzlyJkk4MMRSp87QKBgGlmN8ZA3SHFBPOwuD5HlHx2/C3rPzk8lcNDAVHE
 Qpfz6Bakxu7s1EkQUDgE7jvN19DMzDJpkAegG1qf/jHNHjp+cR4ZlBpOTwzfX1LV
 0Rdu7NectlWd244hX7wkiLb8r6vw76QssNyfhrADEriL4t0PwO4jPUpQ/i+4KUZY
-v7YnAoGBAIVLG3qbEhA3nh+tXtr+xpb+3zVruTTiFpeSJgm9vXAgA6c1vS0boNIH
-RyvU3qioBwcbuAQgpydBPGw5OelBzucXHdFMXLw90iYm/mrW/Uhyrkb6e8PTGWBE
-HaUTp4D1YynUel0GBxZd9os9y2Q64oRaTYwGLS2dHOuDTHg9eVTO
+v7YnAoGAZhb5IDTQVCW8YTGsgvvvnDUefkpVAmiVDQqTvh6/4UD6kKdUcDHpePzg
+Zrcid5rr3dXSMEbK4tdeQZvPtUg1Uaol3N7bNClIIdvWdPx+5S9T95wJcLnkoHam
+rXp0IjScTxfLP+Cq5V6lJ94/pX8Ppoj1FdZfNxeS4NYFSRA7kvY=
 -----END RSA PRIVATE KEY-----'''
 
 # Some versions of OpenSSH generate these (slightly different keys): the PKCS#1
@@ -282,31 +282,31 @@ privateRSA_openssh_encrypted = b"""-----BEGIN RSA PRIVATE KEY-----
 Proc-Type: 4,ENCRYPTED
 DEK-Info: DES-EDE3-CBC,FFFFFFFFFFFFFFFF
 
-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
+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
 -----END RSA PRIVATE KEY-----"""
 
 # Encrypted with the passphrase 'encrypted', and using the new format
@@ -426,12 +426,12 @@ privateRSA_lsh = (
     b"\x14L&\x9b(\xa4\x023\x08_\xe1\xa7p\x98\x014y^R\x8e\xc4\xcf6\xbc\x1fKU"
     b"\xac\xeb\xc1S\x84\xc7\xe1a\xa8J\xd4\xa2\xff@\r\x80\x1f\x12\xa9P\xc0*\x18"
     b"u\x94\x0c\x06\x9b\x16P\xa8K\xecA\xcd{\xef\xf7K\xc9u\x02h\xc4\x98\xb8\x86"
-    b"\x88\x18ZC\xe7\x023\x97\"d\x93\x83\x0cE*|\xed)(1:c129:\x00\x85K\x1bz\x9b"
-    b"\x12\x107\x9e\x1f\xad^\xda\xfe\xc6\x96\xfe\xdf5k\xb94\xe2\x16\x97\x92&\t"
-    b"\xbd\xbdp \x03\xa75\xbd-\x1b\xa0\xd2\x07G+\xd4\xde\xa8\xa8\x07\x07\x1b"
-    b"\xb8\x04 \xa7'A<l99\xe9A\xce\xe7\x17\x1d\xd1L\\\xbc=\xd2&&\xfej\xd6\xfd"
-    b"Hr\xaeF\xfa{\xc3\xd3\x19`D\x1d\xa5\x13\xa7\x80\xf5c)\xd4z]\x06\x07\x16]"
-    b"\xf6\x8b=\xcbd:\xe2\x84ZM\x8c\x06--\x9d\x1c\xeb\x83Lx=yT\xce)))"
+    b"\x88\x18ZC\xe7\x023\x97\"d\x93\x83\x0cE*|\xed)(1:c128:f\x16\xf9 4\xd0T%"
+    b"\xbca1\xac\x82\xfb\xef\x9c5\x1e~JU\x02h\x95\r\n\x93\xbe\x1e\xbf\xe1@\xfa"
+    b"\x90\xa7Tp1\xe9x\xfc\xe0f\xb7\"w\x9a\xeb\xdd\xd5\xd20F\xca\xe2\xd7^A\x9b"
+    b"\xcf\xb5H5Q\xaa%\xdc\xde\xdb4)H!\xdb\xd6t\xfc~\xe5/S\xf7\x9c\tp\xb9\xe4"
+    b"\xa0v\xa6\xadzt\"4\x9cO\x17\xcb?\xe0\xaa\xe5^\xa5\'\xde?\xa5\x7f\x0f\xa6"
+    b"\x88\xf5\x15\xd6_7\x17\x92\xe0\xd6\x05I\x10;\x92\xf6)))"
 )
 
 privateRSA_agentv3 = (
