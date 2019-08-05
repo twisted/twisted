@@ -95,7 +95,11 @@ class SSHSession(channel.SSHChannel):
         """
         Process a request to pass an environment variable.
 
+        @param data: The environment variable name and value, each encoded
+            as an SSH protocol string and concatenated.
         @type data: L{bytes}
+        @return: A true value if the request to pass this environment
+            variable was accepted, otherwise a false value.
         """
         if not self.session:
             self.session = ISession(self.avatar)
