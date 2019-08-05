@@ -6,7 +6,8 @@ https://twistedmatrix.com/trac/wiki/TwistedDevelopment#SubmittingaPatch
 
 ## Contributor Checklist:
 
-* [ ] There is an associated ticket in Trac. Create a new one at https://twistedmatrix.com/trac/newticket
+* [ ] The associated ticket in Trac is here: https://twistedmatrix.com/trac/ticket/<!-- Create a new one at https://twistedmatrix.com/trac/newticket and replace this comment with the ticket number. -->
 * [ ] The changes pass minimal style checks (see: https://twistedmatrix.com/trac/wiki/TwistedDevelopment#GettingYourPatchAccepted )
 * [ ] I have created a newsfragment in src/twisted/newsfragments/ (see: https://twistedmatrix.com/trac/wiki/ReviewProcess#Newsfiles )
 * [ ] I have updated the automated tests.
+* [ ] I have submitted the associated Trac ticket for review by adding the word `review` to the keywords field in Trac; it shows up in https://twisted.reviews/ now.
