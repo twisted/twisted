@@ -1,1 +1,0 @@
-Trial on Python 3 will now properly re-raise ImportErrors that occur during the import of a module, rather than saying the module doesn't exist.
