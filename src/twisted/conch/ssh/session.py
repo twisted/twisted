@@ -36,7 +36,7 @@ class SSHSession(channel.SSHChannel):
         self.sessionSetEnv = None
 
     def request_subsystem(self, data):
-        subsystem, ignored= common.getNS(data)
+        subsystem, ignored = common.getNS(data)
         log.msg('asking for subsystem "%s"' % subsystem)
         client = self.avatar.lookupSubsystem(subsystem, data)
         if client:
