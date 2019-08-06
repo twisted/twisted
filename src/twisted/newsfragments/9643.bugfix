@@ -1,1 +1,0 @@
-twisted.web.client.Agent.request() and twisted.web.client.ProxyAgent.request() now produce TypeError when the method argument is not bytes, rather than failing to generate the request.

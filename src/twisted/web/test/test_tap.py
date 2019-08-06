@@ -303,7 +303,7 @@ class ServiceTests(TestCase):
         self.assertEqual(warnings[0]['category'], DeprecationWarning)
         self.assertEqual(
             warnings[0]['message'],
-            "--notracebacks was deprecated in Twisted NEXT"
+            "--notracebacks was deprecated in Twisted 19.7.0"
         )
         self.assertEqual(len(warnings), 1)
 
