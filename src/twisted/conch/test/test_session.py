@@ -27,6 +27,7 @@ from twisted.internet.error import ProcessTerminated, ProcessDone
 from twisted.python.failure import Failure
 from twisted.internet import defer, protocol, error
 from twisted.python import components, failure
+from twisted.python.test.test_components import RegistryUsingMixin
 from twisted.trial import unittest
 
 
@@ -68,7 +69,7 @@ class StubAvatar:
 
 
 
-@implementer(session.ISession)
+@implementer(session.ISession, session.ISessionSetEnv)
 class StubSessionForStubAvatar(object):
     """
     A stub ISession implementation for our StubAvatar.  The instance
@@ -185,11 +186,6 @@ class StubSessionForStubAvatar(object):
         Note that close has been received.
         """
         self.gotClosed = True
-
-
-if cryptography:
-    components.registerAdapter(StubSessionForStubAvatar, StubAvatar,
-        session.ISession)
 
 
 
@@ -451,7 +447,7 @@ class StubClient(object):
 
 
 
-class SessionInterfaceTests(unittest.TestCase):
+class SessionInterfaceTests(RegistryUsingMixin, unittest.TestCase):
     """
     Tests for the SSHSession class interface.  This interface is not ideal, but
     it is tested in order to maintain backwards compatibility.
@@ -466,9 +462,12 @@ class SessionInterfaceTests(unittest.TestCase):
         so that it's allowed to send packets.  500 and 100 are arbitrary
         values.
         """
-        self.session = session.SSHSession(remoteWindow=500,
-                remoteMaxPacket=100, conn=StubConnection(),
-                avatar=StubAvatar())
+        RegistryUsingMixin.setUp(self)
+        components.registerAdapter(
+            StubSessionForStubAvatar, StubAvatar, session.ISession)
+        self.session = session.SSHSession(
+            remoteWindow=500, remoteMaxPacket=100, conn=StubConnection(),
+            avatar=StubAvatar())
 
 
     def assertSessionIsStubSession(self):
@@ -735,14 +734,17 @@ class SessionInterfaceTests(unittest.TestCase):
     def test_setEnv(self):
         """
         When a client requests passing an environment variable, the
-        SSHSession object should make the request by getting an ISession
-        adapter for the avatar, then calling setEnv with the environment
-        variable name and value.
+        SSHSession object should make the request by getting an
+        ISessionSetEnv adapter for the avatar, then calling setEnv with the
+        environment variable name and value.
         """
+        components.registerAdapter(
+            StubSessionForStubAvatar, StubAvatar, session.ISessionSetEnv)
         # Blocked environment variable name fails.
         self.assertFalse(self.session.requestReceived(
             b'env', common.NS(b'LD_PRELOAD') + common.NS(b'bad')))
-        self.assertSessionIsStubSession()
+        self.assertIsInstance(
+            self.session.sessionSetEnv, StubSessionForStubAvatar)
         self.assertRequestRaisedRuntimeError()
         # An environment variable name for which setEnv raises ValueError is
         # silently ignored.
@@ -752,7 +754,17 @@ class SessionInterfaceTests(unittest.TestCase):
         # Allowed environment variable name succeeds.
         self.assertTrue(self.session.requestReceived(
             b'env', common.NS(b'NAME') + common.NS(b'value')))
-        self.assertEqual(self.session.session.environ, {b'NAME': b'value'})
+        self.assertEqual(
+            self.session.sessionSetEnv.environ, {b'NAME': b'value'})
+
+
+    def test_setEnvWithoutAdapter(self):
+        """
+        If the avatar does not have an ISessionSetEnv adapter, then a
+        request to pass an environment variable fails gracefully.
+        """
+        self.assertFalse(self.session.requestReceived(
+            b'env', common.NS(b'NAME') + common.NS(b'value')))
 
 
     def test_requestWindowChange(self):
@@ -803,7 +815,7 @@ class SessionInterfaceTests(unittest.TestCase):
 
 
 
-class SessionWithNoAvatarTests(unittest.TestCase):
+class SessionWithNoAvatarTests(RegistryUsingMixin, unittest.TestCase):
     """
     Test for the SSHSession interface.  Several of the methods (request_shell,
     request_exec, request_pty_req, request_env, request_window_change) would
@@ -815,6 +827,9 @@ class SessionWithNoAvatarTests(unittest.TestCase):
         skip = "cannot run without cryptography"
 
     def setUp(self):
+        RegistryUsingMixin.setUp(self)
+        components.registerAdapter(
+            StubSessionForStubAvatar, StubAvatar, session.ISession)
         self.session = session.SSHSession()
         self.session.avatar = StubAvatar()
         self.assertIsNone(self.session.session)
@@ -860,12 +875,16 @@ class SessionWithNoAvatarTests(unittest.TestCase):
 
     def test_requestEnvGetsSession(self):
         """
-        If an ISession adapter isn't already present, request_env should get
-        one.
+        If an ISessionSetEnv adapter isn't already present, request_env
+        should get one.
         """
+        components.registerAdapter(
+            StubSessionForStubAvatar, StubAvatar, session.ISessionSetEnv)
         self.session.requestReceived(b'env',
                                      common.NS(b'NAME') + common.NS(b'value'))
-        self.assertSessionProvidesISession()
+        self.assertTrue(
+            session.ISessionSetEnv.providedBy(self.session.sessionSetEnv),
+            "ISessionSetEnv not provided by %r" % self.session.sessionSetEnv)
 
 
     def test_requestWindowChangeGetsSession(self):

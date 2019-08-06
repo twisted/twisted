@@ -190,6 +190,8 @@ class ExampleSession(object):
 
 
 components.registerAdapter(ExampleSession, ExampleAvatar, session.ISession)
+components.registerAdapter(
+    ExampleSession, ExampleAvatar, session.ISessionSetEnv)
 
 
 

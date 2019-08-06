@@ -21,7 +21,7 @@ from zope.interface import implementer
 from twisted.internet import interfaces, protocol
 from twisted.python import log
 from twisted.python.compat import _bytesChr as chr, networkString
-from twisted.conch.interfaces import ISession
+from twisted.conch.interfaces import ISession, ISessionSetEnv
 from twisted.conch.ssh import common, channel, connection
 
 
@@ -33,6 +33,7 @@ class SSHSession(channel.SSHChannel):
         self.buf = b''
         self.client = None
         self.session = None
+        self.sessionSetEnv = None
 
     def request_subsystem(self, data):
         subsystem, ignored= common.getNS(data)
@@ -101,11 +102,15 @@ class SSHSession(channel.SSHChannel):
         @return: A true value if the request to pass this environment
             variable was accepted, otherwise a false value.
         """
-        if not self.session:
-            self.session = ISession(self.avatar)
+        if not self.sessionSetEnv:
+            try:
+                self.sessionSetEnv = ISessionSetEnv(self.avatar)
+            except TypeError:
+                log.msg('unhandled request for env')
+                return 0
         name, value, data = common.getNS(data, 2)
         try:
-            self.session.setEnv(name, value)
+            self.sessionSetEnv.setEnv(name, value)
         except ValueError:
             return 0
         except Exception:

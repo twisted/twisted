@@ -73,10 +73,6 @@ class TerminalSession(components.Adapter):
         self.height, self.width = windowSize[:2]
 
 
-    def setEnv(self, name, value):
-        raise ValueError("Not setting environment variable")
-
-
     def openShell(self, proto):
         self.transportFactory(
             proto, self.chainedProtocolFactory(),
