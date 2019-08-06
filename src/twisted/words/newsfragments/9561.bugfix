@@ -1,1 +1,0 @@
-twisted.words.protocols.jabber.xmlstream.TLSInitiatingInitializer now properly verifies the server's certificate against platform CAs and the stream's domain, mitigating CVE-2019-12855.
