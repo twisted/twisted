@@ -13,22 +13,22 @@ import os, signal, sys, struct
 
 from zope.interface import implementer
 
+from twisted.internet import defer, protocol, error
+from twisted.internet.address import IPv4Address
+from twisted.internet.error import ProcessTerminated, ProcessDone
+from twisted.python import components, failure
+from twisted.python.failure import Failure
 from twisted.python.reflect import requireModule
+from twisted.python.test.test_components import RegistryUsingMixin
+from twisted.trial import unittest
 
 cryptography = requireModule("cryptography")
+
 if cryptography:
     from twisted.conch.ssh import common, session, connection
 else:
     class session:
         from twisted.conch.interfaces import ISession
-
-from twisted.internet.address import IPv4Address
-from twisted.internet.error import ProcessTerminated, ProcessDone
-from twisted.python.failure import Failure
-from twisted.internet import defer, protocol, error
-from twisted.python import components, failure
-from twisted.python.test.test_components import RegistryUsingMixin
-from twisted.trial import unittest
 
 
 
