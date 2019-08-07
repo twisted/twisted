@@ -28,7 +28,7 @@ if cryptography:
     from twisted.conch.ssh import common, session, connection
 else:
     class session:
-        from twisted.conch.interfaces import ISession
+        from twisted.conch.interfaces import ISession, ISessionSetEnv
 
 
 
