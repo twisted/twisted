@@ -858,7 +858,10 @@ def _pypy3BlockingHack():
     <https://bitbucket.org/pypy/pypy/issues/3051/socketfromfd-sets-sockets-to-blocking-on>}
     by replacing C{socket.fromfd} with a more conservative version.
     """
-    from fcntl import fcntl, F_GETFL, F_SETFL
+    try:
+        from fcntl import fcntl, F_GETFL, F_SETFL
+    except ImportError:
+        return
     if not (_PY3 and _PYPY):
         return
 
