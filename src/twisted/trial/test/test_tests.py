@@ -23,7 +23,9 @@ of course.
 
 from __future__ import division, absolute_import
 
-import gc, sys, weakref
+import gc
+import sys
+import weakref
 import unittest as pyunit
 
 from twisted.python.compat import NativeStringIO, _PY3, _PYPY

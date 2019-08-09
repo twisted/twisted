@@ -851,6 +851,7 @@ def _get_async_param(isAsync=None, **kwargs):
     return bool(isAsync)
 
 
+
 def _pypy3BlockingHack():
     """
     Work around U{this pypy bug
@@ -860,6 +861,7 @@ def _pypy3BlockingHack():
     from fcntl import fcntl, F_GETFL, F_SETFL
     if not (_PY3 and _PYPY):
         return
+
     def fromFDWithoutModifyingFlags(fd, family, type, proto=None):
         passproto = [proto] * (proto is not None)
         flags = fcntl(fd, F_GETFL)

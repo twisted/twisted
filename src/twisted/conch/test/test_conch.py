@@ -8,17 +8,7 @@ from itertools import count
 
 from zope.interface import implementer
 from twisted.python.reflect import requireModule
-
-cryptography = requireModule("cryptography")
-
 from twisted.conch.error import ConchError
-if cryptography:
-    from twisted.conch.avatar import ConchUser
-    from twisted.conch.ssh.session import ISession, SSHSession, wrapProtocol
-else:
-    from twisted.conch.interfaces import ISession
-    class ConchUser: pass
-
 from twisted.cred import portal
 from twisted.internet import reactor, defer, protocol
 from twisted.internet.error import ProcessExitedAlready
@@ -27,14 +17,6 @@ from twisted.internet.utils import getProcessValue
 from twisted.python import filepath, log, runtime
 from twisted.python.compat import unicode, _PYPY
 from twisted.trial import unittest
-
-try:
-    from twisted.conch.scripts.conch import SSHSession as StdioInteractingSession
-except ImportError as e:
-    StdioInteractingSession = None
-    _reason = str(e)
-    del e
-
 from twisted.conch.test.test_ssh import ConchTestRealm
 from twisted.python.procutils import which
 
@@ -48,13 +30,28 @@ except ImportError:
     pass
 
 try:
-    import cryptography
-except ImportError:
-    cryptography = None
-try:
     import pyasn1
 except ImportError:
     pyasn1 = None
+
+cryptography = requireModule("cryptography")
+if cryptography:
+    from twisted.conch.avatar import ConchUser
+    from twisted.conch.ssh.session import ISession, SSHSession, wrapProtocol
+else:
+    from twisted.conch.interfaces import ISession
+
+    class ConchUser:
+        pass
+try:
+    from twisted.conch.scripts.conch import (
+        SSHSession as StdioInteractingSession
+    )
+except ImportError as e:
+    StdioInteractingSession = None
+    _reason = str(e)
+    del e
+
 
 
 def _has_ipv6():
