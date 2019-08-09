@@ -132,8 +132,7 @@ class SaveLoadTests(TestCase):
         )
 
     if _PYPY and _PY3:
-        test_saveBytes.skip = "https://bitbucket.org/pypy/pypy/issues/3052/json-skipkeys-true-results-in-invalid-json"
-
+        test_saveBytes.skip = "https://bitbucket.org/pypy/pypy/issues/3052/"
 
 
     def test_saveUnPersistableThenFormat(self):
