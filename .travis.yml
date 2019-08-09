@@ -19,6 +19,11 @@ branches:
 env:
   global:
     - TRIAL_REPORTER=text
+    # Version which should be removed from the cache.
+    - PREVIOUS_PYPY_VERSION=pypy=5.3.1
+    # Some python versions (like PYPY) are installed using pyenv and we cache
+    # the compiled version.
+    - PYENV_ROOT="$HOME/.pyenv"
 
 
 matrix:
@@ -42,6 +47,13 @@ matrix:
     # others, but that's ok.
     - python: 3.6
       env: TOXENV=py36-alldeps-withcov-posix,coverage-prepare,codecov-push,coveralls-push DISABLE_IPV6=yes
+    - python: pypy
+      env: TOXENV=pypy-nodeps-withcov-posix,coverage-prepare,codecov-push,coveralls-push PYPY_VERSION=pypy2.7-7.1.1
+    - python: pypy3
+      env: TOXENV=pypy-nodeps-withcov-posix,coverage-prepare,codecov-push,coveralls-push PYPY_VERSION=pypy3.6-7.1.1
+  allow_failures:
+    # PyPy is still failing some tests - or is it?
+    - python: pypy3
 
 addons:
   apt:
@@ -53,7 +65,14 @@ addons:
 cache:
   directories:
     - $HOME/.cache/pip
-    - $HOME/.pyenv
+    - $PYENV_ROOT
+  before_cache:
+    # Show the current cache size and try to delete things which are no longer
+    # needed.
+    - du -h $HOME/.cache/pip
+    - du -h $PYENV_ROOT
+    - rm -f $HOME/.cache/pip/log/debug.log
+    - pyenv uninstall -f $PREVIOUS_PYPY_VERSION
 
 
 install:

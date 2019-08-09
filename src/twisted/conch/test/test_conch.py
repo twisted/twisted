@@ -25,7 +25,7 @@ from twisted.internet.error import ProcessExitedAlready
 from twisted.internet.task import LoopingCall
 from twisted.internet.utils import getProcessValue
 from twisted.python import filepath, log, runtime
-from twisted.python.compat import unicode
+from twisted.python.compat import unicode, _PYPY
 from twisted.trial import unittest
 
 try:
@@ -322,6 +322,13 @@ class ConchServerSetupMixin:
 
     if not pyasn1:
         skip = "Cannot run without PyASN1"
+
+    # FIXME: https://twistedmatrix.com/trac/ticket/8506
+
+    # This should be un-skipped on Travis after the ticket is fixed.  For now
+    # is enabled so that we can continue with fixing other stuff using Travis.
+    if _PYPY:
+        skip = 'PyPy known_host not working yet on Travis.'
 
     realmFactory = staticmethod(lambda: ConchTestRealm(b'testuser'))
 
