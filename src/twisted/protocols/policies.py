@@ -712,22 +712,6 @@ class TimeoutMixin:
         if self.__timeoutCall is not None and self.timeOut is not None:
             self.__timeoutCall.reset(self.timeOut)
 
-
-    def cancelTimeout(self):
-        """
-        Cancel the timeout.
-
-        If the timeout was already cancelled, this does nothing.
-        """
-        self.timeOut = None
-        if self.__timeoutCall:
-            try:
-                self.__timeoutCall.cancel()
-            except (error.AlreadyCalled, error.AlreadyCancelled):
-                pass
-            self.__timeoutCall = None
-
-
     def setTimeout(self, period):
         """
         Change the timeout period

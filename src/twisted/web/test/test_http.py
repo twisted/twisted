@@ -7,11 +7,12 @@ Test HTTP support.
 
 from __future__ import absolute_import, division
 
-import attr
 import base64
 import calendar
 import cgi
 import random
+
+import hamcrest
 
 try:
     from urlparse import urlparse, urlunsplit, clear_cache
@@ -780,31 +781,14 @@ class GenericHTTPChannelTests(unittest.TestCase):
         When the transport is switched to H2, the HTTPChannel timeouts are
         cancelled.
         """
-        @attr.s
-        class FakeDelayedCall(object):
-            period = attr.ib()
-            callback = attr.ib()
-            cancelled = attr.ib(default=False)
-
-            def cancel(self):
-                self.cancelled = True
-
-            def reset(self, period):
-                self.period = period
-
-        delayedCalls = []
-
-        def fakeCallLater(period, callback):
-            c = FakeDelayedCall(period, callback)
-            delayedCalls.append(c)
-            return c
+        clock = Clock()
 
         a = http._genericHTTPChannelProtocolFactory(b'')
         a.requestFactory = DummyHTTPHandlerProxy
 
         # Set the original timeout to be 100s
         a.timeOut = 100
-        a.callLater = fakeCallLater
+        a.callLater = clock.callLater
 
         b = StringTransport()
         b.negotiatedProtocol = b'h2'
@@ -813,8 +797,16 @@ class GenericHTTPChannelTests(unittest.TestCase):
         # We've made the connection, but we actually check if we've negotiated
         # H2 when data arrives. Right now, the HTTPChannel will have set up a
         # single delayed call.
-        self.assertEqual(len(delayedCalls), 1)
-        self.assertFalse(delayedCalls[0].cancelled)
+        hamcrest.assert_that(
+            clock.getDelayedCalls(),
+            hamcrest.contains(
+                hamcrest.has_property(
+                    "cancelled",
+                    hamcrest.equal_to(False),
+                ),
+            ),
+        )
+        h11Timeout = clock.getDelayedCalls()[0]
 
         # We give it the HTTP data, and it switches out for H2.
         a.dataReceived(b'')
@@ -822,9 +814,17 @@ class GenericHTTPChannelTests(unittest.TestCase):
 
         # The first delayed call is cancelled, and H2 creates a new one for its
         # own timeouts.
-        self.assertEqual(len(delayedCalls), 2)
-        self.assertTrue(delayedCalls[0].cancelled)
-        self.assertFalse(delayedCalls[1].cancelled)
+        self.assertTrue(h11Timeout.cancelled)
+        hamcrest.assert_that(
+            clock.getDelayedCalls(),
+            hamcrest.contains(
+                hamcrest.has_property(
+                    "cancelled",
+                    hamcrest.equal_to(False),
+                ),
+            ),
+        )
+
     if not http.H2_ENABLED:
         test_h2CancelsH11Timeout.skip = "HTTP/2 support not present"
 
