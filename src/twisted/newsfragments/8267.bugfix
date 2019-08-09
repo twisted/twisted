@@ -1,0 +1,1 @@
+Fixed circular import in twisted.trial.reporter, introduced in Twisted 16.0.0.
