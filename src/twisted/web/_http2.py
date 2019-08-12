@@ -195,7 +195,10 @@ class H2Connection(Protocol, TimeoutMixin):
             elif isinstance(event, h2.events.StreamReset):
                 self._requestAborted(event)
             elif isinstance(event, h2.events.WindowUpdated):
-                self._handleWindowUpdate(event)
+                self._handleWindowUpdate(event.stream_id)
+            elif isinstance(event, h2.events.RemoteSettingsChanged):
+                if h2.settings.SettingCodes.INITIAL_WINDOW_SIZE in event.changed_settings:
+                    self._handleWindowUpdate(None)
             elif isinstance(event, h2.events.PriorityUpdated):
                 self._handlePriorityUpdate(event)
             elif isinstance(event, h2.events.ConnectionTerminated):
@@ -687,7 +690,7 @@ class H2Connection(Protocol, TimeoutMixin):
         return windowSize - alreadyConsumed
 
 
-    def _handleWindowUpdate(self, event):
+    def _handleWindowUpdate(self, streamID):
         """
         Manage flow control windows.
 
@@ -695,11 +698,10 @@ class H2Connection(Protocol, TimeoutMixin):
         the connection. This will fire deferreds that wake those streams up and
         allow them to continue processing.
 
-        @param event: The Hyper-h2 event that encodes information about the
-            flow control window change.
-        @type event: L{h2.events.WindowUpdated}
+        @param streamID: The ID of the stream whose flow control window has
+            changed or None if all streams are affected.
+        @type streamID: L{int}
         """
-        streamID = event.stream_id
 
         if streamID:
             if not self._streamIsActive(streamID):
