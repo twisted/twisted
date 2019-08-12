@@ -2,8 +2,10 @@
 set -e
 set -x
 
-if [[ "$(uname -s)" == "Darwin" ]]; then
-    # Initialize the virtualenv created at install time.
+#
+# Initialize the virtualenv if one was created at install time.
+#
+if [ -f ~/.venv/bin/activate ]; then
     source ~/.venv/bin/activate
 
     if [[ "${TOXENV}" =~ py35-.* ]]; then
