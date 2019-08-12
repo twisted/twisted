@@ -1092,13 +1092,10 @@ class DeferredList(Deferred):
         self.consumeErrors = consumeErrors
         self.finishedCount = 0
 
-        index = 0
-        for deferred in self._deferredList:
+        for index, deferred in enumerate(self._deferredList):
             deferred.addCallbacks(self._cbDeferred, self._cbDeferred,
                                   callbackArgs=(index,SUCCESS),
                                   errbackArgs=(index,FAILURE))
-            index = index + 1
-
 
     def _cbDeferred(self, result, index, succeeded):
         """
