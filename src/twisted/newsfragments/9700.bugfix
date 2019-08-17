@@ -1,0 +1,1 @@
+Fixed installation of twisted[serial] being insufficient to import twisted.internet.serialport on Windows.
