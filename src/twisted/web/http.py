@@ -2955,6 +2955,9 @@ class _GenericHTTPChannelProtocol(proxyForInterface(IProtocol, "_channel")):
                 # itself if possible.
                 self._channel._networkProducer.unregisterProducer()
 
+                # Cancel the old channel's timeout.
+                self._channel.setTimeout(None)
+
                 transport = self._channel.transport
                 self._channel = H2Connection()
                 self._channel.requestFactory = self._requestFactory
