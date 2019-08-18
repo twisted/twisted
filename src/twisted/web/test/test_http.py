@@ -967,15 +967,22 @@ class GenericHTTPChannelTests(unittest.TestCase):
         genericProtocol.requestFactory = DummyHTTPHandlerProxy
         genericProtocol.makeConnection(transport)
 
+        originalChannel = genericProtocol._channel
+
         # We expect the transport has a underlying channel registered as
         # a producer.
-        self.assertIs(transport.producer, genericProtocol._channel)
+        self.assertIs(transport.producer, originalChannel)
 
         # Force the upgrade.
         genericProtocol.dataReceived(b'P')
 
-        # The transport should now have no producer.
-        self.assertIs(transport.producer, None)
+        # The transport should not have the original channel as its
+        # producer...
+        self.assertIsNot(transport.producer, originalChannel)
+
+        # ...it should have the new H2 channel as its producer
+        self.assertIs(transport.producer, genericProtocol._channel)
+
     if not http.H2_ENABLED:
         test_unregistersProducer.skip = "HTTP/2 support not present"
 
