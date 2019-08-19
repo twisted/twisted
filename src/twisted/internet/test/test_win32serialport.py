@@ -15,10 +15,18 @@ from twisted.python.failure import Failure
 from twisted.python.runtime import platform
 from twisted.internet.test.test_serialport import DoNothing
 
+
+testing_forced = os.environ.get('TWISTED_FORCE_SERIAL_TESTS', '')
+testing_forced = testing_forced.lower() in {'1', 'yes', 'true'}
+
+
 try:
     from twisted.internet import serialport
     import serial
 except ImportError:
+    if testing_forced:
+        raise
+
     serialport = None
     serial = None
 
@@ -68,11 +76,12 @@ class Win32SerialPortTests(unittest.TestCase):
     Minimal testing for Twisted's Win32 serial port support.
     """
 
-    if not platform.isWindows():
-        skip = "This test must run on Windows."
+    if not testing_forced:
+        if not platform.isWindows():
+            skip = "This test must run on Windows."
 
-    elif not serialport:
-        skip = "Windows serial port support is not available."
+        elif not serialport:
+            skip = "Windows serial port support is not available."
 
     def setUp(self):
         # Re-usable protocol and reactor
