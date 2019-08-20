@@ -16,8 +16,7 @@ from twisted.python.runtime import platform
 from twisted.internet.test.test_serialport import DoNothing
 
 
-testingForced = os.environ.get('TWISTED_FORCE_SERIAL_TESTS', '')
-testingForced = testingForced.lower() in {'1', 'yes', 'true'}
+testingForced = 'TWISTED_FORCE_SERIAL_TESTS' in os.environ
 
 
 try:
