@@ -1,0 +1,1 @@
+FileBodyProducer will now stop producing when cancelled.  This behavior is relied on by twisted.web._newclient.Request.
