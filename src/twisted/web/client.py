@@ -1172,6 +1172,7 @@ class FileBodyProducer(object):
         self._task = self._cooperate(self._writeloop(consumer))
 
         task_d = self._task.whenDone()
+
         # Create another deferred here because cancellers can only be provided
         # to the deferred constructor
         def cancel_producer(ignored):
