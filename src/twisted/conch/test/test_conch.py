@@ -1,6 +1,11 @@
 # -*- test-case-name: twisted.conch.test.test_conch -*-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
+"""
+High level / interoperability tests for Conch.
+
+For now, just the SSH protocol.
+"""
 
 import os, sys, socket
 import subprocess
@@ -601,11 +606,13 @@ class OpenSSHClientMixin:
 
 
 
-class OpenSSHKeyExchangeTests(ConchServerSetupMixin, OpenSSHClientMixin,
+class OpenSSHKEXServerSideTests(ConchServerSetupMixin, OpenSSHClientMixin,
                               unittest.TestCase):
     """
-    Tests L{SSHTransportBase}'s key exchange algorithm compatibility with
+    Tests L{SSHServerTransport}'s key exchange algorithm compatibility with
     OpenSSH.
+
+    These are the tests when Twisted is the server-side of the SSH transport.
     """
 
     def assertExecuteWithKexAlgorithm(self, keyExchangeAlgo):
@@ -666,13 +673,22 @@ class OpenSSHKeyExchangeTests(ConchServerSetupMixin, OpenSSHClientMixin,
             'ecdh-sha2-nistp521')
 
 
-    def test_DH_GROUP14(self):
+    def test_DH_GROUP14SHA1(self):
         """
         The diffie-hellman-group14-sha1 key exchange algorithm is compatible
         with OpenSSH.
         """
         return self.assertExecuteWithKexAlgorithm(
             'diffie-hellman-group14-sha1')
+
+
+    def test_DH_GROUP14SHA256(self):
+        """
+        The diffie-hellman-group14-sha256 key exchange algorithm is compatible
+        with OpenSSH.
+        """
+        return self.assertExecuteWithKexAlgorithm(
+            'diffie-hellman-group14-sha256')
 
 
     def test_DH_GROUP_EXCHANGE_SHA1(self):
@@ -702,6 +718,90 @@ class OpenSSHKeyExchangeTests(ConchServerSetupMixin, OpenSSHClientMixin,
                           self.assertExecuteWithKexAlgorithm,
                           'unsupported-algorithm')
 
+
+class OpenSSHKEXClientSideTests(ConchServerSetupMixin, OpenSSHClientMixin,
+                              unittest.TestCase):
+    """
+    Tests L{SSHClientTransport}'s key exchange algorithm compatibility with
+    OpenSSH.
+
+    These are the tests when Twisted is the client-side of the SSH transport.
+    """
+
+    def getRunningOpenSSHServer(
+            self, sshdOptions=(), sshdHostKey=keydata.privateRSA_openssh,
+            ):
+        """
+        Get the process for a running OpenSSH server in debug mode
+        (will exit after the first connection).
+
+        @param sshdOptions: List of arguments to be used for starting OpenSSH
+            SSHD server.
+        @type sshdOptions: Sequence of str.
+
+        @param sshdHostKey: Private key to be used by the server.
+            In OpenSSH format.
+        @type sshdOptions: bytes.
+
+        @return: The running OpenSSH server process.
+        @rtype: L{ConchTestOpenSSHProcess}
+        """
+        process = ConchTestOpenSSHProcess()
+        process.deferred = defer.Deferred()
+
+        sshd_host = filepath.FilePath(self.mktemp())
+        sshd_host.setContent(sshd_host_key)
+
+        serverCommands = ['-Ddp', '5022', '-h', sshd_host.path]
+        for cmd in sshdOptions:
+            if isinstance(cmd, unicode):
+                cmd = cmd.encode("utf-8")
+            serverCommands.append(cmd)
+
+        reactor.spawnProcess(process, which('sshd')[0], serverCommands)
+        return process
+
+    def getRunningConchClient(self, options=()):
+        """
+        Get the process for a running OpenSSH server in debug mode
+        (will exit after the first connection).
+
+        @param sshdOptions: List of arguments to be used for starting OpenSSH
+            SSHD server.
+        @type sshdOptions: Sequence of str.
+
+        @param sshdHostKey: Private key to be used by the server.
+            In OpenSSH format.
+        @type sshdOptions: bytes.
+
+        @return: The running OpenSSH server process.
+        @rtype: L{ConchTestOpenSSHProcess}
+        """
+        process = ConchTestOpenSSHProcess()
+        process.deferred = defer.Deferred()
+
+        sshd_host = filepath.FilePath(self.mktemp())
+        sshd_host.setContent(sshd_host_key)
+
+        serverCommands = ['-Ddp', '5022', '-h', sshd_host.path]
+        for cmd in sshdOptions:
+            if isinstance(cmd, unicode):
+                cmd = cmd.encode("utf-8")
+            serverCommands.append(cmd)
+
+        reactor.spawnProcess(process, which('sshd')[0], serverCommands)
+        return process
+
+    def test_DH_GROUP14SHA1(self):
+        """
+        Check that Conch SSH client can connect using
+        `diffie-hellman-group14-sha1` KEX to an OpenSSH server.
+        """
+        server = self.getRunningOpenSSHServer(
+            sshdOptions=(
+                '-oKexAlgorithms=diffie-hellman-group14-sha1',),
+            )
+        client = self.getRunningConchClient()
 
 
 class OpenSSHClientForwardingTests(ForwardingMixin, OpenSSHClientMixin,

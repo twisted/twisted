@@ -1355,7 +1355,7 @@ class SSHServerTransport(SSHTransportBase):
         self.g, self.p = _kex.getDHGeneratorAndPrime(self.kexAlg)
         self._startEphemeralDH()
         sharedSecret = self._finishEphemeralDH(clientDHpublicKey)
-        h = sha1()
+        h = _kex.getHashProcessor(self.kexAlg)()
         h.update(NS(self.otherVersionString))
         h.update(NS(self.ourVersionString))
         h.update(NS(self.otherKexInitPayload))
@@ -1397,7 +1397,7 @@ class SSHServerTransport(SSHTransportBase):
             return
 
         # KEXDH_INIT, KEX_ECDH_INIT, and KEX_DH_GEX_REQUEST_OLD
-        # have the same value, so use another cue
+        # have the same message ID, so use another cue
         # to decide what kind of message the peer sent us.
         if _kex.isFixedGroup(self.kexAlg):
             return self._ssh_KEXDH_INIT(packet)
@@ -1783,7 +1783,7 @@ class SSHClientTransport(SSHTransportBase):
         """
         serverKey = keys.Key.fromString(pubKey)
         sharedSecret = self._finishEphemeralDH(f)
-        h = sha1()
+        h = _kex.getHashProcessor(self.kexAlg)()
         h.update(NS(self.ourVersionString))
         h.update(NS(self.otherVersionString))
         h.update(NS(self.ourKexInitPayload))
