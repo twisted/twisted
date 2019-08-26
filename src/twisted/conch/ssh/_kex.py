@@ -156,9 +156,7 @@ class _DHGroup14SHA1(_Group14):
 class _DHGroup14SHA256(_Group14):
     """
     Diffie-Hellman key exchange with SHA-256 as HASH and Oakley Group 14
-    (2048-bit MODP Group).
-
-    I don't know where is the RFC/Specs for this KEX.
+    (2048-bit MODP Group). Defined in RFC 8268.
     """
     preference = 6
     hashProcessor = sha256
