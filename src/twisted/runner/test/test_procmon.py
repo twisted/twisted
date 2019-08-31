@@ -12,7 +12,7 @@ from twisted.internet.error import (ProcessDone, ProcessTerminated,
                                     ProcessExitedAlready)
 from twisted.internet.task import Clock
 from twisted.python.failure import Failure
-from twisted.python import log
+from twisted.logger import globalLogPublisher
 from twisted.test.proto_helpers import MemoryReactor
 
 
@@ -347,11 +347,11 @@ class ProcmonTests(unittest.TestCase):
 
     def test_outputReceivedCompleteLine(self):
         """
-        Getting a complete output line generates a log message.
+        Getting a complete output line on stdout generates a log message.
         """
         events = []
-        self.addCleanup(log.removeObserver, events.append)
-        log.addObserver(events.append)
+        self.addCleanup(globalLogPublisher.removeObserver, events.append)
+        globalLogPublisher.addObserver(events.append)
         self.pm.addProcess("foo", ["foo"])
         # Schedule the process to start
         self.pm.startService()
@@ -363,8 +363,44 @@ class ProcmonTests(unittest.TestCase):
         # Process greets
         self.pm.protocols["foo"].outReceived(b'hello world!\n')
         self.assertEquals(len(events), 1)
-        message = events[0]['message']
-        self.assertEquals(message, tuple([u'[foo] hello world!']))
+        namespace = events[0]['log_namespace']
+        stream = events[0]['stream']
+        tag = events[0]['tag']
+        line = events[0]['line']
+        self.assertEquals(namespace, 'twisted.runner.procmon.ProcessMonitor')
+        self.assertEquals(stream, 'stdout')
+        self.assertEquals(tag, 'foo')
+        self.assertEquals(line, u'hello world!')
+
+
+    def test_ouputReceivedCompleteErrLine(self):
+        """
+        Getting a complete output line on stderr generates a log message.
+        """
+        events = []
+        self.addCleanup(globalLogPublisher.removeObserver, events.append)
+        globalLogPublisher.addObserver(events.append)
+        self.pm.addProcess("foo", ["foo"])
+        # Schedule the process to start
+        self.pm.startService()
+        # Advance the reactor to start the process
+        self.reactor.advance(0)
+        self.assertIn("foo", self.pm.protocols)
+        # Long time passes
+        self.reactor.advance(self.pm.threshold)
+        # Process greets
+        self.pm.protocols["foo"].errReceived(b'hello world!\n')
+        self.assertEquals(len(events), 1)
+        namespace = events[0]['log_namespace']
+        stream = events[0]['stream']
+        tag = events[0]['tag']
+        line = events[0]['line']
+        self.assertEquals(namespace, 'twisted.runner.procmon.ProcessMonitor')
+        self.assertEquals(stream, 'stderr')
+        self.assertEquals(tag, 'foo')
+        self.assertEquals(line, u'hello world!')
+
+
 
 
     def test_outputReceivedCompleteLineInvalidUTF8(self):
@@ -372,8 +408,8 @@ class ProcmonTests(unittest.TestCase):
         Getting invalid UTF-8 results in the repr of the raw message
         """
         events = []
-        self.addCleanup(log.removeObserver, events.append)
-        log.addObserver(events.append)
+        self.addCleanup(globalLogPublisher.removeObserver, events.append)
+        globalLogPublisher.addObserver(events.append)
         self.pm.addProcess("foo", ["foo"])
         # Schedule the process to start
         self.pm.startService()
@@ -385,11 +421,14 @@ class ProcmonTests(unittest.TestCase):
         # Process greets
         self.pm.protocols["foo"].outReceived(b'\xffhello world!\n')
         self.assertEquals(len(events), 1)
-        messages = events[0]['message']
-        self.assertEquals(len(messages), 1)
-        message = messages[0]
-        tag, output = message.split(' ', 1)
-        self.assertEquals(tag, '[foo]')
+        message = events[0]
+        namespace = message['log_namespace']
+        stream = message['stream']
+        tag = message['tag']
+        output = message['line']
+        self.assertEquals(namespace, 'twisted.runner.procmon.ProcessMonitor')
+        self.assertEquals(stream, 'stdout')
+        self.assertEquals(tag, 'foo')
         self.assertEquals(output, repr(b'\xffhello world!'))
 
 
@@ -398,8 +437,8 @@ class ProcmonTests(unittest.TestCase):
         Getting partial line results in no events until process end
         """
         events = []
-        self.addCleanup(log.removeObserver, events.append)
-        log.addObserver(events.append)
+        self.addCleanup(globalLogPublisher.removeObserver, events.append)
+        globalLogPublisher.addObserver(events.append)
         self.pm.addProcess("foo", ["foo"])
         # Schedule the process to start
         self.pm.startService()
@@ -413,8 +452,14 @@ class ProcmonTests(unittest.TestCase):
         self.assertEquals(len(events), 0)
         self.pm.protocols["foo"].processEnded(Failure(ProcessDone(0)))
         self.assertEquals(len(events), 1)
-        message = events[0]['message']
-        self.assertEquals(message, tuple([u'[foo] hello world!']))
+        namespace = events[0]['log_namespace']
+        stream = events[0]['stream']
+        tag = events[0]['tag']
+        line = events[0]['line']
+        self.assertEquals(namespace, 'twisted.runner.procmon.ProcessMonitor')
+        self.assertEquals(stream, 'stdout')
+        self.assertEquals(tag, 'foo')
+        self.assertEquals(line, u'hello world!')
 
     def test_connectionLostLongLivedProcess(self):
         """
