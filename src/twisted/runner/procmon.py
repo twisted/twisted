@@ -8,10 +8,13 @@ Support for starting, monitoring, and restarting child process.
 import attr
 import incremental
 
-from twisted.python import log, deprecate
+from twisted.python import deprecate
 from twisted.internet import error, protocol, reactor as _reactor
 from twisted.application import service
 from twisted.protocols import basic
+from twisted.logger import Logger
+
+
 
 @attr.s(frozen=True)
 class _Process(object):
@@ -62,48 +65,83 @@ class _Process(object):
         """
         return (self.args, self.uid, self.gid, self.env)
 
+
+
 class DummyTransport:
 
     disconnecting = 0
 
+
+
 transport = DummyTransport()
+
+
 
 class LineLogger(basic.LineReceiver):
 
     tag = None
+    stream = None
     delimiter = b'\n'
+    service = None
 
     def lineReceived(self, line):
         try:
             line = line.decode('utf-8')
         except UnicodeDecodeError:
             line = repr(line)
-        log.msg(u'[%s] %s' % (self.tag, line))
+
+        self.service.log.info(u'[{tag}] {line}',
+                              tag=self.tag,
+                              line=line,
+                              stream=self.stream)
+
 
 
 class LoggingProtocol(protocol.ProcessProtocol):
 
     service = None
     name = None
-    empty = 1
 
     def connectionMade(self):
-        self.output = LineLogger()
-        self.output.tag = self.name
-        self.output.makeConnection(transport)
+        self._output = LineLogger()
+        self._output.tag = self.name
+        self._output.stream = 'stdout'
+        self._output.service = self.service
+        self._outputEmpty = True
+
+        self._error = LineLogger()
+        self._error.tag = self.name
+        self._error.stream = 'stderr'
+        self._error.service = self.service
+        self._errorEmpty = True
+
+        self._output.makeConnection(transport)
+        self._error.makeConnection(transport)
 
 
     def outReceived(self, data):
-        self.output.dataReceived(data)
-        self.empty = data[-1] == b'\n'
+        self._output.dataReceived(data)
+        self._outputEmpty = data[-1] == b'\n'
 
-    errReceived = outReceived
-
+    def errReceived(self, data):
+        self._error.dataReceived(data)
+        self._errorEmpty = data[-1] == b'\n'
 
     def processEnded(self, reason):
-        if not self.empty:
-            self.output.dataReceived(b'\n')
+        if not self._outputEmpty:
+            self._output.dataReceived(b'\n')
+        if not self._errorEmpty:
+            self._error.dataReceived(b'\n')
         self.service.connectionLost(self.name)
+
+    @property
+    def output(self):
+        return self._output
+
+    @property
+    def empty(self):
+        return self._outputEmpty
+
 
 
 class ProcessMonitor(service.Service):
@@ -145,11 +183,16 @@ class ProcessMonitor(service.Service):
     @ivar _reactor: A provider of L{IReactorProcess} and L{IReactorTime}
         which will be used to spawn processes and register delayed calls.
 
+    @type log: L{Logger}
+    @ivar log: The logger used to propagate log messages from spawned
+        processes.
+
     """
     threshold = 1
     killTime = 5
     minRestartDelay = 1
     maxRestartDelay = 3600
+    log = Logger()
 
 
     def __init__(self, reactor=_reactor):
