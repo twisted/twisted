@@ -23,8 +23,8 @@ from twisted.internet.error import ConnectionRefusedError
 from twisted.python.failure import Failure
 from twisted.internet import error
 from twisted.internet import interfaces
+from twisted.internet.testing import MemoryReactorClock
 
-from .proto_helpers import MemoryReactorClock
 
 
 class TLSNegotiation:
