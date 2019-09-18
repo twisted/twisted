@@ -1,1 +1,0 @@
-twisted.web.http.Request.write after the channel is disconnected will no longer raise AttributeError.
