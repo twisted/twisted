@@ -39,8 +39,12 @@ class Options(usage.Options):
 
     optFlags = [
         ["notracebacks", "n", (
-            "Do not display tracebacks in broken web pages. Displaying "
-            "tracebacks to users may be security risk!")],
+            "(DEPRECATED: Tracebacks are disabled by default. "
+            "See --enable-tracebacks to turn them on.")],
+        ["display-tracebacks", "", (
+            "Show uncaught exceptions during rendering tracebacks to "
+            "the client. WARNING: This may be a security risk and "
+            "expose private data!")],
     ]
 
     optFlags.append([
@@ -295,7 +299,14 @@ def makeService(config):
     else:
         site = server.Site(root)
 
-    site.displayTracebacks = not config["notracebacks"]
+    if config["display-tracebacks"]:
+        site.displayTracebacks = True
+
+    # Deprecate --notracebacks/-n
+    if config["notracebacks"]:
+        msg = deprecate._getDeprecationWarningString(
+            "--notracebacks", incremental.Version('Twisted', 19, 7, 0))
+        warnings.warn(msg, category=DeprecationWarning, stacklevel=2)
 
     if config['personal']:
         site = makePersonalServerFactory(site)

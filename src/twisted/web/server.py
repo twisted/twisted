@@ -182,6 +182,24 @@ class Request(Copyable, http.Request, components.Componentized):
                 return name
 
 
+    def gotLength(self, length):
+        """
+        Called when HTTP channel got length of content in this request.
+
+        This method is not intended for users.
+
+        @param length: The length of the request body, as indicated by the
+            request headers.  L{None} if the request headers do not indicate a
+            length.
+        """
+        try:
+            getContentFile = self.channel.site.getContentFile
+        except AttributeError:
+            http.Request.gotLength(self, length)
+        else:
+            self.content = getContentFile(length)
+
+
     def process(self):
         """
         Process a request.
@@ -768,14 +786,14 @@ class Site(http.HTTPFactory):
     @ivar counter: increment value used for generating unique sessions ID.
     @ivar requestFactory: A factory which is called with (channel)
         and creates L{Request} instances. Default to L{Request}.
-    @ivar displayTracebacks: if set, Twisted internal errors are displayed on
-        rendered pages. Default to C{True}.
+    @ivar displayTracebacks: If set, unhandled exceptions raised during
+        rendering are returned to the client as HTML. Default to C{False}.
     @ivar sessionFactory: factory for sessions objects. Default to L{Session}.
     @ivar sessionCheckTime: Deprecated.  See L{Session.sessionTimeout} instead.
     """
     counter = 0
     requestFactory = Request
-    displayTracebacks = True
+    displayTracebacks = False
     sessionFactory = Session
     sessionCheckTime = 1800
     _entropy = os.urandom

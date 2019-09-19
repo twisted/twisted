@@ -7,7 +7,12 @@ Test HTTP support.
 
 from __future__ import absolute_import, division
 
-import random, cgi, base64, calendar
+import base64
+import calendar
+import cgi
+import random
+
+import hamcrest
 
 try:
     from urlparse import urlparse, urlunsplit, clear_cache
@@ -16,7 +21,11 @@ except ImportError:
 
 from io import BytesIO
 from itertools import cycle
-from zope.interface import provider
+from zope.interface import (
+    provider,
+    directlyProvides,
+    providedBy,
+)
 from zope.interface.verify import verifyObject
 
 from twisted.python.compat import (_PY3, iterbytes, long, networkString,
@@ -42,8 +51,11 @@ from twisted.web.test.requesthelper import (
     textLinearWhitespaceComponents,
 )
 
-from zope.interface import directlyProvides, providedBy
 from twisted.logger import globalLogPublisher
+
+from ._util import (
+    assertIsFilesystemTemporary,
+)
 
 
 
@@ -764,6 +776,59 @@ class GenericHTTPChannelTests(unittest.TestCase):
         return a._negotiatedProtocol
 
 
+    def test_h2CancelsH11Timeout(self):
+        """
+        When the transport is switched to H2, the HTTPChannel timeouts are
+        cancelled.
+        """
+        clock = Clock()
+
+        a = http._genericHTTPChannelProtocolFactory(b'')
+        a.requestFactory = DummyHTTPHandlerProxy
+
+        # Set the original timeout to be 100s
+        a.timeOut = 100
+        a.callLater = clock.callLater
+
+        b = StringTransport()
+        b.negotiatedProtocol = b'h2'
+        a.makeConnection(b)
+
+        # We've made the connection, but we actually check if we've negotiated
+        # H2 when data arrives. Right now, the HTTPChannel will have set up a
+        # single delayed call.
+        hamcrest.assert_that(
+            clock.getDelayedCalls(),
+            hamcrest.contains(
+                hamcrest.has_property(
+                    "cancelled",
+                    hamcrest.equal_to(False),
+                ),
+            ),
+        )
+        h11Timeout = clock.getDelayedCalls()[0]
+
+        # We give it the HTTP data, and it switches out for H2.
+        a.dataReceived(b'')
+        self.assertEqual(a._negotiatedProtocol, b'h2')
+
+        # The first delayed call is cancelled, and H2 creates a new one for its
+        # own timeouts.
+        self.assertTrue(h11Timeout.cancelled)
+        hamcrest.assert_that(
+            clock.getDelayedCalls(),
+            hamcrest.contains(
+                hamcrest.has_property(
+                    "cancelled",
+                    hamcrest.equal_to(False),
+                ),
+            ),
+        )
+
+    if not http.H2_ENABLED:
+        test_h2CancelsH11Timeout.skip = "HTTP/2 support not present"
+
+
     def test_protocolUnspecified(self):
         """
         If the transport has no support for protocol negotiation (no
@@ -902,15 +967,22 @@ class GenericHTTPChannelTests(unittest.TestCase):
         genericProtocol.requestFactory = DummyHTTPHandlerProxy
         genericProtocol.makeConnection(transport)
 
+        originalChannel = genericProtocol._channel
+
         # We expect the transport has a underlying channel registered as
         # a producer.
-        self.assertIs(transport.producer, genericProtocol._channel)
+        self.assertIs(transport.producer, originalChannel)
 
         # Force the upgrade.
         genericProtocol.dataReceived(b'P')
 
-        # The transport should now have no producer.
-        self.assertIs(transport.producer, None)
+        # The transport should not have the original channel as its
+        # producer...
+        self.assertIsNot(transport.producer, originalChannel)
+
+        # ...it should have the new H2 channel as its producer
+        self.assertIs(transport.producer, genericProtocol._channel)
+
     if not http.H2_ENABLED:
         test_unregistersProducer.skip = "HTTP/2 support not present"
 
@@ -1475,6 +1547,60 @@ class ParsingTests(unittest.TestCase):
             request.requestHeaders.getRawHeaders(b'bAz'), [b'Quux', b'quux'])
 
 
+    def test_headersMultiline(self):
+        """
+        Line folded headers are handled by L{HTTPChannel} by replacing each
+        fold with a single space by the time they are made available to the
+        L{Request}. Any leading whitespace in the folded lines of the header
+        value is preserved.
+
+        See RFC 7230 section 3.2.4.
+        """
+        processed = []
+
+        class MyRequest(http.Request):
+            def process(self):
+                processed.append(self)
+                self.finish()
+
+        requestLines = [
+            b"GET / HTTP/1.0",
+            b"nospace: ",
+            b" nospace\t",
+            b"space:space",
+            b" space",
+            b"spaces: spaces",
+            b"  spaces",
+            b"   spaces",
+            b"tab: t",
+            b"\ta",
+            b"\tb",
+            b"",
+            b"",
+        ]
+
+        self.runRequest(b"\n".join(requestLines), MyRequest, 0)
+        [request] = processed
+        # All leading and trailing whitespace is stripped from the
+        # header-value.
+        self.assertEqual(
+            request.requestHeaders.getRawHeaders(b"nospace"),
+            [b"nospace"],
+        )
+        self.assertEqual(
+            request.requestHeaders.getRawHeaders(b"space"),
+            [b"space  space"],
+        )
+        self.assertEqual(
+            request.requestHeaders.getRawHeaders(b"spaces"),
+            [b"spaces   spaces    spaces"],
+        )
+        self.assertEqual(
+            request.requestHeaders.getRawHeaders(b"tab"),
+            [b"t \ta \tb"],
+        )
+
+
     def test_tooManyHeaders(self):
         """
         L{HTTPChannel} enforces a limit of C{HTTPChannel.maxHeaders} on the
@@ -1935,10 +2061,14 @@ Hello,
         content = []
         decoder = []
         testcase = self
+
         class MyRequest(http.Request):
             def process(self):
-                content.append(self.content.fileno())
+                content.append(self.content)
                 content.append(self.content.read())
+                # Don't let it close the original content object.  We want to
+                # inspect it later.
+                self.content = BytesIO()
                 method.append(self.method)
                 path.append(self.path)
                 decoder.append(self.channel._transferDecoder)
@@ -1946,13 +2076,12 @@ Hello,
                 self.finish()
 
         self.runRequest(httpRequest, MyRequest)
-        # The tempfile API used to create content returns an
-        # instance of a different type depending on what platform
-        # we're running on.  The point here is to verify that the
-        # request body is in a file that's on the filesystem.
-        # Having a fileno method that returns an int is a somewhat
-        # close approximation of this. -exarkun
-        self.assertIsInstance(content[0], int)
+
+        # We took responsibility for closing this when we replaced the request
+        # attribute, above.
+        self.addCleanup(content[0].close)
+
+        assertIsFilesystemTemporary(self, content[0])
         self.assertEqual(content[1], b'Hello, spam,eggs spam spam')
         self.assertEqual(method, [b'GET'])
         self.assertEqual(path, [b'/'])
