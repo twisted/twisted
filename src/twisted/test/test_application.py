@@ -18,6 +18,7 @@ except ImportError:
     asyncio = None
 
 from twisted.application import service, internet, app, reactors
+from twisted.application.internet import backoffPolicy
 from twisted.internet import interfaces, defer, protocol, reactor
 from twisted.persisted import sob
 from twisted.plugins import twisted_reactors
@@ -967,3 +968,41 @@ class HelpReactorsTests(unittest.TestCase):
         self.assertRaises(SystemExit, options.opt_help_reactors)
         message = options.messageOutput.getvalue()
         self.assertNotIn("reactors not available", message)
+
+
+
+class BackoffPolicyTests(unittest.TestCase):
+    """
+    Tests of L{twisted.application.internet.backoffPolicy}
+    """
+    def test_calculates_correct_values(self):
+        """
+        Test that L{backoffPolicy()} calculates expected values
+        """
+        pol = backoffPolicy(1.0, 60.0, 1.5, jitter=lambda: 1)
+        self.assertAlmostEqual(pol(0), 2)
+        self.assertAlmostEqual(pol(1), 2.5)
+        self.assertAlmostEqual(pol(10), 58.6650390625)
+        self.assertEqual(pol(20), 61)
+        self.assertEqual(pol(100), 61)
+
+    def test_does_not_overflow_on_high_attempts(self):
+        """
+        L{backoffPolicy()} does not fail for large values of the attempt
+        parameter. In previous versions, this test failed when attempt was
+        larger than 1750.
+
+        See https://twistedmatrix.com/trac/ticket/9476
+        """
+        pol = backoffPolicy(1.0, 60.0, 1.5, jitter=lambda: 1)
+        self.assertEqual(pol(1751), 61)
+        self.assertEqual(pol(1000000), 61)
+
+    def test_does_not_overflow_with_large_factor_value(self):
+        """
+        Even with unusual parameters, any L{OverflowError} within
+        L{backoffPolicy()} will be caught and L{maxDelay} will be returned
+        instead
+        """
+        pol = backoffPolicy(1.0, 60.0, 1E10, jitter=lambda: 1)
+        self.assertEqual(pol(1751), 61)

@@ -41,7 +41,7 @@ class DigestCredentialFactory(object):
         @return: The L{dict} that can be used to generate a WWW-Authenticate
             header.
         """
-        return self.digest.getChallenge(request.getClientIP())
+        return self.digest.getChallenge(request.getClientAddress().host)
 
 
     def decode(self, response, request):
@@ -53,4 +53,4 @@ class DigestCredentialFactory(object):
         """
         return self.digest.decode(response,
                                   request.method,
-                                  request.getClientIP())
+                                  request.getClientAddress().host)

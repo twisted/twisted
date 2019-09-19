@@ -1,1 +1,0 @@
-Scripts ending with .rpy, .epy, and .cgi now execute properly in Twisted Web on Python 3.

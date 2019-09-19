@@ -18,9 +18,9 @@ from zope.interface.interface import InterfaceClass
 from zope.interface.verify import verifyObject, verifyClass
 
 from twisted.trial import unittest
-from twisted.test.proto_helpers import MemoryReactorClock as MemoryReactor
-from twisted.test.proto_helpers import RaisingMemoryReactor, StringTransport
-from twisted.test.proto_helpers import StringTransportWithDisconnection
+from twisted.internet.testing import MemoryReactorClock as MemoryReactor
+from twisted.internet.testing import RaisingMemoryReactor, StringTransport
+from twisted.internet.testing import StringTransportWithDisconnection
 
 from twisted import plugins
 from twisted.internet import error, interfaces, defer, endpoints, protocol
@@ -1981,7 +1981,7 @@ class _HostnameEndpointMemoryReactorMixin(ClientEndpointTestCaseMixin):
         self.assertTrue(warnings[0]['message'].startswith(
             'Passing HostnameEndpoint a reactor that does not provide'
             ' IReactorPluggableNameResolver'
-            ' (twisted.test.proto_helpers.MemoryReactorClock)'
+            ' (twisted.internet.testing.MemoryReactorClock)'
             ' was deprecated in Twisted 17.5.0;'
             ' please use a reactor that provides'
             ' IReactorPluggableNameResolver instead'))
@@ -2474,6 +2474,77 @@ class HostnameEndpointIDNATests(unittest.SynchronousTestCase):
         deferred = endpoint.connect(Factory())
         err = self.failureResultOf(deferred, ValueError)
         self.assertIn("\\u2ff0-garbage-\\u2ff0", str(err))
+
+
+
+class HostnameEndpointReprTests(unittest.SynchronousTestCase):
+    """
+    Tests for L{HostnameEndpoint}'s string representation.
+    """
+    def test_allASCII(self):
+        """
+        The string representation of L{HostnameEndpoint} includes the host and
+        port passed to the constructor.
+        """
+        endpoint = endpoints.HostnameEndpoint(
+            deterministicResolvingReactor(Clock(), []),
+            'example.com', 80,
+        )
+
+        rep = repr(endpoint)
+
+        self.assertEqual("<HostnameEndpoint example.com:80>", rep)
+        self.assertIs(str, type(rep))
+
+
+    def test_idnaHostname(self):
+        """
+        When IDN is passed to the L{HostnameEndpoint} constructor the string
+        representation includes the punycode version of the host.
+        """
+        endpoint = endpoints.HostnameEndpoint(
+            deterministicResolvingReactor(Clock(), []),
+            u'b\xfccher.ch', 443,
+        )
+
+        rep = repr(endpoint)
+
+        self.assertEqual("<HostnameEndpoint xn--bcher-kva.ch:443>", rep)
+        self.assertIs(str, type(rep))
+
+
+    def test_hostIPv6Address(self):
+        """
+        When the host passed to L{HostnameEndpoint} is an IPv6 address it is
+        wrapped in brackets in the string representation, like in a URI. This
+        prevents the colon separating the host from the port from being
+        ambiguous.
+        """
+        endpoint = endpoints.HostnameEndpoint(
+            deterministicResolvingReactor(Clock(), []),
+            b'::1', 22,
+        )
+
+        rep = repr(endpoint)
+
+        self.assertEqual("<HostnameEndpoint [::1]:22>", rep)
+        self.assertIs(str, type(rep))
+
+
+    def test_badEncoding(self):
+        """
+        When a bad hostname is passed to L{HostnameEndpoint}, the string
+        representation displays invalid characters in backslash-escaped form.
+        """
+        endpoint = endpoints.HostnameEndpoint(
+            deterministicResolvingReactor(Clock(), []),
+            b'\xff-garbage-\xff', 80
+        )
+
+        self.assertEqual(
+            '<HostnameEndpoint \\xff-garbage-\\xff:80>',
+            repr(endpoint),
+        )
 
 
 
