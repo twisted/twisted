@@ -1,9 +1,7 @@
 from __future__ import print_function
 
-from cookielib import CookieJar
-
 from twisted.internet import reactor
-from twisted.python import log
+from twisted.python import log, compat
 from twisted.web.client import Agent, CookieAgent
 
 def displayCookies(response, cookieJar):
@@ -14,10 +12,10 @@ def displayCookies(response, cookieJar):
         print(cookie)
 
 def main():
-    cookieJar = CookieJar()
+    cookieJar = compat.cookielib.CookieJar()
     agent = CookieAgent(Agent(reactor), cookieJar)
 
-    d = agent.request('GET', 'http://www.google.com/')
+    d = agent.request(b'GET', b'http://httpbin.org/cookies/set?some=data')
     d.addCallback(displayCookies, cookieJar)
     d.addErrback(log.err)
     d.addCallback(lambda ignored: reactor.stop())

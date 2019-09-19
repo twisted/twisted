@@ -13,19 +13,19 @@ class FingerProtocol(basic.LineReceiver):
         d.addErrback(onError)
 
         def writeResponse(message):
-            self.transport.write(message + '\r\n')
+            self.transport.write(message + b'\r\n')
             self.transport.loseConnection()
         d.addCallback(writeResponse)
 
 class FingerFactory(protocol.ServerFactory):
     protocol = FingerProtocol
 
-    def __init__(self, **kwargs):
-        self.users = kwargs
+    def __init__(self, users):
+        self.users = users
 
     def getUser(self, user):
-        return defer.succeed(self.users.get(user, "No such user"))
+        return defer.succeed(self.users.get(user, b"No such user"))
 
 fingerEndpoint = endpoints.serverFromString(reactor, "tcp:1079")
-fingerEndpoint.listen(FingerFactory(moshez='Happy and well'))
+fingerEndpoint.listen(FingerFactory({b'moshez': b'Happy and well'}))
 reactor.run()

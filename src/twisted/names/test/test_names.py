@@ -7,9 +7,9 @@ Test cases for twisted.names.
 
 from __future__ import absolute_import, division
 
-import socket
-import operator
 import copy
+import operator
+import socket
 
 from io import BytesIO
 from functools import partial, reduce
@@ -20,11 +20,14 @@ from twisted.trial import unittest
 from twisted.internet import reactor, defer, error
 from twisted.internet.defer import succeed
 from twisted.names import client, server, common, authority, dns
-from twisted.names.dns import SOA, Message, RRHeader, Record_A, Record_SOA
+from twisted.names.dns import (
+    SOA, Message, RRHeader, Record_A, Record_SOA, Query)
 from twisted.names.error import DomainError
 from twisted.names.client import Resolver
 from twisted.names.secondary import (
     SecondaryAuthorityService, SecondaryAuthority)
+from twisted.python.compat import nativeString
+from twisted.python.filepath import FilePath
 
 from twisted.test.proto_helpers import (
     StringTransport, MemoryReactorClock, waitUntilAllDisconnected)
@@ -431,6 +434,15 @@ class ServerDNSTests(unittest.TestCase):
             results
         )
 
+    def test_zoneTransferConnectionFails(self):
+        """
+        A failed AXFR TCP connection errbacks the L{Deferred} returned
+        from L{Resolver.lookupZone}.
+        """
+        resolver = Resolver(servers=[("nameserver.invalid", 53)])
+        return self.assertFailure(resolver.lookupZone("impossible.invalid"),
+                                  error.DNSLookupError)
+
 
     def test_similarZonesDontInterfere(self):
         """Tests that unrelated zones don't mess with each other."""
@@ -581,6 +593,31 @@ class AuthorityTests(unittest.TestCase):
                     ttl=soa_record.expire, payload=soa_record,
                     auth=True)])
         self.assertEqual(additional, [])
+
+
+    def test_unknownTypeNXDOMAIN(self):
+        """
+        Requesting a record of unknown type where no records exist for the name
+        in question results in L{DomainError}.
+        """
+        testDomain = test_domain_com
+        testDomainName = b'nonexistent.prefix-' + testDomain.soa[0]
+        unknownType = max(common.typeToMethod) + 1
+        f = self.failureResultOf(
+            testDomain.query(Query(name=testDomainName, type=unknownType)))
+        self.assertIsInstance(f.value, DomainError)
+
+
+    def test_unknownTypeMissing(self):
+        """
+        Requesting a record of unknown type where other records exist for the
+        name in question results in an empty answer set.
+        """
+        unknownType = max(common.typeToMethod) + 1
+        answer, authority, additional = self.successResultOf(
+            my_domain_com.query(
+                Query(name=u'my-domain.com', type=unknownType)))
+        self.assertEqual(answer, [])
 
 
     def _referralTest(self, method):
@@ -1038,3 +1075,161 @@ class SecondaryAuthorityTests(unittest.TestCase):
         result = self.successResultOf(secondary.lookupAddress('example.com'))
         self.assertEqual((
                 [RRHeader(b'example.com', payload=a, auth=True)], [], []), result)
+
+
+
+sampleBindZone = b"""\
+$ORIGIN example.com.
+$TTL    1w
+example.com. IN SOA dns.example.com (
+            2013120201 ; serial number of this zone file
+            1d         ; slave refresh
+            2h         ; slave retry time in case of a problem
+            4w         ; slave expiration time
+            1h         ; maximum caching time in case of failed lookups
+            )
+
+; A comment.
+@                  IN AAAA 2001:db8:10::1
+example.com.       IN A 10.0.0.1
+no-in.example.com. A 10.0.0.2  ; technically wrong but used to work
+not-fqdn           IN MX 10 mx.example.com
+www                IN CNAME example.com"""
+
+
+
+class BindAuthorityTests(unittest.TestCase):
+    """
+    Tests for L{twisted.names.authority.BindAuthority}.
+    """
+    def loadBindString(self, s):
+        """
+        Create a new L{twisted.names.authority.BindAuthority} from C{s}.
+
+        @param s: A string with BIND zone data.
+        @type s: bytes
+
+        @return: a new bind authority
+        @rtype: L{twisted.names.authority.BindAuthority}
+        """
+        fp = FilePath(self.mktemp().encode("ascii"))
+        fp.setContent(s)
+
+        return authority.BindAuthority(fp.path)
+
+
+    def setUp(self):
+        self.auth = self.loadBindString(sampleBindZone)
+
+
+    def test_ttl(self):
+        """
+        Loads the default $TTL and applies it to all records.
+        """
+        for dom in self.auth.records.keys():
+            for rec in self.auth.records[dom]:
+                self.assertTrue(
+                    604800 == rec.ttl
+                )
+
+
+    def test_originFromFile(self):
+        """
+        Loads the default $ORIGIN.
+        """
+        self.assertEqual(
+            b"example.com.", self.auth.origin,
+        )
+        self.assertIn(
+            b"not-fqdn.example.com", self.auth.records,
+        )
+
+
+    def test_aRecords(self):
+        """
+        A records are loaded.
+        """
+        for dom, ip in [(b"example.com", u"10.0.0.1"),
+                        (b"no-in.example.com", u"10.0.0.2")]:
+            rr = self.successResultOf(
+                self.auth.lookupAddress(dom)
+            )[0][0]
+            self.assertEqual(
+                dns.Record_A(
+                    ip,
+                    604800,
+                ),
+                rr.payload,
+            )
+
+
+    def test_aaaaRecords(self):
+        """
+        AAAA records are loaded.
+        """
+        rr = self.successResultOf(
+            self.auth.lookupIPV6Address(b"example.com")
+        )[0][0]
+        self.assertEqual(
+            dns.Record_AAAA(
+                u"2001:db8:10::1",
+                604800,
+            ),
+            rr.payload,
+        )
+
+
+    def test_mxRecords(self):
+        """
+        MX records are loaded.
+        """
+        rr = self.successResultOf(
+            self.auth.lookupMailExchange(b"not-fqdn.example.com")
+        )[0][0]
+        self.assertEqual(
+            dns.Record_MX(
+                preference=10, name="mx.example.com", ttl=604800,
+            ),
+            rr.payload,
+        )
+
+
+    def test_cnameRecords(self):
+        """
+        CNAME records are loaded.
+        """
+        rr = self.successResultOf(
+            self.auth.lookupIPV6Address(b"www.example.com")
+        )[0][0]
+        self.assertEqual(
+            dns.Record_CNAME(
+                name="example.com", ttl=604800,
+            ),
+            rr.payload,
+        )
+
+
+    def test_invalidRecordClass(self):
+        """
+        loadBindString raises NotImplementedError on invalid records.
+        """
+        with self.assertRaises(NotImplementedError) as e:
+            self.loadBindString(
+                b"example.com. IN LOL 192.168.0.1"
+            )
+        self.assertEqual(
+            "Record type 'LOL' not supported", e.exception.args[0]
+        )
+
+
+    def test_invalidDirectives(self):
+        """
+        $INCLUDE and $GENERATE raise NotImplementedError.
+        """
+        for directive in (b"$INCLUDE", b"$GENERATE"):
+            with self.assertRaises(NotImplementedError) as e:
+                self.loadBindString(directive + b" doesNotMatter")
+            self.assertEqual(
+                nativeString(directive + b" directive not implemented"),
+                e.exception.args[0]
+            )

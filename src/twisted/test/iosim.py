@@ -23,8 +23,8 @@ from twisted.internet.error import ConnectionRefusedError
 from twisted.python.failure import Failure
 from twisted.internet import error
 from twisted.internet import interfaces
+from twisted.internet.testing import MemoryReactorClock
 
-from .proto_helpers import MemoryReactorClock
 
 
 class TLSNegotiation:
@@ -113,6 +113,10 @@ class FakeTransport:
 
 
     def write(self, data):
+        # If transport is closed, we should accept writes but drop the data.
+        if self.disconnecting:
+            return
+
         if self.tls is not None:
             self.tlsbuf.append(data)
         else:
@@ -122,7 +126,7 @@ class FakeTransport:
     def _checkProducer(self):
         # Cheating; this is called at "idle" times to allow producers to be
         # found and dealt with
-        if self.producer:
+        if self.producer and not self.streamingProducer:
             self.producer.resumeProducing()
 
 

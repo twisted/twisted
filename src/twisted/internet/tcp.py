@@ -9,16 +9,19 @@ End users shouldn't use this module directly - use the reactor APIs instead.
 """
 
 from __future__ import division, absolute_import
-
 # System Imports
 import socket
 import sys
 import operator
+import os
 import struct
 
-from zope.interface import implementer
+import attr
 
-from twisted.python.compat import _PY3, lazyByteSlice
+from zope.interface import Interface, implementer
+
+from twisted.logger import Logger
+from twisted.python.compat import lazyByteSlice, unicode
 from twisted.python.runtime import platformType
 from twisted.python import versions, deprecate
 
@@ -94,10 +97,42 @@ _AI_NUMERICSERV = getattr(socket, "AI_NUMERICSERV", 0)
 
 
 # The type for service names passed to socket.getservbyname:
-if _PY3:
-    _portNameType = str
-else:
-    _portNameType = (str, unicode)
+_portNameType = (str, unicode)
+
+
+def _getrealname(addr):
+    """
+    Return a 2-tuple of socket IP and port for IPv4 and a 4-tuple of
+    socket IP, port, flowInfo, and scopeID for IPv6.  For IPv6, it
+    returns the interface portion (the part after the %) as a part of
+    the IPv6 address, which Python 3.7+ does not include.
+
+    @param addr: A 2-tuple for IPv4 information or a 4-tuple for IPv6
+        information.
+    """
+    if len(addr) == 4:
+        # IPv6
+        host = socket.getnameinfo(
+            addr, socket.NI_NUMERICHOST | socket.NI_NUMERICSERV)[0]
+        return tuple([host] + list(addr[1:]))
+    else:
+        return addr[:2]
+
+
+
+def _getpeername(skt):
+    """
+    See L{_getrealname}.
+    """
+    return _getrealname(skt.getpeername())
+
+
+
+def _getsockname(skt):
+    """
+    See L{_getrealname}.
+    """
+    return _getrealname(skt.getsockname())
 
 
 
@@ -429,7 +464,13 @@ class _BaseBaseClient(object):
             and the 'host' portion will always be an IP address, not a DNS
             name.
         """
-        self.realAddress = address
+        if len(address) == 4:
+            # IPv6, make sure we have the scopeID associated
+            hostname = socket.getnameinfo(
+                address, socket.NI_NUMERICHOST | socket.NI_NUMERICSERV)[0]
+            self.realAddress = tuple([hostname] + list(address[1:]))
+        else:
+            self.realAddress = address
         self.doConnect()
 
 
@@ -715,7 +756,7 @@ class _BaseTCPClient(object):
 
         This indicates the address from which I am connecting.
         """
-        return self._addressType('TCP', *self.socket.getsockname()[:2])
+        return self._addressType('TCP', *_getsockname(self.socket))
 
 
     def getPeer(self):
@@ -724,9 +765,7 @@ class _BaseTCPClient(object):
 
         This indicates the address that I am connected to.
         """
-        # an ipv6 realAddress has more than two elements, but the IPv6Address
-        # constructor still only takes two.
-        return self._addressType('TCP', *self.realAddress[:2])
+        return self._addressType('TCP', *self.realAddress)
 
 
     def __repr__(self):
@@ -820,8 +859,8 @@ class Server(_TLSServerMixin, Connection):
         if addressFamily == socket.AF_INET6:
             addressType = address.IPv6Address
         skt = socket.fromfd(fileDescriptor, addressFamily, socket.SOCK_STREAM)
-        addr = skt.getpeername()
-        protocolAddr = addressType('TCP', addr[0], addr[1])
+        addr = _getpeername(skt)
+        protocolAddr = addressType('TCP', *addr)
         localPort = skt.getsockname()[1]
 
         protocol = factory.buildProtocol(protocolAddr)
@@ -842,8 +881,8 @@ class Server(_TLSServerMixin, Connection):
 
         This indicates the server's address.
         """
-        host, port = self.socket.getsockname()[:2]
-        return self._addressType('TCP', host, port)
+        addr = _getsockname(self.socket)
+        return self._addressType('TCP', *addr)
 
 
     def getPeer(self):
@@ -852,7 +891,346 @@ class Server(_TLSServerMixin, Connection):
 
         This indicates the client's address.
         """
-        return self._addressType('TCP', *self.client[:2])
+        return self._addressType('TCP', *self.client)
+
+
+
+class _IFileDescriptorReservation(Interface):
+    """
+    An open file that represents an emergency reservation in the
+    process' file descriptor table.  If L{Port} encounters C{EMFILE}
+    on C{accept(2)}, it can close this file descriptor, retry the
+    C{accept} so that the incoming connection occupies this file
+    descriptor's space, and then close that connection and reopen this
+    one.
+
+    Calling L{_IFileDescriptorReservation.reserve} attempts to open
+    the reserve file descriptor if it is not already open.
+    L{_IFileDescriptorReservation.available} returns L{True} if the
+    underlying file is open and its descriptor claimed.
+
+    L{_IFileDescriptorReservation} instances are context managers;
+    entering them releases the underlying file descriptor, while
+    exiting them attempts to reacquire it.  The block can take
+    advantage of the free slot in the process' file descriptor table
+    accept and close a client connection.
+
+    Because another thread might open a file descriptor between the
+    time the context manager is entered and the time C{accept} is
+    called, opening the reserve descriptor is best-effort only.
+    """
+
+    def available():
+        """
+        Is the reservation available?
+
+        @return: L{True} if the reserved file descriptor is open and
+            can thus be closed to allow a new file to be opened in its
+            place; L{False} if it is not open.
+        """
+
+
+    def reserve():
+        """
+        Attempt to open the reserved file descriptor; if this fails
+        because of C{EMFILE}, internal state is reset so that another
+        reservation attempt can be made.
+
+        @raises: Any exception except an L{OSError} or L{IOError}
+            whose errno is L{EMFILE}.
+        """
+
+
+    def __enter__():
+        """
+        Release the underlying file descriptor so that code within the
+        context manager can open a new file.
+        """
+
+
+    def __exit__(excType, excValue, traceback):
+        """
+        Attempt to re-open the reserved file descriptor.  See
+        L{reserve} for caveats.
+
+        @param excType: See L{object.__exit__}
+        @param excValue: See L{object.__exit__}
+        @param traceback: See L{object.__exit__}
+        """
+
+
+
+@implementer(_IFileDescriptorReservation)
+@attr.s
+class _FileDescriptorReservation(object):
+    """
+    L{_IFileDescriptorReservation} implementation.
+
+    @ivar fileFactory: A factory that will be called to reserve a
+        file descriptor.
+    @type fileFactory: A L{callable} that accepts no arguments and
+        returns an object with a C{close} method.
+    """
+    _log = Logger()
+
+    _fileFactory = attr.ib()
+    _fileDescriptor = attr.ib(init=False, default=None)
+
+
+    def available(self):
+        """
+        See L{_IFileDescriptorReservation.available}.
+
+        @return: L{True} if the reserved file descriptor is open and
+            can thus be closed to allow a new file to be opened in its
+            place; L{False} if it is not open.
+        """
+        return self._fileDescriptor is not None
+
+
+    def reserve(self):
+        """
+        See L{_IFileDescriptorReservation.reserve}.
+        """
+        if self._fileDescriptor is None:
+            try:
+                fileDescriptor = self._fileFactory()
+            except (IOError, OSError) as e:
+                if e.errno == EMFILE:
+                    self._log.failure(
+                        "Could not reserve EMFILE recovery file descriptor.")
+                else:
+                    raise
+            else:
+                self._fileDescriptor = fileDescriptor
+
+
+    def __enter__(self):
+        """
+        See L{_IFileDescriptorReservation.__enter__}.
+        """
+        if self._fileDescriptor is None:
+            raise RuntimeError(
+                "No file reserved.  Have you called my reserve method?")
+        self._fileDescriptor.close()
+        self._fileDescriptor = None
+
+
+    def __exit__(self, excValue, excType, traceback):
+        """
+        See L{_IFileDescriptorReservation.__exit__}.
+        """
+        try:
+            self.reserve()
+        except Exception:
+            self._log.failure(
+                "Could not re-reserve EMFILE recovery file descriptor.")
+
+
+
+@implementer(_IFileDescriptorReservation)
+class _NullFileDescriptorReservation(object):
+    """
+    A null implementation of L{_IFileDescriptorReservation}.
+    """
+
+    def available(self):
+        """
+        The reserved file is never available.  See
+        L{_IFileDescriptorReservation.available}.
+
+        @return: L{False}
+        """
+        return False
+
+
+    def reserve(self):
+        """
+        Do nothing.  See L{_IFileDescriptorReservation.reserve}.
+        """
+
+
+    def __enter__(self):
+        """
+        Do nothing. See L{_IFileDescriptorReservation.__enter__}
+
+        @return: L{False}
+        """
+
+
+    def __exit__(self, excValue, excType, traceback):
+        """
+        Do nothing.  See L{_IFileDescriptorReservation.__exit__}.
+
+        @param excType: See L{object.__exit__}
+        @param excValue: See L{object.__exit__}
+        @param traceback: See L{object.__exit__}
+        """
+
+
+
+# Don't keep a reserve file descriptor for coping with file descriptor
+# exhaustion on Windows.
+
+# WSAEMFILE occurs when a process has run out of memory, not when a
+# specific limit has been reached.  Windows sockets are handles, which
+# differ from UNIX's file descriptors in that they can refer to any
+# "named kernel object", including user interface resources like menu
+# and icons.  The generality of handles results in a much higher limit
+# than UNIX imposes on file descriptors: a single Windows process can
+# allocate up to 16,777,216 handles.  Because they're indexes into a
+# three level table whose upper two layers are allocated from
+# swappable pages, handles compete for heap space with other kernel
+# objects, not with each other.  Closing a given socket handle may not
+# release enough memory to allow the process to make progress.
+#
+# This fundamental difference between file descriptors and handles
+# makes a reserve file descriptor useless on Windows.  Note that other
+# event loops, such as libuv and libevent, also do not special case
+# WSAEMFILE.
+#
+# For an explanation of handles, see the "Object Manager"
+# (pp. 140-175) section of
+#
+# Windows Internals, Part 1: Covering Windows Server 2008 R2 and
+# Windows 7 (6th ed.)
+# Mark E. Russinovich, David A. Solomon, and Alex
+# Ionescu. 2012. Microsoft Press.
+if platformType == 'win32':
+    _reservedFD = _NullFileDescriptorReservation()
+else:
+    _reservedFD = _FileDescriptorReservation(lambda: open(os.devnull))
+
+
+# Linux and other UNIX-like operating systems return EMFILE when a
+# process has reached its soft limit of file descriptors. *BSD and
+# Win32 raise (WSA)ENOBUFS when socket limits are reached.  Linux can
+# give ENFILE if the system is out of inodes, or ENOMEM if there is
+# insufficient memory to allocate a new dentry.  ECONNABORTED is
+# documented as possible on all relevant platforms (Linux, Windows,
+# macOS, and the BSDs) but occurs only on the BSDs.  It occurs when a
+# client sends a FIN or RST after the server sends a SYN|ACK but
+# before application code calls accept(2).  On Linux, calling
+# accept(2) on such a listener returns a connection that fails as
+# though the it were terminated after being fully established.  This
+# appears to be an implementation choice (see inet_accept in
+# inet/ipv4/af_inet.c).  On macOS, such a listener is not considered
+# readable, so accept(2) will never be called.  Calling accept(2) on
+# such a listener, however, does not return at all.
+_ACCEPT_ERRORS = (EMFILE, ENOBUFS, ENFILE, ENOMEM, ECONNABORTED)
+
+
+
+@attr.s
+class _BuffersLogs(object):
+    """
+    A context manager that buffers any log events until after its
+    block exits.
+
+    @ivar _namespace: The namespace of the buffered events.
+    @type _namespace: L{str}.
+
+    @ivar _observer: The observer to which buffered log events will be
+        written
+    @type _observer: L{twisted.logger.ILogObserver}.
+    """
+    _namespace = attr.ib()
+    _observer = attr.ib()
+    _logs = attr.ib(default=attr.Factory(list))
+
+    def __enter__(self):
+        """
+        Enter a log buffering context.
+
+        @return: A logger that buffers log events.
+        @rtype: L{Logger}.
+        """
+        return Logger(namespace=self._namespace, observer=self._logs.append)
+
+
+    def __exit__(self, excValue, excType, traceback):
+        """
+        Exit a log buffering context and log all buffered events to
+        the provided observer.
+
+        @param excType: See L{object.__exit__}
+        @param excValue: See L{object.__exit__}
+        @param traceback: See L{object.__exit__}
+        """
+        for event in self._logs:
+            self._observer(event)
+
+
+
+def _accept(logger, accepts, listener, reservedFD):
+    """
+    Return a generator that yields client sockets from the provided
+    listening socket until there are none left or an unrecoverable
+    error occurs.
+
+    @param logger: A logger to which C{accept}-related events will be
+        logged.  This should not log to arbitrary observers that might
+        open a file descriptor to avoid claiming the C{EMFILE} file
+        descriptor on UNIX-like systems.
+    @type logger: L{Logger}
+
+    @param accepts: An iterable iterated over to limit the number
+        consecutive C{accept}s.
+    @type accepts: An iterable.
+
+    @param listener: The listening socket.
+    @type listener: L{socket.socket}
+
+    @param reservedFD: A reserved file descriptor that can be used to
+        recover from C{EMFILE} on UNIX-like systems.
+    @type reservedFD: L{_IFileDescriptorReservation}
+
+    @return: A generator that yields C{(socket, addr)} tuples from
+        L{socket.socket.accept}
+    """
+    for _ in accepts:
+        try:
+            client, address = listener.accept()
+        except socket.error as e:
+            if e.args[0] in (EWOULDBLOCK, EAGAIN):
+                # No more clients.
+                return
+            elif e.args[0] == EPERM:
+                # Netfilter on Linux may have rejected the
+                # connection, but we get told to try to accept()
+                # anyway.
+                continue
+            elif e.args[0] == EMFILE and reservedFD.available():
+                # Linux and other UNIX-like operating systems return
+                # EMFILE when a process has reached its soft limit of
+                # file descriptors.  The reserved file descriptor is
+                # available, so it can be released to free up a
+                # descriptor for use by listener.accept()'s clients.
+                # Each client socket will be closed until the listener
+                # returns EAGAIN.
+                logger.info("EMFILE encountered;"
+                            " releasing reserved file descriptor.")
+                # The following block should not run arbitrary code
+                # that might acquire its own file descriptor.
+                with reservedFD:
+                    clientsToClose = _accept(
+                        logger, accepts, listener, reservedFD)
+                    for clientToClose, closedAddress in clientsToClose:
+                        clientToClose.close()
+                        logger.info("EMFILE recovery:"
+                                    " Closed socket from {address}",
+                                    address=closedAddress)
+                    logger.info(
+                        "Re-reserving EMFILE recovery file descriptor.")
+                return
+            elif e.args[0] in _ACCEPT_ERRORS:
+                logger.info("Could not accept new connection ({acceptError})",
+                            acceptError=errorcode[e.args[0]])
+                return
+            else:
+                raise
+        else:
+            yield client, address
 
 
 
@@ -912,6 +1290,7 @@ class Port(base.BasePort, _SocketCloser):
 
     addressFamily = socket.AF_INET
     _addressType = address.IPv4Address
+    _logger = Logger()
 
     def __init__(self, port, factory, backlog=50, interface='', reactor=None):
         """Initialize with a numeric port to listen on.
@@ -944,7 +1323,7 @@ class Port(base.BasePort, _SocketCloser):
         @return: A new instance of C{cls} wrapping the socket given by C{fd}.
         """
         port = socket.fromfd(fd, addressFamily, cls.socketType)
-        interface = port.getsockname()[0]
+        interface = _getsockname(port)[0]
         self = cls(None, factory, None, interface, reactor)
         self._preexistingSocket = port
         return self
@@ -970,6 +1349,7 @@ class Port(base.BasePort, _SocketCloser):
         This is called on unserialization, and must be called after creating a
         server to begin listening on the specified port.
         """
+        _reservedFD.reserve()
         if self._preexistingSocket is None:
             # Create a new socket and make it listen
             try:
@@ -1006,14 +1386,12 @@ class Port(base.BasePort, _SocketCloser):
 
         self.startReading()
 
-
     def _buildAddr(self, address):
-        host, port = address[:2]
-        return self._addressType('TCP', host, port)
-
+        return self._addressType('TCP', *address)
 
     def doRead(self):
-        """Called when my socket is ready for reading.
+        """
+        Called when my socket is ready for reading.
 
         This accepts a connection and calls self.protocol() to handle the
         wire-level protocol.
@@ -1025,55 +1403,48 @@ class Port(base.BasePort, _SocketCloser):
                 # win32 event loop breaks if we do more than one accept()
                 # in an iteration of the event loop.
                 numAccepts = 1
-            for i in range(numAccepts):
-                # we need this so we can deal with a factory's buildProtocol
-                # calling our loseConnection
-                if self.disconnecting:
-                    return
-                try:
-                    skt, addr = self.socket.accept()
-                except socket.error as e:
-                    if e.args[0] in (EWOULDBLOCK, EAGAIN):
-                        self.numberAccepts = i
-                        break
-                    elif e.args[0] == EPERM:
-                        # Netfilter on Linux may have rejected the
-                        # connection, but we get told to try to accept()
-                        # anyway.
+
+            with _BuffersLogs(self._logger.namespace,
+                              self._logger.observer) as bufferingLogger:
+                accepted = 0
+                clients = _accept(bufferingLogger,
+                                  range(numAccepts),
+                                  self.socket,
+                                  _reservedFD)
+
+                for accepted, (skt, addr) in enumerate(clients, 1):
+                    fdesc._setCloseOnExec(skt.fileno())
+
+                    if len(addr) == 4:
+                        # IPv6, make sure we get the scopeID if it
+                        # exists
+                        host = socket.getnameinfo(
+                            addr,
+                            socket.NI_NUMERICHOST | socket.NI_NUMERICSERV)
+                        addr = tuple([host[0]] + list(addr[1:]))
+
+                    protocol = self.factory.buildProtocol(
+                        self._buildAddr(addr))
+                    if protocol is None:
+                        skt.close()
                         continue
-                    elif e.args[0] in (EMFILE, ENOBUFS, ENFILE, ENOMEM, ECONNABORTED):
+                    s = self.sessionno
+                    self.sessionno = s + 1
+                    transport = self.transport(
+                        skt, protocol, addr, self, s, self.reactor)
+                    protocol.makeConnection(transport)
 
-                        # Linux gives EMFILE when a process is not allowed
-                        # to allocate any more file descriptors.  *BSD and
-                        # Win32 give (WSA)ENOBUFS.  Linux can also give
-                        # ENFILE if the system is out of inodes, or ENOMEM
-                        # if there is insufficient memory to allocate a new
-                        # dentry.  ECONNABORTED is documented as possible on
-                        # both Linux and Windows, but it is not clear
-                        # whether there are actually any circumstances under
-                        # which it can happen (one might expect it to be
-                        # possible if a client sends a FIN or RST after the
-                        # server sends a SYN|ACK but before application code
-                        # calls accept(2), however at least on Linux this
-                        # _seems_ to be short-circuited by syncookies.
-
-                        log.msg("Could not accept new connection (%s)" % (
-                            errorcode[e.args[0]],))
-                        break
-                    raise
-
-                fdesc._setCloseOnExec(skt.fileno())
-                protocol = self.factory.buildProtocol(self._buildAddr(addr))
-                if protocol is None:
-                    skt.close()
-                    continue
-                s = self.sessionno
-                self.sessionno = s+1
-                transport = self.transport(skt, protocol, addr, self, s, self.reactor)
-                protocol.makeConnection(transport)
+            # Scale our synchronous accept loop according to traffic
+            # Reaching our limit on consecutive accept calls indicates
+            # there might be still more clients to serve the next time
+            # the reactor calls us.  Prepare to accept some more.
+            if accepted == self.numberAccepts:
+                self.numberAccepts += 20
+            # Otherwise, don't attempt to accept any more clients than
+            # we just accepted or any less than 1.
             else:
-                self.numberAccepts = self.numberAccepts+20
-        except:
+                self.numberAccepts = max(1, accepted)
+        except BaseException:
             # Note that in TLS mode, this will possibly catch SSL.Errors
             # raised by self.socket.accept()
             #
@@ -1137,8 +1508,8 @@ class Port(base.BasePort, _SocketCloser):
         Return an L{IPv4Address} or L{IPv6Address} indicating the listening
         address of this port.
         """
-        host, port = self.socket.getsockname()[:2]
-        return self._addressType('TCP', host, port)
+        addr = _getsockname(self.socket)
+        return self._addressType('TCP', *addr)
 
 
 

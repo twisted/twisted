@@ -7,8 +7,10 @@ Tests for L{twisted.application.runner._runner}.
 
 from signal import SIGTERM
 from io import BytesIO
+import errno
 
-from twisted.python.filepath import FilePath
+from attr import attrib, attrs, Factory
+
 from twisted.logger import (
     LogLevel, LogPublisher, LogBeginner,
     FileLogObserver, FilteringLogObserver, LogLevelFilterPredicate,
@@ -17,15 +19,17 @@ from twisted.test.proto_helpers import MemoryReactor
 
 from ...runner import _runner
 from .._exit import ExitStatus
-from .._runner import Runner, RunnerOptions
+from .._pidfile import PIDFile, NonePIDFile
+from .._runner import Runner
+from .test_pidfile import DummyFilePath
 
 import twisted.trial.unittest
 
 
 
-class CommandTests(twisted.trial.unittest.TestCase):
+class RunnerTests(twisted.trial.unittest.TestCase):
     """
-    Tests for L{Command}.
+    Tests for L{Runner}.
     """
 
     def setUp(self):
@@ -42,7 +46,6 @@ class CommandTests(twisted.trial.unittest.TestCase):
 
         self.pid = 1337
         self.pidFileContent = u"{}\n".format(self.pid).encode("utf-8")
-        self.patch(_runner, "getpid", lambda: self.pid)
 
         # Patch globalLogBeginner so that we aren't trying to install multiple
         # global log observers.
@@ -63,38 +66,63 @@ class CommandTests(twisted.trial.unittest.TestCase):
         self.patch(_runner, "globalLogBeginner", self.globalLogBeginner)
 
 
-    def test_run(self):
+    def test_runInOrder(self):
         """
-        L{Runner.run} calls the documented methods in order.
+        L{Runner.run} calls the expected methods in order.
         """
-        called = []
-
-        methodNames = [
-            "killIfRequested",
-            "writePIDFile",
-            "startLogging",
-            "startReactor",
-            "reactorExited",
-            "removePIDFile",
-        ]
-
-        for name in methodNames:
-            self.patch(
-                Runner, name, lambda self, name=name: called.append(name)
-            )
-
-        runner = Runner({})
+        runner = DummyRunner(reactor=MemoryReactor())
         runner.run()
 
-        self.assertEqual(called, methodNames)
+        self.assertEqual(
+            runner.calledMethods,
+            [
+                "killIfRequested",
+                "startLogging",
+                "startReactor",
+                "reactorExited",
+            ]
+        )
+
+
+    def test_runUsesPIDFile(self):
+        """
+        L{Runner.run} uses the provided PID file.
+        """
+        pidFile = DummyPIDFile()
+
+        runner = Runner(reactor=MemoryReactor(), pidFile=pidFile)
+
+        self.assertFalse(pidFile.entered)
+        self.assertFalse(pidFile.exited)
+
+        runner.run()
+
+        self.assertTrue(pidFile.entered)
+        self.assertTrue(pidFile.exited)
+
+
+    def test_runAlreadyRunning(self):
+        """
+        L{Runner.run} exits with L{ExitStatus.EX_USAGE} and the expected
+        message if a process is already running that corresponds to the given
+        PID file.
+        """
+        pidFile = PIDFile(DummyFilePath(self.pidFileContent))
+        pidFile.isRunning = lambda: True
+
+        runner = Runner(reactor=MemoryReactor(), pidFile=pidFile)
+        runner.run()
+
+        self.assertEqual(self.exit.status, ExitStatus.EX_CONFIG)
+        self.assertEqual(self.exit.message, "Already running.")
 
 
     def test_killNotRequested(self):
         """
-        L{Runner.killIfRequested} without L{RunnerOptions.kill} doesn't exit
-        and doesn't indiscriminately murder anyone.
+        L{Runner.killIfRequested} when C{kill} is false doesn't exit and
+        doesn't indiscriminately murder anyone.
         """
-        runner = Runner({})
+        runner = Runner(reactor=MemoryReactor())
         runner.killIfRequested()
 
         self.assertEqual(self.kill.calls, [])
@@ -103,29 +131,25 @@ class CommandTests(twisted.trial.unittest.TestCase):
 
     def test_killRequestedWithoutPIDFile(self):
         """
-        L{Runner.killIfRequested} with L{RunnerOptions.kill} but without
-        L{RunnerOptions.pidFilePath}, exits with L{ExitStatus.EX_USAGE} and
-        the expected message, and also doesn't indiscriminately murder anyone.
+        L{Runner.killIfRequested} when C{kill} is true but C{pidFile} is
+        L{nonePIDFile} exits with L{ExitStatus.EX_USAGE} and the expected
+        message; and also doesn't indiscriminately murder anyone.
         """
-        runner = Runner({RunnerOptions.kill: True})
+        runner = Runner(reactor=MemoryReactor(), kill=True)
         runner.killIfRequested()
 
         self.assertEqual(self.kill.calls, [])
         self.assertEqual(self.exit.status, ExitStatus.EX_USAGE)
-        self.assertEqual(self.exit.message, "No PID file specified")
+        self.assertEqual(self.exit.message, "No PID file specified.")
 
 
     def test_killRequestedWithPIDFile(self):
         """
-        L{Runner.killIfRequested} with both L{RunnerOptions.kill} and
-        L{RunnerOptions.pidFilePath} performs a targeted killing of the
-        appropriate process.
+        L{Runner.killIfRequested} when C{kill} is true and given a C{pidFile}
+        performs a targeted killing of the appropriate process.
         """
-        pidFilePath = DummyFilePath(self.pidFileContent)
-        runner = Runner({
-            RunnerOptions.kill: True,
-            RunnerOptions.pidFilePath: pidFilePath,
-        })
+        pidFile = PIDFile(DummyFilePath(self.pidFileContent))
+        runner = Runner(reactor=MemoryReactor(), kill=True, pidFile=pidFile)
         runner.killIfRequested()
 
         self.assertEqual(self.kill.calls, [(self.pid, SIGTERM)])
@@ -133,17 +157,19 @@ class CommandTests(twisted.trial.unittest.TestCase):
         self.assertIdentical(self.exit.message, None)
 
 
-    def test_killRequestedWithPIDFileCantOpen(self):
+    def test_killRequestedWithPIDFileCantRead(self):
         """
-        L{Runner.killIfRequested} with both L{RunnerOptions.kill} and a
-        L{RunnerOptions.pidFilePath} that it can't read value exits with
-        L{ExitStatus.EX_IOERR}.
+        L{Runner.killIfRequested} when C{kill} is true and given a C{pidFile}
+        that it can't read exits with L{ExitStatus.EX_IOERR}.
         """
-        pidFilePath = DummyFilePath(None)
-        runner = Runner({
-            RunnerOptions.kill: True,
-            RunnerOptions.pidFilePath: pidFilePath,
-        })
+        pidFile = PIDFile(DummyFilePath(None))
+
+        def read():
+            raise OSError(errno.EACCES, "Permission denied")
+
+        pidFile.read = read
+
+        runner = Runner(reactor=MemoryReactor(), kill=True, pidFile=pidFile)
         runner.killIfRequested()
 
         self.assertEqual(self.exit.status, ExitStatus.EX_IOERR)
@@ -152,15 +178,11 @@ class CommandTests(twisted.trial.unittest.TestCase):
 
     def test_killRequestedWithPIDFileEmpty(self):
         """
-        L{Runner.killIfRequested} with both L{RunnerOptions.kill} and a
-        L{RunnerOptions.pidFilePath} containing no value exits with
-        L{ExitStatus.EX_DATAERR}.
+        L{Runner.killIfRequested} when C{kill} is true and given a C{pidFile}
+        containing no value exits with L{ExitStatus.EX_DATAERR}.
         """
-        pidFilePath = DummyFilePath(b"")
-        runner = Runner({
-            RunnerOptions.kill: True,
-            RunnerOptions.pidFilePath: pidFilePath,
-        })
+        pidFile = PIDFile(DummyFilePath(b""))
+        runner = Runner(reactor=MemoryReactor(), kill=True, pidFile=pidFile)
         runner.killIfRequested()
 
         self.assertEqual(self.exit.status, ExitStatus.EX_DATAERR)
@@ -169,43 +191,15 @@ class CommandTests(twisted.trial.unittest.TestCase):
 
     def test_killRequestedWithPIDFileNotAnInt(self):
         """
-        L{Runner.killIfRequested} with both L{RunnerOptions.kill} and a
-        L{RunnerOptions.pidFilePath} containing a non-integer value exits
-        with L{ExitStatus.EX_DATAERR}.
+        L{Runner.killIfRequested} when C{kill} is true and given a C{pidFile}
+        containing a non-integer value exits with L{ExitStatus.EX_DATAERR}.
         """
-        pidFilePath = DummyFilePath(b"** totally not a number, dude **")
-        runner = Runner({
-            RunnerOptions.kill: True,
-            RunnerOptions.pidFilePath: pidFilePath,
-        })
+        pidFile = PIDFile(DummyFilePath(b"** totally not a number, dude **"))
+        runner = Runner(reactor=MemoryReactor(), kill=True, pidFile=pidFile)
         runner.killIfRequested()
 
         self.assertEqual(self.exit.status, ExitStatus.EX_DATAERR)
         self.assertEqual(self.exit.message, "Invalid PID file.")
-
-
-    def test_writePIDFileWithPIDFile(self):
-        """
-        L{Runner.writePIDFile} with L{RunnerOptions.pidFilePath} writes a PID
-        file.
-        """
-        pidFilePath = DummyFilePath()
-        runner = Runner({RunnerOptions.pidFilePath: pidFilePath})
-        runner.writePIDFile()
-
-        self.assertEqual(pidFilePath.getContent(), self.pidFileContent)
-
-
-    def test_removePIDFileWithPIDFile(self):
-        """
-        L{Runner.removePIDFile} with L{RunnerOptions.pidFilePath} removes the
-        PID file.
-        """
-        pidFilePath = DummyFilePath()
-        runner = Runner({RunnerOptions.pidFilePath: pidFilePath})
-        runner.removePIDFile()
-
-        self.assertFalse(pidFilePath.exists())
 
 
     def test_startLogging(self):
@@ -214,7 +208,7 @@ class CommandTests(twisted.trial.unittest.TestCase):
         predicate set to the given log level that contains a file observer of
         the given type which writes to the given file.
         """
-        logFile = object()
+        logFile = BytesIO()
 
         # Patch the log beginner so that we don't try to start the already
         # running (started by trial) logging system.
@@ -248,11 +242,12 @@ class CommandTests(twisted.trial.unittest.TestCase):
                 FileLogObserver.__init__(self, outFile, str)
 
         # Start logging
-        runner = Runner({
-            RunnerOptions.logFile: logFile,
-            RunnerOptions.fileLogObserverFactory: MockFileLogObserver,
-            RunnerOptions.defaultLogLevel: LogLevel.critical,
-        })
+        runner = Runner(
+            reactor=MemoryReactor(),
+            defaultLogLevel=LogLevel.critical,
+            logFile=logFile,
+            fileLogObserverFactory=MockFileLogObserver,
+        )
         runner.startLogging()
 
         # Check for a filtering observer
@@ -281,89 +276,128 @@ class CommandTests(twisted.trial.unittest.TestCase):
         )
 
 
-    def test_startReactorWithoutReactor(self):
-        """
-        L{Runner.startReactor} without L{RunnerOptions.reactor} runs the default
-        reactor.
-        """
-        # Patch defaultReactor
-        reactor = MemoryReactor()
-        self.patch(_runner, "defaultReactor", reactor)
-
-        runner = Runner({})
-        runner.startReactor()
-
-        self.assertTrue(reactor.hasInstalled)
-        self.assertTrue(reactor.hasRun)
-
-
     def test_startReactorWithReactor(self):
         """
-        L{Runner.startReactor} with L{RunnerOptions.reactor} runs that reactor.
+        L{Runner.startReactor} with the C{reactor} argument runs the given
+        reactor.
         """
         reactor = MemoryReactor()
-        runner = Runner({RunnerOptions.reactor: reactor})
+        runner = Runner(reactor=reactor)
         runner.startReactor()
 
         self.assertTrue(reactor.hasRun)
 
 
-    def test_startReactorWithWhenRunning(self):
+    def test_startReactorWhenRunning(self):
         """
-        L{Runner.startReactor} with L{RunnerOptions.whenRunning} ensures that
-        the given callable is called with the runner's options when the reactor
-        is running.
+        L{Runner.startReactor} ensures that C{whenRunning} is called with
+        C{whenRunningArguments} when the reactor is running.
         """
-        optionsSeen = []
+        self._testHook("whenRunning", "startReactor")
 
-        def txmain(options):
-            optionsSeen.append(options)
 
-        options = {
-            RunnerOptions.reactor: MemoryReactor(),
-            RunnerOptions.whenRunning: txmain,
+    def test_whenRunningWithArguments(self):
+        """
+        L{Runner.whenRunning} calls C{whenRunning} with
+        C{whenRunningArguments}.
+        """
+        self._testHook("whenRunning")
+
+
+    def test_reactorExitedWithArguments(self):
+        """
+        L{Runner.whenRunning} calls C{reactorExited} with
+        C{reactorExitedArguments}.
+        """
+        self._testHook("reactorExited")
+
+
+    def _testHook(self, methodName, callerName=None):
+        """
+        Verify that the named hook is run with the expected arguments as
+        specified by the arguments used to create the L{Runner}, when the
+        specified caller is invoked.
+
+        @param methodName: The name of the hook to verify.
+        @type methodName: L{str}
+
+        @param callerName: The name of the method that is expected to cause the
+            hook to be called.
+            If C{None}, use the L{Runner} method with the same name as the
+            hook.
+        @type callerName: L{str}
+        """
+        if callerName is None:
+            callerName = methodName
+
+        arguments = dict(a=object(), b=object(), c=object())
+        argumentsSeen = []
+
+        def hook(**arguments):
+            argumentsSeen.append(arguments)
+
+        runnerArguments = {
+            methodName: hook,
+            "{}Arguments".format(methodName): arguments.copy(),
         }
-        runner = Runner(options)
-        runner.startReactor()
+        runner = Runner(reactor=MemoryReactor(), **runnerArguments)
 
-        self.assertEqual(len(optionsSeen), 1)
-        self.assertIdentical(optionsSeen[0], options)
+        hookCaller = getattr(runner, callerName)
+        hookCaller()
 
-
-    def test_whenRunningWithWhenRunning(self):
-        """
-        L{Runner.whenRunning} with L{RunnerOptions.whenRunning} calls the given
-        callable with the runner's options.
-        """
-        optionsSeen = []
-
-        def txmain(options):
-            optionsSeen.append(options)
-
-        options = {RunnerOptions.whenRunning: txmain}
-        runner = Runner(options)
-        runner.whenRunning()
-
-        self.assertEqual(len(optionsSeen), 1)
-        self.assertIdentical(optionsSeen[0], options)
+        self.assertEqual(len(argumentsSeen), 1)
+        self.assertEqual(argumentsSeen[0], arguments)
 
 
-    def test_reactorExitedWithReactorExited(self):
-        """
-        L{Runner.reactorExited} with L{RunnerOptions.reactorExited} calls the
-        given callable with the runner's options.
-        """
-        optionsSeen = []
 
-        def exited(options):
-            optionsSeen.append(options)
+@attrs(frozen=True)
+class DummyRunner(Runner):
+    """
+    Stub for L{Runner}.
 
-        options = {RunnerOptions.reactorExited: exited}
-        runner = Runner(options)
-        runner.reactorExited()
+    Keep track of calls to some methods without actually doing anything.
+    """
 
-        self.assertEqual(len(optionsSeen), 1)
-        self.assertIdentical(optionsSeen[0], options)
+    calledMethods = attrib(default=Factory(list))
+
+
+    def killIfRequested(self):
+        self.calledMethods.append("killIfRequested")
+
+
+    def startLogging(self):
+        self.calledMethods.append("startLogging")
+
+
+    def startReactor(self):
+        self.calledMethods.append("startReactor")
+
+
+    def reactorExited(self):
+        self.calledMethods.append("reactorExited")
+
+
+
+class DummyPIDFile(NonePIDFile):
+    """
+    Stub for L{PIDFile}.
+
+    Tracks context manager entry/exit without doing anything.
+    """
+    def __init__(self):
+        NonePIDFile.__init__(self)
+
+        self.entered = False
+        self.exited  = False
+
+
+    def __enter__(self):
+        self.entered = True
+        return self
+
+
+    def __exit__(self, excType, excValue, traceback):
+        self.exited  = True
 
 
 
@@ -398,40 +432,6 @@ class DummyKill(object):
 
     def __call__(self, pid, sig):
         self.calls.append((pid, sig))
-
-
-
-class DummyFilePath(FilePath):
-    """
-    Stub for L{twisted.python.filepath.FilePath} which returns a stream
-    containing the given data when opened.
-    """
-
-    def __init__(self, content=b""):
-        self.setContent(content)
-
-
-    def open(self, mode="r"):
-        if self._content is None:
-            raise EnvironmentError()
-        return BytesIO(self._content)
-
-
-    def setContent(self, content):
-        self._exits = True
-        self._content = content
-
-
-    def getContent(self):
-        return self._content
-
-
-    def remove(self):
-        self._exits = False
-
-
-    def exists(self):
-        return self._exits
 
 
 

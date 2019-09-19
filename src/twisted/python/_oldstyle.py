@@ -9,9 +9,41 @@ Utilities to assist in the "flag day" new-style object transition.
 from __future__ import absolute_import, division
 
 import types
+from functools import wraps
 
 from twisted.python.compat import _shouldEnableNewStyle, _PY3
-from twisted.python.util import _replaceIf
+
+
+
+def _replaceIf(condition, alternative):
+    """
+    If C{condition}, replace this function with C{alternative}.
+
+    @param condition: A L{bool} which says whether this should be replaced.
+
+    @param alternative: An alternative function that will be swapped in instead
+        of the original, if C{condition} is truthy.
+
+    @return: A decorator.
+    """
+    def decorator(func):
+
+        if condition is True:
+            call = alternative
+        elif condition is False:
+            call = func
+        else:
+            raise ValueError(("condition argument to _replaceIf requires a "
+                              "bool, not {}").format(repr(condition)))
+
+        @wraps(func)
+        def wrapped(*args, **kwargs):
+            return call(*args, **kwargs)
+
+        return wrapped
+
+    return decorator
+
 
 
 def passthru(arg):

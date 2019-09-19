@@ -99,7 +99,7 @@ class ExampleAvatar(avatar.ConchUser):
     def __init__(self, username):
         avatar.ConchUser.__init__(self)
         self.username = username
-        self.channelLookup.update({'session':session.SSHSession})
+        self.channelLookup.update({b'session':session.SSHSession})
 
 
 
@@ -130,9 +130,9 @@ class EchoProtocol(protocol.Protocol):
         Just echo the received data and and if Ctrl+C is received, close the
         session.
         """
-        if data == '\r':
-            data = '\r\n'
-        elif data == '\x03': #^C
+        if data == b'\r':
+            data = b'\r\n'
+        elif data == b'\x03': #^C
             self.transport.loseConnection()
             return
         self.transport.write(data)
@@ -206,15 +206,15 @@ class ExampleFactory(factory.SSHFactory):
     # To simplify the example this server is defined only with a host key of
     # type RSA.
     publicKeys = {
-        'ssh-rsa': keys.Key.fromFile(SERVER_RSA_PUBLIC)
+        b'ssh-rsa': keys.Key.fromFile(SERVER_RSA_PUBLIC)
     }
     privateKeys = {
-        'ssh-rsa': keys.Key.fromFile(SERVER_RSA_PRIVATE)
+        b'ssh-rsa': keys.Key.fromFile(SERVER_RSA_PRIVATE)
     }
     # Service handlers.
     services = {
-        'ssh-userauth': userauth.SSHUserAuthServer,
-        'ssh-connection': connection.SSHConnection
+        b'ssh-userauth': userauth.SSHUserAuthServer,
+        b'ssh-connection': connection.SSHConnection
     }
 
     def getPrimes(self):
@@ -226,9 +226,9 @@ class ExampleFactory(factory.SSHFactory):
 
 portal = portal.Portal(ExampleRealm())
 passwdDB = InMemoryUsernamePasswordDatabaseDontUse()
-passwdDB.addUser('user', 'password')
+passwdDB.addUser(b'user', b'password')
 sshDB = SSHPublicKeyChecker(InMemorySSHKeyDB(
-    {'user': [keys.Key.fromFile(CLIENT_RSA_PUBLIC)]}))
+    {b'user': [keys.Key.fromFile(CLIENT_RSA_PUBLIC)]}))
 portal.registerChecker(passwdDB)
 portal.registerChecker(sshDB)
 ExampleFactory.portal = portal

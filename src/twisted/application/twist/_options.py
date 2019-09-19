@@ -30,13 +30,14 @@ class TwistOptions(Options):
     Command line options for C{twist}.
     """
 
+    defaultReactorName = "default"
     defaultLogLevel = LogLevel.info
 
 
     def __init__(self):
         Options.__init__(self)
 
-        self["reactorName"] = "default"
+        self["reactorName"] = self.defaultReactorName
         self["logLevel"] = self.defaultLogLevel
         self["logFile"] = stdout
 
@@ -59,7 +60,15 @@ class TwistOptions(Options):
         The name of the reactor to use.
         (options: {options})
         """
-        self["reactorName"] = name
+        # Actually actually actually install the reactor right at this very
+        # moment, before any other code (for example, a sub-command plugin)
+        # runs and accidentally imports and installs the default reactor.
+        try:
+            self["reactor"] = self.installReactor(name)
+        except NoSuchReactor:
+            raise UsageError("Unknown reactor: {}".format(name))
+        else:
+            self["reactorName"] = name
 
     opt_reactor.__doc__ = dedent(opt_reactor.__doc__).format(
         options=", ".join(
@@ -68,15 +77,15 @@ class TwistOptions(Options):
     )
 
 
-    def installReactor(self):
+    def installReactor(self, name):
         """
         Install the reactor.
         """
-        name = self["reactorName"]
-        try:
-            self["reactor"] = installReactor(name)
-        except NoSuchReactor:
-            raise UsageError("Unknown reactor: {}".format(name))
+        if name == self.defaultReactorName:
+            from twisted.internet import reactor
+            return reactor
+        else:
+            return installReactor(name)
 
 
     def opt_log_level(self, levelName):
@@ -154,10 +163,12 @@ class TwistOptions(Options):
 
 
     def parseOptions(self, options=None):
-        self.installReactor()
         self.selectDefaultLogObserver()
 
         Options.parseOptions(self, options=options)
+
+        if "reactor" not in self:
+            self["reactor"] = self.installReactor(self["reactorName"])
 
 
     @property

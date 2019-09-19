@@ -550,6 +550,7 @@ class ClientServiceTests(SynchronousTestCase):
         nkw = {}
         nkw.update(clock=Clock())
         nkw.update(kw)
+        clock = nkw['clock']
         cq, endpoint = endpointForTesting(fireImmediately=fireImmediately)
 
         # `endpointForTesting` is totally generic to any LLPI client that uses
@@ -576,7 +577,7 @@ class ClientServiceTests(SynchronousTestCase):
                 service.stopService()
             # Ensure that we don't leave any state in the reactor after
             # stopService.
-            self.assertEqual(service._clock.getDelayedCalls(), [])
+            self.assertEqual(clock.getDelayedCalls(), [])
         self.addCleanup(stop)
         if startService:
             service.startService()
@@ -621,6 +622,23 @@ class ClientServiceTests(SynchronousTestCase):
         self.successResultOf(d)
 
 
+    def test_startServiceWaitsForDisconnect(self):
+        """
+        When L{ClientService} is restarted after having been connected, it
+        waits to start connecting until after having disconnected.
+        """
+        cq, service = self.makeReconnector()
+        d = service.stopService()
+        self.assertNoResult(d)
+        protocol = cq.constructedProtocols[0]
+        self.assertEqual(protocol.transport.disconnecting, True)
+        service.startService()
+        self.assertNoResult(d)
+        self.assertEqual(len(cq.constructedProtocols), 1)
+        protocol.connectionLost(Failure(Exception()))
+        self.assertEqual(len(cq.constructedProtocols), 2)
+
+
     def test_startServiceWhileStopping(self):
         """
         When L{ClientService} is stopping - that is,
@@ -639,13 +657,13 @@ class ClientServiceTests(SynchronousTestCase):
         self.assertNoResult(nextProtocol)
         self.assertNoResult(stopped)
         self.assertEqual(first.transport.disconnecting, True)
+        first.connectionLost(Failure(Exception()))
+        self.successResultOf(stopped)
         cq.connectQueue[1].callback(None)
         self.assertEqual(len(cq.constructedProtocols), 2)
         self.assertIdentical(self.successResultOf(nextProtocol),
                              cq.applicationProtocols[1])
         secondStopped = service.stopService()
-        first.connectionLost(Failure(Exception()))
-        self.successResultOf(stopped)
         self.assertNoResult(secondStopped)
 
 
@@ -804,13 +822,76 @@ class ClientServiceTests(SynchronousTestCase):
         cq, service = self.makeReconnector(fireImmediately=False, clock=clock)
         a = service.whenConnected()
         b = service.whenConnected()
+        c = service.whenConnected(failAfterFailures=1)
         self.assertNoResult(a)
         self.assertNoResult(b)
+        self.assertNoResult(c)
         cq.connectQueue[0].callback(None)
         resultA = self.successResultOf(a)
         resultB = self.successResultOf(b)
+        resultC = self.successResultOf(c)
         self.assertIdentical(resultA, resultB)
+        self.assertIdentical(resultA, resultC)
         self.assertIdentical(resultA, cq.applicationProtocols[0])
+
+
+    def test_whenConnectedFails(self):
+        """
+        L{ClientService.whenConnected} returns a L{Deferred} that fails, if
+        asked, when some number of connections have failed.
+        """
+        clock = Clock()
+        cq, service = self.makeReconnector(fireImmediately=False, clock=clock)
+        a0 = service.whenConnected()
+        a1 = service.whenConnected(failAfterFailures=1)
+        a2 = service.whenConnected(failAfterFailures=2)
+        a3 = service.whenConnected(failAfterFailures=3)
+        self.assertNoResult(a0)
+        self.assertNoResult(a1)
+        self.assertNoResult(a2)
+        self.assertNoResult(a3)
+
+        f1 = Failure(Exception())
+        cq.connectQueue[0].errback(f1)
+
+        self.assertNoResult(a0)
+        self.assertIdentical(self.failureResultOf(a1, Exception), f1)
+        self.assertNoResult(a2)
+        self.assertNoResult(a3)
+
+        clock.advance(AT_LEAST_ONE_ATTEMPT)
+        self.assertEqual(len(cq.connectQueue), 2)
+
+        self.assertNoResult(a0)
+        self.assertNoResult(a2)
+        self.assertNoResult(a3)
+
+        f2 = Failure(Exception())
+        cq.connectQueue[1].errback(f2)
+
+        self.assertNoResult(a0)
+        self.assertIdentical(self.failureResultOf(a2, Exception), f2)
+        self.assertNoResult(a3)
+
+        AT_LEAST_TWO_ATTEMPTS = AT_LEAST_ONE_ATTEMPT # close enough
+        clock.advance(AT_LEAST_TWO_ATTEMPTS)
+        self.assertEqual(len(cq.connectQueue), 3)
+
+        self.assertNoResult(a0)
+        self.assertNoResult(a3)
+
+        cq.connectQueue[2].callback(None)
+
+        resultA0 = self.successResultOf(a0)
+        resultA3 = self.successResultOf(a3)
+        self.assertIdentical(resultA0, resultA3)
+        self.assertIdentical(resultA0, cq.applicationProtocols[0])
+
+        # a new whenConnected Deferred, obtained after we're connected,
+        # should have fired already, even if failAfterFailures is set
+        a4 = service.whenConnected(failAfterFailures=1)
+        resultA4 = self.successResultOf(a4)
+        self.assertIdentical(resultA0, resultA4)
 
 
     def test_whenConnectedStopService(self):
@@ -822,10 +903,276 @@ class ClientServiceTests(SynchronousTestCase):
         cq, service = self.makeReconnector(fireImmediately=False, clock=clock)
         a = service.whenConnected()
         b = service.whenConnected()
+        c = service.whenConnected(failAfterFailures=1)
         self.assertNoResult(a)
         self.assertNoResult(b)
+        self.assertNoResult(c)
         service.stopService()
         clock.advance(AT_LEAST_ONE_ATTEMPT)
         self.failureResultOf(a, CancelledError)
         self.failureResultOf(b, CancelledError)
+        self.failureResultOf(c, CancelledError)
 
+
+    def test_retryCancelled(self):
+        """
+        When L{ClientService.stopService} is called while waiting between
+        connection attempts, the pending reconnection attempt is cancelled and
+        the service is stopped immediately.
+        """
+        clock = Clock()
+        cq, service = self.makeReconnector(fireImmediately=False, clock=clock)
+        cq.connectQueue[0].errback(Exception("no connection"))
+        d = service.stopService()
+        self.assertEqual(clock.getDelayedCalls(), [])
+        self.successResultOf(d)
+
+
+    def test_stopServiceBeforeStartService(self):
+        """
+        Calling L{ClientService.stopService} before
+        L{ClientService.startService} returns a L{Deferred} that has
+        already fired with L{None}.
+        """
+        clock = Clock()
+        _, service = self.makeReconnector(fireImmediately=False,
+                                          startService=False,
+                                          clock=clock)
+        d = service.stopService()
+        self.assertIsNone(self.successResultOf(d))
+
+
+    def test_whenConnectedErrbacksOnStopService(self):
+        """
+        L{ClientService.whenConnected} returns a L{Deferred} that
+        errbacks with L{CancelledError} if
+        L{ClientService.stopService} is called between connection
+        attempts.
+        """
+        clock = Clock()
+        cq, service = self.makeReconnector(fireImmediately=False,
+                                           clock=clock)
+        beforeErrbackAndStop = service.whenConnected()
+
+        # The protocol fails to connect, and the service is waiting to
+        # reconnect.
+        cq.connectQueue[0].errback(Exception("no connection"))
+
+        service.stopService()
+        afterErrbackAndStop = service.whenConnected()
+
+        self.assertIsInstance(self.failureResultOf(beforeErrbackAndStop).value,
+                              CancelledError)
+        self.assertIsInstance(self.failureResultOf(afterErrbackAndStop).value,
+                              CancelledError)
+
+
+    def test_stopServiceWhileDisconnecting(self):
+        """
+        Calling L{ClientService.stopService} twice after it has
+        connected (that is, stopping it while it is disconnecting)
+        returns a L{Deferred} each time that fires when the
+        disconnection has completed.
+        """
+        clock = Clock()
+        cq, service = self.makeReconnector(fireImmediately=False,
+                                           clock=clock)
+        # The protocol connects
+        cq.connectQueue[0].callback(None)
+
+        # The protocol begins disconnecting
+        firstStopDeferred = service.stopService()
+        # The protocol continues disconnecting
+        secondStopDeferred = service.stopService()
+
+        # The protocol is disconnected
+        cq.constructedProtocols[0].connectionLost(Failure(IndentationError()))
+
+        self.successResultOf(firstStopDeferred)
+        self.successResultOf(secondStopDeferred)
+
+
+    def test_stopServiceWhileRestarting(self):
+        """
+        Calling L{ClientService.stopService} after calling a
+        reconnection attempt returns a L{Deferred} that fires when the
+        disconnection has completed.
+        """
+        clock = Clock()
+        cq, service = self.makeReconnector(fireImmediately=False,
+                                           clock=clock)
+        # The protocol connects
+        cq.connectQueue[0].callback(None)
+
+        # The protocol begins disconnecting
+        firstStopDeferred = service.stopService()
+        # The protocol begins reconnecting
+        service.startService()
+        # The protocol begins disconnecting again
+        secondStopDeferred = service.stopService()
+
+        # The protocol is disconnected
+        cq.constructedProtocols[0].connectionLost(Failure(IndentationError()))
+
+        self.successResultOf(firstStopDeferred)
+        self.successResultOf(secondStopDeferred)
+
+
+    def test_stopServiceOnStoppedService(self):
+        """
+        Calling L{ClientService.stopService} on a stopped service
+        returns a L{Deferred} that has already fired with L{None}.
+        """
+        clock = Clock()
+        _, service = self.makeReconnector(fireImmediately=False,
+                                          clock=clock)
+        firstStopDeferred = service.stopService()
+        secondStopDeferred = service.stopService()
+
+        self.assertIsNone(self.successResultOf(firstStopDeferred))
+        self.assertIsNone(self.successResultOf(secondStopDeferred))
+
+
+    def test_prepareConnectionCalledWhenServiceStarts(self):
+        """
+        The C{prepareConnection} callable is called after
+        L{ClientService.startService} once the connection is made.
+        """
+        prepares = [0]
+
+        def prepareConnection(_proto):
+            prepares[0] += 1
+
+        cq, service = self.makeReconnector(prepareConnection=prepareConnection,
+                                           startService=True)
+        self.assertEqual(1, prepares[0])
+
+
+    def test_prepareConnectionCalledWithProtocol(self):
+        """
+        The C{prepareConnection} callable is passed the connected protocol
+        instance.
+        """
+        newProtocols = []
+
+        def prepareConnection(proto):
+            newProtocols.append(proto)
+
+        cq, service = self.makeReconnector(
+            prepareConnection=prepareConnection,
+        )
+        self.assertIdentical(cq.constructedProtocols[0], newProtocols[0])
+
+
+    def test_prepareConnectionCalledAfterConnectionMade(self):
+        """
+        The C{prepareConnection} callback is invoked only once a connection is
+        made.
+        """
+        prepares = [0]
+
+        def prepareConnection(_proto):
+            prepares[0] += 1
+
+        clock = Clock()
+        cq, service = self.makeReconnector(prepareConnection=prepareConnection,
+                                           fireImmediately=False,
+                                           clock=clock)
+
+        cq.connectQueue[0].errback(Exception('connection attempt failed'))
+        self.assertEqual(0, prepares[0])  # Not called yet.
+
+        clock.advance(AT_LEAST_ONE_ATTEMPT)
+        cq.connectQueue[1].callback(None)
+
+        self.assertEqual(1, prepares[0])  # Was called.
+
+
+    def test_prepareConnectionCalledOnReconnect(self):
+        """
+        The C{prepareConnection} callback is invoked each time a connection is
+        made, including on reconnection.
+        """
+        prepares = [0]
+
+        def prepareConnection(_proto):
+            prepares[0] += 1
+
+        clock = Clock()
+        cq, service = self.makeReconnector(prepareConnection=prepareConnection,
+                                           clock=clock)
+
+        self.assertEqual(1, prepares[0])  # Called once.
+
+        # Protocol disconnects.
+        cq.constructedProtocols[0].connectionLost(Failure(IndentationError()))
+        clock.advance(AT_LEAST_ONE_ATTEMPT)
+
+        self.assertEqual(2, prepares[0])  # Called again.
+
+
+    def test_prepareConnectionReturnValueIgnored(self):
+        """
+        The C{prepareConnection} return value is ignored when it does not
+        indicate a failure. Even though the callback participates in the
+        internal new-connection L{Deferred} chain for error propagation
+        purposes, any successful result does not affect the ultimate return
+        value.
+        """
+        # Sentinel object returned by prepareConnection.
+        sentinel = object()
+
+        def prepareConnection(proto):
+            return sentinel
+
+        cq, service = self.makeReconnector(prepareConnection=prepareConnection)
+
+        result = self.successResultOf(service.whenConnected())
+        self.assertNotIdentical(sentinel, result)
+
+
+    def test_prepareConnectionReturningADeferred(self):
+        """
+        The C{prepareConnection} callable returns a deferred and calls to
+        L{ClientService.whenConnected} wait until it fires.
+        """
+        newProtocols = []
+        newProtocolDeferred = Deferred()
+
+        def prepareConnection(proto):
+            newProtocols.append(proto)
+            return newProtocolDeferred
+
+        cq, service = self.makeReconnector(prepareConnection=prepareConnection)
+
+        whenConnectedDeferred = service.whenConnected()
+        self.assertNoResult(whenConnectedDeferred)
+
+        newProtocolDeferred.callback(None)
+
+        self.assertIdentical(cq.applicationProtocols[0],
+                             self.successResultOf(whenConnectedDeferred))
+
+
+    def test_prepareConnectionThrows(self):
+        """
+        The connection attempt counts as a failure when the
+        C{prepareConnection} callable throws.
+        """
+        clock = Clock()
+
+        def prepareConnection(_proto):
+            raise IndentationError()
+
+        cq, service = self.makeReconnector(prepareConnection=prepareConnection,
+                                           clock=clock)
+
+        whenConnectedDeferred = service.whenConnected(failAfterFailures=2)
+        self.assertNoResult(whenConnectedDeferred)
+
+        clock.advance(AT_LEAST_ONE_ATTEMPT)
+        self.assertNoResult(whenConnectedDeferred)
+
+        clock.advance(AT_LEAST_ONE_ATTEMPT)
+        self.assertIdentical(IndentationError,
+                             self.failureResultOf(whenConnectedDeferred).type)

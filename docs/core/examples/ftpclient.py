@@ -15,18 +15,14 @@ from twisted.python import usage
 from twisted.internet import reactor
 
 # Standard library imports
-import string
 import sys
-try:
-    from cStringIO import StringIO
-except ImportError:
-    from StringIO import StringIO
+from io import BytesIO
 
 
 class BufferingProtocol(Protocol):
     """Simple utility class that holds all data written to it in a buffer."""
     def __init__(self):
-        self.buffer = StringIO()
+        self.buffer = BytesIO()
 
     def dataReceived(self, data):
         self.buffer.write(data)
@@ -39,7 +35,7 @@ def success(response):
     if response is None:
         print(None)
     else:
-        print(string.join(response, '\n'))
+        print("\n".join(response))
     print('---')
 
 
@@ -50,9 +46,9 @@ def fail(error):
 def showFiles(result, fileListProtocol):
     print('Processed file listing:')
     for file in fileListProtocol.files:
-        print('    %s: %d bytes, %s' \
-              % (file['filename'], file['size'], file['date']))
-    print('Total: %d files' % (len(fileListProtocol.files)))
+        print('    {}: {} bytes, {}'.format(
+              file['filename'], file['size'], file['date']))
+    print('Total: {} files'.format(len(fileListProtocol.files)))
 
 def showBuffer(result, bufferProtocol):
     print('Got data:')
@@ -75,7 +71,7 @@ def run():
     config.opts['port'] = int(config.opts['port'])
     config.opts['passive'] = int(config.opts['passive'])
     config.opts['debug'] = int(config.opts['debug'])
-    
+
     # Create the client
     FTPClient.debug = config.opts['debug']
     creator = ClientCreator(reactor, FTPClient, config.opts['username'],
@@ -98,7 +94,7 @@ def connectionMade(ftpClient):
 
     # Change to the parent directory
     ftpClient.cdup().addCallbacks(success, fail)
-    
+
     # Create a buffer
     proto = BufferingProtocol()
 

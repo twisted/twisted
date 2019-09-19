@@ -7,6 +7,8 @@ Test cases for L{twisted.names.client}.
 
 from __future__ import division, absolute_import
 
+import errno
+
 from zope.interface.verify import verifyClass, verifyObject
 
 from twisted.python import failure
@@ -24,7 +26,7 @@ from twisted.names.error import DNSQueryTimeoutError
 from twisted.names.common import ResolverBase
 
 from twisted.names.test.test_hosts import GoodTempPathMixin
-from twisted.names.test.test_util import MemoryReactor
+from twisted.names.test import test_util
 
 from twisted.test import proto_helpers
 
@@ -332,11 +334,11 @@ class ResolverTests(unittest.TestCase):
         """
         protocol = StubDNSDatagramProtocol()
 
-        servers = [object(), object()]
-        dynServers = [object(), object()]
+        servers = [("::1", 53), ("::2", 53)]
+        dynServers = [("::3", 53), ("::4", 53)]
         resolver = client.Resolver(servers=servers)
         resolver.dynServers = dynServers
-        resolver._connectedProtocol = lambda: protocol
+        resolver._connectedProtocol = lambda interface: protocol
 
         expectedResult = object()
         queryResult = resolver.queryUDP(None)
@@ -499,7 +501,7 @@ class ResolverTests(unittest.TestCase):
         L{client.Resolver._connectedProtocol} should pass that reactor
         to L{twisted.names.dns.DNSDatagramProtocol}.
         """
-        reactor = MemoryReactor()
+        reactor = test_util.MemoryReactor()
         resolver = client.Resolver(resolv=self.mktemp(), reactor=reactor)
         proto = resolver._connectedProtocol()
         self.assertIs(proto._reactor, reactor)
@@ -528,6 +530,20 @@ class ResolverTests(unittest.TestCase):
         self.assertEqual(len(set(protocols)), 2)
 
 
+    def test_ipv6Resolver(self):
+        """
+        If the resolver is ipv6, open a ipv6 port.
+        """
+
+        fake = test_util.MemoryReactor()
+        resolver = client.Resolver(servers=[('::1', 53)],
+                                   reactor=fake)
+        resolver.query(dns.Query(b'foo.example.com'))
+        [(proto, transport)] = fake.udpPorts.items()
+        interface = transport.getHost().host
+        self.assertEqual("::", interface)
+
+
     def test_disallowedPort(self):
         """
         If a port number is initially selected which cannot be bound, the
@@ -536,7 +552,7 @@ class ResolverTests(unittest.TestCase):
         ports = []
 
         class FakeReactor(object):
-            def listenUDP(self, port, *args):
+            def listenUDP(self, port, *args, **kwargs):
                 ports.append(port)
                 if len(ports) == 1:
                     raise CannotListenError(None, port, None)
@@ -546,6 +562,48 @@ class ResolverTests(unittest.TestCase):
 
         resolver._connectedProtocol()
         self.assertEqual(len(set(ports)), 2)
+
+    def test_disallowedPortRepeatedly(self):
+        """
+        If port numbers that cannot be bound are repeatedly selected,
+        L{resolver._connectedProtocol} will give up eventually.
+        """
+        ports = []
+
+        class FakeReactor(object):
+            def listenUDP(self, port, *args, **kwargs):
+                ports.append(port)
+                raise CannotListenError(None, port, None)
+
+        resolver = client.Resolver(servers=[('example.com', 53)])
+        resolver._reactor = FakeReactor()
+
+        self.assertRaises(CannotListenError, resolver._connectedProtocol)
+        # 1000 is a good round number. I like it.
+        self.assertEqual(len(ports), 1000)
+
+
+    def test_runOutOfFiles(self):
+        """
+        If the process is out of files, L{Resolver._connectedProtocol}
+        will give up.
+        """
+        ports = []
+
+        class FakeReactor(object):
+            def listenUDP(self, port, *args, **kwargs):
+                ports.append(port)
+                err = OSError(errno.EMFILE, "Out of files :(")
+                raise CannotListenError(None, port, err)
+
+        resolver = client.Resolver(servers=[('example.com', 53)])
+        resolver._reactor = FakeReactor()
+
+        exc = self.assertRaises(CannotListenError, resolver._connectedProtocol)
+        # The EMFILE-containing exception was raised, and it did not try
+        # multiple times.
+        self.assertEqual(exc.socketError.errno, errno.EMFILE)
+        self.assertEqual(len(ports), 1)
 
 
     def test_differentProtocolAfterTimeout(self):

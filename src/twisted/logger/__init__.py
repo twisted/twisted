@@ -49,6 +49,7 @@ __all__ = [
     # From ._format
     "formatEvent", "formatEventAsClassicLogText",
     "formatTime", "timeFormatRFC3339",
+    "eventAsText",
 
     # From ._flatten
     "extractField",
@@ -84,6 +85,9 @@ __all__ = [
     # From ._json
     "eventAsJSON", "eventFromJSON",
     "jsonFileLogObserver", "eventsFromJSONLogFile",
+
+    # From ._capture
+    "capturedLogs",
 ]
 
 from ._levels import InvalidLogLevelError, LogLevel
@@ -92,6 +96,7 @@ from ._flatten import extractField
 
 from ._format import (
     formatEvent, formatEventAsClassicLogText, formatTime, timeFormatRFC3339,
+    eventAsText
 )
 
 from ._logger import Logger, _loggerFor
@@ -121,3 +126,5 @@ from ._json import (
     eventAsJSON, eventFromJSON,
     jsonFileLogObserver, eventsFromJSONLogFile
 )
+
+from ._capture import capturedLogs

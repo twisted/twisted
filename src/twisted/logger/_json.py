@@ -17,7 +17,7 @@ from ._file import FileLogObserver
 from ._levels import LogLevel
 from ._logger import Logger
 
-from twisted.python.compat import unicode
+from twisted.python.compat import unicode, _PY3
 from twisted.python.failure import Failure
 
 log = Logger()
@@ -82,13 +82,17 @@ def failureFromJSON(failureDict):
     @rtype: L{Failure}
     """
     # InstanceType() is only available in Python 2 and lower.
-    # __new__ is only available in Python 3 and higher.
+    # __new__ is only available on new-style classes.
     newFailure = getattr(Failure, "__new__", None)
     if newFailure is None:
-        failureDict = asBytes(failureDict)
         f = types.InstanceType(Failure)
     else:
         f = newFailure(Failure)
+
+    if not _PY3:
+        # Python 2 needs the failure dictionary as purely bytes, not text
+        failureDict = asBytes(failureDict)
+
     typeInfo = failureDict["type"]
     failureDict["type"] = type(typeInfo["__name__"], (), typeInfo)
     f.__dict__ = failureDict

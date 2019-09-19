@@ -10,51 +10,58 @@ from __future__ import absolute_import, division
 import os
 from binascii import Error as BinasciiError, b2a_base64, a2b_base64
 
-from twisted.python.reflect import requireModule
-
-if requireModule('cryptography') and requireModule('pyasn1'):
-    from twisted.conch.ssh.keys import Key, BadKeyError
-    from twisted.conch.client.knownhosts import \
-        PlainEntry, HashedEntry, KnownHostsFile, UnparsedEntry, ConsoleUI
-    from twisted.conch.client import default
-else:
-    skip = "cryptography and PyASN1 required for twisted.conch.knownhosts."
-
 from zope.interface.verify import verifyObject
 
-from twisted.python.filepath import FilePath
 from twisted.python.compat import networkString
+from twisted.python.reflect import requireModule
+from twisted.python.filepath import FilePath
 from twisted.trial.unittest import TestCase
 from twisted.internet.defer import Deferred
 from twisted.conch.interfaces import IKnownHostEntry
 from twisted.conch.error import HostKeyChanged, UserRejectedKey, InvalidEntry
 from twisted.test.testutils import ComparisonTestsMixin
 
+if requireModule('cryptography') and requireModule('pyasn1'):
+    from twisted.conch.ssh.keys import Key, BadKeyError
+    from twisted.conch.client.knownhosts import \
+        PlainEntry, HashedEntry, KnownHostsFile, UnparsedEntry, ConsoleUI
+    from twisted.conch.client import default
+    from twisted.conch.test import keydata
+else:
+    skip = "cryptography and PyASN1 required for twisted.conch.knownhosts."
+
+
+
 
 sampleEncodedKey = (
-    b'AAAAB3NzaC1yc2EAAAABIwAAAQEAsV0VMRbGmzhqxxayLRHmvnFvtyNqgbNKV46dU1bVFB+3y'
-    b'tNvue4Riqv/SVkPRNwMb7eWH29SviXaBxUhYyzKkDoNUq3rTNnH1Vnif6d6X4JCrUb5d3W+Dm'
-    b'YClyJrZ5HgD/hUpdSkTRqdbQ2TrvSAxRacj+vHHT4F4dm1bJSewm3B2D8HVOoi/CbVh3dsIiC'
-    b'dp8VltdZx4qYVfYe2LwVINCbAa3d3tj9ma7RVfw3OH2Mfb+toLd1N5tBQFb7oqTt2nC6I/6Bd'
-    b'4JwPUld+IEitw/suElq/AIJVQXXujeyiZlea90HE65U2mF1ytr17HTAIT2ySokJWyuBANGACk'
-    b'6iIaw==')
+   b'AAAAB3NzaC1yc2EAAAABIwAAAQEAsV0VMRbGmzhqxxayLRHmvnFvtyNqgbNKV46dU1bVFB+3y'
+   b'tNvue4Riqv/SVkPRNwMb7eWH29SviXaBxUhYyzKkDoNUq3rTNnH1Vnif6d6X4JCrUb5d3W+Dm'
+   b'YClyJrZ5HgD/hUpdSkTRqdbQ2TrvSAxRacj+vHHT4F4dm1bJSewm3B2D8HVOoi/CbVh3dsIiC'
+   b'dp8VltdZx4qYVfYe2LwVINCbAa3d3tj9ma7RVfw3OH2Mfb+toLd1N5tBQFb7oqTt2nC6I/6Bd'
+   b'4JwPUld+IEitw/suElq/AIJVQXXujeyiZlea90HE65U2mF1ytr17HTAIT2ySokJWyuBANGACk'
+   b'6iIaw==')
 
 otherSampleEncodedKey = (
-    b'AAAAB3NzaC1yc2EAAAABIwAAAIEAwaeCZd3UCuPXhX39+/p9qO028jTF76DMVd9mPvYVDVXuf'
-    b'WckKZauF7+0b7qm+ChT7kan6BzRVo4++gCVNfAlMzLysSt3ylmOR48tFpAfygg9UCX3DjHz0E'
-    b'lOOUKh3iifc9aUShD0OPaK3pR5JJ8jfiBfzSYWt/hDi/iZ4igsSs8=')
+   b'AAAAB3NzaC1yc2EAAAABIwAAAIEAwaeCZd3UCuPXhX39+/p9qO028jTF76DMVd9mPvYVDVXuf'
+   b'WckKZauF7+0b7qm+ChT7kan6BzRVo4++gCVNfAlMzLysSt3ylmOR48tFpAfygg9UCX3DjHz0E'
+   b'lOOUKh3iifc9aUShD0OPaK3pR5JJ8jfiBfzSYWt/hDi/iZ4igsSs8=')
 
 thirdSampleEncodedKey = (
-    b'AAAAB3NzaC1yc2EAAAABIwAAAQEAl/TQakPkePlnwCBRPitIVUTg6Z8VzN1en+DGkyo/evkmLw'
-    b'7o4NWR5qbysk9A9jXW332nxnEuAnbcCam9SHe1su1liVfyIK0+3bdn0YRB0sXIbNEtMs2LtCho'
-    b'/aV3cXPS+Cf1yut3wvIpaRnAzXxuKPCTXQ7/y0IXa8TwkRBH58OJa3RqfQ/NsSp5SAfdsrHyH2'
-    b'aitiVKm2jfbTKzSEqOQG/zq4J9GXTkq61gZugory/Tvl5/yPgSnOR6C9jVOMHf27ZPoRtyj9SY'
-    b'343Hd2QHiIE0KPZJEgCynKeWoKz8v6eTSK8n4rBnaqWdp8MnGZK1WGy05MguXbyCDuTC8AmJXQ'
-    b'==')
+  b'AAAAB3NzaC1yc2EAAAABIwAAAQEAl/TQakPkePlnwCBRPitIVUTg6Z8VzN1en+DGkyo/evkmLw'
+  b'7o4NWR5qbysk9A9jXW332nxnEuAnbcCam9SHe1su1liVfyIK0+3bdn0YRB0sXIbNEtMs2LtCho'
+  b'/aV3cXPS+Cf1yut3wvIpaRnAzXxuKPCTXQ7/y0IXa8TwkRBH58OJa3RqfQ/NsSp5SAfdsrHyH2'
+  b'aitiVKm2jfbTKzSEqOQG/zq4J9GXTkq61gZugory/Tvl5/yPgSnOR6C9jVOMHf27ZPoRtyj9SY'
+  b'343Hd2QHiIE0KPZJEgCynKeWoKz8v6eTSK8n4rBnaqWdp8MnGZK1WGy05MguXbyCDuTC8AmJXQ'
+  b'==')
+
+ecdsaSampleEncodedKey = (
+   b'AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBIFwh3/zBANyPPIE60'
+   b'SMMfdKMYo3OvfvzGLZphzuKrzSt0q4uF+/iYqtYiHhryAwU/fDWlUQ9kck9f+IlpsNtY4=')
 
 sampleKey = a2b_base64(sampleEncodedKey)
 otherSampleKey = a2b_base64(otherSampleEncodedKey)
 thirdSampleKey = a2b_base64(thirdSampleEncodedKey)
+ecdsaSampleKey =  a2b_base64(ecdsaSampleEncodedKey)
 
 samplePlaintextLine = (
     b"www.twistedmatrix.com ssh-rsa " + sampleEncodedKey + b"\n")
@@ -694,7 +701,7 @@ class KnownHostsDatabaseTests(TestCase):
                 b"www.twistedmatrix.com", Key.fromString(sampleKey)))
 
 
-    def test_hasNonPresentKey(self):
+    def test_notPresentKey(self):
         """
         L{KnownHostsFile.hasHostKey} returns C{False} when a key for the given
         hostname is not present.
@@ -702,6 +709,10 @@ class KnownHostsDatabaseTests(TestCase):
         hostsFile = self.loadSampleHostsFile()
         self.assertFalse(hostsFile.hasHostKey(
                 b"non-existent.example.com", Key.fromString(sampleKey)))
+        self.assertTrue(hostsFile.hasHostKey(
+                b"www.twistedmatrix.com", Key.fromString(sampleKey)))
+        self.assertFalse(hostsFile.hasHostKey(
+                b"www.twistedmatrix.com", Key.fromString(ecdsaSampleKey)))
 
 
     def test_hasLaterAddedKey(self):
@@ -861,7 +872,7 @@ class KnownHostsDatabaseTests(TestCase):
             b"The authenticity of host 'sample-host.example.com (4.3.2.1)' "
             b"can't be established.\n"
             b"RSA key fingerprint is "
-            b"89:4e:cc:8c:57:83:96:48:ef:63:ad:ee:99:00:4c:8f.\n"
+            b"SHA256:mS7mDBGhewdzJkaKRkx+wMjUdZb/GzvgcdoYjX5Js9I=.\n"
             b"Are you sure you want to continue connecting (yes/no)? ")
         return ui, l, hostsFile
 
@@ -897,6 +908,35 @@ class KnownHostsDatabaseTests(TestCase):
         l[0].trap(UserRejectedKey)
 
 
+    def test_verifyNonPresentECKey(self):
+        """
+        Set up a test to verify an ECDSA key that isn't present.
+        Return a 3-tuple of the UI, a list set up to collect the result
+        of the verifyHostKey call, and the sample L{KnownHostsFile} being used.
+        """
+        ecObj = Key._fromECComponents(
+            x=keydata.ECDatanistp256['x'],
+            y=keydata.ECDatanistp256['y'],
+            privateValue=keydata.ECDatanistp256['privateValue'],
+            curve=keydata.ECDatanistp256['curve']
+        )
+
+        hostsFile = self.loadSampleHostsFile()
+        ui = FakeUI()
+        l = []
+        d = hostsFile.verifyHostKey(
+            ui, b"sample-host.example.com", b"4.3.2.1", ecObj)
+        d.addBoth(l.append)
+        self.assertEqual([], l)
+        self.assertEqual(
+            ui.promptText,
+            b"The authenticity of host 'sample-host.example.com (4.3.2.1)' "
+            b"can't be established.\n"
+            b"ECDSA key fingerprint is "
+            b"SHA256:fJnSpgCcYoYYsaBbnWj1YBghGh/QTDgfe4w4U5M5tEo=.\n"
+            b"Are you sure you want to continue connecting (yes/no)? ")
+
+
     def test_verifyHostIPMismatch(self):
         """
         Verifying a key where the host is present (and correct), but the IP is
@@ -929,6 +969,26 @@ class KnownHostsDatabaseTests(TestCase):
             ["Warning: Permanently added the RSA host key for IP address "
              "'5.4.3.2' to the list of known hosts."],
             ui.userWarnings)
+
+
+    def test_getHostKeyAlgorithms(self):
+        """
+        For a given host, get the host key algorithms for that
+        host in the known_hosts file.
+        """
+        hostsFile = self.loadSampleHostsFile()
+        hostsFile.addHostKey(
+            b"www.twistedmatrix.com", Key.fromString(otherSampleKey))
+        hostsFile.addHostKey(
+            b"www.twistedmatrix.com", Key.fromString(ecdsaSampleKey))
+        hostsFile.save()
+        options = {}
+        options['known-hosts'] = hostsFile.savePath.path
+        algorithms = default.getHostKeyAlgorithms(
+                         b"www.twistedmatrix.com", options)
+        expectedAlgorithms = [b'ssh-rsa', b'ecdsa-sha2-nistp256']
+        self.assertEqual(algorithms, expectedAlgorithms)
+
 
 
 class FakeFile(object):
@@ -1133,13 +1193,14 @@ class DefaultAPITests(TestCase):
     point between the code in the rest of conch and L{KnownHostsFile}.
     """
 
-    def patchedOpen(self, fname, mode):
+    def patchedOpen(self, fname, mode, **kwargs):
         """
         The patched version of 'open'; this returns a L{FakeFile} that the
         instantiated L{ConsoleUI} can use.
         """
         self.assertEqual(fname, "/dev/tty")
         self.assertEqual(mode, "r+b")
+        self.assertEqual(kwargs['buffering'], 0)
         return self.fakeFile
 
 
@@ -1249,7 +1310,7 @@ class DefaultAPITests(TestCase):
             [b"The authenticity of host 'fake.example.com (9.8.7.6)' "
              b"can't be established.\n"
              b"RSA key fingerprint is "
-             b"57:a1:c2:a1:07:a0:2b:f4:ce:b5:e5:b7:ae:cc:e1:99.\n"
+             b"SHA256:vD0YydsNIUYJa7yLZl3tIL8h0vZvQ8G+HPG7JLmQV0s=.\n"
              b"Are you sure you want to continue connecting (yes/no)? "],
              self.fakeFile.outchunks)
         return self.assertFailure(d, UserRejectedKey)

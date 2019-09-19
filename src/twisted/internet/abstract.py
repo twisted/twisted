@@ -8,27 +8,28 @@ Support for generic select()able objects.
 
 from __future__ import division, absolute_import
 
-from socket import AF_INET6, inet_pton, error
+from socket import AF_INET, AF_INET6, inet_pton, error
 
 from zope.interface import implementer
 
 # Twisted Imports
-from twisted.python.compat import _PY3, unicode, lazyByteSlice
+from twisted.python.compat import unicode, lazyByteSlice, _PY3
 from twisted.python import reflect, failure
 from twisted.internet import interfaces, main
 
 if _PY3:
+    # Python 3.4+ can join bytes and memoryviews; using a
+    # memoryview prevents the slice from copying
     def _concatenate(bObj, offset, bArray):
-        # Python 3 lacks the buffer() builtin and the other primitives don't
-        # help in this case.  Just do the copy.  Perhaps later these buffers can
-        # be joined and FileDescriptor can use writev().  Or perhaps bytearrays
-        # would help.
-        return bObj[offset:] + b"".join(bArray)
+        return b''.join([memoryview(bObj)[offset:]] + bArray)
 else:
+    from __builtin__ import buffer
+
     def _concatenate(bObj, offset, bArray):
-        # Avoid one extra string copy by using a buffer to limit what we include
-        # in the result.
+        # Avoid one extra string copy by using a buffer to limit what
+        # we include in the result.
         return buffer(bObj, offset) + b"".join(bArray)
+
 
 
 class _ConsumerMixin(object):
@@ -481,30 +482,50 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
         return -1
 
 
-def isIPAddress(addr):
+
+def isIPAddress(addr, family=AF_INET):
     """
-    Determine whether the given string represents an IPv4 address.
+    Determine whether the given string represents an IP address of the given
+    family; by default, an IPv4 address.
 
     @type addr: C{str}
     @param addr: A string which may or may not be the decimal dotted
-    representation of an IPv4 address.
+        representation of an IPv4 address.
+
+    @param family: The address family to test for; one of the C{AF_*} constants
+        from the L{socket} module.  (This parameter has only been available
+        since Twisted 17.1.0; previously L{isIPAddress} could only test for IPv4
+        addresses.)
+    @type family: C{int}
 
     @rtype: C{bool}
-    @return: C{True} if C{addr} represents an IPv4 address, C{False}
-    otherwise.
+    @return: C{True} if C{addr} represents an IPv4 address, C{False} otherwise.
     """
-    dottedParts = addr.split('.')
-    if len(dottedParts) == 4:
-        for octet in dottedParts:
-            try:
-                value = int(octet)
-            except ValueError:
-                return False
-            else:
-                if value < 0 or value > 255:
-                    return False
-        return True
-    return False
+    if isinstance(addr, bytes):
+        try:
+            addr = addr.decode("ascii")
+        except UnicodeDecodeError:
+            return False
+    if family == AF_INET6:
+        # On some platforms, inet_ntop fails unless the scope ID is valid; this
+        # is a test for whether the given string *is* an IP address, so strip
+        # any potential scope ID before checking.
+        addr = addr.split(u"%", 1)[0]
+    elif family == AF_INET:
+        # On Windows, where 3.5+ implement inet_pton, "0" is considered a valid
+        # IPv4 address, but we want to ensure we have all 4 segments.
+        if addr.count(u".") != 3:
+            return False
+    else:
+        raise ValueError("unknown address family {!r}".format(family))
+    try:
+        # This might be a native implementation or the one from
+        # twisted.python.compat.
+        inet_pton(family, addr)
+    except (ValueError, error):
+        return False
+    return True
+
 
 
 def isIPv6Address(addr):
@@ -519,17 +540,7 @@ def isIPv6Address(addr):
         otherwise.
     @rtype: C{bool}
     """
-    if '%' in addr:
-        addr = addr.split('%', 1)[0]
-    if not addr:
-        return False
-    try:
-        # This might be a native implementation or the one from
-        # twisted.python.compat.
-        inet_pton(AF_INET6, addr)
-    except (ValueError, error):
-        return False
-    return True
+    return isIPAddress(addr, AF_INET6)
 
 
 __all__ = ["FileDescriptor", "isIPAddress", "isIPv6Address"]

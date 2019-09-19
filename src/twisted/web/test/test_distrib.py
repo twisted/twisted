@@ -14,15 +14,17 @@ except ImportError:
 
 from zope.interface.verify import verifyObject
 
-from twisted.python import filepath
+from twisted.python import filepath, failure
 from twisted.internet import reactor, defer
 from twisted.trial import unittest
 from twisted.spread import pb
 from twisted.spread.banana import SIZE_LIMIT
 from twisted.web import distrib, client, resource, static, server
-from twisted.web.test.test_web import DummyRequest
+from twisted.web.test.test_web import DummyRequest, DummyChannel
 from twisted.web.test._util import _render
 from twisted.test import proto_helpers
+from twisted.web.http_headers import Headers
+from twisted.logger import globalLogPublisher
 
 
 class MySite(server.Site):
@@ -42,6 +44,13 @@ class PBServerFactory(pb.PBServerFactory):
     def buildProtocol(self, addr):
         self.proto = pb.PBServerFactory.buildProtocol(self, addr)
         return self.proto
+
+
+
+class ArbitraryError(Exception):
+    """
+    An exception for this test.
+    """
 
 
 
@@ -77,19 +86,23 @@ class DistribTests(unittest.TestCase):
     def testDistrib(self):
         # site1 is the publisher
         r1 = resource.Resource()
-        r1.putChild("there", static.Data("root", "text/plain"))
+        r1.putChild(b"there", static.Data(b"root", "text/plain"))
         site1 = server.Site(r1)
         self.f1 = PBServerFactory(distrib.ResourcePublisher(site1))
         self.port1 = reactor.listenTCP(0, self.f1)
         self.sub = distrib.ResourceSubscription("127.0.0.1",
                                                 self.port1.getHost().port)
         r2 = resource.Resource()
-        r2.putChild("here", self.sub)
+        r2.putChild(b"here", self.sub)
         f2 = MySite(r2)
         self.port2 = reactor.listenTCP(0, f2)
-        d = client.getPage("http://127.0.0.1:%d/here/there" % \
-                           self.port2.getHost().port)
-        d.addCallback(self.assertEqual, 'root')
+        agent = client.Agent(reactor)
+        url = "http://127.0.0.1:{}/here/there".format(
+            self.port2.getHost().port)
+        url = url.encode("ascii")
+        d = agent.request(b"GET", url)
+        d.addCallback(client.readBody)
+        d.addCallback(self.assertEqual, b'root')
         return d
 
 
@@ -103,7 +116,7 @@ class DistribTests(unittest.TestCase):
             the created site.
         """
         distribRoot = resource.Resource()
-        distribRoot.putChild("child", child)
+        distribRoot.putChild(b"child", child)
         distribSite = server.Site(distribRoot)
         self.f1 = distribFactory = PBServerFactory(
             distrib.ResourcePublisher(distribSite))
@@ -128,14 +141,18 @@ class DistribTests(unittest.TestCase):
         then retrieve it from a L{ResourceSubscription} via an HTTP client.
 
         @param child: The resource to publish using distrib.
-        @param **kwargs: Extra keyword arguments to pass to L{getPage} when
+        @param **kwargs: Extra keyword arguments to pass to L{Agent.request} when
             requesting the resource.
 
         @return: A L{Deferred} which fires with the result of the request.
         """
         mainPort, mainAddr = self._setupDistribServer(child)
-        return client.getPage("http://%s:%s/child" % (
-            mainAddr.host, mainAddr.port), **kwargs)
+        agent = client.Agent(reactor)
+        url = "http://%s:%s/child" % (mainAddr.host, mainAddr.port)
+        url = url.encode("ascii")
+        d = agent.request(b"GET", url, **kwargs)
+        d.addCallback(client.readBody)
+        return d
 
 
     def _requestAgentTest(self, child, **kwargs):
@@ -153,8 +170,9 @@ class DistribTests(unittest.TestCase):
         """
         mainPort, mainAddr = self._setupDistribServer(child)
 
-        d = client.Agent(reactor).request("GET", "http://%s:%s/child" % (
-            mainAddr.host, mainAddr.port), **kwargs)
+        url = "http://{}:{}/child".format(mainAddr.host, mainAddr.port)
+        url = url.encode("ascii")
+        d = client.Agent(reactor).request(b"GET", url, **kwargs)
 
         def cbCollectBody(response):
             protocol = proto_helpers.AccumulatingProtocol()
@@ -172,17 +190,34 @@ class DistribTests(unittest.TestCase):
         distributed resource's C{render} method.
         """
         requestHeaders = {}
+        logObserver = proto_helpers.EventLoggingObserver()
+        globalLogPublisher.addObserver(logObserver)
+        req = [None]
+
 
         class ReportRequestHeaders(resource.Resource):
             def render(self, request):
+                req[0] = request
                 requestHeaders.update(dict(
                     request.requestHeaders.getAllRawHeaders()))
-                return ""
+                return b""
+
+        def check_logs():
+            msgs = [e["log_format"] for e in logObserver]
+            self.assertIn('connected to publisher', msgs)
+            self.assertIn(
+                "could not connect to distributed web service: {msg}",
+                msgs
+            )
+            self.assertIn(req[0], msgs)
+            globalLogPublisher.removeObserver(logObserver)
 
         request = self._requestTest(
-            ReportRequestHeaders(), headers={'foo': 'bar'})
+            ReportRequestHeaders(), headers=Headers({'foo': ['bar']}))
         def cbRequested(result):
-            self.assertEqual(requestHeaders['Foo'], ['bar'])
+            self.f1.proto.notifyOnDisconnect(check_logs)
+            self.assertEqual(requestHeaders[b'Foo'], [b'bar'])
+
         request.addCallback(cbRequested)
         return request
 
@@ -199,9 +234,9 @@ class DistribTests(unittest.TestCase):
 
         request = self._requestAgentTest(SetResponseCode())
         def cbRequested(result):
-            self.assertEqual(result[0].data, "")
+            self.assertEqual(result[0].data, b"")
             self.assertEqual(result[1].code, 200)
-            self.assertEqual(result[1].phrase, "OK")
+            self.assertEqual(result[1].phrase, b"OK")
         request.addCallback(cbRequested)
         return request
 
@@ -213,14 +248,14 @@ class DistribTests(unittest.TestCase):
         """
         class SetResponseCode(resource.Resource):
             def render(self, request):
-                request.setResponseCode(200, "some-message")
+                request.setResponseCode(200, b"some-message")
                 return ""
 
         request = self._requestAgentTest(SetResponseCode())
         def cbRequested(result):
-            self.assertEqual(result[0].data, "")
+            self.assertEqual(result[0].data, b"")
             self.assertEqual(result[1].code, 200)
-            self.assertEqual(result[1].phrase, "some-message")
+            self.assertEqual(result[1].phrase, b"some-message")
         request.addCallback(cbRequested)
         return request
 
@@ -233,12 +268,12 @@ class DistribTests(unittest.TestCase):
         """
         class LargeWrite(resource.Resource):
             def render(self, request):
-                request.write('x' * SIZE_LIMIT + 'y')
+                request.write(b'x' * SIZE_LIMIT + b'y')
                 request.finish()
                 return server.NOT_DONE_YET
 
         request = self._requestTest(LargeWrite())
-        request.addCallback(self.assertEqual, 'x' * SIZE_LIMIT + 'y')
+        request.addCallback(self.assertEqual, b'x' * SIZE_LIMIT + b'y')
         return request
 
 
@@ -249,10 +284,10 @@ class DistribTests(unittest.TestCase):
         """
         class LargeReturn(resource.Resource):
             def render(self, request):
-                return 'x' * SIZE_LIMIT + 'y'
+                return b'x' * SIZE_LIMIT + b'y'
 
         request = self._requestTest(LargeReturn())
-        request.addCallback(self.assertEqual, 'x' * SIZE_LIMIT + 'y')
+        request.addCallback(self.assertEqual, b'x' * SIZE_LIMIT + b'y')
         return request
 
 
@@ -268,7 +303,7 @@ class DistribTests(unittest.TestCase):
 
         self.sub = subscription = distrib.ResourceSubscription(
             "127.0.0.1", serverPort.getHost().port)
-        request = DummyRequest([''])
+        request = DummyRequest([b''])
         d = _render(subscription, request)
         def cbRendered(ignored):
             self.assertEqual(request.responseCode, 500)
@@ -278,26 +313,63 @@ class DistribTests(unittest.TestCase):
             self.assertEqual(len(errors), 1)
             # The error page is rendered as HTML.
             expected = [
-                '',
-                '<html>',
-                '  <head><title>500 - Server Connection Lost</title></head>',
-                '  <body>',
-                '    <h1>Server Connection Lost</h1>',
-                '    <p>Connection to distributed server lost:'
-                    '<pre>'
-                    '[Failure instance: Traceback from remote host -- '
-                    'Traceback unavailable',
-                'twisted.spread.flavors.NoSuchMethod: '
-                    'No such method: remote_request',
-                ']</pre></p>',
-                '  </body>',
-                '</html>',
-                ''
+                b'',
+                b'<html>',
+                b'  <head><title>500 - Server Connection Lost</title></head>',
+                b'  <body>',
+                b'    <h1>Server Connection Lost</h1>',
+                b'    <p>Connection to distributed server lost:'
+                    b'<pre>'
+                    b'[Failure instance: Traceback from remote host -- '
+                b'twisted.spread.flavors.NoSuchMethod: '
+                    b'No such method: remote_request',
+                b']</pre></p>',
+                b'  </body>',
+                b'</html>',
+                b''
                 ]
-            self.assertEqual(['\n'.join(expected)], request.written)
+            self.assertEqual([b'\n'.join(expected)], request.written)
 
         d.addCallback(cbRendered)
         return d
+
+
+    def test_logFailed(self):
+        """
+        When a request fails, the string form of the failure is logged.
+        """
+        logObserver = proto_helpers.EventLoggingObserver.createWithCleanup(
+            self,
+            globalLogPublisher
+        )
+
+        f = failure.Failure(ArbitraryError())
+        request = DummyRequest([b''])
+        issue = distrib.Issue(request)
+        issue.failed(f)
+        self.assertEquals(1, len(logObserver))
+        self.assertIn(
+            "Failure instance",
+            logObserver[0]["log_format"]
+        )
+
+
+    def test_requestFail(self):
+        """
+        When L{twisted.web.distrib.Request}'s fail is called, the failure
+        is logged.
+        """
+        logObserver = proto_helpers.EventLoggingObserver.createWithCleanup(
+            self,
+            globalLogPublisher
+        )
+        err = ArbitraryError()
+        f = failure.Failure(err)
+        req = distrib.Request(DummyChannel())
+        req.fail(f)
+        self.flushLoggedErrors(ArbitraryError)
+        self.assertEquals(1, len(logObserver))
+        self.assertIs(logObserver[0]["log_failure"], f)
 
 
 
@@ -423,12 +495,12 @@ class UserDirectoryTests(unittest.TestCase):
         # This really only works if it's a unix socket, but the implementation
         # doesn't currently check for that.  It probably should someday, and
         # then skip users with non-sockets.
-        web.child('.twistd-web-pb').setContent("")
+        web.child('.twistd-web-pb').setContent(b"")
 
         request = DummyRequest([''])
         result = _render(self.directory, request)
         def cbRendered(ignored):
-            document = parseString(''.join(request.written))
+            document = parseString(b''.join(request.written))
 
             # Each user should have an li with a link to their page.
             [alice, bob] = document.getElementsByTagName('li')

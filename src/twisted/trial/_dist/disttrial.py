@@ -195,7 +195,7 @@ class DistTrialRunner(object):
         testDir, testDirLock = _unusedTestDirectory(
             FilePath(self._workingDirectory))
         workerNumber = min(count, self._workerNumber)
-        ampWorkers = [LocalWorkerAMP() for x in xrange(workerNumber)]
+        ampWorkers = [LocalWorkerAMP() for x in range(workerNumber)]
         workers = self.createLocalWorkers(ampWorkers, testDir.path)
         processEndDeferreds = [worker.endDeferred for worker in workers]
         self.launchWorkerProcesses(reactor.spawnProcess, workers,

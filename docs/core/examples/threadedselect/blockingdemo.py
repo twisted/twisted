@@ -12,7 +12,12 @@ from twisted.python.failure import Failure
 from twisted.internet import reactor
 from twisted.python.runtime import seconds
 from itertools import count
-from Queue import Queue, Empty
+try:
+    # Python 3
+    from queue import Queue, Empty
+except ImportError:
+    # Python 2
+    from Queue import Queue, Empty
 
 class TwistedManager(object):
     def __init__(self):
@@ -22,7 +27,7 @@ class TwistedManager(object):
 
     def getKey(self):
         # get a unique identifier
-        return self.key.next()
+        return next(self.key)
 
     def start(self):
         # start the reactor

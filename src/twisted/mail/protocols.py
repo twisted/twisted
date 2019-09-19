@@ -2,10 +2,11 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-
 """
 Mail protocol support.
 """
+
+from __future__ import absolute_import, division
 
 from twisted.mail import pop3
 from twisted.mail import smtp
@@ -72,17 +73,19 @@ class DomainDeliveryBase:
         @rtype: L{bytes}
         @return: A received header string.
         """
-        authStr = heloStr = ""
+        authStr = heloStr = b""
         if self.user:
-            authStr = " auth=%s" % (self.user.encode('xtext'),)
+            authStr = b" auth=" + self.user.encode('xtext')
         if helo[0]:
-            heloStr = " helo=%s" % (helo[0],)
-        from_ = "from %s ([%s]%s%s)" % (helo[0], helo[1], heloStr, authStr)
-        by = "by %s with %s (%s)" % (
-            self.host, self.protocolName, longversion
-        )
-        for_ = "for <%s>; %s" % (' '.join(map(str, recipients)), smtp.rfc822date())
-        return "Received: %s\n\t%s\n\t%s" % (from_, by, for_)
+            heloStr = b" helo=" + helo[0]
+        fromUser = (b"from " + helo[0] + b" ([" + helo[1] + b"]" +
+                 heloStr + authStr)
+        by = (b"by " + self.host + b" with " + self.protocolName +
+              b" (" + longversion.encode("ascii") + b")")
+        forUser = (b"for <" + b' '.join(map(bytes, recipients)) + b"> " +
+                smtp.rfc822date())
+        return (b"Received: " + fromUser + b"\n\t" + by +
+                b"\n\t" + forUser)
 
 
     def validateTo(self, user):
@@ -129,9 +132,11 @@ class DomainDeliveryBase:
             origination address.
         """
         if not helo:
-            raise smtp.SMTPBadSender(origin, 503, "Who are you?  Say HELO first.")
-        if origin.local != '' and origin.domain == '':
-            raise smtp.SMTPBadSender(origin, 501, "Sender address must contain domain.")
+            raise smtp.SMTPBadSender(origin, 503,
+                                     "Who are you?  Say HELO first.")
+        if origin.local != b'' and origin.domain == b'':
+            raise smtp.SMTPBadSender(origin, 501,
+                                     "Sender address must contain domain.")
         return origin
 
 
@@ -140,7 +145,7 @@ class SMTPDomainDelivery(DomainDeliveryBase):
     """
     A domain delivery base class for use in an SMTP server.
     """
-    protocolName = 'smtp'
+    protocolName = b'smtp'
 
 
 
@@ -148,7 +153,7 @@ class ESMTPDomainDelivery(DomainDeliveryBase):
     """
     A domain delivery base class for use in an ESMTP server.
     """
-    protocolName = 'esmtp'
+    protocolName = b'esmtp'
 
 
 
@@ -230,7 +235,7 @@ class ESMTPFactory(SMTPFactory):
         """
         SMTPFactory.__init__(self, *args)
         self.challengers = {
-            'CRAM-MD5': CramMD5Credentials
+            b'CRAM-MD5': CramMD5Credentials
         }
 
 
@@ -265,9 +270,9 @@ class VirtualPOP3(pop3.POP3):
     """
     service = None
 
-    domainSpecifier = '@' # Gaagh! I hate POP3. No standardized way
-                          # to indicate user@host. '@' doesn't work
-                          # with NS, e.g.
+    domainSpecifier = b'@'  # Gaagh! I hate POP3. No standardized way
+                            # to indicate user@host. '@' doesn't work
+                            # with NS, e.g.
 
     def authenticateUserAPOP(self, user, digest):
         """
@@ -354,9 +359,10 @@ class VirtualPOP3(pop3.POP3):
         try:
             user, domain = user.split(self.domainSpecifier, 1)
         except ValueError:
-            domain = ''
+            domain = b''
         if domain not in self.service.domains:
-             raise pop3.POP3Error("no such domain %s" % domain)
+            raise pop3.POP3Error(
+                "no such domain {}".format(domain.decode("utf-8")))
         return user, domain
 
 

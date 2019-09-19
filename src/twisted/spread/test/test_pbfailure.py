@@ -4,22 +4,20 @@
 """
 Tests for error handling in PB.
 """
-
-from StringIO import StringIO
-
-from twisted.trial import unittest
-from twisted.spread import pb, flavors, jelly
 from twisted.internet import reactor, defer
 from twisted.python import log
+from twisted.python.compat import NativeStringIO
+from twisted.python.reflect import qual
+from twisted.spread import pb, flavors, jelly
+from twisted.trial import unittest
 
-##
-# test exceptions
-##
+# Test exceptions
 class AsynchronousException(Exception):
     """
     Helper used to test remote methods which return Deferreds which fail with
     exceptions which are not L{pb.Error} subclasses.
     """
+
 
 
 class SynchronousException(Exception):
@@ -29,11 +27,13 @@ class SynchronousException(Exception):
     """
 
 
+
 class AsynchronousError(pb.Error):
     """
     Helper used to test remote methods which return Deferreds which fail with
     exceptions which are L{pb.Error} subclasses.
     """
+
 
 
 class SynchronousError(pb.Error):
@@ -43,22 +43,23 @@ class SynchronousError(pb.Error):
     """
 
 
-#class JellyError(flavors.Jellyable, pb.Error): pass
+
 class JellyError(flavors.Jellyable, pb.Error, pb.RemoteCopy):
     pass
 
 
+
 class SecurityError(pb.Error, pb.RemoteCopy):
     pass
+
+
 
 pb.setUnjellyableForClass(JellyError, JellyError)
 pb.setUnjellyableForClass(SecurityError, SecurityError)
 pb.globalSecurity.allowInstancesOf(SecurityError)
 
 
-####
-# server-side
-####
+# Server-side
 class SimpleRoot(pb.Root):
     def remote_asynchronousException(self):
         """
@@ -66,11 +67,13 @@ class SimpleRoot(pb.Root):
         """
         return defer.fail(AsynchronousException("remote asynchronous exception"))
 
+
     def remote_synchronousException(self):
         """
         Fail synchronously with a non-pb.Error exception.
         """
         raise SynchronousException("remote synchronous exception")
+
 
     def remote_asynchronousError(self):
         """
@@ -78,11 +81,13 @@ class SimpleRoot(pb.Root):
         """
         return defer.fail(AsynchronousError("remote asynchronous error"))
 
+
     def remote_synchronousError(self):
         """
         Fail synchronously with a pb.Error exception.
         """
         raise SynchronousError("remote synchronous error")
+
 
     def remote_unknownError(self):
         """
@@ -92,11 +97,14 @@ class SimpleRoot(pb.Root):
             pass
         raise UnknownError("I'm not known to client!")
 
+
     def remote_jelly(self):
         self.raiseJelly()
 
+
     def remote_security(self):
         self.raiseSecurity()
+
 
     def remote_deferredJelly(self):
         d = defer.Deferred()
@@ -104,14 +112,17 @@ class SimpleRoot(pb.Root):
         d.callback(None)
         return d
 
+
     def remote_deferredSecurity(self):
         d = defer.Deferred()
         d.addCallback(self.raiseSecurity)
         d.callback(None)
         return d
 
+
     def raiseJelly(self, results=None):
         raise JellyError("I'm jellyable!")
+
 
     def raiseSecurity(self, results=None):
         raise SecurityError("I'm secure!")
@@ -140,15 +151,18 @@ class PBConnTestCase(unittest.TestCase):
         self._setUpServer()
         self._setUpClient()
 
+
     def _setUpServer(self):
         self.serverFactory = SaveProtocolServerFactory(SimpleRoot())
         self.serverFactory.unsafeTracebacks = self.unsafeTracebacks
         self.serverPort = reactor.listenTCP(0, self.serverFactory, interface="127.0.0.1")
 
+
     def _setUpClient(self):
         portNo = self.serverPort.getHost().port
         self.clientFactory = pb.PBClientFactory()
         self.clientConnector = reactor.connectTCP("127.0.0.1", portNo, self.clientFactory)
+
 
     def tearDown(self):
         if self.serverFactory.protocolInstance is not None:
@@ -157,8 +171,10 @@ class PBConnTestCase(unittest.TestCase):
             self._tearDownServer(),
             self._tearDownClient()])
 
+
     def _tearDownServer(self):
         return defer.maybeDeferred(self.serverPort.stopListening)
+
 
     def _tearDownClient(self):
         self.clientConnector.disconnect()
@@ -288,7 +304,7 @@ class PBFailureTests(PBConnTestCase):
         def failureUnjellyable(fail):
             self.assertEqual(
                 fail.type,
-                'twisted.spread.test.test_pbfailure.SynchronousError')
+                b'twisted.spread.test.test_pbfailure.SynchronousError')
             return 431
         return self._testImpl('synchronousError', 431, failureUnjellyable)
 
@@ -300,7 +316,7 @@ class PBFailureTests(PBConnTestCase):
         """
         def failureUnknown(fail):
             self.assertEqual(
-                fail.type, 'twisted.spread.test.test_pbfailure.UnknownError')
+                fail.type, b'twisted.spread.test.test_pbfailure.UnknownError')
             return 4310
         return self._testImpl('unknownError', 4310, failureUnknown)
 
@@ -390,7 +406,7 @@ class PBFailureTests(PBConnTestCase):
         self.assertRaises(StopIteration, copy.throwExceptionIntoGenerator, gen)
         self.assertEqual(len(exception), 1)
         exc = exception[0]
-        self.assertEqual(exc.remoteType, "exceptions.AttributeError")
+        self.assertEqual(exc.remoteType, qual(AttributeError).encode("ascii"))
         self.assertEqual(exc.args, ("foo",))
         self.assertEqual(exc.remoteTraceback, 'Traceback unavailable\n')
 
@@ -462,9 +478,9 @@ class FailureJellyingTests(unittest.TestCase):
         """
         original = pb.CopyableFailure(Exception("some reason"))
         copied = jelly.unjelly(jelly.jelly(original, invoker=DummyInvoker()))
-        output = StringIO()
+        output = NativeStringIO()
         copied.printTraceback(output)
-        self.assertEqual(
-            "Traceback from remote host -- Traceback unavailable\n"
-            "exceptions.Exception: some reason\n",
-            output.getvalue())
+        exception = qual(Exception)
+        expectedOutput = ("Traceback from remote host -- "
+                         "{}: some reason\n".format(exception))
+        self.assertEqual(expectedOutput, output.getvalue())
