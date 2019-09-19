@@ -16,6 +16,7 @@ from ...runner.test.test_runner import DummyExit
 from ...twist import _twist
 from .._options import TwistOptions
 from .._twist import Twist
+from twisted.test.test_twistd import SignalCapturingMemoryReactor
 
 import twisted.trial.unittest
 
@@ -124,29 +125,10 @@ class TwistTests(twisted.trial.unittest.TestCase):
         )
 
 
-    def test_runnerArguments(self):
-        """
-        L{Twist.runnerArguments} translates L{TwistOptions} to runner
-        arguments.
-        """
-        options = Twist.options([
-            "twist", "--reactor=default", "--log-format=json", "web"
-        ])
-
-        self.assertEqual(
-            Twist.runnerArguments(options),
-            dict(
-                reactor=self.installedReactors["default"],
-                defaultLogLevel=LogLevel.info,
-                logFile=stdout,
-                fileLogObserverFactory=jsonFileLogObserver,
-            )
-        )
-
-
     def test_run(self):
         """
-        L{Twist.run} runs the runner with the given options.
+        L{Twist.run} runs the runner with arguments corresponding to the given
+        options.
         """
         argsSeen = []
 
@@ -157,18 +139,27 @@ class TwistTests(twisted.trial.unittest.TestCase):
             Runner, "run", lambda self: None
         )
 
-        twistOptions = Twist.options(["twist", "web"])
-        runnerArguments = Twist.runnerArguments(twistOptions)
-        Twist.run(runnerArguments)
+        twistOptions = Twist.options([
+            "twist", "--reactor=default", "--log-format=json", "web"
+        ])
+        Twist.run(twistOptions)
 
         self.assertEqual(len(argsSeen), 1)
-        self.assertEqual(argsSeen[0], runnerArguments)
+        self.assertEqual(
+            argsSeen[0],
+            dict(
+                reactor=self.installedReactors["default"],
+                defaultLogLevel=LogLevel.info,
+                logFile=stdout,
+                fileLogObserverFactory=jsonFileLogObserver,
+            )
+        )
 
 
     def test_main(self):
         """
-        L{Twist.run} runs the runner with options corresponding to the given
-        arguments.
+        L{Twist.main} runs the runner with arguments corresponding to the given
+        command line arguments.
         """
         self.patchStartService()
 
@@ -201,3 +192,78 @@ class TwistTests(twisted.trial.unittest.TestCase):
             )
         )
         self.assertEqual(runners[0].runs, 1)
+
+
+
+class TwistExitTests(twisted.trial.unittest.TestCase):
+    """
+    Tests to verify that the Twist script takes the expected actions related
+    to signals and the reactor.
+    """
+
+    def setUp(self):
+        self.exitWithSignalCalled = False
+
+        def fakeExitWithSignal(sig):
+            """
+            Fake to capture whether L{twisted.application._exitWithSignal
+            was called.
+
+            @param sig: Signal value
+            @type sig: C{int}
+            """
+            self.exitWithSignalCalled = True
+
+        self.patch(_twist, '_exitWithSignal', fakeExitWithSignal)
+
+        def startLogging(_):
+            """
+            Prevent Runner from adding new log observers or other
+            tests outside this module will fail.
+
+            @param _: Unused self param
+            """
+
+        self.patch(Runner, 'startLogging', startLogging)
+
+
+    def test_twistReactorDoesntExitWithSignal(self):
+        """
+        _exitWithSignal is not called if the reactor's _exitSignal attribute
+        is zero.
+        """
+        reactor = SignalCapturingMemoryReactor()
+        reactor._exitSignal = None
+        options = TwistOptions()
+        options["reactor"] = reactor
+        options["fileLogObserverFactory"] = jsonFileLogObserver
+
+        Twist.run(options)
+        self.assertFalse(self.exitWithSignalCalled)
+
+
+    def test_twistReactorHasNoExitSignalAttr(self):
+        """
+        _exitWithSignal is not called if the runner's reactor does not
+        implement L{twisted.internet.interfaces._ISupportsExitSignalCapturing}
+        """
+        reactor = MemoryReactor()
+        options = TwistOptions()
+        options["reactor"] = reactor
+        options["fileLogObserverFactory"] = jsonFileLogObserver
+        Twist.run(options)
+        self.assertFalse(self.exitWithSignalCalled)
+
+
+    def test_twistReactorExitsWithSignal(self):
+        """
+        _exitWithSignal is called if the runner's reactor exits due
+        to a signal.
+        """
+        reactor = SignalCapturingMemoryReactor()
+        reactor._exitSignal = 2
+        options = TwistOptions()
+        options["reactor"] = reactor
+        options["fileLogObserverFactory"] = jsonFileLogObserver
+        Twist.run(options)
+        self.assertTrue(self.exitWithSignalCalled)

@@ -13,7 +13,9 @@ class RemoteCalculationTestCase(unittest.TestCase):
 
 
     def _test(self, operation, a, b, expected):
-        self.proto.dataReceived('%s %d %d\r\n' % (operation, a, b))
+        self.proto.dataReceived(
+            u'{} {} {}\r\n'.format(operation, a, b).encode('utf-8')
+        )
         self.assertEqual(int(self.tr.value()), expected)
 
 
@@ -34,7 +36,7 @@ class RemoteCalculationTestCase(unittest.TestCase):
 
 
     def test_invalidParameters(self):
-        self.proto.dataReceived('add foo bar\r\n')
-        self.assertEqual(self.tr.value(), "error\r\n")
+        self.proto.dataReceived(b'add foo bar\r\n')
+        self.assertEqual(self.tr.value(), b"error\r\n")
         errors = self.flushLoggedErrors(TypeError)
         self.assertEqual(len(errors), 1)

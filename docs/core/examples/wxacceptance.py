@@ -4,7 +4,7 @@
 """
 Acceptance tests for wxreactor.
 
-Please test on Linux, Win32 and OS X:
+Please test on Linux, Win32 and macOS:
 1. Startup event is called at startup.
 2. Scheduled event is called after 2 seconds.
 3. Shutdown takes 3 seconds, both when quiting from menu and when closing

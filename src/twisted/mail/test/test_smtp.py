@@ -759,14 +759,38 @@ class TimeoutTests(unittest.TestCase, LoopbackMixin):
         return d
 
 
-    def test_SMTPClient(self):
+    def test_SMTPClientRecipientBytes(self):
         """
         Test timeout for L{smtp.SMTPSenderFactory}: the response L{Deferred}
         should be errback with a L{smtp.SMTPTimeoutError}.
         """
         onDone = defer.Deferred()
         clientFactory = smtp.SMTPSenderFactory(
-            'source@address', 'recipient@address',
+            'source@address', b'recipient@address',
+            BytesIO(b"Message body"), onDone,
+            retries=0, timeout=0.5)
+        return self._timeoutTest(onDone, clientFactory)
+
+
+    def test_SMTPClientRecipientUnicode(self):
+        """
+        Use a L{unicode} recipient.
+        """
+        onDone = defer.Deferred()
+        clientFactory = smtp.SMTPSenderFactory(
+            'source@address', u'recipient@address',
+            BytesIO(b"Message body"), onDone,
+            retries=0, timeout=0.5)
+        return self._timeoutTest(onDone, clientFactory)
+
+
+    def test_SMTPClientRecipientList(self):
+        """
+        Use a L{list} of recipients.
+        """
+        onDone = defer.Deferred()
+        clientFactory = smtp.SMTPSenderFactory(
+            'source@address', (u'recipient1@address', b'recipient2@address'),
             BytesIO(b"Message body"), onDone,
             retries=0, timeout=0.5)
         return self._timeoutTest(onDone, clientFactory)
@@ -1806,21 +1830,37 @@ class SendmailTests(unittest.TestCase):
         self.assertEqual(reactor, defaults[2])
 
 
-    def test_honorsESMTPArguments(self):
+    def _honorsESMTPArguments(self, username, password):
         """
         L{twisted.mail.smtp.sendmail} creates the ESMTP factory with the ESMTP
         arguments.
         """
         reactor = MemoryReactor()
         smtp.sendmail("localhost", "source@address", "recipient@address",
-                      b"message", reactor=reactor, username=b"foo",
-                      password=b"bar", requireTransportSecurity=True,
+                      b"message", reactor=reactor, username=username,
+                      password=password, requireTransportSecurity=True,
                       requireAuthentication=True)
         factory = reactor.tcpClients[0][2]
         self.assertEqual(factory._requireTransportSecurity, True)
         self.assertEqual(factory._requireAuthentication, True)
         self.assertEqual(factory.username, b"foo")
         self.assertEqual(factory.password, b"bar")
+
+
+    def test_honorsESMTPArgumentsUnicodeUserPW(self):
+        """
+        L{twisted.mail.smtp.sendmail} should accept C{username} and C{password}
+        which are L{unicode}.
+        """
+        return self._honorsESMTPArguments(username=u"foo", password=u"bar")
+
+
+    def test_honorsESMTPArgumentsBytesUserPW(self):
+        """
+        L{twisted.mail.smtp.sendmail} should accept C{username} and C{password}
+        which are L{bytes}.
+        """
+        return self._honorsESMTPArguments(username=b"foo", password=b"bar")
 
 
     def test_messageFilePassthrough(self):

@@ -9,17 +9,19 @@ from signal import SIGTERM
 from io import BytesIO
 import errno
 
+from attr import attrib, attrs, Factory
+
 from twisted.logger import (
     LogLevel, LogPublisher, LogBeginner,
     FileLogObserver, FilteringLogObserver, LogLevelFilterPredicate,
 )
+from twisted.test.proto_helpers import MemoryReactor
 
 from ...runner import _runner
 from .._exit import ExitStatus
 from .._pidfile import PIDFile, NonePIDFile
 from .._runner import Runner
 from .test_pidfile import DummyFilePath
-from .mockreactor import MockReactor
 
 import twisted.trial.unittest
 
@@ -68,7 +70,7 @@ class RunnerTests(twisted.trial.unittest.TestCase):
         """
         L{Runner.run} calls the expected methods in order.
         """
-        runner = DummyRunner({})
+        runner = DummyRunner(reactor=MemoryReactor())
         runner.run()
 
         self.assertEqual(
@@ -88,7 +90,7 @@ class RunnerTests(twisted.trial.unittest.TestCase):
         """
         pidFile = DummyPIDFile()
 
-        runner = DummyRunner(pidFile=pidFile)
+        runner = Runner(reactor=MemoryReactor(), pidFile=pidFile)
 
         self.assertFalse(pidFile.entered)
         self.assertFalse(pidFile.exited)
@@ -108,7 +110,7 @@ class RunnerTests(twisted.trial.unittest.TestCase):
         pidFile = PIDFile(DummyFilePath(self.pidFileContent))
         pidFile.isRunning = lambda: True
 
-        runner = DummyRunner(pidFile=pidFile)
+        runner = Runner(reactor=MemoryReactor(), pidFile=pidFile)
         runner.run()
 
         self.assertEqual(self.exit.status, ExitStatus.EX_CONFIG)
@@ -120,7 +122,7 @@ class RunnerTests(twisted.trial.unittest.TestCase):
         L{Runner.killIfRequested} when C{kill} is false doesn't exit and
         doesn't indiscriminately murder anyone.
         """
-        runner = Runner({})
+        runner = Runner(reactor=MemoryReactor())
         runner.killIfRequested()
 
         self.assertEqual(self.kill.calls, [])
@@ -133,7 +135,7 @@ class RunnerTests(twisted.trial.unittest.TestCase):
         L{nonePIDFile} exits with L{ExitStatus.EX_USAGE} and the expected
         message; and also doesn't indiscriminately murder anyone.
         """
-        runner = Runner(kill=True)
+        runner = Runner(reactor=MemoryReactor(), kill=True)
         runner.killIfRequested()
 
         self.assertEqual(self.kill.calls, [])
@@ -147,7 +149,7 @@ class RunnerTests(twisted.trial.unittest.TestCase):
         performs a targeted killing of the appropriate process.
         """
         pidFile = PIDFile(DummyFilePath(self.pidFileContent))
-        runner = Runner(kill=True, pidFile=pidFile)
+        runner = Runner(reactor=MemoryReactor(), kill=True, pidFile=pidFile)
         runner.killIfRequested()
 
         self.assertEqual(self.kill.calls, [(self.pid, SIGTERM)])
@@ -167,7 +169,7 @@ class RunnerTests(twisted.trial.unittest.TestCase):
 
         pidFile.read = read
 
-        runner = Runner(kill=True, pidFile=pidFile)
+        runner = Runner(reactor=MemoryReactor(), kill=True, pidFile=pidFile)
         runner.killIfRequested()
 
         self.assertEqual(self.exit.status, ExitStatus.EX_IOERR)
@@ -180,7 +182,7 @@ class RunnerTests(twisted.trial.unittest.TestCase):
         containing no value exits with L{ExitStatus.EX_DATAERR}.
         """
         pidFile = PIDFile(DummyFilePath(b""))
-        runner = Runner(kill=True, pidFile=pidFile)
+        runner = Runner(reactor=MemoryReactor(), kill=True, pidFile=pidFile)
         runner.killIfRequested()
 
         self.assertEqual(self.exit.status, ExitStatus.EX_DATAERR)
@@ -193,7 +195,7 @@ class RunnerTests(twisted.trial.unittest.TestCase):
         containing a non-integer value exits with L{ExitStatus.EX_DATAERR}.
         """
         pidFile = PIDFile(DummyFilePath(b"** totally not a number, dude **"))
-        runner = Runner(kill=True, pidFile=pidFile)
+        runner = Runner(reactor=MemoryReactor(), kill=True, pidFile=pidFile)
         runner.killIfRequested()
 
         self.assertEqual(self.exit.status, ExitStatus.EX_DATAERR)
@@ -241,6 +243,7 @@ class RunnerTests(twisted.trial.unittest.TestCase):
 
         # Start logging
         runner = Runner(
+            reactor=MemoryReactor(),
             defaultLogLevel=LogLevel.critical,
             logFile=logFile,
             fileLogObserverFactory=MockFileLogObserver,
@@ -273,27 +276,12 @@ class RunnerTests(twisted.trial.unittest.TestCase):
         )
 
 
-    def test_startReactorWithoutReactor(self):
-        """
-        L{Runner.startReactor} without the C{reactor} argument runs the default
-        reactor.
-        """
-        reactor = MockReactor(self)
-        self.patch(_runner, "defaultReactor", reactor)
-
-        runner = Runner()
-        runner.startReactor()
-
-        self.assertTrue(reactor.hasInstalled)
-        self.assertTrue(reactor.hasRun)
-
-
     def test_startReactorWithReactor(self):
         """
         L{Runner.startReactor} with the C{reactor} argument runs the given
         reactor.
         """
-        reactor = MockReactor(self)
+        reactor = MemoryReactor()
         runner = Runner(reactor=reactor)
         runner.startReactor()
 
@@ -352,7 +340,7 @@ class RunnerTests(twisted.trial.unittest.TestCase):
             methodName: hook,
             "{}Arguments".format(methodName): arguments.copy(),
         }
-        runner = Runner(reactor=MockReactor(self), **runnerArguments)
+        runner = Runner(reactor=MemoryReactor(), **runnerArguments)
 
         hookCaller = getattr(runner, callerName)
         hookCaller()
@@ -362,16 +350,15 @@ class RunnerTests(twisted.trial.unittest.TestCase):
 
 
 
+@attrs(frozen=True)
 class DummyRunner(Runner):
     """
     Stub for L{Runner}.
 
     Keep track of calls to some methods without actually doing anything.
     """
-    def __init__(self, *args, **kwargs):
-        Runner.__init__(self, *args, **kwargs)
 
-        self.calledMethods = []
+    calledMethods = attrib(default=Factory(list))
 
 
     def killIfRequested(self):

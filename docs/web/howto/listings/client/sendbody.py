@@ -4,13 +4,13 @@ from twisted.internet import reactor
 from twisted.web.client import Agent
 from twisted.web.http_headers import Headers
 
-from stringprod import StringProducer
+from bytesprod import BytesProducer
 
 agent = Agent(reactor)
-body = StringProducer("hello, world")
+body = BytesProducer(b"hello, world")
 d = agent.request(
-    'GET',
-    'http://example.com/',
+    b'POST',
+    b'http://httpbin.org/post',
     Headers({'User-Agent': ['Twisted Web Client Example'],
              'Content-Type': ['text/x-greeting']}),
     body)
