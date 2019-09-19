@@ -9,6 +9,7 @@ HTTP client.
 from __future__ import division, absolute_import
 
 import os
+import collections
 import warnings
 
 try:
@@ -46,6 +47,9 @@ from twisted.web.iweb import UNKNOWN_LENGTH, IAgent, IBodyProducer, IResponse
 from twisted.web.http_headers import Headers
 from twisted.logger import Logger
 
+from twisted.web._newclient import _ensureValidURI, _ensureValidMethod
+
+
 
 class PartialDownloadError(error.Error):
     """
@@ -77,11 +81,13 @@ class HTTPPageGetter(http.HTTPClient):
 
     _completelyDone = True
 
-    _specialHeaders = set((b'host', b'user-agent', b'cookie', b'content-length'))
+    _specialHeaders = set(
+        (b'host', b'user-agent', b'cookie', b'content-length'),
+    )
 
     def connectionMade(self):
-        method = getattr(self.factory, 'method', b'GET')
-        self.sendCommand(method, self.factory.path)
+        method = _ensureValidMethod(getattr(self.factory, 'method', b'GET'))
+        self.sendCommand(method, _ensureValidURI(self.factory.path))
         if self.factory.scheme == b'http' and self.factory.port != 80:
             host = self.factory.host + b':' + intToBytes(self.factory.port)
         elif self.factory.scheme == b'https' and self.factory.port != 443:
@@ -361,7 +367,7 @@ class HTTPClientFactory(protocol.ClientFactory):
             # just in case a broken http/1.1 decides to keep connection alive
             self.headers.setdefault(b"connection", b"close")
         self.postdata = postdata
-        self.method = method
+        self.method = _ensureValidMethod(method)
 
         self.setURL(url)
 
@@ -388,6 +394,7 @@ class HTTPClientFactory(protocol.ClientFactory):
         return "<%s: %s>" % (self.__class__.__name__, self.url)
 
     def setURL(self, url):
+        _ensureValidURI(url.strip())
         self.url = url
         uri = URI.fromBytes(url)
         if uri.scheme and uri.host:
@@ -732,7 +739,7 @@ def _makeGetterFactory(url, factoryFactory, contextFactory=None,
 
     @return: The factory created by C{factoryFactory}
     """
-    uri = URI.fromBytes(url)
+    uri = URI.fromBytes(_ensureValidURI(url.strip()))
     factory = factoryFactory(url, *args, **kwargs)
     if uri.scheme == b'https':
         from twisted.internet import ssl
@@ -954,6 +961,73 @@ deprecatedModuleAttribute(Version("Twisted", 14, 0, 0),
                           .split("; ")[1],
                           WebClientContextFactory.__module__,
                           WebClientContextFactory.__name__)
+
+
+
+@implementer(IPolicyForHTTPS)
+class HostnameCachingHTTPSPolicy(object):
+    """
+    IPolicyForHTTPS that wraps a L{IPolicyForHTTPS} and caches the created
+    L{IOpenSSLClientConnectionCreator}.
+
+    This policy will cache up to C{cacheSize}
+    L{client connection creators <twisted.internet.interfaces.
+    IOpenSSLClientConnectionCreator>} for reuse in subsequent requests to
+    the same hostname.
+
+    @ivar _policyForHTTPS: See C{policyforHTTPS} parameter of L{__init__}.
+
+    @ivar _cache: A cache associating hostnames to their
+        L{client connection creators <twisted.internet.interfaces.
+        IOpenSSLClientConnectionCreator>}.
+    @type _cache: L{collections.OrderedDict}
+
+    @ivar _cacheSize: See C{cacheSize} parameter of L{__init__}.
+
+    @since: Twisted 19.2.0
+    """
+
+    def __init__(self, policyforHTTPS, cacheSize=20):
+        """
+        @param policyforHTTPS: The IPolicyForHTTPS to wrap.
+        @type policyforHTTPS: L{IPolicyForHTTPS}
+
+        @param cacheSize: The maximum size of the hostname cache.
+        @type cacheSize: L{int}
+        """
+        self._policyForHTTPS = policyforHTTPS
+        self._cache = collections.OrderedDict()
+        self._cacheSize = cacheSize
+
+
+    def creatorForNetloc(self, hostname, port):
+        """
+        Create a L{client connection creator
+        <twisted.internet.interfaces.IOpenSSLClientConnectionCreator>} for a
+        given network location and cache it for future use.
+
+        @param hostname: The hostname part of the URI.
+        @type hostname: L{bytes}
+
+        @param port: The port part of the URI.
+        @type port: L{int}
+
+        @return: a connection creator with appropriate verification
+            restrictions set
+        @rtype: L{client connection creator
+            <twisted.internet.interfaces.IOpenSSLClientConnectionCreator>}
+        """
+        host = hostname.decode("ascii")
+        try:
+            creator = self._cache.pop(host)
+        except KeyError:
+            creator = self._policyForHTTPS.creatorForNetloc(hostname, port)
+
+        self._cache[host] = creator
+        if len(self._cache) > self._cacheSize:
+            self._cache.popitem(last=False)
+
+        return creator
 
 
 
@@ -1422,6 +1496,12 @@ class _AgentBase(object):
         Issue a new request, given the endpoint and the path sent as part of
         the request.
         """
+        if not isinstance(method, bytes):
+            raise TypeError('method={!r} is {}, but must be bytes'.format(
+                    method, type(method)))
+
+        method = _ensureValidMethod(method)
+
         # Create minimal headers, if necessary:
         if headers is None:
             headers = Headers()
@@ -1646,6 +1726,7 @@ class Agent(_AgentBase):
 
         @see: L{twisted.web.iweb.IAgent.request}
         """
+        uri = _ensureValidURI(uri.strip())
         parsedURI = URI.fromBytes(uri)
         try:
             endpoint = self._getEndpoint(parsedURI)
@@ -1679,6 +1760,8 @@ class ProxyAgent(_AgentBase):
         """
         Issue a new request via the configured proxy.
         """
+        uri = _ensureValidURI(uri.strip())
+
         # Cache *all* connections under the same key, since we are only
         # connecting to a single destination, the proxy:
         key = ("http-proxy", self._proxyEndpoint)

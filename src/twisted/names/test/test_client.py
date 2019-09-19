@@ -7,6 +7,8 @@ Test cases for L{twisted.names.client}.
 
 from __future__ import division, absolute_import
 
+import errno
+
 from zope.interface.verify import verifyClass, verifyObject
 
 from twisted.python import failure
@@ -560,6 +562,48 @@ class ResolverTests(unittest.TestCase):
 
         resolver._connectedProtocol()
         self.assertEqual(len(set(ports)), 2)
+
+    def test_disallowedPortRepeatedly(self):
+        """
+        If port numbers that cannot be bound are repeatedly selected,
+        L{resolver._connectedProtocol} will give up eventually.
+        """
+        ports = []
+
+        class FakeReactor(object):
+            def listenUDP(self, port, *args, **kwargs):
+                ports.append(port)
+                raise CannotListenError(None, port, None)
+
+        resolver = client.Resolver(servers=[('example.com', 53)])
+        resolver._reactor = FakeReactor()
+
+        self.assertRaises(CannotListenError, resolver._connectedProtocol)
+        # 1000 is a good round number. I like it.
+        self.assertEqual(len(ports), 1000)
+
+
+    def test_runOutOfFiles(self):
+        """
+        If the process is out of files, L{Resolver._connectedProtocol}
+        will give up.
+        """
+        ports = []
+
+        class FakeReactor(object):
+            def listenUDP(self, port, *args, **kwargs):
+                ports.append(port)
+                err = OSError(errno.EMFILE, "Out of files :(")
+                raise CannotListenError(None, port, err)
+
+        resolver = client.Resolver(servers=[('example.com', 53)])
+        resolver._reactor = FakeReactor()
+
+        exc = self.assertRaises(CannotListenError, resolver._connectedProtocol)
+        # The EMFILE-containing exception was raised, and it did not try
+        # multiple times.
+        self.assertEqual(exc.socketError.errno, errno.EMFILE)
+        self.assertEqual(len(ports), 1)
 
 
     def test_differentProtocolAfterTimeout(self):

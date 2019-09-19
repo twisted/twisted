@@ -31,6 +31,7 @@ import struct
 import sys
 import tokenize
 from types import MethodType as _MethodType
+import warnings
 
 from io import TextIOBase, IOBase
 
@@ -722,17 +723,6 @@ def _constructMethod(cls, name, self):
 
 
 
-from incremental import Version
-from twisted.python.deprecate import deprecatedModuleAttribute
-
-from collections import OrderedDict
-
-deprecatedModuleAttribute(
-    Version("Twisted", 15, 5, 0),
-    "Use collections.OrderedDict instead.",
-    "twisted.python.compat",
-    "OrderedDict")
-
 if _PY3:
     from base64 import encodebytes as _b64encodebytes
     from base64 import decodebytes as _b64decodebytes
@@ -833,6 +823,66 @@ except ImportError:
     from collections import Sequence
 
 
+
+def _get_async_param(isAsync=None, **kwargs):
+    """
+    Provide a backwards-compatible way to get async param value that does not
+    cause a syntax error under Python 3.7.
+
+    @param isAsync: isAsync param value (should default to None)
+    @type isAsync: L{bool}
+
+    @param kwargs: keyword arguments of the caller (only async is allowed)
+    @type kwargs: L{dict}
+
+    @raise TypeError: Both isAsync and async specified.
+
+    @return: Final isAsync param value
+    @rtype: L{bool}
+    """
+    if 'async' in kwargs:
+        warnings.warn(
+            "'async' keyword argument is deprecated, please use isAsync",
+            DeprecationWarning, stacklevel=2)
+    if isAsync is None and 'async' in kwargs:
+        isAsync = kwargs.pop('async')
+    if kwargs:
+        raise TypeError
+    return bool(isAsync)
+
+
+
+def _pypy3BlockingHack():
+    """
+    Work around U{this pypy bug
+    <https://bitbucket.org/pypy/pypy/issues/3051/socketfromfd-sets-sockets-to-blocking-on>}
+    by replacing C{socket.fromfd} with a more conservative version.
+    """
+    try:
+        from fcntl import fcntl, F_GETFL, F_SETFL
+    except ImportError:
+        return
+    if not (_PY3 and _PYPY):
+        return
+
+    def fromFDWithoutModifyingFlags(fd, family, type, proto=None):
+        passproto = [proto] * (proto is not None)
+        flags = fcntl(fd, F_GETFL)
+        try:
+            return realFromFD(fd, family, type, *passproto)
+        finally:
+            fcntl(fd, F_SETFL, flags)
+    realFromFD = socket.fromfd
+    if realFromFD.__name__ == fromFDWithoutModifyingFlags.__name__:
+        return
+    socket.fromfd = fromFDWithoutModifyingFlags
+
+
+
+_pypy3BlockingHack()
+
+
+
 __all__ = [
     "reraise",
     "execfile",
@@ -873,5 +923,6 @@ __all__ = [
     "unichr",
     "raw_input",
     "_tokenize",
+    "_get_async_param",
     "Sequence",
 ]

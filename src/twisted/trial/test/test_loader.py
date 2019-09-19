@@ -21,6 +21,7 @@ from twisted.trial._asyncrunner import _iterateTests
 
 from twisted.python.modules import getModule
 from twisted.python.compat import _PY3
+from twisted.python.reflect import ModuleNotFound
 
 
 
@@ -35,26 +36,28 @@ def testNames(tests):
 
 
 
-class FinderTests(packages.PackageTest):
+class FinderPy2Tests(unittest.SynchronousTestCase):
     """
     Tests for L{runner.TestLoader.findByName}.
     """
+    if _PY3:
+        skip = "Not relevant on Python 3"
+
     def setUp(self):
-        packages.PackageTest.setUp(self)
         self.loader = runner.TestLoader()
 
-    def tearDown(self):
-        packages.PackageTest.tearDown(self)
 
     def test_findPackage(self):
         sample1 = self.loader.findByName('twisted')
         import twisted as sample2
         self.assertEqual(sample1, sample2)
 
+
     def test_findModule(self):
         sample1 = self.loader.findByName('twisted.trial.test.sample')
         from twisted.trial.test import sample as sample2
         self.assertEqual(sample1, sample2)
+
 
     def test_findFile(self):
         path = util.sibpath(__file__, 'sample.py')
@@ -62,35 +65,79 @@ class FinderTests(packages.PackageTest):
         from twisted.trial.test import sample as sample2
         self.assertEqual(sample1, sample2)
 
+
     def test_findObject(self):
         sample1 = self.loader.findByName('twisted.trial.test.sample.FooTest')
         from twisted.trial.test import sample
         self.assertEqual(sample.FooTest, sample1)
 
-    if _PY3:
-        # In Python 3, `findByName` returns full TestCases, not the objects
-        # inside them. This because on Python 3, unbound methods don't exist,
-        # so you can't simply make a TestCase after finding it -- it's easier
-        # to just find it and put it in a TestCase immediately.
-        _Py3SkipMsg = ("Not relevant on Python 3")
-        test_findPackage.skip = _Py3SkipMsg
-        test_findModule.skip = _Py3SkipMsg
-        test_findFile.skip = _Py3SkipMsg
-        test_findObject.skip = _Py3SkipMsg
 
     def test_findNonModule(self):
-        self.assertRaises(AttributeError,
-                              self.loader.findByName,
-                              'twisted.trial.test.nonexistent')
+        self.assertRaises(
+            AttributeError, self.loader.findByName,
+            'twisted.trial.test.nonexistent'
+        )
+
 
     def test_findNonPackage(self):
-        self.assertRaises(ValueError,
-                              self.loader.findByName,
-                              'nonextant')
+        self.assertRaises(
+            ValueError, self.loader.findByName,
+            'nonextant'
+        )
+
 
     def test_findNonFile(self):
         path = util.sibpath(__file__, 'nonexistent.py')
         self.assertRaises(ValueError, self.loader.findByName, path)
+
+
+
+class FinderPy3Tests(packages.SysPathManglingTest):
+
+    if not _PY3:
+        skip = "Not relevant on Python 2"
+
+    def setUp(self):
+        super(FinderPy3Tests, self).setUp()
+        self.loader = runner.TestLoader()
+
+
+    def test_findNonModule(self):
+        """
+        findByName, if given something findable up until the last entry, will
+        raise AttributeError (as it cannot tell if 'nonexistent' here is
+        supposed to be a module or a class).
+        """
+        self.assertRaises(
+            AttributeError, self.loader.findByName,
+            'twisted.trial.test.nonexistent'
+        )
+
+
+    def test_findNonPackage(self):
+        self.assertRaises(
+            ModuleNotFound, self.loader.findByName, 'nonextant'
+        )
+
+
+    def test_findNonFile(self):
+        """
+        findByName, given a file path that doesn't exist, will raise a
+        ValueError saying that it is not a Python file.
+        """
+        path = util.sibpath(__file__, 'nonexistent.py')
+        self.assertRaises(ValueError, self.loader.findByName, path)
+
+
+    def test_findFileWithImportError(self):
+        """
+        findByName will re-raise ImportErrors inside modules that it has found
+        and imported.
+        """
+        self.assertRaises(
+            ImportError, self.loader.findByName,
+            "unimportablepackage.test_module"
+        )
 
 
 

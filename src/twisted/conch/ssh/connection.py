@@ -13,6 +13,7 @@ from __future__ import division, absolute_import
 import string
 import struct
 
+import twisted.internet.error
 from twisted.conch.ssh import service, common
 from twisted.conch import error
 from twisted.internet import defer
@@ -65,8 +66,16 @@ class SSHConnection(service.SSHService):
         """
         Called when the connection is stopped.
         """
-        for channel in list(self.channels.values()):
+        # Close any fully open channels
+        for channel in list(self.channelsToRemoteChannel.keys()):
             self.channelClosed(channel)
+        # Indicate failure to any channels that were in the process of
+        # opening but not yet open.
+        while self.channels:
+            (_, channel) = self.channels.popitem()
+            log.callWithLogger(channel, channel.openFailed,
+                               twisted.internet.error.ConnectionLost())
+        # Errback any unfinished global requests.
         self._cleanupGlobalDeferreds()
 
 
@@ -605,10 +614,11 @@ class SSHConnection(service.SSHService):
             del self.localToRemoteChannel[channel.id]
             del self.channels[channel.id]
             del self.channelsToRemoteChannel[channel]
-            for d in self.deferreds.setdefault(channel.id, []):
+            for d in self.deferreds.pop(channel.id, []):
                 d.errback(error.ConchError("Channel closed."))
-            del self.deferreds[channel.id][:]
             log.callWithLogger(channel, channel.closed)
+
+
 
 MSG_GLOBAL_REQUEST = 80
 MSG_REQUEST_SUCCESS = 81

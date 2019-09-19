@@ -1,1 +1,0 @@
-On UNIX-like platforms, Twisted attempts to recover from EMFILE when accepting connections on TCP and UNIX ports by shedding incoming clients.

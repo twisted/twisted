@@ -21,6 +21,8 @@ skipNPN = None
 skipALPN = None
 
 if requireModule("OpenSSL"):
+    import ipaddress
+
     from twisted.internet import ssl
 
     from OpenSSL import SSL
@@ -193,12 +195,23 @@ def certificatesForAuthorityAndServer(serviceIdentity=u'example.com'):
             backend=default_backend()
         )
     )
+
     privateKeyForServer = rsa.generate_private_key(
         public_exponent=65537,
         key_size=4096,
         backend=default_backend()
     )
     publicKeyForServer = privateKeyForServer.public_key()
+
+    try:
+        ipAddress = ipaddress.ip_address(serviceIdentity)
+    except ValueError:
+        subjectAlternativeNames = [
+            x509.DNSName(serviceIdentity.encode("idna").decode("ascii"))
+        ]
+    else:
+        subjectAlternativeNames = [x509.IPAddress(ipAddress)]
+
     serverCertificate = (
         x509.CertificateBuilder()
         .subject_name(commonNameForServer)
@@ -212,7 +225,7 @@ def certificatesForAuthorityAndServer(serviceIdentity=u'example.com'):
         )
         .add_extension(
             x509.SubjectAlternativeName(
-                [x509.DNSName(serviceIdentity)]
+                subjectAlternativeNames
             ),
             critical=True,
         )
@@ -579,6 +592,33 @@ class ClientOptionsTests(unittest.SynchronousTestCase):
             bytes.__name__
         )
         self.assertEqual(str(error), expectedText)
+
+
+    def test_dNSNameHostname(self):
+        """
+        If you pass a dNSName to L{sslverify.optionsForClientTLS}
+        L{_hostnameIsDnsName} will be True
+        """
+        options = sslverify.optionsForClientTLS(u'example.com')
+        self.assertTrue(options._hostnameIsDnsName)
+
+
+    def test_IPv4AddressHostname(self):
+        """
+        If you pass an IPv4 address to L{sslverify.optionsForClientTLS}
+        L{_hostnameIsDnsName} will be False
+        """
+        options = sslverify.optionsForClientTLS(u'127.0.0.1')
+        self.assertFalse(options._hostnameIsDnsName)
+
+
+    def test_IPv6AddressHostname(self):
+        """
+        If you pass an IPv6 address to L{sslverify.optionsForClientTLS}
+        L{_hostnameIsDnsName} will be False
+        """
+        options = sslverify.optionsForClientTLS(u'::1')
+        self.assertFalse(options._hostnameIsDnsName)
 
 
 
@@ -993,8 +1033,9 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, unittest.TestCase):
                 insecurelyLowerMinimumTo=sslverify.TLSVersion.TLSv1_2,
             )
 
-        # Best error message
-        self.assertEqual(e.exception.args, ("nope",))
+        self.assertIn('raiseMinimumTo', e.exception.args[0])
+        self.assertIn('insecurelyLowerMinimumTo', e.exception.args[0])
+        self.assertIn('exclusive', e.exception.args[0])
 
 
     def test_tlsProtocolsNoMethodWithAtLeast(self):
@@ -1011,8 +1052,9 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, unittest.TestCase):
                 raiseMinimumTo=sslverify.TLSVersion.TLSv1_2,
             )
 
-        # Best error message
-        self.assertEqual(e.exception.args, ("nope",))
+        self.assertIn('method', e.exception.args[0])
+        self.assertIn('raiseMinimumTo', e.exception.args[0])
+        self.assertIn('exclusive', e.exception.args[0])
 
 
     def test_tlsProtocolsNoMethodWithMinimum(self):
@@ -1029,8 +1071,9 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, unittest.TestCase):
                 insecurelyLowerMinimumTo=sslverify.TLSVersion.TLSv1_2,
             )
 
-        # Best error message
-        self.assertEqual(e.exception.args, ("nope",))
+        self.assertIn('method', e.exception.args[0])
+        self.assertIn('insecurelyLowerMinimumTo', e.exception.args[0])
+        self.assertIn('exclusive', e.exception.args[0])
 
 
     def test_tlsProtocolsNoMethodWithMaximum(self):
@@ -1047,8 +1090,9 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, unittest.TestCase):
                 lowerMaximumSecurityTo=sslverify.TLSVersion.TLSv1_2,
             )
 
-        # Best error message
-        self.assertEqual(e.exception.args, ("nope",))
+        self.assertIn('method', e.exception.args[0])
+        self.assertIn('lowerMaximumSecurityTo', e.exception.args[0])
+        self.assertIn('exclusive', e.exception.args[0])
 
 
     def test_tlsVersionRangeInOrder(self):
@@ -1622,11 +1666,28 @@ class OpenSSLOptionsECDHIntegrationTests(
             raise unittest.SkipTest("OpenSSL does not support ECDH.")
 
         onData = defer.Deferred()
-        self.loopback(sslverify.OpenSSLCertificateOptions(privateKey=self.sKey,
-                            certificate=self.sCert, requireCertificate=False),
-                      sslverify.OpenSSLCertificateOptions(
-                          requireCertificate=False),
-                      onData=onData)
+        # TLS 1.3 cipher suites do not specify the key exchange
+        # mechanism:
+        # https://wiki.openssl.org/index.php/TLS1.3#Differences_with_TLS1.2_and_below
+        #
+        # and OpenSSL only supports ECHDE groups with TLS 1.3:
+        # https://wiki.openssl.org/index.php/TLS1.3#Groups
+        #
+        # so TLS 1.3 implies ECDHE.  Force this test to use TLS 1.2 to
+        # ensure ECDH is selected when it might not be.
+        self.loopback(
+            sslverify.OpenSSLCertificateOptions(
+                privateKey=self.sKey,
+                certificate=self.sCert,
+                requireCertificate=False,
+                lowerMaximumSecurityTo=sslverify.TLSVersion.TLSv1_2
+            ),
+            sslverify.OpenSSLCertificateOptions(
+                requireCertificate=False,
+                lowerMaximumSecurityTo=sslverify.TLSVersion.TLSv1_2,
+            ),
+            onData=onData,
+        )
 
         @onData.addCallback
         def assertECDH(_):
@@ -2324,12 +2385,13 @@ class NPNAndALPNAbsentTests(unittest.TestCase):
     NPN/ALPN operations fail on platforms that do not support them.
 
     These tests only run on platforms that have a PyOpenSSL version < 0.15,
-    or an OpenSSL version earlier than 1.0.1
+    an OpenSSL version earlier than 1.0.1, or an OpenSSL/cryptography built
+    without NPN support.
     """
     if skipSSL:
         skip = skipSSL
-    elif not skipNPN:
-        skip = "NPN/ALPN is present on this platform"
+    elif not skipNPN or not skipALPN:
+        skip = "NPN and/or ALPN is present on this platform"
 
 
     def test_nextProtocolMechanismsNoNegotiationSupported(self):
@@ -3214,6 +3276,7 @@ class SelectVerifyImplementationTests(unittest.SynchronousTestCase):
             result = sslverify._selectVerifyImplementation()
             expected = (
                 sslverify.simpleVerifyHostname,
+                sslverify.simpleVerifyIPAddress,
                 sslverify.SimpleVerificationError)
             self.assertEqual(expected, result)
     test_dependencyMissing.suppress = [

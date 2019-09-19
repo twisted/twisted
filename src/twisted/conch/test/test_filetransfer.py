@@ -28,7 +28,7 @@ else:
 from twisted.internet import defer
 from twisted.protocols import loopback
 from twisted.python import components
-from twisted.python.compat import long
+from twisted.python.compat import long, _PY37PLUS
 from twisted.python.filepath import FilePath
 
 
@@ -545,6 +545,31 @@ class OurServerOurClientTests(SFTPTestBase):
                          set([b'.testHiddenFile', b'testDirectory',
                               b'testRemoveFile', b'testRenameFile',
                               b'testfile1']))
+
+
+    if _PY37PLUS:
+        test_openDirectoryIterator.skip = (
+            "Broken by PEP 479 and deprecated.")
+
+
+    @defer.inlineCallbacks
+    def test_openDirectoryIteratorDeprecated(self):
+        """
+        Using client.openDirectory as an iterator is deprecated.
+        """
+        d = self.client.openDirectory(b'')
+        self._emptyBuffers()
+        openDir = yield d
+        openDir.next()
+
+        warnings = self.flushWarnings()
+        message = (
+            'Using twisted.conch.ssh.filetransfer.ClientDirectory'
+            ' as an iterator was deprecated in Twisted 18.9.0.'
+            )
+        self.assertEqual(1, len(warnings))
+        self.assertEqual(DeprecationWarning, warnings[0]['category'])
+        self.assertEqual(message, warnings[0]['message'])
 
 
 

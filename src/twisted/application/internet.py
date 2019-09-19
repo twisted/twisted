@@ -517,8 +517,14 @@ def backoffPolicy(initialDelay=1.0, maxDelay=60.0, factor=1.5,
     @rtype: see L{ClientService.__init__}'s C{retryPolicy} argument.
     """
     def policy(attempt):
-        return min(initialDelay * (factor ** attempt), maxDelay) + jitter()
+        try:
+            delay = min(initialDelay * (factor ** min(100, attempt)), maxDelay)
+        except OverflowError:
+            delay = maxDelay
+        return delay + jitter()
     return policy
+
+
 
 _defaultPolicy = backoffPolicy()
 
@@ -1077,7 +1083,7 @@ class ClientService(service.Service, object):
             fire. Otherwise its successful return value is consumed, but
             ignored.
 
-            Present Since Twisted NEXT
+            Present Since Twisted 18.7.0
 
         @type prepareConnection: L{callable}
 
