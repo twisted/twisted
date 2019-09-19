@@ -1,0 +1,52 @@
+[tool.towncrier]
+    package = "twisted"
+    package_dir = "src"
+    filename = "NEWS.rst"
+
+    [[tool.towncrier.section]]
+        path = ""
+
+    [[tool.towncrier.section]]
+        path = "conch"
+        name = "Conch"
+
+    [[tool.towncrier.section]]
+        path = "web"
+        name = "Web"
+
+    [[tool.towncrier.section]]
+        path = "mail"
+        name = "Mail"
+
+    [[tool.towncrier.section]]
+        path = "words"
+        name = "Words"
+
+    [[tool.towncrier.section]]
+        path = "names"
+        name = "Names"
+
+    [[tool.towncrier.type]]
+        directory = "feature"
+        name = "Features"
+        showcontent = true
+
+    [[tool.towncrier.type]]
+        directory = "bugfix"
+        name = "Bugfixes"
+        showcontent = true
+
+    [[tool.towncrier.type]]
+        directory = "doc"
+        name = "Improved Documentation"
+        showcontent = true
+
+    [[tool.towncrier.type]]
+        directory = "removal"
+        name = "Deprecations and Removals"
+        showcontent = true
+
+    [[tool.towncrier.type]]
+        directory = "misc"
+        name = "Misc"
+        showcontent = false

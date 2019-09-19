@@ -45,7 +45,7 @@ def main():
     from twisted.cred.checkers import InMemoryUsernamePasswordDatabaseDontUse
     portal = Portal(SimpleRealm())
     checker = InMemoryUsernamePasswordDatabaseDontUse()
-    checker.addUser("benchmark", "benchmark")
+    checker.addUser(b"benchmark", b"benchmark")
     portal.registerChecker(checker)
     reactor.listenTCP(8787, pb.PBServerFactory(portal))
     reactor.run()

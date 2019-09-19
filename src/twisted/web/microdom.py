@@ -20,13 +20,13 @@ Microdom mainly focuses on working with HTML and XHTML.
 
 # System Imports
 import re
-from cStringIO import StringIO
+from io import BytesIO, StringIO
 
-from types import StringTypes, UnicodeType
 
 # Twisted Imports
-from twisted.web.sux import XMLParser, ParseError
+from twisted.python.compat import ioType, iteritems, range, unicode
 from twisted.python.util import InsensitiveDict
+from twisted.web.sux import XMLParser, ParseError
 
 
 def getElementsByTagName(iNode, name):
@@ -48,7 +48,7 @@ def getElementsByTagName(iNode, name):
     matches = []
     matches_append = matches.append # faster lookup. don't do this at home
     slice = [iNode]
-    while len(slice)>0:
+    while len(slice) > 0:
         c = slice.pop(0)
         if c.nodeName == name:
             matches_append(c)
@@ -61,13 +61,28 @@ def getElementsByTagNameNoCase(iNode, name):
     name = name.lower()
     matches = []
     matches_append = matches.append
-    slice=[iNode]
-    while len(slice)>0:
+    slice = [iNode]
+    while len(slice) > 0:
         c = slice.pop(0)
         if c.nodeName.lower() == name:
             matches_append(c)
         slice[:0] = c.childNodes
     return matches
+
+
+
+def _streamWriteWrapper(stream):
+    if ioType(stream) == bytes:
+        def w(s):
+            if isinstance(s, unicode):
+                s = s.encode("utf-8")
+            stream.write(s)
+    else:
+        def w(s):
+            if isinstance(s, bytes):
+                s = s.decode("utf-8")
+            stream.write(s)
+    return w
 
 # order is important
 HTML_ESCAPE_CHARS = (('&', '&amp;'), # don't add any entities before this one
@@ -82,28 +97,37 @@ REV_XML_ESCAPE_CHARS = list(XML_ESCAPE_CHARS)
 REV_XML_ESCAPE_CHARS.reverse()
 
 def unescape(text, chars=REV_HTML_ESCAPE_CHARS):
-    "Perform the exact opposite of 'escape'."
+    """
+    Perform the exact opposite of 'escape'.
+    """
     for s, h in chars:
         text = text.replace(h, s)
     return text
 
+
+
 def escape(text, chars=HTML_ESCAPE_CHARS):
-    "Escape a few XML special chars with XML entities."
+    """
+    Escape a few XML special chars with XML entities.
+    """
     for s, h in chars:
         text = text.replace(s, h)
     return text
 
 
+
 class MismatchedTags(Exception):
 
     def __init__(self, filename, expect, got, endLine, endCol, begLine, begCol):
-       (self.filename, self.expect, self.got, self.begLine, self.begCol, self.endLine,
-        self.endCol) = filename, expect, got, begLine, begCol, endLine, endCol
+        (self.filename, self.expect, self.got, self.begLine, self.begCol, self.endLine,
+         self.endCol) = filename, expect, got, begLine, begCol, endLine, endCol
+
 
     def __str__(self):
         return ("expected </%s>, got </%s> line: %s col: %s, began line: %s col: %s"
                 % (self.expect, self.got, self.endLine, self.endCol, self.begLine,
                    self.begCol))
+
 
 
 class Node(object):
@@ -112,6 +136,7 @@ class Node(object):
     def __init__(self, parentNode=None):
         self.parentNode = parentNode
         self.childNodes = []
+
 
     def isEqualToNode(self, other):
         """
@@ -129,9 +154,11 @@ class Node(object):
                 return False
         return True
 
+
     def writexml(self, stream, indent='', addindent='', newl='', strip=0,
                  nsprefixes={}, namespace=''):
         raise NotImplementedError()
+
 
     def toxml(self, indent='', addindent='', newl='', strip=0, nsprefixes={},
               namespace=''):
@@ -140,14 +167,18 @@ class Node(object):
         rv = s.getvalue()
         return rv
 
+
     def writeprettyxml(self, stream, indent='', addindent=' ', newl='\n', strip=0):
         return self.writexml(stream, indent, addindent, newl, strip)
+
 
     def toprettyxml(self, indent='', addindent=' ', newl='\n', strip=0):
         return self.toxml(indent, addindent, newl, strip)
 
+
     def cloneNode(self, deep=0, parent=None):
         raise NotImplementedError()
+
 
     def hasChildNodes(self):
         if self.childNodes:
@@ -210,6 +241,7 @@ class Node(object):
             child.parentNode = None
         return child
 
+
     def replaceChild(self, newChild, oldChild):
         """
         Replace a L{Node} which is already a child of this node with a
@@ -255,12 +287,15 @@ class Node(object):
     #ownerDocument=node.get_ownerDocument()
     # leaving commented for discussion; see also domhelpers.getParents(node)
 
+
+
 class Document(Node):
 
     def __init__(self, documentElement=None):
         Node.__init__(self)
         if documentElement:
             self.appendChild(documentElement)
+
 
     def cloneNode(self, deep=0, parent=None):
         d = Document()
@@ -278,9 +313,11 @@ class Document(Node):
         return (self.doctype == n.doctype) and Node.isEqualToNode(self, n)
     isEqualToNode = isEqualToDocument
 
+
     def get_documentElement(self):
         return self.childNodes[0]
-    documentElement=property(get_documentElement)
+    documentElement = property(get_documentElement)
+
 
     def appendChild(self, child):
         """
@@ -295,28 +332,36 @@ class Document(Node):
             raise ValueError("Only one element per document.")
         Node.appendChild(self, child)
 
+
     def writexml(self, stream, indent='', addindent='', newl='', strip=0,
                  nsprefixes={}, namespace=''):
-        stream.write('<?xml version="1.0"?>' + newl)
+        w = _streamWriteWrapper(stream)
+
+        w('<?xml version="1.0"?>' + newl)
         if self.doctype:
-            stream.write("<!DOCTYPE "+self.doctype+">" + newl)
+            w(u"<!DOCTYPE {}>{}".format(self.doctype, newl))
         self.documentElement.writexml(stream, indent, addindent, newl, strip,
                                       nsprefixes, namespace)
+
 
     # of dubious utility (?)
     def createElement(self, name, **kw):
         return Element(name, **kw)
 
+
     def createTextNode(self, text):
         return Text(text)
 
+
     def createComment(self, text):
         return Comment(text)
+
 
     def getElementsByTagName(self, name):
         if self.documentElement.caseInsensitive:
             return getElementsByTagNameNoCase(self, name)
         return getElementsByTagName(self, name)
+
 
     def getElementById(self, id):
         childNodes = self.childNodes[:]
@@ -328,6 +373,7 @@ class Document(Node):
                 return node
 
 
+
 class EntityReference(Node):
 
     def __init__(self, eref, parentNode=None):
@@ -335,18 +381,23 @@ class EntityReference(Node):
         self.eref = eref
         self.nodeValue = self.data = "&" + eref + ";"
 
+
     def isEqualToEntityReference(self, n):
         if not isinstance(n, EntityReference):
             return 0
         return (self.eref == n.eref) and (self.nodeValue == n.nodeValue)
     isEqualToNode = isEqualToEntityReference
 
+
     def writexml(self, stream, indent='', addindent='', newl='', strip=0,
                  nsprefixes={}, namespace=''):
-        stream.write(self.nodeValue)
+        w = _streamWriteWrapper(stream)
+        w("" + self.nodeValue)
+
 
     def cloneNode(self, deep=0, parent=None):
         return EntityReference(self.eref, parent)
+
 
 
 class CharacterData(Node):
@@ -355,23 +406,28 @@ class CharacterData(Node):
         Node.__init__(self, parentNode)
         self.value = self.data = self.nodeValue = data
 
+
     def isEqualToCharacterData(self, n):
         return self.value == n.value
     isEqualToNode = isEqualToCharacterData
 
 
+
 class Comment(CharacterData):
-    """A comment node."""
+    """
+    A comment node.
+    """
 
     def writexml(self, stream, indent='', addindent='', newl='', strip=0,
                  nsprefixes={}, namespace=''):
-        val=self.data
-        if isinstance(val, UnicodeType):
-            val=val.encode('utf8')
-        stream.write("<!--%s-->" % val)
+        w = _streamWriteWrapper(stream)
+        val = self.data
+        w(u"<!--{}-->".format(val))
+
 
     def cloneNode(self, deep=0, parent=None):
         return Comment(self.nodeValue, parent)
+
 
 
 class Text(CharacterData):
@@ -394,46 +450,56 @@ class Text(CharacterData):
     def cloneNode(self, deep=0, parent=None):
         return Text(self.nodeValue, parent, self.raw)
 
+
     def writexml(self, stream, indent='', addindent='', newl='', strip=0,
                  nsprefixes={}, namespace=''):
+        w = _streamWriteWrapper(stream)
         if self.raw:
             val = self.nodeValue
-            if not isinstance(val, StringTypes):
+            if not isinstance(val, (str, unicode)):
                 val = str(self.nodeValue)
         else:
             v = self.nodeValue
-            if not isinstance(v, StringTypes):
+            if not isinstance(v, (str, unicode)):
                 v = str(v)
             if strip:
                 v = ' '.join(v.split())
             val = escape(v)
-        if isinstance(val, UnicodeType):
-            val = val.encode('utf8')
-        stream.write(val)
+        w(val)
+
 
     def __repr__(self):
         return "Text(%s" % repr(self.nodeValue) + ')'
+
 
 
 class CDATASection(CharacterData):
     def cloneNode(self, deep=0, parent=None):
         return CDATASection(self.nodeValue, parent)
 
+
     def writexml(self, stream, indent='', addindent='', newl='', strip=0,
                  nsprefixes={}, namespace=''):
-        stream.write("<![CDATA[")
-        stream.write(self.nodeValue)
-        stream.write("]]>")
+        w = _streamWriteWrapper(stream)
+        w("<![CDATA[")
+        w("" + self.nodeValue)
+        w("]]>")
+
+
 
 def _genprefix():
     i = 0
     while True:
         yield  'p' + str(i)
         i = i + 1
-genprefix = _genprefix().next
+genprefix = _genprefix()
+
+
 
 class _Attr(CharacterData):
     "Support class for getAttributeNode."
+
+
 
 class Element(Node):
 
@@ -466,16 +532,19 @@ class Element(Node):
         self._markpos = markpos
         self.namespace = namespace
 
+
     def addPrefixes(self, pfxs):
         if self.nsprefixes is None:
             self.nsprefixes = pfxs
         else:
             self.nsprefixes.update(pfxs)
 
+
     def endTag(self, endTagName):
         if not self.preserveCase:
             endTagName = endTagName.lower()
         self.endTagName = endTagName
+
 
     def isEqualToElement(self, n):
         if self.caseInsensitive:
@@ -508,16 +577,20 @@ class Element(Node):
             clone.childNodes = []
         return clone
 
+
     def getElementsByTagName(self, name):
         if self.caseInsensitive:
             return getElementsByTagNameNoCase(self, name)
         return getElementsByTagName(self, name)
 
+
     def hasAttributes(self):
         return 1
 
+
     def getAttribute(self, name, default=None):
         return self.attributes.get(name, default)
+
 
     def getAttributeNS(self, ns, name, default=None):
         nsk = (ns, name)
@@ -527,15 +600,19 @@ class Element(Node):
             return self.attributes.get(name, default)
         return default
 
+
     def getAttributeNode(self, name):
         return _Attr(self.getAttribute(name), self)
+
 
     def setAttribute(self, name, attr):
         self.attributes[name] = attr
 
+
     def removeAttribute(self, name):
         if name in self.attributes:
             del self.attributes[name]
+
 
     def hasAttribute(self, name):
         return name in self.attributes
@@ -575,14 +652,15 @@ class Element(Node):
         # changing .tagName on the fly(?)
         if not self.preserveCase:
             self.endTagName = self.tagName
-        w = stream.write
+
+        w = _streamWriteWrapper(stream)
         if self.nsprefixes:
             newprefixes = self.nsprefixes.copy()
             for ns in nsprefixes.keys():
                 if ns in newprefixes:
                     del newprefixes[ns]
         else:
-             newprefixes = {}
+            newprefixes = {}
 
         begin = ['<']
         if self.tagName in BLOCKELEMENTS:
@@ -629,15 +707,15 @@ class Element(Node):
                 if ns in nsprefixes:
                     prefix = nsprefixes[ns]
                 else:
-                    prefix = genprefix()
+                    prefix = next(genprefix)
                     newprefixes[ns] = prefix
                 assert val is not None
-                writeattr(prefix+':'+key,val)
+                writeattr(prefix + ':' + key, val)
             else:
                 assert val is not None
                 writeattr(attr, val)
         if newprefixes:
-            for ns, prefix in newprefixes.iteritems():
+            for ns, prefix in iteritems(newprefixes):
                 if prefix:
                     writeattr('xmlns:'+prefix, ns)
             newprefixes.update(nsprefixes)
@@ -673,6 +751,7 @@ class Element(Node):
             rep += ", markpos=%r" % (self._markpos,)
         return rep + ')'
 
+
     def __str__(self):
         rep = "<" + self.nodeName
         if self._filename or self._markpos:
@@ -691,17 +770,23 @@ class Element(Node):
             rep += " />"
         return rep
 
+
+
 def _unescapeDict(d):
     dd = {}
     for k, v in d.items():
         dd[k] = unescape(v)
     return dd
 
+
+
 def _reverseDict(d):
     dd = {}
     for k, v in d.items():
-        dd[v]=k
+        dd[v] = k
     return dd
+
+
 
 class MicroDOMParser(XMLParser):
 
@@ -711,7 +796,7 @@ class MicroDOMParser(XMLParser):
 
     soonClosers = 'area link br img hr input base meta'.split()
     laterClosers = {'p': ['p', 'dt'],
-                    'dt': ['dt','dd'],
+                    'dt': ['dt', 'dd'],
                     'dd': ['dt', 'dd'],
                     'li': ['li'],
                     'tbody': ['thead', 'tfoot', 'tbody'],
@@ -733,7 +818,7 @@ class MicroDOMParser(XMLParser):
         self.elementstack = []
         d = {'xmlns': 'xmlns', '': None}
         dr = _reverseDict(d)
-        self.nsstack = [(d,None,dr)]
+        self.nsstack = [(d, None, dr)]
         self.documents = []
         self._mddoctype = None
         self.beExtremelyLenient = beExtremelyLenient
@@ -743,12 +828,14 @@ class MicroDOMParser(XMLParser):
         self.laterClosers = laterClosers
         # self.indentlevel = 0
 
+
     def shouldPreserveSpace(self):
-        for edx in xrange(len(self.elementstack)):
+        for edx in range(len(self.elementstack)):
             el = self.elementstack[-edx]
             if el.tagName == 'pre' or el.getAttribute("xml:space", '') == 'preserve':
                 return 1
         return 0
+
 
     def _getparent(self):
         if self.elementstack:
@@ -791,8 +878,10 @@ class MicroDOMParser(XMLParser):
                     el.childNodes.append(Text(prefix))
                 el.childNodes.append(e)
 
+
     def gotDoctype(self, doctype):
         self._mddoctype = doctype
+
 
     def gotTagStart(self, name, attributes):
         # print ' '*self.indentlevel, 'start tag',name
@@ -810,24 +899,30 @@ class MicroDOMParser(XMLParser):
         attributes = _unescapeDict(attributes)
         namespaces = self.nsstack[-1][0]
         newspaces = {}
+        keysToDelete = []
         for k, v in attributes.items():
             if k.startswith('xmlns'):
-                spacenames = k.split(':',1)
+                spacenames = k.split(':', 1)
                 if len(spacenames) == 2:
                     newspaces[spacenames[1]] = v
                 else:
                     newspaces[''] = v
-                del attributes[k]
+                keysToDelete.append(k)
+        for k in keysToDelete:
+            del attributes[k]
         if newspaces:
             namespaces = namespaces.copy()
             namespaces.update(newspaces)
+        keysToDelete = []
         for k, v in attributes.items():
             ksplit = k.split(':', 1)
             if len(ksplit) == 2:
                 pfx, tv = ksplit
                 if pfx != 'xml' and pfx in namespaces:
                     attributes[namespaces[pfx], tv] = v
-                    del attributes[k]
+                    keysToDelete.append(k)
+        for k in keysToDelete:
+            del attributes[k]
         el = Element(name, attributes, parent,
                      self.filename, self.saveMark(),
                      caseInsensitive=self.caseInsensitive,
@@ -846,6 +941,7 @@ class MicroDOMParser(XMLParser):
         if (self.beExtremelyLenient and el.tagName in self.soonClosers):
             self.gotTagEnd(name)
 
+
     def _gotStandalone(self, factory, data):
         parent = self._getparent()
         te = factory(data, parent)
@@ -854,18 +950,23 @@ class MicroDOMParser(XMLParser):
         elif self.beExtremelyLenient:
             self.documents.append(te)
 
+
     def gotText(self, data):
         if data.strip() or self.shouldPreserveSpace():
             self._gotStandalone(Text, data)
 
+
     def gotComment(self, data):
         self._gotStandalone(Comment, data)
+
 
     def gotEntityReference(self, entityRef):
         self._gotStandalone(EntityReference, entityRef)
 
+
     def gotCData(self, cdata):
         self._gotStandalone(CDATASection, cdata)
+
 
     def gotTagEnd(self, name):
         # print ' '*self.indentlevel, 'end tag',name
@@ -874,7 +975,7 @@ class MicroDOMParser(XMLParser):
             if self.beExtremelyLenient:
                 return
             raise MismatchedTags(*((self.filename, "NOTHING", name)
-                                   +self.saveMark()+(0,0)))
+                                   + self.saveMark() + (0, 0)))
         el = self.elementstack.pop()
         pfxdix = self.nsstack[-1][2]
         if self.nsstack[-1][1] is el:
@@ -888,20 +989,20 @@ class MicroDOMParser(XMLParser):
             tn = el.tagName
             cname = name
 
-        nsplit = name.split(':',1)
+        nsplit = name.split(':', 1)
         if len(nsplit) == 2:
             pfx, newname = nsplit
-            ns = pfxdix.get(pfx,None)
+            ns = pfxdix.get(pfx, None)
             if ns is not None:
                 if el.namespace != ns:
                     if not self.beExtremelyLenient:
                         raise MismatchedTags(*((self.filename, el.tagName, name)
-                                               +self.saveMark()+el._markpos))
+                                               + self.saveMark() + el._markpos))
         if not (tn == cname):
             if self.beExtremelyLenient:
                 if self.elementstack:
                     lastEl = self.elementstack[0]
-                    for idx in xrange(len(self.elementstack)):
+                    for idx in range(len(self.elementstack)):
                         if self.elementstack[-(idx+1)].tagName == cname:
                             self.elementstack[-(idx+1)].endTag(name)
                             break
@@ -917,12 +1018,13 @@ class MicroDOMParser(XMLParser):
                         return
             else:
                 raise MismatchedTags(*((self.filename, el.tagName, name)
-                                       +self.saveMark()+el._markpos))
+                                       + self.saveMark() + el._markpos))
         el.endTag(name)
         if not self.elementstack:
             self.documents.append(el)
         if self.beExtremelyLenient and el.tagName == "script":
             self._fixScriptElement(el)
+
 
     def connectionLost(self, reason):
         XMLParser.connectionLost(self, reason) # This can cause more events!
@@ -932,18 +1034,21 @@ class MicroDOMParser(XMLParser):
             else:
                 raise MismatchedTags(*((self.filename, self.elementstack[-1],
                                         "END_OF_FILE")
-                                       +self.saveMark()
-                                       +self.elementstack[-1]._markpos))
+                                       + self.saveMark()
+                                       + self.elementstack[-1]._markpos))
+
 
 
 def parse(readable, *args, **kwargs):
-    """Parse HTML or XML readable."""
+    """
+    Parse HTML or XML readable.
+    """
     if not hasattr(readable, "read"):
         readable = open(readable, "rb")
     mdp = MicroDOMParser(*args, **kwargs)
     mdp.filename = getattr(readable, "name", "<xmlfile />")
     mdp.makeConnection(None)
-    if hasattr(readable,"getvalue"):
+    if hasattr(readable, "getvalue"):
         mdp.dataReceived(readable.getvalue())
     else:
         r = readable.read(1024)
@@ -972,48 +1077,62 @@ def parse(readable, *args, **kwargs):
     doc.doctype = mdp._mddoctype
     return doc
 
+
+
 def parseString(st, *args, **kw):
-    if isinstance(st, UnicodeType):
+    if isinstance(st, unicode):
         # this isn't particularly ideal, but it does work.
-        return parse(StringIO(st.encode('UTF-16')), *args, **kw)
-    return parse(StringIO(st), *args, **kw)
+        return parse(BytesIO(st.encode('UTF-16')), *args, **kw)
+    return parse(BytesIO(st), *args, **kw)
+
 
 
 def parseXML(readable):
-    """Parse an XML readable object."""
+    """
+    Parse an XML readable object.
+    """
     return parse(readable, caseInsensitive=0, preserveCase=1)
 
 
+
 def parseXMLString(st):
-    """Parse an XML readable object."""
+    """
+    Parse an XML readable object.
+    """
     return parseString(st, caseInsensitive=0, preserveCase=1)
 
 
-# Utility
 
 class lmx:
-    """Easy creation of XML."""
+    """
+    Easy creation of XML.
+    """
 
     def __init__(self, node='div'):
-        if isinstance(node, StringTypes):
+        if isinstance(node, (str, unicode)):
             node = Element(node)
         self.node = node
+
 
     def __getattr__(self, name):
         if name[0] == '_':
             raise AttributeError("no private attrs")
-        return lambda **kw: self.add(name,**kw)
+        return lambda **kw: self.add(name, **kw)
+
 
     def __setitem__(self, key, val):
         self.node.setAttribute(key, val)
 
+
     def __getitem__(self, key):
         return self.node.getAttribute(key)
+
 
     def text(self, txt, raw=0):
         nn = Text(txt, raw=raw)
         self.node.appendChild(nn)
         return self
+
 
     def add(self, tagName, **kw):
         newNode = Element(tagName, caseInsensitive=0, preserveCase=0)
@@ -1022,5 +1141,5 @@ class lmx:
         for k, v in kw.items():
             if k[0] == '_':
                 k = k[1:]
-            xf[k]=v
+            xf[k] = v
         return xf

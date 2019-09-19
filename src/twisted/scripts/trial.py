@@ -164,9 +164,6 @@ class _BasicOptions(object):
     """
     Basic options shared between trial and its local workers.
     """
-    synopsis = """%s [options] [[file|package|module|TestCase|testmethod]...]
-    """ % (os.path.basename(sys.argv[0]),)
-
     longdesc = ("trial loads and executes a suite of unit tests, obtained "
                 "from modules, packages and files listed on the command line.")
 
@@ -215,6 +212,15 @@ class _BasicOptions(object):
         self['tests'] = []
         usage.Options.__init__(self)
 
+    def getSynopsis(self):
+        executableName = reflect.filenameToModuleName(sys.argv[0])
+
+        if executableName.endswith('.__main__'):
+            executableName = '{} -m {}'.format(os.path.basename(sys.executable),
+                                               executableName.replace('.__main__', ''))
+
+        return """%s [options] [[file|package|module|TestCase|testmethod]...]
+        """ % (executableName,)
 
     def coverdir(self):
         """

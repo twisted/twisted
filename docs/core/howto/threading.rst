@@ -57,6 +57,7 @@ Twisted provides an API for doing so, the :api:`twisted.internet.interfaces.IRea
 
 For example, to run a method in a non-reactor thread we can do::
 
+    from __future__ import print_function
     from twisted.internet import reactor
 
     def aSillyBlockingMethod(x):
@@ -74,6 +75,8 @@ This means that depending on what other work has been submitted to the pool, you
     Keep in mind that ``callInThread`` can only concurrently run a fixed maximum number of tasks, and all users of the reactor are sharing that limit.
     Therefore, you should not submit *tasks which depend on other tasks in order to complete* to be executed by ``callInThread``.
     An example of such a task would be something like this::
+
+        from __future__ import print_function
 
         q = Queue()
         def blocker():
@@ -96,6 +99,9 @@ When we run some code, we often want to know what its result was.  For this, Twi
 
 To get a result from some blocking code back into the reactor thread, we can use :api:`twisted.internet.threads.deferToThread <deferToThread>` to execute it instead of callFromThread.
 
+::
+
+    from __future__ import print_function
     from twisted.internet import reactor, threads
 
     def doLongCalculation():
@@ -121,7 +127,7 @@ Similarly, you want some code running in a non-reactor thread wants to invoke so
         try:
             result = threads.blockingCallFromThread(
                 reactor, agent.request, "GET", "http://twistedmatrix.com/"))
-        except Error, exc:
+        except Error as exc:
             print(exc)
         else:
             print(result)

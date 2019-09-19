@@ -8,23 +8,24 @@ Tests for parts of our release automation system.
 
 import os
 
-
+from pkg_resources import parse_requirements
 from setuptools.dist import Distribution
 import twisted
-from twisted.trial.unittest import TestCase
+from twisted.trial.unittest import SynchronousTestCase
 
 from twisted.python import _setup, filepath
 from twisted.python.compat import _PY3
 from twisted.python._setup import (
     BuildPy3,
     getSetupArgs,
+    _longDescriptionArgsFromReadme,
     ConditionalExtension,
     _EXTRAS_REQUIRE,
     )
 
 
 
-class SetupTests(TestCase):
+class SetupTests(SynchronousTestCase):
     """
     Tests for L{getSetupArgs}.
     """
@@ -37,9 +38,9 @@ class SetupTests(TestCase):
         good_ext = ConditionalExtension("whatever", ["whatever.c"],
                                         condition=lambda b: True)
         bad_ext = ConditionalExtension("whatever", ["whatever.c"],
-                                        condition=lambda b: False)
+                                       condition=lambda b: False)
 
-        args = getSetupArgs(extensions=[good_ext, bad_ext])
+        args = getSetupArgs(extensions=[good_ext, bad_ext], readme=None)
 
         # ext_modules should be set even though it's not used.  See comment
         # in getSetupArgs
@@ -59,7 +60,7 @@ class SetupTests(TestCase):
         ext = ConditionalExtension("whatever", ["whatever.c"],
                                    define_macros=[("whatever", 2)])
 
-        args = getSetupArgs(extensions=[ext])
+        args = getSetupArgs(extensions=[ext], readme=None)
 
         builder = args["cmdclass"]["build_ext"](Distribution())
         self.patch(os, "name", "nt")
@@ -68,7 +69,7 @@ class SetupTests(TestCase):
 
 
 
-class OptionalDependenciesTests(TestCase):
+class OptionalDependenciesTests(SynchronousTestCase):
     """
     Tests for L{_EXTRAS_REQUIRE}
     """
@@ -77,13 +78,33 @@ class OptionalDependenciesTests(TestCase):
         """
         Setuptools' Distribution object parses and stores its C{extras_require}
         argument as an attribute.
+
+        Requirements for install_requires/setup_requires can specified as:
+         * a single requirement as a string, such as:
+           {'im_an_extra_dependency': 'thing'}
+         * a series of requirements as a list, such as:
+           {'im_an_extra_dependency': ['thing']}
+         * a series of requirements as a multi-line string, such as:
+           {'im_an_extra_dependency': '''
+                                      thing
+                                      '''}
+
+        The extras need to be parsed with pkg_resources.parse_requirements(),
+        which returns a generator.
         """
         extras = dict(im_an_extra_dependency="thing")
         attrs = dict(extras_require=extras)
         distribution = Distribution(attrs)
+
+        def canonicalizeExtras(myExtras):
+            parsedExtras = {}
+            for name, val in myExtras.items():
+                parsedExtras[name] = list(parse_requirements(val))
+            return parsedExtras
+
         self.assertEqual(
-            extras,
-            distribution.extras_require
+            canonicalizeExtras(extras),
+            canonicalizeExtras(distribution.extras_require)
         )
 
 
@@ -91,7 +112,7 @@ class OptionalDependenciesTests(TestCase):
         """
         L{_EXTRAS_REQUIRE} contains options for all documented extras: C{dev},
         C{tls}, C{conch}, C{soap}, C{serial}, C{all_non_platform},
-        C{osx_platform}, and C{windows_platform}.
+        C{macos_platform}, and C{windows_platform}.
         """
         self.assertIn('dev', _EXTRAS_REQUIRE)
         self.assertIn('tls', _EXTRAS_REQUIRE)
@@ -99,7 +120,8 @@ class OptionalDependenciesTests(TestCase):
         self.assertIn('soap', _EXTRAS_REQUIRE)
         self.assertIn('serial', _EXTRAS_REQUIRE)
         self.assertIn('all_non_platform', _EXTRAS_REQUIRE)
-        self.assertIn('osx_platform', _EXTRAS_REQUIRE)
+        self.assertIn('macos_platform', _EXTRAS_REQUIRE)
+        self.assertIn('osx_platform', _EXTRAS_REQUIRE)  # Compat for macOS
         self.assertIn('windows_platform', _EXTRAS_REQUIRE)
         self.assertIn('http2', _EXTRAS_REQUIRE)
 
@@ -127,7 +149,7 @@ class OptionalDependenciesTests(TestCase):
         """
         deps = _EXTRAS_REQUIRE['tls']
         self.assertIn('pyopenssl >= 16.0.0', deps)
-        self.assertIn('service_identity', deps)
+        self.assertIn('service_identity >= 18.1.0', deps)
         self.assertIn('idna >= 0.6, != 2.3', deps)
 
 
@@ -139,7 +161,7 @@ class OptionalDependenciesTests(TestCase):
         """
         deps = _EXTRAS_REQUIRE['conch']
         self.assertIn('pyasn1', deps)
-        self.assertIn('cryptography >= 0.9.1', deps)
+        self.assertIn('cryptography >= 2.5', deps)
         self.assertIn('appdirs >= 1.4.0', deps)
 
 
@@ -160,7 +182,7 @@ class OptionalDependenciesTests(TestCase):
         for the packages required to make Twisted's serial support work.
         """
         self.assertIn(
-            'pyserial',
+            'pyserial >= 3.0',
             _EXTRAS_REQUIRE['serial']
         )
 
@@ -171,7 +193,7 @@ class OptionalDependenciesTests(TestCase):
         for the packages required to make Twisted HTTP/2 support work.
         """
         deps = _EXTRAS_REQUIRE['http2']
-        self.assertIn('h2 >= 2.5.0, < 3.0', deps)
+        self.assertIn('h2 >= 3.0, < 4.0', deps)
         self.assertIn('priority >= 1.1.0, < 2.0', deps)
 
 
@@ -183,34 +205,42 @@ class OptionalDependenciesTests(TestCase):
         """
         deps = _EXTRAS_REQUIRE['all_non_platform']
         self.assertIn('pyopenssl >= 16.0.0', deps)
-        self.assertIn('service_identity', deps)
+        self.assertIn('service_identity >= 18.1.0', deps)
         self.assertIn('idna >= 0.6, != 2.3', deps)
         self.assertIn('pyasn1', deps)
-        self.assertIn('cryptography >= 0.9.1', deps)
+        self.assertIn('cryptography >= 2.5', deps)
         self.assertIn('soappy', deps)
-        self.assertIn('pyserial', deps)
+        self.assertIn('pyserial >= 3.0', deps)
         self.assertIn('appdirs >= 1.4.0', deps)
-        self.assertIn('h2 >= 2.5.0, < 3.0', deps)
+        self.assertIn('h2 >= 3.0, < 4.0', deps)
         self.assertIn('priority >= 1.1.0, < 2.0', deps)
 
 
-    def test_extrasRequiresOsxPlatformDeps(self):
+    def test_extrasRequiresMacosPlatformDeps(self):
         """
-        L{_EXTRAS_REQUIRE}'s C{osx_platform} extra contains setuptools
+        L{_EXTRAS_REQUIRE}'s C{macos_platform} extra contains setuptools
         requirements for all of Twisted's optional dependencies usable on the
-        Mac OS X platform.
+        macOS platform.
         """
-        deps = _EXTRAS_REQUIRE['osx_platform']
+        deps = _EXTRAS_REQUIRE['macos_platform']
         self.assertIn('pyopenssl >= 16.0.0', deps)
-        self.assertIn('service_identity', deps)
+        self.assertIn('service_identity >= 18.1.0', deps)
         self.assertIn('idna >= 0.6, != 2.3', deps)
         self.assertIn('pyasn1', deps)
-        self.assertIn('cryptography >= 0.9.1', deps)
+        self.assertIn('cryptography >= 2.5', deps)
         self.assertIn('soappy', deps)
-        self.assertIn('pyserial', deps)
-        self.assertIn('h2 >= 2.5.0, < 3.0', deps)
+        self.assertIn('pyserial >= 3.0', deps)
+        self.assertIn('h2 >= 3.0, < 4.0', deps)
         self.assertIn('priority >= 1.1.0, < 2.0', deps)
         self.assertIn('pyobjc-core', deps)
+
+
+    def test_extrasRequireMacOSXPlatformDeps(self):
+        """
+        L{_EXTRAS_REQUIRE}'s C{osx_platform} is an alias to C{macos_platform}.
+        """
+        self.assertEqual(_EXTRAS_REQUIRE['macos_platform'],
+                         _EXTRAS_REQUIRE['osx_platform'])
 
 
     def test_extrasRequiresWindowsPlatformDeps(self):
@@ -221,15 +251,15 @@ class OptionalDependenciesTests(TestCase):
         """
         deps = _EXTRAS_REQUIRE['windows_platform']
         self.assertIn('pyopenssl >= 16.0.0', deps)
-        self.assertIn('service_identity', deps)
+        self.assertIn('service_identity >= 18.1.0', deps)
         self.assertIn('idna >= 0.6, != 2.3', deps)
         self.assertIn('pyasn1', deps)
-        self.assertIn('cryptography >= 0.9.1', deps)
+        self.assertIn('cryptography >= 2.5', deps)
         self.assertIn('soappy', deps)
-        self.assertIn('pyserial', deps)
-        self.assertIn('h2 >= 2.5.0, < 3.0', deps)
+        self.assertIn('pyserial >= 3.0', deps)
+        self.assertIn('h2 >= 3.0, < 4.0', deps)
         self.assertIn('priority >= 1.1.0, < 2.0', deps)
-        self.assertIn('pypiwin32', deps)
+        self.assertIn('pywin32', deps)
 
 
 
@@ -265,7 +295,7 @@ fakeOtherPlatform = FakeModule({"python_implementation": lambda: "lvhpy"})
 
 
 
-class WithPlatformTests(TestCase):
+class WithPlatformTests(SynchronousTestCase):
     """
     Tests for L{_checkCPython} when used with a (fake) C{platform} module.
     """
@@ -286,7 +316,7 @@ class WithPlatformTests(TestCase):
 
 
 
-class BuildPy3Tests(TestCase):
+class BuildPy3Tests(SynchronousTestCase):
     """
     Tests for L{BuildPy3}.
     """
@@ -333,3 +363,39 @@ class BuildPy3Tests(TestCase):
             ]),
             sorted(result),
         )
+
+
+
+class LongDescriptionTests(SynchronousTestCase):
+    """
+    Tests for C{_getLongDescriptionArgs()}
+
+    Note that the validity of the reStructuredText syntax is tested separately
+    using L{twine check} in L{tox.ini}.
+    """
+    def test_generate(self):
+        """
+        L{_longDescriptionArgsFromReadme()} outputs a L{long_description} in
+        reStructuredText format. Local links are transformed into absolute ones
+        that point at the Twisted GitHub repository.
+        """
+        path = self.mktemp()
+        with open(path, 'w') as f:
+            f.write('\n'.join([
+                'Twisted',
+                '=======',
+                '',
+                'Changes: `NEWS <NEWS.rst>`_.',
+                "Read `the docs <https://twistedmatrix.com/documents/>`_.\n",
+            ]))
+
+        self.assertEqual({
+            'long_description': '''\
+Twisted
+=======
+
+Changes: `NEWS <https://github.com/twisted/twisted/blob/trunk/NEWS.rst>`_.
+Read `the docs <https://twistedmatrix.com/documents/>`_.
+''',
+            'long_description_content_type': 'text/x-rst',
+        }, _longDescriptionArgsFromReadme(path))

@@ -28,7 +28,7 @@ Twisted
 
   .. code-block:: console
 
-      $ twistd --nodaemon web --port 8080 --path /srv/www/www.example.com/static
+      $ twistd --nodaemon web --listen tcp:8080 --path /srv/www/www.example.com/static
       2013-01-28 13:21:35+0000 [-] Log opened.
       2013-01-28 13:21:35+0000 [-] twistd 12.3.0 (/usr/bin/python 2.7.3) starting up.
       2013-01-28 13:21:35+0000 [-] reactor class: twisted.internet.epollreactor.EPollReactor.
@@ -151,7 +151,7 @@ Start the service
               Active: active (running) since Mon 2013-01-28 16:16:26 GMT; 1s ago
             Main PID: 10695 (twistd)
               CGroup: name=systemd:/system/www.example.com.service
-                      └─10695 /usr/bin/python /usr/bin/twistd --nodaemon --pidfile= web --port 8080 --path .
+                      └─10695 /usr/bin/python /usr/bin/twistd --nodaemon --pidfile= web --listen tcp:8080 --path .
 
     Jan 28 16:16:26 zorin.lan systemd[1]: Starting Example Web Server...
     Jan 28 16:16:26 zorin.lan systemd[1]: Started Example Web Server.
@@ -371,7 +371,7 @@ You have also learned how the service can be started on demand, using socket act
 
 Limitations and Known Issues
 ----------------------------
-#. Twisted can not accept UNIX or datagram sockets from ``systemd``\ .
+#. Twisted can not accept datagram sockets from ``systemd``\ .
 #. Twisted does not support listening for SSL connections on sockets inherited from ``systemd``\ .
 
 Further Reading
