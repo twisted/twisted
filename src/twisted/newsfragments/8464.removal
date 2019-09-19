@@ -1,2 +1,0 @@
-twisted.runner.inetdconf.InvalidRPCServicesConfError, twisted.runner.inetdconf.RPCServicesConf, twisted.runner.inetdtap.RPCServer, and twisted.runner.portmap, deprecated since 16.2.0, have been removed.
-

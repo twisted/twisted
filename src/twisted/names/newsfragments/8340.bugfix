@@ -1,1 +1,0 @@
-RRHeader now converts its ttl argument to an integer, raising a TypeError if it cannot.

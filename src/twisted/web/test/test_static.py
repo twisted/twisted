@@ -9,6 +9,8 @@ import inspect
 import mimetypes
 import os
 import re
+import sys
+import warnings
 
 
 from io import BytesIO as StringIO
@@ -18,8 +20,8 @@ from zope.interface.verify import verifyObject
 from twisted.internet import abstract, interfaces
 from twisted.python.runtime import platform
 from twisted.python.filepath import FilePath
-from twisted.python import log
-from twisted.python.compat import intToBytes, networkString, _PY3
+from twisted.python import compat, log
+from twisted.python.compat import intToBytes, networkString
 from twisted.trial.unittest import TestCase
 from twisted.web import static, http, script, resource
 from twisted.web.server import UnsupportedMethod
@@ -64,6 +66,45 @@ class StaticFileTests(TestCase):
     """
     def _render(self, resource, request):
         return _render(resource, request)
+
+
+    def test_ignoredExtTrue(self):
+        """
+        Passing C{1} as the value to L{File}'s C{ignoredExts} argument
+        issues a warning and sets the ignored extensions to the
+        wildcard C{"*"}.
+        """
+        with warnings.catch_warnings(record=True) as caughtWarnings:
+            file = static.File(self.mktemp(), ignoredExts=1)
+            self.assertEqual(file.ignoredExts, ["*"])
+
+        self.assertEqual(len(caughtWarnings), 1)
+
+
+    def test_ignoredExtFalse(self):
+        """
+        Passing C{1} as the value to L{File}'s C{ignoredExts} argument
+        issues a warning and sets the ignored extensions to the empty
+        list.
+        """
+        with warnings.catch_warnings(record=True) as caughtWarnings:
+            file = static.File(self.mktemp(), ignoredExts=0)
+            self.assertEqual(file.ignoredExts, [])
+
+        self.assertEqual(len(caughtWarnings), 1)
+
+
+    def test_allowExt(self):
+        """
+        Passing C{1} as the value to L{File}'s C{allowExt} argument
+        issues a warning and sets the ignored extensions to the
+        wildcard C{*}.
+        """
+        with warnings.catch_warnings(record=True) as caughtWarnings:
+            file = static.File(self.mktemp(), ignoredExts=True)
+            self.assertEqual(file.ignoredExts, ["*"])
+
+        self.assertEqual(len(caughtWarnings), 1)
 
 
     def test_invalidMethod(self):
@@ -114,6 +155,30 @@ class StaticFileTests(TestCase):
         self.assertEqual(child.path, base.path)
 
 
+    def test_emptyChildUnicodeParent(self):
+        """
+        The C{u''} child of a L{File} which corresponds to a directory
+        whose path is text is a L{DirectoryLister} that renders to a
+        binary listing.
+
+        @see: U{https://twistedmatrix.com/trac/ticket/9438}
+        """
+        textBase = FilePath(self.mktemp()).asTextMode()
+        textBase.makedirs()
+        textBase.child(u"text-file").open('w').close()
+        textFile = static.File(textBase.path)
+
+        request = DummyRequest([b''])
+        child = resource.getChildForRequest(textFile, request)
+        self.assertIsInstance(child, static.DirectoryLister)
+
+        nativePath = compat.nativeString(textBase.path)
+        self.assertEqual(child.path, nativePath)
+
+        response = child.render(request)
+        self.assertIsInstance(response, bytes)
+
+
     def test_securityViolationNotFound(self):
         """
         If a request is made which encounters a L{File} before a final segment
@@ -156,6 +221,30 @@ class StaticFileTests(TestCase):
         return d
     if platform.isWindows():
         test_forbiddenResource.skip = "Cannot remove read permission on Windows"
+
+
+    def test_undecodablePath(self):
+        """
+        A request whose path cannot be decoded as UTF-8 receives a not
+        found response, and the failure is logged.
+        """
+        path = self.mktemp()
+        if isinstance(path, bytes):
+            path = path.decode('ascii')
+        base = FilePath(path)
+        base.makedirs()
+
+        file = static.File(base.path)
+        request = DummyRequest([b"\xff"])
+        child = resource.getChildForRequest(file, request)
+
+        d = self._render(child, request)
+        def cbRendered(ignored):
+            self.assertEqual(request.responseCode, 404)
+            self.assertEqual(len(self.flushLoggedErrors(UnicodeDecodeError)),
+                             1)
+        d.addCallback(cbRendered)
+        return d
 
 
     def test_forbiddenResource_default(self):
@@ -205,7 +294,7 @@ class StaticFileTests(TestCase):
         base.makedirs()
         base.child("foo.bar").setContent(b"baz")
         file = static.File(base.path)
-        file.indexNames = [b'foo.bar']
+        file.indexNames = ['foo.bar']
 
         request = DummyRequest([b''])
         child = resource.getChildForRequest(file, request)
@@ -244,6 +333,36 @@ class StaticFileTests(TestCase):
         return d
 
 
+    def test_staticFileUnicodeFileName(self):
+        """
+        A request for a existing unicode file path encoded as UTF-8
+        returns the contents of that file.
+        """
+        name = u"\N{GREEK SMALL LETTER ETA WITH PERISPOMENI}"
+        content = b"content"
+
+        base = FilePath(self.mktemp())
+        base.makedirs()
+        base.child(name).setContent(content)
+        file = static.File(base.path)
+
+        request = DummyRequest([name.encode('utf-8')])
+        child = resource.getChildForRequest(file, request)
+
+        d = self._render(child, request)
+        def cbRendered(ignored):
+            self.assertEqual(b''.join(request.written), content)
+            self.assertEqual(
+                request.responseHeaders.getRawHeaders(b'content-length')[0],
+                networkString(str(len(content))))
+        d.addCallback(cbRendered)
+        return d
+    if sys.getfilesystemencoding().lower() not in ('utf-8', 'mcbs'):
+        test_staticFileUnicodeFileName.skip = (
+            "Cannot write unicode filenames with file system encoding of"
+            " %s" % (sys.getfilesystemencoding(),))
+
+
     def test_staticFileDeletedGetChild(self):
         """
         A L{static.File} created for a directory which does not exist should
@@ -251,7 +370,7 @@ class StaticFileTests(TestCase):
         """
         staticFile = static.File(self.mktemp())
         request = DummyRequest([b'foo.bar'])
-        child = staticFile.getChild("foo.bar", request)
+        child = staticFile.getChild(b"foo.bar", request)
         self.assertEqual(child, staticFile.childNotFound)
 
 
@@ -331,7 +450,7 @@ class StaticFileTests(TestCase):
             b"resource = Data(b'dynamic world', 'text/plain')\n")
 
         file = static.File(base.path)
-        file.processors = {b'.bar': script.ResourceScript}
+        file.processors = {'.bar': script.ResourceScript}
         request = DummyRequest([b"foo.bar"])
         child = resource.getChildForRequest(file, request)
 
@@ -352,12 +471,12 @@ class StaticFileTests(TestCase):
         """
         file = static.File(b".")
         self.assertEqual(file.ignoredExts, [])
-        file.ignoreExt(b".foo")
-        file.ignoreExt(b".bar")
-        self.assertEqual(file.ignoredExts, [b".foo", b".bar"])
+        file.ignoreExt(".foo")
+        file.ignoreExt(".bar")
+        self.assertEqual(file.ignoredExts, [".foo", ".bar"])
 
-        file = static.File(b".", ignoredExts=(b".bar", b".baz"))
-        self.assertEqual(file.ignoredExts, [b".bar", b".baz"])
+        file = static.File(b".", ignoredExts=(".bar", ".baz"))
+        self.assertEqual(file.ignoredExts, [".bar", ".baz"])
 
 
     def test_ignoredExtensionsIgnored(self):
@@ -371,7 +490,7 @@ class StaticFileTests(TestCase):
         base.makedirs()
         base.child('foo.bar').setContent(b'baz')
         base.child('foo.quux').setContent(b'foobar')
-        file = static.File(base.path, ignoredExts=(b".bar",))
+        file = static.File(base.path, ignoredExts=(".bar",))
 
         request = DummyRequest([b"foo"])
         child = resource.getChildForRequest(file, request)
@@ -1707,7 +1826,7 @@ class LoadMimeTypesTests(TestCase):
         # Checking mimetypes.inited doesn't always work, because
         # something, somewhere, calls mimetypes.init. Yay global
         # mutable state :)
-        if _PY3:
+        if getattr(inspect, "signature", None):
             signature = inspect.signature(static.loadMimeTypes)
             self.assertIs(signature.parameters["init"].default,
                           mimetypes.init)

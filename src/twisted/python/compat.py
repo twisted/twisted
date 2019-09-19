@@ -31,6 +31,7 @@ import struct
 import sys
 import tokenize
 from types import MethodType as _MethodType
+import warnings
 
 from io import TextIOBase, IOBase
 
@@ -40,39 +41,22 @@ if sys.version_info < (3, 0):
 else:
     _PY3 = True
 
-if sys.version_info >= (3, 4, 0):
-    _PY34PLUS = True
-else:
-    _PY34PLUS = False
-
 if sys.version_info >= (3, 5, 0):
     _PY35PLUS = True
 else:
     _PY35PLUS = False
+
+if sys.version_info >= (3, 7, 0):
+    _PY37PLUS = True
+else:
+    _PY37PLUS = False
 
 if platform.python_implementation() == 'PyPy':
     _PYPY = True
 else:
     _PYPY = False
 
-def _shouldEnableNewStyle():
-    """
-    Returns whether or not we should enable the new-style conversion of
-    old-style classes. It inspects the environment for C{TWISTED_NEWSTYLE},
-    accepting an empty string, C{no}, C{false}, C{False}, and C{0} as falsey
-    values and everything else as a truthy value.
 
-    @rtype: L{bool}
-    """
-    value = os.environ.get('TWISTED_NEWSTYLE', '')
-
-    if value in ['', 'no', 'false', 'False', '0']:
-        return False
-    else:
-        return True
-
-
-_EXPECT_NEWSTYLE = _PY3 or _shouldEnableNewStyle()
 
 def _shouldEnableNewStyle():
     """
@@ -173,6 +157,8 @@ def inet_pton(af, addr):
         return struct.pack('!8H', *parts)
     else:
         raise socket.error(97, 'Address family not supported by protocol')
+
+
 
 def inet_ntop(af, addr):
     if af == socket.AF_INET:
@@ -292,6 +278,7 @@ def comparable(klass):
     # On Python 2, __cmp__ will just work, so no need to add extra methods:
     if not _PY3:
         return klass
+
 
     def __eq__(self, other):
         c = self.__cmp__(other)
@@ -511,10 +498,6 @@ if _PY3:
         return ("%d" % i).encode("ascii")
 
 
-    # Ideally we would use memoryview, but it has a number of differences from
-    # the Python 2 buffer() that make that impractical
-    # (http://bugs.python.org/issue15945, incompatibility with pyOpenSSL due to
-    # PyArg_ParseTuple differences.)
     def lazyByteSlice(object, offset=0, size=None):
         """
         Return a copy of the given bytes-like object.
@@ -529,10 +512,11 @@ if _PY3:
         @param size: Optional, if an C{int} is given limit the length of copy
             to this size.
         """
+        view = memoryview(object)
         if size is None:
-            return object[offset:]
+            return view[offset:]
         else:
-            return object[offset:(offset + size)]
+            return view[offset:(offset + size)]
 
 
     def networkString(s):
@@ -546,7 +530,6 @@ else:
 
     def intToBytes(i):
         return b"%d" % i
-
 
     lazyByteSlice = buffer
 
@@ -633,8 +616,10 @@ if _PY3:
     def iteritems(d):
         return d.items()
 
+
     def itervalues(d):
         return d.values()
+
 
     def items(d):
         return list(d.items())
@@ -646,8 +631,10 @@ else:
     def iteritems(d):
         return d.iteritems()
 
+
     def itervalues(d):
         return d.itervalues()
+
 
     def items(d):
         return d.items()
@@ -735,17 +722,6 @@ def _constructMethod(cls, name, self):
     return _MethodType(func, self, cls)
 
 
-
-from incremental import Version
-from twisted.python.deprecate import deprecatedModuleAttribute
-
-from collections import OrderedDict
-
-deprecatedModuleAttribute(
-    Version("Twisted", 15, 5, 0),
-    "Use collections.OrderedDict instead.",
-    "twisted.python.compat",
-    "OrderedDict")
 
 if _PY3:
     from base64 import encodebytes as _b64encodebytes
@@ -841,6 +817,70 @@ if _PY3:
 else:
     _tokenize = tokenize.generate_tokens
 
+try:
+    from collections.abc import Sequence
+except ImportError:
+    from collections import Sequence
+
+
+
+def _get_async_param(isAsync=None, **kwargs):
+    """
+    Provide a backwards-compatible way to get async param value that does not
+    cause a syntax error under Python 3.7.
+
+    @param isAsync: isAsync param value (should default to None)
+    @type isAsync: L{bool}
+
+    @param kwargs: keyword arguments of the caller (only async is allowed)
+    @type kwargs: L{dict}
+
+    @raise TypeError: Both isAsync and async specified.
+
+    @return: Final isAsync param value
+    @rtype: L{bool}
+    """
+    if 'async' in kwargs:
+        warnings.warn(
+            "'async' keyword argument is deprecated, please use isAsync",
+            DeprecationWarning, stacklevel=2)
+    if isAsync is None and 'async' in kwargs:
+        isAsync = kwargs.pop('async')
+    if kwargs:
+        raise TypeError
+    return bool(isAsync)
+
+
+
+def _pypy3BlockingHack():
+    """
+    Work around U{this pypy bug
+    <https://bitbucket.org/pypy/pypy/issues/3051/socketfromfd-sets-sockets-to-blocking-on>}
+    by replacing C{socket.fromfd} with a more conservative version.
+    """
+    try:
+        from fcntl import fcntl, F_GETFL, F_SETFL
+    except ImportError:
+        return
+    if not (_PY3 and _PYPY):
+        return
+
+    def fromFDWithoutModifyingFlags(fd, family, type, proto=None):
+        passproto = [proto] * (proto is not None)
+        flags = fcntl(fd, F_GETFL)
+        try:
+            return realFromFD(fd, family, type, *passproto)
+        finally:
+            fcntl(fd, F_SETFL, flags)
+    realFromFD = socket.fromfd
+    if realFromFD.__name__ == fromFDWithoutModifyingFlags.__name__:
+        return
+    socket.fromfd = fromFDWithoutModifyingFlags
+
+
+
+_pypy3BlockingHack()
+
 
 
 __all__ = [
@@ -882,5 +922,7 @@ __all__ = [
     "intern",
     "unichr",
     "raw_input",
-    "_tokenize"
+    "_tokenize",
+    "_get_async_param",
+    "Sequence",
 ]

@@ -19,7 +19,7 @@ deprecatedModuleAttribute(
 
 
 deprecatedModuleAttribute(
-    Version("Twisted", "NEXT", 0, 0),
+    Version('Twisted', 17, 5, 0),
     "Please use hyperlink from PyPI instead.",
     "twisted.python", "url")
 

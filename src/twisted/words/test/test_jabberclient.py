@@ -16,6 +16,14 @@ from twisted.words.protocols.jabber import client, error, jid, xmlstream
 from twisted.words.protocols.jabber.sasl import SASLInitiatingInitializer
 from twisted.words.xish import utility
 
+try:
+    from twisted.internet import ssl
+except ImportError:
+    ssl = None
+    skipWhenNoSSL = "SSL not available"
+else:
+    skipWhenNoSSL = None
+
 IQ_AUTH_GET = '/iq[@type="get"]/query[@xmlns="jabber:iq:auth"]'
 IQ_AUTH_SET = '/iq[@type="set"]/query[@xmlns="jabber:iq:auth"]'
 NS_BIND = 'urn:ietf:params:xml:ns:xmpp-bind'
@@ -379,11 +387,51 @@ class SessionInitializerTests(InitiatingInitializerHarness, unittest.TestCase):
 
 
 
+class BasicAuthenticatorTests(unittest.TestCase):
+    """
+    Test for both BasicAuthenticator and basicClientFactory.
+    """
+
+    def test_basic(self):
+        """
+        Authenticator and stream are properly constructed by the factory.
+
+        The L{xmlstream.XmlStream} protocol created by the factory has the new
+        L{client.BasicAuthenticator} instance in its C{authenticator}
+        attribute.  It is set up with C{jid} and C{password} as passed to the
+        factory, C{otherHost} taken from the client JID. The stream futher has
+        two initializers, for TLS and authentication, of which the first has
+        its C{required} attribute set to C{True}.
+        """
+        self.client_jid = jid.JID('user@example.com/resource')
+
+        # Get an XmlStream instance. Note that it gets initialized with the
+        # XMPPAuthenticator (that has its associateWithXmlStream called) that
+        # is in turn initialized with the arguments to the factory.
+        xs = client.basicClientFactory(self.client_jid,
+                                       'secret').buildProtocol(None)
+
+        # test authenticator's instance variables
+        self.assertEqual('example.com', xs.authenticator.otherHost)
+        self.assertEqual(self.client_jid, xs.authenticator.jid)
+        self.assertEqual('secret', xs.authenticator.password)
+
+        # test list of initializers
+        tls, auth = xs.initializers
+
+        self.assertIsInstance(tls, xmlstream.TLSInitiatingInitializer)
+        self.assertIsInstance(auth, client.IQAuthInitializer)
+
+        self.assertFalse(tls.required)
+
+
+
 class XMPPAuthenticatorTests(unittest.TestCase):
     """
     Test for both XMPPAuthenticator and XMPPClientFactory.
     """
-    def testBasic(self):
+
+    def test_basic(self):
         """
         Test basic operations.
 
@@ -412,7 +460,38 @@ class XMPPAuthenticatorTests(unittest.TestCase):
         self.assertIsInstance(bind, client.BindInitializer)
         self.assertIsInstance(session, client.SessionInitializer)
 
-        self.assertFalse(tls.required)
+        self.assertTrue(tls.required)
         self.assertTrue(sasl.required)
-        self.assertFalse(bind.required)
+        self.assertTrue(bind.required)
         self.assertFalse(session.required)
+
+
+    def test_tlsConfiguration(self):
+        """
+        A TLS configuration is passed to the TLS initializer.
+        """
+        configs = []
+
+        def init(self, xs, required=True, configurationForTLS=None):
+            configs.append(configurationForTLS)
+
+        self.client_jid = jid.JID('user@example.com/resource')
+
+        # Get an XmlStream instance. Note that it gets initialized with the
+        # XMPPAuthenticator (that has its associateWithXmlStream called) that
+        # is in turn initialized with the arguments to the factory.
+        configurationForTLS = ssl.CertificateOptions()
+        factory = client.XMPPClientFactory(
+            self.client_jid, 'secret',
+            configurationForTLS=configurationForTLS)
+        self.patch(xmlstream.TLSInitiatingInitializer, "__init__", init)
+        xs = factory.buildProtocol(None)
+
+        # test list of initializers
+        version, tls, sasl, bind, session = xs.initializers
+
+        self.assertIsInstance(tls, xmlstream.TLSInitiatingInitializer)
+        self.assertIs(configurationForTLS, configs[0])
+
+
+    test_tlsConfiguration.skip = skipWhenNoSSL

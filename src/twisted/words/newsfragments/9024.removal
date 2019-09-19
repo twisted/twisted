@@ -1,1 +1,0 @@
-twisted.words.protocols.oscar, which is client code for Oscar/ICQ, was deprecated in 16.2.0 and has now been removed.

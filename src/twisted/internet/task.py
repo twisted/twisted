@@ -839,7 +839,7 @@ class Clock:
 
 
 
-def deferLater(clock, delay, callable, *args, **kw):
+def deferLater(clock, delay, callable=None, *args, **kw):
     """
     Call the given function after a certain period of time has passed.
 
@@ -864,7 +864,8 @@ def deferLater(clock, delay, callable, *args, **kw):
     def deferLaterCancel(deferred):
         delayedCall.cancel()
     d = defer.Deferred(deferLaterCancel)
-    d.addCallback(lambda ignored: callable(*args, **kw))
+    if callable is not None:
+        d.addCallback(lambda ignored: callable(*args, **kw))
     delayedCall = clock.callLater(delay, d.callback, None)
     return d
 

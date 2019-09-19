@@ -5,7 +5,7 @@
 # way to share the same process between Travis-CI and Buildbot.
 #
 language: python
-sudo: false
+dist: xenial
 
 
 # Only run tests on push on a few branches.
@@ -19,43 +19,38 @@ branches:
 env:
   global:
     - TRIAL_REPORTER=text
+    # Version which should be removed from the cache.
+    - PREVIOUS_PYPY_VERSION=pypy=5.3.1
+    # Some python versions (like PYPY) are installed using pyenv and we cache
+    # the compiled version.
+    - PYENV_ROOT="$HOME/.pyenv"
 
 
 matrix:
   include:
+    - services:
+        - docker
+      env: PIP=pip TOXENV=wheels
     - python: 2.7
-      env: TOXENV=py27-alldeps-withcov-posix,codecov-publish
-    # FIXME: https://twistedmatrix.com/trac/ticket/8633
-    # Coverage should also be reported for nomodules tests so that we also
-    # get report for those conditional branches.
+      env: TOXENV=py27-alldeps-withcov-posix,coverage-prepare,codecov-push,coveralls-push
     - python: 2.7
-      env: TOXENV=py27-nodeps-withcov-posix,codecov-publish
-    - python: 3.3
-      env: TOXENV=py33-alldeps-withcov-posix,codecov-publish
-    - python: 3.4
-      env: TOXENV=py34-alldeps-withcov-posix,codecov-publish
+      env: TOXENV=py27-nodeps-withcov-posix,coverage-prepare,codecov-push,coveralls-push
     - python: 3.5
-      env: TOXENV=py35-alldeps-withcov-posix,codecov-publish
-    # For now all non-trial tests are in a single job to reduce the time spent
-    # on starting separate jobs.
-    - python: 2.7
-      env: TOXENV=narrativedocs,apidocs,pyflakes,topfile,manifest-checker
+      env: TOXENV=py35-alldeps-withcov-posix,coverage-prepare,codecov-push,coveralls-push
+    - python: 3.6
+      env: TOXENV=py36-alldeps-withcov-posix,coverage-prepare,codecov-push,coveralls-push
+    - python: 3.7
+      env: TOXENV=py37-alldeps-withcov-posix,coverage-prepare,codecov-push,coveralls-push
     - python: 3.5
-      env: TOXENV=pyflakes3
-    # Twistedchecker is running as a separate job so that we can ignore if it
-    # fails.
-    - python: 3.5
-      env: TOXENV=txchecker-travis-required
-    - python: 3.5
-      env: TOXENV=txchecker-travis-all
+      env: TOXENV=lint
     # We need a builder without IPv6. This is going to be slower than all the
     # others, but that's ok.
-    - python: 3.5
-      env: TOXENV=py35-alldeps-withcov-posix,codecov-publish DISABLE_IPV6=yes
-      sudo: true
-  allow_failures:
-    - env: TOXENV=txchecker-travis-all
-
+    - python: 3.6
+      env: TOXENV=py36-alldeps-withcov-posix,coverage-prepare,codecov-push,coveralls-push DISABLE_IPV6=yes
+    - python: pypy
+      env: TOXENV=pypy-nodeps-withcov-posix,coverage-prepare,codecov-push,coveralls-push PYPY_VERSION=pypy2.7-7.1.1
+    - python: pypy3
+      env: TOXENV=pypy-nodeps-withcov-posix,coverage-prepare,codecov-push,coveralls-push PYPY_VERSION=pypy3.6-7.1.1
 
 addons:
   apt:
@@ -67,7 +62,14 @@ addons:
 cache:
   directories:
     - $HOME/.cache/pip
-    - $HOME/.pyenv
+    - $PYENV_ROOT
+  before_cache:
+    # Show the current cache size and try to delete things which are no longer
+    # needed.
+    - du -h $HOME/.cache/pip
+    - du -h $PYENV_ROOT
+    - rm -f $HOME/.cache/pip/log/debug.log
+    - pyenv uninstall -f $PREVIOUS_PYPY_VERSION
 
 
 install:

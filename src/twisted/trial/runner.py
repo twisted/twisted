@@ -21,7 +21,6 @@ __all__ = [
     ]
 
 import doctest
-import imp
 import inspect
 import os
 import sys
@@ -30,7 +29,7 @@ import types
 import warnings
 
 from twisted.python import reflect, log, failure, modules, filepath
-from twisted.python.compat import _PY3
+from twisted.python.compat import _PY3, _PY35PLUS
 
 from twisted.internet import defer
 from twisted.trial import util, unittest
@@ -57,10 +56,21 @@ def isPackage(module):
 
 
 def isPackageDirectory(dirname):
-    """Is the directory at path 'dirname' a Python package directory?
+    """
+    Is the directory at path 'dirname' a Python package directory?
     Returns the name of the __init__ file (it may have a weird extension)
-    if dirname is a package directory.  Otherwise, returns False"""
-    for ext in list(zip(*imp.get_suffixes()))[0]:
+    if dirname is a package directory.  Otherwise, returns False
+    """
+    def _getSuffixes():
+        if _PY3:
+            import importlib
+            return importlib.machinery.all_suffixes()
+        else:
+            import imp
+            return list(zip(*imp.get_suffixes()))[0]
+
+
+    for ext in _getSuffixes():
         initFile = '__init__' + ext
         if os.path.exists(os.path.join(dirname, initFile)):
             return initFile
@@ -95,7 +105,8 @@ def filenameToModule(fn):
         # Couldn't find module.  The file 'fn' is not in PYTHONPATH
         return _importFromFile(fn)
 
-    if not hasattr(ret, "__file__"):
+    # >=3.7 has __file__ attribute as None, previously __file__ was not present
+    if getattr(ret, "__file__", None) is None:
         # This isn't a Python module in a package, so import it from a file
         return _importFromFile(fn)
 
@@ -115,8 +126,20 @@ def _importFromFile(fn, moduleName=None):
         moduleName = os.path.splitext(os.path.split(fn)[-1])[0]
     if moduleName in sys.modules:
         return sys.modules[moduleName]
-    with open(fn, 'r') as fd:
-        module = imp.load_source(moduleName, fn, fd)
+    if _PY35PLUS:
+        import importlib
+
+        spec = importlib.util.spec_from_file_location(moduleName, fn)
+        if not spec:
+            raise SyntaxError(fn)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        sys.modules[moduleName] = module
+    else:
+        import imp
+
+        with open(fn, 'r') as fd:
+            module = imp.load_source(moduleName, fn, fd)
     return module
 
 
@@ -528,17 +551,17 @@ class TestLoader(object):
             warnings.warn("trial only supports doctesting modules")
             return
         extraArgs = {}
-        if sys.version_info > (2, 4):
-            # Work around Python issue2604: DocTestCase.tearDown clobbers globs
-            def saveGlobals(test):
-                """
-                Save C{test.globs} and replace it with a copy so that if
-                necessary, the original will be available for the next test
-                run.
-                """
-                test._savedGlobals = getattr(test, '_savedGlobals', test.globs)
-                test.globs = test._savedGlobals.copy()
-            extraArgs['setUp'] = saveGlobals
+
+        # Work around Python issue2604: DocTestCase.tearDown clobbers globs
+        def saveGlobals(test):
+            """
+            Save C{test.globs} and replace it with a copy so that if
+            necessary, the original will be available for the next test
+            run.
+            """
+            test._savedGlobals = getattr(test, '_savedGlobals', test.globs)
+            test.globs = test._savedGlobals.copy()
+        extraArgs['setUp'] = saveGlobals
         return doctest.DocTestSuite(module, **extraArgs)
 
     def loadAnything(self, thing, recurse=False, parent=None, qualName=None):
@@ -701,8 +724,27 @@ class Py3TestLoader(TestLoader):
                 break
 
             except ImportError:
+                # Check to see where the ImportError happened. If it happened
+                # in this file, ignore it.
+                tb = sys.exc_info()[2]
+
+                # Walk down to the deepest frame, where it actually happened.
+                while tb.tb_next is not None:
+                    tb = tb.tb_next
+
+                # Get the filename that the ImportError originated in.
+                filenameWhereHappened = tb.tb_frame.f_code.co_filename
+
+                # If it originated in the reflect file, then it's because it
+                # doesn't exist. If it originates elsewhere, it's because an
+                # ImportError happened in a module that does exist.
+                if filenameWhereHappened != reflect.__file__:
+                    raise
+
                 if remaining == "":
-                    raise reflect.ModuleNotFound("The module {} does not exist.".format(name))
+                    raise reflect.ModuleNotFound(
+                        "The module {} does not exist.".format(name)
+                    )
 
         if obj is None:
             # If it's none here, we didn't get to import anything.

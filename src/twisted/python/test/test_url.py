@@ -476,20 +476,6 @@ class TestURL(SynchronousTestCase):
         )
 
 
-    def test_parseEqualSignInParamValue(self):
-        """
-        Every C{=}-sign after the first in a query parameter is simply included
-        in the value of the parameter.
-        """
-        u = URL.fromText('http://localhost/?=x=x=x')
-        self.assertEqual(u.get(u''), ['x=x=x'])
-        self.assertEqual(u.asText(), 'http://localhost/?=x%3Dx%3Dx')
-        u = URL.fromText('http://localhost/?foo=x=x=x&bar=y')
-        self.assertEqual(u.query, (('foo', 'x=x=x'),
-                                             ('bar', 'y')))
-        self.assertEqual(u.asText(), 'http://localhost/?foo=x%3Dx%3Dx&bar=y')
-
-
     def test_empty(self):
         """
         An empty L{URL} should serialize as the empty string.
@@ -806,7 +792,7 @@ class URLDeprecationTests(SynchronousTestCase):
     """
     def test_urlDeprecation(self):
         """
-        L{twisted.python.url} is deprecated since Twisted NEXT.
+        L{twisted.python.url} is deprecated since Twisted 17.5.0.
         """
         from twisted.python import url
         url
@@ -814,6 +800,6 @@ class URLDeprecationTests(SynchronousTestCase):
         warningsShown = self.flushWarnings([self.test_urlDeprecation])
         self.assertEqual(1, len(warningsShown))
         self.assertEqual(
-            ("twisted.python.url was deprecated in Twisted NEXT:"
+            ("twisted.python.url was deprecated in Twisted 17.5.0:"
              " Please use hyperlink from PyPI instead."),
             warningsShown[0]['message'])

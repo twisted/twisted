@@ -2,8 +2,8 @@
 :LastChangedRevision: $LastChangedRevision$
 :LastChangedBy: $LastChangedBy$
 
-Twisted Names
-=============
+Twisted Names (DNS)
+===================
 
 .. toctree::
    :hidden:
@@ -19,16 +19,16 @@ The client API also includes a replacement for the blocking ``gethostbyname()`` 
 
 Twisted Names provides a ``twistd`` DNS server plugin which can:
 
-  * Act as a master authoritative server
-    which can read most BIND-syntax zone files as well as a simple Python-based configuration format.
+* Act as a master authoritative server
+  which can read most BIND-syntax zone files as well as a simple Python-based configuration format.
 
-  * Act as a secondary authoritative DNS server,
-    which retrieves its records from a master server by zone transfer.
+* Act as a secondary authoritative DNS server,
+  which retrieves its records from a master server by zone transfer.
 
-  * Act as a caching / forwarding nameserver
-    which forwards requests to one or more upstream recursive nameservers and caches the results.
+* Act as a caching / forwarding nameserver
+  which forwards requests to one or more upstream recursive nameservers and caches the results.
 
-  * Or any combination of these.
+* Or any combination of these.
 
 The following developer guides, example scripts and API documentation will demonstrate how to use these components
 and provide you with all the information you need to build your own custom DNS client or server using Twisted Names.

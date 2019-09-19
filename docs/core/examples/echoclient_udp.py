@@ -10,9 +10,9 @@ from twisted.internet import reactor
 
 class EchoClientDatagramProtocol(DatagramProtocol):
     strings = [
-        "Hello, world!",
-        "What a fine day it is.",
-        "Bye-bye!"
+        b"Hello, world!",
+        b"What a fine day it is.",
+        b"Bye-bye!"
     ]
     
     def startProtocol(self):

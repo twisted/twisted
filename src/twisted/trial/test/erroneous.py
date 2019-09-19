@@ -63,6 +63,36 @@ class AsynchronousTestFailureInTearDown(
 
 
 
+class FailureButTearDownRunsMixin(object):
+    """
+    A test fails, but its L{tearDown} still runs.
+    """
+    tornDown = False
+
+    def tearDown(self):
+        self.tornDown = True
+
+
+    def test_fails(self):
+        """
+        A test that fails.
+        """
+        raise FoolishError("I am a broken test")
+
+
+
+class SynchronousTestFailureButTearDownRuns(
+        FailureButTearDownRunsMixin, unittest.SynchronousTestCase):
+    pass
+
+
+
+class AsynchronousTestFailureButTearDownRuns(
+        FailureButTearDownRunsMixin, unittest.TestCase):
+    pass
+
+
+
 class TestRegularFail(unittest.SynchronousTestCase):
 
     def test_fail(self):
