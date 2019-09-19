@@ -9,6 +9,8 @@ import sys
 import time
 import warnings
 
+from twisted.python._oldstyle import _oldStyle
+
 
 
 def shortPythonVersion():
@@ -36,6 +38,7 @@ _timeFunctions = {
 
 
 
+@_oldStyle
 class Platform:
     """
     Gives us information about the platform we're running on.
@@ -75,9 +78,9 @@ class Platform:
 
     def isMacOSX(self):
         """
-        Check if current platform is Mac OS X.
+        Check if current platform is macOS.
 
-        @return: C{True} if the current platform has been detected as OS X.
+        @return: C{True} if the current platform has been detected as macOS.
         @rtype: C{bool}
         """
         return self._platform == "darwin"
@@ -214,9 +217,6 @@ class Platform:
         try:
             from twisted.python._inotify import INotifyError, init
         except ImportError:
-            return False
-
-        if self.isDocker():
             return False
 
         try:

@@ -169,8 +169,9 @@ class FileHandle(_ConsumerMixin, _LogOwner):
 
     def startWriting(self):
         self.reactor.addActiveHandle(self)
-        self.writing = True
-        if not self._writeScheduled:
+
+        if not self._writeScheduled and not self.writing:
+            self.writing = True
             self._writeScheduled = self.reactor.callLater(0,
                                                           self._resumeWriting)
 

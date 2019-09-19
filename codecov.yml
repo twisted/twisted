@@ -12,6 +12,4 @@ coverage:
       default:
         target: 100%
 
-comment:
-  layout: "header, diff, uncovered"
-  behavior: default
+comment: off

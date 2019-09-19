@@ -85,7 +85,7 @@ def verifyHostKey(transport, host, pubKey, fingerprint):
             transport.factory.options['known-hosts']
             or os.path.expanduser(_KNOWN_HOSTS)
             ))
-    ui = ConsoleUI(lambda : _open("/dev/tty", "r+b"))
+    ui = ConsoleUI(lambda : _open("/dev/tty", "r+b", buffering=0))
     return kh.verifyHostKey(ui, actualHost, host, actualKey)
 
 
@@ -127,6 +127,31 @@ def isInKnownHosts(host, pubKey, options):
             else:
                 retVal = 2
     return retVal
+
+
+
+def getHostKeyAlgorithms(host, options):
+    """
+    Look in known_hosts for a key corresponding to C{host}.
+    This can be used to change the order of supported key types
+    in the KEXINIT packet.
+
+    @type host: L{str}
+    @param host: the host to check in known_hosts
+    @type options: L{twisted.conch.client.options.ConchOptions}
+    @param options: options passed to client
+    @return: L{list} of L{str} representing key types or L{None}.
+    """
+    knownHosts = KnownHostsFile.fromPath(FilePath(
+        options['known-hosts']
+        or os.path.expanduser(_KNOWN_HOSTS)
+        ))
+    keyTypes = []
+    for entry in knownHosts.iterentries():
+        if entry.matchesHost(host):
+            if entry.keyType not in keyTypes:
+                keyTypes.append(entry.keyType)
+    return keyTypes or None
 
 
 

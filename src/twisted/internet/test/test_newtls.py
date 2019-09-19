@@ -8,6 +8,7 @@ Tests for L{twisted.internet._newtls}.
 from __future__ import division, absolute_import
 
 from twisted.trial import unittest
+from twisted.internet import interfaces
 from twisted.internet.test.reactormixins import ReactorBuilder
 from twisted.internet.test.connectionmixins import (
     ConnectableProtocol, runProtocolsWithReactor)
@@ -20,6 +21,7 @@ try:
     from twisted.internet import _newtls
 except ImportError:
     _newtls = None
+from zope.interface import implementer
 
 
 class BypassTLSTests(unittest.TestCase):
@@ -74,6 +76,7 @@ class FakeProducer(object):
 
 
 
+@implementer(interfaces.IHandshakeListener)
 class ProducerProtocol(ConnectableProtocol):
     """
     Register a producer, unregister it, and verify the producer hooks up to
@@ -85,7 +88,7 @@ class ProducerProtocol(ConnectableProtocol):
         self.result = result
 
 
-    def connectionMade(self):
+    def handshakeCompleted(self):
         if not isinstance(self.transport.protocol,
                           tls.TLSMemoryBIOProtocol):
             # Either the test or the code have a bug...

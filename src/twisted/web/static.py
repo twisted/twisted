@@ -8,12 +8,12 @@ Static resources for L{twisted.web}.
 
 from __future__ import division, absolute_import
 
-import os
-import warnings
-import itertools
-import time
 import errno
+import itertools
 import mimetypes
+import os
+import time
+import warnings
 
 from zope.interface import implementer
 
@@ -22,7 +22,8 @@ from twisted.web import resource
 from twisted.web import http
 from twisted.web.util import redirectTo
 
-from twisted.python.compat import networkString, intToBytes, nativeString, _PY3
+from twisted.python.compat import (_PY3, intToBytes, nativeString,
+                                   networkString)
 from twisted.python.compat import escape
 
 from twisted.python import components, filepath, log
@@ -50,6 +51,14 @@ class Data(resource.Resource):
     """
 
     def __init__(self, data, type):
+        """
+        @param data: The bytes that make up this data resource.
+        @type data: L{bytes}
+
+        @param type: A native string giving the Internet media type for this
+            content.
+        @type type: L{str}
+        """
         resource.Resource.__init__(self)
         self.data = data
         self.type = type
@@ -186,6 +195,15 @@ class File(resource.Resource, filepath.FilePath):
 
     @cvar childNotFound: L{Resource} used to render 404 Not Found error pages.
     @cvar forbidden: L{Resource} used to render 403 Forbidden error pages.
+
+    @ivar contentTypes: a mapping of extensions to MIME types used to set the
+        default value for the Content-Type header.
+        It is initialized with the values returned by L{loadMimeTypes}.
+    @type contentTypes: C{dict}
+
+    @ivar contentEncodings: a mapping of extensions to encoding types used to
+        set default value for the Content-Encoding header.
+    @type contentEncodings: C{dict}
     """
 
     contentTypes = loadMimeTypes()
@@ -235,7 +253,7 @@ class File(resource.Resource, filepath.FilePath):
         if ignoredExts in (0, 1) or allowExt:
             warnings.warn("ignoredExts should receive a list, not a boolean")
             if ignoredExts or allowExt:
-                self.ignoredExts = [b'*']
+                self.ignoredExts = ['*']
             else:
                 self.ignoredExts = []
         else:
@@ -253,9 +271,31 @@ class File(resource.Resource, filepath.FilePath):
     childNotFound = resource.NoResource("File not found.")
     forbidden = resource.ForbiddenResource()
 
+
     def directoryListing(self):
-        return DirectoryLister(self.path,
-                               self.listNames(),
+        """
+        Return a resource that generates an HTML listing of the
+        directory this path represents.
+
+        @return: A resource that renders the directory to HTML.
+        @rtype: L{DirectoryLister}
+        """
+        if _PY3:
+            path = self.path
+            names = self.listNames()
+        else:
+            # DirectoryLister works in terms of native strings, so on
+            # Python 2, ensure we have a bytes paths for this
+            # directory and its contents.  We use the asBytesMode
+            # method inherited from FilePath to ensure consistent
+            # encoding of the actual path.  This returns a FilePath
+            # instance even when called on subclasses, however, so we
+            # have to create a new File instance.
+            nativeStringPath = self.createSimilarFile(self.asBytesMode().path)
+            path = nativeStringPath.path
+            names = nativeStringPath.listNames()
+        return DirectoryLister(path,
+                               names,
                                self.contentTypes,
                                self.contentEncodings,
                                self.defaultType)
@@ -263,11 +303,33 @@ class File(resource.Resource, filepath.FilePath):
 
     def getChild(self, path, request):
         """
-        If this L{File}'s path refers to a directory, return a L{File}
+        If this L{File}"s path refers to a directory, return a L{File}
         referring to the file named C{path} in that directory.
 
-        If C{path} is the empty string, return a L{DirectoryLister} instead.
+        If C{path} is the empty string, return a L{DirectoryLister}
+        instead.
+
+        @param path: The current path segment.
+        @type path: L{bytes}
+
+        @param request: The incoming request.
+        @type request: An that provides L{twisted.web.iweb.IRequest}.
+
+        @return: A resource representing the requested file or
+            directory, or L{NoResource} if the path cannot be
+            accessed.
+        @rtype: An object that provides L{resource.IResource}.
         """
+        if isinstance(path, bytes):
+            try:
+                # Request calls urllib.unquote on each path segment,
+                # leaving us with raw bytes.
+                path = path.decode('utf-8')
+            except UnicodeDecodeError:
+                log.err(None,
+                        "Could not decode path segment as utf-8: %r" % (path,))
+                return self.childNotFound
+
         self.restat(reraise=False)
 
         if not self.isdir():
@@ -288,12 +350,13 @@ class File(resource.Resource, filepath.FilePath):
             if fpath is None:
                 return self.childNotFound
 
+        extension = fpath.splitext()[1]
         if platformType == "win32":
             # don't want .RPY to be different than .rpy, since that would allow
             # source disclosure.
-            processor = InsensitiveDict(self.processors).get(fpath.splitext()[1])
+            processor = InsensitiveDict(self.processors).get(extension)
         else:
-            processor = self.processors.get(fpath.splitext()[1])
+            processor = self.processors.get(extension)
         if processor:
             return resource.IResource(processor(fpath.path, self.registry))
         return self.createSimilarFile(fpath.path)
@@ -320,7 +383,7 @@ class File(resource.Resource, filepath.FilePath):
         @return: A list C{[(start, stop)]} of pairs of length at least one.
 
         @raise ValueError: if the header is syntactically invalid or if the
-            Bytes-Unit is anything other than 'bytes'.
+            Bytes-Unit is anything other than "bytes'.
         """
         try:
             kind, value = range.split(b'=', 1)
@@ -870,7 +933,13 @@ class DirectoryLister(resource.Resource):
         B{type} and B{encoding}.
     @type linePattern: C{str}
 
+    @ivar contentTypes: a mapping of extensions to MIME types used to populate
+        the information of a member of this directory.
+        It is initialized with the value L{File.contentTypes}.
+    @type contentTypes: C{dict}
+
     @ivar contentEncodings: a mapping of extensions to encoding types.
+        It is initialized with the value L{File.contentEncodings}.
     @type contentEncodings: C{dict}
 
     @ivar defaultType: default type used when no mimetype is detected.

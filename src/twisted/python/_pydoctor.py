@@ -16,7 +16,7 @@ from pydoctor import model, zopeinterface
 from pydoctor.sphinx import SphinxInventory
 
 
-class HeadRequest(urllib2.Request):
+class HeadRequest(urllib2.Request, object):
     """
     A request for the HEAD HTTP method.
     """
@@ -95,11 +95,12 @@ class TwistedSphinxInventory(SphinxInventory):
 
             # Check if URL exists.
             response = self._getURLAsHEAD(fullURL)
-            if response.code == 200:
-                return fullURL
-            else:
-                # Bad URL resolution.
-                return None
+            if response:
+                if response.code == 200:
+                    return fullURL
+                else:
+                    # Bad URL resolution.
+                    print("BAD URL resolution, code: ", response.code)
 
         return None
 
@@ -114,9 +115,13 @@ class TwistedSphinxInventory(SphinxInventory):
         @type url: L{str}
 
         @return: The response for the HEAD method.
-        @rtype: urllib2 response
+        @rtype: urllib2 response or L{None}
         """
-        return urllib2.urlopen(HeadRequest(url))
+        try:
+            return urllib2.urlopen(HeadRequest(url))
+        except Exception as e:
+            print("Error opening {}: {}".format(url, e))
+            return None
 
 
 

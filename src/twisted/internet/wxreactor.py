@@ -23,7 +23,11 @@ expected and probably does not reflect on the reactor's ability to run
 real applications.
 """
 
-import Queue
+try:
+    from queue import Empty, Queue
+except ImportError:
+    from Queue import Empty, Queue
+
 try:
     from wx import PySimpleApp as wxPySimpleApp, CallAfter as wxCallAfter, \
          Timer as wxTimer
@@ -39,7 +43,7 @@ class ProcessEventsTimer(wxTimer):
     """
     Timer that tells wx to process pending events.
 
-    This is necessary on OS X, probably due to a bug in wx, if we want
+    This is necessary on macOS, probably due to a bug in wx, if we want
     wxCallAfters to be handled when modal dialogs, menus, etc.  are open.
     """
     def __init__(self, wxapp):
@@ -121,7 +125,7 @@ class WxReactor(_threadedselect.ThreadedSelectReactor):
         """
         Start the reactor.
         """
-        self._postQueue = Queue.Queue()
+        self._postQueue = Queue()
         if not hasattr(self, "wxapp"):
             log.msg("registerWxApp() was not called on reactor, "
                     "registering my own wxApp instance.")
@@ -138,7 +142,7 @@ class WxReactor(_threadedselect.ThreadedSelectReactor):
         self.addSystemEventTrigger("after", "shutdown",
                                    lambda: self._postQueue.put(None))
 
-        # On Mac OS X, work around wx bug by starting timer to ensure
+        # On macOS, work around wx bug by starting timer to ensure
         # wxCallAfter calls are always processed. We don't wake up as
         # often as we could since that uses too much CPU.
         if runtime.platform.isMacOSX():
@@ -160,7 +164,7 @@ class WxReactor(_threadedselect.ThreadedSelectReactor):
             while 1:
                 try:
                     f = self._postQueue.get(timeout=0.01)
-                except Queue.Empty:
+                except Empty:
                     continue
                 else:
                     if f is None:

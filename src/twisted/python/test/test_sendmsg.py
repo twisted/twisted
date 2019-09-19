@@ -393,21 +393,6 @@ class CModuleSendmsgTests(TestCase):
         self.assertEqual(result, (message, 0, []))
 
 
-    def test_shortsend(self):
-        """
-        L{send1msg} returns the number of bytes which it was able to send.
-        """
-        message = "x" * 1024 * 1024
-        self.input.setblocking(False)
-        sent = send1msg(self.input.fileno(), message)
-        # Sanity check - make sure the amount of data we sent was less than the
-        # message, but not the whole message, as we should have filled the send
-        # buffer. This won't work if the send buffer is more than 1MB, though.
-        self.assertTrue(sent < len(message))
-        received = recv1msg(self.output.fileno(), 0, len(message))
-        self.assertEqual(len(received[0]), sent)
-
-
     def test_roundtripEmptyAncillary(self):
         """
         L{send1msg} treats an empty ancillary data list the same way it treats
@@ -428,7 +413,7 @@ class CModuleSendmsgTests(TestCase):
         # Just exercise one flag with simple, well-known behavior. MSG_DONTWAIT
         # makes the send a non-blocking call, even if the socket is in blocking
         # mode.  See also test_flags in RecvmsgTests
-        for i in range(1024):
+        for i in range(8 * 1024):
             try:
                 send1msg(self.input.fileno(), "x" * 1024, MSG_DONTWAIT)
             except error as e:
@@ -477,6 +462,22 @@ class CModuleSendmsgTests(TestCase):
                          "Test fixture data: blonk.\n")
         # Make sure that the pipe is actually closed now.
         self.assertEqual(read(pipeOut.fileno(), 1024), "")
+
+
+    def test_sendmsgTwoAncillaryDoesNotSegfault(self):
+        """
+        L{sendmsg} with two FDs in two separate ancillary entries
+        does not segfault.
+        """
+        ancillary = [
+            (SOL_SOCKET, SCM_RIGHTS, pack("i", self.input.fileno())),
+            (SOL_SOCKET, SCM_RIGHTS, pack("i", self.output.fileno())),
+        ]
+        try:
+            send1msg(self.input.fileno(), b"some data", 0, ancillary)
+        except error:
+            # Ok as long as it doesn't segfault.
+            pass
 
 
 
@@ -676,12 +677,13 @@ class SendmsgTests(TestCase):
         """
         L{sendmsg} returns the number of bytes which it was able to send.
         """
-        message = b"x" * 1024 * 1024
+        message = b"x" * 1024 * 1024 * 16
         self.input.setblocking(False)
         sent = sendmsg(self.input, message)
         # Sanity check - make sure the amount of data we sent was less than the
         # message, but not the whole message, as we should have filled the send
-        # buffer. This won't work if the send buffer is more than 1MB, though.
+        # buffer. This won't work if the send buffer is large enough for
+        # message, though.
         self.assertTrue(sent < len(message))
         received = recvmsg(self.output, len(message))
         self.assertEqual(len(received[0]), sent)
@@ -707,7 +709,7 @@ class SendmsgTests(TestCase):
         # Just exercise one flag with simple, well-known behavior. MSG_DONTWAIT
         # makes the send a non-blocking call, even if the socket is in blocking
         # mode.  See also test_flags in RecvmsgTests
-        for i in range(1024):
+        for i in range(8 * 1024):
             try:
                 sendmsg(self.input, b"x" * 1024, flags=MSG_DONTWAIT)
             except error as e:

@@ -10,7 +10,6 @@ from twisted.trial.unittest import TestCase
 from twisted.python.usage import UsageError
 from twisted.mail import protocols
 from twisted.mail.tap import Options, makeService
-from twisted.python.filepath import FilePath
 from twisted.python.reflect import requireModule
 from twisted.internet import endpoints, defer
 
@@ -49,25 +48,6 @@ class OptionsTests(TestCase):
         Options().parseOptions([
             '--maildirdbmdomain', 'example.com=example.com',
             '--aliases', self.aliasFilename])
-
-
-    def test_barePort(self):
-        """
-        A bare port passed to I{--pop3} results in deprecation warning in
-        addition to a TCP4ServerEndpoint.
-        """
-        options = Options()
-        options.parseOptions(['--pop3', '8110'])
-        self.assertEqual(len(options['pop3']), 1)
-        self.assertIsInstance(
-            options['pop3'][0], endpoints.TCP4ServerEndpoint)
-        warnings = self.flushWarnings([options.opt_pop3])
-        self.assertEqual(len(warnings), 1)
-        self.assertEqual(warnings[0]['category'], DeprecationWarning)
-        self.assertEqual(
-            warnings[0]['message'],
-            "Specifying plain ports and/or a certificate is deprecated since "
-            "Twisted 11.0; use endpoint descriptions instead.")
 
 
     def _endpointTest(self, service):
@@ -138,32 +118,6 @@ class OptionsTests(TestCase):
         options = Options()
         self.assertRaises(
             UsageError, options.parseOptions, (['--no-pop3', '--no-smtp']))
-
-
-    def test_pop3sBackwardCompatibility(self):
-        """
-        The deprecated I{--pop3s} and I{--certificate} options set up a POP3 SSL
-        server.
-        """
-        cert = FilePath(__file__).sibling("server.pem")
-        options = Options()
-        options.parseOptions(['--pop3s', '8995',
-                              '--certificate', cert.path])
-        self.assertEqual(len(options['pop3']), 2)
-        self.assertIsInstance(
-            options['pop3'][0], endpoints.SSL4ServerEndpoint)
-        self.assertIsInstance(
-            options['pop3'][1], endpoints.TCP4ServerEndpoint)
-
-        warnings = self.flushWarnings([options.postOptions])
-        self.assertEqual(len(warnings), 1)
-        self.assertEqual(warnings[0]['category'], DeprecationWarning)
-        self.assertEqual(
-            warnings[0]['message'],
-            "Specifying plain ports and/or a certificate is deprecated since "
-            "Twisted 11.0; use endpoint descriptions instead.")
-    if sslSkip is not None:
-        test_pop3sBackwardCompatibility.skip = sslSkip
 
 
     def test_esmtpWithoutHostname(self):

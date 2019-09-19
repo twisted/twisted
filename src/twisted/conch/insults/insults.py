@@ -936,6 +936,8 @@ class ServerProtocol(protocol.Protocol):
     # ITransport
     def write(self, data):
         if data:
+            if not isinstance(data, bytes):
+                data = data.encode("utf-8")
             self.lastWrite = data
             self.transport.write(b'\r\n'.join(data.split(b'\n')))
 

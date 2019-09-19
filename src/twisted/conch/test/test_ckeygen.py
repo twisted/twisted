@@ -141,7 +141,7 @@ class KeyGenTests(TestCase):
             'format': 'md5-hex'})
         self.assertEqual(
             self.stdout.getvalue(),
-            '768 3d:13:5f:cb:c9:79:8a:93:06:27:65:bc:3d:0b:8f:af temp\n')
+            '2048 85:25:04:32:58:55:96:9f:57:ee:fb:a8:1a:ea:69:da temp\n')
 
 
     def test_printFingerprintsha256(self):
@@ -155,7 +155,7 @@ class KeyGenTests(TestCase):
             'format': 'sha256-base64'})
         self.assertEqual(
             self.stdout.getvalue(),
-            '768 ryaugIFT0B8ItuszldMEU7q14rG/wj9HkRosMeBWkts= temp\n')
+            '2048 FBTCOoknq0mHy+kpfnY9tDdcAJuWtCpuQMaV3EsvbUI= temp\n')
 
 
     def test_printFingerprintBadFingerPrintFormat(self):
@@ -188,7 +188,7 @@ class KeyGenTests(TestCase):
             "Your identification has been saved in %s\n"
             "Your public key has been saved in %s.pub\n"
             "The key fingerprint in <FingerprintFormats=MD5_HEX> is:\n"
-            "3d:13:5f:cb:c9:79:8a:93:06:27:65:bc:3d:0b:8f:af\n" % (
+            "85:25:04:32:58:55:96:9f:57:ee:fb:a8:1a:ea:69:da\n" % (
                 filename,
                 filename))
         self.assertEqual(
@@ -217,7 +217,7 @@ class KeyGenTests(TestCase):
             "Your identification has been saved in %s\n"
             "Your public key has been saved in %s.pub\n"
             "The key fingerprint in <FingerprintFormats=MD5_HEX> is:\n"
-            "e2:3b:e8:1c:f8:c9:c7:de:8b:c0:00:68:2e:c9:2c:8a\n" % (
+            "1e:ab:83:a6:f2:04:22:99:7c:64:14:d2:ab:fa:f5:16\n" % (
                 filename,
                 filename))
         self.assertEqual(
@@ -245,7 +245,7 @@ class KeyGenTests(TestCase):
             "Your identification has been saved in %s\n"
             "Your public key has been saved in %s.pub\n"
             "The key fingerprint in <FingerprintFormats=SHA256_BASE64> is:\n"
-            "ryaugIFT0B8ItuszldMEU7q14rG/wj9HkRosMeBWkts=\n" % (
+            "FBTCOoknq0mHy+kpfnY9tDdcAJuWtCpuQMaV3EsvbUI=\n" % (
                 filename,
                 filename))
         self.assertEqual(

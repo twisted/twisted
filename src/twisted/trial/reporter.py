@@ -26,7 +26,6 @@ from twisted.python.failure import Failure
 from twisted.python.util import untilConcludes
 from twisted.python.compat import _PY3, items
 from twisted.trial import itrial, util
-from twisted.trial.unittest import makeTodo
 
 try:
     from subunit import TestProtocolClient
@@ -34,10 +33,29 @@ except ImportError:
     TestProtocolClient = None
 
 
+
+def _makeTodo(value):
+    """
+    Return a L{Todo} object built from C{value}.
+
+    This is a synonym for L{twisted.trial.unittest.makeTodo}, but imported
+    locally to avoid circular imports.
+
+    @param value: A string or a tuple of C{(errors, reason)}, where C{errors}
+    is either a single exception class or an iterable of exception classes.
+
+    @return: A L{Todo} object.
+    """
+    from twisted.trial.unittest import makeTodo
+    return makeTodo(value)
+
+
+
 class BrokenTestCaseWarning(Warning):
     """
     Emitted as a warning when an exception occurs in one of setUp or tearDown.
     """
+
 
 
 class SafeStream(object):
@@ -49,8 +67,10 @@ class SafeStream(object):
     def __init__(self, original):
         self.original = original
 
+
     def __getattr__(self, name):
         return getattr(self.original, name)
+
 
     def write(self, *a, **kw):
         return untilConcludes(self.original.write, *a, **kw)
@@ -166,7 +186,7 @@ class TestResult(pyunit.TestResult, object):
             message is provided.
         """
         if todo is None:
-            todo = makeTodo(self._DEFAULT_TODO)
+            todo = _makeTodo(self._DEFAULT_TODO)
         self.unexpectedSuccesses.append((test, todo))
 
 
@@ -183,7 +203,7 @@ class TestResult(pyunit.TestResult, object):
             message is provided.
         """
         if todo is None:
-            todo = makeTodo(self._DEFAULT_TODO)
+            todo = _makeTodo(self._DEFAULT_TODO)
         self.expectedFailures.append((test, error, todo))
 
 
@@ -871,6 +891,7 @@ class _AnsiColorizer(object):
     def __init__(self, stream):
         self.stream = stream
 
+
     def supported(cls, stream=sys.stdout):
         """
         A class method that returns True if the current platform supports
@@ -894,6 +915,7 @@ class _AnsiColorizer(object):
                 return False
     supported = classmethod(supported)
 
+
     def write(self, text, color):
         """
         Write the given text to the stream in the given color.
@@ -904,6 +926,7 @@ class _AnsiColorizer(object):
         """
         color = self._colors[color]
         self.stream.write('\x1b[%s;1m%s\x1b[0m' % (color, text))
+
 
 
 class _Win32Colorizer(object):
@@ -929,6 +952,7 @@ class _Win32Colorizer(object):
             'white': red | green | blue | bold
             }
 
+
     def supported(cls, stream=sys.stdout):
         try:
             import win32console
@@ -948,11 +972,13 @@ class _Win32Colorizer(object):
             return True
     supported = classmethod(supported)
 
+
     def write(self, text, color):
         color = self._colors[color]
         self.screenBuffer.SetConsoleTextAttribute(color)
         self.stream.write(text)
         self.screenBuffer.SetConsoleTextAttribute(self._colors['normal'])
+
 
 
 class _NullColorizer(object):
@@ -962,9 +988,11 @@ class _NullColorizer(object):
     def __init__(self, stream):
         self.stream = stream
 
+
     def supported(cls, stream=sys.stdout):
         return True
     supported = classmethod(supported)
+
 
     def write(self, text, color):
         self.stream.write(text)
@@ -1159,6 +1187,7 @@ class TreeReporter(Reporter):
                 self._colorizer = colorizer(stream)
                 break
 
+
     def getDescription(self, test):
         """
         Return the name of the method which 'test' represents.  This is
@@ -1168,29 +1197,36 @@ class TreeReporter(Reporter):
         """
         return test.id().split('.')[-1]
 
+
     def addSuccess(self, test):
         super(TreeReporter, self).addSuccess(test)
         self.endLine('[OK]', self.SUCCESS)
+
 
     def addError(self, *args):
         super(TreeReporter, self).addError(*args)
         self.endLine('[ERROR]', self.ERROR)
 
+
     def addFailure(self, *args):
         super(TreeReporter, self).addFailure(*args)
         self.endLine('[FAIL]', self.FAILURE)
+
 
     def addSkip(self, *args):
         super(TreeReporter, self).addSkip(*args)
         self.endLine('[SKIPPED]', self.SKIP)
 
+
     def addExpectedFailure(self, *args):
         super(TreeReporter, self).addExpectedFailure(*args)
         self.endLine('[TODO]', self.TODO)
 
+
     def addUnexpectedSuccess(self, *args):
         super(TreeReporter, self).addUnexpectedSuccess(*args)
         self.endLine('[SUCCESS!?!]', self.TODONE)
+
 
     def _write(self, format, *args):
         if args:
@@ -1238,11 +1274,13 @@ class TreeReporter(Reporter):
         self.endLine('[ERROR]', self.ERROR)
         super(TreeReporter, self).cleanupErrors(errs)
 
+
     def upDownError(self, method, error, warn, printStatus):
         self._colorizer.write("  %s" % method, self.ERROR)
         if printStatus:
             self.endLine('[ERROR]', self.ERROR)
         super(TreeReporter, self).upDownError(method, error, warn, printStatus)
+
 
     def startTest(self, test):
         """

@@ -16,7 +16,7 @@ from twisted.python.compat import (
     reduce, execfile, _PY3, _PYPY, comparable, cmp, nativeString,
     networkString, unicode as unicodeCompat, lazyByteSlice, reraise,
     NativeStringIO, iterbytes, intToBytes, ioType, bytesEnviron, iteritems,
-    _coercedUnicode, unichr, raw_input, _bytesRepr
+    _coercedUnicode, unichr, raw_input, _bytesRepr, _get_async_param,
 )
 from twisted.python.filepath import FilePath
 from twisted.python.runtime import platform
@@ -211,6 +211,10 @@ class IPv6Tests(unittest.SynchronousTestCase):
 
 
     def testPToN(self):
+        """
+        L{twisted.python.compat.inet_pton} parses IPv4 and IPv6 addresses in a
+        manner similar to that of L{socket.inet_pton}.
+        """
         from twisted.python.compat import inet_pton
 
         f = lambda a: inet_pton(socket.AF_INET6, a)
@@ -226,6 +230,10 @@ class IPv6Tests(unittest.SynchronousTestCase):
         self.assertEqual(
             '\x45\xef\x76\xcb\x00\x1a\x56\xef\xaf\xeb\x0b\xac\x19\x24\xae\xae',
             f('45ef:76cb:1a:56ef:afeb:bac:1924:aeae'))
+        # Scope ID doesn't affect the binary representation.
+        self.assertEqual(
+            '\x45\xef\x76\xcb\x00\x1a\x56\xef\xaf\xeb\x0b\xac\x19\x24\xae\xae',
+            f('45ef:76cb:1a:56ef:afeb:bac:1924:aeae%en0'))
 
         self.assertEqual('\x00' * 14 + '\x00\x01', f('::1'))
         self.assertEqual('\x00' * 12 + '\x01\x02\x03\x04', f('::1.2.3.4'))
@@ -237,7 +245,7 @@ class IPv6Tests(unittest.SynchronousTestCase):
                         '1:::3', ':::', '1:2', '::1.2', '1.2.3.4::',
                         'abcd:1.2.3.4:abcd:abcd:abcd:abcd:abcd',
                         '1234:1.2.3.4:1234:1234:1234:1234:1234:1234',
-                        '1.2.3.4']:
+                        '1.2.3.4', '', '%eth0']:
             self.assertRaises(ValueError, f, badaddr)
 
 if _PY3:
@@ -776,28 +784,6 @@ class BytesEnvironTests(unittest.TestCase):
 
 
 
-class OrderedDictTests(unittest.TestCase):
-    """
-    Tests for L{twisted.python.compat.OrderedDict}.
-    """
-    def test_deprecated(self):
-        """
-        L{twisted.python.compat.OrderedDict} is deprecated.
-        """
-        from twisted.python.compat import OrderedDict
-        OrderedDict # Shh pyflakes
-
-        currentWarnings = self.flushWarnings(offendingFunctions=[
-            self.test_deprecated])
-        self.assertEqual(
-            currentWarnings[0]['message'],
-            "twisted.python.compat.OrderedDict was deprecated in Twisted "
-            "15.5.0: Use collections.OrderedDict instead.")
-        self.assertEqual(currentWarnings[0]['category'], DeprecationWarning)
-        self.assertEqual(len(currentWarnings), 1)
-
-
-
 class CoercedUnicodeTests(unittest.TestCase):
     """
     Tests for L{twisted.python.compat._coercedUnicode}.
@@ -913,3 +899,37 @@ class FutureBytesReprTests(unittest.TestCase):
         ``b`` to the returned repr on both Python 2 and 3.
         """
         self.assertEqual(_bytesRepr(b'\x00'), "b'\\x00'")
+
+
+
+class GetAsyncParamTests(unittest.SynchronousTestCase):
+    """
+    Tests for L{twisted.python.compat._get_async_param}
+    """
+
+    def test_get_async_param(self):
+        """
+        L{twisted.python.compat._get_async_param} uses isAsync by default,
+        or deprecated async keyword argument if isAsync is None.
+        """
+        self.assertEqual(_get_async_param(isAsync=False), False)
+        self.assertEqual(_get_async_param(isAsync=True), True)
+        self.assertEqual(
+            _get_async_param(isAsync=None, **{'async': False}), False)
+        self.assertEqual(
+            _get_async_param(isAsync=None, **{'async': True}), True)
+        self.assertRaises(TypeError, _get_async_param, False, {'async': False})
+
+
+    def test_get_async_param_deprecation(self):
+        """
+        L{twisted.python.compat._get_async_param} raises a deprecation
+        warning if async keyword argument is passed.
+        """
+        self.assertEqual(
+            _get_async_param(isAsync=None, **{'async': False}), False)
+        currentWarnings = self.flushWarnings(
+            offendingFunctions=[self.test_get_async_param_deprecation])
+        self.assertEqual(
+            currentWarnings[0]['message'],
+            "'async' keyword argument is deprecated, please use isAsync")

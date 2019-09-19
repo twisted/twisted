@@ -7,30 +7,38 @@
 Test case for twisted.mail.imap4
 """
 
+import base64
 import codecs
+import functools
 import locale
 import os
 from io import BytesIO
+import uuid
 
 from itertools import chain
 from collections import OrderedDict
 
 from zope.interface import implementer
+from zope.interface.verify import verifyClass, verifyObject
 
-from twisted.mail.imap4 import MessageSet
-from twisted.mail import imap4
-from twisted.protocols import loopback
 from twisted.internet import defer
 from twisted.internet import error
-from twisted.internet import reactor
 from twisted.internet import interfaces
+from twisted.internet import reactor
 from twisted.internet.task import Clock
-from twisted.trial import unittest
-from twisted.python import util, log
+from twisted.mail import imap4
+from twisted.mail.interfaces import (IChallengeResponse,
+                                     IClientAuthentication,
+                                     ICloseableMailboxIMAP)
+from twisted.mail.imap4 import MessageSet
+from twisted.protocols import loopback
 from twisted.python import failure
-from twisted.python.compat import intToBytes, networkString
+from twisted.python import util, log
+from twisted.python.compat import (intToBytes, range, nativeString,
+                                   networkString, iterbytes, _PY3)
+from twisted.trial import unittest
 
-from twisted.cred.portal import Portal
+from twisted.cred.portal import Portal, IRealm
 from twisted.cred.checkers import InMemoryUsernamePasswordDatabaseDontUse
 from twisted.cred.error import UnauthorizedLogin
 from twisted.cred.credentials import (
@@ -47,18 +55,6 @@ except ImportError:
 
 def strip(f):
     return lambda result, f=f: f()
-
-
-
-def sortNest(l):
-    l = l[:]
-    l.sort()
-    for i in range(len(l)):
-        if isinstance(l[i], list):
-            l[i] = sortNest(l[i])
-        elif isinstance(l[i], tuple):
-            l[i] = tuple(sortNest(list(l[i])))
-    return l
 
 
 
@@ -92,6 +88,29 @@ class IMAP4UTF7Tests(unittest.TestCase):
         self.assertEqual(
             bytes.decode('imap4-utf-7', 'strict'),
             bytes.decode('imap4-utf-7'))
+
+
+    def test_encodeAmpersand(self):
+        """
+        Unicode strings that contain an ampersand (C{&}) can be
+        encoded to bytes with the I{imap4-utf-7} codec.
+        """
+        text = u"&Hello&\N{VULGAR FRACTION ONE HALF}&"
+        self.assertEqual(
+            text.encode("imap4-utf-7"),
+            b'&-Hello&-&AL0-&-',
+        )
+
+
+    def test_decodeWithoutFinalASCIIShift(self):
+        """
+        An I{imap4-utf-7} encoded string that does not shift back to
+        ASCII (i.e., it lacks a final C{-}) can be decoded.
+        """
+        self.assertEqual(
+            b'&AL0'.decode('imap4-utf-7'),
+            u"\N{VULGAR FRACTION ONE HALF}",
+        )
 
 
     def test_getreader(self):
@@ -168,14 +187,15 @@ class BufferingConsumer:
 
 
 
-class MessageProducerTests(unittest.TestCase):
+class MessageProducerTests(unittest.SynchronousTestCase):
+
     def testSinglePart(self):
         body = b'This is body text.  Rar.'
         headers = OrderedDict()
-        headers[b'from'] = b'sender@host'
-        headers[b'to'] = b'recipient@domain'
-        headers[b'subject'] = b'booga booga boo'
-        headers[b'content-type'] = b'text/plain'
+        headers['from'] = 'sender@host'
+        headers['to'] = 'recipient@domain'
+        headers['subject'] = 'booga booga boo'
+        headers['content-type'] = 'text/plain'
 
         msg = FakeyMessage(headers, (), None, body, 123, None )
 
@@ -202,14 +222,14 @@ class MessageProducerTests(unittest.TestCase):
         outerBody = b''
         innerBody = b'Contained body message text.  Squarge.'
         headers = OrderedDict()
-        headers[b'from'] = b'sender@host'
-        headers[b'to'] = b'recipient@domain'
-        headers[b'subject'] = b'booga booga boo'
-        headers[b'content-type'] = b'multipart/alternative; boundary="xyz"'
+        headers['from'] = 'sender@host'
+        headers['to'] = 'recipient@domain'
+        headers['subject'] = 'booga booga boo'
+        headers['content-type'] = 'multipart/alternative; boundary="xyz"'
 
         innerHeaders = OrderedDict()
-        innerHeaders[b'subject'] = b'this is subject text'
-        innerHeaders[b'content-type'] = b'text/plain'
+        innerHeaders['subject'] = 'this is subject text'
+        innerHeaders['content-type'] = 'text/plain'
         msg = FakeyMessage(headers, (), None, outerBody, 123,
                            [FakeyMessage(innerHeaders, (), None, innerBody,
                                          None, None)],
@@ -247,16 +267,16 @@ class MessageProducerTests(unittest.TestCase):
         innerBody1 = b'Contained body message text.  Squarge.'
         innerBody2 = b'Secondary <i>message</i> text of squarge body.'
         headers = OrderedDict()
-        headers[b'from'] = b'sender@host'
-        headers[b'to'] = b'recipient@domain'
-        headers[b'subject'] = b'booga booga boo'
-        headers[b'content-type'] = b'multipart/alternative; boundary="xyz"'
+        headers['from'] = 'sender@host'
+        headers['to'] = 'recipient@domain'
+        headers['subject'] = 'booga booga boo'
+        headers['content-type'] = 'multipart/alternative; boundary="xyz"'
         innerHeaders = OrderedDict()
-        innerHeaders[b'subject'] = b'this is subject text'
-        innerHeaders[b'content-type'] = b'text/plain'
+        innerHeaders['subject'] = 'this is subject text'
+        innerHeaders['content-type'] = 'text/plain'
         innerHeaders2 = OrderedDict()
-        innerHeaders2[b'subject'] = b'<b>this is subject</b>'
-        innerHeaders2[b'content-type'] = b'text/html'
+        innerHeaders2['subject'] = '<b>this is subject</b>'
+        innerHeaders2['content-type'] = 'text/html'
         msg = FakeyMessage(headers, (), None, outerBody, 123, [
             FakeyMessage(innerHeaders, (), None, innerBody1, None, None),
             FakeyMessage(innerHeaders2, (), None, innerBody2, None, None)
@@ -295,13 +315,473 @@ class MessageProducerTests(unittest.TestCase):
         return d.addCallback(cbProduced)
 
 
+    def test_multiPartNoBoundary(self):
+        """
+        A boundary is generated if none is provided.
+        """
+        outerBody = b''
+        innerBody = b'Contained body message text.  Squarge.'
+        headers = OrderedDict()
+        headers['from'] = 'sender@host'
+        headers['to'] = 'recipient@domain'
+        headers['subject'] = 'booga booga boo'
+        headers['content-type'] = 'multipart/alternative'
+
+        innerHeaders = OrderedDict()
+        innerHeaders['subject'] = 'this is subject text'
+        innerHeaders['content-type'] = 'text/plain'
+        msg = FakeyMessage(headers, (), None, outerBody, 123,
+                           [FakeyMessage(innerHeaders, (), None, innerBody,
+                                         None, None)],
+                           )
+
+        c = BufferingConsumer()
+        p = imap4.MessageProducer(msg)
+        p._uuid4 = lambda: uuid.UUID('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa')
+
+        d = p.beginProducing(c)
+
+        def cbProduced(result):
+            self.failUnlessIdentical(result, p)
+            self.assertEqual(
+                b''.join(c.buffer),
+
+                b'{341}\r\n'
+                b'From: sender@host\r\n'
+                b'To: recipient@domain\r\n'
+                b'Subject: booga booga boo\r\n'
+                b'Content-Type: multipart/alternative; boundary='
+                b'"----=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"'
+                b'\r\n'
+                b'\r\n'
+                b'\r\n'
+                b'------=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\r\n'
+                b'Subject: this is subject text\r\n'
+                b'Content-Type: text/plain\r\n'
+                b'\r\n'
+                + innerBody
+                + b'\r\n------=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa--\r\n')
+
+        return d.addCallback(cbProduced)
+
+
+    def test_multiPartNoQuotes(self):
+        """
+        A boundary without does not have them added.
+        """
+        outerBody = b''
+        innerBody = b'Contained body message text.  Squarge.'
+        headers = OrderedDict()
+        headers['from'] = 'sender@host'
+        headers['to'] = 'recipient@domain'
+        headers['subject'] = 'booga booga boo'
+        headers['content-type'] = 'multipart/alternative; boundary=xyz'
+
+        innerHeaders = OrderedDict()
+        innerHeaders['subject'] = 'this is subject text'
+        innerHeaders['content-type'] = 'text/plain'
+        msg = FakeyMessage(headers, (), None, outerBody, 123,
+                           [FakeyMessage(innerHeaders, (), None, innerBody,
+                                         None, None)],
+                           )
+
+        c = BufferingConsumer()
+        p = imap4.MessageProducer(msg)
+        d = p.beginProducing(c)
+
+        def cbProduced(result):
+            self.failUnlessIdentical(result, p)
+            self.assertEqual(
+                b''.join(c.buffer),
+
+                b'{237}\r\n'
+                b'From: sender@host\r\n'
+                b'To: recipient@domain\r\n'
+                b'Subject: booga booga boo\r\n'
+                b'Content-Type: multipart/alternative; boundary='
+                b'xyz'
+                b'\r\n'
+                b'\r\n'
+                b'\r\n'
+                b'--xyz\r\n'
+                b'Subject: this is subject text\r\n'
+                b'Content-Type: text/plain\r\n'
+                b'\r\n'
+                + innerBody
+                + b'\r\n--xyz--\r\n')
+
+        return d.addCallback(cbProduced)
+
+
+
+class MessageSetTests(unittest.SynchronousTestCase):
+    """
+    Tests for L{MessageSet}.
+    """
+
+    def test_equalityIterationAndAddition(self):
+        """
+        Test the following properties of L{MessageSet} addition and
+        equality:
+
+            1. Two empty L{MessageSet}s are equal to each other;
+
+            2. A L{MessageSet} is not equal to any other object;
+
+            2. Adding a L{MessageSet} and another L{MessageSet} or an
+               L{int} representing a single message or a sequence of
+               L{int}s representing a sequence of message numbers
+               produces a new L{MessageSet} that:
+
+            3. Has a length equal to the number of messages within
+               each sequence of message numbers;
+
+            4. Yields each message number in ascending order when
+               iterated over;
+
+            6. L{MessageSet.add} with a single message or a start and
+               end message satisfies 3 and 4 above.
+        """
+        m1 = MessageSet()
+        m2 = MessageSet()
+
+        self.assertEqual(m1, m2)
+        self.assertNotEqual(m1, ())
+
+        m1 = m1 + 1
+        self.assertEqual(len(m1), 1)
+        self.assertEqual(list(m1), [1])
+
+        m1 = m1 + (1, 3)
+        self.assertEqual(len(m1), 3)
+        self.assertEqual(list(m1), [1, 2, 3])
+
+        m2 = m2 + (1, 3)
+        self.assertEqual(m1, m2)
+        self.assertEqual(list(m1 + m2), [1, 2, 3])
+
+        m1.add(5)
+        self.assertEqual(len(m1), 4)
+        self.assertEqual(list(m1), [1, 2, 3, 5])
+
+        self.assertNotEqual(m1, m2)
+
+        m1.add(6, 8)
+        self.assertEqual(len(m1), 7)
+        self.assertEqual(list(m1), [1, 2, 3, 5, 6, 7, 8])
+
+
+    def test_lengthWithWildcardRange(self):
+        """
+        A L{MessageSet} that has a range that ends with L{None} raises
+        a L{TypeError} when its length is requested.
+        """
+        self.assertRaises(TypeError, len, MessageSet(1, None))
+
+
+    def test_reprSanity(self):
+        """
+        L{MessageSet.__repr__} does not raise an exception
+        """
+        repr(MessageSet(1, 2))
+
+
+    def test_stringRepresentationWithWildcards(self):
+        """
+        In a L{MessageSet}, in the presence of wildcards, if the
+        highest message id is known, the wildcard should get replaced
+        by that high value.
+        """
+        inputs = [
+            imap4.parseIdList(b'*'),
+            imap4.parseIdList(b'1:*'),
+            imap4.parseIdList(b'3:*', 6),
+            imap4.parseIdList(b'*:2', 6),
+        ]
+
+        outputs = [
+            "*",
+            "1:*",
+            "3:6",
+            "2:6",
+        ]
+
+        for i, o in zip(inputs, outputs):
+            self.assertEqual(str(i), o)
+
+
+    def test_stringRepresentationWithInversion(self):
+        """
+        In a L{MessageSet}, inverting the high and low numbers in a
+        range doesn't affect the meaning of the range.  For example,
+        3:2 displays just like 2:3, because according to the RFC they
+        have the same meaning.
+        """
+        inputs = [
+            imap4.parseIdList(b'2:3'),
+            imap4.parseIdList(b'3:2'),
+        ]
+
+        outputs = [
+            "2:3",
+            "2:3",
+        ]
+
+        for i, o in zip(inputs, outputs):
+            self.assertEqual(str(i), o)
+
+
+    def test_createWithSingleMessageNumber(self):
+        """
+        Creating a L{MessageSet} with a single message number adds
+        only that message to the L{MessageSet}; its serialized form
+        includes only that message number, its length is one, and it
+        yields only that message number.
+        """
+        m = MessageSet(1)
+        self.assertEqual(str(m), "1")
+        self.assertEqual(len(m), 1)
+        self.assertEqual(list(m), [1])
+
+
+    def test_createWithSequence(self):
+        """
+        Creating a L{MessageSet} with both a start and end message
+        number adds the sequence between to the L{MessageSet}; its
+        serialized form consists that range, its length is the length
+        of the sequence, and it yields the message numbers inclusively
+        between the start and end.
+        """
+        m = MessageSet(1, 10)
+        self.assertEqual(str(m), "1:10")
+        self.assertEqual(len(m), 10)
+        self.assertEqual(list(m), [1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
+
+
+    def test_createWithSingleWildcard(self):
+        """
+        Creating a L{MessageSet} with a single L{None}, representing
+        C{*}, adds C{*} to the range; its serialized form includes
+        only C{*}, its length is one, but it cannot be iterated over
+        because its endpoint is unknown.
+        """
+        m = MessageSet(None)
+        self.assertEqual(str(m), "*")
+        self.assertEqual(len(m), 1)
+        self.assertRaises(TypeError, list, m)
+
+
+    def test_setLastSingleWildcard(self):
+        """
+        Setting L{MessageSet.last} replaces L{None}, representing
+        C{*}, with that number, making that L{MessageSet} iterable.
+        """
+        singleMessageReplaced = MessageSet(None)
+        singleMessageReplaced.last = 10
+        self.assertEqual(list(singleMessageReplaced), [10])
+
+        rangeReplaced = MessageSet(3, None)
+        rangeReplaced.last = 1
+        self.assertEqual(list(rangeReplaced), [1, 2, 3])
+
+
+    def test_setLastWithWildcardRange(self):
+        """
+        Setting L{MessageSet.last} replaces L{None} in all ranges.
+        """
+        m = MessageSet(1, None)
+        m.add(2, None)
+        m.last = 5
+        self.assertEqual(list(m), [1, 2, 3, 4, 5])
+
+
+    def test_setLastTwiceFails(self):
+        """
+        L{MessageSet.last} cannot be set twice.
+        """
+        m = MessageSet(1, None)
+        m.last = 2
+        with self.assertRaises(ValueError):
+            m.last = 3
+
+
+    def test_lastOverridesNoneInAdd(self):
+        """
+        Adding a L{None}, representing C{*}, or a sequence that
+        includes L{None} to a L{MessageSet} whose
+        L{last<MessageSet.last>} property has been set replaces all
+        occurrences of L{None} with the value of
+        L{last<MessageSet.last>}.
+        """
+        hasLast = MessageSet(1)
+        hasLast.last = 4
+
+        hasLast.add(None)
+        self.assertEqual(list(hasLast), [1, 4])
+
+        self.assertEqual(list(hasLast + (None, 5)), [1, 4, 5])
+
+        hasLast.add(3, None)
+        self.assertEqual(list(hasLast), [1, 3, 4])
+
+
+    def test_getLast(self):
+        """
+        Accessing L{MessageSet.last} returns the last value.
+        """
+        m = MessageSet(1, None)
+        m.last = 2
+        self.assertEqual(m.last, 2)
+
+
+    def test_extend(self):
+        """
+        L{MessageSet.extend} accepts as its arugment an L{int} or
+        L{None}, or a sequence L{int}s or L{None}s of length two, or
+        another L{MessageSet}, combining its argument with its
+        instance's existing ranges.
+        """
+        extendWithInt = MessageSet()
+        extendWithInt.extend(1)
+        self.assertEqual(list(extendWithInt), [1])
+
+        extendWithNone = MessageSet()
+        extendWithNone.extend(None)
+        self.assertEqual(str(extendWithNone), "*")
+
+        extendWithSequenceOfInts = MessageSet()
+        extendWithSequenceOfInts.extend((1, 3))
+        self.assertEqual(list(extendWithSequenceOfInts), [1, 2, 3])
+
+        extendWithSequenceOfNones = MessageSet()
+        extendWithSequenceOfNones.extend((None, None))
+        self.assertEqual(str(extendWithSequenceOfNones), "*")
+
+        extendWithMessageSet = MessageSet()
+        extendWithMessageSet.extend(MessageSet(1, 3))
+        self.assertEqual(list(extendWithMessageSet), [1, 2, 3])
+
+
+    def test_contains(self):
+        """
+        A L{MessageSet} contains a number if the number falls within
+        one of its ranges, and raises L{TypeError} if any range
+        contains L{None}.
+        """
+        hasFive = MessageSet(1, 7)
+        doesNotHaveFive = MessageSet(1, 4) + MessageSet(6, 7)
+
+        self.assertIn(5, hasFive)
+        self.assertNotIn(5, doesNotHaveFive)
+
+        hasFiveButHasNone = hasFive + None
+        with self.assertRaises(TypeError):
+            5 in hasFiveButHasNone
+
+        hasFiveButHasNoneInSequence = hasFive + (10, 12)
+        hasFiveButHasNoneInSequence.add(8, None)
+        with self.assertRaises(TypeError):
+            5 in hasFiveButHasNoneInSequence
+
+
+    def test_rangesMerged(self):
+        """
+        Adding a sequence of message numbers to a L{MessageSet} that
+        begins or ends immediately before or after an existing
+        sequence in that L{MessageSet}, or overlaps one, merges the two.
+        """
+
+        mergeAfter = MessageSet(1, 3)
+        mergeBefore = MessageSet(6, 8)
+
+        mergeBetweenSequence = mergeAfter + mergeBefore
+        mergeBetweenNumber = mergeAfter + MessageSet(5, 7)
+
+        self.assertEqual(list(mergeAfter + (2, 4)), [1, 2, 3, 4])
+        self.assertEqual(list(mergeAfter + (3, 5)), [1, 2, 3, 4, 5])
+
+        self.assertEqual(list(mergeBefore + (5, 7)), [5, 6, 7, 8])
+        self.assertEqual(list(mergeBefore + (4, 6)), [4, 5, 6, 7, 8])
+
+        self.assertEqual(list(mergeBetweenSequence + (3, 5)),
+                         [1, 2, 3, 4, 5, 6, 7, 8])
+        self.assertEqual(list(mergeBetweenNumber + MessageSet(4)),
+                         [1, 2, 3, 4, 5, 6, 7])
+
+
+    def test_seq_rangeExamples(self):
+        """
+        Test the C{seq-range} examples from Section 9, "Formal Syntax"
+        of RFC 3501::
+
+            Example: 2:4 and 4:2 are equivalent and indicate values
+                     2, 3, and 4.
+
+            Example: a unique identifier sequence range of
+                     3291:* includes the UID of the last message in
+                     the mailbox, even if that value is less than 3291.
+
+        @see: U{http://tools.ietf.org/html/rfc3501#section-9}
+        """
+
+        self.assertEqual(MessageSet(2, 4), MessageSet(4, 2))
+        self.assertEqual(list(MessageSet(2, 4)), [2, 3, 4])
+
+        m = MessageSet(3291, None)
+        m.last = 3290
+        self.assertEqual(list(m), [3290, 3291])
+
+
+    def test_sequence_setExamples(self):
+        """
+        Test the C{sequence-set} examples from Section 9, "Formal
+        Syntax" of RFC 3501.  In particular, L{MessageSet} reorders
+        and coalesces overlaps::
+
+            Example: a message sequence number set of
+                     2,4:7,9,12:* for a mailbox with 15 messages is
+                     equivalent to 2,4,5,6,7,9,12,13,14,15
+
+            Example: a message sequence number set of *:4,5:7
+                     for a mailbox with 10 messages is equivalent to
+                     10,9,8,7,6,5,4,5,6,7 and MAY be reordered and
+                     overlap coalesced to be 4,5,6,7,8,9,10.
+
+        @see: U{http://tools.ietf.org/html/rfc3501#section-9}
+        """
+        fromFifteenMessages = (
+            MessageSet(2) +
+            MessageSet(4, 7) +
+            MessageSet(9) +
+            MessageSet(12, None)
+        )
+        fromFifteenMessages.last = 15
+        self.assertEqual(','.join(str(i) for i in fromFifteenMessages),
+                         "2,4,5,6,7,9,12,13,14,15")
+
+        fromTenMessages = (
+            MessageSet(None, 4) +
+            MessageSet(5, 7)
+        )
+        fromTenMessages.last = 10
+        self.assertEqual(','.join(str(i) for i in fromTenMessages),
+                         "4,5,6,7,8,9,10")
+
+
 
 class IMAP4HelperTests(unittest.TestCase):
     """
     Tests for various helper utilities in the IMAP4 module.
     """
+    def test_commandRepr(self):
+        """
+        L{imap4.Command}'s C{repr} does not raise an exception.
+        """
+        repr(imap4.Command(b"COMMAND", [b"arg"], (b'extra')))
+
+
     def test_fileProducer(self):
-        b = (('x' * 1) + ('y' * 1) + ('z' * 1)) * 10
+        b = ((b'x' * 1) + (b'y' * 1) + (b'z' * 1)) * 10
         c = BufferingConsumer()
         f = BytesIO(b)
         p = imap4.FileProducer(f)
@@ -310,8 +790,20 @@ class IMAP4HelperTests(unittest.TestCase):
         def cbProduced(result):
             self.failUnlessIdentical(result, p)
             self.assertEqual(
-                ('{%d}\r\n' % len(b))+ b,
-                ''.join(c.buffer))
+                (b'{' + intToBytes(len(b)) + b'}' + b'\r\n' + b),
+                b''.join(c.buffer))
+            return result
+
+        def cbResume(result):
+            # Calling resumeProducing after completion does not raise
+            # an exception
+            p.resumeProducing()
+            return result
+
+        d.addCallback(cbProduced)
+        d.addCallback(cbResume)
+        # The second cbProduced ensures calling resumeProducing after
+        # completion does not change the result.
         return d.addCallback(cbProduced)
 
 
@@ -366,7 +858,8 @@ class IMAP4HelperTests(unittest.TestCase):
         C{":"}-separated format.
         """
         cases = [
-            ({'Header1': 'Value1', 'Header2': 'Value2'}, 'Header2: Value2\r\nHeader1: Value1\r\n'),
+            ({'Header1': 'Value1', 'Header2': 'Value2'},
+             b'Header2: Value2\r\nHeader1: Value1\r\n'),
         ]
 
         for (input, expected) in cases:
@@ -375,113 +868,57 @@ class IMAP4HelperTests(unittest.TestCase):
                              sorted(expected.splitlines(True)))
 
 
-    def test_messageSet(self):
-        m1 = MessageSet()
-        m2 = MessageSet()
-
-        self.assertEqual(m1, m2)
-
-        m1 = m1 + (1, 3)
-        self.assertEqual(len(m1), 3)
-        self.assertEqual(list(m1), [1, 2, 3])
-
-        m2 = m2 + (1, 3)
-        self.assertEqual(m1, m2)
-        self.assertEqual(list(m1 + m2), [1, 2, 3])
-
-
-    def test_messageSetStringRepresentationWithWildcards(self):
-        """
-        In a L{MessageSet}, in the presence of wildcards, if the highest message
-        id is known, the wildcard should get replaced by that high value.
-        """
-        inputs = [
-            MessageSet(imap4.parseIdList(b'*')),
-            MessageSet(imap4.parseIdList(b'3:*', 6)),
-            MessageSet(imap4.parseIdList(b'*:2', 6)),
-        ]
-
-        outputs = [
-            b"*",
-            b"3:6",
-            b"2:6",
-        ]
-
-        for i, o in zip(inputs, outputs):
-            self.assertEqual(str(i), o)
-
-
-    def test_messageSetStringRepresentationWithInversion(self):
-        """
-        In a L{MessageSet}, inverting the high and low numbers in a range
-        doesn't affect the meaning of the range. For example, 3:2 displays just
-        like 2:3, because according to the RFC they have the same meaning.
-        """
-        inputs = [
-            MessageSet(imap4.parseIdList(b'2:3')),
-            MessageSet(imap4.parseIdList(b'3:2')),
-        ]
-
-        outputs = [
-            "2:3",
-            "2:3",
-        ]
-
-        for i, o in zip(inputs, outputs):
-            self.assertEqual(str(i), o)
-
-
     def test_quotedSplitter(self):
         cases = [
-            '''Hello World''',
-            '''Hello "World!"''',
-            '''World "Hello" "How are you?"''',
-            '''"Hello world" How "are you?"''',
-            '''foo bar "baz buz" NIL''',
-            '''foo bar "baz buz" "NIL"''',
-            '''foo NIL "baz buz" bar''',
-            '''foo "NIL" "baz buz" bar''',
-            '''"NIL" bar "baz buz" foo''',
-            'oo \\"oo\\" oo',
-            '"oo \\"oo\\" oo"',
-            'oo \t oo',
-            '"oo \t oo"',
-            'oo \\t oo',
-            '"oo \\t oo"',
-            'oo \o oo',
-            '"oo \o oo"',
-            'oo \\o oo',
-            '"oo \\o oo"',
+            b'''Hello World''',
+            b'''Hello "World!"''',
+            b'''World "Hello" "How are you?"''',
+            b'''"Hello world" How "are you?"''',
+            b'''foo bar "baz buz" NIL''',
+            b'''foo bar "baz buz" "NIL"''',
+            b'''foo NIL "baz buz" bar''',
+            b'''foo "NIL" "baz buz" bar''',
+            b'''"NIL" bar "baz buz" foo''',
+            b'oo \\"oo\\" oo',
+            b'"oo \\"oo\\" oo"',
+            b'oo \t oo',
+            b'"oo \t oo"',
+            b'oo \\t oo',
+            b'"oo \\t oo"',
+            b'oo \o oo',
+            b'"oo \o oo"',
+            b'oo \\o oo',
+            b'"oo \\o oo"',
         ]
 
         answers = [
-            ['Hello', 'World'],
-            ['Hello', 'World!'],
-            ['World', 'Hello', 'How are you?'],
-            ['Hello world', 'How', 'are you?'],
-            ['foo', 'bar', 'baz buz', None],
-            ['foo', 'bar', 'baz buz', 'NIL'],
-            ['foo', None, 'baz buz', 'bar'],
-            ['foo', 'NIL', 'baz buz', 'bar'],
-            ['NIL', 'bar', 'baz buz', 'foo'],
-            ['oo', '"oo"', 'oo'],
-            ['oo "oo" oo'],
-            ['oo', 'oo'],
-            ['oo \t oo'],
-            ['oo', '\\t', 'oo'],
-            ['oo \\t oo'],
-            ['oo', '\o', 'oo'],
-            ['oo \o oo'],
-            ['oo', '\\o', 'oo'],
-            ['oo \\o oo'],
+            [b'Hello', b'World'],
+            [b'Hello', b'World!'],
+            [b'World', b'Hello', b'How are you?'],
+            [b'Hello world', b'How', b'are you?'],
+            [b'foo', b'bar', b'baz buz', None],
+            [b'foo', b'bar', b'baz buz', b'NIL'],
+            [b'foo', None, b'baz buz', b'bar'],
+            [b'foo', b'NIL', b'baz buz', b'bar'],
+            [b'NIL', b'bar', b'baz buz', b'foo'],
+            [b'oo', b'"oo"', b'oo'],
+            [b'oo "oo" oo'],
+            [b'oo', b'oo'],
+            [b'oo \t oo'],
+            [b'oo', b'\\t', b'oo'],
+            [b'oo \\t oo'],
+            [b'oo', b'\o', b'oo'],
+            [b'oo \o oo'],
+            [b'oo', b'\\o', b'oo'],
+            [b'oo \\o oo'],
 
         ]
 
         errors = [
-            '"mismatched quote',
-            'mismatched quote"',
-            'mismatched"quote',
-            '"oops here is" another"',
+            b'"mismatched quote',
+            b'mismatched quote"',
+            b'mismatched"quote',
+            b'"oops here is" another"',
         ]
 
         for s in errors:
@@ -493,23 +930,24 @@ class IMAP4HelperTests(unittest.TestCase):
 
     def test_stringCollapser(self):
         cases = [
-            ['a', 'b', 'c', 'd', 'e'],
-            ['a', ' ', '"', 'b', 'c', ' ', '"', ' ', 'd', 'e'],
-            [['a', 'b', 'c'], 'd', 'e'],
-            ['a', ['b', 'c', 'd'], 'e'],
-            ['a', 'b', ['c', 'd', 'e']],
-            ['"', 'a', ' ', '"', ['b', 'c', 'd'], '"', ' ', 'e', '"'],
-            ['a', ['"', ' ', 'b', 'c', ' ', ' ', '"'], 'd', 'e'],
+            [b'a', b'b', b'c', b'd', b'e'],
+            [b'a', b' ', b'"', b'b', b'c', b' ', b'"', b' ', b'd', b'e'],
+            [[b'a', b'b', b'c'], b'd', b'e'],
+            [b'a', [b'b', b'c', b'd'], b'e'],
+            [b'a', b'b', [b'c', b'd', b'e']],
+            [b'"', b'a', b' ', b'"', [b'b', b'c', b'd'], b'"', b' ', b'e',
+             b'"'],
+            [b'a', [b'"', b' ', b'b', b'c', b' ', b' ', b'"'], b'd', b'e'],
         ]
 
         answers = [
-            ['abcde'],
-            ['a', 'bc ', 'de'],
-            [['abc'], 'de'],
-            ['a', ['bcd'], 'e'],
-            ['ab', ['cde']],
-            ['a ', ['bcd'], ' e'],
-            ['a', [' bc  '], 'de'],
+            [b'abcde'],
+            [b'a', b'bc ', b'de'],
+            [[b'abc'], b'de'],
+            [b'a', [b'bcd'], b'e'],
+            [b'ab', [b'cde']],
+            [b'a ', [b'bcd'], b' e'],
+            [b'a', [b' bc  '], b'de'],
         ]
 
         for (case, expected) in zip(cases, answers):
@@ -517,114 +955,103 @@ class IMAP4HelperTests(unittest.TestCase):
 
 
     def test_parenParser(self):
-        s = '\r\n'.join(['xx'] * 4)
-        cases = [
-            '(BODY.PEEK[HEADER.FIELDS.NOT (subject bcc cc)] {%d}\r\n%s)' % (len(s), s,),
+        s = b'\r\n'.join([b'xx'] * 4)
+        def check(case, expected):
+            parsed = imap4.parseNestedParens(case)
+            self.assertEqual(parsed, [expected])
+            # XXX This code used to work, but changes occurred within the
+            # imap4.py module which made it no longer necessary for *all* of it
+            # to work.  In particular, only the part that makes
+            # 'BODY.PEEK[HEADER.FIELDS.NOT (Subject Bcc Cc)]' come out
+            # correctly no longer needs to work.  So, I am loathe to delete the
+            # entire section of the test. --exarkun
 
-#            '(FLAGS (\Seen) INTERNALDATE "17-Jul-1996 02:44:25 -0700" '
-#            'RFC822.SIZE 4286 ENVELOPE ("Wed, 17 Jul 1996 02:23:25 -0700 (PDT)" '
-#            '"IMAP4rev1 WG mtg summary and minutes" '
-#            '(("Terry Gray" NIL "gray" "cac.washington.edu")) '
-#            '(("Terry Gray" NIL "gray" "cac.washington.edu")) '
-#            '(("Terry Gray" NIL "gray" "cac.washington.edu")) '
-#            '((NIL NIL "imap" "cac.washington.edu")) '
-#            '((NIL NIL "minutes" "CNRI.Reston.VA.US") '
-#            '("John Klensin" NIL "KLENSIN" "INFOODS.MIT.EDU")) NIL NIL '
-#            '"<B27397-0100000@cac.washington.edu>") '
-#            'BODY ("TEXT" "PLAIN" ("CHARSET" "US-ASCII") NIL NIL "7BIT" 3028 92))',
+            # self.assertEqual(b'(' + imap4.collapseNestedLists(parsed) + b')',
+            #                  expected)
 
-            '(FLAGS (\Seen) INTERNALDATE "17-Jul-1996 02:44:25 -0700" '
-            'RFC822.SIZE 4286 ENVELOPE ("Wed, 17 Jul 1996 02:23:25 -0700 (PDT)" '
-            '"IMAP4rev1 WG mtg summary and minutes" '
-            '(("Terry Gray" NIL gray cac.washington.edu)) '
-            '(("Terry Gray" NIL gray cac.washington.edu)) '
-            '(("Terry Gray" NIL gray cac.washington.edu)) '
-            '((NIL NIL imap cac.washington.edu)) '
-            '((NIL NIL minutes CNRI.Reston.VA.US) '
-            '("John Klensin" NIL KLENSIN INFOODS.MIT.EDU)) NIL NIL '
-            '<B27397-0100000@cac.washington.edu>) '
-            'BODY (TEXT PLAIN (CHARSET US-ASCII) NIL NIL 7BIT 3028 92))',
-            '("oo \\"oo\\" oo")',
-            '("oo \\\\ oo")',
-            '("oo \\ oo")',
-            '("oo \\o")',
-            '("oo \o")',
-            '(oo \o)',
-            '(oo \\o)',
 
-        ]
+        check(
+            b'(BODY.PEEK[HEADER.FIELDS.NOT (subject bcc cc)] {' +
+            intToBytes(len(s)) + b'}\r\n' + s + b')',
+            [b'BODY.PEEK', [b'HEADER.FIELDS.NOT', [b'subject', b'bcc', b'cc']],
+             s],
+        )
+        check(
+            b'(FLAGS (\Seen) INTERNALDATE "17-Jul-1996 02:44:25 -0700" '
+            b'RFC822.SIZE 4286 ENVELOPE ("Wed, 17 Jul 1996 02:23:25 -0700 (PDT)" '
+            b'"IMAP4rev1 WG mtg summary and minutes" '
+            b'(("Terry Gray" NIL gray cac.washington.edu)) '
+            b'(("Terry Gray" NIL gray cac.washington.edu)) '
+            b'(("Terry Gray" NIL gray cac.washington.edu)) '
+            b'((NIL NIL imap cac.washington.edu)) '
+            b'((NIL NIL minutes CNRI.Reston.VA.US) '
+            b'("John Klensin" NIL KLENSIN INFOODS.MIT.EDU)) NIL NIL '
+            b'<B27397-0100000@cac.washington.edu>) '
+            b'BODY (TEXT PLAIN (CHARSET US-ASCII) NIL NIL 7BIT 3028 92))',
+            [b'FLAGS', [br'\Seen'], b'INTERNALDATE',
+             b'17-Jul-1996 02:44:25 -0700', b'RFC822.SIZE', b'4286',
+             b'ENVELOPE',
+             [b'Wed, 17 Jul 1996 02:23:25 -0700 (PDT)',
+              b'IMAP4rev1 WG mtg summary and minutes',
+              [[b"Terry Gray", None, b"gray", b"cac.washington.edu"]],
+              [[b"Terry Gray", None, b"gray", b"cac.washington.edu"]],
+              [[b"Terry Gray", None, b"gray", b"cac.washington.edu"]],
+              [[None, None, b"imap", b"cac.washington.edu"]],
+              [[None, None, b"minutes", b"CNRI.Reston.VA.US"],
+               [b"John Klensin", None, b"KLENSIN", b"INFOODS.MIT.EDU"]],
+              None, None, b"<B27397-0100000@cac.washington.edu>"],
+             b"BODY",
+             [b"TEXT", b"PLAIN", [b"CHARSET", b"US-ASCII"], None, None,
+              b"7BIT", b"3028", b"92"]]
+        )
 
-        answers = [
-            ['BODY.PEEK', ['HEADER.FIELDS.NOT', ['subject', 'bcc', 'cc']], s],
+        check(b'("oo \\"oo\\" oo")', [b'oo "oo" oo'])
+        check(b'("oo \\\\ oo")', [b'oo \\\\ oo'])
+        check(b'("oo \\ oo")', [b'oo \\ oo'])
 
-            ['FLAGS', [r'\Seen'], 'INTERNALDATE',
-            '17-Jul-1996 02:44:25 -0700', 'RFC822.SIZE', '4286', 'ENVELOPE',
-            ['Wed, 17 Jul 1996 02:23:25 -0700 (PDT)',
-            'IMAP4rev1 WG mtg summary and minutes', [["Terry Gray", None,
-            "gray", "cac.washington.edu"]], [["Terry Gray", None,
-            "gray", "cac.washington.edu"]], [["Terry Gray", None,
-            "gray", "cac.washington.edu"]], [[None, None, "imap",
-            "cac.washington.edu"]], [[None, None, "minutes",
-            "CNRI.Reston.VA.US"], ["John Klensin", None, "KLENSIN",
-            "INFOODS.MIT.EDU"]], None, None,
-            "<B27397-0100000@cac.washington.edu>"], "BODY", ["TEXT", "PLAIN",
-            ["CHARSET", "US-ASCII"], None, None, "7BIT", "3028", "92"]],
-            ['oo "oo" oo'],
-            ['oo \\\\ oo'],
-            ['oo \\ oo'],
-            ['oo \\o'],
-            ['oo \o'],
-            ['oo', '\o'],
-            ['oo', '\\o'],
-        ]
-
-        for (case, expected) in zip(cases, answers):
-            self.assertEqual(imap4.parseNestedParens(case), [expected])
-
-        # XXX This code used to work, but changes occurred within the
-        # imap4.py module which made it no longer necessary for *all* of it
-        # to work.  In particular, only the part that makes
-        # 'BODY.PEEK[HEADER.FIELDS.NOT (Subject Bcc Cc)]' come out correctly
-        # no longer needs to work.  So, I am loathe to delete the entire
-        # section of the test. --exarkun
-        #
-
-#        for (case, expected) in zip(answers, cases):
-#            self.assertEqual('(' + imap4.collapseNestedLists(case) + ')', expected)
+        check(b'("oo \\o")', [b'oo \\o'])
+        check(b'("oo \o")', [b'oo \o'])
+        check(b'(oo \o)', [b'oo', b'\o'])
+        check(b'(oo \\o)', [b'oo', b'\\o'])
 
 
     def test_fetchParserSimple(self):
         cases = [
-            ['ENVELOPE', 'Envelope'],
-            ['FLAGS', 'Flags'],
-            ['INTERNALDATE', 'InternalDate'],
-            ['RFC822.HEADER', 'RFC822Header'],
-            ['RFC822.SIZE', 'RFC822Size'],
-            ['RFC822.TEXT', 'RFC822Text'],
-            ['RFC822', 'RFC822'],
-            ['UID', 'UID'],
-            ['BODYSTRUCTURE', 'BodyStructure'],
+            ['ENVELOPE', 'Envelope', 'envelope'],
+            ['FLAGS', 'Flags', 'flags'],
+            ['INTERNALDATE', 'InternalDate', 'internaldate'],
+            ['RFC822.HEADER', 'RFC822Header', 'rfc822.header'],
+            ['RFC822.SIZE', 'RFC822Size', 'rfc822.size'],
+            ['RFC822.TEXT', 'RFC822Text', 'rfc822.text'],
+            ['RFC822', 'RFC822', 'rfc822'],
+            ['UID', 'UID', 'uid'],
+            ['BODYSTRUCTURE', 'BodyStructure', 'bodystructure'],
         ]
 
-        for (inp, outp) in cases:
+        for (inp, outp, asString) in cases:
+            inp = inp.encode('ascii')
             p = imap4._FetchParser()
             p.parseString(inp)
             self.assertEqual(len(p.result), 1)
             self.assertTrue(isinstance(p.result[0], getattr(p, outp)))
+            self.assertEqual(str(p.result[0]), asString)
 
 
     def test_fetchParserMacros(self):
         cases = [
-            ['ALL', (4, ['flags', 'internaldate', 'rfc822.size', 'envelope'])],
-            ['FULL', (5, ['flags', 'internaldate', 'rfc822.size', 'envelope', 'body'])],
-            ['FAST', (3, ['flags', 'internaldate', 'rfc822.size'])],
+            [b'ALL', (4, [b'flags', b'internaldate', b'rfc822.size',
+                          b'envelope'])],
+            [b'FULL', (5, [b'flags', b'internaldate', b'rfc822.size',
+                           b'envelope', b'body'])],
+            [b'FAST', (3, [b'flags', b'internaldate', b'rfc822.size'])],
         ]
 
         for (inp, outp) in cases:
             p = imap4._FetchParser()
             p.parseString(inp)
             self.assertEqual(len(p.result), outp[0])
-            expectedResult = [str(token).lower() for token in p.result]
+            expectedResult = [str(token).lower().encode("ascii")
+                              for token in p.result]
             expectedResult.sort()
             outp[1].sort()
             self.assertEqual(expectedResult, outp[1])
@@ -634,7 +1061,7 @@ class IMAP4HelperTests(unittest.TestCase):
         P = imap4._FetchParser
 
         p = P()
-        p.parseString('BODY')
+        p.parseString(b'BODY')
         self.assertEqual(len(p.result), 1)
         self.assertTrue(isinstance(p.result[0], p.Body))
         self.assertEqual(p.result[0].peek, False)
@@ -642,21 +1069,21 @@ class IMAP4HelperTests(unittest.TestCase):
         self.assertEqual(str(p.result[0]), 'BODY')
 
         p = P()
-        p.parseString('BODY.PEEK')
+        p.parseString(b'BODY.PEEK')
         self.assertEqual(len(p.result), 1)
         self.assertTrue(isinstance(p.result[0], p.Body))
         self.assertEqual(p.result[0].peek, True)
         self.assertEqual(str(p.result[0]), 'BODY')
 
         p = P()
-        p.parseString('BODY[]')
+        p.parseString(b'BODY[]')
         self.assertEqual(len(p.result), 1)
         self.assertTrue(isinstance(p.result[0], p.Body))
         self.assertEqual(p.result[0].empty, True)
         self.assertEqual(str(p.result[0]), 'BODY[]')
 
         p = P()
-        p.parseString('BODY[HEADER]')
+        p.parseString(b'BODY[HEADER]')
         self.assertEqual(len(p.result), 1)
         self.assertTrue(isinstance(p.result[0], p.Body))
         self.assertEqual(p.result[0].peek, False)
@@ -667,7 +1094,7 @@ class IMAP4HelperTests(unittest.TestCase):
         self.assertEqual(str(p.result[0]), 'BODY[HEADER]')
 
         p = P()
-        p.parseString('BODY.PEEK[HEADER]')
+        p.parseString(b'BODY.PEEK[HEADER]')
         self.assertEqual(len(p.result), 1)
         self.assertTrue(isinstance(p.result[0], p.Body))
         self.assertEqual(p.result[0].peek, True)
@@ -678,40 +1105,46 @@ class IMAP4HelperTests(unittest.TestCase):
         self.assertEqual(str(p.result[0]), 'BODY[HEADER]')
 
         p = P()
-        p.parseString('BODY[HEADER.FIELDS (Subject Cc Message-Id)]')
+        p.parseString(b'BODY[HEADER.FIELDS (Subject Cc Message-Id)]')
         self.assertEqual(len(p.result), 1)
         self.assertTrue(isinstance(p.result[0], p.Body))
         self.assertEqual(p.result[0].peek, False)
         self.assertTrue(isinstance(p.result[0].header, p.Header))
         self.assertEqual(p.result[0].header.negate, False)
-        self.assertEqual(p.result[0].header.fields, ['SUBJECT', 'CC', 'MESSAGE-ID'])
+        self.assertEqual(p.result[0].header.fields,
+                         [b'SUBJECT', b'CC', b'MESSAGE-ID'])
         self.assertEqual(p.result[0].empty, False)
-        self.assertEqual(str(p.result[0]), 'BODY[HEADER.FIELDS (Subject Cc Message-Id)]')
+        self.assertEqual(bytes(p.result[0]),
+                         b'BODY[HEADER.FIELDS (Subject Cc Message-Id)]')
 
         p = P()
-        p.parseString('BODY.PEEK[HEADER.FIELDS (Subject Cc Message-Id)]')
+        p.parseString(b'BODY.PEEK[HEADER.FIELDS (Subject Cc Message-Id)]')
         self.assertEqual(len(p.result), 1)
         self.assertTrue(isinstance(p.result[0], p.Body))
         self.assertEqual(p.result[0].peek, True)
         self.assertTrue(isinstance(p.result[0].header, p.Header))
         self.assertEqual(p.result[0].header.negate, False)
-        self.assertEqual(p.result[0].header.fields, ['SUBJECT', 'CC', 'MESSAGE-ID'])
+        self.assertEqual(p.result[0].header.fields,
+                         [b'SUBJECT', b'CC', b'MESSAGE-ID'])
         self.assertEqual(p.result[0].empty, False)
-        self.assertEqual(str(p.result[0]), 'BODY[HEADER.FIELDS (Subject Cc Message-Id)]')
+        self.assertEqual(bytes(p.result[0]),
+                         b'BODY[HEADER.FIELDS (Subject Cc Message-Id)]')
 
         p = P()
-        p.parseString('BODY.PEEK[HEADER.FIELDS.NOT (Subject Cc Message-Id)]')
+        p.parseString(b'BODY.PEEK[HEADER.FIELDS.NOT (Subject Cc Message-Id)]')
         self.assertEqual(len(p.result), 1)
         self.assertTrue(isinstance(p.result[0], p.Body))
         self.assertEqual(p.result[0].peek, True)
         self.assertTrue(isinstance(p.result[0].header, p.Header))
         self.assertEqual(p.result[0].header.negate, True)
-        self.assertEqual(p.result[0].header.fields, ['SUBJECT', 'CC', 'MESSAGE-ID'])
+        self.assertEqual(p.result[0].header.fields,
+                         [b'SUBJECT', b'CC', b'MESSAGE-ID'])
         self.assertEqual(p.result[0].empty, False)
-        self.assertEqual(str(p.result[0]), 'BODY[HEADER.FIELDS.NOT (Subject Cc Message-Id)]')
+        self.assertEqual(bytes(p.result[0]),
+                         b'BODY[HEADER.FIELDS.NOT (Subject Cc Message-Id)]')
 
         p = P()
-        p.parseString('BODY[1.MIME]<10.50>')
+        p.parseString(b'BODY[1.MIME]<10.50>')
         self.assertEqual(len(p.result), 1)
         self.assertTrue(isinstance(p.result[0], p.Body))
         self.assertEqual(p.result[0].peek, False)
@@ -720,20 +1153,145 @@ class IMAP4HelperTests(unittest.TestCase):
         self.assertEqual(p.result[0].partialBegin, 10)
         self.assertEqual(p.result[0].partialLength, 50)
         self.assertEqual(p.result[0].empty, False)
-        self.assertEqual(str(p.result[0]), 'BODY[1.MIME]<10.50>')
+        self.assertEqual(bytes(p.result[0]), b'BODY[1.MIME]<10.50>')
 
         p = P()
-        p.parseString('BODY.PEEK[1.3.9.11.HEADER.FIELDS.NOT (Message-Id Date)]<103.69>')
+        p.parseString(
+            b'BODY.PEEK[1.3.9.11.HEADER.FIELDS.NOT (Message-Id Date)]<103.69>')
         self.assertEqual(len(p.result), 1)
         self.assertTrue(isinstance(p.result[0], p.Body))
         self.assertEqual(p.result[0].peek, True)
         self.assertTrue(isinstance(p.result[0].header, p.Header))
         self.assertEqual(p.result[0].part, (0, 2, 8, 10))
-        self.assertEqual(p.result[0].header.fields, ['MESSAGE-ID', 'DATE'])
+        self.assertEqual(p.result[0].header.fields, [b'MESSAGE-ID', b'DATE'])
         self.assertEqual(p.result[0].partialBegin, 103)
         self.assertEqual(p.result[0].partialLength, 69)
         self.assertEqual(p.result[0].empty, False)
-        self.assertEqual(str(p.result[0]), 'BODY[1.3.9.11.HEADER.FIELDS.NOT (Message-Id Date)]<103.69>')
+        self.assertEqual(
+            bytes(p.result[0]),
+            b'BODY[1.3.9.11.HEADER.FIELDS.NOT (Message-Id Date)]<103.69>'
+        )
+
+
+    def test_fetchParserQuotedHeader(self):
+        """
+        Parsing a C{BODY} whose C{HEADER} values require quoting
+        results in a object that perserves that quoting when
+        serialized.
+        """
+        p = imap4._FetchParser()
+        p.parseString(b'BODY[HEADER.FIELDS ((Quoted)]')
+        self.assertEqual(len(p.result), 1)
+        self.assertEqual(p.result[0].peek, False)
+        self.assertIsInstance(p.result[0], p.Body)
+        self.assertIsInstance(p.result[0].header, p.Header)
+        self.assertEqual(bytes(p.result[0]),
+                         b'BODY[HEADER.FIELDS ("(Quoted")]')
+
+
+    def test_fetchParserEmptyString(self):
+        """
+        Parsing an empty string results in no data.
+        """
+        p = imap4._FetchParser()
+        p.parseString(b'')
+        self.assertFalse(len(p.result))
+
+
+    def test_fetchParserUnknownAttribute(self):
+        """
+        Parsing a string with an unknown attribute raises an
+        L{Exception}.
+        """
+        p = imap4._FetchParser()
+        self.assertRaises(Exception, p.parseString, b"UNKNOWN")
+
+
+    def test_fetchParserIncompleteStringEndsInWhitespace(self):
+        """
+        Parsing a string that prematurely ends in whitespace raises an
+        L{Exception}.
+        """
+        p = imap4._FetchParser()
+        self.assertRaises(Exception, p.parseString, b"BODY[HEADER.FIELDS  ")
+
+
+    def test_fetchParserExpectedWhitespace(self):
+        """
+        Parsing a string that contains an unexpected character rather
+        than whitespace raises an L{Exception}.
+        """
+        p = imap4._FetchParser()
+        self.assertRaises(Exception, p.parseString, b"BODY[HEADER.FIELDS!]")
+
+
+    def test_fetchParserTextSection(self):
+        """
+        A C{BODY} can contain a C{TEXT} section.
+        """
+        p = imap4._FetchParser()
+        p.parseString(b"BODY[TEXT]")
+        self.assertEqual(len(p.result), 1)
+        self.assertIsInstance(p.result[0], p.Body)
+        self.assertEqual(p.result[0].peek, False)
+        self.assertIsInstance(p.result[0].text, p.Text)
+        self.assertEqual(bytes(p.result[0]), b'BODY[TEXT]')
+
+
+    def test_fetchParserUnknownSection(self):
+        """
+        Parsing a C{BODY} with an unknown section raises an
+        L{Exception}.
+        """
+        p = imap4._FetchParser()
+        self.assertRaises(Exception, p.parseString, b"BODY[UNKNOWN]")
+
+
+    def test_fetchParserMissingSectionClose(self):
+        """
+        Parsing a C{BODY} with an unterminated section list raises an
+        L{Exception}.
+        """
+        p = imap4._FetchParser()
+        self.assertRaises(Exception,
+                          p.parseString, b'BODY[HEADER')
+        p = imap4._FetchParser()
+        self.assertRaises(Exception,
+                          p.parseString, b'BODY[HEADER.FIELDS (SUBJECT)')
+
+
+    def test_fetchParserHeaderMissingParentheses(self):
+        """
+        Parsing a C{BODY} whose C{HEADER.FIELDS} list does not begin
+        with an open parenthesis (C{(}) or end with a close
+        parenthesis (C{)}) raises an L{Exception}.
+        """
+        p = imap4._FetchParser()
+        self.assertRaises(Exception,
+                          p.parseString, b"BODY[HEADER.FIELDS Missing)]")
+        p = imap4._FetchParser()
+        self.assertRaises(Exception,
+                          p.parseString, b'BODY[HEADER.FIELDS (Missing]')
+
+
+    def test_fetchParserDotlessPartial(self):
+        """
+        Parsing a C{BODY} with a range that lacks a period (C{.})
+        raises an L{Exception}.
+        """
+        p = imap4._FetchParser()
+        self.assertRaises(Exception,
+                          p.parseString, b"BODY<01>")
+
+
+    def test_fetchParserUnclosedPartial(self):
+        """
+        Parsing a C{BODY} with a partial range that's missing its
+        closing greater than sign (C{>}) raises an L{EXCEPTION}.
+        """
+        p = imap4._FetchParser()
+        self.assertRaises(Exception,
+                          p.parseString, b"BODY<0")
 
 
     def test_files(self):
@@ -742,25 +1300,30 @@ class IMAP4HelperTests(unittest.TestCase):
             u'biz'
         ]
 
-        output = '"foo" "bar" "baz" {16}\r\nthis is a file\r\n "buz" "biz"'
+        output = b'"foo" "bar" "baz" {16}\r\nthis is a file\r\n "buz" "biz"'
 
         self.assertEqual(imap4.collapseNestedLists(inputStructure), output)
 
 
     def test_quoteAvoider(self):
         input = [
-            'foo', imap4.DontQuoteMe('bar'), "baz", BytesIO(b'this is a file\r\n'),
-            imap4.DontQuoteMe('buz'), ""
+            b'foo', imap4.DontQuoteMe(b'bar'), b"baz",
+            BytesIO(b'this is a file\r\n'),
+            b"this is\r\nquoted",
+            imap4.DontQuoteMe(b'buz'), b""
         ]
 
-        output = '"foo" bar "baz" {16}\r\nthis is a file\r\n buz ""'
+        output = (b'"foo" bar "baz"'
+                  b' {16}\r\nthis is a file\r\n '
+                  b'{15}\r\nthis is\r\nquoted'
+                  b' buz ""')
 
         self.assertEqual(imap4.collapseNestedLists(input), output)
 
 
     def test_literals(self):
         cases = [
-            ('({10}\r\n0123456789)', [['0123456789']]),
+            (b'({10}\r\n0123456789)', [[b'0123456789']]),
         ]
 
         for (case, expected) in cases:
@@ -835,6 +1398,33 @@ class IMAP4HelperTests(unittest.TestCase):
         self.assertEqual('(UNKEYWORD twisted)', query)
 
 
+    def test_queryWithMesssageSet(self):
+        """
+        When passed a L{MessageSet}, L{imap4.Query} returns a query
+        containing a quoted string representing the ID sequence.
+        """
+        query = imap4.Query(messages=imap4.MessageSet(1, None))
+        self.assertEqual(query, '(MESSAGES "1:*")')
+
+
+    def test_queryWithInteger(self):
+        """
+        When passed an L{int}, L{imap4.Query} returns a query
+        containing a quoted integer.
+        """
+        query = imap4.Query(messages=1)
+        self.assertEqual(query, '(MESSAGES "1")')
+
+
+    def test_queryOrIllegalQuery(self):
+        """
+        An L{imap4.Or} query with less than two arguments raises an
+        L{imap4.IllegalQueryError}.
+        """
+        self.assertRaises(imap4.IllegalQueryError,
+                          imap4.Or, imap4.Query(messages=1))
+
+
     def _keywordFilteringTest(self, keyword):
         """
         Helper to implement tests for value filtering of KEYWORD and UNKEYWORD
@@ -894,10 +1484,10 @@ class IMAP4HelperTests(unittest.TestCase):
         L{IllegalIdentifierError}.
         """
         inputs = [
-            '*:*',
-            'foo',
-            '4:',
-            'bar:5'
+            b'*:*',
+            b'foo',
+            b'4:',
+            b'bar:5'
         ]
 
         for input in inputs:
@@ -912,13 +1502,13 @@ class IMAP4HelperTests(unittest.TestCase):
         non-negative numbers (RFC 3501 section 9, the seq-number grammar item).
         """
         inputs = [
-            '0:5',
-            '0:0',
-            '*:0',
-            '0',
-            '-3:5',
-            '1:-2',
-            '-1'
+            b'0:5',
+            b'0:0',
+            b'*:0',
+            b'0',
+            b'-3:5',
+            b'1:-2',
+            b'-1'
         ]
 
         for input in inputs:
@@ -932,20 +1522,20 @@ class IMAP4HelperTests(unittest.TestCase):
         objects.
         """
         inputs = [
-            '1:*',
-            '5:*',
-            '1:2,5:*',
-            '*',
-            '1',
-            '1,2',
-            '1,3,5',
-            '1:10',
-            '1:10,11',
-            '1:5,10:20',
-            '1,5:10',
-            '1,5:10,15:20',
-            '1:10,15,20:25',
-            '4:2'
+            b'1:*',
+            b'5:*',
+            b'1:2,5:*',
+            b'*',
+            b'1',
+            b'1,2',
+            b'1,3,5',
+            b'1:10',
+            b'1:10,11',
+            b'1:5,10:20',
+            b'1,5:10',
+            b'1,5:10,15:20',
+            b'1:10,15,20:25',
+            b'4:2'
         ]
 
         outputs = [
@@ -980,6 +1570,49 @@ class IMAP4HelperTests(unittest.TestCase):
                 L = len(imap4.parseIdList(input))
                 self.assertEqual(L, expected,
                                   "len(%r) = %r != %r" % (input, L, expected))
+
+
+    def test_parseTimeInvalidFormat(self):
+        """
+        L{imap4.parseTime} raises L{ValueError} when given a a time
+        string whose format is invalid.
+        """
+        self.assertRaises(ValueError, imap4.parseTime, u"invalid")
+
+
+    def test_parseTimeInvalidValues(self):
+        """
+        L{imap4.parseTime} raises L{ValueError} when given a time
+        string composed of invalid values.
+        """
+        invalidStrings = [
+            "invalid-July-2017",
+            "2-invalid-2017",
+            "2-July-invalid",
+        ]
+        for invalid in invalidStrings:
+            self.assertRaises(ValueError, imap4.parseTime, invalid)
+
+
+    def test_statusRequestHelper(self):
+        """
+        L{imap4.statusRequestHelper} builds a L{dict} mapping the
+        requested status names to values extracted from the provided
+        L{IMailboxIMAP}'s.
+        """
+        mbox = SimpleMailbox()
+
+        expected = {
+            'MESSAGES': mbox.getMessageCount(),
+            'RECENT': mbox.getRecentCount(),
+            'UIDNEXT': mbox.getUIDNext(),
+            'UIDVALIDITY': mbox.getUIDValidity(),
+            'UNSEEN': mbox.getUnseenCount(),
+        }
+
+        result = imap4.statusRequestHelper(mbox, expected.keys())
+
+        self.assertEqual(expected, result)
 
 
 
@@ -1069,7 +1702,162 @@ class SimpleMailbox:
 
 
 
-class Account(imap4.MemoryAccount):
+@implementer(imap4.IMailboxInfo, imap4.IMailbox)
+class UncloseableMailbox(object):
+    """
+    A mailbox that cannot be closed.
+    """
+    flags = ('\\Flag1', 'Flag2', '\\AnotherSysFlag', 'LastFlag')
+    messages = []
+    mUID = 0
+    rw = 1
+    closed = False
+
+    def __init__(self):
+        self.listeners = []
+        self.addListener = self.listeners.append
+        self.removeListener = self.listeners.remove
+
+
+    def getFlags(self):
+        """
+        The flags
+
+        @return: A sequence of flags.
+        """
+        return self.flags
+
+
+    def getUIDValidity(self):
+        """
+        The UID validity value.
+
+        @return: The value.
+        """
+        return 42
+
+
+    def getUIDNext(self):
+        """
+        The next UID.
+
+        @return: The UID.
+        """
+        return len(self.messages) + 1
+
+
+    def getMessageCount(self):
+        """
+        The number of messages.
+
+        @return: The number.
+        """
+        return 9
+
+
+    def getRecentCount(self):
+        """
+        The recent messages.
+
+        @return: The number.
+        """
+        return 3
+
+
+    def getUnseenCount(self):
+        """
+        The recent messages.
+
+        @return: The number.
+        """
+        return 4
+
+
+    def isWriteable(self):
+        """
+        The recent messages.
+
+        @return: Whether or not the mailbox is writable.
+        """
+        return self.rw
+
+
+    def destroy(self):
+        """
+        Destroy this mailbox.
+        """
+        pass
+
+
+    def getHierarchicalDelimiter(self):
+        """
+        Return the hierarchical delimiter.
+
+        @return: The delimiter.
+        """
+        return '/'
+
+
+    def requestStatus(self, names):
+        """
+        Return the mailbox's status.
+
+        @param names: The status items to include.
+
+        @return: A L{dict} of status data.
+        """
+        r = {}
+        if 'MESSAGES' in names:
+            r['MESSAGES'] = self.getMessageCount()
+        if 'RECENT' in names:
+            r['RECENT'] = self.getRecentCount()
+        if 'UIDNEXT' in names:
+            r['UIDNEXT'] = self.getMessageCount() + 1
+        if 'UIDVALIDITY' in names:
+            r['UIDVALIDITY'] = self.getUID()
+        if 'UNSEEN' in names:
+            r['UNSEEN'] = self.getUnseenCount()
+        return defer.succeed(r)
+
+
+    def addMessage(self, message, flags, date = None):
+        """
+        Add a message to the mailbox.
+
+        @param message: The message body.
+
+        @param flags: The message flags.
+
+        @param date: The message date.
+
+        @return: A L{Deferred} that fires when the message has been
+            added.
+        """
+        self.messages.append((message, flags, date, self.mUID))
+        self.mUID += 1
+        return defer.succeed(None)
+
+
+    def expunge(self):
+        """
+        Delete messages marked for deletion.
+
+        @return: A L{list} of deleted message IDs.
+        """
+        delete = []
+        for i in self.messages:
+            if '\\Deleted' in i[1]:
+                delete.append(i)
+        for i in delete:
+            self.messages.remove(i)
+        return [i[3] for i in delete]
+
+
+
+class AccountWithoutNamespaces(imap4.MemoryAccountWithoutNamespaces):
+    """
+    An in-memory account that does not provide L{INamespacePresenter}.
+    """
     mailboxFactory = SimpleMailbox
     def _emptyMailbox(self, name, id):
         return self.mailboxFactory()
@@ -1083,13 +1871,21 @@ class Account(imap4.MemoryAccount):
 
 
 
-class SimpleServer(imap4.IMAP4Server):
+class Account(AccountWithoutNamespaces, imap4.MemoryAccount):
+    """
+    An in-memory account that provides L{INamespacePresenter}.
+    """
+
+
+
+class SimpleServer(imap4.IMAP4Server, object):
+    theAccount = Account(b'testuser')
     def __init__(self, *args, **kw):
         imap4.IMAP4Server.__init__(self, *args, **kw)
-        realm = TestRealm()
-        realm.theAccount = Account(b'testuser')
+        realm = TestRealm(accountHolder=self)
         portal = Portal(realm)
         c = InMemoryUsernamePasswordDatabaseDontUse()
+        c.addUser(b'testuser', b'password-test')
         self.checker = c
         self.portal = portal
         portal.registerChecker(c)
@@ -1102,13 +1898,6 @@ class SimpleServer(imap4.IMAP4Server):
             return
 
         imap4.IMAP4Server.lineReceived(self, line)
-
-    _username = b'testuser'
-    _password = b'password-test'
-    def authenticateLogin(self, username, password):
-        if username == self._username and password == self._password:
-            return imap4.IAccount, self.theAccount, lambda: None
-        raise UnauthorizedLogin()
 
 
 
@@ -1124,17 +1913,17 @@ class SimpleClient(imap4.IMAP4Client):
 
 
     def modeChanged(self, writeable):
-        self.events.append([b'modeChanged', writeable])
+        self.events.append(['modeChanged', writeable])
         self.transport.loseConnection()
 
 
     def flagsChanged(self, newFlags):
-        self.events.append([b'flagsChanged', newFlags])
+        self.events.append(['flagsChanged', newFlags])
         self.transport.loseConnection()
 
 
     def newMessages(self, exists, recent):
-        self.events.append([b'newMessages', exists, recent])
+        self.events.append(['newMessages', exists, recent])
         self.transport.loseConnection()
 
 
@@ -1174,6 +1963,25 @@ class IMAP4HelperMixin:
 
     def loopback(self):
         return loopback.loopbackAsync(self.server, self.client)
+
+
+    def assertClientFailureMessage(self, failure, expected):
+        """
+        Assert that the provided failure is an L{IMAP4Exception} with
+        the given message.
+
+        @param failure: A failure whose value L{IMAP4Exception}
+        @type failure: L{failure.Failure}
+
+        @param expected: The expected failure message.
+        @type expected: L{bytes}
+        """
+        failure.trap(imap4.IMAP4Exception)
+        message = str(failure.value)
+        if _PY3:
+            expected = repr(expected)
+
+        self.assertEqual(message, expected)
 
 
 
@@ -1261,13 +2069,88 @@ class IMAP4ServerTests(IMAP4HelperMixin, unittest.TestCase):
         self.assertEqual(self.server.state, 'unauth')
 
 
-    def testLoginRequiringQuoting(self):
-        self.server._username = '{test}user'
-        self.server._password = '{test}password'
+    def test_loginWithoutPortal(self):
+        """
+        Attempting to log into a server that has no L{Portal} results
+        in a failed login.
+        """
+        self.server.portal = None
+        def login():
+            d = self.client.login(b'testuser', b'wrong-password')
+            d.addBoth(self._cbStopClient)
+
+        d1 = self.connected.addCallback(strip(login)).addErrback(self._ebGeneral)
+        d2 = self.loopback()
+        d = defer.gatherResults([d1, d2])
+        return d.addCallback(self._cbTestFailedLogin)
+
+
+    def test_nonIAccountAvatar(self):
+        """
+        The server responds with a C{BAD} response when its portal
+        attempts to log a user in with checker that claims to support
+        L{IAccount} but returns an an avatar interface that is not
+        L{IAccount}.
+        """
+
+        def brokenRequestAvatar(*_, **__):
+            return ("Not IAccount", "Not an account", lambda: None)
+
+        self.server.portal.realm.requestAvatar = brokenRequestAvatar
 
         def login():
-            d = self.client.login('{test}user', '{test}password')
+            d = self.client.login(b'testuser', b'password-test')
             d.addBoth(self._cbStopClient)
+
+        d1 = self.connected.addCallback(strip(login)).addErrback(self._ebGeneral)
+        d2 = self.loopback()
+        d = defer.gatherResults([d1, d2])
+        return d.addCallback(self._cbTestFailedLogin)
+
+
+    def test_loginException(self):
+        """
+        Any exception raised by L{IMAP4Server.authenticateLogin} that
+        is not L{UnauthorizedLogin} is logged results in a C{BAD}
+        response.
+        """
+
+        class UnexpectedException(Exception):
+            """
+            An unexpected exception.
+            """
+
+        def raisesUnexpectedException(user, passwd):
+            raise UnexpectedException("Whoops")
+
+        self.server.authenticateLogin = raisesUnexpectedException
+
+        def login():
+            return self.client.login(b'testuser', b'password-test')
+
+        d1 = self.connected.addCallback(strip(login))
+
+        d1.addErrback(self.assertClientFailureMessage, b"Server error: Whoops")
+
+        @d1.addCallback
+        def assertErrorLogged(_):
+            self.assertTrue(self.flushLoggedErrors(UnexpectedException))
+
+        d1.addErrback(self._ebGeneral)
+        d1.addBoth(self._cbStopClient)
+
+        d2 = self.loopback()
+        d = defer.gatherResults([d1, d2])
+        return d.addCallback(self._cbTestFailedLogin)
+
+
+    def testLoginRequiringQuoting(self):
+        self.server.checker.users = {b'{test}user': b'{test}password'}
+
+        def login():
+            d = self.client.login(b'{test}user', b'{test}password')
+            d.addErrback(log.err, "Problem with " + str(self))
+            d.addCallback(self._cbStopClient)
 
         d1 = self.connected.addCallback(strip(login)).addErrback(self._ebGeneral)
         d = defer.gatherResults([self.loopback(), d1])
@@ -1294,8 +2177,41 @@ class IMAP4ServerTests(IMAP4HelperMixin, unittest.TestCase):
         d1.addErrback(self._ebGeneral)
         d2 = self.loopback()
         d = defer.gatherResults([d1, d2])
-        d.addCallback(lambda _: self.assertEqual(self.namespaceArgs,
-                                                  [[['', '/']], [], []]))
+
+        @d.addCallback
+        def assertAllPairsNativeStrings(ignored):
+            for namespaces in self.namespaceArgs:
+                for pair in namespaces:
+                    for value in pair:
+                        self.assertIsInstance(value, str)
+            return self.namespaceArgs
+
+        d.addCallback(self.assertEqual, [[['', '/']], [], []])
+        return d
+
+
+    def test_mailboxWithoutNamespace(self):
+        """
+        A mailbox that does not provide L{INamespacePresenter} returns
+        empty L{list}s for its personal, shared, and user namespaces.
+        """
+        self.server.theAccount = AccountWithoutNamespaces(b'testuser')
+        self.namespaceArgs = None
+        def login():
+            return self.client.login(b'testuser', b'password-test')
+        def namespace():
+            def gotNamespace(args):
+                self.namespaceArgs = args
+                self._cbStopClient(None)
+            return self.client.namespace().addCallback(gotNamespace)
+
+        d1 = self.connected.addCallback(strip(login))
+        d1.addCallback(strip(namespace))
+        d1.addErrback(self._ebGeneral)
+        d2 = self.loopback()
+        d = defer.gatherResults([d1, d2])
+        d.addCallback(lambda _: self.namespaceArgs)
+        d.addCallback(self.assertEqual, [[], [], []])
         return d
 
 
@@ -1319,13 +2235,41 @@ class IMAP4ServerTests(IMAP4HelperMixin, unittest.TestCase):
         return defer.gatherResults([d1, d2]).addCallback(self._cbTestSelect)
 
 
+    def test_selectWithoutMailbox(self):
+        """
+        A client that selects a mailbox that does not exist receives a
+        C{NO} response.
+        """
+        def login():
+            return self.client.login(b'testuser', b'password-test')
+        def select():
+            return self.client.select('test-mailbox')
+
+        self.connected.addCallback(strip(login))
+        self.connected.addCallback(strip(select))
+        self.connected.addErrback(self.assertClientFailureMessage,
+                                  b"No such mailbox")
+        self.connected.addCallback(self._cbStopClient)
+        self.connected.addErrback(self._ebGeneral)
+
+        connectionComplete = defer.gatherResults(
+            [self.connected, self.loopback()]
+        )
+
+        @connectionComplete.addCallback
+        def assertNoMailboxSelected(_):
+            self.assertIsNone(self.server.mbox)
+
+        return connectionComplete
+
+
     def _cbTestSelect(self, ignored):
         mbox = SimpleServer.theAccount.mailboxes['TEST-MAILBOX']
         self.assertEqual(self.server.mbox, mbox)
         self.assertEqual(self.selectedArgs, {
             'EXISTS': 9, 'RECENT': 3, 'UIDVALIDITY': 42,
             'FLAGS': ('\\Flag1', 'Flag2', '\\AnotherSysFlag', 'LastFlag'),
-            'READ-WRITE': 1
+            'READ-WRITE': True
         })
 
 
@@ -1399,10 +2343,9 @@ class IMAP4ServerTests(IMAP4HelperMixin, unittest.TestCase):
 
     def _cbTestCreate(self, ignored, succeed, fail):
         self.assertEqual(self.result, [1] * len(succeed) + [0] * len(fail))
-        mbox = SimpleServer.theAccount.mailboxes.keys()
-        answers = ['inbox', 'testbox', 'test/box', 'test', 'test/box/box']
-        mbox.sort()
-        answers.sort()
+        mbox = sorted(SimpleServer.theAccount.mailboxes)
+        answers = sorted(['inbox', 'testbox', 'test/box', 'test',
+                          'test/box/box'])
         self.assertEqual(mbox, [a.upper() for a in answers])
 
 
@@ -1418,8 +2361,47 @@ class IMAP4ServerTests(IMAP4HelperMixin, unittest.TestCase):
         d1.addCallbacks(self._cbStopClient, self._ebGeneral)
         d2 = self.loopback()
         d = defer.gatherResults([d1, d2])
-        d.addCallback(lambda _:
-                      self.assertEqual(SimpleServer.theAccount.mailboxes.keys(), []))
+        d.addCallback(
+            lambda _:
+            self.assertEqual(list(SimpleServer.theAccount.mailboxes), []))
+        return d
+
+
+    def testDeleteWithInferiorHierarchicalNames(self):
+        """
+        Attempting to delete a mailbox with hierarchically inferior
+        names fails with an informative error.
+
+        @see: U{https://tools.ietf.org/html/rfc3501#section-6.3.4}
+
+        @return: A L{Deferred} with assertions.
+        """
+        SimpleServer.theAccount.addMailbox('delete')
+        SimpleServer.theAccount.addMailbox('delete/me')
+
+        def login():
+            return self.client.login(b'testuser', b'password-test')
+        def delete():
+            return self.client.delete('delete')
+
+        def assertIMAPException(failure):
+            failure.trap(imap4.IMAP4Exception)
+            self.assertEqual(
+                str(failure.value),
+                str(b'Name "DELETE" has inferior hierarchical names'),
+            )
+
+        loggedIn = self.connected.addCallback(strip(login))
+        loggedIn.addCallbacks(strip(delete), self._ebGeneral)
+        loggedIn.addErrback(assertIMAPException)
+        loggedIn.addCallbacks(self._cbStopClient)
+
+        loopedBack  = self.loopback()
+        d = defer.gatherResults([loggedIn, loopedBack])
+        d.addCallback(
+            lambda _:
+            self.assertEqual(sorted(SimpleServer.theAccount.mailboxes),
+                             ["DELETE", "DELETE/ME"]))
         return d
 
 
@@ -1458,7 +2440,7 @@ class IMAP4ServerTests(IMAP4HelperMixin, unittest.TestCase):
         d2 = self.loopback()
         d = defer.gatherResults([d1, d2])
         d.addCallback(lambda _: self.assertEqual(str(self.failure.value),
-                                                  'No such mailbox'))
+                                                 str(b'No such mailbox')))
         return d
 
 
@@ -1481,14 +2463,15 @@ class IMAP4ServerTests(IMAP4HelperMixin, unittest.TestCase):
         d1.addCallbacks(self._cbStopClient, self._ebGeneral)
         d2 = self.loopback()
         d = defer.gatherResults([d1, d2])
-        expected = "Hierarchically inferior mailboxes exist and \\Noselect is set"
+        expected = str(b"Hierarchically inferior mailboxes exist "
+                       b"and \\Noselect is set")
         d.addCallback(lambda _:
                       self.assertEqual(str(self.failure.value), expected))
         return d
 
 
     def testRename(self):
-        SimpleServer.theAccount.addMailbox(b'oldmbox')
+        SimpleServer.theAccount.addMailbox('oldmbox')
         def login():
             return self.client.login(b'testuser', b'password-test')
         def rename():
@@ -1500,8 +2483,10 @@ class IMAP4ServerTests(IMAP4HelperMixin, unittest.TestCase):
         d2 = self.loopback()
         d = defer.gatherResults([d1, d2])
         d.addCallback(lambda _:
-                      self.assertEqual(SimpleServer.theAccount.mailboxes.keys(),
-                                        [b'NEWNAME']))
+                      self.assertEqual(
+                          list(SimpleServer.theAccount.mailboxes.keys()),
+                          ['NEWNAME']
+                      ))
         return d
 
 
@@ -1526,12 +2511,12 @@ class IMAP4ServerTests(IMAP4HelperMixin, unittest.TestCase):
 
 
     def testHierarchicalRename(self):
-        SimpleServer.theAccount.create(b'oldmbox/m1')
-        SimpleServer.theAccount.create(b'oldmbox/m2')
+        SimpleServer.theAccount.create('oldmbox/m1')
+        SimpleServer.theAccount.create('oldmbox/m2')
         def login():
             return self.client.login(b'testuser', b'password-test')
         def rename():
-            return self.client.rename(b'oldmbox', b'newname')
+            return self.client.rename('oldmbox', 'newname')
 
         d1 = self.connected.addCallback(strip(login))
         d1.addCallbacks(strip(rename), self._ebGeneral)
@@ -1543,7 +2528,7 @@ class IMAP4ServerTests(IMAP4HelperMixin, unittest.TestCase):
 
     def _cbTestHierarchicalRename(self, ignored):
         mboxes = SimpleServer.theAccount.mailboxes.keys()
-        expected = [b'newname', b'newname/m1', b'newname/m2']
+        expected = ['newname', 'newname/m1', 'newname/m2']
         mboxes = list(sorted(mboxes))
         self.assertEqual(mboxes, [s.upper() for s in expected])
 
@@ -1602,17 +2587,43 @@ class IMAP4ServerTests(IMAP4HelperMixin, unittest.TestCase):
         return defer.gatherResults([d1, d2]).addCallback(lambda _: self.listed)
 
 
+    def assertListDelimiterAndMailboxAreStrings(self, results):
+        """
+        Assert a C{LIST} response's delimiter and mailbox are native
+        strings.
+
+        @param results: A list of tuples as returned by
+            L{IMAP4Client.list} or L{IMAP4Client.lsub}.
+        """
+        for result in results:
+            self.assertIsInstance(result[1], str,
+                                  "delimiter %r is not a str")
+            self.assertIsInstance(result[2], str,
+                                  "mailbox %r is not a str")
+        return results
+
+
     def testList(self):
         def mailboxList():
             return self.client.list('root', '%')
         d = self._listSetup(mailboxList)
-        d.addCallback(lambda listed: self.assertEqual(
-            sortNest(listed),
-            sortNest([
-                (SimpleMailbox.flags, "/", "ROOT/SUBTHING"),
-                (SimpleMailbox.flags, "/", "ROOT/ANOTHER-THING")
-            ])
-        ))
+        @d.addCallback
+        def assertListContents(listed):
+            expectedContents = [
+                (sorted(SimpleMailbox.flags), "/", "ROOT/SUBTHING"),
+                (sorted(SimpleMailbox.flags), "/", "ROOT/ANOTHER-THING")
+            ]
+
+            for _ in range(2):
+                flags, delimiter, mailbox = listed.pop(0)
+                self.assertIn(
+                    (sorted(flags), delimiter, mailbox),
+                    expectedContents,
+                )
+
+            self.assertFalse(listed,
+                             "More results than expected: {!r}".format(listed))
+
         return d
 
 
@@ -1621,6 +2632,7 @@ class IMAP4ServerTests(IMAP4HelperMixin, unittest.TestCase):
         def lsub():
             return self.client.lsub('root', '%')
         d = self._listSetup(lsub)
+        d.addCallback(self.assertListDelimiterAndMailboxAreStrings)
         d.addCallback(self.assertEqual,
                       [(SimpleMailbox.flags, "/", "ROOT/SUBTHING")])
         return d
@@ -1644,7 +2656,7 @@ class IMAP4ServerTests(IMAP4HelperMixin, unittest.TestCase):
         d = defer.gatherResults([d1, d2])
         d.addCallback(lambda _: self.assertEqual(
             self.statused,
-            {'MESSAGES': 9, 'UIDNEXT': '10', 'UNSEEN': 4}
+            {'MESSAGES': 9, 'UIDNEXT': b'10', 'UNSEEN': 4}
         ))
         return d
 
@@ -1653,7 +2665,8 @@ class IMAP4ServerTests(IMAP4HelperMixin, unittest.TestCase):
         def login():
             return self.client.login(b'testuser', b'password-test')
         def status():
-            return self.client.status('root/nonexistent', 'MESSAGES', 'UIDNEXT', 'UNSEEN')
+            return self.client.status('root/nonexistent',
+                                      'MESSAGES', 'UIDNEXT', 'UNSEEN')
         def statused(result):
             self.statused = result
         def failed(failure):
@@ -1674,29 +2687,34 @@ class IMAP4ServerTests(IMAP4HelperMixin, unittest.TestCase):
         )
         self.assertEqual(
             self.failure.value.args,
-            ('Could not open mailbox',)
+            (b'Could not open mailbox',)
         )
 
 
     def testFullAppend(self):
         infile = util.sibpath(__file__, 'rfc822.message')
-        message = open(infile)
         SimpleServer.theAccount.addMailbox('root/subthing')
         def login():
             return self.client.login(b'testuser', b'password-test')
+
+        @defer.inlineCallbacks
         def append():
-            return self.client.append(
-                'root/subthing',
-                message,
-                ('\\SEEN', '\\DELETED'),
-                'Tue, 17 Jun 2003 11:22:16 -0600 (MDT)',
-            )
+            with open(infile, "rb") as message:
+                result = yield self.client.append(
+                    'root/subthing',
+                    message,
+                    ('\\SEEN', '\\DELETED'),
+                    'Tue, 17 Jun 2003 11:22:16 -0600 (MDT)',
+                )
+                defer.returnValue(result)
 
         d1 = self.connected.addCallback(strip(login))
         d1.addCallbacks(strip(append), self._ebGeneral)
         d1.addCallbacks(self._cbStopClient, self._ebGeneral)
         d2 = self.loopback()
+
         d = defer.gatherResults([d1, d2])
+
         return d.addCallback(self._cbTestFullAppend, infile)
 
 
@@ -1704,10 +2722,12 @@ class IMAP4ServerTests(IMAP4HelperMixin, unittest.TestCase):
         mb = SimpleServer.theAccount.mailboxes['ROOT/SUBTHING']
         self.assertEqual(1, len(mb.messages))
         self.assertEqual(
-            (['\\SEEN', '\\DELETED'], 'Tue, 17 Jun 2003 11:22:16 -0600 (MDT)', 0),
+            (['\\SEEN', '\\DELETED'],
+             b'Tue, 17 Jun 2003 11:22:16 -0600 (MDT)',
+             0),
             mb.messages[0][1:]
         )
-        with open(infile) as f:
+        with open(infile, "rb") as f:
             self.assertEqual(f.read(), mb.messages[0][0].getvalue())
 
 
@@ -1716,15 +2736,28 @@ class IMAP4ServerTests(IMAP4HelperMixin, unittest.TestCase):
         SimpleServer.theAccount.addMailbox('PARTIAL/SUBTHING')
         def login():
             return self.client.login(b'testuser', b'password-test')
+
+        @defer.inlineCallbacks
         def append():
-            message = open(infile)
-            return self.client.sendCommand(
-                imap4.Command(
-                    'APPEND',
-                    'PARTIAL/SUBTHING (\\SEEN) "Right now" {%d}' % os.path.getsize(infile),
-                    (), self.client._IMAP4Client__cbContinueAppend, message
+            with open(infile, 'rb') as message:
+                result = yield self.client.sendCommand(
+                    imap4.Command(
+                        b'APPEND',
+                        # Using networkString is cheating!  In this
+                        # particular case the mailbox name happens to
+                        # be ASCII.  In real code, the mailbox would
+                        # be encoded with imap4-utf-7.
+                        networkString(
+                            'PARTIAL/SUBTHING '
+                            '(\\SEEN) "Right now" '
+                            '{%d}' % (os.path.getsize(infile),)
+                        ),
+                        (),
+                        self.client._IMAP4Client__cbContinueAppend, message
+                    )
                 )
-            )
+                defer.returnValue(result)
+
         d1 = self.connected.addCallback(strip(login))
         d1.addCallbacks(strip(append), self._ebGeneral)
         d1.addCallbacks(self._cbStopClient, self._ebGeneral)
@@ -1737,14 +2770,14 @@ class IMAP4ServerTests(IMAP4HelperMixin, unittest.TestCase):
         mb = SimpleServer.theAccount.mailboxes['PARTIAL/SUBTHING']
         self.assertEqual(1, len(mb.messages))
         self.assertEqual(
-            (['\\SEEN'], 'Right now', 0),
+            (['\\SEEN'], b'Right now', 0),
             mb.messages[0][1:]
         )
-        with open(infile) as f:
+        with open(infile, 'rb') as f:
             self.assertEqual(f.read(), mb.messages[0][0].getvalue())
 
 
-    def testCheck(self):
+    def _testCheck(self):
         SimpleServer.theAccount.addMailbox(b'root/subthing')
         def login():
             return self.client.login(b'testuser', b'password-test')
@@ -1759,15 +2792,39 @@ class IMAP4ServerTests(IMAP4HelperMixin, unittest.TestCase):
         d.addCallbacks(self._cbStopClient, self._ebGeneral)
         return self.loopback()
 
-        # Okay, that was fun
+
+    def test_check(self):
+        """
+        Trigger the L{imap.IMAP4Server._cbSelectWork} callback
+        by selecting an mbox.
+        """
+        return self._testCheck()
+
+
+    def test_checkFail(self):
+        """
+        Trigger the L{imap.IMAP4Server._ebSelectWork} errback
+        by failing when we select an mbox.
+        """
+        def failSelect(self, name, rw=1):
+            raise imap4.IllegalMailboxEncoding("encoding")
+
+        def checkResponse(ignore):
+            failures = self.flushLoggedErrors()
+            self.assertEqual(failures[1].value.args[0],
+                             b'SELECT failed: Server error')
+
+        self.patch(Account, "select", failSelect)
+        d = self._testCheck()
+        return d.addCallback(checkResponse)
 
 
     def testClose(self):
         m = SimpleMailbox()
         m.messages = [
-            ('Message 1', ('\\Deleted', 'AnotherFlag'), None, 0),
-            ('Message 2', ('AnotherFlag',), None, 1),
-            ('Message 3', ('\\Deleted',), None, 2),
+            (b'Message 1', ('\\Deleted', 'AnotherFlag'), None, 0),
+            (b'Message 2', ('AnotherFlag',), None, 1),
+            (b'Message 3', ('\\Deleted',), None, 2),
         ]
         SimpleServer.theAccount.addMailbox('mailbox', m)
         def login():
@@ -1787,16 +2844,17 @@ class IMAP4ServerTests(IMAP4HelperMixin, unittest.TestCase):
 
     def _cbTestClose(self, ignored, m):
         self.assertEqual(len(m.messages), 1)
-        self.assertEqual(m.messages[0], ('Message 2', ('AnotherFlag',), None, 1))
+        self.assertEqual(
+            m.messages[0], (b'Message 2', ('AnotherFlag',), None, 1))
         self.assertTrue(m.closed)
 
 
     def testExpunge(self):
         m = SimpleMailbox()
         m.messages = [
-            ('Message 1', ('\\Deleted', 'AnotherFlag'), None, 0),
-            ('Message 2', ('AnotherFlag',), None, 1),
-            ('Message 3', ('\\Deleted',), None, 2),
+            (b'Message 1', ('\\Deleted', 'AnotherFlag'), None, 0),
+            (b'Message 2', ('AnotherFlag',), None, 1),
+            (b'Message 3', ('\\Deleted',), None, 2),
         ]
         SimpleServer.theAccount.addMailbox('mailbox', m)
         def login():
@@ -1828,9 +2886,465 @@ class IMAP4ServerTests(IMAP4HelperMixin, unittest.TestCase):
 
     def _cbTestExpunge(self, ignored, m):
         self.assertEqual(len(m.messages), 1)
-        self.assertEqual(m.messages[0], ('Message 2', ('AnotherFlag',), None, 1))
+        self.assertEqual(m.messages[0], (b'Message 2', ('AnotherFlag',), None, 1))
 
         self.assertEqual(self.results, [0, 2])
+
+
+
+class IMAP4ServerParsingTests(unittest.SynchronousTestCase):
+    """
+    Test L{imap4.IMAP4Server}'s command parsing.
+    """
+
+    def setUp(self):
+        self.transport = StringTransport()
+        self.server = imap4.IMAP4Server()
+        self.server.makeConnection(self.transport)
+        self.transport.clear()
+
+
+    def tearDown(self):
+        self.server.connectionLost(failure.Failure(error.ConnectionDone()))
+
+
+    def test_parseMethodExceptionLogged(self):
+        """
+        L{imap4.IMAP4Server} logs exceptions raised by parse methods.
+        """
+
+        class UnhandledException(Exception):
+            """
+            An unhandled exception.
+            """
+
+        def raisesValueError(line):
+            raise UnhandledException
+
+        self.server.parseState = "command"
+        self.server.parse_command = raisesValueError
+
+        self.server.lineReceived(b"invalid")
+
+        self.assertTrue(self.flushLoggedErrors(UnhandledException))
+
+
+    def test_missingCommand(self):
+        """
+        L{imap4.IMAP4Server.parse_command} sends a C{BAD} response to
+        a line that includes a tag but no command.
+        """
+        self.server.parse_command(b"001")
+
+        self.assertEqual(self.transport.value(),
+                         b"001 BAD Missing command\r\n")
+
+        self.server.connectionLost(
+            failure.Failure(error.ConnectionDone("Done")),
+        )
+
+
+    def test_emptyLine(self):
+        """
+        L{imap4.IMAP4Server.parse_command} sends a C{BAD} response to
+        an empty line.
+        """
+        self.server.parse_command(b"")
+
+        self.assertEqual(self.transport.value(), b"* BAD Null command\r\n")
+
+
+    def assertParseExceptionResponse(self,
+                                     exception, tag, expectedResponse):
+        """
+        Assert that the given exception results in the expected
+        response.
+
+        @param exception: The exception to raise.
+        @type exception: L{Exception}
+
+        @param tag: The IMAP tag.
+
+        @type: L{bytes}
+
+        @param expectedResponse: The expected bad response.
+        @type expectedResponse: L{bytes}
+        """
+        def raises(tag, cmd, rest):
+            raise exception
+
+        self.server.dispatchCommand = raises
+
+        self.server.parse_command(b' '.join([tag, b"invalid"]))
+
+        self.assertEqual(self.transport.value(),
+                         b' '.join([tag, expectedResponse]))
+
+
+    def test_parsingRaisesIllegalClientResponse(self):
+        """
+        When a parsing method raises L{IllegalClientResponse}, the
+        server sends a C{BAD} response.
+        """
+        self.assertParseExceptionResponse(
+            imap4.IllegalClientResponse("client response"),
+            b"001", b"BAD Illegal syntax: client response\r\n",
+        )
+
+
+    def test_parsingRaisesIllegalOperationResponse(self):
+        """
+        When a parsing method raises L{IllegalOperation}, the server
+        sends a C{NO} response.
+        """
+        self.assertParseExceptionResponse(
+            imap4.IllegalOperation("operation"),
+            b"001", b"NO Illegal operation: operation\r\n",
+        )
+
+
+    def test_parsingRaisesIllegalMailboxEncoding(self):
+        """
+        When a parsing method raises L{IllegalMailboxEncoding}, the
+        server sends a C{NO} response.
+        """
+        self.assertParseExceptionResponse(
+            imap4.IllegalMailboxEncoding("encoding"),
+            b"001", b"NO Illegal mailbox name: encoding\r\n",
+        )
+
+
+    def test_unsupportedCommand(self):
+        """
+        L{imap4.IMAP4Server} responds to an unsupported command with a
+        C{BAD} response.
+        """
+        self.server.lineReceived(b"001 HULLABALOO")
+        self.assertEqual(self.transport.value(),
+                         b"001 BAD Unsupported command\r\n")
+
+
+    def test_tooManyArgumentsForCommand(self):
+        """
+        L{imap4.IMAP4Server} responds with a C{BAD} response to a
+        command with more arguments than expected.
+        """
+        self.server.lineReceived(b"001 LOGIN A B C")
+        self.assertEqual(
+            self.transport.value(),
+            (b"001 BAD Illegal syntax:" +
+             b" Too many arguments for command: " +
+             repr(b'C').encode("utf-8") +
+             b"\r\n"
+            )
+        )
+
+
+    def assertCommandExceptionResponse(self,
+                                        exception, tag, expectedResponse):
+        """
+        Assert that the given exception results in the expected
+        response.
+
+        @param exception: The exception to raise.
+        @type exception: L{Exception}
+
+        @param: The IMAP tag.
+
+        @type: L{bytes}
+
+        @param expectedResponse: The expected bad response.
+        @type expectedResponse: L{bytes}
+        """
+        def raises(serverInstance, tag, user, passwd):
+            raise exception
+
+        self.assertEqual(self.server.state, "unauth")
+
+        self.server.unauth_LOGIN = (raises,) + self.server.unauth_LOGIN[1:]
+
+        self.server.dispatchCommand(tag, b"LOGIN", b"user passwd")
+
+        self.assertEqual(self.transport.value(),
+                         b' '.join([tag, expectedResponse]))
+
+
+    def test_commandRaisesIllegalClientResponse(self):
+        """
+        When a command raises L{IllegalClientResponse}, the
+        server sends a C{BAD} response.
+        """
+        self.assertCommandExceptionResponse(
+            imap4.IllegalClientResponse("client response"),
+            b"001", b"BAD Illegal syntax: client response\r\n",
+        )
+
+
+    def test_commandRaisesIllegalOperationResponse(self):
+        """
+        When a command raises L{IllegalOperation}, the server sends a
+        C{NO} response.
+        """
+        self.assertCommandExceptionResponse(
+            imap4.IllegalOperation("operation"),
+            b"001", b"NO Illegal operation: operation\r\n",
+        )
+
+
+    def test_commandRaisesIllegalMailboxEncoding(self):
+        """
+        When a command raises L{IllegalMailboxEncoding}, the server
+        sends a C{NO} response.
+        """
+        self.assertCommandExceptionResponse(
+            imap4.IllegalMailboxEncoding("encoding"),
+            b"001", b"NO Illegal mailbox name: encoding\r\n",
+        )
+
+
+    def test_commandRaisesUnhandledException(self):
+        """
+        Wehn a command raises an unhandled exception, the server sends
+        a C{BAD} response and logs the exception.
+        """
+
+        class UnhandledException(Exception):
+            """
+            An unhandled exception.
+            """
+
+        self.assertCommandExceptionResponse(
+            UnhandledException("unhandled"),
+            b"001", b"BAD Server error: unhandled\r\n",
+        )
+
+        self.assertTrue(self.flushLoggedErrors(UnhandledException))
+
+
+    def test_stringLiteralTooLong(self):
+        """
+        A string literal whose length exceeds the maximum allowed
+        length results in a C{BAD} response.
+        """
+        self.server._literalStringLimit = 4
+        self.server.lineReceived(b"001 LOGIN {5}\r\n")
+
+        self.assertEqual(self.transport.value(),
+                         b"001 BAD Illegal syntax: Literal too long!"
+                         b" I accept at most 4 octets\r\n")
+
+
+    def test_arg_astringEmptyLine(self):
+        """
+        An empty string argument raises L{imap4.IllegalClientResponse}.
+        """
+        for empty in [b"", b"\r\n", b" "]:
+            self.assertRaises(imap4.IllegalClientResponse,
+                              self.server.arg_astring, empty)
+
+
+    def test_arg_astringUnmatchedQuotes(self):
+        """
+        An unmatched quote in a string argument raises
+        L{imap4.IllegalClientResponse}.
+        """
+        self.assertRaises(imap4.IllegalClientResponse,
+                          self.server.arg_astring, b'"open')
+
+
+    def test_arg_astringUnmatchedLiteralBraces(self):
+        """
+        An unmatched brace in a string literal's size raises
+        L{imap4.IllegalClientResponse}.
+        """
+        self.assertRaises(imap4.IllegalClientResponse,
+                          self.server.arg_astring, b'{0')
+
+
+    def test_arg_astringInvalidLiteralSize(self):
+        """
+        A non-integral string literal size raises
+        L{imap4.IllegalClientResponse}.
+        """
+        self.assertRaises(imap4.IllegalClientResponse,
+                          self.server.arg_astring, b'{[object Object]}')
+
+
+    def test_arg_atomEmptyLine(self):
+        """
+        An empty atom raises L{IllegalClientResponse}.
+        """
+        self.assertRaises(imap4.IllegalClientResponse,
+                          self.server.arg_atom, b"")
+
+
+    def test_arg_atomMalformedAtom(self):
+        """
+        A malformed atom raises L{IllegalClientResponse}.
+        """
+        self.assertRaises(imap4.IllegalClientResponse,
+                          self.server.arg_atom, b" not an atom ")
+
+
+    def test_arg_plistEmptyLine(self):
+        """
+        An empty parenthesized list raises L{IllegalClientResponse}.
+        """
+        self.assertRaises(imap4.IllegalClientResponse,
+                          self.server.arg_plist, b"")
+
+
+    def test_arg_plistUnmatchedParentheses(self):
+        """
+        A parenthesized with unmatched parentheses raises
+        L{IllegalClientResponse}.
+        """
+        self.assertRaises(imap4.IllegalClientResponse,
+                          self.server.arg_plist, b"(foo")
+        self.assertRaises(imap4.IllegalClientResponse,
+                          self.server.arg_plist, b"foo)")
+
+
+    def test_arg_literalEmptyLine(self):
+        """
+        An empty file literal raises L{IllegalClientResponse}.
+        """
+        self.assertRaises(imap4.IllegalClientResponse,
+                          self.server.arg_literal, b"")
+
+
+    def test_arg_literalUnmatchedBraces(self):
+        """
+        A literal with unmatched braces raises
+        L{IllegalClientResponse}.
+        """
+        self.assertRaises(imap4.IllegalClientResponse,
+                          self.server.arg_literal, b"{10")
+        self.assertRaises(imap4.IllegalClientResponse,
+                          self.server.arg_literal, b"10}")
+
+
+    def test_arg_literalInvalidLiteralSize(self):
+        """
+        A non-integral literal size raises
+        L{imap4.IllegalClientResponse}.
+        """
+        self.assertRaises(imap4.IllegalClientResponse,
+                          self.server.arg_literal, b'{[object Object]}')
+
+
+    def test_arg_seqsetReturnsRest(self):
+        """
+        A sequence set returns the unparsed portion of a line.
+        """
+        sequence = b"1:* blah blah blah"
+        _, rest = self.server.arg_seqset(sequence)
+        self.assertEqual(rest, b"blah blah blah")
+
+
+    def test_arg_seqsetInvalidSequence(self):
+        """
+        An invalid sequence raises L{imap4.IllegalClientResponse}.
+        """
+        self.assertRaises(imap4.IllegalClientResponse,
+                          self.server.arg_seqset, b"x:y")
+
+
+    def test_arg_flaglistOneFlag(self):
+        """
+        A single flag that is not contained in a list is parsed.
+        """
+        flag = b"flag"
+        parsed, rest = self.server.arg_flaglist(flag)
+        self.assertEqual(parsed, [flag])
+        self.assertFalse(rest)
+
+
+    def test_arg_flaglistMismatchedParentehses(self):
+        """
+        A list of flags with unmatched parentheses raises
+        L{imap4.IllegalClientResponse}.
+        """
+        self.assertRaises(
+            imap4.IllegalClientResponse,
+            self.server.arg_flaglist, b"(invalid",
+        )
+
+
+    def test_arg_flaglistMalformedFlag(self):
+        """
+        A list of flags that contains a malformed flag raises
+        L{imap4.IllegalClientResponse}.
+        """
+        self.assertRaises(imap4.IllegalClientResponse,
+                          self.server.arg_flaglist, b"(first \x00)")
+        self.assertRaises(imap4.IllegalClientResponse,
+                          self.server.arg_flaglist, b"(first \x00second)")
+
+
+    def test_opt_plistMissingOpenParenthesis(self):
+        """
+        A line that does not begin with an open parenthesis (C{(}) is
+        parsed as L{None}, and the remainder is the whole line.
+        """
+        line = b"not ("
+        plist, remainder = self.server.opt_plist(line)
+        self.assertIsNone(plist)
+        self.assertEqual(remainder, line)
+
+
+    def test_opt_datetimeMissingOpenQuote(self):
+        """
+        A line that does not begin with a double quote (C{"}) is
+        parsed as L{None}, and the remainder is the whole line.
+        """
+        line = b'not "'
+        dt, remainder = self.server.opt_datetime(line)
+        self.assertIsNone(dt)
+        self.assertEqual(remainder, line)
+
+
+    def test_opt_datetimeMissingCloseQuote(self):
+        """
+        A line that does not have a closing double quote (C{"}) raises
+        L{imap4.IllegalClientResponse}.
+        """
+        line = b'"21-Jul-2017 19:37:07 -0700'
+        self.assertRaises(imap4.IllegalClientResponse,
+                          self.server.opt_datetime, line)
+
+
+    def test_opt_charsetMissingIdentifier(self):
+        """
+        A line that contains C{CHARSET} but no character set
+        identifier raises L{imap4.IllegalClientResponse}.
+        """
+        line = b"CHARSET"
+        self.assertRaises(imap4.IllegalClientResponse,
+                          self.server.opt_charset, line)
+
+
+    def test_opt_charsetEndOfLine(self):
+        """
+        A line that ends with a C{CHARSET} identifier is parsed as
+        that identifier, and the remainder is the empty string.
+        """
+        line = b"CHARSET UTF-8"
+        identifier, remainder = self.server.opt_charset(line)
+        self.assertEqual(identifier, b"UTF-8")
+        self.assertEqual(remainder, b"")
+
+
+    def test_opt_charsetWithRemainder(self):
+        """
+        A line that has additional data after a C{CHARSET} identifier
+        is parsed as that identifier, and the remainder is that
+        additional data.
+        """
+        line = b"CHARSET UTF-8 remainder"
+        identifier, remainder = self.server.opt_charset(line)
+        self.assertEqual(identifier, b"UTF-8")
+        self.assertEqual(remainder, b"remainder")
 
 
 
@@ -1865,12 +3379,12 @@ class IMAP4ServerSearchTests(IMAP4HelperMixin, unittest.TestCase):
         the search range.
         """
         self.assertFalse(
-            self.server.search_UID(['2:3'], self.seq, self.msg, (1, 1234)))
+            self.server.search_UID([b'2:3'], self.seq, self.msg, (1, 1234)))
         # 2:* should get translated to 2:<max UID> and then to 1:2
         self.assertTrue(
-            self.server.search_UID(['2:*'], self.seq, self.msg, (1, 1234)))
+            self.server.search_UID([b'2:*'], self.seq, self.msg, (1, 1234)))
         self.assertTrue(
-            self.server.search_UID(['*'], self.seq, self.msg, (1, 1234)))
+            self.server.search_UID([b'*'], self.seq, self.msg, (1, 1234)))
 
 
     def test_searchWildcardHigh(self):
@@ -1879,7 +3393,7 @@ class IMAP4ServerSearchTests(IMAP4HelperMixin, unittest.TestCase):
         wildcard, because a wildcard means "highest UID in the mailbox".
         """
         self.assertTrue(
-            self.server.search_UID(['1235:*'], self.seq, self.msg, (1234, 1)))
+            self.server.search_UID([b'1235:*'], self.seq, self.msg, (1234, 1)))
 
 
     def test_reversedSearchTerms(self):
@@ -1887,7 +3401,7 @@ class IMAP4ServerSearchTests(IMAP4HelperMixin, unittest.TestCase):
         L{imap4.IMAP4Server.search_SENTON} returns True if the message date is
         the same as the query date.
         """
-        msgset = imap4.parseIdList('4:2')
+        msgset = imap4.parseIdList(b'4:2')
         self.assertEqual(list(msgset), [2, 3, 4])
 
 
@@ -1991,11 +3505,34 @@ class IMAP4ServerSearchTests(IMAP4HelperMixin, unittest.TestCase):
 
 
 
+@implementer(IRealm)
 class TestRealm:
+    """
+    A L{IRealm} for tests.
+
+    @cvar theAccount: An C{Account} instance.  Tests can set this to
+        ensure predictable account retrieval.
+    """
     theAccount = None
 
+    def __init__(self, accountHolder=None):
+        """
+        Create a realm for testing.
+
+        @param accountHolder: (optional) An object whose C{theAccount}
+            attribute will be returned instead of
+            L{TestRealm.theAccount}.  Attribute access occurs on every
+            avatar request, so any modifications to
+            C{accountHolder.theAccount} will be reflected here.
+        """
+        if accountHolder:
+            self._getAccount = lambda: accountHolder.theAccount
+        else:
+            self._getAccount = lambda: self.theAccount
+
+
     def requestAvatar(self, avatarId, mind, *interfaces):
-        return imap4.IAccount, self.theAccount, lambda: None
+        return imap4.IAccount, self._getAccount(), lambda: None
 
 
 
@@ -2026,12 +3563,299 @@ class AuthenticatorTests(IMAP4HelperMixin, unittest.TestCase):
 
         realm = TestRealm()
         realm.theAccount = Account(b'testuser')
-        portal = Portal(realm)
-        portal.registerChecker(TestChecker())
-        self.server.portal = portal
+        self.portal = Portal(realm)
+        self.portal.registerChecker(TestChecker())
+        self.server.portal = self.portal
 
         self.authenticated = 0
         self.account = realm.theAccount
+
+
+    def test_customChallengers(self):
+        """
+        L{imap4.IMAP4Server} accepts a L{dict} mapping challenge type
+        names to L{twisted.mail.interfaces.IChallengeResponse}
+        providers.
+        """
+
+        @implementer(IChallengeResponse, IUsernamePassword)
+        class SPECIALAuth(object):
+
+            def getChallenge(self):
+                return b'SPECIAL'
+
+
+            def setResponse(self, response):
+                self.username, self.password = response.split(None, 1)
+
+
+            def moreChallenges(self):
+                return False
+
+
+            def checkPassword(self, password):
+                self.password = self.password
+
+        special = SPECIALAuth()
+        verifyObject(IChallengeResponse, special)
+
+        server = imap4.IMAP4Server({b'SPECIAL': SPECIALAuth})
+        server.portal = self.portal
+
+        transport = StringTransport()
+        server.makeConnection(transport)
+        self.addCleanup(server.connectionLost,
+                        error.ConnectionDone("Connection done."))
+
+        self.assertIn(b"AUTH=SPECIAL", transport.value())
+
+        transport.clear()
+        server.dataReceived(b'001 AUTHENTICATE SPECIAL\r\n')
+
+        self.assertIn(base64.b64encode(special.getChallenge()),
+                      transport.value())
+
+        transport.clear()
+        server.dataReceived(base64.b64encode(b'username password') + b'\r\n')
+
+        self.assertEqual(transport.value(),
+                         b"001 OK Authentication successful\r\n")
+
+
+    def test_unsupportedMethod(self):
+        """
+        An unsupported C{AUTHENTICATE} method results in a negative
+        response.
+        """
+        server = imap4.IMAP4Server()
+        server.portal = self.portal
+
+        transport = StringTransport()
+        server.makeConnection(transport)
+        self.addCleanup(server.connectionLost,
+                        error.ConnectionDone("Connection done."))
+
+        transport.clear()
+
+        server.dataReceived(b'001 AUTHENTICATE UNKNOWN\r\n')
+        self.assertEqual(transport.value(),
+                         b"001 NO AUTHENTICATE method unsupported\r\n")
+
+
+    def test_missingPortal(self):
+        """
+        An L{imap4.IMAP4Server} that is missing a L{Portal} responds
+        negatively to an authentication
+        """
+        self.server.challengers[b'LOGIN'] = imap4.LOGINCredentials
+
+        cAuth = imap4.LOGINAuthenticator(b'testuser')
+        self.client.registerAuthenticator(cAuth)
+
+        self.server.portal = None
+
+        def auth():
+            return self.client.authenticate(b'secret')
+
+        d = self.connected.addCallback(strip(auth))
+        d.addErrback(self.assertClientFailureMessage,
+                     b"Temporary authentication failure")
+        d.addCallbacks(self._cbStopClient, self._ebGeneral)
+
+        return defer.gatherResults([d, self.loopback()])
+
+
+    def test_challengerRaisesException(self):
+        """
+        When a challenger's
+        L{getChallenge<IChallengeResponse.getChallenge>} method raises
+        any exception, a C{NO} response is sent.
+        """
+
+        @implementer(IChallengeResponse)
+        class ValueErrorAuthChallenge(object):
+            message = b"A challenge failure"
+
+            def getChallenge(self):
+                raise ValueError(self.message)
+
+
+            def setResponse(self, response):
+                """
+                Never called.
+
+                @param response: See L{IChallengeResponse.setResponse}
+                """
+
+
+            def moreChallenges(self):
+                """
+                Never called.
+                """
+
+        @implementer(IClientAuthentication)
+        class ValueErrorAuthenticator(object):
+
+            def getName(self):
+                return b"ERROR"
+
+            def challengeResponse(self, secret, chal):
+                return b"IGNORED"
+
+        bad = ValueErrorAuthChallenge()
+        verifyObject(IChallengeResponse, bad)
+
+        self.server.challengers[b'ERROR'] = ValueErrorAuthChallenge
+        self.client.registerAuthenticator(ValueErrorAuthenticator())
+
+        def auth():
+            return self.client.authenticate(b'secret')
+
+        d = self.connected.addCallback(strip(auth))
+        d.addErrback(self.assertClientFailureMessage,
+                     ("Server error: "
+                      + str(ValueErrorAuthChallenge.message)).encode('ascii'))
+        d.addCallbacks(self._cbStopClient, self._ebGeneral)
+
+        return defer.gatherResults([d, self.loopback()])
+
+
+    def test_authNotBase64(self):
+        """
+        A client that responds with a challenge that cannot be decoded
+        as Base 64 receives an L{IllegalClientResponse}.
+        """
+        @implementer(IChallengeResponse)
+        class NotBase64AuthChallenge(object):
+            message = b"Malformed Response - not base64"
+
+            def getChallenge(self):
+                return b"SomeChallenge"
+
+
+            def setResponse(self, response):
+                """
+                Never called.
+
+                @param response: See L{IChallengeResponse.setResponse}
+                """
+
+
+            def moreChallenges(self):
+                """
+                Never called.
+                """
+
+        notBase64 = NotBase64AuthChallenge()
+        verifyObject(IChallengeResponse, notBase64)
+
+        server = imap4.IMAP4Server()
+        server.portal = self.portal
+        server.challengers[b'NOTBASE64'] = NotBase64AuthChallenge
+
+        transport = StringTransport()
+        server.makeConnection(transport)
+        self.addCleanup(server.connectionLost,
+                        error.ConnectionDone("Connection done."))
+
+        self.assertIn(b"AUTH=NOTBASE64", transport.value())
+
+        transport.clear()
+        server.dataReceived(b'001 AUTHENTICATE NOTBASE64\r\n')
+
+        self.assertIn(base64.b64encode(notBase64.getChallenge()),
+                      transport.value())
+
+        transport.clear()
+        server.dataReceived(b'\x00 Not base64\r\n')
+
+        self.assertEqual(transport.value(),
+                         b"".join([
+                             b"001 NO Authentication failed: ",
+                             notBase64.message,
+                             b"\r\n"]))
+
+
+    def test_unhandledCredentials(self):
+        """
+        A challenger that causes the login to fail
+        L{UnhandledCredentials} results in an C{NO} response.
+
+        @return: A L{Deferred} that fires when the authorization has
+            failed.
+        """
+        realm = TestRealm()
+        portal = Portal(realm)
+        # This portal has no checkers, so all logins will fail with
+        # UnhandledCredentials
+        self.server.portal = portal
+
+        self.server.challengers[b'LOGIN'] = loginCred = imap4.LOGINCredentials
+
+        verifyClass(IChallengeResponse, loginCred)
+
+        cAuth = imap4.LOGINAuthenticator(b'testuser')
+        self.client.registerAuthenticator(cAuth)
+
+        def auth():
+            return self.client.authenticate(b'secret')
+
+        d1 = self.connected.addCallback(strip(auth))
+        d1.addErrback(self.assertClientFailureMessage,
+                      b"Authentication failed: server misconfigured")
+        d1.addCallbacks(self._cbStopClient, self._ebGeneral)
+        d = defer.gatherResults([self.loopback(), d1])
+        return d
+
+
+    def test_unexpectedLoginFailure(self):
+        """
+        If the portal raises an exception other than
+        L{UnauthorizedLogin} or L{UnhandledCredentials}, the server
+        responds with a C{BAD} response and the exception is logged.
+        """
+
+        class UnexpectedException(Exception):
+            """
+            An unexpected exception.
+            """
+
+        class FailingChecker:
+            """
+            A credentials checker whose L{requestAvatarId} method
+            raises L{UnexpectedException}.
+            """
+            credentialInterfaces = (IUsernameHashedPassword,
+                                    IUsernamePassword)
+
+            def requestAvatarId(self, credentials):
+                raise UnexpectedException("Unexpected error.")
+
+        realm = TestRealm()
+        portal = Portal(realm)
+        portal.registerChecker(FailingChecker())
+        self.server.portal = portal
+
+        self.server.challengers[b'LOGIN'] = loginCred = imap4.LOGINCredentials
+
+        verifyClass(IChallengeResponse, loginCred)
+
+        cAuth = imap4.LOGINAuthenticator(b'testuser')
+        self.client.registerAuthenticator(cAuth)
+
+        def auth():
+            return self.client.authenticate(b'secret')
+
+        def assertUnexpectedExceptionLogged():
+            self.assertTrue(self.flushLoggedErrors(UnexpectedException))
+
+        d1 = self.connected.addCallback(strip(auth))
+        d1.addErrback(self.assertClientFailureMessage,
+                      b"Server error: login failed unexpectedly")
+        d1.addCallback(strip(assertUnexpectedExceptionLogged))
+        d1.addCallbacks(self._cbStopClient, self._ebGeneral)
+        d = defer.gatherResults([self.loopback(), d1])
+        return d
 
 
     def testCramMD5(self):
@@ -2082,7 +3906,10 @@ class AuthenticatorTests(IMAP4HelperMixin, unittest.TestCase):
 
 
     def testLOGIN(self):
-        self.server.challengers[b'LOGIN'] = imap4.LOGINCredentials
+        self.server.challengers[b'LOGIN'] = loginCred = imap4.LOGINCredentials
+
+        verifyClass(IChallengeResponse, loginCred)
+
         cAuth = imap4.LOGINAuthenticator(b'testuser')
         self.client.registerAuthenticator(cAuth)
 
@@ -2132,7 +3959,10 @@ class AuthenticatorTests(IMAP4HelperMixin, unittest.TestCase):
 
 
     def testPLAIN(self):
-        self.server.challengers[b'PLAIN'] = imap4.PLAINCredentials
+        self.server.challengers[b'PLAIN'] = plainCred = imap4.PLAINCredentials
+
+        verifyClass(IChallengeResponse, plainCred)
+
         cAuth = imap4.PLAINAuthenticator(b'testuser')
         self.client.registerAuthenticator(cAuth)
 
@@ -2246,7 +4076,7 @@ class UnsolicitedResponseTests(IMAP4HelperMixin, unittest.TestCase):
 
     def _cbTestReadWrite(self, ignored):
         E = self.client.events
-        self.assertEqual(E, [[b'modeChanged', 1]])
+        self.assertEqual(E, [['modeChanged', 1]])
 
 
     def testReadOnly(self):
@@ -2263,14 +4093,14 @@ class UnsolicitedResponseTests(IMAP4HelperMixin, unittest.TestCase):
 
     def _cbTestReadOnly(self, ignored):
         E = self.client.events
-        self.assertEqual(E, [[b'modeChanged', 0]])
+        self.assertEqual(E, [['modeChanged', 0]])
 
 
     def testFlagChange(self):
         flags = {
-            1: [b'\\Answered', b'\\Deleted'],
+            1: ['\\Answered', '\\Deleted'],
             5: [],
-            10: [b'\\Recent']
+            10: ['\\Recent']
         }
         def login():
             return self.client.login(b'testuser', b'password-test')
@@ -2285,9 +4115,9 @@ class UnsolicitedResponseTests(IMAP4HelperMixin, unittest.TestCase):
 
     def _cbTestFlagChange(self, ignored, flags):
         E = self.client.events
-        expect = [[b'flagsChanged', {x[0]: x[1]}] for x in flags.items()]
-        E.sort()
-        expect.sort()
+        expect = [['flagsChanged', {x[0]: x[1]}] for x in flags.items()]
+        E.sort(key=lambda o: o[0])
+        expect.sort(key=lambda o: o[0])
         self.assertEqual(E, expect)
 
 
@@ -2305,7 +4135,7 @@ class UnsolicitedResponseTests(IMAP4HelperMixin, unittest.TestCase):
 
     def _cbTestNewMessages(self, ignored):
         E = self.client.events
-        self.assertEqual(E, [[b'newMessages', 10, None]])
+        self.assertEqual(E, [['newMessages', 10, None]])
 
 
     def testNewRecentMessages(self):
@@ -2322,7 +4152,7 @@ class UnsolicitedResponseTests(IMAP4HelperMixin, unittest.TestCase):
 
     def _cbTestNewRecentMessages(self, ignored):
         E = self.client.events
-        self.assertEqual(E, [[b'newMessages', None, 10]])
+        self.assertEqual(E, [['newMessages', None, 10]])
 
 
     def testNewMessagesAndRecent(self):
@@ -2340,7 +4170,7 @@ class UnsolicitedResponseTests(IMAP4HelperMixin, unittest.TestCase):
 
     def _cbTestNewMessagesAndRecent(self, ignored):
         E = self.client.events
-        self.assertEqual(E, [[b'newMessages', 20, None], [b'newMessages', None, 10]])
+        self.assertEqual(E, [['newMessages', 20, None], ['newMessages', None, 10]])
 
 
 
@@ -2439,11 +4269,17 @@ class HandCraftedTests(IMAP4HelperMixin, unittest.TestCase):
         c.makeConnection(transport)
         c.lineReceived(b'* OK [IMAP4rev1]')
 
+        def cbCheckTransport(ignored):
+            self.assertEqual(
+                transport.value().splitlines()[-1],
+                b"0003 FETCH 1 (RFC822)",
+            )
 
         def cbSelect(ignored):
             d = c.fetchMessage('1')
             c.dataReceived(b'* 1 FETCH (RFC822 {10}\r\n0123456789\r\n RFC822.SIZE 10)\r\n')
             c.dataReceived(b'0003 OK FETCH\r\n')
+            d.addCallback(cbCheckTransport)
             return d
 
 
@@ -2453,13 +4289,17 @@ class HandCraftedTests(IMAP4HelperMixin, unittest.TestCase):
             d.addCallback(cbSelect)
             return d
 
-        d = c.login('blah', 'blah')
+        d = c.login(b'blah', b'blah')
         c.dataReceived(b'0001 OK LOGIN\r\n')
         d.addCallback(cbLogin)
         return d
 
 
-    def testPathelogicalScatteringOfLiterals(self):
+    def test_fragmentedStringLiterals(self):
+        """
+        String literals whose data is not immediately available are
+        parsed.
+        """
         self.server.checker.addUser(b'testuser', b'password-test')
         transport = StringTransport()
         self.server.makeConnection(transport)
@@ -2473,7 +4313,30 @@ class HandCraftedTests(IMAP4HelperMixin, unittest.TestCase):
         self.assertEqual(transport.value(), b"+ Ready for 13 octets of text\r\n")
 
         transport.clear()
-        self.server.dataReceived(b"password-test\r\n")
+        self.server.dataReceived(b"password")
+        self.assertNot(transport.value())
+        self.server.dataReceived(b"-test\r\n")
+        self.assertEqual(transport.value(), b"01 OK LOGIN succeeded\r\n")
+        self.assertEqual(self.server.state, 'auth')
+
+        self.server.connectionLost(error.ConnectionDone("Connection done."))
+
+
+    def test_emptyStringLiteral(self):
+        """
+        Empty string literals are parsed.
+        """
+        self.server.checker.users = {b"": b""}
+        transport = StringTransport()
+        self.server.makeConnection(transport)
+
+        transport.clear()
+        self.server.dataReceived(b"01 LOGIN {0}\r\n")
+        self.assertEqual(transport.value(),
+                         b"+ Ready for 0 octets of text\r\n")
+
+        transport.clear()
+        self.server.dataReceived(b"{0}\r\n")
         self.assertEqual(transport.value(), b"01 OK LOGIN succeeded\r\n")
         self.assertEqual(self.server.state, 'auth')
 
@@ -2494,7 +4357,7 @@ class HandCraftedTests(IMAP4HelperMixin, unittest.TestCase):
         c.lineReceived(b'* OK [IMAP4rev1]')
 
         def login():
-            d = c.login('blah', 'blah')
+            d = c.login(b'blah', b'blah')
             c.dataReceived(b'0001 OK LOGIN\r\n')
             return d
         def select():
@@ -2502,9 +4365,9 @@ class HandCraftedTests(IMAP4HelperMixin, unittest.TestCase):
             c.lineReceived(b'0002 OK SELECT')
             return d
         def fetch():
-            d = c.fetchSpecific(b'1:*',
-                headerType = b'HEADER.FIELDS',
-                headerArgs = [b'SUBJECT'])
+            d = c.fetchSpecific('1:*',
+                headerType = 'HEADER.FIELDS',
+                headerArgs = ['SUBJECT'])
             c.dataReceived(b'* 1 FETCH (BODY[HEADER.FIELDS ("SUBJECT")] {38}\r\n')
             c.dataReceived(b'Subject: Suprise for your woman...\r\n')
             c.dataReceived(b'\r\n')
@@ -2517,11 +4380,16 @@ class HandCraftedTests(IMAP4HelperMixin, unittest.TestCase):
             c.dataReceived(b'0003 OK FETCH completed\r\n')
             return d
         def test(res):
+            self.assertEqual(
+                transport.value().splitlines()[-1],
+                b"0003 FETCH 1:* BODY[HEADER.FIELDS (SUBJECT)]",
+            )
+
             self.assertEqual(res, {
-                1: [[b'BODY', ['HEADER.FIELDS', ['SUBJECT']],
-                    b'Subject: Suprise for your woman...\r\n\r\n']],
-                2: [[b'BODY', [b'HEADER.FIELDS', [b'SUBJECT']],
-                    b'Subject: What you been doing. Order your meds here . ,. handcuff madsen\r\n\r\n']]
+                1: [['BODY', ['HEADER.FIELDS', ['SUBJECT']],
+                    'Subject: Suprise for your woman...\r\n\r\n']],
+                2: [['BODY', ['HEADER.FIELDS', ['SUBJECT']],
+                    'Subject: What you been doing. Order your meds here . ,. handcuff madsen\r\n\r\n']]
             })
 
             self.assertEqual(c.flags, {1: ['\\Seen']})
@@ -2552,16 +4420,20 @@ class HandCraftedTests(IMAP4HelperMixin, unittest.TestCase):
             protocol.lineReceived(b'0002 OK SELECT')
             return d
         def fetch():
-            d = protocol.fetchSpecific(b'1:*',
-                headerType=b'HEADER.FIELDS',
-                headerArgs=[b'SUBJECT'])
+            d = protocol.fetchSpecific('1:*',
+                headerType='HEADER.FIELDS',
+                headerArgs=['SUBJECT'])
             protocol.dataReceived(
                 b'* 1 FETCH (BODY[HEADER.FIELDS ({7}\r\nSUBJECT)] "Hello")\r\n')
             protocol.dataReceived(b'0003 OK FETCH completed\r\n')
             return d
         def test(result):
             self.assertEqual(
-                result,  {1: [[b'BODY', [b'HEADER.FIELDS', [b'SUBJECT']], b'Hello']]})
+                transport.value().splitlines()[-1],
+                b"0003 FETCH 1:* BODY[HEADER.FIELDS (SUBJECT)]",
+            )
+            self.assertEqual(
+                result,  {1: [['BODY', ['HEADER.FIELDS', ['SUBJECT']], 'Hello']]})
 
         d = login()
         d.addCallback(strip(select))
@@ -2583,7 +4455,7 @@ class HandCraftedTests(IMAP4HelperMixin, unittest.TestCase):
         protocol.lineReceived(b'* OK [IMAP4rev1]')
 
         def login():
-            d = protocol.login('blah', 'blah')
+            d = protocol.login(b'blah', b'blah')
             protocol.dataReceived(b'0001 OK LOGIN\r\n')
             return d
         def select():
@@ -2592,9 +4464,15 @@ class HandCraftedTests(IMAP4HelperMixin, unittest.TestCase):
             return d
         def fetch():
             protocol.fetchSpecific(
-                b'1:*',
-                headerType=b'HEADER.FIELDS',
-                headerArgs=[b'SUBJECT'])
+                '1:*',
+                headerType='HEADER.FIELDS',
+                headerArgs=['SUBJECT'])
+
+            self.assertEqual(
+                transport.value().splitlines()[-1],
+                b"0003 FETCH 1:* BODY[HEADER.FIELDS (SUBJECT)]",
+            )
+
             self.assertRaises(
                 imap4.IllegalServerResponse,
                 protocol.dataReceived,
@@ -2619,7 +4497,7 @@ class HandCraftedTests(IMAP4HelperMixin, unittest.TestCase):
 
 
         def login():
-            d = c.login('blah', 'blah')
+            d = c.login(b'blah', b'blah')
             c.dataReceived(b'0001 OK LOGIN\r\n')
             return d
 
@@ -2632,8 +4510,8 @@ class HandCraftedTests(IMAP4HelperMixin, unittest.TestCase):
 
         def fetch():
             d = c.fetchSpecific(b'1:*',
-                headerType=b'HEADER.FIELDS',
-                headerArgs=[b'SUBJECT'])
+                headerType='HEADER.FIELDS',
+                headerArgs=['SUBJECT'])
             # This response includes FLAGS after the requested data.
             c.dataReceived(b'* 1 FETCH (BODY[HEADER.FIELDS ("SUBJECT")] {22}\r\n')
             c.dataReceived(b'Subject: subject one\r\n')
@@ -2649,9 +4527,9 @@ class HandCraftedTests(IMAP4HelperMixin, unittest.TestCase):
         def test(res):
             self.assertEqual(res, {
                 1: [['BODY', ['HEADER.FIELDS', ['SUBJECT']],
-                    'Subject: subject one\r\n']],
+                     'Subject: subject one\r\n']],
                 2: [['BODY', ['HEADER.FIELDS', ['SUBJECT']],
-                    'Subject: subject two\r\n']]
+                     'Subject: subject two\r\n']]
             })
 
             self.assertEqual(c.flags, {1: ['\\Recent'], 2: ['\\Seen']})
@@ -2675,7 +4553,7 @@ class HandCraftedTests(IMAP4HelperMixin, unittest.TestCase):
         c.lineReceived(b'* OK [IMAP4rev1]')
 
         def login():
-            d = c.login('blah', 'blah')
+            d = c.login(b'blah', b'blah')
             c.dataReceived(b'0001 OK LOGIN\r\n')
             return d
         def select():
@@ -2695,6 +4573,11 @@ class HandCraftedTests(IMAP4HelperMixin, unittest.TestCase):
 
 
         def test(res):
+            self.assertEqual(
+                transport.value().splitlines()[-1],
+                b'0003 FETCH 1:* (RFC822)',
+                )
+
             self.assertEqual(res, {
                 1: {'RFC822': 'Subject: first subject\r\n'},
                 2: {'RFC822': 'Subject: second subject\r\n'}})
@@ -2734,19 +4617,23 @@ class HandCraftedTests(IMAP4HelperMixin, unittest.TestCase):
         # This should not really be logged.  See #6021.
         logged = self.flushLoggedErrors(imap4.IllegalServerResponse)
         self.assertEqual(len(logged), 1)
-        self.assertEqual(logged[0].value.args[0], "Something bad! and bad")
+        self.assertEqual(logged[0].value.args[0], b"Something bad! and bad")
         return d
 
 
 
-class PreauthIMAP4ClientMixin:
+class PreauthIMAP4ClientMixin(object):
     """
-    Mixin for L{unittest.TestCase} subclasses which provides a C{setUp} method
-    which creates an L{IMAP4Client} connected to a L{StringTransport} and puts
-    it into the I{authenticated} state.
+    Mixin for L{unittest.SynchronousTestCase} subclasses which
+    provides a C{setUp} method which creates an L{IMAP4Client}
+    connected to a L{StringTransport} and puts it into the
+    I{authenticated} state.
 
-    @ivar transport: A L{StringTransport} to which C{client} is connected.
-    @ivar client: An L{IMAP4Client} which is connected to C{transport}.
+    @ivar transport: A L{StringTransport} to which C{client} is
+        connected.
+
+    @ivar client: An L{IMAP4Client} which is connected to
+        C{transport}.
     """
     clientProtocol = imap4.IMAP4Client
 
@@ -2759,22 +4646,6 @@ class PreauthIMAP4ClientMixin:
         self.client = self.clientProtocol()
         self.client.makeConnection(self.transport)
         self.client.dataReceived(b'* PREAUTH Hello unittest\r\n')
-
-
-    def _extractDeferredResult(self, d):
-        """
-        Synchronously extract the result of the given L{Deferred}.  Fail the
-        test if that is not possible.
-        """
-        result = []
-        error = []
-        d.addCallbacks(result.append, error.append)
-        if result:
-            return result[0]
-        elif error:
-            error[0].raiseException()
-        else:
-            self.fail("Expected result not available")
 
 
 
@@ -2805,7 +4676,7 @@ class SelectionTestsMixin(PreauthIMAP4ClientMixin):
         for line in lines:
             self.client.dataReceived(line + b'\r\n')
         self.client.dataReceived(
-            b'0001 OK [READ-ONLY] %s completed\r\n' % (self.command,))
+            b'0001 OK [READ-ONLY] ' + self.command + b' completed\r\n')
 
 
     def test_exists(self):
@@ -2816,9 +4687,9 @@ class SelectionTestsMixin(PreauthIMAP4ClientMixin):
         associated with the C{'EXISTS'} key.
         """
         d = self._examineOrSelect()
-        self._response('* 3 EXISTS')
+        self._response(b'* 3 EXISTS')
         self.assertEqual(
-            self._extractDeferredResult(d),
+            self.successResultOf(d),
             {'READ-WRITE': False, 'EXISTS': 3})
 
 
@@ -2830,9 +4701,8 @@ class SelectionTestsMixin(PreauthIMAP4ClientMixin):
         L{IllegalServerResponse}.
         """
         d = self._examineOrSelect()
-        self._response('* foo EXISTS')
-        self.assertRaises(
-            imap4.IllegalServerResponse, self._extractDeferredResult, d)
+        self._response(b'* foo EXISTS')
+        self.failureResultOf(d, imap4.IllegalServerResponse)
 
 
     def test_recent(self):
@@ -2843,9 +4713,9 @@ class SelectionTestsMixin(PreauthIMAP4ClientMixin):
         associated with the C{'RECENT'} key.
         """
         d = self._examineOrSelect()
-        self._response('* 5 RECENT')
+        self._response(b'* 5 RECENT')
         self.assertEqual(
-            self._extractDeferredResult(d),
+            self.successResultOf(d),
             {'READ-WRITE': False, 'RECENT': 5})
 
 
@@ -2857,9 +4727,8 @@ class SelectionTestsMixin(PreauthIMAP4ClientMixin):
         L{IllegalServerResponse}.
         """
         d = self._examineOrSelect()
-        self._response('* foo RECENT')
-        self.assertRaises(
-            imap4.IllegalServerResponse, self._extractDeferredResult, d)
+        self._response(b'* foo RECENT')
+        self.failureResultOf(d, imap4.IllegalServerResponse)
 
 
     def test_unseen(self):
@@ -2870,9 +4739,9 @@ class SelectionTestsMixin(PreauthIMAP4ClientMixin):
         associated with the C{'UNSEEN'} key.
         """
         d = self._examineOrSelect()
-        self._response('* OK [UNSEEN 8] Message 8 is first unseen')
+        self._response(b'* OK [UNSEEN 8] Message 8 is first unseen')
         self.assertEqual(
-            self._extractDeferredResult(d),
+            self.successResultOf(d),
             {'READ-WRITE': False, 'UNSEEN': 8})
 
 
@@ -2884,9 +4753,8 @@ class SelectionTestsMixin(PreauthIMAP4ClientMixin):
         L{IllegalServerResponse}.
         """
         d = self._examineOrSelect()
-        self._response('* OK [UNSEEN foo] Message foo is first unseen')
-        self.assertRaises(
-            imap4.IllegalServerResponse, self._extractDeferredResult, d)
+        self._response(b'* OK [UNSEEN foo] Message foo is first unseen')
+        self.failureResultOf(d, imap4.IllegalServerResponse)
 
 
     def test_uidvalidity(self):
@@ -2897,9 +4765,9 @@ class SelectionTestsMixin(PreauthIMAP4ClientMixin):
         including the value associated with the C{'UIDVALIDITY'} key.
         """
         d = self._examineOrSelect()
-        self._response('* OK [UIDVALIDITY 12345] UIDs valid')
+        self._response(b'* OK [UIDVALIDITY 12345] UIDs valid')
         self.assertEqual(
-            self._extractDeferredResult(d),
+            self.successResultOf(d),
             {'READ-WRITE': False, 'UIDVALIDITY': 12345})
 
 
@@ -2911,9 +4779,8 @@ class SelectionTestsMixin(PreauthIMAP4ClientMixin):
         L{IllegalServerResponse}.
         """
         d = self._examineOrSelect()
-        self._response('* OK [UIDVALIDITY foo] UIDs valid')
-        self.assertRaises(
-            imap4.IllegalServerResponse, self._extractDeferredResult, d)
+        self._response(b'* OK [UIDVALIDITY foo] UIDs valid')
+        self.failureResultOf(d, imap4.IllegalServerResponse)
 
 
     def test_uidnext(self):
@@ -2924,9 +4791,9 @@ class SelectionTestsMixin(PreauthIMAP4ClientMixin):
         associated with the C{'UIDNEXT'} key.
         """
         d = self._examineOrSelect()
-        self._response('* OK [UIDNEXT 4392] Predicted next UID')
+        self._response(b'* OK [UIDNEXT 4392] Predicted next UID')
         self.assertEqual(
-            self._extractDeferredResult(d),
+            self.successResultOf(d),
             {'READ-WRITE': False, 'UIDNEXT': 4392})
 
 
@@ -2938,9 +4805,8 @@ class SelectionTestsMixin(PreauthIMAP4ClientMixin):
         L{IllegalServerResponse}.
         """
         d = self._examineOrSelect()
-        self._response('* OK [UIDNEXT foo] Predicted next UID')
-        self.assertRaises(
-            imap4.IllegalServerResponse, self._extractDeferredResult, d)
+        self._response(b'* OK [UIDNEXT foo] Predicted next UID')
+        self.failureResultOf(d, imap4.IllegalServerResponse)
 
 
     def test_flags(self):
@@ -2952,9 +4818,9 @@ class SelectionTestsMixin(PreauthIMAP4ClientMixin):
         """
         d = self._examineOrSelect()
         self._response(
-            '* FLAGS (\\Answered \\Flagged \\Deleted \\Seen \\Draft)')
+            b'* FLAGS (\\Answered \\Flagged \\Deleted \\Seen \\Draft)')
         self.assertEqual(
-            self._extractDeferredResult(d), {
+            self.successResultOf(d), {
                 'READ-WRITE': False,
                 'FLAGS': ('\\Answered', '\\Flagged', '\\Deleted', '\\Seen',
                           '\\Draft')})
@@ -2969,10 +4835,10 @@ class SelectionTestsMixin(PreauthIMAP4ClientMixin):
         """
         d = self._examineOrSelect()
         self._response(
-            '* OK [PERMANENTFLAGS (\\Starred)] Just one permanent flag in '
-            'that list up there')
+            b'* OK [PERMANENTFLAGS (\\Starred)] Just one permanent flag in '
+            b'that list up there')
         self.assertEqual(
-            self._extractDeferredResult(d), {
+            self.successResultOf(d), {
                 'READ-WRITE': False,
                 'PERMANENTFLAGS': ('\\Starred',)})
 
@@ -2984,11 +4850,11 @@ class SelectionTestsMixin(PreauthIMAP4ClientMixin):
         """
         d = self._examineOrSelect()
         self._response(
-            '* OK [X-MADE-UP] I just made this response text up.')
+            b'* OK [X-MADE-UP] I just made this response text up.')
         # The value won't show up in the result.  It would be okay if it did
         # someday, perhaps.  This shouldn't ever happen, though.
         self.assertEqual(
-            self._extractDeferredResult(d), {'READ-WRITE': False})
+            self.successResultOf(d), {'READ-WRITE': False})
 
 
     def test_bareOk(self):
@@ -2997,13 +4863,14 @@ class SelectionTestsMixin(PreauthIMAP4ClientMixin):
         I{OK} with no response code text, parsing does not fail.
         """
         d = self._examineOrSelect()
-        self._response('* OK')
+        self._response(b'* OK')
         self.assertEqual(
-            self._extractDeferredResult(d), {'READ-WRITE': False})
+            self.successResultOf(d), {'READ-WRITE': False})
 
 
 
-class IMAP4ClientExamineTests(SelectionTestsMixin, unittest.TestCase):
+class IMAP4ClientExamineTests(SelectionTestsMixin,
+                              unittest.SynchronousTestCase):
     """
     Tests for the L{IMAP4Client.examine} method.
 
@@ -3019,11 +4886,12 @@ class IMAP4ClientExamineTests(SelectionTestsMixin, unittest.TestCase):
         S: A932 OK [READ-ONLY] EXAMINE completed
     """
     method = 'examine'
-    command = 'EXAMINE'
+    command = b'EXAMINE'
 
 
 
-class IMAP4ClientSelectTests(SelectionTestsMixin, unittest.TestCase):
+class IMAP4ClientSelectTests(SelectionTestsMixin,
+                             unittest.SynchronousTestCase):
     """
     Tests for the L{IMAP4Client.select} method.
 
@@ -3040,11 +4908,12 @@ class IMAP4ClientSelectTests(SelectionTestsMixin, unittest.TestCase):
         S: A142 OK [READ-WRITE] SELECT completed
     """
     method = 'select'
-    command = 'SELECT'
+    command = b'SELECT'
 
 
 
-class IMAP4ClientExpungeTests(PreauthIMAP4ClientMixin, unittest.TestCase):
+class IMAP4ClientExpungeTests(PreauthIMAP4ClientMixin,
+                              unittest.SynchronousTestCase):
     """
     Tests for the L{IMAP4Client.expunge} method.
 
@@ -3066,7 +4935,7 @@ class IMAP4ClientExpungeTests(PreauthIMAP4ClientMixin, unittest.TestCase):
 
     def _response(self, sequenceNumbers):
         for number in sequenceNumbers:
-            self.client.lineReceived(b'* %s EXPUNGE' % (number,))
+            self.client.lineReceived(networkString('* %s EXPUNGE' % (number,)))
         self.client.lineReceived(b'0001 OK EXPUNGE COMPLETED')
 
 
@@ -3078,7 +4947,7 @@ class IMAP4ClientExpungeTests(PreauthIMAP4ClientMixin, unittest.TestCase):
         """
         d = self._expunge()
         self._response([3, 3, 5, 8])
-        self.assertEqual(self._extractDeferredResult(d), [3, 3, 5, 8])
+        self.assertEqual(self.successResultOf(d), [3, 3, 5, 8])
 
 
     def test_nonIntegerExpunged(self):
@@ -3089,12 +4958,12 @@ class IMAP4ClientExpungeTests(PreauthIMAP4ClientMixin, unittest.TestCase):
         """
         d = self._expunge()
         self._response([3, 3, 'foo', 8])
-        self.assertRaises(
-            imap4.IllegalServerResponse, self._extractDeferredResult, d)
+        self.failureResultOf(d, imap4.IllegalServerResponse)
 
 
 
-class IMAP4ClientSearchTests(PreauthIMAP4ClientMixin, unittest.TestCase):
+class IMAP4ClientSearchTests(PreauthIMAP4ClientMixin,
+                             unittest.SynchronousTestCase):
     """
     Tests for the L{IMAP4Client.search} method.
 
@@ -3120,7 +4989,7 @@ class IMAP4ClientSearchTests(PreauthIMAP4ClientMixin, unittest.TestCase):
 
     def _response(self, messageNumbers):
         self.client.lineReceived(
-            b"* SEARCH " + b" ".join(map(str, messageNumbers)))
+            b"* SEARCH " + networkString(" ".join(map(str, messageNumbers))))
         self.client.lineReceived(b"0001 OK SEARCH completed")
 
 
@@ -3132,7 +5001,7 @@ class IMAP4ClientSearchTests(PreauthIMAP4ClientMixin, unittest.TestCase):
         """
         d = self._search()
         self._response([2, 5, 10])
-        self.assertEqual(self._extractDeferredResult(d), [2, 5, 10])
+        self.assertEqual(self.successResultOf(d), [2, 5, 10])
 
 
     def test_nonIntegerFound(self):
@@ -3143,12 +5012,12 @@ class IMAP4ClientSearchTests(PreauthIMAP4ClientMixin, unittest.TestCase):
         """
         d = self._search()
         self._response([2, "foo", 10])
-        self.assertRaises(
-            imap4.IllegalServerResponse, self._extractDeferredResult, d)
+        self.failureResultOf(d, imap4.IllegalServerResponse)
 
 
 
-class IMAP4ClientFetchTests(PreauthIMAP4ClientMixin, unittest.TestCase):
+class IMAP4ClientFetchTests(PreauthIMAP4ClientMixin,
+                            unittest.SynchronousTestCase):
     """
     Tests for the L{IMAP4Client.fetch} method.
 
@@ -3161,7 +5030,7 @@ class IMAP4ClientFetchTests(PreauthIMAP4ClientMixin, unittest.TestCase):
         to C{dict}s mapping C{'UID'} to that message's I{UID} in the server's
         response.
         """
-        d = self.client.fetchUID(b'1:7')
+        d = self.client.fetchUID('1:7')
         self.assertEqual(self.transport.value(), b'0001 FETCH 1:7 (UID)\r\n')
         self.client.lineReceived(b'* 2 FETCH (UID 22)')
         self.client.lineReceived(b'* 3 FETCH (UID 23)')
@@ -3169,7 +5038,7 @@ class IMAP4ClientFetchTests(PreauthIMAP4ClientMixin, unittest.TestCase):
         self.client.lineReceived(b'* 5 FETCH (UID 25)')
         self.client.lineReceived(b'0001 OK FETCH completed')
         self.assertEqual(
-            self._extractDeferredResult(d), {
+            self.successResultOf(d), {
                 2: {'UID': '22'},
                 3: {'UID': '23'},
                 4: {'UID': '24'},
@@ -3182,12 +5051,11 @@ class IMAP4ClientFetchTests(PreauthIMAP4ClientMixin, unittest.TestCase):
         number is expected, the L{Deferred} returned by L{IMAP4Client.fetchUID}
         fails with L{IllegalServerResponse}.
         """
-        d = self.client.fetchUID(b'1')
+        d = self.client.fetchUID('1')
         self.assertEqual(self.transport.value(), b'0001 FETCH 1 (UID)\r\n')
-        self.client.lineReceived('* foo FETCH (UID 22)')
-        self.client.lineReceived('0001 OK FETCH completed')
-        self.assertRaises(
-            imap4.IllegalServerResponse, self._extractDeferredResult, d)
+        self.client.lineReceived(b'* foo FETCH (UID 22)')
+        self.client.lineReceived(b'0001 OK FETCH completed')
+        self.failureResultOf(d, imap4.IllegalServerResponse)
 
 
     def test_incompleteFetchUIDResponse(self):
@@ -3196,14 +5064,13 @@ class IMAP4ClientFetchTests(PreauthIMAP4ClientMixin, unittest.TestCase):
         L{Deferred} returned by L{IMAP4Client.fetchUID} fails with
         L{IllegalServerResponse}.
         """
-        d = self.client.fetchUID(b'1:7')
+        d = self.client.fetchUID('1:7')
         self.assertEqual(self.transport.value(), b'0001 FETCH 1:7 (UID)\r\n')
         self.client.lineReceived(b'* 2 FETCH (UID 22)')
         self.client.lineReceived(b'* 3 FETCH (UID)')
         self.client.lineReceived(b'* 4 FETCH (UID 24)')
         self.client.lineReceived(b'0001 OK FETCH completed')
-        self.assertRaises(
-            imap4.IllegalServerResponse, self._extractDeferredResult, d)
+        self.failureResultOf(d, imap4.IllegalServerResponse)
 
 
     def test_fetchBody(self):
@@ -3213,14 +5080,14 @@ class IMAP4ClientFetchTests(PreauthIMAP4ClientMixin, unittest.TestCase):
         to C{dict}s mapping C{'RFC822.TEXT'} to that message's body as given in
         the server's response.
         """
-        d = self.client.fetchBody(b'3')
+        d = self.client.fetchBody('3')
         self.assertEqual(
             self.transport.value(), b'0001 FETCH 3 (RFC822.TEXT)\r\n')
         self.client.lineReceived(b'* 3 FETCH (RFC822.TEXT "Message text")')
         self.client.lineReceived(b'0001 OK FETCH completed')
         self.assertEqual(
-            self._extractDeferredResult(d),
-            {3: {b'RFC822.TEXT': b'Message text'}})
+            self.successResultOf(d),
+            {3: {'RFC822.TEXT': 'Message text'}})
 
 
     def test_fetchSpecific(self):
@@ -3231,13 +5098,13 @@ class IMAP4ClientFetchTests(PreauthIMAP4ClientMixin, unittest.TestCase):
         to C{list}s of corresponding message data given by the server's
         response.
         """
-        d = self.client.fetchSpecific(b'7')
+        d = self.client.fetchSpecific('7')
         self.assertEqual(
             self.transport.value(), b'0001 FETCH 7 BODY[]\r\n')
         self.client.lineReceived(b'* 7 FETCH (BODY[] "Some body")')
         self.client.lineReceived(b'0001 OK FETCH completed')
         self.assertEqual(
-            self._extractDeferredResult(d), {7: [['BODY', [], "Some body"]]})
+            self.successResultOf(d), {7: [['BODY', [], "Some body"]]})
 
 
     def test_fetchSpecificPeek(self):
@@ -3245,14 +5112,14 @@ class IMAP4ClientFetchTests(PreauthIMAP4ClientMixin, unittest.TestCase):
         L{IMAP4Client.fetchSpecific} issues a I{BODY.PEEK[]} command if passed
         C{True} for the C{peek} parameter.
         """
-        d = self.client.fetchSpecific(b'6', peek=True)
+        d = self.client.fetchSpecific('6', peek=True)
         self.assertEqual(
             self.transport.value(), b'0001 FETCH 6 BODY.PEEK[]\r\n')
         # BODY.PEEK responses are just BODY
         self.client.lineReceived(b'* 6 FETCH (BODY[] "Some body")')
         self.client.lineReceived(b'0001 OK FETCH completed')
         self.assertEqual(
-            self._extractDeferredResult(d), {6: [['BODY', [], "Some body"]]})
+            self.successResultOf(d), {6: [['BODY', [], "Some body"]]})
 
 
     def test_fetchSpecificNumbered(self):
@@ -3263,13 +5130,13 @@ class IMAP4ClientFetchTests(PreauthIMAP4ClientMixin, unittest.TestCase):
         to C{list}s of corresponding message data given by the server's
         response.
         """
-        d = self.client.fetchSpecific(b'7', headerNumber=(1, 2, 3))
+        d = self.client.fetchSpecific('7', headerNumber=(1, 2, 3))
         self.assertEqual(
             self.transport.value(), b'0001 FETCH 7 BODY[1.2.3]\r\n')
         self.client.lineReceived(b'* 7 FETCH (BODY[1.2.3] "Some body")')
         self.client.lineReceived(b'0001 OK FETCH completed')
         self.assertEqual(
-            self._extractDeferredResult(d),
+            self.successResultOf(d),
             {7: [['BODY', ['1.2.3'], "Some body"]]})
 
 
@@ -3280,14 +5147,14 @@ class IMAP4ClientFetchTests(PreauthIMAP4ClientMixin, unittest.TestCase):
         with a C{dict} mapping message sequence numbers to C{list}s of
         corresponding message data given by the server's response.
         """
-        d = self.client.fetchSpecific(b'8', headerType=b'TEXT')
+        d = self.client.fetchSpecific('8', headerType='TEXT')
         self.assertEqual(
             self.transport.value(), b'0001 FETCH 8 BODY[TEXT]\r\n')
         self.client.lineReceived(b'* 8 FETCH (BODY[TEXT] "Some body")')
         self.client.lineReceived(b'0001 OK FETCH completed')
         self.assertEqual(
-            self._extractDeferredResult(d),
-            {8: [[b'BODY', [b'TEXT'], b"Some body"]]})
+            self.successResultOf(d),
+            {8: [['BODY', ['TEXT'], "Some body"]]})
 
 
     def test_fetchSpecificNumberedText(self):
@@ -3298,13 +5165,13 @@ class IMAP4ClientFetchTests(PreauthIMAP4ClientMixin, unittest.TestCase):
         a C{dict} mapping message sequence numbers to C{list}s of message data
         given by the server's response.
         """
-        d = self.client.fetchSpecific(b'4', headerType=b'TEXT', headerNumber=7)
+        d = self.client.fetchSpecific('4', headerType='TEXT', headerNumber=7)
         self.assertEqual(
             self.transport.value(), b'0001 FETCH 4 BODY[7.TEXT]\r\n')
         self.client.lineReceived(b'* 4 FETCH (BODY[7.TEXT] "Some body")')
         self.client.lineReceived(b'0001 OK FETCH completed')
         self.assertEqual(
-            self._extractDeferredResult(d),
+            self.successResultOf(d),
             {4: [['BODY', ['7.TEXT'], "Some body"]]})
 
 
@@ -3315,13 +5182,12 @@ class IMAP4ClientFetchTests(PreauthIMAP4ClientMixin, unittest.TestCase):
         returned by L{IMAP4Client.fetchUID} fails with
         L{IllegalServerResponse}.
         """
-        d = self.client.fetchSpecific(b'8', headerType=b'TEXT')
+        d = self.client.fetchSpecific('8', headerType='TEXT')
         self.assertEqual(
             self.transport.value(), b'0001 FETCH 8 BODY[TEXT]\r\n')
         self.client.lineReceived(b'* 8 FETCH (BODY[TEXT])')
         self.client.lineReceived(b'0001 OK FETCH completed')
-        self.assertRaises(
-            imap4.IllegalServerResponse, self._extractDeferredResult, d)
+        self.failureResultOf(d, imap4.IllegalServerResponse)
 
 
     def test_fetchSpecificMIME(self):
@@ -3331,13 +5197,13 @@ class IMAP4ClientFetchTests(PreauthIMAP4ClientMixin, unittest.TestCase):
         with a C{dict} mapping message sequence numbers to C{list}s of
         corresponding message data given by the server's response.
         """
-        d = self.client.fetchSpecific(b'8', headerType=b'MIME')
+        d = self.client.fetchSpecific('8', headerType='MIME')
         self.assertEqual(
             self.transport.value(), b'0001 FETCH 8 BODY[MIME]\r\n')
         self.client.lineReceived(b'* 8 FETCH (BODY[MIME] "Some body")')
         self.client.lineReceived(b'0001 OK FETCH completed')
         self.assertEqual(
-            self._extractDeferredResult(d),
+            self.successResultOf(d),
             {8: [['BODY', ['MIME'], "Some body"]]})
 
 
@@ -3350,14 +5216,14 @@ class IMAP4ClientFetchTests(PreauthIMAP4ClientMixin, unittest.TestCase):
         server's response.
         """
         d = self.client.fetchSpecific(
-            b'9', headerType=b'TEXT', offset=17, length=3)
+            '9', headerType='TEXT', offset=17, length=3)
         self.assertEqual(
             self.transport.value(), b'0001 FETCH 9 BODY[TEXT]<17.3>\r\n')
         self.client.lineReceived(b'* 9 FETCH (BODY[TEXT]<17> "foo")')
         self.client.lineReceived(b'0001 OK FETCH completed')
         self.assertEqual(
-            self._extractDeferredResult(d),
-            {9: [[b'BODY', [b'TEXT'], b'<17>', b'foo']]})
+            self.successResultOf(d),
+            {9: [['BODY', ['TEXT'], '<17>', 'foo']]})
 
 
     def test_incompleteFetchSpecificPartialResponse(self):
@@ -3367,13 +5233,12 @@ class IMAP4ClientFetchTests(PreauthIMAP4ClientMixin, unittest.TestCase):
         L{Deferred} returned by L{IMAP4Client.fetchUID} fails with
         L{IllegalServerResponse}.
         """
-        d = self.client.fetchSpecific(b'8', headerType=b'TEXT')
+        d = self.client.fetchSpecific('8', headerType='TEXT')
         self.assertEqual(
             self.transport.value(), b'0001 FETCH 8 BODY[TEXT]\r\n')
         self.client.lineReceived(b'* 8 FETCH (BODY[TEXT]<17>)')
         self.client.lineReceived(b'0001 OK FETCH completed')
-        self.assertRaises(
-            imap4.IllegalServerResponse, self._extractDeferredResult, d)
+        self.failureResultOf(d, imap4.IllegalServerResponse)
 
 
     def test_fetchSpecificHTML(self):
@@ -3384,13 +5249,84 @@ class IMAP4ClientFetchTests(PreauthIMAP4ClientMixin, unittest.TestCase):
         as a length indicator for a response to a request for a partial
         body).
         """
-        d = self.client.fetchSpecific(b'7')
+        d = self.client.fetchSpecific('7')
         self.assertEqual(
             self.transport.value(), b'0001 FETCH 7 BODY[]\r\n')
         self.client.lineReceived(b'* 7 FETCH (BODY[] "<html>test</html>")')
         self.client.lineReceived(b'0001 OK FETCH completed')
         self.assertEqual(
-            self._extractDeferredResult(d), {7: [[b'BODY', [], b"<html>test</html>"]]})
+            self.successResultOf(d), {7: [['BODY', [], "<html>test</html>"]]})
+
+
+    def assertFetchSpecificFieldsWithEmptyList(self, section):
+        """
+        Assert that the provided C{BODY} section, when invoked with no
+        arguments, produces an empty list, and that it returns a
+        L{Deferred} which fires with a C{dict} mapping message
+        sequence numbers to C{list}s of corresponding message data
+        given by the server's response.
+
+        @param section: The C{BODY} section to test: either
+            C{'HEADER.FIELDS'} or C{'HEADER.FIELDS.NOT'}
+        @type section: L{str}
+        """
+        d = self.client.fetchSpecific('10', headerType=section)
+        self.assertEqual(
+            self.transport.value(),
+            b'0001 FETCH 10 BODY[' + section.encode('ascii') + b' ()]\r\n')
+        # It's unclear what the response would look like - would it be
+        # an empty string?  No IMAP server parses an empty list of headers
+        self.client.lineReceived(
+            b'* 10 FETCH (BODY[' + section.encode('ascii') + b' ()] "")')
+        self.client.lineReceived(b'0001 OK FETCH completed')
+        self.assertEqual(
+            self.successResultOf(d),
+            {10: [['BODY', [section, []], ""]]})
+
+
+    def test_fetchSpecificHeaderFieldsWithoutHeaders(self):
+        """
+        L{IMAP4Client.fetchSpecific}, when passed C{'HEADER.FIELDS'}
+        for C{headerType} but no C{headerArgs}, sends the
+        I{BODY[HEADER.FIELDS]} command with no arguments.  It returns
+        a L{Deferred} which fires with a C{dict} mapping message
+        sequence numbers to C{list}s of corresponding message data
+        given by the server's response.
+        """
+        self.assertFetchSpecificFieldsWithEmptyList("HEADER.FIELDS")
+
+
+    def test_fetchSpecificHeaderFieldsNotWithoutHeaders(self):
+        """
+        L{IMAP4Client.fetchSpecific}, when passed
+        C{'HEADER.FIELDS.NOT'} for C{headerType} but no C{headerArgs},
+        sends the I{BODY[HEADER.FIELDS.NOT]} command with no
+        arguments.  It returns a L{Deferred} which fires with a
+        C{dict} mapping message sequence numbers to C{list}s of
+        corresponding message data given by the server's response.
+        """
+        self.assertFetchSpecificFieldsWithEmptyList("HEADER.FIELDS.NOT")
+
+
+    def test_fetchSpecificHeader(self):
+        """
+        L{IMAP4Client.fetchSpecific}, when passed C{'HEADER'} for
+        C{headerType}, sends the I{BODY[HEADER]} command.  It returns
+        a L{Deferred} which fires with a C{dict} mapping message
+        sequence numbers to C{list}s of corresponding message data
+        given by the server's response.
+        """
+        d = self.client.fetchSpecific('11', headerType='HEADER')
+        self.assertEqual(
+            self.transport.value(), b'0001 FETCH 11 BODY[HEADER]\r\n')
+        self.client.lineReceived(
+            b'* 11 FETCH (BODY[HEADER]'
+            b' "From: someone@localhost\r\nSubject: Some subject")')
+        self.client.lineReceived(b'0001 OK FETCH completed')
+        self.assertEqual(
+            self.successResultOf(d),
+            {11: [['BODY', ['HEADER'],
+                  "From: someone@localhost\r\nSubject: Some subject"]]})
 
 
 
@@ -3419,15 +5355,15 @@ class IMAP4ClientStoreTests(PreauthIMAP4ClientMixin, unittest.TestCase):
         @param method: The name of the method to test.
         @param item: The data item which is expected to be specified.
         """
-        d = getattr(self.client, method)(b'3', (b'\\Read', b'\\Seen'), False)
+        d = getattr(self.client, method)('3', ('\\Read', '\\Seen'), False)
         self.assertEqual(
             self.transport.value(),
             b'0001 STORE 3 ' + item + b' (\\Read \\Seen)\r\n')
         self.client.lineReceived(b'* 3 FETCH (FLAGS (\\Read \\Seen))')
         self.client.lineReceived(b'0001 OK STORE completed')
         self.assertEqual(
-            self._extractDeferredResult(d),
-            {3: {b'FLAGS': [b'\\Read', b'\\Seen']}})
+            self.successResultOf(d),
+            {3: {'FLAGS': ['\\Read', '\\Seen']}})
 
 
     def _flagsSilentlyTest(self, method, item):
@@ -3439,12 +5375,12 @@ class IMAP4ClientStoreTests(PreauthIMAP4ClientMixin, unittest.TestCase):
         @param method: The name of the method to test.
         @param item: The data item which is expected to be specified.
         """
-        d = getattr(self.client, method)(b'3', (b'\\Read', b'\\Seen'), True)
+        d = getattr(self.client, method)('3', ('\\Read', '\\Seen'), True)
         self.assertEqual(
             self.transport.value(),
             b'0001 STORE 3 ' + item + b' (\\Read \\Seen)\r\n')
         self.client.lineReceived(b'0001 OK STORE completed')
-        self.assertEqual(self._extractDeferredResult(d), {})
+        self.assertEqual(self.successResultOf(d), {})
 
 
     def _flagsSilentlyWithUnsolicitedDataTest(self, method, item):
@@ -3457,14 +5393,14 @@ class IMAP4ClientStoreTests(PreauthIMAP4ClientMixin, unittest.TestCase):
         @param method: The name of the method to test.
         @param item: The data item which is expected to be specified.
         """
-        d = getattr(self.client, method)(b'3', (b'\\Read', b'\\Seen'), True)
+        d = getattr(self.client, method)('3', ('\\Read', '\\Seen'), True)
         self.assertEqual(
             self.transport.value(),
             b'0001 STORE 3 ' + item + b' (\\Read \\Seen)\r\n')
         self.client.lineReceived(b'* 2 FETCH (FLAGS (\\Read \\Seen))')
         self.client.lineReceived(b'0001 OK STORE completed')
-        self.assertEqual(self._extractDeferredResult(d), {})
-        self.assertEqual(self.client.flags, {2: [b'\\Read', b'\\Seen']})
+        self.assertEqual(self.successResultOf(d), {})
+        self.assertEqual(self.client.flags, {2: ['\\Read', '\\Seen']})
 
 
     def test_setFlags(self):
@@ -3545,6 +5481,144 @@ class IMAP4ClientStoreTests(PreauthIMAP4ClientMixin, unittest.TestCase):
         used in silent mode and unsolicited data is received.
         """
         self._flagsSilentlyWithUnsolicitedDataTest('removeFlags', b'-FLAGS.SILENT')
+
+
+
+class IMAP4ClientStatusTests(PreauthIMAP4ClientMixin,
+                             unittest.SynchronousTestCase):
+    """
+    Tests for the L{IMAP4Client.status} method.
+
+    An example of usage of the STATUS command from RFC 3501, section
+    5.1.2::
+
+        C: A042 STATUS blurdybloop (UIDNEXT MESSAGES)
+        S: * STATUS blurdybloop (MESSAGES 231 UIDNEXT 44292)
+        S: A042 OK STATUS completed
+
+    @see: U{https://tools.ietf.org/html/rfc3501#section-5.1.2}
+    """
+
+    def testUnknownName(self):
+        """
+        Only allow sending the C{STATUS} names defined in RFC 3501.
+
+        @see: U{https://tools.ietf.org/html/rfc3501#section-5.1.2}
+        """
+        exc = self.assertRaises(
+            ValueError,
+            self.client.status,
+            "ignored", "IMPOSSIBLE?!",
+        )
+        self.assertEqual(str(exc),
+                         "Unknown names: " + repr(set(["IMPOSSIBLE?!"])))
+
+
+    def testUndecodableName(self):
+        """
+        C{STATUS} names that cannot be decoded as ASCII cause the
+        status Deferred to fail with L{IllegalServerResponse}
+        """
+
+        d = self.client.status("blurdybloop", "MESSAGES")
+        self.assertEqual(
+            self.transport.value(),
+            b"0001 STATUS blurdybloop (MESSAGES)\r\n",
+        )
+
+        self.client.lineReceived(
+            b"* STATUS blurdybloop "
+            b'(MESSAGES 1 ASCIINAME "OK" NOT\xffASCII "NO")'
+        )
+        self.client.lineReceived(b"0001 OK STATUS completed")
+        self.failureResultOf(d, imap4.IllegalServerResponse)
+
+
+
+class IMAP4ClientCopyTests(PreauthIMAP4ClientMixin,
+                           unittest.SynchronousTestCase):
+    """
+    Tests for the L{IMAP4Client.copy} method.
+
+    An example of the C{COPY} command, which this method implements,
+    from RFC 3501, section 6.4.7::
+
+        C: A003 COPY 2:4 MEETING
+        S: A003 OK COPY completed
+    """
+    clientProtocol = StillSimplerClient
+
+
+    def test_copySequenceNumbers(self):
+        """
+        L{IMAP4Client.copy} copies the messages identified by their
+        sequence numbers to the mailbox, returning a L{Deferred} that
+        succeeds with a true value.
+        """
+        d = self.client.copy("2:3", "MEETING", uid=False)
+
+        self.assertEqual(
+            self.transport.value(),
+            b"0001 COPY 2:3 MEETING\r\n",
+        )
+
+        self.client.lineReceived(b"0001 OK COPY completed")
+        self.assertEqual(self.successResultOf(d),
+                         ([], b'OK COPY completed'))
+
+
+    def test_copySequenceNumbersFails(self):
+        """
+        L{IMAP4Client.copy} returns a L{Deferred} that fails with an
+        L{IMAP4Exception} when the messages specified by the given
+        sequence numbers could not be copied to the mailbox.
+        """
+        d = self.client.copy("2:3", "MEETING", uid=False)
+
+        self.assertEqual(
+            self.transport.value(),
+            b"0001 COPY 2:3 MEETING\r\n",
+        )
+
+        self.client.lineReceived(b"0001 BAD COPY failed")
+        self.assertIsInstance(self.failureResultOf(d).value,
+                              imap4.IMAP4Exception)
+
+
+    def test_copyUIDs(self):
+        """
+        L{IMAP4Client.copy} copies the messages identified by their
+        UIDs to the mailbox, returning a L{Deferred} that succeeds
+        with a true value.
+        """
+        d = self.client.copy("2:3", "MEETING", uid=True)
+
+        self.assertEqual(
+            self.transport.value(),
+            b"0001 UID COPY 2:3 MEETING\r\n",
+        )
+
+        self.client.lineReceived(b"0001 OK COPY completed")
+        self.assertEqual(self.successResultOf(d),
+                         ([], b'OK COPY completed'))
+
+
+    def test_copyUIDsFails(self):
+        """
+        L{IMAP4Client.copy} returns a L{Deferred} that fails with an
+        L{IMAP4Exception} when the messages specified by the given
+        UIDs could not be copied to the mailbox.
+        """
+        d = self.client.copy("2:3", "MEETING", uid=True)
+
+        self.assertEqual(
+            self.transport.value(),
+            b"0001 UID COPY 2:3 MEETING\r\n",
+        )
+
+        self.client.lineReceived(b"0001 BAD COPY failed")
+        self.assertIsInstance(self.failureResultOf(d).value,
+                              imap4.IMAP4Exception)
 
 
 
@@ -3656,25 +5730,25 @@ class NewStoreTests(unittest.TestCase, IMAP4HelperMixin):
 
     def testSetFlags(self, uid=0):
         self.function = self.client.setFlags
-        self.messages = b'1,5,9'
-        self.flags = [b'\\A', b'\\B', b'C']
+        self.messages = '1,5,9'
+        self.flags = ['\\A', '\\B', 'C']
         self.silent = False
         self.uid = uid
         self.response = {
-            1: [b'\\A', b'\\B', b'C'],
-            5: [b'\\A', b'\\B', b'C'],
-            9: [b'\\A', b'\\B', b'C'],
+            1: ['\\A', '\\B', 'C'],
+            5: ['\\A', '\\B', 'C'],
+            9: ['\\A', '\\B', 'C'],
         }
         self.expected = {
-            1: {b'FLAGS': [b'\\A', b'\\B', b'C']},
-            5: {b'FLAGS': [b'\\A', b'\\B', b'C']},
-            9: {b'FLAGS': [b'\\A', b'\\B', b'C']},
+            1: {'FLAGS': ['\\A', '\\B', 'C']},
+            5: {'FLAGS': ['\\A', '\\B', 'C']},
+            9: {'FLAGS': ['\\A', '\\B', 'C']},
         }
         msg = imap4.MessageSet()
         msg.add(1)
         msg.add(5)
         msg.add(9)
-        self.expectedArgs = ((msg, [b'\\A', b'\\B', b'C'], 0), {b'uid': 0})
+        self.expectedArgs = ((msg, ['\\A', '\\B', 'C'], 0), {'uid': 0})
         return self._storeWork()
 
 
@@ -3710,6 +5784,44 @@ class GetBodyStructureTests(unittest.TestCase):
             [major, minor, ["charset", charset, 'x', 'y'], identifier,
              description, encoding, len(body)],
             structure)
+
+
+    def test_emptyContentType(self):
+        """
+        L{imap4.getBodyStructure} returns L{None} for the major and
+        minor MIME types of a L{IMessagePart} provider whose headers
+        lack a C{Content-Type}, or have an empty value for it.
+        """
+        missing = FakeyMessage({}, (), b'', b'', 123, None)
+        missingContentTypeStructure = imap4.getBodyStructure(missing)
+        missingMajor, missingMinor = missingContentTypeStructure[:2]
+        self.assertIs(None, missingMajor)
+        self.assertIs(None, missingMinor)
+
+        empty = FakeyMessage({"content-type": ""}, (), b'', b'', 123, None)
+        emptyContentTypeStructure = imap4.getBodyStructure(empty)
+        emptyMajor, emptyMinor = emptyContentTypeStructure[:2]
+        self.assertIs(None, emptyMajor)
+        self.assertIs(None, emptyMinor)
+
+        newline = FakeyMessage({"content-type": "\n"}, (), b'', b'', 123, None)
+        newlineContentTypeStructure = imap4.getBodyStructure(newline)
+        newlineMajor, newlineMinor = newlineContentTypeStructure[:2]
+        self.assertIs(None, newlineMajor)
+        self.assertIs(None, newlineMinor)
+
+
+    def test_onlyMajorContentType(self):
+        """
+        L{imap4.getBodyStructure} returns only a non-L{None} major
+        MIME type for a L{IMessagePart} provider whose headers only
+        have a main a C{Content-Type}.
+        """
+        main = FakeyMessage({"content-type": "main"}, (), b'', b'', 123, None)
+        mainStructure = imap4.getBodyStructure(main)
+        mainMajor, mainMinor = mainStructure[:2]
+        self.assertEqual(mainMajor, "main")
+        self.assertIs(mainMinor, None)
 
 
     def test_singlePartExtended(self):
@@ -3933,9 +6045,9 @@ class NewFetchTests(unittest.TestCase, IMAP4HelperMixin):
 
         self.messages = '7'
         self.msgObjs = [
-            FakeyMessage({}, (), '', '', 12345, None),
-            FakeyMessage({}, (), '', '', 999, None),
-            FakeyMessage({}, (), '', '', 10101, None),
+            FakeyMessage({}, (), b'', b'', 12345, None),
+            FakeyMessage({}, (), b'', b'', 999, None),
+            FakeyMessage({}, (), b'', b'', 10101, None),
         ]
         self.expected = {
             0: {'UID': '12345'},
@@ -3949,8 +6061,10 @@ class NewFetchTests(unittest.TestCase, IMAP4HelperMixin):
         self.function = self.client.fetchFlags
         self.messages = '9'
         self.msgObjs = [
-            FakeyMessage({}, ['FlagA', 'FlagB', '\\FlagC'], '', '', 54321, None),
-            FakeyMessage({}, ['\\FlagC', 'FlagA', 'FlagB'], '', '', 12345, None),
+            FakeyMessage({}, ['FlagA', 'FlagB', '\\FlagC'],
+                         b'', b'', 54321, None),
+            FakeyMessage({}, ['\\FlagC', 'FlagA', 'FlagB'],
+                         b'', b'', 12345, None),
         ]
         self.expected = {
             0: {'FLAGS': ['FlagA', 'FlagB', '\\FlagC']},
@@ -3967,10 +6081,10 @@ class NewFetchTests(unittest.TestCase, IMAP4HelperMixin):
         self.function = self.client.fetchInternalDate
         self.messages = '13'
         self.msgObjs = [
-            FakeyMessage({}, (), 'Fri, 02 Nov 2003 21:25:10 GMT', '', 23232, None),
-            FakeyMessage({}, (), 'Thu, 29 Dec 2013 11:31:52 EST', '', 101, None),
-            FakeyMessage({}, (), 'Mon, 10 Mar 1992 02:44:30 CST', '', 202, None),
-            FakeyMessage({}, (), 'Sat, 11 Jan 2000 14:40:24 PST', '', 303, None),
+            FakeyMessage({}, (), b'Fri, 02 Nov 2003 21:25:10 GMT', b'', 23232, None),
+            FakeyMessage({}, (), b'Thu, 29 Dec 2013 11:31:52 EST', b'', 101, None),
+            FakeyMessage({}, (), b'Mon, 10 Mar 1992 02:44:30 CST', b'', 202, None),
+            FakeyMessage({}, (), b'Sat, 11 Jan 2000 14:40:24 PST', b'', 303, None),
         ]
         self.expected = {
             0: {'INTERNALDATE': '02-Nov-2003 21:25:10 +0000'},
@@ -4015,10 +6129,12 @@ class NewFetchTests(unittest.TestCase, IMAP4HelperMixin):
         self.messages = '15'
         self.msgObjs = [
             FakeyMessage({
-                'from': 'user@domain', 'to': 'resu@domain',
-                'date': 'thursday', 'subject': 'it is a message',
-                'message-id': 'id-id-id-yayaya'}, (), '', '', 65656,
-                None),
+                'from': 'user@domain',
+                'to': 'resu@domain',
+                'date': 'thursday',
+                'subject': 'it is a message',
+                'message-id': 'id-id-id-yayaya'
+            }, (), b'', b'', 65656, None),
         ]
         self.expected = {
             0: {'ENVELOPE':
@@ -4046,7 +6162,7 @@ class NewFetchTests(unittest.TestCase, IMAP4HelperMixin):
         RFC 3501, section 7.4.2.
         """
         self.function = self.client.fetchBodyStructure
-        self.messages = b'3:9,10:*'
+        self.messages = '3:9,10:*'
         self.msgObjs = [FakeyMessage({
                 'content-type': 'text/plain; name=thing; key="value"',
                 'content-id': 'this-is-the-content-id',
@@ -4090,12 +6206,12 @@ class NewFetchTests(unittest.TestCase, IMAP4HelperMixin):
                 'content-md5': '123456abcdef',
                 'content-disposition': 'inline',
                 'content-location': 'outer space',
-            }, (), '', 'Body\nText\nGoes\nHere\n', 919293, None)
+            }, (), b'', b'Body\nText\nGoes\nHere\n', 919293, None)
         self.msgObjs = [FakeyMessage({
                 'content-type': 'multipart/mixed; boundary="xyz"',
                 'content-language': 'en',
                 'content-location': 'nearby',
-            }, (), '', '', 919293, [innerMessage])]
+            }, (), b'', b'', 919293, [innerMessage])]
         self.expected = {0: {'BODYSTRUCTURE': [
             ['text', 'plain', ['key', 'value', 'name', 'thing'],
              'this-is-the-content-id', 'describing-the-content-goes-here!',
@@ -4109,16 +6225,14 @@ class NewFetchTests(unittest.TestCase, IMAP4HelperMixin):
     def testFetchSimplifiedBody(self, uid=0):
         self.function = self.client.fetchSimplifiedBody
         self.messages = '21'
-        self.msgObjs = [FakeyMessage({}, (), '', 'Yea whatever', 91825,
-            [FakeyMessage({'content-type': 'image/jpg'}, (), '',
-                'Body Body Body', None, None
+        self.msgObjs = [FakeyMessage({}, (), b'', b'Yea whatever', 91825,
+            [FakeyMessage({'content-type': 'image/jpg'}, (), b'',
+                b'Body Body Body', None, None
             )]
         )]
         self.expected = {0:
             {'BODY':
-                [None, None, None, None, None, None,
-                    '12'
-                ]
+                [None, None, None, None, None, None, '12']
             }
         }
 
@@ -4133,7 +6247,7 @@ class NewFetchTests(unittest.TestCase, IMAP4HelperMixin):
         self.function = self.client.fetchSimplifiedBody
         self.messages = '21'
         self.msgObjs = [FakeyMessage({'content-type': 'text/plain'},
-            (), '', 'Yea whatever', 91825, None)]
+            (), b'', b'Yea whatever', 91825, None)]
         self.expected = {0:
             {'BODY':
                 ['text', 'plain', None, None, None, None,
@@ -4153,9 +6267,9 @@ class NewFetchTests(unittest.TestCase, IMAP4HelperMixin):
         self.function = self.client.fetchSimplifiedBody
         self.messages = '21'
         self.msgObjs = [FakeyMessage({'content-type': 'message/rfc822'},
-            (), '', 'Yea whatever', 91825,
+            (), b'', b'Yea whatever', 91825,
             [FakeyMessage({'content-type': 'image/jpg'}, (), '',
-                'Body Body Body', None, None
+                b'Body Body Body', None, None
             )]
         )]
         self.expected = {0:
@@ -4194,23 +6308,23 @@ class NewFetchTests(unittest.TestCase, IMAP4HelperMixin):
         singles = [
             FakeyMessage(
                 {'content-type': 'text/plain'},
-                (), 'date', 'Stuff', 54321,  None),
+                (), b'date', b'Stuff', 54321,  None),
             FakeyMessage(
                 {'content-type': 'text/html'},
-                (), 'date', 'Things', 32415, None)]
+                (), b'date', b'Things', 32415, None)]
 
         # A multipart/alternative message containing the above non-multipart
         # messages.  This will be the payload of the outer-most message.
         alternative = FakeyMessage(
             {'content-type': 'multipart/alternative'},
-            (), '', 'Irrelevant', 12345, singles)
+            (), b'', b'Irrelevant', 12345, singles)
 
         # The outer-most message, also with a multipart type, containing just
         # the single middle message.
         mixed = FakeyMessage(
             # The message is multipart/mixed
             {'content-type': 'multipart/mixed'},
-            (), '', 'RootOf', 98765, [alternative])
+            (), b'', b'RootOf', 98765, [alternative])
 
         self.msgObjs = [mixed]
 
@@ -4228,7 +6342,7 @@ class NewFetchTests(unittest.TestCase, IMAP4HelperMixin):
         self.function = self.client.fetchMessage
         self.messages = '1,3,7,10101'
         self.msgObjs = [
-            FakeyMessage({'Header': 'Value'}, (), '', 'BODY TEXT\r\n', 91, None),
+            FakeyMessage({'Header': 'Value'}, (), b'', b'BODY TEXT\r\n', 91, None),
         ]
         self.expected = {
             0: {'RFC822': 'Header: Value\r\n\r\nBODY TEXT\r\n'}
@@ -4244,10 +6358,14 @@ class NewFetchTests(unittest.TestCase, IMAP4HelperMixin):
         self.function = self.client.fetchHeaders
         self.messages = '9,6,2'
         self.msgObjs = [
-            FakeyMessage({'H1': 'V1', 'H2': 'V2'}, (), '', '', 99, None),
+            FakeyMessage({'H1': 'V1', 'H2': 'V2'}, (), b'', b'', 99, None),
         ]
+
+        headers = nativeString(
+            imap4._formatHeaders({'H1': 'V1', 'H2': 'V2'}))
+
         self.expected = {
-            0: {'RFC822.HEADER': imap4._formatHeaders({'H1': 'V1', 'H2': 'V2'})},
+            0: {'RFC822.HEADER': headers},
         }
         return self._fetchWork(uid)
 
@@ -4260,7 +6378,7 @@ class NewFetchTests(unittest.TestCase, IMAP4HelperMixin):
         self.function = self.client.fetchBody
         self.messages = '1,2,3,4,5,6,7'
         self.msgObjs = [
-            FakeyMessage({'Header': 'Value'}, (), '', 'Body goes here\r\n', 171, None),
+            FakeyMessage({'Header': 'Value'}, (), '', b'Body goes here\r\n', 171, None),
         ]
         self.expected = {
             0: {'RFC822.TEXT': 'Body goes here\r\n'},
@@ -4279,8 +6397,8 @@ class NewFetchTests(unittest.TestCase, IMAP4HelperMixin):
         self.function = self.client.fetchSpecific
         self.messages = '1'
         outerBody = ''
-        innerBody1 = 'Contained body message text.  Squarge.'
-        innerBody2 = 'Secondary <i>message</i> text of squarge body.'
+        innerBody1 = b'Contained body message text.  Squarge.'
+        innerBody2 = b'Secondary <i>message</i> text of squarge body.'
         headers = OrderedDict()
         headers['from'] = 'sender@host'
         headers['to'] = 'recipient@domain'
@@ -4324,7 +6442,7 @@ class NewFetchTests(unittest.TestCase, IMAP4HelperMixin):
         self.function = self.client.fetchSpecific
         self.messages = '1'
         parts = [1]
-        outerBody = 'DA body'
+        outerBody = b'DA body'
         headers = OrderedDict()
         headers['from'] = 'sender@host'
         headers['to'] = 'recipient@domain'
@@ -4353,7 +6471,7 @@ class NewFetchTests(unittest.TestCase, IMAP4HelperMixin):
         self.function = self.client.fetchSize
         self.messages = '1:100,2:*'
         self.msgObjs = [
-            FakeyMessage({}, (), '', 'x' * 20, 123, None),
+            FakeyMessage({}, (), b'', b'x' * 20, 123, None),
         ]
         self.expected = {
             0: {'RFC822.SIZE': '20'},
@@ -4370,11 +6488,11 @@ class NewFetchTests(unittest.TestCase, IMAP4HelperMixin):
         self.messages = '1,3'
         self.msgObjs = [
             FakeyMessage({}, ('\\XYZ', '\\YZX', 'Abc'),
-                'Sun, 25 Jul 2010 06:20:30 -0400 (EDT)',
-                'xyz' * 2, 654, None),
+                b'Sun, 25 Jul 2010 06:20:30 -0400 (EDT)',
+                b'xyz' * 2, 654, None),
             FakeyMessage({}, ('\\One', '\\Two', 'Three'),
-                'Mon, 14 Apr 2003 19:43:44 -0400',
-                'abc' * 4, 555, None),
+                b'Mon, 14 Apr 2003 19:43:44 -0400',
+                b'abc' * 4, 555, None),
         ]
         self.expected = {
             0: {'FLAGS': ['\\XYZ', '\\YZX', 'Abc'],
@@ -4399,10 +6517,10 @@ class NewFetchTests(unittest.TestCase, IMAP4HelperMixin):
         self.function = self.client.fetchAll
         self.messages = '1,2:3'
         self.msgObjs = [
-            FakeyMessage({}, (), 'Mon, 14 Apr 2003 19:43:44 +0400',
-                'Lalala', 10101, None),
-            FakeyMessage({}, (), 'Tue, 15 Apr 2003 19:43:44 +0200',
-                'Alalal', 20202, None),
+            FakeyMessage({}, (), b'Mon, 14 Apr 2003 19:43:44 +0400',
+                b'Lalala', 10101, None),
+            FakeyMessage({}, (), b'Tue, 15 Apr 2003 19:43:44 +0200',
+                b'Alalal', 20202, None),
         ]
         self.expected = {
             0: {'ENVELOPE': [None, None, [[None, None, None]], [[None, None, None]], None, None, None, None, None, None],
@@ -4425,7 +6543,7 @@ class NewFetchTests(unittest.TestCase, IMAP4HelperMixin):
         self.function = self.client.fetchFast
         self.messages = '1'
         self.msgObjs = [
-            FakeyMessage({}, ('\\X',), '19 Mar 2003 19:22:21 -0500', '', 9, None),
+            FakeyMessage({}, ('\\X',), b'19 Mar 2003 19:22:21 -0500', b'', 9, None),
         ]
         self.expected = {
             0: {'FLAGS': ['\\X'],
@@ -4495,7 +6613,7 @@ class DefaultSearchTests(IMAP4HelperMixin, unittest.TestCase):
         Test that a search which starts with a message set properly limits
         the search results to messages in that set.
         """
-        return self._messageSetSearchTest(b'1', [1])
+        return self._messageSetSearchTest('1', [1])
 
 
     def test_searchMessageSetWithStar(self):
@@ -4503,7 +6621,7 @@ class DefaultSearchTests(IMAP4HelperMixin, unittest.TestCase):
         If the search filter ends with a star, all the message from the
         starting point are returned.
         """
-        return self._messageSetSearchTest(b'2:*', [2, 3, 4, 5])
+        return self._messageSetSearchTest('2:*', [2, 3, 4, 5])
 
 
     def test_searchMessageSetWithStarFirst(self):
@@ -4511,7 +6629,7 @@ class DefaultSearchTests(IMAP4HelperMixin, unittest.TestCase):
         If the search filter starts with a star, the result should be identical
         with if the filter would end with a star.
         """
-        return self._messageSetSearchTest(b'*:2', [2, 3, 4, 5])
+        return self._messageSetSearchTest('*:2', [2, 3, 4, 5])
 
 
     def test_searchMessageSetUIDWithStar(self):
@@ -4519,7 +6637,7 @@ class DefaultSearchTests(IMAP4HelperMixin, unittest.TestCase):
         If the search filter ends with a star, all the message from the
         starting point are returned (also for the SEARCH UID case).
         """
-        return self._messageSetSearchTest(b'UID 10000:*', [2, 3, 4, 5])
+        return self._messageSetSearchTest('UID 10000:*', [2, 3, 4, 5])
 
 
     def test_searchMessageSetUIDWithStarFirst(self):
@@ -4527,7 +6645,7 @@ class DefaultSearchTests(IMAP4HelperMixin, unittest.TestCase):
         If the search filter starts with a star, the result should be identical
         with if the filter would end with a star (also for the SEARCH UID case).
         """
-        return self._messageSetSearchTest(b'UID *:10000', [2, 3, 4, 5])
+        return self._messageSetSearchTest('UID *:10000', [2, 3, 4, 5])
 
 
     def test_searchMessageSetUIDWithStarAndHighStart(self):
@@ -4536,7 +6654,7 @@ class DefaultSearchTests(IMAP4HelperMixin, unittest.TestCase):
         the mailbox, even if its UID is less than 1234.
         """
         # in our fake mbox the highest message UID is 20002
-        return self._messageSetSearchTest(b'UID 30000:*', [5])
+        return self._messageSetSearchTest('UID 30000:*', [5])
 
 
     def test_searchMessageSetWithList(self):
@@ -4547,7 +6665,7 @@ class DefaultSearchTests(IMAP4HelperMixin, unittest.TestCase):
         # 6 is bigger than the biggest message sequence number, but that's
         # okay, because N:* includes the biggest message sequence number even
         # if N is bigger than that (read the rfc nub).
-        return self._messageSetSearchTest(b'(6:*)', [5])
+        return self._messageSetSearchTest('(6:*)', [5])
 
 
     def test_searchOr(self):
@@ -4555,7 +6673,7 @@ class DefaultSearchTests(IMAP4HelperMixin, unittest.TestCase):
         If the search filter contains an I{OR} term, all messages
         which match either subexpression are returned.
         """
-        return self._messageSetSearchTest(b'OR 1 2', [1, 2])
+        return self._messageSetSearchTest('OR 1 2', [1, 2])
 
 
     def test_searchOrMessageSet(self):
@@ -4565,7 +6683,7 @@ class DefaultSearchTests(IMAP4HelperMixin, unittest.TestCase):
         all messages in that set are considered for inclusion in the
         results.
         """
-        return self._messageSetSearchTest(b'OR 2:* 2:*', [2, 3, 4, 5])
+        return self._messageSetSearchTest('OR 2:* 2:*', [2, 3, 4, 5])
 
 
     def test_searchNot(self):
@@ -4573,7 +6691,7 @@ class DefaultSearchTests(IMAP4HelperMixin, unittest.TestCase):
         If the search filter contains a I{NOT} term, all messages
         which do not match the subexpression are returned.
         """
-        return self._messageSetSearchTest(b'NOT 3', [1, 2, 4, 5])
+        return self._messageSetSearchTest('NOT 3', [1, 2, 4, 5])
 
 
     def test_searchNotMessageSet(self):
@@ -4583,7 +6701,7 @@ class DefaultSearchTests(IMAP4HelperMixin, unittest.TestCase):
         no messages in that set are considered for inclusion in the
         result.
         """
-        return self._messageSetSearchTest(b'NOT 2:*', [1])
+        return self._messageSetSearchTest('NOT 2:*', [1])
 
 
     def test_searchAndMessageSet(self):
@@ -4592,7 +6710,7 @@ class DefaultSearchTests(IMAP4HelperMixin, unittest.TestCase):
         conjoined with a message sequence set wildcard, only the
         intersection of the results of each term are returned.
         """
-        return self._messageSetSearchTest(b'2:* 3', [3])
+        return self._messageSetSearchTest('2:* 3', [3])
 
 
     def test_searchInvalidCriteria(self):
@@ -4601,7 +6719,7 @@ class DefaultSearchTests(IMAP4HelperMixin, unittest.TestCase):
         the client (resulting in an error callback), and an IllegalQueryError is
         logged on the server side.
         """
-        queryTerms = b'FOO'
+        queryTerms = 'FOO'
         def search():
             return self.client.search(queryTerms)
 
@@ -4622,7 +6740,9 @@ class DefaultSearchTests(IMAP4HelperMixin, unittest.TestCase):
 
             # Verify exception given to client has the correct message
             self.assertEqual(
-                b"SEARCH failed: Invalid search command FOO", networkString(str(results)))
+                str(b"SEARCH failed: Invalid search command FOO"),
+                str(results),
+            )
 
         d.addCallback(errorReceived)
         d.addErrback(self._ebGeneral)
@@ -4680,7 +6800,9 @@ class FetchSearchStoreTests(unittest.TestCase, IMAP4HelperMixin):
             self.assertEqual(self.result, self.expected)
             self.assertEqual(self.uid, self.server_received_uid)
             self.assertEqual(
-                imap4.parseNestedParens(self.query),
+                # Queries should be decoded as ASCII unless a charset
+                # identifier is provided.  See #9201.
+                imap4.parseNestedParens(self.query.encode('charmap')),
                 self.server_received_query
             )
         d = loopback.loopbackTCP(self.server, self.client, noisy=False)
@@ -4760,7 +6882,7 @@ class FetchSearchStoreTests(unittest.TestCase, IMAP4HelperMixin):
         IllegalQueryError (e.g. due to invalid search criteria), client sees a
         failure response, and an IllegalQueryError is logged on the server.
         """
-        query = b'FOO'
+        query = 'FOO'
 
         def search():
             return self.client.search(query)
@@ -4782,7 +6904,7 @@ class FetchSearchStoreTests(unittest.TestCase, IMAP4HelperMixin):
 
             # Verify exception given to client has the correct message
             self.assertEqual(
-                "SEARCH failed: FOO is not a valid search criteria",
+                str(b"SEARCH failed: FOO is not a valid search criteria"),
                 str(results))
 
         d.addCallback(errorReceived)
@@ -4867,7 +6989,12 @@ class CopyWorkerTests(unittest.TestCase):
         f = s._IMAP4Server__cbCopy
 
         m = FakeMailbox()
-        msgs = [FakeyMessage({b'Header-Counter': intToBytes(i)}, (), b'Date', b'Body ' + intToBytes(i), i + 10, None) for i in range(1, 11)]
+        msgs = [FakeyMessage({'Header-Counter': str(i)},
+                             (),
+                             b'Date',
+                             b'Body ' + intToBytes(i),
+                             i + 10, None)
+                for i in range(1, 11)]
         d = f([im for im in zip(range(1, 11), msgs)], 'tag', m)
 
         def cbCopy(results):
@@ -4900,7 +7027,7 @@ class CopyWorkerTests(unittest.TestCase):
         d = f([im for im in zip(range(1, 11), msgs)], b'tag', m)
 
         def cbCopy(results):
-            self.assertEqual(results, zip([1] * 10, range(1, 11)))
+            self.assertEqual(results, list(zip([1] * 10, range(1, 11))))
             for (orig, new) in zip(msgs, m.msgs):
                 self.assertIdentical(orig, new)
 
@@ -4927,7 +7054,7 @@ class TLSTests(IMAP4HelperMixin, unittest.TestCase):
             return self.client.list(b'inbox', b'%')
         def status():
             called.append(None)
-            return self.client.status(b'inbox', b'UIDNEXT')
+            return self.client.status(b'inbox', 'UIDNEXT')
         def examine():
             called.append(None)
             return self.client.examine(b'inbox')
@@ -4938,7 +7065,9 @@ class TLSTests(IMAP4HelperMixin, unittest.TestCase):
         self.client.requireTransportSecurity = True
 
         methods = [login, list, status, examine, logout]
-        map(self.connected.addCallback, map(strip, methods))
+        for method in methods:
+            self.connected.addCallback(strip(method))
+
         self.connected.addCallbacks(self._cbStopClient, self._ebGeneral)
         def check(ignored):
             self.assertEqual(self.server.startedTLS, True)
@@ -4966,25 +7095,117 @@ class TLSTests(IMAP4HelperMixin, unittest.TestCase):
         return d
 
 
+    def startTLSAndAssertSession(self):
+        """
+        Begin a C{STARTTLS} sequence and assert that it results in a
+        TLS session.
+
+        @return: A L{Deferred} that fires when the underlying
+            connection between the client and server has been terminated.
+        """
+        success = []
+        self.connected.addCallback(strip(self.client.startTLS))
+        def checkSecure(ignored):
+            self.assertTrue(
+                interfaces.ISSLTransport.providedBy(self.client.transport))
+        self.connected.addCallback(checkSecure)
+        self.connected.addCallback(success.append)
+
+        d = self.loopback()
+        d.addCallback(lambda x : self.assertTrue(success))
+        return defer.gatherResults([d, self.connected])
+
+
     def test_startTLS(self):
         """
         L{IMAP4Client.startTLS} triggers TLS negotiation and returns a
         L{Deferred} which fires after the client's transport is using
         encryption.
         """
-        success = []
-        self.connected.addCallback(lambda _: self.client.startTLS())
-        def checkSecure(ignored):
-            self.assertTrue(
-                interfaces.ISSLTransport.providedBy(self.client.transport))
-        self.connected.addCallback(checkSecure)
+        disconnected = self.startTLSAndAssertSession()
         self.connected.addCallback(self._cbStopClient)
-        self.connected.addCallback(success.append)
+        self.connected.addErrback(self._ebGeneral)
+        return disconnected
+
+
+    def test_doubleSTARTTLS(self):
+        """
+        A server that receives a second C{STARTTLS} sends a C{NO}
+        response.
+        """
+
+        class DoubleSTARTTLSClient(SimpleClient):
+
+            def startTLS(self):
+                if not self.startedTLS:
+                    return SimpleClient.startTLS(self)
+
+                return self.sendCommand(imap4.Command(b"STARTTLS"))
+
+        self.client = DoubleSTARTTLSClient(self.connected,
+                                           contextFactory=self.clientCTX)
+
+        disconnected = self.startTLSAndAssertSession()
+
+        self.connected.addCallback(strip(self.client.startTLS))
+        self.connected.addErrback(self.assertClientFailureMessage, b"TLS already negotiated")
+
+        self.connected.addCallback(self._cbStopClient)
         self.connected.addErrback(self._ebGeneral)
 
-        d = self.loopback()
-        d.addCallback(lambda x : self.assertTrue(success))
-        return defer.gatherResults([d, self.connected])
+        return disconnected
+
+
+    def test_startTLSWithExistingChallengers(self):
+        """
+        Starting a TLS negotiation with an L{IMAP4Server} that already
+        has C{LOGIN} and C{PLAIN} L{IChallengeResponse} factories uses
+        those factories.
+        """
+        self.server.challengers = {b"LOGIN": imap4.LOGINCredentials,
+                                   b"PLAIN": imap4.PLAINCredentials}
+
+        @defer.inlineCallbacks
+        def assertLOGINandPLAIN():
+            capabilities = yield self.client.getCapabilities()
+            self.assertIn(b"AUTH", capabilities)
+            self.assertIn(b"LOGIN", capabilities[b"AUTH"])
+            self.assertIn(b"PLAIN", capabilities[b"AUTH"])
+
+        self.connected.addCallback(strip(assertLOGINandPLAIN))
+
+        disconnected = self.startTLSAndAssertSession()
+
+        self.connected.addCallback(strip(assertLOGINandPLAIN))
+
+        self.connected.addCallback(self._cbStopClient)
+        self.connected.addErrback(self._ebGeneral)
+
+        return disconnected
+
+
+    def test_loginBeforeSTARTTLS(self):
+        """
+        A client that attempts to log in before issuing the
+        C{STARTTLS} command receives a C{NO} response.
+        """
+        # Prevent the client from issuing STARTTLS.
+        self.client.startTLS = lambda: defer.succeed(
+            ([], 'OK Begin TLS negotiation now')
+        )
+        self.connected.addCallback(
+            lambda _: self.client.login(b"wrong", b"time"),
+        )
+
+        self.connected.addErrback(
+            self.assertClientFailureMessage,
+            b"LOGIN is disabled before STARTTLS",
+        )
+
+        self.connected.addCallback(self._cbStopClient)
+        self.connected.addErrback(self._ebGeneral)
+
+        return defer.gatherResults([self.loopback(), self.connected])
 
 
     def testFailedStartTLS(self):
@@ -5049,6 +7270,108 @@ class TimeoutTests(IMAP4HelperMixin, unittest.TestCase):
         return defer.gatherResults([d, self.loopback()])
 
 
+    def test_serverTimesOut(self):
+        """
+        The server times out a connection.
+        """
+        c = Clock()
+        self.server.callLater = c.callLater
+
+        def login():
+            return self.client.login(b'testuser', b'password-test')
+
+        def expireTime():
+            c.advance(self.server.POSTAUTH_TIMEOUT * 2)
+
+        d = self.connected.addCallback(strip(login))
+        d.addCallback(strip(expireTime))
+
+        # The loopback method's Deferred fires the connection is
+        # closed, and the server closes the connection as a result of
+        # expireTime.
+        return defer.gatherResults([d, self.loopback()])
+
+
+    def test_serverUnselectsMailbox(self):
+        """
+        The server unsets the selected mailbox when timing out a
+        connection.
+        """
+        self.patch(SimpleServer.theAccount, "mailboxFactory",
+                   UncloseableMailbox)
+        SimpleServer.theAccount.addMailbox('mailbox-test')
+        mbox = SimpleServer.theAccount.mailboxes[u'MAILBOX-TEST']
+        self.assertFalse(ICloseableMailboxIMAP.providedBy(mbox))
+
+        c = Clock()
+        self.server.callLater = c.callLater
+
+        def login():
+            return self.client.login(b'testuser', b'password-test')
+
+        def select():
+            return self.client.select("mailbox-test")
+
+        def assertSet():
+            self.assertIs(mbox, self.server.mbox)
+
+        def expireTime():
+            c.advance(self.server.POSTAUTH_TIMEOUT * 2)
+
+        def assertUnset():
+            self.assertFalse(self.server.mbox)
+
+        d = self.connected.addCallback(strip(login))
+        d.addCallback(strip(select))
+        d.addCallback(strip(assertSet))
+        d.addCallback(strip(expireTime))
+        d.addCallback(strip(assertUnset))
+
+        # The loopback method's Deferred fires the connection is
+        # closed, and the server closes the connection as a result of
+        # expireTime.
+        return defer.gatherResults([d, self.loopback()])
+
+
+    def test_serverTimesOutAndClosesMailbox(self):
+        """
+        The server closes the selected, closeable mailbox when timing
+        out a connection.
+        """
+        SimpleServer.theAccount.addMailbox('mailbox-test')
+        mbox = SimpleServer.theAccount.mailboxes[u'MAILBOX-TEST']
+        verifyObject(ICloseableMailboxIMAP, mbox)
+
+        c = Clock()
+        self.server.callLater = c.callLater
+
+        def login():
+            return self.client.login(b'testuser', b'password-test')
+
+        def select():
+            return self.client.select("mailbox-test")
+
+        def assertMailboxOpen():
+            self.assertFalse(mbox.closed)
+
+        def expireTime():
+            c.advance(self.server.POSTAUTH_TIMEOUT * 2)
+
+        def assertMailboxClosed():
+            self.assertTrue(mbox.closed)
+
+        d = self.connected.addCallback(strip(login))
+        d.addCallback(strip(select))
+        d.addCallback(strip(assertMailboxOpen))
+        d.addCallback(strip(expireTime))
+        d.addCallback(strip(assertMailboxClosed))
+
+        # The loopback method's Deferred fires the connection is
+        # closed, and the server closes the connection as a result of
+        # expireTime.
+        return defer.gatherResults([d, self.loopback()])
+
+
     def test_longFetchDoesntTimeout(self):
         """
         The connection timeout does not take effect during fetches.
@@ -5070,13 +7393,13 @@ class TimeoutTests(IMAP4HelperMixin, unittest.TestCase):
             return self.client.select('mailbox-test')
 
         def fetch():
-            return self.client.fetchUID(b'1:*')
+            return self.client.fetchUID('1:*')
 
         def stillConnected():
             self.assertNotEqual(self.server.state, 'timeout')
 
         def cbAdvance(ignored):
-            for i in xrange(4):
+            for i in range(4):
                 c.advance(.5)
 
         SlowMailbox.fetchDeferred.addCallback(cbAdvance)
@@ -5145,16 +7468,6 @@ class SynchronousMailbox(object):
 
 
 
-class StringTransportConsumer(StringTransport):
-    producer = None
-    streaming = None
-
-    def registerProducer(self, producer, streaming):
-        self.producer = producer
-        self.streaming = streaming
-
-
-
 class PipeliningTests(unittest.TestCase):
     """
     Tests for various aspects of the IMAP4 server's pipelining support.
@@ -5168,15 +7481,50 @@ class PipeliningTests(unittest.TestCase):
     def setUp(self):
         self.iterators = []
 
-        self.transport = StringTransportConsumer()
+        self.transport = StringTransport()
         self.server = imap4.IMAP4Server(None, None, self.iterateInReactor)
         self.server.makeConnection(self.transport)
 
+        mailbox = SynchronousMailbox(self.messages)
+
+        # Skip over authentication and folder selection
+        self.server.state = 'select'
+        self.server.mbox = mailbox
+
+        # Get rid of any greeting junk
+        self.transport.clear()
+
 
     def iterateInReactor(self, iterator):
+        """
+        A fake L{imap4.iterateInReactor} that records the iterators it
+        receives.
+
+        @param iterator: An iterator.
+
+        @return: A L{Deferred} associated with this iterator.
+        """
         d = defer.Deferred()
         self.iterators.append((iterator, d))
         return d
+
+
+    def flushPending(self, asLongAs=lambda: True):
+        """
+        Advance pending iterators enqueued with L{iterateInReactor} in
+        a round-robin fashion, resuming the transport's producer until
+        it has completed.  This ensures bodies are flushed.
+
+        @param asLongAs: (optional) An optional predicate function.
+            Flushing iterators continues as long as there are
+            iterators and this returns L{True}.
+        """
+        while self.iterators and asLongAs():
+            for e in self.iterators[0][0]:
+                while self.transport.producer:
+                    self.transport.producer.resumeProducing()
+            else:
+                self.iterators.pop(0)[1].callback(None)
 
 
     def tearDown(self):
@@ -5188,42 +7536,86 @@ class PipeliningTests(unittest.TestCase):
         Test that pipelined FETCH commands which can be responded to
         synchronously are responded to correctly.
         """
-        mailbox = SynchronousMailbox(self.messages)
-
-        # Skip over authentication and folder selection
-        self.server.state = 'select'
-        self.server.mbox = mailbox
-
-        # Get rid of any greeting junk
-        self.transport.clear()
-
         # Here's some pipelined stuff
         self.server.dataReceived(
             b'01 FETCH 1 BODY[]\r\n'
             b'02 FETCH 2 BODY[]\r\n'
             b'03 FETCH 3 BODY[]\r\n')
 
-        # Flush anything the server has scheduled to run
-        while self.iterators:
-            for e in self.iterators[0][0]:
-                break
-            else:
-                self.iterators.pop(0)[1].callback(None)
+        self.flushPending()
 
-        # The bodies are empty because we aren't simulating a transport
-        # exactly correctly (we have StringTransportConsumer but we never
-        # call resumeProducing on its producer).  It doesn't matter: just
-        # make sure the surrounding structure is okay, and that no
-        # exceptions occurred.
         self.assertEqual(
-            self.transport.value(),
-            b'* 1 FETCH (BODY[] )\r\n'
-            b'01 OK FETCH completed\r\n'
-            b'* 2 FETCH (BODY[] )\r\n'
-            b'02 OK FETCH completed\r\n'
-            b'* 3 FETCH (BODY[] )\r\n'
-            b'03 OK FETCH completed\r\n')
+            self.transport.value(), b''.join([
+                b'* 1 FETCH (BODY[] )\r\n',
+                networkString(
+                    '01 OK FETCH completed\r\n{5}\r\n\r\n\r\n%s' % (
+                        nativeString(self.messages[0].getBodyFile().read()),
+                    )
+                ),
+                b'* 2 FETCH (BODY[] )\r\n',
+                networkString(
+                    '02 OK FETCH completed\r\n{5}\r\n\r\n\r\n%s' % (
+                        nativeString(self.messages[1].getBodyFile().read()),
+                    )
+                ),
+                b'* 3 FETCH (BODY[] )\r\n',
+                networkString(
+                    '03 OK FETCH completed\r\n{5}\r\n\r\n\r\n%s' % (
+                        nativeString(self.messages[2].getBodyFile().read()),
+                    )
+                ),
+            ]))
 
+
+    def test_bufferedServerStatus(self):
+        """
+        When a server status change occurs during an ongoing FETCH
+        command, the server status is buffered until the FETCH
+        completes.
+        """
+        self.server.dataReceived(
+            b'01 FETCH 1,2 BODY[]\r\n'
+        )
+
+        # Two iterations yields the untagged response and the first
+        # fetched message's body
+        twice = functools.partial(next, iter([True,  True, False]))
+        self.flushPending(asLongAs=twice)
+
+        self.assertEqual(
+            self.transport.value(), b''.join([
+                # The untagged response...
+                b'* 1 FETCH (BODY[] )\r\n',
+                # ...and its body
+                networkString(
+                    '{5}\r\n\r\n\r\n%s' % (
+                        nativeString(self.messages[0].getBodyFile().read()),
+                    )
+                ),
+            ]))
+
+        self.transport.clear()
+
+        # A server status change...
+        self.server.modeChanged(writeable=True)
+
+        # ...remains buffered...
+        self.assertFalse(self.transport.value())
+
+        self.flushPending()
+
+        self.assertEqual(self.transport.value(), b''.join([
+            # The untagged response...
+            b'* 2 FETCH (BODY[] )\r\n',
+            # ...the status change...
+            b"* [READ-WRITE]\r\n",
+            # ...and the completion status and final message's body
+            networkString(
+                '01 OK FETCH completed\r\n{5}\r\n\r\n\r\n%s' % (
+                    nativeString(self.messages[1].getBodyFile().read()),
+                )
+            ),
+        ]))
 
 
 if ClientTLSContext is None:
@@ -5265,3 +7657,237 @@ class IMAP4ServerFetchTests(unittest.TestCase):
         self.assertEqual(self.transport.value(), expected)
         self.transport.clear()
         self.server.connectionLost(error.ConnectionDone("Connection closed"))
+
+
+
+class LiteralTestsMixin(object):
+    """
+    Shared tests for literal classes.
+
+    @ivar literalFactory: A callable that returns instances of the
+        literal under test.
+    """
+
+    def setUp(self):
+        """
+        Shared setup.
+        """
+        self.deferred = defer.Deferred()
+
+
+    def test_partialWrite(self):
+        """
+        The literal returns L{None} when given less data than the
+        literal requires.
+        """
+        literal = self.literalFactory(1024, self.deferred)
+        self.assertIs(None, literal.write(b"incomplete"))
+        self.assertNoResult(self.deferred)
+
+
+    def test_exactWrite(self):
+        """
+        The literal returns an empty L{bytes} instance when given
+        exactly the data the literal requires.
+        """
+        data = b"complete"
+        literal = self.literalFactory(len(data), self.deferred)
+        leftover = literal.write(data)
+
+        self.assertIsInstance(leftover, bytes)
+        self.assertFalse(leftover)
+        self.assertNoResult(self.deferred)
+
+
+    def test_overlongWrite(self):
+        """
+        The literal returns any left over L{bytes} when given more
+        data than the literal requires.
+        """
+        data = b"completeleftover"
+        literal = self.literalFactory(len(b"complete"), self.deferred)
+
+        leftover = literal.write(data)
+
+        self.assertEqual(leftover, b"leftover")
+
+
+    def test_emptyLiteral(self):
+        """
+        The literal returns an empty L{bytes} instance
+        when given an empty L{bytes} instance.
+        """
+        literal = self.literalFactory(0, self.deferred)
+        data = b"leftover"
+
+        leftover = literal.write(data)
+
+        self.assertEqual(leftover, data)
+
+
+
+class LiteralStringTests(LiteralTestsMixin, unittest.SynchronousTestCase):
+    """
+    Tests for L{self.literalFactory}.
+    """
+    literalFactory = imap4.LiteralString
+
+    def test_callback(self):
+        """
+        Calling L{imap4.LiteralString.callback} with a line fires the
+        instance's L{Deferred} with a 2-L{tuple} whose first element
+        is the collected data and whose second is the provided line.
+        """
+        data = b"data"
+        extra = b"extra"
+
+        literal = imap4.LiteralString(len(data), self.deferred)
+
+        for c in iterbytes(data):
+            literal.write(c)
+
+        literal.callback(b"extra")
+
+        result = self.successResultOf(self.deferred)
+        self.assertEqual(result, (data, extra))
+
+
+
+class LiteralFileTests(LiteralTestsMixin, unittest.TestCase):
+    """
+    Tests for L{imap4.LiteralFile}.
+    """
+    literalFactory = imap4.LiteralFile
+
+
+    def test_callback(self):
+        """
+        Calling L{imap4.LiteralFile.callback} with a line fires the
+        instance's L{Deferred} with a 2-L{tuple} whose first element
+        is the file and whose second is the provided line.
+        """
+        data = b"data"
+        extra = b"extra"
+
+        literal = imap4.LiteralFile(len(data), self.deferred)
+
+        for c in iterbytes(data):
+            literal.write(c)
+
+        literal.callback(b"extra")
+
+        result = self.successResultOf(self.deferred)
+        self.assertEqual(len(result), 2)
+
+        dataFile, extra = result
+        self.assertEqual(dataFile.read(), b"data")
+
+
+    def test_callbackSpooledToDisk(self):
+        """
+        A L{imap4.LiteralFile} whose size exceeds the maximum
+        in-memory size spools its content to disk, and invoking its
+        L{callback} with a line fires the instance's L{Deferred} with
+        a 2-L{tuple} whose first element is the spooled file and whose second
+        is the provided line.
+        """
+        data = b"data"
+        extra = b"extra"
+
+        self.patch(imap4.LiteralFile, "_memoryFileLimit", 1)
+
+        literal = imap4.LiteralFile(len(data), self.deferred)
+
+        for c in iterbytes(data):
+            literal.write(c)
+
+        literal.callback(b"extra")
+
+        result = self.successResultOf(self.deferred)
+        self.assertEqual(len(result), 2)
+
+        dataFile, extra = result
+        self.assertEqual(dataFile.read(), b"data")
+
+
+
+class WriteBufferTests(unittest.SynchronousTestCase):
+    """
+    Tests for L{imap4.WriteBuffer}.
+    """
+
+    def setUp(self):
+        self.transport = StringTransport()
+
+
+    def test_partialWrite(self):
+        """
+        L{imap4.WriteBuffer} buffers writes that are smaller than its
+        buffer size.
+        """
+        buf = imap4.WriteBuffer(self.transport)
+        data = b'x' * buf.bufferSize
+
+        buf.write(data)
+
+        self.assertFalse(self.transport.value())
+
+
+    def test_overlongWrite(self):
+        """
+        L{imap4.WriteBuffer} writes data without buffering it when
+        the size of the data exceeds the size of its buffer.
+        """
+        buf = imap4.WriteBuffer(self.transport)
+        data = b'x' * (buf.bufferSize + 1)
+
+        buf.write(data)
+
+        self.assertEqual(self.transport.value(), data)
+
+
+    def test_writesImplyFlush(self):
+        """
+        L{imap4.WriteBuffer} buffers writes until its buffer's size
+        exceeds its maximum value.
+        """
+        buf = imap4.WriteBuffer(self.transport)
+        firstData = b'x' * buf.bufferSize
+        secondData = b'y'
+
+        buf.write(firstData)
+
+        self.assertFalse(self.transport.value())
+
+        buf.write(secondData)
+
+        self.assertEqual(self.transport.value(), firstData + secondData)
+
+
+    def test_explicitFlush(self):
+        """
+        L{imap4.WriteBuffer.flush} flushes the buffer even when its
+        size is smaller than the buffer size.
+        """
+        buf = imap4.WriteBuffer(self.transport)
+        data = b'x' * (buf.bufferSize)
+
+        buf.write(data)
+
+        self.assertFalse(self.transport.value())
+
+        buf.flush()
+
+        self.assertEqual(self.transport.value(), data)
+
+
+    def test_explicitFlushEmptyBuffer(self):
+        """
+        L{imap4.WriteBuffer.flush} has no effect if when the buffer is
+        empty.
+        """
+        buf = imap4.WriteBuffer(self.transport)
+
+        buf.flush()
+
+        self.assertFalse(self.transport.value())

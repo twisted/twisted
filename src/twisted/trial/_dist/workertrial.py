@@ -15,6 +15,7 @@ import os
 import errno
 
 
+
 def _setupPath(environ):
     """
     Override C{sys.path} with what the parent passed in B{TRIAL_PYTHONPATH}.
@@ -73,8 +74,8 @@ def main(_fdopen=os.fdopen):
     from twisted.trial._dist.worker import WorkerProtocol
     workerProtocol = WorkerProtocol(config['force-gc'])
 
-    protocolIn = _fdopen(_WORKER_AMP_STDIN)
-    protocolOut = _fdopen(_WORKER_AMP_STDOUT, 'w')
+    protocolIn = _fdopen(_WORKER_AMP_STDIN, 'rb')
+    protocolOut = _fdopen(_WORKER_AMP_STDOUT, 'wb')
     workerProtocol.makeConnection(FileWrapper(protocolOut))
 
     observer = WorkerLogObserver(workerProtocol)
@@ -90,7 +91,7 @@ def main(_fdopen=os.fdopen):
                 continue
             else:
                 raise
-        if r == '':
+        if r == b'':
             break
         else:
             workerProtocol.dataReceived(r)

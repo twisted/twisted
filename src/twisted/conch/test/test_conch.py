@@ -3,29 +3,20 @@
 # See LICENSE for details.
 
 import os, sys, socket
+import subprocess
 from itertools import count
 
 from zope.interface import implementer
-
+from twisted.python.reflect import requireModule
 from twisted.conch.error import ConchError
-from twisted.conch.avatar import ConchUser
-from twisted.conch.ssh.session import ISession, SSHSession, wrapProtocol
 from twisted.cred import portal
 from twisted.internet import reactor, defer, protocol
 from twisted.internet.error import ProcessExitedAlready
 from twisted.internet.task import LoopingCall
 from twisted.internet.utils import getProcessValue
 from twisted.python import filepath, log, runtime
-from twisted.python.compat import unicode
+from twisted.python.compat import unicode, _PYPY
 from twisted.trial import unittest
-
-try:
-    from twisted.conch.scripts.conch import SSHSession as StdioInteractingSession
-except ImportError as e:
-    StdioInteractingSession = None
-    _reason = str(e)
-    del e
-
 from twisted.conch.test.test_ssh import ConchTestRealm
 from twisted.python.procutils import which
 
@@ -39,14 +30,48 @@ except ImportError:
     pass
 
 try:
-    import cryptography
-except ImportError:
-    cryptography = None
-try:
     import pyasn1
 except ImportError:
     pyasn1 = None
 
+cryptography = requireModule("cryptography")
+if cryptography:
+    from twisted.conch.avatar import ConchUser
+    from twisted.conch.ssh.session import ISession, SSHSession, wrapProtocol
+else:
+    from twisted.conch.interfaces import ISession
+
+    class ConchUser:
+        pass
+try:
+    from twisted.conch.scripts.conch import (
+        SSHSession as StdioInteractingSession
+    )
+except ImportError as e:
+    StdioInteractingSession = None
+    _reason = str(e)
+    del e
+
+
+
+def _has_ipv6():
+    """ Returns True if the system can bind an IPv6 address."""
+    sock = None
+    has_ipv6 = False
+
+    try:
+        sock = socket.socket(socket.AF_INET6)
+        sock.bind(('::1', 0))
+        has_ipv6 = True
+    except socket.error:
+        pass
+
+    if sock:
+        sock.close()
+    return has_ipv6
+
+
+HAS_IPV6 = _has_ipv6()
 
 
 class FakeStdio(object):
@@ -138,8 +163,8 @@ class ConchTestOpenSSHProcess(protocol.ProcessProtocol):
         """
         if reason.value.exitCode != 0:
             self._getDeferred().errback(
-                ConchError("exit code was not 0: %s" %
-                                 reason.value.exitCode))
+                ConchError("exit code was not 0: {}".format(
+                                 reason.value.exitCode)))
         else:
             buf = self.buf.replace(b'\r\n', b'\n')
             self._getDeferred().callback(buf)
@@ -295,6 +320,13 @@ class ConchServerSetupMixin:
     if not pyasn1:
         skip = "Cannot run without PyASN1"
 
+    # FIXME: https://twistedmatrix.com/trac/ticket/8506
+
+    # This should be un-skipped on Travis after the ticket is fixed.  For now
+    # is enabled so that we can continue with fixing other stuff using Travis.
+    if _PYPY:
+        skip = 'PyPy known_host not working yet on Travis.'
+
     realmFactory = staticmethod(lambda: ConchTestRealm(b'testuser'))
 
     def _createFiles(self):
@@ -345,8 +377,9 @@ class ConchServerSetupMixin:
                                              interface="127.0.0.1")
         self.echoServer = reactor.listenTCP(0, EchoFactory())
         self.echoPort = self.echoServer.getHost().port
-        self.echoServerV6 = reactor.listenTCP(0, EchoFactory(), interface="::1")
-        self.echoPortV6 = self.echoServerV6.getHost().port
+        if HAS_IPV6:
+            self.echoServerV6 = reactor.listenTCP(0, EchoFactory(), interface="::1")
+            self.echoPortV6 = self.echoServerV6.getHost().port
 
 
     def tearDown(self):
@@ -356,10 +389,13 @@ class ConchServerSetupMixin:
             pass
         else:
             self.conchFactory.proto.transport.loseConnection()
-        return defer.gatherResults([
-                defer.maybeDeferred(self.conchServer.stopListening),
-                defer.maybeDeferred(self.echoServer.stopListening),
-                defer.maybeDeferred(self.echoServerV6.stopListening)])
+        deferreds = [
+            defer.maybeDeferred(self.conchServer.stopListening),
+            defer.maybeDeferred(self.echoServer.stopListening),
+        ]
+        if HAS_IPV6:
+            deferreds.append(defer.maybeDeferred(self.echoServerV6.stopListening))
+        return defer.gatherResults(deferreds)
 
 
 
@@ -565,8 +601,8 @@ class OpenSSHClientMixin:
 
 
 
-class OpenSSHKeyExchangeTestCase(ConchServerSetupMixin, OpenSSHClientMixin,
-                                 unittest.TestCase):
+class OpenSSHKeyExchangeTests(ConchServerSetupMixin, OpenSSHClientMixin,
+                              unittest.TestCase):
     """
     Tests L{SSHTransportBase}'s key exchange algorithm compatibility with
     OpenSSH.
@@ -583,18 +619,51 @@ class OpenSSHKeyExchangeTestCase(ConchServerSetupMixin, OpenSSHClientMixin,
 
         @return: L{defer.Deferred}
         """
+        kexAlgorithms = []
+        try:
+            output = subprocess.check_output([which('ssh')[0], '-Q', 'kex'],
+                                             stderr=subprocess.STDOUT)
+            if not isinstance(output, str):
+                output = output.decode("utf-8")
+            kexAlgorithms = output.split()
+        except:
+            pass
+
+        if keyExchangeAlgo not in kexAlgorithms:
+            raise unittest.SkipTest(
+                "{} not supported by ssh client".format(
+                    keyExchangeAlgo))
+
         d = self.execute('echo hello', ConchTestOpenSSHProcess(),
                          '-oKexAlgorithms=' + keyExchangeAlgo)
         return d.addCallback(self.assertEqual, b'hello\n')
 
 
-    def test_DH_GROUP1(self):
+    def test_ECDHSHA256(self):
         """
-        The diffie-hellman-group1-sha1 key exchange algorithm is compatible
-        with OpenSSH.
+        The ecdh-sha2-nistp256 key exchange algorithm is compatible with
+        OpenSSH
         """
         return self.assertExecuteWithKexAlgorithm(
-            'diffie-hellman-group1-sha1')
+            'ecdh-sha2-nistp256')
+
+
+    def test_ECDHSHA384(self):
+        """
+        The ecdh-sha2-nistp384 key exchange algorithm is compatible with
+        OpenSSH
+        """
+        return self.assertExecuteWithKexAlgorithm(
+            'ecdh-sha2-nistp384')
+
+
+    def test_ECDHSHA521(self):
+        """
+        The ecdh-sha2-nistp521 key exchange algorithm is compatible with
+        OpenSSH
+        """
+        return self.assertExecuteWithKexAlgorithm(
+            'ecdh-sha2-nistp521')
 
 
     def test_DH_GROUP14(self):
@@ -624,6 +693,16 @@ class OpenSSHKeyExchangeTestCase(ConchServerSetupMixin, OpenSSHClientMixin,
             'diffie-hellman-group-exchange-sha256')
 
 
+    def test_unsupported_algorithm(self):
+        """
+        The list of key exchange algorithms supported
+        by OpenSSH client is obtained with C{ssh -Q kex}.
+        """
+        self.assertRaises(unittest.SkipTest,
+                          self.assertExecuteWithKexAlgorithm,
+                          'unsupported-algorithm')
+
+
 
 class OpenSSHClientForwardingTests(ForwardingMixin, OpenSSHClientMixin,
                                       unittest.TestCase):
@@ -641,6 +720,8 @@ class OpenSSHClientForwardingTests(ForwardingMixin, OpenSSHClientMixin,
                          % (localPort, self.echoPortV6))
         d.addCallback(self.assertEqual, b'test\n')
         return d
+    if not HAS_IPV6:
+        test_localToRemoteForwardingV6.skip = "Requires IPv6 support"
 
 
 
@@ -670,16 +751,14 @@ class CmdLineClientTests(ForwardingMixin, unittest.TestCase):
 
         process.deferred = defer.Deferred()
         port = self.conchServer.getHost().port
-        cmd = ('-p %i -l testuser '
+        cmd = ('-p {} -l testuser '
                '--known-hosts kh_test '
                '--user-authentications publickey '
-               '--host-key-algorithms ssh-rsa '
                '-a '
                '-i dsa_test '
-               '-v ') % port + sshArgs + \
-               ' 127.0.0.1 ' + remoteCommand
+               '-v '.format(port) + sshArgs +
+               ' 127.0.0.1 ' + remoteCommand)
         cmds = _makeArgs(conchArgs + cmd.split())
-        log.msg(str(cmds))
         env = os.environ.copy()
         env['PYTHONPATH'] = os.pathsep.join(sys.path)
         encodedCmds = []
@@ -712,9 +791,23 @@ class CmdLineClientTests(ForwardingMixin, unittest.TestCase):
         d = self.execute(
             remoteCommand='echo goodbye',
             process=ConchTestOpenSSHProcess(),
-            conchArgs=['--log', '--logfile', logPath.path]
+            conchArgs=['--log', '--logfile', logPath.path,
+                       '--host-key-algorithms', 'ssh-rsa']
             )
 
         d.addCallback(self.assertEqual, b'goodbye\n')
         d.addCallback(cb_check_log)
+        return d
+
+
+    def test_runWithNoHostAlgorithmsSpecified(self):
+        """
+        Do not use --host-key-algorithms flag on command line.
+        """
+        d = self.execute(
+            remoteCommand='echo goodbye',
+            process=ConchTestOpenSSHProcess()
+            )
+
+        d.addCallback(self.assertEqual, b'goodbye\n')
         return d

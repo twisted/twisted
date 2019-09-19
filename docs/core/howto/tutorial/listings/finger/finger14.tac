@@ -8,11 +8,11 @@ class FingerProtocol(basic.LineReceiver):
         d = self.factory.getUser(user)
 
         def onError(err):
-            return 'Internal error in server'
+            return b'Internal error in server'
         d.addErrback(onError)
 
         def writeResponse(message):
-            self.transport.write(message + '\r\n')
+            self.transport.write(message + b'\r\n')
             self.transport.loseConnection()
         d.addCallback(writeResponse)
 
@@ -23,9 +23,9 @@ class FingerService(service.Service):
         self.filename = filename
 
     def _read(self):
-        with open(self.filename) as f:
+        with open(self.filename, "rb") as f:
             for line in f:
-                user, status = line.split(':', 1)
+                user, status = line.split(b':', 1)
                 user = user.strip()
                 status = status.strip()
                 self.users[user] = status
@@ -40,7 +40,7 @@ class FingerService(service.Service):
         self.call.cancel()
 
     def getUser(self, user):
-        return defer.succeed(self.users.get(user, "No such user"))
+        return defer.succeed(self.users.get(user, b"No such user"))
 
     def getFingerFactory(self):
         f = protocol.ServerFactory()

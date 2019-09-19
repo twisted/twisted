@@ -2,6 +2,8 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
+# pylint: disable=I0011,W9401,W9402
+
 """
 Tests for L{twisted.conch.manhole}.
 """
@@ -69,32 +71,77 @@ class ManholeProtocolTests(unittest.TestCase):
 
 
 class WriterTests(unittest.TestCase):
-    def testInteger(self):
+    def test_Integer(self):
+        """
+        Colorize an integer.
+        """
         manhole.lastColorizedLine("1")
 
 
-    def testDoubleQuoteString(self):
+    def test_DoubleQuoteString(self):
+        """
+        Colorize an integer in double quotes.
+        """
         manhole.lastColorizedLine('"1"')
 
 
-    def testSingleQuoteString(self):
+    def test_SingleQuoteString(self):
+        """
+        Colorize an integer in single quotes.
+        """
         manhole.lastColorizedLine("'1'")
 
 
-    def testTripleSingleQuotedString(self):
+    def test_TripleSingleQuotedString(self):
+        """
+        Colorize an integer in triple quotes.
+        """
         manhole.lastColorizedLine("'''1'''")
 
 
-    def testTripleDoubleQuotedString(self):
+    def test_TripleDoubleQuotedString(self):
+        """
+        Colorize an integer in triple and double quotes.
+        """
         manhole.lastColorizedLine('"""1"""')
 
 
-    def testFunctionDefinition(self):
+    def test_FunctionDefinition(self):
+        """
+        Colorize a function definition.
+        """
         manhole.lastColorizedLine("def foo():")
 
 
-    def testClassDefinition(self):
+    def test_ClassDefinition(self):
+        """
+        Colorize a class definition.
+        """
         manhole.lastColorizedLine("class foo:")
+
+
+    def test_unicode(self):
+        """
+        Colorize a Unicode string.
+        """
+        res = manhole.lastColorizedLine(u"\u0438")
+        self.assertTrue(isinstance(res, bytes))
+
+
+    def test_bytes(self):
+        """
+        Colorize a UTF-8 byte string.
+        """
+        res = manhole.lastColorizedLine(b"\xd0\xb8")
+        self.assertTrue(isinstance(res, bytes))
+
+
+    def test_identicalOutput(self):
+        """
+        The output of UTF-8 bytestrings and Unicode strings are identical.
+        """
+        self.assertEqual(manhole.lastColorizedLine(b"\xd0\xb8"),
+                         manhole.lastColorizedLine(u"\u0438"))
 
 
 
@@ -106,113 +153,131 @@ class ManholeLoopbackMixin:
         return defer.waitForDeferred(d)
 
 
-    def testSimpleExpression(self):
-        done = self.recvlineClient.expect("done")
+    def test_SimpleExpression(self):
+        """
+        Evaluate simple expression.
+        """
+        done = self.recvlineClient.expect(b"done")
 
         self._testwrite(
-            "1 + 1\n"
-            "done")
+            b"1 + 1\n"
+            b"done")
 
         def finished(ign):
             self._assertBuffer(
-                [">>> 1 + 1",
-                 "2",
-                 ">>> done"])
+                [b">>> 1 + 1",
+                 b"2",
+                 b">>> done"])
 
         return done.addCallback(finished)
 
 
-    def testTripleQuoteLineContinuation(self):
-        done = self.recvlineClient.expect("done")
+    def test_TripleQuoteLineContinuation(self):
+        """
+        Evaluate line continuation in triple quotes.
+        """
+        done = self.recvlineClient.expect(b"done")
 
         self._testwrite(
-            "'''\n'''\n"
-            "done")
+            b"'''\n'''\n"
+            b"done")
 
         def finished(ign):
             self._assertBuffer(
-                [">>> '''",
-                 "... '''",
-                 "'\\n'",
-                 ">>> done"])
+                [b">>> '''",
+                 b"... '''",
+                 b"'\\n'",
+                 b">>> done"])
 
         return done.addCallback(finished)
 
 
-    def testFunctionDefinition(self):
-        done = self.recvlineClient.expect("done")
+    def test_FunctionDefinition(self):
+        """
+        Evaluate function definition.
+        """
+        done = self.recvlineClient.expect(b"done")
 
         self._testwrite(
-            "def foo(bar):\n"
-            "\tprint bar\n\n"
-            "foo(42)\n"
-            "done")
+            b"def foo(bar):\n"
+            b"\tprint(bar)\n\n"
+            b"foo(42)\n"
+            b"done")
 
         def finished(ign):
             self._assertBuffer(
-                [">>> def foo(bar):",
-                 "...     print bar",
-                 "... ",
-                 ">>> foo(42)",
-                 "42",
-                 ">>> done"])
+                [b">>> def foo(bar):",
+                 b"...     print(bar)",
+                 b"... ",
+                 b">>> foo(42)",
+                 b"42",
+                 b">>> done"])
 
         return done.addCallback(finished)
 
 
-    def testClassDefinition(self):
-        done = self.recvlineClient.expect("done")
-
+    def test_ClassDefinition(self):
+        """
+        Evaluate class definition.
+        """
+        done = self.recvlineClient.expect(b"done")
         self._testwrite(
-            "class Foo:\n"
-            "\tdef bar(self):\n"
-            "\t\tprint 'Hello, world!'\n\n"
-            "Foo().bar()\n"
-            "done")
+            b"class Foo:\n"
+            b"\tdef bar(self):\n"
+            b"\t\tprint('Hello, world!')\n\n"
+            b"Foo().bar()\n"
+            b"done")
 
         def finished(ign):
             self._assertBuffer(
-                [">>> class Foo:",
-                 "...     def bar(self):",
-                 "...         print 'Hello, world!'",
-                 "... ",
-                 ">>> Foo().bar()",
-                 "Hello, world!",
-                 ">>> done"])
+                [b">>> class Foo:",
+                 b"...     def bar(self):",
+                 b"...         print('Hello, world!')",
+                 b"... ",
+                 b">>> Foo().bar()",
+                 b"Hello, world!",
+                 b">>> done"])
 
         return done.addCallback(finished)
 
 
-    def testException(self):
-        done = self.recvlineClient.expect("done")
+    def test_Exception(self):
+        """
+        Evaluate raising an exception.
+        """
+        done = self.recvlineClient.expect(b"done")
 
         self._testwrite(
-            "raise Exception('foo bar baz')\n"
-            "done")
+            b"raise Exception('foo bar baz')\n"
+            b"done")
 
         def finished(ign):
             self._assertBuffer(
-                [">>> raise Exception('foo bar baz')",
-                 "Traceback (most recent call last):",
-                 '  File "<console>", line 1, in ' + defaultFunctionName,
-                 "Exception: foo bar baz",
-                 ">>> done"])
+                [b">>> raise Exception('foo bar baz')",
+                 b"Traceback (most recent call last):",
+                 b'  File "<console>", line 1, in ' +
+                 defaultFunctionName.encode("utf-8"),
+                 b"Exception: foo bar baz",
+                 b">>> done"])
 
         return done.addCallback(finished)
 
 
-    def testControlC(self):
-        done = self.recvlineClient.expect("done")
+    def test_ControlC(self):
+        """
+        Evaluate interrupting with CTRL-C.
+        """
+        done = self.recvlineClient.expect(b"done")
 
         self._testwrite(
-            "cancelled line" + manhole.CTRL_C +
-            "done")
+            b"cancelled line" + manhole.CTRL_C +
+            b"done")
 
         def finished(ign):
             self._assertBuffer(
-                [">>> cancelled line",
-                 "KeyboardInterrupt",
-                 ">>> done"])
+                [b">>> cancelled line",
+                 b"KeyboardInterrupt",
+                 b">>> done"])
 
         return done.addCallback(finished)
 
@@ -223,36 +288,39 @@ class ManholeLoopbackMixin:
         complete a statement should discard the entire ongoing statement and
         reset the input prompt to the non-continuation prompt.
         """
-        continuing = self.recvlineClient.expect("things")
+        continuing = self.recvlineClient.expect(b"things")
 
-        self._testwrite("(\nthings")
+        self._testwrite(b"(\nthings")
 
         def gotContinuation(ignored):
             self._assertBuffer(
-                [">>> (",
-                 "... things"])
-            interrupted = self.recvlineClient.expect(">>> ")
+                [b">>> (",
+                 b"... things"])
+            interrupted = self.recvlineClient.expect(b">>> ")
             self._testwrite(manhole.CTRL_C)
             return interrupted
         continuing.addCallback(gotContinuation)
 
         def gotInterruption(ignored):
             self._assertBuffer(
-                [">>> (",
-                 "... things",
-                 "KeyboardInterrupt",
-                 ">>> "])
+                [b">>> (",
+                 b"... things",
+                 b"KeyboardInterrupt",
+                 b">>> "])
         continuing.addCallback(gotInterruption)
         return continuing
 
 
-    def testControlBackslash(self):
-        self._testwrite("cancelled line")
-        partialLine = self.recvlineClient.expect("cancelled line")
+    def test_ControlBackslash(self):
+        """
+        Evaluate cancelling with CTRL-\.
+        """
+        self._testwrite(b"cancelled line")
+        partialLine = self.recvlineClient.expect(b"cancelled line")
 
         def gotPartialLine(ign):
             self._assertBuffer(
-                [">>> cancelled line"])
+                [b">>> cancelled line"])
             self._testwrite(manhole.CTRL_BACKSLASH)
 
             d = self.recvlineClient.onDisconnection
@@ -260,7 +328,7 @@ class ManholeLoopbackMixin:
 
         def gotClearedLine(ign):
             self._assertBuffer(
-                [""])
+                [b""])
 
         return partialLine.addCallback(gotPartialLine).addCallback(
             gotClearedLine)
@@ -272,16 +340,16 @@ class ManholeLoopbackMixin:
         A CTRL+D in the middle of a line doesn't close a connection,
         but at the beginning of a line it does.
         """
-        self._testwrite("1 + 1")
-        yield self.recvlineClient.expect(r"\+ 1")
-        self._assertBuffer([">>> 1 + 1"])
+        self._testwrite(b"1 + 1")
+        yield self.recvlineClient.expect(br"\+ 1")
+        self._assertBuffer([b">>> 1 + 1"])
 
-        self._testwrite(manhole.CTRL_D + " + 1")
-        yield self.recvlineClient.expect(r"\+ 1")
-        self._assertBuffer([">>> 1 + 1 + 1"])
+        self._testwrite(manhole.CTRL_D + b" + 1")
+        yield self.recvlineClient.expect(br"\+ 1")
+        self._assertBuffer([b">>> 1 + 1 + 1"])
 
-        self._testwrite("\n")
-        yield self.recvlineClient.expect("3\n>>> ")
+        self._testwrite(b"\n")
+        yield self.recvlineClient.expect(b"3\n>>> ")
 
         self._testwrite(manhole.CTRL_D)
         d = self.recvlineClient.onDisconnection
@@ -289,7 +357,7 @@ class ManholeLoopbackMixin:
 
 
     @defer.inlineCallbacks
-    def testControlL(self):
+    def test_ControlL(self):
         """
         CTRL+L is generally used as a redraw-screen command in terminal
         applications.  Manhole doesn't currently respect this usage of it,
@@ -298,13 +366,13 @@ class ManholeLoopbackMixin:
         """
         # Start off with a newline so that when we clear the display we can
         # tell by looking for the missing first empty prompt line.
-        self._testwrite("\n1 + 1")
-        yield self.recvlineClient.expect(r"\+ 1")
-        self._assertBuffer([">>> ", ">>> 1 + 1"])
+        self._testwrite(b"\n1 + 1")
+        yield self.recvlineClient.expect(br"\+ 1")
+        self._assertBuffer([b">>> ", b">>> 1 + 1"])
 
-        self._testwrite(manhole.CTRL_L + " + 1")
-        yield self.recvlineClient.expect(r"1 \+ 1 \+ 1")
-        self._assertBuffer([">>> 1 + 1 + 1"])
+        self._testwrite(manhole.CTRL_L + b" + 1")
+        yield self.recvlineClient.expect(br"1 \+ 1 \+ 1")
+        self._assertBuffer([b">>> 1 + 1 + 1"])
 
 
     def test_controlA(self):
@@ -312,10 +380,10 @@ class ManholeLoopbackMixin:
         CTRL-A can be used as HOME - returning cursor to beginning of
         current line buffer.
         """
-        self._testwrite('rint "hello"' + '\x01' + 'p')
-        d = self.recvlineClient.expect('print "hello"')
+        self._testwrite(b'rint "hello"' + b'\x01' + b'p')
+        d = self.recvlineClient.expect(b'print "hello"')
         def cb(ignore):
-            self._assertBuffer(['>>> print "hello"'])
+            self._assertBuffer([b'>>> print "hello"'])
         return d.addCallback(cb)
 
 
@@ -324,10 +392,10 @@ class ManholeLoopbackMixin:
         CTRL-E can be used as END - setting cursor to end of current
         line buffer.
         """
-        self._testwrite('rint "hello' + '\x01' + 'p' + '\x05' + '"')
-        d = self.recvlineClient.expect('print "hello"')
+        self._testwrite(b'rint "hello' + b'\x01' + b'p' + b'\x05' + b'"')
+        d = self.recvlineClient.expect(b'print "hello"')
         def cb(ignore):
-            self._assertBuffer(['>>> print "hello"'])
+            self._assertBuffer([b'>>> print "hello"'])
         return d.addCallback(cb)
 
 
@@ -338,26 +406,26 @@ class ManholeLoopbackMixin:
         a sequence number, and when the deferred fires, the result is printed.
         """
         self._testwrite(
-            "from twisted.internet import defer, reactor\n"
-            "d = defer.Deferred()\n"
-            "d\n")
+            b"from twisted.internet import defer, reactor\n"
+            b"d = defer.Deferred()\n"
+            b"d\n")
 
-        yield self.recvlineClient.expect("<Deferred #0>")
+        yield self.recvlineClient.expect(b"<Deferred #0>")
 
         self._testwrite(
-            "c = reactor.callLater(0.1, d.callback, 'Hi!')\n")
-        yield self.recvlineClient.expect(">>> ")
+            b"c = reactor.callLater(0.1, d.callback, 'Hi!')\n")
+        yield self.recvlineClient.expect(b">>> ")
 
         yield self.recvlineClient.expect(
-            "Deferred #0 called back: 'Hi!'\n>>> ")
+            b"Deferred #0 called back: 'Hi!'\n>>> ")
         self._assertBuffer(
-            [">>> from twisted.internet import defer, reactor",
-             ">>> d = defer.Deferred()",
-             ">>> d",
-             "<Deferred #0>",
-             ">>> c = reactor.callLater(0.1, d.callback, 'Hi!')",
-             "Deferred #0 called back: 'Hi!'",
-             ">>> "])
+            [b">>> from twisted.internet import defer, reactor",
+             b">>> d = defer.Deferred()",
+             b">>> d",
+             b"<Deferred #0>",
+             b">>> c = reactor.callLater(0.1, d.callback, 'Hi!')",
+             b"Deferred #0 called back: 'Hi!'",
+             b">>> "])
 
 
 

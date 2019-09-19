@@ -8,7 +8,7 @@ SSH key exchange handling.
 
 from __future__ import absolute_import, division
 
-from hashlib import sha1, sha256
+from hashlib import sha1, sha256, sha384, sha512
 
 from zope.interface import Attribute, implementer, Interface
 
@@ -49,6 +49,14 @@ class _IFixedGroupKexAlgorithm(_IKexAlgorithm):
 
 
 
+class _IEllipticCurveExchangeKexAlgorithm(_IKexAlgorithm):
+    """
+    An L{_IEllipticCurveExchangeKexAlgorithm} describes a key exchange algorithm
+    that uses an elliptic curve exchange between the client and server.
+    """
+
+
+
 class _IGroupExchangeKexAlgorithm(_IKexAlgorithm):
     """
     An L{_IGroupExchangeKexAlgorithm} describes a key exchange algorithm
@@ -60,6 +68,39 @@ class _IGroupExchangeKexAlgorithm(_IKexAlgorithm):
 
 
 
+@implementer(_IEllipticCurveExchangeKexAlgorithm)
+class _ECDH256(object):
+    """
+    Elliptic Curve Key Exchange with SHA-256 as HASH. Defined in
+    RFC 5656.
+    """
+    preference = 1
+    hashProcessor = sha256
+
+
+
+@implementer(_IEllipticCurveExchangeKexAlgorithm)
+class _ECDH384(object):
+    """
+    Elliptic Curve Key Exchange with SHA-384 as HASH. Defined in
+    RFC 5656.
+    """
+    preference = 2
+    hashProcessor = sha384
+
+
+
+@implementer(_IEllipticCurveExchangeKexAlgorithm)
+class _ECDH512(object):
+    """
+    Elliptic Curve Key Exchange with SHA-512 as HASH. Defined in
+    RFC 5656.
+    """
+    preference = 3
+    hashProcessor = sha512
+
+
+
 @implementer(_IGroupExchangeKexAlgorithm)
 class _DHGroupExchangeSHA256(object):
     """
@@ -67,7 +108,7 @@ class _DHGroupExchangeSHA256(object):
     RFC 4419, 4.2.
     """
 
-    preference = 1
+    preference = 4
     hashProcessor = sha256
 
 
@@ -79,27 +120,8 @@ class _DHGroupExchangeSHA1(object):
     RFC 4419, 4.1.
     """
 
-    preference = 2
+    preference = 5
     hashProcessor = sha1
-
-
-
-@implementer(_IFixedGroupKexAlgorithm)
-class _DHGroup1SHA1(object):
-    """
-    Diffie-Hellman key exchange with SHA-1 as HASH, and Oakley Group 2
-    (1024-bit MODP Group). Defined in RFC 4253, 8.1.
-    """
-
-    preference = 3
-    hashProcessor = sha1
-    # Diffie-Hellman primes from Oakley Group 2 (RFC 2409, 6.2).
-    prime = long('17976931348623159077083915679378745319786029604875601170644'
-        '44236841971802161585193689478337958649255415021805654859805036464405'
-        '48199239100050792877003355816639229553136239076508735759914822574862'
-        '57500742530207744771258955095793777842444242661733472762929938766870'
-        '9205606050270810842907692932019128194467627007')
-    generator = 2
 
 
 
@@ -110,7 +132,7 @@ class _DHGroup14SHA1(object):
     (2048-bit MODP Group). Defined in RFC 4253, 8.2.
     """
 
-    preference = 4
+    preference = 7
     hashProcessor = sha1
     # Diffie-Hellman primes from Oakley Group 14 (RFC 3526, 3).
     prime = long('32317006071311007300338913926423828248817941241140239112842'
@@ -127,11 +149,14 @@ class _DHGroup14SHA1(object):
 
 
 
+# Which ECDH hash function to use is dependent on the size.
 _kexAlgorithms = {
     b"diffie-hellman-group-exchange-sha256": _DHGroupExchangeSHA256(),
     b"diffie-hellman-group-exchange-sha1": _DHGroupExchangeSHA1(),
-    b"diffie-hellman-group1-sha1": _DHGroup1SHA1(),
     b"diffie-hellman-group14-sha1": _DHGroup14SHA1(),
+    b"ecdh-sha2-nistp256": _ECDH256(),
+    b"ecdh-sha2-nistp384": _ECDH384(),
+    b"ecdh-sha2-nistp521": _ECDH512(),
     }
 
 
@@ -153,6 +178,21 @@ def getKex(kexAlgorithm):
         raise error.ConchError(
             "Unsupported key exchange algorithm: %s" % (kexAlgorithm,))
     return _kexAlgorithms[kexAlgorithm]
+
+
+
+def isEllipticCurve(kexAlgorithm):
+    """
+    Returns C{True} if C{kexAlgorithm} is an elliptic curve.
+
+    @param kexAlgorithm: The key exchange algorithm name.
+    @type kexAlgorithm: C{str}
+
+    @return: C{True} if C{kexAlgorithm} is an elliptic curve,
+        otherwise C{False}.
+    @rtype: C{bool}
+    """
+    return _IEllipticCurveExchangeKexAlgorithm.providedBy(getKex(kexAlgorithm))
 
 
 
@@ -209,6 +249,19 @@ def getSupportedKeyExchanges():
     @return: A C{list} of supported key exchange algorithm names.
     @rtype: C{list} of L{bytes}
     """
+    from cryptography.hazmat.backends import default_backend
+    from cryptography.hazmat.primitives.asymmetric import ec
+    from twisted.conch.ssh.keys import _curveTable
+
+    backend = default_backend()
+    kexAlgorithms = _kexAlgorithms.copy()
+    for keyAlgorithm in list(kexAlgorithms):
+        if keyAlgorithm.startswith(b"ecdh"):
+            keyAlgorithmDsa = keyAlgorithm.replace(b"ecdh", b"ecdsa")
+            supported = backend.elliptic_curve_exchange_algorithm_supported(
+                ec.ECDH(), _curveTable[keyAlgorithmDsa])
+            if not supported:
+                kexAlgorithms.pop(keyAlgorithm)
     return sorted(
-        _kexAlgorithms,
-        key = lambda kexAlgorithm: _kexAlgorithms[kexAlgorithm].preference)
+        kexAlgorithms,
+        key = lambda kexAlgorithm: kexAlgorithms[kexAlgorithm].preference)

@@ -2,8 +2,9 @@
 # See LICENSE for details.
 
 """
-A Factory for SSH servers, along with an OpenSSHFactory to use the same
-data sources as OpenSSH.
+A Factory for SSH servers.
+
+See also L{twisted.conch.openssh_compat.factory} for OpenSSH compatibility.
 
 Maintainer: Paul Swartz
 """
@@ -60,7 +61,8 @@ class SSHFactory(protocol.Factory):
                     'because we cannot find moduli file')
             t.supportedKeyExchanges = [
                 kexAlgorithm for kexAlgorithm in t.supportedKeyExchanges
-                if _kex.isFixedGroup(kexAlgorithm)]
+                if _kex.isFixedGroup(kexAlgorithm) or
+                     _kex.isEllipticCurve(kexAlgorithm)]
         return t
 
 

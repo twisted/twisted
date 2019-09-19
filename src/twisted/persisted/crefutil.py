@@ -11,7 +11,7 @@ Utility classes for dealing with circular references.
 from __future__ import division, absolute_import
 
 from twisted.python import log, reflect
-from twisted.python.compat import xrange, _constructMethod
+from twisted.python.compat import range, _constructMethod
 
 
 class NotKnown:
@@ -53,8 +53,8 @@ class _Container(NotKnown):
         NotKnown.__init__(self)
         self.containerType = containerType
         self.l = l
-        self.locs = list(xrange(len(l)))
-        for idx in xrange(len(l)):
+        self.locs = list(range(len(l)))
+        for idx in range(len(l)):
             if not isinstance(l[idx], NotKnown):
                 self.locs.remove(idx)
             else:
