@@ -1291,9 +1291,9 @@ class IReactorTime(Interface):
         """
         Retrieve all currently scheduled delayed calls.
 
-        @return: A tuple of all L{IDelayedCall} providers representing all
+        @return: A list of L{IDelayedCall} providers representing all
                  currently scheduled calls. This is everything that has been
-                 returned by C{callLater} but not yet called or canceled.
+                 returned by C{callLater} but not yet called or cancelled.
         """
 
 
@@ -1879,7 +1879,9 @@ class IConsumer(Interface):
 
         For L{IPushProducer} providers, C{pauseProducing} will be called
         whenever the write buffer fills up and C{resumeProducing} will only be
-        called when it empties.
+        called when it empties.  The consumer will only call C{resumeProducing}
+        to balance a previous C{pauseProducing} call; the producer is assumed
+        to start in an un-paused state.
 
         @type producer: L{IProducer} provider
 
@@ -1915,7 +1917,7 @@ class IProducer(Interface):
     """
     A producer produces data for a consumer.
 
-    Typically producing is done by calling the write method of a class
+    Typically producing is done by calling the C{write} method of a class
     implementing L{IConsumer}.
     """
 
@@ -1933,7 +1935,7 @@ class IPushProducer(IProducer):
     A push producer, also known as a streaming producer is expected to
     produce (write to this consumer) data on a continuous basis, unless
     it has been paused. A paused push producer will resume producing
-    after its resumeProducing() method is called.   For a push producer
+    after its C{resumeProducing()} method is called.   For a push producer
     which is not pauseable, these functions may be noops.
     """
 
@@ -1942,7 +1944,7 @@ class IPushProducer(IProducer):
         Pause producing data.
 
         Tells a producer that it has produced too much data to process for
-        the time being, and to stop until resumeProducing() is called.
+        the time being, and to stop until C{resumeProducing()} is called.
         """
     def resumeProducing():
         """
@@ -1952,10 +1954,12 @@ class IPushProducer(IProducer):
         more data for its consumer.
         """
 
+
+
 class IPullProducer(IProducer):
     """
     A pull producer, also known as a non-streaming producer, is
-    expected to produce data each time resumeProducing() is called.
+    expected to produce data each time L{resumeProducing()} is called.
     """
 
     def resumeProducing():
@@ -1964,9 +1968,13 @@ class IPullProducer(IProducer):
 
         This tells a producer to produce data for the consumer once
         (not repeatedly, once only). Typically this will be done
-        by calling the consumer's write() method a single time with
-        produced data.
+        by calling the consumer's C{write} method a single time with
+        produced data. The producer should produce data before returning
+        from C{resumeProducing()}, that is, it should not schedule a deferred
+        write.
         """
+
+
 
 class IProtocol(Interface):
 

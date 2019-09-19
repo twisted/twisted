@@ -16,7 +16,6 @@ from zope.interface.verify import verifyObject
 from twisted.python.compat import _PY3, iterbytes
 from twisted.trial import unittest
 from twisted.protocols import basic
-from twisted.python import reflect
 from twisted.internet import protocol, task
 from twisted.internet.interfaces import IProducer
 from twisted.test import proto_helpers
@@ -1369,25 +1368,3 @@ class FileSenderTests(unittest.TestCase):
         failure.trap(Exception)
         self.assertEqual("Consumer asked us to stop producing",
                          str(failure.value))
-
-
-
-class MiceDeprecationTests(unittest.TestCase):
-    """
-    L{twisted.protocols.mice} is deprecated.
-    """
-    if _PY3:
-        skip = "twisted.protocols.mice is not being ported to Python 3."
-
-
-    def test_MiceDeprecation(self):
-        """
-        L{twisted.protocols.mice} is deprecated since Twisted 16.0.
-        """
-        reflect.namedAny("twisted.protocols.mice")
-        warningsShown = self.flushWarnings()
-        self.assertEqual(1, len(warningsShown))
-        self.assertEqual(
-            "twisted.protocols.mice was deprecated in Twisted 16.0.0: "
-            "There is no replacement for this module.",
-            warningsShown[0]['message'])

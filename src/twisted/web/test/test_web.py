@@ -7,6 +7,7 @@ Tests for various parts of L{twisted.web}.
 
 import os
 import zlib
+from io import BytesIO
 
 from zope.interface import implementer
 from zope.interface.verify import verifyObject
@@ -15,8 +16,8 @@ from twisted.python import reflect, failure
 from twisted.python.compat import unichr
 from twisted.python.filepath import FilePath
 from twisted.trial import unittest
-from twisted.internet import reactor
-from twisted.internet.address import IPv4Address
+from twisted.internet import reactor, interfaces
+from twisted.internet.address import IPv4Address, IPv6Address
 from twisted.internet.task import Clock
 from twisted.web import server, resource
 from twisted.web import iweb, http, error
@@ -25,6 +26,11 @@ from twisted.web.test.requesthelper import DummyChannel, DummyRequest
 from twisted.web.static import Data
 from twisted.logger import globalLogPublisher, LogLevel
 from twisted.test.proto_helpers import EventLoggingObserver
+
+from ._util import (
+    assertIsFilesystemTemporary,
+)
+
 
 
 class ResourceTests(unittest.TestCase):
@@ -597,6 +603,39 @@ class RequestTests(unittest.TestCase):
         self.assertEqual(request.prePathURL(), b'http://example.com/foo%2Fbar')
 
 
+    def test_processingFailedNoTracebackByDefault(self):
+        """
+        By default, L{Request.processingFailed} does not write out the failure,
+        but give a generic error message, as L{Site.displayTracebacks} is
+        disabled by default.
+        """
+        logObserver = EventLoggingObserver.createWithCleanup(
+            self,
+            globalLogPublisher
+        )
+
+        d = DummyChannel()
+        request = server.Request(d, 1)
+        request.site = server.Site(resource.Resource())
+        fail = failure.Failure(Exception("Oh no!"))
+        request.processingFailed(fail)
+
+        self.assertNotIn(b"Oh no!", request.transport.written.getvalue())
+        self.assertIn(
+            b"Processing Failed", request.transport.written.getvalue()
+        )
+        self.assertEquals(1, len(logObserver))
+
+        event = logObserver[0]
+        f = event["log_failure"]
+        self.assertIsInstance(f.value, Exception)
+        self.assertEquals(f.getErrorMessage(), "Oh no!")
+
+        # Since we didn't "handle" the exception, flush it to prevent a test
+        # failure
+        self.assertEqual(1, len(self.flushLoggedErrors()))
+
+
     def test_processingFailedNoTraceback(self):
         """
         L{Request.processingFailed} when the site has C{displayTracebacks} set
@@ -772,8 +811,8 @@ class RequestTests(unittest.TestCase):
 
     def test_retrieveNonExistentSession(self):
         """
-        L{Request.getSession} generates a new session if the relevant cookie is
-        set in the incoming request.
+        L{Request.getSession} generates a new session if the session ID
+        advertised in the cookie from the incoming request is not found.
         """
         site = server.Site(resource.Resource())
         d = DummyChannel()
@@ -787,6 +826,51 @@ class RequestTests(unittest.TestCase):
         self.assertTrue(request.cookies[0].startswith(b'TWISTED_SESSION='))
         # It should be a new session ID.
         self.assertNotIn(b"does-not-exist", request.cookies[0])
+
+
+    def test_getSessionExpired(self):
+        """
+        L{Request.getSession} generates a new session when the previous
+        session has expired.
+        """
+        clock = Clock()
+        site = server.Site(resource.Resource())
+        d = DummyChannel()
+        request = server.Request(d, 1)
+        request.site = site
+        request.sitepath = []
+
+        def sessionFactoryWithClock(site, uid):
+            """
+            Forward to normal session factory, but inject the clock.
+
+            @param site: The site on which the session is created.
+            @type site: L{server.Site}
+
+            @param uid: A unique identifier for the session.
+            @type uid: C{bytes}
+
+            @return: A newly created session.
+            @rtype: L{server.Session}
+            """
+            session = sessionFactory(site, uid)
+            session._reactor = clock
+            return session
+
+        # The site is patch to allow injecting a clock to the session.
+        sessionFactory = site.sessionFactory
+        site.sessionFactory = sessionFactoryWithClock
+
+        initialSession = request.getSession()
+
+        # When the session is requested after the session timeout,
+        # no error is raised and a new session is returned.
+        clock.advance(sessionFactory.sessionTimeout)
+        newSession = request.getSession()
+        self.addCleanup(newSession.expire)
+
+        self.assertIsNot(initialSession, newSession)
+        self.assertNotEqual(initialSession.uid, newSession.uid)
 
 
     def test_OPTIONSStar(self):
@@ -865,6 +949,59 @@ class RequestTests(unittest.TestCase):
         self.assertNotIn(b'content-type', response.lower())
 
 
+    def test_defaultSmallContentFile(self):
+        """
+        L{http.Request} creates a L{BytesIO} if the content length is small and
+        the site doesn't offer to create one.
+        """
+        request = server.Request(DummyChannel())
+        request.gotLength(100000 - 1)
+        self.assertIsInstance(request.content, BytesIO)
+
+
+    def test_defaultLargerContentFile(self):
+        """
+        L{http.Request} creates a temporary file on the filesystem if the
+        content length is larger and the site doesn't offer to create one.
+        """
+        request = server.Request(DummyChannel())
+        request.gotLength(100000)
+        assertIsFilesystemTemporary(self, request.content)
+
+
+    def test_defaultUnknownSizeContentFile(self):
+        """
+        L{http.Request} creates a temporary file on the filesystem if the
+        content length is not known and the site doesn't offer to create one.
+        """
+        request = server.Request(DummyChannel())
+        request.gotLength(None)
+        assertIsFilesystemTemporary(self, request.content)
+
+
+    def test_siteSuppliedContentFile(self):
+        """
+        L{http.Request} uses L{Site.getContentFile}, if it exists, to get a
+        file-like object for the request content.
+        """
+        lengths = []
+        contentFile = BytesIO()
+        site = server.Site(resource.Resource())
+
+        def getContentFile(length):
+            lengths.append(length)
+            return contentFile
+        site.getContentFile = getContentFile
+
+        channel = DummyChannel()
+        channel.site = site
+
+        request = server.Request(channel)
+        request.gotLength(12345)
+        self.assertEqual([12345], lengths)
+        self.assertIs(contentFile, request.content)
+
+
 
 class GzipEncoderTests(unittest.TestCase):
     def setUp(self):
@@ -902,6 +1039,25 @@ class GzipEncoderTests(unittest.TestCase):
         request.gotLength(0)
         request.requestHeaders.setRawHeaders(b"Accept-Encoding",
                                              [b"gzip,deflate"])
+        request.requestReceived(b'GET', b'/foo', b'HTTP/1.0')
+        data = self.channel.transport.written.getvalue()
+        self.assertNotIn(b"Content-Length", data)
+        self.assertIn(b"Content-Encoding: gzip\r\n", data)
+        body = data[data.find(b"\r\n\r\n") + 4:]
+        self.assertEqual(b"Some data",
+                          zlib.decompress(body, 16 + zlib.MAX_WBITS))
+
+
+    def test_whitespaceInAcceptEncoding(self):
+        """
+        If the client request passes a I{Accept-Encoding} header which mentions
+        gzip, with whitespace inbetween the encoding name and the commas,
+        L{server._GzipEncoder} automatically compresses the data.
+        """
+        request = server.Request(self.channel, False)
+        request.gotLength(0)
+        request.requestHeaders.setRawHeaders(b"Accept-Encoding",
+                                             [b"deflate, gzip"])
         request.requestReceived(b'GET', b'/foo', b'HTTP/1.0')
         data = self.channel.transport.written.getvalue()
         self.assertNotIn(b"Content-Length", data)
@@ -1329,6 +1485,13 @@ class DummyRequestForLogTest(DummyRequest):
     sentLength = None
     client = IPv4Address('TCP', '1.2.3.4', 12345)
 
+    def getClientIP(self):
+        """
+        As L{getClientIP} is deprecated, no log formatter should call it.
+        """
+        raise NotImplementedError('Call to deprecated getClientIP method'
+                                  ' (use getClientAddress instead)')
+
 
 
 class AccessLogTestsMixin(object):
@@ -1463,6 +1626,46 @@ class CombinedLogFormatterTests(unittest.TestCase):
             u'"evil x-forwarded-for \\x80" - - [13/Feb/2009:23:31:30 +0000] '
             u'"POS\\x81 /dummy HTTP/1.0" 123 - "evil \\x83" "evil \\x84"',
             line)
+
+
+    def test_clientAddrIPv6(self):
+        """
+        A request from an IPv6 client is logged with that IP address.
+        """
+        reactor = Clock()
+        reactor.advance(1234567890)
+
+        timestamp = http.datetimeToLogString(reactor.seconds())
+        request = DummyRequestForLogTest(http.HTTPFactory(reactor=reactor))
+        request.client = IPv6Address("TCP", b"::1", 12345)
+
+        line = http.combinedLogFormatter(timestamp, request)
+        self.assertEqual(
+            u'"::1" - - [13/Feb/2009:23:31:30 +0000] '
+            u'"GET /dummy HTTP/1.0" 123 - "-" "-"',
+            line)
+
+
+    def test_clientAddrUnknown(self):
+        """
+        A request made from an unknown address type is logged as C{"-"}.
+        """
+        @implementer(interfaces.IAddress)
+        class UnknowableAddress(object):
+            """
+            An L{IAddress} which L{combinedLogFormatter} cannot have
+            foreknowledge of.
+            """
+
+        reactor = Clock()
+        reactor.advance(1234567890)
+
+        timestamp = http.datetimeToLogString(reactor.seconds())
+        request = DummyRequestForLogTest(http.HTTPFactory(reactor=reactor))
+        request.client = UnknowableAddress()
+
+        line = http.combinedLogFormatter(timestamp, request)
+        self.assertTrue(line.startswith(u'"-" '))
 
 
 

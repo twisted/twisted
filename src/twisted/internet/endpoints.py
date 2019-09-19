@@ -38,7 +38,14 @@ from twisted.internet.interfaces import (
 )
 from twisted.internet.protocol import ClientFactory, Factory
 from twisted.internet.protocol import ProcessProtocol, Protocol
-from twisted.internet.stdio import StandardIO, PipeAddress
+
+try:
+    from twisted.internet.stdio import StandardIO, PipeAddress
+except ImportError:
+    # fallback if pywin32 is not installed
+    StandardIO = None
+    PipeAddress = None
+
 from twisted.internet.task import LoopingCall
 from twisted.internet._resolver import HostResolution
 from twisted.logger import Logger
