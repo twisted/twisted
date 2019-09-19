@@ -61,8 +61,9 @@ class WorkerReporter(TestResult):
         Send a success over.
         """
         super(WorkerReporter, self).addSuccess(test)
+        testName = test.id()
         self.ampProtocol.callRemote(managercommands.AddSuccess,
-                                    testName=test.id())
+                                    testName=testName)
 
 
     def addError(self, test, error):
@@ -70,12 +71,15 @@ class WorkerReporter(TestResult):
         Send an error over.
         """
         super(WorkerReporter, self).addError(test, error)
+        testName = test.id()
         failure = self._getFailure(error)
-        frames = self._getFrames(failure)
+        error = failure.getErrorMessage()
+        errorClass = qual(failure.type)
+        frames = [frame for frame in self._getFrames(failure)]
         self.ampProtocol.callRemote(managercommands.AddError,
-                                    testName=test.id(),
-                                    error=failure.getErrorMessage(),
-                                    errorClass=qual(failure.type),
+                                    testName=testName,
+                                    error=error,
+                                    errorClass=errorClass,
                                     frames=frames)
 
 
@@ -84,12 +88,15 @@ class WorkerReporter(TestResult):
         Send a Failure over.
         """
         super(WorkerReporter, self).addFailure(test, fail)
+        testName = test.id()
         failure = self._getFailure(fail)
-        frames = self._getFrames(failure)
+        fail = failure.getErrorMessage()
+        failClass = qual(failure.type)
+        frames = [frame for frame in self._getFrames(failure)]
         self.ampProtocol.callRemote(managercommands.AddFailure,
-                                    testName=test.id(),
-                                    fail=failure.getErrorMessage(),
-                                    failClass=qual(failure.type),
+                                    testName=testName,
+                                    fail=fail,
+                                    failClass=failClass,
                                     frames=frames)
 
 
@@ -98,8 +105,11 @@ class WorkerReporter(TestResult):
         Send a skip over.
         """
         super(WorkerReporter, self).addSkip(test, reason)
+        reason = str(reason)
+        testName = test.id()
         self.ampProtocol.callRemote(managercommands.AddSkip,
-                                    testName=test.id(), reason=str(reason))
+                                    testName=testName,
+                                    reason=reason)
 
 
     def _getTodoReason(self, todo):
@@ -119,9 +129,11 @@ class WorkerReporter(TestResult):
         Send an expected failure over.
         """
         super(WorkerReporter, self).addExpectedFailure(test, error, todo)
+        errorMessage = error.getErrorMessage()
+        testName = test.id()
         self.ampProtocol.callRemote(managercommands.AddExpectedFailure,
-                                    testName=test.id(),
-                                    error=error.getErrorMessage(),
+                                    testName=testName,
+                                    error=errorMessage,
                                     todo=self._getTodoReason(todo))
 
 
@@ -130,8 +142,9 @@ class WorkerReporter(TestResult):
         Send an unexpected success over.
         """
         super(WorkerReporter, self).addUnexpectedSuccess(test, todo)
+        testName = test.id()
         self.ampProtocol.callRemote(managercommands.AddUnexpectedSuccess,
-                                    testName=test.id(),
+                                    testName=testName,
                                     todo=self._getTodoReason(todo))
 
 

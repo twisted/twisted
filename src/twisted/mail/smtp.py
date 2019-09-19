@@ -1,19 +1,29 @@
 # -*- test-case-name: twisted.mail.test.test_smtp -*-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
+#
+# pylint: disable=I0011,C0103,C9302
 
 """
 Simple Mail Transfer Protocol implementation.
 """
 
-import time, re, base64, types, socket, os, random
+from __future__ import absolute_import, division
+
+import time
+import re
+import base64
+import socket
+import os
+import random
 import binascii
-import email.utils
 import warnings
-from email.base64MIME import encode as encode_base64
+
+from email.utils import parseaddr
 
 from zope.interface import implementer
 
+from twisted import cred
 from twisted.copyright import longversion
 from twisted.protocols import basic
 from twisted.protocols import policies
@@ -24,6 +34,11 @@ from twisted.internet import reactor
 from twisted.internet.interfaces import ITLSTransport, ISSLTransport
 from twisted.python import log
 from twisted.python import util
+from twisted.python.compat import (_PY3, range, long, unicode, networkString,
+                                   nativeString, iteritems, _keys, _bytesChr,
+                                   iterbytes)
+from twisted.python.runtime import platform
+
 from twisted.mail.interfaces import (IClientAuthentication,
                                      IMessageSMTP as IMessage,
                                      IMessageDeliveryFactory, IMessageDelivery)
@@ -37,13 +52,8 @@ from twisted.mail._except import (
     SMTPTimeoutError, SMTPTLSError as TLSError, TLSRequiredError,
     SMTPProtocolError)
 
-from twisted import cred
-from twisted.python.runtime import platform
 
-try:
-    from cStringIO import StringIO
-except ImportError:
-    from StringIO import StringIO
+from io import BytesIO
 
 
 __all__ = [
@@ -70,17 +80,21 @@ __all__ = [
 
 # Cache the hostname (XXX Yes - this is broken)
 if platform.isMacOSX():
-    # On OS X, getfqdn() is ridiculously slow - use the
+    # On macOS, getfqdn() is ridiculously slow - use the
     # probably-identical-but-sometimes-not gethostname() there.
     DNSNAME = socket.gethostname()
 else:
     DNSNAME = socket.getfqdn()
 
+# Encode the DNS name into something we can send over the wire
+DNSNAME = DNSNAME.encode('ascii')
+
 # Used for fast success code lookup
-SUCCESS = dict.fromkeys(xrange(200,300))
+SUCCESS = dict.fromkeys(range(200, 300))
 
 
-def rfc822date(timeinfo=None,local=1):
+
+def rfc822date(timeinfo=None, local=1):
     """
     Format an RFC-2822 compliant date string.
 
@@ -90,7 +104,7 @@ def rfc822date(timeinfo=None,local=1):
         universal time, or if no time is given, whether now should be local or
         universal time. Default is local, as suggested (SHOULD) by rfc-2822.
 
-    @returns: A string representing the time and date in RFC-2822 format.
+    @returns: A L{bytes} representing the time and date in RFC-2822 format.
     """
     if not timeinfo:
         if local:
@@ -109,15 +123,15 @@ def rfc822date(timeinfo=None,local=1):
             tzhr *= int(abs(tz)//tz)
         (tzmin, tzsec) = divmod(tzmin, 60)
     else:
-        (tzhr, tzmin) = (0,0)
+        (tzhr, tzmin) = (0, 0)
 
-    return "%s, %02d %s %04d %02d:%02d:%02d %+03d%02d" % (
+    return networkString("%s, %02d %s %04d %02d:%02d:%02d %+03d%02d" % (
         ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][timeinfo[6]],
         timeinfo[2],
         ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
          'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][timeinfo[1] - 1],
         timeinfo[0], timeinfo[3], timeinfo[4], timeinfo[5],
-        tzhr, tzmin)
+        tzhr, tzmin))
 
 
 
@@ -127,9 +141,11 @@ def idGenerator():
         yield i
         i += 1
 
+_gen = idGenerator()
 
 
-def messageid(uniq=None, N=idGenerator().next):
+
+def messageid(uniq=None, N=lambda: next(_gen)):
     """
     Return a globally unique random string in RFC 2822 Message-ID format
 
@@ -156,21 +172,24 @@ def quoteaddr(addr):
     """
 
     if isinstance(addr, Address):
-        return '<%s>' % str(addr)
+        return b'<' + bytes(addr) + b'>'
 
-    res = email.utils.parseaddr(addr)
+    if isinstance(addr, bytes):
+        addr = addr.decode('ascii')
+
+    res = parseaddr(addr)
 
     if res == (None, None):
         # It didn't parse, use it as-is
-        return '<%s>' % str(addr)
+        return  b'<' + bytes(addr) + b'>'
     else:
-        return '<%s>' % str(res[1])
+        return  b'<' + res[1].encode('ascii') + b'>'
 
 COMMAND, DATA, AUTH = 'COMMAND', 'DATA', 'AUTH'
 
 
 # Character classes for parsing addresses
-atom = r"[-A-Za-z0-9!\#$%&'*+/=?^_`{|}~]"
+atom = br"[-A-Za-z0-9!\#$%&'*+/=?^_`{|}~]"
 
 class Address:
     """Parse and hold an RFC 2821 address.
@@ -178,18 +197,18 @@ class Address:
     Source routes are stipped and ignored, UUCP-style bang-paths
     and %-style routing are not parsed.
 
-    @type domain: C{str}
+    @type domain: C{bytes}
     @ivar domain: The domain within which this address resides.
 
-    @type local: C{str}
+    @type local: C{bytes}
     @ivar local: The local (\"user\") portion of this address.
     """
 
-    tstring = re.compile(r'''( # A string of
-                          (?:"[^"]*" # quoted string
-                          |\\. # backslash-escaped characted
-                          |''' + atom + r''' # atom character
-                          )+|.) # or any single character''',re.X)
+    tstring = re.compile(br'''( # A string of
+                           (?:"[^"]*" # quoted string
+                           |\\. # backslash-escaped characted
+                           |''' + atom + br''' # atom character
+                           )+|.) # or any single character''', re.X)
     atomre = re.compile(atom) # match any one atom character
 
 
@@ -199,26 +218,26 @@ class Address:
         if isinstance(addr, Address):
             self.__dict__ = addr.__dict__.copy()
             return
-        elif not isinstance(addr, types.StringTypes):
-            addr = str(addr)
+        elif not isinstance(addr, bytes):
+            addr = str(addr).encode('ascii')
+
         self.addrstr = addr
 
         # Tokenize
-        atl = filter(None,self.tstring.split(addr))
-
+        atl = list(filter(None, self.tstring.split(addr)))
         local = []
         domain = []
 
         while atl:
-            if atl[0] == '<':
-                if atl[-1] != '>':
+            if atl[0] == b'<':
+                if atl[-1] != b'>':
                     raise AddressError("Unbalanced <>")
                 atl = atl[1:-1]
-            elif atl[0] == '@':
+            elif atl[0] == b'@':
                 atl = atl[1:]
                 if not local:
                     # Source route
-                    while atl and atl[0] != ':':
+                    while atl and atl[0] != b':':
                         # remove it
                         atl = atl[1:]
                     if not atl:
@@ -228,8 +247,10 @@ class Address:
                     raise AddressError("Too many @")
                 else:
                     # Now in domain
-                    domain = ['']
-            elif len(atl[0]) == 1 and not self.atomre.match(atl[0]) and atl[0] !=  '.':
+                    domain = [b'']
+            elif (len(atl[0]) == 1 and
+                  not self.atomre.match(atl[0]) and
+                  atl[0] != b'.'):
                 raise AddressError("Parse error at %r of %r" % (atl[0], (addr, atl)))
             else:
                 if not domain:
@@ -238,40 +259,50 @@ class Address:
                     domain.append(atl[0])
                 atl = atl[1:]
 
-        self.local = ''.join(local)
-        self.domain = ''.join(domain)
-        if self.local != '' and self.domain == '':
+        self.local = b''.join(local)
+        self.domain = b''.join(domain)
+        if self.local != b'' and self.domain == b'':
             if defaultDomain is None:
                 defaultDomain = DNSNAME
             self.domain = defaultDomain
 
-    dequotebs = re.compile(r'\\(.)')
+    dequotebs = re.compile(br'\\(.)')
 
 
-    def dequote(self,addr):
+    def dequote(self, addr):
         """
         Remove RFC-2821 quotes from address.
         """
         res = []
 
-        atl = filter(None,self.tstring.split(str(addr)))
+        if not isinstance(addr, bytes):
+            addr = str(addr).encode('ascii')
+
+        atl = filter(None, self.tstring.split(addr))
 
         for t in atl:
-            if t[0] == '"' and t[-1] == '"':
+            if t[0] == b'"' and t[-1] == b'"':
                 res.append(t[1:-1])
             elif '\\' in t:
-                res.append(self.dequotebs.sub(r'\1',t))
+                res.append(self.dequotebs.sub(br'\1', t))
             else:
                 res.append(t)
 
-        return ''.join(res)
+        return b''.join(res)
+
+    if _PY3:
+        def __str__(self):
+            return nativeString(bytes(self))
+    else:
+        def __str__(self):
+            return self.__bytes__()
 
 
-    def __str__(self):
+    def __bytes__(self):
         if self.local or self.domain:
-            return '@'.join((self.local, self.domain))
+            return b'@'.join((self.local, self.domain))
         else:
-            return ''
+            return b''
 
 
     def __repr__(self):
@@ -286,7 +317,10 @@ class User:
     including information on where the message came from
     """
     def __init__(self, destination, helo, protocol, orig):
-        host = getattr(protocol, 'host', None)
+        try:
+            host = protocol.host
+        except AttributeError:
+            host = None
         self.dest = Address(destination, host)
         self.helo = helo
         self.protocol = protocol
@@ -308,17 +342,25 @@ class User:
                  'protocol' : None,
                  'orig' : self.orig }
 
+
     def __str__(self):
-        return str(self.dest)
+        return nativeString(bytes(self.dest))
+
+
+    def __bytes__(self):
+        return bytes(self.dest)
+
 
 
 class SMTP(basic.LineOnlyReceiver, policies.TimeoutMixin):
     """
     SMTP server-side protocol.
+
+    @ivar host: The hostname of this mail server.
+    @type host: L{bytes}
     """
 
     timeout = 600
-    host = DNSNAME
     portal = None
 
     # Control whether we log SMTP events
@@ -348,16 +390,30 @@ class SMTP(basic.LineOnlyReceiver, policies.TimeoutMixin):
         self._to = []
         self.delivery = delivery
         self.deliveryFactory = deliveryFactory
+        self.host = DNSNAME
+
+
+    @property
+    def host(self):
+        return self._host
+
+
+    @host.setter
+    def host(self, toSet):
+        if not isinstance(toSet, bytes):
+            toSet = str(toSet).encode('ascii')
+        self._host = toSet
+
 
 
     def timeoutConnection(self):
-        msg = '%s Timeout. Try talking faster next time!' % (self.host,)
+        msg = self.host + b' Timeout. Try talking faster next time!'
         self.sendCode(421, msg)
         self.transport.loseConnection()
 
 
     def greeting(self):
-        return '%s NO UCE NO UBE NO RELAY PROBES' % (self.host,)
+        return self.host + b' NO UCE NO UBE NO RELAY PROBES'
 
 
     def connectionMade(self):
@@ -372,16 +428,16 @@ class SMTP(basic.LineOnlyReceiver, policies.TimeoutMixin):
         self.setTimeout(self.timeout)
 
 
-    def sendCode(self, code, message=''):
+    def sendCode(self, code, message=b''):
         """
         Send an SMTP code with a message.
         """
         lines = message.splitlines()
         lastline = lines[-1:]
         for line in lines[:-1]:
-            self.sendLine('%3.3d-%s' % (code, line))
-        self.sendLine('%3.3d %s' % (code,
-                                    lastline and lastline[0] or ''))
+            self.sendLine(networkString('%3.3d-' % (code,)) + line)
+        self.sendLine(networkString('%3.3d ' % (code,)) +
+                                    (lastline and lastline[0] or b''))
 
 
     def lineReceived(self, line):
@@ -401,16 +457,25 @@ class SMTP(basic.LineOnlyReceiver, policies.TimeoutMixin):
             if len(parts) == 2:
                 method(parts[1])
             else:
-                method('')
+                method(b'')
         else:
             self.sendSyntaxError()
 
 
     def sendSyntaxError(self):
-        self.sendCode(500, 'Error: bad syntax')
+        self.sendCode(500, b'Error: bad syntax')
 
 
     def lookupMethod(self, command):
+        """
+
+        @param command: The command to get from this class.
+        @type command: L{str}
+        @return: The function which executes this command.
+        """
+        if not isinstance(command, str):
+            command = nativeString(command)
+
         return getattr(self, 'do_' + command.upper(), None)
 
 
@@ -420,11 +485,11 @@ class SMTP(basic.LineOnlyReceiver, policies.TimeoutMixin):
                 message.connectionLost()
             self.mode = COMMAND
             del self.__messages
-        self.sendCode(500, 'Line too long')
+        self.sendCode(500, b'Line too long')
 
 
     def do_UNKNOWN(self, rest):
-        self.sendCode(500, 'Command not implemented')
+        self.sendCode(500, b'Command not implemented')
 
 
     def do_HELO(self, rest):
@@ -433,83 +498,91 @@ class SMTP(basic.LineOnlyReceiver, policies.TimeoutMixin):
             host = peer.host
         except AttributeError:
             host = str(peer)
+
+        if not isinstance(host, bytes):
+            host = host.encode('idna')
+
         self._helo = (rest, host)
         self._from = None
         self._to = []
-        self.sendCode(250, '%s Hello %s, nice to meet you' % (self.host, host))
+        self.sendCode(250,
+                      self.host + b' Hello ' + host + b', nice to meet you')
 
 
     def do_QUIT(self, rest):
-        self.sendCode(221, 'See you later')
+        self.sendCode(221, b'See you later')
         self.transport.loseConnection()
 
     # A string of quoted strings, backslash-escaped character or
     # atom characters + '@.,:'
-    qstring = r'("[^"]*"|\\.|' + atom + r'|[@.,:])+'
+    qstring = br'("[^"]*"|\\.|' + atom + br'|[@.,:])+'
 
-    mail_re = re.compile(r'''\s*FROM:\s*(?P<path><> # Empty <>
-                         |<''' + qstring + r'''> # <addr>
-                         |''' + qstring + r''' # addr
-                         )\s*(\s(?P<opts>.*))? # Optional WS + ESMTP options
-                         $''',re.I|re.X)
-    rcpt_re = re.compile(r'\s*TO:\s*(?P<path><' + qstring + r'''> # <addr>
-                         |''' + qstring + r''' # addr
-                         )\s*(\s(?P<opts>.*))? # Optional WS + ESMTP options
-                         $''',re.I|re.X)
+    mail_re = re.compile(br'''\s*FROM:\s*(?P<path><> # Empty <>
+                          |<''' + qstring + br'''> # <addr>
+                          |''' + qstring + br''' # addr
+                          )\s*(\s(?P<opts>.*))? # Optional WS + ESMTP options
+                          $''', re.I|re.X)
+    rcpt_re = re.compile(br'\s*TO:\s*(?P<path><' + qstring + br'''> # <addr>
+                          |''' + qstring + br''' # addr
+                          )\s*(\s(?P<opts>.*))? # Optional WS + ESMTP options
+                          $''', re.I|re.X)
 
     def do_MAIL(self, rest):
         if self._from:
-            self.sendCode(503,"Only one sender per message, please")
+            self.sendCode(503, b"Only one sender per message, please")
             return
         # Clear old recipient list
         self._to = []
         m = self.mail_re.match(rest)
         if not m:
-            self.sendCode(501, "Syntax error")
+            self.sendCode(501, b"Syntax error")
             return
 
         try:
             addr = Address(m.group('path'), self.host)
         except AddressError as e:
-            self.sendCode(553, str(e))
+            self.sendCode(553, networkString(str(e)))
             return
 
         validated = defer.maybeDeferred(self.validateFrom, self._helo, addr)
         validated.addCallbacks(self._cbFromValidate, self._ebFromValidate)
 
 
-    def _cbFromValidate(self, from_, code=250, msg='Sender address accepted'):
-        self._from = from_
+    def _cbFromValidate(self, fromEmail, code=250,
+                        msg=b'Sender address accepted'):
+        self._from = fromEmail
         self.sendCode(code, msg)
 
 
     def _ebFromValidate(self, failure):
         if failure.check(SMTPBadSender):
             self.sendCode(failure.value.code,
-                          'Cannot receive from specified address %s: %s'
-                          % (quoteaddr(failure.value.addr), failure.value.resp))
+                          (b'Cannot receive from specified address ' +
+                            quoteaddr(failure.value.addr) + b': ' +
+                            networkString(failure.value.resp)))
         elif failure.check(SMTPServerError):
-            self.sendCode(failure.value.code, failure.value.resp)
+            self.sendCode(failure.value.code,
+                          networkString(failure.value.resp))
         else:
             log.err(failure, "SMTP sender validation failure")
             self.sendCode(
                 451,
-                'Requested action aborted: local error in processing')
+                b'Requested action aborted: local error in processing')
 
 
     def do_RCPT(self, rest):
         if not self._from:
-            self.sendCode(503, "Must have sender before recipient")
+            self.sendCode(503, b"Must have sender before recipient")
             return
         m = self.rcpt_re.match(rest)
         if not m:
-            self.sendCode(501, "Syntax error")
+            self.sendCode(501, b"Syntax error")
             return
 
         try:
             user = User(m.group('path'), self._helo, self, self._from)
         except AddressError as e:
-            self.sendCode(553, str(e))
+            self.sendCode(553, networkString(str(e)))
             return
 
         d = defer.maybeDeferred(self.validateTo, user)
@@ -520,7 +593,8 @@ class SMTP(basic.LineOnlyReceiver, policies.TimeoutMixin):
         )
 
 
-    def _cbToValidate(self, to, user=None, code=250, msg='Recipient address accepted'):
+    def _cbToValidate(self, to, user=None, code=250,
+                      msg=b'Recipient address accepted'):
         if user is None:
             user = to
         self._to.append((user, to))
@@ -529,12 +603,13 @@ class SMTP(basic.LineOnlyReceiver, policies.TimeoutMixin):
 
     def _ebToValidate(self, failure):
         if failure.check(SMTPBadRcpt, SMTPServerError):
-            self.sendCode(failure.value.code, failure.value.resp)
+            self.sendCode(failure.value.code,
+                          networkString(failure.value.resp))
         else:
             log.err(failure)
             self.sendCode(
                 451,
-                'Requested action aborted: local error in processing'
+                b'Requested action aborted: local error in processing'
             )
 
 
@@ -549,7 +624,7 @@ class SMTP(basic.LineOnlyReceiver, policies.TimeoutMixin):
 
     def do_DATA(self, rest):
         if self._from is None or (not self._to):
-            self.sendCode(503, 'Must have valid receiver and originator')
+            self.sendCode(503, b'Must have valid receiver and originator')
             return
         self.mode = DATA
         helo, origin = self._helo, self._from
@@ -574,14 +649,14 @@ class SMTP(basic.LineOnlyReceiver, policies.TimeoutMixin):
                 return
             except:
                 log.err()
-                self.sendCode(550, "Internal server error")
+                self.sendCode(550, b"Internal server error")
                 self.mode = COMMAND
                 self._disconnect(msgs)
                 return
         self.__messages = msgs
 
         self.__inheader = self.__inbody = 0
-        self.sendCode(354, 'Continue')
+        self.sendCode(354, b'Continue')
 
         if self.noisy:
             fmt = 'Receiving message for delivery: from=%s to=%s'
@@ -612,12 +687,12 @@ class SMTP(basic.LineOnlyReceiver, policies.TimeoutMixin):
     def do_RSET(self, rest):
         self._from = None
         self._to = []
-        self.sendCode(250, 'I remember nothing.')
+        self.sendCode(250, b'I remember nothing.')
 
 
     def dataLineReceived(self, line):
-        if line[:1] == '.':
-            if line == '.':
+        if line[:1] == b'.':
+            if line == b'.':
                 self.mode = COMMAND
                 if self.datafailed:
                     self.sendCode(self.datafailed.code,
@@ -642,11 +717,11 @@ class SMTP(basic.LineOnlyReceiver, policies.TimeoutMixin):
             # and the message body if the message comes in without any
             # headers
             if not self.__inheader and not self.__inbody:
-                if ':' in line:
+                if b':' in line:
                     self.__inheader = 1
                 elif line:
                     for message in self.__messages:
-                        message.lineReceived('')
+                        message.lineReceived(b'')
                     self.__inbody = 1
 
             if not line:
@@ -669,12 +744,13 @@ class SMTP(basic.LineOnlyReceiver, policies.TimeoutMixin):
                 log.err(result)
         if failures:
             msg = 'Could not send e-mail'
-            L = len(resultList)
-            if L > 1:
-                msg += ' (%d failures out of %d recipients)' % (failures, L)
-            self.sendCode(550, msg)
+            resultLen = len(resultList)
+            if resultLen > 1:
+                msg += ' (%d failures out of %d recipients)'.format(
+                    failures, resultLen)
+            self.sendCode(550, networkString(msg))
         else:
-            self.sendCode(250, 'Delivery in progress')
+            self.sendCode(250, b'Delivery in progress')
 
 
     def _cbAnonymousAuthentication(self, result):
@@ -699,7 +775,7 @@ class SMTP(basic.LineOnlyReceiver, policies.TimeoutMixin):
         """
         Validate the address from which the message originates.
 
-        @type helo: C{(str, str)}
+        @type helo: C{(bytes, bytes)}
         @param helo: The argument to the HELO command and the client's IP
         address.
 
@@ -785,17 +861,18 @@ class SMTP(basic.LineOnlyReceiver, policies.TimeoutMixin):
         if self.delivery is not None:
             return self.delivery.receivedHeader(helo, origin, recipients)
 
-        heloStr = ""
+        heloStr = b""
         if helo[0]:
-            heloStr = " helo=%s" % (helo[0],)
-        domain = self.transport.getHost().host
-        from_ = "from %s ([%s]%s)" % (helo[0], helo[1], heloStr)
-        by = "by %s with %s (%s)" % (domain,
+            heloStr = b" helo=" + helo[0]
+        domain = networkString(self.transport.getHost().host)
+
+        from_ = b"from " + helo[0] + b" ([" + helo[1] + b"]" + heloStr + b")"
+        by = b"by %s with %s (%s)" % (domain,
                                      self.__class__.__name__,
                                      longversion)
-        for_ = "for %s; %s" % (' '.join(map(str, recipients)),
+        for_ = b"for %s; %s" % (' '.join(map(str, recipients)),
                                rfc822date())
-        return "Received: %s\n\t%s\n\t%s" % (from_, by, for_)
+        return b"Received: " + from_ + b"\n\t" + by + b"\n\t" + for_
 
 
 
@@ -843,7 +920,10 @@ class SMTPClient(basic.LineReceiver, policies.TimeoutMixin):
     timeout = None
 
     def __init__(self, identity, logsize=10):
-        self.identity = identity or ''
+        if isinstance(identity, unicode):
+            identity = identity.encode('ascii')
+
+        self.identity = identity or b''
         self.toAddressesResult = []
         self.successAddresses = []
         self._from = None
@@ -855,7 +935,7 @@ class SMTPClient(basic.LineReceiver, policies.TimeoutMixin):
     def sendLine(self, line):
         # Log sendLine only if you are in debug mode for performance
         if self.debug:
-            self.log.append('>>> ' + line)
+            self.log.append(b'>>> ' + line)
 
         basic.LineReceiver.sendLine(self,line)
 
@@ -879,7 +959,7 @@ class SMTPClient(basic.LineReceiver, policies.TimeoutMixin):
     def timeoutConnection(self):
         self.sendError(
             SMTPTimeoutError(
-                -1, "Timeout waiting for SMTP server response",
+                -1, b"Timeout waiting for SMTP server response",
                  self.log.str()))
 
 
@@ -888,31 +968,34 @@ class SMTPClient(basic.LineReceiver, policies.TimeoutMixin):
 
         # Log lineReceived only if you are in debug mode for performance
         if self.debug:
-            self.log.append('<<< ' + line)
+            self.log.append(b'<<< ' + line)
 
         why = None
 
         try:
             self.code = int(line[:3])
         except ValueError:
-            # This is a fatal error and will disconnect the transport lineReceived will not be called again
-            self.sendError(SMTPProtocolError(-1, "Invalid response from SMTP server: %s" % line, self.log.str()))
+            # This is a fatal error and will disconnect the transport
+            # lineReceived will not be called again.
+            self.sendError(SMTPProtocolError(-1,
+                "Invalid response from SMTP server: {}".format(line),
+                self.log.str()))
             return
 
-        if line[0] == '0':
+        if line[0:1] == b'0':
             # Verbose informational message, ignore it
             return
 
         self.resp.append(line[4:])
 
-        if line[3:4] == '-':
-            # continuation
+        if line[3:4] == b'-':
+            # Continuation
             return
 
         if self.code in self._expected:
-            why = self._okresponse(self.code,'\n'.join(self.resp))
+            why = self._okresponse(self.code, b'\n'.join(self.resp))
         else:
-            why = self._failresponse(self.code,'\n'.join(self.resp))
+            why = self._failresponse(self.code, b'\n'.join(self.resp))
 
         self.code = -1
         self.resp = []
@@ -931,7 +1014,7 @@ class SMTPClient(basic.LineReceiver, policies.TimeoutMixin):
 
 
     def smtpState_helo(self, code, resp):
-        self.sendLine('HELO ' + self.identity)
+        self.sendLine(b'HELO ' + self.identity)
         self._expected = SUCCESS
         self._okresponse = self.smtpState_from
 
@@ -940,7 +1023,7 @@ class SMTPClient(basic.LineReceiver, policies.TimeoutMixin):
         self._from = self.getMailFrom()
         self._failresponse = self.smtpTransferFailed
         if self._from is not None:
-            self.sendLine('MAIL FROM:%s' % quoteaddr(self._from))
+            self.sendLine(b'MAIL FROM:' + quoteaddr(self._from))
             self._expected = [250]
             self._okresponse = self.smtpState_to
         else:
@@ -957,9 +1040,9 @@ class SMTPClient(basic.LineReceiver, policies.TimeoutMixin):
         self.toAddressesResult = []
         self.successAddresses = []
         self._okresponse = self.smtpState_toOrData
-        self._expected = xrange(0,1000)
+        self._expected = range(0, 1000)
         self.lastAddress = None
-        return self.smtpState_toOrData(0, '')
+        return self.smtpState_toOrData(0, b'')
 
 
     def smtpState_toOrData(self, code, resp):
@@ -968,16 +1051,16 @@ class SMTPClient(basic.LineReceiver, policies.TimeoutMixin):
             if code in SUCCESS:
                 self.successAddresses.append(self.lastAddress)
         try:
-            self.lastAddress = self.toAddresses.next()
+            self.lastAddress = next(self.toAddresses)
         except StopIteration:
             if self.successAddresses:
-                self.sendLine('DATA')
+                self.sendLine(b'DATA')
                 self._expected = [ 354 ]
                 self._okresponse = self.smtpState_data
             else:
                 return self.smtpState_msgSent(code,'No recipients accepted')
         else:
-            self.sendLine('RCPT TO:%s' % quoteaddr(self.lastAddress))
+            self.sendLine(b'RCPT TO:' + quoteaddr(self.lastAddress))
 
 
     def smtpState_data(self, code, resp):
@@ -998,7 +1081,7 @@ class SMTPClient(basic.LineReceiver, policies.TimeoutMixin):
 
         self.toAddressesResult = []
         self._from = None
-        self.sendLine('RSET')
+        self.sendLine(b'RSET')
         self._expected = SUCCESS
         self._okresponse = self.smtpState_from
 
@@ -1015,14 +1098,14 @@ class SMTPClient(basic.LineReceiver, policies.TimeoutMixin):
         being made sending the message body, the client will not time out.
         """
         self.resetTimeout()
-        return chunk.replace('\n', '\r\n').replace('\r\n.', '\r\n..')
+        return chunk.replace(b'\n', b'\r\n').replace(b'\r\n.', b'\r\n..')
 
 
     def finishedFileTransfer(self, lastsent):
-        if lastsent != '\n':
-            line = '\r\n.'
+        if lastsent != b'\n':
+            line = b'\r\n.'
         else:
-            line = '.'
+            line = b'.'
         self.sendLine(line)
 
 
@@ -1087,9 +1170,9 @@ class SMTPClient(basic.LineReceiver, policies.TimeoutMixin):
 
 
     def _disconnectFromServer(self):
-        self._expected = xrange(0, 1000)
+        self._expected = range(0, 1000)
         self._okresponse = self.smtpState_disconnect
-        self.sendLine('QUIT')
+        self.sendLine(b'QUIT')
 
 
 
@@ -1423,8 +1506,8 @@ class ESMTPClient(SMTPClient):
 
 
     def authenticate(self, code, resp, items):
-        if self.secret and items.get('AUTH'):
-            schemes = items['AUTH'].split()
+        if self.secret and items.get(b'AUTH'):
+            schemes = items[b'AUTH'].split()
             tmpSchemes = {}
 
             #XXX: May want to come up with a more efficient way to do this
@@ -1442,9 +1525,8 @@ class ESMTPClient(SMTPClient):
                         self._okresponse = self.smtpState_from
                         self._failresponse = self._esmtpState_plainAuth
                         self._expected = [235]
-                        challenge = encode_base64(
-                            self._authinfo.challengeResponse(self.secret, 1),
-                            eol=b"")
+                        challenge = base64.b64encode(
+                            self._authinfo.challengeResponse(self.secret, 1))
                         self.sendLine(b"AUTH %s %s" % (auth, challenge))
                     else:
                         self._expected = [334]
@@ -1466,8 +1548,9 @@ class ESMTPClient(SMTPClient):
         self._okresponse = self.smtpState_from
         self._failresponse = self.esmtpAUTHDeclined
         self._expected = [235]
-        challenge = encode_base64(self._authinfo.challengeResponse(self.secret, 2), eol="")
-        self.sendLine('AUTH PLAIN ' + challenge)
+        challenge = base64.b64encode(
+                        self._authinfo.challengeResponse(self.secret, 2))
+        self.sendLine(b'AUTH PLAIN ' + challenge)
 
 
     def esmtpState_challenge(self, code, resp):
@@ -1477,17 +1560,17 @@ class ESMTPClient(SMTPClient):
     def _authResponse(self, auth, challenge):
         self._failresponse = self.esmtpAUTHDeclined
         try:
-            challenge = base64.decodestring(challenge)
+            challenge = base64.b64decode(challenge)
         except binascii.Error:
             # Illegal challenge, give up, then quit
-            self.sendLine('*')
+            self.sendLine(b'*')
             self._okresponse = self.esmtpAUTHMalformedChallenge
             self._failresponse = self.esmtpAUTHMalformedChallenge
         else:
             resp = auth.challengeResponse(self.secret, challenge)
             self._expected = [235, 334]
             self._okresponse = self.smtpState_maybeAuthenticated
-            self.sendLine(encode_base64(resp, eol=""))
+            self.sendLine(base64.b64encode(resp))
 
 
     def smtpState_maybeAuthenticated(self, code, resp):
@@ -1513,7 +1596,7 @@ class ESMTP(SMTP):
 
     authenticated = False
 
-    def __init__(self, chal = None, contextFactory = None):
+    def __init__(self, chal=None, contextFactory=None):
         SMTP.__init__(self)
         if chal is None:
             chal = {}
@@ -1529,17 +1612,26 @@ class ESMTP(SMTP):
 
 
     def greeting(self):
-        return SMTP.greeting(self) + ' ESMTP'
+        return SMTP.greeting(self) + b' ESMTP'
 
 
     def extensions(self):
-        ext = {'AUTH': self.challengers.keys()}
+        """
+        SMTP service extensions
+
+        @return: the SMTP service extensions that are supported.
+        @rtype: L{dict} with L{bytes} keys and a value of either L{None} or a
+            L{list} of L{bytes}.
+        """
+        ext = {b'AUTH': _keys(self.challengers)}
         if self.canStartTLS and not self.startedTLS:
-            ext['STARTTLS'] = None
+            ext[b'STARTTLS'] = None
         return ext
 
 
     def lookupMethod(self, command):
+        command = nativeString(command)
+
         m = SMTP.lookupMethod(self, command)
         if m is None:
             m = getattr(self, 'ext_' + command.upper(), None)
@@ -1548,49 +1640,52 @@ class ESMTP(SMTP):
 
     def listExtensions(self):
         r = []
-        for (c, v) in self.extensions().iteritems():
+        for (c, v) in iteritems(self.extensions()):
             if v is not None:
                 if v:
                     # Intentionally omit extensions with empty argument lists
-                    r.append('%s %s' % (c, ' '.join(v)))
+                    r.append(c + b' ' +  b' '.join(v))
             else:
                 r.append(c)
-        return '\n'.join(r)
+
+        return b'\n'.join(r)
 
 
     def do_EHLO(self, rest):
         peer = self.transport.getPeer().host
+
+        if not isinstance(peer, bytes):
+            peer = peer.encode('idna')
+
         self._helo = (rest, peer)
         self._from = None
         self._to = []
         self.sendCode(
             250,
-            '%s Hello %s, nice to meet you\n%s' % (
-                self.host, peer,
-                self.listExtensions(),
-            )
+            (self.host + b' Hello ' + peer + b', nice to meet you\n' +
+             self.listExtensions())
         )
 
 
     def ext_STARTTLS(self, rest):
         if self.startedTLS:
-            self.sendCode(503, 'TLS already negotiated')
+            self.sendCode(503, b'TLS already negotiated')
         elif self.ctx and self.canStartTLS:
-            self.sendCode(220, 'Begin TLS negotiation now')
+            self.sendCode(220, b'Begin TLS negotiation now')
             self.transport.startTLS(self.ctx)
             self.startedTLS = True
         else:
-            self.sendCode(454, 'TLS not available')
+            self.sendCode(454, b'TLS not available')
 
 
     def ext_AUTH(self, rest):
         if self.authenticated:
-            self.sendCode(503, 'Already authenticated')
+            self.sendCode(503, b'Already authenticated')
             return
         parts = rest.split(None, 1)
         chal = self.challengers.get(parts[0].upper(), lambda: None)()
         if not chal:
-            self.sendCode(504, 'Unrecognized authentication type')
+            self.sendCode(504, b'Unrecognized authentication type')
             return
 
         self.mode = AUTH
@@ -1620,15 +1715,17 @@ class ESMTP(SMTP):
         Handle cred login errors by translating them to the SMTP authenticate
         failed.  Translate all other errors into a generic SMTP error code and
         log the failure for inspection.  Stop all errors from propagating.
+
+        @param reason: Reason for failure.
         """
         self.challenge = None
         if reason.check(cred.error.UnauthorizedLogin):
-            self.sendCode(535, 'Authentication failed')
+            self.sendCode(535, b'Authentication failed')
         else:
             log.err(reason, "SMTP authentication failure")
             self.sendCode(
                 451,
-                'Requested action aborted: local error in processing')
+                b'Requested action aborted: local error in processing')
 
 
     def state_AUTH(self, response):
@@ -1641,26 +1738,26 @@ class ESMTP(SMTP):
         as per RFC 2554.
         """
         if self.portal is None:
-            self.sendCode(454, 'Temporary authentication failure')
+            self.sendCode(454, b'Temporary authentication failure')
             self.mode = COMMAND
             return
 
         if response is None:
             challenge = self.challenger.getChallenge()
-            encoded = challenge.encode('base64')
+            encoded = base64.b64encode(challenge)
             self.sendCode(334, encoded)
             return
 
-        if response == '*':
-            self.sendCode(501, 'Authentication aborted')
+        if response == b'*':
+            self.sendCode(501, b'Authentication aborted')
             self.challenger = None
             self.mode = COMMAND
             return
 
         try:
-            uncoded = response.decode('base64')
-        except binascii.Error:
-            self.sendCode(501, 'Syntax error in parameters or arguments')
+            uncoded = base64.b64decode(response)
+        except (TypeError, binascii.Error):
+            self.sendCode(501, b'Syntax error in parameters or arguments')
             self.challenger = None
             self.mode = COMMAND
             return
@@ -1668,7 +1765,7 @@ class ESMTP(SMTP):
         self.challenger.setResponse(uncoded)
         if self.challenger.moreChallenges():
             challenge = self.challenger.getChallenge()
-            coded = challenge.encode('base64')[:-1]
+            coded = base64.b64encode(challenge)
             self.sendCode(334, coded)
             return
 
@@ -1677,7 +1774,8 @@ class ESMTP(SMTP):
             self.challenger, None,
             IMessageDeliveryFactory, IMessageDelivery)
         result.addCallback(self._cbAuthenticated)
-        result.addCallback(lambda ign: self.sendCode(235, 'Authentication successful.'))
+        result.addCallback(lambda ign: self.sendCode(235,
+                           b'Authentication successful.'))
         result.addErrback(self._ebAuthenticated)
 
 
@@ -1728,11 +1826,13 @@ class SenderMixin:
             errlog = []
             for addr, acode, aresp in addresses:
                 if acode not in SUCCESS:
-                    errlog.append("%s: %03d %s" % (addr, acode, aresp))
+                    errlog.append((addr + b": " +
+                                   networkString("%03d" % (acode,)) +
+                                   b" " + aresp))
 
             errlog.append(log.str())
 
-            exc = SMTPDeliveryError(code, resp, '\n'.join(errlog), addresses)
+            exc = SMTPDeliveryError(code, resp, b'\n'.join(errlog), addresses)
             self.factory.result.errback(exc)
         else:
             self.factory.result.callback((numOk, addresses))
@@ -1787,8 +1887,19 @@ class SMTPSenderFactory(protocol.ClientFactory):
         """
         assert isinstance(retries, (int, long))
 
-        if isinstance(toEmail, types.StringTypes):
+        if isinstance(toEmail, unicode):
+            toEmail = [toEmail.encode('ascii')]
+        elif isinstance(toEmail, bytes):
             toEmail = [toEmail]
+        else:
+            toEmailFinal = []
+            for _email in toEmail:
+                if not isinstance(_email, bytes):
+                    _email = _email.encode('ascii')
+
+                toEmailFinal.append(_email)
+            toEmail = toEmailFinal
+
         self.fromEmail = Address(fromEmail)
         self.nEmails = len(toEmail)
         self.toEmail = toEmail
@@ -1868,7 +1979,7 @@ class LOGINCredentials(_lcredentials):
 
     def __init__(self):
         _lcredentials.__init__(self)
-        self.challenges = ['Password:', 'Username:']
+        self.challenges = [b'Password:', b'Username:']
 
 
 
@@ -1879,14 +1990,14 @@ class PLAINAuthenticator:
 
 
     def getName(self):
-        return "PLAIN"
+        return b"PLAIN"
 
 
     def challengeResponse(self, secret, chal=1):
         if chal == 1:
-            return "%s\0%s\0%s" % (self.user, self.user, secret)
+            return self.user + b'\0' + self.user + b'\0' + secret
         else:
-            return "%s\0%s" % (self.user, secret)
+            return b'\0' + self.user + b'\0' + secret
 
 
 
@@ -2017,11 +2128,11 @@ def sendmail(smtphost, from_addr, to_addrs, msg, senderDomainName=None, port=25,
     @type port: L{int}
 
     @param username: The username to use, if wanting to authenticate.
-    @type username: L{bytes}
+    @type username: L{bytes} or L{unicode}
 
     @param password: The secret to use, if wanting to authenticate. If you do
         not specify this, SMTP authentication will not occur.
-    @type password: L{bytes}
+    @type password: L{bytes} or L{unicode}
 
     @param requireTransportSecurity: Whether or not STARTTLS is required.
     @type requireTransportSecurity: L{bool}
@@ -2044,7 +2155,7 @@ def sendmail(smtphost, from_addr, to_addrs, msg, senderDomainName=None, port=25,
     """
     if not hasattr(msg, 'read'):
         # It's not a file
-        msg = StringIO(str(msg))
+        msg = BytesIO(bytes(msg))
 
 
     def cancel(d):
@@ -2062,12 +2173,18 @@ def sendmail(smtphost, from_addr, to_addrs, msg, senderDomainName=None, port=25,
             connector.disconnect()
 
     d = defer.Deferred(cancel)
+
+    if isinstance(username, unicode):
+        username = username.encode("utf-8")
+    if isinstance(password, unicode):
+        password = password.encode("utf-8")
+
     factory = ESMTPSenderFactory(username, password, from_addr, to_addrs, msg,
         d, heloFallback=True, requireAuthentication=requireAuthentication,
         requireTransportSecurity=requireTransportSecurity)
 
     if senderDomainName is not None:
-        factory.domain = senderDomainName
+        factory.domain = networkString(senderDomainName)
 
     connector = reactor.connectTCP(smtphost, port, factory)
 
@@ -2075,37 +2192,38 @@ def sendmail(smtphost, from_addr, to_addrs, msg, senderDomainName=None, port=25,
 
 
 
-##
-## Yerg.  Codecs!
-##
 import codecs
 def xtext_encode(s, errors=None):
     r = []
-    for ch in s:
+    for ch in iterbytes(s):
         o = ord(ch)
         if ch == '+' or ch == '=' or o < 33 or o > 126:
-            r.append('+%02X' % o)
+            r.append(networkString('+%02X' % (o,)))
         else:
-            r.append(chr(o))
-    return (''.join(r), len(s))
+            r.append(_bytesChr(o))
+    return (b''.join(r), len(s))
 
 
 
 def xtext_decode(s, errors=None):
     """
     Decode the xtext-encoded string C{s}.
+
+    @param s: String to decode.
+    @param errors: codec error handling scheme.
+    @return: The decoded string.
     """
     r = []
     i = 0
     while i < len(s):
-        if s[i] == '+':
+        if s[i:i+1] == b'+':
             try:
-                r.append(chr(int(s[i + 1:i + 3], 16)))
+                r.append(chr(int(bytes(s[i + 1:i + 3]), 16)))
             except ValueError:
-                r.append(s[i:i + 3])
+                r.append(ord(s[i:i + 3]))
             i += 3
         else:
-            r.append(s[i])
+            r.append(bytes(s[i:i+1]).decode('ascii'))
             i += 1
     return (''.join(r), len(s))
 

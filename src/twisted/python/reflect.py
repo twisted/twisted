@@ -25,6 +25,7 @@ from twisted.python.compat import reraise, nativeString, NativeStringIO
 from twisted.python.compat import _PY3
 from twisted.python import compat
 from twisted.python.deprecate import _fullyQualifiedName as fullyQualifiedName
+from twisted.python._oldstyle import _oldStyle
 
 
 def prefixedMethodNames(classObj, prefix):
@@ -133,7 +134,14 @@ def accumulateMethods(obj, dict, prefix='', curClass=None):
     if not curClass:
         curClass = obj.__class__
     for base in curClass.__bases__:
-        accumulateMethods(obj, dict, prefix, base)
+        # The implementation of the object class is different on PyPy vs.
+        # CPython.  This has the side effect of making accumulateMethods()
+        # pick up object methods from all new-style classes -
+        # such as __getattribute__, etc.
+        # If we ignore 'object' when accumulating methods, we can get
+        # consistent behavior on Pypy and CPython.
+        if base is not object:
+            accumulateMethods(obj, dict, prefix, base)
 
     for name, method in curClass.__dict__.items():
         optName = name[len(prefix):]
@@ -436,19 +444,14 @@ def safe_str(o):
             return o.decode('utf-8')
         except:
             pass
-    if not _PY3:
-        # On Python 2, attempt to encode a unicode representation
-        # first.
-        try:
-            return unicode(o).encode('ascii', 'backslashreplace')
-        except:
-            pass
     try:
         return str(o)
     except:
         return _safeFormat(str, o)
 
 
+
+@_oldStyle
 class QueueMethod:
     """
     I represent a method that doesn't exist yet.

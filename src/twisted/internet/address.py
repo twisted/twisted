@@ -7,79 +7,68 @@ Address objects for network connections.
 
 from __future__ import division, absolute_import
 
+import attr
 import warnings, os
 
 from zope.interface import implementer
 from twisted.internet.interfaces import IAddress
 from twisted.python.filepath import _asFilesystemBytes
 from twisted.python.filepath import _coerceToFilesystemEncoding
-from twisted.python.util import FancyEqMixin
 from twisted.python.runtime import platform
 from twisted.python.compat import _PY3
 
 
 @implementer(IAddress)
-class _IPAddress(FancyEqMixin, object):
+@attr.s(hash=True)
+class IPv4Address(object):
     """
-    An L{_IPAddress} represents the address of an IP socket endpoint, providing
-    common behavior for IPv4 and IPv6.
+    An L{IPv4Address} represents the address of an IPv4 socket endpoint.
 
     @ivar type: A string describing the type of transport, either 'TCP' or
         'UDP'.
 
-    @ivar host: A string containing the presentation format of the IP address;
-        for example, "127.0.0.1" or "::1".
+    @ivar host: A string containing a dotted-quad IPv4 address; for example,
+        "127.0.0.1".
     @type host: C{str}
 
     @ivar port: An integer representing the port number.
     @type port: C{int}
     """
-
-    compareAttributes = ('type', 'host', 'port')
-
-    def __init__(self, type, host, port):
-        assert type in ('TCP', 'UDP')
-        self.type = type
-        self.host = host
-        self.port = port
-
-
-    def __repr__(self):
-        return '%s(%s, %r, %d)' % (
-            self.__class__.__name__, self.type, self.host, self.port)
-
-
-    def __hash__(self):
-        return hash((self.type, self.host, self.port))
+    type = attr.ib(validator=attr.validators.in_(["TCP", "UDP"]))
+    host = attr.ib()
+    port = attr.ib()
 
 
 
-class IPv4Address(_IPAddress):
-    """
-    An L{IPv4Address} represents the address of an IPv4 socket endpoint.
-
-    @ivar host: A string containing a dotted-quad IPv4 address; for example,
-        "127.0.0.1".
-    @type host: C{str}
-    """
-
-    def __init__(self, type, host, port, _bwHack=None):
-        _IPAddress.__init__(self, type, host, port)
-        if _bwHack is not None:
-            warnings.warn("twisted.internet.address.IPv4Address._bwHack "
-                          "is deprecated since Twisted 11.0",
-                          DeprecationWarning, stacklevel=2)
-
-
-
-class IPv6Address(_IPAddress):
+@implementer(IAddress)
+@attr.s(hash=True)
+class IPv6Address(object):
     """
     An L{IPv6Address} represents the address of an IPv6 socket endpoint.
+
+    @ivar type: A string describing the type of transport, either 'TCP' or
+        'UDP'.
 
     @ivar host: A string containing a colon-separated, hexadecimal formatted
         IPv6 address; for example, "::1".
     @type host: C{str}
+
+    @ivar port: An integer representing the port number.
+    @type port: C{int}
+
+    @ivar flowInfo: the IPv6 flow label.  This can be used by QoS routers to
+        identify flows of traffic; you may generally safely ignore it.
+    @type flowInfo: L{int}
+
+    @ivar scopeID: the IPv6 scope identifier - roughly analagous to what
+        interface traffic destined for this address must be transmitted over.
+    @type scopeID: L{int} or L{str}
     """
+    type = attr.ib(validator=attr.validators.in_(["TCP", "UDP"]))
+    host = attr.ib()
+    port = attr.ib()
+    flowInfo = attr.ib(default=0)
+    scopeID = attr.ib(default=0)
 
 
 
@@ -91,8 +80,9 @@ class _ProcessAddress(object):
 
 
 
+@attr.s(hash=True)
 @implementer(IAddress)
-class HostnameAddress(FancyEqMixin, object):
+class HostnameAddress(object):
     """
     A L{HostnameAddress} represents the address of a L{HostnameEndpoint}.
 
@@ -102,25 +92,15 @@ class HostnameAddress(FancyEqMixin, object):
     @ivar port: An integer representing the port number.
     @type port: L{int}
     """
-    compareAttributes = ('hostname', 'port')
 
-    def __init__(self, hostname, port):
-        self.hostname = hostname
-        self.port = port
-
-
-    def __repr__(self):
-        return '%s(%s, %d)' % (
-            self.__class__.__name__, self.hostname, self.port)
-
-
-    def __hash__(self):
-        return hash((self.hostname, self.port))
+    hostname = attr.ib()
+    port = attr.ib()
 
 
 
+@attr.s(hash=False, repr=False, cmp=False)
 @implementer(IAddress)
-class UNIXAddress(FancyEqMixin, object):
+class UNIXAddress(object):
     """
     Object representing a UNIX socket endpoint.
 
@@ -128,40 +108,18 @@ class UNIXAddress(FancyEqMixin, object):
     @type name: C{bytes}
     """
 
-    compareAttributes = ('name', )
-
-    def __init__(self, name, _bwHack = None):
-        self.name = name
-        if _bwHack is not None:
-            warnings.warn("twisted.internet.address.UNIXAddress._bwHack is deprecated since Twisted 11.0",
-                    DeprecationWarning, stacklevel=2)
-
-
-    @property
-    def name(self):
-        return self._name
-
-
-    @name.setter
-    def name(self, name):
-        """
-        On UNIX, paths are always bytes. However, as paths are L{unicode} on
-        Python 3, and L{UNIXAddress} technically takes a file path, we convert
-        it to bytes to maintain compatibility with C{os.path} on Python 3.
-        """
-        if name is not None:
-            self._name = _asFilesystemBytes(name)
-        else:
-            self._name = None
-
+    name = attr.ib(converter=attr.converters.optional(_asFilesystemBytes))
 
     if getattr(os.path, 'samefile', None) is not None:
         def __eq__(self, other):
             """
-            Overriding C{FancyEqMixin} to ensure the os level samefile
+            Overriding C{attrs} to ensure the os level samefile
             check is done if the name attributes do not match.
             """
-            res = super(UNIXAddress, self).__eq__(other)
+            if isinstance(other, self.__class__):
+                res = self.name == other.name
+            else:
+                return False
             if not res and self.name and other.name:
                 try:
                     return os.path.samefile(self.name, other.name)
@@ -173,6 +131,17 @@ class UNIXAddress(FancyEqMixin, object):
                     if not _PY3 and not platform.isLinux():
                         raise e
             return res
+    else:
+        def __eq__(self, other):
+            if isinstance(other, self.__class__):
+                return self.name == other.name
+            return False
+
+
+    def __ne__(self, other):
+        if isinstance(other, self.__class__):
+            return not self.__eq__(other)
+        return True
 
 
     def __repr__(self):

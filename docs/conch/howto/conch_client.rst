@@ -181,7 +181,9 @@ For use of ``SSHCommandClientEndpoint`` that is intended to be completely autono
 
 It is also possible to run commands (one or more) over an
 already-established connection.  This is done using the alternate
-constructor ``SSHCommandClientEndpoint.existingConnection`` .
+constructor ``SSHCommandClientEndpoint.existingConnection`` .  The
+``connection`` argument to that function can be obtained by accessing
+``transport.conn`` on an already connected protocol.
 
 
     
@@ -330,8 +332,8 @@ will take the filename of a key in the supported format, and  and generate a new
 
 ``getPassword()`` and ``getPrivateKey()`` return ``Deferreds`` because they may need to ask the user for input.
 
-Once the authentication is complete, ``SSHUserAuthClient`` takes care of starting the code ``SSHConnection`` object given to it. Next, we'll
-look at how to use the ``SSHConnection``
+Once the authentication is complete, ``SSHUserAuthClient`` takes care of starting the ``SSHConnection`` object given to it. Next, we'll
+look at how to use the ``SSHConnection``.
 
 
 

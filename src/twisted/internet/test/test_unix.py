@@ -8,11 +8,12 @@ Tests for implementations of L{IReactorUNIX}.
 from __future__ import division, absolute_import
 
 from stat import S_IMODE
-from os import stat, close, urandom
-from tempfile import mktemp
-from socket import AF_INET, SOCK_STREAM, socket
+from os import stat, close, urandom, unlink, fstat
+from tempfile import mktemp, mkstemp
+from socket import AF_INET, SOCK_STREAM, SOL_SOCKET, socket, error
 from pprint import pformat
 from hashlib import md5
+from struct import pack
 
 try:
     from socket import AF_UNIX
@@ -21,19 +22,22 @@ except ImportError:
 
 from zope.interface import implementer
 
-from twisted.internet import interfaces
+from twisted.internet import interfaces, base
 from twisted.internet.address import UNIXAddress
-from twisted.internet.defer import Deferred, fail
+from twisted.internet.defer import Deferred, fail, gatherResults
 from twisted.internet.endpoints import UNIXServerEndpoint, UNIXClientEndpoint
-from twisted.internet.error import ConnectionClosed, FileDescriptorOverrun
-from twisted.internet.interfaces import IFileDescriptorReceiver, IReactorUNIX
+from twisted.internet.error import (ConnectionClosed, FileDescriptorOverrun,
+    CannotListenError)
+from twisted.internet.interfaces import (IFileDescriptorReceiver, IReactorUNIX,
+    IReactorSocket, IReactorFDSet)
 from twisted.internet.protocol import DatagramProtocol
 from twisted.internet.protocol import ServerFactory, ClientFactory
 from twisted.internet.task import LoopingCall
 from twisted.internet.test.connectionmixins import EndpointCreator
 from twisted.internet.test.reactormixins import ReactorBuilder
 from twisted.internet.test.test_core import ObjectModelIntegrationMixin
-from twisted.internet.test.test_tcp import StreamTransportTestsMixin
+from twisted.internet.test.test_tcp import (StreamTransportTestsMixin,
+    WriteSequenceTestsMixin, MyClientFactory, MyServerFactory,)
 from twisted.internet.test.connectionmixins import ConnectableProtocol
 from twisted.internet.test.connectionmixins import ConnectionTestsMixin
 from twisted.internet.test.connectionmixins import StreamClientTestsMixin
@@ -43,6 +47,7 @@ from twisted.python.failure import Failure
 from twisted.python.log import addObserver, removeObserver, err
 from twisted.python.runtime import platform
 from twisted.python.reflect import requireModule
+from twisted.python.filepath import _coerceToFilesystemEncoding
 
 if requireModule("twisted.python.sendmsg") is not None:
     sendmsgSkip = None
@@ -237,6 +242,20 @@ class UNIXTestsBuilder(UNIXFamilyMixin, ReactorBuilder, ConnectionTestsMixin):
             'Abstract namespace UNIX sockets only supported on Linux.')
 
 
+    def test_listenFailure(self):
+        """
+        L{IReactorUNIX.listenUNIX} raises L{CannotListenError} if the
+        underlying port's createInternetSocket raises a socket error.
+        """
+        def raiseSocketError(self):
+            raise error('FakeBasePort forced socket.error')
+
+        self.patch(base.BasePort, "createInternetSocket", raiseSocketError)
+        reactor = self.buildReactor()
+        with self.assertRaises(CannotListenError):
+            reactor.listenUNIX('not-used', ServerFactory())
+
+
     def test_connectToLinuxAbstractNamespace(self):
         """
         L{IReactorUNIX.connectUNIX} also accepts a Linux abstract namespace
@@ -382,6 +401,181 @@ class UNIXTestsBuilder(UNIXFamilyMixin, ReactorBuilder, ConnectionTestsMixin):
         test_fileDescriptorOverrun.skip = sendmsgSkip
 
 
+    def _sendmsgMixinFileDescriptorReceivedDriver(self, ancillaryPacker):
+        """
+        Drive _SendmsgMixin via sendmsg socket calls to check that
+        L{IFileDescriptorReceiver.fileDescriptorReceived} is called once
+        for each file descriptor received in the ancillary messages.
+
+        @param ancillaryPacker: A callable that will be given a list of
+            two file descriptors and should return a two-tuple where:
+            The first item is an iterable of zero or more (cmsg_level,
+            cmsg_type, cmsg_data) tuples in the same order as the given
+            list for actual sending via sendmsg; the second item is an
+            integer indicating the expected number of FDs to be received.
+        """
+        # Strategy:
+        # - Create a UNIX socketpair.
+        # - Associate one end to a FakeReceiver and FakeProtocol.
+        # - Call sendmsg on the other end to send FDs as ancillary data.
+        #   Ancillary data is obtained calling ancillaryPacker with
+        #   the two FDs associated to two temp files (using the socket
+        #   FDs for this fails the device/inode verification tests on
+        #   macOS 10.10, so temp files are used instead).
+        # - Call doRead in the FakeReceiver.
+        # - Verify results on FakeProtocol.
+        #   Using known device/inodes to verify correct order.
+
+        # TODO: replace FakeReceiver test approach with one based in
+        # IReactorSocket.adoptStreamConnection once AF_UNIX support is
+        # implemented; see https://twistedmatrix.com/trac/ticket/5573.
+
+        from socket import socketpair
+        from twisted.internet.unix import _SendmsgMixin
+        from twisted.python.sendmsg import sendmsg
+
+        def deviceInodeTuple(fd):
+            fs = fstat(fd)
+            return (fs.st_dev, fs.st_ino)
+
+        @implementer(IFileDescriptorReceiver)
+        class FakeProtocol(ConnectableProtocol):
+            def __init__(self):
+                self.fds = []
+                self.deviceInodesReceived = []
+            def fileDescriptorReceived(self, fd):
+                self.fds.append(fd)
+                self.deviceInodesReceived.append(deviceInodeTuple(fd))
+                close(fd)
+
+        class FakeReceiver(_SendmsgMixin):
+            bufferSize = 1024
+            def __init__(self, skt, proto):
+                self.socket = skt
+                self.protocol = proto
+            def _dataReceived(self, data):
+                pass
+            def getHost(self):
+                pass
+            def getPeer(self):
+                pass
+            def _getLogPrefix(self, o):
+                pass
+
+        sendSocket, recvSocket = socketpair(AF_UNIX, SOCK_STREAM)
+        self.addCleanup(sendSocket.close)
+        self.addCleanup(recvSocket.close)
+
+        proto = FakeProtocol()
+        receiver = FakeReceiver(recvSocket, proto)
+
+        # Temp files give us two FDs to send/receive/verify.
+        fileOneFD, fileOneName = mkstemp()
+        fileTwoFD, fileTwoName = mkstemp()
+        self.addCleanup(unlink, fileOneName)
+        self.addCleanup(unlink, fileTwoName)
+
+        dataToSend = b'some data needs to be sent'
+        fdsToSend = [fileOneFD, fileTwoFD]
+        ancillary, expectedCount = ancillaryPacker(fdsToSend)
+        sendmsg(sendSocket, dataToSend, ancillary)
+
+        receiver.doRead()
+
+        # Verify that fileDescriptorReceived was called twice.
+        self.assertEqual(len(proto.fds), expectedCount)
+
+        # Verify that received FDs are different from the sent ones.
+        self.assertFalse(set(fdsToSend).intersection(set(proto.fds)))
+
+        # Verify that FDs were received in the same order, if any.
+        if proto.fds:
+            deviceInodesSent = [deviceInodeTuple(fd) for fd in fdsToSend]
+            self.assertEqual(deviceInodesSent, proto.deviceInodesReceived)
+
+
+    def test_multiFileDescriptorReceivedPerRecvmsgOneCMSG(self):
+        """
+        _SendmsgMixin handles multiple file descriptors per recvmsg, calling
+        L{IFileDescriptorReceiver.fileDescriptorReceived} once per received
+        file descriptor. Scenario: single CMSG with two FDs.
+        """
+        from twisted.python.sendmsg import SCM_RIGHTS
+
+        def ancillaryPacker(fdsToSend):
+            ancillary = [(SOL_SOCKET, SCM_RIGHTS, pack('ii', *fdsToSend))]
+            expectedCount = 2
+            return ancillary, expectedCount
+
+        self._sendmsgMixinFileDescriptorReceivedDriver(ancillaryPacker)
+    if sendmsgSkip is not None:
+        test_multiFileDescriptorReceivedPerRecvmsgOneCMSG.skip = sendmsgSkip
+
+
+    def test_multiFileDescriptorReceivedPerRecvmsgTwoCMSGs(self):
+        """
+        _SendmsgMixin handles multiple file descriptors per recvmsg, calling
+        L{IFileDescriptorReceiver.fileDescriptorReceived} once per received
+        file descriptor. Scenario: two CMSGs with one FD each.
+        """
+        from twisted.python.sendmsg import SCM_RIGHTS
+
+        def ancillaryPacker(fdsToSend):
+            ancillary = [
+                (SOL_SOCKET, SCM_RIGHTS, pack('i', fd))
+                for fd in fdsToSend
+            ]
+            expectedCount = 2
+            return ancillary, expectedCount
+
+        self._sendmsgMixinFileDescriptorReceivedDriver(ancillaryPacker)
+    if platform.isMacOSX():
+        test_multiFileDescriptorReceivedPerRecvmsgTwoCMSGs.skip = (
+            "Multi control message ancillary sendmsg not supported on Mac.")
+    elif sendmsgSkip is not None:
+        test_multiFileDescriptorReceivedPerRecvmsgTwoCMSGs.skip = sendmsgSkip
+
+
+    def test_multiFileDescriptorReceivedPerRecvmsgBadCMSG(self):
+        """
+        _SendmsgMixin handles multiple file descriptors per recvmsg, calling
+        L{IFileDescriptorReceiver.fileDescriptorReceived} once per received
+        file descriptor. Scenario: unsupported CMSGs.
+        """
+        # Given that we can't just send random/invalid ancillary data via the
+        # packer for it to be sent via sendmsg -- the kernel would not accept
+        # it -- we'll temporarily replace recvmsg with a fake one that produces
+        # a non-supported ancillary message level/type. This being said, from
+        # the perspective of the ancillaryPacker, all that is required is to
+        # let the test driver know that 0 file descriptors are expected.
+        from twisted.python import sendmsg
+
+        def ancillaryPacker(fdsToSend):
+            ancillary = []
+            expectedCount = 0
+            return ancillary, expectedCount
+
+        def fakeRecvmsgUnsupportedAncillary(skt, *args, **kwargs):
+            data = b'some data'
+            ancillary = [(None, None, b'')]
+            flags = 0
+            return sendmsg.RecievedMessage(data, ancillary, flags)
+
+        events = []
+        addObserver(events.append)
+        self.addCleanup(removeObserver, events.append)
+
+        self.patch(sendmsg, "recvmsg", fakeRecvmsgUnsupportedAncillary)
+        self._sendmsgMixinFileDescriptorReceivedDriver(ancillaryPacker)
+
+        # Verify the expected message was logged.
+        expectedMessage = 'received unsupported ancillary data'
+        found = any(expectedMessage in e['format'] for e in events)
+        self.assertTrue(found, 'Expected message not found in logged events')
+    if sendmsgSkip is not None:
+        test_multiFileDescriptorReceivedPerRecvmsgBadCMSG.skip = sendmsgSkip
+
+
     def test_avoidLeakingFileDescriptors(self):
         """
         If associated with a protocol which does not provide
@@ -519,13 +713,55 @@ class UNIXDatagramTestsBuilder(UNIXFamilyMixin, ReactorBuilder):
 
 
 
-class UNIXPortTestsBuilder(ReactorBuilder, ObjectModelIntegrationMixin,
-                           StreamTransportTestsMixin):
+class SocketUNIXMixin(object):
     """
-    Tests for L{IReactorUNIX.listenUnix}
+    Mixin which uses L{IReactorSocket.adoptStreamPort} to hand out listening
+    UNIX ports.
     """
-    requiredInterfaces = (interfaces.IReactorUNIX,)
+    requiredInterfaces = (IReactorUNIX, IReactorSocket,)
 
+    def getListeningPort(self, reactor, factory):
+        """
+        Get a UNIX port from a reactor, wrapping an already-initialized file
+        descriptor.
+        """
+        portSock = socket(AF_UNIX)
+        # self.mktemp() often returns a path which is too long to be used.
+        path = mktemp(suffix='.sock', dir='.')
+        portSock.bind(path)
+        portSock.listen(3)
+        portSock.setblocking(False)
+        try:
+            return reactor.adoptStreamPort(
+                portSock.fileno(), portSock.family, factory)
+        finally:
+            portSock.close()
+
+
+    def connectToListener(self, reactor, address, factory):
+        """
+        Connect to a listening UNIX socket.
+
+        @param reactor: The reactor under test.
+        @type reactor: L{IReactorUNIX}
+
+        @param address: The listening's address.
+        @type address: L{UNIXAddress}
+
+        @param factory: The client factory.
+        @type factory: L{ClientFactory}
+
+        @return: The connector
+        """
+        return reactor.connectUNIX(address.name, factory)
+
+
+
+class ListenUNIXMixin(object):
+    """
+    Mixin which uses L{IReactorTCP.listenUNIX} to hand out listening UNIX
+    ports.
+    """
     def getListeningPort(self, reactor, factory):
         """
         Get a UNIX port from a reactor
@@ -534,6 +770,28 @@ class UNIXPortTestsBuilder(ReactorBuilder, ObjectModelIntegrationMixin,
         path = mktemp(suffix='.sock', dir='.')
         return reactor.listenUNIX(path, factory)
 
+
+    def connectToListener(self, reactor, address, factory):
+        """
+        Connect to a listening UNIX socket.
+
+        @param reactor: The reactor under test.
+        @type reactor: L{IReactorUNIX}
+
+        @param address: The listening's address.
+        @type address: L{UNIXAddress}
+
+        @param factory: The client factory.
+        @type factory: L{ClientFactory}
+
+        @return: The connector
+        """
+        return reactor.connectUNIX(address.name, factory)
+
+
+
+class UNIXPortTestsMixin(object):
+    requiredInterfaces = (IReactorUNIX,)
 
     def getExpectedStartListeningLogMessage(self, port, factory):
         """
@@ -551,9 +809,144 @@ class UNIXPortTestsBuilder(ReactorBuilder, ObjectModelIntegrationMixin,
 
 
 
+class UNIXPortTestsBuilder(ListenUNIXMixin, UNIXPortTestsMixin,
+                           ReactorBuilder, ObjectModelIntegrationMixin,
+                           StreamTransportTestsMixin):
+    """
+    Tests for L{IReactorUNIX.listenUnix}
+    """
+
+
+class UNIXFDPortTestsBuilder(SocketUNIXMixin, UNIXPortTestsMixin,
+                             ReactorBuilder, ObjectModelIntegrationMixin,
+                             StreamTransportTestsMixin):
+    """
+    Tests for L{IReactorUNIX.adoptStreamPort}
+    """
+
+
+class UNIXAdoptStreamConnectionTestsBuilder(WriteSequenceTestsMixin, ReactorBuilder):
+    requiredInterfaces = (IReactorFDSet, IReactorSocket, IReactorUNIX,)
+
+    def test_buildProtocolReturnsNone(self):
+        """
+        {IReactorSocket.adoptStreamConnection} returns None if the given
+        factory's buildProtocol returns None.
+        """
+
+        # Build reactor before anything else: allow self.buildReactor()
+        # to skip the test if any of the self.requiredInterfaces isn't
+        # provided by the reactor (example: Windows), preventing later
+        # failures unrelated to the test itself.
+        reactor = self.buildReactor()
+
+        from socket import socketpair
+
+        class NoneFactory(ServerFactory):
+            def buildProtocol(self, address):
+                return None
+
+        s1, s2 = socketpair(AF_UNIX, SOCK_STREAM)
+        s1.setblocking(False)
+        self.addCleanup(s1.close)
+        self.addCleanup(s2.close)
+
+        s1FD = s1.fileno()
+        factory = NoneFactory()
+        result = reactor.adoptStreamConnection(s1FD, AF_UNIX, factory)
+        self.assertIsNone(result)
+
+
+    def test_ServerAddressUNIX(self):
+        """
+        Helper method to test UNIX server addresses.
+        """
+
+        def connected(protocols):
+            client, server, port = protocols
+            try:
+                portPath = _coerceToFilesystemEncoding('', port.getHost().name)
+                self.assertEqual(
+                    "<AccumulatingProtocol #%s on %s>" %
+                        (server.transport.sessionno, portPath),
+                    str(server.transport))
+
+                self.assertEqual(
+                    "AccumulatingProtocol,%s,%s" %
+                        (server.transport.sessionno, portPath),
+                    server.transport.logstr)
+
+                peerAddress = server.factory.peerAddresses[0]
+                self.assertIsInstance(peerAddress, UNIXAddress)
+            finally:
+                # Be certain to drop the connection so the test completes.
+                server.transport.loseConnection()
+
+        reactor = self.buildReactor()
+        d = self.getConnectedClientAndServer(reactor, interface=None, addressFamily=None)
+        d.addCallback(connected)
+        self.runReactor(reactor)
+
+
+    def getConnectedClientAndServer(self, reactor, interface, addressFamily):
+        """
+        Return a L{Deferred} firing with a L{MyClientFactory} and
+        L{MyServerFactory} connected pair, and the listening C{Port}. The
+        particularity is that the server protocol has been obtained after doing
+        a C{adoptStreamConnection} against the original server connection.
+        """
+        firstServer = MyServerFactory()
+        firstServer.protocolConnectionMade = Deferred()
+
+        server = MyServerFactory()
+        server.protocolConnectionMade = Deferred()
+        server.protocolConnectionLost = Deferred()
+
+        client = MyClientFactory()
+        client.protocolConnectionMade = Deferred()
+        client.protocolConnectionLost = Deferred()
+
+        # self.mktemp() often returns a path which is too long to be used.
+        path = mktemp(suffix='.sock', dir='.')
+        port = reactor.listenUNIX(path, firstServer)
+
+        def firstServerConnected(proto):
+            reactor.removeReader(proto.transport)
+            reactor.removeWriter(proto.transport)
+            reactor.adoptStreamConnection(
+                proto.transport.fileno(), AF_UNIX, server)
+
+        firstServer.protocolConnectionMade.addCallback(firstServerConnected)
+
+        lostDeferred = gatherResults([client.protocolConnectionLost,
+                                      server.protocolConnectionLost])
+        def stop(result):
+            if reactor.running:
+                reactor.stop()
+            return result
+
+        lostDeferred.addBoth(stop)
+
+        deferred = Deferred()
+        deferred.addErrback(stop)
+
+        startDeferred = gatherResults([client.protocolConnectionMade,
+                                       server.protocolConnectionMade])
+        def start(protocols):
+            client, server = protocols
+            deferred.callback((client, server, port))
+
+        startDeferred.addCallback(start)
+
+        reactor.connectUNIX(port.getHost().name, client)
+        return deferred
+
+
 globals().update(UNIXTestsBuilder.makeTestCaseClasses())
 globals().update(UNIXDatagramTestsBuilder.makeTestCaseClasses())
 globals().update(UNIXPortTestsBuilder.makeTestCaseClasses())
+globals().update(UNIXFDPortTestsBuilder.makeTestCaseClasses())
+globals().update(UNIXAdoptStreamConnectionTestsBuilder.makeTestCaseClasses())
 
 
 

@@ -11,8 +11,10 @@ import sys
 from twisted.python.usage import UsageError
 from ..service import Application, IService
 from ..runner._exit import exit, ExitStatus
-from ..runner._runner import Runner, RunnerOptions
+from ..runner._runner import Runner
 from ._options import TwistOptions
+from twisted.application.app import _exitWithSignal
+from twisted.internet.interfaces import _ISupportsExitSignalCapturing
 
 
 
@@ -84,40 +86,25 @@ class Twist(object):
 
 
     @staticmethod
-    def runnerOptions(twistOptions):
-        """
-        Take options obtained from command line and configure options for the
-        application runner.
-
-        @param twistOptions: Command line options to convert to runner options.
-        @type twistOptions: L{TwistOptions}
-
-        @return: The corresponding runner options.
-        @rtype: L{RunnerOptions}
-        """
-        runnerOptions = {}
-
-        for runnerOpt, twistOpt in (
-            (RunnerOptions.reactor, "reactor"),
-            (RunnerOptions.defaultLogLevel, "logLevel"),
-            (RunnerOptions.logFile, "logFile"),
-            (RunnerOptions.fileLogObserverFactory, "fileLogObserverFactory"),
-        ):
-            runnerOptions[runnerOpt] = twistOptions[twistOpt]
-
-        return runnerOptions
-
-
-    @staticmethod
-    def run(runnerOptions):
+    def run(twistOptions):
         """
         Run the application service.
 
-        @param runnerOptions: Options to pass to the runner.
-        @type runnerOptions: L{RunnerOptions}
+        @param twistOptions: Command line options to convert to runner
+            arguments.
+        @type twistOptions: L{TwistOptions}
         """
-        runner = Runner(runnerOptions)
+        runner = Runner(
+            reactor=twistOptions["reactor"],
+            defaultLogLevel=twistOptions["logLevel"],
+            logFile=twistOptions["logFile"],
+            fileLogObserverFactory=twistOptions["fileLogObserverFactory"],
+        )
         runner.run()
+        reactor = twistOptions["reactor"]
+        if _ISupportsExitSignalCapturing.providedBy(reactor):
+            if reactor._exitSignal is not None:
+                _exitWithSignal(reactor._exitSignal)
 
 
     @classmethod
@@ -138,4 +125,4 @@ class Twist(object):
         )
 
         cls.startService(reactor, service)
-        cls.run(cls.runnerOptions(options))
+        cls.run(options)

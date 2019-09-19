@@ -11,95 +11,60 @@ Construct listening port services from a simple string description.
 
 from __future__ import absolute_import, division
 
-import warnings
-
-from incremental import Version
-
 from twisted.application.internet import StreamServerEndpointService
 from twisted.internet import endpoints
-from twisted.python.deprecate import deprecatedModuleAttribute
 
 
-
-def parse(description, factory, default='tcp'):
-    """
-    This function is deprecated as of Twisted 10.2.
-
-    @see: L{twisted.internet.endpoints.serverFromString}
-    """
-    return endpoints._parseServer(description, factory, default)
-
-deprecatedModuleAttribute(
-    Version("Twisted", 10, 2, 0),
-    "in favor of twisted.internet.endpoints.serverFromString",
-    __name__, "parse")
-
-
-
-_DEFAULT = object()
-
-def service(description, factory, default=_DEFAULT, reactor=None):
+def service(description, factory, reactor=None):
     """
     Return the service corresponding to a description.
 
     @param description: The description of the listening port, in the syntax
         described by L{twisted.internet.endpoints.serverFromString}.
-
     @type description: C{str}
 
     @param factory: The protocol factory which will build protocols for
         connections to this service.
-
     @type factory: L{twisted.internet.interfaces.IProtocolFactory}
 
-    @type default: C{str} or L{None}
-
-    @param default: Do not use this parameter. It has been deprecated since
-        Twisted 10.2.0.
-
     @rtype: C{twisted.application.service.IService}
-
-    @return: the service corresponding to a description of a reliable
-        stream server.
+    @return: the service corresponding to a description of a reliable stream
+        server.
 
     @see: L{twisted.internet.endpoints.serverFromString}
     """
     if reactor is None:
         from twisted.internet import reactor
-    if default is _DEFAULT:
-        default = None
-    else:
-        message = "The 'default' parameter was deprecated in Twisted 10.2.0."
-        if default is not None:
-            message += (
-                "  Use qualified endpoint descriptions; for example, "
-                "'tcp:%s'." % (description,))
-        warnings.warn(
-            message=message, category=DeprecationWarning, stacklevel=2)
+
     svc = StreamServerEndpointService(
-        endpoints._serverFromStringLegacy(reactor, description, default),
-        factory)
+        endpoints.serverFromString(reactor, description), factory)
     svc._raiseSynchronously = True
     return svc
 
 
 
-def listen(description, factory, default=None):
-    """Listen on a port corresponding to a description
+def listen(description, factory):
+    """
+    Listen on a port corresponding to a description.
 
+    @param description: The description of the connecting port, in the syntax
+        described by L{twisted.internet.endpoints.serverFromString}.
     @type description: L{str}
+
+    @param factory: The protocol factory which will build protocols on
+        connection.
     @type factory: L{twisted.internet.interfaces.IProtocolFactory}
-    @type default: L{str} or L{None}
+
     @rtype: L{twisted.internet.interfaces.IListeningPort}
-    @return: the port corresponding to a description of a reliable
-    virtual circuit server.
+    @return: the port corresponding to a description of a reliable virtual
+        circuit server.
 
     @see: L{twisted.internet.endpoints.serverFromString}
     """
     from twisted.internet import reactor
-    name, args, kw = endpoints._parseServer(description, factory, default)
-    return getattr(reactor, 'listen'+name)(*args, **kw)
+    name, args, kw = endpoints._parseServer(description, factory)
+    return getattr(reactor, 'listen' + name)(*args, **kw)
 
 
 
-__all__ = ['parse', 'service', 'listen']
+__all__ = ['service', 'listen']

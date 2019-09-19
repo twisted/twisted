@@ -25,19 +25,23 @@ from collections import deque
 from zope.interface import implementer
 
 import priority
+import h2.config
 import h2.connection
 import h2.errors
 import h2.events
 import h2.exceptions
 
 from twisted.internet.defer import Deferred
+from twisted.internet.error import ConnectionLost
 from twisted.internet.interfaces import (
     IProtocol, ITransport, IConsumer, IPushProducer, ISSLTransport
 )
+from twisted.internet._producer_helpers import _PullToPush
 from twisted.internet.protocol import Protocol
 from twisted.logger import Logger
 from twisted.protocols.policies import TimeoutMixin
-from twisted.protocols.tls import _PullToPush
+from twisted.python.failure import Failure
+from twisted.web.error import ExcessiveBufferingError
 
 
 # This API is currently considered private.
@@ -103,16 +107,29 @@ class H2Connection(Protocol, TimeoutMixin):
     @ivar _sender: A handle to the data-sending loop, allowing it to be
         terminated if needed.
     @type _sender: L{twisted.internet.task.LoopingCall}
+
+    @ivar abortTimeout: The number of seconds to wait after we attempt to shut
+        the transport down cleanly to give up and forcibly terminate it. This
+        is only used when we time a connection out, to prevent errors causing
+        the FD to get leaked. If this is L{None}, we will wait forever.
+    @type abortTimeout: L{int}
+
+    @ivar _abortingCall: The L{twisted.internet.base.DelayedCall} that will be
+        used to forcibly close the transport if it doesn't close cleanly.
+    @type _abortingCall: L{twisted.internet.base.DelayedCall}
     """
     factory = None
     site = None
+    abortTimeout = 15
 
     _log = Logger()
+    _abortingCall = None
 
     def __init__(self, reactor=None):
-        self.conn = h2.connection.H2Connection(
+        config = h2.config.H2Configuration(
             client_side=False, header_encoding=None
         )
+        self.conn = h2.connection.H2Connection(config=config)
         self.streams = {}
 
         self.priority = priority.PriorityTree()
@@ -121,6 +138,12 @@ class H2Connection(Protocol, TimeoutMixin):
         self._outboundStreamQueues = {}
         self._streamCleanupCallbacks = {}
         self._stillProducing = True
+
+        # Limit the number of buffered control frame (e.g. PING and
+        # SETTINGS) bytes.
+        self._maxBufferedControlFrameBytes = 1024 * 17
+        self._bufferedControlFrames = deque()
+        self._bufferedControlFrameBytes = 0
 
         if reactor is None:
             from twisted.internet import reactor
@@ -149,17 +172,18 @@ class H2Connection(Protocol, TimeoutMixin):
         @param data: The data received from the transport.
         @type data: L{bytes}
         """
-        self.resetTimeout()
-
         try:
             events = self.conn.receive_data(data)
         except h2.exceptions.ProtocolError:
-            # A remote protocol error terminates the connection.
-            dataToSend = self.conn.data_to_send()
-            self.transport.write(dataToSend)
-            self.transport.loseConnection()
-            self.connectionLost("Protocol error from peer.")
+            stillActive = self._tryToWriteControlData()
+            if stillActive:
+                self.transport.loseConnection()
+                self.connectionLost(Failure(), _cancelTimeouts=False)
             return
+
+        # Only reset the timeout if we've received an actual H2
+        # protocol message
+        self.resetTimeout()
 
         for event in events:
             if isinstance(event, h2.events.RequestReceived):
@@ -176,11 +200,12 @@ class H2Connection(Protocol, TimeoutMixin):
                 self._handlePriorityUpdate(event)
             elif isinstance(event, h2.events.ConnectionTerminated):
                 self.transport.loseConnection()
-                self.connectionLost("Shutdown by remote peer")
+                self.connectionLost(
+                    ConnectionLost("Remote peer sent GOAWAY"),
+                    _cancelTimeouts=False,
+                )
 
-        dataToSend = self.conn.data_to_send()
-        if dataToSend:
-            self.transport.write(dataToSend)
+        self._tryToWriteControlData()
 
 
     def timeoutConnection(self):
@@ -206,32 +231,71 @@ class H2Connection(Protocol, TimeoutMixin):
         # NO_ERROR.
         if (self.conn.open_outbound_streams > 0 or
                 self.conn.open_inbound_streams > 0):
-            error_code = h2.errors.PROTOCOL_ERROR
+            error_code = h2.errors.ErrorCodes.PROTOCOL_ERROR
         else:
-            error_code = h2.errors.NO_ERROR
+            error_code = h2.errors.ErrorCodes.NO_ERROR
 
         self.conn.close_connection(error_code=error_code)
         self.transport.write(self.conn.data_to_send())
+
+        # Don't let the client hold this connection open too long.
+        if self.abortTimeout is not None:
+            # We use self.callLater because that's what TimeoutMixin does, even
+            # though we have a perfectly good reactor sitting around. See
+            # https://twistedmatrix.com/trac/ticket/8488.
+            self._abortingCall = self.callLater(
+                self.abortTimeout, self.forceAbortClient
+            )
 
         # We're done, throw the connection away.
         self.transport.loseConnection()
 
 
-    def connectionLost(self, reason):
+    def forceAbortClient(self):
+        """
+        Called if C{abortTimeout} seconds have passed since the timeout fired,
+        and the connection still hasn't gone away. This can really only happen
+        on extremely bad connections or when clients are maliciously attempting
+        to keep connections open.
+        """
+        self._log.info(
+            "Forcibly timing out client: {client}",
+            client=self.transport.getPeer()
+        )
+        # We want to lose track of the _abortingCall so that no-one tries to
+        # cancel it.
+        self._abortingCall = None
+        self.transport.abortConnection()
+
+
+    def connectionLost(self, reason, _cancelTimeouts=True):
         """
         Called when the transport connection is lost.
 
-        Informs all outstanding response handlers that the connection has been
-        lost, and cleans up all internal state.
+        Informs all outstanding response handlers that the connection
+        has been lost, and cleans up all internal state.
+
+        @param reason: See L{IProtocol.connectionLost}
+
+        @param _cancelTimeouts: Propagate the C{reason} to this
+            connection's streams but don't cancel any timers, so that
+            peers who never read the data we've written are eventually
+            timed out.
         """
         self._stillProducing = False
-        self.setTimeout(None)
+        if _cancelTimeouts:
+            self.setTimeout(None)
 
         for stream in self.streams.values():
             stream.connectionLost(reason)
 
         for streamID in list(self.streams.keys()):
             self._requestDone(streamID)
+
+        # If we were going to force-close the transport, we don't have to now.
+        if _cancelTimeouts and self._abortingCall is not None:
+            self._abortingCall.cancel()
+            self._abortingCall = None
 
 
     # Implementation of IPushProducer
@@ -277,7 +341,8 @@ class H2Connection(Protocol, TimeoutMixin):
     #
     # Note that all of this only applies to *data*. Headers and other control
     # frames deliberately skip this processing as they are not subject to flow
-    # control or priority constraints.
+    # control or priority constraints. Instead, they are stored in their own buffer
+    # which is used primarily to detect excessive buffering.
     def stopProducing(self):
         """
         Stop producing data.
@@ -285,7 +350,7 @@ class H2Connection(Protocol, TimeoutMixin):
         This tells the L{H2Connection} that its consumer has died, so it must
         stop producing data for good.
         """
-        self.connectionLost("stopProducing")
+        self.connectionLost(ConnectionLost("Producing stopped"))
 
 
     def pauseProducing(self):
@@ -296,6 +361,8 @@ class H2Connection(Protocol, TimeoutMixin):
         for the time being, and to stop until resumeProducing() is called.
         """
         self._consumerBlocked = Deferred()
+        # Ensure pending control data (if any) are sent first.
+        self._consumerBlocked.addCallback(self._flushBufferedControlData)
 
 
     def resumeProducing(self):
@@ -348,6 +415,8 @@ class H2Connection(Protocol, TimeoutMixin):
             self._consumerBlocked.addCallback(self._sendPrioritisedData)
             return
 
+        self.resetTimeout()
+
         remainingWindow = self.conn.local_flow_control_window(stream)
         frameData = self._outboundStreamQueues[stream].popleft()
         maxFrameSize = min(self.conn.max_outbound_frame_size, remainingWindow)
@@ -398,10 +467,12 @@ class H2Connection(Protocol, TimeoutMixin):
         @type event: L{h2.events.RequestReceived}
         """
         stream = H2Stream(
-            event.stream_id, self, event.headers, self.requestFactory
+            event.stream_id,
+            self, event.headers,
+            self.requestFactory,
+            self.site,
+            self.factory
         )
-        stream.site = self.site
-        stream.factory = self.factory
         self.streams[event.stream_id] = stream
         self._streamCleanupCallbacks[event.stream_id] = Deferred()
         self._outboundStreamQueues[event.stream_id] = deque()
@@ -453,7 +524,9 @@ class H2Connection(Protocol, TimeoutMixin):
         @type event: L{h2.events.StreamReset}
         """
         stream = self.streams[event.stream_id]
-        stream.connectionLost("Stream reset")
+        stream.connectionLost(
+            ConnectionLost("Stream reset with code %s" % event.error_code)
+        )
         self._requestDone(event.stream_id)
 
 
@@ -515,7 +588,7 @@ class H2Connection(Protocol, TimeoutMixin):
             # when a connection is lost, so that's what we do too.
             return
         else:
-            self.transport.write(self.conn.data_to_send())
+            self._tryToWriteControlData()
 
 
     def writeDataToStream(self, streamID, data):
@@ -569,8 +642,9 @@ class H2Connection(Protocol, TimeoutMixin):
         @type streamID: L{int}
         """
         self.conn.reset_stream(streamID)
-        self.transport.write(self.conn.data_to_send())
-        self._requestDone(streamID)
+        stillActive = self._tryToWriteControlData()
+        if stillActive:
+            self._requestDone(streamID)
 
 
     def _requestDone(self, streamID):
@@ -686,9 +760,7 @@ class H2Connection(Protocol, TimeoutMixin):
         @type increment: L{int}
         """
         self.conn.acknowledge_received_data(increment, streamID)
-        data = self.conn.data_to_send()
-        if data:
-            self.transport.write(data)
+        self._tryToWriteControlData()
 
 
     def _isSecure(self):
@@ -713,7 +785,7 @@ class H2Connection(Protocol, TimeoutMixin):
         """
         headers = [(b':status', b'100')]
         self.conn.send_headers(headers=headers, stream_id=streamID)
-        self.transport.write(self.conn.data_to_send())
+        self._tryToWriteControlData()
 
 
     def _respondToBadRequestAndDisconnect(self, streamID):
@@ -738,11 +810,11 @@ class H2Connection(Protocol, TimeoutMixin):
             stream_id=streamID,
             end_stream=True
         )
-        self.transport.write(self.conn.data_to_send())
-
-        stream = self.streams[streamID]
-        stream.connectionLost("Stream reset")
-        self._requestDone(streamID)
+        stillActive = self._tryToWriteControlData()
+        if stillActive:
+            stream = self.streams[streamID]
+            stream.connectionLost(ConnectionLost("Invalid request"))
+            self._requestDone(streamID)
 
 
     def _streamIsActive(self, streamID):
@@ -758,6 +830,59 @@ class H2Connection(Protocol, TimeoutMixin):
         """
         return streamID in self.streams
 
+    def _tryToWriteControlData(self):
+        """
+        Checks whether the connection is blocked on flow control and,
+        if it isn't, writes any buffered control data.
+
+        @return: L{True} if the connection is still active and
+            L{False} if it was aborted because too many bytes have
+            been written but not consumed by the other end.
+        """
+        bufferedBytes = self.conn.data_to_send()
+        if not bufferedBytes:
+            return True
+
+        if self._consumerBlocked is None and not self._bufferedControlFrames:
+            # The consumer isn't blocked, and we don't have any buffered frames:
+            # write this directly.
+            self.transport.write(bufferedBytes)
+            return True
+        else:
+            # Either the consumer is blocked or we have buffered frames. If the
+            # consumer is blocked, we'll write this when we unblock. If we have
+            # buffered frames, we have presumably been re-entered from
+            # transport.write, and so to avoid reordering issues we'll buffer anyway.
+            self._bufferedControlFrames.append(bufferedBytes)
+            self._bufferedControlFrameBytes += len(bufferedBytes)
+
+            if self._bufferedControlFrameBytes >= self._maxBufferedControlFrameBytes:
+                self._log.error(
+                    "Maximum number of control frame bytes buffered: "
+                    "{bufferedControlFrameBytes} > = {maxBufferedControlFrameBytes}. "
+                    "Aborting connection to client: {client} ",
+                    bufferedControlFrameBytes=self._bufferedControlFrameBytes,
+                    maxBufferedControlFrameBytes=self._maxBufferedControlFrameBytes,
+                    client=self.transport.getPeer(),
+                )
+                # We've exceeded a reasonable buffer size for max buffered control frames.
+                # This is a denial of service risk, so we're going to drop this connection.
+                self.transport.abortConnection()
+                self.connectionLost(ExcessiveBufferingError())
+                return False
+            return True
+
+    def _flushBufferedControlData(self, *args):
+        """
+        Called when the connection is marked writable again after being marked unwritable.
+        Attempts to flush buffered control data if there is any.
+        """
+        # To respect backpressure here we send each write in order, paying attention to whether
+        # we got blocked
+        while self._consumerBlocked is None and self._bufferedControlFrames:
+            nextWrite = self._bufferedControlFrames.popleft()
+            self._bufferedControlFrameBytes -= len(nextWrite)
+            self.transport.write(nextWrite)
 
 
 @implementer(ITransport, IConsumer, IPushProducer)
@@ -789,6 +914,14 @@ class H2Stream(object):
     @ivar producer: The object producing the response, if any.
     @type producer: L{IProducer}
 
+    @ivar site: The L{twisted.web.server.Site} object this stream belongs to,
+        if any.
+    @type site: L{twisted.web.server.Site}
+
+    @ivar factory: The L{twisted.web.http.HTTPFactory} object that constructed
+        this stream's parent connection.
+    @type factory: L{twisted.web.http.HTTPFactory}
+
     @ivar _producerProducing: Whether the producer stored in producer is
         currently producing data.
     @type _producerProducing: L{bool}
@@ -812,7 +945,8 @@ class H2Stream(object):
     transport = None
 
 
-    def __init__(self, streamID, connection, headers, requestFactory):
+    def __init__(self, streamID, connection, headers,
+                 requestFactory, site, factory):
         """
         Initialize this HTTP/2 stream.
 
@@ -831,9 +965,19 @@ class H2Stream(object):
             request objects.
         @type requestFactory: A callable that returns a
             L{twisted.web.iweb.IRequest}.
+
+        @param site: The L{twisted.web.server.Site} object this stream belongs
+            to, if any.
+        @type site: L{twisted.web.server.Site}
+
+        @param factory: The L{twisted.web.http.HTTPFactory} object that
+            constructed this stream's parent connection.
+        @type factory: L{twisted.web.http.HTTPFactory}
         """
 
         self.streamID = streamID
+        self.site = site
+        self.factory = factory
         self.producing = True
         self.command = None
         self.path = None

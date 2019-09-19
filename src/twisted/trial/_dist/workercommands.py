@@ -7,7 +7,10 @@ Commands for telling a worker to load tests or run tests.
 @since: 12.3
 """
 
-from twisted.protocols.amp import Command, String, Boolean
+from twisted.protocols.amp import Command, String, Boolean, Unicode
+from twisted.python.compat import _PY3
+
+NativeString = Unicode if _PY3 else String
 
 
 
@@ -15,8 +18,8 @@ class Run(Command):
     """
     Run a test.
     """
-    arguments = [('testCase', String())]
-    response = [('success', Boolean())]
+    arguments = [(b'testCase', NativeString())]
+    response = [(b'success', Boolean())]
 
 
 
@@ -24,5 +27,5 @@ class Start(Command):
     """
     Set up the worker process, giving the running directory.
     """
-    arguments = [('directory', String())]
-    response = [('success', Boolean())]
+    arguments = [(b'directory', NativeString())]
+    response = [(b'success', Boolean())]

@@ -461,3 +461,21 @@ class FlattenerErrorTests(unittest.TestCase):
             "<...>01234567\\u2603901234567"
             "\\u26039'\n"
             "RuntimeError: reason\n" % u)
+
+
+
+class UnsupportedMethodTests(unittest.SynchronousTestCase):
+    """
+    Tests for L{UnsupportedMethod}.
+    """
+    def test_str(self):
+        """
+        The C{__str__} for L{UnsupportedMethod} makes it clear that what it
+        shows is a list of the supported methods, not the method that was
+        unsupported.
+        """
+        b = "b" if _PY3 else ""
+        e = error.UnsupportedMethod([b"HEAD", b"PATCH"])
+        self.assertEqual(
+            str(e), "Expected one of [{b}'HEAD', {b}'PATCH']".format(b=b),
+        )

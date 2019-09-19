@@ -13,12 +13,12 @@ class IFingerService(Interface):
 
     def getUser(user):
         """
-        Return a deferred returning a string.
+        Return a deferred returning L{bytes}.
         """
 
     def getUsers():
         """
-        Return a deferred returning a list of strings.
+        Return a deferred returning a L{list} of L{bytes}.
         """
 
 
@@ -48,7 +48,7 @@ class FingerProtocol(basic.LineReceiver):
         d = self.factory.getUser(user)
         d.addErrback(catchError)
         def writeValue(value):
-            self.transport.write(value+'\r\n')
+            self.transport.write(value + b'\r\n')
             self.transport.loseConnection()
         d.addCallback(writeValue)
 
@@ -98,12 +98,12 @@ class IFingerSetterFactory(Interface):
 
     def setUser(user, status):
         """
-        Return a deferred returning a string.
+        Return a deferred returning L{bytes}.
         """
 
     def buildProtocol(addr):
         """
-        Return a protocol returning a string.
+        Return a protocol returning L{bytes}.
         """
 
 
@@ -145,7 +145,7 @@ class IIRCClientFactory(Interface):
 
     def getUser(user):
         """
-        Return a deferred returning a string.
+        Return a deferred returning L{bytes}.
         """
 
     def buildProtocol(addr):
@@ -233,19 +233,19 @@ class FingerService(service.Service):
 
     def _read(self):
         self.users.clear()
-        with open(self.filename) as f:
+        with open(self.filename, "rb") as f:
             for line in f:
-                user, status = line.split(':', 1)
+                user, status = line.split(b':', 1)
                 user = user.strip()
                 status = status.strip()
                 self.users[user] = status
         self.call = reactor.callLater(30, self._read)
 
     def getUser(self, user):
-        return defer.succeed(self.users.get(user, "No such user"))
+        return defer.succeed(self.users.get(user, b"No such user"))
 
     def getUsers(self):
-        return defer.succeed(self.users.keys())
+        return defer.succeed(list(self.users.keys()))
 
     def startService(self):
         self._read()
@@ -262,7 +262,7 @@ class FingerService(service.Service):
 class LocalFingerService(service.Service):
     def getUser(self, user):
     # need a local finger daemon running for this to work
-        return utils.getProcessOutput("finger", [user])
+        return utils.getProcessOutput(b"finger", [user])
 
     def getUsers(self):
         return defer.succeed([])

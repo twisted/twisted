@@ -3,8 +3,8 @@
 :LastChangedRevision: $LastChangedRevision$
 :LastChangedBy: $LastChangedBy$
 
-Twisted Conch
-=============
+Twisted Conch (SSH and Telnet)
+==============================
 
 .. toctree::
    :hidden:

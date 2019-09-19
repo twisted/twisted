@@ -9,6 +9,7 @@ Tests for  XML-RPC support in L{twisted.web.xmlrpc}.
 from __future__ import division, absolute_import
 
 from twisted.python.compat import nativeString, networkString, NativeStringIO
+from io import BytesIO
 
 import datetime
 
@@ -16,13 +17,15 @@ from twisted.trial import unittest
 from twisted.web import xmlrpc
 from twisted.web.xmlrpc import XMLRPC, payloadTemplate, addIntrospection
 from twisted.web.xmlrpc import _QueryFactory, withRequest, xmlrpclib
-from twisted.web import server, client, error, http, static
+from twisted.web import server, client, http, static
 from twisted.internet import reactor, defer
 from twisted.internet.error import ConnectionDone
 from twisted.python import failure
 from twisted.python.reflect import namedModule
-from twisted.test.proto_helpers import MemoryReactor
+from twisted.test.proto_helpers import MemoryReactor, EventLoggingObserver
 from twisted.web.test.test_web import DummyRequest
+from twisted.logger import (globalLogPublisher, FilteringLogObserver,
+                            LogLevelFilterPredicate, LogLevel)
 try:
     namedModule('twisted.internet.ssl')
 except ImportError:
@@ -365,6 +368,13 @@ class XMLRPCTests(unittest.TestCase):
         client-side Deferred is errbacked with an appropriate C{Fault}
         instance.
         """
+        logObserver = EventLoggingObserver()
+        filtered = FilteringLogObserver(
+            logObserver,
+            [LogLevelFilterPredicate(defaultLogLevel=LogLevel.critical)]
+        )
+        globalLogPublisher.addObserver(filtered)
+        self.addCleanup(lambda: globalLogPublisher.removeObserver(filtered))
         dl = []
         for code, methodName in [(666, "fail"), (666, "deferFail"),
                                  (12, "fault"), (23, "noSuchMethod"),
@@ -379,6 +389,16 @@ class XMLRPCTests(unittest.TestCase):
             for factory in self.factories:
                 self.assertEqual(factory.headers[b'content-type'],
                                   b'text/xml; charset=utf-8')
+            self.assertEquals(2, len(logObserver))
+            f1 = logObserver[0]["log_failure"].value
+            f2 = logObserver[1]["log_failure"].value
+
+            if isinstance(f1, TestValueError):
+                self.assertIsInstance(f2, TestRuntimeError)
+            else:
+                self.assertIsInstance(f1, TestRuntimeError)
+                self.assertIsInstance(f2, TestValueError)
+
             self.flushLoggedErrors(TestRuntimeError, TestValueError)
         d.addCallback(cb)
         return d
@@ -404,18 +424,23 @@ class XMLRPCTests(unittest.TestCase):
         """
         A classic GET on the xml server should return a NOT_ALLOWED.
         """
-        d = client.getPage(networkString("http://127.0.0.1:%d/" % (self.port,)))
-        d = self.assertFailure(d, error.Error)
-        d.addCallback(
-            lambda exc: self.assertEqual(int(exc.args[0]), http.NOT_ALLOWED))
+        agent = client.Agent(reactor)
+        d = agent.request(b"GET", networkString("http://127.0.0.1:%d/" % (self.port,)))
+        def checkResponse(response):
+            self.assertEqual(response.code, http.NOT_ALLOWED)
+        d.addCallback(checkResponse)
         return d
 
     def test_errorXMLContent(self):
         """
         Test that an invalid XML input returns an L{xmlrpc.Fault}.
         """
-        d = client.getPage(networkString("http://127.0.0.1:%d/" % (self.port,)),
-                           method=b"POST", postdata=b"foo")
+        agent = client.Agent(reactor)
+        d = agent.request(
+            uri=networkString("http://127.0.0.1:%d/" % (self.port,)),
+            method=b"POST",
+            bodyProducer=client.FileBodyProducer(BytesIO(b"foo")))
+        d.addCallback(client.readBody)
         def cb(result):
             self.assertRaises(xmlrpc.Fault, xmlrpclib.loads, result)
         d.addCallback(cb)
@@ -423,6 +448,7 @@ class XMLRPCTests(unittest.TestCase):
 
 
     def test_datetimeRoundtrip(self):
+
         """
         If an L{xmlrpclib.DateTime} is passed as an argument to an XML-RPC
         call and then returned by the server unmodified, the result should
@@ -441,6 +467,13 @@ class XMLRPCTests(unittest.TestCase):
         L{Fault}) the exception which prevents the response from being
         generated is logged and the request object is finished anyway.
         """
+        logObserver = EventLoggingObserver()
+        filtered = FilteringLogObserver(
+            logObserver,
+            [LogLevelFilterPredicate(defaultLogLevel=LogLevel.critical)]
+        )
+        globalLogPublisher.addObserver(filtered)
+        self.addCleanup(lambda: globalLogPublisher.removeObserver(filtered))
         d = self.proxy().callRemote("echo", "")
 
         # *Now* break xmlrpclib.dumps.  Hopefully the client already used it.
@@ -455,6 +488,11 @@ class XMLRPCTests(unittest.TestCase):
 
         def cbFailed(ignored):
             # The fakeDumps exception should have been logged.
+            self.assertEquals(1, len(logObserver))
+            self.assertIsInstance(
+                logObserver[0]["log_failure"].value,
+                RuntimeError
+            )
             self.assertEqual(len(self.flushLoggedErrors(RuntimeError)), 1)
         d.addCallback(cbFailed)
         return d

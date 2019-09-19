@@ -16,10 +16,10 @@ import sys, warnings
 
 def test(i):
     print("printed", i)
-    log.msg("message %s" % i)
-    warnings.warn("warning %s" % i)
+    log.msg("message {}".format(i))
+    warnings.warn("warning {}".format(i))
     try:
-        raise RuntimeError("error %s" % i)
+        raise RuntimeError("error {}".format(i))
     except:
         log.err()
 

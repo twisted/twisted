@@ -5,12 +5,14 @@
 """
 Tests for L{twisted.python.url}.
 """
-
 from __future__ import unicode_literals
 
 from ..url import URL
+
 unicode = type(u'')
-from unittest import TestCase
+
+from twisted.trial.unittest import SynchronousTestCase
+
 
 theurl = "http://www.foo.com/a/nice/path/?zot=23&zut"
 
@@ -76,7 +78,7 @@ relativeLinkTestsForRFC3986 = [
 
 _percentenc = lambda s: ''.join('%%%02X' % ord(c) for c in s)
 
-class TestURL(TestCase):
+class TestURL(SynchronousTestCase):
     """
     Tests for L{URL}.
     """
@@ -178,7 +180,7 @@ class TestURL(TestCase):
             repr(URL(scheme=u'http', host=u'foo', path=[u'bar'],
                      query=[(u'baz', None), (u'k', u'v')],
                      fragment=u'frob')),
-            "URL.fromText(%s)" % (repr(u"http://foo/bar?baz&k=v#frob"),)
+            "URL.from_text(%s)" % (repr(u"http://foo/bar?baz&k=v#frob"),)
         )
 
 
@@ -472,20 +474,6 @@ class TestURL(TestCase):
             url.remove(u"foo"),
             URL.fromText(u"https://example.com/a/b/?bar=2")
         )
-
-
-    def test_parseEqualSignInParamValue(self):
-        """
-        Every C{=}-sign after the first in a query parameter is simply included
-        in the value of the parameter.
-        """
-        u = URL.fromText('http://localhost/?=x=x=x')
-        self.assertEqual(u.get(u''), ['x=x=x'])
-        self.assertEqual(u.asText(), 'http://localhost/?=x%3Dx%3Dx')
-        u = URL.fromText('http://localhost/?foo=x=x=x&bar=y')
-        self.assertEqual(u.query, (('foo', 'x=x=x'),
-                                             ('bar', 'y')))
-        self.assertEqual(u.asText(), 'http://localhost/?foo=x%3Dx%3Dx&bar=y')
 
 
     def test_empty(self):
@@ -793,6 +781,25 @@ class TestURL(TestCase):
             URL(path=u'foo')
         self.assertEqual(
             str(raised.exception),
-            "expected iterable of text for path, got text itself: {}"
+            "expected iterable of text for path, not: {}"
             .format(repr(u'foo'))
         )
+
+
+class URLDeprecationTests(SynchronousTestCase):
+    """
+    L{twisted.python.url} is deprecated.
+    """
+    def test_urlDeprecation(self):
+        """
+        L{twisted.python.url} is deprecated since Twisted 17.5.0.
+        """
+        from twisted.python import url
+        url
+
+        warningsShown = self.flushWarnings([self.test_urlDeprecation])
+        self.assertEqual(1, len(warningsShown))
+        self.assertEqual(
+            ("twisted.python.url was deprecated in Twisted 17.5.0:"
+             " Please use hyperlink from PyPI instead."),
+            warningsShown[0]['message'])

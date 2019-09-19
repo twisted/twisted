@@ -11,12 +11,12 @@ from twisted.trial import unittest
 from twisted.internet import protocol, reactor, interfaces, defer
 from twisted.internet.error import ConnectionDone
 from twisted.protocols import basic
-from twisted.python.reflect import requireModule
 from twisted.python.runtime import platform
 from twisted.test.test_tcp import ProperlyCloseFilesMixin
 from twisted.test.proto_helpers import waitUntilAllDisconnected
 
-import os, errno
+import os
+import hamcrest
 
 try:
     from OpenSSL import SSL, crypto
@@ -30,11 +30,8 @@ except ImportError:
         SSL = ssl = None
     _noSSL()
 
-try:
-    from twisted.protocols import tls as newTLS
-except ImportError:
-    # Assuming SSL exists, we're using old version in reactor (i.e. non-protocol)
-    newTLS = None
+from zope.interface import implementer
+
 
 
 class UnintelligentProtocol(basic.LineReceiver):
@@ -160,13 +157,14 @@ class RecordingClientProtocol(protocol.Protocol):
 
 
 
+@implementer(interfaces.IHandshakeListener)
 class ImmediatelyDisconnectingProtocol(protocol.Protocol):
     """
     A protocol that disconnect immediately on connection. It fires the
     C{connectionDisconnected} deferred of its factory on connetion lost.
     """
 
-    def connectionMade(self):
+    def handshakeCompleted(self):
         self.transport.loseConnection()
 
 
@@ -182,7 +180,7 @@ def generateCertificateObjects(organization, organizationalUnit):
     @return: a tuple of (key, request, certificate) objects.
     """
     pkey = crypto.PKey()
-    pkey.generate_key(crypto.TYPE_RSA, 512)
+    pkey.generate_key(crypto.TYPE_RSA, 1024)
     req = crypto.X509Req()
     subject = req.get_subject()
     subject.O = organization
@@ -307,33 +305,26 @@ class StolenTCPTests(ProperlyCloseFilesMixin, unittest.TestCase):
         return SSL.Error
 
 
-    def getHandleErrorCode(self):
+    def getHandleErrorCodeMatcher(self):
         """
-        Return the argument L{OpenSSL.SSL.Error} will be constructed with for
-        this case. This is basically just a random OpenSSL implementation
-        detail. It would be better if this test worked in a way which did not
+        Return a L{hamcrest.core.matcher.Matcher} for the argument
+        L{OpenSSL.SSL.Error} will be constructed with for this case.
+        This is basically just a random OpenSSL implementation detail.
+        It would be better if this test worked in a way which did not
         require this.
         """
-        # Windows 2000 SP 4 and Windows XP SP 2 give back WSAENOTSOCK for
-        # SSL.Connection.write for some reason.  The twisted.protocols.tls
-        # implementation of IReactorSSL doesn't suffer from this imprecation,
-        # though, since it is isolated from the Windows I/O layer (I suppose?).
-
-        # If test_properlyCloseFiles waited for the SSL handshake to complete
-        # and performed an orderly shutdown, then this would probably be a
-        # little less weird: writing to a shutdown SSL connection has a more
-        # well-defined failure mode (or at least it should).
-
-        # So figure out if twisted.protocols.tls is in use.  If it can be
-        # imported, it should be.
-        if requireModule('twisted.protocols.tls') is None:
-            # It isn't available, so we expect WSAENOTSOCK if we're on Windows.
-            if platform.getType() == 'win32':
-                return errno.WSAENOTSOCK
-
-        # Otherwise, we expect an error about how we tried to write to a
-        # shutdown connection.  This is terribly implementation-specific.
-        return [('SSL routines', 'SSL_write', 'protocol is shutdown')]
+        # We expect an error about how we tried to write to a shutdown
+        # connection.  This is terribly implementation-specific.
+        return hamcrest.contains(
+            hamcrest.contains(
+                hamcrest.equal_to('SSL routines'),
+                hamcrest.any_of(
+                    hamcrest.equal_to('SSL_write'),
+                    hamcrest.equal_to('ssl_write_internal'),
+                ),
+                hamcrest.equal_to('protocol is shutdown'),
+            ),
+        )
 
 
 
@@ -524,23 +515,17 @@ class ConnectionLostTests(unittest.TestCase, ContextGeneratingMixin):
         close cleanly, and only after the underlying TCP connection has
         disconnected.
         """
+        @implementer(interfaces.IHandshakeListener)
         class CloseAfterHandshake(protocol.Protocol):
             gotData = False
 
             def __init__(self):
                 self.done = defer.Deferred()
 
-            def connectionMade(self):
-                self.transport.write(b"a")
-
-            def dataReceived(self, data):
-                # If we got data, handshake is over:
-                self.gotData = True
+            def handshakeCompleted(self):
                 self.transport.loseConnection()
 
             def connectionLost(self, reason):
-                if not self.gotData:
-                    reason = RuntimeError("We never received the data!")
                 self.done.errback(reason)
                 del self.done
 
@@ -567,9 +552,6 @@ class ConnectionLostTests(unittest.TestCase, ContextGeneratingMixin):
         return defer.gatherResults(
             [clientProtocol.done.addErrback(checkResult),
              serverProtocol.done.addErrback(checkResult)])
-
-    if newTLS is None:
-        test_bothSidesLoseConnection.skip = "Old SSL code doesn't always close cleanly."
 
 
     def testFailedVerify(self):
@@ -672,7 +654,8 @@ class DefaultOpenSSLContextFactoryTests(unittest.TestCase):
         self.assertEqual(self.context._method, SSL.SSLv23_METHOD)
 
         # And OP_NO_SSLv2 disables the SSLv2 support.
-        self.assertTrue(self.context._options & SSL.OP_NO_SSLv2)
+        self.assertEqual(self.context._options & SSL.OP_NO_SSLv2,
+                         SSL.OP_NO_SSLv2)
 
         # Make sure SSLv3 and TLSv1 aren't disabled though.
         self.assertFalse(self.context._options & SSL.OP_NO_SSLv3)
@@ -718,7 +701,8 @@ class ClientContextFactoryTests(unittest.TestCase):
         SSLv3 or TLSv1 but not SSLv2.
         """
         self.assertEqual(self.context._method, SSL.SSLv23_METHOD)
-        self.assertTrue(self.context._options & SSL.OP_NO_SSLv2)
+        self.assertEqual(self.context._options & SSL.OP_NO_SSLv2,
+                         SSL.OP_NO_SSLv2)
         self.assertFalse(self.context._options & SSL.OP_NO_SSLv3)
         self.assertFalse(self.context._options & SSL.OP_NO_TLSv1)
 

@@ -19,6 +19,15 @@ class Logger(object):
     A L{Logger} emits log messages to an observer.  You should instantiate it
     as a class or module attribute, as documented in L{this module's
     documentation <twisted.logger>}.
+
+    @type namespace: L{str}
+    @ivar namespace: the namespace for this logger
+
+    @type source: L{object}
+    @ivar source: The object which is emitting events via this logger
+
+    @type: L{ILogObserver}
+    @ivar observer: The observer that this logger will send events to.
     """
 
     @staticmethod
@@ -29,7 +38,10 @@ class Logger(object):
         @return: the fully qualified python name of a module.
         @rtype: L{str} (native string)
         """
-        return currentframe(2).f_globals["__name__"]
+        try:
+            return currentframe(2).f_globals["__name__"]
+        except KeyError:
+            return "<unknown>"
 
 
     def __init__(self, namespace=None, source=None, observer=None):
@@ -146,8 +158,8 @@ class Logger(object):
         or::
 
             d = deferredFrob(knob)
-            d.addErrback(lambda f: log.failure, "While frobbing {knob}",
-                         f, knob=knob)
+            d.addErrback(lambda f: log.failure("While frobbing {knob}",
+                                               f, knob=knob))
 
         This method is generally meant to capture unexpected exceptions in
         code; an exception that is caught and handled somehow should be logged,

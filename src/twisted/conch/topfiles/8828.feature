@@ -1,1 +1,0 @@
-scripts/ckeygen can now generate ecdsa keys.

@@ -27,7 +27,8 @@ from twisted.python.runtime import platform
 
 from twisted.internet.test.test_core import ObjectModelIntegrationMixin
 from twisted.internet.test.test_tcp import (
-    StreamTransportTestsMixin, AbortConnectionMixin)
+    ConnectToTCPListenerMixin, StreamTransportTestsMixin, AbortConnectionMixin,
+)
 from twisted.internet.test.connectionmixins import (
     EndpointCreator, ConnectionTestsMixin, BrokenContextFactory)
 
@@ -288,10 +289,12 @@ class SSLClientTestsMixin(TLSMixin, ReactorBuilder, ContextGeneratingMixin,
 
 class TLSPortTestsBuilder(TLSMixin, ContextGeneratingMixin,
                           ObjectModelIntegrationMixin, BadContextTestsMixin,
+                          ConnectToTCPListenerMixin,
                           StreamTransportTestsMixin, ReactorBuilder):
     """
     Tests for L{IReactorSSL.listenSSL}
     """
+
     def getListeningPort(self, reactor, factory):
         """
         Get a TLS port from a reactor.
@@ -324,6 +327,32 @@ class TLSPortTestsBuilder(TLSMixin, ContextGeneratingMixin,
         self._testBadContext(useIt)
 
 
+    def connectToListener(self, reactor, address, factory):
+        """
+        Connect to the given listening TLS port, assuming the
+        underlying transport is TCP.
+
+        @param reactor: The reactor under test.
+        @type reactor: L{IReactorSSL}
+
+        @param address: The listening's address.  Only the C{port}
+            component is used; see
+            L{ConnectToTCPListenerMixin.LISTENER_HOST}.
+        @type address: L{IPv4Address} or L{IPv6Address}
+
+        @param factory: The client factory.
+        @type factory: L{ClientFactory}
+
+        @return: The connector
+        """
+        return reactor.connectSSL(
+            self.LISTENER_HOST,
+            address.port,
+            factory,
+            self.getClientContext(),
+        )
+
+
 
 globals().update(SSLClientTestsMixin.makeTestCaseClasses())
 globals().update(StartTLSClientTestsMixin.makeTestCaseClasses())
@@ -340,16 +369,13 @@ class AbortSSLConnectionTests(ReactorBuilder, AbortConnectionMixin, ContextGener
 
     def buildReactor(self):
         reactor = ReactorBuilder.buildReactor(self)
-        try:
-            from twisted.protocols import tls
-        except ImportError:
-            return reactor
+        from twisted.internet import _producer_helpers
 
         # Patch twisted.protocols.tls to use this reactor, until we get
         # around to fixing #5206, or the TLS code uses an explicit reactor:
         cooperator = Cooperator(
             scheduler=lambda x: reactor.callLater(0.00001, x))
-        self.patch(tls, "cooperate", cooperator.cooperate)
+        self.patch(_producer_helpers, "cooperate", cooperator.cooperate)
         return reactor
 
 

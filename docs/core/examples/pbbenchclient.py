@@ -11,8 +11,8 @@ class PBBenchClient:
     calledThisSecond = 0
 
     def callLoop(self, ignored):
-        d1 = self.persp.callRemote("simple")
-        d2 = self.persp.callRemote("complexTypes")
+        d1 = self.persp.callRemote(b"simple")
+        d2 = self.persp.callRemote(b"complexTypes")
         defer.DeferredList([d1, d2]).addCallback(self.callLoop)
         self.calledThisSecond += 1
         thisSecond = int(time.time())
@@ -31,7 +31,7 @@ class PBBenchClient:
     def runTest(self):
         factory = pb.PBClientFactory()
         reactor.connectTCP(self.hostname, self.portno, factory)
-        factory.login(UsernamePassword("benchmark", "benchmark")).addCallback(self._cbPerspective)
+        factory.login(UsernamePassword(b"benchmark", b"benchmark")).addCallback(self._cbPerspective)
 
 
 def main():

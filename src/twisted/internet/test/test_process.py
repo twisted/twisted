@@ -23,8 +23,8 @@ from twisted.internet.test.reactormixins import ReactorBuilder
 from twisted.python.log import msg, err
 from twisted.python.runtime import platform
 from twisted.python.filepath import FilePath, _asFilesystemBytes
-from twisted.python.compat import (networkString, _PY3, xrange, items,
-                                   bytesEnviron)
+from twisted.python.compat import (networkString, range, items,
+                                   bytesEnviron, unicode)
 from twisted.internet import utils
 from twisted.internet.interfaces import IReactorProcess, IProcessTransport
 from twisted.internet.defer import Deferred, succeed
@@ -356,10 +356,7 @@ class ProcessTestsBuilderBase(ReactorBuilder):
 
         def f():
             try:
-                if platform.isWindows():
-                    exe = pyExe.decode('mbcs')
-                else:
-                    exe = pyExe.decode('ascii')
+                exe = pyExe.decode(sys.getfilesystemencoding())
 
                 subprocess.Popen([exe, "-c", "import time; time.sleep(0.1)"])
                 f2 = subprocess.Popen([exe, "-c",
@@ -820,10 +817,9 @@ class ProcessTestsBuilder(ProcessTestsBuilderBase):
 
         args = [b'hello', b'"', b' \t|<>^&', br'"\\"hello\\"', br'"foo\ bar baz\""']
         # Ensure that all non-NUL characters can be passed too.
-        if _PY3:
-            args.append("".join(map(chr, xrange(1,255))).encode("utf8"))
-        else:
-            args.append("".join(map(chr, xrange(1,255))))
+        allChars = "".join(map(chr, range(1, 255)))
+        if isinstance(allChars, unicode):
+            allChars.encode("utf-8")
 
         reactor = self.buildReactor()
 
@@ -866,7 +862,7 @@ class PTYProcessTestsBuilder(ProcessTestsBuilderBase):
 
         skippedReactors = {
             "twisted.internet.pollreactor.PollReactor":
-                "OS X's poll() does not support PTYs"}
+                "macOS's poll() does not support PTYs"}
 globals().update(PTYProcessTestsBuilder.makeTestCaseClasses())
 
 

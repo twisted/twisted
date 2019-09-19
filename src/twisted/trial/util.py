@@ -51,6 +51,7 @@ class DirtyReactorAggregateError(Exception):
         self.delayedCalls = delayedCalls
         self.selectables = selectables
 
+
     def __str__(self):
         """
         Return a multi-line message describing all of the unclean state.
@@ -160,6 +161,7 @@ class _Janitor(object):
                 # post class cleanup hook, so it's only isolating classes
                 # from each other, not methods from each other).
                 reactor._stopThreadPool()
+
 
     def _cleanReactor(self):
         """

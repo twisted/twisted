@@ -17,15 +17,16 @@ from twisted.protocols import basic
 from twisted.web import client
 
 class WebCheckerCommandProtocol(basic.LineReceiver):
-    delimiter = '\n' # unix terminal style newlines. remove this line
-                     # for use with Telnet
+    delimiter = b'\n' # unix terminal style newlines. remove this line
+                      # for use with Telnet
 
     def connectionMade(self):
-        self.sendLine("Web checker console. Type 'help' for help.")
+        self.sendLine(b"Web checker console. Type 'help' for help.")
 
     def lineReceived(self, line):
         # Ignore blank lines
         if not line: return
+        line = line.decode("ascii")
 
         # Parse the command
         commandParts = line.split()
@@ -37,37 +38,44 @@ class WebCheckerCommandProtocol(basic.LineReceiver):
         try:
             method = getattr(self, 'do_' + command)
         except AttributeError as e:
-            self.sendLine('Error: no such command.')
+            self.sendLine(b'Error: no such command.')
         else:
             try:
                 method(*args)
             except Exception as e:
-                self.sendLine('Error: ' + str(e))
+                self.sendLine(b'Error: ' + str(e).encode("ascii"))
 
     def do_help(self, command=None):
         """help [command]: List commands, or show help on the given command"""
         if command:
-            self.sendLine(getattr(self, 'do_' + command).__doc__)
+            doc = getattr(self, 'do_' + command).__doc__
+            self.sendLine(doc.encode("ascii"))
         else:
-            commands = [cmd[3:] for cmd in dir(self) if cmd.startswith('do_')]
-            self.sendLine("Valid commands: " +" ".join(commands))
+            commands = [cmd[3:].encode("ascii")
+                        for cmd in dir(self)
+                        if cmd.startswith('do_')]
+            self.sendLine(b"Valid commands: " + b" ".join(commands))
 
     def do_quit(self):
         """quit: Quit this session"""
-        self.sendLine('Goodbye.')
+        self.sendLine(b'Goodbye.')
         self.transport.loseConnection()
         
     def do_check(self, url):
         """check <url>: Attempt to download the given web page"""
-        client.getPage(url).addCallback(
+        url = url.encode("ascii")
+        client.Agent(reactor).request(b'GET', url).addCallback(
+            client.readBody).addCallback(
             self.__checkSuccess).addErrback(
             self.__checkFailure)
 
     def __checkSuccess(self, pageData):
-        self.sendLine("Success: got %i bytes." % len(pageData))
+        msg = "Success: got {} bytes.".format(len(pageData))
+        self.sendLine(msg.encode("ascii"))
 
     def __checkFailure(self, failure):
-        self.sendLine("Failure: " + failure.getErrorMessage())
+        msg = "Failure: " + failure.getErrorMessage()
+        self.sendLine(msg.encode("ascii"))
 
     def connectionLost(self, reason):
         # stop the reactor, only because this is meant to be run in Stdio.

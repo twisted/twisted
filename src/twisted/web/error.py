@@ -19,10 +19,10 @@ __all__ = [
     'RedirectWithNoLocation',
     ]
 
-from collections import Sequence
 
 from twisted.web._responses import RESPONSES
-from twisted.python.compat import unicode, nativeString, intToBytes
+from twisted.python.compat import unicode, nativeString, intToBytes, Sequence
+
 
 
 def _codeToMessage(code):
@@ -222,6 +222,10 @@ class UnsupportedMethod(Exception):
                 "but my first argument is not a sequence.")
 
 
+    def __str__(self):
+        return "Expected one of %r" % (self.allowedMethods,)
+
+
 
 class SchemeNotSupported(Exception):
     """
@@ -293,6 +297,14 @@ class UnsupportedType(Exception):
     """
     During flattening, an object of a type which cannot be flattened was
     encountered.
+    """
+
+
+class ExcessiveBufferingError(Exception):
+    """
+    The HTTP/2 protocol has been forced to buffer an excessive amount of
+    outbound data, and has therefore closed the connection and dropped all
+    outbound data.
     """
 
 

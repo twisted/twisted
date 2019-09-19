@@ -30,6 +30,7 @@ from twisted.internet import error, defer, interfaces, protocol
 from twisted.python import log, failure
 from twisted.names import (
     dns, common, resolve, cache, root, hosts as hostsModule)
+from twisted.internet.abstract import isIPv6Address
 
 
 
@@ -211,17 +212,31 @@ class Resolver(common.ResolverBase):
             return self.dynServers[self.index - serverL]
 
 
-    def _connectedProtocol(self):
+    def _connectedProtocol(self, interface=''):
         """
         Return a new L{DNSDatagramProtocol} bound to a randomly selected port
         number.
         """
+        failures = 0
         proto = dns.DNSDatagramProtocol(self, reactor=self._reactor)
+
         while True:
             try:
-                self._reactor.listenUDP(dns.randomSource(), proto)
-            except error.CannotListenError:
-                pass
+                self._reactor.listenUDP(dns.randomSource(), proto,
+                                        interface=interface)
+            except error.CannotListenError as e:
+                failures += 1
+
+                if (hasattr(e.socketError, "errno") and
+                   e.socketError.errno == errno.EMFILE):
+                    # We've run out of file descriptors. Stop trying.
+                    raise
+
+                if failures >= 1000:
+                    # We've tried a thousand times and haven't found a port.
+                    # This is almost impossible, and likely means something
+                    # else weird is going on. Raise, as to not infinite loop.
+                    raise
             else:
                 return proto
 
@@ -260,7 +275,10 @@ class Resolver(common.ResolverBase):
         @return: A L{Deferred} which will be called back with the result of the
             query.
         """
-        protocol = self._connectedProtocol()
+        if isIPv6Address(args[0][0]):
+            protocol = self._connectedProtocol(interface='::')
+        else:
+            protocol = self._connectedProtocol()
         d = protocol.query(*args)
         def cbQueried(result):
             protocol.transport.stopListening()
@@ -423,7 +441,14 @@ class Resolver(common.ResolverBase):
         controller.timeoutCall = self._reactor.callLater(
             timeout or 10, self._timeoutZone, d, controller,
             connector, timeout or 10)
-        return d.addCallback(self._cbLookupZone, connector)
+
+        def eliminateTimeout(failure):
+            controller.timeoutCall.cancel()
+            controller.timeoutCall = None
+            return failure
+
+        return d.addCallbacks(self._cbLookupZone, eliminateTimeout,
+                              callbackArgs=(connector,))
 
 
     def _timeoutZone(self, d, controller, connector, seconds):
@@ -447,6 +472,7 @@ class AXFRController:
         self.deferred = deferred
         self.soa = None
         self.records = []
+        self.pending = [(deferred,)]
 
 
     def connectionMade(self, protocol):
@@ -533,7 +559,8 @@ class DNSClientFactory(protocol.ClientFactory):
         # deferreds.
         pending = self.controller.pending[:]
         del self.controller.pending[:]
-        for d, query, timeout in pending:
+        for pendingState in pending:
+            d = pendingState[0]
             d.errback(reason)
 
 

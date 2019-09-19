@@ -72,7 +72,7 @@ class MakeServiceTests(TestCase):
         L{manhole_tap.makeService} will make a telnet service on the port
         defined by C{--telnetPort}. It will not make a SSH service.
         """
-        self.options.parseOptions(["--telnetPort", "222"])
+        self.options.parseOptions(["--telnetPort", "tcp:222"])
         service = manhole_tap.makeService(self.options)
         self.assertIsInstance(service, MultiService)
         self.assertEqual(len(service.services), 1)
@@ -92,7 +92,7 @@ class MakeServiceTests(TestCase):
         # which will never be used in a temp directory.
         self.options.parseOptions(["--sshKeyDir", self.mktemp(),
                                    "--sshKeySize", "512",
-                                   "--sshPort", "223"])
+                                   "--sshPort", "tcp:223"])
         service = manhole_tap.makeService(self.options)
         self.assertIsInstance(service, MultiService)
         self.assertEqual(len(service.services), 1)
@@ -106,7 +106,7 @@ class MakeServiceTests(TestCase):
         """
         The C{--passwd} command-line option will load a passwd-like file.
         """
-        self.options.parseOptions(['--telnetPort', '22',
+        self.options.parseOptions(['--telnetPort', 'tcp:22',
                                    '--passwd', self.filename])
         service = manhole_tap.makeService(self.options)
         portal = service.services[0].factory.protocol.portal
