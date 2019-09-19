@@ -11,15 +11,7 @@ from textwrap import dedent
 from twisted.trial import unittest
 from twisted.persisted import sob
 from twisted.python import components
-from twisted.python.filepath import FilePath
-from twisted.python.reflect import namedAny, ObjectNotFound
 from twisted.persisted.styles import Ephemeral
-
-try:
-    namedAny('Crypto.Cipher.AES')
-    skipCrypto = None
-except ObjectNotFound:
-    skipCrypto = 'PyCrypto is required.'
 
 
 
@@ -57,6 +49,15 @@ class PersistTests(unittest.TestCase):
             o1 = sob.load('lala.'+style, style)
             self.assertEqual(o.foo, o1.foo)
             self.assertEqual(sob.IPersistable(o1).style, style)
+
+
+    def testPassphraseError(self):
+        """
+        Calling save() with a passphrase is an error.
+        """
+        p = sob.Persistant(None, 'object')
+        self.assertRaises(
+            TypeError, p.save, 'filename.pickle', passphrase='abc')
 
 
     def testNames(self):
@@ -175,121 +176,3 @@ class PersistTests(unittest.TestCase):
         Restore __main__ to its original value
         """
         sys.modules['__main__'] = self.realMain
-
-
-
-class PersistentEncryptionTests(unittest.TestCase):
-    """
-    Unit tests for Small OBjects persistence using encryption.
-    """
-
-    if skipCrypto is not None:
-        skip = skipCrypto
-
-
-    def test_encryptedStyles(self):
-        """
-        Data can be persisted with encryption for all the supported styles.
-        """
-        for o in objects:
-            phrase = b'once I was the king of spain'
-            p = sob.Persistent(o, '')
-            for style in 'source pickle'.split():
-                p.setStyle(style)
-                p.save(filename='epersisttest.'+style, passphrase=phrase)
-                o1 = sob.load('epersisttest.'+style, style, phrase)
-                self.assertEqual(o, o1)
-                self.flushWarnings([p._saveTemp, sob.load])
-
-
-    def test_loadValueFromFileEncryptedPython(self):
-        """
-        Encrypted Python data can be loaded from a file.
-        """
-        phrase = b'once I was the king of spain'
-        with open("epersisttest.python", 'wb') as f:
-            f.write(sob._encrypt(phrase, b'foo=[1,2,3]'))
-
-        o = sob.loadValueFromFile('epersisttest.python', 'foo', phrase)
-
-        self.assertEqual(o, [1,2,3])
-        self.flushWarnings([
-            sob.loadValueFromFile, self.test_loadValueFromFileEncryptedPython])
-
-
-    def test_saveEncryptedDeprecation(self):
-        """
-        Persisting data with encryption is deprecated.
-        """
-        tempDir = FilePath(self.mktemp())
-        tempDir.makedirs()
-        persistedPath = tempDir.child('epersisttest.python')
-        data = b'once I was the king of spain'
-        persistance = sob.Persistent(data, 'test-data')
-
-        persistance.save(filename=persistedPath.path, passphrase=b'some-pass')
-
-        # Check deprecation message.
-        warnings = self.flushWarnings([persistance._saveTemp])
-        self.assertEqual(1, len(warnings))
-        self.assertIs(DeprecationWarning, warnings[0]['category'])
-        self.assertEqual(
-            'Saving encrypted persisted data is deprecated since '
-            'Twisted 15.5.0',
-            warnings[0]['message'])
-        # Check that data is still valid, even if we are deprecating this
-        # functionality.
-        loadedData = sob.load(
-            persistedPath.path, persistance.style, b'some-pass')
-        self.assertEqual(data, loadedData)
-        self.flushWarnings([sob.load])
-
-
-    def test_loadEncryptedDeprecation(self):
-        """
-        Loading encrypted persisted data is deprecated.
-        """
-        tempDir = FilePath(self.mktemp())
-        tempDir.makedirs()
-        persistedPath = tempDir.child('epersisttest.python')
-        data = b'once I was the king of spain'
-        persistance = sob.Persistent(data, 'test-data')
-        persistance.save(filename=persistedPath.path, passphrase=b'some-pass')
-        # Clean all previous warnings as save will also raise a warning.
-        self.flushWarnings([persistance._saveTemp])
-
-        loadedData = sob.load(
-            persistedPath.path, persistance.style, b'some-pass')
-
-        self.assertEqual(data, loadedData)
-        warnings = self.flushWarnings([sob.load])
-        self.assertEqual(1, len(warnings))
-        self.assertIs(DeprecationWarning, warnings[0]['category'])
-        self.assertEqual(
-            'Loading encrypted persisted data is deprecated since '
-            'Twisted 15.5.0',
-            warnings[0]['message'])
-
-    def test_loadValueFromFileEncryptedDeprecation(self):
-        """
-        Loading encrypted persisted data is deprecated.
-        """
-        tempDir = FilePath(self.mktemp())
-        tempDir.makedirs()
-        persistedPath = tempDir.child('epersisttest.python')
-        persistedPath.setContent(sob._encrypt(b'some-pass', b'foo=[1,2,3]'))
-        # Clean all previous warnings as _encpryt will also raise a warning.
-        self.flushWarnings([
-            self.test_loadValueFromFileEncryptedDeprecation])
-
-        loadedData = sob.loadValueFromFile(
-            persistedPath.path, 'foo', b'some-pass')
-
-        self.assertEqual([1, 2, 3], loadedData)
-        warnings = self.flushWarnings([sob.loadValueFromFile])
-        self.assertEqual(1, len(warnings))
-        self.assertIs(DeprecationWarning, warnings[0]['category'])
-        self.assertEqual(
-            'Loading encrypted persisted data is deprecated since '
-            'Twisted 15.5.0',
-            warnings[0]['message'])

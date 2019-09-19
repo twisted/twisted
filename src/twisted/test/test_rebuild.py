@@ -7,8 +7,9 @@ import types
 
 from twisted.trial import unittest
 from twisted.python import rebuild
+from twisted.python.compat import _PY3
 
-import crash_test_dummy
+from . import crash_test_dummy
 f = crash_test_dummy.foo
 
 class Foo: pass
@@ -26,13 +27,15 @@ class HashRaisesRuntimeError:
     def __init__(self):
         self.hashCalled = False
 
+
     def __hash__(self):
         self.hashCalled = True
         raise RuntimeError('not a TypeError!')
 
 
 
-unhashableObject = None # set in test_hashException
+# Set in test_hashException
+unhashableObject = None
 
 
 
@@ -43,55 +46,42 @@ class RebuildTests(unittest.TestCase):
     def setUp(self):
         self.libPath = self.mktemp()
         os.mkdir(self.libPath)
-        self.fakelibPath = os.path.join(self.libPath, 'twisted_rebuild_fakelib')
+        self.fakelibPath = os.path.join(self.libPath,
+                                        'twisted_rebuild_fakelib')
         os.mkdir(self.fakelibPath)
-        file(os.path.join(self.fakelibPath, '__init__.py'), 'w').close()
+        open(os.path.join(self.fakelibPath, '__init__.py'), 'w').close()
         sys.path.insert(0, self.libPath)
+
 
     def tearDown(self):
         sys.path.remove(self.libPath)
 
-    def testFileRebuild(self):
+
+    def test_FileRebuild(self):
         from twisted.python.util import sibpath
         import shutil, time
         shutil.copyfile(sibpath(__file__, "myrebuilder1.py"),
                         os.path.join(self.fakelibPath, "myrebuilder.py"))
         from twisted_rebuild_fakelib import myrebuilder
         a = myrebuilder.A()
-        try:
-            object
-        except NameError:
-            pass
-        else:
-            from twisted.test import test_rebuild
-            b = myrebuilder.B()
-            class C(myrebuilder.B):
-                pass
-            test_rebuild.C = C
-            C()
+        b = myrebuilder.B()
         i = myrebuilder.Inherit()
         self.assertEqual(a.a(), 'a')
-        # necessary because the file has not "changed" if a second has not gone
+        # Necessary because the file has not "changed" if a second has not gone
         # by in unix.  This sucks, but it's not often that you'll be doing more
         # than one reload per second.
         time.sleep(1.1)
         shutil.copyfile(sibpath(__file__, "myrebuilder2.py"),
                         os.path.join(self.fakelibPath, "myrebuilder.py"))
         rebuild.rebuild(myrebuilder)
-        try:
-            object
-        except NameError:
-            pass
-        else:
-            b2 = myrebuilder.B()
-            self.assertEqual(b2.b(), 'c')
-            self.assertEqual(b.b(), 'c')
+        b2 = myrebuilder.B()
+        self.assertEqual(b2.b(), 'c')
+        self.assertEqual(b.b(), 'c')
         self.assertEqual(i.a(), 'd')
         self.assertEqual(a.a(), 'b')
-        # more work to be done on new-style classes
-        # self.assertEqual(c.b(), 'c')
 
-    def testRebuild(self):
+
+    def test_Rebuild(self):
         """
         Rebuilding an unchanged module.
         """
@@ -104,11 +94,12 @@ class RebuildTests(unittest.TestCase):
         rebuild.rebuild(crash_test_dummy, doLog=False)
         # Instance rebuilding is triggered by attribute access.
         x.do()
-        self.failUnlessIdentical(x.__class__, crash_test_dummy.X)
+        self.assertEqual(x.__class__, crash_test_dummy.X)
 
-        self.failUnlessIdentical(f, crash_test_dummy.foo)
+        self.assertEqual(f, crash_test_dummy.foo)
 
-    def testComponentInteraction(self):
+
+    def test_ComponentInteraction(self):
         x = crash_test_dummy.XComponent()
         x.setAdapter(crash_test_dummy.IX, crash_test_dummy.XA)
         x.getComponent(crash_test_dummy.IX)
@@ -125,14 +116,18 @@ class RebuildTests(unittest.TestCase):
                               crash_test_dummy.XA, crash_test_dummy.X,
                               crash_test_dummy.IX)
 
-    def testUpdateInstance(self):
+
+    def test_UpdateInstance(self):
         global Foo, Buz
 
         b = Buz()
 
         class Foo:
             def foo(self):
-                pass
+                """
+                Dummy method
+                """
+
         class Buz(Bar, Baz):
             x = 10
 
@@ -140,7 +135,8 @@ class RebuildTests(unittest.TestCase):
         assert hasattr(b, 'foo'), "Missing method on rebuilt instance"
         assert hasattr(b, 'x'), "Missing class attribute on rebuilt instance"
 
-    def testBananaInteraction(self):
+
+    def test_BananaInteraction(self):
         from twisted.python import rebuild
         from twisted.spread import banana
         rebuild.latestClass(banana.Banana)
@@ -159,6 +155,60 @@ class RebuildTests(unittest.TestCase):
         self.addCleanup(_cleanup)
         rebuild.rebuild(rebuild)
         self.assertTrue(unhashableObject.hashCalled)
+
+
+    def test_Sensitive(self):
+        """
+        L{twisted.python.rebuild.Sensitive}
+        """
+        from twisted.python import rebuild
+        from twisted.python.rebuild import Sensitive
+
+        class TestSensitive(Sensitive):
+            def test_method(self):
+                """
+                Dummy method
+                """
+
+        testSensitive = TestSensitive()
+        testSensitive.rebuildUpToDate()
+        self.assertFalse(testSensitive.needRebuildUpdate())
+
+        # Test rebuilding a builtin class
+        newException = rebuild.latestClass(Exception)
+        if _PY3:
+            self.assertEqual(repr(Exception), repr(newException))
+        else:
+            self.assertIn('twisted.python.rebuild.Exception', repr(newException))
+        self.assertEqual(newException, testSensitive.latestVersionOf(newException))
+
+        # Test types.MethodType on method in class
+        self.assertEqual(TestSensitive.test_method,
+            testSensitive.latestVersionOf(TestSensitive.test_method))
+        # Test types.MethodType on method in instance of class
+        self.assertEqual(testSensitive.test_method,
+            testSensitive.latestVersionOf(testSensitive.test_method))
+        # Test a class
+        self.assertEqual(TestSensitive,
+            testSensitive.latestVersionOf(TestSensitive))
+
+        class Foo:
+            """
+            Dummy class
+            """
+
+        foo = Foo()
+
+        # Test types.InstanceType
+        self.assertEqual(foo, testSensitive.latestVersionOf(foo))
+
+        def myFunction():
+            """
+            Dummy method
+            """
+
+        # Test types.FunctionType
+        self.assertEqual(myFunction, testSensitive.latestVersionOf(myFunction))
 
 
 
@@ -228,3 +278,6 @@ class NewStyleTests(unittest.TestCase):
         exec(classDefinition, self.m.__dict__)
         # Moving from new-style class to old-style should fail.
         self.assertRaises(TypeError, rebuild.updateInstance, inst)
+
+    if getattr(types, 'ClassType', None) is None:
+        test_instanceSlots.skip = "Old-style classes not supported on Python 3"

@@ -329,9 +329,9 @@ class DictLookup(DictClient):
 
     def dictConnected(self):
         if self.factory.queryType == "define":
-            apply(self.sendDefine, self.factory.param)
+            self.sendDefine(*self.factory.param)
         elif self.factory.queryType == "match":
-            apply(self.sendMatch, self.factory.param)
+            self.sendMatch(*self.factory.param)
 
 
     def defineFailed(self, reason):

@@ -18,7 +18,7 @@ from twisted.trial import unittest
 from twisted.python import filepath, log
 from twisted.python.reflect import requireModule
 from twisted.python.runtime import platform
-from twisted.python.compat import xrange, intToBytes, bytesEnviron
+from twisted.python.compat import range, intToBytes, bytesEnviron
 from twisted.internet import error, defer, protocol, stdio, reactor
 from twisted.test.test_tcp import ConnectionLostNotifyingProtocol
 
@@ -186,7 +186,7 @@ class StandardInputOutputTests(unittest.TestCase):
         """
         p = StandardIOTestProcessProtocol()
 
-        # Note: the OS X bug which prompted the addition of this test
+        # Note: the macOS bug which prompted the addition of this test
         # is an apparent race condition involving non-blocking PTYs.
         # Delaying the parent process significantly increases the
         # likelihood of the race going the wrong way.  If you need to
@@ -269,7 +269,7 @@ class StandardInputOutputTests(unittest.TestCase):
     def _junkPath(self):
         junkPath = self.mktemp()
         with open(junkPath, 'wb') as junkFile:
-            for i in xrange(1024):
+            for i in range(1024):
                 junkFile.write(intToBytes(i) + b'\n')
         return junkPath
 

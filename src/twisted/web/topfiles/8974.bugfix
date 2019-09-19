@@ -1,1 +1,0 @@
-twisted.web.http_headers.Headers.getRawHeaders no longer attempts to decode the default value when called with a unicode header name.

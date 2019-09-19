@@ -35,7 +35,7 @@ mkdir -p build/;
 twistedchecker \
     --ignore="raiser.so,portmap.so,_sendmsg.so" \
     --disable="${TWISTEDCHECKER_SKIP_WARNINGS:-}" \
-    --output-format=parseable \
+    --msg-template='{path}:{line}: [{msg_id}({symbol}), {obj}] {msg}' \
     "${target}" \
     > "build/twistedchecker-branch.report" || true;
 

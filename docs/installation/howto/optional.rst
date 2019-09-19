@@ -16,22 +16,25 @@ For a deeper explanation of what optional dependencies are and how they are decl
 The following optional dependencies are supported:
 
 * **dev** - packages that aid in the development of Twisted itself.
-    * `pyflakes`_
-    * `twisted-dev-tools`_
-    * `python-subunit`_
-    * `Sphinx`_
-    * `TwistedChecker`_, only available on python2
-    * `pydoctor`_, only available on python2
+
+  * `pyflakes`_
+  * `twisted-dev-tools`_
+  * `python-subunit`_
+  * `Sphinx`_
+  * `TwistedChecker`_, only available on python2
+  * `pydoctor`_, only available on python2
 
 
 * **tls** - packages that are needed to work with TLS.
-    * `pyOpenSSL`_
-    * `service_identity`_
-    * `idna`_
+
+  * `pyOpenSSL`_
+  * `service_identity`_
+  * `idna`_
 
 * **conch** - packages for working with conch/SSH.
-    * `pyasn1`_
-    * `cryptography`_
+
+  * `pyasn1`_
+  * `cryptography`_
 
 * **soap** - the `SOAPpy`_ package to work with SOAP.
 
@@ -39,13 +42,14 @@ The following optional dependencies are supported:
 
 * **all_non_platform** - installs **tls**, **conch**, **soap**, and **serial** options.
 
-* **osx_platform** - **all_non_platform** options and `pyobjc`_ to work with Objective-C apis.
+* **macos_platform** - **all_non_platform** options and `pyobjc`_ to work with Objective-C apis.
 
-* **windows_platform** - **all_non_platform** options and `pypiwin32`_ to work with Windows's apis.
+* **windows_platform** - **all_non_platform** options and `pywin32`_ to work with Windows's apis.
 
 * **http2** - packages needed for http2 support.
-     * `h2`_
-     * `priority`_
+
+  * `h2`_
+  * `priority`_
 
 .. _pip: https://pip.pypa.io/en/latest/quickstart.html
 .. _TwistedChecker: https://pypi.python.org/pypi/TwistedChecker
@@ -61,7 +65,7 @@ The following optional dependencies are supported:
 .. _SOAPpy: https://pypi.python.org/pypi/SOAPpy
 .. _pyserial: https://pypi.python.org/pypi/pyserial
 .. _pyobjc: https://pypi.python.org/pypi/pyobjc
-.. _pypiwin32: https://pypi.python.org/pypi/pypiwin32
+.. _pywin32: https://pypi.python.org/pypi/pywin32
 .. _`setuptools documentation`: https://pythonhosted.org/setuptools/setuptools.html#declaring-extras-optional-features-with-their-own-dependencies
 .. _`python packaging tutorial`: https://packaging.python.org/en/latest/installing.html#examples
 .. _idna: https://pypi.python.org/pypi/idna

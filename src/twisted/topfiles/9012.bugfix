@@ -1,1 +1,0 @@
-twisted.python.compat.execfile() does not open files with the deprecated 'U' flag on Python 3.

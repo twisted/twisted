@@ -2421,6 +2421,37 @@ class ClientTests(IRCTestCase):
             'spam', ['#greasyspooncafe', "I don't want any spam!"])
 
 
+    def test_ping(self):
+        """
+        L{IRCClient.ping}
+        """
+        # Ping a user with no message
+        self.protocol.ping("otheruser")
+        self.assertTrue(
+            self.transport.value().startswith(b'PRIVMSG otheruser :\x01PING'))
+        self.transport.clear()
+
+        # Ping a user with a message
+        self.protocol.ping("otheruser", "are you there")
+        self.assertEqual(self.transport.value(),
+            b'PRIVMSG otheruser :\x01PING are you there\x01\r\n')
+        self.transport.clear()
+
+        # Create a lot of pings, more than MAX_PINGRING
+        self.protocol._pings = {}
+        for pingNum in range(self.protocol._MAX_PINGRING + 3):
+            self.protocol._pings[("otheruser"), (str(pingNum))] = (
+                time.time() + pingNum)
+        self.assertEqual(len(self.protocol._pings), self.protocol._MAX_PINGRING + 3)
+
+        # Ping a user
+        self.protocol.ping("otheruser", "I sent a lot of pings")
+        # The excess pings should have been purged
+        self.assertEqual(len(self.protocol._pings), self.protocol._MAX_PINGRING)
+        self.assertEqual(self.transport.value(),
+            b'PRIVMSG otheruser :\x01PING I sent a lot of pings\x01\r\n')
+
+
 
 class CollectorClient(irc.IRCClient):
     """

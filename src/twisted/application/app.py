@@ -21,6 +21,7 @@ from twisted.persisted import sob
 from twisted.python import runtime, log, usage, failure, util, logfile
 from twisted.python._oldstyle import _oldStyle
 from twisted.python.reflect import (qual, namedAny, namedModule)
+from twisted.internet.interfaces import _ISupportsExitSignalCapturing
 
 # Expose the new implementation of installReactor at the old location.
 from twisted.application.reactors import installReactor
@@ -392,8 +393,15 @@ class ApplicationRunner(object):
 
         @see: L{runReactorWithLogging}
         """
+        if reactor is None:
+            from twisted.internet import reactor
         runReactorWithLogging(
             self.config, oldstdout, oldstderr, self.profiler, reactor)
+
+        if _ISupportsExitSignalCapturing.providedBy(reactor):
+            self._exitSignal = reactor._exitSignal
+        else:
+            self._exitSignal = None
 
 
     def preApplication(self):
@@ -591,7 +599,11 @@ class ServerOptions(usage.Options, ReactorSelectionMixin):
 
     def __init__(self, *a, **kw):
         self['debug'] = False
-        usage.Options.__init__(self, *a, **kw)
+        if 'stdout' in kw:
+            self.stdout = kw['stdout']
+        else:
+            self.stdout = sys.stdout
+        usage.Options.__init__(self)
 
 
     def opt_debug(self):
@@ -681,3 +693,16 @@ def startApplication(application, save):
         reactor.addSystemEventTrigger('after', 'shutdown', p.save, 'shutdown')
     reactor.addSystemEventTrigger('before', 'shutdown',
                                   service.IService(application).stopService)
+
+
+
+def _exitWithSignal(sig):
+    """
+    Force the application to terminate with the specified signal by replacing
+    the signal handler with the default and sending the signal to ourselves.
+
+    @param sig:  Signal to use to terminate the process with C{os.kill}.
+    @type sig:  C{int}
+    """
+    signal.signal(sig, signal.SIG_DFL)
+    os.kill(os.getpid(), sig)

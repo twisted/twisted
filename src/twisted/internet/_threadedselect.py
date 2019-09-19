@@ -50,8 +50,13 @@ loop.  Shutdown functions that could be used in place of
 with wxPython, or the PyObjCTools.AppHelper.stopEventLoop function.
 """
 
+from functools import partial
 from threading import Thread
-from Queue import Queue, Empty
+
+try:
+    from queue import Queue, Empty
+except ImportError:
+    from Queue import Queue, Empty
 import sys
 
 from zope.interface import implementer
@@ -66,15 +71,16 @@ from errno import EINTR, EBADF
 
 from twisted.internet.selectreactor import _select
 
+
 def dictRemove(dct, value):
     try:
         del dct[value]
     except KeyError:
         pass
 
+
 def raiseException(e):
     raise e
-
 
 
 @implementer(IReactorFDSet)
@@ -104,13 +110,11 @@ class ThreadedSelectReactor(posixbase.PosixReactorBase):
         return tple
 
     def _sendToMain(self, msg, *args):
-        #print >>sys.stderr, 'sendToMain', msg, args
         self.toMainThread.put((msg, args))
         if self.mainWaker is not None:
             self.mainWaker()
 
     def _sendToThread(self, fn, *args):
-        #print >>sys.stderr, 'sendToThread', fn, args
         self.toThreadQueue.put((fn, args))
 
     def _preenDescriptorsInThread(self):
@@ -132,14 +136,12 @@ class ThreadedSelectReactor(posixbase.PosixReactorBase):
         try:
             while 1:
                 fn, args = self.toThreadQueue.get()
-                #print >>sys.stderr, "worker got", fn, args
                 fn(*args)
         except SystemExit:
-            pass # exception indicates this thread should exit
+            pass  # Exception indicates this thread should exit
         except:
             f = failure.Failure()
             self._sendToMain('Failure', f)
-        #print >>sys.stderr, "worker finished"
 
     def _doSelectInThread(self, timeout):
         """Run one iteration of the I/O monitor loop.
@@ -182,20 +184,19 @@ class ThreadedSelectReactor(posixbase.PosixReactorBase):
         self._sendToMain('Notify', r, w)
 
     def _process_Notify(self, r, w):
-        #print >>sys.stderr, "_process_Notify"
         reads = self.reads
         writes = self.writes
 
         _drdw = self._doReadOrWrite
         _logrun = log.callWithLogger
-        for selectables, method, dct in ((r, "doRead", reads), (w, "doWrite", writes)):
+        for selectables, method, dct in (
+                (r, "doRead", reads), (w, "doWrite", writes)):
             for selectable in selectables:
                 # if this was disconnected in another thread, kill it.
                 if selectable not in dct:
                     continue
                 # This for pausing input when we're not ready for more.
                 _logrun(selectable, _drdw, selectable, method, dct)
-        #print >>sys.stderr, "done _process_Notify"
 
     def _process_Failure(self, f):
         f.raiseException()
@@ -210,23 +211,18 @@ class ThreadedSelectReactor(posixbase.PosixReactorBase):
     def doThreadIteration(self, timeout):
         self._sendToThread(self._doIterationInThread, timeout)
         self.ensureWorkerThread()
-        #print >>sys.stderr, 'getting...'
         msg, args = self.toMainThread.get()
-        #print >>sys.stderr, 'got', msg, args
         getattr(self, '_process_' + msg)(*args)
 
     doIteration = doThreadIteration
 
     def _interleave(self):
         while self.running:
-            #print >>sys.stderr, "runUntilCurrent"
             self.runUntilCurrent()
             t2 = self.timeout()
             t = self.running and t2
             self._sendToThread(self._doIterationInThread, t)
-            #print >>sys.stderr, "yielding"
             yield None
-            #print >>sys.stderr, "fetching"
             msg, args = self.toMainThread.get_nowait()
             getattr(self, '_process_' + msg)(*args)
 
@@ -243,23 +239,22 @@ class ThreadedSelectReactor(posixbase.PosixReactorBase):
         """
         self.startRunning(*args, **kw)
         loop = self._interleave()
+
         def mainWaker(waker=waker, loop=loop):
-            #print >>sys.stderr, "mainWaker()"
-            waker(loop.next)
+            waker(partial(next, loop))
+
         self.mainWaker = mainWaker
-        loop.next()
+        next(loop)
         self.ensureWorkerThread()
 
     def _mainLoopShutdown(self):
         self.mainWaker = None
         if self.workerThread is not None:
-            #print >>sys.stderr, 'getting...'
             self._sendToThread(raiseException, SystemExit)
             self.wakeUp()
             try:
                 while 1:
                     msg, args = self.toMainThread.get_nowait()
-                    #print >>sys.stderr, "ignored:", (msg, args)
             except Empty:
                 pass
             self.workerThread.join()
@@ -317,11 +312,11 @@ class ThreadedSelectReactor(posixbase.PosixReactorBase):
 
 
     def getReaders(self):
-        return self.reads.keys()
+        return list(self.reads.keys())
 
 
     def getWriters(self):
-        return self.writes.keys()
+        return list(self.writes.keys())
 
 
     def stop(self):
@@ -333,7 +328,7 @@ class ThreadedSelectReactor(posixbase.PosixReactorBase):
         self.wakeUp()
 
 
-    def run(self, installSignalHandlers=1):
+    def run(self, installSignalHandlers=True):
         self.startRunning(installSignalHandlers=installSignalHandlers)
         self.mainLoop()
 
@@ -347,7 +342,6 @@ class ThreadedSelectReactor(posixbase.PosixReactorBase):
                 break
 
 
-
 def install():
     """Configure the twisted mainloop to be run using the select() reactor.
     """
@@ -355,5 +349,6 @@ def install():
     from twisted.internet.main import installReactor
     installReactor(reactor)
     return reactor
+
 
 __all__ = ['install']

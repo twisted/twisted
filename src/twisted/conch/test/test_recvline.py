@@ -747,6 +747,27 @@ class HistoricRecvlineLoopbackMixin:
              b">>> done"])
 
 
+    def test_DownArrowToPartialLineInHistory(self):
+        """
+        Pressing down arrow to visit an entry that was added to the
+        history by pressing the up arrow instead of return does not
+        raise a L{TypeError}.
+
+        @see: U{http://twistedmatrix.com/trac/ticket/9031}
+
+        @return: A L{defer.Deferred} that fires when C{b"done"} is
+            echoed back.
+        """
+
+        return self._trivialTest(
+            b"first line\n" + b"partial line" + up + down + b"\ndone",
+            [b">>> first line",
+             b"first line",
+             b">>> partial line",
+             b"partial line",
+             b">>> done"])
+
+
     def testDownArrow(self):
         return self._trivialTest(
             b"first line\nsecond line\n" + up * 2 + down + b"\ndone",

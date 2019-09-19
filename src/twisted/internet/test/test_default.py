@@ -71,7 +71,7 @@ class SelectReactorTests(SynchronousTestCase):
     """
     def test_osx(self):
         """
-        L{_getInstallFunction} chooses the select reactor on OS X.
+        L{_getInstallFunction} chooses the select reactor on macOS.
         """
         install = _getInstallFunction(osx)
         self.assertEqual(

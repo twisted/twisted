@@ -8,7 +8,7 @@ URL parsing, construction and rendering.
 @see: L{URL}
 """
 
-from ._url import URL
+from hyperlink import URL
 
 __all__ = [
     "URL",
