@@ -10,14 +10,18 @@ Maintainer: Paul Swartz
 """
 from __future__ import division, absolute_import
 
+import string
 import struct
 
+import twisted.internet.error
 from twisted.conch.ssh import service, common
 from twisted.conch import error
 from twisted.internet import defer
 from twisted.python import log
 from twisted.python.compat import (
-    networkString, nativeString, long, _bytesChr as chr)
+    nativeString, networkString, long, _bytesChr as chr)
+
+
 
 class SSHConnection(service.SSHService):
     """
@@ -62,8 +66,16 @@ class SSHConnection(service.SSHService):
         """
         Called when the connection is stopped.
         """
-        for channel in list(self.channels.values()):
+        # Close any fully open channels
+        for channel in list(self.channelsToRemoteChannel.keys()):
             self.channelClosed(channel)
+        # Indicate failure to any channels that were in the process of
+        # opening but not yet open.
+        while self.channels:
+            (_, channel) = self.channels.popitem()
+            log.callWithLogger(channel, channel.openFailed,
+                               twisted.internet.error.ConnectionLost())
+        # Errback any unfinished global requests.
         self._cleanupGlobalDeferreds()
 
 
@@ -602,10 +614,11 @@ class SSHConnection(service.SSHService):
             del self.localToRemoteChannel[channel.id]
             del self.channels[channel.id]
             del self.channelsToRemoteChannel[channel]
-            for d in self.deferreds.setdefault(channel.id, []):
+            for d in self.deferreds.pop(channel.id, []):
                 d.errback(error.ConchError("Channel closed."))
-            del self.deferreds[channel.id][:]
             log.callWithLogger(channel, channel.closed)
+
+
 
 MSG_GLOBAL_REQUEST = 80
 MSG_REQUEST_SUCCESS = 81
@@ -632,10 +645,9 @@ EXTENDED_DATA_STDERR = 1
 messages = {}
 for name, value in locals().copy().items():
     if name[:4] == 'MSG_':
-        messages[value] = name # doesn't handle doubles
+        messages[value] = name  # Doesn't handle doubles
 
-import string
 alphanums = networkString(string.ascii_letters + string.digits)
 TRANSLATE_TABLE = b''.join([chr(i) in alphanums and chr(i) or b'_'
-    for i in range(256)])
+                            for i in range(256)])
 SSHConnection.protocolMessages = messages

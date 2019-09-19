@@ -1,1 +1,0 @@
-The telnet_echo.tac example had conflicting port callouts between runtime and documentation. File was altered to run on documented port, 6023.

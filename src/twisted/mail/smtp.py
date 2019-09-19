@@ -17,8 +17,9 @@ import socket
 import os
 import random
 import binascii
-import email.utils
 import warnings
+
+from email.utils import parseaddr
 
 from zope.interface import implementer
 
@@ -33,7 +34,7 @@ from twisted.internet import reactor
 from twisted.internet.interfaces import ITLSTransport, ISSLTransport
 from twisted.python import log
 from twisted.python import util
-from twisted.python.compat import (_PY3, xrange, long, unicode, networkString,
+from twisted.python.compat import (_PY3, range, long, unicode, networkString,
                                    nativeString, iteritems, _keys, _bytesChr,
                                    iterbytes)
 from twisted.python.runtime import platform
@@ -79,7 +80,7 @@ __all__ = [
 
 # Cache the hostname (XXX Yes - this is broken)
 if platform.isMacOSX():
-    # On OS X, getfqdn() is ridiculously slow - use the
+    # On macOS, getfqdn() is ridiculously slow - use the
     # probably-identical-but-sometimes-not gethostname() there.
     DNSNAME = socket.gethostname()
 else:
@@ -89,7 +90,7 @@ else:
 DNSNAME = DNSNAME.encode('ascii')
 
 # Used for fast success code lookup
-SUCCESS = dict.fromkeys(xrange(200, 300))
+SUCCESS = dict.fromkeys(range(200, 300))
 
 
 
@@ -176,7 +177,7 @@ def quoteaddr(addr):
     if isinstance(addr, bytes):
         addr = addr.decode('ascii')
 
-    res = email.utils.parseaddr(addr)
+    res = parseaddr(addr)
 
     if res == (None, None):
         # It didn't parse, use it as-is
@@ -1039,7 +1040,7 @@ class SMTPClient(basic.LineReceiver, policies.TimeoutMixin):
         self.toAddressesResult = []
         self.successAddresses = []
         self._okresponse = self.smtpState_toOrData
-        self._expected = xrange(0,1000)
+        self._expected = range(0, 1000)
         self.lastAddress = None
         return self.smtpState_toOrData(0, b'')
 
@@ -1169,7 +1170,7 @@ class SMTPClient(basic.LineReceiver, policies.TimeoutMixin):
 
 
     def _disconnectFromServer(self):
-        self._expected = xrange(0, 1000)
+        self._expected = range(0, 1000)
         self._okresponse = self.smtpState_disconnect
         self.sendLine(b'QUIT')
 
@@ -1896,7 +1897,7 @@ class SMTPSenderFactory(protocol.ClientFactory):
                 if not isinstance(_email, bytes):
                     _email = _email.encode('ascii')
 
-                toEmailFinal.append(email)
+                toEmailFinal.append(_email)
             toEmail = toEmailFinal
 
         self.fromEmail = Address(fromEmail)
@@ -2127,11 +2128,11 @@ def sendmail(smtphost, from_addr, to_addrs, msg, senderDomainName=None, port=25,
     @type port: L{int}
 
     @param username: The username to use, if wanting to authenticate.
-    @type username: L{bytes}
+    @type username: L{bytes} or L{unicode}
 
     @param password: The secret to use, if wanting to authenticate. If you do
         not specify this, SMTP authentication will not occur.
-    @type password: L{bytes}
+    @type password: L{bytes} or L{unicode}
 
     @param requireTransportSecurity: Whether or not STARTTLS is required.
     @type requireTransportSecurity: L{bool}
@@ -2172,6 +2173,12 @@ def sendmail(smtphost, from_addr, to_addrs, msg, senderDomainName=None, port=25,
             connector.disconnect()
 
     d = defer.Deferred(cancel)
+
+    if isinstance(username, unicode):
+        username = username.encode("utf-8")
+    if isinstance(password, unicode):
+        password = password.encode("utf-8")
+
     factory = ESMTPSenderFactory(username, password, from_addr, to_addrs, msg,
         d, heloFallback=True, requireAuthentication=requireAuthentication,
         requireTransportSecurity=requireTransportSecurity)

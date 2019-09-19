@@ -5,11 +5,11 @@
 Twisted Protocols: A collection of internet protocol implementations.
 """
 
-# Deprecating twisted.protocols.mice.
 from incremental import Version
 from twisted.python.deprecate import deprecatedModuleAttribute
 
+
 deprecatedModuleAttribute(
-    Version("Twisted", 16, 0, 0),
+    Version('Twisted', 17, 9, 0),
     "There is no replacement for this module.",
-    "twisted.protocols", "mice")
+    "twisted.protocols", "dict")

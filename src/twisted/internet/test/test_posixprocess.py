@@ -17,6 +17,7 @@ else:
     from twisted.internet import process
     platformSkip = None
 
+from twisted.python.compat import range
 from twisted.trial.unittest import TestCase
 
 
@@ -265,12 +266,12 @@ class FDDetectorTests(TestCase):
         # When the resource module is here, use its value.
         self.revealResourceModule(512)
         self.assertEqual(
-            range(512), self.detector._fallbackFDImplementation())
+            list(range(512)), list(self.detector._fallbackFDImplementation()))
 
         # But limit its value to the arbitrarily selected value 1024.
         self.revealResourceModule(2048)
         self.assertEqual(
-            range(1024), self.detector._fallbackFDImplementation())
+            list(range(1024)), list(self.detector._fallbackFDImplementation()))
 
 
     def test_fallbackFDImplementation(self):
@@ -280,7 +281,8 @@ class FDDetectorTests(TestCase):
         L{resource} module is not importable.
         """
         self.hideResourceModule()
-        self.assertEqual(range(1024), self.detector._fallbackFDImplementation())
+        self.assertEqual(list(range(1024)),
+                         list(self.detector._fallbackFDImplementation()))
 
 
 

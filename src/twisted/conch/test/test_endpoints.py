@@ -9,10 +9,13 @@ import os.path
 from struct import pack
 from errno import ENOSYS
 
+import hamcrest
+
 from zope.interface.verify import verifyObject, verifyClass
 from zope.interface import implementer
 
-from twisted.python.compat import networkString, iteritems
+from twisted.logger import globalLogPublisher, LogLevel
+from twisted.python.compat import iteritems, networkString
 from twisted.python.failure import Failure
 from twisted.python.filepath import FilePath
 from twisted.python.log import msg
@@ -23,7 +26,7 @@ from twisted.internet.defer import CancelledError, Deferred, succeed, fail
 from twisted.internet.error import ConnectionDone, ConnectionRefusedError
 from twisted.internet.address import IPv4Address
 from twisted.trial.unittest import TestCase
-from twisted.test.proto_helpers import MemoryReactorClock
+from twisted.test.proto_helpers import EventLoggingObserver, MemoryReactorClock
 from twisted.internet.error import ProcessTerminated, ConnectingCancelledError
 
 from twisted.cred.portal import Portal
@@ -33,6 +36,7 @@ from twisted.conch.interfaces import IConchUser
 from twisted.conch.error import ConchError, UserRejectedKey, HostKeyChanged
 
 if requireModule('cryptography') and requireModule('pyasn1.type'):
+    from twisted.conch.ssh import common
     from twisted.conch.ssh.factory import SSHFactory
     from twisted.conch.ssh.userauth import SSHUserAuthServer
     from twisted.conch.ssh.connection import SSHConnection
@@ -592,13 +596,42 @@ class SSHCommandClientEndpointTestsMixin(object):
         When the command exits with a non-zero signal, the protocol's
         C{connectionLost} method is called with a L{Failure} wrapping an
         exception which encapsulates that status.
+
+        Additional packet contents are logged at the C{info} level.
         """
+        logObserver = EventLoggingObserver()
+        globalLogPublisher.addObserver(logObserver)
+        self.addCleanup(globalLogPublisher.removeObserver, logObserver)
+
         exitCode = None
-        signal = 123
-        exc = self._exitStatusTest(b'exit-signal', pack('>L', signal))
+        signal = 15
+        # See https://tools.ietf.org/html/rfc4254#section-6.10
+        packet = b"".join([
+            common.NS(b'TERM'),     # Signal name (without "SIG" prefix);
+                                    # string
+            b'\x01',                # Core dumped; boolean
+            common.NS(b'message'),  # Error message; string (UTF-8 encoded)
+            common.NS(b'en-US'),    # Language tag; string
+        ])
+        exc = self._exitStatusTest(b'exit-signal', packet)
         exc.trap(ProcessTerminated)
         self.assertEqual(exitCode, exc.value.exitCode)
         self.assertEqual(signal, exc.value.signal)
+
+        logNamespace = "twisted.conch.endpoints._CommandChannel"
+        hamcrest.assert_that(
+            logObserver,
+            hamcrest.has_item(
+                hamcrest.has_entries(
+                    {
+                        "log_level": hamcrest.equal_to(LogLevel.info),
+                        "log_namespace": logNamespace,
+                        "shortSignalName": b"TERM",
+                        "coreDumped": True,
+                        "errorMessage": u"message",
+                        "languageTag": b"en-US",
+                    },
+                )))
 
 
     def record(self, server, protocol, event, noArgs=False):

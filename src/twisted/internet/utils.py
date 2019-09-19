@@ -19,12 +19,13 @@ from io import BytesIO
 
 
 
-def _callProtocolWithDeferred(protocol, executable, args, env, path, reactor=None):
+def _callProtocolWithDeferred(protocol, executable, args, env, path,
+                              reactor=None, protoArgs=()):
     if reactor is None:
         from twisted.internet import reactor
 
     d = defer.Deferred()
-    p = protocol(d)
+    p = protocol(d, *protoArgs)
     reactor.spawnProcess(p, executable, (executable,)+tuple(args), env, path)
     return d
 
@@ -137,20 +138,30 @@ class _ValueGetter(protocol.ProcessProtocol):
         self.deferred.callback(reason.value.exitCode)
 
 
+
 def getProcessValue(executable, args=(), env={}, path=None, reactor=None):
     """Spawn a process and return its exit code as a Deferred."""
     return _callProtocolWithDeferred(_ValueGetter, executable, args, env, path,
-                                    reactor)
+                                     reactor)
+
 
 
 class _EverythingGetter(protocol.ProcessProtocol):
 
-    def __init__(self, deferred):
+    def __init__(self, deferred, stdinBytes=None):
         self.deferred = deferred
         self.outBuf = BytesIO()
         self.errBuf = BytesIO()
         self.outReceived = self.outBuf.write
         self.errReceived = self.errBuf.write
+        self.stdinBytes = stdinBytes
+
+    def connectionMade(self):
+        if self.stdinBytes is not None:
+            self.transport.writeToChild(0, self.stdinBytes)
+            # The only compelling reason not to _always_ close stdin here is
+            # backwards compatibility.
+            self.transport.closeStdin()
 
     def processEnded(self, reason):
         out = self.outBuf.getvalue()
@@ -163,15 +174,24 @@ class _EverythingGetter(protocol.ProcessProtocol):
             self.deferred.callback((out, err, code))
 
 
+
 def getProcessOutputAndValue(executable, args=(), env={}, path=None,
-                             reactor=None):
+                             reactor=None, stdinBytes=None):
     """Spawn a process and returns a Deferred that will be called back with
     its output (from stdout and stderr) and it's exit code as (out, err, code)
     If a signal is raised, the Deferred will errback with the stdout and
     stderr up to that point, along with the signal, as (out, err, signalNum)
     """
-    return _callProtocolWithDeferred(_EverythingGetter, executable, args, env, path,
-                                    reactor)
+    return _callProtocolWithDeferred(
+        _EverythingGetter,
+        executable,
+        args,
+        env,
+        path,
+        reactor,
+        protoArgs=(stdinBytes,),
+    )
+
 
 
 def _resetWarningFilters(passthrough, addedFilters):
