@@ -1,1 +1,0 @@
-twisted.application.backoffPolicy will not fail on connection attempts > 1750 with default settings.
