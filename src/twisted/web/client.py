@@ -1171,23 +1171,23 @@ class FileBodyProducer(object):
         """
         self._task = self._cooperate(self._writeloop(consumer))
 
-        task_d = self._task.whenDone()
+        taskD = self._task.whenDone()
 
         # Create another deferred here because cancellers can only be provided
         # to the deferred constructor
-        def cancel_producer(ignored):
+        def cancelProducer(ignored):
             self.stopProducing()
-            task_d.cancel()
-        producer_d = defer.Deferred(canceller=cancel_producer)
-        task_d.chainDeferred(producer_d)
+            taskD.cancel()
+        producerD = defer.Deferred(canceller=cancelProducer)
+        taskD.chainDeferred(producerD)
 
         def maybeStopped(reason):
             # IBodyProducer.startProducing's Deferred isn't support to fire if
             # stopProducing is called.
             reason.trap(task.TaskStopped)
             return defer.Deferred()
-        producer_d.addCallbacks(lambda ignored: None, maybeStopped)
-        return producer_d
+        producerD.addCallbacks(lambda ignored: None, maybeStopped)
+        return producerD
 
 
     def _writeloop(self, consumer):

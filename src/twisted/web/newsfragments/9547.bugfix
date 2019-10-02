@@ -1,1 +1,1 @@
-FileBodyProducer will now stop producing when cancelled.  This behavior is relied on by twisted.web._newclient.Request.
+twisted.web.client.FileBodyProducer will now stop producing when the Deferred returned by FileBodyProducer.startProducing is cancelled.
