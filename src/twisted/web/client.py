@@ -1165,7 +1165,8 @@ class FileBodyProducer(object):
         """
         Start a cooperative task which will read bytes from the input file and
         write them to C{consumer}.  Return a L{Deferred} which fires after all
-        bytes have been written.
+        bytes have been written.  If this L{Deferred} is cancelled before it is
+        fired, stop reading and writing bytes.
 
         @param consumer: Any L{IConsumer} provider
         """
