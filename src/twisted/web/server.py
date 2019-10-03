@@ -182,6 +182,24 @@ class Request(Copyable, http.Request, components.Componentized):
                 return name
 
 
+    def gotLength(self, length):
+        """
+        Called when HTTP channel got length of content in this request.
+
+        This method is not intended for users.
+
+        @param length: The length of the request body, as indicated by the
+            request headers.  L{None} if the request headers do not indicate a
+            length.
+        """
+        try:
+            getContentFile = self.channel.site.getContentFile
+        except AttributeError:
+            http.Request.gotLength(self, length)
+        else:
+            self.content = getContentFile(length)
+
+
     def process(self):
         """
         Process a request.

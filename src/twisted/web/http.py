@@ -659,6 +659,17 @@ NO_BODY_CODES = (204, 304)
 _QUEUED_SENTINEL = object()
 
 
+
+def _getContentFile(length):
+    """
+    Get a writeable file-like object to which request content can be written.
+    """
+    if length is not None and length < 100000:
+        return StringIO()
+    return tempfile.TemporaryFile()
+
+
+
 @implementer(interfaces.IConsumer,
              _IDeprecatedHTTPChannelToRequestInterface)
 class Request:
@@ -812,10 +823,7 @@ class Request:
             request headers.  L{None} if the request headers do not indicate a
             length.
         """
-        if length is not None and length < 100000:
-            self.content = StringIO()
-        else:
-            self.content = tempfile.TemporaryFile()
+        self.content = _getContentFile(length)
 
 
     def parseCookies(self):
@@ -2945,7 +2953,14 @@ class _GenericHTTPChannelProtocol(proxyForInterface(IProtocol, "_channel")):
                 # We need to make sure that the HTTPChannel is unregistered
                 # from the transport so that the H2Connection can register
                 # itself if possible.
-                self._channel._networkProducer.unregisterProducer()
+                networkProducer = self._channel._networkProducer
+                networkProducer.unregisterProducer()
+
+                # Cancel the old channel's timeout.
+                self._channel.setTimeout(None)
+
+                # Cancel the old channel's timeout.
+                self._channel.setTimeout(None)
 
                 transport = self._channel.transport
                 self._channel = H2Connection()
@@ -2955,6 +2970,11 @@ class _GenericHTTPChannelProtocol(proxyForInterface(IProtocol, "_channel")):
                 self._channel.timeOut = self._timeOut
                 self._channel.callLater = self._callLater
                 self._channel.makeConnection(transport)
+
+                # Register the H2Connection as the transport's
+                # producer, so that the transport can apply back
+                # pressure.
+                networkProducer.registerProducer(self._channel, True)
             else:
                 # Only HTTP/2 and HTTP/1.1 are supported right now.
                 assert negotiatedProtocol == b'http/1.1', \
