@@ -258,8 +258,7 @@ class FileBodyProducerTests(TestCase):
         output = BytesIO()
         consumer = FileConsumer(output)
         inputFile = BytesIO(expectedResult)
-        producer = FileBodyProducer(
-            inputFile, self.cooperator, readSize)
+        producer = FileBodyProducer(inputFile, self.cooperator, readSize)
         complete = producer.startProducing(consumer)
         complete.cancel()
         self.assertTrue(inputFile.closed)
