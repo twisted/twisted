@@ -150,8 +150,9 @@ class ISFTPServer(Interface):
 
         @param filename: a string representing the file to open.
 
-        @param flags: an integer of the flags to open the file with, ORed together.
-        The flags and their values are listed at the bottom of this file.
+        @param flags: an integer of the flags to open the file with, ORed
+        together.  The flags and their values are listed at the bottom of
+        L{twisted.conch.ssh.filetransfer} as FXF_*.
 
         @param attrs: a list of attributes to open the file with.  It is a
         dictionary, consisting of 0 or more keys.  The possible keys are::
@@ -363,8 +364,8 @@ class IKnownHostEntry(Interface):
         address, you have to resolve it yourself, and pass it in as a dotted
         quad string.
 
-        @param key: The hostname to match against.
-        @type key: L{str}
+        @param hostname: The hostname to match against.
+        @type hostname: L{str}
         """
 
 
