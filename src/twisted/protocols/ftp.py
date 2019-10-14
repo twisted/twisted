@@ -1069,7 +1069,7 @@ class FTP(basic.LineReceiver, policies.TimeoutMixin, object):
         file.  A null argument implies the user's current working or
         default directory.
         """
-        # Uh, for now, do this retarded thing.
+        # XXX: why is this check different from ftp_RETR/ftp_STOR? See #4180
         if self.dtpInstance is None or not self.dtpInstance.isConnected:
             return defer.fail(
                 BadCmdSequenceError('must send PORT or PASV before RETR'))
