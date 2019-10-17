@@ -32,8 +32,31 @@ log = Logger()
 
 
 class SSHSession(channel.SSHChannel):
+    """
+    A generalized implementation of an SSH session.
+
+    See RFC 4254, section 6.
+
+    The precise implementation of the various operations that the remote end
+    can send is left up to the avatar, usually via an adapter to an
+    interface such as L{ISession}.
+
+    @ivar buf: a buffer for data received before making a connection to a
+        client.
+    @type buf: L{bytes}
+    @ivar client: a protocol for communication with a shell, an application
+        program, or a subsystem (see RFC 4254, section 6.5).
+    @type client: L{SSHSessionProcessProtocol}
+    @ivar session: an object providing concrete implementations of session
+        operations.
+    @type session: L{ISession}
+    @ivar _sessionSetEnv: an object providing a concrete implementation of
+        the C{setEnv} session operation.
+    @type _sessionSetEnv: L{ISessionSetEnv}
+    """
 
     name = b'session'
+
     def __init__(self, *args, **kw):
         channel.SSHChannel.__init__(self, *args, **kw)
         self.buf = b''
