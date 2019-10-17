@@ -113,6 +113,11 @@ class ISession(Interface):
 
 
 
+class EnvironmentVariableNotPermitted(ValueError):
+    """Setting this environment variable in this session is not permitted."""
+
+
+
 class ISessionSetEnv(Interface):
     """A session that can set environment variables."""
 
@@ -136,8 +141,8 @@ class ISessionSetEnv(Interface):
         @type name: L{bytes}
         @param value: The value of the environment variable to set.
         @type value: L{bytes}
-        @raise ValueError: if setting this environment variable is not
-            permitted.
+        @raise EnvironmentVariableNotPermitted: if setting this environment
+            variable is not permitted.
         """
 
 

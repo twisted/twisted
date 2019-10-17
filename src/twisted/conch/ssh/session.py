@@ -21,7 +21,8 @@ from zope.interface import implementer
 from twisted.internet import interfaces, protocol
 from twisted.python import log
 from twisted.python.compat import _bytesChr as chr, networkString
-from twisted.conch.interfaces import ISession, ISessionSetEnv
+from twisted.conch.interfaces import (
+    EnvironmentVariableNotPermitted, ISession, ISessionSetEnv)
 from twisted.conch.ssh import common, channel, connection
 
 
@@ -111,7 +112,7 @@ class SSHSession(channel.SSHChannel):
         name, value, data = common.getNS(data, 2)
         try:
             self.sessionSetEnv.setEnv(name, value)
-        except ValueError:
+        except EnvironmentVariableNotPermitted:
             return 0
         except Exception:
             log.err()

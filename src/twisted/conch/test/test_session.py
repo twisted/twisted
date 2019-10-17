@@ -28,7 +28,8 @@ if cryptography:
     from twisted.conch.ssh import common, session, connection
 else:
     class session:
-        from twisted.conch.interfaces import ISession, ISessionSetEnv
+        from twisted.conch.interfaces import (
+            EnvironmentVariableNotPermitted, ISession, ISessionSetEnv)
 
 
 
@@ -119,8 +120,9 @@ class StubSessionForStubAvatar(object):
     def setEnv(self, name, value):
         """
         If the requested environment variable is 'LD_PRELOAD', fail.  If it
-        is 'IGNORED', raise ValueError, which should cause it to be silently
-        ignored.  Otherwise, store the requested environment variable.
+        is 'IGNORED', raise EnvironmentVariableNotPermitted, which should
+        cause it to be silently ignored.  Otherwise, store the requested
+        environment variable.
 
         (Real applications should normally implement an allowed list rather
         than a blocked list.)
@@ -128,7 +130,8 @@ class StubSessionForStubAvatar(object):
         if name == b'LD_PRELOAD':
             raise RuntimeError('disallowed environment variable name')
         elif name == b'IGNORED':
-            raise ValueError('ignored environment variable name')
+            raise session.EnvironmentVariableNotPermitted(
+                'ignored environment variable name')
         else:
             self.environ[name] = value
 
@@ -746,8 +749,8 @@ class SessionInterfaceTests(RegistryUsingMixin, unittest.TestCase):
         self.assertIsInstance(
             self.session.sessionSetEnv, StubSessionForStubAvatar)
         self.assertRequestRaisedRuntimeError()
-        # An environment variable name for which setEnv raises ValueError is
-        # silently ignored.
+        # An environment variable name for which setEnv raises
+        # EnvironmentVariableNotPermitted is silently ignored.
         self.assertFalse(self.session.requestReceived(
             b'env', common.NS(b'IGNORED') + common.NS(b'ignored')))
         self.assertEqual(self.flushLoggedErrors(), [])
