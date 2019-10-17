@@ -19,11 +19,16 @@ import os
 from zope.interface import implementer
 
 from twisted.internet import interfaces, protocol
-from twisted.python import log
+from twisted.logger import Logger
 from twisted.python.compat import _bytesChr as chr, networkString
 from twisted.conch.interfaces import (
     EnvironmentVariableNotPermitted, ISession, ISessionSetEnv)
 from twisted.conch.ssh import common, channel, connection
+
+
+
+log = Logger()
+
 
 
 class SSHSession(channel.SSHChannel):
@@ -38,7 +43,7 @@ class SSHSession(channel.SSHChannel):
 
     def request_subsystem(self, data):
         subsystem, ignored = common.getNS(data)
-        log.msg('asking for subsystem "%s"' % subsystem)
+        log.info('Asking for subsystem "{subsystem}"', subsystem=subsystem)
         client = self.avatar.lookupSubsystem(subsystem, data)
         if client:
             pp = SSHSessionProcessProtocol(self)
@@ -48,18 +53,18 @@ class SSHSession(channel.SSHChannel):
             self.client = pp
             return 1
         else:
-            log.msg('failed to get subsystem')
+            log.error('Failed to get subsystem')
             return 0
 
     def request_shell(self, data):
-        log.msg('getting shell')
+        log.info('Getting shell')
         if not self.session:
             self.session = ISession(self.avatar)
         try:
             pp = SSHSessionProcessProtocol(self)
             self.session.openShell(pp)
-        except:
-            log.deferr()
+        except Exception:
+            log.failure('Error getting shell')
             return 0
         else:
             self.client = pp
@@ -68,13 +73,13 @@ class SSHSession(channel.SSHChannel):
     def request_exec(self, data):
         if not self.session:
             self.session = ISession(self.avatar)
-        f,data = common.getNS(data)
-        log.msg('executing command "%s"' % f)
+        f, data = common.getNS(data)
+        log.info('Executing command "{f}"', f=f)
         try:
             pp = SSHSessionProcessProtocol(self)
             self.session.execCommand(pp, f)
-        except:
-            log.deferr()
+        except Exception:
+            log.failure('Error executing command "{f}"', f=f)
             return 0
         else:
             self.client = pp
@@ -84,11 +89,13 @@ class SSHSession(channel.SSHChannel):
         if not self.session:
             self.session = ISession(self.avatar)
         term, windowSize, modes = parseRequest_pty_req(data)
-        log.msg('pty request: %r %r' % (term, windowSize))
+        log.info(
+            'Handling pty request: {term!r} {windowSize!r}',
+            term=term, windowSize=windowSize)
         try:
             self.session.getPty(term, windowSize, modes)
-        except:
-            log.err()
+        except Exception:
+            log.failure('Error handling pty request')
             return 0
         else:
             return 1
@@ -107,7 +114,7 @@ class SSHSession(channel.SSHChannel):
             try:
                 self.sessionSetEnv = ISessionSetEnv(self.avatar)
             except TypeError:
-                log.msg('unhandled request for env')
+                log.info('Unhandled request for env')
                 return 0
         name, value, data = common.getNS(data, 2)
         try:
@@ -115,7 +122,7 @@ class SSHSession(channel.SSHChannel):
         except EnvironmentVariableNotPermitted:
             return 0
         except Exception:
-            log.err()
+            log.failure('Error setting environment variable {name}', name=name)
             return 0
         else:
             return 1
@@ -126,9 +133,8 @@ class SSHSession(channel.SSHChannel):
         winSize = parseRequest_window_change(data)
         try:
             self.session.windowChanged(winSize)
-        except:
-            log.msg('error changing window size')
-            log.err()
+        except Exception:
+            log.failure('Error changing window size')
             return 0
         else:
             return 1
@@ -145,7 +151,7 @@ class SSHSession(channel.SSHChannel):
             if self.client and hasattr(self.client.transport, 'writeErr'):
                 self.client.transport.writeErr(data)
         else:
-            log.msg('weird extended data: %s'%dataType)
+            log.warn('Weird extended data: {dataType}', dataType=dataType)
 
     def eofReceived(self):
         if self.session:
@@ -293,20 +299,22 @@ class SSHSessionProcessProtocol(protocol.ProcessProtocol):
             if err.signal is not None:
                 signame = self._getSignalName(err.signal)
                 if (getattr(os, 'WCOREDUMP', None) is not None and
-                    os.WCOREDUMP(err.status)):
-                    log.msg('exitSignal: %s (core dumped)' % (signame,))
+                        os.WCOREDUMP(err.status)):
+                    log.info(
+                        'exitSignal: {signame} (core dumped)', signame=signame)
                     coreDumped = 1
                 else:
-                    log.msg('exitSignal: %s' % (signame,))
+                    log.info('exitSignal: {}', signame=signame)
                     coreDumped = 0
                 self.session.conn.sendRequest(
                     self.session, b'exit-signal',
                     common.NS(networkString(signame[3:])) + chr(coreDumped) +
                     common.NS(b'') + common.NS(b''))
             elif err.exitCode is not None:
-                log.msg('exitCode: %r' % (err.exitCode,))
-                self.session.conn.sendRequest(self.session, b'exit-status',
-                        struct.pack('>L', err.exitCode))
+                log.info('exitCode: {exitCode!r}', exitCode=err.exitCode)
+                self.session.conn.sendRequest(
+                    self.session, b'exit-status',
+                    struct.pack('>L', err.exitCode))
         self.session.loseConnection()
 
 
