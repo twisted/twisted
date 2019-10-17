@@ -114,7 +114,9 @@ class SSHSession(channel.SSHChannel):
             try:
                 self.sessionSetEnv = ISessionSetEnv(self.avatar)
             except TypeError:
-                log.info('Unhandled request for env')
+                log.info(
+                    "Can't handle setting environment variables for "
+                    "SSH avatar {avatar}", avatar=self.avatar)
                 return 0
         name, value, data = common.getNS(data, 2)
         try:
