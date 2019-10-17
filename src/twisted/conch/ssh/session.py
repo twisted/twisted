@@ -39,7 +39,7 @@ class SSHSession(channel.SSHChannel):
         self.buf = b''
         self.client = None
         self.session = None
-        self.sessionSetEnv = None
+        self._sessionSetEnv = None
 
     def request_subsystem(self, data):
         subsystem, ignored = common.getNS(data)
@@ -110,16 +110,16 @@ class SSHSession(channel.SSHChannel):
         @return: A true value if the request to pass this environment
             variable was accepted, otherwise a false value.
         """
-        if not self.sessionSetEnv:
-            self.sessionSetEnv = ISessionSetEnv(self.avatar, None)
-            if self.sessionSetEnv is None:
+        if not self._sessionSetEnv:
+            self._sessionSetEnv = ISessionSetEnv(self.avatar, None)
+            if self._sessionSetEnv is None:
                 log.info(
                     "Can't handle setting environment variables for "
                     "SSH avatar {avatar}", avatar=self.avatar)
                 return 0
         name, value, data = common.getNS(data, 2)
         try:
-            self.sessionSetEnv.setEnv(name, value)
+            self._sessionSetEnv.setEnv(name, value)
         except EnvironmentVariableNotPermitted:
             return 0
         except Exception:

@@ -747,7 +747,7 @@ class SessionInterfaceTests(RegistryUsingMixin, unittest.TestCase):
         self.assertFalse(self.session.requestReceived(
             b'env', common.NS(b'LD_PRELOAD') + common.NS(b'bad')))
         self.assertIsInstance(
-            self.session.sessionSetEnv, StubSessionForStubAvatar)
+            self.session._sessionSetEnv, StubSessionForStubAvatar)
         self.assertRequestRaisedRuntimeError()
         # An environment variable name for which setEnv raises
         # EnvironmentVariableNotPermitted is silently ignored.
@@ -758,7 +758,7 @@ class SessionInterfaceTests(RegistryUsingMixin, unittest.TestCase):
         self.assertTrue(self.session.requestReceived(
             b'env', common.NS(b'NAME') + common.NS(b'value')))
         self.assertEqual(
-            self.session.sessionSetEnv.environ, {b'NAME': b'value'})
+            self.session._sessionSetEnv.environ, {b'NAME': b'value'})
 
 
     def test_setEnvWithoutAdapter(self):
@@ -886,8 +886,8 @@ class SessionWithNoAvatarTests(RegistryUsingMixin, unittest.TestCase):
         self.session.requestReceived(b'env',
                                      common.NS(b'NAME') + common.NS(b'value'))
         self.assertTrue(
-            session.ISessionSetEnv.providedBy(self.session.sessionSetEnv),
-            "ISessionSetEnv not provided by %r" % self.session.sessionSetEnv)
+            session.ISessionSetEnv.providedBy(self.session._sessionSetEnv),
+            "ISessionSetEnv not provided by %r" % self.session._sessionSetEnv)
 
 
     def test_requestWindowChangeGetsSession(self):
