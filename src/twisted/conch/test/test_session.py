@@ -119,15 +119,15 @@ class StubSessionForStubAvatar(object):
 
     def setEnv(self, name, value):
         """
-        If the requested environment variable is 'LD_PRELOAD', fail.  If it
-        is 'IGNORED', raise EnvironmentVariableNotPermitted, which should
-        cause it to be silently ignored.  Otherwise, store the requested
+        If the requested environment variable is 'FAIL', fail.  If it is
+        'IGNORED', raise EnvironmentVariableNotPermitted, which should cause
+        it to be silently ignored.  Otherwise, store the requested
         environment variable.
 
         (Real applications should normally implement an allowed list rather
         than a blocked list.)
         """
-        if name == b'LD_PRELOAD':
+        if name == b'FAIL':
             raise RuntimeError('disallowed environment variable name')
         elif name == b'IGNORED':
             raise session.EnvironmentVariableNotPermitted(
@@ -745,7 +745,7 @@ class SessionInterfaceTests(RegistryUsingMixin, unittest.TestCase):
             StubSessionForStubAvatar, StubAvatar, session.ISessionSetEnv)
         # Blocked environment variable name fails.
         self.assertFalse(self.session.requestReceived(
-            b'env', common.NS(b'LD_PRELOAD') + common.NS(b'bad')))
+            b'env', common.NS(b'FAIL') + common.NS(b'bad')))
         self.assertIsInstance(
             self.session._sessionSetEnv, StubSessionForStubAvatar)
         self.assertRequestRaisedRuntimeError()
