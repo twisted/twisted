@@ -111,9 +111,8 @@ class SSHSession(channel.SSHChannel):
             variable was accepted, otherwise a false value.
         """
         if not self.sessionSetEnv:
-            try:
-                self.sessionSetEnv = ISessionSetEnv(self.avatar)
-            except TypeError:
+            self.sessionSetEnv = ISessionSetEnv(self.avatar, None)
+            if self.sessionSetEnv is None:
                 log.info(
                     "Can't handle setting environment variables for "
                     "SSH avatar {avatar}", avatar=self.avatar)
