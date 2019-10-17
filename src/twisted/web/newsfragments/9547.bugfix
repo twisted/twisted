@@ -1,0 +1,1 @@
+twisted.web.client.FileBodyProducer will now stop producing when the Deferred returned by FileBodyProducer.startProducing is cancelled.
