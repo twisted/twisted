@@ -14,9 +14,18 @@ import re
 
 from twisted.python import compat, failure, log
 from twisted.python.compat import _PY3, _PY35PLUS
+from twisted.python.reflect import requireModule
 from twisted.trial import unittest
 from twisted.internet import defer, reactor
 from twisted.internet.task import Clock
+
+
+if _PY3:
+    contextvars = requireModule('contextvars')
+    if contextvars:
+        contextvarsSkip = None
+    else:
+        contextvarsSkip = "contextvars is not available"
 
 
 if _PY3:
@@ -3122,3 +3131,32 @@ class DeferredFutureAdapterTests(unittest.TestCase):
         self.assertEqual(cancelled.cancelled(), True)
         self.assertRaises(CancelledError, cancelled.result)
         self.failureResultOf(d).trap(CancelledError)
+
+
+class DeferredContextVarsTests(unittest.TestCase):
+
+    skip = contextvarsSkip
+
+    def test_maintains_var(self):
+
+        var = contextvars.ContextVar("testvar")
+
+        contexts = []
+
+        def record_current_context(_):
+            contexts.append(var.get())
+
+        var.set(1)
+
+        d = defer.Deferred()
+        d.addCallback(record_current_context)
+
+        var.set(2)
+
+        d2 = defer.Deferred()
+        d2.addCallback(record_current_context)
+
+        d.callback(True)
+        d2.callback(True)
+
+        self.assertEqual(contexts, [1, 2])
