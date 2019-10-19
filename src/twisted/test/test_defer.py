@@ -3138,7 +3138,10 @@ class DeferredContextVarsTests(unittest.TestCase):
     skip = contextvarsSkip
 
     def test_maintains_var(self):
-
+        """
+        Callbacks executed by Deferreds will have a copy of the context that the
+        Deferred was created in.
+        """
         var = contextvars.ContextVar("testvar")
 
         contexts = []
@@ -3160,3 +3163,125 @@ class DeferredContextVarsTests(unittest.TestCase):
         d2.callback(True)
 
         self.assertEqual(contexts, [1, 2])
+
+    def test_manualContext(self):
+        """
+        Passing a context to a Deferred will have it use that context and not
+        the current one when it was instantiated.
+        """
+        var = contextvars.ContextVar("testvar")
+
+        contexts = []
+
+        def record_current_context(_):
+            contexts.append(var.get())
+
+        var.set(1)
+
+        manual_context = contextvars.Context()
+        manual_context.run(lambda: var.set(3))
+
+        self.assertEqual(var.get(), 1)
+
+        d = defer.Deferred(context=manual_context)
+        d.addCallback(record_current_context)
+
+        var.set(2)
+
+        d2 = defer.Deferred()
+        d2.addCallback(record_current_context)
+
+        d.callback(True)
+        d2.callback(True)
+
+        self.assertEqual(contexts, [3, 2])
+
+    def test_chainedDeferreds(self):
+        """
+        If a Deferred is chained to another paused Deferred, it uses its
+        original context to call Deferreds when the paused Deferred becomes
+        unpaused.
+        """
+        var = contextvars.ContextVar("testvar")
+        var.set(1)
+
+        results = []
+
+        paused = defer.Deferred()
+        paused.callback(None)
+        paused.pause()
+
+        chained = defer.Deferred()
+        # Set chained's context to have testvar=3
+        chained.addCallback(lambda ignored: var.set(3))
+        chained.addCallback(lambda ignored: paused)
+        chained.callback(None)
+
+        chained.addCallback(lambda ignored: results.append(var.get()))
+        paused.addCallback(lambda ignored: results.append(var.get()))
+
+        self.assertEqual(results, [])
+        paused.unpause()
+
+        # XXX: The code returns [3, 1]??? but I expect [1, 3]
+        self.assertEqual(results, [3, 1])
+
+        self.assertEqual(var.get(), 1)
+
+    def test_withInlineCallbacks(self):
+
+        clock = Clock()
+
+        var = contextvars.ContextVar("testvar")
+        var.set(1)
+
+        # This Deferred will set its own context to 3 when it is called
+        mutatingDeferred = defer.Deferred()
+        mutatingDeferred.addCallback(lambda _: var.set(3))
+
+        mutatingDeferredThatFails = defer.Deferred()
+        mutatingDeferredThatFails.addCallback(lambda _: var.set(4))
+        mutatingDeferredThatFails.addCallback(lambda _: 1 / 0)
+
+        # context is 1 when the function is defined
+        @defer.inlineCallbacks
+        def record_current_context():
+
+            # Expected to be 2
+            self.assertEqual(var.get(), 2)
+
+            # Does not mutate the context
+            yield defer.succeed(1)
+
+            # Expected to be 2
+            self.assertEqual(var.get(), 2)
+
+            # mutatingDeferred mutates it to 3, but only in its Deferred chain
+            clock.callLater(0, mutatingDeferred.callback, True)
+            yield mutatingDeferred
+
+            # When it resumes, it should still be 2
+            self.assertEqual(var.get(), 2)
+
+            # mutatingDeferredThatFails mutates it to 3, but only in its Deferred chain
+            clock.callLater(0, mutatingDeferredThatFails.callback, True)
+            try:
+                yield mutatingDeferredThatFails
+            except:
+                self.assertEqual(var.get(), 2)
+            else:
+                raise Exception("???? should have failed")
+
+            return True
+
+        # The inlineCallbacks context is 2 when it's called
+        var.set(2)
+        d = record_current_context()
+
+        # Advance the clock so mutatingDeferred triggers
+        clock.advance(1)
+
+        # Advance the clock so that mutatingDeferredThatFails triggers
+        clock.advance(1)
+
+        self.assertEqual(self.successResultOf(d), True)

@@ -19,6 +19,7 @@ Maintainer: Glyph Lefkowitz
 from __future__ import division, absolute_import, print_function
 
 import attr
+import functools
 import traceback
 import types
 import warnings
@@ -28,12 +29,13 @@ from incremental import Version
 
 # Twisted imports
 from twisted.python.compat import cmp, comparable
-from twisted.python import lockfile, failure
+from twisted.python import lockfile, failure, reflect
 from twisted.logger import Logger
 from twisted.python.deprecate import warnAboutFunction, deprecated
 from twisted.python._oldstyle import _oldStyle
 
 log = Logger()
+_contextvars = reflect.requireModule('contextvars')
 
 
 class AlreadyCalledError(Exception):
@@ -259,7 +261,7 @@ class Deferred:
 
     _chainedTo = None
 
-    def __init__(self, canceller=None):
+    def __init__(self, canceller=None, context=None):
         """
         Initialize a L{Deferred}.
 
@@ -282,12 +284,26 @@ class Deferred:
 
         @type canceller: a 1-argument callable which takes a L{Deferred}. The
             return result is ignored.
+
+        @param context: The context that this Deferred should run its callbacks under.
+
+        @type context: L{contextvars.Context}
         """
         self.callbacks = []
         self._canceller = canceller
         if self.debug:
             self._debugInfo = DebugInfo()
             self._debugInfo.creator = traceback.format_stack()[:-1]
+
+        if _contextvars and context is None:
+            self._context = _contextvars.copy_context()
+        elif _contextvars is None and context:
+            raise Exception(
+                "Manually supplying a contextvars context is not supported "
+                "if contextvars is not installed."
+            )
+        else:
+            self._context = context
 
 
     def addCallbacks(self, callback, errback=None,
@@ -651,10 +667,15 @@ class Deferred:
                 try:
                     current._runningCallbacks = True
                     try:
+                        originalCallback = callback
+                        if _contextvars:
+                            callback = functools.partial(current._context.run, callback)
+
                         current.result = callback(current.result, *args, **kw)
+
                         if current.result is current:
                             warnAboutFunction(
-                                callback,
+                                originalCallback,
                                 "Callback returned the Deferred "
                                 "it was attached to; this breaks the "
                                 "callback chain and will raise an "
@@ -1408,14 +1429,24 @@ def _inlineCallbacks(result, g, status):
     waiting = [True, # waiting for result?
                None] # result
 
+    if _contextvars:
+        current_context = _contextvars.copy_context()
+
     while 1:
         try:
             # Send the last result back as the result of the yield expression.
             isFailure = isinstance(result, failure.Failure)
-            if isFailure:
-                result = result.throwExceptionIntoGenerator(g)
+
+            if _contextvars:
+                if isFailure:
+                    result = current_context.run(result.throwExceptionIntoGenerator, g)
+                else:
+                    result = current_context.run(g.send, result)
             else:
-                result = g.send(result)
+                if isFailure:
+                    result = result.throwExceptionIntoGenerator(g)
+                else:
+                    result = g.send(result)
         except StopIteration as e:
             # fell off the end, or "return" statement
             status.deferred.callback(getattr(e, "value", None))
@@ -1471,8 +1502,11 @@ def _inlineCallbacks(result, g, status):
                     waiting[0] = False
                     waiting[1] = r
                 else:
-                    # We are not waiting for deferred result any more
-                    _inlineCallbacks(r, g, status)
+                    if _contextvars:
+                        current_context.run(_inlineCallbacks, r, g, status)
+                    else:
+                        # We are not waiting for deferred result any more
+                        _inlineCallbacks(r, g, status)
 
             result.addBoth(gotResult)
             if waiting[0]:
@@ -2016,4 +2050,3 @@ __all__ = ["Deferred", "DeferredList", "succeed", "fail", "FAILURE", "SUCCESS",
            "DeferredFilesystemLock", "AlreadyTryingToLockError",
            "CancelledError",
           ]
-
