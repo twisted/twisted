@@ -26,6 +26,8 @@ if _PY3:
         contextvarsSkip = None
     else:
         contextvarsSkip = "contextvars is not available"
+else:
+    contextvarsSkip = "contextvars is not available"
 
 
 if _PY3:
