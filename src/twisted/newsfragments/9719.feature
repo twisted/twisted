@@ -1,0 +1,1 @@
+twisted.internet.defer.Deferred will now capture the current contextvars context when created, and run callbacks using that context. This functionality requires Python 3.7+, or the contextvars PyPI backport to be installed for Python 3.5-3.6.
