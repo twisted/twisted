@@ -3165,6 +3165,7 @@ class DeferredContextVarsTests(unittest.TestCase):
 
         self.assertEqual(contexts, [1, 2])
 
+
     def test_manualContext(self):
         """
         Passing a context to a Deferred will have it use that context and not
@@ -3197,6 +3198,7 @@ class DeferredContextVarsTests(unittest.TestCase):
 
         self.assertEqual(contexts, [3, 2])
 
+
     def test_chainedDeferreds(self):
         """
         If a Deferred is chained to another paused Deferred, it uses its
@@ -3228,6 +3230,7 @@ class DeferredContextVarsTests(unittest.TestCase):
         self.assertEqual(results, [3, 1])
 
         self.assertEqual(var.get(), 1)
+
 
     def test_withInlineCallbacks(self):
         """
