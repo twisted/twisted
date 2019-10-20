@@ -3279,7 +3279,7 @@ class DeferredContextVarsTests(unittest.TestCase):
             else:
                 raise Exception("???? should have failed")
 
-            return True
+            defer.returnValue(True)
 
         # The inlineCallbacks context is 2 when it's called
         var.set(2)
