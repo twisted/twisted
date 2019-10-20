@@ -3137,7 +3137,7 @@ class DeferredContextVarsTests(unittest.TestCase):
 
     skip = contextvarsSkip
 
-    def test_maintains_var(self):
+    def test_contextIsFromDeferredCreation(self):
         """
         Callbacks executed by Deferreds will have a copy of the context that the
         Deferred was created in.
@@ -3229,7 +3229,10 @@ class DeferredContextVarsTests(unittest.TestCase):
         self.assertEqual(var.get(), 1)
 
     def test_withInlineCallbacks(self):
-
+        """
+        When an inlineCallbacks function is called, the context is taken from
+        when it was first called. When it resumes, the same context is applied.
+        """
         clock = Clock()
 
         var = contextvars.ContextVar("testvar")
@@ -3245,7 +3248,7 @@ class DeferredContextVarsTests(unittest.TestCase):
 
         # context is 1 when the function is defined
         @defer.inlineCallbacks
-        def record_current_context():
+        def testFunction():
 
             # Expected to be 2
             self.assertEqual(var.get(), 2)
@@ -3276,7 +3279,7 @@ class DeferredContextVarsTests(unittest.TestCase):
 
         # The inlineCallbacks context is 2 when it's called
         var.set(2)
-        d = record_current_context()
+        d = testFunction()
 
         # Advance the clock so mutatingDeferred triggers
         clock.advance(1)
