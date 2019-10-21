@@ -969,12 +969,15 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
         """
         key = keys.Key.fromString(keydata.privateRSA_agentv3)
         self.assertEqual(key.toString('openssh'), keydata.privateRSA_openssh)
-        self.assertEqual(key.toString('openssh', b'encrypted'),
-                keydata.privateRSA_openssh_encrypted)
-        self.assertEqual(key.public().toString('openssh'),
-                keydata.publicRSA_openssh[:-8]) # no comment
-        self.assertEqual(key.public().toString('openssh', b'comment'),
-                keydata.publicRSA_openssh)
+        self.assertEqual(
+            key.toString('openssh', b'encrypted'),
+            keydata.privateRSA_openssh_encrypted)
+        self.assertEqual(
+            key.public().toString('openssh'),
+            keydata.publicRSA_openssh[:-8])  # no comment
+        self.assertEqual(
+            key.public().toString('openssh', b'comment'),
+            keydata.publicRSA_openssh)
 
 
     def test_toOpenSSHRSA_v1_format(self):
@@ -1002,10 +1005,12 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
         """
         key = keys.Key.fromString(keydata.privateDSA_lsh)
         self.assertEqual(key.toString('openssh'), keydata.privateDSA_openssh)
-        self.assertEqual(key.public().toString('openssh', b'comment'),
-                keydata.publicDSA_openssh)
-        self.assertEqual(key.public().toString('openssh'),
-                keydata.publicDSA_openssh[:-8]) # no comment
+        self.assertEqual(
+            key.public().toString('openssh', b'comment'),
+            keydata.publicDSA_openssh)
+        self.assertEqual(
+            key.public().toString('openssh'),
+            keydata.publicDSA_openssh[:-8])  # no comment
 
 
     def test_toOpenSSHDSA_v1_format(self):
@@ -1032,10 +1037,12 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
         L{keys.Key.toString} serializes an ECDSA key in OpenSSH format.
         """
         key = keys.Key.fromString(keydata.privateECDSA_openssh)
-        self.assertEqual(key.public().toString('openssh', b'comment'),
-                keydata.publicECDSA_openssh)
-        self.assertEqual(key.public().toString('openssh'),
-                keydata.publicECDSA_openssh[:-8]) # no comment
+        self.assertEqual(
+            key.public().toString('openssh', b'comment'),
+            keydata.publicECDSA_openssh)
+        self.assertEqual(
+            key.public().toString('openssh'),
+            keydata.publicECDSA_openssh[:-8])  # no comment
 
 
     def test_toOpenSSHECDSA_v1_format(self):
