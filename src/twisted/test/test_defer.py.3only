@@ -11,10 +11,17 @@ interpreter version that supports the C{async} and C{await} keywords.
 
 import functools
 
-
 from twisted.internet import defer
+from twisted.internet.task import Clock
+from twisted.python.reflect import requireModule
 from twisted.trial import unittest
 
+
+contextvars = requireModule('contextvars')
+if contextvars:
+    contextvarsSkip = None
+else:
+    contextvarsSkip = "contextvars is not available"
 
 
 def ensuringDeferred(f):
@@ -27,7 +34,6 @@ def ensuringDeferred(f):
 
 
 class DeferredTestsAsync(unittest.TestCase):
-
 
     @ensuringDeferred
     async def test_asyncWithLock(self):
@@ -83,3 +89,65 @@ class DeferredTestsAsync(unittest.TestCase):
                 self.assertTrue(lock.locked)
                 raise Exception('some specific exception')
         self.assertFalse(lock.locked)
+
+    def test_contextvarsWithAsyncAwait(self):
+        """
+        When a coroutine is called, the context is taken from when it was first
+        called. When it resumes, the same context is applied.
+        """
+        clock = Clock()
+
+        var = contextvars.ContextVar("testvar")
+        var.set(1)
+
+        # This Deferred will set its own context to 3 when it is called
+        mutatingDeferred = defer.Deferred()
+        mutatingDeferred.addCallback(lambda _: var.set(3))
+
+        mutatingDeferredThatFails = defer.Deferred()
+        mutatingDeferredThatFails.addCallback(lambda _: var.set(4))
+        mutatingDeferredThatFails.addCallback(lambda _: 1 / 0)
+
+        # context is 1 when the function is defined
+        async def testFunction():
+
+            # Expected to be 2
+            self.assertEqual(var.get(), 2)
+
+            # Does not mutate the context
+            await defer.succeed(1)
+
+            # Expected to be 2
+            self.assertEqual(var.get(), 2)
+
+            # mutatingDeferred mutates it to 3, but only in its Deferred chain
+            clock.callLater(0, mutatingDeferred.callback, True)
+            await mutatingDeferred
+
+            # When it resumes, it should still be 2
+            self.assertEqual(var.get(), 2)
+
+            # mutatingDeferredThatFails mutates it to 3, but only in its Deferred chain
+            clock.callLater(0, mutatingDeferredThatFails.callback, True)
+            try:
+                await mutatingDeferredThatFails
+            except:
+                self.assertEqual(var.get(), 2)
+            else:
+                raise Exception("???? should have failed")
+
+            return True
+
+        # The inlineCallbacks context is 2 when it's called
+        var.set(2)
+        d = defer.ensureDeferred(testFunction())
+
+        # Advance the clock so mutatingDeferred triggers
+        clock.advance(1)
+
+        # Advance the clock so that mutatingDeferredThatFails triggers
+        clock.advance(1)
+
+        self.assertEqual(self.successResultOf(d), True)
+
+    test_contextvarsWithAsyncAwait.skip = contextvarsSkip
