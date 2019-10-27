@@ -38,6 +38,7 @@ log = Logger()
 _contextvars = reflect.requireModule('contextvars')
 
 
+
 class AlreadyCalledError(Exception):
     pass
 
@@ -266,9 +267,9 @@ class Deferred:
         Initialize a L{Deferred}.
 
         @param canceller: a callable used to stop the pending operation
-            scheduled by this L{Deferred} when L{Deferred.cancel} is
-            invoked. The canceller will be passed the deferred whose
-            cancelation is requested (i.e., self).
+            scheduled by this L{Deferred} when L{Deferred.cancel} is invoked.
+            The canceller will be passed the deferred whose cancelation is
+            requested (i.e., self).
 
             If a canceller is not given, or does not invoke its argument's
             C{callback} or C{errback} method, L{Deferred.cancel} will
@@ -285,7 +286,8 @@ class Deferred:
         @type canceller: a 1-argument callable which takes a L{Deferred}. The
             return result is ignored.
 
-        @param context: The context that this Deferred should run its callbacks under.
+        @param context: The context that this Deferred should run its callbacks
+        under.
 
         @type context: L{contextvars.Context}
         """
@@ -669,7 +671,9 @@ class Deferred:
                     try:
                         originalCallback = callback
                         if _contextvars:
-                            callback = functools.partial(current._context.run, callback)
+                            callback = functools.partial(
+                                current._context.run, callback
+                            )
 
                         current.result = callback(current.result, *args, **kw)
 
@@ -1439,7 +1443,9 @@ def _inlineCallbacks(result, g, status):
 
             if _contextvars:
                 if isFailure:
-                    result = current_context.run(result.throwExceptionIntoGenerator, g)
+                    result = current_context.run(
+                        result.throwExceptionIntoGenerator, g
+                    )
                 else:
                     result = current_context.run(g.send, result)
             else:
@@ -2041,12 +2047,11 @@ class DeferredFilesystemLock(lockfile.FilesystemLock):
 
 
 
-__all__ = ["Deferred", "DeferredList", "succeed", "fail", "FAILURE", "SUCCESS",
-           "AlreadyCalledError", "TimeoutError", "gatherResults",
-           "maybeDeferred", "ensureDeferred",
-           "waitForDeferred", "deferredGenerator", "inlineCallbacks",
-           "returnValue",
-           "DeferredLock", "DeferredSemaphore", "DeferredQueue",
-           "DeferredFilesystemLock", "AlreadyTryingToLockError",
-           "CancelledError",
-          ]
+__all__ = [
+    "Deferred", "DeferredList", "succeed", "fail", "FAILURE", "SUCCESS",
+    "AlreadyCalledError", "TimeoutError", "gatherResults",
+    "maybeDeferred", "ensureDeferred",
+    "waitForDeferred", "deferredGenerator", "inlineCallbacks", "returnValue",
+    "DeferredLock", "DeferredSemaphore", "DeferredQueue",
+    "DeferredFilesystemLock", "AlreadyTryingToLockError", "CancelledError",
+]

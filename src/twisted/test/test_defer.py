@@ -3142,8 +3142,8 @@ class DeferredContextVarsTests(unittest.TestCase):
 
     def test_contextIsFromDeferredCreation(self):
         """
-        Callbacks executed by Deferreds will have a copy of the context that the
-        Deferred was created in.
+        Callbacks executed by Deferreds will have a copy of the context that
+        the Deferred was created in.
         """
         var = contextvars.ContextVar("testvar")
 
@@ -3272,11 +3272,12 @@ class DeferredContextVarsTests(unittest.TestCase):
             # When it resumes, it should still be 2
             self.assertEqual(var.get(), 2)
 
-            # mutatingDeferredThatFails mutates it to 3, but only in its Deferred chain
+            # mutatingDeferredThatFails mutates it to 3, but only in its
+            # Deferred chain
             clock.callLater(0, mutatingDeferredThatFails.callback, True)
             try:
                 yield mutatingDeferredThatFails
-            except:
+            except Exception:
                 self.assertEqual(var.get(), 2)
             else:
                 raise Exception("???? should have failed")
