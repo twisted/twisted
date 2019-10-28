@@ -1430,8 +1430,8 @@ def _inlineCallbacks(result, g, status):
     # loop and the waiting variable solve that by manually unfolding the
     # recursion.
 
-    waiting = [True, # waiting for result?
-               None] # result
+    waiting = [True,  # waiting for result?
+               None]  # result
 
     if _contextvars:
         current_context = _contextvars.copy_context()
