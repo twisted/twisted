@@ -3,6 +3,80 @@ http://twistedmatrix.com/trac/ticket/<number>
 
 .. towncrier release notes start
 
+Twisted 19.10.0 (2019-11-03)
+============================
+
+Features
+--------
+
+- twisted.trial.successResultOf, twisted.trial.failureResultOf, and
+  twisted.trial.assertNoResult accept coroutines as well as Deferreds. (#9006)
+
+
+Bugfixes
+--------
+
+- Fixed circular import in twisted.trial.reporter, introduced in Twisted 16.0.0. (#8267)
+- The POP3 server implemented by twisted.mail.pop3 now accepts passwords that contain spaces. (#9100)
+- Incoming HTTP/2 connections will now not time out if they persist for longer than one minute. (#9653)
+- The serial extra now requires pywin32 on Windows enabling use of twisted.internet.serialport without specifying the windows_platform extra. (#9700)
+
+
+Misc
+----
+
+- #8506, #9677, #9684, #9687, #9688
+
+
+Conch
+-----
+
+Bugfixes
+~~~~~~~~
+
+- twisted.conch.ssh.keys now correctly writes the "iqmp" parameter in serialized RSA private keys as q^-1 mod p rather than p^-1 mod q. (#9681)
+
+
+Misc
+~~~~
+
+- #9689
+
+
+Web
+---
+
+Features
+~~~~~~~~
+
+- twisted.web.server.Request will now use twisted.web.server.Site.getContentFile, if it exists, to get a file into which to write request content.  If getContentFile is not provided by the site, it will fall back to the previous behavior of using io.BytesIO for small requests and tempfile.TemporaryFile for large ones. (#9655)
+
+
+Bugfixes
+~~~~~~~~
+
+- twisted.web.client.FileBodyProducer will now stop producing when the Deferred returned by FileBodyProducer.startProducing is cancelled. (#9547)
+- The HTTP/2 server implementation now enforces TCP flow control on control frame messages and times out clients that send invalid data without reading responses.  This closes CVE-2019-9512 (Ping Flood), CVE-2019-9514 (Reset Flood), and CVE-2019-9515 (Settings Flood).  Thanks to Jonathan Looney and Piotr Sikora. (#9694)
+
+
+Mail
+----
+
+No significant changes.
+
+
+Words
+-----
+
+No significant changes.
+
+
+Names
+-----
+
+No significant changes.
+
+
 Twisted 19.7.0 (2019-07-28)
 ===========================
 
