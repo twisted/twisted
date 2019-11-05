@@ -45,13 +45,6 @@ class LogComposedObject(object):
     """
     log = TestLogger()
 
-    def __init__(self, state=None):
-        self.state = state
-
-
-    def __str__(self):
-        return "<LogComposedObject {state}>".format(state=self.state)
-
 
 
 class LoggerTests(unittest.TestCase):
@@ -102,8 +95,6 @@ class LoggerTests(unittest.TestCase):
         )
         self.assertEqual(obj.log.namespace, expectedNamespace)
         self.assertEqual(LogComposedObject.log.namespace, expectedNamespace)
-        self.assertIs(LogComposedObject.log.source, LogComposedObject)
-        self.assertIs(obj.log.source, obj)
         self.assertIsNone(Logger().source)
 
 
@@ -139,15 +130,18 @@ class LoggerTests(unittest.TestCase):
         On instances that have a L{Logger} class attribute, the C{log_source}
         key is available to format strings.
         """
-        obj = LogComposedObject("hello")
+        obj = LogComposedObject()
         log = obj.log
         log.error("Hello, {log_source}.")
 
         self.assertIn("log_source", log.event)
-        self.assertEqual(log.event["log_source"], obj)
+        self.assertEqual(log.event["log_source"], LogComposedObject)
 
         stuff = formatEvent(log.event)
-        self.assertIn("Hello, <LogComposedObject hello>.", stuff)
+        self.assertIn(
+            "Hello, <class 'twisted.logger.test.test_logger.LogComposedObject'>.",
+            stuff
+        )
 
 
     def test_basicLogger(self):
@@ -195,10 +189,10 @@ class LoggerTests(unittest.TestCase):
 
     def test_sourceOnInstance(self):
         """
-        C{log_source} event key refers to the instance.
+        C{log_source} event key refers to the class.
         """
         def observer(event):
-            self.assertEqual(event["log_source"], thingo)
+            self.assertEqual(event["log_source"], Thingo)
 
         class Thingo(object):
             log = TestLogger(observer=observer)

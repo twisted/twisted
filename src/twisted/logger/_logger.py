@@ -60,7 +60,7 @@ class Logger(object):
             If L{None}, use the L{global log publisher <globalLogPublisher>}.
         @type observer: L{ILogObserver}
         """
-        self._isDescriptor = False
+        self._isClassLogger = False
         if namespace is None:
             namespace = self._namespaceFromCallingContext()
 
@@ -88,16 +88,16 @@ class Logger(object):
         declared on.  In the above example, the namespace would be
         C{athing.Something}.
 
-        Additionally, its source will be set to the actual object referring to
-        the L{Logger}.  In the above example, C{Something.log.source} would be
-        C{Something}, and C{Something().log.source} would be an instance of
+        Additionally, its source will be set to the class it is declared
+        on.  In the above example, C{Something.log.source} would be
+        C{Something}, and C{Something().log.source} would also be
         C{Something}.
         """
-        if not self._isDescriptor:
+        if not self._isClassLogger:
             self.namespace = ".".join([type.__module__, type.__name__])
             self._isDescriptor = True
 
-        self.source = type if oself is None else oself
+        self.source = type
 
         return self
 
