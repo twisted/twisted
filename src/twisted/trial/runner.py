@@ -551,17 +551,17 @@ class TestLoader(object):
             warnings.warn("trial only supports doctesting modules")
             return
         extraArgs = {}
-        if sys.version_info > (2, 4):
-            # Work around Python issue2604: DocTestCase.tearDown clobbers globs
-            def saveGlobals(test):
-                """
-                Save C{test.globs} and replace it with a copy so that if
-                necessary, the original will be available for the next test
-                run.
-                """
-                test._savedGlobals = getattr(test, '_savedGlobals', test.globs)
-                test.globs = test._savedGlobals.copy()
-            extraArgs['setUp'] = saveGlobals
+
+        # Work around Python issue2604: DocTestCase.tearDown clobbers globs
+        def saveGlobals(test):
+            """
+            Save C{test.globs} and replace it with a copy so that if
+            necessary, the original will be available for the next test
+            run.
+            """
+            test._savedGlobals = getattr(test, '_savedGlobals', test.globs)
+            test.globs = test._savedGlobals.copy()
+        extraArgs['setUp'] = saveGlobals
         return doctest.DocTestSuite(module, **extraArgs)
 
     def loadAnything(self, thing, recurse=False, parent=None, qualName=None):
