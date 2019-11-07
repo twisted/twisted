@@ -20,6 +20,7 @@ from twisted.python import failure
 from twisted.cred import error, credentials
 
 
+
 class ICredentialsChecker(Interface):
     """
     An object that can check sub-interfaces of L{ICredentials}.
@@ -59,6 +60,7 @@ class ICredentialsChecker(Interface):
 # create potential problems with persistence.
 
 ANONYMOUS = ()
+
 
 
 @implementer(ICredentialsChecker)
@@ -117,7 +119,7 @@ class InMemoryUsernamePasswordDatabaseDontUse(object):
         Passwords must be given as L{bytes}.
         @type users: L{dict} of L{str} to L{bytes}
         """
-        self.users = {x.encode('ascii'):y for x, y in users.items()}
+        self.users = {x.encode('ascii'): y for x, y in users.items()}
 
 
     def addUser(self, username, password):
