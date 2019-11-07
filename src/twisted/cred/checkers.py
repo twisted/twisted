@@ -178,7 +178,7 @@ class FilePasswordDB:
         @param filename: The name of the file from which to read username and
         password information.
 
-        @type delim: L{str}
+        @type delim: L{bytes}
         @param delim: The field delimiter used in the file.
 
         @type usernameField: L{int}
