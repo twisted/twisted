@@ -281,12 +281,12 @@ class FilePasswordDB:
         @param username: The username to look up.
         @type username: L{bytes}
 
-        @returns: Two-tuple of the canonical username (i.e. lowercase if
-        C{caseSensitive} is C{False}) and the associated password value, both
-        L{bytes}.
+        @returns: Two-tuple of the canonicalicalized username (i.e. lowercase
+        if the database is not case sensitive) and the associated password
+        value, both L{bytes}.
         @rtype: L{tuple}
 
-        @raises KeyError: When no password is found for C{username}.
+        @raises KeyError: When lookup of the username fails.
         """
         if not self.caseSensitive:
             username = username.lower()
