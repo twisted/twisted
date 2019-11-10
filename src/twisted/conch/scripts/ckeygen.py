@@ -214,7 +214,7 @@ def changePassPhrase(options):
         options['newpass'] = p1
 
     try:
-        newkeydata = key.toString('openssh', extra=options['newpass'])
+        newkeydata = key.toString('openssh', passphrase=options['newpass'])
     except Exception as e:
         sys.exit('Could not change passphrase: %s' % (e,))
 
@@ -287,11 +287,11 @@ def _saveKey(key, options):
     comment = '%s@%s' % (getpass.getuser(), socket.gethostname())
 
     filepath.FilePath(options['filename']).setContent(
-        key.toString('openssh', options['pass']))
+        key.toString('openssh', passphrase=options['pass']))
     os.chmod(options['filename'], 33152)
 
     filepath.FilePath(options['filename'] + '.pub').setContent(
-        key.public().toString('openssh', comment))
+        key.public().toString('openssh', comment=comment))
     options = enumrepresentation(options)
 
     print('Your identification has been saved in %s' % (options['filename'],))

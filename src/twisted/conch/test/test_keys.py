@@ -411,17 +411,21 @@ SUrCyZXsNh6VXwjs3gKQ
         """
         self.assertRaises(keys.BadKeyError, keys.Key.fromString, b'')
         # no key data with a bad key type
-        self.assertRaises(keys.BadKeyError, keys.Key.fromString, b'',
-                'bad_type')
+        self.assertRaises(
+            keys.BadKeyError, keys.Key.fromString, b'', 'bad_type')
         # trying to decrypt a key which doesn't support encryption
-        self.assertRaises(keys.BadKeyError, keys.Key.fromString,
-                keydata.publicRSA_lsh, passphrase = b'unencrypted')
+        self.assertRaises(
+            keys.BadKeyError, keys.Key.fromString,
+            keydata.publicRSA_lsh, passphrase=b'unencrypted')
         # trying to decrypt a key with the wrong passphrase
-        self.assertRaises(keys.EncryptedKeyError, keys.Key.fromString,
-                keys.Key(self.rsaObj).toString('openssh', b'encrypted'))
+        self.assertRaises(
+            keys.EncryptedKeyError, keys.Key.fromString,
+            keys.Key(self.rsaObj).toString(
+                'openssh', passphrase=b'encrypted'))
         # key with no key data
-        self.assertRaises(keys.BadKeyError, keys.Key.fromString,
-                b'-----BEGIN RSA KEY-----\nwA==\n')
+        self.assertRaises(
+            keys.BadKeyError, keys.Key.fromString,
+            b'-----BEGIN RSA KEY-----\nwA==\n')
         # key with invalid DEK Info
         self.assertRaises(
             keys.BadKeyError, keys.Key.fromString,
@@ -970,13 +974,13 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
         key = keys.Key.fromString(keydata.privateRSA_agentv3)
         self.assertEqual(key.toString('openssh'), keydata.privateRSA_openssh)
         self.assertEqual(
-            key.toString('openssh', b'encrypted'),
+            key.toString('openssh', passphrase=b'encrypted'),
             keydata.privateRSA_openssh_encrypted)
         self.assertEqual(
             key.public().toString('openssh'),
             keydata.publicRSA_openssh[:-8])  # no comment
         self.assertEqual(
-            key.public().toString('openssh', b'comment'),
+            key.public().toString('openssh', comment=b'comment'),
             keydata.publicRSA_openssh)
 
 
@@ -1006,7 +1010,7 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
         key = keys.Key.fromString(keydata.privateDSA_lsh)
         self.assertEqual(key.toString('openssh'), keydata.privateDSA_openssh)
         self.assertEqual(
-            key.public().toString('openssh', b'comment'),
+            key.public().toString('openssh', comment=b'comment'),
             keydata.publicDSA_openssh)
         self.assertEqual(
             key.public().toString('openssh'),
@@ -1038,7 +1042,7 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
         """
         key = keys.Key.fromString(keydata.privateECDSA_openssh)
         self.assertEqual(
-            key.public().toString('openssh', b'comment'),
+            key.public().toString('openssh', comment=b'comment'),
             keydata.publicECDSA_openssh)
         self.assertEqual(
             key.public().toString('openssh'),
