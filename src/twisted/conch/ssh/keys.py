@@ -14,6 +14,7 @@ import itertools
 from hashlib import md5, sha256
 import base64
 import struct
+import warnings
 
 import bcrypt
 from cryptography.exceptions import InvalidSignature
@@ -1208,8 +1209,8 @@ class Key(object):
         @param extra: Any extra data supported by the selected format which
             is not part of the key itself.  For public OpenSSH keys, this is
             a comment.  For private OpenSSH keys, this is a passphrase to
-            encrypt with.  (Deprecated; use C{comment} or C{passphrase} as
-            appropriate instead.)
+            encrypt with.  (Deprecated since Twisted NEXT; use C{comment}
+            or C{passphrase} as appropriate instead.)
         @type extra: L{bytes} or L{unicode} or L{None}
 
         @param subtype: A subtype of the requested C{type} to emit.  Only
@@ -1220,16 +1221,27 @@ class Key(object):
 
         @param comment: A comment to include with the key.  Only supported
             for OpenSSH keys.
+
+            Present since Twisted NEXT.
+
         @type comment: L{bytes} or L{unicode} or L{None}
 
         @param passphrase: A passphrase to encrypt the key with.  Only
             supported for private OpenSSH keys.
+
+            Present since Twisted NEXT.
+
         @type passphrase: L{bytes} or L{unicode} or L{None}
 
         @rtype: L{bytes}
         """
         if extra is not None:
             # Compatibility with old parameter format.
+            warnings.warn(
+                "The 'extra' argument to "
+                "twisted.conch.ssh.keys.Key.toString was deprecated in "
+                "Twisted NEXT; use 'comment' or 'passphrase' instead.",
+                DeprecationWarning, stacklevel=3)
             if self.isPublic():
                 comment = extra
             else:
