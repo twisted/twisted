@@ -64,7 +64,6 @@ class KeyGenTests(TestCase):
         self.patch(sys, 'stdout', self.stdout)
 
 
-
     def _testrun(self, keyType, keySize=None, privateKeySubtype=None):
         filename = self.mktemp()
         args = ['ckeygen', '-t', keyType, '-f', filename, '--no-passphrase']

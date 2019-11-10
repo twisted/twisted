@@ -50,7 +50,8 @@ class GeneralOptions(usage.Options):
                      ['comment', 'C', None, 'Provide new comment.'],
                      ['newpass', 'N', None, 'Provide new passphrase.'],
                      ['pass', 'P', None, 'Provide old passphrase.'],
-                     ['format', 'o', 'sha256-base64', 'Fingerprint format of key file.'],
+                     ['format', 'o', 'sha256-base64',
+                      'Fingerprint format of key file.'],
                      ['private-key-subtype', None, 'PEM',
                       'OpenSSH private key subtype to write ("PEM" or "v1").']]
 
@@ -58,7 +59,8 @@ class GeneralOptions(usage.Options):
                 ['changepass', 'p', 'Change passphrase of private key file.'],
                 ['quiet', 'q', 'Quiet.'],
                 ['no-passphrase', None, "Create the key with no passphrase."],
-                ['showpub', 'y', 'Read private key file and print public key.']]
+                ['showpub', 'y',
+                 'Read private key file and print public key.']]
 
     compData = usage.Completions(
         optActions={
