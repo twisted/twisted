@@ -1,1 +1,0 @@
-twisted.web.http.HTTPChannel no longer raises TypeError internally when receiving a line-folded HTTP header on Python 3.
