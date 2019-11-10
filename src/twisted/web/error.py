@@ -300,6 +300,14 @@ class UnsupportedType(Exception):
     """
 
 
+class ExcessiveBufferingError(Exception):
+    """
+    The HTTP/2 protocol has been forced to buffer an excessive amount of
+    outbound data, and has therefore closed the connection and dropped all
+    outbound data.
+    """
+
+
 
 class FlattenerError(Exception):
     """

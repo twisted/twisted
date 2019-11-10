@@ -33,7 +33,7 @@ class ICredentials(Interface):
     """
     I check credentials.
 
-    Implementors _must_ specify which sub-interfaces of ICredentials
+    Implementors I{must} specify the sub-interfaces of ICredentials
     to which it conforms, using L{zope.interface.declarations.implementer}.
     """
 
@@ -121,6 +121,8 @@ class IUsernamePassword(ICredentials):
 class IAnonymous(ICredentials):
     """
     I am an explicitly anonymous request for access.
+
+    @see: L{twisted.cred.checkers.AllowAnonymousAccess}
     """
 
 

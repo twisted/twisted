@@ -1171,17 +1171,22 @@ class Key(object):
         type = self.type()
         data = self.data()
         if type == 'RSA':
+            iqmp = rsa.rsa_crt_iqmp(data['p'], data['q'])
             return (common.NS(b'ssh-rsa') + common.MP(data['n']) +
                     common.MP(data['e']) + common.MP(data['d']) +
-                    common.MP(data['u']) + common.MP(data['p']) +
+                    common.MP(iqmp) + common.MP(data['p']) +
                     common.MP(data['q']))
         elif type == 'DSA':
             return (common.NS(b'ssh-dss') + common.MP(data['p']) +
                     common.MP(data['q']) + common.MP(data['g']) +
                     common.MP(data['y']) + common.MP(data['x']))
-        else: # EC
-            return (common.NS(data['curve']) + common.MP(data['x']) +
-                    common.MP(data['y']) + common.MP(data['privateValue']))
+        else:  # EC
+            encPub = self._keyObject.public_key().public_bytes(
+                serialization.Encoding.X962,
+                serialization.PublicFormat.UncompressedPoint
+            )
+            return (common.NS(data['curve']) + common.NS(data['curve'][-8:]) +
+                    common.NS(encPub) + common.MP(data['privateValue']))
 
     def toString(self, type, extra=None):
         """
@@ -1257,9 +1262,10 @@ class Key(object):
                                b' PRIVATE KEY-----'))]
             if self.type() == 'RSA':
                 p, q = data['p'], data['q']
+                iqmp = rsa.rsa_crt_iqmp(p, q)
                 objData = (0, data['n'], data['e'], data['d'], p, q,
                            data['d'] % (p - 1), data['d'] % (q - 1),
-                           data['u'])
+                           iqmp)
             else:
                 objData = (0, data['p'], data['q'], data['g'], data['y'],
                            data['x'])
@@ -1322,6 +1328,7 @@ class Key(object):
         else:
             if type == 'RSA':
                 p, q = data['p'], data['q']
+                iqmp = rsa.rsa_crt_iqmp(p, q)
                 return sexpy.pack([[b'private-key',
                                     [b'rsa-pkcs1',
                                      [b'n', common.MP(data['n'])[4:]],
@@ -1333,7 +1340,7 @@ class Key(object):
                                          data['d'] % (q - 1))[4:]],
                                      [b'b', common.MP(
                                          data['d'] % (p - 1))[4:]],
-                                     [b'c', common.MP(data['u'])[4:]]]]])
+                                     [b'c', common.MP(iqmp)[4:]]]]])
             elif type == 'DSA':
                 return sexpy.pack([[b'private-key',
                                     [b'dsa',

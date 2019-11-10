@@ -790,6 +790,8 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
 
         self.assertFalse(rsaKey.isPublic())
         self.assertEqual(keydata.RSAData, rsaKey.data())
+        self.assertEqual(
+            rsaKey, keys.Key._fromString_PRIVATE_BLOB(rsaKey.privateBlob()))
 
 
     def test_fromPrivateBlobDSA(self):
@@ -809,6 +811,8 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
 
         self.assertFalse(dsaKey.isPublic())
         self.assertEqual(keydata.DSAData, dsaKey.data())
+        self.assertEqual(
+            dsaKey, keys.Key._fromString_PRIVATE_BLOB(dsaKey.privateBlob()))
 
 
     def test_fromPrivateBlobECDSA(self):
@@ -835,6 +839,8 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
 
         self.assertFalse(eckey.isPublic())
         self.assertEqual(keydata.ECDatanistp256, eckey.data())
+        self.assertEqual(
+            eckey, keys.Key._fromString_PRIVATE_BLOB(eckey.privateBlob()))
 
 
     def test_blobRSA(self):
@@ -899,18 +905,16 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
         L{keys.Key.privateBlob} returns the SSH protocol-level format of an
         RSA private key.
         """
-        from cryptography.hazmat.primitives.asymmetric import rsa
         numbers = self.rsaObj.private_numbers()
-        u = rsa.rsa_crt_iqmp(numbers.q, numbers.p)
         self.assertEqual(
             keys.Key(self.rsaObj).privateBlob(),
             common.NS(b'ssh-rsa') +
-            common.MP(self.rsaObj.private_numbers().public_numbers.n) +
-            common.MP(self.rsaObj.private_numbers().public_numbers.e) +
-            common.MP(self.rsaObj.private_numbers().d) +
-            common.MP(u) +
-            common.MP(self.rsaObj.private_numbers().p) +
-            common.MP(self.rsaObj.private_numbers().q)
+            common.MP(numbers.public_numbers.n) +
+            common.MP(numbers.public_numbers.e) +
+            common.MP(numbers.d) +
+            common.MP(numbers.iqmp) +
+            common.MP(numbers.p) +
+            common.MP(numbers.q)
             )
 
 
@@ -937,11 +941,15 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
         L{keys.Key.privateBlob} returns the SSH ptotocol-level format of EC
         private key.
         """
+        from cryptography.hazmat.primitives import serialization
         self.assertEqual(
             keys.Key(self.ecObj).privateBlob(),
             common.NS(keydata.ECDatanistp256['curve']) +
-            common.MP(self.ecObj.private_numbers().public_numbers.x) +
-            common.MP(self.ecObj.private_numbers().public_numbers.y) +
+            common.NS(keydata.ECDatanistp256['curve'][-8:]) +
+            common.NS(
+                self.ecObj.public_key().public_bytes(
+                    serialization.Encoding.X962,
+                    serialization.PublicFormat.UncompressedPoint)) +
             common.MP(self.ecObj.private_numbers().private_value)
             )
 
