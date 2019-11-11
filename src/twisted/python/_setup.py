@@ -287,7 +287,7 @@ def getSetupArgs(extensions=_EXTENSIONS, readme='README.rst'):
         "Automat >= 0.3.0",
         "hyperlink >= 17.1.1",
         "PyHamcrest >= 1.9.0",
-        "attrs >= 17.4.0",
+        "attrs >= 19.2.0",
     ]
 
     arguments.update(dict(
