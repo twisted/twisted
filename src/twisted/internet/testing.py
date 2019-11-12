@@ -635,7 +635,7 @@ class MemoryReactor(object):
                           maxPacketSize=8192):
         """
         Fake L{IReactorSocket.adoptDatagramPort}, that logs the call and
-            returns a fake L{IListeningPort}.
+        returns a fake L{IListeningPort}.
 
         @see: L{twisted.internet.interfaces.IReactorSocket.adoptDatagramPort}
         """
