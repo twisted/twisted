@@ -646,7 +646,7 @@ run your test suite using another debugger instead. To specify a debugger other
 than ``pdb`` , pass in the fully-qualified name of an
 object that provides the same interface as ``pdb`` .
 Most third-party debuggers tend to implement an interface similar to ``pdb`` , or at least provide a wrapper object that
-does. For example, invoking Trial with the extra arguments ``-debug --debugger pudb`` will open the `PuDB <http://pypi.python.org/pypi/pudb>`_ debugger instead, provided
+does. For example, invoking Trial with the extra arguments ``--debug --debugger pudb`` will open the `PuDB <http://pypi.python.org/pypi/pudb>`_ debugger instead, provided
 it is properly installed.
 
 

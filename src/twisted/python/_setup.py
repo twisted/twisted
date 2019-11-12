@@ -110,11 +110,11 @@ _EXTRA_OPTIONS = dict(
     ],
     soap=['soappy'],
     serial=['pyserial >= 3.0',
-            'pywin32; platform_system == "Windows"'],
+            'pywin32 != 226; platform_system == "Windows"'],
     macos=['pyobjc-core',
            'pyobjc-framework-CFNetwork',
            'pyobjc-framework-Cocoa'],
-    windows=['pywin32'],
+    windows=['pywin32 != 226'],
     http2=['h2 >= 3.0, < 4.0',
            'priority >= 1.1.0, < 2.0'],
 )

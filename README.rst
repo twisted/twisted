@@ -5,7 +5,7 @@ Twisted
 |travis|_
 |circleci|_
 
-For information on what's new in Twisted 19.2.0, see the `NEWS <NEWS.rst>`_ file that comes with the distribution.
+For information on changes in this release, see the `NEWS <NEWS.rst>`_ file.
 
 
 What is this?
