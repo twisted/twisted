@@ -259,7 +259,7 @@ class OptionalDependenciesTests(SynchronousTestCase):
         self.assertIn('pyserial >= 3.0', deps)
         self.assertIn('h2 >= 3.0, < 4.0', deps)
         self.assertIn('priority >= 1.1.0, < 2.0', deps)
-        self.assertIn('pywin32', deps)
+        self.assertIn('pywin32 != 226', deps)
 
 
 
