@@ -32,20 +32,36 @@ matrix:
         - docker
       env: PIP=pip TOXENV=wheels
     - python: 2.7
+      services:
+        - docker
       env: TOXENV=py27-alldeps-withcov-posix,coverage-prepare,codecov-push,coveralls-push
     - python: 2.7
+      services:
+        - docker
       env: TOXENV=py27-nodeps-withcov-posix,coverage-prepare,codecov-push,coveralls-push
+      services:
+        - docker
     - python: 3.5
+      services:
+        - docker
       env: TOXENV=py35-alldeps-withcov-posix,coverage-prepare,codecov-push,coveralls-push
     - python: 3.6
+      services:
+        - docker
       env: TOXENV=py36-alldeps-withcov-posix,coverage-prepare,codecov-push,coveralls-push
     - python: 3.7
+      services:
+        - docker
       env: TOXENV=py37-alldeps-withcov-posix,coverage-prepare,codecov-push,coveralls-push
+      services:
+        - docker
     - python: 3.5
       env: TOXENV=lint
     # We need a builder without IPv6. This is going to be slower than all the
     # others, but that's ok.
     - python: 3.6
+      services:
+        - docker
       env: TOXENV=py36-alldeps-withcov-posix,coverage-prepare,codecov-push,coveralls-push DISABLE_IPV6=yes
     - python: pypy
       env: TOXENV=pypy-nodeps-withcov-posix,coverage-prepare,codecov-push,coveralls-push PYPY_VERSION=pypy2.7-7.1.1
