@@ -1,0 +1,1 @@
+Fixed parsing of streams with Python 3.8 when there are spaces in namespaces or namespaced attributes in twisted.words.xish.domish.ExpatElementStream
