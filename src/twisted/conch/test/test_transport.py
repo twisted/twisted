@@ -47,7 +47,7 @@ else:
     X25519_SUPPORTED = False
 
 
-    class transport: # fictional modules to make classes work
+    class transport:  # fictional modules to make classes work
         class SSHTransportBase: pass
         class SSHServerTransport: pass
         class SSHClientTransport: pass

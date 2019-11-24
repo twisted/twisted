@@ -291,4 +291,4 @@ def getSupportedKeyExchanges():
             kexAlgorithms.pop(keyAlgorithm)
     return sorted(
         kexAlgorithms,
-        key = lambda kexAlgorithm: kexAlgorithms[kexAlgorithm].preference)
+        key=lambda kexAlgorithm: kexAlgorithms[kexAlgorithm].preference)
