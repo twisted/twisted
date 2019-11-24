@@ -397,12 +397,13 @@ SUrCyZXsNh6VXwjs3gKQ
         """
         Test that keys are correctly generated from Agent v3 strings.
         """
-        self._testPrivateFromString(keydata.privateRSA_agentv3, 'RSA',
-                keydata.RSAData)
-        self._testPrivateFromString(keydata.privateDSA_agentv3, 'DSA',
-                keydata.DSAData)
-        self.assertRaises(keys.BadKeyError, keys.Key.fromString,
-                b'\x00\x00\x00\x07ssh-foo'+ b'\x00\x00\x00\x01\x01'*5)
+        self._testPrivateFromString(
+            keydata.privateRSA_agentv3, 'RSA', keydata.RSAData)
+        self._testPrivateFromString(
+            keydata.privateDSA_agentv3, 'DSA', keydata.DSAData)
+        self.assertRaises(
+            keys.BadKeyError, keys.Key.fromString,
+            b'\x00\x00\x00\x07ssh-foo' + b'\x00\x00\x00\x01\x01' * 5)
 
 
     def test_fromStringNormalizesUnicodePassphrase(self):
