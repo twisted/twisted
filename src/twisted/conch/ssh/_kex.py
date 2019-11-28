@@ -124,17 +124,11 @@ class _DHGroupExchangeSHA1(object):
     hashProcessor = sha1
 
 
-
 @implementer(_IFixedGroupKexAlgorithm)
-class _DHGroup14SHA1(object):
+class _Group14(object):
     """
-    Diffie-Hellman key exchange with SHA-1 as HASH and Oakley Group 14
-    (2048-bit MODP Group). Defined in RFC 4253, 8.2.
+    Diffie-Hellman primes from Oakley Group 14 (RFC 3526, 3).
     """
-
-    preference = 7
-    hashProcessor = sha1
-    # Diffie-Hellman primes from Oakley Group 14 (RFC 3526, 3).
     prime = long('32317006071311007300338913926423828248817941241140239112842'
         '00975140074170663435422261968941736356934711790173790970419175460587'
         '32091950288537589861856221532121754125149017745202702357960782362488'
@@ -149,11 +143,32 @@ class _DHGroup14SHA1(object):
 
 
 
+class _DHGroup14SHA1(_Group14):
+    """
+    Diffie-Hellman key exchange with SHA-1 as HASH and Oakley Group 14
+    (2048-bit MODP Group). Defined in RFC 4253, 8.2.
+    """
+    preference = 7
+    hashProcessor = sha1
+
+
+
+class _DHGroup14SHA256(_Group14):
+    """
+    Diffie-Hellman key exchange with SHA-256 as HASH and Oakley Group 14
+    (2048-bit MODP Group). Defined in RFC 8268.
+    """
+    preference = 6
+    hashProcessor = sha256
+
+
+
 # Which ECDH hash function to use is dependent on the size.
 _kexAlgorithms = {
     b"diffie-hellman-group-exchange-sha256": _DHGroupExchangeSHA256(),
     b"diffie-hellman-group-exchange-sha1": _DHGroupExchangeSHA1(),
     b"diffie-hellman-group14-sha1": _DHGroup14SHA1(),
+    b"diffie-hellman-group14-sha256": _DHGroup14SHA256(),
     b"ecdh-sha2-nistp256": _ECDH256(),
     b"ecdh-sha2-nistp384": _ECDH384(),
     b"ecdh-sha2-nistp521": _ECDH512(),
