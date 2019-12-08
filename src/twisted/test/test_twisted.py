@@ -12,7 +12,6 @@ import sys
 
 from types import ModuleType
 
-from twisted.python._setup import _checkPythonVersion
 from twisted.trial.unittest import TestCase
 
 
