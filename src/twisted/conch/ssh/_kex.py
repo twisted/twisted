@@ -148,9 +148,7 @@ class _DHGroup14SHA1(object):
     generator = 2
 
 
-
-# Which ECDH hash function to use is dependent on the size.
-_kexAlgorithms = {
+_baseKexAlgorithms = {
     b"diffie-hellman-group-exchange-sha256": _DHGroupExchangeSHA256(),
     b"diffie-hellman-group-exchange-sha1": _DHGroupExchangeSHA1(),
     b"diffie-hellman-group14-sha1": _DHGroup14SHA1(),
@@ -159,6 +157,9 @@ _kexAlgorithms = {
     b"ecdh-sha2-nistp521": _ECDH512(),
     }
 
+
+# Set the default kex algorithms to the base algorithms.
+_kexAlgorithms = _baseKexAlgorithms
 
 
 def getKex(kexAlgorithm):
@@ -241,27 +242,16 @@ def getDHGeneratorAndPrime(kexAlgorithm):
 
 
 
-def getSupportedKeyExchanges():
+def getSupportedKeyExchanges(kexAlgs=_kexAlgorithms):
     """
     Get a list of supported key exchange algorithm names in order of
     preference.
 
+    @param kexAlgs: An optional L{dict} of keys to sort and return.
     @return: A C{list} of supported key exchange algorithm names.
     @rtype: C{list} of L{bytes}
     """
-    from cryptography.hazmat.backends import default_backend
-    from cryptography.hazmat.primitives.asymmetric import ec
-    from twisted.conch.ssh.keys import _curveTable
-
-    backend = default_backend()
-    kexAlgorithms = _kexAlgorithms.copy()
-    for keyAlgorithm in list(kexAlgorithms):
-        if keyAlgorithm.startswith(b"ecdh"):
-            keyAlgorithmDsa = keyAlgorithm.replace(b"ecdh", b"ecdsa")
-            supported = backend.elliptic_curve_exchange_algorithm_supported(
-                ec.ECDH(), _curveTable[keyAlgorithmDsa])
-            if not supported:
-                kexAlgorithms.pop(keyAlgorithm)
+    kexAlgorithms = kexAlgs.copy()
     return sorted(
         kexAlgorithms,
         key = lambda kexAlgorithm: kexAlgorithms[kexAlgorithm].preference)

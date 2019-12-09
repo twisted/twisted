@@ -26,7 +26,6 @@ from cryptography.hazmat.primitives.serialization import (
 from cryptography import utils
 
 try:
-
     from cryptography.hazmat.primitives.asymmetric.utils import (
         encode_dss_signature, decode_dss_signature)
 except ImportError:
@@ -51,6 +50,7 @@ from twisted.python.constants import NamedConstant, Names
 from twisted.python.deprecate import _mutuallyExclusiveArguments
 
 # Curve lookup table
+# These are all of the curves supported by cryptography, but only the first 3 are enabled by default.
 _curveTable = {
     b'ecdsa-sha2-nistp256': ec.SECP256R1(),
     b'ecdsa-sha2-nistp384': ec.SECP384R1(),
@@ -58,12 +58,10 @@ _curveTable = {
 }
 
 _secToNist = {
-    b'secp256r1' : b'nistp256',
-    b'secp384r1' : b'nistp384',
-    b'secp521r1' : b'nistp521',
+    b'secp256r1': b'ecdsa-sha2-nistp256',
+    b'secp384r1': b'ecdsa-sha2-nistp384',
+    b'secp521r1': b'ecdsa-sha2-nistp521',
 }
-
-
 
 
 
@@ -1019,7 +1017,7 @@ class Key(object):
         @rtype: L{bytes}
         """
         if self.type() == 'EC':
-            return b'ecdsa-sha2-' + _secToNist[self._keyObject.curve.name.encode('ascii')]
+            return _secToNist[self._keyObject.curve.name.encode('ascii')]
         else:
             return {'RSA': b'ssh-rsa', 'DSA': b'ssh-dss'}[self.type()]
 

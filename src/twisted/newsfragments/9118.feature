@@ -1,0 +1,1 @@
+twisted.conch.ssh.transport has 4 new methods (addSupportedKexes, setSupportedKexes, addSupportedPublicKeys, setSupportedPublicKeys) that let a developer specify what key exchanges and public keys they wish to support, including ones not supported by default.
