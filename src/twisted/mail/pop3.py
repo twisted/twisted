@@ -575,8 +575,9 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
             return self.processCommand(*line.split(b' '))
         except (ValueError, AttributeError, POP3Error, TypeError) as e:
             log.err()
-            self.failResponse('bad protocol or server: {}: {}'.format(
-                e.__class__.__name__, e))
+            self.failResponse(b': '.join([b'bad protocol or server',
+                                          e.__class__.__name__.encode('utf-8'),
+                                          b''.join(e.args)]))
 
 
     def processCommand(self, command, *args):
@@ -862,7 +863,7 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
         self.successResponse(b'USER accepted, send PASS')
 
 
-    def do_PASS(self, password):
+    def do_PASS(self, password, *words):
         """
         Handle a PASS command.
 
@@ -874,15 +875,19 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
 
         @type password: L{bytes}
         @param password: A password.
+
+        @type words: L{tuple} of L{bytes}
+        @param words: Other parts of the password split by spaces.
         """
         if self._userIs is None:
             self.failResponse(b"USER required before PASS")
             return
         user = self._userIs
         self._userIs = None
+        password = b' '.join((password,) + words)
         d = defer.maybeDeferred(self.authenticateUserPASS, user, password)
-        d.addCallbacks(self._cbMailbox, self._ebMailbox, callbackArgs=(user,)
-        ).addErrback(self._ebUnexpected)
+        d.addCallbacks(self._cbMailbox, self._ebMailbox,
+                       callbackArgs=(user,)).addErrback(self._ebUnexpected)
 
 
     def _longOperation(self, d):
