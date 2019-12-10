@@ -14,6 +14,7 @@ import itertools
 from hashlib import md5, sha256
 import base64
 import struct
+import warnings
 
 import bcrypt
 from cryptography.exceptions import InvalidSignature
@@ -44,8 +45,10 @@ from twisted.conch.ssh.common import int_from_bytes, int_to_bytes
 from twisted.python import randbytes
 from twisted.python.compat import (
     iterbytes, long, izip, nativeString, unicode, _PY3,
-    _b64decodebytes as decodebytes, _b64encodebytes as encodebytes)
+    _b64decodebytes as decodebytes, _b64encodebytes as encodebytes,
+    _bytesChr as chr)
 from twisted.python.constants import NamedConstant, Names
+from twisted.python.deprecate import _mutuallyExclusiveArguments
 
 # Curve lookup table
 _curveTable = {
@@ -1171,19 +1174,29 @@ class Key(object):
         type = self.type()
         data = self.data()
         if type == 'RSA':
+            iqmp = rsa.rsa_crt_iqmp(data['p'], data['q'])
             return (common.NS(b'ssh-rsa') + common.MP(data['n']) +
                     common.MP(data['e']) + common.MP(data['d']) +
-                    common.MP(data['u']) + common.MP(data['p']) +
+                    common.MP(iqmp) + common.MP(data['p']) +
                     common.MP(data['q']))
         elif type == 'DSA':
             return (common.NS(b'ssh-dss') + common.MP(data['p']) +
                     common.MP(data['q']) + common.MP(data['g']) +
                     common.MP(data['y']) + common.MP(data['x']))
-        else: # EC
-            return (common.NS(data['curve']) + common.MP(data['x']) +
-                    common.MP(data['y']) + common.MP(data['privateValue']))
+        else:  # EC
+            encPub = self._keyObject.public_key().public_bytes(
+                serialization.Encoding.X962,
+                serialization.PublicFormat.UncompressedPoint
+            )
+            return (common.NS(data['curve']) + common.NS(data['curve'][-8:]) +
+                    common.NS(encPub) + common.MP(data['privateValue']))
 
-    def toString(self, type, extra=None):
+    @_mutuallyExclusiveArguments([
+        ['extra', 'comment'],
+        ['extra', 'passphrase'],
+    ])
+    def toString(self, type, extra=None, subtype=None, comment=None,
+                 passphrase=None):
         """
         Create a string representation of this key.  If the key is a private
         key and you want the representation of its public key, use
@@ -1196,25 +1209,205 @@ class Key(object):
         @param extra: Any extra data supported by the selected format which
             is not part of the key itself.  For public OpenSSH keys, this is
             a comment.  For private OpenSSH keys, this is a passphrase to
-            encrypt with.
+            encrypt with.  (Deprecated since Twisted NEXT; use C{comment}
+            or C{passphrase} as appropriate instead.)
         @type extra: L{bytes} or L{unicode} or L{None}
+
+        @param subtype: A subtype of the requested C{type} to emit.  Only
+            supported for private OpenSSH keys, for which the currently
+            supported subtypes are C{'PEM'} and C{'v1'}.  If not given, an
+            appropriate default is used.
+        @type subtype: L{str} or L{None}
+
+        @param comment: A comment to include with the key.  Only supported
+            for OpenSSH keys.
+
+            Present since Twisted NEXT.
+
+        @type comment: L{bytes} or L{unicode} or L{None}
+
+        @param passphrase: A passphrase to encrypt the key with.  Only
+            supported for private OpenSSH keys.
+
+            Present since Twisted NEXT.
+
+        @type passphrase: L{bytes} or L{unicode} or L{None}
 
         @rtype: L{bytes}
         """
-        if isinstance(extra, unicode):
-            extra = extra.encode("utf-8")
+        if extra is not None:
+            # Compatibility with old parameter format.
+            warnings.warn(
+                "The 'extra' argument to "
+                "twisted.conch.ssh.keys.Key.toString was deprecated in "
+                "Twisted NEXT; use 'comment' or 'passphrase' instead.",
+                DeprecationWarning, stacklevel=3)
+            if self.isPublic():
+                comment = extra
+            else:
+                passphrase = extra
+        if isinstance(comment, unicode):
+            comment = comment.encode("utf-8")
+        if isinstance(passphrase, unicode):
+            passphrase = passphrase.encode("utf-8")
         method = getattr(self, '_toString_%s' % (type.upper(),), None)
         if method is None:
             raise BadKeyError('unknown key type: %s' % (type,))
-        if method.__code__.co_argcount == 2:
-            return method(extra)
-        else:
-            return method()
+        return method(subtype=subtype, comment=comment, passphrase=passphrase)
 
-    def _toString_OPENSSH(self, extra):
+    def _toPublicOpenSSH(self, comment=None):
+        """
+        Return a public OpenSSH key string.
+
+        See _fromString_PUBLIC_OPENSSH for the string format.
+
+        @type comment: L{bytes} or L{None}
+        @param comment: A comment to include with the key, or L{None} to
+        omit the comment.
+        """
+        if self.type() == 'EC':
+            if not comment:
+                comment = b''
+            return (self._keyObject.public_bytes(
+                serialization.Encoding.OpenSSH,
+                serialization.PublicFormat.OpenSSH
+                ) + b' ' + comment).strip()
+
+        b64Data = encodebytes(self.blob()).replace(b'\n', b'')
+        if not comment:
+            comment = b''
+        return (self.sshType() + b' ' + b64Data + b' ' + comment).strip()
+
+    def _toPrivateOpenSSH_v1(self, comment=None, passphrase=None):
+        """
+        Return a private OpenSSH key string, in the "openssh-key-v1" format
+        introduced in OpenSSH 6.5.
+
+        See _fromPrivateOpenSSH_v1 for the string format.
+
+        @type passphrase: L{bytes} or L{None}
+        @param passphrase: The passphrase to encrypt the key with, or L{None}
+        if it is not encrypted.
+        """
+        if passphrase:
+            # For now we just hardcode the cipher to the one used by
+            # OpenSSH.  We could make this configurable later if it's
+            # needed.
+            cipher = algorithms.AES
+            cipherName = b'aes256-ctr'
+            kdfName = b'bcrypt'
+            blockSize = cipher.block_size // 8
+            keySize = 32
+            ivSize = blockSize
+            salt = randbytes.secureRandom(ivSize)
+            rounds = 100
+            kdfOptions = common.NS(salt) + struct.pack('!L', rounds)
+        else:
+            cipherName = b'none'
+            kdfName = b'none'
+            blockSize = 8
+            kdfOptions = b''
+        check = randbytes.secureRandom(4)
+        privKeyList = (
+            check + check + self.privateBlob() + common.NS(comment or b''))
+        padByte = 0
+        while len(privKeyList) % blockSize:
+            padByte += 1
+            privKeyList += chr(padByte & 0xFF)
+        if passphrase:
+            encKey = bcrypt.kdf(passphrase, salt, keySize + ivSize, 100)
+            encryptor = Cipher(
+                cipher(encKey[:keySize]),
+                modes.CTR(encKey[keySize:keySize + ivSize]),
+                backend=default_backend()
+            ).encryptor()
+            encPrivKeyList = (
+                encryptor.update(privKeyList) + encryptor.finalize())
+        else:
+            encPrivKeyList = privKeyList
+        blob = (
+            b'openssh-key-v1\0' +
+            common.NS(cipherName) +
+            common.NS(kdfName) + common.NS(kdfOptions) +
+            struct.pack('!L', 1) +
+            common.NS(self.blob()) +
+            common.NS(encPrivKeyList))
+        b64Data = encodebytes(blob).replace(b'\n', b'')
+        lines = (
+            [b'-----BEGIN OPENSSH PRIVATE KEY-----'] +
+            [b64Data[i:i + 64] for i in range(0, len(b64Data), 64)] +
+            [b'-----END OPENSSH PRIVATE KEY-----'])
+        return b'\n'.join(lines) + b'\n'
+
+    def _toPrivateOpenSSH_PEM(self, passphrase=None):
+        """
+        Return a private OpenSSH key string, in the old PEM-based format.
+
+        See _fromPrivateOpenSSH_PEM for the string format.
+
+        @type passphrase: L{bytes} or L{None}
+        @param passphrase: The passphrase to encrypt the key with, or L{None}
+        if it is not encrypted.
+        """
+        if self.type() == 'EC':
+            # EC keys has complex ASN.1 structure hence we do this this way.
+            if not passphrase:
+                # unencrypted private key
+                encryptor = serialization.NoEncryption()
+            else:
+                encryptor = serialization.BestAvailableEncryption(passphrase)
+
+            return self._keyObject.private_bytes(
+                serialization.Encoding.PEM,
+                serialization.PrivateFormat.TraditionalOpenSSL,
+                encryptor)
+
+        data = self.data()
+        lines = [b''.join((b'-----BEGIN ', self.type().encode('ascii'),
+                           b' PRIVATE KEY-----'))]
+        if self.type() == 'RSA':
+            p, q = data['p'], data['q']
+            iqmp = rsa.rsa_crt_iqmp(p, q)
+            objData = (0, data['n'], data['e'], data['d'], p, q,
+                       data['d'] % (p - 1), data['d'] % (q - 1),
+                       iqmp)
+        else:
+            objData = (0, data['p'], data['q'], data['g'], data['y'],
+                       data['x'])
+        asn1Sequence = univ.Sequence()
+        for index, value in izip(itertools.count(), objData):
+            asn1Sequence.setComponentByPosition(index, univ.Integer(value))
+        asn1Data = berEncoder.encode(asn1Sequence)
+        if passphrase:
+            iv = randbytes.secureRandom(8)
+            hexiv = ''.join(['%02X' % (ord(x),) for x in iterbytes(iv)])
+            hexiv = hexiv.encode('ascii')
+            lines.append(b'Proc-Type: 4,ENCRYPTED')
+            lines.append(b'DEK-Info: DES-EDE3-CBC,' + hexiv + b'\n')
+            ba = md5(passphrase + iv).digest()
+            bb = md5(ba + passphrase + iv).digest()
+            encKey = (ba + bb)[:24]
+            padLen = 8 - (len(asn1Data) % 8)
+            asn1Data += chr(padLen) * padLen
+
+            encryptor = Cipher(
+                algorithms.TripleDES(encKey),
+                modes.CBC(iv),
+                backend=default_backend()
+            ).encryptor()
+
+            asn1Data = encryptor.update(asn1Data) + encryptor.finalize()
+
+        b64Data = encodebytes(asn1Data).replace(b'\n', b'')
+        lines += [b64Data[i:i + 64] for i in range(0, len(b64Data), 64)]
+        lines.append(b''.join((b'-----END ', self.type().encode('ascii'),
+                               b' PRIVATE KEY-----')))
+        return b'\n'.join(lines)
+
+    def _toString_OPENSSH(self, subtype=None, comment=None, passphrase=None):
         """
         Return a public or private OpenSSH string.  See
-        _fromString_PUBLIC_OPENSSH and _fromString_PRIVATE_OPENSSH for the
+        _fromString_PUBLIC_OPENSSH and _fromPrivateOpenSSH_PEM for the
         string formats.  If extra is present, it represents a comment for a
         public key, or a passphrase for a private key.
 
@@ -1224,76 +1417,17 @@ class Key(object):
 
         @rtype: L{bytes}
         """
-        data = self.data()
         if self.isPublic():
-            if self.type() == 'EC':
-                if not extra:
-                    extra = b''
-                return (self._keyObject.public_bytes(
-                    serialization.Encoding.OpenSSH,
-                    serialization.PublicFormat.OpenSSH
-                    ) + b' ' + extra).strip()
-
-            b64Data = encodebytes(self.blob()).replace(b'\n', b'')
-            if not extra:
-                extra = b''
-            return (self.sshType() + b' ' + b64Data + b' ' + extra).strip()
+            return self._toPublicOpenSSH(comment=comment)
+        elif subtype is None or subtype == 'PEM':
+            return self._toPrivateOpenSSH_PEM(passphrase=passphrase)
+        elif subtype == 'v1':
+            return self._toPrivateOpenSSH_v1(
+                comment=comment, passphrase=passphrase)
         else:
+            raise ValueError('unknown subtype %s' % (subtype,))
 
-            if self.type() == 'EC':
-                # EC keys has complex ASN.1 structure hence we do this this way.
-                if not extra:
-                    # unencrypted private key
-                    encryptor = serialization.NoEncryption()
-                else:
-                    encryptor = serialization.BestAvailableEncryption(extra)
-
-                return self._keyObject.private_bytes(
-                    serialization.Encoding.PEM,
-                    serialization.PrivateFormat.TraditionalOpenSSL,
-                    encryptor)
-
-            lines = [b''.join((b'-----BEGIN ', self.type().encode('ascii'),
-                               b' PRIVATE KEY-----'))]
-            if self.type() == 'RSA':
-                p, q = data['p'], data['q']
-                objData = (0, data['n'], data['e'], data['d'], p, q,
-                           data['d'] % (p - 1), data['d'] % (q - 1),
-                           data['u'])
-            else:
-                objData = (0, data['p'], data['q'], data['g'], data['y'],
-                           data['x'])
-            asn1Sequence = univ.Sequence()
-            for index, value in izip(itertools.count(), objData):
-                asn1Sequence.setComponentByPosition(index, univ.Integer(value))
-            asn1Data = berEncoder.encode(asn1Sequence)
-            if extra:
-                iv = randbytes.secureRandom(8)
-                hexiv = ''.join(['%02X' % (ord(x),) for x in iterbytes(iv)])
-                hexiv = hexiv.encode('ascii')
-                lines.append(b'Proc-Type: 4,ENCRYPTED')
-                lines.append(b'DEK-Info: DES-EDE3-CBC,' + hexiv + b'\n')
-                ba = md5(extra + iv).digest()
-                bb = md5(ba + extra + iv).digest()
-                encKey = (ba + bb)[:24]
-                padLen = 8 - (len(asn1Data) % 8)
-                asn1Data += (chr(padLen) * padLen).encode('ascii')
-
-                encryptor = Cipher(
-                    algorithms.TripleDES(encKey),
-                    modes.CBC(iv),
-                    backend=default_backend()
-                ).encryptor()
-
-                asn1Data = encryptor.update(asn1Data) + encryptor.finalize()
-
-            b64Data = encodebytes(asn1Data).replace(b'\n', b'')
-            lines += [b64Data[i:i + 64] for i in range(0, len(b64Data), 64)]
-            lines.append(b''.join((b'-----END ', self.type().encode('ascii'),
-                                   b' PRIVATE KEY-----')))
-            return b'\n'.join(lines)
-
-    def _toString_LSH(self):
+    def _toString_LSH(self, **kwargs):
         """
         Return a public or private LSH key.  See _fromString_PUBLIC_LSH and
         _fromString_PRIVATE_LSH for the key formats.
@@ -1322,6 +1456,7 @@ class Key(object):
         else:
             if type == 'RSA':
                 p, q = data['p'], data['q']
+                iqmp = rsa.rsa_crt_iqmp(p, q)
                 return sexpy.pack([[b'private-key',
                                     [b'rsa-pkcs1',
                                      [b'n', common.MP(data['n'])[4:]],
@@ -1333,7 +1468,7 @@ class Key(object):
                                          data['d'] % (q - 1))[4:]],
                                      [b'b', common.MP(
                                          data['d'] % (p - 1))[4:]],
-                                     [b'c', common.MP(data['u'])[4:]]]]])
+                                     [b'c', common.MP(iqmp)[4:]]]]])
             elif type == 'DSA':
                 return sexpy.pack([[b'private-key',
                                     [b'dsa',
@@ -1345,7 +1480,7 @@ class Key(object):
             else:
                 raise BadKeyError("unknown key type %s'" % (type,))
 
-    def _toString_AGENTV3(self):
+    def _toString_AGENTV3(self, **kwargs):
         """
         Return a private Secure Shell Agent v3 key.  See
         _fromString_AGENTV3 for the key format.
