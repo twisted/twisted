@@ -2177,7 +2177,7 @@ Hello,
         self.patch(base64, 'decodestring', lambda x: [])
         self.runRequest(f, Request, 0)
         req = requests.pop()
-        self.assertEqual(('', ''), req.credentials)
+        self.assertEqual((b'', b''), req.credentials)
         self.assertEquals(1, len(logObserver))
         event = logObserver[0]
         f = event["log_failure"]
