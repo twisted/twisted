@@ -659,6 +659,17 @@ NO_BODY_CODES = (204, 304)
 _QUEUED_SENTINEL = object()
 
 
+
+def _getContentFile(length):
+    """
+    Get a writeable file-like object to which request content can be written.
+    """
+    if length is not None and length < 100000:
+        return StringIO()
+    return tempfile.TemporaryFile()
+
+
+
 @implementer(interfaces.IConsumer,
              _IDeprecatedHTTPChannelToRequestInterface)
 class Request:
@@ -812,10 +823,7 @@ class Request:
             request headers.  L{None} if the request headers do not indicate a
             length.
         """
-        if length is not None and length < 100000:
-            self.content = StringIO()
-        else:
-            self.content = tempfile.TemporaryFile()
+        self.content = _getContentFile(length)
 
 
     def parseCookies(self):
@@ -1103,6 +1111,13 @@ class Request:
         if self.finished:
             raise RuntimeError('Request.write called on a request after '
                                'Request.finish was called.')
+
+        if self._disconnected:
+            # Don't attempt to write any data to a disconnected client.
+            # The RuntimeError exception will be thrown as usual when
+            # request.finish is called
+            return
+
         if not self.startedWriting:
             self.startedWriting = 1
             version = self.clientproto
@@ -1520,7 +1535,7 @@ class Request:
         try:
             authh = self.getHeader(b"Authorization")
             if not authh:
-                self.user = self.password = ''
+                self.user = self.password = b''
                 return
             bas, upw = authh.split()
             if bas.lower() != b"basic":
@@ -1528,10 +1543,10 @@ class Request:
             upw = base64.decodestring(upw)
             self.user, self.password = upw.split(b':', 1)
         except (binascii.Error, ValueError):
-            self.user = self.password = ""
+            self.user = self.password = b''
         except:
             self._log.failure('')
-            self.user = self.password = ""
+            self.user = self.password = b''
 
 
     def getUser(self):
@@ -1586,7 +1601,8 @@ class Request:
         """
         Pass the loseConnection through to the underlying channel.
         """
-        self.channel.loseConnection()
+        if self.channel is not None:
+            self.channel.loseConnection()
 
 
     def __eq__(self, other):
@@ -2043,7 +2059,7 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
 
     length = 0
     persistent = 1
-    __header = ''
+    __header = b''
     __first_line = 1
     __content = None
 
@@ -2132,7 +2148,7 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
                 # with processing. We'll have sent a 400 anyway, so just stop.
                 if not ok:
                     return
-            self.__header = ''
+            self.__header = b''
             self.allHeadersReceived()
             if self.length == 0:
                 self.allContentReceived()
@@ -2140,7 +2156,7 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
                 self.setRawMode()
         elif line[0] in b' \t':
             # Continuation of a multi line header.
-            self.__header = self.__header + '\n' + line
+            self.__header = self.__header + b'\n' + line
         # Regular header line.
         # Processing of header line is delayed to allow accumulating multi
         # line headers.
@@ -2937,7 +2953,14 @@ class _GenericHTTPChannelProtocol(proxyForInterface(IProtocol, "_channel")):
                 # We need to make sure that the HTTPChannel is unregistered
                 # from the transport so that the H2Connection can register
                 # itself if possible.
-                self._channel._networkProducer.unregisterProducer()
+                networkProducer = self._channel._networkProducer
+                networkProducer.unregisterProducer()
+
+                # Cancel the old channel's timeout.
+                self._channel.setTimeout(None)
+
+                # Cancel the old channel's timeout.
+                self._channel.setTimeout(None)
 
                 transport = self._channel.transport
                 self._channel = H2Connection()
@@ -2947,6 +2970,11 @@ class _GenericHTTPChannelProtocol(proxyForInterface(IProtocol, "_channel")):
                 self._channel.timeOut = self._timeOut
                 self._channel.callLater = self._callLater
                 self._channel.makeConnection(transport)
+
+                # Register the H2Connection as the transport's
+                # producer, so that the transport can apply back
+                # pressure.
+                networkProducer.registerProducer(self._channel, True)
             else:
                 # Only HTTP/2 and HTTP/1.1 are supported right now.
                 assert negotiatedProtocol == b'http/1.1', \

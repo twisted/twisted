@@ -723,17 +723,6 @@ def _constructMethod(cls, name, self):
 
 
 
-from incremental import Version
-from twisted.python.deprecate import deprecatedModuleAttribute
-
-from collections import OrderedDict
-
-deprecatedModuleAttribute(
-    Version("Twisted", 15, 5, 0),
-    "Use collections.OrderedDict instead.",
-    "twisted.python.compat",
-    "OrderedDict")
-
 if _PY3:
     from base64 import encodebytes as _b64encodebytes
     from base64 import decodebytes as _b64decodebytes
@@ -860,6 +849,37 @@ def _get_async_param(isAsync=None, **kwargs):
     if kwargs:
         raise TypeError
     return bool(isAsync)
+
+
+
+def _pypy3BlockingHack():
+    """
+    Work around U{this pypy bug
+    <https://bitbucket.org/pypy/pypy/issues/3051/socketfromfd-sets-sockets-to-blocking-on>}
+    by replacing C{socket.fromfd} with a more conservative version.
+    """
+    try:
+        from fcntl import fcntl, F_GETFL, F_SETFL
+    except ImportError:
+        return
+    if not (_PY3 and _PYPY):
+        return
+
+    def fromFDWithoutModifyingFlags(fd, family, type, proto=None):
+        passproto = [proto] * (proto is not None)
+        flags = fcntl(fd, F_GETFL)
+        try:
+            return realFromFD(fd, family, type, *passproto)
+        finally:
+            fcntl(fd, F_SETFL, flags)
+    realFromFD = socket.fromfd
+    if realFromFD.__name__ == fromFDWithoutModifyingFlags.__name__:
+        return
+    socket.fromfd = fromFDWithoutModifyingFlags
+
+
+
+_pypy3BlockingHack()
 
 
 

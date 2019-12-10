@@ -291,6 +291,45 @@ class ServiceTests(TestCase):
         self.assertIsInstance(resource._originalResource, demo.Test)
 
 
+    def test_noTracebacksDeprecation(self):
+        """
+        Passing --notracebacks is deprecated.
+        """
+        options = Options()
+        options.parseOptions(["--notracebacks"])
+        makeService(options)
+
+        warnings = self.flushWarnings([self.test_noTracebacksDeprecation])
+        self.assertEqual(warnings[0]['category'], DeprecationWarning)
+        self.assertEqual(
+            warnings[0]['message'],
+            "--notracebacks was deprecated in Twisted 19.7.0"
+        )
+        self.assertEqual(len(warnings), 1)
+
+
+    def test_displayTracebacks(self):
+        """
+        Passing --display-tracebacks will enable traceback rendering on the
+        generated Site.
+        """
+        options = Options()
+        options.parseOptions(["--display-tracebacks"])
+        service = makeService(options)
+        self.assertTrue(service.services[0].factory.displayTracebacks)
+
+
+    def test_displayTracebacksNotGiven(self):
+        """
+        Not passing --display-tracebacks will leave traceback rendering on the
+        generated Site off.
+        """
+        options = Options()
+        options.parseOptions([])
+        service = makeService(options)
+        self.assertFalse(service.services[0].factory.displayTracebacks)
+
+
 
 class AddHeadersResourceTests(TestCase):
     def test_getChildWithDefault(self):
