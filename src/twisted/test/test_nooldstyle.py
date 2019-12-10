@@ -150,6 +150,8 @@ class NewStyleOnly(object):
             module = namedAny(self.module)
         except ImportError as e:
             raise unittest.SkipTest("Not importable: {}".format(e))
+        except SyntaxError as e:
+            raise unittest.SkipTest("Invalid syntax: {}".format(e))
 
         oldStyleClasses = []
 
@@ -171,6 +173,47 @@ class NewStyleOnly(object):
                 "Old-style classes in {module}: {val}".format(
                     module=self.module,
                     val=", ".join(oldStyleClasses)))
+
+
+
+class NewStyleOnlyTests(unittest.TestCase):
+    """
+    Tests for L{NewStyleOnly}, because test turtles all the way down.
+    """
+
+    def test_importError(self):
+        """
+        L{NewStyleOnly.test_newStyleClassesOnly} raises L{unittest.SkipTest}
+        if in the module is not importable.
+        """
+        self._verifySkipOnImportError(ImportError)
+
+
+    def test_syntaxError(self):
+        """
+        L{NewStyleOnly.test_newStyleClassesOnly} raises L{unittest.SkipTest}
+        if in the module is not parseable.
+        """
+        self._verifySkipOnImportError(SyntaxError)
+
+
+    def _verifySkipOnImportError(self, exceptionType):
+        """
+        L{NewStyleOnly.test_newStyleClassesOnly} raises L{unittest.SkipTest}
+        if in the module is not importable due to the given exception type.
+
+        @param exceptionType: The exception raised by namedAny.
+        @type exceptionType: exception class
+        """
+        def namedAny(*args, **kwargs):
+            raise exceptionType("Oh no")
+
+        import twisted.test.test_nooldstyle as me
+        self.patch(me, "namedAny", namedAny)
+
+        nso = NewStyleOnly()
+        nso.module = "foo"
+        self.assertRaises(unittest.SkipTest, nso.test_newStyleClassesOnly)
 
 
 
