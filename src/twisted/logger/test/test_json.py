@@ -9,7 +9,7 @@ from io import StringIO, BytesIO
 
 from zope.interface.verify import verifyObject, BrokenMethodImplementation
 
-from twisted.python.compat import unicode
+from twisted.python.compat import unicode, _PYPY, _PY3
 
 from twisted.trial.unittest import TestCase
 
@@ -130,6 +130,9 @@ class SaveLoadTests(TestCase):
             eventFromJSON(self.savedEventJSON(inputEvent)),
             {u"hello": asbytes(range(255)).decode("charmap")}
         )
+
+    if _PYPY and _PY3:
+        test_saveBytes.skip = "https://bitbucket.org/pypy/pypy/issues/3052/"
 
 
     def test_saveUnPersistableThenFormat(self):

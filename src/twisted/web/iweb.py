@@ -476,8 +476,9 @@ class IBodyProducer(IPushProducer):
         Start producing to the given
         L{IConsumer<twisted.internet.interfaces.IConsumer>} provider.
 
-        @return: A L{Deferred<twisted.internet.defer.Deferred>} which fires with
-            L{None} when all bytes have been produced or with a
+        @return: A L{Deferred<twisted.internet.defer.Deferred>} which stops
+            production of data when L{Deferred.cancel} is called, and which
+            fires with L{None} when all bytes have been produced or with a
             L{Failure<twisted.python.failure.Failure>} if there is any problem
             before all bytes have been produced.
         """
