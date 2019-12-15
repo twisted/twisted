@@ -2035,16 +2035,19 @@ class ContentDecoderAgent(object):
     An L{Agent} wrapper to handle encoded content.
 
     It takes care of declaring the support for content in the
-    I{Accept-Encoding} header, and automatically decompresses the received data
-    if it's effectively using compression.
+    I{Accept-Encoding} header and automatically decompresses the received data
+    if the I{Content-Encoding} header indicates a supported encoding.
 
-    @param decoders: A list or tuple of (name, decoder) objects. The name
-        declares which decoding the decoder supports, and the decoder must
-        return a response object when called/instantiated. For example,
-        C{(('gzip', GzipDecoder))}. The order determines how the decoders are
-        going to be advertized to the server.
+    @param decoders: A sequence of (name, decoder) objects. The name
+        declares which encoding the decoder supports. The decoder must accept
+        an L{IResponse} and return an L{IResponse} when called.  For example,
+        C{[(b'gzip', GzipDecoder)]}. The order determines how the decoders are
+        advertized to the server.
+    @type decoders: sequence of (L{bytes}, L{callable}) tuples
 
     @since: 11.1
+
+    @see: L{GzipDecoder}
     """
 
     def __init__(self, agent, decoders):
