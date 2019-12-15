@@ -5,20 +5,21 @@
 Tests for large portions of L{twisted.mail}.
 """
 
-import os
-import errno
-import shutil
-import pickle
-import StringIO
 import email.message
 import email.parser
-import tempfile
+import errno
+import os
+import pickle
+import shutil
 import signal
+import StringIO
+import tempfile
 import time
+import types
 from hashlib import md5
 
-from zope.interface.verify import verifyClass
 from zope.interface import Interface, implementer
+from zope.interface.verify import verifyClass
 
 import twisted.cred.checkers
 import twisted.cred.credentials
@@ -29,25 +30,37 @@ import twisted.mail.maildir
 import twisted.mail.protocols
 import twisted.mail.relay
 import twisted.mail.relaymanager
-
+from twisted.python.compat import range
 from twisted import cred, mail
-from twisted.internet import (address, defer, interfaces, protocol,
-                              reactor, task)
+from twisted.internet import (
+    address,
+    defer,
+    interfaces,
+    protocol,
+    reactor,
+    task,
+)
 from twisted.internet.defer import Deferred
-from twisted.internet.error import (DNSLookupError, CannotListenError,
-                                    ProcessDone, ProcessTerminated)
+from twisted.internet.error import (
+    CannotListenError,
+    DNSLookupError,
+    ProcessDone,
+    ProcessTerminated,
+)
 from twisted.mail import pop3, smtp
 from twisted.mail.relaymanager import _AttemptManager
-from twisted.names import dns
-from twisted.names.dns import RRHeader, Record_CNAME, Record_MX
+from twisted.names import client, common, dns, server
+from twisted.names.dns import Record_CNAME, Record_MX, RRHeader
 from twisted.names.error import DNSNameError
 from twisted.python import failure, log
-from twisted.python.compat import range
 from twisted.python.filepath import FilePath
-from twisted.test.proto_helpers import (LineSendingProtocol,
-                                        MemoryReactorClock, StringTransport)
+from twisted.python.runtime import platformType
+from twisted.test.proto_helpers import (
+    LineSendingProtocol,
+    MemoryReactorClock,
+    StringTransport,
+)
 from twisted.trial import unittest
-
 
 
 class DomainWithDefaultsTests(unittest.TestCase):
@@ -1193,9 +1206,6 @@ class DirectoryQueueTests(unittest.TestCase):
                 ['header', i]
             )
 
-from twisted.names import server
-from twisted.names import client
-from twisted.names import common
 
 class TestAuthority(common.ResolverBase):
     def __init__(self):
@@ -2637,8 +2647,6 @@ class _AttemptManagerTests(unittest.TestCase):
 
 
 
-from twisted.python.runtime import platformType
-import types
 if platformType != "posix":
     for o in locals().values():
         if isinstance(o, (types.ClassType, type)) and issubclass(o, unittest.TestCase):

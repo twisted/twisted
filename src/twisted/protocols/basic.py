@@ -9,19 +9,18 @@ Basic protocols, such as line-oriented, netstring, and int prefixed strings.
 
 from __future__ import absolute_import, division
 
+import math
 # System imports
 import re
-from struct import pack, unpack, calcsize
 from io import BytesIO
-import math
+from struct import calcsize, pack, unpack
 
 from zope.interface import implementer
 
 # Twisted imports
 from twisted.python.compat import _PY3
-from twisted.internet import protocol, defer, interfaces
+from twisted.internet import defer, interfaces, protocol
 from twisted.python import log
-
 
 # Unfortunately we cannot use regular string formatting on Python 3; see
 # http://bugs.python.org/issue3982 for details.

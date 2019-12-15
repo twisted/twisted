@@ -5,18 +5,18 @@
 Tests for L{twisted.conch.ssh.forwarding}.
 """
 
-from __future__ import division, absolute_import
+from __future__ import absolute_import, division
 
+from twisted.internet.address import IPv6Address
+from twisted.internet.test.test_endpoints import deterministicResolvingReactor
 from twisted.python.reflect import requireModule
+from twisted.test.proto_helpers import MemoryReactorClock, StringTransport
+from twisted.trial import unittest
 
 cryptography = requireModule("cryptography")
 if cryptography:
     from twisted.conch.ssh import forwarding
 
-from twisted.internet.address import IPv6Address
-from twisted.trial import unittest
-from twisted.internet.test.test_endpoints import deterministicResolvingReactor
-from twisted.test.proto_helpers import MemoryReactorClock, StringTransport
 
 
 class TestSSHConnectForwardingChannel(unittest.TestCase):

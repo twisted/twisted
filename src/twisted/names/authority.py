@@ -11,12 +11,11 @@ from __future__ import absolute_import, division
 import os
 import time
 
-from twisted.names import dns, error, common
+from twisted.python.compat import _PY3, execfile, nativeString
 from twisted.internet import defer
+from twisted.names import common, dns, error
 from twisted.python import failure
-from twisted.python.compat import execfile, nativeString, _PY3
 from twisted.python.filepath import FilePath
-
 
 
 def getSerial(filename='/tmp/twisted-names.serial'):

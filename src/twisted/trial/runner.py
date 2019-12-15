@@ -10,6 +10,30 @@ Maintainer: Jonathan Lange
 
 from __future__ import absolute_import, division
 
+import doctest
+import inspect
+import os
+import sys
+import time
+import types
+import warnings
+
+from zope.interface import implementer
+
+from twisted.python.compat import _PY3, _PY35PLUS
+from twisted.internet import defer
+from twisted.python import failure, filepath, log, modules, reflect
+from twisted.trial import unittest, util
+from twisted.trial._asyncrunner import (
+    _ForceGarbageCollectionDecorator,
+    _iterateTests,
+)
+from twisted.trial._synctest import _logObserver
+from twisted.trial.itrial import ITestCase
+from twisted.trial.reporter import UncleanWarningsReporterWrapper, _ExitWrapper
+# These are imported so that they remain in the public API for t.trial.runner
+from twisted.trial.unittest import TestSuite
+
 __all__ = [
     'TestSuite',
 
@@ -20,28 +44,10 @@ __all__ = [
     'name', 'samefile', 'NOT_IN_TEST',
     ]
 
-import doctest
-import inspect
-import os
-import sys
-import time
-import types
-import warnings
 
-from twisted.python import reflect, log, failure, modules, filepath
-from twisted.python.compat import _PY3, _PY35PLUS
 
-from twisted.internet import defer
-from twisted.trial import util, unittest
-from twisted.trial.itrial import ITestCase
-from twisted.trial.reporter import _ExitWrapper, UncleanWarningsReporterWrapper
-from twisted.trial._asyncrunner import _ForceGarbageCollectionDecorator, _iterateTests
-from twisted.trial._synctest import _logObserver
 
-# These are imported so that they remain in the public API for t.trial.runner
-from twisted.trial.unittest import TestSuite
 
-from zope.interface import implementer
 
 pyunit = __import__('unittest')
 

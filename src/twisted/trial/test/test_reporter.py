@@ -12,21 +12,17 @@ import errno
 import os
 import re
 import sys
-
 from inspect import getmro
-from unittest import expectedFailure
-from unittest import TestCase as StdlibTestCase
+from unittest import TestCase as StdlibTestCase, expectedFailure
 
+from twisted.python.compat import _PY3, NativeStringIO
 from twisted.python import log, reflect
 from twisted.python.failure import Failure
 from twisted.python.reflect import qual
-from twisted.trial import itrial, unittest, runner, reporter, util
-from twisted.trial.reporter import _ExitWrapper, UncleanWarningsReporterWrapper
-from twisted.trial.test import erroneous
-from twisted.trial.unittest import makeTodo, SkipTest, Todo
-from twisted.trial.test import sample
-
-from twisted.python.compat import NativeStringIO, _PY3
+from twisted.trial import itrial, reporter, runner, unittest, util
+from twisted.trial.reporter import UncleanWarningsReporterWrapper, _ExitWrapper
+from twisted.trial.test import erroneous, sample
+from twisted.trial.unittest import SkipTest, Todo, makeTodo
 
 if _PY3:
     from io import BytesIO

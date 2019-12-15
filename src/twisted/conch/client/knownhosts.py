@@ -11,19 +11,19 @@ An implementation of the OpenSSH known_hosts database.
 from __future__ import absolute_import, division
 
 import hmac
-from binascii import Error as DecodeError, b2a_base64, a2b_base64
+import sys
+from binascii import Error as DecodeError, a2b_base64, b2a_base64
 from contextlib import closing
 from hashlib import sha1
-import sys
 
 from zope.interface import implementer
 
+from twisted.python.compat import nativeString, unicode
+from twisted.conch.error import HostKeyChanged, InvalidEntry, UserRejectedKey
 from twisted.conch.interfaces import IKnownHostEntry
-from twisted.conch.error import HostKeyChanged, UserRejectedKey, InvalidEntry
-from twisted.conch.ssh.keys import Key, BadKeyError, FingerprintFormats
+from twisted.conch.ssh.keys import BadKeyError, FingerprintFormats, Key
 from twisted.internet import defer
 from twisted.python import log
-from twisted.python.compat import nativeString, unicode
 from twisted.python.randbytes import secureRandom
 from twisted.python.util import FancyEqMixin
 

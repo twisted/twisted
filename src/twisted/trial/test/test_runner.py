@@ -13,18 +13,17 @@ import sys
 from zope.interface import implementer
 from zope.interface.verify import verifyObject
 
-from twisted.trial.itrial import IReporter, ITestCase
-from twisted.trial import unittest, runner, reporter, util
-from twisted.trial._asyncrunner import _ForceGarbageCollectionDecorator
+from twisted.python.compat import NativeStringIO
+from twisted import plugin
+from twisted.internet import defer
+from twisted.plugins import twisted_trial
 from twisted.python import failure, log, reflect
 from twisted.python.filepath import FilePath
 from twisted.python.reflect import namedAny
-from twisted.python.compat import NativeStringIO
 from twisted.scripts import trial
-from twisted.plugins import twisted_trial
-from twisted import plugin
-from twisted.internet import defer
-
+from twisted.trial import reporter, runner, unittest, util
+from twisted.trial._asyncrunner import _ForceGarbageCollectionDecorator
+from twisted.trial.itrial import IReporter, ITestCase
 
 pyunit = __import__('unittest')
 

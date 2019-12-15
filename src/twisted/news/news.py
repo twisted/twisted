@@ -8,10 +8,11 @@ Maintainer: Jp Calderone
 
 from __future__ import print_function
 
-from twisted.news import nntp
-from twisted.internet import protocol, reactor
-
 import time
+
+from twisted.internet import protocol, reactor
+from twisted.news import nntp
+
 
 class NNTPFactory(protocol.ServerFactory):
     """A factory for NNTP server protocols."""

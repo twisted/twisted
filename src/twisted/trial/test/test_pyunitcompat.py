@@ -1,18 +1,17 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-from __future__ import division, absolute_import
+from __future__ import absolute_import, division
 
 import sys
 import traceback
+import unittest as pyunit
 
 from zope.interface import implementer
 
 from twisted.python.failure import Failure
-from twisted.trial.unittest import SynchronousTestCase, PyUnitResultAdapter
 from twisted.trial.itrial import IReporter, ITestCase
-
-import unittest as pyunit
+from twisted.trial.unittest import PyUnitResultAdapter, SynchronousTestCase
 
 
 class PyUnitTestTests(SynchronousTestCase):

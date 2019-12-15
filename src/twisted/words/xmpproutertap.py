@@ -7,6 +7,7 @@ from twisted.application import strports
 from twisted.python import usage
 from twisted.words.protocols.jabber import component
 
+
 class Options(usage.Options):
     optParameters = [
             ('port', None, 'tcp:5347:interface=127.0.0.1',

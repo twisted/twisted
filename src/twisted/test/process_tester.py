@@ -1,6 +1,7 @@
 """Test program for processes."""
 
-import sys, os
+import os
+import sys
 
 # Twisted is unimportable from this file, so just do the PY3 check manually
 if sys.version_info < (3, 0):

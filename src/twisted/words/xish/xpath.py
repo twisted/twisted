@@ -17,6 +17,7 @@ from io import StringIO
 
 from twisted.python.compat import StringType, unicode
 
+
 class LiteralValue(unicode):
     def value(self, elem):
         return self

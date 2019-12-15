@@ -5,12 +5,21 @@
 Tests for L{twisted.python.sendmsg}.
 """
 
-import sys
 import errno
+import sys
 import warnings
-from os import devnull, pipe, read, close, pathsep
+from os import close, devnull, pathsep, pipe, read
+from socket import AF_INET, AF_INET6, SOL_SOCKET, error, socket
 from struct import pack
-from socket import SOL_SOCKET, AF_INET, AF_INET6, socket, error
+
+from twisted.python.compat import _PY3, bytesEnviron, intToBytes
+from twisted.internet import reactor
+from twisted.internet.defer import Deferred, inlineCallbacks
+from twisted.internet.error import ProcessDone
+from twisted.internet.protocol import ProcessProtocol
+from twisted.python.filepath import FilePath
+from twisted.python.runtime import platform
+from twisted.trial.unittest import TestCase
 
 try:
     from socket import AF_UNIX, socketpair
@@ -19,15 +28,7 @@ except ImportError:
 else:
     nonUNIXSkip = None
 
-from twisted.internet import reactor
-from twisted.internet.defer import Deferred, inlineCallbacks
-from twisted.internet.error import ProcessDone
-from twisted.internet.protocol import ProcessProtocol
-from twisted.python.compat import _PY3, intToBytes, bytesEnviron
-from twisted.python.filepath import FilePath
-from twisted.python.runtime import platform
 
-from twisted.trial.unittest import TestCase
 
 if platform.isLinux():
     from socket import MSG_DONTWAIT

@@ -12,20 +12,20 @@ U{http://twistedmatrix.com/projects/core/documentation/howto/options.html},
 or doc/core/howto/options.xhtml in your Twisted directory.
 """
 
-from __future__ import print_function
-from __future__ import division, absolute_import
+from __future__ import absolute_import, division, print_function
 
+import getopt
 # System Imports
 import inspect
 import os
 import sys
-import getopt
-from os import path
 import textwrap
+from os import path
 
+from twisted.python.compat import _PY3
 # Sibling Imports
 from twisted.python import reflect, util
-from twisted.python.compat import _PY3
+
 
 class UsageError(Exception):
     pass

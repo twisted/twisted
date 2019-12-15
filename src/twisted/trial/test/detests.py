@@ -5,12 +5,12 @@
 Tests for Deferred handling by L{twisted.trial.unittest.TestCase}.
 """
 
-from __future__ import division, absolute_import
+from __future__ import absolute_import, division
 
-from twisted.trial import unittest
-from twisted.internet import defer, threads, reactor
-from twisted.trial.util import suppress as SUPPRESS
+from twisted.internet import defer, reactor, threads
 from twisted.python.util import runWithWarningsSuppressed
+from twisted.trial import unittest
+from twisted.trial.util import suppress as SUPPRESS
 
 
 class DeferredSetUpOK(unittest.TestCase):

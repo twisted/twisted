@@ -11,6 +11,9 @@ from __future__ import absolute_import, division, print_function
 import os
 import sys
 
+from zope.interface import implementer
+
+import pywintypes
 # Win32 imports
 import win32api
 import win32con
@@ -20,23 +23,20 @@ import win32pipe
 import win32process
 import win32security
 
-import pywintypes
+from twisted.python.compat import _PY3, items
+from twisted.internet import _pollingfile, error
+from twisted.internet._baseprocess import BaseProcess
+from twisted.internet.interfaces import IConsumer, IProcessTransport, IProducer
+from twisted.python.util import _replaceIf
+from twisted.python.win32 import quoteArguments
 
 # Security attributes for pipes
 PIPE_ATTRS_INHERITABLE = win32security.SECURITY_ATTRIBUTES()
 PIPE_ATTRS_INHERITABLE.bInheritHandle = 1
 
-from zope.interface import implementer
-from twisted.internet.interfaces import IProcessTransport, IConsumer, IProducer
 
-from twisted.python.compat import items, _PY3
-from twisted.python.win32 import quoteArguments
-from twisted.python.util import _replaceIf
 
-from twisted.internet import error
 
-from twisted.internet import _pollingfile
-from twisted.internet._baseprocess import BaseProcess
 
 
 @_replaceIf(_PY3, getattr(os, 'fsdecode', None))

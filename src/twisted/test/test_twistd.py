@@ -9,9 +9,38 @@ from __future__ import absolute_import, division
 
 import errno
 import inspect
-import signal
 import os
+import signal
 import sys
+
+from zope.interface import implementer
+from zope.interface.verify import verifyObject
+
+from twisted.python.compat import _PY3, NativeStringIO
+from twisted import internet, logger, plugin
+from twisted.application import app, reactors, service
+from twisted.application.service import IServiceMaker
+from twisted.internet.base import ReactorBase
+from twisted.internet.defer import Deferred
+from twisted.internet.interfaces import (
+    IReactorDaemonize,
+    _ISupportsExitSignalCapturing,
+)
+from twisted.internet.test.modulehelpers import AlternateReactor
+from twisted.logger import ILogObserver, globalLogBeginner, globalLogPublisher
+from twisted.python import util
+from twisted.python.components import Componentized
+from twisted.python.fakepwd import UserDatabase
+from twisted.python.log import (
+    ILogObserver as LegacyILogObserver,
+    textFromEventDict,
+)
+from twisted.python.runtime import platformType
+from twisted.python.usage import UsageError
+from twisted.scripts import twistd
+from twisted.test.proto_helpers import MemoryReactor
+from twisted.test.test_process import MockOS
+from twisted.trial import unittest
 
 try:
     import pwd
@@ -24,31 +53,8 @@ try:
 except ImportError:
     import pickle
 
-from zope.interface import implementer
-from zope.interface.verify import verifyObject
 
-from twisted.trial import unittest
-from twisted.test.test_process import MockOS
 
-from twisted import plugin, logger, internet
-from twisted.application import service, app, reactors
-from twisted.application.service import IServiceMaker
-from twisted.internet.defer import Deferred
-from twisted.internet.interfaces import (IReactorDaemonize,
-                                         _ISupportsExitSignalCapturing)
-from twisted.internet.test.modulehelpers import AlternateReactor
-from twisted.logger import globalLogBeginner, globalLogPublisher, ILogObserver
-from twisted.internet.base import ReactorBase
-from twisted.test.proto_helpers import MemoryReactor
-from twisted.python.compat import NativeStringIO, _PY3
-from twisted.python.components import Componentized
-from twisted.python import util
-from twisted.python.log import (ILogObserver as LegacyILogObserver,
-                                textFromEventDict)
-from twisted.python.runtime import platformType
-from twisted.python.usage import UsageError
-from twisted.python.fakepwd import UserDatabase
-from twisted.scripts import twistd
 
 try:
     from twisted.scripts import _twistd_unix

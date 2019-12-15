@@ -7,10 +7,10 @@ Classes and functions used by L{twisted.trial.test.test_util}
 and L{twisted.trial.test.test_loader}.
 """
 
-from __future__ import division, absolute_import
+from __future__ import absolute_import, division
 
-import sys
 import os
+import sys
 
 from twisted.python.compat import _PY3
 from twisted.trial import unittest

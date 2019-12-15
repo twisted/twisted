@@ -8,9 +8,9 @@
 Support for bounce message generation.
 """
 import email.utils
-import time
 import os
-from io import StringIO, SEEK_SET, SEEK_END
+import time
+from io import SEEK_END, SEEK_SET, StringIO
 
 from twisted.mail import smtp
 

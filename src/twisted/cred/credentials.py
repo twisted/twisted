@@ -8,25 +8,27 @@ authentication credentials to provide, and also includes a number of useful
 implementations of that interface.
 """
 
-from __future__ import division, absolute_import
-
-from zope.interface import implementer, Interface
+from __future__ import absolute_import, division
 
 import base64
 import hmac
 import random
 import re
 import time
-
 from binascii import hexlify
 from hashlib import md5
 
-from twisted.python.randbytes import secureRandom
-from twisted.python.compat import networkString, nativeString
-from twisted.python.compat import intToBytes, unicode
-from twisted.cred._digest import calcResponse, calcHA1, calcHA2
-from twisted.cred import error
+from zope.interface import Interface, implementer
 
+from twisted.python.compat import (
+    intToBytes,
+    nativeString,
+    networkString,
+    unicode,
+)
+from twisted.cred import error
+from twisted.cred._digest import calcHA1, calcHA2, calcResponse
+from twisted.python.randbytes import secureRandom
 
 
 class ICredentials(Interface):

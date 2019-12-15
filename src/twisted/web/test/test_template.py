@@ -5,31 +5,36 @@
 Tests for L{twisted.web.template}
 """
 
-from __future__ import division, absolute_import
+from __future__ import absolute_import, division
 
 from zope.interface.verify import verifyObject
 
-from twisted.internet.defer import succeed, gatherResults
+from twisted.python.compat import NativeStringIO as StringIO
+from twisted.internet.defer import gatherResults, succeed
+from twisted.logger import globalLogPublisher
 from twisted.python.filepath import FilePath
+from twisted.test.proto_helpers import EventLoggingObserver
 from twisted.trial.unittest import TestCase
 from twisted.trial.util import suppress as SUPPRESS
-from twisted.web.template import (
-    Element, TagLoader, renderer, tags, XMLFile, XMLString)
-from twisted.web.iweb import ITemplateLoader
-
-from twisted.web.error import (FlattenerError, MissingTemplateLoader,
-    MissingRenderMethod)
-
-from twisted.web.template import renderElement
 from twisted.web._element import UnexposedMethodError
+from twisted.web.error import (
+    FlattenerError,
+    MissingRenderMethod,
+    MissingTemplateLoader,
+)
+from twisted.web.iweb import ITemplateLoader
+from twisted.web.server import NOT_DONE_YET
+from twisted.web.template import (
+    Element,
+    TagLoader,
+    XMLFile,
+    XMLString,
+    renderElement,
+    renderer,
+    tags,
+)
 from twisted.web.test._util import FlattenTestCase
 from twisted.web.test.test_web import DummyRequest
-from twisted.web.server import NOT_DONE_YET
-
-from twisted.python.compat import NativeStringIO as StringIO
-from twisted.logger import globalLogPublisher
-from twisted.test.proto_helpers import EventLoggingObserver
-
 
 _xmlFileSuppress = SUPPRESS(category=DeprecationWarning,
         message="Passing filenames or file objects to XMLFile is "

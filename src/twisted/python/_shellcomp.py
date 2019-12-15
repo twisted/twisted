@@ -25,11 +25,12 @@ The main public documentation exists in the L{twisted.python.usage.Options}
 docstring, the L{twisted.python.usage.Completions} docstring, and the
 Options howto.
 """
-import itertools, getopt, inspect
+import getopt
+import inspect
+import itertools
 
-from twisted.python import reflect, util, usage
 from twisted.python.compat import ioType, unicode
-
+from twisted.python import reflect, usage, util
 
 
 def shellComplete(config, cmdName, words, shellCompFile):
@@ -674,4 +675,3 @@ def escape(x):
         s = s + c
     s = s + '"'
     return s
-

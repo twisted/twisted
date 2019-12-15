@@ -10,25 +10,34 @@ End users shouldn't use this module directly - use the reactor APIs instead.
 Maintainer: Itamar Shtull-Trauring
 """
 
-from __future__ import division, absolute_import
+from __future__ import absolute_import, division
 
 import os
-import stat
 import socket
+import stat
 import struct
-from errno import EINTR, EMSGSIZE, EAGAIN, EWOULDBLOCK, ECONNREFUSED, ENOBUFS
+from errno import EAGAIN, ECONNREFUSED, EINTR, EMSGSIZE, ENOBUFS, EWOULDBLOCK
 
-from zope.interface import implementer, implementer_only, implementedBy
+from zope.interface import implementedBy, implementer, implementer_only
+
+from twisted.python.compat import lazyByteSlice
+from twisted.internet import (
+    address,
+    base,
+    error,
+    interfaces,
+    main,
+    protocol,
+    tcp,
+    udp,
+)
+from twisted.python import failure, lockfile, log, reflect
+from twisted.python.filepath import _coerceToFilesystemEncoding
+from twisted.python.util import untilConcludes
 
 if not hasattr(socket, 'AF_UNIX'):
     raise ImportError("UNIX sockets not supported on this platform")
 
-from twisted.internet import main, base, tcp, udp, error, interfaces
-from twisted.internet import protocol, address
-from twisted.python import lockfile, log, reflect, failure
-from twisted.python.filepath import _coerceToFilesystemEncoding
-from twisted.python.util import untilConcludes
-from twisted.python.compat import lazyByteSlice
 
 
 try:

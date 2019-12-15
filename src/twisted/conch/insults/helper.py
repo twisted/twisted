@@ -10,17 +10,18 @@ Partial in-memory terminal emulator
 
 from __future__ import print_function
 
-import re, string
+import re
+import string
 
 from zope.interface import implementer
 
 from incremental import Version
 
-from twisted.internet import defer, protocol, reactor
-from twisted.python import log, _textattributes
 from twisted.python.compat import iterbytes
-from twisted.python.deprecate import deprecated, deprecatedModuleAttribute
 from twisted.conch.insults import insults
+from twisted.internet import defer, protocol, reactor
+from twisted.python import _textattributes, log
+from twisted.python.deprecate import deprecated, deprecatedModuleAttribute
 
 FOREGROUND = 30
 BACKGROUND = 40

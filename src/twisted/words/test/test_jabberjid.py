@@ -7,8 +7,8 @@ Tests for L{twisted.words.protocols.jabber.jid}.
 
 from twisted.python.compat import unicode
 from twisted.trial import unittest
-
 from twisted.words.protocols.jabber import jid
+
 
 class JIDParsingTests(unittest.TestCase):
     def test_parse(self):

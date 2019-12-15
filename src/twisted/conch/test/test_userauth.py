@@ -11,17 +11,20 @@ from __future__ import absolute_import, division
 
 from zope.interface import implementer
 
+from twisted.python.compat import _bytesChr as chr
+from twisted.conch.error import ConchError, ValidPublicKey
 from twisted.cred.checkers import ICredentialsChecker
-from twisted.cred.credentials import IUsernamePassword, ISSHPrivateKey
-from twisted.cred.credentials import IAnonymous
+from twisted.cred.credentials import (
+    IAnonymous,
+    ISSHPrivateKey,
+    IUsernamePassword,
+)
 from twisted.cred.error import UnauthorizedLogin
 from twisted.cred.portal import IRealm, Portal
-from twisted.conch.error import ConchError, ValidPublicKey
 from twisted.internet import defer, task
 from twisted.protocols import loopback
 from twisted.python.reflect import requireModule
 from twisted.trial import unittest
-from twisted.python.compat import _bytesChr as chr
 
 if requireModule('cryptography') and requireModule('pyasn1'):
     from twisted.conch.ssh.common import NS

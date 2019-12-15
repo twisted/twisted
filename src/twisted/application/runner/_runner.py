@@ -6,21 +6,22 @@
 Twisted application runner.
 """
 
-from sys import stderr
-from signal import SIGTERM
 from os import kill
+from signal import SIGTERM
+from sys import stderr
 
-from attr import attrib, attrs, Factory
+from attr import Factory, attrib, attrs
 
 from twisted.logger import (
-    globalLogBeginner, textFileLogObserver,
-    FilteringLogObserver, LogLevelFilterPredicate,
-    LogLevel, Logger,
+    FilteringLogObserver,
+    Logger,
+    LogLevel,
+    LogLevelFilterPredicate,
+    globalLogBeginner,
+    textFileLogObserver,
 )
-
-from ._exit import exit, ExitStatus
-from ._pidfile import nonePIDFile, AlreadyRunningError, InvalidPIDFileError
-
+from ._exit import ExitStatus, exit
+from ._pidfile import AlreadyRunningError, InvalidPIDFileError, nonePIDFile
 
 
 @attrs(frozen=True)

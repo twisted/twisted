@@ -5,16 +5,19 @@
 Test cases for twisted.python._shellcomp
 """
 
-from __future__ import division, absolute_import
+from __future__ import absolute_import, division
 
 import sys
 from io import BytesIO
 
+from twisted.python import _shellcomp, reflect, usage
+from twisted.python.usage import (
+    CompleteFiles,
+    CompleteList,
+    Completer,
+    Completions,
+)
 from twisted.trial import unittest
-from twisted.python import _shellcomp, usage, reflect
-from twisted.python.usage import Completions, Completer, CompleteFiles
-from twisted.python.usage import CompleteList
-
 
 
 class ZshScriptTestMeta(type):

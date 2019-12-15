@@ -2,9 +2,9 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-import sys
 import os
 import socket
+import sys
 from struct import unpack
 
 from twisted.python.sendmsg import recvmsg

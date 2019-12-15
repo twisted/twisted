@@ -5,28 +5,28 @@
 Tests for L{twisted.python.log}.
 """
 
-from __future__ import division, absolute_import, print_function
+from __future__ import absolute_import, division, print_function
 
-from twisted.python.compat import _PY3, NativeStringIO as StringIO
-
+import calendar
+import logging
 import os
 import sys
 import time
-import logging
 import warnings
-import calendar
-from io import IOBase
 from imp import reload
+from io import IOBase
 
-from twisted.trial import unittest
-
-from twisted.python import log, failure
-from twisted.logger.test.test_stdlib import handlerAndBytesIO
-from twisted.python.log import LogPublisher
+from twisted.python.compat import _PY3, NativeStringIO as StringIO
 from twisted.logger import (
-    LoggingFile, LogLevel as NewLogLevel, LogBeginner,
-    LogPublisher as NewLogPublisher
+    LogBeginner,
+    LoggingFile,
+    LogLevel as NewLogLevel,
+    LogPublisher as NewLogPublisher,
 )
+from twisted.logger.test.test_stdlib import handlerAndBytesIO
+from twisted.python import failure, log
+from twisted.python.log import LogPublisher
+from twisted.trial import unittest
 
 
 class FakeWarning(Warning):

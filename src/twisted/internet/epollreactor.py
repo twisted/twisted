@@ -11,17 +11,16 @@ listeners or connectors are added)::
     epollreactor.install()
 """
 
-from __future__ import division, absolute_import
+from __future__ import absolute_import, division
 
-from select import epoll, EPOLLHUP, EPOLLERR, EPOLLIN, EPOLLOUT
 import errno
+from select import EPOLLERR, EPOLLHUP, EPOLLIN, EPOLLOUT, epoll
 
 from zope.interface import implementer
 
-from twisted.internet.interfaces import IReactorFDSet
-
-from twisted.python import log
 from twisted.internet import posixbase
+from twisted.internet.interfaces import IReactorFDSet
+from twisted.python import log
 
 
 @implementer(IReactorFDSet)

@@ -6,23 +6,26 @@
 Implementation of the lowest-level Resource class.
 """
 
-from __future__ import division, absolute_import
-
-__all__ = [
-    'IResource', 'getChildForRequest',
-    'Resource', 'ErrorPage', 'NoResource', 'ForbiddenResource',
-    'EncodingResourceWrapper']
+from __future__ import absolute_import, division
 
 import warnings
 
 from zope.interface import Attribute, Interface, implementer
 
 from twisted.python.compat import nativeString, unicode
-from twisted.python.reflect import prefixedMethodNames
 from twisted.python.components import proxyForInterface
-
+from twisted.python.reflect import prefixedMethodNames
 from twisted.web._responses import FORBIDDEN, NOT_FOUND
 from twisted.web.error import UnsupportedMethod
+
+__all__ = [
+    'IResource', 'getChildForRequest',
+    'Resource', 'ErrorPage', 'NoResource', 'ForbiddenResource',
+    'EncodingResourceWrapper']
+
+
+
+
 
 
 

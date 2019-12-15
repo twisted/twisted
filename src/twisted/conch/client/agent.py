@@ -15,7 +15,6 @@ from twisted.internet import protocol, reactor
 from twisted.python import log
 
 
-
 class SSHAgentClient(agent.SSHAgentClient):
 
     def __init__(self):

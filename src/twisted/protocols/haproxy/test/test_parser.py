@@ -5,16 +5,18 @@
 Tests for L{twisted.protocols.haproxy._parser}.
 """
 
-from twisted.trial.unittest import SynchronousTestCase as TestCase
-from twisted.test.proto_helpers import MemoryReactor
 from twisted.internet.endpoints import (
-    _WrapperServerEndpoint, TCP4ServerEndpoint, TCP6ServerEndpoint,
-    UNIXServerEndpoint, serverFromString, _parse as parseEndpoint
+    TCP4ServerEndpoint,
+    TCP6ServerEndpoint,
+    UNIXServerEndpoint,
+    _parse as parseEndpoint,
+    _WrapperServerEndpoint,
+    serverFromString,
 )
-
-from .._wrapper import HAProxyWrappingFactory
+from twisted.test.proto_helpers import MemoryReactor
+from twisted.trial.unittest import SynchronousTestCase as TestCase
 from .._parser import unparseEndpoint
-
+from .._wrapper import HAProxyWrappingFactory
 
 
 class UnparseEndpointTests(TestCase):
@@ -129,4 +131,3 @@ class HAProxyServerParserTests(TestCase):
         Test if the parser generates a wrapped UNIX endpoint.
         """
         self.onePrefix('haproxy:unix:address=/tmp/socket', UNIXServerEndpoint)
-

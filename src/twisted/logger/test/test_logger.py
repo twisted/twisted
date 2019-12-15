@@ -6,13 +6,10 @@ Test cases for L{twisted.logger._logger}.
 """
 
 from twisted.trial import unittest
-
-from .._levels import InvalidLogLevelError
-from .._levels import LogLevel
 from .._format import formatEvent
-from .._logger import Logger
 from .._global import globalLogPublisher
-
+from .._levels import InvalidLogLevelError, LogLevel
+from .._logger import Logger
 
 
 class TestLogger(Logger):

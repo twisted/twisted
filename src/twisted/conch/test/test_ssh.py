@@ -5,11 +5,24 @@
 Tests for L{twisted.conch.ssh}.
 """
 
-from __future__ import division, absolute_import
+from __future__ import absolute_import, division
 
 import struct
 
+from twisted.conch.test.keydata import (
+    privateDSA_openssh,
+    privateRSA_openssh,
+    publicDSA_openssh,
+    publicRSA_openssh,
+)
+from twisted.conch.test.loopback import LoopbackRelay
+from twisted.cred import portal
+from twisted.cred.error import UnauthorizedLogin
+from twisted.internet import defer, protocol, reactor
+from twisted.internet.error import ProcessTerminated
+from twisted.python import components, failure, log
 from twisted.python.reflect import requireModule
+from twisted.trial import unittest
 
 cryptography = requireModule("cryptography")
 pyasn1 = requireModule("pyasn1")
@@ -21,16 +34,7 @@ else:
     class avatar:
         class  ConchUser: pass
 
-from twisted.conch.test.keydata import publicRSA_openssh, privateRSA_openssh
-from twisted.conch.test.keydata import publicDSA_openssh, privateDSA_openssh
-from twisted.cred import portal
-from twisted.cred.error import UnauthorizedLogin
-from twisted.internet import defer, protocol, reactor
-from twisted.internet.error import ProcessTerminated
-from twisted.python import failure, log
-from twisted.trial import unittest
 
-from twisted.conch.test.loopback import LoopbackRelay
 
 
 
@@ -198,7 +202,6 @@ class ConchSessionForTestAvatar(object):
         self.remoteWindowLeftAtClose = self.proto.session.remoteWindowLeft
         self.onClose.callback(None)
 
-from twisted.python import components
 
 if cryptography:
     components.registerAdapter(ConchSessionForTestAvatar, ConchTestAvatar,

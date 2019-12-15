@@ -12,12 +12,11 @@ retrieve 'value'.
 This is thread-safe.
 """
 
-from __future__ import division, absolute_import
+from __future__ import absolute_import, division
 
 from threading import local
 
 from twisted.python._oldstyle import _oldStyle
-
 
 defaultContextDict = {}
 

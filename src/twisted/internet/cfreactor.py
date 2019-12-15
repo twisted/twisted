@@ -19,25 +19,36 @@ import sys
 
 from zope.interface import implementer
 
-from twisted.internet.interfaces import IReactorFDSet
-from twisted.internet.posixbase import PosixReactorBase, _Waker
-from twisted.internet.posixbase import _NO_FILEDESC
-
-from twisted.python import log
-
-from CoreFoundation import (
-    CFRunLoopAddSource, CFRunLoopRemoveSource, CFRunLoopGetMain, CFRunLoopRun,
-    CFRunLoopStop, CFRunLoopTimerCreate, CFRunLoopAddTimer,
-    CFRunLoopTimerInvalidate, kCFAllocatorDefault, kCFRunLoopCommonModes,
-    CFAbsoluteTimeGetCurrent)
-
 from CFNetwork import (
-    CFSocketCreateWithNative, CFSocketSetSocketFlags, CFSocketEnableCallBacks,
-    CFSocketCreateRunLoopSource, CFSocketDisableCallBacks, CFSocketInvalidate,
-    kCFSocketWriteCallBack, kCFSocketReadCallBack, kCFSocketConnectCallBack,
+    CFSocketCreateRunLoopSource,
+    CFSocketCreateWithNative,
+    CFSocketDisableCallBacks,
+    CFSocketEnableCallBacks,
+    CFSocketInvalidate,
+    CFSocketSetSocketFlags,
     kCFSocketAutomaticallyReenableReadCallBack,
-    kCFSocketAutomaticallyReenableWriteCallBack)
+    kCFSocketAutomaticallyReenableWriteCallBack,
+    kCFSocketConnectCallBack,
+    kCFSocketReadCallBack,
+    kCFSocketWriteCallBack,
+)
+from CoreFoundation import (
+    CFAbsoluteTimeGetCurrent,
+    CFRunLoopAddSource,
+    CFRunLoopAddTimer,
+    CFRunLoopGetMain,
+    CFRunLoopRemoveSource,
+    CFRunLoopRun,
+    CFRunLoopStop,
+    CFRunLoopTimerCreate,
+    CFRunLoopTimerInvalidate,
+    kCFAllocatorDefault,
+    kCFRunLoopCommonModes,
+)
 
+from twisted.internet.interfaces import IReactorFDSet
+from twisted.internet.posixbase import _NO_FILEDESC, PosixReactorBase, _Waker
+from twisted.python import log
 
 _READ = 0
 _WRITE = 1

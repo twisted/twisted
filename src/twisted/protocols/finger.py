@@ -6,6 +6,7 @@
 
 from twisted.protocols import basic
 
+
 class Finger(basic.LineReceiver):
 
     def lineReceived(self, line):

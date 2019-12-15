@@ -6,15 +6,13 @@
 Domain Name Server
 """
 
-import os, traceback
+import os
+import traceback
 
-from twisted.python import usage
-from twisted.names import dns
 from twisted.application import internet, service
+from twisted.names import authority, dns, secondary, server
+from twisted.python import usage
 
-from twisted.names import server
-from twisted.names import authority
-from twisted.names import secondary
 
 class Options(usage.Options):
     optParameters = [

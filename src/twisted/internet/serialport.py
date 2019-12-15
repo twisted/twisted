@@ -6,7 +6,24 @@
 Serial Port Protocol
 """
 
-from __future__ import division, absolute_import
+from __future__ import absolute_import, division
+
+# all of them require pyserial at the moment, so check that first
+import serial
+from serial import (
+    EIGHTBITS,
+    FIVEBITS,
+    PARITY_EVEN,
+    PARITY_NONE,
+    PARITY_ODD,
+    SEVENBITS,
+    SIXBITS,
+    STOPBITS_ONE,
+    STOPBITS_TWO,
+)
+
+from twisted.python._oldstyle import _oldStyle
+from twisted.python.runtime import platform
 
 # http://twistedmatrix.com/trac/ticket/3725#comment:24
 # Apparently applications use these names even though they should
@@ -17,14 +34,7 @@ __all__ = ["serial", "PARITY_ODD", "PARITY_EVEN", "PARITY_NONE",
 # Name this module is actually trying to export
            "SerialPort"]
 
-# all of them require pyserial at the moment, so check that first
-import serial
-from serial import PARITY_NONE, PARITY_EVEN, PARITY_ODD
-from serial import STOPBITS_ONE, STOPBITS_TWO
-from serial import FIVEBITS, SIXBITS, SEVENBITS, EIGHTBITS
 
-from twisted.python._oldstyle import _oldStyle
-from twisted.python.runtime import platform
 
 
 

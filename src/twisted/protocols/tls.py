@@ -36,10 +36,36 @@ implement onion routing.  It can also be used to run TLS over unusual
 transports, such as UNIX sockets and stdio.
 """
 
-from __future__ import division, absolute_import
+from __future__ import absolute_import, division
 
-from OpenSSL.SSL import Error, ZeroReturnError, WantReadError
-from OpenSSL.SSL import TLSv1_METHOD, Context, Connection
+from zope.interface import directlyProvides, implementer, providedBy
+
+from OpenSSL.SSL import (
+    Connection,
+    Context,
+    Error,
+    TLSv1_METHOD,
+    WantReadError,
+    ZeroReturnError,
+)
+
+from twisted.python.compat import unicode
+from twisted.internet._producer_helpers import _PullToPush
+from twisted.internet._sslverify import _setAcceptableProtocols
+from twisted.internet.interfaces import (
+    IHandshakeListener,
+    ILoggingContext,
+    INegotiated,
+    IOpenSSLClientConnectionCreator,
+    IOpenSSLServerConnectionCreator,
+    IProtocolNegotiationFactory,
+    IPushProducer,
+    ISystemHandle,
+)
+from twisted.internet.main import CONNECTION_LOST
+from twisted.internet.protocol import Protocol
+from twisted.protocols.policies import ProtocolWrapper, WrappingFactory
+from twisted.python.failure import Failure
 
 try:
     Connection(Context(TLSv1_METHOD), None)
@@ -48,20 +74,7 @@ except TypeError as e:
         raise
     raise ImportError("twisted.protocols.tls requires pyOpenSSL 0.10 or newer.")
 
-from zope.interface import implementer, providedBy, directlyProvides
 
-from twisted.python.compat import unicode
-from twisted.python.failure import Failure
-from twisted.internet.interfaces import (
-    ISystemHandle, INegotiated, IPushProducer, ILoggingContext,
-    IOpenSSLServerConnectionCreator, IOpenSSLClientConnectionCreator,
-    IProtocolNegotiationFactory, IHandshakeListener
-)
-from twisted.internet.main import CONNECTION_LOST
-from twisted.internet._producer_helpers import _PullToPush
-from twisted.internet.protocol import Protocol
-from twisted.internet._sslverify import _setAcceptableProtocols
-from twisted.protocols.policies import ProtocolWrapper, WrappingFactory
 
 
 @implementer(IPushProducer)

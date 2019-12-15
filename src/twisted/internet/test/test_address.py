@@ -1,16 +1,20 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-from __future__ import division, absolute_import
+from __future__ import absolute_import, division
 
 import os
 import socket
 
-from twisted.trial import unittest
-from twisted.internet.address import IPv4Address, UNIXAddress, IPv6Address
-from twisted.internet.address import HostnameAddress
 from twisted.python.compat import nativeString
+from twisted.internet.address import (
+    HostnameAddress,
+    IPv4Address,
+    IPv6Address,
+    UNIXAddress,
+)
 from twisted.python.runtime import platform
+from twisted.trial import unittest
 
 if not platform._supportsSymlinks():
     symlinkSkip = "Platform does not support symlinks"

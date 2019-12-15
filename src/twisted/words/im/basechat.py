@@ -6,7 +6,7 @@
 Base classes for Instance Messenger clients.
 """
 
-from twisted.words.im.locals import OFFLINE, ONLINE, AWAY
+from twisted.words.im.locals import AWAY, OFFLINE, ONLINE
 
 
 class ContactsList:

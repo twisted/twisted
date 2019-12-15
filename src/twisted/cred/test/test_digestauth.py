@@ -6,20 +6,26 @@ Tests for L{twisted.cred._digest} and the associated bits in
 L{twisted.cred.credentials}.
 """
 
-from __future__ import division, absolute_import
+from __future__ import absolute_import, division
 
 import base64
-
 from binascii import hexlify
 from hashlib import md5, sha1
 
 from zope.interface.verify import verifyObject
-from twisted.trial.unittest import TestCase
-from twisted.internet.address import IPv4Address
-from twisted.cred.error import LoginFailed
-from twisted.cred.credentials import calcHA1, calcHA2, IUsernameDigestHash
-from twisted.cred.credentials import calcResponse, DigestCredentialFactory
+
 from twisted.python.compat import networkString
+from twisted.cred.credentials import (
+    DigestCredentialFactory,
+    IUsernameDigestHash,
+    calcHA1,
+    calcHA2,
+    calcResponse,
+)
+from twisted.cred.error import LoginFailed
+from twisted.internet.address import IPv4Address
+from twisted.trial.unittest import TestCase
+
 
 def b64encode(s):
     return base64.b64encode(s).strip()

@@ -10,6 +10,7 @@ CreateProcess(...) will spawn a process, and always return a PID of 42.
 """
 
 import win32process
+
 GetExitCodeProcess = win32process.GetExitCodeProcess
 STARTUPINFO = win32process.STARTUPINFO
 

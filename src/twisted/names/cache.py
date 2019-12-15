@@ -6,12 +6,11 @@
 An in-memory caching resolver.
 """
 
-from __future__ import division, absolute_import
+from __future__ import absolute_import, division
 
-from twisted.names import dns, common
-from twisted.python import failure, log
 from twisted.internet import defer
-
+from twisted.names import common, dns
+from twisted.python import failure, log
 
 
 class CacheResolver(common.ResolverBase):

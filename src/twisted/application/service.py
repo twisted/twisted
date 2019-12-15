@@ -16,14 +16,14 @@ Maintainer: Moshe Zadka
 
 from __future__ import absolute_import, division
 
-from zope.interface import implementer, Interface, Attribute
+from zope.interface import Attribute, Interface, implementer
 
+from twisted.internet import defer
 from twisted.persisted import sob
-from twisted.python.reflect import namedAny
+from twisted.plugin import IPlugin
 from twisted.python import components
 from twisted.python._oldstyle import _oldStyle
-from twisted.internet import defer
-from twisted.plugin import IPlugin
+from twisted.python.reflect import namedAny
 
 
 class IServiceMaker(Interface):

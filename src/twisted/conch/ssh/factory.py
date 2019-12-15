@@ -9,15 +9,14 @@ See also L{twisted.conch.openssh_compat.factory} for OpenSSH compatibility.
 Maintainer: Paul Swartz
 """
 
-from __future__ import division, absolute_import
-
-from twisted.internet import protocol
-from twisted.python import log
-
-from twisted.conch import error
-from twisted.conch.ssh import (_kex, transport, userauth, connection)
+from __future__ import absolute_import, division
 
 import random
+
+from twisted.conch import error
+from twisted.conch.ssh import _kex, connection, transport, userauth
+from twisted.internet import protocol
+from twisted.python import log
 
 
 class SSHFactory(protocol.Factory):

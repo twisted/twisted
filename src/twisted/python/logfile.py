@@ -7,15 +7,17 @@
 A rotating, browsable log file.
 """
 
-from __future__ import division, absolute_import
+from __future__ import absolute_import, division
 
+import glob
 # System Imports
-import os, glob, time, stat
+import os
+import stat
+import time
 
+from twisted.python.compat import unicode
 from twisted.python import threadable
 from twisted.python._oldstyle import _oldStyle
-from twisted.python.compat import unicode
-
 
 
 @_oldStyle

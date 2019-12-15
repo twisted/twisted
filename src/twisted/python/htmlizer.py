@@ -6,11 +6,12 @@
 HTML rendering of Python source.
 """
 
-from twisted.python.compat import _tokenize, escape
+import keyword
+import tokenize
 
-import tokenize, keyword
-from . import reflect
+from twisted.python.compat import _tokenize, escape
 from twisted.python._oldstyle import _oldStyle
+from . import reflect
 
 
 @_oldStyle

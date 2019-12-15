@@ -13,20 +13,24 @@ interact with a known_hosts database, use L{twisted.conch.client.knownhosts}.
 
 from __future__ import print_function
 
-from twisted.python import log
-from twisted.python.compat import (
-    nativeString, raw_input, _PY3, _b64decodebytes as decodebytes)
-from twisted.python.filepath import FilePath
+import contextlib
+import getpass
+import os
+import sys
 
+from twisted.python.compat import (
+    _PY3,
+    _b64decodebytes as decodebytes,
+    nativeString,
+    raw_input,
+)
+from twisted.conch.client import agent
+from twisted.conch.client.knownhosts import ConsoleUI, KnownHostsFile
 from twisted.conch.error import ConchError
 from twisted.conch.ssh import common, keys, userauth
 from twisted.internet import defer, protocol, reactor
-
-from twisted.conch.client.knownhosts import KnownHostsFile, ConsoleUI
-
-from twisted.conch.client import agent
-
-import os, sys, getpass, contextlib
+from twisted.python import log
+from twisted.python.filepath import FilePath
 
 if _PY3:
     import io

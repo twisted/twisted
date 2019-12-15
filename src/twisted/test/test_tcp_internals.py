@@ -5,26 +5,38 @@
 Whitebox tests for TCP APIs.
 """
 
-from __future__ import division, absolute_import
+from __future__ import absolute_import, division
 
-import errno, socket, os
+import errno
+import os
+import socket
+
+from twisted.internet import interfaces, reactor
+from twisted.internet.defer import gatherResults, maybeDeferred
+from twisted.internet.protocol import Protocol, ServerFactory
+from twisted.internet.tcp import (
+    _ACCEPT_ERRORS,
+    EAGAIN,
+    ECONNABORTED,
+    EINPROGRESS,
+    EMFILE,
+    ENFILE,
+    ENOBUFS,
+    ENOMEM,
+    EPERM,
+    EWOULDBLOCK,
+    Port,
+)
+from twisted.python import compat, log
+from twisted.python.runtime import platform
+from twisted.trial.unittest import TestCase
 
 try:
     import resource
 except ImportError:
     resource = None
 
-from twisted.trial.unittest import TestCase
 
-from twisted.python import compat, log
-from twisted.internet.tcp import (
-    _ACCEPT_ERRORS, ECONNABORTED, EPERM, ENOMEM, ENFILE,
-    EAGAIN, EMFILE, ENOBUFS, EINPROGRESS, EWOULDBLOCK, Port,
-)
-from twisted.internet.protocol import Protocol, ServerFactory
-from twisted.python.runtime import platform
-from twisted.internet.defer import maybeDeferred, gatherResults
-from twisted.internet import reactor, interfaces
 
 
 class PlatformAssumptionsTests(TestCase):

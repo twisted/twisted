@@ -14,7 +14,6 @@ from zope.interface import Interface, implementer
 from twisted.logger import Logger
 
 
-
 class IPIDFile(Interface):
     """
     Manages a file that remembers a process ID.

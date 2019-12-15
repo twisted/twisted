@@ -9,20 +9,20 @@ allows access to a shell and a python interpreter over SSH.
 Maintainer: Paul Swartz
 """
 
-from __future__ import division, absolute_import
+from __future__ import absolute_import, division
 
-import struct
-import signal
-import sys
 import os
+import signal
+import struct
+import sys
 
 from zope.interface import implementer
 
-from twisted.internet import interfaces, protocol
-from twisted.python import log
 from twisted.python.compat import _bytesChr as chr, networkString
 from twisted.conch.interfaces import ISession
-from twisted.conch.ssh import common, channel, connection
+from twisted.conch.ssh import channel, common, connection
+from twisted.internet import interfaces, protocol
+from twisted.python import log
 
 
 class SSHSession(channel.SSHChannel):

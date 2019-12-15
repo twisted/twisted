@@ -13,11 +13,35 @@ This is a web server which integrates with the twisted.internet infrastructure.
     value.
 """
 
-from __future__ import division, absolute_import
+from __future__ import absolute_import, division
 
 import copy
 import os
 import re
+import zlib
+from binascii import hexlify
+
+from zope.interface import implementer
+
+from incremental import Version
+
+from twisted.python.compat import (
+    escape,
+    intToBytes,
+    nativeString,
+    networkString,
+)
+from twisted import copyright
+from twisted.internet import address, interfaces
+from twisted.internet.error import AlreadyCalled, AlreadyCancelled
+from twisted.logger import Logger
+from twisted.python import components, failure, reflect
+from twisted.python.deprecate import deprecatedModuleAttribute
+from twisted.spread.pb import Copyable, ViewPoint
+from twisted.web import http, iweb, resource, util
+from twisted.web.error import UnsupportedMethod
+from twisted.web.http import unquote
+
 try:
     from urllib import quote
 except ImportError:
@@ -27,26 +51,9 @@ except ImportError:
         return _quote(
             string.decode('charmap'), *args, **kwargs).encode('charmap')
 
-import zlib
-from binascii import hexlify
 
-from zope.interface import implementer
 
-from twisted.python.compat import networkString, nativeString, intToBytes
-from twisted.spread.pb import Copyable, ViewPoint
-from twisted.internet import address, interfaces
-from twisted.internet.error import AlreadyCalled, AlreadyCancelled
-from twisted.web import iweb, http, util
-from twisted.web.http import unquote
-from twisted.python import reflect, failure, components
-from twisted import copyright
-from twisted.web import resource
-from twisted.web.error import UnsupportedMethod
 
-from incremental import Version
-from twisted.python.deprecate import deprecatedModuleAttribute
-from twisted.python.compat import escape
-from twisted.logger import Logger
 
 NOT_DONE_YET = 1
 

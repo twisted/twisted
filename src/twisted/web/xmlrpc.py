@@ -11,23 +11,29 @@ Maintainer: Itamar Shtull-Trauring
 @type Fault: L{xmlrpclib.Fault}
 """
 
-from __future__ import division, absolute_import
-
-from twisted.python.compat import _PY3, intToBytes, nativeString, urllib_parse
-from twisted.python.compat import unicode
+from __future__ import absolute_import, division
 
 # System Imports
 import base64
+
+from twisted.python.compat import (
+    _PY3,
+    intToBytes,
+    nativeString,
+    unicode,
+    urllib_parse,
+)
+from twisted.internet import defer, protocol, reactor
+from twisted.logger import Logger
+from twisted.python import failure, reflect
+# Sibling Imports
+from twisted.web import http, resource, server
+
 if _PY3:
     import xmlrpc.client as xmlrpclib
 else:
     import xmlrpclib
 
-# Sibling Imports
-from twisted.web import resource, server, http
-from twisted.internet import defer, protocol, reactor
-from twisted.python import reflect, failure
-from twisted.logger import Logger
 
 # These are deprecated, use the class level definitions
 NOT_FOUND = 8001

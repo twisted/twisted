@@ -10,18 +10,17 @@ Tests for L{twisted.internet.stdio}.
 
 from __future__ import absolute_import, division
 
+import itertools
 import os
 import sys
-import itertools
 
-from twisted.trial import unittest
+from twisted.python.compat import bytesEnviron, intToBytes, range
+from twisted.internet import defer, error, protocol, reactor, stdio
 from twisted.python import filepath, log
 from twisted.python.reflect import requireModule
 from twisted.python.runtime import platform
-from twisted.python.compat import range, intToBytes, bytesEnviron
-from twisted.internet import error, defer, protocol, stdio, reactor
 from twisted.test.test_tcp import ConnectionLostNotifyingProtocol
-
+from twisted.trial import unittest
 
 # A short string which is intended to appear here and nowhere else,
 # particularly not in any random garbage output CPython unavoidable

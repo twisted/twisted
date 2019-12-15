@@ -5,19 +5,18 @@
 Test cases for L{twisted.internet.defer}.
 """
 
-from __future__ import division, absolute_import
+from __future__ import absolute_import, division
 
-import warnings
 import gc
-import traceback
 import re
+import traceback
+import warnings
 
-from twisted.python import compat, failure, log
 from twisted.python.compat import _PY3, _PY35PLUS
-from twisted.trial import unittest
 from twisted.internet import defer, reactor
 from twisted.internet.task import Clock
-
+from twisted.python import compat, failure, log
+from twisted.trial import unittest
 
 if _PY3:
     from asyncio import new_event_loop, Future, CancelledError

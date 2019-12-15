@@ -11,20 +11,26 @@ listeners or connectors are added)::
     pollreactor.install()
 """
 
-from __future__ import division, absolute_import
+from __future__ import absolute_import, division
 
 # System imports
 import errno
-from select import error as SelectError, poll
-from select import POLLIN, POLLOUT, POLLHUP, POLLERR, POLLNVAL
+from select import (
+    POLLERR,
+    POLLHUP,
+    POLLIN,
+    POLLNVAL,
+    POLLOUT,
+    error as SelectError,
+    poll,
+)
 
 from zope.interface import implementer
 
-# Twisted imports
-from twisted.python import log
 from twisted.internet import posixbase
 from twisted.internet.interfaces import IReactorFDSet
-
+# Twisted imports
+from twisted.python import log
 
 
 @implementer(IReactorFDSet)

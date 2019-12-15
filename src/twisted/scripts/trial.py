@@ -13,15 +13,14 @@ import sys
 import time
 import warnings
 
-from twisted.internet import defer
-from twisted.application import app
-from twisted.python import usage, reflect, failure
-from twisted.python.filepath import FilePath
-from twisted.python.reflect import namedModule
 from twisted.python.compat import long
 from twisted import plugin
-from twisted.trial import runner, itrial, reporter
-
+from twisted.application import app
+from twisted.internet import defer
+from twisted.python import failure, reflect, usage
+from twisted.python.filepath import FilePath
+from twisted.python.reflect import namedModule
+from twisted.trial import itrial, reporter, runner
 
 # Yea, this is stupid.  Leave it for command-line compatibility for a
 # while, though.

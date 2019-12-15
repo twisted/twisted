@@ -7,6 +7,29 @@ Tests for L{twisted.conch.checkers}.
 
 from __future__ import absolute_import, division
 
+import os
+from collections import namedtuple
+from io import BytesIO
+
+from zope.interface.verify import verifyObject
+
+from twisted.python.compat import _b64encodebytes
+from twisted.cred.checkers import InMemoryUsernamePasswordDatabaseDontUse
+from twisted.cred.credentials import (
+    ISSHPrivateKey,
+    IUsernamePassword,
+    SSHPrivateKey,
+    UsernamePassword,
+)
+from twisted.cred.error import UnauthorizedLogin, UnhandledCredentials
+from twisted.python import util
+from twisted.python.failure import Failure
+from twisted.python.fakepwd import ShadowDatabase, UserDatabase
+from twisted.python.filepath import FilePath
+from twisted.python.reflect import requireModule
+from twisted.test.test_process import MockOS
+from twisted.trial.unittest import TestCase
+
 try:
     import crypt
 except ImportError:
@@ -14,25 +37,9 @@ except ImportError:
 else:
     cryptSkip = None
 
-import os
 
-from collections import namedtuple
-from io import BytesIO
 
-from zope.interface.verify import verifyObject
 
-from twisted.python import util
-from twisted.python.compat import _b64encodebytes
-from twisted.python.failure import Failure
-from twisted.python.reflect import requireModule
-from twisted.trial.unittest import TestCase
-from twisted.python.filepath import FilePath
-from twisted.cred.checkers import InMemoryUsernamePasswordDatabaseDontUse
-from twisted.cred.credentials import UsernamePassword, IUsernamePassword, \
-    SSHPrivateKey, ISSHPrivateKey
-from twisted.cred.error import UnhandledCredentials, UnauthorizedLogin
-from twisted.python.fakepwd import UserDatabase, ShadowDatabase
-from twisted.test.test_process import MockOS
 
 
 if requireModule('cryptography') and requireModule('pyasn1'):

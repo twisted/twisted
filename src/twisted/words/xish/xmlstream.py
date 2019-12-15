@@ -33,9 +33,9 @@ Maintainer: Ralph Meijer
 
 from __future__ import absolute_import, division
 
-from twisted.python import failure
 from twisted.python.compat import intern, unicode
 from twisted.internet import protocol
+from twisted.python import failure
 from twisted.words.xish import domish, utility
 
 STREAM_CONNECTED_EVENT = intern("//event/stream/connected")

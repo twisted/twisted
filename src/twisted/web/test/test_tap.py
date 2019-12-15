@@ -10,7 +10,7 @@ from __future__ import absolute_import, division
 import os
 import stat
 
-from twisted.internet import reactor, endpoints
+from twisted.internet import endpoints, reactor
 from twisted.internet.interfaces import IReactorUNIX
 from twisted.python.filepath import FilePath
 from twisted.python.reflect import requireModule
@@ -23,12 +23,15 @@ from twisted.web.distrib import ResourcePublisher, UserDirectory
 from twisted.web.script import PythonScript
 from twisted.web.server import Site
 from twisted.web.static import Data, File
-from twisted.web.tap import Options, makeService
-from twisted.web.tap import makePersonalServerFactory, _AddHeadersResource
+from twisted.web.tap import (
+    Options,
+    _AddHeadersResource,
+    makePersonalServerFactory,
+    makeService,
+)
 from twisted.web.test.requesthelper import DummyRequest
 from twisted.web.twcgi import CGIScript
 from twisted.web.wsgi import WSGIResource
-
 
 application = object()
 

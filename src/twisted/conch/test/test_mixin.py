@@ -2,10 +2,9 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-from twisted.trial import unittest
-from twisted.test.proto_helpers import StringTransport
-
 from twisted.conch import mixin
+from twisted.test.proto_helpers import StringTransport
+from twisted.trial import unittest
 
 
 class TestBufferingProto(mixin.BufferingMixin):

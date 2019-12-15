@@ -9,11 +9,10 @@ Tools for formatting logging events.
 from datetime import datetime as DateTime
 
 from twisted.python.compat import unicode
+from twisted.python._tzhelper import FixedOffsetTimeZone
 from twisted.python.failure import Failure
 from twisted.python.reflect import safe_repr
-from twisted.python._tzhelper import FixedOffsetTimeZone
-
-from ._flatten import flatFormat, aFormatter
+from ._flatten import aFormatter, flatFormat
 
 timeFormatRFC3339 = "%Y-%m-%dT%H:%M:%S%z"
 

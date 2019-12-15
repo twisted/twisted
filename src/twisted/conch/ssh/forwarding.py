@@ -8,16 +8,16 @@ clients and servers to forward arbitrary TCP data across the connection.
 Maintainer: Paul Swartz
 """
 
-from __future__ import division, absolute_import
+from __future__ import absolute_import, division
 
 import struct
 
+from twisted.python.compat import _PY3, unicode
+from twisted.conch.ssh import channel, common
 from twisted.internet import protocol, reactor
 from twisted.internet.endpoints import HostnameEndpoint, connectProtocol
 from twisted.python import log
-from twisted.python.compat import _PY3, unicode
 
-from twisted.conch.ssh import common, channel
 
 class SSHListenForwardingFactory(protocol.Factory):
     def __init__(self, connection, hostport, klass):

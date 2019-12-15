@@ -26,11 +26,12 @@ if cryptography and pyasn1 and unix:
 
 from twisted.application.internet import StreamServerEndpointService
 from twisted.cred import error
-from twisted.cred.credentials import ISSHPrivateKey
-from twisted.cred.credentials import IUsernamePassword, UsernamePassword
-
+from twisted.cred.credentials import (
+    ISSHPrivateKey,
+    IUsernamePassword,
+    UsernamePassword,
+)
 from twisted.trial.unittest import TestCase
-
 
 
 class MakeServiceTests(TestCase):

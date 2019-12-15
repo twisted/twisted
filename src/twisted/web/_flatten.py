@@ -7,13 +7,18 @@ Context-free flattener/serializer for rendering Python objects, possibly
 complex or arbitrarily nested, as strings.
 """
 
-from __future__ import division, absolute_import
+from __future__ import absolute_import, division
 
 from io import BytesIO
-
 from sys import exc_info
-from types import GeneratorType
 from traceback import extract_tb
+from types import GeneratorType
+
+from twisted.python.compat import iteritems, nativeString, unicode
+from twisted.internet.defer import Deferred, ensureDeferred
+from twisted.web._stan import CDATA, CharRef, Comment, Tag, slot, voidElements
+from twisted.web.error import FlattenerError, UnfilledSlot, UnsupportedType
+from twisted.web.iweb import IRenderable
 
 try:
     from inspect import iscoroutine
@@ -21,11 +26,6 @@ except ImportError:
     def iscoroutine(*args, **kwargs):
         return False
 
-from twisted.python.compat import unicode, nativeString, iteritems
-from twisted.internet.defer import Deferred, ensureDeferred
-from twisted.web._stan import Tag, slot, voidElements, Comment, CDATA, CharRef
-from twisted.web.error import UnfilledSlot, UnsupportedType, FlattenerError
-from twisted.web.iweb import IRenderable
 
 
 

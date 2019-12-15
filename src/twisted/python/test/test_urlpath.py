@@ -6,9 +6,9 @@
 Tests for L{twisted.python.urlpath}.
 """
 
-from twisted.trial import unittest
-from twisted.python import urlpath
 from twisted.python.compat import _PY3
+from twisted.python import urlpath
+from twisted.trial import unittest
 
 
 class _BaseURLPathTests(object):

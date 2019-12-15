@@ -5,18 +5,23 @@
 Tests for L{twisted.names.common}.
 """
 
-from __future__ import division, absolute_import
+from __future__ import absolute_import, division
 
 from zope.interface.verify import verifyClass
 
 from twisted.internet.interfaces import IResolver
-from twisted.trial.unittest import SynchronousTestCase
-from twisted.python.failure import Failure
 from twisted.names.common import ResolverBase
-from twisted.names.dns import EFORMAT, ESERVER, ENAME, ENOTIMP, EREFUSED, Query
-from twisted.names.error import DNSFormatError, DNSServerError, DNSNameError
-from twisted.names.error import DNSNotImplementedError, DNSQueryRefusedError
-from twisted.names.error import DNSUnknownError
+from twisted.names.dns import EFORMAT, ENAME, ENOTIMP, EREFUSED, ESERVER, Query
+from twisted.names.error import (
+    DNSFormatError,
+    DNSNameError,
+    DNSNotImplementedError,
+    DNSQueryRefusedError,
+    DNSServerError,
+    DNSUnknownError,
+)
+from twisted.python.failure import Failure
+from twisted.trial.unittest import SynchronousTestCase
 
 
 class ExceptionForCodeTests(SynchronousTestCase):

@@ -9,15 +9,15 @@ from __future__ import absolute_import, division
 
 import os
 
-from twisted import plugin
-from twisted.trial import unittest
-from twisted.cred import credentials, checkers, error, strcred
-from twisted.plugins import cred_file, cred_anonymous, cred_unix
-from twisted.python import usage
 from twisted.python.compat import NativeStringIO
-from twisted.python.filepath import FilePath
+from twisted import plugin
+from twisted.cred import checkers, credentials, error, strcred
+from twisted.plugins import cred_anonymous, cred_file, cred_unix
+from twisted.python import usage
 from twisted.python.fakepwd import UserDatabase
+from twisted.python.filepath import FilePath
 from twisted.python.reflect import requireModule
+from twisted.trial import unittest
 
 try:
     import crypt

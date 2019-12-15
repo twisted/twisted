@@ -5,7 +5,7 @@
 Utilities for Twisted.names tests.
 """
 
-from __future__ import division, absolute_import
+from __future__ import absolute_import, division
 
 from random import randrange
 
@@ -14,9 +14,8 @@ from zope.interface.verify import verifyClass
 
 from twisted.internet.address import IPv4Address
 from twisted.internet.defer import succeed
-from twisted.internet.task import Clock
 from twisted.internet.interfaces import IReactorUDP, IUDPTransport
-
+from twisted.internet.task import Clock
 
 
 @implementer(IUDPTransport)

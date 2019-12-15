@@ -5,14 +5,19 @@
 Tests for L{twisted.web.resource}.
 """
 
-from twisted.trial.unittest import TestCase
 from twisted.python.compat import _PY3
-
+from twisted.trial.unittest import TestCase
 from twisted.web.error import UnsupportedMethod
-from twisted.web.resource import (
-    NOT_FOUND, FORBIDDEN, Resource, ErrorPage, NoResource, ForbiddenResource,
-    getChildForRequest)
 from twisted.web.http_headers import Headers
+from twisted.web.resource import (
+    FORBIDDEN,
+    NOT_FOUND,
+    ErrorPage,
+    ForbiddenResource,
+    NoResource,
+    Resource,
+    getChildForRequest,
+)
 from twisted.web.test.requesthelper import DummyRequest
 
 

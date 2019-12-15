@@ -4,8 +4,8 @@
 
 import array
 import stat
+from time import localtime, strftime, time
 
-from time import time, strftime, localtime
 from twisted.python.compat import _PY3
 
 # Locale-independent month names to use instead of strftime's

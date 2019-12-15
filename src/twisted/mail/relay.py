@@ -6,11 +6,11 @@
 Support for relaying mail.
 """
 
+import os
+
+from twisted.internet.address import UNIXAddress
 from twisted.mail import smtp
 from twisted.python import log
-from twisted.internet.address import UNIXAddress
-
-import os
 
 try:
     import cPickle as pickle

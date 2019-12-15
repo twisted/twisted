@@ -5,6 +5,9 @@
 Tests for the command-line interfaces to conch.
 """
 from twisted.python.reflect import requireModule
+from twisted.python.test.test_shellcomp import ZshScriptTestMixin
+from twisted.scripts.test.test_scripts import ScriptTestsMixin
+from twisted.trial.unittest import TestCase
 
 if requireModule('pyasn1'):
     pyasn1Skip = None
@@ -33,9 +36,6 @@ else:
     else:
         tkskip = None
 
-from twisted.trial.unittest import TestCase
-from twisted.scripts.test.test_scripts import ScriptTestsMixin
-from twisted.python.test.test_shellcomp import ZshScriptTestMixin
 
 
 

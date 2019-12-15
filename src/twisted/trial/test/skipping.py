@@ -11,10 +11,14 @@ See the L{twisted.trial.test.test_tests} module docstring for details about how
 this code is arranged.
 """
 
-from __future__ import division, absolute_import
+from __future__ import absolute_import, division
 
 from twisted.trial.unittest import (
-    SynchronousTestCase, TestCase, SkipTest, FailTest)
+    FailTest,
+    SkipTest,
+    SynchronousTestCase,
+    TestCase,
+)
 
 
 class SkippingMixin(object):

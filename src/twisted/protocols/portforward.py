@@ -10,6 +10,7 @@ A simple port forwarder.
 from twisted.internet import protocol
 from twisted.python import log
 
+
 class Proxy(protocol.Protocol):
     noisy = True
 

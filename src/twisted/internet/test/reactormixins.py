@@ -12,23 +12,27 @@ available.  Additionally, the tests will automatically be applied to all
 available reactor implementations.
 """
 
-from __future__ import division, absolute_import
+from __future__ import absolute_import, division
+
+import os
+import signal
+import time
+
+from twisted.python.compat import _PY3
+from twisted.python import log
+from twisted.python.deprecate import _fullyQualifiedName as fullyQualifiedName
+from twisted.python.failure import Failure
+from twisted.python.reflect import namedAny
+from twisted.python.runtime import platform
+from twisted.trial.unittest import SkipTest, SynchronousTestCase
+from twisted.trial.util import DEFAULT_TIMEOUT_DURATION, acquireAttribute
 
 __metaclass__ = type
 
 __all__ = ['TestTimeoutError', 'ReactorBuilder', 'needsRunningReactor']
 
-import os, signal, time
 
-from twisted.trial.unittest import SynchronousTestCase, SkipTest
-from twisted.trial.util import DEFAULT_TIMEOUT_DURATION, acquireAttribute
-from twisted.python.runtime import platform
-from twisted.python.reflect import namedAny
-from twisted.python.deprecate import _fullyQualifiedName as fullyQualifiedName
 
-from twisted.python import log
-from twisted.python.failure import Failure
-from twisted.python.compat import _PY3
 
 
 # Access private APIs.

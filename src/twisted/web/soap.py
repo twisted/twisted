@@ -18,9 +18,9 @@ Pluggable method lookup policies.
 # SOAPpy
 import SOAPpy
 
-# twisted imports
-from twisted.web import server, resource, client
 from twisted.internet import defer
+# twisted imports
+from twisted.web import client, resource, server
 
 
 class SOAPPublisher(resource.Resource):
@@ -151,4 +151,3 @@ class Proxy:
                               headers={'content-type': 'text/xml',
                                        'SOAPAction': method}
                               ).addCallback(self._cbGotResult)
-

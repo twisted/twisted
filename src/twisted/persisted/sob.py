@@ -9,18 +9,20 @@ Save and load Small OBjects to and from files, using various formats.
 Maintainer: Moshe Zadka
 """
 
-from __future__ import division, absolute_import
+from __future__ import absolute_import, division
 
 import os
 import sys
+
+from zope.interface import Interface, implementer
+
+from twisted.persisted import styles
+from twisted.python import log, runtime
 
 try:
     import cPickle as pickle
 except ImportError:
     import pickle
-from twisted.python import log, runtime
-from twisted.persisted import styles
-from zope.interface import implementer, Interface
 
 
 

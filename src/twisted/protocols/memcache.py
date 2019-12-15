@@ -29,14 +29,16 @@ from __future__ import absolute_import, division
 
 from collections import deque
 
+from twisted.python.compat import (
+    intToBytes,
+    iteritems,
+    nativeString,
+    networkString,
+)
+from twisted.internet.defer import Deferred, TimeoutError, fail
 from twisted.protocols.basic import LineReceiver
 from twisted.protocols.policies import TimeoutMixin
-from twisted.internet.defer import Deferred, fail, TimeoutError
 from twisted.python import log
-from twisted.python.compat import (
-    intToBytes, iteritems, nativeString, networkString)
-
-
 
 DEFAULT_PORT = 11211
 

@@ -6,7 +6,11 @@
 Exception definitions for L{twisted.web}.
 """
 
-from __future__ import division, absolute_import
+from __future__ import absolute_import, division
+
+from twisted.python.compat import Sequence, intToBytes, nativeString, unicode
+from twisted.web._responses import RESPONSES
+
 try:
     from future_builtins import ascii
 except ImportError:
@@ -20,8 +24,6 @@ __all__ = [
     ]
 
 
-from twisted.web._responses import RESPONSES
-from twisted.python.compat import unicode, nativeString, intToBytes, Sequence
 
 
 

@@ -6,34 +6,31 @@
 Logging and metrics infrastructure.
 """
 
-from __future__ import division, absolute_import
+from __future__ import absolute_import, division
 
 import sys
 import time
 import warnings
-
 from datetime import datetime
 
 from zope.interface import Interface
 
-from twisted.python.compat import unicode, _PY3
-from twisted.python import context
-from twisted.python import reflect
-from twisted.python import util
-from twisted.python import failure
-from twisted.python._oldstyle import _oldStyle
-from twisted.python.threadable import synchronize
+from twisted.python.compat import _PY3, unicode
 from twisted.logger import (
-    Logger as NewLogger, LogLevel as NewLogLevel,
+    LegacyLogObserverWrapper,
+    Logger as NewLogger,
+    LoggingFile,
+    LogLevel as NewLogLevel,
+    LogPublisher as NewPublisher,
     STDLibLogObserver as NewSTDLibLogObserver,
-    LegacyLogObserverWrapper, LoggingFile, LogPublisher as NewPublisher,
-    globalLogPublisher as newGlobalLogPublisher,
     globalLogBeginner as newGlobalLogBeginner,
+    globalLogPublisher as newGlobalLogPublisher,
 )
-
 from twisted.logger._global import LogBeginner
 from twisted.logger._legacy import publishToNewObserver as _publishNew
-
+from twisted.python import context, failure, reflect, util
+from twisted.python._oldstyle import _oldStyle
+from twisted.python.threadable import synchronize
 
 
 @_oldStyle

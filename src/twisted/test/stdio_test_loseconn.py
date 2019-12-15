@@ -12,9 +12,10 @@ from __future__ import absolute_import, division
 
 import sys
 
+from twisted.internet import protocol, stdio
 from twisted.internet.error import ConnectionDone
-from twisted.internet import stdio, protocol
-from twisted.python import reflect, log
+from twisted.python import log, reflect
+
 
 class LoseConnChild(protocol.Protocol):
     exitCode = 0

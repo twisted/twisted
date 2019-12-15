@@ -12,10 +12,9 @@ import string
 
 from zope.interface import implementer
 
-from twisted.conch.insults import insults, helper
-
-from twisted.python import log, reflect
 from twisted.python.compat import iterbytes
+from twisted.conch.insults import helper, insults
+from twisted.python import log, reflect
 
 _counters = {}
 class Logging(object):

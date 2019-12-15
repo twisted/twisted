@@ -6,16 +6,15 @@
 hosts(5) support.
 """
 
-from __future__ import division, absolute_import
+from __future__ import absolute_import, division
 
 from twisted.python.compat import nativeString
-from twisted.names import dns
-from twisted.python import failure
-from twisted.python.filepath import FilePath
 from twisted.internet import defer
 from twisted.internet.abstract import isIPAddress
+from twisted.names import common, dns
+from twisted.python import failure
+from twisted.python.filepath import FilePath
 
-from twisted.names import common
 
 def searchFileForAll(hostsFile, name):
     """

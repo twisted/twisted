@@ -6,11 +6,10 @@ This module contains tests for L{twisted.internet.task.Cooperator} and
 related functionality.
 """
 
-from __future__ import division, absolute_import
+from __future__ import absolute_import, division
 
-from twisted.internet import reactor, defer, task
+from twisted.internet import defer, reactor, task
 from twisted.trial import unittest
-
 
 
 class FakeDelayedCall(object):
@@ -706,6 +705,3 @@ class RunStateTests(unittest.TestCase):
         self.stopNext()
         self.scheduler.pump()
         self.assertEqual(callbackPhases, [self.task._iterator, "done"])
-
-
-

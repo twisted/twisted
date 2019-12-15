@@ -2,11 +2,9 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-from twisted.trial import unittest
-
 from twisted.conch.insults import text
 from twisted.conch.insults.text import attributes as A
-
+from twisted.trial import unittest
 
 
 class FormattedTextTests(unittest.TestCase):
@@ -116,6 +114,3 @@ class FormattedTextTests(unittest.TestCase):
             'twisted.conch.insults.text.flatten was deprecated in Twisted '
             '13.1.0: Use twisted.conch.insults.text.assembleFormattedText '
             'instead.')
-
-
-

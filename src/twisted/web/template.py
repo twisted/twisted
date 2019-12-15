@@ -18,7 +18,21 @@ HTML rendering for twisted.web.
     L{AttributeError}.
 """
 
-from __future__ import division, absolute_import
+from __future__ import absolute_import, division
+
+import warnings
+from collections import OrderedDict
+from xml.sax import handler, make_parser
+
+from zope.interface import implementer
+
+from twisted.python.compat import NativeStringIO, items
+from twisted.logger import Logger
+from twisted.python.filepath import FilePath
+from twisted.web._element import Element, renderer
+from twisted.web._flatten import flatten, flattenString
+from twisted.web._stan import CDATA, CharRef, Comment, Tag, slot
+from twisted.web.iweb import ITemplateLoader
 
 __all__ = [
     'TEMPLATE_NAMESPACE', 'VALID_HTML_TAG_NAMES', 'Element', 'TagLoader',
@@ -26,19 +40,10 @@ __all__ = [
     'Comment', 'CDATA', 'Tag', 'slot', 'CharRef', 'renderElement'
     ]
 
-import warnings
 
-from collections import OrderedDict
 
-from zope.interface import implementer
 
-from xml.sax import make_parser, handler
 
-from twisted.python.compat import NativeStringIO, items
-from twisted.python.filepath import FilePath
-from twisted.web._stan import Tag, slot, Comment, CDATA, CharRef
-from twisted.web.iweb import ITemplateLoader
-from twisted.logger import Logger
 
 TEMPLATE_NAMESPACE = 'http://twistedmatrix.com/ns/twisted.web.template/0.1'
 
@@ -568,8 +573,3 @@ def renderElement(request, element,
     d.addErrback(eb)
     d.addBoth(lambda _: request.finish())
     return NOT_DONE_YET
-
-
-
-from twisted.web._element import Element, renderer
-from twisted.web._flatten import flatten, flattenString

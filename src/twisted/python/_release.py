@@ -14,10 +14,9 @@ which must run on multiple platforms (eg the setup.py script).
 
 import os
 import sys
+from subprocess import STDOUT, CalledProcessError, check_output
 
 from zope.interface import Interface, implementer
-
-from subprocess import check_output, STDOUT, CalledProcessError
 
 from twisted.python.compat import execfile
 from twisted.python.filepath import FilePath

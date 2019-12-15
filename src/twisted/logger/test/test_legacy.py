@@ -5,23 +5,18 @@
 Test cases for L{twisted.logger._legacy}.
 """
 
-from time import time
 import logging as py_logging
+from time import time
 
-from zope.interface.verify import verifyObject, BrokenMethodImplementation
+from zope.interface.verify import BrokenMethodImplementation, verifyObject
 
-from twisted.trial import unittest
-
-from twisted.python import context
-from twisted.python import log as legacyLog
+from twisted.python import context, log as legacyLog
 from twisted.python.failure import Failure
-
+from twisted.trial import unittest
+from .._format import formatEvent
+from .._legacy import LegacyLogObserverWrapper, publishToNewObserver
 from .._levels import LogLevel
 from .._observer import ILogObserver
-from .._format import formatEvent
-from .._legacy import LegacyLogObserverWrapper
-from .._legacy import publishToNewObserver
-
 
 
 class LegacyLogObserverWrapperTests(unittest.TestCase):

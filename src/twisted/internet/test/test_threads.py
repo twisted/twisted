@@ -5,17 +5,20 @@
 Tests for implementations of L{IReactorThreads}.
 """
 
-from __future__ import division, absolute_import
+from __future__ import absolute_import, division
+
+import gc
+import threading
+from weakref import ref
+
+from twisted.internet.interfaces import IReactorThreads
+from twisted.internet.test.reactormixins import ReactorBuilder
+from twisted.python.threadable import isInIOThread
+from twisted.python.threadpool import ThreadPool
 
 __metaclass__ = type
 
-from weakref import ref
-import gc, threading
 
-from twisted.python.threadable import isInIOThread
-from twisted.internet.test.reactormixins import ReactorBuilder
-from twisted.python.threadpool import ThreadPool
-from twisted.internet.interfaces import IReactorThreads
 
 
 class ThreadTestsBuilder(ReactorBuilder):

@@ -10,7 +10,7 @@ In general, this module should not be used, other than by reactor authors
 who need to use the 'installReactor' method.
 """
 
-from __future__ import division, absolute_import
+from __future__ import absolute_import, division
 
 from twisted.internet import error
 

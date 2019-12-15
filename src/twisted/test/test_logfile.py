@@ -1,7 +1,7 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-from __future__ import division, absolute_import
+from __future__ import absolute_import, division
 
 import contextlib
 import errno
@@ -9,8 +9,8 @@ import os
 import stat
 import time
 
-from twisted.trial import unittest
 from twisted.python import logfile, runtime
+from twisted.trial import unittest
 
 
 class LogFileTests(unittest.TestCase):

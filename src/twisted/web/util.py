@@ -6,19 +6,21 @@
 An assortment of web server-related utilities.
 """
 
-from __future__ import division, absolute_import
+from __future__ import absolute_import, division
 
 import linecache
 
+from twisted.python.compat import _PY3, escape, nativeString, unicode
 from twisted.python import urlpath
-from twisted.python.compat import _PY3, unicode, nativeString, escape
 from twisted.python.reflect import fullyQualifiedName
-
 from twisted.web import resource
-
-from twisted.web.template import TagLoader, XMLString, Element, renderer
-from twisted.web.template import flattenString
-
+from twisted.web.template import (
+    Element,
+    TagLoader,
+    XMLString,
+    flattenString,
+    renderer,
+)
 
 
 def _PRE(text):

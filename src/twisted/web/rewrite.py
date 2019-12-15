@@ -4,6 +4,7 @@
 #
 from twisted.web import resource
 
+
 class RewriterResource(resource.Resource):
 
     def __init__(self, orig, *rewriteRules):

@@ -7,6 +7,7 @@ Public Jabber Interfaces.
 
 from zope.interface import Attribute, Interface
 
+
 class IInitializer(Interface):
     """
     Interface for XML stream initializers.

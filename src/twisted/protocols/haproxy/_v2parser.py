@@ -10,18 +10,20 @@ IProxyParser implementation for version two of the PROXY protocol.
 import binascii
 import struct
 
-from constantly import Values, ValueConstant
-
 from zope.interface import implementer
+
+from constantly import ValueConstant, Values
+
 from twisted.internet import address
 from twisted.python import compat
-
+from . import _info, _interfaces
 from ._exceptions import (
-    convertError, InvalidProxyHeader, InvalidNetworkProtocol,
-    MissingAddressData
+    InvalidNetworkProtocol,
+    InvalidProxyHeader,
+    MissingAddressData,
+    convertError,
 )
-from . import _info
-from . import _interfaces
+
 
 class NetFamily(Values):
     """

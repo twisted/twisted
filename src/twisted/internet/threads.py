@@ -7,16 +7,17 @@ Extended thread dispatching support.
 For basic support see reactor threading API docs.
 """
 
-from __future__ import division, absolute_import
+from __future__ import absolute_import, division
 
 from twisted.python.compat import _PY3
+from twisted.internet import defer
+from twisted.python import failure
+
 if not _PY3:
     import Queue
 else:
     import queue as Queue
 
-from twisted.python import failure
-from twisted.internet import defer
 
 
 def deferToThreadPool(reactor, threadpool, f, *args, **kwargs):

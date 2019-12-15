@@ -6,38 +6,63 @@
 Object-oriented filesystem path representation.
 """
 
-from __future__ import division, absolute_import
+from __future__ import absolute_import, division
 
+import base64
+import errno
 import os
 import sys
-import errno
-import base64
+from os import listdir, stat, utime
+from os.path import (
+    abspath,
+    basename,
+    dirname,
+    exists,
+    isabs,
+    join as joinpath,
+    normpath,
+    splitext,
+)
+from stat import (
+    S_IMODE,
+    S_IRGRP,
+    S_IROTH,
+    S_IRUSR,
+    S_ISBLK,
+    S_ISDIR,
+    S_ISREG,
+    S_ISSOCK,
+    S_IWGRP,
+    S_IWOTH,
+    S_IWUSR,
+    S_IXGRP,
+    S_IXOTH,
+    S_IXUSR,
+)
 
-from os.path import isabs, exists, normpath, abspath, splitext
-from os.path import basename, dirname, join as joinpath
-from os import listdir, utime, stat
+from zope.interface import Attribute, Interface, implementer
 
-from stat import S_ISREG, S_ISDIR, S_IMODE, S_ISBLK, S_ISSOCK
-from stat import S_IRUSR, S_IWUSR, S_IXUSR
-from stat import S_IRGRP, S_IWGRP, S_IXGRP
-from stat import S_IROTH, S_IWOTH, S_IXOTH
+from incremental import Version
 
-from zope.interface import Interface, Attribute, implementer
+from twisted.python.compat import cmp, comparable, unicode
+from twisted.python.deprecate import deprecated
+from twisted.python.runtime import platform
+from twisted.python.util import FancyEqMixin
+from twisted.python.win32 import (
+    ERROR_DIRECTORY,
+    ERROR_FILE_NOT_FOUND,
+    ERROR_INVALID_NAME,
+    ERROR_PATH_NOT_FOUND,
+    O_BINARY,
+    WindowsError,
+)
 
 # Please keep this as light as possible on other Twisted imports; many, many
 # things import this module, and it would be good if it could easily be
 # modified for inclusion in the standard library.  --glyph
 
-from twisted.python.compat import comparable, cmp, unicode
-from twisted.python.deprecate import deprecated
-from twisted.python.runtime import platform
-from incremental import Version
 
-from twisted.python.win32 import ERROR_FILE_NOT_FOUND, ERROR_PATH_NOT_FOUND
-from twisted.python.win32 import ERROR_INVALID_NAME, ERROR_DIRECTORY, O_BINARY
-from twisted.python.win32 import WindowsError
 
-from twisted.python.util import FancyEqMixin
 
 _CREATE_FLAGS = (os.O_EXCL |
                  os.O_CREAT |

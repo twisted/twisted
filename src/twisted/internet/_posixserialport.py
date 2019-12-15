@@ -6,18 +6,14 @@
 Serial Port Protocol
 """
 
-from __future__ import division, absolute_import
+from __future__ import absolute_import, division
 
 # dependent on pyserial ( http://pyserial.sf.net/ )
 # only tested w/ 1.18 (5 Dec 2002)
-from serial import PARITY_NONE
-from serial import STOPBITS_ONE
-from serial import EIGHTBITS
-
-from twisted.internet.serialport import BaseSerialPort
+from serial import EIGHTBITS, PARITY_NONE, STOPBITS_ONE
 
 from twisted.internet import abstract, fdesc
-
+from twisted.internet.serialport import BaseSerialPort
 
 
 class SerialPort(BaseSerialPort, abstract.FileDescriptor):

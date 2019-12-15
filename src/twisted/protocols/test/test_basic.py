@@ -5,20 +5,20 @@
 Test cases for L{twisted.protocols.basic}.
 """
 
-from __future__ import division, absolute_import
+from __future__ import absolute_import, division
 
-import sys
 import struct
+import sys
 from io import BytesIO
 
 from zope.interface.verify import verifyObject
 
 from twisted.python.compat import _PY3, iterbytes
-from twisted.trial import unittest
-from twisted.protocols import basic
 from twisted.internet import protocol, task
 from twisted.internet.interfaces import IProducer
+from twisted.protocols import basic
 from twisted.test import proto_helpers
+from twisted.trial import unittest
 
 _PY3NEWSTYLESKIP = "All classes are new style on Python 3."
 

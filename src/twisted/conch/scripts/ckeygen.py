@@ -8,9 +8,16 @@ Implementation module for the `ckeygen` command.
 
 from __future__ import print_function
 
-import sys, os, getpass, socket
+import getpass
+import os
+import socket
+import sys
 from functools import wraps
 from imp import reload
+
+from twisted.python.compat import _PY3, raw_input
+from twisted.conch.ssh import keys
+from twisted.python import failure, filepath, log, usage
 
 if getpass.getpass == getpass.unix_getpass:
     try:
@@ -20,9 +27,6 @@ if getpass.getpass == getpass.unix_getpass:
         sys.modules['termios'] = None
         reload(getpass)
 
-from twisted.conch.ssh import keys
-from twisted.python import failure, filepath, log, usage
-from twisted.python.compat import raw_input, _PY3
 
 
 

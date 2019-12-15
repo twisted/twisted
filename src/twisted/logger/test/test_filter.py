@@ -5,18 +5,16 @@
 Test cases for L{twisted.logger._filter}.
 """
 
-from zope.interface.verify import verifyObject, BrokenMethodImplementation
+from zope.interface.verify import BrokenMethodImplementation, verifyObject
 
 from twisted.trial import unittest
-
-from .._levels import InvalidLogLevelError
-from .._levels import LogLevel
-from .._observer import ILogObserver
-from .._observer import LogPublisher
-from .._filter import FilteringLogObserver
-from .._filter import PredicateResult
-from .._filter import LogLevelFilterPredicate
-
+from .._filter import (
+    FilteringLogObserver,
+    LogLevelFilterPredicate,
+    PredicateResult,
+)
+from .._levels import InvalidLogLevelError, LogLevel
+from .._observer import ILogObserver, LogPublisher
 
 
 class FilteringLogObserverTests(unittest.TestCase):

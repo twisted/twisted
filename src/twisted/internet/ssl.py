@@ -53,17 +53,39 @@ APIs listed above.
     throughout the documentation.
 """
 
-from __future__ import division, absolute_import
+from __future__ import absolute_import, division
+
+from zope.interface import implementedBy, implementer, implementer_only
 
 # System imports
 from OpenSSL import SSL
-supported = True
-
-from zope.interface import implementer, implementer_only, implementedBy
 
 # Twisted imports
-from twisted.internet import tcp, interfaces
+from twisted.internet import interfaces, tcp
+from twisted.internet._sslverify import (
+    DN,
+    Certificate,
+    CertificateRequest,
+    DistinguishedName,
+    KeyPair,
+    OpenSSLAcceptableCiphers as AcceptableCiphers,
+    OpenSSLCertificateOptions as CertificateOptions,
+    OpenSSLDefaultPaths,
+    OpenSSLDiffieHellmanParameters as DiffieHellmanParameters,
+    PrivateCertificate,
+    ProtocolNegotiationSupport,
+    TLSVersion,
+    VerificationError,
+    optionsForClientTLS,
+    platformTrust,
+    protocolNegotiationMechanisms,
+    trustRootFromCertificates,
+)
 from twisted.python._oldstyle import _oldStyle
+
+supported = True
+
+
 
 
 @implementer(interfaces.IOpenSSLContextFactory)
@@ -227,18 +249,6 @@ class Connector(tcp.Connector):
 
 
 
-from twisted.internet._sslverify import (
-    KeyPair, DistinguishedName, DN, Certificate,
-    CertificateRequest, PrivateCertificate,
-    OpenSSLAcceptableCiphers as AcceptableCiphers,
-    OpenSSLCertificateOptions as CertificateOptions,
-    OpenSSLDiffieHellmanParameters as DiffieHellmanParameters,
-    platformTrust, OpenSSLDefaultPaths, VerificationError,
-    optionsForClientTLS, ProtocolNegotiationSupport,
-    protocolNegotiationMechanisms,
-    trustRootFromCertificates,
-    TLSVersion,
-)
 
 __all__ = [
     "ContextFactory", "DefaultOpenSSLContextFactory", "ClientContextFactory",

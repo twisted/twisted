@@ -18,22 +18,30 @@ from hashlib import md5
 
 from zope.interface import implementer
 
-from twisted import cred
-from twisted.internet import task
-from twisted.internet import defer
-from twisted.internet import interfaces
-from twisted.mail import smtp
-from twisted.mail.interfaces import (
-    IServerFactoryPOP3 as IServerFactory,
-    IMailboxPOP3 as IMailbox,
-)
-from twisted.mail._except import (
-    POP3Error, _POP3MessageDeleted, POP3ClientError
-)
-from twisted.protocols import basic
-from twisted.protocols import policies
-from twisted.python import log
 from twisted.python.compat import _PY3, intToBytes
+from twisted import cred
+from twisted.internet import defer, interfaces, task
+from twisted.mail import smtp
+from twisted.mail._except import (
+    POP3ClientError,
+    POP3Error,
+    _POP3MessageDeleted,
+)
+from twisted.mail.interfaces import (
+    IMailboxPOP3 as IMailbox,
+    IServerFactoryPOP3 as IServerFactory,
+)
+from twisted.mail.pop3client import (
+    InsecureAuthenticationDisallowed,
+    LineTooLong,
+    POP3Client as AdvancedPOP3Client,
+    ServerErrorResponse,
+    TLSError,
+    TLSNotSupportedError,
+)
+from twisted.protocols import basic, policies
+from twisted.python import log
+
 
 # Authentication
 @implementer(cred.credentials.IUsernamePassword)
@@ -1727,12 +1735,6 @@ class POP3Client(basic.LineOnlyReceiver):
         self.sendShort(b'QUIT')
 
 
-from twisted.mail.pop3client import POP3Client as AdvancedPOP3Client
-from twisted.mail.pop3client import InsecureAuthenticationDisallowed
-from twisted.mail.pop3client import ServerErrorResponse
-from twisted.mail.pop3client import LineTooLong
-from twisted.mail.pop3client import TLSError
-from twisted.mail.pop3client import TLSNotSupportedError
 
 __all__ = [
     # Interfaces

@@ -15,7 +15,6 @@ import os
 
 from twisted.python.compat import raw_input
 
-
 # errors
 
 class DirectoryExists(OSError):

@@ -18,11 +18,10 @@ from __future__ import absolute_import, division
 
 import sys
 
-from zope.interface import Interface, Attribute
+from zope.interface import Attribute, Interface
 
 from twisted.plugin import getPlugins
 from twisted.python import usage
-
 
 
 class ICheckerFactory(Interface):

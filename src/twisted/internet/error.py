@@ -5,13 +5,13 @@
 Exceptions and errors for use in twisted.internet modules.
 """
 
-from __future__ import division, absolute_import
+from __future__ import absolute_import, division
 
 import socket
 
-from twisted.python import deprecate
 from incremental import Version
 
+from twisted.python import deprecate
 
 
 class BindError(Exception):

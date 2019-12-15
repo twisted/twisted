@@ -6,10 +6,11 @@
 Application data directory support.
 """
 
-from __future__ import division, absolute_import
+from __future__ import absolute_import, division
+
+import inspect
 
 import appdirs
-import inspect
 
 from twisted.python.compat import currentframe
 

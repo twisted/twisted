@@ -13,7 +13,6 @@ import ctypes
 import ctypes.util
 
 
-
 class INotifyError(Exception):
     """
     Unify all the possible exceptions that can be raised by the INotify API.

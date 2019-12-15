@@ -7,18 +7,17 @@ Tools for saving and loading log events in a structured format.
 """
 
 import types
-
-from constantly import NamedConstant
 from json import dumps, loads
 from uuid import UUID
 
-from ._flatten import flattenEvent
+from constantly import NamedConstant
+
+from twisted.python.compat import _PY3, unicode
+from twisted.python.failure import Failure
 from ._file import FileLogObserver
+from ._flatten import flattenEvent
 from ._levels import LogLevel
 from ._logger import Logger
-
-from twisted.python.compat import unicode, _PY3
-from twisted.python.failure import Failure
 
 log = Logger()
 

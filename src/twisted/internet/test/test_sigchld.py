@@ -6,13 +6,16 @@ Tests for L{twisted.internet._sigchld}, an alternate, superior SIGCHLD
 monitoring API.
 """
 
-from __future__ import division, absolute_import
+from __future__ import absolute_import, division
 
-import os, signal, errno
+import errno
+import os
+import signal
 
-from twisted.python.runtime import platformType
 from twisted.python.log import msg
+from twisted.python.runtime import platformType
 from twisted.trial.unittest import SynchronousTestCase
+
 if platformType == "posix":
     from twisted.internet.fdesc import setNonBlocking
     from twisted.internet._signals import installHandler, isDefaultHandler
@@ -122,4 +125,3 @@ class SetWakeupSIGCHLDTests(SynchronousTestCase):
         os.kill(os.getpid(), signal.SIGCHLD)
 
         self.assertEqual(len(os.read(read, 5)), 1)
-

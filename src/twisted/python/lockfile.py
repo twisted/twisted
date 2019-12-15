@@ -11,16 +11,16 @@ from __future__ import absolute_import, division
 
 import errno
 import os
-
+from os import rename
 from time import time as _uniquefloat
 
-from twisted.python.runtime import platform
 from twisted.python.compat import _PY3
+from twisted.python.runtime import platform
+
 
 def unique():
     return str(int(_uniquefloat() * 1000))
 
-from os import rename
 
 if not platform.isWindows():
     from os import kill

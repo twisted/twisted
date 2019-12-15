@@ -10,13 +10,11 @@ See the L{twisted.trial.test.test_tests} module docstring for details about how
 this code is arranged.
 """
 
-from __future__ import division, absolute_import
+from __future__ import absolute_import, division
 
 import warnings
 
 from twisted.trial import unittest, util
-
-
 
 METHOD_WARNING_MSG = "method warning message"
 CLASS_WARNING_MSG = "class warning message"

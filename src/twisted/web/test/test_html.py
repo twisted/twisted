@@ -5,7 +5,6 @@ from twisted.trial import unittest
 from twisted.web import html
 
 
-
 class WebHtmlTests(unittest.TestCase):
     """
     Unit tests for L{twisted.web.html}.

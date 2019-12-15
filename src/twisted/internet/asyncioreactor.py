@@ -9,24 +9,27 @@ asyncio-based reactor implementation.
 from __future__ import absolute_import, division
 
 import errno
+# As per ImportError above, this module is never imported on python 2, but
+# pyflakes still runs on python 2, so let's tell it where the errors come from.
+from builtins import BrokenPipeError, PermissionError
 
 from zope.interface import implementer
 
-from twisted.logger import Logger
 from twisted.internet.base import DelayedCall
-from twisted.internet.posixbase import (PosixReactorBase, _NO_FILEDESC,
-                                        _ContinuousPolling)
-from twisted.python.log import callWithLogger
 from twisted.internet.interfaces import IReactorFDSet
+from twisted.internet.posixbase import (
+    _NO_FILEDESC,
+    PosixReactorBase,
+    _ContinuousPolling,
+)
+from twisted.logger import Logger
+from twisted.python.log import callWithLogger
 
 try:
     from asyncio import get_event_loop
 except ImportError:
     raise ImportError("Requires asyncio.")
 
-# As per ImportError above, this module is never imported on python 2, but
-# pyflakes still runs on python 2, so let's tell it where the errors come from.
-from builtins import PermissionError, BrokenPipeError
 
 
 class _DCHandle(object):

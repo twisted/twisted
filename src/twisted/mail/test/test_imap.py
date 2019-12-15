@@ -12,39 +12,46 @@ import codecs
 import functools
 import locale
 import os
-from io import BytesIO
 import uuid
-
-from itertools import chain
 from collections import OrderedDict
+from io import BytesIO
+from itertools import chain
 
 from zope.interface import implementer
 from zope.interface.verify import verifyClass, verifyObject
 
-from twisted.internet import defer
-from twisted.internet import error
-from twisted.internet import interfaces
-from twisted.internet import reactor
+from twisted.python.compat import (
+    _PY3,
+    intToBytes,
+    iterbytes,
+    nativeString,
+    networkString,
+    range,
+)
+from twisted.cred.checkers import InMemoryUsernamePasswordDatabaseDontUse
+from twisted.cred.credentials import (
+    CramMD5Credentials,
+    IUsernameHashedPassword,
+    IUsernamePassword,
+)
+from twisted.cred.error import UnauthorizedLogin
+from twisted.cred.portal import IRealm, Portal
+from twisted.internet import defer, error, interfaces, reactor
 from twisted.internet.task import Clock
 from twisted.mail import imap4
-from twisted.mail.interfaces import (IChallengeResponse,
-                                     IClientAuthentication,
-                                     ICloseableMailboxIMAP)
 from twisted.mail.imap4 import MessageSet
+from twisted.mail.interfaces import (
+    IChallengeResponse,
+    IClientAuthentication,
+    ICloseableMailboxIMAP,
+)
 from twisted.protocols import loopback
-from twisted.python import failure
-from twisted.python import util, log
-from twisted.python.compat import (intToBytes, range, nativeString,
-                                   networkString, iterbytes, _PY3)
+from twisted.python import failure, log, util
+from twisted.test.proto_helpers import (
+    StringTransport,
+    StringTransportWithDisconnection,
+)
 from twisted.trial import unittest
-
-from twisted.cred.portal import Portal, IRealm
-from twisted.cred.checkers import InMemoryUsernamePasswordDatabaseDontUse
-from twisted.cred.error import UnauthorizedLogin
-from twisted.cred.credentials import (
-    IUsernameHashedPassword, IUsernamePassword, CramMD5Credentials)
-
-from twisted.test.proto_helpers import StringTransport, StringTransportWithDisconnection
 
 try:
     from twisted.test.ssl_helpers import ClientTLSContext, ServerTLSContext

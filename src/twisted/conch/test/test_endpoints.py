@@ -6,34 +6,41 @@ Tests for L{twisted.conch.endpoints}.
 """
 
 import os.path
-from struct import pack
 from errno import ENOSYS
+from struct import pack
+
+from zope.interface import implementer
+from zope.interface.verify import verifyClass, verifyObject
 
 import hamcrest
 
-from zope.interface.verify import verifyObject, verifyClass
-from zope.interface import implementer
-
-from twisted.logger import globalLogPublisher, LogLevel
 from twisted.python.compat import iteritems, networkString
+from twisted.conch.error import ConchError, HostKeyChanged, UserRejectedKey
+from twisted.conch.interfaces import IConchUser
+from twisted.cred.checkers import InMemoryUsernamePasswordDatabaseDontUse
+from twisted.cred.portal import Portal
+from twisted.internet.address import IPv4Address
+from twisted.internet.defer import CancelledError, Deferred, fail, succeed
+from twisted.internet.error import (
+    ConnectingCancelledError,
+    ConnectionDone,
+    ConnectionRefusedError,
+    ProcessTerminated,
+)
+from twisted.internet.interfaces import IAddress, IStreamClientEndpoint
+from twisted.internet.protocol import Factory, Protocol
+from twisted.logger import LogLevel, globalLogPublisher
 from twisted.python.failure import Failure
 from twisted.python.filepath import FilePath
 from twisted.python.log import msg
 from twisted.python.reflect import requireModule
-from twisted.internet.interfaces import IAddress, IStreamClientEndpoint
-from twisted.internet.protocol import Factory, Protocol
-from twisted.internet.defer import CancelledError, Deferred, succeed, fail
-from twisted.internet.error import ConnectionDone, ConnectionRefusedError
-from twisted.internet.address import IPv4Address
+from twisted.test.iosim import FakeTransport, connect
+from twisted.test.proto_helpers import (
+    EventLoggingObserver,
+    MemoryReactorClock,
+    StringTransport,
+)
 from twisted.trial.unittest import TestCase
-from twisted.test.proto_helpers import EventLoggingObserver, MemoryReactorClock
-from twisted.internet.error import ProcessTerminated, ConnectingCancelledError
-
-from twisted.cred.portal import Portal
-from twisted.cred.checkers import InMemoryUsernamePasswordDatabaseDontUse
-
-from twisted.conch.interfaces import IConchUser
-from twisted.conch.error import ConchError, UserRejectedKey, HostKeyChanged
 
 if requireModule('cryptography') and requireModule('pyasn1.type'):
     from twisted.conch.ssh import common
@@ -64,8 +71,6 @@ else:
         SSHAgentServer = KnownHostsFile = SSHPublicKeyChecker = ConchUser = \
         object
 
-from twisted.test.proto_helpers import StringTransport
-from twisted.test.iosim import FakeTransport, connect
 
 
 class AbortableFakeTransport(FakeTransport):

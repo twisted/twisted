@@ -9,9 +9,16 @@ Implementation module for the I{mailmail} command.
 from __future__ import print_function
 
 import email.utils
+import getpass
 import os
 import sys
-import getpass
+
+from twisted.python.compat import NativeStringIO
+from twisted.copyright import version
+from twisted.internet import reactor
+from twisted.logger import Logger, textFileLogObserver
+from twisted.mail import smtp
+
 try:
     # Python 3
     from configparser import ConfigParser
@@ -19,11 +26,6 @@ except ImportError:
     # Python 2
     from ConfigParser import ConfigParser
 
-from twisted.copyright import version
-from twisted.internet import reactor
-from twisted.logger import Logger, textFileLogObserver
-from twisted.mail import smtp
-from twisted.python.compat import NativeStringIO
 
 GLOBAL_CFG = "/etc/mailmail"
 LOCAL_CFG = os.path.expanduser("~/.twisted/mailmail")

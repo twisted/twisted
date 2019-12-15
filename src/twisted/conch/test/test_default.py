@@ -9,7 +9,14 @@ from __future__ import absolute_import, division
 
 import sys
 
+from twisted.python.compat import nativeString
+from twisted.conch.error import ConchError
+from twisted.conch.test import keydata
+from twisted.python.filepath import FilePath
 from twisted.python.reflect import requireModule
+from twisted.python.runtime import platform
+from twisted.test.proto_helpers import StringTransport
+from twisted.trial.unittest import TestCase
 
 if requireModule('cryptography') and requireModule('pyasn1'):
     from twisted.conch.client.agent import SSHAgentClient
@@ -21,13 +28,6 @@ if requireModule('cryptography') and requireModule('pyasn1'):
 else:
     skip = "cryptography and PyASN1 required for twisted.conch.client.default."
 
-from twisted.trial.unittest import TestCase
-from twisted.python.filepath import FilePath
-from twisted.conch.error import ConchError
-from twisted.conch.test import keydata
-from twisted.test.proto_helpers import StringTransport
-from twisted.python.compat import nativeString
-from twisted.python.runtime import platform
 
 if platform.isWindows():
     windowsSkip = (

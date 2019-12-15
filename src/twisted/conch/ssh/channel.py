@@ -9,14 +9,13 @@ are session, direct-tcp, and forwarded-tcp.
 Maintainer: Paul Swartz
 """
 
-from __future__ import division, absolute_import
+from __future__ import absolute_import, division
 
 from zope.interface import implementer
 
-from twisted.python import log
-from twisted.python.compat import nativeString, intToBytes
+from twisted.python.compat import intToBytes, nativeString
 from twisted.internet import interfaces
-
+from twisted.python import log
 
 
 @implementer(interfaces.ITransport)

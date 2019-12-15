@@ -10,27 +10,36 @@ from __future__ import absolute_import, division
 import copy
 import operator
 import socket
-
-from io import BytesIO
 from functools import partial, reduce
+from io import BytesIO
 from struct import pack
 
+from twisted.python.compat import nativeString
+from twisted.internet import defer, error, reactor
+from twisted.internet.defer import succeed
+from twisted.names import authority, client, common, dns, server
+from twisted.names.client import Resolver
+from twisted.names.dns import (
+    SOA,
+    Message,
+    Query,
+    Record_A,
+    Record_SOA,
+    RRHeader,
+)
+from twisted.names.error import DomainError
+from twisted.names.secondary import (
+    SecondaryAuthority,
+    SecondaryAuthorityService,
+)
+from twisted.python.filepath import FilePath
+from twisted.test.proto_helpers import (
+    MemoryReactorClock,
+    StringTransport,
+    waitUntilAllDisconnected,
+)
 from twisted.trial import unittest
 
-from twisted.internet import reactor, defer, error
-from twisted.internet.defer import succeed
-from twisted.names import client, server, common, authority, dns
-from twisted.names.dns import (
-    SOA, Message, RRHeader, Record_A, Record_SOA, Query)
-from twisted.names.error import DomainError
-from twisted.names.client import Resolver
-from twisted.names.secondary import (
-    SecondaryAuthorityService, SecondaryAuthority)
-from twisted.python.compat import nativeString
-from twisted.python.filepath import FilePath
-
-from twisted.test.proto_helpers import (
-    StringTransport, MemoryReactorClock, waitUntilAllDisconnected)
 
 def justPayload(results):
     return [r.payload for r in results[0]]

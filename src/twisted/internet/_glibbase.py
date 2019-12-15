@@ -11,7 +11,7 @@ import gireactor or gtk3reactor for GObject Introspection based applications,
 or glib2reactor or gtk2reactor for applications using legacy static bindings.
 """
 
-from __future__ import division, absolute_import
+from __future__ import absolute_import, division
 
 import sys
 
@@ -20,7 +20,6 @@ from zope.interface import implementer
 from twisted.internet import base, posixbase, selectreactor
 from twisted.internet.interfaces import IReactorFDSet
 from twisted.python import log
-
 
 
 def ensureNotImported(moduleNames, errorMessage, preventImports=[]):

@@ -5,11 +5,10 @@
 Tests for L{twisted.internet.error}
 """
 
-from __future__ import division, absolute_import
+from __future__ import absolute_import, division
 
-from twisted.trial.unittest import SynchronousTestCase
 from twisted.internet import error
-
+from twisted.trial.unittest import SynchronousTestCase
 
 
 class ConnectionAbortedTests(SynchronousTestCase):

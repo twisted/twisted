@@ -10,9 +10,14 @@ select() - this is pretty much only useful on Windows.
 from __future__ import absolute_import, division
 
 from zope.interface import implementer
-from twisted.internet.interfaces import IConsumer, IPushProducer
-from twisted.python.compat import unicode
 
+import pywintypes
+import win32api
+import win32file
+import win32pipe
+
+from twisted.python.compat import unicode
+from twisted.internet.interfaces import IConsumer, IPushProducer
 
 MIN_TIMEOUT = 0.000000001
 MAX_TIMEOUT = 0.1
@@ -100,10 +105,6 @@ class _PollingTimer:
 # If we ever (let's hope not) need the above functionality on UNIX, this could
 # be factored into a different module.
 
-import win32pipe
-import win32file
-import win32api
-import pywintypes
 
 @implementer(IPushProducer)
 class _PollableReadPipe(_PollableResource):

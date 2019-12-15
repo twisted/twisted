@@ -5,16 +5,15 @@
 Tests for L{twisted.names.cache}.
 """
 
-from __future__ import division, absolute_import
+from __future__ import absolute_import, division
 
 import time
 
 from zope.interface.verify import verifyClass
 
+from twisted.internet import interfaces, task
+from twisted.names import cache, dns
 from twisted.trial import unittest
-
-from twisted.names import dns, cache
-from twisted.internet import task, interfaces
 
 
 class CachingTests(unittest.TestCase):

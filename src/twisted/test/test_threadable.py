@@ -5,9 +5,14 @@
 Tests for L{twisted.python.threadable}.
 """
 
-from __future__ import division, absolute_import
+from __future__ import absolute_import, division
 
-import sys, pickle
+import pickle
+import sys
+
+from twisted.python.compat import _PY3
+from twisted.python import threadable
+from twisted.trial import unittest
 
 try:
     import threading
@@ -16,10 +21,7 @@ except ImportError:
 else:
     threadingSkip = None
 
-from twisted.python.compat import _PY3
-from twisted.trial import unittest
 
-from twisted.python import threadable
 
 class TestObject:
     synchronized = ['aMethod']

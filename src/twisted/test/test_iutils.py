@@ -5,16 +5,20 @@
 Test running processes with the APIs in L{twisted.internet.utils}.
 """
 
-from __future__ import division, absolute_import
+from __future__ import absolute_import, division
 
-import warnings, os, stat, sys, signal
+import os
+import signal
+import stat
+import sys
+import warnings
 
 from twisted.python.compat import _PY3
-from twisted.python.runtime import platform
-from twisted.trial import unittest
-from twisted.internet import error, reactor, utils, interfaces
+from twisted.internet import error, interfaces, reactor, utils
 from twisted.internet.defer import Deferred
+from twisted.python.runtime import platform
 from twisted.python.test.test_util import SuppressedWarningsTests
+from twisted.trial import unittest
 
 
 class ProcessUtilsTests(unittest.TestCase):

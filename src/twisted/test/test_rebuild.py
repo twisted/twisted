@@ -2,14 +2,15 @@
 # See LICENSE for details.
 
 
-import sys, os
+import os
+import sys
 import types
 
-from twisted.trial import unittest
-from twisted.python import rebuild
 from twisted.python.compat import _PY3
-
+from twisted.python import rebuild
+from twisted.trial import unittest
 from . import crash_test_dummy
+
 f = crash_test_dummy.foo
 
 class Foo: pass

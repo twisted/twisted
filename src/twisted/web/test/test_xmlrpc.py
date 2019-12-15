@@ -6,26 +6,35 @@
 Tests for  XML-RPC support in L{twisted.web.xmlrpc}.
 """
 
-from __future__ import division, absolute_import
-
-from twisted.python.compat import nativeString, networkString, NativeStringIO
-from io import BytesIO
+from __future__ import absolute_import, division
 
 import datetime
+from io import BytesIO
 
-from twisted.trial import unittest
-from twisted.web import xmlrpc
-from twisted.web.xmlrpc import XMLRPC, payloadTemplate, addIntrospection
-from twisted.web.xmlrpc import _QueryFactory, withRequest, xmlrpclib
-from twisted.web import server, client, http, static
-from twisted.internet import reactor, defer
+from twisted.python.compat import NativeStringIO, nativeString, networkString
+from twisted.internet import defer, reactor
 from twisted.internet.error import ConnectionDone
+from twisted.logger import (
+    FilteringLogObserver,
+    LogLevel,
+    LogLevelFilterPredicate,
+    globalLogPublisher,
+)
 from twisted.python import failure
 from twisted.python.reflect import namedModule
-from twisted.test.proto_helpers import MemoryReactor, EventLoggingObserver
+from twisted.test.proto_helpers import EventLoggingObserver, MemoryReactor
+from twisted.trial import unittest
+from twisted.web import client, http, server, static, xmlrpc
 from twisted.web.test.test_web import DummyRequest
-from twisted.logger import (globalLogPublisher, FilteringLogObserver,
-                            LogLevelFilterPredicate, LogLevel)
+from twisted.web.xmlrpc import (
+    XMLRPC,
+    _QueryFactory,
+    addIntrospection,
+    payloadTemplate,
+    withRequest,
+    xmlrpclib,
+)
+
 try:
     namedModule('twisted.internet.ssl')
 except ImportError:

@@ -8,29 +8,33 @@ Tests for implementations of L{IReactorProcess}.
     platforms and native L{str} keys/values on Windows.
 """
 
-from __future__ import division, absolute_import, print_function
+from __future__ import absolute_import, division, print_function
 
 import io
 import os
 import signal
+import subprocess
 import sys
 import threading
+
 import twisted
-import subprocess
-
-from twisted.trial.unittest import TestCase
-from twisted.internet.test.reactormixins import ReactorBuilder
-from twisted.python.log import msg, err
-from twisted.python.runtime import platform
-from twisted.python.filepath import FilePath, _asFilesystemBytes
-from twisted.python.compat import (networkString, range, items,
-                                   bytesEnviron, unicode)
+from twisted.python.compat import (
+    bytesEnviron,
+    items,
+    networkString,
+    range,
+    unicode,
+)
 from twisted.internet import utils
-from twisted.internet.interfaces import IReactorProcess, IProcessTransport
 from twisted.internet.defer import Deferred, succeed
-from twisted.internet.protocol import ProcessProtocol
 from twisted.internet.error import ProcessDone, ProcessTerminated
-
+from twisted.internet.interfaces import IProcessTransport, IReactorProcess
+from twisted.internet.protocol import ProcessProtocol
+from twisted.internet.test.reactormixins import ReactorBuilder
+from twisted.python.filepath import FilePath, _asFilesystemBytes
+from twisted.python.log import err, msg
+from twisted.python.runtime import platform
+from twisted.trial.unittest import TestCase
 
 # Get the current Python executable as a bytestring.
 pyExe = FilePath(sys.executable)._asBytesPath()

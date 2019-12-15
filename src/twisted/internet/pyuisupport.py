@@ -13,6 +13,7 @@ See doc/examples/pyuidemo.py for example usage.
 # System imports
 import pyui
 
+
 def _guiUpdate(reactor, delay):
     pyui.draw()
     if pyui.update() == 0:

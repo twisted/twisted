@@ -5,13 +5,11 @@
 Test cases for L{twisted.logger._buffer}.
 """
 
-from zope.interface.verify import verifyObject, BrokenMethodImplementation
+from zope.interface.verify import BrokenMethodImplementation, verifyObject
 
 from twisted.trial import unittest
-
-from .._observer import ILogObserver
 from .._buffer import LimitedHistoryLogObserver
-
+from .._observer import ILogObserver
 
 
 class LimitedHistoryLogObserverTests(unittest.TestCase):

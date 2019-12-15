@@ -9,18 +9,16 @@ Serial port support for Windows.
 Requires PySerial and pywin32.
 """
 
-from __future__ import division, absolute_import
+from __future__ import absolute_import, division
 
+import win32event
+import win32file
 # system imports
-from serial import PARITY_NONE
-from serial import STOPBITS_ONE
-from serial import EIGHTBITS
+from serial import EIGHTBITS, PARITY_NONE, STOPBITS_ONE
 from serial.serialutil import to_bytes
-import win32file, win32event
 
 # twisted imports
 from twisted.internet import abstract
-
 # sibling imports
 from twisted.internet.serialport import BaseSerialPort
 

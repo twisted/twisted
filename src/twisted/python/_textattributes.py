@@ -25,7 +25,6 @@ from __future__ import print_function
 from twisted.python.util import FancyEqMixin
 
 
-
 class _Attribute(FancyEqMixin, object):
     """
     A text attribute.

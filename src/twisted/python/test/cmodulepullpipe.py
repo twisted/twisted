@@ -2,10 +2,12 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-import sys, os
+import os
+import sys
 from struct import unpack
 
 from twisted.python.sendmsg import recv1msg
+
 
 def recvfd(socketfd):
     """

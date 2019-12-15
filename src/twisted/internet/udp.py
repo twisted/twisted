@@ -15,17 +15,22 @@ Please do not use this module directly.
     module) representing socket errors that indicate connection refused.
 """
 
-from __future__ import division, absolute_import
+from __future__ import absolute_import, division
 
+import operator
 # System Imports
 import socket
-import operator
 import struct
 import warnings
 
 from zope.interface import implementer
 
+# Twisted Imports
+from twisted.internet import abstract, address, base, defer, error, interfaces
+from twisted.python import failure, log
+from twisted.python._oldstyle import _oldStyle
 from twisted.python.runtime import platformType
+
 if platformType == 'win32':
     from errno import WSAEWOULDBLOCK
     from errno import WSAEINTR, WSAEMSGSIZE, WSAETIMEDOUT
@@ -49,11 +54,6 @@ else:
     _sockErrReadIgnore = [EAGAIN, EINTR, EWOULDBLOCK]
     _sockErrReadRefuse = [ECONNREFUSED]
 
-# Twisted Imports
-from twisted.internet import base, defer, address
-from twisted.python import log, failure
-from twisted.python._oldstyle import _oldStyle
-from twisted.internet import abstract, error, interfaces
 
 
 

@@ -7,24 +7,27 @@ Tests for L{twisted.web.distrib}.
 
 from os.path import abspath
 from xml.dom.minidom import parseString
+
+from zope.interface.verify import verifyObject
+
+from twisted.internet import defer, reactor
+from twisted.logger import globalLogPublisher
+from twisted.python import failure, filepath
+from twisted.spread import pb
+from twisted.spread.banana import SIZE_LIMIT
+from twisted.test import proto_helpers
+from twisted.trial import unittest
+from twisted.web import client, distrib, resource, server, static
+from twisted.web.http_headers import Headers
+from twisted.web.test._util import _render
+from twisted.web.test.test_web import DummyChannel, DummyRequest
+
 try:
     import pwd
 except ImportError:
     pwd = None
 
-from zope.interface.verify import verifyObject
 
-from twisted.python import filepath, failure
-from twisted.internet import reactor, defer
-from twisted.trial import unittest
-from twisted.spread import pb
-from twisted.spread.banana import SIZE_LIMIT
-from twisted.web import distrib, client, resource, static, server
-from twisted.web.test.test_web import DummyRequest, DummyChannel
-from twisted.web.test._util import _render
-from twisted.test import proto_helpers
-from twisted.web.http_headers import Headers
-from twisted.logger import globalLogPublisher
 
 
 class MySite(server.Site):
@@ -524,4 +527,3 @@ class UserDirectoryTests(unittest.TestCase):
         self.assertIdentical(directory._pwd, pwd)
     if pwd is None:
         test_passwordDatabase.skip = "pwd module required"
-

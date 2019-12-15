@@ -5,14 +5,16 @@
 Testing helpers related to the module system.
 """
 
-from __future__ import division, absolute_import
-
-__all__ = ['NoReactor', 'AlternateReactor']
+from __future__ import absolute_import, division
 
 import sys
 
 import twisted.internet
 from twisted.test.test_twisted import SetAsideModule
+
+__all__ = ['NoReactor', 'AlternateReactor']
+
+
 
 
 

@@ -6,9 +6,12 @@
 Cryptographically secure random implementation, with fallback on normal random.
 """
 
-from __future__ import division, absolute_import
+from __future__ import absolute_import, division
 
-import warnings, os, random, string
+import os
+import random
+import string
+import warnings
 
 from twisted.python.compat import _PY3
 

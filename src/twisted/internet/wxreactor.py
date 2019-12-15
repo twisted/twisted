@@ -35,8 +35,8 @@ except ImportError:
     # older version of wxPython:
     from wxPython.wx import wxPySimpleApp, wxCallAfter, wxTimer
 
-from twisted.python import log, runtime
 from twisted.internet import _threadedselect
+from twisted.python import log, runtime
 
 
 class ProcessEventsTimer(wxTimer):

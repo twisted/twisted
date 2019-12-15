@@ -5,10 +5,10 @@
 Tests for L{twisted.python.monkey}.
 """
 
-from __future__ import division, absolute_import
+from __future__ import absolute_import, division
 
-from twisted.trial import unittest
 from twisted.python.monkey import MonkeyPatcher
+from twisted.trial import unittest
 
 
 class TestObj:

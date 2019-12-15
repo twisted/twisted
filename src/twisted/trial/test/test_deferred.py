@@ -5,13 +5,12 @@
 Tests for returning Deferreds from a TestCase.
 """
 
-from __future__ import division, absolute_import
+from __future__ import absolute_import, division
 
 import unittest as pyunit
 
 from twisted.internet import defer
-from twisted.trial import unittest, reporter
-from twisted.trial import util
+from twisted.trial import reporter, unittest, util
 from twisted.trial.test import detests
 
 

@@ -6,57 +6,74 @@ Tests for L{twisted.web.client.Agent} and related new client APIs.
 """
 
 import zlib
-
 from io import BytesIO
 
+from zope.interface.declarations import implementer
 from zope.interface.verify import verifyObject
 
-from twisted.trial.unittest import TestCase, SynchronousTestCase
-from twisted.web import client, error, http_headers
-from twisted.web._newclient import RequestNotSent, RequestTransmissionFailed
-from twisted.web._newclient import ResponseNeverReceived, ResponseFailed
-from twisted.web._newclient import PotentialDataLoss
-from twisted.internet import defer, task
-from twisted.python.failure import Failure
-from twisted.python.compat import cookielib, intToBytes, unicode
-from twisted.python.components import proxyForInterface
-from twisted.test.proto_helpers import (StringTransport, MemoryReactorClock,
-                                        EventLoggingObserver)
-from twisted.internet.task import Clock
-from twisted.internet.error import ConnectionRefusedError, ConnectionDone
-from twisted.internet.error import ConnectionLost
-from twisted.internet.protocol import Protocol, Factory
-from twisted.internet.defer import Deferred, succeed, CancelledError
-from twisted.internet.endpoints import TCP4ClientEndpoint
-from twisted.internet.address import IPv4Address, IPv6Address
-
-from twisted.web.client import (FileBodyProducer, Request, HTTPConnectionPool,
-                                ResponseDone, _HTTP11ClientFactory, URI)
-
-from twisted.web.iweb import (
-    UNKNOWN_LENGTH, IAgent, IBodyProducer, IResponse, IAgentEndpointFactory,
-    )
-from twisted.web.http_headers import Headers
-from twisted.web._newclient import HTTP11ClientProtocol, Response
-
-from twisted.internet.interfaces import IOpenSSLClientConnectionCreator
-from zope.interface.declarations import implementer
-from twisted.web.iweb import IPolicyForHTTPS
-from twisted.python.deprecate import getDeprecationWarningString
 from incremental import Version
-from twisted.web.client import (BrowserLikePolicyForHTTPS,
-                                HostnameCachingHTTPSPolicy)
+
+from twisted.python.compat import cookielib, intToBytes, unicode
+from twisted.internet import defer, task
+from twisted.internet.address import IPv4Address, IPv6Address
+from twisted.internet.defer import CancelledError, Deferred, succeed
+from twisted.internet.endpoints import HostnameEndpoint, TCP4ClientEndpoint
+from twisted.internet.error import (
+    ConnectionDone,
+    ConnectionLost,
+    ConnectionRefusedError,
+)
+from twisted.internet.interfaces import IOpenSSLClientConnectionCreator
+from twisted.internet.protocol import Factory, Protocol
+from twisted.internet.task import Clock
 from twisted.internet.test.test_endpoints import deterministicResolvingReactor
-from twisted.internet.endpoints import HostnameEndpoint
-from twisted.test.proto_helpers import AccumulatingProtocol
-from twisted.test.iosim import IOPump, FakeTransport
+from twisted.logger import globalLogPublisher
+from twisted.python.components import proxyForInterface
+from twisted.python.deprecate import getDeprecationWarningString
+from twisted.python.failure import Failure
+from twisted.test.iosim import FakeTransport, IOPump
+from twisted.test.proto_helpers import (
+    AccumulatingProtocol,
+    EventLoggingObserver,
+    MemoryReactorClock,
+    StringTransport,
+)
 from twisted.test.test_sslverify import certificatesForAuthorityAndServer
+from twisted.trial.unittest import SynchronousTestCase, TestCase
+from twisted.web import client, error, http_headers
+from twisted.web._newclient import (
+    HTTP11ClientProtocol,
+    PotentialDataLoss,
+    RequestNotSent,
+    RequestTransmissionFailed,
+    Response,
+    ResponseFailed,
+    ResponseNeverReceived,
+)
+from twisted.web.client import (
+    URI,
+    BrowserLikePolicyForHTTPS,
+    FileBodyProducer,
+    HostnameCachingHTTPSPolicy,
+    HTTPConnectionPool,
+    Request,
+    ResponseDone,
+    _HTTP11ClientFactory,
+)
+from twisted.web.error import SchemeNotSupported
+from twisted.web.http_headers import Headers
+from twisted.web.iweb import (
+    UNKNOWN_LENGTH,
+    IAgent,
+    IAgentEndpointFactory,
+    IBodyProducer,
+    IPolicyForHTTPS,
+    IResponse,
+)
 from twisted.web.test.injectionhelpers import (
     MethodInjectionTestsMixin,
     URIInjectionTestsMixin,
 )
-from twisted.web.error import SchemeNotSupported
-from twisted.logger import globalLogPublisher
 
 try:
     from twisted.internet import ssl

@@ -5,12 +5,10 @@
 Tests for L{twisted.application.runner._exit}.
 """
 
+import twisted.trial.unittest
 from twisted.python.compat import NativeStringIO
 from ...runner import _exit
-from .._exit import exit, ExitStatus
-
-import twisted.trial.unittest
-
+from .._exit import ExitStatus, exit
 
 
 class ExitTests(twisted.trial.unittest.TestCase):

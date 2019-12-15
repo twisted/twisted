@@ -5,16 +5,16 @@
 Tests for L{twisted.web.twcgi}.
 """
 
-import sys
-import os
 import json
+import os
+import sys
 from io import BytesIO
 
+from twisted.internet import address, error, interfaces, reactor
+from twisted.python import failure, log, util
 from twisted.trial import unittest
-from twisted.internet import address, reactor, interfaces, error
-from twisted.python import util, failure, log
-from twisted.web.http import NOT_FOUND, INTERNAL_SERVER_ERROR
-from twisted.web import client, twcgi, server, resource, http_headers
+from twisted.web import client, http_headers, resource, server, twcgi
+from twisted.web.http import INTERNAL_SERVER_ERROR, NOT_FOUND
 from twisted.web.test._util import _render
 from twisted.web.test.test_web import DummyRequest
 

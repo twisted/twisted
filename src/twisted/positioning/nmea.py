@@ -21,16 +21,17 @@ U{http://www.nmea.org/content/nmea_standards/nmea_0183_v_410.asp}.
 
 from __future__ import absolute_import, division
 
-import operator
 import datetime
+import operator
 
 from zope.interface import implementer
-from constantly import Values, ValueConstant
 
-from twisted.positioning import base, ipositioning, _sentence
+from constantly import ValueConstant, Values
+
+from twisted.python.compat import iterbytes, izip, nativeString, reduce
+from twisted.positioning import _sentence, base, ipositioning
 from twisted.positioning.base import Angles
 from twisted.protocols.basic import LineReceiver
-from twisted.python.compat import reduce, izip, nativeString, iterbytes
 
 
 class GPGGAFixQualities(Values):

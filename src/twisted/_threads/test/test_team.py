@@ -7,13 +7,12 @@ Tests for L{twisted._threads._team}.
 
 from __future__ import absolute_import, division, print_function
 
-from twisted.trial.unittest import SynchronousTestCase
-
-from twisted.python.context import call, get
 from twisted.python.components import proxyForInterface
-
+from twisted.python.context import call, get
 from twisted.python.failure import Failure
-from .. import IWorker, Team, createMemoryWorker, AlreadyQuit
+from twisted.trial.unittest import SynchronousTestCase
+from .. import AlreadyQuit, IWorker, Team, createMemoryWorker
+
 
 class ContextualWorker(proxyForInterface(IWorker, "_realWorker")):
     """

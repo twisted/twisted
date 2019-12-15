@@ -10,11 +10,11 @@ workers.
 from __future__ import absolute_import, division, print_function
 
 from collections import deque
+
 from zope.interface import implementer
 
 from . import IWorker
 from ._convenience import Quit
-
 
 
 class Statistics(object):

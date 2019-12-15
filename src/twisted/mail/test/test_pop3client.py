@@ -2,22 +2,24 @@
 # Copyright (c) 2001-2004 Divmod Inc.
 # See LICENSE for details.
 
-import sys
 import inspect
+import sys
 
 from zope.interface import directlyProvides
 
-from twisted.internet import reactor, defer, error, protocol, interfaces
-from twisted.mail.pop3 import AdvancedPOP3Client as POP3Client
-from twisted.mail.pop3 import InsecureAuthenticationDisallowed
-from twisted.mail.pop3 import ServerErrorResponse
+import twisted.mail.pop3client
+from twisted.python.compat import intToBytes
+from twisted.internet import defer, error, interfaces, protocol, reactor
+from twisted.mail.pop3 import (
+    AdvancedPOP3Client as POP3Client,
+    InsecureAuthenticationDisallowed,
+    ServerErrorResponse,
+)
 from twisted.mail.test import pop3testserver
 from twisted.protocols import basic, loopback
 from twisted.python import log
-from twisted.python.compat import intToBytes
 from twisted.test.proto_helpers import StringTransport
 from twisted.trial import unittest
-
 
 try:
     from twisted.test.ssl_helpers import ClientTLSContext, ServerTLSContext
@@ -651,7 +653,6 @@ elif interfaces.IReactorSSL(reactor, None) is None:
 
 
 
-import twisted.mail.pop3client
 
 class POP3ClientModuleStructureTests(unittest.TestCase):
     """

@@ -10,14 +10,12 @@ You will find these useful if you're adding a new protocol to IM.
 
 # Abstract representation of chat "model" classes
 
+from twisted.internet import error
+from twisted.internet.protocol import Protocol
+from twisted.persisted import styles
+from twisted.python.reflect import prefixedMethods
 from twisted.words.im.locals import OFFLINE, OfflineError
 
-from twisted.internet.protocol import Protocol
-
-from twisted.python.reflect import prefixedMethods
-from twisted.persisted import styles
-
-from twisted.internet import error
 
 class AbstractGroup:
     def __init__(self, name, account):

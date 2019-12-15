@@ -5,32 +5,45 @@
 Tests for implementations of L{ITLSTransport}.
 """
 
-from __future__ import division, absolute_import
-
-__metaclass__ = type
+from __future__ import absolute_import, division
 
 from zope.interface import implementer
 
 from twisted.python.compat import networkString
-from twisted.python.filepath import FilePath
-from twisted.internet.test.reactormixins import ReactorBuilder
-from twisted.internet.protocol import ServerFactory, ClientFactory, Protocol
-from twisted.internet.interfaces import (
-    IReactorSSL, ITLSTransport, IStreamClientEndpoint)
 from twisted.internet.defer import Deferred, DeferredList
 from twisted.internet.endpoints import (
-    SSL4ServerEndpoint, SSL4ClientEndpoint, TCP4ClientEndpoint)
+    SSL4ClientEndpoint,
+    SSL4ServerEndpoint,
+    TCP4ClientEndpoint,
+)
 from twisted.internet.error import ConnectionClosed
+from twisted.internet.interfaces import (
+    IReactorSSL,
+    IStreamClientEndpoint,
+    ITLSTransport,
+)
+from twisted.internet.protocol import ClientFactory, Protocol, ServerFactory
 from twisted.internet.task import Cooperator
-from twisted.trial.unittest import SkipTest
-from twisted.python.runtime import platform
-
+from twisted.internet.test.connectionmixins import (
+    BrokenContextFactory,
+    ConnectionTestsMixin,
+    EndpointCreator,
+)
+from twisted.internet.test.reactormixins import ReactorBuilder
 from twisted.internet.test.test_core import ObjectModelIntegrationMixin
 from twisted.internet.test.test_tcp import (
-    ConnectToTCPListenerMixin, StreamTransportTestsMixin, AbortConnectionMixin,
+    AbortConnectionMixin,
+    ConnectToTCPListenerMixin,
+    StreamTransportTestsMixin,
 )
-from twisted.internet.test.connectionmixins import (
-    EndpointCreator, ConnectionTestsMixin, BrokenContextFactory)
+from twisted.python.filepath import FilePath
+from twisted.python.runtime import platform
+from twisted.trial.unittest import SkipTest
+
+__metaclass__ = type
+
+
+
 
 try:
     from OpenSSL.crypto import FILETYPE_PEM

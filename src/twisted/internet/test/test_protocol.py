@@ -5,25 +5,33 @@
 Tests for L{twisted.internet.protocol}.
 """
 
-from __future__ import division, absolute_import
+from __future__ import absolute_import, division
 
 from io import BytesIO
 
 from zope.interface import implementer
 from zope.interface.verify import verifyObject
 
+from twisted.python.compat import _PY3
 from twisted.internet.defer import CancelledError
 from twisted.internet.interfaces import (
-    IProtocol, ILoggingContext, IProtocolFactory, IConsumer)
+    IConsumer,
+    ILoggingContext,
+    IProtocol,
+    IProtocolFactory,
+)
 from twisted.internet.protocol import (
-    Protocol, ClientCreator, Factory, ProtocolToConsumerAdapter,
-    ConsumerToProtocolAdapter, FileWrapper)
+    ClientCreator,
+    ConsumerToProtocolAdapter,
+    Factory,
+    FileWrapper,
+    Protocol,
+    ProtocolToConsumerAdapter,
+)
 from twisted.logger import LogLevel, globalLogPublisher
-from twisted.python.compat import _PY3
 from twisted.python.failure import Failure
 from twisted.test.proto_helpers import MemoryReactorClock, StringTransport
 from twisted.trial.unittest import TestCase
-
 
 
 class ClientCreatorTests(TestCase):

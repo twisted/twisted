@@ -28,18 +28,16 @@ which allow access to only the parts of another class defined by a specified
 interface.
 """
 
-from __future__ import division, absolute_import, print_function
+from __future__ import absolute_import, division, print_function
 
 # zope3 imports
-from zope.interface import interface, declarations
+from zope.interface import declarations, interface
 from zope.interface.adapter import AdapterRegistry
 
 # twisted imports
 from twisted.python.compat import NativeStringIO
 from twisted.python import reflect
 from twisted.python._oldstyle import _oldStyle
-
-
 
 # Twisted's global adapter registry
 globalRegistry = AdapterRegistry()

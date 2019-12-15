@@ -8,16 +8,29 @@ Implementation module for the `tkconch` command.
 
 from __future__ import print_function
 
-from twisted.conch import error
-from twisted.conch.ui import tkvt100
-from twisted.conch.ssh import transport, userauth, connection, common, keys
-from twisted.conch.ssh import session, forwarding, channel
-from twisted.conch.client.default import isInKnownHosts
-from twisted.internet import reactor, defer, protocol, tksupport
-from twisted.python import usage, log
-from twisted.python.compat import _PY3
+import base64
+import getpass
+import os
+import signal
+import struct
+import sys
 
-import os, sys, getpass, struct, base64, signal
+from twisted.python.compat import _PY3
+from twisted.conch import error
+from twisted.conch.client.default import isInKnownHosts
+from twisted.conch.ssh import (
+    channel,
+    common,
+    connection,
+    forwarding,
+    keys,
+    session,
+    transport,
+    userauth,
+)
+from twisted.conch.ui import tkvt100
+from twisted.internet import defer, protocol, reactor, tksupport
+from twisted.python import log, usage
 
 if _PY3:
     import tkinter as Tkinter

@@ -29,8 +29,8 @@ fix::
 @see: U{Tcl/TkAqua FAQ for more info<http://wiki.tcl.tk/12987>}
 """
 
-from twisted.internet import task
 from twisted.python.compat import _PY3
+from twisted.internet import task
 
 if _PY3:
     import tkinter.simpledialog as tkSimpleDialog

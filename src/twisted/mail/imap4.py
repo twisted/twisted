@@ -18,62 +18,79 @@ To do::
 import binascii
 import codecs
 import copy
+import email.utils
 import functools
 import re
 import string
 import tempfile
 import time
 import uuid
-
-import email.utils
-
-from itertools import chain
 from io import BytesIO
+from itertools import chain
 
 from zope.interface import implementer
 
-from twisted.protocols import basic
-from twisted.protocols import policies
-from twisted.internet import defer
-from twisted.internet import error
-from twisted.internet.defer import maybeDeferred
-from twisted.python import log, text
 from twisted.python.compat import (
-    _bytesChr, unichr as chr, _b64decodebytes as decodebytes,
+    _PY3,
+    _b64decodebytes as decodebytes,
     _b64encodebytes as encodebytes,
-    intToBytes, iterbytes, long, nativeString, networkString, unicode,
-    _matchingString, _PY3, _get_async_param,
+    _bytesChr,
+    _get_async_param,
+    _matchingString,
+    intToBytes,
+    iterbytes,
+    long,
+    nativeString,
+    networkString,
+    unichr as chr,
+    unicode,
 )
-from twisted.internet import interfaces
-
 from twisted.cred import credentials
 from twisted.cred.error import UnauthorizedLogin, UnhandledCredentials
-
-# Re-exported for compatibility reasons
-from twisted.mail.interfaces import (
-    IClientAuthentication, INamespacePresenter,
-    IAccountIMAP as IAccount,
-    IMessageIMAPPart as IMessagePart,
-    IMessageIMAP as IMessage,
-    IMessageIMAPFile as IMessageFile,
-    ISearchableIMAPMailbox as ISearchableMailbox,
-    IMessageIMAPCopier as IMessageCopier,
-    IMailboxIMAPInfo as IMailboxInfo,
-    IMailboxIMAP as IMailbox,
-    ICloseableMailboxIMAP as ICloseableMailbox,
-    IMailboxIMAPListener as IMailboxListener
-)
+from twisted.internet import defer, error, interfaces
+from twisted.internet.defer import maybeDeferred
 from twisted.mail._cred import (
     CramMD5ClientAuthenticator,
-    LOGINAuthenticator, LOGINCredentials,
-    PLAINAuthenticator, PLAINCredentials)
-from twisted.mail._except import (
-    IMAP4Exception, IllegalClientResponse, IllegalOperation, MailboxException,
-    IllegalMailboxEncoding, MailboxCollision, NoSuchMailbox, ReadOnlyMailbox,
-    UnhandledResponse, NegativeResponse, NoSupportedAuthentication,
-    IllegalIdentifierError, IllegalQueryError, MismatchedNesting,
-    MismatchedQuoting, IllegalServerResponse,
+    LOGINAuthenticator,
+    LOGINCredentials,
+    PLAINAuthenticator,
+    PLAINCredentials,
 )
+from twisted.mail._except import (
+    IllegalClientResponse,
+    IllegalIdentifierError,
+    IllegalMailboxEncoding,
+    IllegalOperation,
+    IllegalQueryError,
+    IllegalServerResponse,
+    IMAP4Exception,
+    MailboxCollision,
+    MailboxException,
+    MismatchedNesting,
+    MismatchedQuoting,
+    NegativeResponse,
+    NoSuchMailbox,
+    NoSupportedAuthentication,
+    ReadOnlyMailbox,
+    UnhandledResponse,
+)
+# Re-exported for compatibility reasons
+from twisted.mail.interfaces import (
+    IAccountIMAP as IAccount,
+    IClientAuthentication,
+    ICloseableMailboxIMAP as ICloseableMailbox,
+    IMailboxIMAP as IMailbox,
+    IMailboxIMAPInfo as IMailboxInfo,
+    IMailboxIMAPListener as IMailboxListener,
+    IMessageIMAP as IMessage,
+    IMessageIMAPCopier as IMessageCopier,
+    IMessageIMAPFile as IMessageFile,
+    IMessageIMAPPart as IMessagePart,
+    INamespacePresenter,
+    ISearchableIMAPMailbox as ISearchableMailbox,
+)
+from twisted.protocols import basic, policies
+from twisted.python import log, text
 
 # locale-independent month names to use instead of strftime's
 _MONTH_NAMES = dict(zip(

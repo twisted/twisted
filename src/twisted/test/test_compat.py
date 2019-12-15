@@ -6,21 +6,41 @@
 Tests for L{twisted.python.compat}.
 """
 
-from __future__ import division, absolute_import
+from __future__ import absolute_import, division
 
-import socket, sys, traceback, io, codecs
-
-from twisted.trial import unittest
+import codecs
+import io
+import socket
+import sys
+import traceback
 
 from twisted.python.compat import (
-    reduce, execfile, _PY3, _PYPY, comparable, cmp, nativeString,
-    networkString, unicode as unicodeCompat, lazyByteSlice, reraise,
-    NativeStringIO, iterbytes, intToBytes, ioType, bytesEnviron, iteritems,
-    _coercedUnicode, unichr, raw_input, _bytesRepr, _get_async_param,
+    _PY3,
+    _PYPY,
+    NativeStringIO,
+    _bytesRepr,
+    _coercedUnicode,
+    _get_async_param,
+    bytesEnviron,
+    cmp,
+    comparable,
+    execfile,
+    intToBytes,
+    ioType,
+    iterbytes,
+    iteritems,
+    lazyByteSlice,
+    nativeString,
+    networkString,
+    raw_input,
+    reduce,
+    reraise,
+    unichr,
+    unicode as unicodeCompat,
 )
 from twisted.python.filepath import FilePath
 from twisted.python.runtime import platform
-
+from twisted.trial import unittest
 
 
 class IOTypeTests(unittest.SynchronousTestCase):

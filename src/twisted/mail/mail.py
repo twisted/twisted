@@ -6,22 +6,20 @@
 Mail service support.
 """
 
-import warnings
-
-# Twisted imports
-from twisted.internet import defer
-from twisted.application import service, internet
-from twisted.python import util
-from twisted.python import log
-from twisted.mail.interfaces import IAliasableDomain, IDomain
-from twisted.cred.portal import Portal
-
-# Sibling imports
-from twisted.mail import protocols, smtp
-
 # System imports
 import os
+import warnings
+
 from zope.interface import implementer
+
+from twisted.application import internet, service
+from twisted.cred.portal import Portal
+# Twisted imports
+from twisted.internet import defer
+# Sibling imports
+from twisted.mail import protocols, smtp
+from twisted.mail.interfaces import IAliasableDomain, IDomain
+from twisted.python import log, util
 
 
 class DomainWithDefaultDict:

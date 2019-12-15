@@ -12,9 +12,10 @@ from __future__ import absolute_import, division
 
 import sys
 
-from twisted.python import log, reflect
-from twisted.internet import stdio, protocol
+from twisted.internet import protocol, stdio
 from twisted.protocols import basic
+from twisted.python import log, reflect
+
 
 def failed(err):
     log.startLogging(sys.stderr)

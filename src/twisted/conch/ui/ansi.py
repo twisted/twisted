@@ -12,6 +12,7 @@ import string
 # Twisted imports
 from twisted.python import log
 
+
 class ColorText:
     """
     Represents an element of text along with the texts colors and

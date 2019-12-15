@@ -6,12 +6,17 @@
 Tests for L{twisted.conch.ssh.filetransfer}.
 """
 
-from __future__ import division, absolute_import
+from __future__ import absolute_import, division
 
 import os
 import re
 import struct
 
+from twisted.python.compat import _PY37PLUS, long
+from twisted.internet import defer
+from twisted.protocols import loopback
+from twisted.python import components
+from twisted.python.filepath import FilePath
 from twisted.python.reflect import requireModule
 from twisted.trial import unittest
 
@@ -25,11 +30,6 @@ else:
     class avatar:
         class ConchUser: pass
 
-from twisted.internet import defer
-from twisted.protocols import loopback
-from twisted.python import components
-from twisted.python.compat import long, _PY37PLUS
-from twisted.python.filepath import FilePath
 
 
 class TestAvatar(avatar.ConchUser):

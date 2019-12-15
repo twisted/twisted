@@ -10,16 +10,17 @@ functionality.
 import os
 import sys
 
-from twisted.conch.insults import insults
-from twisted.conch import recvline
-
-from twisted.python import reflect, components, filepath
-from twisted.python.compat import iterbytes, bytesEnviron
-from twisted.python.runtime import platform
+from twisted.python.compat import bytesEnviron, iterbytes
+from twisted.conch import recvline, telnet
+from twisted.conch.insults import helper, insults
+from twisted.conch.test import test_telnet
+from twisted.conch.test.loopback import LoopbackRelay
+from twisted.cred import checkers, portal
 from twisted.internet import defer, error
-from twisted.trial import unittest
-from twisted.cred import portal
+from twisted.python import components, filepath, reflect
+from twisted.python.runtime import platform
 from twisted.test.proto_helpers import StringTransport
+from twisted.trial import unittest
 
 if platform.isWindows():
     properEnv = dict(os.environ)
@@ -299,9 +300,6 @@ class ArrowsTests(unittest.TestCase):
 
 
 
-from twisted.conch import telnet
-from twisted.conch.insults import helper
-from twisted.conch.test.loopback import LoopbackRelay
 
 class EchoServer(recvline.HistoricRecvLine):
     def lineReceived(self, line):
@@ -318,7 +316,6 @@ delete = b"\x1b[3~"
 end = b"\x1b[4~"
 backspace = b"\x7f"
 
-from twisted.cred import checkers
 
 try:
     from twisted.conch.ssh import (userauth, transport, channel, connection,
@@ -529,7 +526,6 @@ class _SSHMixin(_BaseMixin):
 
 
 
-from twisted.conch.test import test_telnet
 
 class TestInsultsClientProtocol(insults.ClientProtocol,
                                 test_telnet.TestProtocol):

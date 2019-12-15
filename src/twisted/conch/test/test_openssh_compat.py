@@ -7,18 +7,18 @@ Tests for L{twisted.conch.openssh_compat}.
 
 import os
 
-from twisted.trial.unittest import TestCase
+from twisted.conch.ssh._kex import getDHGeneratorAndPrime
+from twisted.conch.test import keydata
 from twisted.python.filepath import FilePath
 from twisted.python.reflect import requireModule
+from twisted.test.test_process import MockOS
+from twisted.trial.unittest import TestCase
 
 if requireModule('cryptography') and requireModule('pyasn1'):
     from twisted.conch.openssh_compat.factory import OpenSSHFactory
 else:
     OpenSSHFactory = None
 
-from twisted.conch.ssh._kex import getDHGeneratorAndPrime
-from twisted.conch.test import keydata
-from twisted.test.test_process import MockOS
 
 
 class OpenSSHFactoryTests(TestCase):

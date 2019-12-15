@@ -5,11 +5,10 @@
 Test cases for L{twisted.python.randbytes}.
 """
 
-from __future__ import division, absolute_import
+from __future__ import absolute_import, division
 
-from twisted.trial import unittest
 from twisted.python import randbytes
-
+from twisted.trial import unittest
 
 
 class SecureRandomTestCaseBase(object):
@@ -116,4 +115,3 @@ class RandomBaseTests(SecureRandomTestCaseBase, unittest.SynchronousTestCase):
         factory = randbytes.RandomFactory()
         factory.getrandbits = None
         self._check(factory.insecureRandom)
-

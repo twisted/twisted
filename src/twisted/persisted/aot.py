@@ -9,9 +9,14 @@ The source-code-marshallin'est abstract-object-serializin'est persister
 this side of Marmalade!
 """
 
-from __future__ import division, absolute_import
+from __future__ import absolute_import, division
 
-import types, re
+import re
+import types
+
+from twisted.python.compat import _PY3, _constructMethod, unicode
+from twisted.persisted import crefutil
+from twisted.python import log, reflect
 
 try:
     from tokenize import generate_tokens as tokenize
@@ -24,9 +29,6 @@ try:
 except:
     import copyreg as copy_reg
 
-from twisted.python import reflect, log
-from twisted.persisted import crefutil
-from twisted.python.compat import unicode, _PY3, _constructMethod
 
 ###########################
 # Abstract Object Classes #

@@ -8,9 +8,25 @@ Provide L{ICredentialsChecker} implementations to be used in Conch protocols.
 
 from __future__ import absolute_import, division
 
-import sys
 import binascii
 import errno
+import sys
+
+from zope.interface import Interface, implementer, providedBy
+
+from incremental import Version
+
+from twisted.python.compat import _PY3, _b64decodebytes, _keys
+from twisted.conch import error
+from twisted.conch.ssh import keys
+from twisted.cred.checkers import ICredentialsChecker
+from twisted.cred.credentials import ISSHPrivateKey, IUsernamePassword
+from twisted.cred.error import UnauthorizedLogin, UnhandledCredentials
+from twisted.internet import defer
+from twisted.python import failure, log, reflect
+from twisted.python.deprecate import deprecatedModuleAttribute
+from twisted.python.filepath import FilePath
+from twisted.python.util import runAsEffectiveUser
 
 try:
     import pwd
@@ -24,21 +40,8 @@ try:
 except ImportError:
     spwd = None
 
-from zope.interface import providedBy, implementer, Interface
 
-from incremental import Version
 
-from twisted.conch import error
-from twisted.conch.ssh import keys
-from twisted.cred.checkers import ICredentialsChecker
-from twisted.cred.credentials import IUsernamePassword, ISSHPrivateKey
-from twisted.cred.error import UnauthorizedLogin, UnhandledCredentials
-from twisted.internet import defer
-from twisted.python.compat import _keys, _PY3, _b64decodebytes
-from twisted.python import failure, reflect, log
-from twisted.python.deprecate import deprecatedModuleAttribute
-from twisted.python.util import runAsEffectiveUser
-from twisted.python.filepath import FilePath
 
 
 

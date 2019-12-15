@@ -13,15 +13,13 @@ from warnings import warn
 
 from zope.interface import implementer
 
+from twisted.python.compat import Sequence, reraise
 from twisted.internet.threads import blockingCallFromThread
-from twisted.python.compat import reraise, Sequence
+from twisted.logger import Logger
 from twisted.python.failure import Failure
+from twisted.web.http import INTERNAL_SERVER_ERROR
 from twisted.web.resource import IResource
 from twisted.web.server import NOT_DONE_YET
-from twisted.web.http import INTERNAL_SERVER_ERROR
-from twisted.logger import Logger
-
-
 
 # PEP-3333 -- which has superseded PEP-333 -- states that, in both Python 2
 # and Python 3, text strings MUST be represented using the platform's native

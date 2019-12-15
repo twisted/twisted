@@ -5,18 +5,18 @@
 Test code for policies.
 """
 
-from __future__ import division, absolute_import
+from __future__ import absolute_import, division
 
-from zope.interface import Interface, implementer, implementedBy
+from zope.interface import Interface, implementedBy, implementer
 
 from twisted.python.compat import NativeStringIO
-from twisted.trial import unittest
-from twisted.test.proto_helpers import StringTransport
-from twisted.test.proto_helpers import StringTransportWithDisconnection
-
-from twisted.internet import protocol, reactor, address, defer, task
+from twisted.internet import address, defer, protocol, reactor, task
 from twisted.protocols import policies
-
+from twisted.test.proto_helpers import (
+    StringTransport,
+    StringTransportWithDisconnection,
+)
+from twisted.trial import unittest
 
 try:
     import builtins

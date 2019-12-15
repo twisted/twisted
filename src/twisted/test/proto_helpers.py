@@ -9,8 +9,6 @@ instead.
 """
 from twisted.internet import testing
 
-
-
 __all__ = testing.__all__
 
 

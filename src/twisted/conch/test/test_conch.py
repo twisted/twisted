@@ -2,26 +2,32 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-import os, sys, socket
+import os
+import socket
 import subprocess
+import sys
 from itertools import count
 
 from zope.interface import implementer
-from twisted.python.reflect import requireModule
+
+from twisted.python.compat import _PYPY, unicode
 from twisted.conch.error import ConchError
+from twisted.conch.test.keydata import (
+    privateDSA_openssh,
+    privateRSA_openssh,
+    publicDSA_openssh,
+    publicRSA_openssh,
+)
+from twisted.conch.test.test_ssh import ConchTestRealm
 from twisted.cred import portal
-from twisted.internet import reactor, defer, protocol
+from twisted.internet import defer, protocol, reactor
 from twisted.internet.error import ProcessExitedAlready
 from twisted.internet.task import LoopingCall
 from twisted.internet.utils import getProcessValue
 from twisted.python import filepath, log, runtime
-from twisted.python.compat import unicode, _PYPY
-from twisted.trial import unittest
-from twisted.conch.test.test_ssh import ConchTestRealm
 from twisted.python.procutils import which
-
-from twisted.conch.test.keydata import publicRSA_openssh, privateRSA_openssh
-from twisted.conch.test.keydata import publicDSA_openssh, privateDSA_openssh
+from twisted.python.reflect import requireModule
+from twisted.trial import unittest
 
 try:
     from twisted.conch.test.test_ssh import ConchTestServerFactory, \

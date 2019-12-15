@@ -5,17 +5,25 @@
 Tests for lots of functionality provided by L{twisted.internet}.
 """
 
-from __future__ import division, absolute_import
+from __future__ import absolute_import, division
 
 import os
 import sys
 import time
 
 from twisted.python.compat import _PY3
-from twisted.trial import unittest
-from twisted.internet import reactor, protocol, error, abstract, defer
-from twisted.internet import interfaces, base
+from twisted.internet import (
+    abstract,
+    base,
+    defer,
+    error,
+    interfaces,
+    protocol,
+    reactor,
+)
+from twisted.internet.defer import Deferred, passthru
 from twisted.internet.tcp import Connector
+from twisted.trial import unittest
 
 try:
     from twisted.internet import ssl
@@ -24,7 +32,6 @@ except ImportError:
 if ssl and not ssl.supported:
     ssl = None
 
-from twisted.internet.defer import Deferred, passthru
 if not _PY3:
     from twisted.python import util
 

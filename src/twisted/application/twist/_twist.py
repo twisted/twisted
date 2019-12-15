@@ -8,14 +8,13 @@ Run a Twisted application.
 
 import sys
 
-from twisted.python.usage import UsageError
-from ..service import Application, IService
-from ..runner._exit import exit, ExitStatus
-from ..runner._runner import Runner
-from ._options import TwistOptions
 from twisted.application.app import _exitWithSignal
 from twisted.internet.interfaces import _ISupportsExitSignalCapturing
-
+from twisted.python.usage import UsageError
+from ..runner._exit import ExitStatus, exit
+from ..runner._runner import Runner
+from ..service import Application, IService
+from ._options import TwistOptions
 
 
 class Twist(object):

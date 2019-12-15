@@ -8,9 +8,9 @@ I am a support module for making SOCKSv4 servers with twistd.
 """
 from __future__ import print_function
 
+from twisted.application import internet
 from twisted.protocols import socks
 from twisted.python import usage
-from twisted.application import internet
 
 
 class Options(usage.Options):

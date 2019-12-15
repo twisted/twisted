@@ -9,13 +9,17 @@ Some tests for inlineCallbacks are defined in L{twisted.test.test_defgen} as
 well.
 """
 
-from __future__ import division, absolute_import
+from __future__ import absolute_import, division
 
 import sys
 
-from twisted.trial.unittest import TestCase, SynchronousTestCase
 from twisted.internet.defer import (
-    Deferred, returnValue, inlineCallbacks, CancelledError)
+    CancelledError,
+    Deferred,
+    inlineCallbacks,
+    returnValue,
+)
+from twisted.trial.unittest import SynchronousTestCase, TestCase
 
 
 class StopIterationReturnTests(TestCase):

@@ -8,18 +8,20 @@ Tests for Twisted plugin system.
 
 from __future__ import absolute_import, division
 
-import sys, errno, os, time
 import compileall
+import errno
 import functools
+import os
+import sys
+import time
 
 from zope.interface import Interface
 
-from twisted.trial import unittest
 from twisted.python.compat import _PY3, _PYPY
-from twisted.python.log import textFromEventDict, addObserver, removeObserver
-from twisted.python.filepath import FilePath
-
 from twisted import plugin
+from twisted.python.filepath import FilePath
+from twisted.python.log import addObserver, removeObserver, textFromEventDict
+from twisted.trial import unittest
 
 if _PY3:
     from importlib import invalidate_caches as invalidateImportCaches

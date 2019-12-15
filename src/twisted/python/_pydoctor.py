@@ -10,8 +10,8 @@ This documentation does not link to pydoctor API as there is no public API yet.
 """
 
 import urllib2
-
 from compiler import ast
+
 from pydoctor import model, zopeinterface
 from pydoctor.sphinx import SphinxInventory
 

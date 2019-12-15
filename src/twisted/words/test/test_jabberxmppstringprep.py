@@ -2,10 +2,11 @@
 # See LICENSE for details.
 
 from twisted.trial import unittest
-
 from twisted.words.protocols.jabber.xmpp_stringprep import (
-    nodeprep, resourceprep, nameprep)
-
+    nameprep,
+    nodeprep,
+    resourceprep,
+)
 
 
 class DeprecationTests(unittest.TestCase):

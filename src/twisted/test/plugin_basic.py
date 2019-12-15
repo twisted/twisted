@@ -14,7 +14,6 @@ from twisted.plugin import IPlugin
 from twisted.test.test_plugin import ITestPlugin, ITestPlugin2
 
 
-
 @provider(ITestPlugin, IPlugin)
 class TestPlugin:
     """
@@ -48,4 +47,3 @@ class ThirdTestPlugin:
     def test():
         pass
     test = staticmethod(test)
-

@@ -11,10 +11,10 @@ from __future__ import absolute_import, division
 import errno
 import os
 
-from twisted.trial import unittest
 from twisted.python import lockfile
 from twisted.python.reflect import requireModule
 from twisted.python.runtime import platform
+from twisted.trial import unittest
 
 skipKill = None
 if platform.isWindows():

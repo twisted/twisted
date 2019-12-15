@@ -5,8 +5,12 @@
 Tests for L{twisted.internet.fdesc}.
 """
 
-import os, sys
 import errno
+import os
+import sys
+
+from twisted.python.util import untilConcludes
+from twisted.trial import unittest
 
 try:
     import fcntl
@@ -15,8 +19,6 @@ except ImportError:
 else:
     from twisted.internet import fdesc
 
-from twisted.python.util import untilConcludes
-from twisted.trial import unittest
 
 
 

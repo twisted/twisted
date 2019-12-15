@@ -10,22 +10,32 @@ Do NOT use this module directly - use reactor.spawnProcess() instead.
 Maintainer: Itamar Shtull-Trauring
 """
 
-from __future__ import division, absolute_import, print_function
+from __future__ import absolute_import, division, print_function
 
+import errno
+import gc
+import io
+import os
+import signal
+import stat
+import sys
+import traceback
+
+from zope.interface import implementer
+
+from twisted.python.compat import _PY3, items, range
+from twisted.internet import abstract, error, fdesc
+from twisted.internet._baseprocess import BaseProcess
+from twisted.internet.interfaces import IProcessTransport
+from twisted.internet.main import CONNECTION_DONE, CONNECTION_LOST
+from twisted.python import failure, log
 from twisted.python.runtime import platform
+from twisted.python.util import switchUID
 
 if platform.isWindows():
     raise ImportError(("twisted.internet.process does not work on Windows. "
                        "Use the reactor.spawnProcess() API instead."))
 
-import errno
-import gc
-import os
-import io
-import signal
-import stat
-import sys
-import traceback
 
 try:
     import pty
@@ -37,15 +47,7 @@ try:
 except ImportError:
     fcntl = None
 
-from zope.interface import implementer
 
-from twisted.python import log, failure
-from twisted.python.util import switchUID
-from twisted.python.compat import items, range, _PY3
-from twisted.internet import fdesc, abstract, error
-from twisted.internet.main import CONNECTION_LOST, CONNECTION_DONE
-from twisted.internet._baseprocess import BaseProcess
-from twisted.internet.interfaces import IProcessTransport
 
 # Some people were importing this, which is incorrect, just keeping it
 # here for backwards compatibility:

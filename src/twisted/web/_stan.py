@@ -26,7 +26,6 @@ from __future__ import absolute_import, division
 from twisted.python.compat import iteritems
 
 
-
 class slot(object):
     """
     Marker for markup insertion in a template.

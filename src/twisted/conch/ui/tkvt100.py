@@ -14,6 +14,7 @@ try:
 except ImportError:
     import Tkinter, tkFont
 import string
+
 from . import ansi
 
 ttyFont = None#tkFont.Font(family = 'Courier', size = 10)

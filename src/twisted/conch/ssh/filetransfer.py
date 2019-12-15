@@ -3,7 +3,7 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-from __future__ import division, absolute_import
+from __future__ import absolute_import, division
 
 import errno
 import struct
@@ -11,13 +11,17 @@ import warnings
 
 from zope.interface import implementer
 
-from twisted.conch.interfaces import ISFTPServer, ISFTPFile
+from twisted.python.compat import (
+    _PY3,
+    itervalues,
+    nativeString,
+    networkString,
+    range,
+)
+from twisted.conch.interfaces import ISFTPFile, ISFTPServer
 from twisted.conch.ssh.common import NS, getNS
 from twisted.internet import defer, protocol
 from twisted.python import failure, log
-from twisted.python.compat import (
-    _PY3, range, itervalues, nativeString, networkString)
-
 
 
 class FileTransferBase(protocol.Protocol):

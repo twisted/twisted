@@ -5,17 +5,19 @@
 Tests for L{twisted.internet.defer.deferredGenerator} and related APIs.
 """
 
-from __future__ import division, absolute_import
+from __future__ import absolute_import, division
 
-from twisted.internet import reactor
-
-from twisted.trial import unittest
-
-from twisted.internet.defer import waitForDeferred, deferredGenerator, Deferred
-from twisted.internet.defer import inlineCallbacks, returnValue
-from twisted.internet import defer
-from twisted.trial.util import suppress as SUPPRESS
+from twisted.internet import defer, reactor
+from twisted.internet.defer import (
+    Deferred,
+    deferredGenerator,
+    inlineCallbacks,
+    returnValue,
+    waitForDeferred,
+)
 from twisted.python.util import runWithWarningsSuppressed
+from twisted.trial import unittest
+from twisted.trial.util import suppress as SUPPRESS
 
 
 def getThing():

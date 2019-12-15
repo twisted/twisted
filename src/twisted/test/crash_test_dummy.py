@@ -3,8 +3,10 @@
 # See LICENSE for details.
 
 
+from zope.interface import Interface, implementer
+
 from twisted.python import components
-from zope.interface import implementer, Interface
+
 
 def foo():
     return 2

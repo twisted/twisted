@@ -8,8 +8,10 @@ from __future__ import absolute_import, division
 
 import struct
 
-from twisted.trial import unittest
+from twisted.conch.error import ConchError, MissingKeyStoreError
+from twisted.conch.test import keydata
 from twisted.test import iosim
+from twisted.trial import unittest
 
 try:
     import cryptography
@@ -26,8 +28,6 @@ if cryptography and pyasn1:
 else:
     keys = agent = None
 
-from twisted.conch.test import keydata
-from twisted.conch.error import ConchError, MissingKeyStoreError
 
 
 class StubFactory(object):

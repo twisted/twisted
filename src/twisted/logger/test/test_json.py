@@ -5,26 +5,26 @@
 Tests for L{twisted.logger._json}.
 """
 
-from io import StringIO, BytesIO
+from io import BytesIO, StringIO
 
-from zope.interface.verify import verifyObject, BrokenMethodImplementation
+from zope.interface.verify import BrokenMethodImplementation, verifyObject
 
-from twisted.python.compat import unicode, _PYPY, _PY3
-
-from twisted.trial.unittest import TestCase
-
+from twisted.python.compat import _PY3, _PYPY, unicode
 from twisted.python.failure import Failure
-
-from .._observer import ILogObserver, LogPublisher
-from .._format import formatEvent
-from .._levels import LogLevel
+from twisted.trial.unittest import TestCase
 from .._flatten import extractField
+from .._format import formatEvent
 from .._global import globalLogPublisher
 from .._json import (
-    eventAsJSON, eventFromJSON, jsonFileLogObserver, eventsFromJSONLogFile,
-    log as jsonLog
+    eventAsJSON,
+    eventFromJSON,
+    eventsFromJSONLogFile,
+    jsonFileLogObserver,
+    log as jsonLog,
 )
+from .._levels import LogLevel
 from .._logger import Logger
+from .._observer import ILogObserver, LogPublisher
 
 
 def savedJSONInvariants(testCase, savedJSON):

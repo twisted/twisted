@@ -5,16 +5,16 @@
 Tests for Trial's interaction with the Python warning system.
 """
 
-from __future__ import division, absolute_import
+from __future__ import absolute_import, division
 
-import sys, warnings
-
+import sys
+import warnings
 from unittest import TestResult
 
 from twisted.python.compat import NativeStringIO as StringIO
 from twisted.python.filepath import FilePath
-from twisted.trial.unittest import SynchronousTestCase
 from twisted.trial._synctest import _collectWarnings, _setWarningRegistryToNone
+from twisted.trial.unittest import SynchronousTestCase
 
 
 class Mask(object):

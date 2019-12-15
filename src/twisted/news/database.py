@@ -6,21 +6,23 @@
 News server backend implementations.
 """
 
-import getpass, pickle, time, socket
+import getpass
 import os
+import pickle
+import socket
 import StringIO
-from hashlib import md5
-from email.Message import Message
+import time
 from email.Generator import Generator
-from zope.interface import implementer, Interface
+from email.Message import Message
+from hashlib import md5
 
-from twisted.news.nntp import NNTPError
-from twisted.mail import smtp
-from twisted.internet import defer
+from zope.interface import Interface, implementer
+
 from twisted.enterprise import adbapi
+from twisted.internet import defer
+from twisted.mail import smtp
+from twisted.news.nntp import NNTPError
 from twisted.persisted import dirdbm
-
-
 
 ERR_NOGROUP, ERR_NOARTICLE = range(2, 4)  # XXX - put NNTP values here (I guess?)
 

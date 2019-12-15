@@ -5,12 +5,12 @@
 Tests for twisted.internet.glibbase.
 """
 
-from __future__ import division, absolute_import
+from __future__ import absolute_import, division
 
 import sys
-from twisted.trial.unittest import TestCase
-from twisted.internet._glibbase import ensureNotImported
 
+from twisted.internet._glibbase import ensureNotImported
+from twisted.trial.unittest import TestCase
 
 
 class EnsureNotImportedTests(TestCase):

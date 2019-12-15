@@ -5,23 +5,30 @@
 Tests for L{twisted.internet._newtls}.
 """
 
-from __future__ import division, absolute_import
+from __future__ import absolute_import, division
 
-from twisted.trial import unittest
+from zope.interface import implementer
+
 from twisted.internet import interfaces
-from twisted.internet.test.reactormixins import ReactorBuilder
 from twisted.internet.test.connectionmixins import (
-    ConnectableProtocol, runProtocolsWithReactor)
-from twisted.internet.test.test_tls import SSLCreator, TLSMixin
-from twisted.internet.test.test_tls import StartTLSClientCreator
-from twisted.internet.test.test_tls import ContextGeneratingMixin
+    ConnectableProtocol,
+    runProtocolsWithReactor,
+)
+from twisted.internet.test.reactormixins import ReactorBuilder
 from twisted.internet.test.test_tcp import TCPCreator
+from twisted.internet.test.test_tls import (
+    ContextGeneratingMixin,
+    SSLCreator,
+    StartTLSClientCreator,
+    TLSMixin,
+)
+from twisted.trial import unittest
+
 try:
     from twisted.protocols import tls
     from twisted.internet import _newtls
 except ImportError:
     _newtls = None
-from zope.interface import implementer
 
 
 class BypassTLSTests(unittest.TestCase):

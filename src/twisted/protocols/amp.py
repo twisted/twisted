@@ -195,35 +195,49 @@ has several features:
 
 from __future__ import absolute_import, division
 
-__metaclass__ = type
-
-import types, warnings
-
-from io import BytesIO
-from struct import pack
-import decimal, datetime
+import datetime
+import decimal
+import types
+import warnings
 from functools import partial
+from io import BytesIO
 from itertools import count
+from struct import pack
 
 from zope.interface import Interface, implementer
 
-from twisted.python.reflect import accumulateClassDict
-from twisted.python.failure import Failure
-from twisted.python._tzhelper import (
-    FixedOffsetTimeZone as _FixedOffsetTZInfo, UTC as utc
+from twisted.python.compat import (
+    _PY3,
+    intToBytes,
+    iteritems,
+    long,
+    nativeString,
+    unicode,
 )
-
-from twisted.python import log, filepath
-
+from twisted.internet.defer import Deferred, fail, maybeDeferred
+from twisted.internet.error import (
+    ConnectionClosed,
+    ConnectionLost,
+    PeerVerifyError,
+)
 from twisted.internet.interfaces import IFileDescriptorReceiver
 from twisted.internet.main import CONNECTION_LOST
-from twisted.internet.error import PeerVerifyError, ConnectionLost
-from twisted.internet.error import ConnectionClosed
-from twisted.internet.defer import Deferred, maybeDeferred, fail
 from twisted.protocols.basic import Int16StringReceiver, StatefulStringProtocol
-from twisted.python.compat import (
-    iteritems, unicode, nativeString, intToBytes, _PY3, long,
+from twisted.python import filepath, log
+from twisted.python._tzhelper import (
+    UTC as utc,
+    FixedOffsetTimeZone as _FixedOffsetTZInfo,
 )
+from twisted.python.failure import Failure
+from twisted.python.reflect import accumulateClassDict
+
+__metaclass__ = type
+
+
+
+
+
+
 
 try:
     from twisted.internet import ssl

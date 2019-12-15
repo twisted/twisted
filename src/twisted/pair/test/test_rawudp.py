@@ -1,11 +1,11 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
+from twisted.internet import protocol
+from twisted.pair import rawudp
 #
 from twisted.trial import unittest
 
-from twisted.internet import protocol
-from twisted.pair import rawudp
 
 class MyProtocol(protocol.DatagramProtocol):
     def __init__(self, expecting):

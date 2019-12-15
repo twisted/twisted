@@ -6,8 +6,12 @@
 Test cases for L{twisted.logger._format}.
 """
 
-from itertools import count
 import json
+from itertools import count
+
+from twisted.trial import unittest
+from .._flatten import KeyFlattener, aFormatter, extractField, flattenEvent
+from .._format import formatEvent
 
 try:
     from time import tzset
@@ -16,12 +20,7 @@ try:
 except ImportError:
     tzset = None
 
-from twisted.trial import unittest
 
-from .._format import formatEvent
-from .._flatten import (
-    flattenEvent, extractField, KeyFlattener, aFormatter
-)
 
 
 

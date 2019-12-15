@@ -9,23 +9,25 @@ from __future__ import absolute_import, division
 
 import itertools
 
-from zope.interface import providedBy, directlyProvides
+from zope.interface import directlyProvides, providedBy
 
-from twisted.internet import defer, reactor, task, error
-from twisted.python import failure
 from twisted.python.compat import iterbytes
-from twisted.internet.testing import StringTransport, MemoryReactorClock
+from twisted.internet import defer, error, reactor, task
+from twisted.internet.address import IPv4Address
+from twisted.internet.testing import MemoryReactorClock, StringTransport
+from twisted.python import failure
 from twisted.test.test_internet import DummyProducer
 from twisted.trial import unittest
 from twisted.web import http
 from twisted.web.test.test_http import (
-    DummyHTTPHandler, DummyHTTPHandlerProxy,
-    DelayedHTTPHandler, DelayedHTTPHandlerProxy,
+    DelayedHTTPHandler,
+    DelayedHTTPHandlerProxy,
+    DummyHTTPHandler,
+    DummyHTTPHandlerProxy,
     DummyPullProducerHandlerProxy,
+    _IDeprecatedHTTPChannelToRequestInterfaceProxy,
     _makeRequestProxyFactory,
-    _IDeprecatedHTTPChannelToRequestInterfaceProxy
 )
-from twisted.internet.address import IPv4Address
 
 skipH2 = None
 

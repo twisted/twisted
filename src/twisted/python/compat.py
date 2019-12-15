@@ -30,11 +30,9 @@ import socket
 import struct
 import sys
 import tokenize
-from types import MethodType as _MethodType
 import warnings
-
-from io import TextIOBase, IOBase
-
+from io import IOBase, TextIOBase
+from types import MethodType as _MethodType
 
 if sys.version_info < (3, 0):
     _PY3 = False

@@ -7,25 +7,25 @@ Standardized versions of various cool and/or strange things that you can do
 with Python's reflection capabilities.
 """
 
-from __future__ import division, absolute_import, print_function
+from __future__ import absolute_import, division, print_function
 
-import sys
-import types
 import os
 import pickle
-import weakref
 import re
+import sys
 import traceback
+import types
+import weakref
 from collections import deque
+
+from twisted.python.compat import _PY3, NativeStringIO, nativeString, reraise
+from twisted.python import compat
+from twisted.python._oldstyle import _oldStyle
+from twisted.python.deprecate import _fullyQualifiedName as fullyQualifiedName
 
 RegexType = type(re.compile(""))
 
 
-from twisted.python.compat import reraise, nativeString, NativeStringIO
-from twisted.python.compat import _PY3
-from twisted.python import compat
-from twisted.python.deprecate import _fullyQualifiedName as fullyQualifiedName
-from twisted.python._oldstyle import _oldStyle
 
 
 def prefixedMethodNames(classObj, prefix):

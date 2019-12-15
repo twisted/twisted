@@ -6,9 +6,9 @@
 from __future__ import absolute_import, division
 
 from twisted.python.compat import _coercedUnicode, unicode
-from twisted.words.protocols.jabber import xmlstream, sasl, error
+from twisted.words.protocols.jabber import error, sasl, xmlstream
 from twisted.words.protocols.jabber.jid import JID
-from twisted.words.xish import domish, xpath, utility
+from twisted.words.xish import domish, utility, xpath
 
 NS_XMPP_STREAMS = 'urn:ietf:params:xml:ns:xmpp-streams'
 NS_XMPP_BIND = 'urn:ietf:params:xml:ns:xmpp-bind'

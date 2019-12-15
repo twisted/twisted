@@ -11,8 +11,7 @@ from __future__ import absolute_import, division
 import types
 from functools import wraps
 
-from twisted.python.compat import _shouldEnableNewStyle, _PY3
-
+from twisted.python.compat import _PY3, _shouldEnableNewStyle
 
 
 def _replaceIf(condition, alternative):

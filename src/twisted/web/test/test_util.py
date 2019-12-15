@@ -9,21 +9,26 @@ from __future__ import absolute_import, division
 
 import gc
 
+from twisted.python.compat import _PY3, intToBytes, networkString
+from twisted.internet import defer
 from twisted.python.failure import Failure
 from twisted.trial.unittest import SynchronousTestCase, TestCase
-from twisted.internet import defer
-from twisted.python.compat import _PY3, intToBytes, networkString
 from twisted.web import resource, util
 from twisted.web.error import FlattenerError
 from twisted.web.http import FOUND
 from twisted.web.server import Request
 from twisted.web.template import TagLoader, flattenString, tags
 from twisted.web.test.requesthelper import DummyChannel, DummyRequest
-from twisted.web.util import DeferredResource
-from twisted.web.util import _SourceFragmentElement, _FrameElement
-from twisted.web.util import _StackElement, FailureElement, formatFailure
-from twisted.web.util import redirectTo, _SourceLineElement
-
+from twisted.web.util import (
+    DeferredResource,
+    FailureElement,
+    _FrameElement,
+    _SourceFragmentElement,
+    _SourceLineElement,
+    _StackElement,
+    formatFailure,
+    redirectTo,
+)
 
 
 class RedirectToTests(TestCase):

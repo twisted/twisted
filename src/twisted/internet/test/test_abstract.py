@@ -6,11 +6,11 @@ Tests for L{twisted.internet.abstract}, a collection of APIs for implementing
 reactors.
 """
 
-from __future__ import division, absolute_import
-
-from twisted.trial.unittest import SynchronousTestCase
+from __future__ import absolute_import, division
 
 from twisted.internet.abstract import isIPv6Address
+from twisted.trial.unittest import SynchronousTestCase
+
 
 class IPv6AddressTests(SynchronousTestCase):
     """

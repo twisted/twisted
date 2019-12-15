@@ -6,7 +6,7 @@
 Tests for L{twisted.python.util}.
 """
 
-from __future__ import division, absolute_import
+from __future__ import absolute_import, division
 
 import errno
 import os.path
@@ -14,22 +14,23 @@ import shutil
 import sys
 import warnings
 
+from twisted.internet import reactor
+from twisted.internet.defer import Deferred
+from twisted.internet.error import ProcessDone
+from twisted.internet.interfaces import IReactorProcess
+from twisted.internet.protocol import ProcessProtocol
+from twisted.python import util
+from twisted.python.filepath import FilePath
+from twisted.test.test_process import MockOS
+from twisted.trial import unittest
+from twisted.trial.util import suppress as SUPPRESS
+
 try:
     import pwd, grp
 except ImportError:
     pwd = grp = None
 
-from twisted.trial import unittest
-from twisted.trial.util import suppress as SUPPRESS
 
-from twisted.python import util
-from twisted.python.filepath import FilePath
-from twisted.internet import reactor
-from twisted.internet.interfaces import IReactorProcess
-from twisted.internet.protocol import ProcessProtocol
-from twisted.internet.defer import Deferred
-from twisted.internet.error import ProcessDone
-from twisted.test.test_process import MockOS
 
 
 pyExe = FilePath(sys.executable)._asBytesPath()

@@ -7,14 +7,12 @@
 Protocol wrapper that provides HAProxy PROXY protocol support.
 """
 
-from twisted.protocols import policies
 from twisted.internet import interfaces
 from twisted.internet.endpoints import _WrapperServerEndpoint
-
+from twisted.protocols import policies
 from ._exceptions import InvalidProxyHeader
 from ._v1parser import V1Parser
 from ._v2parser import V2Parser
-
 
 
 class HAProxyProtocolWrapper(policies.ProtocolWrapper, object):

@@ -6,19 +6,19 @@
 Infrastructure for test running and suites.
 """
 
-from __future__ import division, absolute_import
+from __future__ import absolute_import, division
 
 import doctest
 import gc
 
-from twisted.python import components
+from zope.interface import implementer
 
+from twisted.python import components
 from twisted.trial import itrial, reporter
 from twisted.trial._synctest import _logObserver
 
 pyunit = __import__('unittest')
 
-from zope.interface import implementer
 
 
 

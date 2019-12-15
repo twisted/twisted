@@ -17,6 +17,13 @@ import sys
 
 from zope.interface import Interface, providedBy
 
+from twisted.python.compat import iteritems
+from twisted.python import log
+from twisted.python.components import getAdapterFactory
+from twisted.python.modules import getModule
+from twisted.python.reflect import namedAny
+
+
 def _determinePickleModule():
     """
     Determine which 'pickle' API module to use.
@@ -30,11 +37,6 @@ def _determinePickleModule():
 
 pickle = _determinePickleModule()
 
-from twisted.python.components import getAdapterFactory
-from twisted.python.reflect import namedAny
-from twisted.python import log
-from twisted.python.modules import getModule
-from twisted.python.compat import iteritems
 
 
 

@@ -7,10 +7,10 @@ Tests for L{twisted.web.script}.
 
 import os
 
-from twisted.trial.unittest import TestCase
 from twisted.python.filepath import FilePath
+from twisted.trial.unittest import TestCase
 from twisted.web.http import NOT_FOUND
-from twisted.web.script import ResourceScriptDirectory, PythonScript
+from twisted.web.script import PythonScript, ResourceScriptDirectory
 from twisted.web.test._util import _render
 from twisted.web.test.requesthelper import DummyRequest
 

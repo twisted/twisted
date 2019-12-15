@@ -14,14 +14,16 @@ for more details.
 
 from __future__ import absolute_import, division
 
-import copy, struct
+import copy
+import struct
 from io import BytesIO
 
+from twisted.python.compat import _bytesChr as chr, iterbytes, long
 from twisted.internet import protocol
 from twisted.persisted import styles
 from twisted.python import log
-from twisted.python.compat import iterbytes, long, _bytesChr as chr
 from twisted.python.reflect import fullyQualifiedName
+
 
 class BananaError(Exception):
     pass

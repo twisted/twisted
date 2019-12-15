@@ -8,9 +8,10 @@ are ssh-userauth and ssh-connection.
 Maintainer: Paul Swartz
 """
 
-from __future__ import division, absolute_import
+from __future__ import absolute_import, division
 
 from twisted.python import log
+
 
 class SSHService(log.Logger):
     name = None # this is the ssh name for the service

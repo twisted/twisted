@@ -8,19 +8,22 @@ allows access to the shell and port-forwarding.
 
 Maintainer: Paul Swartz
 """
-from __future__ import division, absolute_import
+from __future__ import absolute_import, division
 
 import string
 import struct
 
 import twisted.internet.error
-from twisted.conch.ssh import service, common
+from twisted.python.compat import (
+    _bytesChr as chr,
+    long,
+    nativeString,
+    networkString,
+)
 from twisted.conch import error
+from twisted.conch.ssh import common, service
 from twisted.internet import defer
 from twisted.python import log
-from twisted.python.compat import (
-    nativeString, networkString, long, _bytesChr as chr)
-
 
 
 class SSHConnection(service.SSHService):

@@ -9,11 +9,12 @@ Depending on a specific application's needs, some other reactor may in
 fact be better.
 """
 
-from __future__ import division, absolute_import
+from __future__ import absolute_import, division
+
+from twisted.python.runtime import platform
 
 __all__ = ["install"]
 
-from twisted.python.runtime import platform
 
 
 def _getInstallFunction(platform):

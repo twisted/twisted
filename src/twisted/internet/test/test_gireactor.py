@@ -5,9 +5,22 @@
 GI/GTK3 reactor tests.
 """
 
-from __future__ import division, absolute_import, print_function
+from __future__ import absolute_import, division, print_function
 
-import sys, os
+import os
+import sys
+
+from twisted.python.compat import _PY3
+from twisted.internet.defer import Deferred
+from twisted.internet.error import ReactorAlreadyRunning
+from twisted.internet.interfaces import IReactorProcess
+from twisted.internet.protocol import ProcessProtocol
+from twisted.internet.test.reactormixins import ReactorBuilder
+from twisted.python.filepath import FilePath
+from twisted.python.runtime import platform
+from twisted.test.test_twisted import SetAsideModule
+from twisted.trial.unittest import SkipTest, TestCase
+
 try:
     from twisted.internet import gireactor
     from gi.repository import Gio
@@ -24,16 +37,6 @@ else:
     else:
         from gi.repository import Gtk
 
-from twisted.python.filepath import FilePath
-from twisted.python.runtime import platform
-from twisted.internet.defer import Deferred
-from twisted.internet.error import ReactorAlreadyRunning
-from twisted.internet.protocol import ProcessProtocol
-from twisted.trial.unittest import TestCase, SkipTest
-from twisted.internet.test.reactormixins import ReactorBuilder
-from twisted.test.test_twisted import SetAsideModule
-from twisted.internet.interfaces import IReactorProcess
-from twisted.python.compat import _PY3
 
 # Skip all tests if gi is unavailable:
 if gireactor is None:

@@ -5,19 +5,23 @@
 Test cases for the L{twisted.python.reflect} module.
 """
 
-from __future__ import division, absolute_import
+from __future__ import absolute_import, division
 
 import os
 import weakref
 from collections import deque
 
 from twisted.python.compat import _PY3
-from twisted.trial import unittest
-from twisted.trial.unittest import SynchronousTestCase as TestCase
 from twisted.python import reflect
 from twisted.python.reflect import (
-    accumulateMethods, prefixedMethods, prefixedMethodNames,
-    addMethodNamesToDict, fullyQualifiedName)
+    accumulateMethods,
+    addMethodNamesToDict,
+    fullyQualifiedName,
+    prefixedMethodNames,
+    prefixedMethods,
+)
+from twisted.trial import unittest
+from twisted.trial.unittest import SynchronousTestCase as TestCase
 
 
 class Base(object):

@@ -11,11 +11,10 @@ See also twisted.python.shortcut.
     may safely be OR'ed into a mask for os.open.
 """
 
-from __future__ import division, absolute_import
+from __future__ import absolute_import, division
 
-import re
 import os
-
+import re
 
 # http://msdn.microsoft.com/library/default.asp?url=/library/en-us/debug/base/system_error_codes.asp
 ERROR_FILE_NOT_FOUND = 2

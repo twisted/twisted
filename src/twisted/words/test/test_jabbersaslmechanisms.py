@@ -7,10 +7,10 @@ Tests for L{twisted.words.protocols.jabber.sasl_mechanisms}.
 
 from __future__ import absolute_import, division
 
-from twisted.trial import unittest
-
 from twisted.python.compat import networkString
+from twisted.trial import unittest
 from twisted.words.protocols.jabber import sasl_mechanisms
+
 
 class PlainTests(unittest.TestCase):
     """

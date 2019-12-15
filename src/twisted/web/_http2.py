@@ -17,32 +17,34 @@ it has stabilised, it'll be made public.
 from __future__ import absolute_import, division
 
 import io
-import warnings
 import sys
-
+import warnings
 from collections import deque
 
 from zope.interface import implementer
 
-import priority
 import h2.config
 import h2.connection
 import h2.errors
 import h2.events
 import h2.exceptions
+import priority
 
+from twisted.internet._producer_helpers import _PullToPush
 from twisted.internet.defer import Deferred
 from twisted.internet.error import ConnectionLost
 from twisted.internet.interfaces import (
-    IProtocol, ITransport, IConsumer, IPushProducer, ISSLTransport
+    IConsumer,
+    IProtocol,
+    IPushProducer,
+    ISSLTransport,
+    ITransport,
 )
-from twisted.internet._producer_helpers import _PullToPush
 from twisted.internet.protocol import Protocol
 from twisted.logger import Logger
 from twisted.protocols.policies import TimeoutMixin
 from twisted.python.failure import Failure
 from twisted.web.error import ExcessiveBufferingError
-
 
 # This API is currently considered private.
 __all__ = []

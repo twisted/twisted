@@ -5,19 +5,22 @@
 Test cases covering L{twisted.python.filepath}.
 """
 
-from __future__ import division, absolute_import
+from __future__ import absolute_import, division
 
-import os, time, pickle, errno, stat
+import errno
+import os
+import pickle
+import stat
+import time
 from pprint import pformat
 
+from zope.interface.verify import verifyObject
+
 from twisted.python.compat import _PY3, long, unicode
-from twisted.python.win32 import WindowsError, ERROR_DIRECTORY
 from twisted.python import filepath
 from twisted.python.runtime import platform
-
+from twisted.python.win32 import ERROR_DIRECTORY, WindowsError
 from twisted.trial.unittest import SkipTest, SynchronousTestCase as TestCase
-
-from zope.interface.verify import verifyObject
 
 if not platform._supportsSymlinks():
     symlinkSkip = "Platform does not support symlinks"

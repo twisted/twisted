@@ -9,14 +9,15 @@ Start here if you are looking to write a new protocol implementation for
 Twisted.  The Protocol class contains some introductory material.
 """
 
-from __future__ import division, absolute_import
+from __future__ import absolute_import, division
 
 import random
+
 from zope.interface import implementer
 
-from twisted.python import log, failure, components
-from twisted.internet import interfaces, error, defer
+from twisted.internet import defer, error, interfaces
 from twisted.logger import _loggerFor
+from twisted.python import components, failure, log
 from twisted.python._oldstyle import _oldStyle
 
 

@@ -17,17 +17,26 @@ Test running processes.
     platforms and native L{str} keys/values on Windows.
 """
 
-from __future__ import division, absolute_import, print_function
+from __future__ import absolute_import, division, print_function
 
-import gzip
-import os
-import sys
-import signal
 import errno
 import gc
-import stat
+import gzip
 import operator
+import os
+import signal
+import stat
+import sys
+from io import BytesIO
 
+from zope.interface.verify import verifyObject
+
+from twisted.python.compat import _PY3, bytesEnviron, networkString, range
+from twisted.internet import defer, error, interfaces, protocol, reactor
+from twisted.python import procutils, runtime
+from twisted.python.filepath import FilePath
+from twisted.python.log import msg
+from twisted.trial import unittest
 
 try:
     import fcntl
@@ -36,16 +45,8 @@ except ImportError:
 else:
     from twisted.internet import process
 
-from zope.interface.verify import verifyObject
 
-from io import BytesIO
 
-from twisted.python.log import msg
-from twisted.internet import reactor, protocol, error, interfaces, defer
-from twisted.trial import unittest
-from twisted.python import runtime, procutils
-from twisted.python.compat import _PY3, networkString, range, bytesEnviron
-from twisted.python.filepath import FilePath
 
 
 # Get the current Python executable as a bytestring.

@@ -6,19 +6,19 @@
 Testing support for protocols -- loopback between client and server.
 """
 
-from __future__ import division, absolute_import
+from __future__ import absolute_import, division
 
 # system imports
 import tempfile
 
 from zope.interface import implementer
 
+from twisted.internet import defer, interfaces, main, protocol
+from twisted.internet.interfaces import IAddress
+from twisted.internet.task import deferLater
 # Twisted Imports
 from twisted.protocols import policies
-from twisted.internet import interfaces, protocol, main, defer
-from twisted.internet.task import deferLater
 from twisted.python import failure
-from twisted.internet.interfaces import IAddress
 
 
 class _LoopbackQueue(object):

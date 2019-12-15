@@ -8,22 +8,44 @@ Handling of RSA, DSA, and EC keys.
 
 from __future__ import absolute_import, division
 
+import base64
 import binascii
 import itertools
-
-from hashlib import md5, sha256
-import base64
 import struct
 import warnings
+from hashlib import md5, sha256
 
 import bcrypt
+from cryptography import utils
 from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes, serialization
-from cryptography.hazmat.primitives.asymmetric import dsa, rsa, padding, ec
+from cryptography.hazmat.primitives.asymmetric import dsa, ec, padding, rsa
+from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.primitives.serialization import (
-    load_pem_private_key, load_ssh_public_key)
-from cryptography import utils
+    load_pem_private_key,
+    load_ssh_public_key,
+)
+from pyasn1.codec.ber import decoder as berDecoder, encoder as berEncoder
+from pyasn1.error import PyAsn1Error
+from pyasn1.type import univ
+
+from twisted.python.compat import (
+    _PY3,
+    _b64decodebytes as decodebytes,
+    _b64encodebytes as encodebytes,
+    _bytesChr as chr,
+    iterbytes,
+    izip,
+    long,
+    nativeString,
+    unicode,
+)
+from twisted.conch.ssh import common, sexpy
+from twisted.conch.ssh.common import int_from_bytes, int_to_bytes
+from twisted.python import randbytes
+from twisted.python.constants import NamedConstant, Names
+from twisted.python.deprecate import _mutuallyExclusiveArguments
 
 try:
 
@@ -33,22 +55,8 @@ except ImportError:
     from cryptography.hazmat.primitives.asymmetric.utils import (
         encode_rfc6979_signature as encode_dss_signature,
         decode_rfc6979_signature as decode_dss_signature)
-from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 
-from pyasn1.error import PyAsn1Error
-from pyasn1.type import univ
-from pyasn1.codec.ber import decoder as berDecoder
-from pyasn1.codec.ber import encoder as berEncoder
 
-from twisted.conch.ssh import common, sexpy
-from twisted.conch.ssh.common import int_from_bytes, int_to_bytes
-from twisted.python import randbytes
-from twisted.python.compat import (
-    iterbytes, long, izip, nativeString, unicode, _PY3,
-    _b64decodebytes as decodebytes, _b64encodebytes as encodebytes,
-    _bytesChr as chr)
-from twisted.python.constants import NamedConstant, Names
-from twisted.python.deprecate import _mutuallyExclusiveArguments
 
 # Curve lookup table
 _curveTable = {

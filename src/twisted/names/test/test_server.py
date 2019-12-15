@@ -4,7 +4,7 @@
 """
 Test cases for L{twisted.names.server}.
 """
-from __future__ import division, absolute_import
+from __future__ import absolute_import, division
 
 from zope.interface.verify import verifyClass
 
@@ -13,7 +13,6 @@ from twisted.internet.interfaces import IProtocolFactory
 from twisted.names import dns, error, resolve, server
 from twisted.python import failure, log
 from twisted.trial import unittest
-
 
 
 class RaisedArguments(Exception):

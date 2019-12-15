@@ -7,19 +7,18 @@ Tests for L{twisted.words.protocols.jabber.xmlstream}.
 
 from __future__ import absolute_import, division
 
-from twisted.trial import unittest
-
 from zope.interface.verify import verifyObject
 
+from twisted.python.compat import unicode
 from twisted.internet import defer, task
 from twisted.internet.error import ConnectionLost
 from twisted.internet.interfaces import IProtocolFactory
 from twisted.python import failure
-from twisted.python.compat import unicode
 from twisted.test import proto_helpers
+from twisted.trial import unittest
+from twisted.words.protocols.jabber import error, ijabber, jid, xmlstream
 from twisted.words.test.test_xmlstream import GenericXmlStreamFactoryTestsMixin
 from twisted.words.xish import domish
-from twisted.words.protocols.jabber import error, ijabber, jid, xmlstream
 
 try:
     from twisted.internet import ssl

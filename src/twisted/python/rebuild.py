@@ -7,13 +7,16 @@
 *Real* reloading support for Python.
 """
 
+import linecache
 # System Imports
 import sys
-import types
 import time
-import linecache
-
+import types
 from imp import reload
+
+from twisted.python.compat import _PY3
+# Sibling Imports
+from twisted.python import log, reflect
 
 try:
     # Python 2
@@ -22,9 +25,6 @@ except ImportError:
     # Python 3
     pass
 
-# Sibling Imports
-from twisted.python import log, reflect
-from twisted.python.compat import _PY3
 
 lastRebuild = time.time()
 

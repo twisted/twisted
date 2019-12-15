@@ -1,10 +1,10 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
-from twisted.trial import unittest
-
-from twisted.python import components
-from twisted.pair import ip, raw
 from zope import interface
+
+from twisted.pair import ip, raw
+from twisted.python import components
+from twisted.trial import unittest
 
 
 @interface.implementer(raw.IRawDatagramProtocol)

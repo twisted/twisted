@@ -10,7 +10,7 @@ An asynchronous mapping to U{DB-API
 import sys
 
 from twisted.internet import threads
-from twisted.python import reflect, log, compat
+from twisted.python import compat, log, reflect
 
 
 class ConnectionLost(Exception):

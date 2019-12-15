@@ -7,10 +7,10 @@ Cross-platform process-related functionality used by different
 L{IReactorProcess} implementations.
 """
 
-from twisted.python.reflect import qual
 from twisted.python.deprecate import getWarningMethod
 from twisted.python.failure import Failure
 from twisted.python.log import err
+from twisted.python.reflect import qual
 
 _missingProcessExited = ("Since Twisted 8.2, IProcessProtocol.processExited "
                          "is required.  %s must implement it.")

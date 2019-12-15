@@ -10,10 +10,10 @@ See the L{twisted.trial.test.test_tests} module docstring for details about how
 this code is arranged.
 """
 
-from __future__ import division, absolute_import
+from __future__ import absolute_import, division
 
+from twisted.internet import defer, protocol, reactor
 from twisted.trial import unittest, util
-from twisted.internet import reactor, protocol, defer
 
 
 class FoolishError(Exception):
@@ -215,4 +215,3 @@ def unexpectedException(self):
 
     >>> 1/0
     """
-

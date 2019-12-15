@@ -5,27 +5,31 @@
 Helpers related to HTTP requests, used by tests.
 """
 
-from __future__ import division, absolute_import
-
-__all__ = ['DummyChannel', 'DummyRequest']
+from __future__ import absolute_import, division
 
 from io import BytesIO
 
 from zope.interface import implementer, verify
 
-from twisted.python.compat import intToBytes
-from twisted.python.deprecate import deprecated
 from incremental import Version
-from twisted.internet.defer import Deferred
+
+from twisted.python.compat import intToBytes
 from twisted.internet.address import IPv4Address, IPv6Address
-from twisted.internet.interfaces import ISSLTransport, IAddress
-
+from twisted.internet.defer import Deferred
+from twisted.internet.interfaces import IAddress, ISSLTransport
+from twisted.python.deprecate import deprecated
 from twisted.trial import unittest
-
+from twisted.web._responses import FOUND
 from twisted.web.http_headers import Headers
 from twisted.web.resource import Resource
 from twisted.web.server import NOT_DONE_YET, Session, Site
-from twisted.web._responses import FOUND
+
+__all__ = ['DummyChannel', 'DummyRequest']
+
+
+
+
+
 
 
 

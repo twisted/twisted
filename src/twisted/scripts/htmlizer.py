@@ -9,12 +9,15 @@ HTML pretty-printing for Python source code.
 
 from __future__ import print_function
 
+import os
+import sys
+
+from twisted import copyright
+from twisted.python import htmlizer, usage
+
 __version__ = '$Revision: 1.8 $'[11:-2]
 
-from twisted.python import htmlizer, usage
-from twisted import copyright
 
-import os, sys
 
 header = '''<html><head>
 <title>%(title)s</title>

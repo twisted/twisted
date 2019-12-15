@@ -10,11 +10,10 @@ __metaclass__ = type
 from email.Parser import Parser
 from socket import gethostname
 
-from twisted.trial.unittest import TestCase
 from twisted.internet.defer import succeed
 from twisted.mail.smtp import messageid
-from twisted.news.database import Article, PickleStorage, NewsShelf
-
+from twisted.news.database import Article, NewsShelf, PickleStorage
+from twisted.trial.unittest import TestCase
 
 
 class ModerationTestsMixin:

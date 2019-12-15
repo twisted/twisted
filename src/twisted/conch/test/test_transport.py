@@ -12,19 +12,19 @@ import re
 import string
 import struct
 import types
-
 from hashlib import md5, sha1, sha256, sha384, sha512
+
+from twisted.python.compat import _bytesChr as chr, iterbytes
 from twisted import __version__ as twisted_version
-from twisted.trial import unittest
+from twisted.conch.error import ConchError
+from twisted.conch.ssh import _kex, address, service
 from twisted.internet import defer
 from twisted.protocols import loopback
 from twisted.python import randbytes
 from twisted.python.randbytes import insecureRandom
-from twisted.python.compat import iterbytes, _bytesChr as chr
-from twisted.conch.ssh import address, service, _kex
-from twisted.conch.error import ConchError
-from twisted.test import proto_helpers
 from twisted.python.reflect import requireModule
+from twisted.test import proto_helpers
+from twisted.trial import unittest
 
 pyasn1 = requireModule("pyasn1")
 cryptography = requireModule("cryptography")

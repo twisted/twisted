@@ -14,9 +14,9 @@ else:
     from twisted.web import soap
     SOAPPublisher = soap.SOAPPublisher
 
+from twisted.internet import defer, reactor
 from twisted.trial import unittest
-from twisted.web import server, error
-from twisted.internet import reactor, defer
+from twisted.web import error, server
 
 
 class Test(SOAPPublisher):
@@ -111,4 +111,3 @@ class SOAPTests(unittest.TestCase):
 
 if not SOAPpy:
     SOAPTests.skip = "SOAPpy not installed"
-

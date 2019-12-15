@@ -6,25 +6,27 @@
 Tests for L{twisted.trial.util}
 """
 
-from __future__ import division, absolute_import
+from __future__ import absolute_import, division
 
-import os, sys
+import os
+import sys
 
 from zope.interface import implementer
 
 from twisted.python.compat import NativeStringIO
-from twisted.python import filepath
-from twisted.internet.interfaces import IProcessTransport
 from twisted.internet import defer
 from twisted.internet.base import DelayedCall
+from twisted.internet.interfaces import IProcessTransport
+from twisted.python import filepath
 from twisted.python.failure import Failure
-
-from twisted.trial.unittest import SynchronousTestCase
 from twisted.trial import util
+from twisted.trial.unittest import SynchronousTestCase
 from twisted.trial.util import (
-    DirtyReactorAggregateError, _Janitor, excInfoOrFailureToExcInfo,
-    acquireAttribute)
-
+    DirtyReactorAggregateError,
+    _Janitor,
+    acquireAttribute,
+    excInfoOrFailureToExcInfo,
+)
 
 
 class MktempTests(SynchronousTestCase):

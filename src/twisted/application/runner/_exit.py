@@ -6,10 +6,9 @@
 System exit support.
 """
 
-from sys import stdout, stderr, exit as sysexit
+from sys import exit as sysexit, stderr, stdout
 
-from constantly import Values, ValueConstant
-
+from constantly import ValueConstant, Values
 
 
 def exit(status, message=None):

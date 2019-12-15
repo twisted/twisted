@@ -34,19 +34,28 @@ Test coverage needs to be better.
 <http://www.irchelp.org/irchelp/rfc/ctcpspec.html>}
 """
 
-import errno, os, random, re, stat, struct, sys, time, traceback
+import errno
 import operator
-import string, socket
-import textwrap
+import os
+import random
+import re
 import shlex
+import socket
+import stat
+import string
+import struct
+import sys
+import textwrap
+import time
+import traceback
 from functools import reduce
 from os import path
 
-from twisted.internet import reactor, protocol, task
+from twisted.python.compat import range, unicode
+from twisted.internet import protocol, reactor, task
 from twisted.persisted import styles
 from twisted.protocols import basic
-from twisted.python import log, reflect, _textattributes
-from twisted.python.compat import unicode, range
+from twisted.python import _textattributes, log, reflect
 
 NUL = chr(0)
 CR = chr(0o15)

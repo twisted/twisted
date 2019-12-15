@@ -9,12 +9,10 @@ from __future__ import absolute_import, division, print_function
 
 import os
 
-from twisted.python.compat import NativeStringIO, _PY3
-
+from twisted.python.compat import _PY3, NativeStringIO
 from twisted.scripts import trial
 from twisted.trial import runner
 from twisted.trial.test import packages
-
 
 if _PY3:
     _noModuleError = "No module named 'frotz'"

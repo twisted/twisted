@@ -5,7 +5,7 @@
 Test cases for L{twisted.names.rfc1982}.
 """
 
-from __future__ import division, absolute_import
+from __future__ import absolute_import, division
 
 import calendar
 from datetime import datetime
@@ -13,7 +13,6 @@ from functools import partial
 
 from twisted.names._rfc1982 import SerialNumber
 from twisted.trial import unittest
-
 
 
 class SerialNumberTests(unittest.TestCase):

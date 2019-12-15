@@ -16,22 +16,23 @@ Maintainer: Glyph Lefkowitz
     at the Deferred which is chained to the Deferred which has this marker.
 """
 
-from __future__ import division, absolute_import, print_function
+from __future__ import absolute_import, division, print_function
 
-import attr
 import traceback
 import types
 import warnings
-from sys import exc_info, version_info
 from functools import wraps
+from sys import exc_info, version_info
+
+import attr
 from incremental import Version
 
 # Twisted imports
 from twisted.python.compat import cmp, comparable
-from twisted.python import lockfile, failure
 from twisted.logger import Logger
-from twisted.python.deprecate import warnAboutFunction, deprecated
+from twisted.python import failure, lockfile
 from twisted.python._oldstyle import _oldStyle
+from twisted.python.deprecate import deprecated, warnAboutFunction
 
 log = Logger()
 
@@ -2016,4 +2017,3 @@ __all__ = ["Deferred", "DeferredList", "succeed", "fail", "FAILURE", "SUCCESS",
            "DeferredFilesystemLock", "AlreadyTryingToLockError",
            "CancelledError",
           ]
-

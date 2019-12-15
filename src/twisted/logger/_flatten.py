@@ -8,8 +8,8 @@ relevant fields from the format string and persisting them for later
 examination.
 """
 
-from string import Formatter
 from collections import defaultdict
+from string import Formatter
 
 from twisted.python.compat import unicode
 

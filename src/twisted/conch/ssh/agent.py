@@ -13,12 +13,11 @@ from __future__ import absolute_import, division
 
 import struct
 
-from twisted.conch.ssh.common import NS, getNS, getMP
+from twisted.python.compat import itervalues
 from twisted.conch.error import ConchError, MissingKeyStoreError
 from twisted.conch.ssh import keys
+from twisted.conch.ssh.common import NS, getMP, getNS
 from twisted.internet import defer, protocol
-from twisted.python.compat import itervalues
-
 
 
 class SSHAgentClient(protocol.Protocol):

@@ -11,18 +11,18 @@ Asynchronous-friendly error mechanism.
 See L{Failure}.
 """
 
-from __future__ import division, absolute_import, print_function
+from __future__ import absolute_import, division, print_function
 
 # System Imports
 import copy
-import sys
-import linecache
 import inspect
+import linecache
 import opcode
+import sys
 from inspect import getmro
 
-from twisted.python import reflect
 from twisted.python.compat import _PY3, NativeStringIO as StringIO
+from twisted.python import reflect
 
 count = 0
 traceupLength = 4

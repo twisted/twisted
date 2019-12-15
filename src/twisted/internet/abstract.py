@@ -6,16 +6,16 @@
 Support for generic select()able objects.
 """
 
-from __future__ import division, absolute_import
+from __future__ import absolute_import, division
 
-from socket import AF_INET, AF_INET6, inet_pton, error
+from socket import AF_INET, AF_INET6, error, inet_pton
 
 from zope.interface import implementer
 
 # Twisted Imports
-from twisted.python.compat import unicode, lazyByteSlice, _PY3
-from twisted.python import reflect, failure
+from twisted.python.compat import _PY3, lazyByteSlice, unicode
 from twisted.internet import interfaces, main
+from twisted.python import failure, reflect
 
 if _PY3:
     # Python 3.4+ can join bytes and memoryviews; using a

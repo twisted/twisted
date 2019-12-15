@@ -49,6 +49,3 @@ def _idnaText(octets):
         return octets.decode("idna")
     else:
         return idna.decode(octets)
-
-
-

@@ -2,13 +2,16 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-from __future__ import division, absolute_import
+from __future__ import absolute_import, division
 
 from zope.interface import implementer
 
+from twisted.web.error import (
+    MissingRenderMethod,
+    MissingTemplateLoader,
+    UnexposedMethodError,
+)
 from twisted.web.iweb import IRenderable
-from twisted.web.error import MissingRenderMethod, UnexposedMethodError
-from twisted.web.error import MissingTemplateLoader
 
 
 class Expose(object):

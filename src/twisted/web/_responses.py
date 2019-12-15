@@ -6,7 +6,7 @@
 HTTP response code definitions.
 """
 
-from __future__ import division, absolute_import
+from __future__ import absolute_import, division
 
 _CONTINUE = 100
 SWITCHING = 101
@@ -111,4 +111,3 @@ RESPONSES = {
     INSUFFICIENT_STORAGE_SPACE: b"Insufficient Storage Space",
     NOT_EXTENDED: b"Not Extended"
     }
-

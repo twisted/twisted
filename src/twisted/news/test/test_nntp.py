@@ -1,11 +1,10 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-from twisted.trial import unittest
-from twisted.news import database
-from twisted.news import nntp
+from twisted.news import database, nntp
 from twisted.protocols import loopback
 from twisted.test import proto_helpers
+from twisted.trial import unittest
 
 ALL_GROUPS = ('alt.test.nntp', 0, 1, 'y'),
 GROUP = ('0', '1', '0', 'alt.test.nntp', 'group', 'selected')

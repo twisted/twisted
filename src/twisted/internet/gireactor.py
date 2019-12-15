@@ -20,11 +20,11 @@ Then use twisted.internet APIs as usual.
 On Python 3, pygobject v3.4 or later is required.
 """
 
-from __future__ import division, absolute_import
+from __future__ import absolute_import, division
 
 from twisted.python.compat import _PY3
-from twisted.internet.error import ReactorAlreadyRunning
 from twisted.internet import _glibbase
+from twisted.internet.error import ReactorAlreadyRunning
 from twisted.python import runtime
 
 if _PY3:

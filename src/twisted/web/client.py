@@ -6,11 +6,65 @@
 HTTP client.
 """
 
-from __future__ import division, absolute_import
+from __future__ import absolute_import, division
 
-import os
 import collections
+import os
 import warnings
+import zlib
+from functools import wraps
+
+from zope.interface import implementer
+
+from incremental import Version
+
+from twisted.python.compat import (
+    _PY3,
+    intToBytes,
+    itervalues,
+    nativeString,
+    networkString,
+    unicode,
+)
+from twisted.internet import defer, protocol, reactor, task
+from twisted.internet.abstract import isIPv6Address
+from twisted.internet.endpoints import HostnameEndpoint, wrapClientTLS
+from twisted.internet.interfaces import IOpenSSLContextFactory, IProtocol
+from twisted.logger import Logger
+from twisted.python.components import proxyForInterface
+from twisted.python.deprecate import (
+    deprecated,
+    deprecatedModuleAttribute,
+    getDeprecationWarningString,
+)
+from twisted.python.failure import Failure
+from twisted.python.util import InsensitiveDict
+from twisted.web import error, http
+from twisted.web._newclient import (
+    HTTP11ClientProtocol,
+    PotentialDataLoss,
+    Request,
+    RequestGenerationFailed,
+    RequestNotSent,
+    RequestTransmissionFailed,
+    Response,
+    ResponseDone,
+    ResponseFailed,
+    ResponseNeverReceived,
+    _ensureValidMethod,
+    _ensureValidURI,
+    _WrapperException,
+)
+from twisted.web.error import SchemeNotSupported
+from twisted.web.http_headers import Headers
+from twisted.web.iweb import (
+    UNKNOWN_LENGTH,
+    IAgent,
+    IAgentEndpointFactory,
+    IBodyProducer,
+    IPolicyForHTTPS,
+    IResponse,
+)
 
 try:
     from urlparse import urlunparse, urljoin, urldefrag
@@ -22,32 +76,10 @@ except ImportError:
         result = _urlunparse(tuple([p.decode("charmap") for p in parts]))
         return result.encode("charmap")
 
-import zlib
-from functools import wraps
 
-from zope.interface import implementer
 
-from twisted.python.compat import _PY3, networkString
-from twisted.python.compat import nativeString, intToBytes, unicode, itervalues
-from twisted.python.deprecate import deprecatedModuleAttribute, deprecated
-from twisted.python.failure import Failure
-from incremental import Version
 
-from twisted.web.iweb import IPolicyForHTTPS, IAgentEndpointFactory
-from twisted.python.deprecate import getDeprecationWarningString
-from twisted.web import http
-from twisted.internet import defer, protocol, task, reactor
-from twisted.internet.abstract import isIPv6Address
-from twisted.internet.interfaces import IProtocol, IOpenSSLContextFactory
-from twisted.internet.endpoints import HostnameEndpoint, wrapClientTLS
-from twisted.python.util import InsensitiveDict
-from twisted.python.components import proxyForInterface
-from twisted.web import error
-from twisted.web.iweb import UNKNOWN_LENGTH, IAgent, IBodyProducer, IResponse
-from twisted.web.http_headers import Headers
-from twisted.logger import Logger
 
-from twisted.web._newclient import _ensureValidURI, _ensureValidMethod
 
 
 
@@ -818,20 +850,6 @@ def downloadPage(url, file, contextFactory=None, *args, **kwargs):
 # should be significantly better than anything above, though it is not yet
 # feature equivalent.
 
-from twisted.web.error import SchemeNotSupported
-from twisted.web._newclient import (
-    HTTP11ClientProtocol,
-    PotentialDataLoss,
-    Request,
-    RequestGenerationFailed,
-    RequestNotSent,
-    RequestTransmissionFailed,
-    Response,
-    ResponseDone,
-    ResponseFailed,
-    ResponseNeverReceived,
-    _WrapperException,
-    )
 
 
 

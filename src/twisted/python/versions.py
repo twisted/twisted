@@ -7,7 +7,7 @@ Versions for Python packages.
 See L{incremental}.
 """
 
-from __future__ import division, absolute_import
+from __future__ import absolute_import, division
 
 from incremental import IncomparableVersions, Version, getVersionString
 

@@ -7,7 +7,15 @@ Tests for L{twisted.conch.ssh.keys}.
 
 from __future__ import absolute_import, division
 
+import base64
+import os
+
+from twisted.python.compat import long
+from twisted.conch.test import keydata
+from twisted.python import randbytes
+from twisted.python.filepath import FilePath
 from twisted.python.reflect import requireModule
+from twisted.trial import unittest
 
 cryptography = requireModule("cryptography")
 if cryptography is None:
@@ -19,14 +27,7 @@ pyasn1 = requireModule("pyasn1")
 if cryptography and pyasn1:
     from twisted.conch.ssh import keys, common, sexpy
 
-import base64
-import os
 
-from twisted.conch.test import keydata
-from twisted.python import randbytes
-from twisted.trial import unittest
-from twisted.python.compat import long
-from twisted.python.filepath import FilePath
 
 
 

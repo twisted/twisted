@@ -4,9 +4,10 @@
 # See LICENSE for details.
 
 
+from io import BytesIO
+
 from twisted.internet import protocol
 
-from io import BytesIO
 
 class StatefulProtocol(protocol.Protocol):
     """A Protocol that stores state for you.
@@ -46,4 +47,3 @@ class StatefulProtocol(protocol.Protocol):
             buffer.write(b)
             offset = 0
         self._sful_data = state, buffer, offset
-

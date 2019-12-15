@@ -8,10 +8,12 @@ Dict client protocol implementation.
 @author: Pavel Pergamenshchik
 """
 
-from twisted.protocols import basic
-from twisted.internet import defer, protocol
-from twisted.python import log
 from io import BytesIO
+
+from twisted.internet import defer, protocol
+from twisted.protocols import basic
+from twisted.python import log
+
 
 def parseParam(line):
     """Chew one dqstring or atom from beginning of line and return (param, remaningline)"""
@@ -412,4 +414,3 @@ def match(host, port, database, strategy, word):
     from twisted.internet import reactor
     reactor.connectTCP(host, port, factory)
     return d
-

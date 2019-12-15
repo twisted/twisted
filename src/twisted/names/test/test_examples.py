@@ -9,9 +9,9 @@ from __future__ import absolute_import, division
 
 import sys
 
+from twisted.python.compat import NativeStringIO
 from twisted.python.filepath import FilePath
 from twisted.trial.unittest import SkipTest, TestCase
-from twisted.python.compat import NativeStringIO
 
 
 class ExampleTestBase(object):

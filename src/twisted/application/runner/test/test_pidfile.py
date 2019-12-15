@@ -5,26 +5,28 @@
 Tests for L{twisted.application.runner._pidfile}.
 """
 
-from functools import wraps
 import errno
-from os import getpid, name as SYSTEM_NAME
+from functools import wraps
 from io import BytesIO
+from os import getpid, name as SYSTEM_NAME
 
 from zope.interface import implementer
 from zope.interface.verify import verifyObject
 
+import twisted.trial.unittest
 from twisted.python.filepath import IFilePath
 from twisted.python.runtime import platform
-
+from twisted.trial.unittest import SkipTest
 from ...runner import _pidfile
 from .._pidfile import (
-    IPIDFile, PIDFile, NonePIDFile,
-    AlreadyRunningError, InvalidPIDFileError, StalePIDFileError,
+    AlreadyRunningError,
+    InvalidPIDFileError,
+    IPIDFile,
+    NonePIDFile,
     NoPIDFound,
+    PIDFile,
+    StalePIDFileError,
 )
-
-import twisted.trial.unittest
-from twisted.trial.unittest import SkipTest
 
 
 def ifPlatformSupported(f):

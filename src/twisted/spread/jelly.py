@@ -61,13 +61,31 @@ The same rule applies for C{frozenset} and C{sets.ImmutableSet}.
 @author: Glyph Lefkowitz
 """
 
+import copy
+import datetime
+import decimal
 # System Imports
 import types
 import warnings
-import decimal
 from functools import reduce
-import copy
-import datetime
+
+from zope.interface import implementer
+
+from incremental import Version
+
+# Twisted Imports
+from twisted.python.compat import _PY3, long, nativeString, unicode
+from twisted.persisted.crefutil import (
+    NotKnown,
+    _Container,
+    _Dereference,
+    _DictKeyAndValue,
+    _InstanceMethod,
+    _Tuple,
+)
+from twisted.python.deprecate import deprecatedModuleAttribute
+from twisted.python.reflect import namedAny, namedObject, qual
+from twisted.spread.interfaces import IJellyable, IUnjellyable
 
 try:
     from types import (ClassType as _OldStyleClass,
@@ -94,20 +112,9 @@ with warnings.catch_warnings():
         _SetTypes.append(_sets.Set)
         _ImmutableSetTypes.append(_sets.ImmutableSet)
 
-from zope.interface import implementer
 
-# Twisted Imports
-from twisted.python.compat import unicode, long, nativeString
-from twisted.python.reflect import namedObject, qual, namedAny
-from twisted.persisted.crefutil import NotKnown, _Tuple, _InstanceMethod
-from twisted.persisted.crefutil import _DictKeyAndValue, _Dereference
-from twisted.persisted.crefutil import _Container
 
-from twisted.spread.interfaces import IJellyable, IUnjellyable
 
-from twisted.python.compat import _PY3
-from twisted.python.deprecate import deprecatedModuleAttribute
-from incremental import Version
 
 DictTypes = (dict,)
 

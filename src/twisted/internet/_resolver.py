@@ -8,24 +8,38 @@ IPv6-aware hostname resolution.
 @see: L{IHostnameResolver}
 """
 
-from __future__ import division, absolute_import
+from __future__ import absolute_import, division
 
-__metaclass__ = type
-
-from socket import (getaddrinfo, AF_INET, AF_INET6, AF_UNSPEC, SOCK_STREAM,
-                    SOCK_DGRAM, gaierror)
+from socket import (
+    AF_INET,
+    AF_INET6,
+    AF_UNSPEC,
+    SOCK_DGRAM,
+    SOCK_STREAM,
+    gaierror,
+    getaddrinfo,
+)
 
 from zope.interface import implementer
 
-from twisted.internet.interfaces import (IHostnameResolver, IHostResolution,
-                                         IResolverSimple, IResolutionReceiver)
-from twisted.internet.error import DNSLookupError
-from twisted.internet.defer import Deferred
-from twisted.internet.threads import deferToThreadPool
-from twisted.internet.address import IPv4Address, IPv6Address
 from twisted.python.compat import nativeString
 from twisted.internet._idna import _idnaBytes
+from twisted.internet.address import IPv4Address, IPv6Address
+from twisted.internet.defer import Deferred
+from twisted.internet.error import DNSLookupError
+from twisted.internet.interfaces import (
+    IHostnameResolver,
+    IHostResolution,
+    IResolutionReceiver,
+    IResolverSimple,
+)
+from twisted.internet.threads import deferToThreadPool
 from twisted.logger import Logger
+
+__metaclass__ = type
+
+
+
 
 
 @implementer(IHostResolution)

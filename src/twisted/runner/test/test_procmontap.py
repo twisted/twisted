@@ -6,9 +6,9 @@ Tests for L{twisted.runner.procmontap}.
 """
 
 from twisted.python.usage import UsageError
-from twisted.trial import unittest
-from twisted.runner.procmon import ProcessMonitor
 from twisted.runner import procmontap as tap
+from twisted.runner.procmon import ProcessMonitor
+from twisted.trial import unittest
 
 
 class ProcessMonitorTapTests(unittest.TestCase):

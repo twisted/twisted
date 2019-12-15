@@ -4,19 +4,22 @@
 """
 Tests for twisted SSL support.
 """
-from __future__ import division, absolute_import
-
-from twisted.python.filepath import FilePath
-from twisted.trial import unittest
-from twisted.internet import protocol, reactor, interfaces, defer
-from twisted.internet.error import ConnectionDone
-from twisted.protocols import basic
-from twisted.python.runtime import platform
-from twisted.test.test_tcp import ProperlyCloseFilesMixin
-from twisted.test.proto_helpers import waitUntilAllDisconnected
+from __future__ import absolute_import, division
 
 import os
+
+from zope.interface import implementer
+
 import hamcrest
+
+from twisted.internet import defer, interfaces, protocol, reactor
+from twisted.internet.error import ConnectionDone
+from twisted.protocols import basic
+from twisted.python.filepath import FilePath
+from twisted.python.runtime import platform
+from twisted.test.proto_helpers import waitUntilAllDisconnected
+from twisted.test.test_tcp import ProperlyCloseFilesMixin
+from twisted.trial import unittest
 
 try:
     from OpenSSL import SSL, crypto
@@ -30,7 +33,6 @@ except ImportError:
         SSL = ssl = None
     _noSSL()
 
-from zope.interface import implementer
 
 
 

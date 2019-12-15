@@ -8,4 +8,3 @@
 
 class Foo(object):
     pass
-

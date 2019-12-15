@@ -8,15 +8,12 @@ Test cases for twisted.protocols.ident module.
 
 import struct
 
+from twisted.python.compat import NativeStringIO
+from twisted.internet import defer, error
 from twisted.protocols import ident
 from twisted.python import failure
-from twisted.internet import error
-from twisted.internet import defer
-from twisted.python.compat import NativeStringIO
-
-from twisted.trial import unittest
 from twisted.test.proto_helpers import StringTransport
-
+from twisted.trial import unittest
 
 try:
     import builtins

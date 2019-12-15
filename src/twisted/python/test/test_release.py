@@ -10,32 +10,38 @@ only ever performed on Linux.
 
 from __future__ import print_function
 
-import glob
 import functools
+import glob
 import operator
 import os
-import sys
-import textwrap
-import tempfile
 import shutil
-
+import sys
+import tempfile
+import textwrap
 from io import BytesIO, StringIO
-
-from twisted.trial.unittest import TestCase, FailTest, SkipTest
-
-from twisted.python.procutils import which
-from twisted.python import release
-from twisted.python.filepath import FilePath
+from subprocess import CalledProcessError
 
 from incremental import Version
 
-from subprocess import CalledProcessError
-
+from twisted.python import release
 from twisted.python._release import (
-    findTwistedProjects, replaceInFile, Project, filePathDelta,
-    APIBuilder, BuildAPIDocsScript, CheckNewsfragmentScript,
-    runCommand, NotWorkingDirectory, SphinxBuilder,
-    GitCommand, getRepositoryCommand, IVCSCommand)
+    APIBuilder,
+    BuildAPIDocsScript,
+    CheckNewsfragmentScript,
+    GitCommand,
+    IVCSCommand,
+    NotWorkingDirectory,
+    Project,
+    SphinxBuilder,
+    filePathDelta,
+    findTwistedProjects,
+    getRepositoryCommand,
+    replaceInFile,
+    runCommand,
+)
+from twisted.python.filepath import FilePath
+from twisted.python.procutils import which
+from twisted.trial.unittest import FailTest, SkipTest, TestCase
 
 if os.name != 'posix':
     skip = "Release toolchain only supported on POSIX."

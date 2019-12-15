@@ -5,19 +5,36 @@
 Tests for L{twisted.pair.tuntap}.
 """
 
-from __future__ import division, absolute_import
+from __future__ import absolute_import, division
 
 import os
-import struct
 import socket
-from errno import EPERM, EBADF, EINVAL, EAGAIN, EWOULDBLOCK, ENOENT, ENODEV
-from random import randrange
+import struct
 from collections import deque
+from errno import EAGAIN, EBADF, EINVAL, ENODEV, ENOENT, EPERM, EWOULDBLOCK
 from itertools import cycle
+from random import randrange
 from signal import SIGINT
 
-from twisted.python.compat import intToBytes, _PY3
-from twisted.python.reflect import ObjectNotFound, namedAny
+from zope.interface import Interface, implementer
+from zope.interface.verify import verifyObject
+
+from twisted.python.compat import _PY3, intToBytes, iterbytes
+from twisted.internet.error import CannotListenError
+from twisted.internet.interfaces import IAddress, IListeningPort, IReactorFDSet
+from twisted.internet.protocol import (
+    AbstractDatagramProtocol,
+    DatagramProtocol,
+    Factory,
+)
+from twisted.internet.task import Clock
+from twisted.pair.ethernet import EthernetProtocol
+from twisted.pair.ip import IPProtocol
+from twisted.pair.raw import IRawPacketProtocol
+from twisted.pair.rawudp import RawUDPProtocol
+from twisted.python.log import addObserver, removeObserver, textFromEventDict
+from twisted.python.reflect import ObjectNotFound, fullyQualifiedName, namedAny
+from twisted.trial.unittest import SkipTest, SynchronousTestCase
 
 try:
     namedAny("fcntl.ioctl")
@@ -26,24 +43,8 @@ except (ObjectNotFound, AttributeError):
 else:
     platformSkip = None
 
-from zope.interface import Interface, implementer
-from zope.interface.verify import verifyObject
 
-from twisted.internet.interfaces import IListeningPort
-from twisted.internet.protocol import DatagramProtocol
-from twisted.pair.rawudp import RawUDPProtocol
-from twisted.pair.ip import IPProtocol
-from twisted.pair.ethernet import EthernetProtocol
 
-from twisted.python.reflect import fullyQualifiedName
-from twisted.python.compat import iterbytes
-from twisted.python.log import addObserver, removeObserver, textFromEventDict
-from twisted.internet.interfaces import IAddress, IReactorFDSet
-from twisted.internet.protocol import AbstractDatagramProtocol, Factory
-from twisted.internet.task import Clock
-from twisted.trial.unittest import SkipTest, SynchronousTestCase
-from twisted.internet.error import CannotListenError
-from twisted.pair.raw import IRawPacketProtocol
 
 # Let the module-scope testing subclass of this still be defined (and then not
 # used) in case we can't import from twisted.pair.testing due to platform

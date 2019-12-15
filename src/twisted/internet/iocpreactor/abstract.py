@@ -5,17 +5,19 @@
 Abstract file handle class
 """
 
-from twisted.internet import main, error, interfaces
-from twisted.internet.abstract import _ConsumerMixin, _LogOwner
-from twisted.python import failure
-from twisted.python.compat import unicode
-
-from zope.interface import implementer
 import errno
 
-from twisted.internet.iocpreactor.const import ERROR_HANDLE_EOF
-from twisted.internet.iocpreactor.const import ERROR_IO_PENDING
+from zope.interface import implementer
+
+from twisted.python.compat import unicode
+from twisted.internet import error, interfaces, main
+from twisted.internet.abstract import _ConsumerMixin, _LogOwner
 from twisted.internet.iocpreactor import iocpsupport as _iocp
+from twisted.internet.iocpreactor.const import (
+    ERROR_HANDLE_EOF,
+    ERROR_IO_PENDING,
+)
+from twisted.python import failure
 
 
 @implementer(interfaces.IPushProducer, interfaces.IConsumer,

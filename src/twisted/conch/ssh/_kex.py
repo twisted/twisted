@@ -10,10 +10,10 @@ from __future__ import absolute_import, division
 
 from hashlib import sha1, sha256, sha384, sha512
 
-from zope.interface import Attribute, implementer, Interface
+from zope.interface import Attribute, Interface, implementer
 
-from twisted.conch import error
 from twisted.python.compat import long
+from twisted.conch import error
 
 
 class _IKexAlgorithm(Interface):

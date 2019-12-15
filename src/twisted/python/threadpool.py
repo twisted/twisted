@@ -9,15 +9,14 @@ In most cases you can just use C{reactor.callInThread} and friends
 instead of creating a thread pool directly.
 """
 
-from __future__ import division, absolute_import
+from __future__ import absolute_import, division
 
 import threading
 
 from twisted._threads import pool as _pool
-from twisted.python import log, context
-from twisted.python.failure import Failure
+from twisted.python import context, log
 from twisted.python._oldstyle import _oldStyle
-
+from twisted.python.failure import Failure
 
 WorkerStop = object()
 

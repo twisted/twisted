@@ -6,20 +6,23 @@
 Base functionality useful to various parts of Twisted Names.
 """
 
-from __future__ import division, absolute_import
+from __future__ import absolute_import, division
 
 import socket
 
 from zope.interface import implementer
 
-from twisted.names import dns
-from twisted.names.error import DNSFormatError, DNSServerError, DNSNameError
-from twisted.names.error import DNSNotImplementedError, DNSQueryRefusedError
-from twisted.names.error import DNSUnknownError
-
 from twisted.internet import defer, error, interfaces
-
 from twisted.logger import Logger
+from twisted.names import dns
+from twisted.names.error import (
+    DNSFormatError,
+    DNSNameError,
+    DNSNotImplementedError,
+    DNSQueryRefusedError,
+    DNSServerError,
+    DNSUnknownError,
+)
 
 # Helpers for indexing the three-tuples that get thrown around by this code a
 # lot.

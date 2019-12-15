@@ -4,11 +4,11 @@ from __future__ import absolute_import, division
 
 from zope.interface import implementer
 
+from twisted.python.compat import nativeString
 from twisted.conch.error import ConchError
 from twisted.conch.interfaces import IConchUser
 from twisted.conch.ssh.connection import OPEN_UNKNOWN_CHANNEL_TYPE
 from twisted.python import log
-from twisted.python.compat import nativeString
 
 
 @implementer(IConchUser)

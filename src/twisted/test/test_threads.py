@@ -6,16 +6,23 @@
 Test methods in twisted.internet.threads and reactor thread APIs.
 """
 
-from __future__ import division, absolute_import
+from __future__ import absolute_import, division
 
-import sys, os, time
-
-from twisted.trial import unittest
+import os
+import sys
+import time
 
 from twisted.python.compat import range
-from twisted.internet import reactor, defer, interfaces, threads, protocol, error
-from twisted.python import failure, threadable, log, threadpool
-
+from twisted.internet import (
+    defer,
+    error,
+    interfaces,
+    protocol,
+    reactor,
+    threads,
+)
+from twisted.python import failure, log, threadable, threadpool
+from twisted.trial import unittest
 
 
 class ReactorThreadsTests(unittest.TestCase):

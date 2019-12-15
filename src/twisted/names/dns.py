@@ -9,7 +9,30 @@ Future Plans:
     - Get rid of some toplevels, maybe.
 """
 
-from __future__ import division, absolute_import
+from __future__ import absolute_import, division
+
+# System imports
+import inspect
+import random
+import socket
+import struct
+from io import BytesIO
+from itertools import chain
+
+from zope.interface import Attribute, Interface, implementer
+
+from twisted.python.compat import _PY3, cmp, comparable, nativeString, unicode
+# Twisted imports
+from twisted.internet import defer, protocol
+from twisted.internet.error import CannotListenError
+# Backwards compatibility aliases - these should be deprecated or something I
+# suppose. -exarkun
+from twisted.names.error import (
+    AuthoritativeDomainError,
+    DNSQueryTimeoutError,
+    DomainError,
+)
+from twisted.python import failure, log, randbytes, util as tputil
 
 __all__ = [
     'IEncodable', 'IRecord',
@@ -46,24 +69,12 @@ __all__ = [
     ]
 
 
-# System imports
-import inspect, struct, random, socket
-from itertools import chain
 
-from io import BytesIO
 
 AF_INET6 = socket.AF_INET6
 
-from zope.interface import implementer, Interface, Attribute
 
 
-# Twisted imports
-from twisted.internet import protocol, defer
-from twisted.internet.error import CannotListenError
-from twisted.python import log, failure
-from twisted.python import util as tputil
-from twisted.python import randbytes
-from twisted.python.compat import _PY3, unicode, comparable, cmp, nativeString
 
 
 if _PY3:
@@ -219,10 +230,6 @@ class IRecord(Interface):
     TYPE = Attribute("An indicator of what kind of record this is.")
 
 
-# Backwards compatibility aliases - these should be deprecated or something I
-# suppose. -exarkun
-from twisted.names.error import DomainError, AuthoritativeDomainError
-from twisted.names.error import DNSQueryTimeoutError
 
 
 

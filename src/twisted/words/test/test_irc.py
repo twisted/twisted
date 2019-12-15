@@ -9,10 +9,10 @@ import errno
 import operator
 import time
 
+from twisted.python.compat import unicode
 from twisted.internet import protocol, task
 from twisted.python.filepath import FilePath
-from twisted.python.compat import unicode
-from twisted.test.proto_helpers import StringTransport, StringIOWithoutClosing
+from twisted.test.proto_helpers import StringIOWithoutClosing, StringTransport
 from twisted.trial.unittest import TestCase
 from twisted.words.protocols import irc
 from twisted.words.protocols.irc import IRCClient, attributes as A

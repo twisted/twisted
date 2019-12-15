@@ -23,10 +23,9 @@ from __future__ import absolute_import, division
 from twisted.python.compat import urllib_parse, urlquote
 from twisted.internet import reactor
 from twisted.internet.protocol import ClientFactory
+from twisted.web.http import _QUEUED_SENTINEL, HTTPChannel, HTTPClient, Request
 from twisted.web.resource import Resource
 from twisted.web.server import NOT_DONE_YET
-from twisted.web.http import HTTPClient, Request, HTTPChannel, _QUEUED_SENTINEL
-
 
 
 class ProxyClient(HTTPClient):

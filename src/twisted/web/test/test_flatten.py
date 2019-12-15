@@ -8,28 +8,30 @@ L{twisted.web._flatten}.
 
 import sys
 import traceback
-
-from xml.etree.cElementTree import XML
-
 from collections import OrderedDict
+from xml.etree.cElementTree import XML
 
 from zope.interface import implementer
 
 from twisted.python.compat import _PY35PLUS
-
-from twisted.trial.unittest import TestCase
+from twisted.internet.defer import gatherResults, passthru, succeed
 from twisted.test.testutils import XMLAssertionMixin
-
-from twisted.internet.defer import passthru, succeed, gatherResults
-
+from twisted.trial.unittest import TestCase
+from twisted.web.error import FlattenerError, UnfilledSlot, UnsupportedType
 from twisted.web.iweb import IRenderable
-from twisted.web.error import UnfilledSlot, UnsupportedType, FlattenerError
-
-from twisted.web.template import tags, Tag, Comment, CDATA, CharRef, slot
-from twisted.web.template import Element, renderer, TagLoader, flattenString
-
+from twisted.web.template import (
+    CDATA,
+    CharRef,
+    Comment,
+    Element,
+    Tag,
+    TagLoader,
+    flattenString,
+    renderer,
+    slot,
+    tags,
+)
 from twisted.web.test._util import FlattenTestCase
-
 
 
 class SerializationTests(FlattenTestCase, XMLAssertionMixin):

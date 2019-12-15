@@ -11,7 +11,6 @@ import itertools
 from twisted.positioning import _sentence
 from twisted.trial.unittest import TestCase
 
-
 sentinelValueOne = "someStringValue"
 sentinelValueTwo = "someOtherStringValue"
 

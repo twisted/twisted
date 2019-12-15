@@ -6,7 +6,20 @@
 Test cases for L{twisted.logger._format}.
 """
 
-from twisted.python.test.test_tzhelper import mktime, addTZCleanup, setTZ
+from twisted.python.compat import _PY3, unicode
+from twisted.python.failure import Failure
+from twisted.python.test.test_tzhelper import addTZCleanup, mktime, setTZ
+from twisted.trial import unittest
+from twisted.trial.unittest import SkipTest
+from .._format import (
+    eventAsText,
+    formatEvent,
+    formatEventAsClassicLogText,
+    formatTime,
+    formatUnformattableEvent,
+    formatWithCall,
+)
+from .._levels import LogLevel
 
 try:
     from time import tzset
@@ -15,16 +28,7 @@ try:
 except ImportError:
     tzset = None
 
-from twisted.trial import unittest
-from twisted.trial.unittest import SkipTest
 
-from twisted.python.compat import _PY3, unicode
-from .._levels import LogLevel
-from .._format import (
-    formatEvent, formatUnformattableEvent, formatTime,
-    formatEventAsClassicLogText, formatWithCall, eventAsText
-)
-from twisted.python.failure import Failure
 
 
 

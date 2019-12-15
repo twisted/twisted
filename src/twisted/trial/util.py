@@ -18,11 +18,11 @@ Maintainer: Jonathan Lange
     asynchronous (ie, Deferred-returning) test methods, in seconds.
 """
 
-from __future__ import division, absolute_import, print_function
+from __future__ import absolute_import, division, print_function
 
 from random import randrange
 
-from twisted.internet import defer, utils, interfaces
+from twisted.internet import defer, interfaces, utils
 from twisted.python.failure import Failure
 from twisted.python.filepath import FilePath
 from twisted.python.lockfile import FilesystemLock

@@ -21,16 +21,17 @@ Maintainer: Itamar Shtull-Trauring
 """
 
 
-import os
 import base64
 import glob
+import os
+
+from twisted.python.filepath import FilePath
 
 try:
     import cPickle as pickle
 except ImportError:
     import pickle
 
-from twisted.python.filepath import FilePath
 
 try:
     _open

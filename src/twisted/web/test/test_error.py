@@ -5,17 +5,16 @@
 HTTP errors.
 """
 
-from __future__ import division, absolute_import
+from __future__ import absolute_import, division
 
 import re
 import sys
 import traceback
 
+from twisted.python.compat import _PY3, nativeString
 from twisted.trial import unittest
-from twisted.python.compat import nativeString, _PY3
 from twisted.web import error
 from twisted.web.template import Tag
-
 
 
 class CodeToMessageTests(unittest.TestCase):

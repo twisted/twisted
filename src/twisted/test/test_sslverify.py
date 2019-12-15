@@ -6,14 +6,30 @@
 Tests for L{twisted.internet._sslverify}.
 """
 
-from __future__ import division, absolute_import
+from __future__ import absolute_import, division
 
-import sys
-import itertools
 import datetime
+import itertools
+import sys
 
 from zope.interface import implementer
+
+from incremental import Version
+
+from twisted.python.compat import nativeString
+from twisted.internet import defer, interfaces, protocol, reactor
+from twisted.internet._idna import _idnaText
+from twisted.internet.error import (
+    CertificateError,
+    ConnectionClosed,
+    ConnectionLost,
+)
+from twisted.python.filepath import FilePath
+from twisted.python.modules import getModule
 from twisted.python.reflect import requireModule
+from twisted.test.iosim import connectedServerAndClient
+from twisted.test.test_twisted import SetAsideModule
+from twisted.trial import unittest, util
 
 skipSSL = None
 skipSNI = None
@@ -58,21 +74,9 @@ else:
     skipNPN = skipSSL
     skipALPN = skipSSL
 
-from twisted.test.test_twisted import SetAsideModule
-from twisted.test.iosim import connectedServerAndClient
 
-from twisted.internet.error import ConnectionClosed
-from twisted.python.compat import nativeString
-from twisted.python.filepath import FilePath
-from twisted.python.modules import getModule
 
-from twisted.trial import unittest, util
-from twisted.internet import protocol, defer, reactor
-from twisted.internet._idna import _idnaText
 
-from twisted.internet.error import CertificateError, ConnectionLost
-from twisted.internet import interfaces
-from incremental import Version
 
 if not skipSSL:
     from twisted.internet.ssl import platformTrust, VerificationError

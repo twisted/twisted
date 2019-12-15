@@ -6,18 +6,18 @@
 Reactor that uses IO completion ports
 """
 
-import warnings, socket, sys
+import socket
+import sys
+import warnings
 
 from zope.interface import implementer
 
-from twisted.internet import base, interfaces, main, error
-from twisted.python import log, failure
+from twisted.internet import base, error, interfaces, main
 from twisted.internet._dumbwin32proc import Process
-from twisted.internet.win32eventreactor import _ThreadedWin32EventsMixin
-
-from twisted.internet.iocpreactor import iocpsupport as _iocp
+from twisted.internet.iocpreactor import iocpsupport as _iocp, tcp, udp
 from twisted.internet.iocpreactor.const import WAIT_TIMEOUT
-from twisted.internet.iocpreactor import tcp, udp
+from twisted.internet.win32eventreactor import _ThreadedWin32EventsMixin
+from twisted.python import failure, log
 
 try:
     from twisted.protocols.tls import TLSMemoryBIOFactory

@@ -5,20 +5,17 @@
 Test cases for the L{twisted.python.failure} module.
 """
 
-from __future__ import division, absolute_import
+from __future__ import absolute_import, division
 
+import linecache
+import pdb
 import re
 import sys
 import traceback
-import pdb
-import linecache
 
 from twisted.python.compat import _PY3, NativeStringIO
-from twisted.python import reflect
-from twisted.python import failure
-
+from twisted.python import failure, reflect
 from twisted.trial.unittest import SkipTest, SynchronousTestCase
-
 
 try:
     from twisted.test import raiser

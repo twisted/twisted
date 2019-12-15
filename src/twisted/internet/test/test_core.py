@@ -5,18 +5,20 @@
 Tests for implementations of L{IReactorCore}.
 """
 
-from __future__ import division, absolute_import
+from __future__ import absolute_import, division
+
+import inspect
+import signal
+import time
+
+from twisted.internet.abstract import FileDescriptor
+from twisted.internet.defer import Deferred
+from twisted.internet.error import ReactorAlreadyRunning, ReactorNotRestartable
+from twisted.internet.test.reactormixins import ReactorBuilder
 
 __metaclass__ = type
 
-import signal
-import time
-import inspect
 
-from twisted.internet.abstract import FileDescriptor
-from twisted.internet.error import ReactorAlreadyRunning, ReactorNotRestartable
-from twisted.internet.defer import Deferred
-from twisted.internet.test.reactormixins import ReactorBuilder
 
 
 class ObjectModelIntegrationMixin(object):

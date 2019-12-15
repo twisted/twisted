@@ -11,7 +11,6 @@ import sys
 from ._levels import LogLevel
 
 
-
 class LoggingFile(object):
     """
     File-like object that turns C{write()} calls into logging events.

@@ -18,22 +18,31 @@ but may have a small impact on users who subclass and override methods.
 
 from __future__ import absolute_import, division
 
+import sys
+
+from zope.interface import Interface, implementer
+
+from twisted.python.compat import _PY3, cmp, comparable, unicode
+from twisted.python import log, reflect
+from .jelly import (
+    Jellyable,
+    Unjellyable,
+    _createBlank,
+    getInstanceState,
+    setInstanceState,
+    setUnjellyableFactoryForClass,
+    setUnjellyableForClass,
+    setUnjellyableForClassTree,
+    unjellyableRegistry,
+)
+
 # NOTE: this module should NOT import pb; it is supposed to be a module which
 # abstractly defines remotely accessible types.  Many of these types expect to
 # be serialized by Jelly, but they ought to be accessible through other
 # mechanisms (like XMLRPC)
 
-import sys
 
-from zope.interface import implementer, Interface
 
-from twisted.python import log, reflect
-from twisted.python.compat import _PY3, unicode, comparable, cmp
-from .jelly import (
-    setUnjellyableForClass, setUnjellyableForClassTree,
-    setUnjellyableFactoryForClass, unjellyableRegistry, Jellyable, Unjellyable,
-    setInstanceState, getInstanceState, _createBlank
-)
 
 # compatibility
 setCopierForClass = setUnjellyableForClass

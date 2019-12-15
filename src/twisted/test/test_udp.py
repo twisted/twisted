@@ -6,16 +6,15 @@
 Tests for implementations of L{IReactorUDP} and L{IReactorMulticast}.
 """
 
-from __future__ import division, absolute_import
+from __future__ import absolute_import, division
 
 import os
 
-from twisted.trial import unittest
-
 from twisted.python.compat import intToBytes
+from twisted.internet import defer, error, interfaces, protocol, reactor, udp
 from twisted.internet.defer import Deferred, gatherResults, maybeDeferred
-from twisted.internet import protocol, reactor, error, defer, interfaces, udp
 from twisted.python import runtime
+from twisted.trial import unittest
 
 
 class Mixin:

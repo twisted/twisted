@@ -6,7 +6,7 @@
 Exception class definitions for Twisted Names.
 """
 
-from __future__ import division, absolute_import
+from __future__ import absolute_import, division
 
 from twisted.internet.defer import TimeoutError
 

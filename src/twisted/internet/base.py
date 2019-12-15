@@ -6,38 +6,40 @@
 Very basic functionality for a Reactor implementation.
 """
 
-from __future__ import division, absolute_import
+from __future__ import absolute_import, division
 
-import socket # needed only for sync-dns
-from zope.interface import implementer, classImplements
-
+import socket  # needed only for sync-dns
 import sys
-import warnings
-from heapq import heappush, heappop, heapify
-
 import traceback
+import warnings
+from heapq import heapify, heappop, heappush
 
-from twisted.internet.interfaces import (
-    IReactorCore, IReactorTime, IReactorThreads, IResolverSimple,
-    IReactorPluggableResolver, IReactorPluggableNameResolver, IConnector,
-    IDelayedCall, _ISupportsExitSignalCapturing
-)
+from zope.interface import classImplements, implementer
 
-from twisted.internet import fdesc, main, error, abstract, defer, threads
+from twisted.python.compat import iteritems, unicode
+from twisted.internet import abstract, defer, error, fdesc, main, threads
 from twisted.internet._resolver import (
-    GAIResolver as _GAIResolver,
     ComplexResolverSimplifier as _ComplexResolverSimplifier,
+    GAIResolver as _GAIResolver,
     SimpleResolverComplexifier as _SimpleResolverComplexifier,
 )
-from twisted.python import log, failure, reflect
-from twisted.python.compat import unicode, iteritems
-from twisted.python.runtime import seconds as runtimeSeconds, platform
 from twisted.internet.defer import Deferred, DeferredList
-from twisted.python._oldstyle import _oldStyle
-
+from twisted.internet.interfaces import (
+    IConnector,
+    IDelayedCall,
+    IReactorCore,
+    IReactorPluggableNameResolver,
+    IReactorPluggableResolver,
+    IReactorThreads,
+    IReactorTime,
+    IResolverSimple,
+    _ISupportsExitSignalCapturing,
+)
 # This import is for side-effects!  Even if you don't see any code using it
 # in this module, don't delete it.
-from twisted.python import threadable
+from twisted.python import failure, log, reflect, threadable
+from twisted.python._oldstyle import _oldStyle
+from twisted.python.runtime import platform, seconds as runtimeSeconds
 
 
 @implementer(IDelayedCall)

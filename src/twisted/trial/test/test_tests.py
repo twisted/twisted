@@ -21,26 +21,24 @@ is intentionally only provided by TestCase, not SynchronousTestCase, is excepted
 of course.
 """
 
-from __future__ import division, absolute_import
+from __future__ import absolute_import, division
 
 import gc
 import sys
-import weakref
 import unittest as pyunit
+import weakref
 
-from twisted.python.compat import NativeStringIO, _PY3, _PYPY
-from twisted.python.reflect import namedAny
+from twisted.python.compat import _PY3, _PYPY, NativeStringIO
 from twisted.internet import defer, reactor
-from twisted.trial import unittest, reporter, util
-
-from twisted.trial import runner
-from twisted.trial.test import erroneous
-from twisted.trial.test.test_suppression import SuppressionMixin
+from twisted.python.reflect import namedAny
+from twisted.trial import reporter, runner, unittest, util
 from twisted.trial._asyncrunner import (
     _clearSuite,
     _ForceGarbageCollectionDecorator,
     _iterateTests,
-    )
+)
+from twisted.trial.test import erroneous
+from twisted.trial.test.test_suppression import SuppressionMixin
 
 
 class ResultsTestMixin(object):

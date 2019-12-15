@@ -6,23 +6,24 @@
 Different styles of persisted objects.
 """
 
-from __future__ import division, absolute_import
+from __future__ import absolute_import, division
 
+import copy
+import inspect
+import pickle
 # System Imports
 import types
-import pickle
+
+from twisted.python.compat import _PY3, _PYPY
+# Twisted Imports
+from twisted.python import log, reflect
+
 try:
     import copy_reg
 except ImportError:
     import copyreg as copy_reg
-import copy
-import inspect
 
-from twisted.python.compat import _PY3, _PYPY
 
-# Twisted Imports
-from twisted.python import log
-from twisted.python import reflect
 
 oldModules = {}
 

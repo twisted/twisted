@@ -13,8 +13,8 @@ Maintainer: James Y Knight
 
 from zope.interface import implementer
 
-from twisted.internet import process, error, interfaces
-from twisted.python import log, failure
+from twisted.internet import error, interfaces, process
+from twisted.python import failure, log
 
 
 @implementer(interfaces.IAddress)

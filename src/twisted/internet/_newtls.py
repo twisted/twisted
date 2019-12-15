@@ -10,14 +10,12 @@ implementation and will be used whenever pyOpenSSL 0.10 or newer is installed
 @since: 11.1
 """
 
-from __future__ import division, absolute_import
+from __future__ import absolute_import, division
 
-from zope.interface import implementer
-from zope.interface import directlyProvides
+from zope.interface import directlyProvides, implementer
 
-from twisted.internet.interfaces import ITLSTransport, ISSLTransport
 from twisted.internet.abstract import FileDescriptor
-
+from twisted.internet.interfaces import ISSLTransport, ITLSTransport
 from twisted.protocols.tls import TLSMemoryBIOFactory, TLSMemoryBIOProtocol
 
 

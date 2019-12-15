@@ -7,6 +7,12 @@ Postfix mail transport agent related protocols.
 """
 
 import sys
+
+from twisted.python.compat import unicode
+from twisted.internet import defer, protocol
+from twisted.protocols import basic, policies
+from twisted.python import log
+
 try:
     # Python 2
     from UserDict import UserDict
@@ -21,11 +27,6 @@ except ImportError:
     # Python 3
     from urllib.parse import quote as _quote, unquote as _unquote
 
-from twisted.protocols import basic
-from twisted.protocols import policies
-from twisted.internet import protocol, defer
-from twisted.python import log
-from twisted.python.compat import unicode
 
 # urllib's quote functions just happen to match
 # the postfix semantics.

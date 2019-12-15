@@ -5,37 +5,46 @@
 Tests for Twisted's deprecation framework, L{twisted.python.deprecate}.
 """
 
-from __future__ import division, absolute_import
+from __future__ import absolute_import, division
 
-import sys, types, warnings, inspect
+import inspect
+import sys
+import types
+import warnings
 from os.path import normcase
-from warnings import simplefilter, catch_warnings
+from warnings import catch_warnings, simplefilter
+
+from incremental import Version
+
+from twisted.python.compat import _PY3, execfile
+from twisted.python import deprecate
+from twisted.python.deprecate import (
+    DEPRECATION_WARNING_FORMAT,
+    _appendToDocstring,
+    _fullyQualifiedName as fullyQualifiedName,
+    _getDeprecationDocstring,
+    _getDeprecationWarningString,
+    _mutuallyExclusiveArguments,
+    _passedArgSpec,
+    _passedSignature,
+    deprecated,
+    deprecatedProperty,
+    getDeprecationWarningString,
+)
+from twisted.python.filepath import FilePath
+from twisted.python.runtime import platform
+from twisted.python.test import deprecatedattributes
+from twisted.python.test.modules_helpers import TwistedModulesMixin
+from twisted.trial.unittest import SynchronousTestCase
+
 try:
     from importlib import invalidate_caches
 except ImportError:
     invalidate_caches = None
 
-from twisted.python import deprecate
-from twisted.python.deprecate import _getDeprecationWarningString
-from twisted.python.deprecate import DEPRECATION_WARNING_FORMAT
-from twisted.python.deprecate import (
-    getDeprecationWarningString,
-    deprecated, _appendToDocstring, _getDeprecationDocstring,
-    _fullyQualifiedName as fullyQualifiedName,
-    _mutuallyExclusiveArguments,
-    deprecatedProperty,
-    _passedArgSpec, _passedSignature
-)
 
-from twisted.python.compat import _PY3, execfile
-from incremental import Version
-from twisted.python.runtime import platform
-from twisted.python.filepath import FilePath
 
-from twisted.python.test import deprecatedattributes
-from twisted.python.test.modules_helpers import TwistedModulesMixin
 
-from twisted.trial.unittest import SynchronousTestCase
 
 # Note that various tests in this module require manual encoding of paths to
 # utf-8. This can be fixed once FilePath supports Unicode; see #2366, #4736,

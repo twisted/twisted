@@ -6,10 +6,8 @@ Tests for L{twisted.python.text}.
 """
 
 from twisted.python.compat import NativeStringIO as StringIO
-
-from twisted.trial import unittest
 from twisted.python import text
-
+from twisted.trial import unittest
 
 sampleText = \
 """Every attempt to employ mathematical methods in the study of chemical
@@ -243,4 +241,3 @@ class StrFileTests(unittest.TestCase):
 
     def test_insensitive(self):
         self.assertTrue(text.strFile("ThIs is A test STRING", self.io, False))
-

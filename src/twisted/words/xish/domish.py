@@ -12,10 +12,17 @@ for use in streaming XML applications.
 
 from __future__ import absolute_import, division
 
-from zope.interface import implementer, Interface, Attribute
+from zope.interface import Attribute, Interface, implementer
 
-from twisted.python.compat import (_PY3, StringType, _coercedUnicode,
-                                   iteritems, itervalues, unicode)
+from twisted.python.compat import (
+    _PY3,
+    StringType,
+    _coercedUnicode,
+    iteritems,
+    itervalues,
+    unicode,
+)
+
 
 def _splitPrefix(name):
     """ Internal method for splitting a prefixed Element name into its
@@ -888,5 +895,3 @@ class ExpatElementStream:
 
 ## def parseFile(filename):
 ##     return FileParser().parse(filename)
-
-

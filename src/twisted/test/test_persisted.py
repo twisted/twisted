@@ -2,11 +2,15 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-from __future__ import division, absolute_import
+from __future__ import absolute_import, division
 
+import io
 # System Imports
 import sys
 
+from twisted.python.compat import _PY3
+# Twisted Imports
+from twisted.persisted import aot, crefutil, styles
 from twisted.trial import unittest
 
 try:
@@ -14,7 +18,6 @@ try:
 except ImportError:
     import pickle
 
-import io
 
 try:
     from cStringIO import StringIO as _oldStyleCStringIO
@@ -28,9 +31,6 @@ try:
 except:
     import copy_reg as copyreg
 
-# Twisted Imports
-from twisted.persisted import styles, aot, crefutil
-from twisted.python.compat import _PY3
 
 
 class VersionTests(unittest.TestCase):
@@ -532,4 +532,3 @@ class CrefUtilTests(unittest.TestCase):
 
 
 testCases = [VersionTests, EphemeralTests, PicklingTests]
-

@@ -4,12 +4,13 @@
 """
 Tests for error handling in PB.
 """
-from twisted.internet import reactor, defer
-from twisted.python import log
 from twisted.python.compat import NativeStringIO
+from twisted.internet import defer, reactor
+from twisted.python import log
 from twisted.python.reflect import qual
-from twisted.spread import pb, flavors, jelly
+from twisted.spread import flavors, jelly, pb
 from twisted.trial import unittest
+
 
 # Test exceptions
 class AsynchronousException(Exception):

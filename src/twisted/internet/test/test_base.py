@@ -6,22 +6,28 @@ Tests for L{twisted.internet.base}.
 """
 
 import socket
+
+from zope.interface import implementer
+
+from twisted.internet._resolver import FirstOneWins
+from twisted.internet.base import DelayedCall, ReactorBase, ThreadedResolver
+from twisted.internet.defer import Deferred
+from twisted.internet.error import DNSLookupError
+from twisted.internet.interfaces import (
+    IReactorThreads,
+    IReactorTime,
+    IResolverSimple,
+)
+from twisted.internet.task import Clock
+from twisted.python.threadpool import ThreadPool
+from twisted.trial.unittest import SkipTest, TestCase
+
 try:
     from Queue import Queue
 except ImportError:
     from queue import Queue
 
-from zope.interface import implementer
 
-from twisted.python.threadpool import ThreadPool
-from twisted.internet.interfaces import (IReactorTime, IReactorThreads,
-                                         IResolverSimple)
-from twisted.internet.error import DNSLookupError
-from twisted.internet._resolver import FirstOneWins
-from twisted.internet.defer import Deferred
-from twisted.internet.base import ThreadedResolver, DelayedCall, ReactorBase
-from twisted.internet.task import Clock
-from twisted.trial.unittest import TestCase, SkipTest
 
 
 @implementer(IReactorTime, IReactorThreads)

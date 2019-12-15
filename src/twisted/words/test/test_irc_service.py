@@ -11,6 +11,7 @@ from twisted.words.protocols import irc
 from twisted.words.service import InMemoryWordsRealm, IRCFactory, IRCUser
 from twisted.words.test.test_irc import IRCTestCase
 
+
 class IRCUserTests(IRCTestCase):
     """
     Isolated tests for L{IRCUser}

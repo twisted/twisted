@@ -7,15 +7,17 @@
 Utility functions for dealing with POSIX file descriptors.
 """
 
-import os
 import errno
+import os
+
+# twisted imports
+from twisted.internet.main import CONNECTION_DONE, CONNECTION_LOST
+
 try:
     import fcntl
 except ImportError:
     fcntl = None
 
-# twisted imports
-from twisted.internet.main import CONNECTION_LOST, CONNECTION_DONE
 
 
 def setNonBlocking(fd):

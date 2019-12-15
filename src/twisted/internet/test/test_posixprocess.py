@@ -5,9 +5,14 @@
 Tests for POSIX-based L{IReactorProcess} implementations.
 """
 
-from __future__ import division, absolute_import
+from __future__ import absolute_import, division
 
-import errno, os, sys
+import errno
+import os
+import sys
+
+from twisted.python.compat import range
+from twisted.trial.unittest import TestCase
 
 try:
     import fcntl
@@ -17,8 +22,6 @@ else:
     from twisted.internet import process
     platformSkip = None
 
-from twisted.python.compat import range
-from twisted.trial.unittest import TestCase
 
 
 class FakeFile(object):

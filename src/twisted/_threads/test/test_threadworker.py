@@ -9,11 +9,11 @@ from __future__ import absolute_import, division, print_function
 
 import gc
 import weakref
-
-from twisted.trial.unittest import SynchronousTestCase
 from threading import ThreadError, local
 
-from .. import ThreadWorker, LockWorker, AlreadyQuit
+from twisted.trial.unittest import SynchronousTestCase
+from .. import AlreadyQuit, LockWorker, ThreadWorker
+
 
 class FakeQueueEmpty(Exception):
     """
@@ -305,4 +305,3 @@ class LockWorkerTests(SynchronousTestCase):
 
         worker = RacyLockWorker(FakeLock(), local())
         self.assertRaises(AlreadyQuit, worker.do, list)
-

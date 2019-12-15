@@ -5,14 +5,15 @@
 Tests for the data directory support.
 """
 
-from __future__ import division, absolute_import
+from __future__ import absolute_import, division
+
+from twisted.trial import unittest
 
 try:
     from twisted.python import _appdirs
 except ImportError:
     _appdirs = None
 
-from twisted.trial import unittest
 
 
 class AppdirsTests(unittest.TestCase):

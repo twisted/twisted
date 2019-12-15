@@ -6,13 +6,17 @@
 L{URLPath}, a representation of a URL.
 """
 
-from __future__ import division, absolute_import
-
-from twisted.python.compat import (
-    nativeString, unicode, urllib_parse as urlparse, urlunquote, urlquote
-)
+from __future__ import absolute_import, division
 
 from hyperlink import URL as _URL
+
+from twisted.python.compat import (
+    nativeString,
+    unicode,
+    urllib_parse as urlparse,
+    urlquote,
+    urlunquote,
+)
 
 _allascii = b"".join([chr(x).encode('ascii') for x in range(1, 128)])
 

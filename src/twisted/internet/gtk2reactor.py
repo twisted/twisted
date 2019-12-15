@@ -19,6 +19,8 @@ intended to be called directly.
 # System Imports
 import sys
 
+import gobject
+
 # Twisted Imports
 from twisted.internet import _glibbase
 from twisted.python import runtime
@@ -42,7 +44,6 @@ try:
 except (ImportError, AttributeError):
     pass # maybe we're using pygtk before this hack existed.
 
-import gobject
 if hasattr(gobject, "threads_init"):
     # recent versions of python-gtk expose this. python-gtk=2.4.1
     # (wrapping glib-2.4.7) does. python-gtk=2.0.0 (wrapping

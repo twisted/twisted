@@ -7,14 +7,14 @@ Tests for L{twisted.internet.iocpreactor}.
 
 import errno
 from array import array
+from socket import AF_INET, AF_INET6, SOCK_STREAM, SOL_SOCKET, error, socket
 from struct import pack
-from socket import AF_INET6, AF_INET, SOCK_STREAM, SOL_SOCKET, error, socket
 
 from zope.interface.verify import verifyClass
 
-from twisted.trial import unittest
-from twisted.python.log import msg
 from twisted.internet.interfaces import IPushProducer
+from twisted.python.log import msg
+from twisted.trial import unittest
 
 try:
     from twisted.internet.iocpreactor import iocpsupport as _iocp, tcp, udp
@@ -147,4 +147,3 @@ class IOCPReactorTests(unittest.TestCase):
         self.assertEqual(fd.counter, EVENTS_PER_LOOP)
         ir.doIteration(0)
         self.assertEqual(fd.counter, EVENTS_PER_LOOP + 1)
-

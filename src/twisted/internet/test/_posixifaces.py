@@ -5,15 +5,26 @@
 POSIX implementation of local network interface enumeration.
 """
 
-from __future__ import division, absolute_import
+from __future__ import absolute_import, division
 
-import sys, socket
-
-from socket import AF_INET, AF_INET6, inet_ntop
+import socket
+import sys
 from ctypes import (
-    CDLL, POINTER, Structure, c_char_p, c_ushort, c_int,
-    c_uint32, c_uint8, c_void_p, c_ubyte, pointer, cast)
+    CDLL,
+    POINTER,
+    Structure,
+    c_char_p,
+    c_int,
+    c_ubyte,
+    c_uint8,
+    c_uint32,
+    c_ushort,
+    c_void_p,
+    cast,
+    pointer,
+)
 from ctypes.util import find_library
+from socket import AF_INET, AF_INET6, inet_ntop
 
 from twisted.python.compat import _PY3, nativeString
 

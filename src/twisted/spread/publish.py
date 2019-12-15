@@ -15,7 +15,7 @@ from __future__ import absolute_import, division
 import time
 
 from twisted.internet import defer
-from twisted.spread import banana, jelly, flavors
+from twisted.spread import banana, flavors, jelly
 
 
 class Publishable(flavors.Cacheable):

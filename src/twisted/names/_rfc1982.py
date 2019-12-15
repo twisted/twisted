@@ -14,14 +14,13 @@ Utilities for handling RFC1982 Serial Number Arithmetic.
    Format<https://tools.ietf.org/html/rfc4034#section-3.2>}
 """
 
-from __future__ import division, absolute_import
+from __future__ import absolute_import, division
 
 import calendar
 from datetime import datetime, timedelta
 
 from twisted.python.compat import nativeString
 from twisted.python.util import FancyStrMixin
-
 
 RFC4034_TIME_FORMAT = '%Y%m%d%H%M%S'
 

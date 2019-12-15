@@ -14,15 +14,21 @@ import decimal
 from zope.interface import implementer
 from zope.interface.verify import verifyClass, verifyObject
 
-from twisted.python import filepath
 from twisted.python.compat import intToBytes
-from twisted.python.failure import Failure
-from twisted.protocols import amp
-from twisted.trial import unittest
 from twisted.internet import (
-    address, protocol, defer, error, reactor, interfaces)
+    address,
+    defer,
+    error,
+    interfaces,
+    protocol,
+    reactor,
+)
+from twisted.protocols import amp
+from twisted.python import filepath
+from twisted.python.failure import Failure
 from twisted.test import iosim
 from twisted.test.proto_helpers import StringTransport
+from twisted.trial import unittest
 
 ssl = None
 try:

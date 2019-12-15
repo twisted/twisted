@@ -7,14 +7,13 @@ Factory for reading openssh configuration files: public keys, private keys, and
 moduli file.
 """
 
-import os, errno
+import errno
+import os
 
+from twisted.conch.openssh_compat import primes
+from twisted.conch.ssh import common, factory, keys
 from twisted.python import log
 from twisted.python.util import runAsEffectiveUser
-
-from twisted.conch.ssh import keys, factory, common
-from twisted.conch.openssh_compat import primes
-
 
 
 class OpenSSHFactory(factory.SSHFactory):

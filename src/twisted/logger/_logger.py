@@ -13,7 +13,6 @@ from twisted.python.failure import Failure
 from ._levels import InvalidLogLevelError, LogLevel
 
 
-
 class Logger(object):
     """
     A L{Logger} emits log messages to an observer.  You should instantiate it

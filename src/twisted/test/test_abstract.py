@@ -5,13 +5,12 @@
 Tests for generic file descriptor based reactor support code.
 """
 
-from __future__ import division, absolute_import
-
-from twisted.trial.unittest import TestCase
-
-from twisted.internet.abstract import isIPAddress
+from __future__ import absolute_import, division
 
 from socket import AF_IPX
+
+from twisted.internet.abstract import isIPAddress
+from twisted.trial.unittest import TestCase
 
 
 class AddressTests(TestCase):
@@ -112,4 +111,3 @@ class AddressTests(TestCase):
         """
         self.assertFalse(isIPAddress(b'\xff.notascii'))
         self.assertFalse(isIPAddress(u'\u4321.notascii'))
-

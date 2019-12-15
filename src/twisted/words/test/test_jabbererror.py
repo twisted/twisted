@@ -9,7 +9,6 @@ from __future__ import absolute_import, division
 
 from twisted.python.compat import unicode
 from twisted.trial import unittest
-
 from twisted.words.protocols.jabber import error
 from twisted.words.xish import domish
 

@@ -8,14 +8,14 @@ from __future__ import absolute_import, division
 
 import datetime
 from operator import attrgetter
+
 from zope.interface import implementer
 
-from twisted.python.compat import iteritems, intToBytes
-from twisted.positioning import base, nmea, ipositioning
+from twisted.python.compat import intToBytes, iteritems
+from twisted.positioning import base, ipositioning, nmea
+from twisted.positioning.base import Angles
 from twisted.positioning.test.receiver import MockPositioningReceiver
 from twisted.trial.unittest import TestCase
-
-from twisted.positioning.base import Angles
 
 # Sample sentences
 GPGGA = b'$GPGGA,123519,4807.038,N,01131.000,E,1,08,0.9,545.4,M,46.9,M,,*47'

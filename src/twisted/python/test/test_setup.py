@@ -10,19 +10,18 @@ import os
 
 from pkg_resources import parse_requirements
 from setuptools.dist import Distribution
+
 import twisted
-from twisted.trial.unittest import SynchronousTestCase
-
-from twisted.python import _setup, filepath
 from twisted.python.compat import _PY3
+from twisted.python import _setup, filepath
 from twisted.python._setup import (
-    BuildPy3,
-    getSetupArgs,
-    _longDescriptionArgsFromReadme,
-    ConditionalExtension,
     _EXTRAS_REQUIRE,
-    )
-
+    BuildPy3,
+    ConditionalExtension,
+    _longDescriptionArgsFromReadme,
+    getSetupArgs,
+)
+from twisted.trial.unittest import SynchronousTestCase
 
 
 class SetupTests(SynchronousTestCase):

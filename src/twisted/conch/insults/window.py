@@ -8,9 +8,10 @@ Simple insults-based widget library
 
 import array
 
-from twisted.conch.insults import insults, helper
+from twisted.python.compat import _PY3, _bytesChr as chr
+from twisted.conch.insults import helper, insults
 from twisted.python import text as tptext
-from twisted.python.compat import (_PY3, _bytesChr as chr)
+
 
 class YieldFocus(Exception):
     """

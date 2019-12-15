@@ -13,6 +13,7 @@ collapse numerous small writes into a single larger one.
 
 from twisted.internet import reactor
 
+
 class BufferingMixin:
     """
     Mixin which adds write buffering.

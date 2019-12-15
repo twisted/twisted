@@ -8,17 +8,17 @@ Resource limiting policies.
 @seealso: See also L{twisted.protocols.htb} for rate limiting.
 """
 
-from __future__ import division, absolute_import
+from __future__ import absolute_import, division
 
 # system imports
 import sys
 
 from zope.interface import directlyProvides, providedBy
 
-# twisted imports
-from twisted.internet.protocol import ServerFactory, Protocol, ClientFactory
 from twisted.internet import error
 from twisted.internet.interfaces import ILoggingContext
+# twisted imports
+from twisted.internet.protocol import ClientFactory, Protocol, ServerFactory
 from twisted.python import log
 
 

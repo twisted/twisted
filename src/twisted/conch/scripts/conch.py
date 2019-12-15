@@ -10,22 +10,20 @@
 #"""
 from __future__ import print_function
 
+import fcntl
+import getpass
+import os
+import signal
+import struct
+import sys
+import tty
+
+from twisted.python.compat import ioType, networkString, unicode
 from twisted.conch.client import connect, default, options
 from twisted.conch.error import ConchError
-from twisted.conch.ssh import connection, common
-from twisted.conch.ssh import session, forwarding, channel
+from twisted.conch.ssh import channel, common, connection, forwarding, session
 from twisted.internet import reactor, stdio, task
 from twisted.python import log, usage
-from twisted.python.compat import ioType, networkString, unicode
-
-import os
-import sys
-import getpass
-import struct
-import tty
-import fcntl
-import signal
-
 
 
 class ClientOptions(options.ConchOptions):

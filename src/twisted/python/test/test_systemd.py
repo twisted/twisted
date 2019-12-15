@@ -5,12 +5,12 @@
 Tests for L{twisted.python.systemd}.
 """
 
-from __future__ import division, absolute_import
+from __future__ import absolute_import, division
 
 import os
 
-from twisted.trial.unittest import TestCase
 from twisted.python.systemd import ListenFDs
+from twisted.trial.unittest import TestCase
 
 
 class InheritedDescriptorsMixin(object):

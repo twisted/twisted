@@ -5,17 +5,16 @@
 Test cases for L{twisted.logger._format}.
 """
 
-import sys
-from io import BytesIO, TextIOWrapper
 import logging as py_logging
+import sys
 from inspect import getsourcefile
+from io import BytesIO, TextIOWrapper
 
-from zope.interface.verify import verifyObject, BrokenMethodImplementation
+from zope.interface.verify import BrokenMethodImplementation, verifyObject
 
 from twisted.python.compat import _PY3, currentframe
 from twisted.python.failure import Failure
 from twisted.trial import unittest
-
 from .._levels import LogLevel
 from .._observer import ILogObserver
 from .._stdlib import STDLibLogObserver

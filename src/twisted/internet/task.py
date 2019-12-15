@@ -6,9 +6,7 @@
 Scheduling utility methods and classes.
 """
 
-from __future__ import division, absolute_import
-
-__metaclass__ = type
+from __future__ import absolute_import, division
 
 import sys
 import time
@@ -16,15 +14,20 @@ import warnings
 
 from zope.interface import implementer
 
-from twisted.python import log
-from twisted.python import reflect
-from twisted.python.deprecate import _getDeprecationWarningString
-from twisted.python.failure import Failure
 from incremental import Version
 
 from twisted.internet import base, defer
-from twisted.internet.interfaces import IReactorTime
 from twisted.internet.error import ReactorNotRunning
+from twisted.internet.interfaces import IReactorTime
+from twisted.python import log, reflect
+from twisted.python.deprecate import _getDeprecationWarningString
+from twisted.python.failure import Failure
+
+__metaclass__ = type
+
+
+
+
 
 
 class LoopingCall:

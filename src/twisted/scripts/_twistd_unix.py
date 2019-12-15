@@ -10,16 +10,18 @@ import pwd
 import sys
 import traceback
 
-from twisted.python import log, logfile, usage
-from twisted.python.compat import (intToBytes, _bytesRepr, _PY3)
-from twisted.python.util import (
-    switchUID, uidFromString, gidFromString, untilConcludes)
+from twisted.python.compat import _PY3, _bytesRepr, intToBytes
+from twisted import copyright, logger
 from twisted.application import app, service
 from twisted.internet.interfaces import IReactorDaemonize
-from twisted import copyright, logger
+from twisted.python import log, logfile, usage
 from twisted.python.runtime import platformType
-
-
+from twisted.python.util import (
+    gidFromString,
+    switchUID,
+    uidFromString,
+    untilConcludes,
+)
 
 if platformType == "win32":
     raise ImportError("_twistd_unix doesn't work on Windows.")

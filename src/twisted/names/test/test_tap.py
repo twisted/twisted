@@ -5,17 +5,16 @@
 Tests for L{twisted.names.tap}.
 """
 
+from twisted.python.compat import _PY3
 from twisted.internet.base import ThreadedResolver
 from twisted.names.client import Resolver
 from twisted.names.dns import PORT
 from twisted.names.resolve import ResolverChain
 from twisted.names.secondary import SecondaryAuthorityService
 from twisted.names.tap import Options, _buildResolvers
-from twisted.python.compat import _PY3
 from twisted.python.runtime import platform
 from twisted.python.usage import UsageError
 from twisted.trial.unittest import SynchronousTestCase
-
 
 
 class OptionsTests(SynchronousTestCase):

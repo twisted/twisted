@@ -9,17 +9,14 @@ from __future__ import print_function
 
 import io
 
-from twisted.trial import unittest
-
-from .._file import textFileLogObserver
-from .._observer import LogPublisher
-from .._logger import Logger
-from .._global import LogBeginner
-from .._global import MORE_THAN_ONCE_WARNING
-from .._levels import LogLevel
-from ..test.test_stdlib import nextLine
 from twisted.python.failure import Failure
-
+from twisted.trial import unittest
+from .._file import textFileLogObserver
+from .._global import MORE_THAN_ONCE_WARNING, LogBeginner
+from .._levels import LogLevel
+from .._logger import Logger
+from .._observer import LogPublisher
+from ..test.test_stdlib import nextLine
 
 
 def compareEvents(test, actualEvents, expectedEvents):

@@ -1,18 +1,16 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-from __future__ import division, absolute_import
+from __future__ import absolute_import, division
 
 import os
 import sys
-
 from textwrap import dedent
 
-from twisted.trial import unittest
 from twisted.persisted import sob
-from twisted.python import components
 from twisted.persisted.styles import Ephemeral
-
+from twisted.python import components
+from twisted.trial import unittest
 
 
 class Dummy(components.Componentized):

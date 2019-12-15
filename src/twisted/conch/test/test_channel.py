@@ -5,9 +5,12 @@
 Test ssh/channel.py.
 """
 
-from __future__ import division, absolute_import
+from __future__ import absolute_import, division
 
 from zope.interface.verify import verifyObject
+
+from twisted.python.compat import intToBytes
+from twisted.trial import unittest
 
 try:
     from twisted.conch.ssh import channel
@@ -21,8 +24,6 @@ try:
 except ImportError:
     skipTest = 'Conch SSH not supported.'
     SSHService = object
-from twisted.trial import unittest
-from twisted.python.compat import intToBytes
 
 
 class MockConnection(SSHService):

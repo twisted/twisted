@@ -5,12 +5,12 @@
 Tests for async assertions provided by C{twisted.trial.unittest.TestCase}.
 """
 
-from __future__ import division, absolute_import
+from __future__ import absolute_import, division
 
 import unittest as pyunit
 
-from twisted.python import failure
 from twisted.internet import defer
+from twisted.python import failure
 from twisted.trial import unittest
 
 

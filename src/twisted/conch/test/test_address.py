@@ -5,14 +5,12 @@
 Tests for L{SSHTransportAddrress} in ssh/address.py
 """
 
-from __future__ import division, absolute_import
-
-from twisted.trial import unittest
-from twisted.internet.address import IPv4Address
-from twisted.internet.test.test_address import AddressTestCaseMixin
+from __future__ import absolute_import, division
 
 from twisted.conch.ssh.address import SSHTransportAddress
-
+from twisted.internet.address import IPv4Address
+from twisted.internet.test.test_address import AddressTestCaseMixin
+from twisted.trial import unittest
 
 
 class SSHTransportAddressTests(unittest.TestCase, AddressTestCaseMixin):

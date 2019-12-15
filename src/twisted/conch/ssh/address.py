@@ -10,13 +10,12 @@ Maintainer: Paul Swartz
 @since: 12.1
 """
 
-from __future__ import division, absolute_import
+from __future__ import absolute_import, division
 
 from zope.interface import implementer
 
 from twisted.internet.interfaces import IAddress
 from twisted.python import util
-
 
 
 @implementer(IAddress)

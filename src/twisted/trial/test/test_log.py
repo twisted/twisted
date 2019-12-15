@@ -4,13 +4,13 @@
 """
 Test the interaction between trial and errors logged during test run.
 """
-from __future__ import division, absolute_import
+from __future__ import absolute_import, division
 
 import time
 
 from twisted.internet import reactor, task
 from twisted.python import failure, log
-from twisted.trial import unittest, reporter, _synctest
+from twisted.trial import _synctest, reporter, unittest
 
 
 def makeFailure():
@@ -259,4 +259,3 @@ class AsynchronousLogErrorsTests(LogErrorsMixin, unittest.TestCase):
         self.assertEqual(len(self.result.errors), 1)
         self.assertTrue(self.result.errors[0][1].check(ZeroDivisionError),
                         self.result.errors[0][1])
-

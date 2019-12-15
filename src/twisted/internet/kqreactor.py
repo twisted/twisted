@@ -16,20 +16,23 @@ connections, listeners or connectors are added)::
    kqreactor.install()
 """
 
-from __future__ import division, absolute_import
+from __future__ import absolute_import, division
 
 import errno
 import select
+from select import (
+    KQ_EV_ADD,
+    KQ_EV_DELETE,
+    KQ_EV_EOF,
+    KQ_FILTER_READ,
+    KQ_FILTER_WRITE,
+)
 
-from select import KQ_FILTER_READ, KQ_FILTER_WRITE
-from select import KQ_EV_DELETE, KQ_EV_ADD, KQ_EV_EOF
-
-from zope.interface import implementer, declarations, Interface, Attribute
+from zope.interface import Attribute, Interface, declarations, implementer
 
 from twisted.internet import main, posixbase
-from twisted.internet.interfaces import IReactorFDSet, IReactorDaemonize
-from twisted.python import log, failure
-
+from twisted.internet.interfaces import IReactorDaemonize, IReactorFDSet
+from twisted.python import failure, log
 
 
 class _IKQueue(Interface):

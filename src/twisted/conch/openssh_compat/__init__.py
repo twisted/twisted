@@ -8,4 +8,3 @@ Support for OpenSSH configuration files.
 
 Maintainer: Paul Swartz
 """
-

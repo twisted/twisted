@@ -6,9 +6,8 @@
 Test cases for formmethod module.
 """
 
-from twisted.trial import unittest
-
 from twisted.python import formmethod
+from twisted.trial import unittest
 
 
 class ArgumentTests(unittest.TestCase):
@@ -94,5 +93,3 @@ class ArgumentTests(unittest.TestCase):
         goodTests = {("foo", "foo"): "foo", ("ab", "ab"): "ab"}.items()
         badTests = [("ab", "a"), ("12345", "12345"), ("", ""), ("a", "a"), ("a",), ("a", "a", "a")]
         self.argTest(formmethod.VerifiedPassword, goodTests, badTests, min=2, max=4)
-
-        

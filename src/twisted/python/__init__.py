@@ -9,8 +9,8 @@ from __future__ import absolute_import, division
 
 # Deprecating twisted.python.constants.
 from .compat import unicode
-from .versions import Version
 from .deprecate import deprecatedModuleAttribute
+from .versions import Version
 
 deprecatedModuleAttribute(
     Version("Twisted", 16, 5, 0),

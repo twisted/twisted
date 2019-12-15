@@ -7,9 +7,10 @@ A module to provide some very basic threading primitives, such as
 synchronization.
 """
 
-from __future__ import division, absolute_import
+from __future__ import absolute_import, division
 
 from functools import wraps
+
 
 class DummyLock(object):
     """

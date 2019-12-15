@@ -3,8 +3,8 @@
 
 from pprint import pformat
 
-from twisted.trial import unittest
 from twisted.news import database
+from twisted.trial import unittest
 
 MESSAGE_ID = "f83ba57450ed0fd8ac9a472b847e830e"
 

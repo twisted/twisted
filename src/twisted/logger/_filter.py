@@ -16,7 +16,6 @@ from ._levels import InvalidLogLevelError, LogLevel
 from ._observer import ILogObserver
 
 
-
 class PredicateResult(Names):
     """
     Predicate results.

@@ -8,18 +8,18 @@ Tests for L{twisted.conch.client.knownhosts}.
 from __future__ import absolute_import, division
 
 import os
-from binascii import Error as BinasciiError, b2a_base64, a2b_base64
+from binascii import Error as BinasciiError, a2b_base64, b2a_base64
 
 from zope.interface.verify import verifyObject
 
 from twisted.python.compat import networkString
-from twisted.python.reflect import requireModule
-from twisted.python.filepath import FilePath
-from twisted.trial.unittest import TestCase
-from twisted.internet.defer import Deferred
+from twisted.conch.error import HostKeyChanged, InvalidEntry, UserRejectedKey
 from twisted.conch.interfaces import IKnownHostEntry
-from twisted.conch.error import HostKeyChanged, UserRejectedKey, InvalidEntry
+from twisted.internet.defer import Deferred
+from twisted.python.filepath import FilePath
+from twisted.python.reflect import requireModule
 from twisted.test.testutils import ComparisonTestsMixin
+from twisted.trial.unittest import TestCase
 
 if requireModule('cryptography') and requireModule('pyasn1'):
     from twisted.conch.ssh.keys import Key, BadKeyError

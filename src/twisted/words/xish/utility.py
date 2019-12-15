@@ -9,9 +9,10 @@ Event Dispatching and Callback utilities.
 
 from __future__ import absolute_import, division
 
-from twisted.python import log
 from twisted.python.compat import iteritems
+from twisted.python import log
 from twisted.words.xish import xpath
+
 
 class _MethodWrapper(object):
     """

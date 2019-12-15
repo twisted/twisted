@@ -6,10 +6,9 @@ Tests for miscellaneous behaviors of the top-level L{twisted} package (ie, for
 the code in C{twisted/__init__.py}.
 """
 
-from __future__ import division, absolute_import
+from __future__ import absolute_import, division
 
 import sys
-
 from types import ModuleType
 
 from twisted.trial.unittest import TestCase

@@ -5,15 +5,16 @@
 Tests for L{twisted.internet.epollreactor}.
 """
 
-from __future__ import division, absolute_import
+from __future__ import absolute_import, division
 
+from twisted.internet.error import ConnectionDone
+from twisted.internet.task import Clock
 from twisted.trial.unittest import TestCase
+
 try:
     from twisted.internet.epollreactor import _ContinuousPolling
 except ImportError:
     _ContinuousPolling = None
-from twisted.internet.task import Clock
-from twisted.internet.error import ConnectionDone
 
 
 

@@ -6,9 +6,9 @@
 An API for storing HTTP header names and values.
 """
 
-from __future__ import division, absolute_import
+from __future__ import absolute_import, division
 
-from twisted.python.compat import comparable, cmp, unicode
+from twisted.python.compat import cmp, comparable, unicode
 
 
 def _dashCapitalize(name):

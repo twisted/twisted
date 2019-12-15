@@ -4,9 +4,10 @@
 
 from __future__ import print_function
 
-from twisted.news import news, database
 from twisted.application import strports
-from twisted.python import usage, log
+from twisted.news import database, news
+from twisted.python import log, usage
+
 
 class DBOptions(usage.Options):
     optParameters = [

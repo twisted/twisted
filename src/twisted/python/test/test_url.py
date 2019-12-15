@@ -7,11 +7,11 @@ Tests for L{twisted.python.url}.
 """
 from __future__ import unicode_literals
 
+from twisted.trial.unittest import SynchronousTestCase
 from ..url import URL
 
 unicode = type(u'')
 
-from twisted.trial.unittest import SynchronousTestCase
 
 
 theurl = "http://www.foo.com/a/nice/path/?zot=23&zut"

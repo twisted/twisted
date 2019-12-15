@@ -6,17 +6,16 @@
 Utility methods.
 """
 
-from __future__ import division, absolute_import
+from __future__ import absolute_import, division
 
-import sys, warnings
+import sys
+import warnings
 from functools import wraps
-
-from twisted.internet import protocol, defer
-from twisted.python import failure
-from twisted.python.compat import reraise
-
 from io import BytesIO
 
+from twisted.python.compat import reraise
+from twisted.internet import defer, protocol
+from twisted.python import failure
 
 
 def _callProtocolWithDeferred(protocol, executable, args, env, path,

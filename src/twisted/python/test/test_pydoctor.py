@@ -8,7 +8,6 @@ from collections import namedtuple
 
 from twisted.python.compat import _PY3
 from twisted.python.reflect import requireModule
-
 from twisted.trial.unittest import TestCase
 
 model = requireModule('pydoctor.model')

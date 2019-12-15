@@ -5,11 +5,11 @@
 Tests for L{twisted.python.context}.
 """
 
-from __future__ import division, absolute_import
-
-from twisted.trial.unittest import SynchronousTestCase
+from __future__ import absolute_import, division
 
 from twisted.python import context
+from twisted.trial.unittest import SynchronousTestCase
+
 
 class ContextTests(SynchronousTestCase):
     """

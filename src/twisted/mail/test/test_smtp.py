@@ -7,34 +7,37 @@ Test cases for twisted.mail.smtp module.
 
 from __future__ import absolute_import, division
 
-import inspect
 import base64
-
+import inspect
+import re
 from io import BytesIO
 
-from zope.interface import implementer, directlyProvides
+from zope.interface import directlyProvides, implementer
 
-from twisted.python.util import LineLog
-from twisted.trial import unittest
-from twisted.protocols import basic, loopback
-from twisted.internet import defer, protocol, reactor, interfaces
-from twisted.internet import address, error, task
-from twisted.test.proto_helpers import MemoryReactor, StringTransport
-
-from twisted import cred
-import twisted.cred.error
-import twisted.cred.portal
 import twisted.cred.checkers
 import twisted.cred.credentials
-
-from twisted.cred.portal import IRealm, Portal
-from twisted.cred.checkers import ICredentialsChecker, AllowAnonymousAccess
+import twisted.cred.error
+import twisted.cred.portal
+from twisted import cred
+from twisted.cred.checkers import AllowAnonymousAccess, ICredentialsChecker
 from twisted.cred.credentials import IAnonymous
 from twisted.cred.error import UnauthorizedLogin
-
+from twisted.cred.portal import IRealm, Portal
+from twisted.internet import (
+    address,
+    defer,
+    error,
+    interfaces,
+    protocol,
+    reactor,
+    task,
+)
 from twisted.mail import smtp
 from twisted.mail._cred import LOGINCredentials
-
+from twisted.protocols import basic, loopback
+from twisted.python.util import LineLog
+from twisted.test.proto_helpers import MemoryReactor, StringTransport
+from twisted.trial import unittest
 
 try:
     from twisted.test.ssl_helpers import ClientTLSContext, ServerTLSContext
@@ -43,7 +46,6 @@ except ImportError:
 else:
     sslSkip = None
 
-import re
 
 
 def spameater(*spam, **eggs):

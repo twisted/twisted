@@ -7,13 +7,22 @@ Tests for the 'session' channel implementation in twisted.conch.ssh.session.
 See also RFC 4254.
 """
 
-from __future__ import division, absolute_import
+from __future__ import absolute_import, division
 
-import os, signal, sys, struct
+import os
+import signal
+import struct
+import sys
 
 from zope.interface import implementer
 
+from twisted.internet import defer, error, protocol
+from twisted.internet.address import IPv4Address
+from twisted.internet.error import ProcessDone, ProcessTerminated
+from twisted.python import components, failure
+from twisted.python.failure import Failure
 from twisted.python.reflect import requireModule
+from twisted.trial import unittest
 
 cryptography = requireModule("cryptography")
 if cryptography:
@@ -22,12 +31,6 @@ else:
     class session:
         from twisted.conch.interfaces import ISession
 
-from twisted.internet.address import IPv4Address
-from twisted.internet.error import ProcessTerminated, ProcessDone
-from twisted.python.failure import Failure
-from twisted.internet import defer, protocol, error
-from twisted.python import components, failure
-from twisted.trial import unittest
 
 
 

@@ -12,7 +12,12 @@ characters, case folding and canonicalisation through L{stringprep<twisted.words
 """
 
 from twisted.python.compat import _PY3, unicode
-from twisted.words.protocols.jabber.xmpp_stringprep import nodeprep, resourceprep, nameprep
+from twisted.words.protocols.jabber.xmpp_stringprep import (
+    nameprep,
+    nodeprep,
+    resourceprep,
+)
+
 
 class InvalidFormat(Exception):
     """

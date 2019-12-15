@@ -5,22 +5,20 @@
 Tests for L{twisted.application.twist._options}.
 """
 
-from sys import stdout, stderr
-
-from twisted.internet import reactor
-from twisted.copyright import version
-from twisted.python.usage import UsageError
-from twisted.logger import LogLevel, textFileLogObserver, jsonFileLogObserver
-from twisted.test.proto_helpers import MemoryReactor
-from ...reactors import NoSuchReactor
-from ...service import ServiceMaker
-from ...runner._exit import ExitStatus
-from ...runner.test.test_runner import DummyExit
-from ...twist import _options
-from .._options import TwistOptions
+from sys import stderr, stdout
 
 import twisted.trial.unittest
-
+from twisted.copyright import version
+from twisted.internet import reactor
+from twisted.logger import LogLevel, jsonFileLogObserver, textFileLogObserver
+from twisted.python.usage import UsageError
+from twisted.test.proto_helpers import MemoryReactor
+from ...reactors import NoSuchReactor
+from ...runner._exit import ExitStatus
+from ...runner.test.test_runner import DummyExit
+from ...service import ServiceMaker
+from ...twist import _options
+from .._options import TwistOptions
 
 
 class OptionsTests(twisted.trial.unittest.TestCase):

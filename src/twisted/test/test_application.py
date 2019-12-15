@@ -12,23 +12,24 @@ import copy
 import os
 import pickle
 
+from twisted.python.compat import NativeStringIO
+from twisted.application import app, internet, reactors, service
+from twisted.application.internet import backoffPolicy
+from twisted.internet import defer, interfaces, protocol, reactor
+from twisted.persisted import sob
+from twisted.plugins import twisted_reactors
+from twisted.protocols import basic, wire
+from twisted.python import usage
+from twisted.python.runtime import platformType
+from twisted.python.test.modules_helpers import TwistedModulesMixin
+from twisted.test.proto_helpers import MemoryReactor
+from twisted.trial import unittest
+
 try:
     import asyncio
 except ImportError:
     asyncio = None
 
-from twisted.application import service, internet, app, reactors
-from twisted.application.internet import backoffPolicy
-from twisted.internet import interfaces, defer, protocol, reactor
-from twisted.persisted import sob
-from twisted.plugins import twisted_reactors
-from twisted.protocols import wire, basic
-from twisted.python import usage
-from twisted.python.compat import NativeStringIO
-from twisted.python.runtime import platformType
-from twisted.python.test.modules_helpers import TwistedModulesMixin
-from twisted.test.proto_helpers import MemoryReactor
-from twisted.trial import unittest
 
 
 

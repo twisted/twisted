@@ -6,24 +6,21 @@ Tests for twisted.python.modules, abstract access to imported or importable
 objects.
 """
 
-from __future__ import division, absolute_import
+from __future__ import absolute_import, division
 
-import sys
-import itertools
 import compileall
+import itertools
+import sys
 import zipfile
 
 import twisted
-
-from twisted.python import modules
 from twisted.python.compat import networkString
+from twisted.python import modules
 from twisted.python.filepath import FilePath
 from twisted.python.reflect import namedAny
-
-from twisted.trial.unittest import TestCase
 from twisted.python.test.modules_helpers import TwistedModulesMixin
 from twisted.python.test.test_zippath import zipit
-
+from twisted.trial.unittest import TestCase
 
 
 class TwistedModulesTestCase(TwistedModulesMixin, TestCase):

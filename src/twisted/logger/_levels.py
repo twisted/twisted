@@ -9,7 +9,6 @@ Log levels.
 from constantly import NamedConstant, Names
 
 
-
 class InvalidLogLevelError(Exception):
     """
     Someone tried to use a L{LogLevel} that is unknown to the logging system.

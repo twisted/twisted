@@ -8,22 +8,38 @@ Various asynchronous TCP/IP classes.
 End users shouldn't use this module directly - use the reactor APIs instead.
 """
 
-from __future__ import division, absolute_import
-# System Imports
-import socket
-import sys
+from __future__ import absolute_import, division
+
 import operator
 import os
+# System Imports
+import socket
 import struct
-
-import attr
+import sys
+from errno import errorcode
 
 from zope.interface import Interface, implementer
 
-from twisted.logger import Logger
+import attr
+
 from twisted.python.compat import lazyByteSlice, unicode
+# Twisted Imports
+from twisted.internet import (
+    abstract,
+    address,
+    base,
+    error,
+    fdesc,
+    interfaces,
+    main,
+)
+from twisted.internet.error import CannotListenError
+from twisted.internet.protocol import Protocol
+from twisted.internet.task import deferLater
+from twisted.logger import Logger
+from twisted.python import deprecate, failure, log, reflect, versions
 from twisted.python.runtime import platformType
-from twisted.python import versions, deprecate
+from twisted.python.util import untilConcludes
 
 try:
     # Try to get the memory BIO based startTLS implementation, available since
@@ -81,16 +97,7 @@ else:
     from os import strerror
 
 
-from errno import errorcode
 
-# Twisted Imports
-from twisted.internet import base, address, fdesc
-from twisted.internet.task import deferLater
-from twisted.python import log, failure, reflect
-from twisted.python.util import untilConcludes
-from twisted.internet.error import CannotListenError
-from twisted.internet import abstract, main, interfaces, error
-from twisted.internet.protocol import Protocol
 
 # Not all platforms have, or support, this flag.
 _AI_NUMERICSERV = getattr(socket, "AI_NUMERICSERV", 0)

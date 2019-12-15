@@ -1,12 +1,14 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-from __future__ import division, absolute_import
+from __future__ import absolute_import, division
 
-import socket, errno
-from twisted.trial import unittest
+import errno
+import socket
+
 from twisted.internet import error
 from twisted.python.runtime import platformType
+from twisted.trial import unittest
 
 
 class StringificationTests(unittest.SynchronousTestCase):

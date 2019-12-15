@@ -7,7 +7,7 @@ Test Twisted's doctest support.
 
 from __future__ import absolute_import, division
 
-from twisted.trial import itrial, runner, unittest, reporter
+from twisted.trial import itrial, reporter, runner, unittest
 from twisted.trial.test import mockdoctest
 
 

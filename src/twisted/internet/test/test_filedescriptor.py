@@ -5,14 +5,13 @@
 Whitebox tests for L{twisted.internet.abstract.FileDescriptor}.
 """
 
-from __future__ import division, absolute_import
+from __future__ import absolute_import, division
 
 from zope.interface.verify import verifyClass
 
 from twisted.internet.abstract import FileDescriptor
 from twisted.internet.interfaces import IPushProducer
 from twisted.trial.unittest import SynchronousTestCase
-
 
 
 class MemoryFile(FileDescriptor):

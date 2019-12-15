@@ -56,17 +56,14 @@ the modules outside the standard library's python-files directory::
 @type: L{PythonPath}
 """
 
-from __future__ import division, absolute_import, print_function
+from __future__ import absolute_import, division, print_function
 
-__metaclass__ = type
-
-# let's try to keep path imports to a minimum...
-from os.path import dirname, split as splitpath
-
-import sys
 import inspect
+import sys
 import warnings
 import zipimport
+# let's try to keep path imports to a minimum...
+from os.path import dirname, split as splitpath
 
 from zope.interface import Interface, implementer
 
@@ -75,6 +72,12 @@ from twisted.python.components import registerAdapter
 from twisted.python.filepath import FilePath, UnlistableError
 from twisted.python.reflect import namedAny
 from twisted.python.zippath import ZipArchive
+
+__metaclass__ = type
+
+
+
+
 
 
 _nothing = object()

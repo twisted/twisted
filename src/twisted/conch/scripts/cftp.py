@@ -6,17 +6,26 @@
 Implementation module for the I{cftp} command.
 """
 from __future__ import division, print_function
-import os, sys, getpass, struct, tty, fcntl, stat
-import fnmatch, pwd, glob
 
-from twisted.conch.client import connect, default, options
-from twisted.conch.ssh import connection, common
-from twisted.conch.ssh import channel, filetransfer
-from twisted.protocols import basic
+import fcntl
+import fnmatch
+import getpass
+import glob
+import os
+import pwd
+import stat
+import struct
+import sys
+import tty
+
 from twisted.python.compat import _PY3, unicode
-from twisted.internet import reactor, stdio, defer, utils
-from twisted.python import log, usage, failure
+from twisted.conch.client import connect, default, options
+from twisted.conch.ssh import channel, common, connection, filetransfer
+from twisted.internet import defer, reactor, stdio, utils
+from twisted.protocols import basic
+from twisted.python import failure, log, usage
 from twisted.python.filepath import FilePath
+
 
 class ClientOptions(options.ConchOptions):
 

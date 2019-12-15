@@ -3,12 +3,12 @@
 # See LICENSE for details.
 
 
-from twisted.trial import unittest
-from twisted.protocols import loopback
-from twisted.protocols import basic
-from twisted.internet import protocol, abstract
-
 from io import BytesIO
+
+from twisted.internet import abstract, protocol
+from twisted.protocols import basic, loopback
+from twisted.trial import unittest
+
 
 class BufferingServer(protocol.Protocol):
     buffer = b''
@@ -52,4 +52,3 @@ class FileSenderTests(unittest.TestCase):
         # Which means the Deferred from FileSender should have been called
         self.assertTrue(d.called, 
                         'producer unregistered with deferred being called')
-

@@ -5,14 +5,14 @@
 Test that twisted scripts can be invoked as modules.
 """
 
-from __future__ import division, absolute_import
+from __future__ import absolute_import, division
 
 import sys
 
-from twisted.application.twist._options import TwistOptions
-from twisted.scripts import trial
-from twisted.internet import defer, reactor
 from twisted.python.compat import NativeStringIO as StringIO
+from twisted.application.twist._options import TwistOptions
+from twisted.internet import defer, reactor
+from twisted.scripts import trial
 from twisted.test.test_process import Accumulator
 from twisted.trial.unittest import TestCase
 

@@ -12,15 +12,15 @@ Documented in RFC 2543.
 import socket
 import time
 import warnings
-
-from zope.interface import implementer, Interface
 from collections import OrderedDict
 
+from zope.interface import Interface, implementer
+
+from twisted.python.compat import _PY3, iteritems, unicode
 from twisted import cred
-from twisted.internet import protocol, defer, reactor
+from twisted.internet import defer, protocol, reactor
 from twisted.protocols import basic
 from twisted.python import log
-from twisted.python.compat import _PY3, iteritems, unicode
 
 PORT = 5060
 

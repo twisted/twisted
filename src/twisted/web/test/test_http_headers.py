@@ -5,17 +5,16 @@
 Tests for L{twisted.web.http_headers}.
 """
 
-from __future__ import division, absolute_import
+from __future__ import absolute_import, division
 
-from twisted.trial.unittest import TestCase
 from twisted.python.compat import _PY3, unicode
+from twisted.trial.unittest import TestCase
 from twisted.web.http_headers import Headers
 from twisted.web.test.requesthelper import (
     bytesLinearWhitespaceComponents,
     sanitizedBytes,
     textLinearWhitespaceComponents,
 )
-
 
 
 def assertSanitized(testCase, components, expected):

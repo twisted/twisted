@@ -5,9 +5,9 @@
 Tests for L{twisted.python._inotify}.
 """
 
-from twisted.trial.unittest import TestCase
 from twisted.python.filepath import FilePath
 from twisted.python.runtime import platform
+from twisted.trial.unittest import TestCase
 
 if platform.supportsINotify():
     from ctypes import c_int, c_uint32, c_char_p

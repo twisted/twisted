@@ -5,11 +5,12 @@
 Copyright information for Twisted.
 """
 
-from __future__ import division, absolute_import
+from __future__ import absolute_import, division
+
+from twisted import __version__ as version, version as longversion
 
 __all__ = ['copyright', 'disclaimer', 'longversion' ,'version']
 
-from twisted import __version__ as version, version as longversion
 
 longversion = str(longversion)
 

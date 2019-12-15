@@ -205,4 +205,3 @@ def strFile(p, f, caseSensitive=True):
             buf = buf[l:] + r
         if buf.find(p) != -1:
             return True
-

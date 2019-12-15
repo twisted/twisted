@@ -6,15 +6,15 @@
 I contain PythonScript, which is a very simple python script resource.
 """
 
-from __future__ import division, absolute_import
+from __future__ import absolute_import, division
 
-import os, traceback
+import os
+import traceback
 
+from twisted.python.compat import _PY3, NativeStringIO, execfile, networkString
 from twisted import copyright
 from twisted.python.filepath import _coerceToFilesystemEncoding
-from twisted.python.compat import execfile, networkString, NativeStringIO, _PY3
-from twisted.web import http, server, static, resource, util
-
+from twisted.web import http, resource, server, static, util
 
 rpyNoResource = """<p>You forgot to assign to the variable "resource" in your script. For example:</p>
 <pre>

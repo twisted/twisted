@@ -6,16 +6,18 @@
 Select reactor
 """
 
-from __future__ import division, absolute_import
+from __future__ import absolute_import, division
 
+import select
+import socket
+import sys
+from errno import EBADF, EINTR
 from time import sleep
-import sys, select, socket
-from errno import EINTR, EBADF
 
 from zope.interface import implementer
 
-from twisted.internet.interfaces import IReactorFDSet
 from twisted.internet import posixbase
+from twisted.internet.interfaces import IReactorFDSet
 from twisted.python import log
 from twisted.python.runtime import platformType
 

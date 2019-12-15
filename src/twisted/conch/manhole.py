@@ -13,15 +13,15 @@ and reasonable handling of Deferreds.
 @author: Jp Calderone
 """
 
-import code, sys, tokenize
+import code
+import sys
+import tokenize
 from io import BytesIO
 
+from twisted.python.compat import _get_async_param, _tokenize
 from twisted.conch import recvline
-
 from twisted.internet import defer
-from twisted.python.compat import _tokenize, _get_async_param
 from twisted.python.htmlizer import TokenPrinter
-
 
 
 class FileWrapper:

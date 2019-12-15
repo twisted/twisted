@@ -12,6 +12,7 @@ from twisted.python import failure
 from twisted.trial import unittest
 from twisted.words.xish import domish, utility, xmlstream
 
+
 class XmlStreamTests(unittest.TestCase):
     def setUp(self):
         self.connectionLostMsg = "no reason"

@@ -6,10 +6,11 @@
 
 from __future__ import print_function
 
+import sys
+
+from twisted.internet import reactor
 from twisted.internet.protocol import Factory
 from twisted.protocols import basic
-from twisted.internet import reactor
-import sys
 
 USER = "test"
 PASS = "twisted"

@@ -14,7 +14,6 @@ from twisted.python import reflect
 from twisted.python._oldstyle import _oldStyle
 
 
-
 class NotSupportedError(NotImplementedError):
     """
     An exception meaning that the tree-manipulation operation

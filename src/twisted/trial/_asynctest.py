@@ -8,7 +8,7 @@ Things likely to be used by writers of unit tests.
 Maintainer: Jonathan Lange
 """
 
-from __future__ import division, absolute_import
+from __future__ import absolute_import, division
 
 import inspect
 import warnings
@@ -20,10 +20,8 @@ from zope.interface import implementer
 # breaking reactor installation. See also #6047.
 from twisted.internet import defer, utils
 from twisted.python import failure
-
 from twisted.trial import itrial, util
-from twisted.trial._synctest import (
-    FailTest, SkipTest, SynchronousTestCase)
+from twisted.trial._synctest import FailTest, SkipTest, SynchronousTestCase
 
 _wait_is_running = []
 

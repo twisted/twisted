@@ -4,11 +4,12 @@
 
 from __future__ import print_function
 
-from twisted.python import log
-from twisted.application import app, service, internet
-from twisted import copyright
-import sys, os
+import os
+import sys
 
+from twisted import copyright
+from twisted.application import app, internet, service
+from twisted.python import log
 
 
 class ServerOptions(app.ServerOptions):

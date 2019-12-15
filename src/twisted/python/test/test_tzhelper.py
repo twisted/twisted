@@ -5,18 +5,19 @@
 Tests for L{twisted.python._tzhelper}.
 """
 
+from datetime import timedelta
 from os import environ
+from time import mktime as mktime_real
+
+from twisted.python._tzhelper import FixedOffsetTimeZone
+from twisted.trial.unittest import SkipTest, TestCase
 
 try:
     from time import tzset
 except ImportError:
     tzset = None
 
-from twisted.python._tzhelper import FixedOffsetTimeZone
-from twisted.trial.unittest import TestCase, SkipTest
-from datetime import timedelta
 
-from time import mktime as mktime_real
 
 
 # On some rare platforms (FreeBSD 8?  I was not able to reproduce

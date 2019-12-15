@@ -2,7 +2,9 @@
 # A program which exits after starting a child which inherits its
 # stdin/stdout/stderr and keeps them open until stdin is closed.
 
-import sys, os
+import os
+import sys
+
 
 def grandchild():
     sys.stdout.write('grandchild started')

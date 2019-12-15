@@ -9,7 +9,7 @@ them.
 
 from __future__ import absolute_import, division
 
-from zope.interface import Interface, Attribute, implementer
+from zope.interface import Attribute, Interface, implementer
 
 from twisted.plugin import IPlugin, getPlugins
 from twisted.python.reflect import namedAny

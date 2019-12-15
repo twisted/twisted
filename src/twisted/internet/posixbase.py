@@ -6,25 +6,32 @@
 Posix reactor base class
 """
 
-from __future__ import division, absolute_import
+from __future__ import absolute_import, division
 
-import socket
 import errno
 import os
+import socket
 import sys
 
-from zope.interface import implementer, classImplements
+from zope.interface import classImplements, implementer
 
-from twisted.internet import error, udp, tcp
+from twisted.internet import error, tcp, udp
 from twisted.internet.base import ReactorBase, _SignalReactorMixin
-from twisted.internet.main import CONNECTION_DONE, CONNECTION_LOST
 from twisted.internet.interfaces import (
-    IReactorUNIX, IReactorUNIXDatagram, IReactorTCP, IReactorUDP, IReactorSSL,
-    IReactorSocket, IHalfCloseableDescriptor, IReactorProcess,
-    IReactorMulticast, IReactorFDSet)
-
-from twisted.python import log, failure, util
-from twisted.python.runtime import platformType, platform
+    IHalfCloseableDescriptor,
+    IReactorFDSet,
+    IReactorMulticast,
+    IReactorProcess,
+    IReactorSocket,
+    IReactorSSL,
+    IReactorTCP,
+    IReactorUDP,
+    IReactorUNIX,
+    IReactorUNIXDatagram,
+)
+from twisted.internet.main import CONNECTION_DONE, CONNECTION_LOST
+from twisted.python import failure, log, util
+from twisted.python.runtime import platform, platformType
 
 # Exceptions that doSelect might return frequently
 _NO_FILENO = error.ConnectionFdescWentAway('Handler has no fileno method')

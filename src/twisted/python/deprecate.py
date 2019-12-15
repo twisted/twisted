@@ -71,7 +71,17 @@ See also L{incremental.Version}.
     to use when one is not provided by the user.
 """
 
-from __future__ import division, absolute_import
+from __future__ import absolute_import, division
+
+import inspect
+import sys
+from dis import findlinestarts
+from functools import wraps
+from warnings import warn, warn_explicit
+
+from incremental import getVersionString
+
+from twisted.python.compat import _PY3
 
 __all__ = [
     'deprecated',
@@ -83,13 +93,7 @@ __all__ = [
     ]
 
 
-import sys, inspect
-from warnings import warn, warn_explicit
-from dis import findlinestarts
-from functools import wraps
 
-from incremental import getVersionString
-from twisted.python.compat import _PY3
 
 DEPRECATION_WARNING_FORMAT = '%(fqpn)s was deprecated in %(version)s'
 

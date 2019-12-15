@@ -6,10 +6,8 @@ Test cases for L{twisted.logger._util}.
 """
 
 from twisted.trial import unittest
-
 from .._observer import LogPublisher
 from .._util import formatTrace
-
 
 
 class UtilTests(unittest.TestCase):

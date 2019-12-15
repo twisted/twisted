@@ -6,64 +6,101 @@ Tests for implementations of L{IReactorTCP} and the TCP parts of
 L{IReactorSocket}.
 """
 
-from __future__ import division, absolute_import
-
-__metaclass__ = type
+from __future__ import absolute_import, division
 
 import errno
 import gc
 import io
 import os
 import socket
-
 from functools import wraps
-
-import attr
 
 from zope.interface import Interface, implementer
 from zope.interface.verify import verifyClass, verifyObject
 
-from twisted.logger import Logger
-from twisted.python.compat import long
-from twisted.python.runtime import platform
-from twisted.python.failure import Failure
-from twisted.python import log
+import attr
 
-from twisted.trial.unittest import SkipTest, SynchronousTestCase, TestCase
-from twisted.internet.error import (
-    ConnectionLost, UserError, ConnectionRefusedError, ConnectionDone,
-    ConnectionAborted, DNSLookupError, NoProtocol,
-    ConnectBindError, ConnectionClosed,
-)
-from twisted.internet.test.connectionmixins import (
-    LogObserverMixin, ConnectionTestsMixin, StreamClientTestsMixin,
-    findFreePort, ConnectableProtocol, EndpointCreator,
-    runProtocolsWithReactor, Stop, BrokenContextFactory)
-from twisted.internet.test.reactormixins import (
-    ReactorBuilder, needsRunningReactor, stopOnError)
-from twisted.internet.interfaces import (
-    ILoggingContext, IConnector, IReactorFDSet, IReactorSocket, IReactorTCP,
-    IResolverSimple, ITLSTransport)
+from twisted.python.compat import long
 from twisted.internet.address import IPv4Address, IPv6Address
 from twisted.internet.defer import (
-    Deferred, DeferredList, maybeDeferred, gatherResults, succeed, fail)
-from twisted.internet.endpoints import TCP4ServerEndpoint, TCP4ClientEndpoint
-from twisted.internet.protocol import ServerFactory, ClientFactory, Protocol
+    Deferred,
+    DeferredList,
+    fail,
+    gatherResults,
+    maybeDeferred,
+    succeed,
+)
+from twisted.internet.endpoints import TCP4ClientEndpoint, TCP4ServerEndpoint
+from twisted.internet.error import (
+    ConnectBindError,
+    ConnectionAborted,
+    ConnectionClosed,
+    ConnectionDone,
+    ConnectionLost,
+    ConnectionRefusedError,
+    DNSLookupError,
+    NoProtocol,
+    UserError,
+)
 from twisted.internet.interfaces import (
-    IPushProducer, IPullProducer, IHalfCloseableProtocol)
+    IConnector,
+    IHalfCloseableProtocol,
+    ILoggingContext,
+    IPullProducer,
+    IPushProducer,
+    IReactorFDSet,
+    IReactorSocket,
+    IReactorTCP,
+    IResolverSimple,
+    ITLSTransport,
+)
+from twisted.internet.protocol import ClientFactory, Protocol, ServerFactory
 from twisted.internet.tcp import (
-    _BuffersLogs,
     Connection,
+    Server,
+    _BuffersLogs,
     _FileDescriptorReservation,
     _IFileDescriptorReservation,
     _NullFileDescriptorReservation,
-    Server,
     _resolveIPv6,
 )
+from twisted.internet.test.connectionmixins import (
+    BrokenContextFactory,
+    ConnectableProtocol,
+    ConnectionTestsMixin,
+    EndpointCreator,
+    LogObserverMixin,
+    Stop,
+    StreamClientTestsMixin,
+    findFreePort,
+    runProtocolsWithReactor,
+)
+from twisted.internet.test.reactormixins import (
+    ReactorBuilder,
+    needsRunningReactor,
+    stopOnError,
+)
 from twisted.internet.test.test_core import ObjectModelIntegrationMixin
-from twisted.test.test_tcp import MyClientFactory, MyServerFactory
-from twisted.test.test_tcp import ClosingFactory, ClientStartStopFactory
+from twisted.logger import Logger
+from twisted.python import log
+from twisted.python.failure import Failure
+from twisted.python.runtime import platform
 from twisted.test.proto_helpers import MemoryReactor, StringTransport
+from twisted.test.test_tcp import (
+    ClientStartStopFactory,
+    ClosingFactory,
+    MyClientFactory,
+    MyServerFactory,
+)
+from twisted.trial.unittest import SkipTest, SynchronousTestCase, TestCase
+
+__metaclass__ = type
+
+
+
+
+
+
 
 try:
     from OpenSSL import SSL

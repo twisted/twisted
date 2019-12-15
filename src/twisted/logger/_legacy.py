@@ -8,11 +8,10 @@ Integration with L{twisted.python.log}.
 
 from zope.interface import implementer
 
-from ._levels import LogLevel
 from ._format import formatEvent
+from ._levels import LogLevel
 from ._observer import ILogObserver
-from ._stdlib import fromStdlibLogLevelMapping, StringifiableFromEvent
-
+from ._stdlib import StringifiableFromEvent, fromStdlibLogLevelMapping
 
 
 @implementer(ILogObserver)

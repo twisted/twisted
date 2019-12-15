@@ -13,11 +13,9 @@ don't-use-it-outside-Twisted-we-won't-maintain-compatibility rule!
 """
 
 from io import BytesIO
-
 from xml.dom import minidom as dom
 
 from twisted.internet.protocol import FileWrapper
-
 
 
 class IOPump:

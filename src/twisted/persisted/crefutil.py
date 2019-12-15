@@ -8,10 +8,11 @@
 Utility classes for dealing with circular references.
 """
 
-from __future__ import division, absolute_import
+from __future__ import absolute_import, division
 
+from twisted.python.compat import _constructMethod, range
+from twisted.internet.defer import Deferred
 from twisted.python import log, reflect
-from twisted.python.compat import range, _constructMethod
 
 
 class NotKnown:
@@ -133,7 +134,6 @@ class _Dereference(NotKnown):
 
 
 
-from twisted.internet.defer import Deferred
 
 class _Defer(Deferred, NotKnown):
     def __init__(self):

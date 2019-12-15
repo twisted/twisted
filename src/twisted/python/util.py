@@ -2,9 +2,21 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-from __future__ import division, absolute_import, print_function
+from __future__ import absolute_import, division, print_function
 
-import os, sys, errno, warnings
+import errno
+import os
+import sys
+import warnings
+# For backwards compatibility, some things import this, so just link it
+from collections import OrderedDict
+
+from incremental import Version
+
+from twisted.python.compat import _PY3, unicode
+from twisted.python._oldstyle import _oldStyle, _replaceIf
+from twisted.python.deprecate import deprecatedModuleAttribute
+
 try:
     import pwd, grp
 except ImportError:
@@ -14,13 +26,7 @@ try:
 except ImportError:
     setgroups = getgroups = None
 
-from twisted.python.compat import _PY3, unicode
-from incremental import Version
-from twisted.python.deprecate import deprecatedModuleAttribute
-from twisted.python._oldstyle import _oldStyle, _replaceIf
 
-# For backwards compatibility, some things import this, so just link it
-from collections import OrderedDict
 
 deprecatedModuleAttribute(
     Version("Twisted", 15, 5, 0),

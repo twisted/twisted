@@ -7,8 +7,8 @@ Tests for L{twisted.persisted.styles}.
 
 import pickle
 
+from twisted.persisted.styles import _UniversalPicklingError, unpickleMethod
 from twisted.trial import unittest
-from twisted.persisted.styles import unpickleMethod, _UniversalPicklingError
 
 
 class Foo:

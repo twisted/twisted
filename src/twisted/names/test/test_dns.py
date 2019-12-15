@@ -6,23 +6,21 @@
 Tests for twisted.names.dns.
 """
 
-from __future__ import division, absolute_import
-
-from io import BytesIO
+from __future__ import absolute_import, division
 
 import struct
+from io import BytesIO
 
 from zope.interface.verify import verifyClass
 
-from twisted.python.failure import Failure
-from twisted.python.util import FancyEqMixin, FancyStrMixin
 from twisted.internet import address, task
 from twisted.internet.error import CannotListenError, ConnectionDone
-from twisted.trial import unittest
 from twisted.names import dns
-
+from twisted.python.failure import Failure
+from twisted.python.util import FancyEqMixin, FancyStrMixin
 from twisted.test import proto_helpers
 from twisted.test.testutils import ComparisonTestsMixin
+from twisted.trial import unittest
 
 RECORD_TYPES = [
     dns.Record_NS, dns.Record_MD, dns.Record_MF, dns.Record_CNAME,

@@ -5,42 +5,51 @@
 Tests for the old L{twisted.web.client} APIs, C{getPage} and friends.
 """
 
-from __future__ import division, absolute_import
+from __future__ import absolute_import, division
 
 import io
 import os
 from errno import ENOSPC
+
+from twisted.python.compat import intToBytes, nativeString, networkString
+from twisted import test
+from twisted.internet import address, defer, interfaces, reactor
+from twisted.internet.protocol import ClientFactory
+from twisted.logger import (
+    FilteringLogObserver,
+    Logger,
+    LogLevel,
+    LogLevelFilterPredicate,
+    globalLogPublisher,
+)
+from twisted.protocols.policies import WrappingFactory
+from twisted.python.filepath import FilePath
+from twisted.test.proto_helpers import (
+    EventLoggingObserver,
+    StringTransport,
+    waitUntilAllDisconnected,
+)
+from twisted.trial import unittest, util
+from twisted.web import client, error, resource, server
+from twisted.web.static import Data
+from twisted.web.test.injectionhelpers import (
+    MethodInjectionTestsMixin,
+    URIInjectionTestsMixin,
+)
+from twisted.web.util import Redirect
 
 try:
     from urlparse import urlparse, urljoin
 except ImportError:
     from urllib.parse import urlparse, urljoin
 
-from twisted.python.compat import networkString, nativeString, intToBytes
-from twisted.trial import unittest, util
-from twisted.web import server, client, error, resource
-from twisted.web.static import Data
-from twisted.web.util import Redirect
-from twisted.internet import address, reactor, defer, interfaces
-from twisted.internet.protocol import ClientFactory
-from twisted.python.filepath import FilePath
-from twisted.protocols.policies import WrappingFactory
-from twisted.test.proto_helpers import (
-    StringTransport, waitUntilAllDisconnected, EventLoggingObserver)
 
 try:
     from twisted.internet import ssl
 except:
     ssl = None
 
-from twisted import test
-from twisted.logger import (globalLogPublisher, FilteringLogObserver,
-                            LogLevelFilterPredicate, LogLevel, Logger)
 
-from twisted.web.test.injectionhelpers import (
-    MethodInjectionTestsMixin,
-    URIInjectionTestsMixin,
-)
 
 
 

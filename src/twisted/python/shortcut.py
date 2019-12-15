@@ -8,9 +8,10 @@ Creation of  Windows shortcuts.
 Requires win32all.
 """
 
-from win32com.shell import shell
-import pythoncom
 import os
+
+import pythoncom
+from win32com.shell import shell
 
 
 def open(filename):

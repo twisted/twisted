@@ -7,14 +7,14 @@ Tests for L{twisted.python._oldstyle._oldStyle}.
 
 from __future__ import absolute_import, division
 
-import types
 import inspect
+import types
 
-from twisted.python.reflect import namedAny, fullyQualifiedName
-from twisted.python.modules import getModule
 from twisted.python.compat import _PY3, _shouldEnableNewStyle
-from twisted.trial import unittest
 from twisted.python import _oldstyle
+from twisted.python.modules import getModule
+from twisted.python.reflect import fullyQualifiedName, namedAny
+from twisted.trial import unittest
 
 _skip = None
 

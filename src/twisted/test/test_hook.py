@@ -10,6 +10,7 @@ Test cases for twisted.hook module.
 from twisted.python import hook
 from twisted.trial import unittest
 
+
 class BaseClass:
     """
     dummy class to help in testing.

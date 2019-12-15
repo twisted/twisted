@@ -10,17 +10,16 @@ command line program I{mailmail}.
 import os
 import sys
 
+from twisted.python.compat import NativeStringIO
 from twisted.copyright import version
 from twisted.internet.defer import Deferred
 from twisted.mail import smtp
 from twisted.mail.scripts import mailmail
 from twisted.mail.scripts.mailmail import parseOptions
-from twisted.python.compat import NativeStringIO
 from twisted.python.failure import Failure
 from twisted.python.runtime import platformType
 from twisted.test.proto_helpers import MemoryReactor
 from twisted.trial.unittest import TestCase
-
 
 
 class OptionsTests(TestCase):

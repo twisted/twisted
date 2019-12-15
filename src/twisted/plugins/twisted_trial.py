@@ -1,10 +1,9 @@
-from __future__ import division, absolute_import
+from __future__ import absolute_import, division
 
 from zope.interface import implementer
 
-from twisted.trial.itrial import IReporter
 from twisted.plugin import IPlugin
-
+from twisted.trial.itrial import IReporter
 
 
 @implementer(IPlugin, IReporter)
