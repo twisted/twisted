@@ -1441,7 +1441,8 @@ class ParsingTests(unittest.TestCase):
         """
         Execute a web request based on plain text content.
 
-        @param httpRequest: Content for the request which is processed.
+        @param httpRequest: Content for the request which is processed. Each
+            L{"\n"} will be replaced with L{"\r\n"}.
         @type httpRequest: C{bytes}
 
         @param requestFactory: 2-argument callable returning a Request.
@@ -1478,6 +1479,32 @@ class ParsingTests(unittest.TestCase):
         else:
             self.assertFalse(self.didRequest)
         return channel
+
+
+    def assertRequestRejected(self, requestLines):
+        """
+        Execute a HTTP request and assert that it is rejected with a 400 Bad
+        Response and disconnection.
+
+        @param requestLines: Plain text lines of the request. These lines will
+            be joined with newlines to form the HTTP request that is processed.
+        @type requestLines: C{list} of C{bytes}
+        """
+        httpRequest = b"\n".join(requestLines)
+        processed = []
+
+        class MyRequest(http.Request):
+            def process(self):
+                processed.append(self)
+                self.finish()
+
+        channel = self.runRequest(httpRequest, MyRequest, success=False)
+        self.assertEqual(
+            channel.transport.value(),
+            b"HTTP/1.1 400 Bad Request\r\n\r\n",
+        )
+        self.assertTrue(channel.transport.disconnecting)
+        self.assertEqual(processed, [])
 
 
     def test_invalidNonAsciiMethod(self):
@@ -1603,45 +1630,29 @@ class ParsingTests(unittest.TestCase):
 
     def test_tooManyHeaders(self):
         """
-        L{HTTPChannel} enforces a limit of C{HTTPChannel.maxHeaders} on the
+        C{HTTPChannel} enforces a limit of C{HTTPChannel.maxHeaders} on the
         number of headers received per request.
         """
-        processed = []
-        class MyRequest(http.Request):
-            def process(self):
-                processed.append(self)
-
         requestLines = [b"GET / HTTP/1.0"]
         for i in range(http.HTTPChannel.maxHeaders + 2):
             requestLines.append(networkString("%s: foo" % (i,)))
         requestLines.extend([b"", b""])
 
-        channel = self.runRequest(b"\n".join(requestLines), MyRequest, 0)
-        self.assertEqual(processed, [])
-        self.assertEqual(
-            channel.transport.value(),
-            b"HTTP/1.1 400 Bad Request\r\n\r\n")
+        self.assertRequestRejected(requestLines)
 
 
     def test_invalidContentLengthHeader(self):
         """
-        If a Content-Length header with a non-integer value is received, a 400
-        (Bad Request) response is sent to the client and the connection is
-        closed.
+        If a I{Content-Length} header with a non-integer value is received,
+        a 400 (Bad Request) response is sent to the client and the connection
+        is closed.
         """
-        processed = []
-        class MyRequest(http.Request):
-            def process(self):
-                processed.append(self)
-                self.finish()
-
-        requestLines = [b"GET / HTTP/1.0", b"Content-Length: x", b"", b""]
-        channel = self.runRequest(b"\n".join(requestLines), MyRequest, 0)
-        self.assertEqual(
-            channel.transport.value(),
-            b"HTTP/1.1 400 Bad Request\r\n\r\n")
-        self.assertTrue(channel.transport.disconnecting)
-        self.assertEqual(processed, [])
+        self.assertRequestRejected([
+            b"GET / HTTP/1.0",
+            b"Content-Length: x",
+            b"",
+            b"",
+        ])
 
 
     def test_invalidHeaderNoColon(self):
@@ -1649,24 +1660,46 @@ class ParsingTests(unittest.TestCase):
         If a header without colon is received a 400 (Bad Request) response
         is sent to the client and the connection is closed.
         """
-        processed = []
-        class MyRequest(http.Request):
-            def process(self):
-                processed.append(self)
-                self.finish()
+        self.assertRequestRejected([
+            b"GET / HTTP/1.0",
+            b"HeaderName ",
+            b"",
+            b"",
+        ])
 
-        requestLines = [b"GET / HTTP/1.0", b"HeaderName ", b"", b""]
-        channel = self.runRequest(b"\n".join(requestLines), MyRequest, 0)
-        self.assertEqual(
-            channel.transport.value(),
-            b"HTTP/1.1 400 Bad Request\r\n\r\n")
-        self.assertTrue(channel.transport.disconnecting)
-        self.assertEqual(processed, [])
+
+    def test_invalidHeaderOnlyColon(self):
+        """
+        C{HTTPChannel} rejects a request with an empty header name (i.e.
+        nothing before the colon).  It produces a 400 (Bad Request) response is
+        generated and closes the connection.
+        """
+        self.assertRequestRejected([
+            b"GET / HTTP/1.0",
+            b": foo",
+            b"",
+            b"",
+        ])
+
+
+    def test_invalidHeaderWhitespaceBeforeColon(self):
+        """
+        C{HTTPChannel} rejects a request containing a header with whitespace
+        between the header name and colon as requried by RFC 7230 section
+        3.2.4. A 400 (Bad Request) response is generated and the connection
+        closed.
+        """
+        self.assertRequestRejected([
+            b"GET / HTTP/1.0",
+            b"HeaderName : foo",
+            b"",
+            b"",
+        ])
 
 
     def test_headerLimitPerRequest(self):
         """
-        L{HTTPChannel} enforces the limit of C{HTTPChannel.maxHeaders} per
+        C{HTTPChannel} enforces the limit of C{HTTPChannel.maxHeaders} per
         request so that headers received in an earlier request do not count
         towards the limit when processing a later request.
         """
