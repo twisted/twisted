@@ -2043,6 +2043,9 @@ class ContentDecoderAgent(object):
         agent = ContentDecoderAgent(Agent(reactor),
                                     [(b'gzip', GzipDecoder)])
 
+    @param agent: The agent to wrap
+    @type agent: L{IAgent}
+
     @param decoders: A sequence of (name, decoder) objects. The name
         declares which encoding the decoder supports. The decoder must accept
         an L{IResponse} and return an L{IResponse} when called. The order
