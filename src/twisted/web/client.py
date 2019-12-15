@@ -2038,11 +2038,16 @@ class ContentDecoderAgent(object):
     I{Accept-Encoding} header and automatically decompresses the received data
     if the I{Content-Encoding} header indicates a supported encoding.
 
+    For example::
+
+        agent = ContentDecoderAgent(Agent(reactor),
+                                    [(b'gzip', GzipDecoder)])
+
     @param decoders: A sequence of (name, decoder) objects. The name
         declares which encoding the decoder supports. The decoder must accept
-        an L{IResponse} and return an L{IResponse} when called.  For example,
-        C{[(b'gzip', GzipDecoder)]}. The order determines how the decoders are
-        advertized to the server.
+        an L{IResponse} and return an L{IResponse} when called. The order
+        determines how the decoders are advertised to the server. Names must
+        be unique.not be duplicated.
     @type decoders: sequence of (L{bytes}, L{callable}) tuples
 
     @since: 11.1
