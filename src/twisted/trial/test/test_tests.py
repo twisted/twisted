@@ -1028,7 +1028,6 @@ class SuiteClearingMixin(object):
         This test is important since C{_clearSuite} operates by mutating
         internal variables.
         """
-        pyunit = __import__('unittest')
         suite = pyunit.TestSuite()
         suite.addTest(self.TestCase())
         # Double check that the test suite actually has something in it.
