@@ -873,6 +873,7 @@ class Request:
         @type version: C{bytes}
         @param version: The HTTP version of this request.
         """
+        clength = self.content.tell()
         self.content.seek(0,0)
         self.args = {}
 
@@ -889,16 +890,14 @@ class Request:
         # Argument processing
         args = self.args
         ctype = self.requestHeaders.getRawHeaders(b'content-type')
-        clength = self.requestHeaders.getRawHeaders(b'content-length')
         if ctype is not None:
             ctype = ctype[0]
-
-        if clength is not None:
-            clength = clength[0]
 
         if self.method == b"POST" and ctype and clength:
             mfd = b'multipart/form-data'
             key, pdict = _parseHeader(ctype)
+            # This fake content-type param is required by cgi.parse_multipart()
+            # in Python 3.7+, see bpo-29979.
             pdict["CONTENT-LENGTH"] = clength
             if key == b'application/x-www-form-urlencoded':
                 args.update(parse_qs(self.content.read(), 1))
