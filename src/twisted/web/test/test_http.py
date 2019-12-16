@@ -1373,7 +1373,7 @@ class ChunkingTests(unittest.TestCase, ResponseTestMixin):
 
         if requestFactory:
             channel.requestFactory = _makeRequestProxyFactory(requestFactory)
-        
+
         httpRequest = httpRequest.replace(b"\n", b"\r\n")
         header, body = httpRequest.split(b"\r\n\r\n", 1)
 
@@ -1381,7 +1381,7 @@ class ChunkingTests(unittest.TestCase, ResponseTestMixin):
 
         channel.makeConnection(transport)
         channel.dataReceived(header+b"\r\n\r\n")
-       
+
         for pos in range(len(body)//chunkSize+1):
             if channel.transport.disconnecting:
                 break
@@ -1403,6 +1403,7 @@ class ChunkingTests(unittest.TestCase, ResponseTestMixin):
         This fails as of twisted version 18.9.0 because of bug #9678.
         """
         processed = []
+
         class MyRequest(http.Request):
             def process(self):
                 processed.append(self)
