@@ -64,14 +64,14 @@ class KeyGenTests(TestCase):
         self.patch(sys, 'stdout', self.stdout)
 
 
-
-    def _testrun(self, keyType, keySize=None):
+    def _testrun(self, keyType, keySize=None, privateKeySubtype=None):
         filename = self.mktemp()
-        if keySize is None:
-            subprocess.call(['ckeygen', '-t', keyType, '-f', filename, '--no-passphrase'])
-        else:
-            subprocess.call(['ckeygen', '-t', keyType, '-f', filename, '--no-passphrase',
-                '-b', keySize])
+        args = ['ckeygen', '-t', keyType, '-f', filename, '--no-passphrase']
+        if keySize is not None:
+            args.extend(['-b', keySize])
+        if privateKeySubtype is not None:
+            args.extend(['--private-key-subtype', privateKeySubtype])
+        subprocess.call(args)
         privKey = Key.fromFile(filename)
         pubKey = Key.fromFile(filename + '.pub')
         if keyType == 'ecdsa':
@@ -83,11 +83,17 @@ class KeyGenTests(TestCase):
 
     def test_keygeneration(self):
         self._testrun('ecdsa', '384')
+        self._testrun('ecdsa', '384', privateKeySubtype='v1')
         self._testrun('ecdsa')
+        self._testrun('ecdsa', privateKeySubtype='v1')
         self._testrun('dsa', '2048')
+        self._testrun('dsa', '2048', privateKeySubtype='v1')
         self._testrun('dsa')
+        self._testrun('dsa', privateKeySubtype='v1')
         self._testrun('rsa', '2048')
+        self._testrun('rsa', '2048', privateKeySubtype='v1')
         self._testrun('rsa')
+        self._testrun('rsa', privateKeySubtype='v1')
 
 
 
@@ -328,6 +334,37 @@ class KeyGenTests(TestCase):
         self.assertEqual(key, persistedKey)
 
 
+    def test_saveKeySubtypeV1(self):
+        """
+        L{_saveKey} can be told to write the new private key file in OpenSSH
+        v1 format.
+        """
+        base = FilePath(self.mktemp())
+        base.makedirs()
+        filename = base.child('id_rsa').path
+        key = Key.fromString(privateRSA_openssh)
+        _saveKey(key, {
+            'filename': filename, 'pass': 'passphrase',
+            'format': 'md5-hex', 'private-key-subtype': 'v1',
+        })
+        self.assertEqual(
+            self.stdout.getvalue(),
+            "Your identification has been saved in %s\n"
+            "Your public key has been saved in %s.pub\n"
+            "The key fingerprint in <FingerprintFormats=MD5_HEX> is:\n"
+            "85:25:04:32:58:55:96:9f:57:ee:fb:a8:1a:ea:69:da\n" % (
+                filename,
+                filename))
+        privateKeyContent = base.child('id_rsa').getContent()
+        self.assertEqual(
+            key.fromString(privateKeyContent, None, 'passphrase'), key)
+        self.assertTrue(privateKeyContent.startswith(
+            b'-----BEGIN OPENSSH PRIVATE KEY-----\n'))
+        self.assertEqual(
+            Key.fromString(base.child('id_rsa.pub').getContent()),
+            key.public())
+
+
     def test_displayPublicKey(self):
         """
         L{displayPublicKey} prints out the public key associated with a given
@@ -565,3 +602,24 @@ class KeyGenTests(TestCase):
         self.assertEqual(
             'Could not change passphrase: key not encrypted', str(error))
         self.assertEqual(publicRSA_openssh, FilePath(filename).getContent())
+
+
+    def test_changePassphraseSubtypeV1(self):
+        """
+        L{changePassPhrase} can be told to write the new private key file in
+        OpenSSH v1 format.
+        """
+        oldNewConfirm = makeGetpass('encrypted', 'newpass', 'newpass')
+        self.patch(getpass, 'getpass', oldNewConfirm)
+
+        filename = self.mktemp()
+        FilePath(filename).setContent(privateRSA_openssh_encrypted)
+
+        changePassPhrase({'filename': filename, 'private-key-subtype': 'v1'})
+        self.assertEqual(
+            self.stdout.getvalue().strip('\n'),
+            'Your identification has been saved with the new passphrase.')
+        privateKeyContent = FilePath(filename).getContent()
+        self.assertNotEqual(privateRSA_openssh_encrypted, privateKeyContent)
+        self.assertTrue(privateKeyContent.startswith(
+            b'-----BEGIN OPENSSH PRIVATE KEY-----\n'))
