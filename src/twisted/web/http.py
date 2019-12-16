@@ -874,7 +874,7 @@ class Request:
         @param version: The HTTP version of this request.
         """
         clength = self.content.tell()
-        self.content.seek(0,0)
+        self.content.seek(0, 0)
         self.args = {}
 
         self.method, self.uri = command, path
