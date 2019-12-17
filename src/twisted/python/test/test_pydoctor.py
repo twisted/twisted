@@ -4,8 +4,6 @@
 """
 Tests for L{twisted.python._pydoctor}.
 """
-from collections import namedtuple
-
 from twisted.python.compat import _PY3
 from twisted.python.reflect import requireModule
 
