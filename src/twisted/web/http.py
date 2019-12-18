@@ -1535,7 +1535,7 @@ class Request:
         try:
             authh = self.getHeader(b"Authorization")
             if not authh:
-                self.user = self.password = ''
+                self.user = self.password = b''
                 return
             bas, upw = authh.split()
             if bas.lower() != b"basic":
@@ -1543,10 +1543,10 @@ class Request:
             upw = base64.decodestring(upw)
             self.user, self.password = upw.split(b':', 1)
         except (binascii.Error, ValueError):
-            self.user = self.password = ""
+            self.user = self.password = b''
         except:
             self._log.failure('')
-            self.user = self.password = ""
+            self.user = self.password = b''
 
 
     def getUser(self):
@@ -2186,6 +2186,10 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         try:
             header, data = line.split(b':', 1)
         except ValueError:
+            self._respondToBadRequestAndDisconnect()
+            return False
+
+        if not header or header[-1:].isspace():
             self._respondToBadRequestAndDisconnect()
             return False
 

@@ -98,7 +98,7 @@ class HostnameAddress(object):
 
 
 
-@attr.s(hash=False, repr=False, cmp=False)
+@attr.s(hash=False, repr=False, eq=False)
 @implementer(IAddress)
 class UNIXAddress(object):
     """
