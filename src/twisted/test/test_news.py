@@ -13,32 +13,19 @@ class NewsDeprecationTestCase(SynchronousTestCase):
     """
     Tests for the deprecation of L{twisted.news}.
     """
-    def test_deprecated3(self):
+    def test_deprecated(self):
         """
-        L{twisted.news} is deprecated on Python 3.
+        L{twisted.news} is deprecated.
         """
         import twisted.news
         twisted.news
-        warningsShown = self.flushWarnings([self.test_deprecated3])
+        warningsShown = self.flushWarnings([self.test_deprecated])
         self.assertEqual(len(warningsShown), 1)
         self.assertIs(warningsShown[0]['category'], DeprecationWarning)
         self.assertEqual(
             warningsShown[0]['message'],
-            'twisted.news was deprecated in Twisted NEXT:'
-            ' Will not be ported to Python 3.')
-
-
-    def test_deprecated2(self):
-        """
-        L{twisted.news} is NOT deprecated on Python 2.
-        """
-        import twisted.news
-        twisted.news
-        warningsShown = self.flushWarnings([self.test_deprecated2])
-        self.assertEqual(len(warningsShown), 0)
-
+            'twisted.news was deprecated in Twisted NEXT: morituri nolumus mori'
+        )
 
     if _PY3:
-        test_deprecated2.skip = "Not relevant on Python 3."
-    else:
-        test_deprecated3.skip = "Not relevant on Python 2."
+        test_deprecated.skip = "Not relevant on Python 3"
