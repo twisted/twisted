@@ -72,6 +72,7 @@ STATIC_PACKAGE_METADATA = dict(
         "Programming Language :: Python :: 3.6",
         "Programming Language :: Python :: 3.7",
     ],
+    python_requires='>=2.7,!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,!=3.4.*',
 )
 
 
@@ -198,18 +199,6 @@ _EXTENSIONS = [
 
 
 
-def _checkPythonVersion():
-    """
-    Fail if we detect a version of Python we don't support.
-    """
-    version = getattr(sys, "version_info", (0,))
-    if version < (2, 7):
-        raise ImportError("Twisted requires Python 2.7 or later.")
-    elif version >= (3, 0) and version < (3, 5):
-        raise ImportError("Twisted on Python 3 requires Python 3.5 or later.")
-
-
-
 def _longDescriptionArgsFromReadme(readme):
     """
     Generate a PyPI long description from the readme.
@@ -255,8 +244,6 @@ def getSetupArgs(extensions=_EXTENSIONS, readme='README.rst'):
     @return: The keyword arguments to be used by the setup method.
     @rtype: L{dict}
     """
-    _checkPythonVersion()
-
     arguments = STATIC_PACKAGE_METADATA.copy()
     if readme:
         arguments.update(_longDescriptionArgsFromReadme(readme))
@@ -287,7 +274,7 @@ def getSetupArgs(extensions=_EXTENSIONS, readme='README.rst'):
         "Automat >= 0.3.0",
         "hyperlink >= 17.1.1",
         "PyHamcrest >= 1.9.0",
-        "attrs >= 17.4.0",
+        "attrs >= 19.2.0",
     ]
 
     arguments.update(dict(
