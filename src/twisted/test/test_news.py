@@ -9,6 +9,7 @@ from twisted.trial.unittest import SynchronousTestCase
 from twisted.python.compat import _PY3
 
 
+
 class NewsDeprecationTestCase(SynchronousTestCase):
     """
     Tests for the deprecation of L{twisted.news}.
@@ -17,14 +18,17 @@ class NewsDeprecationTestCase(SynchronousTestCase):
         """
         L{twisted.news} is deprecated.
         """
-        import twisted.news
-        twisted.news
+        from twisted import news
+        news
         warningsShown = self.flushWarnings([self.test_deprecated])
         self.assertEqual(len(warningsShown), 1)
         self.assertIs(warningsShown[0]['category'], DeprecationWarning)
         self.assertEqual(
             warningsShown[0]['message'],
-            'twisted.news was deprecated in Twisted NEXT: morituri nolumus mori'
+            (
+                'twisted.news was deprecated in Twisted NEXT: '
+                'morituri nolumus mori'
+            )
         )
 
     if _PY3:
