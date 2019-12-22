@@ -7,7 +7,18 @@ Tests for L{twisted.conch.ssh.keys}.
 
 from __future__ import absolute_import, division
 
+import base64
+import os
+from textwrap import dedent
+
+from twisted.conch.test import keydata
+from twisted.python import randbytes
+from twisted.python.compat import long
+from twisted.python.filepath import FilePath
 from twisted.python.reflect import requireModule
+from twisted.trial import unittest
+
+
 
 cryptography = requireModule("cryptography")
 if cryptography is None:
@@ -23,15 +34,6 @@ if cryptography and pyasn1:
     ED25519_SUPPORTED = default_backend().ed25519_supported()
 else:
     ED25519_SUPPORTED = False
-
-import base64
-import os
-
-from twisted.conch.test import keydata
-from twisted.python import randbytes
-from twisted.trial import unittest
-from twisted.python.compat import long
-from twisted.python.filepath import FilePath
 
 
 
@@ -249,7 +251,6 @@ class KeyTests(unittest.TestCase):
             self.assertFalse(ed25519Key.isPublic())
 
 
-
     def _testPublicPrivateFromString(self, public, private, type, data):
         self._testPublicFromString(public, type, data)
         self._testPrivateFromString(private, type, data)
@@ -286,13 +287,15 @@ class KeyTests(unittest.TestCase):
         self.assertEqual(keys.Key.fromString(
             keydata.privateRSA_openssh_alternate),
             keys.Key.fromString(keydata.privateRSA_openssh))
-        self._testPublicPrivateFromString(keydata.publicDSA_openssh,
-                keydata.privateDSA_openssh, 'DSA', keydata.DSAData)
+        self._testPublicPrivateFromString(
+            keydata.publicDSA_openssh,
+            keydata.privateDSA_openssh, 'DSA', keydata.DSAData)
 
         if ED25519_SUPPORTED:
-            self._testPublicPrivateFromString(keydata.publicEd25519_openssh,
-                    keydata.privateEd25519_openssh_new, 'Ed25519',
-                    keydata.Ed25519Data)
+            self._testPublicPrivateFromString(
+                keydata.publicEd25519_openssh,
+                keydata.privateEd25519_openssh_new, 'Ed25519',
+                keydata.Ed25519Data)
 
     def test_fromOpenSSHErrors(self):
         """
@@ -733,7 +736,7 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
         self.assertEqual(keys.Key(self.dsaObj).sshType(), b'ssh-dss')
         self.assertEqual(keys.Key(self.ecObj).type(), 'EC')
         self.assertEqual(keys.Key(self.ecObj).sshType(),
-                        keydata.ECDatanistp256['curve'])
+                         keydata.ECDatanistp256['curve'])
         if ED25519_SUPPORTED:
             self.assertEqual(keys.Key(self.ed25519Obj).type(), 'Ed25519')
             self.assertEqual(
@@ -1481,15 +1484,17 @@ attr n:
         The repr of a L{keys.Key} contains all the OpenSSH format for an ECDSA
         public key.
         """
-        self.assertEqual(repr(keys.Key(self.ecObj).public()),
-"""<Elliptic Curve Public Key (256 bits)
-curve:
-\tecdsa-sha2-nistp256
-x:
-\t76282513020392096317118503144964731774299773481750550543382904345687059013883
-y:""" +
-"\n\t8154319786460285263226566476944164753434437589431431968106113715931064" +
-"6683104>\n")
+        self.assertEqual(
+            repr(keys.Key(self.ecObj).public()),
+            dedent("""\
+                <Elliptic Curve Public Key (256 bits)
+                curve:
+                \tecdsa-sha2-nistp256
+                x:
+                \t{x}
+                y:
+                \t{y}>
+                """).format(**keydata.ECDatanistp256))
 
 
     def test_reprPrivateECDSA(self):
@@ -1497,17 +1502,19 @@ y:""" +
         The repr of a L{keys.Key} contains all the OpenSSH format for an ECDSA
         private key.
         """
-        self.assertEqual(repr(keys.Key(self.ecObj)),
-"""<Elliptic Curve Private Key (256 bits)
-curve:
-\tecdsa-sha2-nistp256
-privateValue:
-\t34638743477210341700964008455655698253555655678826059678074967909361042656500
-x:
-\t76282513020392096317118503144964731774299773481750550543382904345687059013883
-y:""" +
-"\n\t8154319786460285263226566476944164753434437589431431968106113715931064" +
-"6683104>\n")
+        self.assertEqual(
+            repr(keys.Key(self.ecObj)),
+            dedent("""\
+                <Elliptic Curve Private Key (256 bits)
+                curve:
+                \tecdsa-sha2-nistp256
+                privateValue:
+                \t{privateValue}
+                x:
+                \t{x}
+                y:
+                \t{y}>
+                """).format(**keydata.ECDatanistp256))
 
 
     @skipWithoutEd25519
@@ -1516,12 +1523,14 @@ y:""" +
         The repr of a L{keys.Key} contains all the OpenSSH format for an
         Ed25519 public key.
         """
-        self.assertEqual(repr(keys.Key(self.ed25519Obj).public()),
-"""<Ed25519 Public Key (256 bits)
-attr a:
-\tf1:16:d1:15:4a:1e:15:0e:19:5e:19:46:b5:f2:44:
-\t0d:b2:52:a0:ae:2a:6b:23:13:73:45:fd:40:d9:57:
-\t7b:8b>""")
+        self.assertEqual(
+            repr(keys.Key(self.ed25519Obj).public()),
+            dedent("""\
+                <Ed25519 Public Key (256 bits)
+                attr a:
+                \tf1:16:d1:15:4a:1e:15:0e:19:5e:19:46:b5:f2:44:
+                \t0d:b2:52:a0:ae:2a:6b:23:13:73:45:fd:40:d9:57:
+                \t7b:8b>"""))
 
 
     @skipWithoutEd25519
@@ -1530,16 +1539,18 @@ attr a:
         The repr of a L{keys.Key} contains all the OpenSSH format for an
         Ed25519 private key.
         """
-        self.assertEqual(repr(keys.Key(self.ed25519Obj)),
-"""<Ed25519 Private Key (256 bits)
-attr a:
-\tf1:16:d1:15:4a:1e:15:0e:19:5e:19:46:b5:f2:44:
-\t0d:b2:52:a0:ae:2a:6b:23:13:73:45:fd:40:d9:57:
-\t7b:8b
-attr k:
-\t37:2f:25:da:8d:d4:a8:9a:78:7c:61:f0:98:01:c6:
-\tf4:5e:6d:67:05:69:31:37:4c:69:0d:05:55:bb:c9:
-\t44:58>""")
+        self.assertEqual(
+            repr(keys.Key(self.ed25519Obj)),
+            dedent("""\
+                <Ed25519 Private Key (256 bits)
+                attr a:
+                \tf1:16:d1:15:4a:1e:15:0e:19:5e:19:46:b5:f2:44:
+                \t0d:b2:52:a0:ae:2a:6b:23:13:73:45:fd:40:d9:57:
+                \t7b:8b
+                attr k:
+                \t37:2f:25:da:8d:d4:a8:9a:78:7c:61:f0:98:01:c6:
+                \tf4:5e:6d:67:05:69:31:37:4c:69:0d:05:55:bb:c9:
+                \t44:58>"""))
 
 
 

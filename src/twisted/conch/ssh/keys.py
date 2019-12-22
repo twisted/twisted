@@ -1043,7 +1043,8 @@ class Key(object):
                 self._keyObject, (dsa.DSAPublicKey, dsa.DSAPrivateKey)):
             return 'DSA'
         elif isinstance(
-                self._keyObject, (ec.EllipticCurvePublicKey, ec.EllipticCurvePrivateKey)):
+                self._keyObject,
+                (ec.EllipticCurvePublicKey, ec.EllipticCurvePrivateKey)):
             return 'EC'
         elif isinstance(
                 self._keyObject,
@@ -1065,7 +1066,9 @@ class Key(object):
         @rtype: L{bytes}
         """
         if self.type() == 'EC':
-            return b'ecdsa-sha2-' + _secToNist[self._keyObject.curve.name.encode('ascii')]
+            return (
+                b'ecdsa-sha2-' +
+                _secToNist[self._keyObject.curve.name.encode('ascii')])
         else:
             return {
                 'RSA': b'ssh-rsa',
@@ -1209,9 +1212,11 @@ class Key(object):
                     common.MP(data['y']))
         elif type == 'EC':
             byteLength = (self._keyObject.curve.key_size + 7) // 8
-            return (common.NS(data['curve']) + common.NS(data["curve"][-8:]) +
-                common.NS(b'\x04' + utils.int_to_bytes(data['x'], byteLength) +
-                utils.int_to_bytes(data['y'], byteLength)))
+            return (
+                common.NS(data['curve']) + common.NS(data["curve"][-8:]) +
+                common.NS(
+                    b'\x04' + utils.int_to_bytes(data['x'], byteLength) +
+                    utils.int_to_bytes(data['y'], byteLength)))
         elif type == 'Ed25519':
             return common.NS(b'ssh-ed25519') + common.NS(data['a'])
         else:

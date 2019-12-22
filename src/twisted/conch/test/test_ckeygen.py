@@ -14,20 +14,20 @@ from io import BytesIO, StringIO
 from twisted.python.compat import unicode, _PY3
 from twisted.python.reflect import requireModule
 
-if requireModule('cryptography') and requireModule('pyasn1'):
-    from twisted.conch.ssh.keys import (Key, BadKeyError,
-        BadFingerPrintFormat, FingerprintFormats)
-    from twisted.conch.scripts.ckeygen import (
-        changePassPhrase, displayPublicKey, printFingerprint,
-        _saveKey, enumrepresentation)
-else:
-    skip = "cryptography and pyasn1 required for twisted.conch.scripts.ckeygen"
-
 from twisted.python.filepath import FilePath
 from twisted.trial.unittest import TestCase
 from twisted.conch.test.keydata import (
     publicRSA_openssh, privateRSA_openssh, privateRSA_openssh_encrypted,
     privateECDSA_openssh, privateEd25519_openssh_new)
+
+if requireModule('cryptography') and requireModule('pyasn1'):
+    from twisted.conch.ssh.keys import (
+        Key, BadKeyError, BadFingerPrintFormat, FingerprintFormats)
+    from twisted.conch.scripts.ckeygen import (
+        changePassPhrase, displayPublicKey, printFingerprint,
+        _saveKey, enumrepresentation)
+else:
+    skip = "cryptography and pyasn1 required for twisted.conch.scripts.ckeygen"
 
 
 
@@ -249,8 +249,9 @@ class KeyGenTests(TestCase):
         base.makedirs()
         filename = base.child('id_ed25519').path
         key = Key.fromString(privateEd25519_openssh_new)
-        _saveKey(key, {'filename': filename, 'pass': 'passphrase',
-            'format': 'md5-hex'})
+        _saveKey(
+            key,
+            {'filename': filename, 'pass': 'passphrase', 'format': 'md5-hex'})
         self.assertEqual(
             self.stdout.getvalue(),
             "Your identification has been saved in %s\n"
@@ -355,8 +356,9 @@ class KeyGenTests(TestCase):
         base.makedirs()
         filename = base.child('id_ed25519').path
         key = Key.fromString(privateEd25519_openssh_new)
-        _saveKey(key, {'filename': filename, 'no-passphrase': True,
-            'format': 'md5-hex'})
+        _saveKey(
+            key,
+            {'filename': filename, 'no-passphrase': True, 'format': 'md5-hex'})
         self.assertEqual(
             key.fromString(
                 base.child('id_ed25519').getContent(), None),
