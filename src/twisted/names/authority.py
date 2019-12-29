@@ -26,6 +26,9 @@ def getSerial(filename='/tmp/twisted-names.serial'):
     State is stored in the given file.  If it does not exist, it is
     created with rw-/---/--- permissions.
 
+    This manipulates process-global state by calling C{os.umask()}, so it isn't
+    thread-safe.
+
     @param filename: Path to a file that is used to store the state across
         program runs.
     @type filename: L{str}
