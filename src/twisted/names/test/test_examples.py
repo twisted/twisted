@@ -47,7 +47,7 @@ class ExampleTestBase(object):
         # Get documentation root
         here = (
             FilePath(__file__)
-            .parent().parent().parent().parent()
+            .parent().parent().parent().parent().parent()
             .child('docs')
         )
 
