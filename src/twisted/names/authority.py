@@ -220,6 +220,7 @@ class FileAuthority(common.ResolverBase):
 
 
     def lookupZone(self, name, timeout=10):
+        name = dns.domainString(name)
         if self.soa[0].lower() == name.lower():
             # Wee hee hee hooo yea
             default_ttl = max(self.soa[1].minimum, self.soa[1].expire)

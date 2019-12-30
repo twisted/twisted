@@ -60,9 +60,9 @@ class SRVConnector:
                  defaultPort=None,
                  ):
         """
-        @param domain: The domain to connect to.  If passed as a unicode
+        @param domain: The domain to connect to.  If passed as a text
             string, it will be encoded using C{idna} encoding.
-        @type domain: L{bytes} or L{unicode}
+        @type domain: L{bytes} or L{str}
 
         @param defaultPort: Optional default port number to be used when SRV
             lookup fails and the service name is unknown. This should be the
@@ -72,9 +72,7 @@ class SRVConnector:
         """
         self.reactor = reactor
         self.service = service
-        if isinstance(domain, unicode):
-            domain = domain.encode('idna')
-        self.domain = nativeString(domain)
+        self.domain = None if domain is None else dns.domainString(domain)
         self.factory = factory
 
         self.protocol = protocol
@@ -99,7 +97,7 @@ class SRVConnector:
             d = client.lookupService('_%s._%s.%s' %
                     (nativeString(self.service),
                      nativeString(self.protocol),
-                     self.domain))
+                     nativeString(self.domain)))
             d.addCallbacks(self._cbGotServers, self._ebGotServers)
             d.addCallback(lambda x, self=self: self._reallyConnect())
             if self._defaultPort:
@@ -180,7 +178,7 @@ class SRVConnector:
 
         if not self.servers and not self.orderedServers:
             # no SRV record, fall back..
-            return self.domain, self.service
+            return nativeString(self.domain), self.service
 
         if not self.servers and self.orderedServers:
             # start new round
