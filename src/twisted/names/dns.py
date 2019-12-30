@@ -325,30 +325,34 @@ def readPrecisely(file, l):
 class IEncodable(Interface):
     """
     Interface for something which can be encoded to and decoded
-    from a file object.
+    to the DNS wire format.
+
+    A binary-mode file object (such as L{io.BytesIO}) is used as a buffer when
+    encoding or decoding.
     """
 
-    def encode(strio, compDict = None):
+    def encode(strio, compDict=None):
         """
         Write a representation of this object to the given
         file object.
 
         @type strio: File-like object
-        @param strio: The stream to which to write bytes
+        @param strio: The buffer to write to. It must have a C{tell()} method.
 
-        @type compDict: C{dict} or L{None}
-        @param compDict: A dictionary of backreference addresses that have
-        already been written to this stream and that may be used for
-        compression.
+        @type compDict: L{dict} of L{bytes} to L{int} r L{None}
+        @param compDict: A mapping of names to byte offsets that have already
+        been written to the buffer, which may be used for compression (see RFC
+        1035 section 4.1.4). When L{None}, encode without compression.
         """
 
-    def decode(strio, length = None):
+
+    def decode(strio, length=None):
         """
         Reconstruct an object from data read from the given
         file object.
 
         @type strio: File-like object
-        @param strio: The stream from which bytes may be read
+        @param strio: A seekable buffer from which bytes may be read.
 
         @type length: L{int} or L{None}
         @param length: The number of bytes in this RDATA field.  Most
@@ -1126,7 +1130,7 @@ class Record_A(tputil.FancyEqMixin):
             quad-dotted notation.
         """
         if _PY3 and isinstance(address, bytes):
-            address = address.decode('idna')
+            address = address.decode('ascii')
 
         address = socket.inet_aton(address)
         self.address = address
