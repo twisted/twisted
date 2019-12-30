@@ -80,8 +80,8 @@ if _PY3:
 
     def _nicebytes(bytes):
         """
-        Represent a mostly textful bytes object in a way suitable for presentation
-        to an end user.
+        Represent a mostly textful bytes object in a way suitable for
+        presentation to an end user.
 
         @param bytes: The bytes to represent.
         @rtype: L{str}
@@ -107,8 +107,8 @@ else:
 
 def randomSource():
     """
-    Wrapper around L{twisted.python.randbytes.RandomFactory.secureRandom} to return
-    2 random bytes.
+    Wrapper around L{twisted.python.randbytes.RandomFactory.secureRandom} to
+    return 2 random bytes.
 
     @rtype: L{bytes}
     """
@@ -248,6 +248,7 @@ def _nameToLabels(name):
     return labels
 
 
+
 def domainString(domain):
     """
     Coerce a domain name string to bytes.
@@ -258,8 +259,8 @@ def domainString(domain):
     L{encodings.idna}.
 
     Note that DNS is I{case insensitive} but I{case preserving}. This function
-    doesn't normalize case, so you'll need to do that when comparing domain
-    strings.
+    doesn't normalize case, so you'll still need to do that whenever comparing
+    the strings it returns.
 
     @param domain: A domain name.  If passed as a text string it will be
         C{idna} encoded.
@@ -277,6 +278,7 @@ def domainString(domain):
                         type(b'').__name__, type(u'').__name__,
                         domain, type(domain)))
     return domain
+
 
 
 def _isSubdomainOf(descendantName, ancestorName):
@@ -346,11 +348,13 @@ def str2time(s):
     return s
 
 
+
 def readPrecisely(file, l):
     buff = file.read(l)
     if len(buff) < l:
         raise EOFError
     return buff
+
 
 
 class IEncodable(Interface):
