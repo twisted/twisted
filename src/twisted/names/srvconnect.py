@@ -239,8 +239,7 @@ class SRVConnector:
         self.connector = connectFunc(
             self.host, self.port,
             _SRVConnector_ClientFactoryWrapper(self, self.factory),
-            *self.connectFuncArgs, **self.connectFuncKwArgs,
-        )
+            *self.connectFuncArgs, **self.connectFuncKwArgs)
 
 
     def stopConnecting(self):
