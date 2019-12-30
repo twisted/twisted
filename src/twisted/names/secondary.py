@@ -17,6 +17,8 @@ from twisted.python import log, failure
 from twisted.python.compat import nativeString
 from twisted.application import service
 
+
+
 class SecondaryAuthorityService(service.Service):
     """
     A service that keeps one or more authorities up to date by doing hourly
@@ -101,18 +103,18 @@ class SecondaryAuthority(FileAuthority):
     An Authority that keeps itself updated by performing zone transfers.
 
     @ivar primary: The IP address of the server from which zone transfers will
-        be attempted.
+    be attempted.
     @type primary: C{str}
 
-    @ivar _port: The port number of the server from which zone transfers will be
-        attempted.
+    @ivar _port: The port number of the server from which zone transfers will
+    be attempted.
     @type: C{int}
 
     @ivar domain: The domain for which this is the secondary authority.
     @type: C{bytes}
 
-    @ivar _reactor: The reactor to use to perform the zone transfers, or L{None}
-        to use the global reactor.
+    @ivar _reactor: The reactor to use to perform the zone transfers, or
+    L{None} to use the global reactor.
     """
 
     transferring = False

@@ -14,19 +14,24 @@ from twisted.names.error import DNSNameError
 from twisted.python.compat import nativeString
 
 
+
 class _SRVConnector_ClientFactoryWrapper:
     def __init__(self, connector, wrappedFactory):
         self.__connector = connector
         self.__wrappedFactory = wrappedFactory
 
+
     def startedConnecting(self, connector):
         self.__wrappedFactory.startedConnecting(self.__connector)
+
 
     def clientConnectionFailed(self, connector, reason):
         self.__connector.connectionFailed(reason)
 
+
     def clientConnectionLost(self, connector, reason):
         self.__connector.connectionLost(reason)
+
 
     def __getattr__(self, key):
         return getattr(self.__wrappedFactory, key)
@@ -83,7 +88,9 @@ class SRVConnector:
 
         self.connector = None
         self.servers = None
-        self.orderedServers = None # list of servers already used in this round
+        # list of servers already used in this round:
+        self.orderedServers = None
+
 
     def connect(self):
         """Start connection to remote server."""
@@ -92,12 +99,15 @@ class SRVConnector:
 
         if not self.servers:
             if self.domain is None:
-                self.connectionFailed(error.DNSLookupError("Domain is not defined."))
+                self.connectionFailed(
+                    error.DNSLookupError("Domain is not defined."),
+                )
                 return
-            d = client.lookupService('_%s._%s.%s' %
-                    (nativeString(self.service),
-                     nativeString(self.protocol),
-                     nativeString(self.domain)))
+            d = client.lookupService('_%s._%s.%s' % (
+                nativeString(self.service),
+                nativeString(self.protocol),
+                nativeString(self.domain)),
+            )
             d.addCallbacks(self._cbGotServers, self._ebGotServers)
             d.addCallback(lambda x, self=self: self._reallyConnect())
             if self._defaultPort:
@@ -108,6 +118,7 @@ class SRVConnector:
         else:
             self.connector.connect()
 
+
     def _ebGotServers(self, failure):
         failure.trap(DNSNameError)
 
@@ -117,6 +128,7 @@ class SRVConnector:
 
         self.servers = []
         self.orderedServers = []
+
 
     def _cbGotServers(self, result):
         answers, auth, add = result
@@ -135,6 +147,7 @@ class SRVConnector:
 
             self.orderedServers.append(a.payload)
 
+
     def _ebServiceUnknown(self, failure):
         """
         Connect to the default port when the service name is unknown.
@@ -148,6 +161,7 @@ class SRVConnector:
         self.servers = [dns.Record_SRV(0, 0, self._defaultPort, self.domain)]
         self.orderedServers = []
         self.connect()
+
 
     def pickServer(self):
         """
@@ -211,9 +225,10 @@ class SRVConnector:
         raise RuntimeError(
             'Impossible %s pickServer result.' % (self.__class__.__name__,))
 
+
     def _reallyConnect(self):
         if self.stopAfterDNS:
-            self.stopAfterDNS=0
+            self.stopAfterDNS = 0
             return
 
         self.host, self.port = self.pickServer()
@@ -221,17 +236,20 @@ class SRVConnector:
         assert self.port is not None, 'Must have a port to connect to.'
 
         connectFunc = getattr(self.reactor, self.connectFuncName)
-        self.connector=connectFunc(
+        self.connector = connectFunc(
             self.host, self.port,
             _SRVConnector_ClientFactoryWrapper(self, self.factory),
-            *self.connectFuncArgs, **self.connectFuncKwArgs)
+            *self.connectFuncArgs, **self.connectFuncKwArgs,
+        )
+
 
     def stopConnecting(self):
         """Stop attempting to connect."""
         if self.connector:
             self.connector.stopConnecting()
         else:
-            self.stopAfterDNS=1
+            self.stopAfterDNS = 1
+
 
     def disconnect(self):
         """Disconnect whatever our are state is."""
@@ -240,13 +258,16 @@ class SRVConnector:
         else:
             self.stopConnecting()
 
+
     def getDestination(self):
         assert self.connector
         return self.connector.getDestination()
 
+
     def connectionFailed(self, reason):
         self.factory.clientConnectionFailed(self, reason)
         self.factory.doStop()
+
 
     def connectionLost(self, reason):
         self.factory.clientConnectionLost(self, reason)

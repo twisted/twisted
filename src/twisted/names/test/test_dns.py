@@ -36,12 +36,16 @@ RECORD_TYPES = [
     ]
 
 
+
 class DomainStringTests(unittest.SynchronousTestCase):
     def test_bytes(self):
         """
         L{dns.domainString} returns L{bytes} unchanged.
         """
-        self.assertEqual(b'twistedmatrix.com', dns.domainString(b'twistedmatrix.com'))
+        self.assertEqual(
+            b'twistedmatrix.com',
+            dns.domainString(b'twistedmatrix.com'),
+        )
 
 
     def test_native(self):
