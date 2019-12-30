@@ -11,7 +11,7 @@ from zope.interface import implementer
 from twisted.internet import error, interfaces
 from twisted.names import client, dns
 from twisted.names.error import DNSNameError
-from twisted.python.compat import nativeString, unicode
+from twisted.python.compat import nativeString
 
 
 class _SRVConnector_ClientFactoryWrapper:
@@ -51,7 +51,7 @@ class SRVConnector:
     @type orderedServers: L{list} of L{dns.Record_SRV}
     """
 
-    stopAfterDNS=0
+    stopAfterDNS = 0
 
     def __init__(self, reactor, service, domain, factory,
                  protocol='tcp', connectFuncName='connectTCP',
