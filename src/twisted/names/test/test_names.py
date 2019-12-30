@@ -1171,9 +1171,9 @@ class BindAuthorityTests(unittest.TestCase):
         """
         for dom, ip in [(b"example.com", u"10.0.0.1"),
                         (b"no-in.example.com", u"10.0.0.2")]:
-            rr = self.successResultOf(
+            [[rr], [], []] = self.successResultOf(
                 self.auth.lookupAddress(dom)
-            )[0][0]
+            )
             self.assertEqual(
                 dns.Record_A(
                     ip,
@@ -1187,9 +1187,9 @@ class BindAuthorityTests(unittest.TestCase):
         """
         AAAA records are loaded.
         """
-        rr = self.successResultOf(
+        [[rr], [], []] = self.successResultOf(
             self.auth.lookupIPV6Address(b"example.com")
-        )[0][0]
+        )
         self.assertEqual(
             dns.Record_AAAA(
                 u"2001:db8:10::1",
@@ -1203,9 +1203,9 @@ class BindAuthorityTests(unittest.TestCase):
         """
         MX records are loaded.
         """
-        rr = self.successResultOf(
+        [[rr], [], []] = self.successResultOf(
             self.auth.lookupMailExchange(b"not-fqdn.example.com")
-        )[0][0]
+        )
         self.assertEqual(
             dns.Record_MX(
                 preference=10, name="mx.example.com", ttl=604800,
@@ -1218,9 +1218,10 @@ class BindAuthorityTests(unittest.TestCase):
         """
         CNAME records are loaded.
         """
-        rr = self.successResultOf(
+        [answers, [], []] = self.successResultOf(
             self.auth.lookupIPV6Address(b"www.example.com")
-        )[0][0]
+        )
+        rr = answers[0]
         self.assertEqual(
             dns.Record_CNAME(
                 name="example.com", ttl=604800,
