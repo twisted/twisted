@@ -108,7 +108,9 @@ else:
 def randomSource():
     """
     Wrapper around L{twisted.python.randbytes.RandomFactory.secureRandom} to return
-    2 random chars.
+    2 random bytes.
+
+    @rtype: L{bytes}
     """
     return struct.unpack('H', randbytes.secureRandom(2, fallback=True))[0]
 
