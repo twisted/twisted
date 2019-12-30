@@ -267,6 +267,8 @@ def domainString(domain):
 
     @returns: L{bytes} suitable for network transmission.
     @rtype: L{bytes}
+
+    @since: Twisted NEXT
     """
     if isinstance(domain, unicode):
         domain = domain.encode('idna')
