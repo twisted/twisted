@@ -47,7 +47,12 @@ def searchFileForAll(hostsFile, name):
         parts = line.split()
 
         if name.lower() in [s.lower() for s in parts[1:]]:
-            results.append(nativeString(parts[0]))
+            try:
+                maybeIP = nativeString(parts[0])
+            except ValueError:  # Not ASCII.
+                continue
+            if isIPAddress(maybeIP) or isIPv6Address(maybeIP):
+                results.append(maybeIP)
     return results
 
 
@@ -150,4 +155,5 @@ class Resolver(common.ResolverBase):
     # Someday this should include IPv6 addresses too, but that will cause
     # problems if users of the API (mainly via getHostByName) aren't updated to
     # know about IPv6 first.
+    # FIXME - getHostByName knows about IPv6 now.
     lookupAllRecords = lookupAddress
