@@ -17,6 +17,8 @@ from twisted.internet.abstract import isIPAddress, isIPv6Address
 
 from twisted.names import common
 
+
+
 def searchFileForAll(hostsFile, name):
     """
     Search the given file, which is in hosts(5) standard format, for addresses
