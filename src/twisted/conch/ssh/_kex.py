@@ -69,12 +69,33 @@ class _IGroupExchangeKexAlgorithm(_IKexAlgorithm):
 
 
 @implementer(_IEllipticCurveExchangeKexAlgorithm)
+class _Curve25519SHA256(object):
+    """
+    Elliptic Curve Key Exchange using Curve25519 and SHA256. Defined in
+    U{https://datatracker.ietf.org/doc/draft-ietf-curdle-ssh-curves/}.
+    """
+    preference = 1
+    hashProcessor = sha256
+
+
+
+@implementer(_IEllipticCurveExchangeKexAlgorithm)
+class _Curve25519SHA256LibSSH(object):
+    """
+    As L{_Curve25519SHA256}, but with a pre-standardized algorithm name.
+    """
+    preference = 2
+    hashProcessor = sha256
+
+
+
+@implementer(_IEllipticCurveExchangeKexAlgorithm)
 class _ECDH256(object):
     """
     Elliptic Curve Key Exchange with SHA-256 as HASH. Defined in
     RFC 5656.
     """
-    preference = 1
+    preference = 3
     hashProcessor = sha256
 
 
@@ -85,7 +106,7 @@ class _ECDH384(object):
     Elliptic Curve Key Exchange with SHA-384 as HASH. Defined in
     RFC 5656.
     """
-    preference = 2
+    preference = 4
     hashProcessor = sha384
 
 
@@ -96,7 +117,7 @@ class _ECDH512(object):
     Elliptic Curve Key Exchange with SHA-512 as HASH. Defined in
     RFC 5656.
     """
-    preference = 3
+    preference = 5
     hashProcessor = sha512
 
 
@@ -108,7 +129,7 @@ class _DHGroupExchangeSHA256(object):
     RFC 4419, 4.2.
     """
 
-    preference = 4
+    preference = 6
     hashProcessor = sha256
 
 
@@ -120,7 +141,7 @@ class _DHGroupExchangeSHA1(object):
     RFC 4419, 4.1.
     """
 
-    preference = 5
+    preference = 7
     hashProcessor = sha1
 
 
@@ -132,7 +153,7 @@ class _DHGroup14SHA1(object):
     (2048-bit MODP Group). Defined in RFC 4253, 8.2.
     """
 
-    preference = 7
+    preference = 8
     hashProcessor = sha1
     # Diffie-Hellman primes from Oakley Group 14 (RFC 3526, 3).
     prime = long('32317006071311007300338913926423828248817941241140239112842'
@@ -151,6 +172,8 @@ class _DHGroup14SHA1(object):
 
 # Which ECDH hash function to use is dependent on the size.
 _kexAlgorithms = {
+    b"curve25519-sha256": _Curve25519SHA256(),
+    b"curve25519-sha256@libssh.org": _Curve25519SHA256LibSSH(),
     b"diffie-hellman-group-exchange-sha256": _DHGroupExchangeSHA256(),
     b"diffie-hellman-group-exchange-sha1": _DHGroupExchangeSHA1(),
     b"diffie-hellman-group14-sha1": _DHGroup14SHA1(),
@@ -260,8 +283,12 @@ def getSupportedKeyExchanges():
             keyAlgorithmDsa = keyAlgorithm.replace(b"ecdh", b"ecdsa")
             supported = backend.elliptic_curve_exchange_algorithm_supported(
                 ec.ECDH(), _curveTable[keyAlgorithmDsa])
-            if not supported:
-                kexAlgorithms.pop(keyAlgorithm)
+        elif keyAlgorithm.startswith(b"curve25519-sha256"):
+            supported = backend.x25519_supported()
+        else:
+            supported = True
+        if not supported:
+            kexAlgorithms.pop(keyAlgorithm)
     return sorted(
         kexAlgorithms,
-        key = lambda kexAlgorithm: kexAlgorithms[kexAlgorithm].preference)
+        key=lambda kexAlgorithm: kexAlgorithms[kexAlgorithm].preference)

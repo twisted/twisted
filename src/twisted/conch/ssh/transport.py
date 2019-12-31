@@ -23,7 +23,7 @@ from cryptography.exceptions import UnsupportedAlgorithm
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.ciphers import algorithms, modes, Cipher
-from cryptography.hazmat.primitives.asymmetric import dh, ec
+from cryptography.hazmat.primitives.asymmetric import dh, ec, x25519
 
 from twisted import __version__ as twisted_version
 from twisted.internet import protocol, defer
@@ -35,8 +35,23 @@ from twisted.python.compat import iterbytes, _bytesChr as chr, networkString
 
 from twisted.conch.ssh import address, keys, _kex
 from twisted.conch.ssh.common import (
-    NS, getNS, MP, getMP, ffs
+    NS, getNS, MP, getMP, ffs, int_from_bytes
 )
+
+
+
+def _mpFromBytes(data):
+    """Make an SSH multiple-precision integer from big-endian L{bytes}.
+
+    Used in ECDH key exchange.
+
+    @type data: L{bytes}
+    @param data: The input data, interpreted as a big-endian octet string.
+
+    @rtype: L{bytes}
+    @return: The given data encoded as an SSH multiple-precision integer.
+    """
+    return MP(int_from_bytes(data, 'big'))
 
 
 
@@ -1213,6 +1228,97 @@ class SSHTransportBase(protocol.Protocol):
             log.msg('Remote Debug Message: %s' % (message,))
 
 
+    def _generateECPrivateKey(self):
+        """
+        Generate an private key for ECDH key exchange.
+
+        @rtype: The appropriate private key type matching C{self.kexAlg}:
+            L{EllipticCurvePrivateKey} for C{ecdh-sha2-nistp*}, or
+            L{X25519PrivateKey} for C{curve25519-sha256}.
+        @return: The generated private key.
+        """
+        if self.kexAlg.startswith(b'ecdh-sha2-nistp'):
+            try:
+                curve = keys._curveTable[b'ecdsa' + self.kexAlg[4:]]
+            except KeyError:
+                raise UnsupportedAlgorithm('unused-key')
+
+            return ec.generate_private_key(curve, default_backend())
+        elif self.kexAlg in (
+                b'curve25519-sha256', b'curve25519-sha256@libssh.org'):
+            return x25519.X25519PrivateKey.generate()
+        else:
+            raise UnsupportedAlgorithm(
+                'Cannot generate elliptic curve private key for %r' %
+                (self.kexAlg,))
+
+
+    def _encodeECPublicKey(self, ecPub):
+        """
+        Encode an elliptic curve public key to bytes.
+
+        @type ecPub: The appropriate public key type matching
+            C{self.kexAlg}: L{EllipticCurvePublicKey} for
+            C{ecdh-sha2-nistp*}, or L{X25519PublicKey} for
+            C{curve25519-sha256}.
+        @param ecPub: The public key to encode.
+
+        @rtype: L{bytes}
+        @return: The encoded public key.
+        """
+        if self.kexAlg.startswith(b'ecdh-sha2-nistp'):
+            return ecPub.public_bytes(
+                serialization.Encoding.X962,
+                serialization.PublicFormat.UncompressedPoint
+            )
+        elif self.kexAlg in (
+                b'curve25519-sha256', b'curve25519-sha256@libssh.org'):
+            return ecPub.public_bytes(
+                serialization.Encoding.Raw,
+                serialization.PublicFormat.Raw
+            )
+        else:
+            raise UnsupportedAlgorithm(
+                'Cannot encode elliptic curve public key for %r' %
+                (self.kexAlg,))
+
+
+    def _generateECSharedSecret(self, ecPriv, theirECPubBytes):
+        """
+        Generate a shared secret for ECDH key exchange.
+
+        @type ecPriv: The appropriate private key type matching
+            C{self.kexAlg}: L{EllipticCurvePrivateKey} for
+            C{ecdh-sha2-nistp*}, or L{X25519PrivateKey} for
+            C{curve25519-sha256}.
+        @param ecPriv: Our private key.
+
+        @rtype: L{bytes}
+        @return: The generated shared secret, as an SSH multiple-precision
+            integer.
+        """
+        if self.kexAlg.startswith(b'ecdh-sha2-nistp'):
+            try:
+                curve = keys._curveTable[b'ecdsa' + self.kexAlg[4:]]
+            except KeyError:
+                raise UnsupportedAlgorithm('unused-key')
+
+            theirECPub = ec.EllipticCurvePublicKey.from_encoded_point(
+                curve, theirECPubBytes)
+            sharedSecret = ecPriv.exchange(ec.ECDH(), theirECPub)
+        elif self.kexAlg in (
+                b'curve25519-sha256', b'curve25519-sha256@libssh.org'):
+            theirECPub = x25519.X25519PublicKey.from_public_bytes(
+                theirECPubBytes)
+            sharedSecret = ecPriv.exchange(theirECPub)
+        else:
+            raise UnsupportedAlgorithm(
+                'Cannot generate elliptic curve shared secret for %r' %
+                (self.kexAlg,))
+
+        return _mpFromBytes(sharedSecret)
+
+
 
 class SSHServerTransport(SSHTransportBase):
     """
@@ -1285,34 +1391,15 @@ class SSHServerTransport(SSHTransportBase):
         pubHostKey = self.factory.publicKeys[self.keyAlg]
         privHostKey = self.factory.privateKeys[self.keyAlg]
 
-        # Get the curve instance
-        try:
-            curve = keys._curveTable[b'ecdsa' + self.kexAlg[4:]]
-        except KeyError:
-            raise UnsupportedAlgorithm('unused-key')
-
         # Generate the private key
-        ecPriv = ec.generate_private_key(curve, default_backend())
+        ecPriv = self._generateECPrivateKey()
 
         # Get the public key
-        ecPub = ecPriv.public_key()
-        encPub = ecPub.public_bytes(
-            serialization.Encoding.X962,
-            serialization.PublicFormat.UncompressedPoint
-        )
+        self.ecPub = ecPriv.public_key()
+        encPub = self._encodeECPublicKey(self.ecPub)
 
-        # Take the provided public key and transform it into
-        # a format for the cryptography module
-        theirECPub = ec.EllipticCurvePublicKey.from_encoded_point(curve,
-                                                                  pktPub)
-
-        # We need to convert to hex,
-        # so we can convert to an int
-        # so we can make it a multiple precision int.
-        sharedSecret = MP(
-                       int(
-                        binascii.hexlify(
-                          ecPriv.exchange(ec.ECDH(), theirECPub)), 16))
+        # Generate the shared secret
+        sharedSecret = self._generateECSharedSecret(ecPriv, pktPub)
 
         # Finish update and digest
         h = _kex.getHashProcessor(self.kexAlg)()
@@ -1590,21 +1677,14 @@ class SSHClientTransport(SSHTransportBase):
             return
         # Are we using ECDH?
         if _kex.isEllipticCurve(self.kexAlg):
-            # Find the base curve info
-            self.curve = keys._curveTable[b'ecdsa' + self.kexAlg[4:]]
-
             # Generate the keys
-            self.ecPriv = ec.generate_private_key(self.curve,
-                                                  default_backend())
+            self.ecPriv = self._generateECPrivateKey()
             self.ecPub = self.ecPriv.public_key()
 
             # DH_GEX_REQUEST_OLD is the same number we need.
             self.sendPacket(
                 MSG_KEX_DH_GEX_REQUEST_OLD,
-                NS(self.ecPub.public_bytes(
-                    serialization.Encoding.X962,
-                    serialization.PublicFormat.UncompressedPoint
-                ))
+                NS(self._encodeECPublicKey(self.ecPub))
             )
         elif _kex.isFixedGroup(self.kexAlg):
             # We agreed on a fixed group key exchange algorithm.
@@ -1651,19 +1731,7 @@ class SSHClientTransport(SSHTransportBase):
             # Save off the host public key.
             theirECHost = hostKey
 
-            # Take the provided public key and transform it into a format
-            # for the cryptography module
-            theirECPub = ec.EllipticCurvePublicKey.from_encoded_point(
-                self.curve, pubKey
-            )
-
-            # We need to convert to hex,
-            # so we can convert to an int
-            # so we can make a multiple precision int.
-            sharedSecret = MP(
-                           int(
-                           binascii.hexlify(
-                             self.ecPriv.exchange(ec.ECDH(), theirECPub)), 16))
+            sharedSecret = self._generateECSharedSecret(self.ecPriv, pubKey)
 
             h = _kex.getHashProcessor(self.kexAlg)()
             h.update(NS(self.ourVersionString))
@@ -1671,10 +1739,7 @@ class SSHClientTransport(SSHTransportBase):
             h.update(NS(self.ourKexInitPayload))
             h.update(NS(self.otherKexInitPayload))
             h.update(NS(theirECHost))
-            h.update(NS(self.ecPub.public_bytes(
-                serialization.Encoding.X962,
-                serialization.PublicFormat.UncompressedPoint
-            )))
+            h.update(NS(self._encodeECPublicKey(self.ecPub)))
             h.update(NS(pubKey))
             h.update(sharedSecret)
 
