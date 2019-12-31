@@ -37,17 +37,25 @@ if pyasn1 is not None and cryptography is not None:
     from cryptography.hazmat.primitives.asymmetric import dh, ec
     from cryptography.exceptions import UnsupportedAlgorithm
     from cryptography.hazmat.primitives import serialization
+
+    X25519_SUPPORTED = default_backend().x25519_supported()
 else:
     if pyasn1 is None:
         dependencySkip = "Cannot run without PyASN1"
     elif cryptography is None:
         dependencySkip = "can't run without cryptography"
+    X25519_SUPPORTED = False
 
 
-    class transport: # fictional modules to make classes work
-        class SSHTransportBase: pass
-        class SSHServerTransport: pass
-        class SSHClientTransport: pass
+    class transport:  # fictional modules to make classes work
+        class SSHTransportBase:
+            pass
+
+        class SSHServerTransport:
+            pass
+
+        class SSHClientTransport:
+            pass
 
 
     class factory:
@@ -57,6 +65,13 @@ else:
     class common:
         @classmethod
         def NS(self, arg): return b''
+
+
+
+def skipWithoutX25519(f):
+    if not X25519_SUPPORTED:
+        f.skip = "x25519 not supported on this system"
+    return f
 
 
 
@@ -464,6 +479,16 @@ class ECDHMixin:
     """
 
     kexAlgorithm = b'ecdh-sha2-nistp256'
+    hashProcessor = sha256
+
+
+
+class Curve25519SHA256Mixin:
+    """
+    Mixin for curve25519-sha256 tests.
+    """
+
+    kexAlgorithm = b'curve25519-sha256'
     hashProcessor = sha256
 
 
@@ -1272,6 +1297,16 @@ class BaseSSHTransportEllipticCurveTests(
 
 
 
+@skipWithoutX25519
+class BaseSSHTransportCurve25519SHA256Tests(
+        BaseSSHTransportDHGroupExchangeBaseCase, Curve25519SHA256Mixin,
+        TransportTestCase):
+    """
+    curve25519-sha256 tests for TransportBase
+    """
+
+
+
 class ServerAndClientSSHTransportBaseCase:
     """
     Tests that need to be run on both the server and the client.
@@ -1822,6 +1857,73 @@ class ServerSSHTransportDHGroupExchangeSHA256Tests(
 
 
 
+class ServerSSHTransportECDHBaseCase(ServerSSHTransportBaseCase):
+    """
+    Elliptic Curve Diffie-Hellman tests for SSHServerTransport.
+    """
+
+    def test_KEX_ECDH_INIT(self):
+        """
+        Test that the KEXDH_INIT message causes the server to send a
+        KEXDH_REPLY with the server's public key and a signature.
+        """
+        self.proto.supportedKeyExchanges = [self.kexAlgorithm]
+        self.proto.supportedPublicKeys = [b'ssh-rsa']
+        self.proto.dataReceived(self.transport.value())
+
+        privKey = self.proto.factory.privateKeys[b'ssh-rsa']
+        pubKey = self.proto.factory.publicKeys[b'ssh-rsa']
+        ecPriv = self.proto._generateECPrivateKey()
+        ecPub = ecPriv.public_key()
+        encPub = self.proto._encodeECPublicKey(ecPub)
+
+        self.proto.ssh_KEX_DH_GEX_REQUEST_OLD(common.NS(encPub))
+
+        sharedSecret = self.proto._generateECSharedSecret(
+            ecPriv, self.proto._encodeECPublicKey(self.proto.ecPub)
+        )
+
+        h = self.hashProcessor()
+        h.update(common.NS(self.proto.otherVersionString))
+        h.update(common.NS(self.proto.ourVersionString))
+        h.update(common.NS(self.proto.otherKexInitPayload))
+        h.update(common.NS(self.proto.ourKexInitPayload))
+        h.update(common.NS(pubKey.blob()))
+        h.update(common.NS(encPub))
+        h.update(common.NS(self.proto._encodeECPublicKey(self.proto.ecPub)))
+        h.update(sharedSecret)
+        exchangeHash = h.digest()
+
+        signature = privKey.sign(exchangeHash)
+
+        self.assertEqual(
+            self.packets,
+            [(transport.MSG_KEXDH_REPLY,
+              common.NS(pubKey.blob()) +
+              common.NS(self.proto._encodeECPublicKey(self.proto.ecPub)) +
+              common.NS(signature)),
+             (transport.MSG_NEWKEYS, b'')])
+
+
+
+class ServerSSHTransportECDHTests(
+        ServerSSHTransportECDHBaseCase, ECDHMixin, TransportTestCase):
+    """
+    ecdh-sha2-nistp256 tests for SSHServerTransport.
+    """
+
+
+
+@skipWithoutX25519
+class ServerSSHTransportCurve25519SHA256Tests(
+        ServerSSHTransportECDHBaseCase, Curve25519SHA256Mixin,
+        TransportTestCase):
+    """
+    curve25519-sha256 tests for SSHServerTransport.
+    """
+
+
+
 class ClientSSHTransportBaseCase(ServerAndClientSSHTransportBaseCase):
     """
     Base case for SSHClientTransport tests.
@@ -2326,6 +2428,113 @@ class ClientSSHTransportDHGroupExchangeSHA256Tests(
         TransportTestCase):
     """
     diffie-hellman-group-exchange-sha256 tests for SSHClientTransport.
+    """
+
+
+
+class ClientSSHTransportECDHBaseCase(ClientSSHTransportBaseCase):
+    """
+    Elliptic Curve Diffie-Hellman tests for SSHClientTransport.
+    """
+
+    def test_KEXINIT(self):
+        """
+        KEXINIT packet with an elliptic curve key exchange results
+        in a KEXDH_INIT message.
+        """
+        self.proto.supportedKeyExchanges = [self.kexAlgorithm]
+        self.proto.dataReceived(self.transport.value())
+        # The response will include the client's ephemeral public key.
+        self.assertEqual(self.packets, [(
+            transport.MSG_KEXDH_INIT,
+            common.NS(self.proto._encodeECPublicKey(self.proto.ecPub)))])
+
+
+    def begin_KEXDH_REPLY(self):
+        """
+        Utility for test_KEXDH_REPLY and
+        test_disconnectKEXDH_REPLYBadSignature.
+
+        Begins an Elliptic Curve Diffie-Hellman key exchange and computes
+        information needed to return either a correct or incorrect
+        signature.
+        """
+        self.test_KEXINIT()
+
+        privKey = MockFactory().getPrivateKeys()[b'ssh-rsa']
+        pubKey = MockFactory().getPublicKeys()[b'ssh-rsa']
+        ecPriv = self.proto._generateECPrivateKey()
+        ecPub = ecPriv.public_key()
+        encPub = self.proto._encodeECPublicKey(ecPub)
+
+        sharedSecret = self.proto._generateECSharedSecret(
+            ecPriv, self.proto._encodeECPublicKey(self.proto.ecPub)
+        )
+
+        h = self.hashProcessor()
+        h.update(common.NS(self.proto.ourVersionString))
+        h.update(common.NS(self.proto.otherVersionString))
+        h.update(common.NS(self.proto.ourKexInitPayload))
+        h.update(common.NS(self.proto.otherKexInitPayload))
+        h.update(common.NS(pubKey.blob()))
+        h.update(common.NS(self.proto._encodeECPublicKey(self.proto.ecPub)))
+        h.update(common.NS(encPub))
+        h.update(sharedSecret)
+        exchangeHash = h.digest()
+
+        signature = privKey.sign(exchangeHash)
+
+        return (
+            exchangeHash,
+            signature,
+            common.NS(pubKey.blob()) + common.NS(encPub))
+
+
+    def test_KEXDH_REPLY(self):
+        """
+        Test that the KEXDH_REPLY message completes the key exchange.
+        """
+        (exchangeHash, signature, packetStart) = self.begin_KEXDH_REPLY()
+
+        def _cbTestKEXDH_REPLY(value):
+            self.assertIsNone(value)
+            self.assertTrue(self.calledVerifyHostKey)
+            self.assertEqual(self.proto.sessionID, exchangeHash)
+
+        d = self.proto.ssh_KEX_DH_GEX_GROUP(packetStart + common.NS(signature))
+        d.addCallback(_cbTestKEXDH_REPLY)
+        return d
+
+
+    def test_disconnectKEXDH_REPLYBadSignature(self):
+        """
+        Test that KEX_ECDH_REPLY disconnects if the signature is bad.
+        """
+        (exchangeHash, signature, packetStart) = self.begin_KEXDH_REPLY()
+
+        d = self.proto.ssh_KEX_DH_GEX_GROUP(
+            packetStart + common.NS(b"bad signature"))
+        return d.addCallback(
+            lambda _: self.checkDisconnected(
+                transport.DISCONNECT_KEY_EXCHANGE_FAILED)
+        )
+
+
+
+class ClientSSHTransportECDHTests(
+        ClientSSHTransportECDHBaseCase, ECDHMixin, TransportTestCase):
+    """
+    ecdh-sha2-nistp256 tests for SSHClientTransport.
+    """
+
+
+
+@skipWithoutX25519
+class ClientSSHTransportCurve25519SHA256Tests(
+        ClientSSHTransportECDHBaseCase, Curve25519SHA256Mixin,
+        TransportTestCase):
+    """
+    curve25519-sha256 tests for SSHClientTransport.
     """
 
 
