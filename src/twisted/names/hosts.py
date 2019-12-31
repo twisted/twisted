@@ -13,14 +13,14 @@ from twisted.names import dns
 from twisted.python import failure
 from twisted.python.filepath import FilePath
 from twisted.internet import defer
-from twisted.internet.abstract import isIPAddress
+from twisted.internet.abstract import isIPAddress, isIPv6Address
 
 from twisted.names import common
 
 def searchFileForAll(hostsFile, name):
     """
-    Search the given file, which is in hosts(5) standard format, for an address
-    entry with a given name.
+    Search the given file, which is in hosts(5) standard format, for addresses
+    associated with a given name.
 
     @param hostsFile: The name of the hosts(5)-format file to search.
     @type hostsFile: L{FilePath}
@@ -107,7 +107,7 @@ class Resolver(common.ResolverBase):
                          dns.Record_AAAA(addr, self.ttl))
             for addr
             in searchFileForAll(FilePath(self.file), name)
-            if not isIPAddress(addr)])
+            if isIPv6Address(addr)])
 
 
     def _respond(self, name, records):
