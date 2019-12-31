@@ -119,6 +119,25 @@ class SearchHostsFileForAllTests(SynchronousTestCase, GoodTempPathMixin):
         self.assertEqual(
             [], searchFileForAll(self.path(), b"example.com"))
 
+    def test_malformedIP(self):
+        """
+        L{searchFileForAll} ignores any malformed IP addresses associated with
+        the name passed to it.
+        """
+        hosts = self.path()
+        hosts.setContent(
+            b"127.0.0.1\tmiser.example.org\tmiser\n"
+            b"not-an-ip\tmiser\n"
+            b"\xffnot-ascii\t miser\n"
+            b"# miser\n"
+            b"miser\n"
+            b"::1 miser"
+        )
+        self.assertEqual(
+            ['127.0.0.1', '::1'],
+            searchFileForAll(hosts, b'miser'),
+        )
+
 
 
 class HostsTests(SynchronousTestCase, GoodTempPathMixin):
@@ -136,6 +155,11 @@ class HostsTests(SynchronousTestCase, GoodTempPathMixin):
 1.1.1.4    multiple
 ::3        ip6-multiple
 ::4        ip6-multiple
+not-an-ip  malformed
+malformed
+# malformed
+1.1.1.5    malformed
+::5        malformed
 ''')
         self.ttl = 4200
         self.resolver = Resolver(f.path, self.ttl)
@@ -249,3 +273,30 @@ class HostsTests(SynchronousTestCase, GoodTempPathMixin):
         """
         self.failureResultOf(self.resolver.lookupAllRecords(b'foueoa'),
                              DomainError)
+
+    def test_lookupMalformed(self):
+        """
+        L{hosts.Resolver.lookupAddress} returns a L{Deferred} which fires with
+        the valid addresses from the hosts file, ignoring any entries that
+        aren't valid IP addresses.
+        """
+        d = self.resolver.lookupAddress(b'malformed')
+        [answer], authority, additional = self.successResultOf(d)
+        self.assertEqual(
+            RRHeader(b"malformed", A, IN, self.ttl,
+                     Record_A("1.1.1.5", self.ttl)),
+            answer,
+        )
+
+    def test_lookupIPV6Malformed(self):
+        """
+        Like L{test_lookupAddressMalformed}, but for
+        L{hosts.Resolver.lookupIPV6Address}.
+        """
+        d = self.resolver.lookupIPV6Address(b'malformed')
+        [answer], authority, additional = self.successResultOf(d)
+        self.assertEqual(
+            RRHeader(b"malformed", AAAA, IN, self.ttl,
+                     Record_AAAA("::5", self.ttl)),
+            answer,
+        )
