@@ -64,7 +64,7 @@ class FileAuthority(common.ResolverBase):
     An Authority that is loaded from a file.
 
     This is an abstract class that implements record search logic. To create
-    a functional resolver, subclass it and override the L{loadFile()} method.
+    a functional resolver, subclass it and override the L{loadFile} method.
 
     @ivar _ADDITIONAL_PROCESSING_TYPES: Record types for which additional
         processing will be done.
@@ -104,6 +104,8 @@ class FileAuthority(common.ResolverBase):
 
         @param filename: The I{filename} parameter that was passed to the
         initilizer.
+
+        @returns: L{None} -- the return value is ignored
         """
 
 
