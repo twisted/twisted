@@ -166,6 +166,8 @@ class SecondaryAuthority(FileAuthority):
         @returns: A L{Deferred} that fires with L{None} when attempted zone
             transfer has completed.
         """
+        # FIXME: This logic doesn't avoid duplicate transfers
+        # https://twistedmatrix.com/trac/ticket/9754
         if self.transferring:  # <-- never true
             return
         self.transfering = True  # <-- speling
