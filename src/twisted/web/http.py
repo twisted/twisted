@@ -1692,7 +1692,7 @@ class PotentialDataLoss(Exception):
 
 class ConnectionLostError(RuntimeError):
     """
-    L{ConnectionLostError} may be raises by Request.finish when called on a request
+    L{ConnectionLostError} may be raised by Request.finish when called on a request
     after its connection was lost
     """
 
