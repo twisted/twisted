@@ -1426,6 +1426,73 @@ class ChunkingTests(unittest.TestCase, ResponseTestMixin):
               b"Transfer-Encoding: chunked",
               b"5\r\nHello\r\n6\r\nWorld!\r\n")])
 
+    def runChunkedRequest(self, httpRequest, requestFactory=None,
+                          chunkSize=1):
+        """
+        Execute a web request based on plain text content, chunking
+        the request payload.
+
+        This is a stripped-down, chunking version of ParsingTests.runRequest.
+        """
+        channel = http.HTTPChannel()
+
+        if requestFactory:
+            channel.requestFactory = _makeRequestProxyFactory(requestFactory)
+
+        httpRequest = httpRequest.replace(b"\n", b"\r\n")
+        header, body = httpRequest.split(b"\r\n\r\n", 1)
+
+        transport = StringTransport()
+
+        channel.makeConnection(transport)
+        channel.dataReceived(header+b"\r\n\r\n")
+
+        for pos in range(len(body)//chunkSize+1):
+            if channel.transport.disconnecting:
+                break
+            channel.dataReceived(b"".join(
+                http.toChunk(body[pos*chunkSize:(pos+1)*chunkSize])))
+
+        channel.dataReceived(b"".join(http.toChunk(b"")))
+        channel.connectionLost(IOError("all done"))
+
+        return channel
+
+    def test_multipartFormData(self):
+        """
+        Test that chunked uploads are actually processed into args.
+
+        This is essentially a copy of ParsingTests.test_multipartFormData,
+        just with chunking put in.
+
+        This fails as of twisted version 18.9.0 because of bug #9678.
+        """
+        processed = []
+
+        class MyRequest(http.Request):
+            def process(self):
+                processed.append(self)
+                self.write(b"done")
+                self.finish()
+        req = b'''\
+POST / HTTP/1.0
+Content-Type: multipart/form-data; boundary=AaB03x
+Transfer-Encoding: chunked
+
+--AaB03x
+Content-Type: text/plain
+Content-Disposition: form-data; name="text"
+Content-Transfer-Encoding: quoted-printable
+
+abasdfg
+--AaB03x--
+'''
+        channel = self.runChunkedRequest(req, MyRequest, chunkSize=5)
+        self.assertEqual(channel.transport.value(),
+                         b"HTTP/1.0 200 OK\r\n\r\ndone")
+        self.assertEqual(len(processed), 1)
+        self.assertEqual(processed[0].args, {b"text": [b"abasdfg"]})
+
 
 
 class ParsingTests(unittest.TestCase):
