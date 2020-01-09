@@ -873,7 +873,8 @@ class Request:
         @type version: C{bytes}
         @param version: The HTTP version of this request.
         """
-        self.content.seek(0,0)
+        clength = self.content.tell()
+        self.content.seek(0, 0)
         self.args = {}
 
         self.method, self.uri = command, path
@@ -889,16 +890,16 @@ class Request:
         # Argument processing
         args = self.args
         ctype = self.requestHeaders.getRawHeaders(b'content-type')
-        clength = self.requestHeaders.getRawHeaders(b'content-length')
         if ctype is not None:
             ctype = ctype[0]
-
-        if clength is not None:
-            clength = clength[0]
 
         if self.method == b"POST" and ctype and clength:
             mfd = b'multipart/form-data'
             key, pdict = _parseHeader(ctype)
+            # This weird CONTENT-LENGTH param is required by
+            # cgi.parse_multipart() in some versions of Python 3.7+, see
+            # bpo-29979. It looks like this will be relaxed and backported, see
+            # https://github.com/python/cpython/pull/8530.
             pdict["CONTENT-LENGTH"] = clength
             if key == b'application/x-www-form-urlencoded':
                 args.update(parse_qs(self.content.read(), 1))
