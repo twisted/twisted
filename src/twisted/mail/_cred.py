@@ -8,6 +8,7 @@ Credential managers for L{twisted.mail}.
 from __future__ import absolute_import, division
 
 import hmac
+import hashlib
 
 from zope.interface import implementer
 
@@ -28,7 +29,7 @@ class CramMD5ClientAuthenticator:
 
 
     def challengeResponse(self, secret, chal):
-        response = hmac.HMAC(secret, chal).hexdigest().encode('ascii')
+        response = hmac.HMAC(secret, chal, digestmod = hashlib.md5).hexdigest().encode('ascii')
         return self.user + b' ' + response
 
 
