@@ -83,103 +83,107 @@ class ResolverBase:
 
 
     def lookupAddress(self, name, timeout=None):
-        return self._lookup(name, dns.IN, dns.A, timeout)
+        return self._lookup(dns.domainString(name), dns.IN, dns.A, timeout)
 
 
     def lookupIPV6Address(self, name, timeout=None):
-        return self._lookup(name, dns.IN, dns.AAAA, timeout)
+        return self._lookup(dns.domainString(name), dns.IN, dns.AAAA, timeout)
 
 
     def lookupAddress6(self, name, timeout=None):
-        return self._lookup(name, dns.IN, dns.A6, timeout)
+        return self._lookup(dns.domainString(name), dns.IN, dns.A6, timeout)
 
 
     def lookupMailExchange(self, name, timeout=None):
-        return self._lookup(name, dns.IN, dns.MX, timeout)
+        return self._lookup(dns.domainString(name), dns.IN, dns.MX, timeout)
 
 
     def lookupNameservers(self, name, timeout=None):
-        return self._lookup(name, dns.IN, dns.NS, timeout)
+        return self._lookup(dns.domainString(name), dns.IN, dns.NS, timeout)
 
 
     def lookupCanonicalName(self, name, timeout=None):
-        return self._lookup(name, dns.IN, dns.CNAME, timeout)
+        return self._lookup(dns.domainString(name), dns.IN, dns.CNAME, timeout)
 
 
     def lookupMailBox(self, name, timeout=None):
-        return self._lookup(name, dns.IN, dns.MB, timeout)
+        return self._lookup(dns.domainString(name), dns.IN, dns.MB, timeout)
 
 
     def lookupMailGroup(self, name, timeout=None):
-        return self._lookup(name, dns.IN, dns.MG, timeout)
+        return self._lookup(dns.domainString(name), dns.IN, dns.MG, timeout)
 
 
     def lookupMailRename(self, name, timeout=None):
-        return self._lookup(name, dns.IN, dns.MR, timeout)
+        return self._lookup(dns.domainString(name), dns.IN, dns.MR, timeout)
 
 
     def lookupPointer(self, name, timeout=None):
-        return self._lookup(name, dns.IN, dns.PTR, timeout)
+        return self._lookup(dns.domainString(name), dns.IN, dns.PTR, timeout)
 
 
     def lookupAuthority(self, name, timeout=None):
-        return self._lookup(name, dns.IN, dns.SOA, timeout)
+        return self._lookup(dns.domainString(name), dns.IN, dns.SOA, timeout)
 
 
     def lookupNull(self, name, timeout=None):
-        return self._lookup(name, dns.IN, dns.NULL, timeout)
+        return self._lookup(dns.domainString(name), dns.IN, dns.NULL, timeout)
 
 
     def lookupWellKnownServices(self, name, timeout=None):
-        return self._lookup(name, dns.IN, dns.WKS, timeout)
+        return self._lookup(dns.domainString(name), dns.IN, dns.WKS, timeout)
 
 
     def lookupService(self, name, timeout=None):
-        return self._lookup(name, dns.IN, dns.SRV, timeout)
+        return self._lookup(dns.domainString(name), dns.IN, dns.SRV, timeout)
 
 
     def lookupHostInfo(self, name, timeout=None):
-        return self._lookup(name, dns.IN, dns.HINFO, timeout)
+        return self._lookup(dns.domainString(name), dns.IN, dns.HINFO, timeout)
 
 
     def lookupMailboxInfo(self, name, timeout=None):
-        return self._lookup(name, dns.IN, dns.MINFO, timeout)
+        return self._lookup(dns.domainString(name), dns.IN, dns.MINFO, timeout)
 
 
     def lookupText(self, name, timeout=None):
-        return self._lookup(name, dns.IN, dns.TXT, timeout)
+        return self._lookup(dns.domainString(name), dns.IN, dns.TXT, timeout)
 
 
     def lookupSenderPolicy(self, name, timeout=None):
-        return self._lookup(name, dns.IN, dns.SPF, timeout)
+        return self._lookup(dns.domainString(name), dns.IN, dns.SPF, timeout)
 
 
     def lookupResponsibility(self, name, timeout=None):
-        return self._lookup(name, dns.IN, dns.RP, timeout)
+        return self._lookup(dns.domainString(name), dns.IN, dns.RP, timeout)
 
 
     def lookupAFSDatabase(self, name, timeout=None):
-        return self._lookup(name, dns.IN, dns.AFSDB, timeout)
+        return self._lookup(dns.domainString(name), dns.IN, dns.AFSDB, timeout)
 
 
     def lookupZone(self, name, timeout=None):
-        return self._lookup(name, dns.IN, dns.AXFR, timeout)
+        return self._lookup(dns.domainString(name), dns.IN, dns.AXFR, timeout)
 
 
     def lookupNamingAuthorityPointer(self, name, timeout=None):
-        return self._lookup(name, dns.IN, dns.NAPTR, timeout)
+        return self._lookup(dns.domainString(name), dns.IN, dns.NAPTR, timeout)
 
 
     def lookupAllRecords(self, name, timeout=None):
-        return self._lookup(name, dns.IN, dns.ALL_RECORDS, timeout)
+        return self._lookup(dns.domainString(name), dns.IN, dns.ALL_RECORDS,
+                            timeout)
 
 
     # IResolverSimple
     def getHostByName(self, name, timeout=None, effort=10):
+        name = dns.domainString(name)
         # XXX - respect timeout
-        return self.lookupAllRecords(name, timeout
-            ).addCallback(self._cbRecords, name, effort
-            )
+        # XXX - this should do A and AAAA lookups, not ANY (see RFC 8482).
+        # https://twistedmatrix.com/trac/ticket/9691
+        d = self.lookupAllRecords(name, timeout)
+        d.addCallback(self._cbRecords, name, effort)
+        return d
 
 
     def _cbRecords(self, records, name, effort):
@@ -192,8 +196,35 @@ class ResolverBase:
 
 
 def extractRecord(resolver, name, answers, level=10):
+    """
+    Resolve a name to an IP address, following I{CNAME} records and I{NS}
+    referrals recursively.
+
+    This is an implementation detail of L{ResolverBase.getHostByName}.
+
+    @param resolver: The resolver to use for the next query (unless handling
+    an I{NS} referral).
+    @type resolver: L{IResolver}
+
+    @param name: The name being looked up.
+    @type name: L{dns.Name}
+
+    @param answers: All of the records returned by the previous query (answers,
+    authority, and additional concatenated).
+    @type answers: L{list} of L{dns.RRHeader}
+
+    @param level: Remaining recursion budget. This is decremented at each
+    recursion. The query returns L{None} when it reaches 0.
+    @type level: L{int}
+
+    @returns: The first IPv4 or IPv6 address (as a dotted quad or colon
+    quibbles), or L{None} when no result is found.
+    @rtype: native L{str} or L{None}
+    """
     if not level:
         return None
+    # FIXME: twisted.python.compat monkeypatches this if missing, so this
+    # condition is always true. https://twistedmatrix.com/trac/ticket/9753
     if hasattr(socket, 'inet_ntop'):
         for r in answers:
             if r.name == name and r.type == dns.A6:
@@ -210,20 +241,23 @@ def extractRecord(resolver, name, answers, level=10):
                 resolver, r.payload.name, answers, level - 1)
             if not result:
                 return resolver.getHostByName(
-                    str(r.payload.name), effort=level - 1)
+                    r.payload.name.name, effort=level - 1)
             return result
     # No answers, but maybe there's a hint at who we should be asking about
     # this
     for r in answers:
-        if r.type == dns.NS:
-            from twisted.names import client
-            r = client.Resolver(servers=[(str(r.payload.name), dns.PORT)])
-            return r.lookupAddress(str(name)
-                ).addCallback(
-                    lambda records: extractRecord(
-                        r, name,
-                        records[_ANS] + records[_AUTH] + records[_ADD],
-                        level - 1))
+        if r.type != dns.NS:
+            continue
+        from twisted.names import client
+        nsResolver = client.Resolver(servers=[
+            (r.payload.name.name.decode('ascii'), dns.PORT),
+        ])
+
+        def queryAgain(records):
+            (ans, auth, add) = records
+            return extractRecord(nsResolver, name, ans + auth + add, level - 1)
+
+        return nsResolver.lookupAddress(name.name).addCallback(queryAgain)
 
 
 
