@@ -1,0 +1,1 @@
+twisted.protocols.amp.BoxDispatcher.callRemote and callRemoteString will no longer return failing Deferreds for requiresAnswer=False commands when the transport they're operating on has been disconnected.
