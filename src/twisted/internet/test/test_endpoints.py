@@ -18,9 +18,9 @@ from zope.interface.interface import InterfaceClass
 from zope.interface.verify import verifyObject, verifyClass
 
 from twisted.trial import unittest
-from twisted.test.proto_helpers import MemoryReactorClock as MemoryReactor
-from twisted.test.proto_helpers import RaisingMemoryReactor, StringTransport
-from twisted.test.proto_helpers import StringTransportWithDisconnection
+from twisted.internet.testing import MemoryReactorClock as MemoryReactor
+from twisted.internet.testing import RaisingMemoryReactor, StringTransport
+from twisted.internet.testing import StringTransportWithDisconnection
 
 from twisted import plugins
 from twisted.internet import error, interfaces, defer, endpoints, protocol
@@ -1981,7 +1981,7 @@ class _HostnameEndpointMemoryReactorMixin(ClientEndpointTestCaseMixin):
         self.assertTrue(warnings[0]['message'].startswith(
             'Passing HostnameEndpoint a reactor that does not provide'
             ' IReactorPluggableNameResolver'
-            ' (twisted.test.proto_helpers.MemoryReactorClock)'
+            ' (twisted.internet.testing.MemoryReactorClock)'
             ' was deprecated in Twisted 17.5.0;'
             ' please use a reactor that provides'
             ' IReactorPluggableNameResolver instead'))

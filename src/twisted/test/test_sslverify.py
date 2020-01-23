@@ -2385,12 +2385,13 @@ class NPNAndALPNAbsentTests(unittest.TestCase):
     NPN/ALPN operations fail on platforms that do not support them.
 
     These tests only run on platforms that have a PyOpenSSL version < 0.15,
-    or an OpenSSL version earlier than 1.0.1
+    an OpenSSL version earlier than 1.0.1, or an OpenSSL/cryptography built
+    without NPN support.
     """
     if skipSSL:
         skip = skipSSL
-    elif not skipNPN:
-        skip = "NPN/ALPN is present on this platform"
+    elif not skipNPN or not skipALPN:
+        skip = "NPN and/or ALPN is present on this platform"
 
 
     def test_nextProtocolMechanismsNoNegotiationSupported(self):

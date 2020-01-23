@@ -7,7 +7,12 @@ Test HTTP support.
 
 from __future__ import absolute_import, division
 
-import random, cgi, base64, calendar
+import base64
+import calendar
+import cgi
+import random
+
+import hamcrest
 
 try:
     from urlparse import urlparse, urlunsplit, clear_cache
@@ -16,7 +21,11 @@ except ImportError:
 
 from io import BytesIO
 from itertools import cycle
-from zope.interface import provider
+from zope.interface import (
+    provider,
+    directlyProvides,
+    providedBy,
+)
 from zope.interface.verify import verifyObject
 
 from twisted.python.compat import (_PY3, iterbytes, long, networkString,
@@ -42,8 +51,11 @@ from twisted.web.test.requesthelper import (
     textLinearWhitespaceComponents,
 )
 
-from zope.interface import directlyProvides, providedBy
 from twisted.logger import globalLogPublisher
+
+from ._util import (
+    assertIsFilesystemTemporary,
+)
 
 
 
@@ -764,6 +776,59 @@ class GenericHTTPChannelTests(unittest.TestCase):
         return a._negotiatedProtocol
 
 
+    def test_h2CancelsH11Timeout(self):
+        """
+        When the transport is switched to H2, the HTTPChannel timeouts are
+        cancelled.
+        """
+        clock = Clock()
+
+        a = http._genericHTTPChannelProtocolFactory(b'')
+        a.requestFactory = DummyHTTPHandlerProxy
+
+        # Set the original timeout to be 100s
+        a.timeOut = 100
+        a.callLater = clock.callLater
+
+        b = StringTransport()
+        b.negotiatedProtocol = b'h2'
+        a.makeConnection(b)
+
+        # We've made the connection, but we actually check if we've negotiated
+        # H2 when data arrives. Right now, the HTTPChannel will have set up a
+        # single delayed call.
+        hamcrest.assert_that(
+            clock.getDelayedCalls(),
+            hamcrest.contains(
+                hamcrest.has_property(
+                    "cancelled",
+                    hamcrest.equal_to(False),
+                ),
+            ),
+        )
+        h11Timeout = clock.getDelayedCalls()[0]
+
+        # We give it the HTTP data, and it switches out for H2.
+        a.dataReceived(b'')
+        self.assertEqual(a._negotiatedProtocol, b'h2')
+
+        # The first delayed call is cancelled, and H2 creates a new one for its
+        # own timeouts.
+        self.assertTrue(h11Timeout.cancelled)
+        hamcrest.assert_that(
+            clock.getDelayedCalls(),
+            hamcrest.contains(
+                hamcrest.has_property(
+                    "cancelled",
+                    hamcrest.equal_to(False),
+                ),
+            ),
+        )
+
+    if not http.H2_ENABLED:
+        test_h2CancelsH11Timeout.skip = "HTTP/2 support not present"
+
+
     def test_protocolUnspecified(self):
         """
         If the transport has no support for protocol negotiation (no
@@ -902,15 +967,22 @@ class GenericHTTPChannelTests(unittest.TestCase):
         genericProtocol.requestFactory = DummyHTTPHandlerProxy
         genericProtocol.makeConnection(transport)
 
+        originalChannel = genericProtocol._channel
+
         # We expect the transport has a underlying channel registered as
         # a producer.
-        self.assertIs(transport.producer, genericProtocol._channel)
+        self.assertIs(transport.producer, originalChannel)
 
         # Force the upgrade.
         genericProtocol.dataReceived(b'P')
 
-        # The transport should now have no producer.
-        self.assertIs(transport.producer, None)
+        # The transport should not have the original channel as its
+        # producer...
+        self.assertIsNot(transport.producer, originalChannel)
+
+        # ...it should have the new H2 channel as its producer
+        self.assertIs(transport.producer, genericProtocol._channel)
+
     if not http.H2_ENABLED:
         test_unregistersProducer.skip = "HTTP/2 support not present"
 
@@ -1354,6 +1426,73 @@ class ChunkingTests(unittest.TestCase, ResponseTestMixin):
               b"Transfer-Encoding: chunked",
               b"5\r\nHello\r\n6\r\nWorld!\r\n")])
 
+    def runChunkedRequest(self, httpRequest, requestFactory=None,
+                          chunkSize=1):
+        """
+        Execute a web request based on plain text content, chunking
+        the request payload.
+
+        This is a stripped-down, chunking version of ParsingTests.runRequest.
+        """
+        channel = http.HTTPChannel()
+
+        if requestFactory:
+            channel.requestFactory = _makeRequestProxyFactory(requestFactory)
+
+        httpRequest = httpRequest.replace(b"\n", b"\r\n")
+        header, body = httpRequest.split(b"\r\n\r\n", 1)
+
+        transport = StringTransport()
+
+        channel.makeConnection(transport)
+        channel.dataReceived(header+b"\r\n\r\n")
+
+        for pos in range(len(body)//chunkSize+1):
+            if channel.transport.disconnecting:
+                break
+            channel.dataReceived(b"".join(
+                http.toChunk(body[pos*chunkSize:(pos+1)*chunkSize])))
+
+        channel.dataReceived(b"".join(http.toChunk(b"")))
+        channel.connectionLost(IOError("all done"))
+
+        return channel
+
+    def test_multipartFormData(self):
+        """
+        Test that chunked uploads are actually processed into args.
+
+        This is essentially a copy of ParsingTests.test_multipartFormData,
+        just with chunking put in.
+
+        This fails as of twisted version 18.9.0 because of bug #9678.
+        """
+        processed = []
+
+        class MyRequest(http.Request):
+            def process(self):
+                processed.append(self)
+                self.write(b"done")
+                self.finish()
+        req = b'''\
+POST / HTTP/1.0
+Content-Type: multipart/form-data; boundary=AaB03x
+Transfer-Encoding: chunked
+
+--AaB03x
+Content-Type: text/plain
+Content-Disposition: form-data; name="text"
+Content-Transfer-Encoding: quoted-printable
+
+abasdfg
+--AaB03x--
+'''
+        channel = self.runChunkedRequest(req, MyRequest, chunkSize=5)
+        self.assertEqual(channel.transport.value(),
+                         b"HTTP/1.0 200 OK\r\n\r\ndone")
+        self.assertEqual(len(processed), 1)
+        self.assertEqual(processed[0].args, {b"text": [b"abasdfg"]})
+
 
 
 class ParsingTests(unittest.TestCase):
@@ -1369,7 +1508,8 @@ class ParsingTests(unittest.TestCase):
         """
         Execute a web request based on plain text content.
 
-        @param httpRequest: Content for the request which is processed.
+        @param httpRequest: Content for the request which is processed. Each
+            L{"\n"} will be replaced with L{"\r\n"}.
         @type httpRequest: C{bytes}
 
         @param requestFactory: 2-argument callable returning a Request.
@@ -1406,6 +1546,32 @@ class ParsingTests(unittest.TestCase):
         else:
             self.assertFalse(self.didRequest)
         return channel
+
+
+    def assertRequestRejected(self, requestLines):
+        """
+        Execute a HTTP request and assert that it is rejected with a 400 Bad
+        Response and disconnection.
+
+        @param requestLines: Plain text lines of the request. These lines will
+            be joined with newlines to form the HTTP request that is processed.
+        @type requestLines: C{list} of C{bytes}
+        """
+        httpRequest = b"\n".join(requestLines)
+        processed = []
+
+        class MyRequest(http.Request):
+            def process(self):
+                processed.append(self)
+                self.finish()
+
+        channel = self.runRequest(httpRequest, MyRequest, success=False)
+        self.assertEqual(
+            channel.transport.value(),
+            b"HTTP/1.1 400 Bad Request\r\n\r\n",
+        )
+        self.assertTrue(channel.transport.disconnecting)
+        self.assertEqual(processed, [])
 
 
     def test_invalidNonAsciiMethod(self):
@@ -1475,47 +1641,85 @@ class ParsingTests(unittest.TestCase):
             request.requestHeaders.getRawHeaders(b'bAz'), [b'Quux', b'quux'])
 
 
-    def test_tooManyHeaders(self):
+    def test_headersMultiline(self):
         """
-        L{HTTPChannel} enforces a limit of C{HTTPChannel.maxHeaders} on the
-        number of headers received per request.
-        """
-        processed = []
-        class MyRequest(http.Request):
-            def process(self):
-                processed.append(self)
+        Line folded headers are handled by L{HTTPChannel} by replacing each
+        fold with a single space by the time they are made available to the
+        L{Request}. Any leading whitespace in the folded lines of the header
+        value is preserved.
 
-        requestLines = [b"GET / HTTP/1.0"]
-        for i in range(http.HTTPChannel.maxHeaders + 2):
-            requestLines.append(networkString("%s: foo" % (i,)))
-        requestLines.extend([b"", b""])
-
-        channel = self.runRequest(b"\n".join(requestLines), MyRequest, 0)
-        self.assertEqual(processed, [])
-        self.assertEqual(
-            channel.transport.value(),
-            b"HTTP/1.1 400 Bad Request\r\n\r\n")
-
-
-    def test_invalidContentLengthHeader(self):
-        """
-        If a Content-Length header with a non-integer value is received, a 400
-        (Bad Request) response is sent to the client and the connection is
-        closed.
+        See RFC 7230 section 3.2.4.
         """
         processed = []
+
         class MyRequest(http.Request):
             def process(self):
                 processed.append(self)
                 self.finish()
 
-        requestLines = [b"GET / HTTP/1.0", b"Content-Length: x", b"", b""]
-        channel = self.runRequest(b"\n".join(requestLines), MyRequest, 0)
+        requestLines = [
+            b"GET / HTTP/1.0",
+            b"nospace: ",
+            b" nospace\t",
+            b"space:space",
+            b" space",
+            b"spaces: spaces",
+            b"  spaces",
+            b"   spaces",
+            b"tab: t",
+            b"\ta",
+            b"\tb",
+            b"",
+            b"",
+        ]
+
+        self.runRequest(b"\n".join(requestLines), MyRequest, 0)
+        [request] = processed
+        # All leading and trailing whitespace is stripped from the
+        # header-value.
         self.assertEqual(
-            channel.transport.value(),
-            b"HTTP/1.1 400 Bad Request\r\n\r\n")
-        self.assertTrue(channel.transport.disconnecting)
-        self.assertEqual(processed, [])
+            request.requestHeaders.getRawHeaders(b"nospace"),
+            [b"nospace"],
+        )
+        self.assertEqual(
+            request.requestHeaders.getRawHeaders(b"space"),
+            [b"space  space"],
+        )
+        self.assertEqual(
+            request.requestHeaders.getRawHeaders(b"spaces"),
+            [b"spaces   spaces    spaces"],
+        )
+        self.assertEqual(
+            request.requestHeaders.getRawHeaders(b"tab"),
+            [b"t \ta \tb"],
+        )
+
+
+    def test_tooManyHeaders(self):
+        """
+        C{HTTPChannel} enforces a limit of C{HTTPChannel.maxHeaders} on the
+        number of headers received per request.
+        """
+        requestLines = [b"GET / HTTP/1.0"]
+        for i in range(http.HTTPChannel.maxHeaders + 2):
+            requestLines.append(networkString("%s: foo" % (i,)))
+        requestLines.extend([b"", b""])
+
+        self.assertRequestRejected(requestLines)
+
+
+    def test_invalidContentLengthHeader(self):
+        """
+        If a I{Content-Length} header with a non-integer value is received,
+        a 400 (Bad Request) response is sent to the client and the connection
+        is closed.
+        """
+        self.assertRequestRejected([
+            b"GET / HTTP/1.0",
+            b"Content-Length: x",
+            b"",
+            b"",
+        ])
 
 
     def test_invalidHeaderNoColon(self):
@@ -1523,24 +1727,46 @@ class ParsingTests(unittest.TestCase):
         If a header without colon is received a 400 (Bad Request) response
         is sent to the client and the connection is closed.
         """
-        processed = []
-        class MyRequest(http.Request):
-            def process(self):
-                processed.append(self)
-                self.finish()
+        self.assertRequestRejected([
+            b"GET / HTTP/1.0",
+            b"HeaderName ",
+            b"",
+            b"",
+        ])
 
-        requestLines = [b"GET / HTTP/1.0", b"HeaderName ", b"", b""]
-        channel = self.runRequest(b"\n".join(requestLines), MyRequest, 0)
-        self.assertEqual(
-            channel.transport.value(),
-            b"HTTP/1.1 400 Bad Request\r\n\r\n")
-        self.assertTrue(channel.transport.disconnecting)
-        self.assertEqual(processed, [])
+
+    def test_invalidHeaderOnlyColon(self):
+        """
+        C{HTTPChannel} rejects a request with an empty header name (i.e.
+        nothing before the colon).  It produces a 400 (Bad Request) response is
+        generated and closes the connection.
+        """
+        self.assertRequestRejected([
+            b"GET / HTTP/1.0",
+            b": foo",
+            b"",
+            b"",
+        ])
+
+
+    def test_invalidHeaderWhitespaceBeforeColon(self):
+        """
+        C{HTTPChannel} rejects a request containing a header with whitespace
+        between the header name and colon as requried by RFC 7230 section
+        3.2.4. A 400 (Bad Request) response is generated and the connection
+        closed.
+        """
+        self.assertRequestRejected([
+            b"GET / HTTP/1.0",
+            b"HeaderName : foo",
+            b"",
+            b"",
+        ])
 
 
     def test_headerLimitPerRequest(self):
         """
-        L{HTTPChannel} enforces the limit of C{HTTPChannel.maxHeaders} per
+        C{HTTPChannel} enforces the limit of C{HTTPChannel.maxHeaders} per
         request so that headers received in an earlier request do not count
         towards the limit when processing a later request.
         """
@@ -1935,10 +2161,14 @@ Hello,
         content = []
         decoder = []
         testcase = self
+
         class MyRequest(http.Request):
             def process(self):
-                content.append(self.content.fileno())
+                content.append(self.content)
                 content.append(self.content.read())
+                # Don't let it close the original content object.  We want to
+                # inspect it later.
+                self.content = BytesIO()
                 method.append(self.method)
                 path.append(self.path)
                 decoder.append(self.channel._transferDecoder)
@@ -1946,13 +2176,12 @@ Hello,
                 self.finish()
 
         self.runRequest(httpRequest, MyRequest)
-        # The tempfile API used to create content returns an
-        # instance of a different type depending on what platform
-        # we're running on.  The point here is to verify that the
-        # request body is in a file that's on the filesystem.
-        # Having a fileno method that returns an int is a somewhat
-        # close approximation of this. -exarkun
-        self.assertIsInstance(content[0], int)
+
+        # We took responsibility for closing this when we replaced the request
+        # attribute, above.
+        self.addCleanup(content[0].close)
+
+        assertIsFilesystemTemporary(self, content[0])
         self.assertEqual(content[1], b'Hello, spam,eggs spam spam')
         self.assertEqual(method, [b'GET'])
         self.assertEqual(path, [b'/'])
@@ -2015,7 +2244,7 @@ Hello,
         self.patch(base64, 'decodestring', lambda x: [])
         self.runRequest(f, Request, 0)
         req = requests.pop()
-        self.assertEqual(('', ''), req.credentials)
+        self.assertEqual((b'', b''), req.credentials)
         self.assertEquals(1, len(logObserver))
         event = logObserver[0]
         f = event["log_failure"]
@@ -2929,6 +3158,19 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         channel = DummyChannel()
         req = http.Request(channel, False)
         req.connectionLost(Failure(ConnectionLost("The end.")))
+        self.assertRaises(RuntimeError, req.finish)
+
+
+    def test_writeAfterConnectionLost(self):
+        """
+        Calling L{Request.write} after L{Request.connectionLost} has been
+        called does not raise an exception. L{RuntimeError} will be raised
+        when finish is called on the request.
+        """
+        channel = DummyChannel()
+        req = http.Request(channel, False)
+        req.connectionLost(Failure(ConnectionLost("The end.")))
+        req.write(b'foobar')
         self.assertRaises(RuntimeError, req.finish)
 
 

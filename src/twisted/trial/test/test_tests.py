@@ -23,10 +23,12 @@ of course.
 
 from __future__ import division, absolute_import
 
-import gc, sys, weakref
+import gc
+import sys
+import weakref
 import unittest as pyunit
 
-from twisted.python.compat import NativeStringIO, _PY3
+from twisted.python.compat import NativeStringIO, _PY3, _PYPY
 from twisted.python.reflect import namedAny
 from twisted.internet import defer, reactor
 from twisted.trial import unittest, reporter, util
@@ -862,6 +864,9 @@ class UnhandledDeferredTests(unittest.SynchronousTestCase):
         x = self.flushLoggedErrors()
         self.assertEqual(len(x), 0, 'Errors logged after gc.collect')
 
+    if _PYPY:
+        test_doesntBleed.skip = "GC works differently on PyPy."
+
     def tearDown(self):
         """
         Tear down the test
@@ -1023,7 +1028,6 @@ class SuiteClearingMixin(object):
         This test is important since C{_clearSuite} operates by mutating
         internal variables.
         """
-        pyunit = __import__('unittest')
         suite = pyunit.TestSuite()
         suite.addTest(self.TestCase())
         # Double check that the test suite actually has something in it.

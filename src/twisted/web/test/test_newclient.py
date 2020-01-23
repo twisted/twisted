@@ -527,6 +527,28 @@ class HTTPClientParserTests(TestCase):
         self.assertIdentical(protocol.response.length, UNKNOWN_LENGTH)
 
 
+    def test_responseHeadersMultiline(self):
+        """
+        The multi-line response headers are folded and added to the response
+        object's C{headers} L{Headers} instance.
+        """
+        protocol = HTTPClientParser(
+            Request(b'GET', b'/', _boringHeaders, None),
+            lambda rest: None)
+        protocol.makeConnection(StringTransport())
+        protocol.dataReceived(b'HTTP/1.1 200 OK\r\n')
+        protocol.dataReceived(b'X-Multiline: a\r\n')
+        protocol.dataReceived(b'    b\r\n')
+        protocol.dataReceived(b'\r\n')
+        self.assertEqual(
+            protocol.connHeaders,
+            Headers({}))
+        self.assertEqual(
+            protocol.response.headers,
+            Headers({b'x-multiline': [b'a    b']}))
+        self.assertIdentical(protocol.response.length, UNKNOWN_LENGTH)
+
+
     def test_connectionHeaders(self):
         """
         The connection control headers are added to the parser's C{connHeaders}

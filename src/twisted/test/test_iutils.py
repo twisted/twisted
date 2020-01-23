@@ -221,23 +221,27 @@ class ProcessUtilsTests(unittest.TestCase):
         os.makedirs(dir)
 
         scriptFile = self.makeSourceFile([
-                "import os, sys, stat",
-                # Fix the permissions so we can report the working directory.
-                # On macOS (and maybe elsewhere), os.getcwd() fails with EACCES
-                # if +x is missing from the working directory.
-                "os.chmod(%r, stat.S_IXUSR)" % (dir,),
-                "sys.stdout.write(os.getcwd())"])
+            "import os, sys",
+            "cdir = os.getcwd()",
+            "sys.stdout.write(cdir)"]
+        )
 
         # Switch to it, but make sure we switch back
         self.addCleanup(os.chdir, os.getcwd())
         os.chdir(dir)
 
-        # Get rid of all its permissions, but make sure they get cleaned up
-        # later, because otherwise it might be hard to delete the trial
-        # temporary directory.
-        self.addCleanup(
-            os.chmod, dir, stat.S_IMODE(os.stat('.').st_mode))
-        os.chmod(dir, 0)
+        # Remember its default permissions.
+        originalMode = stat.S_IMODE(os.stat('.').st_mode)
+
+        # On macOS Catalina (and maybe elsewhere), os.getcwd() sometimes fails
+        # with EACCES if u+rx is missing from the working directory, so don't
+        # reduce it further than this.
+        os.chmod(dir, stat.S_IXUSR | stat.S_IRUSR)
+
+        # Restore the permissions to their original state later (probably
+        # adding at least u+w), because otherwise it might be hard to delete
+        # the trial temporary directory.
+        self.addCleanup(os.chmod, dir, originalMode)
 
         # Pass in -S so that if run using the coverage .pth trick, it won't be
         # loaded and cause Coverage to try and get the current working
@@ -282,6 +286,33 @@ class ProcessUtilsTests(unittest.TestCase):
             self.assertEqual(status, 0)
         return self._defaultPathTest(
             utils.getProcessOutputAndValue, check)
+
+
+    def test_get_processOutputAndValueStdin(self):
+        """
+        Standard input can be made available to the child process by passing
+        bytes for the `stdinBytes` parameter.
+        """
+        scriptFile = self.makeSourceFile([
+            "import sys",
+            "sys.stdout.write(sys.stdin.read())",
+        ])
+        stdinBytes = b"These are the bytes to see."
+        d = utils.getProcessOutputAndValue(
+            self.exe,
+            ['-u', scriptFile],
+            stdinBytes=stdinBytes,
+        )
+
+        def gotOutputAndValue(out_err_code):
+            out, err, code = out_err_code
+            # Avoid making an exact equality comparison in case there is extra
+            # random output on stdout (warnings, stray print statements,
+            # logging, who knows).
+            self.assertIn(stdinBytes, out)
+            self.assertEqual(0, code)
+        d.addCallback(gotOutputAndValue)
+        return d
 
 
 

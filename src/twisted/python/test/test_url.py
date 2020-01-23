@@ -476,20 +476,6 @@ class TestURL(SynchronousTestCase):
         )
 
 
-    def test_parseEqualSignInParamValue(self):
-        """
-        Every C{=}-sign after the first in a query parameter is simply included
-        in the value of the parameter.
-        """
-        u = URL.fromText('http://localhost/?=x=x=x')
-        self.assertEqual(u.get(u''), ['x=x=x'])
-        self.assertEqual(u.asText(), 'http://localhost/?=x%3Dx%3Dx')
-        u = URL.fromText('http://localhost/?foo=x=x=x&bar=y')
-        self.assertEqual(u.query, (('foo', 'x=x=x'),
-                                             ('bar', 'y')))
-        self.assertEqual(u.asText(), 'http://localhost/?foo=x%3Dx%3Dx&bar=y')
-
-
     def test_empty(self):
         """
         An empty L{URL} should serialize as the empty string.
