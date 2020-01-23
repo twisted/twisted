@@ -26,6 +26,9 @@ def getSerial(filename='/tmp/twisted-names.serial'):
     State is stored in the given file.  If it does not exist, it is
     created with rw-/---/--- permissions.
 
+    This manipulates process-global state by calling C{os.umask()}, so it isn't
+    thread-safe.
+
     @param filename: Path to a file that is used to store the state across
         program runs.
     @type filename: L{str}
@@ -60,6 +63,9 @@ class FileAuthority(common.ResolverBase):
     """
     An Authority that is loaded from a file.
 
+    This is an abstract class that implements record search logic. To create
+    a functional resolver, subclass it and override the L{loadFile} method.
+
     @ivar _ADDITIONAL_PROCESSING_TYPES: Record types for which additional
         processing will be done.
 
@@ -68,6 +74,9 @@ class FileAuthority(common.ResolverBase):
 
     @ivar soa: A 2-tuple containing the SOA domain name as a L{bytes} and a
         L{dns.Record_SOA}.
+
+    @ivar records: A mapping of domains (as lowercased L{bytes}) to records.
+    @type records: L{dict} with L{byte} keys
     """
     # See https://twistedmatrix.com/trac/ticket/6650
     _ADDITIONAL_PROCESSING_TYPES = (dns.CNAME, dns.MX, dns.NS)
@@ -84,6 +93,20 @@ class FileAuthority(common.ResolverBase):
 
     def __setstate__(self, state):
         self.__dict__ = state
+
+
+    def loadFile(self, filename):
+        """
+        Load DNS records from a file.
+
+        This method populates the I{soa} and I{records} attributes. It must be
+        overridden in a subclass. It is called once from the initializer.
+
+        @param filename: The I{filename} parameter that was passed to the
+        initilizer.
+
+        @returns: L{None} -- the return value is ignored
+        """
 
 
     def _additionalRecords(self, answer, authority, ttl):
@@ -217,6 +240,7 @@ class FileAuthority(common.ResolverBase):
 
 
     def lookupZone(self, name, timeout=10):
+        name = dns.domainString(name)
         if self.soa[0].lower() == name.lower():
             # Wee hee hee hooo yea
             default_ttl = max(self.soa[1].minimum, self.soa[1].expire)
