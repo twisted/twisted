@@ -889,7 +889,10 @@ class BoxDispatcher:
         @raise ProtocolSwitched: if the protocol has been switched.
         """
         if self._failAllReason is not None:
-            return fail(self._failAllReason)
+            if requiresAnswer:
+                return fail(self._failAllReason)
+            else:
+                return None
         box[COMMAND] = command
         tag = self._nextTag()
         if requiresAnswer:
