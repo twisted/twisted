@@ -1,1 +1,0 @@
-twisted.mail._cred.CramMD5ClientAuthenticator.challengeResponse(...) now calls hmac.HMAC.new(...) with explicit MD5 digestmod.
