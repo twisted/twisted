@@ -248,6 +248,25 @@ class FileBodyProducerTests(TestCase):
         self.failureResultOf(complete).trap(IOError)
 
 
+    def test_cancelWhileProducing(self):
+        """
+        When the L{Deferred} returned by L{FileBodyProducer.startProducing} is
+        cancelled, the input file is closed and the task is stopped.
+        """
+        expectedResult = b"hello, world"
+        readSize = 3
+        output = BytesIO()
+        consumer = FileConsumer(output)
+        inputFile = BytesIO(expectedResult)
+        producer = FileBodyProducer(inputFile, self.cooperator, readSize)
+        complete = producer.startProducing(consumer)
+        complete.cancel()
+        self.assertTrue(inputFile.closed)
+        self._scheduled.pop(0)()
+        self.assertEqual(b"", output.getvalue())
+        self.assertNoResult(complete)
+
+
     def test_stopProducing(self):
         """
         L{FileBodyProducer.stopProducing} stops the underlying L{IPullProducer}

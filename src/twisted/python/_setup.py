@@ -72,6 +72,7 @@ STATIC_PACKAGE_METADATA = dict(
         "Programming Language :: Python :: 3.6",
         "Programming Language :: Python :: 3.7",
     ],
+    python_requires='>=2.7,!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,!=3.4.*',
 )
 
 
@@ -108,11 +109,12 @@ _EXTRA_OPTIONS = dict(
         'bcrypt >= 3.0.0',
     ],
     soap=['soappy'],
-    serial=['pyserial >= 3.0'],
+    serial=['pyserial >= 3.0',
+            'pywin32 != 226; platform_system == "Windows"'],
     macos=['pyobjc-core',
-         'pyobjc-framework-CFNetwork',
-         'pyobjc-framework-Cocoa'],
-    windows=['pywin32'],
+           'pyobjc-framework-CFNetwork',
+           'pyobjc-framework-Cocoa'],
+    windows=['pywin32 != 226'],
     http2=['h2 >= 3.0, < 4.0',
            'priority >= 1.1.0, < 2.0'],
 )
@@ -197,18 +199,6 @@ _EXTENSIONS = [
 
 
 
-def _checkPythonVersion():
-    """
-    Fail if we detect a version of Python we don't support.
-    """
-    version = getattr(sys, "version_info", (0,))
-    if version < (2, 7):
-        raise ImportError("Twisted requires Python 2.7 or later.")
-    elif version >= (3, 0) and version < (3, 5):
-        raise ImportError("Twisted on Python 3 requires Python 3.5 or later.")
-
-
-
 def _longDescriptionArgsFromReadme(readme):
     """
     Generate a PyPI long description from the readme.
@@ -254,8 +244,6 @@ def getSetupArgs(extensions=_EXTENSIONS, readme='README.rst'):
     @return: The keyword arguments to be used by the setup method.
     @rtype: L{dict}
     """
-    _checkPythonVersion()
-
     arguments = STATIC_PACKAGE_METADATA.copy()
     if readme:
         arguments.update(_longDescriptionArgsFromReadme(readme))
@@ -285,8 +273,11 @@ def getSetupArgs(extensions=_EXTENSIONS, readme='README.rst'):
         "incremental >= 16.10.1",
         "Automat >= 0.3.0",
         "hyperlink >= 17.1.1",
-        "PyHamcrest >= 1.9.0",
-        "attrs >= 17.4.0",
+        # PyHamcrest 1.10.0 is Python 3 only, but lacks package metadata that
+        # says so. This condition can be dropped when Twisted drops support for
+        # Python 2.7.
+        "PyHamcrest >= 1.9.0, != 1.10.0",
+        "attrs >= 19.2.0",
     ]
 
     arguments.update(dict(

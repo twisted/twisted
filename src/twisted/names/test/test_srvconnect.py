@@ -19,7 +19,6 @@ from twisted.internet.interfaces import IConnector
 from twisted.names import client, dns, srvconnect
 from twisted.names.common import ResolverBase
 from twisted.names.error import DNSNameError
-from twisted.python.compat import nativeString
 from twisted.test.proto_helpers import MemoryReactor
 
 
@@ -127,7 +126,7 @@ class SRVConnectorTests(unittest.TestCase):
         """
         Test connectTCP gets called with fallback parameters on NXDOMAIN.
         """
-        client.theResolver.failure = DNSNameError('example.org')
+        client.theResolver.failure = DNSNameError(b'example.org')
         self.connector.connect()
 
         self.assertIsNone(self.factory.reason)
@@ -217,7 +216,7 @@ class SRVConnectorTests(unittest.TestCase):
         self.connector.connect()
 
         name = client.theResolver.lookups[-1][0]
-        self.assertEqual(nativeString('_xmpp-server._tcp.example.org'), name)
+        self.assertEqual(b'_xmpp-server._tcp.example.org', name)
 
 
     def test_unicodeDomain(self):
@@ -228,7 +227,7 @@ class SRVConnectorTests(unittest.TestCase):
         self.connector = srvconnect.SRVConnector(
             self.reactor, 'xmpp-client', u'\u00e9chec.example.org',
             self.factory)
-        self.assertEqual('xn--chec-9oa.example.org', self.connector.domain)
+        self.assertEqual(b'xn--chec-9oa.example.org', self.connector.domain)
 
 
     def test_pickServerWeights(self):

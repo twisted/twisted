@@ -873,7 +873,8 @@ class Request:
         @type version: C{bytes}
         @param version: The HTTP version of this request.
         """
-        self.content.seek(0,0)
+        clength = self.content.tell()
+        self.content.seek(0, 0)
         self.args = {}
 
         self.method, self.uri = command, path
@@ -889,16 +890,16 @@ class Request:
         # Argument processing
         args = self.args
         ctype = self.requestHeaders.getRawHeaders(b'content-type')
-        clength = self.requestHeaders.getRawHeaders(b'content-length')
         if ctype is not None:
             ctype = ctype[0]
-
-        if clength is not None:
-            clength = clength[0]
 
         if self.method == b"POST" and ctype and clength:
             mfd = b'multipart/form-data'
             key, pdict = _parseHeader(ctype)
+            # This weird CONTENT-LENGTH param is required by
+            # cgi.parse_multipart() in some versions of Python 3.7+, see
+            # bpo-29979. It looks like this will be relaxed and backported, see
+            # https://github.com/python/cpython/pull/8530.
             pdict["CONTENT-LENGTH"] = clength
             if key == b'application/x-www-form-urlencoded':
                 args.update(parse_qs(self.content.read(), 1))
@@ -1535,7 +1536,7 @@ class Request:
         try:
             authh = self.getHeader(b"Authorization")
             if not authh:
-                self.user = self.password = ''
+                self.user = self.password = b''
                 return
             bas, upw = authh.split()
             if bas.lower() != b"basic":
@@ -1543,10 +1544,10 @@ class Request:
             upw = base64.decodestring(upw)
             self.user, self.password = upw.split(b':', 1)
         except (binascii.Error, ValueError):
-            self.user = self.password = ""
+            self.user = self.password = b''
         except:
             self._log.failure('')
-            self.user = self.password = ""
+            self.user = self.password = b''
 
 
     def getUser(self):
@@ -2186,6 +2187,10 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         try:
             header, data = line.split(b':', 1)
         except ValueError:
+            self._respondToBadRequestAndDisconnect()
+            return False
+
+        if not header or header[-1:].isspace():
             self._respondToBadRequestAndDisconnect()
             return False
 
@@ -2953,7 +2958,14 @@ class _GenericHTTPChannelProtocol(proxyForInterface(IProtocol, "_channel")):
                 # We need to make sure that the HTTPChannel is unregistered
                 # from the transport so that the H2Connection can register
                 # itself if possible.
-                self._channel._networkProducer.unregisterProducer()
+                networkProducer = self._channel._networkProducer
+                networkProducer.unregisterProducer()
+
+                # Cancel the old channel's timeout.
+                self._channel.setTimeout(None)
+
+                # Cancel the old channel's timeout.
+                self._channel.setTimeout(None)
 
                 transport = self._channel.transport
                 self._channel = H2Connection()
@@ -2963,6 +2975,11 @@ class _GenericHTTPChannelProtocol(proxyForInterface(IProtocol, "_channel")):
                 self._channel.timeOut = self._timeOut
                 self._channel.callLater = self._callLater
                 self._channel.makeConnection(transport)
+
+                # Register the H2Connection as the transport's
+                # producer, so that the transport can apply back
+                # pressure.
+                networkProducer.registerProducer(self._channel, True)
             else:
                 # Only HTTP/2 and HTTP/1.1 are supported right now.
                 assert negotiatedProtocol == b'http/1.1', \
