@@ -273,7 +273,10 @@ def getSetupArgs(extensions=_EXTENSIONS, readme='README.rst'):
         "incremental >= 16.10.1",
         "Automat >= 0.3.0",
         "hyperlink >= 17.1.1",
-        "PyHamcrest >= 1.9.0",
+        # PyHamcrest 1.10.0 is Python 3 only, but lacks package metadata that
+        # says so. This condition can be dropped when Twisted drops support for
+        # Python 2.7.
+        "PyHamcrest >= 1.9.0, != 1.10.0",
         "attrs >= 19.2.0",
     ]
 
