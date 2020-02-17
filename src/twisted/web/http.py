@@ -2171,6 +2171,51 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         self.allContentReceived()
         self._dataBuffer.append(data)
 
+    def _maybeChooseTransferDecoder(self, header, data):
+        """
+        If the provided header is C{content-length} or
+        C{transfer-encoding}, choose the appropriate decoder if any.
+
+        Returns L{True} if the request can proceed and L{False} if not.
+        """
+
+        def fail():
+            self._respondToBadRequestAndDisconnect()
+            self.length = None
+
+        # Can this header determine the length?
+        if header == b'content-length':
+            try:
+                length = int(data)
+            except ValueError:
+                fail()
+                return False
+            newTransferDecoder = _IdentityTransferDecoder(
+                length, self.requests[-1].handleContentChunk, self._finishRequestBody)
+        elif header == b'transfer-encoding':
+            # XXX Rather poorly tested code block, apparently only exercised by
+            # test_chunkedEncoding
+            if data.lower() == b'chunked':
+                length = None
+                newTransferDecoder = _ChunkedTransferDecoder(
+                    self.requests[-1].handleContentChunk, self._finishRequestBody)
+            elif data.lower() == b'identity':
+                return True
+            else:
+                fail()
+                return False
+        else:
+            # It's not a length related header, so exit
+            return True
+
+        if self._transferDecoder is not None:
+            fail()
+            return False
+        else:
+            self.length = length
+            self._transferDecoder = newTransferDecoder
+            return True
+
 
     def headerReceived(self, line):
         """
@@ -2196,21 +2241,10 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
 
         header = header.lower()
         data = data.strip()
-        if header == b'content-length':
-            try:
-                self.length = int(data)
-            except ValueError:
-                self._respondToBadRequestAndDisconnect()
-                self.length = None
-                return False
-            self._transferDecoder = _IdentityTransferDecoder(
-                self.length, self.requests[-1].handleContentChunk, self._finishRequestBody)
-        elif header == b'transfer-encoding' and data.lower() == b'chunked':
-            # XXX Rather poorly tested code block, apparently only exercised by
-            # test_chunkedEncoding
-            self.length = None
-            self._transferDecoder = _ChunkedTransferDecoder(
-                self.requests[-1].handleContentChunk, self._finishRequestBody)
+
+        if not self._maybeChooseTransferDecoder(header, data):
+            return False
+
         reqHeaders = self.requests[-1].requestHeaders
         values = reqHeaders.getRawHeaders(header)
         if values is not None:
