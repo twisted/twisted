@@ -20,6 +20,7 @@ from twisted.conch.ssh import (_kex, transport, userauth, connection)
 import random
 
 
+
 class SSHFactory(protocol.Factory):
     """
     A Factory for SSH servers.
@@ -35,13 +36,35 @@ class SSHFactory(protocol.Factory):
         Check for public and private keys.
         """
         if not hasattr(self,'publicKeys'):
-            self.publicKeys = self.getPublicKeys()
+            self.publicKeys = self._withVariantKeyAlgorithms(
+                self.getPublicKeys()
+            )
         if not hasattr(self,'privateKeys'):
-            self.privateKeys = self.getPrivateKeys()
+            self.privateKeys = self._withVariantKeyAlgorithms(
+                self.getPrivateKeys()
+            )
         if not self.publicKeys or not self.privateKeys:
             raise error.ConchError('no host keys, failing')
         if not hasattr(self,'primes'):
             self.primes = self.getPrimes()
+
+
+    def _withVariantKeyAlgorithms(self, keys):
+        """
+        Generate a mapping of SSH type types to keys that includes
+        variant signing algorithms.
+
+        @see: L{Key.signingAlgorithmVariants<twisted.conch.keys.Key>}
+
+        @return: A mapping of L{Key.sshType<twisted.conch.keys.Key>}
+            to L{Key<twisted.conch.keys.Key>}
+        @rtype: L{dict}
+        """
+        allKeys = keys.copy()
+        for key in keys.values():
+            for variant in key.signingAlgorithmVariants():
+                allKeys[variant.sshType()] = variant
+        return allKeys
 
 
     def buildProtocol(self, addr):
@@ -55,7 +78,7 @@ class SSHFactory(protocol.Factory):
         @return: The built transport.
         """
         t = protocol.Factory.buildProtocol(self, addr)
-        t.supportedPublicKeys = self.privateKeys.keys()
+        # t.supportedPublicKeys = self.privateKeys.keys()
         if not self.primes:
             log.msg('disabling non-fixed-group key exchange algorithms '
                     'because we cannot find moduli file')

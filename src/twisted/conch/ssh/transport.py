@@ -1745,8 +1745,15 @@ class SSHClientTransport(SSHTransportBase):
 
             exchangeHash = h.digest()
 
-            if not keys.Key.fromString(theirECHost).verify(
-                                                      signature, exchangeHash):
+            # TODO: pass the keyalg to this
+            signingKey = keys.Key.fromString(theirECHost)
+            signingKey = next(
+                (k for k in signingKey.signingAlgorithmVariants()
+                 if k.sshType() == self.keyAlg),
+                signingKey,
+            )
+
+            if not signingKey.verify(signature, exchangeHash):
                 self.sendDisconnect(DISCONNECT_KEY_EXCHANGE_FAILED,
                                     b'bad signature')
             else:

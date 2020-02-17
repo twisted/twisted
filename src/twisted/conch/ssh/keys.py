@@ -853,7 +853,7 @@ class Key(object):
 
         return cls(keyObject)
 
-    def __init__(self, keyObject):
+    def __init__(self, keyObject, fixedKeyFactory=hashes.SHA1):
         """
         Initialize with a private or public
         C{cryptography.hazmat.primitives.asymmetric} key.
@@ -862,6 +862,7 @@ class Key(object):
         @type keyObject: C{cryptography.hazmat.primitives.asymmetric} key.
         """
         self._keyObject = keyObject
+        self._fixedHashFactory = fixedKeyFactory
 
     def __eq__(self, other):
         """
@@ -1021,7 +1022,12 @@ class Key(object):
         if self.type() == 'EC':
             return b'ecdsa-sha2-' + _secToNist[self._keyObject.curve.name.encode('ascii')]
         else:
-            return {'RSA': b'ssh-rsa', 'DSA': b'ssh-dss'}[self.type()]
+            return {
+                ('RSA', hashes.SHA1.name): b'ssh-rsa',
+                ('RSA', hashes.SHA256.name): b'rsa-sha2-256',
+                ('RSA', hashes.SHA512.name): b'rsa-sha2-512',
+                ('DSA', hashes.SHA1.name): b'ssh-dss',
+            }[(self.type(), self._fixedHashFactory.name)]
 
     def size(self):
         """
@@ -1511,11 +1517,15 @@ class Key(object):
         """
         keyType = self.type()
         if keyType == 'RSA':
-            sig = self._keyObject.sign(data, padding.PKCS1v15(), hashes.SHA1())
+            sig = self._keyObject.sign(
+                data,
+                padding.PKCS1v15(),
+                self._fixedHashFactory(),
+            )
             ret = common.NS(sig)
 
         elif keyType == 'DSA':
-            sig = self._keyObject.sign(data, hashes.SHA1())
+            sig = self._keyObject.sign(data, self._fixedHashFactory())
             (r, s) = decode_dss_signature(sig)
             # SSH insists that the DSS signature blob be two 160-bit integers
             # concatenated together. The sig[0], [1] numbers from obj.sign
@@ -1591,7 +1601,7 @@ class Key(object):
                 common.getNS(signature)[0],
                 data,
                 padding.PKCS1v15(),
-                hashes.SHA1(),
+                self._fixedHashFactory(),
             )
         elif keyType == 'DSA':
             concatenatedSignature = common.getNS(signature)[0]
@@ -1601,7 +1611,7 @@ class Key(object):
             k = self._keyObject
             if not self.isPublic():
                 k = k.public_key()
-            args = (signature, data, hashes.SHA1())
+            args = (signature, data, self._fixedHashFactory())
 
         elif keyType == 'EC':  # Pragma: no branch
             concatenatedSignature = common.getNS(signature)[0]
@@ -1629,6 +1639,39 @@ class Key(object):
             return False
         else:
             return True
+
+    def signingAlgorithmVariants(self):
+        """
+        Some key types support additional key signing algorithms.  In
+        particular example, RSA keys (whose L{Key.type} method returns
+        C{"RSA"}) support at least three signing variants:
+
+            - SHA1: the historical default.  L{Key.sshType} returns
+              C{ssh-rsa}.
+
+            - SHA256: L{Key.sshType} returns C{rsa-sha2-256}
+
+            - SHA512: L{Key.sshType} returns C{rsa-sha2-512}
+
+        L{Key} instances always use the historical default, if any.
+
+        This method returns new L{Key} instances that vary by signing
+        algorithms, excluding the historical default.  For C{"RSA"}
+        keys, this method returns C{rsa-sha2-256} and C{rsa-sha2-512}
+        keys.
+
+        L{twisted.conch.ssh.factory.SSHFactory.startFactory} instances
+        call this method to learn about those variants
+
+        @return: a possibly empty sequence of L{Key} instances with
+            variant signing algorithms
+        @rtype: L{tuple}
+        """
+        if self.type() == "RSA":
+            otherHashes = (hashes.SHA256, hashes.SHA512)
+            return tuple(Key(self._keyObject, h) for h in otherHashes)
+        else:
+            return ()
 
 
 def _getPersistentRSAKey(location, keySize=4096):
