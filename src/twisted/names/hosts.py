@@ -26,7 +26,7 @@ def searchFileForAll(hostsFile, name):
     @type hostsFile: L{FilePath}
 
     @param name: The name to search for.
-    @type name: C{str}
+    @type name: C{bytes}
 
     @return: L{None} if the name is not found in the file, otherwise a
         C{str} giving the address in the file associated with the name.
@@ -58,12 +58,14 @@ def searchFileFor(file, name):
     entry with a given name.
 
     @param file: The name of the hosts(5)-format file to search.
+    @type file: C{str} or C{bytes}
 
     @param name: The name to search for.
-    @type name: C{str}
+    @type name: C{bytes}
 
     @return: L{None} if the name is not found in the file, otherwise a
-        C{str} giving the address in the file associated with the name.
+        C{str} giving the first address in the file associated with
+        the name.
     """
     addresses = searchFileForAll(FilePath(file), name)
     if addresses:
@@ -130,9 +132,10 @@ class Resolver(common.ResolverBase):
 
     def lookupAddress(self, name, timeout=None):
         """
-        Read any IPv4 addresses from C{self.file} and return them as L{Record_A}
-        instances.
+        Read any IPv4 addresses from C{self.file} and return them as
+        L{Record_A} instances.
         """
+        name = dns.domainString(name)
         return self._respond(name, self._aRecords(name))
 
 
@@ -141,6 +144,7 @@ class Resolver(common.ResolverBase):
         Read any IPv6 addresses from C{self.file} and return them as
         L{Record_AAAA} instances.
         """
+        name = dns.domainString(name)
         return self._respond(name, self._aaaaRecords(name))
 
     # Someday this should include IPv6 addresses too, but that will cause
