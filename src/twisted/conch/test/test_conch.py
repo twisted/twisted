@@ -346,13 +346,13 @@ class ConchServerSetupMixin:
                   'kh_test']:
             if os.path.exists(f):
                 os.remove(f)
-        with open('rsa_test','wb') as f:
+        with open('rsa_test', 'wb') as f:
             f.write(privateRSA_openssh)
-        with open('rsa_test.pub','wb') as f:
+        with open('rsa_test.pub', 'wb') as f:
             f.write(publicRSA_openssh)
-        with open('dsa_test.pub','wb') as f:
+        with open('dsa_test.pub', 'wb') as f:
             f.write(publicDSA_openssh)
-        with open('dsa_test','wb') as f:
+        with open('dsa_test', 'wb') as f:
             f.write(privateDSA_openssh)
         os.chmod('dsa_test', 0o600)
         os.chmod('rsa_test', 0o600)
@@ -363,7 +363,7 @@ class ConchServerSetupMixin:
                 " possible windows permission issue?"
                 " see https://tm.tl/9767"
             )
-        with open('kh_test','wb') as f:
+        with open('kh_test', 'wb') as f:
             f.write(b'127.0.0.1 '+publicRSA_openssh)
 
 
