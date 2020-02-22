@@ -2310,6 +2310,7 @@ def readBody(response):
 
 __all__ = [
     'Agent',
+    'BrowserLikePolicyForHTTPS',
     'BrowserLikeRedirectAgent',
     'ContentDecoderAgent',
     'CookieAgent',
