@@ -105,6 +105,8 @@ _EXTRA_OPTIONS = dict(
     conch=[
         'pyasn1',
         'cryptography >= 2.5',
+        # enum34 1.1.8 is broken. The package is required by cryptography.
+        'enum34 != 1.1.8',
         'appdirs >= 1.4.0',
         'bcrypt >= 3.0.0',
     ],
