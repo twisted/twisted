@@ -485,6 +485,11 @@ class FakeContext(object):
         self._defaultVerifyPathsSet = False
         self._ecCurve = None
 
+        # Note that this value is explicitly documented as the default by
+        # https://www.openssl.org/docs/man1.1.1/man3/
+        # SSL_CTX_set_session_cache_mode.html
+        self._sessionCacheMode = SSL.SESS_CACHE_SERVER
+
 
     def set_options(self, options):
         self._options |= options
@@ -523,6 +528,22 @@ class FakeContext(object):
         # This fake should change when the upstream changes:
         # https://github.com/pyca/pyopenssl/issues/845
         self._sessionIDContext = sessionIDContext
+
+
+    def set_session_cache_mode(self, cacheMode):
+        """
+        Set the session cache mode on the context, as per
+        L{SSL.Context.set_session_cache_mode}.
+        """
+        self._sessionCacheMode = cacheMode
+
+
+    def get_session_cache_mode(self):
+        """
+        Retrieve the session cache mode from the context, as per
+        L{SSL.Context.get_session_cache_mode}.
+        """
+        return self._sessionCacheMode
 
 
     def add_extra_chain_cert(self, cert):
