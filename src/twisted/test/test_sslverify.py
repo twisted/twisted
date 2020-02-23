@@ -519,8 +519,10 @@ class FakeContext(object):
         self._verifyDepth = depth
 
 
-    def set_session_id(self, sessionID):
-        self._sessionID = sessionID
+    def set_session_id(self, sessionIDContext):
+        # This fake should change when the upstream changes:
+        # https://github.com/pyca/pyopenssl/issues/845
+        self._sessionIDContext = sessionIDContext
 
 
     def add_extra_chain_cert(self, cert):
@@ -1441,6 +1443,22 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, unittest.TestCase):
 
         self.assertTrue(hostA.getPublicKey().matches(hostB.getPublicKey()))
         self.assertFalse(peerA.getPublicKey().matches(hostA.getPublicKey()))
+
+
+    def test_enablingAndDisablingSessions(self):
+        """
+        The enableSessions argument sets the session cache mode; it defaults to
+        False (at least until https://twistedmatrix.com/trac/ticket/9764 can be
+        resolved).
+        """
+        options = sslverify.OpenSSLCertificateOptions()
+        self.assertEqual(options.enableSessions, False)
+        ctx = options.getContext()
+        self.assertEqual(ctx.get_session_cache_mode(), SSL.SESS_CACHE_OFF)
+        options = sslverify.OpenSSLCertificateOptions(enableSessions=True)
+        self.assertEqual(options.enableSessions, True)
+        ctx = options.getContext()
+        self.assertEqual(ctx.get_session_cache_mode(), SSL.SESS_CACHE_SERVER)
 
 
     def test_certificateOptionsSerialization(self):
