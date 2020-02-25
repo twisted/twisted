@@ -80,8 +80,8 @@ if _PY3:
 
     def _nicebytes(bytes):
         """
-        Represent a mostly textful bytes object in a way suitable for presentation
-        to an end user.
+        Represent a mostly textful bytes object in a way suitable for
+        presentation to an end user.
 
         @param bytes: The bytes to represent.
         @rtype: L{str}
@@ -107,8 +107,10 @@ else:
 
 def randomSource():
     """
-    Wrapper around L{twisted.python.randbytes.RandomFactory.secureRandom} to return
-    2 random chars.
+    Wrapper around L{twisted.python.randbytes.RandomFactory.secureRandom} to
+    return 2 random bytes.
+
+    @rtype: L{bytes}
     """
     return struct.unpack('H', randbytes.secureRandom(2, fallback=True))[0]
 
@@ -236,6 +238,7 @@ def _nameToLabels(name):
 
     @return: A L{list} of labels ending with an empty label
         representing the DNS root zone.
+    @rtype: L{list} of L{bytes}
     """
     if name in (b'', b'.'):
         return [b'']
@@ -243,6 +246,38 @@ def _nameToLabels(name):
     if labels[-1] != b'':
         labels.append(b'')
     return labels
+
+
+
+def domainString(domain):
+    """
+    Coerce a domain name string to bytes.
+
+    L{twisted.names} represents domain names as L{bytes}, but many interfaces
+    accept L{bytes} or a text string (L{unicode} on Python 2, L{str} on Python
+    3). This function coerces text strings using IDNA encoding --- see
+    L{encodings.idna}.
+
+    Note that DNS is I{case insensitive} but I{case preserving}. This function
+    doesn't normalize case, so you'll still need to do that whenever comparing
+    the strings it returns.
+
+    @param domain: A domain name.  If passed as a text string it will be
+        C{idna} encoded.
+    @type domain: L{bytes} or L{str}
+
+    @returns: L{bytes} suitable for network transmission.
+    @rtype: L{bytes}
+
+    @since: Twisted NEXT
+    """
+    if isinstance(domain, unicode):
+        domain = domain.encode('idna')
+    if not isinstance(domain, bytes):
+        raise TypeError('Expected {} or {} but found {!r} of type {}'.format(
+                        type(b'').__name__, type(u'').__name__,
+                        domain, type(domain)))
+    return domain
 
 
 
@@ -313,6 +348,7 @@ def str2time(s):
     return s
 
 
+
 def readPrecisely(file, l):
     buff = file.read(l)
     if len(buff) < l:
@@ -320,33 +356,38 @@ def readPrecisely(file, l):
     return buff
 
 
+
 class IEncodable(Interface):
     """
     Interface for something which can be encoded to and decoded
-    from a file object.
+    to the DNS wire format.
+
+    A binary-mode file object (such as L{io.BytesIO}) is used as a buffer when
+    encoding or decoding.
     """
 
-    def encode(strio, compDict = None):
+    def encode(strio, compDict=None):
         """
         Write a representation of this object to the given
         file object.
 
         @type strio: File-like object
-        @param strio: The stream to which to write bytes
+        @param strio: The buffer to write to. It must have a C{tell()} method.
 
-        @type compDict: C{dict} or L{None}
-        @param compDict: A dictionary of backreference addresses that have
-        already been written to this stream and that may be used for
-        compression.
+        @type compDict: L{dict} of L{bytes} to L{int} r L{None}
+        @param compDict: A mapping of names to byte offsets that have already
+        been written to the buffer, which may be used for compression (see RFC
+        1035 section 4.1.4). When L{None}, encode without compression.
         """
 
-    def decode(strio, length = None):
+
+    def decode(strio, length=None):
         """
         Reconstruct an object from data read from the given
         file object.
 
         @type strio: File-like object
-        @param strio: The stream from which bytes may be read
+        @param strio: A seekable buffer from which bytes may be read.
 
         @type length: L{int} or L{None}
         @param length: The number of bytes in this RDATA field.  Most
@@ -432,13 +473,9 @@ class Name:
     def __init__(self, name=b''):
         """
         @param name: A name.
-        @type name: L{unicode} or L{bytes}
+        @type name: L{bytes} or L{str}
         """
-        if isinstance(name, unicode):
-            name = name.encode('idna')
-        if not isinstance(name, bytes):
-            raise TypeError("%r is not a byte string" % (name,))
-        self.name = name
+        self.name = domainString(name)
 
 
     def encode(self, strio, compDict=None):
@@ -586,14 +623,14 @@ class Query:
 
 
     def __hash__(self):
-        return hash((str(self.name).lower(), self.type, self.cls))
+        return hash((self.name.name.lower(), self.type, self.cls))
 
 
     def __cmp__(self, other):
         if isinstance(other, Query):
             return cmp(
-                (str(self.name).lower(), self.type, self.cls),
-                (str(other.name).lower(), other.type, other.cls))
+                (self.name.name.lower(), self.type, self.cls),
+                (other.name.name.lower(), other.type, other.cls))
         return NotImplemented
 
 
@@ -604,7 +641,7 @@ class Query:
 
 
     def __repr__(self):
-        return 'Query(%r, %r, %r)' % (str(self.name), self.type, self.cls)
+        return 'Query(%r, %r, %r)' % (self.name.name, self.type, self.cls)
 
 
 
@@ -888,7 +925,7 @@ class RRHeader(tputil.FancyEqMixin):
     def __init__(self, name=b'', type=A, cls=IN, ttl=0, payload=None,
                  auth=False):
         """
-        @type name: L{bytes} or L{unicode}
+        @type name: L{bytes} or L{str}
         @param name: See L{RRHeader.name}
 
         @type type: L{int}
@@ -977,7 +1014,7 @@ class SimpleRecord(tputil.FancyStrMixin, tputil.FancyEqMixin):
     def __init__(self, name=b'', ttl=None):
         """
         @param name: See L{SimpleRecord.name}
-        @type name: L{bytes} or L{unicode}
+        @type name: L{bytes} or L{str}
         """
         self.name = Name(name)
         self.ttl = str2time(ttl)
@@ -1124,7 +1161,7 @@ class Record_A(tputil.FancyEqMixin):
             quad-dotted notation.
         """
         if _PY3 and isinstance(address, bytes):
-            address = address.decode('idna')
+            address = address.decode('ascii')
 
         address = socket.inet_aton(address)
         self.address = address

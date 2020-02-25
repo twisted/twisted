@@ -50,16 +50,23 @@ class GeneralOptions(usage.Options):
                      ['comment', 'C', None, 'Provide new comment.'],
                      ['newpass', 'N', None, 'Provide new passphrase.'],
                      ['pass', 'P', None, 'Provide old passphrase.'],
-                     ['format', 'o', 'sha256-base64', 'Fingerprint format of key file.']]
+                     ['format', 'o', 'sha256-base64',
+                      'Fingerprint format of key file.'],
+                     ['private-key-subtype', None, 'PEM',
+                      'OpenSSH private key subtype to write ("PEM" or "v1").']]
 
     optFlags = [['fingerprint', 'l', 'Show fingerprint of key file.'],
                 ['changepass', 'p', 'Change passphrase of private key file.'],
                 ['quiet', 'q', 'Quiet.'],
                 ['no-passphrase', None, "Create the key with no passphrase."],
-                ['showpub', 'y', 'Read private key file and print public key.']]
+                ['showpub', 'y',
+                 'Read private key file and print public key.']]
 
     compData = usage.Completions(
-        optActions={"type": usage.CompleteList(list(supportedKeyTypes.keys()))})
+        optActions={
+            "type": usage.CompleteList(list(supportedKeyTypes.keys())),
+            "private-key-subtype": usage.CompleteList(["PEM", "v1"]),
+        })
 
 
 
@@ -214,7 +221,9 @@ def changePassPhrase(options):
         options['newpass'] = p1
 
     try:
-        newkeydata = key.toString('openssh', extra=options['newpass'])
+        newkeydata = key.toString(
+            'openssh', subtype=options.get('private-key-subtype'),
+            passphrase=options['newpass'])
     except Exception as e:
         sys.exit('Could not change passphrase: %s' % (e,))
 
@@ -277,7 +286,8 @@ def _saveKey(key, options):
         options['pass'] = b''
     elif not options['pass']:
         while 1:
-            p1 = getpass.getpass('Enter passphrase (empty for no passphrase): ')
+            p1 = getpass.getpass(
+                'Enter passphrase (empty for no passphrase): ')
             p2 = getpass.getpass('Enter same passphrase again: ')
             if p1 == p2:
                 break
@@ -287,11 +297,13 @@ def _saveKey(key, options):
     comment = '%s@%s' % (getpass.getuser(), socket.gethostname())
 
     filepath.FilePath(options['filename']).setContent(
-        key.toString('openssh', options['pass']))
+        key.toString(
+            'openssh', subtype=options.get('private-key-subtype'),
+            passphrase=options['pass']))
     os.chmod(options['filename'], 33152)
 
     filepath.FilePath(options['filename'] + '.pub').setContent(
-        key.public().toString('openssh', comment))
+        key.public().toString('openssh', comment=comment))
     options = enumrepresentation(options)
 
     print('Your identification has been saved in %s' % (options['filename'],))

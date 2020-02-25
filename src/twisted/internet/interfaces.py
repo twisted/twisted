@@ -60,7 +60,7 @@ class IResolverSimple(Interface):
         """
         Resolve the domain name C{name} into an IP address.
 
-        @type name: C{str}
+        @type name: C{bytes} or C{str}
         @param name: DNS name to resolve.
 
         @type timeout: Sequence of C{int}
@@ -216,7 +216,7 @@ class IResolver(IResolverSimple):
         """
         Perform an A record lookup.
 
-        @type name: L{bytes}
+        @type name: L{bytes} or L{str}
         @param name: DNS name to resolve.
 
         @type timeout: Sequence of C{int}
@@ -238,7 +238,7 @@ class IResolver(IResolverSimple):
         """
         Perform an A6 record lookup.
 
-        @type name: C{str}
+        @type name: L{bytes} or L{str}
         @param name: DNS name to resolve.
 
         @type timeout: Sequence of C{int}
@@ -260,7 +260,7 @@ class IResolver(IResolverSimple):
         """
         Perform an AAAA record lookup.
 
-        @type name: C{str}
+        @type name: L{bytes} or L{str}
         @param name: DNS name to resolve.
 
         @type timeout: Sequence of C{int}
@@ -282,7 +282,7 @@ class IResolver(IResolverSimple):
         """
         Perform an MX record lookup.
 
-        @type name: C{str}
+        @type name: L{bytes} or L{str}
         @param name: DNS name to resolve.
 
         @type timeout: Sequence of C{int}
@@ -304,7 +304,7 @@ class IResolver(IResolverSimple):
         """
         Perform an NS record lookup.
 
-        @type name: C{str}
+        @type name: L{bytes} or L{str}
         @param name: DNS name to resolve.
 
         @type timeout: Sequence of C{int}
@@ -326,7 +326,7 @@ class IResolver(IResolverSimple):
         """
         Perform a CNAME record lookup.
 
-        @type name: C{str}
+        @type name: L{bytes} or L{str}
         @param name: DNS name to resolve.
 
         @type timeout: Sequence of C{int}
@@ -348,7 +348,7 @@ class IResolver(IResolverSimple):
         """
         Perform an MB record lookup.
 
-        @type name: C{str}
+        @type name: L{bytes} or L{str}
         @param name: DNS name to resolve.
 
         @type timeout: Sequence of C{int}
@@ -370,7 +370,7 @@ class IResolver(IResolverSimple):
         """
         Perform an MG record lookup.
 
-        @type name: C{str}
+        @type name: L{bytes} or L{str}
         @param name: DNS name to resolve.
 
         @type timeout: Sequence of C{int}
@@ -392,7 +392,7 @@ class IResolver(IResolverSimple):
         """
         Perform an MR record lookup.
 
-        @type name: C{str}
+        @type name: L{bytes} or L{str}
         @param name: DNS name to resolve.
 
         @type timeout: Sequence of C{int}
@@ -414,7 +414,7 @@ class IResolver(IResolverSimple):
         """
         Perform a PTR record lookup.
 
-        @type name: C{str}
+        @type name: L{bytes} or L{str}
         @param name: DNS name to resolve.
 
         @type timeout: Sequence of C{int}
@@ -436,7 +436,7 @@ class IResolver(IResolverSimple):
         """
         Perform an SOA record lookup.
 
-        @type name: C{str}
+        @type name: L{bytes} or L{str}
         @param name: DNS name to resolve.
 
         @type timeout: Sequence of C{int}
@@ -458,7 +458,7 @@ class IResolver(IResolverSimple):
         """
         Perform a NULL record lookup.
 
-        @type name: C{str}
+        @type name: L{bytes} or L{str}
         @param name: DNS name to resolve.
 
         @type timeout: Sequence of C{int}
@@ -480,7 +480,7 @@ class IResolver(IResolverSimple):
         """
         Perform a WKS record lookup.
 
-        @type name: C{str}
+        @type name: L{bytes} or L{str}
         @param name: DNS name to resolve.
 
         @type timeout: Sequence of C{int}
@@ -502,7 +502,7 @@ class IResolver(IResolverSimple):
         """
         Perform a HINFO record lookup.
 
-        @type name: C{str}
+        @type name: L{bytes} or L{str}
         @param name: DNS name to resolve.
 
         @type timeout: Sequence of C{int}
@@ -524,7 +524,7 @@ class IResolver(IResolverSimple):
         """
         Perform an MINFO record lookup.
 
-        @type name: C{str}
+        @type name: L{bytes} or L{str}
         @param name: DNS name to resolve.
 
         @type timeout: Sequence of C{int}
@@ -546,7 +546,7 @@ class IResolver(IResolverSimple):
         """
         Perform a TXT record lookup.
 
-        @type name: C{str}
+        @type name: L{bytes} or L{str}
         @param name: DNS name to resolve.
 
         @type timeout: Sequence of C{int}
@@ -568,7 +568,7 @@ class IResolver(IResolverSimple):
         """
         Perform an RP record lookup.
 
-        @type name: C{str}
+        @type name: L{bytes} or L{str}
         @param name: DNS name to resolve.
 
         @type timeout: Sequence of C{int}
@@ -590,7 +590,7 @@ class IResolver(IResolverSimple):
         """
         Perform an AFSDB record lookup.
 
-        @type name: C{str}
+        @type name: L{bytes} or L{str}
         @param name: DNS name to resolve.
 
         @type timeout: Sequence of C{int}
@@ -612,7 +612,7 @@ class IResolver(IResolverSimple):
         """
         Perform an SRV record lookup.
 
-        @type name: C{str}
+        @type name: L{bytes} or L{str}
         @param name: DNS name to resolve.
 
         @type timeout: Sequence of C{int}
@@ -634,7 +634,7 @@ class IResolver(IResolverSimple):
         """
         Perform an ALL_RECORD lookup.
 
-        @type name: C{str}
+        @type name: L{bytes} or L{str}
         @param name: DNS name to resolve.
 
         @type timeout: Sequence of C{int}
@@ -656,7 +656,7 @@ class IResolver(IResolverSimple):
         """
         Perform a SPF record lookup.
 
-        @type name: C{str}
+        @type name: L{bytes} or L{str}
         @param name: DNS name to resolve.
 
         @type timeout: Sequence of C{int}
@@ -678,7 +678,7 @@ class IResolver(IResolverSimple):
         """
         Perform a NAPTR record lookup.
 
-        @type name: C{str}
+        @type name: L{bytes} or L{str}
         @param name: DNS name to resolve.
 
         @type timeout: Sequence of C{int}
@@ -707,7 +707,7 @@ class IResolver(IResolverSimple):
         NB Unlike other C{lookup*} methods, the timeout here is not a
         list of ints, it is a single int.
 
-        @type name: C{str}
+        @type name: L{bytes} or L{str}
         @param name: DNS name to resolve.
 
         @type timeout: C{int}

@@ -1545,6 +1545,21 @@ class AMPTests(unittest.TestCase):
         self.assertFalse(s.greeted)
 
 
+    def test_requiresNoAnswerAfterFail(self):
+        """
+        No-answer commands sent after the connection has been torn down do not
+        return a L{Deferred}.
+        """
+        c, s, p = connectedServerAndClient(
+            ServerClass=SimpleSymmetricCommandProtocol,
+            ClientClass=SimpleSymmetricCommandProtocol,
+        )
+        c.transport.loseConnection()
+        p.flush()
+        result = c.callRemote(NoAnswerHello, hello=b'ignored')
+        self.assertIs(result, None)
+
+
     def test_noAnswerResponderBadAnswer(self):
         """
         Verify that responders of requiresAnswer=False commands have to return
