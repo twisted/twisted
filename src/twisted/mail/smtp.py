@@ -2035,7 +2035,6 @@ class ESMTPSender(SenderMixin, ESMTPClient):
         else:
             try:
                 context = ssl.ClientContextFactory()
-                context.method = ssl.SSL.TLSv1_METHOD
                 return context
             except AttributeError:
                 return None
