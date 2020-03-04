@@ -116,7 +116,7 @@ To get a result from some blocking code back into the reactor thread, we can use
     d.addCallback(printResult)
     reactor.run()
 
-Similarly, you want some code running in a non-reactor thread wants to invoke some code in the reactor thread and get its result, you can use :py:func:`blockingCallFromThread <twisted.internet.threads.blockingCallFromThread>`::
+Similarly, if you want some code running in a non-reactor thread to invoke some code in the reactor thread and get its result, you can use :py:func:`twisted.internet.threads.blockingCallFromThread <blockingCallFromThread>`::
 
     from twisted.internet import threads, reactor, defer
     from twisted.web.client import Agent
