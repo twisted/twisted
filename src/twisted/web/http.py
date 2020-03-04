@@ -2182,35 +2182,35 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         def fail():
             self._respondToBadRequestAndDisconnect()
             self.length = None
+            return False
 
         # Can this header determine the length?
         if header == b'content-length':
             try:
                 length = int(data)
             except ValueError:
-                fail()
-                return False
+                return fail()
             newTransferDecoder = _IdentityTransferDecoder(
-                length, self.requests[-1].handleContentChunk, self._finishRequestBody)
+                length, self.requests[-1].handleContentChunk,
+                self._finishRequestBody)
         elif header == b'transfer-encoding':
             # XXX Rather poorly tested code block, apparently only exercised by
             # test_chunkedEncoding
             if data.lower() == b'chunked':
                 length = None
                 newTransferDecoder = _ChunkedTransferDecoder(
-                    self.requests[-1].handleContentChunk, self._finishRequestBody)
+                    self.requests[-1].handleContentChunk,
+                    self._finishRequestBody)
             elif data.lower() == b'identity':
                 return True
             else:
-                fail()
-                return False
+                return fail()
         else:
             # It's not a length related header, so exit
             return True
 
         if self._transferDecoder is not None:
-            fail()
-            return False
+            return fail()
         else:
             self.length = length
             self._transferDecoder = newTransferDecoder

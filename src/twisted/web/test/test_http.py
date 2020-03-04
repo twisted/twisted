@@ -2252,27 +2252,6 @@ Hello,
         self.flushLoggedErrors(AttributeError)
 
 
-    def assertDisconnectingBadRequest(self, request):
-        """
-        Assert that the given request bytes fail with a 400 bad
-        request without calling L{Request.process}.
-
-        @param request: A raw HTTP request
-        @type request: L{bytes}
-        """
-        class FailedRequest(http.Request):
-            processed = False
-            def process(self):
-                FailedRequest.processed = True
-
-        channel = self.runRequest(request, FailedRequest, success=False)
-        self.assertFalse(FailedRequest.processed, "Request.process called")
-        self.assertEqual(
-            channel.transport.value(),
-            b"HTTP/1.1 400 Bad Request\r\n\r\n")
-        self.assertTrue(channel.transport.disconnecting)
-
-
     def test_duplicateContentLengths(self):
         """
         A request which includes multiple C{content-length} headers
@@ -2368,6 +2347,7 @@ Hello,
 
         class SuccessfulRequest(http.Request):
             processed = False
+
             def process(self):
                 body.append(self.content.read())
                 self.setHeader(b'content-length', b'0')
