@@ -17,7 +17,7 @@ This is not to say that it makes *no* use of threads; there are plenty of APIs w
 One prominent example of this is system hostname resolution: unless you have configured Twisted to use its own DNS client in ``twisted.names``, it will have to use your operating system's blocking APIs to map host names to IP addresses, in the reactor's thread pool.
 However, this is something you only need to know about for resource-tuning purposes, like setting the number of threads to use; otherwise, it is an implementation detail you can ignore.
 
-It is a common mistake is to think that because Twisted can manage multiple connections once, things are happening in multiple threads, and so you need to carefully manage locks.
+It is a common mistake is to think that because Twisted can manage multiple connections at once, things are happening in multiple threads, and so you need to carefully manage locks.
 Lucky for you, Twisted does most things in one thread!
 This document will explain how to interact with existing APIs which need to be run within their own threads because they block.
 If you're just using Twisted's own APIs, the rule for threads is simply "don't use them".
