@@ -21,17 +21,17 @@ parameters:
   - iocp
 
 steps:
+- task: UsePythonVersion@0
+  displayName: "Use Python ${{ parameters.pythonVersion }}"
+  inputs:
+    versionSpec: "${{ parameters.pythonVersion }}"
+
 - ${{ if and( eq(parameters.platform, 'windows'), startsWith(parameters.pythonVersion, '2') ) }}:
   - task: CmdLine@1
     displayName: 'Install compiler for Python 2.7'
     inputs:
       filename: choco
       arguments: 'install vcpython27 -confirm'
-
-- task: UsePythonVersion@0
-  displayName: "Use Python ${{ parameters.pythonVersion }}"
-  inputs:
-    versionSpec: "${{ parameters.pythonVersion }}"
 
 - script: |
    python --version
