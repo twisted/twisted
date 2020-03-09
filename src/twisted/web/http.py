@@ -671,7 +671,7 @@ def _getContentFile(length):
 
 
 
-_hostHeaderExpression = re.compile(br"\[?(?P<host>.*?)\]?(:\d+)?")
+_hostHeaderExpression = re.compile(br"^\[?(?P<host>.*?)\]?(:\d+)?$")
 
 @implementer(interfaces.IConsumer,
              _IDeprecatedHTTPChannelToRequestInterface)
@@ -1431,7 +1431,7 @@ class Request:
         # nothing failed.
         host = self.getHeader(b'host')
         if host is not None:
-            match = _hostHeaderExpression.fullmatch(host)
+            match = _hostHeaderExpression.match(host)
             if match is not None:
                 return match.group("host")
         return networkString(self.getHost().host)
