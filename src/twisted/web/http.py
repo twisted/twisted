@@ -671,7 +671,7 @@ def _getContentFile(length):
 
 
 
-_hostHeaderExpression = re.compile(rb"\[?(?P<host>.*?)\]?(:\d+)?")
+_hostHeaderExpression = re.compile(br"\[?(?P<host>.*?)\]?(:\d+)?")
 
 @implementer(interfaces.IConsumer,
              _IDeprecatedHTTPChannelToRequestInterface)
