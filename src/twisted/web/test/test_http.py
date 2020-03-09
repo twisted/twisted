@@ -2537,9 +2537,11 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         request, based on the C{Host:} header.
         """
         req = http.Request(DummyChannel(), False)
+
         def check(header, expectedHost):
             req.requestHeaders.setRawHeaders(b"host", [header])
             self.assertEqual(req.getRequestHostname(), expectedHost)
+
         check(b"example.com", b"example.com")
         check(b"example.com:8443", b"example.com")
         check(b"192.168.1.1", b"192.168.1.1")
