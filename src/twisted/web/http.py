@@ -66,6 +66,7 @@ import time
 import calendar
 import warnings
 import os
+import re
 from io import BytesIO as StringIO
 
 try:
@@ -669,6 +670,8 @@ def _getContentFile(length):
     return tempfile.TemporaryFile()
 
 
+
+_hostHeaderExpression = re.compile(rb"\[?(?P<host>.*?)\]?(:\d+)?")
 
 @implementer(interfaces.IConsumer,
              _IDeprecatedHTTPChannelToRequestInterface)
@@ -1427,8 +1430,9 @@ class Request:
         # XXX This method probably has no unit tests.  I changed it a ton and
         # nothing failed.
         host = self.getHeader(b'host')
-        if host:
-            return host.split(b':', 1)[0]
+        match = _hostHeaderExpression.fullmatch(host)
+        if match is not None:
+            return match.group("host")
         return networkString(self.getHost().host)
 
 
