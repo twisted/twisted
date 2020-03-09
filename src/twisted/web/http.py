@@ -1430,9 +1430,10 @@ class Request:
         # XXX This method probably has no unit tests.  I changed it a ton and
         # nothing failed.
         host = self.getHeader(b'host')
-        match = _hostHeaderExpression.fullmatch(host)
-        if match is not None:
-            return match.group("host")
+        if host is not None:
+            match = _hostHeaderExpression.fullmatch(host)
+            if match is not None:
+                return match.group("host")
         return networkString(self.getHost().host)
 
 
