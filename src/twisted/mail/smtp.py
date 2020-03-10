@@ -2065,7 +2065,8 @@ class ESMTPSenderFactory(SMTPSenderFactory):
                  requireTransportSecurity=True,
                  hostname=None):
 
-        SMTPSenderFactory.__init__(self, fromEmail, toEmail, file, deferred, retries, timeout)
+        SMTPSenderFactory.__init__(self, fromEmail, toEmail, file, deferred,
+                                   retries, timeout)
         self.username = username
         self.password = password
         self._contextFactory = contextFactory
@@ -2086,7 +2087,8 @@ class ESMTPSenderFactory(SMTPSenderFactory):
         @rtype: L{ESMTPSender}
         """
         p = self.protocol(self.username, self.password, self._contextFactory,
-                          self.domain, self.nEmails*2+2, hostname=self._hostname)
+                          self.domain, self.nEmails*2+2,
+                          hostname=self._hostname)
         p.heloFallback = self._heloFallback
         p.requireAuthentication = self._requireAuthentication
         p.requireTransportSecurity = self._requireTransportSecurity
@@ -2191,9 +2193,18 @@ def sendmail(smtphost, from_addr, to_addrs, msg, senderDomainName=None, port=25,
     if not isinstance(tlsHostname, unicode):
         tlsHostname = tlsHostname.decode("ascii")
 
-    factory = ESMTPSenderFactory(username, password, from_addr, to_addrs, msg,
-        d, heloFallback=True, requireAuthentication=requireAuthentication,
-        requireTransportSecurity=requireTransportSecurity, hostname=tlsHostname)
+    factory = ESMTPSenderFactory(
+        username,
+        password,
+        from_addr,
+        to_addrs,
+        msg,
+        d,
+        heloFallback=True,
+        requireAuthentication=requireAuthentication,
+        requireTransportSecurity=requireTransportSecurity,
+        hostname=tlsHostname
+    )
 
     if senderDomainName is not None:
         factory.domain = networkString(senderDomainName)
