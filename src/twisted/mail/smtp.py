@@ -1196,7 +1196,7 @@ class ESMTPClient(SMTPClient):
     @type requireAuthentication: L{bool}
 
     @ivar context: The context factory to use for STARTTLS, if desired.
-    @type context: L{ssl.ClientContextFactory}
+    @type context: L{IOpenSSLClientConnectionCreator}
 
     @ivar _tlsMode: Whether or not the connection is over TLS.
     @type _tlsMode: L{bool}
@@ -2010,6 +2010,11 @@ class ESMTPSender(SenderMixin, ESMTPClient):
         self.heloFallback = 0
         self.username = username
 
+        self._hostname = None
+        if 'hostname' in kw:
+            self._hostname = kw['hostname']
+            del kw['hostname']
+
         if contextFactory is None:
             contextFactory = self._getContextFactory()
 
@@ -2028,13 +2033,15 @@ class ESMTPSender(SenderMixin, ESMTPClient):
     def _getContextFactory(self):
         if self.context is not None:
             return self.context
+        if self._hostname is None:
+            return None
         try:
-            from twisted.internet import ssl
+            from twisted.internet._sslverify import optionsForClientTLS
         except ImportError:
             return None
         else:
             try:
-                context = ssl.ClientContextFactory()
+                context = optionsForClientTLS(self._hostname)
                 return context
             except AttributeError:
                 return None
@@ -2055,7 +2062,8 @@ class ESMTPSenderFactory(SMTPSenderFactory):
                  deferred, retries=5, timeout=None,
                  contextFactory=None, heloFallback=False,
                  requireAuthentication=True,
-                 requireTransportSecurity=True):
+                 requireTransportSecurity=True,
+                 hostname=None):
 
         SMTPSenderFactory.__init__(self, fromEmail, toEmail, file, deferred, retries, timeout)
         self.username = username
@@ -2064,6 +2072,7 @@ class ESMTPSenderFactory(SMTPSenderFactory):
         self._heloFallback = heloFallback
         self._requireAuthentication = requireAuthentication
         self._requireTransportSecurity = requireTransportSecurity
+        self._hostname = hostname
 
 
     def buildProtocol(self, addr):
@@ -2077,7 +2086,7 @@ class ESMTPSenderFactory(SMTPSenderFactory):
         @rtype: L{ESMTPSender}
         """
         p = self.protocol(self.username, self.password, self._contextFactory,
-                          self.domain, self.nEmails*2+2)
+                          self.domain, self.nEmails*2+2, hostname=self._hostname)
         p.heloFallback = self._heloFallback
         p.requireAuthentication = self._requireAuthentication
         p.requireTransportSecurity = self._requireTransportSecurity
@@ -2180,7 +2189,7 @@ def sendmail(smtphost, from_addr, to_addrs, msg, senderDomainName=None, port=25,
 
     factory = ESMTPSenderFactory(username, password, from_addr, to_addrs, msg,
         d, heloFallback=True, requireAuthentication=requireAuthentication,
-        requireTransportSecurity=requireTransportSecurity)
+        requireTransportSecurity=requireTransportSecurity, hostname=smtphost)
 
     if senderDomainName is not None:
         factory.domain = networkString(senderDomainName)
