@@ -2187,9 +2187,13 @@ def sendmail(smtphost, from_addr, to_addrs, msg, senderDomainName=None, port=25,
     if isinstance(password, unicode):
         password = password.encode("utf-8")
 
+    tlsHostname = smtphost
+    if not isinstance(tlsHostname, unicode):
+        tlsHostname = tlsHostname.decode("ascii")
+
     factory = ESMTPSenderFactory(username, password, from_addr, to_addrs, msg,
         d, heloFallback=True, requireAuthentication=requireAuthentication,
-        requireTransportSecurity=requireTransportSecurity, hostname=smtphost)
+        requireTransportSecurity=requireTransportSecurity, hostname=tlsHostname)
 
     if senderDomainName is not None:
         factory.domain = networkString(senderDomainName)
