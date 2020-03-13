@@ -1,0 +1,1 @@
+twisted.names.secondary.SecondaryAuthority now accepts str for its domain parameter, so twist dns --secondary now functions on Python 3.
