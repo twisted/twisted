@@ -1421,12 +1421,12 @@ class Request:
 
     def getRequestHostname(self):
         """
-        Get the hostname that the user passed in to the request.
+        Get the hostname that the HTTP client passed in to the request.
 
-        This will either use the Host: header (if it is available) or the
-        host we are listening on if the header is unavailable.
+        @see: L{IRequest.getRequestHostname}
 
         @returns: the requested hostname
+
         @rtype: C{bytes}
         """
         # XXX This method probably has no unit tests.  I changed it a ton and
