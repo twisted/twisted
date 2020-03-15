@@ -2531,6 +2531,30 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         self.assertEqual(req.getHeader(b"test"), b"lemur")
 
 
+    def test_getRequestHostname(self):
+        """
+        L{http.Request.getRequestHostname} returns the hostname portion of the
+        request, based on the C{Host:} header.
+        """
+        req = http.Request(DummyChannel(), False)
+
+        def check(header, expectedHost):
+            req.requestHeaders.setRawHeaders(b"host", [header])
+            self.assertEqual(req.getRequestHostname(), expectedHost)
+
+        check(b"example.com", b"example.com")
+        check(b"example.com:8443", b"example.com")
+        check(b"192.168.1.1", b"192.168.1.1")
+        check(b"192.168.1.1:19289", b"192.168.1.1")
+        check(b"[2607:f0d0:1002:51::4]",
+              b"2607:f0d0:1002:51::4")
+        check(b"[2607:f0d0:1002:0051:0000:0000:0000:0004]",
+              b"2607:f0d0:1002:0051:0000:0000:0000:0004")
+        check(b"[::1]", b"::1")
+        check(b"[::1]:8080", b"::1")
+        check(b"[2607:f0d0:1002:51::4]:9443", b"2607:f0d0:1002:51::4")
+
+
     def test_getHeaderReceivedMultiples(self):
         """
         When there are multiple values for a single request header,
