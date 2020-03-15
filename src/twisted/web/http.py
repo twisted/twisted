@@ -1429,8 +1429,6 @@ class Request:
 
         @rtype: C{bytes}
         """
-        # XXX This method probably has no unit tests.  I changed it a ton and
-        # nothing failed.
         host = self.getHeader(b'host')
         if host is not None:
             match = _hostHeaderExpression.match(host)
