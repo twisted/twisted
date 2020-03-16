@@ -293,6 +293,7 @@ class INotify(FileDescriptor, object):
                     self._addChildren, self._watchpoints[new_wd])
             if mask & IN_DELETE_SELF:
                 self._rmWatch(wd)
+                self.loseConnection()
 
 
     def _addChildren(self, iwp):
