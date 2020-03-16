@@ -97,13 +97,26 @@ class IRequest(Interface):
 
     def getRequestHostname():
         """
-        Get the hostname that the user passed in to the request.
+        Get the hostname that the HTTP client passed in to the request.
 
-        This will either use the Host: header (if it is available) or the
-        host we are listening on if the header is unavailable.
+        This will either use the C{Host:} header (if it is available; which,
+        for a spec-compliant request, it will be) or the IP address of the host
+        we are listening on if the header is unavailable.
+
+        @note: This is the I{host portion} of the requested resource, which
+            means that:
+
+                1. it might be an IPv4 or IPv6 address, not just a DNS host
+                   name,
+
+                2. there's no guarantee it's even a I{valid} host name or IP
+                   address, since the C{Host:} header may be malformed,
+
+                3. it does not include the port number.
 
         @returns: the requested hostname
-        @rtype: L{str}
+
+        @rtype: L{bytes}
         """
 
 
