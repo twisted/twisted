@@ -906,3 +906,31 @@ class ProcessIsUnimportableOnUnsupportedPlatormsTests(TestCase):
 
     if not platform.isWindows():
         test_unimportableOnWindows.skip = "Only relevant on Windows."
+
+
+
+class ReapingNonePidsLogsProperly(TestCase):
+    def test_registerReapProcessHandler(self):
+        expected = 'an integer is required (got type NoneType)'
+
+        process.registerReapProcessHandler(None, None)
+
+        [error] = self.flushLoggedErrors()
+        self.assertEqual(
+            str(error.value),
+            expected,
+            'Error logged with wrong message',
+        )
+
+    def test_(self):
+        expected = 'an integer is required (got type NoneType)'
+
+        _baseProcess = process._BaseProcess(None)
+        _baseProcess.reapProcess()
+
+        [error] = self.flushLoggedErrors()
+        self.assertEqual(
+            str(error.value),
+            expected,
+            'Error logged with wrong message',
+        )
