@@ -931,6 +931,9 @@ class ReapingNonePidsLogsProperly(TestCase):
             'Wrong error message logged',
         )
 
+    if platform.isWindows():
+        test_registerReapProcessHandler.skip = "Not relevant on Windows."
+
     def test__BaseProcess_reapProcess(self):
         _baseProcess = process._BaseProcess(None)
         _baseProcess.reapProcess()
@@ -946,3 +949,6 @@ class ReapingNonePidsLogsProperly(TestCase):
             self.expected_message,
             'Wrong error message logged',
         )
+
+    if platform.isWindows():
+        test__BaseProcess_reapProcess.skip = "Not relevant on Windows."
