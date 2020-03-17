@@ -32,6 +32,7 @@ from twisted.internet import defer
 from twisted.internet import error
 from twisted.internet import reactor
 from twisted.internet.interfaces import ITLSTransport, ISSLTransport
+from twisted.internet._idna import _idnaText
 from twisted.python import log
 from twisted.python import util
 from twisted.python.compat import (_PY3, range, long, unicode, networkString,
@@ -2010,10 +2011,7 @@ class ESMTPSender(SenderMixin, ESMTPClient):
         self.heloFallback = 0
         self.username = username
 
-        self._hostname = None
-        if 'hostname' in kw:
-            self._hostname = kw['hostname']
-            del kw['hostname']
+        self._hostname = kw.pop('hostname', None)
 
         if contextFactory is None:
             contextFactory = self._getContextFactory()
@@ -2036,15 +2034,12 @@ class ESMTPSender(SenderMixin, ESMTPClient):
         if self._hostname is None:
             return None
         try:
-            from twisted.internet._sslverify import optionsForClientTLS
+            from twisted.internet.ssl import optionsForClientTLS
         except ImportError:
             return None
         else:
-            try:
-                context = optionsForClientTLS(self._hostname)
-                return context
-            except AttributeError:
-                return None
+            context = optionsForClientTLS(self._hostname)
+            return context
 
 
 
@@ -2191,7 +2186,7 @@ def sendmail(smtphost, from_addr, to_addrs, msg, senderDomainName=None, port=25,
 
     tlsHostname = smtphost
     if not isinstance(tlsHostname, unicode):
-        tlsHostname = tlsHostname.decode("ascii")
+        tlsHostname = _idnaText(tlsHostname)
 
     factory = ESMTPSenderFactory(
         username,
