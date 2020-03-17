@@ -910,27 +910,39 @@ class ProcessIsUnimportableOnUnsupportedPlatormsTests(TestCase):
 
 
 class ReapingNonePidsLogsProperly(TestCase):
-    def test_registerReapProcessHandler(self):
-        expected = 'an integer is required (got type NoneType)'
+    try:
+        os.waitpid(None, None)
+    except Exception as e:
+        expected_message = str(e)
+        expected_type = type(e)
 
+    def test_registerReapProcessHandler(self):
         process.registerReapProcessHandler(None, None)
 
         [error] = self.flushLoggedErrors()
         self.assertEqual(
+            type(error.value),
+            self.expected_type,
+            'Wrong error type logged',
+        )
+        self.assertEqual(
             str(error.value),
-            expected,
-            'Error logged with wrong message',
+            self.expected_message,
+            'Wrong error message logged',
         )
 
-    def test_(self):
-        expected = 'an integer is required (got type NoneType)'
-
+    def test__BaseProcess_reapProcess(self):
         _baseProcess = process._BaseProcess(None)
         _baseProcess.reapProcess()
 
         [error] = self.flushLoggedErrors()
         self.assertEqual(
+            type(error.value),
+            self.expected_type,
+            'Wrong error type logged',
+        )
+        self.assertEqual(
             str(error.value),
-            expected,
-            'Error logged with wrong message',
+            self.expected_message,
+            'Wrong error message logged',
         )
