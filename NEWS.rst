@@ -3,8 +3,8 @@ http://twistedmatrix.com/trac/ticket/<number>
 
 .. towncrier release notes start
 
-Twisted 20.3.0rc1 (2020-03-08)
-==============================
+Twisted 20.3.0 (2020-03-13)
+===========================
 
 Bugfixes
 --------

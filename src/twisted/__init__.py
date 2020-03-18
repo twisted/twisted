@@ -16,7 +16,7 @@ __version__ = version.short()
 from incremental import Version
 from twisted.python.deprecate import deprecatedModuleAttribute
 deprecatedModuleAttribute(
-    Version('Twisted', 20, 3, 0, release_candidate=1),
+    Version('Twisted', 20, 3, 0),
     "morituri nolumus mori",
     "twisted",
     "news"
