@@ -13,7 +13,6 @@ import errno
 from zope.interface import implementer
 
 from twisted.logger import Logger
-from twisted.internet.base import DelayedCall
 from twisted.internet.posixbase import (PosixReactorBase, _NO_FILEDESC,
                                         _ContinuousPolling)
 from twisted.python.log import callWithLogger
@@ -64,8 +63,11 @@ class AsyncioSelectorReactor(PosixReactorBase):
         self._asyncioEventloop = eventloop
         self._writers = {}
         self._readers = {}
-        self._delayedCalls = set()
         self._continuousPolling = _ContinuousPolling(self)
+
+        self._scheduledAt = None
+        self._timerHandle = None
+
         super().__init__()
 
 
@@ -252,10 +254,6 @@ class AsyncioSelectorReactor(PosixReactorBase):
                 self._continuousPolling.getWriters())
 
 
-    def getDelayedCalls(self):
-        return list(self._delayedCalls)
-
-
     def iterate(self, timeout):
         self._asyncioEventloop.call_later(timeout + 0.01,
                                           self._asyncioEventloop.stop)
@@ -283,24 +281,29 @@ class AsyncioSelectorReactor(PosixReactorBase):
         return self._asyncioEventloop.time()
 
 
+    def _onTimer(self):
+        self._scheduledAt = None
+        self.runUntilCurrent()
+        self._reschedule()
+
+    def _reschedule(self):
+        timeout = self.timeout()
+        if timeout is not None:
+            abs_time = self._asyncioEventloop.time() + timeout
+            self._scheduledAt = abs_time
+            if self._timerHandle is not None:
+                self._timerHandle.cancel()
+            self._timerHandle = self._asyncioEventloop.call_at(abs_time, self._onTimer)
+
+    def _moveCallLaterSooner(self, tple):
+        PosixReactorBase._moveCallLaterSooner(self, tple)
+        self._reschedule()
+
     def callLater(self, seconds, f, *args, **kwargs):
-        def run():
-            dc.called = True
-            self._delayedCalls.remove(dc)
-            f(*args, **kwargs)
-        handle = self._asyncioEventloop.call_later(seconds, run)
-        dchandle = _DCHandle(handle)
-
-        def cancel(dc):
-            self._delayedCalls.remove(dc)
-            dchandle.cancel()
-
-        def reset(dc):
-            dchandle.handle = self._asyncioEventloop.call_at(dc.time, run)
-
-        dc = DelayedCall(self.seconds() + seconds, run, (), {},
-                         cancel, reset, seconds=self.seconds)
-        self._delayedCalls.add(dc)
+        dc = PosixReactorBase.callLater(self, seconds, f, *args, *kwargs)
+        abs_time = self._asyncioEventloop.time() + self.timeout()
+        if self._scheduledAt is None or abs_time < self._scheduledAt:
+            self._reschedule()
         return dc
 
 
