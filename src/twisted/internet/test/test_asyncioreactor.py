@@ -109,7 +109,7 @@ class AsyncioSelectorReactorTests(ReactorBuilder, SynchronousTestCase):
 
             reactor = AsyncioSelectorReactor()
             for _ in range(timer_count):
-                reactor.callLater(0, lambda: ...)
+                reactor.callLater(0, lambda: None)
             reactor.runUntilCurrent()
 
             objects_after = len(gc.get_objects())

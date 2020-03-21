@@ -300,7 +300,7 @@ class AsyncioSelectorReactor(PosixReactorBase):
         self._reschedule()
 
     def callLater(self, seconds, f, *args, **kwargs):
-        dc = PosixReactorBase.callLater(self, seconds, f, *args, *kwargs)
+        dc = PosixReactorBase.callLater(self, seconds, f, *args, **kwargs)
         abs_time = self._asyncioEventloop.time() + self.timeout()
         if self._scheduledAt is None or abs_time < self._scheduledAt:
             self._reschedule()
