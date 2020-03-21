@@ -1,1 +1,0 @@
-twisted.web.http.HTTPChannel now rejects requests (with status code 400 and a drop) that have malformed headers of the form "Foo : value" or ": value".

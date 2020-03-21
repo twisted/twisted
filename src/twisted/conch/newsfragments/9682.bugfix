@@ -1,1 +1,0 @@
-twisted.conch.keys.Key.privateBlob now returns the correct blob format for ECDSA (i.e. the same as that implemented by OpenSSH).
