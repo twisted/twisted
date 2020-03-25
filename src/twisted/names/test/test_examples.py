@@ -49,7 +49,9 @@ class ExampleTestBase(object):
         try:
             here = FilePath(os.environ['TOX_INI_DIR']).child('docs')
         except KeyError:
-            raise SkipTest("Examples not found ($TOX_INI_DIR unset) - cannot test")
+            raise SkipTest(
+                "Examples not found ($TOX_INI_DIR unset) - cannot test",
+            )
 
         # Find the example script within this branch
         for childName in self.exampleRelativePath.split('/'):
