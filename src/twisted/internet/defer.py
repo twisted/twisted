@@ -27,11 +27,14 @@ from functools import wraps
 from incremental import Version
 
 # Twisted imports
-from twisted.python.compat import cmp, comparable
+from twisted.python.compat import _PY3, cmp, comparable
 from twisted.python import lockfile, failure
 from twisted.logger import Logger
 from twisted.python.deprecate import warnAboutFunction, deprecated
 from twisted.python._oldstyle import _oldStyle
+
+if _PY3:
+    import asyncio
 
 log = Logger()
 
@@ -821,8 +824,11 @@ class Deferred:
         """
         def adapt(result):
             try:
-                extracted = result.result()
-            except:
+                try:
+                    extracted = result.result()
+                except asyncio.CancelledError:
+                    raise CancelledError()
+            except:  # noqa: E722
                 extracted = failure.Failure()
             adapt.actual.callback(extracted)
         futureCancel = object()
