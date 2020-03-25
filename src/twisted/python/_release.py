@@ -336,7 +336,6 @@ class APIBuilder(object):
                 u"--html-output", outputPath.path,
                 u"--html-write-function-pages", u"--quiet", u"--make-html",
                ] + intersphinxes
-        args = [arg.encode("utf-8") for arg in args]
         main(args)
 
         monkeyPatch.restore()
