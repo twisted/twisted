@@ -36,7 +36,7 @@ from incremental import Version
 from twisted.web.iweb import IPolicyForHTTPS, IAgentEndpointFactory
 from twisted.python.deprecate import getDeprecationWarningString
 from twisted.web import http
-from twisted.internet import defer, protocol, task, reactor
+from twisted.internet import defer, protocol, task
 from twisted.internet.abstract import isIPv6Address
 from twisted.internet.interfaces import IProtocol, IOpenSSLContextFactory
 from twisted.internet.endpoints import HostnameEndpoint, wrapClientTLS
@@ -183,6 +183,7 @@ class HTTPPageGetter(http.HTTPClient):
             self._completelyDone = False
             self.factory.setURL(url)
 
+            from twisted.internet import reactor
             if self.factory.scheme == b'https':
                 from twisted.internet import ssl
                 contextFactory = ssl.ClientContextFactory()
@@ -408,6 +409,7 @@ class HTTPClientFactory(protocol.ClientFactory):
         p.followRedirect = self.followRedirect
         p.afterFoundGet = self.afterFoundGet
         if self.timeout:
+            from twisted.internet import reactor
             timeoutCall = reactor.callLater(self.timeout, p.timeout)
             self.deferred.addBoth(self._cancelTimeout, timeoutCall)
         return p
@@ -741,6 +743,7 @@ def _makeGetterFactory(url, factoryFactory, contextFactory=None,
     """
     uri = URI.fromBytes(_ensureValidURI(url.strip()))
     factory = factoryFactory(url, *args, **kwargs)
+    from twisted.internet import reactor
     if uri.scheme == b'https':
         from twisted.internet import ssl
         if contextFactory is None:
@@ -2310,6 +2313,7 @@ def readBody(response):
 
 __all__ = [
     'Agent',
+    'BrowserLikePolicyForHTTPS',
     'BrowserLikeRedirectAgent',
     'ContentDecoderAgent',
     'CookieAgent',
