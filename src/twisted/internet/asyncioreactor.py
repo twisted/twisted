@@ -269,7 +269,9 @@ class AsyncioSelectorReactor(PosixReactorBase):
 
     def stop(self):
         super().stop()
-        self.callLater(0, self.fireSystemEvent, "shutdown")
+        # This will cause runUntilCurrent which in its turn
+        # will call fireSystemEvent("shutdown")
+        self.callLater(0, lambda: None)
 
 
     def crash(self):
