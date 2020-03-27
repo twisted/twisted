@@ -118,7 +118,7 @@ class TwistedSphinxInventory(SphinxInventory):
         @rtype: urllib2 response or L{None}
         """
         try:
-            return urllib.urlopen(HeadRequest(url))
+            return urllib.request.urlopen(HeadRequest(url))
         except Exception as e:
             print("Error opening {}: {}".format(url, e))
             return None
