@@ -16,6 +16,7 @@ from pydoctor import model, zopeinterface, astbuilder
 from pydoctor.sphinx import SphinxInventory
 
 
+
 class HeadRequest(urllib.request.Request, object):
     """
     A request for the HEAD HTTP method.
@@ -137,8 +138,8 @@ def getDeprecated(self, decorators):
 
             if fn == "twisted.python.deprecate.deprecated":
                 try:
-                    self._deprecated_info = deprecatedToUsefulText(self,
-                        self.name, a)
+                    self._deprecated_info = deprecatedToUsefulText(
+                        self, self.name, a)
                 except AttributeError:
                     raise
                     # It's a reference or something that we can't figure out
