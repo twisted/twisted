@@ -440,7 +440,6 @@ notPortedModules = [
     "twisted.plugins.twisted_mail",
     "twisted.plugins.twisted_news",
     "twisted.protocols.shoutcast",
-    "twisted.python._pydoctor",
     "twisted.python.finalize",
     "twisted.python.hook",
     "twisted.python.test.cmodulepullpipe",
