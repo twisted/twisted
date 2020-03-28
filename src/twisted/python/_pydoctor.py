@@ -10,23 +10,9 @@ This documentation does not link to pydoctor API as there is no public API yet.
 """
 
 import ast
-import urllib
 
 from pydoctor import model, zopeinterface, astbuilder
 from pydoctor.sphinx import SphinxInventory
-
-
-
-class HeadRequest(urllib.request.Request, object):
-    """
-    A request for the HEAD HTTP method.
-    """
-
-    def get_method(self):
-        """
-        Use the HEAD HTTP method.
-        """
-        return 'HEAD'
 
 
 
@@ -84,45 +70,7 @@ class TwistedSphinxInventory(SphinxInventory):
 
             return '%s/%s' % (baseURL, relativeLink)
 
-        if name.startswith('win32api'):
-            # This is a link to pywin32 which does not provide inter-API doc
-            # link capabilities
-            baseURL = 'http://docs.activestate.com/activepython/2.7/pywin32'
-
-            # For now only links to methods are supported.
-            relativeLink = '%s_meth.html' % (name.replace('.', '__'),)
-
-            fullURL = '%s/%s' % (baseURL, relativeLink)
-
-            # Check if URL exists.
-            response = self._getURLAsHEAD(fullURL)
-            if response:
-                if response.code == 200:
-                    return fullURL
-                else:
-                    # Bad URL resolution.
-                    print("BAD URL resolution, code: ", response.code)
-
         return None
-
-
-    def _getURLAsHEAD(self, url):
-        """
-        Get are HEAD response for URL.
-
-        Here to help with testing and allow injecting another URL getter.
-
-        @param url: Full URL to the page which is retrieved.
-        @type url: L{str}
-
-        @return: The response for the HEAD method.
-        @rtype: urllib2 response or L{None}
-        """
-        try:
-            return urllib.request.urlopen(HeadRequest(url))
-        except Exception as e:
-            print("Error opening {}: {}".format(url, e))
-            return None
 
 
 
