@@ -1,1 +1,0 @@
-Require attrs ≥ 19.2.0 to use eq instead of the deprecated cmp
