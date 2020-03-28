@@ -350,6 +350,23 @@ class DomishStreamTestsMixin:
             self.elements[0].attributes, {(" bar baz ", "baz"): "quux"})
 
 
+    def test_attributesWithNamespaces(self):
+        """
+        Attributes with namespace are parsed without Exception.
+        (https://twistedmatrix.com/trac/ticket/9730 regression test)
+        """
+
+        xml = b"""<root xmlns:test='http://example.org' xml:lang='en'>
+                    <test:test>test</test:test>
+                  </root>"""
+
+        # with Python 3.8 and without #9730 fix, the following error would
+        # happen at next line:
+        # ``RuntimeError: dictionary keys changed during iteration``
+        self.stream.parse(xml)
+        self.assertEqual(self.elements[0].uri, "http://example.org")
+
+
     def testChildPrefix(self):
         xml = b"<root xmlns='testns' xmlns:foo='testns2'><foo:child/></root>"
 

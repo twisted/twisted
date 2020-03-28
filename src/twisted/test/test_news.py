@@ -26,7 +26,7 @@ class NewsDeprecationTestCase(SynchronousTestCase):
         self.assertEqual(
             warningsShown[0]['message'],
             (
-                'twisted.news was deprecated in Twisted NEXT: '
+                'twisted.news was deprecated in Twisted 20.3.0: '
                 'morituri nolumus mori'
             )
         )

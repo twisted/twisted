@@ -2252,6 +2252,123 @@ Hello,
         self.flushLoggedErrors(AttributeError)
 
 
+    def test_duplicateContentLengths(self):
+        """
+        A request which includes multiple C{content-length} headers
+        fails with a 400 response without calling L{Request.process}.
+        """
+        self.assertRequestRejected([
+            b'GET /a HTTP/1.1',
+            b'Content-Length: 56',
+            b'Content-Length: 0',
+            b'Host: host.invalid',
+            b'',
+            b'',
+        ])
+
+
+    def test_duplicateContentLengthsWithPipelinedRequests(self):
+        """
+        Two pipelined requests, the first of which includes multiple
+        C{content-length} headers, trigger a 400 response without
+        calling L{Request.process}.
+        """
+        self.assertRequestRejected([
+            b'GET /a HTTP/1.1',
+            b'Content-Length: 56',
+            b'Content-Length: 0',
+            b'Host: host.invalid',
+            b'',
+            b'',
+            b'GET /a HTTP/1.1',
+            b'Host: host.invalid',
+            b'',
+            b'',
+        ])
+
+
+    def test_contentLengthAndTransferEncoding(self):
+        """
+        A request that includes both C{content-length} and
+        C{transfer-encoding} headers fails with a 400 response without
+        calling L{Request.process}.
+        """
+        self.assertRequestRejected([
+            b'GET /a HTTP/1.1',
+            b'Transfer-Encoding: chunked',
+            b'Content-Length: 0',
+            b'Host: host.invalid',
+            b'',
+            b'',
+        ])
+
+
+    def test_contentLengthAndTransferEncodingWithPipelinedRequests(self):
+        """
+        Two pipelined requests, the first of which includes both
+        C{content-length} and C{transfer-encoding} headers, triggers a
+        400 response without calling L{Request.process}.
+        """
+        self.assertRequestRejected([
+            b'GET /a HTTP/1.1',
+            b'Transfer-Encoding: chunked',
+            b'Content-Length: 0',
+            b'Host: host.invalid',
+            b'',
+            b'',
+            b'GET /a HTTP/1.1',
+            b'Host: host.invalid',
+            b'',
+            b'',
+        ])
+
+
+    def test_unknownTransferEncoding(self):
+        """
+        A request whose C{transfer-encoding} header includes a value
+        other than C{chunked} or C{identity} fails with a 400 response
+        without calling L{Request.process}.
+        """
+        self.assertRequestRejected([
+            b'GET /a HTTP/1.1',
+            b'Transfer-Encoding: unknown',
+            b'Host: host.invalid',
+            b'',
+            b'',
+        ])
+
+
+    def test_transferEncodingIdentity(self):
+        """
+        A request with a valid C{content-length} and a
+        C{transfer-encoding} whose value is C{identity} succeeds.
+        """
+        body = []
+
+        class SuccessfulRequest(http.Request):
+            processed = False
+
+            def process(self):
+                body.append(self.content.read())
+                self.setHeader(b'content-length', b'0')
+                self.finish()
+
+        request = b'''\
+GET / HTTP/1.1
+Host: host.invalid
+Content-Length: 2
+Transfer-Encoding: identity
+
+ok
+'''
+        channel = self.runRequest(request, SuccessfulRequest, False)
+        self.assertEqual(body, [b'ok'])
+        self.assertEqual(
+            channel.transport.value(),
+            b'HTTP/1.1 200 OK\r\nContent-Length: 0\r\n\r\n',
+        )
+
+
 
 class QueryArgumentsTests(unittest.TestCase):
     def testParseqs(self):
@@ -2412,6 +2529,30 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         req = http.Request(DummyChannel(), False)
         req.requestHeaders.setRawHeaders(b"test", [b"lemur"])
         self.assertEqual(req.getHeader(b"test"), b"lemur")
+
+
+    def test_getRequestHostname(self):
+        """
+        L{http.Request.getRequestHostname} returns the hostname portion of the
+        request, based on the C{Host:} header.
+        """
+        req = http.Request(DummyChannel(), False)
+
+        def check(header, expectedHost):
+            req.requestHeaders.setRawHeaders(b"host", [header])
+            self.assertEqual(req.getRequestHostname(), expectedHost)
+
+        check(b"example.com", b"example.com")
+        check(b"example.com:8443", b"example.com")
+        check(b"192.168.1.1", b"192.168.1.1")
+        check(b"192.168.1.1:19289", b"192.168.1.1")
+        check(b"[2607:f0d0:1002:51::4]",
+              b"2607:f0d0:1002:51::4")
+        check(b"[2607:f0d0:1002:0051:0000:0000:0000:0004]",
+              b"2607:f0d0:1002:0051:0000:0000:0000:0004")
+        check(b"[::1]", b"::1")
+        check(b"[::1]:8080", b"::1")
+        check(b"[2607:f0d0:1002:51::4]:9443", b"2607:f0d0:1002:51::4")
 
 
     def test_getHeaderReceivedMultiples(self):
