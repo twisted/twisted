@@ -28,6 +28,7 @@ NEWSFRAGMENT_TYPES = ["doc", "bugfix", "misc", "feature", "removal"]
 intersphinxURLs = [
     u"https://docs.python.org/2/objects.inv",
     u"https://docs.python.org/3/objects.inv",
+    u"https://cryptography.io/en/latest/objects.inv",
     u"https://pyopenssl.readthedocs.io/en/stable/objects.inv",
     u"https://hyperlink.readthedocs.io/en/stable/objects.inv",
     u"https://twisted.github.io/constantly/docs/objects.inv",
