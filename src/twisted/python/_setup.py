@@ -104,7 +104,7 @@ _EXTRA_OPTIONS = dict(
     ],
     conch=[
         'pyasn1',
-        'cryptography >= 2.5',
+        'cryptography >= 2.6',
         'appdirs >= 1.4.0',
         'bcrypt >= 3.0.0',
     ],
