@@ -327,15 +327,16 @@ class APIBuilder(object):
 
         from pydoctor.driver import main
 
-        args = [u"--project-name", projectName,
-                u"--project-url", projectURL,
-                u"--system-class", u"twisted.python._pydoctor.TwistedSystem",
-                u"--project-base-dir", packagePath.parent().path,
-                u"--html-viewsource-base", sourceURL,
-                u"--add-package", packagePath.path,
-                u"--html-output", outputPath.path,
-                u"--html-write-function-pages", u"--quiet", u"--make-html",
-               ] + intersphinxes
+        args = [
+            "--project-name", projectName,
+            "--project-url", projectURL,
+            "--system-class", "twisted.python._pydoctor.TwistedSystem",
+            "--project-base-dir", packagePath.parent().path,
+            "--html-viewsource-base", sourceURL,
+            "--add-package", packagePath.path,
+            "--html-output", outputPath.path,
+            "--html-write-function-pages", "--quiet", "--make-html",
+        ] + intersphinxes
         main(args)
 
         monkeyPatch.restore()

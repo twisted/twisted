@@ -104,7 +104,7 @@ jobs:
     docker:
       - image: circleci/python:3.6
     environment:
-      PYTHON: python2
+      PYTHON: python3
     steps:
       # Get the source.
       - checkout

@@ -52,7 +52,7 @@ class GeneralOptions(usage.Options):
                      ['pass', 'P', None, 'Provide old passphrase.'],
                      ['format', 'o', 'sha256-base64',
                       'Fingerprint format of key file.'],
-                     ['private-key-subtype', None, 'PEM',
+                     ['private-key-subtype', None, None,
                       'OpenSSH private key subtype to write ("PEM" or "v1").']]
 
     optFlags = [['fingerprint', 'l', 'Show fingerprint of key file.'],
@@ -171,6 +171,35 @@ def generateECDSAkey(options):
 
 
 
+@_keyGenerator('ed25519')
+def generateEd25519key(options):
+    from cryptography.hazmat.primitives.asymmetric import ed25519
+
+    keyPrimitive = ed25519.Ed25519PrivateKey.generate()
+    key = keys.Key(keyPrimitive)
+    _saveKey(key, options)
+
+
+
+def _defaultPrivateKeySubtype(keyType):
+    """
+    Return a reasonable default private key subtype for a given key type.
+
+    @type keyType: L{str}
+    @param keyType: A key type, as returned by
+        L{twisted.conch.ssh.keys.Key.type}.
+
+    @rtype: L{str}
+    @return: A private OpenSSH key subtype (C{'PEM'} or C{'v1'}).
+    """
+    if keyType == 'Ed25519':
+        # No PEM format is defined for Ed25519 keys.
+        return 'v1'
+    else:
+        return 'PEM'
+
+
+
 def printFingerprint(options):
     if not options['filename']:
         filename = os.path.expanduser('~/.ssh/id_rsa')
@@ -220,9 +249,12 @@ def changePassPhrase(options):
             print('Passphrases do not match.  Try again.')
         options['newpass'] = p1
 
+    if options.get('private-key-subtype') is None:
+        options['private-key-subtype'] = _defaultPrivateKeySubtype(key.type())
+
     try:
         newkeydata = key.toString(
-            'openssh', subtype=options.get('private-key-subtype'),
+            'openssh', subtype=options['private-key-subtype'],
             passphrase=options['newpass'])
     except Exception as e:
         sys.exit('Could not change passphrase: %s' % (e,))
@@ -267,7 +299,12 @@ def _saveKey(key, options):
     @param options:
     @type options: L{dict}
     """
-    KeyTypeMapping = {'EC': 'ecdsa', 'RSA': 'rsa', 'DSA': 'dsa'}
+    KeyTypeMapping = {
+        'EC': 'ecdsa',
+        'Ed25519': 'ed25519',
+        'RSA': 'rsa',
+        'DSA': 'dsa'
+    }
     keyTypeName = KeyTypeMapping[key.type()]
     if not options['filename']:
         defaultPath = os.path.expanduser(u'~/.ssh/id_%s' % (keyTypeName,))
@@ -294,11 +331,14 @@ def _saveKey(key, options):
             print('Passphrases do not match.  Try again.')
         options['pass'] = p1
 
+    if options.get('private-key-subtype') is None:
+        options['private-key-subtype'] = _defaultPrivateKeySubtype(key.type())
+
     comment = '%s@%s' % (getpass.getuser(), socket.gethostname())
 
     filepath.FilePath(options['filename']).setContent(
         key.toString(
-            'openssh', subtype=options.get('private-key-subtype'),
+            'openssh', subtype=options['private-key-subtype'],
             passphrase=options['pass']))
     os.chmod(options['filename'], 33152)
 
