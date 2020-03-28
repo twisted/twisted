@@ -523,8 +523,18 @@ class CheckNewsfragmentScript(object):
         branch = runCommand([b"git", b"rev-parse", b"--abbrev-ref",  "HEAD"],
                             cwd=location).decode(encoding).strip()
 
-        r = runCommand([b"git", b"diff", b"--name-only", b"origin/trunk..."],
-                       cwd=location).decode(encoding).strip()
+        # diff-filter=d to exclude deleted newsfiles (which will happen on the
+        # release branch)
+        r = runCommand(
+            [
+                b"git",
+                b"diff",
+                b"--name-only",
+                b"origin/trunk...",
+                b"--diff-filter=d"
+            ],
+            cwd=location
+        ).decode(encoding).strip()
 
         if not r:
             self._print(
