@@ -10,6 +10,7 @@ Tests for implementations of L{IReactorProcess}.
 
 from __future__ import division, absolute_import, print_function
 
+import hamcrest
 import io
 import os
 import signal
@@ -880,7 +881,10 @@ class ProcessTestsBuilder(ProcessTestsBuilderBase):
         reactor.callWhenRunning(go, reactor)
         self.runReactor(reactor)
 
-        self.assertEqual(['process already removed as desired'], results)
+        hamcrest.assert_that(
+            results,
+            hamcrest.equal_to(['process already removed as desired']),
+        )
 
 
 
