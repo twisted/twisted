@@ -27,7 +27,7 @@ from twisted.python.compat import (networkString, range, items,
                                    bytesEnviron, unicode)
 from twisted.internet import utils
 from twisted.internet.interfaces import IReactorProcess, IProcessTransport
-from twisted.internet.defer import Deferred, succeed
+from twisted.internet.defer import Deferred, inlineCallbacks, succeed
 from twisted.internet.protocol import ProcessProtocol
 from twisted.internet.error import ProcessDone, ProcessTerminated
 
@@ -844,6 +844,43 @@ class ProcessTestsBuilder(ProcessTestsBuilderBase):
 
         reactor.callWhenRunning(spawnChild)
         self.runReactor(reactor)
+
+
+    def test_process_unregistered_before_protocol_ended_callback(self):
+        """
+        Process is removed from reapProcessHandler dict before running
+        ProcessProtocol.processEnded() callback.
+        """
+        results = []
+
+        class TestProcessProtocol(ProcessProtocol):
+            def __init__(self):
+                self.deferred = Deferred()
+
+            def processEnded(self, status):
+                handlers = twisted.internet.process.reapProcessHandlers
+                processes = handlers.values()
+                if self.transport in processes:
+                    results.append('process present but should not be')
+                else:
+                    results.append('process already removed as desired')
+
+                self.deferred.callback(None)
+
+        @inlineCallbacks
+        def go(reactor):
+            try:
+                testProcessProtocol = TestProcessProtocol()
+                reactor.spawnProcess(testProcessProtocol, "echo", ["twist it"])
+                yield testProcessProtocol.deferred
+            finally:
+                reactor.stop()
+
+        reactor = self.buildReactor()
+        reactor.callWhenRunning(go, reactor)
+        self.runReactor(reactor)
+
+        self.assertEqual(['process already removed as desired'], results)
 globals().update(ProcessTestsBuilder.makeTestCaseClasses())
 
 
