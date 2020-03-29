@@ -881,6 +881,9 @@ class ProcessTestsBuilder(ProcessTestsBuilderBase):
         self.runReactor(reactor)
 
         self.assertEqual(['process already removed as desired'], results)
+
+
+
 globals().update(ProcessTestsBuilder.makeTestCaseClasses())
 
 
