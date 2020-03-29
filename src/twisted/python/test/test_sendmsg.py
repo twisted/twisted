@@ -8,7 +8,7 @@ Tests for L{twisted.python.sendmsg}.
 import sys
 import errno
 import warnings
-from os import devnull, pipe, read, close, pathsep
+from os import pipe, read, close, pathsep
 from struct import pack
 from socket import SOL_SOCKET, AF_INET, AF_INET6, socket, error
 
