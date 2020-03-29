@@ -178,55 +178,6 @@ def _spawn(script, outputFD):
 
 
 
-class BadList(list):
-    """
-    A list which cannot be iterated sometimes.
-
-    This is a C{list} subclass to get past the type check in L{send1msg}, not
-    as an example of how real programs might want to interact with L{send1msg}
-    (or anything else).  A custom C{list} subclass makes it easier to trigger
-    certain error cases in the implementation.
-
-    @ivar iterate: A flag which indicates whether an instance of L{BadList}
-        will allow iteration over itself or not.  If C{False}, an attempt to
-        iterate over the instance will raise an exception.
-    """
-    iterate = True
-
-    def __iter__(self):
-        """
-        Allow normal list iteration, or raise an exception.
-
-        If C{self.iterate} is C{True}, it will be flipped to C{False} and then
-        normal iteration will proceed.  If C{self.iterate} is C{False},
-        L{RuntimeError} is raised instead.
-        """
-        if self.iterate:
-            self.iterate = False
-            return super(BadList, self).__iter__()
-        raise RuntimeError("Something bad happened")
-
-
-
-class WorseList(list):
-    """
-    A list which at first gives the appearance of being iterable, but then
-    raises an exception.
-
-    See L{BadList} for a warning about not writing code like this.
-    """
-    def __iter__(self):
-        """
-        Return an iterator which will raise an exception as soon as C{next} is
-        called on it.
-        """
-        class BadIterator(object):
-            def next(self):
-                raise RuntimeError("This is a really bad case.")
-        return BadIterator()
-
-
-
 class SendmsgTests(TestCase):
     """
     Tests for the Python2/3 compatible L{sendmsg} interface.
