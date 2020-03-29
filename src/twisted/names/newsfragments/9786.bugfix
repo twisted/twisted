@@ -1,0 +1,1 @@
+twist dns --pyzone example-domain.com now works on Python 3.

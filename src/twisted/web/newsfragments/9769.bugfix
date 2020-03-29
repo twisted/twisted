@@ -1,1 +1,0 @@
-twisted.web.client.BrowserLikePolicyForHTTPS is now listed in __all__, since it's a user-facing class that anyone could import and extend. 
