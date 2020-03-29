@@ -847,6 +847,7 @@ class ProcessTestsBuilder(ProcessTestsBuilderBase):
         self.runReactor(reactor)
 
 
+    @onlyOnPOSIX
     def test_process_unregistered_before_protocol_ended_callback(self):
         """
         Process is removed from reapProcessHandler dict before running
@@ -859,8 +860,11 @@ class ProcessTestsBuilder(ProcessTestsBuilderBase):
                 self.deferred = Deferred()
 
             def processEnded(self, status):
-                handlers = twisted.internet.process.reapProcessHandlers
+                from twisted.internet import process
+
+                handlers = process.reapProcessHandlers
                 processes = handlers.values()
+
                 if self.transport in processes:
                     results.append('process present but should not be')
                 else:
@@ -872,8 +876,14 @@ class ProcessTestsBuilder(ProcessTestsBuilderBase):
         def go(reactor):
             try:
                 testProcessProtocol = TestProcessProtocol()
-                reactor.spawnProcess(testProcessProtocol, "echo", ["twist it"])
+                reactor.spawnProcess(
+                    testProcessProtocol,
+                    pyExe,
+                    [pyExe, '--version'],
+                )
                 yield testProcessProtocol.deferred
+            except Exception as e:
+                results.append(e)
             finally:
                 reactor.stop()
 
