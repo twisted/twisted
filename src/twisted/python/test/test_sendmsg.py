@@ -23,7 +23,7 @@ from twisted.internet import reactor
 from twisted.internet.defer import Deferred, inlineCallbacks
 from twisted.internet.error import ProcessDone
 from twisted.internet.protocol import ProcessProtocol
-from twisted.python.compat import _PY3, intToBytes, bytesEnviron
+from twisted.python.compat import intToBytes, bytesEnviron
 from twisted.python.filepath import FilePath
 from twisted.python.runtime import platform
 
@@ -83,8 +83,6 @@ class _FDHolder(object):
         If C{self._fd} is unclosed, raise a warning.
         """
         if self._fd:
-            if not _PY3:
-                ResourceWarning = Warning
             warnings.warn("FD %s was not closed!" % (self._fd,),
                           ResourceWarning)
             self.close()
@@ -115,9 +113,7 @@ class ExitedWithStderr(Exception):
         Dump the errors in a pretty way in the event of a subprocess traceback.
         """
         result = b'\n'.join([b''] + list(self.args))
-        if _PY3:
-            result = repr(result)
-        return result
+        return repr(result)
 
 
 
