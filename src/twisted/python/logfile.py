@@ -13,12 +13,10 @@ from __future__ import division, absolute_import
 import os, glob, time, stat
 
 from twisted.python import threadable
-from twisted.python._oldstyle import _oldStyle
 from twisted.python.compat import unicode
 
 
 
-@_oldStyle
 class BaseLogFile:
     """
     The base class for a log file that can be rotated.
@@ -310,7 +308,6 @@ class DailyLogFile(BaseLogFile):
 threadable.synchronize(DailyLogFile)
 
 
-@_oldStyle
 class LogReader:
     """Read from a log file."""
 
