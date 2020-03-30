@@ -12,6 +12,7 @@ import tokenize, keyword
 from . import reflect
 
 
+
 class TokenPrinter:
     """
     Format a stream of tokens and intermediate whitespace, for pretty-printing.

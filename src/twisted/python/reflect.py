@@ -27,6 +27,7 @@ from twisted.python import compat
 from twisted.python.deprecate import _fullyQualifiedName as fullyQualifiedName
 
 
+
 def prefixedMethodNames(classObj, prefix):
     """
     Given a class object C{classObj}, returns a list of method names that match
