@@ -47,6 +47,7 @@ else:
     importSkip = None
 
 
+
 class _FDHolder(object):
     """
     A wrapper around a FD that will remember if it has been closed or not.
