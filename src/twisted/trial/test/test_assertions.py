@@ -14,11 +14,9 @@ demonstrated to work earlier in the file are used by those later in the file
 
 from __future__ import division, absolute_import
 
-import sys
 import warnings
 import unittest as pyunit
 
-from twisted.python.filepath import FilePath
 from twisted.python.util import FancyEqMixin
 from twisted.python.reflect import (
     prefixedMethods, accumulateMethods, fullyQualifiedName)

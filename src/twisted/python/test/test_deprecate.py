@@ -27,7 +27,6 @@ from twisted.python.deprecate import (
     _passedArgSpec, _passedSignature
 )
 
-from twisted.python.compat import execfile
 from incremental import Version
 from twisted.python.runtime import platform
 from twisted.python.filepath import FilePath

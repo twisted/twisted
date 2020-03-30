@@ -9,12 +9,13 @@ from __future__ import division, absolute_import
 
 import warnings
 import gc
+import functools
 import traceback
 import re
 
 from asyncio import new_event_loop, Future, CancelledError
 
-from twisted.python import compat, failure, log
+from twisted.python import failure, log
 from twisted.trial import unittest
 from twisted.internet import defer, reactor
 from twisted.internet.task import Clock
@@ -3121,7 +3122,8 @@ class DeferredTestsAsync(unittest.TestCase):
     @ensuringDeferred
     async def test_asyncWithSemaphore(self):
         """
-        L{defer.DeferredSemaphore} can be used as an asynchronous context manager.
+        L{defer.DeferredSemaphore} can be used as an asynchronous context
+        manager.
         """
         sem = defer.DeferredSemaphore(3)
 
