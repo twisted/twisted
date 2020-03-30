@@ -31,10 +31,6 @@ matrix:
     - services:
         - docker
       env: PIP=pip TOXENV=wheels
-    - python: 2.7
-      env: TOXENV=py27-alldeps-withcov-posix,coverage-prepare,codecov-push,coveralls-push
-    - python: 2.7
-      env: TOXENV=py27-nodeps-withcov-posix,coverage-prepare,codecov-push,coveralls-push
     - python: 3.5
       env: TOXENV=py35-alldeps-withcov-posix,coverage-prepare,codecov-push,coveralls-push
     - python: 3.6
@@ -47,10 +43,8 @@ matrix:
     # others, but that's ok.
     - python: 3.6
       env: TOXENV=py36-alldeps-withcov-posix,coverage-prepare,codecov-push,coveralls-push DISABLE_IPV6=yes
-    - python: pypy
-      env: TOXENV=pypy-nodeps-withcov-posix,coverage-prepare,codecov-push,coveralls-push PYPY_VERSION=pypy2.7-7.1.1
     - python: pypy3
-      env: TOXENV=pypy-nodeps-withcov-posix,coverage-prepare,codecov-push,coveralls-push PYPY_VERSION=pypy3.6-7.1.1
+      env: TOXENV=pypy-nodeps-withcov-posix,coverage-prepare,codecov-push,coveralls-push PYPY_VERSION=pypy3.6-7.3.0
 
 addons:
   apt:
