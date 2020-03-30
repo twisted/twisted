@@ -300,12 +300,14 @@ class PySourceAuthority(FileAuthority):
 
 
     def wrapRecord(self, type):
-        return lambda name, *arg, **kw: (name, type(*arg, **kw))
+        def wrapRecordFunc(name, *arg, **kw):
+            return (dns.domainString(name), type(*arg, **kw))
+        return wrapRecordFunc
 
 
     def setupConfigNamespace(self):
         r = {}
-        items = dns.__dict__.iterkeys()
+        items = dns.__dict__.keys()
         for record in [x for x in items if x.startswith('Record_')]:
             type = getattr(dns, record)
             f = self.wrapRecord(type)
