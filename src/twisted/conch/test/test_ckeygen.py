@@ -14,19 +14,20 @@ from io import BytesIO, StringIO
 from twisted.python.compat import unicode, _PY3
 from twisted.python.reflect import requireModule
 
+from twisted.python.filepath import FilePath
+from twisted.trial.unittest import TestCase
+from twisted.conch.test.keydata import (
+    publicRSA_openssh, privateRSA_openssh, privateRSA_openssh_encrypted,
+    privateECDSA_openssh, privateEd25519_openssh_new)
+
 if requireModule('cryptography') and requireModule('pyasn1'):
-    from twisted.conch.ssh.keys import (Key, BadKeyError,
-        BadFingerPrintFormat, FingerprintFormats)
+    from twisted.conch.ssh.keys import (
+        Key, BadKeyError, BadFingerPrintFormat, FingerprintFormats)
     from twisted.conch.scripts.ckeygen import (
         changePassPhrase, displayPublicKey, printFingerprint,
         _saveKey, enumrepresentation)
 else:
     skip = "cryptography and pyasn1 required for twisted.conch.scripts.ckeygen"
-
-from twisted.python.filepath import FilePath
-from twisted.trial.unittest import TestCase
-from twisted.conch.test.keydata import (
-    publicRSA_openssh, privateRSA_openssh, privateRSA_openssh_encrypted, privateECDSA_openssh)
 
 
 
@@ -76,6 +77,8 @@ class KeyGenTests(TestCase):
         pubKey = Key.fromFile(filename + '.pub')
         if keyType == 'ecdsa':
             self.assertEqual(privKey.type(), 'EC')
+        elif keyType == 'ed25519':
+            self.assertEqual(privKey.type(), 'Ed25519')
         else:
             self.assertEqual(privKey.type(), keyType.upper())
         self.assertTrue(pubKey.isPublic())
@@ -86,6 +89,7 @@ class KeyGenTests(TestCase):
         self._testrun('ecdsa', '384', privateKeySubtype='v1')
         self._testrun('ecdsa')
         self._testrun('ecdsa', privateKeySubtype='v1')
+        self._testrun('ed25519')
         self._testrun('dsa', '2048')
         self._testrun('dsa', '2048', privateKeySubtype='v1')
         self._testrun('dsa')
@@ -235,6 +239,36 @@ class KeyGenTests(TestCase):
             key.public())
 
 
+    def test_saveKeyEd25519(self):
+        """
+        L{_saveKey} writes the private and public parts of a key to two
+        different files and writes a report of this to standard out.
+        Test with Ed25519 key.
+        """
+        base = FilePath(self.mktemp())
+        base.makedirs()
+        filename = base.child('id_ed25519').path
+        key = Key.fromString(privateEd25519_openssh_new)
+        _saveKey(
+            key,
+            {'filename': filename, 'pass': 'passphrase', 'format': 'md5-hex'})
+        self.assertEqual(
+            self.stdout.getvalue(),
+            "Your identification has been saved in %s\n"
+            "Your public key has been saved in %s.pub\n"
+            "The key fingerprint in <FingerprintFormats=MD5_HEX> is:\n"
+            "ab:ee:c8:ed:e5:01:1b:45:b7:8d:b2:f0:8f:61:1c:14\n" % (
+                filename,
+                filename))
+        self.assertEqual(
+            key.fromString(
+                base.child('id_ed25519').getContent(), None, 'passphrase'),
+            key)
+        self.assertEqual(
+            Key.fromString(base.child('id_ed25519.pub').getContent()),
+            key.public())
+
+
     def test_saveKeysha256(self):
         """
         L{_saveKey} will generate key fingerprint in
@@ -312,6 +346,23 @@ class KeyGenTests(TestCase):
                 base.child('id_ecdsa').getContent(), None),
             key)
 
+
+    def test_saveKeyEd25519EmptyPassphrase(self):
+        """
+        L{_saveKey} will choose an empty string for the passphrase if
+        no-passphrase is C{True}.
+        """
+        base = FilePath(self.mktemp())
+        base.makedirs()
+        filename = base.child('id_ed25519').path
+        key = Key.fromString(privateEd25519_openssh_new)
+        _saveKey(
+            key,
+            {'filename': filename, 'no-passphrase': True, 'format': 'md5-hex'})
+        self.assertEqual(
+            key.fromString(
+                base.child('id_ed25519').getContent(), None),
+            key)
 
 
     def test_saveKeyNoFilename(self):
