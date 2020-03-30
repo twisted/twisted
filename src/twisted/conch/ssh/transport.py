@@ -1235,8 +1235,8 @@ class SSHTransportBase(protocol.Protocol):
         Generate an private key for ECDH key exchange.
 
         @rtype: The appropriate private key type matching C{self.kexAlg}:
-            L{EllipticCurvePrivateKey} for C{ecdh-sha2-nistp*}, or
-            L{X25519PrivateKey} for C{curve25519-sha256}.
+            L{ec.EllipticCurvePrivateKey} for C{ecdh-sha2-nistp*}, or
+            L{x25519.X25519PrivateKey} for C{curve25519-sha256}.
         @return: The generated private key.
         """
         if self.kexAlg.startswith(b'ecdh-sha2-nistp'):
@@ -1260,8 +1260,8 @@ class SSHTransportBase(protocol.Protocol):
         Encode an elliptic curve public key to bytes.
 
         @type ecPub: The appropriate public key type matching
-            C{self.kexAlg}: L{EllipticCurvePublicKey} for
-            C{ecdh-sha2-nistp*}, or L{X25519PublicKey} for
+            C{self.kexAlg}: L{ec.EllipticCurvePublicKey} for
+            C{ecdh-sha2-nistp*}, or L{x25519.X25519PublicKey} for
             C{curve25519-sha256}.
         @param ecPub: The public key to encode.
 
@@ -1290,8 +1290,8 @@ class SSHTransportBase(protocol.Protocol):
         Generate a shared secret for ECDH key exchange.
 
         @type ecPriv: The appropriate private key type matching
-            C{self.kexAlg}: L{EllipticCurvePrivateKey} for
-            C{ecdh-sha2-nistp*}, or L{X25519PrivateKey} for
+            C{self.kexAlg}: L{ec.EllipticCurvePrivateKey} for
+            C{ecdh-sha2-nistp*}, or L{x25519.X25519PrivateKey} for
             C{curve25519-sha256}.
         @param ecPriv: Our private key.
 
