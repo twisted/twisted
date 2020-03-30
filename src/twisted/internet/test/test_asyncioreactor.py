@@ -46,3 +46,14 @@ class AsyncioSelectorReactorTests(ReactorBuilder, SynchronousTestCase):
         self.assertEqual(result, [])
         self.runReactor(reactor, timeout=1)
         self.assertEqual(result, [True])
+
+    def test_seconds(self):
+        """L{seconds} should return a plausible epoch time."""
+        reactor = AsyncioSelectorReactor()
+        result = reactor.seconds()
+
+        # greater than 2020-01-01
+        self.assertGreater(result, 1577836800)
+
+        # less than 2120-01-01
+        self.assertLess(result, 4733510400)
