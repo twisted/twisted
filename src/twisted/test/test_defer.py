@@ -12,41 +12,12 @@ import gc
 import traceback
 import re
 
+from asyncio import new_event_loop, Future, CancelledError
+
 from twisted.python import compat, failure, log
-from twisted.python.compat import _PY3, _PY35PLUS
 from twisted.trial import unittest
 from twisted.internet import defer, reactor
 from twisted.internet.task import Clock
-
-
-if _PY3:
-    from asyncio import new_event_loop, Future, CancelledError
-    asyncSkip = None
-else:
-    asyncSkip = "asyncio not available before python 3.4"
-
-
-if _PY35PLUS:
-    from twisted.python.filepath import FilePath
-
-    _path = FilePath(__file__).parent().child("test_defer.py.3only")
-
-    _g = {"__name__": __name__ + ".3only"}
-    compat.execfile(_path.path, _g)
-    DeferredTestsAsync = _g["DeferredTestsAsync"]
-else:
-    class DeferredTestsAsync(unittest.TestCase):
-        """
-        A dummy class to show that this test file was discovered but the tests
-        are unable to be ran in this version of Python.
-        """
-        skip = "async/await is not available before Python 3.5"
-
-        def test_notAvailable(self):
-            """
-            A skipped test to show that this was not ran because the Python is
-            too old.
-            """
 
 
 
@@ -1437,16 +1408,11 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         newFailure = self.failureResultOf(d)
         tb = traceback.extract_tb(newFailure.getTracebackObject())
 
-        if _PY3:
-            self.assertEqual(len(tb), 3)
-            self.assertIn('test_defer', tb[2][0])
-            self.assertEqual('getDivisionFailure', tb[2][2])
-            self.assertEqual('1/0', tb[2][3])
-        else:
-            self.assertEqual(len(tb), 2)
-            self.assertIn('test_defer', tb[1][0])
-            self.assertEqual('getDivisionFailure', tb[1][2])
-            self.assertEqual('1/0', tb[1][3])
+        self.assertEqual(len(tb), 3)
+        self.assertIn('test_defer', tb[2][0])
+        self.assertEqual('getDivisionFailure', tb[2][2])
+        self.assertEqual('1/0', tb[2][3])
+
         self.assertIn('test_defer', tb[0][0])
         self.assertEqual('test_inlineCallbacksTracebacks', tb[0][2])
         self.assertEqual('f.raiseException()', tb[0][3])
@@ -3013,8 +2979,6 @@ def callAllSoonCalls(loop):
 
 class DeferredFutureAdapterTests(unittest.TestCase):
 
-    skip = asyncSkip
-
     def test_asFuture(self):
         """
         L{defer.Deferred.asFuture} returns a L{asyncio.Future} which fires when
@@ -3122,3 +3086,72 @@ class DeferredFutureAdapterTests(unittest.TestCase):
         self.assertEqual(cancelled.cancelled(), True)
         self.assertRaises(CancelledError, cancelled.result)
         self.failureResultOf(d).trap(CancelledError)
+
+
+
+def ensuringDeferred(f):
+    @functools.wraps(f)
+    def wrapper(*args, **kwargs):
+        result = f(*args, **kwargs)
+        return defer.ensureDeferred(result)
+    return wrapper
+
+
+
+class DeferredTestsAsync(unittest.TestCase):
+
+
+    @ensuringDeferred
+    async def test_asyncWithLock(self):
+        """
+        L{defer.DeferredLock} can be used as an asynchronous context manager.
+        """
+        lock = defer.DeferredLock()
+        async with lock:
+            self.assertTrue(lock.locked)
+            d = lock.acquire()
+            d.addCallback(lambda _: lock.release())
+            self.assertTrue(lock.locked)
+            self.assertFalse(d.called)
+        self.assertTrue(d.called)
+        await d
+        self.assertFalse(lock.locked)
+
+
+    @ensuringDeferred
+    async def test_asyncWithSemaphore(self):
+        """
+        L{defer.DeferredSemaphore} can be used as an asynchronous context manager.
+        """
+        sem = defer.DeferredSemaphore(3)
+
+        async with sem:
+            self.assertEqual(sem.tokens, 2)
+            async with sem:
+                self.assertEqual(sem.tokens, 1)
+                d1 = sem.acquire()
+                d2 = sem.acquire()
+                self.assertEqual(sem.tokens, 0)
+                self.assertTrue(d1.called)
+                self.assertFalse(d2.called)
+            self.assertEqual(sem.tokens, 0)
+            self.assertTrue(d2.called)
+            d1.addCallback(lambda _: sem.release())
+            d2.addCallback(lambda _: sem.release())
+            await d1
+            await d2
+            self.assertEqual(sem.tokens, 2)
+        self.assertEqual(sem.tokens, 3)
+
+    @ensuringDeferred
+    async def test_asyncWithLockException(self):
+        """
+        C{defer.DeferredLock} correctly propagates exceptions when
+        used as an asynchronous context manager.
+        """
+        lock = defer.DeferredLock()
+        with self.assertRaisesRegexp(Exception, 'some specific exception'):
+            async with lock:
+                self.assertTrue(lock.locked)
+                raise Exception('some specific exception')
+        self.assertFalse(lock.locked)
