@@ -135,7 +135,10 @@ def err(_stuff=None, _why=None, **kw):
     else:
         msg(repr(_stuff), why=_why, isError=1, **kw)
 
+
+
 deferr = err
+
 
 
 class Logger:

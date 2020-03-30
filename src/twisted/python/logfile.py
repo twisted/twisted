@@ -10,7 +10,10 @@ A rotating, browsable log file.
 from __future__ import division, absolute_import
 
 # System Imports
-import os, glob, time, stat
+import os
+import glob
+import time
+import stat
 
 from twisted.python import threadable
 from twisted.python.compat import unicode
@@ -306,6 +309,7 @@ class DailyLogFile(BaseLogFile):
         return state
 
 threadable.synchronize(DailyLogFile)
+
 
 
 class LogReader:

@@ -19,6 +19,7 @@ from twisted.internet import interfaces, error, defer
 from twisted.logger import _loggerFor
 
 
+
 @implementer(interfaces.IProtocolFactory, interfaces.ILoggingContext)
 class Factory:
     """
@@ -697,7 +698,8 @@ class ProcessProtocol(BaseProtocol):
 
 class AbstractDatagramProtocol:
     """
-    Abstract protocol for datagram-oriented transports, e.g. IP, ICMP, ARP, UDP.
+    Abstract protocol for datagram-oriented transports, e.g. IP, ICMP, ARP,
+    UDP.
     """
 
     transport = None

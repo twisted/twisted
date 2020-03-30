@@ -57,12 +57,16 @@ from __future__ import division, absolute_import
 
 # System imports
 from OpenSSL import SSL
-supported = True
 
 from zope.interface import implementer, implementer_only, implementedBy
 
 # Twisted imports
 from twisted.internet import tcp, interfaces
+
+
+
+supported = True
+
 
 
 @implementer(interfaces.IOpenSSLContextFactory)
