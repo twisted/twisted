@@ -26,13 +26,6 @@ steps:
   inputs:
     versionSpec: "${{ parameters.pythonVersion }}"
 
-- ${{ if and( eq(parameters.platform, 'windows'), startsWith(parameters.pythonVersion, '2') ) }}:
-  - task: CmdLine@1
-    displayName: 'Install compiler for Python 2.7'
-    inputs:
-      filename: choco
-      arguments: 'install vcpython27 -confirm'
-
 - script: |
    python --version
    python -c "import sys; print(sys.prefix)"
