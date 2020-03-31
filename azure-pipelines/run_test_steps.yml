@@ -9,7 +9,7 @@ parameters:
 - name: pythonVersion
   type: string
   values:
-  - '2.7'
+  - '3.5'
   - '3.6'
   - '3.7'
 

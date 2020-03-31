@@ -1254,3 +1254,160 @@ class BindAuthorityTests(unittest.TestCase):
                 nativeString(directive + b" directive not implemented"),
                 e.exception.args[0]
             )
+
+
+
+samplePySource = """\
+zone = [
+    SOA(
+        # For whom we are the authority
+        'example.com',
+
+        # This nameserver's name
+        mname = "dns.example.com",
+
+        # Mailbox of individual who handles this
+        rname = "root.example.com",
+
+        # Unique serial identifying this SOA data
+        serial = 86400,
+
+        # Time interval before zone should be refreshed
+        refresh = "2H",
+
+        # Interval before failed refresh should be retried
+        retry = "1H",
+
+        # Upper limit on time interval before expiry
+        expire = "1H",
+
+        # Minimum TTL
+        minimum = "3H"
+
+    ),
+
+    AAAA('example.com', '2001:db8:10::1'),
+    A('example.com', '10.0.0.1'),
+    NS('example.com', 'dns.example.com'),
+    A('no-in.example.com', '10.0.0.2'),
+    PTR('2.0.0.10.in-addr.arpa', 'no-in.example.com'),
+
+    CNAME('www.example.com', 'example.com'),
+    CNAME('ftp.example.com', 'example.com'),
+
+    MX('not-fqdn.example.com', 10, 'mail.example.com'),
+]
+"""
+
+
+
+class PySourceAuthorityTests(unittest.TestCase):
+    """
+    Tests for L{twisted.names.authority.PySourceAuthority}.
+    """
+    def loadPySourceString(self, s):
+        """
+        Create a new L{twisted.names.authority.PySourceAuthority} from C{s}.
+
+        @param s: A string with BIND zone data in a Python source file.
+        @type s: L{str}
+
+        @return: a new bind authority
+        @rtype: L{twisted.names.authority.PySourceAuthority}
+        """
+        fp = FilePath(self.mktemp())
+        with open(fp.path, "w") as f:
+            f.write(s)
+
+        return authority.PySourceAuthority(fp.path)
+
+
+    def setUp(self):
+        self.auth = self.loadPySourceString(samplePySource)
+
+
+    def test_aRecords(self):
+        """
+        A records are loaded.
+        """
+        for dom, ip in [(b"example.com", u"10.0.0.1"),
+                        (b"no-in.example.com", u"10.0.0.2")]:
+            [[rr], [], []] = self.successResultOf(
+                self.auth.lookupAddress(dom)
+            )
+            self.assertEqual(
+                dns.Record_A(
+                    ip
+                ),
+                rr.payload,
+            )
+
+
+    def test_aaaaRecords(self):
+        """
+        AAAA records are loaded.
+        """
+        [[rr], [], []] = self.successResultOf(
+            self.auth.lookupIPV6Address(b"example.com")
+        )
+        self.assertEqual(
+            dns.Record_AAAA(
+                u"2001:db8:10::1"
+            ),
+            rr.payload,
+        )
+
+
+    def test_mxRecords(self):
+        """
+        MX records are loaded.
+        """
+        [[rr], [], []] = self.successResultOf(
+            self.auth.lookupMailExchange(b"not-fqdn.example.com")
+        )
+        self.assertEqual(
+            dns.Record_MX(
+                preference=10, name="mail.example.com",
+            ),
+            rr.payload,
+        )
+
+
+    def test_cnameRecords(self):
+        """
+        CNAME records are loaded.
+        """
+        [answers, [], []] = self.successResultOf(
+            self.auth.lookupIPV6Address(b"www.example.com")
+        )
+        rr = answers[0]
+        self.assertEqual(
+            dns.Record_CNAME(
+                name="example.com",
+            ),
+            rr.payload,
+        )
+
+
+    def test_PTR(self):
+        """
+        PTR records are loaded.
+        """
+        [answers, [], []] = self.successResultOf(
+            self.auth.lookupPointer(b"2.0.0.10.in-addr.arpa")
+        )
+        rr = answers[0]
+        self.assertEqual(
+            dns.Record_PTR(
+                name=b"no-in.example.com",
+            ),
+            rr.payload,
+        )
+
+
+    def test_badInputNoZone(self):
+        """
+        Input file has no zone variable
+        """
+        badPySource = "nothing = []"
+        self.assertRaises(ValueError, self.loadPySourceString, badPySource)
