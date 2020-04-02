@@ -1,0 +1,1 @@
+twisted.adbapi.ConnectionPool correct destroy transaction object
