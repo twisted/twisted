@@ -1,11 +1,9 @@
-# -*- test-case-name: twisted.internet.test.test_coroutines -*-
+# -*- test-case-name: twisted.internet.test.test_defer_await -*-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
 Tests for C{await} support in Deferreds.
-
-These tests can only work and be imported on Python 3.5+!
 """
 
 import types
