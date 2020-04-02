@@ -463,13 +463,6 @@ class NetworkStringTests(unittest.SynchronousTestCase):
     """
     Tests for L{networkString}.
     """
-    def test_bytes(self):
-        """
-        L{networkString} returns a C{bytes} object passed to it unmodified.
-        """
-        self.assertEqual(b"foo", networkString(b"foo"))
-
-
     def test_unicode(self):
         """
         L{networkString} returns a C{unicode} object passed to it encoded into
