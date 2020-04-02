@@ -47,7 +47,7 @@ class Connection(object):
         pass
 
 
-    def rollback(self):
+    def rollback(self, exValue):
         if not self._pool.reconnect:
             self._connection.rollback()
             return
@@ -300,7 +300,7 @@ class ConnectionPool:
         except:
             excType, excValue, excTraceback = sys.exc_info()
             try:
-                conn.rollback()
+                conn.rollback(excValue)
             except:
                 log.err(None, "Rollback failed")
             compat.reraise(excValue, excTraceback)
@@ -458,8 +458,8 @@ class ConnectionPool:
 
     def _runInteraction(self, interaction, *args, **kw):
         conn = self.connectionFactory(self)
-        trans = self.transactionFactory(self, conn)
         try:
+            trans = self.transactionFactory(self, conn)
             result = interaction(trans, *args, **kw)
             trans.close()
             conn.commit()
@@ -467,7 +467,7 @@ class ConnectionPool:
         except:
             excType, excValue, excTraceback = sys.exc_info()
             try:
-                conn.rollback()
+                conn.rollback(excValue)
             except:
                 log.err(None, "Rollback failed")
             compat.reraise(excValue, excTraceback)
