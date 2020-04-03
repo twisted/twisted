@@ -346,6 +346,7 @@ of the package. You would have to extend the layout of your files like this:
 
 
 .. code-block:: python
+    :caption: ``a minimal setup.py file``
 
 
     from setuptools import setup, find_packages
@@ -353,12 +354,10 @@ of the package. You would have to extend the layout of your files like this:
     setup(
         name='MyApplication',
         version='0.1dev',
-        # it is neccesary to extend the found package list with the twisted.plugin
+        # it is necesary to extend the found package list with the twisted.plugin
         # directory. It cannot be automatically detected, because it should not
         # contain a __init__.py file.
-        packages= find_packages().append('twisted.plugins'),
-        license='MIT License',
-        long_description="Insert your long description here",
+        packages=find_packages()+['twisted.plugins'],
         install_requires=[
             'twisted',
             ],
@@ -377,7 +376,7 @@ can be used:
 .. code-block:: console
 
 
-    python setup.py sdist
+    python3 setup.py sdist
 
 
 
@@ -407,8 +406,10 @@ specified in ``setup.py``.
 
 
 
-For more information about packaging in Python have a look at the `hitchhiker's
-guide to packaging <https://the-hitchhikers-guide-to-packaging.readthedocs.io/>`_.
+For more information about packaging in Python have a look at the `official
+Python packaging user guide <https://packaging.python.org/tutorials/packaging-projects/>`_ or
+`hitchhiker's guide to packaging
+<https://the-hitchhikers-guide-to-packaging.readthedocs.io/>`_.
 
 
 
