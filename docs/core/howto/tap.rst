@@ -310,12 +310,12 @@ For a full list of cred plugins supported, see :api:`twisted.plugins <twisted.pl
 
 
 
-Deploy your application using python packages
+Deploy your application using Python packages
 ---------------------------------------------
 
 
 
-To deploy your application one possibility is to wrap it up in a python package.
+To deploy your application one possibility is to wrap it up in a Python package.
 For this you need to write a special file ``setup.py``, which contains metadata
 of the package. You would have to extend the layout of your files like this:
 
@@ -368,7 +368,7 @@ of the package. You would have to extend the layout of your files like this:
 
 
 
-To create the python package from the directory the standard setup tools
+To create the Python package from the directory the standard setup tools
 can be used:
 
 
