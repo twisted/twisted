@@ -122,6 +122,14 @@ class FileTransferBase(protocol.Protocol):
             flags |= FILEXFER_ATTR_EXTENDED
         return struct.pack('!L', flags) + data
 
+    def connectionLost(self, reason):
+        """
+        Called when connection to the remote subsystem was lost.
+        """
+
+        super().connectionLost(reason)
+        self.connected = False
+
 
 
 class FileTransferServer(FileTransferBase):
@@ -496,14 +504,12 @@ class FileTransferServer(FileTransferBase):
 
     def connectionLost(self, reason):
         """
+        Called when connection to the remote subsystem was lost.
+
         Clean all opened files and directories.
         """
 
-        # On Python2, we're an oldstyle class, so we can't use super().
         FileTransferBase.connectionLost(self, reason)
-        # Not sure why self.connected isn't updated in
-        # t.i.p.Protocol.connectionLost() instead
-        self.connected = False
 
         for fileObj in self.openFiles.values():
             fileObj.close()
@@ -536,28 +542,25 @@ class FileTransferClient(FileTransferBase):
 
     def connectionLost(self, reason):
         """
-        Abort any pending requests.
+        Called when connection to the remote subsystem was lost.
+
+        Any pending requests are aborted.
         """
 
-        # On Python2, we're an oldstyle class, so we can't use super().
         FileTransferBase.connectionLost(self, reason)
-        # Not sure why self.connected isn't updated in
-        # t.i.p.Protocol.connectionLost() instead
-        self.connected = False
 
         # If there are still requests waiting for responses when the
         # connection is lost, fail them.
         if self.openRequests:
-            if reason.check(error.ConnectionDone):
-                # Even if our transport was lost "cleanly", our
-                # requests were still not cancelled "cleanly".
-                reqreason = failure.Failure(
-                    error.ConnectionLost(str(reason.value)))
-            else:
-                reqreason = reason
+
+            # Even if our transport was lost "cleanly", our
+            # requests were still not cancelled "cleanly".
+            requestError = error.ConnectionLost()
+            requestError.__cause__ = reason.value
+            requestFailure = failure.Failure(requestError)
             while self.openRequests:
                 _, deferred = self.openRequests.popitem()
-                deferred.errback(reqreason)
+                deferred.errback(requestFailure)
 
 
     def _sendRequest(self, msg, data):
