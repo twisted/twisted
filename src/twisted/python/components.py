@@ -16,6 +16,7 @@ you need is in the top-level of the zope.interface package, e.g.::
 
    @implementer(IFoo)
    class Foo:
+       pass
 
    print(IFoo.implementedBy(Foo)) # True
    print(IFoo.providedBy(Foo())) # True

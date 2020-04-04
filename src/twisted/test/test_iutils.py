@@ -243,10 +243,7 @@ class ProcessUtilsTests(unittest.TestCase):
         # the trial temporary directory.
         self.addCleanup(os.chmod, dir, originalMode)
 
-        # Pass in -S so that if run using the coverage .pth trick, it won't be
-        # loaded and cause Coverage to try and get the current working
-        # directory (see the comments above why this can be a problem) on OSX.
-        d = utilFunc(self.exe, ['-S', '-u', scriptFile])
+        d = utilFunc(self.exe, ['-u', scriptFile])
         d.addCallback(check, dir.encode(sys.getfilesystemencoding()))
         return d
 

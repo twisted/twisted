@@ -9,23 +9,10 @@ FIXME: https://github.com/twisted/pydoctor/issues/106
 This documentation does not link to pydoctor API as there is no public API yet.
 """
 
-import urllib2
+import ast
 
-from compiler import ast
-from pydoctor import model, zopeinterface
+from pydoctor import model, zopeinterface, astbuilder
 from pydoctor.sphinx import SphinxInventory
-
-
-class HeadRequest(urllib2.Request, object):
-    """
-    A request for the HEAD HTTP method.
-    """
-
-    def get_method(self):
-        """
-        Use the HEAD HTTP method.
-        """
-        return 'HEAD'
 
 
 
@@ -83,45 +70,7 @@ class TwistedSphinxInventory(SphinxInventory):
 
             return '%s/%s' % (baseURL, relativeLink)
 
-        if name.startswith('win32api'):
-            # This is a link to pywin32 which does not provide inter-API doc
-            # link capabilities
-            baseURL = 'http://docs.activestate.com/activepython/2.7/pywin32'
-
-            # For now only links to methods are supported.
-            relativeLink = '%s_meth.html' % (name.replace('.', '__'),)
-
-            fullURL = '%s/%s' % (baseURL, relativeLink)
-
-            # Check if URL exists.
-            response = self._getURLAsHEAD(fullURL)
-            if response:
-                if response.code == 200:
-                    return fullURL
-                else:
-                    # Bad URL resolution.
-                    print("BAD URL resolution, code: ", response.code)
-
         return None
-
-
-    def _getURLAsHEAD(self, url):
-        """
-        Get are HEAD response for URL.
-
-        Here to help with testing and allow injecting another URL getter.
-
-        @param url: Full URL to the page which is retrieved.
-        @type url: L{str}
-
-        @return: The response for the HEAD method.
-        @rtype: urllib2 response or L{None}
-        """
-        try:
-            return urllib2.urlopen(HeadRequest(url))
-        except Exception as e:
-            print("Error opening {}: {}".format(url, e))
-            return None
 
 
 
@@ -132,22 +81,15 @@ def getDeprecated(self, decorators):
     decorator.
     """
     for a in decorators:
-        if isinstance(a, ast.CallFunc):
-            decorator = a.asList()
-
-            # Getattr is used when the decorator is @foo.bar, not @bar
-            if isinstance(decorator[0], ast.Getattr):
-                getAttr = decorator[0].asList()
-                name = getAttr[0].name
-                fn = self.expandName(name) + "." + getAttr[1]
-            else:
-                fn = self.expandName(decorator[0].name)
+        if isinstance(a, ast.Call):
+            fn = self.expandName(''.join(astbuilder.node2dottedname(a.func)))
 
             if fn == "twisted.python.deprecate.deprecated":
                 try:
                     self._deprecated_info = deprecatedToUsefulText(
-                        self.name, decorator)
+                        self, self.name, a)
                 except AttributeError:
+                    raise
                     # It's a reference or something that we can't figure out
                     # from the AST.
                     pass
@@ -185,23 +127,22 @@ def versionToUsefulObject(version):
     Change an AST C{Version()} to a real one.
     """
     from incremental import Version
-
-    return Version(*[x.value for x in version.asList()[1:] if x])
-
+    return Version(version.args[0].s, *[x.n for x in version.args[1:] if x])
 
 
-def deprecatedToUsefulText(name, deprecated):
+
+def deprecatedToUsefulText(visitor, name, deprecated):
     """
     Change a C{@deprecated} to a display string.
     """
     from twisted.python.deprecate import _getDeprecationWarningString
 
-    version = versionToUsefulObject(deprecated[1])
-    if deprecated[2]:
-        if isinstance(deprecated[2], ast.Keyword):
-            replacement = deprecated[2].asList()[1].value
+    version = versionToUsefulObject(deprecated.args[0])
+    if len(deprecated.args) > 1 and deprecated.args[1]:
+        if isinstance(deprecated.args[1], ast.Name):
+            replacement = visitor.resolveName(deprecated.args[1].id)
         else:
-            replacement = deprecated[2].value
+            replacement = deprecated.args[1].s
     else:
         replacement = None
 

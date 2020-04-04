@@ -66,6 +66,7 @@ import time
 import calendar
 import warnings
 import os
+import re
 from io import BytesIO as StringIO
 
 try:
@@ -670,6 +671,10 @@ def _getContentFile(length):
 
 
 
+_hostHeaderExpression = re.compile(br"^\[?(?P<host>.*?)\]?(:\d+)?$")
+
+
+
 @implementer(interfaces.IConsumer,
              _IDeprecatedHTTPChannelToRequestInterface)
 class Request:
@@ -873,7 +878,8 @@ class Request:
         @type version: C{bytes}
         @param version: The HTTP version of this request.
         """
-        self.content.seek(0,0)
+        clength = self.content.tell()
+        self.content.seek(0, 0)
         self.args = {}
 
         self.method, self.uri = command, path
@@ -889,16 +895,16 @@ class Request:
         # Argument processing
         args = self.args
         ctype = self.requestHeaders.getRawHeaders(b'content-type')
-        clength = self.requestHeaders.getRawHeaders(b'content-length')
         if ctype is not None:
             ctype = ctype[0]
-
-        if clength is not None:
-            clength = clength[0]
 
         if self.method == b"POST" and ctype and clength:
             mfd = b'multipart/form-data'
             key, pdict = _parseHeader(ctype)
+            # This weird CONTENT-LENGTH param is required by
+            # cgi.parse_multipart() in some versions of Python 3.7+, see
+            # bpo-29979. It looks like this will be relaxed and backported, see
+            # https://github.com/python/cpython/pull/8530.
             pdict["CONTENT-LENGTH"] = clength
             if key == b'application/x-www-form-urlencoded':
                 args.update(parse_qs(self.content.read(), 1))
@@ -1415,19 +1421,19 @@ class Request:
 
     def getRequestHostname(self):
         """
-        Get the hostname that the user passed in to the request.
+        Get the hostname that the HTTP client passed in to the request.
 
-        This will either use the Host: header (if it is available) or the
-        host we are listening on if the header is unavailable.
+        @see: L{IRequest.getRequestHostname}
 
         @returns: the requested hostname
+
         @rtype: C{bytes}
         """
-        # XXX This method probably has no unit tests.  I changed it a ton and
-        # nothing failed.
         host = self.getHeader(b'host')
-        if host:
-            return host.split(b':', 1)[0]
+        if host is not None:
+            match = _hostHeaderExpression.match(host)
+            if match is not None:
+                return match.group("host")
         return networkString(self.getHost().host)
 
 
@@ -2170,6 +2176,51 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         self.allContentReceived()
         self._dataBuffer.append(data)
 
+    def _maybeChooseTransferDecoder(self, header, data):
+        """
+        If the provided header is C{content-length} or
+        C{transfer-encoding}, choose the appropriate decoder if any.
+
+        Returns L{True} if the request can proceed and L{False} if not.
+        """
+
+        def fail():
+            self._respondToBadRequestAndDisconnect()
+            self.length = None
+            return False
+
+        # Can this header determine the length?
+        if header == b'content-length':
+            try:
+                length = int(data)
+            except ValueError:
+                return fail()
+            newTransferDecoder = _IdentityTransferDecoder(
+                length, self.requests[-1].handleContentChunk,
+                self._finishRequestBody)
+        elif header == b'transfer-encoding':
+            # XXX Rather poorly tested code block, apparently only exercised by
+            # test_chunkedEncoding
+            if data.lower() == b'chunked':
+                length = None
+                newTransferDecoder = _ChunkedTransferDecoder(
+                    self.requests[-1].handleContentChunk,
+                    self._finishRequestBody)
+            elif data.lower() == b'identity':
+                return True
+            else:
+                return fail()
+        else:
+            # It's not a length related header, so exit
+            return True
+
+        if self._transferDecoder is not None:
+            return fail()
+        else:
+            self.length = length
+            self._transferDecoder = newTransferDecoder
+            return True
+
 
     def headerReceived(self, line):
         """
@@ -2189,23 +2240,16 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
             self._respondToBadRequestAndDisconnect()
             return False
 
+        if not header or header[-1:].isspace():
+            self._respondToBadRequestAndDisconnect()
+            return False
+
         header = header.lower()
         data = data.strip()
-        if header == b'content-length':
-            try:
-                self.length = int(data)
-            except ValueError:
-                self._respondToBadRequestAndDisconnect()
-                self.length = None
-                return False
-            self._transferDecoder = _IdentityTransferDecoder(
-                self.length, self.requests[-1].handleContentChunk, self._finishRequestBody)
-        elif header == b'transfer-encoding' and data.lower() == b'chunked':
-            # XXX Rather poorly tested code block, apparently only exercised by
-            # test_chunkedEncoding
-            self.length = None
-            self._transferDecoder = _ChunkedTransferDecoder(
-                self.requests[-1].handleContentChunk, self._finishRequestBody)
+
+        if not self._maybeChooseTransferDecoder(header, data):
+            return False
+
         reqHeaders = self.requests[-1].requestHeaders
         values = reqHeaders.getRawHeaders(header)
         if values is not None:

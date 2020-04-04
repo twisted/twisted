@@ -3,6 +3,96 @@ http://twistedmatrix.com/trac/ticket/<number>
 
 .. towncrier release notes start
 
+Twisted 20.3.0 (2020-03-13)
+===========================
+
+Bugfixes
+--------
+
+- twisted.protocols.amp.BoxDispatcher.callRemote and callRemoteString will no longer return failing Deferreds for requiresAnswer=False commands when the transport they're operating on has been disconnected. (#9756)
+
+
+Improved Documentation
+----------------------
+
+- Added a missing hyphen to a reference to the ``--debug`` option of ``pdb`` in the Trial how-to. (#9690)
+- The documentation of the twisted.cred.checkers module has been extended and corrected. (#9724)
+
+
+Deprecations and Removals
+-------------------------
+
+- twisted.news is deprecated. (#9405)
+
+
+Misc
+----
+
+- #9634, #9701, #9707, #9710, #9715, #9726, #9727, #9728, #9729, #9735, #9737, #9757
+
+
+Conch
+-----
+
+Features
+~~~~~~~~
+
+- twisted.conch.ssh now supports the curve25519-sha256 key exchange algorithm (requires OpenSSL >= 1.1.0). (#6814)
+- twisted.conch.ssh.keys can now write private keys in the new "openssh-key-v1" format, introduced in OpenSSH 6.5 and made the default in OpenSSH 7.8.  ckeygen has a corresponding new --private-key-subtype=v1 option. (#9683)
+
+
+Bugfixes
+~~~~~~~~
+
+- twisted.conch.keys.Key.privateBlob now returns the correct blob format for ECDSA (i.e. the same as that implemented by OpenSSH). (#9682)
+
+
+Misc
+~~~~
+
+- #9760
+
+
+Web
+---
+
+Bugfixes
+~~~~~~~~
+
+- Fixed return type of twisted.web.http.Request.getUser and twisted.web.http.Request.getPassword to binary if no authorization header was found or an exception was thrown (#9596)
+- twisted.web.http.HTTPChannel now rejects requests (with status code 400 and a drop) that have malformed headers of the form "Foo : value" or ": value". (#9646)
+- twisted.web.http.Request now correctly parses multipart-encoded form data submitted as a chunked request on Python 3.7+. (#9678)
+- twisted.web.client.BrowserLikePolicyForHTTPS is now listed in __all__, since it's a user-facing class that anyone could import and extend. (#9769)
+- twisted.web.http was subject to several request smuggling attacks. Requests with multiple Content-Length headers were allowed (CVE-2020-10108, thanks to Jake Miller from Bishop Fox and ZeddYu Lu for reporting this) and now fail with a 400; requests with a Content-Length header and a Transfer-Encoding header honored the first header (CVE-2020-10109, thanks to Jake Miller from Bishop Fox for reporting this) and now fail with a 400; requests whose Transfer-Encoding header had a value other than "chunked" and "identity" (thanks to ZeddYu Lu) were allowed and now fail with a 400. (#9770)
+
+
+Mail
+----
+
+Misc
+~~~~
+
+- #9733
+
+
+Words
+-----
+
+Bugfixes
+~~~~~~~~
+
+- Fixed parsing of streams with Python 3.8 when there are spaces in namespaces or namespaced attributes in twisted.words.xish.domish.ExpatElementStream (#9730)
+
+
+Names
+-----
+
+Bugfixes
+~~~~~~~~
+
+- twisted.names.secondary.SecondaryAuthority now accepts str for its domain parameter, so twist dns --secondary now functions on Python 3. (#9496)
+
+
 Twisted 19.10.0 (2019-11-03)
 ============================
 
