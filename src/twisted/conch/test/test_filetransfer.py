@@ -562,9 +562,9 @@ class OurServerOurClientTests(SFTPTestBase):
         d = self.client.openDirectory(b'')
         self._emptyBuffers()
         openDir = yield d
-        d_ = openDir.next()
+        oneFile = openDir.next()
         self._emptyBuffers()
-        yield d_
+        yield oneFile
 
         warnings = self.flushWarnings()
         message = (
