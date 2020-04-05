@@ -47,7 +47,7 @@ class Connection(object):
         pass
 
 
-    def rollback(self, exValue):
+    def rollback(self, exValue=None):
         if not self._pool.reconnect:
             self._connection.rollback()
             return
