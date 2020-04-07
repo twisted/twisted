@@ -564,6 +564,18 @@ class FileTransferClient(FileTransferBase):
 
 
     def _sendRequest(self, msg, data):
+        """
+        Send a request and return a deferred which waits for the result.
+
+        @type msg: L{int}
+        @param msg: The request type (e.g., C{FXP_READ}).
+
+        @type data: L{bytes}
+        @param data: The body of the request.
+        """
+        if not self.connected:
+            return defer.fail(error.ConnectionLost())
+
         data = struct.pack('!L', self.counter) + data
         d = defer.Deferred()
         self.openRequests[self.counter] = d
