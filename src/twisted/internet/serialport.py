@@ -23,12 +23,10 @@ from serial import PARITY_NONE, PARITY_EVEN, PARITY_ODD
 from serial import STOPBITS_ONE, STOPBITS_TWO
 from serial import FIVEBITS, SIXBITS, SEVENBITS, EIGHTBITS
 
-from twisted.python._oldstyle import _oldStyle
 from twisted.python.runtime import platform
 
 
 
-@_oldStyle
 class BaseSerialPort:
     """
     Base class for Windows and POSIX serial ports.
