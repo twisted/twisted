@@ -29,7 +29,6 @@ import types
 import warnings
 
 from twisted.python import reflect, log, failure, modules, filepath
-from twisted.python.compat import _PY3, _PY35PLUS
 
 from twisted.internet import defer
 from twisted.trial import util, unittest
@@ -62,12 +61,8 @@ def isPackageDirectory(dirname):
     if dirname is a package directory.  Otherwise, returns False
     """
     def _getSuffixes():
-        if _PY3:
-            import importlib
-            return importlib.machinery.all_suffixes()
-        else:
-            import imp
-            return list(zip(*imp.get_suffixes()))[0]
+        import importlib
+        return importlib.machinery.all_suffixes()
 
 
     for ext in _getSuffixes():
@@ -126,20 +121,14 @@ def _importFromFile(fn, moduleName=None):
         moduleName = os.path.splitext(os.path.split(fn)[-1])[0]
     if moduleName in sys.modules:
         return sys.modules[moduleName]
-    if _PY35PLUS:
-        import importlib
+    import importlib
 
-        spec = importlib.util.spec_from_file_location(moduleName, fn)
-        if not spec:
-            raise SyntaxError(fn)
-        module = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(module)
-        sys.modules[moduleName] = module
-    else:
-        import imp
-
-        with open(fn, 'r') as fd:
-            module = imp.load_source(moduleName, fn, fd)
+    spec = importlib.util.spec_from_file_location(moduleName, fn)
+    if not spec:
+        raise SyntaxError(fn)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    sys.modules[moduleName] = module
     return module
 
 
@@ -904,9 +893,9 @@ def _qualNameWalker(qualName):
         yield (".".join(qualParts[:-index]), qualParts[-index:])
 
 
-if _PY3:
-    del TestLoader
-    TestLoader = Py3TestLoader
+
+del TestLoader
+TestLoader = Py3TestLoader
 
 
 
