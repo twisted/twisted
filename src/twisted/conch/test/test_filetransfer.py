@@ -172,7 +172,7 @@ class OurServerOurClientTests(SFTPTestBase):
 
     def test_openedFileClosedWithConnection(self):
         """
-        A file opened with C{openFile} is close when the connection is lost.
+        A file opened with C{openFile} is closed when the connection is lost.
         """
         d = self.client.openFile(b"testfile1", filetransfer.FXF_READ |
                                  filetransfer.FXF_WRITE, {})
@@ -613,6 +613,11 @@ class OurServerOurClientTests(SFTPTestBase):
         self._emptyBuffers()
 
         self.assertFalse(self.client.connected)
+        self.failureResultOf(d, ConnectionLost)
+
+        # Further attempts to use the filetransfer session should fail
+        # immediately
+        d = fh.getAttrs()
         self.failureResultOf(d, ConnectionLost)
 
 
