@@ -17,6 +17,7 @@ from twisted.internet.base import DelayedCall
 from twisted.internet.posixbase import (PosixReactorBase, _NO_FILEDESC,
                                         _ContinuousPolling)
 from twisted.python.log import callWithLogger
+from twisted.python.runtime import seconds as runtimeSeconds
 from twisted.internet.interfaces import IReactorFDSet
 
 try:
@@ -279,9 +280,7 @@ class AsyncioSelectorReactor(PosixReactorBase):
         self._asyncioEventloop.stop()
 
 
-    def seconds(self):
-        return self._asyncioEventloop.time()
-
+    seconds = staticmethod(runtimeSeconds)
 
     def callLater(self, seconds, f, *args, **kwargs):
         def run():

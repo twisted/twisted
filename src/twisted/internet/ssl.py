@@ -57,17 +57,19 @@ from __future__ import division, absolute_import
 
 # System imports
 from OpenSSL import SSL
-supported = True
 
 from zope.interface import implementer, implementer_only, implementedBy
 
 # Twisted imports
 from twisted.internet import tcp, interfaces
-from twisted.python._oldstyle import _oldStyle
+
+
+
+supported = True
+
 
 
 @implementer(interfaces.IOpenSSLContextFactory)
-@_oldStyle
 class ContextFactory:
     """A factory for SSL context objects, for server SSL connections."""
 
@@ -138,7 +140,6 @@ class DefaultOpenSSLContextFactory(ContextFactory):
 
 
 @implementer(interfaces.IOpenSSLContextFactory)
-@_oldStyle
 class ClientContextFactory:
     """A context factory for SSL clients."""
 
