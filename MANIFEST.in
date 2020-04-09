@@ -23,6 +23,8 @@ exclude appveyor.yml
 exclude .coveralls.yml
 exclude .circleci
 recursive-exclude .circleci *
+exclude azure-pipelines
+recursive-exclude azure-pipelines *
 prune bin
 prune admin
 prune .travis

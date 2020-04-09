@@ -14,7 +14,6 @@ import twisted
 from twisted.trial.unittest import SynchronousTestCase
 
 from twisted.python import _setup, filepath
-from twisted.python.compat import _PY3
 from twisted.python._setup import (
     BuildPy3,
     getSetupArgs,
@@ -117,7 +116,6 @@ class OptionalDependenciesTests(SynchronousTestCase):
         self.assertIn('dev', _EXTRAS_REQUIRE)
         self.assertIn('tls', _EXTRAS_REQUIRE)
         self.assertIn('conch', _EXTRAS_REQUIRE)
-        self.assertIn('soap', _EXTRAS_REQUIRE)
         self.assertIn('serial', _EXTRAS_REQUIRE)
         self.assertIn('all_non_platform', _EXTRAS_REQUIRE)
         self.assertIn('macos_platform', _EXTRAS_REQUIRE)
@@ -136,9 +134,7 @@ class OptionalDependenciesTests(SynchronousTestCase):
         self.assertIn('twisted-dev-tools >= 0.0.2', deps)
         self.assertIn('python-subunit', deps)
         self.assertIn('sphinx >= 1.3.1', deps)
-        if not _PY3:
-            self.assertIn('twistedchecker >= 0.4.0', deps)
-            self.assertIn('pydoctor >= 16.2.0', deps)
+        self.assertIn('twistedchecker >= 0.7.2', deps)
 
 
     def test_extrasRequiresTlsDeps(self):
@@ -150,7 +146,7 @@ class OptionalDependenciesTests(SynchronousTestCase):
         deps = _EXTRAS_REQUIRE['tls']
         self.assertIn('pyopenssl >= 16.0.0', deps)
         self.assertIn('service_identity >= 18.1.0', deps)
-        self.assertIn('idna >= 0.6, != 2.3', deps)
+        self.assertIn('idna >= 2.4', deps)
 
 
     def test_extrasRequiresConchDeps(self):
@@ -163,17 +159,6 @@ class OptionalDependenciesTests(SynchronousTestCase):
         self.assertIn('pyasn1', deps)
         self.assertIn('cryptography >= 2.6', deps)
         self.assertIn('appdirs >= 1.4.0', deps)
-
-
-    def test_extrasRequiresSoapDeps(self):
-        """
-        L{_EXTRAS_REQUIRE}' C{soap} extra contains setuptools requirements for
-        the packages required to make the C{twisted.web.soap} module function.
-        """
-        self.assertIn(
-            'soappy',
-            _EXTRAS_REQUIRE['soap']
-        )
 
 
     def test_extrasRequiresSerialDeps(self):
@@ -206,10 +191,9 @@ class OptionalDependenciesTests(SynchronousTestCase):
         deps = _EXTRAS_REQUIRE['all_non_platform']
         self.assertIn('pyopenssl >= 16.0.0', deps)
         self.assertIn('service_identity >= 18.1.0', deps)
-        self.assertIn('idna >= 0.6, != 2.3', deps)
+        self.assertIn('idna >= 2.4', deps)
         self.assertIn('pyasn1', deps)
         self.assertIn('cryptography >= 2.6', deps)
-        self.assertIn('soappy', deps)
         self.assertIn('pyserial >= 3.0', deps)
         self.assertIn('appdirs >= 1.4.0', deps)
         self.assertIn('h2 >= 3.0, < 4.0', deps)
@@ -225,10 +209,9 @@ class OptionalDependenciesTests(SynchronousTestCase):
         deps = _EXTRAS_REQUIRE['macos_platform']
         self.assertIn('pyopenssl >= 16.0.0', deps)
         self.assertIn('service_identity >= 18.1.0', deps)
-        self.assertIn('idna >= 0.6, != 2.3', deps)
+        self.assertIn('idna >= 2.4', deps)
         self.assertIn('pyasn1', deps)
         self.assertIn('cryptography >= 2.6', deps)
-        self.assertIn('soappy', deps)
         self.assertIn('pyserial >= 3.0', deps)
         self.assertIn('h2 >= 3.0, < 4.0', deps)
         self.assertIn('priority >= 1.1.0, < 2.0', deps)
@@ -252,10 +235,9 @@ class OptionalDependenciesTests(SynchronousTestCase):
         deps = _EXTRAS_REQUIRE['windows_platform']
         self.assertIn('pyopenssl >= 16.0.0', deps)
         self.assertIn('service_identity >= 18.1.0', deps)
-        self.assertIn('idna >= 0.6, != 2.3', deps)
+        self.assertIn('idna >= 2.4', deps)
         self.assertIn('pyasn1', deps)
         self.assertIn('cryptography >= 2.6', deps)
-        self.assertIn('soappy', deps)
         self.assertIn('pyserial >= 3.0', deps)
         self.assertIn('h2 >= 3.0, < 4.0', deps)
         self.assertIn('priority >= 1.1.0, < 2.0', deps)
@@ -321,9 +303,6 @@ class BuildPy3Tests(SynchronousTestCase):
     Tests for L{BuildPy3}.
     """
     maxDiff = None
-
-    if not _PY3:
-        skip = "BuildPy3 setuptools command used with Python 3 only."
 
     def test_find_package_modules(self):
         """
