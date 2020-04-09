@@ -4,7 +4,6 @@
 """
 Tests for L{twisted.python._pydoctor}.
 """
-from twisted.python.compat import _PY3
 from twisted.python.reflect import requireModule
 
 from twisted.trial.unittest import TestCase
@@ -15,8 +14,6 @@ TwistedSphinxInventory = object
 TwistedSystem = object
 if model is None:
     pydoctorSkip = 'Pydoctor is not present.'
-elif _PY3:
-    pydoctorSkip = 'Pydoctor not supported on Python3.'
 else:
     # We have a valid pydoctor.
     from twisted.python._pydoctor import TwistedSphinxInventory, TwistedSystem
