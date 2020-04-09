@@ -28,25 +28,6 @@ except ImportError:
 from builtins import PermissionError, BrokenPipeError
 
 
-class _DCHandle(object):
-    """
-    Wraps ephemeral L{asyncio.Handle} instances.  Callbacks can close
-    over this and use it as a mutable reference to asyncio C{Handles}.
-
-    @ivar handle: The current L{asyncio.Handle}
-    """
-    def __init__(self, handle):
-        self.handle = handle
-
-
-    def cancel(self):
-        """
-        Cancel the inner L{asyncio.Handle}.
-        """
-        self.handle.cancel()
-
-
-
 @implementer(IReactorFDSet)
 class AsyncioSelectorReactor(PosixReactorBase):
     """
@@ -295,7 +276,8 @@ class AsyncioSelectorReactor(PosixReactorBase):
             self._scheduledAt = abs_time
             if self._timerHandle is not None:
                 self._timerHandle.cancel()
-            self._timerHandle = self._asyncioEventloop.call_at(abs_time, self._onTimer)
+            self._timerHandle = self._asyncioEventloop.call_at(
+                abs_time, self._onTimer)
 
     def _moveCallLaterSooner(self, tple):
         PosixReactorBase._moveCallLaterSooner(self, tple)
