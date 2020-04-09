@@ -21,12 +21,15 @@ __all__ = [
     ]
 
 import doctest
+import importlib
 import inspect
 import os
 import sys
 import time
 import types
 import warnings
+
+from importlib.machinery import SourceFileLoader
 
 from twisted.python import reflect, log, failure, modules, filepath
 
@@ -61,7 +64,6 @@ def isPackageDirectory(dirname):
     if dirname is a package directory.  Otherwise, returns False
     """
     def _getSuffixes():
-        import importlib
         return importlib.machinery.all_suffixes()
 
 
@@ -121,7 +123,6 @@ def _importFromFile(fn, moduleName=None):
         moduleName = os.path.splitext(os.path.split(fn)[-1])[0]
     if moduleName in sys.modules:
         return sys.modules[moduleName]
-    import importlib
 
     spec = importlib.util.spec_from_file_location(moduleName, fn)
     if not spec:
@@ -657,8 +658,6 @@ class Py3TestLoader(TestLoader):
             within the given package (and so on), otherwise, only inspect
             modules in the package itself.
         """
-        from importlib.machinery import SourceFileLoader
-
         name = reflect.filenameToModuleName(fileName)
         try:
             module = SourceFileLoader(name, fileName).load_module()
