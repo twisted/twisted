@@ -1031,8 +1031,10 @@ class HTTPLoopbackTests(unittest.TestCase):
     def _cbTestLoopback(self, ignored):
         if not (self.gotStatus and self.gotResponse and self.gotEndHeaders):
             raise RuntimeError(
-                "didn't got all callbacks %s"
-                % [self.gotStatus, self.gotResponse, self.gotEndHeaders])
+                "didn't get all callbacks {}".format(
+                    [self.gotStatus, self.gotResponse, self.gotEndHeaders],
+                )
+            )
         del self.gotEndHeaders
         del self.gotResponse
         del self.gotStatus
