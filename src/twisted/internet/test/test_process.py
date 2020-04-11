@@ -856,10 +856,24 @@ class ProcessTestsBuilder(ProcessTestsBuilderBase):
         results = []
 
         class TestProcessProtocol(ProcessProtocol):
+            """
+            Process protocol captures own presence in
+            process.reapProcessHandlers at time of .processEnded() callback.
+
+            @ivar deferred: A deferred fired when the .processEnded() callback
+                has completed.
+            @type deferred: L{Deferred<defer.Deferred>}
+            """
             def __init__(self):
                 self.deferred = Deferred()
 
             def processEnded(self, status):
+                """
+                Capture whether the process has already been removed
+                from process.reapProcessHandlers.
+
+                @param status: unused
+                """
                 from twisted.internet import process
 
                 handlers = process.reapProcessHandlers
@@ -873,7 +887,18 @@ class ProcessTestsBuilder(ProcessTestsBuilderBase):
                 self.deferred.callback(None)
 
         @inlineCallbacks
-        def go(reactor):
+        def launchProcessAndWait(reactor):
+            """
+            Launch and wait for a subprocess and allow the TestProcessProtocol
+            to capture the order of the .processEnded() callback vs. removal
+            from process.reapProcessHandlers.
+
+            @param reactor: Reactor used to spawn the test process and to be
+                stopped when checks are complete.
+            @type reactor: object providing
+                L{twisted.internet.interfaces.IReactorProcess} and
+                L{twisted.internet.interfaces.IReactorCore}.
+            """
             try:
                 testProcessProtocol = TestProcessProtocol()
                 reactor.spawnProcess(
@@ -888,7 +913,7 @@ class ProcessTestsBuilder(ProcessTestsBuilderBase):
                 reactor.stop()
 
         reactor = self.buildReactor()
-        reactor.callWhenRunning(go, reactor)
+        reactor.callWhenRunning(launchProcessAndWait, reactor)
         self.runReactor(reactor)
 
         hamcrest.assert_that(
