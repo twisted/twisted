@@ -1,1 +1,0 @@
-twisted.internet.process.BaseProcess will be removed from twisted.internet.process.reapProcessHandlers before calling ProcessProtocol.processEnded()
