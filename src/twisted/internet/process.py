@@ -312,8 +312,8 @@ class _BaseProcess(BaseProcess, object):
             log.err()
             pid = None
         if pid:
-            self.processEnded(status)
             unregisterReapProcessHandler(pid, self)
+            self.processEnded(status)
 
 
     def _getReason(self, status):
