@@ -21,6 +21,10 @@ parameters:
   - select
   - iocp
 
+- name: allowFailures
+  type: boolean
+  default: false
+
 steps:
 - task: UsePythonVersion@0
   displayName: "Use Python ${{ parameters.pythonVersion }}"
