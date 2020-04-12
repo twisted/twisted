@@ -3003,9 +3003,6 @@ class _GenericHTTPChannelProtocol(proxyForInterface(IProtocol, "_channel")):
                 # Cancel the old channel's timeout.
                 self._channel.setTimeout(None)
 
-                # Cancel the old channel's timeout.
-                self._channel.setTimeout(None)
-
                 transport = self._channel.transport
                 self._channel = H2Connection()
                 self._channel.requestFactory = self._requestFactory
