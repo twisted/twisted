@@ -21,7 +21,7 @@ parameters:
   - select
   - iocp
 
-- name: allowFailures
+- name: allowFailure
   type: boolean
   default: false
 

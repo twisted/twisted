@@ -18,3 +18,4 @@ jobs:
       parameters:
         platform: macos
         pythonVersion: ${{ pyver.value }}
+        allowFailure: ${{ pyver.value == '3.8' }}
