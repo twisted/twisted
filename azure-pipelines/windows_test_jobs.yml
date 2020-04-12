@@ -24,3 +24,4 @@ jobs:
         platform: windows
         pythonVersion: ${{ pyver.value }}
         windowsReactor: ${{ parameters.reactor }}
+        allowFailure: ${{ pyver.value == '3.8' }}

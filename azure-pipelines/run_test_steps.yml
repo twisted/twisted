@@ -41,10 +41,12 @@ steps:
 - ${{ if eq(parameters.platform, 'macos') }}:
   - script: 'python -m tox -e alldeps-withcov-posix'
     displayName: 'Run tests'
+    continueOnError: ${{ parameters.allowFailure }}
 
 - ${{ if eq(parameters.platform, 'windows') }}:
   - script: 'python -m tox -e alldeps-withcov-windows'
     displayName: 'Run tests'
+    continueOnError: ${{ parameters.allowFailure }}
     env:
       TWISTED_REACTOR: ${{ parameters.windowsReactor }}
 
