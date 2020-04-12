@@ -66,6 +66,7 @@ import time
 import calendar
 import warnings
 import os
+import re
 from io import BytesIO as StringIO
 
 try:
@@ -667,6 +668,10 @@ def _getContentFile(length):
     if length is not None and length < 100000:
         return StringIO()
     return tempfile.TemporaryFile()
+
+
+
+_hostHeaderExpression = re.compile(br"^\[?(?P<host>.*?)\]?(:\d+)?$")
 
 
 
@@ -1416,19 +1421,19 @@ class Request:
 
     def getRequestHostname(self):
         """
-        Get the hostname that the user passed in to the request.
+        Get the hostname that the HTTP client passed in to the request.
 
-        This will either use the Host: header (if it is available) or the
-        host we are listening on if the header is unavailable.
+        @see: L{IRequest.getRequestHostname}
 
         @returns: the requested hostname
+
         @rtype: C{bytes}
         """
-        # XXX This method probably has no unit tests.  I changed it a ton and
-        # nothing failed.
         host = self.getHeader(b'host')
-        if host:
-            return host.split(b':', 1)[0]
+        if host is not None:
+            match = _hostHeaderExpression.match(host)
+            if match is not None:
+                return match.group("host")
         return networkString(self.getHost().host)
 
 
@@ -2171,6 +2176,51 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         self.allContentReceived()
         self._dataBuffer.append(data)
 
+    def _maybeChooseTransferDecoder(self, header, data):
+        """
+        If the provided header is C{content-length} or
+        C{transfer-encoding}, choose the appropriate decoder if any.
+
+        Returns L{True} if the request can proceed and L{False} if not.
+        """
+
+        def fail():
+            self._respondToBadRequestAndDisconnect()
+            self.length = None
+            return False
+
+        # Can this header determine the length?
+        if header == b'content-length':
+            try:
+                length = int(data)
+            except ValueError:
+                return fail()
+            newTransferDecoder = _IdentityTransferDecoder(
+                length, self.requests[-1].handleContentChunk,
+                self._finishRequestBody)
+        elif header == b'transfer-encoding':
+            # XXX Rather poorly tested code block, apparently only exercised by
+            # test_chunkedEncoding
+            if data.lower() == b'chunked':
+                length = None
+                newTransferDecoder = _ChunkedTransferDecoder(
+                    self.requests[-1].handleContentChunk,
+                    self._finishRequestBody)
+            elif data.lower() == b'identity':
+                return True
+            else:
+                return fail()
+        else:
+            # It's not a length related header, so exit
+            return True
+
+        if self._transferDecoder is not None:
+            return fail()
+        else:
+            self.length = length
+            self._transferDecoder = newTransferDecoder
+            return True
+
 
     def headerReceived(self, line):
         """
@@ -2196,21 +2246,10 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
 
         header = header.lower()
         data = data.strip()
-        if header == b'content-length':
-            try:
-                self.length = int(data)
-            except ValueError:
-                self._respondToBadRequestAndDisconnect()
-                self.length = None
-                return False
-            self._transferDecoder = _IdentityTransferDecoder(
-                self.length, self.requests[-1].handleContentChunk, self._finishRequestBody)
-        elif header == b'transfer-encoding' and data.lower() == b'chunked':
-            # XXX Rather poorly tested code block, apparently only exercised by
-            # test_chunkedEncoding
-            self.length = None
-            self._transferDecoder = _ChunkedTransferDecoder(
-                self.requests[-1].handleContentChunk, self._finishRequestBody)
+
+        if not self._maybeChooseTransferDecoder(header, data):
+            return False
+
         reqHeaders = self.requests[-1].requestHeaders
         values = reqHeaders.getRawHeaders(header)
         if values is not None:
