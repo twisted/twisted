@@ -985,3 +985,45 @@ class ProcessIsUnimportableOnUnsupportedPlatormsTests(TestCase):
 
     if not platform.isWindows():
         test_unimportableOnWindows.skip = "Only relevant on Windows."
+
+
+
+class ReapingNonePidsLogsProperly(TestCase):
+    try:
+        os.waitpid(None, None)
+    except Exception as e:
+        expected_message = str(e)
+        expected_type = type(e)
+
+    @onlyOnPOSIX
+    def test_registerReapProcessHandler(self):
+        process.registerReapProcessHandler(None, None)
+
+        [error] = self.flushLoggedErrors()
+        self.assertEqual(
+            type(error.value),
+            self.expected_type,
+            'Wrong error type logged',
+        )
+        self.assertEqual(
+            str(error.value),
+            self.expected_message,
+            'Wrong error message logged',
+        )
+
+    @onlyOnPOSIX
+    def test__BaseProcess_reapProcess(self):
+        _baseProcess = process._BaseProcess(None)
+        _baseProcess.reapProcess()
+
+        [error] = self.flushLoggedErrors()
+        self.assertEqual(
+            type(error.value),
+            self.expected_type,
+            'Wrong error type logged',
+        )
+        self.assertEqual(
+            str(error.value),
+            self.expected_message,
+            'Wrong error message logged',
+        )
