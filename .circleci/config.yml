@@ -74,9 +74,9 @@ jobs:
   static_checkers:
     working_directory: ~/static-checkers
     docker:
-      - image: circleci/python:2.7
+      - image: circleci/python:3.6
     environment:
-      PYTHON: python2
+      PYTHON: python3
     steps:
       # Get the source.
       - checkout
@@ -102,9 +102,9 @@ jobs:
   documentation:
     working_directory: ~/documentation
     docker:
-      - image: circleci/python:2.7
+      - image: circleci/python:3.6
     environment:
-      PYTHON: python2
+      PYTHON: python3
     steps:
       # Get the source.
       - checkout

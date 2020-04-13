@@ -9,8 +9,6 @@ import sys
 import time
 import warnings
 
-from twisted.python._oldstyle import _oldStyle
-
 
 
 def shortPythonVersion():
@@ -38,7 +36,6 @@ _timeFunctions = {
 
 
 
-@_oldStyle
 class Platform:
     """
     Gives us information about the platform we're running on.

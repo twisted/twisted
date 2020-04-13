@@ -5,7 +5,7 @@ Twisted
 |travis|_
 |circleci|_
 
-For information on what's new in Twisted 19.2.0, see the `NEWS <NEWS.rst>`_ file that comes with the distribution.
+For information on changes in this release, see the `NEWS <NEWS.rst>`_ file.
 
 
 What is this?
@@ -72,7 +72,7 @@ Some of these tests may fail if you:
 Copyright
 ---------
 
-All of the code in this distribution is Copyright (c) 2001-2019 Twisted Matrix Laboratories.
+All of the code in this distribution is Copyright (c) 2001-2020 Twisted Matrix Laboratories.
 
 Twisted is made available under the MIT license.
 The included `LICENSE <LICENSE>`_ file describes this in detail.
