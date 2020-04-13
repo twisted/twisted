@@ -441,7 +441,8 @@ class CramMD5Credentials(object):
 
 
     def checkPassword(self, password):
-        verify = hexlify(hmac.HMAC(password, self.challenge).digest())
+        verify = hexlify(hmac.HMAC(password, self.challenge,
+                         digestmod=md5).digest())
         return verify == self.response
 
 
