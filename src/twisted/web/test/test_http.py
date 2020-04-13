@@ -9,15 +9,11 @@ from __future__ import absolute_import, division
 
 import base64
 import calendar
-import cgi
 import random
 
 import hamcrest
 
-try:
-    from urlparse import urlparse, urlunsplit, clear_cache
-except ImportError:
-    from urllib.parse import urlparse, urlunsplit, clear_cache
+from urllib.parse import urlparse, urlunsplit, clear_cache, parse_qs
 
 from io import BytesIO
 from itertools import cycle
@@ -28,7 +24,7 @@ from zope.interface import (
 )
 from zope.interface.verify import verifyObject
 
-from twisted.python.compat import (_PY3, iterbytes, long, networkString,
+from twisted.python.compat import (iterbytes, long, networkString,
                                    unicode, intToBytes)
 from twisted.python.components import proxyForInterface
 from twisted.python.failure import Failure
@@ -2021,33 +2017,6 @@ Content-Type: application/x-www-form-urlencoded
         self.assertEqual(content, [networkString(query)])
 
 
-    def test_missingContentDisposition(self):
-        """
-        If the C{Content-Disposition} header is missing, the request is denied
-        as a bad request.
-        """
-        req = b'''\
-POST / HTTP/1.0
-Content-Type: multipart/form-data; boundary=AaB03x
-Content-Length: 103
-
---AaB03x
-Content-Type: text/plain
-Content-Transfer-Encoding: quoted-printable
-
-abasdfg
---AaB03x--
-'''
-        channel = self.runRequest(req, http.Request, success=False)
-        self.assertEqual(
-            channel.transport.value(),
-            b"HTTP/1.1 400 Bad Request\r\n\r\n")
-
-    if _PY3:
-        test_missingContentDisposition.skip = (
-            "cgi.parse_multipart is much more error-tolerant on Python 3.")
-
-
     def test_multipartProcessingFailure(self):
         """
         When the multipart processing fails the client gets a 400 Bad Request.
@@ -2375,15 +2344,15 @@ ok
 class QueryArgumentsTests(unittest.TestCase):
     def testParseqs(self):
         self.assertEqual(
-            cgi.parse_qs(b"a=b&d=c;+=f"),
+            parse_qs(b"a=b&d=c;+=f"),
             http.parse_qs(b"a=b&d=c;+=f"))
         self.assertRaises(
             ValueError, http.parse_qs, b"blah", strict_parsing=True)
         self.assertEqual(
-            cgi.parse_qs(b"a=&b=c", keep_blank_values=1),
+            parse_qs(b"a=&b=c", keep_blank_values=1),
             http.parse_qs(b"a=&b=c", keep_blank_values=1))
         self.assertEqual(
-            cgi.parse_qs(b"a=&b=c"),
+            parse_qs(b"a=&b=c"),
             http.parse_qs(b"a=&b=c"))
 
 
