@@ -8,7 +8,6 @@
 
 #""" Implementation module for the `conch` command.
 #"""
-from __future__ import print_function
 
 from twisted.conch.client import connect, default, options
 from twisted.conch.error import ConchError

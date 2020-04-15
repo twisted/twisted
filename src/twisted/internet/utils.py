@@ -6,7 +6,6 @@
 Utility methods.
 """
 
-from __future__ import division, absolute_import
 
 import sys, warnings
 from functools import wraps

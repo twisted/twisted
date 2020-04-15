@@ -9,7 +9,6 @@ allows access to a shell and a python interpreter over SSH.
 Maintainer: Paul Swartz
 """
 
-from __future__ import division, absolute_import
 
 import struct
 import signal

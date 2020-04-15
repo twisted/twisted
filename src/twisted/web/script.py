@@ -6,7 +6,6 @@
 I contain PythonScript, which is a very simple python script resource.
 """
 
-from __future__ import division, absolute_import
 
 import os, traceback
 

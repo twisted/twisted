@@ -5,7 +5,6 @@
 """
 Implementation module for the I{cftp} command.
 """
-from __future__ import division, print_function
 import os, sys, getpass, struct, tty, fcntl, stat
 import fnmatch, pwd, glob
 

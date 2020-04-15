@@ -7,7 +7,6 @@
 Protocol agnostic implementations of SASL authentication mechanisms.
 """
 
-from __future__ import absolute_import, division
 
 import binascii, random, time, os
 from hashlib import md5

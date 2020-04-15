@@ -5,7 +5,6 @@
 Tests for Twisted's deprecation framework, L{twisted.python.deprecate}.
 """
 
-from __future__ import division, absolute_import
 
 import sys, types, warnings, inspect
 from os.path import normcase

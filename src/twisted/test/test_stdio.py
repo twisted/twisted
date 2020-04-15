@@ -8,7 +8,6 @@ Tests for L{twisted.internet.stdio}.
     platforms and native L{str} keys/values on Windows.
 """
 
-from __future__ import absolute_import, division
 
 import os
 import sys

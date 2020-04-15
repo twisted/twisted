@@ -7,7 +7,6 @@ Tests for the 'session' channel implementation in twisted.conch.ssh.session.
 See also RFC 4254.
 """
 
-from __future__ import division, absolute_import
 
 import os, signal, sys, struct
 

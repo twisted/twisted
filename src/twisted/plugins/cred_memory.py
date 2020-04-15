@@ -7,7 +7,6 @@
 Cred plugin for an in-memory user database.
 """
 
-from __future__ import absolute_import, division
 
 from zope.interface import implementer
 

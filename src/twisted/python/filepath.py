@@ -6,7 +6,6 @@
 Object-oriented filesystem path representation.
 """
 
-from __future__ import division, absolute_import
 
 import os
 import sys

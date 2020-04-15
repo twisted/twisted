@@ -5,7 +5,6 @@
 Script used by twisted.test.test_process on win32.
 """
 
-from __future__ import absolute_import, division
 
 import sys, os, msvcrt
 msvcrt.setmode(sys.stdout.fileno(), os.O_BINARY)

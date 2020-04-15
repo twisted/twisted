@@ -6,7 +6,6 @@
 Tests for L{twisted.python.compat}.
 """
 
-from __future__ import division, absolute_import
 
 import socket, sys, traceback, io, codecs
 

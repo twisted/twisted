@@ -5,7 +5,6 @@
 Test cases for L{twisted.names.client}.
 """
 
-from __future__ import division, absolute_import
 
 import errno
 

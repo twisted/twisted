@@ -6,7 +6,6 @@
 Tests for L{twisted.trial.util}
 """
 
-from __future__ import division, absolute_import
 
 import os, sys
 

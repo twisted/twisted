@@ -6,7 +6,6 @@
 Mail protocol support.
 """
 
-from __future__ import absolute_import, division
 
 from twisted.mail import pop3
 from twisted.mail import smtp

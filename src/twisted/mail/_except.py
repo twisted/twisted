@@ -5,7 +5,6 @@
 Exceptions in L{twisted.mail}.
 """
 
-from __future__ import absolute_import, division
 
 from twisted.python.compat import _PY3, unicode
 

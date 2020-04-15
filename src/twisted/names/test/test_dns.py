@@ -6,7 +6,6 @@
 Tests for twisted.names.dns.
 """
 
-from __future__ import division, absolute_import
 
 from io import BytesIO
 

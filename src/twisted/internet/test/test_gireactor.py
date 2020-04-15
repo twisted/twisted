@@ -5,7 +5,6 @@
 GI/GTK3 reactor tests.
 """
 
-from __future__ import division, absolute_import, print_function
 
 import sys, os
 try:

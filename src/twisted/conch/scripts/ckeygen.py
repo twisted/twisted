@@ -6,7 +6,6 @@
 Implementation module for the `ckeygen` command.
 """
 
-from __future__ import print_function
 
 import sys, os, getpass, socket
 from functools import wraps

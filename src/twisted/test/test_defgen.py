@@ -5,7 +5,6 @@
 Tests for L{twisted.internet.defer.deferredGenerator} and related APIs.
 """
 
-from __future__ import division, absolute_import
 
 from twisted.internet import reactor
 

@@ -6,7 +6,6 @@
 Very basic functionality for a Reactor implementation.
 """
 
-from __future__ import division, absolute_import
 
 import socket # needed only for sync-dns
 from zope.interface import implementer, classImplements

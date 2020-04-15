@@ -6,7 +6,6 @@
 Select reactor
 """
 
-from __future__ import division, absolute_import
 
 from time import sleep
 import sys, select, socket

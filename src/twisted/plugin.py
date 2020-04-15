@@ -10,7 +10,6 @@ Plugin system for Twisted.
 @author: Glyph Lefkowitz
 """
 
-from __future__ import absolute_import, division
 
 import os
 import sys

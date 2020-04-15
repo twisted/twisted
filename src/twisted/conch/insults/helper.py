@@ -8,9 +8,9 @@ Partial in-memory terminal emulator
 @author: Jp Calderone
 """
 
-from __future__ import print_function
 
-import re, string
+import re
+import string
 
 from zope.interface import implementer
 

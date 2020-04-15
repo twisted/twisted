@@ -9,7 +9,6 @@ The source-code-marshallin'est abstract-object-serializin'est persister
 this side of Marmalade!
 """
 
-from __future__ import division, absolute_import
 
 import types, re
 

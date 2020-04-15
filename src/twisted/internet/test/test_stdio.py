@@ -5,7 +5,6 @@
 Tests for L{twisted.internet.stdio}.
 """
 
-from __future__ import absolute_import, division
 
 from twisted.python.runtime import platform
 from twisted.internet.test.reactormixins import ReactorBuilder

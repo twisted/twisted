@@ -6,7 +6,6 @@
 Handling of RSA, DSA, ECDSA, and Ed25519 keys.
 """
 
-from __future__ import absolute_import, division
 
 import binascii
 import itertools

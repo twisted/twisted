@@ -5,7 +5,6 @@
 Tests for returning Deferreds from a TestCase.
 """
 
-from __future__ import division, absolute_import
 
 import unittest as pyunit
 

@@ -11,7 +11,6 @@ only specific tests for old API.
 # issue1195 TODOs: replace pump.pump() with something involving Deferreds.
 # Clean up warning suppression.
 
-from __future__ import absolute_import, division
 
 import sys, os, time, gc, weakref
 from collections import deque

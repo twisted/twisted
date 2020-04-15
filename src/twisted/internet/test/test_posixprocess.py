@@ -5,7 +5,6 @@
 Tests for POSIX-based L{IReactorProcess} implementations.
 """
 
-from __future__ import division, absolute_import
 
 import errno, os, sys
 
