@@ -7,7 +7,7 @@ Very basic functionality for a Reactor implementation.
 """
 
 
-import socket # needed only for sync-dns
+import socket  # needed only for sync-dns
 from zope.interface import implementer, classImplements
 
 import sys

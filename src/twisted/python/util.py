@@ -3,9 +3,13 @@
 # See LICENSE for details.
 
 
-import os, sys, errno, warnings
+import errno
+import os
+import sys
+import warnings
 try:
-    import pwd, grp
+    import grp
+    import pwd
 except ImportError:
     pwd = grp = None
 try:

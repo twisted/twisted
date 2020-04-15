@@ -8,7 +8,10 @@ Protocol agnostic implementations of SASL authentication mechanisms.
 """
 
 
-import binascii, random, time, os
+import binascii
+import os
+import random
+import time
 from hashlib import md5
 
 from zope.interface import Interface, Attribute, implementer

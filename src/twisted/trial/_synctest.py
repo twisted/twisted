@@ -10,7 +10,11 @@ Maintainer: Jonathan Lange
 
 
 import inspect
-import os, warnings, sys, tempfile, types
+import os
+import sys
+import tempfile
+import types
+import warnings
 from dis import findlinestarts as _findlinestarts
 
 from twisted.python import failure, log, monkey

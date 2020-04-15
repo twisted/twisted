@@ -8,7 +8,9 @@ Select reactor
 
 
 from time import sleep
-import sys, select, socket
+import select
+import socket
+import sys
 from errno import EINTR, EBADF
 
 from zope.interface import implementer

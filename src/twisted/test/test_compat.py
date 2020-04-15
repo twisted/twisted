@@ -7,7 +7,11 @@ Tests for L{twisted.python.compat}.
 """
 
 
-import socket, sys, traceback, io, codecs
+import codecs
+import io
+import socket
+import sys
+import traceback
 
 from twisted.trial import unittest
 

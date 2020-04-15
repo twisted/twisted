@@ -10,7 +10,8 @@ this side of Marmalade!
 """
 
 
-import types, re
+import re
+import types
 
 try:
     from tokenize import generate_tokens as tokenize

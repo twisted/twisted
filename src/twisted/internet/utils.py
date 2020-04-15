@@ -7,7 +7,8 @@ Utility methods.
 """
 
 
-import sys, warnings
+import warnings
+import sys
 from functools import wraps
 
 from twisted.internet import protocol, defer

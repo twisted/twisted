@@ -6,7 +6,9 @@ Script used by twisted.test.test_process on win32.
 """
 
 
-import sys, os, msvcrt
+import msvcrt
+import os
+import sys
 msvcrt.setmode(sys.stdout.fileno(), os.O_BINARY)
 msvcrt.setmode(sys.stderr.fileno(), os.O_BINARY)
 

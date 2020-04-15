@@ -7,7 +7,8 @@ Tests for L{twisted.trial.util}
 """
 
 
-import os, sys
+import os
+import sys
 
 from zope.interface import implementer
 

@@ -4,6 +4,8 @@
 # this module is a trivial class with doctests to test trial's doctest
 # support.
 
+
+
 class Counter(object):
     """a simple counter object for testing trial's doctest support
 

@@ -6,7 +6,8 @@ Tests for L{twisted.python.threadable}.
 """
 
 
-import sys, pickle
+import pickle
+import sys
 
 try:
     import threading

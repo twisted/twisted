@@ -6,7 +6,8 @@ Tests for L{twisted.internet.default}.
 """
 
 
-import select, sys
+import select
+import sys
 from twisted.trial.unittest import SynchronousTestCase
 from twisted.python.runtime import Platform
 from twisted.python.reflect import requireModule

@@ -7,7 +7,10 @@ Implementation module for the `ckeygen` command.
 """
 
 
-import sys, os, getpass, socket
+import getpass
+import os
+import socket
+import sys
 from functools import wraps
 from imp import reload
 

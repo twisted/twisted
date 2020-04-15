@@ -6,7 +6,8 @@ GI/GTK3 reactor tests.
 """
 
 
-import sys, os
+import os
+import sys
 try:
     from twisted.internet import gireactor
     from gi.repository import Gio

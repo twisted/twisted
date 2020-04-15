@@ -6,7 +6,9 @@ Tests for POSIX-based L{IReactorProcess} implementations.
 """
 
 
-import errno, os, sys
+import errno
+import os
+import sys
 
 try:
     import fcntl

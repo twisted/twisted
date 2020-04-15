@@ -6,7 +6,8 @@ Tests for Trial's interaction with the Python warning system.
 """
 
 
-import sys, warnings
+import warnings
+import sys
 
 from unittest import TestResult
 

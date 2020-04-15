@@ -6,7 +6,10 @@ Tests for Twisted's deprecation framework, L{twisted.python.deprecate}.
 """
 
 
-import sys, types, warnings, inspect
+import inspect
+import sys
+import types
+import warnings
 from os.path import normcase
 from warnings import simplefilter, catch_warnings
 try:

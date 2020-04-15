@@ -12,7 +12,11 @@ only specific tests for old API.
 # Clean up warning suppression.
 
 
-import sys, os, time, gc, weakref
+import gc
+import os
+import sys
+import time
+import weakref
 from collections import deque
 
 from io import BytesIO as StringIO

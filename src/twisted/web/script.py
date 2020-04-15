@@ -7,7 +7,8 @@ I contain PythonScript, which is a very simple python script resource.
 """
 
 
-import os, traceback
+import os
+import traceback
 
 from twisted import copyright
 from twisted.python.filepath import _coerceToFilesystemEncoding

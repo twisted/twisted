@@ -7,7 +7,9 @@ Test methods in twisted.internet.threads and reactor thread APIs.
 """
 
 
-import sys, os, time
+import os
+import sys
+import time
 
 from twisted.trial import unittest
 

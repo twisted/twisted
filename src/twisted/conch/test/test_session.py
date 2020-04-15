@@ -8,7 +8,10 @@ See also RFC 4254.
 """
 
 
-import os, signal, sys, struct
+import os
+import signal
+import struct
+import sys
 
 from zope.interface import implementer
 

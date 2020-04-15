@@ -7,9 +7,12 @@ Tests for Twisted plugin system.
 """
 
 
-import sys, errno, os, time
 import compileall
+import errno
 import functools
+import os
+import sys
+import time
 
 from zope.interface import Interface
 
