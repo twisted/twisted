@@ -11,7 +11,6 @@ Maintainer: Glyph Lefkowitz
 from __future__ import absolute_import, division
 
 from twisted.python import reflect
-from twisted.python._oldstyle import _oldStyle
 
 
 
@@ -23,7 +22,6 @@ class NotSupportedError(NotImplementedError):
 
 
 
-@_oldStyle
 class Request:
     """I am an abstract representation of a request for an entity.
 
@@ -46,7 +44,6 @@ class Request:
 
 
 
-@_oldStyle
 class Entity:
     """I am a terminal object in a hierarchy, with no children.
 
@@ -66,7 +63,6 @@ class Entity:
 
 
 
-@_oldStyle
 class Collection:
     """I represent a static collection of entities.
 
