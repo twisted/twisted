@@ -224,7 +224,9 @@ class INotifyTests(unittest.TestCase):
         """
         def cbNotified(result):
             (watch, filename, events) = result
-            self.assertEqual(filename.asBytesMode(), self.dirname.asBytesMode())
+            self.assertEqual(
+                filename.asBytesMode(), self.dirname.asBytesMode()
+            )
             self.assertTrue(events & inotify.IN_DELETE_SELF)
 
         self.inotify.watch(
@@ -332,7 +334,9 @@ class INotifyTests(unittest.TestCase):
                     d.errback()
 
             (ignored, filename, events) = result
-            self.assertEqual(filename.asBytesMode(), self.dirname.asBytesMode())
+            self.assertEqual(
+                filename.asBytesMode(), self.dirname.asBytesMode()
+            )
             self.assertTrue(events & inotify.IN_DELETE_SELF)
             reactor.callLater(0, _)
 
