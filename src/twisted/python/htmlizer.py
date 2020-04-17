@@ -10,10 +10,9 @@ from twisted.python.compat import _tokenize, escape
 
 import tokenize, keyword
 from . import reflect
-from twisted.python._oldstyle import _oldStyle
 
 
-@_oldStyle
+
 class TokenPrinter:
     """
     Format a stream of tokens and intermediate whitespace, for pretty-printing.
@@ -68,7 +67,6 @@ class TokenPrinter:
 
 
 
-@_oldStyle
 class HTMLWriter:
     """
     Write the stream of tokens and whitespace from L{TokenPrinter}, formating

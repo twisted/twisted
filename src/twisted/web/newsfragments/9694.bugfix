@@ -1,1 +1,0 @@
-The HTTP/2 server implementation now enforces TCP flow control on control frame messages and times out clients that send invalid data without reading responses.  This closes CVE-2019-9512 (Ping Flood), CVE-2019-9514 (Reset Flood), and CVE-2019-9515 (Settings Flood).  Thanks to Jonathan Looney and Piotr Sikora.

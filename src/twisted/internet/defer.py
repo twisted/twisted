@@ -31,7 +31,6 @@ from twisted.python.compat import cmp, comparable
 from twisted.python import lockfile, failure
 from twisted.logger import Logger
 from twisted.python.deprecate import warnAboutFunction, deprecated
-from twisted.python._oldstyle import _oldStyle
 
 log = Logger()
 
@@ -197,7 +196,6 @@ _CONTINUE = object()
 
 
 
-@_oldStyle
 class Deferred:
     """
     This is a callback which will be put off until later.
@@ -918,8 +916,6 @@ def ensureDeferred(coro):
 
 
 
-
-@_oldStyle
 class DebugInfo:
     """
     Deferred debug helper.
@@ -1192,7 +1188,6 @@ FAILURE = False
 
 
 ## deferredGenerator
-@_oldStyle
 class waitForDeferred:
     """
     See L{deferredGenerator}.
@@ -1595,7 +1590,7 @@ def inlineCallbacks(f):
     You can cancel the L{Deferred} returned from your L{inlineCallbacks}
     generator before it is fired by your generator completing (either by
     reaching its end, a C{return} statement, or by calling L{returnValue}).
-    A C{CancelledError} will be raised from the C{yielde}ed L{Deferred} that
+    A C{CancelledError} will be raised from the C{yield}ed L{Deferred} that
     has been cancelled if that C{Deferred} does not otherwise suppress it.
     """
     @wraps(f)
