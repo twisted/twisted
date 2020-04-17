@@ -12,15 +12,8 @@ import os
 import collections
 import warnings
 
-try:
-    from urlparse import urlunparse, urljoin, urldefrag
-except ImportError:
-    from urllib.parse import urljoin, urldefrag
-    from urllib.parse import urlunparse as _urlunparse
-
-    def urlunparse(parts):
-        result = _urlunparse(tuple([p.decode("charmap") for p in parts]))
-        return result.encode("charmap")
+from urllib.parse import urljoin, urldefrag
+from urllib.parse import urlunparse as _urlunparse
 
 import zlib
 from functools import wraps
@@ -48,6 +41,12 @@ from twisted.web.http_headers import Headers
 from twisted.logger import Logger
 
 from twisted.web._newclient import _ensureValidURI, _ensureValidMethod
+
+
+
+def urlunparse(parts):
+    result = _urlunparse(tuple([p.decode("charmap") for p in parts]))
+    return result.encode("charmap")
 
 
 
@@ -2035,16 +2034,27 @@ class ContentDecoderAgent(object):
     An L{Agent} wrapper to handle encoded content.
 
     It takes care of declaring the support for content in the
-    I{Accept-Encoding} header, and automatically decompresses the received data
-    if it's effectively using compression.
+    I{Accept-Encoding} header and automatically decompresses the received data
+    if the I{Content-Encoding} header indicates a supported encoding.
 
-    @param decoders: A list or tuple of (name, decoder) objects. The name
-        declares which decoding the decoder supports, and the decoder must
-        return a response object when called/instantiated. For example,
-        C{(('gzip', GzipDecoder))}. The order determines how the decoders are
-        going to be advertized to the server.
+    For example::
+
+        agent = ContentDecoderAgent(Agent(reactor),
+                                    [(b'gzip', GzipDecoder)])
+
+    @param agent: The agent to wrap
+    @type agent: L{IAgent}
+
+    @param decoders: A sequence of (name, decoder) objects. The name
+        declares which encoding the decoder supports. The decoder must accept
+        an L{IResponse} and return an L{IResponse} when called. The order
+        determines how the decoders are advertised to the server. Names must
+        be unique.not be duplicated.
+    @type decoders: sequence of (L{bytes}, L{callable}) tuples
 
     @since: 11.1
+
+    @see: L{GzipDecoder}
     """
 
     def __init__(self, agent, decoders):

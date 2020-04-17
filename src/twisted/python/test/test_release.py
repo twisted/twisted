@@ -496,8 +496,8 @@ class APIBuilderTests(ExternalTempdirTestCase):
         twistedPath = outputPath.child("twisted.html")
         self.assertTrue(
             twistedPath.exists(),
-            u"Package documentation file %r did not exist.".format(
-            twistedPath.path))
+            u"Package documentation file {!r} did not exist.".format(
+                twistedPath.path))
         self.assertIn(
             docstring, twistedPath.getContent(),
             "Docstring not in package documentation file.")

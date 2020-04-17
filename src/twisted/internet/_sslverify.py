@@ -17,7 +17,6 @@ from OpenSSL._util import lib as pyOpenSSLlib
 from twisted.internet.abstract import isIPAddress, isIPv6Address
 from twisted.python import log
 from twisted.python.randbytes import secureRandom
-from twisted.python._oldstyle import _oldStyle
 from ._idna import _idnaBytes
 
 from zope.interface import Interface, implementer
@@ -382,7 +381,6 @@ DN = DistinguishedName
 
 
 
-@_oldStyle
 class CertBase:
     """
     Base class for public (certificate only) and private (certificate + key
@@ -734,7 +732,6 @@ class PrivateCertificate(Certificate):
 
 
 
-@_oldStyle
 class PublicKey:
     """
     A L{PublicKey} is a representation of the public part of a key pair.

@@ -19,8 +19,7 @@ from twisted.application import service, reactors
 from twisted.internet import defer
 from twisted.persisted import sob
 from twisted.python import runtime, log, usage, failure, util, logfile
-from twisted.python._oldstyle import _oldStyle
-from twisted.python.reflect import (qual, namedAny, namedModule)
+from twisted.python.reflect import qual, namedAny, namedModule
 from twisted.internet.interfaces import _ISupportsExitSignalCapturing
 
 # Expose the new implementation of installReactor at the old location.
@@ -488,7 +487,6 @@ def _reactorAction():
 
 
 
-@_oldStyle
 class ReactorSelectionMixin:
     """
     Provides options for selecting a reactor to install.

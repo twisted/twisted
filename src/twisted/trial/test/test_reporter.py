@@ -26,14 +26,9 @@ from twisted.trial.test import erroneous
 from twisted.trial.unittest import makeTodo, SkipTest, Todo
 from twisted.trial.test import sample
 
-from twisted.python.compat import NativeStringIO, _PY3
+from twisted.python.compat import NativeStringIO
 
-if _PY3:
-    from io import BytesIO
-else:
-    # On Python 2, we want regular old StringIO, because otherwise subunit
-    # complains
-    from StringIO import StringIO as BytesIO
+from io import BytesIO
 
 
 

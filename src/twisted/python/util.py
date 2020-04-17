@@ -17,7 +17,6 @@ except ImportError:
 from twisted.python.compat import _PY3, unicode
 from incremental import Version
 from twisted.python.deprecate import deprecatedModuleAttribute
-from twisted.python._oldstyle import _oldStyle, _replaceIf
 
 # For backwards compatibility, some things import this, so just link it
 from collections import OrderedDict
@@ -30,7 +29,6 @@ deprecatedModuleAttribute(
 
 
 
-@_oldStyle
 class InsensitiveDict:
     """
     Dictionary, that has case-insensitive keys.
@@ -434,7 +432,6 @@ def searchupwards(start, files=[], dirs=[]):
 
 
 
-@_oldStyle
 class LineLog:
     """
     A limited-size line-based log, useful for logging line-based
@@ -578,7 +575,6 @@ class _IntervalDifferentialIterator(object):
 
 
 
-@_oldStyle
 class FancyStrMixin:
     """
     Mixin providing a flexible implementation of C{__str__}.
@@ -617,7 +613,6 @@ class FancyStrMixin:
 
 
 
-@_oldStyle
 class FancyEqMixin:
     """
     Mixin that implements C{__eq__} and C{__ne__}.
@@ -1014,7 +1009,7 @@ __all__ = [
     "raises", "IntervalDifferential", "FancyStrMixin", "FancyEqMixin",
     "switchUID", "SubclassableCStringIO", "mergeFunctionMetadata",
     "nameToLabel", "uidFromString", "gidFromString", "runAsEffectiveUser",
-    "untilConcludes", "runWithWarningsSuppressed", "_replaceIf",
+    "untilConcludes", "runWithWarningsSuppressed",
 ]
 
 
