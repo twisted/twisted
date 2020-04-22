@@ -37,7 +37,9 @@ matrix:
       env: TOXENV=py36-alldeps-withcov-posix,coverage-prepare,codecov-push,coveralls-push
     - python: 3.7
       env: TOXENV=py37-alldeps-withcov-posix,coverage-prepare,codecov-push,coveralls-push
-    - python: 3.5
+    - python: 3.8
+      env: TOXENV=py38-alldeps-withcov-posix,coverage-prepare,codecov-push,coveralls-push
+    - python: 3.6
       env: TOXENV=lint
     # We need a builder without IPv6. This is going to be slower than all the
     # others, but that's ok.
