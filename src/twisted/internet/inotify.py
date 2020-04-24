@@ -289,10 +289,12 @@ class INotify(FileDescriptor, object):
                 # too many events waiting while we process these subdirs, we
                 # must always answer events as fast as possible or the overflow
                 # might come.
-                self.reactor.callLater(0,
-                    self._addChildren, self._watchpoints[new_wd])
+                self.reactor.callLater(
+                    0, self._addChildren, self._watchpoints[new_wd]
+                )
             if mask & IN_DELETE_SELF:
                 self._rmWatch(wd)
+                self.loseConnection()
 
 
     def _addChildren(self, iwp):
