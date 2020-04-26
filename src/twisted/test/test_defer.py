@@ -3288,7 +3288,8 @@ class DeferredContextVarsTests(unittest.TestCase):
     @ensuringDeferred
     async def test_asyncWithSemaphore(self):
         """
-        L{defer.DeferredSemaphore} can be used as an asynchronous context manager.
+        L{defer.DeferredSemaphore} can be used as an asynchronous context
+        manager.
         """
         sem = defer.DeferredSemaphore(3)
 
@@ -3361,11 +3362,12 @@ class DeferredContextVarsTests(unittest.TestCase):
             # When it resumes, it should still be 2
             self.assertEqual(var.get(), 2)
 
-            # mutatingDeferredThatFails mutates it to 3, but only in its Deferred chain
+            # mutatingDeferredThatFails mutates it to 3, but only in its
+            # Deferred chain
             clock.callLater(0, mutatingDeferredThatFails.callback, True)
             try:
                 await mutatingDeferredThatFails
-            except:
+            except Exception:
                 self.assertEqual(var.get(), 2)
             else:
                 raise Exception("???? should have failed")
