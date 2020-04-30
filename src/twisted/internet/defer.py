@@ -19,7 +19,6 @@ Maintainer: Glyph Lefkowitz
 from __future__ import division, absolute_import, print_function
 
 import attr
-import functools
 import traceback
 import types
 import warnings
@@ -29,7 +28,7 @@ from incremental import Version
 
 # Twisted imports
 from twisted.python.compat import cmp, comparable
-from twisted.python import lockfile, failure, reflect
+from twisted.python import lockfile, failure
 from twisted.logger import Logger
 from twisted.python.deprecate import warnAboutFunction, deprecated
 
