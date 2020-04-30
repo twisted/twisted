@@ -35,7 +35,9 @@ from twisted.python.deprecate import warnAboutFunction, deprecated
 
 try:
     from contextvars import copy_context as _copy_context
+    _contextvarsSupport = True
 except ImportError:
+    _contextvarsSupport = False
     class _NoContext:
         @staticmethod
         def run(f, *args, **kwargs):
@@ -1447,6 +1449,12 @@ def _inlineCallbacks(result, g, status):
             # _inlineCallbacks); the next one down should be the application
             # code.
             appCodeTrace = exc_info()[2].tb_next
+
+            # If contextvars support is not present, we also have added a frame
+            # in the no-op shim, remove that
+            if not _contextvarsSupport:
+                appCodeTrace = appCodeTrace.tb_next
+
             if isFailure:
                 # If we invoked this generator frame by throwing an exception
                 # into it, then throwExceptionIntoGenerator will consume an
