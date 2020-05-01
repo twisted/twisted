@@ -32,7 +32,23 @@ from twisted.python import lockfile, failure
 from twisted.logger import Logger
 from twisted.python.deprecate import warnAboutFunction, deprecated
 
+try:
+    from contextvars import copy_context as _copy_context
+    _contextvarsSupport = True
+except ImportError:
+    _contextvarsSupport = False
+
+    class _NoContext:
+        @staticmethod
+        def run(f, *args, **kwargs):
+            return f(*args, **kwargs)
+
+
+    def _copy_context():
+        return _NoContext
+
 log = Logger()
+
 
 
 class AlreadyCalledError(Exception):
@@ -262,9 +278,9 @@ class Deferred:
         Initialize a L{Deferred}.
 
         @param canceller: a callable used to stop the pending operation
-            scheduled by this L{Deferred} when L{Deferred.cancel} is
-            invoked. The canceller will be passed the deferred whose
-            cancelation is requested (i.e., self).
+            scheduled by this L{Deferred} when L{Deferred.cancel} is invoked.
+            The canceller will be passed the deferred whose cancelation is
+            requested (i.e., self).
 
             If a canceller is not given, or does not invoke its argument's
             C{callback} or C{errback} method, L{Deferred.cancel} will
@@ -650,6 +666,7 @@ class Deferred:
                     current._runningCallbacks = True
                     try:
                         current.result = callback(current.result, *args, **kw)
+
                         if current.result is current:
                             warnAboutFunction(
                                 callback,
@@ -1400,17 +1417,23 @@ def _inlineCallbacks(result, g, status):
     # loop and the waiting variable solve that by manually unfolding the
     # recursion.
 
-    waiting = [True, # waiting for result?
-               None] # result
+    waiting = [True,  # waiting for result?
+               None]  # result
+
+    # Get the current contextvars Context object.
+    current_context = _copy_context()
 
     while 1:
         try:
             # Send the last result back as the result of the yield expression.
             isFailure = isinstance(result, failure.Failure)
+
             if isFailure:
-                result = result.throwExceptionIntoGenerator(g)
+                result = current_context.run(
+                    result.throwExceptionIntoGenerator, g
+                )
             else:
-                result = g.send(result)
+                result = current_context.run(g.send, result)
         except StopIteration as e:
             # fell off the end, or "return" statement
             status.deferred.callback(getattr(e, "value", None))
@@ -1426,6 +1449,12 @@ def _inlineCallbacks(result, g, status):
             # _inlineCallbacks); the next one down should be the application
             # code.
             appCodeTrace = exc_info()[2].tb_next
+
+            # If contextvars support is not present, we also have added a frame
+            # in the no-op shim, remove that
+            if not _contextvarsSupport:
+                appCodeTrace = appCodeTrace.tb_next
+
             if isFailure:
                 # If we invoked this generator frame by throwing an exception
                 # into it, then throwExceptionIntoGenerator will consume an
@@ -1466,8 +1495,7 @@ def _inlineCallbacks(result, g, status):
                     waiting[0] = False
                     waiting[1] = r
                 else:
-                    # We are not waiting for deferred result any more
-                    _inlineCallbacks(r, g, status)
+                    current_context.run(_inlineCallbacks, r, g, status)
 
             result.addBoth(gotResult)
             if waiting[0]:
@@ -2002,13 +2030,11 @@ class DeferredFilesystemLock(lockfile.FilesystemLock):
 
 
 
-__all__ = ["Deferred", "DeferredList", "succeed", "fail", "FAILURE", "SUCCESS",
-           "AlreadyCalledError", "TimeoutError", "gatherResults",
-           "maybeDeferred", "ensureDeferred",
-           "waitForDeferred", "deferredGenerator", "inlineCallbacks",
-           "returnValue",
-           "DeferredLock", "DeferredSemaphore", "DeferredQueue",
-           "DeferredFilesystemLock", "AlreadyTryingToLockError",
-           "CancelledError",
-          ]
-
+__all__ = [
+    "Deferred", "DeferredList", "succeed", "fail", "FAILURE", "SUCCESS",
+    "AlreadyCalledError", "TimeoutError", "gatherResults",
+    "maybeDeferred", "ensureDeferred",
+    "waitForDeferred", "deferredGenerator", "inlineCallbacks", "returnValue",
+    "DeferredLock", "DeferredSemaphore", "DeferredQueue",
+    "DeferredFilesystemLock", "AlreadyTryingToLockError", "CancelledError",
+]
