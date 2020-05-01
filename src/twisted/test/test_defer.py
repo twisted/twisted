@@ -3301,8 +3301,8 @@ class CoroutineContextVarsTests(unittest.TestCase):
             else:
                 raise Exception("???? should have failed")
 
-            # If we await another async def-defined function, it will be able to
-            # mutate the outer function's context, it is *not* frozen and
+            # If we await another async def-defined function, it will be able
+            # to mutate the outer function's context, it is *not* frozen and
             # restored inside the function call.
             await asyncFuncAwaitingDeferred()
             self.assertEqual(var.get(), 3)
