@@ -314,6 +314,19 @@ class Deferred:
             self._context = _contextvars.copy_context()
 
 
+    def getContext(self):
+        """
+        Get the context that this Deferred runs its callbacks with.
+
+        @param
+        """
+
+
+    def setContext(self, context):
+        """
+        """
+
+
     def addCallbacks(self, callback, errback=None,
                      callbackArgs=None, callbackKeywords=None,
                      errbackArgs=None, errbackKeywords=None):
@@ -1438,12 +1451,12 @@ def _inlineCallbacks(result, g, status):
             # Send the last result back as the result of the yield expression.
             isFailure = isinstance(result, failure.Failure)
 
-                if isFailure:
-                    result = current_context.run(
-                        result.throwExceptionIntoGenerator, g
-                    )
-                else:
-                    result = current_context.run(g.send, result)
+            if isFailure:
+                result = current_context.run(
+                    result.throwExceptionIntoGenerator, g
+                )
+            else:
+                result = current_context.run(g.send, result)
         except StopIteration as e:
             # fell off the end, or "return" statement
             status.deferred.callback(getattr(e, "value", None))
@@ -1505,7 +1518,7 @@ def _inlineCallbacks(result, g, status):
                     waiting[0] = False
                     waiting[1] = r
                 else:
-                        current_context.run(_inlineCallbacks, r, g, status)
+                    current_context.run(_inlineCallbacks, r, g, status)
 
             result.addBoth(gotResult)
             if waiting[0]:
