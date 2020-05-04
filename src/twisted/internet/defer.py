@@ -273,7 +273,7 @@ class Deferred:
 
     _chainedTo = None
 
-    def __init__(self, canceller=None):
+    def __init__(self, canceller=None, context=None):
         """
         Initialize a L{Deferred}.
 
@@ -296,12 +296,22 @@ class Deferred:
 
         @type canceller: a 1-argument callable which takes a L{Deferred}. The
             return result is ignored.
+
+        @param context: The context that this Deferred should run its callbacks
+        under.
+
+        @type context: L{contextvars.Context}
         """
         self.callbacks = []
         self._canceller = canceller
         if self.debug:
             self._debugInfo = DebugInfo()
             self._debugInfo.creator = traceback.format_stack()[:-1]
+
+        if context is not None:
+            self._context = context
+        else:
+            self._context = _contextvars.copy_context()
 
 
     def addCallbacks(self, callback, errback=None,
@@ -665,7 +675,7 @@ class Deferred:
                 try:
                     current._runningCallbacks = True
                     try:
-                        current.result = callback(current.result, *args, **kw)
+                        current.result = current._context.run(callback, current.result, *args, **kw)
 
                         if current.result is current:
                             warnAboutFunction(
@@ -1428,12 +1438,12 @@ def _inlineCallbacks(result, g, status):
             # Send the last result back as the result of the yield expression.
             isFailure = isinstance(result, failure.Failure)
 
-            if isFailure:
-                result = current_context.run(
-                    result.throwExceptionIntoGenerator, g
-                )
-            else:
-                result = current_context.run(g.send, result)
+                if isFailure:
+                    result = current_context.run(
+                        result.throwExceptionIntoGenerator, g
+                    )
+                else:
+                    result = current_context.run(g.send, result)
         except StopIteration as e:
             # fell off the end, or "return" statement
             status.deferred.callback(getattr(e, "value", None))
@@ -1495,7 +1505,7 @@ def _inlineCallbacks(result, g, status):
                     waiting[0] = False
                     waiting[1] = r
                 else:
-                    current_context.run(_inlineCallbacks, r, g, status)
+                        current_context.run(_inlineCallbacks, r, g, status)
 
             result.addBoth(gotResult)
             if waiting[0]:

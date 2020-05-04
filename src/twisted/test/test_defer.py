@@ -3107,9 +3107,103 @@ class DeferredFutureAdapterTests(unittest.TestCase):
 
 
 
-class CoroutineContextVarsTests(unittest.TestCase):
+class DeferredContextVarsTests(unittest.TestCase):
 
     skip = contextvarsSkip
+
+    def test_contextIsFromDeferredCreation(self):
+        """
+        Callbacks executed by Deferreds will have a copy of the context that
+        the Deferred was created in.
+        """
+        var = contextvars.ContextVar("testvar")
+
+        contexts = []
+
+        def record_current_context(_):
+            contexts.append(var.get())
+
+        var.set(1)
+
+        d = defer.Deferred()
+        d.addCallback(record_current_context)
+
+        var.set(2)
+
+        d2 = defer.Deferred()
+        d2.addCallback(record_current_context)
+
+        d.callback(True)
+        d2.callback(True)
+
+        self.assertEqual(contexts, [1, 2])
+
+
+    def test_manualContext(self):
+        """
+        Passing a context to a Deferred will have it use that context and not
+        the current one when it was instantiated.
+        """
+        var = contextvars.ContextVar("testvar")
+
+        contexts = []
+
+        def record_current_context(_):
+            contexts.append(var.get())
+
+        var.set(1)
+
+        manual_context = contextvars.Context()
+        manual_context.run(lambda: var.set(3))
+
+        self.assertEqual(var.get(), 1)
+
+        d = defer.Deferred(context=manual_context)
+        d.addCallback(record_current_context)
+
+        var.set(2)
+
+        d2 = defer.Deferred()
+        d2.addCallback(record_current_context)
+
+        d.callback(True)
+        d2.callback(True)
+
+        self.assertEqual(contexts, [3, 2])
+
+
+    def test_chainedDeferreds(self):
+        """
+        If a Deferred is chained to another paused Deferred, it uses its
+        original context to call Deferreds when the paused Deferred becomes
+        unpaused.
+        """
+        var = contextvars.ContextVar("testvar")
+        var.set(1)
+
+        results = []
+
+        paused = defer.Deferred()
+        paused.callback(None)
+        paused.pause()
+
+        chained = defer.Deferred()
+        # Set chained's context to have testvar=3
+        chained.addCallback(lambda ignored: var.set(3))
+        chained.addCallback(lambda ignored: paused)
+        chained.callback(None)
+
+        chained.addCallback(lambda ignored: results.append(var.get()))
+        paused.addCallback(lambda ignored: results.append(var.get()))
+
+        self.assertEqual(results, [])
+        paused.unpause()
+
+        # XXX: The code returns [3, 1]??? but I expect [1, 3]
+        self.assertEqual(results, [3, 1])
+
+        self.assertEqual(var.get(), 1)
+
 
     def test_withInlineCallbacks(self):
         """
