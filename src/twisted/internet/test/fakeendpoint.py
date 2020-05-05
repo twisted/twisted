@@ -6,7 +6,6 @@
 Fake client and server endpoint string parser plugins for testing purposes.
 """
 
-from __future__ import absolute_import, division
 
 from zope.interface.declarations import implementer
 from twisted.plugin import IPlugin

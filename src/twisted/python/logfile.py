@@ -7,7 +7,6 @@
 A rotating, browsable log file.
 """
 
-from __future__ import division, absolute_import
 
 # System Imports
 import os

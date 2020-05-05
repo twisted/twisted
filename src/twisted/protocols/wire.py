@@ -6,7 +6,6 @@
 These protocols are either provided by inetd, or are not provided at all.
 """
 
-from __future__ import absolute_import, division
 
 import time
 import struct

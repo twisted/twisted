@@ -6,7 +6,6 @@
 Assorted functionality which is commonly useful when writing unit tests.
 """
 
-from __future__ import division, absolute_import
 
 from socket import AF_INET, AF_INET6
 from io import BytesIO

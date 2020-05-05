@@ -193,7 +193,6 @@ has several features:
 @type ERROR_DESCRIPTION: L{bytes}
 """
 
-from __future__ import absolute_import, division
 
 __metaclass__ = type
 

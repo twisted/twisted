@@ -6,9 +6,9 @@
 I contain PythonScript, which is a very simple python script resource.
 """
 
-from __future__ import division, absolute_import
 
-import os, traceback
+import os
+import traceback
 
 from twisted import copyright
 from twisted.python.filepath import _coerceToFilesystemEncoding

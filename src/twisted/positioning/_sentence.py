@@ -4,7 +4,6 @@
 Generic sentence handling tools: hopefully reusable.
 """
 
-from __future__ import absolute_import, division
 
 
 class _BaseSentence(object):

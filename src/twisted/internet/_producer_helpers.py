@@ -5,7 +5,6 @@
 """
 Helpers for working with producers.
 """
-from __future__ import division, absolute_import
 
 from zope.interface import implementer
 

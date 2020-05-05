@@ -5,7 +5,6 @@
 Tests for L{twisted.cred}'s implementation of CRAM-MD5.
 """
 
-from __future__ import division, absolute_import
 
 import hashlib
 

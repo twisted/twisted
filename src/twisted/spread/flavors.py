@@ -16,7 +16,6 @@ but may have a small impact on users who subclass and override methods.
 @author: Glyph Lefkowitz
 """
 
-from __future__ import absolute_import, division
 
 # NOTE: this module should NOT import pb; it is supposed to be a module which
 # abstractly defines remotely accessible types.  Many of these types expect to

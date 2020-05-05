@@ -6,7 +6,6 @@
 Application data directory support.
 """
 
-from __future__ import division, absolute_import
 
 import appdirs
 import inspect

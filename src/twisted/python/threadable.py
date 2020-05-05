@@ -7,7 +7,6 @@ A module to provide some very basic threading primitives, such as
 synchronization.
 """
 
-from __future__ import division, absolute_import
 
 from functools import wraps
 

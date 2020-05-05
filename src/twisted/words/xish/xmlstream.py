@@ -31,7 +31,6 @@ Maintainer: Ralph Meijer
 @type STREAM_START_EVENT: L{str}.
 """
 
-from __future__ import absolute_import, division
 
 from twisted.python import failure
 from twisted.python.compat import intern, unicode

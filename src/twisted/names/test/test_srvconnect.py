@@ -5,7 +5,6 @@
 Test cases for L{twisted.names.srvconnect}.
 """
 
-from __future__ import absolute_import, division
 
 import random
 

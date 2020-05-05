@@ -5,7 +5,6 @@
 Tests for ssh/transport.py and the classes therein.
 """
 
-from __future__ import absolute_import, division
 
 import binascii
 import re

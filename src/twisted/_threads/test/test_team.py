@@ -5,7 +5,6 @@
 Tests for L{twisted._threads._team}.
 """
 
-from __future__ import absolute_import, division, print_function
 
 from twisted.trial.unittest import SynchronousTestCase
 

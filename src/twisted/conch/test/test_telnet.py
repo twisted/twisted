@@ -6,7 +6,6 @@
 Tests for L{twisted.conch.telnet}.
 """
 
-from __future__ import absolute_import, division
 
 from zope.interface import implementer
 from zope.interface.verify import verifyObject

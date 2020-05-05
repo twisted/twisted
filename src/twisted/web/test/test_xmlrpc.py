@@ -6,7 +6,6 @@
 Tests for  XML-RPC support in L{twisted.web.xmlrpc}.
 """
 
-from __future__ import division, absolute_import
 
 from twisted.python.compat import nativeString, networkString, NativeStringIO
 from io import BytesIO

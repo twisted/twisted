@@ -4,7 +4,6 @@
 """
 Tests for twisted SSL support.
 """
-from __future__ import division, absolute_import
 
 from twisted.python.filepath import FilePath
 from twisted.trial import unittest

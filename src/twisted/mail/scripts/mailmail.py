@@ -6,7 +6,6 @@
 Implementation module for the I{mailmail} command.
 """
 
-from __future__ import print_function
 
 import email.utils
 import os

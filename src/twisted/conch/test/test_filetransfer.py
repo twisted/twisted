@@ -6,7 +6,6 @@
 Tests for L{twisted.conch.ssh.filetransfer}.
 """
 
-from __future__ import division, absolute_import
 
 import os
 import re

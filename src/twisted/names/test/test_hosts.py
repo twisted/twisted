@@ -5,7 +5,6 @@
 Tests for the I{hosts(5)}-based resolver, L{twisted.names.hosts}.
 """
 
-from __future__ import division, absolute_import
 
 from twisted.trial.unittest import SynchronousTestCase
 from twisted.python.filepath import FilePath

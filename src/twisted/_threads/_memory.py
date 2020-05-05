@@ -6,7 +6,6 @@
 Implementation of an in-memory worker that defers execution.
 """
 
-from __future__ import absolute_import, division, print_function
 
 from zope.interface import implementer
 

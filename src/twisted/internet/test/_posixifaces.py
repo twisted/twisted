@@ -5,9 +5,9 @@
 POSIX implementation of local network interface enumeration.
 """
 
-from __future__ import division, absolute_import
 
-import sys, socket
+import socket
+import sys
 
 from socket import AF_INET, AF_INET6, inet_ntop
 from ctypes import (
