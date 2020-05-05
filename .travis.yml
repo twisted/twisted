@@ -27,6 +27,8 @@ env:
 
 
 matrix:
+  allow_failures:
+    - python: 3.8
   include:
     - services:
         - docker
