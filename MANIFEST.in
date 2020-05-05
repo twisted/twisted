@@ -31,7 +31,7 @@ prune .travis
 prune .github
 
 # Include test-running utilities for downstream packagers
-include tox.ini .coveragerc
+include mypy.ini tox.ini .coveragerc
 
 # Include our docs templates
 recursive-include src/twisted/python/_pydoctortemplates *.html
