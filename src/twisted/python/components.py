@@ -29,7 +29,6 @@ which allow access to only the parts of another class defined by a specified
 interface.
 """
 
-from __future__ import division, absolute_import, print_function
 
 # zope3 imports
 from zope.interface import interface, declarations

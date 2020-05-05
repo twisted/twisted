@@ -9,7 +9,6 @@ Start here if you are looking to write a new protocol implementation for
 Twisted.  The Protocol class contains some introductory material.
 """
 
-from __future__ import division, absolute_import
 
 import random
 from zope.interface import implementer

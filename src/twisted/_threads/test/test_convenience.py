@@ -5,7 +5,6 @@
 Test cases for convenience functionality in L{twisted._threads._convenience}.
 """
 
-from __future__ import absolute_import, division, print_function
 
 from twisted.trial.unittest import SynchronousTestCase
 

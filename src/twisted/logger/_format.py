@@ -139,7 +139,6 @@ def formatEventAsClassicLogText(event, formatTime=formatTime):
 
     Example::
 
-        >>> from __future__ import print_function
         >>> from time import time
         >>> from twisted.logger import formatEventAsClassicLogText
         >>> from twisted.logger import LogLevel

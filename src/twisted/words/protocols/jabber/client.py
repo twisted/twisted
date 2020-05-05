@@ -3,7 +3,6 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-from __future__ import absolute_import, division
 
 from twisted.python.compat import _coercedUnicode, unicode
 from twisted.words.protocols.jabber import xmlstream, sasl, error

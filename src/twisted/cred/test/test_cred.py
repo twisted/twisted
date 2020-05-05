@@ -5,7 +5,6 @@
 Tests for L{twisted.cred}, now with 30% more starch.
 """
 
-from __future__ import absolute_import, division
 
 from zope.interface import implementer, Interface
 

@@ -21,7 +21,6 @@ the latest version of Python directly from your code, if possible.
     Python 3)
 """
 
-from __future__ import absolute_import, division
 
 import inspect
 import os

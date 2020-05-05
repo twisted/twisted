@@ -11,7 +11,6 @@ L{domish.Element<twisted.words.xish.domish.Element>} instances against
 XPath-like expressions.
 """
 
-from __future__ import absolute_import, division
 
 from io import StringIO
 

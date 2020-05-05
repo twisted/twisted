@@ -6,7 +6,6 @@
 An in-memory caching resolver.
 """
 
-from __future__ import division, absolute_import
 
 from twisted.names import dns, common
 from twisted.python import failure, log

@@ -6,7 +6,6 @@
 An API for storing HTTP header names and values.
 """
 
-from __future__ import division, absolute_import
 
 from twisted.python.compat import comparable, cmp, unicode
 

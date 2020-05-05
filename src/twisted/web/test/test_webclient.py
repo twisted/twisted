@@ -5,7 +5,6 @@
 Tests for the old L{twisted.web.client} APIs, C{getPage} and friends.
 """
 
-from __future__ import division, absolute_import
 
 import io
 import os

@@ -6,7 +6,6 @@
 Implementation of the lowest-level Resource class.
 """
 
-from __future__ import division, absolute_import
 
 __all__ = [
     'IResource', 'getChildForRequest',

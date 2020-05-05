@@ -37,7 +37,6 @@ converting from a L{bytes} path name to a L{str} path name.
 @since: 10.1
 """
 
-from __future__ import print_function
 
 import os
 import struct

@@ -5,7 +5,6 @@
 Tests for L{twisted.words.xish.domish}, a DOM-like library for XMPP.
 """
 
-from __future__ import absolute_import, division
 
 from zope.interface.verify import verifyObject
 

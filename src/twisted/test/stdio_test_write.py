@@ -8,7 +8,6 @@ L{twisted.test.test_stdio.StandardInputOutputTests.test_write} to test that
 ITransport.write() works for process transports.
 """
 
-from __future__ import absolute_import, division
 
 import sys
 

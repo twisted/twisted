@@ -6,7 +6,6 @@
 hosts(5) support.
 """
 
-from __future__ import division, absolute_import
 
 from twisted.python.compat import nativeString
 from twisted.names import dns

@@ -36,7 +36,6 @@ implement onion routing.  It can also be used to run TLS over unusual
 transports, such as UNIX sockets and stdio.
 """
 
-from __future__ import division, absolute_import
 
 from OpenSSL.SSL import Error, ZeroReturnError, WantReadError
 from OpenSSL.SSL import TLSv1_METHOD, Context, Connection

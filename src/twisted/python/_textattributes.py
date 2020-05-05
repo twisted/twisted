@@ -20,7 +20,6 @@ Serializing a formatting structure is done with L{flatten}.
 @see: L{twisted.words.protocols.irc._CharacterAttributes}
 """
 
-from __future__ import print_function
 
 from twisted.python.util import FancyEqMixin
 

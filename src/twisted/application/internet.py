@@ -37,7 +37,6 @@ C{TCPServer(8080, server.Site(r))}.  See the documentation for the
 reactor.listen/connect* methods for more information.
 """
 
-from __future__ import absolute_import, division
 
 from random import random as _goodEnoughRandom
 

@@ -2,7 +2,6 @@
 # See LICENSE for details.
 
 
-from __future__ import print_function
 
 from twisted.internet import defer, protocol, reactor
 from twisted.conch import error

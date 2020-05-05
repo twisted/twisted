@@ -4,7 +4,6 @@
 # Maintainer: Jonathan Lange
 # Author: Robert Collins
 
-from __future__ import absolute_import, division
 
 import os
 import pdb
