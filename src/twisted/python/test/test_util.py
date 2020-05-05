@@ -6,7 +6,6 @@
 Tests for L{twisted.python.util}.
 """
 
-from __future__ import division, absolute_import
 
 import errno
 import os.path

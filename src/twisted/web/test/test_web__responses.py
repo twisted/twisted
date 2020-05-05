@@ -6,7 +6,6 @@ The L{_response} module contains constants for all standard HTTP codes, along
 with a mapping to the corresponding phrases.
 """
 
-from __future__ import division, absolute_import
 
 import string
 from twisted.trial import unittest

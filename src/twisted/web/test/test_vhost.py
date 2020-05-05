@@ -5,7 +5,6 @@
 Tests for L{twisted.web.vhost}.
 """
 
-from __future__ import absolute_import, division
 
 from twisted.internet.defer import gatherResults
 from twisted.trial.unittest import TestCase

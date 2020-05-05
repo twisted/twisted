@@ -8,7 +8,6 @@ are ssh-userauth and ssh-connection.
 Maintainer: Paul Swartz
 """
 
-from __future__ import division, absolute_import
 
 from twisted.python import log
 

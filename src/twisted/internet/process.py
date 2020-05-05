@@ -10,7 +10,6 @@ Do NOT use this module directly - use reactor.spawnProcess() instead.
 Maintainer: Itamar Shtull-Trauring
 """
 
-from __future__ import division, absolute_import, print_function
 
 from twisted.python.runtime import platform
 

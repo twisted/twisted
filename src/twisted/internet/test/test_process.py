@@ -8,7 +8,6 @@ Tests for implementations of L{IReactorProcess}.
     platforms and native L{str} keys/values on Windows.
 """
 
-from __future__ import division, absolute_import, print_function
 
 import hamcrest
 import io

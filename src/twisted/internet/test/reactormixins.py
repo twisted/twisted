@@ -12,7 +12,6 @@ available.  Additionally, the tests will automatically be applied to all
 available reactor implementations.
 """
 
-from __future__ import division, absolute_import
 
 __metaclass__ = type
 

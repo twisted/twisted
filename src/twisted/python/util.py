@@ -2,11 +2,14 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-from __future__ import division, absolute_import, print_function
 
-import os, sys, errno, warnings
+import errno
+import os
+import sys
+import warnings
 try:
-    import pwd, grp
+    import grp
+    import pwd
 except ImportError:
     pwd = grp = None
 try:

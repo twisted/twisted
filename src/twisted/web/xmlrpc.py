@@ -11,7 +11,6 @@ Maintainer: Itamar Shtull-Trauring
 @type Fault: L{xmlrpclib.Fault}
 """
 
-from __future__ import division, absolute_import
 
 from twisted.python.compat import _PY3, intToBytes, nativeString, urllib_parse
 from twisted.python.compat import unicode

@@ -7,7 +7,6 @@ Interface documentation.
 Maintainer: Itamar Shtull-Trauring
 """
 
-from __future__ import division, absolute_import
 
 from zope.interface import Interface, Attribute
 

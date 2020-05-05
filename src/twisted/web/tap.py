@@ -6,7 +6,6 @@
 Support for creating a service which runs a web server.
 """
 
-from __future__ import absolute_import, division
 
 import os
 import warnings

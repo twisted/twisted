@@ -8,7 +8,6 @@
 Data used by test_keys as well as others.
 """
 
-from __future__ import absolute_import, division
 
 from twisted.python.compat import long, _b64decodebytes as decodebytes
 

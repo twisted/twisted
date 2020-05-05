@@ -5,7 +5,6 @@
 L{twisted.cred.strcred}.
 """
 
-from __future__ import absolute_import, division
 
 import os
 

@@ -5,7 +5,6 @@
 Unit tests for L{twisted.python.constants}.
 """
 
-from __future__ import division, absolute_import
 
 import warnings
 

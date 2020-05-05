@@ -6,7 +6,6 @@
 Support for generic select()able objects.
 """
 
-from __future__ import division, absolute_import
 
 from socket import AF_INET, AF_INET6, inet_pton, error
 

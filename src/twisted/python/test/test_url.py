@@ -5,7 +5,6 @@
 """
 Tests for L{twisted.python.url}.
 """
-from __future__ import unicode_literals
 
 from ..url import URL
 

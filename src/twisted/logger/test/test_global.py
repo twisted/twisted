@@ -5,7 +5,6 @@
 Test cases for L{twisted.logger._global}.
 """
 
-from __future__ import print_function
 
 import io
 

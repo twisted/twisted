@@ -11,7 +11,6 @@ Asynchronous-friendly error mechanism.
 See L{Failure}.
 """
 
-from __future__ import division, absolute_import, print_function
 
 # System Imports
 import copy

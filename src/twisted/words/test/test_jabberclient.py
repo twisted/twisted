@@ -5,7 +5,6 @@
 Tests for L{twisted.words.protocols.jabber.client}
 """
 
-from __future__ import absolute_import, division
 
 from hashlib import sha1
 

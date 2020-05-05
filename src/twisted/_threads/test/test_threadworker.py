@@ -5,7 +5,6 @@
 Tests for L{twisted._threads._threadworker}.
 """
 
-from __future__ import absolute_import, division, print_function
 
 import gc
 import weakref

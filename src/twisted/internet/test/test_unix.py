@@ -5,7 +5,6 @@
 Tests for implementations of L{IReactorUNIX}.
 """
 
-from __future__ import division, absolute_import
 
 from stat import S_IMODE
 from os import stat, close, urandom, unlink, fstat
