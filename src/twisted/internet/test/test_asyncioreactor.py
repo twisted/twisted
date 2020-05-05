@@ -9,12 +9,20 @@ import gc
 from twisted.trial.unittest import SynchronousTestCase
 from .reactormixins import ReactorBuilder
 
+skipReason = ""
 try:
     from twisted.internet.asyncioreactor import AsyncioSelectorReactor
-    import asyncio
-except ImportError:
+except:
     AsyncioSelectorReactor = None
-    skipReason = "Requires asyncio."
+    if not skipReason:
+        skipReason = "Could not import AsyncioSelectorReactor"
+
+try:
+    import asyncio
+except:
+    AsyncioSelectorReactor = None
+    if not skipReason:
+        skipReason = "Requires asyncio."
 
 
 
