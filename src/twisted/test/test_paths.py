@@ -5,9 +5,12 @@
 Test cases covering L{twisted.python.filepath}.
 """
 
-from __future__ import division, absolute_import
 
-import os, time, pickle, errno, stat
+import errno
+import os
+import pickle
+import stat
+import time
 from pprint import pformat
 
 from twisted.python.compat import _PY3, long, unicode

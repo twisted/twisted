@@ -12,8 +12,6 @@ U{http://twistedmatrix.com/projects/core/documentation/howto/options.html},
 or doc/core/howto/options.xhtml in your Twisted directory.
 """
 
-from __future__ import print_function
-from __future__ import division, absolute_import
 
 # System Imports
 import inspect

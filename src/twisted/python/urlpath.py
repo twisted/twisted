@@ -6,7 +6,6 @@
 L{URLPath}, a representation of a URL.
 """
 
-from __future__ import division, absolute_import
 
 from twisted.python.compat import (
     nativeString, unicode, urllib_parse as urlparse, urlunquote, urlquote

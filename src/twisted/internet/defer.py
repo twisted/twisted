@@ -16,7 +16,6 @@ Maintainer: Glyph Lefkowitz
     at the Deferred which is chained to the Deferred which has this marker.
 """
 
-from __future__ import division, absolute_import, print_function
 
 import attr
 import traceback

@@ -6,7 +6,6 @@
 """
 Tests for L{twisted.trial.reporter}.
 """
-from __future__ import absolute_import, division
 
 import errno
 import os

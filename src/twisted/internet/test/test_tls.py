@@ -5,7 +5,6 @@
 Tests for implementations of L{ITLSTransport}.
 """
 
-from __future__ import division, absolute_import
 
 __metaclass__ = type
 

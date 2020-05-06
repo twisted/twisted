@@ -6,7 +6,6 @@
 SSH key exchange handling.
 """
 
-from __future__ import absolute_import, division
 
 from hashlib import sha1, sha256, sha384, sha512
 

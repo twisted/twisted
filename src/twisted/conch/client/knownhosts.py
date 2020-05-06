@@ -8,7 +8,6 @@ An implementation of the OpenSSH known_hosts database.
 @since: 8.2
 """
 
-from __future__ import absolute_import, division
 
 import hmac
 from binascii import Error as DecodeError, b2a_base64, a2b_base64

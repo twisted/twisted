@@ -5,7 +5,6 @@
 Tests for L{twisted.words.protocols.jabber.jstrports}.
 """
 
-from __future__ import absolute_import, division
 
 from twisted.trial import unittest
 

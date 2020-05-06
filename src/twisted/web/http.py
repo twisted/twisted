@@ -27,7 +27,6 @@ also useful for HTTP clients (such as the chunked encoding parser).
     indicate that the server has not taken the requested action.
 """
 
-from __future__ import division, absolute_import
 
 __all__ = [
     'SWITCHING', 'OK', 'CREATED', 'ACCEPTED', 'NON_AUTHORITATIVE_INFORMATION',

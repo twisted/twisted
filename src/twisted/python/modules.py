@@ -56,7 +56,6 @@ the modules outside the standard library's python-files directory::
 @type: L{PythonPath}
 """
 
-from __future__ import division, absolute_import, print_function
 
 __metaclass__ = type
 

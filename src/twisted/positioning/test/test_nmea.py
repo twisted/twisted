@@ -4,7 +4,6 @@
 Test cases for using NMEA sentences.
 """
 
-from __future__ import absolute_import, division
 
 import datetime
 from operator import attrgetter

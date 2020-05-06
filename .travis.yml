@@ -26,7 +26,7 @@ env:
     - PYENV_ROOT="$HOME/.pyenv"
 
 
-matrix:
+jobs:
   include:
     - services:
         - docker

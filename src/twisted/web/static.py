@@ -6,7 +6,6 @@
 Static resources for L{twisted.web}.
 """
 
-from __future__ import division, absolute_import
 
 import errno
 import itertools

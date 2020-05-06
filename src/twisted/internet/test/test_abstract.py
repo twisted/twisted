@@ -6,7 +6,6 @@ Tests for L{twisted.internet.abstract}, a collection of APIs for implementing
 reactors.
 """
 
-from __future__ import division, absolute_import
 
 from twisted.trial.unittest import SynchronousTestCase
 

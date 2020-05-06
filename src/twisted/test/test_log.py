@@ -5,7 +5,6 @@
 Tests for L{twisted.python.log}.
 """
 
-from __future__ import division, absolute_import, print_function
 
 from twisted.python.compat import _PY3, NativeStringIO as StringIO
 

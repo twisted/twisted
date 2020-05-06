@@ -9,7 +9,6 @@ In most cases you can just use C{reactor.callInThread} and friends
 instead of creating a thread pool directly.
 """
 
-from __future__ import division, absolute_import
 
 import threading
 

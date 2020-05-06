@@ -9,7 +9,6 @@ U{PROTOCOL.agent<http://www.openbsd.org/cgi-bin/cvsweb/src/usr.bin/ssh/PROTOCOL.
 Maintainer: Paul Swartz
 """
 
-from __future__ import absolute_import, division
 
 import struct
 
