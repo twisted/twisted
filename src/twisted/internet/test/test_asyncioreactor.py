@@ -12,14 +12,14 @@ from .reactormixins import ReactorBuilder
 skipReason = ""
 try:
     from twisted.internet.asyncioreactor import AsyncioSelectorReactor
-except:
+except Exception:
     AsyncioSelectorReactor = None
     if not skipReason:
         skipReason = "Could not import AsyncioSelectorReactor"
 
 try:
     import asyncio
-except:
+except Exception:
     AsyncioSelectorReactor = None
     if not skipReason:
         skipReason = "Requires asyncio."
@@ -27,7 +27,7 @@ except:
 try:
     if AsyncioSelectorReactor:
         AsyncioSelectorReactor()
-except:
+except Exception:
     AsyncioSelectorReactor = None
     if not skipReason:
         skipReason = "Could not instantiate AsyncioSelectorReactor"
