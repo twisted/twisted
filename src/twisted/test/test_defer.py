@@ -3116,7 +3116,7 @@ class DeferredContextVarsWithoutSupportTests(unittest.TestCase):
         setContext raises RuntimeError if it is used without contextvars
         support.
         """
-        d = Deferred()
+        d = defer.Deferred()
         self.assertRaises(RuntimeError, d.setContext, None)
 
 
@@ -3125,7 +3125,7 @@ class DeferredContextVarsWithoutSupportTests(unittest.TestCase):
         getContext raises RuntimeError if it is used without contextvars
         support.
         """
-        d = Deferred()
+        d = defer.Deferred()
         self.assertRaises(RuntimeError, d.getContext)
 
 
