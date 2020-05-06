@@ -3107,6 +3107,30 @@ class DeferredFutureAdapterTests(unittest.TestCase):
 
 
 
+class DeferredContextVarsWithoutSupportTests(unittest.TestCase):
+
+    if not contextvarsSkip:
+        skip = "Requires contextvars support to be missing."
+
+    def test_setContext(self):
+        """
+        setContext raises RuntimeError if it is used without contextvars
+        support.
+        """
+        d = Deferred()
+        self.assertRaises(RuntimeError, d.setContext, None)
+
+
+    def test_getContext(self):
+        """
+        getContext raises RuntimeError if it is used without contextvars
+        support.
+        """
+        d = Deferred()
+        self.assertRaises(RuntimeError, d.getContext)
+
+
+
 class DeferredContextVarsTests(unittest.TestCase):
 
     skip = contextvarsSkip
@@ -3120,18 +3144,18 @@ class DeferredContextVarsTests(unittest.TestCase):
 
         contexts = []
 
-        def record_current_context(_):
+        def recordCurrentContext(_):
             contexts.append(var.get())
 
         var.set(1)
 
         d = defer.Deferred()
-        d.addCallback(record_current_context)
+        d.addCallback(recordCurrentContext)
 
         var.set(2)
 
         d2 = defer.Deferred()
-        d2.addCallback(record_current_context)
+        d2.addCallback(recordCurrentContext)
 
         d.callback(True)
         d2.callback(True)
@@ -3148,7 +3172,7 @@ class DeferredContextVarsTests(unittest.TestCase):
 
         contexts = []
 
-        def record_current_context(_):
+        def recordCurrentContext(_):
             contexts.append(var.get())
 
         var.set(1)
@@ -3159,17 +3183,49 @@ class DeferredContextVarsTests(unittest.TestCase):
         self.assertEqual(var.get(), 1)
 
         d = defer.Deferred(context=manual_context)
-        d.addCallback(record_current_context)
+        d.addCallback(recordCurrentContext)
 
         var.set(2)
 
         d2 = defer.Deferred()
-        d2.addCallback(record_current_context)
+        d2.addCallback(recordCurrentContext)
 
         d.callback(True)
         d2.callback(True)
 
         self.assertEqual(contexts, [3, 2])
+
+
+    def test_setContext(self):
+        """
+        Calling setContext on a Deferred will have it use that context and not
+        the current one when it was instantiated.
+        """
+        var = contextvars.ContextVar("testvar")
+
+        contexts = []
+
+        def recordCurrentContext(_):
+            contexts.append(var.get())
+
+        var.set(1)
+
+        manualContext = contextvars.Context()
+        manualContext.run(lambda: var.set(3))
+
+        d = defer.Deferred()
+        d.callback(True)
+        d.addCallback(recordCurrentContext)
+
+        # Set the context then add another callback to be run
+        d.setContext(manualContext)
+        d.addCallback(recordCurrentContext)
+
+        # Check setting the outer context doesn't change it
+        var.set(2)
+        d.addCallback(recordCurrentContext)
+
+        self.assertEqual(contexts, [1, 3, 3])
 
 
     def test_chainedDeferreds(self):
@@ -3184,25 +3240,35 @@ class DeferredContextVarsTests(unittest.TestCase):
         results = []
 
         paused = defer.Deferred()
-        paused.callback(None)
+        paused.addCallback(
+            lambda ignored: results.append(('paused', var.get()))
+        )
         paused.pause()
+        paused.callback(None)
 
         chained = defer.Deferred()
         # Set chained's context to have testvar=3
         chained.addCallback(lambda ignored: var.set(3))
         chained.addCallback(lambda ignored: paused)
+        chained.addCallback(
+            lambda ignored: results.append(('chained', var.get()))
+        )
         chained.callback(None)
 
-        chained.addCallback(lambda ignored: results.append(var.get()))
-        paused.addCallback(lambda ignored: results.append(var.get()))
+        # Set the test's context to have testvar=3
+        var.set(2)
 
+        # Nothing has happened yet because the Deferred is paused
         self.assertEqual(results, [])
+
+        # Unpausing will mean that the callbacks will run, and they will dump
+        # their unique contexts.
         paused.unpause()
+        self.assertEqual(results, [('paused', 1), ('chained', 3)])
+        self.assertEqual(var.get(), 2)
 
-        # XXX: The code returns [3, 1]??? but I expect [1, 3]
-        self.assertEqual(results, [3, 1])
-
-        self.assertEqual(var.get(), 1)
+        # These contexts are not shared
+        self.assertIsNot(paused.getContext(), chained.getContext())
 
 
     def test_withInlineCallbacks(self):

@@ -25,6 +25,7 @@ import warnings
 from sys import exc_info, version_info
 from functools import wraps
 from incremental import Version
+from typing import NoReturn
 
 # Twisted imports
 from twisted.python.compat import cmp, comparable
@@ -33,12 +34,15 @@ from twisted.logger import Logger
 from twisted.python.deprecate import warnAboutFunction, deprecated
 
 try:
-    from contextvars import copy_context as _copy_context
+    from contextvars import copy_context as _copy_context, Context as _Context
     _contextvarsSupport = True
 except ImportError:
     _contextvarsSupport = False
 
-    class _NoContext:
+    class _Context:
+        pass
+
+    class _NoContext(_Context):
         @staticmethod
         def run(f, *args, **kwargs):
             return f(*args, **kwargs)
@@ -273,7 +277,7 @@ class Deferred:
 
     _chainedTo = None
 
-    def __init__(self, canceller=None, context=None):
+    def __init__(self, canceller=None, context: _Context = None):
         """
         Initialize a L{Deferred}.
 
@@ -311,21 +315,40 @@ class Deferred:
         if context is not None:
             self._context = context
         else:
-            self._context = _contextvars.copy_context()
+            self._context = _copy_context()
 
 
-    def getContext(self):
+    def getContext(self) -> _Context:
         """
         Get the context that this Deferred runs its callbacks with.
 
-        @param
+        @raise L{RuntimeError}: If L{contextvars} is not available.
+
+        @rtype: L{contextvars.Context}
         """
+        if not _contextvarsSupport:
+            raise RuntimeError(
+                "contextvars support is not available on this platform."
+            )
+
+        return self._context
 
 
-    def setContext(self, context):
+    def setContext(self, context: _Context) -> NoReturn:
         """
-        """
+        Set the context that this Deferred runs its callbacks with.
 
+        @raise L{RuntimeError}: If L{contextvars} is not available.
+
+        @param context: The context for this Deferred to use.
+        @type context: L{contextvars.Context}
+        """
+        if not _contextvarsSupport:
+            raise RuntimeError(
+                "contextvars support is not available on this platform."
+            )
+
+        self._context = context
 
     def addCallbacks(self, callback, errback=None,
                      callbackArgs=None, callbackKeywords=None,
