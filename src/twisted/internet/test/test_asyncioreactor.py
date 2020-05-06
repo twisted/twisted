@@ -24,6 +24,14 @@ except:
     if not skipReason:
         skipReason = "Requires asyncio."
 
+try:
+    if AsyncioSelectorReactor:
+        AsyncioSelectorReactor()
+except:
+    AsyncioSelectorReactor = None
+    if not skipReason:
+        skipReason = "Could not instantiate AsyncioSelectorReactor"
+
 
 
 class AsyncioSelectorReactorTests(ReactorBuilder, SynchronousTestCase):
