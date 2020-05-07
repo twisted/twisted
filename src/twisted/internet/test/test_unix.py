@@ -14,6 +14,7 @@ from pprint import pformat
 from hashlib import md5
 from struct import pack
 from typing import Optional, Sequence, Type
+from unittest import skipIf
 
 try:
     from socket import AF_UNIX
@@ -50,10 +51,9 @@ from twisted.python.reflect import requireModule
 from twisted.python.filepath import _coerceToFilesystemEncoding
 
 if requireModule("twisted.python.sendmsg") is not None:
-    sendmsgSkip = None
+    sendmsgSkip = False
 else:
-    sendmsgSkip = (
-        "sendmsg extension unavailable, extended UNIX features disabled")
+    sendmsgSkip = True
 
 
 
@@ -227,20 +227,19 @@ class UNIXTestsBuilder(UNIXFamilyMixin, ReactorBuilder, ConnectionTestsMixin):
         self._modeTest('listenUNIX', self.mktemp(), ServerFactory())
 
 
+    @skipIf(not platform.isLinux(), 'Abstract namespace UNIX sockets only '
+                                    'supported on Linux.')
     def test_listenOnLinuxAbstractNamespace(self):
         """
-        On Linux, a UNIX socket path may begin with C{'\0'} to indicate a socket
-        in the abstract namespace.  L{IReactorUNIX.listenUNIX} accepts such a
-        path.
+        On Linux, a UNIX socket path may begin with C{'\0'} to indicate
+        a socket in the abstract namespace.  L{IReactorUNIX.listenUNIX}
+        accepts such a path.
         """
         # Don't listen on a path longer than the maximum allowed.
         path = _abstractPath(self)
         reactor = self.buildReactor()
         port = reactor.listenUNIX('\0' + path, ServerFactory())
         self.assertEqual(port.getHost(), UNIXAddress('\0' + path))
-    if not platform.isLinux():
-        test_listenOnLinuxAbstractNamespace.skip = (
-            'Abstract namespace UNIX sockets only supported on Linux.')
 
 
     def test_listenFailure(self):
@@ -257,6 +256,8 @@ class UNIXTestsBuilder(UNIXFamilyMixin, ReactorBuilder, ConnectionTestsMixin):
             reactor.listenUNIX('not-used', ServerFactory())
 
 
+    @skipIf(not platform.isLinux(), 'Abstract namespace UNIX sockets only '
+                                    'supported on Linux.')
     def test_connectToLinuxAbstractNamespace(self):
         """
         L{IReactorUNIX.connectUNIX} also accepts a Linux abstract namespace
@@ -266,9 +267,6 @@ class UNIXTestsBuilder(UNIXFamilyMixin, ReactorBuilder, ConnectionTestsMixin):
         reactor = self.buildReactor()
         connector = reactor.connectUNIX('\0' + path, ClientFactory())
         self.assertEqual(connector.getDestination(), UNIXAddress('\0' + path))
-    if not platform.isLinux():
-        test_connectToLinuxAbstractNamespace.skip = (
-            'Abstract namespace UNIX sockets only supported on Linux.')
 
 
     def test_addresses(self):
@@ -292,6 +290,8 @@ class UNIXTestsBuilder(UNIXFamilyMixin, ReactorBuilder, ConnectionTestsMixin):
         self.assertEqual(server.addresses['peer'], client.addresses['host'])
 
 
+    @skipIf(sendmsgSkip, "sendmsg extension unavailable, "
+                         "extended UNIX features disabled")
     def test_sendFileDescriptor(self):
         """
         L{IUNIXTransport.sendFileDescriptor} accepts an integer file descriptor
@@ -323,14 +323,14 @@ class UNIXTestsBuilder(UNIXFamilyMixin, ReactorBuilder, ConnectionTestsMixin):
         d.addBoth(lambda ignored: server.transport.loseConnection())
 
         runProtocolsWithReactor(self, server, client, self.endpoints)
-    if sendmsgSkip is not None:
-        test_sendFileDescriptor.skip = sendmsgSkip
 
 
+    @skipIf(sendmsgSkip,
+            "sendmsg extension unavailable, extended UNIX features disabled")
     def test_sendFileDescriptorTriggersPauseProducing(self):
         """
-        If a L{IUNIXTransport.sendFileDescriptor} call fills up the send buffer,
-        any registered producer is paused.
+        If a L{IUNIXTransport.sendFileDescriptor} call fills up
+        the send buffer, any registered producer is paused.
         """
         class DoesNotRead(ConnectableProtocol):
             def connectionMade(self):
@@ -372,10 +372,10 @@ class UNIXTestsBuilder(UNIXFamilyMixin, ReactorBuilder, ConnectionTestsMixin):
 
         self.assertTrue(
             server.paused, "sendFileDescriptor producer was not paused")
-    if sendmsgSkip is not None:
-        test_sendFileDescriptorTriggersPauseProducing.skip = sendmsgSkip
 
 
+    @skipIf(sendmsgSkip,
+            "sendmsg extension unavailable, extended UNIX features disabled")
     def test_fileDescriptorOverrun(self):
         """
         If L{IUNIXTransport.sendFileDescriptor} is used to queue a greater
@@ -398,8 +398,6 @@ class UNIXTestsBuilder(UNIXFamilyMixin, ReactorBuilder, ConnectionTestsMixin):
         self.assertIsInstance(result[0], Failure)
         result[0].trap(ConnectionClosed)
         self.assertIsInstance(server.reason.value, FileDescriptorOverrun)
-    if sendmsgSkip is not None:
-        test_fileDescriptorOverrun.skip = sendmsgSkip
 
 
     def _sendmsgMixinFileDescriptorReceivedDriver(self, ancillaryPacker):
@@ -495,6 +493,8 @@ class UNIXTestsBuilder(UNIXFamilyMixin, ReactorBuilder, ConnectionTestsMixin):
             self.assertEqual(deviceInodesSent, proto.deviceInodesReceived)
 
 
+    @skipIf(sendmsgSkip,
+            "sendmsg extension unavailable, extended UNIX features disabled")
     def test_multiFileDescriptorReceivedPerRecvmsgOneCMSG(self):
         """
         _SendmsgMixin handles multiple file descriptors per recvmsg, calling
@@ -509,10 +509,12 @@ class UNIXTestsBuilder(UNIXFamilyMixin, ReactorBuilder, ConnectionTestsMixin):
             return ancillary, expectedCount
 
         self._sendmsgMixinFileDescriptorReceivedDriver(ancillaryPacker)
-    if sendmsgSkip is not None:
-        test_multiFileDescriptorReceivedPerRecvmsgOneCMSG.skip = sendmsgSkip
 
 
+    @skipIf(platform.isMacOSX(),
+            "Multi control message ancillary sendmsg not supported on Mac.")
+    @skipIf(sendmsgSkip,
+            "sendmsg extension unavailable, extended UNIX features disabled")
     def test_multiFileDescriptorReceivedPerRecvmsgTwoCMSGs(self):
         """
         _SendmsgMixin handles multiple file descriptors per recvmsg, calling
@@ -530,13 +532,10 @@ class UNIXTestsBuilder(UNIXFamilyMixin, ReactorBuilder, ConnectionTestsMixin):
             return ancillary, expectedCount
 
         self._sendmsgMixinFileDescriptorReceivedDriver(ancillaryPacker)
-    if platform.isMacOSX():
-        test_multiFileDescriptorReceivedPerRecvmsgTwoCMSGs.skip = (
-            "Multi control message ancillary sendmsg not supported on Mac.")
-    elif sendmsgSkip is not None:
-        test_multiFileDescriptorReceivedPerRecvmsgTwoCMSGs.skip = sendmsgSkip
 
 
+    @skipIf(sendmsgSkip,
+            "sendmsg extension unavailable, extended UNIX features disabled")
     def test_multiFileDescriptorReceivedPerRecvmsgBadCMSG(self):
         """
         _SendmsgMixin handles multiple file descriptors per recvmsg, calling
@@ -573,10 +572,10 @@ class UNIXTestsBuilder(UNIXFamilyMixin, ReactorBuilder, ConnectionTestsMixin):
         expectedMessage = 'received unsupported ancillary data'
         found = any(expectedMessage in e['format'] for e in events)
         self.assertTrue(found, 'Expected message not found in logged events')
-    if sendmsgSkip is not None:
-        test_multiFileDescriptorReceivedPerRecvmsgBadCMSG.skip = sendmsgSkip
 
 
+    @skipIf(sendmsgSkip,
+            "sendmsg extension unavailable, extended UNIX features disabled")
     def test_avoidLeakingFileDescriptors(self):
         """
         If associated with a protocol which does not provide
@@ -642,10 +641,10 @@ class UNIXTestsBuilder(UNIXFamilyMixin, ReactorBuilder, ConnectionTestsMixin):
             self.fail(
                 "Expected event (%s) not found in logged events (%s)" % (
                     expectedEvent, pformat(events,)))
-    if sendmsgSkip is not None:
-        test_avoidLeakingFileDescriptors.skip = sendmsgSkip
 
 
+    @skipIf(sendmsgSkip,
+            "sendmsg extension unavailable, extended UNIX features disabled")
     def test_descriptorDeliveredBeforeBytes(self):
         """
         L{IUNIXTransport.sendFileDescriptor} sends file descriptors before
@@ -676,8 +675,6 @@ class UNIXTestsBuilder(UNIXFamilyMixin, ReactorBuilder, ConnectionTestsMixin):
             self.assertEqual(b"junk", bytes(client.events[1:]))
         else:
             self.assertEqual(b"junk", b"".join(client.events[1:]))
-    if sendmsgSkip is not None:
-        test_descriptorDeliveredBeforeBytes.skip = sendmsgSkip
 
 
 
@@ -698,19 +695,18 @@ class UNIXDatagramTestsBuilder(UNIXFamilyMixin, ReactorBuilder):
         self._modeTest('listenUNIXDatagram', self.mktemp(), DatagramProtocol())
 
 
+    @skipIf(not platform.isLinux(), 'Abstract namespace UNIX sockets only '
+                                    'supported on Linux.')
     def test_listenOnLinuxAbstractNamespace(self):
         """
-        On Linux, a UNIX socket path may begin with C{'\0'} to indicate a socket
-        in the abstract namespace.  L{IReactorUNIX.listenUNIXDatagram} accepts
-        such a path.
+        On Linux, a UNIX socket path may begin with C{'\0'} to indicate a
+        socket in the abstract namespace.  L{IReactorUNIX.listenUNIXDatagram}
+        accepts such a path.
         """
         path = _abstractPath(self)
         reactor = self.buildReactor()
         port = reactor.listenUNIXDatagram('\0' + path, DatagramProtocol())
         self.assertEqual(port.getHost(), UNIXAddress('\0' + path))
-    if not platform.isLinux():
-        test_listenOnLinuxAbstractNamespace.skip = (
-            'Abstract namespace UNIX sockets only supported on Linux.')
 
 
 

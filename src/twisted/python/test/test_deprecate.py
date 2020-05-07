@@ -1094,8 +1094,6 @@ class MutualArgumentExclusionTests(SynchronousTestCase):
         dummyParameters['c'] = FakeParameter("fake", "fake")
         fakeSig = FakeSignature(dummyParameters)
         self.assertRaises(TypeError, _passedSignature, fakeSig, (1, 2), {})
-    if not getattr(inspect, "signature", None):
-        test_invalidParameterType.skip = "inspect.signature() not available"
 
 
 

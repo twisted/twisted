@@ -8,13 +8,12 @@ Tests for implementations of L{IReactorUNIX} and L{IReactorUNIXDatagram}.
 
 import os
 import sys
-import types
 import socket
 
 from twisted.internet import interfaces, reactor, protocol, error, address
 from twisted.internet import defer, utils
 from twisted.python import lockfile
-from twisted.python.compat import _PY3, networkString
+from twisted.python.compat import networkString
 from twisted.python.filepath import FilePath
 from twisted.trial import unittest
 
@@ -34,6 +33,10 @@ class UnixSocketTests(unittest.TestCase):
     """
     Test unix sockets.
     """
+
+    if not interfaces.IReactorUNIX(reactor, None):
+        skip = "This reactor does not support UNIX domain sockets"
+
     def test_peerBind(self):
         """
         The address passed to the server factory's C{buildProtocol} method and
@@ -212,31 +215,6 @@ class UnixSocketTests(unittest.TestCase):
         return d
 
 
-    def test_reprWithClassicFactory(self):
-        """
-        The two string representations of the L{IListeningPort} returned by
-        L{IReactorUNIX.listenUNIX} contains the name of the classic factory
-        class being used and the filename on which the port is listening or
-        indicates that the port is not listening.
-        """
-        class ClassicFactory:
-            def doStart(self):
-                pass
-
-            def doStop(self):
-                pass
-
-        # Sanity check
-        self.assertIsInstance(ClassicFactory, types.ClassType)
-
-        return self._reprTest(
-            ClassicFactory(), "twisted.test.test_unix.ClassicFactory")
-
-    if _PY3:
-        test_reprWithClassicFactory.skip = (
-            "Classic classes do not exist on Python 3.")
-
-
     def test_reprWithNewStyleFactory(self):
         """
         The two string representations of the L{IListeningPort} returned by
@@ -307,6 +285,10 @@ class DatagramUnixSocketTests(unittest.TestCase):
     """
     Test datagram UNIX sockets.
     """
+
+    if not interfaces.IReactorUNIXDatagram(reactor, None):
+        skip = "This reactor does not support UNIX datagram sockets"
+
     def test_exchange(self):
         """
         Test that a datagram can be sent to and received by a server and vice
@@ -374,31 +356,6 @@ class DatagramUnixSocketTests(unittest.TestCase):
         return stopDeferred
 
 
-    def test_reprWithClassicProtocol(self):
-        """
-        The two string representations of the L{IListeningPort} returned by
-        L{IReactorUNIXDatagram.listenUNIXDatagram} contains the name of the
-        classic protocol class being used and the filename on which the port is
-        listening or indicates that the port is not listening.
-        """
-        class ClassicProtocol:
-            def makeConnection(self, transport):
-                pass
-
-            def doStop(self):
-                pass
-
-        # Sanity check
-        self.assertIsInstance(ClassicProtocol, types.ClassType)
-
-        return self._reprTest(
-            ClassicProtocol(), "twisted.test.test_unix.ClassicProtocol")
-
-    if _PY3:
-        test_reprWithClassicProtocol.skip = (
-            "Classic classes do not exist on Python 3.")
-
-
     def test_reprWithNewStyleProtocol(self):
         """
         The two string representations of the L{IListeningPort} returned by
@@ -418,10 +375,3 @@ class DatagramUnixSocketTests(unittest.TestCase):
 
         return self._reprTest(
             NewStyleProtocol(), "twisted.test.test_unix.NewStyleProtocol")
-
-
-
-if not interfaces.IReactorUNIX(reactor, None):
-    UnixSocketTests.skip = "This reactor does not support UNIX domain sockets"
-if not interfaces.IReactorUNIXDatagram(reactor, None):
-    DatagramUnixSocketTests.skip = "This reactor does not support UNIX datagram sockets"

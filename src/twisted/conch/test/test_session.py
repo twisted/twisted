@@ -13,6 +13,7 @@ import signal
 import struct
 import sys
 
+from unittest import skipIf
 from zope.interface import implementer
 
 from twisted.internet import defer, protocol, error
@@ -22,7 +23,7 @@ from twisted.python import components, failure
 from twisted.python.failure import Failure
 from twisted.python.reflect import requireModule
 from twisted.python.test.test_components import RegistryUsingMixin
-from twisted.trial import unittest
+from twisted.trial.unittest import TestCase
 
 cryptography = requireModule("cryptography")
 
@@ -452,7 +453,7 @@ class StubClient(object):
 
 
 
-class SessionInterfaceTests(RegistryUsingMixin, unittest.TestCase):
+class SessionInterfaceTests(RegistryUsingMixin, TestCase):
     """
     Tests for the SSHSession class interface.  This interface is not ideal, but
     it is tested in order to maintain backwards compatibility.
@@ -820,7 +821,7 @@ class SessionInterfaceTests(RegistryUsingMixin, unittest.TestCase):
 
 
 
-class SessionWithNoAvatarTests(RegistryUsingMixin, unittest.TestCase):
+class SessionWithNoAvatarTests(RegistryUsingMixin, TestCase):
     """
     Test for the SSHSession interface.  Several of the methods (request_shell,
     request_exec, request_pty_req, request_env, request_window_change) would
@@ -905,7 +906,7 @@ class SessionWithNoAvatarTests(RegistryUsingMixin, unittest.TestCase):
 
 
 
-class WrappersTests(unittest.TestCase):
+class WrappersTests(TestCase):
     """
     A test for the wrapProtocol and wrapProcessProtocol functions.
     """
@@ -949,7 +950,7 @@ class WrappersTests(unittest.TestCase):
 
 
 
-class HelpersTests(unittest.TestCase):
+class HelpersTests(TestCase):
     """
     Tests for the 4 helper functions: parseRequest_* and packRequest_*.
     """
@@ -1028,7 +1029,7 @@ class HelpersTests(unittest.TestCase):
 
 
 
-class SSHSessionProcessProtocolTests(unittest.TestCase):
+class SSHSessionProcessProtocolTests(TestCase):
     """
     Tests for L{SSHSessionProcessProtocol}.
     """
@@ -1096,6 +1097,8 @@ class SSHSessionProcessProtocolTests(unittest.TestCase):
         self.assertEqual(self.transport.buf, b'buffer')
 
 
+    @skipIf(getattr(signal, 'SIGALRM', None) is None,
+            "Not all signals available")
     def test_getSignalName(self):
         """
         _getSignalName should return the name of a signal when given the
@@ -1110,6 +1113,8 @@ class SSHSessionProcessProtocolTests(unittest.TestCase):
                                                 signalName))
 
 
+    @skipIf(getattr(signal, 'SIGALRM', None) is None,
+            "Not all signals available")
     def test_getSignalNameWithLocalSignal(self):
         """
         If there are signals in the signal module which aren't in the SSH RFC,
@@ -1119,12 +1124,7 @@ class SSHSessionProcessProtocolTests(unittest.TestCase):
         # Force reinitialization of signals
         self.pp._signalValuesToNames = None
         self.assertEqual(self.pp._getSignalName(signal.SIGTwistedTest),
-                          'SIGTwistedTest@' + sys.platform)
-
-
-    if getattr(signal, 'SIGALRM', None) is None:
-        test_getSignalName.skip = test_getSignalNameWithLocalSignal.skip = \
-            "Not all signals available"
+                         'SIGTwistedTest@' + sys.platform)
 
 
     def test_outReceived(self):
@@ -1218,6 +1218,8 @@ class SSHSessionProcessProtocolTests(unittest.TestCase):
         self.assertSessionClosed()
 
 
+    @skipIf(getattr(os, 'WCOREDUMP', None) is None,
+            "can't run this w/o os.WCOREDUMP")
     def test_processEndedWithExitSignalCoreDump(self):
         """
         When processEnded is called, if there is an exit signal in the reason
@@ -1237,6 +1239,8 @@ class SSHSessionProcessProtocolTests(unittest.TestCase):
         self.assertSessionClosed()
 
 
+    @skipIf(getattr(os, 'WCOREDUMP', None) is None,
+            "can't run this w/o os.WCOREDUMP")
     def test_processEndedWithExitSignalNoCoreDump(self):
         """
         When processEnded is called, if there is an exit signal in the
@@ -1253,14 +1257,8 @@ class SSHSessionProcessProtocolTests(unittest.TestCase):
         self.assertSessionClosed()
 
 
-    if getattr(os, 'WCOREDUMP', None) is None:
-        skipMsg = "can't run this w/o os.WCOREDUMP"
-        test_processEndedWithExitSignalCoreDump.skip = skipMsg
-        test_processEndedWithExitSignalNoCoreDump.skip = skipMsg
 
-
-
-class SSHSessionClientTests(unittest.TestCase):
+class SSHSessionClientTests(TestCase):
     """
     SSHSessionClient is an obsolete class used to connect standard IO to
     an SSHSession.

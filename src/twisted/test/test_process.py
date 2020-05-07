@@ -27,11 +27,14 @@ import gc
 import stat
 import operator
 
+from unittest import skipIf
+
 
 try:
     import fcntl
 except ImportError:
-    fcntl = process = None
+    fcntl = None
+    process = None
 else:
     from twisted.internet import process
 
@@ -43,7 +46,7 @@ from twisted.python.log import msg
 from twisted.internet import reactor, protocol, error, interfaces, defer
 from twisted.trial import unittest
 from twisted.python import runtime, procutils
-from twisted.python.compat import _PY3, networkString, range, bytesEnviron
+from twisted.python.compat import networkString, bytesEnviron
 from twisted.python.filepath import FilePath
 
 
@@ -772,6 +775,7 @@ class TwoProcessesNonPosixTests(TestTwoProcessesBase, unittest.TestCase):
 
 
 class TwoProcessesPosixTests(TestTwoProcessesBase, unittest.TestCase):
+
     def tearDown(self):
         for pp, pr in zip(self.pp, self.processes):
             if not pp.finished:
@@ -1110,6 +1114,8 @@ class PosixProcessBase(object):
         return self._testSignal(signal.SIGUSR1)
 
 
+    @skipIf(runtime.platform.isMacOSX(),
+            "Test is flaky from a Darwin bug. See #8840.")
     def test_executionError(self):
         """
         Raise an error during execvpe to check error management.
@@ -1134,10 +1140,6 @@ class PosixProcessBase(object):
         finally:
             os.execvpe = oldexecvpe
         return d
-
-    if runtime.platform.isMacOSX():
-        test_executionError.skip = (
-            "Test is flaky from a Darwin bug. See #8840.")
 
 
     def test_errorInProcessEnded(self):
@@ -2205,7 +2207,6 @@ class Win32ProcessTests(unittest.TestCase):
     """
     Test process programs that are packaged with twisted.
     """
-
     def _test_stdinReader(self, pyExe, args, env, path):
         """
         Spawn a process, write to stdin, and check the output.
@@ -2364,6 +2365,7 @@ class Win32UnicodeEnvironmentTests(unittest.TestCase):
     goodKey = u'UNICODE'
     goodValue = u'UNICODE'
 
+
     def test_encodableUnicodeEnvironment(self):
         """
         Test C{os.environ} (inherited by every subprocess on Windows) that
@@ -2387,6 +2389,7 @@ class DumbWin32ProcTests(unittest.TestCase):
     """
     L{twisted.internet._dumbwin32proc} tests.
     """
+
     def test_pid(self):
         """
         Simple test for the pid attribute of Process on win32.
@@ -2676,15 +2679,13 @@ class ClosingPipesTests(unittest.TestCase):
         ProcessProtocol.transport.closeStdout actually closes the pipe.
         """
         d = self.doit(1)
+
         def _check(errput):
-            if _PY3:
-                if runtime.platform.isWindows():
-                    self.assertIn(b"OSError", errput)
-                    self.assertIn(b"22", errput)
-                else:
-                    self.assertIn(b'BrokenPipeError', errput)
+            if runtime.platform.isWindows():
+                self.assertIn(b"OSError", errput)
+                self.assertIn(b"22", errput)
             else:
-                self.assertIn(b'OSError', errput)
+                self.assertIn(b'BrokenPipeError', errput)
             if runtime.platform.getType() != 'win32':
                 self.assertIn(b'Broken pipe', errput)
         d.addCallback(_check)
@@ -2704,14 +2705,17 @@ class ClosingPipesTests(unittest.TestCase):
         return d
 
 
+
 skipMessage = "wrong platform or reactor doesn't support IReactorProcess"
-if (runtime.platform.getType() != 'posix') or (not interfaces.IReactorProcess(reactor, None)):
+if (runtime.platform.getType() != 'posix' or
+   not interfaces.IReactorProcess(reactor, None)):
     PosixProcessTests.skip = skipMessage
     PosixProcessPTYTests.skip = skipMessage
     TwoProcessesPosixTests.skip = skipMessage
     FDTests.skip = skipMessage
 
-if (runtime.platform.getType() != 'win32') or (not interfaces.IReactorProcess(reactor, None)):
+if (runtime.platform.getType() != 'win32' or
+   not interfaces.IReactorProcess(reactor, None)):
     Win32ProcessTests.skip = skipMessage
     TwoProcessesNonPosixTests.skip = skipMessage
     DumbWin32ProcTests.skip = skipMessage

@@ -8,7 +8,7 @@ Tests for L{twisted.words.xish.domish}, a DOM-like library for XMPP.
 
 from zope.interface.verify import verifyObject
 
-from twisted.python.compat import _PY3, unicode
+from twisted.python.compat import unicode
 from twisted.python.reflect import requireModule
 from twisted.trial import unittest
 from twisted.words.xish import domish
@@ -188,20 +188,6 @@ class ElementTests(unittest.TestCase):
         """
         element = domish.Element((u"testns", u"foo"))
         self.assertRaises(TypeError, element.addContent, b'bytes')
-    if not _PY3:
-        test_addContentBytes.skip = (
-            "Bytes behavior of addContent only provided on Python 3.")
-
-
-    def test_addContentBytesNonASCII(self):
-        """
-        Non-ASCII byte strings passed to C{addContent} yield L{UnicodeError}.
-        """
-        element = domish.Element((u"testns", u"foo"))
-        self.assertRaises(UnicodeError, element.addContent, b'\xe2\x98\x83')
-    if _PY3:
-        test_addContentBytesNonASCII.skip = (
-            "Bytes behavior of addContent only provided on Python 2.")
 
 
     def test_addElementContent(self):

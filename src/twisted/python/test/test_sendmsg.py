@@ -15,9 +15,11 @@ from socket import SOL_SOCKET, AF_INET, AF_INET6, socket, error
 try:
     from socket import AF_UNIX, socketpair
 except ImportError:
-    nonUNIXSkip = "Platform does not support AF_UNIX sockets"
+    nonUNIXSkip = True
 else:
-    nonUNIXSkip = None
+    nonUNIXSkip = False
+
+from unittest import skipIf
 
 from twisted.internet import reactor
 from twisted.internet.defer import Deferred, inlineCallbacks
@@ -31,11 +33,11 @@ from twisted.trial.unittest import TestCase
 
 if platform.isLinux():
     from socket import MSG_DONTWAIT
-    dontWaitSkip = None
+    dontWaitSkip = False
 else:
     # It would be nice to be able to test flags on more platforms, but finding
     # a flag that works *at all* is somewhat challenging.
-    dontWaitSkip = "MSG_DONTWAIT is only known to work as intended on Linux"
+    dontWaitSkip = True
 
 
 try:
@@ -264,6 +266,8 @@ class SendmsgTests(TestCase):
         self.assertEqual(result, (b"hello, world!", [], 0))
 
 
+    @skipIf(dontWaitSkip,
+            "MSG_DONTWAIT is only known to work as intended on Linux")
     def test_flags(self):
         """
         The C{flags} argument to L{sendmsg} is passed on to the underlying
@@ -283,8 +287,6 @@ class SendmsgTests(TestCase):
             self.fail(
                 "Failed to fill up the send buffer, "
                 "or maybe send1msg blocked for a while")
-    if dontWaitSkip is not None:
-        test_flags.skip = dontWaitSkip
 
 
     @inlineCallbacks
@@ -347,11 +349,10 @@ class GetSocketFamilyTests(TestCase):
         self.assertEqual(AF_INET6, getSocketFamily(self._socket(AF_INET6)))
 
 
+    @skipIf(nonUNIXSkip, "Platform does not support AF_UNIX sockets")
     def test_unix(self):
         """
         When passed the file descriptor of a socket created with the C{AF_UNIX}
         address family, L{getSocketFamily} returns C{AF_UNIX}.
         """
         self.assertEqual(AF_UNIX, getSocketFamily(self._socket(AF_UNIX)))
-    if nonUNIXSkip is not None:
-        test_unix.skip = nonUNIXSkip

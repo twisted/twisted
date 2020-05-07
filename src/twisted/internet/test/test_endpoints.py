@@ -10,6 +10,7 @@ L{twisted.internet.endpoints}.
 from errno import EPERM
 from socket import AF_INET, AF_INET6, SOCK_STREAM, IPPROTO_TCP, gaierror
 from unicodedata import normalize
+from unittest import skipIf
 from types import FunctionType
 
 from zope.interface import implementer, providedBy, provider
@@ -77,8 +78,10 @@ try:
     testPrivateCertificate = PrivateCertificate.loadPEM(pemPath.getContent())
 
     skipSSL = False
-except ImportError:
-    skipSSL = "OpenSSL is required to construct SSL Endpoints"
+    skipSSLReason = ""
+except ImportError as e:
+    skipSSL = True
+    skipSSLReason = str(e)
 
 
 
@@ -2703,7 +2706,7 @@ class SSL4EndpointsTests(EndpointTestCaseMixin,
     Tests for SSL Endpoints.
     """
     if skipSSL:
-        skip = skipSSL
+        skip = skipSSLReason
 
     def expectedServers(self, reactor):
         """
@@ -3076,6 +3079,7 @@ class ServerStringTests(unittest.TestCase):
         self.assertEqual(server._interface, "10.0.0.1")
 
 
+    @skipIf(skipSSL, skipSSLReason)
     def test_ssl(self):
         """
         When passed an SSL strports description, L{endpoints.serverFromString}
@@ -3098,6 +3102,7 @@ class ServerStringTests(unittest.TestCase):
         self.assertIsInstance(ctx, ContextType)
 
 
+    @skipIf(skipSSL, skipSSLReason)
     def test_sslWithDefaults(self):
         """
         An SSL string endpoint description with minimal arguments returns
@@ -3124,6 +3129,7 @@ class ServerStringTests(unittest.TestCase):
     SSL_CHAIN_TEMPLATE = "ssl:1234:privateKey=%s:extraCertChain=%s"
 
 
+    @skipIf(skipSSL, skipSSLReason)
     def test_sslChainLoads(self):
         """
         Specifying a chain file loads the contained certificates in the right
@@ -3149,6 +3155,7 @@ class ServerStringTests(unittest.TestCase):
                          expectedChainCerts[1].digest('sha1'))
 
 
+    @skipIf(skipSSL, skipSSLReason)
     def test_sslChainFileMustContainCert(self):
         """
         If C{extraCertChain} is passed, it has to contain at least one valid
@@ -3175,6 +3182,7 @@ class ServerStringTests(unittest.TestCase):
                           " certificates in PEM format.") % (fp.path,))
 
 
+    @skipIf(skipSSL, skipSSLReason)
     def test_sslDHparameters(self):
         """
         If C{dhParameters} are specified, they are passed as
@@ -3192,6 +3200,7 @@ class ServerStringTests(unittest.TestCase):
         self.assertEqual(FilePath(fileName), cf.dhParameters._dhFile)
 
 
+    @skipIf(skipSSL, skipSSLReason)
     def test_sslNoTrailingNewlinePem(self):
         """
         Lack of a trailing newline in key and cert .pem files should not
@@ -3215,14 +3224,6 @@ class ServerStringTests(unittest.TestCase):
         self.assertEqual(server._sslContextFactory.method, TLSv1_METHOD)
         ctx = server._sslContextFactory.getContext()
         self.assertIsInstance(ctx, ContextType)
-
-
-    if skipSSL:
-        test_ssl.skip = test_sslWithDefaults.skip = skipSSL
-        test_sslChainLoads.skip = skipSSL
-        test_sslChainFileMustContainCert.skip = skipSSL
-        test_sslDHparameters.skip = skipSSL
-        test_sslNoTrailingNewlinePem.skip = skipSSL
 
 
     def test_unix(self):
@@ -3483,7 +3484,7 @@ class SSLClientStringTests(unittest.TestCase):
     """
 
     if skipSSL:
-        skip = skipSSL
+        skip = skipSSLReason
 
     def test_ssl(self):
         """
@@ -4129,7 +4130,7 @@ class WrapClientTLSParserTests(unittest.TestCase):
     """
 
     if skipSSL:
-        skip = skipSSL
+        skip = skipSSLReason
 
     def test_hostnameEndpointConstruction(self):
         """

@@ -14,7 +14,7 @@ import types
 
 from hashlib import md5, sha1, sha256, sha384, sha512
 from twisted import __version__ as twisted_version
-from twisted.trial import unittest
+from twisted.trial.unittest import TestCase
 from twisted.internet import defer
 from twisted.protocols import loopback
 from twisted.python import randbytes
@@ -390,7 +390,7 @@ def generatePredictableKey(transport):
 
 
 
-class TransportTestCase(unittest.TestCase):
+class TransportTestCase(TestCase):
     """
     Base class for transport test cases.
     """
@@ -2538,7 +2538,7 @@ class ClientSSHTransportCurve25519SHA256Tests(
 
 
 
-class GetMACTests(unittest.TestCase):
+class GetMACTests(TestCase):
     """
     Tests for L{SSHCiphers._getMAC}.
     """
@@ -2658,7 +2658,7 @@ class GetMACTests(unittest.TestCase):
 
 
 
-class SSHCiphersTests(unittest.TestCase):
+class SSHCiphersTests(TestCase):
     """
     Tests for the SSHCiphers helper class.
     """
@@ -2772,7 +2772,7 @@ class SSHCiphersTests(unittest.TestCase):
 
 
 
-class TransportLoopbackTests(unittest.TestCase):
+class TransportLoopbackTests(TestCase):
     """
     Test the server transport and client transport against each other,
     """

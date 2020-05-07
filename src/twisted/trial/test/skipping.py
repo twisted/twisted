@@ -20,13 +20,15 @@ class SkippingMixin(object):
     def test_skip1(self):
         raise SkipTest('skip1')
 
+
     def test_skip2(self):
         raise RuntimeError("I should not get raised")
-    test_skip2.skip = 'skip2'
+    test_skip2.skip = 'skip2'  # type: ignore
+
 
     def test_skip3(self):
         self.fail('I should not fail')
-    test_skip3.skip = 'skip3'
+    test_skip3.skip = 'skip3'  # type: ignore
 
 
 
@@ -44,11 +46,14 @@ class SkippingSetUpMixin(object):
     def setUp(self):
         raise SkipTest('skipSetUp')
 
+
     def test_1(self):
         pass
 
+
     def test_2(self):
         pass
+
 
 
 class SynchronousSkippingSetUp(SkippingSetUpMixin, SynchronousTestCase):
@@ -81,15 +86,25 @@ class AsynchronousDeprecatedReasonlessSkip(
 
 class SkippedClassMixin(object):
     skip = 'class'
+
     def setUp(self):
         self.__class__._setUpRan = True
+
+
     def test_skip1(self):
         raise SkipTest('skip1')
+
+
     def test_skip2(self):
         raise RuntimeError("Ought to skip me")
-    test_skip2.skip = 'skip2'
+
+    test_skip2.skip = 'skip2'  # test: ignore
+
+
     def test_skip3(self):
         pass
+
+
     def test_skip4(self):
         raise RuntimeError("Skip me too")
 
@@ -108,15 +123,17 @@ class AsynchronousSkippedClass(SkippedClassMixin, TestCase):
 class TodoMixin(object):
     def test_todo1(self):
         self.fail("deliberate failure")
-    test_todo1.todo = "todo1"
+    test_todo1.todo = "todo1"  # type: ignore
+
 
     def test_todo2(self):
         raise RuntimeError("deliberate error")
-    test_todo2.todo = "todo2"
+    test_todo2.todo = "todo2"  # type: ignore
+
 
     def test_todo3(self):
         """unexpected success"""
-    test_todo3.todo = 'todo3'
+    test_todo3.todo = 'todo3'  # type: ignore
 
 
 
@@ -135,9 +152,10 @@ class SetUpTodoMixin(object):
     def setUp(self):
         raise RuntimeError("deliberate error")
 
+
     def test_todo1(self):
         pass
-    test_todo1.todo = "setUp todo1"
+    test_todo1.todo = "setUp todo1"  # type: ignore
 
 
 
@@ -155,9 +173,10 @@ class TearDownTodoMixin(object):
     def tearDown(self):
         raise RuntimeError("deliberate error")
 
+
     def test_todo1(self):
         pass
-    test_todo1.todo = "tearDown todo1"
+    test_todo1.todo = "tearDown todo1"  # type: ignore
 
 
 

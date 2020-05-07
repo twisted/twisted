@@ -10,6 +10,7 @@ Tests for L{twisted.conch.ssh.filetransfer}.
 import os
 import re
 import struct
+from unittest import skipIf
 
 from twisted.internet import defer
 from twisted.internet.error import ConnectionLost
@@ -18,7 +19,7 @@ from twisted.python import components
 from twisted.python.compat import long, _PY37PLUS
 from twisted.python.filepath import FilePath
 from twisted.python.reflect import requireModule
-from twisted.trial import unittest
+from twisted.trial.unittest import TestCase
 
 cryptography = requireModule("cryptography")
 unix = requireModule("twisted.conch.unix")
@@ -91,7 +92,9 @@ if unix:
                                    TestAvatar,
                                    filetransfer.ISFTPServer)
 
-class SFTPTestBase(unittest.TestCase):
+
+
+class SFTPTestBase(TestCase):
 
     def setUp(self):
         self.testDir = FilePath(self.mktemp())
@@ -513,6 +516,7 @@ class OurServerOurClientTests(SFTPTestBase):
 
 
     @defer.inlineCallbacks
+    @skipIf(_PY37PLUS, "Broken by PEP 479 and deprecated.")
     def test_openDirectoryIterator(self):
         """
         Check that the object returned by
@@ -546,11 +550,6 @@ class OurServerOurClientTests(SFTPTestBase):
                          set([b'.testHiddenFile', b'testDirectory',
                               b'testRemoveFile', b'testRenameFile',
                               b'testfile1']))
-
-
-    if _PY37PLUS:
-        test_openDirectoryIterator.skip = (
-            "Broken by PEP 479 and deprecated.")
 
 
     @defer.inlineCallbacks
@@ -626,7 +625,8 @@ class FakeConn:
         pass
 
 
-class FileTransferCloseTests(unittest.TestCase):
+
+class FileTransferCloseTests(TestCase):
 
     if not unix:
         skip = "can't run on non-posix computers"
@@ -732,7 +732,7 @@ class FileTransferCloseTests(unittest.TestCase):
 
 
 
-class ConstantsTests(unittest.TestCase):
+class ConstantsTests(TestCase):
     """
     Tests for the constants used by the SFTP protocol implementation.
 
@@ -838,7 +838,7 @@ class ConstantsTests(unittest.TestCase):
 
 
 
-class RawPacketDataTests(unittest.TestCase):
+class RawPacketDataTests(TestCase):
     """
     Tests for L{filetransfer.FileTransferClient} which explicitly craft certain
     less common protocol messages to exercise their handling.

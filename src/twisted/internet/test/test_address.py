@@ -5,23 +5,23 @@
 import os
 import socket
 
-from twisted.trial import unittest
+from unittest import skipIf
+
+from twisted.trial.unittest import SynchronousTestCase, TestCase
 from twisted.internet.address import IPv4Address, UNIXAddress, IPv6Address
 from twisted.internet.address import HostnameAddress
 from twisted.python.compat import nativeString
 from twisted.python.runtime import platform
 
-if not platform._supportsSymlinks():
-    symlinkSkip = "Platform does not support symlinks"
-else:
-    symlinkSkip = None
+symlinkSkip = not platform._supportsSymlinks()
 
 try:
     socket.AF_UNIX
 except AttributeError:
-    unixSkip = "Platform doesn't support UNIX sockets."
+    unixSkip = True
 else:
-    unixSkip = None
+    unixSkip = False
+
 
 
 class AddressTestCaseMixin(object):
@@ -76,7 +76,7 @@ class IPv4AddressTestCaseMixin(AddressTestCaseMixin):
 
 
 
-class HostnameAddressTests(unittest.TestCase, AddressTestCaseMixin):
+class HostnameAddressTests(TestCase, AddressTestCaseMixin):
     """
     Test case for L{HostnameAddress}.
     """
@@ -101,7 +101,7 @@ class HostnameAddressTests(unittest.TestCase, AddressTestCaseMixin):
 
 
 
-class IPv4AddressTCPTests(unittest.SynchronousTestCase,
+class IPv4AddressTCPTests(SynchronousTestCase,
                           IPv4AddressTestCaseMixin):
     def buildAddress(self):
         """
@@ -120,7 +120,7 @@ class IPv4AddressTCPTests(unittest.SynchronousTestCase,
 
 
 
-class IPv4AddressUDPTests(unittest.SynchronousTestCase,
+class IPv4AddressUDPTests(SynchronousTestCase,
                           IPv4AddressTestCaseMixin):
     def buildAddress(self):
         """
@@ -139,7 +139,7 @@ class IPv4AddressUDPTests(unittest.SynchronousTestCase,
 
 
 
-class IPv6AddressTests(unittest.SynchronousTestCase, AddressTestCaseMixin):
+class IPv6AddressTests(SynchronousTestCase, AddressTestCaseMixin):
     addressArgSpec = (("type", "%s"), ("host", "%r"), ("port", "%d"))
 
     def buildAddress(self):
@@ -159,8 +159,9 @@ class IPv6AddressTests(unittest.SynchronousTestCase, AddressTestCaseMixin):
 
 
 
-class UNIXAddressTests(unittest.SynchronousTestCase):
-    skip = unixSkip
+class UNIXAddressTests(SynchronousTestCase):
+    if unixSkip:
+        skip = "Platform doesn't support UNIX sockets."
     addressArgSpec = (("name", "%r"),)
 
     def setUp(self):
@@ -192,6 +193,7 @@ class UNIXAddressTests(unittest.SynchronousTestCase):
             nativeString(self._socketAddress)))
 
 
+    @skipIf(symlinkSkip, "Platform does not support symlinks")
     def test_comparisonOfLinkedFiles(self):
         """
         UNIXAddress objects compare as equal if they link to the same file.
@@ -203,10 +205,9 @@ class UNIXAddressTests(unittest.SynchronousTestCase):
                              UNIXAddress(linkName))
             self.assertEqual(UNIXAddress(linkName),
                              UNIXAddress(self._socketAddress))
-    if not unixSkip:
-        test_comparisonOfLinkedFiles.skip = symlinkSkip
 
 
+    @skipIf(symlinkSkip, "Platform does not support symlinks")
     def test_hashOfLinkedFiles(self):
         """
         UNIXAddress Objects that compare as equal have the same hash value.
@@ -215,18 +216,17 @@ class UNIXAddressTests(unittest.SynchronousTestCase):
         with open(self._socketAddress, 'w') as self.fd:
             os.symlink(os.path.abspath(self._socketAddress), linkName)
             self.assertEqual(hash(UNIXAddress(self._socketAddress)),
-                            hash(UNIXAddress(linkName)))
-    if not unixSkip:
-        test_hashOfLinkedFiles.skip = symlinkSkip
+                             hash(UNIXAddress(linkName)))
 
 
 
-class EmptyUNIXAddressTests(unittest.SynchronousTestCase,
+class EmptyUNIXAddressTests(SynchronousTestCase,
                             AddressTestCaseMixin):
     """
     Tests for L{UNIXAddress} operations involving a L{None} address.
     """
-    skip = unixSkip
+    if unixSkip:
+        skip = "Platform doesn't support UNIX sockets."
     addressArgSpec = (("name", "%r"),)
 
     def setUp(self):
@@ -249,10 +249,11 @@ class EmptyUNIXAddressTests(unittest.SynchronousTestCase,
         return UNIXAddress(self._socketAddress)
 
 
+    @skipIf(symlinkSkip, "Platform does not support symlinks")
     def test_comparisonOfLinkedFiles(self):
         """
-        A UNIXAddress referring to a L{None} address does not compare equal to a
-        UNIXAddress referring to a symlink.
+        A UNIXAddress referring to a L{None} address does not
+        compare equal to a UNIXAddress referring to a symlink.
         """
         linkName = self.mktemp()
         with open(self._socketAddress, 'w') as self.fd:
@@ -261,8 +262,6 @@ class EmptyUNIXAddressTests(unittest.SynchronousTestCase,
                                 UNIXAddress(None))
             self.assertNotEqual(UNIXAddress(None),
                                 UNIXAddress(self._socketAddress))
-    if not unixSkip:
-        test_comparisonOfLinkedFiles.skip = symlinkSkip
 
 
     def test_emptyHash(self):

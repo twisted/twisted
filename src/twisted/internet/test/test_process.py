@@ -17,6 +17,7 @@ import sys
 import threading
 import twisted
 import subprocess
+from unittest import skipIf
 
 from twisted.trial.unittest import TestCase
 from twisted.internet.test.reactormixins import ReactorBuilder
@@ -36,11 +37,13 @@ from twisted.internet.error import ProcessDone, ProcessTerminated
 pyExe = FilePath(sys.executable)._asBytesPath()
 twistedRoot = FilePath(twisted.__file__).parent().parent()
 
-_uidgidSkip = None
+_uidgidSkip = False
+_uidgidSkipReason = ""
 if platform.isWindows():
     resource = None
     process = None
-    _uidgidSkip = "Cannot change UID/GID on Windows"
+    _uidgidSkip = True
+    _uidgidSkipReason = "Cannot change UID/GID on Windows"
 
     properEnv = dict(os.environ)
     properEnv["PYTHONPATH"] = os.pathsep.join(sys.path)
@@ -48,7 +51,8 @@ else:
     import resource
     from twisted.internet import process
     if os.getuid() != 0:
-        _uidgidSkip = "Cannot change UID/GID except as root"
+        _uidgidSkip = True
+        _uidgidSkipReason = "Cannot change UID/GID except as root"
 
     properEnv = bytesEnviron()
     properEnv[b"PYTHONPATH"] = os.pathsep.join(sys.path).encode(
@@ -211,6 +215,8 @@ class ProcessTestsBuilderBase(ReactorBuilder):
         self._writeTest(write)
 
 
+    @skipIf(getattr(signal, 'SIGCHLD', None) is None,
+            "Platform lacks SIGCHLD, early-spawnProcess test can't work.")
     def test_spawnProcessEarlyIsReaped(self):
         """
         If, before the reactor is started with L{IReactorCore.run}, a
@@ -264,10 +270,6 @@ class ProcessTestsBuilderBase(ReactorBuilder):
 
         # Make sure the reactor stopped because the Deferred fired.
         self.assertTrue(result)
-
-    if getattr(signal, 'SIGCHLD', None) is None:
-        test_spawnProcessEarlyIsReaped.skip = (
-            "Platform lacks SIGCHLD, early-spawnProcess test can't work.")
 
 
     def test_processExitedWithSignal(self):
@@ -542,24 +544,22 @@ sys.stdout.flush()""".format(twistedRoot.path))
         self.assertEqual(0, container[0].value.exitCode)
 
 
+    @skipIf(_uidgidSkip, _uidgidSkipReason)
     def test_changeUID(self):
         """
         If a value is passed for L{IReactorProcess.spawnProcess}'s C{uid}, the
         child process is run with that UID.
         """
         self._changeIDTest("uid")
-    if _uidgidSkip is not None:
-        test_changeUID.skip = _uidgidSkip
 
 
+    @skipIf(_uidgidSkip, _uidgidSkipReason)
     def test_changeGID(self):
         """
         If a value is passed for L{IReactorProcess.spawnProcess}'s C{gid}, the
         child process is run with that GID.
         """
         self._changeIDTest("gid")
-    if _uidgidSkip is not None:
-        test_changeGID.skip = _uidgidSkip
 
 
     def test_processExitedRaises(self):
@@ -974,16 +974,14 @@ class ProcessIsUnimportableOnUnsupportedPlatormsTests(TestCase):
     Tests to ensure that L{twisted.internet.process} is unimportable on
     platforms where it does not work (namely Windows).
     """
+    @skipIf(not platform.isWindows(), "Only relevant on Windows.")
     def test_unimportableOnWindows(self):
         """
         L{twisted.internet.process} is unimportable on Windows.
         """
         with self.assertRaises(ImportError):
             import twisted.internet.process
-            twisted.internet.process # shh pyflakes
-
-    if not platform.isWindows():
-        test_unimportableOnWindows.skip = "Only relevant on Windows."
+            twisted.internet.process  # shh pyflakes
 
 
 

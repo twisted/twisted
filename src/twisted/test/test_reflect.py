@@ -11,7 +11,6 @@ import weakref
 from collections import deque
 
 from twisted.python.compat import _PY3
-from twisted.trial import unittest
 from twisted.trial.unittest import SynchronousTestCase as TestCase
 from twisted.python import reflect
 from twisted.python.reflect import (
@@ -544,15 +543,6 @@ class SafeStrTests(TestCase):
         self.assertEqual(reflect.safe_str(x), 'a')
 
 
-    def test_workingUtf8_2(self):
-        """
-        L{safe_str} for C{str} with utf-8 encoded data should return the
-        value unchanged.
-        """
-        x = b't\xc3\xbcst'
-        self.assertEqual(reflect.safe_str(x), x)
-
-
     def test_workingUtf8_3(self):
         """
         L{safe_str} for C{bytes} with utf-8 encoded data should return
@@ -560,16 +550,6 @@ class SafeStrTests(TestCase):
         """
         x = b't\xc3\xbcst'
         self.assertEqual(reflect.safe_str(x), x.decode('utf-8'))
-
-    if _PY3:
-        # TODO: after something like python.compat.nativeUtf8String is
-        # introduced, use that one for assertEqual. Then we can combine
-        # test_workingUtf8_* tests into one without needing _PY3.
-        # nativeUtf8String is needed for Python 3 anyway.
-        test_workingUtf8_2.skip = ("Skip Python 2 specific test for utf-8 str")
-    else:
-        test_workingUtf8_3.skip = (
-            "Skip Python 3 specific test for utf-8 bytes")
 
 
     def test_brokenUtf8(self):
@@ -748,7 +728,8 @@ class FullyQualifiedNameTests(TestCase):
             "%s.%s.test_unboundMethod" % (__name__, self.__class__.__name__))
 
 
-class ObjectGrepTests(unittest.TestCase):
+
+class ObjectGrepTests(TestCase):
     if _PY3:
         # This is to be removed when fixing #6986
         skip = "twisted.python.reflect.objgrep hasn't been ported to Python 3"
@@ -870,19 +851,8 @@ class ObjectGrepTests(unittest.TestCase):
         self.assertIn("[1]", reflect.objgrep(D, o, reflect.isSame))
 
 
-class GetClassTests(unittest.TestCase):
-    if _PY3:
-        oldClassNames = ['type']
-    else:
-        oldClassNames = ['class', 'classobj']
 
-    def test_old(self):
-        class OldClass:
-            pass
-        old = OldClass()
-        self.assertIn(reflect.getClass(OldClass).__name__, self.oldClassNames)
-        self.assertEqual(reflect.getClass(old).__name__, 'OldClass')
-
+class GetClassTests(TestCase):
     def test_new(self):
         class NewClass(object):
             pass

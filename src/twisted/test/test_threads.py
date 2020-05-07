@@ -11,15 +11,16 @@ import os
 import sys
 import time
 
-from twisted.trial import unittest
+from twisted.trial.unittest import TestCase
 
 from twisted.python.compat import range
-from twisted.internet import reactor, defer, interfaces, threads, protocol, error
+from twisted.internet import (reactor, defer, interfaces, threads, protocol,
+                              error)
 from twisted.python import failure, threadable, log, threadpool
 
 
 
-class ReactorThreadsTests(unittest.TestCase):
+class ReactorThreadsTests(TestCase):
     """
     Tests for the reactor threading API.
     """
@@ -211,7 +212,7 @@ class Counter:
 
 
 
-class DeferredResultTests(unittest.TestCase):
+class DeferredResultTests(TestCase):
     """
     Test twisted.internet.threads.
     """
@@ -287,7 +288,7 @@ class DeferredResultTests(unittest.TestCase):
 
 
 
-class DeferToThreadPoolTests(unittest.TestCase):
+class DeferToThreadPoolTests(TestCase):
     """
     Test L{twisted.internet.threads.deferToThreadPool}.
     """
@@ -363,7 +364,7 @@ class ThreadStartupProcessProtocol(protocol.ProcessProtocol):
 
 
 
-class StartupBehaviorTests(unittest.TestCase):
+class StartupBehaviorTests(TestCase):
     """
     Test cases for the behavior of the reactor threadpool near startup
     boundary conditions.

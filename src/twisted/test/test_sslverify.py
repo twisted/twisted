@@ -11,13 +11,32 @@ import sys
 import itertools
 import datetime
 
+from unittest import skipIf
+
 from zope.interface import implementer
 from twisted.python.reflect import requireModule
+from twisted.test.test_twisted import SetAsideModule
+from twisted.test.iosim import connectedServerAndClient
 
-skipSSL = None
-skipSNI = None
-skipNPN = None
-skipALPN = None
+from twisted.internet.error import ConnectionClosed
+from twisted.python.compat import nativeString
+from twisted.python.filepath import FilePath
+from twisted.python.modules import getModule
+
+from twisted.trial import util
+from twisted.trial.unittest import SkipTest, SynchronousTestCase, TestCase
+from twisted.internet import protocol, defer, reactor
+from twisted.internet._idna import _idnaText
+
+from twisted.internet.error import CertificateError, ConnectionLost
+from twisted.internet import interfaces
+from incremental import Version
+
+
+skipSSL = ""
+skipSNI = ""
+skipNPN = ""
+skipALPN = ""
 
 if requireModule("OpenSSL"):
     import ipaddress
@@ -56,22 +75,6 @@ else:
     skipSNI = skipSSL
     skipNPN = skipSSL
     skipALPN = skipSSL
-
-from twisted.test.test_twisted import SetAsideModule
-from twisted.test.iosim import connectedServerAndClient
-
-from twisted.internet.error import ConnectionClosed
-from twisted.python.compat import nativeString
-from twisted.python.filepath import FilePath
-from twisted.python.modules import getModule
-
-from twisted.trial import unittest, util
-from twisted.internet import protocol, defer, reactor
-from twisted.internet._idna import _idnaText
-
-from twisted.internet.error import CertificateError, ConnectionLost
-from twisted.internet import interfaces
-from incremental import Version
 
 if not skipSSL:
     from twisted.internet.ssl import platformTrust, VerificationError
@@ -575,7 +578,7 @@ class FakeContext(object):
 
 
 
-class ClientOptionsTests(unittest.SynchronousTestCase):
+class ClientOptionsTests(SynchronousTestCase):
     """
     Tests for L{sslverify.optionsForClientTLS}.
     """
@@ -737,7 +740,7 @@ class OpenSSLOptionsTestsMixin(object):
 
 
 
-class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, unittest.TestCase):
+class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, TestCase):
     """
     Tests for L{sslverify.OpenSSLOptions}.
     """
@@ -1691,7 +1694,7 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, unittest.TestCase):
 
 
 class OpenSSLOptionsECDHIntegrationTests(
-        OpenSSLOptionsTestsMixin, unittest.TestCase):
+        OpenSSLOptionsTestsMixin, TestCase):
     """
     ECDH-related integration tests for L{OpenSSLOptions}.
     """
@@ -1701,7 +1704,7 @@ class OpenSSLOptionsECDHIntegrationTests(
         Connections use ECDH when OpenSSL supports it.
         """
         if not get_elliptic_curves():
-            raise unittest.SkipTest("OpenSSL does not support ECDH.")
+            raise SkipTest("OpenSSL does not support ECDH.")
 
         onData = defer.Deferred()
         # TLS 1.3 cipher suites do not specify the key exchange
@@ -1738,7 +1741,7 @@ class OpenSSLOptionsECDHIntegrationTests(
 
 
 
-class DeprecationTests(unittest.SynchronousTestCase):
+class DeprecationTests(SynchronousTestCase):
     """
     Tests for deprecation of L{sslverify.OpenSSLCertificateOptions}'s support
     of the pickle protocol.
@@ -1765,7 +1768,7 @@ class DeprecationTests(unittest.SynchronousTestCase):
 
 
 
-class TrustRootTests(unittest.TestCase):
+class TrustRootTests(TestCase):
     """
     Tests for L{sslverify.OpenSSLCertificateOptions}' C{trustRoot} argument,
     L{sslverify.platformTrust}, and their interactions.
@@ -1848,7 +1851,7 @@ class TrustRootTests(unittest.TestCase):
 
 
 
-class ServiceIdentityTests(unittest.SynchronousTestCase):
+class ServiceIdentityTests(SynchronousTestCase):
     """
     Tests for the verification of the peer's service's identity via the
     C{hostname} argument to L{sslverify.OpenSSLCertificateOptions}.
@@ -2170,6 +2173,7 @@ class ServiceIdentityTests(unittest.SynchronousTestCase):
         self.assertIsInstance(sErr, SSL.Error)
 
 
+    @skipIf(skipSNI, skipSNI)
     def test_hostnameIsIndicated(self):
         """
         Specifying the C{hostname} argument to L{CertificateOptions} also sets
@@ -2189,10 +2193,8 @@ class ServiceIdentityTests(unittest.SynchronousTestCase):
         )
         self.assertEqual(names, [u"valid.example.com"])
 
-    if skipSNI is not None:
-        test_hostnameIsIndicated.skip = skipSNI
 
-
+    @skipIf(skipSNI, skipSNI)
     def test_hostnameEncoding(self):
         """
         Hostnames are encoded as IDNA.
@@ -2215,9 +2217,6 @@ class ServiceIdentityTests(unittest.SynchronousTestCase):
         sErr = sWrapped.lostReason
         self.assertIsNone(cErr)
         self.assertIsNone(sErr)
-
-    if skipSNI is not None:
-        test_hostnameEncoding.skip = skipSNI
 
 
     def test_fallback(self):
@@ -2306,7 +2305,7 @@ def negotiateProtocol(serverProtocols,
 
 
 
-class NPNOrALPNTests(unittest.TestCase):
+class NPNOrALPNTests(TestCase):
     """
     NPN and ALPN protocol selection.
 
@@ -2389,7 +2388,7 @@ class NPNOrALPNTests(unittest.TestCase):
 
 
 
-class ALPNTests(unittest.TestCase):
+class ALPNTests(TestCase):
     """
     ALPN protocol selection.
 
@@ -2418,7 +2417,7 @@ class ALPNTests(unittest.TestCase):
 
 
 
-class NPNAndALPNAbsentTests(unittest.TestCase):
+class NPNAndALPNAbsentTests(TestCase):
     """
     NPN/ALPN operations fail on platforms that do not support them.
 
@@ -2502,7 +2501,7 @@ class _ActualSSLTransport:
 
 
 
-class ConstructorsTests(unittest.TestCase):
+class ConstructorsTests(TestCase):
     if skipSSL:
         skip = skipSSL
 
@@ -2573,7 +2572,7 @@ class ConstructorsTests(unittest.TestCase):
 
 
 
-class MultipleCertificateTrustRootTests(unittest.TestCase):
+class MultipleCertificateTrustRootTests(TestCase):
     """
     Test the behavior of the trustRootFromCertificates() API call.
     """
@@ -2707,7 +2706,7 @@ class MultipleCertificateTrustRootTests(unittest.TestCase):
 
 
 
-class OpenSSLCipherTests(unittest.TestCase):
+class OpenSSLCipherTests(TestCase):
     """
     Tests for twisted.internet._sslverify.OpenSSLCipher.
     """
@@ -2761,7 +2760,7 @@ class OpenSSLCipherTests(unittest.TestCase):
 
 
 
-class ExpandCipherStringTests(unittest.TestCase):
+class ExpandCipherStringTests(TestCase):
     """
     Tests for twisted.internet._sslverify._expandCipherString.
     """
@@ -2812,7 +2811,7 @@ class ExpandCipherStringTests(unittest.TestCase):
 
 
 
-class AcceptableCiphersTests(unittest.TestCase):
+class AcceptableCiphersTests(TestCase):
     """
     Tests for twisted.internet._sslverify.OpenSSLAcceptableCiphers.
     """
@@ -2853,7 +2852,7 @@ class AcceptableCiphersTests(unittest.TestCase):
 
 
 
-class DiffieHellmanParametersTests(unittest.TestCase):
+class DiffieHellmanParametersTests(TestCase):
     """
     Tests for twisted.internet._sslverify.OpenSSLDHParameters.
     """
@@ -2929,7 +2928,7 @@ class FakeLib(object):
 
 
 
-class FakeLibTests(unittest.TestCase):
+class FakeLibTests(TestCase):
     """
     Tests for L{FakeLib}.
     """
@@ -3028,7 +3027,7 @@ class FakeCrypto(object):
 
 
 
-class FakeCryptoTests(unittest.SynchronousTestCase):
+class FakeCryptoTests(SynchronousTestCase):
     """
     Tests for L{FakeCrypto}.
     """
@@ -3090,7 +3089,7 @@ class FakeCryptoTests(unittest.SynchronousTestCase):
 
 
 
-class ChooseDiffieHellmanEllipticCurveTests(unittest.SynchronousTestCase):
+class ChooseDiffieHellmanEllipticCurveTests(SynchronousTestCase):
     """
     Tests for L{sslverify._ChooseDiffieHellmanEllipticCurve}.
 
@@ -3249,7 +3248,7 @@ class ChooseDiffieHellmanEllipticCurveTests(unittest.SynchronousTestCase):
 
 
 
-class KeyPairTests(unittest.TestCase):
+class KeyPairTests(TestCase):
     """
     Tests for L{sslverify.KeyPair}.
     """
@@ -3294,11 +3293,11 @@ class KeyPairTests(unittest.TestCase):
 
 
 
-class SelectVerifyImplementationTests(unittest.SynchronousTestCase):
+class SelectVerifyImplementationTests(SynchronousTestCase):
     """
     Tests for L{_selectVerifyImplementation}.
     """
-    if skipSSL is not None:
+    if skipSSL:
         skip = skipSSL
 
 
