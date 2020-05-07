@@ -749,7 +749,7 @@ class SynchronousAssertionsTests(unittest.SynchronousTestCase):
         """
         self.assertDictEqual({'a': 1}, {'a': 1})
     if getattr(unittest.SynchronousTestCase, 'assertDictEqual', None) is None:
-        test_assertDictEqual.skip = (
+        test_assertDictEqual.skip = (  # type: ignore[attr-defined]
             "assertDictEqual is not available on this version of Python")
 
 

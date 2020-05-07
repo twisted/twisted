@@ -4,16 +4,12 @@
 
 
 # System Imports
+import copyreg
+import io
+import pickle
 import sys
 
-from twisted.trial import unittest
-
-try:
-    import cPickle as pickle
-except ImportError:
-    import pickle
-
-import io
+from unittest import skipIf
 
 try:
     from cStringIO import StringIO as _oldStyleCStringIO
@@ -22,19 +18,19 @@ except ImportError:
 else:
     skipStringIO = None
 
-try:
-    import copyreg
-except:
-    import copy_reg as copyreg
 
 # Twisted Imports
 from twisted.persisted import styles, aot, crefutil
 from twisted.python.compat import _PY3
+from twisted.trial import unittest
+from twisted.trial.unittest import TestCase
 
 
-class VersionTests(unittest.TestCase):
+
+class VersionTests(TestCase):
     def test_nullVersionUpgrade(self):
         global NullVersioned
+
         class NullVersioned(object):
             def __init__(self):
                 self.ok = 0
@@ -47,8 +43,10 @@ class VersionTests(unittest.TestCase):
         styles.doUpgrade()
         assert mnv.ok, "initial upgrade not run!"
 
+
     def test_versionUpgrade(self):
         global MyVersioned
+
         class MyVersioned(styles.Versioned):
             persistenceVersion = 2
             persistenceForgets = ['garbagedata']
@@ -77,16 +75,18 @@ class VersionTests(unittest.TestCase):
         styles.doUpgrade()
         assert obj.v3 == 1, "upgraded unnecessarily"
         assert obj.v4 == 1, "upgraded unnecessarily"
-    
+
     def test_nonIdentityHash(self):
         global ClassWithCustomHash
+
         class ClassWithCustomHash(styles.Versioned):
             def __init__(self, unique, hash):
                 self.unique = unique
                 self.hash = hash
+
             def __hash__(self):
                 return self.hash
-        
+
         v1 = ClassWithCustomHash('v1', 0)
         v2 = ClassWithCustomHash('v2', 0)
 
@@ -100,13 +100,17 @@ class VersionTests(unittest.TestCase):
         self.assertEqual(v2.unique, 'v2')
         self.assertTrue(v1.upgraded)
         self.assertTrue(v2.upgraded)
-    
+
+
     def test_upgradeDeserializesObjectsRequiringUpgrade(self):
         global ToyClassA, ToyClassB
+
         class ToyClassA(styles.Versioned):
             pass
+
         class ToyClassB(styles.Versioned):
             pass
+
         x = ToyClassA()
         y = ToyClassB()
         pklA, pklB = pickle.dumps(x), pickle.dumps(y)
@@ -145,7 +149,7 @@ class VersionedDiamondSubClass(VersionedSubSubClass, SecondVersionedSubClass):
 
 
 
-class AybabtuTests(unittest.TestCase):
+class AybabtuTests(TestCase):
     """
     L{styles._aybabtu} gets all of classes in the inheritance hierarchy of its
     argument that are strictly between L{Versioned} and the class itself.
@@ -192,25 +196,27 @@ class MyEphemeral(styles.Ephemeral):
         self.x = x
 
 
-class EphemeralTests(unittest.TestCase):
+
+class EphemeralTests(TestCase):
 
     def test_ephemeral(self):
         o = MyEphemeral(3)
         self.assertEqual(o.__class__, MyEphemeral)
         self.assertEqual(o.x, 3)
-        
+
         pickl = pickle.dumps(o)
         o = pickle.loads(pickl)
-        
+
         self.assertEqual(o.__class__, styles.Ephemeral)
         self.assertFalse(hasattr(o, 'x'))
+
 
 
 class Pickleable:
 
     def __init__(self, x):
         self.x = x
-    
+
     def getX(self):
         return self.x
 
@@ -279,32 +285,20 @@ class B:
     def bmethod(self):
         pass
 
+
+
 def funktion():
     pass
 
-class PicklingTests(unittest.TestCase):
+
+
+class PicklingTests(TestCase):
     """Test pickling of extra object types."""
-    
+
     def test_module(self):
         pickl = pickle.dumps(styles)
         o = pickle.loads(pickl)
         self.assertEqual(o, styles)
-
-
-    def test_classMethod(self):
-        """
-        After importing L{twisted.persisted.styles}, it is possible to pickle
-        classmethod objects.
-        """
-        pickl = pickle.dumps(Pickleable.getX)
-        o = pickle.loads(pickl)
-        self.assertEqual(o, Pickleable.getX)
-
-    if sys.version_info > (3, 4):
-        test_classMethod.skip = (
-            "As of Python 3.4 it is no longer possible to globally change "
-            "the behavior of function pickling."
-        )
 
 
     def test_instanceMethod(self):
@@ -313,7 +307,9 @@ class PicklingTests(unittest.TestCase):
         o = pickle.loads(pickl)
         self.assertEqual(o(), 4)
         self.assertEqual(type(o), type(obj.getX))
-    
+
+
+    @skipIf(skipStringIO, skipStringIO)
     def test_stringIO(self):
         f = _oldStyleCStringIO()
         f.write("abc")
@@ -322,12 +318,9 @@ class PicklingTests(unittest.TestCase):
         self.assertEqual(type(o), type(f))
         self.assertEqual(f.getvalue(), "abc")
 
-    if skipStringIO:
-        test_stringIO.skip = skipStringIO
 
 
-
-class StringIOTransitionTests(unittest.TestCase):
+class StringIOTransitionTests(TestCase):
     """
     When pickling a cStringIO in Python 2, it should unpickle as a BytesIO or a
     StringIO in Python 3, depending on the type of its contents.
@@ -358,13 +351,18 @@ class EvilSourceror:
         self.a.b = self
         self.a.b.c = x
 
+
+
 class NonDictState:
     def __getstate__(self):
         return self.state
+
     def __setstate__(self, state):
         self.state = state
 
-class AOTTests(unittest.TestCase):
+
+
+class AOTTests(TestCase):
     def test_simpleTypes(self):
         obj = (1, 2.0, 3j, True, slice(1, 2, 3), 'hello', u'world',
                sys.maxsize + 1, None, Ellipsis)
@@ -474,7 +472,7 @@ class AOTTests(unittest.TestCase):
 
 
 
-class CrefUtilTests(unittest.TestCase):
+class CrefUtilTests(TestCase):
     """
     Tests for L{crefutil}.
     """
@@ -531,4 +529,3 @@ class CrefUtilTests(unittest.TestCase):
 
 
 testCases = [VersionTests, EphemeralTests, PicklingTests]
-

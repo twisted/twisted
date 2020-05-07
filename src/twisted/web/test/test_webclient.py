@@ -866,6 +866,13 @@ class WebClientTests(unittest.TestCase):
 
 
 class WebClientSSLTests(WebClientTests):
+
+    if ssl is None or not hasattr(ssl, 'DefaultOpenSSLContextFactory'):
+        skip = "OpenSSL not present"
+
+    if not interfaces.IReactorSSL(reactor, None):
+        skip = "Reactor doesn't support SSL"
+
     def _listen(self, site):
         return reactor.listenSSL(
             0, site,
@@ -890,12 +897,21 @@ class WebClientSSLTests(WebClientTests):
 class WebClientRedirectBetweenSSLandPlainTextTests(unittest.TestCase):
     suppress = [util.suppress(category=DeprecationWarning)]
 
+    if ssl is None or not hasattr(ssl, 'DefaultOpenSSLContextFactory'):
+        skip = "OpenSSL not present"
+
+    if not interfaces.IReactorSSL(reactor, None):
+        skip = "Reactor doesn't support SSL"
 
     def getHTTPS(self, path):
-        return networkString("https://127.0.0.1:%d/%s" % (self.tlsPortno, path))
+        return networkString("https://127.0.0.1:{}/{}".format(
+            self.tlsPortno, path))
+
 
     def getHTTP(self, path):
-        return networkString("http://127.0.0.1:%d/%s" % (self.plainPortno, path))
+        return networkString("http://127.0.0.1:{}/{}".format(
+            self.plainPortno, path))
+
 
     def setUp(self):
         plainRoot = Data(b'not me', 'text/plain')
@@ -1098,16 +1114,7 @@ class HostHeaderTests(unittest.TestCase):
         proto = factory.buildProtocol('127.42.42.42')
         proto.makeConnection(StringTransport())
         self.assertEqual(self._getHost(proto.transport.value()),
-                          b'foo.example.com:8080')
-
-
-if ssl is None or not hasattr(ssl, 'DefaultOpenSSLContextFactory'):
-    for case in [WebClientSSLTests, WebClientRedirectBetweenSSLandPlainTextTests]:
-        case.skip = "OpenSSL not present"
-
-if not interfaces.IReactorSSL(reactor, None):
-    for case in [WebClientSSLTests, WebClientRedirectBetweenSSLandPlainTextTests]:
-        case.skip = "Reactor doesn't support SSL"
+                         b'foo.example.com:8080')
 
 
 

@@ -8,11 +8,13 @@ import os
 import stat
 import time
 
-from twisted.trial import unittest
+from unittest import skipIf
+from twisted.trial.unittest import TestCase
 from twisted.python import logfile, runtime
 
 
-class LogFileTests(unittest.TestCase):
+
+class LogFileTests(TestCase):
     """
     Test the rotating log file.
     """
@@ -281,6 +283,7 @@ class LogFileTests(unittest.TestCase):
             self.assertEqual(mode, 0o066)
 
 
+    @skipIf(runtime.platform.isWindows(), "Can't test reopen on Windows")
     def test_reopen(self):
         """
         L{logfile.LogFile.reopen} allows to rename the currently used file and
@@ -297,9 +300,6 @@ class LogFileTests(unittest.TestCase):
             self.assertEqual(f.read(), "hello2")
         with open(savePath) as f:
             self.assertEqual(f.read(), "hello1")
-
-    if runtime.platform.isWindows():
-        test_reopen.skip = "Can't test reopen on Windows"
 
 
     def test_nonExistentDir(self):
@@ -377,7 +377,7 @@ class RiggedDailyLogFile(logfile.DailyLogFile):
 
 
 
-class DailyLogFileTests(unittest.TestCase):
+class DailyLogFileTests(TestCase):
     """
     Test rotating log file.
     """
@@ -475,6 +475,9 @@ class DailyLogFileTests(unittest.TestCase):
         self.assertEqual(previousFile, log._file)
 
 
+    @skipIf(runtime.platform.isWindows(),
+            "Making read-only directories on Windows is too complex for this "
+            "test to reasonably do.")
     def test_rotatePermissionDirectoryNotOk(self):
         """
         L{DailyLogFile.rotate} doesn't do anything if the directory containing
@@ -489,11 +492,6 @@ class DailyLogFileTests(unittest.TestCase):
         previousFile = log._file
         log.rotate()
         self.assertEqual(previousFile, log._file)
-
-    if runtime.platform.isWindows():
-        test_rotatePermissionDirectoryNotOk.skip = (
-            "Making read-only directories on Windows is too complex for this "
-            "test to reasonably do.")
 
 
     def test_rotatePermissionFileNotOk(self):

@@ -177,6 +177,21 @@ class ListingTests(TestCase):
             '!---------    0 0        0               0 Aug 29 09:33 foo')
 
 
+    # If alternate locale is not available, the next test will be
+    # skipped, please install this locale for it to run
+    currentLocale = locale.getlocale()
+    try:
+        try:
+            locale.setlocale(locale.LC_ALL, "es_AR.UTF8")
+        except locale.Error:
+            localeSkip = True
+        else:
+            localeSkip = False
+    finally:
+        locale.setlocale(locale.LC_ALL, currentLocale)
+
+
+    @skipIf(localeSkip, "The es_AR.UTF8 locale is not installed.")
     def test_localeIndependent(self):
         """
         The month name in the date is locale independent.
@@ -196,17 +211,6 @@ class ListingTests(TestCase):
         self.assertEqual(
             self._lsInTimezone('Pacific/Auckland', stat),
             '!---------    0 0        0               0 Aug 29 09:33 foo')
-
-    # If alternate locale is not available, the previous test will be
-    # skipped, please install this locale for it to run
-    currentLocale = locale.getlocale()
-    try:
-        try:
-            locale.setlocale(locale.LC_ALL, "es_AR.UTF8")
-        except locale.Error:
-            test_localeIndependent.skip = "The es_AR.UTF8 locale is not installed."
-    finally:
-        locale.setlocale(locale.LC_ALL, currentLocale)
 
 
     def test_newSingleDigitDayOfMonth(self):

@@ -9,6 +9,7 @@ Tests for  XML-RPC support in L{twisted.web.xmlrpc}.
 
 from twisted.python.compat import nativeString, networkString, NativeStringIO
 from io import BytesIO
+from unittest import skipIf
 
 import datetime
 
@@ -28,9 +29,10 @@ from twisted.logger import (globalLogPublisher, FilteringLogObserver,
 try:
     namedModule('twisted.internet.ssl')
 except ImportError:
-    sslSkip = "OpenSSL not present"
+    sslSkip = True
 else:
-    sslSkip = None
+    sslSkip = False
+
 
 
 class AsyncXMLRPCTests(unittest.TestCase):
@@ -522,6 +524,7 @@ class XMLRPCTests(unittest.TestCase):
         self.assertEqual(reactor.tcpClients[0][3], 2.0)
 
 
+    @skipIf(sslSkip, "OpenSSL not present")
     def test_sslTimeout(self):
         """
         For I{HTTPS} URIs, L{xmlrpc.Proxy.callRemote} passes the value it
@@ -533,7 +536,6 @@ class XMLRPCTests(unittest.TestCase):
                              reactor=reactor)
         proxy.callRemote("someMethod")
         self.assertEqual(reactor.sslClients[0][4], 3.0)
-    test_sslTimeout.skip = sslSkip
 
 
 
