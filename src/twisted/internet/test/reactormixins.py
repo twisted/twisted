@@ -34,9 +34,11 @@ from twisted.python.failure import Failure
 
 # Access private APIs.
 try:
-    from twisted.internet import process
+    from twisted.internet import process as _process
 except ImportError:
-    process = None  # type: ignore
+    process = None
+else:
+    process = _process
 
 
 
