@@ -1,0 +1,1 @@
+Call connectionLost with a Failure instance instead of ConnectionLost.

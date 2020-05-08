@@ -349,7 +349,7 @@ class H2Connection(Protocol, TimeoutMixin):
         This tells the L{H2Connection} that its consumer has died, so it must
         stop producing data for good.
         """
-        self.connectionLost(ConnectionLost("Producing stopped"))
+        self.connectionLost(Failure(ConnectionLost("Producing stopped")))
 
 
     def pauseProducing(self):
