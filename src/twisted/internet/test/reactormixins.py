@@ -346,7 +346,7 @@ class ReactorBuilder:
                     skip = cls.skippedReactors[reactor]
                 try:
                     reactorFactory = namedAny(reactor)
-                except Exception:
+                except BaseException:
                     skip = Failure().getErrorMessage()
             testcase.__name__ = name
             testcase.__qualname__ = ".".join(cls.__qualname__.split()[0:-1] +
