@@ -342,7 +342,7 @@ class ReactorBuilder:
             name = (cls.__name__ + "." + shortReactorName +
                     "Tests").replace(".", "_")
 
-            class testcase(cls, SynchronousTestCase):  # type: ignore
+            class testcase(cls, SynchronousTestCase):  # type: ignore[valid-type,misc]   # noqa
                 __module__ = cls.__module__
                 if reactor in cls.skippedReactors:
                     skip = cls.skippedReactors[reactor]
