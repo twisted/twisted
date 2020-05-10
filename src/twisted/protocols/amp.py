@@ -963,7 +963,7 @@ class BoxDispatcher:
 
         try:
             co = commandType(*a, **kw)
-        except:
+        except BaseException:
             return fail()
         return co._doCommand(self)
 
@@ -1164,16 +1164,18 @@ class CommandLocator:
         """
         def doit(box):
             kw = command.parseArguments(box, self)
+
             def checkKnownErrors(error):
                 key = error.trap(*command.allErrors)
                 code = command.allErrors[key]
                 desc = str(error.value)
                 return Failure(RemoteAmpError(
                         code, desc, key in command.fatalErrors, local=error))
+
             def makeResponseFor(objects):
                 try:
                     return command.makeResponse(objects, self)
-                except:
+                except BaseException:
                     # let's helpfully log this.
                     originalFailure = Failure()
                     raise BadLocalReturn(
@@ -1877,7 +1879,7 @@ class Command:
         """
         try:
             responseType = cls.responseType()
-        except:
+        except BaseException:
             return fail()
         return _objectsToStrings(objects, cls.response, responseType, proto)
 
