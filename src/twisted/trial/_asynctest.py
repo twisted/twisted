@@ -8,7 +8,6 @@ Things likely to be used by writers of unit tests.
 Maintainer: Jonathan Lange
 """
 
-from __future__ import division, absolute_import
 
 import inspect
 import warnings

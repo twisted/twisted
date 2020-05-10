@@ -3,9 +3,9 @@
 reactor.spawnProcess()
 """
 
-from __future__ import print_function
 
-import os, sys
+import os
+import sys
 
 if __name__ == "__main__":
 

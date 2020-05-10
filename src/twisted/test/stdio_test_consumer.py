@@ -8,7 +8,6 @@ L{twisted.test.test_stdio.StandardInputOutputTests.test_consumer} to test
 that process transports implement IConsumer properly.
 """
 
-from __future__ import absolute_import, division
 
 import sys
 

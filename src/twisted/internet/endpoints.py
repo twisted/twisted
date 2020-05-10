@@ -12,7 +12,6 @@ parsed by the L{clientFromString} and L{serverFromString} functions.
 @since: 10.1
 """
 
-from __future__ import division, absolute_import
 
 import os
 import re

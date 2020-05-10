@@ -21,7 +21,6 @@ the latest version of Python directly from your code, if possible.
     Python 3)
 """
 
-from __future__ import absolute_import, division
 
 import inspect
 import os
@@ -30,21 +29,25 @@ import socket
 import struct
 import sys
 import tokenize
-from types import MethodType as _MethodType
+import urllib.parse as urllib_parse
 import warnings
 
+from base64 import decodebytes as _b64decodebytes
+from base64 import encodebytes as _b64encodebytes
+from collections.abc import Sequence
+from functools import reduce
+from html import escape
+from http import cookiejar as cookielib
+from io import StringIO as NativeStringIO
 from io import TextIOBase, IOBase
+from sys import intern
+from types import MethodType as _MethodType
+from urllib.parse import quote as urlquote
+from urllib.parse import unquote as urlunquote
 
 
-if sys.version_info < (3, 0):
-    _PY3 = False
-else:
-    _PY3 = True
-
-if sys.version_info >= (3, 5, 0):
-    _PY35PLUS = True
-else:
-    _PY35PLUS = False
+_PY3 = True
+_PY35PLUS = True
 
 if sys.version_info >= (3, 7, 0):
     _PY37PLUS = True
@@ -56,26 +59,56 @@ if platform.python_implementation() == 'PyPy':
 else:
     _PYPY = False
 
+_shouldEnableNewStyle = lambda: False
+_EXPECT_NEWSTYLE = True
+
+_tokenize = tokenize.tokenize
+FileType = IOBase
+frozenset = frozenset
+InstanceType = object
+izip = zip
+long = int
+range = range
+raw_input = input
+set = set
+StringType = str
+unichr = chr
+unicode = str
+xrange = range
 
 
-def _shouldEnableNewStyle():
+
+def iteritems(d):
     """
-    Returns whether or not we should enable the new-style conversion of
-    old-style classes. It inspects the environment for C{TWISTED_NEWSTYLE},
-    accepting an empty string, C{no}, C{false}, C{False}, and C{0} as falsey
-    values and everything else as a truthy value.
+    Return an iterable of the items of C{d}.
 
-    @rtype: L{bool}
+    @type d: L{dict}
+    @rtype: iterable
     """
-    value = os.environ.get('TWISTED_NEWSTYLE', '')
-
-    if value in ['', 'no', 'false', 'False', '0']:
-        return False
-    else:
-        return True
+    return d.items()
 
 
-_EXPECT_NEWSTYLE = _PY3 or _shouldEnableNewStyle()
+
+def itervalues(d):
+    """
+    Return an iterable of the values of C{d}.
+
+    @type d: L{dict}
+    @rtype: iterable
+    """
+    return d.values()
+
+
+
+def items(d):
+    """
+    Return a list of the items of C{d}.
+
+    @type d: L{dict}
+    @rtype: L{list}
+    """
+    return list(d.items())
+
 
 
 def currentframe(n=0):
@@ -94,137 +127,6 @@ def currentframe(n=0):
     for x in range(n + 1):
         f = f.f_back
     return f
-
-
-
-def inet_pton(af, addr):
-    """
-    Emulator of L{socket.inet_pton}.
-
-    @param af: An address family to parse; C{socket.AF_INET} or
-        C{socket.AF_INET6}.
-    @type af: L{int}
-
-    @param addr: An address.
-    @type addr: native L{str}
-
-    @return: The binary packed version of the passed address.
-    @rtype: L{bytes}
-    """
-    if not addr:
-        raise ValueError("illegal IP address string passed to inet_pton")
-    if af == socket.AF_INET:
-        return socket.inet_aton(addr)
-    elif af == getattr(socket, 'AF_INET6', 'AF_INET6'):
-        if '%' in addr and (addr.count('%') > 1 or addr.index("%") == 0):
-            raise ValueError("illegal IP address string passed to inet_pton")
-        addr = addr.split('%')[0]
-        parts = addr.split(':')
-        elided = parts.count('')
-        ipv4Component = '.' in parts[-1]
-
-        if len(parts) > (8 - ipv4Component) or elided > 3:
-            raise ValueError("Syntactically invalid address")
-
-        if elided == 3:
-            return '\x00' * 16
-
-        if elided:
-            zeros = ['0'] * (8 - len(parts) - ipv4Component + elided)
-
-            if addr.startswith('::'):
-                parts[:2] = zeros
-            elif addr.endswith('::'):
-                parts[-2:] = zeros
-            else:
-                idx = parts.index('')
-                parts[idx:idx+1] = zeros
-
-            if len(parts) != 8 - ipv4Component:
-                raise ValueError("Syntactically invalid address")
-        else:
-            if len(parts) != (8 - ipv4Component):
-                raise ValueError("Syntactically invalid address")
-
-        if ipv4Component:
-            if parts[-1].count('.') != 3:
-                raise ValueError("Syntactically invalid address")
-            rawipv4 = socket.inet_aton(parts[-1])
-            unpackedipv4 = struct.unpack('!HH', rawipv4)
-            parts[-1:] = [hex(x)[2:] for x in unpackedipv4]
-
-        parts = [int(x, 16) for x in parts]
-        return struct.pack('!8H', *parts)
-    else:
-        raise socket.error(97, 'Address family not supported by protocol')
-
-
-
-def inet_ntop(af, addr):
-    if af == socket.AF_INET:
-        return socket.inet_ntoa(addr)
-    elif af == socket.AF_INET6:
-        if len(addr) != 16:
-            raise ValueError("address length incorrect")
-        parts = struct.unpack('!8H', addr)
-        curBase = bestBase = None
-        for i in range(8):
-            if not parts[i]:
-                if curBase is None:
-                    curBase = i
-                    curLen = 0
-                curLen += 1
-            else:
-                if curBase is not None:
-                    bestLen = None
-                    if bestBase is None or curLen > bestLen:
-                        bestBase = curBase
-                        bestLen = curLen
-                    curBase = None
-        if curBase is not None and (bestBase is None or curLen > bestLen):
-            bestBase = curBase
-            bestLen = curLen
-        parts = [hex(x)[2:] for x in parts]
-        if bestBase is not None:
-            parts[bestBase:bestBase + bestLen] = ['']
-        if parts[0] == '':
-            parts.insert(0, '')
-        if parts[-1] == '':
-            parts.insert(len(parts) - 1, '')
-        return ':'.join(parts)
-    else:
-        raise socket.error(97, 'Address family not supported by protocol')
-
-try:
-    socket.AF_INET6
-except AttributeError:
-    socket.AF_INET6 = 'AF_INET6'
-
-try:
-    socket.inet_pton(socket.AF_INET6, "::")
-except (AttributeError, NameError, socket.error):
-    socket.inet_pton = inet_pton
-    socket.inet_ntop = inet_ntop
-
-
-adict = dict
-
-
-
-if _PY3:
-    # These are actually useless in Python 2 as well, but we need to go
-    # through deprecation process there (ticket #5895):
-    del adict, inet_pton, inet_ntop
-
-
-set = set
-frozenset = frozenset
-
-
-try:
-    from functools import reduce
-except ImportError:
-    reduce = reduce
 
 
 
@@ -247,22 +149,20 @@ def execfile(filename, globals, locals=None):
     exec(code, globals, locals)
 
 
-try:
-    cmp = cmp
-except NameError:
-    def cmp(a, b):
-        """
-        Compare two objects.
 
-        Returns a negative number if C{a < b}, zero if they are equal, and a
-        positive number if C{a > b}.
-        """
-        if a < b:
-            return -1
-        elif a == b:
-            return 0
-        else:
-            return 1
+def cmp(a, b):
+    """
+    Compare two objects.
+
+    Returns a negative number if C{a < b}, zero if they are equal, and a
+    positive number if C{a > b}.
+    """
+    if a < b:
+        return -1
+    elif a == b:
+        return 0
+    else:
+        return 1
 
 
 
@@ -270,16 +170,9 @@ def comparable(klass):
     """
     Class decorator that ensures support for the special C{__cmp__} method.
 
-    On Python 2 this does nothing.
-
-    On Python 3, C{__eq__}, C{__lt__}, etc. methods are added to the class,
-    relying on C{__cmp__} to implement their comparisons.
+    C{__eq__}, C{__lt__}, etc. methods are added to the class, relying on
+    C{__cmp__} to implement their comparisons.
     """
-    # On Python 2, __cmp__ will just work, so no need to add extra methods:
-    if not _PY3:
-        return klass
-
-
     def __eq__(self, other):
         c = self.__cmp__(other)
         if c is NotImplemented:
@@ -331,15 +224,6 @@ def comparable(klass):
 
 
 
-if _PY3:
-    unicode = str
-    long = int
-else:
-    unicode = unicode
-    long = long
-
-
-
 def ioType(fileIshObject, default=unicode):
     """
     Determine the type which will be returned from the given file object's
@@ -385,18 +269,6 @@ def ioType(fileIshObject, default=unicode):
             return unicode
         else:
             return bytes
-    if not _PY3:
-        # Special case: if we have an encoding file, we can *give* it unicode,
-        # but we can't expect to *get* unicode.
-        if isinstance(fileIshObject, file):
-            if encoding is not None:
-                return basestring
-            else:
-                return bytes
-        from cStringIO import InputType, OutputType
-        from StringIO import StringIO
-        if isinstance(fileIshObject, (StringIO, InputType, OutputType)):
-            return bytes
     return default
 
 
@@ -411,18 +283,11 @@ def nativeString(s):
     """
     if not isinstance(s, (bytes, unicode)):
         raise TypeError("%r is neither bytes nor unicode" % s)
-    if _PY3:
-        if isinstance(s, bytes):
-            return s.decode("ascii")
-        else:
-            # Ensure we're limited to ASCII subset:
-            s.encode("ascii")
+    if isinstance(s, bytes):
+        return s.decode("ascii")
     else:
-        if isinstance(s, unicode):
-            return s.encode("ascii")
-        else:
-            # Ensure we're limited to ASCII subset:
-            s.decode("ascii")
+        # Ensure we're limited to ASCII subset:
+        s.encode("ascii")
     return s
 
 
@@ -459,212 +324,95 @@ def _matchingString(constantString, inputString):
 
 
 
-if _PY3:
-    def reraise(exception, traceback):
-        raise exception.with_traceback(traceback)
-else:
-    exec("""def reraise(exception, traceback):
-        raise exception.__class__, exception, traceback""")
+def reraise(exception, traceback):
+    """
+    Re-raise an exception, with an optional traceback.
 
-reraise.__doc__ = """
-Re-raise an exception, with an optional traceback, in a way that is compatible
-with both Python 2 and Python 3.
+    Re-raised exceptions will be mutated, with their C{__traceback__} attribute
+    being set.
 
-Note that on Python 3, re-raised exceptions will be mutated, with their
-C{__traceback__} attribute being set.
-
-@param exception: The exception instance.
-@param traceback: The traceback to use, or L{None} indicating a new traceback.
-"""
+    @param exception: The exception instance.
+    @param traceback: The traceback to use, or L{None} indicating a new
+    traceback.
+    """
+    raise exception.with_traceback(traceback)
 
 
 
-if _PY3:
-    from io import StringIO as NativeStringIO
-else:
-    from io import BytesIO as NativeStringIO
+def iterbytes(originalBytes):
+    """
+    Return an iterable wrapper for a C{bytes} object that provides the behavior
+    of iterating over C{bytes} on Python 2.
+
+    In particular, the results of iteration are the individual bytes (rather
+    than integers as on Python 3).
+
+    @param originalBytes: A C{bytes} object that will be wrapped.
+    """
+    for i in range(len(originalBytes)):
+        yield originalBytes[i:i+1]
 
 
 
-# Functions for dealing with Python 3's bytes type, which is somewhat
-# different than Python 2's:
-if _PY3:
-    def iterbytes(originalBytes):
-        for i in range(len(originalBytes)):
-            yield originalBytes[i:i+1]
+def intToBytes(i):
+    """
+    Convert the given integer into C{bytes}, as ASCII-encoded Arab numeral.
+
+    In other words, this is equivalent to calling C{bytes} in Python 2 on an
+    integer.
+
+    @param i: The C{int} to convert to C{bytes}.
+    @rtype: C{bytes}
+    """
+    return ("%d" % i).encode("ascii")
 
 
-    def intToBytes(i):
-        return ("%d" % i).encode("ascii")
+
+def lazyByteSlice(object, offset=0, size=None):
+    """
+    Return a copy of the given bytes-like object.
+
+    If an offset is given, the copy starts at that offset. If a size is
+    given, the copy will only be of that length.
+
+    @param object: C{bytes} to be copied.
+
+    @param offset: C{int}, starting index of copy.
+
+    @param size: Optional, if an C{int} is given limit the length of copy
+        to this size.
+    """
+    view = memoryview(object)
+    if size is None:
+        return view[offset:]
+    else:
+        return view[offset:(offset + size)]
 
 
-    def lazyByteSlice(object, offset=0, size=None):
-        """
-        Return a copy of the given bytes-like object.
 
-        If an offset is given, the copy starts at that offset. If a size is
-        given, the copy will only be of that length.
+def networkString(s):
+    """
+    Convert the native string type to C{bytes} if it is not already C{bytes}
+    using ASCII encoding if conversion is necessary.
 
-        @param object: C{bytes} to be copied.
+    This is useful for sending text-like bytes that are constructed using
+    string interpolation.  For example:
 
-        @param offset: C{int}, starting index of copy.
+        networkString("Hello %d" % (n,))
 
-        @param size: Optional, if an C{int} is given limit the length of copy
-            to this size.
-        """
-        view = memoryview(object)
-        if size is None:
-            return view[offset:]
-        else:
-            return view[offset:(offset + size)]
+    @param s: A native string to convert to bytes if necessary.
+    @type s: C{str}
 
+    @raise UnicodeError: The input string is not ASCII encodable/decodable.
+    @raise TypeError: The input is neither C{bytes} nor C{unicode}.
 
-    def networkString(s):
-        if not isinstance(s, unicode):
-            raise TypeError("Can only convert text to bytes on Python 3")
-        return s.encode('ascii')
-else:
-    def iterbytes(originalBytes):
-        return originalBytes
+    @rtype: C{bytes}
+    """
+    if not isinstance(s, unicode):
+        raise TypeError("Can only convert text to bytes on Python 3")
+    return s.encode('ascii')
 
 
-    def intToBytes(i):
-        return b"%d" % i
-
-    lazyByteSlice = buffer
-
-    def networkString(s):
-        if not isinstance(s, str):
-            raise TypeError("Can only pass-through bytes on Python 2")
-        # Ensure we're limited to ASCII subset:
-        s.decode('ascii')
-        return s
-
-iterbytes.__doc__ = """
-Return an iterable wrapper for a C{bytes} object that provides the behavior of
-iterating over C{bytes} on Python 2.
-
-In particular, the results of iteration are the individual bytes (rather than
-integers as on Python 3).
-
-@param originalBytes: A C{bytes} object that will be wrapped.
-"""
-
-intToBytes.__doc__ = """
-Convert the given integer into C{bytes}, as ASCII-encoded Arab numeral.
-
-In other words, this is equivalent to calling C{bytes} in Python 2 on an
-integer.
-
-@param i: The C{int} to convert to C{bytes}.
-@rtype: C{bytes}
-"""
-
-networkString.__doc__ = """
-Convert the native string type to C{bytes} if it is not already C{bytes} using
-ASCII encoding if conversion is necessary.
-
-This is useful for sending text-like bytes that are constructed using string
-interpolation.  For example, this is safe on Python 2 and Python 3:
-
-    networkString("Hello %d" % (n,))
-
-@param s: A native string to convert to bytes if necessary.
-@type s: C{str}
-
-@raise UnicodeError: The input string is not ASCII encodable/decodable.
-@raise TypeError: The input is neither C{bytes} nor C{unicode}.
-
-@rtype: C{bytes}
-"""
-
-
-try:
-    StringType = basestring
-except NameError:
-    # Python 3+
-    StringType = str
-
-try:
-    from types import InstanceType
-except ImportError:
-    # Python 3+
-    InstanceType = object
-
-try:
-    from types import FileType
-except ImportError:
-    # Python 3+
-    FileType = IOBase
-
-if _PY3:
-    import urllib.parse as urllib_parse
-    from html import escape
-    from urllib.parse import quote as urlquote
-    from urllib.parse import unquote as urlunquote
-    from http import cookiejar as cookielib
-else:
-    import urlparse as urllib_parse
-    from cgi import escape
-    from urllib import quote as urlquote
-    from urllib import unquote as urlunquote
-    import cookielib
-
-
-# Dealing with the differences in items/iteritems
-if _PY3:
-    def iteritems(d):
-        return d.items()
-
-
-    def itervalues(d):
-        return d.values()
-
-
-    def items(d):
-        return list(d.items())
-
-    range = range
-    xrange = range
-    izip = zip
-else:
-    def iteritems(d):
-        return d.iteritems()
-
-
-    def itervalues(d):
-        return d.itervalues()
-
-
-    def items(d):
-        return d.items()
-
-    range = xrange
-    xrange = xrange
-    from itertools import izip
-    izip # shh pyflakes
-
-
-iteritems.__doc__ = """
-Return an iterable of the items of C{d}.
-
-@type d: L{dict}
-@rtype: iterable
-"""
-
-itervalues.__doc__ = """
-Return an iterable of the values of C{d}.
-
-@type d: L{dict}
-@rtype: iterable
-"""
-
-items.__doc__ = """
-Return a list of the items of C{d}.
-
-@type d: L{dict}
-@rtype: L{list}
-"""
 
 def _keys(d):
     """
@@ -673,10 +421,7 @@ def _keys(d):
     @type d: L{dict}
     @rtype: L{list}
     """
-    if _PY3:
-        return list(d.keys())
-    else:
-        return d.keys()
+    return list(d.keys())
 
 
 
@@ -688,10 +433,6 @@ def bytesEnviron():
     This function is POSIX only; environment variables are always text strings
     on Windows.
     """
-    if not _PY3:
-        # On py2, nothing to do.
-        return dict(os.environ)
-
     target = dict()
     for x, y in os.environ.items():
         target[os.environ.encodekey(x)] = os.environ.encodevalue(y)
@@ -717,18 +458,7 @@ def _constructMethod(cls, name, self):
     @rtype: L{types.MethodType}
     """
     func = cls.__dict__[name]
-    if _PY3:
-        return _MethodType(func, self)
-    return _MethodType(func, self, cls)
-
-
-
-if _PY3:
-    from base64 import encodebytes as _b64encodebytes
-    from base64 import decodebytes as _b64decodebytes
-else:
-    from base64 import encodestring as _b64encodebytes
-    from base64 import decodestring as _b64decodebytes
+    return _MethodType(func, self)
 
 
 
@@ -741,17 +471,7 @@ def _bytesChr(i):
 
     @rtype: L{bytes}
     """
-    if _PY3:
-        return bytes([i])
-    else:
-        return chr(i)
-
-
-
-try:
-    from sys import intern
-except ImportError:
-    intern = intern
+    return bytes([i])
 
 
 
@@ -781,15 +501,6 @@ def _coercedUnicode(s):
 
 
 
-if _PY3:
-    unichr = chr
-    raw_input = input
-else:
-    unichr = unichr
-    raw_input = raw_input
-
-
-
 def _bytesRepr(bytestring):
     """
     Provide a repr for a byte string that begins with 'b' on both
@@ -806,21 +517,7 @@ def _bytesRepr(bytestring):
     if not isinstance(bytestring, bytes):
         raise TypeError("Expected bytes not %r" % (bytestring,))
 
-    if _PY3:
-        return repr(bytestring)
-    else:
-        return 'b' + repr(bytestring)
-
-
-if _PY3:
-    _tokenize = tokenize.tokenize
-else:
-    _tokenize = tokenize.generate_tokens
-
-try:
-    from collections.abc import Sequence
-except ImportError:
-    from collections import Sequence
+    return repr(bytestring)
 
 
 
@@ -862,7 +559,7 @@ def _pypy3BlockingHack():
         from fcntl import fcntl, F_GETFL, F_SETFL
     except ImportError:
         return
-    if not (_PY3 and _PYPY):
+    if not _PYPY:
         return
 
     def fromFDWithoutModifyingFlags(fd, family, type, proto=None):

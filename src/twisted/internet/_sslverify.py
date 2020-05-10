@@ -3,10 +3,10 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-from __future__ import division, absolute_import
 
 import warnings
 
+from binascii import hexlify
 from constantly import Names, NamedConstant
 from hashlib import md5
 
@@ -16,7 +16,6 @@ from OpenSSL._util import lib as pyOpenSSLlib
 from twisted.internet.abstract import isIPAddress, isIPv6Address
 from twisted.python import log
 from twisted.python.randbytes import secureRandom
-from twisted.python._oldstyle import _oldStyle
 from ._idna import _idnaBytes
 
 from zope.interface import Interface, implementer
@@ -381,7 +380,6 @@ DN = DistinguishedName
 
 
 
-@_oldStyle
 class CertBase:
     """
     Base class for public (certificate only) and private (certificate + key
@@ -733,7 +731,6 @@ class PrivateCertificate(Certificate):
 
 
 
-@_oldStyle
 class PublicKey:
     """
     A L{PublicKey} is a representation of the public part of a key pair.
@@ -1367,7 +1364,7 @@ class OpenSSLCertificateOptions(object):
                  requireCertificate=True,
                  verifyOnce=True,
                  enableSingleUseKeys=True,
-                 enableSessions=True,
+                 enableSessions=False,
                  fixBrokenPeers=False,
                  enableSessionTickets=False,
                  extraCertChain=None,
@@ -1429,9 +1426,12 @@ class OpenSSLCertificateOptions(object):
             ephemeral DH and ECDH parameters are used to prevent small subgroup
             attacks and to ensure perfect forward secrecy.
 
-        @param enableSessions: If True, set a session ID on each context.  This
-            allows a shortened handshake to be used when a known client
-            reconnects.
+        @param enableSessions: This allows a shortened handshake to be used
+            when a known client reconnects to the same process.  If True,
+            enable OpenSSL's session caching.  Note that session caching only
+            works on a single Twisted node at once.  Also, it is currently
+            somewhat risky due to U{a crashing bug when using OpenSSL 1.1.1
+            <https://twistedmatrix.com/trac/ticket/9764>}.
 
         @param fixBrokenPeers: If True, enable various non-spec protocol fixes
             for broken SSL implementations.  This should be entirely safe,
@@ -1710,11 +1710,25 @@ class OpenSSLCertificateOptions(object):
         if self.verifyDepth is not None:
             ctx.set_verify_depth(self.verifyDepth)
 
+        # Until we know what's going on with
+        # https://twistedmatrix.com/trac/ticket/9764 let's be conservative
+        # in naming this; ASCII-only, short, as the recommended value (a
+        # hostname) might be:
+        sessionIDContext = hexlify(secureRandom(7))
+        # Note that this doesn't actually set the session ID (which had
+        # better be per-connection anyway!):
+        # https://github.com/pyca/pyopenssl/issues/845
+
+        # This is set unconditionally because it's apparently required for
+        # client certificates to work:
+        # https://www.openssl.org/docs/man1.1.1/man3/SSL_CTX_set_session_id_context.html
+        ctx.set_session_id(sessionIDContext)
+
         if self.enableSessions:
-            # 32 bytes is the maximum length supported
-            # Unfortunately pyOpenSSL doesn't provide SSL_MAX_SESSION_ID_LENGTH
-            sessionName = secureRandom(32)
-            ctx.set_session_id(sessionName)
+            ctx.set_session_cache_mode(SSL.SESS_CACHE_SERVER)
+        else:
+            ctx.set_session_cache_mode(SSL.SESS_CACHE_OFF)
+
 
         if self.dhParameters:
             ctx.load_tmp_dh(self.dhParameters._dhFile.path)

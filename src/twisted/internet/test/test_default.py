@@ -5,9 +5,9 @@
 Tests for L{twisted.internet.default}.
 """
 
-from __future__ import division, absolute_import
 
-import select, sys
+import select
+import sys
 from twisted.trial.unittest import SynchronousTestCase
 from twisted.python.runtime import Platform
 from twisted.python.reflect import requireModule

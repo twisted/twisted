@@ -5,7 +5,6 @@
 Tests for L{twisted.application.app} and L{twisted.scripts.twistd}.
 """
 
-from __future__ import absolute_import, division
 
 import errno
 import inspect

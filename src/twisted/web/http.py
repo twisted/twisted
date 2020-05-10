@@ -27,7 +27,6 @@ also useful for HTTP clients (such as the chunked encoding parser).
     indicate that the server has not taken the requested action.
 """
 
-from __future__ import division, absolute_import
 
 __all__ = [
     'SWITCHING', 'OK', 'CREATED', 'ACCEPTED', 'NON_AUTHORITATIVE_INFORMATION',
@@ -66,27 +65,11 @@ import time
 import calendar
 import warnings
 import os
-from io import BytesIO as StringIO
+import re
+from io import BytesIO
 
-try:
-    from urlparse import (
-        ParseResult as ParseResultBytes, urlparse as _urlparse)
-    from urllib import unquote
-    from cgi import parse_header as _parseHeader
-except ImportError:
-    from urllib.parse import (
-        ParseResultBytes, urlparse as _urlparse, unquote_to_bytes as unquote)
-
-    def _parseHeader(line):
-        # cgi.parse_header requires a str
-        key, pdict = cgi.parse_header(line.decode('charmap'))
-
-        # We want the key as bytes, and cgi.parse_multipart (which consumes
-        # pdict) expects a dict of str keys but bytes values
-        key = key.encode('charmap')
-        pdict = {x:y.encode('charmap') for x, y in pdict.items()}
-        return (key, pdict)
-
+from urllib.parse import (
+    ParseResultBytes, urlparse as _urlparse, unquote_to_bytes as unquote)
 
 from zope.interface import Attribute, Interface, implementer, provider
 
@@ -162,6 +145,20 @@ monthname = [None,
              'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 weekdayname_lower = [name.lower() for name in weekdayname]
 monthname_lower = [name and name.lower() for name in monthname]
+
+
+
+def _parseHeader(line):
+    # cgi.parse_header requires a str
+    key, pdict = cgi.parse_header(line.decode('charmap'))
+
+    # We want the key as bytes, and cgi.parse_multipart (which consumes
+    # pdict) expects a dict of str keys but bytes values
+    key = key.encode('charmap')
+    pdict = {x: y.encode('charmap') for x, y in pdict.items()}
+    return (key, pdict)
+
+
 
 def urlparse(url):
     """
@@ -486,13 +483,15 @@ class _IDeprecatedHTTPChannelToRequestInterface(Interface):
 
 class StringTransport:
     """
-    I am a StringIO wrapper that conforms for the transport API. I support
+    I am a BytesIO wrapper that conforms for the transport API. I support
     the `writeSequence' method.
     """
     def __init__(self):
-        self.s = StringIO()
+        self.s = BytesIO()
+
     def writeSequence(self, seq):
         self.s.write(b''.join(seq))
+
     def __getattr__(self, attr):
         return getattr(self.__dict__['s'], attr)
 
@@ -513,7 +512,7 @@ class HTTPClient(basic.LineReceiver):
     @type firstLine: C{bool}
 
     @ivar __buffer: The buffer that stores the response to the HTTP request.
-    @type __buffer: A C{StringIO} object.
+    @type __buffer: A C{BytesIO} object.
 
     @ivar _header: Part or all of an HTTP request header.
     @type _header: C{bytes}
@@ -579,7 +578,7 @@ class HTTPClient(basic.LineReceiver):
             if self._header != b"":
                 # Only extract headers if there are any
                 self.extractHeader(self._header)
-            self.__buffer = StringIO()
+            self.__buffer = BytesIO()
             self.handleEndHeaders()
             self.setRawMode()
             return
@@ -665,8 +664,12 @@ def _getContentFile(length):
     Get a writeable file-like object to which request content can be written.
     """
     if length is not None and length < 100000:
-        return StringIO()
+        return BytesIO()
     return tempfile.TemporaryFile()
+
+
+
+_hostHeaderExpression = re.compile(br"^\[?(?P<host>.*?)\]?(:\d+)?$")
 
 
 
@@ -873,7 +876,8 @@ class Request:
         @type version: C{bytes}
         @param version: The HTTP version of this request.
         """
-        self.content.seek(0,0)
+        clength = self.content.tell()
+        self.content.seek(0, 0)
         self.args = {}
 
         self.method, self.uri = command, path
@@ -889,16 +893,16 @@ class Request:
         # Argument processing
         args = self.args
         ctype = self.requestHeaders.getRawHeaders(b'content-type')
-        clength = self.requestHeaders.getRawHeaders(b'content-length')
         if ctype is not None:
             ctype = ctype[0]
-
-        if clength is not None:
-            clength = clength[0]
 
         if self.method == b"POST" and ctype and clength:
             mfd = b'multipart/form-data'
             key, pdict = _parseHeader(ctype)
+            # This weird CONTENT-LENGTH param is required by
+            # cgi.parse_multipart() in some versions of Python 3.7+, see
+            # bpo-29979. It looks like this will be relaxed and backported, see
+            # https://github.com/python/cpython/pull/8530.
             pdict["CONTENT-LENGTH"] = clength
             if key == b'application/x-www-form-urlencoded':
                 args.update(parse_qs(self.content.read(), 1))
@@ -1415,19 +1419,19 @@ class Request:
 
     def getRequestHostname(self):
         """
-        Get the hostname that the user passed in to the request.
+        Get the hostname that the HTTP client passed in to the request.
 
-        This will either use the Host: header (if it is available) or the
-        host we are listening on if the header is unavailable.
+        @see: L{IRequest.getRequestHostname}
 
         @returns: the requested hostname
+
         @rtype: C{bytes}
         """
-        # XXX This method probably has no unit tests.  I changed it a ton and
-        # nothing failed.
         host = self.getHeader(b'host')
-        if host:
-            return host.split(b':', 1)[0]
+        if host is not None:
+            match = _hostHeaderExpression.match(host)
+            if match is not None:
+                return match.group("host")
         return networkString(self.getHost().host)
 
 
@@ -1535,7 +1539,7 @@ class Request:
         try:
             authh = self.getHeader(b"Authorization")
             if not authh:
-                self.user = self.password = ''
+                self.user = self.password = b''
                 return
             bas, upw = authh.split()
             if bas.lower() != b"basic":
@@ -1543,10 +1547,10 @@ class Request:
             upw = base64.decodestring(upw)
             self.user, self.password = upw.split(b':', 1)
         except (binascii.Error, ValueError):
-            self.user = self.password = ""
+            self.user = self.password = b''
         except:
             self._log.failure('')
-            self.user = self.password = ""
+            self.user = self.password = b''
 
 
     def getUser(self):
@@ -2170,6 +2174,51 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         self.allContentReceived()
         self._dataBuffer.append(data)
 
+    def _maybeChooseTransferDecoder(self, header, data):
+        """
+        If the provided header is C{content-length} or
+        C{transfer-encoding}, choose the appropriate decoder if any.
+
+        Returns L{True} if the request can proceed and L{False} if not.
+        """
+
+        def fail():
+            self._respondToBadRequestAndDisconnect()
+            self.length = None
+            return False
+
+        # Can this header determine the length?
+        if header == b'content-length':
+            try:
+                length = int(data)
+            except ValueError:
+                return fail()
+            newTransferDecoder = _IdentityTransferDecoder(
+                length, self.requests[-1].handleContentChunk,
+                self._finishRequestBody)
+        elif header == b'transfer-encoding':
+            # XXX Rather poorly tested code block, apparently only exercised by
+            # test_chunkedEncoding
+            if data.lower() == b'chunked':
+                length = None
+                newTransferDecoder = _ChunkedTransferDecoder(
+                    self.requests[-1].handleContentChunk,
+                    self._finishRequestBody)
+            elif data.lower() == b'identity':
+                return True
+            else:
+                return fail()
+        else:
+            # It's not a length related header, so exit
+            return True
+
+        if self._transferDecoder is not None:
+            return fail()
+        else:
+            self.length = length
+            self._transferDecoder = newTransferDecoder
+            return True
+
 
     def headerReceived(self, line):
         """
@@ -2189,23 +2238,16 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
             self._respondToBadRequestAndDisconnect()
             return False
 
+        if not header or header[-1:].isspace():
+            self._respondToBadRequestAndDisconnect()
+            return False
+
         header = header.lower()
         data = data.strip()
-        if header == b'content-length':
-            try:
-                self.length = int(data)
-            except ValueError:
-                self._respondToBadRequestAndDisconnect()
-                self.length = None
-                return False
-            self._transferDecoder = _IdentityTransferDecoder(
-                self.length, self.requests[-1].handleContentChunk, self._finishRequestBody)
-        elif header == b'transfer-encoding' and data.lower() == b'chunked':
-            # XXX Rather poorly tested code block, apparently only exercised by
-            # test_chunkedEncoding
-            self.length = None
-            self._transferDecoder = _ChunkedTransferDecoder(
-                self.requests[-1].handleContentChunk, self._finishRequestBody)
+
+        if not self._maybeChooseTransferDecoder(header, data):
+            return False
+
         reqHeaders = self.requests[-1].requestHeaders
         values = reqHeaders.getRawHeaders(header)
         if values is not None:
@@ -2955,9 +2997,6 @@ class _GenericHTTPChannelProtocol(proxyForInterface(IProtocol, "_channel")):
                 # itself if possible.
                 networkProducer = self._channel._networkProducer
                 networkProducer.unregisterProducer()
-
-                # Cancel the old channel's timeout.
-                self._channel.setTimeout(None)
 
                 # Cancel the old channel's timeout.
                 self._channel.setTimeout(None)

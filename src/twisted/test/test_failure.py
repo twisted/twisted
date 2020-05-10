@@ -5,7 +5,6 @@
 Test cases for the L{twisted.python.failure} module.
 """
 
-from __future__ import division, absolute_import
 
 import re
 import sys

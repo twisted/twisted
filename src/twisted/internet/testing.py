@@ -6,7 +6,6 @@
 Assorted functionality which is commonly useful when writing unit tests.
 """
 
-from __future__ import division, absolute_import
 
 from socket import AF_INET, AF_INET6
 from io import BytesIO
@@ -635,7 +634,7 @@ class MemoryReactor(object):
                           maxPacketSize=8192):
         """
         Fake L{IReactorSocket.adoptDatagramPort}, that logs the call and
-            returns a fake L{IListeningPort}.
+        returns a fake L{IListeningPort}.
 
         @see: L{twisted.internet.interfaces.IReactorSocket.adoptDatagramPort}
         """

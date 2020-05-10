@@ -6,9 +6,11 @@
 Implementation module for the `ckeygen` command.
 """
 
-from __future__ import print_function
 
-import sys, os, getpass, socket
+import getpass
+import os
+import socket
+import sys
 from functools import wraps
 from imp import reload
 
@@ -50,16 +52,23 @@ class GeneralOptions(usage.Options):
                      ['comment', 'C', None, 'Provide new comment.'],
                      ['newpass', 'N', None, 'Provide new passphrase.'],
                      ['pass', 'P', None, 'Provide old passphrase.'],
-                     ['format', 'o', 'sha256-base64', 'Fingerprint format of key file.']]
+                     ['format', 'o', 'sha256-base64',
+                      'Fingerprint format of key file.'],
+                     ['private-key-subtype', None, None,
+                      'OpenSSH private key subtype to write ("PEM" or "v1").']]
 
     optFlags = [['fingerprint', 'l', 'Show fingerprint of key file.'],
                 ['changepass', 'p', 'Change passphrase of private key file.'],
                 ['quiet', 'q', 'Quiet.'],
                 ['no-passphrase', None, "Create the key with no passphrase."],
-                ['showpub', 'y', 'Read private key file and print public key.']]
+                ['showpub', 'y',
+                 'Read private key file and print public key.']]
 
     compData = usage.Completions(
-        optActions={"type": usage.CompleteList(list(supportedKeyTypes.keys()))})
+        optActions={
+            "type": usage.CompleteList(list(supportedKeyTypes.keys())),
+            "private-key-subtype": usage.CompleteList(["PEM", "v1"]),
+        })
 
 
 
@@ -164,6 +173,35 @@ def generateECDSAkey(options):
 
 
 
+@_keyGenerator('ed25519')
+def generateEd25519key(options):
+    from cryptography.hazmat.primitives.asymmetric import ed25519
+
+    keyPrimitive = ed25519.Ed25519PrivateKey.generate()
+    key = keys.Key(keyPrimitive)
+    _saveKey(key, options)
+
+
+
+def _defaultPrivateKeySubtype(keyType):
+    """
+    Return a reasonable default private key subtype for a given key type.
+
+    @type keyType: L{str}
+    @param keyType: A key type, as returned by
+        L{twisted.conch.ssh.keys.Key.type}.
+
+    @rtype: L{str}
+    @return: A private OpenSSH key subtype (C{'PEM'} or C{'v1'}).
+    """
+    if keyType == 'Ed25519':
+        # No PEM format is defined for Ed25519 keys.
+        return 'v1'
+    else:
+        return 'PEM'
+
+
+
 def printFingerprint(options):
     if not options['filename']:
         filename = os.path.expanduser('~/.ssh/id_rsa')
@@ -213,8 +251,13 @@ def changePassPhrase(options):
             print('Passphrases do not match.  Try again.')
         options['newpass'] = p1
 
+    if options.get('private-key-subtype') is None:
+        options['private-key-subtype'] = _defaultPrivateKeySubtype(key.type())
+
     try:
-        newkeydata = key.toString('openssh', extra=options['newpass'])
+        newkeydata = key.toString(
+            'openssh', subtype=options['private-key-subtype'],
+            passphrase=options['newpass'])
     except Exception as e:
         sys.exit('Could not change passphrase: %s' % (e,))
 
@@ -258,7 +301,12 @@ def _saveKey(key, options):
     @param options:
     @type options: L{dict}
     """
-    KeyTypeMapping = {'EC': 'ecdsa', 'RSA': 'rsa', 'DSA': 'dsa'}
+    KeyTypeMapping = {
+        'EC': 'ecdsa',
+        'Ed25519': 'ed25519',
+        'RSA': 'rsa',
+        'DSA': 'dsa'
+    }
     keyTypeName = KeyTypeMapping[key.type()]
     if not options['filename']:
         defaultPath = os.path.expanduser(u'~/.ssh/id_%s' % (keyTypeName,))
@@ -277,21 +325,27 @@ def _saveKey(key, options):
         options['pass'] = b''
     elif not options['pass']:
         while 1:
-            p1 = getpass.getpass('Enter passphrase (empty for no passphrase): ')
+            p1 = getpass.getpass(
+                'Enter passphrase (empty for no passphrase): ')
             p2 = getpass.getpass('Enter same passphrase again: ')
             if p1 == p2:
                 break
             print('Passphrases do not match.  Try again.')
         options['pass'] = p1
 
+    if options.get('private-key-subtype') is None:
+        options['private-key-subtype'] = _defaultPrivateKeySubtype(key.type())
+
     comment = '%s@%s' % (getpass.getuser(), socket.gethostname())
 
     filepath.FilePath(options['filename']).setContent(
-        key.toString('openssh', options['pass']))
+        key.toString(
+            'openssh', subtype=options['private-key-subtype'],
+            passphrase=options['pass']))
     os.chmod(options['filename'], 33152)
 
     filepath.FilePath(options['filename'] + '.pub').setContent(
-        key.public().toString('openssh', comment))
+        key.public().toString('openssh', comment=comment))
     options = enumrepresentation(options)
 
     print('Your identification has been saved in %s' % (options['filename'],))

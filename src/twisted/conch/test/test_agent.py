@@ -4,7 +4,6 @@
 """
 Tests for L{twisted.conch.ssh.agent}.
 """
-from __future__ import absolute_import, division
 
 import struct
 

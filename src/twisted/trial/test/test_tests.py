@@ -21,14 +21,13 @@ is intentionally only provided by TestCase, not SynchronousTestCase, is excepted
 of course.
 """
 
-from __future__ import division, absolute_import
 
 import gc
 import sys
 import weakref
 import unittest as pyunit
 
-from twisted.python.compat import NativeStringIO, _PY3, _PYPY
+from twisted.python.compat import NativeStringIO, _PYPY
 from twisted.python.reflect import namedAny
 from twisted.internet import defer, reactor
 from twisted.trial import unittest, reporter, util
@@ -852,13 +851,10 @@ class UnhandledDeferredTests(unittest.SynchronousTestCase):
         """
         result = reporter.TestResult()
         self.test1(result)
-        self.flushLoggedErrors() # test1 logs errors that get caught be us.
+        self.flushLoggedErrors()  # test1 logs errors that get caught be us.
         # test1 created unreachable cycle.
         # it & all others should have been collected by now.
-        if _PY3:
-            n = len(gc.garbage)
-        else:
-            n = gc.collect()
+        n = len(gc.garbage)
         self.assertEqual(n, 0, 'unreachable cycle still existed')
         # check that last gc.collect didn't log more errors
         x = self.flushLoggedErrors()
@@ -1028,7 +1024,6 @@ class SuiteClearingMixin(object):
         This test is important since C{_clearSuite} operates by mutating
         internal variables.
         """
-        pyunit = __import__('unittest')
         suite = pyunit.TestSuite()
         suite.addTest(self.TestCase())
         # Double check that the test suite actually has something in it.

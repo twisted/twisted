@@ -32,7 +32,6 @@ provide the necessary C signal handler which writes to the pipe to be
 registered with C{SA_RESTART}.
 """
 
-from __future__ import division, absolute_import
 
 import signal
 

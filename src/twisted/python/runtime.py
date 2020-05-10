@@ -2,14 +2,11 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-from __future__ import division, absolute_import
 
 import os
 import sys
 import time
 import warnings
-
-from twisted.python._oldstyle import _oldStyle
 
 
 
@@ -38,7 +35,6 @@ _timeFunctions = {
 
 
 
-@_oldStyle
 class Platform:
     """
     Gives us information about the platform we're running on.

@@ -7,10 +7,9 @@ Commands for telling a worker to load tests or run tests.
 @since: 12.3
 """
 
-from twisted.protocols.amp import Command, String, Boolean, Unicode
-from twisted.python.compat import _PY3
+from twisted.protocols.amp import Command, Boolean, Unicode
 
-NativeString = Unicode if _PY3 else String
+NativeString = Unicode
 
 
 

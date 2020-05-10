@@ -15,7 +15,6 @@ Please do not use this module directly.
     module) representing socket errors that indicate connection refused.
 """
 
-from __future__ import division, absolute_import
 
 # System Imports
 import socket
@@ -52,7 +51,6 @@ else:
 # Twisted Imports
 from twisted.internet import base, defer, address
 from twisted.python import log, failure
-from twisted.python._oldstyle import _oldStyle
 from twisted.internet import abstract, error, interfaces
 
 
@@ -442,7 +440,6 @@ class Port(base.BasePort):
 
 
 
-@_oldStyle
 class MulticastMixin:
     """
     Implement multicast functionality.

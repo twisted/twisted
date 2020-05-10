@@ -11,7 +11,6 @@ See also twisted.python.shortcut.
     may safely be OR'ed into a mask for os.open.
 """
 
-from __future__ import division, absolute_import
 
 import re
 import os
@@ -77,7 +76,8 @@ class _ErrorFormatter(object):
 
     @ivar formatMessage: A callable which takes one integer error number
         argument and returns a C{str} giving the message for that error (like
-        L{win32api.FormatMessage}).
+        U{win32api.FormatMessage<http://
+        timgolden.me.uk/pywin32-docs/win32api__FormatMessage_meth.html>}).
 
     @ivar errorTab: A mapping from integer error numbers to C{str} messages
         which correspond to those erorrs (like I{socket.errorTab}).

@@ -8,7 +8,6 @@ All of these tests are skipped on platforms other than Linux, as the release is
 only ever performed on Linux.
 """
 
-from __future__ import print_function
 
 import glob
 import functools
@@ -496,8 +495,8 @@ class APIBuilderTests(ExternalTempdirTestCase):
         twistedPath = outputPath.child("twisted.html")
         self.assertTrue(
             twistedPath.exists(),
-            u"Package documentation file %r did not exist.".format(
-            twistedPath.path))
+            u"Package documentation file {!r} did not exist.".format(
+                twistedPath.path))
         self.assertIn(
             docstring, twistedPath.getContent(),
             "Docstring not in package documentation file.")

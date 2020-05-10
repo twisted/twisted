@@ -11,7 +11,6 @@ import gireactor or gtk3reactor for GObject Introspection based applications,
 or glib2reactor or gtk2reactor for applications using legacy static bindings.
 """
 
-from __future__ import division, absolute_import
 
 import sys
 

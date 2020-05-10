@@ -14,14 +14,12 @@ a sibling).
 Maintainer: Moshe Zadka
 """
 
-from __future__ import absolute_import, division
 
 from zope.interface import implementer, Interface, Attribute
 
 from twisted.persisted import sob
 from twisted.python.reflect import namedAny
 from twisted.python import components
-from twisted.python._oldstyle import _oldStyle
 from twisted.internet import defer
 from twisted.plugin import IPlugin
 
@@ -354,7 +352,6 @@ class IProcess(Interface):
 
 
 @implementer(IProcess)
-@_oldStyle
 class Process:
     """
     Process running parameters.

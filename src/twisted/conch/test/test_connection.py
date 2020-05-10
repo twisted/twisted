@@ -4,7 +4,6 @@
 """
 This module tests twisted.conch.ssh.connection.
 """
-from __future__ import division, absolute_import
 
 import struct
 

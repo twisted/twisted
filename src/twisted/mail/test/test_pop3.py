@@ -5,12 +5,12 @@
 Test cases for Ltwisted.mail.pop3} module.
 """
 
-from __future__ import print_function
 
 import hmac
 import base64
 import itertools
 
+from hashlib import md5
 from collections import OrderedDict
 from io import BytesIO
 
@@ -1097,7 +1097,8 @@ class SASLTests(unittest.TestCase):
         p.lineReceived(b"AUTH CRAM-MD5")
         chal = s.getvalue().splitlines()[-1][2:]
         chal = base64.decodestring(chal)
-        response = hmac.HMAC(b'testpassword', chal).hexdigest().encode("ascii")
+        response = hmac.HMAC(b'testpassword', chal,
+                             digestmod=md5).hexdigest().encode("ascii")
 
         p.lineReceived(
             base64.encodestring(b'testuser ' + response).rstrip(b'\n'))

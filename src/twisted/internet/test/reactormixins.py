@@ -12,13 +12,15 @@ available.  Additionally, the tests will automatically be applied to all
 available reactor implementations.
 """
 
-from __future__ import division, absolute_import
 
 __metaclass__ = type
 
 __all__ = ['TestTimeoutError', 'ReactorBuilder', 'needsRunningReactor']
 
-import os, signal, time
+import os
+import signal
+import time
+from typing import Dict, Type, Union
 
 from twisted.trial.unittest import SynchronousTestCase, SkipTest
 from twisted.trial.util import DEFAULT_TIMEOUT_DURATION, acquireAttribute
@@ -28,14 +30,16 @@ from twisted.python.deprecate import _fullyQualifiedName as fullyQualifiedName
 
 from twisted.python import log
 from twisted.python.failure import Failure
-from twisted.python.compat import _PY3
 
 
 # Access private APIs.
-if platform.isWindows():
+try:
+    from twisted.internet import process as _process
+except ImportError:
     process = None
 else:
-    from twisted.internet import process
+    process = _process
+
 
 
 
@@ -148,8 +152,7 @@ class ReactorBuilder:
                 "twisted.internet.gireactor.GIReactor",
                 "twisted.internet.gtk3reactor.Gtk3Reactor"])
 
-        if _PY3:
-            _reactors.append(
+        _reactors.append(
                 "twisted.internet.asyncioreactor.AsyncioSelectorReactor")
 
         if platform.isMacOSX():
@@ -169,7 +172,7 @@ class ReactorBuilder:
     reactorFactory = None
     originalHandler = None
     requiredInterfaces = None
-    skippedReactors = {}
+    skippedReactors = {}  # type: Dict[str, str]
 
     def setUp(self):
         """
@@ -325,26 +328,30 @@ class ReactorBuilder:
             timedOutCall.cancel()
 
 
-    def makeTestCaseClasses(cls):
+    @classmethod
+    def makeTestCaseClasses(
+        cls: Type['ReactorBuilder']
+    ) -> Dict[str, Union[Type['ReactorBuilder'], Type[SynchronousTestCase]]]:
         """
         Create a L{SynchronousTestCase} subclass which mixes in C{cls} for each
         known reactor and return a dict mapping their names to them.
         """
-        classes = {}
+        classes = {}  # type: Dict[str, Union[Type['ReactorBuilder'], Type[SynchronousTestCase]]]   # noqa
         for reactor in cls._reactors:
             shortReactorName = reactor.split(".")[-1]
-            name = (cls.__name__ + "." + shortReactorName + "Tests").replace(".", "_")
-            class testcase(cls, SynchronousTestCase):
+            name = (cls.__name__ + "." + shortReactorName +
+                    "Tests").replace(".", "_")
+
+            class testcase(cls, SynchronousTestCase):  # type: ignore[valid-type,misc]   # noqa
                 __module__ = cls.__module__
                 if reactor in cls.skippedReactors:
                     skip = cls.skippedReactors[reactor]
                 try:
                     reactorFactory = namedAny(reactor)
-                except:
+                except BaseException:
                     skip = Failure().getErrorMessage()
             testcase.__name__ = name
-            if hasattr(cls, "__qualname__"):
-                testcase.__qualname__ = ".".join(cls.__qualname__.split()[0:-1] + [name])
+            testcase.__qualname__ = ".".join(cls.__qualname__.split()[0:-1] +
+                                             [name])
             classes[testcase.__name__] = testcase
         return classes
-    makeTestCaseClasses = classmethod(makeTestCaseClasses)

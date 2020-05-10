@@ -71,7 +71,6 @@ See also L{incremental.Version}.
     to use when one is not provided by the user.
 """
 
-from __future__ import division, absolute_import
 
 __all__ = [
     'deprecated',
