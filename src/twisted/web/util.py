@@ -6,7 +6,6 @@
 An assortment of web server-related utilities.
 """
 
-from __future__ import division, absolute_import
 
 import linecache
 

@@ -5,7 +5,6 @@
 Tests for L{twisted.conch.client.default}.
 """
 
-from __future__ import absolute_import, division
 
 import sys
 
@@ -171,7 +170,8 @@ class SSHUserAuthClientTests(TestCase):
         """
         rsaPrivate = Key.fromString(keydata.privateRSA_openssh)
         passphrase = b'this is the passphrase'
-        self.rsaFile.setContent(rsaPrivate.toString('openssh', passphrase))
+        self.rsaFile.setContent(
+            rsaPrivate.toString('openssh', passphrase=passphrase))
         options = ConchOptions()
         options.identitys = [self.rsaFile.path]
         client = SSHUserAuthClient(b"user",  options, None)

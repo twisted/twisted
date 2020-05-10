@@ -8,7 +8,6 @@ The Twisted Daemon: platform-independent interface.
 @author: Christopher Armstrong
 """
 
-from __future__ import absolute_import, division
 
 from twisted.application import app
 

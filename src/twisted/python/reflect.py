@@ -7,7 +7,6 @@ Standardized versions of various cool and/or strange things that you can do
 with Python's reflection capabilities.
 """
 
-from __future__ import division, absolute_import, print_function
 
 import sys
 import types
@@ -25,7 +24,7 @@ from twisted.python.compat import reraise, nativeString, NativeStringIO
 from twisted.python.compat import _PY3
 from twisted.python import compat
 from twisted.python.deprecate import _fullyQualifiedName as fullyQualifiedName
-from twisted.python._oldstyle import _oldStyle
+
 
 
 def prefixedMethodNames(classObj, prefix):
@@ -451,7 +450,6 @@ def safe_str(o):
 
 
 
-@_oldStyle
 class QueueMethod:
     """
     I represent a method that doesn't exist yet.

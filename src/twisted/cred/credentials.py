@@ -8,7 +8,6 @@ authentication credentials to provide, and also includes a number of useful
 implementations of that interface.
 """
 
-from __future__ import division, absolute_import
 
 from zope.interface import implementer, Interface
 
@@ -33,7 +32,7 @@ class ICredentials(Interface):
     """
     I check credentials.
 
-    Implementors _must_ specify which sub-interfaces of ICredentials
+    Implementors I{must} specify the sub-interfaces of ICredentials
     to which it conforms, using L{zope.interface.declarations.implementer}.
     """
 
@@ -121,6 +120,8 @@ class IUsernamePassword(ICredentials):
 class IAnonymous(ICredentials):
     """
     I am an explicitly anonymous request for access.
+
+    @see: L{twisted.cred.checkers.AllowAnonymousAccess}
     """
 
 
@@ -439,7 +440,8 @@ class CramMD5Credentials(object):
 
 
     def checkPassword(self, password):
-        verify = hexlify(hmac.HMAC(password, self.challenge).digest())
+        verify = hexlify(hmac.HMAC(password, self.challenge,
+                         digestmod=md5).digest())
         return verify == self.response
 
 

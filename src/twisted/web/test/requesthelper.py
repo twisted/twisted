@@ -5,7 +5,6 @@
 Helpers related to HTTP requests, used by tests.
 """
 
-from __future__ import division, absolute_import
 
 __all__ = ['DummyChannel', 'DummyRequest']
 

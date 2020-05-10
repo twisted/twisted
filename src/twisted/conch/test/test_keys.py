@@ -5,9 +5,19 @@
 Tests for L{twisted.conch.ssh.keys}.
 """
 
-from __future__ import absolute_import, division
 
+import base64
+import os
+from textwrap import dedent
+
+from twisted.conch.test import keydata
+from twisted.python import randbytes
+from twisted.python.compat import long
+from twisted.python.filepath import FilePath
 from twisted.python.reflect import requireModule
+from twisted.trial import unittest
+
+
 
 cryptography = requireModule("cryptography")
 if cryptography is None:
@@ -17,16 +27,19 @@ pyasn1 = requireModule("pyasn1")
 
 
 if cryptography and pyasn1:
+    from cryptography.hazmat.backends import default_backend
     from twisted.conch.ssh import keys, common, sexpy
 
-import base64
-import os
+    ED25519_SUPPORTED = default_backend().ed25519_supported()
+else:
+    ED25519_SUPPORTED = False
 
-from twisted.conch.test import keydata
-from twisted.python import randbytes
-from twisted.trial import unittest
-from twisted.python.compat import long
-from twisted.python.filepath import FilePath
+
+
+def skipWithoutEd25519(f):
+    if not ED25519_SUPPORTED:
+        f.skip = "ed25519 not supported on this system"
+    return f
 
 
 
@@ -72,6 +85,11 @@ class KeyTests(unittest.TestCase):
             privateValue=keydata.ECDatanistp521['privateValue'],
             curve=keydata.ECDatanistp521['curve']
         )._keyObject
+        if ED25519_SUPPORTED:
+            self.ed25519Obj = keys.Key._fromEd25519Components(
+                a=keydata.Ed25519Data['a'],
+                k=keydata.Ed25519Data['k']
+            )._keyObject
         self.rsaSignature = (
             b"\x00\x00\x00\x07ssh-rsa\x00\x00\x01\x00~Y\xa3\xd7\xfdW\xc6pu@"
             b"\xd81\xa1S\xf3O\xdaE\xf4/\x1ex\x1d\xf1\x9a\xe1G3\xd9\xd6U\x1f"
@@ -110,6 +128,8 @@ class KeyTests(unittest.TestCase):
         self.assertEqual(keys.Key(self.ecObj).size(), 256)
         self.assertEqual(keys.Key(self.ecObj384).size(), 384)
         self.assertEqual(keys.Key(self.ecObj521).size(), 521)
+        if ED25519_SUPPORTED:
+            self.assertEqual(keys.Key(self.ed25519Obj).size(), 256)
 
 
 
@@ -127,6 +147,10 @@ class KeyTests(unittest.TestCase):
         self.assertEqual(
             keys.Key._guessStringType(keydata.publicECDSA_openssh),
             'public_openssh')
+        if ED25519_SUPPORTED:
+            self.assertEqual(
+                keys.Key._guessStringType(keydata.publicEd25519_openssh),
+                'public_openssh')
         self.assertEqual(
             keys.Key._guessStringType(keydata.privateRSA_openssh),
             'private_openssh')
@@ -145,6 +169,10 @@ class KeyTests(unittest.TestCase):
         self.assertEqual(
             keys.Key._guessStringType(keydata.privateECDSA_openssh_new),
             'private_openssh')
+        if ED25519_SUPPORTED:
+            self.assertEqual(
+                keys.Key._guessStringType(keydata.privateEd25519_openssh_new),
+                'private_openssh')
         self.assertEqual(
             keys.Key._guessStringType(keydata.publicRSA_lsh), 'public_lsh')
         self.assertEqual(
@@ -187,6 +215,17 @@ class KeyTests(unittest.TestCase):
         publicECDSAKey = keys.Key.fromString(keydata.publicECDSA_openssh)
         self.assertEqual(privateECDSAKey.public(), publicECDSAKey.public())
 
+        if ED25519_SUPPORTED:
+            privateEd25519Key = keys.Key.fromString(
+                keydata.privateEd25519_openssh_new
+            )
+            publicEd25519Key = keys.Key.fromString(
+                keydata.publicEd25519_openssh
+            )
+            self.assertEqual(
+                privateEd25519Key.public(), publicEd25519Key.public()
+            )
+
 
     def test_isPublic(self):
         """
@@ -203,6 +242,12 @@ class KeyTests(unittest.TestCase):
         self.assertTrue(ecdsaKey.public().isPublic())
         self.assertFalse(ecdsaKey.isPublic())
 
+        if ED25519_SUPPORTED:
+            ed25519Key = keys.Key.fromString(
+                keydata.privateEd25519_openssh_new
+            )
+            self.assertTrue(ed25519Key.public().isPublic())
+            self.assertFalse(ed25519Key.isPublic())
 
 
     def _testPublicPrivateFromString(self, public, private, type, data):
@@ -241,8 +286,15 @@ class KeyTests(unittest.TestCase):
         self.assertEqual(keys.Key.fromString(
             keydata.privateRSA_openssh_alternate),
             keys.Key.fromString(keydata.privateRSA_openssh))
-        self._testPublicPrivateFromString(keydata.publicDSA_openssh,
-                keydata.privateDSA_openssh, 'DSA', keydata.DSAData)
+        self._testPublicPrivateFromString(
+            keydata.publicDSA_openssh,
+            keydata.privateDSA_openssh, 'DSA', keydata.DSAData)
+
+        if ED25519_SUPPORTED:
+            self._testPublicPrivateFromString(
+                keydata.publicEd25519_openssh,
+                keydata.privateEd25519_openssh_new, 'Ed25519',
+                keydata.Ed25519Data)
 
     def test_fromOpenSSHErrors(self):
         """
@@ -411,17 +463,21 @@ SUrCyZXsNh6VXwjs3gKQ
         """
         self.assertRaises(keys.BadKeyError, keys.Key.fromString, b'')
         # no key data with a bad key type
-        self.assertRaises(keys.BadKeyError, keys.Key.fromString, b'',
-                'bad_type')
+        self.assertRaises(
+            keys.BadKeyError, keys.Key.fromString, b'', 'bad_type')
         # trying to decrypt a key which doesn't support encryption
-        self.assertRaises(keys.BadKeyError, keys.Key.fromString,
-                keydata.publicRSA_lsh, passphrase = b'unencrypted')
+        self.assertRaises(
+            keys.BadKeyError, keys.Key.fromString,
+            keydata.publicRSA_lsh, passphrase=b'unencrypted')
         # trying to decrypt a key with the wrong passphrase
-        self.assertRaises(keys.EncryptedKeyError, keys.Key.fromString,
-                keys.Key(self.rsaObj).toString('openssh', b'encrypted'))
+        self.assertRaises(
+            keys.EncryptedKeyError, keys.Key.fromString,
+            keys.Key(self.rsaObj).toString(
+                'openssh', passphrase=b'encrypted'))
         # key with no key data
-        self.assertRaises(keys.BadKeyError, keys.Key.fromString,
-                b'-----BEGIN RSA KEY-----\nwA==\n')
+        self.assertRaises(
+            keys.BadKeyError, keys.Key.fromString,
+            b'-----BEGIN RSA KEY-----\nwA==\n')
         # key with invalid DEK Info
         self.assertRaises(
             keys.BadKeyError, keys.Key.fromString,
@@ -679,7 +735,12 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
         self.assertEqual(keys.Key(self.dsaObj).sshType(), b'ssh-dss')
         self.assertEqual(keys.Key(self.ecObj).type(), 'EC')
         self.assertEqual(keys.Key(self.ecObj).sshType(),
-                        keydata.ECDatanistp256['curve'])
+                         keydata.ECDatanistp256['curve'])
+        if ED25519_SUPPORTED:
+            self.assertEqual(keys.Key(self.ed25519Obj).type(), 'Ed25519')
+            self.assertEqual(
+                keys.Key(self.ed25519Obj).sshType(), b'ssh-ed25519'
+            )
         self.assertRaises(RuntimeError, keys.Key(None).type)
         self.assertRaises(RuntimeError, keys.Key(None).sshType)
         self.assertRaises(RuntimeError, keys.Key(self).type)
@@ -761,6 +822,25 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
         self.assertTrue(eckey.isPublic())
         self.assertEqual(ecPublicData, eckey.data())
 
+    @skipWithoutEd25519
+    def test_fromBlobEd25519(self):
+        """
+        A public Ed25519 key is correctly generated from a public key blob.
+        """
+        ed25519PublicData = {
+            'a': keydata.Ed25519Data['a'],
+        }
+
+        ed25519Blob = (
+            common.NS(b'ssh-ed25519') +
+            common.NS(ed25519PublicData['a'])
+        )
+
+        ed25519Key = keys.Key.fromString(ed25519Blob)
+
+        self.assertTrue(ed25519Key.isPublic())
+        self.assertEqual(ed25519PublicData, ed25519Key.data())
+
     def test_fromPrivateBlobUnsupportedType(self):
         """
         C{BadKeyError} is raised when loading a private blob with an
@@ -790,6 +870,8 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
 
         self.assertFalse(rsaKey.isPublic())
         self.assertEqual(keydata.RSAData, rsaKey.data())
+        self.assertEqual(
+            rsaKey, keys.Key._fromString_PRIVATE_BLOB(rsaKey.privateBlob()))
 
 
     def test_fromPrivateBlobDSA(self):
@@ -809,13 +891,14 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
 
         self.assertFalse(dsaKey.isPublic())
         self.assertEqual(keydata.DSAData, dsaKey.data())
+        self.assertEqual(
+            dsaKey, keys.Key._fromString_PRIVATE_BLOB(dsaKey.privateBlob()))
 
 
     def test_fromPrivateBlobECDSA(self):
         """
         A private EC key is correctly generated from a private key blob.
         """
-        from cryptography.hazmat.backends import default_backend
         from cryptography.hazmat.primitives.asymmetric import ec
         from cryptography.hazmat.primitives import serialization
         publicNumbers = ec.EllipticCurvePublicNumbers(
@@ -835,6 +918,29 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
 
         self.assertFalse(eckey.isPublic())
         self.assertEqual(keydata.ECDatanistp256, eckey.data())
+        self.assertEqual(
+            eckey, keys.Key._fromString_PRIVATE_BLOB(eckey.privateBlob()))
+
+
+    @skipWithoutEd25519
+    def test_fromPrivateBlobEd25519(self):
+        """
+        A private Ed25519 key is correctly generated from a private key blob.
+        """
+        ed25519Blob = (
+            common.NS(b'ssh-ed25519') +
+            common.NS(keydata.Ed25519Data['a']) +
+            common.NS(keydata.Ed25519Data['k'] + keydata.Ed25519Data['a'])
+        )
+
+        ed25519Key = keys.Key._fromString_PRIVATE_BLOB(ed25519Blob)
+
+        self.assertFalse(ed25519Key.isPublic())
+        self.assertEqual(keydata.Ed25519Data, ed25519Key.data())
+        self.assertEqual(
+            ed25519Key,
+            keys.Key._fromString_PRIVATE_BLOB(ed25519Key.privateBlob())
+        )
 
 
     def test_blobRSA(self):
@@ -882,6 +988,25 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
                    utils.int_to_bytes(
                    self.ecObj.private_numbers().public_numbers.y, byteLength))
             )
+
+
+    @skipWithoutEd25519
+    def test_blobEd25519(self):
+        """
+        Return the over-the-wire SSH format of the Ed25519 public key.
+        """
+        from cryptography.hazmat.primitives import serialization
+
+        publicBytes = self.ed25519Obj.public_key().public_bytes(
+            serialization.Encoding.Raw,
+            serialization.PublicFormat.Raw
+        )
+
+        self.assertEqual(
+            keys.Key(self.ed25519Obj).blob(),
+            common.NS(b'ssh-ed25519') +
+            common.NS(publicBytes)
+        )
 
 
     def test_blobNoKey(self):
@@ -935,13 +1060,42 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
         L{keys.Key.privateBlob} returns the SSH ptotocol-level format of EC
         private key.
         """
+        from cryptography.hazmat.primitives import serialization
         self.assertEqual(
             keys.Key(self.ecObj).privateBlob(),
             common.NS(keydata.ECDatanistp256['curve']) +
-            common.MP(self.ecObj.private_numbers().public_numbers.x) +
-            common.MP(self.ecObj.private_numbers().public_numbers.y) +
+            common.NS(keydata.ECDatanistp256['curve'][-8:]) +
+            common.NS(
+                self.ecObj.public_key().public_bytes(
+                    serialization.Encoding.X962,
+                    serialization.PublicFormat.UncompressedPoint)) +
             common.MP(self.ecObj.private_numbers().private_value)
             )
+
+
+    @skipWithoutEd25519
+    def test_privateBlobEd25519(self):
+        """
+        L{keys.Key.privateBlob} returns the SSH protocol-level format of an
+        Ed25519 private key.
+        """
+        from cryptography.hazmat.primitives import serialization
+        publicBytes = self.ed25519Obj.public_key().public_bytes(
+            serialization.Encoding.Raw,
+            serialization.PublicFormat.Raw
+        )
+        privateBytes = self.ed25519Obj.private_bytes(
+            serialization.Encoding.Raw,
+            serialization.PrivateFormat.Raw,
+            serialization.NoEncryption()
+        )
+
+        self.assertEqual(
+            keys.Key(self.ed25519Obj).privateBlob(),
+            common.NS(b'ssh-ed25519') +
+            common.NS(publicBytes) +
+            common.NS(privateBytes + publicBytes)
+        )
 
 
     def test_privateBlobNoKeyObject(self):
@@ -959,12 +1113,34 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
         """
         key = keys.Key.fromString(keydata.privateRSA_agentv3)
         self.assertEqual(key.toString('openssh'), keydata.privateRSA_openssh)
-        self.assertEqual(key.toString('openssh', b'encrypted'),
-                keydata.privateRSA_openssh_encrypted)
-        self.assertEqual(key.public().toString('openssh'),
-                keydata.publicRSA_openssh[:-8]) # no comment
-        self.assertEqual(key.public().toString('openssh', b'comment'),
-                keydata.publicRSA_openssh)
+        self.assertEqual(
+            key.toString('openssh', passphrase=b'encrypted'),
+            keydata.privateRSA_openssh_encrypted)
+        self.assertEqual(
+            key.public().toString('openssh'),
+            keydata.publicRSA_openssh[:-8])  # no comment
+        self.assertEqual(
+            key.public().toString('openssh', comment=b'comment'),
+            keydata.publicRSA_openssh)
+
+
+    def test_toOpenSSHRSA_v1_format(self):
+        """
+        L{keys.Key.toString} serializes an RSA key in OpenSSH's v1 format.
+        """
+        key = keys.Key.fromString(keydata.privateRSA_openssh)
+        new_key_data = key.toString('openssh', subtype='v1')
+        new_enc_key_data = key.toString(
+            'openssh', subtype='v1', passphrase='encrypted')
+        self.assertEqual(
+            b'-----BEGIN OPENSSH PRIVATE KEY-----',
+            new_key_data.splitlines()[0])
+        self.assertEqual(
+            b'-----BEGIN OPENSSH PRIVATE KEY-----',
+            new_enc_key_data.splitlines()[0])
+        self.assertEqual(key, keys.Key.fromString(new_key_data))
+        self.assertEqual(
+            key, keys.Key.fromString(new_enc_key_data, passphrase='encrypted'))
 
 
     def test_toOpenSSHDSA(self):
@@ -973,21 +1149,94 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
         """
         key = keys.Key.fromString(keydata.privateDSA_lsh)
         self.assertEqual(key.toString('openssh'), keydata.privateDSA_openssh)
-        self.assertEqual(key.public().toString('openssh', b'comment'),
-                keydata.publicDSA_openssh)
-        self.assertEqual(key.public().toString('openssh'),
-                keydata.publicDSA_openssh[:-8]) # no comment
+        self.assertEqual(
+            key.public().toString('openssh', comment=b'comment'),
+            keydata.publicDSA_openssh)
+        self.assertEqual(
+            key.public().toString('openssh'),
+            keydata.publicDSA_openssh[:-8])  # no comment
+
+
+    def test_toOpenSSHDSA_v1_format(self):
+        """
+        L{keys.Key.toString} serializes a DSA key in OpenSSH's v1 format.
+        """
+        key = keys.Key.fromString(keydata.privateDSA_openssh)
+        new_key_data = key.toString('openssh', subtype='v1')
+        new_enc_key_data = key.toString(
+            'openssh', subtype='v1', passphrase='encrypted')
+        self.assertEqual(
+            b'-----BEGIN OPENSSH PRIVATE KEY-----',
+            new_key_data.splitlines()[0])
+        self.assertEqual(
+            b'-----BEGIN OPENSSH PRIVATE KEY-----',
+            new_enc_key_data.splitlines()[0])
+        self.assertEqual(key, keys.Key.fromString(new_key_data))
+        self.assertEqual(
+            key, keys.Key.fromString(new_enc_key_data, passphrase='encrypted'))
 
 
     def test_toOpenSSHECDSA(self):
         """
-        L{keys.Key.toString} serializes a ECDSA key in OpenSSH format.
+        L{keys.Key.toString} serializes an ECDSA key in OpenSSH format.
         """
         key = keys.Key.fromString(keydata.privateECDSA_openssh)
-        self.assertEqual(key.public().toString('openssh', b'comment'),
-                keydata.publicECDSA_openssh)
-        self.assertEqual(key.public().toString('openssh'),
-                keydata.publicECDSA_openssh[:-8]) # no comment
+        self.assertEqual(
+            key.public().toString('openssh', comment=b'comment'),
+            keydata.publicECDSA_openssh)
+        self.assertEqual(
+            key.public().toString('openssh'),
+            keydata.publicECDSA_openssh[:-8])  # no comment
+
+
+    def test_toOpenSSHECDSA_v1_format(self):
+        """
+        L{keys.Key.toString} serializes an ECDSA key in OpenSSH's v1 format.
+        """
+        key = keys.Key.fromString(keydata.privateECDSA_openssh)
+        new_key_data = key.toString('openssh', subtype='v1')
+        new_enc_key_data = key.toString(
+            'openssh', subtype='v1', passphrase='encrypted')
+        self.assertEqual(
+            b'-----BEGIN OPENSSH PRIVATE KEY-----',
+            new_key_data.splitlines()[0])
+        self.assertEqual(
+            b'-----BEGIN OPENSSH PRIVATE KEY-----',
+            new_enc_key_data.splitlines()[0])
+        self.assertEqual(key, keys.Key.fromString(new_key_data))
+        self.assertEqual(
+            key, keys.Key.fromString(new_enc_key_data, passphrase='encrypted'))
+
+
+    @skipWithoutEd25519
+    def test_toOpenSSHEd25519(self):
+        """
+        L{keys.Key.toString} serializes an Ed25519 key in OpenSSH's v1 format.
+        """
+        key = keys.Key.fromString(keydata.privateEd25519_openssh_new)
+        new_key_data = key.toString('openssh')
+        new_enc_key_data = key.toString('openssh', passphrase='encrypted')
+        self.assertEqual(
+            b'-----BEGIN OPENSSH PRIVATE KEY-----',
+            new_key_data.splitlines()[0])
+        self.assertEqual(
+            b'-----BEGIN OPENSSH PRIVATE KEY-----',
+            new_enc_key_data.splitlines()[0])
+        self.assertEqual(key, keys.Key.fromString(new_key_data))
+        self.assertEqual(
+            key, keys.Key.fromString(new_enc_key_data, passphrase='encrypted'))
+        self.assertEqual(new_key_data, key.toString('openssh', subtype='v1'))
+
+
+    @skipWithoutEd25519
+    def test_toOpenSSHEd25519_PEM_format(self):
+        """
+        L{keys.Key.toString} refuses to serialize an Ed25519 key in
+        OpenSSH's old PEM format, as no encoding of Ed25519 is defined for
+        that format.
+        """
+        key = keys.Key.fromString(keydata.privateEd25519_openssh_new)
+        self.assertRaises(ValueError, key.toString, 'openssh', subtype='PEM')
 
 
     def test_toLSHRSA(self):
@@ -1077,6 +1326,18 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
         self.assertTrue(key384.verify(signature384, data))
         self.assertTrue(key521.public().verify(signature521, data))
         self.assertTrue(key521.verify(signature521, data))
+
+
+    @skipWithoutEd25519
+    def test_signAndVerifyEd25519(self):
+        """
+        Signed data can be verified using Ed25519.
+        """
+        data = b'some-data'
+        key = keys.Key.fromString(keydata.privateEd25519_openssh_new)
+        signature = key.sign(data)
+        self.assertTrue(key.public().verify(signature, data))
+        self.assertTrue(key.verify(signature, data))
 
 
     def test_verifyRSA(self):
@@ -1222,15 +1483,17 @@ attr n:
         The repr of a L{keys.Key} contains all the OpenSSH format for an ECDSA
         public key.
         """
-        self.assertEqual(repr(keys.Key(self.ecObj).public()),
-"""<Elliptic Curve Public Key (256 bits)
-curve:
-\tecdsa-sha2-nistp256
-x:
-\t76282513020392096317118503144964731774299773481750550543382904345687059013883
-y:""" +
-"\n\t8154319786460285263226566476944164753434437589431431968106113715931064" +
-"6683104>\n")
+        self.assertEqual(
+            repr(keys.Key(self.ecObj).public()),
+            dedent("""\
+                <Elliptic Curve Public Key (256 bits)
+                curve:
+                \tecdsa-sha2-nistp256
+                x:
+                \t{x}
+                y:
+                \t{y}>
+                """).format(**keydata.ECDatanistp256))
 
 
     def test_reprPrivateECDSA(self):
@@ -1238,17 +1501,55 @@ y:""" +
         The repr of a L{keys.Key} contains all the OpenSSH format for an ECDSA
         private key.
         """
-        self.assertEqual(repr(keys.Key(self.ecObj)),
-"""<Elliptic Curve Private Key (256 bits)
-curve:
-\tecdsa-sha2-nistp256
-privateValue:
-\t34638743477210341700964008455655698253555655678826059678074967909361042656500
-x:
-\t76282513020392096317118503144964731774299773481750550543382904345687059013883
-y:""" +
-"\n\t8154319786460285263226566476944164753434437589431431968106113715931064" +
-"6683104>\n")
+        self.assertEqual(
+            repr(keys.Key(self.ecObj)),
+            dedent("""\
+                <Elliptic Curve Private Key (256 bits)
+                curve:
+                \tecdsa-sha2-nistp256
+                privateValue:
+                \t{privateValue}
+                x:
+                \t{x}
+                y:
+                \t{y}>
+                """).format(**keydata.ECDatanistp256))
+
+
+    @skipWithoutEd25519
+    def test_reprPublicEd25519(self):
+        """
+        The repr of a L{keys.Key} contains all the OpenSSH format for an
+        Ed25519 public key.
+        """
+        self.assertEqual(
+            repr(keys.Key(self.ed25519Obj).public()),
+            dedent("""\
+                <Ed25519 Public Key (256 bits)
+                attr a:
+                \tf1:16:d1:15:4a:1e:15:0e:19:5e:19:46:b5:f2:44:
+                \t0d:b2:52:a0:ae:2a:6b:23:13:73:45:fd:40:d9:57:
+                \t7b:8b>"""))
+
+
+    @skipWithoutEd25519
+    def test_reprPrivateEd25519(self):
+        """
+        The repr of a L{keys.Key} contains all the OpenSSH format for an
+        Ed25519 private key.
+        """
+        self.assertEqual(
+            repr(keys.Key(self.ed25519Obj)),
+            dedent("""\
+                <Ed25519 Private Key (256 bits)
+                attr a:
+                \tf1:16:d1:15:4a:1e:15:0e:19:5e:19:46:b5:f2:44:
+                \t0d:b2:52:a0:ae:2a:6b:23:13:73:45:fd:40:d9:57:
+                \t7b:8b
+                attr k:
+                \t37:2f:25:da:8d:d4:a8:9a:78:7c:61:f0:98:01:c6:
+                \tf4:5e:6d:67:05:69:31:37:4c:69:0d:05:55:bb:c9:
+                \t44:58>"""))
 
 
 

@@ -8,7 +8,6 @@ Various asynchronous TCP/IP classes.
 End users shouldn't use this module directly - use the reactor APIs instead.
 """
 
-from __future__ import division, absolute_import
 # System Imports
 import socket
 import sys

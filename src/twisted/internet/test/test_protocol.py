@@ -5,7 +5,6 @@
 Tests for L{twisted.internet.protocol}.
 """
 
-from __future__ import division, absolute_import
 
 from io import BytesIO
 

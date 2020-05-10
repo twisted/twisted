@@ -10,7 +10,6 @@ End users shouldn't use this module directly - use the reactor APIs instead.
 Maintainer: Itamar Shtull-Trauring
 """
 
-from __future__ import division, absolute_import
 
 import os
 import stat

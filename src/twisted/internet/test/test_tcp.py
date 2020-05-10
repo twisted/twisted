@@ -6,7 +6,6 @@ Tests for implementations of L{IReactorTCP} and the TCP parts of
 L{IReactorSocket}.
 """
 
-from __future__ import division, absolute_import
 
 __metaclass__ = type
 

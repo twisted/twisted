@@ -12,8 +12,6 @@ to format methods.
 
 import calendar
 
-from twisted.python._oldstyle import _oldStyle
-
 
 class FormException(Exception):
     """An error occurred calling the form method.
@@ -30,7 +28,6 @@ class InputError(FormException):
 
 
 
-@_oldStyle
 class Argument:
     """Base class for form arguments."""
 
@@ -332,7 +329,6 @@ class Submit(Choice):
 
 
 
-@_oldStyle
 class PresentationHint:
     """
     A hint to a particular system.
@@ -340,7 +336,6 @@ class PresentationHint:
 
 
 
-@_oldStyle
 class MethodSignature:
     """
     A signature of a callable.
@@ -361,7 +356,6 @@ class MethodSignature:
 
 
 
-@_oldStyle
 class FormMethod:
     """A callable object with a signature."""
 

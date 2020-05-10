@@ -9,7 +9,6 @@ Some tests for inlineCallbacks are defined in L{twisted.test.test_defgen} as
 well.
 """
 
-from __future__ import division, absolute_import
 
 import sys
 

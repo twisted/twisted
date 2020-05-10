@@ -5,7 +5,6 @@
 Tests for L{twisted.internet.task}.
 """
 
-from __future__ import division, absolute_import
 
 from twisted.trial import unittest
 

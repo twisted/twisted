@@ -6,7 +6,6 @@
 Tests for L{twisted.protocols.amp}.
 """
 
-from __future__ import absolute_import, division
 
 import datetime
 import decimal
@@ -1543,6 +1542,21 @@ class AMPTests(unittest.TestCase):
         p.flush()
         L.pop().trap(error.ConnectionDone)
         self.assertFalse(s.greeted)
+
+
+    def test_requiresNoAnswerAfterFail(self):
+        """
+        No-answer commands sent after the connection has been torn down do not
+        return a L{Deferred}.
+        """
+        c, s, p = connectedServerAndClient(
+            ServerClass=SimpleSymmetricCommandProtocol,
+            ClientClass=SimpleSymmetricCommandProtocol,
+        )
+        c.transport.loseConnection()
+        p.flush()
+        result = c.callRemote(NoAnswerHello, hello=b'ignored')
+        self.assertIs(result, None)
 
 
     def test_noAnswerResponderBadAnswer(self):

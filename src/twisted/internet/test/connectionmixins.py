@@ -6,7 +6,6 @@
 Various helpers for tests for connection-oriented transports.
 """
 
-from __future__ import division, absolute_import
 
 import socket
 

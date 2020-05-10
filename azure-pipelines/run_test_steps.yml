@@ -1,0 +1,58 @@
+parameters:
+
+- name: platform
+  type: string
+  values:
+  - macos
+  - windows
+
+- name: pythonVersion
+  type: string
+  values:
+  - '3.5'
+  - '3.6'
+  - '3.7'
+  - '3.8'
+
+- name: windowsReactor
+  type: string
+  default: select
+  values:
+  - select
+  - iocp
+
+- name: allowFailure
+  type: boolean
+  default: false
+
+steps:
+- task: UsePythonVersion@0
+  displayName: "Use Python ${{ parameters.pythonVersion }}"
+  inputs:
+    versionSpec: "${{ parameters.pythonVersion }}"
+
+- script: |
+   python --version
+   python -c "import sys; print(sys.prefix)"
+   python -c "import sys; print(sys.exec_prefix)"
+   python -c "import sys; print(sys.executable)"
+   python -c "import struct; print(struct.calcsize('P') * 8)"
+  displayName: 'Get Python Information'
+
+- script: 'python -m pip install -U pip setuptools tox'
+  displayName: 'Update pip & install tox'
+
+- ${{ if eq(parameters.platform, 'macos') }}:
+  - script: 'python -m tox -e alldeps-withcov-posix'
+    displayName: 'Run tests'
+    continueOnError: ${{ parameters.allowFailure }}
+
+- ${{ if eq(parameters.platform, 'windows') }}:
+  - script: 'python -m tox -e alldeps-withcov-windows'
+    displayName: 'Run tests'
+    continueOnError: ${{ parameters.allowFailure }}
+    env:
+      TWISTED_REACTOR: ${{ parameters.windowsReactor }}
+
+- script: 'python -m tox -e coverage-prepare,coveralls-push'
+  displayName: 'Report coverage'

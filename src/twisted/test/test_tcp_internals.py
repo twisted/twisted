@@ -5,9 +5,10 @@
 Whitebox tests for TCP APIs.
 """
 
-from __future__ import division, absolute_import
 
-import errno, socket, os
+import errno
+import os
+import socket
 
 try:
     import resource

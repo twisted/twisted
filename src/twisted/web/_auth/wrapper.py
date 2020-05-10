@@ -13,7 +13,6 @@ denied, a 401 will be sent in the response along with I{WWW-Authenticate}
 headers for each of the allowed authentication schemes.
 """
 
-from __future__ import absolute_import, division
 
 from twisted.cred import error
 from twisted.cred.credentials import Anonymous
