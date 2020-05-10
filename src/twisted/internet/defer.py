@@ -18,6 +18,7 @@ Maintainer: Glyph Lefkowitz
 
 
 import attr
+import contextlib
 import traceback
 import types
 import warnings
@@ -47,6 +48,9 @@ except ImportError:
         return _NoContext
 
 if _contextvarsSupport:
+    # TODO: would we rather just require sniffio?
+    # TODO: would we rather have another layer of no-op instead of None
+    #       checking?
     try:
         from sniffio import current_async_library_cvar
     except ImportError:
@@ -1399,6 +1403,29 @@ class _CancellationStatus(object):
 
 
 
+@contextlib.contextmanager
+def current_async_library_is_twisted(current_context):
+    # TODO: is this abstraction too costly to be worthwhile for just a couple
+    #       uses?
+    current_async_library_token = None
+
+    if current_async_library_cvar is not None:
+        current_async_library_token = current_context.run(
+            current_async_library_cvar.set,
+            "twisted",
+        )
+
+    try:
+        yield
+    finally:
+        if current_async_library_token is not None:
+            current_context.run(
+                current_async_library_cvar.reset,
+                current_async_library_token,
+            )
+
+
+
 @failure._extraneous
 def _inlineCallbacks(result, g, status):
     """
@@ -1429,20 +1456,19 @@ def _inlineCallbacks(result, g, status):
 
     # Get the current contextvars Context object.
     current_context = _copy_context()
-    if current_async_library_cvar is not None:
-        current_context.run(current_async_library_cvar.set, "twisted")
 
     while 1:
         try:
             # Send the last result back as the result of the yield expression.
             isFailure = isinstance(result, failure.Failure)
 
-            if isFailure:
-                result = current_context.run(
-                    result.throwExceptionIntoGenerator, g
-                )
-            else:
-                result = current_context.run(g.send, result)
+            with current_async_library_is_twisted(current_context):
+                if isFailure:
+                    result = current_context.run(
+                        result.throwExceptionIntoGenerator, g
+                    )
+                else:
+                    result = current_context.run(g.send, result)
         except StopIteration as e:
             # fell off the end, or "return" statement
             status.deferred.callback(getattr(e, "value", None))
@@ -1504,7 +1530,8 @@ def _inlineCallbacks(result, g, status):
                     waiting[0] = False
                     waiting[1] = r
                 else:
-                    current_context.run(_inlineCallbacks, r, g, status)
+                    with current_async_library_is_twisted(current_context):
+                        current_context.run(_inlineCallbacks, r, g, status)
 
             result.addBoth(gotResult)
             if waiting[0]:
