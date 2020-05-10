@@ -1279,7 +1279,7 @@ def _parseUNIX(factory, address, mode='666', backlog=50, lockfile=True):
          'wantPID': bool(int(lockfile))})
 
 
-def _parseSSL(factory, port, privateKey="server.pem", certKey=None, trustRoot=None,
+def _parseSSL(factory, port, privateKey="server.pem", certKey=None, caKey=None,
               sslmethod=None, interface='', backlog=50, extraCertChain=None,
               dhParameters=None):
     """
@@ -1338,10 +1338,10 @@ def _parseSSL(factory, port, privateKey="server.pem", certKey=None, trustRoot=No
         certPEM + b'\n' + keyPEM)
 
     trustCertRoot = None
-    if trustRoot is not None:
-        trustPEM = FilePath(trustRoot).getContent()
+    if caKey is not None:
+        caPEM = FilePath(caKey).getContent()
         trustCertRoot = OpenSSLCertificateAuthorities(
-            [crypto.load_certificate(crypto.FILETYPE_PEM, trustPEM)])
+            [crypto.load_certificate(crypto.FILETYPE_PEM, caPEM)])
 
     if extraCertChain is not None:
         matches = re.findall(
