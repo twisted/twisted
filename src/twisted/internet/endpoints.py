@@ -1305,6 +1305,9 @@ def _parseSSL(factory, port, privateKey="server.pem", certKey=None, caKey=None,
     @param certKey: The file name of a PEM format certificate file.
     @type certKey: C{str}
 
+    @param caKey: The file name of a PEM format for root certificate file
+    @type caKey: C{str}
+
     @param sslmethod: The string name of an SSL method, based on the name of a
         constant in C{OpenSSL.SSL}.  Must be one of: "SSLv23_METHOD",
         "SSLv2_METHOD", "SSLv3_METHOD", "TLSv1_METHOD".
