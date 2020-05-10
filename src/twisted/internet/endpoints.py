@@ -1371,7 +1371,7 @@ def _parseSSL(factory, port, privateKey="server.pem", certKey=None, caKey=None,
         certificate=privateCertificate.original,
         extraCertChain=chainCertificates,
         dhParameters=dhParameters,
-        trustRoot=trustCertRoot
+        trustRoot=trustCertRoot,
         ** kw
     )
     return ((int(port), factory, cf),
