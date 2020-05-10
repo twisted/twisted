@@ -890,6 +890,7 @@ class _AnsiColorizer(object):
         self.stream = stream
 
 
+    @classmethod
     def supported(cls, stream=sys.stdout):
         """
         A class method that returns True if the current platform supports
@@ -908,10 +909,9 @@ class _AnsiColorizer(object):
                 except curses.error:
                     curses.setupterm()
                     return curses.tigetnum("colors") > 2
-            except:
+            except BaseException:
                 # guess false in case of error
                 return False
-    supported = classmethod(supported)
 
 
     def write(self, text, color):
@@ -951,6 +951,7 @@ class _Win32Colorizer(object):
             }
 
 
+    @classmethod
     def supported(cls, stream=sys.stdout):
         try:
             import win32console
@@ -968,7 +969,6 @@ class _Win32Colorizer(object):
             return False
         else:
             return True
-    supported = classmethod(supported)
 
 
     def write(self, text, color):
@@ -987,9 +987,9 @@ class _NullColorizer(object):
         self.stream = stream
 
 
+    @classmethod
     def supported(cls, stream=sys.stdout):
         return True
-    supported = classmethod(supported)
 
 
     def write(self, text, color):
