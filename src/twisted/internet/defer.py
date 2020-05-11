@@ -1462,12 +1462,16 @@ def _inlineCallbacks(result, g, status):
             # Send the last result back as the result of the yield expression.
             isFailure = isinstance(result, failure.Failure)
 
-            with current_async_library_is_twisted(current_context):
-                if isFailure:
+            if isFailure:
+                # TODO: not yet required for tests but it doesn't feel like it
+                #       isn't needed.  be sure to add a test checking while
+                #       handling an exception.
+                # with current_async_library_is_twisted(current_context):
                     result = current_context.run(
                         result.throwExceptionIntoGenerator, g
                     )
-                else:
+            else:
+                with current_async_library_is_twisted(current_context):
                     result = current_context.run(g.send, result)
         except StopIteration as e:
             # fell off the end, or "return" statement
@@ -1530,8 +1534,7 @@ def _inlineCallbacks(result, g, status):
                     waiting[0] = False
                     waiting[1] = r
                 else:
-                    with current_async_library_is_twisted(current_context):
-                        current_context.run(_inlineCallbacks, r, g, status)
+                    current_context.run(_inlineCallbacks, r, g, status)
 
             result.addBoth(gotResult)
             if waiting[0]:

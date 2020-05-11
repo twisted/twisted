@@ -6,6 +6,8 @@ Tests for L{twisted.internet.asyncioreactor}.
 """
 import gc
 
+from twisted.internet import defer
+from twisted.python.reflect import requireModule
 from twisted.trial.unittest import SynchronousTestCase
 from .reactormixins import ReactorBuilder
 
@@ -15,6 +17,20 @@ try:
 except ImportError:
     AsyncioSelectorReactor = None
     skipReason = "Requires asyncio."
+
+
+contextvars = requireModule('contextvars')
+if contextvars:
+    contextvarsSkip = None
+else:
+    contextvarsSkip = "contextvars is not available"
+
+
+sniffio = requireModule('sniffio')
+if sniffio:
+    sniffioSkip = contextvarsSkip
+else:
+    sniffioSkip = "sniffio is not available"
 
 
 
@@ -129,3 +145,44 @@ class AsyncioSelectorReactorTests(ReactorBuilder, SynchronousTestCase):
         finally:
             if gc_was_enabled:
                 gc.enable()
+
+
+    def testSniffioFindsAsyncioInCoroutine(self):
+        # TODO: what about skipping
+        reactor = AsyncioSelectorReactor()
+
+        async def andLetMeKnow():
+            # to be run as asyncio
+            return [sniffio.current_async_library()]
+
+        async def youKnowYouTwist():
+            # to be run as twisted
+            future = asyncio.ensure_future(andLetMeKnow())
+            d = defer.Deferred.fromFuture(future)
+            inner = await d
+            return [sniffio.current_async_library(), *inner]
+
+        async def shakeItUp():
+            # to be run as asyncio
+            d = defer.ensureDeferred(youKnowYouTwist())
+            future = d.asFuture(loop=asyncio.get_event_loop())
+            inner = await future
+
+            reactor.stop()
+
+            return [sniffio.current_async_library(), *inner]
+
+        future = asyncio.ensure_future(shakeItUp())
+        d = defer.Deferred.fromFuture(future)
+
+        reactor.run()
+
+        self.assertEqual(
+            self.successResultOf(d),
+            ["asyncio", "twisted", "asyncio"],
+        )
+
+        self.assertRaises(
+            sniffio.AsyncLibraryNotFoundError,
+            sniffio.current_async_library,
+        )
