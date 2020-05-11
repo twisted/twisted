@@ -6,7 +6,6 @@ Tests for L{twisted.cred._digest} and the associated bits in
 L{twisted.cred.credentials}.
 """
 
-from __future__ import division, absolute_import
 
 import base64
 

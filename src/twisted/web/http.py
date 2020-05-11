@@ -27,7 +27,6 @@ also useful for HTTP clients (such as the chunked encoding parser).
     indicate that the server has not taken the requested action.
 """
 
-from __future__ import division, absolute_import
 
 __all__ = [
     'SWITCHING', 'OK', 'CREATED', 'ACCEPTED', 'NON_AUTHORITATIVE_INFORMATION',
@@ -67,27 +66,10 @@ import calendar
 import warnings
 import os
 import re
-from io import BytesIO as StringIO
+from io import BytesIO
 
-try:
-    from urlparse import (
-        ParseResult as ParseResultBytes, urlparse as _urlparse)
-    from urllib import unquote
-    from cgi import parse_header as _parseHeader
-except ImportError:
-    from urllib.parse import (
-        ParseResultBytes, urlparse as _urlparse, unquote_to_bytes as unquote)
-
-    def _parseHeader(line):
-        # cgi.parse_header requires a str
-        key, pdict = cgi.parse_header(line.decode('charmap'))
-
-        # We want the key as bytes, and cgi.parse_multipart (which consumes
-        # pdict) expects a dict of str keys but bytes values
-        key = key.encode('charmap')
-        pdict = {x:y.encode('charmap') for x, y in pdict.items()}
-        return (key, pdict)
-
+from urllib.parse import (
+    ParseResultBytes, urlparse as _urlparse, unquote_to_bytes as unquote)
 
 from zope.interface import Attribute, Interface, implementer, provider
 
@@ -163,6 +145,20 @@ monthname = [None,
              'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 weekdayname_lower = [name.lower() for name in weekdayname]
 monthname_lower = [name and name.lower() for name in monthname]
+
+
+
+def _parseHeader(line):
+    # cgi.parse_header requires a str
+    key, pdict = cgi.parse_header(line.decode('charmap'))
+
+    # We want the key as bytes, and cgi.parse_multipart (which consumes
+    # pdict) expects a dict of str keys but bytes values
+    key = key.encode('charmap')
+    pdict = {x: y.encode('charmap') for x, y in pdict.items()}
+    return (key, pdict)
+
+
 
 def urlparse(url):
     """
@@ -487,13 +483,15 @@ class _IDeprecatedHTTPChannelToRequestInterface(Interface):
 
 class StringTransport:
     """
-    I am a StringIO wrapper that conforms for the transport API. I support
+    I am a BytesIO wrapper that conforms for the transport API. I support
     the `writeSequence' method.
     """
     def __init__(self):
-        self.s = StringIO()
+        self.s = BytesIO()
+
     def writeSequence(self, seq):
         self.s.write(b''.join(seq))
+
     def __getattr__(self, attr):
         return getattr(self.__dict__['s'], attr)
 
@@ -514,7 +512,7 @@ class HTTPClient(basic.LineReceiver):
     @type firstLine: C{bool}
 
     @ivar __buffer: The buffer that stores the response to the HTTP request.
-    @type __buffer: A C{StringIO} object.
+    @type __buffer: A C{BytesIO} object.
 
     @ivar _header: Part or all of an HTTP request header.
     @type _header: C{bytes}
@@ -580,7 +578,7 @@ class HTTPClient(basic.LineReceiver):
             if self._header != b"":
                 # Only extract headers if there are any
                 self.extractHeader(self._header)
-            self.__buffer = StringIO()
+            self.__buffer = BytesIO()
             self.handleEndHeaders()
             self.setRawMode()
             return
@@ -666,7 +664,7 @@ def _getContentFile(length):
     Get a writeable file-like object to which request content can be written.
     """
     if length is not None and length < 100000:
-        return StringIO()
+        return BytesIO()
     return tempfile.TemporaryFile()
 
 
@@ -2999,9 +2997,6 @@ class _GenericHTTPChannelProtocol(proxyForInterface(IProtocol, "_channel")):
                 # itself if possible.
                 networkProducer = self._channel._networkProducer
                 networkProducer.unregisterProducer()
-
-                # Cancel the old channel's timeout.
-                self._channel.setTimeout(None)
 
                 # Cancel the old channel's timeout.
                 self._channel.setTimeout(None)

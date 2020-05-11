@@ -7,7 +7,6 @@
 Basic protocols, such as line-oriented, netstring, and int prefixed strings.
 """
 
-from __future__ import absolute_import, division
 
 # System imports
 import re

@@ -6,7 +6,6 @@
 L{twisted.words} support for Instance Messenger.
 """
 
-from __future__ import print_function
 
 from twisted.internet import defer
 from twisted.internet import error

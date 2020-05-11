@@ -8,7 +8,6 @@ This module contains implementations of L{IFilePath} for zip files.
 See the constructor of L{ZipArchive} for use.
 """
 
-from __future__ import absolute_import, division
 
 import os
 import time

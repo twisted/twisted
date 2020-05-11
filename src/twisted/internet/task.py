@@ -6,7 +6,6 @@
 Scheduling utility methods and classes.
 """
 
-from __future__ import division, absolute_import
 
 __metaclass__ = type
 

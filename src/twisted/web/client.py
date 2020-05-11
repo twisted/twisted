@@ -6,21 +6,13 @@
 HTTP client.
 """
 
-from __future__ import division, absolute_import
 
 import os
 import collections
 import warnings
 
-try:
-    from urlparse import urlunparse, urljoin, urldefrag
-except ImportError:
-    from urllib.parse import urljoin, urldefrag
-    from urllib.parse import urlunparse as _urlunparse
-
-    def urlunparse(parts):
-        result = _urlunparse(tuple([p.decode("charmap") for p in parts]))
-        return result.encode("charmap")
+from urllib.parse import urljoin, urldefrag
+from urllib.parse import urlunparse as _urlunparse
 
 import zlib
 from functools import wraps
@@ -48,6 +40,12 @@ from twisted.web.http_headers import Headers
 from twisted.logger import Logger
 
 from twisted.web._newclient import _ensureValidURI, _ensureValidMethod
+
+
+
+def urlunparse(parts):
+    result = _urlunparse(tuple([p.decode("charmap") for p in parts]))
+    return result.encode("charmap")
 
 
 
@@ -1161,7 +1159,10 @@ class FileBodyProducer(object):
         stopping the underlying L{CooperativeTask}.
         """
         self._inputFile.close()
-        self._task.stop()
+        try:
+            self._task.stop()
+        except task.TaskFinished:
+            pass
 
 
     def startProducing(self, consumer):

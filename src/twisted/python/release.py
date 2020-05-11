@@ -9,7 +9,6 @@ Don't use this outside of Twisted.
 Maintainer: Christopher Armstrong
 """
 
-from __future__ import print_function
 
 import os
 

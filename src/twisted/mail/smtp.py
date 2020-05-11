@@ -8,7 +8,6 @@
 Simple Mail Transfer Protocol implementation.
 """
 
-from __future__ import absolute_import, division
 
 import time
 import re
@@ -747,7 +746,7 @@ class SMTP(basic.LineOnlyReceiver, policies.TimeoutMixin):
             msg = 'Could not send e-mail'
             resultLen = len(resultList)
             if resultLen > 1:
-                msg += ' (%d failures out of %d recipients)'.format(
+                msg += ' ({} failures out of {} recipients)'.format(
                     failures, resultLen)
             self.sendCode(550, networkString(msg))
         else:

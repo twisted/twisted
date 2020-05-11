@@ -9,7 +9,6 @@ Future Plans:
     - Get rid of some toplevels, maybe.
 """
 
-from __future__ import division, absolute_import
 
 __all__ = [
     'IEncodable', 'IRecord',

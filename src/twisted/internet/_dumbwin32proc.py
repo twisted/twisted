@@ -6,7 +6,6 @@
 http://isometri.cc/strips/gates_in_the_head
 """
 
-from __future__ import absolute_import, division, print_function
 
 import os
 import sys
@@ -29,31 +28,13 @@ PIPE_ATTRS_INHERITABLE.bInheritHandle = 1
 from zope.interface import implementer
 from twisted.internet.interfaces import IProcessTransport, IConsumer, IProducer
 
-from twisted.python.compat import items, _PY3
+from twisted.python.compat import items
 from twisted.python.win32 import quoteArguments
-from twisted.python.util import _replaceIf
 
 from twisted.internet import error
 
 from twisted.internet import _pollingfile
 from twisted.internet._baseprocess import BaseProcess
-
-
-@_replaceIf(_PY3, getattr(os, 'fsdecode', None))
-def _fsdecode(x):
-    """
-    Decode a string to a L{unicode} representation, passing
-    through existing L{unicode} unchanged.
-
-    @param x: The string to be conditionally decoded.
-    @type x: L{bytes} or L{unicode}
-
-    @return: L{unicode}
-    """
-    if isinstance(x, bytes):
-        return x.decode(sys.getfilesystemencoding())
-    else:
-        return x
 
 
 
@@ -202,21 +183,21 @@ class Process(_pollingfile._PollingTimer, BaseProcess):
         newenv = {}
         for key, value in items(env):
 
-            key = _fsdecode(key)
-            value = _fsdecode(value)
+            key = os.fsdecode(key)
+            value = os.fsdecode(value)
 
             newenv[key] = value
 
         env = newenv
 
         # Make sure all the arguments are Unicode.
-        args = [_fsdecode(x) for x in args]
+        args = [os.fsdecode(x) for x in args]
 
         cmdline = quoteArguments(args)
 
         # The command, too, needs to be Unicode, if it is a value.
-        command = _fsdecode(command) if command else command
-        path = _fsdecode(path) if path else path
+        command = os.fsdecode(command) if command else command
+        path = os.fsdecode(path) if path else path
 
         # TODO: error detection here.  See #2787 and #4184.
         def doCreate():

@@ -1,9 +1,9 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-from __future__ import division, absolute_import
 
-import socket, errno
+import errno
+import socket
 from twisted.trial import unittest
 from twisted.internet import error
 from twisted.python.runtime import platformType

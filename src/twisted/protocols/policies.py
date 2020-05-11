@@ -8,7 +8,6 @@ Resource limiting policies.
 @seealso: See also L{twisted.protocols.htb} for rate limiting.
 """
 
-from __future__ import division, absolute_import
 
 # system imports
 import sys

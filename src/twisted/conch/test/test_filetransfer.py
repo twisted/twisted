@@ -6,12 +6,17 @@
 Tests for L{twisted.conch.ssh.filetransfer}.
 """
 
-from __future__ import division, absolute_import
 
 import os
 import re
 import struct
 
+from twisted.internet import defer
+from twisted.internet.error import ConnectionLost
+from twisted.protocols import loopback
+from twisted.python import components
+from twisted.python.compat import long, _PY37PLUS
+from twisted.python.filepath import FilePath
 from twisted.python.reflect import requireModule
 from twisted.trial import unittest
 
@@ -23,13 +28,9 @@ if cryptography:
     from twisted.conch.ssh import common, connection, filetransfer, session
 else:
     class avatar:
-        class ConchUser: pass
+        class ConchUser:
+            pass
 
-from twisted.internet import defer
-from twisted.protocols import loopback
-from twisted.python import components
-from twisted.python.compat import long, _PY37PLUS
-from twisted.python.filepath import FilePath
 
 
 class TestAvatar(avatar.ConchUser):
@@ -170,7 +171,7 @@ class OurServerOurClientTests(SFTPTestBase):
 
     def test_openedFileClosedWithConnection(self):
         """
-        A file opened with C{openFile} is close when the connection is lost.
+        A file opened with C{openFile} is closed when the connection is lost.
         """
         d = self.client.openFile(b"testfile1", filetransfer.FXF_READ |
                                  filetransfer.FXF_WRITE, {})
@@ -560,7 +561,9 @@ class OurServerOurClientTests(SFTPTestBase):
         d = self.client.openDirectory(b'')
         self._emptyBuffers()
         openDir = yield d
-        openDir.next()
+        oneFile = openDir.next()
+        self._emptyBuffers()
+        yield oneFile
 
         warnings = self.flushWarnings()
         message = (
@@ -570,6 +573,51 @@ class OurServerOurClientTests(SFTPTestBase):
         self.assertEqual(1, len(warnings))
         self.assertEqual(DeprecationWarning, warnings[0]['category'])
         self.assertEqual(message, warnings[0]['message'])
+
+
+    @defer.inlineCallbacks
+    def test_closedConnectionCancelsRequests(self):
+        """
+        If there are requests outstanding when the connection
+        is closed for any reason, they should fail.
+        """
+
+        d = self.client.openFile(b"testfile1", filetransfer.FXF_READ, {})
+        self._emptyBuffers()
+        fh = yield d
+
+        # Intercept the handling of the read request on the server side
+        gotReadRequest = []
+
+        def _slowRead(offset, length):
+            self.assertEqual(gotReadRequest, [])
+            d = defer.Deferred()
+            gotReadRequest.append(offset)
+            return d
+        [serverSideFh] = self.server.openFiles.values()
+        serverSideFh.readChunk = _slowRead
+        del serverSideFh
+
+        # Make a read request, dropping the connection before the reply
+        # is sent
+        d = fh.readChunk(100, 200)
+        self._emptyBuffers()
+        self.assertEqual(len(gotReadRequest), 1)
+        self.assertNoResult(d)
+
+        # Lost connection should cause an errback
+        self.serverTransport.loseConnection()
+        self.serverTransport.clearBuffer()
+        self.clientTransport.clearBuffer()
+        self._emptyBuffers()
+
+        self.assertFalse(self.client.connected)
+        self.failureResultOf(d, ConnectionLost)
+
+        # Further attempts to use the filetransfer session should fail
+        # immediately
+        d = fh.getAttrs()
+        self.failureResultOf(d, ConnectionLost)
 
 
 

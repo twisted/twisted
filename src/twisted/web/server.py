@@ -13,7 +13,6 @@ This is a web server which integrates with the twisted.internet infrastructure.
     value.
 """
 
-from __future__ import division, absolute_import
 
 import copy
 import os

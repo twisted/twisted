@@ -5,9 +5,11 @@
 Tests for Twisted's deprecation framework, L{twisted.python.deprecate}.
 """
 
-from __future__ import division, absolute_import
 
-import sys, types, warnings, inspect
+import inspect
+import sys
+import types
+import warnings
 from os.path import normcase
 from warnings import simplefilter, catch_warnings
 try:

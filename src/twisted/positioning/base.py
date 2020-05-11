@@ -7,7 +7,6 @@ Generic positioning base classes.
 @since: 14.0
 """
 
-from __future__ import absolute_import, division
 
 from functools import partial
 from operator import attrgetter

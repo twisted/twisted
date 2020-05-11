@@ -6,7 +6,6 @@
 Testing support for protocols -- loopback between client and server.
 """
 
-from __future__ import division, absolute_import
 
 # system imports
 import tempfile

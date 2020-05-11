@@ -5,7 +5,6 @@
 General helpers for L{twisted.web} unit tests.
 """
 
-from __future__ import division, absolute_import
 
 from twisted.internet.defer import succeed
 from twisted.web import server
