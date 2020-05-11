@@ -11,6 +11,7 @@ import gc
 import functools
 import traceback
 import re
+import types
 
 from asyncio import new_event_loop, Future, CancelledError
 
@@ -1433,6 +1434,30 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         self.assertIn('test_defer', tb[0][0])
         self.assertEqual('test_inlineCallbacksTracebacks', tb[0][2])
         self.assertEqual('f.raiseException()', tb[0][3])
+
+
+    def test_fromCoroutineRequiresCoroutine(self):
+        """
+        L{Deferred.fromCoroutine} requires a coroutine object or a generator,
+        and will reject things that are not that.
+        """
+        thingsThatAreNotCoroutines = [
+            # Lambda
+            lambda x: x,
+            # Int
+            1,
+            # Boolean
+            True,
+            # Function
+            self.test_fromCoroutineRequiresCoroutine,
+            # None
+            None,
+            # Module
+            defer
+        ]
+
+        for thing in thingsThatAreNotCoroutines:
+            self.assertRaises(ValueError, defer.Deferred.fromCoroutine, thing)
 
 
 
@@ -2957,6 +2982,50 @@ class EnsureDeferredTests(unittest.TestCase):
         """
         with self.assertRaises(ValueError):
             defer.ensureDeferred("something")
+
+
+    def test_ensureDeferredCoroutine(self):
+        """
+        L{ensureDeferred} will turn a coroutine into a L{Deferred}.
+        """
+        async def run():
+            d = defer.succeed("foo")
+            res = await d
+            return res
+
+        # It's a coroutine...
+        r = run()
+        self.assertIsInstance(r, types.CoroutineType)
+
+        # Now it's a Deferred.
+        d = defer.ensureDeferred(r)
+        self.assertIsInstance(d, defer.Deferred)
+
+        # The Deferred has the result we want.
+        res = self.successResultOf(d)
+        self.assertEqual(res, "foo")
+
+
+    def test_ensureDeferredGenerator(self):
+        """
+        L{ensureDeferred} will turn a yield-from coroutine into a L{Deferred}.
+        """
+        def run():
+            d = defer.succeed("foo")
+            res = yield from d
+            return res
+
+        # It's a generator...
+        r = run()
+        self.assertIsInstance(r, types.GeneratorType)
+
+        # Now it's a Deferred.
+        d = defer.ensureDeferred(r)
+        self.assertIsInstance(d, defer.Deferred)
+
+        # The Deferred has the result we want.
+        res = self.successResultOf(d)
+        self.assertEqual(res, "foo")
 
 
 

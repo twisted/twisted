@@ -24,6 +24,7 @@ import warnings
 from sys import exc_info, version_info
 from functools import wraps
 from incremental import Version
+from asyncio import iscoroutine
 
 # Twisted imports
 from twisted.python.compat import cmp, comparable
@@ -855,6 +856,53 @@ class Deferred:
         return self
 
 
+    @classmethod
+    def fromCoroutine(cls, coro):
+        """
+        Schedule the execution of a coroutine that awaits/yields from L{Deferred}s,
+        wrapping it in a L{Deferred} that will fire on success/failure of the
+        coroutine.
+
+        Coroutine functions return a coroutine object, similar to how generators
+        work. This function turns that coroutine into a Deferred, meaning that it
+        can be used in regular Twisted code. For example::
+
+            import treq
+            from twisted.internet.defer import ensureDeferred
+            from twisted.internet.task import react
+
+            async def crawl(pages):
+                results = {}
+                for page in pages:
+                    results[page] = await treq.content(await treq.get(page))
+                return results
+
+            def main(reactor):
+                pages = [
+                    "http://localhost:8080"
+                ]
+                d = ensureDeferred(crawl(pages))
+                d.addCallback(print)
+                return d
+
+            react(main)
+
+        @since: Twisted NEXT
+
+        @param coro: The coroutine object to schedule.
+        @type coro: A Python 3.5+ C{async def} coroutine or a Python 3.4+
+            C{yield from} coroutine.
+
+        @raise ValueError: If C{coro} is not a coroutine or generator.
+
+        @rtype: L{Deferred}
+        """
+        if not iscoroutine(coro) and not isinstance(coro, types.GeneratorType):
+            raise ValueError("%r is not a coroutine" % (coro,))
+
+        return _cancellableInlineCallbacks(coro)
+
+
 
 def _cancelledToTimedOutError(value, timeout):
     """
@@ -886,29 +934,7 @@ def ensureDeferred(coro):
     coroutine. If a Deferred is passed to this function, it will be returned
     directly (mimicing C{asyncio}'s C{ensure_future} function).
 
-    Coroutine functions return a coroutine object, similar to how generators
-    work. This function turns that coroutine into a Deferred, meaning that it
-    can be used in regular Twisted code. For example::
-
-        import treq
-        from twisted.internet.defer import ensureDeferred
-        from twisted.internet.task import react
-
-        async def crawl(pages):
-            results = {}
-            for page in pages:
-                results[page] = await treq.content(await treq.get(page))
-            return results
-
-        def main(reactor):
-            pages = [
-                "http://localhost:8080"
-            ]
-            d = ensureDeferred(crawl(pages))
-            d.addCallback(print)
-            return d
-
-        react(main)
+    See L{Deferred.fromCoroutine} for examples of coroutines.
 
     @param coro: The coroutine object to schedule, or a L{Deferred}.
     @type coro: A Python 3.5+ C{async def} C{coroutine}, a Python 3.4+
@@ -916,19 +942,15 @@ def ensureDeferred(coro):
 
     @rtype: L{Deferred}
     """
-    from types import GeneratorType
-
-    if version_info >= (3, 4, 0):
-        from asyncio import iscoroutine
-
-        if iscoroutine(coro) or isinstance(coro, GeneratorType):
-            return _cancellableInlineCallbacks(coro)
-
-    if not isinstance(coro, Deferred):
-        raise ValueError("%r is not a coroutine or a Deferred" % (coro,))
-
-    # Must be a Deferred
-    return coro
+    if isinstance(coro, Deferred):
+        return coro
+    else:
+        try:
+            return Deferred.fromCoroutine(coro)
+        except ValueError:
+            # It's not a coroutine. Raise an exception, but say that it's also
+            # not a Deferred so the error makes sense.
+            raise ValueError("%r is not a coroutine or a Deferred" % (coro,))
 
 
 
