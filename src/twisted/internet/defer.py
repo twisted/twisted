@@ -1404,7 +1404,7 @@ class _CancellationStatus(object):
 
 
 @contextlib.contextmanager
-def current_async_library_is_twisted(current_context):
+def currentAsyncLibraryIsTwisted(current_context):
     # TODO: is this abstraction too costly to be worthwhile for just a couple
     #       uses?
     current_async_library_token = None
@@ -1471,7 +1471,7 @@ def _inlineCallbacks(result, g, status):
                         result.throwExceptionIntoGenerator, g
                     )
             else:
-                with current_async_library_is_twisted(current_context):
+                with currentAsyncLibraryIsTwisted(current_context):
                     result = current_context.run(g.send, result)
         except StopIteration as e:
             # fell off the end, or "return" statement
