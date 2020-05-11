@@ -18,7 +18,6 @@ Maintainer: Glyph Lefkowitz
 
 
 import attr
-import contextlib
 import traceback
 import types
 import warnings
@@ -1403,29 +1402,6 @@ class _CancellationStatus(object):
 
 
 
-@contextlib.contextmanager
-def currentAsyncLibraryIsTwisted(current_context):
-    # TODO: is this abstraction too costly to be worthwhile for just a couple
-    #       uses?
-    current_async_library_token = None
-
-    if current_async_library_cvar is not None:
-        current_async_library_token = current_context.run(
-            current_async_library_cvar.set,
-            "twisted",
-        )
-
-    try:
-        yield
-    finally:
-        if current_async_library_token is not None:
-            current_context.run(
-                current_async_library_cvar.reset,
-                current_async_library_token,
-            )
-
-
-
 @failure._extraneous
 def _inlineCallbacks(result, g, status):
     """
@@ -1456,6 +1432,8 @@ def _inlineCallbacks(result, g, status):
 
     # Get the current contextvars Context object.
     current_context = _copy_context()
+    if current_async_library_cvar is not None:
+        current_context.run(current_async_library_cvar.set, "twisted")
 
     while 1:
         try:
@@ -1471,8 +1449,7 @@ def _inlineCallbacks(result, g, status):
                         result.throwExceptionIntoGenerator, g
                     )
             else:
-                with currentAsyncLibraryIsTwisted(current_context):
-                    result = current_context.run(g.send, result)
+                result = current_context.run(g.send, result)
         except StopIteration as e:
             # fell off the end, or "return" statement
             status.deferred.callback(getattr(e, "value", None))
