@@ -3361,6 +3361,32 @@ class CoroutineSniffioTests(unittest.TestCase):
         )
 
 
+    def testTwistedFoundInCoroutineExceptionHandler(self):
+        """
+        sniffio will recognize Twisted in a coroutine when handling an
+        exception.
+        """
+
+        async def fail():
+            raise Exception()
+
+        async def twistAndShout():
+            try:
+                await fail()
+            except:
+                return sniffio.current_async_library()
+
+            return 'exception not handled'
+
+        d = defer.ensureDeferred(twistAndShout())
+        self.assertEqual(self.successResultOf(d), "twisted")
+
+        self.assertRaises(
+            sniffio.AsyncLibraryNotFoundError,
+            sniffio.current_async_library,
+        )
+
+
     def testTwistedFoundInInlineCallbacks(self):
         """sniffio will recognize Twisted in a L{defer.inlineCallbacks}"""
         @defer.inlineCallbacks

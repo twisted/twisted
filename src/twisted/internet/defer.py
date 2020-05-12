@@ -1440,13 +1440,9 @@ def _inlineCallbacks(result, g, status):
             isFailure = isinstance(result, failure.Failure)
 
             if isFailure:
-                # TODO: not yet required for tests but it doesn't feel like it
-                #       isn't needed.  be sure to add a test checking while
-                #       handling an exception.
-                # with current_async_library_is_twisted(current_context):
-                    result = current_context.run(
-                        result.throwExceptionIntoGenerator, g
-                    )
+                result = current_context.run(
+                    result.throwExceptionIntoGenerator, g
+                )
             else:
                 result = current_context.run(g.send, result)
         except StopIteration as e:
