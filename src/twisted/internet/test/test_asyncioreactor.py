@@ -146,10 +146,11 @@ class AsyncioSelectorReactorTests(ReactorBuilder, SynchronousTestCase):
             if gc_was_enabled:
                 gc.enable()
 
+class AsyncioSelectorReactorSniffioTests(ReactorBuilder, SynchronousTestCase):
+
+    skip = sniffioSkip
 
     def testSniffioFindsAsyncioInCoroutine(self):
-        # TODO: what about skipping
-
         async def inAsyncio():
             reactor.stop()
 
@@ -175,7 +176,6 @@ class AsyncioSelectorReactorTests(ReactorBuilder, SynchronousTestCase):
 
 
     def testSniffioFindsAsyncioTwistedAsyncio(self):
-        # TODO: what about skipping
         # TODO: maybe the granular two-layer tests below are sufficient
         reactor = AsyncioSelectorReactor()
 
@@ -217,7 +217,6 @@ class AsyncioSelectorReactorTests(ReactorBuilder, SynchronousTestCase):
 
 
     def testSniffioFindsTwistedCoroutineInsideAsyncioCoroutine(self):
-        # TODO: what about skipping
         reactor = AsyncioSelectorReactor()
 
         async def innerTwisted():
@@ -246,7 +245,6 @@ class AsyncioSelectorReactorTests(ReactorBuilder, SynchronousTestCase):
 
 
     def testSniffioFindsAsyncioCoroutineInsideTwistedCoroutine(self):
-        # TODO: what about skipping
         reactor = AsyncioSelectorReactor()
 
         async def innerAsyncio():
