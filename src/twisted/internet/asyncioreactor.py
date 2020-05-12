@@ -19,13 +19,33 @@ from twisted.python.runtime import seconds as runtimeSeconds
 from twisted.internet.interfaces import IReactorFDSet
 
 try:
-    from asyncio import get_event_loop
+    from asyncio import get_event_loop, tasks
 except ImportError:
     raise ImportError("Requires asyncio.")
 
 # As per ImportError above, this module is never imported on python 2, but
 # pyflakes still runs on python 2, so let's tell it where the errors come from.
 from builtins import PermissionError, BrokenPipeError
+
+try:
+    from contextvars import copy_context
+    _contextvarsSupport = True
+except ImportError:
+    _contextvarsSupport = False
+
+current_async_library_cvar = None
+if _contextvarsSupport:
+    try:
+        from sniffio import current_async_library_cvar
+    except ImportError:
+        pass
+
+
+def sniffioTaskFactory(loop, coro):
+    current_context = copy_context()
+    current_context.run(current_async_library_cvar.set, None)
+
+    return current_context.run(tasks.Task, coro=coro, loop=loop)
 
 
 
@@ -41,6 +61,8 @@ class AsyncioSelectorReactor(PosixReactorBase):
 
         if eventloop is None:
             eventloop = get_event_loop()
+            if current_async_library_cvar is not None:
+                eventloop.set_task_factory(factory=sniffioTaskFactory)
 
         self._asyncioEventloop = eventloop
         self._writers = {}

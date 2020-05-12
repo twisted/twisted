@@ -46,6 +46,7 @@ except ImportError:
     def _copy_context():
         return _NoContext
 
+current_async_library_cvar = None
 if _contextvarsSupport:
     # TODO: would we rather just require sniffio?
     # TODO: would we rather have another layer of no-op instead of None
@@ -53,9 +54,7 @@ if _contextvarsSupport:
     try:
         from sniffio import current_async_library_cvar
     except ImportError:
-        current_async_library_cvar = None
-else:
-    current_async_library_cvar = None
+        pass
 
 log = Logger()
 
