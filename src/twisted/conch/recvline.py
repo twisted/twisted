@@ -9,6 +9,7 @@ Basic line editing support.
 """
 
 import string
+from typing import Dict
 
 from zope.interface import implementer
 
@@ -17,7 +18,10 @@ from twisted.conch.insults import insults, helper
 from twisted.python import log, reflect
 from twisted.python.compat import iterbytes
 
-_counters = {}
+_counters = {}  # type: Dict[str, int]
+
+
+
 class Logging(object):
     """
     Wrapper which logs attribute lookups.

@@ -12,6 +12,7 @@ from functools import partial
 from operator import attrgetter
 from zope.interface import implementer
 from constantly import Names, NamedConstant
+from typing import Sequence
 
 from twisted.python.util import FancyEqMixin
 from twisted.positioning import ipositioning
@@ -159,7 +160,7 @@ class Angle(FancyEqMixin, object):
     }
 
 
-    compareAttributes = 'angleType', 'inDecimalDegrees'
+    compareAttributes = 'angleType', 'inDecimalDegrees'  # type: Sequence[str]
 
 
     def __init__(self, angle=None, angleType=None):

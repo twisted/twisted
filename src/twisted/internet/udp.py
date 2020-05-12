@@ -26,14 +26,18 @@ from zope.interface import implementer
 
 from twisted.python.runtime import platformType
 if platformType == 'win32':
-    from errno import WSAEWOULDBLOCK
-    from errno import WSAEINTR, WSAEMSGSIZE, WSAETIMEDOUT
-    from errno import WSAECONNREFUSED, WSAECONNRESET, WSAENETRESET
-    from errno import WSAEINPROGRESS
-    from errno import WSAENOPROTOOPT as ENOPROTOOPT
+    from errno import WSAEWOULDBLOCK  # type: ignore[attr-defined]
+    from errno import (  # type: ignore[attr-defined]
+        WSAEINTR, WSAEMSGSIZE, WSAETIMEDOUT)
+    from errno import (  # type: ignore[attr-defined]
+      WSAECONNREFUSED, WSAECONNRESET, WSAENETRESET)
+    from errno import WSAEINPROGRESS  # type: ignore[attr-defined]
+    from errno import (  # type: ignore[attr-defined]
+        WSAENOPROTOOPT as ENOPROTOOPT)
 
     # Classify read and write errors
-    _sockErrReadIgnore = [WSAEINTR, WSAEWOULDBLOCK, WSAEMSGSIZE, WSAEINPROGRESS]
+    _sockErrReadIgnore = [WSAEINTR, WSAEWOULDBLOCK, WSAEMSGSIZE,
+                          WSAEINPROGRESS]
     _sockErrReadRefuse = [WSAECONNREFUSED, WSAECONNRESET, WSAENETRESET,
                           WSAETIMEDOUT]
 

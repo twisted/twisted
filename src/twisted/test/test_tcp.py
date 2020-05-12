@@ -12,6 +12,8 @@ import errno
 import hamcrest
 from functools import wraps
 
+from typing import Type
+
 from zope.interface import implementer
 
 from twisted.trial import unittest
@@ -118,7 +120,7 @@ class MyProtocolFactoryMixin(object):
 
     protocolConnectionMade = None
     protocolConnectionLost = None
-    protocol = None
+    protocol = None  # type: Type[AccumulatingProtocol]
     called = 0
 
     def __init__(self):

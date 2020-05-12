@@ -13,6 +13,7 @@ import socket
 import time
 import warnings
 
+from typing import Dict
 from zope.interface import implementer, Interface
 from collections import OrderedDict
 
@@ -1081,9 +1082,9 @@ class RegisterProxy(Proxy):
 
     portal = None
 
-    registry = None # Should implement IRegistry
+    registry = None  # Should implement IRegistry
 
-    authorizers = {}
+    authorizers = {}  # type: Dict[str, IAuthorizer]
 
     def __init__(self, *args, **kw):
         Proxy.__init__(self, *args, **kw)

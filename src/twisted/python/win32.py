@@ -30,10 +30,12 @@ class FakeWindowsError(OSError):
     is missing.
     """
 
+
+
 try:
-    WindowsError = WindowsError
+    WindowsError = WindowsError  # type: OSError
 except NameError:
-    WindowsError = FakeWindowsError
+    WindowsError = FakeWindowsError  # type: ignore[misc,assignment]
 
 
 _cmdLineQuoteRe = re.compile(r'(\\*)"')

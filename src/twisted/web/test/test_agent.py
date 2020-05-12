@@ -59,12 +59,13 @@ from twisted.web.error import SchemeNotSupported
 from twisted.logger import globalLogPublisher
 
 try:
-    from twisted.internet import ssl
+    from twisted.internet import ssl as _ssl
 except ImportError:
     ssl = None
     skipWhenNoSSL = "SSL not present, cannot run SSL tests."
     skipWhenSSLPresent = None
 else:
+    ssl = _ssl
     skipWhenSSLPresent = "SSL present."
     skipWhenNoSSL = None
     from twisted.internet._sslverify import ClientTLSOptions, IOpenSSLTrustRoot

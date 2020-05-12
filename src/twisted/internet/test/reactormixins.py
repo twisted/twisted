@@ -20,7 +20,9 @@ __all__ = ['TestTimeoutError', 'ReactorBuilder', 'needsRunningReactor']
 import os
 import signal
 import time
-from typing import Dict, Type, Union
+from typing import Dict, Sequence, Optional, Type, Union
+
+from zope.interface import Interface
 
 from twisted.trial.unittest import SynchronousTestCase, SkipTest
 from twisted.trial.util import DEFAULT_TIMEOUT_DURATION, acquireAttribute
@@ -171,7 +173,7 @@ class ReactorBuilder:
 
     reactorFactory = None
     originalHandler = None
-    requiredInterfaces = None
+    requiredInterfaces = None  # type: Optional[Sequence[Type[Interface]]]
     skippedReactors = {}  # type: Dict[str, str]
 
     def setUp(self):
