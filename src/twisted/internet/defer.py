@@ -1449,7 +1449,10 @@ def _inlineCallbacks(result, g, status):
             # code.
             appCodeTrace = exc_info()[2].tb_next
 
-            appCodeTrace = appCodeTrace.tb_next
+            # If contextvars support is not present, we also have added a frame
+            # in the no-op shim, remove that
+            if sys.version < (3, 7):
+                appCodeTrace = appCodeTrace.tb_next
 
             if isFailure:
                 # If we invoked this generator frame by throwing an exception
