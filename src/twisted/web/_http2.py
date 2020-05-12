@@ -200,7 +200,7 @@ class H2Connection(Protocol, TimeoutMixin):
             elif isinstance(event, h2.events.ConnectionTerminated):
                 self.transport.loseConnection()
                 self.connectionLost(
-                    ConnectionLost("Remote peer sent GOAWAY"),
+                    Failure(ConnectionLost("Remote peer sent GOAWAY")),
                     _cancelTimeouts=False,
                 )
 
@@ -524,7 +524,8 @@ class H2Connection(Protocol, TimeoutMixin):
         """
         stream = self.streams[event.stream_id]
         stream.connectionLost(
-            ConnectionLost("Stream reset with code %s" % event.error_code)
+            Failure(
+                ConnectionLost("Stream reset with code %s" % event.error_code))
         )
         self._requestDone(event.stream_id)
 
@@ -812,7 +813,7 @@ class H2Connection(Protocol, TimeoutMixin):
         stillActive = self._tryToWriteControlData()
         if stillActive:
             stream = self.streams[streamID]
-            stream.connectionLost(ConnectionLost("Invalid request"))
+            stream.connectionLost(Failure(ConnectionLost("Invalid request")))
             self._requestDone(streamID)
 
 
@@ -867,7 +868,7 @@ class H2Connection(Protocol, TimeoutMixin):
                 # We've exceeded a reasonable buffer size for max buffered control frames.
                 # This is a denial of service risk, so we're going to drop this connection.
                 self.transport.abortConnection()
-                self.connectionLost(ExcessiveBufferingError())
+                self.connectionLost(Failure(ExcessiveBufferingError()))
                 return False
             return True
 
