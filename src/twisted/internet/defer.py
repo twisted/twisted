@@ -1451,7 +1451,7 @@ def _inlineCallbacks(result, g, status):
 
             # If contextvars support is not present, we also have added a frame
             # in the no-op shim, remove that
-            if sys.version_info < (3, 7):
+            if version_info < (3, 7):
                 appCodeTrace = appCodeTrace.tb_next
 
             if isFailure:
