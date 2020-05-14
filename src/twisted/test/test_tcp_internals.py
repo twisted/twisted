@@ -15,6 +15,8 @@ try:
 except ImportError:
     resource = None
 
+from unittest import skipIf
+
 from twisted.trial.unittest import TestCase
 
 from twisted.python import compat, log
@@ -28,6 +30,9 @@ from twisted.internet.defer import maybeDeferred, gatherResults
 from twisted.internet import reactor, interfaces
 
 
+
+@skipIf(not interfaces.IReactorFDSet.providedBy(reactor),
+        'This test only applies to reactors that implement IReactorFDset')
 class PlatformAssumptionsTests(TestCase):
     """
     Test assumptions about platform behaviors.
@@ -117,6 +122,8 @@ class PlatformAssumptionsTests(TestCase):
 
 
 
+@skipIf(not interfaces.IReactorFDSet.providedBy(reactor),
+        'This test only applies to reactors that implement IReactorFDset')
 class SelectReactorTests(TestCase):
     """
     Tests for select-specific failure conditions.
@@ -373,10 +380,3 @@ class SelectReactorTests(TestCase):
         failures = self.flushLoggedErrors(socket.error)
         self.assertEqual(1, len(failures))
         self.assertEqual(failures[0].value.args[0], unknownAcceptError)
-
-
-
-if not interfaces.IReactorFDSet.providedBy(reactor):
-    skipMsg = 'This test only applies to reactors that implement IReactorFDset'
-    PlatformAssumptionsTests.skip = skipMsg
-    SelectReactorTests.skip = skipMsg

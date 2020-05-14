@@ -10,6 +10,7 @@ import os
 import sys
 import types
 import socket
+from unittest import skipIf
 
 from twisted.internet import interfaces, reactor, protocol, error, address
 from twisted.internet import defer, utils
@@ -30,6 +31,8 @@ class FailedConnectionClientFactory(protocol.ClientFactory):
 
 
 
+@skipIf(not interfaces.IReactorUNIX(reactor, None),
+        "This reactor does not support UNIX domain sockets")
 class UnixSocketTests(unittest.TestCase):
     """
     Test unix sockets.
@@ -303,6 +306,8 @@ class ServerProto(protocol.DatagramProtocol):
 
 
 
+@skipIf(not interfaces.IReactorUNIXDatagram(reactor, None),
+        "This reactor does not support UNIX datagram sockets")
 class DatagramUnixSocketTests(unittest.TestCase):
     """
     Test datagram UNIX sockets.
@@ -418,10 +423,3 @@ class DatagramUnixSocketTests(unittest.TestCase):
 
         return self._reprTest(
             NewStyleProtocol(), "twisted.test.test_unix.NewStyleProtocol")
-
-
-
-if not interfaces.IReactorUNIX(reactor, None):
-    UnixSocketTests.skip = "This reactor does not support UNIX domain sockets"
-if not interfaces.IReactorUNIXDatagram(reactor, None):
-    DatagramUnixSocketTests.skip = "This reactor does not support UNIX datagram sockets"

@@ -7,10 +7,17 @@ Tests for L{twisted.conch.scripts.cftp}.
 """
 
 import locale
-import time, sys, os, operator, getpass, struct
+import getpass
+import operator
+import os
+import struct
+import sys
+import time
+from unittest import skipIf
 from io import BytesIO
 
 from twisted.python.filepath import FilePath
+from twisted.python.procutils import which
 from twisted.python.reflect import requireModule
 from zope.interface import implementer
 
@@ -18,7 +25,6 @@ pyasn1 = requireModule('pyasn1')
 cryptography = requireModule('cryptography')
 unix = requireModule('twisted.conch.unix')
 
-_reason = None
 if cryptography and pyasn1:
     try:
         from twisted.conch.scripts import cftp
@@ -46,7 +52,14 @@ from twisted.trial.unittest import TestCase
 
 
 
+skipTests = False
+if None in (unix, cryptography, pyasn1,
+            interfaces.IReactorProcess(reactor, None)):
+    skipTests = True
 
+
+
+@skipIf(skipTests, "don't run w/o spawnProcess or cryptography or pyasn1")
 class SSHSessionTests(TestCase):
     """
     Tests for L{twisted.conch.scripts.cftp.SSHSession}.
@@ -346,6 +359,7 @@ class InMemoryRemoteFile(BytesIO):
 
 
 
+@skipIf(skipTests, "don't run w/o spawnProcess or cryptography or pyasn1")
 class StdioClientTests(TestCase):
     """
     Tests for L{cftp.StdioClient}.
@@ -945,6 +959,7 @@ class CFTPClientTestBase(SFTPTestBase):
 
 
 
+@skipIf(skipTests, "don't run w/o spawnProcess or cryptography or pyasn1")
 class OurServerCmdLineClientTests(CFTPClientTestBase):
     """
     Functional tests which launch a SFTP server over TCP on localhost and check
@@ -1320,6 +1335,7 @@ class OurServerCmdLineClientTests(CFTPClientTestBase):
 
 
 
+@skipIf(skipTests, "don't run w/o spawnProcess or cryptography or pyasn1")
 class OurServerBatchFileTests(CFTPClientTestBase):
     """
     Functional tests which launch a SFTP server over localhost and checks csftp
@@ -1424,6 +1440,8 @@ exit
 
 
 
+@skipIf(skipTests, "don't run w/o spawnProcess or cryptography or pyasn1")
+@skipIf(not which('sftp'), "no sftp command-line client available")
 class OurServerSftpClientTests(CFTPClientTestBase):
     """
     Test the sftp server against sftp command line client.
@@ -1489,19 +1507,3 @@ class OurServerSftpClientTests(CFTPClientTestBase):
         d.addCallback(hasPAKT)
         d.addCallback(lambda args: getProcessOutputAndValue('sftp', args))
         return d.addCallback(check)
-
-
-
-if None in (unix, cryptography, pyasn1,
-            interfaces.IReactorProcess(reactor, None)):
-    if _reason is None:
-        _reason = "don't run w/o spawnProcess or cryptography or pyasn1"
-    OurServerCmdLineClientTests.skip = _reason
-    OurServerBatchFileTests.skip = _reason
-    OurServerSftpClientTests.skip = _reason
-    StdioClientTests.skip = _reason
-    SSHSessionTests.skip = _reason
-else:
-    from twisted.python.procutils import which
-    if not which('sftp'):
-        OurServerSftpClientTests.skip = "no sftp command-line client available"
