@@ -9,6 +9,7 @@ Tests for lots of functionality provided by L{twisted.internet}.
 import os
 import sys
 import time
+from unittest import skipIf
 
 from twisted.python.compat import _PY3
 from twisted.trial import unittest
@@ -1014,6 +1015,9 @@ class ChildResolveProtocol(protocol.ProcessProtocol):
         self.onCompletion = None
 
 
+
+@skipIf(not interfaces.IReactorProcess(reactor, None),
+        "cannot run test: reactor doesn't support IReactorProcess")
 class ResolveTests(unittest.TestCase):
     def testChildResolve(self):
         # I've seen problems with reactor.run under gtk2reactor. Spawn a
@@ -1054,10 +1058,6 @@ class ResolveTests(unittest.TestCase):
 
         helperDeferred.addCallback(cbFinished)
         return helperDeferred
-
-if not interfaces.IReactorProcess(reactor, None):
-    ResolveTests.skip = (
-        "cannot run test: reactor doesn't support IReactorProcess")
 
 
 
