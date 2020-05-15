@@ -122,6 +122,7 @@ class OptionalDependenciesTests(SynchronousTestCase):
         self.assertIn('osx_platform', _EXTRAS_REQUIRE)  # Compat for macOS
         self.assertIn('windows_platform', _EXTRAS_REQUIRE)
         self.assertIn('http2', _EXTRAS_REQUIRE)
+        self.assertIn('contextvars', _EXTRAS_REQUIRE)
 
 
     def test_extrasRequiresDevDeps(self):
@@ -182,6 +183,16 @@ class OptionalDependenciesTests(SynchronousTestCase):
         self.assertIn('priority >= 1.1.0, < 2.0', deps)
 
 
+    def test_extrasRequiresContextvarsDeps(self):
+        """
+        L{_EXTRAS_REQUIRES}'s C{contextvars} extra contains setuptools
+        requirements for the packages required to make Twisted contextvars
+        support work in Python versions less than 3.7 which do not contain
+        the contextvars library in the standard library.
+        """
+        deps = _EXTRAS_REQUIRE['contextvars']
+        self.assertIn('contextvars >= 2.4, < 3', deps)
+
     def test_extrasRequiresAllNonPlatformDeps(self):
         """
         L{_EXTRAS_REQUIRE}'s C{all_non_platform} extra contains setuptools
@@ -198,6 +209,7 @@ class OptionalDependenciesTests(SynchronousTestCase):
         self.assertIn('appdirs >= 1.4.0', deps)
         self.assertIn('h2 >= 3.0, < 4.0', deps)
         self.assertIn('priority >= 1.1.0, < 2.0', deps)
+        self.assertIn('contextvars >= 2.4, < 3', deps)
 
 
     def test_extrasRequiresMacosPlatformDeps(self):
@@ -216,6 +228,7 @@ class OptionalDependenciesTests(SynchronousTestCase):
         self.assertIn('h2 >= 3.0, < 4.0', deps)
         self.assertIn('priority >= 1.1.0, < 2.0', deps)
         self.assertIn('pyobjc-core', deps)
+        self.assertIn('contextvars >= 2.4, < 3', deps)
 
 
     def test_extrasRequireMacOSXPlatformDeps(self):
@@ -242,6 +255,7 @@ class OptionalDependenciesTests(SynchronousTestCase):
         self.assertIn('h2 >= 3.0, < 4.0', deps)
         self.assertIn('priority >= 1.1.0, < 2.0', deps)
         self.assertIn('pywin32 != 226', deps)
+        self.assertIn('contextvars >= 2.4, < 3', deps)
 
 
 
