@@ -102,6 +102,7 @@ _EXTRA_OPTIONS = dict(
     windows=['pywin32 != 226'],
     http2=['h2 >= 3.0, < 4.0',
            'priority >= 1.1.0, < 2.0'],
+    contextvars=['contextvars >= 2.4, < 3; python_version < "3.7"'],
     sniffio=['sniffio'],
 )
 
@@ -110,6 +111,7 @@ _PLATFORM_INDEPENDENT = (
     _EXTRA_OPTIONS['conch'] +
     _EXTRA_OPTIONS['serial'] +
     _EXTRA_OPTIONS['http2'] +
+    _EXTRA_OPTIONS['contextvars'] +
     _EXTRA_OPTIONS['sniffio']
 )
 
@@ -119,6 +121,7 @@ _EXTRAS_REQUIRE = {
     'conch': _EXTRA_OPTIONS['conch'],
     'serial': _EXTRA_OPTIONS['serial'],
     'http2': _EXTRA_OPTIONS['http2'],
+    'contextvars': _EXTRA_OPTIONS['contextvars'],
     'all_non_platform': _PLATFORM_INDEPENDENT,
     'macos_platform': (
         _EXTRA_OPTIONS['macos'] + _PLATFORM_INDEPENDENT
