@@ -3361,6 +3361,20 @@ class CoroutineSniffioTests(unittest.TestCase):
         )
 
 
+    def testNothingFoundAfterCoroutine(self):
+        """sniffio will recognize no loop after a coroutine"""
+        async def twistAndShout():
+            pass
+
+        d = defer.ensureDeferred(twistAndShout())
+        self.successResultOf(d)
+
+        self.assertRaises(
+            sniffio.AsyncLibraryNotFoundError,
+            sniffio.current_async_library,
+        )
+
+
     def testTwistedFoundInCoroutineExceptionHandler(self):
         """
         sniffio will recognize Twisted in a coroutine when handling an
@@ -3390,6 +3404,26 @@ class CoroutineSniffioTests(unittest.TestCase):
         )
 
 
+    def testNothingFoundafterCoroutineExceptionHandler(self):
+        """
+        sniffio will recognize no loop after a coroutine raises an exception
+        """
+
+        class LocalException(Exception):
+            pass
+
+        async def twistAndShout():
+            raise LocalException()
+
+        d = defer.ensureDeferred(twistAndShout())
+        self.successResultOf(d)
+
+        self.assertRaises(
+            sniffio.AsyncLibraryNotFoundError,
+            sniffio.current_async_library,
+        )
+
+
     def testTwistedFoundInInlineCallbacks(self):
         """sniffio will recognize Twisted in a L{defer.inlineCallbacks}"""
         @defer.inlineCallbacks
@@ -3400,6 +3434,16 @@ class CoroutineSniffioTests(unittest.TestCase):
 
         d = defer.ensureDeferred(twistALittleCloserNow())
         self.assertEqual(self.successResultOf(d), "twisted")
+
+
+    def testNothingFoundAfterInlineCallbacks(self):
+        """sniffio will recognize no loop after a L{defer.inlineCallbacks}"""
+        @defer.inlineCallbacks
+        def twistALittleCloserNow():
+            yield
+
+        d = defer.ensureDeferred(twistALittleCloserNow())
+        self.successResultOf(d)
 
         self.assertRaises(
             sniffio.AsyncLibraryNotFoundError,

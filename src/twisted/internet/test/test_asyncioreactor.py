@@ -152,6 +152,15 @@ class AsyncioSelectorReactorSniffioTests(ReactorBuilder, SynchronousTestCase):
 
     skip = sniffioSkip
 
+    def testSniffioNotFoundWhenOutside(self):
+        reactor = AsyncioSelectorReactor()
+
+        self.assertRaises(
+            sniffio.AsyncLibraryNotFoundError,
+            sniffio.current_async_library,
+        )
+
+
     def testSniffioFindsAsyncioInCoroutine(self):
         async def inAsyncio():
             reactor.stop()
@@ -164,53 +173,17 @@ class AsyncioSelectorReactorSniffioTests(ReactorBuilder, SynchronousTestCase):
 
         reactor.run()
 
-        self.assertRaises(
-            sniffio.AsyncLibraryNotFoundError,
-            sniffio.current_async_library,
-        )
-
         self.assertEqual(self.successResultOf(d), "asyncio")
 
-        self.assertRaises(
-            sniffio.AsyncLibraryNotFoundError,
-            sniffio.current_async_library,
-        )
 
-
-    def testSniffioFindsAsyncioTwistedAsyncio(self):
-        # TODO: maybe the granular two-layer tests below are sufficient
-        reactor = AsyncioSelectorReactor()
-
-        async def andLetMeKnow():
-            # to be run as asyncio
-            return [sniffio.current_async_library()]
-
-        async def youKnowYouTwist():
-            # to be run as twisted
-            future = asyncio.ensure_future(andLetMeKnow())
-            d = defer.Deferred.fromFuture(future)
-            inner = await d
-            return [sniffio.current_async_library(), *inner]
-
-        async def shakeItUp():
-            # to be run as asyncio
-            d = defer.ensureDeferred(youKnowYouTwist())
-            future = d.asFuture(loop=asyncio.get_event_loop())
-            inner = await future
-
+    def testSniffioFindsNothingAfterCoroutine(self):
+        async def inAsyncio():
             reactor.stop()
 
-            return [sniffio.current_async_library(), *inner]
-
-        future = asyncio.ensure_future(shakeItUp())
-        d = defer.Deferred.fromFuture(future)
+        reactor = AsyncioSelectorReactor()
+        future = asyncio.ensure_future(inAsyncio())
 
         reactor.run()
-
-        self.assertEqual(
-            self.successResultOf(d),
-            ["asyncio", "twisted", "asyncio"],
-        )
 
         self.assertRaises(
             sniffio.AsyncLibraryNotFoundError,
@@ -246,6 +219,29 @@ class AsyncioSelectorReactorSniffioTests(ReactorBuilder, SynchronousTestCase):
         )
 
 
+    def testSniffioFindsNothingAfterTwistedCoroutineInsideAsyncioCoroutine(self):
+        reactor = AsyncioSelectorReactor()
+
+        async def innerTwisted():
+            pass
+
+        async def outerAsyncio():
+            d = defer.ensureDeferred(innerTwisted())
+            future = d.asFuture(loop=asyncio.get_event_loop())
+            await future
+
+            reactor.stop()
+
+        future = asyncio.ensure_future(outerAsyncio())
+
+        reactor.run()
+
+        self.assertRaises(
+            sniffio.AsyncLibraryNotFoundError,
+            sniffio.current_async_library,
+        )
+
+
     def testSniffioFindsAsyncioCoroutineInsideTwistedCoroutine(self):
         reactor = AsyncioSelectorReactor()
 
@@ -265,12 +261,27 @@ class AsyncioSelectorReactorSniffioTests(ReactorBuilder, SynchronousTestCase):
 
         reactor.run()
 
-        self.assertRaises(
-            sniffio.AsyncLibraryNotFoundError,
-            sniffio.current_async_library,
-        )
-
         self.assertEqual(self.successResultOf(d), ["twisted", "asyncio"])
+
+
+    def testSniffioFindsNothingAfterAsyncioCoroutineInsideTwistedCoroutine(
+            self,
+    ):
+        reactor = AsyncioSelectorReactor()
+
+        async def innerAsyncio():
+            pass
+
+        async def outerTwisted():
+            future = asyncio.ensure_future(innerAsyncio())
+            d = defer.Deferred.fromFuture(future)
+            await d
+
+            reactor.stop()
+
+        d = defer.ensureDeferred(outerTwisted())
+
+        reactor.run()
 
         self.assertRaises(
             sniffio.AsyncLibraryNotFoundError,
