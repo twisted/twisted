@@ -103,7 +103,7 @@ _EXTRA_OPTIONS = dict(
     http2=['h2 >= 3.0, < 4.0',
            'priority >= 1.1.0, < 2.0'],
     contextvars=['contextvars >= 2.4, < 3; python_version < "3.7"'],
-    sniffio=['sniffio'],
+    sniffio=['sniffio >= 1.1, < 2'],
 )
 
 _PLATFORM_INDEPENDENT = (
@@ -122,6 +122,7 @@ _EXTRAS_REQUIRE = {
     'serial': _EXTRA_OPTIONS['serial'],
     'http2': _EXTRA_OPTIONS['http2'],
     'contextvars': _EXTRA_OPTIONS['contextvars'],
+    'sniffio': _EXTRA_OPTIONS['sniffio'],
     'all_non_platform': _PLATFORM_INDEPENDENT,
     'macos_platform': (
         _EXTRA_OPTIONS['macos'] + _PLATFORM_INDEPENDENT
