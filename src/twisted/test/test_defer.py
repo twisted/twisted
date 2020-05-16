@@ -3416,7 +3416,7 @@ class CoroutineSniffioTests(unittest.TestCase):
             raise LocalException()
 
         d = defer.ensureDeferred(twistAndShout())
-        self.successResultOf(d)
+        self.failureResultOf(d)
 
         self.assertRaises(
             sniffio.AsyncLibraryNotFoundError,
