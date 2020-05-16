@@ -3367,13 +3367,16 @@ class CoroutineSniffioTests(unittest.TestCase):
         exception.
         """
 
+        class LocalException(Exception):
+            pass
+
         async def fail():
-            raise Exception()
+            raise LocalException()
 
         async def twistAndShout():
             try:
                 await fail()
-            except:
+            except LocalException:
                 return sniffio.current_async_library()
 
             return 'exception not handled'

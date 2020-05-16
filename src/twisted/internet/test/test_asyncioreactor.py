@@ -146,6 +146,8 @@ class AsyncioSelectorReactorTests(ReactorBuilder, SynchronousTestCase):
             if gc_was_enabled:
                 gc.enable()
 
+
+
 class AsyncioSelectorReactorSniffioTests(ReactorBuilder, SynchronousTestCase):
 
     skip = sniffioSkip
