@@ -102,7 +102,7 @@ _EXTRA_OPTIONS = dict(
     windows=['pywin32 != 226'],
     http2=['h2 >= 3.0, < 4.0',
            'priority >= 1.1.0, < 2.0'],
-    contextvars=['contextvars >= 2.4, < 3'],
+    contextvars=['contextvars >= 2.4, < 3; python_version < "3.7"'],
 )
 
 _PLATFORM_INDEPENDENT = (

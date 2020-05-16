@@ -191,7 +191,7 @@ class OptionalDependenciesTests(SynchronousTestCase):
         the contextvars library in the standard library.
         """
         deps = _EXTRAS_REQUIRE['contextvars']
-        self.assertIn('contextvars >= 2.4, < 3', deps)
+        self.assertIn('contextvars >= 2.4, < 3; python_version < "3.7"', deps)
 
     def test_extrasRequiresAllNonPlatformDeps(self):
         """
@@ -209,7 +209,7 @@ class OptionalDependenciesTests(SynchronousTestCase):
         self.assertIn('appdirs >= 1.4.0', deps)
         self.assertIn('h2 >= 3.0, < 4.0', deps)
         self.assertIn('priority >= 1.1.0, < 2.0', deps)
-        self.assertIn('contextvars >= 2.4, < 3', deps)
+        self.assertIn('contextvars >= 2.4, < 3; python_version < "3.7"', deps)
 
 
     def test_extrasRequiresMacosPlatformDeps(self):
@@ -228,7 +228,7 @@ class OptionalDependenciesTests(SynchronousTestCase):
         self.assertIn('h2 >= 3.0, < 4.0', deps)
         self.assertIn('priority >= 1.1.0, < 2.0', deps)
         self.assertIn('pyobjc-core', deps)
-        self.assertIn('contextvars >= 2.4, < 3', deps)
+        self.assertIn('contextvars >= 2.4, < 3; python_version < "3.7"', deps)
 
 
     def test_extrasRequireMacOSXPlatformDeps(self):
@@ -255,7 +255,7 @@ class OptionalDependenciesTests(SynchronousTestCase):
         self.assertIn('h2 >= 3.0, < 4.0', deps)
         self.assertIn('priority >= 1.1.0, < 2.0', deps)
         self.assertIn('pywin32 != 226', deps)
-        self.assertIn('contextvars >= 2.4, < 3', deps)
+        self.assertIn('contextvars >= 2.4, < 3; python_version < "3.7"', deps)
 
 
 
