@@ -153,7 +153,7 @@ class AsyncioSelectorReactorSniffioTests(ReactorBuilder, SynchronousTestCase):
     skip = sniffioSkip
 
     def testSniffioNotFoundWhenOutside(self):
-        reactor = AsyncioSelectorReactor()
+        reactor = AsyncioSelectorReactor()  # noqa: F841
 
         self.assertRaises(
             sniffio.AsyncLibraryNotFoundError,
@@ -181,7 +181,7 @@ class AsyncioSelectorReactorSniffioTests(ReactorBuilder, SynchronousTestCase):
             reactor.stop()
 
         reactor = AsyncioSelectorReactor()
-        future = asyncio.ensure_future(inAsyncio())
+        asyncio.ensure_future(inAsyncio())
 
         reactor.run()
 
@@ -232,7 +232,7 @@ class AsyncioSelectorReactorSniffioTests(ReactorBuilder, SynchronousTestCase):
 
             reactor.stop()
 
-        future = asyncio.ensure_future(outerAsyncio())
+        asyncio.ensure_future(outerAsyncio())
 
         reactor.run()
 
@@ -279,7 +279,7 @@ class AsyncioSelectorReactorSniffioTests(ReactorBuilder, SynchronousTestCase):
 
             reactor.stop()
 
-        d = defer.ensureDeferred(outerTwisted())
+        defer.ensureDeferred(outerTwisted())
 
         reactor.run()
 
