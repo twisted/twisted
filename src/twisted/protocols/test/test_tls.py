@@ -73,6 +73,7 @@ class HandshakeCallbackContextFactory:
         self._method = method
 
 
+    @classmethod
     def factoryAndDeferred(cls):
         """
         Create a new L{HandshakeCallbackContextFactory} and return a two-tuple
@@ -81,7 +82,6 @@ class HandshakeCallbackContextFactory:
         """
         contextFactory = cls()
         return contextFactory, contextFactory._finished
-    factoryAndDeferred = classmethod(factoryAndDeferred)
 
 
     def _info(self, connection, where, ret):
