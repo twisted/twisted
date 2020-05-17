@@ -64,7 +64,8 @@ class AwaitTests(TestCase):
 
     def test_basic(self):
         """
-        L{Deferred.fromCoroutine} allows a function to C{await} on a L{Deferred}.
+        L{Deferred.fromCoroutine} allows a function to C{await} on a
+        L{Deferred}.
         """
         async def run():
             d = succeed("foo")
@@ -114,9 +115,12 @@ class AwaitTests(TestCase):
         """
         def raises():
             raise SampleException()
+
         it = maybeDeferred(raises)
+
         async def doomed():
             return await it
+
         failure = self.failureResultOf(Deferred.fromCoroutine(doomed()))
 
         self.assertIn(", in doomed\n", failure.getTraceback())

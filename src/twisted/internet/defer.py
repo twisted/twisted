@@ -859,13 +859,13 @@ class Deferred:
     @classmethod
     def fromCoroutine(cls, coro):
         """
-        Schedule the execution of a coroutine that awaits/yields from L{Deferred}s,
-        wrapping it in a L{Deferred} that will fire on success/failure of the
-        coroutine.
+        Schedule the execution of a coroutine that awaits/yields from
+        L{Deferred}s, wrapping it in a L{Deferred} that will fire on
+        success/failure of the coroutine.
 
-        Coroutine functions return a coroutine object, similar to how generators
-        work. This function turns that coroutine into a Deferred, meaning that it
-        can be used in regular Twisted code. For example::
+        Coroutine functions return a coroutine object, similar to how
+        generators work. This function turns that coroutine into a Deferred,
+        meaning that it can be used in regular Twisted code. For example::
 
             import treq
             from twisted.internet.defer import ensureDeferred
