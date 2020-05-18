@@ -250,7 +250,7 @@ def getSetupArgs(extensions=_EXTENSIONS, readme='README.rst'):
         "zope.interface >= 4.4.2",
         "constantly >= 15.1",
         "incremental >= 16.10.1",
-        "Automat >= 0.3.0",
+        "Automat >= 0.8.0",
         "hyperlink >= 17.1.1",
         "PyHamcrest >= 1.9.0",
         "attrs >= 19.2.0",
