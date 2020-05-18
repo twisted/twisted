@@ -139,8 +139,10 @@ class AwaitTests(TestCase):
             except SampleException:
                 return Failure()
         it = Deferred()
+
         async def doomed():
             return await it
+
         started = Deferred.fromCoroutine(doomed())
         self.assertNoResult(started)
         it.errback(returnsFailure())
