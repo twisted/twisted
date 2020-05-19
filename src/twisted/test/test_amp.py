@@ -2409,6 +2409,7 @@ class MagicSchemaCommand(amp.Command):
     A command which overrides L{parseResponse}, L{parseArguments}, and
     L{makeResponse}.
     """
+    @classmethod
     def parseResponse(self, strings, protocol):
         """
         Don't do any parsing, just jam the input strings and protocol
@@ -2417,9 +2418,9 @@ class MagicSchemaCommand(amp.Command):
         """
         protocol.parseResponseArguments = (strings, protocol)
         return strings
-    parseResponse = classmethod(parseResponse)
 
 
+    @classmethod
     def parseArguments(cls, strings, protocol):
         """
         Don't do any parsing, just jam the input strings and protocol
@@ -2428,9 +2429,9 @@ class MagicSchemaCommand(amp.Command):
         """
         protocol.parseArgumentsArguments = (strings, protocol)
         return strings
-    parseArguments = classmethod(parseArguments)
 
 
+    @classmethod
     def makeArguments(cls, objects, protocol):
         """
         Don't do any serializing, just jam the input strings and protocol
@@ -2439,7 +2440,6 @@ class MagicSchemaCommand(amp.Command):
         """
         protocol.makeArgumentsArguments = (objects, protocol)
         return objects
-    makeArguments = classmethod(makeArguments)
 
 
 
