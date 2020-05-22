@@ -52,13 +52,8 @@ class ProcessUtilsTests(unittest.TestCase):
         scriptFile = self.makeSourceFile([
                 "import sys",
                 "for s in b'hello world\\n':",
-                "    if hasattr(sys.stdout, 'buffer'):",
-                "        # Python 3",
-                "        s = bytes([s])",
-                "        sys.stdout.buffer.write(s)",
-                "    else:",
-                "        # Python 2",
-                "        sys.stdout.write(s)",
+                "    s = bytes([s])",
+                "    sys.stdout.buffer.write(s)",
                 "    sys.stdout.flush()"])
         d = utils.getProcessOutput(self.exe, ['-u', scriptFile])
         return d.addCallback(self.assertEqual, b"hello world\n")
@@ -122,14 +117,8 @@ class ProcessUtilsTests(unittest.TestCase):
         """
         scriptFile = self.makeSourceFile([
             "import sys",
-            "if hasattr(sys.stdout, 'buffer'):",
-            "    # Python 3",
-            "    sys.stdout.buffer.write(b'hello world!\\n')",
-            "    sys.stderr.buffer.write(b'goodbye world!\\n')",
-            "else:",
-            "    # Python 2",
-            "    sys.stdout.write(b'hello world!\\n')",
-            "    sys.stderr.write(b'goodbye world!\\n')",
+            "sys.stdout.buffer.write(b'hello world!\\n')",
+            "sys.stderr.buffer.write(b'goodbye world!\\n')",
             "sys.exit(1)"
             ])
 
