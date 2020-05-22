@@ -55,6 +55,7 @@ addons:
     packages:
     - libssl-dev
     - libssl1.0.0
+    - smbclient
 
 
 cache:
