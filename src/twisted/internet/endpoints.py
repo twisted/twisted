@@ -61,7 +61,8 @@ from twisted.python.systemd import ListenFDs
 from ._idna import _idnaBytes, _idnaText
 
 try:
-    from twisted.protocols.tls import TLSMemoryBIOFactory
+    from twisted.protocols.tls import (
+        TLSMemoryBIOFactory as _TLSMemoryBIOFactory)
     from twisted.internet.ssl import (
         optionsForClientTLS, PrivateCertificate, Certificate, KeyPair,
         CertificateOptions, trustRootFromCertificates
@@ -69,6 +70,8 @@ try:
     from OpenSSL.SSL import Error as SSLError
 except ImportError:
     TLSMemoryBIOFactory = None
+else:
+    TLSMemoryBIOFactory = _TLSMemoryBIOFactory
 
 __all__ = ["clientFromString", "serverFromString",
            "TCP4ServerEndpoint", "TCP6ServerEndpoint",

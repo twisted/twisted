@@ -16,6 +16,7 @@ import os
 import socket
 
 from functools import wraps
+from typing import Optional, Sequence, Type
 
 import attr
 
@@ -1526,7 +1527,7 @@ class TCPPortTestsMixin(object):
     """
     Tests for L{IReactorTCP.listenTCP}
     """
-    requiredInterfaces = (IReactorTCP,)
+    requiredInterfaces = (IReactorTCP,)  # type: Optional[Sequence[Type[Interface]]]  # noqa
 
     def getExpectedStartListeningLogMessage(self, port, factory):
         """
@@ -2125,7 +2126,7 @@ class WriteSequenceTestsMixin(object):
     """
     Test for L{twisted.internet.abstract.FileDescriptor.writeSequence}.
     """
-    requiredInterfaces = (IReactorTCP,)
+    requiredInterfaces = (IReactorTCP,)  # type: Optional[Sequence[Type[Interface]]]  # noqa
 
     def setWriteBufferSize(self, transport, value):
         """
@@ -2832,7 +2833,7 @@ class AbortConnectionMixin(object):
     Unit tests for L{ITransport.abortConnection}.
     """
     # Override in subclasses, should be an EndpointCreator instance:
-    endpoints = None
+    endpoints = None  # type: Optional[EndpointCreator]
 
     def runAbortTest(self, clientClass, serverClass,
                      clientConnectionLostReason=None):

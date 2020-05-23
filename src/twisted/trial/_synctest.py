@@ -388,7 +388,9 @@ class _Assertions(pyunit.TestCase, object):
         """
         super(_Assertions, self).assertFalse(condition, msg)
         return condition
-    assertNot = failUnlessFalse = failIf = assertFalse
+    assertNot = assertFalse
+    failUnlessFalse = assertFalse
+    failIf = assertFalse
 
 
     def assertTrue(self, condition, msg=None):
@@ -399,7 +401,9 @@ class _Assertions(pyunit.TestCase, object):
         """
         super(_Assertions, self).assertTrue(condition, msg)
         return condition
-    assert_ = failUnlessTrue = failUnless = assertTrue
+    assert_ = assertTrue
+    failUnlessTrue = assertTrue
+    failUnless = assertTrue
 
 
     def assertRaises(self, exception, f=None, *args, **kwargs):
@@ -436,7 +440,9 @@ class _Assertions(pyunit.TestCase, object):
         """
         super(_Assertions, self).assertEqual(first, second, msg)
         return first
-    failUnlessEqual = failUnlessEquals = assertEquals = assertEqual
+    failUnlessEqual = assertEqual
+    failUnlessEquals = assertEqual
+    assertEquals = assertEqual
 
 
     def assertIs(self, first, second, msg=None):
@@ -449,9 +455,11 @@ class _Assertions(pyunit.TestCase, object):
         '%r is not %r' % (first, second)
         """
         if first is not second:
-            raise self.failureException(msg or '%r is not %r' % (first, second))
+            raise self.failureException(
+                msg or '%r is not %r' % (first, second))
         return first
-    failUnlessIdentical = assertIdentical = assertIs
+    failUnlessIdentical = assertIs
+    assertIdentical = assertIs
 
 
     def assertIsNot(self, first, second, msg=None):
@@ -466,7 +474,8 @@ class _Assertions(pyunit.TestCase, object):
         if first is second:
             raise self.failureException(msg or '%r is %r' % (first, second))
         return first
-    failIfIdentical = assertNotIdentical = assertIsNot
+    failIfIdentical = assertIsNot
+    assertNotIdentical = assertIsNot
 
 
     def assertNotEqual(self, first, second, msg=None):
@@ -479,7 +488,9 @@ class _Assertions(pyunit.TestCase, object):
         if not first != second:
             raise self.failureException(msg or '%r == %r' % (first, second))
         return first
-    assertNotEquals = failIfEquals = failIfEqual = assertNotEqual
+    assertNotEquals = assertNotEqual
+    failIfEquals = assertNotEqual
+    failIfEqual = assertNotEqual
 
 
     def assertIn(self, containee, container, msg=None):
@@ -532,7 +543,8 @@ class _Assertions(pyunit.TestCase, object):
             raise self.failureException(msg or '%r == %r within %r places'
                                         % (first, second, places))
         return first
-    assertNotAlmostEquals = failIfAlmostEqual = assertNotAlmostEqual
+    assertNotAlmostEquals = assertNotAlmostEqual
+    failIfAlmostEqual = assertNotAlmostEqual
     failIfAlmostEquals = assertNotAlmostEqual
 
 
@@ -552,8 +564,8 @@ class _Assertions(pyunit.TestCase, object):
             raise self.failureException(msg or '%r != %r within %r places'
                                         % (first, second, places))
         return first
-    assertAlmostEquals = failUnlessAlmostEqual = assertAlmostEqual
-    failUnlessAlmostEquals = assertAlmostEqual
+    assertAlmostEquals = assertAlmostEqual
+    failUnlessAlmostEqual = assertAlmostEqual
 
 
     def assertApproximates(self, first, second, tolerance, msg=None):

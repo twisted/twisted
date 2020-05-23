@@ -14,16 +14,20 @@ from twisted.conch.ssh import session, forwarding, channel
 from twisted.conch.client.default import isInKnownHosts
 from twisted.internet import reactor, defer, protocol, tksupport
 from twisted.python import usage, log
-from twisted.python.compat import _PY3
 
-import os, sys, getpass, struct, base64, signal
+import base64
+import getpass
+import os
+import signal
+import struct
+import sys
+from typing import List, Tuple
 
-if _PY3:
-    import tkinter as Tkinter
-    import tkinter.filedialog as tkFileDialog
-    import tkinter.messagebox as tkMessageBox
-else:
-    import Tkinter, tkFileDialog, tkMessageBox
+import tkinter as Tkinter
+import tkinter.filedialog as tkFileDialog
+import tkinter.messagebox as tkMessageBox
+
+
 
 class TkConchMenu(Tkinter.Frame):
     def __init__(self, *args, **params):
@@ -222,9 +226,9 @@ class GeneralOptions(usage.Options):
                       usage.Completer(descr="argument", repeat=True)]
         )
 
-    identitys = []
-    localForwards = []
-    remoteForwards = []
+    identitys = []  # type: List[str]
+    localForwards = []  # type: List[Tuple[int, Tuple[int, int]]]
+    remoteForwards = []  # type: List[Tuple[int, Tuple[int, int]]]
 
     def opt_identity(self, i):
         self.identitys.append(i)
@@ -421,13 +425,15 @@ class SSHClientTransport(transport.SSHClientTransport):
             user = getpass.getuser()
         self.requestService(SSHUserAuthClient(user, SSHConnection()))
 
-class SSHUserAuthClient(userauth.SSHUserAuthClient):
-    usedFiles = []
 
-    def getPassword(self, prompt = None):
+
+class SSHUserAuthClient(userauth.SSHUserAuthClient):
+    usedFiles = []  # type: List[str]
+
+    def getPassword(self, prompt=None):
         if not prompt:
             prompt = "%s@%s's password: " % (self.user, options['host'])
-        return deferredAskFrame(prompt,0)
+        return deferredAskFrame(prompt, 0)
 
     def getPublicKey(self):
         files = [x for x in options.identitys if x not in self.usedFiles]
@@ -552,8 +558,7 @@ class SSHSession(channel.SSHChannel):
             self.write(char)
 
     def dataReceived(self, data):
-        if _PY3 and isinstance(data, bytes):
-            data = data.decode("utf-8")
+        data = data.decode("utf-8")
         if options['ansilog']:
             print(repr(data))
         frame.write(data)
