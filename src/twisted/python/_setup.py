@@ -120,7 +120,7 @@ _EXTRAS_REQUIRE = {
     'conch': _EXTRA_OPTIONS['conch'],
     'serial': _EXTRA_OPTIONS['serial'],
     'http2': _EXTRA_OPTIONS['http2'],
-    'smb':_EXTRA_OPTIONS['smb'],
+    'smb': _EXTRA_OPTIONS['smb'],
     'contextvars': _EXTRA_OPTIONS['contextvars'],
     'all_non_platform': _PLATFORM_INDEPENDENT,
     'macos_platform': (
