@@ -460,7 +460,7 @@ class SMBConnection(base.SMBPacketReceiver):
                          SYNCHRONIZE)
         elif IPipe.providedBy(share):
             resp.share_type = SHARE_PIPE
-            resp.flags = capabilities = 0
+            resp.flags = 0
             resp.max_perms = (FILE_READ_DATA |
                          FILE_WRITE_DATA |
                          FILE_APPEND_DATA |
