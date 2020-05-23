@@ -8,16 +8,23 @@ Jabber Identifier support.
 
 This module provides an object to represent Jabber Identifiers (JIDs) and
 parse string representations into them with proper checking for illegal
-characters, case folding and canonicalisation through L{stringprep<twisted.words.protocols.jabber.xmpp_stringprep>}.
+characters, case folding and canonicalisation through
+L{stringprep<twisted.words.protocols.jabber.xmpp_stringprep>}.
 """
 
+from typing import Dict
 from twisted.python.compat import _PY3, unicode
-from twisted.words.protocols.jabber.xmpp_stringprep import nodeprep, resourceprep, nameprep
+from twisted.words.protocols.jabber.xmpp_stringprep import (
+    nodeprep, resourceprep, nameprep)
+
+
 
 class InvalidFormat(Exception):
     """
     The given string could not be parsed into a valid Jabber Identifier (JID).
     """
+
+
 
 def parse(jidstring):
     """
@@ -105,7 +112,11 @@ def prep(user, host, resource):
 
     return (user, host, resource)
 
-__internJIDs = {}
+
+
+__internJIDs = {}  # type: Dict[str, 'JID']
+
+
 
 def internJID(jidstring):
     """
@@ -120,6 +131,8 @@ def internJID(jidstring):
         j = JID(jidstring)
         __internJIDs[jidstring] = j
         return j
+
+
 
 class JID(object):
     """

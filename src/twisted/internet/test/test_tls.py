@@ -8,7 +8,8 @@ Tests for implementations of L{ITLSTransport}.
 
 __metaclass__ = type
 
-from zope.interface import implementer
+from typing import Optional, Sequence, Type
+from zope.interface import implementer, Interface
 
 from twisted.python.compat import networkString
 from twisted.python.filepath import FilePath
@@ -40,8 +41,9 @@ else:
     from twisted.internet.ssl import ClientContextFactory
 
 
+
 class TLSMixin:
-    requiredInterfaces = [IReactorSSL]
+    requiredInterfaces = [IReactorSSL]  # type: Optional[Sequence[Type[Interface]]]  # noqa
 
     if platform.isWindows():
         msg = (

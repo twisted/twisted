@@ -8,6 +8,7 @@ import errno
 import struct
 import warnings
 
+from typing import Dict
 from zope.interface import implementer
 
 from twisted.conch.interfaces import ISFTPServer, ISFTPFile
@@ -23,7 +24,7 @@ class FileTransferBase(protocol.Protocol):
 
     versions = (3, )
 
-    packetTypes = {}
+    packetTypes = {}  # type: Dict[int, str]
 
     def __init__(self):
         self.buf = b''

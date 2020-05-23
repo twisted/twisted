@@ -24,16 +24,12 @@ Maintainer: Itamar Shtull-Trauring
 import os
 import base64
 import glob
-
-try:
-    import cPickle as pickle
-except ImportError:
-    import pickle
+import pickle
 
 from twisted.python.filepath import FilePath
 
 try:
-    _open
+    _open  # type: ignore[has-type]
 except NameError:
     _open = open
 

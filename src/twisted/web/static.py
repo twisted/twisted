@@ -14,6 +14,7 @@ import os
 import time
 import warnings
 
+from typing import Any, Dict, Callable
 from zope.interface import implementer
 
 from twisted.web import server
@@ -212,7 +213,7 @@ class File(resource.Resource, filepath.FilePath):
         ".bz2": "bzip2"
         }
 
-    processors = {}
+    processors = {}  # type: Dict[str, Callable[[str, Any], Data]]
 
     indexNames = ["index", "index.html", "index.htm", "index.rpy"]
 

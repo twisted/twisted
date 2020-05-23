@@ -13,13 +13,14 @@ from socket import AF_INET, SOCK_STREAM, SOL_SOCKET, socket, error
 from pprint import pformat
 from hashlib import md5
 from struct import pack
+from typing import Optional, Sequence, Type
 
 try:
     from socket import AF_UNIX
 except ImportError:
     AF_UNIX = None
 
-from zope.interface import implementer
+from zope.interface import Interface, implementer
 
 from twisted.internet import interfaces, base
 from twisted.internet.address import UNIXAddress
@@ -84,7 +85,8 @@ class UNIXCreator(EndpointCreator):
     """
     Create UNIX socket end points.
     """
-    requiredInterfaces = (interfaces.IReactorUNIX,)
+    requiredInterfaces = (
+        interfaces.IReactorUNIX,)  # type: Optional[Sequence[Type[Interface]]]
 
     def server(self, reactor):
         """
@@ -717,7 +719,8 @@ class SocketUNIXMixin(object):
     Mixin which uses L{IReactorSocket.adoptStreamPort} to hand out listening
     UNIX ports.
     """
-    requiredInterfaces = (IReactorUNIX, IReactorSocket,)
+    requiredInterfaces = (IReactorUNIX,
+                          IReactorSocket,)  # type: Optional[Sequence[Type[Interface]]]  # noqa
 
     def getListeningPort(self, reactor, factory):
         """
@@ -790,7 +793,7 @@ class ListenUNIXMixin(object):
 
 
 class UNIXPortTestsMixin(object):
-    requiredInterfaces = (IReactorUNIX,)
+    requiredInterfaces = (IReactorUNIX,)  # type: Optional[Sequence[Type[Interface]]]  # noqa
 
     def getExpectedStartListeningLogMessage(self, port, factory):
         """

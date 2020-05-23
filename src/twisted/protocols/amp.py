@@ -200,7 +200,9 @@ import types, warnings
 
 from io import BytesIO
 from struct import pack
-import decimal, datetime
+from typing import Any, Callable, Dict, List, Tuple, Type
+import datetime
+import decimal
 from functools import partial
 from itertools import count
 
@@ -225,9 +227,11 @@ from twisted.python.compat import (
 )
 
 try:
-    from twisted.internet import ssl
+    from twisted.internet import ssl as _ssl
 except ImportError:
     ssl = None
+else:
+    ssl = _ssl
 
 if ssl and not ssl.supported:
     ssl = None
@@ -626,14 +630,19 @@ class IncompatibleVersions(AmpError):
     """
 
 
+
 PROTOCOL_ERRORS = {UNHANDLED_ERROR_CODE: UnhandledCommand}
+
+
 
 class AmpBox(dict):
     """
-    I am a packet in the AMP protocol, much like a regular bytes:bytes dictionary.
+    I am a packet in the AMP protocol, much like a
+    regular bytes:bytes dictionary.
     """
-    __slots__ = []              # be like a regular dictionary, don't magically
-                                # acquire a __dict__...
+    # be like a regular dictionary don't magically
+    # acquire a __dict__...
+    __slots__ = []  # type: List[str]
 
 
     def __init__(self, *args, **kw):
@@ -732,7 +741,7 @@ class QuitBox(AmpBox):
     """
     I am an AmpBox that, upon being sent, terminates the connection.
     """
-    __slots__ = []
+    __slots__ = []  # type: List[str]
 
 
     def __repr__(self):
@@ -1123,7 +1132,8 @@ class CommandLocator:
         metaclass.
         """
 
-        _currentClassCommands = []
+        _currentClassCommands = []  # type: List[Tuple[Command, Callable]]
+
         def __new__(cls, name, bases, attrs):
             commands = cls._currentClassCommands[:]
             cls._currentClassCommands[:] = []
@@ -1791,7 +1801,7 @@ class Command:
                         % (name, ))
 
             errors = {}
-            fatalErrors = {}
+            fatalErrors = {}  # type: Dict[Exception, bytes]
             accumulateClassDict(newtype, 'errors', errors)
             accumulateClassDict(newtype, 'fatalErrors', fatalErrors)
 
@@ -1820,14 +1830,14 @@ class Command:
 
             return newtype
 
-    arguments = []
-    response = []
-    extra = []
-    errors = {}
-    fatalErrors = {}
+    arguments = []  # type: List[Tuple[bytes, _LocalArgument]]
+    response = []  # type: List[Tuple[bytes, Argument]]
+    extra = []  # type: List[Any]
+    errors = {}  # type: Dict[Exception, bytes]
+    fatalErrors = {}  # type: Dict[Exception, bytes]
 
-    commandType = Box
-    responseType = Box
+    commandType = Box  # type: Type[Command]
+    responseType = Box  # type: Type[AmpBox]
 
     requiresAnswer = True
 
@@ -2074,7 +2084,7 @@ class _TLSBox(AmpBox):
     """
     I am an AmpBox that, upon being sent, initiates a TLS connection.
     """
-    __slots__ = []
+    __slots__ = []  # type: List[str]
 
     def __init__(self):
         if ssl is None:

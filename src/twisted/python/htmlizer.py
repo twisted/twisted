@@ -8,8 +8,10 @@ HTML rendering of Python source.
 
 from twisted.python.compat import _tokenize, escape
 
-import tokenize, keyword
+import keyword
+import tokenize
 from . import reflect
+from typing import List
 
 
 
@@ -73,7 +75,7 @@ class HTMLWriter:
     tokens as HTML spans.
     """
 
-    noSpan = []
+    noSpan = []  # type: List[str]
 
     def __init__(self, writer):
         self.writer = writer
