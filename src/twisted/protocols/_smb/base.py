@@ -8,11 +8,8 @@ base classes for SMB networking
 from __future__ import absolute_import, division
 
 import struct
-import binascii
 
-from zope.interface import implementer
-
-from twisted.internet import protocol, interfaces
+from twisted.internet import protocol
 from twisted.logger import Logger
 from twisted.python.randbytes import secureRandom
 

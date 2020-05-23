@@ -2,23 +2,16 @@
 
 import sys
 import struct
-import time
 import calendar
-import threading
-import tempfile
-import pdb
 import io
 import socket
 import re
 
 from twisted.protocols._smb import base, core, security_blob, ntlm
-from twisted.protocols._smb.interfaces import (ISMBServer, IFilesystem, 
-                                              IPipe, IPrinter)
-
+from twisted.protocols._smb.interfaces import (ISMBServer, IFilesystem)
 
 from twisted.cred import portal, checkers, credentials
 from twisted.trial import unittest
-from twisted.internet.endpoints import TCP4ServerEndpoint
 from twisted.internet import reactor
 from twisted.logger import globalLogBeginner, textFileLogObserver, Logger
 from twisted.internet.protocol import ProcessProtocol 

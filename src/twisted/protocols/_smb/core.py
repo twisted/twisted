@@ -16,8 +16,7 @@ from twisted.protocols._smb import base, security_blob
 from twisted.protocols._smb.interfaces import (ISMBServer, IFilesystem, 
                                               IPipe, IPrinter)
 
-from zope.interface import implementer
-from twisted.internet import protocol, interfaces
+from twisted.internet import protocol
 from twisted.logger import Logger
 from twisted.cred.checkers import ANONYMOUS
 from twisted.internet.defer import maybeDeferred
@@ -478,7 +477,7 @@ class SMBConnection(base.SMBPacketReceiver):
                          SYNCHRONIZE)
         elif IPrinter.providedBy(share):
             resp.share_type = SHARE_PRINTER
-            resp.flags = capabilities = 0
+            resp.flags = 0
             # FIXME need to check printer  max perms
             resp.max_perms = (FILE_READ_DATA |
                          FILE_WRITE_DATA |
@@ -496,7 +495,7 @@ class SMBConnection(base.SMBPacketReceiver):
                          SYNCHRONIZE)
         else:
             log.error("unknown share object %r" % (share,))
-            error_response(STATUS_UNSUCCESSFUL)
+            self.error_response(STATUS_UNSUCCESSFUL)
             return
         resp.size = 16
         self.tree_id = base.int32key(self.trees, share)                   

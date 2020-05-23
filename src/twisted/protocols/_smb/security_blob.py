@@ -16,7 +16,7 @@ from __future__ import absolute_import, division
 from pyasn1.type import tag, univ, namedtype, namedval, constraint, char
 from pyasn1.codec.der import encoder, decoder
 
-from twisted.protocols._smb import ntlm
+from twisted.protocols._smb import ntlm, base
 
 from twisted.logger import Logger
 

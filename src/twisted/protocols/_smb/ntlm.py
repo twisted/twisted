@@ -8,7 +8,7 @@ protocol
 
 from __future__ import absolute_import, division
 
-from zope.interface import implementer, Interface
+from zope.interface import implementer
 
 import struct
 import time
@@ -20,7 +20,6 @@ from twisted.protocols._smb import base
 
 import twisted.cred.credentials
 from twisted.python.randbytes import secureRandom
-from twisted.internet.defer import maybeDeferred
 from twisted.logger import Logger
 
 log = Logger()
@@ -293,7 +292,7 @@ class NTLMManager(object):
             if parts.resp_type != 0x01:
                 log.warn("NT response not valid type")  
         if not nt and not lm:
-            raise smb.SMBError("one of LM challenge or NT challenge must be provided")
+            raise base.SMBError("one of LM challenge or NT challenge must be provided")
         if a.domain_len > 0:
             client_domain = self.token[a.domain_offset:a.domain_offset+a.domain_len]
             client_domain = client_domain.decode('utf-16le')
@@ -303,7 +302,7 @@ class NTLMManager(object):
             user = self.token[a.user_offset:a.user_offset+a.user_len]
             user = user.decode('utf-16le')
         else:
-            raise smb.SMBError("username is required") 
+            raise base.SMBError("username is required") 
         if a.workstation_len > 0:
             workstation = self.token[a.workstation_offset:a.workstation_offset+a.workstation_len]
             workstation = workstation.decode('utf-16le')
