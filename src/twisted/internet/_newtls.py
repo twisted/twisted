@@ -10,7 +10,6 @@ implementation and will be used whenever pyOpenSSL 0.10 or newer is installed
 @since: 11.1
 """
 
-from __future__ import division, absolute_import
 
 from zope.interface import implementer
 from zope.interface import directlyProvides

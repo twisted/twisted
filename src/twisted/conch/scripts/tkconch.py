@@ -6,7 +6,6 @@
 Implementation module for the `tkconch` command.
 """
 
-from __future__ import print_function
 
 from twisted.conch import error
 from twisted.conch.ui import tkvt100

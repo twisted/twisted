@@ -11,7 +11,6 @@ Asynchronous-friendly error mechanism.
 See L{Failure}.
 """
 
-from __future__ import division, absolute_import, print_function
 
 # System Imports
 import copy
@@ -512,6 +511,7 @@ class Failure(BaseException):
         return g.throw(self.type, self.value, self.tb)
 
 
+    @classmethod
     def _findFailure(cls):
         """
         Find the failure that represents the exception currently in context.
@@ -569,7 +569,6 @@ class Failure(BaseException):
         if frame and frame.f_code is cls.throwExceptionIntoGenerator.__code__:
             return frame.f_locals.get('self')
 
-    _findFailure = classmethod(_findFailure)
 
     def __repr__(self):
         return "<%s %s: %s>" % (reflect.qual(self.__class__),

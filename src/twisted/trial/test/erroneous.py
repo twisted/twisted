@@ -10,7 +10,6 @@ See the L{twisted.trial.test.test_tests} module docstring for details about how
 this code is arranged.
 """
 
-from __future__ import division, absolute_import
 
 from twisted.trial import unittest, util
 from twisted.internet import reactor, protocol, defer

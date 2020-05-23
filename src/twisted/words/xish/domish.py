@@ -10,7 +10,6 @@ and serializing such structures to an XML string representation, optimized
 for use in streaming XML applications.
 """
 
-from __future__ import absolute_import, division
 
 from zope.interface import implementer, Interface, Attribute
 

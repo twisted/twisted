@@ -8,7 +8,6 @@ All of these tests are skipped on platforms other than Linux, as the release is
 only ever performed on Linux.
 """
 
-from __future__ import print_function
 
 import glob
 import functools

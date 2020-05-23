@@ -5,7 +5,6 @@
 Tests for lots of functionality provided by L{twisted.internet}.
 """
 
-from __future__ import division, absolute_import
 
 import os
 import sys
@@ -975,7 +974,6 @@ class DelayedTests(unittest.TestCase):
 
 
 resolve_helper = """
-from __future__ import print_function
 import %(reactor)s
 %(reactor)s.install()
 from twisted.internet import reactor

@@ -5,7 +5,6 @@
 Tests for L{twisted.conch.ssh}.
 """
 
-from __future__ import division, absolute_import
 
 import struct
 

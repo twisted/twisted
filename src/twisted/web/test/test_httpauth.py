@@ -5,7 +5,6 @@
 Tests for L{twisted.web._auth}.
 """
 
-from __future__ import division, absolute_import
 
 import base64
 

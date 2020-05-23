@@ -8,7 +8,6 @@ L{twisted.test.test_stdio.StandardInputOutputTests.test_producer} to test
 that process transports implement IProducer properly.
 """
 
-from __future__ import absolute_import, division
 
 import sys
 

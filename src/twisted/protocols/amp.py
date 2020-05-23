@@ -193,7 +193,6 @@ has several features:
 @type ERROR_DESCRIPTION: L{bytes}
 """
 
-from __future__ import absolute_import, division
 
 __metaclass__ = type
 
@@ -964,7 +963,7 @@ class BoxDispatcher:
 
         try:
             co = commandType(*a, **kw)
-        except:
+        except BaseException:
             return fail()
         return co._doCommand(self)
 
@@ -1165,16 +1164,18 @@ class CommandLocator:
         """
         def doit(box):
             kw = command.parseArguments(box, self)
+
             def checkKnownErrors(error):
                 key = error.trap(*command.allErrors)
                 code = command.allErrors[key]
                 desc = str(error.value)
                 return Failure(RemoteAmpError(
                         code, desc, key in command.fatalErrors, local=error))
+
             def makeResponseFor(objects):
                 try:
                     return command.makeResponse(objects, self)
-                except:
+                except BaseException:
                     # let's helpfully log this.
                     originalFailure = Failure()
                     raise BadLocalReturn(
@@ -1862,6 +1863,7 @@ class Command:
         forgotten = []
 
 
+    @classmethod
     def makeResponse(cls, objects, proto):
         """
         Serialize a mapping of arguments using this L{Command}'s
@@ -1877,12 +1879,12 @@ class Command:
         """
         try:
             responseType = cls.responseType()
-        except:
+        except BaseException:
             return fail()
         return _objectsToStrings(objects, cls.response, responseType, proto)
-    makeResponse = classmethod(makeResponse)
 
 
+    @classmethod
     def makeArguments(cls, objects, proto):
         """
         Serialize a mapping of arguments using this L{Command}'s
@@ -1906,9 +1908,9 @@ class Command:
                     "%s is not a valid argument" % (intendedArg,))
         return _objectsToStrings(objects, cls.arguments, cls.commandType(),
                                  proto)
-    makeArguments = classmethod(makeArguments)
 
 
+    @classmethod
     def parseResponse(cls, box, protocol):
         """
         Parse a mapping of serialized arguments using this
@@ -1922,9 +1924,9 @@ class Command:
         forms.
         """
         return _stringsToObjects(box, cls.response, protocol)
-    parseResponse = classmethod(parseResponse)
 
 
+    @classmethod
     def parseArguments(cls, box, protocol):
         """
         Parse a mapping of serialized arguments using this
@@ -1937,9 +1939,9 @@ class Command:
         @return: A mapping of argument names to the parsed forms.
         """
         return _stringsToObjects(box, cls.arguments, protocol)
-    parseArguments = classmethod(parseArguments)
 
 
+    @classmethod
     def responder(cls, methodfunc):
         """
         Declare a method to be a responder for a particular command.
@@ -1973,7 +1975,6 @@ class Command:
         """
         CommandLocator._currentClassCommands.append((cls, methodfunc))
         return methodfunc
-    responder = classmethod(responder)
 
 
     # Our only instance method
@@ -2200,9 +2201,9 @@ class ProtocolSwitchCommand(Command):
         super(ProtocolSwitchCommand, self).__init__(**kw)
 
 
+    @classmethod
     def makeResponse(cls, innerProto, proto):
         return _SwitchBox(innerProto)
-    makeResponse = classmethod(makeResponse)
 
 
     def _doCommand(self, proto):
@@ -2691,6 +2692,7 @@ class _ParserHelper:
 
 
     # Synchronous helpers
+    @classmethod
     def parse(cls, fileObj):
         """
         Parse some amp data stored in a file.
@@ -2704,9 +2706,9 @@ class _ParserHelper:
         bbp.makeConnection(parserHelper)
         bbp.dataReceived(fileObj.read())
         return parserHelper.boxes
-    parse = classmethod(parse)
 
 
+    @classmethod
     def parseString(cls, data):
         """
         Parse some amp data stored in a string.
@@ -2716,7 +2718,6 @@ class _ParserHelper:
         @return: a list of AmpBoxes encoded in the given string.
         """
         return cls.parse(BytesIO(data))
-    parseString = classmethod(parseString)
 
 
 

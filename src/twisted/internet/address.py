@@ -5,10 +5,10 @@
 Address objects for network connections.
 """
 
-from __future__ import division, absolute_import
 
 import attr
-import warnings, os
+import os
+import warnings
 
 from zope.interface import implementer
 from twisted.internet.interfaces import IAddress

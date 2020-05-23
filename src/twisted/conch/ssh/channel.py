@@ -9,7 +9,6 @@ are session, direct-tcp, and forwarded-tcp.
 Maintainer: Paul Swartz
 """
 
-from __future__ import division, absolute_import
 
 from zope.interface import implementer
 

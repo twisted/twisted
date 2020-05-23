@@ -9,7 +9,6 @@ Construct listening port services from a simple string description.
 @see: L{twisted.internet.endpoints.clientFromString}
 """
 
-from __future__ import absolute_import, division
 
 from twisted.application.internet import StreamServerEndpointService
 from twisted.internet import endpoints

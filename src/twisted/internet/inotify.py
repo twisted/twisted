@@ -37,7 +37,6 @@ converting from a L{bytes} path name to a L{str} path name.
 @since: 10.1
 """
 
-from __future__ import print_function
 
 import os
 import struct
@@ -289,10 +288,12 @@ class INotify(FileDescriptor, object):
                 # too many events waiting while we process these subdirs, we
                 # must always answer events as fast as possible or the overflow
                 # might come.
-                self.reactor.callLater(0,
-                    self._addChildren, self._watchpoints[new_wd])
+                self.reactor.callLater(
+                    0, self._addChildren, self._watchpoints[new_wd]
+                )
             if mask & IN_DELETE_SELF:
                 self._rmWatch(wd)
+                self.loseConnection()
 
 
     def _addChildren(self, iwp):

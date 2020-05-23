@@ -21,7 +21,6 @@ cumbersome.
     output.
 """
 
-from __future__ import absolute_import, division
 
 from twisted.python.compat import iteritems
 

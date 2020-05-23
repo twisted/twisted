@@ -6,7 +6,6 @@
 HTTP client.
 """
 
-from __future__ import division, absolute_import
 
 import os
 import collections
@@ -1160,7 +1159,10 @@ class FileBodyProducer(object):
         stopping the underlying L{CooperativeTask}.
         """
         self._inputFile.close()
-        self._task.stop()
+        try:
+            self._task.stop()
+        except task.TaskFinished:
+            pass
 
 
     def startProducing(self, consumer):

@@ -6,7 +6,6 @@
 Logging and metrics infrastructure.
 """
 
-from __future__ import division, absolute_import
 
 import sys
 import time

@@ -10,7 +10,6 @@ Maintainer: Paul Swartz
 @since: 12.1
 """
 
-from __future__ import division, absolute_import
 
 from zope.interface import implementer
 

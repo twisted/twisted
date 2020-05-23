@@ -5,7 +5,6 @@
 Test cases for Ltwisted.mail.pop3} module.
 """
 
-from __future__ import print_function
 
 import hmac
 import base64

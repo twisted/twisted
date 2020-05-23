@@ -5,7 +5,6 @@
 Twisted Python: Utilities and Enhancements for Python.
 """
 
-from __future__ import absolute_import, division
 
 # Deprecating twisted.python.constants.
 from .compat import unicode

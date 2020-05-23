@@ -22,7 +22,6 @@ Stanzas.
 @type Reset: Basic object.
 """
 
-from __future__ import absolute_import, division
 
 from binascii import hexlify
 from hashlib import sha1

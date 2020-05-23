@@ -6,7 +6,6 @@
 Tests for L{twisted.internet._sslverify}.
 """
 
-from __future__ import division, absolute_import
 
 import sys
 import itertools

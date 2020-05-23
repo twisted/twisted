@@ -102,14 +102,16 @@ _EXTRA_OPTIONS = dict(
     windows=['pywin32 != 226'],
     http2=['h2 >= 3.0, < 4.0',
            'priority >= 1.1.0, < 2.0'],
-    smb=['pyasn1']
+    smb=['pyasn1'],
+    contextvars=['contextvars >= 2.4, < 3; python_version < "3.7"'],
 )
 
 _PLATFORM_INDEPENDENT = (
     _EXTRA_OPTIONS['tls'] +
     _EXTRA_OPTIONS['conch'] +
     _EXTRA_OPTIONS['serial'] +
-    _EXTRA_OPTIONS['http2']
+    _EXTRA_OPTIONS['http2'] +
+    _EXTRA_OPTIONS['contextvars']
 )
 
 _EXTRAS_REQUIRE = {
@@ -119,6 +121,7 @@ _EXTRAS_REQUIRE = {
     'serial': _EXTRA_OPTIONS['serial'],
     'http2': _EXTRA_OPTIONS['http2'],
     'smb':_EXTRA_OPTIONS['smb'],
+    'contextvars': _EXTRA_OPTIONS['contextvars'],
     'all_non_platform': _PLATFORM_INDEPENDENT,
     'macos_platform': (
         _EXTRA_OPTIONS['macos'] + _PLATFORM_INDEPENDENT
@@ -249,7 +252,7 @@ def getSetupArgs(extensions=_EXTENSIONS, readme='README.rst'):
         "zope.interface >= 4.4.2",
         "constantly >= 15.1",
         "incremental >= 16.10.1",
-        "Automat >= 0.3.0",
+        "Automat >= 0.8.0",
         "hyperlink >= 17.1.1",
         "PyHamcrest >= 1.9.0",
         "attrs >= 19.2.0",

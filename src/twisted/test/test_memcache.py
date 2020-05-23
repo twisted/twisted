@@ -5,7 +5,6 @@
 Test the memcache client protocol.
 """
 
-from __future__ import absolute_import, division
 
 from twisted.internet.error import ConnectionDone
 

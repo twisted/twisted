@@ -5,7 +5,6 @@
 Tests for implementations of L{IReactorTCP}.
 """
 
-from __future__ import division, absolute_import
 
 import socket
 import random

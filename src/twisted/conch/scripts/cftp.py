@@ -5,9 +5,16 @@
 """
 Implementation module for the I{cftp} command.
 """
-from __future__ import division, print_function
-import os, sys, getpass, struct, tty, fcntl, stat
-import fnmatch, pwd, glob
+import fcntl
+import fnmatch
+import getpass
+import glob
+import os
+import pwd
+import stat
+import struct
+import sys
+import tty
 
 from twisted.conch.client import connect, default, options
 from twisted.conch.ssh import connection, common

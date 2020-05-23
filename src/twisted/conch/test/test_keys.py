@@ -5,7 +5,6 @@
 Tests for L{twisted.conch.ssh.keys}.
 """
 
-from __future__ import absolute_import, division
 
 import base64
 import os

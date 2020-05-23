@@ -4,7 +4,6 @@
 """
 Test cases for L{twisted.names.server}.
 """
-from __future__ import division, absolute_import
 
 from zope.interface.verify import verifyClass
 
