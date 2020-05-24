@@ -8,6 +8,7 @@ Very basic functionality for a Reactor implementation.
 
 
 import socket  # needed only for sync-dns
+from typing import List
 from zope.interface import implementer, classImplements
 
 import sys
@@ -1189,8 +1190,8 @@ class BasePort(abstract.FileDescriptor):
     Note: This does not actually implement IListeningPort.
     """
 
-    addressFamily = None
-    socketType = None
+    addressFamily = None  # type: socket.AddressFamily
+    socketType = None  # type: socket.SocketKind
 
     def createInternetSocket(self):
         s = socket.socket(self.addressFamily, self.socketType)
@@ -1298,4 +1299,4 @@ class _SignalReactorMixin(object):
 
 
 
-__all__ = []
+__all__ = []  # type: List[str]

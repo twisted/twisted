@@ -10,13 +10,6 @@ Do NOT use this module directly - use reactor.spawnProcess() instead.
 Maintainer: Itamar Shtull-Trauring
 """
 
-
-from twisted.python.runtime import platform
-
-if platform.isWindows():
-    raise ImportError(("twisted.internet.process does not work on Windows. "
-                       "Use the reactor.spawnProcess() API instead."))
-
 import errno
 import gc
 import os
@@ -26,15 +19,8 @@ import stat
 import sys
 import traceback
 
-try:
-    import pty
-except ImportError:
-    pty = None
-
-try:
-    import fcntl, termios
-except ImportError:
-    fcntl = None
+from typing import Callable, Dict, Optional
+from twisted.python.runtime import platform
 
 from zope.interface import implementer
 
@@ -46,11 +32,32 @@ from twisted.internet.main import CONNECTION_LOST, CONNECTION_DONE
 from twisted.internet._baseprocess import BaseProcess
 from twisted.internet.interfaces import IProcessTransport
 
+if platform.isWindows():
+    raise ImportError(("twisted.internet.process does not work on Windows. "
+                       "Use the reactor.spawnProcess() API instead."))
+
+try:
+    import pty as _pty
+except ImportError:
+    pty = None
+else:
+    pty = _pty
+
+try:
+    import fcntl as _fcntl
+    import termios
+except ImportError:
+    fcntl = None
+else:
+    fcntl = _fcntl
+
 # Some people were importing this, which is incorrect, just keeping it
 # here for backwards compatibility:
 ProcessExitedAlready = error.ProcessExitedAlready
 
-reapProcessHandlers = {}
+reapProcessHandlers = {}  # type: Dict[int, Callable]
+
+
 
 def reapAllProcesses():
     """
@@ -281,7 +288,7 @@ class _BaseProcess(BaseProcess, object):
     """
     Base class for Process and PTYProcess.
     """
-    status = None
+    status = None  # type: Optional[int]
     pid = None
 
     def reapProcess(self):

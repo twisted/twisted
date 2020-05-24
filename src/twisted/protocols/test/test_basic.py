@@ -10,6 +10,7 @@ import sys
 import struct
 from io import BytesIO
 
+from typing import List
 from zope.interface.verify import verifyObject
 
 from twisted.python.compat import _PY3, iterbytes
@@ -573,7 +574,7 @@ class TestNetstring(TestMixin, basic.NetstringReceiver):
 
 class LPTestCaseMixin:
 
-    illegalStrings = []
+    illegalStrings = []  # type: List[bytes]
     protocol = None
 
 

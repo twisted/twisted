@@ -375,7 +375,7 @@ class build_ext_twisted(build_ext.build_ext, object):
 
 
 
-def _checkCPython(sys=sys, platform=platform):
+def _checkCPython(sys=sys, platform=platform) -> bool:
     """
     Checks if this implementation is CPython.
 
@@ -391,7 +391,8 @@ def _checkCPython(sys=sys, platform=platform):
     return platform.python_implementation() == "CPython"
 
 
-_isCPython = _checkCPython()
+
+_isCPython = _checkCPython()  # type: bool
 
 notPortedModules = [
     "twisted.mail.alias",
