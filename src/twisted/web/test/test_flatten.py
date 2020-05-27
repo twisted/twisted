@@ -9,7 +9,7 @@ L{twisted.web._flatten}.
 import sys
 import traceback
 
-from xml.etree.cElementTree import XML
+from xml.etree.ElementTree import XML
 
 from collections import OrderedDict
 
