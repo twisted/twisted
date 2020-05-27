@@ -412,7 +412,7 @@ class SSHClientTransport(transport.SSHClientTransport):
                 "known hosts.\r\n" %
                 (khHost, {b'ssh-dss':'DSA', b'ssh-rsa':'RSA'}[keyType]))
             with open(os.path.expanduser('~/.ssh/known_hosts'), 'a') as known_hosts:
-                encodedKey = base64.encodestring(pubKey).replace(b'\n', b'')
+                encodedKey = base64.b64encode(pubKey)
                 known_hosts.write('\n%s %s %s' % (khHost, keyType, encodedKey))
         except:
             log.deferr()

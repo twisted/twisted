@@ -1604,7 +1604,7 @@ class ParsingTests(unittest.TestCase):
                 requests.append(self)
 
         for u, p in [(b"foo", b"bar"), (b"hello", b"there:z")]:
-            s = base64.encodestring(b":".join((u, p))).strip()
+            s = base64.b64encode(b":".join((u, p)))
             f = b"GET / HTTP/1.0\nAuthorization: Basic " + s + b"\n\n"
             self.runRequest(f, Request, 0)
             req = requests.pop()
@@ -2209,9 +2209,9 @@ Hello,
 
         u = b"foo"
         p = b"bar"
-        s = base64.encodestring(b":".join((u, p))).strip()
+        s = base64.b64encode(b":".join((u, p)))
         f = b"GET / HTTP/1.0\nAuthorization: Basic " + s + b"\n\n"
-        self.patch(base64, 'decodestring', lambda x: [])
+        self.patch(base64, 'b64decode', lambda x: [])
         self.runRequest(f, Request, 0)
         req = requests.pop()
         self.assertEqual((b'', b''), req.credentials)

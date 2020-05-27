@@ -728,7 +728,7 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
         self._auth = auth()
         chal = self._auth.getChallenge()
 
-        self.sendLine(b'+ ' + base64.encodestring(chal).rstrip(b'\n'))
+        self.sendLine(b'+ ' + base64.b64encode(chal))
         self.state = 'AUTH'
 
 
@@ -747,7 +747,7 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
         """
         self.state = "COMMAND"
         try:
-            parts = base64.decodestring(line).split(None, 1)
+            parts = base64.b64decode(line).split(None, 1)
         except binascii.Error:
             self.failResponse(b"Invalid BASE64 encoding")
         else:
