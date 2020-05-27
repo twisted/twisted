@@ -10,7 +10,7 @@ import sys
 import traceback
 from unittest import skipIf
 
-from xml.etree.cElementTree import XML
+from xml.etree.ElementTree import XML
 
 from collections import OrderedDict
 
