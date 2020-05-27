@@ -55,7 +55,10 @@ def verifyCryptedPassword(crypted, pw):
 
     @rtype: L{bool}
     """
-    return crypt.crypt(pw, crypted) == crypted
+    try:
+        return crypt.crypt(pw, crypted) == crypted
+    except OSError:
+        return False
 
 
 
