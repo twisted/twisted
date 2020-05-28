@@ -27,8 +27,7 @@ def _dashCapitalize(name):
 def _sanitizeLinearWhitespace(headerComponent):
     r"""
     Replace linear whitespace (C{\n}, C{\r\n}, C{\r}) in a header key
-    or value with a single space.  If C{headerComponent} is not
-    L{bytes}, it is passed through unchanged.
+    or value with a single space.
 
     @param headerComponent: The header key or value to sanitize.
     @type headerComponent: L{bytes}
@@ -208,11 +207,26 @@ class Headers(object):
         @param values: A list of strings each one being a header value of
             the given name.
 
+        @raise TypeError: Raised if C{values} is not a L{list} of L{bytes}
+            or L{unicode} strings, or if C{name} is not a L{bytes} or
+            L{unicode} string.
+
         @return: L{None}
         """
         if not isinstance(values, list):
             raise TypeError("Header entry %r should be list but found "
                             "instance of %r instead" % (name, type(values)))
+
+        if not isinstance(name, (bytes, unicode)):
+            raise TypeError("Header name is an instance of %r, "
+                            "not bytes or unicode" % (type(name),))
+
+        for count, value in enumerate(values):
+            if not isinstance(value, (bytes, unicode)):
+                raise TypeError(
+                    "Header value at position %s is an instance of %r, not "
+                    "bytes or unicode" % (count, type(value),)
+                )
 
         name = _sanitizeLinearWhitespace(self._encodeName(name))
         encodedValues = [_sanitizeLinearWhitespace(v)
@@ -231,6 +245,14 @@ class Headers(object):
         @type value: L{bytes} or L{unicode}
         @param value: The value to set for the named header.
         """
+        if not isinstance(name, (bytes, unicode)):
+            raise TypeError("Header name is an instance of %r, "
+                            "not bytes or unicode" % (type(name),))
+
+        if not isinstance(value, (bytes, unicode)):
+            raise TypeError("Header value is an instance of %r, not "
+                            "bytes or unicode" % (type(value),))
+
         values = self.getRawHeaders(name)
 
         if values is not None:
