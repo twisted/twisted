@@ -18,7 +18,7 @@ from twisted.web.http import FOUND
 from twisted.web.server import Request
 from twisted.web.template import TagLoader, flattenString, tags
 from twisted.web.test.requesthelper import DummyChannel, DummyRequest
-from twisted.web.util import DeferredResource
+from twisted.web.util import DeferredResource, ParentRedirect
 from twisted.web.util import _SourceFragmentElement, _FrameElement
 from twisted.web.util import _StackElement, FailureElement, formatFailure
 from twisted.web.util import redirectTo, _SourceLineElement
@@ -314,6 +314,32 @@ class SDResource(resource.Resource):
         d = defer.succeed(self.default)
         resource = util.DeferredResource(d)
         return resource.getChildWithDefault(name, request)
+
+
+
+class ParentRedirectTests(SynchronousTestCase):
+    """
+    Tests for L{ParentRedirect}.
+    """
+
+    def test_parentRedirect(self):
+        """
+        L{ParentRedirect} issues a redirect to the parent of the URL it was
+        requested with.
+        """
+        request = Request(DummyChannel(), True)
+        request.requestHeaders.setRawHeaders(b'Host', [b'example.com'])
+        request.method = b'GET'
+        request.prepath = [b'foo', b'bar', b'baz']
+
+        r = ParentRedirect()
+        request.render(r)
+
+        self.assertEqual(request.code, FOUND)
+        self.assertEqual(
+            request.responseHeaders.getRawHeaders(b'location'),
+            [b'http://example.com/foo/bar/']
+        )
 
 
 

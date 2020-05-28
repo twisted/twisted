@@ -113,7 +113,8 @@ class ParentRedirect(resource.Resource):
     """
     isLeaf = 1
     def render(self, request):
-        return redirectTo(urlpath.URLPath.fromRequest(request).here(), request)
+        path = str(urlpath.URLPath.fromRequest(request).here()).encode('ascii')
+        return redirectTo(path, request)
 
     def getChild(self, request):
         return self
