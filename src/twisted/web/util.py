@@ -107,17 +107,21 @@ class ChildRedirector(Redirect):
         return ChildRedirector(newUrl)
 
 
+
 class ParentRedirect(resource.Resource):
     """
     I redirect to URLPath.here().
     """
     isLeaf = 1
+
     def render(self, request):
         path = str(urlpath.URLPath.fromRequest(request).here()).encode('ascii')
         return redirectTo(path, request)
 
+
     def getChild(self, request):
         return self
+
 
 
 class DeferredResource(resource.Resource):

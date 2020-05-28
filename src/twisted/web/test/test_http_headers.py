@@ -96,8 +96,8 @@ class BytesHeadersTests(TestCase):
 
     def test_rawHeadersTypeCheckingName(self):
         """
-        L{Headers.setRawHeaders} requires C{name} to be a L{bytes} or L{unicode}
-        string.
+        L{Headers.setRawHeaders} requires C{name} to be a L{bytes} or
+        L{unicode} string.
         """
         h = Headers()
         e = self.assertRaises(TypeError, h.setRawHeaders, None, [b'foo'])
@@ -114,7 +114,9 @@ class BytesHeadersTests(TestCase):
         L{unicode} strings.
         """
         h = Headers()
-        e = self.assertRaises(TypeError, h.setRawHeaders, b'key', [b'bar', None])
+        e = self.assertRaises(
+            TypeError, h.setRawHeaders, b'key', [b'bar', None]
+        )
         self.assertEqual(
             e.args[0],
             "Header value at position 1 is an instance of <class 'NoneType'>, "
