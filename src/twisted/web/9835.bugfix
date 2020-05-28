@@ -1,0 +1,1 @@
+twisted.web.util.ParentRedirect now does not pass a URLPath as a redirect path instead of a bytestring, causing an exception to be raised processing the request. Additionally, twisted.web.http_headers.Headers now has stricter type checking and will raise a more accurate exception if non-strings are used as header keys/values.
