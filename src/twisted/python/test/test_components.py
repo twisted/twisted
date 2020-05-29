@@ -581,7 +581,7 @@ class IProxiedSubInterface(IProxiedInterface):
     An interface that derives from another for use with L{proxyForInterface}.
     """
 
-    def boo(self):
+    def boo():
         """
         A different sample method which should be proxied.
         """
