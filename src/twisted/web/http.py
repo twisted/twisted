@@ -56,41 +56,60 @@ __all__ = [
     ]
 
 
-# system imports
-import tempfile
-import base64, binascii
+import base64
+import binascii
+import calendar
 import cgi
 import math
-import time
-import calendar
-import warnings
 import os
 import re
+# system imports
+import tempfile
+import time
+import warnings
 from io import BytesIO
+from urllib.parse import ParseResultBytes
+from urllib.parse import unquote_to_bytes as unquote
+from urllib.parse import urlparse as _urlparse
 
-from urllib.parse import (
-    ParseResultBytes, urlparse as _urlparse, unquote_to_bytes as unquote)
-
-from zope.interface import Attribute, Interface, implementer, provider
-
-# twisted imports
-from twisted.python.compat import (
-    _PY3, long, unicode, intToBytes, networkString, nativeString, _PY37PLUS)
-from twisted.python.deprecate import deprecated
-from twisted.python import log
-from twisted.logger import Logger
-from twisted.python.failure import Failure
 from incremental import Version
-from twisted.python.components import proxyForInterface
-from twisted.internet import interfaces, protocol, address
+from twisted.internet import address, interfaces, protocol
+from twisted.internet._producer_helpers import _PullToPush
 from twisted.internet.defer import Deferred
 from twisted.internet.interfaces import IProtocol
-from twisted.internet._producer_helpers import _PullToPush
-from twisted.protocols import policies, basic
-
-from twisted.web.iweb import (
-    IRequest, IAccessLogFormatter, INonQueuedRequestFactory)
+from twisted.logger import Logger
+from twisted.protocols import basic, policies
+from twisted.python import log
+# twisted imports
+from twisted.python.compat import (_PY3, _PY37PLUS, intToBytes, long,
+                                   nativeString, networkString, unicode)
+from twisted.python.components import proxyForInterface
+from twisted.python.deprecate import deprecated
+from twisted.python.failure import Failure
+from twisted.web._responses import (ACCEPTED, BAD_GATEWAY, BAD_REQUEST,
+                                    CONFLICT, CREATED, EXPECTATION_FAILED,
+                                    FORBIDDEN, FOUND, GATEWAY_TIMEOUT, GONE,
+                                    HTTP_VERSION_NOT_SUPPORTED,
+                                    INSUFFICIENT_STORAGE_SPACE,
+                                    INTERNAL_SERVER_ERROR, LENGTH_REQUIRED,
+                                    MOVED_PERMANENTLY, MULTI_STATUS,
+                                    MULTIPLE_CHOICE, NO_CONTENT,
+                                    NON_AUTHORITATIVE_INFORMATION,
+                                    NOT_ACCEPTABLE, NOT_ALLOWED, NOT_EXTENDED,
+                                    NOT_FOUND, NOT_IMPLEMENTED, NOT_MODIFIED,
+                                    OK, PARTIAL_CONTENT, PAYMENT_REQUIRED,
+                                    PRECONDITION_FAILED, PROXY_AUTH_REQUIRED,
+                                    REQUEST_ENTITY_TOO_LARGE, REQUEST_TIMEOUT,
+                                    REQUEST_URI_TOO_LONG,
+                                    REQUESTED_RANGE_NOT_SATISFIABLE,
+                                    RESET_CONTENT, RESPONSES, SEE_OTHER,
+                                    SERVICE_UNAVAILABLE, SWITCHING,
+                                    TEMPORARY_REDIRECT, UNAUTHORIZED,
+                                    UNSUPPORTED_MEDIA_TYPE, USE_PROXY)
 from twisted.web.http_headers import Headers, _sanitizeLinearWhitespace
+from twisted.web.iweb import (IAccessLogFormatter, INonQueuedRequestFactory,
+                              IRequest)
+from zope.interface import Attribute, Interface, implementer, provider
 
 try:
     from twisted.web._http2 import H2Connection
@@ -100,26 +119,6 @@ except ImportError:
     H2_ENABLED = False
 
 
-from twisted.web._responses import (
-    SWITCHING,
-
-    OK, CREATED, ACCEPTED, NON_AUTHORITATIVE_INFORMATION, NO_CONTENT,
-    RESET_CONTENT, PARTIAL_CONTENT, MULTI_STATUS,
-
-    MULTIPLE_CHOICE, MOVED_PERMANENTLY, FOUND, SEE_OTHER, NOT_MODIFIED,
-    USE_PROXY, TEMPORARY_REDIRECT,
-
-    BAD_REQUEST, UNAUTHORIZED, PAYMENT_REQUIRED, FORBIDDEN, NOT_FOUND,
-    NOT_ALLOWED, NOT_ACCEPTABLE, PROXY_AUTH_REQUIRED, REQUEST_TIMEOUT,
-    CONFLICT, GONE, LENGTH_REQUIRED, PRECONDITION_FAILED,
-    REQUEST_ENTITY_TOO_LARGE, REQUEST_URI_TOO_LONG, UNSUPPORTED_MEDIA_TYPE,
-    REQUESTED_RANGE_NOT_SATISFIABLE, EXPECTATION_FAILED,
-
-    INTERNAL_SERVER_ERROR, NOT_IMPLEMENTED, BAD_GATEWAY, SERVICE_UNAVAILABLE,
-    GATEWAY_TIMEOUT, HTTP_VERSION_NOT_SUPPORTED, INSUFFICIENT_STORAGE_SPACE,
-    NOT_EXTENDED,
-
-    RESPONSES)
 
 
 _intTypes = (int, long)
@@ -1248,7 +1247,7 @@ class Request:
 
 
         def _sanitize(val):
-            """
+            r"""
             Replace linear whitespace (C{\r}, C{\n}, C{\r\n}) and
             semicolons C{;} in C{val} with a single space.
 
