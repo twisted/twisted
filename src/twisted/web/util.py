@@ -104,8 +104,8 @@ class ChildRedirector(Redirect):
     def __init__(self, url):
         # XXX is this enough?
         if ((url.find('://') == -1)
-            and (not url.startswith('..'))
-            and (not url.startswith('/'))):
+                and (not url.startswith('..'))
+                and (not url.startswith('/'))):
             raise ValueError((
                 "It seems you've given me a redirect (%s) that is a child of"
                 " myself! That's not good, it'll cause an infinite redirect."
