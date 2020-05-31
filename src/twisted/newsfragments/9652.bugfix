@@ -1,0 +1,1 @@
+Twisted logging tests now accept that mktime() may correctly raise EOVERFLOW if isDST=1 for a time zone which does not observe DST (as is the case for glibc >= 2.28).
