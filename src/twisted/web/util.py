@@ -154,6 +154,7 @@ class ParentRedirect(resource.Resource):
 
 
 
+
 class DeferredResource(resource.Resource):
     """
     I wrap up a Deferred that will eventually result in a Resource
