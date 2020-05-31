@@ -24,10 +24,12 @@ from twisted.web.util import (DeferredResource, FailureElement, ParentRedirect,
                               redirectTo)
 
 
+
 class RedirectToTests(TestCase):
     """
     Tests for L{redirectTo}.
     """
+
 
     def test_headersAndCode(self):
         """
@@ -62,7 +64,6 @@ class ParentRedirectTests(SynchronousTestCase):
     """
     Test L{ParentRedirect}.
     """
-
     def doLocationTest(self, requestPath: bytes):
         """
         Render a response to a request with path *requestPath*
@@ -81,13 +82,16 @@ class ParentRedirectTests(SynchronousTestCase):
         [location] = request.responseHeaders.getRawHeaders(b'Location')
         return location
 
+
     def test_locationRoot(self):
         """
         At the URL root issue a redirect to the current URL, removing any query
         string.
         """
         self.assertEqual(b'http://10.0.0.1/', self.doLocationTest(b'/'))
-        self.assertEqual(b'http://10.0.0.1/', self.doLocationTest(b'/?biff=baff'))
+        self.assertEqual(b'http://10.0.0.1/',
+                         self.doLocationTest(b'/?biff=baff'))
+
 
     def test_locationToRoot(self):
         """
@@ -95,17 +99,21 @@ class ParentRedirectTests(SynchronousTestCase):
         a redirect to the root.
         """
         self.assertEqual(b'http://10.0.0.1/', self.doLocationTest(b'/foo'))
-        self.assertEqual(b'http://10.0.0.1/', self.doLocationTest(b'/foo?bar=sproiiing'))
+        self.assertEqual(b'http://10.0.0.1/',
+                         self.doLocationTest(b'/foo?bar=sproiiing'))
+
 
     def test_locationUpOne(self):
         """
         Requests for resources directly under the path C{/foo/} produce
         redirects to C{/foo/}.
         """
-        self.assertEqual(b'http://10.0.0.1/foo/', self.doLocationTest(b'/foo/'))
-        self.assertEqual(b'http://10.0.0.1/foo/', self.doLocationTest(b'/foo/bar'))
-        self.assertEqual(b'http://10.0.0.1/foo/', self.doLocationTest(b'/foo/bar?biz=baz'))
-
+        self.assertEqual(b'http://10.0.0.1/foo/',
+                         self.doLocationTest(b'/foo/'))
+        self.assertEqual(b'http://10.0.0.1/foo/',
+                         self.doLocationTest(b'/foo/bar'))
+        self.assertEqual(b'http://10.0.0.1/foo/',
+                         self.doLocationTest(b'/foo/bar?biz=baz'))
 
 
 

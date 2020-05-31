@@ -17,6 +17,7 @@ from twisted.web.template import (Element, TagLoader, XMLString, flattenString,
                                   renderer)
 
 
+
 def _PRE(text):
     """
     Wraps <pre> tags around some text and HTML-escape it.
@@ -44,7 +45,8 @@ def redirectTo(URL: bytes, request) -> bytes:
 
     @raise TypeError: If the type of C{URL} a L{str} instead of L{bytes}.
 
-    @return: A C{bytes} containing HTML which tries to convince the client agent
+    @return: A C{bytes} containing HTML which tries to convince the client
+        agent
         to visit the new location even if it doesn't respect the I{FOUND}
         response code.  This is intended to be returned from a render method,
         eg::
@@ -52,7 +54,7 @@ def redirectTo(URL: bytes, request) -> bytes:
             def render_GET(self, request):
                 return redirectTo(b"http://example.com/", request)
     """
-    if isinstance(URL, str) :
+    if isinstance(URL, str):
         raise TypeError("Unicode object not allowed as URL")
     request.setHeader(b"Content-Type", b"text/html; charset=utf-8")
     request.redirect(URL)
@@ -69,29 +71,47 @@ def redirectTo(URL: bytes, request) -> bytes:
     return content
 
 
+
 class Redirect(resource.Resource):
+    """
+    Resource that redirects to a specific URL.
+
+    @ivar url: Redirect target URL to put in the I{Location} response header.
+    @type url: L{bytes}
+    """
     isLeaf = True
 
-    def __init__(self, url):
-        resource.Resource.__init__(self)
+
+    def __init__(self, url: bytes):
+        super().__init__()
         self.url = url
+
 
     def render(self, request):
         return redirectTo(self.url, request)
+
 
     def getChild(self, name, request):
         return self
 
 
+
+# FIXME: This is totally broken, see https://twistedmatrix.com/trac/ticket/9838
 class ChildRedirector(Redirect):
     isLeaf = 0
+
+
     def __init__(self, url):
         # XXX is this enough?
         if ((url.find('://') == -1)
             and (not url.startswith('..'))
             and (not url.startswith('/'))):
-            raise ValueError("It seems you've given me a redirect (%s) that is a child of myself! That's not good, it'll cause an infinite redirect." % url)
+            raise ValueError((
+                "It seems you've given me a redirect (%s) that is a child of"
+                " myself! That's not good, it'll cause an infinite redirect."
+            ) % url)
         Redirect.__init__(self, url)
+
 
     def getChild(self, name, request):
         newUrl = self.url
