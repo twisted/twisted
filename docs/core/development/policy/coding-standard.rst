@@ -69,26 +69,11 @@ Whenever a new file is added to the repository, add the following license header
 When you update existing files, if there is no copyright header, add one.
 
 
-Whitespace
+Formatting
 ----------
 
-Indentation is 4 spaces per indent.
-Tabs are not allowed.
-It is preferred that every block appears on a new line, so that control structure indentation is always visible.
+Code must be formatted by ``black``.
 
-Lines are flowed at 89 columns.
-They must not have trailing whitespace.
-Long lines must be wrapped using implied line continuation inside parentheses; backslashes aren't allowed.
-To handle long import lines, please wrap them inside parentheses:
-
-.. code-block:: python
-
-    from very.long.package import (
-        foo, bar, baz, qux, quux, quuux
-    )
-
-
-Top-level classes and functions must be separated with 2 blank lines, and class-level functions with 1 blank line.
 The control-L (i.e. ``^L``) form feed character must not be used.
 
 
@@ -179,17 +164,17 @@ While this applies to all packages within Twisted, one ``twisted.python`` deserv
 Strings
 -------
 
-All strings in Twisted which are not interfacing directly with Python (e.g. ``sys.path`` contents, module names, and anything which returns ``str`` on both Python 2 and 3)  should be marked explicitly as "bytestrings" or "text/Unicode strings".
-This is done by using the ``b`` (for bytestrings) or ``u`` (for Unicode strings) prefixes when using string literals.
-String literals not marked with this are "native/bare strings", and have a different meaning on Python 2 (where a bare string is a bytestring) and Python 3 (where a bare string is a Unicode string).
+All literal strings in Twisted which contain binary data must be prefixed with ``b`` (for bytestring).
+String literals not marked with this are "native/bare strings", which are Unicode text strings.
+The ``u`` prefix for text strings was required to maintain Python 2 and 3 compatibility, but this is no longer required in new code.
 
 .. code-block:: python
 
     u"I am text, also known as a Unicode string!"
+    "I am a native bare string, and also Unicode!"
     b"I am a bytestring!"
-    "I am a native bare string, and therefore may be either!"
 
-Bytestrings and text must not be implicitly concatenated, as this causes an invisible ASCII encode/decode on Python 2, and causes an exception on Python 3.
+Bytestrings and text must not be implicitly concatenated, as this causes an exception.
 
 Use ``+`` to combine bytestrings, not string formatting (either "percent formatting" or ``.format()``).
 
@@ -197,9 +182,6 @@ Use ``+`` to combine bytestrings, not string formatting (either "percent formatt
 
     HTTPVersion = b"1.1"
     transport.write(b"HTTP/" + HTTPVersion)
-
-
-Utilities are available in :api:`twisted.python.compat <twisted.python.compat>` to paper over some use cases where other Python code (especially the standard library) expects a "native string", or provides a native string where a bytestring is actually required (namely :api:`twisted.python.compat <twisted.python.compat.nativeString>` and :api:`twisted.python.compat <twisted.python.compat.networkString>`)
 
 
 String Formatting Operations
@@ -437,28 +419,6 @@ For example scripts you expect a Twisted user to run from the command-line, add 
     #!/usr/bin/env python
 
 
-Standard Library Extension Modules
-----------------------------------
-
-When using the extension version of a module for which there is also a Python version, place the import statement inside a try/except block, and import the Python version if the import fails.
-This allows code to work on platforms where the extension version is not available.
-For example:
-
-.. code-block:: python
-
-    try:
-        import cPickle as pickle
-    except ImportError:
-        import pickle
-
-
-Use the "as" syntax of the import statement as well, to set the name of the extension module to the name of the Python module.
-
-Some modules don't exist across all supported Python versions.
-For example, Python 2.3's ``sets`` module was deprecated in Python 2.6 in favor of the ``set`` and ``frozenset`` builtins.
-:api:`twisted.python.compat <twisted.python.compat>` would be the place to add ``set`` and ``frozenset`` implementations that work across Python versions.
-
-
 Classes
 -------
 
@@ -478,15 +438,6 @@ Examples of classes **not** meeting this criteria:
 An effort should be made to prevent class names from clashing with each other between modules, to reduce the need for qualification when importing.
 For example, a Service subclass for Forums might be named ``twisted.forum.service.ForumService``, and a Service subclass for Words might be ``twisted.words.service.WordsService``.
 Since neither of these modules are volatile *(see above)* the classes may be imported directly into the user's namespace and not cause confusion.
-
-
-New-style Classes
-~~~~~~~~~~~~~~~~~
-
-Classes and instances in Python come in two flavors: old-style or classic, and new-style.
-Up to Python 2.1, old-style classes were the only flavour available to the user, new-style classes were introduced in Python 2.2 to unify classes and types.
-All classes added to Twisted must be written as new-style classes.
-If ``x`` is an instance of a new-style class, then ``type(x)`` is the same as ``x.__class__``.
 
 
 Methods
@@ -621,17 +572,6 @@ An attribute (or function, method or class) should be considered private when on
 - The attribute is part of a known-to-be-sub-optimal interface and will certainly be removed in a future release.
 
 
-Python 3
---------
-
-Twisted is being ported to Python 3, targeting Python 3.5+.
-Please see :doc:`Porting to Python 3 </core/howto/python3>` for details.
-
-All new modules must be Python 2.7 & 3.5+ compatible, and all new code to ported modules must be Python 2.7 & 3.5+ compatible.
-New code in non-ported modules must be written in a 2.7 & 3.5+ compatible way (explicit bytes/unicode strings, new exception raising format, etc) as to prevent extra work when that module is eventually ported.
-Code targeting Python 3 specific features must gracefully fall-back on Python 2 as much as is reasonably possible (for example, Python 2 support for 'async/await' is not reasonably possible and would not be required, but code that uses a Python 3-specific module such as ipaddress should be able to use a backport to 2.7 if available).
-
-
 Database
 --------
 
@@ -647,10 +587,10 @@ All SQL keywords should be in upper case.
 C Code
 ------
 
-C code must be optional, and work across multiple platforms (MSVC++9/10/14 for Pythons 2.7 and 3.5+ on Windows, as well as recent GCCs and Clangs for Linux, macOS, and FreeBSD).
+C code must be optional, and work across multiple platforms (MSVC++14 for Python 3.5+ on Windows, as well as recent GCCs and Clangs for Linux, macOS, and FreeBSD).
 
 C code should be kept in external bindings packages which Twisted depends on.
-If creating new C extension modules, using `cffi <https://cffi.readthedocs.io/en/latest/>`_ is highly encouraged, as it will perform well on PyPy and CPython, and be easier to use on Python 2 and 3.
+If creating new C extension modules, using `cffi <https://cffi.readthedocs.io/en/latest/>`_ is highly encouraged, as it will perform well on PyPy and CPython.
 Consider optimizing for `PyPy <http://pypy.org/performance.html>`_ instead of creating bespoke C code.
 
 
