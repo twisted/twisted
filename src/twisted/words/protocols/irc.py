@@ -34,19 +34,28 @@ Test coverage needs to be better.
 <http://www.irchelp.org/irchelp/rfc/ctcpspec.html>}
 """
 
-import errno, os, random, re, stat, struct, sys, time, traceback
+import errno
 import operator
-import string, socket
-import textwrap
+import os
+import random
+import re
 import shlex
+import socket
+import stat
+import string
+import struct
+import sys
+import textwrap
+import time
+import traceback
 from functools import reduce
 from os import path
 
-from twisted.internet import reactor, protocol, task
+from twisted.internet import protocol, reactor, task
 from twisted.persisted import styles
 from twisted.protocols import basic
-from twisted.python import log, reflect, _textattributes
-from twisted.python.compat import unicode, range
+from twisted.python import _textattributes, log, reflect
+from twisted.python.compat import range, unicode
 
 NUL = chr(0)
 CR = chr(0o15)
@@ -2853,7 +2862,7 @@ def fileSize(file):
     I'll try my damndest to determine the size of this file object.
 
     @param file: The file object to determine the size of.
-    @type file: L{file}
+    @type file: L{io.IOBase}
 
     @rtype: L{int} or L{None}
     @return: The size of the file object as an integer if it can be determined,
