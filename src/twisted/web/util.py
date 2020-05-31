@@ -45,7 +45,7 @@ def redirectTo(URL: bytes, request) -> bytes:
 
     @raise TypeError: If the type of C{URL} a L{str} instead of L{bytes}.
 
-    @return: A C{bytes} containing HTML which tries to convince the client
+    @return: A L{bytes} containing HTML which tries to convince the client
         agent
         to visit the new location even if it doesn't respect the I{FOUND}
         response code.  This is intended to be returned from a render method,
@@ -58,6 +58,8 @@ def redirectTo(URL: bytes, request) -> bytes:
         raise TypeError("Unicode object not allowed as URL")
     request.setHeader(b"Content-Type", b"text/html; charset=utf-8")
     request.redirect(URL)
+    # FIXME: The URL should be HTML-escaped.
+    # https://twistedmatrix.com/trac/ticket/9839
     content = b"""
 <html>
     <head>
@@ -457,7 +459,7 @@ def formatFailure(myFailure):
 
     @type myFailure: L{Failure<twisted.python.failure.Failure>}
 
-    @rtype: C{bytes}
+    @rtype: L{bytes}
     @return: A string containing the HTML representation of the given failure.
     """
     result = []
