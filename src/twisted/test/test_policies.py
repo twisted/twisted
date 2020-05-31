@@ -5,7 +5,6 @@
 Test code for policies.
 """
 
-from __future__ import division, absolute_import
 
 from zope.interface import Interface, implementer, implementedBy
 

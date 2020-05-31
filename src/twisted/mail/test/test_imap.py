@@ -13,6 +13,7 @@ import functools
 import locale
 import os
 from io import BytesIO
+from typing import List, Optional, Tuple, Type
 import uuid
 
 from itertools import chain
@@ -49,7 +50,8 @@ from twisted.test.proto_helpers import StringTransport, StringTransportWithDisco
 try:
     from twisted.test.ssl_helpers import ClientTLSContext, ServerTLSContext
 except ImportError:
-    ClientTLSContext = ServerTLSContext = None
+    ClientTLSContext = None  # type: ignore[assignment,misc]
+    ServerTLSContext = None  # type: ignore[assignment,misc]
 
 
 
@@ -1619,7 +1621,7 @@ class IMAP4HelperTests(unittest.TestCase):
 @implementer(imap4.IMailboxInfo, imap4.IMailbox, imap4.ICloseableMailbox)
 class SimpleMailbox:
     flags = ('\\Flag1', 'Flag2', '\\AnotherSysFlag', 'LastFlag')
-    messages = []
+    messages = []  # type: List[Tuple[bytes, list, bytes, int]]
     mUID = 0
     rw = 1
     closed = False
@@ -1708,7 +1710,7 @@ class UncloseableMailbox(object):
     A mailbox that cannot be closed.
     """
     flags = ('\\Flag1', 'Flag2', '\\AnotherSysFlag', 'LastFlag')
-    messages = []
+    messages = []  # type:List[Tuple[bytes, list, bytes, int]]
     mUID = 0
     rw = 1
     closed = False
@@ -1930,8 +1932,8 @@ class SimpleClient(imap4.IMAP4Client):
 
 class IMAP4HelperMixin:
 
-    serverCTX = None
-    clientCTX = None
+    serverCTX = None  # type: Optional[ServerTLSContext]
+    clientCTX = None  # type: Optional[ClientTLSContext]
 
     def setUp(self):
         d = defer.Deferred()
@@ -4635,7 +4637,7 @@ class PreauthIMAP4ClientMixin(object):
     @ivar client: An L{IMAP4Client} which is connected to
         C{transport}.
     """
-    clientProtocol = imap4.IMAP4Client
+    clientProtocol = imap4.IMAP4Client  # type: Type[imap4.IMAP4Client]
 
     def setUp(self):
         """
@@ -7036,8 +7038,12 @@ class CopyWorkerTests(unittest.TestCase):
 
 
 class TLSTests(IMAP4HelperMixin, unittest.TestCase):
-    serverCTX = ServerTLSContext and ServerTLSContext()
-    clientCTX = ClientTLSContext and ClientTLSContext()
+    serverCTX = None
+    clientCTX = None
+    if ServerTLSContext:
+        serverCTX = ServerTLSContext()
+    if ClientTLSContext:
+        clientCTX = ClientTLSContext()
 
     def loopback(self):
         return loopback.loopbackTCP(self.server, self.client, noisy=False)

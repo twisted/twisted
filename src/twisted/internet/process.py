@@ -10,14 +10,6 @@ Do NOT use this module directly - use reactor.spawnProcess() instead.
 Maintainer: Itamar Shtull-Trauring
 """
 
-from __future__ import division, absolute_import, print_function
-
-from twisted.python.runtime import platform
-
-if platform.isWindows():
-    raise ImportError(("twisted.internet.process does not work on Windows. "
-                       "Use the reactor.spawnProcess() API instead."))
-
 import errno
 import gc
 import os
@@ -27,15 +19,8 @@ import stat
 import sys
 import traceback
 
-try:
-    import pty
-except ImportError:
-    pty = None
-
-try:
-    import fcntl, termios
-except ImportError:
-    fcntl = None
+from typing import Callable, Dict, Optional
+from twisted.python.runtime import platform
 
 from zope.interface import implementer
 
@@ -47,11 +32,32 @@ from twisted.internet.main import CONNECTION_LOST, CONNECTION_DONE
 from twisted.internet._baseprocess import BaseProcess
 from twisted.internet.interfaces import IProcessTransport
 
+if platform.isWindows():
+    raise ImportError(("twisted.internet.process does not work on Windows. "
+                       "Use the reactor.spawnProcess() API instead."))
+
+try:
+    import pty as _pty
+except ImportError:
+    pty = None
+else:
+    pty = _pty
+
+try:
+    import fcntl as _fcntl
+    import termios
+except ImportError:
+    fcntl = None
+else:
+    fcntl = _fcntl
+
 # Some people were importing this, which is incorrect, just keeping it
 # here for backwards compatibility:
 ProcessExitedAlready = error.ProcessExitedAlready
 
-reapProcessHandlers = {}
+reapProcessHandlers = {}  # type: Dict[int, Callable]
+
+
 
 def reapAllProcesses():
     """
@@ -76,9 +82,13 @@ def registerReapProcessHandler(pid, process):
         raise RuntimeError("Try to register an already registered process.")
     try:
         auxPID, status = os.waitpid(pid, os.WNOHANG)
-    except:
-        log.msg('Failed to reap %d:' % pid)
+    except:     # noqa
+        log.msg('Failed to reap {}:'.format(pid))
         log.err()
+
+        if pid is None:
+            return
+
         auxPID = None
     if auxPID:
         process.processEnded(status)
@@ -278,7 +288,7 @@ class _BaseProcess(BaseProcess, object):
     """
     Base class for Process and PTYProcess.
     """
-    status = None
+    status = None  # type: Optional[int]
     pid = None
 
     def reapProcess(self):
@@ -303,13 +313,13 @@ class _BaseProcess(BaseProcess, object):
                     pid = None
                 else:
                     raise
-        except:
-            log.msg('Failed to reap %d:' % self.pid)
+        except:     # noqa
+            log.msg('Failed to reap {}:'.format(self.pid))
             log.err()
             pid = None
         if pid:
-            self.processEnded(status)
             unregisterReapProcessHandler(pid, self)
+            self.processEnded(status)
 
 
     def _getReason(self, status):

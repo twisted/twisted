@@ -6,7 +6,6 @@
 Different styles of persisted objects.
 """
 
-from __future__ import division, absolute_import
 
 # System Imports
 import types
@@ -18,13 +17,14 @@ except ImportError:
 import copy
 import inspect
 
+from typing import Dict
 from twisted.python.compat import _PY3, _PYPY
 
 # Twisted Imports
 from twisted.python import log
 from twisted.python import reflect
 
-oldModules = {}
+oldModules = {}  # type: Dict[str, types.ModuleType]
 
 
 try:
@@ -292,8 +292,11 @@ class Ephemeral:
         self.__class__ = Ephemeral
 
 
-versionedsToUpgrade = {}
+
+versionedsToUpgrade = {}  # type: Dict[int, 'Versioned']
 upgraded = {}
+
+
 
 def doUpgrade():
     global versionedsToUpgrade, upgraded

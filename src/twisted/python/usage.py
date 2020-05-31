@@ -12,8 +12,6 @@ U{http://twistedmatrix.com/projects/core/documentation/howto/options.html},
 or doc/core/howto/options.xhtml in your Twisted directory.
 """
 
-from __future__ import print_function
-from __future__ import division, absolute_import
 
 # System Imports
 import inspect
@@ -22,6 +20,7 @@ import sys
 import getopt
 from os import path
 import textwrap
+from typing import Callable, Optional
 
 # Sibling Imports
 from twisted.python import reflect, util
@@ -188,7 +187,7 @@ class Options(dict):
             self._dispatch.update(dispatch)
 
 
-    __hash__ = object.__hash__
+    __hash__ = object.__hash__  # type: Callable[[object], int]
 
 
     def opt_help(self):
@@ -561,7 +560,8 @@ class Completer(object):
     This class produces no completion matches itself - see the various
     subclasses for specific completion functionality.
     """
-    _descr = None
+    _descr = None  # type: Optional[str]
+
     def __init__(self, descr=None, repeat=False):
         """
         @type descr: C{str}

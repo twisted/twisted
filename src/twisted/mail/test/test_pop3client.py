@@ -5,6 +5,7 @@
 import sys
 import inspect
 
+from typing import List
 from zope.interface import directlyProvides
 
 from twisted.internet import reactor, defer, error, protocol, interfaces
@@ -529,7 +530,8 @@ class POP3HelperMixin:
 class TLSServerFactory(protocol.ServerFactory):
     class protocol(basic.LineReceiver):
         context = None
-        output = []
+        output = []  # type: List[bytes]
+
         def connectionMade(self):
             self.factory.input = []
             self.output = self.output[:]
@@ -679,8 +681,14 @@ class POP3ClientModuleStructureTests(unittest.TestCase):
                          if not c[0][0] == '_']
 
         for pc in publicClasses:
+            if sys.version_info < (3, 7) and pc == 'List':
+                # typing.List shows up in publicClasses on
+                # Python < 3.7, so skip it.
+                continue
             if not pc == 'POP3Client':
-                self.assertTrue(hasattr(twisted.mail.pop3, pc))
+                self.assertTrue(
+                    hasattr(twisted.mail.pop3, pc),
+                    "{} not in {}".format(pc, twisted.mail.pop3))
             else:
-                self.assertTrue(hasattr(twisted.mail.pop3,
-                    'AdvancedPOP3Client'))
+                self.assertTrue(
+                    hasattr(twisted.mail.pop3, 'AdvancedPOP3Client'))

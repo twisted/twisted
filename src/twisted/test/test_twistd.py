@@ -5,24 +5,23 @@
 Tests for L{twisted.application.app} and L{twisted.scripts.twistd}.
 """
 
-from __future__ import absolute_import, division
 
 import errno
 import inspect
+import pickle
 import signal
 import os
 import sys
 
 try:
-    import pwd
-    import grp
+    import pwd as _pwd
+    import grp as _grp
 except ImportError:
-    pwd = grp = None
-
-try:
-    import cPickle as pickle
-except ImportError:
-    import pickle
+    pwd = None
+    grp = None
+else:
+    pwd = _pwd
+    grp = _grp
 
 from zope.interface import implementer
 from zope.interface.verify import verifyObject

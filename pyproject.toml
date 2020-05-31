@@ -53,3 +53,16 @@
 
 [tool.black]
 skip-string-normalization = true
+
+[tool.isort]
+line_length = 89
+sections = "FUTURE,STDLIB,ZOPE,OPENSSL,THIRDPARTY,FIRSTPARTY,LOCALFOLDER"
+default_section = "THIRDPARTY"
+no_lines_before = "LOCALFOLDER"
+known_first_party = "twisted"
+known_zope = "zope"
+known_openssl = "OpenSSL"
+multi_line_output = 3
+include_trailing_comma = true
+combine_as_imports = true
+skip = "src/twisted/logger/__init__.py,src/twisted/internet/reactor.py"

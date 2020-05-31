@@ -8,7 +8,6 @@ clients and servers to forward arbitrary TCP data across the connection.
 Maintainer: Paul Swartz
 """
 
-from __future__ import division, absolute_import
 
 import struct
 

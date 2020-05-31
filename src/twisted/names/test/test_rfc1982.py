@@ -5,7 +5,6 @@
 Test cases for L{twisted.names.rfc1982}.
 """
 
-from __future__ import division, absolute_import
 
 import calendar
 from datetime import datetime

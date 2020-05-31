@@ -5,7 +5,6 @@
 Tests for interrupting tests with Control-C.
 """
 
-from __future__ import absolute_import, division
 
 from twisted.python.compat import NativeStringIO
 

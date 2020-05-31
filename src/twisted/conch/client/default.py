@@ -11,7 +11,6 @@ you are sitting at an interactive terminal.  For example, to programmatically
 interact with a known_hosts database, use L{twisted.conch.client.knownhosts}.
 """
 
-from __future__ import print_function
 
 from twisted.python import log
 from twisted.python.compat import (

@@ -6,14 +6,17 @@
 Tests for L{twisted.python.compat}.
 """
 
-from __future__ import division, absolute_import
 
-import socket, sys, traceback, io, codecs
+import codecs
+import io
+import socket
+import sys
+import traceback
 
 from twisted.trial import unittest
 
 from twisted.python.compat import (
-    reduce, execfile, _PY3, _PYPY, comparable, cmp, nativeString,
+    reduce, execfile, _PYPY, comparable, cmp, nativeString,
     networkString, unicode as unicodeCompat, lazyByteSlice, reraise,
     NativeStringIO, iterbytes, intToBytes, ioType, bytesEnviron, iteritems,
     _coercedUnicode, unichr, raw_input, _bytesRepr, _get_async_param,
@@ -56,51 +59,6 @@ class IOTypeTests(unittest.SynchronousTestCase):
         """
         with io.open(self.mktemp(), "wb") as f:
             self.assertEqual(ioType(f), bytes)
-
-
-    def test_2openTextMode(self):
-        """
-        The special built-in console file in Python 2 which has an 'encoding'
-        attribute should qualify as a special type, since it accepts both bytes
-        and text faithfully.
-        """
-        class VerySpecificLie(file):
-            """
-            In their infinite wisdom, the CPython developers saw fit not to
-            allow us a writable 'encoding' attribute on the built-in 'file'
-            type in Python 2, despite making it writable in C with
-            PyFile_SetEncoding.
-
-            Pretend they did not do that.
-            """
-            encoding = 'utf-8'
-
-        self.assertEqual(ioType(VerySpecificLie(self.mktemp(), "wb")),
-                          basestring)
-
-
-    def test_2StringIO(self):
-        """
-        Python 2's L{StringIO} and L{cStringIO} modules are both binary I/O.
-        """
-        from cStringIO import StringIO as cStringIO
-        from StringIO import StringIO
-        self.assertEqual(ioType(StringIO()), bytes)
-        self.assertEqual(ioType(cStringIO()), bytes)
-
-
-    def test_2openBinaryMode(self):
-        """
-        The normal 'open' builtin in Python 2 will always result in bytes I/O.
-        """
-        with open(self.mktemp(), "w") as f:
-            self.assertEqual(ioType(f), bytes)
-
-    if _PY3:
-        test_2openTextMode.skip = "The 'file' type is no longer available."
-        test_2openBinaryMode.skip = "'io.open' is now the same as 'open'."
-        test_2StringIO.skip = ("The 'StringIO' and 'cStringIO' modules were "
-                               "subsumed by the 'io' module.")
 
 
     def test_codecsOpenBytes(self):
@@ -184,75 +142,6 @@ class CompatTests(unittest.SynchronousTestCase):
 
 
 
-class IPv6Tests(unittest.SynchronousTestCase):
-    """
-    C{inet_pton} and C{inet_ntop} implementations support IPv6.
-    """
-
-    def testNToP(self):
-        from twisted.python.compat import inet_ntop
-
-        f = lambda a: inet_ntop(socket.AF_INET6, a)
-        g = lambda a: inet_ntop(socket.AF_INET, a)
-
-        self.assertEqual('::', f('\x00' * 16))
-        self.assertEqual('::1', f('\x00' * 15 + '\x01'))
-        self.assertEqual(
-            'aef:b01:506:1001:ffff:9997:55:170',
-            f('\x0a\xef\x0b\x01\x05\x06\x10\x01\xff\xff\x99\x97\x00\x55\x01'
-              '\x70'))
-
-        self.assertEqual('1.0.1.0', g('\x01\x00\x01\x00'))
-        self.assertEqual('170.85.170.85', g('\xaa\x55\xaa\x55'))
-        self.assertEqual('255.255.255.255', g('\xff\xff\xff\xff'))
-
-        self.assertEqual('100::', f('\x01' + '\x00' * 15))
-        self.assertEqual('100::1', f('\x01' + '\x00' * 14 + '\x01'))
-
-
-    def testPToN(self):
-        """
-        L{twisted.python.compat.inet_pton} parses IPv4 and IPv6 addresses in a
-        manner similar to that of L{socket.inet_pton}.
-        """
-        from twisted.python.compat import inet_pton
-
-        f = lambda a: inet_pton(socket.AF_INET6, a)
-        g = lambda a: inet_pton(socket.AF_INET, a)
-
-        self.assertEqual('\x00\x00\x00\x00', g('0.0.0.0'))
-        self.assertEqual('\xff\x00\xff\x00', g('255.0.255.0'))
-        self.assertEqual('\xaa\xaa\xaa\xaa', g('170.170.170.170'))
-
-        self.assertEqual('\x00' * 16, f('::'))
-        self.assertEqual('\x00' * 16, f('0::0'))
-        self.assertEqual('\x00\x01' + '\x00' * 14, f('1::'))
-        self.assertEqual(
-            '\x45\xef\x76\xcb\x00\x1a\x56\xef\xaf\xeb\x0b\xac\x19\x24\xae\xae',
-            f('45ef:76cb:1a:56ef:afeb:bac:1924:aeae'))
-        # Scope ID doesn't affect the binary representation.
-        self.assertEqual(
-            '\x45\xef\x76\xcb\x00\x1a\x56\xef\xaf\xeb\x0b\xac\x19\x24\xae\xae',
-            f('45ef:76cb:1a:56ef:afeb:bac:1924:aeae%en0'))
-
-        self.assertEqual('\x00' * 14 + '\x00\x01', f('::1'))
-        self.assertEqual('\x00' * 12 + '\x01\x02\x03\x04', f('::1.2.3.4'))
-        self.assertEqual(
-            '\x00\x01\x00\x02\x00\x03\x00\x04\x00\x05\x00\x06\x01\x02\x03\xff',
-            f('1:2:3:4:5:6:1.2.3.255'))
-
-        for badaddr in ['1:2:3:4:5:6:7:8:', ':1:2:3:4:5:6:7:8', '1::2::3',
-                        '1:::3', ':::', '1:2', '::1.2', '1.2.3.4::',
-                        'abcd:1.2.3.4:abcd:abcd:abcd:abcd:abcd',
-                        '1234:1.2.3.4:1234:1234:1234:1234:1234:1234',
-                        '1.2.3.4', '', '%eth0']:
-            self.assertRaises(ValueError, f, badaddr)
-
-if _PY3:
-    IPv6Tests.skip = "These tests are only relevant to old versions of Python"
-
-
-
 class ExecfileCompatTests(unittest.SynchronousTestCase):
     """
     Tests for the Python 3-friendly L{execfile} implementation.
@@ -302,28 +191,6 @@ class ExecfileCompatTests(unittest.SynchronousTestCase):
             globalNamespace = {"foo": None}
             execfile(script.path, globalNamespace)
             self.assertEqual("okay", globalNamespace["foo"])
-
-
-
-class PY3Tests(unittest.SynchronousTestCase):
-    """
-    Identification of Python 2 vs. Python 3.
-    """
-
-    def test_python2(self):
-        """
-        On Python 2, C{_PY3} is False.
-        """
-        if sys.version.startswith("2."):
-            self.assertFalse(_PY3)
-
-
-    def test_python3(self):
-        """
-        On Python 3, C{_PY3} is True.
-        """
-        if sys.version.startswith("3."):
-            self.assertTrue(_PY3)
 
 
 
@@ -481,11 +348,6 @@ class Python3ComparableTests(unittest.SynchronousTestCase):
         """
         self.assertEqual(Comparable(1).__le__(object()), NotImplemented)
 
-if not _PY3:
-    # On Python 2, we just use __cmp__ directly, so checking detailed
-    # comparison methods doesn't makes sense.
-    Python3ComparableTests.skip = "Python 3 only."
-
 
 
 class CmpTests(unittest.SynchronousTestCase):
@@ -585,11 +447,7 @@ class StringTests(unittest.SynchronousTestCase):
         """
         C{compat.unicode} is C{str} on Python 3, C{unicode} on Python 2.
         """
-        if _PY3:
-            expected = str
-        else:
-            expected = unicode
-        self.assertIs(unicodeCompat, expected)
+        self.assertIs(unicodeCompat, str)
 
 
     def test_nativeStringIO(self):
@@ -608,25 +466,6 @@ class NetworkStringTests(unittest.SynchronousTestCase):
     """
     Tests for L{networkString}.
     """
-    def test_bytes(self):
-        """
-        L{networkString} returns a C{bytes} object passed to it unmodified.
-        """
-        self.assertEqual(b"foo", networkString(b"foo"))
-
-
-    def test_bytesOutOfRange(self):
-        """
-        L{networkString} raises C{UnicodeError} if passed a C{bytes} instance
-        containing bytes not used by ASCII.
-        """
-        self.assertRaises(
-            UnicodeError, networkString, u"\N{SNOWMAN}".encode('utf-8'))
-    if _PY3:
-        test_bytes.skip = test_bytesOutOfRange.skip = (
-            "Bytes behavior of networkString only provided on Python 2.")
-
-
     def test_unicode(self):
         """
         L{networkString} returns a C{unicode} object passed to it encoded into
@@ -642,9 +481,6 @@ class NetworkStringTests(unittest.SynchronousTestCase):
         """
         self.assertRaises(
             UnicodeError, networkString, u"\N{SNOWMAN}")
-    if not _PY3:
-        test_unicode.skip = test_unicodeOutOfRange.skip = (
-            "Unicode behavior of networkString only provided on Python 3.")
 
 
     def test_nonString(self):
@@ -653,10 +489,7 @@ class NetworkStringTests(unittest.SynchronousTestCase):
         the wrong type of string object.
         """
         self.assertRaises(TypeError, networkString, object())
-        if _PY3:
-            self.assertRaises(TypeError, networkString, b"bytes")
-        else:
-            self.assertRaises(TypeError, networkString, u"text")
+        self.assertRaises(TypeError, networkString, b"bytes")
 
 
 
@@ -825,19 +658,6 @@ class CoercedUnicodeTests(unittest.TestCase):
         """
         exc = self.assertRaises(TypeError, _coercedUnicode, b'bytes')
         self.assertEqual(str(exc), "Expected str not b'bytes' (bytes)")
-    if not _PY3:
-        test_bytesPy3.skip = (
-            "Bytes behavior of _coercedUnicode only provided on Python 2.")
-
-
-    def test_bytesNonASCII(self):
-        """
-        Byte strings with non-ASCII code points raise an exception.
-        """
-        self.assertRaises(UnicodeError, _coercedUnicode, b'\xe2\x98\x83')
-    if _PY3:
-        test_bytesNonASCII.skip = (
-            "Bytes behavior of _coercedUnicode only provided on Python 2.")
 
 
 

@@ -5,7 +5,6 @@
 Tests for L{twisted.web._newclient}.
 """
 
-from __future__ import division, absolute_import
 __metaclass__ = type
 
 from zope.interface import implementer

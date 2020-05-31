@@ -8,7 +8,6 @@
 Defines classes that handle the results of tests.
 """
 
-from __future__ import division, absolute_import
 
 import sys
 import os
@@ -24,7 +23,7 @@ from twisted.python import reflect, log
 from twisted.python.components import proxyForInterface
 from twisted.python.failure import Failure
 from twisted.python.util import untilConcludes
-from twisted.python.compat import _PY3, items
+from twisted.python.compat import items
 from twisted.trial import itrial, util
 
 try:
@@ -581,13 +580,12 @@ class Reporter(TestResult):
 
         twoFrames = ((firstMethod, firstFile), (secondMethod, secondFile))
 
-        if _PY3:
-            # On PY3, we have an extra frame which is reraising the exception
-            for frame in newFrames:
-                frameFile = os.path.splitext(os.path.basename(frame[1]))[0]
-                if frameFile == "compat" and frame[0] == "reraise":
-                    # If it's in the compat module and is reraise, BLAM IT
-                    newFrames.pop(newFrames.index(frame))
+        # On PY3, we have an extra frame which is reraising the exception
+        for frame in newFrames:
+            frameFile = os.path.splitext(os.path.basename(frame[1]))[0]
+            if frameFile == "compat" and frame[0] == "reraise":
+                # If it's in the compat module and is reraise, BLAM IT
+                newFrames.pop(newFrames.index(frame))
 
         if twoFrames == syncCase:
             newFrames = newFrames[2:]
@@ -892,6 +890,7 @@ class _AnsiColorizer(object):
         self.stream = stream
 
 
+    @classmethod
     def supported(cls, stream=sys.stdout):
         """
         A class method that returns True if the current platform supports
@@ -910,10 +909,9 @@ class _AnsiColorizer(object):
                 except curses.error:
                     curses.setupterm()
                     return curses.tigetnum("colors") > 2
-            except:
+            except BaseException:
                 # guess false in case of error
                 return False
-    supported = classmethod(supported)
 
 
     def write(self, text, color):
@@ -953,6 +951,7 @@ class _Win32Colorizer(object):
             }
 
 
+    @classmethod
     def supported(cls, stream=sys.stdout):
         try:
             import win32console
@@ -970,7 +969,6 @@ class _Win32Colorizer(object):
             return False
         else:
             return True
-    supported = classmethod(supported)
 
 
     def write(self, text, color):
@@ -989,9 +987,9 @@ class _NullColorizer(object):
         self.stream = stream
 
 
+    @classmethod
     def supported(cls, stream=sys.stdout):
         return True
-    supported = classmethod(supported)
 
 
     def write(self, text, color):

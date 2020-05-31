@@ -59,12 +59,13 @@ from twisted.web.error import SchemeNotSupported
 from twisted.logger import globalLogPublisher
 
 try:
-    from twisted.internet import ssl
+    from twisted.internet import ssl as _ssl
 except ImportError:
     ssl = None
     skipWhenNoSSL = "SSL not present, cannot run SSL tests."
     skipWhenSSLPresent = None
 else:
+    ssl = _ssl
     skipWhenSSLPresent = "SSL present."
     skipWhenNoSSL = None
     from twisted.internet._sslverify import ClientTLSOptions, IOpenSSLTrustRoot
@@ -336,6 +337,28 @@ class FileBodyProducerTests(TestCase):
         producer.resumeProducing()
         self._scheduled.pop(0)()
         self.assertEqual(expectedResult[:readSize * 2], output.getvalue())
+
+    def test_multipleStop(self):
+        """
+        L{FileBodyProducer.stopProducing} can be called more than once without
+        raising an exception.
+        """
+        expectedResult = b"test"
+        readSize = 3
+        output = BytesIO()
+        consumer = FileConsumer(output)
+        inputFile = BytesIO(expectedResult)
+        producer = FileBodyProducer(
+            inputFile, self.cooperator, readSize)
+        complete = producer.startProducing(consumer)
+        producer.stopProducing()
+        producer.stopProducing()
+        self.assertTrue(inputFile.closed)
+        self._scheduled.pop(0)()
+        self.assertEqual(b"", output.getvalue())
+        self.assertNoResult(complete)
+
+
 
 EXAMPLE_COM_IP = '127.0.0.7'
 EXAMPLE_COM_V6_IP = '::7'

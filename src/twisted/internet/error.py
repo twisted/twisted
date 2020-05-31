@@ -5,7 +5,6 @@
 Exceptions and errors for use in twisted.internet modules.
 """
 
-from __future__ import division, absolute_import
 
 import socket
 

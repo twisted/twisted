@@ -5,7 +5,6 @@
 Test cases for twisted.python._shellcomp
 """
 
-from __future__ import division, absolute_import
 
 import sys
 from io import BytesIO

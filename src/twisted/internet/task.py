@@ -6,7 +6,6 @@
 Scheduling utility methods and classes.
 """
 
-from __future__ import division, absolute_import
 
 __metaclass__ = type
 
@@ -87,6 +86,8 @@ class LoopingCall:
 
         return self._deferred
 
+
+    @classmethod
     def withCount(cls, countCallable):
         """
         An alternate constructor for L{LoopingCall} that makes available the
@@ -143,8 +144,6 @@ class LoopingCall:
         self._realLastTime = None
 
         return self
-
-    withCount = classmethod(withCount)
 
 
     def _intervalOf(self, t):

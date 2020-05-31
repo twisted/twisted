@@ -5,6 +5,7 @@
 Test cases for twisted.protocols.postfix module.
 """
 
+from typing import List, Dict, Tuple
 from twisted.trial import unittest
 from twisted.protocols import postfix
 from twisted.test.proto_helpers import StringTransport
@@ -37,11 +38,11 @@ class PostfixTCPMapQuoteTests(unittest.TestCase):
 class PostfixTCPMapServerTestCase(object):
     data = {
         # 'key': 'value',
-        }
+        }  # type: Dict[bytes, bytes]
 
     chat = [
         # (input, expected_output),
-        ]
+        ]  # type: List[Tuple[bytes, bytes]]
 
 
     def test_chat(self):

@@ -8,12 +8,13 @@ HTML rendering of Python source.
 
 from twisted.python.compat import _tokenize, escape
 
-import tokenize, keyword
+import keyword
+import tokenize
 from . import reflect
-from twisted.python._oldstyle import _oldStyle
+from typing import List
 
 
-@_oldStyle
+
 class TokenPrinter:
     """
     Format a stream of tokens and intermediate whitespace, for pretty-printing.
@@ -68,14 +69,13 @@ class TokenPrinter:
 
 
 
-@_oldStyle
 class HTMLWriter:
     """
     Write the stream of tokens and whitespace from L{TokenPrinter}, formating
     tokens as HTML spans.
     """
 
-    noSpan = []
+    noSpan = []  # type: List[str]
 
     def __init__(self, writer):
         self.writer = writer

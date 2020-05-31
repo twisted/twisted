@@ -10,7 +10,6 @@ and serializing such structures to an XML string representation, optimized
 for use in streaming XML applications.
 """
 
-from __future__ import absolute_import, division
 
 from zope.interface import implementer, Interface, Attribute
 
@@ -807,11 +806,18 @@ class ExpatElementStream:
             qname = ('', name)
 
         # Process attributes
+        newAttrs = {}
+        toDelete = []
         for k, v in attrs.items():
             if " " in k:
                 aqname = k.rsplit(" ", 1)
-                attrs[(aqname[0], aqname[1])] = v
-                del attrs[k]
+                newAttrs[(aqname[0], aqname[1])] = v
+                toDelete.append(k)
+
+        attrs.update(newAttrs)
+
+        for k in toDelete:
+            del attrs[k]
 
         # Construct the new element
         e = Element(qname, self.defaultNsStack[-1], attrs, self.localPrefixes)

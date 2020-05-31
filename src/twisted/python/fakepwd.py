@@ -6,7 +6,6 @@
 L{twisted.python.fakepwd} provides a fake implementation of the L{pwd} API.
 """
 
-from __future__ import absolute_import, division
 
 __all__ = ['UserDatabase', 'ShadowDatabase']
 

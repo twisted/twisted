@@ -9,19 +9,18 @@ Start here if you are looking to write a new protocol implementation for
 Twisted.  The Protocol class contains some introductory material.
 """
 
-from __future__ import division, absolute_import
 
 import random
+from typing import Optional, Type
 from zope.interface import implementer
 
 from twisted.python import log, failure, components
 from twisted.internet import interfaces, error, defer
 from twisted.logger import _loggerFor
-from twisted.python._oldstyle import _oldStyle
+
 
 
 @implementer(interfaces.IProtocolFactory, interfaces.ILoggingContext)
-@_oldStyle
 class Factory:
     """
     This is a factory which produces protocols.
@@ -31,7 +30,7 @@ class Factory:
     """
 
     # Put a subclass of Protocol here:
-    protocol = None
+    protocol = None  # type: Optional[Type['Protocol']]
 
     numPorts = 0
     noisy = True
@@ -237,7 +236,6 @@ class _InstanceFactory(ClientFactory):
 
 
 
-@_oldStyle
 class ClientCreator:
     """
     Client connections that do not require a factory.
@@ -490,7 +488,6 @@ class ServerFactory(Factory):
 
 
 
-@_oldStyle
 class BaseProtocol:
     """
     This is the abstract superclass of all protocols.
@@ -699,10 +696,10 @@ class ProcessProtocol(BaseProtocol):
 
 
 
-@_oldStyle
 class AbstractDatagramProtocol:
     """
-    Abstract protocol for datagram-oriented transports, e.g. IP, ICMP, ARP, UDP.
+    Abstract protocol for datagram-oriented transports, e.g. IP, ICMP, ARP,
+    UDP.
     """
 
     transport = None
@@ -834,7 +831,6 @@ class ConnectedDatagramProtocol(DatagramProtocol):
 
 
 @implementer(interfaces.ITransport)
-@_oldStyle
 class FileWrapper:
     """
     A wrapper around a file-like object to make it behave as a Transport.

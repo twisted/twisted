@@ -14,13 +14,13 @@ This API is currently considered private because it's in early draft form. When
 it has stabilised, it'll be made public.
 """
 
-from __future__ import absolute_import, division
 
 import io
 import warnings
 import sys
 
 from collections import deque
+from typing import List
 
 from zope.interface import implementer
 
@@ -45,7 +45,7 @@ from twisted.web.error import ExcessiveBufferingError
 
 
 # This API is currently considered private.
-__all__ = []
+__all__ = []  # type: List[str]
 
 
 _END_STREAM_SENTINEL = object()

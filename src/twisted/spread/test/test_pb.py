@@ -11,12 +11,16 @@ only specific tests for old API.
 # issue1195 TODOs: replace pump.pump() with something involving Deferreds.
 # Clean up warning suppression.
 
-from __future__ import absolute_import, division
 
-import sys, os, time, gc, weakref
+import gc
+import os
+import sys
+import time
+import weakref
 from collections import deque
 
 from io import BytesIO as StringIO
+from typing import Dict
 from zope.interface import implementer, Interface
 
 from twisted.trial import unittest
@@ -285,7 +289,8 @@ class SimpleFactoryCopy(pb.Copyable):
     @cvar allIDs: hold every created instances of this class.
     @type allIDs: C{dict}
     """
-    allIDs = {}
+    allIDs = {}  # type: Dict[int, 'SimpleFactoryCopy']
+
     def __init__(self, id):
         self.id = id
         SimpleFactoryCopy.allIDs[id] = self

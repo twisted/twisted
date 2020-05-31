@@ -7,7 +7,6 @@
 Basic protocols, such as line-oriented, netstring, and int prefixed strings.
 """
 
-from __future__ import absolute_import, division
 
 # System imports
 import re
@@ -118,9 +117,9 @@ class NetstringReceiver(protocol.Protocol):
     @type _expectedPayloadSize: C{int}
     """
     MAX_LENGTH = 99999
-    _LENGTH = re.compile(b'(0|[1-9]\d*)(:)')
+    _LENGTH = re.compile(br'(0|[1-9]\d*)(:)')
 
-    _LENGTH_PREFIX = re.compile(b'(0|[1-9]\d*)$')
+    _LENGTH_PREFIX = re.compile(br'(0|[1-9]\d*)$')
 
     # Some error information for NetstringParseError instances.
     _MISSING_LENGTH = ("The received netstring does not start with a "

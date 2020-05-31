@@ -26,7 +26,6 @@ Various other classes in this module support this usage:
     response.
 """
 
-from __future__ import division, absolute_import
 __metaclass__ = type
 
 import re

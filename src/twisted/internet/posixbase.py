@@ -6,12 +6,13 @@
 Posix reactor base class
 """
 
-from __future__ import division, absolute_import
 
 import socket
 import errno
 import os
 import sys
+
+from typing import Union, Sequence, Type
 
 from zope.interface import implementer, classImplements
 
@@ -32,13 +33,18 @@ _NO_FILEDESC = error.ConnectionFdescWentAway('File descriptor lost')
 
 
 try:
-    from twisted.protocols import tls
+    from twisted.protocols import tls as _tls
 except ImportError:
     tls = None
-    try:
-        from twisted.internet import ssl
-    except ImportError:
-        ssl = None
+else:
+    tls = _tls
+
+try:
+    from twisted.internet import ssl as _ssl
+except ImportError:
+    ssl = None
+else:
+    ssl = _ssl
 
 unixEnabled = (platformType == 'posix')
 
@@ -183,7 +189,7 @@ class _UnixWaker(_FDWaker):
 
 
 if platformType == 'posix':
-    _Waker = _UnixWaker
+    _Waker = _UnixWaker  # type: Union[Type[_FDWaker], Type[_SocketWaker]]
 else:
     # Primarily Windows and Jython.
     _Waker = _SocketWaker
@@ -432,7 +438,7 @@ class PosixReactorBase(_SignalReactorMixin, _DisconnectSelectableMixin,
     if unixEnabled:
         _supportedAddressFamilies = (
             socket.AF_INET, socket.AF_INET6, socket.AF_UNIX,
-        )
+        )  # type: Sequence[socket.AddressFamily]
     else:
         _supportedAddressFamilies = (
             socket.AF_INET, socket.AF_INET6,

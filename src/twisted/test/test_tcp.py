@@ -5,13 +5,14 @@
 Tests for implementations of L{IReactorTCP}.
 """
 
-from __future__ import division, absolute_import
 
 import socket
 import random
 import errno
 import hamcrest
 from functools import wraps
+
+from typing import Type
 
 from zope.interface import implementer
 
@@ -119,7 +120,7 @@ class MyProtocolFactoryMixin(object):
 
     protocolConnectionMade = None
     protocolConnectionLost = None
-    protocol = None
+    protocol = None  # type: Type[AccumulatingProtocol]
     called = 0
 
     def __init__(self):

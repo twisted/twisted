@@ -7,7 +7,6 @@ Extended thread dispatching support.
 For basic support see reactor threading API docs.
 """
 
-from __future__ import division, absolute_import
 
 from twisted.python.compat import _PY3
 if not _PY3:

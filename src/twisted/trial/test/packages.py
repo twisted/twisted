@@ -7,23 +7,15 @@ Classes and functions used by L{twisted.trial.test.test_util}
 and L{twisted.trial.test.test_loader}.
 """
 
-from __future__ import division, absolute_import
 
 import sys
 import os
 
-from twisted.python.compat import _PY3
 from twisted.trial import unittest
 
-if _PY3:
-    # Python 3 has some funny import caching, which we don't want.
-    # invalidate_caches clears it out for us.
-    from importlib import invalidate_caches as invalidateImportCaches
-else:
-    def invalidateImportCaches():
-        """
-        On python 2, import caches don't need to be invalidated.
-        """
+# Python 3 has some funny import caching, which we don't want.
+# invalidate_caches clears it out for us.
+from importlib import invalidate_caches as invalidateImportCaches
 
 testModule = """
 from twisted.trial import unittest
