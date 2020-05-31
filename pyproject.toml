@@ -52,7 +52,7 @@
         showcontent = false
 
 [tool.black]
-skip-string-normalization = true
+target-version = ['py35', 'py36', 'py37', 'py38']
 
 [tool.isort]
 line_length = 89
