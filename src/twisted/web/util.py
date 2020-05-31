@@ -104,16 +104,35 @@ class ChildRedirector(Redirect):
         return ChildRedirector(newUrl)
 
 
+
 class ParentRedirect(resource.Resource):
     """
-    I redirect to URLPath.here().
+    Redirect to the nearest directory and strip any query string.
+
+    This generates redirects like::
+
+        /              \u2192  /
+        /foo           \u2192  /
+        /foo?bar       \u2192  /
+        /foo/          \u2192  /foo/
+        /foo/bar       \u2192  /foo/
+        /foo/bar?baz   \u2192  /foo/
+
+    However, the generated I{Location} header contains an absolute URL rather
+    than a path.
+
+    The response is the same regardless of HTTP method.
     """
     isLeaf = 1
-    def render(self, request):
-        return redirectTo(urlpath.URLPath.fromRequest(request).here(), request)
 
-    def getChild(self, request):
-        return self
+
+    def render(self, request) -> bytes:
+        """
+        Respond to all requests by redirecting to nearest directory.
+        """
+        here = str(urlpath.URLPath.fromRequest(request).here()).encode('ascii')
+        return redirectTo(here, request)
+
 
 
 class DeferredResource(resource.Resource):
