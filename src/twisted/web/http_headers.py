@@ -6,11 +6,13 @@
 An API for storing HTTP header names and values.
 """
 
+from typing import List, Iterator, Tuple, Optional, Dict, Union, Any
 
 from twisted.python.compat import comparable, cmp
+from twisted.python._typing import String
 
 
-def _dashCapitalize(name):
+def _dashCapitalize(name: bytes) -> bytes:
     """
     Return a byte string which is capitalized using '-' as a word separator.
 
@@ -23,11 +25,10 @@ def _dashCapitalize(name):
     return b"-".join([word.capitalize() for word in name.split(b"-")])
 
 
-def _sanitizeLinearWhitespace(headerComponent):
+def _sanitizeLinearWhitespace(headerComponent: bytes) -> bytes:
     r"""
     Replace linear whitespace (C{\n}, C{\r\n}, C{\r}) in a header key
-    or value with a single space.  If C{headerComponent} is not
-    L{bytes}, it is passed through unchanged.
+    or value with a single space.
 
     @param headerComponent: The header key or value to sanitize.
     @type headerComponent: L{bytes}
@@ -71,8 +72,8 @@ class Headers:
         b"x-xss-protection": b"X-XSS-Protection",
     }
 
-    def __init__(self, rawHeaders=None):
-        self._rawHeaders = {}
+    def __init__(self, rawHeaders: Optional[Dict[String, List[String]]] = None):
+        self._rawHeaders = {}  # type: Dict[bytes, List[bytes]]
         if rawHeaders is not None:
             for name, values in rawHeaders.items():
                 self.setRawHeaders(name, values)
@@ -97,7 +98,7 @@ class Headers:
             )
         return NotImplemented
 
-    def _encodeName(self, name):
+    def _encodeName(self, name: String) -> bytes:
         """
         Encode the name of a header (eg 'Content-Type') to an ISO-8859-1 encoded
         bytestring if required.
@@ -126,7 +127,7 @@ class Headers:
             return value.encode("utf8")
         return value
 
-    def _encodeValues(self, values):
+    def _encodeValues(self, values: List[String]) -> List[bytes]:
         """
         Encode a L{list} of header values to a L{list} of UTF-8 encoded
         bytestrings if required.
@@ -143,7 +144,7 @@ class Headers:
             newValues.append(self._encodeValue(value))
         return newValues
 
-    def _decodeValues(self, values):
+    def _decodeValues(self, values: List[bytes]) -> List[str]:
         """
         Decode a L{list} of header values into a L{list} of Unicode strings.
 
@@ -167,7 +168,7 @@ class Headers:
         """
         return self.__class__(self._rawHeaders)
 
-    def hasHeader(self, name):
+    def hasHeader(self, name: String) -> bool:
         """
         Check for the existence of a given header.
 
@@ -179,7 +180,7 @@ class Headers:
         """
         return self._encodeName(name) in self._rawHeaders
 
-    def removeHeader(self, name):
+    def removeHeader(self, name: String) -> None:
         """
         Remove the named header from this header object.
 
@@ -190,7 +191,7 @@ class Headers:
         """
         self._rawHeaders.pop(self._encodeName(name), None)
 
-    def setRawHeaders(self, name, values):
+    def setRawHeaders(self, name: String, values: List[String]) -> None:
         """
         Sets the raw representation of the given header.
 
@@ -201,6 +202,10 @@ class Headers:
         @param values: A list of strings each one being a header value of
             the given name.
 
+        @raise TypeError: Raised if C{values} is not a L{list} of L{bytes}
+            or L{unicode} strings, or if C{name} is not a L{bytes} or
+            L{unicode} string.
+
         @return: L{None}
         """
         if not isinstance(values, list):
@@ -209,14 +214,31 @@ class Headers:
                 "instance of %r instead" % (name, type(values))
             )
 
+        if not isinstance(name, (bytes, unicode)):
+            raise TypeError(
+                "Header name is an instance of %r, "
+                "not bytes or unicode" % (type(name),)
+            )
+
+        for count, value in enumerate(values):
+            if not isinstance(value, (bytes, unicode)):
+                raise TypeError(
+                    "Header value at position %s is an instance of %r, not "
+                    "bytes or unicode"
+                    % (
+                        count,
+                        type(value),
+                    )
+                )
+
         name = _sanitizeLinearWhitespace(self._encodeName(name))
         encodedValues = [
             _sanitizeLinearWhitespace(v) for v in self._encodeValues(values)
         ]
 
-        self._rawHeaders[name] = self._encodeValues(encodedValues)
+        self._rawHeaders[name] = encodedValues
 
-    def addRawHeader(self, name, value):
+    def addRawHeader(self, name: String, value: String) -> None:
         """
         Add a new raw value for the given header.
 
@@ -226,6 +248,18 @@ class Headers:
         @type value: L{bytes} or L{unicode}
         @param value: The value to set for the named header.
         """
+        if not isinstance(name, (bytes, unicode)):
+            raise TypeError(
+                "Header name is an instance of %r, "
+                "not bytes or unicode" % (type(name),)
+            )
+
+        if not isinstance(value, (bytes, unicode)):
+            raise TypeError(
+                "Header value is an instance of %r, not "
+                "bytes or unicode" % (type(value),)
+            )
+
         values = self.getRawHeaders(name)
 
         if values is not None:
@@ -235,7 +269,9 @@ class Headers:
 
         self.setRawHeaders(name, values)
 
-    def getRawHeaders(self, name, default=None):
+    def getRawHeaders(
+        self, name: String, default: Optional[Any] = None
+    ) -> Optional[Union[List[String], Any]]:
         """
         Returns a list of headers matching the given name as the raw string
         given.
@@ -254,11 +290,11 @@ class Headers:
         encodedName = self._encodeName(name)
         values = self._rawHeaders.get(encodedName, default)
 
-        if isinstance(name, str) and values is not default:
+        if isinstance(name, str) and values is not default and values is not None:
             return self._decodeValues(values)
         return values
 
-    def getAllRawHeaders(self):
+    def getAllRawHeaders(self) -> Iterator[Tuple[bytes, List[bytes]]]:
         """
         Return an iterator of key, value pairs of all headers contained in this
         object, as L{bytes}.  The keys are capitalized in canonical
@@ -267,7 +303,7 @@ class Headers:
         for k, v in self._rawHeaders.items():
             yield self._canonicalNameCaps(k), v
 
-    def _canonicalNameCaps(self, name):
+    def _canonicalNameCaps(self, name: bytes) -> bytes:
         """
         Return the canonical name for the given header.
 
