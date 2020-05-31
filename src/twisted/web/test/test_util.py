@@ -18,9 +18,10 @@ from twisted.web.http import FOUND
 from twisted.web.server import Request
 from twisted.web.template import TagLoader, flattenString, tags
 from twisted.web.test.requesthelper import DummyChannel, DummyRequest
-from twisted.web.util import (DeferredResource, FailureElement, _FrameElement,
-                              _SourceFragmentElement, _SourceLineElement,
-                              _StackElement, formatFailure, redirectTo)
+from twisted.web.util import (DeferredResource, FailureElement, ParentRedirect,
+                              _FrameElement, _SourceFragmentElement,
+                              _SourceLineElement, _StackElement, formatFailure,
+                              redirectTo)
 
 
 class RedirectToTests(TestCase):
@@ -54,6 +55,53 @@ class RedirectToTests(TestCase):
         request.method = b'GET'
         targetURL = u'http://target.example.com/4321'
         self.assertRaises(TypeError, redirectTo, targetURL, request)
+
+
+
+class ParentRedirectTests(SynchronousTestCase):
+    """
+    Test L{ParentRedirect}.
+    """
+
+    def doLocationTest(self, requestPath: bytes):
+        """
+        Render a response to a request with path *requestPath*
+
+        @param requestPath: A slash-separated path like L{b'/foo/bar'}.
+        """
+        request = Request(DummyChannel(), True)
+        request.method = b'GET'
+        request.prepath = requestPath.lstrip(b'/').split(b'/')
+
+        resource = ParentRedirect()
+        resource.render(request)
+
+        [location] = request.responseHeaders.getRawHeader(b'Location')
+        return location
+
+    def test_locationRoot(self):
+        """
+        At the URL root issue a redirect to the current URL.
+        """
+        self.assertEqual(b'/', self.doLocationTest(b'/'))
+
+    def test_locationToRoot(self):
+        self.assertEqual(b'/', self.doLocationTest(b'/foo'))
+        self.assertEqual(b'/', self.doLocationTest(b'/foo/'))
+
+    def test_locationUpOne(self):
+        self.assertEqual(b'/foo/', self.doLocationTest(b'/foo/bar'))
+        self.assertEqual(b'/foo/', self.doLocationTest(b'/foo/bar/'))
+
+    def test_getChild(self):
+        """
+        L{ParentRedirector} returns itself as its own child.
+        """
+        resource = ParentRedirect()
+
+        self.assertTrue(resource.isLeaf)
+        self.assertIs(resource, resource.getChild(b'foo'))
+
 
 
 
