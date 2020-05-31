@@ -33,12 +33,11 @@ def _PRE(text):
 
 
 
-def redirectTo(URL, request):
+def redirectTo(URL: bytes, request) -> bytes:
     """
     Generate a redirect to the given location.
 
     @param URL: A L{bytes} giving the location to which to redirect.
-    @type URL: L{bytes}
 
     @param request: The request object to use to generate the redirect.
     @type request: L{IRequest<twisted.web.iweb.IRequest>} provider
@@ -57,7 +56,7 @@ def redirectTo(URL, request):
         raise TypeError("Unicode object not allowed as URL")
     request.setHeader(b"Content-Type", b"text/html; charset=utf-8")
     request.redirect(URL)
-    content =  """
+    content = b"""
 <html>
     <head>
         <meta http-equiv=\"refresh\" content=\"0;URL=%(url)s\">
@@ -66,9 +65,7 @@ def redirectTo(URL, request):
     <a href=\"%(url)s\">click here</a>
     </body>
 </html>
-""" % {'url': nativeString(URL)}
-    if _PY3:
-        content = content.encode("utf8")
+""" % {b'url': URL}
     return content
 
 
