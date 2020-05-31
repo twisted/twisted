@@ -10,7 +10,7 @@ An assortment of web server-related utilities.
 import linecache
 
 from twisted.python import urlpath
-from twisted.python.compat import _PY3, escape, nativeString, unicode
+from twisted.python.compat import escape
 from twisted.python.reflect import fullyQualifiedName
 from twisted.web import resource
 from twisted.web.template import (Element, TagLoader, XMLString, flattenString,
@@ -42,7 +42,7 @@ def redirectTo(URL: bytes, request) -> bytes:
     @param request: The request object to use to generate the redirect.
     @type request: L{IRequest<twisted.web.iweb.IRequest>} provider
 
-    @raise TypeError: If the type of C{URL} a L{unicode} instead of L{bytes}.
+    @raise TypeError: If the type of C{URL} a L{str} instead of L{bytes}.
 
     @return: A C{bytes} containing HTML which tries to convince the client agent
         to visit the new location even if it doesn't respect the I{FOUND}
@@ -52,7 +52,7 @@ def redirectTo(URL: bytes, request) -> bytes:
             def render_GET(self, request):
                 return redirectTo(b"http://example.com/", request)
     """
-    if isinstance(URL, unicode) :
+    if isinstance(URL, str) :
         raise TypeError("Unicode object not allowed as URL")
     request.setHeader(b"Content-Type", b"text/html; charset=utf-8")
     request.redirect(URL)
@@ -415,7 +415,7 @@ class FailureElement(Element):
         """
         Render the exception value as a child of C{tag}.
         """
-        return tag(unicode(self.failure.value).encode('utf8'))
+        return tag(str(self.failure.value).encode('utf8'))
 
 
     @renderer
