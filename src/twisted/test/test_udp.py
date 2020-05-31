@@ -9,6 +9,8 @@ Tests for implementations of L{IReactorUDP} and L{IReactorMulticast}.
 
 import os
 
+from unittest import skipIf
+
 from twisted.trial import unittest
 
 from twisted.python.compat import intToBytes
@@ -115,6 +117,8 @@ class BadClient(protocol.DatagramProtocol):
 
 
 
+@skipIf(not interfaces.IReactorUDP(reactor, None),
+        "This reactor does not support UDP")
 class UDPTests(unittest.TestCase):
 
     def test_oldAddress(self):
@@ -455,6 +459,8 @@ class UDPTests(unittest.TestCase):
 
 
 
+@skipIf(not interfaces.IReactorUDP(reactor, None),
+        "This reactor does not support UDP")
 class ReactorShutdownInteractionTests(unittest.TestCase):
     """Test reactor shutdown interaction"""
 
@@ -504,6 +510,8 @@ class ReactorShutdownInteractionTests(unittest.TestCase):
 
 
 
+@skipIf(not interfaces.IReactorMulticast(reactor, None),
+        "This reactor does not support multicast")
 class MulticastTests(unittest.TestCase):
 
     if (
@@ -700,12 +708,5 @@ class MulticastTests(unittest.TestCase):
         return joined
     if runtime.platform.isWindows():
         test_multiListen.skip = ("on non-linux platforms it appears multiple "
-                                 "processes can listen, but not multiple sockets "
-                                 "in same process?")
-
-
-if not interfaces.IReactorUDP(reactor, None):
-    UDPTests.skip = "This reactor does not support UDP"
-    ReactorShutdownInteractionTests.skip = "This reactor does not support UDP"
-if not interfaces.IReactorMulticast(reactor, None):
-    MulticastTests.skip = "This reactor does not support multicast"
+                                 "processes can listen, but not multiple "
+                                 "sockets in same process?")
