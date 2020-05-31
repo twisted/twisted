@@ -1,0 +1,1 @@
+twisted.web.util.ParentRedirect has been fixed (it was broken a security fix in Twisted 19.2.0) and more thoroughly documented.
