@@ -23,8 +23,10 @@ oldModules = {}  # type: Dict[str, types.ModuleType]
 _UniversalPicklingError = pickle.PicklingError
 
 
-## First, let's register support for some stuff that really ought to
-## be registerable...
+# First, let's register support for some stuff that really ought to
+# be registerable...
+
+
 
 def pickleMethod(method):
     'support function for copy_reg to pickle method refs'
