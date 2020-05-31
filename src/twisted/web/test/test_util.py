@@ -67,7 +67,9 @@ class ParentRedirectTests(SynchronousTestCase):
         """
         Render a response to a request with path *requestPath*
 
-        @param requestPath: A slash-separated path like L{b'/foo/bar'}.
+        @param requestPath: A slash-separated path like C{b'/foo/bar'}.
+
+        @returns: The value of the I{Location} header.
         """
         request = Request(DummyChannel(), True)
         request.method = b'GET'
@@ -76,31 +78,33 @@ class ParentRedirectTests(SynchronousTestCase):
         resource = ParentRedirect()
         resource.render(request)
 
-        [location] = request.responseHeaders.getRawHeader(b'Location')
+        [location] = request.responseHeaders.getRawHeaders(b'Location')
         return location
 
     def test_locationRoot(self):
         """
-        At the URL root issue a redirect to the current URL.
+        At the URL root issue a redirect to the current URL, removing any query
+        string.
         """
-        self.assertEqual(b'/', self.doLocationTest(b'/'))
+        self.assertEqual(b'http://10.0.0.1/', self.doLocationTest(b'/'))
+        self.assertEqual(b'http://10.0.0.1/', self.doLocationTest(b'/?biff=baff'))
 
     def test_locationToRoot(self):
-        self.assertEqual(b'/', self.doLocationTest(b'/foo'))
-        self.assertEqual(b'/', self.doLocationTest(b'/foo/'))
+        """
+        A request for a resource one level down from the URL root produces
+        a redirect to the root.
+        """
+        self.assertEqual(b'http://10.0.0.1/', self.doLocationTest(b'/foo'))
+        self.assertEqual(b'http://10.0.0.1/', self.doLocationTest(b'/foo?bar=sproiiing'))
 
     def test_locationUpOne(self):
-        self.assertEqual(b'/foo/', self.doLocationTest(b'/foo/bar'))
-        self.assertEqual(b'/foo/', self.doLocationTest(b'/foo/bar/'))
-
-    def test_getChild(self):
         """
-        L{ParentRedirector} returns itself as its own child.
+        Requests for resources directly under the path C{/foo/} produce
+        redirects to C{/foo/}.
         """
-        resource = ParentRedirect()
-
-        self.assertTrue(resource.isLeaf)
-        self.assertIs(resource, resource.getChild(b'foo'))
+        self.assertEqual(b'http://10.0.0.1/foo/', self.doLocationTest(b'/foo/'))
+        self.assertEqual(b'http://10.0.0.1/foo/', self.doLocationTest(b'/foo/bar'))
+        self.assertEqual(b'http://10.0.0.1/foo/', self.doLocationTest(b'/foo/bar?biz=baz'))
 
 
 
