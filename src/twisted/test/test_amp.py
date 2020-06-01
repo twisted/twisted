@@ -9,6 +9,7 @@ Tests for L{twisted.protocols.amp}.
 
 import datetime
 import decimal
+from unittest import skipIf
 
 from zope.interface import implementer
 from zope.interface.verify import verifyClass, verifyObject
@@ -1905,6 +1906,9 @@ class SecurableProto(FactoryNotifier):
 
 
 
+@skipIf(not ssl, "SSL not available")
+@skipIf(not interfaces.IReactorSSL.providedBy(reactor),
+        'This test case requires SSL support in the reactor')
 class TLSTests(unittest.TestCase):
     def test_startingTLS(self):
         """
@@ -2007,8 +2011,6 @@ class TLSTests(unittest.TestCase):
         # it might be a good idea to move this exception somewhere more
         # reasonable.
         self.assertFailure(d, error.PeerVerifyError)
-
-    skip = skipSSL
 
 
 
@@ -2278,6 +2280,10 @@ if ssl is not None:
     tempcert = tempSelfSigned()
 
 
+
+@skipIf(not ssl, "SSL not available")
+@skipIf(not interfaces.IReactorSSL.providedBy(reactor),
+        'This test case requires SSL support in the reactor')
 class LiveFireTLSTests(LiveFireBase, unittest.TestCase):
     clientProto = SecurableProto
     serverProto = SecurableProto
@@ -2309,11 +2315,9 @@ class LiveFireTLSTests(LiveFireBase, unittest.TestCase):
                 self.assertEqual(x, self.svr.hostCertificate.digest())
                 self.assertEqual(x, self.svr.peerCertificate.digest())
             return self.cli.callRemote(SecuredPing).addCallback(pinged)
-        return self.cli.callRemote(amp.StartTLS,
-                                   tls_localCertificate=cert,
-                                   tls_verifyAuthorities=[cert]).addCallback(secured)
-
-    skip = skipSSL
+        return self.cli.callRemote(amp.StartTLS, tls_localCertificate=cert,
+                                   tls_verifyAuthorities=[cert]).addCallback(
+                                   secured)
 
 
 
@@ -2330,6 +2334,10 @@ class SlightlySmartTLS(SimpleSymmetricCommandProtocol):
     amp.StartTLS.responder(getTLSVars)
 
 
+
+@skipIf(not ssl, "SSL not available")
+@skipIf(not interfaces.IReactorSSL.providedBy(reactor),
+        'This test case requires SSL support in the reactor')
 class PlainVanillaLiveFireTests(LiveFireBase, unittest.TestCase):
 
     clientProto = SimpleSymmetricCommandProtocol
@@ -2344,10 +2352,11 @@ class PlainVanillaLiveFireTests(LiveFireBase, unittest.TestCase):
             return self.cli.callRemote(SecuredPing)
         return self.cli.callRemote(amp.StartTLS).addCallback(secured)
 
-    skip = skipSSL
 
 
-
+@skipIf(not ssl, "SSL not available")
+@skipIf(not interfaces.IReactorSSL.providedBy(reactor),
+        'This test case requires SSL support in the reactor')
 class WithServerTLSVerificationTests(LiveFireBase, unittest.TestCase):
     clientProto = SimpleSymmetricCommandProtocol
     serverProto = SlightlySmartTLS
@@ -2358,11 +2367,9 @@ class WithServerTLSVerificationTests(LiveFireBase, unittest.TestCase):
         """
         def secured(result):
             return self.cli.callRemote(SecuredPing)
-        return self.cli.callRemote(amp.StartTLS,
-                                   tls_verifyAuthorities=[tempcert]
-            ).addCallback(secured)
-
-    skip = skipSSL
+        return self.cli.callRemote(
+            amp.StartTLS, tls_verifyAuthorities=[tempcert]).addCallback(
+            secured)
 
 
 
@@ -3334,12 +3341,3 @@ class RemoteAmpErrorTests(unittest.TestCase):
                 "Traceback [(]failure with no frames[)]: "
                 "<.+Exception.>: Something came loose\n"
             ))
-
-
-
-if not interfaces.IReactorSSL.providedBy(reactor):
-    skipMsg = 'This test case requires SSL support in the reactor'
-    TLSTests.skip = skipMsg
-    LiveFireTLSTests.skip = skipMsg
-    PlainVanillaLiveFireTests.skip = skipMsg
-    WithServerTLSVerificationTests.skip = skipMsg

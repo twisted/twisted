@@ -27,6 +27,8 @@ import gc
 import stat
 import operator
 
+from unittest import skipIf
+
 
 try:
     import fcntl
@@ -508,6 +510,8 @@ class GetEnvironmentDictionary(UtilityProcessProtocol):
 
 
 
+@skipIf(not interfaces.IReactorProcess(reactor, None),
+        "reactor doesn't support IReactorProcess")
 class ProcessTests(unittest.TestCase):
     """
     Test running a process.
@@ -766,11 +770,19 @@ class TestTwoProcessesBase:
 
 
 
+@skipIf(runtime.platform.getType() != 'win32',
+        "Only runs on Windows")
+@skipIf(not interfaces.IReactorProcess(reactor, None),
+        "reactor doesn't support IReactorProcess")
 class TwoProcessesNonPosixTests(TestTwoProcessesBase, unittest.TestCase):
     pass
 
 
 
+@skipIf(runtime.platform.getType() != 'posix',
+        "Only runs on POSIX platform")
+@skipIf(not interfaces.IReactorProcess(reactor, None),
+        "reactor doesn't support IReactorProcess")
 class TwoProcessesPosixTests(TestTwoProcessesBase, unittest.TestCase):
     def tearDown(self):
         for pp, pr in zip(self.pp, self.processes):
@@ -905,6 +917,10 @@ class FDChecker(protocol.ProcessProtocol):
 
 
 
+@skipIf(runtime.platform.getType() != 'posix',
+        "Only runs on POSIX platform")
+@skipIf(not interfaces.IReactorProcess(reactor, None),
+        "reactor doesn't support IReactorProcess")
 class FDTests(unittest.TestCase):
 
     def test_FD(self):
@@ -2095,6 +2111,10 @@ class MockProcessTests(unittest.TestCase):
 
 
 
+@skipIf(runtime.platform.getType() != 'posix',
+        "Only runs on POSIX platform")
+@skipIf(not interfaces.IReactorProcess(reactor, None),
+        "reactor doesn't support IReactorProcess")
 class PosixProcessTests(unittest.TestCase, PosixProcessBase):
     # add two non-pty test cases
 
@@ -2139,6 +2159,10 @@ class PosixProcessTests(unittest.TestCase, PosixProcessBase):
 
 
 
+@skipIf(runtime.platform.getType() != 'posix',
+        "Only runs on POSIX platform")
+@skipIf(not interfaces.IReactorProcess(reactor, None),
+        "reactor doesn't support IReactorProcess")
 class PosixProcessPTYTests(unittest.TestCase, PosixProcessBase):
     """
     Just like PosixProcessTests, but use ptys instead of pipes.
@@ -2201,6 +2225,10 @@ class Win32SignalProtocol(SignalProtocol):
 
 
 
+@skipIf(runtime.platform.getType() != 'win32',
+        "Only runs on Windows")
+@skipIf(not interfaces.IReactorProcess(reactor, None),
+        "reactor doesn't support IReactorProcess")
 class Win32ProcessTests(unittest.TestCase):
     """
     Test process programs that are packaged with twisted.
@@ -2357,6 +2385,10 @@ class Win32ProcessTests(unittest.TestCase):
 
 
 
+@skipIf(runtime.platform.getType() != 'win32',
+        "Only runs on Windows")
+@skipIf(not interfaces.IReactorProcess(reactor, None),
+        "reactor doesn't support IReactorProcess")
 class Win32UnicodeEnvironmentTests(unittest.TestCase):
     """
     Tests for Unicode environment on Windows
@@ -2383,6 +2415,10 @@ class Win32UnicodeEnvironmentTests(unittest.TestCase):
 
 
 
+@skipIf(runtime.platform.getType() != 'win32',
+        "Only runs on Windows")
+@skipIf(not interfaces.IReactorProcess(reactor, None),
+        "reactor doesn't support IReactorProcess")
 class DumbWin32ProcTests(unittest.TestCase):
     """
     L{twisted.internet._dumbwin32proc} tests.
@@ -2427,6 +2463,10 @@ class DumbWin32ProcTests(unittest.TestCase):
 
 
 
+@skipIf(runtime.platform.getType() != 'win32',
+        "Only runs on Windows")
+@skipIf(not interfaces.IReactorProcess(reactor, None),
+        "reactor doesn't support IReactorProcess")
 class Win32CreateProcessFlagsTests(unittest.TestCase):
     """
     Check the flags passed to CreateProcess.
@@ -2614,6 +2654,8 @@ class ClosingPipesProcessProtocol(protocol.ProcessProtocol):
 
 
 
+@skipIf(not interfaces.IReactorProcess(reactor, None),
+        "reactor doesn't support IReactorProcess")
 class ClosingPipesTests(unittest.TestCase):
 
     def doit(self, fd):
@@ -2702,22 +2744,3 @@ class ClosingPipesTests(unittest.TestCase):
             self.assertEqual(errput, b'')
         d.addCallback(_check)
         return d
-
-
-skipMessage = "wrong platform or reactor doesn't support IReactorProcess"
-if (runtime.platform.getType() != 'posix') or (not interfaces.IReactorProcess(reactor, None)):
-    PosixProcessTests.skip = skipMessage
-    PosixProcessPTYTests.skip = skipMessage
-    TwoProcessesPosixTests.skip = skipMessage
-    FDTests.skip = skipMessage
-
-if (runtime.platform.getType() != 'win32') or (not interfaces.IReactorProcess(reactor, None)):
-    Win32ProcessTests.skip = skipMessage
-    TwoProcessesNonPosixTests.skip = skipMessage
-    DumbWin32ProcTests.skip = skipMessage
-    Win32CreateProcessFlagsTests.skip = skipMessage
-    Win32UnicodeEnvironmentTests.skip = skipMessage
-
-if not interfaces.IReactorProcess(reactor, None):
-    ProcessTests.skip = skipMessage
-    ClosingPipesTests.skip = skipMessage

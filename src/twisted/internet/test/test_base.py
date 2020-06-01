@@ -6,10 +6,8 @@ Tests for L{twisted.internet.base}.
 """
 
 import socket
-try:
-    from Queue import Queue
-except ImportError:
-    from queue import Queue
+from queue import Queue
+from unittest import skipIf
 
 from zope.interface import implementer
 
@@ -22,6 +20,14 @@ from twisted.internet.defer import Deferred
 from twisted.internet.base import ThreadedResolver, DelayedCall, ReactorBase
 from twisted.internet.task import Clock
 from twisted.trial.unittest import TestCase, SkipTest
+
+try:
+    import signal as _signal
+except ImportError:
+    signal = None
+else:
+    signal = _signal
+
 
 
 @implementer(IReactorTime, IReactorThreads)
@@ -396,6 +402,7 @@ class TestSpySignalCapturingReactor(ReactorBase):
 
 
 
+@skipIf(not signal, "signal module not available")
 class ReactorBaseSignalTests(TestCase):
 
     """
@@ -441,10 +448,3 @@ class ReactorBaseSignalTests(TestCase):
         reactor = TestSpySignalCapturingReactor()
         reactor.sigBreak(signal.SIGBREAK, None)
         self.assertEquals(signal.SIGBREAK, reactor._exitSignal)
-
-
-
-try:
-    import signal
-except ImportError:
-    ReactorBaseSignalTests.skip = "signal module not available"
