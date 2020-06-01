@@ -23,6 +23,7 @@ else:
     pwd = _pwd
     grp = _grp
 
+from io import StringIO
 from unittest import skipIf
 from zope.interface import implementer
 from zope.interface.verify import verifyObject
@@ -40,7 +41,6 @@ from twisted.internet.test.modulehelpers import AlternateReactor
 from twisted.logger import globalLogBeginner, globalLogPublisher, ILogObserver
 from twisted.internet.base import ReactorBase
 from twisted.test.proto_helpers import MemoryReactor
-from twisted.python.compat import NativeStringIO, _PY3
 from twisted.python.components import Componentized
 from twisted.python import util
 from twisted.python.log import (ILogObserver as LegacyILogObserver,
@@ -228,7 +228,7 @@ class ServerOptionsTests(TestCase):
         config = twistd.ServerOptions()
         self.assertEqual(config._getReactorTypes, reactors.getReactorTypes)
         config._getReactorTypes = getReactorTypes
-        config.messageOutput = NativeStringIO()
+        config.messageOutput = StringIO()
 
         self.assertRaises(SystemExit, config.parseOptions, ['--help-reactors'])
         helpOutput = config.messageOutput.getvalue()
@@ -359,7 +359,7 @@ class ServerOptionsTests(TestCase):
         expectedOutput = ('twistd {} {}\n{}\n'.format(
             name, copyright.version, copyright.copyright))
 
-        stdout = NativeStringIO()
+        stdout = StringIO()
         config = twistd.ServerOptions(stdout=stdout)
         e = self.assertRaises(SystemExit, config.parseOptions, ['--version'])
         self.assertIs(e.code, None)
@@ -935,24 +935,19 @@ class UnixApplicationRunnerStartApplicationTests(TestCase):
             args.extend((chroot, rundir, nodaemon, umask, pidfile))
 
         # Sanity check
-        if _PY3:
-            setupEnvironmentParameters = \
-                inspect.signature(self.runner.setupEnvironment).parameters
-            fakeSetupEnvironmentParameters = \
-                inspect.signature(fakeSetupEnvironment).parameters
+        setupEnvironmentParameters = \
+            inspect.signature(self.runner.setupEnvironment).parameters
+        fakeSetupEnvironmentParameters = \
+            inspect.signature(fakeSetupEnvironment).parameters
 
-            # inspect.signature() does not return "self" in the signature of
-            # a class method, so we need to omit  it when comparing the
-            # the signature of a plain method
-            fakeSetupEnvironmentParameters = fakeSetupEnvironmentParameters.copy()
-            fakeSetupEnvironmentParameters.pop("self")
+        # inspect.signature() does not return "self" in the signature of
+        # a class method, so we need to omit  it when comparing the
+        # the signature of a plain method
+        fakeSetupEnvironmentParameters = fakeSetupEnvironmentParameters.copy()
+        fakeSetupEnvironmentParameters.pop("self")
 
-            self.assertEqual(setupEnvironmentParameters,
-                fakeSetupEnvironmentParameters)
-        else:
-            self.assertEqual(
-                inspect.getargspec(self.runner.setupEnvironment),
-                inspect.getargspec(fakeSetupEnvironment))
+        self.assertEqual(setupEnvironmentParameters,
+                         fakeSetupEnvironmentParameters)
 
         self.patch(UnixApplicationRunner, 'setupEnvironment',
                    fakeSetupEnvironment)
@@ -1176,7 +1171,7 @@ class AppProfilingTests(TestCase):
 
 
     def _testStats(self, statsClass, profile):
-        out = NativeStringIO()
+        out = StringIO()
 
         # Patch before creating the pstats, because pstats binds self.stream to
         # sys.stdout early in 2.5 and newer.
@@ -1965,7 +1960,7 @@ class DaemonizeTests(TestCase):
         """
         self.mockos.child = False
         self.mockos.readData = readData
-        errorIO = NativeStringIO()
+        errorIO = StringIO()
         self.patch(sys, '__stderr__', errorIO)
         with AlternateReactor(FakeDaemonizingReactor()):
             self.assertRaises(SystemError, self.runner.postApplication)

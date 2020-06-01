@@ -223,7 +223,7 @@ from twisted.internet.error import ConnectionClosed
 from twisted.internet.defer import Deferred, maybeDeferred, fail
 from twisted.protocols.basic import Int16StringReceiver, StatefulStringProtocol
 from twisted.python.compat import (
-    iteritems, unicode, nativeString, intToBytes, _PY3, long,
+    iteritems, unicode, nativeString, intToBytes, long,
 )
 
 try:
@@ -574,14 +574,9 @@ class RemoteAmpError(AmpError):
 
         # Backslash-escape errorCode. Python 3.5 can do this natively
         # ("backslashescape") but Python 2.7 and Python 3.4 can't.
-        if _PY3:
-            errorCodeForMessage = "".join(
-                "\\x%2x" % (c,) if c >= 0x80 else chr(c)
-                for c in errorCode)
-        else:
-            errorCodeForMessage = "".join(
-                "\\x%2x" % (ord(c),) if ord(c) >= 0x80 else c
-                for c in errorCode)
+        errorCodeForMessage = "".join(
+            "\\x%2x" % (c,) if c >= 0x80 else chr(c)
+            for c in errorCode)
 
         if othertb:
             message = "Code<%s>%s: %s\n%s" % (
@@ -671,11 +666,10 @@ class AmpBox(dict):
             to an ASCII byte string (Python 3 only).
         """
         super(AmpBox, self).__init__(*args, **kw)
-        if _PY3:
-            nonByteNames = [n for n in self if not isinstance(n, bytes)]
-            for nonByteName in nonByteNames:
-                byteName = nonByteName.encode("ascii")
-                self[byteName] = self.pop(nonByteName)
+        nonByteNames = [n for n in self if not isinstance(n, bytes)]
+        for nonByteName in nonByteNames:
+            byteName = nonByteName.encode("ascii")
+            self[byteName] = self.pop(nonByteName)
 
 
     def copy(self):
@@ -1229,23 +1223,18 @@ class CommandLocator:
         cd = self._commandDispatch
         if name in cd:
             commandClass, responderFunc = cd[name]
-            if _PY3:
-                responderMethod = types.MethodType(
-                    responderFunc, self)
-            else:
-                responderMethod = types.MethodType(
-                    responderFunc, self, self.__class__)
+            responderMethod = types.MethodType(
+                responderFunc, self)
             return self._wrapWithSerialization(responderMethod, commandClass)
 
 
 
-if _PY3:
-    # Python 3 ignores the __metaclass__ attribute and has instead new syntax
-    # for setting the metaclass. Unfortunately it's not valid Python 2 syntax
-    # so we work-around it by recreating CommandLocator using the metaclass
-    # here.
-    CommandLocator = CommandLocator.__metaclass__(
-        "CommandLocator", (CommandLocator, ), {})
+# Python 3 ignores the __metaclass__ attribute and has instead new syntax
+# for setting the metaclass. Unfortunately it's not valid Python 2 syntax
+# so we work-around it by recreating CommandLocator using the metaclass
+# here.
+CommandLocator = CommandLocator.__metaclass__(
+    "CommandLocator", (CommandLocator, ), {})
 
 
 
@@ -1779,10 +1768,7 @@ class Command:
             reverseErrors = attrs['reverseErrors'] = {}
             er = attrs['allErrors'] = {}
             if 'commandName' not in attrs:
-                if _PY3:
-                    attrs['commandName'] = name.encode("ascii")
-                else:
-                    attrs['commandName'] = name
+                attrs['commandName'] = name.encode("ascii")
             newtype = type.__new__(cls, name, bases, attrs)
 
             if not isinstance(newtype.commandName, bytes):
@@ -2018,11 +2004,10 @@ class Command:
 
 
 
-if _PY3:
-    # Python 3 ignores the __metaclass__ attribute and has instead new syntax
-    # for setting the metaclass. Unfortunately it's not valid Python 2 syntax
-    # so we work-around it by recreating Command using the metaclass here.
-    Command = Command.__metaclass__("Command", (Command, ), {})
+# Python 3 ignores the __metaclass__ attribute and has instead new syntax
+# for setting the metaclass. Unfortunately it's not valid Python 2 syntax
+# so we work-around it by recreating Command using the metaclass here.
+Command = Command.__metaclass__("Command", (Command, ), {})
 
 
 

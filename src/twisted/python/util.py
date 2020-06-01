@@ -28,7 +28,7 @@ else:
 
 from typing import Sequence
 
-from twisted.python.compat import _PY3, unicode
+from twisted.python.compat import unicode
 from incremental import Version
 from twisted.python.deprecate import deprecatedModuleAttribute
 
@@ -475,10 +475,6 @@ class LineLog:
     def str(self):
         return bytes(self)
 
-    if not _PY3:
-        def __str__(self):
-            return self.__bytes__()
-
 
     def __bytes__(self):
         return b'\n'.join(filter(None, self.log))
@@ -738,74 +734,6 @@ def switchUID(uid, gid, euid=False):
 
 
 
-class SubclassableCStringIO(object):
-    """
-    A wrapper around cStringIO to allow for subclassing.
-    """
-    __csio = None
-
-    def __init__(self, *a, **kw):
-        from cStringIO import StringIO
-        self.__csio = StringIO(*a, **kw)
-
-
-    def __iter__(self):
-        return self.__csio.__iter__()
-
-
-    def next(self):
-        return self.__csio.next()
-
-
-    def close(self):
-        return self.__csio.close()
-
-
-    def isatty(self):
-        return self.__csio.isatty()
-
-
-    def seek(self, pos, mode=0):
-        return self.__csio.seek(pos, mode)
-
-
-    def tell(self):
-        return self.__csio.tell()
-
-
-    def read(self, n=-1):
-        return self.__csio.read(n)
-
-
-    def readline(self, length=None):
-        return self.__csio.readline(length)
-
-
-    def readlines(self, sizehint=0):
-        return self.__csio.readlines(sizehint)
-
-
-    def truncate(self, size=None):
-        return self.__csio.truncate(size)
-
-
-    def write(self, s):
-        return self.__csio.write(s)
-
-
-    def writelines(self, list):
-        return self.__csio.writelines(list)
-
-
-    def flush(self):
-        return self.__csio.flush()
-
-
-    def getvalue(self):
-        return self.__csio.getvalue()
-
-
-
 def untilConcludes(f, *a, **kw):
     """
     Call C{f} with the given arguments, handling C{EINTR} by retrying.
@@ -1023,16 +951,7 @@ __all__ = [
     "getPassword", "println", "makeStatBar", "OrderedDict",
     "InsensitiveDict", "spewer", "searchupwards", "LineLog",
     "raises", "IntervalDifferential", "FancyStrMixin", "FancyEqMixin",
-    "switchUID", "SubclassableCStringIO", "mergeFunctionMetadata",
+    "switchUID", "mergeFunctionMetadata",
     "nameToLabel", "uidFromString", "gidFromString", "runAsEffectiveUser",
     "untilConcludes", "runWithWarningsSuppressed",
 ]
-
-
-if _PY3:
-    __notported__ = ["SubclassableCStringIO", "makeStatBar"]
-    for name in __all__[:]:
-        if name in __notported__:
-            __all__.remove(name)
-            del globals()[name]
-    del name, __notported__

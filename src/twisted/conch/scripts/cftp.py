@@ -20,7 +20,7 @@ from twisted.conch.client import connect, default, options
 from twisted.conch.ssh import connection, common
 from twisted.conch.ssh import channel, filetransfer
 from twisted.protocols import basic
-from twisted.python.compat import _PY3, unicode
+from twisted.python.compat import unicode
 from twisted.internet import reactor, stdio, defer, utils
 from twisted.python import log, usage, failure
 from twisted.python.filepath import FilePath
@@ -163,7 +163,7 @@ class StdioClient(basic.LineReceiver):
     def lineReceived(self, line):
         if self.client.transport.localClosed:
             return
-        if _PY3 and isinstance(line, bytes):
+        if isinstance(line, bytes):
             line = line.decode("utf-8")
         log.msg('got line %s' % line)
         line = line.lstrip()
@@ -769,31 +769,31 @@ version                         Print the SFTP version.
         d.addCallback(self._cbOpenList, glob)
         return d
 
-    def _cbReadFile(self, files, l, directory, glob):
+    def _cbReadFile(self, files, matchedFiles, directory, glob):
         if not isinstance(files, failure.Failure):
             if glob:
-                if _PY3:
-                    glob = glob.encode("utf-8")
-                l.extend([f for f in files if fnmatch.fnmatch(f[0], glob)])
+                glob = glob.encode("utf-8")
+                matchedFiles.extend([f for f in files
+                                     if fnmatch.fnmatch(f[0], glob)])
             else:
-                l.extend(files)
+                matchedFiles.extend(files)
             d = directory.read()
-            d.addBoth(self._cbReadFile, l, directory, glob)
+            d.addBoth(self._cbReadFile, matchedFiles, directory, glob)
             return d
         else:
             reason = files
             reason.trap(EOFError)
             directory.close()
-            return l
+            return matchedFiles
 
     def _abbrevSize(self, size):
-        # from http://mail.python.org/pipermail/python-list/1999-December/018395.html
+        # from http://mail.python.org/pipermail/python-list/1999-December/018395.html  # noqa
         _abbrevs = [
-            (1<<50, 'PB'),
-            (1<<40, 'TB'),
-            (1<<30, 'GB'),
-            (1<<20, 'MB'),
-            (1<<10, 'kB'),
+            (1 << 50, 'PB'),
+            (1 << 40, 'TB'),
+            (1 << 30, 'GB'),
+            (1 << 20, 'MB'),
+            (1 << 10, 'kB'),
             (1, 'B')
             ]
 
@@ -803,7 +803,7 @@ version                         Print the SFTP version.
         return '%.1f' % (size/factor) + suffix
 
     def _abbrevTime(self, t):
-        if t > 3600: # 1 hour
+        if t > 3600:  # 1 hour
             hours = int(t / 3600)
             t -= (3600 * hours)
             mins = int(t / 60)

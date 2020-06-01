@@ -9,7 +9,7 @@ from io import StringIO, BytesIO
 from unittest import skipIf
 from zope.interface.verify import verifyObject, BrokenMethodImplementation
 
-from twisted.python.compat import unicode, _PYPY, _PY3
+from twisted.python.compat import _PYPY
 
 from twisted.trial.unittest import TestCase
 
@@ -35,14 +35,14 @@ def savedJSONInvariants(testCase, savedJSON):
     @type testCase: L{TestCase}
 
     @param savedJSON: The result of L{eventAsJSON}.
-    @type savedJSON: L{unicode} (we hope)
+    @type savedJSON: L{str} (we hope)
 
     @return: C{savedJSON}
-    @rtype: L{unicode}
+    @rtype: L{str}
 
     @raise AssertionError: If any of the preconditions fail.
     """
-    testCase.assertIsInstance(savedJSON, unicode)
+    testCase.assertIsInstance(savedJSON, str)
     testCase.assertEqual(savedJSON.count("\n"), 0)
     return savedJSON
 
@@ -77,7 +77,7 @@ class SaveLoadTests(TestCase):
         """
         Saving and loading a dictionary with some simple values in it results
         in those same simple values in the output; according to JSON's rules,
-        though, all dictionary keys must be L{unicode} and any non-L{unicode}
+        though, all dictionary keys must be L{str} and any non-L{str}
         keys will be converted.
         """
         self.assertEqual(
@@ -109,27 +109,20 @@ class SaveLoadTests(TestCase):
         )
 
 
-    @skipIf(_PYPY and _PY3, "https://bitbucket.org/pypy/pypy/issues/3052/")
+    @skipIf(_PYPY, "https://bitbucket.org/pypy/pypy/issues/3052/")
     def test_saveBytes(self):
         """
         Any L{bytes} objects will be saved as if they are latin-1 so they can
         be faithfully re-loaded.
         """
-        def asbytes(x):
-            if bytes is str:
-                return b"".join(map(chr, x))
-            else:
-                return bytes(x)
-
-        inputEvent = {"hello": asbytes(range(255))}
-        if bytes is not str:
-            # On Python 3, bytes keys will be skipped by the JSON encoder. Not
-            # much we can do about that.  Let's make sure that we don't get an
-            # error, though.
-            inputEvent.update({b"skipped": "okay"})
+        inputEvent = {"hello": bytes(range(255))}
+        # On Python 3, bytes keys will be skipped by the JSON encoder. Not
+        # much we can do about that.  Let's make sure that we don't get an
+        # error, though.
+        inputEvent.update({b"skipped": "okay"})
         self.assertEqual(
             eventFromJSON(self.savedEventJSON(inputEvent)),
-            {u"hello": asbytes(range(255)).decode("charmap")}
+            {"hello": bytes(range(255)).decode("charmap")}
         )
 
 
@@ -246,7 +239,7 @@ class FileLogObserverTests(TestCase):
         record separator.
 
         @param recordSeparator: A record separator.
-        @type recordSeparator: L{unicode}
+        @type recordSeparator: L{str}
 
         @param kwargs: Keyword arguments to pass to L{jsonFileLogObserver}.
         @type kwargs: L{dict}
@@ -431,7 +424,7 @@ class LogFileReaderTests(TestCase):
 
     def test_readUnicode(self):
         """
-        If the file being read from vends L{unicode}, strings decode from JSON
+        If the file being read from vends L{str}, strings decode from JSON
         as-is.
         """
         # The Euro currency sign is u"\u20ac"

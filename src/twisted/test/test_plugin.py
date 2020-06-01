@@ -7,6 +7,7 @@ Tests for Twisted plugin system.
 """
 
 
+import compileall
 import errno
 import functools
 import os
@@ -525,6 +526,39 @@ class DeveloperSetupTests(unittest.TestCase):
             names = self.getAllPlugins()
             names.sort()
             self.assertEqual(names, ['app', 'dev'])
+
+
+    def test_freshPyReplacesStalePyc(self):
+        """
+        Verify that if a stale .pyc file on the PYTHONPATH is replaced by a
+        fresh .py file, the plugins in the new .py are picked up rather than
+        the stale .pyc, even if the .pyc is still around.
+        """
+        mypath = self.appPackage.child("stale.py")
+        mypath.setContent(pluginFileContents('one'))
+        # Make it super stale
+        x = time.time() - 1000
+        os.utime(mypath.path, (x, x))
+        pyc = mypath.sibling('stale.pyc')
+        # compile it
+        # On python 3, don't use the __pycache__ directory; the intention
+        # of scanning for .pyc files is for configurations where you want
+        # to intentionally include them, which means we _don't_ scan for
+        # them inside cache directories.
+        extra = dict(legacy=True)
+        compileall.compile_dir(self.appPackage.path, quiet=1, **extra)
+        os.utime(pyc.path, (x, x))
+        # Eliminate the other option.
+        mypath.remove()
+        # Make sure it's the .pyc path getting cached.
+        self.resetEnvironment()
+        # Sanity check.
+        self.assertIn('one', self.getAllPlugins())
+        self.failIfIn('two', self.getAllPlugins())
+        self.resetEnvironment()
+        mypath.setContent(pluginFileContents('two'))
+        self.failIfIn('one', self.getAllPlugins())
+        self.assertIn('two', self.getAllPlugins())
 
 
     def test_newPluginsOnReadOnlyPath(self):

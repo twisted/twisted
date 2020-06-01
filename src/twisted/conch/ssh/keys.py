@@ -31,11 +31,10 @@ from pyasn1.type import univ
 from twisted.conch.ssh import common, sexpy
 from twisted.conch.ssh.common import int_from_bytes, int_to_bytes
 from twisted.python import randbytes
-from twisted.python.compat import _PY3
-from twisted.python.compat import _b64decodebytes as decodebytes
-from twisted.python.compat import _b64encodebytes as encodebytes
-from twisted.python.compat import _bytesChr as chr
-from twisted.python.compat import iterbytes, izip, long, nativeString, unicode
+from twisted.python.compat import (
+    iterbytes, long, izip, nativeString, unicode,
+    _b64decodebytes as decodebytes, _b64encodebytes as encodebytes,
+    _bytesChr as chr)
 from twisted.python.constants import NamedConstant, Names
 from twisted.python.deprecate import _mutuallyExclusiveArguments
 
@@ -935,7 +934,7 @@ class Key(object):
                 out = '<Elliptic Curve Private Key (%s bits)' % (name[-3:],)
 
             for k, v in sorted(data.items()):
-                if _PY3 and k == 'curve':
+                if k == 'curve':
                     out += "\ncurve:\n\t%s" % (name,)
                 else:
                     out += "\n%s:\n\t%s" % (k, v)

@@ -9,10 +9,7 @@ Tests for L{twisted.python.dist3}.
 import os
 import twisted
 
-from unittest import skipIf
-
 from twisted.trial.unittest import TestCase
-from twisted.python.compat import _PY3
 from twisted.python._setup import notPortedModules
 
 
@@ -20,24 +17,6 @@ class ModulesToInstallTests(TestCase):
     """
     Tests for L{notPortedModules}.
     """
-    @skipIf(_PY3, "Only on Python 2")
-    def test_exist(self):
-        """
-        All modules listed in L{notPortedModules} exist on Py2.
-        """
-        root = os.path.dirname(os.path.dirname(twisted.__file__))
-        for module in notPortedModules:
-            segments = module.split(".")
-            segments[-1] += ".py"
-            path = os.path.join(root, *segments)
-            alternateSegments = module.split(".") + ["__init__.py"]
-            packagePath = os.path.join(root, *alternateSegments)
-            self.assertTrue(os.path.exists(path) or
-                            os.path.exists(packagePath),
-                            "Module {0} does not exist".format(module))
-
-
-    @skipIf(not _PY3, "Only on Python 3")
     def test_notexist(self):
         """
         All modules listed in L{notPortedModules} do not exist on Py3.

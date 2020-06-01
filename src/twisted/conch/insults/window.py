@@ -10,7 +10,9 @@ import array
 
 from twisted.conch.insults import insults, helper
 from twisted.python import text as tptext
-from twisted.python.compat import (_PY3, _bytesChr as chr)
+from twisted.python.compat import _bytesChr as chr
+
+
 
 class YieldFocus(Exception):
     """
@@ -459,14 +461,9 @@ class Canvas(Widget):
             self.resize(width, height)
         for i in range(height):
             terminal.cursorPosition(0, i)
-            if _PY3:
-                text = self.contents[self._width * i:
-                                     self._width * i + self._width
-                                    ].tobytes()
-            else:
-                text = self.contents[self._width * i:
-                                     self._width * i + self._width
-                                    ].tostring()
+            text = self.contents[
+                self._width * i:
+                self._width * i + self._width].tobytes()
             text = text[:width]
             terminal.write(text)
 

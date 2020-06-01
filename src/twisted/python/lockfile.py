@@ -14,7 +14,8 @@ import os
 from time import time as _uniquefloat
 
 from twisted.python.runtime import platform
-from twisted.python.compat import _PY3
+
+
 
 def unique():
     return str(int(_uniquefloat() * 1000))
@@ -77,10 +78,7 @@ else:
 
         # Python 3 does not support the 'commit' flag of fopen in the MSVCRT
         # (http://msdn.microsoft.com/en-us/library/yeby3zcb%28VS.71%29.aspx)
-        if _PY3:
-            mode = 'w'
-        else:
-            mode = 'wc'
+        mode = 'w'
 
         with _open(newvalname, mode) as f:
             f.write(value)

@@ -6,16 +6,13 @@ Tests for L{twisted.python.log}.
 """
 
 
-from twisted.python.compat import _PY3, NativeStringIO as StringIO
-
 import os
 import sys
 import time
 import logging
 import warnings
 import calendar
-from io import IOBase
-from imp import reload
+from io import IOBase, StringIO
 
 from twisted.trial import unittest
 
@@ -344,17 +341,11 @@ class LogPublisherTestCaseMixin:
         self.lp.addObserver(self.flo.emit)
 
         try:
-            str(u'\N{VULGAR FRACTION ONE HALF}')
+            str('\N{VULGAR FRACTION ONE HALF}')
         except UnicodeEncodeError:
-            # This is the behavior we want - don't change anything.
-            self._origEncoding = None
-        else:
-            if _PY3:
-                self._origEncoding = None
-                return
-            reload(sys)
-            self._origEncoding = sys.getdefaultencoding()
-            sys.setdefaultencoding('ascii')
+            pass
+        # This is the behavior we want - don't change anything.
+        self._origEncoding = None
 
 
     def tearDown(self):
@@ -396,14 +387,10 @@ class LogPublisherTests(LogPublisherTestCaseMixin,
         On Python 3, where Unicode is default message type, the message is
         logged normally.
         """
-        message = u"Hello, \N{VULGAR FRACTION ONE HALF} world."
+        message = "Hello, \N{VULGAR FRACTION ONE HALF} world."
         self.lp.msg(message)
         self.assertEqual(len(self.out), 1)
-        if _PY3:
-            self.assertIn(message, self.out[0])
-        else:
-            self.assertIn('with str error', self.out[0])
-            self.assertIn('UnicodeEncodeError', self.out[0])
+        self.assertIn(message, self.out[0])
 
 
 
@@ -1076,23 +1063,17 @@ class StdioOnnaStickTests(unittest.SynchronousTestCase):
 
         On Python 3, the prints are left unmodified.
         """
-        unicodeString = u"Hello, \N{VULGAR FRACTION ONE HALF} world."
+        unicodeString = "Hello, \N{VULGAR FRACTION ONE HALF} world."
         stdio = log.StdioOnnaStick(encoding="utf-8")
         self.assertEqual(stdio.encoding, "utf-8")
-        stdio.write(unicodeString + u"\n")
-        stdio.writelines([u"Also, " + unicodeString])
+        stdio.write(unicodeString + "\n")
+        stdio.writelines(["Also, " + unicodeString])
         oldStdout = sys.stdout
         sys.stdout = stdio
         self.addCleanup(setattr, sys, "stdout", oldStdout)
         # This should go to the log, utf-8 encoded too:
         print(unicodeString)
-        if _PY3:
-            self.assertEqual(self.getLogMessages(),
-                             [unicodeString,
-                              u"Also, " + unicodeString,
-                              unicodeString])
-        else:
-            self.assertEqual(self.getLogMessages(),
-                             [unicodeString.encode("utf-8"),
-                              (u"Also, " + unicodeString).encode("utf-8"),
-                              unicodeString.encode("utf-8")])
+        self.assertEqual(self.getLogMessages(),
+                         [unicodeString,
+                          "Also, " + unicodeString,
+                          unicodeString])

@@ -21,6 +21,22 @@ from twisted.python.procutils import which
 from twisted.python.reflect import requireModule
 from zope.interface import implementer
 
+from twisted.conch import ls
+from twisted.conch.interfaces import ISFTPFile
+from twisted.conch.test.test_filetransfer import SFTPTestBase
+from twisted.conch.test.test_filetransfer import FileTransferTestAvatar
+from twisted.cred import portal
+from twisted.internet import reactor, protocol, interfaces, defer, error
+from twisted.internet.utils import getProcessOutputAndValue, getProcessValue
+from twisted.python import log
+from twisted.python.compat import unicode
+from twisted.python.fakepwd import UserDatabase
+from twisted.test.proto_helpers import StringTransport
+from twisted.internet.task import Clock
+from twisted.trial.unittest import TestCase
+
+
+
 pyasn1 = requireModule('pyasn1')
 cryptography = requireModule('cryptography')
 unix = requireModule('twisted.conch.unix')
@@ -30,27 +46,12 @@ if cryptography and pyasn1:
         from twisted.conch.scripts import cftp
         from twisted.conch.scripts.cftp import SSHSession
         from twisted.conch.ssh import filetransfer
-        from twisted.conch.test.test_filetransfer import FileTransferForTestAvatar
+        from twisted.conch.test.test_filetransfer import (
+            FileTransferForTestAvatar)
         from twisted.conch.test import test_ssh, test_conch
         from twisted.conch.test.test_conch import FakeStdio
     except ImportError:
         pass
-
-from twisted.conch import ls
-from twisted.conch.interfaces import ISFTPFile
-from twisted.conch.test.test_filetransfer import SFTPTestBase
-from twisted.conch.test.test_filetransfer import FileTransferTestAvatar
-from twisted.cred import portal
-from twisted.internet import reactor, protocol, interfaces, defer, error
-from twisted.internet.utils import getProcessOutputAndValue, getProcessValue
-from twisted.python import log
-from twisted.python.compat import _PY3, unicode
-from twisted.python.fakepwd import UserDatabase
-from twisted.test.proto_helpers import StringTransport
-from twisted.internet.task import Clock
-from twisted.trial.unittest import TestCase
-
-
 
 skipTests = False
 if None in (unix, cryptography, pyasn1,
@@ -469,10 +470,7 @@ class StdioClientTests(TestCase):
 
         self.client._printProgressBar(wrapper, startTime)
 
-        if _PY3:
-            result = b"\rb'sample' 40% 4.0kB 2.0kBps 00:03 "
-        else:
-            result = "\rsample 40% 4.0kB 2.0kBps 00:03 "
+        result = b"\rb'sample' 40% 4.0kB 2.0kBps 00:03 "
         self.assertEqual(self.client.transport.value(), result)
 
 
@@ -491,10 +489,7 @@ class StdioClientTests(TestCase):
 
         self.client._printProgressBar(wrapper, startTime)
 
-        if _PY3:
-            result = b"\rb'sample'  0% 0.0B 0.0Bps 00:00 "
-        else:
-            result = "\rsample  0% 0.0B 0.0Bps 00:00 "
+        result = b"\rb'sample'  0% 0.0B 0.0Bps 00:00 "
         self.assertEqual(self.client.transport.value(), result)
 
 
@@ -509,10 +504,7 @@ class StdioClientTests(TestCase):
 
         self.client._printProgressBar(wrapper, 0)
 
-        if _PY3:
-            result = b"\rb'empty-file'100% 0.0B 0.0Bps 00:00 "
-        else:
-            result = "\rempty-file100% 0.0B 0.0Bps 00:00 "
+        result = b"\rb'empty-file'100% 0.0B 0.0Bps 00:00 "
         self.assertEqual(result, self.client.transport.value())
 
 
@@ -587,8 +579,7 @@ class StdioClientTests(TestCase):
 
         """
         output = self.client.transport.value()
-        if _PY3:
-            output = output.decode("utf-8")
+        output = output.decode("utf-8")
         output = output.split('\n\r')
 
         expectedOutput = []
@@ -1061,7 +1052,7 @@ class OurServerCmdLineClientTests(CFTPClientTestBase):
             """
             cmds = []
             for cmd in output:
-                if _PY3 and isinstance(cmd, bytes):
+                if isinstance(cmd, bytes):
                     cmd = cmd.decode("utf-8")
                 cmds.append(cmd)
             return cmds[:3] + cmds[4:]

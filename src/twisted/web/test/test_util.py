@@ -9,7 +9,7 @@ Tests for L{twisted.web.util}.
 import gc
 
 from twisted.internet import defer
-from twisted.python.compat import _PY3, intToBytes, networkString
+from twisted.python.compat import intToBytes, networkString
 from twisted.python.failure import Failure
 from twisted.trial.unittest import SynchronousTestCase, TestCase
 from twisted.web import resource, util
@@ -178,25 +178,14 @@ class FailureElementTests(TestCase):
             u'raised.',
         ]
         d = flattenString(None, element)
-        if _PY3:
-            stringToCheckFor = ''.join([
-                '<div class="snippet%sLine"><span>%d</span><span>%s</span>'
-                '</div>' % (
-                    ["", "Highlight"][lineNumber == 1],
-                    self.base + lineNumber,
-                    (u" \N{NO-BREAK SPACE}" * 4 + sourceLine))
-                for (lineNumber, sourceLine)
-                in enumerate(source)]).encode("utf8")
-
-        else:
-            stringToCheckFor = ''.join([
-                '<div class="snippet%sLine"><span>%d</span><span>%s</span>'
-                '</div>' % (
-                    ["", "Highlight"][lineNumber == 1],
-                    self.base + lineNumber,
-                    (u" \N{NO-BREAK SPACE}" * 4 + sourceLine).encode('utf8'))
-                for (lineNumber, sourceLine)
-                in enumerate(source)])
+        stringToCheckFor = ''.join([
+            '<div class="snippet%sLine"><span>%d</span><span>%s</span>'
+            '</div>' % (
+                ["", "Highlight"][lineNumber == 1],
+                self.base + lineNumber,
+                (u" \N{NO-BREAK SPACE}" * 4 + sourceLine))
+            for (lineNumber, sourceLine)
+            in enumerate(source)]).encode("utf8")
 
         d.addCallback(self.assertEqual, stringToCheckFor)
         return d
@@ -306,10 +295,7 @@ class FailureElementTests(TestCase):
         element = FailureElement(
             self.failure, TagLoader(tags.span(render="type")))
         d = flattenString(None, element)
-        if _PY3:
-            exc = b"builtins.Exception"
-        else:
-            exc = b"exceptions.Exception"
+        exc = b"builtins.Exception"
         d.addCallback(
             self.assertEqual, b"<span>" + exc + b"</span>")
         return d
@@ -354,10 +340,7 @@ class FormatFailureTests(TestCase):
             result = formatFailure(Failure())
 
         self.assertIsInstance(result, bytes)
-        if _PY3:
-            self.assertTrue(all(ch < 128 for ch in result))
-        else:
-            self.assertTrue(all(ord(ch) < 128 for ch in result))
+        self.assertTrue(all(ch < 128 for ch in result))
         # Indentation happens to rely on NO-BREAK SPACE
         self.assertIn(b"&#160;", result)
 

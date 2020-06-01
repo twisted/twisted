@@ -68,24 +68,26 @@ import tempfile
 import time
 import warnings
 from io import BytesIO
-from urllib.parse import ParseResultBytes
-from urllib.parse import unquote_to_bytes as unquote
-from urllib.parse import urlparse as _urlparse
+from urllib.parse import (
+    ParseResultBytes, urlparse as _urlparse, unquote_to_bytes as unquote)
 
+from zope.interface import Attribute, Interface, implementer, provider
+
+# twisted imports
 from incremental import Version
+from twisted.logger import Logger
 from twisted.internet import address, interfaces, protocol
 from twisted.internet._producer_helpers import _PullToPush
 from twisted.internet.defer import Deferred
 from twisted.internet.interfaces import IProtocol
-from twisted.logger import Logger
-from twisted.protocols import basic, policies
-from twisted.python import log
-# twisted imports
-from twisted.python.compat import (_PY3, _PY37PLUS, intToBytes, long,
-                                   nativeString, networkString, unicode)
+from twisted.python.compat import (_PY37PLUS, intToBytes, long,
+                                   nativeString, networkString)
 from twisted.python.components import proxyForInterface
+from twisted.python import log
 from twisted.python.deprecate import deprecated
 from twisted.python.failure import Failure
+from twisted.protocols import basic, policies
+# twisted imports
 from twisted.web._responses import (ACCEPTED, BAD_GATEWAY, BAD_REQUEST,
                                     CONFLICT, CREATED, EXPECTATION_FAILED,
                                     FORBIDDEN, FOUND, GATEWAY_TIMEOUT, GONE,
@@ -109,7 +111,8 @@ from twisted.web._responses import (ACCEPTED, BAD_GATEWAY, BAD_REQUEST,
 from twisted.web.http_headers import Headers, _sanitizeLinearWhitespace
 from twisted.web.iweb import (IAccessLogFormatter, INonQueuedRequestFactory,
                               IRequest)
-from zope.interface import Attribute, Interface, implementer, provider
+
+
 
 try:
     from twisted.web._http2 import H2Connection
@@ -163,22 +166,22 @@ def urlparse(url):
     """
     Parse an URL into six components.
 
-    This is similar to C{urlparse.urlparse}, but rejects C{unicode} input
+    This is similar to C{urlparse.urlparse}, but rejects C{str} input
     and always produces C{bytes} output.
 
     @type url: C{bytes}
 
-    @raise TypeError: The given url was a C{unicode} string instead of a
+    @raise TypeError: The given url was a C{str} string instead of a
         C{bytes}.
 
     @return: The scheme, net location, path, params, query string, and fragment
         of the URL - all as C{bytes}.
     @rtype: C{ParseResultBytes}
     """
-    if isinstance(url, unicode):
+    if isinstance(url, str):
         raise TypeError("url must be bytes, not unicode")
     scheme, netloc, path, params, query, fragment = _urlparse(url)
-    if isinstance(scheme, unicode):
+    if isinstance(scheme, str):
         scheme = scheme.encode('ascii')
         netloc = netloc.encode('ascii')
         path = path.encode('ascii')
@@ -914,14 +917,7 @@ class Request:
                     else:
                         cgiArgs = cgi.parse_multipart(self.content, pdict)
 
-                    if not _PY37PLUS and _PY3:
-                        # The parse_multipart function on Python 3
-                        # decodes the header bytes as iso-8859-1 and
-                        # returns a str key -- we want bytes so encode
-                        # it back
-                        self.args.update({x.encode('iso-8859-1'): y
-                                          for x, y in cgiArgs.items()})
-                    elif _PY37PLUS:
+                    if _PY37PLUS:
                         # The parse_multipart function on Python 3.7+
                         # decodes the header bytes as iso-8859-1 and
                         # decodes the body bytes as utf8 with
@@ -931,9 +927,13 @@ class Request:
                             [z.encode('utf8', "surrogateescape")
                              if isinstance(z, str) else z for z in y]
                             for x, y in cgiArgs.items()})
-
                     else:
-                        self.args.update(cgiArgs)
+                        # The parse_multipart function on Python 3
+                        # decodes the header bytes as iso-8859-1 and
+                        # returns a str key -- we want bytes so encode
+                        # it back
+                        self.args.update({x.encode('iso-8859-1'): y
+                                          for x, y in cgiArgs.items()})
                 except Exception as e:
                     # It was a bad request, or we got a signal.
                     self.channel._respondToBadRequestAndDisconnect()
@@ -1188,26 +1188,26 @@ class Request:
         L{twisted.web.server.Session} class for details.
 
         @param k: cookie name
-        @type k: L{bytes} or L{unicode}
+        @type k: L{bytes} or L{str}
 
         @param v: cookie value
-        @type v: L{bytes} or L{unicode}
+        @type v: L{bytes} or L{str}
 
         @param expires: cookie expire attribute value in
             "Wdy, DD Mon YYYY HH:MM:SS GMT" format
-        @type expires: L{bytes} or L{unicode}
+        @type expires: L{bytes} or L{str}
 
         @param domain: cookie domain
-        @type domain: L{bytes} or L{unicode}
+        @type domain: L{bytes} or L{str}
 
         @param path: cookie path
-        @type path: L{bytes} or L{unicode}
+        @type path: L{bytes} or L{str}
 
         @param max_age: cookie expiration in seconds from reception
-        @type max_age: L{bytes} or L{unicode}
+        @type max_age: L{bytes} or L{str}
 
         @param comment: cookie comment
-        @type comment: L{bytes} or L{unicode}
+        @type comment: L{bytes} or L{str}
 
         @param secure: direct browser to send the cookie on encrypted
             connections only
@@ -1221,10 +1221,10 @@ class Request:
             Direct browsers not to send this cookie on cross-origin requests.
             Please see:
             U{https://tools.ietf.org/html/draft-west-first-party-cookies-07}
-        @type sameSite: L{None}, L{bytes} or L{unicode}
+        @type sameSite: L{None}, L{bytes} or L{str}
 
         @raises: L{DeprecationWarning} if an argument is not L{bytes} or
-            L{unicode}.
+            L{str}.
             L{ValueError} if the value for C{sameSite} is not supported.
         """
         def _ensureBytes(val):
@@ -1232,7 +1232,7 @@ class Request:
             Ensure that C{val} is bytes, encoding using UTF-8 if
             needed.
 
-            @param val: L{bytes} or L{unicode}
+            @param val: L{bytes} or L{str}
 
             @return: L{bytes}
             """
@@ -2698,16 +2698,16 @@ def _escape(s):
     quotes were double quotes.
 
     @param s: The string to escape.
-    @type s: L{bytes} or L{unicode}
+    @type s: L{bytes} or L{str}
 
     @return: An escaped string.
-    @rtype: L{unicode}
+    @rtype: L{str}
     """
     if not isinstance(s, bytes):
         s = s.encode("ascii")
 
     r = repr(s)
-    if not isinstance(r, unicode):
+    if not isinstance(r, str):
         r = r.decode("ascii")
     if r.startswith(u"b"):
         r = r[1:]

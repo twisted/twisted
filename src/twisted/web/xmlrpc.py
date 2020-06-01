@@ -12,15 +12,12 @@ Maintainer: Itamar Shtull-Trauring
 """
 
 
-from twisted.python.compat import _PY3, intToBytes, nativeString, urllib_parse
+from twisted.python.compat import intToBytes, nativeString, urllib_parse
 from twisted.python.compat import unicode
 
 # System Imports
 import base64
-if _PY3:
-    import xmlrpc.client as xmlrpclib
-else:
-    import xmlrpclib
+import xmlrpc.client as xmlrpclib
 
 # Sibling Imports
 from twisted.web import resource, server, http

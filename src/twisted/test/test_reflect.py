@@ -10,7 +10,6 @@ import os
 import weakref
 from collections import deque
 
-from twisted.python.compat import _PY3
 from twisted.trial.unittest import SynchronousTestCase as TestCase
 from twisted.python import reflect
 from twisted.python.reflect import (
@@ -730,9 +729,7 @@ class FullyQualifiedNameTests(TestCase):
 
 
 class ObjectGrepTests(TestCase):
-    if _PY3:
-        # This is to be removed when fixing #6986
-        skip = "twisted.python.reflect.objgrep hasn't been ported to Python 3"
+    skip = "twisted.python.reflect.objgrep hasn't been ported to Python 3"
 
 
     def test_dictionary(self):

@@ -12,10 +12,10 @@ import traceback
 import pdb
 import linecache
 
+from io import StringIO
 from traceback import FrameSummary
 from unittest import skipIf
 
-from twisted.python.compat import NativeStringIO
 from twisted.python import reflect
 from twisted.python import failure
 
@@ -38,7 +38,7 @@ def getDivisionFailure(*args, **kwargs):
     """
     try:
         1/0
-    except:
+    except BaseException:
         f = failure.Failure(*args, **kwargs)
     return f
 
@@ -54,11 +54,27 @@ class FailureTests(SynchronousTestCase):
         """
         try:
             raise NotImplementedError('test')
-        except:
+        except BaseException:
             f = failure.Failure()
         error = f.trap(SystemExit, RuntimeError)
         self.assertEqual(error, RuntimeError)
         self.assertEqual(f.type, NotImplementedError)
+
+
+    def test_trapRaisesWrappedException(self):
+        """
+        If the wrapped C{Exception} is not a subclass of one of the
+        expected types, L{failure.Failure.trap} raises the wrapped
+        C{Exception}.
+        """
+        exception = ValueError()
+        try:
+            raise exception
+        except BaseException:
+            f = failure.Failure()
+
+        untrapped = self.assertRaises(ValueError, f.trap, OverflowError)
+        self.assertIs(exception, untrapped)
 
 
     def test_failureValueFromFailure(self):
@@ -84,7 +100,7 @@ class FailureTests(SynchronousTestCase):
         f1 = failure.Failure(exception)
         try:
             f1.trap(OverflowError)
-        except:
+        except BaseException:
             f2 = failure.Failure()
 
         self.assertIs(f2.value, exception)
@@ -181,7 +197,7 @@ class FailureTests(SynchronousTestCase):
             exampleLocalVar
 
         f = getDivisionFailure(captureVars=captureVars)
-        out = NativeStringIO()
+        out = StringIO()
         if cleanFailure:
             f.cleanFailure()
         f.printDetailedTraceback(out)
@@ -239,7 +255,7 @@ class FailureTests(SynchronousTestCase):
             exampleLocalVar
 
         f = getDivisionFailure()
-        out = NativeStringIO()
+        out = StringIO()
         f.printBriefTraceback(out)
         tb = out.getvalue()
         stack = ''
@@ -285,7 +301,7 @@ class FailureTests(SynchronousTestCase):
             exampleLocalVar
 
         f = getDivisionFailure(captureVars=captureVars)
-        out = NativeStringIO()
+        out = StringIO()
         f.printTraceback(out)
         tb = out.getvalue()
         stack = ''
@@ -485,7 +501,7 @@ class FailureTests(SynchronousTestCase):
         """
         try:
             1/0
-        except:
+        except BaseException:
             klass, exception, tb = sys.exc_info()
         f = failure.Failure(exception)
         self.assertIs(f.tb, tb)
@@ -635,7 +651,7 @@ class FindFailureTests(SynchronousTestCase):
         """
         try:
             1/0
-        except:
+        except BaseException:
             self.assertIsNone(failure.Failure._findFailure())
         else:
             self.fail("No exception raised from 1/0!?")
@@ -661,7 +677,7 @@ class FindFailureTests(SynchronousTestCase):
         f.cleanFailure()
         try:
             f.raiseException()
-        except:
+        except BaseException:
             self.assertEqual(failure.Failure._findFailure(), f)
         else:
             self.fail("No exception raised from raiseException!?")
@@ -680,7 +696,7 @@ class FindFailureTests(SynchronousTestCase):
         f.cleanFailure()
         try:
             f.raiseException()
-        except:
+        except BaseException:
             newF = failure.Failure()
             tb = f.getTraceback().splitlines()
             new_tb = newF.getTraceback().splitlines()
@@ -815,7 +831,7 @@ class DebugModeTests(SynchronousTestCase):
         """
         try:
             1/0
-        except:
+        except BaseException:
             typ, exc, tb = sys.exc_info()
             f = failure.Failure()
         self.assertEqual(self.result, [tb])
@@ -829,7 +845,7 @@ class DebugModeTests(SynchronousTestCase):
         """
         try:
             1/0
-        except:
+        except BaseException:
             typ, exc, tb = sys.exc_info()
             f = failure.Failure(captureVars=True)
         self.assertEqual(self.result, [tb])
@@ -857,13 +873,15 @@ class ExtendedGeneratorTests(SynchronousTestCase):
         represents into a generator.
         """
         stuff = []
+
         def generator():
             try:
                 yield
-            except:
+            except BaseException:
                 stuff.append(sys.exc_info())
             else:
                 self.fail("Yield should have yielded exception.")
+
         g = generator()
         f = getDivisionFailure()
         next(g)
@@ -883,12 +901,12 @@ class ExtendedGeneratorTests(SynchronousTestCase):
         """
         f = getDivisionFailure()
         f.cleanFailure()
-
         foundFailures = []
+
         def generator():
             try:
                 yield
-            except:
+            except BaseException:
                 foundFailures.append(failure.Failure._findFailure())
             else:
                 self.fail("No exception sent to generator")
@@ -916,7 +934,7 @@ class ExtendedGeneratorTests(SynchronousTestCase):
         def generator():
             try:
                 yield
-            except:
+            except BaseException:
                 newFailures.append(failure.Failure())
             else:
                 self.fail("No exception sent to generator")
@@ -945,9 +963,9 @@ class ExtendedGeneratorTests(SynchronousTestCase):
             try:
                 try:
                     yield
-                except:
+                except BaseException:
                     [][1]
-            except:
+            except BaseException:
                 self.assertIsInstance(failure.Failure().value, IndexError)
         g = generator()
         next(g)
@@ -964,12 +982,12 @@ class ExtendedGeneratorTests(SynchronousTestCase):
         def generator():
             try:
                 yield
-            except:
+            except BaseException:
                 [][1]
         g = generator()
         next(g)
         f = getDivisionFailure()
         try:
             self._throwIntoGenerator(f, g)
-        except:
+        except BaseException:
             self.assertIsInstance(failure.Failure().value, IndexError)

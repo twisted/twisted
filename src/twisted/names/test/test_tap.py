@@ -11,7 +11,6 @@ from twisted.names.dns import PORT
 from twisted.names.resolve import ResolverChain
 from twisted.names.secondary import SecondaryAuthorityService
 from twisted.names.tap import Options, _buildResolvers
-from twisted.python.compat import _PY3
 from twisted.python.runtime import platform
 from twisted.python.usage import UsageError
 from twisted.trial.unittest import SynchronousTestCase
@@ -112,12 +111,8 @@ class OptionsTests(SynchronousTestCase):
             # ours from the threaded resolver cleanup
             from twisted.internet import reactor
             for x in reactor._newTimedCalls:
-                if _PY3:
-                    self.assertEqual(x.func.__func__,
-                                     ThreadedResolver._cleanup)
-                else:
-                    self.assertEqual(x.func.__func__,
-                                     ThreadedResolver._cleanup.__func__)
+                self.assertEqual(x.func.__func__,
+                                 ThreadedResolver._cleanup)
                 x.cancel()
 
         self.assertIsInstance(cl[-1], ResolverChain)

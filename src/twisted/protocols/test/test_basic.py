@@ -13,14 +13,12 @@ from io import BytesIO
 from typing import List
 from zope.interface.verify import verifyObject
 
-from twisted.python.compat import _PY3, iterbytes
+from twisted.python.compat import iterbytes
 from twisted.trial import unittest
 from twisted.protocols import basic
 from twisted.internet import protocol, task
 from twisted.internet.interfaces import IProducer
 from twisted.test import proto_helpers
-
-_PY3NEWSTYLESKIP = "All classes are new style on Python 3."
 
 
 
@@ -1085,25 +1083,6 @@ class Int16Tests(unittest.SynchronousTestCase, IntNTestCaseMixin,
         r = self.getProtocol()
         tooSend = b"b" * (2**(r.prefixLength * 8) + 1)
         self.assertRaises(AssertionError, r.sendString, tooSend)
-
-
-
-class NewStyleTestInt16(TestInt16, object):
-    """
-    A new-style class version of TestInt16
-    """
-
-
-
-class NewStyleInt16Tests(Int16Tests):
-    """
-    This test case verifies that IntNStringReceiver still works when inherited
-    by a new-style class.
-    """
-    if _PY3:
-        skip = _PY3NEWSTYLESKIP
-
-    protocol = NewStyleTestInt16
 
 
 

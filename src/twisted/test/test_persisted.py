@@ -9,19 +9,8 @@ import io
 import pickle
 import sys
 
-from unittest import skipIf
-
-try:
-    from cStringIO import StringIO as _oldStyleCStringIO
-except ImportError:
-    skipStringIO = "No cStringIO available."
-else:
-    skipStringIO = None
-
-
 # Twisted Imports
 from twisted.persisted import styles, aot, crefutil
-from twisted.python.compat import _PY3
 from twisted.trial import unittest
 from twisted.trial.unittest import TestCase
 
@@ -76,6 +65,7 @@ class VersionTests(TestCase):
         assert obj.v3 == 1, "upgraded unnecessarily"
         assert obj.v4 == 1, "upgraded unnecessarily"
 
+
     def test_nonIdentityHash(self):
         global ClassWithCustomHash
 
@@ -116,12 +106,18 @@ class VersionTests(TestCase):
         pklA, pklB = pickle.dumps(x), pickle.dumps(y)
         del x, y
         ToyClassA.persistenceVersion = 1
+
         def upgradeToVersion1(self):
             self.y = pickle.loads(pklB)
             styles.doUpgrade()
+
         ToyClassA.upgradeToVersion1 = upgradeToVersion1
         ToyClassB.persistenceVersion = 1
-        ToyClassB.upgradeToVersion1 = lambda self: setattr(self, 'upgraded', True)
+
+        def setUpgraded(self):
+            setattr(self, 'upgraded', True)
+
+        ToyClassB.upgradeToVersion1 = setUpgraded
 
         x = pickle.loads(pklA)
         styles.doUpgrade()
@@ -309,26 +305,12 @@ class PicklingTests(TestCase):
         self.assertEqual(type(o), type(obj.getX))
 
 
-    @skipIf(skipStringIO, skipStringIO)
-    def test_stringIO(self):
-        f = _oldStyleCStringIO()
-        f.write("abc")
-        pickl = pickle.dumps(f)
-        o = pickle.loads(pickl)
-        self.assertEqual(type(o), type(f))
-        self.assertEqual(f.getvalue(), "abc")
-
-
 
 class StringIOTransitionTests(TestCase):
     """
     When pickling a cStringIO in Python 2, it should unpickle as a BytesIO or a
     StringIO in Python 3, depending on the type of its contents.
     """
-
-    if not _PY3:
-        skip = "In Python 2 we can still unpickle cStringIO as such."
-
 
     def test_unpickleBytesIO(self):
         """
@@ -356,6 +338,7 @@ class EvilSourceror:
 class NonDictState:
     def __getstate__(self):
         return self.state
+
 
     def __setstate__(self, state):
         self.state = state

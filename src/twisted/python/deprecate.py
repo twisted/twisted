@@ -99,7 +99,6 @@ from dis import findlinestarts
 from functools import wraps
 
 from incremental import Version, getVersionString
-from twisted.python.compat import _PY3
 
 DEPRECATION_WARNING_FORMAT = '%(fqpn)s was deprecated in %(version)s'
 
@@ -366,21 +365,8 @@ def deprecatedProperty(version, replacement=None):
 
 
     def deprecationDecorator(function):
-        if _PY3:
-            warningString = getDeprecationWarningString(
-                function, version, None, replacement)
-        else:
-            # Because Python 2 sucks, we need to implement our own here -- lack
-            # of __qualname__ means that we kinda have to stack walk. It maybe
-            # probably works. Probably. -Amber
-            functionName = function.__name__
-            className = inspect.stack()[1][3]  # wow hax
-            moduleName = function.__module__
-
-            fqdn = "%s.%s.%s" % (moduleName, className, functionName)
-
-            warningString = _getDeprecationWarningString(
-                fqdn, version, None, replacement)
+        warningString = getDeprecationWarningString(
+            function, version, None, replacement)
 
         @wraps(function)
         def deprecatedFunction(*args, **kwargs):

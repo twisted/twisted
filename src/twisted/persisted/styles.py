@@ -12,32 +12,23 @@ import inspect
 import pickle
 import types
 from typing import Dict
-
+from twisted.python.compat import _PYPY
 from twisted.python import log, reflect
-from twisted.python.compat import _PY3, _PYPY
+
+
 
 oldModules = {}  # type: Dict[str, types.ModuleType]
-
 
 
 _UniversalPicklingError = pickle.PicklingError
 
 
-# First, let's register support for some stuff that really ought to
-# be registerable...
-
-
 
 def pickleMethod(method):
     'support function for copy_reg to pickle method refs'
-    if _PY3:
-        return (unpickleMethod, (method.__name__,
-                                 method.__self__,
-                                 method.__self__.__class__))
-    else:
-        return (unpickleMethod, (method.im_func.__name__,
-                                 method.im_self,
-                                 method.im_class))
+    return (unpickleMethod, (method.__name__,
+                             method.__self__,
+                             method.__self__.__class__))
 
 
 
@@ -56,9 +47,7 @@ def _methodFunction(classObject, methodName):
     @rtype: L{types.FunctionType}
     """
     methodObject = getattr(classObject, methodName)
-    if _PY3:
-        return methodObject
-    return methodObject.im_func
+    return methodObject
 
 
 
@@ -89,10 +78,7 @@ def unpickleMethod(im_name, im_self, im_class):
             raise
         return unpickleMethod(im_name, im_self, im_self.__class__)
     else:
-        if _PY3:
-            maybeClass = ()
-        else:
-            maybeClass = tuple([im_class])
+        maybeClass = ()
         bound = types.MethodType(methodFunction, im_self, *maybeClass)
         return bound
 
