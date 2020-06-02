@@ -24,7 +24,7 @@ else:
 
 # Sibling Imports
 from twisted.web import resource, server, http
-from twisted.internet import defer, protocol, reactor
+from twisted.internet import defer, protocol, reactor, error
 from twisted.python import reflect, failure
 from twisted.logger import Logger
 
@@ -372,6 +372,9 @@ class QueryProtocol(http.HTTPClient):
         If we have a full response from the server, then parse it and fired a
         Deferred with the return value or C{Fault} that the server gave us.
         """
+        if not reason.check(error.ConnectionDone, error.ConnectionLost):
+            # for example, ssl.SSL.Error
+            self.factory.clientConnectionLost(None, reason)
         http.HTTPClient.connectionLost(self, reason)
         if self._response is not None:
             response, self._response = self._response, None
@@ -510,7 +513,8 @@ class Proxy:
     queryFactory = _QueryFactory
 
     def __init__(self, url, user=None, password=None, allowNone=False,
-                 useDateTime=False, connectTimeout=30.0, reactor=reactor):
+                 useDateTime=False, connectTimeout=30.0, reactor=reactor,
+                 trustRoot=None):
         """
         @param url: The URL to which to post method calls.  Calls will be made
             over SSL if the scheme is HTTPS.  If netloc contains username or
@@ -518,6 +522,14 @@ class Proxy:
             the C{user} and C{password} arguments are not specified.
         @type url: L{bytes}
 
+        @param trustRoot: See the optionsForClientTLS documentation. This
+            parameter controls which CAs Twisted uses to verify a TLS
+            connection. To trust a single CA (in a pem file format on disk),
+            you can pass the result of ssl.Certificate.loadPEM() here. If you
+            set trustRoot to None (the default), we use the result of
+            ssl.platformTrust(), which means we validate the connection
+            against the system-wide CA bundle.
+        @type trustRoot: L{sslverify.IOpenSSLTrustRoot}
         """
         scheme, netloc, path, params, query, fragment = urllib_parse.urlparse(
             url)
@@ -549,6 +561,7 @@ class Proxy:
         self.useDateTime = useDateTime
         self.connectTimeout = connectTimeout
         self._reactor = reactor
+        self.trustRoot = trustRoot
 
 
     def callRemote(self, method, *args):
@@ -573,9 +586,12 @@ class Proxy:
 
         if self.secure:
             from twisted.internet import ssl
+            contextFactory = ssl.optionsForClientTLS(
+                hostname=nativeString(self.host),
+                trustRoot=self.trustRoot)
             connector = self._reactor.connectSSL(
                 nativeString(self.host), self.port or 443,
-                factory, ssl.ClientContextFactory(),
+                factory, contextFactory,
                 timeout=self.connectTimeout)
         else:
             connector = self._reactor.connectTCP(
