@@ -873,7 +873,8 @@ class DeprecatedDecoratorTests(SynchronousTestCase):
         version = Version('Twisted', 8, 0, 0)
         decorator = deprecated(version, replacement=dummyReplacementMethod)
         dummy = decorator(dummyCallable)
-        self.assertEqual(dummy.__doc__,
+        self.assertEqual(
+            dummy.__doc__,
             "\n"
             "    Do nothing.\n\n"
             "    This is used to test the deprecation decorators.\n\n"
