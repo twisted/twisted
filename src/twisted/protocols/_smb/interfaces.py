@@ -5,8 +5,6 @@
 Various interfaces for realms, avatars and related objects
 """
 
-from __future__ import absolute_import, division
-
 from zope.interface import Interface, Attribute
 
 

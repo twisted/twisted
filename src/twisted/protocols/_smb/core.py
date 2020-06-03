@@ -1,9 +1,8 @@
 # -*- test-case-name: twisted.protocols._smb.tests -*-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
-"""Implement Microsoft's Server Message Block protocol"""
 
-from __future__ import absolute_import, division
+"""Implement Microsoft's Server Message Block protocol"""
 
 import struct
 import binascii

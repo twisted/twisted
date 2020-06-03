@@ -5,8 +5,6 @@
 base classes for SMB networking
 """
 
-from __future__ import absolute_import, division
-
 import struct
 
 from twisted.internet import protocol
