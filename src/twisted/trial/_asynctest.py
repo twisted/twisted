@@ -12,6 +12,8 @@ Maintainer: Jonathan Lange
 import inspect
 import warnings
 
+from typing import List
+
 from zope.interface import implementer
 
 # We can't import reactor at module-level because this code runs before trial
@@ -24,7 +26,9 @@ from twisted.trial import itrial, util
 from twisted.trial._synctest import (
     FailTest, SkipTest, SynchronousTestCase)
 
-_wait_is_running = []
+_wait_is_running = []  # type: List[None]
+
+
 
 @implementer(itrial.ITestCase)
 class TestCase(SynchronousTestCase):

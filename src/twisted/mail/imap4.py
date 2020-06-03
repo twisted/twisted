@@ -29,6 +29,7 @@ import email.utils
 
 from itertools import chain
 from io import BytesIO
+from typing import Any, List
 
 from zope.interface import implementer
 
@@ -171,7 +172,7 @@ class MessageSet(object):
         is being used that maintains its own state, it is guaranteed
         that it will not be called out-of-order).
     """
-    _empty = []
+    _empty = []  # type: List[Any]
     _infinity = float('inf')
 
     def __init__(self, start=_empty, end=_empty):

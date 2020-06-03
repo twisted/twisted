@@ -16,14 +16,12 @@ import stat
 import socket
 import struct
 from errno import EINTR, EMSGSIZE, EAGAIN, EWOULDBLOCK, ECONNREFUSED, ENOBUFS
-
+from typing import Optional, Type
 from zope.interface import implementer, implementer_only, implementedBy
-
-if not hasattr(socket, 'AF_UNIX'):
-    raise ImportError("UNIX sockets not supported on this platform")
 
 from twisted.internet import main, base, tcp, udp, error, interfaces
 from twisted.internet import protocol, address
+from twisted.internet.abstract import FileDescriptor
 from twisted.python import lockfile, log, reflect, failure
 from twisted.python.filepath import _coerceToFilesystemEncoding
 from twisted.python.util import untilConcludes
@@ -31,9 +29,15 @@ from twisted.python.compat import lazyByteSlice
 
 
 try:
-    from twisted.python import sendmsg
+    from twisted.python import sendmsg as _sendmsg
 except ImportError:
     sendmsg = None
+else:
+    sendmsg = _sendmsg
+
+if not hasattr(socket, 'AF_UNIX'):
+    raise ImportError("UNIX sockets not supported on this platform")
+
 
 
 
@@ -67,7 +71,7 @@ class _SendmsgMixin(object):
         registered producer, if there is one.
     """
 
-    _writeSomeDataBase = None
+    _writeSomeDataBase = None  # type: Optional[Type[FileDescriptor]]
     _fileDescriptorBufferSize = 64
 
     def __init__(self):

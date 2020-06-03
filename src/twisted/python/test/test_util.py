@@ -14,9 +14,14 @@ import sys
 import warnings
 
 try:
-    import pwd, grp
+    import pwd as _pwd
+    import grp as _grp
 except ImportError:
-    pwd = grp = None
+    pwd = None
+    grp = None
+else:
+    pwd = _pwd
+    grp = _grp
 
 from twisted.trial import unittest
 from twisted.trial.util import suppress as SUPPRESS

@@ -46,15 +46,18 @@ except ImportError:
 
 
 if platformType == 'win32':
-    # no such thing as WSAEPERM or error code 10001 according to winsock.h or MSDN
+    # no such thing as WSAEPERM or error code 10001
+    # according to winsock.h or MSDN
     EPERM = object()
-    from errno import WSAEINVAL as EINVAL
-    from errno import WSAEWOULDBLOCK as EWOULDBLOCK
-    from errno import WSAEINPROGRESS as EINPROGRESS
-    from errno import WSAEALREADY as EALREADY
-    from errno import WSAEISCONN as EISCONN
-    from errno import WSAENOBUFS as ENOBUFS
-    from errno import WSAEMFILE as EMFILE
+    from errno import WSAEINVAL as EINVAL  # type: ignore[attr-defined]
+    from errno import (  # type: ignore[attr-defined]
+        WSAEWOULDBLOCK as EWOULDBLOCK)
+    from errno import (  # type: ignore[attr-defined]
+        WSAEINPROGRESS as EINPROGRESS)
+    from errno import WSAEALREADY as EALREADY  # type: ignore[attr-defined]
+    from errno import WSAEISCONN as EISCONN  # type: ignore[attr-defined]
+    from errno import WSAENOBUFS as ENOBUFS  # type: ignore[attr-defined]
+    from errno import WSAEMFILE as EMFILE  # type: ignore[attr-defined]
     # No such thing as WSAENFILE, either.
     ENFILE = object()
     # Nor ENOMEM

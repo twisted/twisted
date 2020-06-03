@@ -7,6 +7,8 @@ L{twisted.cred.strcred}.
 
 
 import os
+from typing import List, Sequence, Type
+from zope.interface import Interface
 
 from twisted import plugin
 from twisted.trial import unittest
@@ -280,7 +282,7 @@ class UnixCheckerTests(unittest.TestCase):
 
 
     if None in (pwd, spwd, crypt):
-        availability = []
+        availability = []  # type: List[str]
         for module, name in ((pwd, "pwd"), (spwd, "spwd"), (crypt, "crypt")):
             if module is None:
                 availability += [name]
@@ -595,7 +597,7 @@ class OptionsSupportsAllInterfaces(usage.Options, strcred.AuthOptionMixin):
 
 
 class OptionsSupportsNoInterfaces(usage.Options, strcred.AuthOptionMixin):
-    supportedInterfaces = []
+    supportedInterfaces = []  # type: Sequence[Type[Interface]]
 
 
 

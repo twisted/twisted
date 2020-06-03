@@ -39,6 +39,7 @@ reactor.listen/connect* methods for more information.
 
 
 from random import random as _goodEnoughRandom
+from typing import List
 
 from twisted.python import log
 from twisted.logger import Logger
@@ -67,7 +68,7 @@ def _maybeGlobalReactor(maybeReactor):
 
 class _VolatileDataService(service.Service):
 
-    volatile = []
+    volatile = []  # type: List[str]
 
     def __getstate__(self):
         d = service.Service.__getstate__(self)

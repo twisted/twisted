@@ -8,9 +8,11 @@ Tests for L{twisted.web.distrib}.
 from os.path import abspath
 from xml.dom.minidom import parseString
 try:
-    import pwd
+    import pwd as _pwd
 except ImportError:
     pwd = None
+else:
+    pwd = _pwd
 
 from zope.interface.verify import verifyObject
 
