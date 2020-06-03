@@ -454,15 +454,27 @@ class FileObserverTests(LogPublisherTestCaseMixin,
             # So only do this after changing the timezone.
 
             # Compute a POSIX timestamp for a certain date and time that is
-            # known to occur at a time when daylight saving time is in effect.
-            localDaylightTuple = (2006, 6, 30, 0, 0, 0, 4, 181, 1)
-            daylight = time.mktime(localDaylightTuple)
-
-            # Compute a POSIX timestamp for a certain date and time that is
             # known to occur at a time when daylight saving time is not in
             # effect.
             localStandardTuple = (2007, 1, 31, 0, 0, 0, 2, 31, 0)
             standard = time.mktime(localStandardTuple)
+
+            # Compute a POSIX timestamp for a certain date and time that is
+            # known to occur at a time when daylight saving time is in effect.
+            localDaylightTuple = (2006, 6, 30, 0, 0, 0, 4, 181, 1)
+            try:
+                daylight = time.mktime(localDaylightTuple)
+            except OverflowError:
+                # mktime() may raise OverflowError if its tuple is
+                # inconsistent, although many implementations don't
+                # care. The implementation in glibc>=2.28 will raise
+                # if DST is indicated for a zone that doesn't have DST.
+                # We accept either behavior: ignoring the DST flag for those
+                # zones, or raising EOVERFLOW.
+                if daylightOffset == standardOffset:  # DST-less zone?
+                    daylight = standard
+                else:
+                    raise
 
             self.assertEqual(
                 (self.flo.getTimezoneOffset(daylight),
@@ -504,9 +516,10 @@ class FileObserverTests(LogPublisherTestCaseMixin,
         daylight saving time at all (so both summer and winter time test values
         should have the same offset).
         """
-        # Test a timezone that doesn't have DST.  mktime() implementations
-        # available for testing seem happy to produce results for this even
-        # though it's not entirely valid.
+        # Test a timezone that doesn't have DST.  Some mktime()
+        # implementations available for testing seem happy to produce
+        # results for this even though it's not entirely valid. Others
+        # such as glibc>=2.28 return EOVERFLOW.
         self._getTimezoneOffsetTest("Africa/Johannesburg", -7200, -7200)
 
 

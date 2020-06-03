@@ -10,8 +10,6 @@ well.
 """
 
 
-import sys
-
 from twisted.trial.unittest import TestCase, SynchronousTestCase
 from twisted.internet.defer import (
     Deferred, returnValue, inlineCallbacks, CancelledError)
@@ -42,11 +40,6 @@ def f(d):
         d2 = environ["f"](d1)
         d1.callback(None)
         self.assertEqual(self.successResultOf(d2), 14)
-
-
-
-if sys.version_info < (3, 4):
-    StopIterationReturnTests.skip = "Test requires Python 3.4 or greater"
 
 
 

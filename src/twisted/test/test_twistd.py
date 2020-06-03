@@ -23,6 +23,7 @@ else:
     pwd = _pwd
     grp = _grp
 
+from unittest import skipIf
 from zope.interface import implementer
 from zope.interface.verify import verifyObject
 
@@ -1850,6 +1851,8 @@ class UnixAppLoggerTests(unittest.TestCase):
 
 
 
+@skipIf(_twistd_unix is None,
+        "twistd unix support not available")
 class DaemonizeTests(unittest.TestCase):
     """
     Tests for L{_twistd_unix.UnixApplicationRunner} daemonization.
@@ -2269,8 +2272,3 @@ class ExitWithSignalTests(unittest.TestCase):
         twistd.runApp(self.config)
         self.assertEquals(self.fakeKillArgs[0], os.getpid())
         self.assertEquals(self.fakeKillArgs[1], signal.SIGINT)
-
-
-
-if _twistd_unix is None:
-    DaemonizeTests.skip = "twistd unix support not available"

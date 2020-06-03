@@ -11,6 +11,7 @@ this code is arranged.
 """
 
 
+from unittest import skipIf
 from twisted.trial import unittest, util
 from twisted.internet import reactor, protocol, defer
 
@@ -151,10 +152,10 @@ class ErrorTest(unittest.SynchronousTestCase):
 
 
 
+@skipIf(True, "skipping this test")
 class TestSkipTestCase(unittest.SynchronousTestCase):
     pass
 
-TestSkipTestCase.skip = "skipping this test"
 
 
 class DelayedCall(unittest.TestCase):
