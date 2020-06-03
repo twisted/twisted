@@ -35,30 +35,13 @@ from twisted.cred.credentials import IUsernamePassword, ISSHPrivateKey
 from twisted.cred.error import UnauthorizedLogin, UnhandledCredentials
 from twisted.internet import defer
 from twisted.python import failure, reflect
+from twisted.plugins.cred_unix import verifyCryptedPassword
 from twisted.python.deprecate import deprecatedModuleAttribute
 from twisted.python.util import runAsEffectiveUser
 from twisted.python.filepath import FilePath
 from twisted.logger import Logger
 
 _log = Logger()
-
-
-
-def verifyCryptedPassword(crypted, pw):
-    """
-    Check that the password, when crypted, matches the stored crypted password.
-
-    @param crypted: The stored crypted password.
-    @type crypted: L{str}
-    @param pw: The password the user has given.
-    @type pw: L{str}
-
-    @rtype: L{bool}
-    """
-    try:
-        return crypt.crypt(pw, crypted) == crypted
-    except OSError:
-        return False
 
 
 
