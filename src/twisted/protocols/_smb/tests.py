@@ -19,7 +19,6 @@ from twisted.internet.defer import Deferred
 from twisted.python.failure import Failure
 from zope.interface import implementer
 
-
 log = Logger()
 observers = [textFileLogObserver(sys.stdout)]
 globalLogBeginner.beginLoggingTo(observers)
@@ -27,7 +26,6 @@ globalLogBeginner.beginLoggingTo(observers)
 
 
 class TestBase(unittest.TestCase):
-
     def test_base_pack(self):
         data = struct.pack("<HBH", 525, 24, 17) + b'bob'
         t = base.nstruct("one:H two:B three:H")
@@ -45,6 +43,7 @@ class TestBase(unittest.TestCase):
         def recv(x):
             global rdata
             rdata = x
+
         pr.packetReceived = recv
         # send fake packet
         pr.sendPacket(b'bur ble')
@@ -124,23 +123,15 @@ CHALLENGE = b'&z\xd3>Cu\xdd+'
 
 
 class TestSecurity(unittest.TestCase):
-
     def test_negotiate(self):
         blob_manager = security_blob.BlobManager("DOMAIN")
         blob_manager.receiveInitialBlob(NEG_PACKET)
         flags = {
-            'Negotiate128',
-            'TargetTypeServer',
-            'RequestTarget',
-            'NegotiateVersion',
-            'NegotiateUnicode',
-            'NegotiateAlwaysSign',
-            'NegotiateSign',
-            'Negotiate56',
-            'NegotiateKeyExchange',
-            'NegotiateExtendedSecurity',
-            'NegotiateNTLM',
-            'NegotiateTargetInfo'}
+            'Negotiate128', 'TargetTypeServer', 'RequestTarget',
+            'NegotiateVersion', 'NegotiateUnicode', 'NegotiateAlwaysSign',
+            'NegotiateSign', 'Negotiate56', 'NegotiateKeyExchange',
+            'NegotiateExtendedSecurity', 'NegotiateNTLM', 'NegotiateTargetInfo'
+        }
         self.assertEqual(blob_manager.manager.flags, flags)
         self.assertIsNone(blob_manager.manager.client_domain)
         self.assertIsNone(blob_manager.manager.workstation)
@@ -151,8 +142,7 @@ class TestSecurity(unittest.TestCase):
         blob_manager.generateChallengeBlob()
         blob_manager.manager.challenge = CHALLENGE
         blob_manager.receiveResp(AUTH_PACKET)
-        self.assertEqual(blob_manager.credential.domain,
-                         "MicrosoftAccount")
+        self.assertEqual(blob_manager.credential.domain, "MicrosoftAccount")
         self.assertEqual(blob_manager.credential.username, "user")
         self.assertTrue(blob_manager.credential.checkPassword("password"))
         self.assertFalse(blob_manager.credential.checkPassword("wrong"))
@@ -162,8 +152,7 @@ class TestSecurity(unittest.TestCase):
         with self.assertRaises(base.SMBError):
             manager.receiveToken(b"I'm too short")
         with self.assertRaises(base.SMBError):
-            manager.receiveToken(
-                b"I'm long enough but have an invalid header")
+            manager.receiveToken(b"I'm long enough but have an invalid header")
         with self.assertRaises(base.SMBError):
             manager.receiveToken(b"NTLMSSP\x00\xFF\0\0\0invalid message" +
                                  b"type                             ")
@@ -178,7 +167,6 @@ class TestDisc:
 
 @implementer(ISMBServer)
 class TestAvatar:
-
     def getShare(self, name):
         if name == "share":
             return TestDisc()
@@ -192,9 +180,8 @@ class TestAvatar:
 
 @implementer(portal.IRealm)
 class TestRealm:
-
     def requestAvatar(self, avatarId, mind, interfaces):
-        log.debug("avatarId={a} mind={m}", a=repr(avatarId), m=repr(mind))
+        log.debug("avatarId={a!r} mind={m!r}", a=avatarId, m=mind)
         return (ISMBServer, TestAvatar(), lambda: None)
 
 
@@ -257,7 +244,6 @@ TESTPORT = 5445
 
 
 class SambaClientTests(unittest.TestCase):
-
     def setUp(self):
         # Start the server
         r = TestRealm()
@@ -268,19 +254,16 @@ class SambaClientTests(unittest.TestCase):
         users_checker.addUser(self.username, self.password)
         p.registerChecker(users_checker, credentials.IUsernameHashedPassword)
         self.factory = core.SMBFactory(p)
-        self.port = port = reactor.listenTCP(
-            TESTPORT, self.factory)
+        self.port = port = reactor.listenTCP(TESTPORT, self.factory)
         self.addCleanup(port.stopListening)
 
     def smbclient(self, chat, ignoreRCode=False):
-        return spawn(chat, ["/usr/bin/smbclient",
-                            "\\\\%s\\share" % socket.gethostname(),
-                            self.password,
-                            "-m", "SMB2",
-                            "-U", self.username,
-                            "-I", "127.0.0.1",
-                            "-p", str(TESTPORT),
-                            "-d", "10"],
+        return spawn(chat, [
+            "/usr/bin/smbclient",
+            "\\\\%s\\share" % socket.gethostname(), self.password, "-m",
+            "SMB2", "-U", self.username, "-I", "127.0.0.1", "-p",
+            str(TESTPORT), "-d", "10"
+        ],
                      ignoreRCode=ignoreRCode,
                      usePTY=True)
 

@@ -208,17 +208,18 @@ class NTLMManager(object):
         flags = flags2set(neg.flags)
         log.debug("NTLM NEGOTIATE")
         log.debug("--------------")
-        log.debug("Flags           %r" % list(flags))
+        log.debug("Flags           {flags!r}", flags=flags)
         if 'NegotiateVersion' in flags:
-            log.debug("Version         %d.%d (%d) 0x%02x" %
-                      (neg.v_major, neg.v_minor, neg.v_build, neg.v_protocol))
+            log.debug("Version         {major}.{minor} ({build}) {proto:x}",
+                      major=neg.v_major, minor=neg.v_minor, build=neg.v_build,
+                      proto=neg.v_protocol)
         if 'NegotiateUnicode' not in flags:
             raise base.SMBError("clients must use Unicode")
         if 'NegotiateOemDomainSupplied' in flags and neg.domain_len > 0:
             self.client_domain = \
                 self.token[neg.domain_len:neg.domain_len +
                            neg.domain_offset].decode('utf-16le')
-            log.debug("Client domain   %r" % self.client_domain)
+            log.debug("Client domain   {cd!r}", cd=self.client_domain)
         else:
             self.client_domain = None
         if ('NegotiateOemWorkstationSupplied' in flags
@@ -226,7 +227,7 @@ class NTLMManager(object):
             self.workstation = \
                 self.token[neg.workstation_len:neg.workstation_len +
                            neg.workstation_offset].decode('utf-16le')
-            log.debug("Workstation     %r" % self.workstation)
+            log.debug("Workstation     {wkstn!r}", wkstn=self.workstation)
         else:
             self.workstation = None
         self.flags = DEFAULT_FLAGS & flags
@@ -324,15 +325,16 @@ class NTLMManager(object):
         log.debug("NTLM AUTH")
         log.debug("---------")
         if 'NegotiateVersion' in flags:
-            log.debug("Version         %d.%d (%d) 0x%02x" %
-                      (a.v_major, a.v_minor, a.v_build, a.v_protocol))
-        log.debug("Flags           {flags}", flags=repr(flags))
-        log.debug("User            %r" % user)
-        log.debug("Workstation     %r" % workstation)
-        log.debug("Client domain   %r" % client_domain)
-        log.debug("LM response     {lm}", lm=repr(lm))
-        log.debug("NT response     {nt}", nt=repr(nt))
-        log.debug("ERSK            %r" % ersk)
+            log.debug("Version         {major}.{minor} ({build}) {proto:x}",
+                      major=a.v_major, minor=a.v_minor, build=a.v_build,
+                      proto=a.v_protocol)
+        log.debug("Flags           {flags!r}", flags=flags)
+        log.debug("User            {user!r}", user=user)
+        log.debug("Workstation     {wrkstn!r}", wrkstn=workstation)
+        log.debug("Client domain   {cm!r}", cm=client_domain)
+        log.debug("LM response     {lm!r}", lm=lm)
+        log.debug("NT response     {nt!r}", nt=nt)
+        log.debug("ERSK            {ersk!r}", ersk=ersk)
         self.credential = NTLMCredential(user, client_domain, lm, nt,
                                          self.challenge)
 

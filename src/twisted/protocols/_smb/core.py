@@ -1,7 +1,6 @@
 # -*- test-case-name: twisted.protocols._smb.tests -*-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
-
 """Implement Microsoft's Server Message Block protocol"""
 
 import struct
@@ -159,7 +158,7 @@ class SMBConnection(base.SMBPacketReceiver):
     """
     def __init__(self, factory, addr):
         base.SMBPacketReceiver.__init__(self)
-        log.debug("new SMBConnection from %r" % addr)
+        log.debug("new SMBConnection from {addr!r}", addr=addr)
         self.addr = addr
         self.factory = factory
         self.avatar = None
@@ -200,7 +199,7 @@ class SMBConnection(base.SMBPacketReceiver):
         elif protocol_id != b"\xFESMB":
             self.transport.close()
             log.error("Unknown packet type")
-            log.debug(repr(packet[:64]))
+            log.debug("packet data {data!r}", data=packet[:64])
             return
         begin_struct = "<4xHH4sHHLLQ"
         (hdr_size, self.credit_charge, hdr_status, self.hdr_command,
@@ -220,13 +219,14 @@ class SMBConnection(base.SMBPacketReceiver):
             self.async_id = 0x00
         log.debug("HEADER")
         log.debug("------")
-        log.debug("protocol ID     %r" % protocol_id)
-        log.debug("size            %d" % hdr_size)
-        log.debug("credit charge   %d" % self.credit_charge)
-        log.debug("status          %r" % hdr_status)
-        log.debug("command         %s (0x%02x)" %
-                  (COMMANDS[self.hdr_command], self.hdr_command))
-        log.debug("credit request  %d" % self.credit_request)
+        log.debug("protocol ID     {pid!r}", pid=protocol_id)
+        log.debug("size            {hs}", hs=hdr_size)
+        log.debug("credit charge   {cc}", cc=self.credit_charge)
+        log.debug("status          {status}", status=hdr_status)
+        log.debug("command         {cmd!r} {cmdn:02x}",
+                  cmd=COMMANDS[self.hdr_command],
+                  cmdn=self.hdr_command)
+        log.debug("credit request  {cr}", cr=self.credit_request)
         s = ""
         if self.is_async:
             s += "ASYNC "
@@ -234,19 +234,20 @@ class SMBConnection(base.SMBPacketReceiver):
             s += "SIGNED "
         if self.is_related:
             s += "RELATED "
-        log.debug("flags           0x%x %s" % (self.hdr_flags, s))
-        log.debug("next command    0x%x" % self.next_command)
-        log.debug("message ID      0x%x" % self.message_id)
-        log.debug("session ID      0x%x" % self.session_id)
+        log.debug("flags           0x{flags:x} {s}", flags=self.hdr_flags, s=s)
+        log.debug("next command    0x{nc:x}", nc=self.next_command)
+        log.debug("message ID      0x{mid:x}", mid=self.message_id)
+        log.debug("session ID      0x{sid:x}", sid=self.session_id)
         if self.is_async:
-            log.debug("async ID        0x%x" % self.async_id)
+            log.debug("async ID        0x{aid:x}", aid=self.async_id)
         else:
-            log.debug("tree ID         0x%x" % self.tree_id)
-        log.debug("signature       %s" % binascii.hexlify(self.signature))
+            log.debug("tree ID         0x{tid:x}", tid=self.tree_id)
+        log.debug("signature       {sig}",
+                  sig=binascii.hexlify(self.signature))
         try:
             name, req_type, resp_type = COMMANDS[self.hdr_command]
         except IndexError:
-            log.error("unknown command 0x%02x" % self.hdr_command)
+            log.error("unknown command 0x{cmd:x}", cmd=self.hdr_command)
             self.error_response(STATUS_NOT_IMPLEMENTED)
         else:
             func = 'smb_' + name
@@ -256,8 +257,8 @@ class SMBConnection(base.SMBPacketReceiver):
                     resp = resp_type()
                     getattr(self, func)(req, resp)
                 else:
-                    log.error("command '%s' not implemented" %
-                              COMMANDS[self.hdr_command][0])
+                    log.error("command '{cmd}' not implemented",
+                              cmd=COMMANDS[self.hdr_command][0])
                     self.error_response(STATUS_NOT_IMPLEMENTED)
             except base.SMBError as e:
                 log.error(str(e))
@@ -317,16 +318,17 @@ class SMBConnection(base.SMBPacketReceiver):
                                  & NEGOTIATE_SIGNING_REQUIRED) > 0
         log.debug("NEGOTIATE")
         log.debug("---------")
-        log.debug("size            %d" % req.size)
-        log.debug("dialect count   %d" % req.dialect_count)
+        log.debug("size            {sz}", sz=req.size)
+        log.debug("dialect count   {dc}", dc=req.dialect_count)
         s = ""
         if self.signing_enabled:
             s += "ENABLED "
         if self.signing_required:
             s += "REQUIRED"
-        log.debug("signing         0x%02x %s" % (req.security_mode, s))
-        log.debug("client UUID     %s" % self.client_uuid)
-        log.debug("dialects        %r" % (["%04x" % x for x in dialects], ))
+        log.debug("signing         0x{sm:02x} {s}", sm=req.security_mode, s=s)
+        log.debug("client UUID     {uuid}", uuid=self.client_uuid)
+        log.debug("dialects        {dlt!r}",
+                  dlt=["%04x" % x for x in dialects])
         self.negotiate_response(dialects)
 
     def error_response(self, ntstatus):
@@ -347,7 +349,7 @@ class SMBConnection(base.SMBPacketReceiver):
                 raise base.SMBError(
                     "min client dialect %04x higher than our max %04x" %
                     (self.dialect, MAX_DIALECT))
-            log.debug("dialect %04x chosen" % self.dialect)
+            log.debug("dialect {dlt:04x} chosen", dlt=self.dialect)
         resp = COMMANDS[0][2]()
         resp.size = 65
         resp.signing = NEGOTIATE_SIGNING_ENABLED
@@ -369,11 +371,11 @@ class SMBConnection(base.SMBPacketReceiver):
                           64 + req.buflen]
         log.debug("SESSION SETUP")
         log.debug("-------------")
-        log.debug("Size             %d" % req.size)
-        log.debug("Security mode    0x%02x" % req.security_mode)
-        log.debug("Capabilities     0x%08x" % req.capabilities)
-        log.debug("Channel          0x%08x" % req.channel)
-        log.debug("Prev. session ID 0x%016x" % req.prev_session_id)
+        log.debug("Size             {sz}", sz=req.size)
+        log.debug("Security mode    0x{sm:08x}", sm=req.security_mode)
+        log.debug("Capabilities     0x{cap:08x}", cap=req.capabilities)
+        log.debug("Channel          0x{chl:08x}", chl=req.channel)
+        log.debug("Prev. session ID 0x{pid:016x}", pid=req.prev_session_id)
         if self.first_session_setup:
             self.blob_manager.receiveInitialBlob(blob)
             resp.buffer = self.blob_manager.generateChallengeBlob()
@@ -480,7 +482,7 @@ class SMBConnection(base.SMBPacketReceiver):
                 # WRITE_OWNER |
                 SYNCHRONIZE)
         else:
-            log.error("unknown share object %r" % (share, ))
+            log.error("unknown share object {share!r}", share=share)
             self.error_response(STATUS_UNSUCCESSFUL)
             return
         resp.size = 16
