@@ -26,6 +26,7 @@ from twisted.python.deprecate import (
     _fullyQualifiedName as fullyQualifiedName,
     _mutuallyExclusiveArguments,
     deprecatedProperty,
+    deprecatedKeywordParameter,
     _passedArgSpec, _passedSignature
 )
 
@@ -732,6 +733,14 @@ class ClassWithDeprecatedProperty(object):
 
 
 
+@deprecatedKeywordParameter(Version('Twisted', 19, 2, 0), 'foo')
+def functionWithDeprecatedParameter(a, b, c=1, foo=2, bar=3):
+    """
+    Function with a deprecated keyword parameter.
+    """
+
+
+
 class DeprecatedDecoratorTests(SynchronousTestCase):
     """
     Tests for deprecated decorators.
@@ -863,13 +872,45 @@ class DeprecatedDecoratorTests(SynchronousTestCase):
         version = Version('Twisted', 8, 0, 0)
         decorator = deprecated(version, replacement=dummyReplacementMethod)
         dummy = decorator(dummyCallable)
-        self.assertEqual(dummy.__doc__,
+        self.assertEqual(
+            dummy.__doc__,
             "\n"
             "    Do nothing.\n\n"
             "    This is used to test the deprecation decorators.\n\n"
             "    Deprecated in Twisted 8.0.0; please use "
             "%s.dummyReplacementMethod instead.\n"
             "    " % (__name__,))
+
+
+    def test_deprecatedKeywordParameter(self):
+
+        message = ("The 'foo' parameter to "
+                   "twisted.python.test.test_deprecate."
+                   "functionWithDeprecatedParameter "
+                   "was deprecated in Twisted 19.2.0")
+
+        with catch_warnings(record=True) as ws:
+            simplefilter('always')
+
+            functionWithDeprecatedParameter(10, 20)
+            self.assertEqual(ws, [])
+
+            functionWithDeprecatedParameter(10, 20, 30)
+            self.assertEqual(ws, [])
+
+            functionWithDeprecatedParameter(10, 20, foo=40)
+            self.assertEqual(len(ws), 1)
+            self.assertEqual(ws[0].category, DeprecationWarning)
+            self.assertEqual(str(ws[0].message), message)
+
+            ws.clear()
+            functionWithDeprecatedParameter(10, 20, bar=50)
+            self.assertEqual(ws, [])
+
+            functionWithDeprecatedParameter(10, 20, 30, 40)
+            self.assertEqual(len(ws), 1)
+            self.assertEqual(ws[0].category, DeprecationWarning)
+            self.assertEqual(str(ws[0].message), message)
 
 
 
