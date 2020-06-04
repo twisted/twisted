@@ -738,7 +738,6 @@ def functionWithDeprecatedParameter(a, b, c=1, foo=2, bar=3):
     """
     Function with a deprecated keyword parameter.
     """
-    pass
 
 
 
