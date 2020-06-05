@@ -10,13 +10,11 @@ An assortment of web server-related utilities.
 import linecache
 
 from twisted.python import urlpath
-from twisted.python.compat import _PY3, unicode, nativeString, escape
+from twisted.python.compat import escape
 from twisted.python.reflect import fullyQualifiedName
-
 from twisted.web import resource
-
-from twisted.web.template import TagLoader, XMLString, Element, renderer
-from twisted.web.template import flattenString
+from twisted.web.template import (Element, TagLoader, XMLString, flattenString,
+                                  renderer)
 
 
 
@@ -36,19 +34,19 @@ def _PRE(text):
 
 
 
-def redirectTo(URL, request):
+def redirectTo(URL: bytes, request) -> bytes:
     """
     Generate a redirect to the given location.
 
     @param URL: A L{bytes} giving the location to which to redirect.
-    @type URL: L{bytes}
 
     @param request: The request object to use to generate the redirect.
     @type request: L{IRequest<twisted.web.iweb.IRequest>} provider
 
-    @raise TypeError: If the type of C{URL} a L{unicode} instead of L{bytes}.
+    @raise TypeError: If the type of C{URL} a L{str} instead of L{bytes}.
 
-    @return: A C{bytes} containing HTML which tries to convince the client agent
+    @return: A L{bytes} containing HTML which tries to convince the client
+        agent
         to visit the new location even if it doesn't respect the I{FOUND}
         response code.  This is intended to be returned from a render method,
         eg::
@@ -56,11 +54,13 @@ def redirectTo(URL, request):
             def render_GET(self, request):
                 return redirectTo(b"http://example.com/", request)
     """
-    if isinstance(URL, unicode) :
+    if isinstance(URL, str):
         raise TypeError("Unicode object not allowed as URL")
     request.setHeader(b"Content-Type", b"text/html; charset=utf-8")
     request.redirect(URL)
-    content =  """
+    # FIXME: The URL should be HTML-escaped.
+    # https://twistedmatrix.com/trac/ticket/9839
+    content = b"""
 <html>
     <head>
         <meta http-equiv=\"refresh\" content=\"0;URL=%(url)s\">
@@ -69,35 +69,51 @@ def redirectTo(URL, request):
     <a href=\"%(url)s\">click here</a>
     </body>
 </html>
-""" % {'url': nativeString(URL)}
-    if _PY3:
-        content = content.encode("utf8")
+""" % {b'url': URL}
     return content
 
 
+
 class Redirect(resource.Resource):
+    """
+    Resource that redirects to a specific URL.
+
+    @ivar url: Redirect target URL to put in the I{Location} response header.
+    @type url: L{bytes}
+    """
     isLeaf = True
 
-    def __init__(self, url):
-        resource.Resource.__init__(self)
+
+    def __init__(self, url: bytes):
+        super().__init__()
         self.url = url
+
 
     def render(self, request):
         return redirectTo(self.url, request)
+
 
     def getChild(self, name, request):
         return self
 
 
+
+# FIXME: This is totally broken, see https://twistedmatrix.com/trac/ticket/9838
 class ChildRedirector(Redirect):
     isLeaf = 0
+
+
     def __init__(self, url):
         # XXX is this enough?
         if ((url.find('://') == -1)
-            and (not url.startswith('..'))
-            and (not url.startswith('/'))):
-            raise ValueError("It seems you've given me a redirect (%s) that is a child of myself! That's not good, it'll cause an infinite redirect." % url)
+                and (not url.startswith('..'))
+                and (not url.startswith('/'))):
+            raise ValueError((
+                "It seems you've given me a redirect (%s) that is a child of"
+                " myself! That's not good, it'll cause an infinite redirect."
+            ) % url)
         Redirect.__init__(self, url)
+
 
     def getChild(self, name, request):
         newUrl = self.url
@@ -107,16 +123,35 @@ class ChildRedirector(Redirect):
         return ChildRedirector(newUrl)
 
 
+
 class ParentRedirect(resource.Resource):
     """
-    I redirect to URLPath.here().
+    Redirect to the nearest directory and strip any query string.
+
+    This generates redirects like::
+
+        /              \u2192  /
+        /foo           \u2192  /
+        /foo?bar       \u2192  /
+        /foo/          \u2192  /foo/
+        /foo/bar       \u2192  /foo/
+        /foo/bar?baz   \u2192  /foo/
+
+    However, the generated I{Location} header contains an absolute URL rather
+    than a path.
+
+    The response is the same regardless of HTTP method.
     """
     isLeaf = 1
-    def render(self, request):
-        return redirectTo(urlpath.URLPath.fromRequest(request).here(), request)
 
-    def getChild(self, request):
-        return self
+
+    def render(self, request) -> bytes:
+        """
+        Respond to all requests by redirecting to nearest directory.
+        """
+        here = str(urlpath.URLPath.fromRequest(request).here()).encode('ascii')
+        return redirectTo(here, request)
+
 
 
 class DeferredResource(resource.Resource):
@@ -402,7 +437,7 @@ class FailureElement(Element):
         """
         Render the exception value as a child of C{tag}.
         """
-        return tag(unicode(self.failure.value).encode('utf8'))
+        return tag(str(self.failure.value).encode('utf8'))
 
 
     @renderer
@@ -424,7 +459,7 @@ def formatFailure(myFailure):
 
     @type myFailure: L{Failure<twisted.python.failure.Failure>}
 
-    @rtype: C{bytes}
+    @rtype: L{bytes}
     @return: A string containing the HTML representation of the given failure.
     """
     result = []
