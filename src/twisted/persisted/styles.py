@@ -6,45 +6,27 @@
 Different styles of persisted objects.
 """
 
-
-# System Imports
-import types
-import pickle
-try:
-    import copy_reg
-except ImportError:
-    import copyreg as copy_reg
 import copy
+import copyreg as copy_reg
 import inspect
-
+import pickle
+import types
 from typing import Dict
-from twisted.python.compat import _PY3, _PYPY
 
-# Twisted Imports
-from twisted.python import log
-from twisted.python import reflect
+from twisted.python import log, reflect
+from twisted.python.compat import _PY3, _PYPY
 
 oldModules = {}  # type: Dict[str, types.ModuleType]
 
 
-try:
-    import cPickle
-except ImportError:
-    cPickle = None
 
-if cPickle is None or cPickle.PicklingError is pickle.PicklingError:
-    _UniversalPicklingError = pickle.PicklingError
-else:
-    class _UniversalPicklingError(pickle.PicklingError,
-                                  cPickle.PicklingError):
-        """
-        A PicklingError catchable by both L{cPickle.PicklingError} and
-        L{pickle.PicklingError} handlers.
-        """
+_UniversalPicklingError = pickle.PicklingError
 
 
-## First, let's register support for some stuff that really ought to
-## be registerable...
+# First, let's register support for some stuff that really ought to
+# be registerable...
+
+
 
 def pickleMethod(method):
     'support function for copy_reg to pickle method refs'
