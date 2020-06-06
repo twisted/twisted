@@ -37,6 +37,7 @@ class PlatformAssumptionsTests(TestCase):
     """
     Test assumptions about platform behaviors.
     """
+
     socketLimit = 8192
 
     def setUp(self):
@@ -78,6 +79,9 @@ class PlatformAssumptionsTests(TestCase):
         return s
 
 
+    @skipIf(platform.getType() == "win32",
+            "Windows requires an unacceptably large amount of resources to "
+            "provoke this behavior in the naive manner.")
     def test_acceptOutOfFiles(self):
         """
         Test that the platform accept(2) call fails with either L{EMFILE} or
@@ -115,10 +119,6 @@ class PlatformAssumptionsTests(TestCase):
         # Make sure that the accept call fails in the way we expect.
         exc = self.assertRaises(socket.error, port.accept)
         self.assertIn(exc.args[0], (EMFILE, ENOBUFS))
-    if platform.getType() == "win32":
-        test_acceptOutOfFiles.skip = (
-            "Windows requires an unacceptably large amount of resources to "
-            "provoke this behavior in the naive manner.")
 
 
 
@@ -224,6 +224,8 @@ class SelectReactorTests(TestCase):
         return self._acceptFailureTest(ECONNABORTED)
 
 
+    @skipIf(platform.getType() == 'win32',
+            "Windows accept(2) cannot generate ENFILE")
     def test_noFilesFromAccept(self):
         """
         Similar to L{test_tooManyFilesFromAccept}, but test the case where
@@ -233,10 +235,10 @@ class SelectReactorTests(TestCase):
         of inodes.
         """
         return self._acceptFailureTest(ENFILE)
-    if platform.getType() == 'win32':
-        test_noFilesFromAccept.skip = "Windows accept(2) cannot generate ENFILE"
 
 
+    @skipIf(platform.getType() == 'win32',
+            "Windows accept(2) cannot generate ENOMEM")
     def test_noMemoryFromAccept(self):
         """
         Similar to L{test_tooManyFilesFromAccept}, but test the case where
@@ -249,11 +251,10 @@ class SelectReactorTests(TestCase):
         memory).
         """
         return self._acceptFailureTest(ENOMEM)
-    if platform.getType() == 'win32':
-        test_noMemoryFromAccept.skip = (
-            "Windows accept(2) cannot generate ENOMEM")
 
 
+    @skipIf(os.environ.get("INFRASTRUCTURE") == "AZUREPIPELINES",
+            "Hangs on Azure Pipelines due to firewall")
     def test_acceptScaling(self):
         """
         L{tcp.Port.doRead} increases the number of consecutive
@@ -295,10 +296,9 @@ class SelectReactorTests(TestCase):
         # accept should be tried next.
         self.assertEqual(port.numberAccepts, 1)
 
-    if os.environ.get("INFRASTRUCTURE") == "AZUREPIPELINES":
-        test_acceptScaling.skip = "Hangs on Azure Pipelines due to firewall"
 
-
+    @skipIf(platform.getType() == 'win32',
+            "Windows accept(2) cannot generate EPERM")
     def test_permissionFailure(self):
         """
         C{accept(2)} returning C{EPERM} is treated as a transient
@@ -342,10 +342,6 @@ class SelectReactorTests(TestCase):
         # This is scaled down to 1 because no accept(2)s returned
         # successfully.
         self.assertEquals(port.numberAccepts, 1)
-
-    if platform.getType() == 'win32':
-        test_permissionFailure.skip = (
-            "Windows accept(2) cannot generate EPERM")
 
 
     def test_unknownSocketErrorRaise(self):

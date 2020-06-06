@@ -12,11 +12,14 @@ import traceback
 import pdb
 import linecache
 
-from twisted.python.compat import _PY3, NativeStringIO
+from traceback import FrameSummary
+from unittest import skipIf
+
+from twisted.python.compat import NativeStringIO
 from twisted.python import reflect
 from twisted.python import failure
 
-from twisted.trial.unittest import SkipTest, SynchronousTestCase
+from twisted.trial.unittest import SynchronousTestCase
 
 
 try:
@@ -56,53 +59,6 @@ class FailureTests(SynchronousTestCase):
         error = f.trap(SystemExit, RuntimeError)
         self.assertEqual(error, RuntimeError)
         self.assertEqual(f.type, NotImplementedError)
-
-
-    def test_trapRaisesWrappedException(self):
-        """
-        If the wrapped C{Exception} is not a subclass of one of the
-        expected types, L{failure.Failure.trap} raises the wrapped
-        C{Exception}.
-        """
-        if not _PY3:
-            raise SkipTest(
-                """
-                Only expected behaviour on Python 3.
-                @see U{http://twisted.readthedocs.io/en/latest/core/howto/python3.html#twisted-python-failure}
-                """
-            )
-
-        exception = ValueError()
-        try:
-            raise exception
-        except:
-            f = failure.Failure()
-
-        untrapped = self.assertRaises(ValueError, f.trap, OverflowError)
-        self.assertIs(exception, untrapped)
-
-
-    def test_trapRaisesSelf(self):
-        """
-        If the wrapped C{Exception} is not a subclass of one of the
-        expected types, L{failure.Failure.trap} raises itself.
-        """
-        if _PY3:
-            raise SkipTest(
-                """
-                Only expected behaviour on Python 2.
-                @see U{http://twisted.readthedocs.io/en/latest/core/howto/python3.html#twisted-python-failure}
-                """
-            )
-
-        exception = ValueError()
-        try:
-            raise exception
-        except:
-            f = failure.Failure()
-
-        untrapped = self.assertRaises(failure.Failure, f.trap, OverflowError)
-        self.assertIs(f, untrapped)
 
 
     def test_failureValueFromFailure(self):
@@ -546,10 +502,6 @@ class FailureTests(SynchronousTestCase):
         f.cleanFailure()
         self.assertIsNone(f.value.__traceback__)
 
-    if getattr(BaseException, "__traceback__", None) is None:
-        test_tracebackFromExceptionInPython3.skip = "Python 3 only."
-        test_cleanFailureRemovesTracebackInPython3.skip = "Python 3 only."
-
 
     def test_repr(self):
         """
@@ -738,6 +690,7 @@ class FindFailureTests(SynchronousTestCase):
             self.fail("No exception raised from raiseException!?")
 
 
+    @skipIf(raiser is None, "raiser extension not available")
     def test_failureConstructionWithMungedStackSucceeds(self):
         """
         Pyrex and Cython are known to insert fake stack frames so as to give
@@ -753,21 +706,13 @@ class FindFailureTests(SynchronousTestCase):
             self.fail("No exception raised from extension?!")
 
 
-    if raiser is None:
-        skipMsg = "raiser extension not available"
-        test_failureConstructionWithMungedStackSucceeds.skip = skipMsg
-
-
 
 # On Python 3.5, extract_tb returns "FrameSummary" objects, which are almost
 # like the old tuples. This being different does not affect the actual tests
 # as we are testing that the input works, and that extract_tb returns something
 # reasonable.
-if sys.version_info < (3, 5):
-    _tb = lambda fn, lineno, name, text: (fn, lineno, name, text)
-else:
-    from traceback import FrameSummary
-    _tb = lambda fn, lineno, name, text: FrameSummary(fn, lineno, name)
+def _tb(fn, lineno, name, text):
+    return FrameSummary(fn, lineno, name)
 
 
 

@@ -27,7 +27,7 @@ from unittest import skipIf
 from zope.interface import implementer
 from zope.interface.verify import verifyObject
 
-from twisted.trial import unittest
+from twisted.trial.unittest import TestCase
 from twisted.test.test_process import MockOS
 
 from twisted import plugin, logger, internet
@@ -45,43 +45,25 @@ from twisted.python.components import Componentized
 from twisted.python import util
 from twisted.python.log import (ILogObserver as LegacyILogObserver,
                                 textFromEventDict)
+from twisted.python.reflect import requireModule
 from twisted.python.runtime import platformType
 from twisted.python.usage import UsageError
 from twisted.python.fakepwd import UserDatabase
 from twisted.scripts import twistd
 
-try:
-    from twisted.scripts import _twistd_unix
-except ImportError:
-    _twistd_unix = None
-else:
+
+
+_twistd_unix = requireModule('twistd.scripts._twistd_unix')
+if _twistd_unix:
     from twisted.scripts._twistd_unix import checkPID
     from twisted.scripts._twistd_unix import UnixApplicationRunner
     from twisted.scripts._twistd_unix import UnixAppLogger
 
 
-try:
-    from twisted.python import syslog
-except ImportError:
-    syslog = None
-
-
-try:
-    import profile
-except ImportError:
-    profile = None
-
-
-try:
-    import pstats
-    import cProfile
-except ImportError:
-    cProfile = None
-
-if getattr(os, 'setuid', None) is None:
-    setuidSkip = "Platform does not support --uid/--gid twistd options."
-else:
-    setuidSkip = None
+syslog = requireModule('twistd.python.syslog')
+profile = requireModule('profile')
+pstats = requireModule('pstats')
+cProfile = requireModule('cProfile')
 
 
 
@@ -175,7 +157,7 @@ class CrippledApplicationRunner(twistd._SomeApplicationRunner):
 
 
 
-class ServerOptionsTests(unittest.TestCase):
+class ServerOptionsTests(TestCase):
     """
     Non-platform-specific tests for the platform-specific ServerOptions class.
     """
@@ -295,6 +277,7 @@ class ServerOptionsTests(unittest.TestCase):
             self.assertIn(profiler, helpOutput)
 
 
+    @skipIf(not _twistd_unix, "twistd unix not available")
     def test_defaultUmask(self):
         """
         The default value for the C{umask} option is L{None}.
@@ -303,6 +286,7 @@ class ServerOptionsTests(unittest.TestCase):
         self.assertIsNone(config['umask'])
 
 
+    @skipIf(not _twistd_unix, "twistd unix not available")
     def test_umask(self):
         """
         The value given for the C{umask} option is parsed as an octal integer
@@ -315,6 +299,7 @@ class ServerOptionsTests(unittest.TestCase):
         self.assertEqual(config['umask'], 83)
 
 
+    @skipIf(not _twistd_unix, "twistd unix not available")
     def test_invalidUmask(self):
         """
         If a value is given for the C{umask} option which cannot be parsed as
@@ -323,10 +308,6 @@ class ServerOptionsTests(unittest.TestCase):
         config = twistd.ServerOptions()
         self.assertRaises(UsageError, config.parseOptions,
                           ['--umask', 'abcdef'])
-
-    if _twistd_unix is None:
-        msg = "twistd unix not available"
-        test_defaultUmask.skip = test_umask.skip = test_invalidUmask.skip = msg
 
 
     def test_unimportableConfiguredLogObserver(self):
@@ -386,13 +367,11 @@ class ServerOptionsTests(unittest.TestCase):
 
 
 
-class CheckPIDTests(unittest.TestCase):
+@skipIf(not _twistd_unix, "twistd unix not available")
+class CheckPIDTests(TestCase):
     """
     Tests for L{checkPID}.
     """
-    if _twistd_unix is None:
-        skip = "twistd unix not available"
-
 
     def test_notExists(self):
         """
@@ -457,7 +436,8 @@ class CheckPIDTests(unittest.TestCase):
         self.assertTrue(e.args[0].startswith("Can't check status of PID"))
 
 
-class TapFileTests(unittest.TestCase):
+
+class TapFileTests(TestCase):
     """
     Test twistd-related functionality that requires a tap file on disk.
     """
@@ -532,7 +512,7 @@ class TestApplicationRunner(app.ApplicationRunner):
 
 
 
-class ApplicationRunnerTests(unittest.TestCase):
+class ApplicationRunnerTests(TestCase):
     """
     Non-platform-specific tests for the platform-specific ApplicationRunner.
     """
@@ -649,6 +629,8 @@ class ApplicationRunnerTests(unittest.TestCase):
              ('privileges', False, uid, gid), 'startService', 'reactor'])
 
 
+    @skipIf(not getattr(os, 'setuid', None),
+            "Platform does not support --uid/--gid twistd options.")
     def test_applicationStartsWithConfiguredNumericIDs(self):
         """
         L{postApplication} should change the UID and GID to the values
@@ -660,9 +642,10 @@ class ApplicationRunnerTests(unittest.TestCase):
         gid = 4321
         self._applicationStartsWithConfiguredID(
             ["--uid", str(uid), "--gid", str(gid)], uid, gid)
-    test_applicationStartsWithConfiguredNumericIDs.skip = setuidSkip
 
 
+    @skipIf(not getattr(os, 'setuid', None),
+            "Platform does not support --uid/--gid twistd options.")
     def test_applicationStartsWithConfiguredNameIDs(self):
         """
         L{postApplication} should change the UID and GID to the values
@@ -677,7 +660,6 @@ class ApplicationRunnerTests(unittest.TestCase):
         patchUserDatabase(self.patch, user, uid, group, gid)
         self._applicationStartsWithConfiguredID(
             ["--uid", user, "--gid", group], uid, gid)
-    test_applicationStartsWithConfiguredNameIDs.skip = setuidSkip
 
 
     def test_startReactorRunsTheReactor(self):
@@ -774,7 +756,8 @@ class ApplicationRunnerTests(unittest.TestCase):
 
 
 
-class UnixApplicationRunnerSetupEnvironmentTests(unittest.TestCase):
+@skipIf(not _twistd_unix, "twistd unix not available")
+class UnixApplicationRunnerSetupEnvironmentTests(TestCase):
     """
     Tests for L{UnixApplicationRunner.setupEnvironment}.
 
@@ -794,8 +777,6 @@ class UnixApplicationRunnerSetupEnvironmentTests(unittest.TestCase):
         by a call to L{_twistd_unix.daemonize} (patched for this TestCase with
         L{UnixApplicationRunnerSetupEnvironmentTests}.
     """
-    if _twistd_unix is None:
-        skip = "twistd unix not available"
 
     unset = object()
 
@@ -924,13 +905,12 @@ class UnixApplicationRunnerSetupEnvironmentTests(unittest.TestCase):
         self.assertEqual(self.mask, 0o077)
 
 
-class UnixApplicationRunnerStartApplicationTests(unittest.TestCase):
+
+@skipIf(not _twistd_unix, "twistd unix not available")
+class UnixApplicationRunnerStartApplicationTests(TestCase):
     """
     Tests for L{UnixApplicationRunner.startApplication}.
     """
-    if _twistd_unix is None:
-        skip = "twistd unix not available"
-
 
     def test_setupEnvironment(self):
         """
@@ -1074,13 +1054,12 @@ class UnixApplicationRunnerStartApplicationTests(unittest.TestCase):
         self.assertEqual(expectedWarning, warningsShown[0]["message"])
 
 
-class UnixApplicationRunnerRemovePIDTests(unittest.TestCase):
+
+@skipIf(not _twistd_unix, "twistd unix not available")
+class UnixApplicationRunnerRemovePIDTests(TestCase):
     """
     Tests for L{UnixApplicationRunner.removePID}.
     """
-    if _twistd_unix is None:
-        skip = "twistd unix not available"
-
 
     def test_removePID(self):
         """
@@ -1170,11 +1149,12 @@ class DummyReactor(object):
 
 
 
-class AppProfilingTests(unittest.TestCase):
+class AppProfilingTests(TestCase):
     """
     Tests for L{app.AppProfiler}.
     """
 
+    @skipIf(not profile, "profile module not available")
     def test_profile(self):
         """
         L{app.ProfileRunner.run} should call the C{run} method of the reactor
@@ -1193,9 +1173,6 @@ class AppProfilingTests(unittest.TestCase):
             data = f.read()
         self.assertIn("DummyReactor.run", data)
         self.assertIn("function calls", data)
-
-    if profile is None:
-        test_profile.skip = "profile module not available"
 
 
     def _testStats(self, statsClass, profile):
@@ -1216,6 +1193,7 @@ class AppProfilingTests(unittest.TestCase):
         self.assertIn("(run)", data)
 
 
+    @skipIf(not profile, "profile module not available")
     def test_profileSaveStats(self):
         """
         With the C{savestats} option specified, L{app.ProfileRunner.run}
@@ -1232,9 +1210,6 @@ class AppProfilingTests(unittest.TestCase):
 
         self.assertTrue(reactor.called)
         self._testStats(pstats.Stats, config['profile'])
-
-    if profile is None:
-        test_profileSaveStats.skip = "profile module not available"
 
 
     def test_withoutProfile(self):
@@ -1256,6 +1231,7 @@ class AppProfilingTests(unittest.TestCase):
             sys.modules.update(savedModules)
 
 
+    @skipIf(not profile, "profile module not available")
     def test_profilePrintStatsError(self):
         """
         When an error happens during the print of the stats, C{sys.stdout}
@@ -1276,10 +1252,8 @@ class AppProfilingTests(unittest.TestCase):
         self.assertRaises(RuntimeError, profiler.run, reactor)
         self.assertIs(sys.stdout, oldStdout)
 
-    if profile is None:
-        test_profilePrintStatsError.skip = "profile module not available"
 
-
+    @skipIf(not cProfile, "cProfile module not available")
     def test_cProfile(self):
         """
         L{app.CProfileRunner.run} should call the C{run} method of the
@@ -1299,10 +1273,8 @@ class AppProfilingTests(unittest.TestCase):
         self.assertIn("run", data)
         self.assertIn("function calls", data)
 
-    if cProfile is None:
-        test_cProfile.skip = "cProfile module not available"
 
-
+    @skipIf(not cProfile, "cProfile module not available")
     def test_cProfileSaveStats(self):
         """
         With the C{savestats} option specified,
@@ -1320,9 +1292,6 @@ class AppProfilingTests(unittest.TestCase):
 
         self.assertTrue(reactor.called)
         self._testStats(pstats.Stats, config['profile'])
-
-    if cProfile is None:
-        test_cProfileSaveStats.skip = "cProfile module not available"
 
 
     def test_withoutCProfile(self):
@@ -1380,7 +1349,7 @@ def _patchTextFileLogObserver(patch):
     Patch L{logger.textFileLogObserver} to record every call and keep a
     reference to the passed log file for tests.
 
-    @param patch: a callback for patching (usually L{unittest.TestCase.patch}).
+    @param patch: a callback for patching (usually L{TestCase.patch}).
 
     @return: the list that keeps track of the log files.
     @rtype: C{list}
@@ -1416,7 +1385,7 @@ def _setupSyslog(testCase):
 
 
 
-class AppLoggerTests(unittest.TestCase):
+class AppLoggerTests(TestCase):
     """
     Tests for L{app.AppLogger}.
 
@@ -1578,6 +1547,8 @@ class AppLoggerTests(unittest.TestCase):
         self.assertEqual(nonlogs, [])
 
 
+    @skipIf(not _twistd_unix, "twistd unix not available")
+    @skipIf(not syslog, "syslog not available")
     def test_configuredLogObserverBeatsSyslog(self):
         """
         C{--logger} takes precedence over a C{--syslog} command line
@@ -1589,11 +1560,6 @@ class AppLoggerTests(unittest.TestCase):
                                                         {"syslog": True},
                                                         UnixAppLogger))
         self.assertEqual(logs, [])
-
-    if _twistd_unix is None or syslog is None:
-        test_configuredLogObserverBeatsSyslog.skip = (
-            "Not on POSIX, or syslog not available."
-        )
 
 
     def test_configuredLogObserverBeatsLogfile(self):
@@ -1722,16 +1688,14 @@ class AppLoggerTests(unittest.TestCase):
 
 
 
-class UnixAppLoggerTests(unittest.TestCase):
+@skipIf(not _twistd_unix, "twistd unix not available")
+class UnixAppLoggerTests(TestCase):
     """
     Tests for L{UnixAppLogger}.
 
     @ivar signals: list of signal handlers installed.
     @type signals: C{list}
     """
-    if _twistd_unix is None:
-        skip = "twistd unix not available"
-
 
     def setUp(self):
         """
@@ -1834,6 +1798,7 @@ class UnixAppLoggerTests(unittest.TestCase):
         self.assertEqual(logFiles[0].path, os.path.abspath("twistd.log"))
 
 
+    @skipIf(not _twistd_unix, "twistd unix not available")
     def test_getLogObserverSyslog(self):
         """
         If C{syslog} is set to C{True}, L{UnixAppLogger._getLogObserver} starts
@@ -1846,14 +1811,10 @@ class UnixAppLoggerTests(unittest.TestCase):
         observer({"a": "b"})
         self.assertEqual(logs, ["test-prefix", {"a": "b"}])
 
-    if syslog is None:
-        test_getLogObserverSyslog.skip = "Syslog not available"
 
 
-
-@skipIf(_twistd_unix is None,
-        "twistd unix support not available")
-class DaemonizeTests(unittest.TestCase):
+@skipIf(not _twistd_unix, "twistd unix support not available")
+class DaemonizeTests(TestCase):
     """
     Tests for L{_twistd_unix.UnixApplicationRunner} daemonization.
     """
@@ -2194,7 +2155,7 @@ def stubApplicationRunnerFactoryCreator(signum):
 
 
 
-class ExitWithSignalTests(unittest.TestCase):
+class ExitWithSignalTests(TestCase):
 
     """
     Tests for L{twisted.application.app._exitWithSignal}.

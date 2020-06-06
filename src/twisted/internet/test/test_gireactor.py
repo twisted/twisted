@@ -8,6 +8,7 @@ GI/GTK3 reactor tests.
 
 import os
 import sys
+from unittest import skipIf
 try:
     from twisted.internet import gireactor
     from gi.repository import Gio
@@ -91,6 +92,8 @@ class GApplicationRegistrationTests(ReactorBuilder, TestCase):
         self.runReactor(app, reactor)
 
 
+    @skipIf(gtk3reactor is None,
+            "Gtk unavailable (may require running with X11 DISPLAY env set)")
     def test_gtkApplicationActivate(self):
         """
         L{Gtk.Application} instances can be registered with a gtk3reactor.
@@ -102,10 +105,6 @@ class GApplicationRegistrationTests(ReactorBuilder, TestCase):
             flags=Gio.ApplicationFlags.FLAGS_NONE)
 
         self.runReactor(app, reactor)
-
-    if gtk3reactor is None:
-        test_gtkApplicationActivate.skip = (
-            "Gtk unavailable (may require running with X11 DISPLAY env set)")
 
 
     def test_portable(self):
@@ -222,8 +221,8 @@ class PygtkCompatibilityTests(TestCase):
 
     def test_compatibilityLayer(self):
         """
-        If compatibility layer is present, importing gobject uses the gi
-        compatibility layer.
+        If compatibility layer is present, importing gobject uses
+        the gi compatibility layer.
         """
         if "gi.pygtkcompat" not in sys.modules:
             raise SkipTest("This version of gi doesn't include pygtkcompat.")
@@ -237,6 +236,8 @@ class Gtk3ReactorTests(TestCase):
     Tests for L{gtk3reactor}.
     """
 
+    @skipIf(platform.getType() != "posix" or platform.isMacOSX(),
+            "This test is only relevant when using X11")
     def test_requiresDISPLAY(self):
         """
         On X11, L{gtk3reactor} is unimportable if the C{DISPLAY} environment
@@ -251,7 +252,5 @@ class Gtk3ReactorTests(TestCase):
                                     __import__, "twisted.internet.gtk3reactor")
             self.assertEqual(
                 exc.args[0],
-                "Gtk3 requires X11, and no DISPLAY environment variable is set")
-
-    if platform.getType() != "posix" or platform.isMacOSX():
-        test_requiresDISPLAY.skip = "This test is only relevant when using X11"
+                "Gtk3 requires X11, and no DISPLAY environment "
+                "variable is set")
