@@ -6,6 +6,8 @@ base classes for SMB networking
 """
 
 import struct
+import attr
+import uuid as uuid_mod
 
 from twisted.internet import protocol
 from twisted.logger import Logger
@@ -40,6 +42,181 @@ def u2nt_time(epoch):
     @rtype: L{int}
     """
     return int(epoch * 10000000.0) + 116444736000000000
+
+
+
+SMB_METADATA = '__smb_metadata'
+
+
+
+def byte(default=0):
+    """an 8-bit unsigned integer
+
+    wraps L{attr.ib} with appropriate metadata for use with L{pack} and
+    L{unpack}
+    """
+    return attr.ib(default=default, type=int, metadata={SMB_METADATA: "B"})
+
+
+
+def short(default=0):
+    """a 16-bit unsigned integer"""
+    return attr.ib(default=default, type=int, metadata={SMB_METADATA: "H"})
+
+
+
+def int32(default=0):
+    """a 32-bit unsigned integer"""
+    return attr.ib(default=default, type=int, metadata={SMB_METADATA: "I"})
+
+
+
+def long(default=0):
+    """an 64-bit unsigned integer"""
+    return attr.ib(default=default, type=int, metadata={SMB_METADATA: "Q"})
+
+
+
+def single(default=0.0):
+    """a 32-bit float"""
+    return attr.ib(default=default, type=float, metadata={SMB_METADATA: "f"})
+
+
+
+def double(default=0.0):
+    """a 64-bit float"""
+    return attr.ib(default=default, type=float, metadata={SMB_METADATA: "d"})
+
+
+
+def octets(length=None, default=None):
+    """
+    a group of octets (bytes). Either a length or a default must be given.
+    If a length, the default is all zeros, if a default, the length is taken
+    from the default.
+
+    @param length: number of bytes
+    @type length: L{int}
+
+    @type default: L{bytes}
+    """
+    assert length or default
+    if length is None:
+        length = len(default)
+    if default is None:
+        default = b'\0' * length
+    return attr.ib(default=default,
+                   type=bytes,
+                   metadata={SMB_METADATA: str(length) + "s"})
+
+
+
+NULL_UUID = uuid_mod.UUID("00000000-0000-0000-0000-000000000000")
+NEW_UUID = attr.Factory(uuid_mod.uuid4)
+
+
+
+def uuid(default=NULL_UUID):
+    """a universial unique ID"""
+    default = _conv_uuid(default)
+    return attr.ib(default=default,
+                   metadata={SMB_METADATA: "16s"},
+                   type=uuid_mod.UUID,
+                   converter=_conv_uuid)
+
+
+
+def _conv_uuid(x):
+    if type(x) is str:
+        return uuid_mod.UUID(x)
+    elif type(x) is bytes:
+        return uuid_mod.UUID(bytes_le=x)
+    else:
+        return x
+
+
+
+def pack(obj):
+    """
+    pack an object into binary data. The object must have been decorated
+    with L{attr.s} and the fields set with the appropriate metadata using
+    the helpers in this module
+
+    @rtype: L{bytes}
+    """
+    strct = _get_struct(type(obj))
+    args = tuple(_conv_arg(obj, i) for i in attr.fields(type(obj)))
+    return strct.pack(*args)
+
+
+
+def _conv_arg(obj, attrib):
+    val = getattr(obj, attrib.name)
+    if type(val) is uuid_mod.UUID:
+        val = val.bytes_le
+    return val
+
+
+
+def unpack(cls, data, offset=0, remainder=0):
+    """
+    unpack binary data into an object.
+
+    @param cls: the class, must be decorated with L{attr.s} and have
+    members with the appropriate metadata using the helpers from this
+    module.
+    @type cls: L{type}
+
+    @param data: the data to unpack
+    @type data: L{bytes}
+
+    @param remainder: what to do with remaining data if longer than required
+                      to fill C{cls}
+                      - C{0} ignore it
+                      - C{1} throw a L{SMBError}
+                      - C{2} return offset into data
+                        where remainder begins as second item of tuple
+                      - C{3} return remaining data as second item of tuple
+    @type remainder: L{int}
+
+    @param offset: offset into data to begin from
+    @type offset: L{int}
+
+    @return: an instance of C{cls}, or a 2-tuple, first item the former,
+             second as determined by C{remainder}
+    """
+    strct = _get_struct(cls)
+    if remainder == 1 and strct.size + offset < len(data):
+        raise SMBError("unexpected remaining data")
+    ret = strct.unpack_from(data, offset=offset)
+    fields = attr.fields(cls)
+    assert len(fields) == len(ret)
+    kwargs = {}
+    for i in range(len(ret)):
+        val = ret[i]
+        if fields[i].type is uuid_mod.UUID:
+            val = uuid_mod.UUID(bytes_le=val)
+        kwargs[fields[i].name] = val
+    obj = cls(**kwargs)
+    if remainder <= 1:
+        return obj
+    elif remainder == 2:
+        return (obj, offset + strct.size)
+    else:
+        return (obj, data[offset + strct.size:])
+
+
+
+def _get_struct(cls):
+    try:
+        # we use classes to hold cache of Structs as precompiling is more
+        # efficient
+        strct = cls._struct
+    except AttributeError:
+        strct = struct.Struct("<" + "".join(i.metadata[SMB_METADATA]
+                                            for i in attr.fields(cls)))
+        cls._struct = strct
+    return strct
 
 
 

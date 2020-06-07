@@ -6,6 +6,7 @@ import calendar
 import io
 import socket
 import re
+import attr
 
 from twisted.protocols._smb import base, core, security_blob, ntlm
 from twisted.protocols._smb.interfaces import (ISMBServer, IFilesystem)
@@ -25,16 +26,30 @@ globalLogBeginner.beginLoggingTo(observers)
 
 
 
+@attr.s
+class FakeStruct:
+    one = base.short()
+    two = base.byte()
+    three = base.single(4.5)
+    four = base.octets(3)
+
+
+
+@attr.s
+class FakeStruct2:
+    i = base.short()
+    b = base.byte()
+    s = base.octets(3)
+
+
+
 class TestBase(unittest.TestCase):
     def test_base_pack(self):
-        data = struct.pack("<HBH", 525, 24, 17) + b'bob'
-        t = base.nstruct("one:H two:B three:H")
-        r = t()
-        r.one = 525
-        r.two = 24
-        r.three = 17
-        r.buffer = b'bob'
-        self.assertEqual(r.pack(), data)
+        data = struct.pack("<HBf3s", 525, 42, 4.5, b'bob')
+        r = FakeStruct(one=525)
+        r.two = 42
+        r.four = b'bob'
+        self.assertEqual(base.pack(r), data)
 
     def test_smb_packet_receiver(self):
         pr = base.SMBPacketReceiver()
@@ -62,12 +77,27 @@ class TestBase(unittest.TestCase):
         self.assertTrue(n < 2**32)
 
     def test_unpack(self):
-        t = base.nstruct("i:H b:B s:3s")
-        r = t(b'\x0B\x02\x0Etwisted')
-        self.assertEqual(r.i, 523)
-        self.assertEqual(r.b, 0x0E)
-        self.assertEqual(r.s, b'twi')
-        self.assertEqual(r.buffer, b'sted')
+        DATA = b'\x0B\x02\x0Etwisted'
+        with self.subTest(remainder=0):
+            r = base.unpack(FakeStruct2, DATA, remainder=0)
+            self.assertEqual(r.i, 523)
+            self.assertEqual(r.b, 0x0E)
+            self.assertEqual(r.s, b'twi')
+        with self.subTest(remainder=1):
+            with self.assertRaises(base.SMBError):
+                r = base.unpack(FakeStruct2, DATA, remainder=1)
+        with self.subTest(remainder=2):
+            r, rem = base.unpack(FakeStruct2, DATA, remainder=2)
+            self.assertEqual(r.i, 523)
+            self.assertEqual(r.b, 0x0E)
+            self.assertEqual(r.s, b'twi')
+            self.assertEqual(rem, 6)
+        with self.subTest(remainder=3):
+            r, rem = base.unpack(FakeStruct2, DATA, remainder=3)
+            self.assertEqual(r.i, 523)
+            self.assertEqual(r.b, 0x0E)
+            self.assertEqual(r.s, b'twi')
+            self.assertEqual(rem, b'sted')
 
     def test_u2nt_time(self):
         s = b'\x46\x63\xdc\x91\xd2\x29\xd6\x01'

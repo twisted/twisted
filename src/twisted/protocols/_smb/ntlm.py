@@ -211,7 +211,9 @@ class NTLMManager(object):
         log.debug("Flags           {flags!r}", flags=flags)
         if 'NegotiateVersion' in flags:
             log.debug("Version         {major}.{minor} ({build}) {proto:x}",
-                      major=neg.v_major, minor=neg.v_minor, build=neg.v_build,
+                      major=neg.v_major,
+                      minor=neg.v_minor,
+                      build=neg.v_build,
                       proto=neg.v_protocol)
         if 'NegotiateUnicode' not in flags:
             raise base.SMBError("clients must use Unicode")
@@ -326,7 +328,9 @@ class NTLMManager(object):
         log.debug("---------")
         if 'NegotiateVersion' in flags:
             log.debug("Version         {major}.{minor} ({build}) {proto:x}",
-                      major=a.v_major, minor=a.v_minor, build=a.v_build,
+                      major=a.v_major,
+                      minor=a.v_minor,
+                      build=a.v_build,
                       proto=a.v_protocol)
         log.debug("Flags           {flags!r}", flags=flags)
         log.debug("User            {user!r}", user=user)
