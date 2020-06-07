@@ -12,7 +12,7 @@ from inspect import getsourcefile
 
 from zope.interface.verify import verifyObject, BrokenMethodImplementation
 
-from twisted.python.compat import _PY3, currentframe
+from twisted.python.compat import currentframe
 from twisted.python.failure import Failure
 from twisted.trial import unittest
 
@@ -275,8 +275,7 @@ def handlerAndBytesIO():
     output = BytesIO()
     stream = output
     template = py_logging.BASIC_FORMAT
-    if _PY3:
-        stream = TextIOWrapper(output, encoding="utf-8", newline="\n")
+    stream = TextIOWrapper(output, encoding="utf-8", newline="\n")
     formatter = py_logging.Formatter(template)
     handler = py_logging.StreamHandler(stream)
     handler.setFormatter(formatter)

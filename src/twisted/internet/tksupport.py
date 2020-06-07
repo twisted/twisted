@@ -30,13 +30,9 @@ fix::
 """
 
 from twisted.internet import task
-from twisted.python.compat import _PY3
 
-if _PY3:
-    import tkinter.simpledialog as tkSimpleDialog
-    import tkinter.messagebox as tkMessageBox
-else:
-    import tkSimpleDialog, tkMessageBox
+import tkinter.simpledialog as tkSimpleDialog
+import tkinter.messagebox as tkMessageBox
 
 
 

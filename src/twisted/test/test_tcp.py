@@ -24,7 +24,6 @@ from twisted.internet import error
 from twisted.internet.address import IPv4Address
 from twisted.internet.interfaces import IHalfCloseableProtocol, IPullProducer
 from twisted.protocols import policies
-from twisted.python.compat import _PY3
 from twisted.python.runtime import platform
 from twisted.test.proto_helpers import AccumulatingProtocol
 
@@ -1149,10 +1148,9 @@ class ProperlyCloseFilesMixin:
         errno expected to result from writing to a closed platform
         socket handle.
         """
-        # Windows and Python 3: returns WSAENOTSOCK
-        # Windows and Python 2: returns EBADF
+        # Windows: returns WSAENOTSOCK
         # Linux, FreeBSD, macOS: returns EBADF
-        if platform.isWindows() and _PY3:
+        if platform.isWindows():
             return hamcrest.equal_to(errno.WSAENOTSOCK)
         return hamcrest.equal_to(errno.EBADF)
 

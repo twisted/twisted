@@ -21,7 +21,7 @@ from twisted import cred
 from twisted.internet import protocol, defer, reactor
 from twisted.protocols import basic
 from twisted.python import log
-from twisted.python.compat import _PY3, iteritems, unicode
+from twisted.python.compat import iteritems, unicode
 
 PORT = 5060
 
@@ -650,7 +650,7 @@ class MessagesParser(basic.LineReceiver):
 
 
     def lineReceived(self, line):
-        if _PY3 and isinstance(line, bytes):
+        if isinstance(line, bytes):
             line = line.decode("utf-8")
 
         if self.state == "firstline":
@@ -726,7 +726,7 @@ class MessagesParser(basic.LineReceiver):
 
     def rawDataReceived(self, data):
         assert self.state in ("body", "invalid")
-        if _PY3 and isinstance(data, bytes):
+        if isinstance(data, bytes):
             data = data.decode("utf-8")
         if self.state == "invalid":
             return

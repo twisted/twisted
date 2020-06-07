@@ -33,7 +33,7 @@ from twisted.cred.checkers import ICredentialsChecker
 from twisted.cred.credentials import IUsernamePassword, ISSHPrivateKey
 from twisted.cred.error import UnauthorizedLogin, UnhandledCredentials
 from twisted.internet import defer
-from twisted.python.compat import _keys, _PY3, _b64decodebytes
+from twisted.python.compat import _keys, _b64decodebytes
 from twisted.python import failure, reflect, log
 from twisted.python.deprecate import deprecatedModuleAttribute
 from twisted.python.util import runAsEffectiveUser
@@ -110,12 +110,8 @@ class UNIXPasswordDatabase:
     def requestAvatarId(self, credentials):
         # We get bytes, but the Py3 pwd module uses str. So attempt to decode
         # it using the same method that CPython does for the file on disk.
-        if _PY3:
-            username = credentials.username.decode(sys.getfilesystemencoding())
-            password = credentials.password.decode(sys.getfilesystemencoding())
-        else:
-            username = credentials.username
-            password = credentials.password
+        username = credentials.username.decode(sys.getfilesystemencoding())
+        password = credentials.password.decode(sys.getfilesystemencoding())
 
         for func in self._getByNameFunctions:
             try:

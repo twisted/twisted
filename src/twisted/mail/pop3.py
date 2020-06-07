@@ -33,7 +33,9 @@ from twisted.mail._except import (
 from twisted.protocols import basic
 from twisted.protocols import policies
 from twisted.python import log
-from twisted.python.compat import _PY3, intToBytes
+from twisted.python.compat import intToBytes
+
+
 
 # Authentication
 @implementer(cred.credentials.IUsernamePassword)
@@ -243,8 +245,7 @@ class _IteratorBuffer(object):
                     self.lines = []
                     self.bufSize = 0
 
-    if not _PY3:
-        next = __next__
+    next = __next__
 
 
 

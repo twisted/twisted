@@ -119,8 +119,8 @@ class TagTests(TestCase):
         L{Comment.__repr__} returns a value which makes it easy to see what's
         in the comment.
         """
-        self.assertEqual(repr(Comment(u"hello there")),
-                          "Comment('hello there')")
+        self.assertEqual(repr(Comment("hello there")),
+                         "Comment('hello there')")
 
 
     def test_cdataReprPy3(self):
@@ -128,7 +128,7 @@ class TagTests(TestCase):
         L{CDATA.__repr__} returns a value which makes it easy to see what's in
         the comment.
         """
-        self.assertEqual(repr(CDATA(u"test data")),
+        self.assertEqual(repr(CDATA("test data")),
                          "CDATA('test data')")
 
 

@@ -16,7 +16,7 @@ from twisted.conch.ssh.common import NS, getNS
 from twisted.internet import defer, protocol, error
 from twisted.python import failure, log
 from twisted.python.compat import (
-    _PY3, range, itervalues, nativeString, networkString)
+    range, itervalues, nativeString, networkString)
 
 
 
@@ -815,8 +815,7 @@ class FileTransferClient(FileTransferBase):
 
     def _cbRealPath(self, result):
         name, longname, attrs = result[0]
-        if _PY3:
-            name = name.decode("utf-8")
+        name = name.decode("utf-8")
         return name
 
 

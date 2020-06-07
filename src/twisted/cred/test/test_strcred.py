@@ -8,8 +8,8 @@ L{twisted.cred.strcred}.
 
 import os
 from typing import Sequence, Type
-from zope.interface import Interface
 from unittest import skipIf
+from zope.interface import Interface
 
 from twisted import plugin
 from twisted.trial.unittest import TestCase
@@ -170,6 +170,7 @@ class AnonymousCheckerTests(TestCase):
 @skipIf(not crypt, "Required module not available: crypt")
 @skipIf(not spwd, "Required module not available: spwd")
 class UnixCheckerTests(TestCase):
+
     users = {
         'admin': 'asdf',
         'alice': 'foo',
@@ -277,12 +278,11 @@ class UnixCheckerTests(TestCase):
 
 
 
+@skipIf(not crypt, "Required module is unavailable: crypt")
 class CryptTests(TestCase):
     """
     L{crypt} has functions for encrypting password.
     """
-    if not crypt:
-        skip = "Required module is unavailable: crypt"
 
     def test_verifyCryptedPassword(self):
         """
@@ -411,22 +411,14 @@ class FileDBCheckerTests(TestCase):
 
 
 
+@skipIf(not requireModule('cryptography'), 'cryptography is not available')
+@skipIf(not requireModule('pyasn1'), 'pyasn1 is not available')
 class SSHCheckerTests(TestCase):
     """
-    Tests for the C{--auth=sshkey:...} checker.  The majority of the tests
-    for the ssh public key database checker are in
+    Tests for the C{--auth=sshkey:...} checker.  The majority of the
+    tests for the ssh public key database checker are in
     L{twisted.conch.test.test_checkers.SSHPublicKeyCheckerTestCase}.
     """
-
-    skip = None
-
-    if requireModule('cryptography') is None:
-        skip = 'cryptography is not available'
-
-    if requireModule('pyasn1') is None:
-        skip = 'pyasn1 is not available'
-
-
     def test_isChecker(self):
         """
         Verifies that strcred.makeChecker('sshkey') returns an object

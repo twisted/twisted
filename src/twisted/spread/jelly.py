@@ -68,6 +68,19 @@ import decimal
 from functools import reduce
 import copy
 import datetime
+from zope.interface import implementer
+
+# Twisted Imports
+from twisted.python.compat import unicode, long, nativeString
+from twisted.python.reflect import namedObject, qual, namedAny
+from twisted.persisted.crefutil import NotKnown, _Tuple, _InstanceMethod
+from twisted.persisted.crefutil import _DictKeyAndValue, _Dereference
+from twisted.persisted.crefutil import _Container
+
+from twisted.spread.interfaces import IJellyable, IUnjellyable
+
+from twisted.python.deprecate import deprecatedModuleAttribute
+from incremental import Version
 
 try:
     from types import (ClassType as _OldStyleClass,
@@ -94,20 +107,6 @@ with warnings.catch_warnings():
         _SetTypes.append(_sets.Set)
         _ImmutableSetTypes.append(_sets.ImmutableSet)
 
-from zope.interface import implementer
-
-# Twisted Imports
-from twisted.python.compat import unicode, long, nativeString
-from twisted.python.reflect import namedObject, qual, namedAny
-from twisted.persisted.crefutil import NotKnown, _Tuple, _InstanceMethod
-from twisted.persisted.crefutil import _DictKeyAndValue, _Dereference
-from twisted.persisted.crefutil import _Container
-
-from twisted.spread.interfaces import IJellyable, IUnjellyable
-
-from twisted.python.compat import _PY3
-from twisted.python.deprecate import deprecatedModuleAttribute
-from incremental import Version
 
 DictTypes = (dict,)
 
@@ -153,15 +152,13 @@ def _createBlank(cls):
     called on it.  If the object is not a type, return C{None}.
 
     @param cls: The type (or class) to create an instance of.
-    @type cls: L{_OldStyleClass}, L{type}, or something else that cannot be
+    @type cls: L{type} or something else that cannot be
         instantiated.
 
     @return: a new blank instance or L{None} if C{cls} is not a class or type.
     """
     if isinstance(cls, type):
         return cls.__new__(cls)
-    if not _PY3 and isinstance(cls, _OldStyleClass):
-        return _OldStyleInstance(cls)
 
 
 
@@ -187,7 +184,7 @@ def _newInstance(cls, state):
 def _maybeClass(classnamep):
     isObject = isinstance(classnamep, type)
 
-    if isObject or ((not _PY3) and isinstance(classnamep, _OldStyleClass)):
+    if isObject:
         classnamep = qual(classnamep)
 
     if not isinstance(classnamep, bytes):
@@ -489,25 +486,21 @@ class _Jellier:
         objType = type(obj)
         if self.taster.isTypeAllowed(qual(objType).encode('utf-8')):
             # "Immutable" Types
-            if ((objType is bytes) or
-                (objType is int) or
-                (objType is long) or
-                (objType is float)):
+            if objType in (bytes, int, long, float):
                 return obj
-            elif objType is types.MethodType:
-                aSelf = obj.__self__ if _PY3 else obj.im_self
-                aFunc = obj.__func__ if _PY3 else obj.im_func
-                aClass = aSelf.__class__ if _PY3 else obj.im_class
+            elif isinstance(obj, types.MethodType):
+                aSelf = obj.__self__
+                aFunc = obj.__func__
+                aClass = aSelf.__class__
                 return [b"method", aFunc.__name__, self.jelly(aSelf),
                         self.jelly(aClass)]
             elif objType is unicode:
                 return [b'unicode', obj.encode('UTF-8')]
-            elif objType is type(None):
+            elif isinstance(obj, type(None)):
                 return [b'None']
-            elif objType is types.FunctionType:
-                return [b'function', obj.__module__ + '.' +
-                        (obj.__qualname__ if _PY3 else obj.__name__)]
-            elif objType is types.ModuleType:
+            elif isinstance(obj, types.FunctionType):
+                return [b'function', obj.__module__ + '.' + obj.__qualname__]
+            elif isinstance(obj, types.ModuleType):
                 return [b'module', obj.__name__]
             elif objType is bool:
                 return [b'boolean', obj and b'true' or b'false']
@@ -684,7 +677,8 @@ class _Unjellier:
             modName = '.'.join(nameSplit[:-1])
             if not self.taster.isModuleAllowed(modName):
                 raise InsecureJelly(
-                    "Module %s not allowed (in type %s)." % (modName, jelTypeText))
+                    "Module {} not allowed (in type {}).".format(
+                     modName, jelTypeText))
             clz = namedObject(jelTypeText)
             if not self.taster.isClassAllowed(clz):
                 raise InsecureJelly("Class %s not allowed." % jelTypeText)
@@ -917,8 +911,6 @@ class _Unjellier:
             category=DeprecationWarning, filename="", lineno=0)
 
         clz = self.unjelly(rest[0])
-        if not _PY3 and type(clz) is not _OldStyleClass:
-            raise InsecureJelly("Legacy 'instance' found with new-style class")
         return self._genericUnjelly(clz, rest[1])
 
 
@@ -942,7 +934,7 @@ class _Unjellier:
                 im = _InstanceMethod(im_name, im_self, im_class)
             else:
                 im = types.MethodType(im_class.__dict__[im_name], im_self,
-                                      *([im_class] * (not _PY3)))
+                                      *([im_class] * (False)))
         else:
             raise TypeError('instance method changed')
         return im

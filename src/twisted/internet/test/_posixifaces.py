@@ -16,17 +16,8 @@ from ctypes import (
 from ctypes.util import find_library
 from typing import Any, List, Tuple
 
-from twisted.python.compat import _PY3, nativeString
+from twisted.python.compat import nativeString, _bytesChr as chr
 
-if _PY3:
-    # Once #6070 is implemented, this can be replaced with the implementation
-    # from that ticket:
-    def chr(i):
-        """
-        Python 3 implementation of Python 2 chr(), i.e. convert an integer to
-        corresponding byte.
-        """
-        return bytes([i])
 
 
 libc = CDLL(find_library("c"))

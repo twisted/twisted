@@ -11,7 +11,6 @@ import signal
 import stat
 import sys
 import warnings
-
 from unittest import skipIf
 
 from twisted.python.runtime import platform
