@@ -29,14 +29,14 @@ class SMBError(Exception):
 
 
 
-def u2nt_time(epoch):
+def unixToNTTime(epoch):
     """
     Convert UNIX epoch time to NT filestamp
     quoting from spec: The FILETIME structure is a 64-bit value
     that represents the number of 100-nanosecond intervals that
     have elapsed since January 1, 1601, Coordinated Universal Time.
 
-    @param epoch: seconds since 1/1/1970
+    @param epoch: seconds since 1970-1-1
     @type epoch: L{float}
 
     @rtype: L{int}

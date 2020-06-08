@@ -359,8 +359,8 @@ class SMBConnection(base.SMBPacketReceiver):
         resp.max_transact = MAX_TRANSACT_SIZE
         resp.max_read = MAX_READ_SIZE
         resp.max_write = MAX_WRITE_SIZE
-        resp.time = base.u2nt_time(time.time())
-        resp.boot_time = base.u2nt_time(self.factory.server_start)
+        resp.time = base.unixToNTTime(time.time())
+        resp.boot_time = base.unixToNTTime(self.factory.server_start)
         resp.offset = 128
         resp.buflen = len(blob)
         resp.buffer = blob

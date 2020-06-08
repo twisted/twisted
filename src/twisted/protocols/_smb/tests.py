@@ -99,18 +99,18 @@ class TestBase(unittest.TestCase):
             self.assertEqual(r.s, b'twi')
             self.assertEqual(rem, b'sted')
 
-    def test_u2nt_time(self):
+    def test_unixToNTTime(self):
         s = b'\x46\x63\xdc\x91\xd2\x29\xd6\x01'
         nttime, = struct.unpack("<Q", s)
         # 2020/5/14 09:32:22.101895
         epoch = calendar.timegm((2020, 5, 14, 9, 32, 22.101895, 0, -1, 0))
-        self.assertEqual(base.u2nt_time(epoch), nttime)
+        self.assertEqual(base.unixToNTTime(epoch), nttime)
 
         s = b'\x24\xba\x1c\x33\x9f\x14\xd6\x01'
         nttime, = struct.unpack("<Q", s)
         # 2020/4/17 10:01:44.388458
         epoch = calendar.timegm((2020, 4, 17, 10, 1, 44.388458, 0, -1, 0))
-        self.assertEqual(base.u2nt_time(epoch), nttime)
+        self.assertEqual(base.unixToNTTime(epoch), nttime)
 
 
 

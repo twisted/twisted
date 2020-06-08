@@ -260,7 +260,7 @@ class NTLMManager(object):
                         AV_DNS_COMPUTER_NAME, socket.getfqdn()) + avpair(
                             AV_DNS_DOMAIN_NAME, b'\0\0') + avpair(
                                 AV_TIMESTAMP,
-                                struct.pack("<Q", base.u2nt_time(
+                                struct.pack("<Q", base.unixToNTTime(
                                     time.time()))) + avpair(AV_EOL, b'')
         else:
             targetinfo = b''
