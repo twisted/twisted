@@ -17,14 +17,7 @@ This is a web server which integrates with the twisted.internet infrastructure.
 import copy
 import os
 import re
-try:
-    from urllib import quote
-except ImportError:
-    from urllib.parse import quote as _quote
-
-    def quote(string, *args, **kwargs):
-        return _quote(
-            string.decode('charmap'), *args, **kwargs).encode('charmap')
+from urllib.parse import quote as _quote
 
 import zlib
 from binascii import hexlify
@@ -76,6 +69,13 @@ string_date_time = http.stringToDatetime
 
 # Support for other methods may be implemented on a per-resource basis.
 supportedMethods = (b'GET', b'HEAD', b'POST')
+
+
+
+def quote(string, *args, **kwargs):
+    return _quote(
+        string.decode('charmap'), *args, **kwargs).encode('charmap')
+
 
 
 def _addressToTuple(addr):
