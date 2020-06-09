@@ -35,6 +35,7 @@ properEnv = dict(os.environ)
 properEnv["PYTHONPATH"] = os.pathsep.join(sys.path)
 
 
+
 class StandardIOTestProcessProtocol(protocol.ProcessProtocol):
     """
     Test helper for collecting output from a child process and notifying

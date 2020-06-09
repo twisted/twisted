@@ -19,12 +19,12 @@ from twisted.python.compat import raw_input
 
 
 
-if getpass.getpass == getpass.unix_getpass:
+if getpass.getpass == getpass.unix_getpass:  # type: ignore[attr-defined]
     try:
-        import termios # hack around broken termios
+        import termios  # hack around broken termios
         termios.tcgetattr, termios.tcsetattr
     except (ImportError, AttributeError):
-        sys.modules['termios'] = None
+        sys.modules['termios'] = None  # type: ignore[assignment]
         reload(getpass)
 
 supportedKeyTypes = dict()

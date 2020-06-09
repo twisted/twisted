@@ -991,4 +991,7 @@ def portCoerce(value):
     if value < 0 or value > 65535:
         raise ValueError("Port number not in range: %s" % (value,))
     return value
-portCoerce.coerceDoc = "Must be an int between 0 and 65535."
+
+
+
+portCoerce.coerceDoc = "Must be an int between 0 and 65535."  # type: ignore[attr-defined]  # noqa

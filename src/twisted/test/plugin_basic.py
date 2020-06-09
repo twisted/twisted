@@ -48,4 +48,3 @@ class ThirdTestPlugin:
     @staticmethod
     def test():
         pass
-

@@ -2185,7 +2185,7 @@ class CookieAgentTests(TestCase, CookieTestsMixin, FakeReactorAndConnectMixin,
 
 
 
-class Decoder1(proxyForInterface(IResponse)):
+class Decoder1(proxyForInterface(IResponse)):  # type: ignore[misc]
     """
     A test decoder to be used by L{client.ContentDecoderAgent} tests.
     """

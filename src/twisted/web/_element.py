@@ -3,9 +3,10 @@
 # See LICENSE for details.
 
 
+from typing import Optional
 from zope.interface import implementer
 
-from twisted.web.iweb import IRenderable
+from twisted.web.iweb import IRenderable, ITemplateLoader
 from twisted.web.error import MissingRenderMethod, UnexposedMethodError
 from twisted.web.error import MissingTemplateLoader
 
@@ -150,7 +151,7 @@ class Element(object):
     @ivar loader: The factory which will be used to load documents to
         return from C{render}.
     """
-    loader = None
+    loader = None  # type: Optional[ITemplateLoader]
 
     def __init__(self, loader=None):
         if loader is not None:

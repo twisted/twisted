@@ -645,7 +645,7 @@ class SuxElementStream(sux.XMLParser):
         for k, v in list(attributes.items()):
             if k.startswith("xmlns"):
                 x, p = _splitPrefix(k)
-                if (x is None): # I.e.  default declaration
+                if (x is None):  # I.e.  default declaration
                     defaultUri = v
                 else:
                     localPrefixes[p] = v
@@ -664,7 +664,7 @@ class SuxElementStream(sux.XMLParser):
 
         # Fix up name
         prefix, name = _splitPrefix(name)
-        if prefix is None: # This element is in the default namespace
+        if prefix is None:  # This element is in the default namespace
             uri = defaultUri
         else:
             # Find the URI for the prefix
@@ -699,13 +699,13 @@ class SuxElementStream(sux.XMLParser):
             self.DocumentStartEvent(e)
 
     def gotText(self, data):
-        if self.currElem != None:
+        if self.currElem is not None:
             if isinstance(data, bytes):
                 data = data.decode('ascii')
             self.currElem.addContent(data)
 
     def gotCData(self, data):
-        if self.currElem != None:
+        if self.currElem is not None:
             if isinstance(data, bytes):
                 data = data.decode('ascii')
             self.currElem.addContent(data)
@@ -714,11 +714,13 @@ class SuxElementStream(sux.XMLParser):
         # Ignore comments for the moment
         pass
 
-    entities = { "amp" : "&",
-                 "lt"  : "<",
-                 "gt"  : ">",
-                 "apos": "'",
-                 "quot": "\"" }
+    entities = {
+               "amp": "&",
+               "lt": "<",
+               "gt": ">",
+               "apos": "'",
+               "quot": "\"",
+               }
 
     def gotEntityReference(self, entityRef):
         # If this is an entity we know about, add it as content

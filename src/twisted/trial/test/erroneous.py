@@ -179,7 +179,7 @@ class DelayedCall(unittest.TestCase):
         reactor.callLater(0, self.go)
         reactor.iterate(0.01)
         self.fail("Deliberate failure to mask the hidden exception")
-    testHiddenException.suppress = [util.suppress(
+    testHiddenException.suppress = [util.suppress(  # type: ignore[attr-defined]  # noqa
         message=r'reactor\.iterate cannot be used.*',
         category=DeprecationWarning)]
 

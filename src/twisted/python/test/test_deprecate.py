@@ -724,7 +724,7 @@ class ClassWithDeprecatedProperty(object):
         return self._someProtectedValue
 
 
-    @someProperty.setter
+    @someProperty.setter  # type: ignore[no-redef]
     def someProperty(self, value):
         """
         Setter docstring.

@@ -67,7 +67,6 @@ _SIMPLE_BUILTINS = [
 
 
 
-
 class Instance:
     def __init__(self, className, __stateObj__=NoStateObj, **state):
         if not isinstance(className, str):

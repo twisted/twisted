@@ -13,11 +13,13 @@ from twisted.application import app
 
 from twisted.python.runtime import platformType
 if platformType == "win32":
-    from twisted.scripts._twistw import ServerOptions, \
-        WindowsApplicationRunner as _SomeApplicationRunner
+    from twisted.scripts._twistw import (
+        ServerOptions,  WindowsApplicationRunner as _SomeApplicationRunner)
 else:
-    from twisted.scripts._twistd_unix import ServerOptions, \
-        UnixApplicationRunner as _SomeApplicationRunner
+    from twisted.scripts._twistd_unix import (  # type: ignore[misc]
+        ServerOptions, UnixApplicationRunner as _SomeApplicationRunner)
+
+
 
 def runApp(config):
     runner = _SomeApplicationRunner(config)

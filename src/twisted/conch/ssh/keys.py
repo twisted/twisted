@@ -43,7 +43,7 @@ try:
     from cryptography.hazmat.primitives.asymmetric.utils import (
         encode_dss_signature, decode_dss_signature)
 except ImportError:
-    from cryptography.hazmat.primitives.asymmetric.utils import (
+    from cryptography.hazmat.primitives.asymmetric.utils import (  # type: ignore[no-redef,attr-defined]  # noqa
         encode_rfc6979_signature as encode_dss_signature,
         decode_rfc6979_signature as decode_dss_signature)
 

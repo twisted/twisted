@@ -28,7 +28,7 @@ if cryptography:
     from twisted.conch import avatar
     from twisted.conch.ssh import common, connection, filetransfer, session
 else:
-    class avatar:
+    class avatar:  # type: ignore[no-redef]
         class ConchUser:
             pass
 

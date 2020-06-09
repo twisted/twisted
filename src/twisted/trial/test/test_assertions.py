@@ -1260,7 +1260,7 @@ class ResultOfCoroutineAssertionsTests(unittest.SynchronousTestCase):
         except self.failureException as e:
             self.assertIn(self.failure.getTraceback(), str(e))
 
-    test_successResultOfWithFailureHasTraceback.todo = (
+    test_successResultOfWithFailureHasTraceback.todo = (  # type: ignore[attr-defined]  # noqa
         "Tracebacks aren't preserved by exceptions later wrapped in Failures"
     )
 
@@ -1331,7 +1331,7 @@ class ResultOfCoroutineAssertionsTests(unittest.SynchronousTestCase):
         except self.failureException as e:
             self.assertIn(self.failure.getTraceback(), str(e))
 
-    test_failureResultOfWithWrongExceptionOneExpectedExceptionHasTB.todo = (
+    test_failureResultOfWithWrongExceptionOneExpectedExceptionHasTB.todo = (  # type: ignore[attr-defined]  # noqa
         "Tracebacks aren't preserved by exceptions later wrapped in Failures"
     )
 
@@ -1371,7 +1371,7 @@ class ResultOfCoroutineAssertionsTests(unittest.SynchronousTestCase):
         except self.failureException as e:
             self.assertIn(self.failure.getTraceback(), str(e))
 
-    test_failureResultOfWithWrongExceptionMultiExpectedExceptionsHasTB.todo = (
+    test_failureResultOfWithWrongExceptionMultiExpectedExceptionsHasTB.todo = (  # type: ignore[attr-defined]  # noqa
         "Tracebacks aren't preserved by exceptions later wrapped in Failures"
     )
 

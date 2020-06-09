@@ -14,7 +14,7 @@ from twisted.conch.insults import insults
 from twisted.conch import recvline
 
 from twisted.python import reflect, components, filepath
-from twisted.python.compat import iterbytes, bytesEnviron
+from twisted.python.compat import iterbytes
 from twisted.internet import defer, error
 from twisted.trial import unittest
 from twisted.cred import portal
