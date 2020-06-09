@@ -65,10 +65,8 @@ _SIMPLE_BUILTINS = [
     slice, type(Ellipsis)
 ]
 
-try:
-    _SIMPLE_BUILTINS.append(long)
-except NameError:
-    pass
+
+
 
 class Instance:
     def __init__(self, className, __stateObj__=NoStateObj, **state):
