@@ -40,3 +40,5 @@ jobs:
       py37: "3.7"
       py38: "3.8"
     reactor: iocp
+
+- template: 'mypy_jobs.yml'
