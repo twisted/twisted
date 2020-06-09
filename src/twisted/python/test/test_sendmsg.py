@@ -5,6 +5,7 @@
 Tests for L{twisted.python.sendmsg}.
 """
 
+import os
 import sys
 import errno
 import warnings
@@ -25,7 +26,7 @@ from twisted.internet import reactor
 from twisted.internet.defer import Deferred, inlineCallbacks
 from twisted.internet.error import ProcessDone
 from twisted.internet.protocol import ProcessProtocol
-from twisted.python.compat import intToBytes, bytesEnviron
+from twisted.python.compat import intToBytes
 from twisted.python.filepath import FilePath
 from twisted.python.runtime import platform
 
@@ -165,15 +166,15 @@ def _spawn(script, outputFD):
 
     @rtype: L{StartStopProcessProtocol}
     """
-    pyExe = FilePath(sys.executable).asBytesMode().path
-    env = bytesEnviron()
-    env[b"PYTHONPATH"] = FilePath(
-        pathsep.join(sys.path)).asBytesMode().path
+    pyExe = FilePath(sys.executable).asTextMode().path
+    env = dict(os.environ)
+    env["PYTHONPATH"] = FilePath(
+        pathsep.join(sys.path)).asTextMode().path
     sspp = StartStopProcessProtocol()
     reactor.spawnProcess(
         sspp, pyExe, [
             pyExe,
-            FilePath(__file__).sibling(script + ".py").asBytesMode().path,
+            FilePath(__file__).sibling(script + ".py").asTextMode().path,
             intToBytes(outputFD),
         ],
         env=env,
