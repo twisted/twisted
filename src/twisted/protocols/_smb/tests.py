@@ -9,7 +9,7 @@ import re
 import attr
 
 from twisted.protocols._smb import base, core, security_blob, ntlm
-from twisted.protocols._smb.interfaces import (ISMBServer, IFilesystem)
+from twisted.protocols._smb.ismb import (ISMBServer, IFilesystem, NoSuchShare)
 
 from twisted.cred import portal, checkers, credentials
 from twisted.trial import unittest
@@ -201,7 +201,7 @@ class TestAvatar:
         if name == "share":
             return TestDisc()
         else:
-            raise KeyError(name)
+            raise NoSuchShare(name)
 
     def listShares(self):
         return ["share"]

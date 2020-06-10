@@ -319,6 +319,10 @@ def nstruct(fields):
 
 
 
+_leint = struct.Struct("<I")
+
+
+
 def int32key(d, val):
     """
     generate a new random key for a dictionary
@@ -328,19 +332,23 @@ def int32key(d, val):
     @rtype: L{int}
     """
     assert len(d) < 0xc0000000  # otherwiae dict so big hard to find keys
-    n, = struct.unpack("<I", secureRandom(4, True))
+    n = 0
     while n == 0 or n in d:
-        n, = struct.unpack("<I", secureRandom(4, True))
+        [n] = _leint.unpack(secureRandom(_leint.size, True))
     d[n] = val
     return n
 
 
 
+BASE_HEADER = struct.Struct("!xBH")
+
+
+
 class SMBPacketReceiver(protocol.Protocol):
     """
-    basic SMB 2.0 packets over TCP have a 4-byte header: null byte
-    and 24-bit length field
-    this base class processes these headers
+    A L{SMBPacketReceiver} is a wire protocol parser for the SMB framing
+    mechanism, which consist of a 4-byte header: single null
+    and a 24-bit length field.
     """
     def __init__(self):
         self.data = b''
@@ -350,14 +358,15 @@ class SMBPacketReceiver(protocol.Protocol):
         self._processData()
 
     def _processData(self):
-        if len(self.data) < 5:
+        if len(self.data) < BASE_HEADER.size + 1:
             return
-        x, y = struct.unpack("!xBH", self.data[:4])
+        x, y = BASE_HEADER.unpack_from(self.data)
         size = (x << 16) + y
-        if len(self.data) < size + 4:
+        if len(self.data) < size + BASE_HEADER.size:
             return
-        self.packetReceived(self.data[4:4 + size])
-        self.data = self.data[4 + size:]
+        self.packetReceived(self.data[BASE_HEADER.size:BASE_HEADER.size +
+                                      size])
+        self.data = self.data[BASE_HEADER.size + size:]
         self._processData()
 
     def sendPacket(self, data):
@@ -371,7 +380,7 @@ class SMBPacketReceiver(protocol.Protocol):
         assert size < 0xffffff
         x = (size & 0xff0000) >> 16
         y = size & 0xffff
-        self.transport.write(struct.pack("!BBH", 0, x, y) + data)
+        self.transport.write(BASE_HEADER.pack(x, y) + data)
 
     def packetReceived(self, packet):
         """
@@ -381,4 +390,3 @@ class SMBPacketReceiver(protocol.Protocol):
         @param packet: raw packet data
         @type packet: L{bytes}
         """
-        pass

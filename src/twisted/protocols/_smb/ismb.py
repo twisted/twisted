@@ -9,6 +9,11 @@ from zope.interface import Interface, Attribute
 
 
 
+class NoSuchShare(Exception):
+    pass
+
+
+
 class ISMBServer(Interface):
     """
     A SMB server avatar, contains a number of "shares" (filesystems/printers/

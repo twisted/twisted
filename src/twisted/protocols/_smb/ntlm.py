@@ -128,6 +128,9 @@ AV_CHANNEL_BINDINGS = 0x000A
 
 SERVER_VERSION = (6, 1, 1)
 # major version 6.1 = Vista, roughly speaking what this emulates
+PROTOCOL_VERSION = 0x0F
+
+NT_RESP_TYPE = 0x01
 
 MAGIC = b'NTLMSSP\0'
 
@@ -206,9 +209,11 @@ class NTLMManager(object):
     def ntlm_negotiate(self, data):
         neg = NegType(data)
         flags = flags2set(neg.flags)
-        log.debug("NTLM NEGOTIATE")
-        log.debug("--------------")
-        log.debug("Flags           {flags!r}", flags=flags)
+        log.debug("""
+NTLM NEGOTIATE
+--------------
+Flags           {flags!r}""",
+                  flags=flags)
         if 'NegotiateVersion' in flags:
             log.debug("Version         {major}.{minor} ({build}) {proto:x}",
                       major=neg.v_major,
@@ -265,7 +270,7 @@ class NTLMManager(object):
         else:
             targetinfo = b''
         if 'NegotiateVersion' in self.flags:
-            chal.v_protocol = 0x0F
+            chal.v_protocol = PROTOCOL_VERSION
             chal.v_major, chal.v_minor, chal.v_build = SERVER_VERSION
         chal.challenge = self.challenge = secureRandom(8)
         chal.target_len = chal.target_max_len = len(target)
@@ -296,7 +301,7 @@ class NTLMManager(object):
             nt['time'] = parts.time
             nt['client_challenge'] = parts.client_challenge
             nt['avpairs'] = parts.buffer
-            if parts.resp_type != 0x01:
+            if parts.resp_type != NT_RESP_TYPE:
                 log.warn("NT response not valid type")
         if not nt and not lm:
             raise base.SMBError(
@@ -324,21 +329,30 @@ class NTLMManager(object):
         else:
             ersk = None
         self.ersk = ersk
-        log.debug("NTLM AUTH")
-        log.debug("---------")
+        log.debug("""
+NTLM AUTH
+---------
+Flags           {flags!r}
+User            {user!r}
+Workstation     {wrkstn!r}
+Client domain   {cd!r}
+LM response     {lm!r}
+NT response     {nt!r}
+ERSK            {ersk!r}
+""",
+                  flags=flags,
+                  user=user,
+                  wrkstn=workstation,
+                  cd=client_domain,
+                  lm=lm,
+                  nt=nt,
+                  ersk=ersk)
         if 'NegotiateVersion' in flags:
             log.debug("Version         {major}.{minor} ({build}) {proto:x}",
                       major=a.v_major,
                       minor=a.v_minor,
                       build=a.v_build,
                       proto=a.v_protocol)
-        log.debug("Flags           {flags!r}", flags=flags)
-        log.debug("User            {user!r}", user=user)
-        log.debug("Workstation     {wrkstn!r}", wrkstn=workstation)
-        log.debug("Client domain   {cm!r}", cm=client_domain)
-        log.debug("LM response     {lm!r}", lm=lm)
-        log.debug("NT response     {nt!r}", nt=nt)
-        log.debug("ERSK            {ersk!r}", ersk=ersk)
         self.credential = NTLMCredential(user, client_domain, lm, nt,
                                          self.challenge)
 
