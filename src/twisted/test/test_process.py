@@ -51,15 +51,10 @@ from twisted.python.filepath import FilePath
 
 
 # Get the current Python executable as a bytestring.
-pyExe = FilePath(sys.executable)._asBytesPath()
+pyExe = FilePath(sys.executable).path
 CONCURRENT_PROCESS_TEST_COUNT = 25
-if not runtime.platform.isWindows():
-    properEnv = bytesEnviron()
-    properEnv[b"PYTHONPATH"] = os.pathsep.join(sys.path).encode(
-        sys.getfilesystemencoding())
-else:
-    properEnv = dict(os.environ)
-    properEnv["PYTHONPATH"] = os.pathsep.join(sys.path)
+properEnv = dict(os.environ)
+properEnv["PYTHONPATH"] = os.pathsep.join(sys.path)
 
 
 
@@ -408,7 +403,7 @@ class UtilityProcessProtocol(protocol.ProcessProtocol):
         """
         self = cls()
         reactor.spawnProcess(
-            self, pyExe, [pyExe, b"-u", b"-m", self.programName] + argv,
+            self, pyExe, [pyExe, "-u", "-m", self.programName] + argv,
             env=env)
         return self
 
@@ -2272,16 +2267,12 @@ class Win32ProcessTests(unittest.TestCase):
         """
         import win32api
 
-        pyExe = FilePath(sys.executable)._asTextPath()
+        pyExe = FilePath(sys.executable).path
         args = [pyExe, u"-u", u"-m", u"twisted.test.process_stdinreader"]
         env = properEnv
         pythonPath = os.pathsep.join(sys.path)
-        if isinstance(pythonPath, bytes):
-            pythonPath = pythonPath.decode(sys.getfilesystemencoding())
         env[u"PYTHONPATH"] = pythonPath
         path = win32api.GetTempPath()
-        if isinstance(path, bytes):
-            path = path.decode(sys.getfilesystemencoding())
         d = self._test_stdinReader(pyExe, args, env, path)
         return d
 
@@ -2434,7 +2425,7 @@ class DumbWin32ProcTests(unittest.TestCase):
         from twisted.test import mock_win32process
         self.patch(_dumbwin32proc, "win32process", mock_win32process)
         scriptPath = FilePath(__file__).sibling(u"process_cmdline.py").path
-        pyExe = FilePath(sys.executable).asTextMode().path
+        pyExe = FilePath(sys.executable).path
 
         d = defer.Deferred()
         processProto = TrivialProcessProtocol(d)

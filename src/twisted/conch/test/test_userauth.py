@@ -31,13 +31,13 @@ else:
     keys = None
 
 
-    class transport:
+    class transport:  # type: ignore[no-redef]
         class SSHTransportBase:
             """
             A stub class so that later class definitions won't die.
             """
 
-    class userauth:
+    class userauth:  # type: ignore[no-redef]
         class SSHUserAuthClient:
             """
             A stub class so that later class definitions won't die.

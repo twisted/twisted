@@ -17,10 +17,7 @@ from twisted.internet import protocol, reactor, address, defer, task
 from twisted.protocols import policies
 
 
-try:
-    import builtins
-except ImportError:
-    import __builtin__ as builtins
+import builtins
 
 
 

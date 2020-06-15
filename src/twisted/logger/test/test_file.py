@@ -7,7 +7,8 @@ Test cases for L{twisted.logger._file}.
 
 from io import StringIO
 
-from zope.interface.verify import verifyObject, BrokenMethodImplementation
+from zope.interface.exceptions import BrokenMethodImplementation
+from zope.interface.verify import verifyObject
 
 from twisted.trial.unittest import TestCase
 

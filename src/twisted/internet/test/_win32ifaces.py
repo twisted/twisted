@@ -6,7 +6,7 @@ Windows implementation of local network interface enumeration.
 """
 
 from socket import socket, AF_INET6, SOCK_STREAM
-from ctypes import (
+from ctypes import (  # type: ignore[attr-defined]
     WinDLL, byref, create_string_buffer, create_unicode_buffer,
     c_int, c_void_p,
     POINTER, Structure, cast, wstring_at)

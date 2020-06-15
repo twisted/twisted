@@ -24,8 +24,8 @@ from twisted.internet.test.reactormixins import ReactorBuilder
 from twisted.python.log import msg, err
 from twisted.python.runtime import platform
 from twisted.python.filepath import FilePath, _asFilesystemBytes
-from twisted.python.compat import (networkString, range, items,
-                                   bytesEnviron, unicode)
+from twisted.python.compat import networkString, items, unicode
+from twisted.python.reflect import requireModule
 from twisted.internet import utils
 from twisted.internet.interfaces import IReactorProcess, IProcessTransport
 from twisted.internet.defer import Deferred, inlineCallbacks, succeed
@@ -39,24 +39,18 @@ twistedRoot = FilePath(twisted.__file__).parent().parent()
 
 _uidgidSkip = False
 _uidgidSkipReason = ""
+resource = requireModule('resource')
+properEnv = dict(os.environ)
+properEnv["PYTHONPATH"] = os.pathsep.join(sys.path)
 if platform.isWindows():
-    resource = None
     process = None
     _uidgidSkip = True
     _uidgidSkipReason = "Cannot change UID/GID on Windows"
-
-    properEnv = dict(os.environ)
-    properEnv["PYTHONPATH"] = os.pathsep.join(sys.path)
 else:
-    import resource
     from twisted.internet import process
     if os.getuid() != 0:
         _uidgidSkip = True
         _uidgidSkipReason = "Cannot change UID/GID except as root"
-
-    properEnv = bytesEnviron()
-    properEnv[b"PYTHONPATH"] = os.pathsep.join(sys.path).encode(
-        sys.getfilesystemencoding())
 
 
 

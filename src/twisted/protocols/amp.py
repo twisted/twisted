@@ -1816,7 +1816,7 @@ class Command:
 
             return newtype
 
-    arguments = []  # type: List[Tuple[bytes, _LocalArgument]]
+    arguments = []  # type: List[Tuple[bytes, Argument]]
     response = []  # type: List[Tuple[bytes, Argument]]
     extra = []  # type: List[Any]
     errors = {}  # type: Dict[Exception, bytes]

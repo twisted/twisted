@@ -31,7 +31,7 @@ from twisted.trial import itrial, util
 import unittest as pyunit
 
 # Python 2.7 and higher has skip support built-in
-SkipTest = pyunit.SkipTest
+from unittest import SkipTest
 
 
 

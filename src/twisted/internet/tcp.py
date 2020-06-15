@@ -33,15 +33,15 @@ try:
         ServerMixin as _TLSServerMixin)
 except ImportError:
     # There is no version of startTLS available
-    class _TLSConnectionMixin(object):
+    class _TLSConnectionMixin(object):  # type: ignore[no-redef]
         TLS = False
 
 
-    class _TLSClientMixin(object):
+    class _TLSClientMixin(object):  # type: ignore[no-redef]
         pass
 
 
-    class _TLSServerMixin(object):
+    class _TLSServerMixin(object):  # type: ignore[no-redef]
         pass
 
 
@@ -63,7 +63,8 @@ if platformType == 'win32':
     # Nor ENOMEM
     ENOMEM = object()
     EAGAIN = EWOULDBLOCK
-    from errno import WSAECONNRESET as ECONNABORTED
+    from errno import (  # type: ignore[attr-defined]
+        WSAECONNRESET as ECONNABORTED)
 
     from twisted.python.win32 import formatError as strerror
 else:

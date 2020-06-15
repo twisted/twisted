@@ -13,6 +13,7 @@ from errno import ENOSPC
 from urllib.parse import urlparse, urljoin
 
 from twisted.python.compat import networkString, nativeString, intToBytes
+from twisted.python.reflect import requireModule
 from twisted.trial import unittest, util
 from twisted.web import server, client, error, resource
 from twisted.web.static import Data
@@ -23,12 +24,6 @@ from twisted.python.filepath import FilePath
 from twisted.protocols.policies import WrappingFactory
 from twisted.test.proto_helpers import (
     StringTransport, waitUntilAllDisconnected, EventLoggingObserver)
-
-try:
-    from twisted.internet import ssl
-except:
-    ssl = None
-
 from twisted import test
 from twisted.logger import (globalLogPublisher, FilteringLogObserver,
                             LogLevelFilterPredicate, LogLevel, Logger)
@@ -39,9 +34,11 @@ from twisted.web.test.injectionhelpers import (
 )
 
 
+ssl = requireModule('twisted.internet.ssl')
 
 serverPEM = FilePath(test.__file__).sibling('server.pem')
 serverPEMPath = serverPEM.asBytesMode().path
+
 
 
 class ExtendedRedirect(resource.Resource):
