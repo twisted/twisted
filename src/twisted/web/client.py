@@ -1959,7 +1959,7 @@ class CookieAgent(object):
 
 
 
-class GzipDecoder(proxyForInterface(IResponse)):
+class GzipDecoder(proxyForInterface(IResponse)):  # type: ignore[misc]
     """
     A wrapper for a L{Response} instance which handles gzip'ed body.
 
@@ -1982,7 +1982,7 @@ class GzipDecoder(proxyForInterface(IResponse)):
 
 
 
-class _GzipProtocol(proxyForInterface(IProtocol)):
+class _GzipProtocol(proxyForInterface(IProtocol)):  # type: ignore[misc]
     """
     A L{Protocol} implementation which wraps another one, transparently
     decompressing received data.

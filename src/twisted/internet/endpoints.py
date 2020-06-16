@@ -315,7 +315,7 @@ class _IProcessTransportWithConsumerAndProducer(interfaces.IProcessTransport,
 
 
 class _ProcessEndpointTransport(
-        proxyForInterface(_IProcessTransportWithConsumerAndProducer,
+        proxyForInterface(_IProcessTransportWithConsumerAndProducer,  # type: ignore[misc]  # noqa
                           '_process')):
     """
     An L{ITransport}, L{IProcessTransport}, L{IConsumer}, and L{IPushProducer}

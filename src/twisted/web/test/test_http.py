@@ -56,7 +56,7 @@ from ._util import (
 
 
 
-class _IDeprecatedHTTPChannelToRequestInterfaceProxy(proxyForInterface(
+class _IDeprecatedHTTPChannelToRequestInterfaceProxy(proxyForInterface(  # type: ignore[misc]  # noqa
         http._IDeprecatedHTTPChannelToRequestInterface)):
     """
     Proxy L{_IDeprecatedHTTPChannelToRequestInterface}.  Used to
