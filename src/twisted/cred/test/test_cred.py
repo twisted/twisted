@@ -19,7 +19,7 @@ from twisted.cred import checkers, credentials, portal, error
 try:
     from crypt import crypt
 except ImportError:
-    crypt = None
+    crypt = None  # type: ignore[assignment,misc]
 
 
 

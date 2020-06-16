@@ -1107,7 +1107,7 @@ class _NullFileDescriptorReservation(object):
 if platformType == 'win32':
     _reservedFD = _NullFileDescriptorReservation()
 else:
-    _reservedFD = _FileDescriptorReservation(lambda: open(os.devnull))
+    _reservedFD = _FileDescriptorReservation(lambda: open(os.devnull))  # type: ignore[assignment] # noqa
 
 
 # Linux and other UNIX-like operating systems return EMFILE when a
