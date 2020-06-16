@@ -33,34 +33,38 @@ try:
         ServerMixin as _TLSServerMixin)
 except ImportError:
     # There is no version of startTLS available
-    class _TLSConnectionMixin(object):
+    class _TLSConnectionMixin(object):  # type: ignore[no-redef]
         TLS = False
 
 
-    class _TLSClientMixin(object):
+    class _TLSClientMixin(object):  # type: ignore[no-redef]
         pass
 
 
-    class _TLSServerMixin(object):
+    class _TLSServerMixin(object):  # type: ignore[no-redef]
         pass
 
 
 if platformType == 'win32':
-    # no such thing as WSAEPERM or error code 10001 according to winsock.h or MSDN
+    # no such thing as WSAEPERM or error code 10001
+    # according to winsock.h or MSDN
     EPERM = object()
-    from errno import WSAEINVAL as EINVAL
-    from errno import WSAEWOULDBLOCK as EWOULDBLOCK
-    from errno import WSAEINPROGRESS as EINPROGRESS
-    from errno import WSAEALREADY as EALREADY
-    from errno import WSAEISCONN as EISCONN
-    from errno import WSAENOBUFS as ENOBUFS
-    from errno import WSAEMFILE as EMFILE
+    from errno import WSAEINVAL as EINVAL  # type: ignore[attr-defined]
+    from errno import (  # type: ignore[attr-defined]
+        WSAEWOULDBLOCK as EWOULDBLOCK)
+    from errno import (  # type: ignore[attr-defined]
+        WSAEINPROGRESS as EINPROGRESS)
+    from errno import WSAEALREADY as EALREADY  # type: ignore[attr-defined]
+    from errno import WSAEISCONN as EISCONN  # type: ignore[attr-defined]
+    from errno import WSAENOBUFS as ENOBUFS  # type: ignore[attr-defined]
+    from errno import WSAEMFILE as EMFILE  # type: ignore[attr-defined]
     # No such thing as WSAENFILE, either.
     ENFILE = object()
     # Nor ENOMEM
     ENOMEM = object()
     EAGAIN = EWOULDBLOCK
-    from errno import WSAECONNRESET as ECONNABORTED
+    from errno import (  # type: ignore[attr-defined]
+        WSAECONNRESET as ECONNABORTED)
 
     from twisted.python.win32 import formatError as strerror
 else:

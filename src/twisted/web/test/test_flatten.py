@@ -8,6 +8,7 @@ L{twisted.web._flatten}.
 
 import sys
 import traceback
+from unittest import skipIf
 
 from xml.etree.cElementTree import XML
 
@@ -344,6 +345,7 @@ class SerializationTests(FlattenTestCase, XMLAssertionMixin):
         ])
 
 
+    @skipIf(not _PY35PLUS, "coroutines not available before Python 3.5")
     def test_serializeCoroutine(self):
         """
         Test that a coroutine returning a value is substituted with the that
@@ -361,12 +363,8 @@ class SerializationTests(FlattenTestCase, XMLAssertionMixin):
 
         return self.assertFlattensTo(coro('four'), b'four')
 
-    if not _PY35PLUS:
-        test_serializeCoroutine.skip = (
-            "coroutines not available before Python 3.5"
-        )
 
-
+    @skipIf(not _PY35PLUS, "coroutines not available before Python 3.5")
     def test_serializeCoroutineWithAwait(self):
         """
         Test that a coroutine returning an awaited deferred value is
@@ -383,11 +381,6 @@ class SerializationTests(FlattenTestCase, XMLAssertionMixin):
         coro = namespace["coro"]
 
         return self.assertFlattensTo(coro('four'), b'four')
-
-    if not _PY35PLUS:
-        test_serializeCoroutineWithAwait.skip = (
-            "coroutines not available before Python 3.5"
-        )
 
 
     def test_serializeIRenderable(self):

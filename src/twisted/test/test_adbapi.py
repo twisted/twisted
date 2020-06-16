@@ -9,6 +9,7 @@ from twisted.trial import unittest
 
 import os
 import stat
+from typing import Dict
 
 from twisted.enterprise.adbapi import ConnectionPool, ConnectionLost
 from twisted.enterprise.adbapi import Connection, Transaction
@@ -28,7 +29,7 @@ class ADBAPITestBase(object):
     """
     Test the asynchronous DB-API code.
     """
-    openfun_called = {}
+    openfun_called = {}  # type: Dict[object, bool]
 
     if interfaces.IReactorThreads(reactor, None) is None:
         skip = "ADB-API requires threads, no way to test without them"

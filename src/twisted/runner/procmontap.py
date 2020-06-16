@@ -6,6 +6,8 @@
 Support for creating a service which runs a process monitor.
 """
 
+from typing import List, Sequence
+
 from twisted.python import usage
 from twisted.runner.procmon import ProcessMonitor
 
@@ -31,7 +33,7 @@ class Options(usage.Options):
                       "seconds) to wait before attempting to restart a "
                       "process", float]]
 
-    optFlags = []
+    optFlags = []  # type: List[Sequence[str]]
 
 
     longdesc = """\

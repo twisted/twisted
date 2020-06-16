@@ -13,6 +13,7 @@ import random
 import hamcrest
 
 from urllib.parse import urlparse, urlunsplit, clear_cache, parse_qs
+from unittest import skipIf
 
 from io import BytesIO
 from itertools import cycle
@@ -771,6 +772,7 @@ class GenericHTTPChannelTests(unittest.TestCase):
         return a._negotiatedProtocol
 
 
+    @skipIf(not http.H2_ENABLED, "HTTP/2 support not present")
     def test_h2CancelsH11Timeout(self):
         """
         When the transport is switched to H2, the HTTPChannel timeouts are
@@ -820,9 +822,6 @@ class GenericHTTPChannelTests(unittest.TestCase):
             ),
         )
 
-    if not http.H2_ENABLED:
-        test_h2CancelsH11Timeout.skip = "HTTP/2 support not present"
-
 
     def test_protocolUnspecified(self):
         """
@@ -856,6 +855,7 @@ class GenericHTTPChannelTests(unittest.TestCase):
         self.assertEqual(negotiatedProtocol, b'http/1.1')
 
 
+    @skipIf(not http.H2_ENABLED, "HTTP/2 support not present")
     def test_http2_present(self):
         """
         If the transport reports that HTTP/2 is negotiated and HTTP/2 is
@@ -865,10 +865,9 @@ class GenericHTTPChannelTests(unittest.TestCase):
         b.negotiatedProtocol = b'h2'
         negotiatedProtocol = self._negotiatedProtocolForTransportInstance(b)
         self.assertEqual(negotiatedProtocol, b'h2')
-    if not http.H2_ENABLED:
-        test_http2_present.skip = "HTTP/2 support not present"
 
 
+    @skipIf(http.H2_ENABLED, "HTTP/2 support present")
     def test_http2_absent(self):
         """
         If the transport reports that HTTP/2 is negotiated and HTTP/2 is not
@@ -881,8 +880,6 @@ class GenericHTTPChannelTests(unittest.TestCase):
             self._negotiatedProtocolForTransportInstance,
             b,
         )
-    if http.H2_ENABLED:
-        test_http2_absent.skip = "HTTP/2 support present"
 
 
     def test_unknownProtocol(self):
@@ -921,6 +918,7 @@ class GenericHTTPChannelTests(unittest.TestCase):
         self.assertEqual(protocol._channel.callLater, clock.callLater)
 
 
+    @skipIf(not http.H2_ENABLED, "HTTP/2 support not present")
     def test_genericHTTPChannelCallLaterUpgrade(self):
         """
         If C{callLater} is patched onto the L{http._GenericHTTPChannelProtocol}
@@ -944,12 +942,9 @@ class GenericHTTPChannelTests(unittest.TestCase):
 
         self.assertEqual(protocol.callLater, clock.callLater)
         self.assertEqual(protocol._channel.callLater, clock.callLater)
-    if not http.H2_ENABLED:
-        test_genericHTTPChannelCallLaterUpgrade.skip = (
-            "HTTP/2 support not present"
-        )
 
 
+    @skipIf(not http.H2_ENABLED, "HTTP/2 support not present")
     def test_unregistersProducer(self):
         """
         The L{_GenericHTTPChannelProtocol} will unregister its proxy channel
@@ -977,9 +972,6 @@ class GenericHTTPChannelTests(unittest.TestCase):
 
         # ...it should have the new H2 channel as its producer
         self.assertIs(transport.producer, genericProtocol._channel)
-
-    if not http.H2_ENABLED:
-        test_unregistersProducer.skip = "HTTP/2 support not present"
 
 
 

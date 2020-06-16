@@ -34,7 +34,7 @@ from twisted.internet.interfaces import ITLSTransport, ISSLTransport
 from twisted.internet._idna import _idnaText
 from twisted.python import log
 from twisted.python import util
-from twisted.python.compat import (_PY3, range, long, unicode, networkString,
+from twisted.python.compat import (long, unicode, networkString,
                                    nativeString, iteritems, _keys, _bytesChr,
                                    iterbytes)
 from twisted.python.runtime import platform
@@ -290,12 +290,8 @@ class Address:
 
         return b''.join(res)
 
-    if _PY3:
-        def __str__(self):
-            return nativeString(bytes(self))
-    else:
-        def __str__(self):
-            return self.__bytes__()
+    def __str__(self):
+        return nativeString(bytes(self))
 
 
     def __bytes__(self):

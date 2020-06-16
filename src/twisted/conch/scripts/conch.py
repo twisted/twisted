@@ -24,6 +24,7 @@ import struct
 import tty
 import fcntl
 import signal
+from typing import List, Tuple
 
 
 
@@ -57,8 +58,8 @@ class ClientOptions(options.ConchOptions):
                       usage.Completer(descr="argument", repeat=True)]
         )
 
-    localForwards = []
-    remoteForwards = []
+    localForwards = []  # type: List[Tuple[int, Tuple[int, int]]]
+    remoteForwards = []  # type: List[Tuple[int, Tuple[int, int]]]
 
     def opt_escape(self, esc):
         """

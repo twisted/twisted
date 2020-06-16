@@ -9,7 +9,7 @@ Tests for L{twisted.protocols.amp}.
 
 import datetime
 import decimal
-
+from unittest import skipIf
 from zope.interface import implementer
 from zope.interface.verify import verifyClass, verifyObject
 
@@ -17,7 +17,7 @@ from twisted.python import filepath
 from twisted.python.compat import intToBytes
 from twisted.python.failure import Failure
 from twisted.protocols import amp
-from twisted.trial import unittest
+from twisted.trial.unittest import TestCase
 from twisted.internet import (
     address, protocol, defer, error, reactor, interfaces)
 from twisted.test import iosim
@@ -33,10 +33,14 @@ if ssl and not ssl.supported:
     ssl = None
 
 if ssl is None:
-    skipSSL = "SSL not available"
+    skipSSL = True
 else:
-    skipSSL = None
+    skipSSL = False
 
+if not interfaces.IReactorSSL.providedBy(reactor):
+    reactorLacksSSL = True
+else:
+    reactorLacksSSL = False
 
 
 tz = amp._FixedOffsetTZInfo.fromSignHoursMinutes
@@ -368,7 +372,7 @@ class LiteralAmp(amp.AMP):
 
 
 
-class AmpBoxTests(unittest.TestCase):
+class AmpBoxTests(TestCase):
     """
     Test a few essential properties of AMP boxes, mostly with respect to
     serialization correctness.
@@ -398,7 +402,7 @@ class AmpBoxTests(unittest.TestCase):
 
 
 
-class ParsingTests(unittest.TestCase):
+class ParsingTests(TestCase):
 
     def test_booleanValues(self):
         """
@@ -532,7 +536,7 @@ class FakeSender:
 
 
 
-class CommandDispatchTests(unittest.TestCase):
+class CommandDispatchTests(TestCase):
     """
     The AMP CommandDispatcher class dispatches converts AMP boxes into commands
     and responses using Command.responder decorator.
@@ -751,8 +755,7 @@ class OverrideLocatorAMP(amp.AMP):
 
 
 
-
-class CommandLocatorTests(unittest.TestCase):
+class CommandLocatorTests(TestCase):
     """
     The CommandLocator should enable users to specify responders to commands as
     functions that take structured objects, annotated with metadata.
@@ -845,7 +848,8 @@ SWITCH_CLIENT_DATA = b'Success!'
 SWITCH_SERVER_DATA = b'No, really.  Success.'
 
 
-class BinaryProtocolTests(unittest.TestCase):
+
+class BinaryProtocolTests(TestCase):
     """
     Tests for L{amp.BinaryBoxProtocol}.
 
@@ -1190,7 +1194,7 @@ class BinaryProtocolTests(unittest.TestCase):
 
 
 
-class AMPTests(unittest.TestCase):
+class AMPTests(TestCase):
 
     def test_interfaceDeclarations(self):
         """
@@ -1370,13 +1374,12 @@ class AMPTests(unittest.TestCase):
         self.assertEqual(repr(a), "<AMP at 0x%x>" % (id(a),))
 
 
+    @skipIf(skipSSL, "SSL not available")
     def test_simpleSSLRepr(self):
         """
         L{amp._TLSBox.__repr__} returns a string.
         """
         self.assertEqual(type(repr(amp._TLSBox())), str)
-
-    test_simpleSSLRepr.skip = skipSSL
 
 
     def test_keyTooLong(self):
@@ -1905,7 +1908,10 @@ class SecurableProto(FactoryNotifier):
 
 
 
-class TLSTests(unittest.TestCase):
+@skipIf(skipSSL, "SSL not available")
+@skipIf(reactorLacksSSL, 'This test case requires SSL support in the reactor')
+class TLSTests(TestCase):
+
     def test_startingTLS(self):
         """
         Verify that starting TLS and succeeding at handshaking sends all the
@@ -2008,11 +2014,9 @@ class TLSTests(unittest.TestCase):
         # reasonable.
         self.assertFailure(d, error.PeerVerifyError)
 
-    skip = skipSSL
 
 
-
-class TLSNotAvailableTests(unittest.TestCase):
+class TLSNotAvailableTests(TestCase):
     """
     Tests what happened when ssl is not available in current installation.
     """
@@ -2150,7 +2154,7 @@ class AddedCommandProtocol(amp.AMP):
 
 
 
-class CommandInheritanceTests(unittest.TestCase):
+class CommandInheritanceTests(TestCase):
     """
     These tests verify that commands inherit error conditions properly.
     """
@@ -2278,9 +2282,14 @@ if ssl is not None:
     tempcert = tempSelfSigned()
 
 
-class LiveFireTLSTests(LiveFireBase, unittest.TestCase):
+
+@skipIf(skipSSL, "SSL not available")
+@skipIf(reactorLacksSSL, 'This test case requires SSL support in the reactor')
+class LiveFireTLSTests(LiveFireBase, TestCase):
+
     clientProto = SecurableProto
     serverProto = SecurableProto
+
     def test_liveFireCustomTLS(self):
         """
         Using real, live TLS, actually negotiate a connection.
@@ -2309,11 +2318,9 @@ class LiveFireTLSTests(LiveFireBase, unittest.TestCase):
                 self.assertEqual(x, self.svr.hostCertificate.digest())
                 self.assertEqual(x, self.svr.peerCertificate.digest())
             return self.cli.callRemote(SecuredPing).addCallback(pinged)
-        return self.cli.callRemote(amp.StartTLS,
-                                   tls_localCertificate=cert,
-                                   tls_verifyAuthorities=[cert]).addCallback(secured)
-
-    skip = skipSSL
+        return self.cli.callRemote(amp.StartTLS, tls_localCertificate=cert,
+                                   tls_verifyAuthorities=[cert]).addCallback(
+                                   secured)
 
 
 
@@ -2330,7 +2337,10 @@ class SlightlySmartTLS(SimpleSymmetricCommandProtocol):
     amp.StartTLS.responder(getTLSVars)
 
 
-class PlainVanillaLiveFireTests(LiveFireBase, unittest.TestCase):
+
+@skipIf(skipSSL, "SSL not available")
+@skipIf(reactorLacksSSL, 'This test case requires SSL support in the reactor')
+class PlainVanillaLiveFireTests(LiveFireBase, TestCase):
 
     clientProto = SimpleSymmetricCommandProtocol
     serverProto = SimpleSymmetricCommandProtocol
@@ -2344,11 +2354,12 @@ class PlainVanillaLiveFireTests(LiveFireBase, unittest.TestCase):
             return self.cli.callRemote(SecuredPing)
         return self.cli.callRemote(amp.StartTLS).addCallback(secured)
 
-    skip = skipSSL
 
 
+@skipIf(skipSSL, "SSL not available")
+@skipIf(reactorLacksSSL, 'This test case requires SSL support in the reactor')
+class WithServerTLSVerificationTests(LiveFireBase, TestCase):
 
-class WithServerTLSVerificationTests(LiveFireBase, unittest.TestCase):
     clientProto = SimpleSymmetricCommandProtocol
     serverProto = SlightlySmartTLS
 
@@ -2358,11 +2369,9 @@ class WithServerTLSVerificationTests(LiveFireBase, unittest.TestCase):
         """
         def secured(result):
             return self.cli.callRemote(SecuredPing)
-        return self.cli.callRemote(amp.StartTLS,
-                                   tls_verifyAuthorities=[tempcert]
-            ).addCallback(secured)
-
-    skip = skipSSL
+        return self.cli.callRemote(
+            amp.StartTLS, tls_verifyAuthorities=[tempcert]).addCallback(
+            secured)
 
 
 
@@ -2488,7 +2497,7 @@ class ProtocolIncludingCommandWithDifferentCommandType(
 
 
 
-class CommandTests(unittest.TestCase):
+class CommandTests(TestCase):
     """
     Tests for L{amp.Argument} and L{amp.Command}.
     """
@@ -2779,7 +2788,7 @@ class ListOfTestsMixin:
 
 
 
-class ListOfStringsTests(unittest.TestCase, ListOfTestsMixin):
+class ListOfStringsTests(TestCase, ListOfTestsMixin):
     """
     Tests for L{ListOf} combined with L{amp.String}.
     """
@@ -2796,7 +2805,8 @@ class ListOfStringsTests(unittest.TestCase, ListOfTestsMixin):
         "multiple": [b"bar", b"baz", b"quux"]}
 
 
-class ListOfIntegersTests(unittest.TestCase, ListOfTestsMixin):
+
+class ListOfIntegersTests(TestCase, ListOfTestsMixin):
     """
     Tests for L{ListOf} combined with L{amp.Integer}.
     """
@@ -2822,7 +2832,7 @@ class ListOfIntegersTests(unittest.TestCase, ListOfTestsMixin):
 
 
 
-class ListOfUnicodeTests(unittest.TestCase, ListOfTestsMixin):
+class ListOfUnicodeTests(TestCase, ListOfTestsMixin):
     """
     Tests for L{ListOf} combined with L{amp.Unicode}.
     """
@@ -2840,7 +2850,7 @@ class ListOfUnicodeTests(unittest.TestCase, ListOfTestsMixin):
 
 
 
-class ListOfDecimalTests(unittest.TestCase, ListOfTestsMixin):
+class ListOfDecimalTests(TestCase, ListOfTestsMixin):
     """
     Tests for L{ListOf} combined with L{amp.Decimal}.
     """
@@ -2886,7 +2896,7 @@ class ListOfDecimalTests(unittest.TestCase, ListOfTestsMixin):
 
 
 
-class ListOfDecimalNanTests(unittest.TestCase, ListOfTestsMixin):
+class ListOfDecimalNanTests(TestCase, ListOfTestsMixin):
     """
     Tests for L{ListOf} combined with L{amp.Decimal} for not-a-number values.
     """
@@ -2935,7 +2945,7 @@ class ListOfDecimalNanTests(unittest.TestCase, ListOfTestsMixin):
 
 
 
-class DecimalTests(unittest.TestCase):
+class DecimalTests(TestCase):
     """
     Tests for L{amp.Decimal}.
     """
@@ -2951,7 +2961,7 @@ class DecimalTests(unittest.TestCase):
 
 
 
-class FloatTests(unittest.TestCase):
+class FloatTests(TestCase):
     """
     Tests for L{amp.Float}.
     """
@@ -2975,7 +2985,7 @@ class FloatTests(unittest.TestCase):
 
 
 
-class ListOfDateTimeTests(unittest.TestCase, ListOfTestsMixin):
+class ListOfDateTimeTests(TestCase, ListOfTestsMixin):
     """
     Tests for L{ListOf} combined with L{amp.DateTime}.
     """
@@ -3013,7 +3023,7 @@ class ListOfDateTimeTests(unittest.TestCase, ListOfTestsMixin):
 
 
 
-class ListOfOptionalTests(unittest.TestCase):
+class ListOfOptionalTests(TestCase):
     """
     Tests to ensure L{ListOf} AMP arguments can be omitted from AMP commands
     via the 'optional' flag.
@@ -3122,7 +3132,8 @@ verifyClass(interfaces.ITransport, UNIXStringTransport)
 verifyClass(interfaces.IUNIXTransport, UNIXStringTransport)
 
 
-class DescriptorTests(unittest.TestCase):
+
+class DescriptorTests(TestCase):
     """
     Tests for L{amp.Descriptor}, an argument type for passing a file descriptor
     over an AMP connection over a UNIX domain socket.
@@ -3213,7 +3224,7 @@ class DescriptorTests(unittest.TestCase):
 
 
 
-class DateTimeTests(unittest.TestCase):
+class DateTimeTests(TestCase):
     """
     Tests for L{amp.DateTime}, L{amp._FixedOffsetTZInfo}, and L{amp.utc}.
     """
@@ -3262,7 +3273,7 @@ class DateTimeTests(unittest.TestCase):
 
 
 
-class UTCTests(unittest.TestCase):
+class UTCTests(TestCase):
     """
     Tests for L{amp.utc}.
     """
@@ -3297,7 +3308,7 @@ class UTCTests(unittest.TestCase):
 
 
 
-class RemoteAmpErrorTests(unittest.TestCase):
+class RemoteAmpErrorTests(TestCase):
     """
     Tests for L{amp.RemoteAmpError}.
     """
@@ -3334,12 +3345,3 @@ class RemoteAmpErrorTests(unittest.TestCase):
                 "Traceback [(]failure with no frames[)]: "
                 "<.+Exception.>: Something came loose\n"
             ))
-
-
-
-if not interfaces.IReactorSSL.providedBy(reactor):
-    skipMsg = 'This test case requires SSL support in the reactor'
-    TLSTests.skip = skipMsg
-    LiveFireTLSTests.skip = skipMsg
-    PlainVanillaLiveFireTests.skip = skipMsg
-    WithServerTLSVerificationTests.skip = skipMsg

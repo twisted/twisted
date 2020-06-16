@@ -13,10 +13,12 @@ import functools
 import locale
 import os
 from io import BytesIO
+from typing import List, Optional, Tuple, Type
 import uuid
 
 from itertools import chain
 from collections import OrderedDict
+from unittest import skipIf
 
 from zope.interface import implementer
 from zope.interface.verify import verifyClass, verifyObject
@@ -35,8 +37,8 @@ from twisted.protocols import loopback
 from twisted.python import failure
 from twisted.python import util, log
 from twisted.python.compat import (intToBytes, range, nativeString,
-                                   networkString, iterbytes, _PY3)
-from twisted.trial import unittest
+                                   networkString, iterbytes)
+from twisted.trial.unittest import SynchronousTestCase, TestCase
 
 from twisted.cred.portal import Portal, IRealm
 from twisted.cred.checkers import InMemoryUsernamePasswordDatabaseDontUse
@@ -49,7 +51,8 @@ from twisted.test.proto_helpers import StringTransport, StringTransportWithDisco
 try:
     from twisted.test.ssl_helpers import ClientTLSContext, ServerTLSContext
 except ImportError:
-    ClientTLSContext = ServerTLSContext = None
+    ClientTLSContext = None  # type: ignore[assignment,misc]
+    ServerTLSContext = None  # type: ignore[assignment,misc]
 
 
 
@@ -58,7 +61,7 @@ def strip(f):
 
 
 
-class IMAP4UTF7Tests(unittest.TestCase):
+class IMAP4UTF7Tests(TestCase):
     tests = [
         [u'Hello world', b'Hello world'],
         [u'Hello & world', b'Hello &- world'],
@@ -187,7 +190,7 @@ class BufferingConsumer:
 
 
 
-class MessageProducerTests(unittest.SynchronousTestCase):
+class MessageProducerTests(SynchronousTestCase):
 
     def testSinglePart(self):
         body = b'This is body text.  Rar.'
@@ -414,7 +417,7 @@ class MessageProducerTests(unittest.SynchronousTestCase):
 
 
 
-class MessageSetTests(unittest.SynchronousTestCase):
+class MessageSetTests(SynchronousTestCase):
     """
     Tests for L{MessageSet}.
     """
@@ -769,7 +772,7 @@ class MessageSetTests(unittest.SynchronousTestCase):
 
 
 
-class IMAP4HelperTests(unittest.TestCase):
+class IMAP4HelperTests(TestCase):
     """
     Tests for various helper utilities in the IMAP4 module.
     """
@@ -1619,7 +1622,7 @@ class IMAP4HelperTests(unittest.TestCase):
 @implementer(imap4.IMailboxInfo, imap4.IMailbox, imap4.ICloseableMailbox)
 class SimpleMailbox:
     flags = ('\\Flag1', 'Flag2', '\\AnotherSysFlag', 'LastFlag')
-    messages = []
+    messages = []  # type: List[Tuple[bytes, list, bytes, int]]
     mUID = 0
     rw = 1
     closed = False
@@ -1708,7 +1711,7 @@ class UncloseableMailbox(object):
     A mailbox that cannot be closed.
     """
     flags = ('\\Flag1', 'Flag2', '\\AnotherSysFlag', 'LastFlag')
-    messages = []
+    messages = []  # type:List[Tuple[bytes, list, bytes, int]]
     mUID = 0
     rw = 1
     closed = False
@@ -1930,8 +1933,8 @@ class SimpleClient(imap4.IMAP4Client):
 
 class IMAP4HelperMixin:
 
-    serverCTX = None
-    clientCTX = None
+    serverCTX = None  # type: Optional[ServerTLSContext]
+    clientCTX = None  # type: Optional[ClientTLSContext]
 
     def setUp(self):
         d = defer.Deferred()
@@ -1978,22 +1981,24 @@ class IMAP4HelperMixin:
         """
         failure.trap(imap4.IMAP4Exception)
         message = str(failure.value)
-        if _PY3:
-            expected = repr(expected)
+        expected = repr(expected)
 
         self.assertEqual(message, expected)
 
 
 
-class IMAP4ServerTests(IMAP4HelperMixin, unittest.TestCase):
+class IMAP4ServerTests(IMAP4HelperMixin, TestCase):
     def testCapability(self):
         caps = {}
+
         def getCaps():
             def gotCaps(c):
                 caps.update(c)
                 self.server.transport.loseConnection()
             return self.client.getCapabilities().addCallback(gotCaps)
-        d1 = self.connected.addCallback(strip(getCaps)).addErrback(self._ebGeneral)
+
+        d1 = self.connected.addCallback(strip(getCaps)).addErrback(
+            self._ebGeneral)
         d = defer.gatherResults([self.loopback(), d1])
         expected = {b'IMAP4rev1': None, b'NAMESPACE': None, b'IDLE': None}
         return d.addCallback(lambda _: self.assertEqual(expected, caps))
@@ -2892,7 +2897,7 @@ class IMAP4ServerTests(IMAP4HelperMixin, unittest.TestCase):
 
 
 
-class IMAP4ServerParsingTests(unittest.SynchronousTestCase):
+class IMAP4ServerParsingTests(SynchronousTestCase):
     """
     Test L{imap4.IMAP4Server}'s command parsing.
     """
@@ -3348,7 +3353,7 @@ class IMAP4ServerParsingTests(unittest.SynchronousTestCase):
 
 
 
-class IMAP4ServerSearchTests(IMAP4HelperMixin, unittest.TestCase):
+class IMAP4ServerSearchTests(IMAP4HelperMixin, TestCase):
     """
     Tests for the behavior of the search_* functions in L{imap4.IMAP4Server}.
     """
@@ -3557,7 +3562,7 @@ class TestChecker:
 
 
 
-class AuthenticatorTests(IMAP4HelperMixin, unittest.TestCase):
+class AuthenticatorTests(IMAP4HelperMixin, TestCase):
     def setUp(self):
         IMAP4HelperMixin.setUp(self)
 
@@ -4009,7 +4014,7 @@ class AuthenticatorTests(IMAP4HelperMixin, unittest.TestCase):
 
 
 
-class SASLPLAINTests(unittest.TestCase):
+class SASLPLAINTests(TestCase):
     """
     Tests for I{SASL PLAIN} authentication, as implemented by
     L{imap4.PLAINAuthenticator} and L{imap4.PLAINCredentials}.
@@ -4061,7 +4066,7 @@ class SASLPLAINTests(unittest.TestCase):
 
 
 
-class UnsolicitedResponseTests(IMAP4HelperMixin, unittest.TestCase):
+class UnsolicitedResponseTests(IMAP4HelperMixin, TestCase):
     def testReadWrite(self):
         def login():
             return self.client.login(b'testuser', b'password-test')
@@ -4174,7 +4179,7 @@ class UnsolicitedResponseTests(IMAP4HelperMixin, unittest.TestCase):
 
 
 
-class ClientCapabilityTests(unittest.TestCase):
+class ClientCapabilityTests(TestCase):
     """
     Tests for issuance of the CAPABILITY command and handling of its response.
     """
@@ -4262,7 +4267,7 @@ class StillSimplerClient(imap4.IMAP4Client):
 
 
 
-class HandCraftedTests(IMAP4HelperMixin, unittest.TestCase):
+class HandCraftedTests(IMAP4HelperMixin, TestCase):
     def testTrailingLiteral(self):
         transport = StringTransport()
         c = imap4.IMAP4Client()
@@ -4624,7 +4629,7 @@ class HandCraftedTests(IMAP4HelperMixin, unittest.TestCase):
 
 class PreauthIMAP4ClientMixin(object):
     """
-    Mixin for L{unittest.SynchronousTestCase} subclasses which
+    Mixin for L{SynchronousTestCase} subclasses which
     provides a C{setUp} method which creates an L{IMAP4Client}
     connected to a L{StringTransport} and puts it into the
     I{authenticated} state.
@@ -4635,7 +4640,7 @@ class PreauthIMAP4ClientMixin(object):
     @ivar client: An L{IMAP4Client} which is connected to
         C{transport}.
     """
-    clientProtocol = imap4.IMAP4Client
+    clientProtocol = imap4.IMAP4Client  # type: Type[imap4.IMAP4Client]
 
     def setUp(self):
         """
@@ -4870,7 +4875,7 @@ class SelectionTestsMixin(PreauthIMAP4ClientMixin):
 
 
 class IMAP4ClientExamineTests(SelectionTestsMixin,
-                              unittest.SynchronousTestCase):
+                              SynchronousTestCase):
     """
     Tests for the L{IMAP4Client.examine} method.
 
@@ -4891,7 +4896,7 @@ class IMAP4ClientExamineTests(SelectionTestsMixin,
 
 
 class IMAP4ClientSelectTests(SelectionTestsMixin,
-                             unittest.SynchronousTestCase):
+                             SynchronousTestCase):
     """
     Tests for the L{IMAP4Client.select} method.
 
@@ -4913,7 +4918,7 @@ class IMAP4ClientSelectTests(SelectionTestsMixin,
 
 
 class IMAP4ClientExpungeTests(PreauthIMAP4ClientMixin,
-                              unittest.SynchronousTestCase):
+                              SynchronousTestCase):
     """
     Tests for the L{IMAP4Client.expunge} method.
 
@@ -4963,7 +4968,7 @@ class IMAP4ClientExpungeTests(PreauthIMAP4ClientMixin,
 
 
 class IMAP4ClientSearchTests(PreauthIMAP4ClientMixin,
-                             unittest.SynchronousTestCase):
+                             SynchronousTestCase):
     """
     Tests for the L{IMAP4Client.search} method.
 
@@ -5017,7 +5022,7 @@ class IMAP4ClientSearchTests(PreauthIMAP4ClientMixin,
 
 
 class IMAP4ClientFetchTests(PreauthIMAP4ClientMixin,
-                            unittest.SynchronousTestCase):
+                            SynchronousTestCase):
     """
     Tests for the L{IMAP4Client.fetch} method.
 
@@ -5330,7 +5335,7 @@ class IMAP4ClientFetchTests(PreauthIMAP4ClientMixin,
 
 
 
-class IMAP4ClientStoreTests(PreauthIMAP4ClientMixin, unittest.TestCase):
+class IMAP4ClientStoreTests(PreauthIMAP4ClientMixin, TestCase):
     """
     Tests for the L{IMAP4Client.setFlags}, L{IMAP4Client.addFlags}, and
     L{IMAP4Client.removeFlags} methods.
@@ -5485,7 +5490,7 @@ class IMAP4ClientStoreTests(PreauthIMAP4ClientMixin, unittest.TestCase):
 
 
 class IMAP4ClientStatusTests(PreauthIMAP4ClientMixin,
-                             unittest.SynchronousTestCase):
+                             SynchronousTestCase):
     """
     Tests for the L{IMAP4Client.status} method.
 
@@ -5536,7 +5541,7 @@ class IMAP4ClientStatusTests(PreauthIMAP4ClientMixin,
 
 
 class IMAP4ClientCopyTests(PreauthIMAP4ClientMixin,
-                           unittest.SynchronousTestCase):
+                           SynchronousTestCase):
     """
     Tests for the L{IMAP4Client.copy} method.
 
@@ -5680,7 +5685,7 @@ class FakeyMessage(util.FancyStrMixin):
 
 
 
-class NewStoreTests(unittest.TestCase, IMAP4HelperMixin):
+class NewStoreTests(TestCase, IMAP4HelperMixin):
     result = None
     storeArgs = None
 
@@ -5753,7 +5758,7 @@ class NewStoreTests(unittest.TestCase, IMAP4HelperMixin):
 
 
 
-class GetBodyStructureTests(unittest.TestCase):
+class GetBodyStructureTests(TestCase):
     """
     Tests for L{imap4.getBodyStructure}, a helper for constructing a list which
     directly corresponds to the wire information needed for a I{BODY} or
@@ -5996,7 +6001,7 @@ class GetBodyStructureTests(unittest.TestCase):
 
 
 
-class NewFetchTests(unittest.TestCase, IMAP4HelperMixin):
+class NewFetchTests(TestCase, IMAP4HelperMixin):
     def setUp(self):
         self.received_messages = self.received_uid = None
         self.result = None
@@ -6099,6 +6104,22 @@ class NewFetchTests(unittest.TestCase, IMAP4HelperMixin):
         return self.testFetchInternalDate(1)
 
 
+    # if alternate locale is not available, the previous test will be skipped,
+    # please install this locale for it to run.  Avoid using locale.getlocale
+    # to learn the current locale; its values don't round-trip well on all
+    # platforms.  Fortunately setlocale returns a value which does round-trip
+    # well.
+    currentLocale = locale.setlocale(locale.LC_ALL, None)
+    try:
+        locale.setlocale(locale.LC_ALL, "es_AR.UTF8")
+    except locale.Error:
+        noEsARLocale = True
+    else:
+        locale.setlocale(locale.LC_ALL, currentLocale)
+        noEsARLocale = False
+
+
+    @skipIf(noEsARLocale, "The es_AR.UTF8 locale is not installed.")
     def test_fetchInternalDateLocaleIndependent(self):
         """
         The month name in the date is locale independent.
@@ -6108,20 +6129,6 @@ class NewFetchTests(unittest.TestCase, IMAP4HelperMixin):
         locale.setlocale(locale.LC_ALL, "es_AR.UTF8")
         self.addCleanup(locale.setlocale, locale.LC_ALL, currentLocale)
         return self.testFetchInternalDate(1)
-
-    # if alternate locale is not available, the previous test will be skipped,
-    # please install this locale for it to run.  Avoid using locale.getlocale to
-    # learn the current locale; its values don't round-trip well on all
-    # platforms.  Fortunately setlocale returns a value which does round-trip
-    # well.
-    currentLocale = locale.setlocale(locale.LC_ALL, None)
-    try:
-        locale.setlocale(locale.LC_ALL, "es_AR.UTF8")
-    except locale.Error:
-        test_fetchInternalDateLocaleIndependent.skip = (
-            "The es_AR.UTF8 locale is not installed.")
-    else:
-        locale.setlocale(locale.LC_ALL, currentLocale)
 
 
     def testFetchEnvelope(self, uid=0):
@@ -6558,7 +6565,7 @@ class NewFetchTests(unittest.TestCase, IMAP4HelperMixin):
 
 
 
-class DefaultSearchTests(IMAP4HelperMixin, unittest.TestCase):
+class DefaultSearchTests(IMAP4HelperMixin, TestCase):
     """
     Test the behavior of the server's SEARCH implementation, particularly in
     the face of unhandled search terms.
@@ -6752,7 +6759,7 @@ class DefaultSearchTests(IMAP4HelperMixin, unittest.TestCase):
 
 
 @implementer(imap4.ISearchableMailbox)
-class FetchSearchStoreTests(unittest.TestCase, IMAP4HelperMixin):
+class FetchSearchStoreTests(TestCase, IMAP4HelperMixin):
     def setUp(self):
         self.expected = self.result = None
         self.server_received_query = None
@@ -6952,7 +6959,7 @@ class MessageCopierMailbox:
 
 
 
-class CopyWorkerTests(unittest.TestCase):
+class CopyWorkerTests(TestCase):
     def testFeaturefulMessage(self):
         s = imap4.IMAP4Server()
 
@@ -7035,9 +7042,16 @@ class CopyWorkerTests(unittest.TestCase):
 
 
 
-class TLSTests(IMAP4HelperMixin, unittest.TestCase):
-    serverCTX = ServerTLSContext and ServerTLSContext()
-    clientCTX = ClientTLSContext and ClientTLSContext()
+@skipIf(not ClientTLSContext, "OpenSSL not present")
+@skipIf(not interfaces.IReactorSSL(reactor, None),
+        "Reactor doesn't support SSL")
+class TLSTests(IMAP4HelperMixin, TestCase):
+    serverCTX = None
+    clientCTX = None
+    if ServerTLSContext:
+        serverCTX = ServerTLSContext()
+    if ClientTLSContext:
+        clientCTX = ClientTLSContext()
 
     def loopback(self):
         return loopback.loopbackTCP(self.server, self.client, noisy=False)
@@ -7242,7 +7256,7 @@ class SlowMailbox(SimpleMailbox):
 
 
 
-class TimeoutTests(IMAP4HelperMixin, unittest.TestCase):
+class TimeoutTests(IMAP4HelperMixin, TestCase):
 
     def test_serverTimeout(self):
         """
@@ -7441,7 +7455,7 @@ class TimeoutTests(IMAP4HelperMixin, unittest.TestCase):
 
 
 
-class DisconnectionTests(unittest.TestCase):
+class DisconnectionTests(TestCase):
     def testClientDisconnectFailsDeferreds(self):
         c = imap4.IMAP4Client()
         t = StringTransportWithDisconnection()
@@ -7468,7 +7482,7 @@ class SynchronousMailbox(object):
 
 
 
-class PipeliningTests(unittest.TestCase):
+class PipeliningTests(TestCase):
     """
     Tests for various aspects of the IMAP4 server's pipelining support.
     """
@@ -7618,16 +7632,8 @@ class PipeliningTests(unittest.TestCase):
         ]))
 
 
-if ClientTLSContext is None:
-    for case in (TLSTests,):
-        case.skip = "OpenSSL not present"
-elif interfaces.IReactorSSL(reactor, None) is None:
-    for case in (TLSTests,):
-        case.skip = "Reactor doesn't support SSL"
 
-
-
-class IMAP4ServerFetchTests(unittest.TestCase):
+class IMAP4ServerFetchTests(TestCase):
     """
     This test case is for the FETCH tests that require
     a C{StringTransport}.
@@ -7726,7 +7732,7 @@ class LiteralTestsMixin(object):
 
 
 
-class LiteralStringTests(LiteralTestsMixin, unittest.SynchronousTestCase):
+class LiteralStringTests(LiteralTestsMixin, SynchronousTestCase):
     """
     Tests for L{self.literalFactory}.
     """
@@ -7753,7 +7759,7 @@ class LiteralStringTests(LiteralTestsMixin, unittest.SynchronousTestCase):
 
 
 
-class LiteralFileTests(LiteralTestsMixin, unittest.TestCase):
+class LiteralFileTests(LiteralTestsMixin, TestCase):
     """
     Tests for L{imap4.LiteralFile}.
     """
@@ -7811,7 +7817,7 @@ class LiteralFileTests(LiteralTestsMixin, unittest.TestCase):
 
 
 
-class WriteBufferTests(unittest.SynchronousTestCase):
+class WriteBufferTests(SynchronousTestCase):
     """
     Tests for L{imap4.WriteBuffer}.
     """

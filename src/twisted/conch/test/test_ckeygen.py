@@ -9,9 +9,9 @@ import getpass
 import sys
 import subprocess
 
-from io import BytesIO, StringIO
+from io import StringIO
 
-from twisted.python.compat import unicode, _PY3
+from twisted.python.compat import unicode
 from twisted.python.reflect import requireModule
 
 from twisted.python.filepath import FilePath
@@ -58,10 +58,7 @@ class KeyGenTests(TestCase):
         """
         Patch C{sys.stdout} so tests can make assertions about what's printed.
         """
-        if _PY3:
-            self.stdout = StringIO()
-        else:
-            self.stdout = BytesIO()
+        self.stdout = StringIO()
         self.patch(sys, 'stdout', self.stdout)
 
 
@@ -580,10 +577,8 @@ class KeyGenTests(TestCase):
         error = self.assertRaises(
             SystemExit, changePassPhrase, {'filename': filename})
 
-        if _PY3:
-            expected = "Could not change passphrase: cannot guess the type of b'foobar'"
-        else:
-            expected = "Could not change passphrase: cannot guess the type of 'foobar'"
+        expected = ("Could not change passphrase: cannot "
+                    "guess the type of b'foobar'")
         self.assertEqual(expected, str(error))
         self.assertEqual(b'foobar', FilePath(filename).getContent())
 
@@ -629,12 +624,8 @@ class KeyGenTests(TestCase):
             SystemExit, changePassPhrase,
             {'filename': filename, 'newpass': 'newencrypt'})
 
-        if _PY3:
-            expected = (
-                "Could not change passphrase: cannot guess the type of b''")
-        else:
-            expected = (
-                "Could not change passphrase: cannot guess the type of ''")
+        expected = (
+            "Could not change passphrase: cannot guess the type of b''")
         self.assertEqual(expected, str(error))
 
         self.assertEqual(privateRSA_openssh, FilePath(filename).getContent())

@@ -13,10 +13,7 @@ Maintainer: Moshe Zadka
 import os
 import sys
 
-try:
-    import cPickle as pickle
-except ImportError:
-    import pickle
+import pickle
 from twisted.python import log, runtime
 from twisted.persisted import styles
 from zope.interface import implementer, Interface

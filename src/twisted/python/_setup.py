@@ -292,10 +292,10 @@ class BuildPy3(build_py, object):
 
 
 
-## Helpers and distutil tweaks
+# Helpers and distutil tweaks
 
 
-class build_ext_twisted(build_ext.build_ext, object):
+class build_ext_twisted(build_ext.build_ext, object):  # type: ignore[name-defined]  # noqa
     """
     Allow subclasses to easily detect and customize Extensions to
     build at install-time.
@@ -373,7 +373,7 @@ class build_ext_twisted(build_ext.build_ext, object):
 
 
 
-def _checkCPython(sys=sys, platform=platform):
+def _checkCPython(sys=sys, platform=platform) -> bool:
     """
     Checks if this implementation is CPython.
 
@@ -389,7 +389,8 @@ def _checkCPython(sys=sys, platform=platform):
     return platform.python_implementation() == "CPython"
 
 
-_isCPython = _checkCPython()
+
+_isCPython = _checkCPython()  # type: bool
 
 notPortedModules = [
     "twisted.mail.alias",

@@ -1762,4 +1762,4 @@ _tmp = deprecated(
 FilePath.statinfo = property(_tmp, _tmp)
 
 
-FilePath.clonePath = FilePath
+FilePath.clonePath = FilePath  # type: ignore[attr-defined]

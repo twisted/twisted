@@ -8,6 +8,8 @@ Test strerror
 import socket
 import os
 
+from unittest import skipIf
+
 from twisted.trial.unittest import TestCase
 from twisted.internet.tcp import ECONNABORTED
 from twisted.python.win32 import _ErrorFormatter, formatError
@@ -96,6 +98,7 @@ class ErrorFormatingTests(TestCase):
         self.assertEqual(message, self.probeMessage)
 
 
+    @skipIf(platform.getType() != "win32", "Test will run only on Windows.")
     def test_fromEnvironment(self):
         """
         L{_ErrorFormatter.fromEnvironment} should create an L{_ErrorFormatter}
@@ -123,10 +126,8 @@ class ErrorFormatingTests(TestCase):
                 formatter.formatError(self.probeErrorCode),
                 errorTab[self.probeErrorCode])
 
-    if platform.getType() != "win32":
-        test_fromEnvironment.skip = "Test will run only on Windows."
 
-
+    @skipIf(platform.getType() != "win32", "Test will run only on Windows.")
     def test_correctLookups(self):
         """
         Given a known-good errno, make sure that formatMessage gives results
@@ -146,6 +147,3 @@ class ErrorFormatingTests(TestCase):
             pass
 
         self.assertIn(formatError(ECONNABORTED), acceptable)
-
-    if platform.getType() != "win32":
-        test_correctLookups.skip = "Test will run only on Windows."

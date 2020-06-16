@@ -7,6 +7,8 @@ Cross-platform process-related functionality used by different
 L{IReactorProcess} implementations.
 """
 
+from typing import Optional
+
 from twisted.python.reflect import qual
 from twisted.python.deprecate import getWarningMethod
 from twisted.python.failure import Failure
@@ -18,7 +20,7 @@ _missingProcessExited = ("Since Twisted 8.2, IProcessProtocol.processExited "
 
 
 class BaseProcess(object):
-    pid = None
+    pid = None  # type: Optional[int]
     status = None
     lostProcess = 0
     proto = None

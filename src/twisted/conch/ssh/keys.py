@@ -7,48 +7,47 @@ Handling of RSA, DSA, ECDSA, and Ed25519 keys.
 """
 
 
+import base64
 import binascii
 import itertools
-
-from hashlib import md5, sha256
-import base64
 import struct
 import warnings
+from hashlib import md5, sha256
 
 import bcrypt
+from cryptography import utils
 from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes, serialization
-from cryptography.hazmat.primitives.asymmetric import (
-    dsa, ec, ed25519, padding, rsa)
-from cryptography.hazmat.primitives.serialization import (
-    load_pem_private_key, load_ssh_public_key)
-from cryptography import utils
+from cryptography.hazmat.primitives.asymmetric import (dsa, ec, ed25519,
+                                                       padding, rsa)
+from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+from cryptography.hazmat.primitives.serialization import (load_pem_private_key,
+                                                          load_ssh_public_key)
+from pyasn1.codec.ber import decoder as berDecoder
+from pyasn1.codec.ber import encoder as berEncoder
+from pyasn1.error import PyAsn1Error
+from pyasn1.type import univ
+from twisted.conch.ssh import common, sexpy
+from twisted.conch.ssh.common import int_from_bytes, int_to_bytes
+from twisted.python import randbytes
+from twisted.python.compat import (
+    iterbytes, long, izip, nativeString, unicode,
+    _b64decodebytes as decodebytes, _b64encodebytes as encodebytes,
+    _bytesChr as chr)
+from twisted.python.constants import NamedConstant, Names
+from twisted.python.deprecate import _mutuallyExclusiveArguments
 
 try:
 
     from cryptography.hazmat.primitives.asymmetric.utils import (
         encode_dss_signature, decode_dss_signature)
 except ImportError:
-    from cryptography.hazmat.primitives.asymmetric.utils import (
+    from cryptography.hazmat.primitives.asymmetric.utils import (  # type: ignore[no-redef,attr-defined]  # noqa
         encode_rfc6979_signature as encode_dss_signature,
         decode_rfc6979_signature as decode_dss_signature)
-from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 
-from pyasn1.error import PyAsn1Error
-from pyasn1.type import univ
-from pyasn1.codec.ber import decoder as berDecoder
-from pyasn1.codec.ber import encoder as berEncoder
 
-from twisted.conch.ssh import common, sexpy
-from twisted.conch.ssh.common import int_from_bytes, int_to_bytes
-from twisted.python import randbytes
-from twisted.python.compat import (
-    iterbytes, long, izip, nativeString, unicode, _PY3,
-    _b64decodebytes as decodebytes, _b64encodebytes as encodebytes,
-    _bytesChr as chr)
-from twisted.python.constants import NamedConstant, Names
-from twisted.python.deprecate import _mutuallyExclusiveArguments
 
 # Curve lookup table
 _curveTable = {
@@ -935,7 +934,7 @@ class Key(object):
                 out = '<Elliptic Curve Private Key (%s bits)' % (name[-3:],)
 
             for k, v in sorted(data.items()):
-                if _PY3 and k == 'curve':
+                if k == 'curve':
                     out += "\ncurve:\n\t%s" % (name,)
                 else:
                     out += "\n%s:\n\t%s" % (k, v)
@@ -1230,6 +1229,7 @@ class Key(object):
         Specification in OpenSSH PROTOCOL.agent
 
         RSA keys::
+
             string 'ssh-rsa'
             integer n
             integer e
@@ -1239,6 +1239,7 @@ class Key(object):
             integer q
 
         DSA keys::
+
             string 'ssh-dss'
             integer p
             integer q
@@ -1247,6 +1248,7 @@ class Key(object):
             integer x
 
         EC keys::
+
             string 'ecdsa-sha2-[identifier]'
             integer x
             integer y
@@ -1254,7 +1256,8 @@ class Key(object):
 
             identifier is the NIST standard curve name.
 
-        Ed25519 keys:
+        Ed25519 keys::
+
             string 'ssh-ed25519'
             string a
             string k || a

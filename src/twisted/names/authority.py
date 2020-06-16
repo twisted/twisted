@@ -13,7 +13,7 @@ import time
 from twisted.names import dns, error, common
 from twisted.internet import defer
 from twisted.python import failure
-from twisted.python.compat import execfile, nativeString, _PY3
+from twisted.python.compat import execfile, nativeString
 from twisted.python.filepath import FilePath
 
 
@@ -493,16 +493,12 @@ class BindAuthority(FileAuthority):
         @param line: zone file line to parse; split by word
         @type line: L{list} of L{bytes}
         """
-        if _PY3:
-            queryClasses = set(
-                qc.encode("ascii") for qc in dns.QUERY_CLASSES.values()
-            )
-            queryTypes = set(
-                qt.encode("ascii") for qt in dns.QUERY_TYPES.values()
-            )
-        else:
-            queryClasses = set(dns.QUERY_CLASSES.values())
-            queryTypes = set(dns.QUERY_TYPES.values())
+        queryClasses = set(
+            qc.encode("ascii") for qc in dns.QUERY_CLASSES.values()
+        )
+        queryTypes = set(
+            qt.encode("ascii") for qt in dns.QUERY_TYPES.values()
+        )
 
         markers = queryClasses | queryTypes
 

@@ -14,7 +14,7 @@ import types
 
 from hashlib import md5, sha1, sha256, sha384, sha512
 from twisted import __version__ as twisted_version
-from twisted.trial import unittest
+from twisted.trial.unittest import TestCase
 from twisted.internet import defer
 from twisted.protocols import loopback
 from twisted.python import randbytes
@@ -28,8 +28,8 @@ from twisted.python.reflect import requireModule
 pyasn1 = requireModule("pyasn1")
 cryptography = requireModule("cryptography")
 
-if pyasn1 is not None and cryptography is not None:
-    dependencySkip = None
+if pyasn1 and cryptography:
+    dependencySkip = ""
     from twisted.conch.ssh import common, transport, keys, factory
     from twisted.conch.test import keydata
     from cryptography.hazmat.backends import default_backend
@@ -39,14 +39,15 @@ if pyasn1 is not None and cryptography is not None:
 
     X25519_SUPPORTED = default_backend().x25519_supported()
 else:
-    if pyasn1 is None:
+    if not pyasn1:
         dependencySkip = "Cannot run without PyASN1"
-    elif cryptography is None:
+    elif not cryptography:
         dependencySkip = "can't run without cryptography"
     X25519_SUPPORTED = False
 
 
-    class transport:  # fictional modules to make classes work
+    # fictional modules to make classes work
+    class transport:  # type: ignore[no-redef]
         class SSHTransportBase:
             pass
 
@@ -57,11 +58,11 @@ else:
             pass
 
 
-    class factory:
+    class factory:  # type: ignore[no-redef]
         class SSHFactory:
             pass
 
-    class common:
+    class common:  # type: ignore[no-redef]
         @classmethod
         def NS(self, arg): return b''
 
@@ -390,7 +391,7 @@ def generatePredictableKey(transport):
 
 
 
-class TransportTestCase(unittest.TestCase):
+class TransportTestCase(TestCase):
     """
     Base class for transport test cases.
     """
@@ -2538,7 +2539,7 @@ class ClientSSHTransportCurve25519SHA256Tests(
 
 
 
-class GetMACTests(unittest.TestCase):
+class GetMACTests(TestCase):
     """
     Tests for L{SSHCiphers._getMAC}.
     """
@@ -2658,7 +2659,7 @@ class GetMACTests(unittest.TestCase):
 
 
 
-class SSHCiphersTests(unittest.TestCase):
+class SSHCiphersTests(TestCase):
     """
     Tests for the SSHCiphers helper class.
     """
@@ -2772,7 +2773,7 @@ class SSHCiphersTests(unittest.TestCase):
 
 
 
-class TransportLoopbackTests(unittest.TestCase):
+class TransportLoopbackTests(TestCase):
     """
     Test the server transport and client transport against each other,
     """

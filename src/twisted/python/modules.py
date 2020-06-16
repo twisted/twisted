@@ -473,7 +473,7 @@ class IPathImportMapper(Interface):
     This is an internal interface, used to map importers to factories for
     FilePath-like objects.
     """
-    def mapPath(self, pathLikeString):
+    def mapPath(pathLikeString):
         """
         Return a FilePath-like object.
 

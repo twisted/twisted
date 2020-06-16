@@ -5,7 +5,11 @@
 import sys
 import inspect
 
+from typing import List
+from unittest import skipIf
 from zope.interface import directlyProvides
+
+import twisted.mail.pop3client
 
 from twisted.internet import reactor, defer, error, protocol, interfaces
 from twisted.mail.pop3 import AdvancedPOP3Client as POP3Client
@@ -16,7 +20,7 @@ from twisted.protocols import basic, loopback
 from twisted.python import log
 from twisted.python.compat import intToBytes
 from twisted.test.proto_helpers import StringTransport
-from twisted.trial import unittest
+from twisted.trial.unittest import TestCase
 
 
 try:
@@ -56,7 +60,7 @@ def strip(f):
 
 
 
-class POP3ClientLoginTests(unittest.TestCase):
+class POP3ClientLoginTests(TestCase):
     def testNegativeGreeting(self):
         p, t = setUp(greet=False)
         p.allowInsecureLogin = True
@@ -210,7 +214,7 @@ class MessageConsumer:
 
 
 
-class POP3ClientListTests(unittest.TestCase):
+class POP3ClientListTests(TestCase):
     def testListSize(self):
         p, t = setUp()
         d = p.listSize()
@@ -281,7 +285,7 @@ class POP3ClientListTests(unittest.TestCase):
 
 
 
-class POP3ClientMessageTests(unittest.TestCase):
+class POP3ClientMessageTests(TestCase):
     def testRetrieve(self):
         p, t = setUp()
         d = p.retrieve(7)
@@ -385,7 +389,7 @@ class POP3ClientMessageTests(unittest.TestCase):
 
 
 
-class POP3ClientMiscTests(unittest.TestCase):
+class POP3ClientMiscTests(TestCase):
     def testCapability(self):
         p, t = setUp()
         d = p.capabilities(useCache=0)
@@ -529,7 +533,8 @@ class POP3HelperMixin:
 class TLSServerFactory(protocol.ServerFactory):
     class protocol(basic.LineReceiver):
         context = None
-        output = []
+        output = []  # type: List[bytes]
+
         def connectionMade(self):
             self.factory.input = []
             self.output = self.output[:]
@@ -545,7 +550,9 @@ class TLSServerFactory(protocol.ServerFactory):
 
 
 
-class POP3TLSTests(unittest.TestCase):
+@skipIf(not ClientTLSContext, "OpenSSL not present")
+@skipIf(not interfaces.IReactorSSL(reactor, None), "OpenSSL not present")
+class POP3TLSTests(TestCase):
     """
     Tests for POP3Client's support for TLS connections.
     """
@@ -609,7 +616,7 @@ class POP3TLSTests(unittest.TestCase):
 
 
 
-class POP3TimeoutTests(POP3HelperMixin, unittest.TestCase):
+class POP3TimeoutTests(POP3HelperMixin, TestCase):
     def testTimeout(self):
         def login():
             d = self.client.login('test', 'twisted')
@@ -642,18 +649,7 @@ class POP3TimeoutTests(POP3HelperMixin, unittest.TestCase):
 
 
 
-if ClientTLSContext is None:
-    for case in (POP3TLSTests,):
-        case.skip = "OpenSSL not present"
-elif interfaces.IReactorSSL(reactor, None) is None:
-    for case in (POP3TLSTests,):
-        case.skip = "Reactor doesn't support SSL"
-
-
-
-import twisted.mail.pop3client
-
-class POP3ClientModuleStructureTests(unittest.TestCase):
+class POP3ClientModuleStructureTests(TestCase):
     """
     Miscellaneous tests more to do with module/package structure than
     anything to do with the POP3 client.
@@ -679,8 +675,14 @@ class POP3ClientModuleStructureTests(unittest.TestCase):
                          if not c[0][0] == '_']
 
         for pc in publicClasses:
+            if sys.version_info < (3, 7) and pc == 'List':
+                # typing.List shows up in publicClasses on
+                # Python < 3.7, so skip it.
+                continue
             if not pc == 'POP3Client':
-                self.assertTrue(hasattr(twisted.mail.pop3, pc))
+                self.assertTrue(
+                    hasattr(twisted.mail.pop3, pc),
+                    "{} not in {}".format(pc, twisted.mail.pop3))
             else:
-                self.assertTrue(hasattr(twisted.mail.pop3,
-                    'AdvancedPOP3Client'))
+                self.assertTrue(
+                    hasattr(twisted.mail.pop3, 'AdvancedPOP3Client'))

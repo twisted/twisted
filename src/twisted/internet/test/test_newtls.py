@@ -17,9 +17,11 @@ from twisted.internet.test.test_tls import ContextGeneratingMixin
 from twisted.internet.test.test_tcp import TCPCreator
 try:
     from twisted.protocols import tls
-    from twisted.internet import _newtls
+    from twisted.internet import _newtls as __newtls
 except ImportError:
     _newtls = None
+else:
+    _newtls = __newtls
 from zope.interface import implementer
 
 

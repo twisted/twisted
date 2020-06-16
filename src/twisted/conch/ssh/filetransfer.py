@@ -8,6 +8,7 @@ import errno
 import struct
 import warnings
 
+from typing import Dict
 from zope.interface import implementer
 
 from twisted.conch.interfaces import ISFTPServer, ISFTPFile
@@ -15,7 +16,7 @@ from twisted.conch.ssh.common import NS, getNS
 from twisted.internet import defer, protocol, error
 from twisted.python import failure, log
 from twisted.python.compat import (
-    _PY3, range, itervalues, nativeString, networkString)
+    range, itervalues, nativeString, networkString)
 
 
 
@@ -23,7 +24,7 @@ class FileTransferBase(protocol.Protocol):
 
     versions = (3, )
 
-    packetTypes = {}
+    packetTypes = {}  # type: Dict[int, str]
 
     def __init__(self):
         self.buf = b''
@@ -814,8 +815,7 @@ class FileTransferClient(FileTransferBase):
 
     def _cbRealPath(self, result):
         name, longname, attrs = result[0]
-        if _PY3:
-            name = name.decode("utf-8")
+        name = name.decode("utf-8")
         return name
 
 

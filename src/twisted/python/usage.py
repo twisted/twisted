@@ -20,10 +20,12 @@ import sys
 import getopt
 from os import path
 import textwrap
+from typing import Callable, Optional
 
 # Sibling Imports
 from twisted.python import reflect, util
-from twisted.python.compat import _PY3
+
+
 
 class UsageError(Exception):
     pass
@@ -186,7 +188,7 @@ class Options(dict):
             self._dispatch.update(dispatch)
 
 
-    __hash__ = object.__hash__
+    __hash__ = object.__hash__  # type: Callable[[object], int]
 
 
     def opt_help(self):
@@ -559,7 +561,8 @@ class Completer(object):
     This class produces no completion matches itself - see the various
     subclasses for specific completion functionality.
     """
-    _descr = None
+    _descr = None  # type: Optional[str]
+
     def __init__(self, descr=None, repeat=False):
         """
         @type descr: C{str}
@@ -970,20 +973,12 @@ def flagFunction(method, name=None):
     @return: If the method is a flag handler, return C{True}.  Otherwise return
         C{False}.
     """
-    if _PY3:
-        reqArgs = len(inspect.signature(method).parameters)
-        if reqArgs > 1:
-            raise UsageError('Invalid Option function for %s' %
-                             (name or method.__name__))
-        if reqArgs == 1:
-            return False
-    else:
-        reqArgs = len(inspect.getargspec(method).args)
-        if reqArgs > 2:
-            raise UsageError('Invalid Option function for %s' %
-                             (name or method.__name__))
-        if reqArgs == 2:
-            return False
+    reqArgs = len(inspect.signature(method).parameters)
+    if reqArgs > 1:
+        raise UsageError('Invalid Option function for %s' %
+                         (name or method.__name__))
+    if reqArgs == 1:
+        return False
     return True
 
 
@@ -996,4 +991,7 @@ def portCoerce(value):
     if value < 0 or value > 65535:
         raise ValueError("Port number not in range: %s" % (value,))
     return value
-portCoerce.coerceDoc = "Must be an int between 0 and 65535."
+
+
+
+portCoerce.coerceDoc = "Must be an int between 0 and 65535."  # type: ignore[attr-defined]  # noqa

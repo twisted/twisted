@@ -12,15 +12,12 @@ Maintainer: Itamar Shtull-Trauring
 """
 
 
-from twisted.python.compat import _PY3, intToBytes, nativeString, urllib_parse
+from twisted.python.compat import intToBytes, nativeString, urllib_parse
 from twisted.python.compat import unicode
 
 # System Imports
 import base64
-if _PY3:
-    import xmlrpc.client as xmlrpclib
-else:
-    import xmlrpclib
+import xmlrpc.client as xmlrpclib
 
 # Sibling Imports
 from twisted.web import resource, server, http
@@ -290,12 +287,12 @@ class XMLRPCIntrospection(XMLRPC):
         while todo:
             obj, prefix = todo.pop(0)
             functions.extend([prefix + name for name in obj.listProcedures()])
-            todo.extend([ (obj.getSubHandler(name),
-                           prefix + name + obj.separator)
-                          for name in obj.getSubHandlerPrefixes() ])
+            todo.extend([(obj.getSubHandler(name),
+                         prefix + name + obj.separator)
+                         for name in obj.getSubHandlerPrefixes()])
         return functions
 
-    xmlrpc_listMethods.signature = [['array']]
+    xmlrpc_listMethods.signature = [['array']]  # type: ignore[attr-defined]
 
     def xmlrpc_methodHelp(self, method):
         """
@@ -305,7 +302,7 @@ class XMLRPCIntrospection(XMLRPC):
         return (getattr(method, 'help', None)
                 or getattr(method, '__doc__', None) or '')
 
-    xmlrpc_methodHelp.signature = [['string', 'string']]
+    xmlrpc_methodHelp.signature = [['string', 'string']]  # type: ignore[attr-defined] # noqa
 
     def xmlrpc_methodSignature(self, method):
         """
@@ -319,7 +316,7 @@ class XMLRPCIntrospection(XMLRPC):
         method = self._xmlrpc_parent.lookupProcedure(method)
         return getattr(method, 'signature', None) or ''
 
-    xmlrpc_methodSignature.signature = [['array', 'string'],
+    xmlrpc_methodSignature.signature = [['array', 'string'],  # type: ignore[attr-defined] # noqa
                                         ['string', 'string']]
 
 

@@ -10,13 +10,6 @@ Do NOT use this module directly - use reactor.spawnProcess() instead.
 Maintainer: Itamar Shtull-Trauring
 """
 
-
-from twisted.python.runtime import platform
-
-if platform.isWindows():
-    raise ImportError(("twisted.internet.process does not work on Windows. "
-                       "Use the reactor.spawnProcess() API instead."))
-
 import errno
 import gc
 import os
@@ -26,31 +19,45 @@ import stat
 import sys
 import traceback
 
-try:
-    import pty
-except ImportError:
-    pty = None
-
-try:
-    import fcntl, termios
-except ImportError:
-    fcntl = None
+from typing import Callable, Dict, Optional
+from twisted.python.runtime import platform
 
 from zope.interface import implementer
 
 from twisted.python import log, failure
 from twisted.python.util import switchUID
-from twisted.python.compat import items, range, _PY3
+from twisted.python.compat import items, range
 from twisted.internet import fdesc, abstract, error
 from twisted.internet.main import CONNECTION_LOST, CONNECTION_DONE
 from twisted.internet._baseprocess import BaseProcess
 from twisted.internet.interfaces import IProcessTransport
 
+if platform.isWindows():
+    raise ImportError(("twisted.internet.process does not work on Windows. "
+                       "Use the reactor.spawnProcess() API instead."))
+
+try:
+    import pty as _pty
+except ImportError:
+    pty = None
+else:
+    pty = _pty
+
+try:
+    import fcntl as _fcntl
+    import termios
+except ImportError:
+    fcntl = None
+else:
+    fcntl = _fcntl
+
 # Some people were importing this, which is incorrect, just keeping it
 # here for backwards compatibility:
 ProcessExitedAlready = error.ProcessExitedAlready
 
-reapProcessHandlers = {}
+reapProcessHandlers = {}  # type: Dict[int, Callable]
+
+
 
 def reapAllProcesses():
     """
@@ -281,7 +288,7 @@ class _BaseProcess(BaseProcess, object):
     """
     Base class for Process and PTYProcess.
     """
-    status = None
+    status = None  # type: Optional[int]
     pid = None
 
     def reapProcess(self):
@@ -416,31 +423,27 @@ class _BaseProcess(BaseProcess, object):
                     # write(2, err) is a useful thing to attempt.
 
                     try:
-                        stderr = os.fdopen(2, 'wb')
+                        # On Python 3, print_exc takes a text stream, but
+                        # on Python 2 it still takes a byte stream.  So on
+                        # Python 3 we will wrap up the byte stream returned
+                        # by os.fdopen using TextIOWrapper.
+
+                        # We hard-code UTF-8 as the encoding here, rather
+                        # than looking at something like
+                        # getfilesystemencoding() or sys.stderr.encoding,
+                        # because we want an encoding that will be able to
+                        # encode the full range of code points.  We are
+                        # (most likely) talking to the parent process on
+                        # the other end of this pipe and not the filesystem
+                        # or the original sys.stderr, so there's no point
+                        # in trying to match the encoding of one of those
+                        # objects.
+
+                        stderr = io.TextIOWrapper(os.fdopen(2, 'wb'),
+                                                  encoding="utf-8")
                         msg = ("Upon execvpe {0} {1} in environment id {2}"
                                "\n:").format(executable, str(args),
                                              id(environment))
-
-                        if _PY3:
-
-                            # On Python 3, print_exc takes a text stream, but
-                            # on Python 2 it still takes a byte stream.  So on
-                            # Python 3 we will wrap up the byte stream returned
-                            # by os.fdopen using TextIOWrapper.
-
-                            # We hard-code UTF-8 as the encoding here, rather
-                            # than looking at something like
-                            # getfilesystemencoding() or sys.stderr.encoding,
-                            # because we want an encoding that will be able to
-                            # encode the full range of code points.  We are
-                            # (most likely) talking to the parent process on
-                            # the other end of this pipe and not the filesystem
-                            # or the original sys.stderr, so there's no point
-                            # in trying to match the encoding of one of those
-                            # objects.
-
-                            stderr = io.TextIOWrapper(stderr, encoding="utf-8")
-
                         stderr.write(msg)
                         traceback.print_exc(file=stderr)
                         stderr.flush()

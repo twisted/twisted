@@ -14,22 +14,14 @@ import os
 import sys
 import time
 
+from importlib import invalidate_caches as invalidateImportCaches
 from zope.interface import Interface
 
 from twisted.trial import unittest
-from twisted.python.compat import _PY3, _PYPY
 from twisted.python.log import textFromEventDict, addObserver, removeObserver
 from twisted.python.filepath import FilePath
 
 from twisted import plugin
-
-if _PY3:
-    from importlib import invalidate_caches as invalidateImportCaches
-else:
-    def invalidateImportCaches():
-        """
-        On python 2, import caches don't need to be invalidated.
-        """
 
 
 
@@ -549,15 +541,11 @@ class DeveloperSetupTests(unittest.TestCase):
         os.utime(mypath.path, (x, x))
         pyc = mypath.sibling('stale.pyc')
         # compile it
-        if _PY3:
-            # On python 3, don't use the __pycache__ directory; the intention
-            # of scanning for .pyc files is for configurations where you want
-            # to intentionally include them, which means we _don't_ scan for
-            # them inside cache directories.
-            extra = dict(legacy=True)
-        else:
-            # On python 2 this option doesn't exist.
-            extra = dict()
+        # On python 3, don't use the __pycache__ directory; the intention
+        # of scanning for .pyc files is for configurations where you want
+        # to intentionally include them, which means we _don't_ scan for
+        # them inside cache directories.
+        extra = dict(legacy=True)
         compileall.compile_dir(self.appPackage.path, quiet=1, **extra)
         os.utime(pyc.path, (x, x))
         # Eliminate the other option.
@@ -571,10 +559,6 @@ class DeveloperSetupTests(unittest.TestCase):
         mypath.setContent(pluginFileContents('two'))
         self.failIfIn('one', self.getAllPlugins())
         self.assertIn('two', self.getAllPlugins())
-
-    if _PYPY and not _PY3:
-        test_freshPyReplacesStalePyc.skip = (
-            "PyPy2 will not normally import lone .pyc files.")
 
 
     def test_newPluginsOnReadOnlyPath(self):

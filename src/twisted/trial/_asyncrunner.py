@@ -15,8 +15,7 @@ from twisted.python import components
 from twisted.trial import itrial, reporter
 from twisted.trial._synctest import _logObserver
 
-pyunit = __import__('unittest')
-
+import unittest as pyunit
 from zope.interface import implementer
 
 

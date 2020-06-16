@@ -12,22 +12,16 @@ from socket import AF_INET, AF_INET6, inet_pton, error
 from zope.interface import implementer
 
 # Twisted Imports
-from twisted.python.compat import unicode, lazyByteSlice, _PY3
+from twisted.python.compat import unicode, lazyByteSlice
 from twisted.python import reflect, failure
 from twisted.internet import interfaces, main
 
-if _PY3:
-    # Python 3.4+ can join bytes and memoryviews; using a
-    # memoryview prevents the slice from copying
-    def _concatenate(bObj, offset, bArray):
-        return b''.join([memoryview(bObj)[offset:]] + bArray)
-else:
-    from __builtin__ import buffer
 
-    def _concatenate(bObj, offset, bArray):
-        # Avoid one extra string copy by using a buffer to limit what
-        # we include in the result.
-        return buffer(bObj, offset) + b"".join(bArray)
+
+# Python 3.4+ can join bytes and memoryviews; using a
+# memoryview prevents the slice from copying
+def _concatenate(bObj, offset, bArray):
+    return b''.join([memoryview(bObj)[offset:]] + bArray)
 
 
 
