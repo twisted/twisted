@@ -856,17 +856,21 @@ class H2Connection(Protocol, TimeoutMixin):
             self._bufferedControlFrames.append(bufferedBytes)
             self._bufferedControlFrameBytes += len(bufferedBytes)
 
-            if self._bufferedControlFrameBytes >= self._maxBufferedControlFrameBytes:
+            if (self._bufferedControlFrameBytes >=
+                    self._maxBufferedControlFrameBytes):
+                maxBuffCtrlFrameBytes = self._maxBufferedControlFrameBytes
                 self._log.error(
                     "Maximum number of control frame bytes buffered: "
-                    "{bufferedControlFrameBytes} > = {maxBufferedControlFrameBytes}. "
+                    "{bufferedControlFrameBytes} > = "
+                    "{maxBufferedControlFrameBytes}. "
                     "Aborting connection to client: {client} ",
                     bufferedControlFrameBytes=self._bufferedControlFrameBytes,
-                    maxBufferedControlFrameBytes=self._maxBufferedControlFrameBytes,
+                    maxBufferedControlFrameBytes=maxBuffCtrlFrameBytes,
                     client=self.transport.getPeer(),
                 )
-                # We've exceeded a reasonable buffer size for max buffered control frames.
-                # This is a denial of service risk, so we're going to drop this connection.
+                # We've exceeded a reasonable buffer size for max buffered
+                # control frames. This is a denial of service risk, so we're
+                # going to drop this connection.
                 self.transport.abortConnection()
                 self.connectionLost(Failure(ExcessiveBufferingError()))
                 return False
