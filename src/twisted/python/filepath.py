@@ -1733,6 +1733,10 @@ class FilePath(AbstractFilePath):
             destination.changed()
 
 
+    @property
+    @deprecated(Version('Twisted', 15, 0, 0),
+                "other FilePath methods such as getsize(), "
+                "isdir(), getModificationTime(), etc.")
     def statinfo(self, value=_SpecialNoValue):
         """
         FilePath.statinfo is deprecated.
@@ -1754,12 +1758,30 @@ class FilePath(AbstractFilePath):
             self._statinfo = value
 
 
-# This is all a terrible hack to get statinfo deprecated
-_tmp = deprecated(
-    Version('Twisted', 15, 0, 0),
-    "other FilePath methods such as getsize(), "
-    "isdir(), getModificationTime(), etc.")(FilePath.statinfo)
-FilePath.statinfo = property(_tmp, _tmp)
+    @statinfo.setter
+    @deprecated(Version('Twisted', 15, 0, 0),
+                "other FilePath methods such as getsize(), "
+                "isdir(), getModificationTime(), etc.")
+    def statinfo(self, value=_SpecialNoValue):
+        """
+        FilePath.statinfo is deprecated.
+
+        @param value: value to set statinfo to, if setting a value
+        @return: C{_statinfo} if getting, L{None} if setting
+        """
+        # This is a pretty awful hack to use the deprecated decorator to
+        # deprecate a class attribute.  Ideally, there would just be a
+        # statinfo property and a statinfo property setter, but the
+        # 'deprecated' decorator does not produce the correct FQDN on class
+        # methods.  So the property stuff needs to be set outside the class
+        # definition - but the getter and setter both need the same function
+        # in order for the 'deprecated' decorator to produce the right
+        # deprecation string.
+        if value is _SpecialNoValue:
+            return self._statinfo
+        else:
+            self._statinfo = value
+
 
 
 FilePath.clonePath = FilePath  # type: ignore[attr-defined]
