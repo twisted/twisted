@@ -8,7 +8,7 @@ modules.theSystemPath = modules.PythonPath([], moduleDict={})
 # Now, when we import gireactor it shouldn't use pygtkcompat, and should
 # instead prevent gobject from being importable:
 gireactor = requireModule('twisted.internet.gireactor')
-for name in gireactor._PYGTK_MODULES:  # type: ignore[attr-defined]
+for name in gireactor._PYGTK_MODULES:
     if sys.modules[name] is not None:
         sys.stdout.write("failure, sys.modules[%r] is %r, instead of None" %
                          (name, sys.modules["gobject"]))
