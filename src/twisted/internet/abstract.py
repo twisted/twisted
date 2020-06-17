@@ -8,6 +8,7 @@ Support for generic select()able objects.
 
 
 from socket import AF_INET, AF_INET6, inet_pton, error
+from typing import Sequence
 
 from zope.interface import implementer
 
@@ -124,7 +125,7 @@ class _LogOwner(object):
     transport's log prefix.
     """
 
-    def _getLogPrefix(self, applicationObject):
+    def _getLogPrefix(self, applicationObject) -> str:
         """
         Determine the log prefix to use for messages related to
         C{applicationObject}, which may or may not be an
@@ -169,7 +170,7 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
 
     SEND_LIMIT = 128*1024
 
-    def __init__(self, reactor=None):
+    def __init__(self, reactor: interfaces.IReactorFDSet = None):
         """
         @param reactor: An L{IReactorFDSet} provider which this descriptor will
             use to get readable and writeable event notifications.  If no value
@@ -201,7 +202,7 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
         self.stopWriting()
 
 
-    def writeSomeData(self, data):
+    def writeSomeData(self, data: bytes):
         """
         Write as much as possible of the given data, immediately.
 
@@ -298,7 +299,7 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
         # in current code should never be called
         self.connectionLost(reason)
 
-    def readConnectionLost(self, reason):
+    def readConnectionLost(self, reason: failure.Failure):
         # override in subclasses
         self.connectionLost(reason)
 
@@ -330,7 +331,7 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
                 self.producer.pauseProducing()
 
 
-    def write(self, data):
+    def write(self, data: bytes):
         """Reliably write some data.
 
         The data is buffered until the underlying file descriptor is ready
@@ -349,7 +350,7 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
             self.startWriting()
 
 
-    def writeSequence(self, iovec):
+    def writeSequence(self, iovec: Sequence[bytes]):
         """
         Reliably write a sequence of data.
 
@@ -476,7 +477,7 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
 
 
 
-def isIPAddress(addr, family=AF_INET):
+def isIPAddress(addr, family: int = AF_INET) -> bool:
     """
     Determine whether the given string represents an IP address of the given
     family; by default, an IPv4 address.
@@ -521,7 +522,7 @@ def isIPAddress(addr, family=AF_INET):
 
 
 
-def isIPv6Address(addr):
+def isIPv6Address(addr: str) -> bool:
     """
     Determine whether the given string represents an IPv6 address.
 
