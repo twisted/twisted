@@ -84,7 +84,7 @@ class ConchTestAvatar(avatar.ConchUser):
         self.globalRequests = {}
         self.channelLookup.update(
             {b'session': session.SSHSession,
-             b'direct-tcpip':forwarding.openConnectForwardingClient})
+             b'direct-tcpip': forwarding.openConnectForwardingClient})
         self.subsystemLookup.update({b'crazy': CrazySubsystem})
 
 
@@ -335,7 +335,7 @@ if cryptography is not None and pyasn1 is not None:
 
 
     class ConchTestServerFactory(factory.SSHFactory):
-        noisy = 0
+        noisy = False
 
         services = {
             b'ssh-userauth': userauth.SSHUserAuthServer,
