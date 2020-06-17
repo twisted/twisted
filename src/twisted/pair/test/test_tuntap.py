@@ -23,7 +23,7 @@ try:
 except (ObjectNotFound, AttributeError):
     platformSkip = "Platform is missing fcntl/ioctl support"
 else:
-    platformSkip = None
+    platformSkip = ""
 
 from zope.interface import Interface, implementer
 from zope.interface.verify import verifyObject
@@ -53,7 +53,7 @@ _RealSystem = object
 _IInputOutputSystem = Interface
 
 
-if platformSkip is None:
+if not platformSkip:
     from twisted.pair.testing import (
         _PI_SIZE, Tunnel, MemoryIOSystem, _IPv4, _H, _ethernet, _ip, _udp)
 
