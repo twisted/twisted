@@ -339,10 +339,14 @@ class ConchServerSetupMixin:
     if _PYPY:
         skip = 'PyPy known_host not working yet on Travis.'
 
-    realmFactory = staticmethod(lambda: ConchTestRealm(b'testuser'))
+
+    @staticmethod
+    def realmFactory():
+        return ConchTestRealm(b'testuser')
+
 
     def _createFiles(self):
-        for f in ['rsa_test','rsa_test.pub','dsa_test','dsa_test.pub',
+        for f in ['rsa_test', 'rsa_test.pub', 'dsa_test', 'dsa_test.pub',
                   'kh_test']:
             if os.path.exists(f):
                 os.remove(f)
