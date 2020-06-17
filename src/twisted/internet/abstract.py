@@ -378,7 +378,7 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
         self.startWriting()
 
 
-    def loseConnection(self, _connDone=failure.Failure(main.CONNECTION_DONE)):
+    def loseConnection(self):
         """Close the connection at the next available opportunity.
 
         Call this to cause this FileDescriptor to lose its connection.  It will
@@ -397,7 +397,7 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
                 # doWrite won't trigger the connection close anymore
                 self.stopReading()
                 self.stopWriting()
-                self.connectionLost(_connDone)
+                self.connectionLost(failure.Failure(main.CONNECTION_DONE))
             else:
                 self.stopReading()
                 self.startWriting()
