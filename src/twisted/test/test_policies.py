@@ -357,7 +357,8 @@ class WrapperTests(unittest.TestCase):
 
 
 class WrappingFactory(policies.WrappingFactory):
-    protocol = lambda s, f, p: p
+    def protocol(self, f, p):
+        return p
 
     def startFactory(self):
         policies.WrappingFactory.startFactory(self)
