@@ -197,39 +197,37 @@ class MessageSet(object):
             self.ranges = start[:]
             self.clean()
         else:
-            self.add(start,end)
+            self.add(start, end)
 
 
-    # Ooo.  A property.
-    def last():
-        def _setLast(self, value):
-            if self._last is not self._empty:
-                raise ValueError("last already set")
+    @property
+    def last(self):
+        """
+        Replaces all occurrences of "*".  This should be the
+        largest number in use.  Must be set before attempting to
+        use the MessageSet as a container.
 
-            self._last = value
-            for i, (l, h) in enumerate(self.ranges):
-                if l is None:
-                    l = value
-                if h is None:
-                    h = value
-                if l > h:
-                    l, h = h, l
-                self.ranges[i] = (l, h)
-            self.clean()
+        @raises: L{ValueError} if a largest value has already
+        been set.
+        """
+        return self._last
 
-        def _getLast(self):
-            return self._last
 
-        doc = '''
-              Replaces all occurrences of "*".  This should be the
-              largest number in use.  Must be set before attempting to
-              use the MessageSet as a container.
+    @last.setter
+    def last(self, value):
+        if self._last is not self._empty:
+            raise ValueError("last already set")
 
-              @raises: L{ValueError} if a largest value has already
-                  been set.
-              '''
-        return _getLast, _setLast, None, doc
-    last = property(*last())
+        self._last = value
+        for i, (low, high) in enumerate(self.ranges):
+            if low is None:
+                low = value
+            if high is None:
+                high = value
+            if low > high:
+                low, high = high, low
+            self.ranges[i] = (low, high)
+        self.clean()
 
 
     def add(self, start, end=_empty):

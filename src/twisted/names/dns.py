@@ -1346,7 +1346,10 @@ class Record_WKS(tputil.FancyEqMixin, tputil.FancyStrMixin):
 
     TYPE = WKS
 
-    _address = property(lambda self: socket.inet_ntoa(self.address))
+    @property
+    def _address(self):
+        return socket.inet_ntoa(self.address)
+
 
     def __init__(self, address='0.0.0.0', protocol=0, map=b'', ttl=None):
         """
@@ -1400,7 +1403,10 @@ class Record_AAAA(tputil.FancyEqMixin, tputil.FancyStrMixin):
     showAttributes = (('_address', 'address', '%s'), 'ttl')
     compareAttributes = ('address', 'ttl')
 
-    _address = property(lambda self: socket.inet_ntop(AF_INET6, self.address))
+    @property
+    def _address(self):
+        return socket.inet_ntop(AF_INET6, self.address)
+
 
     def __init__(self, address='::', ttl=None):
         """
@@ -1458,10 +1464,16 @@ class Record_A6(tputil.FancyStrMixin, tputil.FancyEqMixin):
     TYPE = A6
 
     fancybasename = 'A6'
-    showAttributes = (('_suffix', 'suffix', '%s'), ('prefix', 'prefix', '%s'), 'ttl')
+    showAttributes = (('_suffix', 'suffix', '%s'),
+                      ('prefix', 'prefix', '%s'),
+                      'ttl')
     compareAttributes = ('prefixLen', 'prefix', 'suffix', 'ttl')
 
-    _suffix = property(lambda self: socket.inet_ntop(AF_INET6, self.suffix))
+
+    @property
+    def _suffix(self):
+        return socket.inet_ntop(AF_INET6, self.suffix)
+
 
     def __init__(self, prefixLen=0, suffix='::', prefix=b'', ttl=None):
         """

@@ -333,12 +333,13 @@ if cryptography is not None and pyasn1 is not None:
                 return False
             return True
 
+
     class ConchTestServerFactory(factory.SSHFactory):
         noisy = 0
 
         services = {
-            b'ssh-userauth':userauth.SSHUserAuthServer,
-            b'ssh-connection':connection.SSHConnection
+            b'ssh-userauth': userauth.SSHUserAuthServer,
+            b'ssh-connection': connection.SSHConnection
         }
 
         def buildProtocol(self, addr):

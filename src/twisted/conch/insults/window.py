@@ -730,26 +730,25 @@ class Viewport(Widget):
     _xOffset = 0
     _yOffset = 0
 
-    def xOffset():
-        def get(self):
-            return self._xOffset
-        def set(self, value):
-            if self._xOffset != value:
-                self._xOffset = value
-                self.repaint()
-        return get, set
-    xOffset = property(*xOffset())
+    @property
+    def xOffset(self):
+        return self._xOffset
 
+    @xOffset.setter
+    def xOffset(self, value):
+        if self._xOffset != value:
+            self._xOffset = value
+            self.repaint()
 
-    def yOffset():
-        def get(self):
-            return self._yOffset
-        def set(self, value):
-            if self._yOffset != value:
-                self._yOffset = value
-                self.repaint()
-        return get, set
-    yOffset = property(*yOffset())
+    @property
+    def yOffset(self):
+        return self._yOffset
+
+    @yOffset.setter
+    def yOffset(self, value):
+        if self._yOffset != value:
+            self._yOffset = value
+            self.repaint()
 
     _width = 160
     _height = 24

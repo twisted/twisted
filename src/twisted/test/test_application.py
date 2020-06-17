@@ -850,11 +850,12 @@ class PluggableReactorTests(TwistedModulesMixin, TestCase):
         INSTALL_EVENT = 'reactor installed'
         SUBCOMMAND_EVENT = 'subcommands loaded'
 
-        class ReactorSelectionOptions(usage.Options, app.ReactorSelectionMixin):
+        class ReactorSelectionOptions(usage.Options,
+                                      app.ReactorSelectionMixin):
+            @property
             def subCommands(self):
                 executed.append(SUBCOMMAND_EVENT)
                 return [('subcommand', None, lambda: self, 'test subcommand')]
-            subCommands = property(subCommands)
 
         def install():
             executed.append(INSTALL_EVENT)

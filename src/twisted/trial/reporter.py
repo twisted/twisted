@@ -1040,12 +1040,12 @@ class SubunitReporter(object):
         pass
 
 
+    @property
     def shouldStop(self):
         """
         Whether or not the test runner should stop running tests.
         """
         return self._subunit.shouldStop
-    shouldStop = property(shouldStop)
 
 
     def stop(self):
