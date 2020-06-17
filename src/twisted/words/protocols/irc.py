@@ -2917,7 +2917,7 @@ class DccChat(basic.LineReceiver, styles.Ephemeral):
     """
 
     queryData = None
-    delimiter = CR + NL
+    delimiter = CR.encode('ascii') + NL.encode('ascii')
     client = None
     remoteParty = None
     buffer = b""
