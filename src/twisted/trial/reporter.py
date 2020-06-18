@@ -1010,6 +1010,9 @@ class SubunitReporter(object):
     @since: 10.0
     """
 
+    testsRun = None
+
+
     def __init__(self, stream=sys.stdout, tbformat='default',
                  realtime=False, publisher=None):
         """
