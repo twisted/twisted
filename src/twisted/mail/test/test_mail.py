@@ -792,7 +792,7 @@ class StubAliasableDomain(object):
     """
     Minimal testable implementation of IAliasableDomain.
     """
-    def exists(self, user):
+    def exists(self, user, memo=None):
         """
         No test coverage for invocations of this method on domain objects,
         so we just won't implement it.

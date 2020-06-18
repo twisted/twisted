@@ -1704,6 +1704,21 @@ class SimpleMailbox:
         self.closed = True
 
 
+    def fetch(self, messages, uid):
+        # IMailboxIMAP.fetch
+        pass
+
+
+    def getUID(self, message):
+        # IMailboxIMAP.getUID
+        pass
+
+
+    def store(self):
+        # IMailboxIMAP.store
+        pass
+
+
 
 @implementer(imap4.IMailboxInfo, imap4.IMailbox)
 class UncloseableMailbox(object):
@@ -1854,6 +1869,21 @@ class UncloseableMailbox(object):
         for i in delete:
             self.messages.remove(i)
         return [i[3] for i in delete]
+
+
+    def fetch(self, messages, uid):
+        # IMailboxIMAP.fetch
+        pass
+
+
+    def getUID(self, message):
+        # IMailboxIMAP.getUID
+        pass
+
+
+    def store(self, messages, flags, mode, uid):
+        # IMailboxIMAP.store
+        pass
 
 
 

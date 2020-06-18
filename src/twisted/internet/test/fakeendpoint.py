@@ -50,13 +50,19 @@ class EndpointBase(object):
 
 @implementer(IStreamClientEndpoint)
 class StreamClient(EndpointBase):
-    pass
+
+    def connect(self):
+        # IStreamClientEndpoint.connect
+        pass
 
 
 
 @implementer(IStreamServerEndpoint)
 class StreamServer(EndpointBase):
-    pass
+
+    def listen(self):
+        # IStreamClientEndpoint.listen
+        pass
 
 
 

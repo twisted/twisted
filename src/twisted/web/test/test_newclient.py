@@ -1984,6 +1984,16 @@ class StringProducer:
         self.stopped = True
 
 
+    def pauseProducing(self):
+        # IBodyProducer.pauseProducing
+        pass
+
+
+    def resumeProducing(self):
+        # IBodyProducer.resumeProducing
+        pass
+
+
 
 class RequestTests(TestCase):
     """

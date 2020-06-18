@@ -73,6 +73,11 @@ class UnauthorizedResource(object):
         return self
 
 
+    def putChild(self, child):
+        # IResource.putChild
+        raise NotImplementedError()
+
+
 
 @implementer(IResource)
 class HTTPAuthSessionWrapper(object):
@@ -233,3 +238,8 @@ class HTTPAuthSessionWrapper(object):
             if fact.scheme == scheme:
                 return (fact, b' '.join(elements[1:]))
         return (None, None)
+
+
+    def putChild(self, child):
+        # IResource.putChild
+        raise NotImplementedError()

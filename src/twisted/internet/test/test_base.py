@@ -61,6 +61,26 @@ class FakeReactor(object):
         self._threadpool.stop()
 
 
+    def getDelayedCalls(self):
+        # IReactorTime.getDelayedCalls
+        pass
+
+
+    def seconds(self):
+        # IReactorTime.seconds
+        pass
+
+
+    def callInThread(self, callable, *args, **kwargs):
+        # IReactorInThreads.callInThread
+        pass
+
+
+    def suggestThreadPoolSize(self, size):
+        # IReactorThreads.suggestThreadPoolSize
+        pass
+
+
 
 class ThreadedResolverTests(TestCase):
     """
