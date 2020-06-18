@@ -505,7 +505,7 @@ class Reporter(TestResult):
         self._write('\n')
 
 
-    def upDownError(self, method, error, warn, printStatus):
+    def upDownError(self, method, error, warn=True, printStatus=True):
         super(Reporter, self).upDownError(method, error, warn, printStatus)
         if warn:
             tbStr = self._formatFailureTraceback(error)
