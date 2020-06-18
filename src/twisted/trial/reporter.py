@@ -1131,7 +1131,7 @@ class SubunitReporter(object):
             test, util.excInfoOrFailureToExcInfo(err))
 
 
-    def addExpectedFailure(self, test, failure, todo):
+    def addExpectedFailure(self, test, failure, todo=None):
         """
         Record an expected failure from a test.
 
