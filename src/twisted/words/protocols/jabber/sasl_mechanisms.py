@@ -56,6 +56,11 @@ class Anonymous(object):
         return None
 
 
+    def getResponse(self, challenge):
+        # ISASLMechanism.getResponse
+        pass
+
+
 
 @implementer(ISASLMechanism)
 class Plain(object):
@@ -87,6 +92,11 @@ class Plain(object):
         return (self.authzid.encode('utf-8') + b"\x00" +
                 self.authcid.encode('utf-8') + b"\x00" +
                 self.password.encode('utf-8'))
+
+
+    def getResponse(self, challenge):
+        # ISASLMechanism.getResponse
+        pass
 
 
 

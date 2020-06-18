@@ -5194,6 +5194,11 @@ class MemoryAccount(MemoryAccountWithoutNamespaces):
         return None
 
 
+    def getUserNamespaces(self):
+        # INamespacePresenter.getUserNamespaces
+        return None
+
+
 
 _statusRequestDict = {
     'MESSAGES': 'getMessageCount',

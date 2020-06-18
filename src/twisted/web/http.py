@@ -1917,7 +1917,6 @@ class _NoPushProducer(object):
         Tells a producer that it has produced too much data to process for
         the time being, and to stop until resumeProducing() is called.
         """
-        pass
 
 
     def resumeProducing(self):
@@ -1927,7 +1926,6 @@ class _NoPushProducer(object):
         This tells a producer to re-add itself to the main loop and produce
         more data for its consumer.
         """
-        pass
 
 
     def registerProducer(self, producer, streaming):
@@ -1937,14 +1935,18 @@ class _NoPushProducer(object):
         @param producer: The producer to register.
         @param streaming: Whether this is a streaming producer or not.
         """
-        pass
 
 
     def unregisterProducer(self):
         """
         Stop consuming data from a producer, without disconnecting.
         """
-        pass
+
+
+    def stopProducing(self):
+        """
+        IProducer.stopProducing
+        """
 
 
 

@@ -241,6 +241,18 @@ class Connection(abstract.FileHandle, _SocketCloser, _AbortingMixin):
         else:
             abstract.FileHandle.unregisterProducer(self)
 
+
+    def getHost(self):
+        # ITCPTransport.getHost
+        pass
+
+
+    def getPeer(self):
+        # ITCPTransport.getPeer
+        pass
+
+
+
 if _startTLS is not None:
     classImplements(Connection, interfaces.ITLSTransport)
 

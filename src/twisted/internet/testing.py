@@ -868,6 +868,22 @@ class RaisingMemoryReactor(object):
         raise self._connectException
 
 
+    def adoptDatagramPort(self):
+        """
+        Fake L{IReactorSocket.adoptDatagramPort}, that raises
+        L{_connectException}.
+        """
+        raise self._connectException
+
+
+    def adoptStreamConnection(self):
+        """
+        Fake L{IReactorSocket.adoptStreamConnection}, that raises
+        L{_connectException}.
+        """
+        raise self._connectException
+
+
 
 class NonStreamingProducer(object):
     """

@@ -2100,9 +2100,12 @@ class UnknownRecord(tputil.FancyEqMixin, tputil.FancyStrMixin, object):
 
     @since: 11.1
     """
+    TYPE = None
+
     fancybasename = 'UNKNOWN'
     compareAttributes = ('data', 'ttl')
     showAttributes = (('data', _nicebytes), 'ttl')
+
 
     def __init__(self, data=b'', ttl=None):
         self.data = data

@@ -954,6 +954,16 @@ class Process(_BaseProcess):
         _BaseProcess.maybeCallProcessEnded(self)
 
 
+    def getHost(self):
+        # ITransport.getHost
+        raise NotImplementedError()
+
+
+    def getPeer(self):
+        # ITransport.getPeer
+        raise NotImplementedError()
+
+
 
 @implementer(IProcessTransport)
 class PTYProcess(abstract.FileDescriptor, _BaseProcess):
@@ -1118,3 +1128,13 @@ class PTYProcess(abstract.FileDescriptor, _BaseProcess):
         Write some data to the open process.
         """
         return fdesc.writeToFD(self.fd, data)
+
+
+    def closeChildFD(self, descriptor):
+        # IProcessTransport
+        raise NotImplementedError()
+
+
+    def writeToChild(self, childFD, data):
+        # IProcessTransport
+        raise NotImplementedError()

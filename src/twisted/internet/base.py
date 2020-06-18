@@ -775,6 +775,12 @@ class ReactorBase(PluggableResolverMixin):
         """
         self.running = True
 
+
+    def run(self):
+        # IReactorCore.run
+        raise NotImplementedError()
+
+
     # IReactorTime
 
     seconds = staticmethod(runtimeSeconds)
