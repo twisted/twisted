@@ -429,7 +429,11 @@ class _Assertions(pyunit.TestCase, object):
             return context
 
         return context._handle(lambda: f(*args, **kwargs))
-    failUnlessRaises = assertRaises
+
+    # unittest.TestCase.assertRaises() is defined with 4 arguments
+    # but we define it with 5 arguments.  So we need to tell mypy
+    # to ignore the following assignment to failUnlessRaises
+    failUnlessRaises = assertRaises  # type: ignore[assignment]
 
 
     def assertEqual(self, first, second, msg=None):
