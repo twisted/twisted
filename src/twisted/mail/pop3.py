@@ -324,7 +324,8 @@ def formatListLines(msgs):
     i = 0
     for size in msgs:
         i += 1
-        yield intToBytes(i) + b' ' + intToBytes(size) + b'\r\n'
+        if size > 0:
+            yield intToBytes(i) + b' ' + intToBytes(size) + b'\r\n'
 
 
 
@@ -361,7 +362,7 @@ def formatUIDListLines(msgs, getUidl):
         and its unique id.
     """
     for i, m in enumerate(msgs):
-        if m is not None:
+        if m is not None and m > 0:
             uid = getUidl(i)
             if not isinstance(uid, bytes):
                 uid = str(uid).encode("utf-8")
