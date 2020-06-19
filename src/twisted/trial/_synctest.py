@@ -528,7 +528,8 @@ class _Assertions(pyunit.TestCase, object):
     failIfIn = assertNotIn
 
 
-    def assertNotAlmostEqual(self, first, second, places=7, msg=None):
+    def assertNotAlmostEqual(self, first, second, places=7, msg=None,
+                             delta=None):
         """
         Fail if the two objects are equal as determined by their
         difference rounded to the given number of decimal places
@@ -549,7 +550,8 @@ class _Assertions(pyunit.TestCase, object):
     failIfAlmostEquals = assertNotAlmostEqual
 
 
-    def assertAlmostEqual(self, first, second, places=7, msg=None):
+    def assertAlmostEqual(self, first, second, places=7, msg=None,
+                          delta=None):
         """
         Fail if the two objects are unequal as determined by their
         difference rounded to the given number of decimal places
