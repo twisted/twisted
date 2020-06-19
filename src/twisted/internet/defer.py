@@ -42,8 +42,9 @@ except ImportError:
         def run(f, *args, **kwargs):
             return f(*args, **kwargs)
 
-
-    def _copy_context():
+    # typing ignored due to:
+    # https://github.com/python/typeshed/issues/4249
+    def _copy_context():  # type: ignore[misc]
         return _NoContext
 
 log = Logger()
