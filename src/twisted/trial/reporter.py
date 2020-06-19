@@ -238,7 +238,7 @@ class TestResult(pyunit.TestResult, object):
 
 
 @implementer(itrial.IReporter)
-class TestResultDecorator(proxyForInterface(itrial.IReporter,
+class TestResultDecorator(proxyForInterface(itrial.IReporter,  # type: ignore[misc]  # noqa
                                             "_originalReporter")):
     """
     Base class for TestResult decorators.
