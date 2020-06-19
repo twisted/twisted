@@ -10,7 +10,8 @@ from io import BytesIO, TextIOWrapper
 import logging as py_logging
 from inspect import getsourcefile
 
-from zope.interface.verify import verifyObject, BrokenMethodImplementation
+from zope.interface.exceptions import BrokenMethodImplementation
+from zope.interface.verify import verifyObject
 
 from twisted.python.compat import currentframe
 from twisted.python.failure import Failure

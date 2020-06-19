@@ -32,28 +32,27 @@ try:
 except ImportError:
     pass
 
-try:
-    import pyasn1
-except ImportError:
-    pyasn1 = None
-
+pyasn1 = requireModule('pyasn1')
 cryptography = requireModule("cryptography")
+
 if cryptography:
     from twisted.conch.avatar import ConchUser
     from twisted.conch.ssh.session import ISession, SSHSession, wrapProtocol
 else:
     from twisted.conch.interfaces import ISession
 
-    class ConchUser:
+    class ConchUser:  # type: ignore[no-redef]
         pass
 try:
     from twisted.conch.scripts.conch import (
-        SSHSession as StdioInteractingSession
+        SSHSession as _StdioInteractingSession
     )
 except ImportError as e:
     StdioInteractingSession = None
     _reason = str(e)
     del e
+else:
+    StdioInteractingSession = _StdioInteractingSession
 
 
 

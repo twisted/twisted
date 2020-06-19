@@ -19,7 +19,7 @@ from twisted.trial.unittest import SkipTest, TestCase
 from twisted.python import filepath, log
 from twisted.python.reflect import requireModule
 from twisted.python.runtime import platform
-from twisted.python.compat import range, intToBytes, bytesEnviron
+from twisted.python.compat import intToBytes
 from twisted.internet import error, defer, protocol, stdio, reactor
 from twisted.test.test_tcp import ConnectionLostNotifyingProtocol
 
@@ -31,13 +31,9 @@ from twisted.test.test_tcp import ConnectionLostNotifyingProtocol
 # the end, the functionality works.
 UNIQUE_LAST_WRITE_STRING = b'xyz123abc Twisted is great!'
 
-if platform.isWindows():
-    properEnv = dict(os.environ)
-    properEnv["PYTHONPATH"] = os.pathsep.join(sys.path)
-else:
-    properEnv = bytesEnviron()
-    properEnv[b"PYTHONPATH"] = os.pathsep.join(sys.path).encode(
-        sys.getfilesystemencoding())
+properEnv = dict(os.environ)
+properEnv["PYTHONPATH"] = os.pathsep.join(sys.path)
+
 
 
 class StandardIOTestProcessProtocol(protocol.ProcessProtocol):

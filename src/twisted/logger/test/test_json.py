@@ -7,7 +7,8 @@ Tests for L{twisted.logger._json}.
 
 from io import StringIO, BytesIO
 from unittest import skipIf
-from zope.interface.verify import verifyObject, BrokenMethodImplementation
+from zope.interface.exceptions import BrokenMethodImplementation
+from zope.interface.verify import verifyObject
 
 from twisted.python.compat import _PYPY
 

@@ -113,7 +113,8 @@ class Test(XMLRPC):
         """
         return a + b
 
-    xmlrpc_add.signature = [['int', 'int', 'int'],
+    xmlrpc_add.signature = [['int', 'int',  # type: ignore[attr-defined]
+                             'int'],
                             ['double', 'double', 'double']]
 
     # the doc string is part of the test
@@ -123,7 +124,8 @@ class Test(XMLRPC):
         """
         return [string, num]
 
-    xmlrpc_pair.signature = [['array', 'string', 'int']]
+    xmlrpc_pair.signature = [['array',  # type: ignore[attr-defined]
+                              'string', 'int']]
 
     # the doc string is part of the test
     def xmlrpc_defer(self, x):
@@ -157,7 +159,7 @@ class Test(XMLRPC):
 
     def xmlrpc_dict(self, map, key):
         return map[key]
-    xmlrpc_dict.help = 'Help for dict.'
+    xmlrpc_dict.help = 'Help for dict.'  # type: ignore[attr-defined]
 
     @withRequest
     def xmlrpc_withRequest(self, request, other):

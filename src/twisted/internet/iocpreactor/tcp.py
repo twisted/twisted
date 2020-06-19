@@ -26,15 +26,20 @@ from twisted.internet.iocpreactor.const import ERROR_CONNECTION_REFUSED
 from twisted.internet.iocpreactor.const import ERROR_NETWORK_UNREACHABLE
 
 try:
-    from twisted.internet._newtls import startTLS as _startTLS
+    from twisted.internet._newtls import startTLS as __startTLS
 except ImportError:
     _startTLS = None
+else:
+    _startTLS = __startTLS
+
 
 # ConnectEx returns these. XXX: find out what it does for timeout
 connectExErrors = {
-        ERROR_CONNECTION_REFUSED: errno.WSAECONNREFUSED,
-        ERROR_NETWORK_UNREACHABLE: errno.WSAENETUNREACH,
+        ERROR_CONNECTION_REFUSED: errno.WSAECONNREFUSED,  # type: ignore[attr-defined]  # noqa
+        ERROR_NETWORK_UNREACHABLE: errno.WSAENETUNREACH,  # type: ignore[attr-defined]  # noqa
         }
+
+
 
 @implementer(IReadWriteHandle, interfaces.ITCPTransport,
              interfaces.ISystemHandle)

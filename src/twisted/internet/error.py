@@ -180,8 +180,8 @@ try:
         errno.ETIMEDOUT: TCPTimedOutError,
     }
     if hasattr(errno, "WSAECONNREFUSED"):
-        errnoMapping[errno.WSAECONNREFUSED] = ConnectionRefusedError
-        errnoMapping[errno.WSAENETUNREACH] = NoRouteError
+        errnoMapping[errno.WSAECONNREFUSED] = ConnectionRefusedError  # type: ignore[attr-defined]  # noqa
+        errnoMapping[errno.WSAENETUNREACH] = NoRouteError  # type: ignore[attr-defined]  # noqa
 except ImportError:
     errnoMapping = {}
 

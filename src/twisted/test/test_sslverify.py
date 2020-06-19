@@ -1522,8 +1522,8 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, TestCase):
         self.assertTrue(opts.fixBrokenPeers)
         self.assertTrue(opts.enableSessionTickets)
 
-    test_certificateOptionsSerialization.suppress = [
-        util.suppress(category = DeprecationWarning,
+    test_certificateOptionsSerialization.suppress = [  # type: ignore[attr-defined]  # noqa
+        util.suppress(category=DeprecationWarning,
             message='twisted\.internet\._sslverify\.*__[gs]etstate__')]
 
 
@@ -3316,7 +3316,7 @@ class SelectVerifyImplementationTests(SynchronousTestCase):
                 sslverify.simpleVerifyIPAddress,
                 sslverify.SimpleVerificationError)
             self.assertEqual(expected, result)
-    test_dependencyMissing.suppress = [
+    test_dependencyMissing.suppress = [  # type: ignore[attr-defined]
         util.suppress(
             message=(
                 "You do not have a working installation of the "

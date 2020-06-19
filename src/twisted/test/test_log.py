@@ -302,7 +302,8 @@ class FakeFile(list):
         pass
 
 
-IOBase.register(FakeFile)
+
+IOBase.register(FakeFile)  # type: ignore[attr-defined]
 
 
 

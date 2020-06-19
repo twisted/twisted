@@ -30,7 +30,7 @@ cryptography = requireModule("cryptography")
 if cryptography:
     from twisted.conch.ssh import common, session, connection
 else:
-    class session:
+    class session:  # type: ignore[no-redef]
         from twisted.conch.interfaces import (
             EnvironmentVariableNotPermitted, ISession, ISessionSetEnv)
 

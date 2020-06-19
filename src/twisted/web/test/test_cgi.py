@@ -268,7 +268,7 @@ class CGITests(unittest.TestCase):
         d.addCallback(client.readBody)
         d.addCallback(self._test_ReadEmptyInput_1)
         return d
-    test_ReadEmptyInput.timeout = 5
+    test_ReadEmptyInput.timeout = 5  # type: ignore[attr-defined]
 
 
     def _test_ReadEmptyInput_1(self, res):
@@ -295,7 +295,7 @@ class CGITests(unittest.TestCase):
         d.addCallback(client.readBody)
         d.addCallback(self._test_ReadInput_1)
         return d
-    test_ReadInput.timeout = 5
+    test_ReadInput.timeout = 5  # type: ignore[attr-defined]
 
 
     def _test_ReadInput_1(self, res):
@@ -321,7 +321,7 @@ class CGITests(unittest.TestCase):
         d.addCallback(client.readBody)
         d.addCallback(self._test_ReadAllInput_1)
         return d
-    test_ReadAllInput.timeout = 5
+    test_ReadAllInput.timeout = 5  # type: ignore[attr-defined]
 
 
     def _test_ReadAllInput_1(self, res):

@@ -5,19 +5,19 @@
 
 """Test SOAP support."""
 
-try:
-    import SOAPpy
-except ImportError:
-    SOAPpy = None
-    class SOAPPublisher: pass
-else:
-    from twisted.web import soap
-    SOAPPublisher = soap.SOAPPublisher
 
 from unittest import skipIf
+
+from twisted.internet import reactor, defer
+from twisted.python.reflect import requireModule
 from twisted.trial.unittest import TestCase
 from twisted.web import server, error
-from twisted.internet import reactor, defer
+
+SOAPPublisher = object
+SOAPpy = requireModule('SOAPpy')
+if SOAPpy:
+    from twisted.web import soap
+    SOAPPublisher = soap.SOAPPublisher
 
 
 
@@ -29,7 +29,7 @@ class Test(SOAPPublisher):
 
     def soap_kwargs(self, a=1, b=2):
         return a + b
-    soap_kwargs.useKeywords = True
+    soap_kwargs.useKeywords = True  # type: ignore[attr-defined]
 
 
     def soap_triple(self, string, num):

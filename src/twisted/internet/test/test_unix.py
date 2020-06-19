@@ -17,9 +17,11 @@ from typing import Optional, Sequence, Type
 from unittest import skipIf
 
 try:
-    from socket import AF_UNIX
+    from socket import AF_UNIX as _AF_UNIX
 except ImportError:
     AF_UNIX = None
+else:
+    AF_UNIX = _AF_UNIX
 
 from zope.interface import Interface, implementer
 

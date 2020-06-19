@@ -93,7 +93,7 @@ if platform.isWindows():
     from twisted.internet.test import _win32ifaces
     getLinkLocalIPv6Addresses = _win32ifaces.win32GetLinkLocalIPv6Addresses
 
-    SKIP_EMFILE = "Reserved EMFILE file descriptor not supported on Windows."
+    SKIP_EMFILE = True
 else:
     try:
         from twisted.internet.test import _posixifaces
@@ -102,7 +102,7 @@ else:
     else:
         getLinkLocalIPv6Addresses = _posixifaces.posixGetLinkLocalIPv6Addresses
 
-    SKIP_EMFILE = None
+    SKIP_EMFILE = False
 
 
 
@@ -1039,7 +1039,8 @@ class _ExhaustsFileDescriptors(object):
 
 
 
-@skipIf(SKIP_EMFILE, SKIP_EMFILE)
+@skipIf(SKIP_EMFILE,
+        "Reserved EMFILE file descriptor not supported on Windows.")
 class ExhaustsFileDescriptorsTests(SynchronousTestCase):
     """
     Tests for L{_ExhaustsFileDescriptors}.
@@ -1274,7 +1275,8 @@ def assertPeerClosedOnEMFILE(
 
 
 
-@skipIf(SKIP_EMFILE, SKIP_EMFILE)
+@skipIf(SKIP_EMFILE,
+        "Reserved EMFILE file descriptor not supported on Windows.")
 class AssertPeerClosedOnEMFILETests(SynchronousTestCase):
     """
     Tests for L{assertPeerClosedOnEMFILE}.
@@ -1419,7 +1421,8 @@ class StreamTransportTestsMixin(LogObserverMixin):
         self.assertFullyNewStyle(port)
 
 
-    @skipIf(SKIP_EMFILE, SKIP_EMFILE)
+    @skipIf(SKIP_EMFILE,
+            "Reserved EMFILE file descriptor not supported on Windows.")
     def test_closePeerOnEMFILE(self):
         """
         See L{assertPeerClosedOnEMFILE}.
@@ -3102,7 +3105,8 @@ class BuffersLogsTests(SynchronousTestCase):
 
 
 
-@skipIf(SKIP_EMFILE, SKIP_EMFILE)
+@skipIf(SKIP_EMFILE,
+        "Reserved EMFILE file descriptor not supported on Windows.")
 class FileDescriptorReservationTests(SynchronousTestCase):
     """
     Tests for L{_FileDescriptorReservation}.

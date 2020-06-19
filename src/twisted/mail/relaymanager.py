@@ -14,12 +14,7 @@ the recipient and sends on the message.
 import email.utils
 import os
 import time
-
-try:
-    import cPickle as pickle
-except ImportError:
-    import pickle
-
+import pickle
 from twisted.python import log
 from twisted.python.failure import Failure
 from twisted.mail import relay
