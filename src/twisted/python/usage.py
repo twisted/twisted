@@ -581,12 +581,12 @@ class Completer(object):
         self._repeat = repeat
 
 
-    def _getRepeatFlag(self):
+    @property
+    def _repeatFlag(self):
         if self._repeat:
             return "*"
         else:
             return ""
-    _repeatFlag = property(_getRepeatFlag)
 
 
     def _description(self, optName):

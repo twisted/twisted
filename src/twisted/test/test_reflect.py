@@ -401,11 +401,11 @@ class Breakable(object):
 class BrokenType(Breakable, type):
     breakName = False
 
-    def get___name__(self):
+    @property
+    def __name__(self):
         if self.breakName:
             raise RuntimeError("no name")
         return 'BrokenType'
-    __name__ = property(get___name__)
 
 
 
@@ -416,7 +416,7 @@ BTBase = BrokenType('BTBase', (Breakable,),
 
 
 class NoClassAttr(Breakable):
-    __class__ = property(lambda x: x.not_class)
+    __class__ = property(lambda x: x.not_class)  # type: ignore[assignment]
 
 
 

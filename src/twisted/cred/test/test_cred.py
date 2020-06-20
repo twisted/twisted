@@ -408,7 +408,9 @@ class HashlessFilePasswordDBMixin(object):
 
 
 class LocallyHashedFilePasswordDBMixin(HashlessFilePasswordDBMixin):
-    diskHash = staticmethod(lambda x: hexlify(x))
+    @staticmethod
+    def diskHash(x):
+        return hexlify(x)
 
 
 

@@ -1008,6 +1008,7 @@ class SFTPError(Exception):
         self.lang = lang
 
 
+    @property
     def message(self):
         """
         A string received over the network that explains the error to a human.
@@ -1018,7 +1019,6 @@ class SFTPError(Exception):
         # compatibility with object clients that rely on the 'message'
         # attribute being set correctly. See bug #3897.
         return self._message
-    message = property(message)
 
 
     def __str__(self):

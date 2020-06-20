@@ -2538,11 +2538,11 @@ class BinaryBoxProtocol(StatefulStringProtocol, Int16StringReceiver,
                 self.sendBox(box)
 
 
-    def _getPeerCertificate(self):
+    @property
+    def peerCertificate(self):
         if self.noPeerCertificate:
             return None
         return Certificate.peerFromTransport(self.transport)
-    peerCertificate = property(_getPeerCertificate)
 
 
     def unhandledError(self, failure):

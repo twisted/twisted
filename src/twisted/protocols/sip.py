@@ -204,7 +204,8 @@ class Via(object):
         self.otherParams = kw
 
 
-    def _getrport(self):
+    @property
+    def rport(self):
         """
         Returns the rport value expected by the old SIP code.
         """
@@ -216,7 +217,8 @@ class Via(object):
             return None
 
 
-    def _setrport(self, newRPort):
+    @rport.setter
+    def rport(self, newRPort):
         """
         L{Base._fixupNAT} sets C{rport} directly, so this method sets
         C{rportValue} based on that.
@@ -227,7 +229,6 @@ class Via(object):
         self.rportValue = newRPort
         self.rportRequested = False
 
-    rport = property(_getrport, _setrport)
 
     def toString(self):
         """

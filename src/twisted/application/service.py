@@ -70,18 +70,13 @@ class ServiceMaker(object):
         self.tapname = tapname
 
 
-    def options():
-        def get(self):
-            return namedAny(self.module).Options
-        return get,
-    options = property(*options())
+    @property
+    def options(self):
+        return namedAny(self.module).Options
 
-
-    def makeService():
-        def get(self):
-            return namedAny(self.module).makeService
-        return get,
-    makeService = property(*makeService())
+    @property
+    def makeService(self):
+        return namedAny(self.module).makeService
 
 
 

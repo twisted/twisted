@@ -261,10 +261,10 @@ class SSHProtocolChecker:
         self.successfulCredentials = {}
 
 
-    def get_credentialInterfaces(self):
+    @property
+    def credentialInterfaces(self):
         return _keys(self.checkers)
 
-    credentialInterfaces = property(get_credentialInterfaces)
 
     def registerChecker(self, checker, *credentialInterfaces):
         if not credentialInterfaces:
