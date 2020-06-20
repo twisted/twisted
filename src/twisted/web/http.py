@@ -1543,7 +1543,7 @@ class Request:
             bas, upw = authh.split()
             if bas.lower() != b"basic":
                 raise ValueError()
-            upw = base64.decodestring(upw)
+            upw = base64.b64decode(upw)
             self.user, self.password = upw.split(b':', 1)
         except (binascii.Error, ValueError):
             self.user = self.password = b''
