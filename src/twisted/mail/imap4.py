@@ -6348,12 +6348,23 @@ class StreamWriter(codecs.StreamWriter):
         return encoder(s)
 
 
+
 _codecInfo = codecs.CodecInfo(encoder, decoder, StreamReader, StreamWriter)
 
 
+
 def imap4_utf_7(name):
-    if name == 'imap4-utf-7':
+    # In Python 3.9, codecs.lookup() was changed to normalize the codec name
+    # in the same way as encodings.normalize_encoding().  The docstring
+    # for encodings.normalize_encoding() describes how the codec name is
+    # normalized.  We need to replace '-' with '_' to be compatible with
+    # older Python versions.
+    #  See:  https://bugs.python.org/issue37751
+    #        https://github.com/python/cpython/pull/17997
+    if name.replace('-', '_') == 'imap4_utf_7':
         return _codecInfo
+
+
 
 codecs.register(imap4_utf_7)
 
