@@ -77,14 +77,14 @@ class DirDBM:
         Encode a key so it can be used as a filename.
         """
         # NOTE: '_' is NOT in the base64 alphabet!
-        return base64.encodestring(k).replace(b'\n', b'_').replace(b"/", b"-")
+        return base64.encodebytes(k).replace(b'\n', b'_').replace(b"/", b"-")
 
 
     def _decode(self, k):
         """
         Decode a filename to get the key.
         """
-        return base64.decodestring(k.replace(b'_', b'\n').replace(b"-", b"/"))
+        return base64.decodebytes(k.replace(b'_', b'\n').replace(b"-", b"/"))
 
 
     def _readFile(self, path):
