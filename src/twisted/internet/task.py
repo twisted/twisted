@@ -9,6 +9,7 @@ Scheduling utility methods and classes.
 
 __metaclass__ = type
 
+import heapq
 import sys
 import time
 import warnings
@@ -779,24 +780,16 @@ class Clock:
         return self.rightNow
 
 
-    def _sortCalls(self):
-        """
-        Sort the pending calls according to the time they are scheduled.
-        """
-        self.calls.sort(key=lambda a: a.getTime())
-
-
     def callLater(self, when, what, *a, **kw):
         """
         See L{twisted.internet.interfaces.IReactorTime.callLater}.
         """
         dc = base.DelayedCall(self.seconds() + when,
-                               what, a, kw,
-                               self.calls.remove,
-                               lambda c: None,
-                               self.seconds)
-        self.calls.append(dc)
-        self._sortCalls()
+                              what, a, kw,
+                              lambda c: None,
+                              lambda c: None,
+                              self.seconds)
+        heapq.heappush(self.calls, dc)
         return dc
 
 
@@ -817,12 +810,11 @@ class Clock:
         time.
         """
         self.rightNow += amount
-        self._sortCalls()
         while self.calls and self.calls[0].getTime() <= self.seconds():
-            call = self.calls.pop(0)
-            call.called = 1
-            call.func(*call.args, **call.kw)
-            self._sortCalls()
+            call = heapq.heappop(self.calls)
+            if not call.cancelled:
+                call.called = 1
+                call.func(*call.args, **call.kw)
 
 
     def pump(self, timings):
