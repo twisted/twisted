@@ -20,6 +20,8 @@ import attr
 from zope.interface import Interface, implementer
 
 from twisted.logger import Logger
+from twisted.internet.interfaces import (
+    IHalfCloseableProtocol, ITCPTransport, ISystemHandle, IListeningPort)
 from twisted.python.compat import lazyByteSlice, unicode
 from twisted.python.runtime import platformType
 from twisted.python import versions, deprecate
@@ -31,8 +33,11 @@ try:
         ConnectionMixin as _TLSConnectionMixin,
         ClientMixin as _TLSClientMixin,
         ServerMixin as _TLSServerMixin)
+    from twisted.internet.interfaces import ITLSTransport
 except ImportError:
     # There is no version of startTLS available
+    ITLSTransport = Interface
+
     class _TLSConnectionMixin(object):  # type: ignore[no-redef]
         TLS = False
 
@@ -92,7 +97,7 @@ from twisted.internet.task import deferLater
 from twisted.python import log, failure, reflect
 from twisted.python.util import untilConcludes
 from twisted.internet.error import CannotListenError
-from twisted.internet import abstract, main, interfaces, error
+from twisted.internet import abstract, main, error
 from twisted.internet.protocol import Protocol
 
 # Not all platforms have, or support, this flag.
@@ -200,7 +205,7 @@ class _AbortingMixin(object):
 
 
 
-@implementer(interfaces.ITCPTransport, interfaces.ISystemHandle)
+@implementer(ITLSTransport, ITCPTransport, ISystemHandle)
 class Connection(_TLSConnectionMixin, abstract.FileDescriptor, _SocketCloser,
                  _AbortingMixin):
     """
@@ -288,7 +293,7 @@ class Connection(_TLSConnectionMixin, abstract.FileDescriptor, _SocketCloser,
             self.socket.shutdown(1)
         except socket.error:
             pass
-        p = interfaces.IHalfCloseableProtocol(self.protocol, None)
+        p = IHalfCloseableProtocol(self.protocol, None)
         if p:
             try:
                 p.writeConnectionLost()
@@ -299,7 +304,7 @@ class Connection(_TLSConnectionMixin, abstract.FileDescriptor, _SocketCloser,
 
 
     def readConnectionLost(self, reason):
-        p = interfaces.IHalfCloseableProtocol(self.protocol, None)
+        p = IHalfCloseableProtocol(self.protocol, None)
         if p:
             try:
                 p.readConnectionLost()
@@ -1237,7 +1242,7 @@ def _accept(logger, accepts, listener, reservedFD):
 
 
 
-@implementer(interfaces.IListeningPort)
+@implementer(IListeningPort)
 class Port(base.BasePort, _SocketCloser):
     """
     A TCP server port, listening for connections.
