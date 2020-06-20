@@ -76,7 +76,7 @@ class Persistent:
             from twisted.persisted.aot import jellyToSource as dumpFunc
             ext = "tas"
         else:
-            def dumpFunc(obj, file):
+            def dumpFunc(obj, file=None):
                 pickle.dump(obj, file, 2)
             ext = "tap"
         return ext, dumpFunc

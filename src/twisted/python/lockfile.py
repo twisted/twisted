@@ -50,7 +50,9 @@ else:
         ERROR_ACCESS_DENIED = 5
         ERROR_INVALID_PARAMETER = 87
 
-        def kill(pid, signal):
+        # typing ignored due to:
+        # https://github.com/python/typeshed/issues/4249
+        def kill(pid, signal):  # type: ignore[misc]
             try:
                 OpenProcess(0, 0, pid)
             except pywintypes.error as e:
@@ -66,7 +68,9 @@ else:
     _open = open
 
 
-    def symlink(value, filename):
+    # typing ignored due to:
+    # https://github.com/python/typeshed/issues/4249
+    def symlink(value, filename):  # type: ignore[misc]
         """
         Write a file at C{filename} with the contents of C{value}. See the
         above comment block as to why this is needed.
@@ -92,7 +96,9 @@ else:
             raise
 
 
-    def readlink(filename):
+    # typing ignored due to:
+    # https://github.com/python/typeshed/issues/4249
+    def readlink(filename):  # type: ignore[misc]
         """
         Read the contents of C{filename}. See the above comment block as to why
         this is needed.
@@ -109,7 +115,9 @@ else:
             return result
 
 
-    def rmlink(filename):
+    # typing ignored due to:
+    # https://github.com/python/typeshed/issues/4249
+    def rmlink(filename):  # type: ignore[misc]
         os.remove(os.path.join(filename, 'symlink'))
         os.rmdir(filename)
 

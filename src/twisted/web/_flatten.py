@@ -13,12 +13,7 @@ from io import BytesIO
 from sys import exc_info
 from types import GeneratorType
 from traceback import extract_tb
-
-try:
-    from inspect import iscoroutine
-except ImportError:
-    def iscoroutine(*args, **kwargs):
-        return False
+from inspect import iscoroutine
 
 from twisted.python.compat import unicode, nativeString, iteritems
 from twisted.internet.defer import Deferred, ensureDeferred
