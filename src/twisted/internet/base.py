@@ -997,23 +997,30 @@ class ReactorBase(PluggableResolverMixin):
 
         outputArgs = []
         for arg in args:
-            arg = argChecker(arg)
-            if arg is None:
-                raise TypeError("Arguments contain a non-string value")
+            _arg = argChecker(arg)
+            if _arg is None:
+                raise TypeError(
+                    "Arguments contain a non-string value: {}".format(arg))
             else:
-                outputArgs.append(arg)
+                outputArgs.append(_arg)
 
         outputEnv = None
         if env is not None:
             outputEnv = {}
             for key, val in iteritems(env):
-                key = argChecker(key)
-                if key is None:
-                    raise TypeError("Environment contains a non-string key")
-                val = argChecker(val)
-                if val is None:
-                    raise TypeError("Environment contains a non-string value")
-                outputEnv[key] = val
+                _key = argChecker(key)
+                if _key is None:
+                    raise TypeError(
+                        "Environment contains a "
+                        "non-string key: {}, using encoding: {}".format(
+                            key, sys.stdout.encoding))
+                _val = argChecker(val)
+                if _val is None:
+                    raise TypeError(
+                        "Environment contains a "
+                        "non-string value: {}, using encoding {}".format(
+                            val, sys.stdout.encoding))
+                outputEnv[_key] = _val
         return outputArgs, outputEnv
 
     # IReactorThreads
