@@ -1096,12 +1096,12 @@ class SASLTests(unittest.TestCase):
 
         p.lineReceived(b"AUTH CRAM-MD5")
         chal = s.getvalue().splitlines()[-1][2:]
-        chal = base64.decodestring(chal)
+        chal = base64.b64decode(chal)
         response = hmac.HMAC(b'testpassword', chal,
                              digestmod=md5).hexdigest().encode("ascii")
 
         p.lineReceived(
-            base64.encodestring(b'testuser ' + response).rstrip(b'\n'))
+            base64.b64encode(b'testuser ' + response))
         self.assertTrue(p.mbox)
         self.assertTrue(s.getvalue().splitlines()[-1].find(b"+OK") >= 0)
         p.connectionLost(failure.Failure(Exception("Test harness disconnect")))
