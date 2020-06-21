@@ -24,10 +24,11 @@ from twisted.internet import defer
 from twisted.plugin import IPlugin
 
 
+
 class IServiceMaker(Interface):
     """
     An object which can be used to construct services in a flexible
-    way.
+    way. Some random sentence added.
 
     This interface should most often be implemented along with
     L{twisted.plugin.IPlugin}, and will most often be used by the
