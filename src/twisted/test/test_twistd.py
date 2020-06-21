@@ -2083,6 +2083,13 @@ class SignalCapturingMemoryReactor(MemoryReactor):
     MemoryReactor that implements the _ISupportsExitSignalCapturing interface,
     all other operations identical to MemoryReactor.
     """
+    @property
+    def _exitSignal(self):
+        return self._val
+
+    @_exitSignal.setter
+    def _exitSignal(self, val):
+        self._val = val
 
 
 

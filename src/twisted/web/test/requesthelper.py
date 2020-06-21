@@ -89,7 +89,40 @@ class DummyChannel:
 
     @implementer(ISSLTransport)
     class SSL(TCP):
-        pass
+        def abortConnection(self):
+            # ITCPTransport.abortConnection
+            pass
+
+
+        def getTcpKeepAlive(self):
+            # ITCPTransport.getTcpKeepAlive
+            pass
+
+
+        def getTcpNoDelay(self):
+            # ITCPTransport.getTcpNoDelay
+            pass
+
+
+        def loseWriteConnection(self):
+            # ITCPTransport.loseWriteConnection
+            pass
+
+
+        def setTcpKeepAlive(self):
+            # ITCPTransport.setTcpKeepAlive
+            pass
+
+
+        def setTcpNoDelay(self):
+            # ITCPTransport.setTcpNoDelay
+            pass
+
+
+        def getPeerCertificate(self):
+            # ISSLTransport.getPeerCertificate
+            pass
+
 
     site = Site(Resource())
 
@@ -145,6 +178,41 @@ class DummyChannel:
 
     def isSecure(self):
         return isinstance(self.transport, self.SSL)
+
+
+    def abortConnection(self):
+        # ITCPTransport.abortConnection
+        pass
+
+
+    def getTcpKeepAlive(self):
+        # ITCPTransport.getTcpKeepAlive
+        pass
+
+
+    def getTcpNoDelay(self):
+        # ITCPTransport.getTcpNoDelay
+        pass
+
+
+    def loseWriteConnection(self):
+        # ITCPTransport.loseWriteConnection
+        pass
+
+
+    def setTcpKeepAlive(self):
+        # ITCPTransport.setTcpKeepAlive
+        pass
+
+
+    def setTcpNoDelay(self):
+        # ITCPTransport.setTcpNoDelay
+        pass
+
+
+    def getPeerCertificate(self):
+        # ISSLTransport.getPeerCertificate
+        pass
 
 
 

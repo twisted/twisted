@@ -1363,6 +1363,11 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
         raise cred.error.UnauthorizedLogin()
 
 
+    def stopProducing(self):
+        # IProducer.stopProducing
+        raise NotImplementedError()
+
+
 
 @implementer(IMailbox)
 class Mailbox:

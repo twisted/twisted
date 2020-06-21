@@ -587,8 +587,11 @@ class IProxiedSubInterface(IProxiedInterface):
         """
 
 
+
 @implementer(IProxiedInterface)
-class Yayable(object):
+class Yayable(object):  # type: ignore[misc]
+    # class does not implement Attribute ifaceAttribute
+    # so we need to turn off mypy warning
     """
     A provider of L{IProxiedInterface} which increments a counter for
     every call to C{yay}.
@@ -599,6 +602,7 @@ class Yayable(object):
     def __init__(self):
         self.yays = 0
         self.yayArgs = []
+
 
     def yay(self, *a, **kw):
         """
@@ -611,12 +615,17 @@ class Yayable(object):
 
 
 @implementer(IProxiedSubInterface)
-class Booable(object):
+class Booable(object):  # type: ignore[misc]
+    # class does not implement Attribute ifaceAttribute
+    # so we need to turn off mypy warning
     """
     An implementation of IProxiedSubInterface
     """
+
     yayed = False
     booed = False
+
+
     def yay(self):
         """
         Mark the fact that 'yay' has been called.

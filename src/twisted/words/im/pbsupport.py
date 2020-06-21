@@ -227,6 +227,11 @@ class PBAccount(basesupport.AbstractAccount):
             raise error.ConnectionError("Connection in progress")
 
 
+    def logOff(self):
+        # IAccount.logOff
+        pass
+
+
     def _startLogOn(self, chatui):
         print('Connecting...', end=' ')
         d = pb.getObjectAt(self.host, self.port)

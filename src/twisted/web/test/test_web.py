@@ -1249,6 +1249,27 @@ class HeadlessResource(object):
         return server.NOT_DONE_YET
 
 
+    def isLeaf(self):
+        """
+        # IResource.isLeaf
+        """
+        raise NotImplementedError()
+
+
+    def getChildWithDefault(self):
+        """
+        # IResource.getChildWithDefault
+        """
+        raise NotImplementedError()
+
+
+    def putChild(self, child):
+        """
+        # IResource.putChild
+        """
+        raise NotImplementedError()
+
+
 
 class NewRenderTests(unittest.TestCase):
     """

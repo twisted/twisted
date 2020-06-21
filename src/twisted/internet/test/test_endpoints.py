@@ -861,6 +861,11 @@ class MemoryProcessTransport(StringTransportWithDisconnection, object):
         self.signals.append(signal)
 
 
+    def pid(self):
+        # IProcessTransport.pid
+        pass
+
+
 
 verifyClass(interfaces.IConsumer, MemoryProcessTransport)
 verifyClass(interfaces.IPushProducer, MemoryProcessTransport)

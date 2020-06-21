@@ -55,6 +55,11 @@ class HalfCloseProtocol(protocol.Protocol):
         reactor.stop()
 
 
+    def writeConnectionLost(self, reason):
+        # IHalfCloseableProtocol.writeConnectionLost
+        pass
+
+
 
 if __name__ == '__main__':
     reflect.namedAny(sys.argv[1]).install()

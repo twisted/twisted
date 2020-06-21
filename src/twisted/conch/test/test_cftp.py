@@ -354,6 +354,21 @@ class InMemoryRemoteFile(BytesIO):
         self._closed = True
 
 
+    def getAttrs(self):
+        # ISFTPFile.getAttrs
+        pass
+
+
+    def readChunk(self, offset, length):
+        # ISFTPFile.readChunk
+        pass
+
+
+    def setAttrs(self, attrs):
+        # ISFTPFile.getAttrs
+        pass
+
+
     def getvalue(self):
         """
         Get current data of file.

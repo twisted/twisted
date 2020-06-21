@@ -532,6 +532,26 @@ class RekeyAvatar(ConchUser):
         """
 
 
+    def eofReceived(self):
+        # ISession.eofReceived
+        pass
+
+
+    def execCommand(self, proto, command):
+        # ISession.execCommand
+        pass
+
+
+    def getPty(self, term, windowSize, modes):
+        # ISession.getPty
+        pass
+
+
+    def windowChanged(self, newWindowSize):
+        # ISession.windowChanged
+        pass
+
+
 
 class RekeyRealm:
     """

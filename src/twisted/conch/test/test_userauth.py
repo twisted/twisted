@@ -243,6 +243,11 @@ class AnonymousChecker(object):
     credentialInterfaces = (IAnonymous,)
 
 
+    def requestAvatarId(credentials):
+        # ICredentialsChecker.requestAvatarId
+        pass
+
+
 
 class SSHUserAuthServerTests(unittest.TestCase):
     """

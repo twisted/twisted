@@ -1335,6 +1335,11 @@ class IPRecordingProtocol(AbstractDatagramProtocol):
         self.received.append(datagram)
 
 
+    def addProto(self):
+        # IRawPacketProtocol.addProto
+        pass
+
+
 
 class TunTests(TunnelTestsMixin, SynchronousTestCase):
     """

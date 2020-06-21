@@ -304,6 +304,16 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
         self.connectionLost(reason)
 
 
+    def getHost(self):
+        # ITransport.getHost
+        raise NotImplementedError()
+
+
+    def getPeer(self):
+        # ITransport.getPeer
+        raise NotImplementedError()
+
+
     def _isSendBufferFull(self):
         """
         Determine whether the user-space send buffer for this transport is full

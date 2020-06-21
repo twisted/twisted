@@ -19,6 +19,7 @@ from twisted.test import proto_helpers
 from twisted.python.compat import iterbytes
 
 
+
 @implementer(telnet.ITelnetProtocol)
 class TestProtocol:
     localEnableable = ()
@@ -76,6 +77,21 @@ class TestProtocol:
 
     def disableRemote(self, option):
         self.disabledRemote.append(option)
+
+
+    def connectionMade(self):
+        # IProtocol.connectionMade
+        pass
+
+
+    def unhandledCommand(self):
+        # ITelnetProtocol.unhandledCommand
+        pass
+
+
+    def unhandledSubnegotiation(self):
+        # ITelnetProtocol.unhandledSubnegotiation
+        pass
 
 
 
