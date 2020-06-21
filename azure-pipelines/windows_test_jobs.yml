@@ -11,13 +11,14 @@ parameters:
   - select
   - iocp
 
-
 jobs:
 - ${{ each pyver in parameters.pythonVersions }}:
   - job: ${{ format('windows_{0}_{1}reactor', pyver.key, parameters.reactor) }}
     displayName: ${{ format('Windows Py{0} {1}reactor', pyver.value, parameters.reactor) }}
     pool:
       vmImage: ${{ parameters.imageName }}
+    variables:
+      PYTHONUTF8: 1
     steps:
     - template: 'run_test_steps.yml'
       parameters:
