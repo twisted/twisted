@@ -100,7 +100,7 @@ class Redirect(resource.Resource):
 
 # FIXME: This is totally broken, see https://twistedmatrix.com/trac/ticket/9838
 class ChildRedirector(Redirect):
-    isLeaf = 0
+    isLeaf = False
 
 
     def __init__(self, url):

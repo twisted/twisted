@@ -2957,9 +2957,11 @@ class DccChat(basic.LineReceiver, styles.Ephemeral):
                             self.client.nickname, line)
 
 
+
 class DccChatFactory(protocol.ClientFactory):
     protocol = DccChat
-    noisy = 0
+    noisy = False
+
     def __init__(self, client, queryData):
         self.client = client
         self.queryData = queryData
