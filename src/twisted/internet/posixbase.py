@@ -334,7 +334,6 @@ class PosixReactorBase(_SignalReactorMixin, _DisconnectSelectableMixin,
     def spawnProcess(self, processProtocol, executable, args=(),
                      env={}, path=None,
                      uid=None, gid=None, usePTY=0, childFDs=None):
-        args, env = self._checkProcessArgs(args, env)
         if platformType == 'posix':
             if usePTY:
                 if childFDs is not None:

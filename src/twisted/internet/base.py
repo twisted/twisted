@@ -11,7 +11,6 @@ import socket  # needed only for sync-dns
 from typing import List
 from zope.interface import implementer, classImplements
 
-import sys
 import warnings
 from heapq import heappush, heappop, heapify
 
@@ -30,7 +29,6 @@ from twisted.internet._resolver import (
     SimpleResolverComplexifier as _SimpleResolverComplexifier,
 )
 from twisted.python import log, failure, reflect
-from twisted.python.compat import unicode, iteritems
 from twisted.python.runtime import seconds as runtimeSeconds, platform
 from twisted.internet.defer import Deferred, DeferredList
 
@@ -932,82 +930,6 @@ class ReactorBase(PluggableResolverMixin):
             self._justStopped = False
             self.fireSystemEvent("shutdown")
 
-    # IReactorProcess
-
-    def _checkProcessArgs(self, args, env):
-        """
-        Check for valid arguments and environment to spawnProcess.
-
-        @return: A two element tuple giving values to use when creating the
-        process.  The first element of the tuple is a C{list} of C{bytes}
-        giving the values for argv of the child process.  The second element
-        of the tuple is either L{None} if C{env} was L{None} or a C{dict}
-        mapping C{bytes} environment keys to C{bytes} environment values.
-        """
-        # Any unicode string which Python would successfully implicitly
-        # encode to a byte string would have worked before these explicit
-        # checks were added.  Anything which would have failed with a
-        # UnicodeEncodeError during that implicit encoding step would have
-        # raised an exception in the child process and that would have been
-        # a pain in the butt to debug.
-        #
-        # So, we will explicitly attempt the same encoding which Python
-        # would implicitly do later.  If it fails, we will report an error
-        # without ever spawning a child process.  If it succeeds, we'll save
-        # the result so that Python doesn't need to do it implicitly later.
-        #
-        # -exarkun
-
-        defaultEncoding = sys.getfilesystemencoding()
-
-        # Common check function
-        def argChecker(arg):
-            """
-            Return either L{bytes} or L{None}.  If the given value is not
-            allowable for some reason, L{None} is returned.  Otherwise, a
-            possibly different object which should be used in place of arg is
-            returned.  This forces unicode encoding to happen now, rather than
-            implicitly later.
-            """
-            if isinstance(arg, unicode):
-                try:
-                    arg = arg.encode(defaultEncoding)
-                except UnicodeEncodeError:
-                    return None
-            if isinstance(arg, bytes) and b'\0' not in arg:
-                return arg
-
-            return None
-
-        # Make a few tests to check input validity
-        if not isinstance(args, (tuple, list)):
-            raise TypeError("Arguments must be a tuple or list")
-
-        outputArgs = []
-        for arg in args:
-            _arg = argChecker(arg)
-            if _arg is None:
-                raise TypeError(
-                    "Arguments contain a non-string value: {}".format(arg))
-            else:
-                outputArgs.append(_arg)
-
-        outputEnv = None
-        if env is not None:
-            outputEnv = {}
-            for key, val in iteritems(env):
-                _key = argChecker(key)
-                if _key is None:
-                    raise TypeError(
-                        "Environment contains a "
-                        "non-string key: {}".format(key))
-                _val = argChecker(val)
-                if _val is None:
-                    raise TypeError(
-                        "Environment contains a "
-                        "non-string value: {}".format(val))
-                outputEnv[_key] = _val
-        return outputArgs, outputEnv
 
     # IReactorThreads
     if platform.supportsThreads():
