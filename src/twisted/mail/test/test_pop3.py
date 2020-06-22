@@ -1486,7 +1486,7 @@ _listMessageDeprecation = (
     "twisted.mail.pop3.IMailbox.listMessages may not "
     "raise IndexError for out-of-bounds message numbers: "
     "raise ValueError instead.")
-_listMessageSuppression = util.suppress(  # type: ignore[attr-defined]
+_listMessageSuppression = util.suppress(
     message=_listMessageDeprecation,
     category=PendingDeprecationWarning)
 

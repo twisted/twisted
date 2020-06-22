@@ -17,6 +17,7 @@ import os
 import random
 import binascii
 import warnings
+from typing import Type
 
 from email.utils import parseaddr
 
@@ -79,15 +80,13 @@ __all__ = [
 
 
 # Cache the hostname (XXX Yes - this is broken)
+# Encode the DNS name into something we can send over the wire
 if platform.isMacOSX():
     # On macOS, getfqdn() is ridiculously slow - use the
     # probably-identical-but-sometimes-not gethostname() there.
-    DNSNAME = socket.gethostname()
+    DNSNAME = socket.gethostname().encode('ascii')
 else:
-    DNSNAME = socket.getfqdn()
-
-# Encode the DNS name into something we can send over the wire
-DNSNAME = DNSNAME.encode('ascii')
+    DNSNAME = socket.getfqdn().encode('ascii')
 
 # Used for fast success code lookup
 SUCCESS = dict.fromkeys(range(200, 300))
@@ -1858,7 +1857,7 @@ class SMTPSenderFactory(protocol.ClientFactory):
     """
 
     domain = DNSNAME
-    protocol = SMTPSender
+    protocol = SMTPSender  # type: Type[SMTPClient]
 
     def __init__(self, fromEmail, toEmail, file, deferred, retries=5,
                  timeout=None):

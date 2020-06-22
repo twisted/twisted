@@ -18,7 +18,7 @@ try:
     import pwd
     import grp
 except ImportError:
-    pwd = grp = None
+    pwd = grp = None  # type: ignore[assignment]
 
 from zope.interface import Interface, implementer
 
