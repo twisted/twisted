@@ -2543,7 +2543,7 @@ class FTPDataPortFactory(protocol.ServerFactory):
 
     (i.e. "active" transfers)
     """
-    noisy = 0
+    noisy = False
 
     def buildProtocol(self, addr):
         # This is a bit hackish -- we already have a Protocol instance,
