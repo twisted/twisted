@@ -235,7 +235,7 @@ class _UnsupportedSendmsgMixin(object):
 if sendmsg:
     _SendmsgMixin = _SendmsgMixin
 else:
-    _SendmsgMixin = _UnsupportedSendmsgMixin
+    _SendmsgMixin = _UnsupportedSendmsgMixin  # type: ignore[assignment,misc]
 
 
 

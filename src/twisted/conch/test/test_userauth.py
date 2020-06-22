@@ -28,7 +28,7 @@ if requireModule('cryptography') and requireModule('pyasn1'):
     from twisted.conch.ssh import keys, userauth, transport
     from twisted.conch.test import keydata
 else:
-    keys = None
+    keys = None  # type: ignore[assignment]
 
 
     class transport:  # type: ignore[no-redef]
