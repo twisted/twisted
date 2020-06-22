@@ -45,7 +45,7 @@ else:
         from win32api import OpenProcess
         import pywintypes
     except ImportError:
-        kill = None
+        kill = None  # type: ignore[assignment,misc]
     else:
         ERROR_ACCESS_DENIED = 5
         ERROR_INVALID_PARAMETER = 87

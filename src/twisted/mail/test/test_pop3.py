@@ -2,7 +2,7 @@
 # See LICENSE for details.
 
 """
-Test cases for Ltwisted.mail.pop3} module.
+Test cases for L{twisted.mail.pop3} module.
 """
 
 

@@ -216,7 +216,7 @@ class DefaultFormattingState(FancyEqMixin, object):
     A character attribute that does nothing, thus applying no attributes to
     text.
     """
-    compareAttributes = ('_dummy',)
+    compareAttributes = ('_dummy',)  # type: Sequence[str]
 
     _dummy = 0
 

@@ -350,7 +350,7 @@ def handleError():
 
 
 class SSHClientFactory(protocol.ClientFactory):
-    noisy = 1
+    noisy = True
 
     def stopFactory(self):
         reactor.stop()
