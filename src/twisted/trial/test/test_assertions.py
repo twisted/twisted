@@ -43,7 +43,8 @@ class ComparisonError(object):
     def _error(self, other):
         raise ValueError("Comparison is broken")
 
-    __eq__ = __ne__ = _error
+    __eq__ = _error
+    __ne__ = _error
 
 
 

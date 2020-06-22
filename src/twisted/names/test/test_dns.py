@@ -4211,9 +4211,10 @@ class EDNSMessageSpecificsTests(ConstructorTestsMixin,
 
 
 
-class EDNSMessageEqualityTests(ComparisonTestsMixin, unittest.SynchronousTestCase):
+class EDNSMessageEqualityTests(ComparisonTestsMixin,
+                               unittest.SynchronousTestCase):
     """
-    Tests for equality between L(dns._EDNSMessage} instances.
+    Tests for equality between L{dns._EDNSMessage} instances.
 
     These tests will not work with L{dns.Message} because it does not use
     L{twisted.python.util.FancyEqMixin}.
@@ -4924,9 +4925,11 @@ class Foo(object):
 
 class CompactReprTests(unittest.SynchronousTestCase):
     """
-    Tests for L[dns._compactRepr}.
+    Tests for L{dns._compactRepr}.
     """
+
     messageFactory = Foo
+
     def test_defaults(self):
         """
         L{dns._compactRepr} omits field values and sections which have the

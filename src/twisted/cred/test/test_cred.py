@@ -323,12 +323,12 @@ class CheckersMixin(object):
     and deny specified credentials.
 
     Subclasses must provide
-    - C{getCheckers} which returns a sequence of
-      L{checkers.ICredentialChecker}
-    - C{getGoodCredentials} which returns a list of 2-tuples of
-      credential to check and avaterId to expect.
-    - C{getBadCredentials} which returns a list of credentials
-      which are expected to be unauthorized.
+      - C{getCheckers} which returns a sequence of
+        L{checkers.ICredentialChecker}
+      - C{getGoodCredentials} which returns a list of 2-tuples of
+        credential to check and avaterId to expect.
+      - C{getBadCredentials} which returns a list of credentials
+        which are expected to be unauthorized.
     """
 
     @defer.inlineCallbacks
