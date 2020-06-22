@@ -98,6 +98,42 @@ class CapturingReporter(object):
         """
 
 
+    def addError(self, test, error):
+        """
+        Do nothing. These tests don't care about addError.
+        """
+
+
+    def addFailure(self, test, failure):
+        """
+        Do nothing. These tests don't care about addFailure.
+        """
+
+
+    def addExpectedFailure(self, test, failure, todo=None):
+        """
+        Do nothing. These tests don't care about addExpectedFailure.
+        """
+
+
+    def addUnexpectedSuccess(self, test, todo=None):
+        """
+        Do nothing. These tests don't care about addUnexpectedSuccess.
+        """
+
+
+    def addSkip(self, test, reason):
+        """
+        Do nothing. These tests don't care about addSkip.
+        """
+
+
+    def wasSuccessful(self):
+        """
+        Do nothing. These tests don't care about wasSuccessful.
+        """
+
+
 
 class TrialRunnerTestsMixin(object):
     """
