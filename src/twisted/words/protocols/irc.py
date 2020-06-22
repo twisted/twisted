@@ -50,12 +50,13 @@ import time
 import traceback
 from functools import reduce
 from os import path
+from typing import Optional
 
 from twisted.internet import protocol, reactor, task
 from twisted.persisted import styles
 from twisted.protocols import basic
 from twisted.python import _textattributes, log, reflect
-from twisted.python.compat import range, unicode
+from twisted.python.compat import unicode
 
 NUL = chr(0)
 CR = chr(0o15)
@@ -170,7 +171,7 @@ class _CommandDispatcherMixin(object):
     @type prefix: C{str}
     @ivar prefix: Command handler prefix, used to locate handler attributes
     """
-    prefix = None
+    prefix = None  # type: Optional[str]
 
     def dispatch(self, commandName, *args):
         """
@@ -262,7 +263,7 @@ class IRC(protocol.Protocol):
     buffer = ""
     hostname = None
 
-    encoding = None
+    encoding = None  # type: Optional[str]
 
     def connectionMade(self):
         self.channels = []
