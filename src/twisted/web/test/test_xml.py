@@ -817,8 +817,9 @@ class BrokenHTMLTests(TestCase):
     """
     Tests for when microdom encounters very bad HTML and C{beExtremelyLenient}
     is enabled. These tests are inspired by some HTML generated in by a mailer,
-    which breaks up very long lines by splitting them with '!\n '. The expected
-    behaviour is loosely modelled on the way Firefox treats very bad HTML.
+    which breaks up very long lines by splitting them with '!\\n '.
+    The expected behaviour is loosely modelled on the way Firefox treats very
+    bad HTML.
     """
 
     def checkParsed(self, input, expected, beExtremelyLenient=1):

@@ -419,7 +419,7 @@ class InsensitiveDictTests(TestCase):
 
 class PasswordTestingProcessProtocol(ProcessProtocol):
     """
-    Write the string C{"secret\n"} to a subprocess and then collect all of
+    Write the string C{"secret\\n"} to a subprocess and then collect all of
     its output and fire a Deferred with it when the process ends.
     """
     def connectionMade(self):
