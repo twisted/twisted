@@ -13,7 +13,7 @@ import socket
 try:
     import resource
 except ImportError:
-    resource = None
+    resource = None  # type: ignore[assignment]
 
 from unittest import skipIf
 

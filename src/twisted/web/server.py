@@ -17,6 +17,7 @@ This is a web server which integrates with the twisted.internet infrastructure.
 import copy
 import os
 import re
+from typing import List, Optional
 from urllib.parse import quote as _quote
 
 import zlib
@@ -108,7 +109,8 @@ class Request(Copyable, http.Request, components.Componentized):
 
     site = None
     appRootURL = None
-    prepath = postpath = None
+    prepath = None  # type: Optional[List[bytes]]
+    postpath = None  # type: Optional[bytes]
     __pychecker__ = 'unusednames=issuer'
     _inFakeHead = False
     _encoder = None

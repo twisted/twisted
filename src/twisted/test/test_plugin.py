@@ -13,6 +13,7 @@ import functools
 import os
 import sys
 import time
+from typing import Callable
 
 from importlib import invalidate_caches as invalidateImportCaches
 from zope.interface import Interface
@@ -101,7 +102,7 @@ class PluginTests(unittest.TestCase):
         self.package.child('dropin.cache').remove()
 
 
-    def _withCacheness(meth):
+    def _withCacheness(meth: Callable):
         """
         This is a paranoid test wrapper, that calls C{meth} 2 times, clear the
         cache, and calls it 2 other times. It's supposed to ensure that the
@@ -119,6 +120,7 @@ class PluginTests(unittest.TestCase):
         return wrapped
 
 
+    @_withCacheness
     def test_cache(self):
         """
         Check that the cache returned by L{plugin.getCache} hold the plugin
@@ -154,8 +156,6 @@ class PluginTests(unittest.TestCase):
         import mypackage.testplugin as tp
         self.assertIs(realPlugin, tp.TestPlugin)
 
-    test_cache = _withCacheness(test_cache)
-
 
     def test_cacheRepr(self):
         """
@@ -172,6 +172,7 @@ class PluginTests(unittest.TestCase):
         )
 
 
+    @_withCacheness
     def test_plugins(self):
         """
         L{plugin.getPlugins} should return the list of plugins matching the
@@ -188,9 +189,8 @@ class PluginTests(unittest.TestCase):
             names.remove(p.__name__)
             p.test()
 
-    test_plugins = _withCacheness(test_plugins)
 
-
+    @_withCacheness
     def test_detectNewFiles(self):
         """
         Check that L{plugin.getPlugins} is able to detect plugins added at
@@ -219,9 +219,8 @@ class PluginTests(unittest.TestCase):
                 sys.modules['mypackage.pluginextra'],
                 True)
 
-    test_detectNewFiles = _withCacheness(test_detectNewFiles)
 
-
+    @_withCacheness
     def test_detectFilesChanged(self):
         """
         Check that if the content of a plugin change, L{plugin.getPlugins} is
@@ -254,9 +253,8 @@ class PluginTests(unittest.TestCase):
                 sys.modules['mypackage.pluginextra'],
                 True)
 
-    test_detectFilesChanged = _withCacheness(test_detectFilesChanged)
 
-
+    @_withCacheness
     def test_detectFilesRemoved(self):
         """
         Check that when a dropin file is removed, L{plugin.getPlugins} doesn't
@@ -275,9 +273,8 @@ class PluginTests(unittest.TestCase):
         plgs = list(plugin.getPlugins(ITestPlugin, self.module))
         self.assertEqual(1, len(plgs))
 
-    test_detectFilesRemoved = _withCacheness(test_detectFilesRemoved)
 
-
+    @_withCacheness
     def test_nonexistentPathEntry(self):
         """
         Test that getCache skips over any entries in a plugin package's
@@ -293,9 +290,8 @@ class PluginTests(unittest.TestCase):
         finally:
             self.module.__path__.remove(path)
 
-    test_nonexistentPathEntry = _withCacheness(test_nonexistentPathEntry)
 
-
+    @_withCacheness
     def test_nonDirectoryChildEntry(self):
         """
         Test that getCache skips over any entries in a plugin package's
@@ -311,8 +307,6 @@ class PluginTests(unittest.TestCase):
             self.assertEqual(len(plgs), 1)
         finally:
             self.module.__path__.remove(child)
-
-    test_nonDirectoryChildEntry = _withCacheness(test_nonDirectoryChildEntry)
 
 
     def test_deployedMode(self):
