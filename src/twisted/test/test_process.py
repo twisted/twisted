@@ -496,18 +496,18 @@ class GetEnvironmentDictionary(UtilityProcessProtocol):
         strings giving key value pairs of the environment from that process.
         Return this as a dictionary.
         """
-        environString = b''.join(chunks)
-        if not environString:
+        environBytes = b''.join(chunks)
+        if not environBytes:
             return {}
-        environ = iter(environString.split(b'\0'))
+        environb = iter(environBytes.split(b'\0'))
         d = {}
         while 1:
             try:
-                k = next(environ)
+                k = next(environb)
             except StopIteration:
                 break
             else:
-                v = next(environ)
+                v = next(environb)
                 d[k] = v
         return d
 
@@ -2263,7 +2263,10 @@ class Win32ProcessTests(unittest.TestCase):
 
         pyExe = FilePath(sys.executable)._asBytesPath()
         args = [pyExe, b"-u", b"-m", b"twisted.test.process_stdinreader"]
-        env = bytesEnviron()
+        if os.supports_bytes_environ:
+            env = dict(os.environb)
+        else:
+            env = bytesEnviron()
         env[b"PYTHONPATH"] = os.pathsep.join(sys.path).encode(
                                              sys.getfilesystemencoding())
         path = win32api.GetTempPath()
@@ -2394,24 +2397,39 @@ class Win32UnicodeEnvironmentTests(unittest.TestCase):
     """
     Tests for Unicode environment on Windows
     """
-    goodKey = u'UNICODE'
-    goodValue = u'UNICODE'
 
-
-    def test_encodableUnicodeEnvironment(self):
+    def test_AsciiEncodeableUnicodeEnvironment(self):
         """
-        Test C{os.environ} (inherited by every subprocess on Windows) that
-        contains an ascii-encodable Unicode string.
+        C{os.environ} (inherited by every subprocess on Windows)
+        contains Unicode keys and Unicode values which can be ASCII-encodable.
         """
-        os.environ[self.goodKey] = self.goodValue
-        self.addCleanup(operator.delitem, os.environ, self.goodKey)
+        os.environ['KEY_ASCII'] = 'VALUE_ASCII'
+        self.addCleanup(operator.delitem, os.environ, 'KEY_ASCII')
 
         p = GetEnvironmentDictionary.run(reactor, [], os.environ)
 
-        def gotEnvironment(environ):
-            self.assertEqual(
-                environ[self.goodKey.encode('ascii')],
-                self.goodValue.encode('ascii'))
+        def gotEnvironment(environb):
+            self.assertEqual(environb[b'KEY_ASCII'], b'VALUE_ASCII')
+        return p.getResult().addCallback(gotEnvironment)
+
+
+    def test_UTF8StringInEnvironment(self):
+        """
+        L{os.environ} (inherited by every subprocess on Windows) can
+        contain a UTF-8 string value.
+        """
+        envKey = 'TWISTED_BUILD_SOURCEVERSIONAUTHOR'
+        envKeyBytes = b'TWISTED_BUILD_SOURCEVERSIONAUTHOR'
+        envVal = "Speciał Committór"
+        os.environ[envKey] = envVal
+        self.addCleanup(operator.delitem, os.environ, envKey)
+
+        p = GetEnvironmentDictionary.run(reactor, [], os.environ)
+
+        def gotEnvironment(environb):
+            self.assertIn(envKeyBytes, environb)
+            self.assertEqual(environb[envKeyBytes],
+                             "Speciał Committór".encode(sys.stdout.encoding))
 
         return p.getResult().addCallback(gotEnvironment)
 
