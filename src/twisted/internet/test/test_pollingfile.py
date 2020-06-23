@@ -12,7 +12,7 @@ from twisted.trial.unittest import TestCase
 if platform.isWindows():
     from twisted.internet import _pollingfile
 else:
-    _pollingfile = None
+    _pollingfile = None  # type: ignore[assignment]
 
 
 

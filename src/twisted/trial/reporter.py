@@ -238,7 +238,7 @@ class TestResult(pyunit.TestResult, object):
 
 
 @implementer(itrial.IReporter)
-class TestResultDecorator(proxyForInterface(itrial.IReporter,
+class TestResultDecorator(proxyForInterface(itrial.IReporter,  # type: ignore[misc]  # noqa
                                             "_originalReporter")):
     """
     Base class for TestResult decorators.
@@ -1010,6 +1010,9 @@ class SubunitReporter(object):
     @since: 10.0
     """
 
+    testsRun = None
+
+
     def __init__(self, stream=sys.stdout, tbformat='default',
                  realtime=False, publisher=None):
         """
@@ -1131,7 +1134,7 @@ class SubunitReporter(object):
             test, util.excInfoOrFailureToExcInfo(err))
 
 
-    def addExpectedFailure(self, test, failure, todo):
+    def addExpectedFailure(self, test, failure, todo=None):
         """
         Record an expected failure from a test.
 

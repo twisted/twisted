@@ -39,7 +39,7 @@ class TestSuite(pyunit.TestSuite):
 
 
 @implementer(itrial.ITestCase)
-class TestDecorator(components.proxyForInterface(itrial.ITestCase,
+class TestDecorator(components.proxyForInterface(itrial.ITestCase,  # type: ignore[misc]  # noqa
                                                  "_originalTest")):
     """
     Decorator for test cases.

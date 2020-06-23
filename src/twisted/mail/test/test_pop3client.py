@@ -26,7 +26,8 @@ from twisted.trial.unittest import TestCase
 try:
     from twisted.test.ssl_helpers import ClientTLSContext, ServerTLSContext
 except ImportError:
-    ClientTLSContext = ServerTLSContext = None
+    ClientTLSContext = None  # type: ignore[assignment,misc]
+    ServerTLSContext = None  # type: ignore[assignment,misc]
 
 
 

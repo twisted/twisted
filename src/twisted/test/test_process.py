@@ -33,7 +33,7 @@ from unittest import skipIf
 try:
     import fcntl
 except ImportError:
-    fcntl = None
+    fcntl = None  # type: ignore[assignment]
     process = None
 else:
     from twisted.internet import process
@@ -389,7 +389,7 @@ class UtilityProcessProtocol(protocol.ProcessProtocol):
 
     @ivar programName: The name of the program to run.
     """
-    programName = None
+    programName = b""  # type: bytes
 
     @classmethod
     def run(cls, reactor, argv, env):

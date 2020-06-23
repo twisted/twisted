@@ -429,7 +429,11 @@ class _Assertions(pyunit.TestCase, object):
             return context
 
         return context._handle(lambda: f(*args, **kwargs))
-    failUnlessRaises = assertRaises
+
+    # unittest.TestCase.assertRaises() is defined with 4 arguments
+    # but we define it with 5 arguments.  So we need to tell mypy
+    # to ignore the following assignment to failUnlessRaises
+    failUnlessRaises = assertRaises  # type: ignore[assignment]
 
 
     def assertEqual(self, first, second, msg=None):
@@ -528,7 +532,8 @@ class _Assertions(pyunit.TestCase, object):
     failIfIn = assertNotIn
 
 
-    def assertNotAlmostEqual(self, first, second, places=7, msg=None):
+    def assertNotAlmostEqual(self, first, second, places=7, msg=None,
+                             delta=None):
         """
         Fail if the two objects are equal as determined by their
         difference rounded to the given number of decimal places
@@ -549,7 +554,8 @@ class _Assertions(pyunit.TestCase, object):
     failIfAlmostEquals = assertNotAlmostEqual
 
 
-    def assertAlmostEqual(self, first, second, places=7, msg=None):
+    def assertAlmostEqual(self, first, second, places=7, msg=None,
+                          delta=None):
         """
         Fail if the two objects are unequal as determined by their
         difference rounded to the given number of decimal places

@@ -10,6 +10,7 @@ Tests for L{twisted.protocols.amp}.
 import datetime
 import decimal
 from unittest import skipIf
+from typing import Dict, Type
 from zope.interface import implementer
 from zope.interface.verify import verifyClass, verifyObject
 
@@ -23,14 +24,13 @@ from twisted.internet import (
 from twisted.test import iosim
 from twisted.test.proto_helpers import StringTransport
 
-ssl = None
 try:
     from twisted.internet import ssl
 except ImportError:
-    pass
+    ssl = None  # type: ignore[assignment]
 
 if ssl and not ssl.supported:
-    ssl = None
+    ssl = None  # type: ignore[assignment]
 
 if ssl is None:
     skipSSL = True
@@ -147,9 +147,11 @@ class Hello(amp.Command):
     response = [(b'hello', amp.String()),
                 (b'print', amp.Unicode(optional=True))]
 
-    errors = {UnfriendlyGreeting: b'UNFRIENDLY'}
+    errors = {UnfriendlyGreeting: b'UNFRIENDLY'}  # type: Dict[Type[Exception], bytes]  # noqa
 
-    fatalErrors = {DeathThreat: b'DEAD'}
+    fatalErrors = {DeathThreat: b'DEAD'}  # type: Dict[Type[Exception], bytes]
+
+
 
 class NoAnswerHello(Hello):
     commandName = Hello.commandName
@@ -173,6 +175,8 @@ class FutureHello(amp.Command):
 
     errors = {UnfriendlyGreeting: b'UNFRIENDLY'}
 
+
+
 class WTF(amp.Command):
     """
     An example of an invalid command.
@@ -186,18 +190,26 @@ class BrokenReturn(amp.Command):
 
     commandName = b'broken_return'
 
+
+
 class Goodbye(amp.Command):
     # commandName left blank on purpose: this tests implicit command names.
     response = [(b'goodbye', amp.String())]
     responseType = amp.QuitBox
 
+
+
 class WaitForever(amp.Command):
     commandName = b'wait_forever'
+
+
 
 class GetList(amp.Command):
     commandName = b'getlist'
     arguments = [(b'length', amp.Integer())]
     response = [(b'body', amp.AmpList([(b'x', amp.Integer())]))]
+
+
 
 class DontRejectMe(amp.Command):
     commandName = b'dontrejectme'
@@ -207,9 +219,13 @@ class DontRejectMe(amp.Command):
             ]
     response = [(b'response', amp.Unicode())]
 
+
+
 class SecuredPing(amp.Command):
     # XXX TODO: actually make this refuse to send over an insecure connection
     response = [(b'pinged', amp.Boolean())]
+
+
 
 class TestSwitchProto(amp.ProtocolSwitchCommand):
     commandName = b'Switch-Proto'
@@ -218,6 +234,8 @@ class TestSwitchProto(amp.ProtocolSwitchCommand):
         (b'name', amp.String()),
         ]
     errors = {UnknownProtocol: b'UNKNOWN'}
+
+
 
 class SingleUseFactory(protocol.ClientFactory):
     def __init__(self, proto):
@@ -234,12 +252,20 @@ class SingleUseFactory(protocol.ClientFactory):
         self.reasonFailed = reason
         return
 
+
+
 THING_I_DONT_UNDERSTAND = b'gwebol nargo'
+
+
+
 class ThingIDontUnderstandError(Exception):
     pass
 
+
+
 class FactoryNotifier(amp.AMP):
     factory = None
+
     def connectionMade(self):
         if self.factory is not None:
             self.factory.theProto = self
@@ -251,11 +277,14 @@ class FactoryNotifier(amp.AMP):
         if not ISSLTransport.providedBy(self.transport):
             raise DeathThreat("only send secure pings over secure channels")
         return {'pinged': True}
+
     SecuredPing.responder(emitpong)
+
 
 
 class SimpleSymmetricCommandProtocol(FactoryNotifier):
     maybeLater = None
+
     def __init__(self, onConnLost=None):
         amp.AMP.__init__(self)
         self.onConnLost = onConnLost
@@ -326,6 +355,7 @@ class SimpleSymmetricCommandProtocol(FactoryNotifier):
     BrokenReturn.responder(donothing)
 
 
+
 class DeferredSymmetricCommandProtocol(SimpleSymmetricCommandProtocol):
     def switchit(self, name):
         if name == b'test-proto':
@@ -333,6 +363,8 @@ class DeferredSymmetricCommandProtocol(SimpleSymmetricCommandProtocol):
             self.maybeLater = defer.Deferred()
             return self.maybeLater
     TestSwitchProto.responder(switchit)
+
+
 
 class BadNoAnswerCommandProtocol(SimpleSymmetricCommandProtocol):
     def badResponder(self, hello, From, optional=None, Print=None,
@@ -342,11 +374,16 @@ class BadNoAnswerCommandProtocol(SimpleSymmetricCommandProtocol):
         """
     NoAnswerHello.responder(badResponder)
 
+
+
 class NoAnswerCommandProtocol(SimpleSymmetricCommandProtocol):
     def goodNoAnswerResponder(self, hello, From, optional=None, Print=None,
-                              mixedCase=None, dash_arg=None, underscore_arg=None):
+                              mixedCase=None, dash_arg=None,
+                              underscore_arg=None):
         return dict(hello=hello+b"-noanswer")
     NoAnswerHello.responder(goodNoAnswerResponder)
+
+
 
 def connectedServerAndClient(ServerClass=SimpleSymmetricProtocol,
                              ClientClass=SimpleSymmetricProtocol,
@@ -357,10 +394,15 @@ def connectedServerAndClient(ServerClass=SimpleSymmetricProtocol,
         ServerClass, ClientClass,
         *a, **kw)
 
+
+
 class TotallyDumbProtocol(protocol.Protocol):
     buf = b''
+
     def dataReceived(self, data):
         self.buf += data
+
+
 
 class LiteralAmp(amp.AMP):
     def __init__(self):
@@ -2094,7 +2136,7 @@ class BaseCommand(amp.Command):
     """
     This provides a command that will be subclassed.
     """
-    errors = {InheritedError: b'INHERITED_ERROR'}
+    errors = {InheritedError: b'INHERITED_ERROR'}  # type: Dict[Type[Exception], bytes]  # noqa
 
 
 
@@ -2112,7 +2154,7 @@ class AddErrorsCommand(BaseCommand):
     list.
     """
     arguments = [(b'other', amp.Boolean())]
-    errors = {OtherInheritedError: b'OTHER_INHERITED_ERROR'}
+    errors = {OtherInheritedError: b'OTHER_INHERITED_ERROR'}  # type: Dict[Type[Exception], bytes]  # noqa
 
 
 
@@ -2493,7 +2535,7 @@ class ProtocolIncludingCommandWithDifferentCommandType(
     """
     A L{ProtocolIncludingCommand} subclass whose commandType is L{MyBox}
     """
-    commandType = MyBox
+    commandType = MyBox  # type: ignore[assignment]
 
 
 

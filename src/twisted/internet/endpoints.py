@@ -42,8 +42,8 @@ try:
     from twisted.internet.stdio import StandardIO, PipeAddress
 except ImportError:
     # fallback if pywin32 is not installed
-    StandardIO = None
-    PipeAddress = None
+    StandardIO = None  # type: ignore[assignment]
+    PipeAddress = None  # type: ignore[assignment]
 
 from twisted.internet.task import LoopingCall
 from twisted.internet._resolver import HostResolution

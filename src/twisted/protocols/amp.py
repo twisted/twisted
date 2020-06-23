@@ -1786,8 +1786,8 @@ class Command:
                         "Response names must be byte strings, got: %r"
                         % (name, ))
 
-            errors = {}
-            fatalErrors = {}  # type: Dict[Exception, bytes]
+            errors = {}  # type: Dict[Type[Exception], bytes]
+            fatalErrors = {}  # type: Dict[Type[Exception], bytes]
             accumulateClassDict(newtype, 'errors', errors)
             accumulateClassDict(newtype, 'fatalErrors', fatalErrors)
 
@@ -1819,8 +1819,8 @@ class Command:
     arguments = []  # type: List[Tuple[bytes, Argument]]
     response = []  # type: List[Tuple[bytes, Argument]]
     extra = []  # type: List[Any]
-    errors = {}  # type: Dict[Exception, bytes]
-    fatalErrors = {}  # type: Dict[Exception, bytes]
+    errors = {}  # type: Dict[Type[Exception], bytes]
+    fatalErrors = {}  # type: Dict[Type[Exception], bytes]
 
     commandType = Box  # type: Type[Command]
     responseType = Box  # type: Type[AmpBox]

@@ -11,6 +11,7 @@ import re
 import string
 import struct
 import types
+from typing import Optional, Type
 
 from hashlib import md5, sha1, sha256, sha384, sha512
 from twisted import __version__ as twisted_version
@@ -395,7 +396,7 @@ class TransportTestCase(TestCase):
     """
     Base class for transport test cases.
     """
-    klass = None
+    klass = None  # type: Optional[Type[transport.SSHTransportBase]]
 
     if dependencySkip:
         skip = dependencySkip
@@ -498,7 +499,7 @@ class BaseSSHTransportBaseCase:
     Base case for TransportBase tests.
     """
 
-    klass = MockTransportBase
+    klass = MockTransportBase  # type: Optional[Type[transport.SSHTransportBase]]  # noqa
 
 
 
@@ -1411,7 +1412,7 @@ class ServerSSHTransportBaseCase(ServerAndClientSSHTransportBaseCase):
     Base case for SSHServerTransport tests.
     """
 
-    klass = transport.SSHServerTransport
+    klass = transport.SSHServerTransport  # type: Optional[Type[transport.SSHTransportBase]] # noqa
 
 
     def setUp(self):
@@ -1929,7 +1930,7 @@ class ClientSSHTransportBaseCase(ServerAndClientSSHTransportBaseCase):
     Base case for SSHClientTransport tests.
     """
 
-    klass = transport.SSHClientTransport
+    klass = transport.SSHClientTransport  # type: Optional[Type[transport.SSHTransportBase]]  # noqa
 
 
     def verifyHostKey(self, pubKey, fingerprint):

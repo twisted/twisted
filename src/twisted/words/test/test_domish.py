@@ -398,8 +398,6 @@ class DomishExpatStreamTests(DomishStreamTestsMixin, unittest.TestCase):
 
     if requireModule('pyexpat', default=None) is None:
         skip = "pyexpat is required for ExpatElementStream tests."
-    else:
-        skip = None
 
 
 

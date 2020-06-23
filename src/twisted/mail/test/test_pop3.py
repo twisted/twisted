@@ -2,7 +2,7 @@
 # See LICENSE for details.
 
 """
-Test cases for Ltwisted.mail.pop3} module.
+Test cases for L{twisted.mail.pop3} module.
 """
 
 
@@ -1486,7 +1486,7 @@ _listMessageDeprecation = (
     "twisted.mail.pop3.IMailbox.listMessages may not "
     "raise IndexError for out-of-bounds message numbers: "
     "raise ValueError instead.")
-_listMessageSuppression = util.suppress(  # type: ignore[attr-defined]
+_listMessageSuppression = util.suppress(
     message=_listMessageDeprecation,
     category=PendingDeprecationWarning)
 
