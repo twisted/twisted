@@ -24,11 +24,10 @@ from twisted.internet import (
 from twisted.test import iosim
 from twisted.test.proto_helpers import StringTransport
 
-ssl = None
 try:
     from twisted.internet import ssl
 except ImportError:
-    pass
+    ssl = None  # type: ignore[assignment]
 
 if ssl and not ssl.supported:
     ssl = None  # type: ignore[assignment]
