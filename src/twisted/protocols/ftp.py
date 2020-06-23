@@ -18,7 +18,7 @@ try:
     import pwd
     import grp
 except ImportError:
-    pwd = grp = None
+    pwd = grp = None  # type: ignore[assignment]
 
 from zope.interface import Interface, implementer
 
@@ -2543,7 +2543,7 @@ class FTPDataPortFactory(protocol.ServerFactory):
 
     (i.e. "active" transfers)
     """
-    noisy = 0
+    noisy = False
 
     def buildProtocol(self, addr):
         # This is a bit hackish -- we already have a Protocol instance,

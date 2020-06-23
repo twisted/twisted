@@ -14,7 +14,7 @@ import pickle
 try:
     import asyncio
 except ImportError:
-    asyncio = None
+    asyncio = None  # type: ignore[assignment]
 
 from unittest import skipIf
 

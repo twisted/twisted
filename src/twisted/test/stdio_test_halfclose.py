@@ -65,7 +65,7 @@ if __name__ == '__main__':
     reflect.namedAny(sys.argv[1]).install()
     log.startLogging(open(sys.argv[2], 'wb'))
     from twisted.internet import reactor
-    protocol = HalfCloseProtocol()
-    stdio.StandardIO(protocol)
+    halfCloseProtocol = HalfCloseProtocol()
+    stdio.StandardIO(halfCloseProtocol)
     reactor.run()
-    sys.exit(protocol.exitCode)
+    sys.exit(halfCloseProtocol.exitCode)

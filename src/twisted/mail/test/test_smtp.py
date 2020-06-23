@@ -11,6 +11,7 @@ import base64
 
 from io import BytesIO
 from unittest import skipIf
+from typing import Optional, Type
 
 from zope.interface import implementer, directlyProvides
 
@@ -384,8 +385,8 @@ class DummyESMTP(DummyProto, smtp.ESMTP):
 
 
 class AnotherTestCase:
-    serverClass = None
-    clientClass = None
+    serverClass = None  # type: Optional[Type[protocol.Protocol]]
+    clientClass = None  # type: Optional[Type[smtp.SMTPClient]]
 
     messages = [(b'foo.com', b'moshez@foo.com', [b'moshez@bar.com'],
                  b'moshez@foo.com', [b'moshez@bar.com'], b'''\

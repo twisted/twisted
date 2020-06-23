@@ -14,14 +14,14 @@ import errno
 try:
     import pwd
 except ImportError:
-    pwd = None
+    pwd = None  # type: ignore[assignment]
 else:
     import crypt
 
 try:
     import spwd
 except ImportError:
-    spwd = None
+    spwd = None  # type: ignore[assignment]
 
 from zope.interface import providedBy, implementer, Interface
 

@@ -26,7 +26,7 @@ else:
     setgroups = _setgroups
     getgroups = _getgroups
 
-from typing import Sequence
+from typing import Callable, Sequence, Union, Tuple
 
 from twisted.python.compat import unicode
 from incremental import Version
@@ -603,7 +603,7 @@ class FancyStrMixin:
     might be used for a float.
     """
     # Override in subclasses:
-    showAttributes = ()  # type: Sequence[str]
+    showAttributes = ()  # type: Sequence[Union[str, Tuple[str, str, str], Tuple[str, Callable]]]  # noqa
 
 
     def __str__(self):
@@ -630,7 +630,7 @@ class FancyEqMixin:
     Comparison is done using the list of attributes defined in
     C{compareAttributes}.
     """
-    compareAttributes = ()  # type: Sequence[str]
+    compareAttributes = ()  # type: Sequence[Union[str, Sequence[str], Tuple[str, Callable]]]  # noqa
 
     def __eq__(self, other):
         if not self.compareAttributes:

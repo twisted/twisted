@@ -10,6 +10,7 @@ __all__ = ['DummyChannel', 'DummyRequest']
 
 from io import BytesIO
 
+from typing import Optional
 from zope.interface import implementer, verify
 
 from twisted.python.compat import intToBytes
@@ -241,7 +242,7 @@ class DummyRequest(object):
     """
     uri = b'http://dummy/'
     method = b'GET'
-    client = None
+    client = None  # type: Optional[IAddress]
 
 
     def registerProducer(self, prod, s):

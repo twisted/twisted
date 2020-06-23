@@ -13,6 +13,7 @@ import re
 import sys
 
 from inspect import getmro
+from typing import Type
 from unittest import expectedFailure
 from unittest import TestCase as StdlibTestCase
 
@@ -966,7 +967,7 @@ class ReporterInterfaceTests(unittest.SynchronousTestCase):
         callable must take the same parameters as L{reporter.Reporter}.
     """
 
-    resultFactory = reporter.Reporter
+    resultFactory = reporter.Reporter  # type: Type[itrial.IReporter]
 
     def setUp(self):
         self.test = sample.FooTest('test_foo')
@@ -1166,7 +1167,7 @@ class SubunitReporterTests(ReporterInterfaceTests):
     This just tests that the subunit reporter implements the basic interface.
     """
 
-    resultFactory = reporter.SubunitReporter
+    resultFactory = reporter.SubunitReporter  # type: Type[itrial.IReporter]
 
 
     def setUp(self):
@@ -1395,7 +1396,7 @@ class SubunitReporterNotInstalledTests(unittest.SynchronousTestCase):
 
 
 class TimingReporterTests(ReporterTests):
-    resultFactory = reporter.TimingTextReporter
+    resultFactory = reporter.TimingTextReporter  # type: Type[itrial.IReporter]
 
 
 

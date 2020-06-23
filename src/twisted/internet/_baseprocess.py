@@ -21,7 +21,7 @@ _missingProcessExited = ("Since Twisted 8.2, IProcessProtocol.processExited "
 
 class BaseProcess(object):
     pid = None  # type: Optional[int]
-    status = None
+    status = None  # type: Optional[int]
     lostProcess = 0
     proto = None
 
@@ -39,7 +39,7 @@ class BaseProcess(object):
         else:
             try:
                 processExited(Failure(reason))
-            except:
+            except BaseException:
                 err(None, "unexpected error in processExited")
 
 
@@ -64,5 +64,5 @@ class BaseProcess(object):
             self.proto = None
             try:
                 proto.processEnded(Failure(reason))
-            except:
+            except BaseException:
                 err(None, "unexpected error in processEnded")

@@ -17,6 +17,7 @@ import struct
 from itertools import chain
 
 from io import BytesIO
+from typing import Optional
 
 from zope.interface import implementer, Interface, Attribute
 
@@ -1010,7 +1011,7 @@ class SimpleRecord(tputil.FancyStrMixin, tputil.FancyEqMixin):
     showAttributes = (('name', 'name', '%s'), 'ttl')
     compareAttributes = ('name', 'ttl')
 
-    TYPE = None
+    TYPE = None  # type: Optional[int]
     name = None
 
     def __init__(self, name=b'', ttl=None):

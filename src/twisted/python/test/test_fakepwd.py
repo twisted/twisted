@@ -8,12 +8,12 @@ Tests for L{twisted.python.fakepwd}.
 try:
     import pwd
 except ImportError:
-    pwd = None
+    pwd = None  # type: ignore[assignment]
 
 try:
     import spwd
 except ImportError:
-    spwd = None
+    spwd = None  # type: ignore[assignment]
 
 import os
 from operator import getitem

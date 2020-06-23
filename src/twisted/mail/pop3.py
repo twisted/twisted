@@ -15,6 +15,7 @@ import base64
 import binascii
 import warnings
 from hashlib import md5
+from typing import Optional
 
 from zope.interface import implementer
 
@@ -449,7 +450,7 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
         <cred.credentials.IUsernameHashedPassword>} provider
     @ivar _auth: Authorization credentials.
     """
-    magic = None
+    magic = None  # type: Optional[bytes]
     _userIs = None
     _onLogout = None
 
