@@ -75,7 +75,7 @@ class FileAuthority(common.ResolverBase):
         L{dns.Record_SOA}.
 
     @ivar records: A mapping of domains (as lowercased L{bytes}) to records.
-    @type records: L{dict} with L{byte} keys
+    @type records: L{dict} with L{bytes} keys
     """
     # See https://twistedmatrix.com/trac/ticket/6650
     _ADDITIONAL_PROCESSING_TYPES = (dns.CNAME, dns.MX, dns.NS)

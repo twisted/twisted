@@ -272,7 +272,7 @@ class IElement(Interface):
             contains the local name, or a tuple of (uri, local_name) for a
             fully qualified name. In the former case, the namespace URI is
             inherited from this element.
-        @type name: L{str} or L{tuple} of (L{stre}, L{str})
+        @type name: L{str} or L{tuple} of (L{str}, L{str})
 
         @param defaultUri: default namespace URI for child elements. If
             L{None}, this is inherited from this element.
