@@ -107,10 +107,10 @@ class SecondaryAuthority(FileAuthority):
 
     @ivar _port: The port number of the server from which zone transfers will
     be attempted.
-    @type: C{int}
+    @type _port: C{int}
 
     @ivar domain: The domain for which this is the secondary authority.
-    @type: C{bytes}
+    @type domain: C{bytes}
 
     @ivar _reactor: The reactor to use to perform the zone transfers, or
     L{None} to use the global reactor.

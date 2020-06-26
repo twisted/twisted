@@ -53,7 +53,7 @@ the modules outside the standard library's python-files directory::
                 modinfo.name, modinfo.filePath.path))
 
 @var theSystemPath: The very top of the Python object space.
-@type: L{PythonPath}
+@type theSystemPath: L{PythonPath}
 """
 
 
