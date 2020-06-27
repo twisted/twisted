@@ -8,6 +8,7 @@ Test cases for twisted.mail.smtp module.
 
 import inspect
 import base64
+import re
 
 from io import BytesIO
 from unittest import skipIf
@@ -44,7 +45,11 @@ except ImportError:
 else:
     sslSkip = ""
 
-import re
+
+
+if not interfaces.IReactorSSL.providedBy(reactor):
+    sslSkip = "Reactor doesn't support SSL"
+
 
 
 def spameater(*spam, **eggs):
@@ -704,10 +709,6 @@ class TLSTests(TestCase, LoopbackMixin):
             self.assertEqual(server.startedTLS, True)
 
         return self.loopback(server, client).addCallback(check)
-
-if not interfaces.IReactorSSL.providedBy(reactor):
-    for case in (TLSTests,):
-        case.skip = "Reactor doesn't support SSL"
 
 
 
