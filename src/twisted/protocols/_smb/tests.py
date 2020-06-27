@@ -30,8 +30,9 @@ globalLogBeginner.beginLoggingTo(observers)
 class FakeStruct:
     one = base.short()
     two = base.byte()
-    three = base.single(4.5)
+    three = base.single(4.2)
     four = base.octets(3)
+    five = base.long(424242, locked=True)
 
 
 
@@ -45,11 +46,13 @@ class FakeStruct2:
 
 class TestBase(unittest.TestCase):
     def test_base_pack(self):
-        data = struct.pack("<HBf3s", 525, 42, 4.5, b'bob')
+        data = struct.pack("<HBf3sQ", 525, 42, 4.2, b'bob', 424242)
         r = FakeStruct(one=525)
         r.two = 42
         r.four = b'bob'
         self.assertEqual(base.pack(r), data)
+        with self.assertRaises(AssertionError):
+            r = FakeStruct(five=424243)
 
     def test_smb_packet_receiver(self):
         pr = base.SMBPacketReceiver()
@@ -77,23 +80,23 @@ class TestBase(unittest.TestCase):
         self.assertTrue(n < 2**32)
 
     def test_unpack(self):
-        DATA = b'\x0B\x02\x0Etwisted'
-        with self.subTest(remainder=0):
-            r = base.unpack(FakeStruct2, DATA, remainder=0)
+        data = b'\x0B\x02\x0Etwisted'
+        with self.subTest(remainder=base.IGNORE):
+            r = base.unpack(FakeStruct2, data, remainder=base.IGNORE)
             self.assertEqual(r.i, 523)
             self.assertEqual(r.b, 0x0E)
             self.assertEqual(r.s, b'twi')
-        with self.subTest(remainder=1):
+        with self.subTest(remainder=base.ERROR):
             with self.assertRaises(base.SMBError):
-                r = base.unpack(FakeStruct2, DATA, remainder=1)
-        with self.subTest(remainder=2):
-            r, rem = base.unpack(FakeStruct2, DATA, remainder=2)
+                r = base.unpack(FakeStruct2, data, remainder=base.ERROR)
+        with self.subTest(remainder=base.OFFSET):
+            r, rem = base.unpack(FakeStruct2, data, remainder=base.OFFSET)
             self.assertEqual(r.i, 523)
             self.assertEqual(r.b, 0x0E)
             self.assertEqual(r.s, b'twi')
             self.assertEqual(rem, 6)
-        with self.subTest(remainder=3):
-            r, rem = base.unpack(FakeStruct2, DATA, remainder=3)
+        with self.subTest(remainder=base.DATA):
+            r, rem = base.unpack(FakeStruct2, data, remainder=base.DATA)
             self.assertEqual(r.i, 523)
             self.assertEqual(r.b, 0x0E)
             self.assertEqual(r.s, b'twi')

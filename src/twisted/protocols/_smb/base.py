@@ -49,31 +49,56 @@ SMB_METADATA = '__smb_metadata'
 
 
 
-def byte(default=0):
+def default_only(instance, attribute, value):
+    """
+    C{attrs} validator that only accepts the default
+    """
+    assert attribute.default == value, "%s: must be %r, got %r" % (
+        attribute.name, attribute.default, value)
+
+
+
+def byte(default=0, locked=False):
     """an 8-bit unsigned integer
 
     wraps L{attr.ib} with appropriate metadata for use with L{pack} and
     L{unpack}
+
+    @param default: the default value
+    @param locked: when C{True}, the default is the only valid value
+    @type locked: L{bool}
     """
-    return attr.ib(default=default, type=int, metadata={SMB_METADATA: "B"})
+    return attr.ib(default=default,
+                   type=int,
+                   metadata={SMB_METADATA: "B"},
+                   validator=default_only if locked else None)
 
 
 
-def short(default=0):
+def short(default=0, locked=False):
     """a 16-bit unsigned integer"""
-    return attr.ib(default=default, type=int, metadata={SMB_METADATA: "H"})
+    return attr.ib(default=default,
+                   type=int,
+                   metadata={SMB_METADATA: "H"},
+                   validator=default_only if locked else None)
 
 
 
-def int32(default=0):
+def medium(default=0, locked=False):
     """a 32-bit unsigned integer"""
-    return attr.ib(default=default, type=int, metadata={SMB_METADATA: "I"})
+    return attr.ib(default=default,
+                   type=int,
+                   metadata={SMB_METADATA: "I"},
+                   validator=default_only if locked else None)
 
 
 
-def long(default=0):
+def long(default=0, locked=False):
     """an 64-bit unsigned integer"""
-    return attr.ib(default=default, type=int, metadata={SMB_METADATA: "Q"})
+    return attr.ib(default=default,
+                   type=int,
+                   metadata={SMB_METADATA: "Q"},
+                   validator=default_only if locked else None)
 
 
 
@@ -89,7 +114,7 @@ def double(default=0.0):
 
 
 
-def octets(length=None, default=None):
+def octets(length=None, default=None, locked=False):
     """
     a group of octets (bytes). Either a length or a default must be given.
     If a length, the default is all zeros, if a default, the length is taken
@@ -107,7 +132,8 @@ def octets(length=None, default=None):
         default = b'\0' * length
     return attr.ib(default=default,
                    type=bytes,
-                   metadata={SMB_METADATA: str(length) + "s"})
+                   metadata={SMB_METADATA: str(length) + "s"},
+                   validator=default_only if locked else None)
 
 
 
@@ -116,13 +142,14 @@ NEW_UUID = attr.Factory(uuid_mod.uuid4)
 
 
 
-def uuid(default=NULL_UUID):
+def uuid(default=NULL_UUID, locked=False):
     """a universial unique ID"""
     default = _conv_uuid(default)
     return attr.ib(default=default,
                    metadata={SMB_METADATA: "16s"},
                    type=uuid_mod.UUID,
-                   converter=_conv_uuid)
+                   converter=_conv_uuid,
+                   validator=default_only if locked else None)
 
 
 
@@ -158,6 +185,13 @@ def _conv_arg(obj, attrib):
 
 
 
+IGNORE = 0
+ERROR = 1
+OFFSET = 2
+DATA = 3
+
+
+
 def unpack(cls, data, offset=0, remainder=0):
     """
     unpack binary data into an object.
@@ -172,11 +206,11 @@ def unpack(cls, data, offset=0, remainder=0):
 
     @param remainder: what to do with remaining data if longer than required
                       to fill C{cls}
-                      - C{0} ignore it
-                      - C{1} throw a L{SMBError}
-                      - C{2} return offset into data
+                      - C{IGNORE} ignore it
+                      - C{ERROR} throw a L{SMBError}
+                      - C{OFFSET} return offset into data
                         where remainder begins as second item of tuple
-                      - C{3} return remaining data as second item of tuple
+                      - C{DATA} return remaining data as second item of tuple
     @type remainder: L{int}
 
     @param offset: offset into data to begin from
@@ -186,7 +220,7 @@ def unpack(cls, data, offset=0, remainder=0):
              second as determined by C{remainder}
     """
     strct = _get_struct(cls)
-    if remainder == 1 and strct.size + offset < len(data):
+    if remainder == ERROR and strct.size + offset < len(data):
         raise SMBError("unexpected remaining data")
     ret = strct.unpack_from(data, offset=offset)
     fields = attr.fields(cls)
@@ -198,9 +232,9 @@ def unpack(cls, data, offset=0, remainder=0):
             val = uuid_mod.UUID(bytes_le=val)
         kwargs[fields[i].name] = val
     obj = cls(**kwargs)
-    if remainder <= 1:
+    if remainder <= ERROR:
         return obj
-    elif remainder == 2:
+    elif remainder == OFFSET:
         return (obj, offset + strct.size)
     else:
         return (obj, data[offset + strct.size:])
@@ -217,6 +251,17 @@ def _get_struct(cls):
                                             for i in attr.fields(cls)))
         cls._struct = strct
     return strct
+
+
+
+def calcsize(cls):
+    """
+    return the size of a structure.
+    @param cls: C{attr} decorated class
+    @rtype: L{int}
+    """
+    strct = _get_struct(cls)
+    return strct.size
 
 
 
