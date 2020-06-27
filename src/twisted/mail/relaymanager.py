@@ -22,6 +22,7 @@ from twisted.python.failure import Failure
 from twisted.mail import relay
 from twisted.mail import bounce
 from twisted.internet import protocol
+from twisted.internet.protocol import connectionDone
 from twisted.internet.defer import Deferred, DeferredList
 from twisted.internet.error import DNSLookupError
 from twisted.mail import smtp
@@ -55,7 +56,7 @@ class ManagedRelayerMixin:
         del self.names[0]
 
 
-    def connectionLost(self, reason):
+    def connectionLost(self, reason: Failure = connectionDone):
         """
         called when connection is broken
 
