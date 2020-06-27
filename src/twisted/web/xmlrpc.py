@@ -18,6 +18,7 @@ from twisted.python.compat import unicode
 # System Imports
 import base64
 import xmlrpc.client as xmlrpclib
+from xmlrpc.client import Fault, Binary, Boolean, DateTime
 
 # Sibling Imports
 from twisted.web import resource, server, http
@@ -29,12 +30,6 @@ from twisted.logger import Logger
 NOT_FOUND = 8001
 FAILURE = 8002
 
-
-# Useful so people don't need to import xmlrpclib directly
-Fault = xmlrpclib.Fault
-Binary = xmlrpclib.Binary
-Boolean = xmlrpclib.Boolean
-DateTime = xmlrpclib.DateTime
 
 
 def withRequest(f):
