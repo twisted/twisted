@@ -481,7 +481,7 @@ class DummyFilePath(object):
         raise NotImplementedError("Unimplemented: DummyFilePath.sep")
 
 
-    def child(self):
+    def child(self, name):
         # IFilePath.child
         raise NotImplementedError("Unimplemented: DummyFilePath.child")
 
@@ -538,6 +538,6 @@ class DummyFilePath(object):
         raise NotImplementedError("Unimplemented: DummyFilePath.parent")
 
 
-    def sibling(self):
+    def sibling(self, name):
         # IFilePath.sibling
         raise NotImplementedError("Unimplemented: DummyFilePath.sibling")
