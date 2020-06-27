@@ -7,8 +7,9 @@ Assorted functionality which is commonly useful when writing unit tests.
 """
 
 
-from socket import AF_INET, AF_INET6
 from io import BytesIO
+from socket import AF_INET, AF_INET6
+from typing import Any, Callable
 
 from zope.interface import implementer, implementedBy
 from zope.interface.verify import verifyClass
@@ -577,7 +578,8 @@ class MemoryReactor(object):
         raise NotImplementedError()
 
 
-    def addSystemEventTrigger(self, phase, eventType, callable, *args, **kw):
+    def addSystemEventTrigger(self, phase: str, eventType: str,
+                              f: Callable[..., Any], *args, **kw):
         """
         Fake L{IReactorCore.run}.
         Keep track of trigger by appending it to
@@ -585,7 +587,7 @@ class MemoryReactor(object):
         """
         phaseTriggers = self.triggers.setdefault(phase, {})
         eventTypeTriggers = phaseTriggers.setdefault(eventType, [])
-        eventTypeTriggers.append((callable, args, kw))
+        eventTypeTriggers.append((f, args, kw))
 
 
     def removeSystemEventTrigger(self, triggerID):
@@ -595,12 +597,12 @@ class MemoryReactor(object):
         raise NotImplementedError()
 
 
-    def callWhenRunning(self, callable, *args, **kw):
+    def callWhenRunning(self, f: Callable[..., Any], *args, **kw):
         """
         Fake L{IReactorCore.callWhenRunning}.
         Keeps a list of invocations to make in C{self.whenRunningHooks}.
         """
-        self.whenRunningHooks.append((callable, args, kw))
+        self.whenRunningHooks.append((f, args, kw))
 
 
     def adoptStreamPort(self, fileno, addressFamily, factory):

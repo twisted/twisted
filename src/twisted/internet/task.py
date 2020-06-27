@@ -12,6 +12,7 @@ __metaclass__ = type
 import sys
 import time
 import warnings
+from typing import Any, Callable
 
 from zope.interface import implementer
 
@@ -786,15 +787,15 @@ class Clock:
         self.calls.sort(key=lambda a: a.getTime())
 
 
-    def callLater(self, when, what, *a, **kw):
+    def callLater(self, delay, f: Callable[..., Any], *args, **kw):
         """
         See L{twisted.internet.interfaces.IReactorTime.callLater}.
         """
-        dc = base.DelayedCall(self.seconds() + when,
-                               what, a, kw,
-                               self.calls.remove,
-                               lambda c: None,
-                               self.seconds)
+        dc = base.DelayedCall(self.seconds() + delay,
+                              f, args, kw,
+                              self.calls.remove,
+                              lambda c: None,
+                              self.seconds)
         self.calls.append(dc)
         self._sortCalls()
         return dc

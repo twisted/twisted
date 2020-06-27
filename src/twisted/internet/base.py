@@ -8,7 +8,7 @@ Very basic functionality for a Reactor implementation.
 
 
 import socket  # needed only for sync-dns
-from typing import List
+from typing import Any, Callable, List
 from zope.interface import implementer, classImplements
 
 import sys
@@ -719,14 +719,15 @@ class ReactorBase(PluggableResolverMixin):
             event.fireEvent()
 
 
-    def addSystemEventTrigger(self, _phase, _eventType, _f, *args, **kw):
+    def addSystemEventTrigger(self, phase: str, eventType: str,
+                              f: Callable[..., Any], *args, **kw):
         """See twisted.internet.interfaces.IReactorCore.addSystemEventTrigger.
         """
-        assert callable(_f), "%s is not callable" % _f
-        if _eventType not in self._eventTriggers:
-            self._eventTriggers[_eventType] = _ThreePhaseEvent()
-        return (_eventType, self._eventTriggers[_eventType].addTrigger(
-            _phase, _f, *args, **kw))
+        assert callable(f), "%s is not callable" % f
+        if eventType not in self._eventTriggers:
+            self._eventTriggers[eventType] = _ThreePhaseEvent()
+        return (eventType, self._eventTriggers[eventType].addTrigger(
+            phase, f, *args, **kw))
 
 
     def removeSystemEventTrigger(self, triggerID):
@@ -736,14 +737,14 @@ class ReactorBase(PluggableResolverMixin):
         self._eventTriggers[eventType].removeTrigger(handle)
 
 
-    def callWhenRunning(self, _callable, *args, **kw):
+    def callWhenRunning(self, f: Callable[..., Any], *args, **kw):
         """See twisted.internet.interfaces.IReactorCore.callWhenRunning.
         """
         if self.running:
-            _callable(*args, **kw)
+            f(*args, **kw)
         else:
             return self.addSystemEventTrigger('after', 'startup',
-                                              _callable, *args, **kw)
+                                              f, *args, **kw)
 
     def startRunning(self):
         """
@@ -785,13 +786,13 @@ class ReactorBase(PluggableResolverMixin):
 
     seconds = staticmethod(runtimeSeconds)
 
-    def callLater(self, _seconds, _f, *args, **kw):
+    def callLater(self, delay, f: Callable[..., Any],  *args, **kw):
         """See twisted.internet.interfaces.IReactorTime.callLater.
         """
-        assert callable(_f), "%s is not callable" % _f
-        assert _seconds >= 0, \
-               "%s is not greater than or equal to 0 seconds" % (_seconds,)
-        tple = DelayedCall(self.seconds() + _seconds, _f, args, kw,
+        assert callable(f), "%s is not callable" % f
+        assert delay >= 0, \
+               "%s is not greater than or equal to 0 seconds" % (delay,)
+        tple = DelayedCall(self.seconds() + delay, f, args, kw,
                            self._cancelCallLater,
                            self._moveCallLaterSooner,
                            seconds=self.seconds)
