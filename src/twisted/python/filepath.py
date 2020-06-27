@@ -20,6 +20,7 @@ from stat import S_ISREG, S_ISDIR, S_IMODE, S_ISBLK, S_ISSOCK
 from stat import S_IRUSR, S_IWUSR, S_IXUSR
 from stat import S_IRGRP, S_IWGRP, S_IXGRP
 from stat import S_IROTH, S_IWOTH, S_IXOTH
+from typing import Union
 
 from zope.interface import Interface, Attribute, implementer
 
@@ -606,7 +607,7 @@ class _SpecialNoValue(object):
 
 
 
-def _asFilesystemBytes(path, encoding=None):
+def _asFilesystemBytes(path: Union[bytes, str], encoding: str = "") -> bytes:
     """
     Return C{path} as a string of L{bytes} suitable for use on this system's
     filesystem.
@@ -618,10 +619,10 @@ def _asFilesystemBytes(path, encoding=None):
 
     @return: L{bytes}
     """
-    if type(path) == bytes:
+    if isinstance(path, bytes):
         return path
     else:
-        if encoding is None:
+        if not encoding:
             encoding = sys.getfilesystemencoding()
         return path.encode(encoding)
 
