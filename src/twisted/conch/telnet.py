@@ -65,6 +65,7 @@ NAWS =           chr(31)  # Negotiate About Window Size.  Indicate that
 LINEMODE =       chr(34)  # Allow line buffering to be
                           # negotiated about.
 
+EOR =            chr(239) # End of Record (RFC885)
 SE =             chr(240) # End of subnegotiation parameters.
 NOP =            chr(241) # No operation.
 DM =             chr(242) # "Data Mark": The data stream portion
@@ -571,7 +572,7 @@ class Telnet(protocol.Protocol):
                 elif b == SB:
                     self.state = 'subnegotiation'
                     self.commands = []
-                elif b in (NOP, DM, BRK, IP, AO, AYT, EC, EL, GA):
+                elif b in (EOR, NOP, DM, BRK, IP, AO, AYT, EC, EL, GA):
                     self.state = 'data'
                     if appDataBuffer:
                         self.applicationDataReceived(b''.join(appDataBuffer))
