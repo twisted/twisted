@@ -73,7 +73,7 @@ class UnauthorizedResource(object):
         return self
 
 
-    def putChild(self, child):
+    def putChild(self, path, child):
         # IResource.putChild
         raise NotImplementedError()
 

@@ -13,7 +13,7 @@ class MyProtocol:
         self.expecting = list(expecting)
 
 
-    def addProto(self):
+    def addProto(self, num, proto):
         """
         Not implemented
         """

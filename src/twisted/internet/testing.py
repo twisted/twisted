@@ -868,7 +868,8 @@ class RaisingMemoryReactor(object):
         raise self._connectException
 
 
-    def adoptDatagramPort(self):
+    def adoptDatagramPort(self, fileDescriptor, addressFamily, protocol,
+                          maxPacketSize):
         """
         Fake L{IReactorSocket.adoptDatagramPort}, that raises
         L{_connectException}.

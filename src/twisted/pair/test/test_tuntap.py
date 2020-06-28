@@ -1335,7 +1335,7 @@ class IPRecordingProtocol(AbstractDatagramProtocol):
         self.received.append(datagram)
 
 
-    def addProto(self):
+    def addProto(self, num, proto):
         # IRawPacketProtocol.addProto
         pass
 

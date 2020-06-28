@@ -110,12 +110,12 @@ class DummyChannel:
             pass
 
 
-        def setTcpKeepAlive(self):
+        def setTcpKeepAlive(self, enabled):
             # ITCPTransport.setTcpKeepAlive
             pass
 
 
-        def setTcpNoDelay(self):
+        def setTcpNoDelay(self, enabled):
             # ITCPTransport.setTcpNoDelay
             pass
 

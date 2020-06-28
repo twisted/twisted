@@ -185,11 +185,11 @@ class StandardIO(object):
         self.resumeProducing()
 
 
-    def readConnectionLost(self):
+    def readConnectionLost(self, reason):
         # L{IHalfCloseableDescriptor.readConnectionLost}
         raise NotImplementedError()
 
 
-    def writeConnectionLost(self):
+    def writeConnectionLost(self, reason):
         # L{IHalfCloseableDescriptor.writeConnectionLost}
         raise NotImplementedError()
