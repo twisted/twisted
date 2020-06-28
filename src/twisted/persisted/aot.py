@@ -462,12 +462,9 @@ def jellyToSource(obj, file=None):
         return getSource(aot)
 
 
-try:
-    from types import (ClassType as _OldStyleClass,
-                       InstanceType as _OldStyleInstance)
-except ImportError:
-    _OldStyleClass = None
-    _OldStyleInstance = None
+
+_OldStyleClass = None
+_OldStyleInstance = None
 
 
 

@@ -82,15 +82,12 @@ from twisted.spread.interfaces import IJellyable, IUnjellyable
 from twisted.python.deprecate import deprecatedModuleAttribute
 from incremental import Version
 
-try:
-    from types import (ClassType as _OldStyleClass,
-                       InstanceType as _OldStyleInstance)
-except ImportError:
-    # On Python 3 and higher, ClassType and InstanceType
-    # are gone.  Use an empty tuple to pass to isinstance()
-    # tests without throwing an exception.
-    _OldStyleClass = ()
-    _OldStyleInstance = ()
+
+# On Python 3 and higher, ClassType and InstanceType
+# are gone.  Use an empty tuple to pass to isinstance()
+# tests without throwing an exception.
+_OldStyleClass = ()
+_OldStyleInstance = ()
 
 _SetTypes = [set]
 _ImmutableSetTypes = [frozenset]
