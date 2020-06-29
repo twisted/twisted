@@ -9,15 +9,16 @@
 from unittest import skipIf
 
 from twisted.internet import reactor, defer
-from twisted.python.reflect import requireModule
 from twisted.trial.unittest import TestCase
 from twisted.web import server, error
 
-SOAPPublisher = object
-SOAPpy = requireModule('SOAPpy')
-if SOAPpy:
+try:
+    import SOAPpy
     from twisted.web import soap
-    SOAPPublisher = soap.SOAPPublisher  # type: ignore[misc]
+    from twisted.web.soap import SOAPPublisher
+except ImportError:
+    SOAPpy = None
+    SOAPPublisher = object  # type: ignore[misc,assignment]
 
 
 

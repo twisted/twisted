@@ -36,7 +36,7 @@ try:
     from twisted.internet.interfaces import ITLSTransport
 except ImportError:
     # There is no version of startTLS available
-    ITLSTransport = Interface
+    ITLSTransport = Interface  # type: ignore[misc,assignment]
 
     class _TLSConnectionMixin(object):  # type: ignore[no-redef]
         TLS = False

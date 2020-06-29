@@ -18,25 +18,38 @@ from twisted.protocols import loopback
 from twisted.python import components
 from twisted.python.compat import long, _PY37PLUS
 from twisted.python.filepath import FilePath
-from twisted.python.reflect import requireModule
 from twisted.trial.unittest import TestCase
 
-cryptography = requireModule("cryptography")
-unix = requireModule("twisted.conch.unix")
+try:
+    from twisted.conch import unix
+except ImportError:
+    unix = None  # type: ignore[assignment]
 
-if cryptography:
-    from twisted.conch import avatar
+try:
+    from twisted.conch.unix import SFTPServerForUnixConchUser
+except ImportError:
+    SFTPServerForUnixConchUser = None  # type: ignore[assignment,misc]
+
+try:
+    import cryptography
+except ImportError:
+    cryptography = None  # type: ignore[assignment]
+
+try:
+    from twisted.conch.avatar import ConchUser
+except ImportError:
+    ConchUser = object  # type: ignore[assignment,misc]
+
+try:
     from twisted.conch.ssh import common, connection, filetransfer, session
-else:
-    class avatar:  # type: ignore[no-redef]
-        class ConchUser:
-            pass
+except ImportError:
+    pass
 
 
 
-class TestAvatar(avatar.ConchUser):
+class TestAvatar(ConchUser):
     def __init__(self):
-        avatar.ConchUser.__init__(self)
+        ConchUser.__init__(self)
         self.channelLookup[b'session'] = session.SSHSession
         self.subsystemLookup[b'sftp'] = filetransfer.FileTransferServer
 
@@ -68,29 +81,29 @@ class ConchSessionForTestAvatar:
     def __init__(self, avatar):
         self.avatar = avatar
 
-if unix:
-    if not hasattr(unix, 'SFTPServerForUnixConchUser'):
-        # unix should either be a fully working module, or None.  I'm not sure
-        # how this happens, but on win32 it does.  Try to cope.  --spiv.
-        import warnings
-        warnings.warn(("twisted.conch.unix imported %r, "
-                       "but doesn't define SFTPServerForUnixConchUser'")
-                      % (unix,))
-        unix = None
-    else:
-        class FileTransferForTestAvatar(unix.SFTPServerForUnixConchUser):
 
-            def gotVersion(self, version, otherExt):
-                return {b'conchTest' : b'ext data'}
 
-            def extendedRequest(self, extName, extData):
-                if extName == b'testExtendedRequest':
-                    return b'bar'
-                raise NotImplementedError
+if not SFTPServerForUnixConchUser:
+    # unix should either be a fully working module, or None.  I'm not sure
+    # how this happens, but on win32 it does.  Try to cope.  --spiv.
+    import warnings
+    warnings.warn(("twisted.conch.unix imported %r, "
+                   "but doesn't define SFTPServerForUnixConchUser'")
+                  % (unix,))
+else:
+    class FileTransferForTestAvatar(SFTPServerForUnixConchUser):
 
-        components.registerAdapter(FileTransferForTestAvatar,
-                                   TestAvatar,
-                                   filetransfer.ISFTPServer)
+        def gotVersion(self, version, otherExt):
+            return {b'conchTest': b'ext data'}
+
+        def extendedRequest(self, extName, extData):
+            if extName == b'testExtendedRequest':
+                return b'bar'
+            raise NotImplementedError
+
+    components.registerAdapter(FileTransferForTestAvatar,
+                               TestAvatar,
+                               filetransfer.ISFTPServer)
 
 
 

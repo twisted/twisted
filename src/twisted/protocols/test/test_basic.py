@@ -14,9 +14,11 @@ from typing import List, Optional, Type
 from zope.interface.verify import verifyObject
 
 from twisted.python.compat import iterbytes
+from twisted.python.failure import Failure
 from twisted.trial import unittest
 from twisted.protocols import basic
 from twisted.internet import protocol, task
+from twisted.internet.protocol import connectionDone
 from twisted.internet.interfaces import IProducer
 from twisted.test import proto_helpers
 
@@ -557,7 +559,7 @@ class TestMixin:
     closed = 0
 
 
-    def connectionLost(self, reason):
+    def connectionLost(self, reason: Failure = connectionDone):
         self.closed = 1
 
 
