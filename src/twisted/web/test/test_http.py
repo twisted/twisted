@@ -14,6 +14,7 @@ import hamcrest
 
 from urllib.parse import urlparse, urlunsplit, clear_cache, parse_qs
 from unittest import skipIf
+from typing import Sequence, Union
 
 from io import BytesIO
 from itertools import cycle
@@ -270,7 +271,7 @@ class HTTP1_0Tests(unittest.TestCase, ResponseTestMixin):
          b"Command: GET",
          b"Version: HTTP/1.0",
          b"Content-Length: 13",
-         b"'''\nNone\n'''\n")]
+         b"'''\nNone\n'''\n")]  # type: Union[Sequence[Sequence[bytes]], bytes]
 
     def test_buffer(self):
         """

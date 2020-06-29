@@ -20,7 +20,7 @@ from twisted.words.xish import utility
 try:
     from twisted.internet import ssl
 except ImportError:
-    ssl = None
+    ssl = None  # type: ignore[assignment]
     skipWhenNoSSL = (True, "SSL not available")
 else:
     skipWhenNoSSL = (False, "")

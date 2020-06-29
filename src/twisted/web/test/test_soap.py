@@ -17,7 +17,7 @@ SOAPPublisher = object
 SOAPpy = requireModule('SOAPpy')
 if SOAPpy:
     from twisted.web import soap
-    SOAPPublisher = soap.SOAPPublisher
+    SOAPPublisher = soap.SOAPPublisher  # type: ignore[misc]
 
 
 
