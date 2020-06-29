@@ -767,7 +767,7 @@ class IMailboxIMAP(IMailboxIMAPInfo):
         """
 
 
-    def addMessage(message, flags=(), date=None):
+    def addMessage(message, flags, date):
         """
         Add the given message to this mailbox.
 

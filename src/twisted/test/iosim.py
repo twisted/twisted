@@ -275,7 +275,7 @@ class FakeTransport:
         pass
 
 
-    def setTcpNoDelay(self):
+    def setTcpNoDelay(self, enabled):
         # ITCPTransport.setTcpNoDelay
         pass
 

@@ -29,7 +29,7 @@ class MyProtocol:
         assert expectData == data, "Expected %r, got %r" % (expectData, data)
 
 
-    def addProto(self):
+    def addProto(self, num, proto):
         # IRawDatagramProtocol.addProto
         pass
 

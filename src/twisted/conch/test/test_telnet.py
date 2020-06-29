@@ -84,12 +84,12 @@ class TestProtocol:
         pass
 
 
-    def unhandledCommand(self):
+    def unhandledCommand(self, command, argument):
         # ITelnetProtocol.unhandledCommand
         pass
 
 
-    def unhandledSubnegotiation(self):
+    def unhandledSubnegotiation(self, command, data):
         # ITelnetProtocol.unhandledSubnegotiation
         pass
 

@@ -1714,7 +1714,7 @@ class SimpleMailbox:
         pass
 
 
-    def store(self):
+    def store(self, messages, flags, mode, uid):
         # IMailboxIMAP.store
         pass
 

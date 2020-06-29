@@ -34,9 +34,16 @@ try:
     import fcntl
 except ImportError:
     fcntl = None  # type: ignore[assignment]
-    process = None
-else:
+
+try:
     from twisted.internet import process
+    from twisted.internet.process import (
+        ProcessReader, ProcessWriter, PTYProcess)
+except ImportError:
+    process = None  # type: ignore[misc,assignment]
+    ProcessReader = object  # type: ignore[misc,assignment]
+    ProcessWriter = object  # type: ignore[misc,assignment]
+    PTYProcess = object  # type: ignore[misc,assignment]
 
 from zope.interface.verify import verifyObject
 
@@ -1627,36 +1634,40 @@ class MockOS(object):
         return "utf8"
 
 
-if process is not None:
-    class DumbProcessWriter(process.ProcessWriter):
+
+class DumbProcessWriter(ProcessWriter):
+    """
+    A fake L{ProcessWriter} used for tests.
+    """
+
+    def startReading(self):
         """
-        A fake L{process.ProcessWriter} used for tests.
+        Here's the faking: don't do anything here.
         """
 
-        def startReading(self):
-            """
-            Here's the faking: don't do anything here.
-            """
 
-    class DumbProcessReader(process.ProcessReader):
-        """
-        A fake L{process.ProcessReader} used for tests.
-        """
 
-        def startReading(self):
-            """
-            Here's the faking: don't do anything here.
-            """
+class DumbProcessReader(ProcessReader):
+    """
+    A fake L{ProcessReader} used for tests.
+    """
 
-    class DumbPTYProcess(process.PTYProcess):
+    def startReading(self):
         """
-        A fake L{process.PTYProcess} used for tests.
+        Here's the faking: don't do anything here.
         """
 
-        def startReading(self):
-            """
-            Here's the faking: don't do anything here.
-            """
+
+
+class DumbPTYProcess(PTYProcess):
+    """
+    A fake L{PTYProcess} used for tests.
+    """
+
+    def startReading(self):
+        """
+        Here's the faking: don't do anything here.
+        """
 
 
 

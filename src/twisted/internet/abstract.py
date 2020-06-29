@@ -8,7 +8,7 @@ Support for generic select()able objects.
 
 
 from socket import AF_INET, AF_INET6, inet_pton, error
-from typing import Sequence
+from typing import List, Sequence
 
 from zope.interface import implementer
 
@@ -177,9 +177,11 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
             is given, the global reactor will be used.
         """
         if not reactor:
-            from twisted.internet import reactor
+            from twisted.internet import reactor as _reactor
+            reactor = _reactor  # type: ignore[assignment]
         self.reactor = reactor
-        self._tempDataBuffer = [] # will be added to dataBuffer in doWrite
+        # will be added to dataBuffer in doWrite
+        self._tempDataBuffer = []  # type: List[bytes]
         self._tempDataLen = 0
 
 
