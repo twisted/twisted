@@ -510,9 +510,9 @@ class Key(object):
 
         try:
             decodedKey = berDecoder.decode(keyData)[0]
-        except PyAsn1Error as e:
+        except PyAsn1Error as asn1Error:
             raise BadKeyError(
-                'Failed to decode key (Bad Passphrase?): %s' % (e,))
+                'Failed to decode key (Bad Passphrase?): {}'.format(asn1Error))
 
         if kind == b'EC':
             return cls(
