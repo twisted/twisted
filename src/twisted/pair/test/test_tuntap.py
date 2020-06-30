@@ -537,9 +537,12 @@ class FakeTapDeviceTests(FakeDeviceTestsMixin,
     """
     Run various tap-type tunnel unit tests against an in-memory I/O system.
     """
-FakeTapDeviceTests.helper = TapHelper(
+
+
+
+setattr(FakeTapDeviceTests, "helper", TapHelper(
     FakeTapDeviceTests._TUNNEL_REMOTE, FakeTapDeviceTests._TUNNEL_LOCAL,
-    pi=False)
+    pi=False))
 
 
 
@@ -549,9 +552,12 @@ class FakeTapDeviceWithPITests(FakeDeviceTestsMixin,
     Run various tap-type tunnel unit tests against an in-memory I/O system with
     the PI header enabled.
     """
-FakeTapDeviceWithPITests.helper = TapHelper(
+
+
+
+setattr(FakeTapDeviceWithPITests, "helper", TapHelper(
     FakeTapDeviceTests._TUNNEL_REMOTE, FakeTapDeviceTests._TUNNEL_LOCAL,
-    pi=True)
+    pi=True))
 
 
 
@@ -560,8 +566,11 @@ class FakeTunDeviceTests(FakeDeviceTestsMixin,
     """
     Run various tun-type tunnel unit tests against an in-memory I/O system.
     """
-FakeTunDeviceTests.helper = TunHelper(
-    FakeTunDeviceTests._TUNNEL_REMOTE, FakeTunDeviceTests._TUNNEL_LOCAL)
+
+
+
+setattr(FakeTunDeviceTests, "helper", TunHelper(
+    FakeTunDeviceTests._TUNNEL_REMOTE, FakeTunDeviceTests._TUNNEL_LOCAL))
 
 
 
