@@ -12,7 +12,8 @@ import random
 
 import hamcrest
 
-from urllib.parse import urlparse, urlunsplit, clear_cache, parse_qs
+from urllib.parse import urlparse, urlunsplit, parse_qs
+from urllib.parse import clear_cache  # type: ignore[attr-defined]
 from unittest import skipIf
 from typing import Sequence, Union
 
