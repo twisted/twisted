@@ -20,7 +20,7 @@ import sys
 import getopt
 from os import path
 import textwrap
-from typing import Callable, Optional
+from typing import Optional
 
 # Sibling Imports
 from twisted.python import reflect, util
@@ -188,7 +188,10 @@ class Options(dict):
             self._dispatch.update(dispatch)
 
 
-    __hash__ = object.__hash__  # type: Callable[[object], int]
+    # class Options derives from dict, which defines __hash__ as None,
+    # but we need to set __hash__ to object.__hash__ which is of type
+    # Callable[[object], int].  So we need to ignore mypy error here.
+    __hash__ = object.__hash__  # type: ignore[assignment]
 
 
     def opt_help(self):
