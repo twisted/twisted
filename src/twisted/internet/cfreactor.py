@@ -45,7 +45,7 @@ _preserveSOError = 1 << 6
 
 
 
-class _WakerPlus(_Waker):
+class _WakerPlus(_Waker):  # type: ignore[valid-type,misc]
     """
     The normal Twisted waker will simply wake up the main loop, which causes an
     iteration to run, which in turn causes L{ReactorBase.runUntilCurrent}
