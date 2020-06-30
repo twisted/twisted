@@ -45,5 +45,5 @@ if __name__ == '__main__':
     from twisted.internet import reactor
     protocolLoseConnChild = LoseConnChild()
     stdio.StandardIO(protocolLoseConnChild)
-    reactor.run()
+    reactor.run()  # type: ignore[attr-defined]
     sys.exit(protocolLoseConnChild.exitCode)
