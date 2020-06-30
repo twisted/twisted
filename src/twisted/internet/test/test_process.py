@@ -25,7 +25,6 @@ from twisted.python.log import msg, err
 from twisted.python.runtime import platform
 from twisted.python.filepath import FilePath, _asFilesystemBytes
 from twisted.python.compat import networkString, items, unicode
-from twisted.python.reflect import requireModule
 from twisted.internet import utils
 from twisted.internet.interfaces import IReactorProcess, IProcessTransport
 from twisted.internet.defer import Deferred, inlineCallbacks, succeed
@@ -39,18 +38,19 @@ twistedRoot = FilePath(twisted.__file__).parent().parent()
 
 _uidgidSkip = False
 _uidgidSkipReason = ""
-resource = requireModule('resource')
 properEnv = dict(os.environ)
 properEnv["PYTHONPATH"] = os.pathsep.join(sys.path)
-if platform.isWindows():
-    process = None
-    _uidgidSkip = True
-    _uidgidSkipReason = "Cannot change UID/GID on Windows"
-else:
+try:
+    import resource
     from twisted.internet import process
     if os.getuid() != 0:
         _uidgidSkip = True
         _uidgidSkipReason = "Cannot change UID/GID except as root"
+except ImportError:
+    resource = None  # type: ignore[assignment]
+    process = None  # type: ignore[assignment]
+    _uidgidSkip = True
+    _uidgidSkipReason = "Cannot change UID/GID on Windows"
 
 
 
@@ -981,7 +981,9 @@ class ProcessIsUnimportableOnUnsupportedPlatormsTests(TestCase):
 
 class ReapingNonePidsLogsProperly(TestCase):
     try:
-        os.waitpid(None, None)
+        # ignore mypy error, since we are testing passing
+        # the wrong type to waitpid
+        os.waitpid(None, None)  # type: ignore[arg-type]
     except Exception as e:
         expected_message = str(e)
         expected_type = type(e)

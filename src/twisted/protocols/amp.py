@@ -2077,7 +2077,7 @@ class _TLSBox(AmpBox):
         AmpBox.__init__(self)
 
 
-    def _keyprop(k, default):
+    def _keyprop(k: bytes, default):
         return property(lambda self: self.get(k, default))
 
 
