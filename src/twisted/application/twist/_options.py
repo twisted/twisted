@@ -70,7 +70,7 @@ class TwistOptions(Options):
         else:
             self["reactorName"] = name
 
-    opt_reactor.__doc__ = dedent(opt_reactor.__doc__).format(
+    opt_reactor.__doc__ = dedent(opt_reactor.__doc__ or "").format(
         options=", ".join(
             '"{}"'.format(rt.shortName) for rt in getReactorTypes()
         ),
@@ -98,9 +98,10 @@ class TwistOptions(Options):
         except InvalidLogLevelError:
             raise UsageError("Invalid log level: {}".format(levelName))
 
-    opt_log_level.__doc__ = dedent(opt_log_level.__doc__).format(
+    opt_log_level.__doc__ = dedent(opt_log_level.__doc__ or "").format(
         options=", ".join(
-            '"{}"'.format(l.name) for l in LogLevel.iterconstants()
+            '"{}"'.format(constant.name)
+            for constant in LogLevel.iterconstants()
         ),
         default=defaultLogLevel.name,
     )
@@ -143,7 +144,7 @@ class TwistOptions(Options):
             raise UsageError("Invalid log format: {}".format(format))
         self["logFormat"] = format
 
-    opt_log_format.__doc__ = dedent(opt_log_format.__doc__)
+    opt_log_format.__doc__ = dedent(opt_log_format.__doc__ or "")
 
 
     def selectDefaultLogObserver(self):
