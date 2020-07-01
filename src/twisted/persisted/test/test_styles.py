@@ -5,6 +5,7 @@
 Tests for L{twisted.persisted.styles}.
 """
 
+import copy
 import pickle
 
 from twisted.trial import unittest
@@ -78,6 +79,17 @@ class UnpickleMethodTests(unittest.TestCase):
         self.assertIsNot(m, foo.method)
 
 
+    def test_instanceCopyMethod(self):
+        """
+        Copying an instance method returns exercises the pickle code
+        and returns the instance method
+        """
+        foo = Foo()
+        m = copy.copy(foo.method)
+        self.assertEqual(m, foo.method)
+        self.assertIsNot(m, foo.method)
+
+
     def test_instanceBuildingNameNotPresent(self):
         """
         If the named method is not present in the class,
@@ -88,6 +100,16 @@ class UnpickleMethodTests(unittest.TestCase):
         m = unpickleMethod('method', foo, Bar)
         self.assertEqual(m, foo.method)
         self.assertIsNot(m, foo.method)
+
+
+    def test_copyFunction(self):
+        """
+        Copying a function should exercise the pickle code
+        and preserve the function name
+        """
+        f = copy.copy(sampleFunction)
+        self.assertEqual(f, sampleFunction)
+        self.assertEqual(f.__name__, sampleFunction.__name__)
 
 
     def test_primeDirective(self):
