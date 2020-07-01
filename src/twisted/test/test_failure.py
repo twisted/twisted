@@ -5,7 +5,6 @@
 Test cases for the L{twisted.python.failure} module.
 """
 
-from __future__ import division, absolute_import
 
 import re
 import sys
@@ -13,11 +12,14 @@ import traceback
 import pdb
 import linecache
 
-from twisted.python.compat import _PY3, NativeStringIO
+from io import StringIO
+from traceback import FrameSummary
+from unittest import skipIf
+
 from twisted.python import reflect
 from twisted.python import failure
 
-from twisted.trial.unittest import SkipTest, SynchronousTestCase
+from twisted.trial.unittest import SynchronousTestCase
 
 
 try:
@@ -36,7 +38,7 @@ def getDivisionFailure(*args, **kwargs):
     """
     try:
         1/0
-    except:
+    except BaseException:
         f = failure.Failure(*args, **kwargs)
     return f
 
@@ -52,7 +54,7 @@ class FailureTests(SynchronousTestCase):
         """
         try:
             raise NotImplementedError('test')
-        except:
+        except BaseException:
             f = failure.Failure()
         error = f.trap(SystemExit, RuntimeError)
         self.assertEqual(error, RuntimeError)
@@ -65,45 +67,14 @@ class FailureTests(SynchronousTestCase):
         expected types, L{failure.Failure.trap} raises the wrapped
         C{Exception}.
         """
-        if not _PY3:
-            raise SkipTest(
-                """
-                Only expected behaviour on Python 3.
-                @see U{http://twisted.readthedocs.io/en/latest/core/howto/python3.html#twisted-python-failure}
-                """
-            )
-
         exception = ValueError()
         try:
             raise exception
-        except:
+        except BaseException:
             f = failure.Failure()
 
         untrapped = self.assertRaises(ValueError, f.trap, OverflowError)
         self.assertIs(exception, untrapped)
-
-
-    def test_trapRaisesSelf(self):
-        """
-        If the wrapped C{Exception} is not a subclass of one of the
-        expected types, L{failure.Failure.trap} raises itself.
-        """
-        if _PY3:
-            raise SkipTest(
-                """
-                Only expected behaviour on Python 2.
-                @see U{http://twisted.readthedocs.io/en/latest/core/howto/python3.html#twisted-python-failure}
-                """
-            )
-
-        exception = ValueError()
-        try:
-            raise exception
-        except:
-            f = failure.Failure()
-
-        untrapped = self.assertRaises(failure.Failure, f.trap, OverflowError)
-        self.assertIs(f, untrapped)
 
 
     def test_failureValueFromFailure(self):
@@ -129,7 +100,7 @@ class FailureTests(SynchronousTestCase):
         f1 = failure.Failure(exception)
         try:
             f1.trap(OverflowError)
-        except:
+        except BaseException:
             f2 = failure.Failure()
 
         self.assertIs(f2.value, exception)
@@ -226,7 +197,7 @@ class FailureTests(SynchronousTestCase):
             exampleLocalVar
 
         f = getDivisionFailure(captureVars=captureVars)
-        out = NativeStringIO()
+        out = StringIO()
         if cleanFailure:
             f.cleanFailure()
         f.printDetailedTraceback(out)
@@ -284,7 +255,7 @@ class FailureTests(SynchronousTestCase):
             exampleLocalVar
 
         f = getDivisionFailure()
-        out = NativeStringIO()
+        out = StringIO()
         f.printBriefTraceback(out)
         tb = out.getvalue()
         stack = ''
@@ -330,7 +301,7 @@ class FailureTests(SynchronousTestCase):
             exampleLocalVar
 
         f = getDivisionFailure(captureVars=captureVars)
-        out = NativeStringIO()
+        out = StringIO()
         f.printTraceback(out)
         tb = out.getvalue()
         stack = ''
@@ -530,7 +501,7 @@ class FailureTests(SynchronousTestCase):
         """
         try:
             1/0
-        except:
+        except BaseException:
             klass, exception, tb = sys.exc_info()
         f = failure.Failure(exception)
         self.assertIs(f.tb, tb)
@@ -546,10 +517,6 @@ class FailureTests(SynchronousTestCase):
         self.assertIs(f.value.__traceback__, f.tb)
         f.cleanFailure()
         self.assertIsNone(f.value.__traceback__)
-
-    if getattr(BaseException, "__traceback__", None) is None:
-        test_tracebackFromExceptionInPython3.skip = "Python 3 only."
-        test_cleanFailureRemovesTracebackInPython3.skip = "Python 3 only."
 
 
     def test_repr(self):
@@ -684,7 +651,7 @@ class FindFailureTests(SynchronousTestCase):
         """
         try:
             1/0
-        except:
+        except BaseException:
             self.assertIsNone(failure.Failure._findFailure())
         else:
             self.fail("No exception raised from 1/0!?")
@@ -710,7 +677,7 @@ class FindFailureTests(SynchronousTestCase):
         f.cleanFailure()
         try:
             f.raiseException()
-        except:
+        except BaseException:
             self.assertEqual(failure.Failure._findFailure(), f)
         else:
             self.fail("No exception raised from raiseException!?")
@@ -729,7 +696,7 @@ class FindFailureTests(SynchronousTestCase):
         f.cleanFailure()
         try:
             f.raiseException()
-        except:
+        except BaseException:
             newF = failure.Failure()
             tb = f.getTraceback().splitlines()
             new_tb = newF.getTraceback().splitlines()
@@ -739,6 +706,7 @@ class FindFailureTests(SynchronousTestCase):
             self.fail("No exception raised from raiseException!?")
 
 
+    @skipIf(raiser is None, "raiser extension not available")
     def test_failureConstructionWithMungedStackSucceeds(self):
         """
         Pyrex and Cython are known to insert fake stack frames so as to give
@@ -754,21 +722,13 @@ class FindFailureTests(SynchronousTestCase):
             self.fail("No exception raised from extension?!")
 
 
-    if raiser is None:
-        skipMsg = "raiser extension not available"
-        test_failureConstructionWithMungedStackSucceeds.skip = skipMsg
-
-
 
 # On Python 3.5, extract_tb returns "FrameSummary" objects, which are almost
 # like the old tuples. This being different does not affect the actual tests
 # as we are testing that the input works, and that extract_tb returns something
 # reasonable.
-if sys.version_info < (3, 5):
-    _tb = lambda fn, lineno, name, text: (fn, lineno, name, text)
-else:
-    from traceback import FrameSummary
-    _tb = lambda fn, lineno, name, text: FrameSummary(fn, lineno, name)
+def _tb(fn, lineno, name, text):
+    return FrameSummary(fn, lineno, name)
 
 
 
@@ -871,7 +831,7 @@ class DebugModeTests(SynchronousTestCase):
         """
         try:
             1/0
-        except:
+        except BaseException:
             typ, exc, tb = sys.exc_info()
             f = failure.Failure()
         self.assertEqual(self.result, [tb])
@@ -885,7 +845,7 @@ class DebugModeTests(SynchronousTestCase):
         """
         try:
             1/0
-        except:
+        except BaseException:
             typ, exc, tb = sys.exc_info()
             f = failure.Failure(captureVars=True)
         self.assertEqual(self.result, [tb])
@@ -913,13 +873,15 @@ class ExtendedGeneratorTests(SynchronousTestCase):
         represents into a generator.
         """
         stuff = []
+
         def generator():
             try:
                 yield
-            except:
+            except BaseException:
                 stuff.append(sys.exc_info())
             else:
                 self.fail("Yield should have yielded exception.")
+
         g = generator()
         f = getDivisionFailure()
         next(g)
@@ -939,12 +901,12 @@ class ExtendedGeneratorTests(SynchronousTestCase):
         """
         f = getDivisionFailure()
         f.cleanFailure()
-
         foundFailures = []
+
         def generator():
             try:
                 yield
-            except:
+            except BaseException:
                 foundFailures.append(failure.Failure._findFailure())
             else:
                 self.fail("No exception sent to generator")
@@ -972,7 +934,7 @@ class ExtendedGeneratorTests(SynchronousTestCase):
         def generator():
             try:
                 yield
-            except:
+            except BaseException:
                 newFailures.append(failure.Failure())
             else:
                 self.fail("No exception sent to generator")
@@ -1001,9 +963,9 @@ class ExtendedGeneratorTests(SynchronousTestCase):
             try:
                 try:
                     yield
-                except:
+                except BaseException:
                     [][1]
-            except:
+            except BaseException:
                 self.assertIsInstance(failure.Failure().value, IndexError)
         g = generator()
         next(g)
@@ -1020,12 +982,12 @@ class ExtendedGeneratorTests(SynchronousTestCase):
         def generator():
             try:
                 yield
-            except:
+            except BaseException:
                 [][1]
         g = generator()
         next(g)
         f = getDivisionFailure()
         try:
             self._throwIntoGenerator(f, g)
-        except:
+        except BaseException:
             self.assertIsInstance(failure.Failure().value, IndexError)

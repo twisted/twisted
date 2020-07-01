@@ -8,7 +8,6 @@ Various asynchronous TCP/IP classes.
 End users shouldn't use this module directly - use the reactor APIs instead.
 """
 
-from __future__ import division, absolute_import
 # System Imports
 import socket
 import sys
@@ -21,6 +20,8 @@ import attr
 from zope.interface import Interface, implementer
 
 from twisted.logger import Logger
+from twisted.internet.interfaces import (
+    IHalfCloseableProtocol, ITCPTransport, ISystemHandle, IListeningPort)
 from twisted.python.compat import lazyByteSlice, unicode
 from twisted.python.runtime import platformType
 from twisted.python import versions, deprecate
@@ -32,36 +33,43 @@ try:
         ConnectionMixin as _TLSConnectionMixin,
         ClientMixin as _TLSClientMixin,
         ServerMixin as _TLSServerMixin)
+    from twisted.internet.interfaces import ITLSTransport
 except ImportError:
     # There is no version of startTLS available
-    class _TLSConnectionMixin(object):
+    ITLSTransport = Interface  # type: ignore[misc,assignment]
+
+    class _TLSConnectionMixin(object):  # type: ignore[no-redef]
         TLS = False
 
 
-    class _TLSClientMixin(object):
+    class _TLSClientMixin(object):  # type: ignore[no-redef]
         pass
 
 
-    class _TLSServerMixin(object):
+    class _TLSServerMixin(object):  # type: ignore[no-redef]
         pass
 
 
 if platformType == 'win32':
-    # no such thing as WSAEPERM or error code 10001 according to winsock.h or MSDN
+    # no such thing as WSAEPERM or error code 10001
+    # according to winsock.h or MSDN
     EPERM = object()
-    from errno import WSAEINVAL as EINVAL
-    from errno import WSAEWOULDBLOCK as EWOULDBLOCK
-    from errno import WSAEINPROGRESS as EINPROGRESS
-    from errno import WSAEALREADY as EALREADY
-    from errno import WSAEISCONN as EISCONN
-    from errno import WSAENOBUFS as ENOBUFS
-    from errno import WSAEMFILE as EMFILE
+    from errno import WSAEINVAL as EINVAL  # type: ignore[attr-defined]
+    from errno import (  # type: ignore[attr-defined]
+        WSAEWOULDBLOCK as EWOULDBLOCK)
+    from errno import (  # type: ignore[attr-defined]
+        WSAEINPROGRESS as EINPROGRESS)
+    from errno import WSAEALREADY as EALREADY  # type: ignore[attr-defined]
+    from errno import WSAEISCONN as EISCONN  # type: ignore[attr-defined]
+    from errno import WSAENOBUFS as ENOBUFS  # type: ignore[attr-defined]
+    from errno import WSAEMFILE as EMFILE  # type: ignore[attr-defined]
     # No such thing as WSAENFILE, either.
     ENFILE = object()
     # Nor ENOMEM
     ENOMEM = object()
     EAGAIN = EWOULDBLOCK
-    from errno import WSAECONNRESET as ECONNABORTED
+    from errno import (  # type: ignore[attr-defined]
+        WSAECONNRESET as ECONNABORTED)
 
     from twisted.python.win32 import formatError as strerror
 else:
@@ -89,7 +97,7 @@ from twisted.internet.task import deferLater
 from twisted.python import log, failure, reflect
 from twisted.python.util import untilConcludes
 from twisted.internet.error import CannotListenError
-from twisted.internet import abstract, main, interfaces, error
+from twisted.internet import abstract, main, error
 from twisted.internet.protocol import Protocol
 
 # Not all platforms have, or support, this flag.
@@ -197,7 +205,7 @@ class _AbortingMixin(object):
 
 
 
-@implementer(interfaces.ITCPTransport, interfaces.ISystemHandle)
+@implementer(ITLSTransport, ITCPTransport, ISystemHandle)
 class Connection(_TLSConnectionMixin, abstract.FileDescriptor, _SocketCloser,
                  _AbortingMixin):
     """
@@ -285,7 +293,7 @@ class Connection(_TLSConnectionMixin, abstract.FileDescriptor, _SocketCloser,
             self.socket.shutdown(1)
         except socket.error:
             pass
-        p = interfaces.IHalfCloseableProtocol(self.protocol, None)
+        p = IHalfCloseableProtocol(self.protocol, None)
         if p:
             try:
                 p.writeConnectionLost()
@@ -296,7 +304,7 @@ class Connection(_TLSConnectionMixin, abstract.FileDescriptor, _SocketCloser,
 
 
     def readConnectionLost(self, reason):
-        p = interfaces.IHalfCloseableProtocol(self.protocol, None)
+        p = IHalfCloseableProtocol(self.protocol, None)
         if p:
             try:
                 p.readConnectionLost()
@@ -1099,7 +1107,7 @@ class _NullFileDescriptorReservation(object):
 if platformType == 'win32':
     _reservedFD = _NullFileDescriptorReservation()
 else:
-    _reservedFD = _FileDescriptorReservation(lambda: open(os.devnull))
+    _reservedFD = _FileDescriptorReservation(lambda: open(os.devnull))  # type: ignore[assignment] # noqa
 
 
 # Linux and other UNIX-like operating systems return EMFILE when a
@@ -1234,7 +1242,7 @@ def _accept(logger, accepts, listener, reservedFD):
 
 
 
-@implementer(interfaces.IListeningPort)
+@implementer(IListeningPort)
 class Port(base.BasePort, _SocketCloser):
     """
     A TCP server port, listening for connections.

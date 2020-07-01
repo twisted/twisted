@@ -7,8 +7,8 @@ Interface documentation.
 Maintainer: Itamar Shtull-Trauring
 """
 
-from __future__ import division, absolute_import
 
+from twisted.python.failure import Failure
 from zope.interface import Interface, Attribute
 
 
@@ -1877,7 +1877,7 @@ class IConsumer(Interface):
         """
 
 
-    def write(data):
+    def write(data: bytes):
         """
         The producer will write data by calling this method.
 
@@ -1954,7 +1954,7 @@ class IPullProducer(IProducer):
 
 class IProtocol(Interface):
 
-    def dataReceived(data):
+    def dataReceived(data: bytes):
         """
         Called whenever data is received.
 
@@ -2017,7 +2017,7 @@ class IProcessProtocol(Interface):
         """
 
 
-    def childDataReceived(childFD, data):
+    def childDataReceived(childFD: int, data: bytes):
         """
         Called when data arrives from the child process.
 
@@ -2030,7 +2030,7 @@ class IProcessProtocol(Interface):
         """
 
 
-    def childConnectionLost(childFD):
+    def childConnectionLost(childFD: int):
         """
         Called when a file descriptor associated with the child process is
         closed.
@@ -2040,7 +2040,7 @@ class IProcessProtocol(Interface):
         """
 
 
-    def processExited(reason):
+    def processExited(reason: Failure):
         """
         Called when the child process exits.
 

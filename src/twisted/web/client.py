@@ -6,7 +6,6 @@
 HTTP client.
 """
 
-from __future__ import division, absolute_import
 
 import os
 import collections
@@ -20,7 +19,7 @@ from functools import wraps
 
 from zope.interface import implementer
 
-from twisted.python.compat import _PY3, networkString
+from twisted.python.compat import networkString
 from twisted.python.compat import nativeString, intToBytes, unicode, itervalues
 from twisted.python.deprecate import deprecatedModuleAttribute, deprecated
 from twisted.python.failure import Failure
@@ -1160,7 +1159,10 @@ class FileBodyProducer(object):
         stopping the underlying L{CooperativeTask}.
         """
         self._inputFile.close()
-        self._task.stop()
+        try:
+            self._task.stop()
+        except task.TaskFinished:
+            pass
 
 
     def startProducing(self, consumer):
@@ -1821,9 +1823,8 @@ class _FakeUrllib2Request(object):
             # If it's not a schema on the regular port, add the port.
             self.host += ":" + str(_uri.port)
 
-        if _PY3:
-            self.origin_req_host = nativeString(_uri.host)
-            self.unverifiable = lambda _: False
+        self.origin_req_host = nativeString(_uri.host)
+        self.unverifiable = lambda _: False
 
 
     def has_header(self, header):
@@ -1958,7 +1959,7 @@ class CookieAgent(object):
 
 
 
-class GzipDecoder(proxyForInterface(IResponse)):
+class GzipDecoder(proxyForInterface(IResponse)):  # type: ignore[misc]
     """
     A wrapper for a L{Response} instance which handles gzip'ed body.
 
@@ -1981,7 +1982,7 @@ class GzipDecoder(proxyForInterface(IResponse)):
 
 
 
-class _GzipProtocol(proxyForInterface(IProtocol)):
+class _GzipProtocol(proxyForInterface(IProtocol)):  # type: ignore[misc]
     """
     A L{Protocol} implementation which wraps another one, transparently
     decompressing received data.

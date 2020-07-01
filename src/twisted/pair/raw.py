@@ -12,7 +12,7 @@ class IRawDatagramProtocol(Interface):
     An interface for protocols such as UDP, ICMP and TCP.
     """
 
-    def addProto():
+    def addProto(num, proto):
         """
         Add a protocol on top of this one.
         """
@@ -29,7 +29,7 @@ class IRawPacketProtocol(Interface):
     An interface for low-level protocols such as IP and ARP.
     """
 
-    def addProto():
+    def addProto(num, proto):
         """
         Add a protocol on top of this one.
         """

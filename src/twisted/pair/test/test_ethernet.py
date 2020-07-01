@@ -12,6 +12,13 @@ class MyProtocol:
     def __init__(self, expecting):
         self.expecting = list(expecting)
 
+
+    def addProto(self, num, proto):
+        """
+        Not implemented
+        """
+
+
     def datagramReceived(self, data, **kw):
         assert self.expecting, 'Got a packet when not expecting anymore.'
         expect = self.expecting.pop(0)

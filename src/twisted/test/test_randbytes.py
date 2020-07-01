@@ -5,7 +5,6 @@
 Test cases for L{twisted.python.randbytes}.
 """
 
-from __future__ import division, absolute_import
 
 from twisted.trial import unittest
 from twisted.python import randbytes

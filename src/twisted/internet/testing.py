@@ -6,7 +6,6 @@
 Assorted functionality which is commonly useful when writing unit tests.
 """
 
-from __future__ import division, absolute_import
 
 from socket import AF_INET, AF_INET6
 from io import BytesIO
@@ -865,6 +864,23 @@ class RaisingMemoryReactor(object):
     def connectUNIX(self, address, factory, timeout=30, checkPID=0):
         """
         Fake L{IReactorUNIX.connectUNIX}, that raises L{_connectException}.
+        """
+        raise self._connectException
+
+
+    def adoptDatagramPort(self, fileDescriptor, addressFamily, protocol,
+                          maxPacketSize):
+        """
+        Fake L{IReactorSocket.adoptDatagramPort}, that raises
+        L{_connectException}.
+        """
+        raise self._connectException
+
+
+    def adoptStreamConnection(self):
+        """
+        Fake L{IReactorSocket.adoptStreamConnection}, that raises
+        L{_connectException}.
         """
         raise self._connectException
 

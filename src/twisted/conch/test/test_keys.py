@@ -5,7 +5,6 @@
 Tests for L{twisted.conch.ssh.keys}.
 """
 
-from __future__ import absolute_import, division
 
 import base64
 import os
@@ -405,7 +404,7 @@ SUrCyZXsNh6VXwjs3gKQ
 
         self.assertRaises(
             keys.BadKeyError,
-            keys.Key.fromString, data=b'{' + base64.encodestring(sexp) + b'}',
+            keys.Key.fromString, data=b'{' + base64.b64encode(sexp) + b'}',
             )
 
 

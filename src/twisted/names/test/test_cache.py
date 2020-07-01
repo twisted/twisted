@@ -5,7 +5,6 @@
 Tests for L{twisted.names.cache}.
 """
 
-from __future__ import division, absolute_import
 
 import time
 

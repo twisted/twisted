@@ -5,7 +5,6 @@
 Tests for L{twisted.internet.posixbase} and supporting code.
 """
 
-from __future__ import division, absolute_import
 
 from twisted.trial.unittest import TestCase
 from twisted.internet.defer import Deferred

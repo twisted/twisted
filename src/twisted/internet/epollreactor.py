@@ -11,7 +11,6 @@ listeners or connectors are added)::
     epollreactor.install()
 """
 
-from __future__ import division, absolute_import
 
 from select import epoll, EPOLLHUP, EPOLLERR, EPOLLIN, EPOLLOUT
 import errno

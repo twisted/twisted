@@ -6,7 +6,6 @@
 Mail protocol support.
 """
 
-from __future__ import absolute_import, division
 
 from twisted.mail import pop3
 from twisted.mail import smtp
@@ -38,7 +37,7 @@ class DomainDeliveryBase:
         Sub-classes should set this appropriately.
     """
     service = None
-    protocolName = None
+    protocolName = b'not-implemented-protocol'  # type: bytes
 
     def __init__(self, service, user, host=smtp.DNSNAME):
         """

@@ -14,17 +14,15 @@ the recipient and sends on the message.
 import email.utils
 import os
 import time
-
-try:
-    import cPickle as pickle
-except ImportError:
-    import pickle
+import pickle
+from typing import Type
 
 from twisted.python import log
 from twisted.python.failure import Failure
 from twisted.mail import relay
 from twisted.mail import bounce
 from twisted.internet import protocol
+from twisted.internet.protocol import connectionDone
 from twisted.internet.defer import Deferred, DeferredList
 from twisted.internet.error import DNSLookupError
 from twisted.mail import smtp
@@ -58,7 +56,7 @@ class ManagedRelayerMixin:
         del self.names[0]
 
 
-    def connectionLost(self, reason):
+    def connectionLost(self, reason: Failure = connectionDone):
         """
         called when connection is broken
 
@@ -152,7 +150,7 @@ class SMTPManagedRelayerFactory(protocol.ClientFactory):
     @type pKwArgs: L{dict}
     @ivar pKwArgs: Keyword arguments for L{SMTPClient.__init__}
     """
-    protocol = SMTPManagedRelayer
+    protocol = SMTPManagedRelayer  # type: Type[protocol.Protocol]
 
     def __init__(self, messages, manager, *args, **kw):
         """
@@ -689,7 +687,7 @@ class SmartHostSMTPRelayingManager:
     @ivar managed: A mapping of factory for a managed relayer to
         filenames of messages the managed relayer is responsible for.
     """
-    factory = SMTPManagedRelayerFactory
+    factory = SMTPManagedRelayerFactory  # type: Type[protocol.ClientFactory]
 
     PORT = 25
 

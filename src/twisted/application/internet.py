@@ -37,9 +37,9 @@ C{TCPServer(8080, server.Site(r))}.  See the documentation for the
 reactor.listen/connect* methods for more information.
 """
 
-from __future__ import absolute_import, division
 
 from random import random as _goodEnoughRandom
+from typing import List
 
 from twisted.python import log
 from twisted.logger import Logger
@@ -68,7 +68,7 @@ def _maybeGlobalReactor(maybeReactor):
 
 class _VolatileDataService(service.Service):
 
-    volatile = []
+    volatile = []  # type: List[str]
 
     def __getstate__(self):
         d = service.Service.__getstate__(self)

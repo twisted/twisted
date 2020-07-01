@@ -6,7 +6,6 @@
 Tests for L{twisted.conch.telnet}.
 """
 
-from __future__ import absolute_import, division
 
 from zope.interface import implementer
 from zope.interface.verify import verifyObject
@@ -18,6 +17,7 @@ from twisted.conch import telnet
 from twisted.trial import unittest
 from twisted.test import proto_helpers
 from twisted.python.compat import iterbytes
+
 
 
 @implementer(telnet.ITelnetProtocol)
@@ -77,6 +77,21 @@ class TestProtocol:
 
     def disableRemote(self, option):
         self.disabledRemote.append(option)
+
+
+    def connectionMade(self):
+        # IProtocol.connectionMade
+        pass
+
+
+    def unhandledCommand(self, command, argument):
+        # ITelnetProtocol.unhandledCommand
+        pass
+
+
+    def unhandledSubnegotiation(self, command, data):
+        # ITelnetProtocol.unhandledSubnegotiation
+        pass
 
 
 

@@ -4,10 +4,13 @@
 """
 This module tests twisted.conch.ssh.connection.
 """
-from __future__ import division, absolute_import
 
 import struct
 
+from twisted.conch.ssh import channel
+from twisted.python.compat import long
+from twisted.trial import unittest
+from twisted.conch.test import test_userauth
 from twisted.python.reflect import requireModule
 
 cryptography = requireModule("cryptography")
@@ -16,13 +19,10 @@ from twisted.conch import error
 if cryptography:
     from twisted.conch.ssh import common, connection
 else:
-    class connection:
-        class SSHConnection: pass
+    class connection:  # type: ignore[no-redef]
+        class SSHConnection:
+            pass
 
-from twisted.conch.ssh import channel
-from twisted.python.compat import long
-from twisted.trial import unittest
-from twisted.conch.test import test_userauth
 
 
 class TestChannel(channel.SSHChannel):

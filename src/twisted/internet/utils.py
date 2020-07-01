@@ -6,9 +6,9 @@
 Utility methods.
 """
 
-from __future__ import division, absolute_import
 
-import sys, warnings
+import warnings
+import sys
 from functools import wraps
 
 from twisted.internet import protocol, defer

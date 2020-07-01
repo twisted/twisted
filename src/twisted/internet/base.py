@@ -6,9 +6,9 @@
 Very basic functionality for a Reactor implementation.
 """
 
-from __future__ import division, absolute_import
 
-import socket # needed only for sync-dns
+import socket  # needed only for sync-dns
+from typing import List
 from zope.interface import implementer, classImplements
 
 import sys
@@ -775,6 +775,12 @@ class ReactorBase(PluggableResolverMixin):
         """
         self.running = True
 
+
+    def run(self):
+        # IReactorCore.run
+        raise NotImplementedError()
+
+
     # IReactorTime
 
     seconds = staticmethod(runtimeSeconds)
@@ -1190,8 +1196,8 @@ class BasePort(abstract.FileDescriptor):
     Note: This does not actually implement IListeningPort.
     """
 
-    addressFamily = None
-    socketType = None
+    addressFamily = None  # type: socket.AddressFamily
+    socketType = None  # type: socket.SocketKind
 
     def createInternetSocket(self):
         s = socket.socket(self.addressFamily, self.socketType)
@@ -1299,4 +1305,4 @@ class _SignalReactorMixin(object):
 
 
 
-__all__ = []
+__all__ = []  # type: List[str]

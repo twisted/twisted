@@ -9,7 +9,6 @@ Currently implemented authentication types are public-key and password.
 Maintainer: Paul Swartz
 """
 
-from __future__ import absolute_import, division
 
 import struct
 

@@ -61,20 +61,6 @@ class UniversalPicklingErrorTests(unittest.TestCase):
                           self.raise_UniversalPicklingError)
 
 
-    def test_handledBycPickleModule(self):
-        """
-        Handling L{cPickle.PicklingError} handles
-        L{_UniversalPicklingError}.
-        """
-        try:
-            import cPickle
-        except ImportError:
-            raise unittest.SkipTest("cPickle not available.")
-        else:
-            self.assertRaises(cPickle.PicklingError,
-                              self.raise_UniversalPicklingError)
-
-
 
 class UnpickleMethodTests(unittest.TestCase):
     """
@@ -116,15 +102,6 @@ class UnpickleMethodTests(unittest.TestCase):
                 ]).encode("ascii")
         self.assertEqual(pickle.dumps(sampleFunction, protocol=0),
                          expected("0"))
-        try:
-            import cPickle
-        except:
-            pass
-        else:
-            self.assertEqual(
-                cPickle.dumps(sampleFunction, protocol=0),
-                expected("1")
-            )
 
 
     def test_lambdaRaisesPicklingError(self):
@@ -132,10 +109,3 @@ class UnpickleMethodTests(unittest.TestCase):
         Pickling a C{lambda} function ought to raise a L{pickle.PicklingError}.
         """
         self.assertRaises(pickle.PicklingError, pickle.dumps, lambdaExample)
-        try:
-            import cPickle
-        except:
-            pass
-        else:
-            self.assertRaises(cPickle.PicklingError, cPickle.dumps,
-                              lambdaExample)

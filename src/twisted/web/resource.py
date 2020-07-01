@@ -6,7 +6,6 @@
 Implementation of the lowest-level Resource class.
 """
 
-from __future__ import division, absolute_import
 
 __all__ = [
     'IResource', 'getChildForRequest',
@@ -388,7 +387,7 @@ class _IEncodingResource(Interface):
 
 
 @implementer(_IEncodingResource)
-class EncodingResourceWrapper(proxyForInterface(IResource)):
+class EncodingResourceWrapper(proxyForInterface(IResource)):  # type: ignore[misc] # noqa
     """
     Wrap a L{IResource}, potentially applying an encoding to the response body
     generated.
