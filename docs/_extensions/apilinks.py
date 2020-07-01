@@ -47,6 +47,6 @@ def make_api_link(name, rawtext, text, lineno, inliner,
 
 def setup(app):
     app.add_config_value('apilinks_base_url',
-                         'http://twistedmatrix.com/documents/current/api/',
+                         'https://twistedmatrix.com/documents/current/api/',
                          'env')
     app.add_role('api', make_api_link)
