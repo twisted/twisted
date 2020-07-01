@@ -54,6 +54,10 @@ class TestBase(unittest.TestCase):
         with self.assertRaises(AssertionError):
             r = FakeStruct(five=424243)
 
+    def test_base_calcsize(self):
+        self.assertEqual(base.calcsize(FakeStruct), 18)
+        self.assertEqual(base.calcsize(FakeStruct2), 6)
+
     def test_smb_packet_receiver(self):
         pr = base.SMBPacketReceiver()
         pr.transport = io.BytesIO()
@@ -184,7 +188,7 @@ class TestSecurity(unittest.TestCase):
         manager = ntlm.NTLMManager("DOMAIN")
         with self.assertRaises(base.SMBError):
             manager.receiveToken(b"I'm too short")
-        with self.assertRaises(base.SMBError):
+        with self.assertRaises(AssertionError):
             manager.receiveToken(b"I'm long enough but have an invalid header")
         with self.assertRaises(base.SMBError):
             manager.receiveToken(b"NTLMSSP\x00\xFF\0\0\0invalid message" +

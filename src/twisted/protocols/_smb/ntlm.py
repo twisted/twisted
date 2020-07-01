@@ -12,8 +12,10 @@ import time
 import socket
 import hmac
 import hashlib
+import attr
 
 from twisted.protocols._smb import base
+from twisted.protocols._smb.base import (byte, short, medium, long, octets)
 
 import twisted.cred.credentials
 from twisted.python.randbytes import secureRandom
@@ -134,33 +136,90 @@ NT_RESP_TYPE = 0x01
 
 MAGIC = b'NTLMSSP\0'
 
-HeaderType = base.nstruct("magic:8s packet_type:I")
 
-NegType = base.nstruct("""flags:L domain_len:H domain_max_len:H
-    domain_offset:L
-    workstation_len:H workstation_max_len:H workstation_offse:L
-    v_major:B v_minor:B v_build:H reserved:3s v_protocol:B""")
 
-AuthType = base.nstruct("""
-        lmc_len:H lmc_maxlen:H lmc_offset:I
-        ntc_len:H ntc_maxlen:H ntc_offset:I
-        domain_len:H domain_maxlen:H domain_offset:I
-        user_len:H user_maxlen:H user_offset:I
-        workstation_len:H workstation_max_len:H workstation_offset:I
-        ersk_len:H ersk_maxlen:H ersk_offset:I
-        flags:I
-        v_major:B v_minor:B v_build:H reserved:3s v_protocol:B
-        mic:16s""")
+@attr.s
+class HeaderType:
+    magic = octets(default=MAGIC, locked=True)
+    packet_type = medium()
 
-NtParts = base.nstruct("""response:16s resp_type:B hi_resp_type:B
-reserved:6s time:Q client_challenge:8s reserved2:4s""")
 
-ChallengeType = base.nstruct("""
-target_len:H target_max_len:H target_offset:I
-flags:I challenge:8s reserved:8s
-targetinfo_len:H targetinfo_max_len:H targetinfo_offset:I
-v_major:B v_minor:B v_build:H reserved2:3s v_protocol:B
-""")
+
+@attr.s
+class NegType:
+    flags = medium()
+    domain_len = short()
+    domain_max_len = short()
+    domain_offset = medium()
+    workstation_len = short()
+    workstation_max_len = short()
+    workstation_offset = medium()
+    v_major = byte()
+    v_minor = byte()
+    v_build = short()
+    reserved = octets(3)
+    v_protocol = byte()
+
+
+
+@attr.s
+class AuthType:
+    lmc_len = short()
+    lmc_maxlen = short()
+    lmc_offset = medium()
+    ntc_len = short()
+    ntc_maxlen = short()
+    ntc_offset = medium()
+    domain_len = short()
+    domain_maxlen = short()
+    domain_offset = medium()
+    user_len = short()
+    user_maxlen = short()
+    user_offset = medium()
+    workstation_len = short()
+    workstation_max_len = short()
+    workstation_offset = medium()
+    ersk_len = short()
+    ersk_maxlen = short()
+    ersk_offset = medium()
+    flags = medium()
+    v_major = byte()
+    v_minor = byte()
+    v_build = short()
+    reserved = octets(3)
+    v_protocol = byte()
+    mic = octets(16)
+
+
+
+@attr.s
+class NtParts:
+    response = octets(16)
+    resp_type = byte()
+    hi_resp_type = byte()
+    reserved = octets(6)
+    time = long()
+    client_challenge = octets(8)
+    reserved2 = octets(4)
+
+
+
+@attr.s
+class ChallengeType:
+    target_len = short()
+    target_max_len = short()
+    target_offset = medium()
+    flags = medium()
+    challenge = octets(8)
+    reserved = octets(8)
+    targetinfo_len = short()
+    targetinfo_max_len = short()
+    targetinfo_offset = medium()
+    v_major = byte()
+    v_minor = byte()
+    v_build = short()
+    reserved2 = octets(3)
+    v_protocol = byte()
 
 
 
@@ -191,12 +250,9 @@ class NTLMManager(object):
         if len(token) < 36:
             log.debug("{tok}", tok=repr(token))
             raise base.SMBError("token too small")
-        hdr = HeaderType(token)
-        if hdr.magic != MAGIC:
-            log.debug("{tok}", tok=repr(token[:16]))
-            raise base.SMBError("No valid NTLM token header")
+        hdr, rem = base.unpack(HeaderType, token, 0, base.DATA)
         try:
-            getattr(self, 'ntlm_' + NTLM_MESSAGES[hdr.packet_type])(hdr.buffer)
+            getattr(self, 'ntlm_' + NTLM_MESSAGES[hdr.packet_type])(rem)
         except IndexError:
             raise base.SMBError("invalid message %d" % hdr.packet_type)
 
@@ -207,7 +263,7 @@ class NTLMManager(object):
         raise base.SMBError("invalid to send NTLM challenge to a server")
 
     def ntlm_negotiate(self, data):
-        neg = NegType(data)
+        neg = base.unpack(NegType, data)
         flags = flags2set(neg.flags)
         log.debug("""
 NTLM NEGOTIATE
@@ -249,9 +305,7 @@ Flags           {flags!r}""",
 
         @rtype: L{bytes}
         """
-        header = HeaderType()
-        header.magic = MAGIC
-        header.packet_type = 2
+        header = HeaderType(packet_type=2)
         chal = ChallengeType()
         if 'RequestTarget' in self.flags:
             target = socket.gethostname().upper().encode('utf-16le')
@@ -274,18 +328,17 @@ Flags           {flags!r}""",
             chal.v_major, chal.v_minor, chal.v_build = SERVER_VERSION
         chal.challenge = self.challenge = secureRandom(8)
         chal.target_len = chal.target_max_len = len(target)
-        chal.target_offset = len(chal) + len(header)
+        chal.target_offset = base.calcsize(HeaderType) + base.calcsize(
+            ChallengeType)
         chal.targetinfo_len = chal.targetinfo_max_len = len(targetinfo)
-        chal.targetinfo_offset = len(chal) + len(header) + len(target)
+        chal.targetinfo_offset = chal.target_offset + len(target)
         chal.flags = set2flags(self.flags)
-        chal.buffer = target + targetinfo
-        header.buffer = chal.pack()
-        return header.pack()
+        return base.pack(header) + base.pack(chal) + target + targetinfo
 
     def ntlm_auth(self, data):
         # note authentication isn't checked here, it's just unpacked and
         # loaded into the credential object
-        a = AuthType(data)
+        a = base.unpack(AuthType, data)
         flags = flags2set(a.flags)
         lm = {}
         if a.lmc_len > 0:
@@ -296,11 +349,11 @@ Flags           {flags!r}""",
         if a.ntc_len > 0:
             raw_nt_response = self.token[a.ntc_offset:a.ntc_offset + a.ntc_len]
             nt['temp'] = raw_nt_response[16:]
-            parts = NtParts(raw_nt_response)
+            parts, nt['avpairs'] = base.unpack(NtParts, raw_nt_response, 0,
+                                               base.DATA)
             nt['response'] = parts.response
             nt['time'] = parts.time
             nt['client_challenge'] = parts.client_challenge
-            nt['avpairs'] = parts.buffer
             if parts.resp_type != NT_RESP_TYPE:
                 log.warn("NT response not valid type")
         if not nt and not lm:
@@ -371,7 +424,7 @@ class NTLMCredential(object):
         self.challenge = challenge
 
     def __repr__(self):
-        return "%s/%s" % (self.username, self.domain)
+        return "<NTLMCredential %s/%s>" % (self.username, self.domain)
 
     def checkPassword(self, password):
         # code adapted from pysmb ntlm.py

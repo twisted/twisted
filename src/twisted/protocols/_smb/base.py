@@ -192,7 +192,7 @@ DATA = 3
 
 
 
-def unpack(cls, data, offset=0, remainder=0):
+def unpack(cls, data, offset=0, remainder=IGNORE):
     """
     unpack binary data into an object.
 
@@ -262,105 +262,6 @@ def calcsize(cls):
     """
     strct = _get_struct(cls)
     return strct.size
-
-
-
-class GeneralStruct:
-    """
-    a more ergonomic struct.unpack/pack. an object that represents an ordered
-    binary structure and field names..
-    field names are acceessible as attributes.
-    don't use directly, subclass through L{base.nstruct}
-    """
-    def __init__(self, data=None):
-        """
-        @param data: binary data sent to C{pack}
-        @type data: L{bytes}
-        """
-        self.buffer = b''
-        self._values = {}
-        if data:
-            self.unpack(data)
-
-    def __setattr__(self, name, val):
-        if name in self._fields_names:
-            self._values[name] = val
-        else:
-            object.__setattr__(self, name, val)
-
-    def zero(self, field):
-        """
-        get logical zero/null value for a field
-        """
-        n = self._fields_names.index(field)
-        t = self._types[n]
-        if t.endswith("s"):
-            return b"\0" * int(t[0:-1])
-        else:
-            return 0
-
-    def __getattr__(self, name):
-        if name in self._fields_names:
-            return self._values.get(name, self.zero(name))
-        else:
-            raise AttributeError(name)
-
-    def pack(self):
-        """
-        Pack data according to the pattern
-
-        @rtype: L{bytes}
-        """
-        p = [self._values.get(n, self.zero(n)) for n in self._fields_names]
-        return struct.pack(self._pattern, *p) + self.buffer
-
-    def unpack(self, data):
-        """
-        unpack data according to the pattern
-        exceas data goes in buffer
-
-        @param data: the data
-        @type data: L{bytes}
-        """
-        ret = struct.unpack(self._pattern, data[:self._size])
-        for i in range(len(ret)):
-            self._values[self._fields_names[i]] = ret[i]
-        self.buffer = data[self._size:]
-
-    def clear(self):
-        """
-        clear internal fields
-        """
-        self._values = {}
-        self.buffer = b''
-
-    def __len__(self):
-        return self._size
-
-    def __bytes__(self):
-        return self.pack()
-
-
-
-def nstruct(fields):
-    """
-    dynamically subclass GeneralStruct with a speeific binary structure
-
-    @param fields: space-separated list field:type.
-    Type is a single char as used in L{struct.pack}
-    (but only use s and numeric types)
-    @type fields: L{str}
-    """
-    d = {}
-    d['_fields_names'] = []
-    d['_types'] = []
-    for f in fields.split():
-        f = f.split(":")
-        d['_fields_names'].append(f[0])
-        d['_types'].append(f[1])
-    d['_pattern'] = "<" + "".join(d['_types'])
-    d['_size'] = struct.calcsize(d['_pattern'])
-    return type(d['_pattern'], (GeneralStruct, ), d)
 
 
 
