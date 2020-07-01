@@ -67,5 +67,5 @@ if __name__ == '__main__':
     from twisted.internet import reactor
     halfCloseProtocol = HalfCloseProtocol()
     stdio.StandardIO(halfCloseProtocol)
-    reactor.run()
+    reactor.run()  # type: ignore[attr-defined]
     sys.exit(halfCloseProtocol.exitCode)
