@@ -877,7 +877,7 @@ class RaisingMemoryReactor(object):
         raise self._connectException
 
 
-    def adoptStreamConnection(self):
+    def adoptStreamConnection(self, fileDescriptor, addressFamily, factory):
         """
         Fake L{IReactorSocket.adoptStreamConnection}, that raises
         L{_connectException}.

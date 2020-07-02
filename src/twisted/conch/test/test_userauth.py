@@ -243,7 +243,7 @@ class AnonymousChecker(object):
     credentialInterfaces = (IAnonymous,)
 
 
-    def requestAvatarId(credentials):
+    def requestAvatarId(self, credentials):
         # ICredentialsChecker.requestAvatarId
         pass
 

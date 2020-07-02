@@ -240,6 +240,6 @@ class HTTPAuthSessionWrapper(object):
         return (None, None)
 
 
-    def putChild(self, child):
+    def putChild(self, path, child):
         # IResource.putChild
         raise NotImplementedError()
