@@ -15,7 +15,7 @@ import stat
 import struct
 import sys
 import tty
-from typing import List, Union
+from typing import List, Optional, Union
 
 from twisted.conch.client import connect, default, options
 from twisted.conch.ssh import connection, common
@@ -45,7 +45,7 @@ class ClientOptions(options.ConchOptions):
                     ['requests', 'R', 5,
                      'Number of requests to make before waiting for a reply.'],
                     ['subsystem', 's', 'sftp',
-                     'Subsystem/server program to connect to.']]  # type: List[List[Union[str, int, None]]]  # noqa
+                     'Subsystem/server program to connect to.']]  # type: List[List[Optional[Union[str, int]]]]  # noqa
 
     compData = usage.Completions(
         descriptions={
