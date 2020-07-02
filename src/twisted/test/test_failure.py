@@ -23,7 +23,7 @@ from twisted.trial.unittest import SynchronousTestCase
 
 
 try:
-    from twisted.test import raiser
+    from twisted.test import raiser  # type: ignore[attr-defined]
 except ImportError:
     raiser = None
 
