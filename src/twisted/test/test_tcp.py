@@ -1836,4 +1836,4 @@ except ImportError:
     pass
 else:
     numRounds = resource.getrlimit(resource.RLIMIT_NOFILE)[0] + 10
-    ProperlyCloseFilesTests.numberRounds = numRounds
+    setattr(ProperlyCloseFilesTests, "numberRounds", numRounds)
