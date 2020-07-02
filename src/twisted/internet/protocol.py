@@ -768,11 +768,11 @@ class AbstractDatagramProtocol:
         self.doStart()
 
 
-    def datagramReceived(self, datagram: str, addr):
+    def datagramReceived(self, datagram: bytes, addr):
         """
         Called when a datagram is received.
 
-        @param datagram: the string received from the transport.
+        @param datagram: the bytes received from the transport.
         @param addr: tuple of source of datagram.
         """
 
