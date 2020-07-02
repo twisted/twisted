@@ -109,10 +109,10 @@ class CGIScript(resource.Resource):
             qargs = []
         else:
             qs = env['QUERY_STRING'] = request.uri[qindex+1:]
-            if '=' in qs:
+            if b'=' in qs:
                 qargs = []
             else:
-                qargs = [urllib.unquote(x) for x in qs.split('+')]
+                qargs = [urllib.parse.unquote(x.decode()) for x in qs.split(b'+')]
 
         # Propagate HTTP headers
         for title, header in request.getAllHeaders().items():
