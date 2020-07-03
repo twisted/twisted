@@ -41,7 +41,9 @@ class TestProtocol:
         d[b'\x12'] = self.neg_TEST_COMMAND
 
         d = transport.commandMap = transport.commandMap.copy()
-        for cmd in ('NOP', 'DM', 'BRK', 'IP', 'AO', 'AYT', 'EC', 'EL', 'GA'):
+        for cmd in (
+            'EOR', 'NOP', 'DM', 'BRK', 'IP', 'AO', 'AYT', 'EC', 'EL', 'GA'
+        ):
             d[getattr(telnet, cmd)] = lambda arg, cmd=cmd: self.calls.append(cmd)
 
 
@@ -187,6 +189,10 @@ class TelnetTransportTests(unittest.TestCase):
 
     def testInterrupt(self):
         self._simpleCommandTest("IP")
+
+
+    def testEndOfRecord(self):
+        self._simpleCommandTest("EOR")
 
 
     def testNoOperation(self):
