@@ -1024,7 +1024,7 @@ class _FileDescriptorReservation(object):
         self._fileDescriptor = None
 
 
-    def __exit__(self, excValue, excType, traceback):
+    def __exit__(self, excType, excValue, traceback):
         """
         See L{_IFileDescriptorReservation.__exit__}.
         """
@@ -1066,7 +1066,7 @@ class _NullFileDescriptorReservation(object):
         """
 
 
-    def __exit__(self, excValue, excType, traceback):
+    def __exit__(self, excType, excValue, traceback):
         """
         Do nothing.  See L{_IFileDescriptorReservation.__exit__}.
 
