@@ -59,21 +59,20 @@ class TestBase(unittest.TestCase):
         self.assertEqual(base.calcsize(FakeStruct2), 6)
 
     def test_smb_packet_receiver(self):
-        pr = base.SMBPacketReceiver()
-        pr.transport = io.BytesIO()
-
         def recv(x):
             global rdata
             rdata = x
 
-        pr.packetReceived = recv
+        pr = base.SMBPacketReceiver(recv, {})
+        pr.transport = io.BytesIO()
+
         # send fake packet
         pr.sendPacket(b'bur ble')
         r = pr.transport.getvalue()
         self.assertEqual(r, b'\0\0\0\x07bur ble')
         # receive fake packet
         pr.dataReceived(b'\0\0\0\x03abc')
-        self.assertEqual(rdata, b'abc')
+        self.assertEqual(rdata.data, b'abc')
 
     def test_int32key(self):
         d = {}

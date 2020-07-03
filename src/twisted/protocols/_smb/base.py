@@ -172,7 +172,7 @@ def pack(obj):
     @rtype: L{bytes}
     """
     strct = _get_struct(type(obj))
-    args = tuple(_conv_arg(obj, i) for i in attr.fields(type(obj)))
+    args = tuple(_conv_arg(obj, i) for i in smb_fields(type(obj)))
     return strct.pack(*args)
 
 
@@ -223,7 +223,7 @@ def unpack(cls, data, offset=0, remainder=IGNORE):
     if remainder == ERROR and strct.size + offset < len(data):
         raise SMBError("unexpected remaining data")
     ret = strct.unpack_from(data, offset=offset)
-    fields = attr.fields(cls)
+    fields = smb_fields(cls)
     assert len(fields) == len(ret)
     kwargs = {}
     for i in range(len(ret)):
@@ -241,6 +241,11 @@ def unpack(cls, data, offset=0, remainder=IGNORE):
 
 
 
+def smb_fields(cls):
+    return [i for i in attr.fields(cls) if SMB_METADATA in i.metadata]
+
+
+
 def _get_struct(cls):
     try:
         # we use classes to hold cache of Structs as precompiling is more
@@ -248,7 +253,7 @@ def _get_struct(cls):
         strct = cls._struct
     except AttributeError:
         strct = struct.Struct("<" + "".join(i.metadata[SMB_METADATA]
-                                            for i in attr.fields(cls)))
+                                            for i in smb_fields(cls)))
         cls._struct = strct
     return strct
 
@@ -286,6 +291,54 @@ def int32key(d, val):
 
 
 
+@attr.s
+class SMBPacket:
+    """
+    A SMB packet as it moves through the system.
+
+    @ivar data: raw data of the packet, both reception and
+                transmission.
+    @type data: L{bytes}
+
+    @ivar hdr: the parsed header
+    @ivar body: the parsed body
+    """
+    data = attr.ib()
+    _proto = attr.ib()
+    hdr = attr.ib(default=None)
+    body = attr.ib(default=None)
+
+    @property
+    def ctx(self):
+        """
+        the connection context: objects that need to persist scross
+        packets
+        @rtype: L{dict}
+        """
+        return self._proto.ctx
+
+    def send(self):
+        """
+        transmit the packet's data
+        """
+        self._proto.sendPacket(self.data)
+
+    def close(self):
+        """
+        close the underlying connection
+        """
+        self._proto.transport.close()
+
+    def clone(self, **kwargs):
+        """
+        a new packet associated with the same connection
+        @rtype: L{SMBPacket}
+        """
+        kwargs['proto'] = self._proto
+        return SMBPacket(**kwargs)
+
+
+
 BASE_HEADER = struct.Struct("!xBH")
 
 
@@ -296,8 +349,17 @@ class SMBPacketReceiver(protocol.Protocol):
     mechanism, which consist of a 4-byte header: single null
     and a 24-bit length field.
     """
-    def __init__(self):
+    def __init__(self, packetReceived, ctx):
+        """
+        @param ctx: context objects for connection
+        @type ctx: L{dict}
+
+        @param packetReceived: callback receives each incoming L{SMBPacket}
+        @type packetReceived: C{callable}
+        """
         self.data = b''
+        self.ctx = ctx
+        self.packetReceived = packetReceived
 
     def dataReceived(self, data):
         self.data += data
@@ -310,8 +372,10 @@ class SMBPacketReceiver(protocol.Protocol):
         size = (x << 16) + y
         if len(self.data) < size + BASE_HEADER.size:
             return
-        self.packetReceived(self.data[BASE_HEADER.size:BASE_HEADER.size +
-                                      size])
+        pkt = SMBPacket(data=self.data[BASE_HEADER.size:BASE_HEADER.size +
+                                       size],
+                        proto=self)
+        self.packetReceived(pkt)
         self.data = self.data[BASE_HEADER.size + size:]
         self._processData()
 
@@ -327,12 +391,3 @@ class SMBPacketReceiver(protocol.Protocol):
         x = (size & 0xff0000) >> 16
         y = size & 0xffff
         self.transport.write(BASE_HEADER.pack(x, y) + data)
-
-    def packetReceived(self, packet):
-        """
-        called for each complete packet received over network
-        override in descendants
-
-        @param packet: raw packet data
-        @type packet: L{bytes}
-        """

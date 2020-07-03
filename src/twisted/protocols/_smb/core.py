@@ -12,7 +12,8 @@ import enum
 import attr
 
 from twisted.protocols._smb import base, security_blob
-from twisted.protocols._smb.base import (byte, short, medium, long, uuid)
+from twisted.protocols._smb.base import (byte, short, medium, long, uuid,
+                                         octets)
 from twisted.protocols._smb.ismb import (ISMBServer, IFilesystem, IPipe,
                                          IPrinter, NoSuchShare)
 
@@ -29,6 +30,7 @@ SMBMind = namedtuple('SMBMind', 'session_id domain addr')
 
 @attr.s
 class NegReq:
+    """negotiate request"""
     size = short(36, locked=True)
     dialect_count = short()
     security_mode = short()
@@ -46,6 +48,7 @@ MAX_WRITE_SIZE = 0x10000
 
 @attr.s
 class NegResp:
+    """negotiate response"""
     size = short(65, locked=True)
     signing = short()
     dialect = short()
@@ -65,6 +68,7 @@ class NegResp:
 
 @attr.s
 class SessionReq:
+    """session setup request"""
     size = short(25, locked=True)
     flags = byte()
     security_mode = byte()
@@ -78,6 +82,7 @@ class SessionReq:
 
 @attr.s
 class SessionResp:
+    """seesion setup response"""
     size = short(9, locked=True)
     flags = short()
     offset = short(72, locked=True)
@@ -87,6 +92,7 @@ class SessionResp:
 
 @attr.s
 class BasicPacket:
+    """structure used in several request/response types"""
     size = short(4, locked=True)
     reserved = short()
 
@@ -94,6 +100,7 @@ class BasicPacket:
 
 @attr.s
 class TreeReq:
+    """ttee connect request"""
     size = short(9, locked=True)
     reserved = short()
     offset = short()
@@ -103,6 +110,7 @@ class TreeReq:
 
 @attr.s
 class TreeResp:
+    """tree connect response"""
     size = short(16, locked=True)
     share_type = byte()
     reserved = byte()
@@ -238,89 +246,92 @@ HEADER_LEN = HEADER_STRUCT.size + HEADER_STRUCT_SYNC.size
 
 
 
-class SMBConnection(base.SMBPacketReceiver):
-    """
-    implement SMB protocol server-side
-    """
-    def __init__(self, factory, addr):
-        base.SMBPacketReceiver.__init__(self)
-        log.debug("new SMBConnection from {addr!r}", addr=addr)
-        self.addr = addr
-        self.factory = factory
-        self.avatar = None
-        self.logout_thunk = None
-        self.signing_enabled = False
-        self.signing_required = False
-        self.message_id = 0
-        self.tree_id = 0
-        self.session_id = 0
-        self.async_id = 0
-        self.first_session_setup = True
-        self.isAsync = False
-        self.isRelated = False
-        self.isSigned = False
-        self.blob_manager = security_blob.BlobManager(factory.domain)
-        self.trees = {}
+@attr.s
+class HeaderSync:
+    magic = octets(default=SMB2_MAGIC)
+    size = short()
+    credit_charge = short()
+    status = medium()
+    command = short()
+    credit_request = short()
+    flags = medium()
+    next_command = medium()
+    message_id = long()
+    reserved = medium()
+    tree_id = medium()
+    session_id = long()
+    signature = octets(16)
+    async_id = attr.ib(default=0)
 
-    def packetReceived(self, packet):
-        """
-        receive a SMB packet with header. Unpacks the
-        header then calls the appropriate smb_XXX
-        method with data beyond the header.
 
-        @param packet: the raw packet
-        @type packet: L{bytes}
-        """
-        offset = 0
-        self.isRelated = True
-        while self.isRelated:
-            protocol_id = packet[offset:offset + len(SMB2_MAGIC)]
-            if protocol_id == SMB1_MAGIC:
-                # its a SMB1 packet which we dont support with the exception
-                # of the first packet, we try to offer upgrade to SMB2
-                if self.avatar is None:
-                    log.debug("responding to SMB1 packet")
-                    self.negotiate_response()
-                else:
-                    self.transport.close()
-                    log.error("Got SMB1 packet while logged in")
-                return
-            elif protocol_id != SMB2_MAGIC:
-                self.transport.close()
-                log.error("Unknown packet type")
-                log.debug("packet data {data!r}",
-                          data=packet[offset:offset + 64])
-                return
-            (hdr_size, self.credit_charge, hdr_status, self.hdr_command,
-             self.credit_request, self.hdr_flags, self.next_command,
-             self.message_id) = HEADER_STRUCT.unpack_from(packet, offset)
-            o2 = offset + HEADER_STRUCT.size
-            self.isAsync = (self.hdr_flags & FLAG_ASYNC) > 0
-            self.isRelated = (self.hdr_flags & FLAG_RELATED) > 0
-            self.isSigned = (self.hdr_flags & FLAG_SIGNED) > 0
-            # FIXME other flags 3.1 or too obscure
-            if self.isAsync:
-                (self.async_id, self.session_id,
-                 self.signature) = HEADER_STRUCT_ASYNC.unpack_from(packet, o2)
-                o2 += HEADER_STRUCT_ASYNC.size
-                self.tree_id = 0x00
+
+@attr.s
+class HeaderAsync:
+    magic = octets(default=SMB2_MAGIC)
+    size = short()
+    credit_charge = short()
+    status = medium()
+    command = short()
+    credit_request = short()
+    flags = medium()
+    next_command = medium()
+    message_id = long()
+    async_id = long()
+    session_id = long()
+    signature = octets(16)
+    tree_id = attr.ib(default=0)
+
+
+
+def packetReceived(packet):
+    """
+    receive a SMB packet with header. Unpacks the
+    header then calls the appropriate smb_XXX
+    method with data beyond the header.
+
+    @param packet: the raw packet
+    @type packet: L{base.SMBPacket}
+    """
+    offset = 0
+    isRelated = True
+    while isRelated:
+        protocol_id = packet.data[offset:offset + len(SMB2_MAGIC)]
+        if protocol_id == SMB1_MAGIC:
+            # its a SMB1 packet which we dont support with the exception
+            # of the first packet, we try to offer upgrade to SMB2
+            if packet.ctx.get('avatar') is None:
+                log.debug("responding to SMB1 packet")
+                negotiateResponse(packet)
             else:
-                (_reserved, self.tree_id, self.session_id,
-                 self.signature) = HEADER_STRUCT_SYNC.unpack_from(packet, o2)
-                o2 += HEADER_STRUCT_SYNC.size
-                self.async_id = 0x00
-            if self.isRelated:
-                this_packet = packet[offset:offset + self.next_command]
-            else:
-                this_packet = packet[offset:]
-            flags_desc = ""
-            if self.isAsync:
-                flags_desc += " ASYNC"
-            if self.isRelated:
-                flags_desc += " RELATED"
-            if self.isSigned:
-                flags_desc += " SIGNED"
-            log.debug("""
+                packet.close()
+                log.error("Got SMB1 packet while logged in")
+            return
+        elif protocol_id != SMB2_MAGIC:
+            packet.close()
+            log.error("Unknown packet type")
+            log.debug("packet data {data!r}",
+                      data=packet.data[offset:offset + 64])
+            return
+        packet.hdr, o2 = base.unpack(HeaderSync, packet.data, offset,
+                                     base.OFFSET)
+        isAsync = (packet.hdr.flags & FLAG_ASYNC) > 0
+        isRelated = (packet.hdr.flags & FLAG_RELATED) > 0
+        isSigned = (packet.hdr.flags & FLAG_SIGNED) > 0
+        # FIXME other flags 3.1 or too obscure
+        if isAsync:
+            packet.hdr = base.unpack(HeaderAsync, packet.data, offset)
+        if isRelated:
+            this_packet = packet.data[offset:offset + packet.hdr.next_command]
+        else:
+            this_packet = packet.data[offset:]
+        flags_desc = ""
+        if isAsync:
+            flags_desc += " ASYNC"
+        if isRelated:
+            flags_desc += " RELATED"
+        if isSigned:
+            flags_desc += " SIGNED"
+        log.debug("""
 HEADER
 ------
 protocol ID     {pid!r}
@@ -336,98 +347,100 @@ session ID      0x{sid:x}
 async ID        0x{aid:x}
 tree ID         0x{tid:x}
 signature       {sig}""",
-                      pid=protocol_id,
-                      hs=hdr_size,
-                      cc=self.credit_charge,
-                      status=hdr_status,
-                      cmd=COMMANDS[self.hdr_command][0],
-                      cmdn=self.hdr_command,
-                      cr=self.credit_request,
-                      flags=self.hdr_flags,
-                      flags_desc=flags_desc,
-                      nc=self.next_command,
-                      mid=self.message_id,
-                      sid=self.session_id,
-                      aid=self.async_id,
-                      tid=self.tree_id,
-                      sig=binascii.hexlify(self.signature))
-            if self.hdr_command < len(COMMANDS):
-                name, req_type, resp_type = COMMANDS[self.hdr_command]
-                func = 'smb_' + name
-                try:
-                    if hasattr(self, func) and req_type:
-                        req = base.unpack(req_type, packet, o2)
-                        getattr(self, func)(this_packet, req, resp_type)
-                    else:
-                        log.error("command '{cmd}' not implemented",
-                                  cmd=COMMANDS[self.hdr_command][0])
-                        self.error_response(NTStatus.NOT_IMPLEMENTED)
-                except base.SMBError as e:
-                    log.error("SMB error: {e}", e=str(e))
-                    self.error_response(e.ntstatus)
-                except BaseException:
-                    log.failure("in {cmd}", cmd=COMMANDS[self.hdr_command][0])
-                    self.error_response(NTStatus.UNSUCCESSFUL)
-            else:
-                log.error("unknown command 0x{cmd:x}", cmd=self.hdr_command)
-                self.error_response(NTStatus.NOT_IMPLEMENTED)
-
-            offset += self.next_command
-
-    def send_with_header(self, payload, command=None, status=NTStatus.SUCCESS):
-        """
-        prepare and transmit a SMB header and payload
-        so a full packet but focus of function on header construction
-
-        @param command: command name or id, defaults to same as received packet
-        @type command: L{str} or L{int}
-
-        @param payload: the after-header data
-        @type payload: L{bytes}
-
-        @param status: packet status, an NTSTATUS code
-        @type status: L{int}
-        """
-        # FIXME credit and signatures not supportted
-        flags = FLAG_SERVER
-        if self.isAsync:
-            flags |= FLAG_ASYNC
-        if command is None:
-            command = self.hdr_command
-        elif isinstance(command, str):
-            cmds = [c[0] for c in COMMANDS]
-            command = cmds.index(command)
-        if isinstance(status, NTStatus):
-            status = status.value
-        header_data = struct.pack("<4sHHLHHLLQ", SMB2_MAGIC, HEADER_LEN, 0,
-                                  status, command, 1, flags, 0,
-                                  self.message_id)
-        if self.isAsync:
-            header_data += struct.pack("<QQ16x", self.async_id,
-                                       self.session_id)
+                  pid=protocol_id,
+                  hs=packet.hdr.size,
+                  cc=packet.hdr.credit_charge,
+                  status=packet.hdr.status,
+                  cmd=COMMANDS[packet.hdr.command][0],
+                  cmdn=packet.hdr.command,
+                  cr=packet.hdr.credit_request,
+                  flags=packet.hdr.flags,
+                  flags_desc=flags_desc,
+                  nc=packet.hdr.next_command,
+                  mid=packet.hdr.message_id,
+                  sid=packet.hdr.session_id,
+                  aid=packet.hdr.async_id,
+                  tid=packet.hdr.tree_id,
+                  sig=binascii.hexlify(packet.hdr.signature))
+        if packet.hdr.command < len(COMMANDS):
+            name, req_type, resp_type = COMMANDS[packet.hdr.command]
+            func = 'smb_' + name
+            try:
+                if func in globals() and req_type:
+                    req = base.unpack(req_type, packet.data, o2)
+                    new_packet = packet.clone(data=this_packet,
+                                              hdr=packet.hdr,
+                                              body=req)
+                    globals()[func](new_packet, resp_type)
+                else:
+                    log.error("command '{cmd}' not implemented",
+                              cmd=COMMANDS[packet.hdr.command][0])
+                    errorResponse(packet, NTStatus.NOT_IMPLEMENTED)
+            except base.SMBError as e:
+                log.error("SMB error: {e}", e=str(e))
+                errorResponse(packet, e.ntstatus)
+            except BaseException:
+                log.failure("in {cmd}", cmd=COMMANDS[packet.hdr.command][0])
+                errorResponse(packet, NTStatus.UNSUCCESSFUL)
         else:
-            header_data += struct.pack("<LLQ16x", 0, self.tree_id,
-                                       self.session_id)
-        self.sendPacket(header_data + payload)
+            log.error("unknown command 0x{cmd:x}", cmd=packet.hdr.command)
+            errorResponse(packet, NTStatus.NOT_IMPLEMENTED)
 
-    def smb_negotiate(self, packet, req, resp_type):
-        # capabilities is ignored as a 3.1 feature
-        # as are final field complex around "negotiate contexts"
-        dialects = struct.unpack_from("<%dH" % req.dialect_count,
-                                      packet,
-                                      offset=HEADER_LEN + req.size)
-        self.signing_enabled = (req.security_mode
-                                & NEGOTIATE_SIGNING_ENABLED) > 0
-        # by spec this should never be false
-        self.signing_required = (req.security_mode
-                                 & NEGOTIATE_SIGNING_REQUIRED) > 0
-        self.client_uuid = req.client_uuid
-        desc = ""
-        if self.signing_enabled:
-            desc += "ENABLED "
-        if self.signing_required:
-            desc += "REQUIRED"
-        log.debug("""
+        offset += packet.hdr.next_command
+
+
+
+def sendHeader(packet, command=None, status=NTStatus.SUCCESS):
+    """
+    prepare and transmit a SMB header and payload
+    so actually a full packet but focus of function on header construction
+
+    @param command: command name or id, defaults to same as received packet
+    @type command: L{str} or L{int}
+
+    @param packet: the packet, C{data} contains after-header data
+    @type packet: L{base.SMBPacket}
+
+    @param status: packet status, an NTSTATUS code
+    @type status: L{int} or L{NTStatus}
+    """
+    # FIXME credit and signatures not supported yet
+    if packet.hdr is None:
+        packet.hdr = HeaderSync()
+    packet.hdr.flags |= FLAG_SERVER
+    packet.hdr.flags &= ~FLAG_RELATED
+    if isinstance(command, str):
+        cmds = [c[0] for c in COMMANDS]
+        command = cmds.index(command)
+    if command is not None:
+        packet.hdr.command = command
+    if isinstance(status, NTStatus):
+        status = status.value
+    packet.hdr.status = status
+    packet.hdr.credit_request = 1
+    packet.data = base.pack(packet.hdr) + packet.data
+    packet.send()
+
+
+
+def smb_negotiate(packet, resp_type):
+    # capabilities is ignored as a 3.1 feature
+    # as are final field complex around "negotiate contexts"
+    dialects = struct.unpack_from("<%dH" % packet.body.dialect_count,
+                                  packet.data,
+                                  offset=base.calcsize(HeaderSync) +
+                                  packet.body.size)
+    signing_enabled = (packet.body.security_mode
+                       & NEGOTIATE_SIGNING_ENABLED) > 0
+    # by spec this should never be false
+    signing_required = (packet.body.security_mode
+                        & NEGOTIATE_SIGNING_REQUIRED) > 0
+    desc = ""
+    if signing_enabled:
+        desc += "ENABLED "
+    if signing_required:
+        desc += "REQUIRED"
+    log.debug("""
 NEGOTIATE
 ---------
 size            {sz}
@@ -435,48 +448,70 @@ dialect count   {dc}
 signing         0x{sm:02x} {desc}
 client UUID     {uuid!r}
 dialects        {dlt!r}""",
-                  sz=req.size,
-                  dc=req.dialect_count,
-                  sm=req.security_mode,
-                  desc=desc,
-                  uuid=req.client_uuid,
-                  dlt=["%04x" % x for x in dialects])
-        self.negotiate_response(dialects)
+              sz=packet.body.size,
+              dc=packet.body.dialect_count,
+              sm=packet.body.security_mode,
+              desc=desc,
+              uuid=packet.body.client_uuid,
+              dlt=["%04x" % x for x in dialects])
+    negotiateResponse(packet, dialects)
 
-    def error_response(self, ntstatus):
-        if isinstance(ntstatus, NTStatus):
-            ntstatus = ntstatus.value
-        self.send_with_header(ERROR_RESPONSE_MAGIC, status=ntstatus)
-        # pre 3.1.1 no variation in structure
 
-    def negotiate_response(self, dialects=None):
-        log.debug("negotiate_response")
-        blob = self.blob_manager.generateInitialBlob()
-        if dialects is None:
-            log.debug("no dialects data, using 0x0202")
-            self.dialect = 0x0202
-        else:
-            self.dialect = sorted(dialects)[0]
-            if self.dialect == 0x02FF:
-                self.dialect = 0x0202
-            if self.dialect > MAX_DIALECT:
-                raise base.SMBError(
-                    "min client dialect %04x higher than our max %04x" %
-                    (self.dialect, MAX_DIALECT))
-            log.debug("dialect {dlt:04x} chosen", dlt=self.dialect)
-        resp = NegResp()
-        resp.signing = NEGOTIATE_SIGNING_ENABLED
-        resp.dialect = self.dialect
-        resp.server_uuid = self.factory.server_uuid
-        resp.capabilities = GLOBAL_CAP_DFS
-        resp.time = base.unixToNTTime(time.time())
-        resp.boot_time = base.unixToNTTime(self.factory.server_start)
-        resp.buflen = len(blob)
-        self.send_with_header(base.pack(resp) + blob, 'negotiate')
 
-    def smb_session_setup(self, packet, req, resp_type):
-        blob = packet[req.offset:req.offset + req.buflen]
-        log.debug("""
+def errorResponse(packet, ntstatus):
+    """
+    send SMB error response
+
+    @type packet: L{base.SMBPacket}
+    @type ntstatus: L{int} or L{NTStatus}
+    """
+    packet.data = ERROR_RESPONSE_MAGIC
+    sendHeader(packet, status=ntstatus)
+    # pre 3.1.1 no variation in structure
+
+
+
+def negotiateResponse(packet, dialects=None):
+    """
+    send negotiate response
+
+    @type packet: L{base.SMBPacket}
+
+    @param dialects: dialects offered by client, if C{None}, 2.02 used
+    @type dialects: L{list} of L{int}
+    """
+    log.debug("negotiateResponse")
+    blob_manager = packet.ctx['blob_manager']
+    blob = blob_manager.generateInitialBlob()
+    if dialects is None:
+        log.debug("no dialects data, using 0x0202")
+        dialect = 0x0202
+    else:
+        dialect = sorted(dialects)[0]
+        if dialect == 0x02FF:
+            dialect = 0x0202
+        if dialect > MAX_DIALECT:
+            raise base.SMBError(
+                "min client dialect %04x higher than our max %04x" %
+                (dialect, MAX_DIALECT))
+        log.debug("dialect {dlt:04x} chosen", dlt=dialect)
+    resp = NegResp()
+    resp.signing = NEGOTIATE_SIGNING_ENABLED
+    resp.dialect = dialect
+    resp.server_uuid = packet.ctx['factory'].server_uuid
+    resp.capabilities = GLOBAL_CAP_DFS
+    resp.time = base.unixToNTTime(time.time())
+    resp.boot_time = base.unixToNTTime(packet.ctx['factory'].server_start)
+    resp.buflen = len(blob)
+    packet.data = base.pack(resp) + blob
+    sendHeader(packet, 'negotiate')
+
+
+
+def smb_session_setup(packet, resp_type):
+    blob = packet.data[packet.body.offset:packet.body.offset +
+                       packet.body.buflen]
+    log.debug("""
 SESSION SETUP
 -------------
 Size             {sz}
@@ -484,148 +519,174 @@ Security mode    0x{sm:08x}
 Capabilities     0x{cap:08x}
 Channel          0x{chl:08x}
 Prev. session ID 0x{pid:016x}""",
-                  sz=req.size,
-                  sm=req.security_mode,
-                  cap=req.capabilities,
-                  chl=req.channel,
-                  pid=req.prev_session_id)
-        if self.first_session_setup:
-            self.blob_manager.receiveInitialBlob(blob)
-            blob = self.blob_manager.generateChallengeBlob()
-            self.session_setup_response(blob, NTStatus.MORE_PROCESSING)
-            self.first_session_setup = False
+              sz=packet.body.size,
+              sm=packet.body.security_mode,
+              cap=packet.body.capabilities,
+              chl=packet.body.channel,
+              pid=packet.body.prev_session_id)
+    blob_manager = packet.ctx['blob_manager']
+    if packet.ctx.get('first_session_setup', True):
+        blob_manager.receiveInitialBlob(blob)
+        blob = blob_manager.generateChallengeBlob()
+        sessionSetupResponse(packet, blob, NTStatus.MORE_PROCESSING)
+        packet.ctx['first_session_setup'] = False
+    else:
+        blob_manager.receiveResp(blob)
+        if blob_manager.credential:
+            log.debug("got credential: %r" % blob_manager.credential)
+            d = packet.ctx['factory'].portal.login(
+                blob_manager.credential,
+                SMBMind(packet.body.prev_session_id,
+                        blob_manager.credential.domain, packet.ctx['addr']),
+                ISMBServer)
+
+            def cb_login(t):
+                _, packet.ctx['avatar'], packet.ctx['logout_thunk'] = t
+                blob = blob_manager.generateAuthResponseBlob(True)
+                log.debug("successful login")
+                sessionSetupResponse(packet, blob, NTStatus.SUCCESS)
+
+            def eb_login(failure):
+                log.debug(failure.getTraceback())
+                blob = blob_manager.generateAuthResponseBlob(False)
+                sessionSetupResponse(packet, blob, NTStatus.LOGON_FAILURE)
+
+            d.addCallback(cb_login)
+            d.addErrback(eb_login)
         else:
-            self.blob_manager.receiveResp(blob)
-            if self.blob_manager.credential:
-                log.debug("got credential: %r" % self.blob_manager.credential)
-                d = self.factory.portal.login(
-                    self.blob_manager.credential,
-                    SMBMind(req.prev_session_id,
-                            self.blob_manager.credential.domain, self.addr),
-                    ISMBServer)
+            blob = blob_manager.generateChallengeBlob()
+            sessionSetupResponse(packet, blob, NTStatus.MORE_PROCESSING)
 
-                def cb_login(t):
-                    _, self.avatar, self.logout_thunk = t
-                    blob = self.blob_manager.generateAuthResponseBlob(True)
-                    log.debug("successful login")
-                    self.session_setup_response(blob, NTStatus.SUCCESS)
 
-                def eb_login(failure):
-                    log.debug(failure.getTraceback())
-                    blob = self.blob_manager.generateAuthResponseBlob(False)
-                    self.session_setup_response(blob, NTStatus.LOGON_FAILURE)
 
-                d.addCallback(cb_login)
-                d.addErrback(eb_login)
-            else:
-                blob = self.blob_manager.generateChallengeBlob()
-                self.session_setup_response(blob, NTStatus.MORE_PROCESSING)
+def sessionSetupResponse(packet, blob, ntstatus):
+    """
+    send session setup response
 
-    def session_setup_response(self, blob, ntstatus):
-        log.debug("session_setup_response")
-        resp = SessionResp()
-        if self.blob_manager.credential == ANONYMOUS:
-            resp.flags |= SESSION_FLAG_IS_NULL
-        resp.buflen = len(blob)
-        self.send_with_header(
-            base.pack(resp) + blob, 'session_setup', ntstatus)
+    @type packet: L{base.SMBPacket}
 
-    def smb_logoff(self, packet, req, resp_type):
-        self.send_with_header(base.pack(resp_type()))
-        if self.logout_thunk:
-            d = maybeDeferred(self.logout_thunk)
-            d.addErrback(lambda f: log.error(f.getTraceback()))
+    @param blob: the security blob to include in the response
+    @type blob: L{bytes}
 
-    def smb_tree_connect(self, packet, req, resp_type):
-        if self.avatar is None:
-            self.error_response(NTStatus.ACCESS_DENIED)
-            return
-        path = packet[req.offset:req.offset + req.buflen]
-        path = path.decode("utf-16le")
-        log.debug("""
+    @param ntstatus: response status
+    @type ntstatus: L{NTStatus}
+    """
+    log.debug("sessionSetupResponse")
+    resp = SessionResp()
+    if packet.ctx['blob_manager'].credential == ANONYMOUS:
+        resp.flags |= SESSION_FLAG_IS_NULL
+    resp.buflen = len(blob)
+    packet.data = base.pack(resp) + blob
+    sendHeader(packet, 'session_setup', ntstatus)
+
+
+
+def smb_logoff(packet, resp_type):
+    packet.data = base.pack(resp_type())
+    sendHeader(packet)
+    logout_thunk = packet.ctx.get('logout_thunk')
+    if logout_thunk:
+        d = maybeDeferred(logout_thunk)
+        d.addErrback(lambda f: log.error(f.getTraceback()))
+
+
+
+def smb_tree_connect(packet, resp_type):
+    avatar = packet.ctx.get('avatar')
+    if avatar is None:
+        errorResponse(packet, NTStatus.ACCESS_DENIED)
+        return
+    path = packet.data[packet.body.offset:packet.body.offset +
+                       packet.body.buflen]
+    path = path.decode("utf-16le")
+    log.debug("""
 TREE CONNECT
 ------------
 Size   {sz}
 Path   {path!r}
 """,
-                  sz=req.size,
-                  path=path)
-        path = path.split("\\")[-1]
-        d = maybeDeferred(self.avatar.getShare, path)
+              sz=packet.body.size,
+              path=path)
+    path = path.split("\\")[-1]
+    d = maybeDeferred(avatar.getShare, path)
 
-        def eb_tree(failure):
-            if failure.check(NoSuchShare):
-                self.error_response(NTStatus.BAD_NETWORK_NAME)
-            elif failure.check(base.SMBError):
-                log.error("SMB error {e}", e=str(failure.value))
-                self.error_response(failure.value.ntstatus)
-            else:
-                log.error(failure.getTraceback())
-                self.error_response(NTStatus.UNSUCCESSFUL)
+    def eb_tree(failure):
+        if failure.check(NoSuchShare):
+            errorResponse(packet, NTStatus.BAD_NETWORK_NAME)
+        elif failure.check(base.SMBError):
+            log.error("SMB error {e}", e=str(failure.value))
+            errorResponse(packet, failure.value.ntstatus)
+        else:
+            log.error(failure.getTraceback())
+            errorResponse(packet, NTStatus.UNSUCCESSFUL)
 
-        def cb_tree(share):
-            resp = None
-            if IFilesystem.providedBy(share):
-                resp = resp_type(
-                    share_type=SHARE_DISK,
-                    # FUTURE: select these values from share object
-                    flags=SHAREFLAG_MANUAL_CACHING,
-                    capabilities=0,
-                    max_perms=(FILE_READ_DATA | FILE_WRITE_DATA
-                               | FILE_APPEND_DATA | FILE_READ_EA
-                               | FILE_WRITE_EA
-                               | FILE_DELETE_CHILD | FILE_EXECUTE
-                               | FILE_READ_ATTRIBUTES
-                               | FILE_WRITE_ATTRIBUTES
-                               | DELETE | READ_CONTROL | WRITE_DAC
-                               | WRITE_OWNER
-                               | SYNCHRONIZE))
-            if IPipe.providedBy(share):
-                assert resp is None, "share can only be one type"
-                resp = resp_type(
-                    share_type=SHARE_PIPE,
-                    flags=0,
-                    max_perms=(
-                        FILE_READ_DATA | FILE_WRITE_DATA | FILE_APPEND_DATA
-                        | FILE_READ_EA |
-                        # FILE_WRITE_EA |
-                        # FILE_DELETE_CHILD |
-                        FILE_EXECUTE | FILE_READ_ATTRIBUTES |
-                        # FILE_WRITE_ATTRIBUTES |
-                        DELETE | READ_CONTROL |
-                        # WRITE_DAC |
-                        # WRITE_OWNER |
-                        SYNCHRONIZE))
-            if IPrinter.providedBy(share):
-                assert resp is None, "share can only be one type"
-                resp = resp_type(
-                    share_type=SHARE_PRINTER,
-                    flags=0,
-                    # FIXME need to check printer  max perms
-                    max_perms=(
-                        FILE_READ_DATA | FILE_WRITE_DATA | FILE_APPEND_DATA
-                        | FILE_READ_EA |
-                        # FILE_WRITE_EA |
-                        # FILE_DELETE_CHILD |
-                        FILE_EXECUTE | FILE_READ_ATTRIBUTES |
-                        # FILE_WRITE_ATTRIBUTES |
-                        DELETE | READ_CONTROL |
-                        # WRITE_DAC |
-                        # WRITE_OWNER |
-                        SYNCHRONIZE))
-            if resp is None:
-                log.error("unknown share object {share!r}", share=share)
-                self.error_response(NTStatus.UNSUCCESSFUL)
-                return
-            self.tree_id = base.int32key(self.trees, share)
-            self.send_with_header(base.pack(resp))
+    def cb_tree(share):
+        resp = None
+        if IFilesystem.providedBy(share):
+            resp = resp_type(
+                share_type=SHARE_DISK,
+                # FUTURE: select these values from share object
+                flags=SHAREFLAG_MANUAL_CACHING,
+                capabilities=0,
+                max_perms=(FILE_READ_DATA | FILE_WRITE_DATA
+                           | FILE_APPEND_DATA | FILE_READ_EA
+                           | FILE_WRITE_EA
+                           | FILE_DELETE_CHILD | FILE_EXECUTE
+                           | FILE_READ_ATTRIBUTES
+                           | FILE_WRITE_ATTRIBUTES
+                           | DELETE | READ_CONTROL | WRITE_DAC
+                           | WRITE_OWNER
+                           | SYNCHRONIZE))
+        if IPipe.providedBy(share):
+            assert resp is None, "share can only be one type"
+            resp = resp_type(
+                share_type=SHARE_PIPE,
+                flags=0,
+                max_perms=(
+                    FILE_READ_DATA | FILE_WRITE_DATA | FILE_APPEND_DATA
+                    | FILE_READ_EA |
+                    # FILE_WRITE_EA |
+                    # FILE_DELETE_CHILD |
+                    FILE_EXECUTE | FILE_READ_ATTRIBUTES |
+                    # FILE_WRITE_ATTRIBUTES |
+                    DELETE | READ_CONTROL |
+                    # WRITE_DAC |
+                    # WRITE_OWNER |
+                    SYNCHRONIZE))
+        if IPrinter.providedBy(share):
+            assert resp is None, "share can only be one type"
+            resp = resp_type(
+                share_type=SHARE_PRINTER,
+                flags=0,
+                # FIXME need to check printer  max perms
+                max_perms=(
+                    FILE_READ_DATA | FILE_WRITE_DATA | FILE_APPEND_DATA
+                    | FILE_READ_EA |
+                    # FILE_WRITE_EA |
+                    # FILE_DELETE_CHILD |
+                    FILE_EXECUTE | FILE_READ_ATTRIBUTES |
+                    # FILE_WRITE_ATTRIBUTES |
+                    DELETE | READ_CONTROL |
+                    # WRITE_DAC |
+                    # WRITE_OWNER |
+                    SYNCHRONIZE))
+        if resp is None:
+            log.error("unknown share object {share!r}", share=share)
+            errorResponse(packet, NTStatus.UNSUCCESSFUL)
+            return
+        packet.hdr.tree_id = base.int32key(packet.ctx['trees'], share)
+        packet.data = base.pack(resp)
+        sendHeader(packet)
 
-        d.addCallback(cb_tree)
-        d.addErrback(eb_tree)
+    d.addCallback(cb_tree)
+    d.addErrback(eb_tree)
 
-    def smb_tree_disconnect(self, packet, req, resp_type):
-        del self.trees[self.tree_id]
-        self.send_with_header(base.pack(resp_type()))
+
+
+def smb_tree_disconnect(packet, resp_type):
+    del packet.ctx['trees'][packet.hdr.tree_id]
+    packet.data = base.pack(resp_type())
+    sendHeader(packet)
 
 
 
@@ -648,4 +709,10 @@ class SMBFactory(protocol.Factory):
         self.server_start = time.time()
 
     def buildProtocol(self, addr):
-        return SMBConnection(self, addr)
+        log.debug("new SMB connection from {addr!r}", addr=addr)
+        return base.SMBPacketReceiver(
+            packetReceived,
+            dict(addr=addr,
+                 factory=self,
+                 blob_manager=security_blob.BlobManager(self.domain),
+                 trees={}))
