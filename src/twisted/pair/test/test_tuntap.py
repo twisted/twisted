@@ -1340,7 +1340,8 @@ class IPRecordingProtocol(AbstractDatagramProtocol):
         self.received = []
 
 
-    def datagramReceived(self, datagram, partial=False):
+    def datagramReceived(self, datagram, partial=False, dest=None, source=None,
+                         protocol=None):
         self.received.append(datagram)
 
 
