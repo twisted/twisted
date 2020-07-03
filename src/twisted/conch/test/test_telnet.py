@@ -44,7 +44,9 @@ class TestProtocol:
         for cmd in (
             'EOR', 'NOP', 'DM', 'BRK', 'IP', 'AO', 'AYT', 'EC', 'EL', 'GA'
         ):
-            d[getattr(telnet, cmd)] = lambda arg, cmd=cmd: self.calls.append(cmd)
+            d[getattr(telnet, cmd)] = (
+                lambda arg, cmd=cmd: self.calls.append(cmd)
+            )
 
 
     def dataReceived(self, data):
