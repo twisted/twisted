@@ -19,7 +19,7 @@ from typing import Any, List, Tuple
 from twisted.python.compat import nativeString, _bytesChr as chr
 
 
-libc = CDLL(find_library("c"))  # type: ignore[arg-type]
+libc = CDLL(find_library("c") or "")
 
 if sys.platform.startswith('freebsd') or sys.platform == 'darwin':
     _sockaddrCommon = [
