@@ -43,6 +43,7 @@ def make_api_link(name, rawtext, text, lineno, inliner,
     return nodes, sys_msgs
 
 
+
 # setup function to register the extension
 
 def setup(app):

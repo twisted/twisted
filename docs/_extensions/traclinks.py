@@ -17,6 +17,7 @@ import urllib
 from docutils import nodes, utils
 
 
+
 def make_trac_link(name, rawtext, text, lineno, inliner,
                    options={}, content=[]):
     env = inliner.document.settings.env
@@ -27,6 +28,7 @@ def make_trac_link(name, rawtext, text, lineno, inliner,
                            refuri=ref,
                            **options)
     return [node], []
+
 
 
 # setup function to register the extension
