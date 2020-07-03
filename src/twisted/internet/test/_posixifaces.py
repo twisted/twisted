@@ -19,7 +19,6 @@ from typing import Any, List, Tuple
 from twisted.python.compat import nativeString, _bytesChr as chr
 
 
-
 libc = CDLL(find_library("c"))  # type: ignore[arg-type]
 
 if sys.platform.startswith('freebsd') or sys.platform == 'darwin':
@@ -30,7 +29,7 @@ if sys.platform.startswith('freebsd') or sys.platform == 'darwin':
 else:
     _sockaddrCommon = [
         ("sin_family", c_ushort),
-        ]
+        ]   # type: List[Tuple[str, Any]]
 
 
 
