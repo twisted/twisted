@@ -56,7 +56,7 @@ class IConnector(Interface):
 
 
 class IResolverSimple(Interface):
-    def getHostByName(name, timeout = (1, 3, 11, 45)):
+    def getHostByName(name, timeout):
         """
         Resolve the domain name C{name} into an IP address.
 
@@ -1097,7 +1097,7 @@ class IReactorSocket(Interface):
 
 
     def adoptDatagramPort(fileDescriptor, addressFamily, protocol,
-                          maxPacketSize=8192):
+                          maxPacketSize):
         """
         Add an existing listening I{SOCK_DGRAM} socket to the reactor to
         monitor for read and write readiness.

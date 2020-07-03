@@ -55,7 +55,7 @@ class HalfCloseProtocol(protocol.Protocol):
         reactor.stop()
 
 
-    def writeConnectionLost(self, reason):
+    def writeConnectionLost(self):
         # IHalfCloseableProtocol.writeConnectionLost
         pass
 
