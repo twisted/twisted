@@ -85,20 +85,23 @@ vals = {x:y for x,y in os.environ.items() if x.startswith("HTTP_")}
 print(json.dumps(vals))
 '''
 
+URL_PARAMETER_CGI = '''\
+import cgi
+fs = cgi.FieldStorage()
+param = fs.getvalue("param")
+print("Header: OK")
+print("")
+print(param)
+'''
+
+
+
 class PythonScript(twcgi.FilteredScript):
     filter = sys.executable
 
 
 
-class CGITests(unittest.TestCase):
-    """
-    Tests for L{twcgi.FilteredScript}.
-    """
-
-    if not interfaces.IReactorProcess.providedBy(reactor):
-        skip = "CGI tests require a functional reactor.spawnProcess()"
-
-
+class _StartServerAndTearDownMixin:
     def startServer(self, cgi):
         root = resource.Resource()
         cgipath = util.sibpath(__file__, cgi)
@@ -118,6 +121,16 @@ class CGITests(unittest.TestCase):
         with open(cgiFilename, 'wt') as cgiFile:
             cgiFile.write(source)
         return cgiFilename
+
+
+
+class CGITests(_StartServerAndTearDownMixin, unittest.TestCase):
+    """
+    Tests for L{twcgi.FilteredScript}.
+    """
+
+    if not interfaces.IReactorProcess.providedBy(reactor):
+        skip = "CGI tests require a functional reactor.spawnProcess()"
 
 
     def test_CGI(self):
@@ -359,10 +372,32 @@ class CGITests(unittest.TestCase):
 
 
 
-class CGIScriptTests(unittest.TestCase):
+class CGIScriptTests(_StartServerAndTearDownMixin, unittest.TestCase):
     """
     Tests for L{twcgi.CGIScript}.
     """
+
+    def test_urlParameters(self):
+        """
+        If the CGI script is passed URL parameters, do not fall over,
+        as per ticket 9887.
+        """
+        cgiFilename = self.writeCGI(URL_PARAMETER_CGI)
+        portnum = self.startServer(cgiFilename)
+        url = "http://localhost:%d/cgi?param=1234" % (portnum, )
+        url = url.encode("ascii")
+        agent = client.Agent(reactor)
+        d = agent.request(b"GET", url)
+        d.addCallback(client.readBody)
+        d.addCallback(self._test_urlParameters_1)
+        return d
+
+
+    def _test_urlParameters_1(self, res):
+        expected = "1234{}".format(os.linesep)
+        expected = expected.encode("ascii")
+        self.assertEqual(res, expected)
+
 
     def test_pathInfo(self):
         """
