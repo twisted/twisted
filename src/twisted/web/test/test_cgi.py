@@ -101,15 +101,7 @@ class PythonScript(twcgi.FilteredScript):
 
 
 
-class CGITests(unittest.TestCase):
-    """
-    Tests for L{twcgi.FilteredScript}.
-    """
-
-    if not interfaces.IReactorProcess.providedBy(reactor):
-        skip = "CGI tests require a functional reactor.spawnProcess()"
-
-
+class _StartServerAndTearDownMixin:
     def startServer(self, cgi):
         root = resource.Resource()
         cgipath = util.sibpath(__file__, cgi)
@@ -129,6 +121,16 @@ class CGITests(unittest.TestCase):
         with open(cgiFilename, 'wt') as cgiFile:
             cgiFile.write(source)
         return cgiFilename
+
+
+
+class CGITests(_StartServerAndTearDownMixin, unittest.TestCase):
+    """
+    Tests for L{twcgi.FilteredScript}.
+    """
+
+    if not interfaces.IReactorProcess.providedBy(reactor):
+        skip = "CGI tests require a functional reactor.spawnProcess()"
 
 
     def test_CGI(self):
@@ -370,33 +372,17 @@ class CGITests(unittest.TestCase):
 
 
 
-class CGIScriptTests(unittest.TestCase):
+class CGIScriptTests(_StartServerAndTearDownMixin, unittest.TestCase):
     """
     Tests for L{twcgi.CGIScript}.
     """
-    def tearDown(self):
-        if getattr(self, 'p', None):
-            return self.p.stopListening()
-
-
-    def startServer(self, cgi):
-        root = resource.Resource()
-        cgipath = util.sibpath(__file__, cgi)
-        root.putChild(b"cgi", PythonScript(cgipath))
-        site = server.Site(root)
-        self.p = reactor.listenTCP(0, site)
-        return self.p.getHost().port
-
 
     def test_urlParameters(self):
         """
         If the CGI script is passed URL parameters, do not fall over,
         as per ticket 9887.
         """
-        cgiFilename = os.path.abspath(self.mktemp())
-        with open(cgiFilename, 'wt') as cgiFile:
-            cgiFile.write(URL_PARAMETER_CGI)
-
+        cgiFilename = self.writeCGI(URL_PARAMETER_CGI)
         portnum = self.startServer(cgiFilename)
         url = "http://localhost:%d/cgi?param=1234" % (portnum, )
         url = url.encode("ascii")
