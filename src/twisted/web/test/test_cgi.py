@@ -94,6 +94,8 @@ print("")
 print(param)
 '''
 
+
+
 class PythonScript(twcgi.FilteredScript):
     filter = sys.executable
 
@@ -396,8 +398,7 @@ class CGIScriptTests(unittest.TestCase):
             cgiFile.write(URL_PARAMETER_CGI)
 
         portnum = self.startServer(cgiFilename)
-        url = "http://localhost:%d/cgi?param=1234" % (portnum, ) #cgiFilename,)
-        print(url)
+        url = "http://localhost:%d/cgi?param=1234" % (portnum, )
         url = url.encode("ascii")
         agent = client.Agent(reactor)
         d = agent.request(b"GET", url)
