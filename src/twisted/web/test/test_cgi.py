@@ -85,6 +85,15 @@ vals = {x:y for x,y in os.environ.items() if x.startswith("HTTP_")}
 print(json.dumps(vals))
 '''
 
+URL_PARAMETER_CGI = '''\
+import cgi
+fs = cgi.FieldStorage()
+param = fs.getvalue("param")
+print("Header: OK")
+print("")
+print(param)
+'''
+
 class PythonScript(twcgi.FilteredScript):
     filter = sys.executable
 
@@ -363,6 +372,45 @@ class CGIScriptTests(unittest.TestCase):
     """
     Tests for L{twcgi.CGIScript}.
     """
+    def tearDown(self):
+        if getattr(self, 'p', None):
+            return self.p.stopListening()
+
+
+    def startServer(self, cgi):
+        root = resource.Resource()
+        cgipath = util.sibpath(__file__, cgi)
+        root.putChild(b"cgi", PythonScript(cgipath))
+        site = server.Site(root)
+        self.p = reactor.listenTCP(0, site)
+        return self.p.getHost().port
+
+
+    def test_urlParameters(self):
+        """
+        If the CGI script is passed URL parameters, do not fall over,
+        as per ticket 9887.
+        """
+        cgiFilename = os.path.abspath(self.mktemp())
+        with open(cgiFilename, 'wt') as cgiFile:
+            cgiFile.write(URL_PARAMETER_CGI)
+
+        portnum = self.startServer(cgiFilename)
+        url = "http://localhost:%d/cgi?param=1234" % (portnum, ) #cgiFilename,)
+        print(url)
+        url = url.encode("ascii")
+        agent = client.Agent(reactor)
+        d = agent.request(b"GET", url)
+        d.addCallback(client.readBody)
+        d.addCallback(self._test_urlParameters_1)
+        return d
+
+
+    def _test_urlParameters_1(self, res):
+        expected = "1234{}".format(os.linesep)
+        expected = expected.encode("ascii")
+        self.assertEqual(res, expected)
+
 
     def test_pathInfo(self):
         """
