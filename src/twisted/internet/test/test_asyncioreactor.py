@@ -152,7 +152,8 @@ class AsyncioSelectorReactorSniffioTests(ReactorBuilder, SynchronousTestCase):
     skip = sniffioSkip
 
     def testSniffioNotFoundWhenOutside(self):
-        reactor = AsyncioSelectorReactor()  # noqa: F841
+        reactor = AsyncioSelectorReactor()  # keep it alive
+        reactor  # avoid linting complaints about it being unused
 
         self.assertRaises(
             sniffio.AsyncLibraryNotFoundError,
@@ -218,7 +219,9 @@ class AsyncioSelectorReactorSniffioTests(ReactorBuilder, SynchronousTestCase):
         )
 
 
-    def testSniffioFindsNothingAfterTwistedCoroutineInsideAsyncioCoroutine(self):
+    def testSniffioFindsNothingAfterTwistedCoroutineInsideAsyncioCoroutine(
+            self,
+    ):
         reactor = AsyncioSelectorReactor()
 
         async def innerTwisted():
