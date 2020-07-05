@@ -26,7 +26,7 @@ except ImportError:
     if testingForced:
         raise
 
-    serialport = None
+    serialport = None  # type: ignore[assignment]
     serial = None
 
 

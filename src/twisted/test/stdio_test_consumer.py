@@ -42,4 +42,4 @@ if __name__ == '__main__':
     reflect.namedAny(sys.argv[1]).install()
     from twisted.internet import reactor
     stdio.StandardIO(ConsumerChild(sys.argv[2]))
-    reactor.run()
+    reactor.run()  # type: ignore[attr-defined]

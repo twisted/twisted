@@ -43,7 +43,8 @@ class ComparisonError(object):
     def _error(self, other):
         raise ValueError("Comparison is broken")
 
-    __eq__ = __ne__ = _error
+    __eq__ = _error
+    __ne__ = _error
 
 
 
@@ -749,7 +750,7 @@ class SynchronousAssertionsTests(unittest.SynchronousTestCase):
         """
         self.assertDictEqual({'a': 1}, {'a': 1})
     if getattr(unittest.SynchronousTestCase, 'assertDictEqual', None) is None:
-        test_assertDictEqual.skip = (
+        test_assertDictEqual.skip = (  # type: ignore[attr-defined]
             "assertDictEqual is not available on this version of Python")
 
 
@@ -1260,7 +1261,7 @@ class ResultOfCoroutineAssertionsTests(unittest.SynchronousTestCase):
         except self.failureException as e:
             self.assertIn(self.failure.getTraceback(), str(e))
 
-    test_successResultOfWithFailureHasTraceback.todo = (
+    test_successResultOfWithFailureHasTraceback.todo = (  # type: ignore[attr-defined]  # noqa
         "Tracebacks aren't preserved by exceptions later wrapped in Failures"
     )
 
@@ -1331,7 +1332,7 @@ class ResultOfCoroutineAssertionsTests(unittest.SynchronousTestCase):
         except self.failureException as e:
             self.assertIn(self.failure.getTraceback(), str(e))
 
-    test_failureResultOfWithWrongExceptionOneExpectedExceptionHasTB.todo = (
+    test_failureResultOfWithWrongExceptionOneExpectedExceptionHasTB.todo = (  # type: ignore[attr-defined]  # noqa
         "Tracebacks aren't preserved by exceptions later wrapped in Failures"
     )
 
@@ -1371,7 +1372,7 @@ class ResultOfCoroutineAssertionsTests(unittest.SynchronousTestCase):
         except self.failureException as e:
             self.assertIn(self.failure.getTraceback(), str(e))
 
-    test_failureResultOfWithWrongExceptionMultiExpectedExceptionsHasTB.todo = (
+    test_failureResultOfWithWrongExceptionMultiExpectedExceptionsHasTB.todo = (  # type: ignore[attr-defined]  # noqa
         "Tracebacks aren't preserved by exceptions later wrapped in Failures"
     )
 

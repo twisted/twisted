@@ -14,7 +14,7 @@ import os, copy
 try:
     import pwd
 except ImportError:
-    pwd = None
+    pwd = None  # type: ignore[assignment]
 from io import BytesIO
 
 from xml.dom.minidom import getDOMImplementation

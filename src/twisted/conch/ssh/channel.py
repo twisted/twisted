@@ -52,11 +52,11 @@ class SSHChannel(log.Logger):
     @type remoteClosed: L{bool}
     """
 
-    name = None # only needed for client channels
+    name = None  # type: bytes  # only needed for client channels
 
-    def __init__(self, localWindow = 0, localMaxPacket = 0,
-                       remoteWindow = 0, remoteMaxPacket = 0,
-                       conn = None, data=None, avatar = None):
+    def __init__(self, localWindow=0, localMaxPacket=0,
+                 remoteWindow=0, remoteMaxPacket=0,
+                 conn=None, data=None, avatar=None):
         self.localWindowSize = localWindow or 131072
         self.localWindowLeft = self.localWindowSize
         self.localMaxPacket = localMaxPacket or 32768

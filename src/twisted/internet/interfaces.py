@@ -8,6 +8,7 @@ Maintainer: Itamar Shtull-Trauring
 """
 
 
+from twisted.python.failure import Failure
 from zope.interface import Interface, Attribute
 
 
@@ -55,7 +56,7 @@ class IConnector(Interface):
 
 
 class IResolverSimple(Interface):
-    def getHostByName(name, timeout = (1, 3, 11, 45)):
+    def getHostByName(name, timeout):
         """
         Resolve the domain name C{name} into an IP address.
 
@@ -1096,7 +1097,7 @@ class IReactorSocket(Interface):
 
 
     def adoptDatagramPort(fileDescriptor, addressFamily, protocol,
-                          maxPacketSize=8192):
+                          maxPacketSize):
         """
         Add an existing listening I{SOCK_DGRAM} socket to the reactor to
         monitor for read and write readiness.
@@ -1876,7 +1877,7 @@ class IConsumer(Interface):
         """
 
 
-    def write(data):
+    def write(data: bytes):
         """
         The producer will write data by calling this method.
 
@@ -1953,7 +1954,7 @@ class IPullProducer(IProducer):
 
 class IProtocol(Interface):
 
-    def dataReceived(data):
+    def dataReceived(data: bytes):
         """
         Called whenever data is received.
 
@@ -2016,7 +2017,7 @@ class IProcessProtocol(Interface):
         """
 
 
-    def childDataReceived(childFD, data):
+    def childDataReceived(childFD: int, data: bytes):
         """
         Called when data arrives from the child process.
 
@@ -2029,7 +2030,7 @@ class IProcessProtocol(Interface):
         """
 
 
-    def childConnectionLost(childFD):
+    def childConnectionLost(childFD: int):
         """
         Called when a file descriptor associated with the child process is
         closed.
@@ -2039,7 +2040,7 @@ class IProcessProtocol(Interface):
         """
 
 
-    def processExited(reason):
+    def processExited(reason: Failure):
         """
         Called when the child process exits.
 

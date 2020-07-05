@@ -189,6 +189,11 @@ class Server(tcp.Server):
         self.startTLS(self.server.ctxFactory)
 
 
+    def getPeerCertificate(self):
+        # ISSLTransport.getPeerCertificate
+        raise NotImplementedError("Server.getPeerCertificate")
+
+
 
 class Port(tcp.Port):
     """

@@ -3,9 +3,10 @@
 # See LICENSE for details.
 
 
+from typing import Optional
 from zope.interface import implementer
 
-from twisted.web.iweb import IRenderable
+from twisted.web.iweb import IRenderable, ITemplateLoader
 from twisted.web.error import MissingRenderMethod, UnexposedMethodError
 from twisted.web.error import MissingTemplateLoader
 
@@ -31,7 +32,7 @@ class Expose(object):
         Add one or more functions to the set of exposed functions.
 
         This is a way to declare something about a class definition, similar to
-        L{zope.interface.declarations.implementer}.  Use it like this::
+        L{zope.interface.implementer}.  Use it like this::
 
             magic = Expose('perform extra magic')
             class Foo(Bar):
@@ -150,7 +151,7 @@ class Element(object):
     @ivar loader: The factory which will be used to load documents to
         return from C{render}.
     """
-    loader = None
+    loader = None  # type: Optional[ITemplateLoader]
 
     def __init__(self, loader=None):
         if loader is not None:

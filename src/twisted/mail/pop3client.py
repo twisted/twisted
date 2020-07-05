@@ -13,6 +13,7 @@ Don't use this module directly.  Use twisted.mail.pop3 instead.
 
 import re
 from hashlib import md5
+from typing import List
 
 from twisted.python import log
 from twisted.python.compat import intToBytes
@@ -1261,4 +1262,6 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
         """
         return self.sendShort(b'QUIT', None)
 
-__all__ = []
+
+
+__all__ = []  # type: List[str]

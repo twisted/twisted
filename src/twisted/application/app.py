@@ -644,6 +644,7 @@ class ServerOptions(usage.Options, ReactorSelectionMixin):
                                        % (self['logger'], e))
 
 
+    @property
     def subCommands(self):
         plugins = self._getPlugins(service.IServiceMaker)
         self.loadedPlugins = {}
@@ -656,7 +657,6 @@ class ServerOptions(usage.Options, ReactorSelectionMixin):
                    # imports modules).
                    lambda plug=plug: plug.options(),
                    plug.description)
-    subCommands = property(subCommands)
 
 
 

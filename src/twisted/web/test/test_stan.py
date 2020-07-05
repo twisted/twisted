@@ -9,7 +9,8 @@ implementation.
 
 from twisted.web.template import Comment, CDATA, CharRef, Tag
 from twisted.trial.unittest import TestCase
-from twisted.python.compat import _PY3
+
+
 
 def proto(*a, **kw):
     """
@@ -113,31 +114,13 @@ class TagTests(TestCase):
         self.assertEqual(tag.attributes, {'class': 'a'})
 
 
-    def test_commentReprPy2(self):
-        """
-        L{Comment.__repr__} returns a value which makes it easy to see what's
-        in the comment.
-        """
-        self.assertEqual(repr(Comment(u"hello there")),
-                          "Comment(u'hello there')")
-
-
-    def test_cdataReprPy2(self):
-        """
-        L{CDATA.__repr__} returns a value which makes it easy to see what's in
-        the comment.
-        """
-        self.assertEqual(repr(CDATA(u"test data")),
-                          "CDATA(u'test data')")
-
-
     def test_commentReprPy3(self):
         """
         L{Comment.__repr__} returns a value which makes it easy to see what's
         in the comment.
         """
-        self.assertEqual(repr(Comment(u"hello there")),
-                          "Comment('hello there')")
+        self.assertEqual(repr(Comment("hello there")),
+                         "Comment('hello there')")
 
 
     def test_cdataReprPy3(self):
@@ -145,15 +128,8 @@ class TagTests(TestCase):
         L{CDATA.__repr__} returns a value which makes it easy to see what's in
         the comment.
         """
-        self.assertEqual(repr(CDATA(u"test data")),
-                          "CDATA('test data')")
-
-    if not _PY3:
-        test_commentReprPy3.skip = "Only relevant on Python 3."
-        test_cdataReprPy3.skip = "Only relevant on Python 3."
-    else:
-        test_commentReprPy2.skip = "Only relevant on Python 2."
-        test_cdataReprPy2.skip = "Only relevant on Python 2."
+        self.assertEqual(repr(CDATA("test data")),
+                         "CDATA('test data')")
 
 
     def test_charrefRepr(self):

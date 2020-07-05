@@ -200,7 +200,9 @@ class XMLFileReprTests(TestCase):
         """
         fname = "/tmp/fake.xml"
         self.assertEqual('<XMLFile of %r>' % (fname,), repr(XMLFile(fname)))
-    test_filename.suppress = [_xmlFileSuppress]
+
+
+    test_filename.suppress = [_xmlFileSuppress]  # type: ignore[attr-defined]
 
 
     def test_file(self):
@@ -209,7 +211,9 @@ class XMLFileReprTests(TestCase):
         """
         fobj = StringIO("not xml")
         self.assertEqual('<XMLFile of %r>' % (fobj,), repr(XMLFile(fobj)))
-    test_file.suppress = [_xmlFileSuppress]
+
+
+    test_file.suppress = [_xmlFileSuppress]  # type: ignore[attr-defined]
 
 
 
@@ -254,7 +258,7 @@ class XMLLoaderTestsMixin(object):
         tags1 = loader.load()
         tags2 = loader.load()
         self.assertEqual(tags1, tags2)
-    test_loadTwice.suppress = [_xmlFileSuppress]
+    test_loadTwice.suppress = [_xmlFileSuppress]  # type: ignore[attr-defined]
 
 
 

@@ -5,19 +5,6 @@
 Tests for L{twisted.conch.manhole_tap}.
 """
 
-try:
-    import cryptography
-except ImportError:
-    cryptography = None
-
-try:
-    import pyasn1
-except ImportError:
-    pyasn1 = None
-
-if cryptography and pyasn1:
-    from twisted.conch import manhole_tap, manhole_ssh
-
 from twisted.application.internet import StreamServerEndpointService
 from twisted.application.service import MultiService
 
@@ -29,6 +16,16 @@ from twisted.conch import telnet
 from twisted.python import usage
 
 from twisted.trial.unittest import TestCase
+
+from twisted.python.reflect import requireModule
+
+
+
+cryptography = requireModule('cryptography')
+pyasn1 = requireModule('pyasn1')
+
+if cryptography and pyasn1:
+    from twisted.conch import manhole_tap, manhole_ssh
 
 
 

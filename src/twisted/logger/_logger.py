@@ -26,7 +26,7 @@ class Logger(object):
     @type source: L{object}
     @ivar source: The object which is emitting events via this logger
 
-    @type: L{ILogObserver}
+    @type observer: L{ILogObserver}
     @ivar observer: The observer that this logger will send events to.
     """
 

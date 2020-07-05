@@ -9,7 +9,7 @@ Tests for the data directory support.
 try:
     from twisted.python import _appdirs
 except ImportError:
-    _appdirs = None
+    _appdirs = None  # type: ignore[assignment]
 
 from twisted.trial import unittest
 

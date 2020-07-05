@@ -6,7 +6,7 @@ Tests for twisted SSL support.
 """
 
 from twisted.python.filepath import FilePath
-from twisted.trial import unittest
+from twisted.trial.unittest import TestCase
 from twisted.internet import protocol, reactor, interfaces, defer
 from twisted.internet.error import ConnectionDone
 from twisted.protocols import basic
@@ -271,11 +271,13 @@ if SSL is not None:
 
 
 
-class StolenTCPTests(ProperlyCloseFilesMixin, unittest.TestCase):
+class StolenTCPTests(ProperlyCloseFilesMixin, TestCase):
     """
     For SSL transports, test many of the same things which are tested for
     TCP transports.
     """
+    if interfaces.IReactorSSL(reactor, None) is None:
+        skip = "Reactor does not support SSL, cannot run SSL tests"
 
     def createServer(self, address, portNumber, factory):
         """
@@ -327,13 +329,16 @@ class StolenTCPTests(ProperlyCloseFilesMixin, unittest.TestCase):
 
 
 
-class TLSTests(unittest.TestCase):
+class TLSTests(TestCase):
     """
     Tests for startTLS support.
 
     @ivar fillBuffer: forwarded to L{LineCollector.fillBuffer}
     @type fillBuffer: C{bool}
     """
+    if interfaces.IReactorSSL(reactor, None) is None:
+        skip = "Reactor does not support SSL, cannot run SSL tests"
+
     fillBuffer = False
 
     clientProto = None
@@ -436,11 +441,18 @@ class SpammyTLSTests(TLSTests):
     """
     Test TLS features with bytes sitting in the out buffer.
     """
+    if interfaces.IReactorSSL(reactor, None) is None:
+        skip = "Reactor does not support SSL, cannot run SSL tests"
+
     fillBuffer = True
 
 
 
-class BufferingTests(unittest.TestCase):
+class BufferingTests(TestCase):
+
+    if interfaces.IReactorSSL(reactor, None) is None:
+        skip = "Reactor does not support SSL, cannot run SSL tests"
+
     serverProto = None
     clientProto = None
 
@@ -480,10 +492,12 @@ class BufferingTests(unittest.TestCase):
 
 
 
-class ConnectionLostTests(unittest.TestCase, ContextGeneratingMixin):
+class ConnectionLostTests(TestCase, ContextGeneratingMixin):
     """
     SSL connection closing tests.
     """
+    if interfaces.IReactorSSL(reactor, None) is None:
+        skip = "Reactor does not support SSL, cannot run SSL tests"
 
     def testImmediateDisconnect(self):
         org = "twisted.test.test_ssl"
@@ -632,10 +646,13 @@ class FakeContext:
 
 
 
-class DefaultOpenSSLContextFactoryTests(unittest.TestCase):
+class DefaultOpenSSLContextFactoryTests(TestCase):
     """
     Tests for L{ssl.DefaultOpenSSLContextFactory}.
     """
+    if interfaces.IReactorSSL(reactor, None) is None:
+        skip = "Reactor does not support SSL, cannot run SSL tests"
+
     def setUp(self):
         # pyOpenSSL Context objects aren't introspectable enough.  Pass in
         # an alternate context factory so we can inspect what is done to it.
@@ -684,10 +701,13 @@ class DefaultOpenSSLContextFactoryTests(unittest.TestCase):
 
 
 
-class ClientContextFactoryTests(unittest.TestCase):
+class ClientContextFactoryTests(TestCase):
     """
     Tests for L{ssl.ClientContextFactory}.
     """
+    if interfaces.IReactorSSL(reactor, None) is None:
+        skip = "Reactor does not support SSL, cannot run SSL tests"
+
     def setUp(self):
         self.contextFactory = ssl.ClientContextFactory()
         self.contextFactory._contextFactory = FakeContext
@@ -704,12 +724,3 @@ class ClientContextFactoryTests(unittest.TestCase):
                          SSL.OP_NO_SSLv2)
         self.assertFalse(self.context._options & SSL.OP_NO_SSLv3)
         self.assertFalse(self.context._options & SSL.OP_NO_TLSv1)
-
-
-
-if interfaces.IReactorSSL(reactor, None) is None:
-    for tCase in [StolenTCPTests, TLSTests, SpammyTLSTests,
-                  BufferingTests, ConnectionLostTests,
-                  DefaultOpenSSLContextFactoryTests,
-                  ClientContextFactoryTests]:
-        tCase.skip = "Reactor does not support SSL, cannot run SSL tests"
