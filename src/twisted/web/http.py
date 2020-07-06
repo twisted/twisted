@@ -118,7 +118,6 @@ try:
     from twisted.web._http2 import H2Connection
     H2_ENABLED = True
 except ImportError:
-    H2Connection = None
     H2_ENABLED = False
 
 
@@ -804,6 +803,7 @@ class Request:
 
     # methods for channel - end users should not use these
 
+    @deprecated(Version("Twisted", 16, 3, 0))
     def noLongerQueued(self):
         """
         Notify the object that it is no longer queued.
@@ -1479,6 +1479,7 @@ class Request:
         self.host = address.IPv4Address("TCP", host, port)
 
 
+    @deprecated(Version('Twisted', 18, 4, 0), replacement="getClientAddress")
     def getClientIP(self):
         """
         Return the IP address of the client who submitted this request.
@@ -1658,15 +1659,6 @@ class Request:
         """
         return id(self)
 
-
-
-Request.getClientIP = deprecated(
-    Version('Twisted', 18, 4, 0),
-    replacement="getClientAddress",
-)(Request.getClientIP)
-
-Request.noLongerQueued = deprecated(
-    Version("Twisted", 16, 3, 0))(Request.noLongerQueued)
 
 
 class _DataLoss(Exception):
@@ -3057,7 +3049,11 @@ class HTTPFactory(protocol.ServerFactory):
         timestamps.
     """
 
-    protocol = _genericHTTPChannelProtocolFactory
+    # We need to ignore the mypy error here, because
+    # _genericHTTPChannelProtocolFactory is a callable which returns a proxy
+    # to a Protocol, instead of a concrete Protocol object, as expected in
+    # the protocol.Factory interface
+    protocol = _genericHTTPChannelProtocolFactory  # type: ignore[assignment]
 
     logPath = None
 
