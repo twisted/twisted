@@ -48,8 +48,8 @@ class FakeReactor(object):
         self._threadCalls = Queue()
 
 
-    def callFromThread(self, f, *args, **kwargs):
-        self._threadCalls.put((f, args, kwargs))
+    def callFromThread(self, callable, *args, **kwargs):
+        self._threadCalls.put((callable, args, kwargs))
 
 
     def _runThreadCalls(self):
