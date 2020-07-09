@@ -626,7 +626,7 @@ class Booable(object):  # type: ignore[misc]
     booed = False
 
 
-    def yay(self):
+    def yay(self, *a, **kw):
         """
         Mark the fact that 'yay' has been called.
         """
