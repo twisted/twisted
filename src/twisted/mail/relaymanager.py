@@ -41,6 +41,16 @@ class ManagedRelayerMixin:
         self.manager = manager
 
 
+    @property
+    def factory(self):
+        return self._factory
+
+
+    @factory.setter
+    def factory(self, value):
+        self._factory = value
+
+
     def sentMail(self, code, resp, numOk, addresses, log):
         """
         called when e-mail has been sent
