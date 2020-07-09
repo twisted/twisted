@@ -851,7 +851,7 @@ def deprecatedKeywordParameter(version: Version,
                 if name in kwargs:
                     warn(warningString, DeprecationWarning, stacklevel=2)
                 return wrappee(*args, **kwargs)
-        decorated = wraps(wrappee)(checkDeprecatedParameter)
+        decorated = typing.cast(_Tc, wraps(wrappee)(checkDeprecatedParameter))
         _appendToDocstring(decorated, doc)
         return decorated
     return wrapper
