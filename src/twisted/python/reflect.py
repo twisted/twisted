@@ -571,7 +571,8 @@ def objgrep(start, goal, eq=isLike, path='', paths=None, seen=None,
         ...     def __init__(self, x):
         ...         self.x = x
         ...
-        >>> start = Holder({"irrelevant": "ignore", "relevant": [7, 1, 3, 5, 7]})
+        >>> start = Holder({"irrelevant": "ignore",
+        ...                 "relevant": [7, 1, 3, 5, 7]})
         >>> for path in objgrep(start, 7):
         ...     print("start" + path)
         start.x['relevant'][0]
