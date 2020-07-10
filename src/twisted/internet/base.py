@@ -8,7 +8,7 @@ Very basic functionality for a Reactor implementation.
 
 
 import socket  # needed only for sync-dns
-from typing import List
+from typing import Any, Callable, List
 from zope.interface import implementer, classImplements
 
 import sys
@@ -720,7 +720,8 @@ class ReactorBase(PluggableResolverMixin):
             event.fireEvent()
 
 
-    def addSystemEventTrigger(self, phase, eventType, callable, *args, **kw):
+    def addSystemEventTrigger(self, phase: str, eventType: str,
+                              callable: Callable[..., Any], *args, **kw):
         """See twisted.internet.interfaces.IReactorCore.addSystemEventTrigger.
         """
         assert builtins.callable(callable), \
@@ -738,7 +739,7 @@ class ReactorBase(PluggableResolverMixin):
         self._eventTriggers[eventType].removeTrigger(handle)
 
 
-    def callWhenRunning(self, callable, *args, **kw):
+    def callWhenRunning(self, callable: Callable[..., Any], *args, **kw):
         """See twisted.internet.interfaces.IReactorCore.callWhenRunning.
         """
         if self.running:
@@ -746,6 +747,7 @@ class ReactorBase(PluggableResolverMixin):
         else:
             return self.addSystemEventTrigger('after', 'startup',
                                               callable, *args, **kw)
+
 
     def startRunning(self):
         """
@@ -787,7 +789,7 @@ class ReactorBase(PluggableResolverMixin):
 
     seconds = staticmethod(runtimeSeconds)
 
-    def callLater(self, delay, callable, *args, **kw):
+    def callLater(self, delay, callable: Callable[..., Any], *args, **kw):
         """See twisted.internet.interfaces.IReactorTime.callLater.
         """
         assert builtins.callable(callable), \
@@ -800,6 +802,7 @@ class ReactorBase(PluggableResolverMixin):
                            seconds=self.seconds)
         self._newTimedCalls.append(tple)
         return tple
+
 
     def _moveCallLaterSooner(self, tple):
         # Linear time find: slow.
