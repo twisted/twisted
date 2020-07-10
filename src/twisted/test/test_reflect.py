@@ -729,8 +729,6 @@ class FullyQualifiedNameTests(TestCase):
 
 
 class ObjectGrepTests(TestCase):
-    skip = "twisted.python.reflect.objgrep hasn't been ported to Python 3"
-
 
     def test_dictionary(self):
         """
