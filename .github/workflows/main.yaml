@@ -1,31 +1,40 @@
 #
 # GitHub actions Python based test runs.
 #
-# Available VMs
+# Available VMs:
 # https://help.github.com/en/actions/reference/virtual-environments-for-github-hosted-runners
 #
-name: GHA-Python
+# Example Python workflow
+# https://docs.github.com/en/actions/language-and-framework-guides/using-python-with-github-actions#starting-with-the-python-workflow-template
+name: mypy
 
-# Only run on pull requests and only for Python files.
-on:
-  push:
-    branches: [ master ]
-  pull_request:
-    branches: [ master ]
-
+on: [push]
 
 jobs:
+  build:
 
-  mypy:
-    runs-on: ubuntu-20.04
-    timeout-minutes: 10
+    runs-on: ubuntu-latest
+
     steps:
     - uses: actions/checkout@v2
-
-    - name: Create venv
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.8'
+    - name: Install tox
       run: |
-        sudo pip3 install tox
-        tox -e mypy --notest
-
-    - name: Run mypy
-      run: tox -q -e mypy
+        python -m pip install --upgrade pip
+        pip install tox
+    # You can test your matrix by printing the current Python version
+    - name: Display Python information
+      run: |
+        python --version
+        python -c "import sys; print(sys.prefix)"
+        python -c "import sys; print(sys.exec_prefix)"
+        python -c "import sys; print(sys.executable)"
+        python -c "import struct; print(struct.calcsize('P') * 8)"
+        python -c 'print("\nENVIRONMENT VARIABLES\n=====================\n")'
+        python -c "import os; [print(k, v) for k,v in os.environ.items()]"
+    - name: Test with mypy
+      run: |
+        tox -e mypy
