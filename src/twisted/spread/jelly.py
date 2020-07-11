@@ -513,13 +513,15 @@ class _Jellier:
                 if obj.tzinfo:
                     raise NotImplementedError(
                         "Currently can't jelly datetime objects with tzinfo")
-                return [b'time', '%s %s %s %s' % (obj.hour, obj.minute,
-                                                 obj.second, obj.microsecond)]
+                return [b'time', ' '.join([unicode(x) for x in (
+                    obj.hour, obj.minute, obj.second, obj.microsecond)]
+                ).encode('utf-8')]
             elif objType is datetime.date:
-                return [b'date', '%s %s %s' % (obj.year, obj.month, obj.day)]
+                return [b'date', ' '.join([unicode(x) for x in (
+                    obj.year, obj.month, obj.day)]).encode('utf-8')]
             elif objType is datetime.timedelta:
-                return [b'timedelta', '%s %s %s' % (obj.days, obj.seconds,
-                                                   obj.microseconds)]
+                return [b'timedelta', ' '.join([unicode(x) for x in (
+                    obj.days, obj.seconds, obj.microseconds)]).encode('utf-8')]
             elif issubclass(objType, (type, _OldStyleClass)):
                 return [b'class', qual(obj).encode('utf-8')]
             elif objType is decimal.Decimal:
