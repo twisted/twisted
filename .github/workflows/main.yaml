@@ -1,0 +1,33 @@
+#
+# GitHub actions Python based test runs.
+#
+# Available VMs
+# https://help.github.com/en/actions/reference/virtual-environments-for-github-hosted-runners
+#
+name: GHA-Python
+
+# Only run on pull requests and only for Python files.
+on:
+  push:
+    branches: [ master ]
+    paths:
+    - '**.py'
+  pull_request:
+    branches: [ master ]
+    paths:
+    - '**.py'
+
+
+jobs:
+
+  mypy:
+    runs-on: ubuntu-20.04
+    timeout-minutes: 10
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Create venv
+      run: tox -e mypy --notest
+
+    - name: Run mypy
+      run: tox -q -e mypy
