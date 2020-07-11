@@ -6,6 +6,10 @@
 Parser for inetd.conf files
 """
 
+from typing import Optional
+
+
+
 # Various exceptions
 class InvalidConfError(Exception):
     """
@@ -46,7 +50,7 @@ class SimpleConfFile:
     """
 
     commentChar = '#'
-    defaultFilename = None
+    defaultFilename = None  # type: Optional[str]
 
     def parseFile(self, file=None):
         """

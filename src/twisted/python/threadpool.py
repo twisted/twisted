@@ -9,21 +9,18 @@ In most cases you can just use C{reactor.callInThread} and friends
 instead of creating a thread pool directly.
 """
 
-from __future__ import division, absolute_import
 
 import threading
 
 from twisted._threads import pool as _pool
 from twisted.python import log, context
 from twisted.python.failure import Failure
-from twisted.python._oldstyle import _oldStyle
 
 
 WorkerStop = object()
 
 
 
-@_oldStyle
 class ThreadPool:
     """
     This class (hopefully) generalizes the functionality of a pool of threads
@@ -44,7 +41,6 @@ class ThreadPool:
     max = 20
     joined = False
     started = False
-    workers = 0
     name = None
 
     threadFactory = threading.Thread

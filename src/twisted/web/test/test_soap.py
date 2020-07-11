@@ -5,18 +5,21 @@
 
 """Test SOAP support."""
 
+
+from unittest import skipIf
+
+from twisted.internet import reactor, defer
+from twisted.trial.unittest import TestCase
+from twisted.web import server, error
+
 try:
     import SOAPpy
+    from twisted.web import soap
+    from twisted.web.soap import SOAPPublisher
 except ImportError:
     SOAPpy = None
-    class SOAPPublisher: pass
-else:
-    from twisted.web import soap
-    SOAPPublisher = soap.SOAPPublisher
+    SOAPPublisher = object  # type: ignore[misc,assignment]
 
-from twisted.trial import unittest
-from twisted.web import server, error
-from twisted.internet import reactor, defer
 
 
 class Test(SOAPPublisher):
@@ -24,12 +27,15 @@ class Test(SOAPPublisher):
     def soap_add(self, a, b):
         return a + b
 
+
     def soap_kwargs(self, a=1, b=2):
         return a + b
-    soap_kwargs.useKeywords=True
+    soap_kwargs.useKeywords = True  # type: ignore[attr-defined]
+
 
     def soap_triple(self, string, num):
         return [string, num, None]
+
 
     def soap_struct(self):
         return SOAPpy.structType({"a": "c"})
@@ -37,23 +43,30 @@ class Test(SOAPPublisher):
     def soap_defer(self, x):
         return defer.succeed(x)
 
+
     def soap_deferFail(self):
         return defer.fail(ValueError())
+
 
     def soap_fail(self):
         raise RuntimeError
 
+
     def soap_deferFault(self):
         return defer.fail(ValueError())
 
+
     def soap_complex(self):
         return {"a": ["b", "c", 12, []], "D": "foo"}
+
 
     def soap_dict(self, map, key):
         return map[key]
 
 
-class SOAPTests(unittest.TestCase):
+
+@skipIf(not SOAPpy, "SOAPpy not installed")
+class SOAPTests(TestCase):
 
     def setUp(self):
         self.publisher = Test()
@@ -61,11 +74,14 @@ class SOAPTests(unittest.TestCase):
                                    interface="127.0.0.1")
         self.port = self.p.getHost().port
 
+
     def tearDown(self):
         return self.p.stopListening()
 
+
     def proxy(self):
         return soap.Proxy("http://127.0.0.1:%d/" % self.port)
+
 
     def testResults(self):
         inputOutput = [
@@ -86,8 +102,10 @@ class SOAPTests(unittest.TestCase):
         d.addCallback(self.assertEqual, {"a": ["b", "c", 12, []], "D": "foo"})
         dl.append(d)
 
-        # We now return to our regularly scheduled program, already in progress.
+        # We now return to our regularly scheduled program,
+        # already in progress.
         return defer.DeferredList(dl, fireOnOneErrback=True)
+
 
     def testMethodNotFound(self):
         """
@@ -100,6 +118,7 @@ class SOAPTests(unittest.TestCase):
         d.addCallback(cb)
         return d
 
+
     def testLookupFunction(self):
         """
         Test lookupFunction method on publisher, to see available remote
@@ -108,7 +127,3 @@ class SOAPTests(unittest.TestCase):
         self.assertTrue(self.publisher.lookupFunction("add"))
         self.assertTrue(self.publisher.lookupFunction("fail"))
         self.assertFalse(self.publisher.lookupFunction("foobar"))
-
-if not SOAPpy:
-    SOAPTests.skip = "SOAPpy not installed"
-

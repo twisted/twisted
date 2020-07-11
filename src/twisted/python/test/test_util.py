@@ -6,7 +6,6 @@
 Tests for L{twisted.python.util}.
 """
 
-from __future__ import division, absolute_import
 
 import errno
 import os.path
@@ -14,12 +13,19 @@ import shutil
 import sys
 import warnings
 
-try:
-    import pwd, grp
-except ImportError:
-    pwd = grp = None
+from unittest import skipIf
 
-from twisted.trial import unittest
+try:
+    import pwd as _pwd
+    import grp as _grp
+except ImportError:
+    pwd = None
+    grp = None
+else:
+    pwd = _pwd
+    grp = _grp
+
+from twisted.trial.unittest import TestCase, FailTest
 from twisted.trial.util import suppress as SUPPRESS
 
 from twisted.python import util
@@ -35,11 +41,14 @@ from twisted.test.test_process import MockOS
 pyExe = FilePath(sys.executable)._asBytesPath()
 
 
-class UtilTests(unittest.TestCase):
+
+class UtilTests(TestCase):
 
     def testUniq(self):
-        l = ["a", 1, "ab", "a", 3, 4, 1, 2, 2, 4, 6]
-        self.assertEqual(util.uniquify(l), ["a", 1, "ab", 3, 4, 2, 6])
+        listWithDupes = ["a", 1, "ab", "a", 3, 4, 1, 2, 2, 4, 6]
+        self.assertEqual(util.uniquify(listWithDupes),
+                         ["a", 1, "ab", 3, 4, 2, 6])
+
 
     def testRaises(self):
         self.assertTrue(util.raises(ZeroDivisionError, divmod, 1, 0))
@@ -50,7 +59,7 @@ class UtilTests(unittest.TestCase):
         except ZeroDivisionError:
             pass
         else:
-            raise unittest.FailTest("util.raises didn't raise when it should have")
+            raise FailTest("util.raises didn't raise when it should have")
 
 
     def test_uidFromNumericString(self):
@@ -61,6 +70,7 @@ class UtilTests(unittest.TestCase):
         self.assertEqual(util.uidFromString("100"), 100)
 
 
+    @skipIf(pwd is None, "Username/UID conversion requires the pwd module.")
     def test_uidFromUsernameString(self):
         """
         When L{uidFromString} is called with a base-ten string representation
@@ -68,9 +78,6 @@ class UtilTests(unittest.TestCase):
         """
         pwent = pwd.getpwuid(os.getuid())
         self.assertEqual(util.uidFromString(pwent.pw_name), pwent.pw_uid)
-    if pwd is None:
-        test_uidFromUsernameString.skip = (
-            "Username/UID conversion requires the pwd module.")
 
 
     def test_gidFromNumericString(self):
@@ -81,6 +88,7 @@ class UtilTests(unittest.TestCase):
         self.assertEqual(util.gidFromString("100"), 100)
 
 
+    @skipIf(grp is None, "Group Name/GID conversion requires the grp module.")
     def test_gidFromGroupnameString(self):
         """
         When L{gidFromString} is called with a base-ten string representation
@@ -88,13 +96,10 @@ class UtilTests(unittest.TestCase):
         """
         grent = grp.getgrgid(os.getgid())
         self.assertEqual(util.gidFromString(grent.gr_name), grent.gr_gid)
-    if grp is None:
-        test_gidFromGroupnameString.skip = (
-            "Group Name/GID conversion requires the grp module.")
 
 
 
-class NameToLabelTests(unittest.TestCase):
+class NameToLabelTests(TestCase):
     """
     Tests for L{nameToLabel}.
     """
@@ -118,7 +123,7 @@ class NameToLabelTests(unittest.TestCase):
 
 
 
-class UntilConcludesTests(unittest.TestCase):
+class UntilConcludesTests(TestCase):
     """
     Tests for L{untilConcludes}, an C{EINTR} helper.
     """
@@ -148,15 +153,11 @@ class UntilConcludesTests(unittest.TestCase):
 
 
 
-class SwitchUIDTests(unittest.TestCase):
+@skipIf(not getattr(os, "getuid", None), "getuid/setuid not available")
+class SwitchUIDTests(TestCase):
     """
     Tests for L{util.switchUID}.
     """
-
-    if getattr(os, "getuid", None) is None:
-        skip = "getuid/setuid not available"
-
-
     def setUp(self):
         self.mockos = MockOS()
         self.patch(util, "os", self.mockos)
@@ -226,7 +227,7 @@ class SwitchUIDTests(unittest.TestCase):
 
 
 
-class MergeFunctionMetadataTests(unittest.TestCase):
+class MergeFunctionMetadataTests(TestCase):
     """
     Tests for L{mergeFunctionMetadata}.
     """
@@ -323,7 +324,7 @@ class MergeFunctionMetadataTests(unittest.TestCase):
 
 
 
-class OrderedDictTests(unittest.TestCase):
+class OrderedDictTests(TestCase):
     """
     Tests for L{util.OrderedDict}.
     """
@@ -345,7 +346,7 @@ class OrderedDictTests(unittest.TestCase):
 
 
 
-class InsensitiveDictTests(unittest.TestCase):
+class InsensitiveDictTests(TestCase):
     """
     Tests for L{util.InsensitiveDict}.
     """
@@ -418,7 +419,7 @@ class InsensitiveDictTests(unittest.TestCase):
 
 class PasswordTestingProcessProtocol(ProcessProtocol):
     """
-    Write the string C{"secret\n"} to a subprocess and then collect all of
+    Write the string C{"secret\\n"} to a subprocess and then collect all of
     its output and fire a Deferred with it when the process ends.
     """
     def connectionMade(self):
@@ -432,10 +433,10 @@ class PasswordTestingProcessProtocol(ProcessProtocol):
         self.finished.callback((reason, self.output))
 
 
-class GetPasswordTests(unittest.TestCase):
-    if not IReactorProcess.providedBy(reactor):
-        skip = "Process support required to test getPassword"
 
+@skipIf(not IReactorProcess.providedBy(reactor),
+        "Process support required to test getPassword")
+class GetPasswordTests(TestCase):
     def test_stdin(self):
         """
         Making sure getPassword accepts a password from standard input by
@@ -464,7 +465,7 @@ class GetPasswordTests(unittest.TestCase):
 
 
 
-class SearchUpwardsTests(unittest.TestCase):
+class SearchUpwardsTests(TestCase):
     def testSearchupwards(self):
         os.makedirs('searchupwards/a/b/c')
         open('searchupwards/foo.txt', 'w').close()
@@ -488,7 +489,7 @@ class SearchUpwardsTests(unittest.TestCase):
 
 
 
-class IntervalDifferentialTests(unittest.TestCase):
+class IntervalDifferentialTests(TestCase):
     def testDefault(self):
         d = iter(util.IntervalDifferential([], 10))
         for i in range(100):
@@ -623,7 +624,7 @@ class EqualToNothing(object):
 
 
 
-class EqualityTests(unittest.TestCase):
+class EqualityTests(TestCase):
     """
     Tests for L{FancyEqMixin}.
     """
@@ -728,14 +729,12 @@ class EqualityTests(unittest.TestCase):
 
 
 
-class RunAsEffectiveUserTests(unittest.TestCase):
+@skipIf(not getattr(os, "geteuid", None),
+        "geteuid/seteuid not available")
+class RunAsEffectiveUserTests(TestCase):
     """
     Test for the L{util.runAsEffectiveUser} function.
     """
-
-    if getattr(os, "geteuid", None) is None:
-        skip = "geteuid/seteuid not available"
-
     def setUp(self):
         self.mockos = MockOS()
         self.patch(os, "geteuid", self.mockos.geteuid)
@@ -843,7 +842,8 @@ class RunAsEffectiveUserTests(unittest.TestCase):
 
 
 
-class InitGroupsTests(unittest.TestCase):
+@skipIf(not util._initgroups, "stdlib support for initgroups is not available")
+class InitGroupsTests(TestCase):
     """
     Tests for L{util.initgroups}.
     """
@@ -872,12 +872,9 @@ class InitGroupsTests(unittest.TestCase):
         """
         self.assertRaises(TypeError, util.initgroups, os.getuid(), None)
 
-    if util._initgroups is None:
-        skip = "stdlib support for initgroups is not available"
 
 
-
-class DeprecationTests(unittest.TestCase):
+class DeprecationTests(TestCase):
     """
     Tests for deprecations in C{twisted.python.util}.
     """
@@ -909,14 +906,14 @@ class DeprecationTests(unittest.TestCase):
             "12.2.")
         self.assertEqual(currentWarnings[0]['category'], DeprecationWarning)
         self.assertEqual(len(currentWarnings), 1)
-    test_addPluginDir.suppress = [
+    test_addPluginDir.suppress = [  # type: ignore[attr-defined]
             SUPPRESS(category=DeprecationWarning,
                      message="twisted.python.util.getPluginDirs is deprecated")
             ]
 
 
 
-class SuppressedWarningsTests(unittest.TestCase):
+class SuppressedWarningsTests(TestCase):
     """
     Tests for L{util.runWithWarningsSuppressed}.
     """
@@ -968,7 +965,7 @@ class SuppressedWarningsTests(unittest.TestCase):
 
 
 
-class FancyStrMixinTests(unittest.TestCase):
+class FancyStrMixinTests(TestCase):
     """
     Tests for L{util.FancyStrMixin}.
     """
@@ -1037,7 +1034,7 @@ class FancyStrMixinTests(unittest.TestCase):
 
 
 
-class PadToTests(unittest.TestCase):
+class PadToTests(TestCase):
     """
     Tests for L{util.padTo}.
     """
@@ -1104,66 +1101,3 @@ class PadToTests(unittest.TestCase):
         items = []
         util.padTo(4, items)
         self.assertEqual([], items)
-
-
-
-class ReplaceIfTests(unittest.TestCase):
-    """
-    Tests for L{util._replaceIf}.
-    """
-
-    def test_replacesIfTrue(self):
-        """
-        L{util._replaceIf} swaps out the body of a function if the conditional
-        is C{True}.
-        """
-        @util._replaceIf(True, lambda: "hi")
-        def test():
-            return "bye"
-
-        self.assertEqual(test(), "hi")
-        self.assertEqual(test.__name__, "test")
-        self.assertEqual(test.__module__, "twisted.python.test.test_util")
-
-
-    def test_keepsIfFalse(self):
-        """
-        L{util._replaceIf} keeps the original body of the function if the
-        conditional is C{False}.
-        """
-        @util._replaceIf(False, lambda: "hi")
-        def test():
-            return "bye"
-
-        self.assertEqual(test(), "bye")
-
-
-    def test_multipleReplace(self):
-        """
-        In the case that multiple conditions are true, the first one
-        (to the reader) is chosen by L{util._replaceIf}
-        """
-        @util._replaceIf(True, lambda: "hi")
-        @util._replaceIf(False, lambda: "bar")
-        @util._replaceIf(True, lambda: "baz")
-        def test():
-            return "bye"
-
-        self.assertEqual(test(), "hi")
-
-
-    def test_boolsOnly(self):
-        """
-        L{util._replaceIf}'s condition argument only accepts bools.
-        """
-        with self.assertRaises(ValueError) as e:
-
-            @util._replaceIf("hi", "there")
-            def test():
-                """
-                Some test function.
-                """
-
-        self.assertEqual(e.exception.args[0],
-                         ("condition argument to _replaceIf requires a bool, "
-                          "not 'hi'"))

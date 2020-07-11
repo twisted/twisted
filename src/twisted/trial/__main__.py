@@ -6,5 +6,5 @@ if __name__ == '__main__':
     import sys
 
     sys.exit(
-        load_entry_point('Twisted', 'console_scripts', 'trial')()
+        load_entry_point('Twisted', 'console_scripts', 'trial')()  # type: ignore[func-returns-value]  # noqa
     )

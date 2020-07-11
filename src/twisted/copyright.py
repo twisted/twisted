@@ -5,19 +5,18 @@
 Copyright information for Twisted.
 """
 
-from __future__ import division, absolute_import
 
-__all__ = ['copyright', 'disclaimer', 'longversion' ,'version']
+__all__ = ['copyright', 'disclaimer', 'longversion', 'version']
 
 from twisted import __version__ as version, version as longversion
 
 longversion = str(longversion)
 
-copyright="""\
-Copyright (c) 2001-2019 Twisted Matrix Laboratories.
+copyright = """\
+Copyright (c) 2001-2020 Twisted Matrix Laboratories.
 See LICENSE for details."""
 
-disclaimer='''
+disclaimer = '''
 Twisted, the Framework of Your Internet
 %s
 

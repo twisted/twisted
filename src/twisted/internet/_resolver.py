@@ -8,7 +8,6 @@ IPv6-aware hostname resolution.
 @see: L{IHostnameResolver}
 """
 
-from __future__ import division, absolute_import
 
 __metaclass__ = type
 
@@ -39,6 +38,11 @@ class HostResolution(object):
         Create a L{HostResolution} with the given name.
         """
         self.name = name
+
+
+    def cancel(self):
+        # IHostResolution.cancel
+        raise NotImplementedError()
 
 
 

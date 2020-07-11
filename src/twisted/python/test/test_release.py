@@ -8,7 +8,6 @@ All of these tests are skipped on platforms other than Linux, as the release is
 only ever performed on Linux.
 """
 
-from __future__ import print_function
 
 import glob
 import functools
@@ -40,7 +39,7 @@ from twisted.python._release import (
 if os.name != 'posix':
     skip = "Release toolchain only supported on POSIX."
 else:
-    skip = None
+    skip = ""
 
 testingSphinxConf = u"master_doc = 'index'\n"
 
@@ -397,7 +396,8 @@ class APIBuilderTests(ExternalTempdirTestCase):
     """
     Tests for L{APIBuilder}.
     """
-    skip = pydoctorSkip
+    if pydoctorSkip:
+        skip = pydoctorSkip
 
     @doNotFailOnNetworkError
     def test_build(self):
@@ -496,8 +496,8 @@ class APIBuilderTests(ExternalTempdirTestCase):
         twistedPath = outputPath.child("twisted.html")
         self.assertTrue(
             twistedPath.exists(),
-            u"Package documentation file %r did not exist.".format(
-            twistedPath.path))
+            u"Package documentation file {!r} did not exist.".format(
+                twistedPath.path))
         self.assertIn(
             docstring, twistedPath.getContent(),
             "Docstring not in package documentation file.")
@@ -912,7 +912,8 @@ class GitCommandTest(CommandsTestMixin, ExternalTempdirTestCase):
     L{GitCommand}.
     """
     createCommand = GitCommand
-    skip = gitSkip
+    if gitSkip:
+        skip = gitSkip
 
 
     def makeRepository(self, root):

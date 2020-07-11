@@ -7,9 +7,11 @@
 Protocol agnostic implementations of SASL authentication mechanisms.
 """
 
-from __future__ import absolute_import, division
 
-import binascii, random, time, os
+import binascii
+import os
+import random
+import time
 from hashlib import md5
 
 from zope.interface import Interface, Attribute, implementer
@@ -54,6 +56,11 @@ class Anonymous(object):
         return None
 
 
+    def getResponse(self, challenge):
+        # ISASLMechanism.getResponse
+        pass
+
+
 
 @implementer(ISASLMechanism)
 class Plain(object):
@@ -85,6 +92,11 @@ class Plain(object):
         return (self.authzid.encode('utf-8') + b"\x00" +
                 self.authcid.encode('utf-8') + b"\x00" +
                 self.password.encode('utf-8'))
+
+
+    def getResponse(self, challenge):
+        # ISASLMechanism.getResponse
+        pass
 
 
 

@@ -8,7 +8,6 @@
 Simple Mail Transfer Protocol implementation.
 """
 
-from __future__ import absolute_import, division
 
 import time
 import re
@@ -18,6 +17,7 @@ import os
 import random
 import binascii
 import warnings
+from typing import Type
 
 from email.utils import parseaddr
 
@@ -32,9 +32,10 @@ from twisted.internet import defer
 from twisted.internet import error
 from twisted.internet import reactor
 from twisted.internet.interfaces import ITLSTransport, ISSLTransport
+from twisted.internet._idna import _idnaText
 from twisted.python import log
 from twisted.python import util
-from twisted.python.compat import (_PY3, range, long, unicode, networkString,
+from twisted.python.compat import (long, unicode, networkString,
                                    nativeString, iteritems, _keys, _bytesChr,
                                    iterbytes)
 from twisted.python.runtime import platform
@@ -79,15 +80,13 @@ __all__ = [
 
 
 # Cache the hostname (XXX Yes - this is broken)
+# Encode the DNS name into something we can send over the wire
 if platform.isMacOSX():
     # On macOS, getfqdn() is ridiculously slow - use the
     # probably-identical-but-sometimes-not gethostname() there.
-    DNSNAME = socket.gethostname()
+    DNSNAME = socket.gethostname().encode('ascii')
 else:
-    DNSNAME = socket.getfqdn()
-
-# Encode the DNS name into something we can send over the wire
-DNSNAME = DNSNAME.encode('ascii')
+    DNSNAME = socket.getfqdn().encode('ascii')
 
 # Used for fast success code lookup
 SUCCESS = dict.fromkeys(range(200, 300))
@@ -290,12 +289,8 @@ class Address:
 
         return b''.join(res)
 
-    if _PY3:
-        def __str__(self):
-            return nativeString(bytes(self))
-    else:
-        def __str__(self):
-            return self.__bytes__()
+    def __str__(self):
+        return nativeString(bytes(self))
 
 
     def __bytes__(self):
@@ -746,7 +741,7 @@ class SMTP(basic.LineOnlyReceiver, policies.TimeoutMixin):
             msg = 'Could not send e-mail'
             resultLen = len(resultList)
             if resultLen > 1:
-                msg += ' (%d failures out of %d recipients)'.format(
+                msg += ' ({} failures out of {} recipients)'.format(
                     failures, resultLen)
             self.sendCode(550, networkString(msg))
         else:
@@ -1196,7 +1191,7 @@ class ESMTPClient(SMTPClient):
     @type requireAuthentication: L{bool}
 
     @ivar context: The context factory to use for STARTTLS, if desired.
-    @type context: L{ssl.ClientContextFactory}
+    @type context: L{IOpenSSLClientConnectionCreator}
 
     @ivar _tlsMode: Whether or not the connection is over TLS.
     @type _tlsMode: L{bool}
@@ -1862,7 +1857,7 @@ class SMTPSenderFactory(protocol.ClientFactory):
     """
 
     domain = DNSNAME
-    protocol = SMTPSender
+    protocol = SMTPSender  # type: Type[SMTPClient]
 
     def __init__(self, fromEmail, toEmail, file, deferred, retries=5,
                  timeout=None):
@@ -2010,6 +2005,8 @@ class ESMTPSender(SenderMixin, ESMTPClient):
         self.heloFallback = 0
         self.username = username
 
+        self._hostname = kw.pop('hostname', None)
+
         if contextFactory is None:
             contextFactory = self._getContextFactory()
 
@@ -2028,17 +2025,15 @@ class ESMTPSender(SenderMixin, ESMTPClient):
     def _getContextFactory(self):
         if self.context is not None:
             return self.context
+        if self._hostname is None:
+            return None
         try:
-            from twisted.internet import ssl
+            from twisted.internet.ssl import optionsForClientTLS
         except ImportError:
             return None
         else:
-            try:
-                context = ssl.ClientContextFactory()
-                context.method = ssl.SSL.TLSv1_METHOD
-                return context
-            except AttributeError:
-                return None
+            context = optionsForClientTLS(self._hostname)
+            return context
 
 
 
@@ -2056,15 +2051,18 @@ class ESMTPSenderFactory(SMTPSenderFactory):
                  deferred, retries=5, timeout=None,
                  contextFactory=None, heloFallback=False,
                  requireAuthentication=True,
-                 requireTransportSecurity=True):
+                 requireTransportSecurity=True,
+                 hostname=None):
 
-        SMTPSenderFactory.__init__(self, fromEmail, toEmail, file, deferred, retries, timeout)
+        SMTPSenderFactory.__init__(self, fromEmail, toEmail, file, deferred,
+                                   retries, timeout)
         self.username = username
         self.password = password
         self._contextFactory = contextFactory
         self._heloFallback = heloFallback
         self._requireAuthentication = requireAuthentication
         self._requireTransportSecurity = requireTransportSecurity
+        self._hostname = hostname
 
 
     def buildProtocol(self, addr):
@@ -2078,7 +2076,8 @@ class ESMTPSenderFactory(SMTPSenderFactory):
         @rtype: L{ESMTPSender}
         """
         p = self.protocol(self.username, self.password, self._contextFactory,
-                          self.domain, self.nEmails*2+2)
+                          self.domain, self.nEmails*2+2,
+                          hostname=self._hostname)
         p.heloFallback = self._heloFallback
         p.requireAuthentication = self._requireAuthentication
         p.requireTransportSecurity = self._requireTransportSecurity
@@ -2179,9 +2178,22 @@ def sendmail(smtphost, from_addr, to_addrs, msg, senderDomainName=None, port=25,
     if isinstance(password, unicode):
         password = password.encode("utf-8")
 
-    factory = ESMTPSenderFactory(username, password, from_addr, to_addrs, msg,
-        d, heloFallback=True, requireAuthentication=requireAuthentication,
-        requireTransportSecurity=requireTransportSecurity)
+    tlsHostname = smtphost
+    if not isinstance(tlsHostname, unicode):
+        tlsHostname = _idnaText(tlsHostname)
+
+    factory = ESMTPSenderFactory(
+        username,
+        password,
+        from_addr,
+        to_addrs,
+        msg,
+        d,
+        heloFallback=True,
+        requireAuthentication=requireAuthentication,
+        requireTransportSecurity=requireTransportSecurity,
+        hostname=tlsHostname
+    )
 
     if senderDomainName is not None:
         factory.domain = networkString(senderDomainName)

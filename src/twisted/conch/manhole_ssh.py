@@ -8,6 +8,7 @@ insults/SSH integration support.
 @author: Jp Calderone
 """
 
+from typing import Dict
 from zope.interface import implementer
 
 from twisted.conch import avatar, interfaces as iconch, error as econch
@@ -84,7 +85,20 @@ class TerminalSession(components.Adapter):
         raise econch.ConchError("Cannot execute commands")
 
 
+    def windowChanged(self, newWindowSize):
+        # ISession.windowChanged
+        raise NotImplementedError(
+            "Unimplemented: TerminalSession.windowChanged")
+
+
+    def eofReceived(self):
+        # ISession.eofReceived
+        raise NotImplementedError(
+            "Unimplemented: TerminalSession.eofReceived")
+
+
     def closed(self):
+        # ISession.closed
         pass
 
 
@@ -134,8 +148,8 @@ class TerminalRealm:
 
 
 class ConchFactory(factory.SSHFactory):
-    publicKeys = {}
-    privateKeys = {}
+    publicKeys = {}  # type: Dict[bytes, bytes]
+    privateKeys = {}  # type: Dict[bytes, bytes]
 
     def __init__(self, portal):
         self.portal = portal

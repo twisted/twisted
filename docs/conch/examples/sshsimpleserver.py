@@ -159,6 +159,12 @@ class ExampleSession(object):
         """
 
 
+    def setEnv(self, name, value):
+        """
+        We don't support setting environment variables.
+        """
+
+
     def execCommand(self, proto, cmd):
         """
         We don't support command execution sessions.
@@ -184,6 +190,8 @@ class ExampleSession(object):
 
 
 components.registerAdapter(ExampleSession, ExampleAvatar, session.ISession)
+components.registerAdapter(
+    ExampleSession, ExampleAvatar, session.ISessionSetEnv)
 
 
 

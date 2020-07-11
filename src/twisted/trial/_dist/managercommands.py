@@ -7,10 +7,9 @@ Commands for reporting test success of failure to the manager.
 @since: 12.3
 """
 
-from twisted.protocols.amp import Command, String, Boolean, ListOf, Unicode
-from twisted.python.compat import _PY3
+from twisted.protocols.amp import Command, Boolean, ListOf, Unicode
 
-NativeString = Unicode if _PY3 else String
+NativeString = Unicode
 
 
 

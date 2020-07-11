@@ -5,7 +5,6 @@
 Utilities for Twisted.names tests.
 """
 
-from __future__ import division, absolute_import
 
 from random import randrange
 

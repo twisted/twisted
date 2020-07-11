@@ -7,7 +7,7 @@ from twisted.python.failure import Failure
 try:
     import syslog as stdsyslog
 except ImportError:
-    stdsyslog = None
+    stdsyslog = None  # type: ignore[assignment]
 else:
     from twisted.python import syslog
 

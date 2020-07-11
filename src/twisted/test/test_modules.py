@@ -6,7 +6,6 @@ Tests for twisted.python.modules, abstract access to imported or importable
 objects.
 """
 
-from __future__ import division, absolute_import
 
 import sys
 import itertools

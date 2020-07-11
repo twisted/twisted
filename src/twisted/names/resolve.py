@@ -9,7 +9,6 @@ Future Plans: This needs someway to specify which resolver answered
 the query, or someway to specify (authority|ttl|cache behavior|more?)
 """
 
-from __future__ import division, absolute_import
 
 from zope.interface import implementer
 

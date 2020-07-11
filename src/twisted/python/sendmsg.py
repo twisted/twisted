@@ -6,19 +6,13 @@
 sendmsg(2) and recvmsg(2) support for Python.
 """
 
-from __future__ import absolute_import, division
 
 from collections import namedtuple
-from twisted.python.compat import _PY3
+from socket import SCM_RIGHTS, CMSG_SPACE
+
 
 __all__ = ["sendmsg", "recvmsg", "getSocketFamily", "SCM_RIGHTS"]
 
-if not _PY3:
-    from twisted.python._sendmsg import send1msg, recv1msg
-    from twisted.python._sendmsg import getsockfam, SCM_RIGHTS
-    __all__ += ["send1msg", "recv1msg", "getsockfam"]
-else:
-    from socket import SCM_RIGHTS, CMSG_SPACE
 
 RecievedMessage = namedtuple('RecievedMessage', ['data', 'ancillary', 'flags'])
 
@@ -44,10 +38,7 @@ def sendmsg(socket, data, ancillary=[], flags=0):
 
     @return: The return value of the underlying syscall, if it succeeds.
     """
-    if _PY3:
-        return socket.sendmsg([data], ancillary, flags)
-    else:
-        return send1msg(socket.fileno(), data, flags, ancillary)
+    return socket.sendmsg([data], ancillary, flags)
 
 
 
@@ -75,17 +66,13 @@ def recvmsg(socket, maxSize=8192, cmsgSize=4096, flags=0):
         mechanism, a L{list} of L{tuple}s giving ancillary received data, and
         flags as an L{int} describing the data received.
     """
-    if _PY3:
-        # In Twisted's sendmsg.c, the csmg_space is defined as:
-        #     int cmsg_size = 4096;
-        #     cmsg_space = CMSG_SPACE(cmsg_size);
-        # Since the default in Python 3's socket is 0, we need to define our
-        # own default of 4096. -hawkie
-        data, ancillary, flags = socket.recvmsg(
-            maxSize, CMSG_SPACE(cmsgSize), flags)[0:3]
-    else:
-        data, flags, ancillary = recv1msg(
-            socket.fileno(), flags, maxSize, cmsgSize)
+    # In Twisted's _sendmsg.c, the csmg_space was defined as:
+    #     int cmsg_size = 4096;
+    #     cmsg_space = CMSG_SPACE(cmsg_size);
+    # Since the default in Python 3's socket is 0, we need to define our
+    # own default of 4096. -hawkie
+    data, ancillary, flags = socket.recvmsg(
+        maxSize, CMSG_SPACE(cmsgSize), flags)[0:3]
 
     return RecievedMessage(data=data, ancillary=ancillary, flags=flags)
 
@@ -100,7 +87,4 @@ def getSocketFamily(socket):
 
     @rtype: L{int}
     """
-    if _PY3:
-        return socket.family
-    else:
-        return getsockfam(socket.fileno())
+    return socket.family

@@ -7,7 +7,6 @@ A module to provide some very basic threading primitives, such as
 synchronization.
 """
 
-from __future__ import division, absolute_import
 
 from functools import wraps
 
@@ -26,7 +25,10 @@ def unpickle_lock():
         return XLock()
     else:
         return DummyLock()
-unpickle_lock.__safe_for_unpickling__ = True
+
+
+
+unpickle_lock.__safe_for_unpickling__ = True  # type: ignore[attr-defined]
 
 
 
@@ -130,10 +132,11 @@ XLock = None
 
 
 try:
-    import threading as threadingmodule
+    import threading as _threadingmodule
 except ImportError:
     threadingmodule = None
 else:
+    threadingmodule = _threadingmodule
     init(True)
 
 

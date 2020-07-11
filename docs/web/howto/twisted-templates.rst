@@ -19,9 +19,8 @@ A Very Quick Introduction To Templating In Python
 HTML templating is the process of transforming a template document (one which
 describes style and structure, but does not itself include any content) into
 some HTML output which includes information about objects in your application.
-There are many, many libraries for doing this in Python: to name a few, `jinja2 <http://jinja.pocoo.org/>`_ , `django templates <http://docs.djangoproject.com/en/dev/ref/templates/>`_ ,
-and `clearsilver <http://www.clearsilver.net/>`_ .  You can easily use
-any of these libraries in your Twisted Web application, either by running them
+There are many, many libraries for doing this in Python: to name a few, `Jinja2 <https://palletsprojects.com/p/jinja/>`_ and `Django templates <https://docs.djangoproject.com/en/dev/ref/templates/>`_.
+You can easily use any of these libraries in your Twisted Web application, either by running them
 as :doc:`WSGI applications <web-in-60/wsgi>` or by calling your
 preferred templating system's APIs to produce their output as strings, and then
 writing those strings to :api:`twisted.web.http.Request.write <Request.write>` .
@@ -333,7 +332,7 @@ Quoting
 
 
 :api:`twisted.web.template <twisted.web.template>`  will quote any strings that place
-into the DOM.  This provides protection against `XSS attacks <http://en.wikipedia.org/wiki/Cross-site_scripting>`_ , in
+into the DOM.  This provides protection against `XSS attacks <https://en.wikipedia.org/wiki/Cross-site_scripting>`_ , in
 addition to just generally making it easy to put arbitrary strings onto a web
 page, without worrying about what they might have in them.  This can easily be
 demonstrated with an element using the same template from our earlier examples.
@@ -403,11 +402,11 @@ A Brief Note on Formats and DOCTYPEs
 
 
 
-The goal of ``twisted.web.template`` is to emit both valid `HTML <http://whatwg.org/html>`_ or `XHTML <http://www.whatwg.org/specs/web-apps/current-work/multipage/the-xhtml-syntax.html#the-xhtml-syntax>`_ .
+The goal of ``twisted.web.template`` is to emit both valid `HTML <https://html.spec.whatwg.org/multipage/>`_ or `XHTML <https://www.whatwg.org/specs/web-apps/current-work/multipage/the-xhtml-syntax.html#the-xhtml-syntax>`_ .
 However, in order to get the maximally standards-compliant output format you
 desire, you have to know which one you want, and take a few simple steps to emit
 it correctly.  Many browsers will probably work with most output if you ignore
-this section entirely, but `the    HTML specification recommends that you specify an appropriate DOCTYPE <http://www.whatwg.org/specs/web-apps/current-work/multipage/syntax.html#the-doctype>`_ .
+this section entirely, but `the HTML specification recommends that you specify an appropriate DOCTYPE <https://www.whatwg.org/specs/web-apps/current-work/multipage/syntax.html#the-doctype>`_ .
 
 
 
