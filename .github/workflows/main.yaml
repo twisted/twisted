@@ -27,7 +27,9 @@ jobs:
     - uses: actions/checkout@v2
 
     - name: Create venv
-      run: tox -e mypy --notest
+      run: |
+        sudo pip3 install tox
+        tox -e mypy --notest
 
     - name: Run mypy
       run: tox -q -e mypy
