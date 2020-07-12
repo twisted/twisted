@@ -292,10 +292,10 @@ class BuildPy3(build_py, object):
 
 
 
-## Helpers and distutil tweaks
+# Helpers and distutil tweaks
 
 
-class build_ext_twisted(build_ext.build_ext, object):
+class build_ext_twisted(build_ext.build_ext, object):  # type: ignore[name-defined]  # noqa
     """
     Allow subclasses to easily detect and customize Extensions to
     build at install-time.

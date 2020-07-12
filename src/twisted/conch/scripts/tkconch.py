@@ -337,6 +337,8 @@ def run():
     reactor.run()
     sys.exit(exitStatus)
 
+
+
 def handleError():
     from twisted.python import failure
     global exitStatus
@@ -345,8 +347,10 @@ def handleError():
     reactor.stop()
     raise
 
+
+
 class SSHClientFactory(protocol.ClientFactory):
-    noisy = 1
+    noisy = True
 
     def stopFactory(self):
         reactor.stop()
@@ -410,11 +414,12 @@ class SSHClientTransport(transport.SSHClientTransport):
             frame.write(
                 "Warning: Permanently added '%s' (%s) to the list of "
                 "known hosts.\r\n" %
-                (khHost, {b'ssh-dss':'DSA', b'ssh-rsa':'RSA'}[keyType]))
-            with open(os.path.expanduser('~/.ssh/known_hosts'), 'a') as known_hosts:
-                encodedKey = base64.encodestring(pubKey).replace(b'\n', b'')
+                (khHost, {b'ssh-dss': 'DSA', b'ssh-rsa': 'RSA'}[keyType]))
+            with open(os.path.expanduser(
+                      '~/.ssh/known_hosts'), 'a') as known_hosts:
+                encodedKey = base64.b64encode(pubKey)
                 known_hosts.write('\n%s %s %s' % (khHost, keyType, encodedKey))
-        except:
+        except BaseException:
             log.deferr()
             raise error.ConchError
 

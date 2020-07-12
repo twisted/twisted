@@ -2,7 +2,7 @@
 # See LICENSE for details.
 
 """
-Test cases for Ltwisted.mail.pop3} module.
+Test cases for L{twisted.mail.pop3} module.
 """
 
 
@@ -391,7 +391,7 @@ Someone set up us the bomb!\015
                 failure.Failure(Exception("Test harness disconnect")))
         d = loopback.loopbackAsync(protocol, clientProtocol)
         return d.addCallback(check)
-    test_loopback.suppress = [util.suppress(
+    test_loopback.suppress = [util.suppress(  # type: ignore[attr-defined]
          message="twisted.mail.pop3.POP3Client is deprecated")]
 
 
@@ -1096,12 +1096,12 @@ class SASLTests(unittest.TestCase):
 
         p.lineReceived(b"AUTH CRAM-MD5")
         chal = s.getvalue().splitlines()[-1][2:]
-        chal = base64.decodestring(chal)
+        chal = base64.b64decode(chal)
         response = hmac.HMAC(b'testpassword', chal,
                              digestmod=md5).hexdigest().encode("ascii")
 
         p.lineReceived(
-            base64.encodestring(b'testuser ' + response).rstrip(b'\n'))
+            base64.b64encode(b'testuser ' + response))
         self.assertTrue(p.mbox)
         self.assertTrue(s.getvalue().splitlines()[-1].find(b"+OK") >= 0)
         p.connectionLost(failure.Failure(Exception("Test harness disconnect")))
@@ -1514,7 +1514,7 @@ class IndexErrorCommandTests(CommandMixin, unittest.TestCase):
         L{IndexError}.
         """
         return CommandMixin.test_LISTWithBadArgument(self)
-    test_LISTWithBadArgument.suppress = [_listMessageSuppression]
+    test_LISTWithBadArgument.suppress = [_listMessageSuppression]  # type: ignore[attr-defined]  # noqa
 
 
     def test_UIDLWithBadArgument(self):
@@ -1524,7 +1524,7 @@ class IndexErrorCommandTests(CommandMixin, unittest.TestCase):
         L{IndexError}.
         """
         return CommandMixin.test_UIDLWithBadArgument(self)
-    test_UIDLWithBadArgument.suppress = [_getUidlSuppression]
+    test_UIDLWithBadArgument.suppress = [_getUidlSuppression]  # type: ignore[attr-defined]  # noqa
 
 
     def test_TOPWithBadArgument(self):
@@ -1534,7 +1534,7 @@ class IndexErrorCommandTests(CommandMixin, unittest.TestCase):
         L{IndexError}.
         """
         return CommandMixin.test_TOPWithBadArgument(self)
-    test_TOPWithBadArgument.suppress = [_listMessageSuppression]
+    test_TOPWithBadArgument.suppress = [_listMessageSuppression]  # type: ignore[attr-defined]  # noqa
 
 
     def test_RETRWithBadArgument(self):
@@ -1544,7 +1544,7 @@ class IndexErrorCommandTests(CommandMixin, unittest.TestCase):
         L{IndexError}.
         """
         return CommandMixin.test_RETRWithBadArgument(self)
-    test_RETRWithBadArgument.suppress = [_listMessageSuppression]
+    test_RETRWithBadArgument.suppress = [_listMessageSuppression]  # type: ignore[attr-defined]  # noqa
 
 
 

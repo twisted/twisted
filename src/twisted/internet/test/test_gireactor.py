@@ -8,32 +8,30 @@ GI/GTK3 reactor tests.
 
 import os
 import sys
+from unittest import skipIf
 try:
-    from twisted.internet import gireactor
+    from twisted.internet import gireactor as _gireactor
     from gi.repository import Gio
 except ImportError:
     gireactor = None
     gtk3reactor = None
 else:
+    gireactor = _gireactor
     # gtk3reactor may be unavailable even if gireactor is available; in
     # particular in pygobject 3.4/gtk 3.6, when no X11 DISPLAY is found.
     try:
-        from twisted.internet import gtk3reactor
+        from twisted.internet import gtk3reactor as _gtk3reactor
     except ImportError:
         gtk3reactor = None
     else:
+        gtk3reactor = _gtk3reactor
         from gi.repository import Gtk
 
-from twisted.python.filepath import FilePath
 from twisted.python.runtime import platform
-from twisted.internet.defer import Deferred
 from twisted.internet.error import ReactorAlreadyRunning
-from twisted.internet.protocol import ProcessProtocol
 from twisted.trial.unittest import TestCase, SkipTest
 from twisted.internet.test.reactormixins import ReactorBuilder
 from twisted.test.test_twisted import SetAsideModule
-from twisted.internet.interfaces import IReactorProcess
-from twisted.python.compat import _PY3
 
 # Skip all tests if gi is unavailable:
 if gireactor is None:
@@ -91,6 +89,8 @@ class GApplicationRegistrationTests(ReactorBuilder, TestCase):
         self.runReactor(app, reactor)
 
 
+    @skipIf(gtk3reactor is None,
+            "Gtk unavailable (may require running with X11 DISPLAY env set)")
     def test_gtkApplicationActivate(self):
         """
         L{Gtk.Application} instances can be registered with a gtk3reactor.
@@ -102,10 +102,6 @@ class GApplicationRegistrationTests(ReactorBuilder, TestCase):
             flags=Gio.ApplicationFlags.FLAGS_NONE)
 
         self.runReactor(app, reactor)
-
-    if gtk3reactor is None:
-        test_gtkApplicationActivate.skip = (
-            "Gtk unavailable (may require running with X11 DISPLAY env set)")
 
 
     def test_portable(self):
@@ -182,48 +178,10 @@ class PygtkCompatibilityTests(TestCase):
     pygtk imports are either prevented, or a compatibility layer is used if
     possible.
     """
-    def test_noCompatibilityLayer(self):
-        """
-        If no compatibility layer is present, imports of gobject and friends
-        are disallowed.
-
-        We do this by running a process where we make sure gi.pygtkcompat
-        isn't present.
-        """
-        if _PY3:
-            raise SkipTest("Python3 always has the compatibility layer.")
-
-        from twisted.internet import reactor
-        if not IReactorProcess.providedBy(reactor):
-            raise SkipTest("No process support available in this reactor.")
-
-        result = Deferred()
-        class Stdout(ProcessProtocol):
-            data = b""
-
-            def errReceived(self, err):
-                print(err)
-
-            def outReceived(self, data):
-                self.data += data
-
-            def processExited(self, reason):
-                result.callback(self.data)
-
-        path = FilePath(__file__).sibling(b"process_gireactornocompat.py").path
-        pyExe = FilePath(sys.executable)._asBytesPath()
-        # Pass in a PYTHONPATH that is the test runner's os.path, to make sure
-        # we're running from a checkout
-        reactor.spawnProcess(Stdout(), pyExe, [pyExe, path],
-                             env={"PYTHONPATH": ":".join(sys.path)})
-        result.addCallback(self.assertEqual, b"success")
-        return result
-
-
     def test_compatibilityLayer(self):
         """
-        If compatibility layer is present, importing gobject uses the gi
-        compatibility layer.
+        If compatibility layer is present, importing gobject uses
+        the gi compatibility layer.
         """
         if "gi.pygtkcompat" not in sys.modules:
             raise SkipTest("This version of gi doesn't include pygtkcompat.")
@@ -237,6 +195,8 @@ class Gtk3ReactorTests(TestCase):
     Tests for L{gtk3reactor}.
     """
 
+    @skipIf(platform.getType() != "posix" or platform.isMacOSX(),
+            "This test is only relevant when using X11")
     def test_requiresDISPLAY(self):
         """
         On X11, L{gtk3reactor} is unimportable if the C{DISPLAY} environment
@@ -251,7 +211,5 @@ class Gtk3ReactorTests(TestCase):
                                     __import__, "twisted.internet.gtk3reactor")
             self.assertEqual(
                 exc.args[0],
-                "Gtk3 requires X11, and no DISPLAY environment variable is set")
-
-    if platform.getType() != "posix" or platform.isMacOSX():
-        test_requiresDISPLAY.skip = "This test is only relevant when using X11"
+                "Gtk3 requires X11, and no DISPLAY environment "
+                "variable is set")

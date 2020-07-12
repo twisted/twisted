@@ -844,6 +844,8 @@ class UnhandledDeferredTests(unittest.SynchronousTestCase):
         self.assertEqual(len(result.errors), 1,
                          'Unhandled deferred passed without notice')
 
+
+    @pyunit.skipIf(_PYPY, "GC works differently on PyPy.")
     def test_doesntBleed(self):
         """
         Forcing garbage collection in the test should mean that there are
@@ -860,8 +862,6 @@ class UnhandledDeferredTests(unittest.SynchronousTestCase):
         x = self.flushLoggedErrors()
         self.assertEqual(len(x), 0, 'Errors logged after gc.collect')
 
-    if _PYPY:
-        test_doesntBleed.skip = "GC works differently on PyPy."
 
     def tearDown(self):
         """

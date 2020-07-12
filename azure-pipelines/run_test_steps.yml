@@ -36,6 +36,7 @@ steps:
    python -c "import sys; print(sys.prefix)"
    python -c "import sys; print(sys.exec_prefix)"
    python -c "import sys; print(sys.executable)"
+   python -c "import os; print(os.environ)"
    python -c "import struct; print(struct.calcsize('P') * 8)"
   displayName: 'Get Python Information'
 

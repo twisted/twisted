@@ -32,6 +32,7 @@ Maintainer: Ralph Meijer
 """
 
 
+from typing import Type
 from twisted.python import failure
 from twisted.python.compat import intern, unicode
 from twisted.internet import protocol
@@ -263,7 +264,7 @@ class XmlStreamFactory(XmlStreamFactoryMixin,
     Factory for XmlStream protocol objects as a reconnection client.
     """
 
-    protocol = XmlStream
+    protocol = XmlStream  # type: Type[protocol.Protocol]
 
     def buildProtocol(self, addr):
         """

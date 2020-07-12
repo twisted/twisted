@@ -85,7 +85,20 @@ class TerminalSession(components.Adapter):
         raise econch.ConchError("Cannot execute commands")
 
 
+    def windowChanged(self, newWindowSize):
+        # ISession.windowChanged
+        raise NotImplementedError(
+            "Unimplemented: TerminalSession.windowChanged")
+
+
+    def eofReceived(self):
+        # ISession.eofReceived
+        raise NotImplementedError(
+            "Unimplemented: TerminalSession.eofReceived")
+
+
     def closed(self):
+        # ISession.closed
         pass
 
 

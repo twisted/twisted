@@ -60,9 +60,15 @@ if requireModule('cryptography') and requireModule('pyasn1.type'):
     from twisted.conch.ssh.transport import SSHClientTransport
 else:
     skip = "can't run w/o cryptography and pyasn1"
-    SSHFactory = SSHUserAuthServer = SSHConnection = Key = SSHChannel = \
-        SSHAgentServer = KnownHostsFile = SSHPublicKeyChecker = ConchUser = \
-        object
+    SSHFactory = object  # type: ignore[assignment,misc]
+    SSHUserAuthServer = object  # type: ignore[assignment,misc]
+    SSHConnection = object  # type: ignore[assignment,misc]
+    Key = object  # type: ignore[assignment,misc,misc]
+    SSHChannel = object  # type: ignore[assignment,misc]
+    SSHAgentServer = object  # type: ignore[assignment,misc]
+    KnownHostsFile = object  # type: ignore[assignment,misc]
+    SSHPublicKeyChecker = object  # type: ignore[assignment,misc]
+    ConchUser = object  # type: ignore[assignment,misc]
 
 from twisted.test.proto_helpers import StringTransport
 from twisted.test.iosim import FakeTransport, connect

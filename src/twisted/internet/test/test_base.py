@@ -8,6 +8,7 @@ Tests for L{twisted.internet.base}.
 import socket
 from queue import Queue
 from unittest import skipIf
+from typing import Any, Callable
 
 from zope.interface import implementer
 
@@ -48,8 +49,8 @@ class FakeReactor(object):
         self._threadCalls = Queue()
 
 
-    def callFromThread(self, f, *args, **kwargs):
-        self._threadCalls.put((f, args, kwargs))
+    def callFromThread(self, callable: Callable[..., Any], *args, **kwargs):
+        self._threadCalls.put((callable, args, kwargs))
 
 
     def _runThreadCalls(self):
@@ -59,6 +60,26 @@ class FakeReactor(object):
 
     def _stop(self):
         self._threadpool.stop()
+
+
+    def getDelayedCalls(self):
+        # IReactorTime.getDelayedCalls
+        pass
+
+
+    def seconds(self):
+        # IReactorTime.seconds
+        pass
+
+
+    def callInThread(self, callable: Callable[..., Any], *args, **kwargs):
+        # IReactorInThreads.callInThread
+        pass
+
+
+    def suggestThreadPoolSize(self, size):
+        # IReactorThreads.suggestThreadPoolSize
+        pass
 
 
 

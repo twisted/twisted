@@ -26,9 +26,9 @@ else:
     setgroups = _setgroups
     getgroups = _getgroups
 
-from typing import Sequence
+from typing import Callable, Sequence, Union, Tuple
 
-from twisted.python.compat import _PY3, unicode
+from twisted.python.compat import unicode
 from incremental import Version
 from twisted.python.deprecate import deprecatedModuleAttribute
 
@@ -475,10 +475,6 @@ class LineLog:
     def str(self):
         return bytes(self)
 
-    if not _PY3:
-        def __str__(self):
-            return self.__bytes__()
-
 
     def __bytes__(self):
         return b'\n'.join(filter(None, self.log))
@@ -607,7 +603,7 @@ class FancyStrMixin:
     might be used for a float.
     """
     # Override in subclasses:
-    showAttributes = ()  # type: Sequence[str]
+    showAttributes = ()  # type: Sequence[Union[str, Tuple[str, str, str], Tuple[str, Callable]]]  # noqa
 
 
     def __str__(self):
@@ -634,7 +630,7 @@ class FancyEqMixin:
     Comparison is done using the list of attributes defined in
     C{compareAttributes}.
     """
-    compareAttributes = ()  # type: Sequence[str]
+    compareAttributes = ()  # type: Sequence[Union[str, Sequence[str], Tuple[str, Callable]]]  # noqa
 
     def __eq__(self, other):
         if not self.compareAttributes:
@@ -735,74 +731,6 @@ def switchUID(uid, gid, euid=False):
         else:
             initgroups(uid, gid)
             setuid(uid)
-
-
-
-class SubclassableCStringIO(object):
-    """
-    A wrapper around cStringIO to allow for subclassing.
-    """
-    __csio = None
-
-    def __init__(self, *a, **kw):
-        from cStringIO import StringIO
-        self.__csio = StringIO(*a, **kw)
-
-
-    def __iter__(self):
-        return self.__csio.__iter__()
-
-
-    def next(self):
-        return self.__csio.next()
-
-
-    def close(self):
-        return self.__csio.close()
-
-
-    def isatty(self):
-        return self.__csio.isatty()
-
-
-    def seek(self, pos, mode=0):
-        return self.__csio.seek(pos, mode)
-
-
-    def tell(self):
-        return self.__csio.tell()
-
-
-    def read(self, n=-1):
-        return self.__csio.read(n)
-
-
-    def readline(self, length=None):
-        return self.__csio.readline(length)
-
-
-    def readlines(self, sizehint=0):
-        return self.__csio.readlines(sizehint)
-
-
-    def truncate(self, size=None):
-        return self.__csio.truncate(size)
-
-
-    def write(self, s):
-        return self.__csio.write(s)
-
-
-    def writelines(self, list):
-        return self.__csio.writelines(list)
-
-
-    def flush(self):
-        return self.__csio.flush()
-
-
-    def getvalue(self):
-        return self.__csio.getvalue()
 
 
 
@@ -1023,16 +951,7 @@ __all__ = [
     "getPassword", "println", "makeStatBar", "OrderedDict",
     "InsensitiveDict", "spewer", "searchupwards", "LineLog",
     "raises", "IntervalDifferential", "FancyStrMixin", "FancyEqMixin",
-    "switchUID", "SubclassableCStringIO", "mergeFunctionMetadata",
+    "switchUID", "mergeFunctionMetadata",
     "nameToLabel", "uidFromString", "gidFromString", "runAsEffectiveUser",
     "untilConcludes", "runWithWarningsSuppressed",
 ]
-
-
-if _PY3:
-    __notported__ = ["SubclassableCStringIO", "makeStatBar"]
-    for name in __all__[:]:
-        if name in __notported__:
-            __all__.remove(name)
-            del globals()[name]
-    del name, __notported__

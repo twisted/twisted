@@ -42,8 +42,9 @@ except ImportError:
         def run(f, *args, **kwargs):
             return f(*args, **kwargs)
 
-
-    def _copy_context():
+    # typing ignored due to:
+    # https://github.com/python/typeshed/issues/4249
+    def _copy_context():  # type: ignore[misc]
         return _NoContext
 
 log = Logger()
@@ -1537,7 +1538,7 @@ def _cancellableInlineCallbacks(g):
 
         @param result: An L{_InternalInlineCallbacksCancelledError} from
             C{cancel()}.
-        @return: A new L{Deferred} that the C{@}L{inlineCallback} generator
+        @return: A new L{Deferred} that the C{@}L{inlineCallbacks} generator
             can callback or errback through.
         """
         result.trap(_InternalInlineCallbacksCancelledError)

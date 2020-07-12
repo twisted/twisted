@@ -48,14 +48,14 @@ class SuppressionMixin(EmitMixin):
 
     def testSuppressMethod(self):
         self._emit()
-    testSuppressMethod.suppress = [util.suppress(message=METHOD_WARNING_MSG)]
+    testSuppressMethod.suppress = [util.suppress(message=METHOD_WARNING_MSG)]  # type: ignore[attr-defined] # noqa
 
     def testSuppressClass(self):
         self._emit()
 
     def testOverrideSuppressClass(self):
         self._emit()
-    testOverrideSuppressClass.suppress = []
+    testOverrideSuppressClass.suppress = []  # type: ignore[attr-defined]
 
 
 

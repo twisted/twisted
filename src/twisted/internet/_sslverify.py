@@ -807,10 +807,12 @@ class KeyPair(PublicKey):
         return crypto.dump_privatekey(format, self.original)
 
 
+    @deprecated(Version("Twisted", 15, 0, 0), "a real persistence system")
     def __getstate__(self):
         return self.dump()
 
 
+    @deprecated(Version("Twisted", 15, 0, 0), "a real persistence system")
     def __setstate__(self, state):
         self.__init__(crypto.load_privatekey(crypto.FILETYPE_ASN1, state))
 
@@ -916,11 +918,6 @@ class KeyPair(PublicKey):
         return PrivateCertificate.fromCertificateAndKeyPair(
             self.signRequestObject(dn, self.requestObject(dn), serialNumber),
             self)
-
-KeyPair.__getstate__ = deprecated(Version("Twisted", 15, 0, 0),
-    "a real persistence system")(KeyPair.__getstate__)
-KeyPair.__setstate__ = deprecated(Version("Twisted", 15, 0, 0),
-    "a real persistence system")(KeyPair.__setstate__)
 
 
 

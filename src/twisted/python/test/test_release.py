@@ -39,7 +39,7 @@ from twisted.python._release import (
 if os.name != 'posix':
     skip = "Release toolchain only supported on POSIX."
 else:
-    skip = None
+    skip = ""
 
 testingSphinxConf = u"master_doc = 'index'\n"
 
@@ -396,7 +396,8 @@ class APIBuilderTests(ExternalTempdirTestCase):
     """
     Tests for L{APIBuilder}.
     """
-    skip = pydoctorSkip
+    if pydoctorSkip:
+        skip = pydoctorSkip
 
     @doNotFailOnNetworkError
     def test_build(self):
@@ -911,7 +912,8 @@ class GitCommandTest(CommandsTestMixin, ExternalTempdirTestCase):
     L{GitCommand}.
     """
     createCommand = GitCommand
-    skip = gitSkip
+    if gitSkip:
+        skip = gitSkip
 
 
     def makeRepository(self, root):

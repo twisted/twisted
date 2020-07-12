@@ -30,7 +30,7 @@ from twisted.internet.error import ConnectionRefusedError
 from twisted.internet.defer import Deferred, gatherResults, succeed
 from twisted.protocols.policies import WrappingFactory
 from twisted.python import failure, log
-from twisted.python.compat import iterbytes, range, _PY3
+from twisted.python.compat import iterbytes, range
 from twisted.cred.error import UnauthorizedLogin, UnhandledCredentials
 from twisted.cred import portal, checkers, credentials
 
@@ -848,8 +848,7 @@ class BrokerTests(unittest.TestCase):
         self.assertEqual(complex[0].foo, 4)
         self.assertEqual(len(coll), 2)
         cp = coll[0][0]
-        self.assertIdentical(cp.checkMethod().__self__ if _PY3 else
-                             cp.checkMethod().im_self, cp,
+        self.assertIdentical(cp.checkMethod().__self__, cp,
                              "potential refcounting issue")
         self.assertIdentical(cp.checkSelf(), cp,
                              "other potential refcounting issue")
