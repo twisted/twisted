@@ -9,9 +9,9 @@ name: GHA-Python
 # Only run on pull requests and only for Python files.
 on:
   push:
-    branches: [ master ]
+    branches: [ trunk ]
   pull_request:
-    branches: [ master ]
+    branches: [ trunk ]
 
 
 jobs:
