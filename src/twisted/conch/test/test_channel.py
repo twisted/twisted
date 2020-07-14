@@ -176,15 +176,6 @@ class ChannelTests(TestCase):
             b'<SSHChannel None (lw 1 rw 0)>')
 
 
-    def test_logPrefix(self):
-        """
-        Test that SSHChannel.logPrefix gives the name of the channel, the
-        local channel ID and the underlying connection.
-        """
-        self.assertEqual(self.channel.logPrefix(), 'SSHChannel channel '
-                '(unknown) on MockConnection')
-
-
     def test_addWindowBytes(self):
         """
         Test that addWindowBytes adds bytes to the window and resumes writing

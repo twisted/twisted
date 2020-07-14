@@ -12,14 +12,13 @@ Maintainer: Paul Swartz
 
 from zope.interface import implementer
 
-from twisted.python import log
 from twisted.python.compat import nativeString, intToBytes
 from twisted.internet import interfaces
-
+from twisted.logger import Logger
 
 
 @implementer(interfaces.ITransport)
-class SSHChannel(log.Logger):
+class SSHChannel(object):
     """
     A class that represents a multiplexed channel over an SSH connection.
     The channel has a local window which is the maximum amount of data it will
@@ -51,7 +50,7 @@ class SSHChannel(log.Logger):
     @ivar remoteClosed: True if the other side isn't accepting more data.
     @type remoteClosed: L{bool}
     """
-
+    log = Logger()
     name = None  # type: bytes  # only needed for client channels
 
     def __init__(self, localWindow=0, localMaxPacket=0,
@@ -92,16 +91,6 @@ class SSHChannel(log.Logger):
                 b' rw ' + intToBytes(self.remoteWindowLeft) +
                 b')>')
 
-
-    def logPrefix(self):
-        id = (self.id is not None and str(self.id)) or "unknown"
-        name = self.name
-        if name:
-            name = nativeString(name)
-        return "SSHChannel %s (%s) on %s" % (name, id,
-                self.conn.logPrefix())
-
-
     def channelOpen(self, specificData):
         """
         Called when the channel is opened.  specificData is any data that the
@@ -109,7 +98,7 @@ class SSHChannel(log.Logger):
 
         @type specificData: L{bytes}
         """
-        log.msg('channel open')
+        self.log.info('channel open')
 
 
     def openFailed(self, reason):
@@ -119,7 +108,7 @@ class SSHChannel(log.Logger):
 
         @type reason: L{error.ConchError}
         """
-        log.msg('other side refused open\nreason: %s'% reason)
+        self.log.error('other side refused open\nreason: {reason}', reason=reason)
 
 
     def addWindowBytes(self, data):
@@ -159,7 +148,7 @@ class SSHChannel(log.Logger):
         f = getattr(self, 'request_%s'%foo, None)
         if f:
             return f(data)
-        log.msg('unhandled request for %s'%requestType)
+        self.log.info('unhandled request for {requestType}', requestType=requestType)
         return 0
 
 
@@ -169,7 +158,7 @@ class SSHChannel(log.Logger):
 
         @type data: L{bytes}
         """
-        log.msg('got data %s'%repr(data))
+        self.log.debug('got data {data}', data=data)
 
 
     def extReceived(self, dataType, data):
@@ -179,21 +168,21 @@ class SSHChannel(log.Logger):
         @type dataType: L{int}
         @type data:     L{str}
         """
-        log.msg('got extended data %s %s'%(dataType, repr(data)))
+        self.log.debug('got extended data {dataType} {data!r}', dataType=dataType, data=data)
 
 
     def eofReceived(self):
         """
         Called when the other side will send no more data.
         """
-        log.msg('remote eof')
+        self.log.info('remote eof')
 
 
     def closeReceived(self):
         """
         Called when the other side has closed the channel.
         """
-        log.msg('remote close')
+        self.log.info('remote close')
         self.loseConnection()
 
 
@@ -202,7 +191,7 @@ class SSHChannel(log.Logger):
         Called when the channel is closed.  This means that both our side and
         the remote side have closed the channel.
         """
-        log.msg('closed')
+        self.log.info('closed')
 
 
     def write(self, data):

@@ -14,13 +14,15 @@ from zope.interface import implementer
 from twisted.conch.interfaces import ISFTPServer, ISFTPFile
 from twisted.conch.ssh.common import NS, getNS
 from twisted.internet import defer, protocol, error
-from twisted.python import failure, log
+from twisted.python import failure
 from twisted.python.compat import (
     range, itervalues, nativeString, networkString)
+from twisted.logger import Logger
 
 
 
 class FileTransferBase(protocol.Protocol):
+    log = Logger()
 
     versions = (3, )
 
@@ -44,12 +46,12 @@ class FileTransferBase(protocol.Protocol):
             data, self.buf = self.buf[5:4+length], self.buf[4+length:]
             packetType = self.packetTypes.get(kind, None)
             if not packetType:
-                log.msg('no packet type for', kind)
+                self.log.info('no packet type for {kind}', kind=kind)
                 continue
             f = getattr(self, 'packet_{}'.format(packetType), None)
             if not f:
-                log.msg('not implemented: {}'.format(packetType))
-                log.msg(repr(data[4:]))
+                self.log.info('not implemented: {packetType}', packetType=packetType)
+                self.log.info(repr(data[4:]))
                 reqId, = struct.unpack('!L', data[:4])
                 self._sendStatus(reqId, FX_OP_UNSUPPORTED,
                                  "don't understand {}".format(packetType))
@@ -58,7 +60,7 @@ class FileTransferBase(protocol.Protocol):
             try:
                 f(data)
             except Exception:
-                log.err()
+                self.log.failure()
                 continue
 
 
@@ -389,7 +391,7 @@ class FileTransferServer(FileTransferBase):
         path, data = getNS(data)
         attrs, data = self._parseAttributes(data)
         if data != b'':
-            log.msg('WARN: still have data in SETSTAT: {!r}'.format(data))
+            self.log.warn('Still have data in SETSTAT: {data!r}', data=data)
         d = defer.maybeDeferred(self.client.setAttrs, path, attrs)
         d.addCallback(self._cbStatus, requestId, b'setstat succeeded')
         d.addErrback(self._ebStatus, requestId, b'setstat failed')
@@ -475,7 +477,7 @@ class FileTransferServer(FileTransferBase):
             elif reason.value.errno == errno.EEXIST:
                 code = FX_FILE_ALREADY_EXISTS
             else:
-                log.err(reason)
+                self.log.failure(nativeString(message), reason)
         elif isinstance(reason.value, EOFError):  # EOF
             code = FX_EOF
             if reason.value.args:
@@ -488,7 +490,7 @@ class FileTransferServer(FileTransferBase):
             code = reason.value.code
             message = networkString(reason.value.message)
         else:
-            log.err(reason)
+            self.log.failure('Unknown error handling', reason)
         self._sendStatus(requestId, code, message)
 
 

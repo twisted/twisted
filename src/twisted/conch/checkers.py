@@ -34,11 +34,13 @@ from twisted.cred.credentials import IUsernamePassword, ISSHPrivateKey
 from twisted.cred.error import UnauthorizedLogin, UnhandledCredentials
 from twisted.internet import defer
 from twisted.python.compat import _keys, _b64decodebytes
-from twisted.python import failure, reflect, log
+from twisted.python import failure, reflect
 from twisted.python.deprecate import deprecatedModuleAttribute
 from twisted.python.util import runAsEffectiveUser
 from twisted.python.filepath import FilePath
+from twisted.logger import Logger
 
+log = Logger()
 
 
 
@@ -178,8 +180,7 @@ class SSHPublicKeyDatabase:
                 pubKey = keys.Key.fromString(credentials.blob)
                 if pubKey.verify(credentials.signature, credentials.sigData):
                     return credentials.username
-            except: # any error should be treated as a failed login
-                log.err()
+            except Exception:  # any error should be treated as a failed login
                 return failure.Failure(UnauthorizedLogin('error while verifying key'))
         return failure.Failure(UnauthorizedLogin("unable to verify key"))
 
@@ -237,7 +238,7 @@ class SSHPublicKeyDatabase:
 
     def _ebRequestAvatarId(self, f):
         if not f.check(UnauthorizedLogin):
-            log.msg(f)
+            log.error('Unauthorized login {error}', error=f.value)
             return failure.Failure(UnauthorizedLogin("unable to get avatar id"))
         return f
 
@@ -380,8 +381,8 @@ def readAuthorizedKeyFile(fileobj, parseKey=keys.Key.fromString):
             try:
                 yield parseKey(line)
             except keys.BadKeyError as e:
-                log.msg('Unable to parse line "{0}" as a key: {1!s}'
-                        .format(line, e))
+                log.error('Unable to parse line {line!r} as a key: {error!s}',
+                          line=line, error=e)
 
 
 
@@ -410,7 +411,7 @@ def _keysFromFilepaths(filepaths, parseKey):
                     for key in readAuthorizedKeyFile(f, parseKey):
                         yield key
             except (IOError, OSError) as e:
-                log.msg("Unable to read {0}: {1!s}".format(fp.path, e))
+                log.error("Unable to read {path!r}: {error!s}", path=fp.path, error=e)
 
 
 
@@ -581,7 +582,6 @@ class SSHPublicKeyChecker(object):
             if pubKey.verify(credentials.signature, credentials.sigData):
                 return credentials.username
         except:  # Any error should be treated as a failed login
-            log.err()
             raise UnauthorizedLogin('Error while verifying key')
 
         raise UnauthorizedLogin("Key signature invalid.")

@@ -15,8 +15,9 @@ from zope.interface import implementer
 
 from twisted.conch.insults import insults, helper
 
-from twisted.python import log, reflect
+from twisted.python import reflect
 from twisted.python.compat import iterbytes
+from twisted.logger import Logger
 
 _counters = {}  # type: Dict[str, int]
 
@@ -409,6 +410,8 @@ class RecvLine(insults.TerminalProtocol):
     pn = 0
     _printableChars = string.printable.encode("ascii")
 
+    log = Logger()
+
     def connectionMade(self):
         # A list containing the characters making up the current line
         self.lineBuffer = []
@@ -499,7 +502,7 @@ class RecvLine(insults.TerminalProtocol):
         elif keyID in self._printableChars:
             self.characterReceived(keyID, False)
         else:
-            log.msg("Received unhandled keyID: %r" % (keyID,))
+            self.log.warn("Received unhandled keyID: {keyID!r}", keyID=keyID)
 
 
     def characterReceived(self, ch, moreCharactersComing):

@@ -13,8 +13,8 @@ import struct
 
 from twisted.internet import protocol, reactor
 from twisted.internet.endpoints import HostnameEndpoint, connectProtocol
-from twisted.python import log
 from twisted.python.compat import unicode
+
 
 from twisted.conch.ssh import common, channel
 
@@ -36,7 +36,7 @@ class SSHListenForwardingFactory(protocol.Factory):
 class SSHListenForwardingChannel(channel.SSHChannel):
 
     def channelOpen(self, specificData):
-        log.msg('opened forwarding channel %s' % self.id)
+        self.log.info('opened forwarding channel {id}', id=self.id)
         if len(self.client.buf)>1:
             b = self.client.buf[1:]
             self.write(b)
@@ -53,7 +53,7 @@ class SSHListenForwardingChannel(channel.SSHChannel):
 
     def closed(self):
         if hasattr(self, 'client'):
-            log.msg('closing local forwarding channel %s' % self.id)
+            self.log.info('closing local forwarding channel {id}', id=self.id)
             self.client.transport.loseConnection()
             del self.client
 
@@ -103,7 +103,7 @@ class SSHConnectForwardingChannel(channel.SSHChannel):
         """
         See: L{channel.SSHChannel}
         """
-        log.msg("connecting to %s:%i" % self.hostport)
+        self.log.info("connecting to {host}:{port}", host=self.hostport[0], port=self.hostport[1])
         ep = HostnameEndpoint(
             self._reactor, self.hostport[0], self.hostport[1])
         d = connectProtocol(ep, SSHForwardingClient(self))
@@ -119,7 +119,7 @@ class SSHConnectForwardingChannel(channel.SSHChannel):
         @type  client: L{protocol.Protocol}
         """
         self.client = client
-        log.msg("connected to %s:%i" % self.hostport)
+        self.log.info("connected to {host}:{port}", host=self.hostport[0], port=self.hostport[1])
         if self.clientBuf:
             self.client.transport.write(self.clientBuf)
             self.clientBuf = None
@@ -135,7 +135,7 @@ class SSHConnectForwardingChannel(channel.SSHChannel):
         @param reason: Reason why connection failed.
         @type  reason: L{twisted.python.failure.Failure}
         """
-        log.msg("failed to connect: %s" % reason)
+        self.log.error("failed to connect: {reason}", reason=reason)
         self.loseConnection()
 
 
@@ -154,7 +154,7 @@ class SSHConnectForwardingChannel(channel.SSHChannel):
         See: L{channel.SSHChannel}
         """
         if self.client:
-            log.msg('closed remote forwarding channel %s' % self.id)
+            self.log.info('closed remote forwarding channel {id}', id=self.id)
             if self.client.channel:
                 self.loseConnection()
             self.client.transport.loseConnection()
@@ -164,7 +164,7 @@ class SSHConnectForwardingChannel(channel.SSHChannel):
 
 def openConnectForwardingClient(remoteWindow, remoteMaxPacket, data, avatar):
     remoteHP, origHP = unpackOpen_direct_tcpip(data)
-    return SSHConnectForwardingChannel(remoteHP, 
+    return SSHConnectForwardingChannel(remoteHP,
                                        remoteWindow=remoteWindow,
                                        remoteMaxPacket=remoteMaxPacket,
                                        avatar=avatar)

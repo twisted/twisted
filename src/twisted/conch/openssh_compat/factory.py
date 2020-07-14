@@ -9,7 +9,6 @@ moduli file.
 
 import os, errno
 
-from twisted.python import log
 from twisted.python.util import runAsEffectiveUser
 
 from twisted.conch.ssh import keys, factory, common
@@ -36,7 +35,7 @@ class OpenSSHFactory(factory.SSHFactory):
                     t = common.getNS(k.blob())[0]
                     ks[t] = k
                 except Exception as e:
-                    log.msg('bad public key file %s: %s' % (filename, e))
+                    self.log.error('bad public key file {filename}: {error}', filename=filename, error=e)
         return ks
 
 
@@ -59,7 +58,7 @@ class OpenSSHFactory(factory.SSHFactory):
                     else:
                         raise
                 except Exception as e:
-                    log.msg('bad private key file %s: %s' % (filename, e))
+                    self.log.error('bad public key file {filename}: {error}', filename=filename, error=e)
                 else:
                     privateKeys[key.sshType()] = key
         return privateKeys

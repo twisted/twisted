@@ -16,7 +16,6 @@ import twisted.internet.error
 from twisted.conch.ssh import service, common
 from twisted.conch import error
 from twisted.internet import defer
-from twisted.python import log
 from twisted.python.compat import (
     nativeString, networkString, long, _bytesChr as chr)
 
@@ -72,8 +71,7 @@ class SSHConnection(service.SSHService):
         # opening but not yet open.
         while self.channels:
             (_, channel) = self.channels.popitem()
-            log.callWithLogger(channel, channel.openFailed,
-                               twisted.internet.error.ConnectionLost())
+            channel.openFailed(twisted.internet.error.ConnectionLost())
         # Errback any unfinished global requests.
         self._cleanupGlobalDeferreds()
 
@@ -116,7 +114,7 @@ class SSHConnection(service.SSHService):
         Our global request succeeded.  Get the appropriate Deferred and call
         it back with the packet we received.
         """
-        log.msg('RS')
+        self.log.debug('global requeset success')
         self.deferreds['global'].pop(0).callback(packet)
 
     def ssh_REQUEST_FAILURE(self, packet):
@@ -124,7 +122,7 @@ class SSHConnection(service.SSHService):
         Our global request failed.  Get the appropriate Deferred and errback
         it with the packet we received.
         """
-        log.msg('RF')
+        self.log.debug('global request failure')
         self.deferreds['global'].pop(0).errback(
             error.ConchError('global request failed', packet))
 
@@ -157,9 +155,9 @@ class SSHConnection(service.SSHService):
                 struct.pack('>4L', senderChannel, localChannel,
                     channel.localWindowSize,
                     channel.localMaxPacket)+channel.specificData)
-            log.callWithLogger(channel, channel.channelOpen, packet)
+            channel.channelOpen(packet)
         except Exception as e:
-            log.err(e, 'channel open failed')
+            self.log.failure('channel open failed')
             if isinstance(e, error.ConchError):
                 textualInfo, reason = e.args
                 if isinstance(textualInfo, (int, long)):
@@ -194,7 +192,7 @@ class SSHConnection(service.SSHService):
         self.channelsToRemoteChannel[channel] = remoteChannel
         channel.remoteWindowLeft = windowSize
         channel.remoteMaxPacket = maxPacket
-        log.callWithLogger(channel, channel.channelOpen, specificData)
+        channel.channelOpen(specificData)
 
     def ssh_CHANNEL_OPEN_FAILURE(self, packet):
         """
@@ -212,7 +210,7 @@ class SSHConnection(service.SSHService):
         del self.channels[localChannel]
         channel.conn = self
         reason = error.ConchError(reasonDesc, reasonCode)
-        log.callWithLogger(channel, channel.openFailed, reason)
+        channel.openFailed(reason)
 
     def ssh_CHANNEL_WINDOW_ADJUST(self, packet):
         """
@@ -225,7 +223,7 @@ class SSHConnection(service.SSHService):
         """
         localChannel, bytesToAdd = struct.unpack('>2L', packet[:8])
         channel = self.channels[localChannel]
-        log.callWithLogger(channel, channel.addWindowBytes, bytesToAdd)
+        channel.addWindowBytes(bytesToAdd)
 
     def ssh_CHANNEL_DATA(self, packet):
         """
@@ -243,7 +241,7 @@ class SSHConnection(service.SSHService):
         # XXX should this move to dataReceived to put client in charge?
         if (dataLength > channel.localWindowLeft or
            dataLength > channel.localMaxPacket): # more data than we want
-            log.callWithLogger(channel, log.msg, 'too much data')
+            self.log.error('too much data')
             self.sendClose(channel)
             return
             #packet = packet[:channel.localWindowLeft+4]
@@ -252,9 +250,7 @@ class SSHConnection(service.SSHService):
         if channel.localWindowLeft < channel.localWindowSize // 2:
             self.adjustWindow(channel, channel.localWindowSize - \
                                        channel.localWindowLeft)
-            #log.msg('local window left: %s/%s' % (channel.localWindowLeft,
-            #                                    channel.localWindowSize))
-        log.callWithLogger(channel, channel.dataReceived, data)
+        channel.dataReceived(data)
 
     def ssh_CHANNEL_EXTENDED_DATA(self, packet):
         """
@@ -273,7 +269,7 @@ class SSHConnection(service.SSHService):
         channel = self.channels[localChannel]
         if (dataLength > channel.localWindowLeft or
                 dataLength > channel.localMaxPacket):
-            log.callWithLogger(channel, log.msg, 'too much extdata')
+            self.log.error('too much extdata')
             self.sendClose(channel)
             return
         data = common.getNS(packet[8:])[0]
@@ -281,7 +277,7 @@ class SSHConnection(service.SSHService):
         if channel.localWindowLeft < channel.localWindowSize // 2:
             self.adjustWindow(channel, channel.localWindowSize -
                                        channel.localWindowLeft)
-        log.callWithLogger(channel, channel.extReceived, typeCode, data)
+        channel.extReceived(typeCode, data)
 
     def ssh_CHANNEL_EOF(self, packet):
         """
@@ -292,7 +288,7 @@ class SSHConnection(service.SSHService):
         """
         localChannel = struct.unpack('>L', packet[:4])[0]
         channel = self.channels[localChannel]
-        log.callWithLogger(channel, channel.eofReceived)
+        channel.eofReceived()
 
     def ssh_CHANNEL_CLOSE(self, packet):
         """
@@ -305,7 +301,7 @@ class SSHConnection(service.SSHService):
         """
         localChannel = struct.unpack('>L', packet[:4])[0]
         channel = self.channels[localChannel]
-        log.callWithLogger(channel, channel.closeReceived)
+        channel.closeReceived()
         channel.remoteClosed = True
         if channel.localClosed and channel.remoteClosed:
             self.channelClosed(channel)
@@ -326,8 +322,7 @@ class SSHConnection(service.SSHService):
         requestType, rest = common.getNS(packet[4:])
         wantReply = ord(rest[0:1])
         channel = self.channels[localChannel]
-        d = defer.maybeDeferred(log.callWithLogger, channel,
-                channel.requestReceived, requestType, rest[1:])
+        d = defer.maybeDeferred(channel.requestReceived, requestType, rest[1:])
         if wantReply:
             d.addCallback(self._cbChannelRequest, localChannel)
             d.addErrback(self._ebChannelRequest, localChannel)
@@ -375,8 +370,7 @@ class SSHConnection(service.SSHService):
         localChannel = struct.unpack('>L', packet[:4])[0]
         if self.deferreds.get(localChannel):
             d = self.deferreds[localChannel].pop(0)
-            log.callWithLogger(self.channels[localChannel],
-                               d.callback, '')
+            d.callback('')
 
     def ssh_CHANNEL_FAILURE(self, packet):
         """
@@ -389,9 +383,7 @@ class SSHConnection(service.SSHService):
         localChannel = struct.unpack('>L', packet[:4])[0]
         if self.deferreds.get(localChannel):
             d = self.deferreds[localChannel].pop(0)
-            log.callWithLogger(self.channels[localChannel],
-                               d.errback,
-                               error.ConchError('channel request failed'))
+            d.errback(error.ConchError('channel request failed'))
 
     # methods for users of the connection to call
 
@@ -421,8 +413,10 @@ class SSHConnection(service.SSHService):
         @type channel:  subclass of C{SSHChannel}
         @type extra:    L{bytes}
         """
-        log.msg('opening channel %s with %s %s'%(self.localChannelID,
-                channel.localWindowSize, channel.localMaxPacket))
+        self.log.info('opening channel {id} with {localWindowSize} {localMaxPacket}',
+                      id=self.localChannelID,
+                      localWindowSize=channel.localWindowSize,
+                      localMaxPacket=channel.localMaxPacket)
         self.transport.sendPacket(MSG_CHANNEL_OPEN, common.NS(channel.name)
                     + struct.pack('>3L', self.localChannelID,
                     channel.localWindowSize, channel.localMaxPacket)
@@ -443,7 +437,7 @@ class SSHConnection(service.SSHService):
         """
         if channel.localClosed:
             return
-        log.msg('sending request %r' % (requestType))
+        self.log.debug('sending request {requestType}', requestType=requestType)
         self.transport.sendPacket(MSG_CHANNEL_REQUEST, struct.pack('>L',
                                     self.channelsToRemoteChannel[channel])
                                   + common.NS(requestType)+chr(wantReply)
@@ -466,8 +460,10 @@ class SSHConnection(service.SSHService):
         self.transport.sendPacket(MSG_CHANNEL_WINDOW_ADJUST, struct.pack('>2L',
                                     self.channelsToRemoteChannel[channel],
                                     bytesToAdd))
-        log.msg('adding %i to %i in channel %i' % (bytesToAdd,
-            channel.localWindowLeft, channel.id))
+        self.log.debug('adding {bytesToAdd} to {localWindowLeft} in channel {id}',
+                       bytesToAdd=bytesToAdd,
+                       localWindowLeft=channel.localWindowLeft,
+                       id=channel.id)
         channel.localWindowLeft += bytesToAdd
 
     def sendData(self, channel, data):
@@ -508,7 +504,7 @@ class SSHConnection(service.SSHService):
         """
         if channel.localClosed:
             return # we're already closed
-        log.msg('sending eof')
+        self.log.debug('sending eof')
         self.transport.sendPacket(MSG_CHANNEL_EOF, struct.pack('>L',
                                     self.channelsToRemoteChannel[channel]))
 
@@ -520,7 +516,7 @@ class SSHConnection(service.SSHService):
         """
         if channel.localClosed:
             return # we're already closed
-        log.msg('sending close %i' % channel.id)
+        self.log.info('sending close {id}', id=channel.id)
         self.transport.sendPacket(MSG_CHANNEL_CLOSE, struct.pack('>L',
                 self.channelsToRemoteChannel[channel]))
         channel.localClosed = True
@@ -549,7 +545,7 @@ class SSHConnection(service.SSHService):
         @type data:         L{bytes}
         @rtype:             subclass of L{SSHChannel}/L{tuple}
         """
-        log.msg('got channel %r request' % (channelType))
+        self.log.debug('got channel {channelType!r} request', channelType=channelType)
         if hasattr(self.transport, "avatar"): # this is a server!
             chan = self.transport.avatar.lookupChannel(channelType,
                                                        windowSize,
@@ -588,7 +584,7 @@ class SSHConnection(service.SSHService):
         @type data:         L{bytes}
         @rtype:             L{int}/L{tuple}
         """
-        log.msg('got global %s request' % requestType)
+        self.log.debug('got global {requestType} request', requestType=requestType)
         if hasattr(self.transport, 'avatar'): # this is a server!
             return self.transport.avatar.gotGlobalRequest(requestType, data)
 
@@ -615,7 +611,7 @@ class SSHConnection(service.SSHService):
             del self.channelsToRemoteChannel[channel]
             for d in self.deferreds.pop(channel.id, []):
                 d.errback(error.ConchError("Channel closed."))
-            log.callWithLogger(channel, channel.closed)
+            channel.closed()
 
 
 

@@ -21,10 +21,12 @@ from twisted.conch.interfaces import IKnownHostEntry
 from twisted.conch.error import HostKeyChanged, UserRejectedKey, InvalidEntry
 from twisted.conch.ssh.keys import Key, BadKeyError, FingerprintFormats
 from twisted.internet import defer
-from twisted.python import log
 from twisted.python.compat import nativeString, unicode
 from twisted.python.randbytes import secureRandom
 from twisted.python.util import FancyEqMixin
+from twisted.logger import Logger
+
+log = Logger()
 
 
 def _b64encode(s):
@@ -626,4 +628,4 @@ class ConsoleUI(object):
             with closing(self.opener()) as f:
                 f.write(text)
         except:
-            log.err()
+            log.failure('Failed to write to console')

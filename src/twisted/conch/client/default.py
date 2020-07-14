@@ -11,8 +11,6 @@ you are sitting at an interactive terminal.  For example, to programmatically
 interact with a known_hosts database, use L{twisted.conch.client.knownhosts}.
 """
 
-
-from twisted.python import log
 from twisted.python.compat import (
     nativeString, raw_input, _b64decodebytes as decodebytes)
 from twisted.python.filepath import FilePath
@@ -168,7 +166,7 @@ class SSHUserAuthClient(userauth.SSHUserAuthClient):
 
     def serviceStarted(self):
         if 'SSH_AUTH_SOCK' in os.environ and not self.options['noagent']:
-            log.msg('using agent')
+            self.log.debug('using SSH agent')
             cc = protocol.ClientCreator(reactor, agent.SSHAgentClient)
             d = cc.connectUNIX(os.environ['SSH_AUTH_SOCK'])
             d.addCallback(self._setAgent)
@@ -239,12 +237,11 @@ class SSHUserAuthClient(userauth.SSHUserAuthClient):
             if key is not None:
                 return key
         files = [x for x in self.options.identitys if x not in self.usedFiles]
-        log.msg(str(self.options.identitys))
-        log.msg(str(files))
+        self.log.debug('public key identities: {identities}\n{files}',
+                       identities=self.options.identitys, files=files)
         if not files:
             return None
         file = files[0]
-        log.msg(file)
         self.usedFiles.append(file)
         file = os.path.expanduser(file)
         file += '.pub'
