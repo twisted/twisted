@@ -151,12 +151,12 @@ class SSHConnection(service.SSHService):
             self.channels[localChannel] = channel
             self.channelsToRemoteChannel[channel] = senderChannel
             self.localToRemoteChannel[localChannel] = senderChannel
-            packet = struct.pack(
+            open_confirm_packet = struct.pack(
                 '>4L', senderChannel, localChannel,
                 channel.localWindowSize,
                 channel.localMaxPacket
             ) + channel.specificData
-            self.transport.sendPacket(MSG_CHANNEL_OPEN_CONFIRMATION, packet)
+            self.transport.sendPacket(MSG_CHANNEL_OPEN_CONFIRMATION, open_confirm_packet)
             channel.channelOpen(packet)
         except Exception as e:
             self.log.failure('channel open failed')
