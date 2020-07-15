@@ -17,6 +17,7 @@ from twisted.internet import interfaces
 from twisted.logger import Logger
 
 
+
 @implementer(interfaces.ITransport)
 class SSHChannel(object):
     """
@@ -108,7 +109,8 @@ class SSHChannel(object):
 
         @type reason: L{error.ConchError}
         """
-        self.log.error('other side refused open\nreason: {reason}', reason=reason)
+        self.log.error('other side refused open\nreason: {reason}',
+                       reason=reason)
 
 
     def addWindowBytes(self, data):
@@ -145,10 +147,11 @@ class SSHChannel(object):
         @rtype:             L{bool}
         """
         foo = nativeString(requestType.replace(b'-', b'_'))
-        f = getattr(self, 'request_%s'%foo, None)
+        f = getattr(self, 'request_' + foo, None)
         if f:
             return f(data)
-        self.log.info('unhandled request for {requestType}', requestType=requestType)
+        self.log.info('unhandled request for {requestType}',
+                      requestType=requestType)
         return 0
 
 
@@ -168,7 +171,8 @@ class SSHChannel(object):
         @type dataType: L{int}
         @type data:     L{str}
         """
-        self.log.debug('got extended data {dataType} {data!r}', dataType=dataType, data=data)
+        self.log.debug('got extended data {dataType} {data!r}',
+                       dataType=dataType, data=data)
 
 
     def eofReceived(self):

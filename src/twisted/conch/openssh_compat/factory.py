@@ -7,7 +7,8 @@ Factory for reading openssh configuration files: public keys, private keys, and
 moduli file.
 """
 
-import os, errno
+import os
+import errno
 
 from twisted.python.util import runAsEffectiveUser
 
@@ -35,7 +36,8 @@ class OpenSSHFactory(factory.SSHFactory):
                     t = common.getNS(k.blob())[0]
                     ks[t] = k
                 except Exception as e:
-                    self.log.error('bad public key file {filename}: {error}', filename=filename, error=e)
+                    self.log.error('bad public key file {filename}: {error}',
+                                   filename=filename, error=e)
         return ks
 
 
@@ -58,7 +60,8 @@ class OpenSSHFactory(factory.SSHFactory):
                     else:
                         raise
                 except Exception as e:
-                    self.log.error('bad public key file {filename}: {error}', filename=filename, error=e)
+                    self.log.error('bad public key file {filename}: {error}',
+                                   filename=filename, error=e)
                 else:
                     privateKeys[key.sshType()] = key
         return privateKeys

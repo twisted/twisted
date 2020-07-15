@@ -8,6 +8,7 @@ from twisted.conch import error
 from twisted.conch.ssh import transport
 
 
+
 class SSHClientFactory(protocol.ClientFactory):
 
     def __init__(self, d, options, verifyHostKey, userAuthObject):
@@ -77,7 +78,7 @@ class SSHClientTransport(transport.SSHClientTransport):
 
     def receiveDebug(self, alwaysDisplay, message, lang):
         self.log.debug('Received Debug Message: {message}', message=message)
-        if alwaysDisplay: # XXX what should happen here?
+        if alwaysDisplay:  # XXX what should happen here?
             print(message)
 
 

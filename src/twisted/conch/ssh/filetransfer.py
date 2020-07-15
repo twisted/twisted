@@ -50,7 +50,8 @@ class FileTransferBase(protocol.Protocol):
                 continue
             f = getattr(self, 'packet_{}'.format(packetType), None)
             if not f:
-                self.log.info('not implemented: {packetType}', packetType=packetType)
+                self.log.info('not implemented: {packetType}',
+                              packetType=packetType)
                 self.log.info(repr(data[4:]))
                 reqId, = struct.unpack('!L', data[:4])
                 self._sendStatus(reqId, FX_OP_UNSUPPORTED,

@@ -358,14 +358,20 @@ class TerminalBuffer(protocol.Protocol):
                 try:
                     v = int(a)
                 except ValueError:
-                    self.log.error("Unknown graphic rendition attribute: {attr!r}", attr=a)
+                    self.log.error(
+                        "Unknown graphic rendition attribute: {attr!r}",
+                        attr=a
+                    )
                 else:
                     if FOREGROUND <= v <= FOREGROUND + N_COLORS:
                         self.graphicRendition['foreground'] = v - FOREGROUND
                     elif BACKGROUND <= v <= BACKGROUND + N_COLORS:
                         self.graphicRendition['background'] = v - BACKGROUND
                     else:
-                        self.log.error("Unknown graphic rendition attribute: {attr!r}", attr=a)
+                        self.log.error(
+                            "Unknown graphic rendition attribute: {attr!r}",
+                            attr=a
+                        )
 
 
     def eraseLine(self):

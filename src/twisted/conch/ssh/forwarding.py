@@ -15,8 +15,9 @@ from twisted.internet import protocol, reactor
 from twisted.internet.endpoints import HostnameEndpoint, connectProtocol
 from twisted.python.compat import unicode
 
-
 from twisted.conch.ssh import common, channel
+
+
 
 class SSHListenForwardingFactory(protocol.Factory):
     def __init__(self, connection, hostport, klass):
@@ -33,11 +34,13 @@ class SSHListenForwardingFactory(protocol.Factory):
         self.conn.openChannel(channel, channelOpenData)
         return client
 
+
+
 class SSHListenForwardingChannel(channel.SSHChannel):
 
     def channelOpen(self, specificData):
         self.log.info('opened forwarding channel {id}', id=self.id)
-        if len(self.client.buf)>1:
+        if len(self.client.buf) > 1:
             b = self.client.buf[1:]
             self.write(b)
         self.client.buf = b''
@@ -103,7 +106,8 @@ class SSHConnectForwardingChannel(channel.SSHChannel):
         """
         See: L{channel.SSHChannel}
         """
-        self.log.info("connecting to {host}:{port}", host=self.hostport[0], port=self.hostport[1])
+        self.log.info("connecting to {host}:{port}",
+                      host=self.hostport[0], port=self.hostport[1])
         ep = HostnameEndpoint(
             self._reactor, self.hostport[0], self.hostport[1])
         d = connectProtocol(ep, SSHForwardingClient(self))
@@ -119,7 +123,8 @@ class SSHConnectForwardingChannel(channel.SSHChannel):
         @type  client: L{protocol.Protocol}
         """
         self.client = client
-        self.log.info("connected to {host}:{port}", host=self.hostport[0], port=self.hostport[1])
+        self.log.info("connected to {host}:{port}",
+                      host=self.hostport[0], port=self.hostport[1])
         if self.clientBuf:
             self.client.transport.write(self.clientBuf)
             self.clientBuf = None

@@ -662,7 +662,7 @@ class SSHTransportBase(protocol.Protocol):
         if self.incomingCompression:
             try:
                 payload = self.incomingCompression.decompress(payload)
-            except:
+            except Exception:
                 # Tolerate any errors in decompression
                 self.log.failure('Error decompressing payload')
                 self.sendDisconnect(DISCONNECT_COMPRESSION_ERROR,
@@ -739,12 +739,14 @@ class SSHTransportBase(protocol.Protocol):
             if f is not None:
                 f(payload)
             else:
-                self.log.debug("couldn't handle {messageType}: {payload!r}", messageType=messageType, payload=payload)
+                self.log.debug("couldn't handle {messageType}: {payload!r}",
+                               messageType=messageType, payload=payload)
                 self.sendUnimplemented()
         elif self.service:
             self.service.packetReceived(messageNum, payload)
         else:
-            self.log.debug("couldn't handle {messageNum}: {payload!r}", messageNum=messageNum, payload=payload)
+            self.log.debug("couldn't handle {messageNum}: {payload!r}",
+                           messageNum=messageNum, payload=payload)
             self.sendUnimplemented()
 
 
@@ -867,15 +869,16 @@ class SSHTransportBase(protocol.Protocol):
             self.sendDisconnect(DISCONNECT_KEY_EXCHANGE_FAILED,
                                 b"couldn't match all kex parts")
             return
-        self.log.info('kex alg={kexAlg!r} key alg={keyAlg!r}', kexAlg=self.kexAlg, keyAlg=self.keyAlg)
-        self.log.info('outgoing: {cip!r} {mac!r} {compression!r}',
-                      cip=self.nextEncryptions.outCipType,
-                      mac=self.nextEncryptions.outMACType,
-                      compression=self.outgoingCompressionType)
-        self.log.info('incoming: {cip!r} {mac!r} {compression!r}',
-                      cip=self.nextEncryptions.inCipType,
-                      mac=self.nextEncryptions.inMACType,
-                      compression=self.incomingCompressionType)
+        self.log.debug('kex alg={kexAlg!r} key alg={keyAlg!r}',
+                       kexAlg=self.kexAlg, keyAlg=self.keyAlg)
+        self.log.debug('outgoing: {cip!r} {mac!r} {compression!r}',
+                       cip=self.nextEncryptions.outCipType,
+                       mac=self.nextEncryptions.outMACType,
+                       compression=self.outgoingCompressionType)
+        self.log.debug('incoming: {cip!r} {mac!r} {compression!r}',
+                       cip=self.nextEncryptions.inCipType,
+                       mac=self.nextEncryptions.inMACType,
+                       compression=self.incomingCompressionType)
 
         if self._keyExchangeState == self._KEY_EXCHANGE_REQUESTED:
             self._keyExchangeState = self._KEY_EXCHANGE_PROGRESSING
@@ -1009,7 +1012,10 @@ class SSHTransportBase(protocol.Protocol):
         """
         self.sendPacket(
             MSG_DISCONNECT, struct.pack('>L', reason) + NS(desc) + NS(b''))
-        self.log.info('Disconnecting with error, code {code}\nreason: {description}', code=reason, description=desc)
+        self.log.info(
+            'Disconnecting with error, code {code}\nreason: {description}',
+            code=reason, description=desc
+        )
         self.transport.loseConnection()
 
 
@@ -1107,7 +1113,7 @@ class SSHTransportBase(protocol.Protocol):
         integKeySC = self._getKey(b'F', sharedSecret, exchangeHash)
         outs = [initIVSC, encKeySC, integKeySC]
         ins = [initIVCS, encKeyCS, integKeyCS]
-        if self.isClient: # Reverse for the client
+        if self.isClient:  # Reverse for the client
             outs, ins = ins, outs
         self.nextEncryptions.setKeys(outs[0], outs[1], ins[0], ins[1],
                                      outs[2], ins[2])
@@ -1210,7 +1216,8 @@ class SSHTransportBase(protocol.Protocol):
         @param seqnum: the sequence number that was not understood.
         @type seqnum: L{int}
         """
-        self.log.warn('other side unimplemented packet #{seqnum}', seqnum=seqnum)
+        self.log.warn('other side unimplemented packet #{seqnum}',
+                      seqnum=seqnum)
 
 
     def receiveDebug(self, alwaysDisplay, message, lang):

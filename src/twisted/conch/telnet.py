@@ -989,9 +989,11 @@ class TelnetBootstrapProtocol(TelnetProtocol, ProtocolTransportMixin):
                 lambda f: self.log.failure('Error do {opt!r}', f, opt=opt))
         for opt in (ECHO,):
             self.transport.will(opt).addErrback(
-                lambda f: self.log.failure('Error setting will {opt!r}', f, opt=opt))
+                lambda f: self.log.failure(
+                    'Error setting will {opt!r}', f, opt=opt))
 
-        self.protocol = self.protocolFactory(*self.protocolArgs, **self.protocolKwArgs)
+        self.protocol = self.protocolFactory(*self.protocolArgs,
+                                             **self.protocolKwArgs)
 
         try:
             factory = self.factory
@@ -1045,7 +1047,8 @@ class TelnetBootstrapProtocol(TelnetProtocol, ProtocolTransportMixin):
             width, height = struct.unpack('!HH', b''.join(data))
             self.protocol.terminalProtocol.terminalSize(width, height)
         else:
-            self.log.error("Wrong number of NAWS bytes: {nbytes}", nbytes=len(data))
+            self.log.error("Wrong number of NAWS bytes: {nbytes}",
+                           nbytes=len(data))
 
     linemodeSubcommands = {
         LINEMODE_SLC: 'SLC'}

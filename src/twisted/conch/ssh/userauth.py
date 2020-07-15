@@ -22,6 +22,7 @@ from twisted.python import failure, log
 from twisted.python.compat import nativeString, _bytesChr as chr
 
 
+
 class SSHUserAuthServer(service.SSHService):
     """
     A service implementing the server side of the 'ssh-userauth' service.  It
@@ -196,11 +197,12 @@ class SSHUserAuthServer(service.SSHService):
         self.transport.avatar = avatar
         self.transport.logoutFunction = logout
         service = self.transport.factory.getService(self.transport,
-                self.nextService)
+                                                    self.nextService)
         if not service:
-            raise error.ConchError('could not get next service: %s'
-                                  % self.nextService)
-        self.log.debug('{user!r} authenticated with {method!r}', user=self.user, method=self.method)
+            raise error.ConchError(
+                'could not get next service: %s' % (self.nextService,))
+        self.log.debug('{user!r} authenticated with {method!r}',
+                       user=self.user, method=self.method)
         self.transport.sendPacket(MSG_USERAUTH_SUCCESS, b'')
         self.transport.setService(service())
 
@@ -231,9 +233,11 @@ class SSHUserAuthServer(service.SSHService):
         if reason.check(error.IgnoreAuthentication):
             return
         if self.method != b'none':
-            self.log.debug('{user!r} failed auth {method!r}', user=self.user, method=self.method)
+            self.log.debug('{user!r} failed auth {method!r}',
+                           user=self.user, method=self.method)
             if reason.check(UnauthorizedLogin):
-                self.log.debug('unauthorized login: {message}', message=reason.getErrorMessage())
+                self.log.debug('unauthorized login: {message}',
+                               message=reason.getErrorMessage())
             elif reason.check(error.ConchError):
                 self.log.debug('reason: %s' % reason.getErrorMessage())
             else:
@@ -386,7 +390,7 @@ class SSHUserAuthClient(service.SSHService):
         """
         kind = nativeString(kind.replace(b'-', b'_'))
         self.log.debug('trying to auth with {kind}', kind=kind)
-        f = getattr(self,'auth_%s' % (kind,), None)
+        f = getattr(self, 'auth_' + kind, None)
         if f:
             return f()
 
@@ -455,7 +459,7 @@ class SSHUserAuthClient(service.SSHService):
                               if meth not in self.authenticatedWith],
                              key=orderByPreference)
 
-        self.log.debug('can continue with: {canContinue}', canContinue=canContinue)
+        self.log.debug('can continue with: {methods}', methods=canContinue)
         return self._cbUserauthFailure(None, iter(canContinue))
 
 
@@ -611,7 +615,8 @@ class SSHUserAuthClient(service.SSHService):
         if publicKey is not None:
             self.lastPublicKey = publicKey
             self.triedPublicKeys.append(publicKey)
-            self.log.debug('using key of type {keyType}', keyType=publicKey.type())
+            self.log.debug('using key of type {keyType}',
+                           keyType=publicKey.type())
             self.askForAuth(b'publickey', b'\x00' + NS(publicKey.sshType()) +
                             NS(publicKey.blob()))
             return True

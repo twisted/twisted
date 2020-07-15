@@ -29,6 +29,7 @@ from twisted.logger import Logger
 log = Logger()
 
 
+
 def _b64encode(s):
     """
     Encode a binary string as base64 with no trailing newline.
@@ -627,5 +628,5 @@ class ConsoleUI(object):
         try:
             with closing(self.opener()) as f:
                 f.write(text)
-        except:
+        except Exception:
             log.failure('Failed to write to console')
