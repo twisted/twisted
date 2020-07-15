@@ -5,19 +5,17 @@
 Test HTTP support.
 """
 
-from __future__ import absolute_import, division
 
 import base64
 import calendar
-import cgi
 import random
 
 import hamcrest
 
-try:
-    from urlparse import urlparse, urlunsplit, clear_cache
-except ImportError:
-    from urllib.parse import urlparse, urlunsplit, clear_cache
+from urllib.parse import urlparse, urlunsplit, parse_qs
+from urllib.parse import clear_cache  # type: ignore[attr-defined]
+from unittest import skipIf
+from typing import Sequence, Union
 
 from io import BytesIO
 from itertools import cycle
@@ -28,7 +26,7 @@ from zope.interface import (
 )
 from zope.interface.verify import verifyObject
 
-from twisted.python.compat import (_PY3, iterbytes, long, networkString,
+from twisted.python.compat import (iterbytes, long, networkString,
                                    unicode, intToBytes)
 from twisted.python.components import proxyForInterface
 from twisted.python.failure import Failure
@@ -59,7 +57,7 @@ from ._util import (
 
 
 
-class _IDeprecatedHTTPChannelToRequestInterfaceProxy(proxyForInterface(
+class _IDeprecatedHTTPChannelToRequestInterfaceProxy(proxyForInterface(  # type: ignore[misc]  # noqa
         http._IDeprecatedHTTPChannelToRequestInterface)):
     """
     Proxy L{_IDeprecatedHTTPChannelToRequestInterface}.  Used to
@@ -274,7 +272,7 @@ class HTTP1_0Tests(unittest.TestCase, ResponseTestMixin):
          b"Command: GET",
          b"Version: HTTP/1.0",
          b"Content-Length: 13",
-         b"'''\nNone\n'''\n")]
+         b"'''\nNone\n'''\n")]  # type: Union[Sequence[Sequence[bytes]], bytes]
 
     def test_buffer(self):
         """
@@ -776,6 +774,7 @@ class GenericHTTPChannelTests(unittest.TestCase):
         return a._negotiatedProtocol
 
 
+    @skipIf(not http.H2_ENABLED, "HTTP/2 support not present")
     def test_h2CancelsH11Timeout(self):
         """
         When the transport is switched to H2, the HTTPChannel timeouts are
@@ -825,9 +824,6 @@ class GenericHTTPChannelTests(unittest.TestCase):
             ),
         )
 
-    if not http.H2_ENABLED:
-        test_h2CancelsH11Timeout.skip = "HTTP/2 support not present"
-
 
     def test_protocolUnspecified(self):
         """
@@ -861,6 +857,7 @@ class GenericHTTPChannelTests(unittest.TestCase):
         self.assertEqual(negotiatedProtocol, b'http/1.1')
 
 
+    @skipIf(not http.H2_ENABLED, "HTTP/2 support not present")
     def test_http2_present(self):
         """
         If the transport reports that HTTP/2 is negotiated and HTTP/2 is
@@ -870,10 +867,9 @@ class GenericHTTPChannelTests(unittest.TestCase):
         b.negotiatedProtocol = b'h2'
         negotiatedProtocol = self._negotiatedProtocolForTransportInstance(b)
         self.assertEqual(negotiatedProtocol, b'h2')
-    if not http.H2_ENABLED:
-        test_http2_present.skip = "HTTP/2 support not present"
 
 
+    @skipIf(http.H2_ENABLED, "HTTP/2 support present")
     def test_http2_absent(self):
         """
         If the transport reports that HTTP/2 is negotiated and HTTP/2 is not
@@ -886,8 +882,6 @@ class GenericHTTPChannelTests(unittest.TestCase):
             self._negotiatedProtocolForTransportInstance,
             b,
         )
-    if http.H2_ENABLED:
-        test_http2_absent.skip = "HTTP/2 support present"
 
 
     def test_unknownProtocol(self):
@@ -926,6 +920,7 @@ class GenericHTTPChannelTests(unittest.TestCase):
         self.assertEqual(protocol._channel.callLater, clock.callLater)
 
 
+    @skipIf(not http.H2_ENABLED, "HTTP/2 support not present")
     def test_genericHTTPChannelCallLaterUpgrade(self):
         """
         If C{callLater} is patched onto the L{http._GenericHTTPChannelProtocol}
@@ -949,12 +944,9 @@ class GenericHTTPChannelTests(unittest.TestCase):
 
         self.assertEqual(protocol.callLater, clock.callLater)
         self.assertEqual(protocol._channel.callLater, clock.callLater)
-    if not http.H2_ENABLED:
-        test_genericHTTPChannelCallLaterUpgrade.skip = (
-            "HTTP/2 support not present"
-        )
 
 
+    @skipIf(not http.H2_ENABLED, "HTTP/2 support not present")
     def test_unregistersProducer(self):
         """
         The L{_GenericHTTPChannelProtocol} will unregister its proxy channel
@@ -982,9 +974,6 @@ class GenericHTTPChannelTests(unittest.TestCase):
 
         # ...it should have the new H2 channel as its producer
         self.assertIs(transport.producer, genericProtocol._channel)
-
-    if not http.H2_ENABLED:
-        test_unregistersProducer.skip = "HTTP/2 support not present"
 
 
 
@@ -1031,8 +1020,10 @@ class HTTPLoopbackTests(unittest.TestCase):
     def _cbTestLoopback(self, ignored):
         if not (self.gotStatus and self.gotResponse and self.gotEndHeaders):
             raise RuntimeError(
-                "didn't got all callbacks %s"
-                % [self.gotStatus, self.gotResponse, self.gotEndHeaders])
+                "didn't get all callbacks {}".format(
+                    [self.gotStatus, self.gotResponse, self.gotEndHeaders],
+                )
+            )
         del self.gotEndHeaders
         del self.gotResponse
         del self.gotStatus
@@ -1607,7 +1598,7 @@ class ParsingTests(unittest.TestCase):
                 requests.append(self)
 
         for u, p in [(b"foo", b"bar"), (b"hello", b"there:z")]:
-            s = base64.encodestring(b":".join((u, p))).strip()
+            s = base64.b64encode(b":".join((u, p)))
             f = b"GET / HTTP/1.0\nAuthorization: Basic " + s + b"\n\n"
             self.runRequest(f, Request, 0)
             req = requests.pop()
@@ -2019,33 +2010,6 @@ Content-Type: application/x-www-form-urlencoded
         self.assertEqual(content, [networkString(query)])
 
 
-    def test_missingContentDisposition(self):
-        """
-        If the C{Content-Disposition} header is missing, the request is denied
-        as a bad request.
-        """
-        req = b'''\
-POST / HTTP/1.0
-Content-Type: multipart/form-data; boundary=AaB03x
-Content-Length: 103
-
---AaB03x
-Content-Type: text/plain
-Content-Transfer-Encoding: quoted-printable
-
-abasdfg
---AaB03x--
-'''
-        channel = self.runRequest(req, http.Request, success=False)
-        self.assertEqual(
-            channel.transport.value(),
-            b"HTTP/1.1 400 Bad Request\r\n\r\n")
-
-    if _PY3:
-        test_missingContentDisposition.skip = (
-            "cgi.parse_multipart is much more error-tolerant on Python 3.")
-
-
     def test_multipartProcessingFailure(self):
         """
         When the multipart processing fails the client gets a 400 Bad Request.
@@ -2239,9 +2203,9 @@ Hello,
 
         u = b"foo"
         p = b"bar"
-        s = base64.encodestring(b":".join((u, p))).strip()
+        s = base64.b64encode(b":".join((u, p)))
         f = b"GET / HTTP/1.0\nAuthorization: Basic " + s + b"\n\n"
-        self.patch(base64, 'decodestring', lambda x: [])
+        self.patch(base64, 'b64decode', lambda x: [])
         self.runRequest(f, Request, 0)
         req = requests.pop()
         self.assertEqual((b'', b''), req.credentials)
@@ -2252,19 +2216,136 @@ Hello,
         self.flushLoggedErrors(AttributeError)
 
 
+    def test_duplicateContentLengths(self):
+        """
+        A request which includes multiple C{content-length} headers
+        fails with a 400 response without calling L{Request.process}.
+        """
+        self.assertRequestRejected([
+            b'GET /a HTTP/1.1',
+            b'Content-Length: 56',
+            b'Content-Length: 0',
+            b'Host: host.invalid',
+            b'',
+            b'',
+        ])
+
+
+    def test_duplicateContentLengthsWithPipelinedRequests(self):
+        """
+        Two pipelined requests, the first of which includes multiple
+        C{content-length} headers, trigger a 400 response without
+        calling L{Request.process}.
+        """
+        self.assertRequestRejected([
+            b'GET /a HTTP/1.1',
+            b'Content-Length: 56',
+            b'Content-Length: 0',
+            b'Host: host.invalid',
+            b'',
+            b'',
+            b'GET /a HTTP/1.1',
+            b'Host: host.invalid',
+            b'',
+            b'',
+        ])
+
+
+    def test_contentLengthAndTransferEncoding(self):
+        """
+        A request that includes both C{content-length} and
+        C{transfer-encoding} headers fails with a 400 response without
+        calling L{Request.process}.
+        """
+        self.assertRequestRejected([
+            b'GET /a HTTP/1.1',
+            b'Transfer-Encoding: chunked',
+            b'Content-Length: 0',
+            b'Host: host.invalid',
+            b'',
+            b'',
+        ])
+
+
+    def test_contentLengthAndTransferEncodingWithPipelinedRequests(self):
+        """
+        Two pipelined requests, the first of which includes both
+        C{content-length} and C{transfer-encoding} headers, triggers a
+        400 response without calling L{Request.process}.
+        """
+        self.assertRequestRejected([
+            b'GET /a HTTP/1.1',
+            b'Transfer-Encoding: chunked',
+            b'Content-Length: 0',
+            b'Host: host.invalid',
+            b'',
+            b'',
+            b'GET /a HTTP/1.1',
+            b'Host: host.invalid',
+            b'',
+            b'',
+        ])
+
+
+    def test_unknownTransferEncoding(self):
+        """
+        A request whose C{transfer-encoding} header includes a value
+        other than C{chunked} or C{identity} fails with a 400 response
+        without calling L{Request.process}.
+        """
+        self.assertRequestRejected([
+            b'GET /a HTTP/1.1',
+            b'Transfer-Encoding: unknown',
+            b'Host: host.invalid',
+            b'',
+            b'',
+        ])
+
+
+    def test_transferEncodingIdentity(self):
+        """
+        A request with a valid C{content-length} and a
+        C{transfer-encoding} whose value is C{identity} succeeds.
+        """
+        body = []
+
+        class SuccessfulRequest(http.Request):
+            processed = False
+
+            def process(self):
+                body.append(self.content.read())
+                self.setHeader(b'content-length', b'0')
+                self.finish()
+
+        request = b'''\
+GET / HTTP/1.1
+Host: host.invalid
+Content-Length: 2
+Transfer-Encoding: identity
+
+ok
+'''
+        channel = self.runRequest(request, SuccessfulRequest, False)
+        self.assertEqual(body, [b'ok'])
+        self.assertEqual(
+            channel.transport.value(),
+            b'HTTP/1.1 200 OK\r\nContent-Length: 0\r\n\r\n',
+        )
+
+
 
 class QueryArgumentsTests(unittest.TestCase):
     def testParseqs(self):
         self.assertEqual(
-            cgi.parse_qs(b"a=b&d=c;+=f"),
+            parse_qs(b"a=b&d=c;+=f"),
             http.parse_qs(b"a=b&d=c;+=f"))
         self.assertRaises(
             ValueError, http.parse_qs, b"blah", strict_parsing=True)
         self.assertEqual(
-            cgi.parse_qs(b"a=&b=c", keep_blank_values=1),
+            parse_qs(b"a=&b=c", keep_blank_values=1),
             http.parse_qs(b"a=&b=c", keep_blank_values=1))
         self.assertEqual(
-            cgi.parse_qs(b"a=&b=c"),
+            parse_qs(b"a=&b=c"),
             http.parse_qs(b"a=&b=c"))
 
 
@@ -2412,6 +2493,30 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         req = http.Request(DummyChannel(), False)
         req.requestHeaders.setRawHeaders(b"test", [b"lemur"])
         self.assertEqual(req.getHeader(b"test"), b"lemur")
+
+
+    def test_getRequestHostname(self):
+        """
+        L{http.Request.getRequestHostname} returns the hostname portion of the
+        request, based on the C{Host:} header.
+        """
+        req = http.Request(DummyChannel(), False)
+
+        def check(header, expectedHost):
+            req.requestHeaders.setRawHeaders(b"host", [header])
+            self.assertEqual(req.getRequestHostname(), expectedHost)
+
+        check(b"example.com", b"example.com")
+        check(b"example.com:8443", b"example.com")
+        check(b"192.168.1.1", b"192.168.1.1")
+        check(b"192.168.1.1:19289", b"192.168.1.1")
+        check(b"[2607:f0d0:1002:51::4]",
+              b"2607:f0d0:1002:51::4")
+        check(b"[2607:f0d0:1002:0051:0000:0000:0000:0004]",
+              b"2607:f0d0:1002:0051:0000:0000:0000:0004")
+        check(b"[::1]", b"::1")
+        check(b"[::1]:8080", b"::1")
+        check(b"[2607:f0d0:1002:51::4]:9443", b"2607:f0d0:1002:51::4")
 
 
     def test_getHeaderReceivedMultiples(self):

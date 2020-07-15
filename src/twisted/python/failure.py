@@ -11,7 +11,6 @@ Asynchronous-friendly error mechanism.
 See L{Failure}.
 """
 
-from __future__ import division, absolute_import, print_function
 
 # System Imports
 import copy
@@ -22,7 +21,7 @@ import opcode
 from inspect import getmro
 
 from twisted.python import reflect
-from twisted.python.compat import _PY3, NativeStringIO as StringIO
+from io import StringIO
 
 count = 0
 traceupLength = 4
@@ -229,10 +228,7 @@ class Failure(BaseException):
     # on PY3, b'a'[0] == 97 while in py2 b'a'[0] == b'a' opcodes
     # are stored in bytes so we need to properly account for this
     # difference.
-    if _PY3:
-        _yieldOpcode = opcode.opmap["YIELD_VALUE"]
-    else:
-        _yieldOpcode = chr(opcode.opmap["YIELD_VALUE"])
+    _yieldOpcode = opcode.opmap["YIELD_VALUE"]
 
 
     def __init__(self, exc_value=None, exc_type=None, exc_tb=None,
@@ -456,10 +452,7 @@ class Failure(BaseException):
         """
         error = self.check(*errorTypes)
         if not error:
-            if _PY3:
-                self.raiseException()
-            else:
-                raise self
+            self.raiseException()
         return error
 
 
@@ -512,6 +505,7 @@ class Failure(BaseException):
         return g.throw(self.type, self.value, self.tb)
 
 
+    @classmethod
     def _findFailure(cls):
         """
         Find the failure that represents the exception currently in context.
@@ -569,7 +563,6 @@ class Failure(BaseException):
         if frame and frame.f_code is cls.throwExceptionIntoGenerator.__code__:
             return frame.f_locals.get('self')
 
-    _findFailure = classmethod(_findFailure)
 
     def __repr__(self):
         return "<%s %s: %s>" % (reflect.qual(self.__class__),

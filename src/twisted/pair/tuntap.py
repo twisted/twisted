@@ -390,6 +390,7 @@ class TuntapPort(abstract.FileDescriptor):
             return defer.succeed(None)
 
 
+    @deprecated(Version("Twisted", 14, 0, 0), stopListening)
     def loseConnection(self):
         """
         Close this tunnel.  Use L{TuntapPort.stopListening} instead.
@@ -427,7 +428,3 @@ class TuntapPort(abstract.FileDescriptor):
         @rtype: L{TunnelAddress}
         """
         return TunnelAddress(self._mode, self.interface)
-
-TuntapPort.loseConnection = deprecated(
-    Version("Twisted", 14, 0, 0),
-    TuntapPort.stopListening)(TuntapPort.loseConnection)

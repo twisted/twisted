@@ -5,15 +5,17 @@
 Tests for Twisted's deprecation framework, L{twisted.python.deprecate}.
 """
 
-from __future__ import division, absolute_import
 
-import sys, types, warnings, inspect
+import inspect
+import sys
+import types
+import warnings
 from os.path import normcase
 from warnings import simplefilter, catch_warnings
 try:
     from importlib import invalidate_caches
 except ImportError:
-    invalidate_caches = None
+    invalidate_caches = None  # type: ignore[assignment,misc]
 
 from twisted.python import deprecate
 from twisted.python.deprecate import _getDeprecationWarningString
@@ -24,10 +26,10 @@ from twisted.python.deprecate import (
     _fullyQualifiedName as fullyQualifiedName,
     _mutuallyExclusiveArguments,
     deprecatedProperty,
+    deprecatedKeywordParameter,
     _passedArgSpec, _passedSignature
 )
 
-from twisted.python.compat import _PY3, execfile
 from incremental import Version
 from twisted.python.runtime import platform
 from twisted.python.filepath import FilePath
@@ -366,11 +368,10 @@ class WarnAboutFunctionTests(SynchronousTestCase):
         """
         Create a file that will have known line numbers when emitting warnings.
         """
-        self.package = FilePath(self.mktemp().encode("utf-8")
-                                ).child(b'twisted_private_helper')
+        self.package = FilePath(self.mktemp()).child('twisted_private_helper')
         self.package.makedirs()
-        self.package.child(b'__init__.py').setContent(b'')
-        self.package.child(b'module.py').setContent(b'''
+        self.package.child('__init__.py').setContent(b'')
+        self.package.child('module.py').setContent(b'''
 "A module string"
 
 from twisted.python import deprecate
@@ -386,7 +387,7 @@ def callTestFunction():
         deprecate.warnAboutFunction(testFunction, "A Warning String")
 ''')
         # Python 3 doesn't accept bytes in sys.path:
-        packagePath = self.package.parent().path.decode("utf-8")
+        packagePath = self.package.parent().path
         sys.path.insert(0, packagePath)
         self.addCleanup(sys.path.remove, packagePath)
 
@@ -394,10 +395,10 @@ def callTestFunction():
         self.addCleanup(
             lambda: (sys.modules.clear(), sys.modules.update(modules)))
 
-        # On Windows on Python 3, most FilePath interactions produce
+        # On Windows, most FilePath interactions produce
         # DeprecationWarnings, so flush them here so that they don't interfere
         # with the tests.
-        if platform.isWindows() and _PY3:
+        if platform.isWindows():
             self.flushWarnings()
 
 
@@ -723,12 +724,20 @@ class ClassWithDeprecatedProperty(object):
         return self._someProtectedValue
 
 
-    @someProperty.setter
+    @someProperty.setter  # type: ignore[no-redef]
     def someProperty(self, value):
         """
         Setter docstring.
         """
         self._someProtectedValue = value
+
+
+
+@deprecatedKeywordParameter(Version('Twisted', 19, 2, 0), 'foo')
+def functionWithDeprecatedParameter(a, b, c=1, foo=2, bar=3):
+    """
+    Function with a deprecated keyword parameter.
+    """
 
 
 
@@ -863,13 +872,45 @@ class DeprecatedDecoratorTests(SynchronousTestCase):
         version = Version('Twisted', 8, 0, 0)
         decorator = deprecated(version, replacement=dummyReplacementMethod)
         dummy = decorator(dummyCallable)
-        self.assertEqual(dummy.__doc__,
+        self.assertEqual(
+            dummy.__doc__,
             "\n"
             "    Do nothing.\n\n"
             "    This is used to test the deprecation decorators.\n\n"
             "    Deprecated in Twisted 8.0.0; please use "
             "%s.dummyReplacementMethod instead.\n"
             "    " % (__name__,))
+
+
+    def test_deprecatedKeywordParameter(self):
+
+        message = ("The 'foo' parameter to "
+                   "twisted.python.test.test_deprecate."
+                   "functionWithDeprecatedParameter "
+                   "was deprecated in Twisted 19.2.0")
+
+        with catch_warnings(record=True) as ws:
+            simplefilter('always')
+
+            functionWithDeprecatedParameter(10, 20)
+            self.assertEqual(ws, [])
+
+            functionWithDeprecatedParameter(10, 20, 30)
+            self.assertEqual(ws, [])
+
+            functionWithDeprecatedParameter(10, 20, foo=40)
+            self.assertEqual(len(ws), 1)
+            self.assertEqual(ws[0].category, DeprecationWarning)
+            self.assertEqual(str(ws[0].message), message)
+
+            ws.clear()
+            functionWithDeprecatedParameter(10, 20, bar=50)
+            self.assertEqual(ws, [])
+
+            functionWithDeprecatedParameter(10, 20, 30, 40)
+            self.assertEqual(len(ws), 1)
+            self.assertEqual(ws[0].category, DeprecationWarning)
+            self.assertEqual(str(ws[0].message), message)
 
 
 
@@ -1094,31 +1135,53 @@ class MutualArgumentExclusionTests(SynchronousTestCase):
         dummyParameters['c'] = FakeParameter("fake", "fake")
         fakeSig = FakeSignature(dummyParameters)
         self.assertRaises(TypeError, _passedSignature, fakeSig, (1, 2), {})
-    if not getattr(inspect, "signature", None):
-        test_invalidParameterType.skip = "inspect.signature() not available"
 
 
-if sys.version_info >= (3,):
-    _path = FilePath(__file__).parent().child("_deprecatetests.py.3only")
 
-    _g = {}
-    execfile(_path.path, _g)
-
-    KeywordOnlyTests = _g["KeywordOnlyTests"]
-else:
-    from twisted.trial.unittest import TestCase
-
-    class KeywordOnlyTests(TestCase):
+class KeywordOnlyTests(SynchronousTestCase):
+    """
+    Keyword only arguments (PEP 3102).
+    """
+    def checkPassed(self, func, *args, **kw):
         """
-        A dummy class to show that this test file was discovered but the tests
-        are unable to be ran in this version of Python.
-        """
-        skip = (
-            "keyword only arguments (PEP 3102) are "
-            "only in Python 3 and higher")
+        Test an invocation of L{passed} with the given function, arguments, and
+        keyword arguments.
 
-        def test_notAvailable(self):
+        @param func: A function whose argspec to pass to L{_passed}.
+        @type func: A callable.
+
+        @param args: The arguments which could be passed to L{func}.
+
+        @param kw: The keyword arguments which could be passed to L{func}.
+
+        @return: L{_passed}'s return value
+        @rtype: L{dict}
+        """
+        return _passedSignature(inspect.signature(func), args, kw)
+
+
+    def test_passedKeywordOnly(self):
+        """
+        Keyword only arguments follow varargs.
+        They are specified in PEP 3102.
+        """
+        def func1(*a, b=True):
             """
-            A skipped test to show that this was not ran because the Python is
-            too old.
+            b is a keyword-only argument, with a default value.
             """
+
+        def func2(*a, b=True, c, d, e):
+            """
+            b, c, d, e  are keyword-only arguments.
+            b has a default value.
+            """
+
+        self.assertEqual(self.checkPassed(func1, 1, 2, 3),
+                         dict(a=(1, 2, 3), b=True))
+        self.assertEqual(self.checkPassed(func1, 1, 2, 3, b=False),
+                         dict(a=(1, 2, 3), b=False))
+        self.assertEqual(self.checkPassed(func2,
+                         1, 2, b=False, c=1, d=2, e=3),
+                         dict(a=(1, 2), b=False, c=1, d=2, e=3))
+        self.assertRaises(TypeError, self.checkPassed,
+                          func2, 1, 2, b=False, c=1, d=2)

@@ -11,12 +11,16 @@ only specific tests for old API.
 # issue1195 TODOs: replace pump.pump() with something involving Deferreds.
 # Clean up warning suppression.
 
-from __future__ import absolute_import, division
 
-import sys, os, time, gc, weakref
+import gc
+import os
+import sys
+import time
+import weakref
 from collections import deque
 
 from io import BytesIO as StringIO
+from typing import Dict
 from zope.interface import implementer, Interface
 
 from twisted.trial import unittest
@@ -26,7 +30,7 @@ from twisted.internet.error import ConnectionRefusedError
 from twisted.internet.defer import Deferred, gatherResults, succeed
 from twisted.protocols.policies import WrappingFactory
 from twisted.python import failure, log
-from twisted.python.compat import iterbytes, range, _PY3
+from twisted.python.compat import iterbytes, range
 from twisted.cred.error import UnauthorizedLogin, UnhandledCredentials
 from twisted.cred import portal, checkers, credentials
 
@@ -285,7 +289,8 @@ class SimpleFactoryCopy(pb.Copyable):
     @cvar allIDs: hold every created instances of this class.
     @type allIDs: C{dict}
     """
-    allIDs = {}
+    allIDs = {}  # type: Dict[int, 'SimpleFactoryCopy']
+
     def __init__(self, id):
         self.id = id
         SimpleFactoryCopy.allIDs[id] = self
@@ -843,8 +848,7 @@ class BrokerTests(unittest.TestCase):
         self.assertEqual(complex[0].foo, 4)
         self.assertEqual(len(coll), 2)
         cp = coll[0][0]
-        self.assertIdentical(cp.checkMethod().__self__ if _PY3 else
-                             cp.checkMethod().im_self, cp,
+        self.assertIdentical(cp.checkMethod().__self__, cp,
                              "potential refcounting issue")
         self.assertIdentical(cp.checkSelf(), cp,
                              "other potential refcounting issue")

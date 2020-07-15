@@ -5,19 +5,23 @@
 Test running processes with the APIs in L{twisted.internet.utils}.
 """
 
-from __future__ import division, absolute_import
 
-import warnings, os, stat, sys, signal
+import os
+import signal
+import stat
+import sys
+import warnings
+from unittest import skipIf
 
-from twisted.python.compat import _PY3
 from twisted.python.runtime import platform
-from twisted.trial import unittest
+from twisted.trial.unittest import SynchronousTestCase, TestCase
 from twisted.internet import error, reactor, utils, interfaces
 from twisted.internet.defer import Deferred
 from twisted.python.test.test_util import SuppressedWarningsTests
 
 
-class ProcessUtilsTests(unittest.TestCase):
+
+class ProcessUtilsTests(TestCase):
     """
     Test running a process using L{getProcessOutput}, L{getProcessValue}, and
     L{getProcessOutputAndValue}.
@@ -49,13 +53,8 @@ class ProcessUtilsTests(unittest.TestCase):
         scriptFile = self.makeSourceFile([
                 "import sys",
                 "for s in b'hello world\\n':",
-                "    if hasattr(sys.stdout, 'buffer'):",
-                "        # Python 3",
-                "        s = bytes([s])",
-                "        sys.stdout.buffer.write(s)",
-                "    else:",
-                "        # Python 2",
-                "        sys.stdout.write(s)",
+                "    s = bytes([s])",
+                "    sys.stdout.buffer.write(s)",
                 "    sys.stdout.flush()"])
         d = utils.getProcessOutput(self.exe, ['-u', scriptFile])
         return d.addCallback(self.assertEqual, b"hello world\n")
@@ -119,30 +118,21 @@ class ProcessUtilsTests(unittest.TestCase):
         """
         scriptFile = self.makeSourceFile([
             "import sys",
-            "if hasattr(sys.stdout, 'buffer'):",
-            "    # Python 3",
-            "    sys.stdout.buffer.write(b'hello world!\\n')",
-            "    sys.stderr.buffer.write(b'goodbye world!\\n')",
-            "else:",
-            "    # Python 2",
-            "    sys.stdout.write(b'hello world!\\n')",
-            "    sys.stderr.write(b'goodbye world!\\n')",
+            "sys.stdout.buffer.write(b'hello world!\\n')",
+            "sys.stderr.buffer.write(b'goodbye world!\\n')",
             "sys.exit(1)"
             ])
 
         def gotOutputAndValue(out_err_code):
             out, err, code = out_err_code
             self.assertEqual(out, b"hello world!\n")
-            if _PY3:
-                self.assertEqual(err, b"goodbye world!\n")
-            else:
-                self.assertEqual(err, b"goodbye world!" +
-                                      os.linesep)
+            self.assertEqual(err, b"goodbye world!\n")
             self.assertEqual(code, 1)
         d = utils.getProcessOutputAndValue(self.exe, ["-u", scriptFile])
         return d.addCallback(gotOutputAndValue)
 
 
+    @skipIf(platform.isWindows(), "Windows doesn't have real signals.")
     def test_outputSignal(self):
         """
         If the child process exits because of a signal, the L{Deferred}
@@ -170,8 +160,6 @@ class ProcessUtilsTests(unittest.TestCase):
         d = utils.getProcessOutputAndValue(self.exe, ['-u', scriptFile])
         d = self.assertFailure(d, tuple)
         return d.addCallback(gotOutputAndValue)
-    if platform.isWindows():
-        test_outputSignal.skip = "Windows doesn't have real signals."
 
 
     def _pathTest(self, utilFunc, check):
@@ -313,7 +301,7 @@ class ProcessUtilsTests(unittest.TestCase):
 
 
 
-class SuppressWarningsTests(unittest.SynchronousTestCase):
+class SuppressWarningsTests(SynchronousTestCase):
     """
     Tests for L{utils.suppressWarnings}.
     """

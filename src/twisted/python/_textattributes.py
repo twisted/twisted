@@ -20,8 +20,8 @@ Serializing a formatting structure is done with L{flatten}.
 @see: L{twisted.words.protocols.irc._CharacterAttributes}
 """
 
-from __future__ import print_function
 
+from typing import Sequence
 from twisted.python.util import FancyEqMixin
 
 
@@ -37,7 +37,7 @@ class _Attribute(FancyEqMixin, object):
     @type children: C{list}
     @ivar children: Child attributes.
     """
-    compareAttributes = ('children',)
+    compareAttributes = ('children',)  # type: Sequence[str]
 
 
     def __init__(self):
@@ -216,7 +216,7 @@ class DefaultFormattingState(FancyEqMixin, object):
     A character attribute that does nothing, thus applying no attributes to
     text.
     """
-    compareAttributes = ('_dummy',)
+    compareAttributes = ('_dummy',)  # type: Sequence[str]
 
     _dummy = 0
 

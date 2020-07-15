@@ -6,21 +6,22 @@
 hosts(5) support.
 """
 
-from __future__ import division, absolute_import
 
 from twisted.python.compat import nativeString
 from twisted.names import dns
 from twisted.python import failure
 from twisted.python.filepath import FilePath
 from twisted.internet import defer
-from twisted.internet.abstract import isIPAddress
+from twisted.internet.abstract import isIPAddress, isIPv6Address
 
 from twisted.names import common
 
+
+
 def searchFileForAll(hostsFile, name):
     """
-    Search the given file, which is in hosts(5) standard format, for an address
-    entry with a given name.
+    Search the given file, which is in hosts(5) standard format, for addresses
+    associated with a given name.
 
     @param hostsFile: The name of the hosts(5)-format file to search.
     @type hostsFile: L{FilePath}
@@ -47,7 +48,12 @@ def searchFileForAll(hostsFile, name):
         parts = line.split()
 
         if name.lower() in [s.lower() for s in parts[1:]]:
-            results.append(nativeString(parts[0]))
+            try:
+                maybeIP = nativeString(parts[0])
+            except ValueError:  # Not ASCII.
+                continue
+            if isIPAddress(maybeIP) or isIPv6Address(maybeIP):
+                results.append(maybeIP)
     return results
 
 
@@ -107,7 +113,7 @@ class Resolver(common.ResolverBase):
                          dns.Record_AAAA(addr, self.ttl))
             for addr
             in searchFileForAll(FilePath(self.file), name)
-            if not isIPAddress(addr)])
+            if isIPv6Address(addr)])
 
 
     def _respond(self, name, records):
@@ -150,4 +156,5 @@ class Resolver(common.ResolverBase):
     # Someday this should include IPv6 addresses too, but that will cause
     # problems if users of the API (mainly via getHostByName) aren't updated to
     # know about IPv6 first.
+    # FIXME - getHostByName knows about IPv6 now.
     lookupAllRecords = lookupAddress

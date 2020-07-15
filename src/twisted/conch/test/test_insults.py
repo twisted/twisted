@@ -2,6 +2,8 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
+from typing import Optional, Type
+
 from twisted.trial import unittest
 from twisted.test.proto_helpers import StringTransport
 
@@ -12,6 +14,7 @@ from twisted.conch.insults.insults import (CS_UK, CS_US, CS_DRAWING,
                                            BLINK, UNDERLINE)
 from twisted.conch.insults.insults import G0, G1
 from twisted.conch.insults.insults import modes, privateModes
+from twisted.internet.protocol import Protocol
 from twisted.python.compat import intToBytes, iterbytes
 from twisted.python.constants import ValueConstant, Values
 
@@ -201,18 +204,27 @@ def testByte%(groupName)s(self):
 
     self.verifyResults(transport, proto, parser)
 """
-class ByteGroupingsMixin(MockMixin):
-    protocolFactory = None
 
-    for word, n in [('Pairs', 2), ('Triples', 3), ('Quads', 4), ('Quints', 5), ('Sexes', 6)]:
+
+
+class ByteGroupingsMixin(MockMixin):
+    protocolFactory = None  # type: Optional[Type[Protocol]]
+
+    for word, n in [('Pairs', 2), ('Triples', 3), ('Quads', 4), ('Quints', 5),
+                    ('Sexes', 6)]:
         exec(_byteGroupingTestTemplate % {'groupName': word, 'bytesPer': n})
     del word, n
 
     def verifyResults(self, transport, proto, parser):
-        result = self.assertCall(occurrences(proto).pop(0), "makeConnection", (parser,))
+        result = self.assertCall(occurrences(proto).pop(0), "makeConnection",
+                                 (parser,))
         self.assertEqual(occurrences(result), [])
 
+
+
 del _byteGroupingTestTemplate
+
+
 
 class ServerArrowKeysTests(ByteGroupingsMixin, unittest.TestCase):
     protocolFactory = ServerProtocol

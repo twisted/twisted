@@ -11,6 +11,7 @@ from io import BytesIO
 import getpass
 import string
 import random
+from unittest import skipIf
 
 from zope.interface import implementer
 from zope.interface.verify import verifyClass
@@ -24,7 +25,7 @@ from twisted.protocols import basic
 from twisted.python import failure, filepath, runtime
 from twisted.python.compat import range
 from twisted.test import proto_helpers
-from twisted.trial import unittest
+from twisted.trial.unittest import TestCase
 
 from twisted.protocols import ftp, loopback
 
@@ -32,7 +33,7 @@ from twisted.protocols import ftp, loopback
 if runtime.platform.isWindows():
     nonPOSIXSkip = "Cannot run on Windows"
 else:
-    nonPOSIXSkip = None
+    nonPOSIXSkip = ""
 
 
 
@@ -89,7 +90,7 @@ def passivemode_msg(protocol, host='127.0.0.1', port=12345):
 
 
 
-class FTPServerTestCase(unittest.TestCase):
+class FTPServerTestCase(TestCase):
     """
     Simple tests for an FTP server with the default settings.
 
@@ -1298,7 +1299,7 @@ class FTPServerPortDataConnectionTests(FTPServerPasvDataConnectionTests):
 
 
 
-class DTPFactoryTests(unittest.TestCase):
+class DTPFactoryTests(TestCase):
     """
     Tests for L{ftp.DTPFactory}.
     """
@@ -1434,7 +1435,7 @@ class DTPFactoryTests(unittest.TestCase):
 
 
 
-class DTPTests(unittest.TestCase):
+class DTPTests(TestCase):
     """
     Tests for L{ftp.DTP}.
 
@@ -1503,7 +1504,7 @@ class MyFTPFileListProtocol(ftp.FTPFileListProtocol):
 
 
 
-class FTPFileListingTests(unittest.TestCase):
+class FTPFileListingTests(TestCase):
     def getFilesForLines(self, lines):
         fileList = MyFTPFileListProtocol()
         d = loopback.loopbackAsync(PrintLines(lines), fileList)
@@ -1651,7 +1652,7 @@ class FTPFileListingTests(unittest.TestCase):
 
 
 
-class FTPClientFailedRETRAndErrbacksUponDisconnectTests(unittest.TestCase):
+class FTPClientFailedRETRAndErrbacksUponDisconnectTests(TestCase):
     """
     FTP client fails and RETR fails and disconnects.
     """
@@ -1710,7 +1711,7 @@ class FTPClientFailedRETRAndErrbacksUponDisconnectTests(unittest.TestCase):
 
 
 
-class FTPClientTests(unittest.TestCase):
+class FTPClientTests(TestCase):
     """
     Test advanced FTP client commands.
     """
@@ -2660,7 +2661,7 @@ class FTPClientTests(unittest.TestCase):
 
 
 
-class FTPClientBasicTests(unittest.TestCase):
+class FTPClientBasicTests(TestCase):
     """
     FTP client
     """
@@ -2780,7 +2781,7 @@ class FTPClientBasicTests(unittest.TestCase):
 
 
 
-class PathHandlingTests(unittest.TestCase):
+class PathHandlingTests(TestCase):
     """
     Handling paths.
     """
@@ -2842,7 +2843,7 @@ class PathHandlingTests(unittest.TestCase):
 
 
 
-class IsGlobbingExpressionTests(unittest.TestCase):
+class IsGlobbingExpressionTests(TestCase):
     """
     Tests for _isGlobbingExpression utility function.
     """
@@ -2879,7 +2880,7 @@ class IsGlobbingExpressionTests(unittest.TestCase):
 
 
 
-class BaseFTPRealmTests(unittest.TestCase):
+class BaseFTPRealmTests(TestCase):
     """
     Tests for L{ftp.BaseFTPRealm}, a base class to help define L{IFTPShell}
     realms with different user home directory policies.
@@ -2934,7 +2935,7 @@ class BaseFTPRealmTests(unittest.TestCase):
 
 
 
-class FTPRealmTests(unittest.TestCase):
+class FTPRealmTests(TestCase):
     """
     Tests for L{ftp.FTPRealm}.
     """
@@ -2962,11 +2963,11 @@ class FTPRealmTests(unittest.TestCase):
 
 
 
-class SystemFTPRealmTests(unittest.TestCase):
+@skipIf(nonPOSIXSkip, nonPOSIXSkip)
+class SystemFTPRealmTests(TestCase):
     """
     Tests for L{ftp.SystemFTPRealm}.
     """
-    skip = nonPOSIXSkip
 
     def test_getHomeDirectory(self):
         """
@@ -3002,7 +3003,7 @@ class SystemFTPRealmTests(unittest.TestCase):
 
 
 
-class ErrnoToFailureTests(unittest.TestCase):
+class ErrnoToFailureTests(TestCase):
     """
     Tests for L{ftp.errnoToFailure} errno checking.
     """
@@ -3068,7 +3069,7 @@ class ErrnoToFailureTests(unittest.TestCase):
 
 
 
-class AnonymousFTPShellTests(unittest.TestCase):
+class AnonymousFTPShellTests(TestCase):
     """
     Test anonymous shell properties.
     """
@@ -3513,7 +3514,7 @@ class IFTPShellTestsMixin:
 
 
 
-class FTPShellTests(unittest.TestCase, IFTPShellTestsMixin):
+class FTPShellTests(TestCase, IFTPShellTestsMixin):
     """
     Tests for the C{ftp.FTPShell} object.
     """
@@ -3689,7 +3690,7 @@ class IReadWriteTestsMixin:
 
 
 
-class FTPReadWriteTests(unittest.TestCase, IReadWriteTestsMixin):
+class FTPReadWriteTests(TestCase, IReadWriteTestsMixin):
     """
     Tests for C{ftp._FileReader} and C{ftp._FileWriter}, the objects returned
     by the shell in C{openForReading}/C{openForWriting}.
@@ -3765,7 +3766,7 @@ class CloseTestShell:
 
 
 
-class FTPCloseTests(unittest.TestCase):
+class FTPCloseTests(TestCase):
     """
     Tests that the server invokes IWriteFile.close
     """
@@ -3807,7 +3808,7 @@ class FTPCloseTests(unittest.TestCase):
 
 
 
-class FTPResponseCodeTests(unittest.TestCase):
+class FTPResponseCodeTests(TestCase):
     """
     Tests relating directly to response codes.
     """

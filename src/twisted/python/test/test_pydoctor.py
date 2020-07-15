@@ -4,9 +4,6 @@
 """
 Tests for L{twisted.python._pydoctor}.
 """
-from collections import namedtuple
-
-from twisted.python.compat import _PY3
 from twisted.python.reflect import requireModule
 
 from twisted.trial.unittest import TestCase
@@ -17,8 +14,6 @@ TwistedSphinxInventory = object
 TwistedSystem = object
 if model is None:
     pydoctorSkip = 'Pydoctor is not present.'
-elif _PY3:
-    pydoctorSkip = 'Pydoctor not supported on Python3.'
 else:
     # We have a valid pydoctor.
     from twisted.python._pydoctor import TwistedSphinxInventory, TwistedSystem
@@ -231,41 +226,3 @@ class TwistedSphinxInventoryTests(TestCase):
         result = sut.getLink('zope.interface.adapter.AdapterRegistry')
 
         self.assertEqual('https://zope.tld/adapter.html', result)
-
-
-    def test_getLinkWin32APIExistingMethod(self):
-        """
-        Will return a link to the activestate.com python 2.7 API for
-        pywin32 methods.
-        """
-        activeStateURL = (
-            'http://docs.activestate.com/activepython/2.7/pywin32/'
-            'win32api__FormatMessage_meth.html'
-            )
-        Response = namedtuple('Animal', 'code')
-        response = Response(code=200)
-        sut = self.getInventoryWithZope()
-        sut._getURLAsHEAD = lambda url: {activeStateURL: response}[url]
-
-        result = sut.getLink('win32api.FormatMessage')
-
-        self.assertEqual(activeStateURL, result)
-
-
-    def test_getLinkWin32APIUnknown(self):
-        """
-        Will return L{None} when the auto created link don't exist on the
-        activestate.com site.
-        """
-        activeStateURL = (
-            'http://docs.activestate.com/activepython/2.7/pywin32/'
-            'win32api__FormatMessage_meth.html'
-            )
-        Response = namedtuple('Animal', 'code')
-        response = Response(code=404)
-        sut = self.getInventoryWithZope()
-        sut._getURLAsHEAD = lambda url: {activeStateURL: response}[url]
-
-        result = sut.getLink('win32api.FormatMessage')
-
-        self.assertIsNone(result)

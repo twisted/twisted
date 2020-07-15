@@ -4,7 +4,6 @@
 Windows-specific implementation of the L{twisted.internet.stdio} interface.
 """
 
-from __future__ import absolute_import, division
 
 import win32api
 import os

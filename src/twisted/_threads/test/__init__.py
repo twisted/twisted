@@ -5,5 +5,3 @@
 """
 Tests for L{twisted._threads}.
 """
-
-from __future__ import absolute_import, division, print_function

@@ -6,7 +6,6 @@
 """ A temporary placeholder for client-capable strports, until we
 sufficient use cases get identified """
 
-from __future__ import absolute_import, division
 
 from twisted.internet.endpoints import _parse
 

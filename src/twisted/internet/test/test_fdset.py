@@ -7,8 +7,10 @@ Tests for implementations of L{IReactorFDSet}.
 
 __metaclass__ = type
 
-import os, socket, traceback
-
+import os
+import socket
+import traceback
+from unittest import skipIf
 from zope.interface import implementer
 
 from twisted.python.runtime import platform
@@ -269,6 +271,7 @@ class ReactorFDSetTestsBuilder(ReactorBuilder):
         self.assertEqual(descriptor._received, b"x")
 
 
+    @skipIf(platform.isWindows(), "Cannot duplicate socket filenos on Windows")
     def test_lostFileDescriptor(self):
         """
         The file descriptor underlying a FileDescriptor may be closed and
@@ -338,9 +341,6 @@ class ReactorFDSetTestsBuilder(ReactorBuilder):
         # If the implementation feels like logging the exception raised by
         # MessedUp.fileno, that's fine.
         self.flushLoggedErrors(socket.error)
-    if platform.isWindows():
-        test_lostFileDescriptor.skip = (
-            "Cannot duplicate socket filenos on Windows")
 
 
     def test_connectionLostOnShutdown(self):
