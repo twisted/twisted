@@ -8,7 +8,6 @@ authentication credentials to provide, and also includes a number of useful
 implementations of that interface.
 """
 
-from __future__ import division, absolute_import
 
 from zope.interface import implementer, Interface
 
@@ -34,7 +33,7 @@ class ICredentials(Interface):
     I check credentials.
 
     Implementors I{must} specify the sub-interfaces of ICredentials
-    to which it conforms, using L{zope.interface.declarations.implementer}.
+    to which it conforms, using L{zope.interface.implementer}.
     """
 
 
@@ -441,7 +440,8 @@ class CramMD5Credentials(object):
 
 
     def checkPassword(self, password):
-        verify = hexlify(hmac.HMAC(password, self.challenge).digest())
+        verify = hexlify(hmac.HMAC(password, self.challenge,
+                         digestmod=md5).digest())
         return verify == self.response
 
 

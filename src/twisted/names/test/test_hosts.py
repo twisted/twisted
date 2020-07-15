@@ -5,9 +5,8 @@
 Tests for the I{hosts(5)}-based resolver, L{twisted.names.hosts}.
 """
 
-from __future__ import division, absolute_import
 
-from twisted.trial.unittest import TestCase
+from twisted.trial.unittest import SynchronousTestCase
 from twisted.python.filepath import FilePath
 from twisted.internet.defer import gatherResults
 
@@ -22,7 +21,7 @@ class GoodTempPathMixin(object):
 
 
 
-class SearchHostsFileTests(TestCase, GoodTempPathMixin):
+class SearchHostsFileTests(SynchronousTestCase, GoodTempPathMixin):
     """
     Tests for L{searchFileFor}, a helper which finds the first address for a
     particular hostname in a I{hosts(5)}-style file.
@@ -81,7 +80,7 @@ class SearchHostsFileTests(TestCase, GoodTempPathMixin):
 
 
 
-class SearchHostsFileForAllTests(TestCase, GoodTempPathMixin):
+class SearchHostsFileForAllTests(SynchronousTestCase, GoodTempPathMixin):
     """
     Tests for L{searchFileForAll}, a helper which finds all addresses for a
     particular hostname in a I{hosts(5)}-style file.
@@ -119,9 +118,28 @@ class SearchHostsFileForAllTests(TestCase, GoodTempPathMixin):
         self.assertEqual(
             [], searchFileForAll(self.path(), b"example.com"))
 
+    def test_malformedIP(self):
+        """
+        L{searchFileForAll} ignores any malformed IP addresses associated with
+        the name passed to it.
+        """
+        hosts = self.path()
+        hosts.setContent(
+            b"127.0.0.1\tmiser.example.org\tmiser\n"
+            b"not-an-ip\tmiser\n"
+            b"\xffnot-ascii\t miser\n"
+            b"# miser\n"
+            b"miser\n"
+            b"::1 miser"
+        )
+        self.assertEqual(
+            ['127.0.0.1', '::1'],
+            searchFileForAll(hosts, b'miser'),
+        )
 
 
-class HostsTests(TestCase, GoodTempPathMixin):
+
+class HostsTests(SynchronousTestCase, GoodTempPathMixin):
     """
     Tests for the I{hosts(5)}-based L{twisted.names.hosts.Resolver}.
     """
@@ -136,6 +154,11 @@ class HostsTests(TestCase, GoodTempPathMixin):
 1.1.1.4    multiple
 ::3        ip6-multiple
 ::4        ip6-multiple
+not-an-ip  malformed
+malformed
+# malformed
+1.1.1.5    malformed
+::5        malformed
 ''')
         self.ttl = 4200
         self.resolver = Resolver(f.path, self.ttl)
@@ -162,7 +185,7 @@ class HostsTests(TestCase, GoodTempPathMixin):
                 ]
         ds = [self.resolver.getHostByName(n).addCallback(self.assertEqual, ip)
               for n, ip in data]
-        return gatherResults(ds)
+        self.successResultOf(gatherResults(ds))
 
 
     def test_lookupAddress(self):
@@ -171,16 +194,13 @@ class HostsTests(TestCase, GoodTempPathMixin):
         records from the hosts file.
         """
         d = self.resolver.lookupAddress(b'multiple')
-        def resolved(results):
-            answers, authority, additional = results
-            self.assertEqual(
-                (RRHeader(b"multiple", A, IN, self.ttl,
-                          Record_A("1.1.1.3", self.ttl)),
-                 RRHeader(b"multiple", A, IN, self.ttl,
-                          Record_A("1.1.1.4", self.ttl))),
-                answers)
-        d.addCallback(resolved)
-        return d
+        answers, authority, additional = self.successResultOf(d)
+        self.assertEqual(
+            (RRHeader(b"multiple", A, IN, self.ttl,
+                      Record_A("1.1.1.3", self.ttl)),
+             RRHeader(b"multiple", A, IN, self.ttl,
+                      Record_A("1.1.1.4", self.ttl))),
+            answers)
 
 
     def test_lookupIPV6Address(self):
@@ -189,16 +209,13 @@ class HostsTests(TestCase, GoodTempPathMixin):
         with AAAA records from the hosts file.
         """
         d = self.resolver.lookupIPV6Address(b'ip6-multiple')
-        def resolved(results):
-            answers, authority, additional = results
-            self.assertEqual(
-                (RRHeader(b"ip6-multiple", AAAA, IN, self.ttl,
-                          Record_AAAA("::3", self.ttl)),
-                 RRHeader(b"ip6-multiple", AAAA, IN, self.ttl,
-                          Record_AAAA("::4", self.ttl))),
-                answers)
-        d.addCallback(resolved)
-        return d
+        answers, authority, additional = self.successResultOf(d)
+        self.assertEqual(
+            (RRHeader(b"ip6-multiple", AAAA, IN, self.ttl,
+                      Record_AAAA("::3", self.ttl)),
+             RRHeader(b"ip6-multiple", AAAA, IN, self.ttl,
+                      Record_AAAA("::4", self.ttl))),
+            answers)
 
 
     def test_lookupAllRecords(self):
@@ -207,26 +224,26 @@ class HostsTests(TestCase, GoodTempPathMixin):
         with A records from the hosts file.
         """
         d = self.resolver.lookupAllRecords(b'mixed')
-        def resolved(results):
-            answers, authority, additional = results
-            self.assertEqual(
-                (RRHeader(b"mixed", A, IN, self.ttl,
-                          Record_A("1.1.1.2", self.ttl)),),
-                answers)
-        d.addCallback(resolved)
-        return d
+        answers, authority, additional = self.successResultOf(d)
+        self.assertEqual(
+            (RRHeader(b"mixed", A, IN, self.ttl,
+                      Record_A("1.1.1.2", self.ttl)),),
+            answers)
 
 
     def test_notImplemented(self):
-        return self.assertFailure(self.resolver.lookupMailExchange(b'EXAMPLE'),
-                                  NotImplementedError)
+        """
+        L{hosts.Resolver} fails with L{NotImplementedError} for L{IResolver}
+        methods it doesn't implement.
+        """
+        self.failureResultOf(self.resolver.lookupMailExchange(b'EXAMPLE'),
+                             NotImplementedError)
 
 
     def test_query(self):
         d = self.resolver.query(Query(b'EXAMPLE'))
-        d.addCallback(lambda x: self.assertEqual(x[0][0].payload.dottedQuad(),
-                                                 '1.1.1.1'))
-        return d
+        [answer], authority, additional = self.successResultOf(d)
+        self.assertEqual(answer.payload.dottedQuad(), '1.1.1.1')
 
 
     def test_lookupAddressNotFound(self):
@@ -235,8 +252,8 @@ class HostsTests(TestCase, GoodTempPathMixin):
         L{dns.DomainError} if the name passed in has no addresses in the hosts
         file.
         """
-        return self.assertFailure(self.resolver.lookupAddress(b'foueoa'),
-                                  DomainError)
+        self.failureResultOf(self.resolver.lookupAddress(b'foueoa'),
+                             DomainError)
 
 
     def test_lookupIPV6AddressNotFound(self):
@@ -244,8 +261,8 @@ class HostsTests(TestCase, GoodTempPathMixin):
         Like L{test_lookupAddressNotFound}, but for
         L{hosts.Resolver.lookupIPV6Address}.
         """
-        return self.assertFailure(self.resolver.lookupIPV6Address(b'foueoa'),
-                                  DomainError)
+        self.failureResultOf(self.resolver.lookupIPV6Address(b'foueoa'),
+                             DomainError)
 
 
     def test_lookupAllRecordsNotFound(self):
@@ -253,5 +270,32 @@ class HostsTests(TestCase, GoodTempPathMixin):
         Like L{test_lookupAddressNotFound}, but for
         L{hosts.Resolver.lookupAllRecords}.
         """
-        return self.assertFailure(self.resolver.lookupAllRecords(b'foueoa'),
-                                  DomainError)
+        self.failureResultOf(self.resolver.lookupAllRecords(b'foueoa'),
+                             DomainError)
+
+    def test_lookupMalformed(self):
+        """
+        L{hosts.Resolver.lookupAddress} returns a L{Deferred} which fires with
+        the valid addresses from the hosts file, ignoring any entries that
+        aren't valid IP addresses.
+        """
+        d = self.resolver.lookupAddress(b'malformed')
+        [answer], authority, additional = self.successResultOf(d)
+        self.assertEqual(
+            RRHeader(b"malformed", A, IN, self.ttl,
+                     Record_A("1.1.1.5", self.ttl)),
+            answer,
+        )
+
+    def test_lookupIPV6Malformed(self):
+        """
+        Like L{test_lookupAddressMalformed}, but for
+        L{hosts.Resolver.lookupIPV6Address}.
+        """
+        d = self.resolver.lookupIPV6Address(b'malformed')
+        [answer], authority, additional = self.successResultOf(d)
+        self.assertEqual(
+            RRHeader(b"malformed", AAAA, IN, self.ttl,
+                     Record_AAAA("::5", self.ttl)),
+            answer,
+        )

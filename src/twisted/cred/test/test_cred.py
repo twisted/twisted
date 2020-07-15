@@ -5,7 +5,6 @@
 Tests for L{twisted.cred}, now with 30% more starch.
 """
 
-from __future__ import absolute_import, division
 
 from zope.interface import implementer, Interface
 
@@ -20,7 +19,7 @@ from twisted.cred import checkers, credentials, portal, error
 try:
     from crypt import crypt
 except ImportError:
-    crypt = None
+    crypt = None  # type: ignore[assignment,misc]
 
 
 
@@ -324,12 +323,12 @@ class CheckersMixin(object):
     and deny specified credentials.
 
     Subclasses must provide
-    - C{getCheckers} which returns a sequence of
-      L{checkers.ICredentialChecker}
-    - C{getGoodCredentials} which returns a list of 2-tuples of
-      credential to check and avaterId to expect.
-    - C{getBadCredentials} which returns a list of credentials
-      which are expected to be unauthorized.
+      - C{getCheckers} which returns a sequence of
+        L{checkers.ICredentialChecker}
+      - C{getGoodCredentials} which returns a list of 2-tuples of
+        credential to check and avaterId to expect.
+      - C{getBadCredentials} which returns a list of credentials
+        which are expected to be unauthorized.
     """
 
     @defer.inlineCallbacks
@@ -409,7 +408,9 @@ class HashlessFilePasswordDBMixin(object):
 
 
 class LocallyHashedFilePasswordDBMixin(HashlessFilePasswordDBMixin):
-    diskHash = staticmethod(lambda x: hexlify(x))
+    @staticmethod
+    def diskHash(x):
+        return hexlify(x)
 
 
 

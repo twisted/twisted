@@ -6,7 +6,6 @@ Tests for implementations of L{IHostnameResolver} and their interactions with
 reactor implementations.
 """
 
-from __future__ import division, absolute_import
 
 __metaclass__ = type
 

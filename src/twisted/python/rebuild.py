@@ -15,16 +15,11 @@ import linecache
 
 from imp import reload
 
-try:
-    # Python 2
-    from types import InstanceType
-except ImportError:
-    # Python 3
-    pass
+from types import ModuleType
+from typing import Dict
 
 # Sibling Imports
 from twisted.python import log, reflect
-from twisted.python.compat import _PY3
 
 lastRebuild = time.time()
 
@@ -82,17 +77,17 @@ class Sensitive(object):
                 return getattr(anObject.im_class, anObject.__name__)
             else:
                 return getattr(anObject.__self__, anObject.__name__)
-        elif not _PY3 and t == InstanceType:
-            # Kick it, if it's out of date.
-            getattr(anObject, 'nothing', None)
-            return anObject
         elif _isClassType(t):
             return latestClass(anObject)
         else:
             log.msg('warning returning anObject!')
             return anObject
 
-_modDictIDMap = {}
+
+
+_modDictIDMap = {}  # type:Dict[int, ModuleType]
+
+
 
 def latestFunction(oldFunc):
     """

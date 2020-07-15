@@ -6,7 +6,6 @@
 Serial Port Protocol
 """
 
-from __future__ import division, absolute_import
 
 # dependent on pyserial ( http://pyserial.sf.net/ )
 # only tested w/ 1.18 (5 Dec 2002)

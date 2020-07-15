@@ -23,13 +23,15 @@ exclude appveyor.yml
 exclude .coveralls.yml
 exclude .circleci
 recursive-exclude .circleci *
+exclude azure-pipelines
+recursive-exclude azure-pipelines *
 prune bin
 prune admin
 prune .travis
 prune .github
 
 # Include test-running utilities for downstream packagers
-include tox.ini .coveragerc
+include mypy.ini tox.ini .coveragerc
 
 # Include our docs templates
 recursive-include src/twisted/python/_pydoctortemplates *.html
@@ -44,7 +46,6 @@ include src/twisted/internet/test/fake_CAs/*
 include src/twisted/mail/test/rfc822.message
 
 # Some extras
-recursive-include src/twisted *.3only
 recursive-include src/twisted *.glade *.pxi *.h *.c *.bat *.g *.pyx *.zsh *.txt
 
 # Docs

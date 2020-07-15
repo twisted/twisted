@@ -5,8 +5,9 @@
 Tests for L{twisted.web._newclient}.
 """
 
-from __future__ import division, absolute_import
 __metaclass__ = type
+
+from typing import Optional
 
 from zope.interface import implementer
 from zope.interface.verify import verifyObject
@@ -183,7 +184,7 @@ class _HTTPParserTests(object):
     Base test class for L{HTTPParser} which is responsible for the bulk of
     the task of parsing HTTP bytes.
     """
-    sep = None
+    sep = None  # type: Optional[bytes]
 
     def test_statusCallback(self):
         """
@@ -1981,6 +1982,16 @@ class StringProducer:
 
     def stopProducing(self):
         self.stopped = True
+
+
+    def pauseProducing(self):
+        # IBodyProducer.pauseProducing
+        pass
+
+
+    def resumeProducing(self):
+        # IBodyProducer.resumeProducing
+        pass
 
 
 

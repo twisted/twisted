@@ -8,15 +8,18 @@ Tests for L{twisted.web.distrib}.
 from os.path import abspath
 from xml.dom.minidom import parseString
 try:
-    import pwd
+    import pwd as _pwd
 except ImportError:
     pwd = None
+else:
+    pwd = _pwd
 
+from unittest import skipIf
 from zope.interface.verify import verifyObject
 
 from twisted.python import filepath, failure
 from twisted.internet import reactor, defer
-from twisted.trial import unittest
+from twisted.trial.unittest import TestCase
 from twisted.spread import pb
 from twisted.spread.banana import SIZE_LIMIT
 from twisted.web import distrib, client, resource, static, server
@@ -54,7 +57,7 @@ class ArbitraryError(Exception):
 
 
 
-class DistribTests(unittest.TestCase):
+class DistribTests(TestCase):
     port1 = None
     port2 = None
     sub = None
@@ -390,7 +393,7 @@ class _PasswordDatabase:
 
 
 
-class UserDirectoryTests(unittest.TestCase):
+class UserDirectoryTests(TestCase):
     """
     Tests for L{UserDirectory}, a resource for listing all user resources
     available on a system.
@@ -515,6 +518,7 @@ class UserDirectoryTests(unittest.TestCase):
         return result
 
 
+    @skipIf(not pwd, "pwd module required")
     def test_passwordDatabase(self):
         """
         If L{UserDirectory} is instantiated with no arguments, it uses the
@@ -522,6 +526,3 @@ class UserDirectoryTests(unittest.TestCase):
         """
         directory = distrib.UserDirectory()
         self.assertIdentical(directory._pwd, pwd)
-    if pwd is None:
-        test_passwordDatabase.skip = "pwd module required"
-

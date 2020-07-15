@@ -1,0 +1,1 @@
+Fixed serialization of timedelta, date, and time objects in twisted.spread.

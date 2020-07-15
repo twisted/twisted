@@ -5,7 +5,6 @@
 Tests for async assertions provided by C{twisted.trial.unittest.TestCase}.
 """
 
-from __future__ import division, absolute_import
 
 import unittest as pyunit
 

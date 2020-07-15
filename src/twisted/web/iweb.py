@@ -39,7 +39,7 @@ class IRequest(Interface):
 
     prepath = Attribute(
         "The URL path segments which have been processed during resource "
-        "traversal, as a list of {bytes}.")
+        "traversal, as a list of L{bytes}.")
 
     postpath = Attribute(
         "The URL path segments which have not (yet) been processed "

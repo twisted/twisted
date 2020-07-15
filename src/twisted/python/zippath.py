@@ -8,7 +8,6 @@ This module contains implementations of L{IFilePath} for zip files.
 See the constructor of L{ZipArchive} for use.
 """
 
-from __future__ import absolute_import, division
 
 import os
 import time
@@ -221,7 +220,10 @@ class ZipArchive(ZipPath):
     instances will be in the mode of the argument to the creator method,
     converting if required.
     """
-    archive = property(lambda self: self)
+    @property
+    def archive(self):
+        return self
+
 
     def __init__(self, archivePathname):
         """

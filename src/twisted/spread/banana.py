@@ -12,9 +12,9 @@ for more details.
 @author: Glyph Lefkowitz
 """
 
-from __future__ import absolute_import, division
 
-import copy, struct
+import copy
+import struct
 from io import BytesIO
 
 from twisted.internet import protocol

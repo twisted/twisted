@@ -29,6 +29,7 @@ import email.utils
 
 from itertools import chain
 from io import BytesIO
+from typing import Any, List
 
 from zope.interface import implementer
 
@@ -42,7 +43,7 @@ from twisted.python.compat import (
     _bytesChr, unichr as chr, _b64decodebytes as decodebytes,
     _b64encodebytes as encodebytes,
     intToBytes, iterbytes, long, nativeString, networkString, unicode,
-    _matchingString, _PY3, _get_async_param,
+    _matchingString, _get_async_param,
 )
 from twisted.internet import interfaces
 
@@ -171,7 +172,7 @@ class MessageSet(object):
         is being used that maintains its own state, it is guaranteed
         that it will not be called out-of-order).
     """
-    _empty = []
+    _empty = []  # type: List[Any]
     _infinity = float('inf')
 
     def __init__(self, start=_empty, end=_empty):
@@ -196,39 +197,37 @@ class MessageSet(object):
             self.ranges = start[:]
             self.clean()
         else:
-            self.add(start,end)
+            self.add(start, end)
 
 
-    # Ooo.  A property.
-    def last():
-        def _setLast(self, value):
-            if self._last is not self._empty:
-                raise ValueError("last already set")
+    @property
+    def last(self):
+        """
+        Replaces all occurrences of "*".  This should be the
+        largest number in use.  Must be set before attempting to
+        use the MessageSet as a container.
 
-            self._last = value
-            for i, (l, h) in enumerate(self.ranges):
-                if l is None:
-                    l = value
-                if h is None:
-                    h = value
-                if l > h:
-                    l, h = h, l
-                self.ranges[i] = (l, h)
-            self.clean()
+        @raises: L{ValueError} if a largest value has already
+        been set.
+        """
+        return self._last
 
-        def _getLast(self):
-            return self._last
 
-        doc = '''
-              Replaces all occurrences of "*".  This should be the
-              largest number in use.  Must be set before attempting to
-              use the MessageSet as a container.
+    @last.setter
+    def last(self, value):
+        if self._last is not self._empty:
+            raise ValueError("last already set")
 
-              @raises: L{ValueError} if a largest value has already
-                  been set.
-              '''
-        return _getLast, _setLast, None, doc
-    last = property(*last())
+        self._last = value
+        for i, (low, high) in enumerate(self.ranges):
+            if low is None:
+                low = value
+            if high is None:
+                high = value
+            if low > high:
+                low, high = high, low
+            self.ranges[i] = (low, high)
+        self.clean()
 
 
     def add(self, start, end=_empty):
@@ -581,11 +580,7 @@ _CTL = b''.join(_bytesChr(ch) for ch in chain(range(0x21), range(0x80, 0x100)))
 _nonAtomChars = b']\\\\(){%*"' + _SP + _CTL
 
 # _nonAtomRE is only used in Query, so it uses native strings.
-if _PY3:
-    #
-    _nativeNonAtomChars = _nonAtomChars.decode('charmap')
-else:
-    _nativeNonAtomChars = _nonAtomChars
+_nativeNonAtomChars = _nonAtomChars.decode('charmap')
 _nonAtomRE = re.compile('[' + _nativeNonAtomChars + ']')
 
 # This is all the bytes that match the ATOM-CHAR from the grammar in the RFC.
@@ -3185,14 +3180,10 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         # they should receive namespaces and delimiters as native
         # strings.  Both cases are possible because of the imap4-utf-7
         # encoding.
-        if _PY3:
-            def _prepareNamespaceOrDelimiter(namespaceList):
-                return [
-                    element.decode('imap4-utf-7') for element in namespaceList
-                ]
-        else:
-            def _prepareNamespaceOrDelimiter(element):
-                return element
+        def _prepareNamespaceOrDelimiter(namespaceList):
+            return [
+                element.decode('imap4-utf-7') for element in namespaceList
+            ]
 
         for parts in lines:
             if len(parts) == 4 and parts[0] == b'NAMESPACE':
@@ -3526,11 +3517,10 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
                 #
                 # Mailbox names contain the hierarchical delimiter, so
                 # it too should be a native string.
-                if _PY3:
-                    # delimiter
-                    parts[2] = parts[2].decode('imap4-utf-7')
-                    # mailbox
-                    parts[3] = parts[3].decode('imap4-utf-7')
+                # delimiter
+                parts[2] = parts[2].decode('imap4-utf-7')
+                # mailbox
+                parts[3] = parts[3].decode('imap4-utf-7')
 
                 results.append(tuple(parts[1:]))
         return results
@@ -3745,8 +3735,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         """
         # Queries should be encoded as ASCII unless a charset
         # identifier is provided.  See #9201.
-        if _PY3:
-            queries = [query.encode('charmap') for query in queries]
+        queries = [query.encode('charmap') for query in queries]
 
         if kwarg.get('uid'):
             cmd = b'UID SEARCH'
@@ -4118,16 +4107,12 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         # return native (byte) strings, while on Python 3 it should
         # decode bytes to native strings via charmap, ensuring data
         # fidelity at the cost of mojibake.
-        if _PY3:
-            def nativeStringResponse(thing):
-                if isinstance(thing, bytes):
-                    return thing.decode('charmap')
-                elif isinstance(thing, list):
-                    return [nativeStringResponse(subthing)
-                            for subthing in thing]
-        else:
-            def nativeStringResponse(thing):
-                return thing
+        def nativeStringResponse(thing):
+            if isinstance(thing, bytes):
+                return thing.decode('charmap')
+            elif isinstance(thing, list):
+                return [nativeStringResponse(subthing)
+                        for subthing in thing]
 
         values = {}
         unstructured = []
@@ -4354,8 +4339,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
 
         # APPEND components should be encoded as ASCII unless a
         # charset identifier is provided.  See #9201.
-        if _PY3:
-            cmd = cmd.encode('charmap')
+        cmd = cmd.encode('charmap')
 
         d = self.sendCommand(Command(fetch, cmd, wantResponse=(b'FETCH',)))
         d.addCallback(self._cbFetch, (), False)
@@ -5207,6 +5191,11 @@ class MemoryAccount(MemoryAccountWithoutNamespaces):
 
 
     def getOtherNamespaces(self):
+        return None
+
+
+    def getUserNamespaces(self):
+        # INamespacePresenter.getUserNamespaces
         return None
 
 
@@ -6364,12 +6353,23 @@ class StreamWriter(codecs.StreamWriter):
         return encoder(s)
 
 
+
 _codecInfo = codecs.CodecInfo(encoder, decoder, StreamReader, StreamWriter)
 
 
+
 def imap4_utf_7(name):
-    if name == 'imap4-utf-7':
+    # In Python 3.9, codecs.lookup() was changed to normalize the codec name
+    # in the same way as encodings.normalize_encoding().  The docstring
+    # for encodings.normalize_encoding() describes how the codec name is
+    # normalized.  We need to replace '-' with '_' to be compatible with
+    # older Python versions.
+    #  See:  https://bugs.python.org/issue37751
+    #        https://github.com/python/cpython/pull/17997
+    if name.replace('-', '_') == 'imap4_utf_7':
         return _codecInfo
+
+
 
 codecs.register(imap4_utf_7)
 

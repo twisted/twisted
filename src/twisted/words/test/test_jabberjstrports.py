@@ -5,12 +5,12 @@
 Tests for L{twisted.words.protocols.jabber.jstrports}.
 """
 
-from __future__ import absolute_import, division
 
 from twisted.trial import unittest
 
 from twisted.words.protocols.jabber import jstrports
 from twisted.application.internet import TCPClient
+
 
 
 class JabberStrPortsPlaceHolderTests(unittest.TestCase):

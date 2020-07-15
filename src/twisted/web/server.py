@@ -13,19 +13,12 @@ This is a web server which integrates with the twisted.internet infrastructure.
     value.
 """
 
-from __future__ import division, absolute_import
 
 import copy
 import os
 import re
-try:
-    from urllib import quote
-except ImportError:
-    from urllib.parse import quote as _quote
-
-    def quote(string, *args, **kwargs):
-        return _quote(
-            string.decode('charmap'), *args, **kwargs).encode('charmap')
+from typing import List, Optional
+from urllib.parse import quote as _quote
 
 import zlib
 from binascii import hexlify
@@ -79,6 +72,13 @@ string_date_time = http.stringToDatetime
 supportedMethods = (b'GET', b'HEAD', b'POST')
 
 
+
+def quote(string, *args, **kwargs):
+    return _quote(
+        string.decode('charmap'), *args, **kwargs).encode('charmap')
+
+
+
 def _addressToTuple(addr):
     if isinstance(addr, address.IPv4Address):
         return ('INET', addr.host, addr.port)
@@ -109,7 +109,8 @@ class Request(Copyable, http.Request, components.Componentized):
 
     site = None
     appRootURL = None
-    prepath = postpath = None
+    prepath = None  # type: Optional[List[bytes]]
+    postpath = None  # type: Optional[bytes]
     __pychecker__ = 'unusednames=issuer'
     _inFakeHead = False
     _encoder = None
