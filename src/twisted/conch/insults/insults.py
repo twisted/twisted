@@ -514,9 +514,20 @@ class ServerProtocol(protocol.Protocol):
         self._cursorReports = []
 
 
+    def getHost(self):
+        # ITransport.getHost
+        raise NotImplementedError("Unimplemented: ServerProtocol.getHost")
+
+
+    def getPeer(self):
+        # ITransport.getPeer
+        raise NotImplementedError("Unimplemented: ServerProtocol.getPeer")
+
+
     def connectionMade(self):
         if self.protocolFactory is not None:
-            self.terminalProtocol = self.protocolFactory(*self.protocolArgs, **self.protocolKwArgs)
+            self.terminalProtocol = self.protocolFactory(*self.protocolArgs,
+                                                         **self.protocolKwArgs)
 
             try:
                 factory = self.factory

@@ -5,7 +5,6 @@
 Tests for warning suppression features of Trial.
 """
 
-from __future__ import division, absolute_import
 
 import unittest as pyunit
 

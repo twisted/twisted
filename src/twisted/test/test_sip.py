@@ -13,8 +13,8 @@ from twisted.trial import unittest
 
 try:
     from twisted.internet.asyncioreactor import AsyncioSelectorReactor
-except:
-    AsyncioSelectorReactor = None
+except BaseException:
+    AsyncioSelectorReactor = None  # type: ignore[assignment,misc]
 
 from zope.interface import implementer
 

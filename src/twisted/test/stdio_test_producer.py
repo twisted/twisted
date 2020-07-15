@@ -8,7 +8,6 @@ L{twisted.test.test_stdio.StandardInputOutputTests.test_producer} to test
 that process transports implement IProducer properly.
 """
 
-from __future__ import absolute_import, division
 
 import sys
 
@@ -56,4 +55,4 @@ if __name__ == '__main__':
     reflect.namedAny(sys.argv[1]).install()
     from twisted.internet import reactor
     stdio.StandardIO(ProducerChild())
-    reactor.run()
+    reactor.run()  # type: ignore[attr-defined]

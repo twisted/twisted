@@ -15,13 +15,17 @@ from twisted.pair import raw
 from zope.interface import implementer, Interface
 
 
+
 class IEthernetProtocol(Interface):
     """An interface for protocols that handle Ethernet frames"""
-    def addProto():
+    def addProto(num, proto):
         """Add an IRawPacketProtocol protocol"""
 
-    def datagramReceived():
+
+    def datagramReceived(data, partial):
         """An Ethernet frame has been received"""
+
+
 
 class EthernetHeader:
     def __init__(self, data):
@@ -36,6 +40,7 @@ class EthernetProtocol(protocol.AbstractDatagramProtocol):
     def __init__(self):
         self.etherProtos = {}
 
+
     def addProto(self, num, proto):
         proto = raw.IRawPacketProtocol(proto)
         if num < 0:
@@ -45,6 +50,7 @@ class EthernetProtocol(protocol.AbstractDatagramProtocol):
         if num not in self.etherProtos:
             self.etherProtos[num] = []
         self.etherProtos[num].append(proto)
+
 
     def datagramReceived(self, data, partial=0):
         header = EthernetHeader(data[:14])

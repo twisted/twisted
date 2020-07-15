@@ -6,7 +6,6 @@
 Authoritative resolvers.
 """
 
-from __future__ import absolute_import, division
 
 import os
 import time
@@ -14,7 +13,7 @@ import time
 from twisted.names import dns, error, common
 from twisted.internet import defer
 from twisted.python import failure
-from twisted.python.compat import execfile, nativeString, _PY3
+from twisted.python.compat import execfile, nativeString
 from twisted.python.filepath import FilePath
 
 
@@ -76,7 +75,7 @@ class FileAuthority(common.ResolverBase):
         L{dns.Record_SOA}.
 
     @ivar records: A mapping of domains (as lowercased L{bytes}) to records.
-    @type records: L{dict} with L{byte} keys
+    @type records: L{dict} with L{bytes} keys
     """
     # See https://twistedmatrix.com/trac/ticket/6650
     _ADDITIONAL_PROCESSING_TYPES = (dns.CNAME, dns.MX, dns.NS)
@@ -300,12 +299,14 @@ class PySourceAuthority(FileAuthority):
 
 
     def wrapRecord(self, type):
-        return lambda name, *arg, **kw: (name, type(*arg, **kw))
+        def wrapRecordFunc(name, *arg, **kw):
+            return (dns.domainString(name), type(*arg, **kw))
+        return wrapRecordFunc
 
 
     def setupConfigNamespace(self):
         r = {}
-        items = dns.__dict__.iterkeys()
+        items = dns.__dict__.keys()
         for record in [x for x in items if x.startswith('Record_')]:
             type = getattr(dns, record)
             f = self.wrapRecord(type)
@@ -492,16 +493,12 @@ class BindAuthority(FileAuthority):
         @param line: zone file line to parse; split by word
         @type line: L{list} of L{bytes}
         """
-        if _PY3:
-            queryClasses = set(
-                qc.encode("ascii") for qc in dns.QUERY_CLASSES.values()
-            )
-            queryTypes = set(
-                qt.encode("ascii") for qt in dns.QUERY_TYPES.values()
-            )
-        else:
-            queryClasses = set(dns.QUERY_CLASSES.values())
-            queryTypes = set(dns.QUERY_TYPES.values())
+        queryClasses = set(
+            qc.encode("ascii") for qc in dns.QUERY_CLASSES.values()
+        )
+        queryTypes = set(
+            qt.encode("ascii") for qt in dns.QUERY_TYPES.values()
+        )
 
         markers = queryClasses | queryTypes
 

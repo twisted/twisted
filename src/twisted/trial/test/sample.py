@@ -3,7 +3,6 @@ functionality. Do NOT change the number of tests in this module.  Do NOT change
 the names the tests in this module.
 """
 
-from __future__ import absolute_import, division
 
 import unittest as pyunit
 from twisted.trial import unittest

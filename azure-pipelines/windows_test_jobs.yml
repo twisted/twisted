@@ -1,0 +1,27 @@
+parameters:
+- name: imageName
+  type: string
+  default: 'windows-latest'
+# Must be a mapping of id-suitable-name -> actual version number with dot
+- name: pythonVersions
+  type: object
+- name: reactor
+  type: string
+  values:
+  - select
+  - iocp
+
+
+jobs:
+- ${{ each pyver in parameters.pythonVersions }}:
+  - job: ${{ format('windows_{0}_{1}reactor', pyver.key, parameters.reactor) }}
+    displayName: ${{ format('Windows Py{0} {1}reactor', pyver.value, parameters.reactor) }}
+    pool:
+      vmImage: ${{ parameters.imageName }}
+    steps:
+    - template: 'run_test_steps.yml'
+      parameters:
+        platform: windows
+        pythonVersion: ${{ pyver.value }}
+        windowsReactor: ${{ parameters.reactor }}
+        allowFailure: ${{ eq(pyver.value, '3.8') }}

@@ -64,7 +64,7 @@ Sometimes you want to send more complicated emails -- ones with headers, or with
 
 .. literalinclude:: ../examples/sendmail_message.py
 
-For more information on how to use ``Message``, please see :ref:`the module's Python docs <py2:email-examples>`.
+For more information on how to use ``Message``, please see :ref:`the module's Python docs <py3:email-examples>`.
 
 
 Enforcing Transport Security

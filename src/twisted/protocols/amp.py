@@ -193,7 +193,6 @@ has several features:
 @type ERROR_DESCRIPTION: L{bytes}
 """
 
-from __future__ import absolute_import, division
 
 __metaclass__ = type
 
@@ -201,7 +200,9 @@ import types, warnings
 
 from io import BytesIO
 from struct import pack
-import decimal, datetime
+from typing import Any, Callable, Dict, List, Tuple, Type, Union
+import datetime
+import decimal
 from functools import partial
 from itertools import count
 
@@ -222,20 +223,18 @@ from twisted.internet.error import ConnectionClosed
 from twisted.internet.defer import Deferred, maybeDeferred, fail
 from twisted.protocols.basic import Int16StringReceiver, StatefulStringProtocol
 from twisted.python.compat import (
-    iteritems, unicode, nativeString, intToBytes, _PY3, long,
+    iteritems, unicode, nativeString, intToBytes, long,
 )
 
 try:
     from twisted.internet import ssl
+    if ssl.supported:
+        from twisted.internet.ssl import (CertificateOptions, Certificate, DN,
+                                          KeyPair)
+    else:
+        ssl = None  # type: ignore[assignment]
 except ImportError:
-    ssl = None
-
-if ssl and not ssl.supported:
-    ssl = None
-
-if ssl is not None:
-    from twisted.internet.ssl import (CertificateOptions, Certificate, DN,
-                                      KeyPair)
+    ssl = None  # type: ignore[assignment]
 
 
 
@@ -571,14 +570,9 @@ class RemoteAmpError(AmpError):
 
         # Backslash-escape errorCode. Python 3.5 can do this natively
         # ("backslashescape") but Python 2.7 and Python 3.4 can't.
-        if _PY3:
-            errorCodeForMessage = "".join(
-                "\\x%2x" % (c,) if c >= 0x80 else chr(c)
-                for c in errorCode)
-        else:
-            errorCodeForMessage = "".join(
-                "\\x%2x" % (ord(c),) if ord(c) >= 0x80 else c
-                for c in errorCode)
+        errorCodeForMessage = "".join(
+            "\\x%2x" % (c,) if c >= 0x80 else chr(c)
+            for c in errorCode)
 
         if othertb:
             message = "Code<%s>%s: %s\n%s" % (
@@ -627,14 +621,19 @@ class IncompatibleVersions(AmpError):
     """
 
 
+
 PROTOCOL_ERRORS = {UNHANDLED_ERROR_CODE: UnhandledCommand}
+
+
 
 class AmpBox(dict):
     """
-    I am a packet in the AMP protocol, much like a regular bytes:bytes dictionary.
+    I am a packet in the AMP protocol, much like a
+    regular bytes:bytes dictionary.
     """
-    __slots__ = []              # be like a regular dictionary, don't magically
-                                # acquire a __dict__...
+    # be like a regular dictionary don't magically
+    # acquire a __dict__...
+    __slots__ = []  # type: List[str]
 
 
     def __init__(self, *args, **kw):
@@ -663,11 +662,10 @@ class AmpBox(dict):
             to an ASCII byte string (Python 3 only).
         """
         super(AmpBox, self).__init__(*args, **kw)
-        if _PY3:
-            nonByteNames = [n for n in self if not isinstance(n, bytes)]
-            for nonByteName in nonByteNames:
-                byteName = nonByteName.encode("ascii")
-                self[byteName] = self.pop(nonByteName)
+        nonByteNames = [n for n in self if not isinstance(n, bytes)]
+        for nonByteName in nonByteNames:
+            byteName = nonByteName.encode("ascii")
+            self[byteName] = self.pop(nonByteName)
 
 
     def copy(self):
@@ -733,7 +731,7 @@ class QuitBox(AmpBox):
     """
     I am an AmpBox that, upon being sent, terminates the connection.
     """
-    __slots__ = []
+    __slots__ = []  # type: List[str]
 
 
     def __repr__(self):
@@ -964,7 +962,7 @@ class BoxDispatcher:
 
         try:
             co = commandType(*a, **kw)
-        except:
+        except BaseException:
             return fail()
         return co._doCommand(self)
 
@@ -1124,7 +1122,8 @@ class CommandLocator:
         metaclass.
         """
 
-        _currentClassCommands = []
+        _currentClassCommands = []  # type: List[Tuple[Command, Callable]]
+
         def __new__(cls, name, bases, attrs):
             commands = cls._currentClassCommands[:]
             cls._currentClassCommands[:] = []
@@ -1165,16 +1164,18 @@ class CommandLocator:
         """
         def doit(box):
             kw = command.parseArguments(box, self)
+
             def checkKnownErrors(error):
                 key = error.trap(*command.allErrors)
                 code = command.allErrors[key]
                 desc = str(error.value)
                 return Failure(RemoteAmpError(
                         code, desc, key in command.fatalErrors, local=error))
+
             def makeResponseFor(objects):
                 try:
                     return command.makeResponse(objects, self)
-                except:
+                except BaseException:
                     # let's helpfully log this.
                     originalFailure = Failure()
                     raise BadLocalReturn(
@@ -1218,23 +1219,18 @@ class CommandLocator:
         cd = self._commandDispatch
         if name in cd:
             commandClass, responderFunc = cd[name]
-            if _PY3:
-                responderMethod = types.MethodType(
-                    responderFunc, self)
-            else:
-                responderMethod = types.MethodType(
-                    responderFunc, self, self.__class__)
+            responderMethod = types.MethodType(
+                responderFunc, self)
             return self._wrapWithSerialization(responderMethod, commandClass)
 
 
 
-if _PY3:
-    # Python 3 ignores the __metaclass__ attribute and has instead new syntax
-    # for setting the metaclass. Unfortunately it's not valid Python 2 syntax
-    # so we work-around it by recreating CommandLocator using the metaclass
-    # here.
-    CommandLocator = CommandLocator.__metaclass__(
-        "CommandLocator", (CommandLocator, ), {})
+# Python 3 ignores the __metaclass__ attribute and has instead new syntax
+# for setting the metaclass. Unfortunately it's not valid Python 2 syntax
+# so we work-around it by recreating CommandLocator using the metaclass
+# here.
+CommandLocator = CommandLocator.__metaclass__(  # type: ignore[assignment,misc]
+    "CommandLocator", (CommandLocator, ), {})
 
 
 
@@ -1768,10 +1764,7 @@ class Command:
             reverseErrors = attrs['reverseErrors'] = {}
             er = attrs['allErrors'] = {}
             if 'commandName' not in attrs:
-                if _PY3:
-                    attrs['commandName'] = name.encode("ascii")
-                else:
-                    attrs['commandName'] = name
+                attrs['commandName'] = name.encode("ascii")
             newtype = type.__new__(cls, name, bases, attrs)
 
             if not isinstance(newtype.commandName, bytes):
@@ -1789,8 +1782,8 @@ class Command:
                         "Response names must be byte strings, got: %r"
                         % (name, ))
 
-            errors = {}
-            fatalErrors = {}
+            errors = {}  # type: Dict[Type[Exception], bytes]
+            fatalErrors = {}  # type: Dict[Type[Exception], bytes]
             accumulateClassDict(newtype, 'errors', errors)
             accumulateClassDict(newtype, 'fatalErrors', fatalErrors)
 
@@ -1819,14 +1812,14 @@ class Command:
 
             return newtype
 
-    arguments = []
-    response = []
-    extra = []
-    errors = {}
-    fatalErrors = {}
+    arguments = []  # type: List[Tuple[bytes, Argument]]
+    response = []  # type: List[Tuple[bytes, Argument]]
+    extra = []  # type: List[Any]
+    errors = {}  # type: Dict[Type[Exception], bytes]
+    fatalErrors = {}  # type: Dict[Type[Exception], bytes]
 
-    commandType = Box
-    responseType = Box
+    commandType = Box  # type: Union[Type[Command], Type[Box]]
+    responseType = Box  # type: Type[AmpBox]
 
     requiresAnswer = True
 
@@ -1862,6 +1855,7 @@ class Command:
         forgotten = []
 
 
+    @classmethod
     def makeResponse(cls, objects, proto):
         """
         Serialize a mapping of arguments using this L{Command}'s
@@ -1877,12 +1871,12 @@ class Command:
         """
         try:
             responseType = cls.responseType()
-        except:
+        except BaseException:
             return fail()
         return _objectsToStrings(objects, cls.response, responseType, proto)
-    makeResponse = classmethod(makeResponse)
 
 
+    @classmethod
     def makeArguments(cls, objects, proto):
         """
         Serialize a mapping of arguments using this L{Command}'s
@@ -1906,9 +1900,9 @@ class Command:
                     "%s is not a valid argument" % (intendedArg,))
         return _objectsToStrings(objects, cls.arguments, cls.commandType(),
                                  proto)
-    makeArguments = classmethod(makeArguments)
 
 
+    @classmethod
     def parseResponse(cls, box, protocol):
         """
         Parse a mapping of serialized arguments using this
@@ -1922,9 +1916,9 @@ class Command:
         forms.
         """
         return _stringsToObjects(box, cls.response, protocol)
-    parseResponse = classmethod(parseResponse)
 
 
+    @classmethod
     def parseArguments(cls, box, protocol):
         """
         Parse a mapping of serialized arguments using this
@@ -1937,9 +1931,9 @@ class Command:
         @return: A mapping of argument names to the parsed forms.
         """
         return _stringsToObjects(box, cls.arguments, protocol)
-    parseArguments = classmethod(parseArguments)
 
 
+    @classmethod
     def responder(cls, methodfunc):
         """
         Declare a method to be a responder for a particular command.
@@ -1973,7 +1967,6 @@ class Command:
         """
         CommandLocator._currentClassCommands.append((cls, methodfunc))
         return methodfunc
-    responder = classmethod(responder)
 
 
     # Our only instance method
@@ -2007,11 +2000,10 @@ class Command:
 
 
 
-if _PY3:
-    # Python 3 ignores the __metaclass__ attribute and has instead new syntax
-    # for setting the metaclass. Unfortunately it's not valid Python 2 syntax
-    # so we work-around it by recreating Command using the metaclass here.
-    Command = Command.__metaclass__("Command", (Command, ), {})
+# Python 3 ignores the __metaclass__ attribute and has instead new syntax
+# for setting the metaclass. Unfortunately it's not valid Python 2 syntax
+# so we work-around it by recreating Command using the metaclass here.
+Command = Command.__metaclass__("Command", (Command, ), {})  # type: ignore[assignment,misc]  # noqa
 
 
 
@@ -2073,7 +2065,7 @@ class _TLSBox(AmpBox):
     """
     I am an AmpBox that, upon being sent, initiates a TLS connection.
     """
-    __slots__ = []
+    __slots__ = []  # type: List[str]
 
     def __init__(self):
         if ssl is None:
@@ -2081,13 +2073,15 @@ class _TLSBox(AmpBox):
         AmpBox.__init__(self)
 
 
-    def _keyprop(k, default):
-        return property(lambda self: self.get(k, default))
+    @property
+    def certificate(self):
+        return self.get(b'tls_localCertificate', _NoCertificate(False))
 
 
-    # These properties are described in startTLS
-    certificate = _keyprop(b'tls_localCertificate', _NoCertificate(False))
-    verify = _keyprop(b'tls_verifyAuthorities', None)
+    @property
+    def verify(self):
+        return self.get(b'tls_verifyAuthorities', None)
+
 
     def _sendTo(self, proto):
         """
@@ -2200,9 +2194,9 @@ class ProtocolSwitchCommand(Command):
         super(ProtocolSwitchCommand, self).__init__(**kw)
 
 
+    @classmethod
     def makeResponse(cls, innerProto, proto):
         return _SwitchBox(innerProto)
-    makeResponse = classmethod(makeResponse)
 
 
     def _doCommand(self, proto):
@@ -2542,11 +2536,11 @@ class BinaryBoxProtocol(StatefulStringProtocol, Int16StringReceiver,
                 self.sendBox(box)
 
 
-    def _getPeerCertificate(self):
+    @property
+    def peerCertificate(self):
         if self.noPeerCertificate:
             return None
         return Certificate.peerFromTransport(self.transport)
-    peerCertificate = property(_getPeerCertificate)
 
 
     def unhandledError(self, failure):
@@ -2691,6 +2685,7 @@ class _ParserHelper:
 
 
     # Synchronous helpers
+    @classmethod
     def parse(cls, fileObj):
         """
         Parse some amp data stored in a file.
@@ -2704,9 +2699,9 @@ class _ParserHelper:
         bbp.makeConnection(parserHelper)
         bbp.dataReceived(fileObj.read())
         return parserHelper.boxes
-    parse = classmethod(parse)
 
 
+    @classmethod
     def parseString(cls, data):
         """
         Parse some amp data stored in a string.
@@ -2716,7 +2711,6 @@ class _ParserHelper:
         @return: a list of AmpBoxes encoded in the given string.
         """
         return cls.parse(BytesIO(data))
-    parseString = classmethod(parseString)
 
 
 

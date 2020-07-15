@@ -6,7 +6,6 @@
 Infrastructure for test running and suites.
 """
 
-from __future__ import division, absolute_import
 
 import doctest
 import gc
@@ -16,8 +15,7 @@ from twisted.python import components
 from twisted.trial import itrial, reporter
 from twisted.trial._synctest import _logObserver
 
-pyunit = __import__('unittest')
-
+import unittest as pyunit
 from zope.interface import implementer
 
 
@@ -41,7 +39,7 @@ class TestSuite(pyunit.TestSuite):
 
 
 @implementer(itrial.ITestCase)
-class TestDecorator(components.proxyForInterface(itrial.ITestCase,
+class TestDecorator(components.proxyForInterface(itrial.ITestCase,  # type: ignore[misc]  # noqa
                                                  "_originalTest")):
     """
     Decorator for test cases.

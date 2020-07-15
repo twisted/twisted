@@ -5,9 +5,9 @@
 Tests for Trial's interaction with the Python warning system.
 """
 
-from __future__ import division, absolute_import
 
-import sys, warnings
+import warnings
+import sys
 
 from unittest import TestResult
 

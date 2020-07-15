@@ -5,7 +5,6 @@
 Tests for L{twisted.python.threadpool}
 """
 
-from __future__ import division, absolute_import
 
 import pickle
 import time

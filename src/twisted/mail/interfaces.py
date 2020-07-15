@@ -7,7 +7,6 @@ Interfaces for L{twisted.mail}.
 @since: 16.5
 """
 
-from __future__ import absolute_import, division
 
 from zope.interface import Interface
 
@@ -768,7 +767,7 @@ class IMailboxIMAP(IMailboxIMAPInfo):
         """
 
 
-    def addMessage(message, flags=(), date=None):
+    def addMessage(message, flags, date):
         """
         Add the given message to this mailbox.
 
