@@ -4,7 +4,6 @@
 """
 Tests for L{twisted._threads._memory}.
 """
-from __future__ import absolute_import, division, print_function
 
 from zope.interface.verify import verifyObject
 

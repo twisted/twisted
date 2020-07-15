@@ -6,7 +6,6 @@
 Base functionality useful to various parts of Twisted Names.
 """
 
-from __future__ import division, absolute_import
 
 import socket
 

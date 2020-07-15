@@ -9,19 +9,18 @@ Start here if you are looking to write a new protocol implementation for
 Twisted.  The Protocol class contains some introductory material.
 """
 
-from __future__ import division, absolute_import
 
 import random
+from typing import Optional, Type, Union
 from zope.interface import implementer
 
 from twisted.python import log, failure, components
 from twisted.internet import interfaces, error, defer
 from twisted.logger import _loggerFor
-from twisted.python._oldstyle import _oldStyle
+
 
 
 @implementer(interfaces.IProtocolFactory, interfaces.ILoggingContext)
-@_oldStyle
 class Factory:
     """
     This is a factory which produces protocols.
@@ -31,7 +30,7 @@ class Factory:
     """
 
     # Put a subclass of Protocol here:
-    protocol = None
+    protocol = None  # type: Optional[Union[Type['Protocol'], Type['AbstractDatagramProtocol']]]  # noqa
 
     numPorts = 0
     noisy = True
@@ -237,7 +236,6 @@ class _InstanceFactory(ClientFactory):
 
 
 
-@_oldStyle
 class ClientCreator:
     """
     Client connections that do not require a factory.
@@ -490,7 +488,6 @@ class ServerFactory(Factory):
 
 
 
-@_oldStyle
 class BaseProtocol:
     """
     This is the abstract superclass of all protocols.
@@ -557,7 +554,7 @@ class Protocol(BaseProtocol):
         return self.__class__.__name__
 
 
-    def dataReceived(self, data):
+    def dataReceived(self, data: bytes):
         """
         Called whenever data is received.
 
@@ -572,7 +569,7 @@ class Protocol(BaseProtocol):
             differing chunk sizes, down to one byte at a time.
         """
 
-    def connectionLost(self, reason=connectionDone):
+    def connectionLost(self, reason: failure.Failure = connectionDone):
         """
         Called when the connection is shut down.
 
@@ -587,7 +584,7 @@ class Protocol(BaseProtocol):
 @implementer(interfaces.IConsumer)
 class ProtocolToConsumerAdapter(components.Adapter):
 
-    def write(self, data):
+    def write(self, data: bytes):
         self.original.dataReceived(data)
 
 
@@ -607,11 +604,11 @@ components.registerAdapter(ProtocolToConsumerAdapter, interfaces.IProtocol,
 @implementer(interfaces.IProtocol)
 class ConsumerToProtocolAdapter(components.Adapter):
 
-    def dataReceived(self, data):
+    def dataReceived(self, data: bytes):
         self.original.write(data)
 
 
-    def connectionLost(self, reason):
+    def connectionLost(self, reason: failure.Failure):
         pass
 
 
@@ -635,26 +632,26 @@ class ProcessProtocol(BaseProtocol):
     stdin, stdout, and stderr file descriptors.
     """
 
-    def childDataReceived(self, childFD, data):
+    def childDataReceived(self, childFD: int, data: bytes):
         if childFD == 1:
             self.outReceived(data)
         elif childFD == 2:
             self.errReceived(data)
 
 
-    def outReceived(self, data):
+    def outReceived(self, data: bytes):
         """
         Some data was received from stdout.
         """
 
 
-    def errReceived(self, data):
+    def errReceived(self, data: bytes):
         """
         Some data was received from stderr.
         """
 
 
-    def childConnectionLost(self, childFD):
+    def childConnectionLost(self, childFD: int):
         if childFD == 0:
             self.inConnectionLost()
         elif childFD == 1:
@@ -681,7 +678,7 @@ class ProcessProtocol(BaseProtocol):
         """
 
 
-    def processExited(self, reason):
+    def processExited(self, reason: failure.Failure):
         """
         This will be called when the subprocess exits.
 
@@ -689,7 +686,7 @@ class ProcessProtocol(BaseProtocol):
         """
 
 
-    def processEnded(self, reason):
+    def processEnded(self, reason: failure.Failure):
         """
         Called when the child process exits and all file descriptors
         associated with it have been closed.
@@ -699,10 +696,10 @@ class ProcessProtocol(BaseProtocol):
 
 
 
-@_oldStyle
 class AbstractDatagramProtocol:
     """
-    Abstract protocol for datagram-oriented transports, e.g. IP, ICMP, ARP, UDP.
+    Abstract protocol for datagram-oriented transports, e.g. IP, ICMP, ARP,
+    UDP.
     """
 
     transport = None
@@ -771,11 +768,11 @@ class AbstractDatagramProtocol:
         self.doStart()
 
 
-    def datagramReceived(self, datagram, addr):
+    def datagramReceived(self, datagram: bytes, addr):
         """
         Called when a datagram is received.
 
-        @param datagram: the string received from the transport.
+        @param datagram: the bytes received from the transport.
         @param addr: tuple of source of datagram.
         """
 
@@ -824,7 +821,7 @@ class ConnectedDatagramProtocol(DatagramProtocol):
         @param datagram: the string received from the transport.
         """
 
-    def connectionFailed(self, failure):
+    def connectionFailed(self, failure: failure.Failure):
         """
         Called if connecting failed.
 
@@ -834,7 +831,6 @@ class ConnectedDatagramProtocol(DatagramProtocol):
 
 
 @implementer(interfaces.ITransport)
-@_oldStyle
 class FileWrapper:
     """
     A wrapper around a file-like object to make it behave as a Transport.
@@ -852,10 +848,10 @@ class FileWrapper:
         self.file = file
 
 
-    def write(self, data):
+    def write(self, data: bytes):
         try:
             self.file.write(data)
-        except:
+        except BaseException:
             self.handleException()
 
 

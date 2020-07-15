@@ -6,13 +6,13 @@
 Scheduling utility methods and classes.
 """
 
-from __future__ import division, absolute_import
 
 __metaclass__ = type
 
 import sys
 import time
 import warnings
+from typing import Any, Callable
 
 from zope.interface import implementer
 
@@ -87,6 +87,8 @@ class LoopingCall:
 
         return self._deferred
 
+
+    @classmethod
     def withCount(cls, countCallable):
         """
         An alternate constructor for L{LoopingCall} that makes available the
@@ -143,8 +145,6 @@ class LoopingCall:
         self._realLastTime = None
 
         return self
-
-    withCount = classmethod(withCount)
 
 
     def _intervalOf(self, t):
@@ -787,15 +787,15 @@ class Clock:
         self.calls.sort(key=lambda a: a.getTime())
 
 
-    def callLater(self, when, what, *a, **kw):
+    def callLater(self, delay, callable: Callable[..., Any], *args, **kw):
         """
         See L{twisted.internet.interfaces.IReactorTime.callLater}.
         """
-        dc = base.DelayedCall(self.seconds() + when,
-                               what, a, kw,
-                               self.calls.remove,
-                               lambda c: None,
-                               self.seconds)
+        dc = base.DelayedCall(self.seconds() + delay,
+                              callable, args, kw,
+                              self.calls.remove,
+                              lambda c: None,
+                              self.seconds)
         self.calls.append(dc)
         self._sortCalls()
         return dc

@@ -6,7 +6,6 @@
 L{twisted.words} support for Instance Messenger.
 """
 
-from __future__ import print_function
 
 from twisted.internet import defer
 from twisted.internet import error
@@ -226,6 +225,11 @@ class PBAccount(basesupport.AbstractAccount):
             return d
         else:
             raise error.ConnectionError("Connection in progress")
+
+
+    def logOff(self):
+        # IAccount.logOff
+        pass
 
 
     def _startLogOn(self, chatui):

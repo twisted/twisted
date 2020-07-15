@@ -16,7 +16,6 @@ Maintainer: Glyph Lefkowitz
     at the Deferred which is chained to the Deferred which has this marker.
 """
 
-from __future__ import division, absolute_import, print_function
 
 import attr
 import traceback
@@ -31,9 +30,25 @@ from twisted.python.compat import cmp, comparable
 from twisted.python import lockfile, failure
 from twisted.logger import Logger
 from twisted.python.deprecate import warnAboutFunction, deprecated
-from twisted.python._oldstyle import _oldStyle
+
+try:
+    from contextvars import copy_context as _copy_context
+    _contextvarsSupport = True
+except ImportError:
+    _contextvarsSupport = False
+
+    class _NoContext:
+        @staticmethod
+        def run(f, *args, **kwargs):
+            return f(*args, **kwargs)
+
+    # typing ignored due to:
+    # https://github.com/python/typeshed/issues/4249
+    def _copy_context():  # type: ignore[misc]
+        return _NoContext
 
 log = Logger()
+
 
 
 class AlreadyCalledError(Exception):
@@ -197,7 +212,6 @@ _CONTINUE = object()
 
 
 
-@_oldStyle
 class Deferred:
     """
     This is a callback which will be put off until later.
@@ -264,9 +278,9 @@ class Deferred:
         Initialize a L{Deferred}.
 
         @param canceller: a callable used to stop the pending operation
-            scheduled by this L{Deferred} when L{Deferred.cancel} is
-            invoked. The canceller will be passed the deferred whose
-            cancelation is requested (i.e., self).
+            scheduled by this L{Deferred} when L{Deferred.cancel} is invoked.
+            The canceller will be passed the deferred whose cancelation is
+            requested (i.e., self).
 
             If a canceller is not given, or does not invoke its argument's
             C{callback} or C{errback} method, L{Deferred.cancel} will
@@ -652,6 +666,7 @@ class Deferred:
                     current._runningCallbacks = True
                     try:
                         current.result = callback(current.result, *args, **kw)
+
                         if current.result is current:
                             warnAboutFunction(
                                 callback,
@@ -918,8 +933,6 @@ def ensureDeferred(coro):
 
 
 
-
-@_oldStyle
 class DebugInfo:
     """
     Deferred debug helper.
@@ -1189,7 +1202,6 @@ FAILURE = False
 
 
 ## deferredGenerator
-@_oldStyle
 class waitForDeferred:
     """
     See L{deferredGenerator}.
@@ -1402,17 +1414,23 @@ def _inlineCallbacks(result, g, status):
     # loop and the waiting variable solve that by manually unfolding the
     # recursion.
 
-    waiting = [True, # waiting for result?
-               None] # result
+    waiting = [True,  # waiting for result?
+               None]  # result
+
+    # Get the current contextvars Context object.
+    current_context = _copy_context()
 
     while 1:
         try:
             # Send the last result back as the result of the yield expression.
             isFailure = isinstance(result, failure.Failure)
+
             if isFailure:
-                result = result.throwExceptionIntoGenerator(g)
+                result = current_context.run(
+                    result.throwExceptionIntoGenerator, g
+                )
             else:
-                result = g.send(result)
+                result = current_context.run(g.send, result)
         except StopIteration as e:
             # fell off the end, or "return" statement
             status.deferred.callback(getattr(e, "value", None))
@@ -1428,6 +1446,11 @@ def _inlineCallbacks(result, g, status):
             # _inlineCallbacks); the next one down should be the application
             # code.
             appCodeTrace = exc_info()[2].tb_next
+
+            # The contextvars backport and our no-op shim add an extra frame.
+            if version_info < (3, 7):
+                appCodeTrace = appCodeTrace.tb_next
+
             if isFailure:
                 # If we invoked this generator frame by throwing an exception
                 # into it, then throwExceptionIntoGenerator will consume an
@@ -1468,8 +1491,7 @@ def _inlineCallbacks(result, g, status):
                     waiting[0] = False
                     waiting[1] = r
                 else:
-                    # We are not waiting for deferred result any more
-                    _inlineCallbacks(r, g, status)
+                    current_context.run(_inlineCallbacks, r, g, status)
 
             result.addBoth(gotResult)
             if waiting[0]:
@@ -1513,7 +1535,7 @@ def _cancellableInlineCallbacks(g):
 
         @param result: An L{_InternalInlineCallbacksCancelledError} from
             C{cancel()}.
-        @return: A new L{Deferred} that the C{@}L{inlineCallback} generator
+        @return: A new L{Deferred} that the C{@}L{inlineCallbacks} generator
             can callback or errback through.
         """
         result.trap(_InternalInlineCallbacksCancelledError)
@@ -2004,13 +2026,11 @@ class DeferredFilesystemLock(lockfile.FilesystemLock):
 
 
 
-__all__ = ["Deferred", "DeferredList", "succeed", "fail", "FAILURE", "SUCCESS",
-           "AlreadyCalledError", "TimeoutError", "gatherResults",
-           "maybeDeferred", "ensureDeferred",
-           "waitForDeferred", "deferredGenerator", "inlineCallbacks",
-           "returnValue",
-           "DeferredLock", "DeferredSemaphore", "DeferredQueue",
-           "DeferredFilesystemLock", "AlreadyTryingToLockError",
-           "CancelledError",
-          ]
-
+__all__ = [
+    "Deferred", "DeferredList", "succeed", "fail", "FAILURE", "SUCCESS",
+    "AlreadyCalledError", "TimeoutError", "gatherResults",
+    "maybeDeferred", "ensureDeferred",
+    "waitForDeferred", "deferredGenerator", "inlineCallbacks", "returnValue",
+    "DeferredLock", "DeferredSemaphore", "DeferredQueue",
+    "DeferredFilesystemLock", "AlreadyTryingToLockError", "CancelledError",
+]

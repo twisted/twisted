@@ -8,10 +8,11 @@ Things likely to be used by writers of unit tests.
 Maintainer: Jonathan Lange
 """
 
-from __future__ import division, absolute_import
 
 import inspect
 import warnings
+
+from typing import List
 
 from zope.interface import implementer
 
@@ -25,7 +26,9 @@ from twisted.trial import itrial, util
 from twisted.trial._synctest import (
     FailTest, SkipTest, SynchronousTestCase)
 
-_wait_is_running = []
+_wait_is_running = []  # type: List[None]
+
+
 
 @implementer(itrial.ITestCase)
 class TestCase(SynchronousTestCase):

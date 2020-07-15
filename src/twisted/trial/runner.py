@@ -8,7 +8,6 @@ A miscellany of code used to run Trial tests.
 Maintainer: Jonathan Lange
 """
 
-from __future__ import absolute_import, division
 
 __all__ = [
     'TestSuite',
@@ -21,6 +20,7 @@ __all__ = [
     ]
 
 import doctest
+import importlib
 import inspect
 import os
 import sys
@@ -28,8 +28,9 @@ import time
 import types
 import warnings
 
+from importlib.machinery import SourceFileLoader
+
 from twisted.python import reflect, log, failure, modules, filepath
-from twisted.python.compat import _PY3, _PY35PLUS
 
 from twisted.internet import defer
 from twisted.trial import util, unittest
@@ -62,12 +63,7 @@ def isPackageDirectory(dirname):
     if dirname is a package directory.  Otherwise, returns False
     """
     def _getSuffixes():
-        if _PY3:
-            import importlib
-            return importlib.machinery.all_suffixes()
-        else:
-            import imp
-            return list(zip(*imp.get_suffixes()))[0]
+        return importlib.machinery.all_suffixes()
 
 
     for ext in _getSuffixes():
@@ -126,20 +122,13 @@ def _importFromFile(fn, moduleName=None):
         moduleName = os.path.splitext(os.path.split(fn)[-1])[0]
     if moduleName in sys.modules:
         return sys.modules[moduleName]
-    if _PY35PLUS:
-        import importlib
 
-        spec = importlib.util.spec_from_file_location(moduleName, fn)
-        if not spec:
-            raise SyntaxError(fn)
-        module = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(module)
-        sys.modules[moduleName] = module
-    else:
-        import imp
-
-        with open(fn, 'r') as fd:
-            module = imp.load_source(moduleName, fn, fd)
+    spec = importlib.util.spec_from_file_location(moduleName, fn)
+    if not spec:
+        raise SyntaxError(fn)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    sys.modules[moduleName] = module
     return module
 
 
@@ -406,6 +395,7 @@ class TestLoader(object):
         """
         return sorted(xs, key=self.sorter)
 
+
     def findTestClasses(self, module):
         """Given a module, return all Trial test classes"""
         classes = []
@@ -414,280 +404,18 @@ class TestLoader(object):
                 classes.append(val)
         return self.sort(classes)
 
-    def findByName(self, name):
-        """
-        Return a Python object given a string describing it.
-
-        @param name: a string which may be either a filename or a
-        fully-qualified Python name.
-
-        @return: If C{name} is a filename, return the module. If C{name} is a
-        fully-qualified Python name, return the object it refers to.
-        """
-        if os.path.exists(name):
-            return filenameToModule(name)
-        return reflect.namedAny(name)
-
-    def loadModule(self, module):
-        """
-        Return a test suite with all the tests from a module.
-
-        Included are TestCase subclasses and doctests listed in the module's
-        __doctests__ module. If that's not good for you, put a function named
-        either C{testSuite} or C{test_suite} in your module that returns a
-        TestSuite, and I'll use the results of that instead.
-
-        If C{testSuite} and C{test_suite} are both present, then I'll use
-        C{testSuite}.
-        """
-        ## XXX - should I add an optional parameter to disable the check for
-        ## a custom suite.
-        ## OR, should I add another method
-        if not isinstance(module, types.ModuleType):
-            raise TypeError("%r is not a module" % (module,))
-        if hasattr(module, 'testSuite'):
-            return module.testSuite()
-        elif hasattr(module, 'test_suite'):
-            return module.test_suite()
-        suite = self.suiteFactory()
-        for testClass in self.findTestClasses(module):
-            suite.addTest(self.loadClass(testClass))
-        if not hasattr(module, '__doctests__'):
-            return suite
-        docSuite = self.suiteFactory()
-        for docTest in module.__doctests__:
-            docSuite.addTest(self.loadDoctests(docTest))
-        return self.suiteFactory([suite, docSuite])
-    loadTestsFromModule = loadModule
-
-    def loadClass(self, klass):
-        """
-        Given a class which contains test cases, return a sorted list of
-        C{TestCase} instances.
-        """
-        if not (isinstance(klass, type) or isinstance(klass, types.ClassType)):
-            raise TypeError("%r is not a class" % (klass,))
-        if not isTestCase(klass):
-            raise ValueError("%r is not a test case" % (klass,))
-        names = self.getTestCaseNames(klass)
-        tests = self.sort([self._makeCase(klass, self.methodPrefix+name)
-                           for name in names])
-        return self.suiteFactory(tests)
-    loadTestsFromTestCase = loadClass
-
-    def getTestCaseNames(self, klass):
-        """
-        Given a class that contains C{TestCase}s, return a list of names of
-        methods that probably contain tests.
-        """
-        return reflect.prefixedMethodNames(klass, self.methodPrefix)
-
-    def loadMethod(self, method):
-        """
-        Given a method of a C{TestCase} that represents a test, return a
-        C{TestCase} instance for that test.
-        """
-        if not isinstance(method, types.MethodType):
-            raise TypeError("%r not a method" % (method,))
-        return self._makeCase(method.im_class, _getMethodNameInClass(method))
-
-    def _makeCase(self, klass, methodName):
-        return klass(methodName)
-
-    def loadPackage(self, package, recurse=False):
-        """
-        Load tests from a module object representing a package, and return a
-        TestSuite containing those tests.
-
-        Tests are only loaded from modules whose name begins with 'test_'
-        (or whatever C{modulePrefix} is set to).
-
-        @param package: a types.ModuleType object (or reasonable facsimile
-        obtained by importing) which may contain tests.
-
-        @param recurse: A boolean.  If True, inspect modules within packages
-        within the given package (and so on), otherwise, only inspect modules
-        in the package itself.
-
-        @raise: TypeError if 'package' is not a package.
-
-        @return: a TestSuite created with my suiteFactory, containing all the
-        tests.
-        """
-        if not isPackage(package):
-            raise TypeError("%r is not a package" % (package,))
-        pkgobj = modules.getModule(package.__name__)
-        if recurse:
-            discovery = pkgobj.walkModules()
-        else:
-            discovery = pkgobj.iterModules()
-        discovered = []
-        for disco in discovery:
-            if disco.name.split(".")[-1].startswith(self.modulePrefix):
-                discovered.append(disco)
-        suite = self.suiteFactory()
-        for modinfo in self.sort(discovered):
-            try:
-                module = modinfo.load()
-            except:
-                thingToAdd = ErrorHolder(modinfo.name, failure.Failure())
-            else:
-                thingToAdd = self.loadModule(module)
-            suite.addTest(thingToAdd)
-        return suite
-
-    def loadDoctests(self, module):
-        """
-        Return a suite of tests for all the doctests defined in C{module}.
-
-        @param module: A module object or a module name.
-        """
-        if isinstance(module, str):
-            try:
-                module = reflect.namedAny(module)
-            except:
-                return ErrorHolder(module, failure.Failure())
-        if not inspect.ismodule(module):
-            warnings.warn("trial only supports doctesting modules")
-            return
-        extraArgs = {}
-
-        # Work around Python issue2604: DocTestCase.tearDown clobbers globs
-        def saveGlobals(test):
-            """
-            Save C{test.globs} and replace it with a copy so that if
-            necessary, the original will be available for the next test
-            run.
-            """
-            test._savedGlobals = getattr(test, '_savedGlobals', test.globs)
-            test.globs = test._savedGlobals.copy()
-        extraArgs['setUp'] = saveGlobals
-        return doctest.DocTestSuite(module, **extraArgs)
-
-    def loadAnything(self, thing, recurse=False, parent=None, qualName=None):
-        """
-        Given a Python object, return whatever tests that are in it. Whatever
-        'in' might mean.
-
-        @param thing: A Python object. A module, method, class or package.
-        @param recurse: Whether or not to look in subpackages of packages.
-        Defaults to False.
-
-        @param parent: For compatibility with the Python 3 loader, does
-            nothing.
-        @param qualname: For compatibility with the Python 3 loader, does
-            nothing.
-
-        @return: A C{TestCase} or C{TestSuite}.
-        """
-        if isinstance(thing, types.ModuleType):
-            if isPackage(thing):
-                return self.loadPackage(thing, recurse)
-            return self.loadModule(thing)
-        elif isinstance(thing, types.ClassType):
-            return self.loadClass(thing)
-        elif isinstance(thing, type):
-            return self.loadClass(thing)
-        elif isinstance(thing, types.MethodType):
-            return self.loadMethod(thing)
-        raise TypeError("No loader for %r. Unrecognized type" % (thing,))
-
-    def loadByName(self, name, recurse=False):
-        """
-        Given a string representing a Python object, return whatever tests
-        are in that object.
-
-        If C{name} is somehow inaccessible (e.g. the module can't be imported,
-        there is no Python object with that name etc) then return an
-        L{ErrorHolder}.
-
-        @param name: The fully-qualified name of a Python object.
-        """
-        try:
-            thing = self.findByName(name)
-        except:
-            return ErrorHolder(name, failure.Failure())
-        return self.loadAnything(thing, recurse)
-
-    loadTestsFromName = loadByName
-
-    def loadByNames(self, names, recurse=False):
-        """
-        Construct a TestSuite containing all the tests found in 'names', where
-        names is a list of fully qualified python names and/or filenames. The
-        suite returned will have no duplicate tests, even if the same object
-        is named twice.
-        """
-        things = []
-        errors = []
-        for name in names:
-            try:
-                things.append(self.findByName(name))
-            except:
-                errors.append(ErrorHolder(name, failure.Failure()))
-        suites = [self.loadAnything(thing, recurse)
-                  for thing in self._uniqueTests(things)]
-        suites.extend(errors)
-        return self.suiteFactory(suites)
-
-
-    def _uniqueTests(self, things):
-        """
-        Gather unique suite objects from loaded things. This will guarantee
-        uniqueness of inherited methods on TestCases which would otherwise hash
-        to same value and collapse to one test unexpectedly if using simpler
-        means: e.g. set().
-        """
-        seen = set()
-        for thing in things:
-            if isinstance(thing, types.MethodType):
-                thing = (thing, thing.im_class)
-            else:
-                thing = (thing,)
-
-            if thing not in seen:
-                yield thing[0]
-                seen.add(thing)
-
-
-
-class Py3TestLoader(TestLoader):
-    """
-    A test loader finds tests from the functions, modules, and files that is
-    asked to and loads them into a L{TestSuite} or L{TestCase}.
-
-    See L{TestLoader} for further details.
-    """
-
-    def loadFile(self, fileName, recurse=False):
-        """
-        Load a file, and then the tests in that file.
-
-        @param fileName: The file name to load.
-        @param recurse: A boolean. If True, inspect modules within packages
-            within the given package (and so on), otherwise, only inspect
-            modules in the package itself.
-        """
-        from importlib.machinery import SourceFileLoader
-
-        name = reflect.filenameToModuleName(fileName)
-        try:
-            module = SourceFileLoader(name, fileName).load_module()
-            return self.loadAnything(module, recurse=recurse)
-        except OSError:
-            raise ValueError("{} is not a Python file.".format(fileName))
-
 
     def findByName(self, _name, recurse=False):
         """
         Find and load tests, given C{name}.
 
-        This partially duplicates the logic in C{unittest.loader.TestLoader}.
-
         @param name: The qualified name of the thing to load.
         @param recurse: A boolean. If True, inspect modules within packages
             within the given package (and so on), otherwise, only inspect
             modules in the package itself.
+
+        @return: If C{name} is a filename, return the module. If C{name} is a
+        fully-qualified Python name, return the object it refers to.
         """
         if os.sep in _name:
             # It's a file, try and get the module name for this file.
@@ -765,6 +493,146 @@ class Py3TestLoader(TestLoader):
                                  recurse=recurse)
 
 
+    def loadModule(self, module):
+        """
+        Return a test suite with all the tests from a module.
+
+        Included are TestCase subclasses and doctests listed in the module's
+        __doctests__ module. If that's not good for you, put a function named
+        either C{testSuite} or C{test_suite} in your module that returns a
+        TestSuite, and I'll use the results of that instead.
+
+        If C{testSuite} and C{test_suite} are both present, then I'll use
+        C{testSuite}.
+        """
+        ## XXX - should I add an optional parameter to disable the check for
+        ## a custom suite.
+        ## OR, should I add another method
+        if not isinstance(module, types.ModuleType):
+            raise TypeError("%r is not a module" % (module,))
+        if hasattr(module, 'testSuite'):
+            return module.testSuite()
+        elif hasattr(module, 'test_suite'):
+            return module.test_suite()
+        suite = self.suiteFactory()
+        for testClass in self.findTestClasses(module):
+            suite.addTest(self.loadClass(testClass))
+        if not hasattr(module, '__doctests__'):
+            return suite
+        docSuite = self.suiteFactory()
+        for docTest in module.__doctests__:
+            docSuite.addTest(self.loadDoctests(docTest))
+        return self.suiteFactory([suite, docSuite])
+    loadTestsFromModule = loadModule
+
+
+    def loadClass(self, klass):
+        """
+        Given a class which contains test cases, return a list of L{TestCase}s.
+
+        @param klass: The class to load tests from.
+        """
+        if not isinstance(klass, type):
+            raise TypeError("%r is not a class" % (klass,))
+        if not isTestCase(klass):
+            raise ValueError("%r is not a test case" % (klass,))
+        names = self.getTestCaseNames(klass)
+        tests = self.sort([self._makeCase(klass, self.methodPrefix+name)
+                           for name in names])
+        return self.suiteFactory(tests)
+
+
+    loadTestsFromTestCase = loadClass
+
+
+    def getTestCaseNames(self, klass):
+        """
+        Given a class that contains C{TestCase}s, return a list of names of
+        methods that probably contain tests.
+        """
+        return reflect.prefixedMethodNames(klass, self.methodPrefix)
+
+
+    def loadMethod(self, method):
+        raise NotImplementedError("Can't happen on Py3")
+
+
+    def _makeCase(self, klass, methodName):
+        return klass(methodName)
+
+
+    def loadPackage(self, package, recurse=False):
+        """
+        Load tests from a module object representing a package, and return a
+        TestSuite containing those tests.
+
+        Tests are only loaded from modules whose name begins with 'test_'
+        (or whatever C{modulePrefix} is set to).
+
+        @param package: a types.ModuleType object (or reasonable facsimile
+        obtained by importing) which may contain tests.
+
+        @param recurse: A boolean.  If True, inspect modules within packages
+        within the given package (and so on), otherwise, only inspect modules
+        in the package itself.
+
+        @raise: TypeError if 'package' is not a package.
+
+        @return: a TestSuite created with my suiteFactory, containing all the
+        tests.
+        """
+        if not isPackage(package):
+            raise TypeError("%r is not a package" % (package,))
+        pkgobj = modules.getModule(package.__name__)
+        if recurse:
+            discovery = pkgobj.walkModules()
+        else:
+            discovery = pkgobj.iterModules()
+        discovered = []
+        for disco in discovery:
+            if disco.name.split(".")[-1].startswith(self.modulePrefix):
+                discovered.append(disco)
+        suite = self.suiteFactory()
+        for modinfo in self.sort(discovered):
+            try:
+                module = modinfo.load()
+            except:
+                thingToAdd = ErrorHolder(modinfo.name, failure.Failure())
+            else:
+                thingToAdd = self.loadModule(module)
+            suite.addTest(thingToAdd)
+        return suite
+
+
+    def loadDoctests(self, module):
+        """
+        Return a suite of tests for all the doctests defined in C{module}.
+
+        @param module: A module object or a module name.
+        """
+        if isinstance(module, str):
+            try:
+                module = reflect.namedAny(module)
+            except:
+                return ErrorHolder(module, failure.Failure())
+        if not inspect.ismodule(module):
+            warnings.warn("trial only supports doctesting modules")
+            return
+        extraArgs = {}
+
+        # Work around Python issue2604: DocTestCase.tearDown clobbers globs
+        def saveGlobals(test):
+            """
+            Save C{test.globs} and replace it with a copy so that if
+            necessary, the original will be available for the next test
+            run.
+            """
+            test._savedGlobals = getattr(test, '_savedGlobals', test.globs)
+            test.globs = test._savedGlobals.copy()
+        extraArgs['setUp'] = saveGlobals
+        return doctest.DocTestSuite(module, **extraArgs)
+
+
     def loadAnything(self, obj, recurse=False, parent=None, qualName=None):
         """
         Load absolutely anything (as long as that anything is a module,
@@ -778,6 +646,8 @@ class Py3TestLoader(TestLoader):
             method. C{qualName} is also required.
         @param qualName: If C{obj} is a method, this a list containing is the
             qualified name of the method. C{parent} is also required.
+
+        @return: A C{TestCase} or C{TestSuite}.
         """
         if isinstance(obj, types.ModuleType):
             # It looks like a module
@@ -825,6 +695,9 @@ class Py3TestLoader(TestLoader):
             return self.suiteFactory([ErrorHolder(name, failure.Failure())])
 
 
+    loadTestsFromName = loadByName
+
+
     def loadByNames(self, names, recurse=False):
         """
         Load some tests by a list of names.
@@ -845,26 +718,6 @@ class Py3TestLoader(TestLoader):
         return self.suiteFactory(self._uniqueTests(things))
 
 
-    def loadClass(self, klass):
-        """
-        Given a class which contains test cases, return a list of L{TestCase}s.
-
-        @param klass: The class to load tests from.
-        """
-        if not isinstance(klass, type):
-            raise TypeError("%r is not a class" % (klass,))
-        if not isTestCase(klass):
-            raise ValueError("%r is not a test case" % (klass,))
-        names = self.getTestCaseNames(klass)
-        tests = self.sort([self._makeCase(klass, self.methodPrefix+name)
-                           for name in names])
-        return self.suiteFactory(tests)
-
-
-    def loadMethod(self, method):
-        raise NotImplementedError("Can't happen on Py3")
-
-
     def _uniqueTests(self, things):
         """
         Gather unique suite objects from loaded things. This will guarantee
@@ -880,6 +733,24 @@ class Py3TestLoader(TestLoader):
                 if str(thing) not in seen:
                     yield thing
                     seen.add(str(thing))
+
+
+    def loadFile(self, fileName, recurse=False):
+        """
+        Load a file, and then the tests in that file.
+
+        @param fileName: The file name to load.
+        @param recurse: A boolean. If True, inspect modules within packages
+            within the given package (and so on), otherwise, only inspect
+            modules in the package itself.
+        """
+        name = reflect.filenameToModuleName(fileName)
+        try:
+            module = SourceFileLoader(name, fileName).load_module()
+            return self.loadAnything(module, recurse=recurse)
+        except OSError:
+            raise ValueError("{} is not a Python file.".format(fileName))
+
 
 
 def _qualNameWalker(qualName):
@@ -902,11 +773,6 @@ def _qualNameWalker(qualName):
         # (walker.texas, ["ranger"])
         # (walker, ["texas", "ranger"])
         yield (".".join(qualParts[:-index]), qualParts[-index:])
-
-
-if _PY3:
-    del TestLoader
-    TestLoader = Py3TestLoader
 
 
 

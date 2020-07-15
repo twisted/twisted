@@ -8,7 +8,8 @@ Test cases for L{twisted.logger._legacy}.
 from time import time
 import logging as py_logging
 
-from zope.interface.verify import verifyObject, BrokenMethodImplementation
+from zope.interface.exceptions import BrokenMethodImplementation
+from zope.interface.verify import verifyObject
 
 from twisted.trial import unittest
 

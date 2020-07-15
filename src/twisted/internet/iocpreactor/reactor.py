@@ -6,7 +6,11 @@
 Reactor that uses IO completion ports
 """
 
-import warnings, socket, sys
+
+import socket
+import sys
+import warnings
+from typing import Tuple, Type
 
 from zope.interface import implementer
 
@@ -19,13 +23,15 @@ from twisted.internet.iocpreactor import iocpsupport as _iocp
 from twisted.internet.iocpreactor.const import WAIT_TIMEOUT
 from twisted.internet.iocpreactor import tcp, udp
 
+
+
 try:
     from twisted.protocols.tls import TLSMemoryBIOFactory
 except ImportError:
     # Either pyOpenSSL isn't installed, or it is too old for this code to work.
     # The reactor won't provide IReactorSSL.
-    TLSMemoryBIOFactory = None
-    _extraInterfaces = ()
+    TLSMemoryBIOFactory = None  # type: ignore[assignment,misc]
+    _extraInterfaces = ()  # type: Tuple[Type[interfaces.IReactorSSL], ...]
     warnings.warn(
         "pyOpenSSL 0.10 or newer is required for SSL support in iocpreactor. "
         "It is missing, so the reactor will not support SSL APIs.")

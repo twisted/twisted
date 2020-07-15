@@ -5,7 +5,6 @@
 Tests for Deferred handling by L{twisted.trial.unittest.TestCase}.
 """
 
-from __future__ import division, absolute_import
 
 from twisted.trial import unittest
 from twisted.internet import defer, threads, reactor
@@ -151,7 +150,8 @@ class DeferredTests(unittest.TestCase):
         d = defer.succeed('todo')
         d.addCallback(self._cb_error)
         return d
-    test_expectedFailure.todo = "Expected failure"
+    test_expectedFailure.todo = "Expected failure"  # type: ignore[attr-defined]  # noqa
+
 
 
 class TimeoutTests(unittest.TestCase):
@@ -161,7 +161,7 @@ class TimeoutTests(unittest.TestCase):
         d = defer.Deferred()
         reactor.callLater(0, d.callback, 'hoorj!')
         return d
-    test_pass.timeout = 2
+    test_pass.timeout = 2  # type: ignore[attr-defined]
 
     def test_passDefault(self):
         # test default timeout
@@ -171,21 +171,21 @@ class TimeoutTests(unittest.TestCase):
 
     def test_timeout(self):
         return defer.Deferred()
-    test_timeout.timeout = 0.1
+    test_timeout.timeout = 0.1  # type: ignore[attr-defined]
 
     def test_timeoutZero(self):
         return defer.Deferred()
-    test_timeoutZero.timeout = 0
+    test_timeoutZero.timeout = 0  # type: ignore[attr-defined]
 
     def test_expectedFailure(self):
         return defer.Deferred()
-    test_expectedFailure.timeout = 0.1
-    test_expectedFailure.todo = "i will get it right, eventually"
+    test_expectedFailure.timeout = 0.1  # type: ignore[attr-defined]
+    test_expectedFailure.todo = "i will get it right, eventually"  # type: ignore[attr-defined]  # noqa
 
     def test_skip(self):
         return defer.Deferred()
-    test_skip.timeout = 0.1
-    test_skip.skip = "i will get it right, eventually"
+    test_skip.timeout = 0.1  # type: ignore[attr-defined]
+    test_skip.skip = "i will get it right, eventually"  # type: ignore[attr-defined]  # noqa
 
     def test_errorPropagation(self):
         def timedOut(err):
@@ -194,7 +194,7 @@ class TimeoutTests(unittest.TestCase):
         d = defer.Deferred()
         d.addErrback(timedOut)
         return d
-    test_errorPropagation.timeout = 0.1
+    test_errorPropagation.timeout = 0.1  # type: ignore[attr-defined]
 
     def test_calledButNeverCallback(self):
         d = defer.Deferred()
@@ -203,7 +203,8 @@ class TimeoutTests(unittest.TestCase):
         d.addCallback(neverFire)
         d.callback(1)
         return d
-    test_calledButNeverCallback.timeout = 0.1
+    test_calledButNeverCallback.timeout = 0.1  # type: ignore[attr-defined]
+
 
 
 class TestClassTimeoutAttribute(unittest.TestCase):

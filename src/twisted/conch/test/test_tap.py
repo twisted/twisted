@@ -5,31 +5,25 @@
 Tests for L{twisted.conch.tap}.
 """
 
-try:
-    import cryptography
-except ImportError:
-    cryptography = None
-
-try:
-    import pyasn1
-except ImportError:
-    pyasn1 = None
-
-try:
-    from twisted.conch import unix
-except ImportError:
-    unix = None
-
-if cryptography and pyasn1 and unix:
-    from twisted.conch import tap
-    from twisted.conch.openssh_compat.factory import OpenSSHFactory
-
+from twisted.python.reflect import requireModule
 from twisted.application.internet import StreamServerEndpointService
 from twisted.cred import error
 from twisted.cred.credentials import ISSHPrivateKey
 from twisted.cred.credentials import IUsernamePassword, UsernamePassword
 
 from twisted.trial.unittest import TestCase
+
+
+
+cryptography = requireModule('cryptography')
+pyasn1 = requireModule('pyasn1')
+unix = requireModule('twisted.conch.unix')
+
+
+
+if cryptography and pyasn1 and unix:
+    from twisted.conch import tap
+    from twisted.conch.openssh_compat.factory import OpenSSHFactory
 
 
 

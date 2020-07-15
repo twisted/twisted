@@ -6,7 +6,6 @@
 Utilities and helpers for simulating a network
 """
 
-from __future__ import absolute_import, division, print_function
 
 import itertools
 
@@ -254,6 +253,31 @@ class FakeTransport:
                 self.tls.readyToSend = True
         else:
             self.protocol.dataReceived(buf)
+
+
+    def getTcpKeepAlive(self):
+        # ITCPTransport.getTcpKeepAlive
+        pass
+
+
+    def getTcpNoDelay(self):
+        # ITCPTransport.getTcpNoDelay
+        pass
+
+
+    def loseWriteConnection(self):
+        # ITCPTransport.loseWriteConnection
+        pass
+
+
+    def setTcpKeepAlive(self, enabled):
+        # ITCPTransport.setTcpKeepAlive
+        pass
+
+
+    def setTcpNoDelay(self, enabled):
+        # ITCPTransport.setTcpNoDelay
+        pass
 
 
 

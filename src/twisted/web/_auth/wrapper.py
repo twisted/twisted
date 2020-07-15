@@ -13,7 +13,6 @@ denied, a 401 will be sent in the response along with I{WWW-Authenticate}
 headers for each of the allowed authentication schemes.
 """
 
-from __future__ import absolute_import, division
 
 from twisted.cred import error
 from twisted.cred.credentials import Anonymous
@@ -72,6 +71,11 @@ class UnauthorizedResource(object):
         Disable resource dispatch
         """
         return self
+
+
+    def putChild(self, path, child):
+        # IResource.putChild
+        raise NotImplementedError()
 
 
 
@@ -234,3 +238,8 @@ class HTTPAuthSessionWrapper(object):
             if fact.scheme == scheme:
                 return (fact, b' '.join(elements[1:]))
         return (None, None)
+
+
+    def putChild(self, path, child):
+        # IResource.putChild
+        raise NotImplementedError()

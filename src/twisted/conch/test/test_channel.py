@@ -5,8 +5,8 @@
 Test ssh/channel.py.
 """
 
-from __future__ import division, absolute_import
 
+from unittest import skipIf
 from zope.interface.verify import verifyObject
 
 try:
@@ -17,11 +17,11 @@ try:
     from twisted.internet import interfaces
     from twisted.internet.address import IPv4Address
     from twisted.test.proto_helpers import StringTransport
-    skipTest = None
+    skipTest = ""
 except ImportError:
     skipTest = 'Conch SSH not supported.'
-    SSHService = object
-from twisted.trial import unittest
+    SSHService = object  # type: ignore[assignment,misc]
+from twisted.trial.unittest import TestCase
 from twisted.python.compat import intToBytes
 
 
@@ -94,12 +94,11 @@ def connectSSHTransport(service, hostAddress=None, peerAddress=None):
 
 
 
-class ChannelTests(unittest.TestCase):
+@skipIf(skipTest, skipTest)
+class ChannelTests(TestCase):
     """
     Tests for L{SSHChannel}.
     """
-
-    skip = skipTest
 
     def setUp(self):
         """

@@ -8,7 +8,6 @@ Calculations for HTTP Digest authentication.
 @see: U{http://www.faqs.org/rfcs/rfc2617.html}
 """
 
-from __future__ import division, absolute_import
 
 from binascii import hexlify
 from hashlib import md5, sha1

@@ -9,29 +9,27 @@ functionality.
 
 import os
 import sys
+from unittest import skipIf
 
 from twisted.conch.insults import insults
 from twisted.conch import recvline
 
 from twisted.python import reflect, components, filepath
-from twisted.python.compat import iterbytes, bytesEnviron
-from twisted.python.runtime import platform
+from twisted.python.compat import iterbytes
+from twisted.python.reflect import requireModule
 from twisted.internet import defer, error
-from twisted.trial import unittest
+from twisted.trial.unittest import SkipTest, TestCase
 from twisted.cred import portal
 from twisted.test.proto_helpers import StringTransport
 
-if platform.isWindows():
-    properEnv = dict(os.environ)
-    properEnv["PYTHONPATH"] = os.pathsep.join(sys.path)
-else:
-    properEnv = bytesEnviron()
-    properEnv[b"PYTHONPATH"] = os.pathsep.join(sys.path).encode(
-        sys.getfilesystemencoding())
+
+stdio = requireModule('twisted.conch.stdio')
+properEnv = dict(os.environ)
+properEnv["PYTHONPATH"] = os.pathsep.join(sys.path)
 
 
 
-class ArrowsTests(unittest.TestCase):
+class ArrowsTests(TestCase):
     def setUp(self):
         self.underlyingTransport = StringTransport()
         self.pt = insults.ServerProtocol()
@@ -479,7 +477,7 @@ class _BaseMixin:
 class _SSHMixin(_BaseMixin):
     def setUp(self):
         if not ssh:
-            raise unittest.SkipTest(
+            raise SkipTest(
                 "cryptography requirements missing, can't run historic "
                 "recvline tests over ssh")
 
@@ -572,11 +570,6 @@ class _TelnetMixin(_BaseMixin):
     def _testwrite(self, data):
         self.telnetClient.write(data)
 
-try:
-    from twisted.conch import stdio
-except ImportError:
-    stdio = None
-
 
 
 class _StdioMixin(_BaseMixin):
@@ -605,8 +598,6 @@ class _StdioMixin(_BaseMixin):
         if module.endswith('.pyc') or module.endswith('.pyo'):
             module = module[:-1]
         args = [exe, module, reflect.qual(self.serverProtocol)]
-        if not platform.isWindows():
-            args = [arg.encode(sys.getfilesystemencoding()) for arg in args]
 
         from twisted.internet import reactor
         clientTransport = reactor.spawnProcess(processClient, exe, args,
@@ -718,19 +709,21 @@ class RecvlineLoopbackMixin:
 
 
 
-class RecvlineLoopbackTelnetTests(_TelnetMixin, unittest.TestCase, RecvlineLoopbackMixin):
+class RecvlineLoopbackTelnetTests(_TelnetMixin, TestCase,
+                                  RecvlineLoopbackMixin):
     pass
 
 
 
-class RecvlineLoopbackSSHTests(_SSHMixin, unittest.TestCase, RecvlineLoopbackMixin):
+class RecvlineLoopbackSSHTests(_SSHMixin, TestCase, RecvlineLoopbackMixin):
     pass
 
 
 
-class RecvlineLoopbackStdioTests(_StdioMixin, unittest.TestCase, RecvlineLoopbackMixin):
-    if stdio is None:
-        skip = "Terminal requirements missing, can't run recvline tests over stdio"
+@skipIf(not stdio,
+        "Terminal requirements missing, can't run recvline tests over stdio")
+class RecvlineLoopbackStdioTests(_StdioMixin, TestCase, RecvlineLoopbackMixin):
+    pass
 
 
 
@@ -781,23 +774,27 @@ class HistoricRecvlineLoopbackMixin:
 
 
 
-class HistoricRecvlineLoopbackTelnetTests(_TelnetMixin, unittest.TestCase, HistoricRecvlineLoopbackMixin):
+class HistoricRecvlineLoopbackTelnetTests(_TelnetMixin, TestCase,
+                                          HistoricRecvlineLoopbackMixin):
     pass
 
 
 
-class HistoricRecvlineLoopbackSSHTests(_SSHMixin, unittest.TestCase, HistoricRecvlineLoopbackMixin):
+class HistoricRecvlineLoopbackSSHTests(_SSHMixin, TestCase,
+                                       HistoricRecvlineLoopbackMixin):
     pass
 
 
 
-class HistoricRecvlineLoopbackStdioTests(_StdioMixin, unittest.TestCase, HistoricRecvlineLoopbackMixin):
-    if stdio is None:
-        skip = "Terminal requirements missing, can't run historic recvline tests over stdio"
+@skipIf(not stdio, "Terminal requirements missing, "
+        "can't run historic recvline tests over stdio")
+class HistoricRecvlineLoopbackStdioTests(_StdioMixin, TestCase,
+                                         HistoricRecvlineLoopbackMixin):
+    pass
 
 
 
-class TransportSequenceTests(unittest.TestCase):
+class TransportSequenceTests(TestCase):
     """
     L{twisted.conch.recvline.TransportSequence}
     """
