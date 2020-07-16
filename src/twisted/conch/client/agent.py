@@ -12,10 +12,12 @@ import os
 
 from twisted.conch.ssh import agent, channel, keys
 from twisted.internet import protocol, reactor
+from twisted.logger import Logger
 
 
 
 class SSHAgentClient(agent.SSHAgentClient):
+    _log = Logger()
 
     def __init__(self):
         agent.SSHAgentClient.__init__(self)
