@@ -119,7 +119,7 @@ class UnixConchUser(ConchUser):
         # Remove all listeners.
         for listener in self.listeners.values():
             self._runAsUser(listener.stopListening)
-        self.log.info(
+        self._log.info(
             'avatar {username} logging out ({nlisteners})',
             username=self.username, nlisteners=len(self.listeners))
 
@@ -156,7 +156,7 @@ class UnixConchUser(ConchUser):
 
 @implementer(ISession)
 class SSHSessionForUnixConchUser:
-    log = Logger()
+    _log = Logger()
 
     def __init__(self, avatar, reactor=None):
         """
@@ -214,7 +214,7 @@ class SSHSessionForUnixConchUser:
 
     def openShell(self, proto):
         if not self.ptyTuple:  # We didn't get a pty-req.
-            self.log.error('tried to get shell without pty, failing')
+            self._log.error('tried to get shell without pty, failing')
             raise ConchError("no pty")
         uid, gid = self.avatar.getUserGroupId()
         homeDir = self.avatar.getHomeDir()
@@ -320,7 +320,7 @@ class SSHSessionForUnixConchUser:
                 pass
             self.pty.loseConnection()
             self.addUTMPEntry(0)
-        self.log.info('shell closed')
+        self._log.info('shell closed')
 
 
     def windowChanged(self, winSize):

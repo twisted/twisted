@@ -39,7 +39,7 @@ class SSHListenForwardingFactory(protocol.Factory):
 class SSHListenForwardingChannel(channel.SSHChannel):
 
     def channelOpen(self, specificData):
-        self.log.info('opened forwarding channel {id}', id=self.id)
+        self._log.info('opened forwarding channel {id}', id=self.id)
         if len(self.client.buf) > 1:
             b = self.client.buf[1:]
             self.write(b)
@@ -56,7 +56,7 @@ class SSHListenForwardingChannel(channel.SSHChannel):
 
     def closed(self):
         if hasattr(self, 'client'):
-            self.log.info('closing local forwarding channel {id}', id=self.id)
+            self._log.info('closing local forwarding channel {id}', id=self.id)
             self.client.transport.loseConnection()
             del self.client
 
@@ -106,8 +106,8 @@ class SSHConnectForwardingChannel(channel.SSHChannel):
         """
         See: L{channel.SSHChannel}
         """
-        self.log.info("connecting to {host}:{port}",
-                      host=self.hostport[0], port=self.hostport[1])
+        self._log.info("connecting to {host}:{port}",
+                       host=self.hostport[0], port=self.hostport[1])
         ep = HostnameEndpoint(
             self._reactor, self.hostport[0], self.hostport[1])
         d = connectProtocol(ep, SSHForwardingClient(self))
@@ -123,8 +123,8 @@ class SSHConnectForwardingChannel(channel.SSHChannel):
         @type  client: L{protocol.Protocol}
         """
         self.client = client
-        self.log.info("connected to {host}:{port}",
-                      host=self.hostport[0], port=self.hostport[1])
+        self._log.info("connected to {host}:{port}",
+                       host=self.hostport[0], port=self.hostport[1])
         if self.clientBuf:
             self.client.transport.write(self.clientBuf)
             self.clientBuf = None
@@ -140,9 +140,9 @@ class SSHConnectForwardingChannel(channel.SSHChannel):
         @param reason: Reason why connection failed.
         @type  reason: L{twisted.python.failure.Failure}
         """
-        self.log.error("failed to connect to {host}:{port}: {reason}",
-                       host=self.hostport[0], port=self.hostport[1],
-                       reason=reason)
+        self._log.error("failed to connect to {host}:{port}: {reason}",
+                        host=self.hostport[0], port=self.hostport[1],
+                        reason=reason)
         self.loseConnection()
 
 
@@ -161,7 +161,7 @@ class SSHConnectForwardingChannel(channel.SSHChannel):
         See: L{channel.SSHChannel}
         """
         if self.client:
-            self.log.info('closed remote forwarding channel {id}', id=self.id)
+            self._log.info('closed remote forwarding channel {id}', id=self.id)
             if self.client.channel:
                 self.loseConnection()
             self.client.transport.loseConnection()

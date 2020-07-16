@@ -13,7 +13,7 @@ from twisted.logger import Logger
 
 @implementer(IConchUser)
 class ConchUser:
-    log = Logger()
+    _log = Logger()
 
     def __init__(self):
         self.channelLookup = {}
@@ -41,8 +41,8 @@ class ConchUser:
 
 
     def lookupSubsystem(self, subsystem, data):
-        self.log.debug('Subsystem lookup: {subsystem!r}',
-                       subsystem=self.subsystemLookup)
+        self._log.debug('Subsystem lookup: {subsystem!r}',
+                        subsystem=self.subsystemLookup)
         klass = self.subsystemLookup.get(subsystem, None)
         if not klass:
             return False

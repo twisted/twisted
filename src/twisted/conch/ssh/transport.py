@@ -425,7 +425,7 @@ class SSHTransportBase(protocol.Protocol):
         to send them while a key exchange is in progress.  When the key
         exchange completes, another attempt is made to send these messages.
     """
-    log = Logger()
+    _log = Logger()
 
     protocolVersion = b'2.0'
     version = b'Twisted_' + twisted_version.encode('ascii')
@@ -501,7 +501,7 @@ class SSHTransportBase(protocol.Protocol):
             self.service.serviceStopped()
         if hasattr(self, 'avatar'):
             self.logoutFunction()
-        self.log.info('connection lost')
+        self._log.info('connection lost')
 
 
     def connectionMade(self):
@@ -664,7 +664,7 @@ class SSHTransportBase(protocol.Protocol):
                 payload = self.incomingCompression.decompress(payload)
             except Exception:
                 # Tolerate any errors in decompression
-                self.log.failure('Error decompressing payload')
+                self._log.failure('Error decompressing payload')
                 self.sendDisconnect(DISCONNECT_COMPRESSION_ERROR,
                                     b'compression error')
                 return
@@ -739,14 +739,14 @@ class SSHTransportBase(protocol.Protocol):
             if f is not None:
                 f(payload)
             else:
-                self.log.debug("couldn't handle {messageType}: {payload!r}",
-                               messageType=messageType, payload=payload)
+                self._log.debug("couldn't handle {messageType}: {payload!r}",
+                                messageType=messageType, payload=payload)
                 self.sendUnimplemented()
         elif self.service:
             self.service.packetReceived(messageNum, payload)
         else:
-            self.log.debug("couldn't handle {messageNum}: {payload!r}",
-                           messageNum=messageNum, payload=payload)
+            self._log.debug("couldn't handle {messageNum}: {payload!r}",
+                            messageNum=messageNum, payload=payload)
             self.sendUnimplemented()
 
 
@@ -869,16 +869,16 @@ class SSHTransportBase(protocol.Protocol):
             self.sendDisconnect(DISCONNECT_KEY_EXCHANGE_FAILED,
                                 b"couldn't match all kex parts")
             return
-        self.log.debug('kex alg={kexAlg!r} key alg={keyAlg!r}',
-                       kexAlg=self.kexAlg, keyAlg=self.keyAlg)
-        self.log.debug('outgoing: {cip!r} {mac!r} {compression!r}',
-                       cip=self.nextEncryptions.outCipType,
-                       mac=self.nextEncryptions.outMACType,
-                       compression=self.outgoingCompressionType)
-        self.log.debug('incoming: {cip!r} {mac!r} {compression!r}',
-                       cip=self.nextEncryptions.inCipType,
-                       mac=self.nextEncryptions.inMACType,
-                       compression=self.incomingCompressionType)
+        self._log.debug('kex alg={kexAlg!r} key alg={keyAlg!r}',
+                        kexAlg=self.kexAlg, keyAlg=self.keyAlg)
+        self._log.debug('outgoing: {cip!r} {mac!r} {compression!r}',
+                        cip=self.nextEncryptions.outCipType,
+                        mac=self.nextEncryptions.outMACType,
+                        compression=self.outgoingCompressionType)
+        self._log.debug('incoming: {cip!r} {mac!r} {compression!r}',
+                        cip=self.nextEncryptions.inCipType,
+                        mac=self.nextEncryptions.inMACType,
+                        compression=self.incomingCompressionType)
 
         if self._keyExchangeState == self._KEY_EXCHANGE_REQUESTED:
             self._keyExchangeState = self._KEY_EXCHANGE_PROGRESSING
@@ -955,7 +955,7 @@ class SSHTransportBase(protocol.Protocol):
         @type service: C{SSHService}
         @param service: The service to attach.
         """
-        self.log.debug('starting service {service!r}', service=service.name)
+        self._log.debug('starting service {service!r}', service=service.name)
         if self.service:
             self.service.serviceStopped()
         self.service = service
@@ -1012,7 +1012,7 @@ class SSHTransportBase(protocol.Protocol):
         """
         self.sendPacket(
             MSG_DISCONNECT, struct.pack('>L', reason) + NS(desc) + NS(b''))
-        self.log.info(
+        self._log.info(
             'Disconnecting with error, code {code}\nreason: {description}',
             code=reason, description=desc
         )
@@ -1127,7 +1127,7 @@ class SSHTransportBase(protocol.Protocol):
         and compression parameters should be adopted.  Any messages which were
         queued during key exchange will also be flushed.
         """
-        self.log.debug('NEW KEYS')
+        self._log.debug('NEW KEYS')
         self.currentEncryptions = self.nextEncryptions
         if self.outgoingCompressionType == b'zlib':
             self.outgoingCompression = zlib.compressobj(6)
@@ -1204,8 +1204,8 @@ class SSHTransportBase(protocol.Protocol):
                             disconnection.
         @type description: L{str}
         """
-        self.log.error('Got remote error, code {code}\nreason: {description}',
-                       code=reasonCode, description=description)
+        self._log.error('Got remote error, code {code}\nreason: {description}',
+                        code=reasonCode, description=description)
 
 
     def receiveUnimplemented(self, seqnum):
@@ -1216,8 +1216,8 @@ class SSHTransportBase(protocol.Protocol):
         @param seqnum: the sequence number that was not understood.
         @type seqnum: L{int}
         """
-        self.log.warn('other side unimplemented packet #{seqnum}',
-                      seqnum=seqnum)
+        self._log.warn('other side unimplemented packet #{seqnum}',
+                       seqnum=seqnum)
 
 
     def receiveDebug(self, alwaysDisplay, message, lang):
@@ -1233,7 +1233,7 @@ class SSHTransportBase(protocol.Protocol):
         @type lang: L{str}
         """
         if alwaysDisplay:
-            self.log.debug('Remote Debug Message: {message}', message=message)
+            self._log.debug('Remote Debug Message: {message}', message=message)
 
 
     def _generateECPrivateKey(self):
@@ -1981,7 +1981,7 @@ class SSHClientTransport(SSHTransportBase):
         @param packet: The message data.
         """
         if packet == b'':
-            self.log.info('got SERVICE_ACCEPT without payload')
+            self._log.info('got SERVICE_ACCEPT without payload')
         else:
             name = getNS(packet)[0]
             if name != self.instance.name:

@@ -27,7 +27,7 @@ class SSHAgentClient(agent.SSHAgentClient):
 
 
     def _cbPublicKeys(self, blobcomm):
-        self.log.debug('got {num_keys} public keys', num_keys=len(blobcomm))
+        self._log.debug('got {num_keys} public keys', num_keys=len(blobcomm))
         self.blobs = [x[0] for x in blobcomm]
 
 

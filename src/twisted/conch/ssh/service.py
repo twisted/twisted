@@ -18,7 +18,7 @@ class SSHService(object):
     protocolMessages = {}  # type: Dict[int, str]  # map #'s -> protocol names
     transport = None  # gets set later
 
-    log = Logger()
+    _log = Logger()
 
     def serviceStarted(self):
         """
@@ -33,7 +33,7 @@ class SSHService(object):
 
     def logPrefix(self):
         return "SSHService %r on %s" % (self.name,
-            self.transport.transport.logPrefix())
+                                        self.transport.transport.logPrefix())
 
     def packetReceived(self, messageNum, packet):
         """
@@ -46,6 +46,6 @@ class SSHService(object):
                         None)
             if f is not None:
                 return f(packet)
-        self.log.info("couldn't handle {messageNum} {packet!r}",
-                      messageNum=messageNum, packet=packet)
+        self._log.info("couldn't handle {messageNum} {packet!r}",
+                       messageNum=messageNum, packet=packet)
         self.transport.sendUnimplemented()

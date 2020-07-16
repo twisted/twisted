@@ -166,8 +166,8 @@ class SSHUserAuthClient(userauth.SSHUserAuthClient):
 
     def serviceStarted(self):
         if 'SSH_AUTH_SOCK' in os.environ and not self.options['noagent']:
-            self.log.debug('using SSH agent {authSock!r}',
-                           authSock=os.environ['SSH_AUTH_SOCK'])
+            self._log.debug('using SSH agent {authSock!r}',
+                            authSock=os.environ['SSH_AUTH_SOCK'])
             cc = protocol.ClientCreator(reactor, agent.SSHAgentClient)
             d = cc.connectUNIX(os.environ['SSH_AUTH_SOCK'])
             d.addCallback(self._setAgent)
@@ -238,8 +238,8 @@ class SSHUserAuthClient(userauth.SSHUserAuthClient):
             if key is not None:
                 return key
         files = [x for x in self.options.identitys if x not in self.usedFiles]
-        self.log.debug('public key identities: {identities}\n{files}',
-                       identities=self.options.identitys, files=files)
+        self._log.debug('public key identities: {identities}\n{files}',
+                        identities=self.options.identitys, files=files)
         if not files:
             return None
         file = files[0]

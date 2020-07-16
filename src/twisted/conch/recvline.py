@@ -410,7 +410,7 @@ class RecvLine(insults.TerminalProtocol):
     pn = 0
     _printableChars = string.printable.encode("ascii")
 
-    log = Logger()
+    _log = Logger()
 
     def connectionMade(self):
         # A list containing the characters making up the current line
@@ -502,7 +502,7 @@ class RecvLine(insults.TerminalProtocol):
         elif keyID in self._printableChars:
             self.characterReceived(keyID, False)
         else:
-            self.log.warn("Received unhandled keyID: {keyID!r}", keyID=keyID)
+            self._log.warn("Received unhandled keyID: {keyID!r}", keyID=keyID)
 
 
     def characterReceived(self, ch, moreCharactersComing):

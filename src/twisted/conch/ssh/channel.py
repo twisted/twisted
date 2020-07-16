@@ -52,7 +52,7 @@ class SSHChannel(log.Logger):
     @ivar remoteClosed: True if the other side isn't accepting more data.
     @type remoteClosed: L{bool}
     """
-    log = Logger()
+    _log = Logger()
     name = None  # type: bytes  # only needed for client channels
 
     def __init__(self, localWindow=0, localMaxPacket=0,
@@ -110,7 +110,7 @@ class SSHChannel(log.Logger):
 
         @type specificData: L{bytes}
         """
-        self.log.info('channel open')
+        self._log.info('channel open')
 
 
     def openFailed(self, reason):
@@ -120,8 +120,8 @@ class SSHChannel(log.Logger):
 
         @type reason: L{error.ConchError}
         """
-        self.log.error('other side refused open\nreason: {reason}',
-                       reason=reason)
+        self._log.error('other side refused open\nreason: {reason}',
+                        reason=reason)
 
 
     def addWindowBytes(self, data):
@@ -161,8 +161,8 @@ class SSHChannel(log.Logger):
         f = getattr(self, 'request_' + foo, None)
         if f:
             return f(data)
-        self.log.info('unhandled request for {requestType}',
-                      requestType=requestType)
+        self._log.info('unhandled request for {requestType}',
+                       requestType=requestType)
         return 0
 
 
@@ -172,7 +172,7 @@ class SSHChannel(log.Logger):
 
         @type data: L{bytes}
         """
-        self.log.debug('got data {data}', data=data)
+        self._log.debug('got data {data}', data=data)
 
 
     def extReceived(self, dataType, data):
@@ -182,22 +182,22 @@ class SSHChannel(log.Logger):
         @type dataType: L{int}
         @type data:     L{str}
         """
-        self.log.debug('got extended data {dataType} {data!r}',
-                       dataType=dataType, data=data)
+        self._log.debug('got extended data {dataType} {data!r}',
+                        dataType=dataType, data=data)
 
 
     def eofReceived(self):
         """
         Called when the other side will send no more data.
         """
-        self.log.info('remote eof')
+        self._log.info('remote eof')
 
 
     def closeReceived(self):
         """
         Called when the other side has closed the channel.
         """
-        self.log.info('remote close')
+        self._log.info('remote close')
         self.loseConnection()
 
 
@@ -206,7 +206,7 @@ class SSHChannel(log.Logger):
         Called when the channel is closed.  This means that both our side and
         the remote side have closed the channel.
         """
-        self.log.info('closed')
+        self._log.info('closed')
 
 
     def write(self, data):

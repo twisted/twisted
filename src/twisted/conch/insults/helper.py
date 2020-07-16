@@ -125,7 +125,7 @@ class TerminalBuffer(protocol.Protocol):
 
     fill = b' '
     void = object()
-    log = Logger()
+    _log = Logger()
 
     def getCharacter(self, x, y):
         return self.lines[y][x]
@@ -358,7 +358,7 @@ class TerminalBuffer(protocol.Protocol):
                 try:
                     v = int(a)
                 except ValueError:
-                    self.log.error(
+                    self._log.error(
                         "Unknown graphic rendition attribute: {attr!r}",
                         attr=a
                     )
@@ -368,7 +368,7 @@ class TerminalBuffer(protocol.Protocol):
                     elif BACKGROUND <= v <= BACKGROUND + N_COLORS:
                         self.graphicRendition['background'] = v - BACKGROUND
                     else:
-                        self.log.error(
+                        self._log.error(
                             "Unknown graphic rendition attribute: {attr!r}",
                             attr=a
                         )

@@ -318,7 +318,7 @@ class AlreadyNegotiating(NegotiationError):
 
 @implementer(ITelnetProtocol)
 class TelnetProtocol(protocol.Protocol):
-    log = Logger()
+    _log = Logger()
 
     def unhandledCommand(self, command, argument):
         pass
@@ -986,10 +986,10 @@ class TelnetBootstrapProtocol(TelnetProtocol, ProtocolTransportMixin):
 
         for opt in (LINEMODE, NAWS, SGA):
             self.transport.do(opt).addErrback(
-                lambda f: self.log.failure('Error do {opt!r}', f, opt=opt))
+                lambda f: self._log.failure('Error do {opt!r}', f, opt=opt))
         for opt in (ECHO,):
             self.transport.will(opt).addErrback(
-                lambda f: self.log.failure(
+                lambda f: self._log.failure(
                     'Error setting will {opt!r}', f, opt=opt))
 
         self.protocol = self.protocolFactory(*self.protocolArgs,
@@ -1047,8 +1047,8 @@ class TelnetBootstrapProtocol(TelnetProtocol, ProtocolTransportMixin):
             width, height = struct.unpack('!HH', b''.join(data))
             self.protocol.terminalProtocol.terminalSize(width, height)
         else:
-            self.log.error("Wrong number of NAWS bytes: {nbytes}",
-                           nbytes=len(data))
+            self._log.error("Wrong number of NAWS bytes: {nbytes}",
+                            nbytes=len(data))
 
     linemodeSubcommands = {
         LINEMODE_SLC: 'SLC'}
@@ -1085,7 +1085,7 @@ class StatefulTelnetProtocol(basic.LineReceiver, TelnetProtocol):
             if self.state == oldState:
                 self.state = newState
             else:
-                self.log.warn("state changed and new state returned")
+                self._log.warn("state changed and new state returned")
 
 
     def telnet_Discard(self, line):

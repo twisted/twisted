@@ -18,8 +18,9 @@ from twisted.conch.ssh.common import NS, getNS
 from twisted.cred import credentials
 from twisted.cred.error import UnauthorizedLogin
 from twisted.internet import defer, reactor
-from twisted.python import failure, log
+from twisted.python import failure
 from twisted.python.compat import nativeString, _bytesChr as chr
+from twisted.logger import Logger
 
 
 
@@ -71,12 +72,13 @@ class SSHUserAuthServer(service.SSHService):
     # 10 minutes before we disconnect them
     attemptsBeforeDisconnect = 20
     # 20 login attempts before a disconnect
-    passwordDelay = 1 # number of seconds to delay on a failed password
+    passwordDelay = 1  # number of seconds to delay on a failed password
     clock = reactor
     interfaceToMethod = {
-        credentials.ISSHPrivateKey : b'publickey',
-        credentials.IUsernamePassword : b'password',
+        credentials.ISSHPrivateKey: b'publickey',
+        credentials.IUsernamePassword: b'password',
     }
+    _log = Logger()
 
 
     def serviceStarted(self):
@@ -142,7 +144,7 @@ class SSHUserAuthServer(service.SSHService):
             if it failed.
         @rtype: C{defer.Deferred}
         """
-        self.log.debug('{user!r} trying auth {kind!r}', user=user, kind=kind)
+        self._log.debug('{user!r} trying auth {kind!r}', user=user, kind=kind)
         if kind not in self.supportedAuthentications:
             return defer.fail(
                     error.ConchError('unsupported authentication, failing'))
@@ -201,8 +203,8 @@ class SSHUserAuthServer(service.SSHService):
         if not service:
             raise error.ConchError(
                 'could not get next service: %s' % (self.nextService,))
-        self.log.debug('{user!r} authenticated with {method!r}',
-                       user=self.user, method=self.method)
+        self._log.debug('{user!r} authenticated with {method!r}',
+                        user=self.user, method=self.method)
         self.transport.sendPacket(MSG_USERAUTH_SUCCESS, b'')
         self.transport.setService(service())
 
@@ -233,16 +235,17 @@ class SSHUserAuthServer(service.SSHService):
         if reason.check(error.IgnoreAuthentication):
             return
         if self.method != b'none':
-            self.log.debug('{user!r} failed auth {method!r}',
-                           user=self.user, method=self.method)
+            self._log.debug('{user!r} failed auth {method!r}',
+                            user=self.user, method=self.method)
             if reason.check(UnauthorizedLogin):
-                self.log.debug('unauthorized login: {message}',
-                               message=reason.getErrorMessage())
+                self._log.debug('unauthorized login: {message}',
+                                message=reason.getErrorMessage())
             elif reason.check(error.ConchError):
-                self.log.debug('reason: {reason}', reason=reason.getErrorMessage())
+                self._log.debug('reason: {reason}',
+                                reason=reason.getErrorMessage())
             else:
-                self.log.failure('Error checking auth for user {user}',
-                                 failure=reason, user=self.user)
+                self._log.failure('Error checking auth for user {user}',
+                                  failure=reason, user=self.user)
             self.loginAttempts += 1
             if self.loginAttempts > self.attemptsBeforeDisconnect:
                 self.transport.sendDisconnect(
@@ -272,7 +275,7 @@ class SSHUserAuthServer(service.SSHService):
         except keys.BadKeyError:
             error = "Unsupported key type %s or bad key" % (
                 algName.decode('ascii'),)
-            self.log.error(error)
+            self._log.error(error)
             return defer.fail(UnauthorizedLogin(error))
 
         signature = hasSig and getNS(rest)[0] or None
@@ -390,7 +393,7 @@ class SSHUserAuthClient(service.SSHService):
         @type kind: L{bytes}
         """
         kind = nativeString(kind.replace(b'-', b'_'))
-        self.log.debug('trying to auth with {kind}', kind=kind)
+        self._log.debug('trying to auth with {kind}', kind=kind)
         f = getattr(self, 'auth_' + kind, None)
         if f:
             return f()
@@ -460,7 +463,7 @@ class SSHUserAuthClient(service.SSHService):
                               if meth not in self.authenticatedWith],
                              key=orderByPreference)
 
-        self.log.debug('can continue with: {methods}', methods=canContinue)
+        self._log.debug('can continue with: {methods}', methods=canContinue)
         return self._cbUserauthFailure(None, iter(canContinue))
 
 
@@ -616,8 +619,8 @@ class SSHUserAuthClient(service.SSHService):
         if publicKey is not None:
             self.lastPublicKey = publicKey
             self.triedPublicKeys.append(publicKey)
-            self.log.debug('using key of type {keyType}',
-                           keyType=publicKey.type())
+            self._log.debug('using key of type {keyType}',
+                            keyType=publicKey.type())
             self.askForAuth(b'publickey', b'\x00' + NS(publicKey.sshType()) +
                             NS(publicKey.blob()))
             return True
@@ -648,7 +651,7 @@ class SSHUserAuthClient(service.SSHService):
 
         @rtype: L{bool}
         """
-        self.log.debug('authing with keyboard-interactive')
+        self._log.debug('authing with keyboard-interactive')
         self.askForAuth(b'keyboard-interactive', NS(b'') + NS(b''))
         return True
 

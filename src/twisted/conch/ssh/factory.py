@@ -23,7 +23,7 @@ class SSHFactory(protocol.Factory):
     """
     A Factory for SSH servers.
     """
-    log = Logger()
+    _log = Logger()
     protocol = transport.SSHServerTransport
 
     services = {
@@ -57,8 +57,8 @@ class SSHFactory(protocol.Factory):
         t = protocol.Factory.buildProtocol(self, addr)
         t.supportedPublicKeys = self.privateKeys.keys()
         if not self.primes:
-            self.log.info('disabling non-fixed-group key exchange algorithms '
-                          'because we cannot find moduli file')
+            self._log.info('disabling non-fixed-group key exchange algorithms '
+                           'because we cannot find moduli file')
             t.supportedKeyExchanges = [
                 kexAlgorithm for kexAlgorithm in t.supportedKeyExchanges
                 if _kex.isFixedGroup(kexAlgorithm) or

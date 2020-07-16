@@ -16,6 +16,7 @@ import twisted.internet.error
 from twisted.conch.ssh import service, common
 from twisted.conch import error
 from twisted.internet import defer
+from twisted.logger import Logger
 from twisted.python.compat import (
     nativeString, networkString, long, _bytesChr as chr)
 
@@ -42,17 +43,22 @@ class SSHConnection(service.SSHService):
         key stores the C{list} of pending global request C{Deferred}s.
     """
     name = b'ssh-connection'
+    _log = Logger()
+
 
     def __init__(self):
-        self.localChannelID = 0 # this is the current # to use for channel ID
-        self.localToRemoteChannel = {} # local channel ID -> remote channel ID
-        self.channels = {} # local channel ID -> subclass of SSHChannel
-        self.channelsToRemoteChannel = {} # subclass of SSHChannel ->
-                                          # remote channel ID
-        self.deferreds = {"global": []} # local channel -> list of deferreds
-                            # for pending requests or 'global' -> list of
-                            # deferreds for global requests
-        self.transport = None # gets set later
+        self.localChannelID = 0  # this is the current # to use for channel ID
+        # local channel ID -> remote channel ID
+        self.localToRemoteChannel = {}
+        # local channel ID -> subclass of SSHChannel
+        self.channels = {}
+        # subclass of SSHChannel -> remote channel ID
+        self.channelsToRemoteChannel = {}
+        # local channel -> list of deferreds for pending requests
+        # or 'global' -> list of deferreds for global requests
+        self.deferreds = {"global": []}
+
+        self.transport = None  # gets set later
 
 
     def serviceStarted(self):
@@ -114,7 +120,7 @@ class SSHConnection(service.SSHService):
         Our global request succeeded.  Get the appropriate Deferred and call
         it back with the packet we received.
         """
-        self.log.debug('global requeset success')
+        self._log.debug('global requeset success')
         self.deferreds['global'].pop(0).callback(packet)
 
     def ssh_REQUEST_FAILURE(self, packet):
@@ -122,7 +128,7 @@ class SSHConnection(service.SSHService):
         Our global request failed.  Get the appropriate Deferred and errback
         it with the packet we received.
         """
-        self.log.debug('global request failure')
+        self._log.debug('global request failure')
         self.deferreds['global'].pop(0).errback(
             error.ConchError('global request failed', packet))
 
@@ -156,10 +162,11 @@ class SSHConnection(service.SSHService):
                 channel.localWindowSize,
                 channel.localMaxPacket
             ) + channel.specificData
-            self.transport.sendPacket(MSG_CHANNEL_OPEN_CONFIRMATION, open_confirm_packet)
+            self.transport.sendPacket(MSG_CHANNEL_OPEN_CONFIRMATION,
+                                      open_confirm_packet)
             channel.channelOpen(packet)
         except Exception as e:
-            self.log.failure('channel open failed')
+            self._log.failure('channel open failed')
             if isinstance(e, error.ConchError):
                 textualInfo, reason = e.args
                 if isinstance(textualInfo, (int, long)):
@@ -243,7 +250,7 @@ class SSHConnection(service.SSHService):
         # XXX should this move to dataReceived to put client in charge?
         if (dataLength > channel.localWindowLeft or
            dataLength > channel.localMaxPacket):  # more data than we want
-            self.log.error('too much data')
+            self._log.error('too much data')
             self.sendClose(channel)
             return
             # packet = packet[:channel.localWindowLeft+4]
@@ -273,7 +280,7 @@ class SSHConnection(service.SSHService):
         channel = self.channels[localChannel]
         if (dataLength > channel.localWindowLeft or
                 dataLength > channel.localMaxPacket):
-            self.log.error('too much extdata')
+            self._log.error('too much extdata')
             self.sendClose(channel)
             return
         data = common.getNS(packet[8:])[0]
@@ -419,7 +426,7 @@ class SSHConnection(service.SSHService):
         @type channel:  subclass of C{SSHChannel}
         @type extra:    L{bytes}
         """
-        self.log.info(
+        self._log.info(
             'opening channel {id} with {localWindowSize} {localMaxPacket}',
             id=self.localChannelID,
             localWindowSize=channel.localWindowSize,
@@ -448,8 +455,8 @@ class SSHConnection(service.SSHService):
         """
         if channel.localClosed:
             return
-        self.log.debug('sending request {requestType}',
-                       requestType=requestType)
+        self._log.debug('sending request {requestType}',
+                        requestType=requestType)
         self.transport.sendPacket(
             MSG_CHANNEL_REQUEST,
             struct.pack('>L', self.channelsToRemoteChannel[channel]) +
@@ -473,7 +480,7 @@ class SSHConnection(service.SSHService):
         packet = struct.pack(
             '>2L', self.channelsToRemoteChannel[channel], bytesToAdd)
         self.transport.sendPacket(MSG_CHANNEL_WINDOW_ADJUST, packet)
-        self.log.debug(
+        self._log.debug(
             'adding {bytesToAdd} to {localWindowLeft} in channel {id}',
             bytesToAdd=bytesToAdd,
             localWindowLeft=channel.localWindowLeft,
@@ -519,7 +526,7 @@ class SSHConnection(service.SSHService):
         """
         if channel.localClosed:
             return  # we're already closed
-        self.log.debug('sending eof')
+        self._log.debug('sending eof')
         self.transport.sendPacket(MSG_CHANNEL_EOF, struct.pack('>L',
                                   self.channelsToRemoteChannel[channel]))
 
@@ -531,7 +538,7 @@ class SSHConnection(service.SSHService):
         """
         if channel.localClosed:
             return  # we're already closed
-        self.log.info('sending close {id}', id=channel.id)
+        self._log.info('sending close {id}', id=channel.id)
         self.transport.sendPacket(MSG_CHANNEL_CLOSE, struct.pack('>L',
                                   self.channelsToRemoteChannel[channel]))
         channel.localClosed = True
@@ -560,8 +567,8 @@ class SSHConnection(service.SSHService):
         @type data:         L{bytes}
         @rtype:             subclass of L{SSHChannel}/L{tuple}
         """
-        self.log.debug('got channel {channelType!r} request',
-                       channelType=channelType)
+        self._log.debug('got channel {channelType!r} request',
+                        channelType=channelType)
         if hasattr(self.transport, "avatar"):  # this is a server!
             chan = self.transport.avatar.lookupChannel(channelType,
                                                        windowSize,
@@ -600,8 +607,8 @@ class SSHConnection(service.SSHService):
         @type data:         L{bytes}
         @rtype:             L{int}/L{tuple}
         """
-        self.log.debug('got global {requestType} request',
-                       requestType=requestType)
+        self._log.debug('got global {requestType} request',
+                        requestType=requestType)
         if hasattr(self.transport, 'avatar'):  # this is a server!
             return self.transport.avatar.gotGlobalRequest(requestType, data)
 
