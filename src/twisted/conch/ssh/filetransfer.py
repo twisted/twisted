@@ -50,9 +50,8 @@ class FileTransferBase(protocol.Protocol):
                 continue
             f = getattr(self, 'packet_{}'.format(packetType), None)
             if not f:
-                self.log.info('not implemented: {packetType}',
-                              packetType=packetType)
-                self.log.info(repr(data[4:]))
+                self.log.info('not implemented: {packetType} data={data!r}',
+                              packetType=packetType, data=data[4:])
                 reqId, = struct.unpack('!L', data[:4])
                 self._sendStatus(reqId, FX_OP_UNSUPPORTED,
                                  "don't understand {}".format(packetType))
@@ -61,7 +60,10 @@ class FileTransferBase(protocol.Protocol):
             try:
                 f(data)
             except Exception:
-                self.log.failure()
+                self.log.failure(
+                    "Failed to handle packet of type {packetType}",
+                    packetType=packetType
+                )
                 continue
 
 
@@ -478,7 +480,9 @@ class FileTransferServer(FileTransferBase):
             elif reason.value.errno == errno.EEXIST:
                 code = FX_FILE_ALREADY_EXISTS
             else:
-                self.log.failure(nativeString(message), reason)
+                self.log.failure("Request {requestId} failed: {message}",
+                                 failure=reason, requestId=requestId,
+                                 message=message)
         elif isinstance(reason.value, EOFError):  # EOF
             code = FX_EOF
             if reason.value.args:
@@ -491,7 +495,11 @@ class FileTransferServer(FileTransferBase):
             code = reason.value.code
             message = networkString(reason.value.message)
         else:
-            self.log.failure('Unknown error handling', reason)
+            self.log.failure(
+                "Request {requestId} failed with unknown error: {message}",
+                failure=reason, requestId=requestId,
+                message=message
+            )
         self._sendStatus(requestId, code, message)
 
 

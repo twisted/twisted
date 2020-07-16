@@ -955,7 +955,7 @@ class SSHTransportBase(protocol.Protocol):
         @type service: C{SSHService}
         @param service: The service to attach.
         """
-        self.log.debug('starting service %r' % (service.name,))
+        self.log.debug('starting service {service!r}', service=service.name)
         if self.service:
             self.service.serviceStopped()
         self.service = service

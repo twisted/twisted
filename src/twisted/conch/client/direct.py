@@ -77,7 +77,8 @@ class SSHClientTransport(transport.SSHClientTransport):
 
 
     def receiveDebug(self, alwaysDisplay, message, lang):
-        self.log.debug('Received Debug Message: {message}', message=message)
+        self.log.debug('Received Debug Message: {message}',
+                       message=message, alwaysDisplay=alwaysDisplay, lang=lang)
         if alwaysDisplay:  # XXX what should happen here?
             print(message)
 

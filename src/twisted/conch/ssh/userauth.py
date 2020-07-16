@@ -239,9 +239,10 @@ class SSHUserAuthServer(service.SSHService):
                 self.log.debug('unauthorized login: {message}',
                                message=reason.getErrorMessage())
             elif reason.check(error.ConchError):
-                self.log.debug('reason: %s' % reason.getErrorMessage())
+                self.log.debug('reason: {reason}', reason=reason.getErrorMessage())
             else:
-                log.failure('Error checking auth', failure=reason)
+                self.log.failure('Error checking auth for user {user}',
+                                 failure=reason, user=self.user)
             self.loginAttempts += 1
             if self.loginAttempts > self.attemptsBeforeDisconnect:
                 self.transport.sendDisconnect(

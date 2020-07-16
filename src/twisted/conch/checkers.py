@@ -181,6 +181,7 @@ class SSHPublicKeyDatabase:
                 if pubKey.verify(credentials.signature, credentials.sigData):
                     return credentials.username
             except Exception:  # any error should be treated as a failed login
+                log.failure('Error while verifying key')
                 return failure.Failure(
                     UnauthorizedLogin('error while verifying key'))
         return failure.Failure(UnauthorizedLogin("unable to verify key"))
@@ -239,7 +240,8 @@ class SSHPublicKeyDatabase:
 
     def _ebRequestAvatarId(self, f):
         if not f.check(UnauthorizedLogin):
-            log.error('Unauthorized login {error}', error=f.value)
+            log.error('Unauthorized login due to internal error: {error}',
+                      error=f.value)
             return failure.Failure(
                 UnauthorizedLogin("unable to get avatar id"))
         return f
@@ -584,7 +586,7 @@ class SSHPublicKeyChecker(object):
         try:
             if pubKey.verify(credentials.signature, credentials.sigData):
                 return credentials.username
-        except Exception:  # Any error should be treated as a failed login
-            raise UnauthorizedLogin('Error while verifying key')
+        except Exception as e:  # Any error should be treated as a failed login
+            raise UnauthorizedLogin('Error while verifying key') from e
 
         raise UnauthorizedLogin("Key signature invalid.")

@@ -31,6 +31,10 @@ class SSHService(object):
         or by another service being started
         """
 
+    def logPrefix(self):
+        return "SSHService %r on %s" % (self.name,
+            self.transport.transport.logPrefix())
+
     def packetReceived(self, messageNum, packet):
         """
         called when we receive a packet on the transport

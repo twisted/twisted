@@ -166,7 +166,8 @@ class SSHUserAuthClient(userauth.SSHUserAuthClient):
 
     def serviceStarted(self):
         if 'SSH_AUTH_SOCK' in os.environ and not self.options['noagent']:
-            self.log.debug('using SSH agent')
+            self.log.debug('using SSH agent {authSock!r}',
+                           authSock=os.environ['SSH_AUTH_SOCK'])
             cc = protocol.ClientCreator(reactor, agent.SSHAgentClient)
             d = cc.connectUNIX(os.environ['SSH_AUTH_SOCK'])
             d.addCallback(self._setAgent)

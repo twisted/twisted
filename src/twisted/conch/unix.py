@@ -120,7 +120,7 @@ class UnixConchUser(ConchUser):
         for listener in self.listeners.values():
             self._runAsUser(listener.stopListening)
         self.log.info(
-            'avatar {username} logging out ({nlisteners}}])',
+            'avatar {username} logging out ({nlisteners})',
             username=self.username, nlisteners=len(self.listeners))
 
 

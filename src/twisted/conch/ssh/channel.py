@@ -12,6 +12,7 @@ Maintainer: Paul Swartz
 
 from zope.interface import implementer
 
+from twisted.python import log
 from twisted.python.compat import nativeString, intToBytes
 from twisted.internet import interfaces
 from twisted.logger import Logger
@@ -19,7 +20,7 @@ from twisted.logger import Logger
 
 
 @implementer(interfaces.ITransport)
-class SSHChannel(object):
+class SSHChannel(log.Logger):
     """
     A class that represents a multiplexed channel over an SSH connection.
     The channel has a local window which is the maximum amount of data it will
@@ -91,6 +92,16 @@ class SSHChannel(object):
                 b' (lw ' + intToBytes(self.localWindowLeft) +
                 b' rw ' + intToBytes(self.remoteWindowLeft) +
                 b')>')
+
+
+    def logPrefix(self):
+        id = (self.id is not None and str(self.id)) or "unknown"
+        name = self.name
+        if name:
+            name = nativeString(name)
+        return "SSHChannel %s (%s) on %s" % (name, id,
+                self.conn.logPrefix())
+
 
     def channelOpen(self, specificData):
         """

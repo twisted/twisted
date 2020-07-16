@@ -140,7 +140,9 @@ class SSHConnectForwardingChannel(channel.SSHChannel):
         @param reason: Reason why connection failed.
         @type  reason: L{twisted.python.failure.Failure}
         """
-        self.log.error("failed to connect: {reason}", reason=reason)
+        self.log.error("failed to connect to {host}:{port}: {reason}",
+                       host=self.hostport[0], port=self.hostport[1],
+                       reason=reason)
         self.loseConnection()
 
 
