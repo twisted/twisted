@@ -13,10 +13,12 @@ on:
     branches: [ trunk ]
     paths:
     - '**.py'
+    - '.github/**'
   pull_request:
     branches: [ trunk ]
     paths:
     - '**.py'
+    - '.github/**'
 
 jobs:
   test_run:
