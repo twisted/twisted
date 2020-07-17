@@ -11,7 +11,7 @@ import decimal
 from unittest import skipIf
 
 from twisted.python.compat import unicode
-from twisted.spread import jelly, pb
+from twisted.spread import banana, jelly, pb
 from twisted.trial import unittest
 from twisted.trial.unittest import TestCase
 from twisted.test.proto_helpers import StringTransport
@@ -113,6 +113,19 @@ class SimpleJellyTest:
 
     def isTheSameAs(self, other):
         return self.__dict__ == other.__dict__
+
+
+
+def jellyRoundTrip(testCase, toSerialize):
+    """
+    Verify that the given object round-trips through jelly & banana and comes
+    out equivalent to the input.
+    """
+    jellied = jelly.jelly(toSerialize)
+    encoded = banana.encode(jellied)
+    decoded = banana.decode(encoded)
+    unjellied = jelly.unjelly(decoded)
+    testCase.assertEqual(toSerialize, unjellied)
 
 
 
@@ -238,6 +251,22 @@ class JellyTests(TestCase):
         output = jelly.unjelly(c)
         self.assertEqual(inputList, output)
         self.assertIsNot(inputList, output)
+
+
+    def test_bananaTimeTypes(self):
+        """
+        Jellying L{datetime.time}, L{datetime.timedelta}, L{datetime.datetime},
+        and L{datetime.date} objects should result in jellied objects which can
+        be serialized and unserialized with banana.
+        """
+        sampleDate = datetime.date(2020, 7, 11)
+        sampleTime = datetime.time(1, 16, 5, 344)
+        sampleDateTime = datetime.datetime.combine(sampleDate, sampleTime)
+        sampleTimeDelta = sampleDateTime - datetime.datetime(2020, 7, 3)
+        jellyRoundTrip(self, sampleDate)
+        jellyRoundTrip(self, sampleTime)
+        jellyRoundTrip(self, sampleDateTime)
+        jellyRoundTrip(self, sampleTimeDelta)
 
 
     def test_decimal(self):
