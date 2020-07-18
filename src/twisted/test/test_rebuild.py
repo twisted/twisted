@@ -2,12 +2,12 @@
 # See LICENSE for details.
 
 
-import sys, os
+import os
+import sys
 import types
 
-from twisted.trial import unittest
+from twisted.trial.unittest import TestCase
 from twisted.python import rebuild
-from twisted.python.compat import _PY3
 
 from . import crash_test_dummy
 f = crash_test_dummy.foo
@@ -39,7 +39,7 @@ unhashableObject = None
 
 
 
-class RebuildTests(unittest.TestCase):
+class RebuildTests(TestCase):
     """
     Simple testcase for rebuilding, to at least exercise the code.
     """
@@ -176,11 +176,9 @@ class RebuildTests(unittest.TestCase):
 
         # Test rebuilding a builtin class
         newException = rebuild.latestClass(Exception)
-        if _PY3:
-            self.assertEqual(repr(Exception), repr(newException))
-        else:
-            self.assertIn('twisted.python.rebuild.Exception', repr(newException))
-        self.assertEqual(newException, testSensitive.latestVersionOf(newException))
+        self.assertEqual(repr(Exception), repr(newException))
+        self.assertEqual(newException,
+                         testSensitive.latestVersionOf(newException))
 
         # Test types.MethodType on method in class
         self.assertEqual(TestSensitive.test_method,
@@ -212,7 +210,7 @@ class RebuildTests(unittest.TestCase):
 
 
 
-class NewStyleTests(unittest.TestCase):
+class NewStyleTests(TestCase):
     """
     Tests for rebuilding new-style classes of various sorts.
     """
@@ -258,26 +256,3 @@ class NewStyleTests(unittest.TestCase):
         rebuild.updateInstance(inst)
         self.assertEqual(inst[0], 2)
         self.assertIs(type(inst), self.m.ListSubclass)
-
-
-    def test_instanceSlots(self):
-        """
-        Test that when rebuilding an instance with a __slots__ attribute, it
-        fails accurately instead of giving a L{rebuild.RebuildError}.
-        """
-        classDefinition = (
-            "class NotSlottedClass(object):\n"
-            "    pass\n")
-
-        exec(classDefinition, self.m.__dict__)
-        inst = self.m.NotSlottedClass()
-        inst.__slots__ = ['a']
-        classDefinition = (
-            "class NotSlottedClass:\n"
-            "    pass\n")
-        exec(classDefinition, self.m.__dict__)
-        # Moving from new-style class to old-style should fail.
-        self.assertRaises(TypeError, rebuild.updateInstance, inst)
-
-    if getattr(types, 'ClassType', None) is None:
-        test_instanceSlots.skip = "Old-style classes not supported on Python 3"

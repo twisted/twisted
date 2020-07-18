@@ -12,6 +12,7 @@ from functools import partial
 from operator import attrgetter
 from zope.interface import implementer
 from constantly import Names, NamedConstant
+from typing import Sequence
 
 from twisted.python.util import FancyEqMixin
 from twisted.positioning import ipositioning
@@ -159,7 +160,7 @@ class Angle(FancyEqMixin, object):
     }
 
 
-    compareAttributes = 'angleType', 'inDecimalDegrees'
+    compareAttributes = 'angleType', 'inDecimalDegrees'  # type: Sequence[str]
 
 
     def __init__(self, angle=None, angleType=None):
@@ -751,16 +752,33 @@ class PositionError(FancyEqMixin, object):
             raise
 
 
-    pdop = property(fget=lambda self: self._getDOP('pdop'),
-                    fset=lambda self, value: self._setDOP('pdop', value))
+    @property
+    def pdop(self):
+        return self._getDOP('pdop')
+
+    @pdop.setter
+    def pdop(self, value):
+        return self._setDOP('pdop', value)
 
 
-    hdop = property(fget=lambda self: self._getDOP('hdop'),
-                    fset=lambda self, value: self._setDOP('hdop', value))
+    @property
+    def hdop(self):
+        return self._getDOP('hdop')
 
 
-    vdop = property(fget=lambda self: self._getDOP('vdop'),
-                    fset=lambda self, value: self._setDOP('vdop', value))
+    @hdop.setter
+    def hdop(self, value):
+        return self._setDOP('hdop', value)
+
+
+    @property
+    def vdop(self):
+        return self._getDOP('vdop')
+
+
+    @vdop.setter
+    def vdop(self, value):
+        return self._setDOP('vdop', value)
 
 
     _REPR_TEMPLATE = "<PositionError (pdop: %s, hdop: %s, vdop: %s)>"

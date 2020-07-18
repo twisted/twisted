@@ -13,20 +13,12 @@ this side of Marmalade!
 import re
 import types
 
-try:
-    from tokenize import generate_tokens as tokenize
-except ImportError:
-    from tokenize import tokenize
-
-
-try:
-    import copy_reg
-except:
-    import copyreg as copy_reg
+from tokenize import generate_tokens as tokenize
+import copyreg as copy_reg
 
 from twisted.python import reflect, log
 from twisted.persisted import crefutil
-from twisted.python.compat import unicode, _PY3, _constructMethod
+from twisted.python.compat import unicode, _constructMethod
 
 ###########################
 # Abstract Object Classes #
@@ -73,10 +65,7 @@ _SIMPLE_BUILTINS = [
     slice, type(Ellipsis)
 ]
 
-try:
-    _SIMPLE_BUILTINS.append(long)
-except NameError:
-    pass
+
 
 class Instance:
     def __init__(self, className, __stateObj__=NoStateObj, **state):
@@ -185,6 +174,7 @@ def dictToKW(d):
     return ''.join(out)
 
 
+
 def prettify(obj):
     if hasattr(obj, 'getSource'):
         return obj.getSource()
@@ -216,7 +206,11 @@ def prettify(obj):
             out.append(len(obj) and '\n\0)' or ')')
             return ''.join(out)
         else:
-            raise TypeError("Unsupported type %s when trying to prettify %s." % (t, obj))
+            raise TypeError(
+                "Unsupported type {} when trying to prettify {}.".format(
+                    t, obj))
+
+
 
 def indentify(s):
     out = []
@@ -245,6 +239,8 @@ def unjellyFromAOT(aot):
     Pass me an Abstract Object Tree, and I'll unjelly it for you.
     """
     return AOTUnjellier().unjelly(aot)
+
+
 
 def unjellyFromSource(stringOrFile):
     """
@@ -295,6 +291,7 @@ class AOTUnjellier:
         self.unjellyInto(d, 0, node)
         return d
 
+
     def unjellyInto(self, obj, loc, ao):
         """Utility method for unjellying one object into another.
         This automates the handling of backreferences.
@@ -305,22 +302,25 @@ class AOTUnjellier:
             o.addDependant(obj, loc)
         return o
 
+
     def callAfter(self, callable, result):
         if isinstance(result, crefutil.NotKnown):
-            l = [None]
-            result.addDependant(l, 1)
+            listResult = [None]
+            result.addDependant(listResult, 1)
         else:
-            l = [result]
-        self.afterUnjelly.append((callable, l))
+            listResult = [result]
+        self.afterUnjelly.append((callable, listResult))
+
 
     def unjellyAttribute(self, instance, attrName, ao):
-        #XXX this is unused????
+        # XXX this is unused????
         """Utility method for unjellying into instances of attributes.
 
         Use this rather than unjellyAO unless you like surprising bugs!
         Alternatively, you can use unjellyInto on your instance's __dict__.
         """
         self.unjellyInto(instance.__dict__, attrName, ao)
+
 
     def unjellyAO(self, ao):
         """Unjelly an Abstract Object and everything it contains.
@@ -446,6 +446,8 @@ def jellyToAOT(obj):
     """Convert an object to an Abstract Object Tree."""
     return AOTJellier().jelly(obj)
 
+
+
 def jellyToSource(obj, file=None):
     """
     Pass me an object and, optionally, a file object.
@@ -460,12 +462,9 @@ def jellyToSource(obj, file=None):
         return getSource(aot)
 
 
-try:
-    from types import (ClassType as _OldStyleClass,
-                       InstanceType as _OldStyleInstance)
-except ImportError:
-    _OldStyleClass = None
-    _OldStyleInstance = None
+
+_OldStyleClass = None
+_OldStyleInstance = None
 
 
 
@@ -479,9 +478,7 @@ def _classOfMethod(methodObject):
     @return: a class
     @rtype: L{types.ClassType} or L{type}
     """
-    if _PY3:
-        return methodObject.__self__.__class__
-    return methodObject.im_class
+    return methodObject.__self__.__class__
 
 
 
@@ -495,9 +492,7 @@ def _funcOfMethod(methodObject):
     @return: the function implementing C{methodObject}
     @rtype: L{types.FunctionType}
     """
-    if _PY3:
-        return methodObject.__func__
-    return methodObject.im_func
+    return methodObject.__func__
 
 
 
@@ -511,9 +506,7 @@ def _selfOfMethod(methodObject):
     @return: the C{self} passed to C{methodObject}
     @rtype: L{object}
     """
-    if _PY3:
-        return methodObject.__self__
-    return methodObject.im_self
+    return methodObject.__self__
 
 
 

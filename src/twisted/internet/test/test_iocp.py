@@ -9,10 +9,11 @@ import errno
 from array import array
 from struct import pack
 from socket import AF_INET6, AF_INET, SOCK_STREAM, SOL_SOCKET, error, socket
+from unittest import skipIf
 
 from zope.interface.verify import verifyClass
 
-from twisted.trial import unittest
+from twisted.trial.unittest import TestCase
 from twisted.python.log import msg
 from twisted.internet.interfaces import IPushProducer
 
@@ -28,11 +29,16 @@ except ImportError:
 try:
     socket(AF_INET6, SOCK_STREAM).close()
 except error as e:
-    ipv6Skip = str(e)
-else:
-    ipv6Skip = None
+    ipv6Skip = True
+    ipv6SkipReason = str(e)
 
-class SupportTests(unittest.TestCase):
+else:
+    ipv6Skip = False
+    ipv6SkipReason = ""
+
+
+
+class SupportTests(TestCase):
     """
     Tests for L{twisted.internet.iocpreactor.iocpsupport}, low-level reactor
     implementation helpers.
@@ -84,9 +90,11 @@ class SupportTests(unittest.TestCase):
         self._acceptAddressTest(AF_INET, '127.0.0.1')
 
 
+    @skipIf(ipv6Skip, ipv6SkipReason)
     def test_ipv6AcceptAddress(self):
         """
-        Like L{test_ipv4AcceptAddress}, but for IPv6 connections.  In this case:
+        Like L{test_ipv4AcceptAddress}, but for IPv6 connections.
+        In this case:
 
           - the first element is C{AF_INET6}
           - the second element is a two-tuple of a hexadecimal IPv6 address
@@ -95,12 +103,10 @@ class SupportTests(unittest.TestCase):
             connection
         """
         self._acceptAddressTest(AF_INET6, '::1')
-    if ipv6Skip is not None:
-        test_ipv6AcceptAddress.skip = ipv6Skip
 
 
 
-class IOCPReactorTests(unittest.TestCase):
+class IOCPReactorTests(TestCase):
     def test_noPendingTimerEvents(self):
         """
         Test reactor behavior (doIteration) when there are no pending time

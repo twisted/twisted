@@ -6,7 +6,6 @@ Tests for L{twisted.web.resource}.
 """
 
 from twisted.trial.unittest import TestCase
-from twisted.python.compat import _PY3
 
 from twisted.web.error import UnsupportedMethod
 from twisted.web.resource import (
@@ -189,11 +188,10 @@ class ResourceTests(TestCase):
         self.assertEqual(len(warnings), 1)
         self.assertIn("Path segment must be bytes",
                       warnings[0]['message'])
-        if _PY3:
-            # We expect an error here because u"foo" != b"foo" on Py3k
-            self.assertIsInstance(
-                resource.getChildWithDefault(b"foo", DummyRequest([])),
-                ErrorPage)
+        # We expect an error here because "foo" != b"foo" on Python 3+
+        self.assertIsInstance(
+            resource.getChildWithDefault(b"foo", DummyRequest([])),
+            ErrorPage)
 
         resource.putChild(None, sibling)
         warnings = self.flushWarnings([self.test_staticChildPathType])

@@ -9,6 +9,8 @@ Tests for L{twisted.web.tap}.
 import os
 import stat
 
+from unittest import skipIf
+
 from twisted.internet import reactor, endpoints
 from twisted.internet.interfaces import IReactorUNIX
 from twisted.python.filepath import FilePath
@@ -63,6 +65,8 @@ class ServiceTests(TestCase):
         self.assertEqual(root.path, path.path)
 
 
+    @skipIf(not IReactorUNIX.providedBy(reactor),
+            "The reactor does not support UNIX domain sockets")
     def test_pathServer(self):
         """
         The I{--path} option to L{makeService} causes it to return a service
@@ -80,10 +84,6 @@ class ServiceTests(TestCase):
         self.assertEqual(service.services[0].factory.resource.path, path.path)
         self.assertTrue(os.path.exists(port))
         self.assertTrue(stat.S_ISSOCK(os.stat(port).st_mode))
-
-    if not IReactorUNIX.providedBy(reactor):
-        test_pathServer.skip = (
-            "The reactor does not support UNIX domain sockets")
 
 
     def test_cgiProcessor(self):
@@ -136,6 +136,8 @@ class ServiceTests(TestCase):
         self.assertIdentical(serverFactory.root.site, site)
 
 
+    @skipIf(not IReactorUNIX.providedBy(reactor),
+            "The reactor does not support UNIX domain sockets")
     def test_personalServer(self):
         """
         The I{--personal} option to L{makeService} causes it to return a
@@ -151,11 +153,9 @@ class ServiceTests(TestCase):
         self.assertTrue(os.path.exists(port))
         self.assertTrue(stat.S_ISSOCK(os.stat(port).st_mode))
 
-    if not IReactorUNIX.providedBy(reactor):
-        test_personalServer.skip = (
+
+    @skipIf(not IReactorUNIX.providedBy(reactor),
             "The reactor does not support UNIX domain sockets")
-
-
     def test_defaultPersonalPath(self):
         """
         If the I{--port} option not specified but the I{--personal} option is,
@@ -168,10 +168,6 @@ class ServiceTests(TestCase):
             os.path.join('~', UserDirectory.userSocketName))
         self.assertEqual(options['ports'][0],
                          'unix:{}'.format(path))
-
-    if not IReactorUNIX.providedBy(reactor):
-        test_defaultPersonalPath.skip = (
-            "The reactor does not support UNIX domain sockets")
 
 
     def test_defaultPort(self):
@@ -232,6 +228,8 @@ class ServiceTests(TestCase):
                              "No such WSGI application: %r" % (name,))
 
 
+    @skipIf(requireModule('OpenSSL.SSL') is not None,
+            'SSL module is available.')
     def test_HTTPSFailureOnMissingSSL(self):
         """
         An L{UsageError} is raised when C{https} is requested but there is no
@@ -244,10 +242,9 @@ class ServiceTests(TestCase):
 
         self.assertEqual('SSL support not installed', exception.args[0])
 
-    if requireModule('OpenSSL.SSL') is not None:
-        test_HTTPSFailureOnMissingSSL.skip = 'SSL module is available.'
 
-
+    @skipIf(requireModule('OpenSSL.SSL') is None,
+            'SSL module is not available.')
     def test_HTTPSAcceptedOnAvailableSSL(self):
         """
         When SSL support is present, it accepts the --https option.
@@ -258,9 +255,6 @@ class ServiceTests(TestCase):
 
         self.assertIn('ssl', options['ports'][0])
         self.assertIn('443', options['ports'][0])
-
-    if requireModule('OpenSSL.SSL') is None:
-        test_HTTPSAcceptedOnAvailableSSL.skip = 'SSL module is not available.'
 
 
     def test_add_header_parsing(self):

@@ -396,4 +396,15 @@ class FileHandle(_ConsumerMixin, _LogOwner):
         self.loseConnection()
 
 
+    def getHost(self):
+        # ITransport.getHost
+        raise NotImplementedError()
+
+
+    def getPeer(self):
+        # ITransport.getPeer
+        raise NotImplementedError()
+
+
+
 __all__ = ['FileHandle']

@@ -13,22 +13,24 @@ import socket
 import sys
 from functools import wraps
 from imp import reload
-
-if getpass.getpass == getpass.unix_getpass:
-    try:
-        import termios # hack around broken termios
-        termios.tcgetattr, termios.tcsetattr
-    except (ImportError, AttributeError):
-        sys.modules['termios'] = None
-        reload(getpass)
-
 from twisted.conch.ssh import keys
 from twisted.python import failure, filepath, log, usage
-from twisted.python.compat import raw_input, _PY3
+from twisted.python.compat import raw_input
 
 
+
+if getpass.getpass == getpass.unix_getpass:  # type: ignore[attr-defined]
+    try:
+        import termios  # hack around broken termios
+        termios.tcgetattr, termios.tcsetattr
+    except (ImportError, AttributeError):
+        sys.modules['termios'] = None  # type: ignore[assignment]
+        reload(getpass)
 
 supportedKeyTypes = dict()
+
+
+
 def _keyGenerator(keyType):
     def assignkeygenerator(keygenerator):
         @wraps(keygenerator)
@@ -283,10 +285,8 @@ def displayPublicKey(options):
         if not options.get('pass'):
             options['pass'] = getpass.getpass('Enter passphrase: ')
         key = keys.Key.fromFile(
-            options['filename'], passphrase = options['pass'])
-    displayKey = key.public().toString('openssh')
-    if _PY3:
-        displayKey = displayKey.decode("ascii")
+            options['filename'], passphrase=options['pass'])
+    displayKey = key.public().toString('openssh').decode("ascii")
     print(displayKey)
 
 

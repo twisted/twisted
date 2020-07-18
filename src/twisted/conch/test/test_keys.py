@@ -404,7 +404,7 @@ SUrCyZXsNh6VXwjs3gKQ
 
         self.assertRaises(
             keys.BadKeyError,
-            keys.Key.fromString, data=b'{' + base64.encodestring(sexp) + b'}',
+            keys.Key.fromString, data=b'{' + base64.b64encode(sexp) + b'}',
             )
 
 

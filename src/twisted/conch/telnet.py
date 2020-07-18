@@ -24,82 +24,59 @@ MODE_ACK = 4
 SOFT_TAB = 8
 LIT_ECHO = 16
 
-# Characters gleaned from the various (and conflicting) RFCs.  Not all of these are correct.
+# Characters gleaned from the various (and conflicting) RFCs. Not all of these
+# are correct.
 
-NULL =           chr(0)   # No operation.
-BEL =            chr(7)   # Produces an audible or
-                          # visible signal (which does
-                          # NOT move the print head).
-BS =             chr(8)   # Moves the print head one
-                          # character position towards
-                          # the left margin.
-HT =             chr(9)   # Moves the printer to the
-                          # next horizontal tab stop.
-                          # It remains unspecified how
-                          # either party determines or
-                          # establishes where such tab
-                          # stops are located.
-LF =             chr(10)  # Moves the printer to the
-                          # next print line, keeping the
-                          # same horizontal position.
-VT =             chr(11)  # Moves the printer to the
-                          # next vertical tab stop.  It
-                          # remains unspecified how
-                          # either party determines or
-                          # establishes where such tab
-                          # stops are located.
-FF =             chr(12)  # Moves the printer to the top
-                          # of the next page, keeping
-                          # the same horizontal position.
-CR =             chr(13)  # Moves the printer to the left
-                          # margin of the current line.
+NULL = chr(0)  # No operation.
+BEL = chr(7)  # Produces an audible or visible signal (which does NOT move the
+# print head).
+BS = chr(8)  # Moves the print head one character position towards the left
+# margin.
+HT = chr(9)  # Moves the printer to the next horizontal tab stop. It remains
+# unspecified how either party determines or establishes where such tab stops
+# are located.
+LF = chr(10)  # Moves the printer to the next print line, keeping the same
+# horizontal position.
+VT = chr(11)  # Moves the printer to the next vertical tab stop. It remains
+# unspecified how either party determines or establishes where such tab stops
+# are located.
+FF = chr(12)  # Moves the printer to the top of the next page, keeping the same
+# horizontal position.
+CR = chr(13)  # Moves the printer to the left margin of the current line.
 
-ECHO  =          chr(1)   # User-to-Server:  Asks the server to send
-                          # Echos of the transmitted data.
-SGA =            chr(3)   # Suppress Go Ahead.  Go Ahead is silly
-                          # and most modern servers should suppress
-                          # it.
-NAWS =           chr(31)  # Negotiate About Window Size.  Indicate that
-                          # information about the size of the terminal
-                          # can be communicated.
-LINEMODE =       chr(34)  # Allow line buffering to be
-                          # negotiated about.
+ECHO = chr(1)  # User-to-Server:  Asks the server to send Echos of the
+# transmitted data.
+SGA = chr(3)  # Suppress Go Ahead.  Go Ahead is silly and most modern servers
+# should suppress it.
+NAWS = chr(31)  # Negotiate About Window Size.  Indicate that information about
+# the size of the terminal can be communicated.
+LINEMODE = chr(34)  # Allow line buffering to be negotiated about.
 
-SE =             chr(240) # End of subnegotiation parameters.
-NOP =            chr(241) # No operation.
-DM =             chr(242) # "Data Mark": The data stream portion
-                          # of a Synch.  This should always be
-                          # accompanied by a TCP Urgent
-                          # notification.
-BRK =            chr(243) # NVT character Break.
-IP =             chr(244) # The function Interrupt Process.
-AO =             chr(245) # The function Abort Output
-AYT =            chr(246) # The function Are You There.
-EC =             chr(247) # The function Erase Character.
-EL =             chr(248) # The function Erase Line
-GA =             chr(249) # The Go Ahead signal.
-SB =             chr(250) # Indicates that what follows is
-                          # subnegotiation of the indicated
-                          # option.
-WILL =           chr(251) # Indicates the desire to begin
-                          # performing, or confirmation that
-                          # you are now performing, the
-                          # indicated option.
-WONT =           chr(252) # Indicates the refusal to perform,
-                          # or continue performing, the
-                          # indicated option.
-DO =             chr(253) # Indicates the request that the
-                          # other party perform, or
-                          # confirmation that you are expecting
-                          # the other party to perform, the
-                          # indicated option.
-DONT =           chr(254) # Indicates the demand that the
-                          # other party stop performing,
-                          # or confirmation that you are no
-                          # longer expecting the other party
-                          # to perform, the indicated option.
-IAC =            chr(255) # Data Byte 255.  Introduces a
-                          # telnet command.
+EOR = chr(239)  # End of Record (RFC 885)
+SE = chr(240)  # End of subnegotiation parameters.
+NOP = chr(241)  # No operation.
+DM = chr(242)  # "Data Mark": The data stream portion of a Synch. This should
+# always be accompanied by a TCP Urgent notification.
+BRK = chr(243)  # NVT character Break.
+IP = chr(244)  # The function Interrupt Process.
+AO = chr(245)  # The function Abort Output
+AYT = chr(246)  # The function Are You There.
+EC = chr(247)  # The function Erase Character.
+EL = chr(248)  # The function Erase Line
+GA = chr(249)  # The Go Ahead signal.
+SB = chr(250)  # Indicates that what follows is subnegotiation of the indicated
+# option.
+WILL = chr(251)  # Indicates the desire to begin performing, or confirmation
+# that you are now performing, the indicated option.
+WONT = chr(252)  # Indicates the refusal to perform, or continue performing,
+# the indicated option.
+DO = chr(253)  # Indicates the request that the other party perform, or
+# confirmation that you are expecting the other party to perform, the indicated
+# option.
+DONT = chr(254)  # Indicates the demand that the other party stop performing,
+# or confirmation that you are no longer expecting the other party to perform,
+# the indicated option.
+IAC = chr(255)  # Data Byte 255. Introduces a telnet command.
 
 LINEMODE_MODE = chr(1)
 LINEMODE_EDIT = chr(1)
@@ -571,7 +548,7 @@ class Telnet(protocol.Protocol):
                 elif b == SB:
                     self.state = 'subnegotiation'
                     self.commands = []
-                elif b in (NOP, DM, BRK, IP, AO, AYT, EC, EL, GA):
+                elif b in (EOR, NOP, DM, BRK, IP, AO, AYT, EC, EL, GA):
                     self.state = 'data'
                     if appDataBuffer:
                         self.applicationDataReceived(b''.join(appDataBuffer))

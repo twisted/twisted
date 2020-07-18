@@ -14,31 +14,22 @@ from ctypes import (
     CDLL, POINTER, Structure, c_char_p, c_ushort, c_int,
     c_uint32, c_uint8, c_void_p, c_ubyte, pointer, cast)
 from ctypes.util import find_library
+from typing import Any, List, Tuple
 
-from twisted.python.compat import _PY3, nativeString
-
-if _PY3:
-    # Once #6070 is implemented, this can be replaced with the implementation
-    # from that ticket:
-    def chr(i):
-        """
-        Python 3 implementation of Python 2 chr(), i.e. convert an integer to
-        corresponding byte.
-        """
-        return bytes([i])
+from twisted.python.compat import nativeString, _bytesChr as chr
 
 
-libc = CDLL(find_library("c"))
+libc = CDLL(find_library("c") or "")
 
 if sys.platform.startswith('freebsd') or sys.platform == 'darwin':
     _sockaddrCommon = [
         ("sin_len", c_uint8),
         ("sin_family", c_uint8),
-        ]
+        ]  # type: List[Tuple[str, Any]]
 else:
     _sockaddrCommon = [
         ("sin_family", c_ushort),
-        ]
+        ]   # type: List[Tuple[str, Any]]
 
 
 
