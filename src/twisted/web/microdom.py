@@ -314,9 +314,9 @@ class Document(Node):
     isEqualToNode = isEqualToDocument
 
 
-    def get_documentElement(self):
+    @property
+    def documentElement(self):
         return self.childNodes[0]
-    documentElement = property(get_documentElement)
 
 
     def appendChild(self, child):

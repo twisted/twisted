@@ -6,31 +6,34 @@ Tests for L{twisted.conch.openssh_compat}.
 """
 
 import os
+from unittest import skipIf
 
 from twisted.trial.unittest import TestCase
 from twisted.python.filepath import FilePath
 from twisted.python.reflect import requireModule
-
-if requireModule('cryptography') and requireModule('pyasn1'):
-    from twisted.conch.openssh_compat.factory import OpenSSHFactory
-else:
-    OpenSSHFactory = None
-
 from twisted.conch.ssh._kex import getDHGeneratorAndPrime
 from twisted.conch.test import keydata
 from twisted.test.test_process import MockOS
 
+doSkip = False
+skipReason = ""
+if requireModule('cryptography') and requireModule('pyasn1'):
+    from twisted.conch.openssh_compat.factory import OpenSSHFactory
+else:
+    doSkip = True
+    skipReason = "Cannot run without cryptography or PyASN1"
 
+if not hasattr(os, "geteuid"):
+    doSkip = True
+    skipReason = "geteuid/seteuid not available"
+
+
+
+@skipIf(doSkip, skipReason)
 class OpenSSHFactoryTests(TestCase):
     """
     Tests for L{OpenSSHFactory}.
     """
-    if getattr(os, "geteuid", None) is None:
-        skip = "geteuid/seteuid not available"
-    elif OpenSSHFactory is None:
-        skip = "Cannot run without cryptography or PyASN1"
-
-
     def setUp(self):
         self.factory = OpenSSHFactory()
         self.keysDir = FilePath(self.mktemp())

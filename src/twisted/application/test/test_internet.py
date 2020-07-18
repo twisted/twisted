@@ -129,6 +129,18 @@ class FakePort(object):
         self.deferred = Deferred()
         return self.deferred
 
+
+    def getHost(self):
+        # IListeningPort.getHost
+        pass
+
+
+    def startListening(self):
+        # IListeningPort.startListening
+        pass
+
+
+
 verifyClass(IStreamServerEndpoint, FakeServer)
 
 

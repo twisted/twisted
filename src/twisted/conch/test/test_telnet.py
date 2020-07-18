@@ -19,6 +19,7 @@ from twisted.test import proto_helpers
 from twisted.python.compat import iterbytes
 
 
+
 @implementer(telnet.ITelnetProtocol)
 class TestProtocol:
     localEnableable = ()
@@ -40,8 +41,12 @@ class TestProtocol:
         d[b'\x12'] = self.neg_TEST_COMMAND
 
         d = transport.commandMap = transport.commandMap.copy()
-        for cmd in ('NOP', 'DM', 'BRK', 'IP', 'AO', 'AYT', 'EC', 'EL', 'GA'):
-            d[getattr(telnet, cmd)] = lambda arg, cmd=cmd: self.calls.append(cmd)
+        for cmd in (
+            'EOR', 'NOP', 'DM', 'BRK', 'IP', 'AO', 'AYT', 'EC', 'EL', 'GA'
+        ):
+            d[getattr(telnet, cmd)] = (
+                lambda arg, cmd=cmd: self.calls.append(cmd)
+            )
 
 
     def dataReceived(self, data):
@@ -76,6 +81,21 @@ class TestProtocol:
 
     def disableRemote(self, option):
         self.disabledRemote.append(option)
+
+
+    def connectionMade(self):
+        # IProtocol.connectionMade
+        pass
+
+
+    def unhandledCommand(self, command, argument):
+        # ITelnetProtocol.unhandledCommand
+        pass
+
+
+    def unhandledSubnegotiation(self, command, data):
+        # ITelnetProtocol.unhandledSubnegotiation
+        pass
 
 
 
@@ -171,6 +191,10 @@ class TelnetTransportTests(unittest.TestCase):
 
     def testInterrupt(self):
         self._simpleCommandTest("IP")
+
+
+    def testEndOfRecord(self):
+        self._simpleCommandTest("EOR")
 
 
     def testNoOperation(self):

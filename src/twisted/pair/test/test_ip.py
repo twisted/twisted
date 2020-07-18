@@ -12,20 +12,30 @@ class MyProtocol:
     def __init__(self, expecting):
         self.expecting = list(expecting)
 
-    def datagramReceived(self, data, **kw):
+
+    def datagramReceived(self, data, partial, source, dest, protocol, version,
+                         ihl, tos, tot_len, fragment_id, fragment_offset,
+                         dont_fragment, more_fragments, ttl):
         assert self.expecting, 'Got a packet when not expecting anymore.'
         expectData, expectKw = self.expecting.pop(0)
 
         expectKwKeys = expectKw.keys()
         expectKwKeys = list(sorted(expectKwKeys))
-        kwKeys = kw.keys()
-        kwKeys = list(sorted(kwKeys))
-        assert expectKwKeys == kwKeys, "Expected %r, got %r" % (expectKwKeys, kwKeys)
+        localVariables = locals()
 
         for k in expectKwKeys:
-            assert expectKw[k] == kw[k], "Expected %s=%r, got %r" % (k, expectKw[k], kw[k])
-        assert expectKw == kw, "Expected %r, got %r" % (expectKw, kw)
-        assert expectData == data, "Expected %r, got %r" % (expectData, data)
+            assert expectKw[k] == localVariables[k], \
+                "Expected {}={!r}, got {!r}".format(
+                 k, expectKw[k], localVariables[k])
+        assert expectData == data, "Expected {!r}, got {!r}".format(
+            expectData, data)
+
+
+    def addProto(self, num, proto):
+        # IRawDatagramProtocol.addProto
+        pass
+
+
 
 class IPTests(unittest.TestCase):
     def testPacketParsing(self):

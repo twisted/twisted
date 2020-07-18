@@ -51,7 +51,6 @@ def _ancillaryDescriptor(fd):
 
 
 
-@implementer(interfaces.IUNIXTransport)
 class _SendmsgMixin(object):
     """
     Mixin for stream-oriented UNIX transports which uses sendmsg and recvmsg to
@@ -236,10 +235,11 @@ class _UnsupportedSendmsgMixin(object):
 if sendmsg:
     _SendmsgMixin = _SendmsgMixin
 else:
-    _SendmsgMixin = _UnsupportedSendmsgMixin
+    _SendmsgMixin = _UnsupportedSendmsgMixin  # type: ignore[assignment,misc]
 
 
 
+@implementer(interfaces.IUNIXTransport)
 class Server(_SendmsgMixin, tcp.Server):
 
     _writeSomeDataBase = tcp.Server
@@ -428,6 +428,7 @@ class Port(_UNIXPort, tcp.Port):
 
 
 
+@implementer(interfaces.IUNIXTransport)
 class Client(_SendmsgMixin, tcp.BaseClient):
     """A client for Unix sockets."""
     addressFamily = socket.AF_UNIX

@@ -255,6 +255,31 @@ class FakeTransport:
             self.protocol.dataReceived(buf)
 
 
+    def getTcpKeepAlive(self):
+        # ITCPTransport.getTcpKeepAlive
+        pass
+
+
+    def getTcpNoDelay(self):
+        # ITCPTransport.getTcpNoDelay
+        pass
+
+
+    def loseWriteConnection(self):
+        # ITCPTransport.loseWriteConnection
+        pass
+
+
+    def setTcpKeepAlive(self, enabled):
+        # ITCPTransport.setTcpKeepAlive
+        pass
+
+
+    def setTcpNoDelay(self, enabled):
+        # ITCPTransport.setTcpNoDelay
+        pass
+
+
 
 def makeFakeClient(clientProtocol):
     """

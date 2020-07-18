@@ -7,6 +7,7 @@ Specific tests for (some of) the methods in L{twisted.web.domhelpers}.
 """
 
 from xml.dom import minidom
+from typing import Any, Optional
 
 from twisted.python.compat import unicode
 from twisted.trial.unittest import TestCase
@@ -19,7 +20,7 @@ class DOMHelpersTestsMixin:
     domhelpers functionality based on a DOM creation function provided by a
     subclass.
     """
-    dom = None
+    dom = None  # type: Optional[Any]
 
     def test_getElementsByTagName(self):
         doc1 = self.dom.parseString('<foo/>')

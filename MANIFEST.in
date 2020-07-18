@@ -30,6 +30,9 @@ prune admin
 prune .travis
 prune .github
 
+# Include marker indicating that we ship type annotations (PEP 561)
+include src/twisted/py.typed
+
 # Include test-running utilities for downstream packagers
 include mypy.ini tox.ini .coveragerc
 

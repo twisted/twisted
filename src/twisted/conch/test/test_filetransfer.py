@@ -10,6 +10,7 @@ Tests for L{twisted.conch.ssh.filetransfer}.
 import os
 import re
 import struct
+from unittest import skipIf
 
 from twisted.internet import defer
 from twisted.internet.error import ConnectionLost
@@ -17,25 +18,38 @@ from twisted.protocols import loopback
 from twisted.python import components
 from twisted.python.compat import long, _PY37PLUS
 from twisted.python.filepath import FilePath
-from twisted.python.reflect import requireModule
-from twisted.trial import unittest
+from twisted.trial.unittest import TestCase
 
-cryptography = requireModule("cryptography")
-unix = requireModule("twisted.conch.unix")
+try:
+    from twisted.conch import unix
+except ImportError:
+    unix = None  # type: ignore[assignment]
 
-if cryptography:
-    from twisted.conch import avatar
+try:
+    from twisted.conch.unix import SFTPServerForUnixConchUser
+except ImportError:
+    SFTPServerForUnixConchUser = None  # type: ignore[assignment,misc]
+
+try:
+    import cryptography
+except ImportError:
+    cryptography = None  # type: ignore[assignment]
+
+try:
+    from twisted.conch.avatar import ConchUser
+except ImportError:
+    ConchUser = object  # type: ignore[assignment,misc]
+
+try:
     from twisted.conch.ssh import common, connection, filetransfer, session
-else:
-    class avatar:
-        class ConchUser:
-            pass
+except ImportError:
+    pass
 
 
 
-class TestAvatar(avatar.ConchUser):
+class TestAvatar(ConchUser):
     def __init__(self):
-        avatar.ConchUser.__init__(self)
+        ConchUser.__init__(self)
         self.channelLookup[b'session'] = session.SSHSession
         self.subsystemLookup[b'sftp'] = filetransfer.FileTransferServer
 
@@ -67,31 +81,33 @@ class ConchSessionForTestAvatar:
     def __init__(self, avatar):
         self.avatar = avatar
 
-if unix:
-    if not hasattr(unix, 'SFTPServerForUnixConchUser'):
-        # unix should either be a fully working module, or None.  I'm not sure
-        # how this happens, but on win32 it does.  Try to cope.  --spiv.
-        import warnings
-        warnings.warn(("twisted.conch.unix imported %r, "
-                       "but doesn't define SFTPServerForUnixConchUser'")
-                      % (unix,))
-        unix = None
-    else:
-        class FileTransferForTestAvatar(unix.SFTPServerForUnixConchUser):
 
-            def gotVersion(self, version, otherExt):
-                return {b'conchTest' : b'ext data'}
 
-            def extendedRequest(self, extName, extData):
-                if extName == b'testExtendedRequest':
-                    return b'bar'
-                raise NotImplementedError
+if not SFTPServerForUnixConchUser:
+    # unix should either be a fully working module, or None.  I'm not sure
+    # how this happens, but on win32 it does.  Try to cope.  --spiv.
+    import warnings
+    warnings.warn(("twisted.conch.unix imported %r, "
+                   "but doesn't define SFTPServerForUnixConchUser'")
+                  % (unix,))
+else:
+    class FileTransferForTestAvatar(SFTPServerForUnixConchUser):
 
-        components.registerAdapter(FileTransferForTestAvatar,
-                                   TestAvatar,
-                                   filetransfer.ISFTPServer)
+        def gotVersion(self, version, otherExt):
+            return {b'conchTest': b'ext data'}
 
-class SFTPTestBase(unittest.TestCase):
+        def extendedRequest(self, extName, extData):
+            if extName == b'testExtendedRequest':
+                return b'bar'
+            raise NotImplementedError
+
+    components.registerAdapter(FileTransferForTestAvatar,
+                               TestAvatar,
+                               filetransfer.ISFTPServer)
+
+
+
+class SFTPTestBase(TestCase):
 
     def setUp(self):
         self.testDir = FilePath(self.mktemp())
@@ -113,10 +129,9 @@ class SFTPTestBase(unittest.TestCase):
             f.write(b'a')
 
 
-class OurServerOurClientTests(SFTPTestBase):
 
-    if not unix:
-        skip = "can't run on non-posix computers"
+@skipIf(not unix, "can't run on non-posix computers")
+class OurServerOurClientTests(SFTPTestBase):
 
     def setUp(self):
         SFTPTestBase.setUp(self)
@@ -513,6 +528,7 @@ class OurServerOurClientTests(SFTPTestBase):
 
 
     @defer.inlineCallbacks
+    @skipIf(_PY37PLUS, "Broken by PEP 479 and deprecated.")
     def test_openDirectoryIterator(self):
         """
         Check that the object returned by
@@ -546,11 +562,6 @@ class OurServerOurClientTests(SFTPTestBase):
                          set([b'.testHiddenFile', b'testDirectory',
                               b'testRemoveFile', b'testRenameFile',
                               b'testfile1']))
-
-
-    if _PY37PLUS:
-        test_openDirectoryIterator.skip = (
-            "Broken by PEP 479 and deprecated.")
 
 
     @defer.inlineCallbacks
@@ -626,10 +637,9 @@ class FakeConn:
         pass
 
 
-class FileTransferCloseTests(unittest.TestCase):
 
-    if not unix:
-        skip = "can't run on non-posix computers"
+@skipIf(not unix, "can't run on non-posix computers")
+class FileTransferCloseTests(TestCase):
 
     def setUp(self):
         self.avatar = TestAvatar()
@@ -732,7 +742,8 @@ class FileTransferCloseTests(unittest.TestCase):
 
 
 
-class ConstantsTests(unittest.TestCase):
+@skipIf(not cryptography, "Cannot run without cryptography")
+class ConstantsTests(TestCase):
     """
     Tests for the constants used by the SFTP protocol implementation.
 
@@ -741,9 +752,6 @@ class ConstantsTests(unittest.TestCase):
         protocol.  There are more recent drafts of the specification, but this
         one describes version 3, which is what conch (and OpenSSH) implements.
     """
-    if not cryptography:
-        skip = "Cannot run without cryptography"
-
     filexferSpecExcerpts = [
         """
            The following values are defined for packet types.
@@ -838,15 +846,12 @@ class ConstantsTests(unittest.TestCase):
 
 
 
-class RawPacketDataTests(unittest.TestCase):
+@skipIf(not cryptography, "Cannot run without cryptography")
+class RawPacketDataTests(TestCase):
     """
     Tests for L{filetransfer.FileTransferClient} which explicitly craft certain
     less common protocol messages to exercise their handling.
     """
-
-    if not cryptography:
-        skip = "Cannot run without cryptography"
-
     def setUp(self):
         self.ftc = filetransfer.FileTransferClient()
 

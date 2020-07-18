@@ -12,20 +12,19 @@ import pickle
 import stat
 import time
 from pprint import pformat
+from unittest import skipIf
 
-from twisted.python.compat import _PY3, long, unicode
+from twisted.python.compat import long
 from twisted.python.win32 import WindowsError, ERROR_DIRECTORY
 from twisted.python import filepath
 from twisted.python.runtime import platform
 
-from twisted.trial.unittest import SkipTest, SynchronousTestCase as TestCase
+from twisted.trial.unittest import SynchronousTestCase as TestCase
 
 from zope.interface.verify import verifyObject
 
-if not platform._supportsSymlinks():
-    symlinkSkip = "Platform does not support symlinks"
-else:
-    symlinkSkip = None
+
+symlinkSkip = not platform._supportsSymlinks()
 
 
 
@@ -260,25 +259,20 @@ class FakeWindowsPath(filepath.FilePath):
         """
         @raise WindowsError: always.
         """
-        if _PY3:
-            # For Python 3.3 and higher, WindowsError is an alias for OSError.
-            # The first argument to the OSError constructor is errno, and the fourth
-            # argument is winerror.
-            # For further details, refer to:
-            # https://docs.python.org/3/library/exceptions.html#OSError
-            #
-            # On Windows, if winerror is set in the constructor,
-            # the errno value in the constructor is ignored, and OSError internally
-            # maps the winerror value to an errno value.
-            raise WindowsError(
-                None,
-                "A directory's validness was called into question",
-                self.path,
-                ERROR_DIRECTORY)
-        else:
-            raise WindowsError(
-                ERROR_DIRECTORY,
-                "A directory's validness was called into question")
+        # For Python 3.3 and higher, WindowsError is an alias for OSError.
+        # The first argument to the OSError constructor is errno,
+        # and the fourth argument is winerror.
+        # For further details, refer to:
+        # https://docs.python.org/3/library/exceptions.html#OSError
+        #
+        # On Windows, if winerror is set in the constructor,
+        # the errno value in the constructor is ignored, and OSError internally
+        # maps the winerror value to an errno value.
+        raise WindowsError(
+            None,
+            "A directory's validness was called into question",
+            self.path,
+            ERROR_DIRECTORY)
 
 
 
@@ -287,6 +281,7 @@ class ListingCompatibilityTests(BytesTestCase):
     These tests verify compatibility with legacy behavior of directory listing.
     """
 
+    @skipIf(not platform.isWindows(), "Only relevant on on Windows.")
     def test_windowsErrorExcept(self):
         """
         Verify that when a WindowsError is raised from listdir, catching
@@ -295,9 +290,6 @@ class ListingCompatibilityTests(BytesTestCase):
         fwp = FakeWindowsPath(self.mktemp())
         self.assertRaises(filepath.UnlistableError, fwp.children)
         self.assertRaises(WindowsError, fwp.children)
-
-    if not platform.isWindows():
-        test_windowsErrorExcept.skip = "Only relevant on on Windows."
 
 
     def test_alwaysCatchOSError(self):
@@ -629,50 +621,40 @@ class FilePathTests(AbstractFilePathTests):
                 mode)
 
 
-    def symlink(self, target, name):
-        """
-        Create a symbolic link named C{name} pointing at C{target}.
-
-        @type target: C{str}
-        @type name: C{str}
-        @raise SkipTest: raised if symbolic links are not supported on the
-            host platform.
-        """
-        if symlinkSkip:
-            raise SkipTest(symlinkSkip)
-        os.symlink(target, name)
-
-
     def createLinks(self):
         """
         Create several symbolic links to files and directories.
         """
         subdir = self.path.child(b"sub1")
-        self.symlink(subdir.path, self._mkpath(b"sub1.link"))
-        self.symlink(subdir.child(b"file2").path, self._mkpath(b"file2.link"))
-        self.symlink(subdir.child(b"file2").path,
-                     self._mkpath(b"sub1", b"sub1.file2.link"))
+        os.symlink(subdir.path, self._mkpath(b"sub1.link"))
+        os.symlink(subdir.child(b"file2").path, self._mkpath(b"file2.link"))
+        os.symlink(subdir.child(b"file2").path,
+                   self._mkpath(b"sub1", b"sub1.file2.link"))
 
 
+    @skipIf(symlinkSkip, "Platform does not support symlinks")
     def test_realpathSymlink(self):
         """
         L{FilePath.realpath} returns the path of the ultimate target of a
         symlink.
         """
         self.createLinks()
-        self.symlink(self.path.child(b"file2.link").path,
-                     self.path.child(b"link.link").path)
+        os.symlink(self.path.child(b"file2.link").path,
+                   self.path.child(b"link.link").path)
         self.assertEqual(self.path.child(b"link.link").realpath(),
-                          self.path.child(b"sub1").child(b"file2"))
+                         self.path.child(b"sub1").child(b"file2"))
 
 
+    @skipIf(symlinkSkip, "Platform does not support symlinks")
     def test_realpathCyclicalSymlink(self):
         """
         L{FilePath.realpath} raises L{filepath.LinkError} if the path is a
         symbolic link which is part of a cycle.
         """
-        self.symlink(self.path.child(b"link1").path, self.path.child(b"link2").path)
-        self.symlink(self.path.child(b"link2").path, self.path.child(b"link1").path)
+        os.symlink(self.path.child(b"link1").path,
+                   self.path.child(b"link2").path)
+        os.symlink(self.path.child(b"link2").path,
+                   self.path.child(b"link1").path)
         self.assertRaises(filepath.LinkError,
                           self.path.child(b"link2").realpath)
 
@@ -683,21 +665,25 @@ class FilePathTests(AbstractFilePathTests):
         symbolic link.
         """
         self.assertEqual(self.path.child(b"sub1").realpath(),
-                          self.path.child(b"sub1"))
+                         self.path.child(b"sub1"))
 
 
+    @skipIf(symlinkSkip, "Platform does not support symlinks")
     def test_walkCyclicalSymlink(self):
         """
         Verify that walking a path with a cyclical symlink raises an error
         """
         self.createLinks()
-        self.symlink(self.path.child(b"sub1").path,
-                     self.path.child(b"sub1").child(b"sub1.loopylink").path)
+        os.symlink(self.path.child(b"sub1").path,
+                   self.path.child(b"sub1").child(b"sub1.loopylink").path)
+
         def iterateOverPath():
             return [foo.path for foo in self.path.walk()]
+
         self.assertRaises(filepath.LinkError, iterateOverPath)
 
 
+    @skipIf(symlinkSkip, "Platform does not support symlinks")
     def test_walkObeysDescendWithCyclicalSymlinks(self):
         """
         Verify that, after making a path with cyclical symlinks, when the
@@ -706,15 +692,19 @@ class FilePathTests(AbstractFilePathTests):
         """
         self.createLinks()
         # we create cyclical symlinks
-        self.symlink(self.path.child(b"sub1").path,
-                     self.path.child(b"sub1").child(b"sub1.loopylink").path)
+        os.symlink(self.path.child(b"sub1").path,
+                   self.path.child(b"sub1").child(b"sub1.loopylink").path)
+
         def noSymLinks(path):
             return not path.islink()
+
         def iterateOverPath():
             return [foo.path for foo in self.path.walk(descend=noSymLinks)]
+
         self.assertTrue(iterateOverPath())
 
 
+    @skipIf(symlinkSkip, "Platform does not support symlinks")
     def test_walkObeysDescend(self):
         """
         Verify that when the supplied C{descend} predicate returns C{False},
@@ -748,6 +738,7 @@ class FilePathTests(AbstractFilePathTests):
         self.assertTrue(fp.fp.closed)
 
 
+    @skipIf(symlinkSkip, "Platform does not support symlinks")
     def test_symbolicLink(self):
         """
         Verify the behavior of the C{isLink} method against links and
@@ -756,13 +747,14 @@ class FilePathTests(AbstractFilePathTests):
         """
         s4 = self.path.child(b"sub4")
         s3 = self.path.child(b"sub3")
-        self.symlink(s3.path, s4.path)
+        os.symlink(s3.path, s4.path)
         self.assertTrue(s4.islink())
         self.assertFalse(s3.islink())
         self.assertTrue(s4.isdir())
         self.assertTrue(s3.isdir())
 
 
+    @skipIf(symlinkSkip, "Platform does not support symlinks")
     def test_linkTo(self):
         """
         Verify that symlink creates a valid symlink that is both a link and a
@@ -781,6 +773,7 @@ class FilePathTests(AbstractFilePathTests):
             self.assertEqual(target.isfile(), link.isfile())
 
 
+    @skipIf(symlinkSkip, "Platform does not support symlinks")
     def test_linkToErrors(self):
         """
         Verify C{linkTo} fails in the following case:
@@ -791,12 +784,6 @@ class FilePathTests(AbstractFilePathTests):
                           self.path.child(b'nosub').child(b'file1'))
         self.assertRaises(OSError, self.path.child(b"file1").linkTo,
                           self.path.child(b'sub1').child(b'file2'))
-
-
-    if symlinkSkip:
-        test_symbolicLink.skip = symlinkSkip
-        test_linkTo.skip = symlinkSkip
-        test_linkToErrors.skip = symlinkSkip
 
 
     def testMultiExt(self):
@@ -844,14 +831,15 @@ class FilePathTests(AbstractFilePathTests):
         self.assertRaises(filepath.InsecurePath, self.path.child, b"/etc")
         self.assertRaises(filepath.InsecurePath, self.path.child, b"../..")
 
+
+    @skipIf(platform.getType() != 'win32', "Test will run only on Windows.")
     def testInsecureWin32(self):
         self.assertRaises(filepath.InsecurePath, self.path.child, b"..\\..")
-        self.assertRaises(filepath.InsecurePath, self.path.child, b"C:randomfile")
-
-    if platform.getType() != 'win32':
-        testInsecureWin32.skip = "Test will run only on Windows."
+        self.assertRaises(filepath.InsecurePath,
+                          self.path.child, b"C:randomfile")
 
 
+    @skipIf(platform.getType() != 'win32', "Test will run only on Windows.")
     def testInsecureWin32Whacky(self):
         """
         Windows has 'special' filenames like NUL and CON and COM1 and LPR
@@ -862,9 +850,6 @@ class FilePathTests(AbstractFilePathTests):
         self.assertRaises(filepath.InsecurePath, self.path.child, b"CON")
         self.assertRaises(filepath.InsecurePath, self.path.child, b"C:CON")
         self.assertRaises(filepath.InsecurePath, self.path.child, r"C:\CON")
-
-    if platform.getType() != 'win32':
-        testInsecureWin32Whacky.skip = "Test will run only on Windows."
 
 
     def testComparison(self):
@@ -938,6 +923,7 @@ class FilePathTests(AbstractFilePathTests):
         self.assertFalse(self.path.exists())
 
 
+    @skipIf(symlinkSkip, "Platform does not support symlinks")
     def test_removeWithSymlink(self):
         """
         For a path which is a symbolic link, L{FilePath.remove} just deletes
@@ -945,7 +931,7 @@ class FilePathTests(AbstractFilePathTests):
         """
         link = self.path.child(b"sub1.link")
         # setUp creates the sub1 child
-        self.symlink(self.path.child(b"sub1").path, link.path)
+        os.symlink(self.path.child(b"sub1").path, link.path)
         link.remove()
         self.assertFalse(link.exists())
         self.assertTrue(self.path.child(b"sub1").exists())
@@ -1010,25 +996,27 @@ class FilePathTests(AbstractFilePathTests):
                           self.path.copyTo, self.path.child(b'file1'))
 
 
+    @skipIf(symlinkSkip, "Platform does not support symlinks")
     def test_copyToWithSymlink(self):
         """
         Verify that copying with followLinks=True copies symlink targets
         instead of symlinks
         """
-        self.symlink(self.path.child(b"sub1").path,
-                     self.path.child(b"link1").path)
+        os.symlink(self.path.child(b"sub1").path,
+                   self.path.child(b"link1").path)
         fp = filepath.FilePath(self.mktemp())
         self.path.copyTo(fp)
         self.assertFalse(fp.child(b"link1").islink())
         self.assertEqual([x.basename() for x in fp.child(b"sub1").children()],
-                          [x.basename() for x in fp.child(b"link1").children()])
+                         [x.basename() for x in fp.child(b"link1").children()])
 
 
+    @skipIf(symlinkSkip, "Platform does not support symlinks")
     def test_copyToWithoutSymlink(self):
         """
         Verify that copying with followLinks=False copies symlinks as symlinks
         """
-        self.symlink(b"sub1", self.path.child(b"link1").path)
+        os.symlink(b"sub1", self.path.child(b"link1").path)
         fp = filepath.FilePath(self.mktemp())
         self.path.copyTo(fp, followLinks=False)
         self.assertTrue(fp.child(b"link1").islink())
@@ -1176,6 +1164,7 @@ class FilePathTests(AbstractFilePathTests):
         self.assertTrue(invokedWith)
 
 
+    @skipIf(symlinkSkip, "Platform does not support symlinks")
     def test_crossMountMoveToWithSymlink(self):
         """
         By default, when moving a symlink, it should follow the link and
@@ -1184,13 +1173,14 @@ class FilePathTests(AbstractFilePathTests):
         invokedWith = self.setUpFaultyRename()
         f2 = self.path.child(b'file2')
         f3 = self.path.child(b'file3')
-        self.symlink(self.path.child(b'file1').path, f2.path)
+        os.symlink(self.path.child(b'file1').path, f2.path)
         f2.moveTo(f3)
         self.assertFalse(f3.islink())
         self.assertEqual(f3.getContent(), b'file 1')
         self.assertTrue(invokedWith)
 
 
+    @skipIf(symlinkSkip, "Platform does not support symlinks")
     def test_crossMountMoveToWithoutSymlink(self):
         """
         Verify that moveTo called with followLinks=False actually create
@@ -1199,7 +1189,7 @@ class FilePathTests(AbstractFilePathTests):
         invokedWith = self.setUpFaultyRename()
         f2 = self.path.child(b'file2')
         f3 = self.path.child(b'file3')
-        self.symlink(self.path.child(b'file1').path, f2.path)
+        os.symlink(self.path.child(b'file1').path, f2.path)
         f2.moveTo(f3, followLinks=False)
         self.assertTrue(f3.islink())
         self.assertEqual(f3.getContent(), b'file 1')
@@ -1454,12 +1444,12 @@ class FilePathTests(AbstractFilePathTests):
         self.assertEqual(fp.getsize(), 5)
         fp.changed()
 
-        # This path should look like we don't know what status it's in, not that
-        # we know that it didn't exist when last we checked.
-        self.assertIsNone(fp.statinfo)
+        # This path should look like we don't know what status it's in, not
+        # that we know that it didn't exist when last we checked.
         self.assertEqual(fp.getsize(), 8)
 
 
+    @skipIf(platform.isWindows(), "Test does not run on Windows")
     def test_getPermissions_POSIX(self):
         """
         Getting permissions for a file returns a L{Permissions} object for
@@ -1476,48 +1466,6 @@ class FilePathTests(AbstractFilePathTests):
             "rwxrw-r--")
 
 
-    def test_deprecateStatinfoGetter(self):
-        """
-        Getting L{twisted.python.filepath.FilePath.statinfo} is deprecated.
-        """
-        fp = filepath.FilePath(self.mktemp())
-        fp.statinfo
-        warningInfo = self.flushWarnings([self.test_deprecateStatinfoGetter])
-        self.assertEqual(len(warningInfo), 1)
-        self.assertEqual(warningInfo[0]['category'], DeprecationWarning)
-        self.assertEqual(
-            warningInfo[0]['message'],
-            "twisted.python.filepath.FilePath.statinfo was deprecated in "
-            "Twisted 15.0.0; please use other FilePath methods such as "
-            "getsize(), isdir(), getModificationTime(), etc. instead")
-
-
-    def test_deprecateStatinfoSetter(self):
-        """
-        Setting L{twisted.python.filepath.FilePath.statinfo} is deprecated.
-        """
-        fp = filepath.FilePath(self.mktemp())
-        fp.statinfo = None
-        warningInfo = self.flushWarnings([self.test_deprecateStatinfoSetter])
-        self.assertEqual(len(warningInfo), 1)
-        self.assertEqual(warningInfo[0]['category'], DeprecationWarning)
-        self.assertEqual(
-            warningInfo[0]['message'],
-            "twisted.python.filepath.FilePath.statinfo was deprecated in "
-            "Twisted 15.0.0; please use other FilePath methods such as "
-            "getsize(), isdir(), getModificationTime(), etc. instead")
-
-
-    def test_deprecateStatinfoSetterSets(self):
-        """
-        Setting L{twisted.python.filepath.FilePath.statinfo} changes the value
-        of _statinfo such that getting statinfo again returns the new value.
-        """
-        fp = filepath.FilePath(self.mktemp())
-        fp.statinfo = None
-        self.assertIsNone(fp.statinfo)
-
-
     def test_filePathNotDeprecated(self):
         """
         While accessing L{twisted.python.filepath.FilePath.statinfo} is
@@ -1528,6 +1476,7 @@ class FilePathTests(AbstractFilePathTests):
         self.assertEqual(warningInfo, [])
 
 
+    @skipIf(not platform.isWindows(), "Test will run only on Windows")
     def test_getPermissions_Windows(self):
         """
         Getting permissions for a file returns a L{Permissions} object in
@@ -1557,6 +1506,7 @@ class FilePathTests(AbstractFilePathTests):
         self.assertFalse(self.path.isSocket())
 
 
+    @skipIf(not platform.isWindows(), "Test will run only on Windows")
     def test_statinfoBitsNotImplementedInWindows(self):
         """
         Verify that certain file stats are not available on Windows
@@ -1568,6 +1518,7 @@ class FilePathTests(AbstractFilePathTests):
         self.assertRaises(NotImplementedError, self.path.getGroupID)
 
 
+    @skipIf(platform.isWindows(), "Test does not run on Windows")
     def test_statinfoBitsAreNumbers(self):
         """
         Verify that file inode/device/nlinks/uid/gid stats are numbers in
@@ -1585,6 +1536,7 @@ class FilePathTests(AbstractFilePathTests):
         self.assertEqual(self.path.getGroupID(), c.getGroupID())
 
 
+    @skipIf(platform.isWindows(), "Test does not run on Windows")
     def test_statinfoNumbersAreValid(self):
         """
         Verify that the right numbers come back from the right accessor methods
@@ -1612,15 +1564,6 @@ class FilePathTests(AbstractFilePathTests):
         self.assertEqual(self.path.getNumberOfHardLinks(), fake.st_nlink)
         self.assertEqual(self.path.getUserID(), fake.st_uid)
         self.assertEqual(self.path.getGroupID(), fake.st_gid)
-
-
-    if platform.isWindows():
-        test_statinfoBitsAreNumbers.skip = True
-        test_statinfoNumbersAreValid.skip = True
-        test_getPermissions_POSIX.skip = True
-    else:
-        test_statinfoBitsNotImplementedInWindows.skip = "Test will run only on Windows."
-        test_getPermissions_Windows.skip = "Test will run only on Windows."
 
 
 
@@ -1727,7 +1670,7 @@ class UnicodeFilePathTests(TestCase):
         FilePath.
         """
         fp = filepath.FilePath(u'./mon\u20acy')
-        self.assertEqual(type(fp.path), unicode)
+        self.assertEqual(type(fp.path), str)
 
 
     def test_UnicodeInstantiationBytesChild(self):
@@ -1747,7 +1690,7 @@ class UnicodeFilePathTests(TestCase):
         """
         fp = filepath.FilePath(u'./parent-mon\u20acy')
         child = fp.child(u'mon\u20acy')
-        self.assertEqual(type(child.path), unicode)
+        self.assertEqual(type(child.path), str)
 
 
     def test_UnicodeInstantiationUnicodePreauthChild(self):
@@ -1757,7 +1700,7 @@ class UnicodeFilePathTests(TestCase):
         """
         fp = filepath.FilePath(u'./parent-mon\u20acy')
         child = fp.preauthChild(u'mon\u20acy')
-        self.assertEqual(type(child.path), unicode)
+        self.assertEqual(type(child.path), str)
 
 
     def test_UnicodeInstantiationBytesPreauthChild(self):
@@ -1796,7 +1739,7 @@ class UnicodeFilePathTests(TestCase):
         """
         fp = filepath.FilePath(u'parent-mon\u20acy'.encode('utf-8'))
         child = fp.child(u"mon\u20acy")
-        self.assertEqual(type(child.path), unicode)
+        self.assertEqual(type(child.path), str)
 
 
     def test_BytesInstantiationBytesPreauthChild(self):
@@ -1816,65 +1759,48 @@ class UnicodeFilePathTests(TestCase):
         """
         fp = filepath.FilePath(u'./parent-mon\u20acy'.encode('utf-8'))
         child = fp.preauthChild(u"mon\u20acy")
-        self.assertEqual(type(child.path), unicode)
+        self.assertEqual(type(child.path), str)
 
 
+    @skipIf(platform.isWindows(), "Test will not work on Windows")
     def test_unicoderepr(self):
         """
         The repr of a L{unicode} L{FilePath} shouldn't burst into flames.
         """
         fp = filepath.FilePath(u"/mon\u20acy")
         reprOutput = repr(fp)
-        if _PY3:
-            self.assertEqual("FilePath('/mon\u20acy')", reprOutput)
-        else:
-            self.assertEqual("FilePath(u'/mon\\u20acy')", reprOutput)
+        self.assertEqual("FilePath('/mon\u20acy')", reprOutput)
 
 
+    @skipIf(platform.isWindows(), "Test will not work on Windows")
     def test_bytesrepr(self):
         """
         The repr of a L{bytes} L{FilePath} shouldn't burst into flames.
         """
         fp = filepath.FilePath(u'/parent-mon\u20acy'.encode('utf-8'))
         reprOutput = repr(fp)
-        if _PY3:
-            self.assertEqual(
-                "FilePath(b'/parent-mon\\xe2\\x82\\xacy')", reprOutput)
-        else:
-            self.assertEqual(
-                "FilePath('/parent-mon\\xe2\\x82\\xacy')", reprOutput)
+        self.assertEqual(
+            "FilePath(b'/parent-mon\\xe2\\x82\\xacy')", reprOutput)
 
 
+    @skipIf(not platform.isWindows(), "Test only works on Windows")
     def test_unicodereprWindows(self):
         """
         The repr of a L{unicode} L{FilePath} shouldn't burst into flames.
         """
         fp = filepath.FilePath(u"C:\\")
         reprOutput = repr(fp)
-        if _PY3:
-            self.assertEqual("FilePath('C:\\\\')", reprOutput)
-        else:
-            self.assertEqual("FilePath(u'C:\\\\')", reprOutput)
+        self.assertEqual("FilePath('C:\\\\')", reprOutput)
 
 
+    @skipIf(not platform.isWindows(), "Test only works on Windows")
     def test_bytesreprWindows(self):
         """
         The repr of a L{bytes} L{FilePath} shouldn't burst into flames.
         """
         fp = filepath.FilePath(b"C:\\")
         reprOutput = repr(fp)
-        if _PY3:
-            self.assertEqual("FilePath(b'C:\\\\')", reprOutput)
-        else:
-            self.assertEqual("FilePath('C:\\\\')", reprOutput)
-
-
-    if platform.isWindows():
-        test_unicoderepr.skip = "Test will not work on Windows"
-        test_bytesrepr.skip = "Test will not work on Windows"
-    else:
-        test_unicodereprWindows.skip = "Test only works on Windows"
-        test_bytesreprWindows.skip = "Test only works on Windows"
+        self.assertEqual("FilePath(b'C:\\\\')", reprOutput)
 
 
     def test_mixedTypeGlobChildren(self):
@@ -1892,7 +1818,7 @@ class UnicodeFilePathTests(TestCase):
         """
         fp = filepath.FilePath(u"/")
         children = fp.globChildren(u"*")
-        self.assertIsInstance(children[0].path, unicode)
+        self.assertIsInstance(children[0].path, str)
 
 
     def test_unicodeBasename(self):
@@ -1900,7 +1826,7 @@ class UnicodeFilePathTests(TestCase):
         Calling C{basename} on an text- L{FilePath} returns L{unicode}.
         """
         fp = filepath.FilePath(u"./")
-        self.assertIsInstance(fp.basename(), unicode)
+        self.assertIsInstance(fp.basename(), str)
 
 
     def test_unicodeDirname(self):
@@ -1908,7 +1834,7 @@ class UnicodeFilePathTests(TestCase):
         Calling C{dirname} on a text-mode L{FilePath} returns L{unicode}.
         """
         fp = filepath.FilePath(u"./")
-        self.assertIsInstance(fp.dirname(), unicode)
+        self.assertIsInstance(fp.dirname(), str)
 
 
     def test_unicodeParent(self):
@@ -1918,7 +1844,7 @@ class UnicodeFilePathTests(TestCase):
         """
         fp = filepath.FilePath(u"./")
         parent = fp.parent()
-        self.assertIsInstance(parent.path, unicode)
+        self.assertIsInstance(parent.path, str)
 
 
     def test_mixedTypeTemporarySibling(self):
@@ -1938,7 +1864,7 @@ class UnicodeFilePathTests(TestCase):
         """
         fp = filepath.FilePath(u"/tmp/mon\u20acy")
         tempSibling = fp.temporarySibling(u".txt")
-        self.assertIsInstance(tempSibling.path, unicode)
+        self.assertIsInstance(tempSibling.path, str)
 
 
     def test_mixedTypeSiblingExtensionSearch(self):
@@ -1967,7 +1893,7 @@ class UnicodeFilePathTests(TestCase):
         newPath = fp.siblingExtensionSearch(u".txt")
 
         self.assertIsInstance(newPath, filepath.FilePath)
-        self.assertIsInstance(newPath.path, unicode)
+        self.assertIsInstance(newPath.path, str)
 
 
     def test_mixedTypeSiblingExtension(self):
@@ -1997,7 +1923,7 @@ class UnicodeFilePathTests(TestCase):
         newPath = fp.siblingExtension(u".txt")
 
         self.assertIsInstance(newPath, filepath.FilePath)
-        self.assertIsInstance(newPath.path, unicode)
+        self.assertIsInstance(newPath.path, str)
 
 
     def test_mixedTypeChildSearchPreauth(self):
@@ -2031,7 +1957,7 @@ class UnicodeFilePathTests(TestCase):
         newPath = fp.childSearchPreauth(u"text.txt")
 
         self.assertIsInstance(newPath, filepath.FilePath)
-        self.assertIsInstance(newPath.path, unicode)
+        self.assertIsInstance(newPath.path, str)
 
 
     def test_asBytesModeFromUnicode(self):
@@ -2053,7 +1979,7 @@ class UnicodeFilePathTests(TestCase):
         fp = filepath.FilePath(b"./tmp")
         newfp = fp.asTextMode()
         self.assertIsNot(fp, newfp)
-        self.assertIsInstance(newfp.path, unicode)
+        self.assertIsInstance(newfp.path, str)
 
 
     def test_asBytesModeFromBytes(self):
@@ -2075,7 +2001,7 @@ class UnicodeFilePathTests(TestCase):
         fp = filepath.FilePath(u"./tmp")
         newfp = fp.asTextMode()
         self.assertIs(fp, newfp)
-        self.assertIsInstance(newfp.path, unicode)
+        self.assertIsInstance(newfp.path, str)
 
 
     def test_asBytesModeFromUnicodeWithEncoding(self):

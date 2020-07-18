@@ -31,15 +31,15 @@ import sys
 import tokenize
 import urllib.parse as urllib_parse
 import warnings
-
 from base64 import decodebytes as _b64decodebytes
 from base64 import encodebytes as _b64encodebytes
 from collections.abc import Sequence
 from functools import reduce
 from html import escape
 from http import cookiejar as cookielib
+from io import IOBase
 from io import StringIO as NativeStringIO
-from io import TextIOBase, IOBase
+from io import TextIOBase
 from sys import intern
 from types import MethodType as _MethodType
 from urllib.parse import quote as urlquote
@@ -392,21 +392,21 @@ def lazyByteSlice(object, offset=0, size=None):
 
 def networkString(s):
     """
-    Convert the native string type to C{bytes} if it is not already C{bytes}
+    Convert the native string type to L{bytes} if it is not already L{bytes}
     using ASCII encoding if conversion is necessary.
 
     This is useful for sending text-like bytes that are constructed using
-    string interpolation.  For example:
+    string interpolation.  For example::
 
         networkString("Hello %d" % (n,))
 
     @param s: A native string to convert to bytes if necessary.
-    @type s: C{str}
+    @type s: L{str}
 
     @raise UnicodeError: The input string is not ASCII encodable/decodable.
-    @raise TypeError: The input is neither C{bytes} nor C{unicode}.
+    @raise TypeError: The input is neither L{bytes} nor L{unicode}.
 
-    @rtype: C{bytes}
+    @rtype: L{bytes}
     """
     if not isinstance(s, unicode):
         raise TypeError("Can only convert text to bytes on Python 3")

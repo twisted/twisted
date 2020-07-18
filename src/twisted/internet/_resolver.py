@@ -40,6 +40,11 @@ class HostResolution(object):
         self.name = name
 
 
+    def cancel(self):
+        # IHostResolution.cancel
+        raise NotImplementedError()
+
+
 
 _any = frozenset([IPv4Address, IPv6Address])
 
