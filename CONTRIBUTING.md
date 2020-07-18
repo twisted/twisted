@@ -2,30 +2,26 @@ Contributing to Twisted
 =======================
 
 As an open source project, Twisted welcomes contributions of many forms.
+This document summarizes the process.
+
+Twisted has a [Code of Conduct](./code_of_conduct.md).
 
 Examples of contributions include:
 
 * Code patches
 * Documentation improvements
-* Bug reports and patch reviews
+* Bug reports
+* Pull request reviews
 
-Extensive contribution guidelines are available online at:
+Contributions are managed using GitHub's Pull Requests.
+For a PR to be accepted:
 
-https://twistedmatrix.com/trac/wiki/ContributingToTwistedLabs
-
-Twisted has a Code of Conduct, available at code_of_conduct.md.
-
-File a ticket at:
-
-https://twistedmatrix.com/trac/newticket
+* It must have an associated Trac ticket ([file one here](https://twistedmatrix.com/trac/newticket))
+* All automated checks must pass
+* The changeset must have 100% patch test coverage
 
 Twisted uses Trac to keep track of bugs, feature requests, and associated
 patches because GitHub doesn't provide adequate tooling for its community.
+You can log in to Trac with your GitHub account.
 
-Contributions are managed using GitHub's Pull Requests.
-For a PR to be accepted it needs to have:
-
-* all Travis CI tests passing
-* patch coverage of 100% as reported by codecov.io
-
-The Travis CI tests currently represent only a subset of the all the platforms Twisted supports, so the buildbot tests are still the actual gate for PR acceptance.
+Extensive contribution guidelines are [available online](https://twistedmatrix.com/trac/wiki/ContributingToTwistedLabs).
