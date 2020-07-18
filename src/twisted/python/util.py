@@ -628,8 +628,7 @@ class FancyStrMixin:
 
 
     def __str__(self) -> str:
-        r = ['<', (hasattr(self, 'fancybasename') and self.fancybasename)
-             or self.__class__.__name__]
+        r = ['<', getattr(self, 'fancybasename', self.__class__.__name__)]
         for attr in self.showAttributes:
             if isinstance(attr, str):
                 r.append(' %s=%r' % (attr, getattr(self, attr)))
