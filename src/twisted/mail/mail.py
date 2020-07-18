@@ -172,7 +172,7 @@ class DomainWithDefaultDict:
         return len(self.domains)
 
 
-    def __str__(self):
+    def __str__(self) -> str:
         """
         Build an informal string representation of this dictionary.
 

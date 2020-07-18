@@ -65,7 +65,7 @@ class AbstractGroup:
         return '<%s %r>' % (self.__class__, self.name)
 
 
-    def __str__(self):
+    def __str__(self) -> str:
         return '%s@%s' % (self.name, self.account.accountName)
 
 
@@ -97,7 +97,7 @@ class AbstractPerson:
         return '<%s %r/%s>' % (self.__class__, self.name, self.status)
 
 
-    def __str__(self):
+    def __str__(self) -> str:
         return '%s@%s' % (self.name, self.account.accountName)
 
 

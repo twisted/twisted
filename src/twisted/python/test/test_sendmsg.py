@@ -104,7 +104,7 @@ class ExitedWithStderr(Exception):
     A process exited with some stderr.
     """
 
-    def __str__(self):
+    def __str__(self) -> str:
         """
         Dump the errors in a pretty way in the event of a subprocess traceback.
         """

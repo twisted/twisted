@@ -383,7 +383,7 @@ class Breakable(object):
     breakRepr = False
     breakStr = False
 
-    def __str__(self):
+    def __str__(self) -> str:
         if self.breakStr:
             raise RuntimeError("str!")
         else:

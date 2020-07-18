@@ -85,7 +85,7 @@ class Error(Exception):
         self.response = response
 
 
-    def __str__(self):
+    def __str__(self) -> str:
         return nativeString(self.status + b" " + self.message)
 
 
@@ -221,7 +221,7 @@ class UnsupportedMethod(Exception):
                 "but my first argument is not a sequence.")
 
 
-    def __str__(self):
+    def __str__(self) -> str:
         return "Expected one of %r" % (self.allowedMethods,)
 
 
@@ -394,7 +394,7 @@ class FlattenerError(Exception):
             str(self._exception) + '\n')
 
 
-    def __str__(self):
+    def __str__(self) -> str:
         return repr(self)
 
 

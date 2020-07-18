@@ -123,7 +123,7 @@ class MismatchedTags(Exception):
          self.endCol) = filename, expect, got, begLine, begCol, endLine, endCol
 
 
-    def __str__(self):
+    def __str__(self) -> str:
         return ("expected </%s>, got </%s> line: %s col: %s, began line: %s col: %s"
                 % (self.expect, self.got, self.endLine, self.endCol, self.begLine,
                    self.begCol))
@@ -752,7 +752,7 @@ class Element(Node):
         return rep + ')'
 
 
-    def __str__(self):
+    def __str__(self) -> str:
         rep = "<" + self.nodeName
         if self._filename or self._markpos:
             rep += " ("

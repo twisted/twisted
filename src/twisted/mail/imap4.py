@@ -399,7 +399,7 @@ class MessageSet(object):
         return res
 
 
-    def __str__(self):
+    def __str__(self) -> str:
         p = []
         for low, high in self.ranges:
             if low == high:
@@ -4950,7 +4950,7 @@ class DontQuoteMe:
         self.value = value
 
 
-    def __str__(self):
+    def __str__(self) -> str:
         return str(self.value)
 
 
@@ -5879,7 +5879,7 @@ class _FetchParser:
         partialBegin = None
         partialLength = None
 
-        def __str__(self):
+        def __str__(self) -> str:
             return nativeString(self.__bytes__())
 
         def __bytes__(self):
@@ -5917,7 +5917,7 @@ class _FetchParser:
         fields = None
         part = None
 
-        def __str__(self):
+        def __str__(self) -> str:
             return nativeString(self.__bytes__())
 
 

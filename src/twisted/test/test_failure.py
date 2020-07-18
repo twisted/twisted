@@ -538,7 +538,7 @@ class BrokenStr(Exception):
     An exception class the instances of which cannot be presented as strings via
     C{str}.
     """
-    def __str__(self):
+    def __str__(self) -> str:
         # Could raise something else, but there's no point as yet.
         raise self
 
@@ -549,7 +549,7 @@ class BrokenExceptionMetaclass(type):
     A metaclass for an exception type which cannot be presented as a string via
     C{str}.
     """
-    def __str__(self):
+    def __str__(self) -> str:
         raise ValueError("You cannot make a string out of me.")
 
 

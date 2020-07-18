@@ -289,7 +289,7 @@ class Address:
 
         return b''.join(res)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return nativeString(bytes(self))
 
 
@@ -338,7 +338,7 @@ class User:
                  'orig' : self.orig }
 
 
-    def __str__(self):
+    def __str__(self) -> str:
         return nativeString(bytes(self.dest))
 
 

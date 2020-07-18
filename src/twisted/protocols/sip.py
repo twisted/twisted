@@ -353,7 +353,7 @@ class URL:
         return "".join(l)
 
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.toString()
 
 

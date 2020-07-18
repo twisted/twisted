@@ -188,7 +188,7 @@ class FlatFormattingTests(unittest.TestCase):
                 """
                 Hack
                 """
-                def __str__(self):
+                def __str__(self) -> str:
                     return str(next(counter))
 
             event = dict(

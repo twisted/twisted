@@ -276,7 +276,7 @@ class URLPath(object):
         return self._fromURL(self._url.click(st.decode("ascii")))
 
 
-    def __str__(self):
+    def __str__(self) -> str:
         """
         The L{str} of a L{URLPath} is its URL text.
         """

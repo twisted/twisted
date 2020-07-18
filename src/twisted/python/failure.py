@@ -570,7 +570,7 @@ class Failure(BaseException):
                                 self.getErrorMessage())
 
 
-    def __str__(self):
+    def __str__(self) -> str:
         return "[Failure instance: %s]" % self.getBriefTraceback()
 
 

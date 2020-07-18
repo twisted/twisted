@@ -71,7 +71,7 @@ class ParseError(Exception):
         self.col = col
         self.message = message
 
-    def __str__(self):
+    def __str__(self) -> str:
        return "%s:%s:%s: %s" % (self.filename, self.line, self.col,
                                 self.message)
 

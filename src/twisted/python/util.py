@@ -627,7 +627,7 @@ class FancyStrMixin:
     showAttributes = ()  # type: Sequence[Union[str, Tuple[str, str, str], Tuple[str, Callable]]]  # noqa
 
 
-    def __str__(self):
+    def __str__(self) -> str:
         r = ['<', (hasattr(self, 'fancybasename') and self.fancybasename)
              or self.__class__.__name__]
         for attr in self.showAttributes:

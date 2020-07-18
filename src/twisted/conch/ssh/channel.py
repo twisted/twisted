@@ -75,7 +75,7 @@ class SSHChannel(log.Logger):
         self.id = None # gets set later by SSHConnection
 
 
-    def __str__(self):
+    def __str__(self) -> str:
         return nativeString(self.__bytes__())
 
 

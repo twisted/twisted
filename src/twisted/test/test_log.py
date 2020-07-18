@@ -308,13 +308,13 @@ IOBase.register(FakeFile)  # type: ignore[attr-defined]
 
 
 class EvilStr:
-    def __str__(self):
+    def __str__(self) -> str:
         1 // 0
 
 
 
 class EvilRepr:
-    def __str__(self):
+    def __str__(self) -> str:
         return "Happy Evil Repr"
 
 

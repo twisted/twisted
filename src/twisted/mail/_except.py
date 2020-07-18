@@ -36,19 +36,19 @@ class MailboxException(IMAP4Exception):
 
 
 class MailboxCollision(MailboxException):
-    def __str__(self):
+    def __str__(self) -> str:
         return 'Mailbox named %s already exists' % self.args
 
 
 
 class NoSuchMailbox(MailboxException):
-    def __str__(self):
+    def __str__(self) -> str:
         return 'No mailbox named %s exists' % self.args
 
 
 
 class ReadOnlyMailbox(MailboxException):
-    def __str__(self):
+    def __str__(self) -> str:
         return 'Mailbox open in read-only state'
 
 
@@ -69,7 +69,7 @@ class NoSupportedAuthentication(IMAP4Exception):
         self.serverSupports = serverSupports
         self.clientSupports = clientSupports
 
-    def __str__(self):
+    def __str__(self) -> str:
         return (IMAP4Exception.__str__(self)
             + ': Server supports %r, client supports %r'
             % (self.serverSupports, self.clientSupports))
@@ -137,7 +137,7 @@ class SMTPClientError(SMTPError):
         self.retry = retry
 
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.__bytes__().decode("utf-8")
 
 
@@ -277,7 +277,7 @@ class SMTPServerError(SMTPError):
         self.resp = resp
 
 
-    def __str__(self):
+    def __str__(self) -> str:
         return "%.3d %s" % (self.code, self.resp)
 
 
@@ -290,7 +290,7 @@ class SMTPAddressError(SMTPServerError):
         self.addr = Address(addr)
 
 
-    def __str__(self):
+    def __str__(self) -> str:
         return "%.3d <%s>... %s" % (self.code, self.addr, self.resp)
 
 
