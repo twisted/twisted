@@ -357,7 +357,7 @@ class URL:
         return self.toString()
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return '<URL %s:%s@%s:%r/%s>' % (self.username, self.password, self.host, self.port, self.transport)
 
 
@@ -543,7 +543,7 @@ class Request(Message):
             cleanRequestURL(self.uri)
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "<SIP Request %d:%s %s>" % (id(self), self.method, self.uri.toString())
 
 
@@ -565,7 +565,7 @@ class Response(Message):
         self.phrase = phrase
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "<SIP Response %d:%s>" % (id(self), self.code)
 
 

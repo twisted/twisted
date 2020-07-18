@@ -390,7 +390,7 @@ class Breakable(object):
             return '<Breakable>'
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         if self.breakRepr:
             raise RuntimeError("repr!")
         else:

@@ -468,7 +468,7 @@ class Text(CharacterData):
         w(val)
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "Text(%s" % repr(self.nodeValue) + ')'
 
 
@@ -741,7 +741,7 @@ class Element(Node):
             w(" />")
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         rep = "Element(%s" % repr(self.nodeName)
         if self.attributes:
             rep += ", attributes=%r" % (self.attributes,)

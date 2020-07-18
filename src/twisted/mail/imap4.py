@@ -414,7 +414,7 @@ class MessageSet(object):
         return ','.join(p)
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return '<MessageSet %s>' % (str(self),)
 
 
@@ -533,7 +533,7 @@ class Command:
         self.lines = []
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "<imap4.Command {!r} {!r} {!r} {!r} {!r}>".format(
             self.command, self.args, self.wantResponse, self.continuation,
             self.lines

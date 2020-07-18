@@ -165,7 +165,7 @@ class InsensitiveDict(MutableMapping):
             self[k] = v
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """
         String representation of the dictionary.
         """

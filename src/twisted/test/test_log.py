@@ -318,7 +318,7 @@ class EvilRepr:
         return "Happy Evil Repr"
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         1 // 0
 
 
@@ -970,7 +970,7 @@ class DefaultObserverTests(unittest.SynchronousTestCase):
         with a message that causes L{repr} to raise.
         """
         class Ouch(object):
-            def __repr__(self):
+            def __repr__(self) -> str:
                 return str(1 / 0)
 
         message = ("foo", Ouch())

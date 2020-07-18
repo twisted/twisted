@@ -9,7 +9,7 @@ class Enum:
     def __init__(self, label):
         self.label = label
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return '<%s: %s>' % (self.group, self.label)
 
     def __str__(self):

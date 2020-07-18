@@ -183,7 +183,7 @@ class DomainWithDefaultDict:
         return '<DomainWithDefaultDict %s>' % (self.domains,)
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """
         Build an "official" string representation of this dictionary.
 

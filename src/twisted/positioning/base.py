@@ -256,7 +256,7 @@ class Angle(FancyEqMixin, object):
         return self._angle
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """
         Returns a string representation of this angle.
 
@@ -373,7 +373,7 @@ class Heading(Angle):
     compareAttributes = list(Angle.compareAttributes) + ["variation"]
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """
         Returns a string representation of this angle.
 
@@ -499,7 +499,7 @@ class Altitude(FancyEqMixin, object):
         return self._altitude
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """
         Returns a string representation of this altitude.
 
@@ -569,7 +569,7 @@ class _BaseSpeed(FancyEqMixin, object):
         return self._speed
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """
         Returns a string representation of this speed object.
 
@@ -786,7 +786,7 @@ class PositionError(FancyEqMixin, object):
     _REPR_TEMPLATE = "<PositionError (pdop: %s, hdop: %s, vdop: %s)>"
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """
         Returns a string representation of positioning information object.
 
@@ -822,7 +822,7 @@ class BeaconInformation(object):
         self.usedBeacons = set()
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """
         Returns a string representation of this beacon information object.
 
@@ -878,7 +878,7 @@ class PositioningBeacon(object):
         return hash(self.identifier)
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """
         Returns a string representation of this beacon.
 
@@ -928,7 +928,7 @@ class Satellite(PositioningBeacon):
         self.signalToNoiseRatio = signalToNoiseRatio
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """
         Returns a string representation of this Satellite.
 

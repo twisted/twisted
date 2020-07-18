@@ -300,7 +300,7 @@ class Address:
             return b''
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "%s.%s(%s)" % (self.__module__, self.__class__.__name__,
                               repr(str(self)))
 

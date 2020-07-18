@@ -283,7 +283,7 @@ class URLPath(object):
         return nativeString(self._url.asURI().asText())
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """
         The L{repr} of a L{URLPath} is an eval-able expression which will
         construct a similar L{URLPath}.

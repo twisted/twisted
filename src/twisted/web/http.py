@@ -946,7 +946,7 @@ class Request:
         self.process()
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """
         Return a string description of the request including such information
         as the request method and request URI.

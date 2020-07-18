@@ -409,7 +409,7 @@ class ProcessMonitor(service.Service):
             self.stopProcess(name)
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         l = []
         for name, proc in self._processes.items():
             uidgid = ''

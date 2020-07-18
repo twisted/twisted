@@ -254,7 +254,7 @@ class MissingRenderMethod(RenderError):
         self.renderName = renderName
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return '%r: %r had no render method named %r' % (
             self.__class__.__name__, self.element, self.renderName)
 
@@ -272,7 +272,7 @@ class MissingTemplateLoader(RenderError):
         self.element = element
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return '%r: %r had no loader' % (self.__class__.__name__,
                                          self.element)
 
@@ -365,7 +365,7 @@ class FlattenerError(Exception):
             return ascii(obj)
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """
         Present a string representation which includes a template traceback, so
         we can tell where this error occurred in the template, as well as in

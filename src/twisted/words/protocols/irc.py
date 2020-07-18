@@ -3211,7 +3211,7 @@ class DccFileReceive(DccFileReceiveBasic):
         s = ("DCC transfer of '%s' from %s" % (self.filename, from_))
         return s
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         s = ("<%s at %x: GET %s>"
              % (self.__class__, id(self), self.filename))
         return s

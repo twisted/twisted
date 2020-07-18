@@ -547,7 +547,7 @@ class Options(dict):
 
         return s + longdesc + commands
 
-    #def __repr__(self):
+    #def __repr__(self) -> str:
     #    XXX: It'd be cool if we could return a succinct representation
     #        of which flags and options are set here.
 

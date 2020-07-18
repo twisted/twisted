@@ -525,7 +525,7 @@ class RWX(FancyEqMixin, object):
         self.execute = executable
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "RWX(read=%s, write=%s, execute=%s)" % (
             self.read, self.write, self.execute)
 
@@ -577,7 +577,7 @@ class Permissions(FancyEqMixin, object):
         )
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "[%s | %s | %s]" % (
             str(self.user), str(self.group), str(self.other))
 
@@ -1351,7 +1351,7 @@ class FilePath(AbstractFilePath):
         return splitext(self.path)
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return 'FilePath(%r)' % (self.path,)
 
 

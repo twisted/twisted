@@ -72,7 +72,7 @@ class _BaseSentence(object):
             raise AttributeError(msg)
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """
         Returns a textual representation of this sentence.
 

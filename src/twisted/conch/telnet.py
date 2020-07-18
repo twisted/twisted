@@ -435,7 +435,7 @@ class Telnet(protocol.Protocol):
             self.him = self._Perspective()
 
 
-        def __repr__(self):
+        def __repr__(self) -> str:
             return '<_OptionState us=%s him=%s>' % (self.us, self.him)
 
 

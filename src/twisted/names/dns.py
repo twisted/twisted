@@ -638,7 +638,7 @@ class Query:
         return '<Query %s %s %s>' % (self.name, t, c)
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return 'Query(%r, %r, %r)' % (self.name.name, self.type, self.cls)
 
 
@@ -2475,7 +2475,7 @@ class Message(tputil.FancyEqMixin):
         self.additional = []
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """
         Generate a repr of this L{Message}.
 
@@ -2818,7 +2818,7 @@ class _EDNSMessage(tputil.FancyEqMixin, object):
         self.additional = additional
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return _compactRepr(
             self,
             flagNames=('answer', 'auth', 'trunc', 'recDes', 'recAv',

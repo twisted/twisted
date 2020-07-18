@@ -42,7 +42,7 @@ class Logging(object):
         return str(super(Logging, self).__getattribute__('original'))
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return repr(super(Logging, self).__getattribute__('original'))
 
 

@@ -564,7 +564,7 @@ class Failure(BaseException):
             return frame.f_locals.get('self')
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "<%s %s: %s>" % (reflect.qual(self.__class__),
                                 reflect.qual(self.type),
                                 self.getErrorMessage())

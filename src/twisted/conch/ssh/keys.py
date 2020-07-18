@@ -951,7 +951,7 @@ class Key(object):
         else:
             return NotImplemented
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """
         Return a pretty representation of this object.
         """
