@@ -8,6 +8,3 @@
 #   git blame --ignore-revs-file .git-blame-ignore-revs ...
 #
 # Note that these features require Git 2.23 (released August 2019).
-
-# Move everything to src/
-3b116ebd785f1ea0f9d8bf8fde27874b0f28a3df
