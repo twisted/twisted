@@ -6,7 +6,6 @@
 """
 Tests for L{twisted.trial.reporter}.
 """
-from __future__ import absolute_import, division
 
 import errno
 import os
@@ -14,6 +13,7 @@ import re
 import sys
 
 from inspect import getmro
+from typing import Type
 from unittest import expectedFailure
 from unittest import TestCase as StdlibTestCase
 
@@ -26,14 +26,9 @@ from twisted.trial.test import erroneous
 from twisted.trial.unittest import makeTodo, SkipTest, Todo
 from twisted.trial.test import sample
 
-from twisted.python.compat import NativeStringIO, _PY3
+from twisted.python.compat import NativeStringIO
 
-if _PY3:
-    from io import BytesIO
-else:
-    # On Python 2, we want regular old StringIO, because otherwise subunit
-    # complains
-    from StringIO import StringIO as BytesIO
+from io import BytesIO
 
 
 
@@ -972,7 +967,7 @@ class ReporterInterfaceTests(unittest.SynchronousTestCase):
         callable must take the same parameters as L{reporter.Reporter}.
     """
 
-    resultFactory = reporter.Reporter
+    resultFactory = reporter.Reporter  # type: Type[itrial.IReporter]
 
     def setUp(self):
         self.test = sample.FooTest('test_foo')
@@ -1172,7 +1167,7 @@ class SubunitReporterTests(ReporterInterfaceTests):
     This just tests that the subunit reporter implements the basic interface.
     """
 
-    resultFactory = reporter.SubunitReporter
+    resultFactory = reporter.SubunitReporter  # type: Type[itrial.IReporter]
 
 
     def setUp(self):
@@ -1401,7 +1396,7 @@ class SubunitReporterNotInstalledTests(unittest.SynchronousTestCase):
 
 
 class TimingReporterTests(ReporterTests):
-    resultFactory = reporter.TimingTextReporter
+    resultFactory = reporter.TimingTextReporter  # type: Type[itrial.IReporter]
 
 
 

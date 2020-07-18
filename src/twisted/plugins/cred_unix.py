@@ -7,7 +7,6 @@
 Cred plugin for UNIX user accounts.
 """
 
-from __future__ import absolute_import, division
 
 from zope.interface import implementer
 

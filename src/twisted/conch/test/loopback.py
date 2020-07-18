@@ -4,9 +4,11 @@
 Loopback helper used in test_ssh and test_recvline
 """
 
-from __future__ import division, absolute_import
 
 from twisted.protocols import loopback
+
+
+
 class LoopbackRelay(loopback.LoopbackRelay):
     clearCall = None
 

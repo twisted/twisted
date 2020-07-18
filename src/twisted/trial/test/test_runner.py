@@ -4,11 +4,13 @@
 # Maintainer: Jonathan Lange
 # Author: Robert Collins
 
-from __future__ import absolute_import, division
 
 import os
 import pdb
 import sys
+import unittest as pyunit
+
+from typing import List
 
 from zope.interface import implementer
 from zope.interface.verify import verifyObject
@@ -25,8 +27,6 @@ from twisted.plugins import twisted_trial
 from twisted import plugin
 from twisted.internet import defer
 
-
-pyunit = __import__('unittest')
 
 
 class CapturingDebugger(object):
@@ -95,6 +95,42 @@ class CapturingReporter(object):
     def done(self):
         """
         Do nothing. These tests don't care about done.
+        """
+
+
+    def addError(self, test, error):
+        """
+        Do nothing. These tests don't care about addError.
+        """
+
+
+    def addFailure(self, test, failure):
+        """
+        Do nothing. These tests don't care about addFailure.
+        """
+
+
+    def addExpectedFailure(self, test, failure, todo=None):
+        """
+        Do nothing. These tests don't care about addExpectedFailure.
+        """
+
+
+    def addUnexpectedSuccess(self, test, todo=None):
+        """
+        Do nothing. These tests don't care about addUnexpectedSuccess.
+        """
+
+
+    def addSkip(self, test, reason):
+        """
+        Do nothing. These tests don't care about addSkip.
+        """
+
+
+    def wasSuccessful(self):
+        """
+        Do nothing. These tests don't care about wasSuccessful.
         """
 
 
@@ -595,7 +631,8 @@ class UntilFailureTests(unittest.SynchronousTestCase):
         """
         A test case that fails when run 3 times in a row.
         """
-        count = []
+        count = []  # type: List[None]
+
         def test_foo(self):
             self.count.append(None)
             if len(self.count) == 3:
@@ -898,8 +935,10 @@ class MalformedMethodTests(unittest.SynchronousTestCase):
         """
         def test_foo(self, blah):
             pass
-        def test_bar():
+
+        def test_bar():  # type: ignore[misc]
             pass
+
         test_spam = defer.inlineCallbacks(test_bar)
 
     def _test(self, method):

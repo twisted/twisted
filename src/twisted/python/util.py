@@ -2,22 +2,35 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-from __future__ import division, absolute_import, print_function
 
-import os, sys, errno, warnings
+import errno
+import os
+import sys
+import warnings
 try:
-    import pwd, grp
+    import grp as _grp
+    import pwd as _pwd
 except ImportError:
-    pwd = grp = None
-try:
-    from os import setgroups, getgroups
-except ImportError:
-    setgroups = getgroups = None
+    pwd = None
+    grp = None
+else:
+    grp = _grp
+    pwd = _pwd
 
-from twisted.python.compat import _PY3, unicode
+try:
+    from os import setgroups as _setgroups, getgroups as _getgroups
+except ImportError:
+    setgroups = None
+    getgroups = None
+else:
+    setgroups = _setgroups
+    getgroups = _getgroups
+
+from typing import Callable, Sequence, Union, Tuple
+
+from twisted.python.compat import unicode
 from incremental import Version
 from twisted.python.deprecate import deprecatedModuleAttribute
-from twisted.python._oldstyle import _oldStyle, _replaceIf
 
 # For backwards compatibility, some things import this, so just link it
 from collections import OrderedDict
@@ -30,7 +43,6 @@ deprecatedModuleAttribute(
 
 
 
-@_oldStyle
 class InsensitiveDict:
     """
     Dictionary, that has case-insensitive keys.
@@ -434,7 +446,6 @@ def searchupwards(start, files=[], dirs=[]):
 
 
 
-@_oldStyle
 class LineLog:
     """
     A limited-size line-based log, useful for logging line-based
@@ -463,10 +474,6 @@ class LineLog:
 
     def str(self):
         return bytes(self)
-
-    if not _PY3:
-        def __str__(self):
-            return self.__bytes__()
 
 
     def __bytes__(self):
@@ -578,7 +585,6 @@ class _IntervalDifferentialIterator(object):
 
 
 
-@_oldStyle
 class FancyStrMixin:
     """
     Mixin providing a flexible implementation of C{__str__}.
@@ -597,7 +603,7 @@ class FancyStrMixin:
     might be used for a float.
     """
     # Override in subclasses:
-    showAttributes = ()
+    showAttributes = ()  # type: Sequence[Union[str, Tuple[str, str, str], Tuple[str, Callable]]]  # noqa
 
 
     def __str__(self):
@@ -617,7 +623,6 @@ class FancyStrMixin:
 
 
 
-@_oldStyle
 class FancyEqMixin:
     """
     Mixin that implements C{__eq__} and C{__ne__}.
@@ -625,7 +630,7 @@ class FancyEqMixin:
     Comparison is done using the list of attributes defined in
     C{compareAttributes}.
     """
-    compareAttributes = ()
+    compareAttributes = ()  # type: Sequence[Union[str, Sequence[str], Tuple[str, Callable]]]  # noqa
 
     def __eq__(self, other):
         if not self.compareAttributes:
@@ -647,9 +652,11 @@ class FancyEqMixin:
 
 try:
     # initgroups is available in Python 2.7+ on UNIX-likes
-    from os import initgroups as _initgroups
+    from os import initgroups as __initgroups
 except ImportError:
     _initgroups = None
+else:
+    _initgroups = __initgroups
 
 
 
@@ -724,74 +731,6 @@ def switchUID(uid, gid, euid=False):
         else:
             initgroups(uid, gid)
             setuid(uid)
-
-
-
-class SubclassableCStringIO(object):
-    """
-    A wrapper around cStringIO to allow for subclassing.
-    """
-    __csio = None
-
-    def __init__(self, *a, **kw):
-        from cStringIO import StringIO
-        self.__csio = StringIO(*a, **kw)
-
-
-    def __iter__(self):
-        return self.__csio.__iter__()
-
-
-    def next(self):
-        return self.__csio.next()
-
-
-    def close(self):
-        return self.__csio.close()
-
-
-    def isatty(self):
-        return self.__csio.isatty()
-
-
-    def seek(self, pos, mode=0):
-        return self.__csio.seek(pos, mode)
-
-
-    def tell(self):
-        return self.__csio.tell()
-
-
-    def read(self, n=-1):
-        return self.__csio.read(n)
-
-
-    def readline(self, length=None):
-        return self.__csio.readline(length)
-
-
-    def readlines(self, sizehint=0):
-        return self.__csio.readlines(sizehint)
-
-
-    def truncate(self, size=None):
-        return self.__csio.truncate(size)
-
-
-    def write(self, s):
-        return self.__csio.write(s)
-
-
-    def writelines(self, list):
-        return self.__csio.writelines(list)
-
-
-    def flush(self):
-        return self.__csio.flush()
-
-
-    def getvalue(self):
-        return self.__csio.getvalue()
 
 
 
@@ -1012,16 +951,7 @@ __all__ = [
     "getPassword", "println", "makeStatBar", "OrderedDict",
     "InsensitiveDict", "spewer", "searchupwards", "LineLog",
     "raises", "IntervalDifferential", "FancyStrMixin", "FancyEqMixin",
-    "switchUID", "SubclassableCStringIO", "mergeFunctionMetadata",
+    "switchUID", "mergeFunctionMetadata",
     "nameToLabel", "uidFromString", "gidFromString", "runAsEffectiveUser",
-    "untilConcludes", "runWithWarningsSuppressed", "_replaceIf",
+    "untilConcludes", "runWithWarningsSuppressed",
 ]
-
-
-if _PY3:
-    __notported__ = ["SubclassableCStringIO", "makeStatBar"]
-    for name in __all__[:]:
-        if name in __notported__:
-            __all__.remove(name)
-            del globals()[name]
-    del name, __notported__

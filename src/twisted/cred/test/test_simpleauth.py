@@ -5,7 +5,6 @@
 Tests for basic constructs of L{twisted.cred.credentials}.
 """
 
-from __future__ import division, absolute_import
 
 from twisted.trial.unittest import TestCase
 from twisted.cred.credentials import UsernamePassword, IUsernamePassword

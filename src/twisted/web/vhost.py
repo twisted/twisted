@@ -6,7 +6,6 @@
 I am a virtual hosts implementation.
 """
 
-from __future__ import division, absolute_import
 
 # Twisted Imports
 from twisted.python import roots

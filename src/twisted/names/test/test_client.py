@@ -5,7 +5,6 @@
 Test cases for L{twisted.names.client}.
 """
 
-from __future__ import division, absolute_import
 
 import errno
 
@@ -35,7 +34,7 @@ from twisted.trial import unittest
 if platform.isWindows():
     windowsSkip = "These tests need more work before they'll work on Windows."
 else:
-    windowsSkip = None
+    windowsSkip = ""
 
 
 

@@ -77,6 +77,7 @@ class DomainWithDefaultDict:
         return 1
 
 
+    @classmethod
     def fromkeys(klass, keys, value=None):
         """
         Create a new L{DomainWithDefaultDict} with the specified keys.
@@ -95,7 +96,6 @@ class DomainWithDefaultDict:
         for k in keys:
             d[k] = value
         return d
-    fromkeys = classmethod(fromkeys)
 
 
     def __contains__(self, name):

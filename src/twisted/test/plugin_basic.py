@@ -21,9 +21,9 @@ class TestPlugin:
     A plugin used solely for testing purposes.
     """
 
+    @staticmethod
     def test1():
         pass
-    test1 = staticmethod(test1)
 
 
 
@@ -33,9 +33,9 @@ class AnotherTestPlugin:
     Another plugin used solely for testing purposes.
     """
 
+    @staticmethod
     def test():
         pass
-    test = staticmethod(test)
 
 
 
@@ -45,7 +45,6 @@ class ThirdTestPlugin:
     Another plugin used solely for testing purposes.
     """
 
+    @staticmethod
     def test():
         pass
-    test = staticmethod(test)
-

@@ -7,27 +7,32 @@ Tests for the 'session' channel implementation in twisted.conch.ssh.session.
 See also RFC 4254.
 """
 
-from __future__ import division, absolute_import
 
-import os, signal, sys, struct
+import os
+import signal
+import struct
+import sys
 
+from unittest import skipIf
 from zope.interface import implementer
 
+from twisted.internet import defer, protocol, error
+from twisted.internet.address import IPv4Address
+from twisted.internet.error import ProcessTerminated, ProcessDone
+from twisted.python import components, failure
+from twisted.python.failure import Failure
 from twisted.python.reflect import requireModule
+from twisted.python.test.test_components import RegistryUsingMixin
+from twisted.trial.unittest import TestCase
 
 cryptography = requireModule("cryptography")
+
 if cryptography:
     from twisted.conch.ssh import common, session, connection
 else:
-    class session:
-        from twisted.conch.interfaces import ISession
-
-from twisted.internet.address import IPv4Address
-from twisted.internet.error import ProcessTerminated, ProcessDone
-from twisted.python.failure import Failure
-from twisted.internet import defer, protocol, error
-from twisted.python import components, failure
-from twisted.trial import unittest
+    class session:  # type: ignore[no-redef]
+        from twisted.conch.interfaces import (
+            EnvironmentVariableNotPermitted, ISession, ISessionSetEnv)
 
 
 
@@ -68,7 +73,7 @@ class StubAvatar:
 
 
 
-@implementer(session.ISession)
+@implementer(session.ISession, session.ISessionSetEnv)
 class StubSessionForStubAvatar(object):
     """
     A stub ISession implementation for our StubAvatar.  The instance
@@ -78,6 +83,8 @@ class StubSessionForStubAvatar(object):
     @ivar avatar: the L{StubAvatar} we are adapting.
     @ivar ptyRequest: if present, the terminal, window size, and modes passed
         to the getPty method.
+    @ivar environ: a L{dict} of environment variables passed to the setEnv
+        method.
     @ivar windowChange: if present, the window size passed to the
         windowChangned method.
     @ivar shellProtocol: if present, the L{SSHSessionProcessProtocol} passed
@@ -99,6 +106,7 @@ class StubSessionForStubAvatar(object):
         """
         self.avatar = avatar
         self.shellProtocol = None
+        self.environ = {}
 
 
     def getPty(self, terminal, window, modes):
@@ -110,6 +118,25 @@ class StubSessionForStubAvatar(object):
             self.ptyRequest = (terminal, window, modes)
         else:
             raise RuntimeError('not getting a pty')
+
+
+    def setEnv(self, name, value):
+        """
+        If the requested environment variable is 'FAIL', fail.  If it is
+        'IGNORED', raise EnvironmentVariableNotPermitted, which should cause
+        it to be silently ignored.  Otherwise, store the requested
+        environment variable.
+
+        (Real applications should normally implement an allowed list rather
+        than a blocked list.)
+        """
+        if name == b'FAIL':
+            raise RuntimeError('disallowed environment variable name')
+        elif name == b'IGNORED':
+            raise session.EnvironmentVariableNotPermitted(
+                'ignored environment variable name')
+        else:
+            self.environ[name] = value
 
 
     def windowChanged(self, window):
@@ -165,11 +192,6 @@ class StubSessionForStubAvatar(object):
         Note that close has been received.
         """
         self.gotClosed = True
-
-
-if cryptography:
-    components.registerAdapter(StubSessionForStubAvatar, StubAvatar,
-        session.ISession)
 
 
 
@@ -431,7 +453,7 @@ class StubClient(object):
 
 
 
-class SessionInterfaceTests(unittest.TestCase):
+class SessionInterfaceTests(RegistryUsingMixin, TestCase):
     """
     Tests for the SSHSession class interface.  This interface is not ideal, but
     it is tested in order to maintain backwards compatibility.
@@ -446,9 +468,12 @@ class SessionInterfaceTests(unittest.TestCase):
         so that it's allowed to send packets.  500 and 100 are arbitrary
         values.
         """
-        self.session = session.SSHSession(remoteWindow=500,
-                remoteMaxPacket=100, conn=StubConnection(),
-                avatar=StubAvatar())
+        RegistryUsingMixin.setUp(self)
+        components.registerAdapter(
+            StubSessionForStubAvatar, StubAvatar, session.ISession)
+        self.session = session.SSHSession(
+            remoteWindow=500, remoteMaxPacket=100, conn=StubConnection(),
+            avatar=StubAvatar())
 
 
     def assertSessionIsStubSession(self):
@@ -705,10 +730,47 @@ class SessionInterfaceTests(unittest.TestCase):
         self.assertSessionIsStubSession()
         self.assertRequestRaisedRuntimeError()
         # 'good' terminal type succeeds
-        self.assertTrue(self.session.requestReceived(b'pty_req',
+        self.assertTrue(self.session.requestReceived(
+            b'pty_req',
             session.packRequest_pty_req(b'good', (1, 2, 3, 4), b'')))
-        self.assertEqual(self.session.session.ptyRequest,
-                (b'good', (1, 2, 3, 4), []))
+        self.assertEqual(
+            self.session.session.ptyRequest, (b'good', (1, 2, 3, 4), []))
+
+
+    def test_setEnv(self):
+        """
+        When a client requests passing an environment variable, the
+        SSHSession object should make the request by getting an
+        ISessionSetEnv adapter for the avatar, then calling setEnv with the
+        environment variable name and value.
+        """
+        components.registerAdapter(
+            StubSessionForStubAvatar, StubAvatar, session.ISessionSetEnv)
+        # Blocked environment variable name fails.
+        self.assertFalse(self.session.requestReceived(
+            b'env', common.NS(b'FAIL') + common.NS(b'bad')))
+        self.assertIsInstance(
+            self.session._sessionSetEnv, StubSessionForStubAvatar)
+        self.assertRequestRaisedRuntimeError()
+        # An environment variable name for which setEnv raises
+        # EnvironmentVariableNotPermitted is silently ignored.
+        self.assertFalse(self.session.requestReceived(
+            b'env', common.NS(b'IGNORED') + common.NS(b'ignored')))
+        self.assertEqual(self.flushLoggedErrors(), [])
+        # Allowed environment variable name succeeds.
+        self.assertTrue(self.session.requestReceived(
+            b'env', common.NS(b'NAME') + common.NS(b'value')))
+        self.assertEqual(
+            self.session._sessionSetEnv.environ, {b'NAME': b'value'})
+
+
+    def test_setEnvWithoutAdapter(self):
+        """
+        If the avatar does not have an ISessionSetEnv adapter, then a
+        request to pass an environment variable fails gracefully.
+        """
+        self.assertFalse(self.session.requestReceived(
+            b'env', common.NS(b'NAME') + common.NS(b'value')))
 
 
     def test_requestWindowChange(self):
@@ -759,18 +821,21 @@ class SessionInterfaceTests(unittest.TestCase):
 
 
 
-class SessionWithNoAvatarTests(unittest.TestCase):
+class SessionWithNoAvatarTests(RegistryUsingMixin, TestCase):
     """
     Test for the SSHSession interface.  Several of the methods (request_shell,
-    request_exec, request_pty_req, request_window_change) would create a
-    'session' instance variable from the avatar if one didn't exist when they
-    were called.
+    request_exec, request_pty_req, request_env, request_window_change) would
+    create a 'session' instance variable from the avatar if one didn't exist
+    when they were called.
     """
 
     if not cryptography:
         skip = "cannot run without cryptography"
 
     def setUp(self):
+        RegistryUsingMixin.setUp(self)
+        components.registerAdapter(
+            StubSessionForStubAvatar, StubAvatar, session.ISession)
         self.session = session.SSHSession()
         self.session.avatar = StubAvatar()
         self.assertIsNone(self.session.session)
@@ -814,6 +879,20 @@ class SessionWithNoAvatarTests(unittest.TestCase):
         self.assertSessionProvidesISession()
 
 
+    def test_requestEnvGetsSession(self):
+        """
+        If an ISessionSetEnv adapter isn't already present, request_env
+        should get one.
+        """
+        components.registerAdapter(
+            StubSessionForStubAvatar, StubAvatar, session.ISessionSetEnv)
+        self.session.requestReceived(b'env',
+                                     common.NS(b'NAME') + common.NS(b'value'))
+        self.assertTrue(
+            session.ISessionSetEnv.providedBy(self.session._sessionSetEnv),
+            "ISessionSetEnv not provided by %r" % self.session._sessionSetEnv)
+
+
     def test_requestWindowChangeGetsSession(self):
         """
         If an ISession adapter isn't already present, request_window_change
@@ -827,7 +906,7 @@ class SessionWithNoAvatarTests(unittest.TestCase):
 
 
 
-class WrappersTests(unittest.TestCase):
+class WrappersTests(TestCase):
     """
     A test for the wrapProtocol and wrapProcessProtocol functions.
     """
@@ -871,7 +950,7 @@ class WrappersTests(unittest.TestCase):
 
 
 
-class HelpersTests(unittest.TestCase):
+class HelpersTests(TestCase):
     """
     Tests for the 4 helper functions: parseRequest_* and packRequest_*.
     """
@@ -950,7 +1029,7 @@ class HelpersTests(unittest.TestCase):
 
 
 
-class SSHSessionProcessProtocolTests(unittest.TestCase):
+class SSHSessionProcessProtocolTests(TestCase):
     """
     Tests for L{SSHSessionProcessProtocol}.
     """
@@ -1018,6 +1097,8 @@ class SSHSessionProcessProtocolTests(unittest.TestCase):
         self.assertEqual(self.transport.buf, b'buffer')
 
 
+    @skipIf(not hasattr(signal, 'SIGALRM'),
+            "Not all signals available")
     def test_getSignalName(self):
         """
         _getSignalName should return the name of a signal when given the
@@ -1032,6 +1113,8 @@ class SSHSessionProcessProtocolTests(unittest.TestCase):
                                                 signalName))
 
 
+    @skipIf(not hasattr(signal, 'SIGALRM'),
+            "Not all signals available")
     def test_getSignalNameWithLocalSignal(self):
         """
         If there are signals in the signal module which aren't in the SSH RFC,
@@ -1041,12 +1124,7 @@ class SSHSessionProcessProtocolTests(unittest.TestCase):
         # Force reinitialization of signals
         self.pp._signalValuesToNames = None
         self.assertEqual(self.pp._getSignalName(signal.SIGTwistedTest),
-                          'SIGTwistedTest@' + sys.platform)
-
-
-    if getattr(signal, 'SIGALRM', None) is None:
-        test_getSignalName.skip = test_getSignalNameWithLocalSignal.skip = \
-            "Not all signals available"
+                         'SIGTwistedTest@' + sys.platform)
 
 
     def test_outReceived(self):
@@ -1140,6 +1218,8 @@ class SSHSessionProcessProtocolTests(unittest.TestCase):
         self.assertSessionClosed()
 
 
+    @skipIf(not hasattr(os, 'WCOREDUMP'),
+            "can't run this w/o os.WCOREDUMP")
     def test_processEndedWithExitSignalCoreDump(self):
         """
         When processEnded is called, if there is an exit signal in the reason
@@ -1159,6 +1239,8 @@ class SSHSessionProcessProtocolTests(unittest.TestCase):
         self.assertSessionClosed()
 
 
+    @skipIf(not hasattr(os, 'WCOREDUMP'),
+            "can't run this w/o os.WCOREDUMP")
     def test_processEndedWithExitSignalNoCoreDump(self):
         """
         When processEnded is called, if there is an exit signal in the
@@ -1175,14 +1257,8 @@ class SSHSessionProcessProtocolTests(unittest.TestCase):
         self.assertSessionClosed()
 
 
-    if getattr(os, 'WCOREDUMP', None) is None:
-        skipMsg = "can't run this w/o os.WCOREDUMP"
-        test_processEndedWithExitSignalCoreDump.skip = skipMsg
-        test_processEndedWithExitSignalNoCoreDump.skip = skipMsg
 
-
-
-class SSHSessionClientTests(unittest.TestCase):
+class SSHSessionClientTests(TestCase):
     """
     SSHSessionClient is an obsolete class used to connect standard IO to
     an SSHSession.

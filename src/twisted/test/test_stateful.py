@@ -78,7 +78,7 @@ class Int32Tests(TestCase, test_basic.IntNTestCaseMixin):
     protocol = TestInt32
     strings = [b"a", b"b" * 16]
     illegalStrings = [b"\x10\x00\x00\x00aaaaaa"]
-    partialStrings = [b"\x00\x00\x00", b"hello there", ""]
+    partialStrings = [b"\x00\x00\x00", b"hello there", b""]
 
     def test_bigReceive(self):
         r = self.getProtocol()
