@@ -309,7 +309,7 @@ IOBase.register(FakeFile)  # type: ignore[attr-defined]
 
 class EvilStr:
     def __str__(self) -> str:
-        1 // 0
+        return str(1 // 0)
 
 
 
@@ -319,7 +319,7 @@ class EvilRepr:
 
 
     def __repr__(self) -> str:
-        1 // 0
+        return str(1 // 0)
 
 
 
