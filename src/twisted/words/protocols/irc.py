@@ -3204,7 +3204,9 @@ class DccFileReceive(DccFileReceiveBasic):
     def __str__(self) -> str:
         if not self.connected:
             return "<Unconnected DccFileReceive object at %x>" % (id(self),)
-        from_ = self.transport.getPeer()
+        transport = self.transport
+        assert transport is not None
+        from_ = transport.getPeer()
         if self.fromUser:
             from_ = "%s (%s)" % (self.fromUser, from_)
 
