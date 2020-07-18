@@ -27,7 +27,7 @@ else:
     getgroups = _getgroups
 
 from typing import (Callable, ClassVar, Mapping, MutableMapping, Sequence,
-                    Union, Tuple)
+                    Union, Tuple, cast)
 
 from twisted.python.compat import unicode
 from incremental import Version
@@ -629,13 +629,20 @@ class FancyStrMixin:
 
     def __str__(self) -> str:
         r = ['<', getattr(self, 'fancybasename', self.__class__.__name__)]
+        # The casts help mypy understand which type from the Union applies
+        # in each 'if' case.
+        #   https://github.com/python/mypy/issues/9171
         for attr in self.showAttributes:
             if isinstance(attr, str):
                 r.append(' %s=%r' % (attr, getattr(self, attr)))
             elif len(attr) == 2:
-                r.append((' %s=' % (attr[0],)) + attr[1](getattr(self, attr[0])))
+                attr = cast(Tuple[str, Callable], attr)
+                r.append((' %s=' % (attr[0],))
+                         + attr[1](getattr(self, attr[0])))
             else:
-                r.append((' %s=' + attr[2]) % (attr[1], getattr(self, attr[0])))
+                attr = cast(Tuple[str, str, str], attr)
+                r.append((' %s=' + attr[2])
+                         % (attr[1], getattr(self, attr[0])))
         r.append('>')
         return ''.join(r)
 
