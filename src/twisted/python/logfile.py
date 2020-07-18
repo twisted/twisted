@@ -7,18 +7,18 @@
 A rotating, browsable log file.
 """
 
-from __future__ import division, absolute_import
 
 # System Imports
-import os, glob, time, stat
+import os
+import glob
+import time
+import stat
 
 from twisted.python import threadable
-from twisted.python._oldstyle import _oldStyle
 from twisted.python.compat import unicode
 
 
 
-@_oldStyle
 class BaseLogFile:
     """
     The base class for a log file that can be rotated.
@@ -45,6 +45,7 @@ class BaseLogFile:
         self._openFile()
 
 
+    @classmethod
     def fromFullPath(cls, filename, *args, **kwargs):
         """
         Construct a log file from a full file path.
@@ -52,7 +53,6 @@ class BaseLogFile:
         logPath = os.path.abspath(filename)
         return cls(os.path.basename(logPath),
                    os.path.dirname(logPath), *args, **kwargs)
-    fromFullPath = classmethod(fromFullPath)
 
 
     def shouldRotate(self):
@@ -310,7 +310,7 @@ class DailyLogFile(BaseLogFile):
 threadable.synchronize(DailyLogFile)
 
 
-@_oldStyle
+
 class LogReader:
     """Read from a log file."""
 

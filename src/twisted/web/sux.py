@@ -20,7 +20,6 @@ does not:
     option, they're not on by default).
 """
 
-from __future__ import print_function
 
 from twisted.internet.protocol import Protocol
 from twisted.python.compat import unicode

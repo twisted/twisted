@@ -8,7 +8,6 @@ allows access to the shell and port-forwarding.
 
 Maintainer: Paul Swartz
 """
-from __future__ import division, absolute_import
 
 import string
 import struct

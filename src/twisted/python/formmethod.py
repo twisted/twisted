@@ -11,8 +11,8 @@ to format methods.
 """
 
 import calendar
+from typing import Any, Optional, Tuple
 
-from twisted.python._oldstyle import _oldStyle
 
 
 class FormException(Exception):
@@ -23,6 +23,7 @@ class FormException(Exception):
         self.descriptions = kwargs
 
 
+
 class InputError(FormException):
     """
     An error occurred with some input.
@@ -30,12 +31,11 @@ class InputError(FormException):
 
 
 
-@_oldStyle
 class Argument:
     """Base class for form arguments."""
 
     # default value for argument, if no other default is given
-    defaultDefault = None
+    defaultDefault = None  # type: Any
 
     def __init__(self, name, default=None, shortDesc=None,
                  longDesc=None, hints=None, allowNone=1):
@@ -67,10 +67,11 @@ class Argument:
         raise NotImplementedError("implement in subclass")
 
 
+
 class String(Argument):
     """A single string.
     """
-    defaultDefault = ''
+    defaultDefault = ''  # type: str
     min = 0
     max = None
 
@@ -90,14 +91,17 @@ class String(Argument):
         return str(val)
 
 
+
 class Text(String):
     """A long string.
     """
 
 
+
 class Password(String):
     """A string which should be obscured when input.
     """
+
 
 
 class VerifiedPassword(String):
@@ -114,6 +118,7 @@ class VerifiedPassword(String):
         return s
 
 
+
 class Hidden(String):
     """A string which is not displayed.
 
@@ -121,10 +126,11 @@ class Hidden(String):
     """
 
 
+
 class Integer(Argument):
     """A single integer.
     """
-    defaultDefault = None
+    defaultDefault = None  # type: Optional[int]
 
     def __init__(self, name, allowNone=1, default=None, shortDesc=None,
                  longDesc=None, hints=None):
@@ -142,7 +148,10 @@ class Integer(Argument):
         try:
             return int(val)
         except ValueError:
-            raise InputError("%s is not valid, please enter a whole number, e.g. 10" % val)
+            raise InputError(
+                "{} is not valid, please enter "
+                "a whole number, e.g. 10".format(val))
+
 
 
 class IntegerRange(Integer):
@@ -165,9 +174,10 @@ class IntegerRange(Integer):
         return result
 
 
+
 class Float(Argument):
 
-    defaultDefault = None
+    defaultDefault = None  # type: Optional[float]
 
     def __init__(self, name, allowNone=1, default=None, shortDesc=None,
                  longDesc=None, hints=None):
@@ -187,6 +197,7 @@ class Float(Argument):
             return float(val)
         except ValueError:
             raise InputError("Invalid float: %s" % val)
+
 
 
 class Choice(Argument):
@@ -212,6 +223,7 @@ class Choice(Argument):
                 return val
         else:
             raise InputError("Invalid Choice: %s" % inIdent)
+
 
 
 class Flags(Argument):
@@ -243,12 +255,15 @@ class Flags(Argument):
         return outFlags
 
 
+
 class CheckGroup(Flags):
     pass
 
 
+
 class RadioGroup(Choice):
     pass
+
 
 
 class Boolean(Argument):
@@ -259,6 +274,8 @@ class Boolean(Argument):
         if lInVal in ('no', 'n', 'f', 'false', '0'):
             return 0
         return 1
+
+
 
 class File(Argument):
     def __init__(self, name, allowNone=1, shortDesc=None, longDesc=None,
@@ -274,15 +291,20 @@ class File(Argument):
         else:
             raise InputError("Invalid File")
 
+
+
 def positiveInt(x):
     x = int(x)
-    if x <= 0: raise ValueError
+    if x <= 0:
+        raise ValueError
     return x
+
+
 
 class Date(Argument):
     """A date -- (year, month, day) tuple."""
 
-    defaultDefault = None
+    defaultDefault = None  # type: Optional[Tuple[int, int, int]]
 
     def __init__(self, name, allowNone=1, default=None, shortDesc=None,
                  longDesc=None, hints=None):
@@ -332,7 +354,6 @@ class Submit(Choice):
 
 
 
-@_oldStyle
 class PresentationHint:
     """
     A hint to a particular system.
@@ -340,7 +361,6 @@ class PresentationHint:
 
 
 
-@_oldStyle
 class MethodSignature:
     """
     A signature of a callable.
@@ -361,7 +381,6 @@ class MethodSignature:
 
 
 
-@_oldStyle
 class FormMethod:
     """A callable object with a signature."""
 

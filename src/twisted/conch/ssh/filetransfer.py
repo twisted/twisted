@@ -3,20 +3,20 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-from __future__ import division, absolute_import
 
 import errno
 import struct
 import warnings
 
+from typing import Dict
 from zope.interface import implementer
 
 from twisted.conch.interfaces import ISFTPServer, ISFTPFile
 from twisted.conch.ssh.common import NS, getNS
-from twisted.internet import defer, protocol
+from twisted.internet import defer, protocol, error
 from twisted.python import failure, log
 from twisted.python.compat import (
-    _PY3, range, itervalues, nativeString, networkString)
+    range, itervalues, nativeString, networkString)
 
 
 
@@ -24,7 +24,7 @@ class FileTransferBase(protocol.Protocol):
 
     versions = (3, )
 
-    packetTypes = {}
+    packetTypes = {}  # type: Dict[int, str]
 
     def __init__(self):
         self.buf = b''
@@ -121,6 +121,14 @@ class FileTransferBase(protocol.Protocol):
             data += b''.join(extended)
             flags |= FILEXFER_ATTR_EXTENDED
         return struct.pack('!L', flags) + data
+
+    def connectionLost(self, reason):
+        """
+        Called when connection to the remote subsystem was lost.
+        """
+
+        super().connectionLost(reason)
+        self.connected = False
 
 
 
@@ -496,8 +504,13 @@ class FileTransferServer(FileTransferBase):
 
     def connectionLost(self, reason):
         """
+        Called when connection to the remote subsystem was lost.
+
         Clean all opened files and directories.
         """
+
+        FileTransferBase.connectionLost(self, reason)
+
         for fileObj in self.openFiles.values():
             fileObj.close()
         self.openFiles = {}
@@ -527,7 +540,42 @@ class FileTransferClient(FileTransferBase):
         self.sendPacket(FXP_INIT, data)
 
 
+    def connectionLost(self, reason):
+        """
+        Called when connection to the remote subsystem was lost.
+
+        Any pending requests are aborted.
+        """
+
+        FileTransferBase.connectionLost(self, reason)
+
+        # If there are still requests waiting for responses when the
+        # connection is lost, fail them.
+        if self.openRequests:
+
+            # Even if our transport was lost "cleanly", our
+            # requests were still not cancelled "cleanly".
+            requestError = error.ConnectionLost()
+            requestError.__cause__ = reason.value
+            requestFailure = failure.Failure(requestError)
+            while self.openRequests:
+                _, deferred = self.openRequests.popitem()
+                deferred.errback(requestFailure)
+
+
     def _sendRequest(self, msg, data):
+        """
+        Send a request and return a deferred which waits for the result.
+
+        @type msg: L{int}
+        @param msg: The request type (e.g., C{FXP_READ}).
+
+        @type data: L{bytes}
+        @param data: The body of the request.
+        """
+        if not self.connected:
+            return defer.fail(error.ConnectionLost())
+
         data = struct.pack('!L', self.counter) + data
         d = defer.Deferred()
         self.openRequests[self.counter] = d
@@ -767,8 +815,7 @@ class FileTransferClient(FileTransferBase):
 
     def _cbRealPath(self, result):
         name, longname, attrs = result[0]
-        if _PY3:
-            name = name.decode("utf-8")
+        name = name.decode("utf-8")
         return name
 
 
@@ -961,6 +1008,7 @@ class SFTPError(Exception):
         self.lang = lang
 
 
+    @property
     def message(self):
         """
         A string received over the network that explains the error to a human.
@@ -971,7 +1019,6 @@ class SFTPError(Exception):
         # compatibility with object clients that rely on the 'message'
         # attribute being set correctly. See bug #3897.
         return self._message
-    message = property(message)
 
 
     def __str__(self):

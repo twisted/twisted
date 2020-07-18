@@ -5,7 +5,6 @@
 Utilities for dealing with processes.
 """
 
-from __future__ import division, absolute_import
 
 import os
 

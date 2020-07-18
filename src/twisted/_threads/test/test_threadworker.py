@@ -5,7 +5,6 @@
 Tests for L{twisted._threads._threadworker}.
 """
 
-from __future__ import absolute_import, division, print_function
 
 import gc
 import weakref
@@ -295,13 +294,14 @@ class LockWorkerTests(SynchronousTestCase):
         L{AlreadyQuit} will be raised.
         """
         class RacyLockWorker(LockWorker):
-            def _lock_get(self):
+            @property
+            def _lock(self):
                 self.quit()
                 return self.__dict__['_lock']
-            def _lock_set(self, value):
-                self.__dict__['_lock'] = value
 
-            _lock = property(_lock_get, _lock_set)
+            @_lock.setter
+            def _lock(self, value):
+                self.__dict__['_lock'] = value
 
         worker = RacyLockWorker(FakeLock(), local())
         self.assertRaises(AlreadyQuit, worker.do, list)

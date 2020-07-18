@@ -6,10 +6,10 @@
 Tests for  XML-RPC support in L{twisted.web.xmlrpc}.
 """
 
-from __future__ import division, absolute_import
 
 from twisted.python.compat import nativeString, networkString, NativeStringIO
 from io import BytesIO
+from unittest import skipIf
 
 import datetime
 
@@ -29,9 +29,10 @@ from twisted.logger import (globalLogPublisher, FilteringLogObserver,
 try:
     namedModule('twisted.internet.ssl')
 except ImportError:
-    sslSkip = "OpenSSL not present"
+    sslSkip = True
 else:
-    sslSkip = None
+    sslSkip = False
+
 
 
 class AsyncXMLRPCTests(unittest.TestCase):
@@ -112,7 +113,8 @@ class Test(XMLRPC):
         """
         return a + b
 
-    xmlrpc_add.signature = [['int', 'int', 'int'],
+    xmlrpc_add.signature = [['int', 'int',  # type: ignore[attr-defined]
+                             'int'],
                             ['double', 'double', 'double']]
 
     # the doc string is part of the test
@@ -122,7 +124,8 @@ class Test(XMLRPC):
         """
         return [string, num]
 
-    xmlrpc_pair.signature = [['array', 'string', 'int']]
+    xmlrpc_pair.signature = [['array',  # type: ignore[attr-defined]
+                              'string', 'int']]
 
     # the doc string is part of the test
     def xmlrpc_defer(self, x):
@@ -156,7 +159,7 @@ class Test(XMLRPC):
 
     def xmlrpc_dict(self, map, key):
         return map[key]
-    xmlrpc_dict.help = 'Help for dict.'
+    xmlrpc_dict.help = 'Help for dict.'  # type: ignore[attr-defined]
 
     @withRequest
     def xmlrpc_withRequest(self, request, other):
@@ -523,6 +526,7 @@ class XMLRPCTests(unittest.TestCase):
         self.assertEqual(reactor.tcpClients[0][3], 2.0)
 
 
+    @skipIf(sslSkip, "OpenSSL not present")
     def test_sslTimeout(self):
         """
         For I{HTTPS} URIs, L{xmlrpc.Proxy.callRemote} passes the value it
@@ -534,7 +538,6 @@ class XMLRPCTests(unittest.TestCase):
                              reactor=reactor)
         proxy.callRemote("someMethod")
         self.assertEqual(reactor.sslClients[0][4], 3.0)
-    test_sslTimeout.skip = sslSkip
 
 
 

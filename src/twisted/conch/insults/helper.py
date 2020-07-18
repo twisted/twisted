@@ -8,9 +8,9 @@ Partial in-memory terminal emulator
 @author: Jp Calderone
 """
 
-from __future__ import print_function
 
-import re, string
+import re
+import string
 
 from zope.interface import implementer
 
@@ -454,6 +454,64 @@ class TerminalBuffer(protocol.Protocol):
                     buf.append(self.fill)
             lines.append(b''.join(buf[:length]))
         return b'\n'.join(lines)
+
+
+    def getHost(self):
+        # ITransport.getHost
+        raise NotImplementedError("Unimplemented: TerminalBuffer.getHost")
+
+
+    def getPeer(self):
+        # ITransport.getPeer
+        raise NotImplementedError("Unimplemented: TerminalBuffer.getPeer")
+
+
+    def loseConnection(self):
+        # ITransport.loseConnection
+        raise NotImplementedError(
+            "Unimplemented: TerminalBuffer.loseConnection")
+
+
+    def writeSequence(self, data):
+        # ITransport.writeSequence
+        raise NotImplementedError(
+            "Unimplemented: TerminalBuffer.writeSequence")
+
+
+    def horizontalTabulationSet(self):
+        # ITerminalTransport.horizontalTabulationSet
+        raise NotImplementedError(
+            "Unimplemented: TerminalBuffer.horizontalTabulationSet")
+
+
+    def tabulationClear(self):
+        # TerminalTransport.tabulationClear
+        raise NotImplementedError(
+            "Unimplemented: TerminalBuffer.tabulationClear")
+
+
+    def tabulationClearAll(self):
+        # TerminalTransport.tabulationClearAll
+        raise NotImplementedError(
+            "Unimplemented: TerminalBuffer.tabulationClearAll")
+
+
+    def doubleHeightLine(self, top=True):
+        # ITerminalTransport.doubleHeightLine
+        raise NotImplementedError(
+            "Unimplemented: TerminalBuffer.doubleHeightLine")
+
+
+    def singleWidthLine(self):
+        # ITerminalTransport.singleWidthLine
+        raise NotImplementedError(
+            "Unimplemented: TerminalBuffer.singleWidthLine")
+
+
+    def doubleWidthLine(self):
+        # ITerminalTransport.doubleWidthLine
+        raise NotImplementedError(
+            "Unimplemented: TerminalBuffer.doubleWidthLine")
 
 
 

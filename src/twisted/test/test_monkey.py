@@ -5,7 +5,6 @@
 Tests for L{twisted.python.monkey}.
 """
 
-from __future__ import division, absolute_import
 
 from twisted.trial import unittest
 from twisted.python.monkey import MonkeyPatcher

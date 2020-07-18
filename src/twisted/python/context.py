@@ -12,18 +12,17 @@ retrieve 'value'.
 This is thread-safe.
 """
 
-from __future__ import division, absolute_import
 
 from threading import local
+from typing import Dict, Type
 
-from twisted.python._oldstyle import _oldStyle
 
-
-defaultContextDict = {}
+defaultContextDict = {}  # type: Dict[Type[object], Dict[str, str]]
 
 setDefault = defaultContextDict.__setitem__
 
-@_oldStyle
+
+
 class ContextTracker:
     """
     A L{ContextTracker} provides a way to pass arbitrary key/value data up and
@@ -125,6 +124,13 @@ class ThreadedContextTracker(object):
         return self.currentContext().getContext(key, default)
 
 
+
+theContextTracker = ThreadedContextTracker()
+call = theContextTracker.callWithContext
+get = theContextTracker.getContext
+
+
+
 def installContextTracker(ctr):
     global theContextTracker
     global call
@@ -133,5 +139,3 @@ def installContextTracker(ctr):
     theContextTracker = ctr
     call = theContextTracker.callWithContext
     get = theContextTracker.getContext
-
-installContextTracker(ThreadedContextTracker())

@@ -4,7 +4,6 @@
 Tests for positioning sentences.
 """
 
-from __future__ import absolute_import, division
 
 import itertools
 

@@ -5,7 +5,6 @@
 XMPP-specific SASL profile.
 """
 
-from __future__ import absolute_import, division
 
 from base64 import b64decode, b64encode
 import re

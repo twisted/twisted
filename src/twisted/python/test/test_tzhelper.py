@@ -10,7 +10,7 @@ from os import environ
 try:
     from time import tzset
 except ImportError:
-    tzset = None
+    tzset = None  # type: ignore[assignment,misc]
 
 from twisted.python._tzhelper import FixedOffsetTimeZone
 from twisted.trial.unittest import TestCase, SkipTest

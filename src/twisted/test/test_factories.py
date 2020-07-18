@@ -5,7 +5,6 @@
 Test code for basic Factory classes.
 """
 
-from __future__ import division, absolute_import
 
 import pickle
 

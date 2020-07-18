@@ -7,7 +7,6 @@ Plugin-based system for enumerating available reactors and installing one of
 them.
 """
 
-from __future__ import absolute_import, division
 
 from zope.interface import Interface, Attribute, implementer
 

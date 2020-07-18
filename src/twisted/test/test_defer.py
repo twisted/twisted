@@ -5,48 +5,36 @@
 Test cases for L{twisted.internet.defer}.
 """
 
-from __future__ import division, absolute_import
 
 import warnings
 import gc
+import functools
 import traceback
 import re
 
-from twisted.python import compat, failure, log
-from twisted.python.compat import _PY3, _PY35PLUS
+from asyncio import new_event_loop, Future, CancelledError
+
+from twisted.python.reflect import requireModule
+from twisted.python import failure, log
 from twisted.trial import unittest
 from twisted.internet import defer, reactor
 from twisted.internet.task import Clock
 
 
-if _PY3:
-    from asyncio import new_event_loop, Future, CancelledError
-    asyncSkip = None
+contextvars = requireModule('contextvars')
+if contextvars:
+    contextvarsSkip = None
 else:
-    asyncSkip = "asyncio not available before python 3.4"
+    contextvarsSkip = "contextvars is not available"
 
 
-if _PY35PLUS:
-    from twisted.python.filepath import FilePath
 
-    _path = FilePath(__file__).parent().child("test_defer.py.3only")
-
-    _g = {"__name__": __name__ + ".3only"}
-    compat.execfile(_path.path, _g)
-    DeferredTestsAsync = _g["DeferredTestsAsync"]
-else:
-    class DeferredTestsAsync(unittest.TestCase):
-        """
-        A dummy class to show that this test file was discovered but the tests
-        are unable to be ran in this version of Python.
-        """
-        skip = "async/await is not available before Python 3.5"
-
-        def test_notAvailable(self):
-            """
-            A skipped test to show that this was not ran because the Python is
-            too old.
-            """
+def ensuringDeferred(f):
+    @functools.wraps(f)
+    def wrapper(*args, **kwargs):
+        result = f(*args, **kwargs)
+        return defer.ensureDeferred(result)
+    return wrapper
 
 
 
@@ -1437,16 +1425,11 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         newFailure = self.failureResultOf(d)
         tb = traceback.extract_tb(newFailure.getTracebackObject())
 
-        if _PY3:
-            self.assertEqual(len(tb), 3)
-            self.assertIn('test_defer', tb[2][0])
-            self.assertEqual('getDivisionFailure', tb[2][2])
-            self.assertEqual('1/0', tb[2][3])
-        else:
-            self.assertEqual(len(tb), 2)
-            self.assertIn('test_defer', tb[1][0])
-            self.assertEqual('getDivisionFailure', tb[1][2])
-            self.assertEqual('1/0', tb[1][3])
+        self.assertEqual(len(tb), 3)
+        self.assertIn('test_defer', tb[2][0])
+        self.assertEqual('getDivisionFailure', tb[2][2])
+        self.assertEqual('1/0', tb[2][3])
+
         self.assertIn('test_defer', tb[0][0])
         self.assertEqual('test_inlineCallbacksTracebacks', tb[0][2])
         self.assertEqual('f.raiseException()', tb[0][3])
@@ -3013,8 +2996,6 @@ def callAllSoonCalls(loop):
 
 class DeferredFutureAdapterTests(unittest.TestCase):
 
-    skip = asyncSkip
-
     def test_asFuture(self):
         """
         L{defer.Deferred.asFuture} returns a L{asyncio.Future} which fires when
@@ -3122,3 +3103,222 @@ class DeferredFutureAdapterTests(unittest.TestCase):
         self.assertEqual(cancelled.cancelled(), True)
         self.assertRaises(CancelledError, cancelled.result)
         self.failureResultOf(d).trap(CancelledError)
+
+
+
+class CoroutineContextVarsTests(unittest.TestCase):
+
+    skip = contextvarsSkip
+
+    def test_withInlineCallbacks(self):
+        """
+        When an inlineCallbacks function is called, the context is taken from
+        when it was first called. When it resumes, the same context is applied.
+        """
+        clock = Clock()
+
+        var = contextvars.ContextVar("testvar")
+        var.set(1)
+
+        # This Deferred will set its own context to 3 when it is called
+        mutatingDeferred = defer.Deferred()
+        mutatingDeferred.addCallback(lambda _: var.set(3))
+
+        mutatingDeferredThatFails = defer.Deferred()
+        mutatingDeferredThatFails.addCallback(lambda _: var.set(4))
+        mutatingDeferredThatFails.addCallback(lambda _: 1 / 0)
+
+        @defer.inlineCallbacks
+        def yieldingDeferred():
+            d = defer.Deferred()
+            clock.callLater(1, d.callback, True)
+            yield d
+            var.set(3)
+
+        # context is 1 when the function is defined
+        @defer.inlineCallbacks
+        def testFunction():
+
+            # Expected to be 2
+            self.assertEqual(var.get(), 2)
+
+            # Does not mutate the context
+            yield defer.succeed(1)
+
+            # Expected to be 2
+            self.assertEqual(var.get(), 2)
+
+            # mutatingDeferred mutates it to 3, but only in its Deferred chain
+            clock.callLater(1, mutatingDeferred.callback, True)
+            yield mutatingDeferred
+
+            # When it resumes, it should still be 2
+            self.assertEqual(var.get(), 2)
+
+            # mutatingDeferredThatFails mutates it to 3, but only in its
+            # Deferred chain
+            clock.callLater(1, mutatingDeferredThatFails.callback, True)
+            try:
+                yield mutatingDeferredThatFails
+            except Exception:
+                self.assertEqual(var.get(), 2)
+            else:
+                raise Exception("???? should have failed")
+
+            # IMPLEMENTATION DETAIL: Because inlineCallbacks must be at every
+            # level, an inlineCallbacks function yielding another
+            # inlineCallbacks function will NOT mutate the outer one's context,
+            # as it is copied when the inner one is ran and mutated there.
+            yield yieldingDeferred()
+            self.assertEqual(var.get(), 2)
+
+            defer.returnValue(True)
+
+        # The inlineCallbacks context is 2 when it's called
+        var.set(2)
+        d = testFunction()
+
+        # Advance the clock so mutatingDeferred triggers
+        clock.advance(1)
+
+        # Advance the clock so that mutatingDeferredThatFails triggers
+        clock.advance(1)
+
+        # Advance the clock so that yieldingDeferred triggers
+        clock.advance(1)
+
+        self.assertEqual(self.successResultOf(d), True)
+
+
+    @ensuringDeferred
+    async def test_asyncWithLock(self):
+        """
+        L{defer.DeferredLock} can be used as an asynchronous context manager.
+        """
+        lock = defer.DeferredLock()
+        async with lock:
+            self.assertTrue(lock.locked)
+            d = lock.acquire()
+            d.addCallback(lambda _: lock.release())
+            self.assertTrue(lock.locked)
+            self.assertFalse(d.called)
+        self.assertTrue(d.called)
+        await d
+        self.assertFalse(lock.locked)
+
+
+    @ensuringDeferred
+    async def test_asyncWithSemaphore(self):
+        """
+        L{defer.DeferredSemaphore} can be used as an asynchronous context
+        manager.
+        """
+        sem = defer.DeferredSemaphore(3)
+
+        async with sem:
+            self.assertEqual(sem.tokens, 2)
+            async with sem:
+                self.assertEqual(sem.tokens, 1)
+                d1 = sem.acquire()
+                d2 = sem.acquire()
+                self.assertEqual(sem.tokens, 0)
+                self.assertTrue(d1.called)
+                self.assertFalse(d2.called)
+            self.assertEqual(sem.tokens, 0)
+            self.assertTrue(d2.called)
+            d1.addCallback(lambda _: sem.release())
+            d2.addCallback(lambda _: sem.release())
+            await d1
+            await d2
+            self.assertEqual(sem.tokens, 2)
+        self.assertEqual(sem.tokens, 3)
+
+    @ensuringDeferred
+    async def test_asyncWithLockException(self):
+        """
+        C{defer.DeferredLock} correctly propagates exceptions when
+        used as an asynchronous context manager.
+        """
+        lock = defer.DeferredLock()
+        with self.assertRaisesRegexp(Exception, 'some specific exception'):
+            async with lock:
+                self.assertTrue(lock.locked)
+                raise Exception('some specific exception')
+        self.assertFalse(lock.locked)
+
+
+    def test_contextvarsWithAsyncAwait(self):
+        """
+        When a coroutine is called, the context is taken from when it was first
+        called. When it resumes, the same context is applied.
+        """
+        clock = Clock()
+
+        var = contextvars.ContextVar("testvar")
+        var.set(1)
+
+        # This Deferred will set its own context to 3 when it is called
+        mutatingDeferred = defer.Deferred()
+        mutatingDeferred.addCallback(lambda _: var.set(3))
+
+        mutatingDeferredThatFails = defer.Deferred()
+        mutatingDeferredThatFails.addCallback(lambda _: var.set(4))
+        mutatingDeferredThatFails.addCallback(lambda _: 1 / 0)
+
+        async def asyncFuncAwaitingDeferred():
+            d = defer.Deferred()
+            clock.callLater(1, d.callback, True)
+            await d
+            var.set(3)
+
+        # context is 1 when the function is defined
+        async def testFunction():
+
+            # Expected to be 2
+            self.assertEqual(var.get(), 2)
+
+            # Does not mutate the context
+            await defer.succeed(1)
+
+            # Expected to be 2
+            self.assertEqual(var.get(), 2)
+
+            # mutatingDeferred mutates it to 3, but only in its Deferred chain
+            clock.callLater(0, mutatingDeferred.callback, True)
+            await mutatingDeferred
+
+            # When it resumes, it should still be 2
+            self.assertEqual(var.get(), 2)
+
+            # mutatingDeferredThatFails mutates it to 3, but only in its
+            # Deferred chain
+            clock.callLater(1, mutatingDeferredThatFails.callback, True)
+            try:
+                await mutatingDeferredThatFails
+            except Exception:
+                self.assertEqual(var.get(), 2)
+            else:
+                raise Exception("???? should have failed")
+
+            # If we await another async def-defined function, it will be able
+            # to mutate the outer function's context, it is *not* frozen and
+            # restored inside the function call.
+            await asyncFuncAwaitingDeferred()
+            self.assertEqual(var.get(), 3)
+
+            return True
+
+        # The inlineCallbacks context is 2 when it's called
+        var.set(2)
+        d = defer.ensureDeferred(testFunction())
+
+        # Advance the clock so mutatingDeferred triggers
+        clock.advance(1)
+
+        # Advance the clock so that mutatingDeferredThatFails triggers
+        clock.advance(1)
+
+        # Advance the clock so that asyncFuncAwaitingDeferred triggers
+        clock.advance(1)
+
+        self.assertEqual(self.successResultOf(d), True)

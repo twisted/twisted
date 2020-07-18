@@ -7,19 +7,8 @@ Postfix mail transport agent related protocols.
 """
 
 import sys
-try:
-    # Python 2
-    from UserDict import UserDict
-except ImportError:
-    # Python 3
-    from collections import UserDict
-
-try:
-    # Python 2
-    from urllib import quote as _quote, unquote as _unquote
-except ImportError:
-    # Python 3
-    from urllib.parse import quote as _quote, unquote as _unquote
+from collections import UserDict
+from urllib.parse import quote as _quote, unquote as _unquote
 
 from twisted.protocols import basic
 from twisted.protocols import policies
