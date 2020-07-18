@@ -17,7 +17,7 @@ import struct
 from itertools import chain
 
 from io import BytesIO
-from typing import Optional
+from typing import Optional, SupportsInt, Union
 
 from zope.interface import implementer, Interface, Attribute
 
@@ -926,17 +926,14 @@ class RRHeader(tputil.FancyEqMixin):
 
     fmt = "!HHIH"
 
-    name = None
-    type = None
-    cls = None
-    ttl = None
-    payload = None
     rdlength = None
 
     cachedResponse = None
 
-    def __init__(self, name=b'', type=A, cls=IN, ttl=0, payload=None,
-                 auth=False):
+    def __init__(self, name: Union[bytes, str] = b'', type: int = A,
+                 cls: int = IN, ttl: SupportsInt = 0,
+                 payload: Optional[IEncodableRecord] = None,
+                 auth: bool = False):
         """
         @type name: L{bytes} or L{str}
         @param name: See L{RRHeader.name}
