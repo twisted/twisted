@@ -603,11 +603,9 @@ class Query:
     @ivar cls: The query class.
     @type cls: L{int}
     """
-    name = None
-    type = None
-    cls = None
 
-    def __init__(self, name=b'', type=A, cls=IN):
+    def __init__(self, name: Union[bytes, str] = b'', type: int = A,
+                 cls: int = IN):
         """
         @type name: L{bytes} or L{str}
         @param name: See L{Query.name}
