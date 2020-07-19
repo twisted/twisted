@@ -6,14 +6,15 @@
 Posix reactor base class
 """
 
-from __future__ import division, absolute_import
 
 import socket
 import errno
 import os
 import sys
 
-from zope.interface import implementer, classImplements
+from typing import Sequence
+
+from zope.interface import Attribute, Interface, implementer, classImplements
 
 from twisted.internet import error, udp, tcp
 from twisted.internet.base import ReactorBase, _SignalReactorMixin
@@ -32,13 +33,18 @@ _NO_FILEDESC = error.ConnectionFdescWentAway('File descriptor lost')
 
 
 try:
-    from twisted.protocols import tls
+    from twisted.protocols import tls as _tls
 except ImportError:
     tls = None
-    try:
-        from twisted.internet import ssl
-    except ImportError:
-        ssl = None
+else:
+    tls = _tls
+
+try:
+    from twisted.internet import ssl as _ssl
+except ImportError:
+    ssl = None
+else:
+    ssl = _ssl
 
 unixEnabled = (platformType == 'posix')
 
@@ -57,6 +63,37 @@ if platform.isWindows():
         win32process = None
 
 
+
+class _IWaker(Interface):
+    """
+    Interface to wake up the event loop based on the self-pipe trick.
+
+    The U{I{self-pipe trick}<http://cr.yp.to/docs/selfpipe.html>}, used to wake
+    up the main loop from another thread or a signal handler.
+    This is why we have wakeUp together with doRead
+
+    This is used by threads or signals to wake up the event loop.
+    """
+    disconnected = Attribute('')
+
+    def wakeUp():
+        """
+        Called when the event should be wake up.
+        """
+
+    def doRead():
+        """
+        Read some data from my connection and discard it.
+        """
+
+    def connectionLost(reason: failure.Failure):
+        """
+        Called when connection was closed and the pipes.
+        """
+
+
+
+@implementer(_IWaker)
 class _SocketWaker(log.Logger):
     """
     The I{self-pipe trick<http://cr.yp.to/docs/selfpipe.html>}, implemented
@@ -93,13 +130,16 @@ class _SocketWaker(log.Logger):
             if e.args[0] != errno.WSAEWOULDBLOCK:
                 raise
 
+
     def doRead(self):
-        """Read some data from my connection.
+        """
+        Read some data from my connection.
         """
         try:
             self.r.recv(8192)
         except socket.error:
             pass
+
 
     def connectionLost(self, reason):
         self.r.close()
@@ -159,6 +199,7 @@ class _FDWaker(log.Logger, object):
 
 
 
+@implementer(_IWaker)
 class _UnixWaker(_FDWaker):
     """
     This class provides a simple interface to wake up the event loop.
@@ -186,7 +227,8 @@ if platformType == 'posix':
     _Waker = _UnixWaker
 else:
     # Primarily Windows and Jython.
-    _Waker = _SocketWaker
+    _Waker = _SocketWaker  # type: ignore[misc,assignment]
+
 
 
 class _SIGCHLDWaker(_FDWaker):
@@ -432,7 +474,7 @@ class PosixReactorBase(_SignalReactorMixin, _DisconnectSelectableMixin,
     if unixEnabled:
         _supportedAddressFamilies = (
             socket.AF_INET, socket.AF_INET6, socket.AF_UNIX,
-        )
+        )  # type: Sequence[socket.AddressFamily]
     else:
         _supportedAddressFamilies = (
             socket.AF_INET, socket.AF_INET6,

@@ -2,7 +2,6 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-from __future__ import division, absolute_import
 
 import os
 import sys
@@ -42,7 +41,7 @@ class Platform:
     """
 
     type = knownPlatforms.get(os.name)
-    seconds = staticmethod(_timeFunctions.get(type, time.time))
+    seconds = staticmethod(_timeFunctions.get(type, time.time))  # type: ignore[arg-type]  # noqa
     _platform = sys.platform
 
     def __init__(self, name=None, platform=None):

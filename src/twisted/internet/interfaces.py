@@ -7,9 +7,11 @@ Interface documentation.
 Maintainer: Itamar Shtull-Trauring
 """
 
-from __future__ import division, absolute_import
 
+from typing import Any, Callable, Sequence, Union
+from twisted.python.failure import Failure
 from zope.interface import Interface, Attribute
+
 
 
 class IAddress(Interface):
@@ -56,7 +58,7 @@ class IConnector(Interface):
 
 
 class IResolverSimple(Interface):
-    def getHostByName(name, timeout = (1, 3, 11, 45)):
+    def getHostByName(name: Union[bytes, str], timeout: Sequence[int]):
         """
         Resolve the domain name C{name} into an IP address.
 
@@ -150,8 +152,9 @@ class IHostnameResolver(Interface):
     @since: Twisted 17.1.0
     """
 
-    def resolveHostName(resolutionReceiver, hostName, portNumber=0,
-                        addressTypes=None, transportSemantics='TCP'):
+    def resolveHostName(resolutionReceiver: IResolutionReceiver, hostName: str,
+                        portNumber: int, addressTypes: Sequence[IAddress],
+                        transportSemantics: str):
         """
         Initiate a hostname resolution.
 
@@ -189,7 +192,7 @@ class IHostnameResolver(Interface):
 
 
 class IResolver(IResolverSimple):
-    def query(query, timeout=None):
+    def query(query, timeout):
         """
         Dispatch C{query} to the method which can handle its type.
 
@@ -212,7 +215,7 @@ class IResolver(IResolverSimple):
         """
 
 
-    def lookupAddress(name, timeout=None):
+    def lookupAddress(name, timeout):
         """
         Perform an A record lookup.
 
@@ -234,7 +237,7 @@ class IResolver(IResolverSimple):
         """
 
 
-    def lookupAddress6(name, timeout=None):
+    def lookupAddress6(name, timeout):
         """
         Perform an A6 record lookup.
 
@@ -256,7 +259,7 @@ class IResolver(IResolverSimple):
         """
 
 
-    def lookupIPV6Address(name, timeout=None):
+    def lookupIPV6Address(name, timeout):
         """
         Perform an AAAA record lookup.
 
@@ -278,7 +281,7 @@ class IResolver(IResolverSimple):
         """
 
 
-    def lookupMailExchange(name, timeout=None):
+    def lookupMailExchange(name, timeout):
         """
         Perform an MX record lookup.
 
@@ -300,7 +303,7 @@ class IResolver(IResolverSimple):
         """
 
 
-    def lookupNameservers(name, timeout=None):
+    def lookupNameservers(name, timeout):
         """
         Perform an NS record lookup.
 
@@ -322,7 +325,7 @@ class IResolver(IResolverSimple):
         """
 
 
-    def lookupCanonicalName(name, timeout=None):
+    def lookupCanonicalName(name, timeout):
         """
         Perform a CNAME record lookup.
 
@@ -344,7 +347,7 @@ class IResolver(IResolverSimple):
         """
 
 
-    def lookupMailBox(name, timeout=None):
+    def lookupMailBox(name, timeout):
         """
         Perform an MB record lookup.
 
@@ -366,7 +369,7 @@ class IResolver(IResolverSimple):
         """
 
 
-    def lookupMailGroup(name, timeout=None):
+    def lookupMailGroup(name, timeout):
         """
         Perform an MG record lookup.
 
@@ -388,7 +391,7 @@ class IResolver(IResolverSimple):
         """
 
 
-    def lookupMailRename(name, timeout=None):
+    def lookupMailRename(name, timeout):
         """
         Perform an MR record lookup.
 
@@ -410,7 +413,7 @@ class IResolver(IResolverSimple):
         """
 
 
-    def lookupPointer(name, timeout=None):
+    def lookupPointer(name, timeout):
         """
         Perform a PTR record lookup.
 
@@ -432,7 +435,7 @@ class IResolver(IResolverSimple):
         """
 
 
-    def lookupAuthority(name, timeout=None):
+    def lookupAuthority(name, timeout):
         """
         Perform an SOA record lookup.
 
@@ -454,7 +457,7 @@ class IResolver(IResolverSimple):
         """
 
 
-    def lookupNull(name, timeout=None):
+    def lookupNull(name, timeout):
         """
         Perform a NULL record lookup.
 
@@ -476,7 +479,7 @@ class IResolver(IResolverSimple):
         """
 
 
-    def lookupWellKnownServices(name, timeout=None):
+    def lookupWellKnownServices(name, timeout):
         """
         Perform a WKS record lookup.
 
@@ -498,7 +501,7 @@ class IResolver(IResolverSimple):
         """
 
 
-    def lookupHostInfo(name, timeout=None):
+    def lookupHostInfo(name, timeout):
         """
         Perform a HINFO record lookup.
 
@@ -520,7 +523,7 @@ class IResolver(IResolverSimple):
         """
 
 
-    def lookupMailboxInfo(name, timeout=None):
+    def lookupMailboxInfo(name, timeout):
         """
         Perform an MINFO record lookup.
 
@@ -542,7 +545,7 @@ class IResolver(IResolverSimple):
         """
 
 
-    def lookupText(name, timeout=None):
+    def lookupText(name, timeout):
         """
         Perform a TXT record lookup.
 
@@ -564,7 +567,7 @@ class IResolver(IResolverSimple):
         """
 
 
-    def lookupResponsibility(name, timeout=None):
+    def lookupResponsibility(name, timeout):
         """
         Perform an RP record lookup.
 
@@ -586,7 +589,7 @@ class IResolver(IResolverSimple):
         """
 
 
-    def lookupAFSDatabase(name, timeout=None):
+    def lookupAFSDatabase(name, timeout):
         """
         Perform an AFSDB record lookup.
 
@@ -608,7 +611,7 @@ class IResolver(IResolverSimple):
         """
 
 
-    def lookupService(name, timeout=None):
+    def lookupService(name, timeout):
         """
         Perform an SRV record lookup.
 
@@ -630,7 +633,7 @@ class IResolver(IResolverSimple):
         """
 
 
-    def lookupAllRecords(name, timeout=None):
+    def lookupAllRecords(name, timeout):
         """
         Perform an ALL_RECORD lookup.
 
@@ -652,7 +655,7 @@ class IResolver(IResolverSimple):
         """
 
 
-    def lookupSenderPolicy(name, timeout= 10):
+    def lookupSenderPolicy(name, timeout):
         """
         Perform a SPF record lookup.
 
@@ -674,7 +677,7 @@ class IResolver(IResolverSimple):
         """
 
 
-    def lookupNamingAuthorityPointer(name, timeout=None):
+    def lookupNamingAuthorityPointer(name, timeout):
         """
         Perform a NAPTR record lookup.
 
@@ -696,7 +699,7 @@ class IResolver(IResolverSimple):
         """
 
 
-    def lookupZone(name, timeout=None):
+    def lookupZone(name, timeout):
         """
         Perform an AXFR record lookup.
 
@@ -728,7 +731,7 @@ class IResolver(IResolverSimple):
 
 class IReactorTCP(Interface):
 
-    def listenTCP(port, factory, backlog=50, interface=''):
+    def listenTCP(port: int, factory, backlog: int, interface: str):
         """
         Connects a given protocol factory to the given numeric TCP/IP port.
 
@@ -750,7 +753,7 @@ class IReactorTCP(Interface):
                                   cannot bind to the required port number)
         """
 
-    def connectTCP(host, port, factory, timeout=30, bindAddress=None):
+    def connectTCP(host, port: int, factory, timeout, bindAddress):
         """
         Connect a TCP client.
 
@@ -775,9 +778,12 @@ class IReactorTCP(Interface):
                  docs for details.
         """
 
+
+
 class IReactorSSL(Interface):
 
-    def connectSSL(host, port, factory, contextFactory, timeout=30, bindAddress=None):
+    def connectSSL(host, port: int, factory, contextFactory, timeout,
+                   bindAddress):
         """
         Connect a client Protocol to a remote SSL socket.
 
@@ -798,7 +804,8 @@ class IReactorSSL(Interface):
         @return: An object which provides L{IConnector}.
         """
 
-    def listenSSL(port, factory, contextFactory, backlog=50, interface=''):
+    def listenSSL(port: int, factory, contextFactory, backlog: int,
+                  interface: str):
         """
         Connects a given protocol factory to the given numeric TCP/IP port.
         The connection is a SSL one, using contexts created by the context
@@ -822,7 +829,7 @@ class IReactorUNIX(Interface):
     UNIX socket methods.
     """
 
-    def connectUNIX(address, factory, timeout=30, checkPID=0):
+    def connectUNIX(address, factory, timeout, checkPID):
         """
         Connect a client protocol to a UNIX socket.
 
@@ -841,7 +848,7 @@ class IReactorUNIX(Interface):
         """
 
 
-    def listenUNIX(address, factory, backlog=50, mode=0o666, wantPID=0):
+    def listenUNIX(address, factory, backlog, mode, wantPID):
         """
         Listen on a UNIX socket.
 
@@ -869,7 +876,8 @@ class IReactorUNIXDatagram(Interface):
     Datagram UNIX socket methods.
     """
 
-    def connectUNIXDatagram(address, protocol, maxPacketSize=8192, mode=0o666, bindAddress=None):
+    def connectUNIXDatagram(address, protocol, maxPacketSize: int, mode: int,
+                            bindAddress):
         """
         Connect a client protocol to a datagram UNIX socket.
 
@@ -890,7 +898,7 @@ class IReactorUNIXDatagram(Interface):
         """
 
 
-    def listenUNIXDatagram(address, protocol, maxPacketSize=8192, mode=0o666):
+    def listenUNIXDatagram(address, protocol, maxPacketSize, mode):
         """
         Listen on a datagram UNIX socket.
 
@@ -948,7 +956,7 @@ class IReactorUDP(Interface):
     UDP socket methods.
     """
 
-    def listenUDP(port, protocol, interface='', maxPacketSize=8192):
+    def listenUDP(port: int, protocol, interface: str, maxPacketSize: int):
         """
         Connects a given L{DatagramProtocol} to the given numeric UDP port.
 
@@ -979,8 +987,8 @@ class IReactorMulticast(Interface):
     without backwards compatibility. Suggestions are welcome.
     """
 
-    def listenMulticast(port, protocol, interface='', maxPacketSize=8192,
-                        listenMultiple=False):
+    def listenMulticast(port: int, protocol, interface: str,
+                        maxPacketSize: int, listenMultiple: bool):
         """
         Connects a given
         L{DatagramProtocol<twisted.internet.protocol.DatagramProtocol>} to the
@@ -1096,8 +1104,8 @@ class IReactorSocket(Interface):
         """
 
 
-    def adoptDatagramPort(fileDescriptor, addressFamily, protocol,
-                          maxPacketSize=8192):
+    def adoptDatagramPort(fileDescriptor: int, addressFamily: int, protocol,
+                          maxPacketSize: int):
         """
         Add an existing listening I{SOCK_DGRAM} socket to the reactor to
         monitor for read and write readiness.
@@ -1135,8 +1143,8 @@ class IReactorSocket(Interface):
 
 class IReactorProcess(Interface):
 
-    def spawnProcess(processProtocol, executable, args=(), env={}, path=None,
-                     uid=None, gid=None, usePTY=0, childFDs=None):
+    def spawnProcess(processProtocol, executable, args, env, path,
+                     uid, gid, usePTY, childFDs):
         """
         Spawn a process, with a process protocol.
 
@@ -1243,7 +1251,7 @@ class IReactorTime(Interface):
         """
 
 
-    def callLater(delay, callable, *args, **kw):
+    def callLater(delay, callable: Callable[..., Any], *args, **kw):
         """
         Call a function later.
 
@@ -1340,7 +1348,7 @@ class IReactorFromThreads(Interface):
     @since: 15.4
     """
 
-    def callFromThread(callable, *args, **kw):
+    def callFromThread(callable: Callable[..., Any], *args, **kw):
         """
         Cause a function to be executed by the reactor thread.
 
@@ -1349,10 +1357,10 @@ class IReactorFromThreads(Interface):
         thread (where L{reactor.run() <IReactorCore.run>} is executing) and run
         the given callable in that thread.
 
-        If you're writing a multi-threaded application the C{callable} may need
-        to be thread safe, but this method doesn't require it as such.  If you
-        want to call a function in the next mainloop iteration, but you're in
-        the same thread, use L{callLater} with a delay of 0.
+        If you're writing a multi-threaded application the C{callable}
+        may need to be thread safe, but this method doesn't require it as such.
+        If you want to call a function in the next mainloop iteration, but
+        you're in the same thread, use L{callLater} with a delay of 0.
         """
 
 
@@ -1364,7 +1372,7 @@ class IReactorInThreads(Interface):
     @since: 15.4
     """
 
-    def callInThread(callable, *args, **kwargs):
+    def callInThread(callable: Callable[..., Any], *args, **kwargs):
         """
         Run the given callable object in a separate thread, with the given
         arguments and keyword arguments.
@@ -1406,9 +1414,10 @@ class IReactorCore(Interface):
         "I{during shutdown} and C{False} the rest of the time.")
 
 
-    def resolve(name, timeout=10):
+    def resolve(name, timeout):
         """
-        Return a L{twisted.internet.defer.Deferred} that will resolve a hostname.
+        Return a L{twisted.internet.defer.Deferred} that will resolve
+        a hostname.
         """
 
     def run():
@@ -1434,7 +1443,7 @@ class IReactorCore(Interface):
         can become wedged in a pre-shutdown call.
         """
 
-    def iterate(delay=0):
+    def iterate(delay):
         """
         Run the main loop's I/O polling function for a period of time.
 
@@ -1457,7 +1466,8 @@ class IReactorCore(Interface):
         'persist'.
         """
 
-    def addSystemEventTrigger(phase, eventType, callable, *args, **kw):
+    def addSystemEventTrigger(phase: str, eventType: str,
+                              callable: Callable[..., Any], *args, **kw):
         """
         Add a function to be called when a system event occurs.
 
@@ -1508,7 +1518,7 @@ class IReactorCore(Interface):
             C{triggerID}.
         """
 
-    def callWhenRunning(callable, *args, **kw):
+    def callWhenRunning(callable: Callable[..., Any], *args, **kw):
         """
         Call a function when the reactor is running.
 
@@ -1877,7 +1887,7 @@ class IConsumer(Interface):
         """
 
 
-    def write(data):
+    def write(data: bytes):
         """
         The producer will write data by calling this method.
 
@@ -1954,7 +1964,7 @@ class IPullProducer(IProducer):
 
 class IProtocol(Interface):
 
-    def dataReceived(data):
+    def dataReceived(data: bytes):
         """
         Called whenever data is received.
 
@@ -2017,7 +2027,7 @@ class IProcessProtocol(Interface):
         """
 
 
-    def childDataReceived(childFD, data):
+    def childDataReceived(childFD: int, data: bytes):
         """
         Called when data arrives from the child process.
 
@@ -2030,7 +2040,7 @@ class IProcessProtocol(Interface):
         """
 
 
-    def childConnectionLost(childFD):
+    def childConnectionLost(childFD: int):
         """
         Called when a file descriptor associated with the child process is
         closed.
@@ -2040,7 +2050,7 @@ class IProcessProtocol(Interface):
         """
 
 
-    def processExited(reason):
+    def processExited(reason: Failure):
         """
         Called when the child process exits.
 
@@ -2630,7 +2640,7 @@ class IUDPTransport(Interface):
     Transport for UDP DatagramProtocols.
     """
 
-    def write(packet, addr=None):
+    def write(packet, addr):
         """
         Write packet to given address.
 
@@ -2762,7 +2772,7 @@ class IMulticastTransport(Interface):
         Set time to live on multicast packets.
         """
 
-    def joinGroup(addr, interface=""):
+    def joinGroup(addr, interface: str):
         """
         Join a multicast group. Returns L{Deferred} of success or failure.
 
@@ -2770,7 +2780,7 @@ class IMulticastTransport(Interface):
         L{error.MulticastJoinError}.
         """
 
-    def leaveGroup(addr, interface=""):
+    def leaveGroup(addr, interface: str):
         """
         Leave multicast group, return L{Deferred} of success.
         """

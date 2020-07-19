@@ -5,7 +5,6 @@
 Test case for L{twisted.protocols.loopback}.
 """
 
-from __future__ import division, absolute_import
 
 from zope.interface import implementer
 

@@ -8,7 +8,6 @@
 Defines classes that handle the results of tests.
 """
 
-from __future__ import division, absolute_import
 
 import sys
 import os
@@ -239,7 +238,7 @@ class TestResult(pyunit.TestResult, object):
 
 
 @implementer(itrial.IReporter)
-class TestResultDecorator(proxyForInterface(itrial.IReporter,
+class TestResultDecorator(proxyForInterface(itrial.IReporter,  # type: ignore[misc]  # noqa
                                             "_originalReporter")):
     """
     Base class for TestResult decorators.
@@ -506,7 +505,7 @@ class Reporter(TestResult):
         self._write('\n')
 
 
-    def upDownError(self, method, error, warn, printStatus):
+    def upDownError(self, method, error, warn=True, printStatus=True):
         super(Reporter, self).upDownError(method, error, warn, printStatus)
         if warn:
             tbStr = self._formatFailureTraceback(error)
@@ -891,6 +890,7 @@ class _AnsiColorizer(object):
         self.stream = stream
 
 
+    @classmethod
     def supported(cls, stream=sys.stdout):
         """
         A class method that returns True if the current platform supports
@@ -909,10 +909,9 @@ class _AnsiColorizer(object):
                 except curses.error:
                     curses.setupterm()
                     return curses.tigetnum("colors") > 2
-            except:
+            except BaseException:
                 # guess false in case of error
                 return False
-    supported = classmethod(supported)
 
 
     def write(self, text, color):
@@ -952,6 +951,7 @@ class _Win32Colorizer(object):
             }
 
 
+    @classmethod
     def supported(cls, stream=sys.stdout):
         try:
             import win32console
@@ -969,7 +969,6 @@ class _Win32Colorizer(object):
             return False
         else:
             return True
-    supported = classmethod(supported)
 
 
     def write(self, text, color):
@@ -988,9 +987,9 @@ class _NullColorizer(object):
         self.stream = stream
 
 
+    @classmethod
     def supported(cls, stream=sys.stdout):
         return True
-    supported = classmethod(supported)
 
 
     def write(self, text, color):
@@ -1010,6 +1009,9 @@ class SubunitReporter(object):
 
     @since: 10.0
     """
+
+    testsRun = None
+
 
     def __init__(self, stream=sys.stdout, tbformat='default',
                  realtime=False, publisher=None):
@@ -1041,12 +1043,12 @@ class SubunitReporter(object):
         pass
 
 
+    @property
     def shouldStop(self):
         """
         Whether or not the test runner should stop running tests.
         """
         return self._subunit.shouldStop
-    shouldStop = property(shouldStop)
 
 
     def stop(self):
@@ -1132,7 +1134,7 @@ class SubunitReporter(object):
             test, util.excInfoOrFailureToExcInfo(err))
 
 
-    def addExpectedFailure(self, test, failure, todo):
+    def addExpectedFailure(self, test, failure, todo=None):
         """
         Record an expected failure from a test.
 

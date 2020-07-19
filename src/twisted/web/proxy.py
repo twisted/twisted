@@ -18,7 +18,6 @@ and returns the result.
 Normally, a Proxy is used on the client end of an Internet connection, while a
 ReverseProxy is used on the server end.
 """
-from __future__ import absolute_import, division
 
 from twisted.python.compat import urllib_parse, urlquote
 from twisted.internet import reactor

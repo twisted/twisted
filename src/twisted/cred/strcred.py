@@ -14,9 +14,9 @@ Examples:
  - unix
 """
 
-from __future__ import absolute_import, division
 
 import sys
+from typing import Optional, Sequence, Type
 
 from zope.interface import Interface, Attribute
 
@@ -155,7 +155,7 @@ class AuthOptionMixin:
         will send all help-related output. Default: L{sys.stdout}
     """
 
-    supportedInterfaces = None
+    supportedInterfaces = None  # type: Optional[Sequence[Type[Interface]]]
     authOutput = sys.stdout
 
 

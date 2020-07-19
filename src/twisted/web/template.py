@@ -18,7 +18,6 @@ HTML rendering for twisted.web.
     L{AttributeError}.
 """
 
-from __future__ import division, absolute_import
 
 __all__ = [
     'TEMPLATE_NAMESPACE', 'VALID_HTML_TAG_NAMES', 'Element', 'TagLoader',

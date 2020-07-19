@@ -11,7 +11,6 @@ See also twisted.python.shortcut.
     may safely be OR'ed into a mask for os.open.
 """
 
-from __future__ import division, absolute_import
 
 import re
 import os
@@ -31,10 +30,12 @@ class FakeWindowsError(OSError):
     is missing.
     """
 
+
+
 try:
-    WindowsError = WindowsError
+    WindowsError = WindowsError  # type: OSError
 except NameError:
-    WindowsError = FakeWindowsError
+    WindowsError = FakeWindowsError  # type: ignore[misc,assignment]
 
 
 _cmdLineQuoteRe = re.compile(r'(\\*)"')
@@ -88,6 +89,8 @@ class _ErrorFormatter(object):
         self.formatMessage = FormatMessage
         self.errorTab = errorTab
 
+
+    @classmethod
     def fromEnvironment(cls):
         """
         Get as many of the platform-specific error translation objects as
@@ -106,7 +109,6 @@ class _ErrorFormatter(object):
         except ImportError:
             errorTab = None
         return cls(WinError, FormatMessage, errorTab)
-    fromEnvironment = classmethod(fromEnvironment)
 
 
     def formatError(self, errorcode):

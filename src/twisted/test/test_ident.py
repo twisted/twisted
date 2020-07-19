@@ -6,6 +6,7 @@
 Test cases for twisted.protocols.ident module.
 """
 
+import builtins
 import struct
 
 from twisted.protocols import ident
@@ -16,12 +17,6 @@ from twisted.python.compat import NativeStringIO
 
 from twisted.trial import unittest
 from twisted.test.proto_helpers import StringTransport
-
-
-try:
-    import builtins
-except ImportError:
-    import __builtin__ as builtins
 
 
 

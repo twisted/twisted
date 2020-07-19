@@ -16,7 +16,6 @@ connections, listeners or connectors are added)::
    kqreactor.install()
 """
 
-from __future__ import division, absolute_import
 
 import errno
 import select

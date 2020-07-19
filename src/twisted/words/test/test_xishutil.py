@@ -5,7 +5,6 @@
 Test cases for twisted.words.xish.utility
 """
 
-from __future__ import absolute_import, division
 
 from collections import OrderedDict
 

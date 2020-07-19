@@ -5,14 +5,15 @@
 Test cases for L{jelly} object serialization.
 """
 
-from __future__ import absolute_import, division
 
 import datetime
 import decimal
+from unittest import skipIf
 
 from twisted.python.compat import unicode
-from twisted.spread import jelly, pb
+from twisted.spread import banana, jelly, pb
 from twisted.trial import unittest
+from twisted.trial.unittest import TestCase
 from twisted.test.proto_helpers import StringTransport
 
 
@@ -115,7 +116,20 @@ class SimpleJellyTest:
 
 
 
-class JellyTests(unittest.TestCase):
+def jellyRoundTrip(testCase, toSerialize):
+    """
+    Verify that the given object round-trips through jelly & banana and comes
+    out equivalent to the input.
+    """
+    jellied = jelly.jelly(toSerialize)
+    encoded = banana.encode(jellied)
+    decoded = banana.decode(encoded)
+    unjellied = jelly.unjelly(decoded)
+    testCase.assertEqual(toSerialize, unjellied)
+
+
+
+class JellyTests(TestCase):
     """
     Testcases for L{jelly} module serialization.
 
@@ -239,6 +253,22 @@ class JellyTests(unittest.TestCase):
         self.assertIsNot(inputList, output)
 
 
+    def test_bananaTimeTypes(self):
+        """
+        Jellying L{datetime.time}, L{datetime.timedelta}, L{datetime.datetime},
+        and L{datetime.date} objects should result in jellied objects which can
+        be serialized and unserialized with banana.
+        """
+        sampleDate = datetime.date(2020, 7, 11)
+        sampleTime = datetime.time(1, 16, 5, 344)
+        sampleDateTime = datetime.datetime.combine(sampleDate, sampleTime)
+        sampleTimeDelta = sampleDateTime - datetime.datetime(2020, 7, 3)
+        jellyRoundTrip(self, sampleDate)
+        jellyRoundTrip(self, sampleTime)
+        jellyRoundTrip(self, sampleDateTime)
+        jellyRoundTrip(self, sampleTimeDelta)
+
+
     def test_decimal(self):
         """
         Jellying L{decimal.Decimal} instances and then unjellying the result
@@ -329,6 +359,7 @@ class JellyTests(unittest.TestCase):
         self._testSecurity(inputList, b"frozenset")
 
 
+    @skipIf(not jelly._sets, "sets.Set is gone in Python 3 and higher")
     def test_oldSets(self):
         """
         Test jellying C{sets.Set}: it should serialize to the same thing as
@@ -345,10 +376,9 @@ class JellyTests(unittest.TestCase):
         else:
             self.assertIsInstance(output[0], set)
 
-    if not jelly._sets:
-        test_oldSets.skip = "sets.Set is gone in Python 3 and higher"
 
-
+    @skipIf(not jelly._sets, "sets.ImmutableSets is gone in Python 3 "
+                             "and higher")
     def test_oldImmutableSets(self):
         """
         Test jellying C{sets.ImmutableSet}: it should serialize to the same
@@ -365,10 +395,6 @@ class JellyTests(unittest.TestCase):
             self.assertIsInstance(output[0], jelly._sets.ImmutableSet)
         else:
             self.assertIsInstance(output[0], frozenset)
-
-    if not jelly._sets:
-        test_oldImmutableSets.skip = (
-            "sets.ImmutableSets is gone in Python 3 and higher")
 
 
     def test_simple(self):
@@ -584,7 +610,7 @@ class JellyTests(unittest.TestCase):
 
 
 
-class JellyDeprecationTests(unittest.TestCase):
+class JellyDeprecationTests(TestCase):
     """
     Tests for deprecated Jelly things
     """
@@ -637,7 +663,7 @@ class ClassB(pb.Copyable, pb.RemoteCopy):
 
 
 
-class CircularReferenceTests(unittest.TestCase):
+class CircularReferenceTests(TestCase):
     """
     Tests for circular references handling in the jelly/unjelly process.
     """

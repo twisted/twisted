@@ -9,7 +9,6 @@ In most cases you can just use C{reactor.callInThread} and friends
 instead of creating a thread pool directly.
 """
 
-from __future__ import division, absolute_import
 
 import threading
 
@@ -42,7 +41,6 @@ class ThreadPool:
     max = 20
     joined = False
     started = False
-    workers = 0
     name = None
 
     threadFactory = threading.Thread

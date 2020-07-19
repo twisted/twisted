@@ -6,7 +6,6 @@
 http://isometri.cc/strips/gates_in_the_head
 """
 
-from __future__ import absolute_import, division, print_function
 
 import os
 import sys
@@ -406,6 +405,16 @@ class Process(_pollingfile._PollingTimer, BaseProcess):
 
     def stopProducing(self):
         self.loseConnection()
+
+
+    def getHost(self):
+        # ITransport.getHost
+        raise NotImplementedError("Unimplemented: Process.getHost")
+
+
+    def getPeer(self):
+        # ITransport.getPeer
+        raise NotImplementedError("Unimplemented: Process.getPeer")
 
 
     def __repr__(self):

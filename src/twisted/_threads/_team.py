@@ -7,7 +7,6 @@ Implementation of a L{Team} of workers; a thread-pool that can allocate work to
 workers.
 """
 
-from __future__ import absolute_import, division, print_function
 
 from collections import deque
 from zope.interface import implementer

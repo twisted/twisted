@@ -6,15 +6,16 @@
 Very basic functionality for a Reactor implementation.
 """
 
-from __future__ import division, absolute_import
 
-import socket # needed only for sync-dns
+import socket  # needed only for sync-dns
+from typing import Any, Callable, List
 from zope.interface import implementer, classImplements
 
 import sys
 import warnings
 from heapq import heappush, heappop, heapify
 
+import builtins
 import traceback
 
 from twisted.internet.interfaces import (
@@ -719,14 +720,16 @@ class ReactorBase(PluggableResolverMixin):
             event.fireEvent()
 
 
-    def addSystemEventTrigger(self, _phase, _eventType, _f, *args, **kw):
+    def addSystemEventTrigger(self, phase: str, eventType: str,
+                              callable: Callable[..., Any], *args, **kw):
         """See twisted.internet.interfaces.IReactorCore.addSystemEventTrigger.
         """
-        assert callable(_f), "%s is not callable" % _f
-        if _eventType not in self._eventTriggers:
-            self._eventTriggers[_eventType] = _ThreePhaseEvent()
-        return (_eventType, self._eventTriggers[_eventType].addTrigger(
-            _phase, _f, *args, **kw))
+        assert builtins.callable(callable), \
+               "{} is not callable".format(callable)
+        if eventType not in self._eventTriggers:
+            self._eventTriggers[eventType] = _ThreePhaseEvent()
+        return (eventType, self._eventTriggers[eventType].addTrigger(
+            phase, callable, *args, **kw))
 
 
     def removeSystemEventTrigger(self, triggerID):
@@ -736,14 +739,15 @@ class ReactorBase(PluggableResolverMixin):
         self._eventTriggers[eventType].removeTrigger(handle)
 
 
-    def callWhenRunning(self, _callable, *args, **kw):
+    def callWhenRunning(self, callable: Callable[..., Any], *args, **kw):
         """See twisted.internet.interfaces.IReactorCore.callWhenRunning.
         """
         if self.running:
-            _callable(*args, **kw)
+            callable(*args, **kw)
         else:
             return self.addSystemEventTrigger('after', 'startup',
-                                              _callable, *args, **kw)
+                                              callable, *args, **kw)
+
 
     def startRunning(self):
         """
@@ -775,22 +779,30 @@ class ReactorBase(PluggableResolverMixin):
         """
         self.running = True
 
+
+    def run(self):
+        # IReactorCore.run
+        raise NotImplementedError()
+
+
     # IReactorTime
 
     seconds = staticmethod(runtimeSeconds)
 
-    def callLater(self, _seconds, _f, *args, **kw):
+    def callLater(self, delay, callable: Callable[..., Any], *args, **kw):
         """See twisted.internet.interfaces.IReactorTime.callLater.
         """
-        assert callable(_f), "%s is not callable" % _f
-        assert _seconds >= 0, \
-               "%s is not greater than or equal to 0 seconds" % (_seconds,)
-        tple = DelayedCall(self.seconds() + _seconds, _f, args, kw,
+        assert builtins.callable(callable), \
+               "{} is not callable".format(callable)
+        assert delay >= 0, \
+               "{} is not greater than or equal to 0 seconds".format(delay)
+        tple = DelayedCall(self.seconds() + delay, callable, args, kw,
                            self._cancelCallLater,
                            self._moveCallLaterSooner,
                            seconds=self.seconds)
         self._newTimedCalls.append(tple)
         return tple
+
 
     def _moveCallLaterSooner(self, tple):
         # Linear time find: slow.
@@ -1190,8 +1202,8 @@ class BasePort(abstract.FileDescriptor):
     Note: This does not actually implement IListeningPort.
     """
 
-    addressFamily = None
-    socketType = None
+    addressFamily = None  # type: socket.AddressFamily
+    socketType = None  # type: socket.SocketKind
 
     def createInternetSocket(self):
         s = socket.socket(self.addressFamily, self.socketType)
@@ -1299,4 +1311,4 @@ class _SignalReactorMixin(object):
 
 
 
-__all__ = []
+__all__ = []  # type: List[str]

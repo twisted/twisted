@@ -8,7 +8,6 @@
 Simple Mail Transfer Protocol implementation.
 """
 
-from __future__ import absolute_import, division
 
 import time
 import re
@@ -18,6 +17,7 @@ import os
 import random
 import binascii
 import warnings
+from typing import Type
 
 from email.utils import parseaddr
 
@@ -35,7 +35,7 @@ from twisted.internet.interfaces import ITLSTransport, ISSLTransport
 from twisted.internet._idna import _idnaText
 from twisted.python import log
 from twisted.python import util
-from twisted.python.compat import (_PY3, range, long, unicode, networkString,
+from twisted.python.compat import (long, unicode, networkString,
                                    nativeString, iteritems, _keys, _bytesChr,
                                    iterbytes)
 from twisted.python.runtime import platform
@@ -80,15 +80,13 @@ __all__ = [
 
 
 # Cache the hostname (XXX Yes - this is broken)
+# Encode the DNS name into something we can send over the wire
 if platform.isMacOSX():
     # On macOS, getfqdn() is ridiculously slow - use the
     # probably-identical-but-sometimes-not gethostname() there.
-    DNSNAME = socket.gethostname()
+    DNSNAME = socket.gethostname().encode('ascii')
 else:
-    DNSNAME = socket.getfqdn()
-
-# Encode the DNS name into something we can send over the wire
-DNSNAME = DNSNAME.encode('ascii')
+    DNSNAME = socket.getfqdn().encode('ascii')
 
 # Used for fast success code lookup
 SUCCESS = dict.fromkeys(range(200, 300))
@@ -291,12 +289,8 @@ class Address:
 
         return b''.join(res)
 
-    if _PY3:
-        def __str__(self):
-            return nativeString(bytes(self))
-    else:
-        def __str__(self):
-            return self.__bytes__()
+    def __str__(self):
+        return nativeString(bytes(self))
 
 
     def __bytes__(self):
@@ -1863,7 +1857,7 @@ class SMTPSenderFactory(protocol.ClientFactory):
     """
 
     domain = DNSNAME
-    protocol = SMTPSender
+    protocol = SMTPSender  # type: Type[SMTPClient]
 
     def __init__(self, fromEmail, toEmail, file, deferred, retries=5,
                  timeout=None):
