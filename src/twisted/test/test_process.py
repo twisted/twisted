@@ -688,7 +688,7 @@ class ProcessTests(unittest.TestCase):
         # can do about that.
         badUnicode = u'\N{SNOWMAN}'
         try:
-            badUnicode.encode(sys.getfilesystemencoding())
+            badUnicode.encode(sys.stdout.encoding)
         except UnicodeEncodeError:
             # Okay, that unicode doesn't encode, put it in as a bad environment
             # key.

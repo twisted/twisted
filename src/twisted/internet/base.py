@@ -970,7 +970,13 @@ class ReactorBase(PluggableResolverMixin):
         #
         # -exarkun
 
-        defaultEncoding = sys.getfilesystemencoding()
+        # If any of the following environment variables:
+        #  - PYTHONUTF8
+        #  - PYTHONIOENCODING
+        #
+        # are set before the Python interpreter runs, they will affect the
+        # value of sys.stdout.encoding
+        defaultEncoding = sys.stdout.encoding
 
         # Common check function
         def argChecker(arg):
