@@ -43,11 +43,11 @@ Creating the Plugin
 
 The following directory structure is assumed of your project:
 
-- **MyProject** - Top level directory
+- ``MyProject`` - Top level directory
 
-  - **myproject** - Python package
+  - ``myproject`` - Python package
 
-    - **__init__.py**
+    - ``__init__.py``
 
 During development of your project,
 Twisted plugins can be loaded from a special directory in your project,
@@ -205,19 +205,19 @@ For this you need to write a special file ``setup.py``, which contains metadata
 of the package. You would have to extend the layout of your files like this:
 
 
-- **MyProject** - Top level directory
+- ``MyProject`` - Top level directory
 
-- ``setup.py`` - Description file for the package
+  - ``setup.py`` - Description file for the package
 
-  - ``myproject`` - Python package
+    - ``myproject`` - Python package
 
-    - ``__init__.py``
+      - ``__init__.py``
 
-  - ``twisted``
+    - ``twisted``
 
-    - ``plugins``
+      - ``plugins``
 
-      - ``myplugin.py`` - Dropin file containing the actual plugin
+        - ``myplugin.py`` - Dropin file containing the actual plugin
 
 
 .. code-block:: python
