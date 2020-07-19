@@ -12,6 +12,7 @@ from twisted.cred.credentials import IUsernameHashedPassword
 from twisted.python.versions import Version
 
 
+
 class UsernamePasswordTests(TestCase):
     """
     Tests for L{UsernamePassword}.

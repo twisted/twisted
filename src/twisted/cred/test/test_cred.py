@@ -254,6 +254,7 @@ class OnDiskDatabaseTests(unittest.TestCase):
         return d
 
 
+
 class HashedPasswordOnDiskDatabaseTests(unittest.TestCase):
     users = [
         (b'user1', b'pass1'),
