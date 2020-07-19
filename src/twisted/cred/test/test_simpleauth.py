@@ -53,7 +53,7 @@ class UsernamePasswordTests(TestCase):
 
 
 
-_uhpVersion = Version('Twisted', 16, 3, 0)
+_uhpVersion = Version("Twisted", "NEXT", 0, 0)
 
 
 

@@ -25,7 +25,7 @@ except ImportError:
 
 
 # The Twisted version in which UsernameHashedPassword is first deprecated.
-_uhpVersion = Version('Twisted', 17, 1, 0)
+_uhpVersion = Version("Twisted", "NEXT", 0, 0)
 
 
 
