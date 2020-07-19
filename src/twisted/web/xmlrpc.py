@@ -381,7 +381,8 @@ payloadTemplate = """<?xml version="1.0"?>
 """
 
 
-class _QueryFactory(protocol.ClientFactory):
+
+class QueryFactory(protocol.ClientFactory):
     """
     XML-RPC Client Factory
 
@@ -499,10 +500,16 @@ class Proxy:
     @ivar _reactor: The reactor used to create connections.
     @type _reactor: Object providing L{twisted.internet.interfaces.IReactorTCP}
 
-    @ivar queryFactory: Object returning a factory for XML-RPC protocol. Mainly
-        useful for tests.
+    @ivar queryFactory: Object returning a factory for XML-RPC protocol. Use
+        this for testing, or to manipulate the XML-RPC parsing behavior. For
+        example, you may set this to a custom "debugging" factory object that
+        reimplements C{parseResponse} in order to log the raw XML-RPC contents
+        from the server before continuing on with parsing. Another possibility
+        is to implement your own XML-RPC marshaller here to handle non-standard
+        XML-RPC traffic.
+    @type queryFactory: L{twisted.web.xmlrpc.QueryFactory}
     """
-    queryFactory = _QueryFactory
+    queryFactory = QueryFactory
 
     def __init__(self, url, user=None, password=None, allowNone=False,
                  useDateTime=False, connectTimeout=30.0, reactor=reactor):
