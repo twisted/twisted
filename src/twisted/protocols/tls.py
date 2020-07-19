@@ -36,7 +36,6 @@ implement onion routing.  It can also be used to run TLS over unusual
 transports, such as UNIX sockets and stdio.
 """
 
-from __future__ import division, absolute_import
 
 from OpenSSL.SSL import Error, ZeroReturnError, WantReadError
 from OpenSSL.SSL import TLSv1_METHOD, Context, Connection
@@ -402,12 +401,15 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
         self.connected = False
         ProtocolWrapper.connectionLost(self, reason)
 
+        # Breaking reference cycle between self._tlsConnection and self.
+        self._tlsConnection = None
+
 
     def loseConnection(self):
         """
         Send a TLS close alert and close the underlying connection.
         """
-        if self.disconnecting:
+        if self.disconnecting or not self.connected:
             return
         # If connection setup has not finished, OpenSSL 1.0.2f+ will not shut
         # down the connection until we write some data to the connection which

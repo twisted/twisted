@@ -11,7 +11,6 @@ See the L{twisted.trial.test.test_tests} module docstring for details about how
 this code is arranged.
 """
 
-from __future__ import division, absolute_import
 
 from twisted.trial.unittest import (
     SynchronousTestCase, TestCase, SkipTest, FailTest)
@@ -21,13 +20,17 @@ class SkippingMixin(object):
     def test_skip1(self):
         raise SkipTest('skip1')
 
+
     def test_skip2(self):
         raise RuntimeError("I should not get raised")
-    test_skip2.skip = 'skip2'
+
+    test_skip2.skip = 'skip2'  # type: ignore[attr-defined]
+
 
     def test_skip3(self):
         self.fail('I should not fail')
-    test_skip3.skip = 'skip3'
+
+    test_skip3.skip = 'skip3'  # type: ignore[attr-defined]
 
 
 
@@ -45,11 +48,14 @@ class SkippingSetUpMixin(object):
     def setUp(self):
         raise SkipTest('skipSetUp')
 
+
     def test_1(self):
         pass
 
+
     def test_2(self):
         pass
+
 
 
 class SynchronousSkippingSetUp(SkippingSetUpMixin, SynchronousTestCase):
@@ -82,15 +88,25 @@ class AsynchronousDeprecatedReasonlessSkip(
 
 class SkippedClassMixin(object):
     skip = 'class'
+
     def setUp(self):
         self.__class__._setUpRan = True
+
+
     def test_skip1(self):
         raise SkipTest('skip1')
+
+
     def test_skip2(self):
         raise RuntimeError("Ought to skip me")
-    test_skip2.skip = 'skip2'
+
+    test_skip2.skip = 'skip2'  # type: ignore
+
+
     def test_skip3(self):
         pass
+
+
     def test_skip4(self):
         raise RuntimeError("Skip me too")
 
@@ -109,15 +125,17 @@ class AsynchronousSkippedClass(SkippedClassMixin, TestCase):
 class TodoMixin(object):
     def test_todo1(self):
         self.fail("deliberate failure")
-    test_todo1.todo = "todo1"
+    test_todo1.todo = "todo1"  # type: ignore[attr-defined]
+
 
     def test_todo2(self):
         raise RuntimeError("deliberate error")
-    test_todo2.todo = "todo2"
+    test_todo2.todo = "todo2"  # type: ignore[attr-defined]
+
 
     def test_todo3(self):
         """unexpected success"""
-    test_todo3.todo = 'todo3'
+    test_todo3.todo = 'todo3'  # type: ignore[attr-defined]
 
 
 
@@ -136,9 +154,10 @@ class SetUpTodoMixin(object):
     def setUp(self):
         raise RuntimeError("deliberate error")
 
+
     def test_todo1(self):
         pass
-    test_todo1.todo = "setUp todo1"
+    test_todo1.todo = "setUp todo1"  # type: ignore[attr-defined]
 
 
 
@@ -156,9 +175,10 @@ class TearDownTodoMixin(object):
     def tearDown(self):
         raise RuntimeError("deliberate error")
 
+
     def test_todo1(self):
         pass
-    test_todo1.todo = "tearDown todo1"
+    test_todo1.todo = "tearDown todo1"  # type: ignore[attr-defined]
 
 
 
@@ -174,14 +194,20 @@ class AsynchronousTearDownTodo(TearDownTodoMixin, TestCase):
 
 class TodoClassMixin(object):
     todo = "class"
+
     def test_todo1(self):
         pass
-    test_todo1.todo = "method"
+
+    test_todo1.todo = "method"  # type: ignore[attr-defined]
+
     def test_todo2(self):
         pass
+
     def test_todo3(self):
         self.fail("Deliberate Failure")
-    test_todo3.todo = "method"
+
+    test_todo3.todo = "method"  # type: ignore[attr-defined]
+
     def test_todo4(self):
         self.fail("Deliberate Failure")
 
@@ -200,31 +226,31 @@ class AsynchronousTodoClass(TodoClassMixin, TestCase):
 class StrictTodoMixin(object):
     def test_todo1(self):
         raise RuntimeError("expected failure")
-    test_todo1.todo = (RuntimeError, "todo1")
+    test_todo1.todo = (RuntimeError, "todo1")  # type: ignore[attr-defined]
 
     def test_todo2(self):
         raise RuntimeError("expected failure")
-    test_todo2.todo = ((RuntimeError, OSError), "todo2")
+    test_todo2.todo = ((RuntimeError, OSError), "todo2")  # type: ignore[attr-defined] # noqa
 
     def test_todo3(self):
         raise RuntimeError("we had no idea!")
-    test_todo3.todo = (OSError, "todo3")
+    test_todo3.todo = (OSError, "todo3")  # type: ignore[attr-defined]
 
     def test_todo4(self):
         raise RuntimeError("we had no idea!")
-    test_todo4.todo = ((OSError, SyntaxError), "todo4")
+    test_todo4.todo = ((OSError, SyntaxError), "todo4")  # type: ignore[attr-defined] # noqa
 
     def test_todo5(self):
         self.fail("deliberate failure")
-    test_todo5.todo = (FailTest, "todo5")
+    test_todo5.todo = (FailTest, "todo5")  # type: ignore[attr-defined]
 
     def test_todo6(self):
         self.fail("deliberate failure")
-    test_todo6.todo = (RuntimeError, "todo6")
+    test_todo6.todo = (RuntimeError, "todo6")  # type: ignore[attr-defined]
 
     def test_todo7(self):
         pass
-    test_todo7.todo = (RuntimeError, "todo7")
+    test_todo7.todo = (RuntimeError, "todo7")  # type: ignore[attr-defined]
 
 
 

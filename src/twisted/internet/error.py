@@ -5,7 +5,6 @@
 Exceptions and errors for use in twisted.internet modules.
 """
 
-from __future__ import division, absolute_import
 
 import socket
 
@@ -181,8 +180,8 @@ try:
         errno.ETIMEDOUT: TCPTimedOutError,
     }
     if hasattr(errno, "WSAECONNREFUSED"):
-        errnoMapping[errno.WSAECONNREFUSED] = ConnectionRefusedError
-        errnoMapping[errno.WSAENETUNREACH] = NoRouteError
+        errnoMapping[errno.WSAECONNREFUSED] = ConnectionRefusedError  # type: ignore[attr-defined]  # noqa
+        errnoMapping[errno.WSAENETUNREACH] = NoRouteError  # type: ignore[attr-defined]  # noqa
 except ImportError:
     errnoMapping = {}
 
@@ -235,6 +234,17 @@ class ConnectionAborted(ConnectionLost):
 
     @since: 11.1
     """
+
+    def __str__(self):
+        s = [(
+            "Connection was aborted locally using"
+            " ITCPTransport.abortConnection"
+        )]
+        if self.args:
+            s.append(': ')
+            s.append(' '.join(self.args))
+        s.append('.')
+        return ''.join(s)
 
 
 

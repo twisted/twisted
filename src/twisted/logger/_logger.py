@@ -26,7 +26,7 @@ class Logger(object):
     @type source: L{object}
     @ivar source: The object which is emitting events via this logger
 
-    @type: L{ILogObserver}
+    @type observer: L{ILogObserver}
     @ivar observer: The observer that this logger will send events to.
     """
 
@@ -158,8 +158,8 @@ class Logger(object):
         or::
 
             d = deferredFrob(knob)
-            d.addErrback(lambda f: log.failure, "While frobbing {knob}",
-                         f, knob=knob)
+            d.addErrback(lambda f: log.failure("While frobbing {knob}",
+                                               f, knob=knob))
 
         This method is generally meant to capture unexpected exceptions in
         code; an exception that is caught and handled somehow should be logged,

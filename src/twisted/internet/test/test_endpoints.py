@@ -6,11 +6,11 @@ Test the C{I...Endpoint} implementations that wrap the L{IReactorTCP},
 L{IReactorSSL}, and L{IReactorUNIX} interfaces found in
 L{twisted.internet.endpoints}.
 """
-from __future__ import division, absolute_import
 
 from errno import EPERM
 from socket import AF_INET, AF_INET6, SOCK_STREAM, IPPROTO_TCP, gaierror
 from unicodedata import normalize
+from unittest import skipIf
 from types import FunctionType
 
 from zope.interface import implementer, providedBy, provider
@@ -18,9 +18,9 @@ from zope.interface.interface import InterfaceClass
 from zope.interface.verify import verifyObject, verifyClass
 
 from twisted.trial import unittest
-from twisted.test.proto_helpers import MemoryReactorClock as MemoryReactor
-from twisted.test.proto_helpers import RaisingMemoryReactor, StringTransport
-from twisted.test.proto_helpers import StringTransportWithDisconnection
+from twisted.internet.testing import MemoryReactorClock as MemoryReactor
+from twisted.internet.testing import RaisingMemoryReactor, StringTransport
+from twisted.internet.testing import StringTransportWithDisconnection
 
 from twisted import plugins
 from twisted.internet import error, interfaces, defer, endpoints, protocol
@@ -78,8 +78,10 @@ try:
     testPrivateCertificate = PrivateCertificate.loadPEM(pemPath.getContent())
 
     skipSSL = False
-except ImportError:
-    skipSSL = "OpenSSL is required to construct SSL Endpoints"
+    skipSSLReason = ""
+except ImportError as e:
+    skipSSL = True
+    skipSSLReason = str(e)
 
 
 
@@ -857,6 +859,11 @@ class MemoryProcessTransport(StringTransportWithDisconnection, object):
 
     def signalProcess(self, signal):
         self.signals.append(signal)
+
+
+    def pid(self):
+        # IProcessTransport.pid
+        pass
 
 
 
@@ -1981,7 +1988,7 @@ class _HostnameEndpointMemoryReactorMixin(ClientEndpointTestCaseMixin):
         self.assertTrue(warnings[0]['message'].startswith(
             'Passing HostnameEndpoint a reactor that does not provide'
             ' IReactorPluggableNameResolver'
-            ' (twisted.test.proto_helpers.MemoryReactorClock)'
+            ' (twisted.internet.testing.MemoryReactorClock)'
             ' was deprecated in Twisted 17.5.0;'
             ' please use a reactor that provides'
             ' IReactorPluggableNameResolver instead'))
@@ -2477,6 +2484,77 @@ class HostnameEndpointIDNATests(unittest.SynchronousTestCase):
 
 
 
+class HostnameEndpointReprTests(unittest.SynchronousTestCase):
+    """
+    Tests for L{HostnameEndpoint}'s string representation.
+    """
+    def test_allASCII(self):
+        """
+        The string representation of L{HostnameEndpoint} includes the host and
+        port passed to the constructor.
+        """
+        endpoint = endpoints.HostnameEndpoint(
+            deterministicResolvingReactor(Clock(), []),
+            'example.com', 80,
+        )
+
+        rep = repr(endpoint)
+
+        self.assertEqual("<HostnameEndpoint example.com:80>", rep)
+        self.assertIs(str, type(rep))
+
+
+    def test_idnaHostname(self):
+        """
+        When IDN is passed to the L{HostnameEndpoint} constructor the string
+        representation includes the punycode version of the host.
+        """
+        endpoint = endpoints.HostnameEndpoint(
+            deterministicResolvingReactor(Clock(), []),
+            u'b\xfccher.ch', 443,
+        )
+
+        rep = repr(endpoint)
+
+        self.assertEqual("<HostnameEndpoint xn--bcher-kva.ch:443>", rep)
+        self.assertIs(str, type(rep))
+
+
+    def test_hostIPv6Address(self):
+        """
+        When the host passed to L{HostnameEndpoint} is an IPv6 address it is
+        wrapped in brackets in the string representation, like in a URI. This
+        prevents the colon separating the host from the port from being
+        ambiguous.
+        """
+        endpoint = endpoints.HostnameEndpoint(
+            deterministicResolvingReactor(Clock(), []),
+            b'::1', 22,
+        )
+
+        rep = repr(endpoint)
+
+        self.assertEqual("<HostnameEndpoint [::1]:22>", rep)
+        self.assertIs(str, type(rep))
+
+
+    def test_badEncoding(self):
+        """
+        When a bad hostname is passed to L{HostnameEndpoint}, the string
+        representation displays invalid characters in backslash-escaped form.
+        """
+        endpoint = endpoints.HostnameEndpoint(
+            deterministicResolvingReactor(Clock(), []),
+            b'\xff-garbage-\xff', 80
+        )
+
+        self.assertEqual(
+            '<HostnameEndpoint \\xff-garbage-\\xff:80>',
+            repr(endpoint),
+        )
+
+
+
 class HostnameEndpointsGAIFailureTests(unittest.TestCase):
     """
     Tests for the hostname based endpoints when GAI returns no address.
@@ -2627,14 +2705,12 @@ class HostnameEndpointsFasterConnectionTests(unittest.TestCase):
 
 
 
+@skipIf(skipSSL, skipSSLReason)
 class SSL4EndpointsTests(EndpointTestCaseMixin,
                          unittest.TestCase):
     """
     Tests for SSL Endpoints.
     """
-    if skipSSL:
-        skip = skipSSL
-
     def expectedServers(self, reactor):
         """
         @return: List of calls to L{IReactorSSL.listenSSL}
@@ -3006,6 +3082,7 @@ class ServerStringTests(unittest.TestCase):
         self.assertEqual(server._interface, "10.0.0.1")
 
 
+    @skipIf(skipSSL, skipSSLReason)
     def test_ssl(self):
         """
         When passed an SSL strports description, L{endpoints.serverFromString}
@@ -3028,6 +3105,7 @@ class ServerStringTests(unittest.TestCase):
         self.assertIsInstance(ctx, ContextType)
 
 
+    @skipIf(skipSSL, skipSSLReason)
     def test_sslWithDefaults(self):
         """
         An SSL string endpoint description with minimal arguments returns
@@ -3054,6 +3132,7 @@ class ServerStringTests(unittest.TestCase):
     SSL_CHAIN_TEMPLATE = "ssl:1234:privateKey=%s:extraCertChain=%s"
 
 
+    @skipIf(skipSSL, skipSSLReason)
     def test_sslChainLoads(self):
         """
         Specifying a chain file loads the contained certificates in the right
@@ -3079,6 +3158,7 @@ class ServerStringTests(unittest.TestCase):
                          expectedChainCerts[1].digest('sha1'))
 
 
+    @skipIf(skipSSL, skipSSLReason)
     def test_sslChainFileMustContainCert(self):
         """
         If C{extraCertChain} is passed, it has to contain at least one valid
@@ -3105,6 +3185,7 @@ class ServerStringTests(unittest.TestCase):
                           " certificates in PEM format.") % (fp.path,))
 
 
+    @skipIf(skipSSL, skipSSLReason)
     def test_sslDHparameters(self):
         """
         If C{dhParameters} are specified, they are passed as
@@ -3122,6 +3203,7 @@ class ServerStringTests(unittest.TestCase):
         self.assertEqual(FilePath(fileName), cf.dhParameters._dhFile)
 
 
+    @skipIf(skipSSL, skipSSLReason)
     def test_sslNoTrailingNewlinePem(self):
         """
         Lack of a trailing newline in key and cert .pem files should not
@@ -3145,14 +3227,6 @@ class ServerStringTests(unittest.TestCase):
         self.assertEqual(server._sslContextFactory.method, TLSv1_METHOD)
         ctx = server._sslContextFactory.getContext()
         self.assertIsInstance(ctx, ContextType)
-
-
-    if skipSSL:
-        test_ssl.skip = test_sslWithDefaults.skip = skipSSL
-        test_sslChainLoads.skip = skipSSL
-        test_sslChainFileMustContainCert.skip = skipSSL
-        test_sslDHparameters.skip = skipSSL
-        test_sslNoTrailingNewlinePem.skip = skipSSL
 
 
     def test_unix(self):
@@ -3407,14 +3481,11 @@ class ClientStringTests(unittest.TestCase):
 
 
 
+@skipIf(skipSSL, skipSSLReason)
 class SSLClientStringTests(unittest.TestCase):
     """
     Tests for L{twisted.internet.endpoints.clientFromString} which require SSL.
     """
-
-    if skipSSL:
-        skip = skipSSL
-
     def test_ssl(self):
         """
         When passed an SSL strports description, L{clientFromString} returns a
@@ -4053,14 +4124,11 @@ def connectionCreatorFromEndpoint(memoryReactor, tlsEndpoint):
 
 
 
+@skipIf(skipSSL, skipSSLReason)
 class WrapClientTLSParserTests(unittest.TestCase):
     """
     Tests for L{_TLSClientEndpointParser}.
     """
-
-    if skipSSL:
-        skip = skipSSL
-
     def test_hostnameEndpointConstruction(self):
         """
         A L{HostnameEndpoint} is constructed from parameters passed to

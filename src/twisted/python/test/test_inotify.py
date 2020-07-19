@@ -15,7 +15,7 @@ if platform.supportsINotify():
     from twisted.python._inotify import (
         INotifyError, initializeModule, init, add)
 else:
-    _inotify = None
+    _inotify = None  # type: ignore[assignment]
 
 
 

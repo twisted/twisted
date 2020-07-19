@@ -13,15 +13,14 @@ denied, a 401 will be sent in the response along with I{WWW-Authenticate}
 headers for each of the allowed authentication schemes.
 """
 
-from __future__ import absolute_import, division
 
 from twisted.cred import error
 from twisted.cred.credentials import Anonymous
-from twisted.python import log
 from twisted.python.compat import unicode
 from twisted.python.components import proxyForInterface
 from twisted.web import util
 from twisted.web.resource import ErrorPage, IResource
+from twisted.logger import Logger
 
 from zope.interface import implementer
 
@@ -74,6 +73,11 @@ class UnauthorizedResource(object):
         return self
 
 
+    def putChild(self, path, child):
+        # IResource.putChild
+        raise NotImplementedError()
+
+
 
 @implementer(IResource)
 class HTTPAuthSessionWrapper(object):
@@ -88,6 +92,7 @@ class HTTPAuthSessionWrapper(object):
         providers.
     """
     isLeaf = False
+    _log = Logger()
 
     def __init__(self, portal, credentialFactories):
         """
@@ -123,7 +128,7 @@ class HTTPAuthSessionWrapper(object):
         except error.LoginFailed:
             return UnauthorizedResource(self._credentialFactories)
         except:
-            log.err(None, "Unexpected failure from credentials factory")
+            self._log.failure("Unexpected failure from credentials factory")
             return ErrorPage(500, None, None)
         else:
             return util.DeferredResource(self._login(credentials))
@@ -210,10 +215,11 @@ class HTTPAuthSessionWrapper(object):
         if result.check(error.Unauthorized, error.LoginFailed):
             return UnauthorizedResource(self._credentialFactories)
         else:
-            log.err(
-                result,
+            self._log.failure(
                 "HTTPAuthSessionWrapper.getChildWithDefault encountered "
-                "unexpected error")
+                "unexpected error",
+                failure=result,
+            )
             return ErrorPage(500, None, None)
 
 
@@ -232,3 +238,8 @@ class HTTPAuthSessionWrapper(object):
             if fact.scheme == scheme:
                 return (fact, b' '.join(elements[1:]))
         return (None, None)
+
+
+    def putChild(self, path, child):
+        # IResource.putChild
+        raise NotImplementedError()

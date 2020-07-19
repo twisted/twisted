@@ -6,11 +6,11 @@
 Various helpers for tests for connection-oriented transports.
 """
 
-from __future__ import division, absolute_import
 
 import socket
 
 from gc import collect
+from typing import Optional
 from weakref import ref
 
 from zope.interface.verify import verifyObject
@@ -46,7 +46,13 @@ def findFreePort(interface='127.0.0.1', family=socket.AF_INET,
     probe = socket.socket(family, type)
     try:
         probe.bind(addr)
-        return probe.getsockname()
+        if family == socket.AF_INET6:
+            sockname = probe.getsockname()
+            hostname = socket.getnameinfo(
+                sockname, socket.NI_NUMERICHOST | socket.NI_NUMERICSERV)[0]
+            return (hostname, sockname[1])
+        else:
+            return probe.getsockname()
     finally:
         probe.close()
 
@@ -286,8 +292,7 @@ class ConnectionTestsMixin(object):
     implementations.
     """
 
-    # This should be a reactormixins.EndpointCreator instance.
-    endpoints = None
+    endpoints = None  # type: Optional[EndpointCreator]
 
 
     def test_logPrefix(self):

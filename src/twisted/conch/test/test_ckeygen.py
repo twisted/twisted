@@ -9,24 +9,25 @@ import getpass
 import sys
 import subprocess
 
-from io import BytesIO, StringIO
+from io import StringIO
 
-from twisted.python.compat import unicode, _PY3
+from twisted.python.compat import unicode
 from twisted.python.reflect import requireModule
 
+from twisted.python.filepath import FilePath
+from twisted.trial.unittest import TestCase
+from twisted.conch.test.keydata import (
+    publicRSA_openssh, privateRSA_openssh, privateRSA_openssh_encrypted,
+    privateECDSA_openssh, privateEd25519_openssh_new)
+
 if requireModule('cryptography') and requireModule('pyasn1'):
-    from twisted.conch.ssh.keys import (Key, BadKeyError,
-        BadFingerPrintFormat, FingerprintFormats)
+    from twisted.conch.ssh.keys import (
+        Key, BadKeyError, BadFingerPrintFormat, FingerprintFormats)
     from twisted.conch.scripts.ckeygen import (
         changePassPhrase, displayPublicKey, printFingerprint,
         _saveKey, enumrepresentation)
 else:
     skip = "cryptography and pyasn1 required for twisted.conch.scripts.ckeygen"
-
-from twisted.python.filepath import FilePath
-from twisted.trial.unittest import TestCase
-from twisted.conch.test.keydata import (
-    publicRSA_openssh, privateRSA_openssh, privateRSA_openssh_encrypted, privateECDSA_openssh)
 
 
 
@@ -57,25 +58,24 @@ class KeyGenTests(TestCase):
         """
         Patch C{sys.stdout} so tests can make assertions about what's printed.
         """
-        if _PY3:
-            self.stdout = StringIO()
-        else:
-            self.stdout = BytesIO()
+        self.stdout = StringIO()
         self.patch(sys, 'stdout', self.stdout)
 
 
-
-    def _testrun(self, keyType, keySize=None):
+    def _testrun(self, keyType, keySize=None, privateKeySubtype=None):
         filename = self.mktemp()
-        if keySize is None:
-            subprocess.call(['ckeygen', '-t', keyType, '-f', filename, '--no-passphrase'])
-        else:
-            subprocess.call(['ckeygen', '-t', keyType, '-f', filename, '--no-passphrase',
-                '-b', keySize])
+        args = ['ckeygen', '-t', keyType, '-f', filename, '--no-passphrase']
+        if keySize is not None:
+            args.extend(['-b', keySize])
+        if privateKeySubtype is not None:
+            args.extend(['--private-key-subtype', privateKeySubtype])
+        subprocess.call(args)
         privKey = Key.fromFile(filename)
         pubKey = Key.fromFile(filename + '.pub')
         if keyType == 'ecdsa':
             self.assertEqual(privKey.type(), 'EC')
+        elif keyType == 'ed25519':
+            self.assertEqual(privKey.type(), 'Ed25519')
         else:
             self.assertEqual(privKey.type(), keyType.upper())
         self.assertTrue(pubKey.isPublic())
@@ -83,11 +83,18 @@ class KeyGenTests(TestCase):
 
     def test_keygeneration(self):
         self._testrun('ecdsa', '384')
+        self._testrun('ecdsa', '384', privateKeySubtype='v1')
         self._testrun('ecdsa')
+        self._testrun('ecdsa', privateKeySubtype='v1')
+        self._testrun('ed25519')
         self._testrun('dsa', '2048')
+        self._testrun('dsa', '2048', privateKeySubtype='v1')
         self._testrun('dsa')
+        self._testrun('dsa', privateKeySubtype='v1')
         self._testrun('rsa', '2048')
+        self._testrun('rsa', '2048', privateKeySubtype='v1')
         self._testrun('rsa')
+        self._testrun('rsa', privateKeySubtype='v1')
 
 
 
@@ -141,7 +148,7 @@ class KeyGenTests(TestCase):
             'format': 'md5-hex'})
         self.assertEqual(
             self.stdout.getvalue(),
-            '768 3d:13:5f:cb:c9:79:8a:93:06:27:65:bc:3d:0b:8f:af temp\n')
+            '2048 85:25:04:32:58:55:96:9f:57:ee:fb:a8:1a:ea:69:da temp\n')
 
 
     def test_printFingerprintsha256(self):
@@ -155,7 +162,7 @@ class KeyGenTests(TestCase):
             'format': 'sha256-base64'})
         self.assertEqual(
             self.stdout.getvalue(),
-            '768 ryaugIFT0B8ItuszldMEU7q14rG/wj9HkRosMeBWkts= temp\n')
+            '2048 FBTCOoknq0mHy+kpfnY9tDdcAJuWtCpuQMaV3EsvbUI= temp\n')
 
 
     def test_printFingerprintBadFingerPrintFormat(self):
@@ -188,7 +195,7 @@ class KeyGenTests(TestCase):
             "Your identification has been saved in %s\n"
             "Your public key has been saved in %s.pub\n"
             "The key fingerprint in <FingerprintFormats=MD5_HEX> is:\n"
-            "3d:13:5f:cb:c9:79:8a:93:06:27:65:bc:3d:0b:8f:af\n" % (
+            "85:25:04:32:58:55:96:9f:57:ee:fb:a8:1a:ea:69:da\n" % (
                 filename,
                 filename))
         self.assertEqual(
@@ -229,6 +236,36 @@ class KeyGenTests(TestCase):
             key.public())
 
 
+    def test_saveKeyEd25519(self):
+        """
+        L{_saveKey} writes the private and public parts of a key to two
+        different files and writes a report of this to standard out.
+        Test with Ed25519 key.
+        """
+        base = FilePath(self.mktemp())
+        base.makedirs()
+        filename = base.child('id_ed25519').path
+        key = Key.fromString(privateEd25519_openssh_new)
+        _saveKey(
+            key,
+            {'filename': filename, 'pass': 'passphrase', 'format': 'md5-hex'})
+        self.assertEqual(
+            self.stdout.getvalue(),
+            "Your identification has been saved in %s\n"
+            "Your public key has been saved in %s.pub\n"
+            "The key fingerprint in <FingerprintFormats=MD5_HEX> is:\n"
+            "ab:ee:c8:ed:e5:01:1b:45:b7:8d:b2:f0:8f:61:1c:14\n" % (
+                filename,
+                filename))
+        self.assertEqual(
+            key.fromString(
+                base.child('id_ed25519').getContent(), None, 'passphrase'),
+            key)
+        self.assertEqual(
+            Key.fromString(base.child('id_ed25519.pub').getContent()),
+            key.public())
+
+
     def test_saveKeysha256(self):
         """
         L{_saveKey} will generate key fingerprint in
@@ -245,7 +282,7 @@ class KeyGenTests(TestCase):
             "Your identification has been saved in %s\n"
             "Your public key has been saved in %s.pub\n"
             "The key fingerprint in <FingerprintFormats=SHA256_BASE64> is:\n"
-            "ryaugIFT0B8ItuszldMEU7q14rG/wj9HkRosMeBWkts=\n" % (
+            "FBTCOoknq0mHy+kpfnY9tDdcAJuWtCpuQMaV3EsvbUI=\n" % (
                 filename,
                 filename))
         self.assertEqual(
@@ -307,6 +344,23 @@ class KeyGenTests(TestCase):
             key)
 
 
+    def test_saveKeyEd25519EmptyPassphrase(self):
+        """
+        L{_saveKey} will choose an empty string for the passphrase if
+        no-passphrase is C{True}.
+        """
+        base = FilePath(self.mktemp())
+        base.makedirs()
+        filename = base.child('id_ed25519').path
+        key = Key.fromString(privateEd25519_openssh_new)
+        _saveKey(
+            key,
+            {'filename': filename, 'no-passphrase': True, 'format': 'md5-hex'})
+        self.assertEqual(
+            key.fromString(
+                base.child('id_ed25519').getContent(), None),
+            key)
+
 
     def test_saveKeyNoFilename(self):
         """
@@ -326,6 +380,37 @@ class KeyGenTests(TestCase):
         persistedKeyContent = base.child('custom_key').getContent()
         persistedKey = key.fromString(persistedKeyContent, None, b'')
         self.assertEqual(key, persistedKey)
+
+
+    def test_saveKeySubtypeV1(self):
+        """
+        L{_saveKey} can be told to write the new private key file in OpenSSH
+        v1 format.
+        """
+        base = FilePath(self.mktemp())
+        base.makedirs()
+        filename = base.child('id_rsa').path
+        key = Key.fromString(privateRSA_openssh)
+        _saveKey(key, {
+            'filename': filename, 'pass': 'passphrase',
+            'format': 'md5-hex', 'private-key-subtype': 'v1',
+        })
+        self.assertEqual(
+            self.stdout.getvalue(),
+            "Your identification has been saved in %s\n"
+            "Your public key has been saved in %s.pub\n"
+            "The key fingerprint in <FingerprintFormats=MD5_HEX> is:\n"
+            "85:25:04:32:58:55:96:9f:57:ee:fb:a8:1a:ea:69:da\n" % (
+                filename,
+                filename))
+        privateKeyContent = base.child('id_rsa').getContent()
+        self.assertEqual(
+            key.fromString(privateKeyContent, None, 'passphrase'), key)
+        self.assertTrue(privateKeyContent.startswith(
+            b'-----BEGIN OPENSSH PRIVATE KEY-----\n'))
+        self.assertEqual(
+            Key.fromString(base.child('id_rsa.pub').getContent()),
+            key.public())
 
 
     def test_displayPublicKey(self):
@@ -492,10 +577,8 @@ class KeyGenTests(TestCase):
         error = self.assertRaises(
             SystemExit, changePassPhrase, {'filename': filename})
 
-        if _PY3:
-            expected = "Could not change passphrase: cannot guess the type of b'foobar'"
-        else:
-            expected = "Could not change passphrase: cannot guess the type of 'foobar'"
+        expected = ("Could not change passphrase: cannot "
+                    "guess the type of b'foobar'")
         self.assertEqual(expected, str(error))
         self.assertEqual(b'foobar', FilePath(filename).getContent())
 
@@ -541,12 +624,8 @@ class KeyGenTests(TestCase):
             SystemExit, changePassPhrase,
             {'filename': filename, 'newpass': 'newencrypt'})
 
-        if _PY3:
-            expected = (
-                "Could not change passphrase: cannot guess the type of b''")
-        else:
-            expected = (
-                "Could not change passphrase: cannot guess the type of ''")
+        expected = (
+            "Could not change passphrase: cannot guess the type of b''")
         self.assertEqual(expected, str(error))
 
         self.assertEqual(privateRSA_openssh, FilePath(filename).getContent())
@@ -565,3 +644,24 @@ class KeyGenTests(TestCase):
         self.assertEqual(
             'Could not change passphrase: key not encrypted', str(error))
         self.assertEqual(publicRSA_openssh, FilePath(filename).getContent())
+
+
+    def test_changePassphraseSubtypeV1(self):
+        """
+        L{changePassPhrase} can be told to write the new private key file in
+        OpenSSH v1 format.
+        """
+        oldNewConfirm = makeGetpass('encrypted', 'newpass', 'newpass')
+        self.patch(getpass, 'getpass', oldNewConfirm)
+
+        filename = self.mktemp()
+        FilePath(filename).setContent(privateRSA_openssh_encrypted)
+
+        changePassPhrase({'filename': filename, 'private-key-subtype': 'v1'})
+        self.assertEqual(
+            self.stdout.getvalue().strip('\n'),
+            'Your identification has been saved with the new passphrase.')
+        privateKeyContent = FilePath(filename).getContent()
+        self.assertNotEqual(privateRSA_openssh_encrypted, privateKeyContent)
+        self.assertTrue(privateKeyContent.startswith(
+            b'-----BEGIN OPENSSH PRIVATE KEY-----\n'))

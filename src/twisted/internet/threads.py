@@ -7,14 +7,8 @@ Extended thread dispatching support.
 For basic support see reactor threading API docs.
 """
 
-from __future__ import division, absolute_import
 
-from twisted.python.compat import _PY3
-if not _PY3:
-    import Queue
-else:
-    import queue as Queue
-
+import queue as Queue
 from twisted.python import failure
 from twisted.internet import defer
 

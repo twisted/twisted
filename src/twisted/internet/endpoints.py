@@ -12,7 +12,6 @@ parsed by the L{clientFromString} and L{serverFromString} functions.
 @since: 10.1
 """
 
-from __future__ import division, absolute_import
 
 import os
 import re
@@ -38,7 +37,14 @@ from twisted.internet.interfaces import (
 )
 from twisted.internet.protocol import ClientFactory, Factory
 from twisted.internet.protocol import ProcessProtocol, Protocol
-from twisted.internet.stdio import StandardIO, PipeAddress
+
+try:
+    from twisted.internet.stdio import StandardIO, PipeAddress
+except ImportError:
+    # fallback if pywin32 is not installed
+    StandardIO = None  # type: ignore[assignment,misc]
+    PipeAddress = None  # type: ignore[assignment,misc]
+
 from twisted.internet.task import LoopingCall
 from twisted.internet._resolver import HostResolution
 from twisted.logger import Logger
@@ -55,7 +61,8 @@ from twisted.python.systemd import ListenFDs
 from ._idna import _idnaBytes, _idnaText
 
 try:
-    from twisted.protocols.tls import TLSMemoryBIOFactory
+    from twisted.protocols.tls import (
+        TLSMemoryBIOFactory as _TLSMemoryBIOFactory)
     from twisted.internet.ssl import (
         optionsForClientTLS, PrivateCertificate, Certificate, KeyPair,
         CertificateOptions, trustRootFromCertificates
@@ -63,6 +70,8 @@ try:
     from OpenSSL.SSL import Error as SSLError
 except ImportError:
     TLSMemoryBIOFactory = None
+else:
+    TLSMemoryBIOFactory = _TLSMemoryBIOFactory
 
 __all__ = ["clientFromString", "serverFromString",
            "TCP4ServerEndpoint", "TCP6ServerEndpoint",
@@ -306,7 +315,7 @@ class _IProcessTransportWithConsumerAndProducer(interfaces.IProcessTransport,
 
 
 class _ProcessEndpointTransport(
-        proxyForInterface(_IProcessTransportWithConsumerAndProducer,
+        proxyForInterface(_IProcessTransportWithConsumerAndProducer,  # type: ignore[misc]  # noqa
                           '_process')):
     """
     An L{ITransport}, L{IProcessTransport}, L{IConsumer}, and L{IPushProducer}
@@ -794,6 +803,27 @@ class HostnameEndpoint(object):
         if attemptDelay is None:
             attemptDelay = self._DEFAULT_ATTEMPT_DELAY
         self._attemptDelay = attemptDelay
+
+
+    def __repr__(self):
+        """
+        Produce a string representation of the L{HostnameEndpoint}.
+
+        @return: A L{str}
+        """
+        if self._badHostname:
+            # Use the backslash-encoded version of the string passed to the
+            # constructor, which is already a native string.
+            host = self._hostStr
+        elif isIPv6Address(self._hostStr):
+            host = '[{}]'.format(self._hostStr)
+        else:
+            # Convert the bytes representation to a native string to ensure
+            # that we display the punycoded version of the hostname, which is
+            # more useful than any IDN version as it can be easily copy-pasted
+            # into debugging tools.
+            host = nativeString(self._hostBytes)
+        return "".join(["<HostnameEndpoint ", host, ":", str(self._port), ">"])
 
 
     def _getNameResolverAndMaybeWarn(self, reactor):

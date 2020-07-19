@@ -4,7 +4,7 @@
 
 """
 A reactor for integrating with U{CFRunLoop<http://bit.ly/cfrunloop>}, the
-CoreFoundation main loop used by MacOS X.
+CoreFoundation main loop used by macOS.
 
 This is useful for integrating Twisted with U{PyObjC<http://pyobjc.sf.net/>}
 applications.
@@ -42,6 +42,7 @@ from CFNetwork import (
 _READ = 0
 _WRITE = 1
 _preserveSOError = 1 << 6
+
 
 
 class _WakerPlus(_Waker):

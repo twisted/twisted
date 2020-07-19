@@ -6,7 +6,6 @@
 Static resources for L{twisted.web}.
 """
 
-from __future__ import division, absolute_import
 
 import errno
 import itertools
@@ -15,6 +14,7 @@ import os
 import time
 import warnings
 
+from typing import Any, Dict, Callable
 from zope.interface import implementer
 
 from twisted.web import server
@@ -22,7 +22,7 @@ from twisted.web import resource
 from twisted.web import http
 from twisted.web.util import redirectTo
 
-from twisted.python.compat import (_PY3, intToBytes, nativeString,
+from twisted.python.compat import (intToBytes, nativeString,
                                    networkString)
 from twisted.python.compat import escape
 
@@ -34,10 +34,7 @@ from twisted.python.url import URL
 from incremental import Version
 from twisted.python.deprecate import deprecated
 
-if _PY3:
-    from urllib.parse import quote, unquote
-else:
-    from urllib import quote, unquote
+from urllib.parse import quote, unquote
 
 dangerousPathError = resource.NoResource("Invalid request URL.")
 
@@ -51,6 +48,14 @@ class Data(resource.Resource):
     """
 
     def __init__(self, data, type):
+        """
+        @param data: The bytes that make up this data resource.
+        @type data: L{bytes}
+
+        @param type: A native string giving the Internet media type for this
+            content.
+        @type type: L{str}
+        """
         resource.Resource.__init__(self)
         self.data = data
         self.type = type
@@ -205,7 +210,7 @@ class File(resource.Resource, filepath.FilePath):
         ".bz2": "bzip2"
         }
 
-    processors = {}
+    processors = {}  # type: Dict[str, Callable[[str, Any], Data]]
 
     indexNames = ["index", "index.html", "index.htm", "index.rpy"]
 
@@ -263,9 +268,19 @@ class File(resource.Resource, filepath.FilePath):
     childNotFound = resource.NoResource("File not found.")
     forbidden = resource.ForbiddenResource()
 
+
     def directoryListing(self):
-        return DirectoryLister(self.path,
-                               self.listNames(),
+        """
+        Return a resource that generates an HTML listing of the
+        directory this path represents.
+
+        @return: A resource that renders the directory to HTML.
+        @rtype: L{DirectoryLister}
+        """
+        path = self.path
+        names = self.listNames()
+        return DirectoryLister(path,
+                               names,
                                self.contentTypes,
                                self.contentEncodings,
                                self.defaultType)
@@ -1001,9 +1016,8 @@ h1 {padding: 0.1em; background-color: #777; color: white; border-bottom: thin wh
         dirs = []
 
         for path in directory:
-            if _PY3:
-                if isinstance(path, bytes):
-                    path = path.decode("utf8")
+            if isinstance(path, bytes):
+                path = path.decode("utf8")
 
             url = quote(path, "/")
             escapedPath = escape(path)
@@ -1061,8 +1075,7 @@ h1 {padding: 0.1em; background-color: #777; color: white; border-bottom: thin wh
             escape(unquote(nativeString(request.uri))),)
 
         done = self.template % {"header": header, "tableContent": tableContent}
-        if _PY3:
-            done = done.encode("utf8")
+        done = done.encode("utf8")
 
         return done
 

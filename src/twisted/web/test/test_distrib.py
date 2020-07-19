@@ -8,22 +8,26 @@ Tests for L{twisted.web.distrib}.
 from os.path import abspath
 from xml.dom.minidom import parseString
 try:
-    import pwd
+    import pwd as _pwd
 except ImportError:
     pwd = None
+else:
+    pwd = _pwd
 
+from unittest import skipIf
 from zope.interface.verify import verifyObject
 
-from twisted.python import filepath
+from twisted.python import filepath, failure
 from twisted.internet import reactor, defer
-from twisted.trial import unittest
+from twisted.trial.unittest import TestCase
 from twisted.spread import pb
 from twisted.spread.banana import SIZE_LIMIT
 from twisted.web import distrib, client, resource, static, server
-from twisted.web.test.test_web import DummyRequest
+from twisted.web.test.test_web import DummyRequest, DummyChannel
 from twisted.web.test._util import _render
 from twisted.test import proto_helpers
 from twisted.web.http_headers import Headers
+from twisted.logger import globalLogPublisher
 
 
 class MySite(server.Site):
@@ -46,7 +50,14 @@ class PBServerFactory(pb.PBServerFactory):
 
 
 
-class DistribTests(unittest.TestCase):
+class ArbitraryError(Exception):
+    """
+    An exception for this test.
+    """
+
+
+
+class DistribTests(TestCase):
     port1 = None
     port2 = None
     sub = None
@@ -182,17 +193,34 @@ class DistribTests(unittest.TestCase):
         distributed resource's C{render} method.
         """
         requestHeaders = {}
+        logObserver = proto_helpers.EventLoggingObserver()
+        globalLogPublisher.addObserver(logObserver)
+        req = [None]
+
 
         class ReportRequestHeaders(resource.Resource):
             def render(self, request):
+                req[0] = request
                 requestHeaders.update(dict(
                     request.requestHeaders.getAllRawHeaders()))
                 return b""
 
+        def check_logs():
+            msgs = [e["log_format"] for e in logObserver]
+            self.assertIn('connected to publisher', msgs)
+            self.assertIn(
+                "could not connect to distributed web service: {msg}",
+                msgs
+            )
+            self.assertIn(req[0], msgs)
+            globalLogPublisher.removeObserver(logObserver)
+
         request = self._requestTest(
             ReportRequestHeaders(), headers=Headers({'foo': ['bar']}))
         def cbRequested(result):
+            self.f1.proto.notifyOnDisconnect(check_logs)
             self.assertEqual(requestHeaders[b'Foo'], [b'bar'])
+
         request.addCallback(cbRequested)
         return request
 
@@ -309,6 +337,44 @@ class DistribTests(unittest.TestCase):
         return d
 
 
+    def test_logFailed(self):
+        """
+        When a request fails, the string form of the failure is logged.
+        """
+        logObserver = proto_helpers.EventLoggingObserver.createWithCleanup(
+            self,
+            globalLogPublisher
+        )
+
+        f = failure.Failure(ArbitraryError())
+        request = DummyRequest([b''])
+        issue = distrib.Issue(request)
+        issue.failed(f)
+        self.assertEquals(1, len(logObserver))
+        self.assertIn(
+            "Failure instance",
+            logObserver[0]["log_format"]
+        )
+
+
+    def test_requestFail(self):
+        """
+        When L{twisted.web.distrib.Request}'s fail is called, the failure
+        is logged.
+        """
+        logObserver = proto_helpers.EventLoggingObserver.createWithCleanup(
+            self,
+            globalLogPublisher
+        )
+        err = ArbitraryError()
+        f = failure.Failure(err)
+        req = distrib.Request(DummyChannel())
+        req.fail(f)
+        self.flushLoggedErrors(ArbitraryError)
+        self.assertEquals(1, len(logObserver))
+        self.assertIs(logObserver[0]["log_failure"], f)
+
+
 
 class _PasswordDatabase:
     def __init__(self, users):
@@ -327,7 +393,7 @@ class _PasswordDatabase:
 
 
 
-class UserDirectoryTests(unittest.TestCase):
+class UserDirectoryTests(TestCase):
     """
     Tests for L{UserDirectory}, a resource for listing all user resources
     available on a system.
@@ -452,6 +518,7 @@ class UserDirectoryTests(unittest.TestCase):
         return result
 
 
+    @skipIf(not pwd, "pwd module required")
     def test_passwordDatabase(self):
         """
         If L{UserDirectory} is instantiated with no arguments, it uses the
@@ -459,6 +526,3 @@ class UserDirectoryTests(unittest.TestCase):
         """
         directory = distrib.UserDirectory()
         self.assertIdentical(directory._pwd, pwd)
-    if pwd is None:
-        test_passwordDatabase.skip = "pwd module required"
-

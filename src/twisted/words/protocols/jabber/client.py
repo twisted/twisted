@@ -3,12 +3,11 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-from __future__ import absolute_import, division
 
 from twisted.python.compat import _coercedUnicode, unicode
-from twisted.words.protocols.jabber import xmlstream, sasl, error
+from twisted.words.protocols.jabber import error, sasl, xmlstream
 from twisted.words.protocols.jabber.jid import JID
-from twisted.words.xish import domish, xpath, utility
+from twisted.words.xish import domish, utility, xpath
 
 NS_XMPP_STREAMS = 'urn:ietf:params:xml:ns:xmpp-streams'
 NS_XMPP_BIND = 'urn:ietf:params:xml:ns:xmpp-bind'
@@ -206,14 +205,10 @@ class BasicAuthenticator(xmlstream.ConnectAuthenticator):
         xs.version = (0, 0)
         xmlstream.ConnectAuthenticator.associateWithStream(self, xs)
 
-        inits = [ (xmlstream.TLSInitiatingInitializer, False),
-                  (IQAuthInitializer, True),
-                ]
-
-        for initClass, required in inits:
-            init = initClass(xs)
-            init.required = required
-            xs.initializers.append(init)
+        xs.initializers = [
+            xmlstream.TLSInitiatingInitializer(xs, required=False),
+            IQAuthInitializer(xs),
+        ]
 
     # TODO: move registration into an Initializer?
 
@@ -302,24 +297,35 @@ class SessionInitializer(xmlstream.BaseFeatureInitiatingInitializer):
 
 
 
-def XMPPClientFactory(jid, password):
+def XMPPClientFactory(jid, password, configurationForTLS=None):
     """
     Client factory for XMPP 1.0 (only).
 
     This returns a L{xmlstream.XmlStreamFactory} with an L{XMPPAuthenticator}
     object to perform the stream initialization steps (such as authentication).
 
-    @see: The notes at L{XMPPAuthenticator} describe how the L{jid} and
-    L{password} parameters are to be used.
+    @see: The notes at L{XMPPAuthenticator} describe how the C{jid} and
+    C{password} parameters are to be used.
 
     @param jid: Jabber ID to connect with.
     @type jid: L{jid.JID}
+
     @param password: password to authenticate with.
     @type password: L{unicode}
+
+    @param configurationForTLS: An object which creates appropriately
+        configured TLS connections. This is passed to C{startTLS} on the
+        transport and is preferably created using
+        L{twisted.internet.ssl.optionsForClientTLS}. If L{None}, the default is
+        to verify the server certificate against the trust roots as provided by
+        the platform. See L{twisted.internet._sslverify.platformTrust}.
+    @type configurationForTLS: L{IOpenSSLClientConnectionCreator} or L{None}
+
     @return: XML stream factory.
     @rtype: L{xmlstream.XmlStreamFactory}
     """
-    a = XMPPAuthenticator(jid, password)
+    a = XMPPAuthenticator(jid, password,
+                          configurationForTLS=configurationForTLS)
     return xmlstream.XmlStreamFactory(a)
 
 
@@ -354,16 +360,29 @@ class XMPPAuthenticator(xmlstream.ConnectAuthenticator):
                resource binding step, and this is stored in this instance
                variable.
     @type jid: L{jid.JID}
+
     @ivar password: password to be used during SASL authentication.
     @type password: L{unicode}
     """
 
     namespace = 'jabber:client'
 
-    def __init__(self, jid, password):
+    def __init__(self, jid, password, configurationForTLS=None):
+        """
+        @param configurationForTLS: An object which creates appropriately
+            configured TLS connections. This is passed to C{startTLS} on the
+            transport and is preferably created using
+            L{twisted.internet.ssl.optionsForClientTLS}. If C{None}, the
+            default is to verify the server certificate against the trust roots
+            as provided by the platform. See
+            L{twisted.internet._sslverify.platformTrust}.
+        @type configurationForTLS: L{IOpenSSLClientConnectionCreator} or
+            C{None}
+        """
         xmlstream.ConnectAuthenticator.__init__(self, jid.host)
         self.jid = jid
         self.password = password
+        self._configurationForTLS = configurationForTLS
 
 
     def associateWithStream(self, xs):
@@ -377,14 +396,12 @@ class XMPPAuthenticator(xmlstream.ConnectAuthenticator):
         """
         xmlstream.ConnectAuthenticator.associateWithStream(self, xs)
 
-        xs.initializers = [CheckVersionInitializer(xs)]
-        inits = [ (xmlstream.TLSInitiatingInitializer, False),
-                  (sasl.SASLInitiatingInitializer, True),
-                  (BindInitializer, False),
-                  (SessionInitializer, False),
+        xs.initializers = [
+                CheckVersionInitializer(xs),
+                xmlstream.TLSInitiatingInitializer(
+                    xs, required=True,
+                    configurationForTLS=self._configurationForTLS),
+                sasl.SASLInitiatingInitializer(xs, required=True),
+                BindInitializer(xs, required=True),
+                SessionInitializer(xs, required=False),
                 ]
-
-        for initClass, required in inits:
-            init = initClass(xs)
-            init.required = required
-            xs.initializers.append(init)

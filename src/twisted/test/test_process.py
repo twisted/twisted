@@ -17,7 +17,6 @@ Test running processes.
     platforms and native L{str} keys/values on Windows.
 """
 
-from __future__ import division, absolute_import, print_function
 
 import gzip
 import os
@@ -28,13 +27,23 @@ import gc
 import stat
 import operator
 
+from unittest import skipIf
+
 
 try:
     import fcntl
 except ImportError:
-    fcntl = process = None
-else:
+    fcntl = None  # type: ignore[assignment]
+
+try:
     from twisted.internet import process
+    from twisted.internet.process import (
+        ProcessReader, ProcessWriter, PTYProcess)
+except ImportError:
+    process = None  # type: ignore[misc,assignment]
+    ProcessReader = object  # type: ignore[misc,assignment]
+    ProcessWriter = object  # type: ignore[misc,assignment]
+    PTYProcess = object  # type: ignore[misc,assignment]
 
 from zope.interface.verify import verifyObject
 
@@ -44,20 +53,15 @@ from twisted.python.log import msg
 from twisted.internet import reactor, protocol, error, interfaces, defer
 from twisted.trial import unittest
 from twisted.python import runtime, procutils
-from twisted.python.compat import _PY3, networkString, range, bytesEnviron
+from twisted.python.compat import networkString, bytesEnviron
 from twisted.python.filepath import FilePath
 
 
 # Get the current Python executable as a bytestring.
-pyExe = FilePath(sys.executable)._asBytesPath()
+pyExe = FilePath(sys.executable).path
 CONCURRENT_PROCESS_TEST_COUNT = 25
-if not runtime.platform.isWindows():
-    properEnv = bytesEnviron()
-    properEnv[b"PYTHONPATH"] = os.pathsep.join(sys.path).encode(
-        sys.getfilesystemencoding())
-else:
-    properEnv = dict(os.environ)
-    properEnv["PYTHONPATH"] = os.pathsep.join(sys.path)
+properEnv = dict(os.environ)
+properEnv["PYTHONPATH"] = os.pathsep.join(sys.path)
 
 
 
@@ -392,7 +396,7 @@ class UtilityProcessProtocol(protocol.ProcessProtocol):
 
     @ivar programName: The name of the program to run.
     """
-    programName = None
+    programName = b""  # type: bytes
 
     @classmethod
     def run(cls, reactor, argv, env):
@@ -406,7 +410,7 @@ class UtilityProcessProtocol(protocol.ProcessProtocol):
         """
         self = cls()
         reactor.spawnProcess(
-            self, pyExe, [pyExe, b"-u", b"-m", self.programName] + argv,
+            self, pyExe, [pyExe, "-u", "-m", self.programName] + argv,
             env=env)
         return self
 
@@ -509,6 +513,8 @@ class GetEnvironmentDictionary(UtilityProcessProtocol):
 
 
 
+@skipIf(not interfaces.IReactorProcess(reactor, None),
+        "reactor doesn't support IReactorProcess")
 class ProcessTests(unittest.TestCase):
     """
     Test running a process.
@@ -767,12 +773,21 @@ class TestTwoProcessesBase:
 
 
 
+@skipIf(runtime.platform.getType() != 'win32',
+        "Only runs on Windows")
+@skipIf(not interfaces.IReactorProcess(reactor, None),
+        "reactor doesn't support IReactorProcess")
 class TwoProcessesNonPosixTests(TestTwoProcessesBase, unittest.TestCase):
     pass
 
 
 
+@skipIf(runtime.platform.getType() != 'posix',
+        "Only runs on POSIX platform")
+@skipIf(not interfaces.IReactorProcess(reactor, None),
+        "reactor doesn't support IReactorProcess")
 class TwoProcessesPosixTests(TestTwoProcessesBase, unittest.TestCase):
+
     def tearDown(self):
         for pp, pr in zip(self.pp, self.processes):
             if not pp.finished:
@@ -906,6 +921,10 @@ class FDChecker(protocol.ProcessProtocol):
 
 
 
+@skipIf(runtime.platform.getType() != 'posix',
+        "Only runs on POSIX platform")
+@skipIf(not interfaces.IReactorProcess(reactor, None),
+        "reactor doesn't support IReactorProcess")
 class FDTests(unittest.TestCase):
 
     def test_FD(self):
@@ -1111,6 +1130,8 @@ class PosixProcessBase(object):
         return self._testSignal(signal.SIGUSR1)
 
 
+    @skipIf(runtime.platform.isMacOSX(),
+            "Test is flaky from a Darwin bug. See #8840.")
     def test_executionError(self):
         """
         Raise an error during execvpe to check error management.
@@ -1135,10 +1156,6 @@ class PosixProcessBase(object):
         finally:
             os.execvpe = oldexecvpe
         return d
-
-    if runtime.platform.isMacOSX():
-        test_executionError.skip = (
-            "Test is flaky from a Darwin bug. See #8840.")
 
 
     def test_errorInProcessEnded(self):
@@ -1617,36 +1634,40 @@ class MockOS(object):
         return "utf8"
 
 
-if process is not None:
-    class DumbProcessWriter(process.ProcessWriter):
+
+class DumbProcessWriter(ProcessWriter):
+    """
+    A fake L{ProcessWriter} used for tests.
+    """
+
+    def startReading(self):
         """
-        A fake L{process.ProcessWriter} used for tests.
+        Here's the faking: don't do anything here.
         """
 
-        def startReading(self):
-            """
-            Here's the faking: don't do anything here.
-            """
 
-    class DumbProcessReader(process.ProcessReader):
-        """
-        A fake L{process.ProcessReader} used for tests.
-        """
 
-        def startReading(self):
-            """
-            Here's the faking: don't do anything here.
-            """
+class DumbProcessReader(ProcessReader):
+    """
+    A fake L{ProcessReader} used for tests.
+    """
 
-    class DumbPTYProcess(process.PTYProcess):
+    def startReading(self):
         """
-        A fake L{process.PTYProcess} used for tests.
+        Here's the faking: don't do anything here.
         """
 
-        def startReading(self):
-            """
-            Here's the faking: don't do anything here.
-            """
+
+
+class DumbPTYProcess(PTYProcess):
+    """
+    A fake L{PTYProcess} used for tests.
+    """
+
+    def startReading(self):
+        """
+        Here's the faking: don't do anything here.
+        """
 
 
 
@@ -2096,6 +2117,10 @@ class MockProcessTests(unittest.TestCase):
 
 
 
+@skipIf(runtime.platform.getType() != 'posix',
+        "Only runs on POSIX platform")
+@skipIf(not interfaces.IReactorProcess(reactor, None),
+        "reactor doesn't support IReactorProcess")
 class PosixProcessTests(unittest.TestCase, PosixProcessBase):
     # add two non-pty test cases
 
@@ -2140,6 +2165,10 @@ class PosixProcessTests(unittest.TestCase, PosixProcessBase):
 
 
 
+@skipIf(runtime.platform.getType() != 'posix',
+        "Only runs on POSIX platform")
+@skipIf(not interfaces.IReactorProcess(reactor, None),
+        "reactor doesn't support IReactorProcess")
 class PosixProcessPTYTests(unittest.TestCase, PosixProcessBase):
     """
     Just like PosixProcessTests, but use ptys instead of pipes.
@@ -2202,11 +2231,14 @@ class Win32SignalProtocol(SignalProtocol):
 
 
 
+@skipIf(runtime.platform.getType() != 'win32',
+        "Only runs on Windows")
+@skipIf(not interfaces.IReactorProcess(reactor, None),
+        "reactor doesn't support IReactorProcess")
 class Win32ProcessTests(unittest.TestCase):
     """
     Test process programs that are packaged with twisted.
     """
-
     def _test_stdinReader(self, pyExe, args, env, path):
         """
         Spawn a process, write to stdin, and check the output.
@@ -2246,16 +2278,12 @@ class Win32ProcessTests(unittest.TestCase):
         """
         import win32api
 
-        pyExe = FilePath(sys.executable)._asTextPath()
+        pyExe = FilePath(sys.executable).path
         args = [pyExe, u"-u", u"-m", u"twisted.test.process_stdinreader"]
         env = properEnv
         pythonPath = os.pathsep.join(sys.path)
-        if isinstance(pythonPath, bytes):
-            pythonPath = pythonPath.decode(sys.getfilesystemencoding())
         env[u"PYTHONPATH"] = pythonPath
         path = win32api.GetTempPath()
-        if isinstance(path, bytes):
-            path = path.decode(sys.getfilesystemencoding())
         d = self._test_stdinReader(pyExe, args, env, path)
         return d
 
@@ -2358,12 +2386,17 @@ class Win32ProcessTests(unittest.TestCase):
 
 
 
+@skipIf(runtime.platform.getType() != 'win32',
+        "Only runs on Windows")
+@skipIf(not interfaces.IReactorProcess(reactor, None),
+        "reactor doesn't support IReactorProcess")
 class Win32UnicodeEnvironmentTests(unittest.TestCase):
     """
     Tests for Unicode environment on Windows
     """
     goodKey = u'UNICODE'
     goodValue = u'UNICODE'
+
 
     def test_encodableUnicodeEnvironment(self):
         """
@@ -2384,10 +2417,15 @@ class Win32UnicodeEnvironmentTests(unittest.TestCase):
 
 
 
+@skipIf(runtime.platform.getType() != 'win32',
+        "Only runs on Windows")
+@skipIf(not interfaces.IReactorProcess(reactor, None),
+        "reactor doesn't support IReactorProcess")
 class DumbWin32ProcTests(unittest.TestCase):
     """
     L{twisted.internet._dumbwin32proc} tests.
     """
+
     def test_pid(self):
         """
         Simple test for the pid attribute of Process on win32.
@@ -2398,7 +2436,7 @@ class DumbWin32ProcTests(unittest.TestCase):
         from twisted.test import mock_win32process
         self.patch(_dumbwin32proc, "win32process", mock_win32process)
         scriptPath = FilePath(__file__).sibling(u"process_cmdline.py").path
-        pyExe = FilePath(sys.executable).asTextMode().path
+        pyExe = FilePath(sys.executable).path
 
         d = defer.Deferred()
         processProto = TrivialProcessProtocol(d)
@@ -2428,6 +2466,10 @@ class DumbWin32ProcTests(unittest.TestCase):
 
 
 
+@skipIf(runtime.platform.getType() != 'win32',
+        "Only runs on Windows")
+@skipIf(not interfaces.IReactorProcess(reactor, None),
+        "reactor doesn't support IReactorProcess")
 class Win32CreateProcessFlagsTests(unittest.TestCase):
     """
     Check the flags passed to CreateProcess.
@@ -2615,6 +2657,8 @@ class ClosingPipesProcessProtocol(protocol.ProcessProtocol):
 
 
 
+@skipIf(not interfaces.IReactorProcess(reactor, None),
+        "reactor doesn't support IReactorProcess")
 class ClosingPipesTests(unittest.TestCase):
 
     def doit(self, fd):
@@ -2637,7 +2681,7 @@ class ClosingPipesTests(unittest.TestCase):
                 # Give the system a bit of time to notice the closed
                 # descriptor.  Another option would be to poll() for HUP
                 # instead of relying on an os.write to fail with SIGPIPE.
-                # However, that wouldn't work on OS X (or Windows?).
+                # However, that wouldn't work on macOS (or Windows?).
                 'for i in range(1000):\n'
                 '    os.write(%d, b"foo\\n")\n'
                 '    time.sleep(0.01)\n'
@@ -2677,15 +2721,13 @@ class ClosingPipesTests(unittest.TestCase):
         ProcessProtocol.transport.closeStdout actually closes the pipe.
         """
         d = self.doit(1)
+
         def _check(errput):
-            if _PY3:
-                if runtime.platform.isWindows():
-                    self.assertIn(b"OSError", errput)
-                    self.assertIn(b"22", errput)
-                else:
-                    self.assertIn(b'BrokenPipeError', errput)
+            if runtime.platform.isWindows():
+                self.assertIn(b"OSError", errput)
+                self.assertIn(b"22", errput)
             else:
-                self.assertIn(b'OSError', errput)
+                self.assertIn(b'BrokenPipeError', errput)
             if runtime.platform.getType() != 'win32':
                 self.assertIn(b'Broken pipe', errput)
         d.addCallback(_check)
@@ -2703,22 +2745,3 @@ class ClosingPipesTests(unittest.TestCase):
             self.assertEqual(errput, b'')
         d.addCallback(_check)
         return d
-
-
-skipMessage = "wrong platform or reactor doesn't support IReactorProcess"
-if (runtime.platform.getType() != 'posix') or (not interfaces.IReactorProcess(reactor, None)):
-    PosixProcessTests.skip = skipMessage
-    PosixProcessPTYTests.skip = skipMessage
-    TwoProcessesPosixTests.skip = skipMessage
-    FDTests.skip = skipMessage
-
-if (runtime.platform.getType() != 'win32') or (not interfaces.IReactorProcess(reactor, None)):
-    Win32ProcessTests.skip = skipMessage
-    TwoProcessesNonPosixTests.skip = skipMessage
-    DumbWin32ProcTests.skip = skipMessage
-    Win32CreateProcessFlagsTests.skip = skipMessage
-    Win32UnicodeEnvironmentTests.skip = skipMessage
-
-if not interfaces.IReactorProcess(reactor, None):
-    ProcessTests.skip = skipMessage
-    ClosingPipesTests.skip = skipMessage

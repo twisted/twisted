@@ -5,9 +5,9 @@
 Tests for L{twisted.internet.default}.
 """
 
-from __future__ import division, absolute_import
 
-import select, sys
+import select
+import sys
 from twisted.trial.unittest import SynchronousTestCase
 from twisted.python.runtime import Platform
 from twisted.python.reflect import requireModule
@@ -71,7 +71,7 @@ class SelectReactorTests(SynchronousTestCase):
     """
     def test_osx(self):
         """
-        L{_getInstallFunction} chooses the select reactor on OS X.
+        L{_getInstallFunction} chooses the select reactor on macOS.
         """
         install = _getInstallFunction(osx)
         self.assertEqual(

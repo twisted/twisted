@@ -14,14 +14,12 @@ a sibling).
 Maintainer: Moshe Zadka
 """
 
-from __future__ import absolute_import, division
 
 from zope.interface import implementer, Interface, Attribute
 
 from twisted.persisted import sob
 from twisted.python.reflect import namedAny
 from twisted.python import components
-from twisted.python._oldstyle import _oldStyle
 from twisted.internet import defer
 from twisted.plugin import IPlugin
 
@@ -72,18 +70,13 @@ class ServiceMaker(object):
         self.tapname = tapname
 
 
-    def options():
-        def get(self):
-            return namedAny(self.module).Options
-        return get,
-    options = property(*options())
+    @property
+    def options(self):
+        return namedAny(self.module).Options
 
-
-    def makeService():
-        def get(self):
-            return namedAny(self.module).makeService
-        return get,
-    makeService = property(*makeService())
+    @property
+    def makeService(self):
+        return namedAny(self.module).makeService
 
 
 
@@ -92,12 +85,16 @@ class IService(Interface):
     A service.
 
     Run start-up and shut-down code at the appropriate times.
-
-    @type name:            C{string}
-    @ivar name:            The name of the service (or None)
-    @type running:         C{boolean}
-    @ivar running:         Whether the service is running.
     """
+
+    name = Attribute(
+        "A C{str} which is the name of the service or C{None}.")
+
+    running = Attribute(
+        "A C{boolean} which indicates whether the service is running.")
+
+    parent = Attribute(
+        "An C{IServiceCollection} which is the parent or C{None}.")
 
     def setName(name):
         """
@@ -350,7 +347,6 @@ class IProcess(Interface):
 
 
 @implementer(IProcess)
-@_oldStyle
 class Process:
     """
     Process running parameters.

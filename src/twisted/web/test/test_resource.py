@@ -175,6 +175,31 @@ class ResourceTests(TestCase):
         self.assertIdentical(child.request, request)
 
 
+    def test_staticChildPathType(self):
+        """
+        Test that passing the wrong type to putChild results in a warning,
+        and a failure in Python 3
+        """
+        resource = Resource()
+        child = Resource()
+        sibling = Resource()
+        resource.putChild(u"foo", child)
+        warnings = self.flushWarnings([self.test_staticChildPathType])
+        self.assertEqual(len(warnings), 1)
+        self.assertIn("Path segment must be bytes",
+                      warnings[0]['message'])
+        # We expect an error here because "foo" != b"foo" on Python 3+
+        self.assertIsInstance(
+            resource.getChildWithDefault(b"foo", DummyRequest([])),
+            ErrorPage)
+
+        resource.putChild(None, sibling)
+        warnings = self.flushWarnings([self.test_staticChildPathType])
+        self.assertEqual(len(warnings), 1)
+        self.assertIn("Path segment must be bytes",
+                      warnings[0]['message'])
+
+
     def test_defaultHEAD(self):
         """
         When not otherwise overridden, L{Resource.render} treats a I{HEAD}

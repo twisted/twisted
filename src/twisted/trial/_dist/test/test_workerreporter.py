@@ -20,6 +20,7 @@ class FakeAMProtocol(object):
 
     def callRemote(self, command, **kwargs):
         self.lastCall = command
+        self.lastArgs = kwargs
 
 
 

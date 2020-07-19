@@ -6,28 +6,20 @@
 HTTP client.
 """
 
-from __future__ import division, absolute_import
 
 import os
+import collections
 import warnings
 
-try:
-    from urlparse import urlunparse, urljoin, urldefrag
-except ImportError:
-    from urllib.parse import urljoin, urldefrag
-    from urllib.parse import urlunparse as _urlunparse
-
-    def urlunparse(parts):
-        result = _urlunparse(tuple([p.decode("charmap") for p in parts]))
-        return result.encode("charmap")
+from urllib.parse import urljoin, urldefrag
+from urllib.parse import urlunparse as _urlunparse
 
 import zlib
 from functools import wraps
 
 from zope.interface import implementer
 
-from twisted.python import log
-from twisted.python.compat import _PY3, networkString
+from twisted.python.compat import networkString
 from twisted.python.compat import nativeString, intToBytes, unicode, itervalues
 from twisted.python.deprecate import deprecatedModuleAttribute, deprecated
 from twisted.python.failure import Failure
@@ -36,7 +28,7 @@ from incremental import Version
 from twisted.web.iweb import IPolicyForHTTPS, IAgentEndpointFactory
 from twisted.python.deprecate import getDeprecationWarningString
 from twisted.web import http
-from twisted.internet import defer, protocol, task, reactor
+from twisted.internet import defer, protocol, task
 from twisted.internet.abstract import isIPv6Address
 from twisted.internet.interfaces import IProtocol, IOpenSSLContextFactory
 from twisted.internet.endpoints import HostnameEndpoint, wrapClientTLS
@@ -45,6 +37,16 @@ from twisted.python.components import proxyForInterface
 from twisted.web import error
 from twisted.web.iweb import UNKNOWN_LENGTH, IAgent, IBodyProducer, IResponse
 from twisted.web.http_headers import Headers
+from twisted.logger import Logger
+
+from twisted.web._newclient import _ensureValidURI, _ensureValidMethod
+
+
+
+def urlunparse(parts):
+    result = _urlunparse(tuple([p.decode("charmap") for p in parts]))
+    return result.encode("charmap")
+
 
 
 class PartialDownloadError(error.Error):
@@ -77,11 +79,13 @@ class HTTPPageGetter(http.HTTPClient):
 
     _completelyDone = True
 
-    _specialHeaders = set((b'host', b'user-agent', b'cookie', b'content-length'))
+    _specialHeaders = set(
+        (b'host', b'user-agent', b'cookie', b'content-length'),
+    )
 
     def connectionMade(self):
-        method = getattr(self.factory, 'method', b'GET')
-        self.sendCommand(method, self.factory.path)
+        method = _ensureValidMethod(getattr(self.factory, 'method', b'GET'))
+        self.sendCommand(method, _ensureValidURI(self.factory.path))
         if self.factory.scheme == b'http' and self.factory.port != 80:
             host = self.factory.host + b':' + intToBytes(self.factory.port)
         elif self.factory.scheme == b'https' and self.factory.port != 443:
@@ -177,6 +181,7 @@ class HTTPPageGetter(http.HTTPClient):
             self._completelyDone = False
             self.factory.setURL(url)
 
+            from twisted.internet import reactor
             if self.factory.scheme == b'https':
                 from twisted.internet import ssl
                 contextFactory = ssl.ClientContextFactory()
@@ -361,7 +366,7 @@ class HTTPClientFactory(protocol.ClientFactory):
             # just in case a broken http/1.1 decides to keep connection alive
             self.headers.setdefault(b"connection", b"close")
         self.postdata = postdata
-        self.method = method
+        self.method = _ensureValidMethod(method)
 
         self.setURL(url)
 
@@ -388,6 +393,7 @@ class HTTPClientFactory(protocol.ClientFactory):
         return "<%s: %s>" % (self.__class__.__name__, self.url)
 
     def setURL(self, url):
+        _ensureValidURI(url.strip())
         self.url = url
         uri = URI.fromBytes(url)
         if uri.scheme and uri.host:
@@ -401,6 +407,7 @@ class HTTPClientFactory(protocol.ClientFactory):
         p.followRedirect = self.followRedirect
         p.afterFoundGet = self.afterFoundGet
         if self.timeout:
+            from twisted.internet import reactor
             timeoutCall = reactor.callLater(self.timeout, p.timeout)
             self.deferred.addBoth(self._cancelTimeout, timeoutCall)
         return p
@@ -472,6 +479,7 @@ class HTTPDownloader(HTTPClientFactory):
     """
     protocol = HTTPPageDownloader
     value = None
+    _log = Logger()
 
     def __init__(self, url, fileOrName,
                  method=b'GET', postdata=None, headers=None,
@@ -557,7 +565,7 @@ class HTTPDownloader(HTTPClientFactory):
                 try:
                     self.file.close()
                 except:
-                    log.err(None, "Error closing HTTPDownloader file")
+                    self._log.failure("Error closing HTTPDownloader file")
             self.deferred.errback(reason)
 
 
@@ -731,8 +739,9 @@ def _makeGetterFactory(url, factoryFactory, contextFactory=None,
 
     @return: The factory created by C{factoryFactory}
     """
-    uri = URI.fromBytes(url)
+    uri = URI.fromBytes(_ensureValidURI(url.strip()))
     factory = factoryFactory(url, *args, **kwargs)
+    from twisted.internet import reactor
     if uri.scheme == b'https':
         from twisted.internet import ssl
         if contextFactory is None:
@@ -956,6 +965,73 @@ deprecatedModuleAttribute(Version("Twisted", 14, 0, 0),
 
 
 
+@implementer(IPolicyForHTTPS)
+class HostnameCachingHTTPSPolicy(object):
+    """
+    IPolicyForHTTPS that wraps a L{IPolicyForHTTPS} and caches the created
+    L{IOpenSSLClientConnectionCreator}.
+
+    This policy will cache up to C{cacheSize}
+    L{client connection creators <twisted.internet.interfaces.
+    IOpenSSLClientConnectionCreator>} for reuse in subsequent requests to
+    the same hostname.
+
+    @ivar _policyForHTTPS: See C{policyforHTTPS} parameter of L{__init__}.
+
+    @ivar _cache: A cache associating hostnames to their
+        L{client connection creators <twisted.internet.interfaces.
+        IOpenSSLClientConnectionCreator>}.
+    @type _cache: L{collections.OrderedDict}
+
+    @ivar _cacheSize: See C{cacheSize} parameter of L{__init__}.
+
+    @since: Twisted 19.2.0
+    """
+
+    def __init__(self, policyforHTTPS, cacheSize=20):
+        """
+        @param policyforHTTPS: The IPolicyForHTTPS to wrap.
+        @type policyforHTTPS: L{IPolicyForHTTPS}
+
+        @param cacheSize: The maximum size of the hostname cache.
+        @type cacheSize: L{int}
+        """
+        self._policyForHTTPS = policyforHTTPS
+        self._cache = collections.OrderedDict()
+        self._cacheSize = cacheSize
+
+
+    def creatorForNetloc(self, hostname, port):
+        """
+        Create a L{client connection creator
+        <twisted.internet.interfaces.IOpenSSLClientConnectionCreator>} for a
+        given network location and cache it for future use.
+
+        @param hostname: The hostname part of the URI.
+        @type hostname: L{bytes}
+
+        @param port: The port part of the URI.
+        @type port: L{int}
+
+        @return: a connection creator with appropriate verification
+            restrictions set
+        @rtype: L{client connection creator
+            <twisted.internet.interfaces.IOpenSSLClientConnectionCreator>}
+        """
+        host = hostname.decode("ascii")
+        try:
+            creator = self._cache.pop(host)
+        except KeyError:
+            creator = self._policyForHTTPS.creatorForNetloc(hostname, port)
+
+        self._cache[host] = creator
+        if len(self._cache) > self._cacheSize:
+            self._cache.popitem(last=False)
+
+        return creator
+
+
+
 @implementer(IOpenSSLContextFactory)
 class _ContextFactoryWithContext(object):
     """
@@ -1083,23 +1159,32 @@ class FileBodyProducer(object):
         stopping the underlying L{CooperativeTask}.
         """
         self._inputFile.close()
-        self._task.stop()
+        try:
+            self._task.stop()
+        except task.TaskFinished:
+            pass
 
 
     def startProducing(self, consumer):
         """
         Start a cooperative task which will read bytes from the input file and
         write them to C{consumer}.  Return a L{Deferred} which fires after all
-        bytes have been written.
+        bytes have been written.  If this L{Deferred} is cancelled before it is
+        fired, stop reading and writing bytes.
 
         @param consumer: Any L{IConsumer} provider
         """
         self._task = self._cooperate(self._writeloop(consumer))
         d = self._task.whenDone()
         def maybeStopped(reason):
-            # IBodyProducer.startProducing's Deferred isn't support to fire if
+            if reason.check(defer.CancelledError):
+                self.stopProducing()
+            elif reason.check(task.TaskStopped):
+                pass
+            else:
+                return reason
+            # IBodyProducer.startProducing's Deferred isn't supposed to fire if
             # stopProducing is called.
-            reason.trap(task.TaskStopped)
             return defer.Deferred()
         d.addCallbacks(lambda ignored: None, maybeStopped)
         return d
@@ -1272,6 +1357,7 @@ class HTTPConnectionPool(object):
     maxPersistentPerHost = 2
     cachedConnectionTimeout = 240
     retryAutomatically = True
+    _log = Logger()
 
     def __init__(self, reactor, persistent=True):
         self._reactor = reactor
@@ -1350,7 +1436,8 @@ class HTTPConnectionPool(object):
                 raise RuntimeError(
                     "BUG: Non-quiescent protocol added to connection pool.")
             except:
-                log.err()
+                self._log.failure(
+                    "BUG: Non-quiescent protocol added to connection pool.")
             return
         connections = self._connections.setdefault(key, [])
         if len(connections) == self.maxPersistentPerHost:
@@ -1419,6 +1506,12 @@ class _AgentBase(object):
         Issue a new request, given the endpoint and the path sent as part of
         the request.
         """
+        if not isinstance(method, bytes):
+            raise TypeError('method={!r} is {}, but must be bytes'.format(
+                    method, type(method)))
+
+        method = _ensureValidMethod(method)
+
         # Create minimal headers, if necessary:
         if headers is None:
             headers = Headers()
@@ -1643,6 +1736,7 @@ class Agent(_AgentBase):
 
         @see: L{twisted.web.iweb.IAgent.request}
         """
+        uri = _ensureValidURI(uri.strip())
         parsedURI = URI.fromBytes(uri)
         try:
             endpoint = self._getEndpoint(parsedURI)
@@ -1676,6 +1770,8 @@ class ProxyAgent(_AgentBase):
         """
         Issue a new request via the configured proxy.
         """
+        uri = _ensureValidURI(uri.strip())
+
         # Cache *all* connections under the same key, since we are only
         # connecting to a single destination, the proxy:
         key = ("http-proxy", self._proxyEndpoint)
@@ -1727,9 +1823,8 @@ class _FakeUrllib2Request(object):
             # If it's not a schema on the regular port, add the port.
             self.host += ":" + str(_uri.port)
 
-        if _PY3:
-            self.origin_req_host = nativeString(_uri.host)
-            self.unverifiable = lambda _: False
+        self.origin_req_host = nativeString(_uri.host)
+        self.unverifiable = lambda _: False
 
 
     def has_header(self, header):
@@ -1864,7 +1959,7 @@ class CookieAgent(object):
 
 
 
-class GzipDecoder(proxyForInterface(IResponse)):
+class GzipDecoder(proxyForInterface(IResponse)):  # type: ignore[misc]
     """
     A wrapper for a L{Response} instance which handles gzip'ed body.
 
@@ -1887,7 +1982,7 @@ class GzipDecoder(proxyForInterface(IResponse)):
 
 
 
-class _GzipProtocol(proxyForInterface(IProtocol)):
+class _GzipProtocol(proxyForInterface(IProtocol)):  # type: ignore[misc]
     """
     A L{Protocol} implementation which wraps another one, transparently
     decompressing received data.
@@ -1940,16 +2035,27 @@ class ContentDecoderAgent(object):
     An L{Agent} wrapper to handle encoded content.
 
     It takes care of declaring the support for content in the
-    I{Accept-Encoding} header, and automatically decompresses the received data
-    if it's effectively using compression.
+    I{Accept-Encoding} header and automatically decompresses the received data
+    if the I{Content-Encoding} header indicates a supported encoding.
 
-    @param decoders: A list or tuple of (name, decoder) objects. The name
-        declares which decoding the decoder supports, and the decoder must
-        return a response object when called/instantiated. For example,
-        C{(('gzip', GzipDecoder))}. The order determines how the decoders are
-        going to be advertized to the server.
+    For example::
+
+        agent = ContentDecoderAgent(Agent(reactor),
+                                    [(b'gzip', GzipDecoder)])
+
+    @param agent: The agent to wrap
+    @type agent: L{IAgent}
+
+    @param decoders: A sequence of (name, decoder) objects. The name
+        declares which encoding the decoder supports. The decoder must accept
+        an L{IResponse} and return an L{IResponse} when called. The order
+        determines how the decoders are advertised to the server. Names must
+        be unique.not be duplicated.
+    @type decoders: sequence of (L{bytes}, L{callable}) tuples
 
     @since: 11.1
+
+    @see: L{GzipDecoder}
     """
 
     def __init__(self, agent, decoders):
@@ -2218,6 +2324,7 @@ def readBody(response):
 
 __all__ = [
     'Agent',
+    'BrowserLikePolicyForHTTPS',
     'BrowserLikeRedirectAgent',
     'ContentDecoderAgent',
     'CookieAgent',

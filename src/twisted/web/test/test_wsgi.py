@@ -14,8 +14,7 @@ import warnings
 
 from zope.interface.verify import verifyObject
 
-from twisted.python.compat import intToBytes, urlquote, _PY3
-from twisted.python.log import addObserver, removeObserver, err
+from twisted.python.compat import intToBytes, urlquote
 from twisted.python.failure import Failure
 from twisted.python.threadable import getThreadID
 from twisted.python.threadpool import ThreadPool
@@ -28,6 +27,9 @@ from twisted.web.resource import IResource, Resource
 from twisted.web.server import Request, Site, version
 from twisted.web.wsgi import WSGIResource
 from twisted.web.test.test_web import DummyChannel
+from twisted.logger import globalLogPublisher, Logger
+from twisted.test.proto_helpers import EventLoggingObserver
+from twisted.internet.address import IPv4Address, IPv6Address
 
 
 
@@ -38,6 +40,8 @@ class SynchronousThreadPool:
     them in a thread pool.  It is used to make the tests which are not
     directly for thread-related behavior deterministic.
     """
+    _log = Logger()
+
     def callInThread(self, f, *a, **kw):
         """
         Call C{f(*a, **kw)} in this thread rather than scheduling it to be
@@ -49,7 +53,9 @@ class SynchronousThreadPool:
             # callInThread doesn't let exceptions propagate to the caller.
             # None is always returned and any exception raised gets logged
             # later on.
-            err(None, "Callable passed to SynchronousThreadPool.callInThread failed")
+            self._log.failure(
+                "Callable passed to SynchronousThreadPool.callInThread failed"
+            )
 
 
 
@@ -104,6 +110,93 @@ class WSGIResourceTests(TestCase):
             RuntimeError,
             self.resource.putChild,
             b"foo", Resource())
+
+
+    def test_applicationAndRequestThrow(self):
+        """
+        If an exception is thrown by the application, and then in the
+        exception handling code, verify it should be propagated to the
+        provided L{ThreadPool}.
+        """
+        logObserver = EventLoggingObserver.createWithCleanup(
+            self,
+            globalLogPublisher
+        )
+
+        class ArbitraryError(Exception):
+            """
+            An arbitrary error for this class
+            """
+
+        class FinishThrowingRequest(Request):
+            """
+            An L{IRequest} request whose finish method throws.
+            """
+            def __init__(self, *args, **kwargs):
+                Request.__init__(self, *args, **kwargs)
+                self.prepath = ''
+                self.postpath = ''
+                self.uri = b'www.example.com/stuff'
+
+
+            def getClientIP(self):
+                """
+                Return loopback address.
+
+                @return: loopback ip address.
+                """
+                return '127.0.0.1'
+
+
+            def getHost(self):
+                """
+                Return a fake Address
+
+                @return: A fake address
+                """
+                return IPv4Address('TCP', '127.0.0.1', 30000)
+
+
+        def application(environ, startResponse):
+            """
+            An application object that throws an exception.
+
+            @param environ: unused
+
+            @param startResponse: unused
+            """
+            raise ArbitraryError()
+
+
+        class ThrowingReactorThreads:
+            """
+            An L{IReactorThreads} implementation whose callFromThread raises
+            an exception.
+            """
+            def callFromThread(self, f, *a, **kw):
+                """
+                Raise an exception to the caller.
+
+                @param f: unused
+
+                @param a: unused
+
+                @param kw: unused
+                """
+                raise ArbitraryError()
+
+        self.resource = WSGIResource(
+            ThrowingReactorThreads(),
+            SynchronousThreadPool(),
+            application
+        )
+
+        self.resource.render(FinishThrowingRequest(DummyChannel(), False))
+        self.assertEquals(1, len(logObserver))
+        f = logObserver[0]["log_failure"]
+        self.assertIsInstance(f.value, ArbitraryError)
+        self.flushLoggedErrors(ArbitraryError)
+
 
 
 class WSGITestsMixin:
@@ -195,8 +288,9 @@ class WSGITestsMixin:
                 startResponse('200 OK', [])
                 return iter(())
             return application
+        channelFactory = kw.pop('channelFactory', self.channelFactory)
         self.lowLevelRender(
-            Request, applicationFactory, self.channelFactory, *a, **kw)
+            Request, applicationFactory, channelFactory, *a, **kw)
         return result
 
 
@@ -377,16 +471,10 @@ class EnvironTests(WSGITestsMixin, TestCase):
         result.addCallback(self.environKeyEqual('SCRIPT_NAME', '/res'))
         self.assertIsInstance(self.successResultOf(result), str)
 
-        if _PY3:
-            # Native strings are rejected by Request.requestReceived() before
-            # t.w.wsgi has any say in the matter.
-            request, result = self.prepareRequest()
-            self.assertRaises(TypeError, request.requestReceived, path=u"/res")
-        else:
-            request, result = self.prepareRequest()
-            request.requestReceived(path=u"/res")
-            result.addCallback(self.environKeyEqual('SCRIPT_NAME', '/res'))
-            self.assertIsInstance(self.successResultOf(result), str)
+        # Native strings are rejected by Request.requestReceived() before
+        # t.w.wsgi has any say in the matter.
+        request, result = self.prepareRequest()
+        self.assertRaises(TypeError, request.requestReceived, path=u"/res")
 
 
     def test_pathInfo(self):
@@ -435,17 +523,11 @@ class EnvironTests(WSGITestsMixin, TestCase):
         result.addCallback(self.environKeyEqual('PATH_INFO', '/foo/bar'))
         self.assertIsInstance(self.successResultOf(result), str)
 
-        if _PY3:
-            # Native strings are rejected by Request.requestReceived() before
-            # t.w.wsgi has any say in the matter.
-            request, result = self.prepareRequest()
-            self.assertRaises(
-                TypeError, request.requestReceived, path=u"/res/foo/bar")
-        else:
-            request, result = self.prepareRequest()
-            request.requestReceived(path=u"/res/foo/bar")
-            result.addCallback(self.environKeyEqual('PATH_INFO', '/foo/bar'))
-            self.assertIsInstance(self.successResultOf(result), str)
+        # Native strings are rejected by Request.requestReceived() before
+        # t.w.wsgi has any say in the matter.
+        request, result = self.prepareRequest()
+        self.assertRaises(
+            TypeError, request.requestReceived, path=u"/res/foo/bar")
 
 
     def test_queryString(self):
@@ -488,17 +570,11 @@ class EnvironTests(WSGITestsMixin, TestCase):
         result.addCallback(self.environKeyEqual('QUERY_STRING', 'foo=bar'))
         self.assertIsInstance(self.successResultOf(result), str)
 
-        if _PY3:
-            # Native strings are rejected by Request.requestReceived() before
-            # t.w.wsgi has any say in the matter.
-            request, result = self.prepareRequest()
-            self.assertRaises(
-                TypeError, request.requestReceived, path=u"/res?foo=bar")
-        else:
-            request, result = self.prepareRequest()
-            request.requestReceived(path=u"/res?foo=bar")
-            result.addCallback(self.environKeyEqual('QUERY_STRING', 'foo=bar'))
-            self.assertIsInstance(self.successResultOf(result), str)
+        # Native strings are rejected by Request.requestReceived() before
+        # t.w.wsgi has any say in the matter.
+        request, result = self.prepareRequest()
+        self.assertRaises(
+            TypeError, request.requestReceived, path=u"/res?foo=bar")
 
 
     def test_contentType(self):
@@ -666,6 +742,21 @@ class EnvironTests(WSGITestsMixin, TestCase):
 
         return d
 
+
+    def test_remoteAddrIPv6(self):
+        """
+        The C{'REMOTE_ADDR'} key of the C{environ} C{dict} passed to
+        the application contains the address of the client making the
+        request when connecting over IPv6.
+        """
+        def channelFactory():
+            return DummyChannel(peer=IPv6Address('TCP', '::1', 1234))
+        d = self.render('GET', '1.1', [], [''], channelFactory=channelFactory)
+        d.addCallback(self.environKeyEqual('REMOTE_ADDR', '::1'))
+
+        return d
+
+
     def test_headers(self):
         """
         HTTP request headers are copied into the C{environ} C{dict} passed to
@@ -766,9 +857,10 @@ class EnvironTests(WSGITestsMixin, TestCase):
         section of PEP 333) which converts bytes written to it into events for
         the logging system.
         """
-        events = []
-        addObserver(events.append)
-        self.addCleanup(removeObserver, events.append)
+        events = EventLoggingObserver.createWithCleanup(
+            self,
+            globalLogPublisher
+        )
 
         errors = self.render('GET', '1.1', [], [''])
         def cbErrors(result):
@@ -788,39 +880,12 @@ class EnvironTests(WSGITestsMixin, TestCase):
         return errors
 
 
-    def test_wsgiErrorsExpectsOnlyNativeStringsInPython2(self):
-        """
-        The C{'wsgi.errors'} file-like object from the C{environ} C{dict}
-        expects writes of only native strings in Python 2. Some existing WSGI
-        applications may write non-native (i.e. C{unicode}) strings so, for
-        compatibility, these elicit only a warning in Python 2.
-        """
-        if _PY3:
-            raise SkipTest("Not relevant in Python 3")
-
-        request, result = self.prepareRequest()
-        request.requestReceived()
-        environ, _ = self.successResultOf(result)
-        errors = environ["wsgi.errors"]
-
-        with warnings.catch_warnings(record=True) as caught:
-            errors.write(u"fred")
-        self.assertEqual(1, len(caught))
-        self.assertEqual(UnicodeWarning, caught[0].category)
-        self.assertEqual(
-            "write() argument should be str, not u'fred' (unicode)",
-            str(caught[0].message))
-
-
     def test_wsgiErrorsAcceptsOnlyNativeStringsInPython3(self):
         """
         The C{'wsgi.errors'} file-like object from the C{environ} C{dict}
         permits writes of only native strings in Python 3, and raises
         C{TypeError} for writes of non-native strings.
         """
-        if not _PY3:
-            raise SkipTest("Relevant only in Python 3")
-
         request, result = self.prepareRequest()
         request.requestReceived()
         environ, _ = self.successResultOf(result)
@@ -1224,7 +1289,7 @@ class StartResponseTests(WSGITestsMixin, TestCase):
         The response status passed to the I{start_response} callable MUST be a
         native string in Python 2 and Python 3.
         """
-        status = b"200 OK" if _PY3 else u"200 OK"
+        status = b"200 OK"
 
         def application(environ, startResponse):
             startResponse(status, [])
@@ -1234,12 +1299,8 @@ class StartResponseTests(WSGITestsMixin, TestCase):
         request.requestReceived()
 
         def checkMessage(error):
-            if _PY3:
-                self.assertEqual(
-                    "status must be str, not b'200 OK' (bytes)", str(error))
-            else:
-                self.assertEqual(
-                    "status must be str, not u'200 OK' (unicode)", str(error))
+            self.assertEqual(
+                "status must be str, not b'200 OK' (bytes)", str(error))
 
         return self.assertFailure(result, TypeError).addCallback(checkMessage)
 
@@ -1419,7 +1480,7 @@ class StartResponseTests(WSGITestsMixin, TestCase):
         Each header key passed to the I{start_response} callable MUST be at
         native string in Python 2 and Python 3.
         """
-        key = b"key" if _PY3 else u"key"
+        key = b"key"
 
         def application(environ, startResponse):
             startResponse("200 OK", [(key, "value")])
@@ -1441,7 +1502,7 @@ class StartResponseTests(WSGITestsMixin, TestCase):
         Each header value passed to the I{start_response} callable MUST be at
         native string in Python 2 and Python 3.
         """
-        value = b"value" if _PY3 else u"value"
+        value = b"value"
 
         def application(environ, startResponse):
             startResponse("200 OK", [("key", value)])
@@ -1749,14 +1810,9 @@ class StartResponseTests(WSGITestsMixin, TestCase):
         request.requestReceived()
 
         def checkMessage(error):
-            if _PY3:
-                self.assertEqual(
-                    "Can only write bytes to a transport, not 'bogus'",
-                    str(error))
-            else:
-                self.assertEqual(
-                    "Can only write bytes to a transport, not u'bogus'",
-                    str(error))
+            self.assertEqual(
+                "Can only write bytes to a transport, not 'bogus'",
+                str(error))
 
         return self.assertFailure(result, TypeError).addCallback(checkMessage)
 
@@ -2026,6 +2082,11 @@ class ApplicationTests(WSGITestsMixin, TestCase):
     def _connectionClosedTest(self, application, responseContent):
         channel = DummyChannel()
 
+        logObserver = EventLoggingObserver.createWithCleanup(
+            self,
+            globalLogPublisher
+        )
+
         def applicationFactory():
             return application
 
@@ -2038,8 +2099,11 @@ class ApplicationTests(WSGITestsMixin, TestCase):
             return requests[-1]
 
         def ebRendered(ignored):
-            errors = self.flushLoggedErrors(RuntimeError)
-            self.assertEqual(len(errors), 1)
+            self.assertEquals(1, len(logObserver))
+            event = logObserver[0]
+            f = event["log_failure"]
+            self.assertIsInstance(f.value, RuntimeError)
+            self.flushLoggedErrors(RuntimeError)
 
             response = channel.transport.written.getvalue()
             self.assertTrue(response.startswith(b'HTTP/1.1 200 OK'))

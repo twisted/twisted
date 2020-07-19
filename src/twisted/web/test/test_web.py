@@ -7,6 +7,7 @@ Tests for various parts of L{twisted.web}.
 
 import os
 import zlib
+from io import BytesIO
 
 from zope.interface import implementer
 from zope.interface.verify import verifyObject
@@ -15,14 +16,21 @@ from twisted.python import reflect, failure
 from twisted.python.compat import unichr
 from twisted.python.filepath import FilePath
 from twisted.trial import unittest
-from twisted.internet import reactor
-from twisted.internet.address import IPv4Address
+from twisted.internet import reactor, interfaces
+from twisted.internet.address import IPv4Address, IPv6Address
 from twisted.internet.task import Clock
 from twisted.web import server, resource
 from twisted.web import iweb, http, error
 
 from twisted.web.test.requesthelper import DummyChannel, DummyRequest
 from twisted.web.static import Data
+from twisted.logger import globalLogPublisher, LogLevel
+from twisted.test.proto_helpers import EventLoggingObserver
+
+from ._util import (
+    assertIsFilesystemTemporary,
+)
+
 
 
 class ResourceTests(unittest.TestCase):
@@ -202,6 +210,7 @@ class SiteTest(unittest.TestCase):
         site = server.Site(resource.Resource())
 
         self.assertRaises(KeyError, site.getSession, b'no-such-uid')
+
 
 
 class SessionTests(unittest.TestCase):
@@ -499,6 +508,14 @@ class RequestTests(unittest.TestCase):
             verifyObject(iweb.IRequest, server.Request(DummyChannel(), True)))
 
 
+    def test_hashable(self):
+        """
+        L{server.Request} instances are hashable, thus can be put in a mapping.
+        """
+        request = server.Request(DummyChannel(), True)
+        hash(request)
+
+
     def testChildLink(self):
         request = server.Request(DummyChannel(), 1)
         request.gotLength(0)
@@ -509,12 +526,14 @@ class RequestTests(unittest.TestCase):
         request.requestReceived(b'GET', b'/foo/bar/', b'HTTP/1.0')
         self.assertEqual(request.childLink(b'baz'), b'baz')
 
+
     def testPrePathURLSimple(self):
         request = server.Request(DummyChannel(), 1)
         request.gotLength(0)
         request.requestReceived(b'GET', b'/foo/bar', b'HTTP/1.0')
         request.setHost(b'example.com', 80)
         self.assertEqual(request.prePathURL(), b'http://example.com/foo/bar')
+
 
     def testPrePathURLNonDefault(self):
         d = DummyChannel()
@@ -523,7 +542,9 @@ class RequestTests(unittest.TestCase):
         request.setHost(b'example.com', 81)
         request.gotLength(0)
         request.requestReceived(b'GET', b'/foo/bar', b'HTTP/1.0')
-        self.assertEqual(request.prePathURL(), b'http://example.com:81/foo/bar')
+        self.assertEqual(request.prePathURL(),
+                         b'http://example.com:81/foo/bar')
+
 
     def testPrePathURLSSLPort(self):
         d = DummyChannel()
@@ -532,7 +553,9 @@ class RequestTests(unittest.TestCase):
         request.setHost(b'example.com', 443)
         request.gotLength(0)
         request.requestReceived(b'GET', b'/foo/bar', b'HTTP/1.0')
-        self.assertEqual(request.prePathURL(), b'http://example.com:443/foo/bar')
+        self.assertEqual(request.prePathURL(),
+                         b'http://example.com:443/foo/bar')
+
 
     def testPrePathURLSSLPortAndSSL(self):
         d = DummyChannel()
@@ -544,6 +567,7 @@ class RequestTests(unittest.TestCase):
         request.requestReceived(b'GET', b'/foo/bar', b'HTTP/1.0')
         self.assertEqual(request.prePathURL(), b'https://example.com/foo/bar')
 
+
     def testPrePathURLHTTPPortAndSSL(self):
         d = DummyChannel()
         d.transport = DummyChannel.SSL()
@@ -552,7 +576,9 @@ class RequestTests(unittest.TestCase):
         request.setHost(b'example.com', 80)
         request.gotLength(0)
         request.requestReceived(b'GET', b'/foo/bar', b'HTTP/1.0')
-        self.assertEqual(request.prePathURL(), b'https://example.com:80/foo/bar')
+        self.assertEqual(request.prePathURL(),
+                         b'https://example.com:80/foo/bar')
+
 
     def testPrePathURLSSLNonDefault(self):
         d = DummyChannel()
@@ -562,7 +588,9 @@ class RequestTests(unittest.TestCase):
         request.setHost(b'example.com', 81)
         request.gotLength(0)
         request.requestReceived(b'GET', b'/foo/bar', b'HTTP/1.0')
-        self.assertEqual(request.prePathURL(), b'https://example.com:81/foo/bar')
+        self.assertEqual(request.prePathURL(),
+                         b'https://example.com:81/foo/bar')
+
 
     def testPrePathURLSetSSLHost(self):
         d = DummyChannel()
@@ -587,12 +615,50 @@ class RequestTests(unittest.TestCase):
         self.assertEqual(request.prePathURL(), b'http://example.com/foo%2Fbar')
 
 
+    def test_processingFailedNoTracebackByDefault(self):
+        """
+        By default, L{Request.processingFailed} does not write out the failure,
+        but give a generic error message, as L{Site.displayTracebacks} is
+        disabled by default.
+        """
+        logObserver = EventLoggingObserver.createWithCleanup(
+            self,
+            globalLogPublisher
+        )
+
+        d = DummyChannel()
+        request = server.Request(d, 1)
+        request.site = server.Site(resource.Resource())
+        fail = failure.Failure(Exception("Oh no!"))
+        request.processingFailed(fail)
+
+        self.assertNotIn(b"Oh no!", request.transport.written.getvalue())
+        self.assertIn(
+            b"Processing Failed", request.transport.written.getvalue()
+        )
+        self.assertEquals(1, len(logObserver))
+
+        event = logObserver[0]
+        f = event["log_failure"]
+        self.assertIsInstance(f.value, Exception)
+        self.assertEquals(f.getErrorMessage(), "Oh no!")
+
+        # Since we didn't "handle" the exception, flush it to prevent a test
+        # failure
+        self.assertEqual(1, len(self.flushLoggedErrors()))
+
+
     def test_processingFailedNoTraceback(self):
         """
         L{Request.processingFailed} when the site has C{displayTracebacks} set
         to C{False} does not write out the failure, but give a generic error
         message.
         """
+        logObserver = EventLoggingObserver.createWithCleanup(
+            self,
+            globalLogPublisher
+        )
+
         d = DummyChannel()
         request = server.Request(d, 1)
         request.site = server.Site(resource.Resource())
@@ -604,6 +670,12 @@ class RequestTests(unittest.TestCase):
         self.assertIn(
             b"Processing Failed", request.transport.written.getvalue()
         )
+        self.assertEquals(1, len(logObserver))
+
+        event = logObserver[0]
+        f = event["log_failure"]
+        self.assertIsInstance(f.value, Exception)
+        self.assertEquals(f.getErrorMessage(), "Oh no!")
 
         # Since we didn't "handle" the exception, flush it to prevent a test
         # failure
@@ -615,6 +687,11 @@ class RequestTests(unittest.TestCase):
         L{Request.processingFailed} when the site has C{displayTracebacks} set
         to C{True} writes out the failure.
         """
+        logObserver = EventLoggingObserver.createWithCleanup(
+            self,
+            globalLogPublisher
+        )
+
         d = DummyChannel()
         request = server.Request(d, 1)
         request.site = server.Site(resource.Resource())
@@ -624,6 +701,10 @@ class RequestTests(unittest.TestCase):
 
         self.assertIn(b"Oh no!", request.transport.written.getvalue())
 
+        event = logObserver[0]
+        f = event["log_failure"]
+        self.assertIsInstance(f.value, Exception)
+        self.assertEquals(f.getErrorMessage(), "Oh no!")
         # Since we didn't "handle" the exception, flush it to prevent a test
         # failure
         self.assertEqual(1, len(self.flushLoggedErrors()))
@@ -635,6 +716,11 @@ class RequestTests(unittest.TestCase):
         to C{True} writes out the failure, making UTF-8 items into HTML
         entities.
         """
+        logObserver = EventLoggingObserver.createWithCleanup(
+            self,
+            globalLogPublisher
+        )
+
         d = DummyChannel()
         request = server.Request(d, 1)
         request.site = server.Site(resource.Resource())
@@ -650,6 +736,9 @@ class RequestTests(unittest.TestCase):
         # uses a default encodig of cp437 which does not support u"\u2603".
         self.flushLoggedErrors(UnicodeError)
 
+        event = logObserver[0]
+        f = event["log_failure"]
+        self.assertIsInstance(f.value, Exception)
         # Since we didn't "handle" the exception, flush it to prevent a test
         # failure
         self.assertEqual(1, len(self.flushLoggedErrors()))
@@ -734,8 +823,8 @@ class RequestTests(unittest.TestCase):
 
     def test_retrieveNonExistentSession(self):
         """
-        L{Request.getSession} generates a new session if the relevant cookie is
-        set in the incoming request.
+        L{Request.getSession} generates a new session if the session ID
+        advertised in the cookie from the incoming request is not found.
         """
         site = server.Site(resource.Resource())
         d = DummyChannel()
@@ -749,6 +838,51 @@ class RequestTests(unittest.TestCase):
         self.assertTrue(request.cookies[0].startswith(b'TWISTED_SESSION='))
         # It should be a new session ID.
         self.assertNotIn(b"does-not-exist", request.cookies[0])
+
+
+    def test_getSessionExpired(self):
+        """
+        L{Request.getSession} generates a new session when the previous
+        session has expired.
+        """
+        clock = Clock()
+        site = server.Site(resource.Resource())
+        d = DummyChannel()
+        request = server.Request(d, 1)
+        request.site = site
+        request.sitepath = []
+
+        def sessionFactoryWithClock(site, uid):
+            """
+            Forward to normal session factory, but inject the clock.
+
+            @param site: The site on which the session is created.
+            @type site: L{server.Site}
+
+            @param uid: A unique identifier for the session.
+            @type uid: C{bytes}
+
+            @return: A newly created session.
+            @rtype: L{server.Session}
+            """
+            session = sessionFactory(site, uid)
+            session._reactor = clock
+            return session
+
+        # The site is patch to allow injecting a clock to the session.
+        sessionFactory = site.sessionFactory
+        site.sessionFactory = sessionFactoryWithClock
+
+        initialSession = request.getSession()
+
+        # When the session is requested after the session timeout,
+        # no error is raised and a new session is returned.
+        clock.advance(sessionFactory.sessionTimeout)
+        newSession = request.getSession()
+        self.addCleanup(newSession.expire)
+
+        self.assertIsNot(initialSession, newSession)
+        self.assertNotEqual(initialSession.uid, newSession.uid)
 
 
     def test_OPTIONSStar(self):
@@ -827,6 +961,59 @@ class RequestTests(unittest.TestCase):
         self.assertNotIn(b'content-type', response.lower())
 
 
+    def test_defaultSmallContentFile(self):
+        """
+        L{http.Request} creates a L{BytesIO} if the content length is small and
+        the site doesn't offer to create one.
+        """
+        request = server.Request(DummyChannel())
+        request.gotLength(100000 - 1)
+        self.assertIsInstance(request.content, BytesIO)
+
+
+    def test_defaultLargerContentFile(self):
+        """
+        L{http.Request} creates a temporary file on the filesystem if the
+        content length is larger and the site doesn't offer to create one.
+        """
+        request = server.Request(DummyChannel())
+        request.gotLength(100000)
+        assertIsFilesystemTemporary(self, request.content)
+
+
+    def test_defaultUnknownSizeContentFile(self):
+        """
+        L{http.Request} creates a temporary file on the filesystem if the
+        content length is not known and the site doesn't offer to create one.
+        """
+        request = server.Request(DummyChannel())
+        request.gotLength(None)
+        assertIsFilesystemTemporary(self, request.content)
+
+
+    def test_siteSuppliedContentFile(self):
+        """
+        L{http.Request} uses L{Site.getContentFile}, if it exists, to get a
+        file-like object for the request content.
+        """
+        lengths = []
+        contentFile = BytesIO()
+        site = server.Site(resource.Resource())
+
+        def getContentFile(length):
+            lengths.append(length)
+            return contentFile
+        site.getContentFile = getContentFile
+
+        channel = DummyChannel()
+        channel.site = site
+
+        request = server.Request(channel)
+        request.gotLength(12345)
+        self.assertEqual([12345], lengths)
+        self.assertIs(contentFile, request.content)
+
+
 
 class GzipEncoderTests(unittest.TestCase):
     def setUp(self):
@@ -864,6 +1051,25 @@ class GzipEncoderTests(unittest.TestCase):
         request.gotLength(0)
         request.requestHeaders.setRawHeaders(b"Accept-Encoding",
                                              [b"gzip,deflate"])
+        request.requestReceived(b'GET', b'/foo', b'HTTP/1.0')
+        data = self.channel.transport.written.getvalue()
+        self.assertNotIn(b"Content-Length", data)
+        self.assertIn(b"Content-Encoding: gzip\r\n", data)
+        body = data[data.find(b"\r\n\r\n") + 4:]
+        self.assertEqual(b"Some data",
+                          zlib.decompress(body, 16 + zlib.MAX_WBITS))
+
+
+    def test_whitespaceInAcceptEncoding(self):
+        """
+        If the client request passes a I{Accept-Encoding} header which mentions
+        gzip, with whitespace inbetween the encoding name and the commas,
+        L{server._GzipEncoder} automatically compresses the data.
+        """
+        request = server.Request(self.channel, False)
+        request.gotLength(0)
+        request.requestHeaders.setRawHeaders(b"Accept-Encoding",
+                                             [b"deflate, gzip"])
         request.requestReceived(b'GET', b'/foo', b'HTTP/1.0')
         data = self.channel.transport.written.getvalue()
         self.assertNotIn(b"Content-Length", data)
@@ -952,22 +1158,47 @@ class GzipEncoderTests(unittest.TestCase):
 
 
 class RootResource(resource.Resource):
-    isLeaf=0
+    isLeaf = 0
+
     def getChildWithDefault(self, name, request):
         request.rememberRootURL()
         return resource.Resource.getChildWithDefault(self, name, request)
+
+
     def render(self, request):
         return ''
 
+
+
 class RememberURLTests(unittest.TestCase):
+    """
+    Tests for L{server.Site}'s root request URL calculation.
+    """
+
     def createServer(self, r):
+        """
+        Create a L{server.Site} bound to a L{DummyChannel} and the
+        given resource as its root.
+
+        @param r: The root resource.
+        @type r: L{resource.Resource}
+
+        @return: The channel to which the site is bound.
+        @rtype: L{DummyChannel}
+        """
         chan = DummyChannel()
         chan.site = server.Site(r)
         return chan
 
+
     def testSimple(self):
+        """
+        The path component of the root URL of a L{server.Site} whose
+        root resource is below C{/} is that resource's path, and the
+        netloc component is the L{site.Server}'s own host and port.
+        """
         r = resource.Resource()
-        r.isLeaf=0
+        r.isLeaf = 0
         rr = RootResource()
         r.putChild(b'foo', rr)
         rr.putChild(b'', rr)
@@ -978,9 +1209,16 @@ class RememberURLTests(unittest.TestCase):
             request.setHost(b'example.com', 81)
             request.gotLength(0)
             request.requestReceived(b'GET', url, b'HTTP/1.0')
-            self.assertEqual(request.getRootURL(), b"http://example.com/foo")
+            self.assertEqual(request.getRootURL(),
+                             b"http://example.com:81/foo")
+
 
     def testRoot(self):
+        """
+        The path component of the root URL of a L{server.Site} whose
+        root resource is at C{/} is C{/}, and the netloc component is
+        the L{site.Server}'s own host and port.
+        """
         rr = RootResource()
         rr.putChild(b'', rr)
         rr.putChild(b'bar', resource.Resource())
@@ -990,12 +1228,15 @@ class RememberURLTests(unittest.TestCase):
             request.setHost(b'example.com', 81)
             request.gotLength(0)
             request.requestReceived(b'GET', url, b'HTTP/1.0')
-            self.assertEqual(request.getRootURL(), b"http://example.com/")
+            self.assertEqual(request.getRootURL(),
+                             b"http://example.com:81/")
+
 
 
 class NewRenderResource(resource.Resource):
     def render_GET(self, request):
         return b"hi hi"
+
 
     def render_HEH(self, request):
         return b"ho ho"
@@ -1021,6 +1262,27 @@ class HeadlessResource(object):
         return server.NOT_DONE_YET
 
 
+    def isLeaf(self):
+        """
+        # IResource.isLeaf
+        """
+        raise NotImplementedError()
+
+
+    def getChildWithDefault(self, name, request):
+        """
+        # IResource.getChildWithDefault
+        """
+        raise NotImplementedError()
+
+
+    def putChild(self, path, child):
+        """
+        # IResource.putChild
+        """
+        raise NotImplementedError()
+
+
 
 class NewRenderTests(unittest.TestCase):
     """
@@ -1042,6 +1304,7 @@ class NewRenderTests(unittest.TestCase):
         request.gotLength(0)
         return request
 
+
     def testGoodMethods(self):
         req = self._getReq()
         req.requestReceived(b'GET', b'/newrender', b'HTTP/1.0')
@@ -1055,6 +1318,7 @@ class NewRenderTests(unittest.TestCase):
             req.transport.written.getvalue().splitlines()[-1], b'ho ho'
         )
 
+
     def testBadMethods(self):
         req = self._getReq()
         req.requestReceived(b'CONNECT', b'/newrender', b'HTTP/1.0')
@@ -1063,6 +1327,7 @@ class NewRenderTests(unittest.TestCase):
         req = self._getReq()
         req.requestReceived(b'hlalauguG', b'/newrender', b'HTTP/1.0')
         self.assertEqual(req.code, 501)
+
 
     def test_notAllowedMethod(self):
         """
@@ -1077,7 +1342,13 @@ class NewRenderTests(unittest.TestCase):
         allowed = sorted([h.strip() for h in raw_header.split(b",")])
         self.assertEqual([b'GET', b'HEAD', b'HEH'], allowed)
 
+
     def testImplicitHead(self):
+        logObserver = EventLoggingObserver.createWithCleanup(
+            self,
+            globalLogPublisher
+        )
+
         req = self._getReq()
         req.requestReceived(b'HEAD', b'/newrender', b'HTTP/1.0')
         self.assertEqual(req.code, 200)
@@ -1085,18 +1356,29 @@ class NewRenderTests(unittest.TestCase):
             -1, req.transport.written.getvalue().find(b'hi hi')
         )
 
+        self.assertEquals(1, len(logObserver))
+        event = logObserver[0]
+        self.assertEquals(event["log_level"], LogLevel.info)
+
 
     def test_unsupportedHead(self):
         """
         HEAD requests against resource that only claim support for GET
         should not include a body in the response.
         """
+        logObserver = EventLoggingObserver.createWithCleanup(
+            self,
+            globalLogPublisher
+        )
+
         resource = HeadlessResource()
         req = self._getReq(resource)
         req.requestReceived(b"HEAD", b"/newrender", b"HTTP/1.0")
         headers, body = req.transport.written.getvalue().split(b'\r\n\r\n')
         self.assertEqual(req.code, 200)
         self.assertEqual(body, b'')
+
+        self.assertEquals(2, len(logObserver))
 
 
     def test_noBytesResult(self):
@@ -1241,6 +1523,13 @@ class DummyRequestForLogTest(DummyRequest):
     sentLength = None
     client = IPv4Address('TCP', '1.2.3.4', 12345)
 
+    def getClientIP(self):
+        """
+        As L{getClientIP} is deprecated, no log formatter should call it.
+        """
+        raise NotImplementedError('Call to deprecated getClientIP method'
+                                  ' (use getClientAddress instead)')
+
 
 
 class AccessLogTestsMixin(object):
@@ -1375,6 +1664,46 @@ class CombinedLogFormatterTests(unittest.TestCase):
             u'"evil x-forwarded-for \\x80" - - [13/Feb/2009:23:31:30 +0000] '
             u'"POS\\x81 /dummy HTTP/1.0" 123 - "evil \\x83" "evil \\x84"',
             line)
+
+
+    def test_clientAddrIPv6(self):
+        """
+        A request from an IPv6 client is logged with that IP address.
+        """
+        reactor = Clock()
+        reactor.advance(1234567890)
+
+        timestamp = http.datetimeToLogString(reactor.seconds())
+        request = DummyRequestForLogTest(http.HTTPFactory(reactor=reactor))
+        request.client = IPv6Address("TCP", b"::1", 12345)
+
+        line = http.combinedLogFormatter(timestamp, request)
+        self.assertEqual(
+            u'"::1" - - [13/Feb/2009:23:31:30 +0000] '
+            u'"GET /dummy HTTP/1.0" 123 - "-" "-"',
+            line)
+
+
+    def test_clientAddrUnknown(self):
+        """
+        A request made from an unknown address type is logged as C{"-"}.
+        """
+        @implementer(interfaces.IAddress)
+        class UnknowableAddress(object):
+            """
+            An L{IAddress} which L{combinedLogFormatter} cannot have
+            foreknowledge of.
+            """
+
+        reactor = Clock()
+        reactor.advance(1234567890)
+
+        timestamp = http.datetimeToLogString(reactor.seconds())
+        request = DummyRequestForLogTest(http.HTTPFactory(reactor=reactor))
+        request.client = UnknowableAddress()
+
+        line = http.combinedLogFormatter(timestamp, request)
+        self.assertTrue(line.startswith(u'"-" '))
 
 
 

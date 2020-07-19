@@ -5,23 +5,22 @@
 Test cases for L{twisted.protocols.basic}.
 """
 
-from __future__ import division, absolute_import
 
 import sys
 import struct
 from io import BytesIO
 
+from typing import List, Optional, Type
 from zope.interface.verify import verifyObject
 
-from twisted.python.compat import _PY3, iterbytes
+from twisted.python.compat import iterbytes
+from twisted.python.failure import Failure
 from twisted.trial import unittest
 from twisted.protocols import basic
-from twisted.python import reflect
-from twisted.internet import protocol, error, task
+from twisted.internet import protocol, task
+from twisted.internet.protocol import connectionDone
 from twisted.internet.interfaces import IProducer
 from twisted.test import proto_helpers
-
-_PY3NEWSTYLESKIP = "All classes are new style on Python 3."
 
 
 
@@ -304,6 +303,60 @@ a'''
         self.assertEqual(b'x' * limit, b''.join(proto.lines))
 
 
+    def test_maximumLineLength(self):
+        """
+        C{LineReceiver} disconnects the transport if it receives a line longer
+        than its C{MAX_LENGTH}.
+        """
+        proto = basic.LineReceiver()
+        transport = proto_helpers.StringTransport()
+        proto.makeConnection(transport)
+        proto.dataReceived(b'x' * (proto.MAX_LENGTH + 1) + b'\r\nr')
+        self.assertTrue(transport.disconnecting)
+
+
+    def test_maximumLineLengthPartialDelimiter(self):
+        """
+        C{LineReceiver} doesn't disconnect the transport when it
+        receives a finished line as long as its C{MAX_LENGTH}, when
+        the second-to-last packet ended with a pattern that could have
+        been -- and turns out to have been -- the start of a
+        delimiter, and that packet causes the total input to exceed
+        C{MAX_LENGTH} + len(delimiter).
+        """
+        proto = LineTester()
+        proto.MAX_LENGTH = 4
+        t = proto_helpers.StringTransport()
+        proto.makeConnection(t)
+
+        line = b'x' * (proto.MAX_LENGTH - 1)
+        proto.dataReceived(line)
+        proto.dataReceived(proto.delimiter[:-1])
+        proto.dataReceived(proto.delimiter[-1:] + line)
+        self.assertFalse(t.disconnecting)
+        self.assertEqual(len(proto.received), 1)
+        self.assertEqual(line, proto.received[0])
+
+
+    def test_notQuiteMaximumLineLengthUnfinished(self):
+        """
+        C{LineReceiver} doesn't disconnect the transport it if
+        receives a non-finished line whose length, counting the
+        delimiter, is longer than its C{MAX_LENGTH} but shorter than
+        its C{MAX_LENGTH} + len(delimiter). (When the first part that
+        exceeds the max is the beginning of the delimiter.)
+        """
+        proto = basic.LineReceiver()
+        # '\r\n' is the default, but we set it just to be explicit in
+        # this test.
+        proto.delimiter = b'\r\n'
+        transport = proto_helpers.StringTransport()
+        proto.makeConnection(transport)
+        proto.dataReceived((b'x' * proto.MAX_LENGTH)
+                           + proto.delimiter[:len(proto.delimiter)-1])
+        self.assertFalse(transport.disconnecting)
+
+
     def test_rawDataError(self):
         """
         C{LineReceiver.dataReceived} forwards errors returned by
@@ -442,7 +495,7 @@ class LineReceiverLineLengthExceededTests(unittest.SynchronousTestCase):
         proto = basic.LineReceiver()
         transport = proto_helpers.StringTransport()
         proto.makeConnection(transport)
-        proto.dataReceived(b'x' * (proto.MAX_LENGTH + 1))
+        proto.dataReceived(b'x' * (proto.MAX_LENGTH + len(proto.delimiter)))
         self.assertTrue(transport.disconnecting)
 
 
@@ -470,15 +523,17 @@ class LineOnlyReceiverTests(unittest.SynchronousTestCase):
         self.assertEqual(a.received, self.buffer.split(b'\n')[:-1])
 
 
-    def test_lineTooLong(self):
+    def test_greaterThanMaximumLineLength(self):
         """
-        Test sending a line too long: it should close the connection.
+        C{LineOnlyReceiver} disconnects the transport if it receives a
+        line longer than its C{MAX_LENGTH} + len(delimiter).
         """
-        t = proto_helpers.StringTransport()
-        a = LineOnlyTester()
-        a.makeConnection(t)
-        res = a.dataReceived(b'x' * 200)
-        self.assertIsInstance(res, error.ConnectionLost)
+        proto = LineOnlyTester()
+        transport = proto_helpers.StringTransport()
+        proto.makeConnection(transport)
+        proto.dataReceived(b'x' * (proto.MAX_LENGTH
+                                   + len(proto.delimiter) + 1) + b'\r\nr')
+        self.assertTrue(transport.disconnecting)
 
 
     def test_lineReceivedNotImplemented(self):
@@ -504,7 +559,7 @@ class TestMixin:
     closed = 0
 
 
-    def connectionLost(self, reason):
+    def connectionLost(self, reason: Failure = connectionDone):
         self.closed = 1
 
 
@@ -519,8 +574,8 @@ class TestNetstring(TestMixin, basic.NetstringReceiver):
 
 class LPTestCaseMixin:
 
-    illegalStrings = []
-    protocol = None
+    illegalStrings = []  # type: Optional[List[bytes]]
+    protocol = None  # type: Optional[Type[protocol.Protocol]]
 
 
     def getProtocol(self):
@@ -783,10 +838,10 @@ class IntNTestCaseMixin(LPTestCaseMixin):
     TestCase mixin for int-prefixed protocols.
     """
 
-    protocol = None
-    strings = None
-    illegalStrings = None
-    partialStrings = None
+    protocol = None  # type: Optional[Type[protocol.Protocol]]
+    strings = None  # type: Optional[List[bytes]]
+    illegalStrings = None  # type: Optional[List[bytes]]
+    partialStrings = None  # type: Optional[List[bytes]]
 
     def test_receive(self):
         """
@@ -1030,25 +1085,6 @@ class Int16Tests(unittest.SynchronousTestCase, IntNTestCaseMixin,
         r = self.getProtocol()
         tooSend = b"b" * (2**(r.prefixLength * 8) + 1)
         self.assertRaises(AssertionError, r.sendString, tooSend)
-
-
-
-class NewStyleTestInt16(TestInt16, object):
-    """
-    A new-style class version of TestInt16
-    """
-
-
-
-class NewStyleInt16Tests(Int16Tests):
-    """
-    This test case verifies that IntNStringReceiver still works when inherited
-    by a new-style class.
-    """
-    if _PY3:
-        skip = _PY3NEWSTYLESKIP
-
-    protocol = NewStyleTestInt16
 
 
 
@@ -1313,25 +1349,3 @@ class FileSenderTests(unittest.TestCase):
         failure.trap(Exception)
         self.assertEqual("Consumer asked us to stop producing",
                          str(failure.value))
-
-
-
-class MiceDeprecationTests(unittest.TestCase):
-    """
-    L{twisted.protocols.mice} is deprecated.
-    """
-    if _PY3:
-        skip = "twisted.protocols.mice is not being ported to Python 3."
-
-
-    def test_MiceDeprecation(self):
-        """
-        L{twisted.protocols.mice} is deprecated since Twisted 16.0.
-        """
-        reflect.namedAny("twisted.protocols.mice")
-        warningsShown = self.flushWarnings()
-        self.assertEqual(1, len(warningsShown))
-        self.assertEqual(
-            "twisted.protocols.mice was deprecated in Twisted 16.0.0: "
-            "There is no replacement for this module.",
-            warningsShown[0]['message'])

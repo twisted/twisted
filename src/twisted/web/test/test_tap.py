@@ -5,10 +5,11 @@
 Tests for L{twisted.web.tap}.
 """
 
-from __future__ import absolute_import, division
 
 import os
 import stat
+
+from unittest import skipIf
 
 from twisted.internet import reactor, endpoints
 from twisted.internet.interfaces import IReactorUNIX
@@ -64,6 +65,8 @@ class ServiceTests(TestCase):
         self.assertEqual(root.path, path.path)
 
 
+    @skipIf(not IReactorUNIX.providedBy(reactor),
+            "The reactor does not support UNIX domain sockets")
     def test_pathServer(self):
         """
         The I{--path} option to L{makeService} causes it to return a service
@@ -81,10 +84,6 @@ class ServiceTests(TestCase):
         self.assertEqual(service.services[0].factory.resource.path, path.path)
         self.assertTrue(os.path.exists(port))
         self.assertTrue(stat.S_ISSOCK(os.stat(port).st_mode))
-
-    if not IReactorUNIX.providedBy(reactor):
-        test_pathServer.skip = (
-            "The reactor does not support UNIX domain sockets")
 
 
     def test_cgiProcessor(self):
@@ -137,6 +136,8 @@ class ServiceTests(TestCase):
         self.assertIdentical(serverFactory.root.site, site)
 
 
+    @skipIf(not IReactorUNIX.providedBy(reactor),
+            "The reactor does not support UNIX domain sockets")
     def test_personalServer(self):
         """
         The I{--personal} option to L{makeService} causes it to return a
@@ -152,11 +153,9 @@ class ServiceTests(TestCase):
         self.assertTrue(os.path.exists(port))
         self.assertTrue(stat.S_ISSOCK(os.stat(port).st_mode))
 
-    if not IReactorUNIX.providedBy(reactor):
-        test_personalServer.skip = (
+
+    @skipIf(not IReactorUNIX.providedBy(reactor),
             "The reactor does not support UNIX domain sockets")
-
-
     def test_defaultPersonalPath(self):
         """
         If the I{--port} option not specified but the I{--personal} option is,
@@ -167,13 +166,8 @@ class ServiceTests(TestCase):
         options.parseOptions(['--personal'])
         path = os.path.expanduser(
             os.path.join('~', UserDirectory.userSocketName))
-        self.assertEqual(
-            endpoints._parseServer(options['port'], None)[:2],
-            ('UNIX', (path, None)))
-
-    if not IReactorUNIX.providedBy(reactor):
-        test_defaultPersonalPath.skip = (
-            "The reactor does not support UNIX domain sockets")
+        self.assertEqual(options['ports'][0],
+                         'unix:{}'.format(path))
 
 
     def test_defaultPort(self):
@@ -184,8 +178,18 @@ class ServiceTests(TestCase):
         options = Options()
         options.parseOptions([])
         self.assertEqual(
-            endpoints._parseServer(options['port'], None)[:2],
+            endpoints._parseServer(options['ports'][0], None)[:2],
             ('TCP', (8080, None)))
+
+
+    def test_twoPorts(self):
+        """
+        If the I{--http} option is given twice, there are two listeners
+        """
+        options = Options()
+        options.parseOptions(['--listen', 'tcp:8001', '--listen', 'tcp:8002'])
+        self.assertIn('8001', options['ports'][0])
+        self.assertIn('8002', options['ports'][1])
 
 
     def test_wsgi(self):
@@ -224,6 +228,8 @@ class ServiceTests(TestCase):
                              "No such WSGI application: %r" % (name,))
 
 
+    @skipIf(requireModule('OpenSSL.SSL') is not None,
+            'SSL module is available.')
     def test_HTTPSFailureOnMissingSSL(self):
         """
         An L{UsageError} is raised when C{https} is requested but there is no
@@ -236,10 +242,9 @@ class ServiceTests(TestCase):
 
         self.assertEqual('SSL support not installed', exception.args[0])
 
-    if requireModule('OpenSSL.SSL') is not None:
-        test_HTTPSFailureOnMissingSSL.skip = 'SSL module is available.'
 
-
+    @skipIf(requireModule('OpenSSL.SSL') is None,
+            'SSL module is not available.')
     def test_HTTPSAcceptedOnAvailableSSL(self):
         """
         When SSL support is present, it accepts the --https option.
@@ -248,10 +253,8 @@ class ServiceTests(TestCase):
 
         options.parseOptions(['--https=443'])
 
-        self.assertEqual('443', options['https'])
-
-    if requireModule('OpenSSL.SSL') is None:
-        test_HTTPSAcceptedOnAvailableSSL.skip = 'SSL module is not available.'
+        self.assertIn('ssl', options['ports'][0])
+        self.assertIn('443', options['ports'][0])
 
 
     def test_add_header_parsing(self):
@@ -279,6 +282,45 @@ class ServiceTests(TestCase):
         self.assertIsInstance(resource, _AddHeadersResource)
         self.assertEqual(resource._headers, [('K1', 'V1'), ('K2', 'V2')])
         self.assertIsInstance(resource._originalResource, demo.Test)
+
+
+    def test_noTracebacksDeprecation(self):
+        """
+        Passing --notracebacks is deprecated.
+        """
+        options = Options()
+        options.parseOptions(["--notracebacks"])
+        makeService(options)
+
+        warnings = self.flushWarnings([self.test_noTracebacksDeprecation])
+        self.assertEqual(warnings[0]['category'], DeprecationWarning)
+        self.assertEqual(
+            warnings[0]['message'],
+            "--notracebacks was deprecated in Twisted 19.7.0"
+        )
+        self.assertEqual(len(warnings), 1)
+
+
+    def test_displayTracebacks(self):
+        """
+        Passing --display-tracebacks will enable traceback rendering on the
+        generated Site.
+        """
+        options = Options()
+        options.parseOptions(["--display-tracebacks"])
+        service = makeService(options)
+        self.assertTrue(service.services[0].factory.displayTracebacks)
+
+
+    def test_displayTracebacksNotGiven(self):
+        """
+        Not passing --display-tracebacks will leave traceback rendering on the
+        generated Site off.
+        """
+        options = Options()
+        options.parseOptions([])
+        service = makeService(options)
+        self.assertFalse(service.services[0].factory.displayTracebacks)
 
 
 

@@ -5,7 +5,6 @@
 General helpers for L{twisted.web} unit tests.
 """
 
-from __future__ import division, absolute_import
 
 from twisted.internet.defer import succeed
 from twisted.web import server
@@ -81,4 +80,23 @@ class FlattenTestCase(TestCase):
         return d
 
 
-__all__ = ["_render", "FlattenTestCase"]
+
+def assertIsFilesystemTemporary(case, fileObj):
+    """
+    Assert that C{fileObj} is a temporary file on the filesystem.
+
+    @param case: A C{TestCase} instance to use to make the assertion.
+
+    @raise: C{case.failureException} if C{fileObj} is not a temporary file on
+        the filesystem.
+    """
+    # The tempfile API used to create content returns an instance of a
+    # different type depending on what platform we're running on.  The point
+    # here is to verify that the request body is in a file that's on the
+    # filesystem.  Having a fileno method that returns an int is a somewhat
+    # close approximation of this. -exarkun
+    case.assertIsInstance(fileObj.fileno(), int)
+
+
+
+__all__ = ["_render", "FlattenTestCase", "assertIsFilesystemTemporary"]

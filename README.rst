@@ -1,23 +1,18 @@
-Twisted 17.9.0
-==============
+Twisted
+=======
 
 |pypi|_
-|coverage|_
 |travis|_
-|appveyor|_
+|circleci|_
+|mypy|_
 
-.. code::
-
-    <lukasa> It's midday here and frankly lunchtime is a perfect time to have a few moments of existential horror
-    <exarkun> or, in the immortal words of robin williams, goooooood mooooooorning #twisted-dev
-
-For information on what's new in Twisted 17.9.0, see the `NEWS <NEWS.rst>`_ file that comes with the distribution.
+For information on changes in this release, see the `NEWS <NEWS.rst>`_ file.
 
 
 What is this?
 -------------
 
-Twisted is an event-based framework for internet applications, supporting Python 2.7 and Python 3.3+.
+Twisted is an event-based framework for internet applications, supporting Python 3.5+.
 It includes modules for many different purposes, including the following:
 
 - ``twisted.web``: HTTP clients and servers, HTML templating, and a WSGI server
@@ -28,7 +23,7 @@ It includes modules for many different purposes, including the following:
 - ``twisted.names``: DNS client and tools for making your own DNS servers
 - ``twisted.trial``: A unit testing framework that integrates well with Twisted-based code.
 
-Twisted supports all major system event loops -- ``select`` (all platforms), ``poll`` (most POSIX platforms), ``epoll`` (Linux), ``kqueue`` (FreeBSD, OS X), IOCP (Windows), and various GUI event loops (GTK+2/3, QT, wxWidgets).
+Twisted supports all major system event loops -- ``select`` (all platforms), ``poll`` (most POSIX platforms), ``epoll`` (Linux), ``kqueue`` (FreeBSD, macOS), IOCP (Windows), and various GUI event loops (GTK+2/3, Qt, wxWidgets).
 Third-party reactors can plug into Twisted, and provide support for additional event loops.
 
 
@@ -45,10 +40,10 @@ Additional instructions for installing this software are in `the installation in
 Documentation and Support
 -------------------------
 
-Twisted's documentation is available from the `Twisted Matrix website <http://twistedmatrix.com/documents/current/>`_.
+Twisted's documentation is available from the `Twisted Matrix website <https://twistedmatrix.com/documents/current/>`_.
 This documentation contains how-tos, code examples, and an API reference.
 
-Help is also available on the `Twisted mailing list <http://twistedmatrix.com/cgi-bin/mailman/listinfo/twisted-python>`_.
+Help is also available on the `Twisted mailing list <https://twistedmatrix.com/cgi-bin/mailman/listinfo/twisted-python>`_.
 
 There is also a pair of very lively IRC channels, ``#twisted`` (for general Twisted questions) and ``#twisted.web`` (for Twisted Web), on ``chat.freenode.net``.
 
@@ -58,15 +53,15 @@ Unit Tests
 
 Twisted has a comprehensive test suite, which can be run by ``tox``::
 
-  $ tox -l            # to view all test environments
-  $ tox -e py27-tests # to run the tests for Python 2.7
-  $ tox -e py34-tests # to run the tests for Python 3.4
+  $ tox -l                       # to view all test environments
+  $ tox -e nocov                 # to run all the tests without coverage
+  $ tox -e withcov               # to run all the tests with coverage
+  $ tox -e alldeps-withcov-posix # install all dependencies, run tests with coverage on POSIX platform
 
 
 You can test running the test suite under the different reactors with the ``TWISTED_REACTOR`` environment variable::
 
-  $ env TWISTED_REACTOR=epoll tox -e py27-tests
-
+  $ env TWISTED_REACTOR=epoll tox -e alldeps-withcov-posix
 
 Some of these tests may fail if you:
 
@@ -75,10 +70,19 @@ Some of these tests may fail if you:
 * run them as root.
 
 
+Static Code checkers
+--------------------
+
+You can ensure that code complies to Twisted coding standards::
+
+  $ tox -e lint   # run pyflakes and pycodestyle to check code against coding standards
+  $ tox -e mypy   # run mypy static type checker to check for type errors
+
+
 Copyright
 ---------
 
-All of the code in this distribution is Copyright (c) 2001-2017 Twisted Matrix Laboratories.
+All of the code in this distribution is Copyright (c) 2001-2020 Twisted Matrix Laboratories.
 
 Twisted is made available under the MIT license.
 The included `LICENSE <LICENSE>`_ file describes this in detail.
@@ -100,14 +104,14 @@ Warranty
 Again, see the included `LICENSE <LICENSE>`_ file for specific legal details.
 
 
-.. |coverage| image:: https://codecov.io/github/twisted/twisted/coverage.svg?branch=trunk
-.. _coverage: https://codecov.io/github/twisted/twisted
-
-.. |pypi| image:: http://img.shields.io/pypi/v/twisted.svg
+.. |pypi| image:: https://img.shields.io/pypi/v/twisted.svg
 .. _pypi: https://pypi.python.org/pypi/twisted
 
 .. |travis| image:: https://travis-ci.org/twisted/twisted.svg?branch=trunk
 .. _travis: https://travis-ci.org/twisted/twisted
 
-.. |appveyor| image:: https://ci.appveyor.com/api/projects/status/x4oyqtl9cqc2i2l8
-.. _appveyor: https://ci.appveyor.com/project/adiroiban/twisted
+.. |circleci| image:: https://circleci.com/gh/twisted/twisted.svg?style=svg
+.. _circleci: https://circleci.com/gh/twisted/twisted
+
+.. |mypy| image:: https://github.com/twisted/twisted/workflows/mypy/badge.svg
+.. _mypy: https://github.com/twisted/twisted

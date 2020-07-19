@@ -5,7 +5,6 @@
 Tests for L{twisted.web.template}
 """
 
-from __future__ import division, absolute_import
 
 from zope.interface.verify import verifyObject
 
@@ -27,6 +26,8 @@ from twisted.web.test.test_web import DummyRequest
 from twisted.web.server import NOT_DONE_YET
 
 from twisted.python.compat import NativeStringIO as StringIO
+from twisted.logger import globalLogPublisher
+from twisted.test.proto_helpers import EventLoggingObserver
 
 
 _xmlFileSuppress = SUPPRESS(category=DeprecationWarning,
@@ -199,7 +200,9 @@ class XMLFileReprTests(TestCase):
         """
         fname = "/tmp/fake.xml"
         self.assertEqual('<XMLFile of %r>' % (fname,), repr(XMLFile(fname)))
-    test_filename.suppress = [_xmlFileSuppress]
+
+
+    test_filename.suppress = [_xmlFileSuppress]  # type: ignore[attr-defined]
 
 
     def test_file(self):
@@ -208,7 +211,9 @@ class XMLFileReprTests(TestCase):
         """
         fobj = StringIO("not xml")
         self.assertEqual('<XMLFile of %r>' % (fobj,), repr(XMLFile(fobj)))
-    test_file.suppress = [_xmlFileSuppress]
+
+
+    test_file.suppress = [_xmlFileSuppress]  # type: ignore[attr-defined]
 
 
 
@@ -253,7 +258,7 @@ class XMLLoaderTestsMixin(object):
         tags1 = loader.load()
         tags2 = loader.load()
         self.assertEqual(tags1, tags2)
-    test_loadTwice.suppress = [_xmlFileSuppress]
+    test_loadTwice.suppress = [_xmlFileSuppress]  # type: ignore[attr-defined]
 
 
 
@@ -748,6 +753,10 @@ class RenderElementTests(TestCase):
         L{renderElement} will render a traceback when rendering of
         the element fails and our site is configured to display tracebacks.
         """
+        logObserver = EventLoggingObserver.createWithCleanup(
+            self,
+            globalLogPublisher
+        )
         self.request.site.displayTracebacks = True
 
         element = FailingElement()
@@ -755,6 +764,9 @@ class RenderElementTests(TestCase):
         d = self.request.notifyFinish()
 
         def check(_):
+            self.assertEquals(1, len(logObserver))
+            f = logObserver[0]["log_failure"]
+            self.assertIsInstance(f.value, FlattenerError)
             flushed = self.flushLoggedErrors(FlattenerError)
             self.assertEqual(len(flushed), 1)
             self.assertEqual(

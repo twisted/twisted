@@ -10,49 +10,54 @@ Do NOT use this module directly - use reactor.spawnProcess() instead.
 Maintainer: Itamar Shtull-Trauring
 """
 
-from __future__ import division, absolute_import, print_function
-
-from twisted.python.runtime import platform
-
-if platform.isWindows():
-    raise ImportError(("twisted.internet.process does not work on Windows. "
-                       "Use the reactor.spawnProcess() API instead."))
-
 import errno
 import gc
 import os
 import io
-import select
 import signal
 import stat
 import sys
 import traceback
 
-try:
-    import pty
-except ImportError:
-    pty = None
-
-try:
-    import fcntl, termios
-except ImportError:
-    fcntl = None
+from typing import Callable, Dict, Optional
+from twisted.python.runtime import platform
 
 from zope.interface import implementer
 
 from twisted.python import log, failure
 from twisted.python.util import switchUID
-from twisted.python.compat import items, range, _PY3
+from twisted.python.compat import items, range
 from twisted.internet import fdesc, abstract, error
 from twisted.internet.main import CONNECTION_LOST, CONNECTION_DONE
 from twisted.internet._baseprocess import BaseProcess
 from twisted.internet.interfaces import IProcessTransport
 
+if platform.isWindows():
+    raise ImportError(("twisted.internet.process does not work on Windows. "
+                       "Use the reactor.spawnProcess() API instead."))
+
+try:
+    import pty as _pty
+except ImportError:
+    pty = None
+else:
+    pty = _pty
+
+try:
+    import fcntl as _fcntl
+    import termios
+except ImportError:
+    fcntl = None
+else:
+    fcntl = _fcntl
+
 # Some people were importing this, which is incorrect, just keeping it
 # here for backwards compatibility:
 ProcessExitedAlready = error.ProcessExitedAlready
 
-reapProcessHandlers = {}
+reapProcessHandlers = {}  # type: Dict[int, Callable]
+
+
 
 def reapAllProcesses():
     """
@@ -77,9 +82,13 @@ def registerReapProcessHandler(pid, process):
         raise RuntimeError("Try to register an already registered process.")
     try:
         auxPID, status = os.waitpid(pid, os.WNOHANG)
-    except:
-        log.msg('Failed to reap %d:' % pid)
+    except:     # noqa
+        log.msg('Failed to reap {}:'.format(pid))
         log.err()
+
+        if pid is None:
+            return
+
         auxPID = None
     if auxPID:
         process.processEnded(status)
@@ -98,34 +107,6 @@ def unregisterReapProcessHandler(pid, process):
             and reapProcessHandlers[pid] == process):
         raise RuntimeError("Try to unregister a process not registered.")
     del reapProcessHandlers[pid]
-
-
-
-def detectLinuxBrokenPipeBehavior():
-    """
-    On some Linux version, write-only pipe are detected as readable. This
-    function is here to check if this bug is present or not.
-
-    See L{ProcessWriter.doRead} for a more detailed explanation.
-
-    @return: C{True} if Linux pipe behaviour is broken.
-    @rtype : L{bool}
-    """
-    r, w = os.pipe()
-    os.write(w, b'a')
-    reads, writes, exes = select.select([w], [], [], 0)
-    if reads:
-        # Linux < 2.6.11 says a write-only pipe is readable.
-        brokenPipeBehavior = True
-    else:
-        brokenPipeBehavior = False
-    os.close(r)
-    os.close(w)
-    return brokenPipeBehavior
-
-
-
-brokenLinuxPipeBehavior = detectLinuxBrokenPipeBehavior()
 
 
 
@@ -217,19 +198,9 @@ class ProcessWriter(abstract.FileDescriptor):
 
         That's what this funky code is for. If linux was not broken, this
         function could be simply "return CONNECTION_LOST".
-
-        BUG: We call select no matter what the reactor.
-        If the reactor is pollreactor, and the fd is > 1024, this will fail.
-        (only occurs on broken versions of linux, though).
         """
         if self.enableReadHack:
-            if brokenLinuxPipeBehavior:
-                fd = self.fd
-                r, w, x = select.select([fd], [fd], [], 0)
-                if r and w:
-                    return CONNECTION_LOST
-            else:
-                return CONNECTION_LOST
+            return CONNECTION_LOST
         else:
             self.stopReading()
 
@@ -238,7 +209,7 @@ class ProcessWriter(abstract.FileDescriptor):
         """
         See abstract.FileDescriptor.connectionLost.
         """
-        # At least on OS X 10.4, exiting while stdout is non-blocking can
+        # At least on macOS 10.4, exiting while stdout is non-blocking can
         # result in data loss.  For some reason putting the file descriptor
         # back into blocking mode seems to resolve this issue.
         fdesc.setBlocking(self.fd)
@@ -317,7 +288,7 @@ class _BaseProcess(BaseProcess, object):
     """
     Base class for Process and PTYProcess.
     """
-    status = None
+    status = None  # type: Optional[int]
     pid = None
 
     def reapProcess(self):
@@ -342,13 +313,13 @@ class _BaseProcess(BaseProcess, object):
                     pid = None
                 else:
                     raise
-        except:
-            log.msg('Failed to reap %d:' % self.pid)
+        except:     # noqa
+            log.msg('Failed to reap {}:'.format(self.pid))
             log.err()
             pid = None
         if pid:
-            self.processEnded(status)
             unregisterReapProcessHandler(pid, self)
+            self.processEnded(status)
 
 
     def _getReason(self, status):
@@ -452,31 +423,27 @@ class _BaseProcess(BaseProcess, object):
                     # write(2, err) is a useful thing to attempt.
 
                     try:
-                        stderr = os.fdopen(2, 'wb')
+                        # On Python 3, print_exc takes a text stream, but
+                        # on Python 2 it still takes a byte stream.  So on
+                        # Python 3 we will wrap up the byte stream returned
+                        # by os.fdopen using TextIOWrapper.
+
+                        # We hard-code UTF-8 as the encoding here, rather
+                        # than looking at something like
+                        # getfilesystemencoding() or sys.stderr.encoding,
+                        # because we want an encoding that will be able to
+                        # encode the full range of code points.  We are
+                        # (most likely) talking to the parent process on
+                        # the other end of this pipe and not the filesystem
+                        # or the original sys.stderr, so there's no point
+                        # in trying to match the encoding of one of those
+                        # objects.
+
+                        stderr = io.TextIOWrapper(os.fdopen(2, 'wb'),
+                                                  encoding="utf-8")
                         msg = ("Upon execvpe {0} {1} in environment id {2}"
                                "\n:").format(executable, str(args),
                                              id(environment))
-
-                        if _PY3:
-
-                            # On Python 3, print_exc takes a text stream, but
-                            # on Python 2 it still takes a byte stream.  So on
-                            # Python 3 we will wrap up the byte stream returned
-                            # by os.fdopen using TextIOWrapper.
-
-                            # We hard-code UTF-8 as the encoding here, rather
-                            # than looking at something like
-                            # getfilesystemencoding() or sys.stderr.encoding,
-                            # because we want an encoding that will be able to
-                            # encode the full range of code points.  We are
-                            # (most likely) talking to the parent process on
-                            # the other end of this pipe and not the filesystem
-                            # or the original sys.stderr, so there's no point
-                            # in trying to match the encoding of one of those
-                            # objects.
-
-                            stderr = io.TextIOWrapper(stderr, encoding="utf-8")
-
                         stderr.write(msg)
                         traceback.print_exc(file=stderr)
                         stderr.flush()
@@ -987,6 +954,16 @@ class Process(_BaseProcess):
         _BaseProcess.maybeCallProcessEnded(self)
 
 
+    def getHost(self):
+        # ITransport.getHost
+        raise NotImplementedError()
+
+
+    def getPeer(self):
+        # ITransport.getPeer
+        raise NotImplementedError()
+
+
 
 @implementer(IProcessTransport)
 class PTYProcess(abstract.FileDescriptor, _BaseProcess):
@@ -1151,3 +1128,13 @@ class PTYProcess(abstract.FileDescriptor, _BaseProcess):
         Write some data to the open process.
         """
         return fdesc.writeToFD(self.fd, data)
+
+
+    def closeChildFD(self, descriptor):
+        # IProcessTransport
+        raise NotImplementedError()
+
+
+    def writeToChild(self, childFD, data):
+        # IProcessTransport
+        raise NotImplementedError()

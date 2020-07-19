@@ -6,7 +6,6 @@
 Exception definitions for L{twisted.web}.
 """
 
-from __future__ import division, absolute_import
 try:
     from future_builtins import ascii
 except ImportError:
@@ -19,10 +18,10 @@ __all__ = [
     'RedirectWithNoLocation',
     ]
 
-from collections import Sequence
 
 from twisted.web._responses import RESPONSES
-from twisted.python.compat import unicode, nativeString, intToBytes
+from twisted.python.compat import unicode, nativeString, intToBytes, Sequence
+
 
 
 def _codeToMessage(code):
@@ -297,6 +296,14 @@ class UnsupportedType(Exception):
     """
     During flattening, an object of a type which cannot be flattened was
     encountered.
+    """
+
+
+class ExcessiveBufferingError(Exception):
+    """
+    The HTTP/2 protocol has been forced to buffer an excessive amount of
+    outbound data, and has therefore closed the connection and dropped all
+    outbound data.
     """
 
 

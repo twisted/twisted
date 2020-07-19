@@ -5,7 +5,6 @@
 Tests for L{twisted.internet.task}.
 """
 
-from __future__ import division, absolute_import
 
 from twisted.trial import unittest
 
@@ -934,6 +933,19 @@ class DeferLaterTests(unittest.TestCase):
         self.assertFailure(d, defer.CancelledError)
         d.addCallback(cbCancelled)
         return d
+
+
+    def test_noCallback(self):
+        """
+        The L{Deferred} returned by L{task.deferLater} fires with C{None}
+        when no callback function is passed.
+        """
+        clock = task.Clock()
+        d = task.deferLater(clock, 2.0)
+        self.assertNoResult(d)
+
+        clock.advance(2.0)
+        self.assertIs(None, self.successResultOf(d))
 
 
 

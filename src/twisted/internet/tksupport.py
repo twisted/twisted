@@ -20,7 +20,7 @@ stop Twisted::
 
     | root.protocol('WM_DELETE_WINDOW', reactor.stop)
 
-When using Aqua Tcl/Tk on Mac OS X the standard Quit menu item in
+When using Aqua Tcl/Tk on macOS the standard Quit menu item in
 your application might become unresponsive without the additional
 fix::
 
@@ -30,13 +30,9 @@ fix::
 """
 
 from twisted.internet import task
-from twisted.python.compat import _PY3
 
-if _PY3:
-    import tkinter.simpledialog as tkSimpleDialog
-    import tkinter.messagebox as tkMessageBox
-else:
-    import tkSimpleDialog, tkMessageBox
+import tkinter.simpledialog as tkSimpleDialog
+import tkinter.messagebox as tkMessageBox
 
 
 

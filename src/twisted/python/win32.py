@@ -11,20 +11,10 @@ See also twisted.python.shortcut.
     may safely be OR'ed into a mask for os.open.
 """
 
-from __future__ import division, absolute_import
 
 import re
 import os
 
-try:
-    import win32api
-    import win32con
-except ImportError:
-    pass
-
-from twisted.python.deprecate import deprecated
-from twisted.python.runtime import platform
-from incremental import Version
 
 # http://msdn.microsoft.com/library/default.asp?url=/library/en-us/debug/base/system_error_codes.asp
 ERROR_FILE_NOT_FOUND = 2
@@ -40,37 +30,12 @@ class FakeWindowsError(OSError):
     is missing.
     """
 
+
+
 try:
-    WindowsError = WindowsError
+    WindowsError = WindowsError  # type: OSError
 except NameError:
-    WindowsError = FakeWindowsError
-
-
-@deprecated(Version("Twisted", 15, 3, 0))
-def getProgramsMenuPath():
-    """
-    Get the path to the Programs menu.
-
-    Probably will break on non-US Windows.
-
-    @return: the filesystem location of the common Start Menu->Programs.
-    @rtype: L{str}
-    """
-    if not platform.isWindows():
-        return "C:\\Windows\\Start Menu\\Programs"
-    keyname = 'SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Shell Folders'
-    hShellFolders = win32api.RegOpenKeyEx(win32con.HKEY_LOCAL_MACHINE,
-                                          keyname, 0, win32con.KEY_READ)
-    return win32api.RegQueryValueEx(hShellFolders, 'Common Programs')[0]
-
-
-@deprecated(Version("Twisted", 15, 3, 0))
-def getProgramFilesPath():
-    """Get the path to the Program Files folder."""
-    keyname = 'SOFTWARE\\Microsoft\\Windows\\CurrentVersion'
-    currentV = win32api.RegOpenKeyEx(win32con.HKEY_LOCAL_MACHINE,
-                                     keyname, 0, win32con.KEY_READ)
-    return win32api.RegQueryValueEx(currentV, 'ProgramFilesDir')[0]
+    WindowsError = FakeWindowsError  # type: ignore[misc,assignment]
 
 
 _cmdLineQuoteRe = re.compile(r'(\\*)"')
@@ -113,7 +78,8 @@ class _ErrorFormatter(object):
 
     @ivar formatMessage: A callable which takes one integer error number
         argument and returns a C{str} giving the message for that error (like
-        L{win32api.FormatMessage}).
+        U{win32api.FormatMessage<http://
+        timgolden.me.uk/pywin32-docs/win32api__FormatMessage_meth.html>}).
 
     @ivar errorTab: A mapping from integer error numbers to C{str} messages
         which correspond to those erorrs (like I{socket.errorTab}).
@@ -123,6 +89,8 @@ class _ErrorFormatter(object):
         self.formatMessage = FormatMessage
         self.errorTab = errorTab
 
+
+    @classmethod
     def fromEnvironment(cls):
         """
         Get as many of the platform-specific error translation objects as
@@ -141,7 +109,6 @@ class _ErrorFormatter(object):
         except ImportError:
             errorTab = None
         return cls(WinError, FormatMessage, errorTab)
-    fromEnvironment = classmethod(fromEnvironment)
 
 
     def formatError(self, errorcode):

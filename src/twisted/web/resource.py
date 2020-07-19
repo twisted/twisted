@@ -6,7 +6,6 @@
 Implementation of the lowest-level Resource class.
 """
 
-from __future__ import division, absolute_import
 
 __all__ = [
     'IResource', 'getChildForRequest',
@@ -214,8 +213,23 @@ class Resource:
         intended to have the root of a folder, e.g. /foo/, you want
         path to be ''.
 
+        @param path: A single path component.
+        @type path: L{bytes}
+
+        @param child: The child resource to register.
+        @type child: L{IResource}
+
         @see: L{IResource.putChild}
         """
+        if not isinstance(path, bytes):
+            warnings.warn(
+                'Path segment must be bytes; '
+                'passing {0} has never worked, and '
+                'will raise an exception in the future.'
+                .format(type(path)),
+                category=DeprecationWarning,
+                stacklevel=2)
+
         self.children[path] = child
         child.server = self.server
 
@@ -373,7 +387,7 @@ class _IEncodingResource(Interface):
 
 
 @implementer(_IEncodingResource)
-class EncodingResourceWrapper(proxyForInterface(IResource)):
+class EncodingResourceWrapper(proxyForInterface(IResource)):  # type: ignore[misc] # noqa
     """
     Wrap a L{IResource}, potentially applying an encoding to the response body
     generated.

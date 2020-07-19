@@ -5,7 +5,6 @@
 Tests for loading tests by name.
 """
 
-from __future__ import absolute_import, division
 
 import os
 import sys
@@ -20,7 +19,7 @@ from twisted.trial.itrial import ITestCase
 from twisted.trial._asyncrunner import _iterateTests
 
 from twisted.python.modules import getModule
-from twisted.python.compat import _PY3
+from twisted.python.reflect import ModuleNotFound
 
 
 
@@ -35,62 +34,49 @@ def testNames(tests):
 
 
 
-class FinderTests(packages.PackageTest):
-    """
-    Tests for L{runner.TestLoader.findByName}.
-    """
+class FinderPy3Tests(packages.SysPathManglingTest):
+
     def setUp(self):
-        packages.PackageTest.setUp(self)
+        super(FinderPy3Tests, self).setUp()
         self.loader = runner.TestLoader()
 
-    def tearDown(self):
-        packages.PackageTest.tearDown(self)
-
-    def test_findPackage(self):
-        sample1 = self.loader.findByName('twisted')
-        import twisted as sample2
-        self.assertEqual(sample1, sample2)
-
-    def test_findModule(self):
-        sample1 = self.loader.findByName('twisted.trial.test.sample')
-        from twisted.trial.test import sample as sample2
-        self.assertEqual(sample1, sample2)
-
-    def test_findFile(self):
-        path = util.sibpath(__file__, 'sample.py')
-        sample1 = self.loader.findByName(path)
-        from twisted.trial.test import sample as sample2
-        self.assertEqual(sample1, sample2)
-
-    def test_findObject(self):
-        sample1 = self.loader.findByName('twisted.trial.test.sample.FooTest')
-        from twisted.trial.test import sample
-        self.assertEqual(sample.FooTest, sample1)
-
-    if _PY3:
-        # In Python 3, `findByName` returns full TestCases, not the objects
-        # inside them. This because on Python 3, unbound methods don't exist,
-        # so you can't simply make a TestCase after finding it -- it's easier
-        # to just find it and put it in a TestCase immediately.
-        _Py3SkipMsg = ("Not relevant on Python 3")
-        test_findPackage.skip = _Py3SkipMsg
-        test_findModule.skip = _Py3SkipMsg
-        test_findFile.skip = _Py3SkipMsg
-        test_findObject.skip = _Py3SkipMsg
 
     def test_findNonModule(self):
-        self.assertRaises(AttributeError,
-                              self.loader.findByName,
-                              'twisted.trial.test.nonexistent')
+        """
+        findByName, if given something findable up until the last entry, will
+        raise AttributeError (as it cannot tell if 'nonexistent' here is
+        supposed to be a module or a class).
+        """
+        self.assertRaises(
+            AttributeError, self.loader.findByName,
+            'twisted.trial.test.nonexistent'
+        )
+
 
     def test_findNonPackage(self):
-        self.assertRaises(ValueError,
-                              self.loader.findByName,
-                              'nonextant')
+        self.assertRaises(
+            ModuleNotFound, self.loader.findByName, 'nonextant'
+        )
+
 
     def test_findNonFile(self):
+        """
+        findByName, given a file path that doesn't exist, will raise a
+        ValueError saying that it is not a Python file.
+        """
         path = util.sibpath(__file__, 'nonexistent.py')
         self.assertRaises(ValueError, self.loader.findByName, path)
+
+
+    def test_findFileWithImportError(self):
+        """
+        findByName will re-raise ImportErrors inside modules that it has found
+        and imported.
+        """
+        self.assertRaises(
+            ImportError, self.loader.findByName,
+            "unimportablepackage.test_module"
+        )
 
 
 
@@ -246,30 +232,13 @@ class LoaderTests(packages.SysPathManglingTest):
         from twisted.trial.test import sample
         suite = self.loader.loadClass(sample.AlphabetTest)
         self.assertEqual(['test_a', 'test_b', 'test_c'],
-                             [test._testMethodName for test in suite._tests])
+                         [test._testMethodName for test in suite._tests])
         newOrder = ['test_b', 'test_c', 'test_a']
         sortDict = dict(zip(newOrder, range(3)))
-        self.loader.sorter = lambda x : sortDict.get(x.shortDescription(), -1)
+        self.loader.sorter = lambda x: sortDict.get(x.shortDescription(), -1)
         suite = self.loader.loadClass(sample.AlphabetTest)
         self.assertEqual(newOrder,
-                             [test._testMethodName for test in suite._tests])
-
-
-    def test_loadMethod(self):
-        from twisted.trial.test import sample
-        suite = self.loader.loadMethod(sample.FooTest.test_foo)
-        self.assertEqual(1, suite.countTestCases())
-        self.assertEqual('test_foo', suite._testMethodName)
-
-
-    def test_loadFailingMethod(self):
-        # test added for issue1353
-        from twisted.trial.test import erroneous
-        suite = self.loader.loadMethod(erroneous.TestRegularFail.test_fail)
-        result = reporter.TestResult()
-        suite.run(result)
-        self.assertEqual(result.testsRun, 1)
-        self.assertEqual(len(result.failures), 1)
+                         [test._testMethodName for test in suite._tests])
 
 
     def test_loadFailure(self):
@@ -283,16 +252,6 @@ class LoaderTests(packages.SysPathManglingTest):
         suite.run(result)
         self.assertEqual(result.testsRun, 1)
         self.assertEqual(len(result.failures), 1)
-
-
-    def test_loadNonMethod(self):
-        from twisted.trial.test import sample
-        self.assertRaises(TypeError, self.loader.loadMethod, sample)
-        self.assertRaises(TypeError,
-                              self.loader.loadMethod, sample.FooTest)
-        self.assertRaises(TypeError, self.loader.loadMethod, "string")
-        self.assertRaises(TypeError,
-                              self.loader.loadMethod, ('foo', 'bar'))
 
 
     def test_loadBadDecorator(self):
@@ -420,12 +379,6 @@ class LoaderTests(packages.SysPathManglingTest):
         from twisted.trial.test import sample
         suite = self.loader.loadAnything(sample.FooTest)
         self.assertEqual(2, suite.countTestCases())
-
-
-    def test_loadAnythingOnMethod(self):
-        from twisted.trial.test import sample
-        suite = self.loader.loadAnything(sample.FooTest.test_foo)
-        self.assertEqual(1, suite.countTestCases())
 
 
     def test_loadAnythingOnPackage(self):
@@ -584,19 +537,6 @@ class LoaderTests(packages.SysPathManglingTest):
         suite1 = self.loader.loadByNames(methods)
         suite2 = runner.TestSuite(map(self.loader.loadByName, methods))
         self.assertSuitesEqual(suite1, suite2)
-
-
-    if _PY3:
-        """
-        These tests are unable to work on Python 3, as Python 3 has no concept
-        of "unbound methods".
-        """
-        _msg = "Not possible on Python 3."
-        test_loadMethod.skip = _msg
-        test_loadNonMethod.skip = _msg
-        test_loadFailingMethod.skip = _msg
-        test_loadAnythingOnMethod.skip = _msg
-        del _msg
 
 
 

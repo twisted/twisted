@@ -8,7 +8,6 @@ Common functions for the SSH classes.
 Maintainer: Paul Swartz
 """
 
-from __future__ import absolute_import, division
 
 import struct
 
@@ -72,14 +71,6 @@ def getMP(data, count=1):
         mp.append(int_from_bytes(data[c + 4:c + 4 + length], 'big'))
         c += 4 + length
     return tuple(mp) + (data[c:],)
-
-
-
-def _MPpow(x, y, z):
-    """
-    Return the MP version of C{(x ** y) % z}.
-    """
-    return MP(pow(x, y, z))
 
 
 

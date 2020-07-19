@@ -2,7 +2,8 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-from twisted.python.reflect import namedAny
+from typing import Optional, Type
+
 from twisted.trial import unittest
 from twisted.test.proto_helpers import StringTransport
 
@@ -13,6 +14,7 @@ from twisted.conch.insults.insults import (CS_UK, CS_US, CS_DRAWING,
                                            BLINK, UNDERLINE)
 from twisted.conch.insults.insults import G0, G1
 from twisted.conch.insults.insults import modes, privateModes
+from twisted.internet.protocol import Protocol
 from twisted.python.compat import intToBytes, iterbytes
 from twisted.python.constants import ValueConstant, Values
 
@@ -202,18 +204,27 @@ def testByte%(groupName)s(self):
 
     self.verifyResults(transport, proto, parser)
 """
-class ByteGroupingsMixin(MockMixin):
-    protocolFactory = None
 
-    for word, n in [('Pairs', 2), ('Triples', 3), ('Quads', 4), ('Quints', 5), ('Sexes', 6)]:
+
+
+class ByteGroupingsMixin(MockMixin):
+    protocolFactory = None  # type: Optional[Type[Protocol]]
+
+    for word, n in [('Pairs', 2), ('Triples', 3), ('Quads', 4), ('Quints', 5),
+                    ('Sexes', 6)]:
         exec(_byteGroupingTestTemplate % {'groupName': word, 'bytesPer': n})
     del word, n
 
     def verifyResults(self, transport, proto, parser):
-        result = self.assertCall(occurrences(proto).pop(0), "makeConnection", (parser,))
+        result = self.assertCall(occurrences(proto).pop(0), "makeConnection",
+                                 (parser,))
         self.assertEqual(occurrences(result), [])
 
+
+
 del _byteGroupingTestTemplate
+
+
 
 class ServerArrowKeysTests(ByteGroupingsMixin, unittest.TestCase):
     protocolFactory = ServerProtocol
@@ -934,40 +945,3 @@ class ServerProtocolOutputTests(unittest.TestCase):
         self.protocol.reportCursorPosition()
         self.assertEqual(self.transport.value(),
                          self.CSI + b'6' + CSFinalByte.DSR.value)
-
-
-
-
-class DeprecationsTests(unittest.TestCase):
-    """
-    Tests to ensure deprecation of L{insults.colors} and L{insults.client}
-    """
-
-    def ensureDeprecated(self, message):
-        """
-        Ensures that the correct deprecation warning was issued.
-        """
-        warnings = self.flushWarnings()
-        self.assertIs(warnings[0]['category'], DeprecationWarning)
-        self.assertEqual(warnings[0]['message'], message)
-        self.assertEqual(len(warnings), 1)
-
-
-    def test_colors(self):
-        """
-        The L{insults.colors} module is deprecated
-        """
-        namedAny('twisted.conch.insults.colors')
-        self.ensureDeprecated("twisted.conch.insults.colors was deprecated "
-                              "in Twisted 10.1.0: Please use "
-                              "twisted.conch.insults.helper instead.")
-
-
-    def test_client(self):
-        """
-        The L{insults.client} module is deprecated
-        """
-        namedAny('twisted.conch.insults.client')
-        self.ensureDeprecated("twisted.conch.insults.client was deprecated "
-                              "in Twisted 10.1.0: Please use "
-                              "twisted.conch.insults.insults instead.")

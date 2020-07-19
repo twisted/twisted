@@ -2,14 +2,11 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-from __future__ import division, absolute_import
 
 import os
 import sys
 import time
 import warnings
-
-from twisted.python._oldstyle import _oldStyle
 
 
 
@@ -38,14 +35,13 @@ _timeFunctions = {
 
 
 
-@_oldStyle
 class Platform:
     """
     Gives us information about the platform we're running on.
     """
 
     type = knownPlatforms.get(os.name)
-    seconds = staticmethod(_timeFunctions.get(type, time.time))
+    seconds = staticmethod(_timeFunctions.get(type, time.time))  # type: ignore[arg-type]  # noqa
     _platform = sys.platform
 
     def __init__(self, name=None, platform=None):
@@ -78,9 +74,9 @@ class Platform:
 
     def isMacOSX(self):
         """
-        Check if current platform is Mac OS X.
+        Check if current platform is macOS.
 
-        @return: C{True} if the current platform has been detected as OS X.
+        @return: C{True} if the current platform has been detected as macOS.
         @rtype: C{bool}
         """
         return self._platform == "darwin"
@@ -217,9 +213,6 @@ class Platform:
         try:
             from twisted.python._inotify import INotifyError, init
         except ImportError:
-            return False
-
-        if self.isDocker():
             return False
 
         try:
