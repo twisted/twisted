@@ -5,43 +5,34 @@
 
 
 import warnings
-import attr
-
-try:
-    from functools import lru_cache
-except ImportError:
-    from backports.functools_lru_cache import lru_cache
-
 from binascii import hexlify
-from constantly import Names, NamedConstant
+from functools import lru_cache
 from hashlib import md5
+
+from zope.interface import Interface, implementer
 
 from OpenSSL import SSL, crypto
 from OpenSSL._util import lib as pyOpenSSLlib
 
-from twisted.internet.abstract import isIPAddress, isIPv6Address
-from twisted.python import log
-from twisted.python.randbytes import secureRandom
-from ._idna import _idnaBytes
-
-from zope.interface import Interface, implementer
-from constantly import Flags, FlagConstant
+import attr
+from constantly import FlagConstant, Flags, NamedConstant, Names
 from incremental import Version
 
+from twisted.internet.abstract import isIPAddress, isIPv6Address
 from twisted.internet.defer import Deferred
-from twisted.internet.error import VerifyError, CertificateError
+from twisted.internet.error import CertificateError, VerifyError
 from twisted.internet.interfaces import (
-    IAcceptableCiphers, ICipher, IOpenSSLClientConnectionCreator,
-    IOpenSSLContextFactory
+    IAcceptableCiphers,
+    ICipher,
+    IOpenSSLClientConnectionCreator,
+    IOpenSSLContextFactory,
 )
-
-from twisted.python import util
-from twisted.python.deprecate import _mutuallyExclusiveArguments
+from twisted.python import log, util
 from twisted.python.compat import nativeString, unicode
+from twisted.python.deprecate import _mutuallyExclusiveArguments, deprecated
 from twisted.python.failure import Failure
-
-from twisted.python.deprecate import deprecated
-
+from twisted.python.randbytes import secureRandom
+from ._idna import _idnaBytes
 
 
 class TLSVersion(Names):
@@ -179,7 +170,8 @@ def _selectVerifyImplementation():
     try:
         from service_identity import VerificationError
         from service_identity.pyopenssl import (
-            verify_hostname, verify_ip_address
+            verify_hostname,
+            verify_ip_address,
         )
         return verify_hostname, verify_ip_address, VerificationError
     except ImportError as e:
