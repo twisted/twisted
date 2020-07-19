@@ -21,7 +21,7 @@ ReverseProxy is used on the server end.
 
 from twisted.python.compat import urllib_parse, urlquote
 from twisted.internet import reactor
-from twisted.internet.protocol import ClientFactory
+from twisted.internet.protocol import ClientFactory, ServerFactory
 from twisted.web.resource import Resource
 from twisted.web.server import NOT_DONE_YET
 from twisted.web.http import HTTPClient, Request, HTTPChannel, _QUEUED_SENTINEL
@@ -206,11 +206,11 @@ class ReverseProxyRequest(Request):
         request.
         """
         self.requestHeaders.setRawHeaders(b"host",
-                                          [self.factory.host.encode('ascii')])
+                                          [self.channel.factory.host])
         clientFactory = self.proxyClientFactoryClass(
             self.method, self.uri, self.clientproto, self.getAllHeaders(),
             self.content.read(), self)
-        self.reactor.connectTCP(self.factory.host, self.factory.port,
+        self.reactor.connectTCP(self.channel.factory.host, self.channel.factory.port,
                                 clientFactory)
 
 
@@ -219,10 +219,25 @@ class ReverseProxy(HTTPChannel):
     """
     Implements a simple reverse proxy.
 
-    For details of usage, see the file examples/reverse-proxy.py.
+    For details of usage, see the file examples/transparent-proxy.py.
     """
 
     requestFactory = ReverseProxyRequest
+
+
+
+class ReverseProxyFactory(ServerFactory):
+    """
+    Used by ReverseProxyRequest to implement a simple transparent proxy
+    """
+    protocol = ReverseProxy
+
+    def __init__(self, host, port):
+        self.host = host
+        self.port = port
+
+    def log(self, *args, **kwargs):
+        pass
 
 
 

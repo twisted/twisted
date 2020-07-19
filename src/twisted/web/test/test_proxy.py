@@ -558,16 +558,15 @@ class ReverseProxyRequestTests(TestCase):
         channel = DummyChannel(transport)
         reactor = MemoryReactor()
         request = ReverseProxyRequest(channel, False, reactor)
-        request.factory = DummyFactory(u"example.com", 1234)
+        channel.factory = DummyFactory(u"example.com", 1234)
         request.gotLength(0)
         request.requestReceived(b'GET', b'/foo/bar', b'HTTP/1.0')
 
+        [(host, port, factory, _timeout, _bind_addr)] = reactor.tcpClients
         # Check that one connection has been created, to the good host/port
-        self.assertEqual(len(reactor.tcpClients), 1)
-        self.assertEqual(reactor.tcpClients[0][0], u"example.com")
-        self.assertEqual(reactor.tcpClients[0][1], 1234)
+        self.assertEqual(host, u"example.com")
+        self.assertEqual(port, 1234)
 
         # Check the factory passed to the connect, and its headers
-        factory = reactor.tcpClients[0][2]
         self.assertIsInstance(factory, ProxyClientFactory)
         self.assertEqual(factory.headers, {b'host': b'example.com'})
