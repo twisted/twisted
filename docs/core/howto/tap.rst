@@ -217,7 +217,7 @@ of the package. You would have to extend the layout of your files like this:
 
       - ``plugins``
 
-        - ``myplugin.py`` - Dropin file containing the actual plugin
+        - ``myproject_plugins.py`` - Dropin file containing the actual plugin
 
 
 .. code-block:: python
