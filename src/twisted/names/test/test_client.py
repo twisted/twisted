@@ -34,7 +34,7 @@ from twisted.trial import unittest
 if platform.isWindows():
     windowsSkip = "These tests need more work before they'll work on Windows."
 else:
-    windowsSkip = None
+    windowsSkip = ""
 
 
 

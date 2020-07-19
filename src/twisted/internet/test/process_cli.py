@@ -1,4 +1,3 @@
-
 import sys
 import os
 
@@ -7,7 +6,7 @@ try:
     # so newline characters are munged on writing, interfering with
     # the tests.
     import msvcrt
-    msvcrt.setmode(sys.stdout.fileno(), os.O_BINARY)
+    msvcrt.setmode(sys.stdout.fileno(), os.O_BINARY)  # type:ignore[attr-defined]  # noqa
 except ImportError:
     pass
 
@@ -16,11 +15,7 @@ except ImportError:
 for arg in sys.argv[1:]:
     res = arg + chr(0)
 
-    if sys.version_info < (3, 0):
-        stdout = sys.stdout
-    else:
-        stdout = sys.stdout.buffer
-        res = res.encode(sys.getfilesystemencoding(), "surrogateescape")
-
-    stdout.write(res)
-    stdout.flush()
+    sys.stdout.buffer.write(
+        res.encode(sys.getfilesystemencoding(), "surrogateescape")
+    )
+    sys.stdout.flush()

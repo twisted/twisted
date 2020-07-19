@@ -5,7 +5,9 @@
 Shiny new words service maker
 """
 
-import sys, socket
+import sys
+import socket
+from typing import List, Optional, Sequence
 
 from twisted.application import strports
 from twisted.application.service import MultiService
@@ -19,7 +21,7 @@ class Options(usage.Options, strcred.AuthOptionMixin):
     supportedInterfaces = [credentials.IUsernamePassword]
     optParameters = [
         ('hostname', None, socket.gethostname(),
-         'Name of this server; purely an informative')]
+         'Name of this server; purely an informative')]  # type: List[Sequence[Optional[str]]]  # noqa
 
     compData = usage.Completions(multiUse=["group"])
 

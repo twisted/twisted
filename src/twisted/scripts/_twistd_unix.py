@@ -10,7 +10,7 @@ import sys
 import traceback
 
 from twisted.python import log, logfile, usage
-from twisted.python.compat import (intToBytes, _bytesRepr, _PY3)
+from twisted.python.compat import (intToBytes, _bytesRepr)
 from twisted.python.util import (
     switchUID, uidFromString, gidFromString, untilConcludes)
 from twisted.application import app, service
@@ -229,9 +229,7 @@ class UnixApplicationRunner(app.ApplicationRunner):
         formattedMessage = '1 {}'.format(exceptionLine.strip())
         # On Python 3, encode the message the same way Python 2's
         # format_exception_only does
-        if _PY3:
-            formattedMessage = formattedMessage.encode('ascii',
-                                                       'backslashreplace')
+        formattedMessage = formattedMessage.encode('ascii', 'backslashreplace')
         # By this point, the message has been encoded, if appropriate,
         # with backslashreplace on both Python 2 and Python 3.
         # Truncating the encoded message won't make it completely

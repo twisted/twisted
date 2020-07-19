@@ -11,7 +11,7 @@ import sys
 import traceback
 
 from twisted.trial import unittest
-from twisted.python.compat import nativeString, _PY3
+from twisted.python.compat import nativeString
 from twisted.web import error
 from twisted.web.template import Tag
 
@@ -442,24 +442,21 @@ class FlattenerErrorTests(unittest.TestCase):
         characters from that string are included in the string representation
         of the exception.
         """
-        # the response includes the output of repr(), which differs between
-        # Python 2 and 3
-        u = {'u': ''} if _PY3 else {'u': 'u'}
         self.assertEqual(
             str(error.FlattenerError(
                     RuntimeError("reason"), [u'abc\N{SNOWMAN}xyz'], [])),
             "Exception while flattening:\n"
-            "  %(u)s'abc\\u2603xyz'\n" # Codepoint for SNOWMAN
-            "RuntimeError: reason\n" % u)
+            "  'abc\\u2603xyz'\n"  # Codepoint for SNOWMAN
+            "RuntimeError: reason\n")
         self.assertEqual(
             str(error.FlattenerError(
                     RuntimeError("reason"), [u'01234567\N{SNOWMAN}9' * 10],
                     [])),
             "Exception while flattening:\n"
-            "  %(u)s'01234567\\u2603901234567\\u26039"
+            "  '01234567\\u2603901234567\\u26039"
             "<...>01234567\\u2603901234567"
             "\\u26039'\n"
-            "RuntimeError: reason\n" % u)
+            "RuntimeError: reason\n")
 
 
 
@@ -473,8 +470,7 @@ class UnsupportedMethodTests(unittest.SynchronousTestCase):
         shows is a list of the supported methods, not the method that was
         unsupported.
         """
-        b = "b" if _PY3 else ""
         e = error.UnsupportedMethod([b"HEAD", b"PATCH"])
         self.assertEqual(
-            str(e), "Expected one of [{b}'HEAD', {b}'PATCH']".format(b=b),
+            str(e), "Expected one of [b'HEAD', b'PATCH']",
         )

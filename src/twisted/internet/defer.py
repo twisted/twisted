@@ -42,8 +42,9 @@ except ImportError:
         def run(f, *args, **kwargs):
             return f(*args, **kwargs)
 
-
-    def _copy_context():
+    # typing ignored due to:
+    # https://github.com/python/typeshed/issues/4249
+    def _copy_context():  # type: ignore[misc]
         return _NoContext
 
 log = Logger()
@@ -1449,9 +1450,8 @@ def _inlineCallbacks(result, g, status):
             # code.
             appCodeTrace = exc_info()[2].tb_next
 
-            # If contextvars support is not present, we also have added a frame
-            # in the no-op shim, remove that
-            if not _contextvarsSupport:
+            # The contextvars backport and our no-op shim add an extra frame.
+            if version_info < (3, 7):
                 appCodeTrace = appCodeTrace.tb_next
 
             if isFailure:
@@ -1538,7 +1538,7 @@ def _cancellableInlineCallbacks(g):
 
         @param result: An L{_InternalInlineCallbacksCancelledError} from
             C{cancel()}.
-        @return: A new L{Deferred} that the C{@}L{inlineCallback} generator
+        @return: A new L{Deferred} that the C{@}L{inlineCallbacks} generator
             can callback or errback through.
         """
         result.trap(_InternalInlineCallbacksCancelledError)

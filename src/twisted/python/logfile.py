@@ -45,6 +45,7 @@ class BaseLogFile:
         self._openFile()
 
 
+    @classmethod
     def fromFullPath(cls, filename, *args, **kwargs):
         """
         Construct a log file from a full file path.
@@ -52,7 +53,6 @@ class BaseLogFile:
         logPath = os.path.abspath(filename)
         return cls(os.path.basename(logPath),
                    os.path.dirname(logPath), *args, **kwargs)
-    fromFullPath = classmethod(fromFullPath)
 
 
     def shouldRotate(self):

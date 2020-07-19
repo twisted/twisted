@@ -9,6 +9,28 @@ Future Plans:
     - Get rid of some toplevels, maybe.
 """
 
+# System imports
+import inspect
+import random
+import socket
+import struct
+from itertools import chain
+
+from io import BytesIO
+from typing import Optional
+
+from zope.interface import implementer, Interface, Attribute
+
+
+# Twisted imports
+from twisted.internet import protocol, defer
+from twisted.internet.error import CannotListenError
+from twisted.python import log, failure
+from twisted.python import util as tputil
+from twisted.python import randbytes
+from twisted.python.compat import comparable, cmp, nativeString
+
+
 
 __all__ = [
     'IEncodable', 'IRecord',
@@ -45,62 +67,44 @@ __all__ = [
     ]
 
 
-# System imports
-import inspect, struct, random, socket
-from itertools import chain
-
-from io import BytesIO
-
 AF_INET6 = socket.AF_INET6
 
-from zope.interface import implementer, Interface, Attribute
 
 
-# Twisted imports
-from twisted.internet import protocol, defer
-from twisted.internet.error import CannotListenError
-from twisted.python import log, failure
-from twisted.python import util as tputil
-from twisted.python import randbytes
-from twisted.python.compat import _PY3, unicode, comparable, cmp, nativeString
+def _ord2bytes(ordinal):
+    """
+    Construct a bytes object representing a single byte with the given
+    ordinal value.
+
+    @type ordinal: L{int}
+    @rtype: L{bytes}
+    """
+    return bytes([ordinal])
 
 
-if _PY3:
-    def _ord2bytes(ordinal):
-        """
-        Construct a bytes object representing a single byte with the given
-        ordinal value.
 
-        @type ordinal: L{int}
-        @rtype: L{bytes}
-        """
-        return bytes([ordinal])
+def _nicebytes(bytes):
+    """
+    Represent a mostly textful bytes object in a way suitable for
+    presentation to an end user.
 
-
-    def _nicebytes(bytes):
-        """
-        Represent a mostly textful bytes object in a way suitable for
-        presentation to an end user.
-
-        @param bytes: The bytes to represent.
-        @rtype: L{str}
-        """
-        return repr(bytes)[1:]
+    @param bytes: The bytes to represent.
+    @rtype: L{str}
+    """
+    return repr(bytes)[1:]
 
 
-    def _nicebyteslist(list):
-        """
-        Represent a list of mostly textful bytes objects in a way suitable for
-        presentation to an end user.
 
-        @param list: The list of bytes to represent.
-        @rtype: L{str}
-        """
-        return '[%s]' % (
-            ', '.join([_nicebytes(b) for b in list]),)
-else:
-    _ord2bytes = chr
-    _nicebytes = _nicebyteslist = repr
+def _nicebyteslist(list):
+    """
+    Represent a list of mostly textful bytes objects in a way suitable for
+    presentation to an end user.
+
+    @param list: The list of bytes to represent.
+    @rtype: L{str}
+    """
+    return '[%s]' % (
+        ', '.join([_nicebytes(b) for b in list]),)
 
 
 
@@ -270,7 +274,7 @@ def domainString(domain):
 
     @since: Twisted 20.3.0
     """
-    if isinstance(domain, unicode):
+    if isinstance(domain, str):
         domain = domain.encode('idna')
     if not isinstance(domain, bytes):
         raise TypeError('Expected {} or {} but found {!r} of type {}'.format(
@@ -322,7 +326,7 @@ def str2time(s):
         (years).  For example: C{"3S"} indicates an interval of three seconds;
         C{"5D"} indicates an interval of five days.  Alternatively, C{s} may be
         any non-string and it will be returned unmodified.
-    @type s: text string (L{bytes} or L{unicode}) for parsing; anything else
+    @type s: text string (L{bytes} or L{str}) for parsing; anything else
         for passthrough.
 
     @return: an L{int} giving the interval represented by the string C{s}, or
@@ -332,7 +336,7 @@ def str2time(s):
         ('S', 1), ('M', 60), ('H', 60 * 60), ('D', 60 * 60 * 24),
         ('W', 60 * 60 * 24 * 7), ('Y', 60 * 60 * 24 * 365)
     )
-    if _PY3 and isinstance(s, bytes):
+    if isinstance(s, bytes):
         s = s.decode('ascii')
 
     if isinstance(s, str):
@@ -596,7 +600,7 @@ class Query:
 
     def __init__(self, name=b'', type=A, cls=IN):
         """
-        @type name: L{bytes} or L{unicode}
+        @type name: L{bytes} or L{str}
         @param name: See L{Query.name}
 
         @type type: L{int}
@@ -1007,7 +1011,7 @@ class SimpleRecord(tputil.FancyStrMixin, tputil.FancyEqMixin):
     showAttributes = (('name', 'name', '%s'), 'ttl')
     compareAttributes = ('name', 'ttl')
 
-    TYPE = None
+    TYPE = None  # type: Optional[int]
     name = None
 
     def __init__(self, name=b'', ttl=None):
@@ -1155,11 +1159,11 @@ class Record_A(tputil.FancyEqMixin):
 
     def __init__(self, address='0.0.0.0', ttl=None):
         """
-        @type address: L{bytes} or L{unicode}
+        @type address: L{bytes} or L{str}
         @param address: The IPv4 address associated with this record, in
             quad-dotted notation.
         """
-        if _PY3 and isinstance(address, bytes):
+        if isinstance(address, bytes):
             address = address.decode('ascii')
 
         address = socket.inet_aton(address)
@@ -1239,10 +1243,10 @@ class Record_SOA(tputil.FancyEqMixin, tputil.FancyStrMixin):
                  expire=0, minimum=0, ttl=None):
         """
         @param mname: See L{Record_SOA.mname}
-        @type mname: L{bytes} or L{unicode}
+        @type mname: L{bytes} or L{str}
 
         @param rname: See L{Record_SOA.rname}
-        @type rname: L{bytes} or L{unicode}
+        @type rname: L{bytes} or L{str}
         """
         self.mname, self.rname = Name(mname), Name(rname)
         self.serial, self.refresh = str2time(serial), str2time(refresh)
@@ -1343,15 +1347,18 @@ class Record_WKS(tputil.FancyEqMixin, tputil.FancyStrMixin):
 
     TYPE = WKS
 
-    _address = property(lambda self: socket.inet_ntoa(self.address))
+    @property
+    def _address(self):
+        return socket.inet_ntoa(self.address)
+
 
     def __init__(self, address='0.0.0.0', protocol=0, map=b'', ttl=None):
         """
-        @type address: L{bytes} or L{unicode}
+        @type address: L{bytes} or L{str}
         @param address: The IPv4 address associated with this record, in
             quad-dotted notation.
         """
-        if _PY3 and isinstance(address, bytes):
+        if isinstance(address, bytes):
             address = address.decode('idna')
 
         self.address = socket.inet_aton(address)
@@ -1397,14 +1404,17 @@ class Record_AAAA(tputil.FancyEqMixin, tputil.FancyStrMixin):
     showAttributes = (('_address', 'address', '%s'), 'ttl')
     compareAttributes = ('address', 'ttl')
 
-    _address = property(lambda self: socket.inet_ntop(AF_INET6, self.address))
+    @property
+    def _address(self):
+        return socket.inet_ntop(AF_INET6, self.address)
+
 
     def __init__(self, address='::', ttl=None):
         """
-        @type address: L{bytes} or L{unicode}
+        @type address: L{bytes} or L{str}
         @param address: The IPv6 address for this host, in RFC 2373 format.
         """
-        if _PY3 and isinstance(address, bytes):
+        if isinstance(address, bytes):
             address = address.decode('idna')
 
         self.address = socket.inet_pton(AF_INET6, address)
@@ -1455,20 +1465,26 @@ class Record_A6(tputil.FancyStrMixin, tputil.FancyEqMixin):
     TYPE = A6
 
     fancybasename = 'A6'
-    showAttributes = (('_suffix', 'suffix', '%s'), ('prefix', 'prefix', '%s'), 'ttl')
+    showAttributes = (('_suffix', 'suffix', '%s'),
+                      ('prefix', 'prefix', '%s'),
+                      'ttl')
     compareAttributes = ('prefixLen', 'prefix', 'suffix', 'ttl')
 
-    _suffix = property(lambda self: socket.inet_ntop(AF_INET6, self.suffix))
+
+    @property
+    def _suffix(self):
+        return socket.inet_ntop(AF_INET6, self.suffix)
+
 
     def __init__(self, prefixLen=0, suffix='::', prefix=b'', ttl=None):
         """
         @param suffix: An IPv6 address suffix in in RFC 2373 format.
-        @type suffix: L{bytes} or L{unicode}
+        @type suffix: L{bytes} or L{str}
 
         @param prefix: An IPv6 address prefix for other A6 records.
-        @type prefix: L{bytes} or L{unicode}
+        @type prefix: L{bytes} or L{str}
         """
-        if _PY3 and isinstance(suffix, bytes):
+        if isinstance(suffix, bytes):
             suffix = suffix.decode('idna')
 
         self.prefixLen = prefixLen
@@ -1562,7 +1578,7 @@ class Record_SRV(tputil.FancyEqMixin, tputil.FancyStrMixin):
     def __init__(self, priority=0, weight=0, port=0, target=b'', ttl=None):
         """
         @param target: See L{Record_SRV.target}
-        @type target: L{bytes} or L{unicode}
+        @type target: L{bytes} or L{str}
         """
         self.priority = int(priority)
         self.weight = int(weight)
@@ -1648,7 +1664,7 @@ class Record_NAPTR(tputil.FancyEqMixin, tputil.FancyStrMixin):
                  regexp=b'', replacement=b'', ttl=None):
         """
         @param replacement: See L{Record_NAPTR.replacement}
-        @type replacement: L{bytes} or L{unicode}
+        @type replacement: L{bytes} or L{str}
         """
         self.order = int(order)
         self.preference = int(preference)
@@ -1718,7 +1734,7 @@ class Record_AFSDB(tputil.FancyStrMixin, tputil.FancyEqMixin):
     def __init__(self, subtype=0, hostname=b'', ttl=None):
         """
         @param hostname: See L{Record_AFSDB.hostname}
-        @type hostname: L{bytes} or L{unicode}
+        @type hostname: L{bytes} or L{str}
         """
         self.subtype = int(subtype)
         self.hostname = Name(hostname)
@@ -1769,10 +1785,10 @@ class Record_RP(tputil.FancyEqMixin, tputil.FancyStrMixin):
     def __init__(self, mbox=b'', txt=b'', ttl=None):
         """
         @param mbox: See L{Record_RP.mbox}.
-        @type mbox: L{bytes} or L{unicode}
+        @type mbox: L{bytes} or L{str}
 
         @param txt: See L{Record_RP.txt}
-        @type txt: L{bytes} or L{unicode}
+        @type txt: L{bytes} or L{str}
         """
         self.mbox = Name(mbox)
         self.txt = Name(txt)
@@ -1883,10 +1899,10 @@ class Record_MINFO(tputil.FancyEqMixin, tputil.FancyStrMixin):
     def __init__(self, rmailbx=b'', emailbx=b'', ttl=None):
         """
         @param rmailbx: See L{Record_MINFO.rmailbx}.
-        @type rmailbx: L{bytes} or L{unicode}
+        @type rmailbx: L{bytes} or L{str}
 
         @param emailbx: See L{Record_MINFO.rmailbx}.
-        @type emailbx: L{bytes} or L{unicode}
+        @type emailbx: L{bytes} or L{str}
         """
         self.rmailbx, self.emailbx = Name(rmailbx), Name(emailbx)
         self.ttl = str2time(ttl)
@@ -1934,7 +1950,7 @@ class Record_MX(tputil.FancyStrMixin, tputil.FancyEqMixin):
     def __init__(self, preference=0, name=b'', ttl=None, **kwargs):
         """
         @param name: See L{Record_MX.name}.
-        @type name: L{bytes} or L{unicode}
+        @type name: L{bytes} or L{str}
         """
         self.preference = int(preference)
         self.name = Name(kwargs.get('exchange', name))
@@ -2085,9 +2101,12 @@ class UnknownRecord(tputil.FancyEqMixin, tputil.FancyStrMixin, object):
 
     @since: 11.1
     """
+    TYPE = None
+
     fancybasename = 'UNKNOWN'
     compareAttributes = ('data', 'ttl')
     showAttributes = (('data', _nicebytes), 'ttl')
+
 
     def __init__(self, data=b'', ttl=None):
         self.data = data
@@ -2259,25 +2278,13 @@ def _getDisplayableArguments(obj, alwaysShow, fieldNames):
     @return: A L{list} of displayable arguments.
     """
     displayableArgs = []
-    if _PY3:
-        # Get the argument names and values from the constructor.
-        signature = inspect.signature(obj.__class__.__init__)
-        for name in fieldNames:
-            defaultValue = signature.parameters[name].default
-            fieldValue = getattr(obj, name, defaultValue)
-            if (name in alwaysShow) or (fieldValue != defaultValue):
-                displayableArgs.append(' %s=%r' % (name, fieldValue))
-    else:
-        # Get the argument names and values from the constructor.
-        argspec = inspect.getargspec(obj.__class__.__init__)
-        # Reverse the args and defaults to avoid mapping positional arguments
-        # which don't have a default.
-        defaults = dict(zip(reversed(argspec.args), reversed(argspec.defaults)))
-        for name in fieldNames:
-            defaultValue = defaults.get(name)
-            fieldValue = getattr(obj, name, defaultValue)
-            if (name in alwaysShow) or (fieldValue != defaultValue):
-                displayableArgs.append(' %s=%r' % (name, fieldValue))
+    # Get the argument names and values from the constructor.
+    signature = inspect.signature(obj.__class__.__init__)
+    for name in fieldNames:
+        defaultValue = signature.parameters[name].default
+        fieldValue = getattr(obj, name, defaultValue)
+        if (name in alwaysShow) or (fieldValue != defaultValue):
+            displayableArgs.append(' %s=%r' % (name, fieldValue))
 
     return displayableArgs
 

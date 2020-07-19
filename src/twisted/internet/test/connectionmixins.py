@@ -10,6 +10,7 @@ Various helpers for tests for connection-oriented transports.
 import socket
 
 from gc import collect
+from typing import Optional
 from weakref import ref
 
 from zope.interface.verify import verifyObject
@@ -291,8 +292,7 @@ class ConnectionTestsMixin(object):
     implementations.
     """
 
-    # This should be a reactormixins.EndpointCreator instance.
-    endpoints = None
+    endpoints = None  # type: Optional[EndpointCreator]
 
 
     def test_logPrefix(self):

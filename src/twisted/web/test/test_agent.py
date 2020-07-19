@@ -8,7 +8,7 @@ Tests for L{twisted.web.client.Agent} and related new client APIs.
 import zlib
 
 from io import BytesIO
-
+from unittest import skipIf
 from zope.interface.verify import verifyObject
 
 from twisted.trial.unittest import TestCase, SynchronousTestCase
@@ -59,14 +59,13 @@ from twisted.web.error import SchemeNotSupported
 from twisted.logger import globalLogPublisher
 
 try:
-    from twisted.internet import ssl
+    from twisted.internet import ssl as _ssl
 except ImportError:
     ssl = None
-    skipWhenNoSSL = "SSL not present, cannot run SSL tests."
-    skipWhenSSLPresent = None
+    sslPresent = False
 else:
-    skipWhenSSLPresent = "SSL present."
-    skipWhenNoSSL = None
+    ssl = _ssl
+    sslPresent = True
     from twisted.internet._sslverify import ClientTLSOptions, IOpenSSLTrustRoot
     from twisted.internet.ssl import optionsForClientTLS
     from twisted.protocols.tls import TLSMemoryBIOProtocol, TLSMemoryBIOFactory
@@ -1246,6 +1245,7 @@ class AgentTests(TestCase, FakeReactorAndConnectMixin, AgentTestsMixin,
         self.assertEqual(5, timeout)
 
 
+    @skipIf(not sslPresent, "SSL not present, cannot run SSL tests.")
     def test_connectTimeoutHTTPS(self):
         """
         L{Agent} takes a C{connectTimeout} argument which is forwarded to the
@@ -1255,8 +1255,6 @@ class AgentTests(TestCase, FakeReactorAndConnectMixin, AgentTestsMixin,
         agent.request(b'GET', b'https://foo/')
         timeout = self.reactor.tcpClients.pop()[3]
         self.assertEqual(5, timeout)
-
-    test_connectTimeoutHTTPS.skip = skipWhenNoSSL
 
 
     def test_bindAddress(self):
@@ -1270,6 +1268,7 @@ class AgentTests(TestCase, FakeReactorAndConnectMixin, AgentTestsMixin,
         self.assertEqual('192.168.0.1', address)
 
 
+    @skipIf(not sslPresent, "SSL not present, cannot run SSL tests.")
     def test_bindAddressSSL(self):
         """
         L{Agent} takes a C{bindAddress} argument which is forwarded to the
@@ -1279,8 +1278,6 @@ class AgentTests(TestCase, FakeReactorAndConnectMixin, AgentTestsMixin,
         agent.request(b'GET', b'https://foo/')
         address = self.reactor.tcpClients.pop()[4]
         self.assertEqual('192.168.0.1', address)
-
-    test_bindAddressSSL.skip = skipWhenNoSSL
 
 
     def test_responseIncludesRequest(self):
@@ -1415,13 +1412,12 @@ class AgentURIInjectionTests(
 
 
 
+@skipIf(not sslPresent, "SSL not present, cannot run SSL tests.")
 class AgentHTTPSTests(TestCase, FakeReactorAndConnectMixin,
                       IntegrationTestingMixin):
     """
     Tests for the new HTTP client API that depends on SSL.
     """
-    skip = skipWhenNoSSL
-
     def makeEndpoint(self, host=b'example.com', port=443):
         """
         Create an L{Agent} with an https scheme and return its endpoint
@@ -1656,6 +1652,7 @@ class WebClientContextFactoryTests(TestCase):
         )
 
 
+    @skipIf(sslPresent, "SSL Present.")
     def test_missingSSL(self):
         """
         If C{getContext} is called and SSL is not available, raise
@@ -1668,6 +1665,7 @@ class WebClientContextFactoryTests(TestCase):
         )
 
 
+    @skipIf(not sslPresent, "SSL not present, cannot run SSL tests.")
     def test_returnsContext(self):
         """
         If SSL is present, C{getContext} returns a L{OpenSSL.SSL.Context}.
@@ -1676,6 +1674,7 @@ class WebClientContextFactoryTests(TestCase):
         self.assertIsInstance(ctx, ssl.SSL.Context)
 
 
+    @skipIf(not sslPresent, "SSL not present, cannot run SSL tests.")
     def test_setsTrustRootOnContextToDefaultTrustRoot(self):
         """
         The L{CertificateOptions} has C{trustRoot} set to the default trust
@@ -1685,11 +1684,6 @@ class WebClientContextFactoryTests(TestCase):
         certificateOptions = ctx._getCertificateOptions('example.com', 443)
         self.assertIsInstance(
             certificateOptions.trustRoot, ssl.OpenSSLDefaultPaths)
-
-    test_returnsContext.skip \
-        = test_setsTrustRootOnContextToDefaultTrustRoot.skip \
-        = skipWhenNoSSL
-    test_missingSSL.skip = skipWhenSSLPresent
 
 
 
@@ -2116,6 +2110,7 @@ class CookieAgentTests(TestCase, CookieTestsMixin, FakeReactorAndConnectMixin,
         self.assertEqual(req.headers.getRawHeaders(b'cookie'), [cookie])
 
 
+    @skipIf(not sslPresent, "SSL not present, cannot run SSL tests.")
     def test_secureCookie(self):
         """
         L{CookieAgent} is able to handle secure cookies, ie cookies which
@@ -2134,8 +2129,6 @@ class CookieAgentTests(TestCase, CookieTestsMixin, FakeReactorAndConnectMixin,
 
         req, res = self.protocol.requests.pop()
         self.assertEqual(req.headers.getRawHeaders(b'cookie'), [b'foo=1'])
-
-    test_secureCookie.skip = skipWhenNoSSL
 
 
     def test_secureCookieOnInsecureConnection(self):
@@ -2192,7 +2185,7 @@ class CookieAgentTests(TestCase, CookieTestsMixin, FakeReactorAndConnectMixin,
 
 
 
-class Decoder1(proxyForInterface(IResponse)):
+class Decoder1(proxyForInterface(IResponse)):  # type: ignore[misc]
     """
     A test decoder to be used by L{client.ContentDecoderAgent} tests.
     """
@@ -3198,9 +3191,8 @@ class ReadBodyTests(TestCase):
 
 
 
+@skipIf(not sslPresent, "SSL not present, cannot run SSL tests.")
 class HostnameCachingHTTPSPolicyTests(TestCase):
-
-    skip = skipWhenNoSSL
 
     def test_cacheIsUsed(self):
         """

@@ -11,12 +11,7 @@ import email.utils
 import os
 import sys
 import getpass
-try:
-    # Python 3
-    from configparser import ConfigParser
-except ImportError:
-    # Python 2
-    from ConfigParser import ConfigParser
+from configparser import ConfigParser
 
 from twisted.copyright import version
 from twisted.internet import reactor

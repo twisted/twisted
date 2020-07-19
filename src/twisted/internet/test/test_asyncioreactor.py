@@ -5,6 +5,7 @@
 Tests for L{twisted.internet.asyncioreactor}.
 """
 import gc
+from unittest import skipIf
 
 from twisted.trial.unittest import SynchronousTestCase
 from .reactormixins import ReactorBuilder
@@ -13,19 +14,17 @@ try:
     from twisted.internet.asyncioreactor import AsyncioSelectorReactor
     import asyncio
 except ImportError:
-    AsyncioSelectorReactor = None
-    skipReason = "Requires asyncio."
+    doSkip = True
+else:
+    doSkip = False
 
 
 
+@skipIf(doSkip, "Requires asyncio.")
 class AsyncioSelectorReactorTests(ReactorBuilder, SynchronousTestCase):
     """
     L{AsyncioSelectorReactor} tests.
     """
-    if AsyncioSelectorReactor is None:
-        skip = skipReason
-
-
     def test_defaultEventLoopFromGlobalPolicy(self):
         """
         L{AsyncioSelectorReactor} wraps the global policy's event loop

@@ -28,16 +28,16 @@ if requireModule('cryptography') and requireModule('pyasn1'):
     from twisted.conch.ssh import keys, userauth, transport
     from twisted.conch.test import keydata
 else:
-    keys = None
+    keys = None  # type: ignore[assignment]
 
 
-    class transport:
+    class transport:  # type: ignore[no-redef]
         class SSHTransportBase:
             """
             A stub class so that later class definitions won't die.
             """
 
-    class userauth:
+    class userauth:  # type: ignore[no-redef]
         class SSHUserAuthClient:
             """
             A stub class so that later class definitions won't die.
@@ -241,6 +241,11 @@ class AnonymousChecker(object):
     A simple checker which isn't supported by L{SSHUserAuthServer}.
     """
     credentialInterfaces = (IAnonymous,)
+
+
+    def requestAvatarId(self, credentials):
+        # ICredentialsChecker.requestAvatarId
+        pass
 
 
 

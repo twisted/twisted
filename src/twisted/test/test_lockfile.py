@@ -10,20 +10,24 @@ Tests for L{twisted.python.lockfile}.
 import errno
 import os
 
-from twisted.trial import unittest
+from unittest import skipIf, skipUnless
+from twisted.trial.unittest import TestCase
 from twisted.python import lockfile
 from twisted.python.reflect import requireModule
 from twisted.python.runtime import platform
 
-skipKill = None
+skipKill = False
+skipKillReason = ""
 if platform.isWindows():
     if(requireModule('win32api.OpenProcess') is None and
-        requireModule('pywintypes') is None
-            ):
-        skipKill = ("On windows, lockfile.kill is not implemented in the "
-                    "absence of win32api and/or pywintypes.")
+       requireModule('pywintypes') is None):
+        skipKill = True
+        skipKillReason = ("On windows, lockfile.kill is not implemented "
+                          "in the absence of win32api and/or pywintypes.")
 
-class UtilTests(unittest.TestCase):
+
+
+class UtilTests(TestCase):
     """
     Tests for the helper functions used to implement L{FilesystemLock}.
     """
@@ -38,6 +42,9 @@ class UtilTests(unittest.TestCase):
         self.assertEqual(exc.errno, errno.EEXIST)
 
 
+    @skipUnless(platform.isWindows(),
+                "special rename EIO handling only necessary and correct on "
+                "Windows.")
     def test_symlinkEIOWindows(self):
         """
         L{lockfile.symlink} raises L{OSError} with C{errno} set to L{EIO} when
@@ -53,10 +60,6 @@ class UtilTests(unittest.TestCase):
         self.patch(lockfile, 'rename', fakeRename)
         exc = self.assertRaises(IOError, lockfile.symlink, name, "foo")
         self.assertEqual(exc.errno, errno.EIO)
-    if not platform.isWindows():
-        test_symlinkEIOWindows.skip = (
-            "special rename EIO handling only necessary and correct on "
-            "Windows.")
 
 
     def test_readlinkENOENT(self):
@@ -69,6 +72,9 @@ class UtilTests(unittest.TestCase):
         self.assertEqual(exc.errno, errno.ENOENT)
 
 
+    @skipUnless(platform.isWindows(),
+                "special readlink EACCES handling only necessary and "
+                "correct on Windows.")
     def test_readlinkEACCESWindows(self):
         """
         L{lockfile.readlink} raises L{OSError} with C{errno} set to L{EACCES}
@@ -84,21 +90,18 @@ class UtilTests(unittest.TestCase):
         self.patch(lockfile, '_open', fakeOpen)
         exc = self.assertRaises(IOError, lockfile.readlink, name)
         self.assertEqual(exc.errno, errno.EACCES)
-    if not platform.isWindows():
-        test_readlinkEACCESWindows.skip = (
-            "special readlink EACCES handling only necessary and correct on "
-            "Windows.")
 
 
+    @skipIf(skipKill, skipKillReason)
     def test_kill(self):
         """
         L{lockfile.kill} returns without error if passed the PID of a
         process which exists and signal C{0}.
         """
         lockfile.kill(os.getpid(), 0)
-    test_kill.skip = skipKill
 
 
+    @skipIf(skipKill, skipKillReason)
     def test_killESRCH(self):
         """
         L{lockfile.kill} raises L{OSError} with errno of L{ESRCH} if
@@ -107,7 +110,6 @@ class UtilTests(unittest.TestCase):
         # Hopefully there is no process with PID 2 ** 31 - 1
         exc = self.assertRaises(OSError, lockfile.kill, 2 ** 31 - 1, 0)
         self.assertEqual(exc.errno, errno.ESRCH)
-    test_killESRCH.skip = skipKill
 
 
     def test_noKillCall(self):
@@ -123,7 +125,7 @@ class UtilTests(unittest.TestCase):
 
 
 
-class LockingTests(unittest.TestCase):
+class LockingTests(TestCase):
     def _symlinkErrorTest(self, errno):
         def fakeSymlink(source, dest):
             raise OSError(errno, None)
@@ -143,6 +145,8 @@ class LockingTests(unittest.TestCase):
         self._symlinkErrorTest(errno.ENOSYS)
 
 
+    @skipIf(platform.isWindows(),
+            "POSIX-specific error propagation not expected on Windows.")
     def test_symlinkErrorPOSIX(self):
         """
         An L{OSError} raised by C{symlink} on a POSIX platform with an errno of
@@ -153,9 +157,6 @@ class LockingTests(unittest.TestCase):
         """
         self._symlinkErrorTest(errno.EACCES)
         self._symlinkErrorTest(errno.EIO)
-    if platform.isWindows():
-        test_symlinkErrorPOSIX.skip = (
-            "POSIX-specific error propagation not expected on Windows.")
 
 
     def test_cleanlyAcquire(self):
@@ -255,6 +256,9 @@ class LockingTests(unittest.TestCase):
         self.assertTrue(lock.locked)
 
 
+    @skipUnless(platform.isWindows(),
+                "special rename EIO handling only necessary and correct on "
+                "Windows.")
     def test_lockReleasedDuringAcquireSymlink(self):
         """
         If the lock is released while an attempt is made to acquire
@@ -275,12 +279,11 @@ class LockingTests(unittest.TestCase):
         lock = lockfile.FilesystemLock(lockf)
         self.assertFalse(lock.lock())
         self.assertFalse(lock.locked)
-    if not platform.isWindows():
-        test_lockReleasedDuringAcquireSymlink.skip = (
-            "special rename EIO handling only necessary and correct on "
-            "Windows.")
 
 
+    @skipUnless(platform.isWindows(),
+                "special readlink EACCES handling only necessary and "
+                "correct on Windows.")
     def test_lockReleasedDuringAcquireReadlink(self):
         """
         If the lock is initially held but is released while an attempt
@@ -299,10 +302,6 @@ class LockingTests(unittest.TestCase):
         lockfile.symlink(str(43125), lockf)
         self.assertFalse(lock.lock())
         self.assertFalse(lock.locked)
-    if not platform.isWindows():
-        test_lockReleasedDuringAcquireReadlink.skip = (
-            "special readlink EACCES handling only necessary and correct on "
-            "Windows.")
 
 
     def _readlinkErrorTest(self, exceptionType, errno):
@@ -330,6 +329,8 @@ class LockingTests(unittest.TestCase):
         self._readlinkErrorTest(IOError, errno.ENOSYS)
 
 
+    @skipIf(platform.isWindows(),
+            "POSIX-specific error propagation not expected on Windows.")
     def test_readlinkErrorPOSIX(self):
         """
         Any L{IOError} raised by C{readlink} on a POSIX platform passed to the
@@ -340,9 +341,6 @@ class LockingTests(unittest.TestCase):
         """
         self._readlinkErrorTest(IOError, errno.ENOSYS)
         self._readlinkErrorTest(IOError, errno.EACCES)
-    if platform.isWindows():
-        test_readlinkErrorPOSIX.skip = (
-            "POSIX-specific error propagation not expected on Windows.")
 
 
     def test_lockCleanedUpConcurrently(self):
