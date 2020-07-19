@@ -11,10 +11,8 @@ import json
 
 try:
     from time import tzset
-    # We should upgrade to a version of pyflakes that does not require this.
-    tzset
 except ImportError:
-    tzset = None
+    tzset = None  # type: ignore[assignment, misc]
 
 from twisted.trial import unittest
 

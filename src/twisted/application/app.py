@@ -2,7 +2,6 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-from __future__ import absolute_import, division, print_function
 
 import sys
 import os
@@ -645,6 +644,7 @@ class ServerOptions(usage.Options, ReactorSelectionMixin):
                                        % (self['logger'], e))
 
 
+    @property
     def subCommands(self):
         plugins = self._getPlugins(service.IServiceMaker)
         self.loadedPlugins = {}
@@ -657,7 +657,6 @@ class ServerOptions(usage.Options, ReactorSelectionMixin):
                    # imports modules).
                    lambda plug=plug: plug.options(),
                    plug.description)
-    subCommands = property(subCommands)
 
 
 

@@ -5,7 +5,6 @@
 Tests for L{twisted.application.service}.
 """
 
-from __future__ import absolute_import, division
 
 from zope.interface import implementer
 from zope.interface.exceptions import BrokenImplementation

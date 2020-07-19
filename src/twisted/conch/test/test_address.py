@@ -5,7 +5,6 @@
 Tests for L{SSHTransportAddrress} in ssh/address.py
 """
 
-from __future__ import division, absolute_import
 
 from twisted.trial import unittest
 from twisted.internet.address import IPv4Address

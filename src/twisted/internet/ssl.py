@@ -53,7 +53,6 @@ APIs listed above.
     throughout the documentation.
 """
 
-from __future__ import division, absolute_import
 
 # System imports
 from OpenSSL import SSL
@@ -188,6 +187,11 @@ class Server(tcp.Server):
     def __init__(self, *args, **kwargs):
         tcp.Server.__init__(self, *args, **kwargs)
         self.startTLS(self.server.ctxFactory)
+
+
+    def getPeerCertificate(self):
+        # ISSLTransport.getPeerCertificate
+        raise NotImplementedError("Server.getPeerCertificate")
 
 
 

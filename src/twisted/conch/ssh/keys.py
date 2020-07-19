@@ -6,50 +6,49 @@
 Handling of RSA, DSA, ECDSA, and Ed25519 keys.
 """
 
-from __future__ import absolute_import, division
 
+import base64
 import binascii
 import itertools
-
-from hashlib import md5, sha256
-import base64
 import struct
+import unicodedata
 import warnings
+from hashlib import md5, sha256
 
 import bcrypt
+from cryptography import utils
 from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes, serialization
-from cryptography.hazmat.primitives.asymmetric import (
-    dsa, ec, ed25519, padding, rsa)
-from cryptography.hazmat.primitives.serialization import (
-    load_pem_private_key, load_ssh_public_key)
-from cryptography import utils
+from cryptography.hazmat.primitives.asymmetric import (dsa, ec, ed25519,
+                                                       padding, rsa)
+from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+from cryptography.hazmat.primitives.serialization import (load_pem_private_key,
+                                                          load_ssh_public_key)
+from pyasn1.codec.ber import decoder as berDecoder
+from pyasn1.codec.ber import encoder as berEncoder
+from pyasn1.error import PyAsn1Error
+from pyasn1.type import univ
+from twisted.conch.ssh import common, sexpy
+from twisted.conch.ssh.common import int_from_bytes, int_to_bytes
+from twisted.python import randbytes
+from twisted.python.compat import (
+    iterbytes, long, izip, nativeString, unicode,
+    _b64decodebytes as decodebytes, _b64encodebytes as encodebytes,
+    _bytesChr as chr)
+from twisted.python.constants import NamedConstant, Names
+from twisted.python.deprecate import _mutuallyExclusiveArguments
 
 try:
 
     from cryptography.hazmat.primitives.asymmetric.utils import (
         encode_dss_signature, decode_dss_signature)
 except ImportError:
-    from cryptography.hazmat.primitives.asymmetric.utils import (
+    from cryptography.hazmat.primitives.asymmetric.utils import (  # type: ignore[no-redef,attr-defined]  # noqa
         encode_rfc6979_signature as encode_dss_signature,
         decode_rfc6979_signature as decode_dss_signature)
-from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 
-from pyasn1.error import PyAsn1Error
-from pyasn1.type import univ
-from pyasn1.codec.ber import decoder as berDecoder
-from pyasn1.codec.ber import encoder as berEncoder
 
-from twisted.conch.ssh import common, sexpy
-from twisted.conch.ssh.common import int_from_bytes, int_to_bytes
-from twisted.python import randbytes
-from twisted.python.compat import (
-    iterbytes, long, izip, nativeString, unicode, _PY3,
-    _b64decodebytes as decodebytes, _b64encodebytes as encodebytes,
-    _bytesChr as chr)
-from twisted.python.constants import NamedConstant, Names
-from twisted.python.deprecate import _mutuallyExclusiveArguments
 
 # Curve lookup table
 _curveTable = {
@@ -109,6 +108,46 @@ class FingerprintFormats(Names):
 
 
 
+class PassphraseNormalizationError(Exception):
+    """
+    Raised when a passphrase contains Unicode characters that cannot be
+    normalized using the available Unicode character database.
+    """
+
+
+
+def _normalizePassphrase(passphrase):
+    """
+    Normalize a passphrase, which may be Unicode.
+
+    If the passphrase is Unicode, this follows the requirements of U{NIST
+    800-63B, section
+    5.1.1.2<https://pages.nist.gov/800-63-3/sp800-63b.html#memsecretver>}
+    for Unicode characters in memorized secrets: it applies the
+    Normalization Process for Stabilized Strings using NFKC normalization.
+    The passphrase is then encoded using UTF-8.
+
+    @type passphrase: L{bytes} or L{unicode} or L{None}
+    @param passphrase: The passphrase to normalize.
+
+    @return: The normalized passphrase, if any.
+    @rtype: L{bytes} or L{None}
+    @raises PassphraseNormalizationError: if the passphrase is Unicode and
+    cannot be normalized using the available Unicode character database.
+    """
+    if isinstance(passphrase, unicode):
+        # The Normalization Process for Stabilized Strings requires aborting
+        # with an error if the string contains any unassigned code point.
+        if any(unicodedata.category(c) == 'Cn' for c in passphrase):
+            # Perhaps not very helpful, but we don't want to leak any other
+            # information about the passphrase.
+            raise PassphraseNormalizationError()
+        return unicodedata.normalize('NFKC', passphrase).encode('UTF-8')
+    else:
+        return passphrase
+
+
+
 class Key(object):
     """
     An object representing a key.  A key can be either a public or
@@ -165,8 +204,7 @@ class Key(object):
         """
         if isinstance(data, unicode):
             data = data.encode("utf-8")
-        if isinstance(passphrase, unicode):
-            passphrase = passphrase.encode("utf-8")
+        passphrase = _normalizePassphrase(passphrase)
         if type is None:
             type = cls._guessStringType(data)
         if type is None:
@@ -512,9 +550,9 @@ class Key(object):
 
         try:
             decodedKey = berDecoder.decode(keyData)[0]
-        except PyAsn1Error as e:
+        except PyAsn1Error as asn1Error:
             raise BadKeyError(
-                'Failed to decode key (Bad Passphrase?): %s' % (e,))
+                'Failed to decode key (Bad Passphrase?): {}'.format(asn1Error))
 
         if kind == b'EC':
             return cls(
@@ -936,7 +974,7 @@ class Key(object):
                 out = '<Elliptic Curve Private Key (%s bits)' % (name[-3:],)
 
             for k, v in sorted(data.items()):
-                if _PY3 and k == 'curve':
+                if k == 'curve':
                     out += "\ncurve:\n\t%s" % (name,)
                 else:
                     out += "\n%s:\n\t%s" % (k, v)
@@ -1231,6 +1269,7 @@ class Key(object):
         Specification in OpenSSH PROTOCOL.agent
 
         RSA keys::
+
             string 'ssh-rsa'
             integer n
             integer e
@@ -1240,6 +1279,7 @@ class Key(object):
             integer q
 
         DSA keys::
+
             string 'ssh-dss'
             integer p
             integer q
@@ -1248,6 +1288,7 @@ class Key(object):
             integer x
 
         EC keys::
+
             string 'ecdsa-sha2-[identifier]'
             integer x
             integer y
@@ -1255,7 +1296,8 @@ class Key(object):
 
             identifier is the NIST standard curve name.
 
-        Ed25519 keys:
+        Ed25519 keys::
+
             string 'ssh-ed25519'
             string a
             string k || a
@@ -1342,8 +1384,7 @@ class Key(object):
                 passphrase = extra
         if isinstance(comment, unicode):
             comment = comment.encode("utf-8")
-        if isinstance(passphrase, unicode):
-            passphrase = passphrase.encode("utf-8")
+        passphrase = _normalizePassphrase(passphrase)
         method = getattr(self, '_toString_%s' % (type.upper(),), None)
         if method is None:
             raise BadKeyError('unknown key type: %s' % (type,))

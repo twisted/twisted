@@ -2,14 +2,15 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-from __future__ import absolute_import, division
 
 from twisted.trial import unittest
 
 from twisted.words.xish import xpath
 from twisted.words.xish.domish import Element
 from twisted.words.xish.xpath import XPathQuery
-from twisted.words.xish.xpathparser import SyntaxError
+from twisted.words.xish.xpathparser import SyntaxError  # type: ignore[attr-defined]  # noqa
+
+
 
 class XPathTests(unittest.TestCase):
     def setUp(self):

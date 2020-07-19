@@ -5,12 +5,12 @@
 Helpers related to HTTP requests, used by tests.
 """
 
-from __future__ import division, absolute_import
 
 __all__ = ['DummyChannel', 'DummyRequest']
 
 from io import BytesIO
 
+from typing import Optional
 from zope.interface import implementer, verify
 
 from twisted.python.compat import intToBytes
@@ -90,7 +90,40 @@ class DummyChannel:
 
     @implementer(ISSLTransport)
     class SSL(TCP):
-        pass
+        def abortConnection(self):
+            # ITCPTransport.abortConnection
+            pass
+
+
+        def getTcpKeepAlive(self):
+            # ITCPTransport.getTcpKeepAlive
+            pass
+
+
+        def getTcpNoDelay(self):
+            # ITCPTransport.getTcpNoDelay
+            pass
+
+
+        def loseWriteConnection(self):
+            # ITCPTransport.loseWriteConnection
+            pass
+
+
+        def setTcpKeepAlive(self, enabled):
+            # ITCPTransport.setTcpKeepAlive
+            pass
+
+
+        def setTcpNoDelay(self, enabled):
+            # ITCPTransport.setTcpNoDelay
+            pass
+
+
+        def getPeerCertificate(self):
+            # ISSLTransport.getPeerCertificate
+            pass
+
 
     site = Site(Resource())
 
@@ -148,6 +181,41 @@ class DummyChannel:
         return isinstance(self.transport, self.SSL)
 
 
+    def abortConnection(self):
+        # ITCPTransport.abortConnection
+        pass
+
+
+    def getTcpKeepAlive(self):
+        # ITCPTransport.getTcpKeepAlive
+        pass
+
+
+    def getTcpNoDelay(self):
+        # ITCPTransport.getTcpNoDelay
+        pass
+
+
+    def loseWriteConnection(self):
+        # ITCPTransport.loseWriteConnection
+        pass
+
+
+    def setTcpKeepAlive(self):
+        # ITCPTransport.setTcpKeepAlive
+        pass
+
+
+    def setTcpNoDelay(self):
+        # ITCPTransport.setTcpNoDelay
+        pass
+
+
+    def getPeerCertificate(self):
+        # ISSLTransport.getPeerCertificate
+        pass
+
+
 
 class DummyRequest(object):
     """
@@ -174,7 +242,7 @@ class DummyRequest(object):
     """
     uri = b'http://dummy/'
     method = b'GET'
-    client = None
+    client = None  # type: Optional[IAddress]
 
 
     def registerProducer(self, prod, s):
@@ -329,19 +397,26 @@ class DummyRequest(object):
         Set the HTTP status response code, but takes care that this is called
         before any data is written.
         """
-        assert not self.written, "Response code cannot be set after data has been written: %s." % "@@@@".join(self.written)
+        assert not self.written, (
+            "Response code cannot be set after data has"
+            "been written: {}.".format("@@@@".join(self.written)))
         self.responseCode = code
         self.responseMessage = message
 
 
     def setLastModified(self, when):
-        assert not self.written, "Last-Modified cannot be set after data has been written: %s." % "@@@@".join(self.written)
+        assert not self.written, (
+            "Last-Modified cannot be set after data has "
+            "been written: {}.".format("@@@@".join(self.written)))
 
 
     def setETag(self, tag):
-        assert not self.written, "ETag cannot be set after data has been written: %s." % "@@@@".join(self.written)
+        assert not self.written, (
+            "ETag cannot be set after data has been "
+            "written: {}.".format("@@@@".join(self.written)))
 
 
+    @deprecated(Version('Twisted', 18, 4, 0), replacement="getClientAddress")
     def getClientIP(self):
         """
         Return the IPv4 address of the client which made this request, if there
@@ -415,13 +490,6 @@ class DummyRequest(object):
         """
         self.setResponseCode(FOUND)
         self.setHeader(b"location", url)
-
-
-
-DummyRequest.getClientIP = deprecated(
-    Version('Twisted', 18, 4, 0),
-    replacement="getClientAddress",
-)(DummyRequest.getClientIP)
 
 
 

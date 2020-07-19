@@ -291,3 +291,8 @@ class IRCAccount(basesupport.AbstractAccount):
         d = cc.connectTCP(self.host, self.port)
         d.addErrback(logonDeferred.errback)
         return logonDeferred
+
+
+    def logOff(self):
+        # IAccount.logOff
+        pass

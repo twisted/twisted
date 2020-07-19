@@ -8,7 +8,6 @@ L{twisted.test.test_stdio.StandardInputOutputTests.test_loseConnection} to
 test that ITransport.loseConnection() works for process transports.
 """
 
-from __future__ import absolute_import, division
 
 import sys
 
@@ -44,7 +43,7 @@ if __name__ == '__main__':
     reflect.namedAny(sys.argv[1]).install()
     log.startLogging(open(sys.argv[2], 'wb'))
     from twisted.internet import reactor
-    protocol = LoseConnChild()
-    stdio.StandardIO(protocol)
-    reactor.run()
-    sys.exit(protocol.exitCode)
+    protocolLoseConnChild = LoseConnChild()
+    stdio.StandardIO(protocolLoseConnChild)
+    reactor.run()  # type: ignore[attr-defined]
+    sys.exit(protocolLoseConnChild.exitCode)

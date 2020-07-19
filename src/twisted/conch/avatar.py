@@ -1,6 +1,5 @@
 # -*- test-case-name: twisted.conch.test.test_conch -*-
 
-from __future__ import absolute_import, division
 
 from zope.interface import implementer
 
@@ -16,6 +15,16 @@ class ConchUser:
     def __init__(self):
         self.channelLookup = {}
         self.subsystemLookup = {}
+
+
+    @property
+    def conn(self):
+        return self._conn
+
+
+    @conn.setter
+    def conn(self, value):
+        self._conn = value
 
 
     def lookupChannel(self, channelType, windowSize, maxPacket, data):

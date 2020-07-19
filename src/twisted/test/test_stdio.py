@@ -8,17 +8,18 @@ Tests for L{twisted.internet.stdio}.
     platforms and native L{str} keys/values on Windows.
 """
 
-from __future__ import absolute_import, division
 
 import os
 import sys
 import itertools
 
-from twisted.trial import unittest
+from unittest import skipIf
+
+from twisted.trial.unittest import SkipTest, TestCase
 from twisted.python import filepath, log
 from twisted.python.reflect import requireModule
 from twisted.python.runtime import platform
-from twisted.python.compat import range, intToBytes, bytesEnviron
+from twisted.python.compat import intToBytes
 from twisted.internet import error, defer, protocol, stdio, reactor
 from twisted.test.test_tcp import ConnectionLostNotifyingProtocol
 
@@ -30,17 +31,9 @@ from twisted.test.test_tcp import ConnectionLostNotifyingProtocol
 # the end, the functionality works.
 UNIQUE_LAST_WRITE_STRING = b'xyz123abc Twisted is great!'
 
-skipWindowsNopywin32 = None
-if platform.isWindows():
-    if requireModule('win32process') is None:
-        skipWindowsNopywin32 = ("On windows, spawnProcess is not available "
-                                "in the absence of win32process.")
-    properEnv = dict(os.environ)
-    properEnv["PYTHONPATH"] = os.pathsep.join(sys.path)
-else:
-    properEnv = bytesEnviron()
-    properEnv[b"PYTHONPATH"] = os.pathsep.join(sys.path).encode(
-        sys.getfilesystemencoding())
+properEnv = dict(os.environ)
+properEnv["PYTHONPATH"] = os.pathsep.join(sys.path)
+
 
 
 class StandardIOTestProcessProtocol(protocol.ProcessProtocol):
@@ -89,9 +82,11 @@ class StandardIOTestProcessProtocol(protocol.ProcessProtocol):
 
 
 
-class StandardInputOutputTests(unittest.TestCase):
+class StandardInputOutputTests(TestCase):
 
-    skip = skipWindowsNopywin32
+    if platform.isWindows() and requireModule('win32process') is None:
+        skip = ("On windows, spawnProcess is not available in the "
+                "absence of win32process.")
 
     def _spawnProcess(self, proto, sibling, *args, **kw):
         """
@@ -202,7 +197,7 @@ class StandardInputOutputTests(unittest.TestCase):
                 usePTY=True)
         except ValueError as e:
             # Some platforms don't work with usePTY=True
-            raise unittest.SkipTest(str(e))
+            raise SkipTest(str(e))
 
         def processEnded(reason):
             """
@@ -323,6 +318,9 @@ class StandardInputOutputTests(unittest.TestCase):
         return self._requireFailure(d, processEnded)
 
 
+    @skipIf(platform.isWindows(),
+            "StandardIO does not accept stdout as an argument to Windows.  "
+            "Testing redirection to a file is therefore harder.")
     def test_normalFileStandardOut(self):
         """
         If L{StandardIO} is created with a file descriptor which refers to a
@@ -373,8 +371,3 @@ class StandardInputOutputTests(unittest.TestCase):
                 b''.join(map(intToBytes, range(howMany))))
         onConnLost.addCallback(cbLost)
         return onConnLost
-
-    if platform.isWindows():
-        test_normalFileStandardOut.skip = (
-            "StandardIO does not accept stdout as an argument to Windows.  "
-            "Testing redirection to a file is therefore harder.")

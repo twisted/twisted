@@ -7,9 +7,9 @@
 XMPP Error support.
 """
 
-from __future__ import absolute_import, division
 
 import copy
+from typing import Optional
 
 from twisted.python.compat import unicode
 from twisted.words.xish import domish
@@ -84,7 +84,7 @@ class BaseError(Exception):
     @type appCondition: object providing L{domish.IElement}.
     """
 
-    namespace = None
+    namespace = None  # type: Optional[str]
 
     def __init__(self, condition, text=None, textLang=None, appCondition=None):
         Exception.__init__(self)

@@ -11,11 +11,7 @@ from twisted.python import log
 from twisted.internet.address import UNIXAddress
 
 import os
-
-try:
-    import cPickle as pickle
-except ImportError:
-    import pickle
+import pickle
 
 
 

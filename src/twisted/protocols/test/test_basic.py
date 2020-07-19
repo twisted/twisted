@@ -5,22 +5,22 @@
 Test cases for L{twisted.protocols.basic}.
 """
 
-from __future__ import division, absolute_import
 
 import sys
 import struct
 from io import BytesIO
 
+from typing import List, Optional, Type
 from zope.interface.verify import verifyObject
 
-from twisted.python.compat import _PY3, iterbytes
+from twisted.python.compat import iterbytes
+from twisted.python.failure import Failure
 from twisted.trial import unittest
 from twisted.protocols import basic
 from twisted.internet import protocol, task
+from twisted.internet.protocol import connectionDone
 from twisted.internet.interfaces import IProducer
 from twisted.test import proto_helpers
-
-_PY3NEWSTYLESKIP = "All classes are new style on Python 3."
 
 
 
@@ -559,7 +559,7 @@ class TestMixin:
     closed = 0
 
 
-    def connectionLost(self, reason):
+    def connectionLost(self, reason: Failure = connectionDone):
         self.closed = 1
 
 
@@ -574,8 +574,8 @@ class TestNetstring(TestMixin, basic.NetstringReceiver):
 
 class LPTestCaseMixin:
 
-    illegalStrings = []
-    protocol = None
+    illegalStrings = []  # type: Optional[List[bytes]]
+    protocol = None  # type: Optional[Type[protocol.Protocol]]
 
 
     def getProtocol(self):
@@ -838,10 +838,10 @@ class IntNTestCaseMixin(LPTestCaseMixin):
     TestCase mixin for int-prefixed protocols.
     """
 
-    protocol = None
-    strings = None
-    illegalStrings = None
-    partialStrings = None
+    protocol = None  # type: Optional[Type[protocol.Protocol]]
+    strings = None  # type: Optional[List[bytes]]
+    illegalStrings = None  # type: Optional[List[bytes]]
+    partialStrings = None  # type: Optional[List[bytes]]
 
     def test_receive(self):
         """
@@ -1085,25 +1085,6 @@ class Int16Tests(unittest.SynchronousTestCase, IntNTestCaseMixin,
         r = self.getProtocol()
         tooSend = b"b" * (2**(r.prefixLength * 8) + 1)
         self.assertRaises(AssertionError, r.sendString, tooSend)
-
-
-
-class NewStyleTestInt16(TestInt16, object):
-    """
-    A new-style class version of TestInt16
-    """
-
-
-
-class NewStyleInt16Tests(Int16Tests):
-    """
-    This test case verifies that IntNStringReceiver still works when inherited
-    by a new-style class.
-    """
-    if _PY3:
-        skip = _PY3NEWSTYLESKIP
-
-    protocol = NewStyleTestInt16
 
 
 

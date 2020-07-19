@@ -5,8 +5,7 @@
 Tests for L{twisted.words.protocols.jabber.xmlstream}.
 """
 
-from __future__ import absolute_import, division
-
+from unittest import skipIf
 from twisted.trial import unittest
 
 from zope.interface.verify import verifyObject
@@ -22,12 +21,13 @@ from twisted.words.xish import domish
 from twisted.words.protocols.jabber import error, ijabber, jid, xmlstream
 
 try:
-    from twisted.internet import ssl
+    from twisted.internet import ssl as _ssl
 except ImportError:
     ssl = None
-    skipWhenNoSSL = "SSL not available"
+    skipWhenNoSSL = (True, "SSL not available")
 else:
-    skipWhenNoSSL = None
+    ssl = _ssl
+    skipWhenNoSSL = (False, "")
     from twisted.internet.ssl import CertificateOptions
     from twisted.internet._sslverify import ClientTLSOptions
 
@@ -696,6 +696,7 @@ class TLSInitiatingInitializerTests(unittest.TestCase):
         self.assertTrue(self.init.required)
 
 
+    @skipIf(*skipWhenNoSSL)
     def test_wantedSupported(self):
         """
         When TLS is wanted and SSL available, StartTLS is initiated.
@@ -716,9 +717,8 @@ class TLSInitiatingInitializerTests(unittest.TestCase):
 
         return d
 
-    test_wantedSupported.skip = skipWhenNoSSL
 
-
+    @skipIf(*skipWhenNoSSL)
     def test_certificateVerify(self):
         """
         The server certificate will be verified.
@@ -739,9 +739,8 @@ class TLSInitiatingInitializerTests(unittest.TestCase):
         self.assertEqual(['TLS', 'reset', 'header'], self.done)
         return d
 
-    test_certificateVerify.skip = skipWhenNoSSL
 
-
+    @skipIf(*skipWhenNoSSL)
     def test_certificateVerifyContext(self):
         """
         A custom contextFactory is passed through to startTLS.
@@ -765,8 +764,6 @@ class TLSInitiatingInitializerTests(unittest.TestCase):
         self.xmlstream.dataReceived("<proceed xmlns='%s'/>" % NS_XMPP_TLS)
         self.assertEqual(['TLS', 'reset', 'header'], self.done)
         return d
-
-    test_certificateVerifyContext.skip = skipWhenNoSSL
 
 
     def test_wantedNotSupportedNotRequired(self):

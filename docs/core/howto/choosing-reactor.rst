@@ -603,7 +603,7 @@ some specialized support code:
 .. code-block:: python
 
     
-    from Tkinter import *
+    from tkinter import *
     from twisted.internet import tksupport, reactor
     
     root = Tk()

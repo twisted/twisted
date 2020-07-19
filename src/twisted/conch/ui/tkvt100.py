@@ -8,11 +8,8 @@
 Maintainer: Paul Swartz
 """
 
-try:
-    import tkinter as Tkinter
-    import tkinter.font as tkFont
-except ImportError:
-    import Tkinter, tkFont
+import tkinter as Tkinter
+import tkinter.font as tkFont
 import string
 from . import ansi
 
