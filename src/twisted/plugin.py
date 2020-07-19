@@ -10,25 +10,13 @@ Plugin system for Twisted.
 @author: Glyph Lefkowitz
 """
 
-from __future__ import absolute_import, division
 
 import os
 import sys
 
 from zope.interface import Interface, providedBy
 
-def _determinePickleModule():
-    """
-    Determine which 'pickle' API module to use.
-    """
-    try:
-        import cPickle
-        return cPickle
-    except ImportError:
-        import pickle
-        return pickle
-
-pickle = _determinePickleModule()
+import pickle
 
 from twisted.python.components import getAdapterFactory
 from twisted.python.reflect import namedAny

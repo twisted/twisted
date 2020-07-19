@@ -217,13 +217,26 @@ class Resolver(common.ResolverBase):
         Return a new L{DNSDatagramProtocol} bound to a randomly selected port
         number.
         """
+        failures = 0
         proto = dns.DNSDatagramProtocol(self, reactor=self._reactor)
+
         while True:
             try:
                 self._reactor.listenUDP(dns.randomSource(), proto,
                                         interface=interface)
-            except error.CannotListenError:
-                pass
+            except error.CannotListenError as e:
+                failures += 1
+
+                if (hasattr(e.socketError, "errno") and
+                   e.socketError.errno == errno.EMFILE):
+                    # We've run out of file descriptors. Stop trying.
+                    raise
+
+                if failures >= 1000:
+                    # We've tried a thousand times and haven't found a port.
+                    # This is almost impossible, and likely means something
+                    # else weird is going on. Raise, as to not infinite loop.
+                    raise
             else:
                 return proto
 

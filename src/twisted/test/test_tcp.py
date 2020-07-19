@@ -5,14 +5,18 @@
 Tests for implementations of L{IReactorTCP}.
 """
 
-from __future__ import division, absolute_import
 
-import socket, random, errno
+import socket
+import random
+import errno
+import hamcrest
 from functools import wraps
+from typing import Optional, Type, Union
+from unittest import skipIf
 
 from zope.interface import implementer
 
-from twisted.trial import unittest
+from twisted.trial.unittest import TestCase, SkipTest
 
 from twisted.python.log import msg, err
 from twisted.internet import protocol, reactor, defer, interfaces
@@ -20,7 +24,6 @@ from twisted.internet import error
 from twisted.internet.address import IPv4Address
 from twisted.internet.interfaces import IHalfCloseableProtocol, IPullProducer
 from twisted.protocols import policies
-from twisted.python.compat import _PY3
 from twisted.python.runtime import platform
 from twisted.test.proto_helpers import AccumulatingProtocol
 
@@ -116,7 +119,7 @@ class MyProtocolFactoryMixin(object):
 
     protocolConnectionMade = None
     protocolConnectionLost = None
-    protocol = None
+    protocol = None  # type: Optional[Union[Type[protocol.Protocol],Type[protocol.AbstractDatagramProtocol]]]  # noqa
     called = 0
 
     def __init__(self):
@@ -172,7 +175,7 @@ class MyClientFactory(MyProtocolFactoryMixin, protocol.ClientFactory):
 
 
 
-class ListeningTests(unittest.TestCase):
+class ListeningTests(TestCase):
 
     def test_listen(self):
         """
@@ -371,7 +374,7 @@ class ListeningTests(unittest.TestCase):
 
 
 
-class LoopbackTests(unittest.TestCase):
+class LoopbackTests(TestCase):
     """
     Test loopback connections.
     """
@@ -619,7 +622,8 @@ class ClientStartStopFactory(MyClientFactory):
         self.whenStopped.callback(True)
 
 
-class FactoryTests(unittest.TestCase):
+
+class FactoryTests(TestCase):
     """Tests for factories."""
 
     def test_serverStartStop(self):
@@ -683,7 +687,7 @@ class FactoryTests(unittest.TestCase):
 
 
 
-class CannotBindTests(unittest.TestCase):
+class CannotBindTests(TestCase):
     """
     Tests for correct behavior when a reactor cannot bind to the required TCP
     port.
@@ -800,7 +804,7 @@ class MyOtherClientFactory(protocol.ClientFactory):
 
 
 
-class LocalRemoteAddressTests(unittest.TestCase):
+class LocalRemoteAddressTests(TestCase):
     """
     Tests for correct getHost/getPeer values and that the correct address is
     passed to buildProtocol.
@@ -877,7 +881,9 @@ class WriterClientFactory(protocol.ClientFactory):
         self.protocol = p
         return p
 
-class WriteDataTests(unittest.TestCase):
+
+
+class WriteDataTests(TestCase):
     """
     Test that connected TCP sockets can actually write data. Try to exercise
     the entire ITransport interface.
@@ -927,12 +933,13 @@ class WriteDataTests(unittest.TestCase):
         # IOCP reactor cannot pass this test, though -- please see the skip
         # reason below for details.
         if reactor.__class__.__name__ == 'IOCPReactor':
-            raise unittest.SkipTest(
-                "iocpreactor does not, in fact, stop reading immediately after "
-                "pauseProducing is called. This results in a bonus disconnection "
-                "notification. Under some circumstances, it might be possible to "
-                "not receive this notifications (specifically, pauseProducing, "
-                "deliver some data, proceed with this test).")
+            raise SkipTest(
+                "iocpreactor does not, in fact, stop reading immediately "
+                "after pauseProducing is called. This results in a "
+                "bonus disconnection notification. Under some "
+                "circumstances, it might be possible to not receive "
+                "this notifications (specifically, pauseProducing, "
+                "deliver some data, proceed with this test). ")
 
         # Called back after the protocol for the client side of the connection
         # has paused its transport, preventing it from reading, therefore
@@ -1135,17 +1142,17 @@ class ProperlyCloseFilesMixin:
         raise NotImplementedError()
 
 
-    def getHandleErrorCode(self):
+    def getHandleErrorCodeMatcher(self):
         """
-        Return the errno expected to result from writing to a closed
-        platform socket handle.
+        Return a L{hamcrest.core.matcher.Matcher} that matches the
+        errno expected to result from writing to a closed platform
+        socket handle.
         """
-        # Windows and Python 3: returns WSAENOTSOCK
-        # Windows and Python 2: returns EBADF
+        # Windows: returns WSAENOTSOCK
         # Linux, FreeBSD, macOS: returns EBADF
-        if platform.isWindows() and _PY3:
-            return errno.WSAENOTSOCK
-        return errno.EBADF
+        if platform.isWindows():
+            return hamcrest.equal_to(errno.WSAENOTSOCK)
+        return hamcrest.equal_to(errno.EBADF)
 
 
     def test_properlyCloseFiles(self):
@@ -1190,10 +1197,13 @@ class ProperlyCloseFilesMixin:
             if not server.lostConnectionReason.check(error.ConnectionClosed):
                 err(server.lostConnectionReason,
                     "Server lost connection for unexpected reason")
-            expectedErrorCode = self.getHandleErrorCode()
+            errorCodeMatcher = self.getHandleErrorCodeMatcher()
             exception = self.assertRaises(
                 self.getHandleExceptionType(), client.handle.send, b'bytes')
-            self.assertEqual(exception.args[0], expectedErrorCode)
+            hamcrest.assert_that(
+                exception.args[0],
+                errorCodeMatcher,
+            )
         clientDeferred.addCallback(clientDisconnected)
 
         def cleanup(passthrough):
@@ -1210,7 +1220,7 @@ class ProperlyCloseFilesMixin:
 
 
 
-class ProperlyCloseFilesTests(unittest.TestCase, ProperlyCloseFilesMixin):
+class ProperlyCloseFilesTests(TestCase, ProperlyCloseFilesMixin):
     """
     Test that the sockets created by L{IReactorTCP.connectTCP} are cleaned up
     when the connection they are associated with is closed.
@@ -1263,7 +1273,7 @@ class WiredFactory(policies.WrappingFactory):
 
 
 
-class AddressTests(unittest.TestCase):
+class AddressTests(TestCase):
     """
     Tests for address-related interactions with client and server protocols.
     """
@@ -1356,15 +1366,22 @@ class AddressTests(unittest.TestCase):
 
 
 class LargeBufferWriterProtocol(protocol.Protocol):
-
     # Win32 sockets cannot handle single huge chunks of bytes.  Write one
-    # massive string to make sure Twisted deals with this fact.
+    # massive string to make sure Twisted deals with this fact. Immediately
+    # follow that with another write to test behaviour under load (see issue
+    # #9446)
 
     def connectionMade(self):
-        # write 60MB
-        self.transport.write(b'X'*self.factory.len)
-        self.factory.done = 1
-        self.transport.loseConnection()
+        self.transport.write(b'X'*(self.factory.len-1))
+
+        def finish():
+            self.transport.write(b'X')
+            self.factory.done = 1
+            self.transport.loseConnection()
+
+        reactor.callLater(0.001, finish)
+
+
 
 class LargeBufferReaderProtocol(protocol.Protocol):
     def dataReceived(self, data):
@@ -1400,7 +1417,8 @@ class FireOnCloseFactory(policies.WrappingFactory):
         self.deferred = defer.Deferred()
 
 
-class LargeBufferTests(unittest.TestCase):
+
+class LargeBufferTests(TestCase):
     """Test that buffering large amounts of data works.
     """
 
@@ -1420,10 +1438,14 @@ class LargeBufferTests(unittest.TestCase):
         reactor.connectTCP("127.0.0.1", n, wrappedClientF)
 
         d = defer.gatherResults([wrappedF.deferred, wrappedClientF.deferred])
+
         def check(ignored):
             self.assertTrue(f.done, "writer didn't finish, it probably died")
-            self.assertTrue(clientF.len == self.datalen,
+            self.assertTrue(clientF.len >= self.datalen,
                             "client didn't receive all the data it expected "
+                            "(%d != %d)" % (clientF.len, self.datalen))
+            self.assertTrue(clientF.len <= self.datalen,
+                            "client did receive more data than it expected "
                             "(%d != %d)" % (clientF.len, self.datalen))
             self.assertTrue(clientF.done,
                             "client didn't see connection dropped")
@@ -1463,7 +1485,8 @@ class MyHCFactory(protocol.ServerFactory):
         return p
 
 
-class HalfCloseTests(unittest.TestCase):
+
+class HalfCloseTests(TestCase):
     """Test half-closing connections."""
 
     def setUp(self):
@@ -1545,7 +1568,8 @@ class HalfCloseTests(unittest.TestCase):
         return d
 
 
-class HalfCloseNoNotificationAndShutdownExceptionTests(unittest.TestCase):
+
+class HalfCloseNoNotificationAndShutdownExceptionTests(TestCase):
 
     def setUp(self):
         self.f = f = MyServerFactory()
@@ -1600,7 +1624,8 @@ class HalfCloseNoNotificationAndShutdownExceptionTests(unittest.TestCase):
         return defer.gatherResults([d, d2])
 
 
-class HalfCloseBuggyApplicationTests(unittest.TestCase):
+
+class HalfCloseBuggyApplicationTests(TestCase):
     """
     Test half-closing connections where notification code has bugs.
     """
@@ -1669,7 +1694,7 @@ class HalfCloseBuggyApplicationTests(unittest.TestCase):
 
 
 
-class LogTests(unittest.TestCase):
+class LogTests(TestCase):
     """
     Test logging facility of TCP base classes.
     """
@@ -1703,11 +1728,13 @@ class LogTests(unittest.TestCase):
 
 
 
-class PauseProducingTests(unittest.TestCase):
+class PauseProducingTests(TestCase):
     """
     Test some behaviors of pausing the production of a transport.
     """
 
+    @skipIf(not interfaces.IReactorFDSet.providedBy(reactor),
+            "Reactor not providing IReactorFDSet")
     def test_pauseProducingInConnectionMade(self):
         """
         In C{connectionMade} of a client protocol, C{pauseProducing} used to be
@@ -1745,12 +1772,9 @@ class PauseProducingTests(unittest.TestCase):
         client.protocolConnectionMade.addCallback(checkInConnectionMade)
         return client.protocolConnectionMade
 
-    if not interfaces.IReactorFDSet.providedBy(reactor):
-        test_pauseProducingInConnectionMade.skip = "Reactor not providing IReactorFDSet"
 
 
-
-class CallBackOrderTests(unittest.TestCase):
+class CallBackOrderTests(TestCase):
     """
     Test the order of reactor callbacks
     """
@@ -1812,4 +1836,4 @@ except ImportError:
     pass
 else:
     numRounds = resource.getrlimit(resource.RLIMIT_NOFILE)[0] + 10
-    ProperlyCloseFilesTests.numberRounds = numRounds
+    setattr(ProperlyCloseFilesTests, "numberRounds", numRounds)

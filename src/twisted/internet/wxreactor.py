@@ -23,10 +23,7 @@ expected and probably does not reflect on the reactor's ability to run
 real applications.
 """
 
-try:
-    from queue import Empty, Queue
-except ImportError:
-    from Queue import Empty, Queue
+from queue import Empty, Queue
 
 try:
     from wx import PySimpleApp as wxPySimpleApp, CallAfter as wxCallAfter, \

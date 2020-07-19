@@ -5,7 +5,6 @@
 Test code for policies.
 """
 
-from __future__ import division, absolute_import
 
 from zope.interface import Interface, implementer, implementedBy
 
@@ -18,10 +17,7 @@ from twisted.internet import protocol, reactor, address, defer, task
 from twisted.protocols import policies
 
 
-try:
-    import builtins
-except ImportError:
-    import __builtin__ as builtins
+import builtins
 
 
 
@@ -341,9 +337,28 @@ class WrapperTests(unittest.TestCase):
         self.assertEqual(result, [(connector, reason)])
 
 
+    def test_breakReferenceCycle(self):
+        """
+        L{policies.ProtocolWrapper.connectionLost} sets C{wrappedProtocol} to
+        C{None} in order to break reference cycle between wrapper and wrapped
+        protocols.
+        :return:
+        """
+        wrapper = policies.ProtocolWrapper(policies.WrappingFactory(Server()),
+                                           protocol.Protocol())
+        transport = StringTransportWithDisconnection()
+        transport.protocol = wrapper
+        wrapper.makeConnection(transport)
+
+        self.assertIsNotNone(wrapper.wrappedProtocol)
+        transport.loseConnection()
+        self.assertIsNone(wrapper.wrappedProtocol)
+
+
 
 class WrappingFactory(policies.WrappingFactory):
-    protocol = lambda s, f, p: p
+    def protocol(self, f, p):
+        return p
 
     def startFactory(self):
         policies.WrappingFactory.startFactory(self)
@@ -571,10 +586,11 @@ class TimeoutProtocolTests(unittest.TestCase):
         Does nothing if no timeout is already reached.
         """
         sut, clock = self.getProtocolAndClock()
+        wrappedProto = sut.wrappedProtocol
         sut.setTimeout(3)
         # Trigger the timeout call.
         clock.advance(3)
-        self.assertTrue(sut.wrappedProtocol.disconnected)
+        self.assertTrue(wrappedProto.disconnected)
 
         # No error is raised when trying to cancel it.
         sut.cancelTimeout()
@@ -615,6 +631,7 @@ class TimeoutFactoryTests(unittest.TestCase):
         self.transport = StringTransportWithDisconnection()
         self.transport.protocol = self.proto
         self.proto.makeConnection(self.transport)
+        self.wrappedProto = self.proto.wrappedProtocol
 
 
     def test_timeout(self):
@@ -625,11 +642,11 @@ class TimeoutFactoryTests(unittest.TestCase):
         """
         # Let almost 3 time units pass
         self.clock.pump([0.0, 0.5, 1.0, 1.0, 0.4])
-        self.assertFalse(self.proto.wrappedProtocol.disconnected)
+        self.assertFalse(self.wrappedProto.disconnected)
 
         # Now let the timer elapse
         self.clock.pump([0.0, 0.2])
-        self.assertTrue(self.proto.wrappedProtocol.disconnected)
+        self.assertTrue(self.wrappedProto.disconnected)
 
 
     def test_sendAvoidsTimeout(self):
@@ -639,7 +656,7 @@ class TimeoutFactoryTests(unittest.TestCase):
         """
         # Let half the countdown period elapse
         self.clock.pump([0.0, 0.5, 1.0])
-        self.assertFalse(self.proto.wrappedProtocol.disconnected)
+        self.assertFalse(self.wrappedProto.disconnected)
 
         # Send some data (self.proto is the /real/ proto's transport, so this
         # is the write that gets called)
@@ -647,18 +664,18 @@ class TimeoutFactoryTests(unittest.TestCase):
 
         # More time passes, putting us past the original timeout
         self.clock.pump([0.0, 1.0, 1.0])
-        self.assertFalse(self.proto.wrappedProtocol.disconnected)
+        self.assertFalse(self.wrappedProto.disconnected)
 
         # Make sure writeSequence delays timeout as well
         self.proto.writeSequence([b'bytes'] * 3)
 
         # Tick tock
         self.clock.pump([0.0, 1.0, 1.0])
-        self.assertFalse(self.proto.wrappedProtocol.disconnected)
+        self.assertFalse(self.wrappedProto.disconnected)
 
         # Don't write anything more, just let the timeout expire
         self.clock.pump([0.0, 2.0])
-        self.assertTrue(self.proto.wrappedProtocol.disconnected)
+        self.assertTrue(self.wrappedProto.disconnected)
 
 
     def test_receiveAvoidsTimeout(self):
@@ -667,19 +684,19 @@ class TimeoutFactoryTests(unittest.TestCase):
         """
         # Let half the countdown period elapse
         self.clock.pump([0.0, 1.0, 0.5])
-        self.assertFalse(self.proto.wrappedProtocol.disconnected)
+        self.assertFalse(self.wrappedProto.disconnected)
 
         # Some bytes arrive, they should reset the counter
         self.proto.dataReceived(b'bytes bytes bytes')
 
         # We pass the original timeout
         self.clock.pump([0.0, 1.0, 1.0])
-        self.assertFalse(self.proto.wrappedProtocol.disconnected)
+        self.assertFalse(self.wrappedProto.disconnected)
 
         # Nothing more arrives though, the new timeout deadline is passed,
         # the connection should be dropped.
         self.clock.pump([0.0, 1.0, 1.0])
-        self.assertTrue(self.proto.wrappedProtocol.disconnected)
+        self.assertTrue(self.wrappedProto.disconnected)
 
 
 

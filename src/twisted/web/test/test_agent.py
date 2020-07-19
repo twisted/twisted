@@ -8,17 +8,17 @@ Tests for L{twisted.web.client.Agent} and related new client APIs.
 import zlib
 
 from io import BytesIO
-
+from unittest import skipIf
 from zope.interface.verify import verifyObject
 
-from twisted.trial.unittest import TestCase
+from twisted.trial.unittest import TestCase, SynchronousTestCase
 from twisted.web import client, error, http_headers
 from twisted.web._newclient import RequestNotSent, RequestTransmissionFailed
 from twisted.web._newclient import ResponseNeverReceived, ResponseFailed
 from twisted.web._newclient import PotentialDataLoss
 from twisted.internet import defer, task
 from twisted.python.failure import Failure
-from twisted.python.compat import cookielib, intToBytes
+from twisted.python.compat import cookielib, intToBytes, unicode
 from twisted.python.components import proxyForInterface
 from twisted.test.proto_helpers import (StringTransport, MemoryReactorClock,
                                         EventLoggingObserver)
@@ -44,27 +44,41 @@ from zope.interface.declarations import implementer
 from twisted.web.iweb import IPolicyForHTTPS
 from twisted.python.deprecate import getDeprecationWarningString
 from incremental import Version
-from twisted.web.client import BrowserLikePolicyForHTTPS
+from twisted.web.client import (BrowserLikePolicyForHTTPS,
+                                HostnameCachingHTTPSPolicy)
 from twisted.internet.test.test_endpoints import deterministicResolvingReactor
 from twisted.internet.endpoints import HostnameEndpoint
 from twisted.test.proto_helpers import AccumulatingProtocol
 from twisted.test.iosim import IOPump, FakeTransport
 from twisted.test.test_sslverify import certificatesForAuthorityAndServer
+from twisted.web.test.injectionhelpers import (
+    MethodInjectionTestsMixin,
+    URIInjectionTestsMixin,
+)
 from twisted.web.error import SchemeNotSupported
 from twisted.logger import globalLogPublisher
 
 try:
-    from twisted.internet import ssl
+    from twisted.internet import ssl as _ssl
 except ImportError:
     ssl = None
-    skipWhenNoSSL = "SSL not present, cannot run SSL tests."
-    skipWhenSSLPresent = None
+    sslPresent = False
 else:
-    skipWhenSSLPresent = "SSL present."
-    skipWhenNoSSL = None
+    ssl = _ssl
+    sslPresent = True
     from twisted.internet._sslverify import ClientTLSOptions, IOpenSSLTrustRoot
     from twisted.internet.ssl import optionsForClientTLS
     from twisted.protocols.tls import TLSMemoryBIOProtocol, TLSMemoryBIOFactory
+
+
+    @implementer(IOpenSSLTrustRoot)
+    class CustomOpenSSLTrustRoot(object):
+        called = False
+        context = None
+
+        def _addCACertsToContext(self, context):
+            self.called = True
+            self.context = context
 
 
 
@@ -233,6 +247,25 @@ class FileBodyProducerTests(TestCase):
         self.failureResultOf(complete).trap(IOError)
 
 
+    def test_cancelWhileProducing(self):
+        """
+        When the L{Deferred} returned by L{FileBodyProducer.startProducing} is
+        cancelled, the input file is closed and the task is stopped.
+        """
+        expectedResult = b"hello, world"
+        readSize = 3
+        output = BytesIO()
+        consumer = FileConsumer(output)
+        inputFile = BytesIO(expectedResult)
+        producer = FileBodyProducer(inputFile, self.cooperator, readSize)
+        complete = producer.startProducing(consumer)
+        complete.cancel()
+        self.assertTrue(inputFile.closed)
+        self._scheduled.pop(0)()
+        self.assertEqual(b"", output.getvalue())
+        self.assertNoResult(complete)
+
+
     def test_stopProducing(self):
         """
         L{FileBodyProducer.stopProducing} stops the underlying L{IPullProducer}
@@ -303,6 +336,28 @@ class FileBodyProducerTests(TestCase):
         self._scheduled.pop(0)()
         self.assertEqual(expectedResult[:readSize * 2], output.getvalue())
 
+    def test_multipleStop(self):
+        """
+        L{FileBodyProducer.stopProducing} can be called more than once without
+        raising an exception.
+        """
+        expectedResult = b"test"
+        readSize = 3
+        output = BytesIO()
+        consumer = FileConsumer(output)
+        inputFile = BytesIO(expectedResult)
+        producer = FileBodyProducer(
+            inputFile, self.cooperator, readSize)
+        complete = producer.startProducing(consumer)
+        producer.stopProducing()
+        producer.stopProducing()
+        self.assertTrue(inputFile.closed)
+        self._scheduled.pop(0)()
+        self.assertEqual(b"", output.getvalue())
+        self.assertNoResult(complete)
+
+
+
 EXAMPLE_COM_IP = '127.0.0.7'
 EXAMPLE_COM_V6_IP = '::7'
 EXAMPLE_NET_IP = '127.0.0.8'
@@ -333,6 +388,8 @@ class FakeReactorAndConnectMixin:
             u'example.org': [EXAMPLE_ORG_IP],
             u'foo': [FOO_LOCAL_IP],
             u'foo.com': [FOO_COM_IP],
+            u'127.0.0.7': ['127.0.0.7'],
+            u'::7': ['::7'],
         })
 
         # Lots of tests were written expecting MemoryReactorClock and the
@@ -763,12 +820,26 @@ class IntegrationTestingMixin(object):
         self.integrationTest(b'example.com', EXAMPLE_COM_IP, IPv4Address)
 
 
+    def test_integrationTestIPv4Address(self):
+        """
+        L{Agent} works over IPv4 when hostname is an IPv4 address.
+        """
+        self.integrationTest(b'127.0.0.7', '127.0.0.7', IPv4Address)
+
+
     def test_integrationTestIPv6(self):
         """
         L{Agent} works over IPv6.
         """
         self.integrationTest(b'ipv6.example.com', EXAMPLE_COM_V6_IP,
                              IPv6Address)
+
+
+    def test_integrationTestIPv6Address(self):
+        """
+        L{Agent} works over IPv6 when hostname is an IPv6 address.
+        """
+        self.integrationTest(b'[::7]', '::7', IPv6Address)
 
 
     def integrationTest(self, hostName, expectedAddress, addressType,
@@ -827,8 +898,9 @@ class IntegrationTestingMixin(object):
         pump = IOPump(clientProtocol, wrapper,
                       clientTransport, serverTransport, False)
         pump.flush()
+        self.assertNoResult(deferred)
         lines = accumulator.currentProtocol.data.split(b"\r\n")
-        self.assertTrue(lines[0].startswith(b"GET / HTTP"))
+        self.assertTrue(lines[0].startswith(b"GET / HTTP"), lines[0])
         headers = dict([line.split(b": ", 1) for line in lines[1:] if line])
         self.assertEqual(headers[b'Host'], hostName)
         self.assertNoResult(deferred)
@@ -869,6 +941,7 @@ class AgentTests(TestCase, FakeReactorAndConnectMixin, AgentTestsMixin,
     """
     Tests for the new HTTP client API provided by L{Agent}.
     """
+
     def makeAgent(self):
         """
         @return: a new L{twisted.web.client.Agent} instance
@@ -959,6 +1032,15 @@ class AgentTests(TestCase, FakeReactorAndConnectMixin, AgentTestsMixin,
         agent.request(b'GET', b'http://foo/',
                       bodyProducer=bodyProducer, headers=headers)
         self.assertEqual(agent._pool.connected, True)
+
+
+    def test_nonBytesMethod(self):
+        """
+        L{Agent.request} raises L{TypeError} when the C{method} argument isn't
+        L{bytes}.
+        """
+        self.assertRaises(TypeError, self.agent.request,
+                          u'GET', b'http://foo.example/')
 
 
     def test_unsupportedScheme(self):
@@ -1163,6 +1245,7 @@ class AgentTests(TestCase, FakeReactorAndConnectMixin, AgentTestsMixin,
         self.assertEqual(5, timeout)
 
 
+    @skipIf(not sslPresent, "SSL not present, cannot run SSL tests.")
     def test_connectTimeoutHTTPS(self):
         """
         L{Agent} takes a C{connectTimeout} argument which is forwarded to the
@@ -1172,8 +1255,6 @@ class AgentTests(TestCase, FakeReactorAndConnectMixin, AgentTestsMixin,
         agent.request(b'GET', b'https://foo/')
         timeout = self.reactor.tcpClients.pop()[3]
         self.assertEqual(5, timeout)
-
-    test_connectTimeoutHTTPS.skip = skipWhenNoSSL
 
 
     def test_bindAddress(self):
@@ -1187,6 +1268,7 @@ class AgentTests(TestCase, FakeReactorAndConnectMixin, AgentTestsMixin,
         self.assertEqual('192.168.0.1', address)
 
 
+    @skipIf(not sslPresent, "SSL not present, cannot run SSL tests.")
     def test_bindAddressSSL(self):
         """
         L{Agent} takes a C{bindAddress} argument which is forwarded to the
@@ -1196,8 +1278,6 @@ class AgentTests(TestCase, FakeReactorAndConnectMixin, AgentTestsMixin,
         agent.request(b'GET', b'https://foo/')
         address = self.reactor.tcpClients.pop()[4]
         self.assertEqual('192.168.0.1', address)
-
-    test_bindAddressSSL.skip = skipWhenNoSSL
 
 
     def test_responseIncludesRequest(self):
@@ -1290,13 +1370,54 @@ class AgentTests(TestCase, FakeReactorAndConnectMixin, AgentTestsMixin,
 
 
 
+class AgentMethodInjectionTests(
+        FakeReactorAndConnectMixin,
+        MethodInjectionTestsMixin,
+        SynchronousTestCase,
+):
+    """
+    Test L{client.Agent} against HTTP method injections.
+    """
+
+    def attemptRequestWithMaliciousMethod(self, method):
+        """
+        Attempt a request with the provided method.
+
+        @param method: see L{MethodInjectionTestsMixin}
+        """
+        agent = client.Agent(self.createReactor())
+        uri = b"http://twisted.invalid"
+        agent.request(method, uri, client.Headers(), None)
+
+
+
+class AgentURIInjectionTests(
+        FakeReactorAndConnectMixin,
+        URIInjectionTestsMixin,
+        SynchronousTestCase,
+):
+    """
+    Test L{client.Agent} against URI injections.
+    """
+
+    def attemptRequestWithMaliciousURI(self, uri):
+        """
+        Attempt a request with the provided method.
+
+        @param uri: see L{URIInjectionTestsMixin}
+        """
+        agent = client.Agent(self.createReactor())
+        method = b"GET"
+        agent.request(method, uri, client.Headers(), None)
+
+
+
+@skipIf(not sslPresent, "SSL not present, cannot run SSL tests.")
 class AgentHTTPSTests(TestCase, FakeReactorAndConnectMixin,
                       IntegrationTestingMixin):
     """
     Tests for the new HTTP client API that depends on SSL.
     """
-    skip = skipWhenNoSSL
-
     def makeEndpoint(self, host=b'example.com', port=443):
         """
         Create an L{Agent} with an https scheme and return its endpoint
@@ -1462,13 +1583,6 @@ class AgentHTTPSTests(TestCase, FakeReactorAndConnectMixin,
         L{IOpenSSLClientConnectionCreator} provider which will add certificates
         from the given trust root.
         """
-        @implementer(IOpenSSLTrustRoot)
-        class CustomOpenSSLTrustRoot(object):
-            called = False
-            context = None
-            def _addCACertsToContext(self, context):
-                self.called = True
-                self.context = context
         trustRoot = CustomOpenSSLTrustRoot()
         policy = BrowserLikePolicyForHTTPS(trustRoot=trustRoot)
         creator = policy.creatorForNetloc(b"thingy", 4321)
@@ -1481,7 +1595,8 @@ class AgentHTTPSTests(TestCase, FakeReactorAndConnectMixin,
         """
         Wrap L{AgentTestsMixin.integrationTest} with TLS.
         """
-        authority, server = certificatesForAuthorityAndServer(hostName
+        certHostName = hostName.strip(b'[]')
+        authority, server = certificatesForAuthorityAndServer(certHostName
                                                               .decode('ascii'))
         def tlsify(serverFactory):
             return TLSMemoryBIOFactory(server.options(), False, serverFactory)
@@ -1537,6 +1652,7 @@ class WebClientContextFactoryTests(TestCase):
         )
 
 
+    @skipIf(sslPresent, "SSL Present.")
     def test_missingSSL(self):
         """
         If C{getContext} is called and SSL is not available, raise
@@ -1549,6 +1665,7 @@ class WebClientContextFactoryTests(TestCase):
         )
 
 
+    @skipIf(not sslPresent, "SSL not present, cannot run SSL tests.")
     def test_returnsContext(self):
         """
         If SSL is present, C{getContext} returns a L{OpenSSL.SSL.Context}.
@@ -1557,6 +1674,7 @@ class WebClientContextFactoryTests(TestCase):
         self.assertIsInstance(ctx, ssl.SSL.Context)
 
 
+    @skipIf(not sslPresent, "SSL not present, cannot run SSL tests.")
     def test_setsTrustRootOnContextToDefaultTrustRoot(self):
         """
         The L{CertificateOptions} has C{trustRoot} set to the default trust
@@ -1566,11 +1684,6 @@ class WebClientContextFactoryTests(TestCase):
         certificateOptions = ctx._getCertificateOptions('example.com', 443)
         self.assertIsInstance(
             certificateOptions.trustRoot, ssl.OpenSSLDefaultPaths)
-
-    test_returnsContext.skip \
-        = test_setsTrustRootOnContextToDefaultTrustRoot.skip \
-        = skipWhenNoSSL
-    test_missingSSL.skip = skipWhenSSLPresent
 
 
 
@@ -1997,6 +2110,7 @@ class CookieAgentTests(TestCase, CookieTestsMixin, FakeReactorAndConnectMixin,
         self.assertEqual(req.headers.getRawHeaders(b'cookie'), [cookie])
 
 
+    @skipIf(not sslPresent, "SSL not present, cannot run SSL tests.")
     def test_secureCookie(self):
         """
         L{CookieAgent} is able to handle secure cookies, ie cookies which
@@ -2015,8 +2129,6 @@ class CookieAgentTests(TestCase, CookieTestsMixin, FakeReactorAndConnectMixin,
 
         req, res = self.protocol.requests.pop()
         self.assertEqual(req.headers.getRawHeaders(b'cookie'), [b'foo=1'])
-
-    test_secureCookie.skip = skipWhenNoSSL
 
 
     def test_secureCookieOnInsecureConnection(self):
@@ -2073,7 +2185,7 @@ class CookieAgentTests(TestCase, CookieTestsMixin, FakeReactorAndConnectMixin,
 
 
 
-class Decoder1(proxyForInterface(IResponse)):
+class Decoder1(proxyForInterface(IResponse)):  # type: ignore[misc]
     """
     A test decoder to be used by L{client.ContentDecoderAgent} tests.
     """
@@ -2451,6 +2563,15 @@ class ProxyAgentTests(TestCase, FakeReactorAndConnectMixin, AgentTestsMixin):
             TCP4ClientEndpoint(self.reactor, "bar", 5678), self.reactor)
         oldEndpoint = self.agent._proxyEndpoint
         self.agent._proxyEndpoint = self.StubEndpoint(oldEndpoint, self)
+
+
+    def test_nonBytesMethod(self):
+        """
+        L{ProxyAgent.request} raises L{TypeError} when the C{method} argument
+        isn't L{bytes}.
+        """
+        self.assertRaises(TypeError, self.agent.request,
+                          u'GET', b'http://foo.example/')
 
 
     def test_proxyRequest(self):
@@ -3067,3 +3188,195 @@ class ReadBodyTests(TestCase):
 
         warnings = self.flushWarnings()
         self.assertEqual(len(warnings), 0)
+
+
+
+@skipIf(not sslPresent, "SSL not present, cannot run SSL tests.")
+class HostnameCachingHTTPSPolicyTests(TestCase):
+
+    def test_cacheIsUsed(self):
+        """
+        Verify that the connection creator is added to the
+        policy's cache, and that it is reused on subsequent calls
+        to creatorForNetLoc.
+
+        """
+        trustRoot = CustomOpenSSLTrustRoot()
+        wrappedPolicy = BrowserLikePolicyForHTTPS(trustRoot=trustRoot)
+        policy = HostnameCachingHTTPSPolicy(wrappedPolicy)
+        creator = policy.creatorForNetloc(b"foo", 1589)
+        self.assertTrue(trustRoot.called)
+        trustRoot.called = False
+        self.assertEquals(1, len(policy._cache))
+        connection = creator.clientConnectionForTLS(None)
+        self.assertIs(trustRoot.context, connection.get_context())
+
+        policy.creatorForNetloc(b"foo", 1589)
+        self.assertFalse(trustRoot.called)
+
+
+    def test_cacheRemovesOldest(self):
+        """
+        Verify that when the cache is full, and a new entry is added,
+        the oldest entry is removed.
+        """
+        trustRoot = CustomOpenSSLTrustRoot()
+        wrappedPolicy = BrowserLikePolicyForHTTPS(trustRoot=trustRoot)
+        policy = HostnameCachingHTTPSPolicy(wrappedPolicy)
+        for i in range(0, 20):
+            hostname = u"host" + unicode(i)
+            policy.creatorForNetloc(hostname.encode("ascii"), 8675)
+
+        # Force host0, which was the first, to be the most recently used
+        host0 = u"host0"
+        policy.creatorForNetloc(host0.encode("ascii"), 309)
+        self.assertIn(host0, policy._cache)
+        self.assertEquals(20, len(policy._cache))
+
+        hostn = u"new"
+        policy.creatorForNetloc(hostn.encode("ascii"), 309)
+
+        host1 = u"host1"
+        self.assertNotIn(host1, policy._cache)
+        self.assertEquals(20, len(policy._cache))
+
+        self.assertIn(hostn, policy._cache)
+        self.assertIn(host0, policy._cache)
+
+        # Accessing an item repeatedly does not corrupt the LRU.
+        for _ in range(20):
+            policy.creatorForNetloc(host0.encode("ascii"), 8675)
+
+        hostNPlus1 = u"new1"
+
+        policy.creatorForNetloc(hostNPlus1.encode("ascii"), 800)
+
+        self.assertNotIn(u"host2", policy._cache)
+        self.assertEquals(20, len(policy._cache))
+
+        self.assertIn(hostNPlus1, policy._cache)
+        self.assertIn(hostn, policy._cache)
+        self.assertIn(host0, policy._cache)
+
+
+    def test_changeCacheSize(self):
+        """
+        Verify that changing the cache size results in a policy that
+        respects the new cache size and not the default.
+
+        """
+        trustRoot = CustomOpenSSLTrustRoot()
+        wrappedPolicy = BrowserLikePolicyForHTTPS(trustRoot=trustRoot)
+        policy = HostnameCachingHTTPSPolicy(wrappedPolicy, cacheSize=5)
+        for i in range(0, 5):
+            hostname = u"host" + unicode(i)
+            policy.creatorForNetloc(hostname.encode("ascii"), 8675)
+
+        first = u"host0"
+        self.assertIn(first, policy._cache)
+        self.assertEquals(5, len(policy._cache))
+
+        hostn = u"new"
+        policy.creatorForNetloc(hostn.encode("ascii"), 309)
+        self.assertNotIn(first, policy._cache)
+        self.assertEquals(5, len(policy._cache))
+
+        self.assertIn(hostn, policy._cache)
+
+
+
+class RequestMethodInjectionTests(
+        MethodInjectionTestsMixin,
+        SynchronousTestCase,
+):
+    """
+    Test L{client.Request} against HTTP method injections.
+    """
+
+    def attemptRequestWithMaliciousMethod(self, method):
+        """
+        Attempt a request with the provided method.
+
+        @param method: see L{MethodInjectionTestsMixin}
+        """
+        client.Request(
+            method=method,
+            uri=b"http://twisted.invalid",
+            headers=http_headers.Headers(),
+            bodyProducer=None,
+        )
+
+
+
+class RequestWriteToMethodInjectionTests(
+        MethodInjectionTestsMixin,
+        SynchronousTestCase,
+):
+    """
+    Test L{client.Request.writeTo} against HTTP method injections.
+    """
+
+    def attemptRequestWithMaliciousMethod(self, method):
+        """
+        Attempt a request with the provided method.
+
+        @param method: see L{MethodInjectionTestsMixin}
+        """
+        headers = http_headers.Headers({b"Host": [b"twisted.invalid"]})
+        req = client.Request(
+            method=b"GET",
+            uri=b"http://twisted.invalid",
+            headers=headers,
+            bodyProducer=None,
+        )
+        req.method = method
+        req.writeTo(StringTransport())
+
+
+
+class RequestURIInjectionTests(
+        URIInjectionTestsMixin,
+        SynchronousTestCase,
+):
+    """
+    Test L{client.Request} against HTTP URI injections.
+    """
+
+    def attemptRequestWithMaliciousURI(self, uri):
+        """
+        Attempt a request with the provided URI.
+
+        @param method: see L{URIInjectionTestsMixin}
+        """
+        client.Request(
+            method=b"GET",
+            uri=uri,
+            headers=http_headers.Headers(),
+            bodyProducer=None,
+        )
+
+
+
+class RequestWriteToURIInjectionTests(
+        URIInjectionTestsMixin,
+        SynchronousTestCase,
+):
+    """
+    Test L{client.Request.writeTo} against HTTP method injections.
+    """
+
+    def attemptRequestWithMaliciousURI(self, uri):
+        """
+        Attempt a request with the provided method.
+
+        @param method: see L{URIInjectionTestsMixin}
+        """
+        headers = http_headers.Headers({b"Host": [b"twisted.invalid"]})
+        req = client.Request(
+            method=b"GET",
+            uri=b"http://twisted.invalid",
+            headers=headers,
+            bodyProducer=None,
+        )
+        req.uri = uri
+        req.writeTo(StringTransport())

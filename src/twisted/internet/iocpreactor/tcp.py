@@ -12,10 +12,10 @@ from zope.interface import implementer, classImplements
 from twisted.internet import interfaces, error, address, main, defer
 from twisted.internet.protocol import Protocol
 from twisted.internet.abstract import _LogOwner, isIPv6Address
-from twisted.internet.tcp import _SocketCloser, Connector as TCPConnector
-from twisted.internet.tcp import _AbortingMixin, _BaseBaseClient, _BaseTCPClient
+from twisted.internet.tcp import (
+    _SocketCloser, Connector as TCPConnector, _AbortingMixin, _BaseBaseClient,
+    _BaseTCPClient, _resolveIPv6, _getsockname)
 from twisted.python import log, failure, reflect
-from twisted.python.compat import _PY3, nativeString
 
 from twisted.internet.iocpreactor import iocpsupport as _iocp, abstract
 from twisted.internet.iocpreactor.interfaces import IReadWriteHandle
@@ -26,15 +26,20 @@ from twisted.internet.iocpreactor.const import ERROR_CONNECTION_REFUSED
 from twisted.internet.iocpreactor.const import ERROR_NETWORK_UNREACHABLE
 
 try:
-    from twisted.internet._newtls import startTLS as _startTLS
+    from twisted.internet._newtls import startTLS as __startTLS
 except ImportError:
     _startTLS = None
+else:
+    _startTLS = __startTLS
+
 
 # ConnectEx returns these. XXX: find out what it does for timeout
 connectExErrors = {
-        ERROR_CONNECTION_REFUSED: errno.WSAECONNREFUSED,
-        ERROR_NETWORK_UNREACHABLE: errno.WSAENETUNREACH,
+        ERROR_CONNECTION_REFUSED: errno.WSAECONNREFUSED,  # type: ignore[attr-defined]  # noqa
+        ERROR_NETWORK_UNREACHABLE: errno.WSAENETUNREACH,  # type: ignore[attr-defined]  # noqa
         }
+
+
 
 @implementer(IReadWriteHandle, interfaces.ITCPTransport,
              interfaces.ISystemHandle)
@@ -235,6 +240,18 @@ class Connection(abstract.FileHandle, _SocketCloser, _AbortingMixin):
             self.protocol.unregisterProducer()
         else:
             abstract.FileHandle.unregisterProducer(self)
+
+
+    def getHost(self):
+        # ITCPTransport.getHost
+        pass
+
+
+    def getPeer(self):
+        # ITCPTransport.getPeer
+        pass
+
+
 
 if _startTLS is not None:
     classImplements(Connection, interfaces.ITLSTransport)
@@ -449,7 +466,7 @@ class Port(_SocketCloser, _LogOwner):
                                             self.socketType)
             # TODO: resolve self.interface if necessary
             if self.addressFamily == socket.AF_INET6:
-                addr = socket.getaddrinfo(self.interface, self.port)[0][4]
+                addr = _resolveIPv6(self.interface, self.port)
             else:
                 addr = (self.interface, self.port)
             skt.bind(addr)
@@ -540,12 +557,11 @@ class Port(_SocketCloser, _LogOwner):
 
     def getHost(self):
         """
-        Returns an IPv4Address.
+        Returns an IPv4Address or IPv6Address.
 
         This indicates the server's address.
         """
-        host, port = self.socket.getsockname()[:2]
-        return self._addressType('TCP', host, port)
+        return self._addressType('TCP', *_getsockname(self.socket))
 
 
     def cbAccept(self, rc, data, evt):
@@ -570,26 +586,26 @@ class Port(_SocketCloser, _LogOwner):
                 struct.pack('P', self.socket.fileno()))
             family, lAddr, rAddr = _iocp.get_accept_addrs(evt.newskt.fileno(),
                                                           evt.buff)
-            if not _PY3:
-                # In _makesockaddr(), we use the Win32 API which
-                # gives us an address of the form: (unicode host, port).
-                # Only on Python 2 do we need to convert it to a
-                # non-unicode str.
-                # On Python 3, we leave it alone as unicode.
-                lAddr = (nativeString(lAddr[0]), lAddr[1])
-                rAddr = (nativeString(rAddr[0]), rAddr[1])
             assert family == self.addressFamily
 
+            # Build an IPv6 address that includes the scopeID, if necessary
+            if "%" in lAddr[0]:
+                scope = int(lAddr[0].split("%")[1])
+                lAddr = (lAddr[0], lAddr[1], 0, scope)
+            if "%" in rAddr[0]:
+                scope = int(rAddr[0].split("%")[1])
+                rAddr = (rAddr[0], rAddr[1], 0, scope)
+
             protocol = self.factory.buildProtocol(
-                self._addressType('TCP', rAddr[0], rAddr[1]))
+                self._addressType('TCP', *rAddr))
             if protocol is None:
                 evt.newskt.close()
             else:
                 s = self.sessionno
                 self.sessionno = s+1
                 transport = Server(evt.newskt, protocol,
-                        self._addressType('TCP', rAddr[0], rAddr[1]),
-                        self._addressType('TCP', lAddr[0], lAddr[1]),
+                        self._addressType('TCP', *rAddr),
+                        self._addressType('TCP', *lAddr),
                         s, self.reactor)
                 protocol.makeConnection(transport)
             return True

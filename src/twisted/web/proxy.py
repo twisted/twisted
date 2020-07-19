@@ -18,7 +18,6 @@ and returns the result.
 Normally, a Proxy is used on the client end of an Internet connection, while a
 ReverseProxy is used on the server end.
 """
-from __future__ import absolute_import, division
 
 from twisted.python.compat import urllib_parse, urlquote
 from twisted.internet import reactor
@@ -259,7 +258,7 @@ class ReverseProxyResource(Resource):
             be proxied to B{/foo/bar}.  Any required encoding of special
             characters (such as " " or "/") should have been done already.
 
-        @type path: C{str}
+        @type path: C{bytes}
         """
         Resource.__init__(self)
         self.host = host
@@ -288,7 +287,7 @@ class ReverseProxyResource(Resource):
         if self.port == 80:
             host = self.host
         else:
-            host = self.host + u":" + str(self.port)
+            host = u"%s:%d" % (self.host, self.port)
         request.requestHeaders.setRawHeaders(b"host", [host.encode('ascii')])
         request.content.seek(0, 0)
         qs = urllib_parse.urlparse(request.uri)[4]

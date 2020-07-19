@@ -9,7 +9,6 @@ are session, direct-tcp, and forwarded-tcp.
 Maintainer: Paul Swartz
 """
 
-from __future__ import division, absolute_import
 
 from zope.interface import implementer
 
@@ -43,21 +42,21 @@ class SSHChannel(log.Logger):
     @type remoteMaxPacket: L{int}
     @ivar conn: the connection this channel is multiplexed through.
     @type conn: L{SSHConnection}
-    @ivar data: any data to send to the other size when the channel is
+    @ivar data: any data to send to the other side when the channel is
         requested.
     @type data: L{bytes}
     @ivar avatar: an avatar for the logged-in user (if a server channel)
     @ivar localClosed: True if we aren't accepting more data.
     @type localClosed: L{bool}
-    @ivar remoteClosed: True if the other size isn't accepting more data.
+    @ivar remoteClosed: True if the other side isn't accepting more data.
     @type remoteClosed: L{bool}
     """
 
-    name = None # only needed for client channels
+    name = None  # type: bytes  # only needed for client channels
 
-    def __init__(self, localWindow = 0, localMaxPacket = 0,
-                       remoteWindow = 0, remoteMaxPacket = 0,
-                       conn = None, data=None, avatar = None):
+    def __init__(self, localWindow=0, localMaxPacket=0,
+                 remoteWindow=0, remoteMaxPacket=0,
+                 conn=None, data=None, avatar=None):
         self.localWindowSize = localWindow or 131072
         self.localWindowLeft = self.localWindowSize
         self.localMaxPacket = localMaxPacket or 32768

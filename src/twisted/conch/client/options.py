@@ -7,6 +7,9 @@ from twisted.python import usage
 from twisted.python.compat import unicode
 
 import sys
+from typing import List, Optional, Union
+
+
 
 class ConchOptions(usage.Options):
 
@@ -18,9 +21,10 @@ class ConchOptions(usage.Options):
                      ['option', 'o', None, 'Ignored OpenSSH options'],
                      ['host-key-algorithms', '', None],
                      ['known-hosts', '', None, 'File to check for host keys'],
-                     ['user-authentications', '', None, 'Types of user authentications to use.'],
+                     ['user-authentications', '', None,
+                      'Types of user authentications to use.'],
                      ['logfile', '', None, 'File to log to, or - for stdout'],
-                   ]
+                     ]  # type: List[List[Optional[Union[str, int]]]]
 
     optFlags = [['version', 'V', 'Display version number only.'],
                 ['compress', 'C', 'Enable compression.'],

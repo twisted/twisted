@@ -37,9 +37,9 @@ C{TCPServer(8080, server.Site(r))}.  See the documentation for the
 reactor.listen/connect* methods for more information.
 """
 
-from __future__ import absolute_import, division
 
 from random import random as _goodEnoughRandom
+from typing import List
 
 from twisted.python import log
 from twisted.logger import Logger
@@ -48,7 +48,7 @@ from twisted.application import service
 from twisted.internet import task
 from twisted.python.failure import Failure
 from twisted.internet.defer import (
-    CancelledError, Deferred, succeed, fail
+    CancelledError, Deferred, succeed, fail, maybeDeferred
 )
 
 from automat import MethodicalMachine
@@ -68,7 +68,7 @@ def _maybeGlobalReactor(maybeReactor):
 
 class _VolatileDataService(service.Service):
 
-    volatile = []
+    volatile = []  # type: List[str]
 
     def __getstate__(self):
         d = service.Service.__getstate__(self)
@@ -97,7 +97,7 @@ class _AbstractServer(_VolatileDataService):
     """
 
     volatile = ['_port']
-    method = None
+    method = ""  # type: str
     reactor = None
 
     _port = None
@@ -138,8 +138,8 @@ class _AbstractServer(_VolatileDataService):
         @rtype: an object providing
             L{twisted.internet.interfaces.IListeningPort}.
         """
-        return getattr(_maybeGlobalReactor(self.reactor),
-                       'listen%s' % (self.method,))(*self.args, **self.kwargs)
+        return getattr(_maybeGlobalReactor(self.reactor), 'listen{}'.format(
+                       self.method,))(*self.args, **self.kwargs)
 
 
 
@@ -161,7 +161,7 @@ class _AbstractClient(_VolatileDataService):
     """
 
     volatile = ['_connection']
-    method = None
+    method = ""  # type: str
     reactor = None
 
     _connection = None
@@ -197,34 +197,79 @@ class _AbstractClient(_VolatileDataService):
 
 
 
-_doc={
-'Client':
-"""Connect to %(tran)s
+_clientDoc = """Connect to {tran}
 
-Call reactor.connect%(tran)s when the service starts, with the
+Call reactor.connect{tran} when the service starts, with the
 arguments given to the constructor.
-""",
-'Server':
-"""Serve %(tran)s clients
+"""
 
-Call reactor.listen%(tran)s when the service starts, with the
+_serverDoc = """Serve {tran} clients
+
+Call reactor.listen{tran} when the service starts, with the
 arguments given to the constructor. When the service stops,
 stop listening. See twisted.internet.interfaces for documentation
 on arguments to the reactor method.
-""",
-}
+"""
 
-for tran in 'TCP UNIX SSL UDP UNIXDatagram Multicast'.split():
-    for side in 'Server Client'.split():
-        if tran == "Multicast" and side == "Client":
-            continue
-        if tran == "UDP" and side == "Client":
-            continue
-        base = globals()['_Abstract'+side]
-        doc = _doc[side] % vars()
 
-        klass = type(tran+side, (base,), {'method': tran, '__doc__': doc})
-        globals()[tran+side] = klass
+
+class TCPServer(_AbstractServer):
+    __doc__ = _serverDoc.format(tran='TCP')
+    method = 'TCP'
+
+
+
+class TCPClient(_AbstractClient):
+    __doc__ = _clientDoc.format(tran='TCP')
+    method = 'TCP'
+
+
+
+class UNIXServer(_AbstractServer):
+    __doc__ = _serverDoc.format(tran='UNIX')
+    method = 'UNIX'
+
+
+
+class UNIXClient(_AbstractClient):
+    __doc__ = _clientDoc.format(tran='UNIX')
+    method = 'UNIX'
+
+
+
+class SSLServer(_AbstractServer):
+    __doc__ = _serverDoc.format(tran='SSL')
+    method = 'SSL'
+
+
+
+class SSLClient(_AbstractClient):
+    __doc__ = _clientDoc.format(tran='SSL')
+    method = 'SSL'
+
+
+
+class UDPServer(_AbstractServer):
+    __doc__ = _serverDoc.format(tran='UDP')
+    method = 'UDP'
+
+
+
+class UNIXDatagramServer(_AbstractServer):
+    __doc__ = _serverDoc.format(tran='UNIXDatagram')
+    method = 'UNIXDatagram'
+
+
+
+class UNIXDatagramClient(_AbstractClient):
+    __doc__ = _clientDoc.format(tran='UNIXDatagram')
+    method = 'UNIXDatagram'
+
+
+
+class MulticastServer(_AbstractServer):
+    __doc__ = _serverDoc.format(tran='Multicast')
+    method = 'Multicast'
 
 
 
@@ -517,8 +562,14 @@ def backoffPolicy(initialDelay=1.0, maxDelay=60.0, factor=1.5,
     @rtype: see L{ClientService.__init__}'s C{retryPolicy} argument.
     """
     def policy(attempt):
-        return min(initialDelay * (factor ** attempt), maxDelay) + jitter()
+        try:
+            delay = min(initialDelay * (factor ** min(100, attempt)), maxDelay)
+        except OverflowError:
+            delay = maxDelay
+        return delay + jitter()
     return policy
+
+
 
 _defaultPolicy = backoffPolicy()
 
@@ -548,7 +599,8 @@ class _ClientMachine(object):
 
     _machine = MethodicalMachine()
 
-    def __init__(self, endpoint, factory, retryPolicy, clock, log):
+    def __init__(self, endpoint, factory, retryPolicy, clock,
+                 prepareConnection, log):
         """
         @see: L{ClientService.__init__}
 
@@ -566,6 +618,7 @@ class _ClientMachine(object):
         self._factory = factory
         self._timeoutForAttempt = retryPolicy
         self._clock = clock
+        self._prepareConnection = prepareConnection
         self._connectionInProgress = succeed(None)
 
         self._awaitingConnected = []
@@ -633,8 +686,33 @@ class _ClientMachine(object):
 
         self._connectionInProgress = (
             self._endpoint.connect(factoryProxy)
+            .addCallback(self._runPrepareConnection)
             .addCallback(self._connectionMade)
             .addErrback(self._connectionFailed))
+
+
+    def _runPrepareConnection(self, protocol):
+        """
+        Run any C{prepareConnection} callback with the connected protocol,
+        ignoring its return value but propagating any failure.
+
+        @param protocol: The protocol of the connection.
+        @type protocol: L{IProtocol}
+
+        @return: Either:
+
+            - A L{Deferred} that succeeds with the protocol when the
+              C{prepareConnection} callback has executed successfully.
+
+            - A L{Deferred} that fails when the C{prepareConnection} callback
+              throws or returns a failed L{Deferred}.
+
+            - The protocol, when no C{prepareConnection} callback is defined.
+        """
+        if self._prepareConnection:
+            return (maybeDeferred(self._prepareConnection, protocol)
+                    .addCallback(lambda _: protocol))
+        return protocol
 
 
     @_machine.output()
@@ -1009,7 +1087,9 @@ class ClientService(service.Service, object):
     """
 
     _log = Logger()
-    def __init__(self, endpoint, factory, retryPolicy=None, clock=None):
+
+    def __init__(self, endpoint, factory, retryPolicy=None, clock=None,
+                 prepareConnection=None):
         """
         @param endpoint: A L{stream client endpoint
             <interfaces.IStreamClientEndpoint>} provider which will be used to
@@ -1029,13 +1109,36 @@ class ClientService(service.Service, object):
             this attribute will not be serialized, and the default value (the
             reactor) will be restored when deserialized.
         @type clock: L{IReactorTime}
+
+        @param prepareConnection: A single argument L{callable} that may return
+            a L{Deferred}. It will be called once with the L{protocol
+            <interfaces.IProtocol>} each time a new connection is made.  It may
+            call methods on the protocol to prepare it for use (e.g.
+            authenticate) or validate it (check its health).
+
+            The C{prepareConnection} callable may raise an exception or return
+            a L{Deferred} which fails to reject the connection.  A rejected
+            connection is not used to fire an L{Deferred} returned by
+            L{whenConnected}.  Instead, L{ClientService} handles the failure
+            and continues as if the connection attempt were a failure
+            (incrementing the counter passed to C{retryPolicy}).
+
+            L{Deferred}s returned by L{whenConnected} will not fire until
+            any L{Deferred} returned by the C{prepareConnection} callable
+            fire. Otherwise its successful return value is consumed, but
+            ignored.
+
+            Present Since Twisted 18.7.0
+
+        @type prepareConnection: L{callable}
+
         """
         clock = _maybeGlobalReactor(clock)
         retryPolicy = _defaultPolicy if retryPolicy is None else retryPolicy
 
         self._machine = _ClientMachine(
             endpoint, factory, retryPolicy, clock,
-            log=self._log,
+            prepareConnection=prepareConnection, log=self._log,
         )
 
 
@@ -1091,9 +1194,9 @@ class ClientService(service.Service, object):
         return self._machine.stop()
 
 
-__all__ = (['TimerService', 'CooperatorService', 'MulticastServer',
-            'StreamServerEndpointService', 'UDPServer',
-            'ClientService'] +
-           [tran + side
-            for tran in 'TCP UNIX SSL UNIXDatagram'.split()
-            for side in 'Server Client'.split()])
+
+__all__ = ['TimerService', 'CooperatorService', 'MulticastServer',
+           'StreamServerEndpointService', 'UDPServer',
+           'ClientService', 'TCPServer', 'TCPClient',
+           'UNIXServer', 'UNIXClient', 'SSLServer', 'SSLClient',
+           'UNIXDatagramServer', 'UNIXDatagramClient']

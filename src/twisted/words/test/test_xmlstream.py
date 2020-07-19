@@ -5,7 +5,6 @@
 Tests for L{twisted.words.xish.xmlstream}.
 """
 
-from __future__ import absolute_import, division
 
 from twisted.internet import protocol
 from twisted.python import failure

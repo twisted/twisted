@@ -5,8 +5,9 @@
 Tests for L{twisted.web._newclient}.
 """
 
-from __future__ import division, absolute_import
 __metaclass__ = type
+
+from typing import Optional
 
 from zope.interface import implementer
 from zope.interface.verify import verifyObject
@@ -46,6 +47,10 @@ from twisted.web.client import (
 from twisted.web.http_headers import Headers
 from twisted.web.http import _DataLoss
 from twisted.web.iweb import IBodyProducer, IResponse
+from twisted.web.test.requesthelper import (
+    bytesLinearWhitespaceComponents,
+    sanitizedBytes,
+)
 from twisted.logger import globalLogPublisher
 
 
@@ -179,7 +184,7 @@ class _HTTPParserTests(object):
     Base test class for L{HTTPParser} which is responsible for the bulk of
     the task of parsing HTTP bytes.
     """
-    sep = None
+    sep = None  # type: Optional[bytes]
 
     def test_statusCallback(self):
         """
@@ -520,6 +525,28 @@ class HTTPClientParserTests(TestCase):
         self.assertEqual(
             protocol.response.headers,
             Headers({b'x-foo': [b'bar']}))
+        self.assertIdentical(protocol.response.length, UNKNOWN_LENGTH)
+
+
+    def test_responseHeadersMultiline(self):
+        """
+        The multi-line response headers are folded and added to the response
+        object's C{headers} L{Headers} instance.
+        """
+        protocol = HTTPClientParser(
+            Request(b'GET', b'/', _boringHeaders, None),
+            lambda rest: None)
+        protocol.makeConnection(StringTransport())
+        protocol.dataReceived(b'HTTP/1.1 200 OK\r\n')
+        protocol.dataReceived(b'X-Multiline: a\r\n')
+        protocol.dataReceived(b'    b\r\n')
+        protocol.dataReceived(b'\r\n')
+        self.assertEqual(
+            protocol.connHeaders,
+            Headers({}))
+        self.assertEqual(
+            protocol.response.headers,
+            Headers({b'x-multiline': [b'a    b']}))
         self.assertIdentical(protocol.response.length, UNKNOWN_LENGTH)
 
 
@@ -1957,6 +1984,16 @@ class StringProducer:
         self.stopped = True
 
 
+    def pauseProducing(self):
+        # IBodyProducer.pauseProducing
+        pass
+
+
+    def resumeProducing(self):
+        # IBodyProducer.resumeProducing
+        pass
+
+
 
 class RequestTests(TestCase):
     """
@@ -2012,6 +2049,26 @@ class RequestTests(TestCase):
              b"Host: example.com",
              b"X-Foo: bar",
              b"X-Foo: baz"])
+
+
+    def test_sanitizeLinearWhitespaceInRequestHeaders(self):
+        """
+        Linear whitespace in request headers is replaced with a single
+        space.
+        """
+        for component in bytesLinearWhitespaceComponents:
+            headers = Headers({component: [component],
+                               b"host": [b"example.invalid"]})
+            transport = StringTransport()
+            Request(b'GET', b'/foo', headers, None).writeTo(transport)
+            lines = transport.value().split(b'\r\n')
+            self.assertEqual(lines[0], b"GET /foo HTTP/1.1")
+            self.assertEqual(lines[-2:], [b"", b""])
+            del lines[0], lines[-2:]
+            lines.remove(b"Connection: close")
+            lines.remove(b"Host: example.invalid")
+            sanitizedHeaderLine = b": ".join([sanitizedBytes, sanitizedBytes])
+            self.assertEqual(lines, [sanitizedHeaderLine])
 
 
     def test_sendChunkedRequestBody(self):

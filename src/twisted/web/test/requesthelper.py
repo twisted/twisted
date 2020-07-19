@@ -5,20 +5,22 @@
 Helpers related to HTTP requests, used by tests.
 """
 
-from __future__ import division, absolute_import
 
 __all__ = ['DummyChannel', 'DummyRequest']
 
 from io import BytesIO
 
-from zope.interface import implementer
+from typing import Optional
+from zope.interface import implementer, verify
 
 from twisted.python.compat import intToBytes
 from twisted.python.deprecate import deprecated
 from incremental import Version
 from twisted.internet.defer import Deferred
-from twisted.internet.address import IPv4Address
-from twisted.internet.interfaces import ISSLTransport
+from twisted.internet.address import IPv4Address, IPv6Address
+from twisted.internet.interfaces import ISSLTransport, IAddress
+
+from twisted.trial import unittest
 
 from twisted.web.http_headers import Headers
 from twisted.web.resource import Resource
@@ -26,17 +28,43 @@ from twisted.web.server import NOT_DONE_YET, Session, Site
 from twisted.web._responses import FOUND
 
 
+
+textLinearWhitespaceComponents = [
+    u"Foo%sbar" % (lw,) for lw in
+    [u'\r', u'\n', u'\r\n']
+]
+
+sanitizedText = "Foo bar"
+bytesLinearWhitespaceComponents = [
+    component.encode('ascii') for component in
+    textLinearWhitespaceComponents
+]
+sanitizedBytes = sanitizedText.encode('ascii')
+
+
+
+@implementer(IAddress)
+class NullAddress(object):
+    """
+    A null implementation of L{IAddress}.
+    """
+
+
+
 class DummyChannel:
     class TCP:
         port = 80
         disconnected = False
 
-        def __init__(self):
+        def __init__(self, peer=None):
+            if peer is None:
+                peer = IPv4Address("TCP", '192.168.1.1', 12344)
+            self._peer = peer
             self.written = BytesIO()
             self.producers = []
 
         def getPeer(self):
-            return IPv4Address("TCP", '192.168.1.1', 12344)
+            return self._peer
 
         def write(self, data):
             if not isinstance(data, bytes):
@@ -62,12 +90,45 @@ class DummyChannel:
 
     @implementer(ISSLTransport)
     class SSL(TCP):
-        pass
+        def abortConnection(self):
+            # ITCPTransport.abortConnection
+            pass
+
+
+        def getTcpKeepAlive(self):
+            # ITCPTransport.getTcpKeepAlive
+            pass
+
+
+        def getTcpNoDelay(self):
+            # ITCPTransport.getTcpNoDelay
+            pass
+
+
+        def loseWriteConnection(self):
+            # ITCPTransport.loseWriteConnection
+            pass
+
+
+        def setTcpKeepAlive(self, enabled):
+            # ITCPTransport.setTcpKeepAlive
+            pass
+
+
+        def setTcpNoDelay(self, enabled):
+            # ITCPTransport.setTcpNoDelay
+            pass
+
+
+        def getPeerCertificate(self):
+            # ISSLTransport.getPeerCertificate
+            pass
+
 
     site = Site(Resource())
 
-    def __init__(self):
-        self.transport = self.TCP()
+    def __init__(self, peer=None):
+        self.transport = self.TCP(peer)
 
 
     def requestDone(self, request):
@@ -120,6 +181,41 @@ class DummyChannel:
         return isinstance(self.transport, self.SSL)
 
 
+    def abortConnection(self):
+        # ITCPTransport.abortConnection
+        pass
+
+
+    def getTcpKeepAlive(self):
+        # ITCPTransport.getTcpKeepAlive
+        pass
+
+
+    def getTcpNoDelay(self):
+        # ITCPTransport.getTcpNoDelay
+        pass
+
+
+    def loseWriteConnection(self):
+        # ITCPTransport.loseWriteConnection
+        pass
+
+
+    def setTcpKeepAlive(self):
+        # ITCPTransport.setTcpKeepAlive
+        pass
+
+
+    def setTcpNoDelay(self):
+        # ITCPTransport.setTcpNoDelay
+        pass
+
+
+    def getPeerCertificate(self):
+        # ISSLTransport.getPeerCertificate
+        pass
+
+
 
 class DummyRequest(object):
     """
@@ -146,10 +242,20 @@ class DummyRequest(object):
     """
     uri = b'http://dummy/'
     method = b'GET'
-    client = None
+    client = None  # type: Optional[IAddress]
 
 
-    def registerProducer(self, prod,s):
+    def registerProducer(self, prod, s):
+        """
+        Call an L{IPullProducer}'s C{resumeProducing} method in a
+        loop until it unregisters itself.
+
+        @param prod: The producer.
+        @type prod: L{IPullProducer}
+
+        @param s: Whether or not the producer is streaming.
+        """
+        # XXX: Handle IPushProducers
         self.go = 1
         while self.go:
             prod.resumeProducing()
@@ -159,7 +265,7 @@ class DummyRequest(object):
         self.go = 0
 
 
-    def __init__(self, postpath, session=None):
+    def __init__(self, postpath, session=None, client=None):
         self.sitepath = []
         self.written = []
         self.finished = 0
@@ -291,27 +397,46 @@ class DummyRequest(object):
         Set the HTTP status response code, but takes care that this is called
         before any data is written.
         """
-        assert not self.written, "Response code cannot be set after data has been written: %s." % "@@@@".join(self.written)
+        assert not self.written, (
+            "Response code cannot be set after data has"
+            "been written: {}.".format("@@@@".join(self.written)))
         self.responseCode = code
         self.responseMessage = message
 
 
     def setLastModified(self, when):
-        assert not self.written, "Last-Modified cannot be set after data has been written: %s." % "@@@@".join(self.written)
+        assert not self.written, (
+            "Last-Modified cannot be set after data has "
+            "been written: {}.".format("@@@@".join(self.written)))
 
 
     def setETag(self, tag):
-        assert not self.written, "ETag cannot be set after data has been written: %s." % "@@@@".join(self.written)
+        assert not self.written, (
+            "ETag cannot be set after data has been "
+            "written: {}.".format("@@@@".join(self.written)))
 
 
+    @deprecated(Version('Twisted', 18, 4, 0), replacement="getClientAddress")
     def getClientIP(self):
         """
         Return the IPv4 address of the client which made this request, if there
         is one, otherwise L{None}.
         """
-        if isinstance(self.client, IPv4Address):
+        if isinstance(self.client, (IPv4Address, IPv6Address)):
             return self.client.host
         return None
+
+
+    def getClientAddress(self):
+        """
+        Return the L{IAddress} of the client that made this request.
+
+        @return: an address.
+        @rtype: an L{IAddress} provider.
+        """
+        if self.client is None:
+            return NullAddress()
+        return self.client
 
 
     def getRequestHostname(self):
@@ -357,16 +482,6 @@ class DummyRequest(object):
         self.requestHeaders.addRawHeader(b"host", hostHeader)
 
 
-    def getClient(self):
-        """
-        Get the client's IP address, if it has one.
-
-        @return: The same value as C{getClientIP}.
-        @rtype: L{bytes}
-        """
-        return self.getClientIP()
-
-
     def redirect(self, url):
         """
         Utility function that does a redirect.
@@ -376,6 +491,64 @@ class DummyRequest(object):
         self.setResponseCode(FOUND)
         self.setHeader(b"location", url)
 
-DummyRequest.getClient = deprecated(
-    Version("Twisted", 15, 0, 0),
-    "Twisted Names to resolve hostnames")(DummyRequest.getClient)
+
+
+class DummyRequestTests(unittest.SynchronousTestCase):
+    """
+    Tests for L{DummyRequest}.
+    """
+
+    def test_getClientIPDeprecated(self):
+        """
+        L{DummyRequest.getClientIP} is deprecated in favor of
+        L{DummyRequest.getClientAddress}
+        """
+
+        request = DummyRequest([])
+        request.getClientIP()
+
+        warnings = self.flushWarnings(
+            offendingFunctions=[self.test_getClientIPDeprecated])
+
+        self.assertEqual(1, len(warnings))
+        [warning] = warnings
+        self.assertEqual(warning.get("category"), DeprecationWarning)
+        self.assertEqual(
+            warning.get("message"),
+            ("twisted.web.test.requesthelper.DummyRequest.getClientIP "
+             "was deprecated in Twisted 18.4.0; "
+             "please use getClientAddress instead"),
+        )
+
+
+    def test_getClientIPSupportsIPv6(self):
+        """
+        L{DummyRequest.getClientIP} supports IPv6 addresses, just like
+        L{twisted.web.http.Request.getClientIP}.
+        """
+        request = DummyRequest([])
+        client = IPv6Address("TCP", "::1", 12345)
+        request.client = client
+
+        self.assertEqual("::1", request.getClientIP())
+
+
+    def test_getClientAddressWithoutClient(self):
+        """
+        L{DummyRequest.getClientAddress} returns an L{IAddress}
+        provider no C{client} has been set.
+        """
+        request = DummyRequest([])
+        null = request.getClientAddress()
+        verify.verifyObject(IAddress, null)
+
+
+    def test_getClientAddress(self):
+        """
+        L{DummyRequest.getClientAddress} returns the C{client}.
+        """
+        request = DummyRequest([])
+        client = IPv4Address("TCP", "127.0.0.1", 12345)
+        request.client = client
+        address = request.getClientAddress()
+        self.assertIs(address, client)

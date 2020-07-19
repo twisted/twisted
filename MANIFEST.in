@@ -14,19 +14,27 @@ exclude src/twisted/topfiles/CREDITS src/twisted/topfiles/ChangeLog.Old
 
 # Include NEWS, READMEs, etc
 recursive-include docs README
-include NEWS.rst README.rst INSTALL.rst CONTRIBUTING LICENSE code_of_conduct.md
+include NEWS.rst README.rst INSTALL.rst CONTRIBUTING.md LICENSE code_of_conduct.md
 
 # Exclude admin scripts and things only useful when running from a source checkout
 exclude pyproject.toml
 exclude codecov.yml
 exclude appveyor.yml
+exclude .coveralls.yml
+exclude .circleci
+recursive-exclude .circleci *
+exclude azure-pipelines
+recursive-exclude azure-pipelines *
 prune bin
 prune admin
 prune .travis
 prune .github
 
+# Include marker indicating that we ship type annotations (PEP 561)
+include src/twisted/py.typed
+
 # Include test-running utilities for downstream packagers
-include tox.ini .coveragerc
+include mypy.ini tox.ini .coveragerc
 
 # Include our docs templates
 recursive-include src/twisted/python/_pydoctortemplates *.html
@@ -41,7 +49,6 @@ include src/twisted/internet/test/fake_CAs/*
 include src/twisted/mail/test/rfc822.message
 
 # Some extras
-recursive-include src/twisted *.3only
 recursive-include src/twisted *.glade *.pxi *.h *.c *.bat *.g *.pyx *.zsh *.txt
 
 # Docs

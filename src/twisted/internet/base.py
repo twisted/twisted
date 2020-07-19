@@ -6,15 +6,16 @@
 Very basic functionality for a Reactor implementation.
 """
 
-from __future__ import division, absolute_import
 
-import socket # needed only for sync-dns
+import socket  # needed only for sync-dns
+from typing import Any, Callable, List
 from zope.interface import implementer, classImplements
 
 import sys
 import warnings
 from heapq import heappush, heappop, heapify
 
+import builtins
 import traceback
 
 from twisted.internet.interfaces import (
@@ -33,21 +34,20 @@ from twisted.python import log, failure, reflect
 from twisted.python.compat import unicode, iteritems
 from twisted.python.runtime import seconds as runtimeSeconds, platform
 from twisted.internet.defer import Deferred, DeferredList
-from twisted.python._oldstyle import _oldStyle
 
 # This import is for side-effects!  Even if you don't see any code using it
 # in this module, don't delete it.
 from twisted.python import threadable
 
 
+
 @implementer(IDelayedCall)
-@_oldStyle
 class DelayedCall:
 
     # enable .debug to record creator call stack, and it will be logged if
     # an exception occurs while the function is being run
     debug = False
-    _str = None
+    _repr = None
 
     def __init__(self, time, func, args, kw, cancel, reset,
                  seconds=runtimeSeconds):
@@ -101,7 +101,7 @@ class DelayedCall:
             self.canceller(self)
             self.cancelled = 1
             if self.debug:
-                self._str = str(self)
+                self._repr = repr(self)
             del self.func, self.args, self.kw
 
     def reset(self, secondsFromNow):
@@ -181,9 +181,15 @@ class DelayedCall:
         return self.time < other.time
 
 
-    def __str__(self):
-        if self._str is not None:
-            return self._str
+    def __repr__(self):
+        """
+        Implement C{repr()} for L{DelayedCall} instances.
+
+        @rtype: C{str}
+        @returns: String containing details of the L{DelayedCall}.
+        """
+        if self._repr is not None:
+            return self._repr
         if hasattr(self, 'func'):
             # This code should be replaced by a utility function in reflect;
             # see ticket #6066:
@@ -289,7 +295,6 @@ class ThreadedResolver(object):
 
 
 @implementer(IResolverSimple)
-@_oldStyle
 class BlockingResolver:
 
     def getHostByName(self, name, timeout = (1, 3, 11, 45)):
@@ -444,9 +449,60 @@ class _ThreePhaseEvent(object):
 
 
 
-@implementer(IReactorCore, IReactorTime, IReactorPluggableResolver,
-             IReactorPluggableNameResolver, _ISupportsExitSignalCapturing)
-class ReactorBase(object):
+@implementer(IReactorPluggableNameResolver, IReactorPluggableResolver)
+class PluggableResolverMixin(object):
+    """
+    A mixin which implements the pluggable resolver reactor interfaces.
+
+    @ivar resolver: The installed L{IResolverSimple}.
+    @ivar _nameResolver: The installed L{IHostnameResolver}.
+    """
+    resolver = BlockingResolver()
+    _nameResolver = _SimpleResolverComplexifier(resolver)
+
+    # IReactorPluggableResolver
+    def installResolver(self, resolver):
+        """
+        See L{IReactorPluggableResolver}.
+
+        @param resolver: see L{IReactorPluggableResolver}.
+
+        @return: see L{IReactorPluggableResolver}.
+        """
+        assert IResolverSimple.providedBy(resolver)
+        oldResolver = self.resolver
+        self.resolver = resolver
+        self._nameResolver = _SimpleResolverComplexifier(resolver)
+        return oldResolver
+
+
+    # IReactorPluggableNameResolver
+    def installNameResolver(self, resolver):
+        """
+        See L{IReactorPluggableNameResolver}.
+
+        @param resolver: See L{IReactorPluggableNameResolver}.
+
+        @return: see L{IReactorPluggableNameResolver}.
+        """
+        previousNameResolver = self._nameResolver
+        self._nameResolver = resolver
+        self.resolver = _ComplexResolverSimplifier(resolver)
+        return previousNameResolver
+
+
+    @property
+    def nameResolver(self):
+        """
+        Implementation of read-only
+        L{IReactorPluggableNameResolver.nameResolver}.
+        """
+        return self._nameResolver
+
+
+
+@implementer(IReactorCore, IReactorTime, _ISupportsExitSignalCapturing)
+class ReactorBase(PluggableResolverMixin):
     """
     Default base class for Reactors.
 
@@ -482,12 +538,12 @@ class ReactorBase(object):
     _stopped = True
     installed = False
     usingThreads = False
-    resolver = BlockingResolver()
     _exitSignal = None
 
     __name__ = "twisted.internet.reactor"
 
     def __init__(self):
+        super(ReactorBase, self).__init__()
         self.threadCallQueue = []
         self._eventTriggers = {}
         self._pendingTimedCalls = []
@@ -499,7 +555,6 @@ class ReactorBase(object):
         self._startedBefore = False
         # reactor internal readers, e.g. the waker.
         self._internalReaders = set()
-        self._nameResolver = None
         self.waker = None
 
         # Arrange for the running attribute to change to True at the right time
@@ -521,44 +576,6 @@ class ReactorBase(object):
     def installWaker(self):
         raise NotImplementedError(
             reflect.qual(self.__class__) + " did not implement installWaker")
-
-
-    def installResolver(self, resolver):
-        """
-        See L{IReactorPluggableResolver}.
-
-        @param resolver: see L{IReactorPluggableResolver}.
-
-        @return: see L{IReactorPluggableResolver}.
-        """
-        assert IResolverSimple.providedBy(resolver)
-        oldResolver = self.resolver
-        self.resolver = resolver
-        self._nameResolver = _SimpleResolverComplexifier(resolver)
-        return oldResolver
-
-
-    def installNameResolver(self, resolver):
-        """
-        See L{IReactorPluggableNameResolver}.
-
-        @param resolver: See L{IReactorPluggableNameResolver}.
-
-        @return: see L{IReactorPluggableNameResolver}.
-        """
-        previousNameResolver = self._nameResolver
-        self._nameResolver = resolver
-        self.resolver = _ComplexResolverSimplifier(resolver)
-        return previousNameResolver
-
-
-    @property
-    def nameResolver(self):
-        """
-        Implementation of read-only
-        L{IReactorPluggableNameResolver.nameResolver}.
-        """
-        return self._nameResolver
 
 
     def wakeUp(self):
@@ -608,7 +625,8 @@ class ReactorBase(object):
             reflect.qual(self.__class__) + " did not implement getWriters")
 
 
-    def resolve(self, name, timeout = (1, 3, 11, 45)):
+    # IReactorCore
+    def resolve(self, name, timeout=(1, 3, 11, 45)):
         """Return a Deferred that will resolve a hostname.
         """
         if not name:
@@ -618,9 +636,7 @@ class ReactorBase(object):
             return defer.succeed(name)
         return self.resolver.getHostByName(name, timeout)
 
-    # Installation.
 
-    # IReactorCore
     def stop(self):
         """
         See twisted.internet.interfaces.IReactorCore.stop.
@@ -704,14 +720,16 @@ class ReactorBase(object):
             event.fireEvent()
 
 
-    def addSystemEventTrigger(self, _phase, _eventType, _f, *args, **kw):
+    def addSystemEventTrigger(self, phase: str, eventType: str,
+                              callable: Callable[..., Any], *args, **kw):
         """See twisted.internet.interfaces.IReactorCore.addSystemEventTrigger.
         """
-        assert callable(_f), "%s is not callable" % _f
-        if _eventType not in self._eventTriggers:
-            self._eventTriggers[_eventType] = _ThreePhaseEvent()
-        return (_eventType, self._eventTriggers[_eventType].addTrigger(
-            _phase, _f, *args, **kw))
+        assert builtins.callable(callable), \
+               "{} is not callable".format(callable)
+        if eventType not in self._eventTriggers:
+            self._eventTriggers[eventType] = _ThreePhaseEvent()
+        return (eventType, self._eventTriggers[eventType].addTrigger(
+            phase, callable, *args, **kw))
 
 
     def removeSystemEventTrigger(self, triggerID):
@@ -721,14 +739,15 @@ class ReactorBase(object):
         self._eventTriggers[eventType].removeTrigger(handle)
 
 
-    def callWhenRunning(self, _callable, *args, **kw):
+    def callWhenRunning(self, callable: Callable[..., Any], *args, **kw):
         """See twisted.internet.interfaces.IReactorCore.callWhenRunning.
         """
         if self.running:
-            _callable(*args, **kw)
+            callable(*args, **kw)
         else:
             return self.addSystemEventTrigger('after', 'startup',
-                                              _callable, *args, **kw)
+                                              callable, *args, **kw)
+
 
     def startRunning(self):
         """
@@ -760,22 +779,30 @@ class ReactorBase(object):
         """
         self.running = True
 
+
+    def run(self):
+        # IReactorCore.run
+        raise NotImplementedError()
+
+
     # IReactorTime
 
     seconds = staticmethod(runtimeSeconds)
 
-    def callLater(self, _seconds, _f, *args, **kw):
+    def callLater(self, delay, callable: Callable[..., Any], *args, **kw):
         """See twisted.internet.interfaces.IReactorTime.callLater.
         """
-        assert callable(_f), "%s is not callable" % _f
-        assert _seconds >= 0, \
-               "%s is not greater than or equal to 0 seconds" % (_seconds,)
-        tple = DelayedCall(self.seconds() + _seconds, _f, args, kw,
+        assert builtins.callable(callable), \
+               "{} is not callable".format(callable)
+        assert delay >= 0, \
+               "{} is not greater than or equal to 0 seconds".format(delay)
+        tple = DelayedCall(self.seconds() + delay, callable, args, kw,
                            self._cancelCallLater,
                            self._moveCallLaterSooner,
                            seconds=self.seconds)
         self._newTimedCalls.append(tple)
         return tple
+
 
     def _moveCallLaterSooner(self, tple):
         # Linear time find: slow.
@@ -1080,8 +1107,8 @@ if platform.supportsThreads():
     classImplements(ReactorBase, IReactorThreads)
 
 
+
 @implementer(IConnector)
-@_oldStyle
 class BaseConnector:
     """Basic implementation of connector.
 
@@ -1162,6 +1189,11 @@ class BaseConnector:
             reflect.qual(self.__class__) + " did not implement "
             "getDestination")
 
+    def __repr__(self):
+        return "<%s instance at 0x%x %s %s>" % (
+            reflect.qual(self.__class__), id(self), self.state,
+            self.getDestination())
+
 
 
 class BasePort(abstract.FileDescriptor):
@@ -1170,8 +1202,8 @@ class BasePort(abstract.FileDescriptor):
     Note: This does not actually implement IListeningPort.
     """
 
-    addressFamily = None
-    socketType = None
+    addressFamily = None  # type: socket.AddressFamily
+    socketType = None  # type: socket.SocketKind
 
     def createInternetSocket(self):
         s = socket.socket(self.addressFamily, self.socketType)
@@ -1279,4 +1311,4 @@ class _SignalReactorMixin(object):
 
 
 
-__all__ = []
+__all__ = []  # type: List[str]

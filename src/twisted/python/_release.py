@@ -28,13 +28,15 @@ NEWSFRAGMENT_TYPES = ["doc", "bugfix", "misc", "feature", "removal"]
 intersphinxURLs = [
     u"https://docs.python.org/2/objects.inv",
     u"https://docs.python.org/3/objects.inv",
+    u"https://cryptography.io/en/latest/objects.inv",
     u"https://pyopenssl.readthedocs.io/en/stable/objects.inv",
     u"https://hyperlink.readthedocs.io/en/stable/objects.inv",
     u"https://twisted.github.io/constantly/docs/objects.inv",
     u"https://twisted.github.io/incremental/docs/objects.inv",
-    u"https://python-hyper.org/h2/en/stable/objects.inv",
-    u"https://python-hyper.org/priority/en/stable/objects.inv",
+    u"https://hyper-h2.readthedocs.io/en/stable/objects.inv",
+    u"https://priority.readthedocs.io/en/stable/objects.inv",
     u"https://zopeinterface.readthedocs.io/en/latest/objects.inv",
+    u"https://automat.readthedocs.io/en/latest/objects.inv",
 ]
 
 
@@ -326,16 +328,16 @@ class APIBuilder(object):
 
         from pydoctor.driver import main
 
-        args = [u"--project-name", projectName,
-                u"--project-url", projectURL,
-                u"--system-class", u"twisted.python._pydoctor.TwistedSystem",
-                u"--project-base-dir", packagePath.parent().path,
-                u"--html-viewsource-base", sourceURL,
-                u"--add-package", packagePath.path,
-                u"--html-output", outputPath.path,
-                u"--html-write-function-pages", u"--quiet", u"--make-html",
-               ] + intersphinxes
-        args = [arg.encode("utf-8") for arg in args]
+        args = [
+            "--project-name", projectName,
+            "--project-url", projectURL,
+            "--system-class", "twisted.python._pydoctor.TwistedSystem",
+            "--project-base-dir", packagePath.parent().path,
+            "--html-viewsource-base", sourceURL,
+            "--add-package", packagePath.path,
+            "--html-output", outputPath.path,
+            "--html-write-function-pages", "--quiet", "--make-html",
+        ] + intersphinxes
         main(args)
 
         monkeyPatch.restore()
@@ -516,13 +518,24 @@ class CheckNewsfragmentScript(object):
         if len(args) != 1:
             sys.exit("Must specify one argument: the Twisted checkout")
 
+        encoding = sys.stdout.encoding or 'ascii'
         location = os.path.abspath(args[0])
 
         branch = runCommand([b"git", b"rev-parse", b"--abbrev-ref",  "HEAD"],
-                            cwd=location).decode(sys.stdout.encoding).strip()
+                            cwd=location).decode(encoding).strip()
 
-        r = runCommand([b"git", b"diff", b"--name-only", b"origin/trunk..."],
-                       cwd=location).decode(sys.stdout.encoding).strip()
+        # diff-filter=d to exclude deleted newsfiles (which will happen on the
+        # release branch)
+        r = runCommand(
+            [
+                b"git",
+                b"diff",
+                b"--name-only",
+                b"origin/trunk...",
+                b"--diff-filter=d"
+            ],
+            cwd=location
+        ).decode(encoding).strip()
 
         if not r:
             self._print(

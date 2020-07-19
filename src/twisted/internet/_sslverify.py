@@ -3,20 +3,39 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-from __future__ import division, absolute_import
 
-import itertools
 import warnings
 
+from binascii import hexlify
 from constantly import Names, NamedConstant
 from hashlib import md5
 
 from OpenSSL import SSL, crypto
+from OpenSSL._util import lib as pyOpenSSLlib
 
+from twisted.internet.abstract import isIPAddress, isIPv6Address
 from twisted.python import log
-from twisted.python._oldstyle import _oldStyle
+from twisted.python.randbytes import secureRandom
 from ._idna import _idnaBytes
 
+from zope.interface import Interface, implementer
+from constantly import Flags, FlagConstant
+from incremental import Version
+
+from twisted.internet.defer import Deferred
+from twisted.internet.error import VerifyError, CertificateError
+from twisted.internet.interfaces import (
+    IAcceptableCiphers, ICipher, IOpenSSLClientConnectionCreator,
+    IOpenSSLContextFactory
+)
+
+from twisted.python import util
+from twisted.python.deprecate import _mutuallyExclusiveArguments
+from twisted.python.compat import nativeString, unicode
+from twisted.python.failure import Failure
+from twisted.python.util import FancyEqMixin
+
+from twisted.python.deprecate import deprecated
 
 
 
@@ -106,6 +125,22 @@ def simpleVerifyHostname(connection, hostname):
 
 
 
+def simpleVerifyIPAddress(connection, hostname):
+    """
+    Always fails validation of IP addresses
+
+    @param connection: the OpenSSL connection to verify.
+    @type connection: L{OpenSSL.SSL.Connection}
+
+    @param hostname: The hostname expected by the user.
+    @type hostname: L{unicode}
+
+    @raise twisted.internet.ssl.VerificationError: Always raised
+    """
+    raise SimpleVerificationError("Cannot verify certificate IP addresses")
+
+
+
 def _usablePyOpenSSL(version):
     """
     Check pyOpenSSL version string whether we can use it for host verification.
@@ -138,8 +173,10 @@ def _selectVerifyImplementation():
 
     try:
         from service_identity import VerificationError
-        from service_identity.pyopenssl import verify_hostname
-        return verify_hostname, VerificationError
+        from service_identity.pyopenssl import (
+            verify_hostname, verify_ip_address
+        )
+        return verify_hostname, verify_ip_address, VerificationError
     except ImportError as e:
         warnings.warn_explicit(
             "You do not have a working installation of the "
@@ -151,38 +188,12 @@ def _selectVerifyImplementation():
             # Unfortunately the lineno is required.
             category=UserWarning, filename="", lineno=0)
 
-    return simpleVerifyHostname, SimpleVerificationError
+    return simpleVerifyHostname, simpleVerifyIPAddress, SimpleVerificationError
 
 
-verifyHostname, VerificationError = _selectVerifyImplementation()
 
-
-from zope.interface import Interface, implementer
-from constantly import Flags, FlagConstant
-from incremental import Version
-
-from twisted.internet.defer import Deferred
-from twisted.internet.error import VerifyError, CertificateError
-from twisted.internet.interfaces import (
-    IAcceptableCiphers, ICipher, IOpenSSLClientConnectionCreator,
-    IOpenSSLContextFactory
-)
-
-from twisted.python import reflect, util
-from twisted.python.deprecate import _mutuallyExclusiveArguments
-from twisted.python.compat import nativeString, networkString, unicode
-from twisted.python.failure import Failure
-from twisted.python.util import FancyEqMixin
-
-from twisted.python.deprecate import deprecated
-
-
-def _sessionCounter(counter=itertools.count()):
-    """
-    Private - shared between all OpenSSLCertificateOptions, counts up to
-    provide a unique session id for each context.
-    """
-    return next(counter)
+verifyHostname, verifyIPAddress, VerificationError = \
+    _selectVerifyImplementation()
 
 
 
@@ -369,7 +380,6 @@ DN = DistinguishedName
 
 
 
-@_oldStyle
 class CertBase:
     """
     Base class for public (certificate only) and private (certificate + key
@@ -721,7 +731,6 @@ class PrivateCertificate(Certificate):
 
 
 
-@_oldStyle
 class PublicKey:
     """
     A L{PublicKey} is a representation of the public part of a key pair.
@@ -798,10 +807,12 @@ class KeyPair(PublicKey):
         return crypto.dump_privatekey(format, self.original)
 
 
+    @deprecated(Version("Twisted", 15, 0, 0), "a real persistence system")
     def __getstate__(self):
         return self.dump()
 
 
+    @deprecated(Version("Twisted", 15, 0, 0), "a real persistence system")
     def __setstate__(self, state):
         self.__init__(crypto.load_privatekey(crypto.FILETYPE_ASN1, state))
 
@@ -819,7 +830,7 @@ class KeyPair(PublicKey):
 
 
     @classmethod
-    def generate(Class, kind=crypto.TYPE_RSA, size=1024):
+    def generate(Class, kind=crypto.TYPE_RSA, size=2048):
         pkey = crypto.PKey()
         pkey.generate_key(kind, size)
         return Class(pkey)
@@ -907,11 +918,6 @@ class KeyPair(PublicKey):
         return PrivateCertificate.fromCertificateAndKeyPair(
             self.signRequestObject(dn, self.requestObject(dn), serialNumber),
             self)
-
-KeyPair.__getstate__ = deprecated(Version("Twisted", 15, 0, 0),
-    "a real persistence system")(KeyPair.__getstate__)
-KeyPair.__setstate__ = deprecated(Version("Twisted", 15, 0, 0),
-    "a real persistence system")(KeyPair.__setstate__)
 
 
 
@@ -1135,6 +1141,11 @@ class ClientTLSOptions(object):
         than working with Python's built-in (but sometimes broken) IDNA
         encoding.  ASCII values, however, will always work.
     @type _hostnameASCII: L{unicode}
+
+    @ivar _hostnameIsDnsName: Whether or not the C{_hostname} is a DNSName.
+        Will be L{False} if C{_hostname} is an IP address or L{True} if
+        C{_hostname} is a DNSName
+    @type _hostnameIsDnsName: L{bool}
     """
 
     def __init__(self, hostname, ctx):
@@ -1149,7 +1160,14 @@ class ClientTLSOptions(object):
         """
         self._ctx = ctx
         self._hostname = hostname
-        self._hostnameBytes = _idnaBytes(hostname)
+
+        if isIPAddress(hostname) or isIPv6Address(hostname):
+            self._hostnameBytes = hostname.encode('ascii')
+            self._hostnameIsDnsName = False
+        else:
+            self._hostnameBytes = _idnaBytes(hostname)
+            self._hostnameIsDnsName = True
+
         self._hostnameASCII = self._hostnameBytes.decode("ascii")
         ctx.set_info_callback(
             _tolerateErrors(self._identityVerifyingInfoCallback)
@@ -1194,11 +1212,16 @@ class ClientTLSOptions(object):
         @param ret: ignored
         @type ret: ignored
         """
-        if where & SSL.SSL_CB_HANDSHAKE_START:
+        # Literal IPv4 and IPv6 addresses are not permitted
+        # as host names according to the RFCs
+        if where & SSL.SSL_CB_HANDSHAKE_START and self._hostnameIsDnsName:
             connection.set_tlsext_host_name(self._hostnameBytes)
         elif where & SSL.SSL_CB_HANDSHAKE_DONE:
             try:
-                verifyHostname(connection, self._hostnameASCII)
+                if self._hostnameIsDnsName:
+                    verifyHostname(connection, self._hostnameASCII)
+                else:
+                    verifyIPAddress(connection, self._hostnameASCII)
             except VerificationError:
                 f = Failure()
                 transport = connection.get_app_data()
@@ -1319,7 +1342,6 @@ class OpenSSLCertificateOptions(object):
 
     _defaultMinimumTLSVersion = TLSVersion.TLSv1_0
 
-
     @_mutuallyExclusiveArguments([
         ['trustRoot', 'requireCertificate'],
         ['trustRoot', 'verify'],
@@ -1339,7 +1361,7 @@ class OpenSSLCertificateOptions(object):
                  requireCertificate=True,
                  verifyOnce=True,
                  enableSingleUseKeys=True,
-                 enableSessions=True,
+                 enableSessions=False,
                  fixBrokenPeers=False,
                  enableSessionTickets=False,
                  extraCertChain=None,
@@ -1401,9 +1423,12 @@ class OpenSSLCertificateOptions(object):
             ephemeral DH and ECDH parameters are used to prevent small subgroup
             attacks and to ensure perfect forward secrecy.
 
-        @param enableSessions: If True, set a session ID on each context.  This
-            allows a shortened handshake to be used when a known client
-            reconnects.
+        @param enableSessions: This allows a shortened handshake to be used
+            when a known client reconnects to the same process.  If True,
+            enable OpenSSL's session caching.  Note that session caching only
+            works on a single Twisted node at once.  Also, it is currently
+            somewhat risky due to U{a crashing bug when using OpenSSL 1.1.1
+            <https://twistedmatrix.com/trac/ticket/9764>}.
 
         @param fixBrokenPeers: If True, enable various non-spec protocol fixes
             for broken SSL implementations.  This should be entirely safe,
@@ -1464,7 +1489,7 @@ class OpenSSLCertificateOptions(object):
         @type raiseMinimumTo: L{TLSVersion} constant
 
         @param insecurelyLowerMinimumTo: The minimum TLS version to use,
-            possibky lower than Twisted's default.  If not specified, it is a
+            possibly lower than Twisted's default.  If not specified, it is a
             generally considered safe default (TLSv1.0).  If you want to raise
             your minimum TLS version to above that of this default, use
             C{raiseMinimumTo}.  DO NOT use this argument unless you are
@@ -1591,10 +1616,11 @@ class OpenSSLCertificateOptions(object):
             self._options |= SSL.OP_NO_TICKET
         self.dhParameters = dhParameters
 
-        try:
-            self._ecCurve = self._getEllipticCurve(_defaultCurveName)
-        except ValueError:
-            self._ecCurve = None
+        self._ecChooser = _ChooseDiffieHellmanEllipticCurve(
+            SSL.OPENSSL_VERSION_NUMBER,
+            openSSLlib=pyOpenSSLlib,
+            openSSLcrypto=crypto,
+        )
 
         if acceptableCiphers is None:
             acceptableCiphers = defaultCiphers
@@ -1626,18 +1652,6 @@ class OpenSSLCertificateOptions(object):
             )
 
         self._acceptableProtocols = acceptableProtocols
-
-
-    def _getEllipticCurve(self, name):
-        """
-        A patchable wrapper for L{OpenSSL.crypto.get_elliptic_curve}
-
-        @param name: The name of the elliptic curve to look up.
-        @type name: L{unicode}
-
-        @return: A pyOpenSSL elliptic curve object.
-        """
-        return crypto.get_elliptic_curve(name)
 
 
     def __getstate__(self):
@@ -1693,21 +1707,31 @@ class OpenSSLCertificateOptions(object):
         if self.verifyDepth is not None:
             ctx.set_verify_depth(self.verifyDepth)
 
-        if self.enableSessions:
-            name = "%s-%d" % (reflect.qual(self.__class__), _sessionCounter())
-            sessionName = md5(networkString(name)).hexdigest()
+        # Until we know what's going on with
+        # https://twistedmatrix.com/trac/ticket/9764 let's be conservative
+        # in naming this; ASCII-only, short, as the recommended value (a
+        # hostname) might be:
+        sessionIDContext = hexlify(secureRandom(7))
+        # Note that this doesn't actually set the session ID (which had
+        # better be per-connection anyway!):
+        # https://github.com/pyca/pyopenssl/issues/845
 
-            ctx.set_session_id(sessionName.encode('ascii'))
+        # This is set unconditionally because it's apparently required for
+        # client certificates to work:
+        # https://www.openssl.org/docs/man1.1.1/man3/SSL_CTX_set_session_id_context.html
+        ctx.set_session_id(sessionIDContext)
+
+        if self.enableSessions:
+            ctx.set_session_cache_mode(SSL.SESS_CACHE_SERVER)
+        else:
+            ctx.set_session_cache_mode(SSL.SESS_CACHE_OFF)
+
 
         if self.dhParameters:
             ctx.load_tmp_dh(self.dhParameters._dhFile.path)
         ctx.set_cipher_list(self._cipherString.encode('ascii'))
 
-        if self._ecCurve is not None:
-            try:
-                ctx.set_tmp_ecdh(self._ecCurve)
-            except BaseException:
-                pass  # ECDHE support is best effort only.
+        self._ecChooser.configureECDHCurve(ctx)
 
         if self._acceptableProtocols:
             # Try to set NPN and ALPN. _acceptableProtocols cannot be set by
@@ -1773,6 +1797,12 @@ def _expandCipherString(cipherString, method, options):
     try:
         ctx.set_cipher_list(cipherString.encode('ascii'))
     except SSL.Error as e:
+        # OpenSSL 1.1.1 turns an invalid cipher list into TLS 1.3
+        # ciphers, so pyOpenSSL >= 19.0.0 raises an artificial Error
+        # that lacks a corresponding OpenSSL error if the cipher list
+        # consists only of these after a call to set_cipher_list.
+        if not e.args[0]:
+            return []
         if e.args[0][0][2] == 'no cipher match':
             return []
         else:
@@ -1850,6 +1880,103 @@ _defaultCurveName = u"prime256v1"
 
 
 
+class _ChooseDiffieHellmanEllipticCurve(object):
+    """
+    Chooses the best elliptic curve for Elliptic Curve Diffie-Hellman
+    key exchange, and provides a C{configureECDHCurve} method to set
+    the curve, when appropriate, on a new L{OpenSSL.SSL.Context}.
+
+    The C{configureECDHCurve} method will be set to one of the
+    following based on the provided OpenSSL version and configuration:
+
+        - L{_configureOpenSSL110}
+
+        - L{_configureOpenSSL102}
+
+        - L{_configureOpenSSL101}
+
+        - L{_configureOpenSSL101NoCurves}.
+
+    @param openSSLVersion: The OpenSSL version number.
+    @type openSSLVersion: L{int}
+
+    @see: L{OpenSSL.SSL.OPENSSL_VERSION_NUMBER}
+
+    @param openSSLlib: The OpenSSL C{cffi} library module.
+    @param openSSLlib: The OpenSSL L{crypto} module.
+
+    @see: L{crypto}
+    """
+
+    def __init__(self, openSSLVersion, openSSLlib, openSSLcrypto):
+        self._openSSLlib = openSSLlib
+        self._openSSLcrypto = openSSLcrypto
+        if openSSLVersion >= 0x10100000:
+            self.configureECDHCurve = self._configureOpenSSL110
+        elif openSSLVersion >= 0x10002000:
+            self.configureECDHCurve = self._configureOpenSSL102
+        else:
+            try:
+                self._ecCurve = openSSLcrypto.get_elliptic_curve(
+                    _defaultCurveName)
+            except ValueError:
+                # The get_elliptic_curve method raises a ValueError
+                # when the curve does not exist.
+                self.configureECDHCurve = self._configureOpenSSL101NoCurves
+            else:
+                self.configureECDHCurve = self._configureOpenSSL101
+
+
+    def _configureOpenSSL110(self, ctx):
+        """
+        OpenSSL 1.1.0 Contexts are preconfigured with an optimal set
+        of ECDH curves.  This method does nothing.
+
+        @param ctx: L{OpenSSL.SSL.Context}
+        """
+
+
+    def _configureOpenSSL102(self, ctx):
+        """
+        Have the context automatically choose elliptic curves for
+        ECDH.  Run on OpenSSL 1.0.2 and OpenSSL 1.1.0+, but only has
+        an effect on OpenSSL 1.0.2.
+
+        @param ctx: The context which .
+        @type ctx: L{OpenSSL.SSL.Context}
+        """
+        ctxPtr = ctx._context
+        try:
+            self._openSSLlib.SSL_CTX_set_ecdh_auto(ctxPtr, True)
+        except:
+            pass
+
+
+    def _configureOpenSSL101(self, ctx):
+        """
+        Set the default elliptic curve for ECDH on the context.  Only
+        run on OpenSSL 1.0.1.
+
+        @param ctx: The context on which to set the ECDH curve.
+        @type ctx: L{OpenSSL.SSL.Context}
+        """
+        try:
+            ctx.set_tmp_ecdh(self._ecCurve)
+        except:
+            pass
+
+
+    def _configureOpenSSL101NoCurves(self, ctx):
+        """
+        No elliptic curves are available on OpenSSL 1.0.1. We can't
+        set anything, so do nothing.
+
+        @param ctx: The context on which to set the ECDH curve.
+        @type ctx: L{OpenSSL.SSL.Context}
+        """
+
+
+
 class OpenSSLDiffieHellmanParameters(object):
     """
     A representation of key generation parameters that are required for
@@ -1867,7 +1994,7 @@ class OpenSSLDiffieHellmanParameters(object):
         Such a file can be generated using the C{openssl} command line tool as
         following:
 
-        C{openssl dhparam -out dh_param_1024.pem -2 1024}
+        C{openssl dhparam -out dh_param_2048.pem -2 2048}
 
         Please refer to U{OpenSSL's C{dhparam} documentation
         <http://www.openssl.org/docs/apps/dhparam.html>} for further details.

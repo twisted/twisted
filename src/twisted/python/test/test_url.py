@@ -5,12 +5,10 @@
 """
 Tests for L{twisted.python.url}.
 """
-from __future__ import unicode_literals
 
 from ..url import URL
 
-unicode = type(u'')
-
+from twisted.python.compat import unicode
 from twisted.trial.unittest import SynchronousTestCase
 
 
@@ -474,20 +472,6 @@ class TestURL(SynchronousTestCase):
             url.remove(u"foo"),
             URL.fromText(u"https://example.com/a/b/?bar=2")
         )
-
-
-    def test_parseEqualSignInParamValue(self):
-        """
-        Every C{=}-sign after the first in a query parameter is simply included
-        in the value of the parameter.
-        """
-        u = URL.fromText('http://localhost/?=x=x=x')
-        self.assertEqual(u.get(u''), ['x=x=x'])
-        self.assertEqual(u.asText(), 'http://localhost/?=x%3Dx%3Dx')
-        u = URL.fromText('http://localhost/?foo=x=x=x&bar=y')
-        self.assertEqual(u.query, (('foo', 'x=x=x'),
-                                             ('bar', 'y')))
-        self.assertEqual(u.asText(), 'http://localhost/?foo=x%3Dx%3Dx&bar=y')
 
 
     def test_empty(self):

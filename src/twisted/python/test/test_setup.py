@@ -8,24 +8,23 @@ Tests for parts of our release automation system.
 
 import os
 
-
 from pkg_resources import parse_requirements
 from setuptools.dist import Distribution
 import twisted
-from twisted.trial.unittest import TestCase
+from twisted.trial.unittest import SynchronousTestCase
 
 from twisted.python import _setup, filepath
-from twisted.python.compat import _PY3
 from twisted.python._setup import (
     BuildPy3,
     getSetupArgs,
+    _longDescriptionArgsFromReadme,
     ConditionalExtension,
     _EXTRAS_REQUIRE,
     )
 
 
 
-class SetupTests(TestCase):
+class SetupTests(SynchronousTestCase):
     """
     Tests for L{getSetupArgs}.
     """
@@ -38,9 +37,9 @@ class SetupTests(TestCase):
         good_ext = ConditionalExtension("whatever", ["whatever.c"],
                                         condition=lambda b: True)
         bad_ext = ConditionalExtension("whatever", ["whatever.c"],
-                                        condition=lambda b: False)
+                                       condition=lambda b: False)
 
-        args = getSetupArgs(extensions=[good_ext, bad_ext])
+        args = getSetupArgs(extensions=[good_ext, bad_ext], readme=None)
 
         # ext_modules should be set even though it's not used.  See comment
         # in getSetupArgs
@@ -60,7 +59,7 @@ class SetupTests(TestCase):
         ext = ConditionalExtension("whatever", ["whatever.c"],
                                    define_macros=[("whatever", 2)])
 
-        args = getSetupArgs(extensions=[ext])
+        args = getSetupArgs(extensions=[ext], readme=None)
 
         builder = args["cmdclass"]["build_ext"](Distribution())
         self.patch(os, "name", "nt")
@@ -69,7 +68,7 @@ class SetupTests(TestCase):
 
 
 
-class OptionalDependenciesTests(TestCase):
+class OptionalDependenciesTests(SynchronousTestCase):
     """
     Tests for L{_EXTRAS_REQUIRE}
     """
@@ -117,13 +116,13 @@ class OptionalDependenciesTests(TestCase):
         self.assertIn('dev', _EXTRAS_REQUIRE)
         self.assertIn('tls', _EXTRAS_REQUIRE)
         self.assertIn('conch', _EXTRAS_REQUIRE)
-        self.assertIn('soap', _EXTRAS_REQUIRE)
         self.assertIn('serial', _EXTRAS_REQUIRE)
         self.assertIn('all_non_platform', _EXTRAS_REQUIRE)
         self.assertIn('macos_platform', _EXTRAS_REQUIRE)
         self.assertIn('osx_platform', _EXTRAS_REQUIRE)  # Compat for macOS
         self.assertIn('windows_platform', _EXTRAS_REQUIRE)
         self.assertIn('http2', _EXTRAS_REQUIRE)
+        self.assertIn('contextvars', _EXTRAS_REQUIRE)
 
 
     def test_extrasRequiresDevDeps(self):
@@ -136,9 +135,7 @@ class OptionalDependenciesTests(TestCase):
         self.assertIn('twisted-dev-tools >= 0.0.2', deps)
         self.assertIn('python-subunit', deps)
         self.assertIn('sphinx >= 1.3.1', deps)
-        if not _PY3:
-            self.assertIn('twistedchecker >= 0.4.0', deps)
-            self.assertIn('pydoctor >= 16.2.0', deps)
+        self.assertIn('twistedchecker >= 0.7.2', deps)
 
 
     def test_extrasRequiresTlsDeps(self):
@@ -149,8 +146,8 @@ class OptionalDependenciesTests(TestCase):
         """
         deps = _EXTRAS_REQUIRE['tls']
         self.assertIn('pyopenssl >= 16.0.0', deps)
-        self.assertIn('service_identity', deps)
-        self.assertIn('idna >= 0.6, != 2.3', deps)
+        self.assertIn('service_identity >= 18.1.0', deps)
+        self.assertIn('idna >= 2.4', deps)
 
 
     def test_extrasRequiresConchDeps(self):
@@ -161,19 +158,8 @@ class OptionalDependenciesTests(TestCase):
         """
         deps = _EXTRAS_REQUIRE['conch']
         self.assertIn('pyasn1', deps)
-        self.assertIn('cryptography >= 1.5', deps)
+        self.assertIn('cryptography >= 2.6', deps)
         self.assertIn('appdirs >= 1.4.0', deps)
-
-
-    def test_extrasRequiresSoapDeps(self):
-        """
-        L{_EXTRAS_REQUIRE}' C{soap} extra contains setuptools requirements for
-        the packages required to make the C{twisted.web.soap} module function.
-        """
-        self.assertIn(
-            'soappy',
-            _EXTRAS_REQUIRE['soap']
-        )
 
 
     def test_extrasRequiresSerialDeps(self):
@@ -197,6 +183,16 @@ class OptionalDependenciesTests(TestCase):
         self.assertIn('priority >= 1.1.0, < 2.0', deps)
 
 
+    def test_extrasRequiresContextvarsDeps(self):
+        """
+        L{_EXTRAS_REQUIRES}'s C{contextvars} extra contains setuptools
+        requirements for the packages required to make Twisted contextvars
+        support work in Python versions less than 3.7 which do not contain
+        the contextvars library in the standard library.
+        """
+        deps = _EXTRAS_REQUIRE['contextvars']
+        self.assertIn('contextvars >= 2.4, < 3; python_version < "3.7"', deps)
+
     def test_extrasRequiresAllNonPlatformDeps(self):
         """
         L{_EXTRAS_REQUIRE}'s C{all_non_platform} extra contains setuptools
@@ -205,15 +201,15 @@ class OptionalDependenciesTests(TestCase):
         """
         deps = _EXTRAS_REQUIRE['all_non_platform']
         self.assertIn('pyopenssl >= 16.0.0', deps)
-        self.assertIn('service_identity', deps)
-        self.assertIn('idna >= 0.6, != 2.3', deps)
+        self.assertIn('service_identity >= 18.1.0', deps)
+        self.assertIn('idna >= 2.4', deps)
         self.assertIn('pyasn1', deps)
-        self.assertIn('cryptography >= 1.5', deps)
-        self.assertIn('soappy', deps)
+        self.assertIn('cryptography >= 2.6', deps)
         self.assertIn('pyserial >= 3.0', deps)
         self.assertIn('appdirs >= 1.4.0', deps)
         self.assertIn('h2 >= 3.0, < 4.0', deps)
         self.assertIn('priority >= 1.1.0, < 2.0', deps)
+        self.assertIn('contextvars >= 2.4, < 3; python_version < "3.7"', deps)
 
 
     def test_extrasRequiresMacosPlatformDeps(self):
@@ -224,15 +220,15 @@ class OptionalDependenciesTests(TestCase):
         """
         deps = _EXTRAS_REQUIRE['macos_platform']
         self.assertIn('pyopenssl >= 16.0.0', deps)
-        self.assertIn('service_identity', deps)
-        self.assertIn('idna >= 0.6, != 2.3', deps)
+        self.assertIn('service_identity >= 18.1.0', deps)
+        self.assertIn('idna >= 2.4', deps)
         self.assertIn('pyasn1', deps)
-        self.assertIn('cryptography >= 1.5', deps)
-        self.assertIn('soappy', deps)
+        self.assertIn('cryptography >= 2.6', deps)
         self.assertIn('pyserial >= 3.0', deps)
         self.assertIn('h2 >= 3.0, < 4.0', deps)
         self.assertIn('priority >= 1.1.0, < 2.0', deps)
         self.assertIn('pyobjc-core', deps)
+        self.assertIn('contextvars >= 2.4, < 3; python_version < "3.7"', deps)
 
 
     def test_extrasRequireMacOSXPlatformDeps(self):
@@ -251,15 +247,15 @@ class OptionalDependenciesTests(TestCase):
         """
         deps = _EXTRAS_REQUIRE['windows_platform']
         self.assertIn('pyopenssl >= 16.0.0', deps)
-        self.assertIn('service_identity', deps)
-        self.assertIn('idna >= 0.6, != 2.3', deps)
+        self.assertIn('service_identity >= 18.1.0', deps)
+        self.assertIn('idna >= 2.4', deps)
         self.assertIn('pyasn1', deps)
-        self.assertIn('cryptography >= 1.5', deps)
-        self.assertIn('soappy', deps)
+        self.assertIn('cryptography >= 2.6', deps)
         self.assertIn('pyserial >= 3.0', deps)
         self.assertIn('h2 >= 3.0, < 4.0', deps)
         self.assertIn('priority >= 1.1.0, < 2.0', deps)
-        self.assertIn('pypiwin32', deps)
+        self.assertIn('pywin32 != 226', deps)
+        self.assertIn('contextvars >= 2.4, < 3; python_version < "3.7"', deps)
 
 
 
@@ -295,7 +291,7 @@ fakeOtherPlatform = FakeModule({"python_implementation": lambda: "lvhpy"})
 
 
 
-class WithPlatformTests(TestCase):
+class WithPlatformTests(SynchronousTestCase):
     """
     Tests for L{_checkCPython} when used with a (fake) C{platform} module.
     """
@@ -316,14 +312,11 @@ class WithPlatformTests(TestCase):
 
 
 
-class BuildPy3Tests(TestCase):
+class BuildPy3Tests(SynchronousTestCase):
     """
     Tests for L{BuildPy3}.
     """
     maxDiff = None
-
-    if not _PY3:
-        skip = "BuildPy3 setuptools command used with Python 3 only."
 
     def test_find_package_modules(self):
         """
@@ -363,3 +356,39 @@ class BuildPy3Tests(TestCase):
             ]),
             sorted(result),
         )
+
+
+
+class LongDescriptionTests(SynchronousTestCase):
+    """
+    Tests for C{_getLongDescriptionArgs()}
+
+    Note that the validity of the reStructuredText syntax is tested separately
+    using L{twine check} in L{tox.ini}.
+    """
+    def test_generate(self):
+        """
+        L{_longDescriptionArgsFromReadme()} outputs a L{long_description} in
+        reStructuredText format. Local links are transformed into absolute ones
+        that point at the Twisted GitHub repository.
+        """
+        path = self.mktemp()
+        with open(path, 'w') as f:
+            f.write('\n'.join([
+                'Twisted',
+                '=======',
+                '',
+                'Changes: `NEWS <NEWS.rst>`_.',
+                "Read `the docs <https://twistedmatrix.com/documents/>`_.\n",
+            ]))
+
+        self.assertEqual({
+            'long_description': '''\
+Twisted
+=======
+
+Changes: `NEWS <https://github.com/twisted/twisted/blob/trunk/NEWS.rst>`_.
+Read `the docs <https://twistedmatrix.com/documents/>`_.
+''',
+            'long_description_content_type': 'text/x-rst',
+        }, _longDescriptionArgsFromReadme(path))

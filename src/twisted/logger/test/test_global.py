@@ -5,7 +5,6 @@
 Test cases for L{twisted.logger._global}.
 """
 
-from __future__ import print_function
 
 import io
 
@@ -18,6 +17,7 @@ from .._global import LogBeginner
 from .._global import MORE_THAN_ONCE_WARNING
 from .._levels import LogLevel
 from ..test.test_stdlib import nextLine
+from twisted.python.failure import Failure
 
 
 
@@ -356,3 +356,16 @@ class LogBeginnerTests(unittest.TestCase):
                 filename=__file__, lineno=2,
             )]
         )
+
+
+    def test_failuresAppendTracebacks(self):
+        """
+        The string resulting from a logged failure contains a traceback.
+        """
+        f = Failure(Exception("this is not the behavior you are looking for"))
+        log = Logger(observer=self.publisher)
+        log.failure('a failure', failure=f)
+        msg = self.errorStream.getvalue()
+        self.assertIn('a failure', msg)
+        self.assertIn('this is not the behavior you are looking for', msg)
+        self.assertIn('Traceback', msg)

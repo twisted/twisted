@@ -36,6 +36,7 @@ class IPProtocol(protocol.AbstractDatagramProtocol):
     def __init__(self):
         self.ipProtos = {}
 
+
     def addProto(self, num, proto):
         proto = raw.IRawDatagramProtocol(proto)
         if num < 0:
@@ -45,6 +46,7 @@ class IPProtocol(protocol.AbstractDatagramProtocol):
         if num not in self.ipProtos:
             self.ipProtos[num] = []
         self.ipProtos[num].append(proto)
+
 
     def datagramReceived(self,
                          data,

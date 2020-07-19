@@ -33,8 +33,10 @@ here.
 @var notPortedModules: Modules that are not yet ported to Python 3.
 """
 
+import io
 import os
 import platform
+import re
 import sys
 
 from distutils.command import build_ext
@@ -42,12 +44,6 @@ from distutils.errors import CompileError
 from setuptools import Extension, find_packages
 from setuptools.command.build_py import build_py
 
-# Do not replace this with t.p.compat imports, this file must not import
-# from Twisted. See the docstring.
-if sys.version_info < (3, 0):
-    _PY3 = False
-else:
-    _PY3 = True
 
 STATIC_PACKAGE_METADATA = dict(
     name="Twisted",
@@ -56,19 +52,21 @@ STATIC_PACKAGE_METADATA = dict(
     author_email="twisted-python@twistedmatrix.com",
     maintainer="Glyph Lefkowitz",
     maintainer_email="glyph@twistedmatrix.com",
-    url="http://twistedmatrix.com/",
+    url="https://twistedmatrix.com/",
+    project_urls={
+        'Documentation': 'https://twistedmatrix.com/documents/current/',
+        'Source': 'https://github.com/twisted/twisted',
+        'Issues': 'https://twistedmatrix.com/trac/report',
+    },
     license="MIT",
-    long_description="""\
-An extensible framework for Python programming, with special focus
-on event-based network programming and multiprotocol integration.
-""",
     classifiers=[
-        "Programming Language :: Python :: 2.7",
         "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.4",
+        "Programming Language :: Python :: 3 :: Only",
         "Programming Language :: Python :: 3.5",
         "Programming Language :: Python :: 3.6",
+        "Programming Language :: Python :: 3.7",
     ],
+    python_requires='>=3.5',
 )
 
 
@@ -77,55 +75,51 @@ _dev = [
     'twisted-dev-tools >= 0.0.2',
     'python-subunit',
     'sphinx >= 1.3.1',
-    'towncrier >= 17.4.0'
+    'towncrier >= 17.4.0',
+    'twistedchecker >= 0.7.2',
 ]
-
-if not _PY3:
-    # These modules do not yet work on Python 3.
-    _dev += [
-        'twistedchecker >= 0.4.0',
-        'pydoctor >= 16.2.0',
-    ]
 
 _EXTRA_OPTIONS = dict(
     dev=_dev,
     tls=[
         'pyopenssl >= 16.0.0',
-        'service_identity',
-        # idna 2.3 introduced some changes that break a few things.  Avoid it.
-        # The problems were fixed in 2.4.
-        'idna >= 0.6, != 2.3',
+        # service_identity 18.1.0 added support for validating IP addresses in
+        # certificate subjectAltNames
+        'service_identity >= 18.1.0',
+        'idna >= 2.4',
     ],
     conch=[
         'pyasn1',
-        'cryptography >= 1.5',
+        'cryptography >= 2.6',
         'appdirs >= 1.4.0',
+        'bcrypt >= 3.0.0',
     ],
-    soap=['soappy'],
-    serial=['pyserial >= 3.0'],
+    serial=['pyserial >= 3.0',
+            'pywin32 != 226; platform_system == "Windows"'],
     macos=['pyobjc-core',
-         'pyobjc-framework-CFNetwork',
-         'pyobjc-framework-Cocoa'],
-    windows=['pypiwin32'],
+           'pyobjc-framework-CFNetwork',
+           'pyobjc-framework-Cocoa'],
+    windows=['pywin32 != 226'],
     http2=['h2 >= 3.0, < 4.0',
            'priority >= 1.1.0, < 2.0'],
+    contextvars=['contextvars >= 2.4, < 3; python_version < "3.7"'],
 )
 
 _PLATFORM_INDEPENDENT = (
     _EXTRA_OPTIONS['tls'] +
     _EXTRA_OPTIONS['conch'] +
-    _EXTRA_OPTIONS['soap'] +
     _EXTRA_OPTIONS['serial'] +
-    _EXTRA_OPTIONS['http2']
+    _EXTRA_OPTIONS['http2'] +
+    _EXTRA_OPTIONS['contextvars']
 )
 
 _EXTRAS_REQUIRE = {
     'dev': _EXTRA_OPTIONS['dev'],
     'tls': _EXTRA_OPTIONS['tls'],
     'conch': _EXTRA_OPTIONS['conch'],
-    'soap': _EXTRA_OPTIONS['soap'],
     'serial': _EXTRA_OPTIONS['serial'],
     'http2': _EXTRA_OPTIONS['http2'],
+    'contextvars': _EXTRA_OPTIONS['contextvars'],
     'all_non_platform': _PLATFORM_INDEPENDENT,
     'macos_platform': (
         _EXTRA_OPTIONS['macos'] + _PLATFORM_INDEPENDENT
@@ -141,19 +135,13 @@ _CONSOLE_SCRIPTS = [
     "ckeygen = twisted.conch.scripts.ckeygen:run",
     "cftp = twisted.conch.scripts.cftp:run",
     "conch = twisted.conch.scripts.conch:run",
+    "mailmail = twisted.mail.scripts.mailmail:run",
     "pyhtmlizer = twisted.scripts.htmlizer:run",
     "tkconch = twisted.conch.scripts.tkconch:run",
     "trial = twisted.scripts.trial:run",
     "twist = twisted.application.twist._twist:Twist.main",
     "twistd = twisted.scripts.twistd:run",
     ]
-# Scripts provided by Twisted on Python 2 only.
-_CONSOLE_SCRIPTS_PY2 = [
-    "mailmail = twisted.mail.scripts.mailmail:run",
-    ]
-
-if not _PY3:
-    _CONSOLE_SCRIPTS = _CONSOLE_SCRIPTS + _CONSOLE_SCRIPTS_PY2
 
 
 
@@ -188,36 +176,58 @@ _EXTENSIONS = [
             ],
         libraries=["ws2_32"],
         condition=lambda _: _isCPython and sys.platform == "win32"),
-
-    ConditionalExtension(
-        "twisted.python._sendmsg",
-        sources=["src/twisted/python/_sendmsg.c"],
-        condition=lambda _: not _PY3 and sys.platform != "win32"),
     ]
 
 
 
-def _checkPythonVersion():
+def _longDescriptionArgsFromReadme(readme):
     """
-    Fail if we detect a version of Python we don't support.
+    Generate a PyPI long description from the readme.
+
+    @param readme: Path to the readme reStructuredText file.
+    @type readme: C{str}
+
+    @return: Keyword arguments to be passed to C{setuptools.setup()}.
+    @rtype: C{str}
     """
-    version = getattr(sys, "version_info", (0,))
-    if version < (2, 7):
-        raise ImportError("Twisted requires Python 2.7 or later.")
-    elif version >= (3, 0) and version < (3, 4):
-        raise ImportError("Twisted on Python 3 requires Python 3.4 or later.")
+    with io.open(readme, encoding='utf-8') as f:
+        readmeRst = f.read()
+
+    # Munge links of the form `NEWS <NEWS.rst>`_ to point at the appropriate
+    # location on GitHub so that they function when the long description is
+    # displayed on PyPI.
+    longDesc = re.sub(
+        r'`([^`]+)\s+<(?!https?://)([^>]+)>`_',
+        r'`\1 <https://github.com/twisted/twisted/blob/trunk/\2>`_',
+        readmeRst,
+        flags=re.I,
+    )
+
+    return {
+        'long_description': longDesc,
+        'long_description_content_type': 'text/x-rst',
+    }
 
 
 
-def getSetupArgs(extensions=_EXTENSIONS):
+def getSetupArgs(extensions=_EXTENSIONS, readme='README.rst'):
     """
+    Generate arguments for C{setuptools.setup()}
 
-    @return: The keyword arguments to be used the the setup method.
+    @param extensions: C extension modules to maybe build. This argument is to
+        be used for testing.
+    @type extensions: C{list} of C{ConditionalExtension}
+
+    @param readme: Path to the readme reStructuredText file. This argument is
+        to be used for testing.
+    @type readme: C{str}
+
+    @return: The keyword arguments to be used by the setup method.
     @rtype: L{dict}
     """
-    _checkPythonVersion()
-
     arguments = STATIC_PACKAGE_METADATA.copy()
+    if readme:
+        arguments.update(_longDescriptionArgsFromReadme(readme))
 
     # This is a workaround for distutils behavior; ext_modules isn't
     # actually used by our custom builder.  distutils deep-down checks
@@ -233,17 +243,17 @@ def getSetupArgs(extensions=_EXTENSIONS):
         conditionalExtensions = extensions
     command_classes = {
         'build_ext': my_build_ext,
+        'build_py': BuildPy3
     }
-
-    if sys.version_info[0] >= 3:
-        command_classes['build_py'] = BuildPy3
 
     requirements = [
         "zope.interface >= 4.4.2",
         "constantly >= 15.1",
         "incremental >= 16.10.1",
-        "Automat >= 0.3.0",
+        "Automat >= 0.8.0",
         "hyperlink >= 17.1.1",
+        "PyHamcrest >= 1.9.0",
+        "attrs >= 19.2.0",
     ]
 
     arguments.update(dict(
@@ -256,6 +266,9 @@ def getSetupArgs(extensions=_EXTENSIONS):
         },
         cmdclass=command_classes,
         include_package_data=True,
+        exclude_package_data={
+            "": ["*.c", "*.h", "*.pxi", "*.pyx", "build.bat"],
+        },
         zip_safe=False,
         extras_require=_EXTRAS_REQUIRE,
         package_dir={"": "src"},
@@ -279,10 +292,10 @@ class BuildPy3(build_py, object):
 
 
 
-## Helpers and distutil tweaks
+# Helpers and distutil tweaks
 
 
-class build_ext_twisted(build_ext.build_ext, object):
+class build_ext_twisted(build_ext.build_ext, object):  # type: ignore[name-defined]  # noqa
     """
     Allow subclasses to easily detect and customize Extensions to
     build at install-time.
@@ -305,7 +318,7 @@ class build_ext_twisted(build_ext.build_ext, object):
         # _XOPEN_SOURCE_EXTENDED macros to build in order to gain access to
         # the msg_control, msg_controllen, and msg_flags members in
         # sendmsg.c. (according to
-        # http://stackoverflow.com/questions/1034587).  See the documentation
+        # https://stackoverflow.com/questions/1034587).  See the documentation
         # of X/Open CAE in the standards(5) man page of Solaris.
         if sys.platform.startswith('sunos'):
             self.define_macros.append(('_XOPEN_SOURCE', 1))
@@ -360,7 +373,7 @@ class build_ext_twisted(build_ext.build_ext, object):
 
 
 
-def _checkCPython(sys=sys, platform=platform):
+def _checkCPython(sys=sys, platform=platform) -> bool:
     """
     Checks if this implementation is CPython.
 
@@ -376,7 +389,8 @@ def _checkCPython(sys=sys, platform=platform):
     return platform.python_implementation() == "CPython"
 
 
-_isCPython = _checkCPython()
+
+_isCPython = _checkCPython()  # type: bool
 
 notPortedModules = [
     "twisted.mail.alias",
@@ -386,34 +400,13 @@ notPortedModules = [
     "twisted.mail.pb",
     "twisted.mail.relaymanager",
     "twisted.mail.scripts.__init__",
-    "twisted.mail.scripts.mailmail",
     "twisted.mail.tap",
     "twisted.mail.test.test_bounce",
     "twisted.mail.test.test_mail",
-    "twisted.mail.test.test_mailmail",
     "twisted.mail.test.test_options",
     "twisted.mail.test.test_scripts",
-    "twisted.news.__init__",
-    "twisted.news.database",
-    "twisted.news.news",
-    "twisted.news.nntp",
-    "twisted.news.tap",
-    "twisted.news.test.__init__",
-    "twisted.news.test.test_database",
-    "twisted.news.test.test_news",
-    "twisted.news.test.test_nntp",
     "twisted.plugins.twisted_mail",
-    "twisted.plugins.twisted_news",
-    "twisted.protocols.mice.__init__",
-    "twisted.protocols.mice.mouseman",
     "twisted.protocols.shoutcast",
-    "twisted.python._pydoctor",
-    "twisted.python.finalize",
-    "twisted.python.hook",
-    "twisted.python.test.cmodulepullpipe",
-    "twisted.python.test.test_pydoctor",
-    "twisted.python.test.test_win32",
-    "twisted.test.test_hook",
     "twisted.web.soap",
     "twisted.web.test.test_soap",
 ]

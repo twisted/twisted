@@ -5,7 +5,6 @@
 Tests for L{twisted.test.iosim}.
 """
 
-from __future__ import absolute_import, division
 
 from zope.interface import implementer
 
@@ -44,6 +43,19 @@ class FakeTransportTests(TestCase):
         a.writeSequence([b"b", b"c", b"d"])
 
         self.assertEqual(b"".join(a.stream), b"abcd")
+
+
+    def test_writeAfterClose(self):
+        """
+        L{FakeTransport.write} will accept writes after transport was closed,
+        but the data will be silently discarded.
+        """
+        a = FakeTransport(object(), False)
+        a.write(b"before")
+        a.loseConnection()
+        a.write(b"after")
+
+        self.assertEqual(b"".join(a.stream), b"before")
 
 
 

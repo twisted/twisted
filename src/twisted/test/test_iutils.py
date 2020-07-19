@@ -5,19 +5,23 @@
 Test running processes with the APIs in L{twisted.internet.utils}.
 """
 
-from __future__ import division, absolute_import
 
-import warnings, os, stat, sys, signal
+import os
+import signal
+import stat
+import sys
+import warnings
+from unittest import skipIf
 
-from twisted.python.compat import _PY3
 from twisted.python.runtime import platform
-from twisted.trial import unittest
+from twisted.trial.unittest import SynchronousTestCase, TestCase
 from twisted.internet import error, reactor, utils, interfaces
 from twisted.internet.defer import Deferred
 from twisted.python.test.test_util import SuppressedWarningsTests
 
 
-class ProcessUtilsTests(unittest.TestCase):
+
+class ProcessUtilsTests(TestCase):
     """
     Test running a process using L{getProcessOutput}, L{getProcessValue}, and
     L{getProcessOutputAndValue}.
@@ -49,13 +53,8 @@ class ProcessUtilsTests(unittest.TestCase):
         scriptFile = self.makeSourceFile([
                 "import sys",
                 "for s in b'hello world\\n':",
-                "    if hasattr(sys.stdout, 'buffer'):",
-                "        # Python 3",
-                "        s = bytes([s])",
-                "        sys.stdout.buffer.write(s)",
-                "    else:",
-                "        # Python 2",
-                "        sys.stdout.write(s)",
+                "    s = bytes([s])",
+                "    sys.stdout.buffer.write(s)",
                 "    sys.stdout.flush()"])
         d = utils.getProcessOutput(self.exe, ['-u', scriptFile])
         return d.addCallback(self.assertEqual, b"hello world\n")
@@ -119,30 +118,21 @@ class ProcessUtilsTests(unittest.TestCase):
         """
         scriptFile = self.makeSourceFile([
             "import sys",
-            "if hasattr(sys.stdout, 'buffer'):",
-            "    # Python 3",
-            "    sys.stdout.buffer.write(b'hello world!\\n')",
-            "    sys.stderr.buffer.write(b'goodbye world!\\n')",
-            "else:",
-            "    # Python 2",
-            "    sys.stdout.write(b'hello world!\\n')",
-            "    sys.stderr.write(b'goodbye world!\\n')",
+            "sys.stdout.buffer.write(b'hello world!\\n')",
+            "sys.stderr.buffer.write(b'goodbye world!\\n')",
             "sys.exit(1)"
             ])
 
         def gotOutputAndValue(out_err_code):
             out, err, code = out_err_code
             self.assertEqual(out, b"hello world!\n")
-            if _PY3:
-                self.assertEqual(err, b"goodbye world!\n")
-            else:
-                self.assertEqual(err, b"goodbye world!" +
-                                      os.linesep)
+            self.assertEqual(err, b"goodbye world!\n")
             self.assertEqual(code, 1)
         d = utils.getProcessOutputAndValue(self.exe, ["-u", scriptFile])
         return d.addCallback(gotOutputAndValue)
 
 
+    @skipIf(platform.isWindows(), "Windows doesn't have real signals.")
     def test_outputSignal(self):
         """
         If the child process exits because of a signal, the L{Deferred}
@@ -170,8 +160,6 @@ class ProcessUtilsTests(unittest.TestCase):
         d = utils.getProcessOutputAndValue(self.exe, ['-u', scriptFile])
         d = self.assertFailure(d, tuple)
         return d.addCallback(gotOutputAndValue)
-    if platform.isWindows():
-        test_outputSignal.skip = "Windows doesn't have real signals."
 
 
     def _pathTest(self, utilFunc, check):
@@ -221,28 +209,29 @@ class ProcessUtilsTests(unittest.TestCase):
         os.makedirs(dir)
 
         scriptFile = self.makeSourceFile([
-                "import os, sys, stat",
-                # Fix the permissions so we can report the working directory.
-                # On macOS (and maybe elsewhere), os.getcwd() fails with EACCES
-                # if +x is missing from the working directory.
-                "os.chmod(%r, stat.S_IXUSR)" % (dir,),
-                "sys.stdout.write(os.getcwd())"])
+            "import os, sys",
+            "cdir = os.getcwd()",
+            "sys.stdout.write(cdir)"]
+        )
 
         # Switch to it, but make sure we switch back
         self.addCleanup(os.chdir, os.getcwd())
         os.chdir(dir)
 
-        # Get rid of all its permissions, but make sure they get cleaned up
-        # later, because otherwise it might be hard to delete the trial
-        # temporary directory.
-        self.addCleanup(
-            os.chmod, dir, stat.S_IMODE(os.stat('.').st_mode))
-        os.chmod(dir, 0)
+        # Remember its default permissions.
+        originalMode = stat.S_IMODE(os.stat('.').st_mode)
 
-        # Pass in -S so that if run using the coverage .pth trick, it won't be
-        # loaded and cause Coverage to try and get the current working
-        # directory (see the comments above why this can be a problem) on OSX.
-        d = utilFunc(self.exe, ['-S', '-u', scriptFile])
+        # On macOS Catalina (and maybe elsewhere), os.getcwd() sometimes fails
+        # with EACCES if u+rx is missing from the working directory, so don't
+        # reduce it further than this.
+        os.chmod(dir, stat.S_IXUSR | stat.S_IRUSR)
+
+        # Restore the permissions to their original state later (probably
+        # adding at least u+w), because otherwise it might be hard to delete
+        # the trial temporary directory.
+        self.addCleanup(os.chmod, dir, originalMode)
+
+        d = utilFunc(self.exe, ['-u', scriptFile])
         d.addCallback(check, dir.encode(sys.getfilesystemencoding()))
         return d
 
@@ -284,8 +273,35 @@ class ProcessUtilsTests(unittest.TestCase):
             utils.getProcessOutputAndValue, check)
 
 
+    def test_get_processOutputAndValueStdin(self):
+        """
+        Standard input can be made available to the child process by passing
+        bytes for the `stdinBytes` parameter.
+        """
+        scriptFile = self.makeSourceFile([
+            "import sys",
+            "sys.stdout.write(sys.stdin.read())",
+        ])
+        stdinBytes = b"These are the bytes to see."
+        d = utils.getProcessOutputAndValue(
+            self.exe,
+            ['-u', scriptFile],
+            stdinBytes=stdinBytes,
+        )
 
-class SuppressWarningsTests(unittest.SynchronousTestCase):
+        def gotOutputAndValue(out_err_code):
+            out, err, code = out_err_code
+            # Avoid making an exact equality comparison in case there is extra
+            # random output on stdout (warnings, stray print statements,
+            # logging, who knows).
+            self.assertIn(stdinBytes, out)
+            self.assertEqual(0, code)
+        d.addCallback(gotOutputAndValue)
+        return d
+
+
+
+class SuppressWarningsTests(SynchronousTestCase):
     """
     Tests for L{utils.suppressWarnings}.
     """

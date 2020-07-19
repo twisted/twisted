@@ -15,6 +15,7 @@ import base64
 import binascii
 import warnings
 from hashlib import md5
+from typing import Optional
 
 from zope.interface import implementer
 
@@ -33,7 +34,9 @@ from twisted.mail._except import (
 from twisted.protocols import basic
 from twisted.protocols import policies
 from twisted.python import log
-from twisted.python.compat import _PY3, intToBytes
+from twisted.python.compat import intToBytes
+
+
 
 # Authentication
 @implementer(cred.credentials.IUsernamePassword)
@@ -243,8 +246,7 @@ class _IteratorBuffer(object):
                     self.lines = []
                     self.bufSize = 0
 
-    if not _PY3:
-        next = __next__
+    next = __next__
 
 
 
@@ -448,7 +450,7 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
         <cred.credentials.IUsernameHashedPassword>} provider
     @ivar _auth: Authorization credentials.
     """
-    magic = None
+    magic = None  # type: Optional[bytes]
     _userIs = None
     _onLogout = None
 
@@ -575,8 +577,9 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
             return self.processCommand(*line.split(b' '))
         except (ValueError, AttributeError, POP3Error, TypeError) as e:
             log.err()
-            self.failResponse('bad protocol or server: {}: {}'.format(
-                e.__class__.__name__, e))
+            self.failResponse(b': '.join([b'bad protocol or server',
+                                          e.__class__.__name__.encode('utf-8'),
+                                          b''.join(e.args)]))
 
 
     def processCommand(self, command, *args):
@@ -727,7 +730,7 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
         self._auth = auth()
         chal = self._auth.getChallenge()
 
-        self.sendLine(b'+ ' + base64.encodestring(chal).rstrip(b'\n'))
+        self.sendLine(b'+ ' + base64.b64encode(chal))
         self.state = 'AUTH'
 
 
@@ -746,7 +749,7 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
         """
         self.state = "COMMAND"
         try:
-            parts = base64.decodestring(line).split(None, 1)
+            parts = base64.b64decode(line).split(None, 1)
         except binascii.Error:
             self.failResponse(b"Invalid BASE64 encoding")
         else:
@@ -862,7 +865,7 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
         self.successResponse(b'USER accepted, send PASS')
 
 
-    def do_PASS(self, password):
+    def do_PASS(self, password, *words):
         """
         Handle a PASS command.
 
@@ -874,15 +877,19 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
 
         @type password: L{bytes}
         @param password: A password.
+
+        @type words: L{tuple} of L{bytes}
+        @param words: Other parts of the password split by spaces.
         """
         if self._userIs is None:
             self.failResponse(b"USER required before PASS")
             return
         user = self._userIs
         self._userIs = None
+        password = b' '.join((password,) + words)
         d = defer.maybeDeferred(self.authenticateUserPASS, user, password)
-        d.addCallbacks(self._cbMailbox, self._ebMailbox, callbackArgs=(user,)
-        ).addErrback(self._ebUnexpected)
+        d.addCallbacks(self._cbMailbox, self._ebMailbox,
+                       callbackArgs=(user,)).addErrback(self._ebUnexpected)
 
 
     def _longOperation(self, d):
@@ -1355,6 +1362,11 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
                 IMailbox
             )
         raise cred.error.UnauthorizedLogin()
+
+
+    def stopProducing(self):
+        # IProducer.stopProducing
+        raise NotImplementedError()
 
 
 

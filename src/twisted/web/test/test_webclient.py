@@ -5,39 +5,40 @@
 Tests for the old L{twisted.web.client} APIs, C{getPage} and friends.
 """
 
-from __future__ import division, absolute_import
 
+import io
 import os
 from errno import ENOSPC
 
-try:
-    from urlparse import urlparse, urljoin
-except ImportError:
-    from urllib.parse import urlparse, urljoin
+from urllib.parse import urlparse, urljoin
 
 from twisted.python.compat import networkString, nativeString, intToBytes
+from twisted.python.reflect import requireModule
 from twisted.trial import unittest, util
 from twisted.web import server, client, error, resource
 from twisted.web.static import Data
 from twisted.web.util import Redirect
-from twisted.internet import reactor, defer, interfaces
+from twisted.internet import address, reactor, defer, interfaces
+from twisted.internet.protocol import ClientFactory
 from twisted.python.filepath import FilePath
 from twisted.protocols.policies import WrappingFactory
 from twisted.test.proto_helpers import (
     StringTransport, waitUntilAllDisconnected, EventLoggingObserver)
-
-try:
-    from twisted.internet import ssl
-except:
-    ssl = None
-
 from twisted import test
 from twisted.logger import (globalLogPublisher, FilteringLogObserver,
                             LogLevelFilterPredicate, LogLevel, Logger)
 
+from twisted.web.test.injectionhelpers import (
+    MethodInjectionTestsMixin,
+    URIInjectionTestsMixin,
+)
+
+
+ssl = requireModule('twisted.internet.ssl')
 
 serverPEM = FilePath(test.__file__).sibling('server.pem')
 serverPEMPath = serverPEM.asBytesMode().path
+
 
 
 class ExtendedRedirect(resource.Resource):
@@ -862,6 +863,13 @@ class WebClientTests(unittest.TestCase):
 
 
 class WebClientSSLTests(WebClientTests):
+
+    if ssl is None or not hasattr(ssl, 'DefaultOpenSSLContextFactory'):
+        skip = "OpenSSL not present"
+
+    if not interfaces.IReactorSSL(reactor, None):
+        skip = "Reactor doesn't support SSL"
+
     def _listen(self, site):
         return reactor.listenSSL(
             0, site,
@@ -886,12 +894,21 @@ class WebClientSSLTests(WebClientTests):
 class WebClientRedirectBetweenSSLandPlainTextTests(unittest.TestCase):
     suppress = [util.suppress(category=DeprecationWarning)]
 
+    if ssl is None or not hasattr(ssl, 'DefaultOpenSSLContextFactory'):
+        skip = "OpenSSL not present"
+
+    if not interfaces.IReactorSSL(reactor, None):
+        skip = "Reactor doesn't support SSL"
 
     def getHTTPS(self, path):
-        return networkString("https://127.0.0.1:%d/%s" % (self.tlsPortno, path))
+        return networkString("https://127.0.0.1:{}/{}".format(
+            self.tlsPortno, path))
+
 
     def getHTTP(self, path):
-        return networkString("http://127.0.0.1:%d/%s" % (self.plainPortno, path))
+        return networkString("http://127.0.0.1:{}/{}".format(
+            self.plainPortno, path))
+
 
     def setUp(self):
         plainRoot = Data(b'not me', 'text/plain')
@@ -1094,16 +1111,7 @@ class HostHeaderTests(unittest.TestCase):
         proto = factory.buildProtocol('127.42.42.42')
         proto.makeConnection(StringTransport())
         self.assertEqual(self._getHost(proto.transport.value()),
-                          b'foo.example.com:8080')
-
-
-if ssl is None or not hasattr(ssl, 'DefaultOpenSSLContextFactory'):
-    for case in [WebClientSSLTests, WebClientRedirectBetweenSSLandPlainTextTests]:
-        case.skip = "OpenSSL not present"
-
-if not interfaces.IReactorSSL(reactor, None):
-    for case in [WebClientSSLTests, WebClientRedirectBetweenSSLandPlainTextTests]:
-        case.skip = "Reactor doesn't support SSL"
+                         b'foo.example.com:8080')
 
 
 
@@ -1519,3 +1527,306 @@ class DeprecationTests(unittest.TestCase):
         L{client.HTTPDownloader} is deprecated.
         """
         self._testDeprecatedClass("HTTPDownloader")
+
+
+
+class GetPageMethodInjectionTests(
+        MethodInjectionTestsMixin,
+        unittest.SynchronousTestCase,
+):
+    """
+    Test L{client.getPage} against HTTP method injections.
+    """
+
+    def attemptRequestWithMaliciousMethod(self, method):
+        """
+        Attempt a request with the provided method.
+
+        @param method: see L{MethodInjectionTestsMixin}
+        """
+        uri = b'http://twisted.invalid'
+        client.getPage(uri, method=method)
+
+
+
+class GetPageURIInjectionTests(
+        URIInjectionTestsMixin,
+        unittest.SynchronousTestCase,
+):
+    """
+    Test L{client.getPage} against URI injections.
+    """
+
+    def attemptRequestWithMaliciousURI(self, uri):
+        """
+        Attempt a request with the provided URI.
+
+        @param uri: see L{URIInjectionTestsMixin}
+        """
+        client.getPage(uri)
+
+
+
+class DownloadPageMethodInjectionTests(
+        MethodInjectionTestsMixin,
+        unittest.SynchronousTestCase,
+):
+    """
+    Test L{client.getPage} against HTTP method injections.
+    """
+
+    def attemptRequestWithMaliciousMethod(self, method):
+        """
+        Attempt a request with the provided method.
+
+        @param method: see L{MethodInjectionTestsMixin}
+        """
+        uri = b'http://twisted.invalid'
+        client.downloadPage(uri, file=io.BytesIO(), method=method)
+
+
+
+class DownloadPageURIInjectionTests(
+        URIInjectionTestsMixin,
+        unittest.SynchronousTestCase,
+):
+    """
+    Test L{client.downloadPage} against URI injections.
+    """
+
+    def attemptRequestWithMaliciousURI(self, uri):
+        """
+        Attempt a request with the provided URI.
+
+        @param uri: see L{URIInjectionTestsMixin}
+        """
+        client.downloadPage(uri, file=io.BytesIO())
+
+
+
+def makeHTTPPageGetterFactory(protocolClass, method, host, path):
+    """
+    Make a L{ClientFactory} that can be used with
+    L{client.HTTPPageGetter} and its subclasses.
+
+    @param protocolClass: The protocol class
+    @type protocolClass: A subclass of L{client.HTTPPageGetter}
+
+    @param method: the HTTP method
+
+    @param host: the host
+
+    @param path: The URI path
+
+    @return: A L{ClientFactory}.
+    """
+    factory = ClientFactory.forProtocol(protocolClass)
+
+    factory.method = method
+    factory.host = host
+    factory.path = path
+
+    factory.scheme = b"http"
+    factory.port = 0
+    factory.headers = {}
+    factory.agent = b"User/Agent"
+    factory.cookies = {}
+
+    return factory
+
+
+
+class HTTPPageGetterMethodInjectionTests(
+        MethodInjectionTestsMixin,
+        unittest.SynchronousTestCase,
+):
+    """
+    Test L{client.HTTPPageGetter} against HTTP method injections.
+    """
+    protocolClass = client.HTTPPageGetter
+
+    def attemptRequestWithMaliciousMethod(self, method):
+        """
+        Attempt a request with the provided method.
+
+        @param method: L{MethodInjectionTestsMixin}
+        """
+        transport = StringTransport()
+        factory = makeHTTPPageGetterFactory(
+            self.protocolClass,
+            method=method,
+            host=b"twisted.invalid",
+            path=b"/",
+        )
+        getter = factory.buildProtocol(
+            address.IPv4Address("TCP", "127.0.0.1", 0),
+        )
+        getter.makeConnection(transport)
+
+
+
+class HTTPPageGetterURIInjectionTests(
+        URIInjectionTestsMixin,
+        unittest.SynchronousTestCase,
+):
+    """
+    Test L{client.HTTPPageGetter} against HTTP URI injections.
+    """
+    protocolClass = client.HTTPPageGetter
+
+    def attemptRequestWithMaliciousURI(self, uri):
+        """
+        Attempt a request with the provided URI.
+
+        @param uri: L{URIInjectionTestsMixin}
+        """
+        transport = StringTransport()
+        # Setting the host and path to the same value is imprecise but
+        # doesn't require parsing an invalid URI.
+        factory = makeHTTPPageGetterFactory(
+            self.protocolClass,
+            method=b"GET",
+            host=uri,
+            path=uri,
+        )
+        getter = factory.buildProtocol(
+            address.IPv4Address("TCP", "127.0.0.1", 0),
+        )
+        getter.makeConnection(transport)
+
+
+
+class HTTPPageDownloaderMethodInjectionTests(
+        HTTPPageGetterMethodInjectionTests
+):
+
+    """
+    Test L{client.HTTPPageDownloader} against HTTP method injections.
+    """
+    protocolClass = client.HTTPPageDownloader
+
+
+
+class HTTPPageDownloaderURIInjectionTests(
+        HTTPPageGetterURIInjectionTests
+):
+    """
+    Test L{client.HTTPPageDownloader} against HTTP URI injections.
+    """
+    protocolClass = client.HTTPPageDownloader
+
+
+
+class HTTPClientFactoryMethodInjectionTests(
+        MethodInjectionTestsMixin,
+        unittest.SynchronousTestCase,
+):
+    """
+    Tests L{client.HTTPClientFactory} against HTTP method injections.
+    """
+
+    def attemptRequestWithMaliciousMethod(self, method):
+        """
+        Attempt a request with the provided method.
+
+        @param method: L{MethodInjectionTestsMixin}
+        """
+        client.HTTPClientFactory(b"https://twisted.invalid", method)
+
+
+
+class HTTPClientFactoryURIInjectionTests(
+        URIInjectionTestsMixin,
+        unittest.SynchronousTestCase,
+):
+    """
+    Tests L{client.HTTPClientFactory} against HTTP URI injections.
+    """
+
+    def attemptRequestWithMaliciousURI(self, uri):
+        """
+        Attempt a request with the provided URI.
+
+        @param uri: L{URIInjectionTestsMixin}
+        """
+        client.HTTPClientFactory(uri)
+
+
+
+class HTTPClientFactorySetURLURIInjectionTests(
+        URIInjectionTestsMixin,
+        unittest.SynchronousTestCase,
+):
+    """
+    Tests L{client.HTTPClientFactory.setURL} against HTTP URI injections.
+    """
+
+    def attemptRequestWithMaliciousURI(self, uri):
+        """
+        Attempt a request with the provided URI.
+
+        @param uri: L{URIInjectionTestsMixin}
+        """
+        client.HTTPClientFactory(b"https://twisted.invalid").setURL(uri)
+
+
+
+class HTTPDownloaderMethodInjectionTests(
+        MethodInjectionTestsMixin,
+        unittest.SynchronousTestCase,
+):
+    """
+    Tests L{client.HTTPDownloader} against HTTP method injections.
+    """
+
+    def attemptRequestWithMaliciousMethod(self, method):
+        """
+        Attempt a request with the provided method.
+
+        @param method: L{MethodInjectionTestsMixin}
+        """
+        client.HTTPDownloader(
+            b"https://twisted.invalid",
+            io.BytesIO(),
+            method=method,
+        )
+
+
+
+class HTTPDownloaderURIInjectionTests(
+        URIInjectionTestsMixin,
+        unittest.SynchronousTestCase,
+):
+    """
+    Tests L{client.HTTPDownloader} against HTTP URI injections.
+    """
+
+    def attemptRequestWithMaliciousURI(self, uri):
+        """
+        Attempt a request with the provided URI.
+
+        @param uri: L{URIInjectionTestsMixin}
+        """
+        client.HTTPDownloader(uri, io.BytesIO())
+
+
+
+class HTTPDownloaderSetURLURIInjectionTests(
+        URIInjectionTestsMixin,
+        unittest.SynchronousTestCase,
+):
+    """
+    Tests L{client.HTTPDownloader.setURL} against HTTP URI injections.
+    """
+
+    def attemptRequestWithMaliciousURI(self, uri):
+        """
+        Attempt a request with the provided URI.
+
+        @param uri: L{URIInjectionTestsMixin}
+        """
+        downloader = client.HTTPDownloader(
+            b"https://twisted.invalid",
+            io.BytesIO(),
+        )
+        downloader.setURL(uri)

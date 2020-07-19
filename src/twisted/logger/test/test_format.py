@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
@@ -12,17 +13,17 @@ try:
     # We should upgrade to a version of pyflakes that does not require this.
     tzset
 except ImportError:
-    tzset = None
+    tzset = None  # type: ignore[assignment,misc]
 
 from twisted.trial import unittest
 from twisted.trial.unittest import SkipTest
 
-from twisted.python.compat import _PY3, unicode
 from .._levels import LogLevel
 from .._format import (
     formatEvent, formatUnformattableEvent, formatTime,
-    formatEventAsClassicLogText, formatWithCall,
+    formatEventAsClassicLogText, formatWithCall, eventAsText
 )
+from twisted.python.failure import Failure
 
 
 
@@ -45,39 +46,33 @@ class FormattingTests(unittest.TestCase):
               to call that key (which ought to be a callable) before
               formatting.
 
-        L{formatEvent} will always return L{unicode}, and if given bytes, will
+        L{formatEvent} will always return L{str}, and if given bytes, will
         always treat its format string as UTF-8 encoded.
         """
         def format(logFormat, **event):
             event["log_format"] = logFormat
             result = formatEvent(event)
-            self.assertIs(type(result), unicode)
+            self.assertIs(type(result), str)
             return result
 
-        self.assertEqual(u"", format(b""))
-        self.assertEqual(u"", format(u""))
-        self.assertEqual(u"abc", format("{x}", x="abc"))
+        self.assertEqual("", format(b""))
+        self.assertEqual("", format(""))
+        self.assertEqual("abc", format("{x}", x="abc"))
         self.assertEqual(
-            u"no, yes.",
+            "no, yes.",
             format(
                 "{not_called}, {called()}.",
                 not_called="no", called=lambda: "yes"
             )
         )
-        self.assertEqual(u"S\xe1nchez", format(b"S\xc3\xa1nchez"))
+        self.assertEqual("S\xe1nchez", format(b"S\xc3\xa1nchez"))
         badResult = format(b"S\xe1nchez")
         self.assertIn(u"Unable to format event", badResult)
         maybeResult = format(b"S{a!s}nchez", a=b"\xe1")
-        # The behavior of unicode.format("{x}", x=bytes) differs on py2 and
-        # py3.  Perhaps we should make our modified formatting more consistent
-        # than this? -glyph
-        if not _PY3:
-            self.assertIn(u"Unable to format event", maybeResult)
-        else:
-            self.assertIn(u"Sb'\\xe1'nchez", maybeResult)
+        self.assertIn("Sb'\\xe1'nchez", maybeResult)
 
-        xe1 = unicode(repr(b"\xe1"))
-        self.assertIn(u"S" + xe1 + "nchez", format(b"S{a!r}nchez", a=b"\xe1"))
+        xe1 = str(repr(b"\xe1"))
+        self.assertIn("S" + xe1 + "nchez", format(b"S{a!r}nchez", a=b"\xe1"))
 
 
     def test_formatEventNoFormat(self):
@@ -87,7 +82,7 @@ class FormattingTests(unittest.TestCase):
         event = dict(foo=1, bar=2)
         result = formatEvent(event)
 
-        self.assertEqual(u"", result)
+        self.assertEqual("", result)
 
 
     def test_formatEventWeirdFormat(self):
@@ -189,29 +184,29 @@ class TimeFormattingTests(unittest.TestCase):
         # UTC
         testForTimeZone(
             "UTC+00",
-            u"2006-06-30T00:00:00+0000",
-            u"2007-01-31T00:00:00+0000",
+            "2006-06-30T00:00:00+0000",
+            "2007-01-31T00:00:00+0000",
         )
 
         # West of UTC
         testForTimeZone(
             "EST+05EDT,M4.1.0,M10.5.0",
-            u"2006-06-30T00:00:00-0400",
-            u"2007-01-31T00:00:00-0500",
+            "2006-06-30T00:00:00-0400",
+            "2007-01-31T00:00:00-0500",
         )
 
         # East of UTC
         testForTimeZone(
             "CEST-01CEDT,M4.1.0,M10.5.0",
-            u"2006-06-30T00:00:00+0200",
-            u"2007-01-31T00:00:00+0100",
+            "2006-06-30T00:00:00+0200",
+            "2007-01-31T00:00:00+0100",
         )
 
         # No DST
         testForTimeZone(
             "CST+06",
-            u"2006-06-30T00:00:00-0600",
-            u"2007-01-31T00:00:00-0600",
+            "2006-06-30T00:00:00-0600",
+            "2007-01-31T00:00:00-0600",
         )
 
 
@@ -219,8 +214,8 @@ class TimeFormattingTests(unittest.TestCase):
         """
         If C{when} argument is L{None}, we get the default output.
         """
-        self.assertEqual(formatTime(None), u"-")
-        self.assertEqual(formatTime(None, default=u"!"), u"!")
+        self.assertEqual(formatTime(None), "-")
+        self.assertEqual(formatTime(None, default="!"), "!")
 
 
     def test_formatTimeWithNoFormat(self):
@@ -228,8 +223,8 @@ class TimeFormattingTests(unittest.TestCase):
         If C{timeFormat} argument is L{None}, we get the default output.
         """
         t = mktime((2013, 9, 24, 11, 40, 47, 1, 267, 1))
-        self.assertEqual(formatTime(t, timeFormat=None), u"-")
-        self.assertEqual(formatTime(t, timeFormat=None, default=u"!"), u"!")
+        self.assertEqual(formatTime(t, timeFormat=None), "-")
+        self.assertEqual(formatTime(t, timeFormat=None, default="!"), "!")
 
 
     def test_formatTimeWithAlternateTimeFormat(self):
@@ -237,14 +232,14 @@ class TimeFormattingTests(unittest.TestCase):
         Alternate time format in output.
         """
         t = mktime((2013, 9, 24, 11, 40, 47, 1, 267, 1))
-        self.assertEqual(formatTime(t, timeFormat="%Y/%W"), u"2013/38")
+        self.assertEqual(formatTime(t, timeFormat="%Y/%W"), "2013/38")
 
 
     def test_formatTimePercentF(self):
         """
         "%f" supported in time format.
         """
-        self.assertEqual(formatTime(1000000.23456, timeFormat="%f"), u"234560")
+        self.assertEqual(formatTime(1000000.23456, timeFormat="%f"), "234560")
 
 
 
@@ -268,10 +263,10 @@ class ClassicLogFormattingTests(unittest.TestCase):
         setTZ("UTC+00")
 
         t = mktime((2013, 9, 24, 11, 40, 47, 1, 267, 1))
-        event = dict(log_format=u"XYZZY", log_time=t)
+        event = dict(log_format="XYZZY", log_time=t)
         self.assertEqual(
             formatEventAsClassicLogText(event),
-            u"2013-09-24T11:40:47+0000 [-#-] XYZZY\n",
+            "2013-09-24T11:40:47+0000 [-\x23-] XYZZY\n",
         )
 
 
@@ -280,11 +275,13 @@ class ClassicLogFormattingTests(unittest.TestCase):
         Time is first field.  Custom formatting function is an optional
         argument.
         """
-        formatTime = lambda t: u"__{0}__".format(t)
-        event = dict(log_format=u"XYZZY", log_time=12345)
+        def formatTime(t):
+            return "__{0}__".format(t)
+
+        event = dict(log_format="XYZZY", log_time=12345)
         self.assertEqual(
             formatEventAsClassicLogText(event, formatTime=formatTime),
-            u"__12345__ [-#-] XYZZY\n",
+            "__12345__ [-\x23-] XYZZY\n",
         )
 
 
@@ -292,10 +289,10 @@ class ClassicLogFormattingTests(unittest.TestCase):
         """
         Namespace is first part of second field.
         """
-        event = dict(log_format=u"XYZZY", log_namespace="my.namespace")
+        event = dict(log_format="XYZZY", log_namespace="my.namespace")
         self.assertEqual(
             formatEventAsClassicLogText(event),
-            u"- [my.namespace#-] XYZZY\n",
+            "- [my.namespace\x23-] XYZZY\n",
         )
 
 
@@ -303,10 +300,10 @@ class ClassicLogFormattingTests(unittest.TestCase):
         """
         Level is second part of second field.
         """
-        event = dict(log_format=u"XYZZY", log_level=LogLevel.warn)
+        event = dict(log_format="XYZZY", log_level=LogLevel.warn)
         self.assertEqual(
             formatEventAsClassicLogText(event),
-            u"- [-#warn] XYZZY\n",
+            "- [-\x23warn] XYZZY\n",
         )
 
 
@@ -314,10 +311,10 @@ class ClassicLogFormattingTests(unittest.TestCase):
         """
         System is second field.
         """
-        event = dict(log_format=u"XYZZY", log_system=u"S.Y.S.T.E.M.")
+        event = dict(log_format="XYZZY", log_system="S.Y.S.T.E.M.")
         self.assertEqual(
             formatEventAsClassicLogText(event),
-            u"- [S.Y.S.T.E.M.] XYZZY\n",
+            "- [S.Y.S.T.E.M.] XYZZY\n",
         )
 
 
@@ -326,14 +323,14 @@ class ClassicLogFormattingTests(unittest.TestCase):
         System is not supplanted by namespace and level.
         """
         event = dict(
-            log_format=u"XYZZY",
+            log_format="XYZZY",
             log_namespace="my.namespace",
             log_level=LogLevel.warn,
-            log_system=u"S.Y.S.T.E.M.",
+            log_system="S.Y.S.T.E.M.",
         )
         self.assertEqual(
             formatEventAsClassicLogText(event),
-            u"- [S.Y.S.T.E.M.] XYZZY\n",
+            "- [S.Y.S.T.E.M.] XYZZY\n",
         )
 
 
@@ -341,10 +338,10 @@ class ClassicLogFormattingTests(unittest.TestCase):
         """
         System is not supplanted by namespace and level.
         """
-        event = dict(log_format=u"XYZZY", log_system=Unformattable())
+        event = dict(log_format="XYZZY", log_system=Unformattable())
         self.assertEqual(
             formatEventAsClassicLogText(event),
-            u"- [UNFORMATTABLE] XYZZY\n",
+            "- [UNFORMATTABLE] XYZZY\n",
         )
 
 
@@ -352,10 +349,10 @@ class ClassicLogFormattingTests(unittest.TestCase):
         """
         Formatted event is last field.
         """
-        event = dict(log_format=u"id:{id}", id="123")
+        event = dict(log_format="id:{id}", id="123")
         self.assertEqual(
             formatEventAsClassicLogText(event),
-            u"- [-#-] id:123\n",
+            "- [-\x23-] id:123\n",
         )
 
 
@@ -388,7 +385,7 @@ class ClassicLogFormattingTests(unittest.TestCase):
         event = dict(log_format=u'XYZZY\nA hollow voice says:\n"Plugh"')
         self.assertEqual(
             formatEventAsClassicLogText(event),
-            u'- [-#-] XYZZY\n\tA hollow voice says:\n\t"Plugh"\n',
+            u'- [-\x23-] XYZZY\n\tA hollow voice says:\n\t"Plugh"\n',
         )
 
 
@@ -400,21 +397,21 @@ class FormatFieldTests(unittest.TestCase):
 
     def test_formatWithCall(self):
         """
-        L{formatWithCall} is an extended version of L{unicode.format} that
+        L{formatWithCall} is an extended version of L{str.format} that
         will interpret a set of parentheses "C{()}" at the end of a format key
         to mean that the format key ought to be I{called} rather than
         stringified.
         """
         self.assertEqual(
             formatWithCall(
-                u"Hello, {world}. {callme()}.",
+                "Hello, {world}. {callme()}.",
                 dict(world="earth", callme=lambda: "maybe")
             ),
             "Hello, earth. maybe."
         )
         self.assertEqual(
             formatWithCall(
-                u"Hello, {repr()!r}.",
+                "Hello, {repr()!r}.",
                 dict(repr=lambda: "repr")
             ),
             "Hello, 'repr'."
@@ -429,3 +426,350 @@ class Unformattable(object):
 
     def __repr__(self):
         return str(1 / 0)
+
+
+
+class CapturedError(Exception):
+    """
+    A captured error for use in format tests.
+    """
+
+
+
+class EventAsTextTests(unittest.TestCase):
+    """
+    Tests for L{eventAsText}, all of which ensure that the
+    returned type is UTF-8 decoded text.
+    """
+
+    def test_eventWithTraceback(self):
+        """
+        An event with a C{log_failure} key will have a traceback appended.
+        """
+        try:
+            raise CapturedError("This is a fake error")
+        except CapturedError:
+            f = Failure()
+
+        event = {
+            "log_format": "This is a test log message"
+        }
+        event["log_failure"] = f
+        eventText = eventAsText(
+            event,
+            includeTimestamp=True,
+            includeSystem=False
+        )
+        self.assertIn(str(f.getTraceback()), eventText)
+        self.assertIn(u'This is a test log message', eventText)
+
+
+    def test_formatEmptyEventWithTraceback(self):
+        """
+        An event with an empty C{log_format} key appends a traceback from
+        the accompanying failure.
+        """
+        try:
+            raise CapturedError("This is a fake error")
+        except CapturedError:
+            f = Failure()
+        event = {
+            "log_format": ""
+        }
+        event["log_failure"] = f
+        eventText = eventAsText(
+            event,
+            includeTimestamp=True,
+            includeSystem=False
+        )
+        self.assertIn(str(f.getTraceback()), eventText)
+        self.assertIn(u'This is a fake error', eventText)
+
+
+    def test_formatUnformattableWithTraceback(self):
+        """
+        An event with an unformattable value in the C{log_format} key still
+        has a traceback appended.
+        """
+        try:
+            raise CapturedError("This is a fake error")
+        except CapturedError:
+            f = Failure()
+
+        event = {
+            "log_format": "{evil()}",
+            "evil": lambda: 1 / 0,
+        }
+        event["log_failure"] = f
+        eventText = eventAsText(
+            event,
+            includeTimestamp=True,
+            includeSystem=False
+        )
+        self.assertIsInstance(eventText, str)
+        self.assertIn(str(f.getTraceback()), eventText)
+        self.assertIn(u'This is a fake error', eventText)
+
+
+    def test_formatUnformattableErrorWithTraceback(self):
+        """
+        An event with an unformattable value in the C{log_format} key, that
+        throws an exception when __repr__ is invoked still has a traceback
+        appended.
+        """
+        try:
+            raise CapturedError("This is a fake error")
+        except CapturedError:
+            f = Failure()
+
+        event = {
+            "log_format": "{evil()}",
+            "evil": lambda: 1 / 0,
+            Unformattable(): "gurk",
+        }
+        event["log_failure"] = f
+        eventText = eventAsText(
+            event,
+            includeTimestamp=True,
+            includeSystem=False
+        )
+        self.assertIsInstance(eventText, str)
+        self.assertIn(u'MESSAGE LOST', eventText)
+        self.assertIn(str(f.getTraceback()), eventText)
+        self.assertIn(u'This is a fake error', eventText)
+
+
+    def test_formatEventUnformattableTraceback(self):
+        """
+        If a traceback cannot be appended, a message indicating this is true
+        is appended.
+        """
+        event = {
+            "log_format": ""
+        }
+        event["log_failure"] = object()
+        eventText = eventAsText(
+            event,
+            includeTimestamp=True,
+            includeSystem=False
+        )
+        self.assertIsInstance(eventText, str)
+        self.assertIn("(UNABLE TO OBTAIN TRACEBACK FROM EVENT)", eventText)
+
+
+    def test_formatEventNonCritical(self):
+        """
+        An event with no C{log_failure} key will not have a traceback appended.
+        """
+        event = {
+            "log_format": "This is a test log message"
+        }
+        eventText = eventAsText(
+            event,
+            includeTimestamp=True,
+            includeSystem=False
+        )
+        self.assertIsInstance(eventText, str)
+        self.assertIn(u'This is a test log message', eventText)
+
+
+    def test_formatTracebackMultibyte(self):
+        """
+        An exception message with multibyte characters is properly handled.
+        """
+        try:
+            raise CapturedError('€')
+        except CapturedError:
+            f = Failure()
+
+        event = {
+            "log_format": "This is a test log message"
+        }
+        event["log_failure"] = f
+        eventText = eventAsText(
+            event,
+            includeTimestamp=True,
+            includeSystem=False
+        )
+        self.assertIn(u'€', eventText)
+        self.assertIn(u'Traceback', eventText)
+
+
+    def test_formatTracebackHandlesUTF8DecodeFailure(self):
+        """
+        An error raised attempting to decode the UTF still produces a
+        valid log message.
+        """
+        try:
+            # 'test' in utf-16
+            raise CapturedError(b'\xff\xfet\x00e\x00s\x00t\x00')
+        except CapturedError:
+            f = Failure()
+
+        event = {
+            "log_format": "This is a test log message"
+        }
+        event["log_failure"] = f
+        eventText = eventAsText(
+            event,
+            includeTimestamp=True,
+            includeSystem=False
+        )
+        self.assertIn(u'Traceback', eventText)
+        self.assertIn(
+            r"CapturedError(b'\xff\xfet\x00e\x00s\x00t\x00')",
+            eventText
+        )
+
+
+    def test_eventAsTextSystemOnly(self):
+        """
+        If includeSystem is specified as the only option no timestamp or
+        traceback are printed.
+        """
+        try:
+            raise CapturedError("This is a fake error")
+        except CapturedError:
+            f = Failure()
+
+        t = mktime((2013, 9, 24, 11, 40, 47, 1, 267, 1))
+        event = {
+            "log_format": "ABCD",
+            "log_system": "fake_system",
+            "log_time": t,
+        }
+        event["log_failure"] = f
+        eventText = eventAsText(
+            event,
+            includeTimestamp=False,
+            includeTraceback=False,
+            includeSystem=True,
+        )
+        self.assertEqual(
+            eventText,
+            "[fake_system] ABCD",
+        )
+
+
+    def test_eventAsTextTimestampOnly(self):
+        """
+        If includeTimestamp is specified as the only option no system or
+        traceback are printed.
+        """
+        if tzset is None:
+            raise SkipTest(
+                "Platform cannot change timezone; unable to verify offsets."
+            )
+
+        addTZCleanup(self)
+        setTZ("UTC+00")
+
+        try:
+            raise CapturedError("This is a fake error")
+        except CapturedError:
+            f = Failure()
+
+        t = mktime((2013, 9, 24, 11, 40, 47, 1, 267, 1))
+        event = {
+            "log_format": "ABCD",
+            "log_system": "fake_system",
+            "log_time": t,
+        }
+        event["log_failure"] = f
+        eventText = eventAsText(
+            event,
+            includeTimestamp=True,
+            includeTraceback=False,
+            includeSystem=False,
+        )
+        self.assertEqual(
+            eventText,
+            "2013-09-24T11:40:47+0000 ABCD",
+        )
+
+
+    def test_eventAsTextSystemMissing(self):
+        """
+        If includeSystem is specified with a missing system [-#-]
+        is used.
+        """
+        try:
+            raise CapturedError("This is a fake error")
+        except CapturedError:
+            f = Failure()
+
+        t = mktime((2013, 9, 24, 11, 40, 47, 1, 267, 1))
+        event = {
+            "log_format": "ABCD",
+            "log_time": t,
+        }
+        event["log_failure"] = f
+        eventText = eventAsText(
+            event,
+            includeTimestamp=False,
+            includeTraceback=False,
+            includeSystem=True,
+        )
+        self.assertEqual(
+            eventText,
+            "[-\x23-] ABCD",
+        )
+
+
+    def test_eventAsTextSystemMissingNamespaceAndLevel(self):
+        """
+        If includeSystem is specified with a missing system but
+        namespace and level are present they are used.
+        """
+        try:
+            raise CapturedError("This is a fake error")
+        except CapturedError:
+            f = Failure()
+
+        t = mktime((2013, 9, 24, 11, 40, 47, 1, 267, 1))
+        event = {
+            "log_format": "ABCD",
+            "log_time": t,
+            "log_level": LogLevel.info,
+            "log_namespace": u'test',
+        }
+        event["log_failure"] = f
+        eventText = eventAsText(
+            event,
+            includeTimestamp=False,
+            includeTraceback=False,
+            includeSystem=True,
+        )
+        self.assertEqual(
+            eventText,
+            "[test\x23info] ABCD",
+        )
+
+
+    def test_eventAsTextSystemMissingLevelOnly(self):
+        """
+        If includeSystem is specified with a missing system but
+        level is present, level is included.
+        """
+        try:
+            raise CapturedError("This is a fake error")
+        except CapturedError:
+            f = Failure()
+
+        t = mktime((2013, 9, 24, 11, 40, 47, 1, 267, 1))
+        event = {
+            "log_format": "ABCD",
+            "log_time": t,
+            "log_level": LogLevel.info,
+        }
+        event["log_failure"] = f
+        eventText = eventAsText(
+            event,
+            includeTimestamp=False,
+            includeTraceback=False,
+            includeSystem=True,
+        )
+        self.assertEqual(
+            eventText,
+            "[-\x23info] ABCD",
+        )

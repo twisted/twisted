@@ -9,6 +9,7 @@ Basic line editing support.
 """
 
 import string
+from typing import Dict
 
 from zope.interface import implementer
 
@@ -17,7 +18,10 @@ from twisted.conch.insults import insults, helper
 from twisted.python import log, reflect
 from twisted.python.compat import iterbytes
 
-_counters = {}
+_counters = {}  # type: Dict[str, int]
+
+
+
 class Logging(object):
     """
     Wrapper which logs attribute lookups.
@@ -85,6 +89,275 @@ def %s(self, *a, **kw):
         result = tpt.%s(*a, **kw)
     return result
 """ % (method, method))
+
+
+    def getHost(self):
+        # ITransport.getHost
+        raise NotImplementedError("Unimplemented: TransportSequence.getHost")
+
+
+    def getPeer(self):
+        # ITransport.getPeer
+        raise NotImplementedError(
+            "Unimplemented: TransportSequence.getPeer")
+
+
+    def loseConnection(self):
+        # ITransport.loseConnection
+        raise NotImplementedError(
+            "Unimplemented: TransportSequence.loseConnection")
+
+
+    def write(self, data):
+        # ITransport.write
+        raise NotImplementedError("Unimplemented: TransportSequence.write")
+
+
+    def writeSequence(self, data):
+        # ITransport.writeSequence
+        raise NotImplementedError(
+            "Unimplemented: TransportSequence.writeSequence")
+
+
+    def cursorUp(self, n=1):
+        # ITerminalTransport.cursorUp
+        raise NotImplementedError("Unimplemented: TransportSequence.cursorUp")
+
+
+    def cursorDown(self, n=1):
+        # ITerminalTransport.cursorDown
+        raise NotImplementedError(
+            "Unimplemented: TransportSequence.cursorDown")
+
+
+    def cursorForward(self, n=1):
+        # ITerminalTransport.cursorForward
+        raise NotImplementedError(
+            "Unimplemented: TransportSequence.cursorForward")
+
+
+    def cursorBackward(self, n=1):
+        # ITerminalTransport.cursorBackward
+        raise NotImplementedError(
+            "Unimplemented: TransportSequence.cursorBackward")
+
+
+    def cursorPosition(self, column, line):
+        # ITerminalTransport.cursorPosition
+        raise NotImplementedError(
+            "Unimplemented: TransportSequence.cursorPosition")
+
+
+    def cursorHome(self):
+        # ITerminalTransport.cursorHome
+        raise NotImplementedError(
+            "Unimplemented: TransportSequence.cursorHome")
+
+
+    def index(self):
+        # ITerminalTransport.index
+        raise NotImplementedError("Unimplemented: TransportSequence.index")
+
+
+    def reverseIndex(self):
+        # ITerminalTransport.reverseIndex
+        raise NotImplementedError(
+            "Unimplemented: TransportSequence.reverseIndex")
+
+
+    def nextLine(self):
+        # ITerminalTransport.nextLine
+        raise NotImplementedError("Unimplemented: TransportSequence.nextLine")
+
+
+    def saveCursor(self):
+        # ITerminalTransport.saveCursor
+        raise NotImplementedError(
+            "Unimplemented: TransportSequence.saveCursor")
+
+
+    def restoreCursor(self):
+        # ITerminalTransport.restoreCursor
+        raise NotImplementedError(
+            "Unimplemented: TransportSequence.restoreCursor")
+
+
+    def setModes(self, modes):
+        # ITerminalTransport.setModes
+        raise NotImplementedError(
+            "Unimplemented: TransportSequence.setModes")
+
+
+    def resetModes(self, mode):
+        # ITerminalTransport.resetModes
+        raise NotImplementedError(
+            "Unimplemented: TransportSequence.resetModes")
+
+
+    def setPrivateModes(self, modes):
+        # ITerminalTransport.setPrivateModes
+        raise NotImplementedError(
+            "Unimplemented: TransportSequence.setPrivateModes")
+
+
+    def resetPrivateModes(self, modes):
+        # ITerminalTransport.resetPrivateModes
+        raise NotImplementedError(
+            "Unimplemented: TransportSequence.resetPrivateModes")
+
+
+    def applicationKeypadMode(self):
+        # ITerminalTransport.applicationKeypadMode
+        raise NotImplementedError(
+            "Unimplemented: TransportSequence.applicationKeypadMode")
+
+
+    def numericKeypadMode(self):
+        # ITerminalTransport.numericKeypadMode
+        raise NotImplementedError(
+            "Unimplemented: TransportSequence.numericKeypadMode")
+
+
+    def selectCharacterSet(self, charSet, which):
+        # ITerminalTransport.selectCharacterSet
+        raise NotImplementedError(
+            "Unimplemented: TransportSequence.selectCharacterSet")
+
+
+    def shiftIn(self):
+        # ITerminalTransport.shiftIn
+        raise NotImplementedError("Unimplemented: TransportSequence.shiftIn")
+
+
+    def shiftOut(self):
+        # ITerminalTransport.shiftOut
+        raise NotImplementedError("Unimplemented: TransportSequence.shiftOut")
+
+
+    def singleShift2(self):
+        # ITerminalTransport.singleShift2
+        raise NotImplementedError(
+            "Unimplemented: TransportSequence.singleShift2")
+
+
+    def singleShift3(self):
+        # ITerminalTransport.singleShift3
+        raise NotImplementedError(
+            "Unimplemented: TransportSequence.singleShift3")
+
+
+    def selectGraphicRendition(self, *attributes):
+        # ITerminalTransport.selectGraphicRendition
+        raise NotImplementedError(
+            "Unimplemented: TransportSequence.selectGraphicRendition")
+
+
+    def horizontalTabulationSet(self):
+        # ITerminalTransport.horizontalTabulationSet
+        raise NotImplementedError(
+            "Unimplemented: TransportSequence.horizontalTabulationSet")
+
+
+    def tabulationClear(self):
+        # ITerminalTransport.tabulationClear
+        raise NotImplementedError(
+            "Unimplemented: TransportSequence.tabulationClear")
+
+
+    def tabulationClearAll(self):
+        # ITerminalTransport.tabulationClearAll
+        raise NotImplementedError(
+            "Unimplemented: TransportSequence.tabulationClearAll")
+
+
+    def doubleHeightLine(self, top=True):
+        # ITerminalTransport.doubleHeightLine
+        raise NotImplementedError(
+            "Unimplemented: TransportSequence.doubleHeightLine")
+
+
+    def singleWidthLine(self):
+        # ITerminalTransport.singleWidthLine
+        raise NotImplementedError(
+            "Unimplemented: TransportSequence.singleWidthLine")
+
+
+    def doubleWidthLine(self):
+        # ITerminalTransport.doubleWidthLine
+        raise NotImplementedError(
+            "Unimplemented: TransportSequence.doubleWidthLine")
+
+
+    def eraseToLineEnd(self):
+        # ITerminalTransport.eraseToLineEnd
+        raise NotImplementedError(
+            "Unimplemented: TransportSequence.eraseToLineEnd")
+
+
+    def eraseToLineBeginning(self):
+        # ITerminalTransport.eraseToLineBeginning
+        raise NotImplementedError(
+            "Unimplemented: TransportSequence.eraseToLineBeginning")
+
+
+    def eraseLine(self):
+        # ITerminalTransport.eraseLine
+        raise NotImplementedError(
+            "Unimplemented: TransportSequence.eraseLine")
+
+
+    def eraseToDisplayEnd(self):
+        # ITerminalTransport.eraseToDisplayEnd
+        raise NotImplementedError(
+            "Unimplemented: TransportSequence.eraseToDisplayEnd")
+
+
+    def eraseToDisplayBeginning(self):
+        # ITerminalTransport.eraseToDisplayBeginning
+        raise NotImplementedError(
+            "Unimplemented: TransportSequence.eraseToDisplayBeginning")
+
+
+    def eraseDisplay(self):
+        # ITerminalTransport.eraseDisplay
+        raise NotImplementedError(
+            "Unimplemented: TransportSequence.eraseDisplay")
+
+
+    def deleteCharacter(self, n=1):
+        # ITerminalTransport.deleteCharacter
+        raise NotImplementedError(
+            "Unimplemented: TransportSequence.deleteCharacter")
+
+
+    def insertLine(self, n=1):
+        # ITerminalTransport.insertLine
+        raise NotImplementedError(
+            "Unimplemented: TransportSequence.insertLine")
+
+
+    def deleteLine(self, n=1):
+        # ITerminalTransport.deleteLine
+        raise NotImplementedError(
+            "Unimplemented: TransportSequence.deleteLine")
+
+
+    def reportCursorPosition(self):
+        # ITerminalTransport.reportCursorPosition
+        raise NotImplementedError(
+            "Unimplemented: TransportSequence.reportCursorPosition")
+
+
+    def reset(self):
+        # ITerminalTransport.reset
+        raise NotImplementedError(
+            "Unimplemented: TransportSequence.reset")
+
+
+    def unhandledControlSequence(self, seq):
+        # ITerminalTransport.unhandledControlSequence
+        raise NotImplementedError(
+            "Unimplemented: TransportSequence.unhandledControlSequence")
 
 
 

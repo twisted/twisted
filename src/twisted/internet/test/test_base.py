@@ -6,10 +6,9 @@ Tests for L{twisted.internet.base}.
 """
 
 import socket
-try:
-    from Queue import Queue
-except ImportError:
-    from queue import Queue
+from queue import Queue
+from unittest import skipIf
+from typing import Any, Callable
 
 from zope.interface import implementer
 
@@ -22,6 +21,14 @@ from twisted.internet.defer import Deferred
 from twisted.internet.base import ThreadedResolver, DelayedCall, ReactorBase
 from twisted.internet.task import Clock
 from twisted.trial.unittest import TestCase, SkipTest
+
+try:
+    import signal as _signal
+except ImportError:
+    signal = None
+else:
+    signal = _signal
+
 
 
 @implementer(IReactorTime, IReactorThreads)
@@ -42,8 +49,8 @@ class FakeReactor(object):
         self._threadCalls = Queue()
 
 
-    def callFromThread(self, f, *args, **kwargs):
-        self._threadCalls.put((f, args, kwargs))
+    def callFromThread(self, callable: Callable[..., Any], *args, **kwargs):
+        self._threadCalls.put((callable, args, kwargs))
 
 
     def _runThreadCalls(self):
@@ -53,6 +60,26 @@ class FakeReactor(object):
 
     def _stop(self):
         self._threadpool.stop()
+
+
+    def getDelayedCalls(self):
+        # IReactorTime.getDelayedCalls
+        pass
+
+
+    def seconds(self):
+        # IReactorTime.seconds
+        pass
+
+
+    def callInThread(self, callable: Callable[..., Any], *args, **kwargs):
+        # IReactorInThreads.callInThread
+        pass
+
+
+    def suggestThreadPoolSize(self, size):
+        # IReactorThreads.suggestThreadPoolSize
+        pass
 
 
 
@@ -242,7 +269,17 @@ class DelayedCallMixin(object):
         self.assertEqual(
             str(dc),
             "<DelayedCall 0x%x [10.5s] called=0 cancelled=0 nothing(3, A=5)>"
-                % (id(dc),))
+            % (id(dc),),
+        )
+
+
+    def test_repr(self):
+        """
+        The string representation of a L{DelayedCall} instance, as returned by
+        {repr}, is identical to that returned by L{str}.
+        """
+        dc = DelayedCall(13, nothing, (6, ), {"A": 9}, None, None, lambda: 1.6)
+        self.assertEqual(str(dc), repr(dc))
 
 
     def test_lt(self):
@@ -386,6 +423,7 @@ class TestSpySignalCapturingReactor(ReactorBase):
 
 
 
+@skipIf(not signal, "signal module not available")
 class ReactorBaseSignalTests(TestCase):
 
     """
@@ -431,10 +469,3 @@ class ReactorBaseSignalTests(TestCase):
         reactor = TestSpySignalCapturingReactor()
         reactor.sigBreak(signal.SIGBREAK, None)
         self.assertEquals(signal.SIGBREAK, reactor._exitSignal)
-
-
-
-try:
-    import signal
-except ImportError:
-    ReactorBaseSignalTests.skip = "signal module not available"

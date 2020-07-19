@@ -14,7 +14,7 @@ import os, copy
 try:
     import pwd
 except ImportError:
-    pwd = None
+    pwd = None  # type: ignore[assignment]
 from io import BytesIO
 
 from xml.dom.minidom import getDOMImplementation
@@ -114,7 +114,7 @@ class Issue:
         self.request = request
 
     def finished(self, result):
-        if result != server.NOT_DONE_YET:
+        if result is not server.NOT_DONE_YET:
             assert isinstance(result, str), "return value not a string"
             self.request.write(result)
             self.request.finish()

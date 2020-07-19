@@ -10,9 +10,11 @@ Utility functions for dealing with POSIX file descriptors.
 import os
 import errno
 try:
-    import fcntl
+    import fcntl as _fcntl
 except ImportError:
     fcntl = None
+else:
+    fcntl = _fcntl
 
 # twisted imports
 from twisted.internet.main import CONNECTION_LOST, CONNECTION_DONE

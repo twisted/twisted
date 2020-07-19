@@ -10,7 +10,7 @@ import logging as stdlibLogging
 
 from zope.interface import implementer
 
-from twisted.python.compat import _PY3, currentframe, unicode
+from twisted.python.compat import currentframe
 from ._levels import LogLevel
 from ._format import formatEvent
 from ._observer import ILogObserver
@@ -78,7 +78,7 @@ class STDLibLogObserver(object):
         self.stackDepth = stackDepth
 
 
-    def _findCaller(self, stackInfo=False):
+    def _findCaller(self, stackInfo=False, stackLevel=1):
         """
         Based on the stack depth passed to this L{STDLibLogObserver}, identify
         the calling function.
@@ -87,16 +87,17 @@ class STDLibLogObserver(object):
             (Currently ignored.)
         @type stackInfo: L{bool}
 
+        @param stackLevel: The number of stack frames to skip when determining
+            the caller (currently ignored; use stackDepth on the instance).
+        @type stackLevel: L{int}
+
         @return: Depending on Python version, either a 3-tuple of (filename,
             lineno, name) or a 4-tuple of that plus stack information.
         @rtype: L{tuple}
         """
         f = currentframe(self.stackDepth)
         co = f.f_code
-        if _PY3:
-            extra = (None,)
-        else:
-            extra = ()
+        extra = (None,)
         return (co.co_filename, f.f_lineno, co.co_name) + extra
 
 
@@ -135,9 +136,6 @@ class StringifiableFromEvent(object):
 
 
     def __bytes__(self):
-        return unicode(self).encode("utf-8")
+        return str(self).encode("utf-8")
 
-    if _PY3:
-        __str__ = __unicode__
-    else:
-        __str__ = __bytes__
+    __str__ = __unicode__

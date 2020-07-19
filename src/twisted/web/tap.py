@@ -6,7 +6,6 @@
 Support for creating a service which runs a web server.
 """
 
-from __future__ import absolute_import, division
 
 import os
 import warnings
@@ -30,25 +29,29 @@ class Options(usage.Options):
     optParameters = [["logfile", "l", None,
                       "Path to web CLF (Combined Log Format) log file."],
                      ["certificate", "c", "server.pem",
-                      "(DEPRECATED: use --http) "
+                      "(DEPRECATED: use --listen) "
                       "SSL certificate to use for HTTPS. "],
                      ["privkey", "k", "server.pem",
-                      "(DEPRECATED: use --http) "
+                      "(DEPRECATED: use --listen) "
                       "SSL certificate to use for HTTPS."],
                      ]
 
     optFlags = [
         ["notracebacks", "n", (
-            "Do not display tracebacks in broken web pages. Displaying "
-            "tracebacks to users may be security risk!")],
+            "(DEPRECATED: Tracebacks are disabled by default. "
+            "See --enable-tracebacks to turn them on.")],
+        ["display-tracebacks", "", (
+            "Show uncaught exceptions during rendering tracebacks to "
+            "the client. WARNING: This may be a security risk and "
+            "expose private data!")],
     ]
 
     optFlags.append([
         "personal", "",
         "Instead of generating a webserver, generate a "
         "ResourcePublisher which listens on  the port given by "
-        "--http, or ~/%s " % (distrib.UserDirectory.userSocketName,) +
-        "if --http is not specified."])
+        "--listen, or ~/%s " % (distrib.UserDirectory.userSocketName,) +
+        "if --listen is not specified."])
 
     compData = usage.Completions(
                    optActions={"logfile" : usage.CompleteFiles("*.log"),
@@ -71,11 +74,11 @@ demo webserver that has the Test class from twisted.web.demo in it."""
 
     def opt_port(self, port):
         """
-        (DEPRECATED: use --http)
+        (DEPRECATED: use --listen)
         Strports description of port to start the server on
         """
         msg = deprecate.getDeprecationWarningString(
-            self.opt_port, incremental.Version("Twisted", "NEXT", 0, 0))
+            self.opt_port, incremental.Version('Twisted', 18, 4, 0))
         warnings.warn(msg, category=DeprecationWarning, stacklevel=2)
         self['port'] = port
 
@@ -83,11 +86,11 @@ demo webserver that has the Test class from twisted.web.demo in it."""
 
     def opt_https(self, port):
         """
-        (DEPRECATED: use --http)
+        (DEPRECATED: use --listen)
         Port to listen on for Secure HTTP.
         """
         msg = deprecate.getDeprecationWarningString(
-            self.opt_https, incremental.Version("Twisted", "NEXT", 0, 0))
+            self.opt_https, incremental.Version('Twisted', 18, 4, 0))
         warnings.warn(msg, category=DeprecationWarning, stacklevel=2)
         self['https'] = port
 
@@ -295,7 +298,14 @@ def makeService(config):
     else:
         site = server.Site(root)
 
-    site.displayTracebacks = not config["notracebacks"]
+    if config["display-tracebacks"]:
+        site.displayTracebacks = True
+
+    # Deprecate --notracebacks/-n
+    if config["notracebacks"]:
+        msg = deprecate._getDeprecationWarningString(
+            "--notracebacks", incremental.Version('Twisted', 19, 7, 0))
+        warnings.warn(msg, category=DeprecationWarning, stacklevel=2)
 
     if config['personal']:
         site = makePersonalServerFactory(site)

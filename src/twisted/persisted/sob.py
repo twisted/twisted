@@ -9,15 +9,11 @@ Save and load Small OBjects to and from files, using various formats.
 Maintainer: Moshe Zadka
 """
 
-from __future__ import division, absolute_import
 
 import os
 import sys
 
-try:
-    import cPickle as pickle
-except ImportError:
-    import pickle
+import pickle
 from twisted.python import log, runtime
 from twisted.persisted import styles
 from zope.interface import implementer, Interface
@@ -80,7 +76,7 @@ class Persistent:
             from twisted.persisted.aot import jellyToSource as dumpFunc
             ext = "tas"
         else:
-            def dumpFunc(obj, file):
+            def dumpFunc(obj, file=None):
                 pickle.dump(obj, file, 2)
             ext = "tap"
         return ext, dumpFunc

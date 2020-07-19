@@ -5,7 +5,6 @@
 Tests for L{twisted.application.strports}.
 """
 
-from __future__ import absolute_import, division
 
 from twisted.trial.unittest import TestCase
 from twisted.application import strports

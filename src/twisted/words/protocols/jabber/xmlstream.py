@@ -22,10 +22,10 @@ Stanzas.
 @type Reset: Basic object.
 """
 
-from __future__ import absolute_import, division
 
 from binascii import hexlify
 from hashlib import sha1
+from typing import Optional, Tuple
 from zope.interface import directlyProvides, implementer
 
 from twisted.internet import defer, protocol
@@ -42,9 +42,9 @@ from twisted.words.xish.xmlstream import STREAM_ERROR_EVENT
 try:
     from twisted.internet import ssl
 except ImportError:
-    ssl = None
+    ssl = None  # type: ignore[assignment]
 if ssl and not ssl.supported:
-    ssl = None
+    ssl = None  # type: ignore[assignment]
 
 STREAM_AUTHD_EVENT = intern("//event/stream/authd")
 INIT_FAILED_EVENT = intern("//event/xmpp/initfailed")
@@ -164,7 +164,7 @@ class ConnectAuthenticator(Authenticator):
     Authenticator for initiating entities.
     """
 
-    namespace = None
+    namespace = None  # type: Optional[str]
 
     def __init__(self, otherHost):
         self.otherHost = otherHost
@@ -263,7 +263,7 @@ class ListenAuthenticator(Authenticator):
     Authenticator for receiving entities.
     """
 
-    namespace = None
+    namespace = None  # type: Optional[str]
 
     def associateWithStream(self, xmlstream):
         """
@@ -316,16 +316,17 @@ class BaseFeatureInitiatingInitializer(object):
 
     @cvar feature: tuple of (uri, name) of the stream feature root element.
     @type feature: tuple of (C{str}, C{str})
+
     @ivar required: whether the stream feature is required to be advertized
                     by the receiving entity.
     @type required: C{bool}
     """
 
-    feature = None
-    required = False
+    feature = None  # type: Optional[Tuple[str, str]]
 
-    def __init__(self, xs):
+    def __init__(self, xs, required=False):
         self.xmlstream = xs
+        self.required = required
 
 
     def initialize(self):
@@ -400,13 +401,31 @@ class TLSInitiatingInitializer(BaseFeatureInitiatingInitializer):
     set the C{wanted} attribute to False instead of removing it from the list
     of initializers, so a proper exception L{TLSRequired} can be raised.
 
-    @cvar wanted: indicates if TLS negotiation is wanted.
+    @ivar wanted: indicates if TLS negotiation is wanted.
     @type wanted: C{bool}
     """
 
     feature = (NS_XMPP_TLS, 'starttls')
     wanted = True
     _deferred = None
+    _configurationForTLS = None
+
+    def __init__(self, xs, required=True, configurationForTLS=None):
+        """
+        @param configurationForTLS: An object which creates appropriately
+            configured TLS connections. This is passed to C{startTLS} on the
+            transport and is preferably created using
+            L{twisted.internet.ssl.optionsForClientTLS}.  If C{None}, the
+            default is to verify the server certificate against the trust roots
+            as provided by the platform. See
+            L{twisted.internet._sslverify.platformTrust}.
+        @type configurationForTLS: L{IOpenSSLClientConnectionCreator} or
+            C{None}
+        """
+        super(TLSInitiatingInitializer, self).__init__(
+                xs, required=required)
+        self._configurationForTLS = configurationForTLS
+
 
     def onProceed(self, obj):
         """
@@ -414,7 +433,10 @@ class TLSInitiatingInitializer(BaseFeatureInitiatingInitializer):
         """
 
         self.xmlstream.removeObserver('/failure', self.onFailure)
-        ctx = ssl.CertificateOptions()
+        if self._configurationForTLS:
+            ctx = self._configurationForTLS
+        else:
+            ctx = ssl.optionsForClientTLS(self.xmlstream.otherEntity.host)
         self.xmlstream.transport.startTLS(ctx)
         self.xmlstream.reset()
         self.xmlstream.sendHeader()
