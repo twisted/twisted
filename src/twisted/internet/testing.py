@@ -6,10 +6,10 @@
 Assorted functionality which is commonly useful when writing unit tests.
 """
 
-from __future__ import division, absolute_import
 
-from socket import AF_INET, AF_INET6
 from io import BytesIO
+from socket import AF_INET, AF_INET6
+from typing import Any, Callable
 
 from zope.interface import implementer, implementedBy
 from zope.interface.verify import verifyClass
@@ -578,7 +578,8 @@ class MemoryReactor(object):
         raise NotImplementedError()
 
 
-    def addSystemEventTrigger(self, phase, eventType, callable, *args, **kw):
+    def addSystemEventTrigger(self, phase: str, eventType: str,
+                              callable: Callable[..., Any], *args, **kw):
         """
         Fake L{IReactorCore.run}.
         Keep track of trigger by appending it to
@@ -596,7 +597,7 @@ class MemoryReactor(object):
         raise NotImplementedError()
 
 
-    def callWhenRunning(self, callable, *args, **kw):
+    def callWhenRunning(self, callable: Callable[..., Any], *args, **kw):
         """
         Fake L{IReactorCore.callWhenRunning}.
         Keeps a list of invocations to make in C{self.whenRunningHooks}.
@@ -635,7 +636,7 @@ class MemoryReactor(object):
                           maxPacketSize=8192):
         """
         Fake L{IReactorSocket.adoptDatagramPort}, that logs the call and
-            returns a fake L{IListeningPort}.
+        returns a fake L{IListeningPort}.
 
         @see: L{twisted.internet.interfaces.IReactorSocket.adoptDatagramPort}
         """
@@ -865,6 +866,23 @@ class RaisingMemoryReactor(object):
     def connectUNIX(self, address, factory, timeout=30, checkPID=0):
         """
         Fake L{IReactorUNIX.connectUNIX}, that raises L{_connectException}.
+        """
+        raise self._connectException
+
+
+    def adoptDatagramPort(self, fileDescriptor, addressFamily, protocol,
+                          maxPacketSize):
+        """
+        Fake L{IReactorSocket.adoptDatagramPort}, that raises
+        L{_connectException}.
+        """
+        raise self._connectException
+
+
+    def adoptStreamConnection(self, fileDescriptor, addressFamily, factory):
+        """
+        Fake L{IReactorSocket.adoptStreamConnection}, that raises
+        L{_connectException}.
         """
         raise self._connectException
 

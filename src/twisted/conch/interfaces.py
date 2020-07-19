@@ -113,6 +113,40 @@ class ISession(Interface):
 
 
 
+class EnvironmentVariableNotPermitted(ValueError):
+    """Setting this environment variable in this session is not permitted."""
+
+
+
+class ISessionSetEnv(Interface):
+    """A session that can set environment variables."""
+
+    def setEnv(name, value):
+        """
+        Set an environment variable for the shell or command to be started.
+
+        From U{RFC 4254, section 6.4
+        <https://tools.ietf.org/html/rfc4254#section-6.4>}: "Uncontrolled
+        setting of environment variables in a privileged process can be a
+        security hazard.  It is recommended that implementations either
+        maintain a list of allowable variable names or only set environment
+        variables after the server process has dropped sufficient
+        privileges."
+
+        (OpenSSH refuses all environment variables by default, but has an
+        C{AcceptEnv} configuration option to select specific variables to
+        accept.)
+
+        @param name: The name of the environment variable to set.
+        @type name: L{bytes}
+        @param value: The value of the environment variable to set.
+        @type value: L{bytes}
+        @raise EnvironmentVariableNotPermitted: if setting this environment
+            variable is not permitted.
+        """
+
+
+
 class ISFTPServer(Interface):
     """
     SFTP subsystem for server-side communication.
@@ -150,8 +184,9 @@ class ISFTPServer(Interface):
 
         @param filename: a string representing the file to open.
 
-        @param flags: an integer of the flags to open the file with, ORed together.
-        The flags and their values are listed at the bottom of this file.
+        @param flags: an integer of the flags to open the file with, ORed
+        together.  The flags and their values are listed at the bottom of
+        L{twisted.conch.ssh.filetransfer} as FXF_*.
 
         @param attrs: a list of attributes to open the file with.  It is a
         dictionary, consisting of 0 or more keys.  The possible keys are::
@@ -363,8 +398,8 @@ class IKnownHostEntry(Interface):
         address, you have to resolve it yourself, and pass it in as a dotted
         quad string.
 
-        @param key: The hostname to match against.
-        @type key: L{str}
+        @param hostname: The hostname to match against.
+        @type hostname: L{str}
         """
 
 

@@ -9,6 +9,7 @@ command line program I{mailmail}.
 
 import os
 import sys
+from unittest import skipIf
 
 from twisted.copyright import version
 from twisted.internet.defer import Deferred
@@ -188,6 +189,9 @@ class OptionsTests(TestCase):
         self.assertEqual(o.sender, "invaliduser4@example.com")
 
 
+    @skipIf(platformType == "win32",
+            "mailmail.run() does not work on win32 due to lack of support for"
+            " getuid()")
     def test_runErrorsToStderr(self):
         """
         Call L{mailmail.run}, and specify I{-oep} to print errors
@@ -206,12 +210,10 @@ class OptionsTests(TestCase):
         # We should not have any failures.
         self.assertIsNone(mailmail.failed)
 
-    if platformType == "win32":
-        test_runErrorsToStderr.skip = (
+
+    @skipIf(platformType == "win32",
             "mailmail.run() does not work on win32 due to lack of support for"
             " getuid()")
-
-
     def test_readInvalidConfig(self):
         """
         Error messages for illegal UID value, illegal GID value, and illegal
@@ -260,10 +262,6 @@ class OptionsTests(TestCase):
                          "invalidgid1")
         self.assertRegex(self.out.getvalue(),
                          'Illegal entry in \\[identity\\] section: funny')
-
-    if platformType == "win32":
-        test_readInvalidConfig.skip = ("mailmail.run() does not work on win32"
-                                       " due to lack of support for getuid()")
 
 
     def getConfigFromFile(self, config):

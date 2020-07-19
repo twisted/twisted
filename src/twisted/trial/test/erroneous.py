@@ -10,8 +10,8 @@ See the L{twisted.trial.test.test_tests} module docstring for details about how
 this code is arranged.
 """
 
-from __future__ import division, absolute_import
 
+from unittest import skipIf
 from twisted.trial import unittest, util
 from twisted.internet import reactor, protocol, defer
 
@@ -152,10 +152,10 @@ class ErrorTest(unittest.SynchronousTestCase):
 
 
 
+@skipIf(True, "skipping this test")
 class TestSkipTestCase(unittest.SynchronousTestCase):
     pass
 
-TestSkipTestCase.skip = "skipping this test"
 
 
 class DelayedCall(unittest.TestCase):
@@ -179,7 +179,7 @@ class DelayedCall(unittest.TestCase):
         reactor.callLater(0, self.go)
         reactor.iterate(0.01)
         self.fail("Deliberate failure to mask the hidden exception")
-    testHiddenException.suppress = [util.suppress(
+    testHiddenException.suppress = [util.suppress(  # type: ignore[attr-defined]  # noqa
         message=r'reactor\.iterate cannot be used.*',
         category=DeprecationWarning)]
 

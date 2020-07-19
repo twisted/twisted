@@ -3,6 +3,170 @@ http://twistedmatrix.com/trac/ticket/<number>
 
 .. towncrier release notes start
 
+Twisted 20.3.0 (2020-03-13)
+===========================
+
+Bugfixes
+--------
+
+- twisted.protocols.amp.BoxDispatcher.callRemote and callRemoteString will no longer return failing Deferreds for requiresAnswer=False commands when the transport they're operating on has been disconnected. (#9756)
+
+
+Improved Documentation
+----------------------
+
+- Added a missing hyphen to a reference to the ``--debug`` option of ``pdb`` in the Trial how-to. (#9690)
+- The documentation of the twisted.cred.checkers module has been extended and corrected. (#9724)
+
+
+Deprecations and Removals
+-------------------------
+
+- twisted.news is deprecated. (#9405)
+
+
+Misc
+----
+
+- #9634, #9701, #9707, #9710, #9715, #9726, #9727, #9728, #9729, #9735, #9737, #9757
+
+
+Conch
+-----
+
+Features
+~~~~~~~~
+
+- twisted.conch.ssh now supports the curve25519-sha256 key exchange algorithm (requires OpenSSL >= 1.1.0). (#6814)
+- twisted.conch.ssh.keys can now write private keys in the new "openssh-key-v1" format, introduced in OpenSSH 6.5 and made the default in OpenSSH 7.8.  ckeygen has a corresponding new --private-key-subtype=v1 option. (#9683)
+
+
+Bugfixes
+~~~~~~~~
+
+- twisted.conch.keys.Key.privateBlob now returns the correct blob format for ECDSA (i.e. the same as that implemented by OpenSSH). (#9682)
+
+
+Misc
+~~~~
+
+- #9760
+
+
+Web
+---
+
+Bugfixes
+~~~~~~~~
+
+- Fixed return type of twisted.web.http.Request.getUser and twisted.web.http.Request.getPassword to binary if no authorization header was found or an exception was thrown (#9596)
+- twisted.web.http.HTTPChannel now rejects requests (with status code 400 and a drop) that have malformed headers of the form "Foo : value" or ": value". (#9646)
+- twisted.web.http.Request now correctly parses multipart-encoded form data submitted as a chunked request on Python 3.7+. (#9678)
+- twisted.web.client.BrowserLikePolicyForHTTPS is now listed in __all__, since it's a user-facing class that anyone could import and extend. (#9769)
+- twisted.web.http was subject to several request smuggling attacks. Requests with multiple Content-Length headers were allowed (CVE-2020-10108, thanks to Jake Miller from Bishop Fox and ZeddYu Lu for reporting this) and now fail with a 400; requests with a Content-Length header and a Transfer-Encoding header honored the first header (CVE-2020-10109, thanks to Jake Miller from Bishop Fox for reporting this) and now fail with a 400; requests whose Transfer-Encoding header had a value other than "chunked" and "identity" (thanks to ZeddYu Lu) were allowed and now fail with a 400. (#9770)
+
+
+Mail
+----
+
+Misc
+~~~~
+
+- #9733
+
+
+Words
+-----
+
+Bugfixes
+~~~~~~~~
+
+- Fixed parsing of streams with Python 3.8 when there are spaces in namespaces or namespaced attributes in twisted.words.xish.domish.ExpatElementStream (#9730)
+
+
+Names
+-----
+
+Bugfixes
+~~~~~~~~
+
+- twisted.names.secondary.SecondaryAuthority now accepts str for its domain parameter, so twist dns --secondary now functions on Python 3. (#9496)
+
+
+Twisted 19.10.0 (2019-11-03)
+============================
+
+Features
+--------
+
+- twisted.trial.successResultOf, twisted.trial.failureResultOf, and
+  twisted.trial.assertNoResult accept coroutines as well as Deferreds. (#9006)
+
+
+Bugfixes
+--------
+
+- Fixed circular import in twisted.trial.reporter, introduced in Twisted 16.0.0. (#8267)
+- The POP3 server implemented by twisted.mail.pop3 now accepts passwords that contain spaces. (#9100)
+- Incoming HTTP/2 connections will now not time out if they persist for longer than one minute. (#9653)
+- The serial extra now requires pywin32 on Windows enabling use of twisted.internet.serialport without specifying the windows_platform extra. (#9700)
+
+
+Misc
+----
+
+- #8506, #9677, #9684, #9687, #9688
+
+
+Conch
+-----
+
+Bugfixes
+~~~~~~~~
+
+- twisted.conch.ssh.keys now correctly writes the "iqmp" parameter in serialized RSA private keys as q^-1 mod p rather than p^-1 mod q. (#9681)
+
+
+Misc
+~~~~
+
+- #9689
+
+
+Web
+---
+
+Features
+~~~~~~~~
+
+- twisted.web.server.Request will now use twisted.web.server.Site.getContentFile, if it exists, to get a file into which to write request content.  If getContentFile is not provided by the site, it will fall back to the previous behavior of using io.BytesIO for small requests and tempfile.TemporaryFile for large ones. (#9655)
+
+
+Bugfixes
+~~~~~~~~
+
+- twisted.web.client.FileBodyProducer will now stop producing when the Deferred returned by FileBodyProducer.startProducing is cancelled. (#9547)
+- The HTTP/2 server implementation now enforces TCP flow control on control frame messages and times out clients that send invalid data without reading responses.  This closes CVE-2019-9512 (Ping Flood), CVE-2019-9514 (Reset Flood), and CVE-2019-9515 (Settings Flood).  Thanks to Jonathan Looney and Piotr Sikora. (#9694)
+
+
+Mail
+----
+
+No significant changes.
+
+
+Words
+-----
+
+No significant changes.
+
+
+Names
+-----
+
+No significant changes.
+
+
 Twisted 19.7.0 (2019-07-28)
 ===========================
 

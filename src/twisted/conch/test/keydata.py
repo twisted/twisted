@@ -8,7 +8,6 @@
 Data used by test_keys as well as others.
 """
 
-from __future__ import absolute_import, division
 
 from twisted.python.compat import long, _b64decodebytes as decodebytes
 
@@ -107,6 +106,13 @@ ECDatanistp521 = {
   'curve': b'ecdsa-sha2-nistp521'
 }
 
+Ed25519Data = {
+  'a': (b'\xf1\x16\xd1\x15J\x1e\x15\x0e\x19^\x19F\xb5\xf2D\r\xb2R\xa0\xae*k'
+        b'#\x13sE\xfd@\xd9W{\x8b'),
+  'k': (b'7/%\xda\x8d\xd4\xa8\x9ax|a\xf0\x98\x01\xc6\xf4^mg\x05i17Li\r\x05U'
+        b'\xbb\xc9DX')
+}
+
 privateECDSA_openssh521 = b"""-----BEGIN EC PRIVATE KEY-----
 MIHcAgEBBEIAjn0lSVF6QweS4bjOGP9RHwqxUiTastSE0MVuLtFvkxygZqQ712oZ
 ewMvqKkxthMQgxzSpGtRBcmkL7RqZ94+18qgBwYFK4EEACOhgYkDgYYABAFpX/6B
@@ -127,7 +133,8 @@ Ah5UaYGPanzhuRX2MHOtQ0kQAKwmO21nDw1tSuHGOQtP/esw227CMTi8uNrQ/sMxMTQRXx
 d/T0RN2S7/P/W05JKtK9HCZRwz2dBQm0ccBmWvlDR/AAAAQgCOfSVJUXpDB5LhuM4Y/1Ef
 CrFSJNqy1ITQxW4u0W+THKBmpDvXahl7Ay+oqTG2ExCDHNKka1EFyaQvtGpn3j7XygAAAA
 ABAg==
------END OPENSSH PRIVATE KEY-----"""
+-----END OPENSSH PRIVATE KEY-----
+"""
 
 publicECDSA_openssh521 = (
     b"ecdsa-sha2-nistp521 AAAAE2VjZHNhLXNoYTItbmlzdHA1MjEAAAAIbmlzdHA1MjEAAACF"
@@ -153,7 +160,8 @@ cDM4NAAAAAhuaXN0cDM4NAAAAGEE1Ne7APT+RUcEpJynBbI47JNPhNwnlz2F9E5PzNBytz
 6VkFoKzvCXURz/XhRPTv9tz/AbpsBbexfwLz5Qs1Xd+VX62hU9KOHAlhtEaqUPp6d9Wipn
 ibIZHGACxHIZ1PrUAAAAMC0CLsjyPvdYJfbSpQzmGEfAe4XNhZhgguzZKHxRn5rA2QBFn8
 W7YtQsuXlG05CltQAAAAA=
------END OPENSSH PRIVATE KEY-----"""
+-----END OPENSSH PRIVATE KEY-----
+"""
 
 publicECDSA_openssh384 = (
     b"ecdsa-sha2-nistp384 AAAAE2VjZHNhLXNoYTItbmlzdHAzODQAAAAIbmlzdHAzODQAAABh"
@@ -181,6 +189,21 @@ Ze3bgtZfOecg+7RH0H6pO23O7+OlntYSzMs+jm1AWIJDf9+J+NheL6XgAAAAmCKU4hcilO
 IXAAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBKimX1DZ7+Qj0Spf
 ePMbo1pb6yGkAb5l7duC1l855yD7tEfQfqk7bc7v46We1hLMyz6ObUBYgkN/34n42F4vpe
 AAAAAgTJTVg5PYnHGh/BslciMZ+101wkrnlpB02uEi3bFhDPQAAAAA
+-----END OPENSSH PRIVATE KEY-----
+"""
+
+publicEd25519_openssh = (
+    b"ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIPEW0RVKHhUOGV4ZRrXyRA2yUqCuKmsjE3NF"
+    b"/UDZV3uL comment"
+)
+
+# OpenSSH has only ever supported the "new" (v1) format for Ed25519.
+privateEd25519_openssh_new = b"""-----BEGIN OPENSSH PRIVATE KEY-----
+b3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAAAMwAAAAtzc2gtZW
+QyNTUxOQAAACDxFtEVSh4VDhleGUa18kQNslKgriprIxNzRf1A2Vd7iwAAAJA61eMLOtXj
+CwAAAAtzc2gtZWQyNTUxOQAAACDxFtEVSh4VDhleGUa18kQNslKgriprIxNzRf1A2Vd7iw
+AAAEA3LyXajdSomnh8YfCYAcb0Xm1nBWkxN0xpDQVVu8lEWPEW0RVKHhUOGV4ZRrXyRA2y
+UqCuKmsjE3NF/UDZV3uLAAAAB2NvbW1lbnQBAgMEBQY=
 -----END OPENSSH PRIVATE KEY-----"""
 
 publicRSA_openssh = (
@@ -225,27 +248,31 @@ rXp0IjScTxfLP+Cq5V6lJ94/pX8Ppoj1FdZfNxeS4NYFSRA7kvY=
 # following it. It is not any standard key format and was probably a bug in
 # OpenSSH at some point.
 privateRSA_openssh_alternate = b"""-----BEGIN RSA PRIVATE KEY-----
-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
+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
 -----END RSA PRIVATE KEY-----"""
 
 # New format introduced in OpenSSH 6.5
@@ -275,7 +302,8 @@ Q9IqliJiK5su1UCp0Ig6cHDf8ZGI7Yqx3aSJwxaBGhZm3j2B0AAACBAPtEF4ukNr4eNx2n
 9mFsBMSq3Xg+B4weMwKuAxSHg3rlnn0IZ6jyqr8ScM9yqafHCx2I1SD9nGPKRzBVTovEz/
 R/FqSSEnShCcLEbpyMM++l5ffgK61PXBGqGoQ3W/166sPNfLDI5B9UY7XHr9/0Caf8xyX8
 XOmR15LFmB5W07EjAAAAAAEC
------END OPENSSH PRIVATE KEY-----'''
+-----END OPENSSH PRIVATE KEY-----
+'''
 
 # Encrypted with the passphrase 'encrypted'
 privateRSA_openssh_encrypted = b"""-----BEGIN RSA PRIVATE KEY-----
@@ -338,7 +366,8 @@ zx7dfixjAPc42ADqrw/tEdFQcSqxigcfJNKO1LbDBjh+Hk/cSBou2PoxbIcl0qfQfbGcqI
 Dbpd695IEuiW9pYR22txNoIi+7cbMsuFHxQ/OqbrX/jCsprGNNJLAjgGsVEI1JnHWDH0db
 3UbqbOHAeY3ufoYXNY1utVOIACpW3r9wBw3FjRi04d70VcKr16OXvOAHGN2G++Y+kMya84
 Hl/Kt/gA==
------END OPENSSH PRIVATE KEY-----"""
+-----END OPENSSH PRIVATE KEY-----
+"""
 
 # Encrypted with the passphrase 'testxp'. NB: this key was generated by
 # OpenSSH, so it doesn't use the same key data as the other keys here.
@@ -524,7 +553,7 @@ kvhGbq0DCe2EPMXirjqWACI5nDioQX1oEMonR8N3AEO5v9SfBqS2Q9R6OBr6lf04RvwpHZ
 9efEUuQcZ9SXxM59P+hecc/GU/GHakW5YWE4dP2GgdgMQWC7S6WFIXePGGXqNQDdWxlX8u
 mhenvQqa1PnKrFRhDrJw8Z7GjdHxflsxCEmXPoLN8AAAAVANXaBstzNR3EK6zSl8Q/Vt11
 pdEtAAAAAAE=
------END OPENSSH PRIVATE KEY-----\
+-----END OPENSSH PRIVATE KEY-----
 """
 
 publicDSA_lsh = decodebytes(b"""\

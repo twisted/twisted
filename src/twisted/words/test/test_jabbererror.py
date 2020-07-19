@@ -5,7 +5,6 @@
 Tests for L{twisted.words.protocols.jabber.error}.
 """
 
-from __future__ import absolute_import, division
 
 from twisted.python.compat import unicode
 from twisted.trial import unittest

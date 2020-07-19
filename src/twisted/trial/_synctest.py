@@ -8,11 +8,15 @@ Things likely to be used by writers of unit tests.
 Maintainer: Jonathan Lange
 """
 
-from __future__ import division, absolute_import
 
 import inspect
-import os, warnings, sys, tempfile, types
+import os
+import sys
+import tempfile
+import types
+import warnings
 from dis import findlinestarts as _findlinestarts
+from typing import Optional, Tuple
 
 from twisted.python import failure, log, monkey
 from twisted.python.reflect import fullyQualifiedName
@@ -30,7 +34,7 @@ from twisted.trial import itrial, util
 import unittest as pyunit
 
 # Python 2.7 and higher has skip support built-in
-SkipTest = pyunit.SkipTest
+from unittest import SkipTest
 
 
 
@@ -388,7 +392,9 @@ class _Assertions(pyunit.TestCase, object):
         """
         super(_Assertions, self).assertFalse(condition, msg)
         return condition
-    assertNot = failUnlessFalse = failIf = assertFalse
+    assertNot = assertFalse
+    failUnlessFalse = assertFalse
+    failIf = assertFalse
 
 
     def assertTrue(self, condition, msg=None):
@@ -399,7 +405,9 @@ class _Assertions(pyunit.TestCase, object):
         """
         super(_Assertions, self).assertTrue(condition, msg)
         return condition
-    assert_ = failUnlessTrue = failUnless = assertTrue
+    assert_ = assertTrue
+    failUnlessTrue = assertTrue
+    failUnless = assertTrue
 
 
     def assertRaises(self, exception, f=None, *args, **kwargs):
@@ -424,7 +432,11 @@ class _Assertions(pyunit.TestCase, object):
             return context
 
         return context._handle(lambda: f(*args, **kwargs))
-    failUnlessRaises = assertRaises
+
+    # unittest.TestCase.assertRaises() is defined with 4 arguments
+    # but we define it with 5 arguments.  So we need to tell mypy
+    # to ignore the following assignment to failUnlessRaises
+    failUnlessRaises = assertRaises  # type: ignore[assignment]
 
 
     def assertEqual(self, first, second, msg=None):
@@ -436,7 +448,9 @@ class _Assertions(pyunit.TestCase, object):
         """
         super(_Assertions, self).assertEqual(first, second, msg)
         return first
-    failUnlessEqual = failUnlessEquals = assertEquals = assertEqual
+    failUnlessEqual = assertEqual
+    failUnlessEquals = assertEqual
+    assertEquals = assertEqual
 
 
     def assertIs(self, first, second, msg=None):
@@ -449,9 +463,11 @@ class _Assertions(pyunit.TestCase, object):
         '%r is not %r' % (first, second)
         """
         if first is not second:
-            raise self.failureException(msg or '%r is not %r' % (first, second))
+            raise self.failureException(
+                msg or '%r is not %r' % (first, second))
         return first
-    failUnlessIdentical = assertIdentical = assertIs
+    failUnlessIdentical = assertIs
+    assertIdentical = assertIs
 
 
     def assertIsNot(self, first, second, msg=None):
@@ -466,7 +482,8 @@ class _Assertions(pyunit.TestCase, object):
         if first is second:
             raise self.failureException(msg or '%r is %r' % (first, second))
         return first
-    failIfIdentical = assertNotIdentical = assertIsNot
+    failIfIdentical = assertIsNot
+    assertNotIdentical = assertIsNot
 
 
     def assertNotEqual(self, first, second, msg=None):
@@ -479,7 +496,9 @@ class _Assertions(pyunit.TestCase, object):
         if not first != second:
             raise self.failureException(msg or '%r == %r' % (first, second))
         return first
-    assertNotEquals = failIfEquals = failIfEqual = assertNotEqual
+    assertNotEquals = assertNotEqual
+    failIfEquals = assertNotEqual
+    failIfEqual = assertNotEqual
 
 
     def assertIn(self, containee, container, msg=None):
@@ -516,7 +535,8 @@ class _Assertions(pyunit.TestCase, object):
     failIfIn = assertNotIn
 
 
-    def assertNotAlmostEqual(self, first, second, places=7, msg=None):
+    def assertNotAlmostEqual(self, first, second, places=7, msg=None,
+                             delta=None):
         """
         Fail if the two objects are equal as determined by their
         difference rounded to the given number of decimal places
@@ -532,11 +552,13 @@ class _Assertions(pyunit.TestCase, object):
             raise self.failureException(msg or '%r == %r within %r places'
                                         % (first, second, places))
         return first
-    assertNotAlmostEquals = failIfAlmostEqual = assertNotAlmostEqual
+    assertNotAlmostEquals = assertNotAlmostEqual
+    failIfAlmostEqual = assertNotAlmostEqual
     failIfAlmostEquals = assertNotAlmostEqual
 
 
-    def assertAlmostEqual(self, first, second, places=7, msg=None):
+    def assertAlmostEqual(self, first, second, places=7, msg=None,
+                          delta=None):
         """
         Fail if the two objects are unequal as determined by their
         difference rounded to the given number of decimal places
@@ -552,8 +574,8 @@ class _Assertions(pyunit.TestCase, object):
             raise self.failureException(msg or '%r != %r within %r places'
                                         % (first, second, places))
         return first
-    assertAlmostEquals = failUnlessAlmostEqual = assertAlmostEqual
-    failUnlessAlmostEquals = assertAlmostEqual
+    assertAlmostEquals = assertAlmostEqual
+    failUnlessAlmostEqual = assertAlmostEqual
 
 
     def assertApproximates(self, first, second, tolerance, msg=None):
@@ -1010,15 +1032,25 @@ class SynchronousTestCase(_Assertions):
         return desc
 
 
-    def getSkip(self):
+    def getSkip(self) -> Tuple[bool, Optional[str]]:
         """
         Return the skip reason set on this test, if any is set. Checks on the
         instance first, then the class, then the module, then packages. As
-        soon as it finds something with a C{skip} attribute, returns that.
-        Returns L{None} if it cannot find anything. See L{TestCase} docstring
-        for more details.
+        soon as it finds something with a C{skip} attribute, returns that in
+        a tuple (L{True}, L{str}).
+        If the C{skip} attribute does not exist, look for C{__unittest_skip__}
+        and C{__unittest_skip_why__} attributes which are set by the standard
+        library L{unittest.skip} function.
+        Returns (L{False}, L{None}) if it cannot find anything.
+        See L{TestCase} docstring for more details.
         """
-        return util.acquireAttribute(self._parents, 'skip', None)
+        skipReason = util.acquireAttribute(self._parents, 'skip', None)
+        doSkip = skipReason is not None
+        if skipReason is None:
+            doSkip = getattr(self, "__unittest_skip__", False)
+            if doSkip:
+                skipReason = getattr(self, "__unittest_skip_why__", "")
+        return (doSkip, skipReason)
 
 
     def getTodo(self):
@@ -1061,8 +1093,9 @@ class SynchronousTestCase(_Assertions):
         else:
             result = new_result
         result.startTest(self)
-        if self.getSkip(): # don't run test methods that are marked as .skip
-            result.addSkip(self, self.getSkip())
+        (doSkip, skipReason) = self.getSkip()
+        if doSkip:  # don't run test methods that are marked as .skip
+            result.addSkip(self, skipReason)
             result.stopTest(self)
             return
 

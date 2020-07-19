@@ -7,7 +7,6 @@
 The point of integration of application and authentication.
 """
 
-from __future__ import division, absolute_import
 
 from twisted.internet import defer
 from twisted.internet.defer import maybeDeferred

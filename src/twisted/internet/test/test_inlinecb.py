@@ -9,9 +9,6 @@ Some tests for inlineCallbacks are defined in L{twisted.test.test_defgen} as
 well.
 """
 
-from __future__ import division, absolute_import
-
-import sys
 
 from twisted.trial.unittest import TestCase, SynchronousTestCase
 from twisted.internet.defer import (
@@ -43,11 +40,6 @@ def f(d):
         d2 = environ["f"](d1)
         d1.callback(None)
         self.assertEqual(self.successResultOf(d2), 14)
-
-
-
-if sys.version_info < (3, 4):
-    StopIterationReturnTests.skip = "Test requires Python 3.4 or greater"
 
 
 

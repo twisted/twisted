@@ -20,7 +20,6 @@ from twisted.internet.error import UnsupportedAddressFamily
 from twisted.internet.protocol import DatagramProtocol, ServerFactory
 from twisted.internet.test.reactormixins import (
     ReactorBuilder, needsRunningReactor)
-from twisted.python.compat import _PY3
 from twisted.python.runtime import platform
 
 
@@ -81,7 +80,7 @@ class AdoptStreamPortErrorsTestsBuilder(ReactorBuilder):
         exc = self.assertRaises(
             socket.error,
             reactor.adoptStreamPort, fileno, socket.AF_INET, ServerFactory())
-        if platform.isWindows() and _PY3:
+        if platform.isWindows():
             self.assertEqual(exc.args[0], errno.WSAENOTSOCK)
         else:
             self.assertEqual(exc.args[0], errno.EBADF)
@@ -133,7 +132,7 @@ class AdoptStreamPortErrorsTestsBuilder(ReactorBuilder):
             # portSocket.  If it was shutdown, the exception would be
             # EINVAL instead.
             exc = self.assertRaises(socket.error, portSocket.accept)
-            if platform.isWindows() and _PY3:
+            if platform.isWindows():
                 self.assertEqual(exc.args[0], errno.WSAEWOULDBLOCK)
             else:
                 self.assertEqual(exc.args[0], errno.EAGAIN)
@@ -203,7 +202,7 @@ class AdoptDatagramPortErrorsTestsBuilder(ReactorBuilder):
             socket.error,
             reactor.adoptDatagramPort, fileno, socket.AF_INET,
             DatagramProtocol())
-        if platform.isWindows() and _PY3:
+        if platform.isWindows():
             self.assertEqual(exc.args[0], errno.WSAENOTSOCK)
         else:
             self.assertEqual(exc.args[0], errno.EBADF)
@@ -252,7 +251,7 @@ class AdoptDatagramPortErrorsTestsBuilder(ReactorBuilder):
             # Should still be possible to recv on portSocket.  If
             # it was shutdown, the exception would be EINVAL instead.
             exc = self.assertRaises(socket.error, portSocket.recvfrom, 1)
-            if platform.isWindows() and _PY3:
+            if platform.isWindows():
                 self.assertEqual(exc.args[0], errno.WSAEWOULDBLOCK)
             else:
                 self.assertEqual(exc.args[0], errno.EAGAIN)

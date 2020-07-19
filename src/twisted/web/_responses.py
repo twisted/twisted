@@ -6,7 +6,6 @@
 HTTP response code definitions.
 """
 
-from __future__ import division, absolute_import
 
 _CONTINUE = 100
 SWITCHING = 101
