@@ -7,7 +7,6 @@
 Cred plugin for a file of the format 'username:password'.
 """
 
-from __future__ import absolute_import, division
 
 import sys
 

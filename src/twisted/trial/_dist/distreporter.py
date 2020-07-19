@@ -18,7 +18,7 @@ from twisted.python.components import proxyForInterface
 
 
 @implementer(IReporter)
-class DistReporter(proxyForInterface(IReporter)):
+class DistReporter(proxyForInterface(IReporter)):  # type: ignore[misc]
     """
     See module docstring.
     """

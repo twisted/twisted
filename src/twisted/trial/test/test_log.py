@@ -4,7 +4,6 @@
 """
 Test the interaction between trial and errors logged during test run.
 """
-from __future__ import division, absolute_import
 
 import time
 

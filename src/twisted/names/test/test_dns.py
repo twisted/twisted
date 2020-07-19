@@ -6,7 +6,6 @@
 Tests for twisted.names.dns.
 """
 
-from __future__ import division, absolute_import
 
 from io import BytesIO
 
@@ -34,6 +33,49 @@ RECORD_TYPES = [
     dns.Record_TSIG,
     dns.UnknownRecord,
     ]
+
+
+
+class DomainStringTests(unittest.SynchronousTestCase):
+    def test_bytes(self):
+        """
+        L{dns.domainString} returns L{bytes} unchanged.
+        """
+        self.assertEqual(
+            b'twistedmatrix.com',
+            dns.domainString(b'twistedmatrix.com'),
+        )
+
+
+    def test_native(self):
+        """
+        L{dns.domainString} converts a native string to L{bytes}
+        if necessary.
+        """
+        self.assertEqual(b'example.com', dns.domainString('example.com'))
+
+
+    def test_text(self):
+        """
+        L{dns.domainString} always converts a unicode string to L{bytes}.
+        """
+        self.assertEqual(b'foo.example', dns.domainString(u'foo.example'))
+
+
+    def test_idna(self):
+        """
+        L{dns.domainString} encodes Unicode using IDNA.
+        """
+        self.assertEqual(b'xn--fwg.test', dns.domainString(u'\u203D.test'))
+
+
+    def test_nonsense(self):
+        """
+        L{dns.domainString} encodes Unicode using IDNA.
+        """
+        self.assertRaises(TypeError, dns.domainString, 9000)
+        self.assertRaises(TypeError, dns.domainString, dns.Name('bar.example'))
+
 
 
 class Ord2ByteTests(unittest.TestCase):
@@ -4169,9 +4211,10 @@ class EDNSMessageSpecificsTests(ConstructorTestsMixin,
 
 
 
-class EDNSMessageEqualityTests(ComparisonTestsMixin, unittest.SynchronousTestCase):
+class EDNSMessageEqualityTests(ComparisonTestsMixin,
+                               unittest.SynchronousTestCase):
     """
-    Tests for equality between L(dns._EDNSMessage} instances.
+    Tests for equality between L{dns._EDNSMessage} instances.
 
     These tests will not work with L{dns.Message} because it does not use
     L{twisted.python.util.FancyEqMixin}.
@@ -4882,9 +4925,11 @@ class Foo(object):
 
 class CompactReprTests(unittest.SynchronousTestCase):
     """
-    Tests for L[dns._compactRepr}.
+    Tests for L{dns._compactRepr}.
     """
+
     messageFactory = Foo
+
     def test_defaults(self):
         """
         L{dns._compactRepr} omits field values and sections which have the

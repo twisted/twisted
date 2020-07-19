@@ -1,0 +1,42 @@
+trigger:
+  batch: true
+  branches:
+    include:
+    - trunk
+
+pr:
+  branches:
+    include:
+    - trunk
+
+variables:
+  INFRASTRUCTURE: "AZUREPIPELINES"
+  TRIAL_REPORTER: "verbose"
+
+jobs:
+
+- template: 'macos_test_jobs.yml'
+  parameters:
+    pythonVersions:
+      py35: "3.5"
+      py36: "3.6"
+      py37: "3.7"
+      py38: "3.8"
+
+- template: 'windows_test_jobs.yml'
+  parameters:
+    pythonVersions:
+      py35: "3.5"
+      py36: "3.6"
+      py37: "3.7"
+      py38: "3.8"
+    reactor: select
+
+- template: 'windows_test_jobs.yml'
+  parameters:
+    pythonVersions:
+      py35: "3.5"
+      py36: "3.6"
+      py37: "3.7"
+      py38: "3.8"
+    reactor: iocp

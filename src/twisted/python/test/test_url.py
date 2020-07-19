@@ -5,12 +5,10 @@
 """
 Tests for L{twisted.python.url}.
 """
-from __future__ import unicode_literals
 
 from ..url import URL
 
-unicode = type(u'')
-
+from twisted.python.compat import unicode
 from twisted.trial.unittest import SynchronousTestCase
 
 

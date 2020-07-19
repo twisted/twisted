@@ -53,10 +53,7 @@ with wxPython, or the PyObjCTools.AppHelper.stopEventLoop function.
 from functools import partial
 from threading import Thread
 
-try:
-    from queue import Queue, Empty
-except ImportError:
-    from Queue import Queue, Empty
+from queue import Queue, Empty
 import sys
 
 from zope.interface import implementer

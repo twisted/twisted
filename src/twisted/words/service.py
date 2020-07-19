@@ -937,27 +937,36 @@ class PBMind(pb.Referenceable):
     def __init__(self):
         pass
 
+
     def jellyFor(self, jellier):
         qual = reflect.qual(PBMind)
         if isinstance(qual, unicode):
             qual = qual.encode("utf-8")
         return qual, jellier.invoker.registerReference(self)
 
+
     def remote_userJoined(self, user, group):
         pass
+
 
     def remote_userLeft(self, user, group, reason):
         pass
 
+
     def remote_receive(self, sender, recipient, message):
         pass
+
 
     def remote_groupMetaUpdate(self, group, meta):
         pass
 
 
+
 @implementer(iwords.IChatClient)
 class PBMindReference(pb.RemoteReference):
+
+    name = ""
+
     def receive(self, sender, recipient, message):
         if iwords.IGroup.providedBy(recipient):
             rec = PBGroup(self.realm, self.avatar, recipient)
@@ -969,11 +978,13 @@ class PBMindReference(pb.RemoteReference):
             rec,
             message)
 
+
     def groupMetaUpdate(self, group, meta):
         return self.callRemote(
             'groupMetaUpdate',
             PBGroup(self.realm, self.avatar, group),
             meta)
+
 
     def userJoined(self, group, user):
         return self.callRemote(
@@ -981,13 +992,18 @@ class PBMindReference(pb.RemoteReference):
             PBGroup(self.realm, self.avatar, group),
             PBUser(self.realm, self.avatar, user))
 
+
     def userLeft(self, group, user, reason=None):
         return self.callRemote(
             'userLeft',
             PBGroup(self.realm, self.avatar, group),
             PBUser(self.realm, self.avatar, user),
             reason)
+
+
+
 pb.setUnjellyableForClass(PBMind, PBMindReference)
+
 
 
 class PBGroup(pb.Referenceable):
@@ -1028,12 +1044,49 @@ class PBGroupReference(pb.RemoteReference):
             self.name = self.name.decode('utf-8')
         return pb.RemoteReference.unjellyFor(self, unjellier, [clsName, ref])
 
+
     def leave(self, reason=None):
         return self.callRemote("leave", reason)
 
+
     def send(self, message):
         return self.callRemote("send", message)
+
+
+    def add(self, user):
+        # IGroup.add
+        pass
+
+
+    def iterusers(self):
+        # IGroup.iterusers
+        pass
+
+
+    def receive(self, sender, recipient, message):
+        # IGroup.receive
+        pass
+
+
+    def remove(self, user, reason=None):
+        # IGroup.remove
+        pass
+
+
+    def setMetadata(self, meta):
+        # IGroup.setMetadata
+        pass
+
+
+    def size(self):
+        # IGroup.size
+        pass
+
+
+
 pb.setUnjellyableForClass(PBGroup, PBGroupReference)
+
+
 
 class PBUser(pb.Referenceable):
     def __init__(self, realm, avatar, user):
@@ -1068,7 +1121,44 @@ class ChatAvatar(pb.Referenceable):
         d = self.avatar.realm.getGroup(groupName)
         d.addCallback(cbGroup)
         return d
+
+
+    @property
+    def name(self):
+        # IChatClient.name
+        pass
+
+
+    @name.setter
+    def name(self, value):
+        # IChatClient.name
+        pass
+
+
+    def groupMetaUpdate(self, group, meta):
+        # IChatClient.groupMetaUpdate
+        pass
+
+
+    def receive(self, sender, recipient, message):
+        # IChatClient.receive
+        pass
+
+
+    def userJoined(self, group, user):
+        # IChatClient.userJoined
+        pass
+
+
+    def userLeft(self, group, user, reason=None):
+        # IChatClient.userLeft
+        pass
+
+
+
 registerAdapter(ChatAvatar, iwords.IUser, pb.IPerspective)
+
+
 
 class AvatarReference(pb.RemoteReference):
     def join(self, groupName):
@@ -1125,6 +1215,11 @@ class WordsRealm(object):
             raise NotImplementedError(self, interfaces)
 
         return self.getUser(avatarId).addCallback(gotAvatar)
+
+
+    def itergroups(self):
+        # IChatServer.itergroups
+        pass
 
 
     # IChatService, mostly.

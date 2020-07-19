@@ -14,7 +14,7 @@ import warnings
 
 
 from io import BytesIO as StringIO
-
+from unittest import skipIf
 from zope.interface.verify import verifyObject
 
 from twisted.internet import abstract, interfaces
@@ -199,6 +199,7 @@ class StaticFileTests(TestCase):
         return d
 
 
+    @skipIf(platform.isWindows(), "Cannot remove read permission on Windows")
     def test_forbiddenResource(self):
         """
         If the file in the filesystem which would satisfy a request cannot be
@@ -219,8 +220,6 @@ class StaticFileTests(TestCase):
             self.assertEqual(request.responseCode, 403)
         d.addCallback(cbRendered)
         return d
-    if platform.isWindows():
-        test_forbiddenResource.skip = "Cannot remove read permission on Windows"
 
 
     def test_undecodablePath(self):
@@ -333,6 +332,9 @@ class StaticFileTests(TestCase):
         return d
 
 
+    @skipIf(sys.getfilesystemencoding().lower() not in ('utf-8', 'mcbs'),
+            "Cannot write unicode filenames with file system encoding of"
+            " {}".format(sys.getfilesystemencoding()))
     def test_staticFileUnicodeFileName(self):
         """
         A request for a existing unicode file path encoded as UTF-8
@@ -357,10 +359,6 @@ class StaticFileTests(TestCase):
                 networkString(str(len(content))))
         d.addCallback(cbRendered)
         return d
-    if sys.getfilesystemencoding().lower() not in ('utf-8', 'mcbs'):
-        test_staticFileUnicodeFileName.skip = (
-            "Cannot write unicode filenames with file system encoding of"
-            " %s" % (sys.getfilesystemencoding(),))
 
 
     def test_staticFileDeletedGetChild(self):
@@ -1714,6 +1712,7 @@ class DirectoryListerTests(TestCase):
              'type': '[text/diff]'}])
 
 
+    @skipIf(not platform._supportsSymlinks(), "No symlink support")
     def test_brokenSymlink(self):
         """
         If on the file in the listing points to a broken symlink, it should not
@@ -1732,9 +1731,6 @@ class DirectoryListerTests(TestCase):
         dirs, files = lister._getFilesAndDirectories(directory)
         self.assertEqual(dirs, [])
         self.assertEqual(files, [])
-
-    if not platform._supportsSymlinks():
-        test_brokenSymlink.skip = "No symlink support"
 
 
     def test_childrenNotFound(self):

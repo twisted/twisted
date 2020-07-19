@@ -7,13 +7,9 @@ Top level thread pool interface, used to implement
 L{twisted.python.threadpool}.
 """
 
-from __future__ import absolute_import, division, print_function
 
 from threading import Thread, Lock, local as LocalStorage
-try:
-    from Queue import Queue
-except ImportError:
-    from queue import Queue
+from queue import Queue
 
 from twisted.python.log import err
 

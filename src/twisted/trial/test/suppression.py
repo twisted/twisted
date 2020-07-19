@@ -10,7 +10,6 @@ See the L{twisted.trial.test.test_tests} module docstring for details about how
 this code is arranged.
 """
 
-from __future__ import division, absolute_import
 
 import warnings
 
@@ -49,14 +48,14 @@ class SuppressionMixin(EmitMixin):
 
     def testSuppressMethod(self):
         self._emit()
-    testSuppressMethod.suppress = [util.suppress(message=METHOD_WARNING_MSG)]
+    testSuppressMethod.suppress = [util.suppress(message=METHOD_WARNING_MSG)]  # type: ignore[attr-defined] # noqa
 
     def testSuppressClass(self):
         self._emit()
 
     def testOverrideSuppressClass(self):
         self._emit()
-    testOverrideSuppressClass.suppress = []
+    testOverrideSuppressClass.suppress = []  # type: ignore[attr-defined]
 
 
 

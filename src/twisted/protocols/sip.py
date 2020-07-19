@@ -13,6 +13,7 @@ import socket
 import time
 import warnings
 
+from typing import Dict
 from zope.interface import implementer, Interface
 from collections import OrderedDict
 
@@ -20,7 +21,7 @@ from twisted import cred
 from twisted.internet import protocol, defer, reactor
 from twisted.protocols import basic
 from twisted.python import log
-from twisted.python.compat import _PY3, iteritems, unicode
+from twisted.python.compat import iteritems, unicode
 
 PORT = 5060
 
@@ -203,7 +204,8 @@ class Via(object):
         self.otherParams = kw
 
 
-    def _getrport(self):
+    @property
+    def rport(self):
         """
         Returns the rport value expected by the old SIP code.
         """
@@ -215,7 +217,8 @@ class Via(object):
             return None
 
 
-    def _setrport(self, newRPort):
+    @rport.setter
+    def rport(self, newRPort):
         """
         L{Base._fixupNAT} sets C{rport} directly, so this method sets
         C{rportValue} based on that.
@@ -226,7 +229,6 @@ class Via(object):
         self.rportValue = newRPort
         self.rportRequested = False
 
-    rport = property(_getrport, _setrport)
 
     def toString(self):
         """
@@ -649,7 +651,7 @@ class MessagesParser(basic.LineReceiver):
 
 
     def lineReceived(self, line):
-        if _PY3 and isinstance(line, bytes):
+        if isinstance(line, bytes):
             line = line.decode("utf-8")
 
         if self.state == "firstline":
@@ -725,7 +727,7 @@ class MessagesParser(basic.LineReceiver):
 
     def rawDataReceived(self, data):
         assert self.state in ("body", "invalid")
-        if _PY3 and isinstance(data, bytes):
+        if isinstance(data, bytes):
             data = data.decode("utf-8")
         if self.state == "invalid":
             return
@@ -1081,9 +1083,9 @@ class RegisterProxy(Proxy):
 
     portal = None
 
-    registry = None # Should implement IRegistry
+    registry = None  # Should implement IRegistry
 
-    authorizers = {}
+    authorizers = {}  # type: Dict[str, IAuthorizer]
 
     def __init__(self, *args, **kw):
         Proxy.__init__(self, *args, **kw)

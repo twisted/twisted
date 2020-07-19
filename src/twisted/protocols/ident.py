@@ -157,7 +157,7 @@ class ProcServerMixin:
             return getpwuid(uid)[0]
         del getpwuid
     except ImportError:
-        def getUsername(self, uid):
+        def getUsername(self, uid, getpwuid=None):
             raise IdentError()
 
 

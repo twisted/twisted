@@ -5,14 +5,13 @@
 Tests for L{twisted.conch.checkers}.
 """
 
-from __future__ import absolute_import, division
 
 try:
     import crypt
 except ImportError:
     cryptSkip = 'cannot run without crypt module'
 else:
-    cryptSkip = None
+    cryptSkip = ''
 
 import os
 
@@ -36,7 +35,7 @@ from twisted.test.test_process import MockOS
 
 
 if requireModule('cryptography') and requireModule('pyasn1'):
-    dependencySkip = None
+    dependencySkip = ''
     from twisted.conch.ssh import keys
     from twisted.conch import checkers
     from twisted.conch.error import NotEnoughAuthentication, ValidPublicKey
@@ -47,7 +46,8 @@ else:
 if getattr(os, 'geteuid', None) is None:
     euidSkip = "Cannot run without effective UIDs (questionable)"
 else:
-    euidSkip = None
+    euidSkip = ''
+
 
 
 class HelperTests(TestCase):

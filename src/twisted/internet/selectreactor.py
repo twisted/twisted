@@ -6,11 +6,14 @@
 Select reactor
 """
 
-from __future__ import division, absolute_import
 
 from time import sleep
-import sys, select, socket
+import select
+import socket
+import sys
 from errno import EINTR, EBADF
+
+from typing import Type
 
 from zope.interface import implementer
 
@@ -46,13 +49,14 @@ else:
 try:
     from twisted.internet.win32eventreactor import _ThreadedWin32EventsMixin
 except ImportError:
-    _extraBase = object
+    _extraBase = object  # type: Type[object]
 else:
     _extraBase = _ThreadedWin32EventsMixin
 
 
+
 @implementer(IReactorFDSet)
-class SelectReactor(posixbase.PosixReactorBase, _extraBase):
+class SelectReactor(posixbase.PosixReactorBase, _extraBase):  # type: ignore[misc,valid-type]  # noqa
     """
     A select() based reactor - runs on all POSIX platforms and on Win32.
 

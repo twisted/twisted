@@ -6,11 +6,11 @@
 #
 # $Id: conch.py,v 1.65 2004/03/11 00:29:14 z3p Exp $
 
-#""" Implementation module for the `conch` command.
-#"""
-from __future__ import print_function
+# Implementation module for the `conch` command.
+#
 
-from twisted.conch.client import connect, default, options
+from twisted.conch.client import connect, default
+from twisted.conch.client.options import ConchOptions
 from twisted.conch.error import ConchError
 from twisted.conch.ssh import connection, common
 from twisted.conch.ssh import session, forwarding, channel
@@ -25,10 +25,11 @@ import struct
 import tty
 import fcntl
 import signal
+from typing import List, Tuple
 
 
 
-class ClientOptions(options.ConchOptions):
+class ClientOptions(ConchOptions):
 
     synopsis = """Usage:   conch [options] host [command]
 """
@@ -58,8 +59,8 @@ class ClientOptions(options.ConchOptions):
                       usage.Completer(descr="argument", repeat=True)]
         )
 
-    localForwards = []
-    remoteForwards = []
+    localForwards = []  # type: List[Tuple[int, Tuple[int, int]]]
+    remoteForwards = []  # type: List[Tuple[int, Tuple[int, int]]]
 
     def opt_escape(self, esc):
         """
