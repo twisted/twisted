@@ -33,7 +33,7 @@ from twisted.python.compat import comparable, cmp, nativeString
 
 
 __all__ = [
-    'IEncodable', 'IRecord',
+    'IEncodable', 'IRecord', 'IEncodableRecord',
 
     'A', 'A6', 'AAAA', 'AFSDB', 'CNAME', 'DNAME', 'HINFO',
     'MAILA', 'MAILB', 'MB', 'MD', 'MF', 'MG', 'MINFO', 'MR', 'MX',
@@ -398,6 +398,15 @@ class IEncodable(Interface):
         records similar to TXT where the total length is in no way
         encoded in the data is it necessary.
         """
+
+
+
+class IEncodableRecord(IEncodable, IRecord):
+    """
+    Interface for DNS records that can be encoded and decoded.
+
+    @since: Twisted NEXT
+    """
 
 
 
@@ -907,7 +916,8 @@ class RRHeader(tputil.FancyEqMixin):
     @ivar ttl: The time-to-live for this record.
     @type ttl: L{int}
 
-    @ivar payload: An object that implements the L{IEncodable} interface
+    @ivar payload: The record described by this header.
+    @type payload: L{IEncodableRecord} or L{None}
 
     @ivar auth: A L{bool} indicating whether this C{RRHeader} was parsed from
         an authoritative message.
@@ -941,8 +951,8 @@ class RRHeader(tputil.FancyEqMixin):
         @param ttl: Time to live for this record.  This will be
             converted to an L{int}.
 
-        @type payload: An object implementing C{IEncodable}
-        @param payload: A Query Type specific data object.
+        @type payload: L{IEncodableRecord} or L{None}
+        @param payload: An optional Query Type specific data object.
 
         @raises TypeError: if the ttl cannot be converted to an L{int}.
         @raises ValueError: if the ttl is negative.
@@ -996,7 +1006,7 @@ class RRHeader(tputil.FancyEqMixin):
 
 
 
-@implementer(IEncodable, IRecord)
+@implementer(IEncodableRecord)
 class SimpleRecord(tputil.FancyStrMixin, tputil.FancyEqMixin):
     """
     A Resource Record which consists of a single RFC 1035 domain-name.
@@ -1139,7 +1149,7 @@ class Record_DNAME(SimpleRecord):
 
 
 
-@implementer(IEncodable, IRecord)
+@implementer(IEncodableRecord)
 class Record_A(tputil.FancyEqMixin):
     """
     An IPv4 host address.
@@ -1193,7 +1203,7 @@ class Record_A(tputil.FancyEqMixin):
 
 
 
-@implementer(IEncodable, IRecord)
+@implementer(IEncodableRecord)
 class Record_SOA(tputil.FancyEqMixin, tputil.FancyStrMixin):
     """
     Marks the start of a zone of authority.
@@ -1283,7 +1293,7 @@ class Record_SOA(tputil.FancyEqMixin, tputil.FancyStrMixin):
 
 
 
-@implementer(IEncodable, IRecord)
+@implementer(IEncodableRecord)
 class Record_NULL(tputil.FancyStrMixin, tputil.FancyEqMixin):
     """
     A null record.
@@ -1318,7 +1328,7 @@ class Record_NULL(tputil.FancyStrMixin, tputil.FancyEqMixin):
 
 
 
-@implementer(IEncodable, IRecord)
+@implementer(IEncodableRecord)
 class Record_WKS(tputil.FancyEqMixin, tputil.FancyStrMixin):
     """
     A well known service description.
@@ -1383,7 +1393,7 @@ class Record_WKS(tputil.FancyEqMixin, tputil.FancyStrMixin):
 
 
 
-@implementer(IEncodable, IRecord)
+@implementer(IEncodableRecord)
 class Record_AAAA(tputil.FancyEqMixin, tputil.FancyStrMixin):
     """
     An IPv6 host address.
@@ -1434,7 +1444,7 @@ class Record_AAAA(tputil.FancyEqMixin, tputil.FancyStrMixin):
 
 
 
-@implementer(IEncodable, IRecord)
+@implementer(IEncodableRecord)
 class Record_A6(tputil.FancyStrMixin, tputil.FancyEqMixin):
     """
     An IPv6 address.
@@ -1534,7 +1544,7 @@ class Record_A6(tputil.FancyStrMixin, tputil.FancyEqMixin):
 
 
 
-@implementer(IEncodable, IRecord)
+@implementer(IEncodableRecord)
 class Record_SRV(tputil.FancyEqMixin, tputil.FancyStrMixin):
     """
     The location of the server(s) for a specific protocol and domain.
@@ -1605,7 +1615,7 @@ class Record_SRV(tputil.FancyEqMixin, tputil.FancyStrMixin):
 
 
 
-@implementer(IEncodable, IRecord)
+@implementer(IEncodableRecord)
 class Record_NAPTR(tputil.FancyEqMixin, tputil.FancyStrMixin):
     """
     The location of the server(s) for a specific protocol and domain.
@@ -1704,7 +1714,7 @@ class Record_NAPTR(tputil.FancyEqMixin, tputil.FancyStrMixin):
 
 
 
-@implementer(IEncodable, IRecord)
+@implementer(IEncodableRecord)
 class Record_AFSDB(tputil.FancyStrMixin, tputil.FancyEqMixin):
     """
     Map from a domain name to the name of an AFS cell database server.
@@ -1757,7 +1767,7 @@ class Record_AFSDB(tputil.FancyStrMixin, tputil.FancyEqMixin):
 
 
 
-@implementer(IEncodable, IRecord)
+@implementer(IEncodableRecord)
 class Record_RP(tputil.FancyEqMixin, tputil.FancyStrMixin):
     """
     The responsible person for a domain.
@@ -1812,7 +1822,7 @@ class Record_RP(tputil.FancyEqMixin, tputil.FancyStrMixin):
 
 
 
-@implementer(IEncodable, IRecord)
+@implementer(IEncodableRecord)
 class Record_HINFO(tputil.FancyStrMixin, tputil.FancyEqMixin):
     """
     Host information.
@@ -1863,7 +1873,7 @@ class Record_HINFO(tputil.FancyStrMixin, tputil.FancyEqMixin):
 
 
 
-@implementer(IEncodable, IRecord)
+@implementer(IEncodableRecord)
 class Record_MINFO(tputil.FancyEqMixin, tputil.FancyStrMixin):
     """
     Mailbox or mail list information.
@@ -1924,7 +1934,7 @@ class Record_MINFO(tputil.FancyEqMixin, tputil.FancyStrMixin):
 
 
 
-@implementer(IEncodable, IRecord)
+@implementer(IEncodableRecord)
 class Record_MX(tputil.FancyStrMixin, tputil.FancyEqMixin):
     """
     Mail exchange.
@@ -1971,7 +1981,7 @@ class Record_MX(tputil.FancyStrMixin, tputil.FancyEqMixin):
 
 
 
-@implementer(IEncodable, IRecord)
+@implementer(IEncodableRecord)
 class Record_SSHFP(tputil.FancyEqMixin, tputil.FancyStrMixin):
     """
     A record containing the fingerprint of an SSH key.
@@ -2039,7 +2049,7 @@ class Record_SSHFP(tputil.FancyEqMixin, tputil.FancyStrMixin):
 
 
 
-@implementer(IEncodable, IRecord)
+@implementer(IEncodableRecord)
 class Record_TXT(tputil.FancyEqMixin, tputil.FancyStrMixin):
     """
     Freeform text.
@@ -2087,7 +2097,7 @@ class Record_TXT(tputil.FancyEqMixin, tputil.FancyStrMixin):
 
 
 
-@implementer(IEncodable, IRecord)
+@implementer(IEncodableRecord)
 class UnknownRecord(tputil.FancyEqMixin, tputil.FancyStrMixin, object):
     """
     Encapsulate the wire data for unknown record types so that they can
@@ -2153,7 +2163,7 @@ class Record_SPF(Record_TXT):
 
 
 
-@implementer(IEncodable, IRecord)
+@implementer(IEncodableRecord)
 class Record_TSIG(tputil.FancyEqMixin, tputil.FancyStrMixin):
     """
     A transaction signature, encapsulated in a RR, as described
