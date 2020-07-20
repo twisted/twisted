@@ -26,7 +26,7 @@ else:
     setgroups = _setgroups
     getgroups = _getgroups
 
-from typing import Callable, Sequence, Union, Tuple
+from typing import Callable, Mapping, MutableMapping, Sequence, Union, Tuple
 
 from twisted.python.compat import unicode
 from incremental import Version
@@ -43,7 +43,7 @@ deprecatedModuleAttribute(
 
 
 
-class InsensitiveDict:
+class InsensitiveDict(MutableMapping):
     """
     Dictionary, that has case-insensitive keys.
 
@@ -52,8 +52,7 @@ class InsensitiveDict:
     looked up in lowercase and returned in lowercase by .keys() and .items().
     """
     """
-    Modified recipe at
-    http://aspn.activestate.com/ASPN/Cookbook/Python/Recipe/66315 originally
+    Modified recipe at http://code.activestate.com/recipes/66315/ originally
     contributed by Sami Hangaslammi.
     """
 
@@ -61,8 +60,9 @@ class InsensitiveDict:
         """
         Create an empty dictionary, or update from 'dict'.
         """
+        super().__init__()
         self.data = {}
-        self.preserve=preserve
+        self.preserve = preserve
         if dict:
             self.update(dict)
 
@@ -176,6 +176,8 @@ class InsensitiveDict:
         for v in self.data.values():
             yield self._doPreserve(v[0])
 
+    __iter__ = iterkeys
+
 
     def itervalues(self):
         for v in self.data.values():
@@ -187,8 +189,23 @@ class InsensitiveDict:
             yield self._doPreserve(k), v
 
 
+    _notFound = object()
+
+    def pop(self, key, default=_notFound):
+        """
+        @see: L{dict.pop}
+        @since: Twisted NEXT
+        """
+        try:
+            return self.data.pop(self._lowerOrReturn(key))[1]
+        except KeyError:
+            if default is self._notFound:
+                raise
+            return default
+
+
     def popitem(self):
-        i=self.items()[0]
+        i = self.items()[0]
         del self[i[0]]
         return i
 
@@ -207,10 +224,13 @@ class InsensitiveDict:
 
 
     def __eq__(self, other: object) -> bool:
-        for k, v in self.items():
-            if not (k in other) or not (other[k] == v):
-                return 0
-        return len(self) == len(other)
+        if isinstance(other, Mapping):
+            for k, v in self.items():
+                if k not in other or other[k] != v:
+                    return False
+            return len(self) == len(other)
+        else:
+            return NotImplemented
 
 
 
