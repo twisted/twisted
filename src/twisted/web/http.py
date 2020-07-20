@@ -446,7 +446,7 @@ class _IDeprecatedHTTPChannelToRequestInterface(Interface):
         """
 
 
-    def __eq__(other):
+    def __eq__(other: object) -> bool:
         """
         Determines if two requests are the same object.
 
@@ -455,11 +455,10 @@ class _IDeprecatedHTTPChannelToRequestInterface(Interface):
 
         @return: L{True} when the two are the same object and L{False}
             when not.
-        @rtype: L{bool}
         """
 
 
-    def __ne__(other):
+    def __ne__(other: object) -> bool:
         """
         Determines if two requests are not the same object.
 
@@ -468,7 +467,6 @@ class _IDeprecatedHTTPChannelToRequestInterface(Interface):
 
         @return: L{True} when the two are not the same object and
             L{False} when they are.
-        @rtype: L{bool}
         """
 
 
