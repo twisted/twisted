@@ -1011,7 +1011,10 @@ class SynchronousTestCase(_Assertions):
         method twice.  Most likely, trial should stop using a set to hold
         tests, but until it does, this is necessary on Python 2.6. -exarkun
         """
-        return self is other
+        if isinstance(other, SynchronousTestCase):
+            return self is other
+        else:
+            return NotImplemented
 
 
     def __hash__(self):

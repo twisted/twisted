@@ -421,7 +421,8 @@ class MessageSet(object):
     def __eq__(self, other: object) -> bool:
         if isinstance(other, MessageSet):
             return self.ranges == other.ranges
-        return False
+        return NotImplemented
+
 
 
 class LiteralString:

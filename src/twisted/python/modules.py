@@ -398,9 +398,9 @@ class PythonModule(_ModuleIteratorHelper):
         """
         PythonModules with the same name are equal.
         """
-        if not isinstance(other, PythonModule):
-            return False
-        return other.name == self.name
+        if isinstance(other, PythonModule):
+            return other.name == self.name
+        return NotImplemented
 
     def walkModules(self, importPackages=False):
         if importPackages and self.isPackage():

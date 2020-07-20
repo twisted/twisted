@@ -458,7 +458,7 @@ class Certificate(CertBase):
     def __eq__(self, other: object) -> bool:
         if isinstance(other, Certificate):
             return self.dump() == other.dump()
-        return False
+        return NotImplemented
 
 
     @classmethod
