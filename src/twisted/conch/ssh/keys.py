@@ -946,7 +946,7 @@ class Key(object):
         """
         Return True if other represents an object with the same key.
         """
-        if type(self) == type(other):
+        if isinstance(other, Key):
             return self.type() == other.type() and self.data() == other.data()
         else:
             return NotImplemented
