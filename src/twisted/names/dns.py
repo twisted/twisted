@@ -956,8 +956,14 @@ class RRHeader(tputil.FancyEqMixin):
 
         @raises TypeError: if the ttl cannot be converted to an L{int}.
         @raises ValueError: if the ttl is negative.
+        @raises ValueError: if the payload type is not equal to the C{type}
+                            argument.
         """
-        assert (payload is None) or isinstance(payload, UnknownRecord) or (payload.TYPE == type)
+        payloadType = None if payload is None else payload.TYPE
+        if payloadType is not None and payloadType != type:
+            raise ValueError("Payload type (%s) does not match given type (%s)"
+                             % (QUERY_TYPES.get(payloadType, payloadType),
+                                QUERY_TYPES.get(type, type)))
 
         integralTTL = int(ttl)
 

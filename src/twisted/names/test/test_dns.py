@@ -421,6 +421,17 @@ class RoundtripDNSTests(unittest.TestCase):
         self.assertEqual(result.ttl, 17)
 
 
+    def test_resourceRecordHeaderTypeMismatch(self):
+        """
+        L{RRHeader()} raises L{ValueError} when the given type and the type
+        of the payload don't match.
+        """
+
+        with self.assertRaisesRegex(ValueError,
+                                    r'Payload type \(AAAA\) .* type \(A\)'):
+            dns.RRHeader(type=dns.A, payload=dns.Record_AAAA())
+
+
     def test_resources(self):
         """
         L{dns.SimpleRecord.encode} encodes the record's name information and
