@@ -657,9 +657,8 @@ class FancyEqMixin:
         if not self.compareAttributes:
             return self is other
         if isinstance(self, other.__class__):
-            return (
-                [getattr(self, name) for name in self.compareAttributes] ==
-                [getattr(other, name) for name in self.compareAttributes])
+            return all(getattr(self, name) == getattr(other, name)
+                       for name in self.compareAttributes)
         return NotImplemented
 
 
