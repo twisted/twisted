@@ -26,7 +26,8 @@ else:
     setgroups = _setgroups
     getgroups = _getgroups
 
-from typing import Callable, Mapping, MutableMapping, Sequence, Union, Tuple
+from typing import (Callable, ClassVar, Mapping, MutableMapping, Sequence,
+                    Union, Tuple)
 
 from twisted.python.compat import unicode
 from incremental import Version
@@ -650,7 +651,7 @@ class FancyEqMixin:
     Comparison is done using the list of attributes defined in
     C{compareAttributes}.
     """
-    compareAttributes = ()  # type: Sequence[Union[str, Sequence[str], Tuple[str, Callable]]]  # noqa
+    compareAttributes = ()  # type: ClassVar[Sequence[str]]
 
     def __eq__(self, other: object) -> bool:
         if not self.compareAttributes:
