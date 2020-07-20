@@ -270,7 +270,7 @@ class PythonAttribute:
         self.pythonValue = pythonValue
 
     def __repr__(self) -> str:
-        return 'PythonAttribute<%r>'%(self.name,)
+        return 'PythonAttribute<%r>' % (self.name,)
 
     def isLoaded(self):
         """

@@ -72,8 +72,10 @@ class ParseError(Exception):
         self.message = message
 
     def __str__(self) -> str:
-       return "%s:%s:%s: %s" % (self.filename, self.line, self.col,
-                                self.message)
+        return "%s:%s:%s: %s" % (self.filename, self.line, self.col,
+                                 self.message)
+
+
 
 class XMLParser(Protocol):
 

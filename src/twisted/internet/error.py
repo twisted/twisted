@@ -44,7 +44,7 @@ class CannotListenError(BindError):
     def __str__(self) -> str:
         iface = self.interface or 'any'
         return "Couldn't listen on %s:%s: %s." % (iface, self.port,
-                                                 self.socketError)
+                                                  self.socketError)
 
 
 

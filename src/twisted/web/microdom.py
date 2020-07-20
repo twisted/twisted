@@ -124,9 +124,10 @@ class MismatchedTags(Exception):
 
 
     def __str__(self) -> str:
-        return ("expected </%s>, got </%s> line: %s col: %s, began line: %s col: %s"
-                % (self.expect, self.got, self.endLine, self.endCol, self.begLine,
-                   self.begCol))
+        return ("expected </%s>, got </%s> line: %s col: %s, "
+                "began line: %s col: %s"
+                % (self.expect, self.got, self.endLine, self.endCol,
+                   self.begLine, self.begCol))
 
 
 

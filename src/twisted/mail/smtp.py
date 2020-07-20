@@ -332,10 +332,10 @@ class User:
         protocol isn't picklabe, but we want User to be, so skip it in
         the pickle.
         """
-        return { 'dest' : self.dest,
-                 'helo' : self.helo,
-                 'protocol' : None,
-                 'orig' : self.orig }
+        return {'dest': self.dest,
+                'helo': self.helo,
+                'protocol': None,
+                'orig': self.orig}
 
 
     def __str__(self) -> str:

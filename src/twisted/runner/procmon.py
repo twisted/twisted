@@ -410,7 +410,7 @@ class ProcessMonitor(service.Service):
 
 
     def __repr__(self) -> str:
-        l = []
+        lst = []
         for name, proc in self._processes.items():
             uidgid = ''
             if proc.uid is not None:
@@ -420,7 +420,7 @@ class ProcessMonitor(service.Service):
 
             if uidgid:
                 uidgid = '(' + uidgid + ')'
-            l.append('%r%s: %r' % (name, uidgid, proc.args))
+            lst.append('%r%s: %r' % (name, uidgid, proc.args))
         return ('<' + self.__class__.__name__ + ' '
-                + ' '.join(l)
+                + ' '.join(lst)
                 + '>')

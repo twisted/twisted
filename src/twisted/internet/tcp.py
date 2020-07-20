@@ -1340,9 +1340,11 @@ class Port(base.BasePort, _SocketCloser):
     def __repr__(self) -> str:
         if self._realPortNumber is not None:
             return "<%s of %s on %s>" % (self.__class__,
-                self.factory.__class__, self._realPortNumber)
+                                         self.factory.__class__,
+                                         self._realPortNumber)
         else:
-            return "<%s of %s (not listening)>" % (self.__class__, self.factory.__class__)
+            return "<%s of %s (not listening)>" % (self.__class__,
+                                                   self.factory.__class__)
 
     def createInternetSocket(self):
         s = base.BasePort.createInternetSocket(self)

@@ -358,7 +358,8 @@ class URL:
 
 
     def __repr__(self) -> str:
-        return '<URL %s:%s@%s:%r/%s>' % (self.username, self.password, self.host, self.port, self.transport)
+        return '<URL %s:%s@%s:%r/%s>' % (self.username, self.password,
+                                         self.host, self.port, self.transport)
 
 
 
@@ -544,7 +545,8 @@ class Request(Message):
 
 
     def __repr__(self) -> str:
-        return "<SIP Request %d:%s %s>" % (id(self), self.method, self.uri.toString())
+        return "<SIP Request %d:%s %s>" % (id(self), self.method,
+                                           self.uri.toString())
 
 
     def _getHeaderLine(self):

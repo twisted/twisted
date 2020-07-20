@@ -292,7 +292,8 @@ class TelnetError(Exception):
 
 class NegotiationError(TelnetError):
     def __str__(self) -> str:
-        return self.__class__.__module__ + '.' + self.__class__.__name__ + ':' + repr(self.args[0])
+        return (self.__class__.__module__ + '.' + self.__class__.__name__ + ':'
+                + repr(self.args[0]))
 
 
 

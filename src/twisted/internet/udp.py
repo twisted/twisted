@@ -160,7 +160,8 @@ class Port(base.BasePort):
 
     def __repr__(self) -> str:
         if self._realPortNumber is not None:
-            return "<%s on %s>" % (self.protocol.__class__, self._realPortNumber)
+            return "<%s on %s>" % (self.protocol.__class__,
+                                   self._realPortNumber)
         else:
             return "<%s not connected>" % (self.protocol.__class__,)
 

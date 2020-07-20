@@ -535,8 +535,8 @@ class FailureTests(SynchronousTestCase):
 
 class BrokenStr(Exception):
     """
-    An exception class the instances of which cannot be presented as strings via
-    C{str}.
+    An exception class the instances of which cannot be presented as strings
+    via C{str}.
     """
     def __str__(self) -> str:
         # Could raise something else, but there's no point as yet.

@@ -633,7 +633,9 @@ class Query:
 
 
     def __str__(self) -> str:
-        t = QUERY_TYPES.get(self.type, EXT_QUERIES.get(self.type, 'UNKNOWN (%d)' % self.type))
+        t = QUERY_TYPES.get(
+                self.type,
+                EXT_QUERIES.get(self.type, 'UNKNOWN (%d)' % self.type))
         c = QUERY_CLASSES.get(self.cls, 'UNKNOWN (%d)' % self.cls)
         return '<Query %s %s %s>' % (self.name, t, c)
 
@@ -986,9 +988,12 @@ class RRHeader(tputil.FancyEqMixin):
 
 
     def __str__(self) -> str:
-        t = QUERY_TYPES.get(self.type, EXT_QUERIES.get(self.type, 'UNKNOWN (%d)' % self.type))
+        t = QUERY_TYPES.get(
+                self.type,
+                EXT_QUERIES.get(self.type, 'UNKNOWN (%d)' % self.type))
         c = QUERY_CLASSES.get(self.cls, 'UNKNOWN (%d)' % self.cls)
-        return '<RR name=%s type=%s class=%s ttl=%ds auth=%s>' % (self.name, t, c, self.ttl, self.auth and 'True' or 'False')
+        return '<RR name=%s type=%s class=%s ttl=%ds auth=%s>' % (
+                self.name, t, c, self.ttl, self.auth and 'True' or 'False')
 
 
     __repr__ = __str__
