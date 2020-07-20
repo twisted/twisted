@@ -206,7 +206,7 @@ class InsensitiveDict:
         return len(self.data)
 
 
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
         for k,v in self.items():
             if not (k in other) or not (other[k]==v):
                 return 0
@@ -632,7 +632,7 @@ class FancyEqMixin:
     """
     compareAttributes = ()  # type: Sequence[Union[str, Sequence[str], Tuple[str, Callable]]]  # noqa
 
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
         if not self.compareAttributes:
             return self is other
         if isinstance(self, other.__class__):
@@ -642,7 +642,7 @@ class FancyEqMixin:
         return NotImplemented
 
 
-    def __ne__(self, other):
+    def __ne__(self, other: object) -> bool:
         result = self.__eq__(other)
         if result is NotImplemented:
             return result

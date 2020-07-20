@@ -1609,7 +1609,7 @@ class Request:
             self.channel.loseConnection()
 
 
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
         """
         Determines if two requests are the same object.
 
@@ -1630,7 +1630,7 @@ class Request:
         return NotImplemented
 
 
-    def __ne__(self, other):
+    def __ne__(self, other: object) -> bool:
         """
         Determines if two requests are not the same object.
 

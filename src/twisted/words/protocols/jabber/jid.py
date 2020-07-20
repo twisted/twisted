@@ -204,7 +204,7 @@ class JID(object):
             else:
                 return self.host
 
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
         """
         Equality comparison.
 
@@ -219,7 +219,7 @@ class JID(object):
         else:
             return NotImplemented
 
-    def __ne__(self, other):
+    def __ne__(self, other: object) -> bool:
         """
         Inequality comparison.
 

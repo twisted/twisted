@@ -942,7 +942,7 @@ class Key(object):
         """
         self._keyObject = keyObject
 
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
         """
         Return True if other represents an object with the same key.
         """
@@ -951,7 +951,7 @@ class Key(object):
         else:
             return NotImplemented
 
-    def __ne__(self, other):
+    def __ne__(self, other: object) -> bool:
         """
         Return True if other represents anything other than this key.
         """

@@ -455,13 +455,13 @@ class Certificate(CertBase):
                                               self.getIssuer().commonName)
 
 
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
         if isinstance(other, Certificate):
             return self.dump() == other.dump()
         return False
 
 
-    def __ne__(self, other):
+    def __ne__(self, other: object) -> bool:
         return not self.__eq__(other)
 
 

@@ -602,11 +602,11 @@ class EqualToEverything(object):
     """
     A class the instances of which consider themselves equal to everything.
     """
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
         return True
 
 
-    def __ne__(self, other):
+    def __ne__(self, other: object) -> bool:
         return False
 
 
@@ -615,11 +615,11 @@ class EqualToNothing(object):
     """
     A class the instances of which consider themselves equal to nothing.
     """
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
         return False
 
 
-    def __ne__(self, other):
+    def __ne__(self, other: object) -> bool:
         return True
 
 

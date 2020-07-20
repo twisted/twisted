@@ -161,7 +161,7 @@ class DelayedCall:
         return not (self.cancelled or self.called)
 
 
-    def __le__(self, other):
+    def __le__(self, other: object) -> bool:
         """
         Implement C{<=} operator between two L{DelayedCall} instances.
 
@@ -171,7 +171,7 @@ class DelayedCall:
         return self.time <= other.time
 
 
-    def __lt__(self, other):
+    def __lt__(self, other: object) -> bool:
         """
         Implement C{<} operator between two L{DelayedCall} instances.
 

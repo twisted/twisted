@@ -394,7 +394,7 @@ class PythonModule(_ModuleIteratorHelper):
                 return default
             raise
 
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
         """
         PythonModules with the same name are equal.
         """
@@ -402,7 +402,7 @@ class PythonModule(_ModuleIteratorHelper):
             return False
         return other.name == self.name
 
-    def __ne__(self, other):
+    def __ne__(self, other: object) -> bool:
         """
         PythonModules with different names are not equal.
         """

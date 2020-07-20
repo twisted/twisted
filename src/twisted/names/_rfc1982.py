@@ -114,7 +114,7 @@ class SerialNumber(FancyStrMixin, object):
         return self._number
 
 
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
         """
         Allow rich equality comparison with another L{SerialNumber} instance.
 
@@ -124,7 +124,7 @@ class SerialNumber(FancyStrMixin, object):
         return other._number == self._number
 
 
-    def __ne__(self, other):
+    def __ne__(self, other: object) -> bool:
         """
         Allow rich equality comparison with another L{SerialNumber} instance.
 
@@ -133,7 +133,7 @@ class SerialNumber(FancyStrMixin, object):
         return not self.__eq__(other)
 
 
-    def __lt__(self, other):
+    def __lt__(self, other: object) -> bool:
         """
         Allow I{less than} comparison with another L{SerialNumber} instance.
 
@@ -149,7 +149,7 @@ class SerialNumber(FancyStrMixin, object):
         )
 
 
-    def __gt__(self, other):
+    def __gt__(self, other: object) -> bool:
         """
         Allow I{greater than} comparison with another L{SerialNumber} instance.
 
@@ -166,7 +166,7 @@ class SerialNumber(FancyStrMixin, object):
         )
 
 
-    def __le__(self, other):
+    def __le__(self, other: object) -> bool:
         """
         Allow I{less than or equal} comparison with another L{SerialNumber}
         instance.
@@ -178,7 +178,7 @@ class SerialNumber(FancyStrMixin, object):
         return self == other or self < other
 
 
-    def __ge__(self, other):
+    def __ge__(self, other: object) -> bool:
         """
         Allow I{greater than or equal} comparison with another L{SerialNumber}
         instance.

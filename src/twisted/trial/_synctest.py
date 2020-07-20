@@ -1002,7 +1002,7 @@ class SynchronousTestCase(_Assertions):
             testMethod, self, sys.modules.get(self.__class__.__module__)]
 
 
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
         """
         Override the comparison defined by the base TestCase which considers
         instances of the same class with the same _testMethodName to be
@@ -1014,7 +1014,7 @@ class SynchronousTestCase(_Assertions):
         return self is other
 
 
-    def __ne__(self, other):
+    def __ne__(self, other: object) -> bool:
         return self is not other
 
 
