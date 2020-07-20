@@ -1014,10 +1014,6 @@ class SynchronousTestCase(_Assertions):
         return self is other
 
 
-    def __ne__(self, other: object) -> bool:
-        return self is not other
-
-
     def __hash__(self):
         return hash((self.__class__, self._testMethodName))
 

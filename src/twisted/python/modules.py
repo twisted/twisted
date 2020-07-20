@@ -402,14 +402,6 @@ class PythonModule(_ModuleIteratorHelper):
             return False
         return other.name == self.name
 
-    def __ne__(self, other: object) -> bool:
-        """
-        PythonModules with different names are not equal.
-        """
-        if not isinstance(other, PythonModule):
-            return True
-        return other.name != self.name
-
     def walkModules(self, importPackages=False):
         if importPackages and self.isPackage():
             self.load()

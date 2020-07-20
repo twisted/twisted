@@ -107,10 +107,6 @@ class _Equal(object):
         return True
 
 
-    def __ne__(self, other: object) -> bool:
-        return False
-
-
 
 class _NotEqual(object):
     """
@@ -118,10 +114,6 @@ class _NotEqual(object):
     """
     def __eq__(self, other: object) -> bool:
         return False
-
-
-    def __ne__(self, other: object) -> bool:
-        return True
 
 
 

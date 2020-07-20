@@ -618,10 +618,6 @@ class EqualToEverything(object):
         return True
 
 
-    def __ne__(self, other: object) -> bool:
-        return False
-
-
 
 class EqualToNothing(object):
     """
@@ -629,10 +625,6 @@ class EqualToNothing(object):
     """
     def __eq__(self, other: object) -> bool:
         return False
-
-
-    def __ne__(self, other: object) -> bool:
-        return True
 
 
 

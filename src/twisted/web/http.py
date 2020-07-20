@@ -1628,27 +1628,6 @@ class Request:
         return NotImplemented
 
 
-    def __ne__(self, other: object) -> bool:
-        """
-        Determines if two requests are not the same object.
-
-        @param other: Another object whose identity will be compared
-            to this instance's.
-
-        @return: L{True} when the two are not the same object and
-            L{False} when they are.
-        @rtype: L{bool}
-        """
-        # When other is not an instance of request, return
-        # NotImplemented so that Python uses other.__ne__ to perform
-        # the comparison.  This ensures that a Request proxy generated
-        # by proxyForInterface can compare equal to an actual Request
-        # instance by turning request != proxy into proxy != request.
-        if isinstance(other, Request):
-            return self is not other
-        return NotImplemented
-
-
     def __hash__(self):
         """
         A C{Request} is hashable so that it can be used as a mapping key.

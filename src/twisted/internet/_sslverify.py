@@ -461,10 +461,6 @@ class Certificate(CertBase):
         return False
 
 
-    def __ne__(self, other: object) -> bool:
-        return not self.__eq__(other)
-
-
     @classmethod
     def load(Class, requestData, format=crypto.FILETYPE_ASN1, args=()):
         """

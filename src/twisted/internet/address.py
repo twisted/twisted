@@ -138,12 +138,6 @@ class UNIXAddress(object):
             return False
 
 
-    def __ne__(self, other: object) -> bool:
-        if isinstance(other, self.__class__):
-            return not self.__eq__(other)
-        return True
-
-
     def __repr__(self):
         name = self.name
         if name:

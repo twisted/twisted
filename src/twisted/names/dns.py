@@ -446,12 +446,6 @@ class Charstr(object):
         return NotImplemented
 
 
-    def __ne__(self, other: object) -> bool:
-        if isinstance(other, Charstr):
-            return self.string != other.string
-        return NotImplemented
-
-
     def __hash__(self):
         return hash(self.string)
 
@@ -558,12 +552,6 @@ class Name:
     def __eq__(self, other: object) -> bool:
         if isinstance(other, Name):
             return self.name.lower() == other.name.lower()
-        return NotImplemented
-
-
-    def __ne__(self, other: object) -> bool:
-        if isinstance(other, Name):
-            return self.name.lower() != other.name.lower()
         return NotImplemented
 
 

@@ -951,15 +951,6 @@ class Key(object):
         else:
             return NotImplemented
 
-    def __ne__(self, other: object) -> bool:
-        """
-        Return True if other represents anything other than this key.
-        """
-        result = self.__eq__(other)
-        if result == NotImplemented:
-            return result
-        return not result
-
     def __repr__(self):
         """
         Return a pretty representation of this object.

@@ -124,15 +124,6 @@ class SerialNumber(FancyStrMixin, object):
         return other._number == self._number
 
 
-    def __ne__(self, other: object) -> bool:
-        """
-        Allow rich equality comparison with another L{SerialNumber} instance.
-
-        @type other: L{SerialNumber}
-        """
-        return not self.__eq__(other)
-
-
     def __lt__(self, other: object) -> bool:
         """
         Allow I{less than} comparison with another L{SerialNumber} instance.

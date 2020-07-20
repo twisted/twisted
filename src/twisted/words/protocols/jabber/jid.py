@@ -219,19 +219,6 @@ class JID(object):
         else:
             return NotImplemented
 
-    def __ne__(self, other: object) -> bool:
-        """
-        Inequality comparison.
-
-        This negates L{__eq__} for comparison with JIDs and uses the default
-        comparison for other types.
-        """
-        result = self.__eq__(other)
-        if result is NotImplemented:
-            return result
-        else:
-            return not result
-
 
     def __hash__(self):
         """

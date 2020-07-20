@@ -423,9 +423,6 @@ class MessageSet(object):
             return self.ranges == other.ranges
         return False
 
-    def __ne__(self, other: object) -> bool:
-        return not self.__eq__(other)
-
 
 class LiteralString:
     def __init__(self, size, defered):
