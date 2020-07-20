@@ -207,10 +207,10 @@ class InsensitiveDict:
 
 
     def __eq__(self, other: object) -> bool:
-        for k,v in self.items():
-            if not (k in other) or not (other[k]==v):
+        for k, v in self.items():
+            if not (k in other) or not (other[k] == v):
                 return 0
-        return len(self)==len(other)
+        return len(self) == len(other)
 
 
 

@@ -170,7 +170,8 @@ class _ServerFactoryIPv4Address(IPv4Address):
 
     def __eq__(self, other: object) -> bool:
         if isinstance(other, tuple):
-            warnings.warn("IPv4Address.__getitem__ is deprecated.  Use attributes instead.",
+            warnings.warn("IPv4Address.__getitem__ is deprecated.  "
+                          "Use attributes instead.",
                           category=DeprecationWarning, stacklevel=2)
             return (self.host, self.port) == other
         elif isinstance(other, IPv4Address):
