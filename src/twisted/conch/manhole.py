@@ -19,7 +19,7 @@ from io import BytesIO
 from twisted.conch import recvline
 
 from twisted.internet import defer
-from twisted.python.compat import _tokenize, _get_async_param
+from twisted.python.compat import _get_async_param
 from twisted.python.htmlizer import TokenPrinter
 
 
@@ -337,7 +337,7 @@ def lastColorizedLine(source):
     p = TokenPrinter(w.write).printtoken
     s = BytesIO(source)
 
-    for token in _tokenize(s.readline):
+    for token in tokenize.tokenize(s.readline):
         (tokenType, string, start, end, line) = token
         p(tokenType, string, start, end, line)
 
