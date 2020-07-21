@@ -406,17 +406,6 @@ def networkString(s):
 
 
 
-def _keys(d):
-    """
-    Return a list of the keys of C{d}.
-
-    @type d: L{dict}
-    @rtype: L{list}
-    """
-    return list(d.keys())
-
-
-
 def bytesEnviron():
     """
     Return a L{dict} of L{os.environ} where all text-strings are encoded into
@@ -599,7 +588,6 @@ __all__ = [
     "urlquote",
     "urlunquote",
     "cookielib",
-    "_keys",
     "_b64encodebytes",
     "_b64decodebytes",
     "_bytesChr",

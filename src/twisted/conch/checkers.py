@@ -33,7 +33,7 @@ from twisted.cred.checkers import ICredentialsChecker
 from twisted.cred.credentials import IUsernamePassword, ISSHPrivateKey
 from twisted.cred.error import UnauthorizedLogin, UnhandledCredentials
 from twisted.internet import defer
-from twisted.python.compat import _keys, _b64decodebytes
+from twisted.python.compat import _b64decodebytes
 from twisted.python import failure, reflect, log
 from twisted.python.deprecate import deprecatedModuleAttribute
 from twisted.python.util import runAsEffectiveUser
@@ -263,7 +263,7 @@ class SSHProtocolChecker:
 
     @property
     def credentialInterfaces(self):
-        return _keys(self.checkers)
+        return list(self.checkers.keys())
 
 
     def registerChecker(self, checker, *credentialInterfaces):
