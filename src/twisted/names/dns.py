@@ -440,15 +440,9 @@ class Charstr(object):
         self.string = readPrecisely(strio, l)
 
 
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
         if isinstance(other, Charstr):
             return self.string == other.string
-        return NotImplemented
-
-
-    def __ne__(self, other):
-        if isinstance(other, Charstr):
-            return self.string != other.string
         return NotImplemented
 
 
@@ -555,15 +549,9 @@ class Name:
             else:
                 self.name = self.name + b'.' + label
 
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
         if isinstance(other, Name):
             return self.name.lower() == other.name.lower()
-        return NotImplemented
-
-
-    def __ne__(self, other):
-        if isinstance(other, Name):
-            return self.name.lower() != other.name.lower()
         return NotImplemented
 
 
@@ -1512,7 +1500,7 @@ class Record_A6(tputil.FancyStrMixin, tputil.FancyEqMixin):
             self.prefix.decode(strio)
 
 
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
         if isinstance(other, Record_A6):
             return (self.prefixLen == other.prefixLen and
                     self.suffix[-self.bytes:] == other.suffix[-self.bytes:] and
@@ -1850,7 +1838,7 @@ class Record_HINFO(tputil.FancyStrMixin, tputil.FancyEqMixin):
         self.os = readPrecisely(strio, os)
 
 
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
         if isinstance(other, Record_HINFO):
             return (self.os.lower() == other.os.lower() and
                     self.cpu.lower() == other.cpu.lower() and
