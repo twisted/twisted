@@ -28,7 +28,6 @@ import platform
 import socket
 import struct
 import sys
-import tokenize
 import urllib.parse as urllib_parse
 import warnings
 from base64 import decodebytes as _b64decodebytes
@@ -56,7 +55,6 @@ if platform.python_implementation() == 'PyPy':
 else:
     _PYPY = False
 
-_tokenize = tokenize.tokenize
 FileType = IOBase
 frozenset = frozenset
 InstanceType = object
@@ -610,7 +608,6 @@ __all__ = [
     "intern",
     "unichr",
     "raw_input",
-    "_tokenize",
     "_get_async_param",
     "Sequence",
 ]
