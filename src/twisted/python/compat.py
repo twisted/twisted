@@ -47,7 +47,6 @@ from urllib.parse import unquote as urlunquote
 
 
 _PY3 = True
-_PY35PLUS = True
 
 if sys.version_info >= (3, 7, 0):
     _PY37PLUS = True
