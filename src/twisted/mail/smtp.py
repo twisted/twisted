@@ -36,7 +36,7 @@ from twisted.internet._idna import _idnaText
 from twisted.python import log
 from twisted.python import util
 from twisted.python.compat import (long, unicode, networkString,
-                                   nativeString, iteritems, _keys, _bytesChr,
+                                   nativeString, iteritems, _bytesChr,
                                    iterbytes)
 from twisted.python.runtime import platform
 
@@ -1618,7 +1618,7 @@ class ESMTP(SMTP):
         @rtype: L{dict} with L{bytes} keys and a value of either L{None} or a
             L{list} of L{bytes}.
         """
-        ext = {b'AUTH': _keys(self.challengers)}
+        ext = {b'AUTH': list(self.challengers.keys())}
         if self.canStartTLS and not self.startedTLS:
             ext[b'STARTTLS'] = None
         return ext
