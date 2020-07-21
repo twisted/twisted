@@ -46,8 +46,6 @@ from urllib.parse import quote as urlquote
 from urllib.parse import unquote as urlunquote
 
 
-_PY3 = True
-
 if sys.version_info >= (3, 7, 0):
     _PY37PLUS = True
 else:
@@ -488,10 +486,7 @@ def _coercedUnicode(s):
     @raise TypeError: The input is L{bytes} on Python 3.
     """
     if isinstance(s, bytes):
-        if _PY3:
-            raise TypeError("Expected str not %r (bytes)" % (s,))
-        else:
-            return s.decode('ascii')
+        raise TypeError("Expected str not %r (bytes)" % (s,))
     else:
         return s
 
