@@ -59,9 +59,6 @@ if platform.python_implementation() == 'PyPy':
 else:
     _PYPY = False
 
-_shouldEnableNewStyle = lambda: False
-_EXPECT_NEWSTYLE = True
-
 _tokenize = tokenize.tokenize
 FileType = IOBase
 frozenset = frozenset
