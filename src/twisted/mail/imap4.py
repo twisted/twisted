@@ -418,13 +418,11 @@ class MessageSet(object):
         return '<MessageSet %s>' % (str(self),)
 
 
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
         if isinstance(other, MessageSet):
             return self.ranges == other.ranges
-        return False
+        return NotImplemented
 
-    def __ne__(self, other):
-        return not self.__eq__(other)
 
 
 class LiteralString:

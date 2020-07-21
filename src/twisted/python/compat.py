@@ -173,42 +173,42 @@ def comparable(klass):
     C{__eq__}, C{__lt__}, etc. methods are added to the class, relying on
     C{__cmp__} to implement their comparisons.
     """
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
         c = self.__cmp__(other)
         if c is NotImplemented:
             return c
         return c == 0
 
 
-    def __ne__(self, other):
+    def __ne__(self, other: object) -> bool:
         c = self.__cmp__(other)
         if c is NotImplemented:
             return c
         return c != 0
 
 
-    def __lt__(self, other):
+    def __lt__(self, other: object) -> bool:
         c = self.__cmp__(other)
         if c is NotImplemented:
             return c
         return c < 0
 
 
-    def __le__(self, other):
+    def __le__(self, other: object) -> bool:
         c = self.__cmp__(other)
         if c is NotImplemented:
             return c
         return c <= 0
 
 
-    def __gt__(self, other):
+    def __gt__(self, other: object) -> bool:
         c = self.__cmp__(other)
         if c is NotImplemented:
             return c
         return c > 0
 
 
-    def __ge__(self, other):
+    def __ge__(self, other: object) -> bool:
         c = self.__cmp__(other)
         if c is NotImplemented:
             return c

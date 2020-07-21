@@ -1002,7 +1002,7 @@ class SynchronousTestCase(_Assertions):
             testMethod, self, sys.modules.get(self.__class__.__module__)]
 
 
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
         """
         Override the comparison defined by the base TestCase which considers
         instances of the same class with the same _testMethodName to be
@@ -1011,11 +1011,10 @@ class SynchronousTestCase(_Assertions):
         method twice.  Most likely, trial should stop using a set to hold
         tests, but until it does, this is necessary on Python 2.6. -exarkun
         """
-        return self is other
-
-
-    def __ne__(self, other):
-        return self is not other
+        if isinstance(other, SynchronousTestCase):
+            return self is other
+        else:
+            return NotImplemented
 
 
     def __hash__(self):
