@@ -9,7 +9,11 @@ Data used by test_keys as well as others.
 """
 
 
-from twisted.python.compat import long, _b64decodebytes as decodebytes
+from base64 import decodebytes
+
+from twisted.python.compat import long
+
+
 
 RSAData = {
     'n': long('269413617238113438198661010376758399219880277968382122687862697'

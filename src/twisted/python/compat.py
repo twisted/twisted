@@ -30,8 +30,6 @@ import struct
 import sys
 import urllib.parse as urllib_parse
 import warnings
-from base64 import decodebytes as _b64decodebytes
-from base64 import encodebytes as _b64encodebytes
 from collections.abc import Sequence
 from functools import reduce
 from html import escape
@@ -532,8 +530,6 @@ __all__ = [
     "urlquote",
     "urlunquote",
     "cookielib",
-    "_b64encodebytes",
-    "_b64decodebytes",
     "intern",
     "unichr",
     "raw_input",
