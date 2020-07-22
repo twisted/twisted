@@ -34,8 +34,7 @@ from twisted.conch.ssh.common import int_from_bytes, int_to_bytes
 from twisted.python import randbytes
 from twisted.python.compat import (
     iterbytes, long, izip, nativeString, unicode,
-    _b64decodebytes as decodebytes, _b64encodebytes as encodebytes,
-    _bytesChr as chr)
+    _b64decodebytes as decodebytes, _b64encodebytes as encodebytes)
 from twisted.python.constants import NamedConstant, Names
 from twisted.python.deprecate import _mutuallyExclusiveArguments
 
@@ -1439,7 +1438,7 @@ class Key(object):
         padByte = 0
         while len(privKeyList) % blockSize:
             padByte += 1
-            privKeyList += chr(padByte & 0xFF)
+            privKeyList += bytes((padByte & 0xFF,))
         if passphrase:
             encKey = bcrypt.kdf(passphrase, salt, keySize + ivSize, 100)
             encryptor = Cipher(
@@ -1519,7 +1518,7 @@ class Key(object):
             bb = md5(ba + passphrase + iv).digest()
             encKey = (ba + bb)[:24]
             padLen = 8 - (len(asn1Data) % 8)
-            asn1Data += chr(padLen) * padLen
+            asn1Data += bytes((padLen,)) * padLen
 
             encryptor = Cipher(
                 algorithms.TripleDES(encKey),

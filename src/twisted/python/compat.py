@@ -443,19 +443,6 @@ def _constructMethod(cls, name, self):
 
 
 
-def _bytesChr(i):
-    """
-    Like L{chr} but always works on ASCII, returning L{bytes}.
-
-    @param i: The ASCII code point to return.
-    @type i: L{int}
-
-    @rtype: L{bytes}
-    """
-    return bytes([i])
-
-
-
 def _coercedUnicode(s):
     """
     Coerce ASCII-only byte strings into unicode for Python 2.
@@ -590,7 +577,6 @@ __all__ = [
     "cookielib",
     "_b64encodebytes",
     "_b64decodebytes",
-    "_bytesChr",
     "_coercedUnicode",
     "_bytesRepr",
     "intern",
