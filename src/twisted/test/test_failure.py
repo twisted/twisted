@@ -536,7 +536,7 @@ class FailureTests(SynchronousTestCase):
 class BrokenStr(Exception):
     """
     An exception class the instances of which cannot be presented as strings
-    via C{str}.
+    via L{str}.
     """
     def __str__(self) -> str:
         # Could raise something else, but there's no point as yet.
@@ -547,7 +547,7 @@ class BrokenStr(Exception):
 class BrokenExceptionMetaclass(type):
     """
     A metaclass for an exception type which cannot be presented as a string via
-    C{str}.
+    L{str}.
     """
     def __str__(self) -> str:
         raise ValueError("You cannot make a string out of me.")
@@ -557,7 +557,7 @@ class BrokenExceptionMetaclass(type):
 class BrokenExceptionType(Exception, object):
     """
     The aforementioned exception type which cnanot be presented as a string via
-    C{str}.
+    L{str}.
     """
     __metaclass__ = BrokenExceptionMetaclass
 
