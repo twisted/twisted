@@ -225,6 +225,13 @@ class ExampleFactory(factory.SSHFactory):
         b'ssh-connection': connection.SSHConnection
     }
 
+    def __init__(self):
+        passwdDB = InMemoryUsernamePasswordDatabaseDontUse(user='password')
+        sshDB = SSHPublicKeyChecker(InMemorySSHKeyDB(
+            {b'user': [keys.Key.fromFile(CLIENT_RSA_PUBLIC)]}))
+        self.portal = portal.Portal(ExampleRealm(), [passwdDB, sshDB])
+
+
     def getPrimes(self):
         """
         See: L{factory.SSHFactory}
@@ -232,14 +239,6 @@ class ExampleFactory(factory.SSHFactory):
         return PRIMES
 
 
-portal = portal.Portal(ExampleRealm())
-passwdDB = InMemoryUsernamePasswordDatabaseDontUse()
-passwdDB.addUser(b'user', b'password')
-sshDB = SSHPublicKeyChecker(InMemorySSHKeyDB(
-    {b'user': [keys.Key.fromFile(CLIENT_RSA_PUBLIC)]}))
-portal.registerChecker(passwdDB)
-portal.registerChecker(sshDB)
-ExampleFactory.portal = portal
 
 if __name__ == '__main__':
     reactor.listenTCP(5022, ExampleFactory())

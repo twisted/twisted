@@ -394,21 +394,13 @@ class PythonModule(_ModuleIteratorHelper):
                 return default
             raise
 
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
         """
         PythonModules with the same name are equal.
         """
-        if not isinstance(other, PythonModule):
-            return False
-        return other.name == self.name
-
-    def __ne__(self, other):
-        """
-        PythonModules with different names are not equal.
-        """
-        if not isinstance(other, PythonModule):
-            return True
-        return other.name != self.name
+        if isinstance(other, PythonModule):
+            return other.name == self.name
+        return NotImplemented
 
     def walkModules(self, importPackages=False):
         if importPackages and self.isPackage():

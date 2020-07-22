@@ -446,7 +446,7 @@ class _IDeprecatedHTTPChannelToRequestInterface(Interface):
         """
 
 
-    def __eq__(other):
+    def __eq__(other: object) -> bool:
         """
         Determines if two requests are the same object.
 
@@ -455,11 +455,10 @@ class _IDeprecatedHTTPChannelToRequestInterface(Interface):
 
         @return: L{True} when the two are the same object and L{False}
             when not.
-        @rtype: L{bool}
         """
 
 
-    def __ne__(other):
+    def __ne__(other: object) -> bool:
         """
         Determines if two requests are not the same object.
 
@@ -468,7 +467,6 @@ class _IDeprecatedHTTPChannelToRequestInterface(Interface):
 
         @return: L{True} when the two are not the same object and
             L{False} when they are.
-        @rtype: L{bool}
         """
 
 
@@ -1609,7 +1607,7 @@ class Request:
             self.channel.loseConnection()
 
 
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
         """
         Determines if two requests are the same object.
 
@@ -1627,27 +1625,6 @@ class Request:
         # instanceby turning request != proxy into proxy != request.
         if isinstance(other, Request):
             return self is other
-        return NotImplemented
-
-
-    def __ne__(self, other):
-        """
-        Determines if two requests are not the same object.
-
-        @param other: Another object whose identity will be compared
-            to this instance's.
-
-        @return: L{True} when the two are not the same object and
-            L{False} when they are.
-        @rtype: L{bool}
-        """
-        # When other is not an instance of request, return
-        # NotImplemented so that Python uses other.__ne__ to perform
-        # the comparison.  This ensures that a Request proxy generated
-        # by proxyForInterface can compare equal to an actual Request
-        # instance by turning request != proxy into proxy != request.
-        if isinstance(other, Request):
-            return self is not other
         return NotImplemented
 
 

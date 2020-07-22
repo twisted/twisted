@@ -161,24 +161,30 @@ class DelayedCall:
         return not (self.cancelled or self.called)
 
 
-    def __le__(self, other):
+    def __le__(self, other: object) -> bool:
         """
         Implement C{<=} operator between two L{DelayedCall} instances.
 
         Comparison is based on the C{time} attribute (unadjusted by the
         delayed time).
         """
-        return self.time <= other.time
+        if isinstance(other, DelayedCall):
+            return self.time <= other.time
+        else:
+            return NotImplemented
 
 
-    def __lt__(self, other):
+    def __lt__(self, other: object) -> bool:
         """
         Implement C{<} operator between two L{DelayedCall} instances.
 
         Comparison is based on the C{time} attribute (unadjusted by the
         delayed time).
         """
-        return self.time < other.time
+        if isinstance(other, DelayedCall):
+            return self.time < other.time
+        else:
+            return NotImplemented
 
 
     def __repr__(self):
