@@ -531,22 +531,25 @@ def accumulateClassList(classObj, attr, listObj, baseClass=None):
         listObj.extend(classObj.__dict__.get(attr, []))
 
 
+
 def isSame(a, b):
     return (a is b)
+
 
 
 def isLike(a, b):
     return (a == b)
 
 
+
 def modgrep(goal):
     return objgrep(sys.modules, goal, isLike, 'sys.modules')
 
 
+
 def isOfType(start, goal):
-    return ((type(start) is goal) or
-            (isinstance(start, compat.InstanceType) and
-             start.__class__ is goal))
+    return (type(start) is goal)
+
 
 
 def findInstances(start, t):
@@ -640,8 +643,6 @@ def objgrep(start, goal, eq=isLike, path='', paths=None, seen=None,
     elif hasattr(start, '__dict__'):
         for k, v in start.__dict__.items():
             objgrep(v, goal, eq, path+'.'+k, *args)
-        if isinstance(start, compat.InstanceType):
-            objgrep(start.__class__, goal, eq, path+'.__class__', *args)
     elif isinstance(start, weakref.ReferenceType):
         objgrep(start(), goal, eq, path+'()', *args)
     elif (isinstance(start, (compat.StringType,

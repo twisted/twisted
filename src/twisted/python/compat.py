@@ -70,6 +70,11 @@ deprecatedModuleAttribute(
     __name__, 'frozenset')
 
 InstanceType = object
+deprecatedModuleAttribute(
+    Version('Twisted', 'NEXT', 0, 0),
+    "Old-style classes don't exist in Python 3",
+    __name__, 'InstanceType')
+
 izip = zip
 long = int
 range = range
