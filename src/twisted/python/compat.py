@@ -443,26 +443,6 @@ def _constructMethod(cls, name, self):
 
 
 
-def _bytesRepr(bytestring):
-    """
-    Provide a repr for a byte string that begins with 'b' on both
-    Python 2 and 3.
-
-    @param bytestring: The string to repr.
-    @type bytestring: L{bytes}
-
-    @raise TypeError: The input is not L{bytes}.
-
-    @return: The repr with a leading 'b'.
-    @rtype: L{bytes}
-    """
-    if not isinstance(bytestring, bytes):
-        raise TypeError("Expected bytes not %r" % (bytestring,))
-
-    return repr(bytestring)
-
-
-
 def _get_async_param(isAsync=None, **kwargs):
     """
     Provide a backwards-compatible way to get async param value that does not
@@ -554,7 +534,6 @@ __all__ = [
     "cookielib",
     "_b64encodebytes",
     "_b64decodebytes",
-    "_bytesRepr",
     "intern",
     "unichr",
     "raw_input",
