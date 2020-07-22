@@ -10,6 +10,7 @@ Provide L{ICredentialsChecker} implementations to be used in Conch protocols.
 import sys
 import binascii
 import errno
+from base64 import decodebytes
 
 try:
     import pwd
@@ -33,7 +34,6 @@ from twisted.cred.checkers import ICredentialsChecker
 from twisted.cred.credentials import IUsernamePassword, ISSHPrivateKey
 from twisted.cred.error import UnauthorizedLogin, UnhandledCredentials
 from twisted.internet import defer
-from twisted.python.compat import _b64decodebytes
 from twisted.python import failure, reflect, log
 from twisted.python.deprecate import deprecatedModuleAttribute
 from twisted.python.util import runAsEffectiveUser
@@ -228,7 +228,7 @@ class SSHPublicKeyDatabase:
                     if len(l2) < 2:
                         continue
                     try:
-                        if _b64decodebytes(l2[1]) == credentials.blob:
+                        if decodebytes(l2[1]) == credentials.blob:
                             return True
                     except binascii.Error:
                         continue

@@ -7,12 +7,12 @@ Handling of RSA, DSA, ECDSA, and Ed25519 keys.
 """
 
 
-import base64
 import binascii
 import itertools
 import struct
 import unicodedata
 import warnings
+from base64 import b64encode, decodebytes, encodebytes
 from hashlib import md5, sha256
 
 import bcrypt
@@ -32,9 +32,7 @@ from pyasn1.type import univ
 from twisted.conch.ssh import common, sexpy
 from twisted.conch.ssh.common import int_from_bytes, int_to_bytes
 from twisted.python import randbytes
-from twisted.python.compat import (
-    iterbytes, long, izip, nativeString, unicode,
-    _b64decodebytes as decodebytes, _b64encodebytes as encodebytes)
+from twisted.python.compat import iterbytes, long, izip, nativeString, unicode
 from twisted.python.constants import NamedConstant, Names
 from twisted.python.deprecate import _mutuallyExclusiveArguments
 
@@ -1046,8 +1044,7 @@ class Key(object):
         @rtype: L{str}
         """
         if format is FingerprintFormats.SHA256_BASE64:
-            return nativeString(base64.b64encode(
-                sha256(self.blob()).digest()))
+            return nativeString(b64encode(sha256(self.blob()).digest()))
         elif format is FingerprintFormats.MD5_HEX:
             return nativeString(
                 b':'.join([binascii.hexlify(x)
