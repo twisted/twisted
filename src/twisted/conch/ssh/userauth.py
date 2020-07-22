@@ -19,7 +19,7 @@ from twisted.cred import credentials
 from twisted.cred.error import UnauthorizedLogin
 from twisted.internet import defer, reactor
 from twisted.python import failure, log
-from twisted.python.compat import nativeString, _bytesChr as chr
+from twisted.python.compat import nativeString
 
 
 
@@ -273,11 +273,12 @@ class SSHUserAuthServer(service.SSHService):
 
         signature = hasSig and getNS(rest)[0] or None
         if hasSig:
-            b = (NS(self.transport.sessionID) + chr(MSG_USERAUTH_REQUEST) +
-                NS(self.user) + NS(self.nextService) + NS(b'publickey') +
-                chr(hasSig) +  NS(pubKey.sshType()) + NS(blob))
+            b = (NS(self.transport.sessionID) +
+                 bytes([MSG_USERAUTH_REQUEST]) +
+                 NS(self.user) + NS(self.nextService) + NS(b'publickey') +
+                 bytes([hasSig]) + NS(pubKey.sshType()) + NS(blob))
             c = credentials.SSHPrivateKey(self.user, algName, blob, b,
-                    signature)
+                                          signature)
             return self.portal.login(c, None, interfaces.IConchUser)
         else:
             c = credentials.SSHPrivateKey(self.user, algName, blob, None, None)
@@ -495,10 +496,10 @@ class SSHUserAuthClient(service.SSHService):
         signature and try to authenticate with it.
         """
         publicKey = self.lastPublicKey
-        b = (NS(self.transport.sessionID) + chr(MSG_USERAUTH_REQUEST) +
+        b = (NS(self.transport.sessionID) + bytes([MSG_USERAUTH_REQUEST]) +
              NS(self.user) + NS(self.instance.name) + NS(b'publickey') +
              b'\x01' + NS(publicKey.sshType()) + NS(publicKey.blob()))
-        d  = self.signData(publicKey, b)
+        d = self.signData(publicKey, b)
         if not d:
             self.askForAuth(b'none', b'')
             # this will fail, we'll move on

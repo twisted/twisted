@@ -36,8 +36,7 @@ from twisted.internet._idna import _idnaText
 from twisted.python import log
 from twisted.python import util
 from twisted.python.compat import (long, unicode, networkString,
-                                   nativeString, iteritems, _bytesChr,
-                                   iterbytes)
+                                   nativeString, iteritems, iterbytes)
 from twisted.python.runtime import platform
 
 from twisted.mail.interfaces import (IClientAuthentication,
@@ -2212,7 +2211,7 @@ def xtext_encode(s, errors=None):
         if ch == '+' or ch == '=' or o < 33 or o > 126:
             r.append(networkString('+%02X' % (o,)))
         else:
-            r.append(_bytesChr(o))
+            r.append(bytes([o]))
     return (b''.join(r), len(s))
 
 

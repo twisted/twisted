@@ -20,7 +20,7 @@ from twisted.internet import defer
 from twisted.protocols import loopback
 from twisted.python import randbytes
 from twisted.python.randbytes import insecureRandom
-from twisted.python.compat import iterbytes, _bytesChr as chr
+from twisted.python.compat import iterbytes
 from twisted.conch.ssh import address, service, _kex
 from twisted.conch.error import ConchError
 from twisted.test import proto_helpers
@@ -205,7 +205,7 @@ class MockCipher(object):
         Make a Message Authentication Code by sending the character value of
         the outgoing packet.
         """
-        return chr(outgoingPacketSequence)
+        return bytes([outgoingPacketSequence])
 
 
     def verify(self, incomingPacketSequence, packet, macData):
@@ -213,7 +213,7 @@ class MockCipher(object):
         Verify the Message Authentication Code by checking that the packet
         sequence number is the same.
         """
-        return chr(incomingPacketSequence) == macData
+        return bytes([incomingPacketSequence]) == macData
 
 
     def setKeys(self, ivOut, keyOut, ivIn, keyIn, macIn, macOut):
@@ -745,7 +745,7 @@ class BaseSSHTransportTests(BaseSSHTransportBaseCase, TransportTestCase):
         value = self.transport.value().split(b'\r\n', 1)[1]
         self.proto.buf = value
         packet = self.proto.getPacket()
-        self.assertEqual(packet[0:1], chr(transport.MSG_KEXINIT))
+        self.assertEqual(packet[0:1], bytes([transport.MSG_KEXINIT]))
         self.assertEqual(packet[1:17], b'\x99' * 16)
         (keyExchanges, pubkeys, ciphers1, ciphers2, macs1, macs2,
          compressions1, compressions2, languages1, languages2,
@@ -1046,7 +1046,7 @@ class BaseSSHTransportTests(BaseSSHTransportBaseCase, TransportTestCase):
         self.proto.loseConnection()
         self.assertEqual(self.packets[0][0], transport.MSG_DISCONNECT)
         self.assertEqual(self.packets[0][1][3:4],
-                         chr(transport.DISCONNECT_CONNECTION_LOST))
+                         bytes([transport.DISCONNECT_CONNECTION_LOST]))
 
 
     def test_badVersion(self):
@@ -1066,7 +1066,7 @@ class BaseSSHTransportTests(BaseSSHTransportBaseCase, TransportTestCase):
             self.assertEqual(self.packets[0][0], transport.MSG_DISCONNECT)
             self.assertEqual(
                 self.packets[0][1][3:4],
-                chr(transport.DISCONNECT_PROTOCOL_VERSION_NOT_SUPPORTED))
+                bytes([transport.DISCONNECT_PROTOCOL_VERSION_NOT_SUPPORTED]))
         testBad(b'SSH-1.5-OpenSSH')
         testBad(b'SSH-3.0-Twisted')
         testBad(b'GET / HTTP/1.1')
@@ -1177,22 +1177,23 @@ here's some other stuff
             self.assertIsNone(self.proto.getPacket())
             self.assertEqual(len(self.packets), 1)
             self.assertEqual(self.packets[0][0], transport.MSG_DISCONNECT)
-            self.assertEqual(self.packets[0][1][3:4], chr(error))
+            self.assertEqual(self.packets[0][1][3:4], bytes([error]))
 
-        testBad(b'\xff' * 8) # big packet
-        testBad(b'\x00\x00\x00\x05\x00BCDE') # length not modulo blocksize
+        testBad(b'\xff' * 8)  # big packet
+        testBad(b'\x00\x00\x00\x05\x00BCDE')  # length not modulo blocksize
         oldEncryptions = self.proto.currentEncryptions
         self.proto.currentEncryptions = MockCipher()
-        testBad(b'\x00\x00\x00\x08\x06AB123456', # bad MAC
+        testBad(b'\x00\x00\x00\x08\x06AB123456',   # bad MAC
                 transport.DISCONNECT_MAC_ERROR)
         self.proto.currentEncryptions.decrypt = lambda x: x[:-1]
-        testBad(b'\x00\x00\x00\x08\x06BCDEFGHIJK') # bad decryption
+        testBad(b'\x00\x00\x00\x08\x06BCDEFGHIJK')   # bad decryption
         self.proto.currentEncryptions = oldEncryptions
         self.proto.incomingCompression = MockCompression()
+
         def stubDecompress(payload):
             raise Exception('bad compression')
         self.proto.incomingCompression.decompress = stubDecompress
-        testBad(b'\x00\x00\x00\x04\x00BCDE', # bad decompression
+        testBad(b'\x00\x00\x00\x04\x00BCDE',  # bad decompression
                 transport.DISCONNECT_COMPRESSION_ERROR)
         self.flushLoggedErrors()
 
@@ -1203,10 +1204,11 @@ here's some other stuff
         to be sent.
         """
         seqnum = self.proto.incomingPacketSequence
+
         def checkUnimplemented(seqnum=seqnum):
             self.assertEqual(self.packets[0][0],
                              transport.MSG_UNIMPLEMENTED)
-            self.assertEqual(self.packets[0][1][3:4], chr(seqnum))
+            self.assertEqual(self.packets[0][1][3:4], bytes([seqnum]))
             self.proto.packets = []
             seqnum += 1
 
@@ -1320,7 +1322,7 @@ class ServerAndClientSSHTransportBaseCase:
         if kind is None:
             kind = transport.DISCONNECT_PROTOCOL_ERROR
         self.assertEqual(self.packets[-1][0], transport.MSG_DISCONNECT)
-        self.assertEqual(self.packets[-1][1][3:4], chr(kind))
+        self.assertEqual(self.packets[-1][1][3:4], bytes([kind]))
 
 
     def connectModifiedProtocol(self, protoModification,
@@ -2587,8 +2589,8 @@ class GetMACTests(TestCase):
         params = self.ciphers._getMAC(hmacName, secret)
 
         key = secret[:digestSize] + b'\x00' * blockPadSize
-        innerPad = b''.join(chr(ord(b) ^ 0x36) for b in iterbytes(key))
-        outerPad = b''.join(chr(ord(b) ^ 0x5c) for b in iterbytes(key))
+        innerPad = bytes(ord(b) ^ 0x36 for b in iterbytes(key))
+        outerPad = bytes(ord(b) ^ 0x5c for b in iterbytes(key))
         self.assertEqual(
             (hashProcessor, innerPad, outerPad, digestSize), params)
         self.assertEqual(key, params.key)
