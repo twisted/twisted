@@ -340,7 +340,7 @@ class ErrorHolder(TestHolder):
         self.error = util.excInfoOrFailureToExcInfo(error)
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "<ErrorHolder description=%r error=%r>" % (
             self.description, self.error[1])
 

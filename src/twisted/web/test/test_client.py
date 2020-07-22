@@ -19,7 +19,7 @@ class DummyEndPoint(object):
     def __init__(self, someString):
         self.someString = someString
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return 'DummyEndPoint({})'.format(self.someString)
 
     def connect(self, factory):

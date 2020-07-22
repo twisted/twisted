@@ -335,7 +335,7 @@ class DistinguishedName(dict):
             setattr(x509name, k, nativeString(v))
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return '<DN %s>' % (dict.__repr__(self)[1:-1])
 
 
@@ -449,7 +449,7 @@ class Certificate(CertBase):
     """
     An x509 certificate.
     """
-    def __repr__(self):
+    def __repr__(self) -> str:
         return '<%s Subject=%s Issuer=%s>' % (self.__class__.__name__,
                                               self.getSubject().commonName,
                                               self.getIssuer().commonName)
@@ -619,7 +619,7 @@ class PrivateCertificate(Certificate):
     """
     An x509 certificate and private key.
     """
-    def __repr__(self):
+    def __repr__(self) -> str:
         return Certificate.__repr__(self) + ' with ' + repr(self.privateKey)
 
 
@@ -761,7 +761,7 @@ class PublicKey:
         return self.keyHash() == otherKey.keyHash()
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return '<%s %s>' % (self.__class__.__name__, self.keyHash())
 
 
@@ -1762,7 +1762,7 @@ class OpenSSLCipher(FancyEqMixin, object):
         self.fullName = fullName
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """
         A runnable representation of the cipher.
         """

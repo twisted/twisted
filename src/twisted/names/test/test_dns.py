@@ -4920,7 +4920,7 @@ class Foo(object):
         self.section1 = section1
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """
         Call L{dns._compactRepr} to generate a string representation.
         """

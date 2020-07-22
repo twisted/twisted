@@ -490,7 +490,7 @@ class _BaseProcess(BaseProcess, object):
         os.execvpe(executable, args, environment)
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """
         String representation of a process.
         """

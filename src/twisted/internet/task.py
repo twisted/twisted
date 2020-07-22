@@ -276,7 +276,7 @@ class LoopingCall:
         self.call = self.clock.callLater(howLong(), self)
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         if hasattr(self.f, '__qualname__'):
             func = self.f.__qualname__
         elif hasattr(self.f, '__name__'):

@@ -399,7 +399,7 @@ class MessageSet(object):
         return res
 
 
-    def __str__(self):
+    def __str__(self) -> str:
         p = []
         for low, high in self.ranges:
             if low == high:
@@ -414,7 +414,7 @@ class MessageSet(object):
         return ','.join(p)
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return '<MessageSet %s>' % (str(self),)
 
 
@@ -533,7 +533,7 @@ class Command:
         self.lines = []
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "<imap4.Command {!r} {!r} {!r} {!r} {!r}>".format(
             self.command, self.args, self.wantResponse, self.continuation,
             self.lines
@@ -4950,7 +4950,7 @@ class DontQuoteMe:
         self.value = value
 
 
-    def __str__(self):
+    def __str__(self) -> str:
         return str(self.value)
 
 
@@ -5879,7 +5879,7 @@ class _FetchParser:
         partialBegin = None
         partialLength = None
 
-        def __str__(self):
+        def __str__(self) -> str:
             return nativeString(self.__bytes__())
 
         def __bytes__(self):
@@ -5917,7 +5917,7 @@ class _FetchParser:
         fields = None
         part = None
 
-        def __str__(self):
+        def __str__(self) -> str:
             return nativeString(self.__bytes__())
 
 

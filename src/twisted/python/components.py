@@ -292,7 +292,7 @@ class ReprableComponentized(Componentized):
     def __init__(self):
         Componentized.__init__(self)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         from pprint import pprint
         sio = NativeStringIO()
         pprint(self._adapterCache, sio)

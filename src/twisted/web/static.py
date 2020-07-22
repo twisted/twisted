@@ -1080,7 +1080,7 @@ h1 {padding: 0.1em; background-color: #777; color: white; border-bottom: thin wh
         return done
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return '<DirectoryLister of %r>' % self.path
 
     __str__ = __repr__

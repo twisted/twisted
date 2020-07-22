@@ -44,7 +44,7 @@ class _Attribute(FancyEqMixin, object):
         self.children = []
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return '<%s %r>' % (type(self).__name__, vars(self))
 
 
