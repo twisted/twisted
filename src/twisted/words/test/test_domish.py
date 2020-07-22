@@ -181,14 +181,6 @@ class ElementTests(unittest.TestCase):
         self.assertEqual("native", str(element))
 
 
-    def test_addContentBytes(self):
-        """
-        Byte strings passed to C{addContent} are not acceptable on Python 3.
-        """
-        element = domish.Element(("testns", "foo"))
-        self.assertRaises(TypeError, element.addContent, b'bytes')
-
-
     def test_addElementContent(self):
         """
         Content passed to addElement becomes character data on the new child.
