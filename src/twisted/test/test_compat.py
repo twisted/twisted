@@ -20,7 +20,7 @@ from twisted.python.compat import (
     reduce, execfile, _PYPY, comparable, cmp, nativeString,
     networkString, unicode as unicodeCompat, lazyByteSlice, reraise,
     NativeStringIO, iterbytes, intToBytes, ioType, bytesEnviron, iteritems,
-    _coercedUnicode, unichr, raw_input, _bytesRepr, _get_async_param,
+    unichr, raw_input, _bytesRepr, _get_async_param,
 )
 from twisted.python.filepath import FilePath
 from twisted.python.runtime import platform
@@ -614,50 +614,6 @@ class BytesEnvironTests(TestCase):
             types.add(type(val))
 
         self.assertEqual(list(types), [bytes])
-
-
-
-class CoercedUnicodeTests(TestCase):
-    """
-    Tests for L{twisted.python.compat._coercedUnicode}.
-    """
-
-    def test_unicodeASCII(self):
-        """
-        Unicode strings with ASCII code points are unchanged.
-        """
-        result = _coercedUnicode(u'text')
-        self.assertEqual(result, u'text')
-        self.assertIsInstance(result, unicodeCompat)
-
-
-    def test_unicodeNonASCII(self):
-        """
-        Unicode strings with non-ASCII code points are unchanged.
-        """
-        result = _coercedUnicode(u'\N{SNOWMAN}')
-        self.assertEqual(result, u'\N{SNOWMAN}')
-        self.assertIsInstance(result, unicodeCompat)
-
-
-    def test_nativeASCII(self):
-        """
-        Native strings with ASCII code points are unchanged.
-
-        On Python 2, this verifies that ASCII-only byte strings are accepted,
-        whereas for Python 3 it is identical to L{test_unicodeASCII}.
-        """
-        result = _coercedUnicode('text')
-        self.assertEqual(result, u'text')
-        self.assertIsInstance(result, unicodeCompat)
-
-
-    def test_bytesPy3(self):
-        """
-        Byte strings are not accceptable in Python 3.
-        """
-        exc = self.assertRaises(TypeError, _coercedUnicode, b'bytes')
-        self.assertEqual(str(exc), "Expected str not b'bytes' (bytes)")
 
 
 
