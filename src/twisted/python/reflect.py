@@ -16,7 +16,7 @@ import weakref
 import re
 import traceback
 from collections import deque
-from io import StringIO
+from io import IOBase, StringIO
 from twisted.python.compat import reraise, nativeString
 from twisted.python import compat
 from twisted.python.deprecate import _fullyQualifiedName as fullyQualifiedName
@@ -647,7 +647,7 @@ def objgrep(start, goal, eq=isLike, path='', paths=None, seen=None,
     elif (isinstance(start, (compat.StringType,
                      int, types.FunctionType,
                      types.BuiltinMethodType, RegexType, float,
-                     type(None), compat.FileType)) or
+                     type(None), IOBase)) or
           type(start).__name__ in ('wrapper_descriptor',
                                    'method_descriptor', 'member_descriptor',
                                    'getset_descriptor')):

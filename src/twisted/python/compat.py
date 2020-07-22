@@ -42,6 +42,10 @@ from types import MethodType as _MethodType
 from urllib.parse import quote as urlquote
 from urllib.parse import unquote as urlunquote
 
+from incremental import Version
+
+from twisted.python.deprecate import deprecatedModuleAttribute
+
 
 if sys.version_info >= (3, 7, 0):
     _PY37PLUS = True
@@ -54,6 +58,11 @@ else:
     _PYPY = False
 
 FileType = IOBase
+deprecatedModuleAttribute(
+    Version('Twisted', 'NEXT', 0, 0),
+    "Obsolete alias for io.IOBase",
+    __name__, 'FileType')
+
 frozenset = frozenset
 InstanceType = object
 izip = zip
