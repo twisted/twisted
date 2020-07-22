@@ -64,6 +64,11 @@ deprecatedModuleAttribute(
     __name__, 'FileType')
 
 frozenset = frozenset
+deprecatedModuleAttribute(
+    Version('Twisted', 'NEXT', 0, 0),
+    "Obsolete alias for frozenset builtin type",
+    __name__, 'frozenset')
+
 InstanceType = object
 izip = zip
 long = int
