@@ -155,6 +155,7 @@ def itervalues(d):
 
 
 
+@deprecated(Version('Twisted', 'NEXT', 0, 0), replacement="list(d.items())")
 def items(d):
     """
     Return a list of the items of C{d}.

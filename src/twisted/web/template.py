@@ -33,7 +33,7 @@ from zope.interface import implementer
 
 from xml.sax import make_parser, handler
 
-from twisted.python.compat import NativeStringIO, items
+from twisted.python.compat import NativeStringIO
 from twisted.python.filepath import FilePath
 from twisted.web._stan import Tag, slot, Comment, CDATA, CharRef
 from twisted.web.iweb import ITemplateLoader
@@ -209,7 +209,7 @@ class _ToStan(handler.ContentHandler, handler.EntityResolver):
         render = None
 
         attrs = OrderedDict(attrs)
-        for k, v in items(attrs):
+        for k, v in list(attrs.items()):
             attrNS, justTheName = k
             if attrNS != TEMPLATE_NAMESPACE:
                 continue
@@ -225,7 +225,7 @@ class _ToStan(handler.ContentHandler, handler.EntityResolver):
         # preserving the xml namespace prefix given in the document.
 
         nonTemplateAttrs = OrderedDict()
-        for (attrNs, attrName), v in items(attrs):
+        for (attrNs, attrName), v in attrs.items():
             nsPrefix = self.prefixMap.get(attrNs)
             if nsPrefix is None:
                 attrKey = attrName

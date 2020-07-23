@@ -26,7 +26,6 @@ from zope.interface import implementer
 
 from twisted.python import log, failure
 from twisted.python.util import switchUID
-from twisted.python.compat import items
 from twisted.internet import fdesc, abstract, error
 from twisted.internet.main import CONNECTION_LOST, CONNECTION_DONE
 from twisted.internet._baseprocess import BaseProcess
@@ -686,10 +685,11 @@ class Process(_BaseProcess):
             return r, w
 
         # fdmap.keys() are filenos of pipes that are used by the child.
-        fdmap = {} # maps childFD to parentFD
+        fdmap = {}  # maps childFD to parentFD
         try:
-            for childFD, target in items(childFDs):
-                if debug: print("[%d]" % childFD, target)
+            for childFD, target in childFDs.items():
+                if debug:
+                    print("[%d]" % childFD, target)
                 if target == "r":
                     # we need a pipe that the parent can read from
                     readFD, writeFD = pipe()
@@ -719,7 +719,7 @@ class Process(_BaseProcess):
         self.proto = proto
 
         # arrange for the parent-side pipes to be read and written
-        for childFD, parentFD in items(helpers):
+        for childFD, parentFD in helpers.items():
             os.close(fdmap[childFD])
             if childFDs[childFD] == "r":
                 reader = self.processReaderFactory(reactor, self, childFD,
@@ -807,15 +807,17 @@ class Process(_BaseProcess):
                     # we can't replace child-fd yet, as some other mapping
                     # still needs the fd it wants to target. We must preserve
                     # that old fd by duping it to a new home.
-                    newtarget = os.dup(child) # give it a safe home
-                    if debug: print("os.dup(%d) -> %d" % (child, newtarget),
-                                    file=errfd)
-                    os.close(child) # close the original
-                    for c, p in items(fdmap):
+                    newtarget = os.dup(child)  # give it a safe home
+                    if debug:
+                        print("os.dup(%d) -> %d" % (child, newtarget),
+                              file=errfd)
+                    os.close(child)  # close the original
+                    for c, p in list(fdmap.items()):
                         if p == child:
-                            fdmap[c] = newtarget # update all pointers
+                            fdmap[c] = newtarget  # update all pointers
                 # now it should be available
-                if debug: print("os.dup2(%d,%d)" % (target, child), file=errfd)
+                if debug:
+                    print("os.dup2(%d,%d)" % (target, child), file=errfd)
                 os.dup2(target, child)
 
         # At this point, the child has everything it needs. We want to close
