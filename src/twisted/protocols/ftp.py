@@ -28,7 +28,7 @@ from twisted.internet import reactor, interfaces, protocol, error, defer
 from twisted.protocols import basic, policies
 
 from twisted.python import log, failure, filepath
-from twisted.python.compat import range, unicode
+from twisted.python.compat import unicode
 from twisted.cred import error as cred_error, portal, credentials, checkers
 
 # constants

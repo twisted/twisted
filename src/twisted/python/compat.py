@@ -88,6 +88,11 @@ deprecatedModuleAttribute(
     __name__, 'long')
 
 range = range
+deprecatedModuleAttribute(
+    Version('Twisted', 'NEXT', 0, 0),
+    "Obsolete alias for range() builtin",
+    __name__, 'range')
+
 raw_input = input
 set = set
 StringType = str

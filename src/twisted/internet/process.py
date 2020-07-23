@@ -26,7 +26,7 @@ from zope.interface import implementer
 
 from twisted.python import log, failure
 from twisted.python.util import switchUID
-from twisted.python.compat import items, range
+from twisted.python.compat import items
 from twisted.internet import fdesc, abstract, error
 from twisted.internet.main import CONNECTION_LOST, CONNECTION_DONE
 from twisted.internet._baseprocess import BaseProcess

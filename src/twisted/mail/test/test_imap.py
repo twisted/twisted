@@ -36,7 +36,7 @@ from twisted.mail.imap4 import MessageSet
 from twisted.protocols import loopback
 from twisted.python import failure
 from twisted.python import util, log
-from twisted.python.compat import (intToBytes, range, nativeString,
+from twisted.python.compat import (intToBytes, nativeString,
                                    networkString, iterbytes)
 from twisted.trial.unittest import SynchronousTestCase, TestCase
 

@@ -14,10 +14,9 @@ from zope.interface import implementer
 from twisted.conch.interfaces import ISFTPServer, ISFTPFile
 from twisted.conch.ssh.common import NS, getNS
 from twisted.internet import defer, protocol, error
-from twisted.python import failure
-from twisted.python.compat import (
-    range, itervalues, nativeString, networkString)
 from twisted.logger import Logger
+from twisted.python import failure
+from twisted.python.compat import itervalues, nativeString, networkString
 
 
 

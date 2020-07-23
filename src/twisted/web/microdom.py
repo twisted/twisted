@@ -24,7 +24,7 @@ from io import BytesIO, StringIO
 
 
 # Twisted Imports
-from twisted.python.compat import ioType, iteritems, range, unicode
+from twisted.python.compat import ioType, iteritems, unicode
 from twisted.python.util import InsensitiveDict
 from twisted.web.sux import XMLParser, ParseError
 
