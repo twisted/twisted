@@ -124,6 +124,10 @@ deprecatedModuleAttribute(
     __name__, 'unicode')
 
 xrange = range
+deprecatedModuleAttribute(
+    Version('Twisted', 'NEXT', 0, 0),
+    "Obsolete alias for range() builtin",
+    __name__, 'xrange')
 
 
 
