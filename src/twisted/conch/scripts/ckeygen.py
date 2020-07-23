@@ -15,7 +15,6 @@ from functools import wraps
 from imp import reload
 from twisted.conch.ssh import keys
 from twisted.python import failure, filepath, log, usage
-from twisted.python.compat import raw_input
 
 
 
@@ -28,6 +27,9 @@ if getpass.getpass == getpass.unix_getpass:  # type: ignore[attr-defined]
         reload(getpass)
 
 supportedKeyTypes = dict()
+
+# This name is bound so that the unit tests can use 'patch' to override it.
+raw_input = input
 
 
 
@@ -207,7 +209,8 @@ def _defaultPrivateKeySubtype(keyType):
 def printFingerprint(options):
     if not options['filename']:
         filename = os.path.expanduser('~/.ssh/id_rsa')
-        options['filename'] = raw_input('Enter file in which the key is (%s): ' % filename)
+        options['filename'] = raw_input(
+            'Enter file in which the key is (%s): ' % filename)
     if os.path.exists(options['filename']+'.pub'):
         options['filename'] += '.pub'
     options = enumrepresentation(options)
@@ -278,7 +281,8 @@ def changePassPhrase(options):
 def displayPublicKey(options):
     if not options['filename']:
         filename = os.path.expanduser('~/.ssh/id_rsa')
-        options['filename'] = raw_input('Enter file in which the key is (%s): ' % filename)
+        options['filename'] = raw_input(
+            'Enter file in which the key is (%s): ' % filename)
     try:
         key = keys.Key.fromFile(options['filename'])
     except keys.EncryptedKeyError:

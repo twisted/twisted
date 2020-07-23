@@ -11,7 +11,7 @@ you are sitting at an interactive terminal.  For example, to programmatically
 interact with a known_hosts database, use L{twisted.conch.client.knownhosts}.
 """
 
-from twisted.python.compat import nativeString, raw_input
+from twisted.python.compat import nativeString
 from twisted.python.filepath import FilePath
 
 from twisted.conch.error import ConchError
@@ -36,6 +36,9 @@ _KNOWN_HOSTS = "~/.ssh/known_hosts"
 
 # This name is bound so that the unit tests can use 'patch' to override it.
 _open = open
+_input = input
+
+
 
 def verifyHostKey(transport, host, pubKey, fingerprint):
     """
@@ -305,7 +308,7 @@ class SSHUserAuthClient(userauth.SSHUserAuthClient):
             for prompt, echo in prompts:
                 prompt = prompt.decode("utf-8")
                 if echo:
-                    responses.append(raw_input(prompt))
+                    responses.append(_input(prompt))
                 else:
                     responses.append(getpass.getpass(prompt))
         return defer.succeed(responses)

@@ -94,6 +94,11 @@ deprecatedModuleAttribute(
     __name__, 'range')
 
 raw_input = input
+deprecatedModuleAttribute(
+    Version('Twisted', 'NEXT', 0, 0),
+    "Obsolete alias for input() builtin",
+    __name__, 'raw_input')
+
 set = set
 StringType = str
 unichr = chr
