@@ -439,21 +439,20 @@ def lazyByteSlice(object, offset=0, size=None):
 
 
 
-def networkString(s):
+def networkString(s: str) -> bytes:
     """
-    Convert the native string type to L{bytes} if it is not already L{bytes}
-    using ASCII encoding if conversion is necessary.
+    Convert a string to L{bytes} using ASCII encoding.
 
     This is useful for sending text-like bytes that are constructed using
     string interpolation.  For example::
 
         networkString("Hello %d" % (n,))
 
-    @param s: A native string to convert to bytes if necessary.
+    @param s: A string to convert to bytes.
     @type s: L{str}
 
-    @raise UnicodeError: The input string is not ASCII encodable/decodable.
-    @raise TypeError: The input is neither L{bytes} nor L{unicode}.
+    @raise UnicodeError: The input string is not ASCII encodable.
+    @raise TypeError: The input is not L{str}.
 
     @rtype: L{bytes}
     """
