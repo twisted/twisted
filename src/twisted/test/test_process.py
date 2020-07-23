@@ -2697,18 +2697,17 @@ class ClosingPipesTests(unittest.TestCase):
         reactor.spawnProcess(
             p, pyExe, [
                 pyExe, b'-u', b'-c',
-                networkString('try: input = raw_input\n'
-                'except NameError: pass\n'
-                'input()\n'
-                'import sys, os, time\n'
-                # Give the system a bit of time to notice the closed
-                # descriptor.  Another option would be to poll() for HUP
-                # instead of relying on an os.write to fail with SIGPIPE.
-                # However, that wouldn't work on macOS (or Windows?).
-                'for i in range(1000):\n'
-                '    os.write(%d, b"foo\\n")\n'
-                '    time.sleep(0.01)\n'
-                'sys.exit(42)\n' % (fd,))
+                networkString(
+                    'input()\n'
+                    'import sys, os, time\n'
+                    # Give the system a bit of time to notice the closed
+                    # descriptor.  Another option would be to poll() for HUP
+                    # instead of relying on an os.write to fail with SIGPIPE.
+                    # However, that wouldn't work on macOS (or Windows?).
+                    'for i in range(1000):\n'
+                    '    os.write(%d, b"foo\\n")\n'
+                    '    time.sleep(0.01)\n'
+                    'sys.exit(42)\n' % (fd,))
                 ],
             env=None)
 
