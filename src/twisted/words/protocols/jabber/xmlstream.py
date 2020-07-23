@@ -31,7 +31,7 @@ from zope.interface import directlyProvides, implementer
 from twisted.internet import defer, protocol
 from twisted.internet.error import ConnectionLost
 from twisted.python import failure, log, randbytes
-from twisted.python.compat import intern, itervalues
+from twisted.python.compat import intern
 from twisted.words.protocols.jabber import error, ijabber, jid
 from twisted.words.xish import domish, xmlstream
 from twisted.words.xish.xmlstream import STREAM_CONNECTED_EVENT
@@ -781,7 +781,7 @@ def upgradeWithIQResponseTracker(xs):
         """
         iqDeferreds = xs.iqDeferreds
         xs.iqDeferreds = {}
-        for d in itervalues(iqDeferreds):
+        for d in iqDeferreds.values():
             d.errback(ConnectionLost())
 
     xs.iqDeferreds = {}

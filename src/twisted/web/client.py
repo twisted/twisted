@@ -20,7 +20,7 @@ from functools import wraps
 from zope.interface import implementer
 
 from twisted.python.compat import networkString
-from twisted.python.compat import nativeString, intToBytes, itervalues
+from twisted.python.compat import nativeString, intToBytes
 from twisted.python.deprecate import deprecatedModuleAttribute, deprecated
 from twisted.python.failure import Failure
 from incremental import Version
@@ -1460,11 +1460,11 @@ class HTTPConnectionPool:
             closed.
         """
         results = []
-        for protocols in itervalues(self._connections):
+        for protocols in self._connections.values():
             for p in protocols:
                 results.append(p.abort())
         self._connections = {}
-        for dc in itervalues(self._timeouts):
+        for dc in self._timeouts.values():
             dc.cancel()
         self._timeouts = {}
         return defer.gatherResults(results).addCallback(lambda ign: None)

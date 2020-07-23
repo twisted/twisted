@@ -13,7 +13,6 @@ for use in streaming XML applications.
 
 from zope.interface import implementer, Interface, Attribute
 
-from twisted.python.compat import itervalues
 from twisted.web import sux
 
 
@@ -427,7 +426,7 @@ class Element:
         self.localPrefixes = localPrefixes or {}
         self.uri, self.name = qname
         if defaultUri is None and \
-           self.uri not in itervalues(self.localPrefixes):
+           self.uri not in self.localPrefixes.values():
             self.defaultUri = self.uri
         else:
             self.defaultUri = defaultUri

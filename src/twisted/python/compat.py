@@ -143,6 +143,7 @@ def iteritems(d):
 
 
 
+@deprecated(Version('Twisted', 'NEXT', 0, 0), replacement="d.values()")
 def itervalues(d):
     """
     Return an iterable of the values of C{d}.

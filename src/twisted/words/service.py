@@ -35,7 +35,6 @@ from twisted import copyright
 from twisted.cred import portal, credentials, error as ecred
 from twisted.internet import defer, protocol
 from twisted.python import log, failure, reflect
-from twisted.python.compat import itervalues
 from twisted.python.components import registerAdapter
 from twisted.spread import pb
 from twisted.words import iwords, ewords
@@ -69,7 +68,7 @@ class Group:
         if user.name not in self.users:
             additions = []
             self.users[user.name] = user
-            for p in itervalues(self.users):
+            for p in self.users.values():
                 if p is not user:
                     d = defer.maybeDeferred(p.userJoined, self, user)
                     d.addErrback(self._ebUserCall, p=p)
@@ -85,7 +84,7 @@ class Group:
             pass
         else:
             removals = []
-            for p in itervalues(self.users):
+            for p in self.users.values():
                 if p is not user:
                     d = defer.maybeDeferred(p.userLeft, self, user, reason)
                     d.addErrback(self._ebUserCall, p=p)
@@ -101,7 +100,7 @@ class Group:
     def receive(self, sender, recipient, message):
         assert recipient is self
         receives = []
-        for p in itervalues(self.users):
+        for p in self.users.values():
             if p is not sender:
                 d = defer.maybeDeferred(p.receive, sender, self, message)
                 d.addErrback(self._ebUserCall, p=p)
@@ -113,7 +112,7 @@ class Group:
     def setMetadata(self, meta):
         self.meta = meta
         sets = []
-        for p in itervalues(self.users):
+        for p in self.users.values():
             d = defer.maybeDeferred(p.groupMetaUpdate, self, meta)
             d.addErrback(self._ebUserCall, p=p)
             sets.append(d)
@@ -1321,7 +1320,7 @@ class InMemoryWordsRealm(WordsRealm):
 
 
     def itergroups(self):
-        return defer.succeed(itervalues(self.groups))
+        return defer.succeed(self.groups.values())
 
 
     def addUser(self, user):
