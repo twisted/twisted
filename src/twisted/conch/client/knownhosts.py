@@ -21,10 +21,10 @@ from twisted.conch.interfaces import IKnownHostEntry
 from twisted.conch.error import HostKeyChanged, UserRejectedKey, InvalidEntry
 from twisted.conch.ssh.keys import Key, BadKeyError, FingerprintFormats
 from twisted.internet import defer
-from twisted.python.compat import nativeString, unicode
+from twisted.logger import Logger
+from twisted.python.compat import nativeString
 from twisted.python.randbytes import secureRandom
 from twisted.python.util import FancyEqMixin
-from twisted.logger import Logger
 
 log = Logger()
 
@@ -165,7 +165,7 @@ class PlainEntry(_BaseEntry):
             C{False} otherwise.
         @rtype: L{bool}
         """
-        if isinstance(hostname, unicode):
+        if isinstance(hostname, str):
             hostname = hostname.encode("utf-8")
         return hostname in self._hostnames
 
@@ -243,7 +243,7 @@ def _hmacedString(key, string):
     @rtype: L{bytes}
     """
     hash = hmac.HMAC(key, digestmod=sha1)
-    if isinstance(string, unicode):
+    if isinstance(string, str):
         string = string.encode("utf-8")
     hash.update(string)
     return hash.digest()

@@ -71,7 +71,7 @@ import datetime
 from zope.interface import implementer
 
 # Twisted Imports
-from twisted.python.compat import unicode, nativeString
+from twisted.python.compat import nativeString
 from twisted.python.reflect import namedObject, qual, namedAny
 from twisted.persisted.crefutil import NotKnown, _Tuple, _InstanceMethod
 from twisted.persisted.crefutil import _DictKeyAndValue, _Dereference
@@ -482,7 +482,7 @@ class _Jellier:
                 aClass = aSelf.__class__
                 return [b"method", aFunc.__name__, self.jelly(aSelf),
                         self.jelly(aClass)]
-            elif objType is unicode:
+            elif objType is str:
                 return [b'unicode', obj.encode('UTF-8')]
             elif isinstance(obj, type(None)):
                 return [b'None']
@@ -496,7 +496,7 @@ class _Jellier:
                 if obj.tzinfo:
                     raise NotImplementedError(
                         "Currently can't jelly datetime objects with tzinfo")
-                return [b'datetime', ' '.join([unicode(x) for x in (
+                return [b'datetime', ' '.join([str(x) for x in (
                     obj.year, obj.month, obj.day, obj.hour,
                     obj.minute, obj.second, obj.microsecond)]
                 ).encode('utf-8')]
@@ -504,14 +504,14 @@ class _Jellier:
                 if obj.tzinfo:
                     raise NotImplementedError(
                         "Currently can't jelly datetime objects with tzinfo")
-                return [b'time', ' '.join([unicode(x) for x in (
+                return [b'time', ' '.join([str(x) for x in (
                     obj.hour, obj.minute, obj.second, obj.microsecond)]
                 ).encode('utf-8')]
             elif objType is datetime.date:
-                return [b'date', ' '.join([unicode(x) for x in (
+                return [b'date', ' '.join([str(x) for x in (
                     obj.year, obj.month, obj.day)]).encode('utf-8')]
             elif objType is datetime.timedelta:
-                return [b'timedelta', ' '.join([unicode(x) for x in (
+                return [b'timedelta', ' '.join([str(x) for x in (
                     obj.days, obj.seconds, obj.microseconds)]).encode('utf-8')]
             elif issubclass(objType, type):
                 return [b'class', qual(obj).encode('utf-8')]
@@ -603,7 +603,7 @@ class _Jellier:
         if sxp is None:
             sxp = []
         sxp.append(unpersistable_atom)
-        if isinstance(reason, unicode):
+        if isinstance(reason, str):
             reason = reason.encode("utf-8")
         sxp.append(reason)
         return sxp
@@ -695,7 +695,7 @@ class _Unjellier:
 
 
     def _unjelly_unicode(self, exp):
-        return unicode(exp[0], "UTF-8")
+        return str(exp[0], "UTF-8")
 
 
     def _unjelly_decimal(self, exp):
@@ -1010,7 +1010,7 @@ class SecurityOptions:
         name.
         """
         for typ in types:
-            if isinstance(typ, unicode):
+            if isinstance(typ, str):
                 typ = typ.encode('utf-8')
             if not isinstance(typ, bytes):
                 typ = qual(typ)

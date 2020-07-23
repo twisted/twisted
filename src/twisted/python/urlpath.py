@@ -8,7 +8,7 @@ L{URLPath}, a representation of a URL.
 
 
 from twisted.python.compat import (
-    nativeString, unicode, urllib_parse as urlparse, urlunquote, urlquote
+    nativeString, urllib_parse as urlparse, urlunquote, urlquote
 )
 
 from hyperlink import URL as _URL
@@ -136,7 +136,7 @@ class URLPath:
         @return: a new L{URLPath} derived from the given string.
         @rtype: L{URLPath}
         """
-        if not isinstance(url, (str, unicode)):
+        if not isinstance(url, str):
             raise ValueError("'url' must be a str or unicode")
         if isinstance(url, bytes):
             # On Python 2, accepting 'str' (for compatibility) means we might

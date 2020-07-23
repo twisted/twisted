@@ -5,9 +5,9 @@
 from zope.interface import implementer
 
 from twisted.internet import defer
-from twisted.python.compat import unicode
 from twisted.trial import unittest
-from twisted.words.protocols.jabber import sasl, sasl_mechanisms, xmlstream, jid
+from twisted.words.protocols.jabber import (sasl, sasl_mechanisms, xmlstream,
+                                            jid)
 from twisted.words.xish import domish
 
 NS_XMPP_SASL = 'urn:ietf:params:xml:ns:xmpp-sasl'
@@ -105,7 +105,7 @@ class SASLInitiatingInitializerTests(unittest.TestCase):
         self.assertEqual(NS_XMPP_SASL, auth.uri)
         self.assertEqual(u'auth', auth.name)
         self.assertEqual(u'DUMMY', auth['mechanism'])
-        self.assertEqual(u'ZHVtbXk=', unicode(auth))
+        self.assertEqual(u'ZHVtbXk=', str(auth))
 
 
     def test_sendAuthNoInitialResponse(self):
@@ -125,7 +125,7 @@ class SASLInitiatingInitializerTests(unittest.TestCase):
         self.init.initialResponse = b""
         self.init.start()
         auth = self.output[0]
-        self.assertEqual('=', unicode(auth))
+        self.assertEqual('=', str(auth))
 
 
     def test_onChallenge(self):
@@ -151,7 +151,7 @@ class SASLInitiatingInitializerTests(unittest.TestCase):
         self.init.mechanism.response = b"response"
         self.init.onChallenge(challenge)
         response = self.output[1]
-        self.assertEqual(u'cmVzcG9uc2U=', unicode(response))
+        self.assertEqual(u'cmVzcG9uc2U=', str(response))
         self.init.onSuccess(None)
         return d
 

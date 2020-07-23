@@ -26,8 +26,7 @@ from zope.interface import (
 )
 from zope.interface.verify import verifyObject
 
-from twisted.python.compat import (iterbytes, networkString,
-                                   unicode, intToBytes)
+from twisted.python.compat import iterbytes, networkString, intToBytes
 from twisted.python.components import proxyForInterface
 from twisted.python.failure import Failure
 from twisted.trial import unittest
@@ -2373,11 +2372,11 @@ class QueryArgumentsTests(unittest.TestCase):
             if decode:
                 urlToStandardImplementation = url.decode('ascii')
 
-            # stdlib urlparse will give back whatever type we give it.  To be
-            # able to compare the values meaningfully, if it gives back unicode,
-            # convert all the values to bytes.
+            # stdlib urlparse will give back whatever type we give it.
+            # To be able to compare the values meaningfully, if it gives back
+            # unicode, convert all the values to bytes.
             standardResult = urlparse(urlToStandardImplementation)
-            if isinstance(standardResult.scheme, unicode):
+            if isinstance(standardResult.scheme, str):
                 # The choice of encoding is basically irrelevant.  The values
                 # are all in ASCII.  UTF-8 is, of course, the correct choice.
                 expected = (standardResult.scheme.encode('utf-8'),

@@ -41,8 +41,8 @@ from twisted.internet import error
 from twisted.internet.defer import maybeDeferred
 from twisted.python import log, text
 from twisted.python.compat import (
-    intToBytes, iterbytes, nativeString, networkString,
-    unicode, _matchingString, _get_async_param,
+    intToBytes, iterbytes, nativeString, networkString, _matchingString,
+    _get_async_param,
 )
 from twisted.internet import interfaces
 
@@ -4970,7 +4970,7 @@ def _needsQuote(s):
 
 
 def _parseMbox(name):
-    if isinstance(name, unicode):
+    if isinstance(name, str):
         return name
     try:
         return name.decode('imap4-utf-7')
@@ -4981,7 +4981,7 @@ def _parseMbox(name):
 
 
 def _prepareMailboxName(name):
-    if not isinstance(name, unicode):
+    if not isinstance(name, str):
         name = name.decode("charmap")
     name = name.encode('imap4-utf-7')
     if _needsQuote(name):
@@ -5023,7 +5023,7 @@ def collapseNestedLists(items):
     """
     pieces = []
     for i in items:
-        if isinstance(i, unicode):
+        if isinstance(i, str):
             # anything besides ASCII will have to wait for an RFC 5738
             # implementation.  See
             # https://twistedmatrix.com/trac/ticket/9258
@@ -5888,7 +5888,7 @@ class _FetchParser:
             part = b''
             separator = b''
             if self.part:
-                part = b'.'.join([unicode(x + 1).encode("ascii")
+                part = b'.'.join([str(x + 1).encode("ascii")
                                   for x in self.part])
                 separator = b'.'
 #            if self.peek:

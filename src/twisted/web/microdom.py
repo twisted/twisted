@@ -24,7 +24,7 @@ from io import BytesIO, StringIO
 
 
 # Twisted Imports
-from twisted.python.compat import ioType, iteritems, unicode
+from twisted.python.compat import ioType, iteritems
 from twisted.python.util import InsensitiveDict
 from twisted.web.sux import XMLParser, ParseError
 
@@ -74,7 +74,7 @@ def getElementsByTagNameNoCase(iNode, name):
 def _streamWriteWrapper(stream):
     if ioType(stream) == bytes:
         def w(s):
-            if isinstance(s, unicode):
+            if isinstance(s, str):
                 s = s.encode("utf-8")
             stream.write(s)
     else:
@@ -457,11 +457,11 @@ class Text(CharacterData):
         w = _streamWriteWrapper(stream)
         if self.raw:
             val = self.nodeValue
-            if not isinstance(val, (str, unicode)):
+            if not isinstance(val, str):
                 val = str(self.nodeValue)
         else:
             v = self.nodeValue
-            if not isinstance(v, (str, unicode)):
+            if not isinstance(v, str):
                 v = str(v)
             if strip:
                 v = ' '.join(v.split())
@@ -1081,7 +1081,7 @@ def parse(readable, *args, **kwargs):
 
 
 def parseString(st, *args, **kw):
-    if isinstance(st, unicode):
+    if isinstance(st, str):
         # this isn't particularly ideal, but it does work.
         return parse(BytesIO(st.encode('UTF-16')), *args, **kw)
     return parse(BytesIO(st), *args, **kw)
@@ -1110,7 +1110,7 @@ class lmx:
     """
 
     def __init__(self, node='div'):
-        if isinstance(node, (str, unicode)):
+        if isinstance(node, str):
             node = Element(node)
         self.node = node
 

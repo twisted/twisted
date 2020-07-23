@@ -21,7 +21,7 @@ from twisted import cred
 from twisted.internet import protocol, defer, reactor
 from twisted.protocols import basic
 from twisted.python import log
-from twisted.python.compat import iteritems, unicode
+from twisted.python.compat import iteritems
 
 PORT = 5060
 
@@ -633,10 +633,10 @@ class MessagesParser(basic.LineReceiver):
 
     def dataReceived(self, data):
         try:
-            if isinstance(data, unicode):
+            if isinstance(data, str):
                 data = data.encode("utf-8")
             basic.LineReceiver.dataReceived(self, data)
-        except:
+        except Exception:
             log.err()
             self.invalidMessage()
 
@@ -833,7 +833,7 @@ class Base(protocol.DatagramProtocol):
         if self.debug:
             log.msg("Sending %r to %r" % (message.toString(), destURL))
         data = message.toString()
-        if isinstance(data, unicode):
+        if isinstance(data, str):
             data = data.encode("utf-8")
         self.transport.write(data, (destURL.host, destURL.port or self.PORT))
 

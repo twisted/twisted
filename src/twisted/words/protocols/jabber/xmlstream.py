@@ -31,7 +31,7 @@ from zope.interface import directlyProvides, implementer
 from twisted.internet import defer, protocol
 from twisted.internet.error import ConnectionLost
 from twisted.python import failure, log, randbytes
-from twisted.python.compat import intern, iteritems, itervalues, unicode
+from twisted.python.compat import intern, iteritems, itervalues
 from twisted.words.protocols.jabber import error, ijabber, jid
 from twisted.words.xish import domish, xmlstream
 from twisted.words.xish.xmlstream import STREAM_CONNECTED_EVENT
@@ -63,9 +63,9 @@ def hashPassword(sid, password):
     @param password: The password to be hashed.
     @type password: C{unicode}.
     """
-    if not isinstance(sid, unicode):
+    if not isinstance(sid, str):
         raise TypeError("The session identifier must be a unicode object")
-    if not isinstance(password, unicode):
+    if not isinstance(password, str):
         raise TypeError("The password must be a unicode object")
     input = u"%s%s" % (sid, password)
     return sha1(input.encode('utf-8')).hexdigest()

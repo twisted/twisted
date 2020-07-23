@@ -18,7 +18,7 @@ import copyreg as copy_reg
 
 from twisted.python import reflect, log
 from twisted.persisted import crefutil
-from twisted.python.compat import unicode, _constructMethod
+from twisted.python.compat import _constructMethod
 
 ###########################
 # Abstract Object Classes #
@@ -53,15 +53,20 @@ class InstanceMethod:
         self.instance = inst
 
     def getSource(self):
-        return "InstanceMethod(%r, %r, \n\0%s)" % (self.name, self.klass, prettify(self.instance))
+        return "InstanceMethod(%r, %r, \n\0%s)" % (self.name, self.klass,
+                                                   prettify(self.instance))
+
 
 
 class _NoStateObj:
     pass
+
+
+
 NoStateObj = _NoStateObj()
 
 _SIMPLE_BUILTINS = [
-    bool, bytes, unicode, int, float, complex, type(None),
+    bool, bytes, str, int, float, complex, type(None),
     slice, type(Ellipsis)
 ]
 

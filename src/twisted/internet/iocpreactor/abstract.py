@@ -8,7 +8,6 @@ Abstract file handle class
 from twisted.internet import main, error, interfaces
 from twisted.internet.abstract import _ConsumerMixin, _LogOwner
 from twisted.python import failure
-from twisted.python.compat import unicode
 
 from zope.interface import implementer
 import errno
@@ -265,8 +264,8 @@ class FileHandle(_ConsumerMixin, _LogOwner):
 
         The data is buffered until his file descriptor is ready for writing.
         """
-        if isinstance(data, unicode): # no, really, I mean it
-            raise TypeError("Data must not be unicode")
+        if isinstance(data, str):  # no, really, I mean it
+            raise TypeError("Data must not be string")
         if not self.connected or self._writeDisconnected:
             return
         if data:
@@ -282,8 +281,8 @@ class FileHandle(_ConsumerMixin, _LogOwner):
 
     def writeSequence(self, iovec):
         for i in iovec:
-            if isinstance(i, unicode): # no, really, I mean it
-                raise TypeError("Data must not be unicode")
+            if isinstance(i, str):  # no, really, I mean it
+                raise TypeError("Data must not be string")
         if not self.connected or not iovec or self._writeDisconnected:
             return
         self._tempDataBuffer.extend(iovec)

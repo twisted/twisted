@@ -28,7 +28,6 @@ from twisted.internet import reactor, interfaces, protocol, error, defer
 from twisted.protocols import basic, policies
 
 from twisted.python import log, failure, filepath
-from twisted.python.compat import unicode
 from twisted.cred import error as cred_error, portal, credentials, checkers
 
 # constants
@@ -797,7 +796,7 @@ class FTP(basic.LineReceiver, policies.TimeoutMixin):
 
         @param line: L{bytes} or L{unicode}
         """
-        if isinstance(line, unicode):
+        if isinstance(line, str):
             line = line.encode(self._encoding)
         super(FTP, self).sendLine(line)
 
@@ -1055,7 +1054,7 @@ class FTP(basic.LineReceiver, policies.TimeoutMixin):
         @return: Wire format of C{name}.
         @rtype: L{bytes}
         """
-        if isinstance(name, unicode):
+        if isinstance(name, str):
             return name.encode('utf-8')
         return name
 
@@ -2609,7 +2608,7 @@ class FTPClientBasic(basic.LineReceiver):
         """
         if line is None:
             return
-        elif isinstance(line, unicode):
+        elif isinstance(line, str):
             line = line.encode(self._encoding)
         basic.LineReceiver.sendLine(self, line)
 

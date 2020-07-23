@@ -10,7 +10,6 @@ import datetime
 import decimal
 from unittest import skipIf
 
-from twisted.python.compat import unicode
 from twisted.spread import banana, jelly, pb
 from twisted.trial import unittest
 from twisted.trial.unittest import TestCase
@@ -415,8 +414,8 @@ class JellyTests(TestCase):
         self.assertIs(z[0][0], z)
 
 
-    def test_unicode(self):
-        x = unicode('blah')
+    def test_str(self):
+        x = str('blah')
         y = jelly.unjelly(jelly.jelly(x))
         self.assertEqual(x, y)
         self.assertEqual(type(x), type(y))

@@ -17,7 +17,7 @@ from twisted.internet.error import ProcessExitedAlready
 from twisted.internet.task import LoopingCall
 from twisted.internet.utils import getProcessValue
 from twisted.python import filepath, log, runtime
-from twisted.python.compat import unicode, _PYPY
+from twisted.python.compat import _PYPY
 from twisted.trial.unittest import SkipTest, TestCase
 from twisted.conch.test.test_ssh import ConchTestRealm
 from twisted.python.procutils import which
@@ -318,7 +318,7 @@ from twisted.conch.scripts.%s import run
 run()""" % mod]
     madeArgs = []
     for arg in start + list(args):
-        if isinstance(arg, unicode):
+        if isinstance(arg, str):
             arg = arg.encode("utf-8")
         madeArgs.append(arg)
     return madeArgs
@@ -635,7 +635,7 @@ class OpenSSHClientMixin:
             cmds = (cmdline % port).split()
             encodedCmds = []
             for cmd in cmds:
-                if isinstance(cmd, unicode):
+                if isinstance(cmd, str):
                     cmd = cmd.encode("utf-8")
                 encodedCmds.append(cmd)
             reactor.spawnProcess(process, which('ssh')[0], encodedCmds)
@@ -806,17 +806,18 @@ class CmdLineClientTests(ForwardingMixin, TestCase):
         encodedCmds = []
         encodedEnv = {}
         for cmd in cmds:
-            if isinstance(cmd, unicode):
+            if isinstance(cmd, str):
                 cmd = cmd.encode("utf-8")
             encodedCmds.append(cmd)
         for var in env:
             val = env[var]
-            if isinstance(var, unicode):
+            if isinstance(var, str):
                 var = var.encode("utf-8")
-            if isinstance(val, unicode):
+            if isinstance(val, str):
                 val = val.encode("utf-8")
             encodedEnv[var] = val
-        reactor.spawnProcess(process, sys.executable, encodedCmds, env=encodedEnv)
+        reactor.spawnProcess(process, sys.executable, encodedCmds,
+                             env=encodedEnv)
         return process.deferred
 
 

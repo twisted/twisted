@@ -28,7 +28,7 @@ from zope.interface import Interface, Attribute, implementer
 # things import this module, and it would be good if it could easily be
 # modified for inclusion in the standard library.  --glyph
 
-from twisted.python.compat import comparable, cmp, unicode
+from twisted.python.compat import comparable, cmp
 from twisted.python.runtime import platform
 from twisted.python.util import FancyEqMixin
 from twisted.python.win32 import ERROR_FILE_NOT_FOUND, ERROR_PATH_NOT_FOUND
@@ -630,7 +630,7 @@ def _asFilesystemText(path, encoding=None):
 
     @return: L{unicode}
     """
-    if type(path) == unicode:
+    if type(path) == str:
         return path
     else:
         if encoding is None:
@@ -765,7 +765,7 @@ class FilePath(AbstractFilePath):
 
         @return: L{bytes} mode L{FilePath}
         """
-        if type(self.path) == unicode:
+        if type(self.path) == str:
             return self.clonePath(self._asBytesPath(encoding=encoding))
         return self
 

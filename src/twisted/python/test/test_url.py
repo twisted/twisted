@@ -8,7 +8,6 @@ Tests for L{twisted.python.url}.
 
 from ..url import URL
 
-from twisted.python.compat import unicode
 from twisted.trial.unittest import SynchronousTestCase
 
 
@@ -87,16 +86,16 @@ class TestURL(SynchronousTestCase):
 
         @param u: The L{URL} to test.
         """
-        self.assertTrue(isinstance(u.scheme, unicode)
+        self.assertTrue(isinstance(u.scheme, str)
                         or u.scheme is None, repr(u))
-        self.assertTrue(isinstance(u.host, unicode)
+        self.assertTrue(isinstance(u.host, str)
                         or u.host is None, repr(u))
         for seg in u.path:
-            self.assertIsInstance(seg, unicode, repr(u))
+            self.assertIsInstance(seg, str, repr(u))
         for (k, v) in u.query:
-            self.assertIsInstance(k, unicode, repr(u))
-            self.assertTrue(v is None or isinstance(v, unicode), repr(u))
-        self.assertIsInstance(u.fragment, unicode, repr(u))
+            self.assertIsInstance(k, str, repr(u))
+            self.assertTrue(v is None or isinstance(v, str), repr(u))
+        self.assertIsInstance(u.fragment, str, repr(u))
 
 
     def assertURL(self, u, scheme, host, path, query,

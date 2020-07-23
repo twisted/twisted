@@ -35,7 +35,7 @@ from twisted import copyright
 from twisted.cred import portal, credentials, error as ecred
 from twisted.internet import defer, protocol
 from twisted.python import log, failure, reflect
-from twisted.python.compat import itervalues, unicode
+from twisted.python.compat import itervalues
 from twisted.python.components import registerAdapter
 from twisted.spread import pb
 from twisted.words import iwords, ewords
@@ -940,7 +940,7 @@ class PBMind(pb.Referenceable):
 
     def jellyFor(self, jellier):
         qual = reflect.qual(PBMind)
-        if isinstance(qual, unicode):
+        if isinstance(qual, str):
             qual = qual.encode("utf-8")
         return qual, jellier.invoker.registerReference(self)
 
@@ -1019,10 +1019,10 @@ class PBGroup(pb.Referenceable):
 
     def jellyFor(self, jellier):
         qual = reflect.qual(self.__class__)
-        if isinstance(qual, unicode):
+        if isinstance(qual, str):
             qual = qual.encode("utf-8")
         group = self.group.name
-        if isinstance(group, unicode):
+        if isinstance(group, str):
             group = group.encode("utf-8")
         return qual, group, jellier.invoker.registerReference(self)
 
@@ -1106,7 +1106,7 @@ class ChatAvatar(pb.Referenceable):
 
     def jellyFor(self, jellier):
         qual = reflect.qual(self.__class__)
-        if isinstance(qual, unicode):
+        if isinstance(qual, str):
             qual = qual.encode("utf-8")
         return qual, jellier.invoker.registerReference(self)
 

@@ -118,6 +118,11 @@ deprecatedModuleAttribute(
     __name__, 'unichr')
 
 unicode = str
+deprecatedModuleAttribute(
+    Version('Twisted', 'NEXT', 0, 0),
+    "Obsolete alias for str builtin type",
+    __name__, 'unicode')
+
 xrange = range
 
 
@@ -268,7 +273,7 @@ def comparable(klass):
 
 
 
-def ioType(fileIshObject, default=unicode):
+def ioType(fileIshObject, default=str):
     """
     Determine the type which will be returned from the given file object's
     read() and accepted by its write() method as an argument.
@@ -300,7 +305,7 @@ def ioType(fileIshObject, default=unicode):
     """
     if isinstance(fileIshObject, TextIOBase):
         # If it's for text I/O, then it's for text I/O.
-        return unicode
+        return str
     if isinstance(fileIshObject, IOBase):
         # If it's for I/O but it's _not_ for text I/O, it's for bytes I/O.
         return bytes
@@ -308,9 +313,9 @@ def ioType(fileIshObject, default=unicode):
     import codecs
     if isinstance(fileIshObject, (codecs.StreamReader, codecs.StreamWriter)):
         # On StreamReaderWriter, the 'encoding' attribute has special meaning;
-        # it is unambiguously unicode.
+        # it is unambiguously text.
         if encoding:
-            return unicode
+            return str
         else:
             return bytes
     return default
@@ -325,8 +330,8 @@ def nativeString(s):
     @raise UnicodeError: The input string is not ASCII encodable/decodable.
     @raise TypeError: The input is neither C{bytes} nor C{unicode}.
     """
-    if not isinstance(s, (bytes, unicode)):
-        raise TypeError("%r is neither bytes nor unicode" % s)
+    if not isinstance(s, (bytes, str)):
+        raise TypeError("%r is neither bytes nor str" % s)
     if isinstance(s, bytes):
         return s.decode("ascii")
     else:
@@ -452,8 +457,8 @@ def networkString(s):
 
     @rtype: L{bytes}
     """
-    if not isinstance(s, unicode):
-        raise TypeError("Can only convert text to bytes on Python 3")
+    if not isinstance(s, str):
+        raise TypeError("Can only convert strings to bytes")
     return s.encode('ascii')
 
 

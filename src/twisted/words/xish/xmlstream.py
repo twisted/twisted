@@ -34,7 +34,7 @@ Maintainer: Ralph Meijer
 
 from typing import Type
 from twisted.python import failure
-from twisted.python.compat import intern, unicode
+from twisted.python.compat import intern
 from twisted.internet import protocol
 from twisted.words.xish import domish, utility
 
@@ -158,7 +158,7 @@ class XmlStream(protocol.Protocol, utility.EventDispatcher):
         if domish.IElement.providedBy(obj):
             obj = obj.toXml()
 
-        if isinstance(obj, unicode):
+        if isinstance(obj, str):
             obj = obj.encode('utf-8')
 
         if self.rawDataOutFn:

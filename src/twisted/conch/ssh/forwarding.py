@@ -13,7 +13,6 @@ import struct
 
 from twisted.internet import protocol, reactor
 from twisted.internet.endpoints import HostnameEndpoint, connectProtocol
-from twisted.python.compat import unicode
 
 from twisted.conch.ssh import common, channel
 
@@ -206,9 +205,9 @@ def packOpen_direct_tcpip(destination, source):
     """
     (connHost, connPort) = destination
     (origHost, origPort) = source
-    if isinstance(connHost, unicode):
+    if isinstance(connHost, str):
         connHost = connHost.encode("utf-8")
-    if isinstance(origHost, unicode):
+    if isinstance(origHost, str):
         origHost = origHost.encode("utf-8")
     conn = common.NS(connHost) + struct.pack('>L', connPort)
     orig = common.NS(origHost) + struct.pack('>L', origPort)

@@ -15,7 +15,7 @@ from zope.interface import implementer, implementedBy
 from zope.interface.verify import verifyClass
 
 from twisted.python import failure
-from twisted.python.compat import unicode, intToBytes, Sequence
+from twisted.python.compat import intToBytes, Sequence
 from twisted.internet.defer import Deferred
 from twisted.internet.interfaces import (
     ITransport, IConsumer, IPushProducer, IConnector,
@@ -230,8 +230,8 @@ class StringTransport:
 
     # ITransport
     def write(self, data):
-        if isinstance(data, unicode):  # no, really, I mean it
-            raise TypeError("Data must not be unicode")
+        if isinstance(data, str):  # no, really, I mean it
+            raise TypeError("Data must not be string")
         self.io.write(data)
 
 

@@ -6,7 +6,6 @@ Exceptions in L{twisted.mail}.
 """
 
 
-from twisted.python.compat import unicode
 
 
 
@@ -150,7 +149,7 @@ class SMTPClientError(SMTPError):
             res.append(self.log)
             res.append(b'')
         for (i, r) in enumerate(res):
-            if isinstance(r, unicode):
+            if isinstance(r, str):
                 res[i] = r.encode('utf-8')
         return b'\n'.join(res)
 

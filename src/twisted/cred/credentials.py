@@ -23,7 +23,7 @@ from hashlib import md5
 from twisted.python.deprecate import deprecatedModuleAttribute
 from twisted.python.randbytes import secureRandom
 from twisted.python.compat import networkString, nativeString
-from twisted.python.compat import intToBytes, unicode
+from twisted.python.compat import intToBytes
 from twisted.python.versions import Version
 from twisted.cred._digest import calcResponse, calcHA1, calcHA2
 from twisted.cred import error
@@ -278,7 +278,7 @@ class DigestCredentialFactory:
 
         if not clientip:
             clientip = b''
-        elif isinstance(clientip, unicode):
+        elif isinstance(clientip, str):
             clientip = clientip.encode('ascii')
 
         key = b",".join((nonce, clientip, now))
@@ -311,7 +311,7 @@ class DigestCredentialFactory:
 
         if not clientip:
             clientip = b''
-        elif isinstance(clientip, unicode):
+        elif isinstance(clientip, str):
             clientip = clientip.encode('ascii')
 
         # Verify the key

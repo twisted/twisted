@@ -222,7 +222,7 @@ from twisted.internet.error import PeerVerifyError, ConnectionLost
 from twisted.internet.error import ConnectionClosed
 from twisted.internet.defer import Deferred, maybeDeferred, fail
 from twisted.protocols.basic import Int16StringReceiver, StatefulStringProtocol
-from twisted.python.compat import iteritems, unicode, nativeString, intToBytes
+from twisted.python.compat import iteritems, nativeString, intToBytes
 
 try:
     from twisted.internet import ssl
@@ -686,9 +686,9 @@ class AmpBox(dict):
         L = []
         w = L.append
         for k, v in i:
-            if type(k) == unicode:
+            if type(k) == str:
                 raise TypeError("Unicode key not allowed: %r" % k)
-            if type(v) == unicode:
+            if type(v) == str:
                 raise TypeError(
                     "Unicode value for key %r not allowed: %r" % (k, v))
             if len(k) > MAX_KEY_LENGTH:
@@ -1018,7 +1018,7 @@ class BoxDispatcher:
             if error.check(RemoteAmpError):
                 code = error.value.errorCode
                 desc = error.value.description
-                if isinstance(desc, unicode):
+                if isinstance(desc, str):
                     desc = desc.encode("utf-8", "replace")
                 if error.value.fatal:
                     errorBox = QuitBox()

@@ -22,7 +22,6 @@ does not:
 
 
 from twisted.internet.protocol import Protocol
-from twisted.python.compat import unicode
 from twisted.python.reflect import prefixedMethodNames
 
 
@@ -121,7 +120,7 @@ class XMLParser(Protocol):
         if self._prepend:
             data = self._prepend + data
         for encoding in self.encodings:
-            data = unicode(data, encoding)
+            data = str(data, encoding)
         return data
 
     def maybeBodyData(self):

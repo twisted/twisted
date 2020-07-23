@@ -28,7 +28,7 @@ from twisted.internet.interfaces import (
     IOpenSSLContextFactory,
 )
 from twisted.python import log, util
-from twisted.python.compat import nativeString, unicode
+from twisted.python.compat import nativeString
 from twisted.python.deprecate import _mutuallyExclusiveArguments, deprecated
 from twisted.python.failure import Failure
 from twisted.python.randbytes import secureRandom
@@ -1290,7 +1290,7 @@ def optionsForClientTLS(hostname, trustRoot=None, clientCertificate=None,
                 arg=kw.popitem()[0]
             )
         )
-    if not isinstance(hostname, unicode):
+    if not isinstance(hostname, str):
         raise TypeError(
             "optionsForClientTLS requires text for host names, not "
             + hostname.__class__.__name__
@@ -1796,7 +1796,7 @@ def _expandCipherString(cipherString, method, options):
             raise
     conn = SSL.Connection(ctx, None)
     ciphers = conn.get_cipher_list()
-    if isinstance(ciphers[0], unicode):
+    if isinstance(ciphers[0], str):
         return tuple(OpenSSLCipher(cipher) for cipher in ciphers)
     else:
         return tuple(

@@ -13,7 +13,6 @@ Maintainer: Itamar Shtull-Trauring
 
 
 from twisted.python.compat import intToBytes, nativeString, urllib_parse
-from twisted.python.compat import unicode
 
 # System Imports
 import base64
@@ -186,7 +185,7 @@ class XMLRPC(resource.Resource):
                 content = xmlrpclib.dumps(f, methodresponse=True,
                                           allow_none=self.allowNone)
 
-            if isinstance(content, unicode):
+            if isinstance(content, str):
                 content = content.encode('utf8')
             request.setHeader(
                 b"content-length", intToBytes(len(content)))
@@ -429,9 +428,9 @@ class QueryFactory(protocol.ClientFactory):
         """
         self.path, self.host = path, host
         self.user, self.password = user, password
-        self.payload = payloadTemplate % (method,
-            xmlrpclib.dumps(args, allow_none=allowNone))
-        if isinstance(self.payload, unicode):
+        self.payload = payloadTemplate % (method, xmlrpclib.dumps(
+                                                args, allow_none=allowNone))
+        if isinstance(self.payload, str):
             self.payload = self.payload.encode('utf8')
         self.deferred = defer.Deferred(canceller)
         self.useDateTime = useDateTime

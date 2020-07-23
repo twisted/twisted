@@ -20,7 +20,7 @@ from functools import wraps
 from zope.interface import implementer
 
 from twisted.python.compat import networkString
-from twisted.python.compat import nativeString, intToBytes, unicode, itervalues
+from twisted.python.compat import nativeString, intToBytes, itervalues
 from twisted.python.deprecate import deprecatedModuleAttribute, deprecated
 from twisted.python.failure import Failure
 from incremental import Version
@@ -487,7 +487,7 @@ class HTTPDownloader(HTTPClientFactory):
                  timeout=0, cookies=None, followRedirect=True,
                  redirectLimit=20, afterFoundGet=False):
         self.requestedPartial = 0
-        if isinstance(fileOrName, (str, unicode)):
+        if isinstance(fileOrName, str):
             self.fileName = fileOrName
             self.file = None
             if supportPartial and os.path.exists(self.fileName):

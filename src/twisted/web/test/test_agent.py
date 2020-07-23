@@ -18,7 +18,7 @@ from twisted.web._newclient import ResponseNeverReceived, ResponseFailed
 from twisted.web._newclient import PotentialDataLoss
 from twisted.internet import defer, task
 from twisted.python.failure import Failure
-from twisted.python.compat import cookielib, intToBytes, unicode
+from twisted.python.compat import cookielib, intToBytes
 from twisted.python.components import proxyForInterface
 from twisted.test.proto_helpers import (StringTransport, MemoryReactorClock,
                                         EventLoggingObserver)
@@ -3231,7 +3231,7 @@ class HostnameCachingHTTPSPolicyTests(TestCase):
         wrappedPolicy = BrowserLikePolicyForHTTPS(trustRoot=trustRoot)
         policy = HostnameCachingHTTPSPolicy(wrappedPolicy)
         for i in range(0, 20):
-            hostname = u"host" + unicode(i)
+            hostname = u"host" + str(i)
             policy.creatorForNetloc(hostname.encode("ascii"), 8675)
 
         # Force host0, which was the first, to be the most recently used
@@ -3276,7 +3276,7 @@ class HostnameCachingHTTPSPolicyTests(TestCase):
         wrappedPolicy = BrowserLikePolicyForHTTPS(trustRoot=trustRoot)
         policy = HostnameCachingHTTPSPolicy(wrappedPolicy, cacheSize=5)
         for i in range(0, 5):
-            hostname = u"host" + unicode(i)
+            hostname = u"host" + str(i)
             policy.creatorForNetloc(hostname.encode("ascii"), 8675)
 
         first = u"host0"

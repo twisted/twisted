@@ -50,7 +50,7 @@ from twisted.internet._resolver import HostResolution
 from twisted.logger import Logger
 from twisted.plugin import IPlugin, getPlugins
 from twisted.python import deprecate, log
-from twisted.python.compat import nativeString, unicode, _matchingString
+from twisted.python.compat import nativeString, _matchingString
 from twisted.python.components import proxyForInterface
 from twisted.python.failure import Failure
 from twisted.python.filepath import FilePath
@@ -2219,9 +2219,9 @@ def _parseClientTLS(reactor, host, port, timeout=b'30', bindAddress=None,
     if kwargs:
         raise TypeError('unrecognized keyword arguments present',
                         list(kwargs.keys()))
-    host = host if isinstance(host, unicode) else host.decode("utf-8")
+    host = host if isinstance(host, str) else host.decode("utf-8")
     bindAddress = (bindAddress
-                   if isinstance(bindAddress, unicode) or bindAddress is None
+                   if isinstance(bindAddress, str) or bindAddress is None
                    else bindAddress.decode("utf-8"))
     port = int(port)
     timeout = int(timeout)

@@ -15,7 +15,6 @@ import time
 import stat
 
 from twisted.python import threadable
-from twisted.python.compat import unicode
 
 
 
@@ -101,7 +100,7 @@ class BaseLogFile:
         if self.shouldRotate():
             self.flush()
             self.rotate()
-        if isinstance(data, unicode):
+        if isinstance(data, str):
             data = data.encode('utf8')
         self._file.write(data)
 

@@ -18,7 +18,7 @@ from twisted.trial.unittest import TestCase, SynchronousTestCase
 
 from twisted.python.compat import (
     reduce, execfile, _PYPY, comparable, cmp, nativeString,
-    networkString, unicode as unicodeCompat, lazyByteSlice, reraise,
+    networkString, lazyByteSlice, reraise,
     NativeStringIO, iterbytes, intToBytes, ioType, bytesEnviron, iteritems,
     _get_async_param,
 )
@@ -36,7 +36,7 @@ class IOTypeTests(SynchronousTestCase):
         """
         An L{io.StringIO} accepts and returns text.
         """
-        self.assertEqual(ioType(io.StringIO()), unicodeCompat)
+        self.assertEqual(ioType(io.StringIO()), str)
 
 
     def test_3BytesIO(self):
@@ -51,7 +51,7 @@ class IOTypeTests(SynchronousTestCase):
         A file opened via 'io.open' in text mode accepts and returns text.
         """
         with io.open(self.mktemp(), "w") as f:
-            self.assertEqual(ioType(f), unicodeCompat)
+            self.assertEqual(ioType(f), str)
 
 
     def test_3openBinaryMode(self):
@@ -76,7 +76,7 @@ class IOTypeTests(SynchronousTestCase):
         When passed an encoding, however, the L{codecs} module returns unicode.
         """
         with codecs.open(self.mktemp(), 'wb', encoding='utf-8') as f:
-            self.assertEqual(ioType(f), unicodeCompat)
+            self.assertEqual(ioType(f), str)
 
 
     def test_defaultToText(self):
@@ -84,7 +84,7 @@ class IOTypeTests(SynchronousTestCase):
         When passed an object about which no sensible decision can be made, err
         on the side of unicode.
         """
-        self.assertEqual(ioType(object()), unicodeCompat)
+        self.assertEqual(ioType(object()), str)
 
 
 
@@ -444,13 +444,6 @@ class StringTests(SynchronousTestCase):
         self.assertRaises(TypeError, nativeString, 1)
 
 
-    def test_unicode(self):
-        """
-        C{compat.unicode} is C{str} on Python 3, C{unicode} on Python 2.
-        """
-        self.assertIs(unicodeCompat, str)
-
-
     def test_nativeStringIO(self):
         """
         L{NativeStringIO} is a file-like object that stores native strings in
@@ -467,7 +460,7 @@ class NetworkStringTests(SynchronousTestCase):
     """
     Tests for L{networkString}.
     """
-    def test_unicode(self):
+    def test_str(self):
         """
         L{networkString} returns a C{unicode} object passed to it encoded into
         a C{bytes} instance.

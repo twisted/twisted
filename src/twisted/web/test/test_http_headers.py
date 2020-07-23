@@ -7,7 +7,6 @@ Tests for L{twisted.web.http_headers}.
 
 
 from twisted.trial.unittest import TestCase
-from twisted.python.compat import unicode
 from twisted.web.http_headers import Headers
 from twisted.web.test.requesthelper import (
     bytesLinearWhitespaceComponents,
@@ -459,7 +458,7 @@ class UnicodeHeadersTests(TestCase):
         h = Headers()
         default = [b"value"]
         h.setRawHeaders(b"key", default)
-        self.assertIsInstance(h.getRawHeaders("key", default)[0], unicode)
+        self.assertIsInstance(h.getRawHeaders("key", default)[0], str)
         self.assertEqual(h.getRawHeaders("key", default), ["value"])
 
 

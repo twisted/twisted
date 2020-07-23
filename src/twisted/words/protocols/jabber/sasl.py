@@ -9,7 +9,6 @@ XMPP-specific SASL profile.
 from base64 import b64decode, b64encode
 import re
 from twisted.internet import defer
-from twisted.python.compat import unicode
 from twisted.words.protocols.jabber import sasl_mechanisms, xmlstream
 from twisted.words.xish import domish
 
@@ -22,7 +21,7 @@ def get_mechanisms(xs):
     mechanisms = []
     for element in xs.features[(NS_XMPP_SASL, 'mechanisms')].elements():
         if element.name == 'mechanism':
-            mechanisms.append(unicode(element))
+            mechanisms.append(str(element))
 
     return mechanisms
 
@@ -191,7 +190,7 @@ class SASLInitiatingInitializer(xmlstream.BaseFeatureInitiatingInitializer):
         """
 
         try:
-            challenge = fromBase64(unicode(element))
+            challenge = fromBase64(str(element))
         except SASLIncorrectEncodingError:
             self._deferred.errback()
         else:

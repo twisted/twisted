@@ -32,7 +32,7 @@ from pyasn1.type import univ
 from twisted.conch.ssh import common, sexpy
 from twisted.conch.ssh.common import int_from_bytes, int_to_bytes
 from twisted.python import randbytes
-from twisted.python.compat import iterbytes, nativeString, unicode
+from twisted.python.compat import iterbytes, nativeString
 from twisted.python.constants import NamedConstant, Names
 from twisted.python.deprecate import _mutuallyExclusiveArguments
 
@@ -132,7 +132,7 @@ def _normalizePassphrase(passphrase):
     @raises PassphraseNormalizationError: if the passphrase is Unicode and
     cannot be normalized using the available Unicode character database.
     """
-    if isinstance(passphrase, unicode):
+    if isinstance(passphrase, str):
         # The Normalization Process for Stabilized Strings requires aborting
         # with an error if the string contains any unassigned code point.
         if any(unicodedata.category(c) == 'Cn' for c in passphrase):
@@ -199,7 +199,7 @@ class Key:
         @rtype: L{Key}
         @return: The loaded key.
         """
-        if isinstance(data, unicode):
+        if isinstance(data, str):
             data = data.encode("utf-8")
         passphrase = _normalizePassphrase(passphrase)
         if type is None:
@@ -1369,7 +1369,7 @@ class Key:
                 comment = extra
             else:
                 passphrase = extra
-        if isinstance(comment, unicode):
+        if isinstance(comment, str):
             comment = comment.encode("utf-8")
         passphrase = _normalizePassphrase(passphrase)
         method = getattr(self, '_toString_%s' % (type.upper(),), None)

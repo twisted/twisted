@@ -23,7 +23,6 @@ from zope.interface import implementer
 from twisted.application import service
 from twisted.internet import defer
 from twisted.python import log
-from twisted.python.compat import unicode
 from twisted.words.xish import domish
 from twisted.words.protocols.jabber import error, ijabber, jstrports, xmlstream
 from twisted.words.protocols.jabber.jid import internJID as JID
@@ -59,7 +58,7 @@ class ComponentInitiatingInitializer:
         xs = self.xmlstream
         hs = domish.Element((self.xmlstream.namespace, "handshake"))
         digest = xmlstream.hashPassword(xs.sid, xs.authenticator.password)
-        hs.addContent(unicode(digest))
+        hs.addContent(str(digest))
 
         # Setup observer to watch for handshake result
         xs.addOnetimeObserver("/handshake", self._cbHandshake)
@@ -169,7 +168,7 @@ class ListenComponentAuthenticator(xmlstream.ListenAuthenticator):
         L{onHandshake}.
         """
         if (element.uri, element.name) == (self.namespace, 'handshake'):
-            self.onHandshake(unicode(element))
+            self.onHandshake(str(element))
         else:
             exc = error.StreamError('not-authorized')
             self.xmlstream.sendStreamError(exc)
@@ -185,7 +184,7 @@ class ListenComponentAuthenticator(xmlstream.ListenAuthenticator):
         be exchanged.
         """
         calculatedHash = xmlstream.hashPassword(self.xmlstream.sid,
-                                                unicode(self.secret))
+                                                str(self.secret))
         if handshake != calculatedHash:
             exc = error.StreamError('not-authorized', text='Invalid hash')
             self.xmlstream.sendStreamError(exc)
