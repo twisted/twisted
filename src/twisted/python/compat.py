@@ -76,6 +76,11 @@ deprecatedModuleAttribute(
     __name__, 'InstanceType')
 
 izip = zip
+deprecatedModuleAttribute(
+    Version('Twisted', 'NEXT', 0, 0),
+    "Obsolete alias for zip() builtin",
+    __name__, 'izip')
+
 long = int
 range = range
 raw_input = input

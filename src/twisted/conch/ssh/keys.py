@@ -32,7 +32,7 @@ from pyasn1.type import univ
 from twisted.conch.ssh import common, sexpy
 from twisted.conch.ssh.common import int_from_bytes, int_to_bytes
 from twisted.python import randbytes
-from twisted.python.compat import iterbytes, long, izip, nativeString, unicode
+from twisted.python.compat import iterbytes, long, nativeString, unicode
 from twisted.python.constants import NamedConstant, Names
 from twisted.python.deprecate import _mutuallyExclusiveArguments
 
@@ -1502,7 +1502,7 @@ class Key:
             objData = (0, data['p'], data['q'], data['g'], data['y'],
                        data['x'])
         asn1Sequence = univ.Sequence()
-        for index, value in izip(itertools.count(), objData):
+        for index, value in zip(itertools.count(), objData):
             asn1Sequence.setComponentByPosition(index, univ.Integer(value))
         asn1Data = berEncoder.encode(asn1Sequence)
         if passphrase:
