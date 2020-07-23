@@ -380,6 +380,8 @@ def _matchingString(constantString, inputString):
 
 
 
+@deprecated(Version('Twisted', 'NEXT', 0, 0),
+            replacement="raise exception.with_traceback(traceback)")
 def reraise(exception, traceback):
     """
     Re-raise an exception, with an optional traceback.

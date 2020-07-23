@@ -1743,9 +1743,7 @@ class StartResponseTests(WSGITestsMixin, TestCase):
             tb1 = reraised[0][2].tb_next
             tb2 = excInfo[2]
             self.assertEqual(
-                # On Python 2 (str is bytes) we need to move back only one
-                # stack frame to skip. On Python 3 we need to move two frames.
-                traceback.extract_tb(tb1)[1 if str is bytes else 2],
+                traceback.extract_tb(tb1)[1],
                 traceback.extract_tb(tb2)[0]
             )
 

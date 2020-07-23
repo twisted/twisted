@@ -17,7 +17,7 @@ import re
 import traceback
 from collections import deque
 from io import IOBase, StringIO
-from twisted.python.compat import reraise, nativeString
+from twisted.python.compat import nativeString
 from twisted.python.deprecate import _fullyQualifiedName as fullyQualifiedName
 
 
@@ -247,10 +247,8 @@ def _importAndCheckStack(importName):
         excType, excValue, excTraceback = sys.exc_info()
         while excTraceback:
             execName = excTraceback.tb_frame.f_globals["__name__"]
-            # in Python 2 execName is None when an ImportError is encountered,
-            # where in Python 3 execName is equal to the importName.
-            if execName is None or execName == importName:
-                reraise(excValue, excTraceback)
+            if execName == importName:
+                raise excValue.with_traceback(excTraceback)
             excTraceback = excTraceback.tb_next
         raise _NoModuleFound()
 
