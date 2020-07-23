@@ -13,7 +13,7 @@ for use in streaming XML applications.
 
 from zope.interface import implementer, Interface, Attribute
 
-from twisted.python.compat import StringType, iteritems, itervalues
+from twisted.python.compat import iteritems, itervalues
 from twisted.web import sux
 
 
@@ -69,7 +69,7 @@ class _ListSerializer:
             return
 
         # Shortcut, check to see if elem is actually a string (aka Cdata)
-        if isinstance(elem, StringType):
+        if isinstance(elem, str):
             write(escapeToXml(elem))
             return
 
@@ -462,7 +462,7 @@ class Element:
         Retrieve the first CData (content) node
         """
         for n in self.children:
-            if isinstance(n, StringType):
+            if isinstance(n, str):
                 return n
         return ""
 

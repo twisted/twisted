@@ -106,6 +106,11 @@ deprecatedModuleAttribute(
     __name__, 'set')
 
 StringType = str
+deprecatedModuleAttribute(
+    Version('Twisted', 'NEXT', 0, 0),
+    "Obsolete alias for str builtin type",
+    __name__, 'StringType')
+
 unichr = chr
 unicode = str
 xrange = range
