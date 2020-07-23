@@ -112,6 +112,11 @@ deprecatedModuleAttribute(
     __name__, 'StringType')
 
 unichr = chr
+deprecatedModuleAttribute(
+    Version('Twisted', 'NEXT', 0, 0),
+    "Obsolete alias for chr() builtin",
+    __name__, 'unichr')
+
 unicode = str
 xrange = range
 

@@ -41,7 +41,7 @@ from twisted.internet import error
 from twisted.internet.defer import maybeDeferred
 from twisted.python import log, text
 from twisted.python.compat import (
-    unichr as chr, intToBytes, iterbytes, nativeString, networkString,
+    intToBytes, iterbytes, nativeString, networkString,
     unicode, _matchingString, _get_async_param,
 )
 from twisted.internet import interfaces
