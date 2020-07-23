@@ -222,9 +222,7 @@ from twisted.internet.error import PeerVerifyError, ConnectionLost
 from twisted.internet.error import ConnectionClosed
 from twisted.internet.defer import Deferred, maybeDeferred, fail
 from twisted.protocols.basic import Int16StringReceiver, StatefulStringProtocol
-from twisted.python.compat import (
-    iteritems, unicode, nativeString, intToBytes, long,
-)
+from twisted.python.compat import iteritems, unicode, nativeString, intToBytes
 
 try:
     from twisted.internet import ssl
@@ -810,7 +808,7 @@ class BoxDispatcher:
 
     _failAllReason = None
     _outstandingRequests = None
-    _counter = long(0)
+    _counter = 0
     boxSender = None
 
     def __init__(self, locator):

@@ -35,7 +35,7 @@ from twisted.internet.interfaces import ITLSTransport, ISSLTransport
 from twisted.internet._idna import _idnaText
 from twisted.python import log
 from twisted.python import util
-from twisted.python.compat import (long, unicode, networkString,
+from twisted.python.compat import (unicode, networkString,
                                    nativeString, iteritems, iterbytes)
 from twisted.python.runtime import platform
 
@@ -1879,7 +1879,7 @@ class SMTPSenderFactory(protocol.ClientFactory):
         @param timeout: Period, in seconds, for which to wait for
         server responses, or None to wait forever.
         """
-        assert isinstance(retries, (int, long))
+        assert isinstance(retries, int)
 
         if isinstance(toEmail, unicode):
             toEmail = [toEmail.encode('ascii')]

@@ -32,7 +32,7 @@ from pyasn1.type import univ
 from twisted.conch.ssh import common, sexpy
 from twisted.conch.ssh.common import int_from_bytes, int_to_bytes
 from twisted.python import randbytes
-from twisted.python.compat import iterbytes, long, nativeString, unicode
+from twisted.python.compat import iterbytes, nativeString, unicode
 from twisted.python.constants import NamedConstant, Names
 from twisted.python.deprecate import _mutuallyExclusiveArguments
 
@@ -562,7 +562,7 @@ class Key:
                 raise BadKeyError('RSA key failed to decode properly')
 
             n, e, d, p, q, dmp1, dmq1, iqmp = [
-                long(value) for value in decodedKey[1:9]
+                int(value) for value in decodedKey[1:9]
                 ]
             return cls(
                 rsa.RSAPrivateNumbers(
@@ -576,7 +576,7 @@ class Key:
                 ).private_key(default_backend())
             )
         elif kind == b'DSA':
-            p, q, g, y, x = [long(value) for value in decodedKey[1: 6]]
+            p, q, g, y, x = [int(value) for value in decodedKey[1: 6]]
             if len(decodedKey) < 6:
                 raise BadKeyError('DSA key failed to decode properly')
             return cls(

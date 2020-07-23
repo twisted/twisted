@@ -19,7 +19,7 @@ from unittest import skipIf
 
 from twisted.trial.unittest import TestCase
 
-from twisted.python import compat, log
+from twisted.python import log
 from twisted.internet.tcp import (
     _ACCEPT_ERRORS, ECONNABORTED, EPERM, ENOMEM, ENFILE,
     EAGAIN, EMFILE, ENOBUFS, EINPROGRESS, EWOULDBLOCK, Port,
@@ -354,7 +354,7 @@ class SelectReactorTests(TestCase):
         # Windows has object()s stubs for some errnos.
         unknownAcceptError = max(
             error for error in knownErrors
-            if isinstance(error, (int, compat.long))
+            if isinstance(error, int)
         ) + 1
 
         class FakeSocketWithUnknownAcceptError:

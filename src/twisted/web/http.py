@@ -80,7 +80,7 @@ from twisted.internet import address, interfaces, protocol
 from twisted.internet._producer_helpers import _PullToPush
 from twisted.internet.defer import Deferred
 from twisted.internet.interfaces import IProtocol
-from twisted.python.compat import (_PY37PLUS, intToBytes, long,
+from twisted.python.compat import (_PY37PLUS, intToBytes,
                                    nativeString, networkString)
 from twisted.python.components import proxyForInterface
 from twisted.python import log
@@ -122,8 +122,6 @@ except ImportError:
 
 
 
-
-_intTypes = (int, long)
 
 # A common request timeout -- 1 minute. This is roughly what nginx uses, and
 # so it seems to be a good choice for us too.
@@ -1287,7 +1285,7 @@ class Request:
         @type code: L{int}
         @type message: L{bytes}
         """
-        if not isinstance(code, _intTypes):
+        if not isinstance(code, int):
             raise TypeError("HTTP response code must be int or long")
         self.code = code
         if message:

@@ -82,6 +82,11 @@ deprecatedModuleAttribute(
     __name__, 'izip')
 
 long = int
+deprecatedModuleAttribute(
+    Version('Twisted', 'NEXT', 0, 0),
+    "Obsolete alias for int builtin type",
+    __name__, 'long')
+
 range = range
 raw_input = input
 set = set

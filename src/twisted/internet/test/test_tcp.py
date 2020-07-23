@@ -25,7 +25,6 @@ from zope.interface import Interface, implementer
 from zope.interface.verify import verifyClass, verifyObject
 
 from twisted.logger import Logger
-from twisted.python.compat import long
 from twisted.python.runtime import platform
 from twisted.python.failure import Failure
 from twisted.python import log
@@ -3036,11 +3035,11 @@ class SimpleUtilityTests(TestCase):
         result = _resolveIPv6("::1", 2)
         self.assertEqual(len(result), 4)
         # We can't say anything more useful about these than that they're
-        # integers, because the whole point of getaddrinfo is that you can never
-        # know a-priori know _anything_ about the network interfaces of the
-        # computer that you're on and you have to ask it.
-        self.assertIsInstance(result[2], (int, long)) # flow info
-        self.assertIsInstance(result[3], (int, long)) # scope id
+        # integers, because the whole point of getaddrinfo is that you can
+        # never know a-priori know _anything_ about the network interfaces
+        # of the computer that you're on and you have to ask it.
+        self.assertIsInstance(result[2], int)  # flow info
+        self.assertIsInstance(result[3], int)  # scope id
         # but, luckily, IP presentation format and what it means to be a port
         # number are a little better specified.
         self.assertEqual(result[:2], ("::1", 2))

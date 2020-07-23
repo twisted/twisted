@@ -26,7 +26,7 @@ from zope.interface import (
 )
 from zope.interface.verify import verifyObject
 
-from twisted.python.compat import (iterbytes, long, networkString,
+from twisted.python.compat import (iterbytes, networkString,
                                    unicode, intToBytes)
 from twisted.python.components import proxyForInterface
 from twisted.python.failure import Failure
@@ -2618,11 +2618,11 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
 
     def test_setResponseCodeAcceptsLongIntegers(self):
         """
-        L{http.Request.setResponseCode} accepts C{long} for the code
+        L{http.Request.setResponseCode} accepts L{int} for the code
         parameter.
         """
         req = http.Request(DummyChannel(), False)
-        req.setResponseCode(long(1))
+        req.setResponseCode(1)
 
 
     def test_setLastModifiedNeverSet(self):

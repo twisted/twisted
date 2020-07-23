@@ -41,7 +41,7 @@ from twisted.internet import error
 from twisted.internet.defer import maybeDeferred
 from twisted.python import log, text
 from twisted.python.compat import (
-    unichr as chr, intToBytes, iterbytes, long, nativeString, networkString,
+    unichr as chr, intToBytes, iterbytes, nativeString, networkString,
     unicode, _matchingString, _get_async_param,
 )
 from twisted.internet import interfaces
@@ -5030,7 +5030,7 @@ def collapseNestedLists(items):
             i = i.encode("ascii")
         if i is None:
             pieces.extend([b' ', b'NIL'])
-        elif isinstance(i, (int, long)):
+        elif isinstance(i, int):
             pieces.extend([b' ', networkString(str(i))])
         elif isinstance(i, DontQuoteMe):
             pieces.extend([b' ', i.value])

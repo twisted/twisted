@@ -71,7 +71,7 @@ import datetime
 from zope.interface import implementer
 
 # Twisted Imports
-from twisted.python.compat import unicode, long, nativeString
+from twisted.python.compat import unicode, nativeString
 from twisted.python.reflect import namedObject, qual, namedAny
 from twisted.persisted.crefutil import NotKnown, _Tuple, _InstanceMethod
 from twisted.persisted.crefutil import _DictKeyAndValue, _Dereference
@@ -474,7 +474,7 @@ class _Jellier:
         objType = type(obj)
         if self.taster.isTypeAllowed(qual(objType).encode('utf-8')):
             # "Immutable" Types
-            if objType in (bytes, int, long, float):
+            if objType in (bytes, int, float):
                 return obj
             elif isinstance(obj, types.MethodType):
                 aSelf = obj.__self__
