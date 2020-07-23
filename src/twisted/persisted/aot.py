@@ -380,10 +380,7 @@ class AOTUnjellier:
             elif c is Instance:
                 klass = reflect.namedObject(ao.klass)
                 state = self.unjellyAO(ao.state)
-                if hasattr(klass, "__new__"):
-                    inst = klass.__new__(klass)
-                else:
-                    inst = _OldStyleInstance(klass)
+                inst = klass.__new__(klass)
                 if hasattr(klass, "__setstate__"):
                     self.callAfter(inst.__setstate__, state)
                 else:
@@ -463,11 +460,6 @@ def jellyToSource(obj, file=None):
 
 
 
-_OldStyleClass = None
-_OldStyleInstance = None
-
-
-
 def _classOfMethod(methodObject):
     """
     Get the associated class of the given method object.
@@ -531,7 +523,7 @@ class AOTJellier:
         if objType in _SIMPLE_BUILTINS:
             retval = obj
 
-        elif objType is types.MethodType:
+        elif issubclass(objType, types.MethodType):
             # TODO: make methods 'prefer' not to jelly the object internally,
             # so that the object will show up where it's referenced first NOT
             # by a method.
@@ -539,11 +531,8 @@ class AOTJellier:
                                     reflect.qual(_classOfMethod(obj)),
                                     self.jellyToAO(_selfOfMethod(obj)))
 
-        elif objType is types.ModuleType:
+        elif issubclass(objType, types.ModuleType):
             retval = Module(obj.__name__)
-
-        elif objType is _OldStyleClass:
-            retval = Class(reflect.qual(obj))
 
         elif issubclass(objType, type):
             retval = Class(reflect.qual(obj))

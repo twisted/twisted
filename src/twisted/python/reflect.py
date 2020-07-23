@@ -473,12 +473,8 @@ def fullFuncName(func):
 def getClass(obj):
     """
     Return the class or type of object 'obj'.
-    Returns sensible result for oldstyle and newstyle instances and types.
     """
-    if hasattr(obj, '__class__'):
-        return obj.__class__
-    else:
-        return type(obj)
+    return type(obj)
 
 
 

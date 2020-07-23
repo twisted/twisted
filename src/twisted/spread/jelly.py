@@ -83,12 +83,6 @@ from twisted.python.deprecate import deprecatedModuleAttribute
 from incremental import Version
 
 
-# On Python 3 and higher, ClassType and InstanceType
-# are gone.  Use an empty tuple to pass to isinstance()
-# tests without throwing an exception.
-_OldStyleClass = ()
-_OldStyleInstance = ()
-
 _SetTypes = [set]
 _ImmutableSetTypes = [frozenset]
 
@@ -144,9 +138,9 @@ unjellyableFactoryRegistry = {}
 
 def _createBlank(cls):
     """
-    Given an object, if that object is a type (or a legacy old-style class),
-    return a new, blank instance of that type which has not had C{__init__}
-    called on it.  If the object is not a type, return C{None}.
+    Given an object, if that object is a type, return a new, blank instance
+    of that type which has not had C{__init__} called on it.  If the object
+    is not a type, return L{None}.
 
     @param cls: The type (or class) to create an instance of.
     @type cls: L{type} or something else that cannot be
@@ -162,7 +156,6 @@ def _createBlank(cls):
 def _newInstance(cls, state):
     """
     Make a new instance of a class without calling its __init__ method.
-    Supports both new- and old-style classes.
 
     @param state: A C{dict} used to update C{inst.__dict__} either directly or
         via C{__setstate__}, if available.
@@ -522,7 +515,7 @@ class _Jellier:
             elif objType is datetime.timedelta:
                 return [b'timedelta', ' '.join([unicode(x) for x in (
                     obj.days, obj.seconds, obj.microseconds)]).encode('utf-8')]
-            elif issubclass(objType, (type, _OldStyleClass)):
+            elif issubclass(objType, type):
                 return [b'class', qual(obj).encode('utf-8')]
             elif objType is decimal.Decimal:
                 return self.jelly_decimal(obj)
@@ -565,9 +558,6 @@ class _Jellier:
                             qual(obj.__class__), sxp)
                 return self.preserve(obj, sxp)
         else:
-            if objType is _OldStyleInstance:
-                raise InsecureJelly("Class not allowed for instance: %s %s" %
-                                    (obj.__class__, obj))
             raise InsecureJelly("Type not allowed for object: %s %s" %
                                 (objType, obj))
 
@@ -690,7 +680,7 @@ class _Unjellier:
         is nonetheless allowed.
 
         @param cls: the class of the instance we are unjellying.
-        @type cls: L{_OldStyleClass} or L{type}
+        @type cls: L{type}
 
         @param state: The jellied representation of the object's state; its
             C{__dict__} unless it has a C{__setstate__} that takes something
@@ -866,7 +856,7 @@ class _Unjellier:
             raise InsecureJelly("module %s not allowed" % modName)
         klaus = namedObject(cname)
         objType = type(klaus)
-        if objType not in (_OldStyleClass, type):
+        if objType is not type:
             raise InsecureJelly(
                 "class %r unjellied to something that isn't a class: %r" % (
                     cname, klaus))
@@ -924,7 +914,7 @@ class _Unjellier:
         im_name = rest[0]
         im_self = self.unjelly(rest[1])
         im_class = self.unjelly(rest[2])
-        if not isinstance(im_class, (type, _OldStyleClass)):
+        if not isinstance(im_class, type):
             raise InsecureJelly("Method found with non-class class.")
         if im_name in im_class.__dict__:
             if im_self is None:

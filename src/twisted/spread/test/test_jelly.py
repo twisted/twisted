@@ -208,16 +208,6 @@ class JellyTests(TestCase):
         self.assertEqual(n.x, 1)
 
 
-    def test_typeOldStyle(self):
-        """
-        Test that an old style class type can be jellied and unjellied
-        to the original type.
-        """
-        t = [C]
-        r = jelly.unjelly(jelly.jelly(t))
-        self.assertEqual(t, r)
-
-
     def test_typeNewStyle(self):
         """
         Test that a new style class type can be jellied and unjellied
