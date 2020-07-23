@@ -372,10 +372,11 @@ class KeyGenTests(TestCase):
         keyPath = base.child('custom_key').path
 
         import twisted.conch.scripts.ckeygen
-        self.patch(twisted.conch.scripts.ckeygen, 'raw_input', lambda _: keyPath)
+        self.patch(twisted.conch.scripts.ckeygen, '_inputSaveFile',
+                   lambda _: keyPath)
         key = Key.fromString(privateRSA_openssh)
         _saveKey(key, {'filename': None, 'no-passphrase': True,
-            'format': 'md5-hex'})
+                       'format': 'md5-hex'})
 
         persistedKeyContent = base.child('custom_key').getContent()
         persistedKey = key.fromString(persistedKeyContent, None, b'')

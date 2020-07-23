@@ -28,9 +28,6 @@ if getpass.getpass == getpass.unix_getpass:  # type: ignore[attr-defined]
 
 supportedKeyTypes = dict()
 
-# This name is bound so that the unit tests can use 'patch' to override it.
-raw_input = input
-
 
 
 def _keyGenerator(keyType):
@@ -209,7 +206,7 @@ def _defaultPrivateKeySubtype(keyType):
 def printFingerprint(options):
     if not options['filename']:
         filename = os.path.expanduser('~/.ssh/id_rsa')
-        options['filename'] = raw_input(
+        options['filename'] = input(
             'Enter file in which the key is (%s): ' % filename)
     if os.path.exists(options['filename']+'.pub'):
         options['filename'] += '.pub'
@@ -228,7 +225,7 @@ def printFingerprint(options):
 def changePassPhrase(options):
     if not options['filename']:
         filename = os.path.expanduser('~/.ssh/id_rsa')
-        options['filename'] = raw_input(
+        options['filename'] = input(
             'Enter file in which the key is (%s): ' % filename)
     try:
         key = keys.Key.fromFile(options['filename'])
@@ -281,7 +278,7 @@ def changePassPhrase(options):
 def displayPublicKey(options):
     if not options['filename']:
         filename = os.path.expanduser('~/.ssh/id_rsa')
-        options['filename'] = raw_input(
+        options['filename'] = input(
             'Enter file in which the key is (%s): ' % filename)
     try:
         key = keys.Key.fromFile(options['filename'])
@@ -292,6 +289,16 @@ def displayPublicKey(options):
             options['filename'], passphrase=options['pass'])
     displayKey = key.public().toString('openssh').decode("ascii")
     print(displayKey)
+
+
+
+def _inputSaveFile(prompt: str) -> str:
+    """
+    Ask the user where to save the key.
+
+    This needs to be a separate function so the unit test can patch it.
+    """
+    return input(prompt)
 
 
 
@@ -314,14 +321,14 @@ def _saveKey(key, options):
     keyTypeName = KeyTypeMapping[key.type()]
     if not options['filename']:
         defaultPath = os.path.expanduser(u'~/.ssh/id_%s' % (keyTypeName,))
-        newPath = raw_input(
+        newPath = _inputSaveFile(
             'Enter file in which to save the key (%s): ' % (defaultPath,))
 
         options['filename'] = newPath.strip() or defaultPath
 
     if os.path.exists(options['filename']):
         print('%s already exists.' % (options['filename'],))
-        yn = raw_input('Overwrite (y/n)? ')
+        yn = input('Overwrite (y/n)? ')
         if yn[0].lower() != 'y':
             sys.exit()
 
