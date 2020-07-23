@@ -32,8 +32,7 @@ from twisted.protocols.basic import LineReceiver
 from twisted.protocols.policies import TimeoutMixin
 from twisted.internet.defer import Deferred, fail, TimeoutError
 from twisted.python import log
-from twisted.python.compat import (
-    intToBytes, iteritems, nativeString, networkString)
+from twisted.python.compat import intToBytes, nativeString, networkString
 
 
 
@@ -230,7 +229,7 @@ class MemCacheProtocol(LineReceiver, TimeoutMixin):
         cmd = self._current.popleft()
         if cmd.command == b"get":
             if cmd.multiple:
-                values = {key: val[::2] for key, val in iteritems(cmd.values)}
+                values = {key: val[::2] for key, val in cmd.values.items()}
                 cmd.success(values)
             else:
                 cmd.success((cmd.flags, cmd.value))

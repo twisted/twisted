@@ -24,7 +24,7 @@ from io import BytesIO, StringIO
 
 
 # Twisted Imports
-from twisted.python.compat import ioType, iteritems
+from twisted.python.compat import ioType
 from twisted.python.util import InsensitiveDict
 from twisted.web.sux import XMLParser, ParseError
 
@@ -716,7 +716,7 @@ class Element(Node):
                 assert val is not None
                 writeattr(attr, val)
         if newprefixes:
-            for ns, prefix in iteritems(newprefixes):
+            for ns, prefix in newprefixes.items():
                 if prefix:
                     writeattr('xmlns:'+prefix, ns)
             newprefixes.update(nsprefixes)

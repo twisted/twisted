@@ -31,7 +31,7 @@ from zope.interface import directlyProvides, implementer
 from twisted.internet import defer, protocol
 from twisted.internet.error import ConnectionLost
 from twisted.python import failure, log, randbytes
-from twisted.python.compat import intern, iteritems, itervalues
+from twisted.python.compat import intern, itervalues
 from twisted.words.protocols.jabber import error, ijabber, jid
 from twisted.words.xish import domish, xmlstream
 from twisted.words.xish.xmlstream import STREAM_CONNECTED_EVENT
@@ -291,7 +291,7 @@ class ListenAuthenticator(Authenticator):
             self.xmlstream.thisEntity = jid.internJID(rootElement["to"])
 
         self.xmlstream.prefixes = {}
-        for prefix, uri in iteritems(rootElement.localPrefixes):
+        for prefix, uri in rootElement.localPrefixes.items():
             self.xmlstream.prefixes[uri] = prefix
 
         self.xmlstream.sid = hexlify(randbytes.secureRandom(8)).decode('ascii')
@@ -573,7 +573,7 @@ class XmlStream(xmlstream.XmlStream):
         """
         # set up optional extra namespaces
         localPrefixes = {}
-        for uri, prefix in iteritems(self.prefixes):
+        for uri, prefix in self.prefixes.items():
             if uri != NS_STREAMS:
                 localPrefixes[prefix] = uri
 

@@ -45,7 +45,7 @@ from twisted.internet.test.connectionmixins import ConnectableProtocol
 from twisted.internet.test.connectionmixins import ConnectionTestsMixin
 from twisted.internet.test.connectionmixins import StreamClientTestsMixin
 from twisted.internet.test.connectionmixins import runProtocolsWithReactor
-from twisted.python.compat import nativeString, iteritems
+from twisted.python.compat import nativeString
 from twisted.python.failure import Failure
 from twisted.python.log import addObserver, removeObserver, err
 from twisted.python.runtime import platform
@@ -626,7 +626,7 @@ class UNIXTestsBuilder(UNIXFamilyMixin, ReactorBuilder, ConnectionTestsMixin):
                              format=format)
 
         for logEvent in events:
-            for k, v in iteritems(expectedEvent):
+            for k, v in expectedEvent.items():
                 if v != logEvent.get(k):
                     break
             else:

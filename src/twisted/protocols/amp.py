@@ -222,7 +222,7 @@ from twisted.internet.error import PeerVerifyError, ConnectionLost
 from twisted.internet.error import ConnectionClosed
 from twisted.internet.defer import Deferred, maybeDeferred, fail
 from twisted.protocols.basic import Int16StringReceiver, StatefulStringProtocol
-from twisted.python.compat import iteritems, nativeString, intToBytes
+from twisted.python.compat import nativeString, intToBytes
 
 try:
     from twisted.internet import ssl
@@ -682,7 +682,7 @@ class AmpBox(dict):
         @return: a C{bytes} encoded according to the rules described in the
             module docstring.
         """
-        i = sorted(iteritems(self))
+        i = sorted(self.items())
         L = []
         w = L.append
         for k, v in i:
@@ -1790,19 +1790,19 @@ class Command:
             if not isinstance(newtype.fatalErrors, dict):
                 newtype.fatalErrors = dict(newtype.fatalErrors)
 
-            for v, k in iteritems(errors):
+            for v, k in errors.items():
                 reverseErrors[k] = v
                 er[v] = k
-            for v, k in iteritems(fatalErrors):
+            for v, k in fatalErrors.items():
                 reverseErrors[k] = v
                 er[v] = k
 
-            for _, name in iteritems(newtype.errors):
+            for _, name in newtype.errors.items():
                 if not isinstance(name, bytes):
                     raise TypeError(
                         "Error names must be byte strings, got: %r"
                         % (name, ))
-            for _, name in iteritems(newtype.fatalErrors):
+            for _, name in newtype.fatalErrors.items():
                 if not isinstance(name, bytes):
                     raise TypeError(
                         "Fatal error names must be byte strings, got: %r"

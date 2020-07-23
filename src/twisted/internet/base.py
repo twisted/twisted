@@ -31,7 +31,6 @@ from twisted.internet._resolver import (
     SimpleResolverComplexifier as _SimpleResolverComplexifier,
 )
 from twisted.python import log, failure, reflect
-from twisted.python.compat import iteritems
 from twisted.python.runtime import seconds as runtimeSeconds, platform
 from twisted.internet.defer import Deferred, DeferredList
 
@@ -1019,7 +1018,7 @@ class ReactorBase(PluggableResolverMixin):
         outputEnv = None
         if env is not None:
             outputEnv = {}
-            for key, val in iteritems(env):
+            for key, val in env.items():
                 _key = argChecker(key)
                 if _key is None:
                     raise TypeError(

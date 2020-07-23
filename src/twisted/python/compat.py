@@ -44,7 +44,7 @@ from urllib.parse import unquote as urlunquote
 
 from incremental import Version
 
-from twisted.python.deprecate import deprecatedModuleAttribute
+from twisted.python.deprecate import deprecated, deprecatedModuleAttribute
 
 
 if sys.version_info >= (3, 7, 0):
@@ -131,6 +131,7 @@ deprecatedModuleAttribute(
 
 
 
+@deprecated(Version('Twisted', 'NEXT', 0, 0), replacement="d.items()")
 def iteritems(d):
     """
     Return an iterable of the items of C{d}.

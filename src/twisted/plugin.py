@@ -22,7 +22,6 @@ from twisted.python.components import getAdapterFactory
 from twisted.python.reflect import namedAny
 from twisted.python import log
 from twisted.python.modules import getModule
-from twisted.python.compat import iteritems
 
 
 
@@ -93,7 +92,7 @@ class CachedDropin:
 def _generateCacheEntry(provider):
     dropin = CachedDropin(provider.__name__,
                           provider.__doc__)
-    for k, v in iteritems(provider.__dict__):
+    for k, v in provider.__dict__.items():
         plugin = IPlugin(v, None)
         if plugin is not None:
             # Instantiated for its side-effects.
@@ -137,7 +136,7 @@ def getCache(module):
             buckets[fpp] = []
         bucket = buckets[fpp]
         bucket.append(plugmod)
-    for pseudoPackagePath, bucket in iteritems(buckets):
+    for pseudoPackagePath, bucket in buckets.items():
         dropinPath = pseudoPackagePath.child('dropin.cache')
         try:
             lastCached = dropinPath.getModificationTime()
@@ -199,7 +198,7 @@ def getPlugins(interface, package=None):
     if package is None:
         import twisted.plugins as package
     allDropins = getCache(package)
-    for key, dropin in iteritems(allDropins):
+    for key, dropin in allDropins.items():
         for plugin in dropin.plugins:
             try:
                 adapted = interface(plugin, None)

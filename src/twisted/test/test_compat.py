@@ -19,7 +19,7 @@ from twisted.trial.unittest import TestCase, SynchronousTestCase
 from twisted.python.compat import (
     reduce, execfile, _PYPY, comparable, cmp, nativeString,
     networkString, lazyByteSlice, reraise,
-    NativeStringIO, iterbytes, intToBytes, ioType, bytesEnviron, iteritems,
+    NativeStringIO, iterbytes, intToBytes, ioType, bytesEnviron,
     _get_async_param,
 )
 from twisted.python.filepath import FilePath
@@ -602,7 +602,7 @@ class BytesEnvironTests(TestCase):
         result = bytesEnviron()
         types = set()
 
-        for key, val in iteritems(result):
+        for key, val in result.items():
             types.add(type(key))
             types.add(type(val))
 

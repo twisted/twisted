@@ -35,8 +35,7 @@ from twisted.internet.interfaces import ITLSTransport, ISSLTransport
 from twisted.internet._idna import _idnaText
 from twisted.python import log
 from twisted.python import util
-from twisted.python.compat import (networkString, nativeString, iteritems,
-                                   iterbytes)
+from twisted.python.compat import networkString, nativeString, iterbytes
 from twisted.python.runtime import platform
 
 from twisted.mail.interfaces import (IClientAuthentication,
@@ -1634,7 +1633,7 @@ class ESMTP(SMTP):
 
     def listExtensions(self):
         r = []
-        for (c, v) in iteritems(self.extensions()):
+        for c, v in self.extensions().items():
             if v is not None:
                 if v:
                     # Intentionally omit extensions with empty argument lists

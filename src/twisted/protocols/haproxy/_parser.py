@@ -12,7 +12,6 @@ from twisted.plugin import IPlugin
 from twisted.internet.endpoints import (
     quoteStringArgument, serverFromString, IStreamServerEndpointStringParser
 )
-from twisted.python.compat import iteritems
 
 from . import proxyEndpoint
 
@@ -35,10 +34,10 @@ def unparseEndpoint(args, kwargs):
 
     description = ':'.join(
         [quoteStringArgument(str(arg)) for arg in args] +
-        sorted(['%s=%s' % (quoteStringArgument(str(key)),
-                    quoteStringArgument(str(value)))
-         for key, value in iteritems(kwargs)
-        ]))
+        sorted('%s=%s' % (quoteStringArgument(str(key)),
+                          quoteStringArgument(str(value)))
+               for key, value in kwargs.items())
+        )
     return description
 
 

@@ -15,7 +15,7 @@ from types import GeneratorType
 from traceback import extract_tb
 from inspect import iscoroutine
 
-from twisted.python.compat import nativeString, iteritems
+from twisted.python.compat import nativeString
 from twisted.internet.defer import Deferred, ensureDeferred
 from twisted.web._stan import Tag, slot, voidElements, Comment, CDATA, CharRef
 from twisted.web.error import UnfilledSlot, UnsupportedType, FlattenerError
@@ -242,7 +242,7 @@ def _flattenElement(request, root, write, slotData, renderFactory,
         else:
             tagName = root.tagName
         write(tagName)
-        for k, v in iteritems(root.attributes):
+        for k, v in root.attributes.items():
             if isinstance(k, str):
                 k = k.encode('ascii')
             write(b' ' + k + b'="')
