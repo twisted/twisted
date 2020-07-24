@@ -568,6 +568,11 @@ _pypy3BlockingHack()
 
 deprecatedModuleAttribute(
     Version('Twisted', 'NEXT', 0, 0),
+    "Use urllib.parse.unquote() directly",
+    __name__, 'urlunquote')
+
+deprecatedModuleAttribute(
+    Version('Twisted', 'NEXT', 0, 0),
     "Use http.cookiejar directly",
     __name__, 'cookielib')
 

@@ -7,8 +7,10 @@ L{URLPath}, a representation of a URL.
 """
 
 
+from urllib.parse import unquote as urlunquote
+
 from twisted.python.compat import (
-    nativeString, urllib_parse as urlparse, urlunquote, urlquote
+    nativeString, urllib_parse as urlparse, urlquote
 )
 
 from hyperlink import URL as _URL
