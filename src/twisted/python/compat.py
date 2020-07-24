@@ -616,7 +616,6 @@ __all__ = [
     "set",
     "cmp",
     "comparable",
-    "OrderedDict",
     "nativeString",
     "NativeStringIO",
     "networkString",
