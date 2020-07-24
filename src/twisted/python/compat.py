@@ -469,6 +469,7 @@ def networkString(s: str) -> bytes:
 
 
 
+@deprecated(Version('Twisted', 'NEXT', 0, 0), replacement="os.environb")
 def bytesEnviron():
     """
     Return a L{dict} of L{os.environ} where all text-strings are encoded into
