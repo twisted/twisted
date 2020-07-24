@@ -7,6 +7,7 @@ Tests for L{twisted.web.client.Agent} and related new client APIs.
 
 import zlib
 
+from http.cookiejar import CookieJar
 from io import BytesIO
 from unittest import skipIf
 from zope.interface.verify import verifyObject
@@ -18,7 +19,6 @@ from twisted.web._newclient import ResponseNeverReceived, ResponseFailed
 from twisted.web._newclient import PotentialDataLoss
 from twisted.internet import defer, task
 from twisted.python.failure import Failure
-from twisted.python.compat import cookielib
 from twisted.python.components import proxyForInterface
 from twisted.test.proto_helpers import (StringTransport, MemoryReactorClock,
                                         EventLoggingObserver)
@@ -1976,13 +1976,13 @@ class CookieJarTests(TestCase, CookieTestsMixin):
     """
     Tests for L{twisted.web.client._FakeUrllib2Response} and
     L{twisted.web.client._FakeUrllib2Request}'s interactions with
-    C{cookielib.CookieJar} instances.
+    L{CookieJar} instances.
     """
     def makeCookieJar(self):
         """
-        @return: a C{cookielib.CookieJar} with some sample cookies
+        @return: a L{CookieJar} with some sample cookies
         """
-        cookieJar = cookielib.CookieJar()
+        cookieJar = CookieJar()
         reqres = self.addCookies(
             cookieJar,
             b'http://example.com:1234/foo?bar',
@@ -1993,7 +1993,7 @@ class CookieJarTests(TestCase, CookieTestsMixin):
 
     def test_extractCookies(self):
         """
-        L{cookielib.CookieJar.extract_cookies} extracts cookie information from
+        L{CookieJar.extract_cookies} extracts cookie information from
         fake urllib2 response instances.
         """
         jar = self.makeCookieJar()[0]
@@ -2018,7 +2018,7 @@ class CookieJarTests(TestCase, CookieTestsMixin):
 
     def test_sendCookie(self):
         """
-        L{cookielib.CookieJar.add_cookie_header} adds a cookie header to a fake
+        L{CookieJar.add_cookie_header} adds a cookie header to a fake
         urllib2 request instance.
         """
         jar, (request, response) = self.makeCookieJar()
@@ -2045,7 +2045,7 @@ class CookieAgentTests(TestCase, CookieTestsMixin, FakeReactorAndConnectMixin,
         """
         return client.CookieAgent(
             self.buildAgentForWrapperTest(self.reactor),
-            cookielib.CookieJar())
+            CookieJar())
 
 
     def setUp(self):
@@ -2059,7 +2059,7 @@ class CookieAgentTests(TestCase, CookieTestsMixin, FakeReactorAndConnectMixin,
         being requested. Cookies are extracted from the response and stored in
         the cookie jar.
         """
-        cookieJar = cookielib.CookieJar()
+        cookieJar = CookieJar()
         self.assertEqual(list(cookieJar), [])
 
         agent = self.buildAgentForWrapperTest(self.reactor)
@@ -2098,7 +2098,7 @@ class CookieAgentTests(TestCase, CookieTestsMixin, FakeReactorAndConnectMixin,
         uri = b'http://example.com:1234/foo?bar'
         cookie = b'foo=1'
 
-        cookieJar = cookielib.CookieJar()
+        cookieJar = CookieJar()
         self.addCookies(cookieJar, uri, [cookie])
         self.assertEqual(len(list(cookieJar)), 1)
 
@@ -2119,7 +2119,7 @@ class CookieAgentTests(TestCase, CookieTestsMixin, FakeReactorAndConnectMixin,
         uri = b'https://example.com:1234/foo?bar'
         cookie = b'foo=1;secure'
 
-        cookieJar = cookielib.CookieJar()
+        cookieJar = CookieJar()
         self.addCookies(cookieJar, uri, [cookie])
         self.assertEqual(len(list(cookieJar)), 1)
 
@@ -2139,7 +2139,7 @@ class CookieAgentTests(TestCase, CookieTestsMixin, FakeReactorAndConnectMixin,
         uri = b'http://example.com/foo?bar'
         cookie = b'foo=1;secure'
 
-        cookieJar = cookielib.CookieJar()
+        cookieJar = CookieJar()
         self.addCookies(cookieJar, uri, [cookie])
         self.assertEqual(len(list(cookieJar)), 1)
 
@@ -2159,7 +2159,7 @@ class CookieAgentTests(TestCase, CookieTestsMixin, FakeReactorAndConnectMixin,
         uri = b'http://example.com:1234/foo?bar'
         cookie = b'foo=1;port=1234'
 
-        cookieJar = cookielib.CookieJar()
+        cookieJar = CookieJar()
         self.addCookies(cookieJar, uri, [cookie])
         self.assertEqual(len(list(cookieJar)), 1)
 
@@ -2179,7 +2179,7 @@ class CookieAgentTests(TestCase, CookieTestsMixin, FakeReactorAndConnectMixin,
         uri = b'http://example.com:4567/foo?bar'
         cookie = b'foo=1;port=1234'
 
-        cookieJar = cookielib.CookieJar()
+        cookieJar = CookieJar()
         self.addCookies(cookieJar, uri, [cookie])
         self.assertEqual(len(list(cookieJar)), 0)
 

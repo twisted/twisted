@@ -568,6 +568,11 @@ _pypy3BlockingHack()
 
 deprecatedModuleAttribute(
     Version('Twisted', 'NEXT', 0, 0),
+    "Use http.cookiejar directly",
+    __name__, 'cookielib')
+
+deprecatedModuleAttribute(
+    Version('Twisted', 'NEXT', 0, 0),
     "Use sys.intern() directly",
     __name__, 'intern')
 
