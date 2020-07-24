@@ -127,7 +127,9 @@ def versionToUsefulObject(version):
     Change an AST C{Version()} to a real one.
     """
     from incremental import Version
-    return Version(version.args[0].s, *[x.n for x in version.args[1:] if x])
+    package = version.args[0].s
+    major = getattr(version.args[1], 'n', getattr(version.args[1], 's', None))
+    return Version(package, major, *(x.n for x in version.args[2:] if x))
 
 
 
