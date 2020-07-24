@@ -9,10 +9,8 @@ Tests for L{twisted.python.compat}.
 
 import codecs
 import io
-import socket
 import sys
 import traceback
-from io import StringIO
 
 from unittest import skipIf
 from twisted.trial.unittest import TestCase, SynchronousTestCase
