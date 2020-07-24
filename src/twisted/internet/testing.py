@@ -7,6 +7,7 @@ Assorted functionality which is commonly useful when writing unit tests.
 """
 
 
+from collections.abc import Sequence
 from io import BytesIO
 from socket import AF_INET, AF_INET6
 from typing import Any, Callable
@@ -15,7 +16,6 @@ from zope.interface import implementer, implementedBy
 from zope.interface.verify import verifyClass
 
 from twisted.python import failure
-from twisted.python.compat import Sequence
 from twisted.internet.defer import Deferred
 from twisted.internet.interfaces import (
     ITransport, IConsumer, IPushProducer, IConnector,

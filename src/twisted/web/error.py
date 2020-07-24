@@ -19,8 +19,10 @@ __all__ = [
     ]
 
 
+from collections.abc import Sequence
+
 from twisted.web._responses import RESPONSES
-from twisted.python.compat import nativeString, Sequence
+from twisted.python.compat import nativeString
 
 
 

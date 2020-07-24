@@ -566,6 +566,13 @@ _pypy3BlockingHack()
 
 
 
+deprecatedModuleAttribute(
+    Version('Twisted', 'NEXT', 0, 0),
+    "Use collections.abc.Sequence directly",
+    __name__, 'Sequence')
+
+
+
 __all__ = [
     "reraise",
     "execfile",
