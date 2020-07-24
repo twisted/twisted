@@ -446,7 +446,7 @@ class Options(dict):
         return longOpt, shortOpt, docs, settings, synonyms, dispatch
 
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.getSynopsis() + '\n' + self.getUsage(width=None)
 
     def getSynopsis(self):
@@ -547,9 +547,6 @@ class Options(dict):
 
         return s + longdesc + commands
 
-    #def __repr__(self):
-    #    XXX: It'd be cool if we could return a succinct representation
-    #        of which flags and options are set here.
 
 
 _ZSH = 'zsh'

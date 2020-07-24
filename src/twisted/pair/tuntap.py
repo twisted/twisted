@@ -13,6 +13,7 @@ import fcntl
 import errno
 import struct
 import warnings
+from typing import Tuple
 
 from collections import namedtuple
 from constantly import Flags, FlagConstant
@@ -250,8 +251,8 @@ class TuntapPort(abstract.FileDescriptor):
         self.logstr = "%s (%s)" % (logPrefix, self._mode.name)
 
 
-    def __repr__(self):
-        args = (fullyQualifiedName(self.protocol.__class__),)
+    def __repr__(self) -> str:
+        args = (fullyQualifiedName(self.protocol.__class__),)  # type: Tuple[str, ...]  # noqa
         if self.connected:
             args = args + ("",)
         else:

@@ -487,7 +487,7 @@ class _ReconnectingProtocolProxy(object):
         return getattr(self._protocol, item)
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return '<%s wrapping %r>' % (
             self.__class__.__name__, self._protocol)
 
@@ -524,7 +524,7 @@ class _DisconnectFactory(object):
         return getattr(self._protocolFactory, item)
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return '<%s wrapping %r>' % (
             self.__class__.__name__, self._protocolFactory)
 

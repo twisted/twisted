@@ -417,7 +417,7 @@ class Process(_pollingfile._PollingTimer, BaseProcess):
         raise NotImplementedError("Unimplemented: Process.getPeer")
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """
         Return a string representation of the process.
         """

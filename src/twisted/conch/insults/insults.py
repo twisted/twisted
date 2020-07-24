@@ -462,7 +462,7 @@ class _const(object):
         self.name = name
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return '[' + self.name + ']'
 
 

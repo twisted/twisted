@@ -1387,7 +1387,7 @@ class NewRenderTests(unittest.TestCase):
         server error is returned.
         """
         class RiggedRepr(object):
-            def __repr__(self):
+            def __repr__(self) -> str:
                 return 'my>repr'
 
         result = RiggedRepr()
