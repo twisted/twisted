@@ -32,9 +32,10 @@ Maintainer: Ralph Meijer
 """
 
 
+from sys import intern
 from typing import Type
+
 from twisted.python import failure
-from twisted.python.compat import intern
 from twisted.internet import protocol
 from twisted.words.xish import domish, utility
 
