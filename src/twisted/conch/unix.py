@@ -29,7 +29,7 @@ from twisted.conch.interfaces import ISession, ISFTPServer, ISFTPFile
 from twisted.cred import portal
 from twisted.internet.error import ProcessExitedAlready
 from twisted.python import components, log
-from twisted.python.compat import _bytesChr as chr, nativeString
+from twisted.python.compat import nativeString
 
 try:
     import utmp
@@ -297,7 +297,7 @@ class SSHSessionForUnixConchUser:
                 if not hasattr(tty, ttyMode):
                     continue
                 ttyval = getattr(tty, ttyMode)
-                attr[tty.CC][ttyval] = chr(modeValue)
+                attr[tty.CC][ttyval] = bytes([modeValue])
         tty.tcsetattr(pty.fileno(), tty.TCSANOW, attr)
 
 

@@ -27,6 +27,7 @@ import uuid
 
 import email.utils
 
+from base64 import decodebytes, encodebytes
 from itertools import chain
 from io import BytesIO
 from typing import Any, List
@@ -40,10 +41,8 @@ from twisted.internet import error
 from twisted.internet.defer import maybeDeferred
 from twisted.python import log, text
 from twisted.python.compat import (
-    _bytesChr, unichr as chr, _b64decodebytes as decodebytes,
-    _b64encodebytes as encodebytes,
-    intToBytes, iterbytes, long, nativeString, networkString, unicode,
-    _matchingString, _get_async_param,
+    unichr as chr, intToBytes, iterbytes, long, nativeString, networkString,
+    unicode, _matchingString, _get_async_param,
 )
 from twisted.internet import interfaces
 
@@ -571,7 +570,7 @@ class Command:
 # Some definitions (SP, CTL, DQUOTE) are also from the ABNF RFC -
 # <https://tools.ietf.org/html/rfc2234>.
 _SP = b' '
-_CTL = b''.join(_bytesChr(ch) for ch in chain(range(0x21), range(0x80, 0x100)))
+_CTL = bytes(chain(range(0x21), range(0x80, 0x100)))
 
 # It is easier to define ATOM-CHAR in terms of what it does not match than in
 # terms of what it does match.
@@ -582,7 +581,9 @@ _nativeNonAtomChars = _nonAtomChars.decode('charmap')
 _nonAtomRE = re.compile('[' + _nativeNonAtomChars + ']')
 
 # This is all the bytes that match the ATOM-CHAR from the grammar in the RFC.
-_atomChars = b''.join(_bytesChr(ch) for ch in list(range(0x100)) if _bytesChr(ch) not in _nonAtomChars)
+_atomChars = bytes(ch for ch in range(0x100) if ch not in _nonAtomChars)
+
+
 
 @implementer(IMailboxListener)
 class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
