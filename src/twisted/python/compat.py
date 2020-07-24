@@ -568,6 +568,11 @@ _pypy3BlockingHack()
 
 deprecatedModuleAttribute(
     Version('Twisted', 'NEXT', 0, 0),
+    "Use functools.reduce() directly",
+    __name__, 'reduce')
+
+deprecatedModuleAttribute(
+    Version('Twisted', 'NEXT', 0, 0),
     "Use io.StringIO directly",
     __name__, 'NativeStringIO')
 

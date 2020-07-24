@@ -22,6 +22,7 @@ U{http://www.nmea.org/content/nmea_standards/nmea_0183_v_410.asp}.
 
 import operator
 import datetime
+from functools import reduce
 
 from zope.interface import implementer
 from constantly import Values, ValueConstant
@@ -29,7 +30,7 @@ from constantly import Values, ValueConstant
 from twisted.positioning import base, ipositioning, _sentence
 from twisted.positioning.base import Angles
 from twisted.protocols.basic import LineReceiver
-from twisted.python.compat import reduce, nativeString, iterbytes
+from twisted.python.compat import nativeString, iterbytes
 
 
 

@@ -18,7 +18,7 @@ from unittest import skipIf
 from twisted.trial.unittest import TestCase, SynchronousTestCase
 
 from twisted.python.compat import (
-    reduce, execfile, _PYPY, comparable, cmp, nativeString,
+    execfile, _PYPY, comparable, cmp, nativeString,
     networkString, lazyByteSlice, reraise,
     iterbytes, intToBytes, ioType, bytesEnviron, _get_async_param,
 )
@@ -132,14 +132,6 @@ class CompatTests(SynchronousTestCase):
         b = list(d)
         b.sort()
         self.assertEqual(b, ['a', 'b', 'r', 's'])
-
-
-    def test_reduce(self):
-        """
-        L{reduce} should behave like the builtin reduce.
-        """
-        self.assertEqual(15, reduce(lambda x, y: x + y, [1, 2, 3, 4, 5]))
-        self.assertEqual(16, reduce(lambda x, y: x + y, [1, 2, 3, 4, 5], 1))
 
 
 
