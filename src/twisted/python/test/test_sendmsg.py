@@ -26,7 +26,6 @@ from twisted.internet import reactor
 from twisted.internet.defer import Deferred, inlineCallbacks
 from twisted.internet.error import ProcessDone
 from twisted.internet.protocol import ProcessProtocol
-from twisted.python.compat import intToBytes
 from twisted.python.filepath import FilePath
 from twisted.python.runtime import platform
 
@@ -175,7 +174,7 @@ def _spawn(script, outputFD):
         sspp, pyExe, [
             pyExe,
             FilePath(__file__).sibling(script + ".py").asTextMode().path,
-            intToBytes(outputFD),
+            b'%d' % (outputFD,),
         ],
         env=env,
         childFDs={0: "w", 1: "r", 2: "r", outputFD: outputFD}

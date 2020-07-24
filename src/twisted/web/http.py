@@ -80,8 +80,7 @@ from twisted.internet import address, interfaces, protocol
 from twisted.internet._producer_helpers import _PullToPush
 from twisted.internet.defer import Deferred
 from twisted.internet.interfaces import IProtocol
-from twisted.python.compat import (_PY37PLUS, intToBytes,
-                                   nativeString, networkString)
+from twisted.python.compat import _PY37PLUS, nativeString, networkString
 from twisted.python.components import proxyForInterface
 from twisted.python import log
 from twisted.python.deprecate import deprecated
@@ -1120,7 +1119,7 @@ class Request:
         if not self.startedWriting:
             self.startedWriting = 1
             version = self.clientproto
-            code = intToBytes(self.code)
+            code = b'%d' % (self.code,)
             reason = self.code_message
             headers = []
 
@@ -1470,7 +1469,7 @@ class Request:
         if port == default:
             hostHeader = host
         else:
-            hostHeader = host + b":" + intToBytes(port)
+            hostHeader = b'%b:%d' % (host, port)
         self.requestHeaders.setRawHeaders(b"host", [hostHeader])
         self.host = address.IPv4Address("TCP", host, port)
 

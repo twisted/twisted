@@ -412,17 +412,15 @@ def iterbytes(originalBytes):
 
 
 
-def intToBytes(i):
+@deprecated(Version('Twisted', 'NEXT', 0, 0), replacement="b'%d'")
+def intToBytes(i: int) -> bytes:
     """
     Convert the given integer into C{bytes}, as ASCII-encoded Arab numeral.
-
-    In other words, this is equivalent to calling C{bytes} in Python 2 on an
-    integer.
 
     @param i: The C{int} to convert to C{bytes}.
     @rtype: C{bytes}
     """
-    return ("%d" % i).encode("ascii")
+    return b"%d" % (i,)
 
 
 

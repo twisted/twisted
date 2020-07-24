@@ -18,7 +18,7 @@ from twisted.web._newclient import ResponseNeverReceived, ResponseFailed
 from twisted.web._newclient import PotentialDataLoss
 from twisted.internet import defer, task
 from twisted.python.failure import Failure
-from twisted.python.compat import cookielib, intToBytes
+from twisted.python.compat import cookielib
 from twisted.python.components import proxyForInterface
 from twisted.test.proto_helpers import (StringTransport, MemoryReactorClock,
                                         EventLoggingObserver)
@@ -1076,7 +1076,7 @@ class AgentTests(TestCase, FakeReactorAndConnectMixin, AgentTestsMixin,
         expectedHost = b'example.com'
         expectedPort = 1234
         endpoint = self.agent._getEndpoint(URI.fromBytes(
-            b'http://' + expectedHost + b":" + intToBytes(expectedPort)))
+            b'http://%b:%d' % (expectedHost, expectedPort)))
         self.assertEqual(endpoint._hostStr, "example.com")
         self.assertEqual(endpoint._port, expectedPort)
         self.assertIsInstance(endpoint, HostnameEndpoint)
@@ -1433,7 +1433,7 @@ class AgentHTTPSTests(TestCase, FakeReactorAndConnectMixin,
         @rtype: L{SSL4ClientEndpoint}
         """
         return client.Agent(self.createReactor())._getEndpoint(
-            URI.fromBytes(b'https://' + host + b":" + intToBytes(port) + b"/"))
+            URI.fromBytes(b'https://%b:%d/' % (host, port)))
 
 
     def test_endpointType(self):
@@ -1541,7 +1541,7 @@ class AgentHTTPSTests(TestCase, FakeReactorAndConnectMixin,
         reactor = self.createReactor()
         agent = client.Agent(reactor, expectedCreatorCreator)
         endpoint = agent._getEndpoint(URI.fromBytes(
-            b'https://' + expectedHost + b":" + intToBytes(expectedPort)))
+            b'https://%b:%d' % (expectedHost, expectedPort)))
         endpoint.connect(Factory.forProtocol(Protocol))
         tlsFactory = reactor.tcpClients[-1][2]
         tlsProtocol = tlsFactory.buildProtocol(None)

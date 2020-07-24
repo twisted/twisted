@@ -9,7 +9,6 @@ import datetime
 from operator import attrgetter
 from zope.interface import implementer
 
-from twisted.python.compat import intToBytes
 from twisted.positioning import base, nmea, ipositioning
 from twisted.positioning.test.receiver import MockPositioningReceiver
 from twisted.trial.unittest import TestCase
@@ -175,7 +174,7 @@ class ChecksumTests(TestCase):
         validate = nmea._validateChecksum
 
         bareSentence, checksum = GPGGA.split(b"*")
-        badChecksum = intToBytes(int(checksum, 16) + 1)
+        badChecksum = b'%d' % (int(checksum, 16) + 1,)
         sentences = [bareSentence + b"*" + badChecksum]
 
         for s in sentences:

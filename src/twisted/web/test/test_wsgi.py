@@ -14,7 +14,7 @@ import warnings
 
 from zope.interface.verify import verifyObject
 
-from twisted.python.compat import intToBytes, urlquote
+from twisted.python.compat import urlquote
 from twisted.python.failure import Failure
 from twisted.python.threadable import getThreadID
 from twisted.python.threadpool import ThreadPool
@@ -1842,7 +1842,7 @@ class ApplicationTests(WSGITestsMixin, TestCase):
             def __iter__(self):
                 for i in range(3):
                     if self.open:
-                        yield intToBytes(i)
+                        yield b'%d' % (i,)
 
             def close(self):
                 self.open = False
@@ -1883,7 +1883,7 @@ class ApplicationTests(WSGITestsMixin, TestCase):
                 def result():
                     for i in range(3):
                         invoked.append(getThreadID())
-                        yield intToBytes(i)
+                        yield b'%d' % (i,)
                 invoked.append(getThreadID())
                 startResponse('200 OK', [('content-length', '3')])
                 return result()

@@ -16,7 +16,6 @@ from hashlib import md5
 from typing import List
 
 from twisted.python import log
-from twisted.python.compat import intToBytes
 from twisted.internet import defer
 from twisted.protocols import basic
 from twisted.protocols import policies
@@ -982,7 +981,7 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
             response minus the status indicator.  On an ERR response, the
             deferred fails with a server error response failure.
         """
-        return self.sendShort(b'DELE', intToBytes(index + 1))
+        return self.sendShort(b'DELE', b'%d' % (index + 1,))
 
 
     def _consumeOrSetItem(self, cmd, args, consumer, xform):
@@ -1187,11 +1186,11 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
             list of the transformed lines.  Otherwise, it returns the consumer
             itself.
         """
-        idx = intToBytes(index + 1)
+        idx = b'%d' % (index + 1,)
         if lines is None:
             return self._consumeOrAppend(b'RETR', idx, consumer, _dotUnquoter)
 
-        return self._consumeOrAppend(b'TOP', idx + b' ' + intToBytes(lines),
+        return self._consumeOrAppend(b'TOP', b'%b %d' % (idx, lines),
                                      consumer, _dotUnquoter)
 
 

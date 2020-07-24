@@ -9,7 +9,7 @@ Tests for L{twisted.web.util}.
 import gc
 
 from twisted.internet import defer
-from twisted.python.compat import intToBytes, networkString
+from twisted.python.compat import networkString
 from twisted.python.failure import Failure
 from twisted.trial.unittest import SynchronousTestCase, TestCase
 from twisted.web import resource, util
@@ -219,8 +219,7 @@ class FailureElementTests(TestCase):
             TagLoader(tags.span(render="lineNumber")),
             self.frame)
         d = flattenString(None, element)
-        d.addCallback(
-            self.assertEqual, b"<span>" + intToBytes(self.base + 1) + b"</span>")
+        d.addCallback(self.assertEqual, b"<span>%d</span>" % (self.base + 1,))
         return d
 
 

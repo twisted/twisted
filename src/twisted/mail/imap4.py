@@ -41,8 +41,7 @@ from twisted.internet import error
 from twisted.internet.defer import maybeDeferred
 from twisted.python import log, text
 from twisted.python.compat import (
-    intToBytes, iterbytes, nativeString, networkString, _matchingString,
-    _get_async_param,
+    iterbytes, nativeString, networkString, _matchingString, _get_async_param,
 )
 from twisted.internet import interfaces
 
@@ -1345,10 +1344,11 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
             return
 
         flags = [networkString(flag) for flag in mbox.getFlags()]
-        self.sendUntaggedResponse(intToBytes(mbox.getMessageCount()) + b' EXISTS')
-        self.sendUntaggedResponse(intToBytes(mbox.getRecentCount()) + b' RECENT')
+        self.sendUntaggedResponse(b'%d EXISTS' % (mbox.getMessageCount(),))
+        self.sendUntaggedResponse(b'%d RECENT' % (mbox.getRecentCount(),))
         self.sendUntaggedResponse(b'FLAGS (' + b' '.join(flags) + b')')
-        self.sendPositiveResponse(None, b'[UIDVALIDITY ' + intToBytes(mbox.getUIDValidity()) + b']')
+        self.sendPositiveResponse(None, b'[UIDVALIDITY %d]'
+                                        % (mbox.getUIDValidity(),))
 
         s = mbox.isWriteable() and b'READ-WRITE' or b'READ-ONLY'
         mbox.addListener(self)
@@ -1573,7 +1573,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
 
 
     def __cbAppend(self, result, tag, mbox):
-        self.sendUntaggedResponse(intToBytes(mbox.getMessageCount()) + b' EXISTS')
+        self.sendUntaggedResponse(b'%d EXISTS' % (mbox.getMessageCount(),))
         self.sendPositiveResponse(tag, b'APPEND complete')
 
 
@@ -1660,7 +1660,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
 
     def __cbExpunge(self, result, tag):
         for e in result:
-            self.sendUntaggedResponse(intToBytes(e) + b' EXPUNGE')
+            self.sendUntaggedResponse(b'%d EXPUNGE' % (e,))
         self.sendPositiveResponse(tag, b'EXPUNGE completed')
 
 
@@ -1736,10 +1736,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
             # messages.
             if self._searchFilter(copy.deepcopy(query), msgId, msg,
                                   lastSequenceId, lastMessageId):
-                if uid:
-                    searchResults.append(intToBytes(msg.getUID()))
-                else:
-                    searchResults.append(intToBytes(msgId))
+                searchResults.append(b'%d' % (msg.getUID() if uid else msgId,))
 
         if i == 4:
             from twisted.internet import reactor
@@ -2222,10 +2219,10 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
                 sign = b"+"
             else:
                 sign = b"-"
-            odate = odate + sign + intToBytes(
-                ((abs(ttup[9]) // 3600) * 100 +
-                 (abs(ttup[9]) % 3600) // 60)
-            ).zfill(4)
+            odate = odate + sign + b'%04d' % (
+                (abs(ttup[9]) // 3600) * 100 +
+                (abs(ttup[9]) % 3600) // 60,
+                )
         _w(b'INTERNALDATE ' + _quote(odate))
 
 
@@ -2249,7 +2246,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
     def spew_rfc822size(self, id, msg, _w=None, _f=None):
         if _w is None:
             _w = self.transport.write
-        _w(b'RFC822.SIZE ' + intToBytes(msg.getSize()))
+        _w(b'RFC822.SIZE %d' % (msg.getSize(),))
 
 
     def spew_rfc822(self, id, msg, _w=None, _f=None):
@@ -2270,7 +2267,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
     def spew_uid(self, id, msg, _w=None, _f=None):
         if _w is None:
             _w = self.transport.write
-        _w(b'UID ' + intToBytes(msg.getUID()))
+        _w(b'UID %d' % (msg.getUID(),))
 
 
     def spew_bodystructure(self, id, msg, _w=None, _f=None):
@@ -2322,10 +2319,13 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         wbuf = WriteBuffer(self.transport)
         write = wbuf.write
         flush = wbuf.flush
+
         def start():
-            write(b'* ' + intToBytes(id) + b' FETCH (')
+            write(b'* %d FETCH (' % (id,))
+
         def finish():
             write(b')\r\n')
+
         def space():
             write(b' ')
 
@@ -2380,15 +2380,13 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         if result and not silent:
             for (k, v) in result.items():
                 if uid:
-                    uidstr = b' UID ' + intToBytes(mbox.getUID(k))
+                    uidstr = b' UID %d' % (mbox.getUID(k),)
                 else:
                     uidstr = b''
 
                 flags = [networkString(flag) for flag in v]
                 self.sendUntaggedResponse(
-                    intToBytes(k) +
-                    b' FETCH (FLAGS ('+ b' '.join(flags) + b')' +
-                    uidstr + b')')
+                    b'%d FETCH (FLAGS (%b)%b)' % (k, b' '.join(flags), uidstr))
         self.sendPositiveResponse(tag, b'STORE completed')
 
 
@@ -2501,19 +2499,15 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
     def flagsChanged(self, newFlags):
         for (mId, flags) in newFlags.items():
             encodedFlags = [networkString(flag) for flag in flags]
-            msg = intToBytes(mId) + (
-                b' FETCH (FLAGS (' + b' '.join(encodedFlags) + b'))'
-            )
+            msg = b'%d FETCH (FLAGS (%b))' % (mId, b' '.join(encodedFlags))
             self.sendUntaggedResponse(msg, isAsync=True)
 
 
     def newMessages(self, exists, recent):
         if exists is not None:
-            self.sendUntaggedResponse(
-                intToBytes(exists) + b' EXISTS', isAsync=True)
+            self.sendUntaggedResponse(b'%d EXISTS' % (exists,), isAsync=True)
         if recent is not None:
-            self.sendUntaggedResponse(
-                intToBytes(recent) + b' RECENT', isAsync=True)
+            self.sendUntaggedResponse(b'%d RECENT' % (recent,), isAsync=True)
 
 
 
@@ -3633,14 +3627,11 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
 
         encodedFlags = [networkString(flag) for flag in flags]
 
-        cmd = b''.join([
-            _prepareMailboxName(mailbox),
-            b" (", b" ".join(encodedFlags), b")",
-            date,
-            b" {", intToBytes(L), b"}",
-        ])
+        cmd = b'%b (%b)%b {%d}' % (
+            _prepareMailboxName(mailbox), b" ".join(encodedFlags), date, L)
 
-        d = self.sendCommand(Command(b'APPEND', cmd, (), self.__cbContinueAppend, message))
+        d = self.sendCommand(
+            Command(b'APPEND', cmd, (), self.__cbContinueAppend, message))
         return d
 
 
@@ -4941,8 +4932,8 @@ def _quote(s):
 
 
 
-def _literal(s):
-    return b'{' + intToBytes(len(s)) + b'}\r\n' + s
+def _literal(s: bytes) -> bytes:
+    return b'{%d}\r\n%b' % (len(s), s)
 
 
 
@@ -5037,13 +5028,13 @@ def collapseNestedLists(items):
         elif isinstance(i, bytes):
             # XXX warning
             if _needsLiteral(i):
-                pieces.extend([b' ', b'{', intToBytes(len(i)), b'}',
+                pieces.extend([b' ', b'{%d}' % (len(i),),
                                IMAP4Server.delimiter, i])
             else:
                 pieces.extend([b' ', _quote(i)])
         elif hasattr(i, 'read'):
             d = i.read()
-            pieces.extend([b' ', b'{', intToBytes(len(d)), b'}',
+            pieces.extend([b' ', b'{%d}' % (len(d),),
                            IMAP4Server.delimiter, d])
         else:
             pieces.extend([b' ', b'(' + collapseNestedLists(i) + b')'])
@@ -5903,7 +5894,7 @@ class _FetchParser:
             elif self.empty:
                 base += b'[' + part + b']'
             if self.partialBegin is not None:
-                base += b'<' + intToBytes(self.partialBegin) + b'.' + intToBytes(self.partialLength) + b'>'
+                base += b'<%d.%d>' % (self.partialBegin, self.partialLength)
             return base
 
 
@@ -6197,7 +6188,7 @@ class FileProducer:
     def resumeProducing(self):
         b = b''
         if self.firstWrite:
-            b = b'{' + intToBytes(self._size()) + b'}\r\n'
+            b = b'{%d}\r\n' % (self._size(),)
             self.firstWrite = False
         if not self.f:
             return

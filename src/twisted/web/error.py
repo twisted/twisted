@@ -20,7 +20,7 @@ __all__ = [
 
 
 from twisted.web._responses import RESPONSES
-from twisted.python.compat import nativeString, intToBytes, Sequence
+from twisted.python.compat import nativeString, Sequence
 
 
 
@@ -78,7 +78,7 @@ class Error(Exception):
             # If we're given an int, convert it to a bytestring
             # downloadPage gives a bytes, Agent gives an int, and it worked by
             # accident previously, so just make it keep working.
-            code = intToBytes(code)
+            code = b'%d' % (code,)
 
         self.status = code
         self.message = message

@@ -19,7 +19,6 @@ from twisted.trial.unittest import SkipTest, TestCase
 from twisted.python import filepath, log
 from twisted.python.reflect import requireModule
 from twisted.python.runtime import platform
-from twisted.python.compat import intToBytes
 from twisted.internet import error, defer, protocol, stdio, reactor
 from twisted.test.test_tcp import ConnectionLostNotifyingProtocol
 
@@ -265,7 +264,7 @@ class StandardInputOutputTests(TestCase):
         junkPath = self.mktemp()
         with open(junkPath, 'wb') as junkFile:
             for i in range(1024):
-                junkFile.write(intToBytes(i) + b'\n')
+                junkFile.write(b'%d\n' % (i,))
         return junkPath
 
 
@@ -282,7 +281,7 @@ class StandardInputOutputTests(TestCase):
 
         def connectionMade(ign):
             if toWrite:
-                written.append(intToBytes(toWrite.pop()) + b"\n")
+                written.append(b"%d\n" % (toWrite.pop(),))
                 proc.write(written[-1])
                 reactor.callLater(0.01, connectionMade, None)
 
@@ -357,7 +356,7 @@ class StandardInputOutputTests(TestCase):
                 if value == howMany:
                     connection.loseConnection()
                     return
-                connection.write(intToBytes(value))
+                connection.write(b'%d' % (value,))
                 break
             reactor.callLater(0, spin)
         reactor.callLater(0, spin)
@@ -368,6 +367,6 @@ class StandardInputOutputTests(TestCase):
             self.assertEqual(next(count), howMany + 1)
             self.assertEqual(
                 path.getContent(),
-                b''.join(map(intToBytes, range(howMany))))
+                b''.join(b'%d' % (i,) for i in range(howMany)))
         onConnLost.addCallback(cbLost)
         return onConnLost

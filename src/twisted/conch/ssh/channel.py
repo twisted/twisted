@@ -13,7 +13,7 @@ Maintainer: Paul Swartz
 from zope.interface import implementer
 
 from twisted.python import log
-from twisted.python.compat import nativeString, intToBytes
+from twisted.python.compat import nativeString
 from twisted.internet import interfaces
 from twisted.logger import Logger
 
@@ -88,10 +88,8 @@ class SSHChannel(log.Logger):
         if not name:
             name = b'None'
 
-        return (b'<SSHChannel ' + name +
-                b' (lw ' + intToBytes(self.localWindowLeft) +
-                b' rw ' + intToBytes(self.remoteWindowLeft) +
-                b')>')
+        return b'<SSHChannel %b (lw %d rw %d)>' % (
+            name, self.localWindowLeft, self.remoteWindowLeft)
 
 
     def logPrefix(self):

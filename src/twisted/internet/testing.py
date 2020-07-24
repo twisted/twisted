@@ -15,7 +15,7 @@ from zope.interface import implementer, implementedBy
 from zope.interface.verify import verifyClass
 
 from twisted.python import failure
-from twisted.python.compat import intToBytes, Sequence
+from twisted.python.compat import Sequence
 from twisted.internet.defer import Deferred
 from twisted.internet.interfaces import (
     ITransport, IConsumer, IPushProducer, IConnector,
@@ -908,7 +908,7 @@ class NonStreamingProducer:
         if self.consumer is None or self.counter >= 10:
             raise RuntimeError("BUG: resume after unregister/stop.")
         else:
-            self.consumer.write(intToBytes(self.counter))
+            self.consumer.write(b'%d' % (self.counter,))
             self.counter += 1
             if self.counter == 10:
                 self.consumer.unregisterProducer()

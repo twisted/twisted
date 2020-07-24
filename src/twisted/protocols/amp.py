@@ -222,7 +222,7 @@ from twisted.internet.error import PeerVerifyError, ConnectionLost
 from twisted.internet.error import ConnectionClosed
 from twisted.internet.defer import Deferred, maybeDeferred, fail
 from twisted.protocols.basic import Int16StringReceiver, StatefulStringProtocol
-from twisted.python.compat import nativeString, intToBytes
+from twisted.python.compat import nativeString
 
 try:
     from twisted.internet import ssl
@@ -1458,8 +1458,9 @@ class Integer(Argument):
     Example: C{123} becomes C{"123"}
     """
     fromString = int
+
     def toString(self, inObject):
-        return intToBytes(inObject)
+        return b'%d' % (inObject,)
 
 
 

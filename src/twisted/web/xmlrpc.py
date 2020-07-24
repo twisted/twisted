@@ -12,7 +12,7 @@ Maintainer: Itamar Shtull-Trauring
 """
 
 
-from twisted.python.compat import intToBytes, nativeString, urllib_parse
+from twisted.python.compat import nativeString, urllib_parse
 
 # System Imports
 import base64
@@ -187,10 +187,9 @@ class XMLRPC(resource.Resource):
 
             if isinstance(content, str):
                 content = content.encode('utf8')
-            request.setHeader(
-                b"content-length", intToBytes(len(content)))
+            request.setHeader(b"content-length", b'%d' % (len(content),))
             request.write(content)
-        except:
+        except Exception:
             self._log.failure('')
         request.finish()
 
@@ -332,7 +331,7 @@ class QueryProtocol(http.HTTPClient):
         self.sendHeader(b'Host', self.factory.host)
         self.sendHeader(b'Content-type', b'text/xml; charset=utf-8')
         payload = self.factory.payload
-        self.sendHeader(b'Content-length', intToBytes(len(payload)))
+        self.sendHeader(b'Content-length', b'%d' % (len(payload),))
 
         if self.factory.user:
             auth = b':'.join([self.factory.user, self.factory.password])

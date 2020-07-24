@@ -34,7 +34,6 @@ from twisted.mail._except import (
 from twisted.protocols import basic
 from twisted.protocols import policies
 from twisted.python import log
-from twisted.python.compat import intToBytes
 
 
 
@@ -306,7 +305,7 @@ def formatStatResponse(msgs):
         i += 1
         bytes += size
         yield None
-    yield successResponse(intToBytes(i) + b' ' + intToBytes(bytes))
+    yield successResponse(b'%d %d' % (i, bytes))
 
 
 
@@ -325,7 +324,7 @@ def formatListLines(msgs):
     i = 0
     for size in msgs:
         i += 1
-        yield intToBytes(i) + b' ' + intToBytes(size) + b'\r\n'
+        yield b'%d %d\r\n' % (i, size)
 
 
 
@@ -342,7 +341,7 @@ def formatListResponse(msgs):
     @rtype: L{bytes}
     @return: Yields a series of strings which make up a complete LIST response.
     """
-    yield successResponse(intToBytes(len(msgs)))
+    yield successResponse(b'%d' % (len(msgs),))
     for ele in formatListLines(msgs):
         yield ele
     yield b'.\r\n'
@@ -366,7 +365,7 @@ def formatUIDListLines(msgs, getUidl):
             uid = getUidl(i)
             if not isinstance(uid, bytes):
                 uid = str(uid).encode("utf-8")
-            yield intToBytes(i + 1) + b' ' + uid + b'\r\n'
+            yield b'%d %b\r\n' % (i + 1, uid)
 
 
 
@@ -978,9 +977,10 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
                 self.failResponse(b"Invalid message-number: " + i)
             else:
                 d = defer.maybeDeferred(self.mbox.listMessages, i - 1)
+
                 def cbMessage(msg):
-                    self.successResponse(intToBytes(i) + b' ' +
-                                         intToBytes(msg))
+                    self.successResponse(b'%d %d' % (i, msg))
+
                 def ebMessage(err):
                     errcls = err.check(ValueError, IndexError)
                     if errcls is not None:

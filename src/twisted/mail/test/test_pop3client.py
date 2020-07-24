@@ -18,7 +18,6 @@ from twisted.mail.pop3 import ServerErrorResponse
 from twisted.mail.test import pop3testserver
 from twisted.protocols import basic, loopback
 from twisted.python import log
-from twisted.python.compat import intToBytes
 from twisted.test.proto_helpers import StringTransport
 from twisted.trial.unittest import TestCase
 
@@ -372,17 +371,17 @@ class POP3ClientMessageTests(TestCase):
         messages = [
             p.retrieve(i).addCallback(
                 self.assertEqual,
-                [b"First line of " + intToBytes(i + 1) + b".",
-                 b"Second line of " + intToBytes(i + 1) + b"."])
+                [b"First line of %d." % (i + 1,),
+                 b"Second line of %d." % (i + 1,)])
             for i
             in range(3)]
 
         for i in range(1, 4):
-            self.assertEqual(t.value(), b"RETR " + intToBytes(i) + b"\r\n")
+            self.assertEqual(t.value(), b"RETR %d\r\n" % (i,))
             t.clear()
             p.dataReceived(b"+OK 2 lines on the way\r\n")
-            p.dataReceived(b"First line of " + intToBytes(i) + b".\r\n")
-            p.dataReceived(b"Second line of " + intToBytes(i) + b".\r\n")
+            p.dataReceived(b"First line of %d.\r\n" % (i,))
+            p.dataReceived(b"Second line of %d.\r\n" % (i,))
             self.assertEqual(t.value(), b"")
             p.dataReceived(b".\r\n")
 
