@@ -19,9 +19,8 @@ Normally, a Proxy is used on the client end of an Internet connection, while a
 ReverseProxy is used on the server end.
 """
 
-from urllib.parse import quote as urlquote
+from urllib.parse import quote as urlquote, urlparse, urlunparse
 
-from twisted.python.compat import urllib_parse
 from twisted.internet import reactor
 from twisted.internet.protocol import ClientFactory
 from twisted.web.resource import Resource
@@ -141,14 +140,14 @@ class ProxyRequest(Request):
 
 
     def process(self):
-        parsed = urllib_parse.urlparse(self.uri)
+        parsed = urlparse(self.uri)
         protocol = parsed[0]
         host = parsed[1].decode('ascii')
         port = self.ports[protocol]
         if ':' in host:
             host, port = host.split(':')
             port = int(port)
-        rest = urllib_parse.urlunparse((b'', b'') + parsed[2:])
+        rest = urlunparse((b'', b'') + parsed[2:])
         if not rest:
             rest = rest + b'/'
         class_ = self.protocols[protocol]
@@ -292,7 +291,7 @@ class ReverseProxyResource(Resource):
             host = u"%s:%d" % (self.host, self.port)
         request.requestHeaders.setRawHeaders(b"host", [host.encode('ascii')])
         request.content.seek(0, 0)
-        qs = urllib_parse.urlparse(request.uri)[4]
+        qs = urlparse(request.uri)[4]
         if qs:
             rest = self.path + b'?' + qs
         else:

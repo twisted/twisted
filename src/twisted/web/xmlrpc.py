@@ -12,11 +12,12 @@ Maintainer: Itamar Shtull-Trauring
 """
 
 
-from twisted.python.compat import nativeString, urllib_parse
+from twisted.python.compat import nativeString
 
 # System Imports
 import base64
 import xmlrpc.client as xmlrpclib
+from urllib.parse import urlparse
 from xmlrpc.client import Fault, Binary, Boolean, DateTime
 
 # Sibling Imports
@@ -519,8 +520,7 @@ class Proxy:
         @type url: L{bytes}
 
         """
-        scheme, netloc, path, params, query, fragment = urllib_parse.urlparse(
-            url)
+        scheme, netloc, path, params, query, fragment = urlparse(url)
         netlocParts = netloc.split(b'@')
         if len(netlocParts) == 2:
             userpass = netlocParts.pop(0).split(b':')

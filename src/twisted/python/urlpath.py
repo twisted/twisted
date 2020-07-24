@@ -7,9 +7,9 @@ L{URLPath}, a representation of a URL.
 """
 
 
-from urllib.parse import quote as urlquote, unquote as urlunquote
+from urllib.parse import quote as urlquote, unquote as urlunquote, urlunsplit
 
-from twisted.python.compat import nativeString, urllib_parse as urlparse
+from twisted.python.compat import nativeString
 
 from hyperlink import URL as _URL
 
@@ -70,8 +70,8 @@ class URLPath:
         Reconstitute this L{URLPath} from all its given attributes.
         """
         urltext = urlquote(
-            urlparse.urlunsplit((self._scheme, self._netloc,
-                                 self._path, self._query, self._fragment)),
+            urlunsplit((self._scheme, self._netloc, self._path, self._query,
+                        self._fragment)),
             safe=_allascii
         )
         self._url = _URL.fromText(urltext.encode("ascii").decode("ascii"))
