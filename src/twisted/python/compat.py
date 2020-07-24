@@ -568,6 +568,11 @@ _pypy3BlockingHack()
 
 deprecatedModuleAttribute(
     Version('Twisted', 'NEXT', 0, 0),
+    "Use html.escape directly",
+    __name__, 'escape')
+
+deprecatedModuleAttribute(
+    Version('Twisted', 'NEXT', 0, 0),
     "Use urllib.parse.quote() directly",
     __name__, 'urlquote')
 

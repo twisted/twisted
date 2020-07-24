@@ -17,6 +17,7 @@ This is a web server which integrates with the twisted.internet infrastructure.
 import copy
 import os
 import re
+from html import escape
 from typing import List, Optional
 from urllib.parse import quote as _quote
 
@@ -38,7 +39,6 @@ from twisted.web.error import UnsupportedMethod
 
 from incremental import Version
 from twisted.python.deprecate import deprecatedModuleAttribute
-from twisted.python.compat import escape
 from twisted.logger import Logger
 
 NOT_DONE_YET = 1
