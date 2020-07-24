@@ -8,13 +8,13 @@ Tests for L{twisted.web.wsgi}.
 __metaclass__ = type
 
 from sys import exc_info
+from urllib.parse import quote as urlquote
 import tempfile
 import traceback
 import warnings
 
 from zope.interface.verify import verifyObject
 
-from twisted.python.compat import urlquote
 from twisted.python.failure import Failure
 from twisted.python.threadable import getThreadID
 from twisted.python.threadpool import ThreadPool

@@ -19,7 +19,9 @@ Normally, a Proxy is used on the client end of an Internet connection, while a
 ReverseProxy is used on the server end.
 """
 
-from twisted.python.compat import urllib_parse, urlquote
+from urllib.parse import quote as urlquote
+
+from twisted.python.compat import urllib_parse
 from twisted.internet import reactor
 from twisted.internet.protocol import ClientFactory
 from twisted.web.resource import Resource
