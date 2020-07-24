@@ -10,6 +10,7 @@ import pdb
 import sys
 import unittest as pyunit
 
+from io import StringIO
 from typing import List
 
 from zope.interface import implementer
@@ -21,7 +22,6 @@ from twisted.trial._asyncrunner import _ForceGarbageCollectionDecorator
 from twisted.python import failure, log, reflect
 from twisted.python.filepath import FilePath
 from twisted.python.reflect import namedAny
-from twisted.python.compat import NativeStringIO
 from twisted.scripts import trial
 from twisted.plugins import twisted_trial
 from twisted import plugin
@@ -202,7 +202,7 @@ class TrialRunnerTests(TrialRunnerTestsMixin, unittest.SynchronousTestCase):
     into warnings disabled.
     """
     def setUp(self):
-        self.stream = NativeStringIO()
+        self.stream = StringIO()
         self.runner = runner.TrialRunner(CapturingReporter, stream=self.stream)
         self.test = TrialRunnerTests('test_empty')
 
@@ -225,7 +225,7 @@ class TrialRunnerWithUncleanWarningsReporterTests(TrialRunnerTestsMixin,
     """
 
     def setUp(self):
-        self.stream = NativeStringIO()
+        self.stream = StringIO()
         self.runner = runner.TrialRunner(CapturingReporter, stream=self.stream,
                                          uncleanWarnings=True)
         self.test = TrialRunnerTests('test_empty')
@@ -240,7 +240,7 @@ class DryRunMixin:
 
     def setUp(self):
         self.log = []
-        self.stream = NativeStringIO()
+        self.stream = StringIO()
         self.runner = runner.TrialRunner(CapturingReporter,
                                          runner.TrialRunner.DRY_RUN,
                                          stream=self.stream)
@@ -369,7 +369,7 @@ class RunnerTests(unittest.SynchronousTestCase):
 
     def getRunner(self):
         r = trial._makeRunner(self.config)
-        r.stream = NativeStringIO()
+        r.stream = StringIO()
         # XXX The runner should always take care of cleaning this up itself.
         # It's not clear why this is necessary.  The runner always tears down
         # its log file.
@@ -642,7 +642,7 @@ class UntilFailureTests(unittest.SynchronousTestCase):
     def setUp(self):
         UntilFailureTests.FailAfter.count = []
         self.test = UntilFailureTests.FailAfter('test_foo')
-        self.stream = NativeStringIO()
+        self.stream = StringIO()
         self.runner = runner.TrialRunner(reporter.Reporter, stream=self.stream)
 
 
@@ -945,7 +945,7 @@ class MalformedMethodTests(unittest.SynchronousTestCase):
         """
         Wrapper for one of the test method of L{ContainMalformed}.
         """
-        stream = NativeStringIO()
+        stream = StringIO()
         trialRunner = runner.TrialRunner(reporter.Reporter, stream=stream)
         test = MalformedMethodTests.ContainMalformed(method)
         result = trialRunner.run(test)

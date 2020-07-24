@@ -28,12 +28,12 @@ __all__ = [
 import warnings
 
 from collections import OrderedDict
+from io import StringIO
 
 from zope.interface import implementer
 
 from xml.sax import make_parser, handler
 
-from twisted.python.compat import NativeStringIO
 from twisted.python.filepath import FilePath
 from twisted.web._stan import Tag, slot, Comment, CDATA, CharRef
 from twisted.web.iweb import ITemplateLoader
@@ -390,7 +390,7 @@ class XMLString:
 
     def __init__(self, s):
         """
-        Run the parser on a L{NativeStringIO} copy of the string.
+        Run the parser on a L{StringIO} copy of the string.
 
         @param s: The string from which to load the XML.
         @type s: C{str}, or a UTF-8 encoded L{bytes}.
@@ -398,7 +398,7 @@ class XMLString:
         if not isinstance(s, str):
             s = s.decode('utf8')
 
-        self._loadedTemplate = _flatsaxParse(NativeStringIO(s))
+        self._loadedTemplate = _flatsaxParse(StringIO(s))
 
 
     def load(self):

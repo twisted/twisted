@@ -6,9 +6,10 @@ Test code for policies.
 """
 
 
+from io import StringIO
+
 from zope.interface import Interface, implementer, implementedBy
 
-from twisted.python.compat import NativeStringIO
 from twisted.trial import unittest
 from twisted.test.proto_helpers import StringTransport
 from twisted.test.proto_helpers import StringTransportWithDisconnection
@@ -936,11 +937,14 @@ class WriteSequenceEchoProtocol(EchoProtocol):
         else:
             EchoProtocol.dataReceived(self, bytes)
 
+
+
 class TestLoggingFactory(policies.TrafficLoggingFactory):
     openFile = None
+
     def open(self, name):
         assert self.openFile is None, "open() called too many times"
-        self.openFile = NativeStringIO()
+        self.openFile = StringIO()
         return self.openFile
 
 
@@ -1017,7 +1021,7 @@ class LoggingFactoryTests(unittest.TestCase):
             Mock for the open call to prevent actually opening a log file.
             """
             open_calls.append((args, kwargs))
-            io = NativeStringIO()
+            io = StringIO()
             io.name = args[0]
             open_rvalues.append(io)
             return io

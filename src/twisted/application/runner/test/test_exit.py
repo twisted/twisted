@@ -5,7 +5,8 @@
 Tests for L{twisted.application.runner._exit}.
 """
 
-from twisted.python.compat import NativeStringIO
+from io import StringIO
+
 from ...runner import _exit
 from .._exit import exit, ExitStatus
 
@@ -64,7 +65,7 @@ class ExitTests(twisted.trial.unittest.TestCase):
         L{exit} given a status code of zero (C{0}) writes the given message to
         standard output.
         """
-        out = NativeStringIO()
+        out = StringIO()
         self.patch(_exit, "stdout", out)
 
         message = "Hello, world."
@@ -78,7 +79,7 @@ class ExitTests(twisted.trial.unittest.TestCase):
         L{exit} given a non-zero status code writes the given message to
         standard error.
         """
-        out = NativeStringIO()
+        out = StringIO()
         self.patch(_exit, "stderr", out)
 
         message = "Hello, world."

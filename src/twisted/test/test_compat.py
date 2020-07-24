@@ -12,6 +12,7 @@ import io
 import socket
 import sys
 import traceback
+from io import StringIO
 
 from unittest import skipIf
 from twisted.trial.unittest import TestCase, SynchronousTestCase
@@ -19,8 +20,7 @@ from twisted.trial.unittest import TestCase, SynchronousTestCase
 from twisted.python.compat import (
     reduce, execfile, _PYPY, comparable, cmp, nativeString,
     networkString, lazyByteSlice, reraise,
-    NativeStringIO, iterbytes, intToBytes, ioType, bytesEnviron,
-    _get_async_param,
+    iterbytes, intToBytes, ioType, bytesEnviron, _get_async_param,
 )
 from twisted.python.filepath import FilePath
 from twisted.python.runtime import platform
@@ -442,17 +442,6 @@ class StringTests(SynchronousTestCase):
         string of some sort.
         """
         self.assertRaises(TypeError, nativeString, 1)
-
-
-    def test_nativeStringIO(self):
-        """
-        L{NativeStringIO} is a file-like object that stores native strings in
-        memory.
-        """
-        f = NativeStringIO()
-        f.write("hello")
-        f.write(" there")
-        self.assertEqual(f.getvalue(), "hello there")
 
 
 

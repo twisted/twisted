@@ -10,6 +10,7 @@ L{twisted.persisted.sob}.
 import copy
 import os
 import pickle
+from io import StringIO
 
 try:
     import asyncio
@@ -25,7 +26,6 @@ from twisted.persisted import sob
 from twisted.plugins import twisted_reactors
 from twisted.protocols import wire, basic
 from twisted.python import usage
-from twisted.python.compat import NativeStringIO
 from twisted.python.runtime import platformType
 from twisted.python.test.modules_helpers import TwistedModulesMixin
 from twisted.test.proto_helpers import MemoryReactor
@@ -881,7 +881,7 @@ class PluggableReactorTests(TwistedModulesMixin, TestCase):
         self.pluginResults = []
 
         options = ReactorSelectionOptions()
-        options.messageOutput = NativeStringIO()
+        options.messageOutput = StringIO()
         e = self.assertRaises(usage.UsageError, options.parseOptions,
                               ['--reactor', 'fakereactortest', 'subcommand'])
         self.assertIn("fakereactortest", e.args[0])
@@ -906,9 +906,9 @@ class PluggableReactorTests(TwistedModulesMixin, TestCase):
         self.pluginResults = [FakeReactor(install, name, package, description)]
 
         options = ReactorSelectionOptions()
-        options.messageOutput = NativeStringIO()
-        e =  self.assertRaises(usage.UsageError, options.parseOptions,
-                               ['--reactor', 'fakereactortest', 'subcommand'])
+        options.messageOutput = StringIO()
+        e = self.assertRaises(usage.UsageError, options.parseOptions,
+                              ['--reactor', 'fakereactortest', 'subcommand'])
         self.assertIn(message, e.args[0])
         self.assertIn("help-reactors", e.args[0])
 
@@ -923,7 +923,7 @@ class HelpReactorsTests(TestCase):
         Get the text from --help-reactors
         """
         self.options = app.ReactorSelectionMixin()
-        self.options.messageOutput = NativeStringIO()
+        self.options.messageOutput = StringIO()
         self.assertRaises(SystemExit, self.options.opt_help_reactors)
         self.message = self.options.messageOutput.getvalue()
 
@@ -974,7 +974,7 @@ class HelpReactorsTests(TestCase):
 
         options = app.ReactorSelectionMixin()
         options._getReactorTypes = getReactorTypes
-        options.messageOutput = NativeStringIO()
+        options.messageOutput = StringIO()
         self.assertRaises(SystemExit, options.opt_help_reactors)
         message = options.messageOutput.getvalue()
         self.assertNotIn("reactors not available", message)

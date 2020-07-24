@@ -568,6 +568,11 @@ _pypy3BlockingHack()
 
 deprecatedModuleAttribute(
     Version('Twisted', 'NEXT', 0, 0),
+    "Use io.StringIO directly",
+    __name__, 'NativeStringIO')
+
+deprecatedModuleAttribute(
+    Version('Twisted', 'NEXT', 0, 0),
     "Import urllib.parse directly",
     __name__, 'urllib_parse')
 
