@@ -26,7 +26,6 @@ import inspect
 import os
 import platform
 import socket
-import struct
 import sys
 import urllib.parse as urllib_parse
 import warnings
