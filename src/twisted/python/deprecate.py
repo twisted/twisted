@@ -465,7 +465,7 @@ class _ModuleProxy(object):
         state._lastWasPath = False
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """
         Get a string containing the type of the module proxy and a
         representation of the wrapped module object.

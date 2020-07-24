@@ -320,7 +320,7 @@ class Unpersistable:
         self.reason = reason
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "Unpersistable(%s)" % repr(self.reason)
 
 

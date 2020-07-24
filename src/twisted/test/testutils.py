@@ -103,12 +103,8 @@ class _Equal(object):
     """
     A class the instances of which are equal to anything and everything.
     """
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
         return True
-
-
-    def __ne__(self, other):
-        return False
 
 
 
@@ -116,12 +112,8 @@ class _NotEqual(object):
     """
     A class the instances of which are equal to nothing.
     """
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
         return False
-
-
-    def __ne__(self, other):
-        return True
 
 
 

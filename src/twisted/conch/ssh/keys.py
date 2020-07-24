@@ -942,25 +942,16 @@ class Key(object):
         """
         self._keyObject = keyObject
 
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
         """
         Return True if other represents an object with the same key.
         """
-        if type(self) == type(other):
+        if isinstance(other, Key):
             return self.type() == other.type() and self.data() == other.data()
         else:
             return NotImplemented
 
-    def __ne__(self, other):
-        """
-        Return True if other represents anything other than this key.
-        """
-        result = self.__eq__(other)
-        if result == NotImplemented:
-            return result
-        return not result
-
-    def __repr__(self):
+    def __repr__(self) -> str:
         """
         Return a pretty representation of this object.
         """

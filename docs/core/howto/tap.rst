@@ -310,6 +310,111 @@ For a full list of cred plugins supported, see :api:`twisted.plugins <twisted.pl
 
 
 
+Deploy your application using Python packages
+---------------------------------------------
+
+
+
+To deploy your application one possibility is to wrap it up in a Python package.
+For this you need to write a special file ``setup.py``, which contains metadata
+of the package. You would have to extend the layout of your files like this:
+
+
+
+
+- **MyProject** - Top level directory
+
+
+- ``setup.py`` - Description file for the package
+
+
+  - **myproject** - Python package
+
+
+    - **__init__.py**
+
+
+  - **twisted**
+
+
+    - **plugins**
+
+      - ``myplugin.py`` - Dropin file containing the actual plugin
+
+
+
+
+
+.. code-block:: python
+    :caption: ``a minimal setup.py file``
+
+
+    from setuptools import setup, find_packages
+
+    setup(
+        name='MyApplication',
+        version='0.1dev',
+        # it is necesary to extend the found package list with the twisted.plugin
+        # directory. It cannot be automatically detected, because it should not
+        # contain a __init__.py file.
+        packages=find_packages()+['twisted.plugins'],
+        install_requires=[
+            'twisted',
+            ],
+    )
+
+
+
+
+
+To create the Python package from the directory the standard setup tools
+can be used:
+
+
+
+
+.. code-block:: console
+
+
+    python3 setup.py sdist
+
+
+
+
+This command creates a ``dist`` directory in your project folder with the
+compressed archive file ``MyApplication-0.1dev.tar.gz``. This archive contains
+all the code and additional files if specified. This file can be copied and used
+for deployment.
+
+
+
+
+
+To install the application just use pip. It will also install all requirements
+specified in ``setup.py``.
+
+
+
+
+.. code-block:: console
+
+
+    pip install MyApplication-0.1dev.tar.gz
+
+
+
+
+
+
+For more information about packaging in Python have a look at the `official
+Python packaging user guide <https://packaging.python.org/tutorials/packaging-projects/>`_ or
+`hitchhiker's guide to packaging
+<https://the-hitchhikers-guide-to-packaging.readthedocs.io/>`_.
+
+
+
+
+
 Conclusion
 ----------
 

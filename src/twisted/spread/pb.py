@@ -415,7 +415,7 @@ class Local:
         self.refcount = 1
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "<pb.Local %r ref:%s>" % (self.object, self.refcount)
 
 

@@ -716,11 +716,13 @@ class TestURL(SynchronousTestCase):
         constructor is off the stack.
         """
         class Unexpected(object):
-            def __str__(self):
+            def __str__(self) -> str:
                 return "wrong"
-            def __repr__(self):
+
+            def __repr__(self) -> str:
                 return "<unexpected>"
         defaultExpectation = "unicode" if bytes is str else "str"
+
         def assertRaised(raised, expectation, name):
             self.assertEqual(str(raised.exception),
                              "expected {} for {}, got {}".format(
