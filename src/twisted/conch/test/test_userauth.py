@@ -20,6 +20,7 @@ from twisted.internet import defer, task
 from twisted.protocols import loopback
 from twisted.python.reflect import requireModule
 from twisted.trial import unittest
+from twisted.python.compat import _bytesChr as chr
 
 if requireModule('cryptography') and requireModule('pyasn1'):
     from twisted.conch.ssh.common import NS
@@ -303,10 +304,9 @@ class SSHUserAuthServerTests(unittest.TestCase):
 
         See RFC 4252, Section 5.1.
         """
-        packet = b''.join([NS(b'foo'), NS(b'none'), NS(b'password'), b'\0',
+        packet = b''.join([NS(b'foo'), NS(b'none'), NS(b'password'), chr(0),
                            NS(b'foo')])
         d = self.authServer.ssh_USERAUTH_REQUEST(packet)
-
         def check(ignored):
             self.assertEqual(
                 self.authServer.transport.packets,
@@ -324,7 +324,7 @@ class SSHUserAuthServerTests(unittest.TestCase):
         See RFC 4252, Section 5.1.
         """
         # packet = username, next_service, authentication type, FALSE, password
-        packet = b''.join([NS(b'foo'), NS(b'none'), NS(b'password'), b'\0',
+        packet = b''.join([NS(b'foo'), NS(b'none'), NS(b'password'), chr(0),
                            NS(b'bar')])
         self.authServer.clock = task.Clock()
         d = self.authServer.ssh_USERAUTH_REQUEST(packet)
@@ -339,18 +339,16 @@ class SSHUserAuthServerTests(unittest.TestCase):
         """
         blob = keys.Key.fromString(keydata.publicRSA_openssh).blob()
         obj = keys.Key.fromString(keydata.privateRSA_openssh)
-        packet = (NS(b'foo') + NS(b'none') + NS(b'publickey') + b'\xff' +
-                  NS(obj.sshType()) + NS(blob))
+        packet = (NS(b'foo') + NS(b'none') + NS(b'publickey') + b'\xff'
+                + NS(obj.sshType()) + NS(blob))
         self.authServer.transport.sessionID = b'test'
-        signature = obj.sign(NS(b'test')
-                             + bytes([userauth.MSG_USERAUTH_REQUEST])
-                             + packet)
+        signature = obj.sign(NS(b'test') + chr(userauth.MSG_USERAUTH_REQUEST)
+                + packet)
         packet += NS(signature)
         d = self.authServer.ssh_USERAUTH_REQUEST(packet)
-
         def check(ignored):
             self.assertEqual(self.authServer.transport.packets,
-                             [(userauth.MSG_USERAUTH_SUCCESS, b'')])
+                    [(userauth.MSG_USERAUTH_SUCCESS, b'')])
         return d.addCallback(check)
 
 
@@ -518,12 +516,11 @@ class SSHUserAuthServerTests(unittest.TestCase):
         timeoutAuthServer.serviceStarted()
         timeoutAuthServer.clock.advance(11 * 60 * 60)
         timeoutAuthServer.serviceStopped()
-        self.assertEqual(
-            timeoutAuthServer.transport.packets,
-            [(transport.MSG_DISCONNECT,
-              b'\x00' * 3 +
-              bytes([transport.DISCONNECT_NO_MORE_AUTH_METHODS_AVAILABLE]) +
-              NS(b"you took too long") + NS(b''))])
+        self.assertEqual(timeoutAuthServer.transport.packets,
+                [(transport.MSG_DISCONNECT,
+                b'\x00' * 3 +
+                chr(transport.DISCONNECT_NO_MORE_AUTH_METHODS_AVAILABLE) +
+                NS(b"you took too long") + NS(b''))])
         self.assertTrue(timeoutAuthServer.transport.lostConnection)
 
 
@@ -546,20 +543,18 @@ class SSHUserAuthServerTests(unittest.TestCase):
         Test that the server disconnects if the client fails authentication
         too many times.
         """
-        packet = b''.join([NS(b'foo'), NS(b'none'), NS(b'password'), b'\0',
+        packet = b''.join([NS(b'foo'), NS(b'none'), NS(b'password'), chr(0),
                            NS(b'bar')])
         self.authServer.clock = task.Clock()
         for i in range(21):
             d = self.authServer.ssh_USERAUTH_REQUEST(packet)
             self.authServer.clock.advance(2)
-
         def check(ignored):
-            self.assertEqual(
-                self.authServer.transport.packets[-1],
+            self.assertEqual(self.authServer.transport.packets[-1],
                 (transport.MSG_DISCONNECT,
-                 b'\x00' * 3 +
-                 bytes([transport.DISCONNECT_NO_MORE_AUTH_METHODS_AVAILABLE]) +
-                 NS(b"too many bad auths") + NS(b'')))
+                b'\x00' * 3 +
+                chr(transport.DISCONNECT_NO_MORE_AUTH_METHODS_AVAILABLE) +
+                NS(b"too many bad auths") + NS(b'')))
         return d.addCallback(check)
 
 
@@ -568,7 +563,7 @@ class SSHUserAuthServerTests(unittest.TestCase):
         If the user requests a service that we don't support, the
         authentication should fail.
         """
-        packet = NS(b'foo') + NS(b'') + NS(b'password') + b'\0' + NS(b'foo')
+        packet = NS(b'foo') + NS(b'') + NS(b'password') + chr(0) + NS(b'foo')
         self.authServer.clock = task.Clock()
         d = self.authServer.ssh_USERAUTH_REQUEST(packet)
         return d.addCallback(self._checkFailed)
@@ -649,30 +644,25 @@ class SSHUserAuthClientTests(unittest.TestCase):
         Test that the client can authenticate with a public key.
         """
         self.authClient.ssh_USERAUTH_FAILURE(NS(b'publickey') + b'\x00')
-        self.assertEqual(
-                self.authClient.transport.packets[-1],
+        self.assertEqual(self.authClient.transport.packets[-1],
                 (userauth.MSG_USERAUTH_REQUEST, NS(b'foo') + NS(b'nancy')
                     + NS(b'publickey') + b'\x00' + NS(b'ssh-dss')
                     + NS(keys.Key.fromString(
                         keydata.publicDSA_openssh).blob())))
-        # that key isn't good
+       # that key isn't good
         self.authClient.ssh_USERAUTH_FAILURE(NS(b'publickey') + b'\x00')
         blob = NS(keys.Key.fromString(keydata.publicRSA_openssh).blob())
-        self.assertEqual(
-                self.authClient.transport.packets[-1],
-                (userauth.MSG_USERAUTH_REQUEST,
-                 (NS(b'foo') + NS(b'nancy') + NS(b'publickey') + b'\x00' +
-                  NS(b'ssh-rsa') + blob)))
-        self.authClient.ssh_USERAUTH_PK_OK(
-                NS(b'ssh-rsa')
-                + NS(keys.Key.fromString(keydata.publicRSA_openssh).blob()))
-        sigData = (NS(self.authClient.transport.sessionID) +
-                   bytes([userauth.MSG_USERAUTH_REQUEST]) + NS(b'foo') +
-                   NS(b'nancy') + NS(b'publickey') + b'\x01' + NS(b'ssh-rsa') +
-                   blob)
+        self.assertEqual(self.authClient.transport.packets[-1],
+                (userauth.MSG_USERAUTH_REQUEST, (NS(b'foo') + NS(b'nancy')
+                    + NS(b'publickey') + b'\x00' + NS(b'ssh-rsa') + blob)))
+        self.authClient.ssh_USERAUTH_PK_OK(NS(b'ssh-rsa')
+            + NS(keys.Key.fromString(keydata.publicRSA_openssh).blob()))
+        sigData = (NS(self.authClient.transport.sessionID)
+                + chr(userauth.MSG_USERAUTH_REQUEST) + NS(b'foo')
+                + NS(b'nancy') + NS(b'publickey') + b'\x01' + NS(b'ssh-rsa')
+                + blob)
         obj = keys.Key.fromString(keydata.privateRSA_openssh)
-        self.assertEqual(
-                self.authClient.transport.packets[-1],
+        self.assertEqual(self.authClient.transport.packets[-1],
                 (userauth.MSG_USERAUTH_REQUEST, NS(b'foo') + NS(b'nancy')
                     + NS(b'publickey') + b'\x01' + NS(b'ssh-rsa') + blob
                     + NS(obj.sign(sigData))))

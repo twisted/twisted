@@ -27,7 +27,7 @@ from cryptography.hazmat.primitives.asymmetric import dh, ec, x25519
 from twisted import __version__ as twisted_version
 from twisted.internet import protocol, defer
 from twisted.python import log, randbytes
-from twisted.python.compat import iterbytes, networkString
+from twisted.python.compat import iterbytes, _bytesChr as chr, networkString
 
 # This import is needed if SHA256 hashing is used.
 # from twisted.python.compat import nativeString
@@ -529,7 +529,7 @@ class SSHTransportBase(protocol.Protocol):
                     self._keyExchangeState,))
 
         self.ourKexInitPayload = b''.join([
-            bytes([MSG_KEXINIT]),
+            chr(MSG_KEXINIT),
             randbytes.secureRandom(16),
             NS(b','.join(self.supportedKeyExchanges)),
             NS(b','.join(self.supportedPublicKeys)),
@@ -587,7 +587,7 @@ class SSHTransportBase(protocol.Protocol):
                 self._blockedByKeyExchange.append((messageType, payload))
                 return
 
-        payload = bytes([messageType]) + payload
+        payload = chr(messageType) + payload
         if self.outgoingCompression:
             payload = (self.outgoingCompression.compress(payload)
                        + self.outgoingCompression.flush(2))
@@ -829,7 +829,7 @@ class SSHTransportBase(protocol.Protocol):
         @return: A L{tuple} of negotiated key exchange algorithms, key
         algorithms, and unhandled data, or L{None} if something went wrong.
         """
-        self.otherKexInitPayload = bytes([MSG_KEXINIT]) + packet
+        self.otherKexInitPayload = chr(MSG_KEXINIT) + packet
         # This is useless to us:
         # cookie = packet[: 16]
         k = getNS(packet[16:], 10)
@@ -970,7 +970,7 @@ class SSHTransportBase(protocol.Protocol):
         @param language: optionally, the language the message is in.
         @type language: L{str}
         """
-        self.sendPacket(MSG_DEBUG, bytes([alwaysDisplay]) + NS(message) +
+        self.sendPacket(MSG_DEBUG, chr(alwaysDisplay) + NS(message) +
                         NS(language))
 
 

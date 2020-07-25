@@ -36,7 +36,8 @@ from twisted.internet._idna import _idnaText
 from twisted.python import log
 from twisted.python import util
 from twisted.python.compat import (long, unicode, networkString,
-                                   nativeString, iteritems, iterbytes)
+                                   nativeString, iteritems, _keys, _bytesChr,
+                                   iterbytes)
 from twisted.python.runtime import platform
 
 from twisted.mail.interfaces import (IClientAuthentication,
@@ -1617,7 +1618,7 @@ class ESMTP(SMTP):
         @rtype: L{dict} with L{bytes} keys and a value of either L{None} or a
             L{list} of L{bytes}.
         """
-        ext = {b'AUTH': list(self.challengers.keys())}
+        ext = {b'AUTH': _keys(self.challengers)}
         if self.canStartTLS and not self.startedTLS:
             ext[b'STARTTLS'] = None
         return ext
@@ -2211,7 +2212,7 @@ def xtext_encode(s, errors=None):
         if ch == '+' or ch == '=' or o < 33 or o > 126:
             r.append(networkString('+%02X' % (o,)))
         else:
-            r.append(bytes([o]))
+            r.append(_bytesChr(o))
     return (b''.join(r), len(s))
 
 
