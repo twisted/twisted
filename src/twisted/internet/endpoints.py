@@ -805,7 +805,7 @@ class HostnameEndpoint(object):
         self._attemptDelay = attemptDelay
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """
         Produce a string representation of the L{HostnameEndpoint}.
 

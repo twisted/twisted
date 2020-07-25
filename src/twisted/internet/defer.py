@@ -726,7 +726,7 @@ class Deferred:
                 chain.pop()
 
 
-    def __str__(self):
+    def __str__(self) -> str:
         """
         Return a string representation of this C{Deferred}.
         """
@@ -996,7 +996,7 @@ class FirstError(Exception):
         self.index = index
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """
         The I{repr} of L{FirstError} instances includes the repr of the
         wrapped failure's exception and the index of the L{FirstError}.
@@ -1004,7 +1004,7 @@ class FirstError(Exception):
         return 'FirstError[#%d, %r]' % (self.index, self.subFailure.value)
 
 
-    def __str__(self):
+    def __str__(self) -> str:
         """
         The I{str} of L{FirstError} instances includes the I{str} of the
         entire wrapped failure (including its traceback and exception) and

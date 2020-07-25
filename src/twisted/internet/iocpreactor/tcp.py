@@ -385,7 +385,7 @@ class Server(Connection):
         self.startReading()
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """
         A string representation of this connection.
         """
@@ -450,7 +450,7 @@ class Port(_SocketCloser, _LogOwner):
             self._addressType = address.IPv6Address
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         if self._realPortNumber is not None:
             return "<%s of %s on %s>" % (self.__class__,
                                          self.factory.__class__,

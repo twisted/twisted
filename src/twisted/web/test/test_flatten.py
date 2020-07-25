@@ -457,7 +457,7 @@ class FlattenerErrorTests(TestCase):
         """
         @implementer(IRenderable)
         class Renderable(object):
-            def __repr__(self):
+            def __repr__(self) -> str:
                 return "renderable repr"
 
         self.assertEqual(

@@ -211,7 +211,7 @@ class Project(object):
         self.directory = directory
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return '%s(%r)' % (
             self.__class__.__name__, self.directory)
 
