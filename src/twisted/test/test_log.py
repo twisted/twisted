@@ -308,18 +308,18 @@ IOBase.register(FakeFile)  # type: ignore[attr-defined]
 
 
 class EvilStr:
-    def __str__(self):
-        1 // 0
+    def __str__(self) -> str:
+        return str(1 // 0)
 
 
 
 class EvilRepr:
-    def __str__(self):
+    def __str__(self) -> str:
         return "Happy Evil Repr"
 
 
-    def __repr__(self):
-        1 // 0
+    def __repr__(self) -> str:
+        return str(1 // 0)
 
 
 
@@ -970,7 +970,7 @@ class DefaultObserverTests(unittest.SynchronousTestCase):
         with a message that causes L{repr} to raise.
         """
         class Ouch(object):
-            def __repr__(self):
+            def __repr__(self) -> str:
                 return str(1 / 0)
 
         message = ("foo", Ouch())

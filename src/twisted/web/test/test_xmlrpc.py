@@ -16,7 +16,7 @@ import datetime
 from twisted.trial import unittest
 from twisted.web import xmlrpc
 from twisted.web.xmlrpc import XMLRPC, payloadTemplate, addIntrospection
-from twisted.web.xmlrpc import _QueryFactory, withRequest, xmlrpclib
+from twisted.web.xmlrpc import QueryFactory, withRequest, xmlrpclib
 from twisted.web import server, client, http, static
 from twisted.internet import reactor, defer
 from twisted.internet.error import ConnectionDone
@@ -261,7 +261,7 @@ class TestQueryProtocol(xmlrpc.QueryProtocol):
 
 
 
-class TestQueryFactory(xmlrpc._QueryFactory):
+class TestQueryFactory(xmlrpc.QueryFactory):
     """
     QueryFactory using L{TestQueryProtocol} for saving headers.
     """
@@ -270,10 +270,11 @@ class TestQueryFactory(xmlrpc._QueryFactory):
     def __init__(self, *args, **kwargs):
         self.headers = {}
         self.sent_headers = {}
-        xmlrpc._QueryFactory.__init__(self, *args, **kwargs)
+        xmlrpc.QueryFactory.__init__(self, *args, **kwargs)
 
 
-class TestQueryFactoryCancel(xmlrpc._QueryFactory):
+
+class TestQueryFactoryCancel(xmlrpc.QueryFactory):
     """
     QueryFactory that saves a reference to the
     L{twisted.internet.interfaces.IConnector} to test connection lost.
@@ -816,13 +817,13 @@ class XMLRPCClientErrorHandlingTests(unittest.TestCase):
 
 class QueryFactoryParseResponseTests(unittest.TestCase):
     """
-    Test the behaviour of L{_QueryFactory.parseResponse}.
+    Test the behaviour of L{QueryFactory.parseResponse}.
     """
 
     def setUp(self):
-        # The _QueryFactory that we are testing. We don't care about any
+        # The QueryFactory that we are testing. We don't care about any
         # of the constructor parameters.
-        self.queryFactory = _QueryFactory(
+        self.queryFactory = QueryFactory(
             path=None, host=None, method='POST', user=None, password=None,
             allowNone=False, args=())
         # An XML-RPC response that will parse without raising an error.
@@ -836,8 +837,8 @@ class QueryFactoryParseResponseTests(unittest.TestCase):
 
     def test_parseResponseCallbackSafety(self):
         """
-        We can safely call L{_QueryFactory.clientConnectionLost} as a callback
-        of L{_QueryFactory.parseResponse}.
+        We can safely call L{QueryFactory.clientConnectionLost} as a callback
+        of L{QueryFactory.parseResponse}.
         """
         d = self.queryFactory.deferred
         # The failure mode is that this callback raises an AlreadyCalled
@@ -850,8 +851,8 @@ class QueryFactoryParseResponseTests(unittest.TestCase):
 
     def test_parseResponseErrbackSafety(self):
         """
-        We can safely call L{_QueryFactory.clientConnectionLost} as an errback
-        of L{_QueryFactory.parseResponse}.
+        We can safely call L{QueryFactory.clientConnectionLost} as an errback
+        of L{QueryFactory.parseResponse}.
         """
         d = self.queryFactory.deferred
         # The failure mode is that this callback raises an AlreadyCalled
@@ -864,8 +865,8 @@ class QueryFactoryParseResponseTests(unittest.TestCase):
 
     def test_badStatusErrbackSafety(self):
         """
-        We can safely call L{_QueryFactory.clientConnectionLost} as an errback
-        of L{_QueryFactory.badStatus}.
+        We can safely call L{QueryFactory.clientConnectionLost} as an errback
+        of L{QueryFactory.badStatus}.
         """
         d = self.queryFactory.deferred
         # The failure mode is that this callback raises an AlreadyCalled
@@ -878,7 +879,7 @@ class QueryFactoryParseResponseTests(unittest.TestCase):
     def test_parseResponseWithoutData(self):
         """
         Some server can send a response without any data:
-        L{_QueryFactory.parseResponse} should catch the error and call the
+        L{QueryFactory.parseResponse} should catch the error and call the
         result errback.
         """
         content = """

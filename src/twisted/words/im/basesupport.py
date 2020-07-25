@@ -61,11 +61,11 @@ class AbstractGroup:
         self.account.client.leaveGroup(self.name)
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return '<%s %r>' % (self.__class__, self.name)
 
 
-    def __str__(self):
+    def __str__(self) -> str:
         return '%s@%s' % (self.name, self.account.accountName)
 
 
@@ -93,11 +93,11 @@ class AbstractPerson:
         return '--'
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return '<%s %r/%s>' % (self.__class__, self.name, self.status)
 
 
-    def __str__(self):
+    def __str__(self) -> str:
         return '%s@%s' % (self.name, self.account.accountName)
 
 
@@ -294,7 +294,7 @@ class AbstractAccount(styles.Versioned):
         return reason
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "<%s: %s (%s@%s:%s)>" % (self.__class__,
                                         self.accountName,
                                         self.username,

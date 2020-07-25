@@ -291,8 +291,9 @@ class TelnetError(Exception):
 
 
 class NegotiationError(TelnetError):
-    def __str__(self):
-        return self.__class__.__module__ + '.' + self.__class__.__name__ + ':' + repr(self.args[0])
+    def __str__(self) -> str:
+        return (self.__class__.__module__ + '.' + self.__class__.__name__ + ':'
+                + repr(self.args[0]))
 
 
 
@@ -426,7 +427,7 @@ class Telnet(protocol.Protocol):
             negotiating = False
             onResult = None
 
-            def __str__(self):
+            def __str__(self) -> str:
                 return self.state + ('*' * self.negotiating)
 
 
@@ -435,7 +436,7 @@ class Telnet(protocol.Protocol):
             self.him = self._Perspective()
 
 
-        def __repr__(self):
+        def __repr__(self) -> str:
             return '<_OptionState us=%s him=%s>' % (self.us, self.him)
 
 

@@ -108,7 +108,7 @@ class FlatFormattingTests(unittest.TestCase):
                 """
                 self.destructed = True
 
-            def __repr__(self):
+            def __repr__(self) -> str:
                 if self.destructed:
                     return "post-serialization garbage"
                 else:
@@ -188,7 +188,7 @@ class FlatFormattingTests(unittest.TestCase):
                 """
                 Hack
                 """
-                def __str__(self):
+                def __str__(self) -> str:
                     return str(next(counter))
 
             event = dict(
@@ -241,7 +241,7 @@ class FlatFormattingTests(unittest.TestCase):
         @param flattenFirst: callable to flatten an event
         """
         class ObjectWithRepr(object):
-            def __repr__(self):
+            def __repr__(self) -> str:
                 return "repr"
 
         class Something(object):

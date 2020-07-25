@@ -424,7 +424,7 @@ class Unformattable(object):
     An object that raises an exception from C{__repr__}.
     """
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return str(1 / 0)
 
 

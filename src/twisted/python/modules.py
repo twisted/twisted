@@ -269,8 +269,8 @@ class PythonAttribute:
         self._loaded = loaded
         self.pythonValue = pythonValue
 
-    def __repr__(self):
-        return 'PythonAttribute<%r>'%(self.name,)
+    def __repr__(self) -> str:
+        return 'PythonAttribute<%r>' % (self.name,)
 
     def isLoaded(self):
         """
@@ -327,7 +327,7 @@ class PythonModule(_ModuleIteratorHelper):
     def _getEntry(self):
         return self.pathEntry
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """
         Return a string representation including the module name.
         """
@@ -394,21 +394,13 @@ class PythonModule(_ModuleIteratorHelper):
                 return default
             raise
 
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
         """
         PythonModules with the same name are equal.
         """
-        if not isinstance(other, PythonModule):
-            return False
-        return other.name == self.name
-
-    def __ne__(self, other):
-        """
-        PythonModules with different names are not equal.
-        """
-        if not isinstance(other, PythonModule):
-            return True
-        return other.name != self.name
+        if isinstance(other, PythonModule):
+            return other.name == self.name
+        return NotImplemented
 
     def walkModules(self, importPackages=False):
         if importPackages and self.isPackage():
@@ -462,7 +454,7 @@ class PathEntry(_ModuleIteratorHelper):
     def _getEntry(self):
         return self
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return 'PathEntry<%r>' % (self.filePath,)
 
     def _packagePaths(self):
@@ -739,7 +731,7 @@ class PythonPath:
             return False
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """
         Display my sysPath and moduleDict in a string representation.
         """

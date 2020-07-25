@@ -97,7 +97,7 @@ class TestResult(pyunit.TestResult, object):
         self._timings = []
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return ('<%s run=%d errors=%d failures=%d todos=%d dones=%d skips=%d>'
                 % (reflect.qual(self.__class__), self.testsRun,
                    len(self.errors), len(self.failures),

@@ -96,9 +96,10 @@ class SerialNumberTests(unittest.TestCase):
     def test_eqForeignType(self):
         """
         == comparison of L{SerialNumber} with a non-L{SerialNumber} instance
-        raises L{TypeError}.
+        returns L{NotImplemented}.
         """
-        self.assertRaises(TypeError, lambda: SerialNumber(1) == object())
+        self.assertFalse(SerialNumber(1) == object())
+        self.assertIs(SerialNumber(1).__eq__(object()), NotImplemented)
 
 
     def test_ne(self):
@@ -112,9 +113,10 @@ class SerialNumberTests(unittest.TestCase):
     def test_neForeignType(self):
         """
         != comparison of L{SerialNumber} with a non-L{SerialNumber} instance
-        raises L{TypeError}.
+        returns L{NotImplemented}.
         """
-        self.assertRaises(TypeError, lambda: SerialNumber(1) != object())
+        self.assertTrue(SerialNumber(1) != object())
+        self.assertIs(SerialNumber(1).__ne__(object()), NotImplemented)
 
 
     def test_le(self):
