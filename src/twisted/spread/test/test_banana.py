@@ -9,7 +9,7 @@ from io import BytesIO
 from twisted.trial.unittest import TestCase
 from twisted.spread import banana
 from twisted.python import failure
-from twisted.python.compat import long, iterbytes
+from twisted.python.compat import long, iterbytes, _bytesChr as chr
 from twisted.internet import protocol, main
 from twisted.test.proto_helpers import StringTransport
 
@@ -367,9 +367,8 @@ class DialectTests(BananaTestBase):
     Tests for Banana's handling of dialects.
     """
     vocab = b'remote'
-    legalPbItem = bytes([banana.Banana.outgoingVocabulary[vocab]]) \
-        + banana.VOCAB
-    illegalPbItem = bytes([122]) + banana.VOCAB
+    legalPbItem = chr(banana.Banana.outgoingVocabulary[vocab]) + banana.VOCAB
+    illegalPbItem = chr(122) + banana.VOCAB
 
     def test_dialectNotSet(self):
         """

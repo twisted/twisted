@@ -15,14 +15,7 @@ from zope.interface import implementer
 
 from twisted.internet import protocol, interfaces as iinternet, defer
 from twisted.python import log
-from twisted.python.compat import iterbytes
-
-
-
-def chr(i):
-    return bytes([i])
-
-
+from twisted.python.compat import _bytesChr as chr, iterbytes
 
 MODE = chr(1)
 EDIT = 1

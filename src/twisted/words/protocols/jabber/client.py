@@ -4,7 +4,7 @@
 # See LICENSE for details.
 
 
-from twisted.python.compat import unicode
+from twisted.python.compat import _coercedUnicode, unicode
 from twisted.words.protocols.jabber import error, sasl, xmlstream
 from twisted.words.protocols.jabber.jid import JID
 from twisted.words.xish import domish, utility, xpath
@@ -115,7 +115,7 @@ class IQAuthInitializer(object):
 
     def _cbAuthQuery(self, iq):
         jid = self.xmlstream.authenticator.jid
-        password = self.xmlstream.authenticator.password
+        password = _coercedUnicode(self.xmlstream.authenticator.password)
 
         # Construct auth request
         reply = xmlstream.IQ(self.xmlstream, "set")

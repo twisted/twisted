@@ -19,7 +19,7 @@ from zope.interface import implementer
 
 from twisted.internet import interfaces, protocol
 from twisted.logger import Logger
-from twisted.python.compat import networkString
+from twisted.python.compat import _bytesChr as chr, networkString
 from twisted.conch.interfaces import (
     EnvironmentVariableNotPermitted, ISession, ISessionSetEnv)
 from twisted.conch.ssh import common, channel, connection
@@ -331,8 +331,7 @@ class SSHSessionProcessProtocol(protocol.ProcessProtocol):
                     coreDumped = 0
                 self.session.conn.sendRequest(
                     self.session, b'exit-signal',
-                    common.NS(networkString(signame[3:])) +
-                    bytes([coreDumped]) +
+                    common.NS(networkString(signame[3:])) + chr(coreDumped) +
                     common.NS(b'') + common.NS(b''))
             elif err.exitCode is not None:
                 log.info('exitCode: {exitCode!r}', exitCode=err.exitCode)

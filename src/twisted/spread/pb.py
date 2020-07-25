@@ -35,7 +35,8 @@ from zope.interface import implementer, Interface
 
 # Twisted Imports
 from twisted.python import log, failure, reflect
-from twisted.python.compat import unicode, range, comparable, cmp
+from twisted.python.compat import (unicode, _bytesChr as chr, range,
+                                   comparable, cmp)
 from twisted.internet import defer, protocol
 from twisted.cred.portal import Portal
 from twisted.cred.credentials import IAnonymous, ICredentials
@@ -1267,8 +1268,9 @@ def challenge():
 
     @return: Some random data.
     """
-    crap = bytes(random.randint(65, 90)
-                 for x in range(random.randrange(15, 25)))
+    crap = b''
+    for x in range(random.randrange(15,25)):
+        crap = crap + chr(random.randint(65,90))
     crap = md5(crap).digest()
     return crap
 
