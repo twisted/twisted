@@ -603,7 +603,7 @@ class RemoteCacheObserver:
         self.cached = cached
         self.perspective = perspective
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "<RemoteCacheObserver(%s, %s, %s) at %s>" % (
             self.broker, self.cached, self.perspective, id(self))
 

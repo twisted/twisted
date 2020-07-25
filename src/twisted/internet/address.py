@@ -137,7 +137,7 @@ class UNIXAddress(object):
             return NotImplemented
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         name = self.name
         if name:
             name = _coerceToFilesystemEncoding('', self.name)

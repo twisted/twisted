@@ -97,7 +97,7 @@ class SerialNumber(FancyStrMixin, object):
         return other
 
 
-    def __str__(self):
+    def __str__(self) -> str:
         """
         Return a string representation of this L{SerialNumber} instance.
 

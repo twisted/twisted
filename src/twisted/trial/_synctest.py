@@ -64,7 +64,7 @@ class Todo(object):
         self.errors = errors
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "<Todo reason=%r errors=%r>" % (self.reason, self.errors)
 
 

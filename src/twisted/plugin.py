@@ -45,7 +45,7 @@ class CachedPlugin(object):
         self.provided = provided
         self.dropin.plugins.append(self)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return '<CachedPlugin %r/%r (provides %r)>' % (
             self.name, self.dropin.moduleName,
             ', '.join([i.__name__ for i in self.provided]))

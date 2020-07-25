@@ -187,7 +187,7 @@ class DelayedCall:
             return NotImplemented
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """
         Implement C{repr()} for L{DelayedCall} instances.
 
@@ -1195,7 +1195,7 @@ class BaseConnector:
             reflect.qual(self.__class__) + " did not implement "
             "getDestination")
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "<%s instance at 0x%x %s %s>" % (
             reflect.qual(self.__class__), id(self), self.state,
             self.getDestination())
