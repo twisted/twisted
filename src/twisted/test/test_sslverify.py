@@ -2772,7 +2772,7 @@ class ExpandCipherStringTests(TestCase):
         If the expanded cipher list is empty, an empty L{list} is returned.
         """
         self.assertEqual(
-            [],
+            tuple(),
             sslverify._expandCipherString(u'', SSL.SSLv23_METHOD, 0)
         )
 
@@ -2795,13 +2795,13 @@ class ExpandCipherStringTests(TestCase):
         )
 
 
-    def test_returnsListOfICiphers(self):
+    def test_returnsTupleOfICiphers(self):
         """
-        L{sslverify._expandCipherString} always returns a L{list} of
+        L{sslverify._expandCipherString} always returns a L{tuple} of
         L{interfaces.ICipher}.
         """
         ciphers = sslverify._expandCipherString(u'ALL', SSL.SSLv23_METHOD, 0)
-        self.assertIsInstance(ciphers, list)
+        self.assertIsInstance(ciphers, tuple)
         bogus = []
         for c in ciphers:
             if not interfaces.ICipher.providedBy(c):
@@ -2822,8 +2822,8 @@ class AcceptableCiphersTests(TestCase):
         """
         If no ciphers are available, nothing can be selected.
         """
-        ac = sslverify.OpenSSLAcceptableCiphers([])
-        self.assertEqual([], ac.selectCiphers([]))
+        ac = sslverify.OpenSSLAcceptableCiphers(tuple())
+        self.assertEqual(tuple(), ac.selectCiphers(tuple()))
 
 
     def test_selectReturnsOnlyFromAvailable(self):
@@ -2835,18 +2835,18 @@ class AcceptableCiphersTests(TestCase):
             sslverify.OpenSSLCipher('A'),
             sslverify.OpenSSLCipher('B'),
         ])
-        self.assertEqual([sslverify.OpenSSLCipher('B')],
+        self.assertEqual((sslverify.OpenSSLCipher('B'),),
                          ac.selectCiphers([sslverify.OpenSSLCipher('B'),
                                            sslverify.OpenSSLCipher('C')]))
 
 
-    def test_fromOpenSSLCipherStringExpandsToListOfCiphers(self):
+    def test_fromOpenSSLCipherStringExpandsToTupleOfCiphers(self):
         """
         If L{sslverify.OpenSSLAcceptableCiphers.fromOpenSSLCipherString} is
-        called it expands the string to a list of ciphers.
+        called it expands the string to a tuple of ciphers.
         """
         ac = sslverify.OpenSSLAcceptableCiphers.fromOpenSSLCipherString('ALL')
-        self.assertIsInstance(ac._ciphers, list)
+        self.assertIsInstance(ac._ciphers, tuple)
         self.assertTrue(all(sslverify.ICipher.providedBy(c)
                             for c in ac._ciphers))
 
