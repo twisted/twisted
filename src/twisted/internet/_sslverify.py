@@ -1000,7 +1000,7 @@ class OpenSSLDefaultPaths(object):
     """
     Trust the set of default verify paths that OpenSSL was built with, as
     specified by U{SSL_CTX_set_default_verify_paths
-    <https://www.openssl.org/docs/manmaster/man3/SSL_CTX_load_verify_locations.html>}.
+    <https://www.openssl.org/docs/man1.1.1/man3/SSL_CTX_load_verify_locations.html>}.
     """
 
     def _addCACertsToContext(self, context):
