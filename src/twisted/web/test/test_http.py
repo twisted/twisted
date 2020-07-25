@@ -3482,7 +3482,7 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
 
         class _NotARequest(object):
 
-            def __eq__(self, other):
+            def __eq__(self, other: object) -> bool:
                 eqCalls.append(other)
                 return True
 
@@ -3502,7 +3502,7 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
 
         class _NotARequest(object):
 
-            def __ne__(self, other):
+            def __ne__(self, other: object) -> bool:
                 eqCalls.append(other)
                 return True
 

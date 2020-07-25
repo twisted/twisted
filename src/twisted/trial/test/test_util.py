@@ -414,7 +414,7 @@ class JanitorTests(SynchronousTestCase):
             A stub Selectable which only has an interesting string
             representation.
             """
-            def __repr__(self):
+            def __repr__(self) -> str:
                 return "(SELECTABLE!)"
 
         reactor = StubReactor([], [Selectable()])

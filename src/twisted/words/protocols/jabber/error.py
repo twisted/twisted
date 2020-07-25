@@ -94,7 +94,7 @@ class BaseError(Exception):
         self.appCondition = appCondition
 
 
-    def __str__(self):
+    def __str__(self) -> str:
         message = "%s with condition %r" % (self.__class__.__name__,
                                             self.condition)
 

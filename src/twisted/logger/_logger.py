@@ -104,7 +104,7 @@ class Logger(object):
         )
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "<%s %r>" % (self.__class__.__name__, self.namespace)
 
 

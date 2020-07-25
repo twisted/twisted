@@ -776,7 +776,7 @@ class _BaseTCPClient(object):
         return self._addressType('TCP', *self.realAddress)
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         s = '<%s to %s at %x>' % (self.__class__, self.addr, id(self))
         return s
 
@@ -836,7 +836,7 @@ class Server(_TLSServerMixin, Connection):
         self.startReading()
         self.connected = 1
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """
         A string representation of this connection.
         """
@@ -1337,12 +1337,14 @@ class Port(base.BasePort, _SocketCloser):
         return self
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         if self._realPortNumber is not None:
             return "<%s of %s on %s>" % (self.__class__,
-                self.factory.__class__, self._realPortNumber)
+                                         self.factory.__class__,
+                                         self._realPortNumber)
         else:
-            return "<%s of %s (not listening)>" % (self.__class__, self.factory.__class__)
+            return "<%s of %s (not listening)>" % (self.__class__,
+                                                   self.factory.__class__)
 
     def createInternetSocket(self):
         s = base.BasePort.createInternetSocket(self)
