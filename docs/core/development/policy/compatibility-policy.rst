@@ -558,7 +558,7 @@ Tests which need to use deprecated classes should use the :api:`twisted.trial.un
             and C{hashed} on it.
             """
             UsernameHashedPassword = self.getDeprecatedModuleAttribute(
-                'twisted.cred.credentials', 'UsernameHashedPassword', Version('Twisted', 16, 3, 0))
+                'twisted.cred.credentials', 'UsernameHashedPassword', Version('Twisted', 20, 3, 0))
             creds = UsernameHashedPassword(b"foo", b"bar")
             self.assertEqual(creds.username, b"foo")
             self.assertEqual(creds.hashed, b"bar")
