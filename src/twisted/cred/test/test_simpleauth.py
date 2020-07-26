@@ -11,6 +11,8 @@ from twisted.cred.credentials import UsernamePassword, IUsernamePassword
 from twisted.cred.credentials import IUsernameHashedPassword
 from twisted.python.versions import Version
 
+from twisted.cred.test.test_cred import _uhpVersion
+
 
 
 class UsernamePasswordTests(TestCase):
@@ -50,10 +52,6 @@ class UsernamePasswordTests(TestCase):
         L{UsernamePassword} implements L{IUsernamePassword}.
         """
         self.assertTrue(IUsernamePassword.implementedBy(UsernamePassword))
-
-
-
-_uhpVersion = Version("Twisted", "NEXT", 0, 0)
 
 
 
