@@ -1275,6 +1275,8 @@ class SynchronousTestCase(_Assertions):
             L{DeprecationWarning} emitted did not produce the canonical
             please-use-something-else message that is standard for Twisted
             deprecations according to the given version and replacement.
+
+        @since: Twisted NEXT
         """
         fqpn = moduleName + '.' + name
         module = sys.modules[moduleName]
