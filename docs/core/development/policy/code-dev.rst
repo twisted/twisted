@@ -35,16 +35,16 @@ Git tutorials can be found elsewhere, see in particular `Git and GitHub learning
 relevant data you need to check out a copy of the Twisted tree is available on
 the `development page <https://twistedmatrix.com/trac/wiki/TwistedDevelopment>`_ , and is as follows:
 
+.. code-block:: console
 
+    $ git clone https://github.com/twisted/twisted Twisted
 
-
+The output of ``git blame`` `will be better <https://github.com/psf/black#migrating-your-code-style-without-ruining-git-blame>`_ if you configure it to use our ignore file:
 
 .. code-block:: console
 
-    
-    $ git clone https://github.com/twisted/twisted Twisted
-
-
+    $ cd Twisted
+    $ git config blame.ignoreRevsFile .git-blame-ignore-revs
 
 
 
