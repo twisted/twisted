@@ -9,7 +9,6 @@ Tests for basic constructs of L{twisted.cred.credentials}.
 from twisted.trial.unittest import TestCase
 from twisted.cred.credentials import UsernamePassword, IUsernamePassword
 from twisted.cred.credentials import IUsernameHashedPassword
-from twisted.python.versions import Version
 
 from twisted.cred.test.test_cred import _uhpVersion
 
