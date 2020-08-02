@@ -47,7 +47,7 @@ class SASLAuthError(SASLError):
         self.condition = condition
 
 
-    def __str__(self):
+    def __str__(self) -> str:
         return "SASLAuthError with condition %r" % self.condition
 
 

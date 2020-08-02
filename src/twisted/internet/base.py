@@ -161,27 +161,33 @@ class DelayedCall:
         return not (self.cancelled or self.called)
 
 
-    def __le__(self, other):
+    def __le__(self, other: object) -> bool:
         """
         Implement C{<=} operator between two L{DelayedCall} instances.
 
         Comparison is based on the C{time} attribute (unadjusted by the
         delayed time).
         """
-        return self.time <= other.time
+        if isinstance(other, DelayedCall):
+            return self.time <= other.time
+        else:
+            return NotImplemented
 
 
-    def __lt__(self, other):
+    def __lt__(self, other: object) -> bool:
         """
         Implement C{<} operator between two L{DelayedCall} instances.
 
         Comparison is based on the C{time} attribute (unadjusted by the
         delayed time).
         """
-        return self.time < other.time
+        if isinstance(other, DelayedCall):
+            return self.time < other.time
+        else:
+            return NotImplemented
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """
         Implement C{repr()} for L{DelayedCall} instances.
 
@@ -1202,7 +1208,7 @@ class BaseConnector:
             reflect.qual(self.__class__) + " did not implement "
             "getDestination")
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "<%s instance at 0x%x %s %s>" % (
             reflect.qual(self.__class__), id(self), self.state,
             self.getDestination())

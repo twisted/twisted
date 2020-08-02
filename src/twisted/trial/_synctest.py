@@ -22,7 +22,10 @@ from twisted.python import failure, log, monkey
 from twisted.python.reflect import fullyQualifiedName
 from twisted.python.util import runWithWarningsSuppressed
 from twisted.python.deprecate import (
-    getDeprecationWarningString, warnAboutFunction
+    DEPRECATION_WARNING_FORMAT,
+    getDeprecationWarningString,
+    getVersionString,
+    warnAboutFunction,
 )
 from twisted.internet.defer import ensureDeferred
 
@@ -64,7 +67,7 @@ class Todo(object):
         self.errors = errors
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "<Todo reason=%r errors=%r>" % (self.reason, self.errors)
 
 
@@ -1002,7 +1005,7 @@ class SynchronousTestCase(_Assertions):
             testMethod, self, sys.modules.get(self.__class__.__module__)]
 
 
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
         """
         Override the comparison defined by the base TestCase which considers
         instances of the same class with the same _testMethodName to be
@@ -1011,11 +1014,10 @@ class SynchronousTestCase(_Assertions):
         method twice.  Most likely, trial should stop using a set to hold
         tests, but until it does, this is necessary on Python 2.6. -exarkun
         """
-        return self is other
-
-
-    def __ne__(self, other):
-        return self is not other
+        if isinstance(other, SynchronousTestCase):
+            return self is other
+        else:
+            return NotImplemented
 
 
     def __hash__(self):
@@ -1245,6 +1247,54 @@ class SynchronousTestCase(_Assertions):
             {'message': w.message, 'category': w.category,
              'filename': w.filename, 'lineno': w.lineno}
             for w in toFlush]
+
+
+    def getDeprecatedModuleAttribute(self, moduleName, name, version, message=None):
+        """
+        Retrieve a module attribute which should have been deprecated,
+        and assert that we saw the appropriate deprecation warning.
+
+        @type moduleName: C{str}
+        @param moduleName: Fully-qualified Python name of the module containing
+            the deprecated attribute; if called from the same module as the
+            attributes are being deprecated in, using the C{__name__} global can
+            be helpful
+
+        @type name: C{str}
+        @param name: Attribute name which we expect to be deprecated
+
+        @param version: The first L{version<twisted.python.versions.Version>} that
+            the module attribute was deprecated.
+
+        @type message: C{str}
+        @param message: (optional) The expected deprecation message for the module attribute
+
+        @return: The given attribute from the named module
+
+        @raise FailTest: if no warnings were emitted on getattr, or if the
+            L{DeprecationWarning} emitted did not produce the canonical
+            please-use-something-else message that is standard for Twisted
+            deprecations according to the given version and replacement.
+
+        @since: Twisted NEXT
+        """
+        fqpn = moduleName + '.' + name
+        module = sys.modules[moduleName]
+        attr = getattr(module, name)
+        warningsShown = self.flushWarnings([self.getDeprecatedModuleAttribute])
+        if len(warningsShown) == 0:
+            self.fail('%s is not deprecated.' % (fqpn,))
+
+        observedWarning = warningsShown[0]['message']
+        expectedWarning = DEPRECATION_WARNING_FORMAT % {
+            'fqpn': fqpn,
+            'version': getVersionString(version)}
+        if message is not None:
+            expectedWarning = expectedWarning + ': ' + message
+        self.assert_(observedWarning.startswith(expectedWarning),
+                     'Expected %r to start with %r' % (observedWarning, expectedWarning))
+
+        return attr
 
 
     def callDeprecated(self, version, f, *args, **kwargs):

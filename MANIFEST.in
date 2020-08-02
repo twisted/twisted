@@ -22,6 +22,7 @@ exclude codecov.yml
 exclude appveyor.yml
 exclude .coveralls.yml
 exclude .circleci
+exclude .git-blame-ignore-revs
 recursive-exclude .circleci *
 exclude azure-pipelines
 recursive-exclude azure-pipelines *

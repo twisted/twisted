@@ -102,7 +102,7 @@ class ElementTests(TestCase):
         A L{MissingTemplateLoader} instance can be repr()'d without error.
         """
         class PrettyReprElement(Element):
-            def __repr__(self):
+            def __repr__(self) -> str:
                 return 'Pretty Repr Element'
         self.assertIn('Pretty Repr Element',
                       repr(MissingTemplateLoader(PrettyReprElement())))
@@ -125,7 +125,7 @@ class ElementTests(TestCase):
         A L{MissingRenderMethod} instance can be repr()'d without error.
         """
         class PrettyReprElement(Element):
-            def __repr__(self):
+            def __repr__(self) -> str:
                 return 'Pretty Repr Element'
         s = repr(MissingRenderMethod(PrettyReprElement(),
                                      'expectedMethod'))

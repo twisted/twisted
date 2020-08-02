@@ -289,7 +289,7 @@ class Address:
 
         return b''.join(res)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return nativeString(bytes(self))
 
 
@@ -300,7 +300,7 @@ class Address:
             return b''
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "%s.%s(%s)" % (self.__module__, self.__class__.__name__,
                               repr(str(self)))
 
@@ -332,13 +332,13 @@ class User:
         protocol isn't picklabe, but we want User to be, so skip it in
         the pickle.
         """
-        return { 'dest' : self.dest,
-                 'helo' : self.helo,
-                 'protocol' : None,
-                 'orig' : self.orig }
+        return {'dest': self.dest,
+                'helo': self.helo,
+                'protocol': None,
+                'orig': self.orig}
 
 
-    def __str__(self):
+    def __str__(self) -> str:
         return nativeString(bytes(self.dest))
 
 

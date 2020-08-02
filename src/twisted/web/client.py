@@ -389,7 +389,7 @@ class HTTPClientFactory(protocol.ClientFactory):
         return self._disconnectedDeferred
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "<%s: %s>" % (self.__class__.__name__, self.url)
 
     def setURL(self, url):
@@ -1239,7 +1239,7 @@ class _HTTP11ClientFactory(protocol.Factory):
         self._metadata = metadata
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return '_HTTP11ClientFactory({}, {})'.format(
             self._quiescentCallback,
             self._metadata)
