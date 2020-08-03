@@ -17,8 +17,7 @@ from twisted.conch.ssh import service, common
 from twisted.conch import error
 from twisted.internet import defer
 from twisted.python import log
-from twisted.python.compat import (
-    nativeString, networkString, long, _bytesChr as chr)
+from twisted.python.compat import nativeString, networkString, long
 
 
 
@@ -444,10 +443,12 @@ class SSHConnection(service.SSHService):
         if channel.localClosed:
             return
         log.msg('sending request %r' % (requestType))
-        self.transport.sendPacket(MSG_CHANNEL_REQUEST, struct.pack('>L',
-                                    self.channelsToRemoteChannel[channel])
-                                  + common.NS(requestType)+chr(wantReply)
-                                  + data)
+        self.transport.sendPacket(
+                MSG_CHANNEL_REQUEST,
+                struct.pack('>L', self.channelsToRemoteChannel[channel])
+                + common.NS(requestType)
+                + (b'\1' if wantReply else b'\0')
+                + data)
         if wantReply:
             d = defer.Deferred()
             self.deferreds.setdefault(channel.id, []).append(d)
@@ -647,6 +648,5 @@ for name, value in locals().copy().items():
         messages[value] = name  # Doesn't handle doubles
 
 alphanums = networkString(string.ascii_letters + string.digits)
-TRANSLATE_TABLE = b''.join([chr(i) in alphanums and chr(i) or b'_'
-                            for i in range(256)])
+TRANSLATE_TABLE = bytes(i if i in alphanums else ord('_') for i in range(256))
 SSHConnection.protocolMessages = messages
