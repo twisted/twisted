@@ -701,7 +701,7 @@ class File(resource.Resource, filepath.FilePath):
 
 
 @implementer(interfaces.IPullProducer)
-class StaticProducer(object):
+class StaticProducer:
     """
     Superclass for classes that implement the business of producing.
 

@@ -20,7 +20,7 @@ class YieldFocus(Exception):
 
 
 
-class BoundedTerminalWrapper(object):
+class BoundedTerminalWrapper:
     def __init__(self, terminal, width, height, xoff, yoff):
         self.width = width
         self.height = height
@@ -51,7 +51,7 @@ class BoundedTerminalWrapper(object):
 
 
 
-class Widget(object):
+class Widget:
     focused = False
     parent = None
     dirty = False

@@ -7,7 +7,7 @@ from twisted.plugin import IPlugin
 
 
 @implementer(IPlugin, IReporter)
-class _Reporter(object):
+class _Reporter:
 
     def __init__(self, name, module, description, longOpt, shortOpt, klass):
         self.name = name

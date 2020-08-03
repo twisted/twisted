@@ -1244,7 +1244,7 @@ class NewRenderResource(resource.Resource):
 
 
 @implementer(resource.IResource)
-class HeadlessResource(object):
+class HeadlessResource:
     """
     A resource that implements GET but not HEAD.
     """
@@ -1386,7 +1386,7 @@ class NewRenderTests(unittest.TestCase):
         When implemented C{render} method does not return bytes an internal
         server error is returned.
         """
-        class RiggedRepr(object):
+        class RiggedRepr:
             def __repr__(self) -> str:
                 return 'my>repr'
 
@@ -1532,7 +1532,7 @@ class DummyRequestForLogTest(DummyRequest):
 
 
 
-class AccessLogTestsMixin(object):
+class AccessLogTestsMixin:
     """
     A mixin for L{TestCase} subclasses defining tests that apply to
     L{HTTPFactory} and its subclasses.
@@ -1689,7 +1689,7 @@ class CombinedLogFormatterTests(unittest.TestCase):
         A request made from an unknown address type is logged as C{"-"}.
         """
         @implementer(interfaces.IAddress)
-        class UnknowableAddress(object):
+        class UnknowableAddress:
             """
             An L{IAddress} which L{combinedLogFormatter} cannot have
             foreknowledge of.

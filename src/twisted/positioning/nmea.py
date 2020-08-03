@@ -420,7 +420,7 @@ class NMEASentence(_sentence._BaseSentence):
 
 
 @implementer(ipositioning.INMEAReceiver)
-class NMEAAdapter(object):
+class NMEAAdapter:
     """
     An adapter from NMEAProtocol receivers to positioning receivers.
 

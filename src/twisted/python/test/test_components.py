@@ -78,14 +78,14 @@ class Test(components.Adapter):
 
 
 @implementer(ITest2)
-class Test2(object):
+class Test2:
     temporaryAdapter = 1
     def __init__(self, orig):
         pass
 
 
 
-class RegistryUsingMixin(object):
+class RegistryUsingMixin:
     """
     Mixin for test cases which modify the global registry somehow.
     """
@@ -257,7 +257,7 @@ class BackwardsAdder(components.Adapter):
 
 
 
-class MetaNumber(object):
+class MetaNumber:
     """
     Integer wrapper for Interface adaptation tests.
     """
@@ -312,7 +312,7 @@ class IAttrXX(Interface):
 
 
 @implementer(IAttrX)
-class Xcellent(object):
+class Xcellent:
     """
     L{IAttrX} implementation for test of adapter with C{__cmp__}.
     """
@@ -327,7 +327,7 @@ class Xcellent(object):
 
 
 @comparable
-class DoubleXAdapter(object):
+class DoubleXAdapter:
     """
     Adapter with __cmp__.
     """
@@ -390,7 +390,7 @@ class RegistrationTests(RegistryUsingMixin, unittest.SynchronousTestCase):
         Test that an adapter from a class can be registered and then looked
         up.
         """
-        class TheOriginal(object):
+        class TheOriginal:
             pass
         return self._registerAdapterForClassOrInterface(TheOriginal)
 
@@ -426,7 +426,7 @@ class RegistrationTests(RegistryUsingMixin, unittest.SynchronousTestCase):
         Test that attempting to register a second adapter from a class
         raises the appropriate exception.
         """
-        class TheOriginal(object):
+        class TheOriginal:
             pass
         return self._duplicateAdapterForClassOrInterface(TheOriginal)
 
@@ -476,7 +476,7 @@ class RegistrationTests(RegistryUsingMixin, unittest.SynchronousTestCase):
         value, duplicate registrations from classes are allowed to override
         the original registration.
         """
-        class TheOriginal(object):
+        class TheOriginal:
             pass
         return self._duplicateAdapterForClassOrInterfaceAllowed(TheOriginal)
 
@@ -510,7 +510,7 @@ class RegistrationTests(RegistryUsingMixin, unittest.SynchronousTestCase):
         Test the registration of an adapter from a class to several
         interfaces at once.
         """
-        class TheOriginal(object):
+        class TheOriginal:
             pass
         return self._multipleInterfacesForClassOrInterface(TheOriginal)
 
@@ -549,7 +549,7 @@ class RegistrationTests(RegistryUsingMixin, unittest.SynchronousTestCase):
         Test that an adapter to a particular interface can be registered
         from both a class and its subclass.
         """
-        class TheOriginal(object):
+        class TheOriginal:
             pass
         return self._subclassAdapterRegistrationForClassOrInterface(TheOriginal)
 
@@ -589,7 +589,7 @@ class IProxiedSubInterface(IProxiedInterface):
 
 
 @implementer(IProxiedInterface)
-class Yayable(object):  # type: ignore[misc]
+class Yayable:  # type: ignore[misc]
     # class does not implement Attribute ifaceAttribute
     # so we need to turn off mypy warning
     """
@@ -615,7 +615,7 @@ class Yayable(object):  # type: ignore[misc]
 
 
 @implementer(IProxiedSubInterface)
-class Booable(object):  # type: ignore[misc]
+class Booable:  # type: ignore[misc]
     # class does not implement Attribute ifaceAttribute
     # so we need to turn off mypy warning
     """
@@ -658,7 +658,7 @@ class IMultipleMethods(Interface):
 
 
 
-class MultipleMethodImplementor(object):
+class MultipleMethodImplementor:
     """
     A precise implementation of L{IMultipleMethods}.
     """
@@ -828,7 +828,7 @@ class ProxyForInterfaceTests(unittest.SynchronousTestCase):
         idiomatic way to ensure that signature works; test_proxyInheritance
         verifies the how-Python-actually-calls-it signature.
         """
-        class Sample(object):
+        class Sample:
             called = False
             def hello(self):
                 self.called = True

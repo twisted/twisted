@@ -517,7 +517,7 @@ class ParsingTests(TestCase):
 
 
 
-class FakeLocator(object):
+class FakeLocator:
     """
     This is a fake implementation of the interface implied by
     L{CommandLocator}.
@@ -3125,7 +3125,7 @@ class ListOfOptionalTests(TestCase):
 
 
 @implementer(interfaces.IUNIXTransport)
-class UNIXStringTransport(object):
+class UNIXStringTransport:
     """
     An in-memory implementation of L{interfaces.IUNIXTransport} which collects
     all data given to it for later inspection.

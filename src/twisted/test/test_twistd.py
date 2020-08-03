@@ -113,7 +113,7 @@ def patchUserDatabase(patch, user, uid, group, gid):
 
 
 
-class MockServiceMaker(object):
+class MockServiceMaker:
     """
     A non-implementation of L{twisted.application.service.IServiceMaker}.
     """
@@ -166,7 +166,7 @@ class ServerOptionsTests(TestCase):
         subCommands is built from IServiceMaker plugins, and is sorted
         alphabetically.
         """
-        class FakePlugin(object):
+        class FakePlugin:
             def __init__(self, name):
                 self.tapname = name
                 self._options = 'options for ' + name
@@ -208,7 +208,7 @@ class ServerOptionsTests(TestCase):
         """
         Reactor names are listed alphabetically by I{--help-reactors}.
         """
-        class FakeReactorInstaller(object):
+        class FakeReactorInstaller:
             def __init__(self, name):
                 self.shortName = 'name of ' + name
                 self.description = 'description of ' + name
@@ -464,7 +464,7 @@ class TapFileTests(TestCase):
 
 
 
-class TestLoggerFactory(object):
+class TestLoggerFactory:
     """
     A logger factory for L{TestApplicationRunner}.
     """
@@ -587,7 +587,7 @@ class ApplicationRunnerTests(TestCase):
                 pass
 
         @implementer(service.IService, service.IProcess)
-        class FakeService(object):
+        class FakeService:
 
             parent = None
             running = None
@@ -728,7 +728,7 @@ class ApplicationRunnerTests(TestCase):
         the reactor does not implement L{_ISupportsExitSignalCapturing}.
         """
 
-        class DummyReactorWithExitSignalAttribute(object):
+        class DummyReactorWithExitSignalAttribute:
             """
             A dummy reactor, providing a C{run} method, and setting the
             _exitSignal attribute to a nonzero value.
@@ -1083,7 +1083,7 @@ class UnixApplicationRunnerRemovePIDTests(TestCase):
 
 
 
-class FakeNonDaemonizingReactor(object):
+class FakeNonDaemonizingReactor:
     """
     A dummy reactor, providing C{beforeDaemonize} and C{afterDaemonize}
     methods, but not announcing this, and logging whether the methods have been
@@ -1124,7 +1124,7 @@ class FakeDaemonizingReactor(FakeNonDaemonizingReactor):
 
 
 
-class DummyReactor(object):
+class DummyReactor:
     """
     A dummy reactor, only providing a C{run} method and checking that it
     has been called.
@@ -1368,7 +1368,7 @@ def _setupSyslog(testCase):
     """
     logMessages = []
 
-    class fakesyslogobserver(object):
+    class fakesyslogobserver:
         def __init__(self, prefix):
             logMessages.append(prefix)
 
@@ -1419,7 +1419,7 @@ class AppLoggerTests(TestCase):
         @rtype: Callable that implements L{ILogObserver}.
         """
         @implementer(ILogObserver)
-        class TestObserver(object):
+        class TestObserver:
             _logs = []
 
             def __call__(self, event):
@@ -1636,7 +1636,7 @@ class AppLoggerTests(TestCase):
         logger = app.AppLogger({})
 
         @implementer(LegacyILogObserver)
-        class LoggerObserver(object):
+        class LoggerObserver:
             """
             An observer which implements the legacy L{LegacyILogObserver}.
             """

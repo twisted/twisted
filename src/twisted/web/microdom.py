@@ -131,7 +131,7 @@ class MismatchedTags(Exception):
 
 
 
-class Node(object):
+class Node:
     nodeName = "Node"
 
     def __init__(self, parentNode=None):

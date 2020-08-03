@@ -68,7 +68,7 @@ class _IGroupExchangeKexAlgorithm(_IKexAlgorithm):
 
 
 @implementer(_IEllipticCurveExchangeKexAlgorithm)
-class _Curve25519SHA256(object):
+class _Curve25519SHA256:
     """
     Elliptic Curve Key Exchange using Curve25519 and SHA256. Defined in
     U{https://datatracker.ietf.org/doc/draft-ietf-curdle-ssh-curves/}.
@@ -79,7 +79,7 @@ class _Curve25519SHA256(object):
 
 
 @implementer(_IEllipticCurveExchangeKexAlgorithm)
-class _Curve25519SHA256LibSSH(object):
+class _Curve25519SHA256LibSSH:
     """
     As L{_Curve25519SHA256}, but with a pre-standardized algorithm name.
     """
@@ -89,7 +89,7 @@ class _Curve25519SHA256LibSSH(object):
 
 
 @implementer(_IEllipticCurveExchangeKexAlgorithm)
-class _ECDH256(object):
+class _ECDH256:
     """
     Elliptic Curve Key Exchange with SHA-256 as HASH. Defined in
     RFC 5656.
@@ -100,7 +100,7 @@ class _ECDH256(object):
 
 
 @implementer(_IEllipticCurveExchangeKexAlgorithm)
-class _ECDH384(object):
+class _ECDH384:
     """
     Elliptic Curve Key Exchange with SHA-384 as HASH. Defined in
     RFC 5656.
@@ -111,7 +111,7 @@ class _ECDH384(object):
 
 
 @implementer(_IEllipticCurveExchangeKexAlgorithm)
-class _ECDH512(object):
+class _ECDH512:
     """
     Elliptic Curve Key Exchange with SHA-512 as HASH. Defined in
     RFC 5656.
@@ -122,7 +122,7 @@ class _ECDH512(object):
 
 
 @implementer(_IGroupExchangeKexAlgorithm)
-class _DHGroupExchangeSHA256(object):
+class _DHGroupExchangeSHA256:
     """
     Diffie-Hellman Group and Key Exchange with SHA-256 as HASH. Defined in
     RFC 4419, 4.2.
@@ -134,7 +134,7 @@ class _DHGroupExchangeSHA256(object):
 
 
 @implementer(_IGroupExchangeKexAlgorithm)
-class _DHGroupExchangeSHA1(object):
+class _DHGroupExchangeSHA1:
     """
     Diffie-Hellman Group and Key Exchange with SHA-1 as HASH. Defined in
     RFC 4419, 4.1.
@@ -146,7 +146,7 @@ class _DHGroupExchangeSHA1(object):
 
 
 @implementer(_IFixedGroupKexAlgorithm)
-class _DHGroup14SHA1(object):
+class _DHGroup14SHA1:
     """
     Diffie-Hellman key exchange with SHA-1 as HASH and Oakley Group 14
     (2048-bit MODP Group). Defined in RFC 4253, 8.2.

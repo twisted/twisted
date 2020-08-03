@@ -163,7 +163,7 @@ class SerializationTests(FlattenTestCase, XMLAssertionMixin):
         tag.
         """
         @implementer(IRenderable)
-        class Arbitrary(object):
+        class Arbitrary:
             def __init__(self, value):
                 self.value = value
             def render(self, request):
@@ -383,7 +383,7 @@ class SerializationTests(FlattenTestCase, XMLAssertionMixin):
         Test that flattening respects all of the IRenderable interface.
         """
         @implementer(IRenderable)
-        class FakeElement(object):
+        class FakeElement:
             def render(ign,ored):
                 return tags.p(
                     'hello, ',
@@ -451,7 +451,7 @@ class FlattenerErrorTests(TestCase):
         exception.
         """
         @implementer(IRenderable)
-        class Renderable(object):
+        class Renderable:
             def __repr__(self) -> str:
                 return "renderable repr"
 

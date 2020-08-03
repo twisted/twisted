@@ -59,7 +59,7 @@ class FakeResolver(ResolverBase):
 
 
 
-class StubPort(object):
+class StubPort:
     """
     A partial implementation of L{IListeningPort} which only keeps track of
     whether it has been stopped.
@@ -74,7 +74,7 @@ class StubPort(object):
 
 
 
-class StubDNSDatagramProtocol(object):
+class StubDNSDatagramProtocol:
     """
     L{dns.DNSDatagramProtocol}-alike.
 
@@ -515,7 +515,7 @@ class ResolverTests(unittest.TestCase):
         resolver = client.Resolver(servers=[('example.com', 53)])
         protocols = []
 
-        class FakeProtocol(object):
+        class FakeProtocol:
             def __init__(self):
                 self.transport = StubPort()
 
@@ -550,7 +550,7 @@ class ResolverTests(unittest.TestCase):
         """
         ports = []
 
-        class FakeReactor(object):
+        class FakeReactor:
             def listenUDP(self, port, *args, **kwargs):
                 ports.append(port)
                 if len(ports) == 1:
@@ -569,7 +569,7 @@ class ResolverTests(unittest.TestCase):
         """
         ports = []
 
-        class FakeReactor(object):
+        class FakeReactor:
             def listenUDP(self, port, *args, **kwargs):
                 ports.append(port)
                 raise CannotListenError(None, port, None)
@@ -589,7 +589,7 @@ class ResolverTests(unittest.TestCase):
         """
         ports = []
 
-        class FakeReactor(object):
+        class FakeReactor:
             def listenUDP(self, port, *args, **kwargs):
                 ports.append(port)
                 err = OSError(errno.EMFILE, "Out of files :(")
@@ -615,7 +615,7 @@ class ResolverTests(unittest.TestCase):
         results = [defer.fail(failure.Failure(DNSQueryTimeoutError(None))),
                    defer.succeed(dns.Message())]
 
-        class FakeProtocol(object):
+        class FakeProtocol:
             def __init__(self):
                 self.transport = StubPort()
 
@@ -638,7 +638,7 @@ class ResolverTests(unittest.TestCase):
         protocols = []
         result = defer.Deferred()
 
-        class FakeProtocol(object):
+        class FakeProtocol:
             def __init__(self):
                 self.transport = StubPort()
 
@@ -666,7 +666,7 @@ class ResolverTests(unittest.TestCase):
         results = [defer.fail(failure.Failure(DNSQueryTimeoutError(None))),
                    result]
 
-        class FakeProtocol(object):
+        class FakeProtocol:
             def __init__(self):
                 self.transport = StubPort()
 
@@ -695,7 +695,7 @@ class ResolverTests(unittest.TestCase):
         protocols = []
         result = defer.Deferred()
 
-        class FakeProtocol(object):
+        class FakeProtocol:
             def __init__(self):
                 self.transport = StubPort()
 
@@ -1183,7 +1183,7 @@ class FilterAnswersTests(unittest.TestCase):
 
 
 
-class FakeDNSDatagramProtocol(object):
+class FakeDNSDatagramProtocol:
     def __init__(self):
         self.queries = []
         self.transport = StubPort()

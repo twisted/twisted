@@ -36,7 +36,7 @@ def _rereconstituter(name):
 
 
 
-class URLPath(object):
+class URLPath:
     """
     A representation of a URL.
 

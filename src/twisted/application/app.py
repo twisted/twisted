@@ -26,7 +26,7 @@ from twisted.application.reactors import installReactor
 from twisted.application.reactors import NoSuchReactor
 
 
-class _BasicProfiler(object):
+class _BasicProfiler:
     """
     @ivar saveStats: if C{True}, save the stats information instead of the
         human readable format
@@ -114,7 +114,7 @@ class CProfileRunner(_BasicProfiler):
 
 
 
-class AppProfiler(object):
+class AppProfiler:
     """
     Class which selects a specific profile runner based on configuration
     options.
@@ -137,7 +137,7 @@ class AppProfiler(object):
 
 
 
-class AppLogger(object):
+class AppLogger:
     """
     An L{AppLogger} attaches the configured log observer specified on the
     commandline to a L{ServerOptions} object, a custom L{logger.ILogObserver},
@@ -340,7 +340,7 @@ def getSavePassphrase(needed):
 
 
 
-class ApplicationRunner(object):
+class ApplicationRunner:
     """
     An object which helps running an application based on a config object.
 

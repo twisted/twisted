@@ -129,7 +129,7 @@ def _Traceback(stackFrames, tbFrames):
 
 
 
-class _TracebackFrame(object):
+class _TracebackFrame:
     """
     Fake traceback object which can be passed to functions in the standard
     library L{traceback} module.
@@ -145,7 +145,7 @@ class _TracebackFrame(object):
 
 
 
-class _Frame(object):
+class _Frame:
     """
     A fake frame object, used by L{_Traceback}.
 
@@ -171,7 +171,7 @@ class _Frame(object):
 
 
 
-class _Code(object):
+class _Code:
     """
     A fake code object, used by L{_Traceback} via L{_Frame}.
     """

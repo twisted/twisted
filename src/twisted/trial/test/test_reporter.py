@@ -32,7 +32,7 @@ from io import BytesIO
 
 
 
-class BrokenStream(object):
+class BrokenStream:
     """
     Stream-ish object that raises a signal interrupt error. We use this to make
     sure that Trial still manages to write what it needs to write.
@@ -825,7 +825,7 @@ class UncleanWarningTodoTests(TodoTests):
 
 
 
-class MockColorizer(object):
+class MockColorizer:
     """
     Used by TreeReporterTests to make sure that output is colored correctly.
     """
@@ -1545,7 +1545,7 @@ class AdaptedReporterTests(unittest.SynchronousTestCase):
 
 
 
-class FakeStream(object):
+class FakeStream:
     """
     A fake stream which C{isatty} method returns some predictable.
 
@@ -1600,7 +1600,7 @@ class AnsiColorizerTests(unittest.SynchronousTestCase):
         to call C{curses.setupterm} if C{curses.tigetnum} previously failed
         with a C{curses.error}.
         """
-        class fakecurses(object):
+        class fakecurses:
             error = RuntimeError
             setUp = 0
 
@@ -1626,7 +1626,7 @@ class AnsiColorizerTests(unittest.SynchronousTestCase):
         to call C{curses.setupterm} if C{curses.tigetnum} returns something
         different than C{curses.error}.
         """
-        class fakecurses(object):
+        class fakecurses:
             error = RuntimeError
 
             def tigetnum(self, value):
@@ -1641,7 +1641,7 @@ class AnsiColorizerTests(unittest.SynchronousTestCase):
         L{reporter._AnsiColorizer.supported} returns C{False} if
         C{curses.tigetnum} returns less than 2 supported colors.
         """
-        class fakecurses(object):
+        class fakecurses:
             error = RuntimeError
 
             def tigetnum(self, value):
@@ -1656,7 +1656,7 @@ class AnsiColorizerTests(unittest.SynchronousTestCase):
         L{reporter._AnsiColorizer.supported} returns C{False} if
         C{curses.tigetnum} raises an error, and calls C{curses.setupterm} once.
         """
-        class fakecurses(object):
+        class fakecurses:
             error = RuntimeError
             setUp = 0
 

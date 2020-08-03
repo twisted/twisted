@@ -17,7 +17,7 @@ from twisted.python.reflect import (
     addMethodNamesToDict, fullyQualifiedName)
 
 
-class Base(object):
+class Base:
     """
     A no-op class which can be used to verify the behavior of
     method-discovering APIs.
@@ -37,7 +37,7 @@ class Sub(Base):
 
 
 
-class Separate(object):
+class Separate:
     """
     A no-op class with methods with differing prefixes.
     """
@@ -158,7 +158,7 @@ class AddMethodNamesToDictTests(TestCase):
         If C{baseClass} is passed to L{addMethodNamesToDict}, only methods which
         are a subclass of C{baseClass} are added to the result dictionary.
         """
-        class Alternate(object):
+        class Alternate:
             pass
 
         class Child(Separate, Alternate):
@@ -171,7 +171,7 @@ class AddMethodNamesToDictTests(TestCase):
 
 
 
-class Summer(object):
+class Summer:
     """
     A class we look up as part of the LookupsTests.
     """
@@ -378,7 +378,7 @@ class LookupsTests(TestCase):
 
 
 
-class Breakable(object):
+class Breakable:
 
     breakRepr = False
     breakStr = False
@@ -849,7 +849,7 @@ class ObjectGrepTests(TestCase):
 
 class GetClassTests(TestCase):
     def test_new(self):
-        class NewClass(object):
+        class NewClass:
             pass
         new = NewClass()
         self.assertEqual(reflect.getClass(NewClass).__name__, 'type')

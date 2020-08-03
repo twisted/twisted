@@ -10,7 +10,7 @@ L{twisted.python.fakepwd} provides a fake implementation of the L{pwd} API.
 __all__ = ['UserDatabase', 'ShadowDatabase']
 
 
-class _UserRecord(object):
+class _UserRecord:
     """
     L{_UserRecord} holds the user data for a single user in L{UserDatabase}.
     It corresponds to L{pwd.struct_passwd}.  See that class for attribute
@@ -37,7 +37,7 @@ class _UserRecord(object):
 
 
 
-class UserDatabase(object):
+class UserDatabase:
     """
     L{UserDatabase} holds a traditional POSIX user data in memory and makes it
     available via the same API as L{pwd}.
@@ -113,7 +113,7 @@ class UserDatabase(object):
 
 
 
-class _ShadowRecord(object):
+class _ShadowRecord:
     """
     L{_ShadowRecord} holds the shadow user data for a single user in
     L{ShadowDatabase}.  It corresponds to C{spwd.struct_spwd}.  See that class
@@ -144,7 +144,7 @@ class _ShadowRecord(object):
 
 
 
-class ShadowDatabase(object):
+class ShadowDatabase:
     """
     L{ShadowDatabase} holds a shadow user database in memory and makes it
     available via the same API as C{spwd}.

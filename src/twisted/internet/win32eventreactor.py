@@ -308,7 +308,7 @@ class Win32Reactor(posixbase.PosixReactorBase):
 
 
 
-class _ThreadFDWrapper(object):
+class _ThreadFDWrapper:
     """
     This wraps an event handler and translates notification in the helper
     L{Win32Reactor} thread into a notification in the primary reactor thread.
@@ -359,7 +359,7 @@ class _ThreadFDWrapper(object):
 
 
 @implementer(IReactorWin32Events)
-class _ThreadedWin32EventsMixin(object):
+class _ThreadedWin32EventsMixin:
     """
     This mixin implements L{IReactorWin32Events} for another reactor by running
     a L{Win32Reactor} in a separate thread and dispatching work to it.

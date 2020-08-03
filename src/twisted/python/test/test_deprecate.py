@@ -44,7 +44,7 @@ from twisted.trial.unittest import SynchronousTestCase
 # #5203.
 
 
-class _MockDeprecatedAttribute(object):
+class _MockDeprecatedAttribute:
     """
     Mock of L{twisted.python.deprecate._DeprecatedAttribute}.
 
@@ -700,14 +700,14 @@ class DeprecationWarningsTests(SynchronousTestCase):
 
 
 @deprecated(Version('Twisted', 1, 2, 3))
-class DeprecatedClass(object):
+class DeprecatedClass:
     """
     Class which is entirely deprecated without having a replacement.
     """
 
 
 
-class ClassWithDeprecatedProperty(object):
+class ClassWithDeprecatedProperty:
     """
     Class with a single deprecated property.
     """

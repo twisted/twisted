@@ -26,7 +26,7 @@ def _concatenate(bObj, offset, bArray):
 
 
 
-class _ConsumerMixin(object):
+class _ConsumerMixin:
     """
     L{IConsumer} implementations can mix this in to get C{registerProducer} and
     C{unregisterProducer} methods which take care of keeping track of a
@@ -118,7 +118,7 @@ class _ConsumerMixin(object):
 
 
 @implementer(interfaces.ILoggingContext)
-class _LogOwner(object):
+class _LogOwner:
     """
     Mixin to help implement L{interfaces.ILoggingContext} for transports which
     have a protocol, the log prefix of which should also appear in the

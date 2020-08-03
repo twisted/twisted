@@ -49,7 +49,7 @@ _LOCALCOMMAND = 'LOCAL'
 _PROXYCOMMAND = 'PROXY'
 
 @implementer(_interfaces.IProxyParser)
-class V2Parser(object):
+class V2Parser:
     """
     PROXY protocol version two header parser.
 

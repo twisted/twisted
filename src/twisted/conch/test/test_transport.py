@@ -158,7 +158,7 @@ class MockTransportBase(transport.SSHTransportBase):
 
 
 
-class MockCipher(object):
+class MockCipher:
     """
     A mocked-up version of twisted.conch.ssh.transport.SSHCiphers.
     """

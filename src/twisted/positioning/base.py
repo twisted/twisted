@@ -60,7 +60,7 @@ class Directions(Names):
 
 
 @implementer(ipositioning.IPositioningReceiver)
-class BasePositioningReceiver(object):
+class BasePositioningReceiver:
     """
     A base positioning receiver.
 
@@ -134,7 +134,7 @@ class InvalidChecksum(Exception):
 
 
 
-class Angle(FancyEqMixin, object):
+class Angle(FancyEqMixin):
     """
     An object representing an angle.
 
@@ -444,7 +444,7 @@ class Coordinate(Angle):
 
 
 
-class Altitude(FancyEqMixin, object):
+class Altitude(FancyEqMixin):
     """
     An altitude.
 
@@ -510,7 +510,7 @@ class Altitude(FancyEqMixin, object):
 
 
 
-class _BaseSpeed(FancyEqMixin, object):
+class _BaseSpeed(FancyEqMixin):
     """
     An object representing the abstract concept of the speed (rate of
     movement) of a mobile object.
@@ -618,7 +618,7 @@ class Climb(_BaseSpeed):
 
 
 
-class PositionError(FancyEqMixin, object):
+class PositionError(FancyEqMixin):
     """
     Position error information.
 
@@ -797,7 +797,7 @@ class PositionError(FancyEqMixin, object):
 
 
 
-class BeaconInformation(object):
+class BeaconInformation:
     """
     Information about positioning beacons (a generalized term for the reference
     objects that help you determine your position, such as satellites or cell
@@ -849,7 +849,7 @@ class BeaconInformation(object):
 
 
 @implementer(ipositioning.IPositioningBeacon)
-class PositioningBeacon(object):
+class PositioningBeacon:
     """
     A positioning beacon.
 

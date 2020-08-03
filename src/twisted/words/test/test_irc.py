@@ -1156,7 +1156,7 @@ class CTCPTests(IRCTestCase):
 
 
 
-class NoticingClient(IRCClientWithoutLogin, object):
+class NoticingClient(IRCClientWithoutLogin):
     methods = {
         'created': ('when',),
         'yourHost': ('info',),

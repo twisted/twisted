@@ -68,7 +68,7 @@ class PyUnitResultTests(SynchronousTestCase):
         C{run} does *not* provide L{IReporter}.
         """
         @implementer(IReporter)
-        class StubReporter(object):
+        class StubReporter:
             """
             A reporter which records data about calls made to it.
 

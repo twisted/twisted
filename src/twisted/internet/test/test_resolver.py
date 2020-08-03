@@ -46,7 +46,7 @@ from twisted.internet.base import (
 
 
 
-class DeterministicThreadPool(ThreadPool, object):
+class DeterministicThreadPool(ThreadPool):
     """
     Create a deterministic L{ThreadPool} object.
     """
@@ -87,14 +87,14 @@ def deterministicReactorThreads():
         object's C{callFromThread} method.
     """
     worker, doer = createMemoryWorker()
-    class CFT(object):
+    class CFT:
         def callFromThread(self, f, *a, **k):
             worker.do(lambda: f(*a, **k))
     return CFT(), doer
 
 
 
-class FakeAddrInfoGetter(object):
+class FakeAddrInfoGetter:
     """
     Test object implementing getaddrinfo.
     """
@@ -171,7 +171,7 @@ class FakeAddrInfoGetter(object):
 
 
 @implementer(IResolutionReceiver)
-class ResultHolder(object):
+class ResultHolder:
     """
     A resolution receiver which holds onto the results it received.
     """
@@ -409,7 +409,7 @@ class HostnameResolutionTests(UnitTest):
 
 
 @implementer(IResolverSimple)
-class SillyResolverSimple(object):
+class SillyResolverSimple:
     """
     Trivial implementation of L{IResolverSimple}
     """
@@ -436,7 +436,7 @@ class SillyResolverSimple(object):
 
 
 
-class LegacyCompatibilityTests(UnitTest, object):
+class LegacyCompatibilityTests(UnitTest):
     """
     Older applications may supply an object to the reactor via
     C{installResolver} that only provides L{IResolverSimple}.
@@ -553,7 +553,7 @@ class JustEnoughReactor(ReactorBase):
 
 
 
-class ReactorInstallationTests(UnitTest, object):
+class ReactorInstallationTests(UnitTest):
     """
     Tests for installing old and new resolvers onto a
     L{PluggableResolverMixin} and L{ReactorBase} (from which all of Twisted's

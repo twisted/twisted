@@ -38,15 +38,15 @@ except ImportError:
     # There is no version of startTLS available
     ITLSTransport = Interface  # type: ignore[misc,assignment]
 
-    class _TLSConnectionMixin(object):  # type: ignore[no-redef]
+    class _TLSConnectionMixin:  # type: ignore[no-redef]
         TLS = False
 
 
-    class _TLSClientMixin(object):  # type: ignore[no-redef]
+    class _TLSClientMixin:  # type: ignore[no-redef]
         pass
 
 
-    class _TLSServerMixin(object):  # type: ignore[no-redef]
+    class _TLSServerMixin:  # type: ignore[no-redef]
         pass
 
 
@@ -144,7 +144,7 @@ def _getsockname(skt):
 
 
 
-class _SocketCloser(object):
+class _SocketCloser:
     """
     @ivar _shouldShutdown: Set to C{True} if C{shutdown} should be called
         before calling C{close} on the underlying socket.
@@ -178,7 +178,7 @@ class _SocketCloser(object):
 
 
 
-class _AbortingMixin(object):
+class _AbortingMixin:
     """
     Common implementation of C{abortConnection}.
 
@@ -358,7 +358,7 @@ class Connection(_TLSConnectionMixin, abstract.FileDescriptor, _SocketCloser,
 
 
 
-class _BaseBaseClient(object):
+class _BaseBaseClient:
     """
     Code shared with other (non-POSIX) reactors for management of general
     outgoing connections.
@@ -692,7 +692,7 @@ def _resolveIPv6(ip, port):
 
 
 
-class _BaseTCPClient(object):
+class _BaseTCPClient:
     """
     Code shared with other (non-POSIX) reactors for management of outgoing TCP
     connections (both TCPv4 and TCPv6).
@@ -970,7 +970,7 @@ class _IFileDescriptorReservation(Interface):
 
 @implementer(_IFileDescriptorReservation)
 @attr.s
-class _FileDescriptorReservation(object):
+class _FileDescriptorReservation:
     """
     L{_IFileDescriptorReservation} implementation.
 
@@ -1037,7 +1037,7 @@ class _FileDescriptorReservation(object):
 
 
 @implementer(_IFileDescriptorReservation)
-class _NullFileDescriptorReservation(object):
+class _NullFileDescriptorReservation:
     """
     A null implementation of L{_IFileDescriptorReservation}.
     """
@@ -1130,7 +1130,7 @@ _ACCEPT_ERRORS = (EMFILE, ENOBUFS, ENFILE, ENOMEM, ECONNABORTED)
 
 
 @attr.s
-class _BuffersLogs(object):
+class _BuffersLogs:
     """
     A context manager that buffers any log events until after its
     block exits.

@@ -168,7 +168,7 @@ class XmlStream(protocol.Protocol, utility.EventDispatcher):
 
 
 
-class BootstrapMixin(object):
+class BootstrapMixin:
     """
     XmlStream factory mixin to install bootstrap event observers.
 

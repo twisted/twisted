@@ -20,7 +20,7 @@ except ImportError:
 
 
 
-class Descriptor(object):
+class Descriptor:
     """
     Records reads and writes, as if it were a C{FileDescriptor}.
     """

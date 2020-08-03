@@ -11,7 +11,7 @@ from twisted.python import urlpath
 
 
 
-class _BaseURLPathTests(object):
+class _BaseURLPathTests:
     """
     Tests for instantiated L{urlpath.URLPath}s.
     """

@@ -16,7 +16,7 @@ from twisted.trial.unittest import TestCase
 
 # This is somewhat generally useful and should probably be part of a public API
 # somewhere.  See #5977.
-class SetAsideModule(object):
+class SetAsideModule:
     """
     L{SetAsideModule} is a context manager for temporarily removing a module
     from C{sys.modules}.

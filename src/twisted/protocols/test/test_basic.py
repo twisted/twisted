@@ -912,7 +912,7 @@ class IntNTestCaseMixin(LPTestCaseMixin):
 
 
 
-class RecvdAttributeMixin(object):
+class RecvdAttributeMixin:
     """
     Mixin defining tests for string receiving protocols with a C{recvd}
     attribute which should be settable by application code, to be combined with
@@ -1129,7 +1129,7 @@ class Int8Tests(unittest.SynchronousTestCase, IntNTestCaseMixin,
 
 
 
-class OnlyProducerTransport(object):
+class OnlyProducerTransport:
     """
     Transport which isn't really a transport, just looks like one to
     someone not looking very hard.

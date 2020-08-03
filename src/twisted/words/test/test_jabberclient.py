@@ -57,7 +57,7 @@ class CheckVersionInitializerTests(unittest.TestCase):
 
 
 
-class InitiatingInitializerHarness(object):
+class InitiatingInitializerHarness:
     """
     Testing harness for interacting with XML stream initializers.
 

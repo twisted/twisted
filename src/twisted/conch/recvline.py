@@ -22,7 +22,7 @@ _counters = {}  # type: Dict[str, int]
 
 
 
-class Logging(object):
+class Logging:
     """
     Wrapper which logs attribute lookups.
 
@@ -55,7 +55,7 @@ class Logging(object):
 
 
 @implementer(insults.ITerminalTransport)
-class TransportSequence(object):
+class TransportSequence:
     """
     An L{ITerminalTransport} implementation which forwards calls to
     one or more other L{ITerminalTransport}s.
@@ -361,7 +361,7 @@ def %s(self, *a, **kw):
 
 
 
-class LocalTerminalBufferMixin(object):
+class LocalTerminalBufferMixin:
     """
     A mixin for RecvLine subclasses which records the state of the terminal.
 

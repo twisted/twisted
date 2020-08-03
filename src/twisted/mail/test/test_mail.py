@@ -417,7 +417,7 @@ class FailingMaildirMailboxAppendMessageTask(
 
 
 
-class _AppendTestMixin(object):
+class _AppendTestMixin:
     """
     Mixin for L{MaildirMailbox.appendMessage} test cases which defines a helper
     for serially appending multiple messages to a mailbox.
@@ -788,7 +788,7 @@ class MaildirDirdbmDomainTests(TestCase):
 
 
 @implementer(mail.mail.IAliasableDomain)
-class StubAliasableDomain(object):
+class StubAliasableDomain:
     """
     Minimal testable implementation of IAliasableDomain.
     """
@@ -1321,7 +1321,7 @@ class MXTests(TestCase):
         @type correctMailExchange: C{str}
         @rtype: L{Deferred}
         """
-        class DummyResolver(object):
+        class DummyResolver:
             def lookupMailExchange(self, name):
                 if name == domain:
                     return defer.succeed((
@@ -1455,7 +1455,7 @@ class MXTests(TestCase):
         ip = '1.2.3.4'
         domain = 'example.org'
 
-        class DummyResolver(object):
+        class DummyResolver:
             """
             Fake resolver which will respond to an MX lookup with an empty
             result set.
@@ -1488,7 +1488,7 @@ class MXTests(TestCase):
         L{MXCalculator.getMX} ultimately fires with a Record_MX instance which
         gives the address in the A record for the name.
         """
-        class DummyResolver(object):
+        class DummyResolver:
             """
             Fake resolver which will fail an MX lookup but then succeed a
             getHostByName call.
@@ -1515,7 +1515,7 @@ class MXTests(TestCase):
         canonical = "canonical.example.com"
         exchange = "mail.example.com"
 
-        class DummyResolver(object):
+        class DummyResolver:
             """
             Fake resolver which will return a CNAME for an MX lookup of a name
             which is an alias and an MX for an MX lookup of the canonical name.
@@ -1548,7 +1548,7 @@ class MXTests(TestCase):
         the length specified, the returned L{Deferred} should errback with
         L{CanonicalNameChainTooLong}.
         """
-        class DummyResolver(object):
+        class DummyResolver:
             """
             Fake resolver which generates a CNAME chain of infinite length in
             response to MX lookups.
@@ -1588,7 +1588,7 @@ class MXTests(TestCase):
         canonical = "canonical.example.com"
         exchange = "mail.example.com"
 
-        class DummyResolver(object):
+        class DummyResolver:
             def lookupMailExchange(self, domain):
                 if domain != alias or lookedUp:
                     # Don't give back any results for anything except the alias
@@ -1618,7 +1618,7 @@ class MXTests(TestCase):
         firstAlias = "cname1.example.com"
         secondAlias = "cname2.example.com"
 
-        class DummyResolver(object):
+        class DummyResolver:
             def lookupMailExchange(self, domain):
                 return defer.succeed((
                         [RRHeader(name=firstAlias,
@@ -1936,7 +1936,7 @@ class AliasTests(TestCase):
 
 
 
-class DummyDomain(object):
+class DummyDomain:
     """
     Test domain for L{AddressAliasTests}.
     """
@@ -2006,7 +2006,7 @@ class AddressAliasTests(TestCase):
 
 
 
-class DummyProcess(object):
+class DummyProcess:
     __slots__ = ['onEnd']
 
 
@@ -2031,7 +2031,7 @@ class MockAliasGroup(mail.alias.AliasGroup):
 
 
 
-class StubProcess(object):
+class StubProcess:
     """
     Fake implementation of L{IProcessTransport}.
 
@@ -2343,7 +2343,7 @@ class TestDomain:
 
 
 
-class DummyQueue(object):
+class DummyQueue:
     """
     A fake relay queue to use for testing.
 
@@ -2428,7 +2428,7 @@ class DummyQueue(object):
 
 
 
-class DummySmartHostSMTPRelayingManager(object):
+class DummySmartHostSMTPRelayingManager:
     """
     A fake smart host to use for testing.
 

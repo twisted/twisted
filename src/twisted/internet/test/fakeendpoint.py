@@ -16,7 +16,7 @@ from twisted.internet.interfaces import (
 
 
 @implementer(IPlugin)
-class PluginBase(object):
+class PluginBase:
 
     def __init__(self, pfx):
         self.prefix = pfx
@@ -39,7 +39,7 @@ class FakeParser(PluginBase):
 
 
 
-class EndpointBase(object):
+class EndpointBase:
 
     def __init__(self, parser, args, kwargs):
         self.parser = parser

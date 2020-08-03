@@ -105,7 +105,7 @@ class IVCSCommand(Interface):
 
 
 @implementer(IVCSCommand)
-class GitCommand(object):
+class GitCommand:
     """
     Subset of Git commands to release Twisted from a Git repository.
     """
@@ -197,7 +197,7 @@ def getRepositoryCommand(directory):
 
 
 
-class Project(object):
+class Project:
     """
     A representation of a project that has a version.
 
@@ -272,7 +272,7 @@ class NoDocumentsFound(Exception):
 
 
 
-class APIBuilder(object):
+class APIBuilder:
     """
     Generate API documentation from source files using
     U{pydoctor<https://github.com/twisted/pydoctor>}.  This requires
@@ -344,7 +344,7 @@ class APIBuilder(object):
 
 
 
-class SphinxBuilder(object):
+class SphinxBuilder:
     """
     Generate HTML documentation using Sphinx.
 
@@ -456,7 +456,7 @@ class NotWorkingDirectory(Exception):
 
 
 
-class BuildAPIDocsScript(object):
+class BuildAPIDocsScript:
     """
     A thing for building API documentation. See L{main}.
     """
@@ -499,7 +499,7 @@ class BuildAPIDocsScript(object):
 
 
 
-class CheckNewsfragmentScript(object):
+class CheckNewsfragmentScript:
     """
     A thing for checking whether a checkout has a newsfragment.
     """

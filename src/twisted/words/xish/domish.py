@@ -312,7 +312,7 @@ class IElement(Interface):
 
 
 @implementer(IElement)
-class Element(object):
+class Element:
     """ Represents an XML element node.
 
     An Element contains a series of attributes (name/value pairs), content

@@ -24,7 +24,7 @@ TwistedXMPPRouter = ServiceMaker(
 
 
 @provider(IPlugin, iwords.IProtocolPlugin)
-class RelayChatInterface(object):
+class RelayChatInterface:
 
     name = 'irc'
 
@@ -36,7 +36,7 @@ class RelayChatInterface(object):
 
 
 @provider(IPlugin, iwords.IProtocolPlugin)
-class PBChatInterface(object):
+class PBChatInterface:
 
     name = 'pb'
 

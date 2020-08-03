@@ -133,7 +133,7 @@ def internJID(jidstring):
 
 
 
-class JID(object):
+class JID:
     """
     Represents a stringprep'd Jabber ID.
 

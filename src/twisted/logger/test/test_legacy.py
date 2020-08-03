@@ -46,7 +46,7 @@ class LegacyLogObserverWrapperTests(unittest.TestCase):
         """
         L{LegacyLogObserverWrapper} returns the expected string.
         """
-        class LegacyObserver(object):
+        class LegacyObserver:
             def __repr__(self) -> str:
                 return "<Legacy Observer>"
 

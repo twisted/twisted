@@ -15,7 +15,7 @@ from ._convenience import Quit
 _stop = object()
 
 @implementer(IExclusiveWorker)
-class ThreadWorker(object):
+class ThreadWorker:
     """
     An L{IExclusiveWorker} implemented based on a single thread and a queue.
 
@@ -68,7 +68,7 @@ class ThreadWorker(object):
 
 
 @implementer(IExclusiveWorker)
-class LockWorker(object):
+class LockWorker:
     """
     An L{IWorker} implemented based on a mutual-exclusion lock.
     """

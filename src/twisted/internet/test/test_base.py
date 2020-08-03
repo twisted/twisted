@@ -32,7 +32,7 @@ else:
 
 
 @implementer(IReactorTime, IReactorThreads)
-class FakeReactor(object):
+class FakeReactor:
     """
     A fake reactor implementation which just supports enough reactor APIs for
     L{ThreadedResolver}.
@@ -193,7 +193,7 @@ class ThreadedResolverTests(TestCase):
         calls = []
 
         @implementer(IResolverSimple)
-        class FakeResolver(object):
+        class FakeResolver:
             def getHostByName(self, name, timeouts=()):
                 calls.append(name)
                 return Deferred()
@@ -234,7 +234,7 @@ def nothing():
 
 
 
-class DelayedCallMixin(object):
+class DelayedCallMixin:
     """
     L{DelayedCall}
     """

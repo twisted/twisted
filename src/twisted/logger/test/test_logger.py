@@ -39,7 +39,7 @@ class TestLogger(Logger):
 
 
 
-class LogComposedObject(object):
+class LogComposedObject:
     """
     A regular object, with a logger attached.
     """
@@ -113,7 +113,7 @@ class LoggerTests(unittest.TestCase):
         """
         observed = []
 
-        class MyObject(object):
+        class MyObject:
             log = Logger(observer=observed.append)
 
         MyObject.log.info("hello")
@@ -174,7 +174,7 @@ class LoggerTests(unittest.TestCase):
         def observer(event):
             self.assertEqual(event["log_source"], Thingo)
 
-        class Thingo(object):
+        class Thingo:
             log = TestLogger(observer=observer)
 
         Thingo.log.info()
@@ -187,7 +187,7 @@ class LoggerTests(unittest.TestCase):
         def observer(event):
             self.assertEqual(event["log_source"], thingo)
 
-        class Thingo(object):
+        class Thingo:
             log = TestLogger(observer=observer)
 
         thingo = Thingo()

@@ -32,7 +32,7 @@ class ModuleWarning(Warning):
 
 
 
-class EmitMixin(object):
+class EmitMixin:
     """
     Mixin for emiting a variety of warnings.
     """
@@ -59,13 +59,13 @@ class SuppressionMixin(EmitMixin):
 
 
 
-class SetUpSuppressionMixin(object):
+class SetUpSuppressionMixin:
     def setUp(self):
         self._emit()
 
 
 
-class TearDownSuppressionMixin(object):
+class TearDownSuppressionMixin:
     def tearDown(self):
         self._emit()
 

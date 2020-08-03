@@ -419,7 +419,7 @@ class FormatFieldTests(unittest.TestCase):
 
 
 
-class Unformattable(object):
+class Unformattable:
     """
     An object that raises an exception from C{__repr__}.
     """

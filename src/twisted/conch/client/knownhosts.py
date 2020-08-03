@@ -70,7 +70,7 @@ def _extractCommon(string):
 
 
 
-class _BaseEntry(object):
+class _BaseEntry:
     """
     Abstract base of both hashed and non-hashed entry objects, since they
     represent keys and key types the same way.
@@ -186,7 +186,7 @@ class PlainEntry(_BaseEntry):
 
 
 @implementer(IKnownHostEntry)
-class UnparsedEntry(object):
+class UnparsedEntry:
     """
     L{UnparsedEntry} is an entry in a L{KnownHostsFile} which can't actually be
     parsed; therefore it matches no keys and no hosts.
@@ -340,7 +340,7 @@ class HashedEntry(_BaseEntry, FancyEqMixin):
 
 
 
-class KnownHostsFile(object):
+class KnownHostsFile:
     """
     A structured representation of an OpenSSH-format ~/.ssh/known_hosts file.
 
@@ -570,7 +570,7 @@ class KnownHostsFile(object):
 
 
 
-class ConsoleUI(object):
+class ConsoleUI:
     """
     A UI object that can ask true/false questions and post notifications on the
     console, to be used during key verification.

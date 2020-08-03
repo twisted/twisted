@@ -57,7 +57,7 @@ class BrokenTestCaseWarning(Warning):
 
 
 
-class SafeStream(object):
+class SafeStream:
     """
     Wraps a stream object so that all C{write} calls are wrapped in
     L{untilConcludes<twisted.python.util.untilConcludes>}.
@@ -77,7 +77,7 @@ class SafeStream(object):
 
 
 @implementer(itrial.IReporter)
-class TestResult(pyunit.TestResult, object):
+class TestResult(pyunit.TestResult):
     """
     Accumulates the results of several L{twisted.trial.unittest.TestCase}s.
 
@@ -876,7 +876,7 @@ class TimingTextReporter(VerboseTextReporter):
 
 
 
-class _AnsiColorizer(object):
+class _AnsiColorizer:
     """
     A colorizer is an object that loosely wraps around a stream, allowing
     callers to write text to the stream in a particular color.
@@ -927,7 +927,7 @@ class _AnsiColorizer(object):
 
 
 
-class _Win32Colorizer(object):
+class _Win32Colorizer:
     """
     See _AnsiColorizer docstring.
     """
@@ -979,7 +979,7 @@ class _Win32Colorizer(object):
 
 
 
-class _NullColorizer(object):
+class _NullColorizer:
     """
     See _AnsiColorizer docstring.
     """
@@ -998,7 +998,7 @@ class _NullColorizer(object):
 
 
 @implementer(itrial.IReporter)
-class SubunitReporter(object):
+class SubunitReporter:
     """
     Reports test output via Subunit.
 

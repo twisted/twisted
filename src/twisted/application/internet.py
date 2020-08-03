@@ -364,7 +364,7 @@ class CooperatorService(service.Service):
 
 
 
-class StreamServerEndpointService(service.Service, object):
+class StreamServerEndpointService(service.Service):
     """
     A L{StreamServerEndpointService} is an L{IService} which runs a server on a
     listening port described by an L{IStreamServerEndpoint
@@ -446,7 +446,7 @@ class StreamServerEndpointService(service.Service, object):
 
 
 
-class _ReconnectingProtocolProxy(object):
+class _ReconnectingProtocolProxy:
     """
     A proxy for a Protocol to provide connectionLost notification to a client
     connection service, in support of reconnecting when connections are lost.
@@ -493,7 +493,7 @@ class _ReconnectingProtocolProxy(object):
 
 
 
-class _DisconnectFactory(object):
+class _DisconnectFactory:
     """
     A L{_DisconnectFactory} is a proxy for L{IProtocolFactory} that catches
     C{connectionLost} notifications and relays them.
@@ -590,7 +590,7 @@ def _firstResult(gen):
 
 
 
-class _ClientMachine(object):
+class _ClientMachine:
     """
     State machine for maintaining a single outgoing connection to an endpoint.
 
@@ -1077,7 +1077,7 @@ class _ClientMachine(object):
 
 
 
-class ClientService(service.Service, object):
+class ClientService(service.Service):
     """
     A L{ClientService} maintains a single outgoing connection to a client
     endpoint, reconnecting after a configurable timeout when a connection

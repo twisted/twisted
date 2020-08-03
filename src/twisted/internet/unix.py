@@ -51,7 +51,7 @@ def _ancillaryDescriptor(fd):
 
 
 
-class _SendmsgMixin(object):
+class _SendmsgMixin:
     """
     Mixin for stream-oriented UNIX transports which uses sendmsg and recvmsg to
     offer additional functionality, such as copying file descriptors into other
@@ -224,7 +224,7 @@ class _SendmsgMixin(object):
                 os.close(fd)
 
 
-class _UnsupportedSendmsgMixin(object):
+class _UnsupportedSendmsgMixin:
     """
     Behaviorless placeholder used when C{twisted.python.sendmsg} is not
     available, preventing L{IUNIXTransport} from being supported.
@@ -303,7 +303,7 @@ def _inFilesystemNamespace(path):
     return path[:1] not in (b"\0", u"\0")
 
 
-class _UNIXPort(object):
+class _UNIXPort:
     def getHost(self):
         """
         Returns a UNIXAddress.

@@ -554,7 +554,7 @@ class BrokenExceptionMetaclass(type):
 
 
 
-class BrokenExceptionType(Exception, object):
+class BrokenExceptionType(Exception):
     """
     The aforementioned exception type which cnanot be presented as a string via
     L{str}.

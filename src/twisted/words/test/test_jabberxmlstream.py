@@ -956,7 +956,7 @@ class ToResponseTests(unittest.TestCase):
         self.assertFalse(response.hasAttribute('type'))
 
 
-class DummyFactory(object):
+class DummyFactory:
     """
     Dummy XmlStream factory that only registers bootstrap observers.
     """
@@ -1026,7 +1026,7 @@ class XMPPHandlerTests(unittest.TestCase):
         """
         Test that data is passed on for sending by the stream manager.
         """
-        class DummyStreamManager(object):
+        class DummyStreamManager:
             def __init__(self):
                 self.outlist = []
 
@@ -1350,7 +1350,7 @@ class XmlStreamServerFactoryTests(GenericXmlStreamFactoryTestsMixin):
         """
         Set up a server factory with an authenticator factory function.
         """
-        class TestAuthenticator(object):
+        class TestAuthenticator:
             def __init__(self):
                 self.xmlstreams = []
 

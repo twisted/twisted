@@ -415,7 +415,7 @@ def _keysFromFilepaths(filepaths, parseKey):
 
 
 @implementer(IAuthorizedKeysDB)
-class InMemorySSHKeyDB(object):
+class InMemorySSHKeyDB:
     """
     Object that provides SSH public keys based on a dictionary of usernames
     mapped to L{twisted.conch.ssh.keys.Key}s.
@@ -440,7 +440,7 @@ class InMemorySSHKeyDB(object):
 
 
 @implementer(IAuthorizedKeysDB)
-class UNIXAuthorizedKeysFiles(object):
+class UNIXAuthorizedKeysFiles:
     """
     Object that provides SSH public keys based on public keys listed in
     authorized_keys and authorized_keys2 files in UNIX user .ssh/ directories.
@@ -482,7 +482,7 @@ class UNIXAuthorizedKeysFiles(object):
 
 
 @implementer(ICredentialsChecker)
-class SSHPublicKeyChecker(object):
+class SSHPublicKeyChecker:
     """
     Checker that authenticates SSH public keys, based on public keys listed in
     authorized_keys and authorized_keys2 files in user .ssh/ directories.

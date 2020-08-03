@@ -33,7 +33,7 @@ from zope.interface import implementer, verify
 
 
 
-class FakeTransport(object):
+class FakeTransport:
     """
     A simple fake process transport.
     """
@@ -160,7 +160,7 @@ class CountingReactorTests(SynchronousTestCase):
 
 
 
-class EternalTerminationPredicateFactory(object):
+class EternalTerminationPredicateFactory:
     """
     A rigged terminationPredicateFactory for which time never pass.
     """

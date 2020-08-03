@@ -432,7 +432,7 @@ _months = [
 
 
 @implementer(interfaces.IConsumer)
-class DTP(protocol.Protocol, object):
+class DTP(protocol.Protocol):
     isConnected = False
 
     _cons = None
@@ -679,7 +679,7 @@ class DTPFactory(protocol.ClientFactory):
 
 # -- FTP-PI (Protocol Interpreter) --
 
-class ASCIIConsumerWrapper(object):
+class ASCIIConsumerWrapper:
     def __init__(self, cons):
         self.cons = cons
         self.registerProducer = cons.registerProducer
@@ -697,7 +697,7 @@ class ASCIIConsumerWrapper(object):
 
 
 @implementer(interfaces.IConsumer)
-class FileConsumer(object):
+class FileConsumer:
     """
     A consumer for FTP input that writes data to a file.
 
@@ -733,7 +733,7 @@ class FTPOverflowProtocol(basic.LineReceiver):
 
 
 
-class FTP(basic.LineReceiver, policies.TimeoutMixin, object):
+class FTP(basic.LineReceiver, policies.TimeoutMixin):
     """
     Protocol Interpreter for the File Transfer Protocol
 
@@ -1900,7 +1900,7 @@ def _testPermissions(uid, gid, spath, mode='r'):
 
 
 @implementer(IFTPShell)
-class FTPAnonymousShell(object):
+class FTPAnonymousShell:
     """
     An anonymous implementation of IFTPShell
 
@@ -2164,7 +2164,7 @@ class FTPAnonymousShell(object):
 
 
 @implementer(IReadFile)
-class _FileReader(object):
+class _FileReader:
     def __init__(self, fObj):
         self.fObj = fObj
         self._send = False
@@ -2275,7 +2275,7 @@ class FTPShell(FTPAnonymousShell):
 
 
 @implementer(IWriteFile)
-class _FileWriter(object):
+class _FileWriter:
     def __init__(self, fObj):
         self.fObj = fObj
         self._receive = False

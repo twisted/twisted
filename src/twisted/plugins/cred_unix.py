@@ -48,7 +48,7 @@ def verifyCryptedPassword(crypted, pw):
 
 
 @implementer(ICredentialsChecker)
-class UNIXChecker(object):
+class UNIXChecker:
     """
     A credentials checker for a UNIX server. This will check that
     an authenticating username/password is a valid user on the system.
@@ -162,7 +162,7 @@ Future versions may include support for PAM authentication.
 
 
 @implementer(ICheckerFactory, plugin.IPlugin)
-class UNIXCheckerFactory(object):
+class UNIXCheckerFactory:
     """
     A factory for L{UNIXChecker}.
     """
