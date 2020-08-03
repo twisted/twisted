@@ -2413,6 +2413,11 @@ class Win32UnicodeEnvironmentTests(unittest.TestCase):
         return p.getResult().addCallback(gotEnvironment)
 
 
+    @skipIf(sys.stdout.encoding != sys.getfilesystemencoding(),
+            "sys.stdout.encoding: {} does not match "
+            "sys.getfilesystemencoding(): {} .  May need to set "
+            "PYTHONUTF8 and PYTHONIOENCODING environment variables.".format(
+            sys.stdout.encoding, sys.getfilesystemencoding()))
     def test_UTF8StringInEnvironment(self):
         """
         L{os.environ} (inherited by every subprocess on Windows) can
