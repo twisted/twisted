@@ -62,8 +62,11 @@ if requireModule("OpenSSL"):
     try:
         ctx = SSL.Context(SSL.SSLv23_METHOD)
         ctx.set_npn_advertise_callback(lambda c: None)
-    except NotImplementedError:
-        skipNPN = "OpenSSL 1.0.1 or greater required for NPN support"
+    except (NotImplementedError, AttributeError):
+        skipNPN = (
+            "NPN is deprecated (and OpenSSL 1.0.1 or greater required for NPN"
+            " support)"
+        )
 
     try:
         ctx = SSL.Context(SSL.SSLv23_METHOD)
