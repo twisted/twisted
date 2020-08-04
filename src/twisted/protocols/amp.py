@@ -1465,9 +1465,9 @@ class Integer(Argument):
 
 
 
-class String(Argument):
+class Binary(Argument):
     """
-    Don't do any conversion at all; just pass through 'str'.
+    Don't do any conversion at all; just pass through 'bytes'.
     """
     def toString(self, inObject):
         return inObject
@@ -1475,6 +1475,8 @@ class String(Argument):
     def fromString(self, inString):
         return inString
 
+
+String = Binary
 
 
 class Float(Argument):
