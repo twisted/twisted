@@ -44,7 +44,7 @@ class Counter(object):
             self._count += other
         return self
 
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
         """equality operator, compare other to my value()
 
            >>> c = Counter()
@@ -58,7 +58,7 @@ class Counter(object):
         """
         return self._count == other
 
-    def __ne__(self, other):
+    def __ne__(self, other: object) -> bool:
         """inequality operator
 
              >>> c = Counter()

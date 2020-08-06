@@ -49,7 +49,7 @@ class LogComposedObject(object):
         self.state = state
 
 
-    def __str__(self):
+    def __str__(self) -> str:
         return "<LogComposedObject {state}>".format(state=self.state)
 
 

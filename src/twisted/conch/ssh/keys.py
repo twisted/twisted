@@ -7,11 +7,12 @@ Handling of RSA, DSA, ECDSA, and Ed25519 keys.
 """
 
 
-import base64
 import binascii
 import itertools
 import struct
+import unicodedata
 import warnings
+from base64 import b64encode, decodebytes, encodebytes
 from hashlib import md5, sha256
 
 import bcrypt
@@ -31,10 +32,7 @@ from pyasn1.type import univ
 from twisted.conch.ssh import common, sexpy
 from twisted.conch.ssh.common import int_from_bytes, int_to_bytes
 from twisted.python import randbytes
-from twisted.python.compat import (
-    iterbytes, long, izip, nativeString, unicode,
-    _b64decodebytes as decodebytes, _b64encodebytes as encodebytes,
-    _bytesChr as chr)
+from twisted.python.compat import iterbytes, long, izip, nativeString, unicode
 from twisted.python.constants import NamedConstant, Names
 from twisted.python.deprecate import _mutuallyExclusiveArguments
 
@@ -107,6 +105,46 @@ class FingerprintFormats(Names):
 
 
 
+class PassphraseNormalizationError(Exception):
+    """
+    Raised when a passphrase contains Unicode characters that cannot be
+    normalized using the available Unicode character database.
+    """
+
+
+
+def _normalizePassphrase(passphrase):
+    """
+    Normalize a passphrase, which may be Unicode.
+
+    If the passphrase is Unicode, this follows the requirements of U{NIST
+    800-63B, section
+    5.1.1.2<https://pages.nist.gov/800-63-3/sp800-63b.html#memsecretver>}
+    for Unicode characters in memorized secrets: it applies the
+    Normalization Process for Stabilized Strings using NFKC normalization.
+    The passphrase is then encoded using UTF-8.
+
+    @type passphrase: L{bytes} or L{unicode} or L{None}
+    @param passphrase: The passphrase to normalize.
+
+    @return: The normalized passphrase, if any.
+    @rtype: L{bytes} or L{None}
+    @raises PassphraseNormalizationError: if the passphrase is Unicode and
+    cannot be normalized using the available Unicode character database.
+    """
+    if isinstance(passphrase, unicode):
+        # The Normalization Process for Stabilized Strings requires aborting
+        # with an error if the string contains any unassigned code point.
+        if any(unicodedata.category(c) == 'Cn' for c in passphrase):
+            # Perhaps not very helpful, but we don't want to leak any other
+            # information about the passphrase.
+            raise PassphraseNormalizationError()
+        return unicodedata.normalize('NFKC', passphrase).encode('UTF-8')
+    else:
+        return passphrase
+
+
+
 class Key(object):
     """
     An object representing a key.  A key can be either a public or
@@ -163,8 +201,7 @@ class Key(object):
         """
         if isinstance(data, unicode):
             data = data.encode("utf-8")
-        if isinstance(passphrase, unicode):
-            passphrase = passphrase.encode("utf-8")
+        passphrase = _normalizePassphrase(passphrase)
         if type is None:
             type = cls._guessStringType(data)
         if type is None:
@@ -902,25 +939,16 @@ class Key(object):
         """
         self._keyObject = keyObject
 
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
         """
         Return True if other represents an object with the same key.
         """
-        if type(self) == type(other):
+        if isinstance(other, Key):
             return self.type() == other.type() and self.data() == other.data()
         else:
             return NotImplemented
 
-    def __ne__(self, other):
-        """
-        Return True if other represents anything other than this key.
-        """
-        result = self.__eq__(other)
-        if result == NotImplemented:
-            return result
-        return not result
-
-    def __repr__(self):
+    def __repr__(self) -> str:
         """
         Return a pretty representation of this object.
         """
@@ -1016,8 +1044,7 @@ class Key(object):
         @rtype: L{str}
         """
         if format is FingerprintFormats.SHA256_BASE64:
-            return nativeString(base64.b64encode(
-                sha256(self.blob()).digest()))
+            return nativeString(b64encode(sha256(self.blob()).digest()))
         elif format is FingerprintFormats.MD5_HEX:
             return nativeString(
                 b':'.join([binascii.hexlify(x)
@@ -1344,8 +1371,7 @@ class Key(object):
                 passphrase = extra
         if isinstance(comment, unicode):
             comment = comment.encode("utf-8")
-        if isinstance(passphrase, unicode):
-            passphrase = passphrase.encode("utf-8")
+        passphrase = _normalizePassphrase(passphrase)
         method = getattr(self, '_toString_%s' % (type.upper(),), None)
         if method is None:
             raise BadKeyError('unknown key type: %s' % (type,))
@@ -1409,7 +1435,7 @@ class Key(object):
         padByte = 0
         while len(privKeyList) % blockSize:
             padByte += 1
-            privKeyList += chr(padByte & 0xFF)
+            privKeyList += bytes((padByte & 0xFF,))
         if passphrase:
             encKey = bcrypt.kdf(passphrase, salt, keySize + ivSize, 100)
             encryptor = Cipher(
@@ -1489,7 +1515,7 @@ class Key(object):
             bb = md5(ba + passphrase + iv).digest()
             encKey = (ba + bb)[:24]
             padLen = 8 - (len(asn1Data) % 8)
-            asn1Data += chr(padLen) * padLen
+            asn1Data += bytes((padLen,)) * padLen
 
             encryptor = Cipher(
                 algorithms.TripleDES(encKey),

@@ -38,7 +38,7 @@ class SSHTransportAddress(util.FancyEqMixin, object):
         self.address = address
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return 'SSHTransportAddress(%r)' % (self.address,)
 
 

@@ -11,8 +11,7 @@ you are sitting at an interactive terminal.  For example, to programmatically
 interact with a known_hosts database, use L{twisted.conch.client.knownhosts}.
 """
 
-from twisted.python.compat import (
-    nativeString, raw_input, _b64decodebytes as decodebytes)
+from twisted.python.compat import nativeString, raw_input
 from twisted.python.filepath import FilePath
 
 from twisted.conch.error import ConchError
@@ -28,6 +27,7 @@ import getpass
 import io
 import os
 import sys
+from base64 import decodebytes
 
 # The default location of the known hosts file (probably should be parsed out
 # of an ssh config file someday).

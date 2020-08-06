@@ -204,7 +204,7 @@ class JID(object):
             else:
                 return self.host
 
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
         """
         Equality comparison.
 
@@ -218,19 +218,6 @@ class JID(object):
                     self.resource == other.resource)
         else:
             return NotImplemented
-
-    def __ne__(self, other):
-        """
-        Inequality comparison.
-
-        This negates L{__eq__} for comparison with JIDs and uses the default
-        comparison for other types.
-        """
-        result = self.__eq__(other)
-        if result is NotImplemented:
-            return result
-        else:
-            return not result
 
 
     def __hash__(self):
@@ -257,7 +244,7 @@ class JID(object):
     __str__ = __unicode__
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """
         Get object representation.
 

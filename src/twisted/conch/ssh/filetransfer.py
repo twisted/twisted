@@ -1032,7 +1032,7 @@ class SFTPError(Exception):
         return self._message
 
 
-    def __str__(self):
+    def __str__(self) -> str:
         return 'SFTPError {}: {}'.format(self.code, self.message)
 
 

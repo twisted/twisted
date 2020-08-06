@@ -26,8 +26,8 @@ from cryptography.hazmat.primitives.asymmetric import dh, ec, x25519
 
 from twisted import __version__ as twisted_version
 from twisted.internet import protocol, defer
-from twisted.python import randbytes
-from twisted.python.compat import iterbytes, _bytesChr as chr, networkString
+from twisted.python import log, randbytes
+from twisted.python.compat import iterbytes, networkString
 from twisted.logger import Logger
 
 # This import is needed if SHA256 hashing is used.
@@ -532,7 +532,7 @@ class SSHTransportBase(protocol.Protocol):
                     self._keyExchangeState,))
 
         self.ourKexInitPayload = b''.join([
-            chr(MSG_KEXINIT),
+            bytes((MSG_KEXINIT,)),
             randbytes.secureRandom(16),
             NS(b','.join(self.supportedKeyExchanges)),
             NS(b','.join(self.supportedPublicKeys)),
@@ -590,7 +590,7 @@ class SSHTransportBase(protocol.Protocol):
                 self._blockedByKeyExchange.append((messageType, payload))
                 return
 
-        payload = chr(messageType) + payload
+        payload = bytes((messageType,)) + payload
         if self.outgoingCompression:
             payload = (self.outgoingCompression.compress(payload)
                        + self.outgoingCompression.flush(2))
@@ -831,7 +831,7 @@ class SSHTransportBase(protocol.Protocol):
         @return: A L{tuple} of negotiated key exchange algorithms, key
         algorithms, and unhandled data, or L{None} if something went wrong.
         """
-        self.otherKexInitPayload = chr(MSG_KEXINIT) + packet
+        self.otherKexInitPayload = bytes((MSG_KEXINIT,)) + packet
         # This is useless to us:
         # cookie = packet[: 16]
         k = getNS(packet[16:], 10)
@@ -975,8 +975,8 @@ class SSHTransportBase(protocol.Protocol):
         @param language: optionally, the language the message is in.
         @type language: L{str}
         """
-        self.sendPacket(MSG_DEBUG, chr(alwaysDisplay) + NS(message) +
-                        NS(language))
+        self.sendPacket(MSG_DEBUG, (b'\1' if alwaysDisplay else b'\0') +
+                        NS(message) + NS(language))
 
 
     def sendIgnore(self, message):

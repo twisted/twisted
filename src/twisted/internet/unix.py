@@ -348,7 +348,7 @@ class Port(_UNIXPort, tcp.Port):
         self._preexistingSocket = port
         return self
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         factoryName = reflect.qual(self.factory.__class__)
         if hasattr(self, 'socket'):
             return '<%s on %r>' % (
@@ -481,7 +481,7 @@ class DatagramPort(_UNIXPort, udp.Port):
         self.mode = mode
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         protocolName = reflect.qual(self.protocol.__class__,)
         if hasattr(self, 'socket'):
             return '<%s on %r>' % (protocolName, self.port)

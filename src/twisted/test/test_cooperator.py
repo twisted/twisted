@@ -224,7 +224,7 @@ class CooperatorTests(unittest.TestCase):
             def __init__(self, func):
                 self.func = func
 
-            def __repr__(self):
+            def __repr__(self) -> str:
                 return '<FakeCall %r>' % (self.func,)
 
         def sched(f):

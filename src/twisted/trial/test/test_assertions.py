@@ -19,7 +19,7 @@ import unittest as pyunit
 from twisted.python.util import FancyEqMixin
 from twisted.python.reflect import (
     prefixedMethods, accumulateMethods, fullyQualifiedName)
-from twisted.python.deprecate import deprecated
+from twisted.python.deprecate import deprecated, deprecatedModuleAttribute
 from incremental import Version, getVersionString
 from twisted.python.failure import Failure
 from twisted.trial import unittest
@@ -32,7 +32,7 @@ class MockEquality(FancyEqMixin, object):
         self.name = name
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "MockEquality(%s)" % (self.name,)
 
 
@@ -1672,3 +1672,104 @@ def oldMethodReplaced(x):
     mythical 'newMethod'.
     """
     return 2 * x
+
+
+
+class GetDeprecatedModuleAttributeTests(unittest.SynchronousTestCase):
+    """
+    Test L{SynchronousTestCase.getDeprecatedModuleAttribute}
+
+    @ivar version: The version at which L{test_assertions.somethingOld}
+        is marked deprecated.
+    @type version: L{incremental.Version}
+    """
+
+    version = Version("Bar", 1, 2, 3)
+
+
+    def test_deprecated(self):
+        """
+        L{getDeprecatedModuleAttribute} returns the specified attribute and
+        consumes the deprecation warning that generates.
+        """
+        self.assertIs(
+            _somethingOld,
+            self.getDeprecatedModuleAttribute(
+                __name__, "somethingOld", self.version,
+            ),
+        )
+        self.assertEqual([], self.flushWarnings())
+
+
+    def test_message(self):
+        """
+        The I{message} argument to L{getDeprecatedModuleAttribute} matches the
+        prefix of the deprecation message.
+        """
+        self.assertIs(
+            _somethingOld,
+            self.getDeprecatedModuleAttribute(
+                __name__, "somethingOld", self.version, message="It's old",
+            ),
+        )
+        self.assertEqual([], self.flushWarnings())
+
+
+    def test_messageMismatch(self):
+        """
+        L{getDeprecatedModuleAttribute} fails the test if the I{message} isn't
+        part of the deprecation message prefix.
+        """
+        self.assertRaises(
+            self.failureException,
+            self.getDeprecatedModuleAttribute,
+            __name__,
+            "somethingOld",
+            self.version,
+            "It's shiny and new",  # Doesn't match.
+        )
+        self.assertEqual([], self.flushWarnings())
+
+
+    def test_notDeprecated(self):
+        """
+        L{getDeprecatedModuleAttribute} fails the test when used to get an
+        attribute that isn't actually deprecated.
+        """
+        self.assertRaises(
+            self.failureException,
+            self.getDeprecatedModuleAttribute,
+            __name__,
+            "somethingNew",
+            self.version,
+        )
+
+
+
+def somethingOld():
+    """
+    A deprecated module attribute. Used by
+    L{GetDeprecatedModuleAttributeTests.test_deprecated}.
+    """
+
+
+
+# A non-deprecated alias of _somethingOld.
+_somethingOld = somethingOld
+
+
+
+deprecatedModuleAttribute(
+    GetDeprecatedModuleAttributeTests.version,
+    "It's old and clunky",
+    __name__,
+    "somethingOld",
+)
+
+
+
+def somethingNew():
+    """
+    A module attribute that is not deprecated. Used by
+    L{GetDeprecatedModuleAttributeTests.test_notDeprecated}.
+    """

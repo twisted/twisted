@@ -73,10 +73,10 @@ class SSHChannel(log.Logger):
         self.closing = 0
         self.localClosed = 0
         self.remoteClosed = 0
-        self.id = None # gets set later by SSHConnection
+        self.id = None  # gets set later by SSHConnection
 
 
-    def __str__(self):
+    def __str__(self) -> str:
         return nativeString(self.__bytes__())
 
 

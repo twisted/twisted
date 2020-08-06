@@ -74,7 +74,7 @@ class Port(abstract.FileHandle):
                 self.interface, 'not an IPv4 or IPv6 address')
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         if self._realPortNumber is not None:
             return ("<%s on %s>" %
                     (self.protocol.__class__, self._realPortNumber))
