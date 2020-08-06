@@ -16,8 +16,6 @@ try:
     import pwd
 except ImportError:
     pwd = None  # type: ignore[assignment]
-else:
-    import crypt
 
 try:
     import spwd
