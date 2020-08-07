@@ -18,7 +18,7 @@ from twisted.conch.ssh.common import NS, getNS
 from twisted.cred import credentials
 from twisted.cred.error import UnauthorizedLogin
 from twisted.internet import defer, reactor
-from twisted.python import failure, log
+from twisted.python import failure
 from twisted.python.compat import nativeString
 from twisted.logger import Logger
 

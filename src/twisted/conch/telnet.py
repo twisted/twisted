@@ -14,7 +14,6 @@ import struct
 from zope.interface import implementer
 
 from twisted.internet import protocol, interfaces as iinternet, defer
-from twisted.python import log
 from twisted.python.compat import iterbytes
 from twisted.logger import Logger
 

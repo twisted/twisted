@@ -26,7 +26,7 @@ from cryptography.hazmat.primitives.asymmetric import dh, ec, x25519
 
 from twisted import __version__ as twisted_version
 from twisted.internet import protocol, defer
-from twisted.python import log, randbytes
+from twisted.python import randbytes
 from twisted.python.compat import iterbytes, networkString
 from twisted.logger import Logger
 
