@@ -40,7 +40,7 @@ from twisted.python.util import runAsEffectiveUser
 from twisted.python.filepath import FilePath
 from twisted.logger import Logger
 
-log = Logger()
+_log = Logger()
 
 
 
@@ -181,7 +181,7 @@ class SSHPublicKeyDatabase:
                 if pubKey.verify(credentials.signature, credentials.sigData):
                     return credentials.username
             except Exception:  # any error should be treated as a failed login
-                log.failure('Error while verifying key')
+                _log.failure('Error while verifying key')
                 return failure.Failure(
                     UnauthorizedLogin('error while verifying key'))
         return failure.Failure(UnauthorizedLogin("unable to verify key"))
@@ -240,7 +240,7 @@ class SSHPublicKeyDatabase:
 
     def _ebRequestAvatarId(self, f):
         if not f.check(UnauthorizedLogin):
-            log.error('Unauthorized login due to internal error: {error}',
+            _log.error('Unauthorized login due to internal error: {error}',
                       error=f.value)
             return failure.Failure(
                 UnauthorizedLogin("unable to get avatar id"))
@@ -385,7 +385,7 @@ def readAuthorizedKeyFile(fileobj, parseKey=keys.Key.fromString):
             try:
                 yield parseKey(line)
             except keys.BadKeyError as e:
-                log.error('Unable to parse line {line!r} as a key: {error!s}',
+                _log.error('Unable to parse line {line!r} as a key: {error!s}',
                           line=line, error=e)
 
 
@@ -415,7 +415,7 @@ def _keysFromFilepaths(filepaths, parseKey):
                     for key in readAuthorizedKeyFile(f, parseKey):
                         yield key
             except (IOError, OSError) as e:
-                log.error("Unable to read {path!r}: {error!s}",
+                _log.error("Unable to read {path!r}: {error!s}",
                           path=fp.path, error=e)
 
 
