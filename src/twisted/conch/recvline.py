@@ -38,11 +38,11 @@ class Logging(object):
         self._logFile = open(key + '-' + str(count), 'w')
 
 
-    def __str__(self):
+    def __str__(self) -> str:
         return str(super(Logging, self).__getattribute__('original'))
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return repr(super(Logging, self).__getattribute__('original'))
 
 
@@ -380,7 +380,7 @@ class LocalTerminalBufferMixin(object):
             TransportSequence(transport, self.terminalCopy))
 
 
-    def __str__(self):
+    def __str__(self) -> str:
         return str(self.terminalCopy)
 
 

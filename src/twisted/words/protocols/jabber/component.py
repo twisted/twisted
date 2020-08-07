@@ -23,7 +23,7 @@ from zope.interface import implementer
 from twisted.application import service
 from twisted.internet import defer
 from twisted.python import log
-from twisted.python.compat import _coercedUnicode, unicode
+from twisted.python.compat import unicode
 from twisted.words.xish import domish
 from twisted.words.protocols.jabber import error, ijabber, jstrports, xmlstream
 from twisted.words.protocols.jabber.jid import internJID as JID
@@ -58,9 +58,7 @@ class ComponentInitiatingInitializer(object):
     def initialize(self):
         xs = self.xmlstream
         hs = domish.Element((self.xmlstream.namespace, "handshake"))
-        digest = xmlstream.hashPassword(
-            xs.sid,
-            _coercedUnicode(xs.authenticator.password))
+        digest = xmlstream.hashPassword(xs.sid, xs.authenticator.password)
         hs.addContent(unicode(digest))
 
         # Setup observer to watch for handshake result
