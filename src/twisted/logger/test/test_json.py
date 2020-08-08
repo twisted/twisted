@@ -181,10 +181,6 @@ class SaveLoadTests(TestCase):
         except ZeroDivisionError:
             f = Failure()
             log.failure("a message about failure", f)
-        import sys
-        if sys.exc_info()[0] is not None:
-            # Make sure we don't get the same Failure by accident.
-            sys.exc_clear()
         self.assertEqual(len(events), 1)
         loaded = eventFromJSON(self.savedEventJSON(events[0]))['log_failure']
         self.assertIsInstance(loaded, Failure)
