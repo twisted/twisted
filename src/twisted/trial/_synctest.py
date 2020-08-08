@@ -838,23 +838,6 @@ class _Assertions(pyunit.TestCase, object):
             )
 
 
-    def assertRegex(self, text, regex, msg=None):
-        """
-        Fail the test if a C{regexp} search of C{text} fails.
-
-        @param text: Text which is under test.
-        @type text: L{str}
-
-        @param regex: A regular expression object or a string containing a
-            regular expression suitable for use by re.search().
-        @type regex: L{str} or L{re.RegexObject}
-
-        @param msg: Text used as the error message on failure.
-        @type msg: L{str}
-        """
-        super(_Assertions, self).assertRegex(text, regex, msg)
-
-
 
 class _LogObserver(object):
     """
