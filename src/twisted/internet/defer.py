@@ -917,13 +917,11 @@ def ensureDeferred(coro):
 
     @rtype: L{Deferred}
     """
+    from asyncio import iscoroutine
     from types import GeneratorType
 
-    if version_info >= (3, 4, 0):
-        from asyncio import iscoroutine
-
-        if iscoroutine(coro) or isinstance(coro, GeneratorType):
-            return _cancellableInlineCallbacks(coro)
+    if iscoroutine(coro) or isinstance(coro, GeneratorType):
+        return _cancellableInlineCallbacks(coro)
 
     if not isinstance(coro, Deferred):
         raise ValueError("%r is not a coroutine or a Deferred" % (coro,))
