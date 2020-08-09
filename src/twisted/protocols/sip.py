@@ -21,7 +21,7 @@ from twisted import cred
 from twisted.internet import protocol, defer, reactor
 from twisted.protocols import basic
 from twisted.python import log
-from twisted.python.compat import _PY3, iteritems, unicode
+from twisted.python.compat import iteritems, unicode
 
 PORT = 5060
 
@@ -204,7 +204,8 @@ class Via(object):
         self.otherParams = kw
 
 
-    def _getrport(self):
+    @property
+    def rport(self):
         """
         Returns the rport value expected by the old SIP code.
         """
@@ -216,7 +217,8 @@ class Via(object):
             return None
 
 
-    def _setrport(self, newRPort):
+    @rport.setter
+    def rport(self, newRPort):
         """
         L{Base._fixupNAT} sets C{rport} directly, so this method sets
         C{rportValue} based on that.
@@ -227,7 +229,6 @@ class Via(object):
         self.rportValue = newRPort
         self.rportRequested = False
 
-    rport = property(_getrport, _setrport)
 
     def toString(self):
         """
@@ -352,12 +353,13 @@ class URL:
         return "".join(l)
 
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.toString()
 
 
-    def __repr__(self):
-        return '<URL %s:%s@%s:%r/%s>' % (self.username, self.password, self.host, self.port, self.transport)
+    def __repr__(self) -> str:
+        return '<URL %s:%s@%s:%r/%s>' % (self.username, self.password,
+                                         self.host, self.port, self.transport)
 
 
 
@@ -542,8 +544,9 @@ class Request(Message):
             cleanRequestURL(self.uri)
 
 
-    def __repr__(self):
-        return "<SIP Request %d:%s %s>" % (id(self), self.method, self.uri.toString())
+    def __repr__(self) -> str:
+        return "<SIP Request %d:%s %s>" % (id(self), self.method,
+                                           self.uri.toString())
 
 
     def _getHeaderLine(self):
@@ -564,7 +567,7 @@ class Response(Message):
         self.phrase = phrase
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "<SIP Response %d:%s>" % (id(self), self.code)
 
 
@@ -650,7 +653,7 @@ class MessagesParser(basic.LineReceiver):
 
 
     def lineReceived(self, line):
-        if _PY3 and isinstance(line, bytes):
+        if isinstance(line, bytes):
             line = line.decode("utf-8")
 
         if self.state == "firstline":
@@ -726,7 +729,7 @@ class MessagesParser(basic.LineReceiver):
 
     def rawDataReceived(self, data):
         assert self.state in ("body", "invalid")
-        if _PY3 and isinstance(data, bytes):
+        if isinstance(data, bytes):
             data = data.decode("utf-8")
         if self.state == "invalid":
             return

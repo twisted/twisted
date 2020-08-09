@@ -38,8 +38,13 @@ class ImportErrorsTests(packages.SysPathManglingTest):
     is what we expect.
     """
 
-    debug = False
+    def debug(self):
+        pass
+
+
     parent = "_testImportErrors"
+
+
     def runTrial(self, *args):
         return runTrial('--temp-directory', self.mktemp(), *args)
 

@@ -109,10 +109,11 @@ class CGIScript(resource.Resource):
             qargs = []
         else:
             qs = env['QUERY_STRING'] = request.uri[qindex+1:]
-            if '=' in qs:
+            if b'=' in qs:
                 qargs = []
             else:
-                qargs = [urllib.unquote(x) for x in qs.split('+')]
+                qargs = [urllib.parse.unquote(x.decode())
+                         for x in qs.split(b'+')]
 
         # Propagate HTTP headers
         for title, header in request.getAllHeaders().items():
@@ -201,6 +202,7 @@ class CGIProcessProtocol(protocol.ProcessProtocol, pb.Viewable):
     headertext = b''
     errortext = b''
     _log = Logger()
+    _requestFinished = False
 
     # Remotely relay producer interface.
 
@@ -230,6 +232,7 @@ class CGIProcessProtocol(protocol.ProcessProtocol, pb.Viewable):
 
     def __init__(self, request):
         self.request = request
+        self.request.notifyFinish().addBoth(self._finished)
 
 
     def connectionMade(self):
@@ -310,12 +313,24 @@ class CGIProcessProtocol(protocol.ProcessProtocol, pb.Viewable):
         if self.errortext:
             self._log.error("Errors from CGI {uri}: {errorText}",
                 uri=self.request.uri, errorText=self.errortext)
+
         if self.handling_headers:
             self._log.error("Premature end of headers in {uri}: {headerText}",
                 uri=self.request.uri, headerText=self.headertext)
-            self.request.write(
-                resource.ErrorPage(http.INTERNAL_SERVER_ERROR,
-                    "CGI Script Error",
-                    "Premature end of script headers.").render(self.request))
-        self.request.unregisterProducer()
-        self.request.finish()
+            if not self._requestFinished:
+                self.request.write(
+                    resource.ErrorPage(http.INTERNAL_SERVER_ERROR,
+                        "CGI Script Error", "Premature end of script headers."
+                    ).render(self.request))
+
+        if not self._requestFinished:
+            self.request.unregisterProducer()
+            self.request.finish()
+
+
+    def _finished(self, ignored):
+        """
+        Record the end of the response generation for the request being
+        serviced.
+        """
+        self._requestFinished = True

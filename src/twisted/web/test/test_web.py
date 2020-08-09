@@ -212,6 +212,7 @@ class SiteTest(unittest.TestCase):
         self.assertRaises(KeyError, site.getSession, b'no-such-uid')
 
 
+
 class SessionTests(unittest.TestCase):
     """
     Tests for L{server.Session}.
@@ -525,12 +526,14 @@ class RequestTests(unittest.TestCase):
         request.requestReceived(b'GET', b'/foo/bar/', b'HTTP/1.0')
         self.assertEqual(request.childLink(b'baz'), b'baz')
 
+
     def testPrePathURLSimple(self):
         request = server.Request(DummyChannel(), 1)
         request.gotLength(0)
         request.requestReceived(b'GET', b'/foo/bar', b'HTTP/1.0')
         request.setHost(b'example.com', 80)
         self.assertEqual(request.prePathURL(), b'http://example.com/foo/bar')
+
 
     def testPrePathURLNonDefault(self):
         d = DummyChannel()
@@ -539,7 +542,9 @@ class RequestTests(unittest.TestCase):
         request.setHost(b'example.com', 81)
         request.gotLength(0)
         request.requestReceived(b'GET', b'/foo/bar', b'HTTP/1.0')
-        self.assertEqual(request.prePathURL(), b'http://example.com:81/foo/bar')
+        self.assertEqual(request.prePathURL(),
+                         b'http://example.com:81/foo/bar')
+
 
     def testPrePathURLSSLPort(self):
         d = DummyChannel()
@@ -548,7 +553,9 @@ class RequestTests(unittest.TestCase):
         request.setHost(b'example.com', 443)
         request.gotLength(0)
         request.requestReceived(b'GET', b'/foo/bar', b'HTTP/1.0')
-        self.assertEqual(request.prePathURL(), b'http://example.com:443/foo/bar')
+        self.assertEqual(request.prePathURL(),
+                         b'http://example.com:443/foo/bar')
+
 
     def testPrePathURLSSLPortAndSSL(self):
         d = DummyChannel()
@@ -560,6 +567,7 @@ class RequestTests(unittest.TestCase):
         request.requestReceived(b'GET', b'/foo/bar', b'HTTP/1.0')
         self.assertEqual(request.prePathURL(), b'https://example.com/foo/bar')
 
+
     def testPrePathURLHTTPPortAndSSL(self):
         d = DummyChannel()
         d.transport = DummyChannel.SSL()
@@ -568,7 +576,9 @@ class RequestTests(unittest.TestCase):
         request.setHost(b'example.com', 80)
         request.gotLength(0)
         request.requestReceived(b'GET', b'/foo/bar', b'HTTP/1.0')
-        self.assertEqual(request.prePathURL(), b'https://example.com:80/foo/bar')
+        self.assertEqual(request.prePathURL(),
+                         b'https://example.com:80/foo/bar')
+
 
     def testPrePathURLSSLNonDefault(self):
         d = DummyChannel()
@@ -578,7 +588,9 @@ class RequestTests(unittest.TestCase):
         request.setHost(b'example.com', 81)
         request.gotLength(0)
         request.requestReceived(b'GET', b'/foo/bar', b'HTTP/1.0')
-        self.assertEqual(request.prePathURL(), b'https://example.com:81/foo/bar')
+        self.assertEqual(request.prePathURL(),
+                         b'https://example.com:81/foo/bar')
+
 
     def testPrePathURLSetSSLHost(self):
         d = DummyChannel()
@@ -1225,6 +1237,7 @@ class NewRenderResource(resource.Resource):
     def render_GET(self, request):
         return b"hi hi"
 
+
     def render_HEH(self, request):
         return b"ho ho"
 
@@ -1249,6 +1262,27 @@ class HeadlessResource(object):
         return server.NOT_DONE_YET
 
 
+    def isLeaf(self):
+        """
+        # IResource.isLeaf
+        """
+        raise NotImplementedError()
+
+
+    def getChildWithDefault(self, name, request):
+        """
+        # IResource.getChildWithDefault
+        """
+        raise NotImplementedError()
+
+
+    def putChild(self, path, child):
+        """
+        # IResource.putChild
+        """
+        raise NotImplementedError()
+
+
 
 class NewRenderTests(unittest.TestCase):
     """
@@ -1270,6 +1304,7 @@ class NewRenderTests(unittest.TestCase):
         request.gotLength(0)
         return request
 
+
     def testGoodMethods(self):
         req = self._getReq()
         req.requestReceived(b'GET', b'/newrender', b'HTTP/1.0')
@@ -1283,6 +1318,7 @@ class NewRenderTests(unittest.TestCase):
             req.transport.written.getvalue().splitlines()[-1], b'ho ho'
         )
 
+
     def testBadMethods(self):
         req = self._getReq()
         req.requestReceived(b'CONNECT', b'/newrender', b'HTTP/1.0')
@@ -1291,6 +1327,7 @@ class NewRenderTests(unittest.TestCase):
         req = self._getReq()
         req.requestReceived(b'hlalauguG', b'/newrender', b'HTTP/1.0')
         self.assertEqual(req.code, 501)
+
 
     def test_notAllowedMethod(self):
         """
@@ -1304,6 +1341,7 @@ class NewRenderTests(unittest.TestCase):
         raw_header = req.responseHeaders.getRawHeaders(b'allow')[0]
         allowed = sorted([h.strip() for h in raw_header.split(b",")])
         self.assertEqual([b'GET', b'HEAD', b'HEH'], allowed)
+
 
     def testImplicitHead(self):
         logObserver = EventLoggingObserver.createWithCleanup(
@@ -1349,7 +1387,7 @@ class NewRenderTests(unittest.TestCase):
         server error is returned.
         """
         class RiggedRepr(object):
-            def __repr__(self):
+            def __repr__(self) -> str:
                 return 'my>repr'
 
         result = RiggedRepr()

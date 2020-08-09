@@ -60,16 +60,18 @@ class CountingReactor(MemoryReactorClock):
         self._workers = workers
 
 
-    def spawnProcess(self, worker, *args, **kwargs):
+    def spawnProcess(self, workerProto, executable, args=(),
+                     env={}, path=None, uid=None, gid=None, usePTY=0,
+                     childFDs=None):
         """
         See L{IReactorProcess.spawnProcess}.
 
-        @param worker: See L{IReactorProcess.spawnProcess}.
+        @param workerProto: See L{IReactorProcess.spawnProcess}.
         @param args: See L{IReactorProcess.spawnProcess}.
         @param kwargs: See L{IReactorProcess.spawnProcess}.
         """
-        self._workers.append(worker)
-        worker.makeConnection(FakeTransport())
+        self._workers.append(workerProto)
+        workerProto.makeConnection(FakeTransport())
         self.spawnCount += 1
 
 
@@ -124,7 +126,7 @@ class CountingReactorTests(SynchronousTestCase):
         proto = Protocol()
         for count in [1, 2]:
             self.reactor.spawnProcess(proto, sys.executable,
-                                      arg=[sys.executable])
+                                      args=[sys.executable])
             self.assertTrue(proto.transport)
             self.assertEqual(self.workers, [proto] * count)
             self.assertEqual(self.reactor.spawnCount, count)

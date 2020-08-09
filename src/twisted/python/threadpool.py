@@ -41,7 +41,6 @@ class ThreadPool:
     max = 20
     joined = False
     started = False
-    workers = 0
     name = None
 
     threadFactory = threading.Thread

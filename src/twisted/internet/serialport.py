@@ -47,34 +47,44 @@ class BaseSerialPort:
         else:
             self._serial.setBaudRate(baudrate)
 
+
     def inWaiting(self):
         return self._serial.inWaiting()
+
 
     def flushInput(self):
         self._serial.flushInput()
 
+
     def flushOutput(self):
         self._serial.flushOutput()
+
 
     def sendBreak(self):
         self._serial.sendBreak()
 
+
     def getDSR(self):
         return self._serial.getDSR()
+
 
     def getCD(self):
         return self._serial.getCD()
 
+
     def getRI(self):
         return self._serial.getRI()
+
 
     def getCTS(self):
         return self._serial.getCTS()
 
-    def setDTR(self, on = 1):
+
+    def setDTR(self, on=1):
         self._serial.setDTR(on)
 
-    def setRTS(self, on = 1):
+
+    def setRTS(self, on=1):
         self._serial.setRTS(on)
 
 
@@ -83,4 +93,4 @@ class BaseSerialPort:
 if platform.isWindows():
     from twisted.internet._win32serialport import SerialPort
 else:
-    from twisted.internet._posixserialport import SerialPort
+    from twisted.internet._posixserialport import SerialPort  # type: ignore[misc]  # noqa

@@ -9,7 +9,7 @@ from twisted.trial import unittest
 
 import os
 import stat
-from typing import Dict
+from typing import Dict, Optional
 
 from twisted.enterprise.adbapi import ConnectionPool, ConnectionLost
 from twisted.enterprise.adbapi import Connection, Transaction
@@ -359,25 +359,26 @@ class DBTestConnector(object):
     you must create a database named DB_NAME with a user DB_USER
     and password DB_PASS with full access rights to database DB_NAME.
     """
-    TEST_PREFIX = None # used for creating new test cases
+    # used for creating new test cases
+    TEST_PREFIX = None  # type: Optional[str]
 
     DB_NAME = "twisted_test"
     DB_USER = 'twisted_test'
     DB_PASS = 'twisted_test'
 
-    DB_DIR = None # directory for database storage
+    DB_DIR = None  # directory for database storage
 
-    nulls_ok = True # nulls supported
-    trailing_spaces_ok = True # trailing spaces in strings preserved
-    can_rollback = True # rollback supported
-    test_failures = True # test bad sql?
-    escape_slashes = True # escape \ in sql?
-    good_sql = ConnectionPool.good_sql
-    early_reconnect = True # cursor() will fail on closed connection
-    can_clear = True # can try to clear out tables when starting
+    nulls_ok = True  # nulls supported
+    trailing_spaces_ok = True  # trailing spaces in strings preserved
+    can_rollback = True  # rollback supported
+    test_failures = True  # test bad sql?
+    escape_slashes = True  # escape \ in sql?
+    good_sql = ConnectionPool.good_sql  # type: Optional[str]
+    early_reconnect = True  # cursor() will fail on closed connection
+    can_clear = True  # can try to clear out tables when starting
 
-    num_iterations = 50 # number of iterations for test loops
-                        # (lower this for slow db's)
+    # number of iterations for test loop (lower this for slow db's)
+    num_iterations = 50
 
     def setUp(self):
         self.DB_DIR = self.mktemp()

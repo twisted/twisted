@@ -10,18 +10,19 @@ Provide L{ICredentialsChecker} implementations to be used in Conch protocols.
 import sys
 import binascii
 import errno
+from base64 import decodebytes
 
 try:
     import pwd
 except ImportError:
-    pwd = None
+    pwd = None  # type: ignore[assignment]
 else:
     import crypt
 
 try:
     import spwd
 except ImportError:
-    spwd = None
+    spwd = None  # type: ignore[assignment]
 
 from zope.interface import providedBy, implementer, Interface
 
@@ -33,7 +34,6 @@ from twisted.cred.checkers import ICredentialsChecker
 from twisted.cred.credentials import IUsernamePassword, ISSHPrivateKey
 from twisted.cred.error import UnauthorizedLogin, UnhandledCredentials
 from twisted.internet import defer
-from twisted.python.compat import _keys, _PY3, _b64decodebytes
 from twisted.python import failure, reflect, log
 from twisted.python.deprecate import deprecatedModuleAttribute
 from twisted.python.util import runAsEffectiveUser
@@ -110,12 +110,8 @@ class UNIXPasswordDatabase:
     def requestAvatarId(self, credentials):
         # We get bytes, but the Py3 pwd module uses str. So attempt to decode
         # it using the same method that CPython does for the file on disk.
-        if _PY3:
-            username = credentials.username.decode(sys.getfilesystemencoding())
-            password = credentials.password.decode(sys.getfilesystemencoding())
-        else:
-            username = credentials.username
-            password = credentials.password
+        username = credentials.username.decode(sys.getfilesystemencoding())
+        password = credentials.password.decode(sys.getfilesystemencoding())
 
         for func in self._getByNameFunctions:
             try:
@@ -232,7 +228,7 @@ class SSHPublicKeyDatabase:
                     if len(l2) < 2:
                         continue
                     try:
-                        if _b64decodebytes(l2[1]) == credentials.blob:
+                        if decodebytes(l2[1]) == credentials.blob:
                             return True
                     except binascii.Error:
                         continue
@@ -265,10 +261,10 @@ class SSHProtocolChecker:
         self.successfulCredentials = {}
 
 
-    def get_credentialInterfaces(self):
-        return _keys(self.checkers)
+    @property
+    def credentialInterfaces(self):
+        return list(self.checkers.keys())
 
-    credentialInterfaces = property(get_credentialInterfaces)
 
     def registerChecker(self, checker, *credentialInterfaces):
         if not credentialInterfaces:

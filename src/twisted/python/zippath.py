@@ -60,7 +60,7 @@ class ZipPath(AbstractFilePath):
                    (other.archive, other.pathInArchive))
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         parts = [_coerceToFilesystemEncoding(
             self.sep, os.path.abspath(self.archive.path))]
         parts.extend(self.pathInArchive.split(self.sep))
@@ -220,7 +220,10 @@ class ZipArchive(ZipPath):
     instances will be in the mode of the argument to the creator method,
     converting if required.
     """
-    archive = property(lambda self: self)
+    @property
+    def archive(self):
+        return self
+
 
     def __init__(self, archivePathname):
         """
@@ -287,7 +290,7 @@ class ZipArchive(ZipPath):
         return FilePath(self.zipfile.filename).getStatusChangeTime()
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return 'ZipArchive(%r)' % (os.path.abspath(self.path),)
 
 

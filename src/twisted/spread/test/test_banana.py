@@ -6,23 +6,23 @@ import sys
 from functools import partial
 from io import BytesIO
 
-from twisted.trial import unittest
+from twisted.trial.unittest import TestCase
 from twisted.spread import banana
 from twisted.python import failure
-from twisted.python.compat import long, iterbytes, _bytesChr as chr, _PY3
+from twisted.python.compat import long, iterbytes
 from twisted.internet import protocol, main
 from twisted.test.proto_helpers import StringTransport
 
-if _PY3:
-    _maxint = 9223372036854775807
-else:
-    from sys import maxint as _maxint
 
 
-class MathTests(unittest.TestCase):
+_maxint = 9223372036854775807
+
+
+
+class MathTests(TestCase):
     def test_int2b128(self):
-        funkylist = (list(range(0,100)) + list(range(1000,1100)) +
-                    list(range(1000000,1000100)) + [1024 **10])
+        funkylist = (list(range(0, 100)) + list(range(1000, 1100)) +
+                     list(range(1000000, 1000100)) + [1024 ** 10])
         for i in funkylist:
             x = BytesIO()
             banana.int2b128(i, x.write)
@@ -71,7 +71,7 @@ def encode(bananaFactory, obj):
 
 
 
-class BananaTestBase(unittest.TestCase):
+class BananaTestBase(TestCase):
     """
     The base for test classes. It defines commonly used things and sets up a
     connection for testing.
@@ -119,10 +119,7 @@ class BananaTests(BananaTestBase):
         Banana does not support unicode.  ``Banana.sendEncoded`` raises
         ``BananaError`` if called with an instance of ``unicode``.
         """
-        if _PY3:
-            self._unsupportedTypeTest(u"hello", "builtins.str")
-        else:
-            self._unsupportedTypeTest(u"hello", "__builtin__.unicode")
+        self._unsupportedTypeTest(u"hello", "builtins.str")
 
 
     def test_unsupportedBuiltinType(self):
@@ -132,10 +129,7 @@ class BananaTests(BananaTestBase):
         with an instance of L{type}.
         """
         # type is an instance of type
-        if _PY3:
-            self._unsupportedTypeTest(type, "builtins.type")
-        else:
-            self._unsupportedTypeTest(type, "__builtin__.type")
+        self._unsupportedTypeTest(type, "builtins.type")
 
 
     def test_unsupportedUserType(self):
@@ -175,29 +169,6 @@ class BananaTests(BananaTestBase):
             self.enc.dataReceived(self.io.getvalue())
             self.assertEqual(self.result, 10151)
             self.assertIsInstance(self.result, int)
-
-
-    def test_largeLong(self):
-        """
-        Integers greater than 2 ** 32 and less than -2 ** 32 should
-        round-trip through banana without changing value and should
-        come out represented as C{int} instances if the value fits
-        into that type on the receiving platform.
-        """
-        for exp in (32, 64, 128, 256):
-            for add in (0, 1):
-                m = 2 ** exp + add
-                for n in (m, -m-1):
-                    self.enc.dataReceived(self.encode(n))
-                    self.assertEqual(self.result, n)
-                    if n > _maxint or n < -_maxint - 1:
-                        self.assertIsInstance(self.result, long)
-                    else:
-                        self.assertIsInstance(self.result, int)
-
-    if _PY3:
-        test_largeLong.skip = (
-            "Python 3 has unified int/long into an int type of unlimited size")
 
 
     def _getSmallest(self):
@@ -396,8 +367,9 @@ class DialectTests(BananaTestBase):
     Tests for Banana's handling of dialects.
     """
     vocab = b'remote'
-    legalPbItem = chr(banana.Banana.outgoingVocabulary[vocab]) + banana.VOCAB
-    illegalPbItem = chr(122) + banana.VOCAB
+    legalPbItem = bytes((banana.Banana.outgoingVocabulary[vocab],)) \
+        + banana.VOCAB
+    illegalPbItem = bytes((122,)) + banana.VOCAB
 
     def test_dialectNotSet(self):
         """
@@ -438,7 +410,7 @@ class DialectTests(BananaTestBase):
 
 
 
-class GlobalCoderTests(unittest.TestCase):
+class GlobalCoderTests(TestCase):
     """
     Tests for the free functions L{banana.encode} and L{banana.decode}.
     """

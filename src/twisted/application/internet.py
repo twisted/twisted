@@ -97,7 +97,7 @@ class _AbstractServer(_VolatileDataService):
     """
 
     volatile = ['_port']
-    method = None
+    method = ""  # type: str
     reactor = None
 
     _port = None
@@ -138,8 +138,8 @@ class _AbstractServer(_VolatileDataService):
         @rtype: an object providing
             L{twisted.internet.interfaces.IListeningPort}.
         """
-        return getattr(_maybeGlobalReactor(self.reactor),
-                       'listen%s' % (self.method,))(*self.args, **self.kwargs)
+        return getattr(_maybeGlobalReactor(self.reactor), 'listen{}'.format(
+                       self.method,))(*self.args, **self.kwargs)
 
 
 
@@ -161,7 +161,7 @@ class _AbstractClient(_VolatileDataService):
     """
 
     volatile = ['_connection']
-    method = None
+    method = ""  # type: str
     reactor = None
 
     _connection = None
@@ -197,34 +197,79 @@ class _AbstractClient(_VolatileDataService):
 
 
 
-_doc={
-'Client':
-"""Connect to %(tran)s
+_clientDoc = """Connect to {tran}
 
-Call reactor.connect%(tran)s when the service starts, with the
+Call reactor.connect{tran} when the service starts, with the
 arguments given to the constructor.
-""",
-'Server':
-"""Serve %(tran)s clients
+"""
 
-Call reactor.listen%(tran)s when the service starts, with the
+_serverDoc = """Serve {tran} clients
+
+Call reactor.listen{tran} when the service starts, with the
 arguments given to the constructor. When the service stops,
 stop listening. See twisted.internet.interfaces for documentation
 on arguments to the reactor method.
-""",
-}
+"""
 
-for tran in 'TCP UNIX SSL UDP UNIXDatagram Multicast'.split():
-    for side in 'Server Client'.split():
-        if tran == "Multicast" and side == "Client":
-            continue
-        if tran == "UDP" and side == "Client":
-            continue
-        base = globals()['_Abstract'+side]
-        doc = _doc[side] % vars()
 
-        klass = type(tran+side, (base,), {'method': tran, '__doc__': doc})
-        globals()[tran+side] = klass
+
+class TCPServer(_AbstractServer):
+    __doc__ = _serverDoc.format(tran='TCP')
+    method = 'TCP'
+
+
+
+class TCPClient(_AbstractClient):
+    __doc__ = _clientDoc.format(tran='TCP')
+    method = 'TCP'
+
+
+
+class UNIXServer(_AbstractServer):
+    __doc__ = _serverDoc.format(tran='UNIX')
+    method = 'UNIX'
+
+
+
+class UNIXClient(_AbstractClient):
+    __doc__ = _clientDoc.format(tran='UNIX')
+    method = 'UNIX'
+
+
+
+class SSLServer(_AbstractServer):
+    __doc__ = _serverDoc.format(tran='SSL')
+    method = 'SSL'
+
+
+
+class SSLClient(_AbstractClient):
+    __doc__ = _clientDoc.format(tran='SSL')
+    method = 'SSL'
+
+
+
+class UDPServer(_AbstractServer):
+    __doc__ = _serverDoc.format(tran='UDP')
+    method = 'UDP'
+
+
+
+class UNIXDatagramServer(_AbstractServer):
+    __doc__ = _serverDoc.format(tran='UNIXDatagram')
+    method = 'UNIXDatagram'
+
+
+
+class UNIXDatagramClient(_AbstractClient):
+    __doc__ = _clientDoc.format(tran='UNIXDatagram')
+    method = 'UNIXDatagram'
+
+
+
+class MulticastServer(_AbstractServer):
+    __doc__ = _serverDoc.format(tran='Multicast')
+    method = 'Multicast'
 
 
 
@@ -442,7 +487,7 @@ class _ReconnectingProtocolProxy(object):
         return getattr(self._protocol, item)
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return '<%s wrapping %r>' % (
             self.__class__.__name__, self._protocol)
 
@@ -479,7 +524,7 @@ class _DisconnectFactory(object):
         return getattr(self._protocolFactory, item)
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return '<%s wrapping %r>' % (
             self.__class__.__name__, self._protocolFactory)
 
@@ -1149,9 +1194,9 @@ class ClientService(service.Service, object):
         return self._machine.stop()
 
 
-__all__ = (['TimerService', 'CooperatorService', 'MulticastServer',
-            'StreamServerEndpointService', 'UDPServer',
-            'ClientService'] +
-           [tran + side
-            for tran in 'TCP UNIX SSL UNIXDatagram'.split()
-            for side in 'Server Client'.split()])
+
+__all__ = ['TimerService', 'CooperatorService', 'MulticastServer',
+           'StreamServerEndpointService', 'UDPServer',
+           'ClientService', 'TCPServer', 'TCPClient',
+           'UNIXServer', 'UNIXClient', 'SSLServer', 'SSLClient',
+           'UNIXDatagramServer', 'UNIXDatagramClient']

@@ -10,7 +10,7 @@ import sys
 import traceback
 
 from twisted.python import log, logfile, usage
-from twisted.python.compat import (intToBytes, _bytesRepr, _PY3)
+from twisted.python.compat import intToBytes
 from twisted.python.util import (
     switchUID, uidFromString, gidFromString, untilConcludes)
 from twisted.application import app, service
@@ -229,9 +229,7 @@ class UnixApplicationRunner(app.ApplicationRunner):
         formattedMessage = '1 {}'.format(exceptionLine.strip())
         # On Python 3, encode the message the same way Python 2's
         # format_exception_only does
-        if _PY3:
-            formattedMessage = formattedMessage.encode('ascii',
-                                                       'backslashreplace')
+        formattedMessage = formattedMessage.encode('ascii', 'backslashreplace')
         # By this point, the message has been encoded, if appropriate,
         # with backslashreplace on both Python 2 and Python 3.
         # Truncating the encoded message won't make it completely
@@ -375,7 +373,7 @@ class UnixApplicationRunner(app.ApplicationRunner):
         return w
 
 
-    def _waitForStart(self, readPipe):
+    def _waitForStart(self, readPipe: int) -> int:
         """
         Wait for the daemonization success.
 
@@ -386,7 +384,7 @@ class UnixApplicationRunner(app.ApplicationRunner):
         @rtype: C{int}
         """
         data = untilConcludes(os.read, readPipe, 100)
-        dataRepr = _bytesRepr(data[2:])
+        dataRepr = repr(data[2:])
         if data != b"0":
             msg = ("An error has occurred: {}\nPlease look at log "
                    "file for more information.\n".format(dataRepr))

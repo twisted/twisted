@@ -34,19 +34,29 @@ Test coverage needs to be better.
 <http://www.irchelp.org/irchelp/rfc/ctcpspec.html>}
 """
 
-import errno, os, random, re, stat, struct, sys, time, traceback
+import errno
 import operator
-import string, socket
-import textwrap
+import os
+import random
+import re
 import shlex
+import socket
+import stat
+import string
+import struct
+import sys
+import textwrap
+import time
+import traceback
 from functools import reduce
 from os import path
+from typing import Optional
 
-from twisted.internet import reactor, protocol, task
+from twisted.internet import protocol, reactor, task
 from twisted.persisted import styles
 from twisted.protocols import basic
-from twisted.python import log, reflect, _textattributes
-from twisted.python.compat import unicode, range
+from twisted.python import _textattributes, log, reflect
+from twisted.python.compat import unicode
 
 NUL = chr(0)
 CR = chr(0o15)
@@ -161,7 +171,7 @@ class _CommandDispatcherMixin(object):
     @type prefix: C{str}
     @ivar prefix: Command handler prefix, used to locate handler attributes
     """
-    prefix = None
+    prefix = None  # type: Optional[str]
 
     def dispatch(self, commandName, *args):
         """
@@ -253,7 +263,7 @@ class IRC(protocol.Protocol):
     buffer = ""
     hostname = None
 
-    encoding = None
+    encoding = None  # type: Optional[str]
 
     def connectionMade(self):
         self.channels = []
@@ -2853,7 +2863,7 @@ def fileSize(file):
     I'll try my damndest to determine the size of this file object.
 
     @param file: The file object to determine the size of.
-    @type file: L{file}
+    @type file: L{io.IOBase}
 
     @rtype: L{int} or L{None}
     @return: The size of the file object as an integer if it can be determined,
@@ -2908,7 +2918,7 @@ class DccChat(basic.LineReceiver, styles.Ephemeral):
     """
 
     queryData = None
-    delimiter = CR + NL
+    delimiter = CR.encode('ascii') + NL.encode('ascii')
     client = None
     remoteParty = None
     buffer = b""
@@ -2948,9 +2958,11 @@ class DccChat(basic.LineReceiver, styles.Ephemeral):
                             self.client.nickname, line)
 
 
+
 class DccChatFactory(protocol.ClientFactory):
     protocol = DccChat
-    noisy = 0
+    noisy = False
+
     def __init__(self, client, queryData):
         self.client = client
         self.queryData = queryData
@@ -3189,17 +3201,19 @@ class DccFileReceive(DccFileReceiveBasic):
 
         # self.transport.log(logmsg)
 
-    def __str__(self):
+    def __str__(self) -> str:
         if not self.connected:
             return "<Unconnected DccFileReceive object at %x>" % (id(self),)
-        from_ = self.transport.getPeer()
+        transport = self.transport
+        assert transport is not None
+        from_ = transport.getPeer()
         if self.fromUser:
             from_ = "%s (%s)" % (self.fromUser, from_)
 
         s = ("DCC transfer of '%s' from %s" % (self.filename, from_))
         return s
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         s = ("<%s at %x: GET %s>"
              % (self.__class__, id(self), self.filename))
         return s

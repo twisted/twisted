@@ -421,6 +421,17 @@ class RoundtripDNSTests(unittest.TestCase):
         self.assertEqual(result.ttl, 17)
 
 
+    def test_resourceRecordHeaderTypeMismatch(self):
+        """
+        L{RRHeader()} raises L{ValueError} when the given type and the type
+        of the payload don't match.
+        """
+
+        with self.assertRaisesRegex(ValueError,
+                                    r'Payload type \(AAAA\) .* type \(A\)'):
+            dns.RRHeader(type=dns.A, payload=dns.Record_AAAA())
+
+
     def test_resources(self):
         """
         L{dns.SimpleRecord.encode} encodes the record's name information and
@@ -4211,9 +4222,10 @@ class EDNSMessageSpecificsTests(ConstructorTestsMixin,
 
 
 
-class EDNSMessageEqualityTests(ComparisonTestsMixin, unittest.SynchronousTestCase):
+class EDNSMessageEqualityTests(ComparisonTestsMixin,
+                               unittest.SynchronousTestCase):
     """
-    Tests for equality between L(dns._EDNSMessage} instances.
+    Tests for equality between L{dns._EDNSMessage} instances.
 
     These tests will not work with L{dns.Message} because it does not use
     L{twisted.python.util.FancyEqMixin}.
@@ -4908,7 +4920,7 @@ class Foo(object):
         self.section1 = section1
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """
         Call L{dns._compactRepr} to generate a string representation.
         """
@@ -4924,9 +4936,11 @@ class Foo(object):
 
 class CompactReprTests(unittest.SynchronousTestCase):
     """
-    Tests for L[dns._compactRepr}.
+    Tests for L{dns._compactRepr}.
     """
+
     messageFactory = Foo
+
     def test_defaults(self):
         """
         L{dns._compactRepr} omits field values and sections which have the

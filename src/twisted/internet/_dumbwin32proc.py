@@ -407,7 +407,17 @@ class Process(_pollingfile._PollingTimer, BaseProcess):
         self.loseConnection()
 
 
-    def __repr__(self):
+    def getHost(self):
+        # ITransport.getHost
+        raise NotImplementedError("Unimplemented: Process.getHost")
+
+
+    def getPeer(self):
+        # ITransport.getPeer
+        raise NotImplementedError("Unimplemented: Process.getPeer")
+
+
+    def __repr__(self) -> str:
         """
         Return a string representation of the process.
         """

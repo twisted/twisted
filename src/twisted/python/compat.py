@@ -28,26 +28,20 @@ import platform
 import socket
 import struct
 import sys
-import tokenize
 import urllib.parse as urllib_parse
 import warnings
-
-from base64 import decodebytes as _b64decodebytes
-from base64 import encodebytes as _b64encodebytes
 from collections.abc import Sequence
 from functools import reduce
 from html import escape
 from http import cookiejar as cookielib
+from io import IOBase
 from io import StringIO as NativeStringIO
-from io import TextIOBase, IOBase
+from io import TextIOBase
 from sys import intern
 from types import MethodType as _MethodType
 from urllib.parse import quote as urlquote
 from urllib.parse import unquote as urlunquote
 
-
-_PY3 = True
-_PY35PLUS = True
 
 if sys.version_info >= (3, 7, 0):
     _PY37PLUS = True
@@ -59,10 +53,6 @@ if platform.python_implementation() == 'PyPy':
 else:
     _PYPY = False
 
-_shouldEnableNewStyle = lambda: False
-_EXPECT_NEWSTYLE = True
-
-_tokenize = tokenize.tokenize
 FileType = IOBase
 frozenset = frozenset
 InstanceType = object
@@ -173,42 +163,42 @@ def comparable(klass):
     C{__eq__}, C{__lt__}, etc. methods are added to the class, relying on
     C{__cmp__} to implement their comparisons.
     """
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
         c = self.__cmp__(other)
         if c is NotImplemented:
             return c
         return c == 0
 
 
-    def __ne__(self, other):
+    def __ne__(self, other: object) -> bool:
         c = self.__cmp__(other)
         if c is NotImplemented:
             return c
         return c != 0
 
 
-    def __lt__(self, other):
+    def __lt__(self, other: object) -> bool:
         c = self.__cmp__(other)
         if c is NotImplemented:
             return c
         return c < 0
 
 
-    def __le__(self, other):
+    def __le__(self, other: object) -> bool:
         c = self.__cmp__(other)
         if c is NotImplemented:
             return c
         return c <= 0
 
 
-    def __gt__(self, other):
+    def __gt__(self, other: object) -> bool:
         c = self.__cmp__(other)
         if c is NotImplemented:
             return c
         return c > 0
 
 
-    def __ge__(self, other):
+    def __ge__(self, other: object) -> bool:
         c = self.__cmp__(other)
         if c is NotImplemented:
             return c
@@ -392,36 +382,25 @@ def lazyByteSlice(object, offset=0, size=None):
 
 def networkString(s):
     """
-    Convert the native string type to C{bytes} if it is not already C{bytes}
+    Convert the native string type to L{bytes} if it is not already L{bytes}
     using ASCII encoding if conversion is necessary.
 
     This is useful for sending text-like bytes that are constructed using
-    string interpolation.  For example:
+    string interpolation.  For example::
 
         networkString("Hello %d" % (n,))
 
     @param s: A native string to convert to bytes if necessary.
-    @type s: C{str}
+    @type s: L{str}
 
     @raise UnicodeError: The input string is not ASCII encodable/decodable.
-    @raise TypeError: The input is neither C{bytes} nor C{unicode}.
+    @raise TypeError: The input is neither L{bytes} nor L{unicode}.
 
-    @rtype: C{bytes}
+    @rtype: L{bytes}
     """
     if not isinstance(s, unicode):
         raise TypeError("Can only convert text to bytes on Python 3")
     return s.encode('ascii')
-
-
-
-def _keys(d):
-    """
-    Return a list of the keys of C{d}.
-
-    @type d: L{dict}
-    @rtype: L{list}
-    """
-    return list(d.keys())
 
 
 
@@ -459,65 +438,6 @@ def _constructMethod(cls, name, self):
     """
     func = cls.__dict__[name]
     return _MethodType(func, self)
-
-
-
-def _bytesChr(i):
-    """
-    Like L{chr} but always works on ASCII, returning L{bytes}.
-
-    @param i: The ASCII code point to return.
-    @type i: L{int}
-
-    @rtype: L{bytes}
-    """
-    return bytes([i])
-
-
-
-def _coercedUnicode(s):
-    """
-    Coerce ASCII-only byte strings into unicode for Python 2.
-
-    In Python 2 C{unicode(b'bytes')} returns a unicode string C{'bytes'}. In
-    Python 3, the equivalent C{str(b'bytes')} will return C{"b'bytes'"}
-    instead. This function mimics the behavior for Python 2. It will decode the
-    byte string as ASCII. In Python 3 it simply raises a L{TypeError} when
-    passing a byte string. Unicode strings are returned as-is.
-
-    @param s: The string to coerce.
-    @type s: L{bytes} or L{unicode}
-
-    @raise UnicodeError: The input L{bytes} is not ASCII decodable.
-    @raise TypeError: The input is L{bytes} on Python 3.
-    """
-    if isinstance(s, bytes):
-        if _PY3:
-            raise TypeError("Expected str not %r (bytes)" % (s,))
-        else:
-            return s.decode('ascii')
-    else:
-        return s
-
-
-
-def _bytesRepr(bytestring):
-    """
-    Provide a repr for a byte string that begins with 'b' on both
-    Python 2 and 3.
-
-    @param bytestring: The string to repr.
-    @type bytestring: L{bytes}
-
-    @raise TypeError: The input is not L{bytes}.
-
-    @return: The repr with a leading 'b'.
-    @rtype: L{bytes}
-    """
-    if not isinstance(bytestring, bytes):
-        raise TypeError("Expected bytes not %r" % (bytestring,))
-
-    return repr(bytestring)
 
 
 
@@ -610,16 +530,9 @@ __all__ = [
     "urlquote",
     "urlunquote",
     "cookielib",
-    "_keys",
-    "_b64encodebytes",
-    "_b64decodebytes",
-    "_bytesChr",
-    "_coercedUnicode",
-    "_bytesRepr",
     "intern",
     "unichr",
     "raw_input",
-    "_tokenize",
     "_get_async_param",
     "Sequence",
 ]

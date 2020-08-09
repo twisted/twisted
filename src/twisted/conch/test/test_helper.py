@@ -8,7 +8,6 @@ from twisted.conch.insults.insults import modes, privateModes
 from twisted.conch.insults.insults import (
     NORMAL, BOLD, UNDERLINE, BLINK, REVERSE_VIDEO)
 
-from twisted.python.compat import _PY3
 from twisted.trial import unittest
 
 WIDTH = 80
@@ -648,11 +647,8 @@ class CharacterAttributeTests(unittest.TestCase):
         warningsShown = self.flushWarnings([self.test_wantOneDeprecated])
         self.assertEqual(len(warningsShown), 1)
         self.assertEqual(warningsShown[0]['category'], DeprecationWarning)
-        if _PY3:
-            deprecatedClass = (
-                "twisted.conch.insults.helper._FormattingState.wantOne")
-        else:
-            deprecatedClass = "twisted.conch.insults.helper.wantOne"
+        deprecatedClass = (
+            "twisted.conch.insults.helper._FormattingState.wantOne")
         self.assertEqual(
             warningsShown[0]['message'],
             '%s was deprecated in Twisted 13.1.0' % (deprecatedClass))

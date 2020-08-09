@@ -9,13 +9,11 @@ L{twisted.web._flatten}.
 import sys
 import traceback
 
-from xml.etree.cElementTree import XML
+from xml.etree.ElementTree import XML
 
 from collections import OrderedDict
 
 from zope.interface import implementer
-
-from twisted.python.compat import _PY35PLUS
 
 from twisted.trial.unittest import TestCase
 from twisted.test.testutils import XMLAssertionMixin
@@ -361,11 +359,6 @@ class SerializationTests(FlattenTestCase, XMLAssertionMixin):
 
         return self.assertFlattensTo(coro('four'), b'four')
 
-    if not _PY35PLUS:
-        test_serializeCoroutine.skip = (
-            "coroutines not available before Python 3.5"
-        )
-
 
     def test_serializeCoroutineWithAwait(self):
         """
@@ -383,11 +376,6 @@ class SerializationTests(FlattenTestCase, XMLAssertionMixin):
         coro = namespace["coro"]
 
         return self.assertFlattensTo(coro('four'), b'four')
-
-    if not _PY35PLUS:
-        test_serializeCoroutineWithAwait.skip = (
-            "coroutines not available before Python 3.5"
-        )
 
 
     def test_serializeIRenderable(self):
@@ -464,7 +452,7 @@ class FlattenerErrorTests(TestCase):
         """
         @implementer(IRenderable)
         class Renderable(object):
-            def __repr__(self):
+            def __repr__(self) -> str:
                 return "renderable repr"
 
         self.assertEqual(

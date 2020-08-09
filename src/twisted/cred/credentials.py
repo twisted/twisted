@@ -20,9 +20,11 @@ import time
 from binascii import hexlify
 from hashlib import md5
 
+from twisted.python.deprecate import deprecatedModuleAttribute
 from twisted.python.randbytes import secureRandom
 from twisted.python.compat import networkString, nativeString
 from twisted.python.compat import intToBytes, unicode
+from twisted.python.versions import Version
 from twisted.cred._digest import calcResponse, calcHA1, calcHA2
 from twisted.cred import error
 
@@ -33,7 +35,7 @@ class ICredentials(Interface):
     I check credentials.
 
     Implementors I{must} specify the sub-interfaces of ICredentials
-    to which it conforms, using L{zope.interface.declarations.implementer}.
+    to which it conforms, using L{zope.interface.implementer}.
     """
 
 
@@ -448,6 +450,11 @@ class CramMD5Credentials(object):
 
 @implementer(IUsernameHashedPassword)
 class UsernameHashedPassword:
+
+    deprecatedModuleAttribute(
+        Version("Twisted", "NEXT", 0, 0),
+        "Use twisted.cred.credentials.UsernamePassword instead.",
+        "twisted.cred.credentials", "UsernameHashedPassword")
 
     def __init__(self, username, hashed):
         self.username = username

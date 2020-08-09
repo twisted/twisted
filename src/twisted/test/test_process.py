@@ -33,9 +33,17 @@ from unittest import skipIf
 try:
     import fcntl
 except ImportError:
-    fcntl = process = None
-else:
+    fcntl = None  # type: ignore[assignment]
+
+try:
     from twisted.internet import process
+    from twisted.internet.process import (
+        ProcessReader, ProcessWriter, PTYProcess)
+except ImportError:
+    process = None  # type: ignore[misc,assignment]
+    ProcessReader = object  # type: ignore[misc,assignment]
+    ProcessWriter = object  # type: ignore[misc,assignment]
+    PTYProcess = object  # type: ignore[misc,assignment]
 
 from zope.interface.verify import verifyObject
 
@@ -45,20 +53,15 @@ from twisted.python.log import msg
 from twisted.internet import reactor, protocol, error, interfaces, defer
 from twisted.trial import unittest
 from twisted.python import runtime, procutils
-from twisted.python.compat import _PY3, networkString, range, bytesEnviron
+from twisted.python.compat import networkString, bytesEnviron
 from twisted.python.filepath import FilePath
 
 
 # Get the current Python executable as a bytestring.
-pyExe = FilePath(sys.executable)._asBytesPath()
+pyExe = FilePath(sys.executable).path
 CONCURRENT_PROCESS_TEST_COUNT = 25
-if not runtime.platform.isWindows():
-    properEnv = bytesEnviron()
-    properEnv[b"PYTHONPATH"] = os.pathsep.join(sys.path).encode(
-        sys.getfilesystemencoding())
-else:
-    properEnv = dict(os.environ)
-    properEnv["PYTHONPATH"] = os.pathsep.join(sys.path)
+properEnv = dict(os.environ)
+properEnv["PYTHONPATH"] = os.pathsep.join(sys.path)
 
 
 
@@ -393,7 +396,7 @@ class UtilityProcessProtocol(protocol.ProcessProtocol):
 
     @ivar programName: The name of the program to run.
     """
-    programName = None
+    programName = b""  # type: bytes
 
     @classmethod
     def run(cls, reactor, argv, env):
@@ -407,7 +410,7 @@ class UtilityProcessProtocol(protocol.ProcessProtocol):
         """
         self = cls()
         reactor.spawnProcess(
-            self, pyExe, [pyExe, b"-u", b"-m", self.programName] + argv,
+            self, pyExe, [pyExe, "-u", "-m", self.programName] + argv,
             env=env)
         return self
 
@@ -493,18 +496,18 @@ class GetEnvironmentDictionary(UtilityProcessProtocol):
         strings giving key value pairs of the environment from that process.
         Return this as a dictionary.
         """
-        environString = b''.join(chunks)
-        if not environString:
+        environBytes = b''.join(chunks)
+        if not environBytes:
             return {}
-        environ = iter(environString.split(b'\0'))
+        environb = iter(environBytes.split(b'\0'))
         d = {}
         while 1:
             try:
-                k = next(environ)
+                k = next(environb)
             except StopIteration:
                 break
             else:
-                v = next(environ)
+                v = next(environb)
                 d[k] = v
         return d
 
@@ -685,7 +688,7 @@ class ProcessTests(unittest.TestCase):
         # can do about that.
         badUnicode = u'\N{SNOWMAN}'
         try:
-            badUnicode.encode(sys.getfilesystemencoding())
+            badUnicode.encode(sys.stdout.encoding)
         except UnicodeEncodeError:
             # Okay, that unicode doesn't encode, put it in as a bad environment
             # key.
@@ -784,6 +787,7 @@ class TwoProcessesNonPosixTests(TestTwoProcessesBase, unittest.TestCase):
 @skipIf(not interfaces.IReactorProcess(reactor, None),
         "reactor doesn't support IReactorProcess")
 class TwoProcessesPosixTests(TestTwoProcessesBase, unittest.TestCase):
+
     def tearDown(self):
         for pp, pr in zip(self.pp, self.processes):
             if not pp.finished:
@@ -1126,6 +1130,8 @@ class PosixProcessBase(object):
         return self._testSignal(signal.SIGUSR1)
 
 
+    @skipIf(runtime.platform.isMacOSX(),
+            "Test is flaky from a Darwin bug. See #8840.")
     def test_executionError(self):
         """
         Raise an error during execvpe to check error management.
@@ -1150,10 +1156,6 @@ class PosixProcessBase(object):
         finally:
             os.execvpe = oldexecvpe
         return d
-
-    if runtime.platform.isMacOSX():
-        test_executionError.skip = (
-            "Test is flaky from a Darwin bug. See #8840.")
 
 
     def test_errorInProcessEnded(self):
@@ -1632,36 +1634,40 @@ class MockOS(object):
         return "utf8"
 
 
-if process is not None:
-    class DumbProcessWriter(process.ProcessWriter):
+
+class DumbProcessWriter(ProcessWriter):
+    """
+    A fake L{ProcessWriter} used for tests.
+    """
+
+    def startReading(self):
         """
-        A fake L{process.ProcessWriter} used for tests.
+        Here's the faking: don't do anything here.
         """
 
-        def startReading(self):
-            """
-            Here's the faking: don't do anything here.
-            """
 
-    class DumbProcessReader(process.ProcessReader):
-        """
-        A fake L{process.ProcessReader} used for tests.
-        """
 
-        def startReading(self):
-            """
-            Here's the faking: don't do anything here.
-            """
+class DumbProcessReader(ProcessReader):
+    """
+    A fake L{ProcessReader} used for tests.
+    """
 
-    class DumbPTYProcess(process.PTYProcess):
+    def startReading(self):
         """
-        A fake L{process.PTYProcess} used for tests.
+        Here's the faking: don't do anything here.
         """
 
-        def startReading(self):
-            """
-            Here's the faking: don't do anything here.
-            """
+
+
+class DumbPTYProcess(PTYProcess):
+    """
+    A fake L{PTYProcess} used for tests.
+    """
+
+    def startReading(self):
+        """
+        Here's the faking: don't do anything here.
+        """
 
 
 
@@ -2233,7 +2239,6 @@ class Win32ProcessTests(unittest.TestCase):
     """
     Test process programs that are packaged with twisted.
     """
-
     def _test_stdinReader(self, pyExe, args, env, path):
         """
         Spawn a process, write to stdin, and check the output.
@@ -2258,7 +2263,10 @@ class Win32ProcessTests(unittest.TestCase):
 
         pyExe = FilePath(sys.executable)._asBytesPath()
         args = [pyExe, b"-u", b"-m", b"twisted.test.process_stdinreader"]
-        env = bytesEnviron()
+        if os.supports_bytes_environ:
+            env = dict(os.environb)
+        else:
+            env = bytesEnviron()
         env[b"PYTHONPATH"] = os.pathsep.join(sys.path).encode(
                                              sys.getfilesystemencoding())
         path = win32api.GetTempPath()
@@ -2273,16 +2281,12 @@ class Win32ProcessTests(unittest.TestCase):
         """
         import win32api
 
-        pyExe = FilePath(sys.executable)._asTextPath()
+        pyExe = FilePath(sys.executable).path
         args = [pyExe, u"-u", u"-m", u"twisted.test.process_stdinreader"]
         env = properEnv
         pythonPath = os.pathsep.join(sys.path)
-        if isinstance(pythonPath, bytes):
-            pythonPath = pythonPath.decode(sys.getfilesystemencoding())
         env[u"PYTHONPATH"] = pythonPath
         path = win32api.GetTempPath()
-        if isinstance(path, bytes):
-            path = path.decode(sys.getfilesystemencoding())
         d = self._test_stdinReader(pyExe, args, env, path)
         return d
 
@@ -2393,24 +2397,45 @@ class Win32UnicodeEnvironmentTests(unittest.TestCase):
     """
     Tests for Unicode environment on Windows
     """
-    goodKey = u'UNICODE'
-    goodValue = u'UNICODE'
 
-    def test_encodableUnicodeEnvironment(self):
+    def test_AsciiEncodeableUnicodeEnvironment(self):
         """
-        Test C{os.environ} (inherited by every subprocess on Windows) that
-        contains an ascii-encodable Unicode string. This is different from
-        passing Unicode environment explicitly to spawnProcess (which is not
-        supported on Python 2).
+        C{os.environ} (inherited by every subprocess on Windows)
+        contains Unicode keys and Unicode values which can be ASCII-encodable.
         """
-        os.environ[self.goodKey] = self.goodValue
-        self.addCleanup(operator.delitem, os.environ, self.goodKey)
+        os.environ['KEY_ASCII'] = 'VALUE_ASCII'
+        self.addCleanup(operator.delitem, os.environ, 'KEY_ASCII')
 
-        p = GetEnvironmentDictionary.run(reactor, [], properEnv)
-        def gotEnvironment(environ):
-            self.assertEqual(
-                environ[self.goodKey.encode('ascii')],
-                self.goodValue.encode('ascii'))
+        p = GetEnvironmentDictionary.run(reactor, [], os.environ)
+
+        def gotEnvironment(environb):
+            self.assertEqual(environb[b'KEY_ASCII'], b'VALUE_ASCII')
+        return p.getResult().addCallback(gotEnvironment)
+
+
+    @skipIf(sys.stdout.encoding != sys.getfilesystemencoding(),
+            "sys.stdout.encoding: {} does not match "
+            "sys.getfilesystemencoding(): {} .  May need to set "
+            "PYTHONUTF8 and PYTHONIOENCODING environment variables.".format(
+            sys.stdout.encoding, sys.getfilesystemencoding()))
+    def test_UTF8StringInEnvironment(self):
+        """
+        L{os.environ} (inherited by every subprocess on Windows) can
+        contain a UTF-8 string value.
+        """
+        envKey = 'TWISTED_BUILD_SOURCEVERSIONAUTHOR'
+        envKeyBytes = b'TWISTED_BUILD_SOURCEVERSIONAUTHOR'
+        envVal = "Speciał Committór"
+        os.environ[envKey] = envVal
+        self.addCleanup(operator.delitem, os.environ, envKey)
+
+        p = GetEnvironmentDictionary.run(reactor, [], os.environ)
+
+        def gotEnvironment(environb):
+            self.assertIn(envKeyBytes, environb)
+            self.assertEqual(environb[envKeyBytes],
+                             "Speciał Committór".encode(sys.stdout.encoding))
+
         return p.getResult().addCallback(gotEnvironment)
 
 
@@ -2423,6 +2448,7 @@ class DumbWin32ProcTests(unittest.TestCase):
     """
     L{twisted.internet._dumbwin32proc} tests.
     """
+
     def test_pid(self):
         """
         Simple test for the pid attribute of Process on win32.
@@ -2433,7 +2459,7 @@ class DumbWin32ProcTests(unittest.TestCase):
         from twisted.test import mock_win32process
         self.patch(_dumbwin32proc, "win32process", mock_win32process)
         scriptPath = FilePath(__file__).sibling(u"process_cmdline.py").path
-        pyExe = FilePath(sys.executable).asTextMode().path
+        pyExe = FilePath(sys.executable).path
 
         d = defer.Deferred()
         processProto = TrivialProcessProtocol(d)
@@ -2718,15 +2744,13 @@ class ClosingPipesTests(unittest.TestCase):
         ProcessProtocol.transport.closeStdout actually closes the pipe.
         """
         d = self.doit(1)
+
         def _check(errput):
-            if _PY3:
-                if runtime.platform.isWindows():
-                    self.assertIn(b"OSError", errput)
-                    self.assertIn(b"22", errput)
-                else:
-                    self.assertIn(b'BrokenPipeError', errput)
+            if runtime.platform.isWindows():
+                self.assertIn(b"OSError", errput)
+                self.assertIn(b"22", errput)
             else:
-                self.assertIn(b'OSError', errput)
+                self.assertIn(b'BrokenPipeError', errput)
             if runtime.platform.getType() != 'win32':
                 self.assertIn(b'Broken pipe', errput)
         d.addCallback(_check)

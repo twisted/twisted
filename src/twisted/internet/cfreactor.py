@@ -44,6 +44,7 @@ _WRITE = 1
 _preserveSOError = 1 << 6
 
 
+
 class _WakerPlus(_Waker):
     """
     The normal Twisted waker will simply wake up the main loop, which causes an

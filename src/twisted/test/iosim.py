@@ -34,7 +34,7 @@ class TLSNegotiation:
         self.readyToSend = connectState
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return 'TLSNegotiation(%r)' % (self.obj,)
 
 
@@ -105,7 +105,7 @@ class FakeTransport:
         self.peerAddress = peerAddress
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return 'FakeTransport<%s,%s,%s>' % (
             self.isServer and 'S' or 'C', self.serial,
             self.protocol.__class__.__name__)
@@ -253,6 +253,31 @@ class FakeTransport:
                 self.tls.readyToSend = True
         else:
             self.protocol.dataReceived(buf)
+
+
+    def getTcpKeepAlive(self):
+        # ITCPTransport.getTcpKeepAlive
+        pass
+
+
+    def getTcpNoDelay(self):
+        # ITCPTransport.getTcpNoDelay
+        pass
+
+
+    def loseWriteConnection(self):
+        # ITCPTransport.loseWriteConnection
+        pass
+
+
+    def setTcpKeepAlive(self, enabled):
+        # ITCPTransport.setTcpKeepAlive
+        pass
+
+
+    def setTcpNoDelay(self, enabled):
+        # ITCPTransport.setTcpNoDelay
+        pass
 
 
 

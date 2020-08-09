@@ -11,10 +11,9 @@ implementation and will be used whenever pyOpenSSL 0.10 or newer is installed
 """
 
 
-from zope.interface import implementer
 from zope.interface import directlyProvides
 
-from twisted.internet.interfaces import ITLSTransport, ISSLTransport
+from twisted.internet.interfaces import ISSLTransport
 from twisted.internet.abstract import FileDescriptor
 
 from twisted.protocols.tls import TLSMemoryBIOFactory, TLSMemoryBIOProtocol
@@ -158,7 +157,6 @@ def startTLS(transport, contextFactory, normal, bypass):
 
 
 
-@implementer(ITLSTransport)
 class ConnectionMixin(object):
     """
     A mixin for L{twisted.internet.abstract.FileDescriptor} which adds an

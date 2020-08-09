@@ -13,20 +13,21 @@ import socket
 import sys
 import traceback
 
-from twisted.trial import unittest
+from unittest import skipIf
+from twisted.trial.unittest import TestCase, SynchronousTestCase
 
 from twisted.python.compat import (
     reduce, execfile, _PYPY, comparable, cmp, nativeString,
     networkString, unicode as unicodeCompat, lazyByteSlice, reraise,
     NativeStringIO, iterbytes, intToBytes, ioType, bytesEnviron, iteritems,
-    _coercedUnicode, unichr, raw_input, _bytesRepr, _get_async_param,
+    unichr, raw_input, _get_async_param,
 )
 from twisted.python.filepath import FilePath
 from twisted.python.runtime import platform
 
 
 
-class IOTypeTests(unittest.SynchronousTestCase):
+class IOTypeTests(SynchronousTestCase):
     """
     Test cases for determining a file-like object's type.
     """
@@ -87,7 +88,7 @@ class IOTypeTests(unittest.SynchronousTestCase):
 
 
 
-class CompatTests(unittest.SynchronousTestCase):
+class CompatTests(SynchronousTestCase):
     """
     Various utility functions in C{twisted.python.compat} provide same
     functionality as modern Python variants.
@@ -142,7 +143,7 @@ class CompatTests(unittest.SynchronousTestCase):
 
 
 
-class ExecfileCompatTests(unittest.SynchronousTestCase):
+class ExecfileCompatTests(SynchronousTestCase):
     """
     Tests for the Python 3-friendly L{execfile} implementation.
     """
@@ -194,7 +195,7 @@ class ExecfileCompatTests(unittest.SynchronousTestCase):
 
 
 
-class PYPYTest(unittest.SynchronousTestCase):
+class PYPYTest(SynchronousTestCase):
     """
     Identification of PyPy.
     """
@@ -226,7 +227,7 @@ class Comparable(object):
 
 
 
-class ComparableTests(unittest.SynchronousTestCase):
+class ComparableTests(SynchronousTestCase):
     """
     L{comparable} decorated classes emulate Python 2's C{__cmp__} semantics.
     """
@@ -290,7 +291,7 @@ class ComparableTests(unittest.SynchronousTestCase):
 
 
 
-class Python3ComparableTests(unittest.SynchronousTestCase):
+class Python3ComparableTests(SynchronousTestCase):
     """
     Python 3-specific functionality of C{comparable}.
     """
@@ -350,7 +351,7 @@ class Python3ComparableTests(unittest.SynchronousTestCase):
 
 
 
-class CmpTests(unittest.SynchronousTestCase):
+class CmpTests(SynchronousTestCase):
     """
     L{cmp} should behave like the built-in Python 2 C{cmp}.
     """
@@ -381,7 +382,7 @@ class CmpTests(unittest.SynchronousTestCase):
 
 
 
-class StringTests(unittest.SynchronousTestCase):
+class StringTests(SynchronousTestCase):
     """
     Compatibility functions and types for strings.
     """
@@ -462,7 +463,7 @@ class StringTests(unittest.SynchronousTestCase):
 
 
 
-class NetworkStringTests(unittest.SynchronousTestCase):
+class NetworkStringTests(SynchronousTestCase):
     """
     Tests for L{networkString}.
     """
@@ -493,7 +494,7 @@ class NetworkStringTests(unittest.SynchronousTestCase):
 
 
 
-class ReraiseTests(unittest.SynchronousTestCase):
+class ReraiseTests(SynchronousTestCase):
     """
     L{reraise} re-raises exceptions on both Python 2 and Python 3.
     """
@@ -541,7 +542,7 @@ class ReraiseTests(unittest.SynchronousTestCase):
 
 
 
-class Python3BytesTests(unittest.SynchronousTestCase):
+class Python3BytesTests(SynchronousTestCase):
     """
     Tests for L{iterbytes}, L{intToBytes}, L{lazyByteSlice}.
     """
@@ -594,10 +595,12 @@ class Python3BytesTests(unittest.SynchronousTestCase):
 
 
 
-class BytesEnvironTests(unittest.TestCase):
+class BytesEnvironTests(TestCase):
     """
     Tests for L{BytesEnviron}.
     """
+    @skipIf(platform.isWindows(),
+            "Environment vars are always str on Windows.")
     def test_alwaysBytes(self):
         """
         The output of L{BytesEnviron} should always be a L{dict} with L{bytes}
@@ -612,56 +615,9 @@ class BytesEnvironTests(unittest.TestCase):
 
         self.assertEqual(list(types), [bytes])
 
-    if platform.isWindows():
-        test_alwaysBytes.skip = "Environment vars are always str on Windows."
 
 
-
-class CoercedUnicodeTests(unittest.TestCase):
-    """
-    Tests for L{twisted.python.compat._coercedUnicode}.
-    """
-
-    def test_unicodeASCII(self):
-        """
-        Unicode strings with ASCII code points are unchanged.
-        """
-        result = _coercedUnicode(u'text')
-        self.assertEqual(result, u'text')
-        self.assertIsInstance(result, unicodeCompat)
-
-
-    def test_unicodeNonASCII(self):
-        """
-        Unicode strings with non-ASCII code points are unchanged.
-        """
-        result = _coercedUnicode(u'\N{SNOWMAN}')
-        self.assertEqual(result, u'\N{SNOWMAN}')
-        self.assertIsInstance(result, unicodeCompat)
-
-
-    def test_nativeASCII(self):
-        """
-        Native strings with ASCII code points are unchanged.
-
-        On Python 2, this verifies that ASCII-only byte strings are accepted,
-        whereas for Python 3 it is identical to L{test_unicodeASCII}.
-        """
-        result = _coercedUnicode('text')
-        self.assertEqual(result, u'text')
-        self.assertIsInstance(result, unicodeCompat)
-
-
-    def test_bytesPy3(self):
-        """
-        Byte strings are not accceptable in Python 3.
-        """
-        exc = self.assertRaises(TypeError, _coercedUnicode, b'bytes')
-        self.assertEqual(str(exc), "Expected str not b'bytes' (bytes)")
-
-
-
-class UnichrTests(unittest.TestCase):
+class UnichrTests(TestCase):
     """
     Tests for L{unichr}.
     """
@@ -673,7 +629,8 @@ class UnichrTests(unittest.TestCase):
         self.assertEqual(unichr(0x2603), u"\N{SNOWMAN}")
 
 
-class RawInputTests(unittest.TestCase):
+
+class RawInputTests(TestCase):
     """
     Tests for L{raw_input}
     """
@@ -698,31 +655,7 @@ class RawInputTests(unittest.TestCase):
 
 
 
-class FutureBytesReprTests(unittest.TestCase):
-    """
-    Tests for L{twisted.python.compat._bytesRepr}.
-    """
-
-    def test_bytesReprNotBytes(self):
-        """
-        L{twisted.python.compat._bytesRepr} raises a
-        L{TypeError} when called any object that is not an instance of
-        L{bytes}.
-        """
-        exc = self.assertRaises(TypeError, _bytesRepr, ["not bytes"])
-        self.assertEquals(str(exc), "Expected bytes not ['not bytes']")
-
-
-    def test_bytesReprPrefix(self):
-        """
-        L{twisted.python.compat._bytesRepr} always prepends
-        ``b`` to the returned repr on both Python 2 and 3.
-        """
-        self.assertEqual(_bytesRepr(b'\x00'), "b'\\x00'")
-
-
-
-class GetAsyncParamTests(unittest.SynchronousTestCase):
+class GetAsyncParamTests(SynchronousTestCase):
     """
     Tests for L{twisted.python.compat._get_async_param}
     """

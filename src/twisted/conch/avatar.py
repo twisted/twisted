@@ -17,6 +17,16 @@ class ConchUser:
         self.subsystemLookup = {}
 
 
+    @property
+    def conn(self):
+        return self._conn
+
+
+    @conn.setter
+    def conn(self, value):
+        self._conn = value
+
+
     def lookupChannel(self, channelType, windowSize, maxPacket, data):
         klass = self.channelLookup.get(channelType, None)
         if not klass:

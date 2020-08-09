@@ -26,7 +26,7 @@ class Logger(object):
     @type source: L{object}
     @ivar source: The object which is emitting events via this logger
 
-    @type: L{ILogObserver}
+    @type observer: L{ILogObserver}
     @ivar observer: The observer that this logger will send events to.
     """
 
@@ -104,7 +104,7 @@ class Logger(object):
         )
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "<%s %r>" % (self.__class__.__name__, self.namespace)
 
 

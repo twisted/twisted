@@ -42,8 +42,8 @@ try:
     from twisted.internet.stdio import StandardIO, PipeAddress
 except ImportError:
     # fallback if pywin32 is not installed
-    StandardIO = None
-    PipeAddress = None
+    StandardIO = None  # type: ignore[assignment,misc]
+    PipeAddress = None  # type: ignore[assignment,misc]
 
 from twisted.internet.task import LoopingCall
 from twisted.internet._resolver import HostResolution
@@ -315,7 +315,7 @@ class _IProcessTransportWithConsumerAndProducer(interfaces.IProcessTransport,
 
 
 class _ProcessEndpointTransport(
-        proxyForInterface(_IProcessTransportWithConsumerAndProducer,
+        proxyForInterface(_IProcessTransportWithConsumerAndProducer,  # type: ignore[misc]  # noqa
                           '_process')):
     """
     An L{ITransport}, L{IProcessTransport}, L{IConsumer}, and L{IPushProducer}
@@ -805,7 +805,7 @@ class HostnameEndpoint(object):
         self._attemptDelay = attemptDelay
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """
         Produce a string representation of the L{HostnameEndpoint}.
 

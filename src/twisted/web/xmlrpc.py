@@ -12,19 +12,17 @@ Maintainer: Itamar Shtull-Trauring
 """
 
 
-from twisted.python.compat import _PY3, intToBytes, nativeString, urllib_parse
+from twisted.python.compat import intToBytes, nativeString, urllib_parse
 from twisted.python.compat import unicode
 
 # System Imports
 import base64
-if _PY3:
-    import xmlrpc.client as xmlrpclib
-else:
-    import xmlrpclib
+import xmlrpc.client as xmlrpclib
+from xmlrpc.client import Fault, Binary, Boolean, DateTime
 
 # Sibling Imports
 from twisted.web import resource, server, http
-from twisted.internet import defer, protocol, reactor
+from twisted.internet import defer, protocol, reactor, error
 from twisted.python import reflect, failure
 from twisted.logger import Logger
 
@@ -32,12 +30,6 @@ from twisted.logger import Logger
 NOT_FOUND = 8001
 FAILURE = 8002
 
-
-# Useful so people don't need to import xmlrpclib directly
-Fault = xmlrpclib.Fault
-Binary = xmlrpclib.Binary
-Boolean = xmlrpclib.Boolean
-DateTime = xmlrpclib.DateTime
 
 
 def withRequest(f):
@@ -290,12 +282,12 @@ class XMLRPCIntrospection(XMLRPC):
         while todo:
             obj, prefix = todo.pop(0)
             functions.extend([prefix + name for name in obj.listProcedures()])
-            todo.extend([ (obj.getSubHandler(name),
-                           prefix + name + obj.separator)
-                          for name in obj.getSubHandlerPrefixes() ])
+            todo.extend([(obj.getSubHandler(name),
+                         prefix + name + obj.separator)
+                         for name in obj.getSubHandlerPrefixes()])
         return functions
 
-    xmlrpc_listMethods.signature = [['array']]
+    xmlrpc_listMethods.signature = [['array']]  # type: ignore[attr-defined]
 
     def xmlrpc_methodHelp(self, method):
         """
@@ -305,7 +297,7 @@ class XMLRPCIntrospection(XMLRPC):
         return (getattr(method, 'help', None)
                 or getattr(method, '__doc__', None) or '')
 
-    xmlrpc_methodHelp.signature = [['string', 'string']]
+    xmlrpc_methodHelp.signature = [['string', 'string']]  # type: ignore[attr-defined] # noqa
 
     def xmlrpc_methodSignature(self, method):
         """
@@ -319,7 +311,7 @@ class XMLRPCIntrospection(XMLRPC):
         method = self._xmlrpc_parent.lookupProcedure(method)
         return getattr(method, 'signature', None) or ''
 
-    xmlrpc_methodSignature.signature = [['array', 'string'],
+    xmlrpc_methodSignature.signature = [['array', 'string'],  # type: ignore[attr-defined] # noqa
                                         ['string', 'string']]
 
 
@@ -372,6 +364,9 @@ class QueryProtocol(http.HTTPClient):
         If we have a full response from the server, then parse it and fired a
         Deferred with the return value or C{Fault} that the server gave us.
         """
+        if not reason.check(error.ConnectionDone, error.ConnectionLost):
+            # for example, ssl.SSL.Error
+            self.factory.clientConnectionLost(None, reason)
         http.HTTPClient.connectionLost(self, reason)
         if self._response is not None:
             response, self._response = self._response, None
@@ -386,7 +381,8 @@ payloadTemplate = """<?xml version="1.0"?>
 """
 
 
-class _QueryFactory(protocol.ClientFactory):
+
+class QueryFactory(protocol.ClientFactory):
     """
     XML-RPC Client Factory
 
@@ -504,10 +500,16 @@ class Proxy:
     @ivar _reactor: The reactor used to create connections.
     @type _reactor: Object providing L{twisted.internet.interfaces.IReactorTCP}
 
-    @ivar queryFactory: Object returning a factory for XML-RPC protocol. Mainly
-        useful for tests.
+    @ivar queryFactory: Object returning a factory for XML-RPC protocol. Use
+        this for testing, or to manipulate the XML-RPC parsing behavior. For
+        example, you may set this to a custom "debugging" factory object that
+        reimplements C{parseResponse} in order to log the raw XML-RPC contents
+        from the server before continuing on with parsing. Another possibility
+        is to implement your own XML-RPC marshaller here to handle non-standard
+        XML-RPC traffic.
+    @type queryFactory: L{twisted.web.xmlrpc.QueryFactory}
     """
-    queryFactory = _QueryFactory
+    queryFactory = QueryFactory
 
     def __init__(self, url, user=None, password=None, allowNone=False,
                  useDateTime=False, connectTimeout=30.0, reactor=reactor):
@@ -573,9 +575,11 @@ class Proxy:
 
         if self.secure:
             from twisted.internet import ssl
+            contextFactory = ssl.optionsForClientTLS(
+                hostname=nativeString(self.host))
             connector = self._reactor.connectSSL(
                 nativeString(self.host), self.port or 443,
-                factory, ssl.ClientContextFactory(),
+                factory, contextFactory,
                 timeout=self.connectTimeout)
         else:
             connector = self._reactor.connectTCP(

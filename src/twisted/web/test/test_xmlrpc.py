@@ -9,13 +9,14 @@ Tests for  XML-RPC support in L{twisted.web.xmlrpc}.
 
 from twisted.python.compat import nativeString, networkString, NativeStringIO
 from io import BytesIO
+from unittest import skipIf
 
 import datetime
 
 from twisted.trial import unittest
 from twisted.web import xmlrpc
 from twisted.web.xmlrpc import XMLRPC, payloadTemplate, addIntrospection
-from twisted.web.xmlrpc import _QueryFactory, withRequest, xmlrpclib
+from twisted.web.xmlrpc import QueryFactory, withRequest, xmlrpclib
 from twisted.web import server, client, http, static
 from twisted.internet import reactor, defer
 from twisted.internet.error import ConnectionDone
@@ -28,9 +29,10 @@ from twisted.logger import (globalLogPublisher, FilteringLogObserver,
 try:
     namedModule('twisted.internet.ssl')
 except ImportError:
-    sslSkip = "OpenSSL not present"
+    sslSkip = True
 else:
-    sslSkip = None
+    sslSkip = False
+
 
 
 class AsyncXMLRPCTests(unittest.TestCase):
@@ -111,7 +113,8 @@ class Test(XMLRPC):
         """
         return a + b
 
-    xmlrpc_add.signature = [['int', 'int', 'int'],
+    xmlrpc_add.signature = [['int', 'int',  # type: ignore[attr-defined]
+                             'int'],
                             ['double', 'double', 'double']]
 
     # the doc string is part of the test
@@ -121,7 +124,8 @@ class Test(XMLRPC):
         """
         return [string, num]
 
-    xmlrpc_pair.signature = [['array', 'string', 'int']]
+    xmlrpc_pair.signature = [['array',  # type: ignore[attr-defined]
+                              'string', 'int']]
 
     # the doc string is part of the test
     def xmlrpc_defer(self, x):
@@ -155,7 +159,7 @@ class Test(XMLRPC):
 
     def xmlrpc_dict(self, map, key):
         return map[key]
-    xmlrpc_dict.help = 'Help for dict.'
+    xmlrpc_dict.help = 'Help for dict.'  # type: ignore[attr-defined]
 
     @withRequest
     def xmlrpc_withRequest(self, request, other):
@@ -257,7 +261,7 @@ class TestQueryProtocol(xmlrpc.QueryProtocol):
 
 
 
-class TestQueryFactory(xmlrpc._QueryFactory):
+class TestQueryFactory(xmlrpc.QueryFactory):
     """
     QueryFactory using L{TestQueryProtocol} for saving headers.
     """
@@ -266,10 +270,11 @@ class TestQueryFactory(xmlrpc._QueryFactory):
     def __init__(self, *args, **kwargs):
         self.headers = {}
         self.sent_headers = {}
-        xmlrpc._QueryFactory.__init__(self, *args, **kwargs)
+        xmlrpc.QueryFactory.__init__(self, *args, **kwargs)
 
 
-class TestQueryFactoryCancel(xmlrpc._QueryFactory):
+
+class TestQueryFactoryCancel(xmlrpc.QueryFactory):
     """
     QueryFactory that saves a reference to the
     L{twisted.internet.interfaces.IConnector} to test connection lost.
@@ -522,6 +527,7 @@ class XMLRPCTests(unittest.TestCase):
         self.assertEqual(reactor.tcpClients[0][3], 2.0)
 
 
+    @skipIf(sslSkip, "OpenSSL not present")
     def test_sslTimeout(self):
         """
         For I{HTTPS} URIs, L{xmlrpc.Proxy.callRemote} passes the value it
@@ -533,7 +539,6 @@ class XMLRPCTests(unittest.TestCase):
                              reactor=reactor)
         proxy.callRemote("someMethod")
         self.assertEqual(reactor.sslClients[0][4], 3.0)
-    test_sslTimeout.skip = sslSkip
 
 
 
@@ -812,13 +817,13 @@ class XMLRPCClientErrorHandlingTests(unittest.TestCase):
 
 class QueryFactoryParseResponseTests(unittest.TestCase):
     """
-    Test the behaviour of L{_QueryFactory.parseResponse}.
+    Test the behaviour of L{QueryFactory.parseResponse}.
     """
 
     def setUp(self):
-        # The _QueryFactory that we are testing. We don't care about any
+        # The QueryFactory that we are testing. We don't care about any
         # of the constructor parameters.
-        self.queryFactory = _QueryFactory(
+        self.queryFactory = QueryFactory(
             path=None, host=None, method='POST', user=None, password=None,
             allowNone=False, args=())
         # An XML-RPC response that will parse without raising an error.
@@ -832,8 +837,8 @@ class QueryFactoryParseResponseTests(unittest.TestCase):
 
     def test_parseResponseCallbackSafety(self):
         """
-        We can safely call L{_QueryFactory.clientConnectionLost} as a callback
-        of L{_QueryFactory.parseResponse}.
+        We can safely call L{QueryFactory.clientConnectionLost} as a callback
+        of L{QueryFactory.parseResponse}.
         """
         d = self.queryFactory.deferred
         # The failure mode is that this callback raises an AlreadyCalled
@@ -846,8 +851,8 @@ class QueryFactoryParseResponseTests(unittest.TestCase):
 
     def test_parseResponseErrbackSafety(self):
         """
-        We can safely call L{_QueryFactory.clientConnectionLost} as an errback
-        of L{_QueryFactory.parseResponse}.
+        We can safely call L{QueryFactory.clientConnectionLost} as an errback
+        of L{QueryFactory.parseResponse}.
         """
         d = self.queryFactory.deferred
         # The failure mode is that this callback raises an AlreadyCalled
@@ -860,8 +865,8 @@ class QueryFactoryParseResponseTests(unittest.TestCase):
 
     def test_badStatusErrbackSafety(self):
         """
-        We can safely call L{_QueryFactory.clientConnectionLost} as an errback
-        of L{_QueryFactory.badStatus}.
+        We can safely call L{QueryFactory.clientConnectionLost} as an errback
+        of L{QueryFactory.badStatus}.
         """
         d = self.queryFactory.deferred
         # The failure mode is that this callback raises an AlreadyCalled
@@ -874,7 +879,7 @@ class QueryFactoryParseResponseTests(unittest.TestCase):
     def test_parseResponseWithoutData(self):
         """
         Some server can send a response without any data:
-        L{_QueryFactory.parseResponse} should catch the error and call the
+        L{QueryFactory.parseResponse} should catch the error and call the
         result errback.
         """
         content = """

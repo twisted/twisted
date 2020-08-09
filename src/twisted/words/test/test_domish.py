@@ -8,7 +8,6 @@ Tests for L{twisted.words.xish.domish}, a DOM-like library for XMPP.
 
 from zope.interface.verify import verifyObject
 
-from twisted.python.compat import _PY3, unicode
 from twisted.python.reflect import requireModule
 from twisted.trial import unittest
 from twisted.words.xish import domish
@@ -23,7 +22,7 @@ class ElementTests(unittest.TestCase):
         """
         L{domish.Element} implements L{domish.IElement}.
         """
-        verifyObject(domish.IElement, domish.Element((None, u"foo")))
+        verifyObject(domish.IElement, domish.Element((None, "foo")))
 
 
     def test_escaping(self):
@@ -76,21 +75,21 @@ class ElementTests(unittest.TestCase):
         Basic L{domish.Element} child tests.
         """
         e = domish.Element(("testns", "foo"))
-        e.addContent(u"somecontent")
+        e.addContent("somecontent")
         b2 = e.addElement(("testns2", "bar2"))
         e["attrib1"] = "value1"
         e[("testns2", "attrib2")] = "value2"
         e.addElement("bar")
         e.addElement("bar")
-        e.addContent(u"abc")
-        e.addContent(u"123")
+        e.addContent("abc")
+        e.addContent("123")
 
         # Check content merging
         self.assertEqual(e.children[-1], "abc123")
 
         # Check direct child accessor
         self.assertEqual(e.bar2, b2)
-        e.bar2.addContent(u"subcontent")
+        e.bar2.addContent("subcontent")
         e.bar2["bar2value"] = "somevalue"
 
         # Check child ops
@@ -107,22 +106,22 @@ class ElementTests(unittest.TestCase):
 
     def test_characterData(self):
         """
-        Extract character data using L{unicode}.
+        Extract character data using L{str}.
         """
-        element = domish.Element((u"testns", u"foo"))
-        element.addContent(u"somecontent")
+        element = domish.Element(("testns", "foo"))
+        element.addContent("somecontent")
 
-        text = unicode(element)
-        self.assertEqual(u"somecontent", text)
-        self.assertIsInstance(text, unicode)
+        text = str(element)
+        self.assertEqual("somecontent", text)
+        self.assertIsInstance(text, str)
 
 
     def test_characterDataNativeString(self):
         """
         Extract ascii character data using L{str}.
         """
-        element = domish.Element((u"testns", u"foo"))
-        element.addContent(u"somecontent")
+        element = domish.Element(("testns", "foo"))
+        element.addContent("somecontent")
 
         text = str(element)
         self.assertEqual("somecontent", text)
@@ -131,25 +130,25 @@ class ElementTests(unittest.TestCase):
 
     def test_characterDataUnicode(self):
         """
-        Extract character data using L{unicode}.
+        Extract character data using L{str}.
         """
-        element = domish.Element((u"testns", u"foo"))
-        element.addContent(u"\N{SNOWMAN}")
+        element = domish.Element(("testns", "foo"))
+        element.addContent("\N{SNOWMAN}")
 
-        text = unicode(element)
-        self.assertEqual(u"\N{SNOWMAN}", text)
-        self.assertIsInstance(text, unicode)
+        text = str(element)
+        self.assertEqual("\N{SNOWMAN}", text)
+        self.assertIsInstance(text, str)
 
 
     def test_characterDataBytes(self):
         """
         Extract character data as UTF-8 using L{bytes}.
         """
-        element = domish.Element((u"testns", u"foo"))
-        element.addContent(u"\N{SNOWMAN}")
+        element = domish.Element(("testns", "foo"))
+        element.addContent("\N{SNOWMAN}")
 
         text = bytes(element)
-        self.assertEqual(u"\N{SNOWMAN}".encode('utf-8'), text)
+        self.assertEqual("\N{SNOWMAN}".encode('utf-8'), text)
         self.assertIsInstance(text, bytes)
 
 
@@ -157,60 +156,46 @@ class ElementTests(unittest.TestCase):
         """
         Mixing addChild with cdata and element, the first cdata is returned.
         """
-        element = domish.Element((u"testns", u"foo"))
-        element.addChild(u"abc")
+        element = domish.Element(("testns", "foo"))
+        element.addChild("abc")
         element.addElement("bar")
-        element.addChild(u"def")
-        self.assertEqual(u"abc", unicode(element))
+        element.addChild("def")
+        self.assertEqual("abc", str(element))
 
 
     def test_addContent(self):
         """
         Unicode strings passed to C{addContent} become the character data.
         """
-        element = domish.Element((u"testns", u"foo"))
-        element.addContent(u'unicode')
-        self.assertEqual(u"unicode", unicode(element))
+        element = domish.Element(("testns", "foo"))
+        element.addContent('unicode')
+        self.assertEqual("unicode", str(element))
 
 
     def test_addContentNativeStringASCII(self):
         """
         ASCII native strings passed to C{addContent} become the character data.
         """
-        element = domish.Element((u"testns", u"foo"))
+        element = domish.Element(("testns", "foo"))
         element.addContent('native')
-        self.assertEqual(u"native", unicode(element))
+        self.assertEqual("native", str(element))
 
 
     def test_addContentBytes(self):
         """
         Byte strings passed to C{addContent} are not acceptable on Python 3.
         """
-        element = domish.Element((u"testns", u"foo"))
+        element = domish.Element(("testns", "foo"))
         self.assertRaises(TypeError, element.addContent, b'bytes')
-    if not _PY3:
-        test_addContentBytes.skip = (
-            "Bytes behavior of addContent only provided on Python 3.")
-
-
-    def test_addContentBytesNonASCII(self):
-        """
-        Non-ASCII byte strings passed to C{addContent} yield L{UnicodeError}.
-        """
-        element = domish.Element((u"testns", u"foo"))
-        self.assertRaises(UnicodeError, element.addContent, b'\xe2\x98\x83')
-    if _PY3:
-        test_addContentBytesNonASCII.skip = (
-            "Bytes behavior of addContent only provided on Python 2.")
 
 
     def test_addElementContent(self):
         """
         Content passed to addElement becomes character data on the new child.
         """
-        element = domish.Element((u"testns", u"foo"))
-        child = element.addElement("bar", content=u"abc")
-        self.assertEqual(u"abc", unicode(child))
+        element = domish.Element(("testns", "foo"))
+        child = element.addElement("bar", content="abc")
+        self.assertEqual("abc", str(child))
 
 
     def test_elements(self):
@@ -218,11 +203,11 @@ class ElementTests(unittest.TestCase):
         Calling C{elements} without arguments on a L{domish.Element} returns
         all child elements, whatever the qualified name.
         """
-        e = domish.Element((u"testns", u"foo"))
-        c1 = e.addElement(u"name")
-        c2 = e.addElement((u"testns2", u"baz"))
-        c3 = e.addElement(u"quux")
-        c4 = e.addElement((u"testns", u"name"))
+        e = domish.Element(("testns", "foo"))
+        c1 = e.addElement("name")
+        c2 = e.addElement(("testns2", "baz"))
+        c3 = e.addElement("quux")
+        c4 = e.addElement(("testns", "name"))
 
         elts = list(e.elements())
 
@@ -237,13 +222,13 @@ class ElementTests(unittest.TestCase):
         Calling C{elements} with a namespace and local name on a
         L{domish.Element} returns all child elements with that qualified name.
         """
-        e = domish.Element((u"testns", u"foo"))
-        c1 = e.addElement(u"name")
-        c2 = e.addElement((u"testns2", u"baz"))
-        c3 = e.addElement(u"quux")
-        c4 = e.addElement((u"testns", u"name"))
+        e = domish.Element(("testns", "foo"))
+        c1 = e.addElement("name")
+        c2 = e.addElement(("testns2", "baz"))
+        c3 = e.addElement("quux")
+        c4 = e.addElement(("testns", "name"))
 
-        elts = list(e.elements(u"testns", u"name"))
+        elts = list(e.elements("testns", "name"))
 
         self.assertIn(c1, elts)
         self.assertNotIn(c2, elts)
@@ -303,7 +288,7 @@ class DomishStreamTestsMixin:
         self.assertEqual(self.elements[0].uri, 'jabber')
         self.assertEqual(self.elements[0]['to'], 'bar')
         self.assertEqual(self.elements[0].x.uri, 'xdelay')
-        self.assertEqual(unicode(self.elements[0].x), 'some&data>')
+        self.assertEqual(str(self.elements[0].x), 'some&data>')
 
     def testNoRootNS(self):
         xml = b"<stream><error xmlns='etherx'/></stream>"
@@ -413,8 +398,6 @@ class DomishExpatStreamTests(DomishStreamTestsMixin, unittest.TestCase):
 
     if requireModule('pyexpat', default=None) is None:
         skip = "pyexpat is required for ExpatElementStream tests."
-    else:
-        skip = None
 
 
 
@@ -575,12 +558,13 @@ class SerializerTests(unittest.TestCase):
 
     def testRawXMLWithUnicodeSerialization(self):
         e = domish.Element((None, "foo"))
-        e.addRawXml(u"<degree>\u00B0</degree>")
-        self.assertEqual(e.toXml(), u"<foo><degree>\u00B0</degree></foo>")
+        e.addRawXml("<degree>\u00B0</degree>")
+        self.assertEqual(e.toXml(), "<foo><degree>\u00B0</degree></foo>")
 
     def testUnicodeSerialization(self):
         e = domish.Element((None, "foo"))
-        e["test"] = u"my value\u0221e"
-        e.addContent(u"A degree symbol...\u00B0")
+        e["test"] = "my value\u0221e"
+        e.addContent("A degree symbol...\u00B0")
         self.assertEqual(e.toXml(),
-                          u"<foo test='my value\u0221e'>A degree symbol...\u00B0</foo>")
+                         "<foo test='my value\u0221e'"
+                         ">A degree symbol...\u00B0</foo>")

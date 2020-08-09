@@ -22,7 +22,7 @@ class IdentError(Exception):
 
     identDescription = 'UNKNOWN-ERROR'
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.identDescription
 
 
@@ -157,7 +157,7 @@ class ProcServerMixin:
             return getpwuid(uid)[0]
         del getpwuid
     except ImportError:
-        def getUsername(self, uid):
+        def getUsername(self, uid, getpwuid=None):
             raise IdentError()
 
 

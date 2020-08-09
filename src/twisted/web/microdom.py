@@ -123,10 +123,11 @@ class MismatchedTags(Exception):
          self.endCol) = filename, expect, got, begLine, begCol, endLine, endCol
 
 
-    def __str__(self):
-        return ("expected </%s>, got </%s> line: %s col: %s, began line: %s col: %s"
-                % (self.expect, self.got, self.endLine, self.endCol, self.begLine,
-                   self.begCol))
+    def __str__(self) -> str:
+        return ("expected </%s>, got </%s> line: %s col: %s, "
+                "began line: %s col: %s"
+                % (self.expect, self.got, self.endLine, self.endCol,
+                   self.begLine, self.begCol))
 
 
 
@@ -314,9 +315,9 @@ class Document(Node):
     isEqualToNode = isEqualToDocument
 
 
-    def get_documentElement(self):
+    @property
+    def documentElement(self):
         return self.childNodes[0]
-    documentElement = property(get_documentElement)
 
 
     def appendChild(self, child):
@@ -468,7 +469,7 @@ class Text(CharacterData):
         w(val)
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "Text(%s" % repr(self.nodeValue) + ')'
 
 
@@ -741,7 +742,7 @@ class Element(Node):
             w(" />")
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         rep = "Element(%s" % repr(self.nodeName)
         if self.attributes:
             rep += ", attributes=%r" % (self.attributes,)
@@ -752,7 +753,7 @@ class Element(Node):
         return rep + ')'
 
 
-    def __str__(self):
+    def __str__(self) -> str:
         rep = "<" + self.nodeName
         if self._filename or self._markpos:
             rep += " ("

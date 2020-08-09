@@ -17,10 +17,7 @@ from twisted.internet import protocol, reactor, address, defer, task
 from twisted.protocols import policies
 
 
-try:
-    import builtins
-except ImportError:
-    import __builtin__ as builtins
+import builtins
 
 
 
@@ -360,7 +357,8 @@ class WrapperTests(unittest.TestCase):
 
 
 class WrappingFactory(policies.WrappingFactory):
-    protocol = lambda s, f, p: p
+    def protocol(self, f, p):
+        return p
 
     def startFactory(self):
         policies.WrappingFactory.startFactory(self)

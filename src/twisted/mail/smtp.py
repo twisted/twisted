@@ -17,6 +17,7 @@ import os
 import random
 import binascii
 import warnings
+from typing import Type
 
 from email.utils import parseaddr
 
@@ -34,9 +35,8 @@ from twisted.internet.interfaces import ITLSTransport, ISSLTransport
 from twisted.internet._idna import _idnaText
 from twisted.python import log
 from twisted.python import util
-from twisted.python.compat import (_PY3, range, long, unicode, networkString,
-                                   nativeString, iteritems, _keys, _bytesChr,
-                                   iterbytes)
+from twisted.python.compat import (long, unicode, networkString,
+                                   nativeString, iteritems, iterbytes)
 from twisted.python.runtime import platform
 
 from twisted.mail.interfaces import (IClientAuthentication,
@@ -79,15 +79,13 @@ __all__ = [
 
 
 # Cache the hostname (XXX Yes - this is broken)
+# Encode the DNS name into something we can send over the wire
 if platform.isMacOSX():
     # On macOS, getfqdn() is ridiculously slow - use the
     # probably-identical-but-sometimes-not gethostname() there.
-    DNSNAME = socket.gethostname()
+    DNSNAME = socket.gethostname().encode('ascii')
 else:
-    DNSNAME = socket.getfqdn()
-
-# Encode the DNS name into something we can send over the wire
-DNSNAME = DNSNAME.encode('ascii')
+    DNSNAME = socket.getfqdn().encode('ascii')
 
 # Used for fast success code lookup
 SUCCESS = dict.fromkeys(range(200, 300))
@@ -290,12 +288,8 @@ class Address:
 
         return b''.join(res)
 
-    if _PY3:
-        def __str__(self):
-            return nativeString(bytes(self))
-    else:
-        def __str__(self):
-            return self.__bytes__()
+    def __str__(self) -> str:
+        return nativeString(bytes(self))
 
 
     def __bytes__(self):
@@ -305,7 +299,7 @@ class Address:
             return b''
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "%s.%s(%s)" % (self.__module__, self.__class__.__name__,
                               repr(str(self)))
 
@@ -337,13 +331,13 @@ class User:
         protocol isn't picklabe, but we want User to be, so skip it in
         the pickle.
         """
-        return { 'dest' : self.dest,
-                 'helo' : self.helo,
-                 'protocol' : None,
-                 'orig' : self.orig }
+        return {'dest': self.dest,
+                'helo': self.helo,
+                'protocol': None,
+                'orig': self.orig}
 
 
-    def __str__(self):
+    def __str__(self) -> str:
         return nativeString(bytes(self.dest))
 
 
@@ -1623,7 +1617,7 @@ class ESMTP(SMTP):
         @rtype: L{dict} with L{bytes} keys and a value of either L{None} or a
             L{list} of L{bytes}.
         """
-        ext = {b'AUTH': _keys(self.challengers)}
+        ext = {b'AUTH': list(self.challengers.keys())}
         if self.canStartTLS and not self.startedTLS:
             ext[b'STARTTLS'] = None
         return ext
@@ -1862,7 +1856,7 @@ class SMTPSenderFactory(protocol.ClientFactory):
     """
 
     domain = DNSNAME
-    protocol = SMTPSender
+    protocol = SMTPSender  # type: Type[SMTPClient]
 
     def __init__(self, fromEmail, toEmail, file, deferred, retries=5,
                  timeout=None):
@@ -2217,7 +2211,7 @@ def xtext_encode(s, errors=None):
         if ch == '+' or ch == '=' or o < 33 or o > 126:
             r.append(networkString('+%02X' % (o,)))
         else:
-            r.append(_bytesChr(o))
+            r.append(bytes((o,)))
     return (b''.join(r), len(s))
 
 

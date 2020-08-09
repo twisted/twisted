@@ -20,11 +20,12 @@ import sys
 import getopt
 from os import path
 import textwrap
-from typing import Callable, Optional
+from typing import Optional
 
 # Sibling Imports
 from twisted.python import reflect, util
-from twisted.python.compat import _PY3
+
+
 
 class UsageError(Exception):
     pass
@@ -187,7 +188,10 @@ class Options(dict):
             self._dispatch.update(dispatch)
 
 
-    __hash__ = object.__hash__  # type: Callable[[object], int]
+    # class Options derives from dict, which defines __hash__ as None,
+    # but we need to set __hash__ to object.__hash__ which is of type
+    # Callable[[object], int].  So we need to ignore mypy error here.
+    __hash__ = object.__hash__  # type: ignore[assignment]
 
 
     def opt_help(self):
@@ -442,7 +446,7 @@ class Options(dict):
         return longOpt, shortOpt, docs, settings, synonyms, dispatch
 
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.getSynopsis() + '\n' + self.getUsage(width=None)
 
     def getSynopsis(self):
@@ -543,9 +547,6 @@ class Options(dict):
 
         return s + longdesc + commands
 
-    #def __repr__(self):
-    #    XXX: It'd be cool if we could return a succinct representation
-    #        of which flags and options are set here.
 
 
 _ZSH = 'zsh'
@@ -580,12 +581,12 @@ class Completer(object):
         self._repeat = repeat
 
 
-    def _getRepeatFlag(self):
+    @property
+    def _repeatFlag(self):
         if self._repeat:
             return "*"
         else:
             return ""
-    _repeatFlag = property(_getRepeatFlag)
 
 
     def _description(self, optName):
@@ -972,20 +973,12 @@ def flagFunction(method, name=None):
     @return: If the method is a flag handler, return C{True}.  Otherwise return
         C{False}.
     """
-    if _PY3:
-        reqArgs = len(inspect.signature(method).parameters)
-        if reqArgs > 1:
-            raise UsageError('Invalid Option function for %s' %
-                             (name or method.__name__))
-        if reqArgs == 1:
-            return False
-    else:
-        reqArgs = len(inspect.getargspec(method).args)
-        if reqArgs > 2:
-            raise UsageError('Invalid Option function for %s' %
-                             (name or method.__name__))
-        if reqArgs == 2:
-            return False
+    reqArgs = len(inspect.signature(method).parameters)
+    if reqArgs > 1:
+        raise UsageError('Invalid Option function for %s' %
+                         (name or method.__name__))
+    if reqArgs == 1:
+        return False
     return True
 
 
@@ -998,4 +991,7 @@ def portCoerce(value):
     if value < 0 or value > 65535:
         raise ValueError("Port number not in range: %s" % (value,))
     return value
-portCoerce.coerceDoc = "Must be an int between 0 and 65535."
+
+
+
+portCoerce.coerceDoc = "Must be an int between 0 and 65535."  # type: ignore[attr-defined]  # noqa

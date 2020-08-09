@@ -15,7 +15,7 @@ from twisted.internet.interfaces import IAddress
 from twisted.python.filepath import _asFilesystemBytes
 from twisted.python.filepath import _coerceToFilesystemEncoding
 from twisted.python.runtime import platform
-from twisted.python.compat import _PY3
+
 
 
 @implementer(IAddress)
@@ -111,15 +111,14 @@ class UNIXAddress(object):
     name = attr.ib(converter=attr.converters.optional(_asFilesystemBytes))
 
     if getattr(os.path, 'samefile', None) is not None:
-        def __eq__(self, other):
+        def __eq__(self, other: object) -> bool:
             """
             Overriding C{attrs} to ensure the os level samefile
             check is done if the name attributes do not match.
             """
-            if isinstance(other, self.__class__):
-                res = self.name == other.name
-            else:
-                return False
+            if not isinstance(other, self.__class__):
+                return NotImplemented
+            res = self.name == other.name
             if not res and self.name and other.name:
                 try:
                     return os.path.samefile(self.name, other.name)
@@ -128,23 +127,17 @@ class UNIXAddress(object):
                 except (TypeError, ValueError) as e:
                     # On Linux, abstract namespace UNIX sockets start with a
                     # \0, which os.path doesn't like.
-                    if not _PY3 and not platform.isLinux():
+                    if not platform.isLinux():
                         raise e
             return res
     else:
-        def __eq__(self, other):
+        def __eq__(self, other: object) -> bool:
             if isinstance(other, self.__class__):
                 return self.name == other.name
-            return False
+            return NotImplemented
 
 
-    def __ne__(self, other):
-        if isinstance(other, self.__class__):
-            return not self.__eq__(other)
-        return True
-
-
-    def __repr__(self):
+    def __repr__(self) -> str:
         name = self.name
         if name:
             name = _coerceToFilesystemEncoding('', self.name)
@@ -168,13 +161,14 @@ class UNIXAddress(object):
 class _ServerFactoryIPv4Address(IPv4Address):
     """Backwards compatibility hack. Just like IPv4Address in practice."""
 
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
         if isinstance(other, tuple):
-            warnings.warn("IPv4Address.__getitem__ is deprecated.  Use attributes instead.",
+            warnings.warn("IPv4Address.__getitem__ is deprecated.  "
+                          "Use attributes instead.",
                           category=DeprecationWarning, stacklevel=2)
             return (self.host, self.port) == other
         elif isinstance(other, IPv4Address):
             a = (self.type, self.host, self.port)
             b = (other.type, other.host, other.port)
             return a == b
-        return False
+        return NotImplemented

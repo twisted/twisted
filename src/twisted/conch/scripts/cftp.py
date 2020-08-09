@@ -15,15 +15,18 @@ import stat
 import struct
 import sys
 import tty
+from typing import List, Optional, Union
 
 from twisted.conch.client import connect, default, options
 from twisted.conch.ssh import connection, common
 from twisted.conch.ssh import channel, filetransfer
 from twisted.protocols import basic
-from twisted.python.compat import _PY3, unicode
+from twisted.python.compat import unicode
 from twisted.internet import reactor, stdio, defer, utils
 from twisted.python import log, usage, failure
 from twisted.python.filepath import FilePath
+
+
 
 class ClientOptions(options.ConchOptions):
 
@@ -35,16 +38,21 @@ class ClientOptions(options.ConchOptions):
                 "executing commands to send and receive file information")
 
     optParameters = [
-                    ['buffersize', 'B', 32768, 'Size of the buffer to use for sending/receiving.'],
-                    ['batchfile', 'b', None, 'File to read commands from, or \'-\' for stdin.'],
-                    ['requests', 'R', 5, 'Number of requests to make before waiting for a reply.'],
-                    ['subsystem', 's', 'sftp', 'Subsystem/server program to connect to.']]
+                    ['buffersize', 'B', 32768,
+                     'Size of the buffer to use for sending/receiving.'],
+                    ['batchfile', 'b', None,
+                     'File to read commands from, or \'-\' for stdin.'],
+                    ['requests', 'R', 5,
+                     'Number of requests to make before waiting for a reply.'],
+                    ['subsystem', 's', 'sftp',
+                     'Subsystem/server program to connect to.']]  # type: List[List[Optional[Union[str, int]]]]  # noqa
 
     compData = usage.Completions(
         descriptions={
             "buffersize": "Size of send/receive buffer (default: 32768)"},
         extraActions=[usage.CompleteUserAtHost(),
                       usage.CompleteFiles(descr="local file")])
+
 
     def parseArgs(self, host, localPath=None):
         self['remotePath'] = ''
@@ -54,12 +62,11 @@ class ClientOptions(options.ConchOptions):
         self['host'] = host
         self['localPath'] = localPath
 
+
+
 def run():
-#    import hotshot
-#    prof = hotshot.Profile('cftp.prof')
-#    prof.start()
     args = sys.argv[1:]
-    if '-l' in args: # cvs is an idiot
+    if '-l' in args:  # cvs is an idiot
         i = args.index('-l')
         args = args[i:i+2]+args
         del args[i+2:i+4]
@@ -77,8 +84,8 @@ def run():
         log.discardLogs()
     doConnect(options)
     reactor.run()
-#    prof.stop()
-#    prof.close()
+
+
 
 def handleError():
     global exitStatus
@@ -89,10 +96,11 @@ def handleError():
     log.err(failure.Failure())
     raise
 
+
+
 def doConnect(options):
-#    log.deferr = handleError # HACK
     if '@' in options['host']:
-        options['user'], options['host'] = options['host'].split('@',1)
+        options['user'], options['host'] = options['host'].split('@', 1)
     host = options['host']
     if not options['user']:
         options['user'] = getpass.getuser()
@@ -108,19 +116,24 @@ def doConnect(options):
     uao = default.SSHUserAuthClient(options['user'], options, conn)
     connect.connect(host, port, options, vhk, uao).addErrback(_ebExit)
 
+
+
 def _ebExit(f):
-    #global exitStatus
     if hasattr(f.value, 'value'):
         s = f.value.value
     else:
         s = str(f)
     print(s)
-    #exitStatus = "conch: exiting with error %s" % f
     try:
         reactor.stop()
-    except: pass
+    except BaseException:
+        pass
+
+
 
 def _ignore(*args): pass
+
+
 
 class FileWrapper:
 
@@ -132,6 +145,8 @@ class FileWrapper:
 
     def __getattr__(self, attr):
         return getattr(self.f, attr)
+
+
 
 class StdioClient(basic.LineReceiver):
 
@@ -163,7 +178,7 @@ class StdioClient(basic.LineReceiver):
     def lineReceived(self, line):
         if self.client.transport.localClosed:
             return
-        if _PY3 and isinstance(line, bytes):
+        if isinstance(line, bytes):
             line = line.decode("utf-8")
         log.msg('got line %s' % line)
         line = line.lstrip()
@@ -201,9 +216,11 @@ class StdioClient(basic.LineReceiver):
             self._ebCommand(failure.Failure(NotImplementedError(errMsg)))
             self._newLine()
 
+
     def _printFailure(self, f):
         log.msg(f)
-        e = f.trap(NotImplementedError, filetransfer.SFTPError, OSError, IOError)
+        e = f.trap(NotImplementedError, filetransfer.SFTPError, OSError,
+                   IOError)
         if e == NotImplementedError:
             self._writeToTransport(self.cmd_HELP(''))
         elif e == filetransfer.SFTPError:
@@ -212,6 +229,7 @@ class StdioClient(basic.LineReceiver):
         elif e in (OSError, IOError):
             errMsg = "local error %i: %s\n" % (f.value.errno, f.value.strerror)
             self._writeToTransport(errMsg)
+
 
     def _newLine(self):
         if self.client.transport.localClosed:
@@ -226,6 +244,7 @@ class StdioClient(basic.LineReceiver):
                 self._writeToTransport(l)
                 self.lineReceived(l.strip())
 
+
     def _cbCommand(self, result):
         if result is not None:
             if isinstance(result, unicode):
@@ -235,11 +254,13 @@ class StdioClient(basic.LineReceiver):
                 self._writeToTransport(b'\n')
         self._newLine()
 
+
     def _ebCommand(self, f):
         self._printFailure(f)
         if self.file and not self.ignoreErrors:
             self.client.transport.loseConnection()
         self._newLine()
+
 
     def cmd_CD(self, path):
         path, rest = self._getFilename(path)
@@ -251,14 +272,17 @@ class StdioClient(basic.LineReceiver):
         d.addErrback(self._ebCommand)
         return d
 
+
     def _cbCd(self, directory):
         directory.close()
         d = self.client.realPath(directory.name)
         d.addCallback(self._cbCurDir)
         return d
 
+
     def _cbCurDir(self, path):
         self.currentDirectory = path
+
 
     def cmd_CHGRP(self, rest):
         grp, rest = rest.split(None, 1)
@@ -268,6 +292,7 @@ class StdioClient(basic.LineReceiver):
         d.addCallback(self._cbSetUsrGrp, path, grp=grp)
         return d
 
+
     def cmd_CHMOD(self, rest):
         mod, rest = rest.split(None, 1)
         path, rest = self._getFilename(rest)
@@ -275,6 +300,7 @@ class StdioClient(basic.LineReceiver):
         d = self.client.setAttrs(path, {'permissions':mod})
         d.addCallback(_ignore)
         return d
+
 
     def cmd_CHOWN(self, rest):
         usr, rest = rest.split(None, 1)
@@ -284,6 +310,7 @@ class StdioClient(basic.LineReceiver):
         d.addCallback(self._cbSetUsrGrp, path, usr=usr)
         return d
 
+
     def _cbSetUsrGrp(self, attrs, path, usr=None, grp=None):
         new = {}
         new['uid'] = (usr is not None) and usr or attrs['uid']
@@ -292,9 +319,10 @@ class StdioClient(basic.LineReceiver):
         d.addCallback(_ignore)
         return d
 
+
     def cmd_GET(self, rest):
         remote, rest = self._getFilename(rest)
-        if '*' in remote or '?' in remote: # wildcard
+        if '*' in remote or '?' in remote:  # wildcard
             if rest:
                 local, rest = self._getFilename(rest)
                 if not os.path.isdir(local):
@@ -316,10 +344,11 @@ class StdioClient(basic.LineReceiver):
         d.addErrback(self._ebCloseLf, lf)
         return d
 
+
     def _cbGetMultiple(self, files, local):
-        #if self._useProgressBar: # one at a time
         # XXX this can be optimized for times w/o progress bar
         return self._cbGetMultipleNext(None, files, local)
+
 
     def _cbGetMultipleNext(self, res, files, local):
         if isinstance(res, failure.Failure):
@@ -339,12 +368,15 @@ class StdioClient(basic.LineReceiver):
         d.addBoth(self._cbGetMultipleNext, files, local)
         return d
 
+
     def _ebCloseLf(self, f, lf):
         lf.close()
         return f
 
+
     def _cbGetOpenFile(self, rf, lf):
         return rf.getAttrs().addCallback(self._cbGetFileSize, rf, lf)
+
 
     def _cbGetFileSize(self, attrs, rf, lf):
         if not stat.S_ISREG(attrs['permissions']):
@@ -365,6 +397,7 @@ class StdioClient(basic.LineReceiver):
         dl.addCallback(self._cbGetDone, rf, lf)
         return dl
 
+
     def _getNextChunk(self, chunks):
         end = 0
         for chunk in chunks:
@@ -378,6 +411,7 @@ class StdioClient(basic.LineReceiver):
         bufSize = int(self.client.transport.conn.options['buffersize'])
         chunks.append((end, end + bufSize))
         return (end, bufSize)
+
 
     def _cbGetRead(self, data, rf, lf, chunks, start, size, startTime):
         if data and isinstance(data, failure.Failure):
@@ -577,6 +611,7 @@ class StdioClient(basic.LineReceiver):
         dl.addCallback(self._cbPutDone, rf, lf)
         return dl
 
+
     def _cbPutWrite(self, ignored, rf, lf, chunks, startTime):
         chunk = self._getNextChunk(chunks)
         start, size = chunk
@@ -592,6 +627,7 @@ class StdioClient(basic.LineReceiver):
         else:
             return
 
+
     def _cbPutDone(self, ignored, rf, lf):
         lf.close()
         rf.close()
@@ -599,8 +635,10 @@ class StdioClient(basic.LineReceiver):
             self._writeToTransport('\n')
         return 'Transferred %s to %s' % (lf.name, rf.name)
 
+
     def cmd_LCD(self, path):
         os.chdir(path)
+
 
     def cmd_LN(self, rest):
         linkpath, rest = self._getFilename(rest)
@@ -609,6 +647,7 @@ class StdioClient(basic.LineReceiver):
                 lambda x: os.path.join(self.currentDirectory, x),
                 (linkpath, targetpath))
         return self.client.makeLink(linkpath, targetpath).addCallback(_ignore)
+
 
     def cmd_LS(self, rest):
         # possible lines:
@@ -635,6 +674,7 @@ class StdioClient(basic.LineReceiver):
         d.addCallback(self._cbDisplayFiles, options)
         return d
 
+
     def _cbDisplayFiles(self, files, options):
         files.sort()
         if 'all' not in options:
@@ -648,26 +688,32 @@ class StdioClient(basic.LineReceiver):
         else:
             return b'\n'.join(lines)
 
+
     def cmd_MKDIR(self, path):
         path, rest = self._getFilename(path)
         path = os.path.join(self.currentDirectory, path)
         return self.client.makeDirectory(path, {}).addCallback(_ignore)
+
 
     def cmd_RMDIR(self, path):
         path, rest = self._getFilename(path)
         path = os.path.join(self.currentDirectory, path)
         return self.client.removeDirectory(path).addCallback(_ignore)
 
+
     def cmd_LMKDIR(self, path):
         os.system("mkdir %s" % path)
+
 
     def cmd_RM(self, path):
         path, rest = self._getFilename(path)
         path = os.path.join(self.currentDirectory, path)
         return self.client.removeFile(path).addCallback(_ignore)
 
+
     def cmd_LLS(self, rest):
         os.system("ls %s" % rest)
+
 
     def cmd_RENAME(self, rest):
         oldpath, rest = self._getFilename(rest)
@@ -677,16 +723,19 @@ class StdioClient(basic.LineReceiver):
                 (oldpath, newpath))
         return self.client.renameFile(oldpath, newpath).addCallback(_ignore)
 
+
     def cmd_EXIT(self, ignored):
         self.client.transport.loseConnection()
 
     cmd_QUIT = cmd_EXIT
+
 
     def cmd_VERSION(self, ignored):
         version = "SFTP version %i" % self.client.version
         if isinstance(version, unicode):
             version = version.encode("utf-8")
         return version
+
 
     def cmd_HELP(self, ignored):
         return """Available commands:
@@ -718,12 +767,15 @@ version                         Print the SFTP version.
     def cmd_PWD(self, ignored):
         return self.currentDirectory
 
+
     def cmd_LPWD(self, ignored):
         return os.getcwd()
+
 
     def cmd_PROGRESS(self, ignored):
         self.useProgressBar = not self.useProgressBar
         return "%ssing progess bar." % (self.useProgressBar and "U" or "Not u")
+
 
     def cmd_EXEC(self, rest):
         """
@@ -758,42 +810,46 @@ version                         Print the SFTP version.
             d.addCallback(self._cbOpenList, tail)
         return d
 
+
     def _cbOpenList(self, directory, glob):
         files = []
         d = directory.read()
         d.addBoth(self._cbReadFile, files, directory, glob)
         return d
 
+
     def _ebNotADirectory(self, reason, path, glob):
         d = self.client.openDirectory(path)
         d.addCallback(self._cbOpenList, glob)
         return d
 
-    def _cbReadFile(self, files, l, directory, glob):
+
+    def _cbReadFile(self, files, matchedFiles, directory, glob):
         if not isinstance(files, failure.Failure):
             if glob:
-                if _PY3:
-                    glob = glob.encode("utf-8")
-                l.extend([f for f in files if fnmatch.fnmatch(f[0], glob)])
+                glob = glob.encode("utf-8")
+                matchedFiles.extend([f for f in files
+                                     if fnmatch.fnmatch(f[0], glob)])
             else:
-                l.extend(files)
+                matchedFiles.extend(files)
             d = directory.read()
-            d.addBoth(self._cbReadFile, l, directory, glob)
+            d.addBoth(self._cbReadFile, matchedFiles, directory, glob)
             return d
         else:
             reason = files
             reason.trap(EOFError)
             directory.close()
-            return l
+            return matchedFiles
+
 
     def _abbrevSize(self, size):
-        # from http://mail.python.org/pipermail/python-list/1999-December/018395.html
+        # from http://mail.python.org/pipermail/python-list/1999-December/018395.html  # noqa
         _abbrevs = [
-            (1<<50, 'PB'),
-            (1<<40, 'TB'),
-            (1<<30, 'GB'),
-            (1<<20, 'MB'),
-            (1<<10, 'kB'),
+            (1 << 50, 'PB'),
+            (1 << 40, 'TB'),
+            (1 << 30, 'GB'),
+            (1 << 20, 'MB'),
+            (1 << 10, 'kB'),
             (1, 'B')
             ]
 
@@ -802,8 +858,9 @@ version                         Print the SFTP version.
                 break
         return '%.1f' % (size/factor) + suffix
 
+
     def _abbrevTime(self, t):
-        if t > 3600: # 1 hour
+        if t > 3600:  # 1 hour
             hours = int(t / 3600)
             t -= (3600 * hours)
             mins = int(t / 60)
@@ -894,11 +951,17 @@ version                         Print the SFTP version.
         else:
             return ret[0], ret[1]
 
+
+
 setattr(StdioClient, 'cmd_?', StdioClient.cmd_HELP)
+
+
 
 class SSHConnection(connection.SSHConnection):
     def serviceStarted(self):
         self.openChannel(SSHSession())
+
+
 
 class SSHSession(channel.SSHChannel):
 
@@ -915,6 +978,7 @@ class SSHSession(channel.SSHChannel):
         d.addCallback(self._cbSubsystem)
         d.addErrback(_ebExit)
 
+
     def _cbSubsystem(self, result):
         self.client = filetransfer.FileTransferClient()
         self.client.makeConnection(self)
@@ -926,31 +990,39 @@ class SSHSession(channel.SSHChannel):
                 f = open(fn)
         self.stdio = stdio.StandardIO(StdioClient(self.client, f))
 
+
     def extReceived(self, t, data):
-        if t==connection.EXTENDED_DATA_STDERR:
+        if t == connection.EXTENDED_DATA_STDERR:
             log.msg('got %s stderr data' % len(data))
             sys.stderr.write(data)
             sys.stderr.flush()
+
 
     def eofReceived(self):
         log.msg('got eof')
         self.stdio.loseWriteConnection()
 
+
     def closeReceived(self):
         log.msg('remote side closed %s' % self)
         self.conn.sendClose(self)
 
+
     def closed(self):
         try:
             reactor.stop()
-        except:
+        except BaseException:
             pass
+
 
     def stopWriting(self):
         self.stdio.pauseProducing()
 
+
     def startWriting(self):
         self.stdio.resumeProducing()
+
+
 
 if __name__ == '__main__':
     run()

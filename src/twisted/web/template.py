@@ -454,7 +454,7 @@ class XMLFile(object):
                 return _flatsaxParse(f)
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return '<XMLFile of %r>' % (self._path,)
 
 

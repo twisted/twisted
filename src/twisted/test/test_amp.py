@@ -10,7 +10,7 @@ Tests for L{twisted.protocols.amp}.
 import datetime
 import decimal
 from unittest import skipIf
-
+from typing import Dict, Type
 from zope.interface import implementer
 from zope.interface.verify import verifyClass, verifyObject
 
@@ -18,26 +18,29 @@ from twisted.python import filepath
 from twisted.python.compat import intToBytes
 from twisted.python.failure import Failure
 from twisted.protocols import amp
-from twisted.trial import unittest
+from twisted.trial.unittest import TestCase
 from twisted.internet import (
     address, protocol, defer, error, reactor, interfaces)
 from twisted.test import iosim
 from twisted.test.proto_helpers import StringTransport
 
-ssl = None
 try:
     from twisted.internet import ssl
 except ImportError:
-    pass
+    ssl = None  # type: ignore[assignment]
 
 if ssl and not ssl.supported:
-    ssl = None
+    ssl = None  # type: ignore[assignment]
 
 if ssl is None:
-    skipSSL = "SSL not available"
+    skipSSL = True
 else:
-    skipSSL = None
+    skipSSL = False
 
+if not interfaces.IReactorSSL.providedBy(reactor):
+    reactorLacksSSL = True
+else:
+    reactorLacksSSL = False
 
 
 tz = amp._FixedOffsetTZInfo.fromSignHoursMinutes
@@ -76,7 +79,7 @@ class TestProto(protocol.Protocol):
         self.onConnLost.callback(self.data)
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """
         Custom repr for testing to avoid coupling amp tests with repr from
         L{Protocol}
@@ -144,9 +147,11 @@ class Hello(amp.Command):
     response = [(b'hello', amp.String()),
                 (b'print', amp.Unicode(optional=True))]
 
-    errors = {UnfriendlyGreeting: b'UNFRIENDLY'}
+    errors = {UnfriendlyGreeting: b'UNFRIENDLY'}  # type: Dict[Type[Exception], bytes]  # noqa
 
-    fatalErrors = {DeathThreat: b'DEAD'}
+    fatalErrors = {DeathThreat: b'DEAD'}  # type: Dict[Type[Exception], bytes]
+
+
 
 class NoAnswerHello(Hello):
     commandName = Hello.commandName
@@ -170,6 +175,8 @@ class FutureHello(amp.Command):
 
     errors = {UnfriendlyGreeting: b'UNFRIENDLY'}
 
+
+
 class WTF(amp.Command):
     """
     An example of an invalid command.
@@ -183,18 +190,26 @@ class BrokenReturn(amp.Command):
 
     commandName = b'broken_return'
 
+
+
 class Goodbye(amp.Command):
     # commandName left blank on purpose: this tests implicit command names.
     response = [(b'goodbye', amp.String())]
     responseType = amp.QuitBox
 
+
+
 class WaitForever(amp.Command):
     commandName = b'wait_forever'
+
+
 
 class GetList(amp.Command):
     commandName = b'getlist'
     arguments = [(b'length', amp.Integer())]
     response = [(b'body', amp.AmpList([(b'x', amp.Integer())]))]
+
+
 
 class DontRejectMe(amp.Command):
     commandName = b'dontrejectme'
@@ -204,9 +219,13 @@ class DontRejectMe(amp.Command):
             ]
     response = [(b'response', amp.Unicode())]
 
+
+
 class SecuredPing(amp.Command):
     # XXX TODO: actually make this refuse to send over an insecure connection
     response = [(b'pinged', amp.Boolean())]
+
+
 
 class TestSwitchProto(amp.ProtocolSwitchCommand):
     commandName = b'Switch-Proto'
@@ -215,6 +234,8 @@ class TestSwitchProto(amp.ProtocolSwitchCommand):
         (b'name', amp.String()),
         ]
     errors = {UnknownProtocol: b'UNKNOWN'}
+
+
 
 class SingleUseFactory(protocol.ClientFactory):
     def __init__(self, proto):
@@ -231,12 +252,20 @@ class SingleUseFactory(protocol.ClientFactory):
         self.reasonFailed = reason
         return
 
+
+
 THING_I_DONT_UNDERSTAND = b'gwebol nargo'
+
+
+
 class ThingIDontUnderstandError(Exception):
     pass
 
+
+
 class FactoryNotifier(amp.AMP):
     factory = None
+
     def connectionMade(self):
         if self.factory is not None:
             self.factory.theProto = self
@@ -248,11 +277,14 @@ class FactoryNotifier(amp.AMP):
         if not ISSLTransport.providedBy(self.transport):
             raise DeathThreat("only send secure pings over secure channels")
         return {'pinged': True}
+
     SecuredPing.responder(emitpong)
+
 
 
 class SimpleSymmetricCommandProtocol(FactoryNotifier):
     maybeLater = None
+
     def __init__(self, onConnLost=None):
         amp.AMP.__init__(self)
         self.onConnLost = onConnLost
@@ -323,6 +355,7 @@ class SimpleSymmetricCommandProtocol(FactoryNotifier):
     BrokenReturn.responder(donothing)
 
 
+
 class DeferredSymmetricCommandProtocol(SimpleSymmetricCommandProtocol):
     def switchit(self, name):
         if name == b'test-proto':
@@ -330,6 +363,8 @@ class DeferredSymmetricCommandProtocol(SimpleSymmetricCommandProtocol):
             self.maybeLater = defer.Deferred()
             return self.maybeLater
     TestSwitchProto.responder(switchit)
+
+
 
 class BadNoAnswerCommandProtocol(SimpleSymmetricCommandProtocol):
     def badResponder(self, hello, From, optional=None, Print=None,
@@ -339,11 +374,16 @@ class BadNoAnswerCommandProtocol(SimpleSymmetricCommandProtocol):
         """
     NoAnswerHello.responder(badResponder)
 
+
+
 class NoAnswerCommandProtocol(SimpleSymmetricCommandProtocol):
     def goodNoAnswerResponder(self, hello, From, optional=None, Print=None,
-                              mixedCase=None, dash_arg=None, underscore_arg=None):
+                              mixedCase=None, dash_arg=None,
+                              underscore_arg=None):
         return dict(hello=hello+b"-noanswer")
     NoAnswerHello.responder(goodNoAnswerResponder)
+
+
 
 def connectedServerAndClient(ServerClass=SimpleSymmetricProtocol,
                              ClientClass=SimpleSymmetricProtocol,
@@ -354,10 +394,15 @@ def connectedServerAndClient(ServerClass=SimpleSymmetricProtocol,
         ServerClass, ClientClass,
         *a, **kw)
 
+
+
 class TotallyDumbProtocol(protocol.Protocol):
     buf = b''
+
     def dataReceived(self, data):
         self.buf += data
+
+
 
 class LiteralAmp(amp.AMP):
     def __init__(self):
@@ -369,7 +414,7 @@ class LiteralAmp(amp.AMP):
 
 
 
-class AmpBoxTests(unittest.TestCase):
+class AmpBoxTests(TestCase):
     """
     Test a few essential properties of AMP boxes, mostly with respect to
     serialization correctness.
@@ -399,7 +444,7 @@ class AmpBoxTests(unittest.TestCase):
 
 
 
-class ParsingTests(unittest.TestCase):
+class ParsingTests(TestCase):
 
     def test_booleanValues(self):
         """
@@ -533,7 +578,7 @@ class FakeSender:
 
 
 
-class CommandDispatchTests(unittest.TestCase):
+class CommandDispatchTests(TestCase):
     """
     The AMP CommandDispatcher class dispatches converts AMP boxes into commands
     and responses using Command.responder decorator.
@@ -752,8 +797,7 @@ class OverrideLocatorAMP(amp.AMP):
 
 
 
-
-class CommandLocatorTests(unittest.TestCase):
+class CommandLocatorTests(TestCase):
     """
     The CommandLocator should enable users to specify responders to commands as
     functions that take structured objects, annotated with metadata.
@@ -846,7 +890,8 @@ SWITCH_CLIENT_DATA = b'Success!'
 SWITCH_SERVER_DATA = b'No, really.  Success.'
 
 
-class BinaryProtocolTests(unittest.TestCase):
+
+class BinaryProtocolTests(TestCase):
     """
     Tests for L{amp.BinaryBoxProtocol}.
 
@@ -1191,7 +1236,7 @@ class BinaryProtocolTests(unittest.TestCase):
 
 
 
-class AMPTests(unittest.TestCase):
+class AMPTests(TestCase):
 
     def test_interfaceDeclarations(self):
         """
@@ -1371,13 +1416,12 @@ class AMPTests(unittest.TestCase):
         self.assertEqual(repr(a), "<AMP at 0x%x>" % (id(a),))
 
 
+    @skipIf(skipSSL, "SSL not available")
     def test_simpleSSLRepr(self):
         """
         L{amp._TLSBox.__repr__} returns a string.
         """
         self.assertEqual(type(repr(amp._TLSBox())), str)
-
-    test_simpleSSLRepr.skip = skipSSL
 
 
     def test_keyTooLong(self):
@@ -1906,10 +1950,10 @@ class SecurableProto(FactoryNotifier):
 
 
 
-@skipIf(not ssl, "SSL not available")
-@skipIf(not interfaces.IReactorSSL.providedBy(reactor),
-        'This test case requires SSL support in the reactor')
-class TLSTests(unittest.TestCase):
+@skipIf(skipSSL, "SSL not available")
+@skipIf(reactorLacksSSL, 'This test case requires SSL support in the reactor')
+class TLSTests(TestCase):
+
     def test_startingTLS(self):
         """
         Verify that starting TLS and succeeding at handshaking sends all the
@@ -2014,7 +2058,7 @@ class TLSTests(unittest.TestCase):
 
 
 
-class TLSNotAvailableTests(unittest.TestCase):
+class TLSNotAvailableTests(TestCase):
     """
     Tests what happened when ssl is not available in current installation.
     """
@@ -2092,7 +2136,7 @@ class BaseCommand(amp.Command):
     """
     This provides a command that will be subclassed.
     """
-    errors = {InheritedError: b'INHERITED_ERROR'}
+    errors = {InheritedError: b'INHERITED_ERROR'}  # type: Dict[Type[Exception], bytes]  # noqa
 
 
 
@@ -2110,7 +2154,7 @@ class AddErrorsCommand(BaseCommand):
     list.
     """
     arguments = [(b'other', amp.Boolean())]
-    errors = {OtherInheritedError: b'OTHER_INHERITED_ERROR'}
+    errors = {OtherInheritedError: b'OTHER_INHERITED_ERROR'}  # type: Dict[Type[Exception], bytes]  # noqa
 
 
 
@@ -2152,7 +2196,7 @@ class AddedCommandProtocol(amp.AMP):
 
 
 
-class CommandInheritanceTests(unittest.TestCase):
+class CommandInheritanceTests(TestCase):
     """
     These tests verify that commands inherit error conditions properly.
     """
@@ -2281,12 +2325,13 @@ if ssl is not None:
 
 
 
-@skipIf(not ssl, "SSL not available")
-@skipIf(not interfaces.IReactorSSL.providedBy(reactor),
-        'This test case requires SSL support in the reactor')
-class LiveFireTLSTests(LiveFireBase, unittest.TestCase):
+@skipIf(skipSSL, "SSL not available")
+@skipIf(reactorLacksSSL, 'This test case requires SSL support in the reactor')
+class LiveFireTLSTests(LiveFireBase, TestCase):
+
     clientProto = SecurableProto
     serverProto = SecurableProto
+
     def test_liveFireCustomTLS(self):
         """
         Using real, live TLS, actually negotiate a connection.
@@ -2335,10 +2380,9 @@ class SlightlySmartTLS(SimpleSymmetricCommandProtocol):
 
 
 
-@skipIf(not ssl, "SSL not available")
-@skipIf(not interfaces.IReactorSSL.providedBy(reactor),
-        'This test case requires SSL support in the reactor')
-class PlainVanillaLiveFireTests(LiveFireBase, unittest.TestCase):
+@skipIf(skipSSL, "SSL not available")
+@skipIf(reactorLacksSSL, 'This test case requires SSL support in the reactor')
+class PlainVanillaLiveFireTests(LiveFireBase, TestCase):
 
     clientProto = SimpleSymmetricCommandProtocol
     serverProto = SimpleSymmetricCommandProtocol
@@ -2354,10 +2398,10 @@ class PlainVanillaLiveFireTests(LiveFireBase, unittest.TestCase):
 
 
 
-@skipIf(not ssl, "SSL not available")
-@skipIf(not interfaces.IReactorSSL.providedBy(reactor),
-        'This test case requires SSL support in the reactor')
-class WithServerTLSVerificationTests(LiveFireBase, unittest.TestCase):
+@skipIf(skipSSL, "SSL not available")
+@skipIf(reactorLacksSSL, 'This test case requires SSL support in the reactor')
+class WithServerTLSVerificationTests(LiveFireBase, TestCase):
+
     clientProto = SimpleSymmetricCommandProtocol
     serverProto = SlightlySmartTLS
 
@@ -2491,11 +2535,11 @@ class ProtocolIncludingCommandWithDifferentCommandType(
     """
     A L{ProtocolIncludingCommand} subclass whose commandType is L{MyBox}
     """
-    commandType = MyBox
+    commandType = MyBox  # type: ignore[assignment]
 
 
 
-class CommandTests(unittest.TestCase):
+class CommandTests(TestCase):
     """
     Tests for L{amp.Argument} and L{amp.Command}.
     """
@@ -2786,7 +2830,7 @@ class ListOfTestsMixin:
 
 
 
-class ListOfStringsTests(unittest.TestCase, ListOfTestsMixin):
+class ListOfStringsTests(TestCase, ListOfTestsMixin):
     """
     Tests for L{ListOf} combined with L{amp.String}.
     """
@@ -2803,7 +2847,8 @@ class ListOfStringsTests(unittest.TestCase, ListOfTestsMixin):
         "multiple": [b"bar", b"baz", b"quux"]}
 
 
-class ListOfIntegersTests(unittest.TestCase, ListOfTestsMixin):
+
+class ListOfIntegersTests(TestCase, ListOfTestsMixin):
     """
     Tests for L{ListOf} combined with L{amp.Integer}.
     """
@@ -2829,7 +2874,7 @@ class ListOfIntegersTests(unittest.TestCase, ListOfTestsMixin):
 
 
 
-class ListOfUnicodeTests(unittest.TestCase, ListOfTestsMixin):
+class ListOfUnicodeTests(TestCase, ListOfTestsMixin):
     """
     Tests for L{ListOf} combined with L{amp.Unicode}.
     """
@@ -2847,7 +2892,7 @@ class ListOfUnicodeTests(unittest.TestCase, ListOfTestsMixin):
 
 
 
-class ListOfDecimalTests(unittest.TestCase, ListOfTestsMixin):
+class ListOfDecimalTests(TestCase, ListOfTestsMixin):
     """
     Tests for L{ListOf} combined with L{amp.Decimal}.
     """
@@ -2893,7 +2938,7 @@ class ListOfDecimalTests(unittest.TestCase, ListOfTestsMixin):
 
 
 
-class ListOfDecimalNanTests(unittest.TestCase, ListOfTestsMixin):
+class ListOfDecimalNanTests(TestCase, ListOfTestsMixin):
     """
     Tests for L{ListOf} combined with L{amp.Decimal} for not-a-number values.
     """
@@ -2942,7 +2987,7 @@ class ListOfDecimalNanTests(unittest.TestCase, ListOfTestsMixin):
 
 
 
-class DecimalTests(unittest.TestCase):
+class DecimalTests(TestCase):
     """
     Tests for L{amp.Decimal}.
     """
@@ -2958,7 +3003,7 @@ class DecimalTests(unittest.TestCase):
 
 
 
-class FloatTests(unittest.TestCase):
+class FloatTests(TestCase):
     """
     Tests for L{amp.Float}.
     """
@@ -2982,7 +3027,7 @@ class FloatTests(unittest.TestCase):
 
 
 
-class ListOfDateTimeTests(unittest.TestCase, ListOfTestsMixin):
+class ListOfDateTimeTests(TestCase, ListOfTestsMixin):
     """
     Tests for L{ListOf} combined with L{amp.DateTime}.
     """
@@ -3020,7 +3065,7 @@ class ListOfDateTimeTests(unittest.TestCase, ListOfTestsMixin):
 
 
 
-class ListOfOptionalTests(unittest.TestCase):
+class ListOfOptionalTests(TestCase):
     """
     Tests to ensure L{ListOf} AMP arguments can be omitted from AMP commands
     via the 'optional' flag.
@@ -3129,7 +3174,8 @@ verifyClass(interfaces.ITransport, UNIXStringTransport)
 verifyClass(interfaces.IUNIXTransport, UNIXStringTransport)
 
 
-class DescriptorTests(unittest.TestCase):
+
+class DescriptorTests(TestCase):
     """
     Tests for L{amp.Descriptor}, an argument type for passing a file descriptor
     over an AMP connection over a UNIX domain socket.
@@ -3220,7 +3266,7 @@ class DescriptorTests(unittest.TestCase):
 
 
 
-class DateTimeTests(unittest.TestCase):
+class DateTimeTests(TestCase):
     """
     Tests for L{amp.DateTime}, L{amp._FixedOffsetTZInfo}, and L{amp.utc}.
     """
@@ -3269,7 +3315,7 @@ class DateTimeTests(unittest.TestCase):
 
 
 
-class UTCTests(unittest.TestCase):
+class UTCTests(TestCase):
     """
     Tests for L{amp.utc}.
     """
@@ -3304,7 +3350,7 @@ class UTCTests(unittest.TestCase):
 
 
 
-class RemoteAmpErrorTests(unittest.TestCase):
+class RemoteAmpErrorTests(TestCase):
     """
     Tests for L{amp.RemoteAmpError}.
     """
