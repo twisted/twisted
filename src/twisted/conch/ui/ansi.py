@@ -12,7 +12,7 @@ import string
 # Twisted imports
 from twisted.logger import Logger
 
-log = Logger()
+_log = Logger()
 
 
 
@@ -155,7 +155,7 @@ class AnsiParser:
                 elif i == L:
                     self.prepend = '\x1B[' + s
                 else:
-                    log.warn('Unhandled ANSI control type: {control_type}',
+                    _log.warn('Unhandled ANSI control type: {control_type}',
                              control_type=s[i])
                     s = s[i + 1:]
                     self.writeString(self.formatText(s))
@@ -173,8 +173,8 @@ class AnsiParser:
         try:
             parts = map(int, str.split(';'))
         except ValueError:
-            log.error('Invalid ANSI color sequence : {sequence!r}',
-                      sequence=str)
+            _log.error('Invalid ANSI color sequence: {sequence!r}',
+                       sequence=str)
             self.currentFG, self.currentBG = self.defaultFG, self.defaultBG
             return
 
@@ -212,7 +212,7 @@ class AnsiParser:
             elif x == 28:
                 self.display = 1
             else:
-                log.error('Unrecognised ANSI color command: {command}',
+                _log.error('Unrecognised ANSI color command: {command}',
                           command=x)
 
     def parseCursor(self, cursor):

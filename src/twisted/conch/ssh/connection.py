@@ -119,7 +119,7 @@ class SSHConnection(service.SSHService):
         Our global request succeeded.  Get the appropriate Deferred and call
         it back with the packet we received.
         """
-        self._log.debug('global requeset success')
+        self._log.debug('global request success')
         self.deferreds['global'].pop(0).callback(packet)
 
     def ssh_REQUEST_FAILURE(self, packet):
@@ -156,13 +156,13 @@ class SSHConnection(service.SSHService):
             self.channels[localChannel] = channel
             self.channelsToRemoteChannel[channel] = senderChannel
             self.localToRemoteChannel[localChannel] = senderChannel
-            open_confirm_packet = struct.pack(
+            openConfirmPacket = struct.pack(
                 '>4L', senderChannel, localChannel,
                 channel.localWindowSize,
                 channel.localMaxPacket
             ) + channel.specificData
             self.transport.sendPacket(MSG_CHANNEL_OPEN_CONFIRMATION,
-                                      open_confirm_packet)
+                                      openConfirmPacket)
             channel.channelOpen(packet)
         except Exception as e:
             self._log.failure('channel open failed')
