@@ -21,6 +21,7 @@ from twisted.trial.unittest import TestCase
 from twisted.protocols import basic, loopback
 from twisted.internet import defer, protocol, reactor, interfaces
 from twisted.internet import address, error, task
+from twisted.python.failure import Failure
 from twisted.test.proto_helpers import MemoryReactor, StringTransport
 
 from twisted import cred
@@ -914,20 +915,62 @@ class SMTPSenderFactoryTests(TestCase):
     """
     Tests for L{smtp.SMTPSenderFactory}.
     """
+
+    def getFactory(self, sentDeferred=None, retries=3):
+        """
+        Helper to create factories used in this test case.
+
+        @param sentDeferred: Deferred used to signal the message delivery.
+        @type sentDeferred: L{defer.Deferred}.
+
+        @param retries: Number of times to retry on failed delivery.
+        @type retries: L{int}.
+
+        @return: A new factory to be used in the tests.
+        @rtype: L{smtp.SMTPSenderFactory}.
+        """
+        if sentDeferred is None:
+            sentDeferred = defer.Deferred()
+
+        return smtp.SMTPSenderFactory(
+            fromEmail="source@address",
+            toEmail="recipient@address",
+            file=BytesIO(b"message"),
+            deferred=sentDeferred,
+            retries=retries,
+            )
+
+
+    def connect(self, reactor, factory):
+        """
+        Trigger the connection and protocol creation for `factory` to
+        localhost:25.
+
+        @param reactor: The reactor handling the connection.
+        @param factory: Factory to create client side connection.
+        @type factory: L{SMTPSenderFactory}.
+
+        @return: The client-side connector.
+        @rtype: L{twisted.internet.interfaces.IConnector}
+        """
+        connector = reactor.connectTCP("localhost", 25, factory)
+        factory.buildProtocol(None)
+        return connector
+
+
     def test_removeCurrentProtocolWhenClientConnectionLost(self):
         """
         L{smtp.SMTPSenderFactory} removes the current protocol when the client
         connection is lost.
         """
         reactor = MemoryReactor()
-        sentDeferred = defer.Deferred()
-        clientFactory = smtp.SMTPSenderFactory(
-            "source@address", "recipient@address",
-            BytesIO(b"message"), sentDeferred)
-        connector = reactor.connectTCP("localhost", 25, clientFactory)
-        clientFactory.buildProtocol(None)
-        clientFactory.clientConnectionLost(connector,
-                                           error.ConnectionDone("Bye."))
+        clientFactory = self.getFactory()
+        connector = self.connect(reactor, clientFactory)
+        self.assertIsNotNone(clientFactory.currentProtocol)
+
+        clientFactory.clientConnectionLost(
+            connector, Failure(error.ConnectionDone("Bye.")))
+
         self.assertEqual(clientFactory.currentProtocol, None)
 
 
@@ -937,15 +980,72 @@ class SMTPSenderFactoryTests(TestCase):
         connection is failed.
         """
         reactor = MemoryReactor()
-        sentDeferred = defer.Deferred()
-        clientFactory = smtp.SMTPSenderFactory(
-            "source@address", "recipient@address",
-            BytesIO(b"message"), sentDeferred)
-        connector = reactor.connectTCP("localhost", 25, clientFactory)
-        clientFactory.buildProtocol(None)
-        clientFactory.clientConnectionFailed(connector,
-                                             error.ConnectionDone("Bye."))
+        clientFactory = self.getFactory()
+        connector = self.connect(reactor, clientFactory)
+        self.assertIsNotNone(clientFactory.currentProtocol)
+
+        clientFactory.clientConnectionFailed(
+            connector, Failure(error.ConnectionDone("Bye.")))
+
         self.assertEqual(clientFactory.currentProtocol, None)
+
+
+    def test_clientConnectionLostConnectionDoneWhenNotFinished(self):
+        """
+        When connection is closed with ConnectionDone before finalizing the
+        send the message and no more retries are left,
+        it will trigger a failure of a dedicated type,
+        to the deferred used to signal the delivery.
+        """
+        reactor = MemoryReactor()
+        sentDeferred = defer.Deferred()
+        sut = self.getFactory(sentDeferred=sentDeferred, retries=0)
+        connector = self.connect(reactor, sut)
+
+        sut.clientConnectionLost(
+            connector, Failure(error.ConnectionDone("Bye.")))
+
+        failure = self.failureResultOf(sentDeferred)
+        self.assertIsInstance(failure.value, smtp.SMTPConnectError)
+        # The delivery deferred is no longer available on the factory.
+        self.assertFalse(hasattr(sut, 'result'))
+
+
+    def test_clientConnectionLostOtherErrorWhenNotFinished(self):
+        """
+        When connection is closed with a non ConnectionDone error
+        before finalizing the delivery of the message,
+        it will bubble that error to the delivery deferred.
+        """
+        error = RuntimeError(b'error-marker')
+        reactor = MemoryReactor()
+        sentDeferred = defer.Deferred()
+        sut = self.getFactory(sentDeferred=sentDeferred, retries=0)
+        connector = self.connect(reactor, sut)
+
+        sut.clientConnectionLost(connector, Failure(error))
+
+        failure = self.failureResultOf(sentDeferred)
+        self.assertIs(error, failure.value)
+
+
+    def test_clientConnectionLostConnectionDoneFinished(self):
+        """
+        Does nothing when the connection was close after the message was
+        marked as being delivered.
+        """
+        reactor = MemoryReactor()
+        sentDeferred = defer.Deferred()
+        sut = self.getFactory(sentDeferred=sentDeferred, retries=3)
+        connector = self.connect(reactor, sut)
+        sut.sendFinished = True
+
+        sut.clientConnectionLost(
+            connector, Failure(error.ConnectionDone("Bye.")))
+
+        # It does not touches the deferred used to signal the message
+        # completion.
+        self.assertNoResult(sentDeferred)
 
 
 

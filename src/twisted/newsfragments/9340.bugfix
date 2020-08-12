@@ -1,0 +1,2 @@
+twisted.mail.stmp.SMTPSenderFactory no longer mutates the ConnectionDone
+failure when connection is lost due to an error.
