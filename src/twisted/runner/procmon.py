@@ -5,6 +5,13 @@
 """
 Support for starting, monitoring, and restarting child process.
 """
+from zope.interface import implementer
+
+from twisted.python import log
+from twisted.internet import error, protocol, reactor as _reactor
+from twisted.application import service
+from twisted.protocols import basic
+from twisted.internet import interfaces
 import attr
 import incremental
 
@@ -97,6 +104,7 @@ class LineLogger(basic.LineReceiver):
 
 
 
+@implementer(interfaces.ILoggingProcessProtocol)
 class LoggingProtocol(protocol.ProcessProtocol):
 
     service = None
@@ -347,9 +355,10 @@ class ProcessMonitor(service.Service):
                                                          name)
 
 
-    def startProcess(self, name):
+    def startProcess(self, name, protocolFactory = LoggingProtocol):
         """
         @param name: The name of the process to be started
+        @param protocolFactory: ?
         """
         # If a protocol instance already exists, it means the process is
         # already running
@@ -358,7 +367,7 @@ class ProcessMonitor(service.Service):
 
         process = self._processes[name]
 
-        proto = LoggingProtocol()
+        proto = protocolFactory()
         proto.service = self
         proto.name = name
         self.protocols[name] = proto
