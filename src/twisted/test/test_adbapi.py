@@ -678,7 +678,7 @@ class ConnectionTests(unittest.TestCase):
         the original error is logged.
         """
         class ConnectionRollbackRaise(object):
-            def rollback(self):
+            def rollback(self, exValue=None):
                 raise RuntimeError("problem!")
 
         pool = FakePool(ConnectionRollbackRaise)
@@ -793,7 +793,7 @@ class ConnectionPoolTests(unittest.TestCase):
             def __init__(self, pool):
                 pass
 
-            def rollback(self):
+            def rollback(self, exValue=None):
                 raise RuntimeError("problem!")
 
         def raisingFunction(connection):
@@ -836,7 +836,7 @@ class ConnectionPoolTests(unittest.TestCase):
             def __init__(self, pool):
                 pass
 
-            def rollback(self):
+            def rollback(self, exValue=None):
                 raise RuntimeError("problem!")
 
         class DummyTransaction(object):
