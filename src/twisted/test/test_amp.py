@@ -79,7 +79,7 @@ class TestProto(protocol.Protocol):
         self.onConnLost.callback(self.data)
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """
         Custom repr for testing to avoid coupling amp tests with repr from
         L{Protocol}

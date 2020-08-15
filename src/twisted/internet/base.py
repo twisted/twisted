@@ -161,27 +161,33 @@ class DelayedCall:
         return not (self.cancelled or self.called)
 
 
-    def __le__(self, other):
+    def __le__(self, other: object) -> bool:
         """
         Implement C{<=} operator between two L{DelayedCall} instances.
 
         Comparison is based on the C{time} attribute (unadjusted by the
         delayed time).
         """
-        return self.time <= other.time
+        if isinstance(other, DelayedCall):
+            return self.time <= other.time
+        else:
+            return NotImplemented
 
 
-    def __lt__(self, other):
+    def __lt__(self, other: object) -> bool:
         """
         Implement C{<} operator between two L{DelayedCall} instances.
 
         Comparison is based on the C{time} attribute (unadjusted by the
         delayed time).
         """
-        return self.time < other.time
+        if isinstance(other, DelayedCall):
+            return self.time < other.time
+        else:
+            return NotImplemented
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """
         Implement C{repr()} for L{DelayedCall} instances.
 
@@ -970,7 +976,13 @@ class ReactorBase(PluggableResolverMixin):
         #
         # -exarkun
 
-        defaultEncoding = sys.getfilesystemencoding()
+        # If any of the following environment variables:
+        #  - PYTHONUTF8
+        #  - PYTHONIOENCODING
+        #
+        # are set before the Python interpreter runs, they will affect the
+        # value of sys.stdout.encoding
+        defaultEncoding = sys.stdout.encoding
 
         # Common check function
         def argChecker(arg):
@@ -997,23 +1009,30 @@ class ReactorBase(PluggableResolverMixin):
 
         outputArgs = []
         for arg in args:
-            arg = argChecker(arg)
-            if arg is None:
-                raise TypeError("Arguments contain a non-string value")
+            _arg = argChecker(arg)
+            if _arg is None:
+                raise TypeError(
+                    "Arguments contain a non-string value: {}".format(arg))
             else:
-                outputArgs.append(arg)
+                outputArgs.append(_arg)
 
         outputEnv = None
         if env is not None:
             outputEnv = {}
             for key, val in iteritems(env):
-                key = argChecker(key)
-                if key is None:
-                    raise TypeError("Environment contains a non-string key")
-                val = argChecker(val)
-                if val is None:
-                    raise TypeError("Environment contains a non-string value")
-                outputEnv[key] = val
+                _key = argChecker(key)
+                if _key is None:
+                    raise TypeError(
+                        "Environment contains a "
+                        "non-string key: {}, using encoding: {}".format(
+                            key, sys.stdout.encoding))
+                _val = argChecker(val)
+                if _val is None:
+                    raise TypeError(
+                        "Environment contains a "
+                        "non-string value: {}, using encoding {}".format(
+                            val, sys.stdout.encoding))
+                outputEnv[_key] = _val
         return outputArgs, outputEnv
 
     # IReactorThreads
@@ -1189,7 +1208,7 @@ class BaseConnector:
             reflect.qual(self.__class__) + " did not implement "
             "getDestination")
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "<%s instance at 0x%x %s %s>" % (
             reflect.qual(self.__class__), id(self), self.state,
             self.getDestination())

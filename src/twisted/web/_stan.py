@@ -67,7 +67,7 @@ class slot(object):
         self.columnNumber = columnNumber
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "slot(%r)" % (self.name,)
 
 
@@ -258,7 +258,7 @@ class Tag(object):
         return self
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         rstr = ''
         if self.attributes:
             rstr += ', attributes=%r' % self.attributes
@@ -286,7 +286,7 @@ class CDATA(object):
         self.data = data
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return 'CDATA(%r)' % (self.data,)
 
 
@@ -305,7 +305,7 @@ class Comment(object):
         self.data = data
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return 'Comment(%r)' % (self.data,)
 
 
@@ -325,5 +325,5 @@ class CharRef(object):
         self.ordinal = ordinal
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "CharRef(%d)" % (self.ordinal,)

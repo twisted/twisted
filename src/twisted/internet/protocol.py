@@ -201,7 +201,7 @@ class _InstanceFactory(ClientFactory):
         self.deferred = deferred
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "<ClientCreator factory: %r>" % (self.instance, )
 
 

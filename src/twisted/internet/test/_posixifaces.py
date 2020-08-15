@@ -16,7 +16,7 @@ from ctypes import (
 from ctypes.util import find_library
 from typing import Any, List, Tuple
 
-from twisted.python.compat import nativeString, _bytesChr as chr
+from twisted.python.compat import nativeString
 
 
 libc = CDLL(find_library("c") or "")
@@ -140,7 +140,7 @@ def _interfaces():
                     addr = None
 
                 if addr:
-                    packed = b''.join(map(chr, addr[0].sin_addr.in_addr[:]))
+                    packed = bytes(addr[0].sin_addr.in_addr[:])
                     packed = _maybeCleanupScopeIndex(family, packed)
                     results.append((
                             ifaddrs[0].ifa_name,
