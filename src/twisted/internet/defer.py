@@ -1373,7 +1373,7 @@ def returnValue(val):
 
 
 @attr.s
-class _CancellationStatus(object):
+class _CancellationStatus:
     """
     Cancellation status of an L{inlineCallbacks} invocation.
 
@@ -1635,7 +1635,7 @@ def inlineCallbacks(f):
 
 ## DeferredLock/DeferredQueue
 
-class _ConcurrencyPrimitive(object):
+class _ConcurrencyPrimitive:
     def __init__(self):
         self.waiting = []
 
@@ -1841,7 +1841,7 @@ class QueueUnderflow(Exception):
 
 
 
-class DeferredQueue(object):
+class DeferredQueue:
     """
     An event driven queue.
 

@@ -18,14 +18,14 @@ from twisted.python import log, failure
 
 
 @implementer(interfaces.IAddress)
-class PipeAddress(object):
+class PipeAddress:
     pass
 
 
 
 @implementer(interfaces.ITransport, interfaces.IProducer,
              interfaces.IConsumer, interfaces.IHalfCloseableDescriptor)
-class StandardIO(object):
+class StandardIO:
 
     _reader = None
     _writer = None

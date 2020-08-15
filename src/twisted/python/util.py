@@ -525,7 +525,7 @@ def raises(exception, f, *args, **kwargs):
 
 
 
-class IntervalDifferential(object):
+class IntervalDifferential:
     """
     Given a list of intervals, generate the amount of time to sleep between
     "instants".
@@ -562,7 +562,7 @@ class IntervalDifferential(object):
 
 
 
-class _IntervalDifferentialIterator(object):
+class _IntervalDifferentialIterator:
     def __init__(self, i, d):
 
         self.intervals = [[e, e, n] for (e, n) in zip(i, range(len(i)))]

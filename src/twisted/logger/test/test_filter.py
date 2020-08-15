@@ -71,7 +71,7 @@ class FilteringLogObserverTests(unittest.TestCase):
             dict(count=3),
         ]
 
-        class Filters(object):
+        class Filters:
             @staticmethod
             def twoMinus(event):
                 """

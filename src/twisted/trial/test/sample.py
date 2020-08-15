@@ -86,7 +86,7 @@ class PyunitTest(pyunit.TestCase):
 
 
 
-class NotATest(object):
+class NotATest:
 
 
     def test_foo(self):

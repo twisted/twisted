@@ -134,7 +134,7 @@ class SaveLoadTests(TestCase):
         in the same string formatting; any extractable fields will retain their
         data types.
         """
-        class Reprable(object):
+        class Reprable:
             def __init__(self, value):
                 self.value = value
 
@@ -154,7 +154,7 @@ class SaveLoadTests(TestCase):
         L{extractField} can extract fields from an object that's been saved and
         loaded from JSON.
         """
-        class Obj(object):
+        class Obj:
             def __init__(self):
                 self.value = 345
 

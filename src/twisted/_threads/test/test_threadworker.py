@@ -29,7 +29,7 @@ class WouldDeadlock(Exception):
 
 
 
-class FakeThread(object):
+class FakeThread:
     """
     A fake L{threading.Thread}.
 
@@ -56,7 +56,7 @@ class FakeThread(object):
 
 
 
-class FakeQueue(object):
+class FakeQueue:
     """
     A fake L{Queue} implementing C{put} and C{get}.
 
@@ -93,7 +93,7 @@ class FakeQueue(object):
 
 
 
-class FakeLock(object):
+class FakeLock:
     """
     A stand-in for L{threading.Lock}.
 

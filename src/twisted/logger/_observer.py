@@ -68,7 +68,7 @@ class ILogObserver(Interface):
 
 
 @implementer(ILogObserver)
-class LogPublisher(object):
+class LogPublisher:
     """
     I{ILogObserver} that fans out events to other observers.
 

@@ -233,7 +233,7 @@ class DelayedCall:
 
 
 @implementer(IResolverSimple)
-class ThreadedResolver(object):
+class ThreadedResolver:
     """
     L{ThreadedResolver} uses a reactor, a threadpool, and
     L{socket.gethostbyname} to perform name lookups without blocking the
@@ -314,7 +314,7 @@ class BlockingResolver:
             return defer.succeed(address)
 
 
-class _ThreePhaseEvent(object):
+class _ThreePhaseEvent:
     """
     Collection of callables (with arguments) which can be invoked as a group in
     a particular order.
@@ -456,7 +456,7 @@ class _ThreePhaseEvent(object):
 
 
 @implementer(IReactorPluggableNameResolver, IReactorPluggableResolver)
-class PluggableResolverMixin(object):
+class PluggableResolverMixin:
     """
     A mixin which implements the pluggable resolver reactor interfaces.
 
@@ -1238,7 +1238,7 @@ class BasePort(abstract.FileDescriptor):
 
 
 
-class _SignalReactorMixin(object):
+class _SignalReactorMixin:
     """
     Private mixin to manage signals: it installs signal handlers at start time,
     and define run method.

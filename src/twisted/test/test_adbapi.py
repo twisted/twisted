@@ -25,7 +25,7 @@ CREATE TABLE simple (
 
 
 
-class ADBAPITestBase(object):
+class ADBAPITestBase:
     """
     Test the asynchronous DB-API code.
     """
@@ -267,7 +267,7 @@ class ADBAPITestBase(object):
 
 
 
-class ReconnectTestBase(object):
+class ReconnectTestBase:
     """
     Test the asynchronous DB-API code with reconnect.
     """
@@ -350,7 +350,7 @@ class ReconnectTestBase(object):
 
 
 
-class DBTestConnector(object):
+class DBTestConnector:
     """
     A class which knows how to test for the presence of
     and establish a connection to a relational database.
@@ -638,7 +638,7 @@ makeSQLTests(ReconnectTestBase, 'ReconnectTests', globals())
 
 
 
-class FakePool(object):
+class FakePool:
     """
     A fake L{ConnectionPool} for tests.
 
@@ -677,7 +677,7 @@ class ConnectionTests(unittest.TestCase):
         If an error happens during rollback, L{ConnectionLost} is raised but
         the original error is logged.
         """
-        class ConnectionRollbackRaise(object):
+        class ConnectionRollbackRaise:
             def rollback(self):
                 raise RuntimeError("problem!")
 
@@ -700,7 +700,7 @@ class TransactionTests(unittest.TestCase):
         If the cursor creation raises an error in L{Transaction.reopen}, it
         reconnects but log the error occurred.
         """
-        class ConnectionCursorRaise(object):
+        class ConnectionCursorRaise:
             count = 0
 
             def reconnect(self):
@@ -720,7 +720,7 @@ class TransactionTests(unittest.TestCase):
 
 
 
-class NonThreadPool(object):
+class NonThreadPool:
     def callInThreadWithCallback(self, onResult, f, *a, **kw):
         success = True
         try:
@@ -746,7 +746,7 @@ class DummyConnectionPool(ConnectionPool):
 
 
 
-class EventReactor(object):
+class EventReactor:
     """
     Partial L{IReactorCore} implementation with simple event-related
     methods.
@@ -789,7 +789,7 @@ class ConnectionPoolTests(unittest.TestCase):
         If rollback fails, L{ConnectionPool.runWithConnection} raises the
         original exception and log the error of the rollback.
         """
-        class ConnectionRollbackRaise(object):
+        class ConnectionRollbackRaise:
             def __init__(self, pool):
                 pass
 
@@ -815,7 +815,7 @@ class ConnectionPoolTests(unittest.TestCase):
         """
         L{ConnectionPool._close} logs exceptions.
         """
-        class ConnectionCloseRaise(object):
+        class ConnectionCloseRaise:
             def close(self):
                 raise RuntimeError("problem!")
 
@@ -832,14 +832,14 @@ class ConnectionPoolTests(unittest.TestCase):
         If rollback fails, L{ConnectionPool.runInteraction} raises the
         original exception and log the error of the rollback.
         """
-        class ConnectionRollbackRaise(object):
+        class ConnectionRollbackRaise:
             def __init__(self, pool):
                 pass
 
             def rollback(self):
                 raise RuntimeError("problem!")
 
-        class DummyTransaction(object):
+        class DummyTransaction:
             def __init__(self, pool, connection):
                 pass
 

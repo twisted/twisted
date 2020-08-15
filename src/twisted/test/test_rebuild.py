@@ -14,7 +14,7 @@ f = crash_test_dummy.foo
 
 class Foo: pass
 class Bar(Foo): pass
-class Baz(object): pass
+class Baz: pass
 class Buz(Bar, Baz): pass
 
 class HashRaisesRuntimeError:
@@ -229,7 +229,7 @@ class NewStyleTests(TestCase):
         Try to rebuild a new style class with slots defined.
         """
         classDefinition = (
-            "class SlottedClass(object):\n"
+            "class SlottedClass:\n"
             "    __slots__ = ['a']\n")
 
         exec(classDefinition, self.m.__dict__)

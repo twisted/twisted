@@ -309,7 +309,7 @@ class UnauthorizedResourceTests(RequestMixin, unittest.TestCase):
 
 
 implementer(portal.IRealm)
-class Realm(object):
+class Realm:
     """
     A simple L{IRealm} implementation which gives out L{WebAvatar} for any
     avatarId.
@@ -489,7 +489,7 @@ class HTTPAuthHeaderTests(unittest.TestCase):
         argument.
         """
         @implementer(ICredentialFactory)
-        class DumbCredentialFactory(object):
+        class DumbCredentialFactory:
             scheme = b'dumb'
 
             def __init__(self):
@@ -598,7 +598,7 @@ class HTTPAuthHeaderTests(unittest.TestCase):
         class UnexpectedException(Exception):
             pass
 
-        class BadFactory(object):
+        class BadFactory:
             scheme = b'bad'
 
             def getChallenge(self, client):
@@ -633,7 +633,7 @@ class HTTPAuthHeaderTests(unittest.TestCase):
         class UnexpectedException(Exception):
             pass
 
-        class BrokenChecker(object):
+        class BrokenChecker:
             credentialInterfaces = (IUsernamePassword,)
 
             def requestAvatarId(self, credentials):

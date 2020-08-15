@@ -72,7 +72,7 @@ else:
 
 
     @implementer(IOpenSSLTrustRoot)
-    class CustomOpenSSLTrustRoot(object):
+    class CustomOpenSSLTrustRoot:
         called = False
         context = None
 
@@ -108,7 +108,7 @@ class StubHTTPProtocol(Protocol):
 
 
 
-class FileConsumer(object):
+class FileConsumer:
     def __init__(self, outputFile):
         self.outputFile = outputFile
 
@@ -158,11 +158,11 @@ class FileBodyProducerTests(TestCase):
         without either a C{seek} or C{tell} method, its C{length} attribute is
         set to C{UNKNOWN_LENGTH}.
         """
-        class HasSeek(object):
+        class HasSeek:
             def seek(self, offset, whence):
                 pass
 
-        class HasTell(object):
+        class HasTell:
             def tell(self):
                 pass
 
@@ -238,7 +238,7 @@ class FileBodyProducerTests(TestCase):
         L{FileBodyProducer.startProducing} fires with a L{Failure} wrapping
         that exception.
         """
-        class BrokenFile(object):
+        class BrokenFile:
             def read(self, count):
                 raise IOError("Simulated bad thing")
         producer = FileBodyProducer(BrokenFile(), self.cooperator)
@@ -398,7 +398,7 @@ class FakeReactorAndConnectMixin:
         drr.advance = mrc.advance
         return drr
 
-    class StubEndpoint(object):
+    class StubEndpoint:
         """
         Endpoint that wraps existing endpoint, substitutes StubHTTPProtocol, and
         resulting protocol instances are attached to the given test case.
@@ -445,7 +445,7 @@ class FakeReactorAndConnectMixin:
 
 
 
-class DummyEndpoint(object):
+class DummyEndpoint:
     """
     An endpoint that uses a fake transport.
     """
@@ -457,7 +457,7 @@ class DummyEndpoint(object):
 
 
 
-class BadEndpoint(object):
+class BadEndpoint:
     """
     An endpoint that shouldn't be called.
     """
@@ -710,7 +710,7 @@ class HTTPConnectionPoolTests(TestCase, FakeReactorAndConnectMixin):
         is called the protocol is returned to the cache correctly, using the
         right key.
         """
-        class StringEndpoint(object):
+        class StringEndpoint:
             def connect(self, factory):
                 p = factory.buildProtocol(None)
                 p.makeConnection(StringTransport())
@@ -796,7 +796,7 @@ class HTTPConnectionPoolTests(TestCase, FakeReactorAndConnectMixin):
 
 
 
-class AgentTestsMixin(object):
+class AgentTestsMixin:
     """
     Tests for any L{IAgent} implementation.
     """
@@ -808,7 +808,7 @@ class AgentTestsMixin(object):
 
 
 
-class IntegrationTestingMixin(object):
+class IntegrationTestingMixin:
     """
     Transport-to-Agent integration tests for both HTTP and HTTPS.
     """
@@ -918,7 +918,7 @@ class IntegrationTestingMixin(object):
 
 
 @implementer(IAgentEndpointFactory)
-class StubEndpointFactory(object):
+class StubEndpointFactory:
     """
     A stub L{IAgentEndpointFactory} for use in testing.
     """
@@ -1011,7 +1011,7 @@ class AgentTests(TestCase, FakeReactorAndConnectMixin, AgentTestsMixin,
                                  (b"http", b"foo", 80))
                 return endpoint
 
-        class DummyPool(object):
+        class DummyPool:
             connected = False
             persistent = False
             def getConnection(this, key, ep):
@@ -1485,7 +1485,7 @@ class AgentHTTPSTests(TestCase, FakeReactorAndConnectMixin,
         """
         expectedHost = b'example.org'
         expectedPort = 20443
-        class JustEnoughConnection(object):
+        class JustEnoughConnection:
             handshakeStarted = False
             connectState = False
             def do_handshake(self):
@@ -1502,7 +1502,7 @@ class AgentHTTPSTests(TestCase, FakeReactorAndConnectMixin,
         contextArgs = []
 
         @implementer(IOpenSSLClientConnectionCreator)
-        class JustEnoughCreator(object):
+        class JustEnoughCreator:
             def __init__(self, hostname, port):
                 self.hostname = hostname
                 self.port = port
@@ -1521,7 +1521,7 @@ class AgentHTTPSTests(TestCase, FakeReactorAndConnectMixin,
 
         expectedConnection = JustEnoughConnection()
         @implementer(IPolicyForHTTPS)
-        class StubBrowserLikePolicyForHTTPS(object):
+        class StubBrowserLikePolicyForHTTPS:
             def creatorForNetloc(self, hostname, port):
                 """
                 Emulate L{BrowserLikePolicyForHTTPS}.
@@ -1604,7 +1604,7 @@ class AgentHTTPSTests(TestCase, FakeReactorAndConnectMixin,
             from twisted.web.iweb import IPolicyForHTTPS
             from zope.interface import implementer
             @implementer(IPolicyForHTTPS)
-            class Policy(object):
+            class Policy:
                 def creatorForNetloc(self, hostname, port):
                     return optionsForClientTLS(hostname.decode("ascii"),
                                                trustRoot=authority)
@@ -1951,7 +1951,7 @@ class HTTPConnectionPoolRetryTests(TestCase, FakeReactorAndConnectMixin):
 
 
 
-class CookieTestsMixin(object):
+class CookieTestsMixin:
     """
     Mixin for unit tests dealing with cookies.
     """
@@ -2452,7 +2452,7 @@ class ContentDecoderAgentWithGzipTests(TestCase,
         C{flush} on the zlib decompressor object to get uncompressed data which
         may have been buffered.
         """
-        class decompressobj(object):
+        class decompressobj:
 
             def __init__(self, wbits):
                 pass
@@ -2497,7 +2497,7 @@ class ContentDecoderAgentWithGzipTests(TestCase,
         If the C{flush} call in C{connectionLost} fails, the C{zlib.error}
         exception is caught and turned into a L{ResponseFailed}.
         """
-        class decompressobj(object):
+        class decompressobj:
 
             def __init__(self, wbits):
                 pass
@@ -2622,7 +2622,7 @@ class ProxyAgentTests(TestCase, FakeReactorAndConnectMixin, AgentTestsMixin):
         with and a key of C{("http-proxy", endpoint)}.
         """
         endpoint = DummyEndpoint()
-        class DummyPool(object):
+        class DummyPool:
             connected = False
             persistent = False
             def getConnection(this, key, ep):
@@ -2643,7 +2643,7 @@ class ProxyAgentTests(TestCase, FakeReactorAndConnectMixin, AgentTestsMixin):
 
 
 
-class _RedirectAgentTestsMixin(object):
+class _RedirectAgentTestsMixin:
     """
     Test cases mixin for L{RedirectAgentTests} and
     L{BrowserLikeRedirectAgentTests}.
@@ -3036,7 +3036,7 @@ class AbortableStringTransport(StringTransport):
 
 
 
-class DummyResponse(object):
+class DummyResponse:
     """
     Fake L{IResponse} for testing readBody that captures the protocol passed to
     deliverBody and uses it to make a connection with a transport.

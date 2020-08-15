@@ -20,7 +20,7 @@ from twisted.python.runtime import platform
 
 @implementer(IAddress)
 @attr.s(hash=True)
-class IPv4Address(object):
+class IPv4Address:
     """
     An L{IPv4Address} represents the address of an IPv4 socket endpoint.
 
@@ -42,7 +42,7 @@ class IPv4Address(object):
 
 @implementer(IAddress)
 @attr.s(hash=True)
-class IPv6Address(object):
+class IPv6Address:
     """
     An L{IPv6Address} represents the address of an IPv6 socket endpoint.
 
@@ -73,7 +73,7 @@ class IPv6Address(object):
 
 
 @implementer(IAddress)
-class _ProcessAddress(object):
+class _ProcessAddress:
     """
     An L{interfaces.IAddress} provider for process transports.
     """
@@ -82,7 +82,7 @@ class _ProcessAddress(object):
 
 @attr.s(hash=True)
 @implementer(IAddress)
-class HostnameAddress(object):
+class HostnameAddress:
     """
     A L{HostnameAddress} represents the address of a L{HostnameEndpoint}.
 
@@ -100,7 +100,7 @@ class HostnameAddress(object):
 
 @attr.s(hash=False, repr=False, eq=False)
 @implementer(IAddress)
-class UNIXAddress(object):
+class UNIXAddress:
     """
     Object representing a UNIX socket endpoint.
 

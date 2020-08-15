@@ -145,7 +145,7 @@ def _normalizePassphrase(passphrase):
 
 
 
-class Key(object):
+class Key:
     """
     An object representing a key.  A key can be either a public or
     private key.  A public key can verify a signature; a private key can

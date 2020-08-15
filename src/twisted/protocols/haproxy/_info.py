@@ -12,7 +12,7 @@ from ._interfaces import IProxyInfo
 
 
 @implementer(IProxyInfo)
-class ProxyInfo(object):
+class ProxyInfo:
     """
     A data container for parsed PROXY protocol information.
 

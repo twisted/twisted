@@ -36,7 +36,7 @@ else:
 
 
 
-class SubsystemOnlyAvatar(object):
+class SubsystemOnlyAvatar:
     """
     A stub class representing an avatar that is only useful for
     getting a subsystem.
@@ -74,7 +74,7 @@ class StubAvatar:
 
 
 @implementer(session.ISession, session.ISessionSetEnv)
-class StubSessionForStubAvatar(object):
+class StubSessionForStubAvatar:
     """
     A stub ISession implementation for our StubAvatar.  The instance
     variables generally keep track of method invocations so that we can test
@@ -292,7 +292,7 @@ class MockProtocol(protocol.Protocol):
 
 
 
-class StubConnection(object):
+class StubConnection:
     """
     A stub for twisted.conch.ssh.connection.SSHConnection.  Record the data
     that channels send, and when they try to close the connection.
@@ -439,7 +439,7 @@ class StubTransportWithWriteErr(StubTransport):
 
 
 
-class StubClient(object):
+class StubClient:
     """
     A stub class representing the client to a SSHSession.
 

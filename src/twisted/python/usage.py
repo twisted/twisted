@@ -34,7 +34,7 @@ class UsageError(Exception):
 error = UsageError
 
 
-class CoerceParameter(object):
+class CoerceParameter:
     """
     Utility class that can corce a parameter before storing it.
     """
@@ -552,7 +552,7 @@ class Options(dict):
 _ZSH = 'zsh'
 _BASH = 'bash'
 
-class Completer(object):
+class Completer:
     """
     A completion "action" - provides completion possibilities for a particular
     command-line option. For example we might provide the user a fixed list of
@@ -762,7 +762,7 @@ class CompleteNetInterfaces(Completer):
 
 
 
-class Completions(object):
+class Completions:
     """
     Extra metadata for the shell tab-completion system.
 

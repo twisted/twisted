@@ -53,7 +53,7 @@ else:
 
 
 
-class _FDHolder(object):
+class _FDHolder:
     """
     A wrapper around a FD that will remember if it has been closed or not.
     """

@@ -86,7 +86,7 @@ class ClosingFactory(protocol.ServerFactory):
 
 
 
-class MyProtocolFactoryMixin(object):
+class MyProtocolFactoryMixin:
     """
     Mixin for factories which create L{AccumulatingProtocol} instances.
 
@@ -986,7 +986,7 @@ class WriteDataTests(TestCase):
         addr = port.getHost()
 
         @implementer(IPullProducer)
-        class Infinite(object):
+        class Infinite:
             """
             A producer which will write to its consumer as long as
             resumeProducing is called.

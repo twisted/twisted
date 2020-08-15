@@ -949,7 +949,7 @@ class DeferLaterTests(unittest.TestCase):
 
 
 
-class _FakeReactor(object):
+class _FakeReactor:
 
     def __init__(self):
         self._running = False

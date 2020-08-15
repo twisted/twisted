@@ -129,7 +129,7 @@ class IAnonymous(ICredentials):
 
 
 @implementer(IUsernameHashedPassword, IUsernameDigestHash)
-class DigestedCredentials(object):
+class DigestedCredentials:
     """
     Yet Another Simple HTTP Digest authentication scheme.
     """
@@ -189,7 +189,7 @@ class DigestedCredentials(object):
 
 
 
-class DigestCredentialFactory(object):
+class DigestCredentialFactory:
     """
     Support for RFC2617 HTTP Digest Authentication
 
@@ -396,7 +396,7 @@ class DigestCredentialFactory(object):
 
 
 @implementer(IUsernameHashedPassword)
-class CramMD5Credentials(object):
+class CramMD5Credentials:
     """
     An encapsulation of some CramMD5 hashed credentials.
 

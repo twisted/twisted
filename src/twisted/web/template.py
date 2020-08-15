@@ -53,7 +53,7 @@ NOT_DONE_YET = 1
 _moduleLog = Logger()
 
 
-class _NSContext(object):
+class _NSContext:
     """
     A mapping from XML namespaces onto their prefixes in the document.
     """
@@ -358,7 +358,7 @@ def _flatsaxParse(fl):
 
 
 @implementer(ITemplateLoader)
-class TagLoader(object):
+class TagLoader:
     """
     An L{ITemplateLoader} that loads existing L{IRenderable} providers.
 
@@ -380,7 +380,7 @@ class TagLoader(object):
 
 
 @implementer(ITemplateLoader)
-class XMLString(object):
+class XMLString:
     """
     An L{ITemplateLoader} that loads and parses XML from a string.
 
@@ -413,7 +413,7 @@ class XMLString(object):
 
 
 @implementer(ITemplateLoader)
-class XMLFile(object):
+class XMLFile:
     """
     An L{ITemplateLoader} that loads and parses XML from a file.
 
@@ -495,7 +495,7 @@ VALID_HTML_TAG_NAMES = set([
 
 
 
-class _TagFactory(object):
+class _TagFactory:
     """
     A factory for L{Tag} objects; the implementation of the L{tags} object.
 

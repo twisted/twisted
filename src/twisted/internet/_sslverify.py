@@ -940,7 +940,7 @@ class IOpenSSLTrustRoot(Interface):
 
 
 @implementer(IOpenSSLTrustRoot)
-class OpenSSLCertificateAuthorities(object):
+class OpenSSLCertificateAuthorities:
     """
     Trust an explicitly specified set of certificates, represented by a list of
     L{OpenSSL.crypto.X509} objects.
@@ -996,7 +996,7 @@ def trustRootFromCertificates(certificates):
 
 
 @implementer(IOpenSSLTrustRoot)
-class OpenSSLDefaultPaths(object):
+class OpenSSLDefaultPaths:
     """
     Trust the set of default verify paths that OpenSSL was built with, as
     specified by U{SSL_CTX_set_default_verify_paths
@@ -1111,7 +1111,7 @@ def _tolerateErrors(wrapped):
 
 
 @implementer(IOpenSSLClientConnectionCreator)
-class ClientTLSOptions(object):
+class ClientTLSOptions:
     """
     Client creator for TLS.
 
@@ -1310,7 +1310,7 @@ def optionsForClientTLS(hostname, trustRoot=None, clientCertificate=None,
 
 
 @implementer(IOpenSSLContextFactory)
-class OpenSSLCertificateOptions(object):
+class OpenSSLCertificateOptions:
     """
     A L{CertificateOptions <twisted.internet.ssl.CertificateOptions>} specifies
     the security properties for a client or server TLS connection used with
@@ -1748,7 +1748,7 @@ OpenSSLCertificateOptions.__setstate__ = deprecated(
 
 @implementer(ICipher)
 @attr.s(frozen=True)
-class OpenSSLCipher(object):
+class OpenSSLCipher:
     """
     A representation of an OpenSSL cipher.
 
@@ -1826,7 +1826,7 @@ def _selectCiphers(wantedCiphers, availableCiphers):
 
 
 @implementer(IAcceptableCiphers)
-class OpenSSLAcceptableCiphers(object):
+class OpenSSLAcceptableCiphers:
     """
     A representation of ciphers that are acceptable for TLS connections.
     """
@@ -1887,7 +1887,7 @@ _defaultCurveName = u"prime256v1"
 
 
 
-class _ChooseDiffieHellmanEllipticCurve(object):
+class _ChooseDiffieHellmanEllipticCurve:
     """
     Chooses the best elliptic curve for Elliptic Curve Diffie-Hellman
     key exchange, and provides a C{configureECDHCurve} method to set
@@ -1984,7 +1984,7 @@ class _ChooseDiffieHellmanEllipticCurve(object):
 
 
 
-class OpenSSLDiffieHellmanParameters(object):
+class OpenSSLDiffieHellmanParameters:
     """
     A representation of key generation parameters that are required for
     Diffie-Hellman key exchange.

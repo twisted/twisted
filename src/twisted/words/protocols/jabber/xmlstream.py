@@ -307,7 +307,7 @@ class FeatureNotAdvertized(Exception):
 
 
 @implementer(ijabber.IInitiatingInitializer)
-class BaseFeatureInitiatingInitializer(object):
+class BaseFeatureInitiatingInitializer:
     """
     Base class for initializers with a stream feature.
 
@@ -900,7 +900,7 @@ def toResponse(stanza, stanzaType=None):
 
 
 @implementer(ijabber.IXMPPHandler)
-class XMPPHandler(object):
+class XMPPHandler:
     """
     XMPP protocol handler.
 
@@ -975,7 +975,7 @@ class XMPPHandler(object):
 
 
 @implementer(ijabber.IXMPPHandlerCollection)
-class XMPPHandlerCollection(object):
+class XMPPHandlerCollection:
     """
     Collection of XMPP subprotocol handlers.
 

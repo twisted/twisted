@@ -21,7 +21,7 @@ class FoolishError(Exception):
 
 
 
-class FailureInSetUpMixin(object):
+class FailureInSetUpMixin:
     def setUp(self):
         raise FoolishError("I am a broken setUp method")
 
@@ -42,7 +42,7 @@ class AsynchronousTestFailureInSetUp(
 
 
 
-class FailureInTearDownMixin(object):
+class FailureInTearDownMixin:
     def tearDown(self):
         raise FoolishError("I am a broken tearDown method")
 
@@ -63,7 +63,7 @@ class AsynchronousTestFailureInTearDown(
 
 
 
-class FailureButTearDownRunsMixin(object):
+class FailureButTearDownRunsMixin:
     """
     A test fails, but its L{tearDown} still runs.
     """

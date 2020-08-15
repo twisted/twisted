@@ -26,7 +26,7 @@ from twisted.python.util import FancyEqMixin
 
 
 
-class _Attribute(FancyEqMixin, object):
+class _Attribute(FancyEqMixin):
     """
     A text attribute.
 
@@ -168,7 +168,7 @@ class _BackgroundColorAttr(_ColorAttr):
 
 
 
-class _ColorAttribute(object):
+class _ColorAttribute:
     """
     A color text attribute.
 
@@ -195,7 +195,7 @@ class _ColorAttribute(object):
 
 
 
-class CharacterAttributesMixin(object):
+class CharacterAttributesMixin:
     """
     Mixin for character attributes that implements a C{__getattr__} method
     returning a new C{_NormalAttr} instance when attempting to access
@@ -211,7 +211,7 @@ class CharacterAttributesMixin(object):
 
 
 
-class DefaultFormattingState(FancyEqMixin, object):
+class DefaultFormattingState(FancyEqMixin):
     """
     A character attribute that does nothing, thus applying no attributes to
     text.

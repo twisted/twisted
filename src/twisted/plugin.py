@@ -37,7 +37,7 @@ class IPlugin(Interface):
 
 
 
-class CachedPlugin(object):
+class CachedPlugin:
     def __init__(self, dropin, name, description, provided):
         self.dropin = dropin
         self.name = name
@@ -66,7 +66,7 @@ class CachedPlugin(object):
 
 
 
-class CachedDropin(object):
+class CachedDropin:
     """
     A collection of L{CachedPlugin} instances from a particular module in a
     plugin package.

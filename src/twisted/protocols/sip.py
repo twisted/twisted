@@ -127,7 +127,7 @@ def unq(s):
 
 _absent = object()
 
-class Via(object):
+class Via:
     """
     A L{Via} is a SIP Via header, representing a segment of the path taken by
     the request.

@@ -25,7 +25,7 @@ from twisted.python.failure import Failure
 from twisted.trial import unittest
 from twisted.internet.defer import Deferred, fail, succeed
 
-class MockEquality(FancyEqMixin, object):
+class MockEquality(FancyEqMixin):
     compareAttributes = ("name",)
 
     def __init__(self, name):
@@ -36,7 +36,7 @@ class MockEquality(FancyEqMixin, object):
         return "MockEquality(%s)" % (self.name,)
 
 
-class ComparisonError(object):
+class ComparisonError:
     """
     An object which raises exceptions from its comparison methods.
     """

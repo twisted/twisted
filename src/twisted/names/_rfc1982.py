@@ -26,7 +26,7 @@ RFC4034_TIME_FORMAT = '%Y%m%d%H%M%S'
 
 
 
-class SerialNumber(FancyStrMixin, object):
+class SerialNumber(FancyStrMixin):
     """
     An RFC1982 Serial Number.
 

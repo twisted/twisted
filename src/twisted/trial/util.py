@@ -68,7 +68,7 @@ class DirtyReactorAggregateError(Exception):
 
 
 
-class _Janitor(object):
+class _Janitor:
     """
     The guy that cleans up after you.
 

@@ -212,7 +212,7 @@ class PYPYTest(SynchronousTestCase):
 
 
 @comparable
-class Comparable(object):
+class Comparable:
     """
     Objects that can be compared to each other, but not others.
     """

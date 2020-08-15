@@ -42,7 +42,7 @@ def componentFactory(componentid, password):
     a = ConnectComponentAuthenticator(componentid, password)
     return xmlstream.XmlStreamFactory(a)
 
-class ComponentInitiatingInitializer(object):
+class ComponentInitiatingInitializer:
     """
     External server-side component authentication initializer for the
     initiating entity.
@@ -325,7 +325,7 @@ def buildServiceManager(jid, password, strport):
 
 
 
-class Router(object):
+class Router:
     """
     XMPP Server's Router.
 

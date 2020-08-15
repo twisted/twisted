@@ -10,7 +10,7 @@ Common functionality used within the implementation of various workers.
 from ._ithreads import AlreadyQuit
 
 
-class Quit(object):
+class Quit:
     """
     A flag representing whether a worker has been quit.
 

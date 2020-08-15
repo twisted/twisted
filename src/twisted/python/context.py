@@ -106,7 +106,7 @@ class ContextTracker:
 
 
 
-class ThreadedContextTracker(object):
+class ThreadedContextTracker:
     def __init__(self):
         self.storage = local()
 

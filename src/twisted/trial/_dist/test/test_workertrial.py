@@ -39,7 +39,7 @@ class WorkerLogObserverTests(TestCase):
         """
         calls = []
 
-        class FakeClient(object):
+        class FakeClient:
 
             def callRemote(self, method, **kwargs):
                 calls.append((method, kwargs))
@@ -118,7 +118,7 @@ class MainTests(TestCase):
         """
         excInfos = []
 
-        class FakeStream(object):
+        class FakeStream:
             count = 0
 
             def read(oself, size):
@@ -141,7 +141,7 @@ class MainTests(TestCase):
         error pops out.
         """
 
-        class FakeStream(object):
+        class FakeStream:
             count = 0
 
             def read(oself, size):

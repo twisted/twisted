@@ -43,7 +43,7 @@ fromStdlibLogLevelMapping = _reverseLogLevelMapping()
 
 
 @implementer(ILogObserver)
-class STDLibLogObserver(object):
+class STDLibLogObserver:
     """
     Log observer that writes to the python standard library's C{logging}
     module.
@@ -118,7 +118,7 @@ class STDLibLogObserver(object):
 
 
 
-class StringifiableFromEvent(object):
+class StringifiableFromEvent:
     """
     An object that implements C{__str__()} in order to defer the work of
     formatting until it's converted into a C{str}.

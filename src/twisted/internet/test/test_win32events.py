@@ -20,7 +20,7 @@ from twisted.internet.test.reactormixins import ReactorBuilder
 from twisted.python.threadable import getThreadID
 
 
-class Listener(object):
+class Listener:
     """
     L{Listener} is an object that can be added to a L{IReactorWin32Events}
     reactor to receive callback notification when a Windows event is set.  It

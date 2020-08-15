@@ -1235,7 +1235,7 @@ CommandLocator = CommandLocator.__metaclass__(  # type: ignore[assignment,misc]
 
 
 @implementer(IResponderLocator)
-class SimpleStringLocator(object):
+class SimpleStringLocator:
     """
     Implement the L{AMP.locateResponder} method to do simple, string-based
     dispatch.
@@ -2222,7 +2222,7 @@ class ProtocolSwitchCommand(Command):
 
 
 @implementer(IFileDescriptorReceiver)
-class _DescriptorExchanger(object):
+class _DescriptorExchanger:
     """
     L{_DescriptorExchanger} is a mixin for L{BinaryBoxProtocol} which adds
     support for receiving file descriptors, a feature offered by

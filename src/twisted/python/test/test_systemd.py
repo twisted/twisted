@@ -12,7 +12,7 @@ from twisted.trial.unittest import TestCase
 from twisted.python.systemd import ListenFDs
 
 
-class InheritedDescriptorsMixin(object):
+class InheritedDescriptorsMixin:
     """
     Mixin for a L{TestCase} subclass which defines test methods for some kind of
     systemd sd-daemon class.  In particular, it defines tests for a
@@ -38,7 +38,7 @@ class InheritedDescriptorsMixin(object):
 
 
 
-class MemoryOnlyMixin(object):
+class MemoryOnlyMixin:
     """
     Mixin for a L{TestCase} subclass which creates creating a fake, in-memory
     implementation of C{inheritedDescriptors}.  This provides verification that
@@ -55,7 +55,7 @@ class MemoryOnlyMixin(object):
 
 
 
-class EnvironmentMixin(object):
+class EnvironmentMixin:
     """
     Mixin for a L{TestCase} subclass which creates a real implementation of
     C{inheritedDescriptors} which is based on the environment variables set by

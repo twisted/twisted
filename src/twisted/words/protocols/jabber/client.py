@@ -77,7 +77,7 @@ class IQ(domish.Element):
 
 
 
-class IQAuthInitializer(object):
+class IQAuthInitializer:
     """
     Non-SASL Authentication initializer for the initiating entity.
 
@@ -237,7 +237,7 @@ class BasicAuthenticator(xmlstream.ConnectAuthenticator):
 
 
 
-class CheckVersionInitializer(object):
+class CheckVersionInitializer:
     """
     Initializer that checks if the minimum common stream version number is 1.0.
     """

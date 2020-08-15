@@ -12,7 +12,7 @@ from twisted.python import log
 from twisted.python.compat import iteritems
 from twisted.words.xish import xpath
 
-class _MethodWrapper(object):
+class _MethodWrapper:
     """
     Internal class for tracking method calls.
     """
@@ -339,7 +339,7 @@ class EventDispatcher:
 
 
 
-class XmlPipe(object):
+class XmlPipe:
     """
     XML stream pipe.
 

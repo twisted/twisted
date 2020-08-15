@@ -272,7 +272,7 @@ def _secureEnoughString(path):
 
 
 
-class AbstractFilePath(object):
+class AbstractFilePath:
     """
     Abstract implementation of an L{IFilePath}; must be completed by a
     subclass.
@@ -501,7 +501,7 @@ class AbstractFilePath(object):
 
 
 
-class RWX(FancyEqMixin, object):
+class RWX(FancyEqMixin):
     """
     A class representing read/write/execute permissions for a single user
     category (i.e. user/owner, group, or other/world).  Instantiate with
@@ -549,7 +549,7 @@ class RWX(FancyEqMixin, object):
 
 
 
-class Permissions(FancyEqMixin, object):
+class Permissions(FancyEqMixin):
     """
     A class representing read/write/execute permissions.  Instantiate with any
     portion of the file's mode that includes the permission bits.

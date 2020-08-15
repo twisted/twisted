@@ -62,7 +62,7 @@ class ServerError(Exception):
 
 
 
-class Command(object):
+class Command:
     """
     Wrap a client action into an object, that holds the values used in the
     protocol.

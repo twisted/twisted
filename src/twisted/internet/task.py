@@ -348,7 +348,7 @@ class NotPaused(SchedulerError):
 
 
 
-class _Timer(object):
+class _Timer:
     MAX_SLICE = 0.01
     def __init__(self):
         self.end = time.time() + self.MAX_SLICE
@@ -365,7 +365,7 @@ def _defaultScheduler(x):
     return reactor.callLater(_EPSILON, x)
 
 
-class CooperativeTask(object):
+class CooperativeTask:
     """
     A L{CooperativeTask} is a task object inside a L{Cooperator}, which can be
     paused, resumed, and stopped.  It can also have its completion (or
@@ -529,7 +529,7 @@ class CooperativeTask(object):
 
 
 
-class Cooperator(object):
+class Cooperator:
     """
     Cooperative task scheduler.
 

@@ -656,7 +656,7 @@ class StringTooLongError(AssertionError):
 
 
 
-class _RecvdCompatHack(object):
+class _RecvdCompatHack:
     """
     Emulates the to-be-deprecated C{IntNStringReceiver.recvd} attribute.
 

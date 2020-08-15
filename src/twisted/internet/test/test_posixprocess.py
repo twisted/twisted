@@ -23,7 +23,7 @@ from twisted.python.compat import range
 from twisted.trial.unittest import TestCase
 
 
-class FakeFile(object):
+class FakeFile:
     """
     A dummy file object which records when it is closed.
     """
@@ -45,7 +45,7 @@ class FakeFile(object):
 
 
 
-class FakeResourceModule(object):
+class FakeResourceModule:
     """
     Fake version of L{resource} which hard-codes a particular rlimit for maximum
     open files.

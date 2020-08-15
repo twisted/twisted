@@ -1721,7 +1721,7 @@ class SimpleMailbox:
 
 
 @implementer(imap4.IMailboxInfo, imap4.IMailbox)
-class UncloseableMailbox(object):
+class UncloseableMailbox:
     """
     A mailbox that cannot be closed.
     """
@@ -1911,7 +1911,7 @@ class Account(AccountWithoutNamespaces, imap4.MemoryAccount):
 
 
 
-class SimpleServer(imap4.IMAP4Server, object):
+class SimpleServer(imap4.IMAP4Server):
     theAccount = Account(b'testuser')
     def __init__(self, *args, **kw):
         imap4.IMAP4Server.__init__(self, *args, **kw)
@@ -3614,7 +3614,7 @@ class AuthenticatorTests(IMAP4HelperMixin, TestCase):
         """
 
         @implementer(IChallengeResponse, IUsernamePassword)
-        class SPECIALAuth(object):
+        class SPECIALAuth:
 
             def getChallenge(self):
                 return b'SPECIAL'
@@ -3708,7 +3708,7 @@ class AuthenticatorTests(IMAP4HelperMixin, TestCase):
         """
 
         @implementer(IChallengeResponse)
-        class ValueErrorAuthChallenge(object):
+        class ValueErrorAuthChallenge:
             message = b"A challenge failure"
 
             def getChallenge(self):
@@ -3729,7 +3729,7 @@ class AuthenticatorTests(IMAP4HelperMixin, TestCase):
                 """
 
         @implementer(IClientAuthentication)
-        class ValueErrorAuthenticator(object):
+        class ValueErrorAuthenticator:
 
             def getName(self):
                 return b"ERROR"
@@ -3761,7 +3761,7 @@ class AuthenticatorTests(IMAP4HelperMixin, TestCase):
         as Base 64 receives an L{IllegalClientResponse}.
         """
         @implementer(IChallengeResponse)
-        class NotBase64AuthChallenge(object):
+        class NotBase64AuthChallenge:
             message = b"Malformed Response - not base64"
 
             def getChallenge(self):
@@ -4657,7 +4657,7 @@ class HandCraftedTests(IMAP4HelperMixin, TestCase):
 
 
 
-class PreauthIMAP4ClientMixin(object):
+class PreauthIMAP4ClientMixin:
     """
     Mixin for L{SynchronousTestCase} subclasses which
     provides a C{setUp} method which creates an L{IMAP4Client}
@@ -7496,7 +7496,7 @@ class DisconnectionTests(TestCase):
 
 
 
-class SynchronousMailbox(object):
+class SynchronousMailbox:
     """
     Trivial, in-memory mailbox implementation which can produce a message
     synchronously.
@@ -7696,7 +7696,7 @@ class IMAP4ServerFetchTests(TestCase):
 
 
 
-class LiteralTestsMixin(object):
+class LiteralTestsMixin:
     """
     Shared tests for literal classes.
 

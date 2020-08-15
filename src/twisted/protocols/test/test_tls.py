@@ -149,7 +149,7 @@ def buildTLSProtocol(server=False, transport=None, fakeConnection=None):
     if fakeConnection:
         @implementer(IOpenSSLServerConnectionCreator,
                      IOpenSSLClientConnectionCreator)
-        class HardCodedConnection(object):
+        class HardCodedConnection:
             def clientConnectionForTLS(self, tlsProtocol):
                 return fakeConnection
             serverConnectionForTLS = clientConnectionForTLS
@@ -212,7 +212,7 @@ class TLSMemoryBIOFactoryTests(TestCase):
         If the wrapped factory does not provide L{ILoggingContext},
         L{TLSMemoryBIOFactory.logPrefix} uses the wrapped factory's class name.
         """
-        class NoFactory(object):
+        class NoFactory:
             pass
 
         contextFactory = ServerTLSContext()
@@ -234,7 +234,7 @@ def handshakingClientAndServer(clientGreetingData=None,
     """
     authCert, serverCert = certificatesForAuthorityAndServer()
     @implementer(IHandshakeListener)
-    class Client(AccumulatingProtocol, object):
+    class Client(AccumulatingProtocol):
         handshook = False
         peerAfterHandshake = None
 
@@ -253,7 +253,7 @@ def handshakingClientAndServer(clientGreetingData=None,
             pass
 
     @implementer(IHandshakeListener)
-    class Server(AccumulatingProtocol, object):
+    class Server(AccumulatingProtocol):
         handshaked = False
         def handshakeCompleted(self):
             self.handshaked = True
@@ -343,7 +343,7 @@ class TLSMemoryBIOTests(TestCase):
         class ITransport(Interface):
             pass
 
-        class MyTransport(object):
+        class MyTransport:
             def write(self, data):
                 pass
 
@@ -993,7 +993,7 @@ class TLSMemoryBIOTests(TestCase):
         tlsClient.wrappedProtocol.connectionLost = reason.append
 
         # Pretend TLS connection is unhappy sending:
-        class Wrapper(object):
+        class Wrapper:
             def __init__(self, wrapped):
                 self._wrapped = wrapped
             def __getattr__(self, attr):
@@ -1366,7 +1366,7 @@ class TLSProducerTests(TestCase):
                 StringTransport.write(self, data)
 
 
-        class TLSConnection(object):
+        class TLSConnection:
             def __init__(self):
                 self.l = []
 
@@ -1481,7 +1481,7 @@ class TLSProducerTests(TestCase):
         clientProtocol.connectionLost = lambda reason: reason.trap(
             Error, ConnectionLost)
 
-        class Producer(object):
+        class Producer:
             stopped = False
 
             def resumeProducing(self):

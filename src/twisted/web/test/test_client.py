@@ -12,7 +12,7 @@ from twisted.trial import unittest
 from twisted.web import client
 
 @implementer(interfaces.IStreamClientEndpoint)
-class DummyEndPoint(object):
+class DummyEndPoint:
 
     """An endpoint that does not connect anywhere"""
 

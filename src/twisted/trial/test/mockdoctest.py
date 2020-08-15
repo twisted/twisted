@@ -6,7 +6,7 @@
 
 
 
-class Counter(object):
+class Counter:
     """a simple counter object for testing trial's doctest support
 
          >>> c = Counter()

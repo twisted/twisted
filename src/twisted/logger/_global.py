@@ -32,7 +32,7 @@ MORE_THAN_ONCE_WARNING = (
 
 
 
-class LogBeginner(object):
+class LogBeginner:
     """
     A L{LogBeginner} holds state related to logging before logging has begun,
     and begins logging when told to do so.  Logging "begins" when someone has

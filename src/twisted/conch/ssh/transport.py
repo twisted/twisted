@@ -2029,7 +2029,7 @@ class SSHClientTransport(SSHTransportBase):
 
 
 
-class _NullEncryptionContext(object):
+class _NullEncryptionContext:
     """
     An encryption context that does not actually encrypt anything.
     """
@@ -2047,7 +2047,7 @@ class _NullEncryptionContext(object):
 
 
 
-class _DummyAlgorithm(object):
+class _DummyAlgorithm:
     """
     An encryption algorithm that does not actually encrypt anything.
     """
@@ -2055,7 +2055,7 @@ class _DummyAlgorithm(object):
 
 
 
-class _DummyCipher(object):
+class _DummyCipher:
     """
     A cipher for the none encryption method.
 

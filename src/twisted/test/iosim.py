@@ -49,7 +49,7 @@ class TLSNegotiation:
 
 
 @implementer(interfaces.IAddress)
-class FakeAddress(object):
+class FakeAddress:
     """
     The default address type for the host and peer of L{FakeTransport}
     connections.
@@ -502,7 +502,7 @@ def _factoriesShouldConnect(clientInfo, serverInfo):
 
 
 
-class ConnectionCompleter(object):
+class ConnectionCompleter:
     """
     A L{ConnectionCompleter} can cause synthetic TCP connections established by
     L{MemoryReactor.connectTCP} and L{MemoryReactor.listenTCP} to succeed or

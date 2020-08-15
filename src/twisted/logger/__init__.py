@@ -17,7 +17,7 @@ Or in a class::
 
     from twisted.logger import Logger
 
-    class Foo(object):
+    class Foo:
         log = Logger()
 
         def oops(self, data):

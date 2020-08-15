@@ -610,7 +610,7 @@ class DerivedRecord(Record):
 
 
 
-class EqualToEverything(object):
+class EqualToEverything:
     """
     A class the instances of which consider themselves equal to everything.
     """
@@ -619,7 +619,7 @@ class EqualToEverything(object):
 
 
 
-class EqualToNothing(object):
+class EqualToNothing:
     """
     A class the instances of which consider themselves equal to nothing.
     """

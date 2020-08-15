@@ -142,7 +142,7 @@ class RealmTests(unittest.TestCase):
 
 
 
-class TestCaseUserAgg(object):
+class TestCaseUserAgg:
     def __init__(self, user, realm, factory, address=address.IPv4Address('TCP', '127.0.0.1', 54321)):
         self.user = user
         self.transport = proto_helpers.StringTransportWithDisconnection()

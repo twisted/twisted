@@ -18,7 +18,7 @@ from twisted.trial.unittest import TestCase
 
 
 @implementer(IService)
-class AlmostService(object):
+class AlmostService:
     """
     Implement IService in a way that can fail.
 

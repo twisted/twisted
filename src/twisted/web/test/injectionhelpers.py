@@ -16,7 +16,7 @@ NONASCII = frozenset(range(128, 256))
 
 
 
-class MethodInjectionTestsMixin(object):
+class MethodInjectionTestsMixin:
     """
     A mixin that runs HTTP method injection tests.  Define
     L{MethodInjectionTestsMixin.attemptRequestWithMaliciousMethod} in
@@ -77,7 +77,7 @@ class MethodInjectionTestsMixin(object):
 
 
 
-class URIInjectionTestsMixin(object):
+class URIInjectionTestsMixin:
     """
     A mixin that runs HTTP URI injection tests.  Define
     L{MethodInjectionTestsMixin.attemptRequestWithMaliciousURI} in a

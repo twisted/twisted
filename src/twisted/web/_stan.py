@@ -26,7 +26,7 @@ from twisted.python.compat import iteritems
 
 
 
-class slot(object):
+class slot:
     """
     Marker for markup insertion in a template.
 
@@ -72,7 +72,7 @@ class slot(object):
 
 
 
-class Tag(object):
+class Tag:
     """
     A L{Tag} represents an XML tags with a tag name, attributes, and children.
     A L{Tag} can be constructed using the special L{twisted.web.template.tags}
@@ -273,7 +273,7 @@ voidElements = ('img', 'br', 'hr', 'base', 'meta', 'link', 'param', 'area',
                 'embed', 'keygen', 'source', 'track', 'wbs')
 
 
-class CDATA(object):
+class CDATA:
     """
     A C{<![CDATA[]]>} block from a template.  Given a separate representation in
     the DOM so that they may be round-tripped through rendering without losing
@@ -291,7 +291,7 @@ class CDATA(object):
 
 
 
-class Comment(object):
+class Comment:
     """
     A C{<!-- -->} comment from a template.  Given a separate representation in
     the DOM so that they may be round-tripped through rendering without losing
@@ -310,7 +310,7 @@ class Comment(object):
 
 
 
-class CharRef(object):
+class CharRef:
     """
     A numeric character reference.  Given a separate representation in the DOM
     so that non-ASCII characters may be output as pure ASCII.
