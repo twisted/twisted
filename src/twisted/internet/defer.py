@@ -15,7 +15,7 @@ Maintainer: Glyph Lefkowitz
     chain.  Always accompanied by a Deferred instance in the args tuple pointing
     at the Deferred which is chained to the Deferred which has this marker.
 """
-
+from __future__ import generator_stop
 
 import attr
 import traceback
