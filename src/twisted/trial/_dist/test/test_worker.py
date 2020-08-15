@@ -291,7 +291,7 @@ class FakeAMProtocol(AMP):
 
 
 
-class FakeTransport(object):
+class FakeTransport:
     """
     A fake process transport implementation for testing.
     """

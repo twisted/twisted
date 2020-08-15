@@ -76,7 +76,7 @@ def returnConnected(server, client):
 
 
 
-class XMLAssertionMixin(object):
+class XMLAssertionMixin:
     """
     Test mixin defining a method for comparing serialized XML documents.
 
@@ -99,7 +99,7 @@ class XMLAssertionMixin(object):
 
 
 
-class _Equal(object):
+class _Equal:
     """
     A class the instances of which are equal to anything and everything.
     """
@@ -108,7 +108,7 @@ class _Equal(object):
 
 
 
-class _NotEqual(object):
+class _NotEqual:
     """
     A class the instances of which are equal to nothing.
     """
@@ -117,7 +117,7 @@ class _NotEqual(object):
 
 
 
-class ComparisonTestsMixin(object):
+class ComparisonTestsMixin:
     """
     A mixin which defines a method for making assertions about the correctness
     of an implementation of C{==} and C{!=}.

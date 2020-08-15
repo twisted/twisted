@@ -45,7 +45,7 @@ class FailTest(AssertionError):
 
 
 
-class Todo(object):
+class Todo:
     """
     Internal object used to mark a L{TestCase} as 'todo'. Tests marked 'todo'
     are reported differently in Trial L{TestResult}s. If todo'd tests fail,
@@ -111,7 +111,7 @@ def makeTodo(value):
 
 
 
-class _Warning(object):
+class _Warning:
     """
     A L{_Warning} instance represents one warning emitted through the Python
     warning system (L{warnings}).  This is used to insulate callers of
@@ -200,7 +200,7 @@ class UnsupportedTrialFeature(Exception):
 
 
 
-class PyUnitResultAdapter(object):
+class PyUnitResultAdapter:
     """
     Wrap a C{TestResult} from the standard library's C{unittest} so that it
     supports the extended result types from Trial, and also supports
@@ -273,7 +273,7 @@ class PyUnitResultAdapter(object):
 
 
 
-class _AssertRaisesContext(object):
+class _AssertRaisesContext:
     """
     A helper for implementing C{assertRaises}.  This is a context manager and a
     helper method to support the non-context manager version of
@@ -367,7 +367,7 @@ class _AssertRaisesContext(object):
 
 
 
-class _Assertions(pyunit.TestCase, object):
+class _Assertions(pyunit.TestCase):
     """
     Replaces many of the built-in TestCase assertions. In general, these
     assertions provide better error messages and are easier to use in
@@ -861,7 +861,7 @@ class _Assertions(pyunit.TestCase, object):
 
 
 
-class _LogObserver(object):
+class _LogObserver:
     """
     Observes the Twisted logs and catches any errors.
 

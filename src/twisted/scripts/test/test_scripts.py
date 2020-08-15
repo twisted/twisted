@@ -46,7 +46,7 @@ def outputFromPythonScript(script, *args):
 
 
 
-class ScriptTestsMixin(object):
+class ScriptTestsMixin:
     """
     Mixin for L{TestCase} subclasses which defines a helper function for testing
     a Twisted-using script.

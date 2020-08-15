@@ -17,7 +17,7 @@ from twisted.trial.unittest import SynchronousTestCase
 from twisted.trial._synctest import _collectWarnings, _setWarningRegistryToNone
 
 
-class Mask(object):
+class Mask:
     """
     Hide a test case definition from trial's automatic discovery mechanism.
     """
@@ -473,7 +473,7 @@ class CollectWarningsTests(SynchronousTestCase):
         """
         d = {}
 
-        class A(object):
+        class A:
             def __init__(self, key):
                 self.__dict__['_key'] = key
 

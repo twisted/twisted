@@ -17,7 +17,7 @@ from ._v2parser import V2Parser
 
 
 
-class HAProxyProtocolWrapper(policies.ProtocolWrapper, object):
+class HAProxyProtocolWrapper(policies.ProtocolWrapper):
     """
     A Protocol wrapper that provides HAProxy support.
 

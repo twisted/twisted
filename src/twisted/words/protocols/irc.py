@@ -157,7 +157,7 @@ class UnhandledCommand(RuntimeError):
 
 
 
-class _CommandDispatcherMixin(object):
+class _CommandDispatcherMixin:
     """
     Dispatch commands to handlers based on their name.
 

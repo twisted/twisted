@@ -336,7 +336,7 @@ def proxyForInterface(iface, originalAttribute='original'):
 
 
 
-class _ProxiedClassMethod(object):
+class _ProxiedClassMethod:
     """
     A proxied class method.
 
@@ -372,7 +372,7 @@ class _ProxiedClassMethod(object):
 
 
 
-class _ProxyDescriptor(object):
+class _ProxyDescriptor:
     """
     A descriptor which will proxy attribute access, mutation, and
     deletion to the L{_ProxyDescriptor.originalAttribute} of the

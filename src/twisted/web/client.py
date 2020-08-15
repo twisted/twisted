@@ -582,7 +582,7 @@ class HTTPDownloader(HTTPClientFactory):
 
 
 
-class URI(object):
+class URI:
     """
     A URI object.
 
@@ -876,7 +876,7 @@ def _requireSSL(decoratee):
 
 
 
-class WebClientContextFactory(object):
+class WebClientContextFactory:
     """
     This class is deprecated.  Please simply use L{Agent} as-is, or if you want
     to customize something, use L{BrowserLikePolicyForHTTPS}.
@@ -920,7 +920,7 @@ class WebClientContextFactory(object):
 
 
 @implementer(IPolicyForHTTPS)
-class BrowserLikePolicyForHTTPS(object):
+class BrowserLikePolicyForHTTPS:
     """
     SSL connection creator for web clients.
     """
@@ -966,7 +966,7 @@ deprecatedModuleAttribute(Version("Twisted", 14, 0, 0),
 
 
 @implementer(IPolicyForHTTPS)
-class HostnameCachingHTTPSPolicy(object):
+class HostnameCachingHTTPSPolicy:
     """
     IPolicyForHTTPS that wraps a L{IPolicyForHTTPS} and caches the created
     L{IOpenSSLClientConnectionCreator}.
@@ -1033,7 +1033,7 @@ class HostnameCachingHTTPSPolicy(object):
 
 
 @implementer(IOpenSSLContextFactory)
-class _ContextFactoryWithContext(object):
+class _ContextFactoryWithContext:
     """
     A L{_ContextFactoryWithContext} is like a
     L{twisted.internet.ssl.ContextFactory} with a pre-created context.
@@ -1065,7 +1065,7 @@ class _ContextFactoryWithContext(object):
 
 
 @implementer(IPolicyForHTTPS)
-class _DeprecatedToCurrentPolicyForHTTPS(object):
+class _DeprecatedToCurrentPolicyForHTTPS:
     """
     Adapt a web context factory to a normal context factory.
 
@@ -1106,7 +1106,7 @@ class _DeprecatedToCurrentPolicyForHTTPS(object):
 
 
 @implementer(IBodyProducer)
-class FileBodyProducer(object):
+class FileBodyProducer:
     """
     L{FileBodyProducer} produces bytes from an input file object incrementally
     and writes them to a consumer.
@@ -1249,7 +1249,7 @@ class _HTTP11ClientFactory(protocol.Factory):
 
 
 
-class _RetryingHTTP11ClientProtocol(object):
+class _RetryingHTTP11ClientProtocol:
     """
     A wrapper for L{HTTP11ClientProtocol} that automatically retries requests.
 
@@ -1314,7 +1314,7 @@ class _RetryingHTTP11ClientProtocol(object):
 
 
 
-class HTTPConnectionPool(object):
+class HTTPConnectionPool:
     """
     A pool of persistent HTTP connections.
 
@@ -1471,7 +1471,7 @@ class HTTPConnectionPool(object):
 
 
 
-class _AgentBase(object):
+class _AgentBase:
     """
     Base class offering common facilities for L{Agent}-type classes.
 
@@ -1534,7 +1534,7 @@ class _AgentBase(object):
 
 
 @implementer(IAgentEndpointFactory)
-class _StandardEndpointFactory(object):
+class _StandardEndpointFactory:
     """
     Standard HTTP endpoint destinations - TCP for HTTP, TCP+TLS for HTTPS.
 
@@ -1785,7 +1785,7 @@ class ProxyAgent(_AgentBase):
 
 
 
-class _FakeUrllib2Request(object):
+class _FakeUrllib2Request:
     """
     A fake C{urllib2.Request} object for C{cookielib} to work with.
 
@@ -1861,7 +1861,7 @@ class _FakeUrllib2Request(object):
 
 
 
-class _FakeUrllib2Response(object):
+class _FakeUrllib2Response:
     """
     A fake C{urllib2.Response} object for C{cookielib} to work with.
 
@@ -1875,7 +1875,7 @@ class _FakeUrllib2Response(object):
 
 
     def info(self):
-        class _Meta(object):
+        class _Meta:
             def getheaders(zelf, name):
                 # PY2
                 headers = self.response.headers.getRawHeaders(name, [])
@@ -1891,7 +1891,7 @@ class _FakeUrllib2Response(object):
 
 
 @implementer(IAgent)
-class CookieAgent(object):
+class CookieAgent:
     """
     L{CookieAgent} extends the basic L{Agent} to add RFC-compliant
     handling of HTTP cookies.  Cookies are written to and extracted
@@ -2030,7 +2030,7 @@ class _GzipProtocol(proxyForInterface(IProtocol)):  # type: ignore[misc]
 
 
 @implementer(IAgent)
-class ContentDecoderAgent(object):
+class ContentDecoderAgent:
     """
     An L{Agent} wrapper to handle encoded content.
 
@@ -2105,7 +2105,7 @@ class ContentDecoderAgent(object):
 
 
 @implementer(IAgent)
-class RedirectAgent(object):
+class RedirectAgent:
     """
     An L{Agent} wrapper which handles HTTP redirects.
 

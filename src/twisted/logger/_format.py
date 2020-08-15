@@ -179,7 +179,7 @@ def formatEventAsClassicLogText(event, formatTime=formatTime):
 
 
 
-class CallMapping(object):
+class CallMapping:
     """
     Read-only mapping that turns a C{()}-suffix in key names into an invocation
     of the key rather than a lookup of the key.

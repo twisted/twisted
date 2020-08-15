@@ -41,7 +41,7 @@ def _sanitizeLinearWhitespace(headerComponent):
 
 
 @comparable
-class Headers(object):
+class Headers:
     """
     Stores HTTP headers in a key and multiple value format.
 

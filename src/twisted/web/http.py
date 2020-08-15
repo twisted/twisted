@@ -1672,7 +1672,7 @@ class _MalformedChunkedDataError(Exception):
 
 
 
-class _IdentityTransferDecoder(object):
+class _IdentityTransferDecoder:
     """
     Protocol for accumulating bytes up to a specified length.  This handles the
     case where no I{Transfer-Encoding} is specified.
@@ -1747,7 +1747,7 @@ class _IdentityTransferDecoder(object):
 
 
 
-class _ChunkedTransferDecoder(object):
+class _ChunkedTransferDecoder:
     """
     Protocol for decoding I{chunked} Transfer-Encoding, as defined by RFC 2616,
     section 3.6.1.  This protocol can interpret the contents of a request or
@@ -1873,7 +1873,7 @@ class _ChunkedTransferDecoder(object):
 
 
 @implementer(interfaces.IPushProducer)
-class _NoPushProducer(object):
+class _NoPushProducer:
     """
     A no-op version of L{interfaces.IPushProducer}, used to abstract over the
     possibility that a L{HTTPChannel} transport does not provide
@@ -2721,7 +2721,7 @@ def combinedLogFormatter(timestamp, request):
 
 
 @implementer(interfaces.IAddress)
-class _XForwardedForAddress(object):
+class _XForwardedForAddress:
     """
     L{IAddress} which represents the client IP to log for a request, as gleaned
     from an X-Forwarded-For header.

@@ -24,11 +24,11 @@ def makeFailure():
 
 
 
-class Mask(object):
+class Mask:
     """
     Hide C{MockTest}s from Trial's automatic test finder.
     """
-    class FailureLoggingMixin(object):
+    class FailureLoggingMixin:
         def test_silent(self):
             """
             Don't log any errors.
@@ -159,7 +159,7 @@ class ObserverTests(unittest.SynchronousTestCase):
 
 
 
-class LogErrorsMixin(object):
+class LogErrorsMixin:
     """
     High-level tests demonstrating the expected behaviour of logged errors
     during tests.

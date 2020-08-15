@@ -274,7 +274,7 @@ class _WrappingFactory(ClientFactory):
 
 
 @implementer(interfaces.IStreamServerEndpoint)
-class StandardIOEndpoint(object):
+class StandardIOEndpoint:
     """
     A Standard Input/Output endpoint
 
@@ -409,7 +409,7 @@ class StandardErrorBehavior(Names):
 
 
 @implementer(interfaces.IStreamClientEndpoint)
-class ProcessEndpoint(object):
+class ProcessEndpoint:
     """
     An endpoint for child processes
 
@@ -461,7 +461,7 @@ class ProcessEndpoint(object):
 
 
 @implementer(interfaces.IStreamServerEndpoint)
-class _TCPServerEndpoint(object):
+class _TCPServerEndpoint:
     """
     A TCP server endpoint interface
     """
@@ -541,7 +541,7 @@ class TCP6ServerEndpoint(_TCPServerEndpoint):
 
 
 @implementer(interfaces.IStreamClientEndpoint)
-class TCP4ClientEndpoint(object):
+class TCP4ClientEndpoint:
     """
     TCP client endpoint with an IPv4 configuration.
     """
@@ -587,7 +587,7 @@ class TCP4ClientEndpoint(object):
 
 
 @implementer(interfaces.IStreamClientEndpoint)
-class TCP6ClientEndpoint(object):
+class TCP6ClientEndpoint:
     """
     TCP client endpoint with an IPv6 configuration.
 
@@ -660,7 +660,7 @@ class TCP6ClientEndpoint(object):
 
 
 @implementer(IHostnameResolver)
-class _SimpleHostnameResolver(object):
+class _SimpleHostnameResolver:
     """
     An L{IHostnameResolver} provider that invokes a provided callable
     to resolve hostnames.
@@ -730,7 +730,7 @@ class _SimpleHostnameResolver(object):
 
 
 @implementer(interfaces.IStreamClientEndpoint)
-class HostnameEndpoint(object):
+class HostnameEndpoint:
     """
     A name-based endpoint that connects to the fastest amongst the resolved
     host addresses.
@@ -918,7 +918,7 @@ class HostnameEndpoint(object):
         d = Deferred()
         addresses = []
         @provider(IResolutionReceiver)
-        class EndpointReceiver(object):
+        class EndpointReceiver:
             @staticmethod
             def resolutionBegan(resolutionInProgress):
                 pass
@@ -1053,7 +1053,7 @@ class HostnameEndpoint(object):
 
 
 @implementer(interfaces.IStreamServerEndpoint)
-class SSL4ServerEndpoint(object):
+class SSL4ServerEndpoint:
     """
     SSL secured TCP server endpoint with an IPv4 configuration.
     """
@@ -1096,7 +1096,7 @@ class SSL4ServerEndpoint(object):
 
 
 @implementer(interfaces.IStreamClientEndpoint)
-class SSL4ClientEndpoint(object):
+class SSL4ClientEndpoint:
     """
     SSL secured TCP client endpoint with an IPv4 configuration
     """
@@ -1148,7 +1148,7 @@ class SSL4ClientEndpoint(object):
 
 
 @implementer(interfaces.IStreamServerEndpoint)
-class UNIXServerEndpoint(object):
+class UNIXServerEndpoint:
     """
     UnixSocket server endpoint.
     """
@@ -1182,7 +1182,7 @@ class UNIXServerEndpoint(object):
 
 
 @implementer(interfaces.IStreamClientEndpoint)
-class UNIXClientEndpoint(object):
+class UNIXClientEndpoint:
     """
     UnixSocket client endpoint.
     """
@@ -1225,7 +1225,7 @@ class UNIXClientEndpoint(object):
 
 
 @implementer(interfaces.IStreamServerEndpoint)
-class AdoptedStreamServerEndpoint(object):
+class AdoptedStreamServerEndpoint:
     """
     An endpoint for listening on a file descriptor initialized outside of
     Twisted.
@@ -1419,7 +1419,7 @@ def _parseSSL(factory, port, privateKey="server.pem", certKey=None,
 
 
 @implementer(IPlugin, IStreamServerEndpointStringParser)
-class _StandardIOParser(object):
+class _StandardIOParser:
     """
     Stream server endpoint string parser for the Standard I/O type.
 
@@ -1445,7 +1445,7 @@ class _StandardIOParser(object):
 
 
 @implementer(IPlugin, IStreamServerEndpointStringParser)
-class _SystemdParser(object):
+class _SystemdParser:
     """
     Stream server endpoint string parser for the I{systemd} endpoint type.
 
@@ -1495,7 +1495,7 @@ class _SystemdParser(object):
 
 
 @implementer(IPlugin, IStreamServerEndpointStringParser)
-class _TCP6ServerParser(object):
+class _TCP6ServerParser:
     """
     Stream server endpoint string parser for the TCP6ServerEndpoint type.
 
@@ -2101,7 +2101,7 @@ def connectProtocol(endpoint, protocol):
 
 
 @implementer(interfaces.IStreamClientEndpoint)
-class _WrapperEndpoint(object):
+class _WrapperEndpoint:
     """
     An endpoint that wraps another endpoint.
     """
@@ -2125,7 +2125,7 @@ class _WrapperEndpoint(object):
 
 
 @implementer(interfaces.IStreamServerEndpoint)
-class _WrapperServerEndpoint(object):
+class _WrapperServerEndpoint:
     """
     A server endpoint that wraps another server endpoint.
     """
@@ -2238,7 +2238,7 @@ def _parseClientTLS(reactor, host, port, timeout=b'30', bindAddress=None,
 
 
 @implementer(IPlugin, IStreamClientEndpointStringParserWithReactor)
-class _TLSClientEndpointParser(object):
+class _TLSClientEndpointParser:
     """
     Stream client endpoint string parser for L{wrapClientTLS} with
     L{HostnameEndpoint}.

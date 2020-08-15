@@ -328,7 +328,7 @@ class ReactorTests(TestCase):
 
 
 
-class TestConsumer(object):
+class TestConsumer:
     """
     A very basic test consumer for use with the NonStreamingProducerTests.
     """

@@ -13,7 +13,7 @@ from twisted.trial import unittest
 from twisted.trial.test import suppression
 
 
-class SuppressionMixin(object):
+class SuppressionMixin:
     """
     Tests for the warning suppression features of
     L{twisted.trial.unittest.SynchronousTestCase}.

@@ -29,7 +29,7 @@ from twisted.conch.test import keydata
 from twisted.conch.error import ConchError, MissingKeyStoreError
 
 
-class StubFactory(object):
+class StubFactory:
     """
     Mock factory that provides the keys attribute required by the
     SSHAgentServerProtocol

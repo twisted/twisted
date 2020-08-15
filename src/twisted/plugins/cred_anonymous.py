@@ -22,7 +22,7 @@ This allows anonymous authentication for servers that support it.
 
 
 @implementer(ICheckerFactory, plugin.IPlugin)
-class AnonymousCheckerFactory(object):
+class AnonymousCheckerFactory:
     """
     Generates checkers that will authenticate an anonymous request.
     """

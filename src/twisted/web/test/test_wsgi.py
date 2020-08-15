@@ -2147,7 +2147,7 @@ class ApplicationTests(WSGITestsMixin, TestCase):
         """
         responseContent = b'foo'
 
-        class Application(object):
+        class Application:
             def __init__(self, environ, startResponse):
                 startResponse('200 OK', [])
 

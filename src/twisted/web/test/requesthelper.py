@@ -44,7 +44,7 @@ sanitizedBytes = sanitizedText.encode('ascii')
 
 
 @implementer(IAddress)
-class NullAddress(object):
+class NullAddress:
     """
     A null implementation of L{IAddress}.
     """
@@ -217,7 +217,7 @@ class DummyChannel:
 
 
 
-class DummyRequest(object):
+class DummyRequest:
     """
     Represents a dummy or fake request. See L{twisted.web.server.Request}.
 

@@ -992,7 +992,7 @@ class Accumulator(protocol.ProcessProtocol):
 
 
 
-class PosixProcessBase(object):
+class PosixProcessBase:
     """
     Test running processes.
     """
@@ -1210,7 +1210,7 @@ class PosixProcessBase(object):
 
 
 
-class MockSignal(object):
+class MockSignal:
     """
     Neuter L{signal.signal}, but pass other attributes unscathed
     """
@@ -1223,7 +1223,7 @@ class MockSignal(object):
 
 
 
-class MockOS(object):
+class MockOS:
     """
     The mock OS: overwrite L{os}, L{fcntl} and {sys} functions with fake ones.
 

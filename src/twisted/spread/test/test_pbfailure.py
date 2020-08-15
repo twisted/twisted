@@ -418,7 +418,7 @@ class PBFailureUnsafeTests(PBFailureTests):
 
 
 
-class DummyInvoker(object):
+class DummyInvoker:
     """
     A behaviorless object to be used as the invoker parameter to
     L{jelly.jelly}.

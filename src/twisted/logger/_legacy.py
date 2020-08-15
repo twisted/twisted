@@ -16,7 +16,7 @@ from ._stdlib import fromStdlibLogLevelMapping, StringifiableFromEvent
 
 
 @implementer(ILogObserver)
-class LegacyLogObserverWrapper(object):
+class LegacyLogObserverWrapper:
     """
     L{ILogObserver} that wraps an L{twisted.python.log.ILogObserver}.
 

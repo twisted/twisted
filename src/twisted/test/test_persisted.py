@@ -20,11 +20,11 @@ class VersionTests(TestCase):
     def test_nullVersionUpgrade(self):
         global NullVersioned
 
-        class NullVersioned(object):
+        class NullVersioned:
             def __init__(self):
                 self.ok = 0
         pkcl = pickle.dumps(NullVersioned())
-        class NullVersioned(styles.Versioned, object):
+        class NullVersioned(styles.Versioned):
             persistenceVersion = 1
             def upgradeToVersion1(self):
                 self.ok = 1
@@ -218,7 +218,7 @@ class Pickleable:
 
 
 
-class NotPickleable(object):
+class NotPickleable:
     """
     A class that is not pickleable.
     """
@@ -231,7 +231,7 @@ class NotPickleable(object):
 
 
 
-class CopyRegistered(object):
+class CopyRegistered:
     """
     A class that is pickleable only because it is registered with the
     C{copyreg} module.
@@ -245,7 +245,7 @@ class CopyRegistered(object):
 
 
 
-class CopyRegisteredLoaded(object):
+class CopyRegisteredLoaded:
     """
     L{CopyRegistered} after unserialization.
     """
@@ -388,7 +388,7 @@ class AOTTests(TestCase):
         an unknown type without a C{__dict__} property or C{__getstate__}
         method.
         """
-        class UnknownType(object):
+        class UnknownType:
             @property
             def __dict__(self):
                 raise AttributeError()

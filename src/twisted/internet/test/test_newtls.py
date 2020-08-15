@@ -42,7 +42,7 @@ class BypassTLSTests(unittest.TestCase):
         default = object()
         result = []
 
-        class FakeTransport(object):
+        class FakeTransport:
             def loseConnection(self, _connDone=default):
                 result.append(_connDone)
 
@@ -59,7 +59,7 @@ class BypassTLSTests(unittest.TestCase):
 
 
 
-class FakeProducer(object):
+class FakeProducer:
     """
     A producer that does nothing.
     """

@@ -138,7 +138,7 @@ C1SevenBit = _makeControlFunctionSymbols(
 
 
 
-class Mock(object):
+class Mock:
     callReturnValue = default
 
     def __init__(self, methods=None, callReturnValue=default):

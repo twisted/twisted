@@ -18,7 +18,7 @@ _DEFAULT_BUFFER_MAXIMUM = 64 * 1024
 
 
 @implementer(ILogObserver)
-class LimitedHistoryLogObserver(object):
+class LimitedHistoryLogObserver:
     """
     L{ILogObserver} that stores events in a buffer of a fixed size::
 

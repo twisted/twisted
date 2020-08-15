@@ -64,7 +64,7 @@ from twisted.protocols.policies import ProtocolWrapper, WrappingFactory
 
 
 @implementer(IPushProducer)
-class _ProducerMembrane(object):
+class _ProducerMembrane:
     """
     Stand-in for producer registered with a L{TLSMemoryBIOProtocol} transport.
 
@@ -624,7 +624,7 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
 
 
 @implementer(IOpenSSLClientConnectionCreator, IOpenSSLServerConnectionCreator)
-class _ContextFactoryToConnectionFactory(object):
+class _ContextFactoryToConnectionFactory:
     """
     Adapter wrapping a L{twisted.internet.interfaces.IOpenSSLContextFactory}
     into a L{IOpenSSLClientConnectionCreator} or

@@ -368,7 +368,7 @@ def pluginFileContents(name):
         "from twisted.test.test_plugin import ITestPlugin\n"
         "\n"
         "@provider(IPlugin, ITestPlugin)\n"
-        "class {0}(object):\n"
+        "class {0}:\n"
         "    pass\n"
     ).format(name).encode('ascii')
 

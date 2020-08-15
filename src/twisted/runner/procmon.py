@@ -17,7 +17,7 @@ from twisted.logger import Logger
 
 
 @attr.s(frozen=True)
-class _Process(object):
+class _Process:
     """
     The parameters of a process to be restarted.
 

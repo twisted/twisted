@@ -151,7 +151,7 @@ class ElementTests(TestCase):
         L{Element.render} loads a document from the C{loader} attribute and
         returns it.
         """
-        class TemplateLoader(object):
+        class TemplateLoader:
             def load(self):
                 return "result"
 
@@ -217,7 +217,7 @@ class XMLFileReprTests(TestCase):
 
 
 
-class XMLLoaderTestsMixin(object):
+class XMLLoaderTestsMixin:
     """
     @ivar templateString: Simple template to use to exercise the loaders.
 
@@ -675,7 +675,7 @@ class FailingElement(Element):
 
 
 
-class FakeSite(object):
+class FakeSite:
     """
     A minimal L{Site} object that we can use to test displayTracebacks
     """

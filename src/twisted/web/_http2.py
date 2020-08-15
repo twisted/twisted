@@ -891,7 +891,7 @@ class H2Connection(Protocol, TimeoutMixin):
 
 
 @implementer(ITransport, IConsumer, IPushProducer)
-class H2Stream(object):
+class H2Stream:
     """
     A class representing a single HTTP/2 stream.
 

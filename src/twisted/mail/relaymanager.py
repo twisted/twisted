@@ -498,7 +498,7 @@ class Queue:
 
 
 
-class _AttemptManager(object):
+class _AttemptManager:
     """
     A manager for an attempt to relay a set of messages to a mail exchange
     server.

@@ -138,7 +138,7 @@ class DatagramTransportTestsMixin(LogObserverMixin):
 
 
 
-class UDPPortTestsMixin(object):
+class UDPPortTestsMixin:
     """
     Tests for L{IReactorUDP.listenUDP} and
     L{IReactorSocket.adoptDatagramPort}.

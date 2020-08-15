@@ -263,7 +263,7 @@ class LoopbackAsyncTests(LoopbackTestCaseMixin, unittest.TestCase):
         Test a push producer registered against a loopback transport.
         """
         @implementer(IPushProducer)
-        class PushProducer(object):
+        class PushProducer:
             resumed = False
 
             def __init__(self, toProduce):
@@ -299,7 +299,7 @@ class LoopbackAsyncTests(LoopbackTestCaseMixin, unittest.TestCase):
         Test a pull producer registered against a loopback transport.
         """
         @implementer(IPullProducer)
-        class PullProducer(object):
+        class PullProducer:
             def __init__(self, toProduce):
                 self.toProduce = toProduce
 

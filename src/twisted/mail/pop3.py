@@ -168,7 +168,7 @@ class _HeadersPlusNLines:
 
 
 
-class _IteratorBuffer(object):
+class _IteratorBuffer:
     """
     An iterator which buffers the elements of a container and periodically
     passes them as input to a writer.

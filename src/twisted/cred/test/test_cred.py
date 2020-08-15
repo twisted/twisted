@@ -37,7 +37,7 @@ class ITestable(Interface):
 
 
 
-class TestAvatar(object):
+class TestAvatar:
     """
     A test avatar.
     """
@@ -74,7 +74,7 @@ class IDerivedCredentials(credentials.IUsernamePassword):
 
 
 @implementer(IDerivedCredentials, ITestable)
-class DerivedCredentials(object):
+class DerivedCredentials:
 
     def __init__(self, username, password):
         self.username = username
@@ -87,7 +87,7 @@ class DerivedCredentials(object):
 
 
 @implementer(portal.IRealm)
-class TestRealm(object):
+class TestRealm:
     """
     A basic test realm.
     """
@@ -326,7 +326,7 @@ class HashedPasswordOnDiskDatabaseTests(unittest.TestCase):
 
 
 
-class CheckersMixin(object):
+class CheckersMixin:
     """
     L{unittest.TestCase} mixin for testing that some checkers accept
     and deny specified credentials.
@@ -364,7 +364,7 @@ class CheckersMixin(object):
 
 
 
-class HashlessFilePasswordDBMixin(object):
+class HashlessFilePasswordDBMixin:
     credClass = credentials.UsernamePassword
     diskHash = None
     networkHash = staticmethod(lambda x: x)

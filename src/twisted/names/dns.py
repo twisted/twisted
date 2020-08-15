@@ -411,7 +411,7 @@ class IEncodableRecord(IEncodable, IRecord):
 
 
 @implementer(IEncodable)
-class Charstr(object):
+class Charstr:
 
     def __init__(self, string=b''):
         if not isinstance(string, bytes):
@@ -646,7 +646,7 @@ class Query:
 
 
 @implementer(IEncodable)
-class _OPTHeader(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
+class _OPTHeader(tputil.FancyStrMixin, tputil.FancyEqMixin):
     """
     An OPT record header.
 
@@ -823,7 +823,7 @@ class _OPTHeader(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
 
 
 @implementer(IEncodable)
-class _OPTVariableOption(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
+class _OPTVariableOption(tputil.FancyStrMixin, tputil.FancyEqMixin):
     """
     A class to represent OPT record variable options.
 
@@ -2092,7 +2092,7 @@ class Record_TXT(tputil.FancyEqMixin, tputil.FancyStrMixin):
 
 
 @implementer(IEncodableRecord)
-class UnknownRecord(tputil.FancyEqMixin, tputil.FancyStrMixin, object):
+class UnknownRecord(tputil.FancyEqMixin, tputil.FancyStrMixin):
     """
     Encapsulate the wire data for unknown record types so that they can
     pass through the system unchanged.
@@ -2650,7 +2650,7 @@ class Message(tputil.FancyEqMixin):
 
 
 
-class _EDNSMessage(tputil.FancyEqMixin, object):
+class _EDNSMessage(tputil.FancyEqMixin):
     """
     An I{EDNS} message.
 
@@ -2962,7 +2962,7 @@ class _EDNSMessage(tputil.FancyEqMixin, object):
 
 
 
-class DNSMixin(object):
+class DNSMixin:
     """
     DNS protocol mixin shared by UDP and TCP implementations.
 

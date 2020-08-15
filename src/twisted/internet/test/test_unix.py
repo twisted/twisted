@@ -60,7 +60,7 @@ if requireModule("twisted.python.sendmsg") is not None:
 
 
 
-class UNIXFamilyMixin(object):
+class UNIXFamilyMixin:
     """
     Test-helper defining mixin for things related to AF_UNIX sockets.
     """
@@ -702,7 +702,7 @@ class UNIXDatagramTestsBuilder(UNIXFamilyMixin, ReactorBuilder):
 
 
 
-class SocketUNIXMixin(object):
+class SocketUNIXMixin:
     """
     Mixin which uses L{IReactorSocket.adoptStreamPort} to hand out listening
     UNIX ports.
@@ -747,7 +747,7 @@ class SocketUNIXMixin(object):
 
 
 
-class ListenUNIXMixin(object):
+class ListenUNIXMixin:
     """
     Mixin which uses L{IReactorTCP.listenUNIX} to hand out listening UNIX
     ports.
@@ -780,7 +780,7 @@ class ListenUNIXMixin(object):
 
 
 
-class UNIXPortTestsMixin(object):
+class UNIXPortTestsMixin:
     requiredInterfaces = (IReactorUNIX,)  # type: Optional[Sequence[Type[Interface]]]  # noqa
 
     def getExpectedStartListeningLogMessage(self, port, factory):

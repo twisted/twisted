@@ -715,7 +715,7 @@ class TestURL(SynchronousTestCase):
         bad data crops up in a method call long after the code that called the
         constructor is off the stack.
         """
-        class Unexpected(object):
+        class Unexpected:
             def __str__(self) -> str:
                 return "wrong"
 

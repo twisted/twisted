@@ -1154,7 +1154,7 @@ class ProtocolTests(TestCase):
         self.assertIsInstance(protocol, factory.protocol)
 
 
-class DummyProducer(object):
+class DummyProducer:
     """
     Very uninteresting producer implementation used by tests to ensure the
     right methods are called by the consumer with which it is registered.

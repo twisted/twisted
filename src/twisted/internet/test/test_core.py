@@ -18,7 +18,7 @@ from twisted.internet.defer import Deferred
 from twisted.internet.test.reactormixins import ReactorBuilder
 
 
-class ObjectModelIntegrationMixin(object):
+class ObjectModelIntegrationMixin:
     """
     Helpers for tests about the object model of reactor-related objects.
     """

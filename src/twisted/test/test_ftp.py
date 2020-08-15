@@ -1310,7 +1310,7 @@ class DTPFactoryTests(TestCase):
         """
         self.reactor = task.Clock()
 
-        class ProtocolInterpreter(object):
+        class ProtocolInterpreter:
             dtpInstance = None
 
         self.protocolInterpreter = ProtocolInterpreter()
@@ -1450,7 +1450,7 @@ class DTPTests(TestCase):
         """
         self.reactor = task.Clock()
 
-        class ProtocolInterpreter(object):
+        class ProtocolInterpreter:
             dtpInstance = None
 
         self.protocolInterpreter = ProtocolInterpreter()
@@ -3558,7 +3558,7 @@ class FTPShellTests(TestCase, IFTPShellTestsMixin):
 
 
 @implementer(IConsumer)
-class TestConsumer(object):
+class TestConsumer:
     """
     A simple consumer for tests. It only works with non-streaming producers.
 
@@ -3601,7 +3601,7 @@ class TestConsumer(object):
 
 
 
-class TestProducer(object):
+class TestProducer:
     """
     A dumb producer.
     """

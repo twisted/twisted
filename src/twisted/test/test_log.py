@@ -712,7 +712,7 @@ class FileObserverTests(LogPublisherTestCaseMixin,
         self._startLoggingCleanup()
         newPublisher = NewLogPublisher()
 
-        class SysModule(object):
+        class SysModule:
             stdout = object()
             stderr = object()
 
@@ -969,7 +969,7 @@ class DefaultObserverTests(unittest.SynchronousTestCase):
         DefaultObserver.emit() does not raise when it observes an error event
         with a message that causes L{repr} to raise.
         """
-        class Ouch(object):
+        class Ouch:
             def __repr__(self) -> str:
                 return str(1 / 0)
 

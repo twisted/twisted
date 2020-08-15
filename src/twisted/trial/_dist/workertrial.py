@@ -36,7 +36,7 @@ from twisted.trial._dist import _WORKER_AMP_STDIN, _WORKER_AMP_STDOUT
 
 
 
-class WorkerLogObserver(object):
+class WorkerLogObserver:
     """
     A log observer that forward its output to a C{AMP} protocol.
     """

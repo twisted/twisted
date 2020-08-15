@@ -1241,7 +1241,7 @@ class MessageComparisonTests(ComparisonTestsMixin,
 
 
 
-class TestController(object):
+class TestController:
     """
     Pretend to be a DNS query processor for a DNSDatagramProtocol.
 
@@ -2608,7 +2608,7 @@ class IsSubdomainOfTests(unittest.SynchronousTestCase):
 
 
 
-class OPTNonStandardAttributes(object):
+class OPTNonStandardAttributes:
     """
     Generate byte and instance representations of an L{dns._OPTHeader}
     where all attributes are set to non-default values.
@@ -3155,7 +3155,7 @@ class RaisedArgs(Exception):
 
 
 
-class MessageEmpty(object):
+class MessageEmpty:
     """
     Generate byte string and constructor arguments for an empty
     L{dns._EDNSMessage}.
@@ -3202,7 +3202,7 @@ class MessageEmpty(object):
 
 
 
-class MessageTruncated(object):
+class MessageTruncated:
     """
     An empty response message whose TR bit is set to 1.
     """
@@ -3247,7 +3247,7 @@ class MessageTruncated(object):
 
 
 
-class MessageNonAuthoritative(object):
+class MessageNonAuthoritative:
     """
     A minimal non-authoritative message.
     """
@@ -3298,7 +3298,7 @@ class MessageNonAuthoritative(object):
 
 
 
-class MessageAuthoritative(object):
+class MessageAuthoritative:
     """
     A minimal authoritative message.
     """
@@ -3463,7 +3463,7 @@ class MessageComplete:
 
 
 
-class MessageEDNSQuery(object):
+class MessageEDNSQuery:
     """
     A minimal EDNS query message.
     """
@@ -3524,7 +3524,7 @@ class MessageEDNSQuery(object):
 
 
 
-class MessageEDNSComplete(object):
+class MessageEDNSComplete:
     """
     An example of a fully populated edns response message.
 
@@ -3652,7 +3652,7 @@ class MessageEDNSComplete(object):
 
 
 
-class MessageEDNSExtendedRCODE(object):
+class MessageEDNSExtendedRCODE:
     """
     An example of an EDNS message with an extended RCODE.
     """
@@ -3713,7 +3713,7 @@ class MessageEDNSExtendedRCODE(object):
 
 
 
-class MessageComparable(FancyEqMixin, FancyStrMixin, object):
+class MessageComparable(FancyEqMixin, FancyStrMixin):
     """
     A wrapper around L{dns.Message} which is comparable so that it can be tested
     using some of the L{dns._EDNSMessage} tests.
@@ -3778,7 +3778,7 @@ def verifyConstructorArgument(testCase, cls, argName, defaultVal, altVal,
 
 
 
-class ConstructorTestsMixin(object):
+class ConstructorTestsMixin:
     """
     Helper methods for verifying default attribute values and corresponding
     constructor arguments.
@@ -3813,7 +3813,7 @@ class ConstructorTestsMixin(object):
 
 
 
-class CommonConstructorTestsMixin(object):
+class CommonConstructorTestsMixin:
     """
     Tests for constructor arguments and their associated attributes that are
     common to both L{twisted.names.dns._EDNSMessage} and L{dns.Message}.
@@ -4124,7 +4124,7 @@ class EDNSMessageSpecificsTests(ConstructorTestsMixin,
         to create a new L{dns.Message} instance which is used to decode the
         supplied bytes.
         """
-        class FakeMessageFactory(object):
+        class FakeMessageFactory:
             """
             Fake message factory.
             """
@@ -4199,7 +4199,7 @@ class EDNSMessageSpecificsTests(ConstructorTestsMixin,
         """
         m = dns._EDNSMessage()
         dummyBytes = object()
-        class FakeMessage(object):
+        class FakeMessage:
             """
             Fake Message
             """
@@ -4450,7 +4450,7 @@ class EDNSMessageEqualityTests(ComparisonTestsMixin,
 
 
 
-class StandardEncodingTestsMixin(object):
+class StandardEncodingTestsMixin:
     """
     Tests for the encoding and decoding of various standard (not EDNS) messages.
 
@@ -4829,7 +4829,7 @@ class ResponseFromMessageTests(unittest.SynchronousTestCase):
         """
         L{dns._responseFromMessage} returns a new instance of C{cls}
         """
-        class SuppliedClass(object):
+        class SuppliedClass:
             id = 1
             queries = []
 
@@ -4897,7 +4897,7 @@ class ResponseFromMessageTests(unittest.SynchronousTestCase):
 
 
 
-class Foo(object):
+class Foo:
     """
     An example class for use in L{dns._compactRepr} tests.
     It follows the pattern of initialiser settable flags, fields and sections

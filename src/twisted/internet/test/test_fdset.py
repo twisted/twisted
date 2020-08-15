@@ -373,7 +373,7 @@ class ReactorFDSetTestsBuilder(ReactorBuilder):
 
 
 @implementer(IReadDescriptor)
-class RemovingDescriptor(object):
+class RemovingDescriptor:
     """
     A read descriptor which removes itself from the reactor as soon as it
     gets a chance to do a read and keeps track of when its own C{fileno}

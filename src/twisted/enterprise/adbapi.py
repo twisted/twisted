@@ -21,7 +21,7 @@ class ConnectionLost(Exception):
 
 
 
-class Connection(object):
+class Connection:
     """
     A wrapper for a DB-API connection instance.
 

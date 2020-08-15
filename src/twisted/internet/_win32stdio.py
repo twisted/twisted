@@ -18,7 +18,7 @@ from twisted.internet import _pollingfile, main
 from twisted.python.failure import Failure
 
 @implementer(IAddress)
-class Win32PipeAddress(object):
+class Win32PipeAddress:
     pass
 
 

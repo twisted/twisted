@@ -82,7 +82,7 @@ class AllowAnonymousAccess:
 
 
 @implementer(ICredentialsChecker)
-class InMemoryUsernamePasswordDatabaseDontUse(object):
+class InMemoryUsernamePasswordDatabaseDontUse:
     """
     An extremely simple credentials checker.
 

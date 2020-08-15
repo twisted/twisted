@@ -114,7 +114,7 @@ def _swapAllPairs(of, that, ifIs):
             for first, second in of]
 
 
-class MessageSet(object):
+class MessageSet:
     """
     A set of message identifiers usable by both L{IMAP4Client} and
     L{IMAP4Server} via L{IMailboxIMAP.store} and
@@ -5052,7 +5052,7 @@ def collapseNestedLists(items):
 
 
 @implementer(IAccount)
-class MemoryAccountWithoutNamespaces(object):
+class MemoryAccountWithoutNamespaces:
     mailboxes = None
     subscriptions = None
     top_id = 0
@@ -5309,7 +5309,7 @@ def _getMessageStructure(message):
 
 
 
-class _MessageStructure(object):
+class _MessageStructure:
     """
     L{_MessageStructure} is a helper base class for message structure classes
     representing the structure of particular kinds of messages, as defined by

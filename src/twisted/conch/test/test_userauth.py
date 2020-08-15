@@ -131,7 +131,7 @@ class FakeTransport(transport.SSHTransportBase):
     @type lostConnection: L{bool}
     """
 
-    class Service(object):
+    class Service:
         """
         A mock service, representing the other service offered by the server.
         """
@@ -142,7 +142,7 @@ class FakeTransport(transport.SSHTransportBase):
             pass
 
 
-    class Factory(object):
+    class Factory:
         """
         A mock factory, representing the factory that spawned this user auth
         service.
@@ -186,7 +186,7 @@ class FakeTransport(transport.SSHTransportBase):
 
 
 @implementer(IRealm)
-class Realm(object):
+class Realm:
     """
     A mock realm for testing L{userauth.SSHUserAuthServer}.
 
@@ -200,7 +200,7 @@ class Realm(object):
 
 
 @implementer(ICredentialsChecker)
-class PasswordChecker(object):
+class PasswordChecker:
     """
     A very simple username/password checker which authenticates anyone whose
     password matches their username and rejects all others.
@@ -215,7 +215,7 @@ class PasswordChecker(object):
 
 
 @implementer(ICredentialsChecker)
-class PrivateKeyChecker(object):
+class PrivateKeyChecker:
     """
     A very simple public key checker which authenticates anyone whose
     public/private keypair is the same keydata.public/privateRSA_openssh.
@@ -235,7 +235,7 @@ class PrivateKeyChecker(object):
 
 
 @implementer(ICredentialsChecker)
-class AnonymousChecker(object):
+class AnonymousChecker:
     """
     A simple checker which isn't supported by L{SSHUserAuthServer}.
     """

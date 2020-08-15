@@ -470,7 +470,7 @@ sys.stdout.flush()""".format(twistedRoot.path))
 
         @reactor.callWhenRunning
         def whenRunning():
-            class TracebackCatcher(ProcessProtocol, object):
+            class TracebackCatcher(ProcessProtocol):
                 errReceived = output.write
                 def processEnded(self, reason):
                     reactor.stop()

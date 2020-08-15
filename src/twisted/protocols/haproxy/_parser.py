@@ -44,7 +44,7 @@ def unparseEndpoint(args, kwargs):
 
 
 @implementer(IPlugin, IStreamServerEndpointStringParser)
-class HAProxyServerParser(object):
+class HAProxyServerParser:
     """
     Stream server endpoint string parser for the HAProxyServerEndpoint type.
 

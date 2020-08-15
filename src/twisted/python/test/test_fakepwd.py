@@ -51,7 +51,7 @@ INVALID_UID = findInvalidUID()
 
 
 
-class UserDatabaseTestsMixin(object):
+class UserDatabaseTestsMixin:
     """
     L{UserDatabaseTestsMixin} defines tests which apply to any user database
     implementation.  Subclasses should mix it in, implement C{setUp} to create
@@ -244,7 +244,7 @@ class PwdModuleTests(TestCase, UserDatabaseTestsMixin):
 
 
 
-class ShadowDatabaseTestsMixin(object):
+class ShadowDatabaseTestsMixin:
     """
     L{ShadowDatabaseTestsMixin} defines tests which apply to any shadow user
     database implementation.  Subclasses should mix it in, implement C{setUp} to
