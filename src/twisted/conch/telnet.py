@@ -14,8 +14,8 @@ import struct
 from zope.interface import implementer
 
 from twisted.internet import protocol, interfaces as iinternet, defer
-from twisted.python import log
 from twisted.python.compat import iterbytes
+from twisted.logger import Logger
 
 
 
@@ -334,6 +334,8 @@ class AlreadyNegotiating(NegotiationError):
 
 @implementer(ITelnetProtocol)
 class TelnetProtocol(protocol.Protocol):
+    _log = Logger()
+
     def unhandledCommand(self, command, argument):
         pass
 
@@ -999,11 +1001,15 @@ class TelnetBootstrapProtocol(TelnetProtocol, ProtocolTransportMixin):
         self.transport.negotiationMap[LINEMODE] = self.telnet_LINEMODE
 
         for opt in (LINEMODE, NAWS, SGA):
-            self.transport.do(opt).addErrback(log.err)
+            self.transport.do(opt).addErrback(
+                lambda f: self._log.failure('Error do {opt!r}', f, opt=opt))
         for opt in (ECHO,):
-            self.transport.will(opt).addErrback(log.err)
+            self.transport.will(opt).addErrback(
+                lambda f: self._log.failure(
+                    'Error setting will {opt!r}', f, opt=opt))
 
-        self.protocol = self.protocolFactory(*self.protocolArgs, **self.protocolKwArgs)
+        self.protocol = self.protocolFactory(*self.protocolArgs,
+                                             **self.protocolKwArgs)
 
         try:
             factory = self.factory
@@ -1057,7 +1063,8 @@ class TelnetBootstrapProtocol(TelnetProtocol, ProtocolTransportMixin):
             width, height = struct.unpack('!HH', b''.join(data))
             self.protocol.terminalProtocol.terminalSize(width, height)
         else:
-            log.msg("Wrong number of NAWS bytes")
+            self._log.error("Wrong number of NAWS bytes: {nbytes}",
+                            nbytes=len(data))
 
     linemodeSubcommands = {
         LINEMODE_SLC: 'SLC'}
@@ -1094,7 +1101,7 @@ class StatefulTelnetProtocol(basic.LineReceiver, TelnetProtocol):
             if self.state == oldState:
                 self.state = newState
             else:
-                log.msg("Warning: state changed and new state returned")
+                self._log.warn("state changed and new state returned")
 
 
     def telnet_Discard(self, line):
