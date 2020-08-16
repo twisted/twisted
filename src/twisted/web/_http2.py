@@ -16,8 +16,6 @@ it has stabilised, it'll be made public.
 
 
 import io
-import warnings
-import sys
 
 from collections import deque
 from typing import List
@@ -49,19 +47,6 @@ __all__ = []  # type: List[str]
 
 
 _END_STREAM_SENTINEL = object()
-
-
-# Python versions 2.7.3 and older don't have a memoryview object that plays
-# well with the struct module, which h2 needs. On those versions, just refuse
-# to import.
-if sys.version_info < (2, 7, 4):
-    warnings.warn(
-        "HTTP/2 cannot be enabled because this version of Python is too "
-        "old, and does not fully support memoryview objects.",
-        UserWarning,
-        stacklevel=2,
-    )
-    raise ImportError("HTTP/2 not supported on this Python version.")
 
 
 
