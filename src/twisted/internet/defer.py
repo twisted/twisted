@@ -21,6 +21,7 @@ import attr
 import traceback
 import types
 import warnings
+from asyncio import iscoroutine
 from sys import exc_info, version_info
 from functools import wraps
 from incremental import Version
@@ -917,13 +918,9 @@ def ensureDeferred(coro):
 
     @rtype: L{Deferred}
     """
-    from types import GeneratorType
 
-    if version_info >= (3, 4, 0):
-        from asyncio import iscoroutine
-
-        if iscoroutine(coro) or isinstance(coro, GeneratorType):
-            return _cancellableInlineCallbacks(coro)
+    if iscoroutine(coro) or isinstance(coro, types.GeneratorType):
+        return _cancellableInlineCallbacks(coro)
 
     if not isinstance(coro, Deferred):
         raise ValueError("%r is not a coroutine or a Deferred" % (coro,))

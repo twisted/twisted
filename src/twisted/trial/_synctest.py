@@ -838,28 +838,6 @@ class _Assertions(pyunit.TestCase):
             )
 
 
-    def assertRegex(self, text, regex, msg=None):
-        """
-        Fail the test if a C{regexp} search of C{text} fails.
-
-        @param text: Text which is under test.
-        @type text: L{str}
-
-        @param regex: A regular expression object or a string containing a
-            regular expression suitable for use by re.search().
-        @type regex: L{str} or L{re.RegexObject}
-
-        @param msg: Text used as the error message on failure.
-        @type msg: L{str}
-        """
-        if sys.version_info[:2] > (2, 7):
-            super(_Assertions, self).assertRegex(text, regex, msg)
-        else:
-            # Python 2.7 has unittest.assertRegexpMatches() which was
-            # renamed to unittest.assertRegex() in Python 3.2
-            super(_Assertions, self).assertRegexpMatches(text, regex, msg)
-
-
 
 class _LogObserver:
     """
