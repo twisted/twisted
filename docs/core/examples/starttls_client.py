@@ -16,7 +16,6 @@ class StartTLSClient(LineReceiver):
             self.sendLine(b"secure text")
             self.transport.loseConnection()
 
-@defer.deferredCoro
 async def main(reactor):
     factory = protocol.Factory.forProtocol(StartTLSClient)
     certData = getModule(__name__).filePath.sibling('server.pem').getContent()

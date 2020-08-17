@@ -11,6 +11,7 @@ Tests for L{twisted.conch.manhole}.
 import traceback
 
 from twisted.trial import unittest
+from twisted.trial.util import _deferredCoro
 from twisted.internet import error, defer
 from twisted.test.proto_helpers import StringTransport
 from twisted.conch.test.test_recvline import (
@@ -304,7 +305,7 @@ class ManholeLoopbackMixin:
 
         return partialLine.addCallback(gotPartialLine).addCallback(gotClearedLine)
 
-    @defer.deferredCoro
+    @_deferredCoro
     async def test_controlD(self):
         """
         A CTRL+D in the middle of a line doesn't close a connection,
@@ -325,7 +326,7 @@ class ManholeLoopbackMixin:
         d = self.recvlineClient.onDisconnection
         await self.assertFailure(d, error.ConnectionDone)
 
-    @defer.deferredCoro
+    @_deferredCoro
     async def test_ControlL(self):
         """
         CTRL+L is generally used as a redraw-screen command in terminal
@@ -369,7 +370,7 @@ class ManholeLoopbackMixin:
 
         return d.addCallback(cb)
 
-    @defer.deferredCoro
+    @_deferredCoro
     async def test_deferred(self):
         """
         When a deferred is returned to the manhole REPL, it is displayed with

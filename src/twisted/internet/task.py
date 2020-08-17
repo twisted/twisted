@@ -865,9 +865,9 @@ def react(main, argv=(), _reactor=None):
 
           task.react(main, ('alice', 'secret'))
 
-    @param main: A callable which returns a L{Deferred}. It should
-        take the reactor as its first parameter, followed by the elements of
-        C{argv}.
+    @param main: A coroutinefunction or a callable which returns a L{Deferred}.
+        It should take the reactor as its first parameter, followed by the
+        elements of C{argv}.
 
     @param argv: A list of arguments to pass to C{main}. If omitted the
         callable will be invoked with no additional arguments.
@@ -879,7 +879,7 @@ def react(main, argv=(), _reactor=None):
     """
     if _reactor is None:
         from twisted.internet import reactor as _reactor
-    finished = main(_reactor, *argv)
+    finished = defer.ensureDeferred(main(_reactor, *argv))
     codes = [0]
 
     stopping = []

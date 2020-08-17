@@ -19,6 +19,7 @@ from twisted.python import components
 from twisted.python.compat import _PY37PLUS
 from twisted.python.filepath import FilePath
 from twisted.trial.unittest import TestCase
+from twisted.trial.util import _deferredCoro
 
 try:
     from twisted.conch import unix
@@ -520,7 +521,7 @@ class OurServerOurClientTests(SFTPTestBase):
         return self.assertFailure(d, NotImplementedError)
 
     @skipIf(_PY37PLUS, "Broken by PEP 479 and deprecated.")
-    @defer.deferredCoro
+    @_deferredCoro
     async def test_openDirectoryIterator(self):
         """
         Check that the object returned by
@@ -563,7 +564,7 @@ class OurServerOurClientTests(SFTPTestBase):
             ),
         )
 
-    @defer.deferredCoro
+    @_deferredCoro
     async def test_openDirectoryIteratorDeprecated(self):
         """
         Using client.openDirectory as an iterator is deprecated.
@@ -584,7 +585,7 @@ class OurServerOurClientTests(SFTPTestBase):
         self.assertEqual(DeprecationWarning, warnings[0]["category"])
         self.assertEqual(message, warnings[0]["message"])
 
-    @defer.deferredCoro
+    @_deferredCoro
     async def test_closedConnectionCancelsRequests(self):
         """
         If there are requests outstanding when the connection

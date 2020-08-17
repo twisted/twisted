@@ -8,10 +8,11 @@ Tests for L{twisted.words.service}.
 import time
 
 from twisted.cred import portal, credentials, checkers
-from twisted.internet import address, defer, reactor
+from twisted.internet import address, reactor
 from twisted.internet.defer import Deferred, DeferredList, maybeDeferred, succeed
 from twisted.spread import pb
 from twisted.test import proto_helpers
+from twisted.trial.util import _deferredCoro
 from twisted.trial import unittest
 from twisted.words import ewords, service
 from twisted.words.protocols import irc
@@ -805,7 +806,7 @@ class PBProtocolTests(unittest.TestCase):
             ]
         )
 
-    @defer.deferredCoro
+    @_deferredCoro
     async def testGroups(self):
         async def loggedInAvatar(name, password, mind):
             nameBytes = name

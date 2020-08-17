@@ -11,6 +11,7 @@ from zope.interface import implementer, Interface
 from binascii import hexlify, unhexlify
 
 from twisted.trial import unittest
+from twisted.trial.util import _deferredCoro
 from twisted.python.compat import nativeString, networkString
 from twisted.python import components
 from twisted.python.versions import Version
@@ -333,7 +334,7 @@ class CheckersMixin:
         which are expected to be unauthorized.
     """
 
-    @defer.deferredCoro
+    @_deferredCoro
     async def test_positive(self):
         """
         The given credentials are accepted by all the checkers, and give
@@ -344,7 +345,7 @@ class CheckersMixin:
                 r = await chk.requestAvatarId(cred)
                 self.assertEqual(r, avatarId)
 
-    @defer.deferredCoro
+    @_deferredCoro
     async def test_negative(self):
         """
         The given credentials are rejected by all the checkers.

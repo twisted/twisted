@@ -22,7 +22,7 @@ else:
 
 from unittest import skipIf
 
-from twisted.internet import reactor, defer
+from twisted.internet import reactor
 from twisted.internet.defer import Deferred
 from twisted.internet.error import ProcessDone
 from twisted.internet.protocol import ProcessProtocol
@@ -30,6 +30,7 @@ from twisted.python.filepath import FilePath
 from twisted.python.runtime import platform
 
 from twisted.trial.unittest import TestCase
+from twisted.trial.util import _deferredCoro
 
 if platform.isLinux():
     from socket import MSG_DONTWAIT
@@ -274,7 +275,7 @@ class SendmsgTests(TestCase):
                 "or maybe send1msg blocked for a while"
             )
 
-    @defer.deferredCoro
+    @_deferredCoro
     async def test_sendSubProcessFD(self):
         """
         Calling L{sendmsg} with SOL_SOCKET, SCM_RIGHTS, and a platform-endian

@@ -7,7 +7,6 @@ from twisted.python.modules import getModule
 
 import echoclient
 
-@defer.deferredCoro
 async def main(reactor):
     factory = protocol.Factory.forProtocol(echoclient.EchoClient)
     certData = getModule(__name__).filePath.sibling('public.pem').getContent()

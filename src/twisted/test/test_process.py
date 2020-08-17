@@ -51,6 +51,7 @@ from io import BytesIO
 from twisted.python.log import msg
 from twisted.internet import reactor, protocol, error, interfaces, defer
 from twisted.trial import unittest
+from twisted.trial.util import _deferredCoro
 from twisted.python import runtime, procutils
 from twisted.python.compat import networkString
 from twisted.python.filepath import FilePath
@@ -2453,7 +2454,7 @@ class Win32CreateProcessFlagsTests(unittest.TestCase):
     Check the flags passed to CreateProcess.
     """
 
-    @defer.deferredCoro
+    @_deferredCoro
     async def test_flags(self):
         """
         Verify that the flags passed to win32process.CreateProcess() prevent a

@@ -19,6 +19,7 @@ Maintainer: Jonathan Lange
 """
 
 
+import functools
 from random import randrange
 
 from twisted.internet import defer, utils, interfaces
@@ -256,7 +257,20 @@ def profiled(f, outputFile):
     return _
 
 
-@defer.deferredCoro
+def _deferredCoro(fn):
+    """
+    Wrap a coroutine function that awaits L{Deferred}s with a deferred returning
+    function.
+    """
+
+    @functools.wraps(fn)
+    def wrapper(*args, **kwargs):
+        return defer.ensureDeferred(fn(*args, **kwargs))
+
+    return wrapper
+
+
+@_deferredCoro
 async def _runSequentially(callables, stopOnFirstError=False):
     """
     Run the given callables one after the other. If a callable returns a
