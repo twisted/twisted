@@ -1,0 +1,1 @@
+twisted.internet.defer.inlineCallbacks is deprecated. This deprecation is intended to encourage the use of coroutine functions when writing new code. There are no current plans to remove @inlineCallbacks

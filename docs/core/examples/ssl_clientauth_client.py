@@ -7,8 +7,8 @@ from twisted.python.modules import getModule
 
 import echoclient
 
-@defer.inlineCallbacks
-def main(reactor):
+@defer.deferredCoro
+async def main(reactor):
     factory = protocol.Factory.forProtocol(echoclient.EchoClient)
     certData = getModule(__name__).filePath.sibling('public.pem').getContent()
     authData = getModule(__name__).filePath.sibling('server.pem').getContent()
@@ -18,11 +18,11 @@ def main(reactor):
                                       clientCertificate)
     endpoint = endpoints.SSL4ClientEndpoint(reactor, 'localhost', 8000,
                                             options)
-    echoClient = yield endpoint.connect(factory)
+    echoClient = await endpoint.connect(factory)
 
     done = defer.Deferred()
     echoClient.connectionLost = lambda reason: done.callback(None)
-    yield done
+    await done
 
 if __name__ == '__main__':
     import ssl_clientauth_client

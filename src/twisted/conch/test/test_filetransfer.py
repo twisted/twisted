@@ -519,9 +519,9 @@ class OurServerOurClientTests(SFTPTestBase):
         self._emptyBuffers()
         return self.assertFailure(d, NotImplementedError)
 
-    @defer.inlineCallbacks
     @skipIf(_PY37PLUS, "Broken by PEP 479 and deprecated.")
-    def test_openDirectoryIterator(self):
+    @defer.deferredCoro
+    async def test_openDirectoryIterator(self):
         """
         Check that the object returned by
         L{filetransfer.FileTransferClient.openDirectory} can be used
@@ -535,18 +535,18 @@ class OurServerOurClientTests(SFTPTestBase):
 
         d = self.client.openDirectory(b"")
         self._emptyBuffers()
-        openDir = yield d
+        openDir = await d
 
         filenames = set()
         try:
             for f in openDir:
                 self._emptyBuffers()
-                (filename, _, fileattrs) = yield f
+                (filename, _, fileattrs) = await f
                 filenames.add(filename)
         finally:
             d = openDir.close()
             self._emptyBuffers()
-            yield d
+            await d
 
         self._emptyBuffers()
 
@@ -563,17 +563,17 @@ class OurServerOurClientTests(SFTPTestBase):
             ),
         )
 
-    @defer.inlineCallbacks
-    def test_openDirectoryIteratorDeprecated(self):
+    @defer.deferredCoro
+    async def test_openDirectoryIteratorDeprecated(self):
         """
         Using client.openDirectory as an iterator is deprecated.
         """
         d = self.client.openDirectory(b"")
         self._emptyBuffers()
-        openDir = yield d
+        openDir = await d
         oneFile = openDir.next()
         self._emptyBuffers()
-        yield oneFile
+        await oneFile
 
         warnings = self.flushWarnings()
         message = (
@@ -584,8 +584,8 @@ class OurServerOurClientTests(SFTPTestBase):
         self.assertEqual(DeprecationWarning, warnings[0]["category"])
         self.assertEqual(message, warnings[0]["message"])
 
-    @defer.inlineCallbacks
-    def test_closedConnectionCancelsRequests(self):
+    @defer.deferredCoro
+    async def test_closedConnectionCancelsRequests(self):
         """
         If there are requests outstanding when the connection
         is closed for any reason, they should fail.
@@ -593,7 +593,7 @@ class OurServerOurClientTests(SFTPTestBase):
 
         d = self.client.openFile(b"testfile1", filetransfer.FXF_READ, {})
         self._emptyBuffers()
-        fh = yield d
+        fh = await d
 
         # Intercept the handling of the read request on the server side
         gotReadRequest = []

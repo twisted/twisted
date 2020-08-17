@@ -359,7 +359,7 @@ class DeprecateDeferredGeneratorTests(unittest.SynchronousTestCase):
             warnings[0]["message"],
             "twisted.internet.defer.deferredGenerator was deprecated in "
             "Twisted 15.0.0; please use "
-            "twisted.internet.defer.inlineCallbacks instead",
+            "async/await coroutines instead",
         )
 
     def test_waitForDeferredDeprecated(self):
@@ -376,5 +376,5 @@ class DeprecateDeferredGeneratorTests(unittest.SynchronousTestCase):
             warnings[0]["message"],
             "twisted.internet.defer.waitForDeferred was deprecated in "
             "Twisted 15.0.0; please use "
-            "twisted.internet.defer.inlineCallbacks instead",
+            "async/await coroutines instead",
         )

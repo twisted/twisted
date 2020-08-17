@@ -256,8 +256,8 @@ def profiled(f, outputFile):
     return _
 
 
-@defer.inlineCallbacks
-def _runSequentially(callables, stopOnFirstError=False):
+@defer.deferredCoro
+async def _runSequentially(callables, stopOnFirstError=False):
     """
     Run the given callables one after the other. If a callable returns a
     Deferred, wait until it has finished before running the next callable.
@@ -273,15 +273,14 @@ def _runSequentially(callables, stopOnFirstError=False):
     """
     results = []
     for f in callables:
-        d = defer.maybeDeferred(f)
         try:
-            thing = yield d
+            thing = await defer.maybeDeferred(f)
             results.append((defer.SUCCESS, thing))
         except Exception:
             results.append((defer.FAILURE, Failure()))
             if stopOnFirstError:
                 break
-    defer.returnValue(results)
+    return results
 
 
 class _NoTrialMarker(Exception):

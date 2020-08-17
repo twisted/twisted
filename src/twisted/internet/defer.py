@@ -927,6 +927,46 @@ def ensureDeferred(coro):
     return coro
 
 
+def deferredCoro(fn):
+    """
+    Wrap a coroutine function that awaits L{Deferred}s with a deferred returning
+    function.
+
+    Coroutine functions return a coroutine object, similar to how generators
+    work. This function turns that coroutine into a Deferred, meaning that it
+    can be used in regular Twisted code. For example::
+
+        import treq
+        from twisted.internet defer, task
+
+        async def crawl(pages):
+            results = {}
+            for page in pages:
+                results[page] = await treq.content(await treq.get(page))
+            return results
+
+        @defer.deferredCoro
+        async def main(reactor):
+            pages = [
+                "http://localhost:8080"
+            ]
+            print(await crawl(pages))
+
+        task.react(main)
+
+    @param fn: The coroutinefunction object to wrap.
+    @type fn: A coroutinefunction
+
+    @rtype: A callable returning L{Deferred}
+    """
+
+    @wraps(fn)
+    def wrapper(*args, **kwargs):
+        return ensureDeferred(fn(*args, **kwargs))
+
+    return wrapper
+
+
 class DebugInfo:
     """
     Deferred debug helper.
@@ -1196,7 +1236,7 @@ class waitForDeferred:
     def __init__(self, d):
         warnings.warn(
             "twisted.internet.defer.waitForDeferred was deprecated in "
-            "Twisted 15.0.0; please use twisted.internet.defer.inlineCallbacks "
+            "Twisted 15.0.0; please use async/await coroutines "
             "instead",
             DeprecationWarning,
             stacklevel=2,
@@ -1269,7 +1309,7 @@ def _deferGenerator(g, deferred):
             result = None
 
 
-@deprecated(Version("Twisted", 15, 0, 0), "twisted.internet.defer.inlineCallbacks")
+@deprecated(Version("Twisted", 15, 0, 0), "async/await coroutines")
 def deferredGenerator(f):
     """
     L{deferredGenerator} and L{waitForDeferred} help you write
@@ -1546,6 +1586,7 @@ class _InternalInlineCallbacksCancelledError(Exception):
     """
 
 
+@deprecated(Version("Twisted", "NEXT", 0, 0), "async/await coroutines")
 def inlineCallbacks(f):
     """
     L{inlineCallbacks} helps you write L{Deferred}-using code that looks like a
