@@ -211,7 +211,7 @@ Even though Deferreds were used in both coroutines, only ``bar`` had to be wrapp
 A low level solution: Deferred
 ------------------------------
 
-This is going to be a bit painstaking, but if you want to really understand how to use :api:`twisted.internet.defer.Deferred <Deferred>`\s and maintain code that uses them, it is worth understanding each example below.
+At this point you know everything you need to know about consuming asynchronous APIs. The ``ensureDeferred`` is built on a low level api described below. It's generally recommended to exlusively use coroutines, but sometimes you'll see code using the lower-level raw-deferred interface.
 
 Twisted tackles this problem with :api:`twisted.internet.defer.Deferred <Deferred>`\s, a type of object designed to do one thing, and one thing only: encode an order of execution separately from the order of lines in Python source code.
 
@@ -223,8 +223,8 @@ Because we explicitly tell it the order that we want.
 
 Thus, instead of writing::
 
-    pod_bay_doors.open()
-    pod.launch()
+    await pod_bay_doors.open()
+    await pod.launch()
 
 We write::
 
@@ -257,18 +257,15 @@ One thing, then another, then another
 
 Recall our example from earlier::
 
-    pprint(sorted(x.get_names()))
+    pprint(sorted(await x.get_names()))
 
 Also written as::
 
-    names = x.get_names()
+    names = await x.get_names()
     sorted_names = sorted(names)
     pprint(sorted_names)
 
-What if neither ``get_names`` nor ``sorted`` can be relied on to finish before they return?
-That is, if both are asynchronous operations?
-
-Well, in Twisted-speak they would return :api:`twisted.internet.defer.Deferred <Deferred>`\s and so we would write::
+Well, in raw-deferred-speak they would return :api:`twisted.internet.defer.Deferred <Deferred>`\s and so we would write::
 
     d = x.get_names()
     d.addCallback(sorted)
@@ -290,9 +287,9 @@ Simple failure handling
 We often want to write code equivalent to this::
 
     try:
-        x.get_names()
+        await x.get_names()
     except Exception as e:
-        report_error(e)
+        await report_error(e)
 
 How would we write this with :api:`twisted.internet.defer.Deferred <Deferred>`\s?
 
@@ -316,11 +313,11 @@ What if we want to do something after our ``try`` block if it actually worked?
 Abandoning our contrived examples and reaching for generic variable names, we get::
 
     try:
-        y = f()
+        y = await f()
     except Exception as e:
-        g(e)
+        await g(e)
     else:
-        h(y)
+        await h(y)
 
 Well, we'd write it like this with :api:`twisted.internet.defer.Deferred <Deferred>`\s::
 
@@ -341,10 +338,10 @@ What if we want to do something after our ``try``/``except`` block, regardless o
 That is, what if we wanted to do the equivalent of this generic code::
 
     try:
-        y = f()
+        y = await f()
     except Exception as e:
-        y = g(e)
-    h(y)
+        y = await g(e)
+    await h(y)
 
 And with :api:`twisted.internet.defer.Deferred <Deferred>`\s::
 
@@ -368,10 +365,10 @@ What if we want to wrap up a multi-step operation in one exception handler?
 .. code-block:: python
 
     try:
-        y = f()
-        z = h(y)
+        y = await f()
+        z = await h(y)
     except Exception as e:
-        g(e)
+        await g(e)
 
 With :api:`twisted.internet.defer.Deferred <Deferred>`\s, it would look like this::
 
@@ -392,9 +389,9 @@ How do we do something regardless of whether or not there was an exception?
 How do we translate this::
 
     try:
-        y = f()
+        y = await f()
     finally:
-        g()
+        await g()
 
 Well, roughly we do this::
 
