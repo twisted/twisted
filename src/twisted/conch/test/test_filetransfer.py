@@ -11,12 +11,12 @@ import os
 import re
 import struct
 from unittest import skipIf
+from collections.abc import Awaitable
 
 from twisted.internet import defer
 from twisted.internet.error import ConnectionLost
 from twisted.protocols import loopback
 from twisted.python import components
-from twisted.python.compat import _PY37PLUS
 from twisted.python.filepath import FilePath
 from twisted.trial.unittest import TestCase
 from twisted.trial.util import _deferredCoro
@@ -520,7 +520,6 @@ class OurServerOurClientTests(SFTPTestBase):
         self._emptyBuffers()
         return self.assertFailure(d, NotImplementedError)
 
-    @skipIf(_PY37PLUS, "Broken by PEP 479 and deprecated.")
     @_deferredCoro
     async def test_openDirectoryIterator(self):
         """
@@ -542,7 +541,12 @@ class OurServerOurClientTests(SFTPTestBase):
         try:
             for f in openDir:
                 self._emptyBuffers()
-                (filename, _, fileattrs) = await f
+                v = await f if isinstance(f, Awaitable) else f
+                # PEP492 (async/await) implies PEP479 (generator_stop)
+                if v is None and f.result.check(StopIteration):
+                    break
+
+                (filename, _, fileattrs) = v
                 filenames.add(filename)
         finally:
             d = openDir.close()
