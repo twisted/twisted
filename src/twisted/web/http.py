@@ -33,7 +33,7 @@ __all__ = [
     'NO_CONTENT', 'RESET_CONTENT', 'PARTIAL_CONTENT', 'MULTI_STATUS',
 
     'MULTIPLE_CHOICE', 'MOVED_PERMANENTLY', 'FOUND', 'SEE_OTHER',
-    'NOT_MODIFIED', 'USE_PROXY', 'TEMPORARY_REDIRECT',
+    'NOT_MODIFIED', 'USE_PROXY', 'TEMPORARY_REDIRECT', 'PERMANENT_REDIRECT',
 
     'BAD_REQUEST', 'UNAUTHORIZED', 'PAYMENT_REQUIRED', 'FORBIDDEN', 'NOT_FOUND',
     'NOT_ALLOWED', 'NOT_ACCEPTABLE', 'PROXY_AUTH_REQUIRED', 'REQUEST_TIMEOUT',
@@ -102,7 +102,7 @@ from twisted.web._responses import (ACCEPTED, BAD_GATEWAY, BAD_REQUEST,
                                     OK, PARTIAL_CONTENT, PAYMENT_REQUIRED,
                                     PRECONDITION_FAILED, PROXY_AUTH_REQUIRED,
                                     REQUEST_ENTITY_TOO_LARGE, REQUEST_TIMEOUT,
-                                    REQUEST_URI_TOO_LONG,
+                                    REQUEST_URI_TOO_LONG, PERMANENT_REDIRECT,
                                     REQUESTED_RANGE_NOT_SATISFIABLE,
                                     RESET_CONTENT, RESPONSES, SEE_OTHER,
                                     SERVICE_UNAVAILABLE, SWITCHING,
