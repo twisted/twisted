@@ -111,10 +111,10 @@ Perhaps we want something that looks a little like this::
 Thank goodness we can!
 
 
-Using coroutines
-~~~~~~~~~~~~~~~~
+Coroutines with async/await 
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-await" functionality can be used with Deferreds by the use of :api:`twisted.internet.defer.ensureDeferred <ensureDeferred>`.
+"async"/ "await" coroutine functionality can be used with Deferreds by the use of :api:`twisted.internet.defer.ensureDeferred <ensureDeferred>`.
 
 Calling a coroutine (that is, the result of a function defined by ``async def funcname():``) with :api:`twisted.internet.defer.ensureDeferred <ensureDeferred>` will allow you to "await" on Deferreds inside it, and will return a standard Deferred.
 You can mix and match code which uses regular Deferreds, and ``ensureDeferred`` freely.
@@ -213,7 +213,7 @@ A low level solution: Deferred
 
 At this point you know everything you need to know about consuming asynchronous APIs. The ``ensureDeferred`` is built on a low level api described below. It's generally recommended to exlusively use coroutines, but sometimes you'll see code using the lower-level raw-deferred interface.
 
-Twisted tackles this problem with :api:`twisted.internet.defer.Deferred <Deferred>`\s, a type of object designed to do one thing, and one thing only: encode an order of execution separately from the order of lines in Python source code.
+Twisted tackles this problem with :api:`twisted.internet.defer.Deferred <Deferred>`\s, a type of object designed to do one thing, and one thing only: to bridge low-level callback-based code with high-level async/await code.
 
 It doesn't deal with threads, parallelism, signals, or subprocesses.
 It doesn't know anything about an event loop, greenlets, or scheduling.
