@@ -28,12 +28,12 @@ class SerialPort(BaseSerialPort, abstract.FileDescriptor):
 
     def __init__(self, protocol, deviceNameOrPortNumber, reactor,
         baudrate = 9600, bytesize = EIGHTBITS, parity = PARITY_NONE,
-        stopbits = STOPBITS_ONE, timeout = 0, xonxoff = 0, rtscts = 0):
+        stopbits = STOPBITS_ONE, timeout = 0, xonxoff = 0, rtscts = 0, dsrdtr = 0):
         abstract.FileDescriptor.__init__(self, reactor)
         self._serial = self._serialFactory(
             deviceNameOrPortNumber, baudrate=baudrate, bytesize=bytesize,
             parity=parity, stopbits=stopbits, timeout=timeout,
-            xonxoff=xonxoff, rtscts=rtscts)
+            xonxoff=xonxoff, rtscts=rtscts, dsrdtr=dsrdtr)
         self.reactor = reactor
         self.flushInput()
         self.flushOutput()
