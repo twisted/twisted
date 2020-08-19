@@ -8,6 +8,7 @@ The Twisted Daemon: platform-independent interface.
 @author: Christopher Armstrong
 """
 
+import os
 import sys
 from twisted.application import app
 
@@ -36,8 +37,14 @@ def run():
     app.run(runApp, ServerOptions)
 
 
+def set_path_then_run():
+    if sys.version_info < (3, 7):
+        sys.path.insert(0, os.path.abspath(os.getcwd()))
+    return run()
+
+
 __all__ = ["run", "runApp"]
 
 
 if __name__ == "__main__":
-    sys.exit(run())
+    sys.exit(set_path_then_run())

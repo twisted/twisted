@@ -86,7 +86,7 @@ class ScriptTests(TestCase, ScriptTestsMixin):
                 twistd, "-ny", "bar.tac", cwd=testDir.path, check=False
             )
         )
-        self.assertIn(testDir.path, output)
+        self.assertEqual(testDir.path, output[0])
 
     def test_twistdAtExit(self) -> None:
         testDir = FilePath(self.mktemp())
