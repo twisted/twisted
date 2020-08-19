@@ -7,6 +7,7 @@ Tests for the command-line mailer tool provided by Twisted Mail.
 
 from twisted.trial.unittest import TestCase
 from twisted.scripts.test.test_scripts import ScriptTestsMixin
+from twisted.mail.scripts import mailmail
 
 
 class ScriptTests(TestCase, ScriptTestsMixin):
@@ -15,4 +16,4 @@ class ScriptTests(TestCase, ScriptTestsMixin):
     """
 
     def test_mailmail(self):
-        self.scriptTest("mail/mailmail")
+        self.scriptTest(mailmail)

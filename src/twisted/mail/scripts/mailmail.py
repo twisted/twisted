@@ -384,3 +384,7 @@ def run():
             raise SystemExit(1)
         else:
             senderror(failed, o)
+
+
+if __name__ == "__main__":
+    sys.exit(run())

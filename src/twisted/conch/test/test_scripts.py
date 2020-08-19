@@ -4,57 +4,58 @@
 """
 Tests for the command-line interfaces to conch.
 """
-from unittest import skipIf
-from twisted.python.reflect import requireModule
+import importlib
 from twisted.python.test.test_shellcomp import ZshScriptTestMixin
 from twisted.scripts.test.test_scripts import ScriptTestsMixin
-from twisted.trial.unittest import TestCase
+from twisted.trial.unittest import TestCase, SkipTest
 
-doSkip = False
-skipReason = ""
 
-if not requireModule("pyasn1"):
-    doSkip = True
-    skipReason = "Cannot run without PyASN1"
-
-if not requireModule("cryptography"):
-    doSkip = True
-    cryptoSkip = "can't run w/o cryptography"
-
-if not requireModule("tty"):
-    doSkip = True
-    ttySkip = "can't run w/o tty"
-
-try:
-    import tkinter
-except ImportError:
-    doSkip = True
-    skipReason = "can't run w/o tkinter"
-else:
+def _importOrSkip(name):
     try:
-        tkinter.Tk().destroy()
-    except tkinter.TclError as e:
-        doSkip = True
-        skipReason = "Can't test Tkinter: " + str(e)
+        return importlib.import_module(name)
+    except ImportError:
+        raise SkipTest("Cannot run without {name}".format(name=name))
 
 
-@skipIf(doSkip, skipReason)
+def _importsOrSkip(module_names=("pyasn1", "cryptography", "tty")):
+    for module_name in module_names:
+        _importOrSkip(module_name)
+
+
 class ScriptTests(TestCase, ScriptTestsMixin):
     """
     Tests for the Conch scripts.
     """
 
     def test_conch(self):
-        self.scriptTest("conch/conch")
+        _importsOrSkip()
+        from twisted.conch.scripts import conch
+
+        self.scriptTest(conch)
 
     def test_cftp(self):
-        self.scriptTest("conch/cftp")
+        _importsOrSkip()
+        from twisted.conch.scripts import cftp
+
+        self.scriptTest(cftp)
 
     def test_ckeygen(self):
-        self.scriptTest("conch/ckeygen")
+        _importsOrSkip()
+        from twisted.conch.scripts import ckeygen
+
+        self.scriptTest(ckeygen)
 
     def test_tkconch(self):
-        self.scriptTest("conch/tkconch")
+        _importsOrSkip()
+        tkinter = _importOrSkip("tkinter")
+        from twisted.conch.scripts import tkconch
+
+        try:
+            tkinter.Tk().destroy()
+        except tkinter.TclError as e:
+            raise SkipTest("Can't test Tkinter: " + str(e))
+
+        self.scriptTest(tkconch)
 
 
 class ZshIntegrationTests(TestCase, ZshScriptTestMixin):

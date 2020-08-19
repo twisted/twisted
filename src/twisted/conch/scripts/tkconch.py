@@ -660,4 +660,4 @@ class SSHSession(channel.SSHChannel):
 
 
 if __name__ == "__main__":
-    run()
+    sys.exit(run())
