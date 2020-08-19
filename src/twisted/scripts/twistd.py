@@ -8,7 +8,7 @@ The Twisted Daemon: platform-independent interface.
 @author: Christopher Armstrong
 """
 
-
+import sys
 from twisted.application import app
 
 from twisted.python.runtime import platformType
@@ -37,3 +37,7 @@ def run():
 
 
 __all__ = ["run", "runApp"]
+
+
+if __name__ == "__main__":
+    sys.exit(run())

@@ -660,3 +660,7 @@ def run():
             show_missing=1, summary=False, coverdir=config.coverdir().path
         )
     sys.exit(not test_result.wasSuccessful())
+
+
+if __name__ == "__main__":
+    sys.exit(run())

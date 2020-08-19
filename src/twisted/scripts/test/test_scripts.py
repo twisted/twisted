@@ -7,20 +7,21 @@ Tests for the command-line scripts in the top-level I{bin/} directory.
 Tests for actual functionality belong elsewhere, written in a way that doesn't
 involve launching child processes.
 """
+import json
+import signal
+import subprocess
+import sys
+import textwrap
 
-from os import devnull, getcwd, chdir
-from sys import executable
-from subprocess import PIPE, Popen
-
-from twisted.trial.unittest import SkipTest, TestCase
-from twisted.python.modules import getModule
+from twisted.trial.unittest import TestCase
 from twisted.python.filepath import FilePath
 from twisted.python.test.test_shellcomp import ZshScriptTestMixin
+from twisted.scripts import htmlizer, trial, twistd
 
 
-def outputFromPythonScript(script, *args):
+def outputFromPythonModule(module, *args, check=True, **kwargs):
     """
-    Synchronously run a Python script, with the same Python interpreter that
+    Synchronously run a Python module, with the same Python interpreter that
     ran the process calling this function, using L{Popen}, using the given
     command-line arguments, with standard input and standard error both
     redirected to L{os.devnull}, and return its output as a string.
@@ -36,15 +37,14 @@ def outputFromPythonScript(script, *args):
         from C{stderr}.
     @rtype: L{bytes}
     """
-    with open(devnull, "rb") as nullInput, open(devnull, "wb") as nullError:
-        process = Popen(
-            [executable, script.path] + list(args),
-            stdout=PIPE,
-            stderr=nullError,
-            stdin=nullInput,
-        )
-        stdout = process.communicate()[0]
-    return stdout
+    return subprocess.run(
+        [sys.executable, "-m", module.__name__, *args],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
+        stdin=subprocess.DEVNULL,
+        check=check,
+        **kwargs,
+    ).stdout
 
 
 class ScriptTestsMixin:
@@ -53,9 +53,7 @@ class ScriptTestsMixin:
     a Twisted-using script.
     """
 
-    bin = getModule("twisted").pathEntry.filePath.child("bin")
-
-    def scriptTest(self, name):
+    def scriptTest(self, module):
         """
         Verify that the given script runs and uses the version of Twisted
         currently being tested.
@@ -68,18 +66,13 @@ class ScriptTestsMixin:
         @param name: A path fragment, relative to the I{bin} directory of a
             Twisted source checkout, identifying a script to test.
         @type name: C{str}
-
-        @raise SkipTest: if the script is not where it is expected to be.
         """
-        script = self.bin.preauthChild(name)
-        if not script.exists():
-            raise SkipTest("Script tests do not apply to installed configuration.")
 
         from twisted.copyright import version
 
-        scriptVersion = outputFromPythonScript(script, "--version")
+        scriptVersion = outputFromPythonModule(module, "--version")
 
-        self.assertIn(str(version), scriptVersion)
+        self.assertIn(str(version), scriptVersion.decode())
 
 
 class ScriptTests(TestCase, ScriptTestsMixin):
@@ -88,47 +81,93 @@ class ScriptTests(TestCase, ScriptTestsMixin):
     """
 
     def test_twistd(self):
-        self.scriptTest("twistd")
+        self.scriptTest(twistd)
 
     def test_twistdPathInsert(self):
         """
         The twistd script adds the current working directory to sys.path so
         that it's able to import modules from it.
         """
-        script = self.bin.child("twistd")
-        if not script.exists():
-            raise SkipTest("Script tests do not apply to installed configuration.")
-        cwd = getcwd()
-        self.addCleanup(chdir, cwd)
         testDir = FilePath(self.mktemp())
         testDir.makedirs()
-        chdir(testDir.path)
-        testDir.child("bar.tac").setContent("import sys\n" "print sys.path\n")
-        output = outputFromPythonScript(script, "-ny", "bar.tac")
-        self.assertIn(repr(testDir.path), output)
+        testDir.child("bar.tac").setContent(
+            textwrap.dedent(
+                """\
+                import json
+                import sys
+
+                print(json.dumps(sys.path))
+                """
+            ).encode()
+        )
+        output = json.loads(
+            outputFromPythonModule(
+                twistd, "-ny", "bar.tac", cwd=testDir.path, check=False
+            )
+        )
+        self.assertIn(testDir.path, output)
+
+    def test_twistdAtExit(self):
+        testDir = FilePath(self.mktemp())
+        testDir.makedirs()
+        testDir.child("bar.tac").setContent(
+            textwrap.dedent(
+                """\
+                import atexit
+                import os
+                import pathlib
+
+                from twisted.application import service
+
+                @atexit.register
+                def _():
+                    pathlib.Path("didexit").write_text("didexit")
+
+                class Service(service.Service):
+                    def startService(self):
+                        from twisted.internet import reactor
+
+                        reactor.callWhenRunning(print, "test_twistdAtExit started")
+
+                application = service.Application("Demo application")
+                Service().setServiceParent(application)
+                """
+            ).encode()
+        )
+        with subprocess.Popen(
+            [sys.executable, "-m", twistd.__name__, "-ny", "bar.tac"],
+            cwd=testDir.path,
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+        ) as process:
+            self.assertTrue(
+                any(
+                    line.endswith(b"test_twistdAtExit started\n")
+                    for line in process.stdout
+                )
+            )
+            process.send_signal(signal.SIGINT)
+
+        self.assertEqual(process.returncode, -signal.SIGINT)
+        self.assertEqual(testDir.child("didexit").getContent(), b"didexit")
 
     def test_trial(self):
-        self.scriptTest("trial")
+        self.scriptTest(trial)
 
     def test_trialPathInsert(self):
         """
         The trial script adds the current working directory to sys.path so that
         it's able to import modules from it.
         """
-        script = self.bin.child("trial")
-        if not script.exists():
-            raise SkipTest("Script tests do not apply to installed configuration.")
-        cwd = getcwd()
-        self.addCleanup(chdir, cwd)
         testDir = FilePath(self.mktemp())
         testDir.makedirs()
-        chdir(testDir.path)
-        testDir.child("foo.py").setContent("")
-        output = outputFromPythonScript(script, "foo")
+        testDir.child("foo.py").setContent(b"")
+        output = outputFromPythonModule(trial, "foo", cwd=testDir.path).decode()
         self.assertIn("PASSED", output)
 
     def test_pyhtmlizer(self):
-        self.scriptTest("pyhtmlizer")
+        self.scriptTest(htmlizer)
 
 
 class ZshIntegrationTests(TestCase, ZshScriptTestMixin):
