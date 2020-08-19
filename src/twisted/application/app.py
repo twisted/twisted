@@ -708,5 +708,7 @@ def _exitWithSignal(sig):
     @type sig:  C{int}
     """
     signal.signal(sig, signal.SIG_DFL)
-    atexit._run_exitfuncs()
-    os.kill(os.getpid(), sig)
+    try:
+        atexit._run_exitfuncs()
+    finally:
+        os.kill(os.getpid(), sig)

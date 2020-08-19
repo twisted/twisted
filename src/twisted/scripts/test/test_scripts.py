@@ -94,6 +94,7 @@ class ScriptTests(TestCase, ScriptTestsMixin):
         testDir.child("bar.tac").setContent(
             textwrap.dedent(
                 """\
+                import sys
                 import atexit
                 import os
                 import pathlib
@@ -103,6 +104,7 @@ class ScriptTests(TestCase, ScriptTestsMixin):
                 @atexit.register
                 def _():
                     pathlib.Path("didexit").write_text("didexit")
+                    sys.exit(100)
 
                 class Service(service.Service):
                     def startService(self):
