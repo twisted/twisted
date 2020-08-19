@@ -12,6 +12,7 @@ __metaclass__ = type
 import sys
 import time
 import warnings
+from typing import Any, Callable
 
 from zope.interface import implementer
 
@@ -275,7 +276,7 @@ class LoopingCall:
         self.call = self.clock.callLater(howLong(), self)
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         if hasattr(self.f, '__qualname__'):
             func = self.f.__qualname__
         elif hasattr(self.f, '__name__'):
@@ -347,7 +348,7 @@ class NotPaused(SchedulerError):
 
 
 
-class _Timer(object):
+class _Timer:
     MAX_SLICE = 0.01
     def __init__(self):
         self.end = time.time() + self.MAX_SLICE
@@ -364,7 +365,7 @@ def _defaultScheduler(x):
     return reactor.callLater(_EPSILON, x)
 
 
-class CooperativeTask(object):
+class CooperativeTask:
     """
     A L{CooperativeTask} is a task object inside a L{Cooperator}, which can be
     paused, resumed, and stopped.  It can also have its completion (or
@@ -528,7 +529,7 @@ class CooperativeTask(object):
 
 
 
-class Cooperator(object):
+class Cooperator:
     """
     Cooperative task scheduler.
 
@@ -786,15 +787,15 @@ class Clock:
         self.calls.sort(key=lambda a: a.getTime())
 
 
-    def callLater(self, when, what, *a, **kw):
+    def callLater(self, delay, callable: Callable[..., Any], *args, **kw):
         """
         See L{twisted.internet.interfaces.IReactorTime.callLater}.
         """
-        dc = base.DelayedCall(self.seconds() + when,
-                               what, a, kw,
-                               self.calls.remove,
-                               lambda c: None,
-                               self.seconds)
+        dc = base.DelayedCall(self.seconds() + delay,
+                              callable, args, kw,
+                              self.calls.remove,
+                              lambda c: None,
+                              self.seconds)
         self.calls.append(dc)
         self._sortCalls()
         return dc

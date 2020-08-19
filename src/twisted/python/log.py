@@ -556,7 +556,7 @@ class FileLogObserver(_GlobalStartStopMixIn):
 
 
 
-class PythonLoggingObserver(_GlobalStartStopMixIn, object):
+class PythonLoggingObserver(_GlobalStartStopMixIn):
     """
     Output twisted messages to Python standard library L{logging} module.
 

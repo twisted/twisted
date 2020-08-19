@@ -8,6 +8,7 @@ Tests for L{twisted.internet.base}.
 import socket
 from queue import Queue
 from unittest import skipIf
+from typing import Any, Callable
 
 from zope.interface import implementer
 
@@ -31,7 +32,7 @@ else:
 
 
 @implementer(IReactorTime, IReactorThreads)
-class FakeReactor(object):
+class FakeReactor:
     """
     A fake reactor implementation which just supports enough reactor APIs for
     L{ThreadedResolver}.
@@ -48,8 +49,8 @@ class FakeReactor(object):
         self._threadCalls = Queue()
 
 
-    def callFromThread(self, f, *args, **kwargs):
-        self._threadCalls.put((f, args, kwargs))
+    def callFromThread(self, callable: Callable[..., Any], *args, **kwargs):
+        self._threadCalls.put((callable, args, kwargs))
 
 
     def _runThreadCalls(self):
@@ -71,7 +72,7 @@ class FakeReactor(object):
         pass
 
 
-    def callInThread(self, callable, *args, **kwargs):
+    def callInThread(self, callable: Callable[..., Any], *args, **kwargs):
         # IReactorInThreads.callInThread
         pass
 
@@ -192,7 +193,7 @@ class ThreadedResolverTests(TestCase):
         calls = []
 
         @implementer(IResolverSimple)
-        class FakeResolver(object):
+        class FakeResolver:
             def getHostByName(self, name, timeouts=()):
                 calls.append(name)
                 return Deferred()
@@ -233,7 +234,7 @@ def nothing():
 
 
 
-class DelayedCallMixin(object):
+class DelayedCallMixin:
     """
     L{DelayedCall}
     """

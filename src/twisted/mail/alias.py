@@ -202,7 +202,7 @@ class AddressAlias(AliasBase):
         self.alias = smtp.Address(alias)
 
 
-    def __str__(self):
+    def __str__(self) -> str:
         """
         Build a string representation of this L{AddressAlias} instance.
 
@@ -317,7 +317,7 @@ class FileWrapper:
         self.fp = None
 
 
-    def __str__(self):
+    def __str__(self) -> str:
         """
         Build a string representation of this L{FileWrapper} instance.
 
@@ -348,7 +348,7 @@ class FileAlias(AliasBase):
         self.filename = filename
 
 
-    def __str__(self):
+    def __str__(self) -> str:
         """
         Build a string representation of this L{FileAlias} instance.
 
@@ -508,7 +508,7 @@ class MessageWrapper:
         """
 
 
-    def __str__(self):
+    def __str__(self) -> str:
         """
         Build a string representation of this L{MessageWrapper} instance.
 
@@ -577,7 +577,7 @@ class ProcessAlias(AliasBase):
         self.program = self.path[0]
 
 
-    def __str__(self):
+    def __str__(self) -> str:
         """
         Build a string representation of this L{ProcessAlias} instance.
 
@@ -679,7 +679,7 @@ class MultiWrapper:
             o.connectionLost()
 
 
-    def __str__(self):
+    def __str__(self) -> str:
         """
         Build a string representation of this L{MultiWrapper} instance.
 
@@ -753,7 +753,7 @@ class AliasGroup(AliasBase):
         return len(self.aliases)
 
 
-    def __str__(self):
+    def __str__(self) -> str:
         """
         Build a string representation of this L{AliasGroup} instance.
 

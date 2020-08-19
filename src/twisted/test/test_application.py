@@ -526,12 +526,12 @@ class InternetTests(TestCase):
         L{service.Service} subclasses that in general have corresponding
         reactor.listenXXX or reactor.connectXXX calls.
         """
-        trans = 'TCP UNIX SSL UDP UNIXDatagram Multicast'.split()
+        trans = ['TCP', 'UNIX', 'SSL', 'UDP', 'UNIXDatagram', 'Multicast']
         for tran in trans[:]:
             if not getattr(interfaces, "IReactor" + tran)(reactor, None):
                 trans.remove(tran)
         for tran in trans:
-            for side in 'Server Client'.split():
+            for side in ['Server', 'Client']:
                 if tran == "Multicast" and side == "Client":
                     continue
                 if tran == "UDP" and side == "Client":

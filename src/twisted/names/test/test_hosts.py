@@ -15,7 +15,7 @@ from twisted.names.dns import (
 from twisted.names.hosts import Resolver, searchFileFor, searchFileForAll
 
 
-class GoodTempPathMixin(object):
+class GoodTempPathMixin:
     def path(self):
         return FilePath(self.mktemp().encode('utf-8'))
 

@@ -17,7 +17,7 @@ from twisted.logger import Logger
 
 
 @attr.s(frozen=True)
-class _Process(object):
+class _Process:
     """
     The parameters of a process to be restarted.
 
@@ -409,8 +409,8 @@ class ProcessMonitor(service.Service):
             self.stopProcess(name)
 
 
-    def __repr__(self):
-        l = []
+    def __repr__(self) -> str:
+        lst = []
         for name, proc in self._processes.items():
             uidgid = ''
             if proc.uid is not None:
@@ -420,7 +420,7 @@ class ProcessMonitor(service.Service):
 
             if uidgid:
                 uidgid = '(' + uidgid + ')'
-            l.append('%r%s: %r' % (name, uidgid, proc.args))
+            lst.append('%r%s: %r' % (name, uidgid, proc.args))
         return ('<' + self.__class__.__name__ + ' '
-                + ' '.join(l)
+                + ' '.join(lst)
                 + '>')

@@ -26,7 +26,7 @@ from twisted.trial._dist import _WORKER_AMP_STDIN, _WORKER_AMP_STDOUT
 
 
 
-class DistTrialRunner(object):
+class DistTrialRunner:
     """
     A specialized runner for distributed trial. The runner launches a number of
     local worker processes which will run tests.

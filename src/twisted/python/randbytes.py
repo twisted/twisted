@@ -31,7 +31,7 @@ class SourceNotAvailable(RuntimeError):
 
 
 
-class RandomFactory(object):
+class RandomFactory:
     """
     Factory providing L{secureRandom} and L{insecureRandom} methods.
 

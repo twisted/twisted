@@ -444,7 +444,7 @@ class NonePIDFileTests(twisted.trial.unittest.TestCase):
 
 
 @implementer(IFilePath)
-class DummyFilePath(object):
+class DummyFilePath:
     """
     In-memory L{IFilePath}.
     """

@@ -141,7 +141,7 @@ class SubcommandAction(usage.Completer):
 
 
 
-class ZshBuilder(object):
+class ZshBuilder:
     """
     Constructs zsh code that will complete options for a given usage.Options
     instance, possibly including a list of subcommand names.
@@ -223,7 +223,7 @@ class ZshSubcommandBuilder(ZshBuilder):
 
 
 
-class ZshArgumentsGenerator(object):
+class ZshArgumentsGenerator:
     """
     Generate a call to the zsh _arguments completion function
     based on data in a usage.Options instance

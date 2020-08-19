@@ -12,7 +12,7 @@ from twisted.trial import unittest
 
 
 
-class FakeDelayedCall(object):
+class FakeDelayedCall:
     """
     Fake delayed call which lets us simulate the scheduler.
     """
@@ -32,7 +32,7 @@ class FakeDelayedCall(object):
 
 
 
-class FakeScheduler(object):
+class FakeScheduler:
     """
     A fake scheduler for testing against.
     """
@@ -224,7 +224,7 @@ class CooperatorTests(unittest.TestCase):
             def __init__(self, func):
                 self.func = func
 
-            def __repr__(self):
+            def __repr__(self) -> str:
                 return '<FakeCall %r>' % (self.func,)
 
         def sched(f):

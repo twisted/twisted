@@ -20,7 +20,7 @@ from twisted._threads import Team, createMemoryWorker
 
 
 
-class Synchronization(object):
+class Synchronization:
     failures = 0
 
     def __init__(self, N, waiting):
@@ -140,7 +140,7 @@ class ThreadPoolTests(unittest.SynchronousTestCase):
             pass
 
         # weakref needs an object subclass
-        class Dumb(object):
+        class Dumb:
             pass
 
         # And here's the unique object
@@ -201,7 +201,7 @@ class ThreadPoolTests(unittest.SynchronousTestCase):
             return Dumb()
 
         # weakref needs an object subclass
-        class Dumb(object):
+        class Dumb:
             pass
 
         # And here's the unique object
@@ -644,7 +644,7 @@ class MemoryPool(threadpool.ThreadPool):
 
 
 
-class PoolHelper(object):
+class PoolHelper:
     """
     A L{PoolHelper} constructs a L{threadpool.ThreadPool} that doesn't actually
     use threads, by using the internal interfaces in L{twisted._threads}.

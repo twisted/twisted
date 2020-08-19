@@ -66,7 +66,7 @@ else:
 
 
 @implementer(IReactorFDSet)
-class ReactorFDSet(object):
+class ReactorFDSet:
     """
     An implementation of L{IReactorFDSet} which only keeps track of which
     descriptors have been registered for reading and writing.
@@ -124,7 +124,7 @@ class FSSetClock(Clock, ReactorFDSet):
 
 
 
-class TunHelper(object):
+class TunHelper:
     """
     A helper for tests of tun-related functionality (ip-level tunnels).
     """
@@ -206,7 +206,7 @@ class TunHelper(object):
 
 
 
-class TapHelper(object):
+class TapHelper:
     """
     A helper for tests of tap-related functionality (ethernet-level tunnels).
     """
@@ -327,7 +327,7 @@ class TunnelTests(SynchronousTestCase):
 
 
 
-class TunnelDeviceTestsMixin(object):
+class TunnelDeviceTestsMixin:
     """
     A mixin defining tests that apply to L{_IInputOutputSystem}
     implementations.
@@ -507,7 +507,7 @@ class TunnelDeviceTestsMixin(object):
 
 
 
-class FakeDeviceTestsMixin(object):
+class FakeDeviceTestsMixin:
     """
     Define a mixin for use with test cases that require an
     L{_IInputOutputSystem} provider.  This mixin hands out L{MemoryIOSystem}
@@ -655,7 +655,7 @@ class TestRealSystem(_RealSystem):
 
 
 
-class RealDeviceTestsMixin(object):
+class RealDeviceTestsMixin:
     """
     Define a mixin for use with test cases that require an
     L{_IInputOutputSystem} provider.  This mixin hands out L{TestRealSystem}
@@ -734,7 +734,7 @@ class TuntapPortTests(SynchronousTestCase):
 
 
 
-class TunnelTestsMixin(object):
+class TunnelTestsMixin:
     """
     A mixin defining tests for L{TuntapPort}.
 
@@ -1384,7 +1384,7 @@ class TapTests(TunnelTestsMixin, SynchronousTestCase):
 
 
 
-class IOSystemTestsMixin(object):
+class IOSystemTestsMixin:
     """
     Tests that apply to any L{_IInputOutputSystem} implementation.
     """

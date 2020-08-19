@@ -41,6 +41,16 @@ class ManagedRelayerMixin:
         self.manager = manager
 
 
+    @property
+    def factory(self):
+        return self._factory
+
+
+    @factory.setter
+    def factory(self, value):
+        self._factory = value
+
+
     def sentMail(self, code, resp, numOk, addresses, log):
         """
         called when e-mail has been sent
@@ -488,7 +498,7 @@ class Queue:
 
 
 
-class _AttemptManager(object):
+class _AttemptManager:
     """
     A manager for an attempt to relay a set of messages to a mail exchange
     server.

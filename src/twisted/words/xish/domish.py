@@ -13,8 +13,7 @@ for use in streaming XML applications.
 
 from zope.interface import implementer, Interface, Attribute
 
-from twisted.python.compat import (StringType, _coercedUnicode,
-                                   iteritems, itervalues)
+from twisted.python.compat import StringType, iteritems, itervalues
 from twisted.web import sux
 
 
@@ -313,7 +312,7 @@ class IElement(Interface):
 
 
 @implementer(IElement)
-class Element(object):
+class Element:
     """ Represents an XML element node.
 
     An Element contains a series of attributes (name/value pairs), content
@@ -511,9 +510,11 @@ class Element(object):
         self.children.append(node)
         return node
 
-    def addContent(self, text):
+    def addContent(self, text: str) -> str:
         """ Add some text data to this Element. """
-        text = _coercedUnicode(text)
+        if not isinstance(text, str):
+            raise TypeError("Expected str not %r (%s)"
+                            % (text, type(text).__name__))
         c = self.children
         if len(c) > 0 and isinstance(c[-1], str):
             c[-1] = c[-1] + text

@@ -18,7 +18,7 @@ To mark a method, function, or class as being deprecated do this::
         ...
 
     @deprecated(Version("Twisted", 16, 0, 0))
-    class BadClass(object):
+    class BadClass:
         '''
         Docstring for BadClass.
         '''
@@ -32,7 +32,7 @@ To deprecate properties you can use::
     from incremental import Version
     from twisted.python.deprecate import deprecatedProperty
 
-    class OtherwiseUndeprecatedClass(object):
+    class OtherwiseUndeprecatedClass:
 
         @deprecatedProperty(Version('Twisted', 16, 0, 0))
         def badProperty(self):
@@ -408,7 +408,7 @@ def setWarningMethod(newMethod):
 
 
 
-class _InternalState(object):
+class _InternalState:
     """
     An L{_InternalState} is a helper object for a L{_ModuleProxy}, so that it
     can easily access its own attributes, bypassing its logic for delegating to
@@ -431,7 +431,7 @@ class _InternalState(object):
 
 
 
-class _ModuleProxy(object):
+class _ModuleProxy:
     """
     Python module wrapper to hook module-level attribute access.
 
@@ -465,7 +465,7 @@ class _ModuleProxy(object):
         state._lastWasPath = False
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """
         Get a string containing the type of the module proxy and a
         representation of the wrapped module object.
@@ -514,7 +514,7 @@ class _ModuleProxy(object):
 
 
 
-class _DeprecatedAttribute(object):
+class _DeprecatedAttribute:
     """
     Wrapper for deprecated attributes.
 
@@ -851,7 +851,7 @@ def deprecatedKeywordParameter(version: Version,
                 if name in kwargs:
                     warn(warningString, DeprecationWarning, stacklevel=2)
                 return wrappee(*args, **kwargs)
-        decorated = wraps(wrappee)(checkDeprecatedParameter)
+        decorated = typing.cast(_Tc, wraps(wrappee)(checkDeprecatedParameter))
         _appendToDocstring(decorated, doc)
         return decorated
     return wrapper

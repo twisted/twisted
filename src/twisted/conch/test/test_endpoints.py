@@ -146,7 +146,7 @@ class UnsatisfiedExecSession(SSHChannel):
 
 
 
-class TrivialRealm(object):
+class TrivialRealm:
     def __init__(self):
         self.channelLookup = {}
 
@@ -167,7 +167,7 @@ class AddressSpyFactory(Factory):
 
 
 
-class FixedResponseUI(object):
+class FixedResponseUI:
     def __init__(self, result):
         self.result = result
 
@@ -232,13 +232,13 @@ class CommandFactory(SSHFactory):
 
 
 @implementer(IAddress)
-class MemoryAddress(object):
+class MemoryAddress:
     pass
 
 
 
 @implementer(IStreamClientEndpoint)
-class SingleUseMemoryEndpoint(object):
+class SingleUseMemoryEndpoint:
     """
     L{SingleUseMemoryEndpoint} is a client endpoint which allows one connection
     to be set up and then exposes an API for moving around bytes related to
@@ -275,7 +275,7 @@ class SingleUseMemoryEndpoint(object):
 
 
 
-class SSHCommandClientEndpointTestsMixin(object):
+class SSHCommandClientEndpointTestsMixin:
     """
     Tests for L{SSHCommandClientEndpoint}, an L{IStreamClientEndpoint}
     implementations which connects a protocol with the stdin and stdout of a
@@ -1387,7 +1387,7 @@ class ExistingConnectionHelperTests(TestCase):
 
 
 
-class _PTYPath(object):
+class _PTYPath:
     """
     A L{FilePath}-like object which can be opened to create a L{_ReadFile} with
     certain contents.

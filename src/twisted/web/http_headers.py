@@ -41,7 +41,7 @@ def _sanitizeLinearWhitespace(headerComponent):
 
 
 @comparable
-class Headers(object):
+class Headers:
     """
     Stores HTTP headers in a key and multiple value format.
 
@@ -78,7 +78,7 @@ class Headers(object):
                 self.setRawHeaders(name, values)
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """
         Return a string fully describing the headers set on this object.
         """

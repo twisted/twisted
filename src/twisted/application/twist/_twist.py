@@ -18,7 +18,7 @@ from twisted.internet.interfaces import _ISupportsExitSignalCapturing
 
 
 
-class Twist(object):
+class Twist:
     """
     Run a Twisted application.
     """

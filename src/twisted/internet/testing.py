@@ -7,8 +7,9 @@ Assorted functionality which is commonly useful when writing unit tests.
 """
 
 
-from socket import AF_INET, AF_INET6
 from io import BytesIO
+from socket import AF_INET, AF_INET6
+from typing import Any, Callable
 
 from zope.interface import implementer, implementedBy
 from zope.interface.verify import verifyClass
@@ -333,7 +334,7 @@ class StringIOWithoutClosing(BytesIO):
 
 
 @implementer(IListeningPort)
-class _FakePort(object):
+class _FakePort:
     """
     A fake L{IListeningPort} to be used in tests.
 
@@ -370,7 +371,7 @@ class _FakePort(object):
 
 
 @implementer(IConnector)
-class _FakeConnector(object):
+class _FakeConnector:
     """
     A fake L{IConnector} that allows us to inspect if it has been told to stop
     connecting.
@@ -425,7 +426,7 @@ class _FakeConnector(object):
     IReactorCore,
     IReactorTCP, IReactorSSL, IReactorUNIX, IReactorSocket, IReactorFDSet
 )
-class MemoryReactor(object):
+class MemoryReactor:
     """
     A fake reactor to be used in tests.  This reactor doesn't actually do
     much that's useful yet.  It accepts TCP connection setup attempts, but
@@ -577,7 +578,8 @@ class MemoryReactor(object):
         raise NotImplementedError()
 
 
-    def addSystemEventTrigger(self, phase, eventType, callable, *args, **kw):
+    def addSystemEventTrigger(self, phase: str, eventType: str,
+                              callable: Callable[..., Any], *args, **kw):
         """
         Fake L{IReactorCore.run}.
         Keep track of trigger by appending it to
@@ -595,7 +597,7 @@ class MemoryReactor(object):
         raise NotImplementedError()
 
 
-    def callWhenRunning(self, callable, *args, **kw):
+    def callWhenRunning(self, callable: Callable[..., Any], *args, **kw):
         """
         Fake L{IReactorCore.callWhenRunning}.
         Keeps a list of invocations to make in C{self.whenRunningHooks}.
@@ -794,7 +796,7 @@ class MemoryReactorClock(MemoryReactor, Clock):
 
 
 @implementer(IReactorTCP, IReactorSSL, IReactorUNIX, IReactorSocket)
-class RaisingMemoryReactor(object):
+class RaisingMemoryReactor:
     """
     A fake reactor to be used in tests.  It accepts TCP connection setup
     attempts, but they will fail.
@@ -886,7 +888,7 @@ class RaisingMemoryReactor(object):
 
 
 
-class NonStreamingProducer(object):
+class NonStreamingProducer:
     """
     A pull producer which writes 10 times only.
     """

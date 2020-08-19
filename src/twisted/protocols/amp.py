@@ -200,7 +200,7 @@ import types, warnings
 
 from io import BytesIO
 from struct import pack
-from typing import Any, Callable, Dict, List, Tuple, Type
+from typing import Any, Callable, Dict, List, Tuple, Type, Union
 import datetime
 import decimal
 from functools import partial
@@ -227,18 +227,14 @@ from twisted.python.compat import (
 )
 
 try:
-    from twisted.internet import ssl as _ssl
+    from twisted.internet import ssl
+    if ssl.supported:
+        from twisted.internet.ssl import (CertificateOptions, Certificate, DN,
+                                          KeyPair)
+    else:
+        ssl = None  # type: ignore[assignment]
 except ImportError:
-    ssl = None
-else:
-    ssl = _ssl
-
-if ssl and not ssl.supported:
-    ssl = None
-
-if ssl is not None:
-    from twisted.internet.ssl import (CertificateOptions, Certificate, DN,
-                                      KeyPair)
+    ssl = None  # type: ignore[assignment]
 
 
 
@@ -520,7 +516,7 @@ class TooLong(AmpError):
         self.keyName = keyName
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         hdr = self.isKey and "key" or "value"
         if not self.isKey:
             hdr += ' ' + repr(self.keyName)
@@ -539,7 +535,7 @@ class BadLocalReturn(AmpError):
         self.enclosed = enclosed
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return self.message + " " + self.enclosed.getBriefTraceback()
 
     __str__ = __repr__
@@ -724,7 +720,7 @@ class AmpBox(dict):
         """
         proto.sendBox(self)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return 'AmpBox(%s)' % (dict.__repr__(self),)
 
 # amp.Box => AmpBox
@@ -738,7 +734,7 @@ class QuitBox(AmpBox):
     __slots__ = []  # type: List[str]
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return 'QuitBox(**%s)' % (super(QuitBox, self).__repr__(),)
 
 
@@ -770,7 +766,7 @@ class _SwitchBox(AmpBox):
         self.innerProto = innerProto
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return '_SwitchBox(%r, **%s)' % (self.innerProto,
                                          dict.__repr__(self),)
 
@@ -1233,13 +1229,13 @@ class CommandLocator:
 # for setting the metaclass. Unfortunately it's not valid Python 2 syntax
 # so we work-around it by recreating CommandLocator using the metaclass
 # here.
-CommandLocator = CommandLocator.__metaclass__(
+CommandLocator = CommandLocator.__metaclass__(  # type: ignore[assignment,misc]
     "CommandLocator", (CommandLocator, ), {})
 
 
 
 @implementer(IResponderLocator)
-class SimpleStringLocator(object):
+class SimpleStringLocator:
     """
     Implement the L{AMP.locateResponder} method to do simple, string-based
     dispatch.
@@ -1822,7 +1818,7 @@ class Command:
     errors = {}  # type: Dict[Type[Exception], bytes]
     fatalErrors = {}  # type: Dict[Type[Exception], bytes]
 
-    commandType = Box  # type: Type[Command]
+    commandType = Box  # type: Union[Type[Command], Type[Box]]
     responseType = Box  # type: Type[AmpBox]
 
     requiresAnswer = True
@@ -2007,7 +2003,7 @@ class Command:
 # Python 3 ignores the __metaclass__ attribute and has instead new syntax
 # for setting the metaclass. Unfortunately it's not valid Python 2 syntax
 # so we work-around it by recreating Command using the metaclass here.
-Command = Command.__metaclass__("Command", (Command, ), {})
+Command = Command.__metaclass__("Command", (Command, ), {})  # type: ignore[assignment,misc]  # noqa
 
 
 
@@ -2077,13 +2073,15 @@ class _TLSBox(AmpBox):
         AmpBox.__init__(self)
 
 
-    def _keyprop(k: bytes, default):
-        return property(lambda self: self.get(k, default))
+    @property
+    def certificate(self):
+        return self.get(b'tls_localCertificate', _NoCertificate(False))
 
 
-    # These properties are described in startTLS
-    certificate = _keyprop(b'tls_localCertificate', _NoCertificate(False))
-    verify = _keyprop(b'tls_verifyAuthorities', None)
+    @property
+    def verify(self):
+        return self.get(b'tls_verifyAuthorities', None)
+
 
     def _sendTo(self, proto):
         """
@@ -2224,7 +2222,7 @@ class ProtocolSwitchCommand(Command):
 
 
 @implementer(IFileDescriptorReceiver)
-class _DescriptorExchanger(object):
+class _DescriptorExchanger:
     """
     L{_DescriptorExchanger} is a mixin for L{BinaryBoxProtocol} which adds
     support for receiving file descriptors, a feature offered by
@@ -2614,7 +2612,7 @@ class AMP(BinaryBoxProtocol, BoxDispatcher,
         return secondResponder
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """
         A verbose string representation which gives us information about this
         AMP connection.

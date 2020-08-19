@@ -76,7 +76,7 @@ def fakeCallbackCanceller(deferred):
 
 
 
-class ImmediateFailureMixin(object):
+class ImmediateFailureMixin:
     """
     Add additional assertion methods.
     """

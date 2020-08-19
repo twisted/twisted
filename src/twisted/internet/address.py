@@ -20,7 +20,7 @@ from twisted.python.runtime import platform
 
 @implementer(IAddress)
 @attr.s(hash=True)
-class IPv4Address(object):
+class IPv4Address:
     """
     An L{IPv4Address} represents the address of an IPv4 socket endpoint.
 
@@ -42,7 +42,7 @@ class IPv4Address(object):
 
 @implementer(IAddress)
 @attr.s(hash=True)
-class IPv6Address(object):
+class IPv6Address:
     """
     An L{IPv6Address} represents the address of an IPv6 socket endpoint.
 
@@ -73,7 +73,7 @@ class IPv6Address(object):
 
 
 @implementer(IAddress)
-class _ProcessAddress(object):
+class _ProcessAddress:
     """
     An L{interfaces.IAddress} provider for process transports.
     """
@@ -82,7 +82,7 @@ class _ProcessAddress(object):
 
 @attr.s(hash=True)
 @implementer(IAddress)
-class HostnameAddress(object):
+class HostnameAddress:
     """
     A L{HostnameAddress} represents the address of a L{HostnameEndpoint}.
 
@@ -100,7 +100,7 @@ class HostnameAddress(object):
 
 @attr.s(hash=False, repr=False, eq=False)
 @implementer(IAddress)
-class UNIXAddress(object):
+class UNIXAddress:
     """
     Object representing a UNIX socket endpoint.
 
@@ -111,15 +111,14 @@ class UNIXAddress(object):
     name = attr.ib(converter=attr.converters.optional(_asFilesystemBytes))
 
     if getattr(os.path, 'samefile', None) is not None:
-        def __eq__(self, other):
+        def __eq__(self, other: object) -> bool:
             """
             Overriding C{attrs} to ensure the os level samefile
             check is done if the name attributes do not match.
             """
-            if isinstance(other, self.__class__):
-                res = self.name == other.name
-            else:
-                return False
+            if not isinstance(other, self.__class__):
+                return NotImplemented
+            res = self.name == other.name
             if not res and self.name and other.name:
                 try:
                     return os.path.samefile(self.name, other.name)
@@ -132,19 +131,13 @@ class UNIXAddress(object):
                         raise e
             return res
     else:
-        def __eq__(self, other):
+        def __eq__(self, other: object) -> bool:
             if isinstance(other, self.__class__):
                 return self.name == other.name
-            return False
+            return NotImplemented
 
 
-    def __ne__(self, other):
-        if isinstance(other, self.__class__):
-            return not self.__eq__(other)
-        return True
-
-
-    def __repr__(self):
+    def __repr__(self) -> str:
         name = self.name
         if name:
             name = _coerceToFilesystemEncoding('', self.name)
@@ -168,13 +161,14 @@ class UNIXAddress(object):
 class _ServerFactoryIPv4Address(IPv4Address):
     """Backwards compatibility hack. Just like IPv4Address in practice."""
 
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
         if isinstance(other, tuple):
-            warnings.warn("IPv4Address.__getitem__ is deprecated.  Use attributes instead.",
+            warnings.warn("IPv4Address.__getitem__ is deprecated.  "
+                          "Use attributes instead.",
                           category=DeprecationWarning, stacklevel=2)
             return (self.host, self.port) == other
         elif isinstance(other, IPv4Address):
             a = (self.type, self.host, self.port)
             b = (other.type, other.host, other.port)
             return a == b
-        return False
+        return NotImplemented

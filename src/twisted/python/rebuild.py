@@ -43,7 +43,7 @@ def _isClassType(t):
 
 
 
-class Sensitive(object):
+class Sensitive:
     """
     A utility mixin that's sensitive to rebuilds.
 

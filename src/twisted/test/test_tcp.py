@@ -11,7 +11,7 @@ import random
 import errno
 import hamcrest
 from functools import wraps
-from typing import Type
+from typing import Optional, Type, Union
 from unittest import skipIf
 
 from zope.interface import implementer
@@ -86,7 +86,7 @@ class ClosingFactory(protocol.ServerFactory):
 
 
 
-class MyProtocolFactoryMixin(object):
+class MyProtocolFactoryMixin:
     """
     Mixin for factories which create L{AccumulatingProtocol} instances.
 
@@ -119,7 +119,7 @@ class MyProtocolFactoryMixin(object):
 
     protocolConnectionMade = None
     protocolConnectionLost = None
-    protocol = None  # type: Type[AccumulatingProtocol]
+    protocol = None  # type: Optional[Union[Type[protocol.Protocol],Type[protocol.AbstractDatagramProtocol]]]  # noqa
     called = 0
 
     def __init__(self):
@@ -986,7 +986,7 @@ class WriteDataTests(TestCase):
         addr = port.getHost()
 
         @implementer(IPullProducer)
-        class Infinite(object):
+        class Infinite:
             """
             A producer which will write to its consumer as long as
             resumeProducing is called.
@@ -1836,4 +1836,4 @@ except ImportError:
     pass
 else:
     numRounds = resource.getrlimit(resource.RLIMIT_NOFILE)[0] + 10
-    ProperlyCloseFilesTests.numberRounds = numRounds
+    setattr(ProperlyCloseFilesTests, "numberRounds", numRounds)

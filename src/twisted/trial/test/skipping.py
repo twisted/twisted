@@ -16,7 +16,7 @@ from twisted.trial.unittest import (
     SynchronousTestCase, TestCase, SkipTest, FailTest)
 
 
-class SkippingMixin(object):
+class SkippingMixin:
     def test_skip1(self):
         raise SkipTest('skip1')
 
@@ -44,7 +44,7 @@ class AsynchronousSkipping(SkippingMixin, TestCase):
 
 
 
-class SkippingSetUpMixin(object):
+class SkippingSetUpMixin:
     def setUp(self):
         raise SkipTest('skipSetUp')
 
@@ -68,7 +68,7 @@ class AsynchronousSkippingSetUp(SkippingSetUpMixin, TestCase):
 
 
 
-class DeprecatedReasonlessSkipMixin(object):
+class DeprecatedReasonlessSkipMixin:
     def test_1(self):
         raise SkipTest()
 
@@ -86,7 +86,7 @@ class AsynchronousDeprecatedReasonlessSkip(
 
 
 
-class SkippedClassMixin(object):
+class SkippedClassMixin:
     skip = 'class'
 
     def setUp(self):
@@ -122,7 +122,7 @@ class AsynchronousSkippedClass(SkippedClassMixin, TestCase):
 
 
 
-class TodoMixin(object):
+class TodoMixin:
     def test_todo1(self):
         self.fail("deliberate failure")
     test_todo1.todo = "todo1"  # type: ignore[attr-defined]
@@ -150,7 +150,7 @@ class AsynchronousTodo(TodoMixin, TestCase):
 
 
 
-class SetUpTodoMixin(object):
+class SetUpTodoMixin:
     def setUp(self):
         raise RuntimeError("deliberate error")
 
@@ -171,7 +171,7 @@ class AsynchronousSetUpTodo(SetUpTodoMixin, TestCase):
 
 
 
-class TearDownTodoMixin(object):
+class TearDownTodoMixin:
     def tearDown(self):
         raise RuntimeError("deliberate error")
 
@@ -192,7 +192,7 @@ class AsynchronousTearDownTodo(TearDownTodoMixin, TestCase):
 
 
 
-class TodoClassMixin(object):
+class TodoClassMixin:
     todo = "class"
 
     def test_todo1(self):
@@ -223,7 +223,7 @@ class AsynchronousTodoClass(TodoClassMixin, TestCase):
 
 
 
-class StrictTodoMixin(object):
+class StrictTodoMixin:
     def test_todo1(self):
         raise RuntimeError("expected failure")
     test_todo1.todo = (RuntimeError, "todo1")  # type: ignore[attr-defined]
@@ -264,7 +264,7 @@ class AsynchronousStrictTodo(StrictTodoMixin, TestCase):
 
 
 
-class AddCleanupMixin(object):
+class AddCleanupMixin:
     def setUp(self):
         self.log = ['setUp']
 

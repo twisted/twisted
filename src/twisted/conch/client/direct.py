@@ -6,7 +6,6 @@
 from twisted.internet import defer, protocol, reactor
 from twisted.conch import error
 from twisted.conch.ssh import transport
-from twisted.python import log
 
 
 
@@ -78,8 +77,10 @@ class SSHClientTransport(transport.SSHClientTransport):
 
 
     def receiveDebug(self, alwaysDisplay, message, lang):
-        log.msg('Received Debug Message: %s' % message)
-        if alwaysDisplay: # XXX what should happen here?
+        self._log.debug('Received Debug Message: {message}',
+                        message=message, alwaysDisplay=alwaysDisplay,
+                        lang=lang)
+        if alwaysDisplay:  # XXX what should happen here?
             print(message)
 
 
@@ -89,7 +90,7 @@ class SSHClientTransport(transport.SSHClientTransport):
 
 
     def setService(self, service):
-        log.msg('setting client server to %s' % service)
+        self._log.info('setting client server to {service}', service=service)
         transport.SSHClientTransport.setService(self, service)
         if service.name != 'ssh-userauth' and self.factory.d is not None:
             d, self.factory.d = self.factory.d, None

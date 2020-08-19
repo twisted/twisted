@@ -26,7 +26,7 @@ from zope.interface import implementer
 
 
 @implementer(IResource)
-class UnauthorizedResource(object):
+class UnauthorizedResource:
     """
     Simple IResource to escape Resource dispatch
     """
@@ -80,7 +80,7 @@ class UnauthorizedResource(object):
 
 
 @implementer(IResource)
-class HTTPAuthSessionWrapper(object):
+class HTTPAuthSessionWrapper:
     """
     Wrap a portal, enforcing supported header-based authentication schemes.
 

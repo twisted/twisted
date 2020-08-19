@@ -26,7 +26,7 @@ from twisted.python.compat import iteritems
 
 
 
-class slot(object):
+class slot:
     """
     Marker for markup insertion in a template.
 
@@ -67,12 +67,12 @@ class slot(object):
         self.columnNumber = columnNumber
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "slot(%r)" % (self.name,)
 
 
 
-class Tag(object):
+class Tag:
     """
     A L{Tag} represents an XML tags with a tag name, attributes, and children.
     A L{Tag} can be constructed using the special L{twisted.web.template.tags}
@@ -258,7 +258,7 @@ class Tag(object):
         return self
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         rstr = ''
         if self.attributes:
             rstr += ', attributes=%r' % self.attributes
@@ -273,7 +273,7 @@ voidElements = ('img', 'br', 'hr', 'base', 'meta', 'link', 'param', 'area',
                 'embed', 'keygen', 'source', 'track', 'wbs')
 
 
-class CDATA(object):
+class CDATA:
     """
     A C{<![CDATA[]]>} block from a template.  Given a separate representation in
     the DOM so that they may be round-tripped through rendering without losing
@@ -286,12 +286,12 @@ class CDATA(object):
         self.data = data
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return 'CDATA(%r)' % (self.data,)
 
 
 
-class Comment(object):
+class Comment:
     """
     A C{<!-- -->} comment from a template.  Given a separate representation in
     the DOM so that they may be round-tripped through rendering without losing
@@ -305,12 +305,12 @@ class Comment(object):
         self.data = data
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return 'Comment(%r)' % (self.data,)
 
 
 
-class CharRef(object):
+class CharRef:
     """
     A numeric character reference.  Given a separate representation in the DOM
     so that non-ASCII characters may be output as pure ASCII.
@@ -325,5 +325,5 @@ class CharRef(object):
         self.ordinal = ordinal
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "CharRef(%d)" % (self.ordinal,)

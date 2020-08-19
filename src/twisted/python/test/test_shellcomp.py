@@ -38,7 +38,7 @@ class ZshScriptTestMeta(type):
 
 
 
-class ZshScriptTestMixin(object):
+class ZshScriptTestMixin:
     """
     Integration test helper to show that C{usage.Options} classes can have zsh
     completion functions generated for them without raising errors.

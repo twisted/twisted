@@ -36,7 +36,7 @@ def makeFakeKQueue(testKQueue, testKEvent):
         C{testKEvent}.
     """
     @implementer(_IKQueue)
-    class FakeKQueue(object):
+    class FakeKQueue:
         kqueue = testKQueue
         kevent = testKEvent
 
@@ -56,7 +56,7 @@ class KQueueTests(TestCase):
         """
         L{KQueueReactor} handles L{errno.EINTR} in C{doKEvent} by returning.
         """
-        class FakeKQueue(object):
+        class FakeKQueue:
             """
             A fake KQueue that raises L{errno.EINTR} when C{control} is called,
             like a real KQueue would if it was interrupted.

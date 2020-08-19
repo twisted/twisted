@@ -7,8 +7,7 @@
 
 You will find these useful if you're adding a new protocol to IM.
 """
-
-# Abstract representation of chat "model" classes
+from typing import Type
 
 from twisted.words.im.locals import OFFLINE, OfflineError
 
@@ -20,6 +19,8 @@ from twisted.persisted import styles
 from twisted.internet import error
 
 
+
+# Abstract representation of chat "model" classes
 
 class AbstractGroup:
     def __init__(self, name, account):
@@ -60,11 +61,11 @@ class AbstractGroup:
         self.account.client.leaveGroup(self.name)
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return '<%s %r>' % (self.__class__, self.name)
 
 
-    def __str__(self):
+    def __str__(self) -> str:
         return '%s@%s' % (self.name, self.account.accountName)
 
 
@@ -92,11 +93,11 @@ class AbstractPerson:
         return '--'
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return '<%s %r/%s>' % (self.__class__, self.name, self.status)
 
 
-    def __str__(self):
+    def __str__(self) -> str:
         return '%s@%s' % (self.name, self.account.accountName)
 
 
@@ -108,6 +109,8 @@ class AbstractClientMixin:
 
     @ivar _logonDeferred: Fired when I am done logging in.
     """
+    _protoBase = None  # type: Type[Protocol]
+
     def __init__(self, account, chatui, logonDeferred):
         for base in self.__class__.__bases__:
             if issubclass(base, Protocol):
@@ -127,7 +130,7 @@ class AbstractClientMixin:
     def connectionLost(self, reason: Failure = connectionDone):
         self.account._clientLost(self, reason)
         self.unregisterAsAccountClient()
-        return self._protoBase.connectionLost(self, reason)
+        return self._protoBase.connectionLost(self, reason)  # type: ignore[arg-type]  # noqa
 
 
     def unregisterAsAccountClient(self):
@@ -291,7 +294,7 @@ class AbstractAccount(styles.Versioned):
         return reason
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "<%s: %s (%s@%s:%s)>" % (self.__class__,
                                         self.accountName,
                                         self.username,

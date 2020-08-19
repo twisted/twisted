@@ -106,7 +106,7 @@ class ContextTracker:
 
 
 
-class ThreadedContextTracker(object):
+class ThreadedContextTracker:
     def __init__(self):
         self.storage = local()
 
@@ -124,6 +124,13 @@ class ThreadedContextTracker(object):
         return self.currentContext().getContext(key, default)
 
 
+
+theContextTracker = ThreadedContextTracker()
+call = theContextTracker.callWithContext
+get = theContextTracker.getContext
+
+
+
 def installContextTracker(ctr):
     global theContextTracker
     global call
@@ -132,5 +139,3 @@ def installContextTracker(ctr):
     theContextTracker = ctr
     call = theContextTracker.callWithContext
     get = theContextTracker.getContext
-
-installContextTracker(ThreadedContextTracker())

@@ -20,7 +20,7 @@ else:
 
 
 
-class StringUDPSocket(object):
+class StringUDPSocket:
     """
     A fake UDP socket object, which returns a fixed sequence of strings and/or
     socket errors.  Useful for testing.

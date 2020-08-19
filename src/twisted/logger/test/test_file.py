@@ -165,7 +165,7 @@ class TextFileLogObserverTests(TestCase):
 
 
 
-class DummyFile(object):
+class DummyFile:
     """
     File that counts writes and flushes.
     """

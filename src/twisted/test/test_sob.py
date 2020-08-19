@@ -25,7 +25,7 @@ objects = [
 {1:"hello"},
 ]
 
-class FakeModule(object):
+class FakeModule:
     pass
 
 class PersistTests(unittest.TestCase):

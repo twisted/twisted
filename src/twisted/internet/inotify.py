@@ -118,7 +118,7 @@ def humanReadableMask(mask):
 
 
 
-class _Watch(object):
+class _Watch:
     """
     Watch object that represents a Watch point in the filesystem. The
     user should let INotify to create these objects
@@ -150,7 +150,7 @@ class _Watch(object):
 
 
 
-class INotify(FileDescriptor, object):
+class INotify(FileDescriptor):
     """
     The INotify file descriptor, it basically does everything related
     to INotify, from reading to notifying watch points.

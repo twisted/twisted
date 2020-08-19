@@ -118,7 +118,6 @@ try:
     from twisted.web._http2 import H2Connection
     H2_ENABLED = True
 except ImportError:
-    H2Connection = None
     H2_ENABLED = False
 
 
@@ -447,7 +446,7 @@ class _IDeprecatedHTTPChannelToRequestInterface(Interface):
         """
 
 
-    def __eq__(other):
+    def __eq__(other: object) -> bool:
         """
         Determines if two requests are the same object.
 
@@ -456,11 +455,10 @@ class _IDeprecatedHTTPChannelToRequestInterface(Interface):
 
         @return: L{True} when the two are the same object and L{False}
             when not.
-        @rtype: L{bool}
         """
 
 
-    def __ne__(other):
+    def __ne__(other: object) -> bool:
         """
         Determines if two requests are not the same object.
 
@@ -469,7 +467,6 @@ class _IDeprecatedHTTPChannelToRequestInterface(Interface):
 
         @return: L{True} when the two are not the same object and
             L{False} when they are.
-        @rtype: L{bool}
         """
 
 
@@ -804,6 +801,7 @@ class Request:
 
     # methods for channel - end users should not use these
 
+    @deprecated(Version("Twisted", 16, 3, 0))
     def noLongerQueued(self):
         """
         Notify the object that it is no longer queued.
@@ -948,7 +946,7 @@ class Request:
         self.process()
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """
         Return a string description of the request including such information
         as the request method and request URI.
@@ -1479,6 +1477,7 @@ class Request:
         self.host = address.IPv4Address("TCP", host, port)
 
 
+    @deprecated(Version('Twisted', 18, 4, 0), replacement="getClientAddress")
     def getClientIP(self):
         """
         Return the IP address of the client who submitted this request.
@@ -1608,7 +1607,7 @@ class Request:
             self.channel.loseConnection()
 
 
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
         """
         Determines if two requests are the same object.
 
@@ -1629,27 +1628,6 @@ class Request:
         return NotImplemented
 
 
-    def __ne__(self, other):
-        """
-        Determines if two requests are not the same object.
-
-        @param other: Another object whose identity will be compared
-            to this instance's.
-
-        @return: L{True} when the two are not the same object and
-            L{False} when they are.
-        @rtype: L{bool}
-        """
-        # When other is not an instance of request, return
-        # NotImplemented so that Python uses other.__ne__ to perform
-        # the comparison.  This ensures that a Request proxy generated
-        # by proxyForInterface can compare equal to an actual Request
-        # instance by turning request != proxy into proxy != request.
-        if isinstance(other, Request):
-            return self is not other
-        return NotImplemented
-
-
     def __hash__(self):
         """
         A C{Request} is hashable so that it can be used as a mapping key.
@@ -1658,15 +1636,6 @@ class Request:
         """
         return id(self)
 
-
-
-Request.getClientIP = deprecated(
-    Version('Twisted', 18, 4, 0),
-    replacement="getClientAddress",
-)(Request.getClientIP)
-
-Request.noLongerQueued = deprecated(
-    Version("Twisted", 16, 3, 0))(Request.noLongerQueued)
 
 
 class _DataLoss(Exception):
@@ -1703,7 +1672,7 @@ class _MalformedChunkedDataError(Exception):
 
 
 
-class _IdentityTransferDecoder(object):
+class _IdentityTransferDecoder:
     """
     Protocol for accumulating bytes up to a specified length.  This handles the
     case where no I{Transfer-Encoding} is specified.
@@ -1778,7 +1747,7 @@ class _IdentityTransferDecoder(object):
 
 
 
-class _ChunkedTransferDecoder(object):
+class _ChunkedTransferDecoder:
     """
     Protocol for decoding I{chunked} Transfer-Encoding, as defined by RFC 2616,
     section 3.6.1.  This protocol can interpret the contents of a request or
@@ -1904,7 +1873,7 @@ class _ChunkedTransferDecoder(object):
 
 
 @implementer(interfaces.IPushProducer)
-class _NoPushProducer(object):
+class _NoPushProducer:
     """
     A no-op version of L{interfaces.IPushProducer}, used to abstract over the
     possibility that a L{HTTPChannel} transport does not provide
@@ -2752,7 +2721,7 @@ def combinedLogFormatter(timestamp, request):
 
 
 @implementer(interfaces.IAddress)
-class _XForwardedForAddress(object):
+class _XForwardedForAddress:
     """
     L{IAddress} which represents the client IP to log for a request, as gleaned
     from an X-Forwarded-For header.
@@ -3057,7 +3026,11 @@ class HTTPFactory(protocol.ServerFactory):
         timestamps.
     """
 
-    protocol = _genericHTTPChannelProtocolFactory
+    # We need to ignore the mypy error here, because
+    # _genericHTTPChannelProtocolFactory is a callable which returns a proxy
+    # to a Protocol, instead of a concrete Protocol object, as expected in
+    # the protocol.Factory interface
+    protocol = _genericHTTPChannelProtocolFactory  # type: ignore[assignment]
 
     logPath = None
 
