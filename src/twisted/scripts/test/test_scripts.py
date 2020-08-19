@@ -14,8 +14,10 @@ import sys
 import textwrap
 import types
 from typing import Optional, TYPE_CHECKING
+from unittest import skipIf
 
 from twisted.trial.unittest import TestCase
+from twisted.python import runtime
 from twisted.python.filepath import FilePath
 from twisted.python.test.test_shellcomp import ZshScriptTestMixin
 from twisted.scripts import htmlizer, trial, twistd
@@ -88,6 +90,7 @@ class ScriptTests(TestCase, ScriptTestsMixin):
         )
         self.assertEqual(testDir.path, output[0])
 
+    @skipIf(runtime.platform.isWindows(), "SIGINT not supported on windows")
     def test_twistdAtExit(self) -> None:
         testDir = FilePath(self.mktemp())
         testDir.makedirs()
