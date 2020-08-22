@@ -77,6 +77,7 @@ _dev = [
     'sphinx >= 1.3.1',
     'towncrier >= 17.4.0',
     'twistedchecker >= 0.7.2',
+    "PyHamcrest >= 1.9.0",
 ]
 
 _EXTRA_OPTIONS = dict(
@@ -252,7 +253,6 @@ def getSetupArgs(extensions=_EXTENSIONS, readme='README.rst'):
         "incremental >= 16.10.1",
         "Automat >= 0.8.0",
         "hyperlink >= 17.1.1",
-        "PyHamcrest >= 1.9.0",
         "attrs >= 19.2.0",
     ]
 
