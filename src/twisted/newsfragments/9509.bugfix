@@ -1,0 +1,1 @@
+Twisted's dependency on PyHamcrest has been moved from the base package to the dev extra. Consequently the dev extra must be installed for Twisted's test suite to pass.
