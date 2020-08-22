@@ -16,7 +16,6 @@ from twisted.cred.checkers import ICredentialsChecker
 from twisted.cred.credentials import IUsernamePassword
 from twisted.cred.error import UnauthorizedLogin
 from twisted.internet import defer
-from twisted.python.compat import StringType
 
 
 
@@ -39,11 +38,14 @@ def verifyCryptedPassword(crypted, pw):
 
     if crypt is None:
         raise NotImplementedError("cred_unix not supported on this platform")
-    if not isinstance(pw, StringType):
+    if isinstance(pw, bytes):
         pw = pw.decode('utf-8')
-    if not isinstance(crypted, StringType):
+    if isinstance(crypted, bytes):
         crypted = crypted.decode('utf-8')
-    return crypt.crypt(pw, crypted) == crypted
+    try:
+        return crypt.crypt(pw, crypted) == crypted
+    except OSError:
+        return False
 
 
 
@@ -76,7 +78,7 @@ class UNIXChecker:
         @type username: L{unicode}/L{str} or L{bytes}
         """
         try:
-            if not isinstance(username, StringType):
+            if isinstance(username, bytes):
                 username = username.decode('utf-8')
             cryptedPass = pwd.getpwnam(username).pw_passwd
         except KeyError:
@@ -104,7 +106,7 @@ class UNIXChecker:
         @type username: L{unicode}/L{str} or L{bytes}
         """
         try:
-            if not isinstance(username, StringType):
+            if isinstance(username, bytes):
                 username = username.decode('utf-8')
             if getattr(spwd.struct_spwd, "sp_pwdp", None):
                 # Python 3

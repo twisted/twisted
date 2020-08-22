@@ -328,6 +328,18 @@ class CryptTests(TestCase):
                                                      password.encode("utf-8"))
             self.assertFalse(result)
 
+    def test_verifyCryptedPasswordOSError(self):
+        """
+        L{cred_unix.verifyCryptedPassword} when OSError is raised
+        """
+        def mockCrypt(password, salt):
+            raise OSError("")
+
+        password = "sample password ^%$"
+        cryptedCorrect = crypt.crypt(password, "ab")
+        self.patch(crypt, "crypt", mockCrypt)
+        self.assertFalse(cred_unix.verifyCryptedPassword(cryptedCorrect,
+                                                         password))
 
 
 class FileDBCheckerTests(TestCase):
