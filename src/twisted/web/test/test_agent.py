@@ -2727,6 +2727,13 @@ class _RedirectAgentTestsMixin:
         self._testRedirectDefault(307)
 
 
+    def test_redirect308(self):
+        """
+        L{client.RedirectAgent} follows redirects on status code 308.
+        """
+        self._testRedirectDefault(308)
+
+
     def _testRedirectToGet(self, code, method):
         """
         L{client.RedirectAgent} changes the method to I{GET} when getting
