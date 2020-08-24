@@ -2128,7 +2128,7 @@ class RedirectAgent:
     """
 
     _redirectResponses = [http.MOVED_PERMANENTLY, http.FOUND,
-                          http.TEMPORARY_REDIRECT]
+                          http.TEMPORARY_REDIRECT, http.PERMANENT_REDIRECT]
     _seeOtherResponses = [http.SEE_OTHER]
 
 
@@ -2221,7 +2221,8 @@ class BrowserLikeRedirectAgent(RedirectAgent):
     @since: 13.1
     """
     _redirectResponses = [http.TEMPORARY_REDIRECT]
-    _seeOtherResponses = [http.MOVED_PERMANENTLY, http.FOUND, http.SEE_OTHER]
+    _seeOtherResponses = [http.MOVED_PERMANENTLY, http.FOUND, http.SEE_OTHER,
+                          http.PERMANENT_REDIRECT]
 
 
 
