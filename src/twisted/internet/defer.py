@@ -51,7 +51,8 @@ except ImportError:
 current_async_library_cvar = None
 if _contextvarsSupport:
     try:
-        from sniffio import current_async_library_cvar
+        import sniffio
+        current_async_library_cvar = sniffio.current_async_library_cvar
     except ImportError:
         pass
 
