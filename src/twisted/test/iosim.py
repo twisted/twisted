@@ -34,7 +34,7 @@ class TLSNegotiation:
         self.readyToSend = connectState
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return 'TLSNegotiation(%r)' % (self.obj,)
 
 
@@ -49,7 +49,7 @@ class TLSNegotiation:
 
 
 @implementer(interfaces.IAddress)
-class FakeAddress(object):
+class FakeAddress:
     """
     The default address type for the host and peer of L{FakeTransport}
     connections.
@@ -105,7 +105,7 @@ class FakeTransport:
         self.peerAddress = peerAddress
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return 'FakeTransport<%s,%s,%s>' % (
             self.isServer and 'S' or 'C', self.serial,
             self.protocol.__class__.__name__)
@@ -502,7 +502,7 @@ def _factoriesShouldConnect(clientInfo, serverInfo):
 
 
 
-class ConnectionCompleter(object):
+class ConnectionCompleter:
     """
     A L{ConnectionCompleter} can cause synthetic TCP connections established by
     L{MemoryReactor.connectTCP} and L{MemoryReactor.listenTCP} to succeed or

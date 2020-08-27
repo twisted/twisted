@@ -43,7 +43,7 @@ from twisted.words.protocols import irc
 
 
 @implementer(iwords.IGroup)
-class Group(object):
+class Group:
     def __init__(self, name):
         self.name = name
         self.users = {}
@@ -127,7 +127,7 @@ class Group(object):
 
 
 @implementer(iwords.IUser)
-class User(object):
+class User:
     realm = None
     mind = None
 
@@ -1174,7 +1174,7 @@ pb.setUnjellyableForClass(ChatAvatar, AvatarReference)
 
 
 @implementer(portal.IRealm, iwords.IChatService)
-class WordsRealm(object):
+class WordsRealm:
     _encoding = 'utf-8'
 
     def __init__(self, name):

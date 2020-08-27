@@ -28,8 +28,9 @@ from twisted.conch.ssh.filetransfer import (
 from twisted.conch.interfaces import ISession, ISFTPServer, ISFTPFile
 from twisted.cred import portal
 from twisted.internet.error import ProcessExitedAlready
-from twisted.python import components, log
-from twisted.python.compat import _bytesChr as chr, nativeString
+from twisted.python import components
+from twisted.python.compat import nativeString
+from twisted.logger import Logger
 
 try:
     import utmp
@@ -118,9 +119,9 @@ class UnixConchUser(ConchUser):
         # Remove all listeners.
         for listener in self.listeners.values():
             self._runAsUser(listener.stopListening)
-        log.msg(
-            'avatar %s logging out (%i)'
-            % (self.username, len(self.listeners)))
+        self._log.info(
+            'avatar {username} logging out ({nlisteners})',
+            username=self.username, nlisteners=len(self.listeners))
 
 
     def _runAsUser(self, f, *args, **kw):
@@ -155,6 +156,8 @@ class UnixConchUser(ConchUser):
 
 @implementer(ISession)
 class SSHSessionForUnixConchUser:
+    _log = Logger()
+
     def __init__(self, avatar, reactor=None):
         """
         Construct an C{SSHSessionForUnixConchUser}.
@@ -211,7 +214,7 @@ class SSHSessionForUnixConchUser:
 
     def openShell(self, proto):
         if not self.ptyTuple:  # We didn't get a pty-req.
-            log.msg('tried to get shell without pty, failing')
+            self._log.error('tried to get shell without pty, failing')
             raise ConchError("no pty")
         uid, gid = self.avatar.getUserGroupId()
         homeDir = self.avatar.getHomeDir()
@@ -297,7 +300,7 @@ class SSHSessionForUnixConchUser:
                 if not hasattr(tty, ttyMode):
                     continue
                 ttyval = getattr(tty, ttyMode)
-                attr[tty.CC][ttyval] = chr(modeValue)
+                attr[tty.CC][ttyval] = bytes((modeValue,))
         tty.tcsetattr(pty.fileno(), tty.TCSANOW, attr)
 
 
@@ -317,7 +320,7 @@ class SSHSessionForUnixConchUser:
                 pass
             self.pty.loseConnection()
             self.addUTMPEntry(0)
-        log.msg('shell closed')
+        self._log.info('shell closed')
 
 
     def windowChanged(self, winSize):

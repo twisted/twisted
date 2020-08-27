@@ -234,7 +234,7 @@ class ListingTests(TestCase):
 
 
 
-class InMemorySSHChannel(StringTransport, object):
+class InMemorySSHChannel(StringTransport):
     """
     Minimal implementation of a L{SSHChannel} like class which only reads and
     writes data from memory.
@@ -251,7 +251,7 @@ class InMemorySSHChannel(StringTransport, object):
 
 
 
-class FilesystemAccessExpectations(object):
+class FilesystemAccessExpectations:
     """
     A test helper used to support expected filesystem access.
     """
@@ -292,7 +292,7 @@ class FilesystemAccessExpectations(object):
 
 
 
-class InMemorySFTPClient(object):
+class InMemorySFTPClient:
     """
     A L{filetransfer.FileTransferClient} which does filesystem operations in
     memory, without touching the local disc or the network interface.
@@ -456,7 +456,7 @@ class StdioClientTests(TestCase):
         """
         # Local import to avoid win32 issues.
         import tty
-        class FakeFcntl(object):
+        class FakeFcntl:
             def ioctl(self, fd, opt, mutate):
                 if opt != tty.TIOCGWINSZ:
                     self.fail("Only window-size queries supported.")

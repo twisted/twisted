@@ -22,7 +22,7 @@ class IdentError(Exception):
 
     identDescription = 'UNKNOWN-ERROR'
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.identDescription
 
 

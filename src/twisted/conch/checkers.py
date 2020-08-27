@@ -10,13 +10,12 @@ Provide L{ICredentialsChecker} implementations to be used in Conch protocols.
 import sys
 import binascii
 import errno
+from base64 import decodebytes
 
 try:
     import pwd
 except ImportError:
     pwd = None  # type: ignore[assignment]
-else:
-    import crypt
 
 try:
     import spwd
@@ -33,27 +32,14 @@ from twisted.cred.checkers import ICredentialsChecker
 from twisted.cred.credentials import IUsernamePassword, ISSHPrivateKey
 from twisted.cred.error import UnauthorizedLogin, UnhandledCredentials
 from twisted.internet import defer
-from twisted.python.compat import _keys, _b64decodebytes
-from twisted.python import failure, reflect, log
+from twisted.python import failure, reflect
+from twisted.plugins.cred_unix import verifyCryptedPassword
 from twisted.python.deprecate import deprecatedModuleAttribute
 from twisted.python.util import runAsEffectiveUser
 from twisted.python.filepath import FilePath
+from twisted.logger import Logger
 
-
-
-
-def verifyCryptedPassword(crypted, pw):
-    """
-    Check that the password, when crypted, matches the stored crypted password.
-
-    @param crypted: The stored crypted password.
-    @type crypted: L{str}
-    @param pw: The password the user has given.
-    @type pw: L{str}
-
-    @rtype: L{bool}
-    """
-    return crypt.crypt(pw, crypted) == crypted
+_log = Logger()
 
 
 
@@ -178,9 +164,10 @@ class SSHPublicKeyDatabase:
                 pubKey = keys.Key.fromString(credentials.blob)
                 if pubKey.verify(credentials.signature, credentials.sigData):
                     return credentials.username
-            except: # any error should be treated as a failed login
-                log.err()
-                return failure.Failure(UnauthorizedLogin('error while verifying key'))
+            except Exception:  # any error should be treated as a failed login
+                _log.failure('Error while verifying key')
+                return failure.Failure(
+                    UnauthorizedLogin('error while verifying key'))
         return failure.Failure(UnauthorizedLogin("unable to verify key"))
 
 
@@ -228,7 +215,7 @@ class SSHPublicKeyDatabase:
                     if len(l2) < 2:
                         continue
                     try:
-                        if _b64decodebytes(l2[1]) == credentials.blob:
+                        if decodebytes(l2[1]) == credentials.blob:
                             return True
                     except binascii.Error:
                         continue
@@ -237,8 +224,10 @@ class SSHPublicKeyDatabase:
 
     def _ebRequestAvatarId(self, f):
         if not f.check(UnauthorizedLogin):
-            log.msg(f)
-            return failure.Failure(UnauthorizedLogin("unable to get avatar id"))
+            _log.error('Unauthorized login due to internal error: {error}',
+                      error=f.value)
+            return failure.Failure(
+                UnauthorizedLogin("unable to get avatar id"))
         return f
 
 
@@ -263,7 +252,7 @@ class SSHProtocolChecker:
 
     @property
     def credentialInterfaces(self):
-        return _keys(self.checkers)
+        return list(self.checkers.keys())
 
 
     def registerChecker(self, checker, *credentialInterfaces):
@@ -380,8 +369,8 @@ def readAuthorizedKeyFile(fileobj, parseKey=keys.Key.fromString):
             try:
                 yield parseKey(line)
             except keys.BadKeyError as e:
-                log.msg('Unable to parse line "{0}" as a key: {1!s}'
-                        .format(line, e))
+                _log.error('Unable to parse line {line!r} as a key: {error!s}',
+                          line=line, error=e)
 
 
 
@@ -410,12 +399,13 @@ def _keysFromFilepaths(filepaths, parseKey):
                     for key in readAuthorizedKeyFile(f, parseKey):
                         yield key
             except (IOError, OSError) as e:
-                log.msg("Unable to read {0}: {1!s}".format(fp.path, e))
+                _log.error("Unable to read {path!r}: {error!s}",
+                          path=fp.path, error=e)
 
 
 
 @implementer(IAuthorizedKeysDB)
-class InMemorySSHKeyDB(object):
+class InMemorySSHKeyDB:
     """
     Object that provides SSH public keys based on a dictionary of usernames
     mapped to L{twisted.conch.ssh.keys.Key}s.
@@ -440,7 +430,7 @@ class InMemorySSHKeyDB(object):
 
 
 @implementer(IAuthorizedKeysDB)
-class UNIXAuthorizedKeysFiles(object):
+class UNIXAuthorizedKeysFiles:
     """
     Object that provides SSH public keys based on public keys listed in
     authorized_keys and authorized_keys2 files in UNIX user .ssh/ directories.
@@ -482,7 +472,7 @@ class UNIXAuthorizedKeysFiles(object):
 
 
 @implementer(ICredentialsChecker)
-class SSHPublicKeyChecker(object):
+class SSHPublicKeyChecker:
     """
     Checker that authenticates SSH public keys, based on public keys listed in
     authorized_keys and authorized_keys2 files in user .ssh/ directories.
@@ -580,8 +570,7 @@ class SSHPublicKeyChecker(object):
         try:
             if pubKey.verify(credentials.signature, credentials.sigData):
                 return credentials.username
-        except:  # Any error should be treated as a failed login
-            log.err()
-            raise UnauthorizedLogin('Error while verifying key')
+        except Exception as e:  # Any error should be treated as a failed login
+            raise UnauthorizedLogin('Error while verifying key') from e
 
         raise UnauthorizedLogin("Key signature invalid.")

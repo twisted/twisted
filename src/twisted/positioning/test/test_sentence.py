@@ -16,7 +16,7 @@ sentinelValueTwo = "someOtherStringValue"
 
 
 
-class DummyProtocol(object):
+class DummyProtocol:
     """
     A simple, fake protocol.
     """
@@ -57,7 +57,7 @@ class MixinSentence(_sentence._BaseSentence):
 
 
 
-class SentenceTestsMixin(object):
+class SentenceTestsMixin:
     """
     Tests for positioning protocols and their respective sentences.
     """

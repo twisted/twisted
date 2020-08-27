@@ -20,7 +20,7 @@ from twisted.web.iweb import ICredentialFactory
 
 
 @implementer(ICredentialFactory)
-class BasicCredentialFactory(object):
+class BasicCredentialFactory:
     """
     Credential Factory for HTTP Basic Authentication
 

@@ -24,7 +24,7 @@ from ._pidfile import nonePIDFile, AlreadyRunningError, InvalidPIDFileError
 
 
 @attrs(frozen=True)
-class Runner(object):
+class Runner:
     """
     Twisted application runner.
 

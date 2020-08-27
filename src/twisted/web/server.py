@@ -618,7 +618,7 @@ class Request(Copyable, http.Request, components.Componentized):
 
 
 @implementer(iweb._IRequestEncoderFactory)
-class GzipEncoderFactory(object):
+class GzipEncoderFactory:
     """
     @cvar compressLevel: The compression level used by the compressor, default
         to 9 (highest).
@@ -650,7 +650,7 @@ class GzipEncoderFactory(object):
 
 
 @implementer(iweb._IRequestEncoder)
-class _GzipEncoder(object):
+class _GzipEncoder:
     """
     An encoder which supports gzip.
 

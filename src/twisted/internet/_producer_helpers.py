@@ -21,7 +21,7 @@ __all__ = []  # type: List[str]
 
 
 @implementer(IPushProducer)
-class _PullToPush(object):
+class _PullToPush:
     """
     An adapter that converts a non-streaming to a streaming producer.
 

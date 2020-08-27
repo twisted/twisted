@@ -44,7 +44,7 @@ class NoSuchReactor(KeyError):
 
 
 @implementer(IPlugin, IReactorInstaller)
-class Reactor(object):
+class Reactor:
     """
     @ivar moduleName: The fully-qualified Python name of the module of which
     the install callable is an attribute.

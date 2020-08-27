@@ -990,7 +990,7 @@ class KnownHostsDatabaseTests(TestCase):
 
 
 
-class FakeFile(object):
+class FakeFile:
     """
     A fake file-like object that acts enough like a file for
     L{ConsoleUI.prompt}.
@@ -1144,7 +1144,7 @@ class ConsoleUITests(TestCase):
 
 
 
-class FakeUI(object):
+class FakeUI:
     """
     A fake UI object, adhering to the interface expected by
     L{KnownHostsFile.verifyHostKey}
@@ -1179,7 +1179,7 @@ class FakeUI(object):
 
 
 
-class FakeObject(object):
+class FakeObject:
     """
     A fake object that can have some attributes.  Used to fake
     L{SSHClientTransport} and L{SSHClientFactory}.

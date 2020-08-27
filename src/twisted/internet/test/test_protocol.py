@@ -462,7 +462,7 @@ class AdapterTests(TestCase):
         """
         result = []
         @implementer(IConsumer)
-        class Consumer(object):
+        class Consumer:
             def write(self, d):
                 result.append(d)
 

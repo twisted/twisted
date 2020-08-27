@@ -76,7 +76,7 @@ def _has_ipv6():
 HAS_IPV6 = _has_ipv6()
 
 
-class FakeStdio(object):
+class FakeStdio:
     """
     A fake for testing L{twisted.conch.scripts.conch.SSHSession.eofReceived} and
     L{twisted.conch.scripts.cftp.SSHSession.eofReceived}.

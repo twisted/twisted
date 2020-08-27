@@ -20,7 +20,7 @@ from . import _interfaces
 
 
 @implementer(_interfaces.IProxyParser)
-class V1Parser(object):
+class V1Parser:
     """
     PROXY protocol version one header parser.
 

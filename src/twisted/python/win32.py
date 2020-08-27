@@ -68,7 +68,7 @@ def quoteArguments(arguments):
     return ' '.join([cmdLineQuote(a) for a in arguments])
 
 
-class _ErrorFormatter(object):
+class _ErrorFormatter:
     """
     Formatter for Windows error messages.
 

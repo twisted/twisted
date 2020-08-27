@@ -11,7 +11,7 @@ from twisted.trial._dist.workerreporter import WorkerReporter
 from twisted.trial._dist import managercommands
 
 
-class FakeAMProtocol(object):
+class FakeAMProtocol:
     """
     A fake C{AMP} implementations to track C{callRemote} calls.
     """

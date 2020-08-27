@@ -41,7 +41,7 @@ def fakeTargetFunction():
 
 
 @implementer(IStreamServerEndpoint)
-class FakeServer(object):
+class FakeServer:
     """
     In-memory implementation of L{IStreamServerEndpoint}.
 
@@ -112,7 +112,7 @@ verifyClass(IStreamServerEndpoint, FakeServer)
 
 
 @implementer(IListeningPort)
-class FakePort(object):
+class FakePort:
     """
     Fake L{IListeningPort} implementation.
 
@@ -453,7 +453,7 @@ class TimerServiceTests(TestCase):
 
 
 
-class ConnectInformation(object):
+class ConnectInformation:
     """
     Information about C{endpointForTesting}
 
@@ -485,7 +485,7 @@ def endpointForTesting(fireImmediately=False):
         C{endpoint}.
     """
     @implementer(IStreamClientEndpoint)
-    class ClientTestEndpoint(object):
+    class ClientTestEndpoint:
         def connect(self, factory):
             result = Deferred()
             info.passedFactories.append(factory)
@@ -572,7 +572,7 @@ class ClientServiceTests(SynchronousTestCase):
 
         applicationProtocols = cq.applicationProtocols = []
 
-        class RememberingFactory(Factory, object):
+        class RememberingFactory(Factory):
             protocol = protocolType
             def buildProtocol(self, addr):
                 result = super(RememberingFactory, self).buildProtocol(addr)
@@ -704,7 +704,7 @@ class ClientServiceTests(SynchronousTestCase):
         the reactor.
         """
         @implementer(IHalfCloseableProtocol, IFileDescriptorReceiver)
-        class FancyProtocol(Protocol, object):
+        class FancyProtocol(Protocol):
             """
             Provider of various interfaces.
             """

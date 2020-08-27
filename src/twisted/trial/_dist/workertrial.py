@@ -36,7 +36,7 @@ from twisted.trial._dist import _WORKER_AMP_STDIN, _WORKER_AMP_STDOUT
 
 
 
-class WorkerLogObserver(object):
+class WorkerLogObserver:
     """
     A log observer that forward its output to a C{AMP} protocol.
     """
@@ -86,8 +86,6 @@ def main(_fdopen=os.fdopen):
             r = protocolIn.read(1)
         except IOError as e:
             if e.args[0] == errno.EINTR:
-                if sys.version_info < (3, 0):
-                    sys.exc_clear()
                 continue
             else:
                 raise

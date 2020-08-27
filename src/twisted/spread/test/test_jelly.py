@@ -17,7 +17,7 @@ from twisted.trial.unittest import TestCase
 from twisted.test.proto_helpers import StringTransport
 
 
-class TestNode(jelly.Jellyable, object):
+class TestNode(jelly.Jellyable):
     """
     An object to test jellyfying of new style class instances.
     """
@@ -77,14 +77,14 @@ class C:
 
 
 
-class D(object):
+class D:
     """
     Dummy new-style class.
     """
 
 
 
-class E(object):
+class E:
     """
     Dummy new-style class with slots.
     """

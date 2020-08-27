@@ -152,7 +152,7 @@ def _udp(src, dst, payload):
 
 
 
-class Tunnel(object):
+class Tunnel:
     """
     An in-memory implementation of a tun or tap device.
 
@@ -317,7 +317,7 @@ def _privileged(original):
 
 
 @implementer(_IInputOutputSystem)
-class MemoryIOSystem(object):
+class MemoryIOSystem:
     """
     An in-memory implementation of basic I/O primitives, useful in the context
     of unit testing as a drop-in replacement for parts of the C{os} module.
@@ -516,7 +516,7 @@ class MemoryIOSystem(object):
 
 
 
-class _FakePort(object):
+class _FakePort:
     """
     A socket-like object which can be used to read UDP datagrams from
     tunnel-like file descriptors managed by a L{MemoryIOSystem}.

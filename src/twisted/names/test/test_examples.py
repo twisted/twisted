@@ -14,7 +14,7 @@ from twisted.trial.unittest import SkipTest, TestCase
 from twisted.python.compat import NativeStringIO
 
 
-class ExampleTestBase(object):
+class ExampleTestBase:
     """
     This is a mixin which adds an example to the path, tests it, and then
     removes it from the path and unimports the modules which the test loaded.

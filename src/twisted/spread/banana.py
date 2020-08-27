@@ -20,20 +20,25 @@ from io import BytesIO
 from twisted.internet import protocol
 from twisted.persisted import styles
 from twisted.python import log
-from twisted.python.compat import iterbytes, long, _bytesChr as chr
+from twisted.python.compat import iterbytes, long
 from twisted.python.reflect import fullyQualifiedName
+
+
 
 class BananaError(Exception):
     pass
 
+
+
 def int2b128(integer, stream):
     if integer == 0:
-        stream(chr(0))
+        stream(b'\0')
         return
     assert integer > 0, "can only encode positive integers"
     while integer:
-        stream(chr(integer & 0x7f))
+        stream(bytes((integer & 0x7f,)))
         integer = integer >> 7
+
 
 
 def b1282int(st):
@@ -56,19 +61,22 @@ def b1282int(st):
     return i
 
 
-# delimiter characters.
-LIST     = chr(0x80)
-INT      = chr(0x81)
-STRING   = chr(0x82)
-NEG      = chr(0x83)
-FLOAT    = chr(0x84)
-# "optional" -- these might be refused by a low-level implementation.
-LONGINT  = chr(0x85)
-LONGNEG  = chr(0x86)
-# really optional; this is part of the 'pb' vocabulary
-VOCAB    = chr(0x87)
 
-HIGH_BIT_SET = chr(0x80)
+# delimiter characters.
+LIST = b'\x80'
+INT = b'\x81'
+STRING = b'\x82'
+NEG = b'\x83'
+FLOAT = b'\x84'
+# "optional" -- these might be refused by a low-level implementation.
+LONGINT = b'\x85'
+LONGNEG = b'\x86'
+# really optional; this is part of the 'pb' vocabulary
+VOCAB = b'\x87'
+
+HIGH_BIT_SET = b'\x80'
+
+
 
 def setPrefixLimit(limit):
     """

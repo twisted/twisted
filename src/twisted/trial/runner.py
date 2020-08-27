@@ -276,7 +276,7 @@ def isTestCase(obj):
 
 
 @implementer(ITestCase)
-class TestHolder(object):
+class TestHolder:
     """
     Placeholder for a L{TestCase} inside a reporter. As far as a L{TestResult}
     is concerned, this looks exactly like a unit test.
@@ -340,7 +340,7 @@ class ErrorHolder(TestHolder):
         self.error = util.excInfoOrFailureToExcInfo(error)
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "<ErrorHolder description=%r error=%r>" % (
             self.description, self.error[1])
 
@@ -358,7 +358,7 @@ class ErrorHolder(TestHolder):
 
 
 
-class TestLoader(object):
+class TestLoader:
     """
     I find tests inside function, modules, files -- whatever -- then return
     them wrapped inside a Test (either a L{TestSuite} or a L{TestCase}).
@@ -776,7 +776,7 @@ def _qualNameWalker(qualName):
 
 
 
-class TrialRunner(object):
+class TrialRunner:
     """
     A specialised runner that the trial front end uses.
     """

@@ -15,7 +15,7 @@ __all__ = ['ListenFDs']
 from os import getpid
 
 
-class ListenFDs(object):
+class ListenFDs:
     """
     L{ListenFDs} provides access to file descriptors inherited from systemd.
 

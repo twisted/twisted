@@ -66,7 +66,7 @@ class ChunkingZipFile(zipfile.ZipFile):
 
 
 
-class _FileEntry(object):
+class _FileEntry:
     """
     Abstract superclass of both compressed and uncompressed variants of
     file-like objects within a zip archive.

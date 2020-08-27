@@ -8,16 +8,17 @@ are ssh-userauth and ssh-connection.
 Maintainer: Paul Swartz
 """
 
-
 from typing import Dict
-from twisted.python import log
+from twisted.logger import Logger
 
 
 
-class SSHService(log.Logger):
+class SSHService(object):
     name = None  # type: bytes  # this is the ssh name for the service
     protocolMessages = {}  # type: Dict[int, str]  # map #'s -> protocol names
     transport = None  # gets set later
+
+    _log = Logger()
 
     def serviceStarted(self):
         """
@@ -32,7 +33,7 @@ class SSHService(log.Logger):
 
     def logPrefix(self):
         return "SSHService %r on %s" % (self.name,
-                self.transport.transport.logPrefix())
+                                        self.transport.transport.logPrefix())
 
     def packetReceived(self, messageNum, packet):
         """
@@ -45,6 +46,6 @@ class SSHService(log.Logger):
                         None)
             if f is not None:
                 return f(packet)
-        log.msg("couldn't handle %r" % messageNum)
-        log.msg(repr(packet))
+        self._log.info("couldn't handle {messageNum} {packet!r}",
+                       messageNum=messageNum, packet=packet)
         self.transport.sendUnimplemented()

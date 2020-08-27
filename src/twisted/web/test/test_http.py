@@ -221,7 +221,7 @@ def parametrizeTimeoutMixin(protocol, reactor):
     return protocol
 
 
-class ResponseTestMixin(object):
+class ResponseTestMixin:
     """
     A mixin that provides a simple means of comparing an actual response string
     to an expected response string by performing the minimal parsing.
@@ -3480,9 +3480,9 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         """
         eqCalls = []
 
-        class _NotARequest(object):
+        class _NotARequest:
 
-            def __eq__(self, other):
+            def __eq__(self, other: object) -> bool:
                 eqCalls.append(other)
                 return True
 
@@ -3500,9 +3500,9 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         """
         eqCalls = []
 
-        class _NotARequest(object):
+        class _NotARequest:
 
-            def __ne__(self, other):
+            def __ne__(self, other: object) -> bool:
                 eqCalls.append(other)
                 return True
 

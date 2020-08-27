@@ -99,7 +99,7 @@ class RaisingDNSServerFactory(server.DNSServerFactory):
 
 
 
-class RaisingProtocol(object):
+class RaisingProtocol:
     """
     A partial fake L{IProtocol} whose methods raise an exception containing the
     supplied arguments.
@@ -123,7 +123,7 @@ class RaisingProtocol(object):
 
 
 
-class NoopProtocol(object):
+class NoopProtocol:
     """
     A partial fake L{dns.DNSProtocolMixin} with a noop L{writeMessage} method.
     """
@@ -140,7 +140,7 @@ class NoopProtocol(object):
 
 
 
-class RaisingResolver(object):
+class RaisingResolver:
     """
     A partial fake L{IResolver} whose methods raise an exception containing the
     supplied arguments.
@@ -165,7 +165,7 @@ class RaisingResolver(object):
 
 
 
-class RaisingCache(object):
+class RaisingCache:
     """
     A partial fake L{twisted.names.cache.Cache} whose methods raise an exception
     containing the supplied arguments.
@@ -294,13 +294,13 @@ class DNSServerFactoryTests(unittest.TestCase):
         authorities, caches and clients.
         """
         # Use classes here so that we can see meaningful names in test results
-        class DummyAuthority(object):
+        class DummyAuthority:
             pass
 
-        class DummyCache(object):
+        class DummyCache:
             pass
 
-        class DummyClient(object):
+        class DummyClient:
             pass
 
         self.assertEqual(
@@ -382,7 +382,7 @@ class DNSServerFactoryTests(unittest.TestCase):
         L{server.DNSServerFactory.protocol} with its self as a positional
         argument.
         """
-        class FakeProtocol(object):
+        class FakeProtocol:
             factory = None
             args = None
             kwargs = None
@@ -665,7 +665,7 @@ class DNSServerFactoryTests(unittest.TestCase):
         f = server.DNSServerFactory()
 
         d = defer.Deferred()
-        class FakeResolver(object):
+        class FakeResolver:
             def query(self, *args, **kwargs):
                 return d
         f.resolver = FakeResolver()
@@ -701,7 +701,7 @@ class DNSServerFactoryTests(unittest.TestCase):
         f = server.DNSServerFactory()
 
         d = defer.Deferred()
-        class FakeResolver(object):
+        class FakeResolver:
             def query(self, *args, **kwargs):
                 return d
         f.resolver = FakeResolver()

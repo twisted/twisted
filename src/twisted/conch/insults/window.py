@@ -10,7 +10,6 @@ import array
 
 from twisted.conch.insults import insults, helper
 from twisted.python import text as tptext
-from twisted.python.compat import _bytesChr as chr
 
 
 
@@ -21,7 +20,7 @@ class YieldFocus(Exception):
 
 
 
-class BoundedTerminalWrapper(object):
+class BoundedTerminalWrapper:
     def __init__(self, terminal, width, height, xoff, yoff):
         self.width = width
         self.height = height
@@ -52,7 +51,7 @@ class BoundedTerminalWrapper(object):
 
 
 
-class Widget(object):
+class Widget:
     focused = False
     parent = None
     dirty = False
@@ -472,7 +471,7 @@ class Canvas(Widget):
 def horizontalLine(terminal, y, left, right):
     terminal.selectCharacterSet(insults.CS_DRAWING, insults.G0)
     terminal.cursorPosition(left, y)
-    terminal.write(chr(0o161) * (right - left))
+    terminal.write(b'\161' * (right - left))
     terminal.selectCharacterSet(insults.CS_US, insults.G0)
 
 
@@ -481,7 +480,7 @@ def verticalLine(terminal, x, top, bottom):
     terminal.selectCharacterSet(insults.CS_DRAWING, insults.G0)
     for n in range(top, bottom):
         terminal.cursorPosition(x, n)
-        terminal.write(chr(0o170))
+        terminal.write(b'\170')
     terminal.selectCharacterSet(insults.CS_US, insults.G0)
 
 
@@ -499,18 +498,18 @@ def rectangle(terminal, position, dimension):
     terminal.selectCharacterSet(insults.CS_DRAWING, insults.G0)
 
     terminal.cursorPosition(top, left)
-    terminal.write(chr(0o154))
-    terminal.write(chr(0o161) * (width - 2))
-    terminal.write(chr(0o153))
+    terminal.write(b'\154')
+    terminal.write(b'\161' * (width - 2))
+    terminal.write(b'\153')
     for n in range(height - 2):
         terminal.cursorPosition(left, top + n + 1)
-        terminal.write(chr(0o170))
+        terminal.write(b'\170')
         terminal.cursorForward(width - 2)
-        terminal.write(chr(0o170))
+        terminal.write(b'\170')
     terminal.cursorPosition(0, top + height - 1)
-    terminal.write(chr(0o155))
-    terminal.write(chr(0o161) * (width - 2))
-    terminal.write(chr(0o152))
+    terminal.write(b'\155')
+    terminal.write(b'\161' * (width - 2))
+    terminal.write(b'\152')
 
     terminal.selectCharacterSet(insults.CS_US, insults.G0)
 

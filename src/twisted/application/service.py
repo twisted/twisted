@@ -59,7 +59,7 @@ class IServiceMaker(Interface):
 
 
 @implementer(IPlugin, IServiceMaker)
-class ServiceMaker(object):
+class ServiceMaker:
     """
     Utility class to simplify the definition of L{IServiceMaker} plugins.
     """
@@ -154,7 +154,7 @@ class IService(Interface):
 
 
 @implementer(IService)
-class Service(object):
+class Service:
     """
     Base class for services.
 

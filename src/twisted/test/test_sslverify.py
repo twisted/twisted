@@ -62,8 +62,11 @@ if requireModule("OpenSSL"):
     try:
         ctx = SSL.Context(SSL.SSLv23_METHOD)
         ctx.set_npn_advertise_callback(lambda c: None)
-    except NotImplementedError:
-        skipNPN = "OpenSSL 1.0.1 or greater required for NPN support"
+    except (NotImplementedError, AttributeError):
+        skipNPN = (
+            "NPN is deprecated (and OpenSSL 1.0.1 or greater required for NPN"
+            " support)"
+        )
 
     try:
         ctx = SSL.Context(SSL.SSLv23_METHOD)
@@ -325,7 +328,7 @@ def loopbackTLSConnection(trustRoot, privateKeyFile, chainedCertFile=None):
     @return: 3-tuple of server-protocol, client-protocol, and L{IOPump}
     @rtype: L{tuple}
     """
-    class ContextFactory(object):
+    class ContextFactory:
         def getContext(self):
             """
             Create a context for the server side of the connection.
@@ -443,7 +446,7 @@ class WritingProtocol(protocol.Protocol):
 
 
 
-class FakeContext(object):
+class FakeContext:
     """
     Introspectable fake of an C{OpenSSL.SSL.Context}.
 
@@ -647,7 +650,7 @@ class ClientOptionsTests(SynchronousTestCase):
 
 
 
-class FakeChooseDiffieHellmanEllipticCurve(object):
+class FakeChooseDiffieHellmanEllipticCurve:
     """
     A fake implementation of L{_ChooseDiffieHellmanEllipticCurve}
     """
@@ -668,7 +671,7 @@ class FakeChooseDiffieHellmanEllipticCurve(object):
 
 
 
-class OpenSSLOptionsTestsMixin(object):
+class OpenSSLOptionsTestsMixin:
     """
     A mixin for L{OpenSSLOptions} test cases creates client and server
     certificates, signs them with a CA, and provides a L{loopback}
@@ -945,7 +948,7 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, TestCase):
         If acceptable ciphers are passed, they are used.
         """
         @implementer(interfaces.IAcceptableCiphers)
-        class FakeAcceptableCiphers(object):
+        class FakeAcceptableCiphers:
             def selectCiphers(self, _):
                 return [sslverify.OpenSSLCipher(u'sentinel')]
 
@@ -1340,7 +1343,7 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, TestCase):
         """
         If C{dhParams} is set, they are loaded into each new context.
         """
-        class FakeDiffieHellmanParameters(object):
+        class FakeDiffieHellmanParameters:
             _dhFile = FilePath(b'dh.params')
 
         dhParams = FakeDiffieHellmanParameters()
@@ -2226,7 +2229,7 @@ class ServiceIdentityTests(SynchronousTestCase):
         matches and raising L{VerificationError} if it doesn't.
         """
         name = 'something.example.com'
-        class Connection(object):
+        class Connection:
             def get_peer_certificate(self):
                 """
                 Fake of L{OpenSSL.SSL.Connection.get_peer_certificate}.
@@ -2750,7 +2753,7 @@ class OpenSSLCipherTests(TestCase):
         If ciphers have the same name but different types, they're still
         different.
         """
-        class DifferentCipher(object):
+        class DifferentCipher:
             fullName = self.cipherName
 
         self.assertNotEqual(
@@ -2772,7 +2775,7 @@ class ExpandCipherStringTests(TestCase):
         If the expanded cipher list is empty, an empty L{list} is returned.
         """
         self.assertEqual(
-            [],
+            tuple(),
             sslverify._expandCipherString(u'', SSL.SSLv23_METHOD, 0)
         )
 
@@ -2795,13 +2798,13 @@ class ExpandCipherStringTests(TestCase):
         )
 
 
-    def test_returnsListOfICiphers(self):
+    def test_returnsTupleOfICiphers(self):
         """
-        L{sslverify._expandCipherString} always returns a L{list} of
+        L{sslverify._expandCipherString} always returns a L{tuple} of
         L{interfaces.ICipher}.
         """
         ciphers = sslverify._expandCipherString(u'ALL', SSL.SSLv23_METHOD, 0)
-        self.assertIsInstance(ciphers, list)
+        self.assertIsInstance(ciphers, tuple)
         bogus = []
         for c in ciphers:
             if not interfaces.ICipher.providedBy(c):
@@ -2822,8 +2825,8 @@ class AcceptableCiphersTests(TestCase):
         """
         If no ciphers are available, nothing can be selected.
         """
-        ac = sslverify.OpenSSLAcceptableCiphers([])
-        self.assertEqual([], ac.selectCiphers([]))
+        ac = sslverify.OpenSSLAcceptableCiphers(tuple())
+        self.assertEqual(tuple(), ac.selectCiphers(tuple()))
 
 
     def test_selectReturnsOnlyFromAvailable(self):
@@ -2835,18 +2838,18 @@ class AcceptableCiphersTests(TestCase):
             sslverify.OpenSSLCipher('A'),
             sslverify.OpenSSLCipher('B'),
         ])
-        self.assertEqual([sslverify.OpenSSLCipher('B')],
+        self.assertEqual((sslverify.OpenSSLCipher('B'),),
                          ac.selectCiphers([sslverify.OpenSSLCipher('B'),
                                            sslverify.OpenSSLCipher('C')]))
 
 
-    def test_fromOpenSSLCipherStringExpandsToListOfCiphers(self):
+    def test_fromOpenSSLCipherStringExpandsToTupleOfCiphers(self):
         """
         If L{sslverify.OpenSSLAcceptableCiphers.fromOpenSSLCipherString} is
-        called it expands the string to a list of ciphers.
+        called it expands the string to a tuple of ciphers.
         """
         ac = sslverify.OpenSSLAcceptableCiphers.fromOpenSSLCipherString('ALL')
-        self.assertIsInstance(ac._ciphers, list)
+        self.assertIsInstance(ac._ciphers, tuple)
         self.assertTrue(all(sslverify.ICipher.providedBy(c)
                             for c in ac._ciphers))
 
@@ -2872,7 +2875,7 @@ class DiffieHellmanParametersTests(TestCase):
 
 
 
-class FakeLibState(object):
+class FakeLibState:
     """
     State for L{FakeLib}
 
@@ -2897,7 +2900,7 @@ class FakeLibState(object):
 
 
 
-class FakeLib(object):
+class FakeLib:
     """
     An introspectable fake of cryptography's lib object.
 
@@ -2968,7 +2971,7 @@ class FakeLibTests(TestCase):
 
 
 
-class FakeCryptoState(object):
+class FakeCryptoState:
     """
     State for L{FakeCrypto}
 
@@ -3000,7 +3003,7 @@ class FakeCryptoState(object):
 
 
 
-class FakeCrypto(object):
+class FakeCrypto:
     """
     An introspectable fake of pyOpenSSL's L{OpenSSL.crypto} module.
 

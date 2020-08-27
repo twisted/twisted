@@ -159,7 +159,7 @@ def _checkKnownRunOrder(order):
 
 
 
-class _BasicOptions(object):
+class _BasicOptions:
     """
     Basic options shared between trial and its local workers.
     """

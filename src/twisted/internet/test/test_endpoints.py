@@ -297,7 +297,7 @@ class WrappingFactoryTests(unittest.TestCase):
         wrapped protocol's class name is returned from
         L{_WrappingProtocol.logPrefix}.
         """
-        class NoProtocol(object):
+        class NoProtocol:
             pass
         factory = TestFactory()
         factory.protocol = NoProtocol
@@ -487,7 +487,7 @@ class WrappingFactoryTests(unittest.TestCase):
 
 
 
-class ClientEndpointTestCaseMixin(object):
+class ClientEndpointTestCaseMixin:
     """
     Generic test methods to be mixed into all client endpoint test classes.
     """
@@ -629,7 +629,7 @@ class ClientEndpointTestCaseMixin(object):
 
 
 
-class ServerEndpointTestCaseMixin(object):
+class ServerEndpointTestCaseMixin:
     """
     Generic test methods to be mixed into all client endpoint test classes.
     """
@@ -740,7 +740,7 @@ class SpecificFactory(Factory):
 
 
 
-class FakeStdio(object):
+class FakeStdio:
     """
     A L{stdio.StandardIO} like object that simply captures its constructor
     arguments.
@@ -822,7 +822,7 @@ class StubApplicationProtocol(protocol.Protocol):
 
 
 @implementer(interfaces.IProcessTransport)
-class MemoryProcessTransport(StringTransportWithDisconnection, object):
+class MemoryProcessTransport(StringTransportWithDisconnection):
     """
     A fake L{IProcessTransport} provider to be used in tests.
     """
@@ -874,7 +874,7 @@ verifyClass(interfaces.IProcessTransport, MemoryProcessTransport)
 
 
 @implementer(interfaces.IReactorProcess)
-class MemoryProcessReactor(object):
+class MemoryProcessReactor:
     """
     A fake L{IReactorProcess} provider to be used in tests.
     """
@@ -1089,7 +1089,7 @@ class ProcessEndpointTransportTests(unittest.TestCase):
         the underlying process transport.
         """
         @implementer(IPushProducer)
-        class AProducer(object):
+        class AProducer:
             pass
         aProducer = AProducer()
         self.endpointTransport.registerProducer(aProducer, False)
@@ -1680,7 +1680,7 @@ def deterministicResolvingReactor(reactor, expectedAddresses=(),
         hostMap = {}
     hostMap = hostMap.copy()
     @implementer(IHostnameResolver)
-    class SimpleNameResolver(object):
+    class SimpleNameResolver:
         @staticmethod
         def resolveHostName(resolutionReceiver, hostName, portNumber=0,
                             addressTypes=None, transportSemantics='TCP'):
@@ -1742,7 +1742,7 @@ class SimpleHostnameResolverTests(unittest.SynchronousTestCase):
         self.resolutionCompleteCallCount = 0
 
         @provider(interfaces.IResolutionReceiver)
-        class _Receiver(object):
+        class _Receiver:
             @staticmethod
             def resolutionBegan(resolutionInProgress):
                 self.resolutionBeganCalls.append(resolutionInProgress)
@@ -3520,9 +3520,9 @@ class SSLClientStringTests(unittest.TestCase):
             if x.basename().lower().endswith('.pem')
         ]
         addedCerts = []
-        class ListCtx(object):
+        class ListCtx:
             def get_cert_store(self):
-                class Store(object):
+                class Store:
                     def add_cert(self, cert):
                         addedCerts.append(cert)
                 return Store()
@@ -3954,7 +3954,7 @@ class ConnectProtocolTests(unittest.TestCase):
 
 
 
-class UppercaseWrapperProtocol(policies.ProtocolWrapper, object):
+class UppercaseWrapperProtocol(policies.ProtocolWrapper):
     """
     A wrapper protocol which uppercases all strings passed through it.
     """
@@ -3990,7 +3990,7 @@ class UppercaseWrapperProtocol(policies.ProtocolWrapper, object):
 
 
 
-class UppercaseWrapperFactory(policies.WrappingFactory, object):
+class UppercaseWrapperFactory(policies.WrappingFactory):
     """
     A wrapper factory which uppercases all strings passed through it.
     """
@@ -3998,7 +3998,7 @@ class UppercaseWrapperFactory(policies.WrappingFactory, object):
 
 
 
-class NetstringTracker(basic.NetstringReceiver, object):
+class NetstringTracker(basic.NetstringReceiver):
     """
     A netstring receiver which keeps track of the strings received.
 

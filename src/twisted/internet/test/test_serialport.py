@@ -16,7 +16,7 @@ except ImportError:
 
 
 
-class DoNothing(object):
+class DoNothing:
     """
     Object with methods that do nothing.
     """

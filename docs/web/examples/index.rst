@@ -19,6 +19,7 @@ XML-RPC
 
 - :download:`xmlrpc.py` XML-RPC server with several methods, including echoing, faulting, returning deferreds and failed deferreds
 - :download:`xmlrpcclient.py` - use ``twisted.web.xmlrpc.Proxy`` to call remote XML-RPC methods
+- :download:`xmlrpc-debug.py` - use ``xmlrpc.Proxy``'s ``queryFactory`` to debug raw XML-RPC traffic
 - :download:`advogato.py` - use ``twisted.web.xmlrpc`` to post a diary entry to advogato.org; requires an advogato account
 
 

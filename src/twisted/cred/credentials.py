@@ -20,9 +20,11 @@ import time
 from binascii import hexlify
 from hashlib import md5
 
+from twisted.python.deprecate import deprecatedModuleAttribute
 from twisted.python.randbytes import secureRandom
 from twisted.python.compat import networkString, nativeString
 from twisted.python.compat import intToBytes, unicode
+from twisted.python.versions import Version
 from twisted.cred._digest import calcResponse, calcHA1, calcHA2
 from twisted.cred import error
 
@@ -127,7 +129,7 @@ class IAnonymous(ICredentials):
 
 
 @implementer(IUsernameHashedPassword, IUsernameDigestHash)
-class DigestedCredentials(object):
+class DigestedCredentials:
     """
     Yet Another Simple HTTP Digest authentication scheme.
     """
@@ -187,7 +189,7 @@ class DigestedCredentials(object):
 
 
 
-class DigestCredentialFactory(object):
+class DigestCredentialFactory:
     """
     Support for RFC2617 HTTP Digest Authentication
 
@@ -394,7 +396,7 @@ class DigestCredentialFactory(object):
 
 
 @implementer(IUsernameHashedPassword)
-class CramMD5Credentials(object):
+class CramMD5Credentials:
     """
     An encapsulation of some CramMD5 hashed credentials.
 
@@ -448,6 +450,11 @@ class CramMD5Credentials(object):
 
 @implementer(IUsernameHashedPassword)
 class UsernameHashedPassword:
+
+    deprecatedModuleAttribute(
+        Version("Twisted", "NEXT", 0, 0),
+        "Use twisted.cred.credentials.UsernamePassword instead.",
+        "twisted.cred.credentials", "UsernameHashedPassword")
 
     def __init__(self, username, hashed):
         self.username = username
