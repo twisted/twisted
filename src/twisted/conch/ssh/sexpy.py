@@ -2,8 +2,6 @@
 # See LICENSE for details.
 
 
-from twisted.python.compat import intToBytes
-
 
 def parse(s):
     s = s.strip()
@@ -29,16 +27,15 @@ def parse(s):
         length = int(s[:i])
         data = s[i+1:i+1+length]
         expr[-1].append(data)
-        s=s[i+1+length:]
-    assert 0, "this should not happen"
+        s = s[i+1+length:]
+    assert False, "this should not happen"
+
+
 
 def pack(sexp):
-    s = b""
-    for o in sexp:
-        if type(o) in (type(()), type([])):
-            s+=b'('
-            s+=pack(o)
-            s+=b')'
-        else:
-            s+=intToBytes(len(o)) + b":" + o
-    return s
+    return b''.join(
+        b'(%b)' % (pack(o),)
+        if type(o) in (type(()), type([]))
+        else b'%d:%b' % (len(o), o)
+        for o in sexp
+        )

@@ -6,6 +6,7 @@ Test for distributed trial worker side.
 """
 
 import os
+from io import BytesIO, StringIO
 
 from zope.interface.verify import verifyObject
 
@@ -25,8 +26,7 @@ from twisted.internet.error import ConnectionDone
 from twisted.python.reflect import fullyQualifiedName
 from twisted.python.failure import Failure
 from twisted.protocols.amp import AMP
-from twisted.python.compat import NativeStringIO
-from io import BytesIO
+
 
 
 class FakeAMP(AMP):
@@ -237,7 +237,7 @@ class LocalWorkerAMPTests(TestCase):
         stream.
         """
         results = []
-        stream = NativeStringIO()
+        stream = StringIO()
         self.managerAMP.setTestStream(stream)
 
         command = managercommands.TestWrite

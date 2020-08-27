@@ -23,7 +23,6 @@ from twisted.internet import reactor, task, protocol, defer, error
 from twisted.internet.interfaces import IConsumer
 from twisted.protocols import basic
 from twisted.python import failure, filepath, runtime
-from twisted.python.compat import range
 from twisted.test import proto_helpers
 from twisted.trial.unittest import TestCase
 

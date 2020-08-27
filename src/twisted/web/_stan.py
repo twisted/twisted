@@ -22,7 +22,6 @@ cumbersome.
 """
 
 
-from twisted.python.compat import iteritems
 
 
 
@@ -186,7 +185,7 @@ class Tag:
         """
         self.children.extend(children)
 
-        for k, v in iteritems(kw):
+        for k, v in kw.items():
             if k[-1] == '_':
                 k = k[:-1]
 

@@ -25,13 +25,13 @@ Stanzas.
 
 from binascii import hexlify
 from hashlib import sha1
+from sys import intern
 from typing import Optional, Tuple
 from zope.interface import directlyProvides, implementer
 
 from twisted.internet import defer, protocol
 from twisted.internet.error import ConnectionLost
 from twisted.python import failure, log, randbytes
-from twisted.python.compat import intern, iteritems, itervalues, unicode
 from twisted.words.protocols.jabber import error, ijabber, jid
 from twisted.words.xish import domish, xmlstream
 from twisted.words.xish.xmlstream import STREAM_CONNECTED_EVENT
@@ -63,9 +63,9 @@ def hashPassword(sid, password):
     @param password: The password to be hashed.
     @type password: C{unicode}.
     """
-    if not isinstance(sid, unicode):
+    if not isinstance(sid, str):
         raise TypeError("The session identifier must be a unicode object")
-    if not isinstance(password, unicode):
+    if not isinstance(password, str):
         raise TypeError("The password must be a unicode object")
     input = u"%s%s" % (sid, password)
     return sha1(input.encode('utf-8')).hexdigest()
@@ -291,7 +291,7 @@ class ListenAuthenticator(Authenticator):
             self.xmlstream.thisEntity = jid.internJID(rootElement["to"])
 
         self.xmlstream.prefixes = {}
-        for prefix, uri in iteritems(rootElement.localPrefixes):
+        for prefix, uri in rootElement.localPrefixes.items():
             self.xmlstream.prefixes[uri] = prefix
 
         self.xmlstream.sid = hexlify(randbytes.secureRandom(8)).decode('ascii')
@@ -573,7 +573,7 @@ class XmlStream(xmlstream.XmlStream):
         """
         # set up optional extra namespaces
         localPrefixes = {}
-        for uri, prefix in iteritems(self.prefixes):
+        for uri, prefix in self.prefixes.items():
             if uri != NS_STREAMS:
                 localPrefixes[prefix] = uri
 
@@ -781,7 +781,7 @@ def upgradeWithIQResponseTracker(xs):
         """
         iqDeferreds = xs.iqDeferreds
         xs.iqDeferreds = {}
-        for d in itervalues(iqDeferreds):
+        for d in iqDeferreds.values():
             d.errback(ConnectionLost())
 
     xs.iqDeferreds = {}

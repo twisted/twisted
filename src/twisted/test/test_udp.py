@@ -12,7 +12,6 @@ import os
 from unittest import skipIf
 from twisted.trial.unittest import TestCase
 
-from twisted.python.compat import intToBytes
 from twisted.internet.defer import Deferred, gatherResults, maybeDeferred
 from twisted.internet import protocol, reactor, error, defer, interfaces, udp
 from twisted.python import runtime
@@ -297,8 +296,8 @@ class UDPTests(TestCase):
             client.transport.connect("127.0.0.1", 80)
 
             for i in range(10):
-                client.transport.write(intToBytes(i))
-                server.transport.write(intToBytes(i), ("127.0.0.1", 80))
+                client.transport.write(b'%d' % (i,))
+                server.transport.write(b'%d' % (i,), ("127.0.0.1", 80))
 
             return self.assertFailure(
                 connectionRefused,
@@ -386,12 +385,13 @@ class UDPTests(TestCase):
             if not attempts:
                 try:
                     self.fail("Not enough packets received")
-                except:
+                except Exception:
                     finalDeferred.errback()
 
-            self.failIfIdentical(client.transport, None, "UDP Protocol lost its transport")
+            self.failIfIdentical(client.transport, None,
+                                 "UDP Protocol lost its transport")
 
-            packet = intToBytes(attempts.pop(0))
+            packet = b'%d' % (attempts.pop(0),)
             packetDeferred = defer.Deferred()
             client.setDeferred(packetDeferred)
             client.transport.write(packet, (addr.host, addr.port))

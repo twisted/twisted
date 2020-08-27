@@ -23,7 +23,6 @@ from twisted.python import reflect, log
 from twisted.python.components import proxyForInterface
 from twisted.python.failure import Failure
 from twisted.python.util import untilConcludes
-from twisted.python.compat import items
 from twisted.trial import itrial, util
 
 try:
@@ -641,7 +640,7 @@ class Reporter(TestResult):
             outcome = content[1:]
             key = formatter(*outcome)
             groups.setdefault(key, []).append(case)
-        return items(groups)
+        return list(groups.items())
 
 
     def _printResults(self, flavor, errors, formatter):

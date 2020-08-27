@@ -8,7 +8,7 @@ File log observer.
 
 from zope.interface import implementer
 
-from twisted.python.compat import ioType, unicode
+from twisted.python.compat import ioType
 from ._observer import ILogObserver
 from ._format import formatTime
 from ._format import timeFormatRFC3339
@@ -31,7 +31,7 @@ class FileLogObserver:
         @type formatEvent: L{callable} that takes an C{event} argument and
             returns a formatted event as L{unicode}.
         """
-        if ioType(outFile) is not unicode:
+        if ioType(outFile) is not str:
             self._encoding = "utf-8"
         else:
             self._encoding = None

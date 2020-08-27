@@ -13,7 +13,6 @@ from functools import wraps
 
 from twisted.internet import protocol, defer
 from twisted.python import failure
-from twisted.python.compat import reraise
 
 from io import BytesIO
 
@@ -215,10 +214,10 @@ def runWithWarningsSuppressed(suppressedWarnings, f, *a, **kw):
     addedFilters = warnings.filters[:len(suppressedWarnings)]
     try:
         result = f(*a, **kw)
-    except:
+    except:  # noqa
         exc_info = sys.exc_info()
         _resetWarningFilters(None, addedFilters)
-        reraise(exc_info[1], exc_info[2])
+        raise exc_info[1].with_traceback(exc_info[2])
     else:
         if isinstance(result, defer.Deferred):
             result.addBoth(_resetWarningFilters, addedFilters)

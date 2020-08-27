@@ -29,7 +29,6 @@ else:
 from typing import (Callable, ClassVar, Mapping, MutableMapping, Sequence,
                     Union, Tuple, cast)
 
-from twisted.python.compat import unicode
 from incremental import Version
 from twisted.python.deprecate import deprecatedModuleAttribute
 
@@ -74,7 +73,7 @@ class InsensitiveDict(MutableMapping):
 
 
     def _lowerOrReturn(self, key):
-        if isinstance(key, bytes) or isinstance(key, unicode):
+        if isinstance(key, bytes) or isinstance(key, str):
             return key.lower()
         else:
             return key
@@ -109,7 +108,7 @@ class InsensitiveDict(MutableMapping):
 
     def _doPreserve(self, key):
         if not self.preserve and (isinstance(key, bytes)
-                                  or isinstance(key, unicode)):
+                                  or isinstance(key, str)):
             return key.lower()
         else:
             return key

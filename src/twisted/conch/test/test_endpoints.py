@@ -15,7 +15,7 @@ from zope.interface.verify import verifyObject, verifyClass
 from zope.interface import implementer
 
 from twisted.logger import globalLogPublisher, LogLevel
-from twisted.python.compat import iteritems, networkString
+from twisted.python.compat import networkString
 from twisted.python.failure import Failure
 from twisted.python.filepath import FilePath
 from twisted.python.log import msg
@@ -1056,8 +1056,7 @@ class NewConnectionTests(TestCase, SSHCommandClientEndpointTestsMixin):
             OpenSSH-formatted private keys.
         @type users: L{dict}
         """
-        mapping = dict([(k,[Key.fromString(v).public()])
-                        for k, v in iteritems(users)])
+        mapping = {k: [Key.fromString(v).public()] for k, v in users.items()}
         checker = SSHPublicKeyChecker(InMemorySSHKeyDB(mapping))
         portal.registerChecker(checker)
 

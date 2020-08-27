@@ -8,7 +8,6 @@ Tools for formatting logging events.
 
 from datetime import datetime as DateTime
 
-from twisted.python.compat import unicode
 from twisted.python.failure import Failure
 from twisted.python.reflect import safe_repr
 from twisted.python._tzhelper import FixedOffsetTimeZone
@@ -117,7 +116,7 @@ def formatTime(when, timeFormat=timeFormatRFC3339, default=u"-"):
     else:
         tz = FixedOffsetTimeZone.fromLocalTimeStamp(when)
         datetime = DateTime.fromtimestamp(when, tz)
-        return unicode(datetime.strftime(timeFormat))
+        return str(datetime.strftime(timeFormat))
 
 
 
@@ -234,7 +233,7 @@ def formatWithCall(formatString, mapping):
     @return: The string with formatted values interpolated.
     @rtype: L{unicode}
     """
-    return unicode(
+    return str(
         aFormatter.vformat(formatString, (), CallMapping(mapping))
     )
 
@@ -267,7 +266,7 @@ def _formatEvent(event):
         if isinstance(format, bytes):
             # If we get bytes, assume it's UTF-8 bytes
             format = format.decode("utf-8")
-        elif not isinstance(format, unicode):
+        elif not isinstance(format, str):
             raise TypeError(
                 "Log format must be unicode or bytes, not {0!r}".format(format)
             )
@@ -298,7 +297,7 @@ def _formatTraceback(failure):
             traceback = traceback.decode('utf-8', errors='replace')
     except BaseException as e:
         traceback = (
-            u"(UNABLE TO OBTAIN TRACEBACK FROM EVENT):" + unicode(e)
+            u"(UNABLE TO OBTAIN TRACEBACK FROM EVENT):" + str(e)
         )
     return traceback
 
@@ -331,7 +330,7 @@ def _formatSystem(event):
         )
     else:
         try:
-            system = unicode(system)
+            system = str(system)
         except Exception:
             system = u"UNFORMATTABLE"
     return system

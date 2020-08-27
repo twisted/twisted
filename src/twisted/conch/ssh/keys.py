@@ -32,7 +32,7 @@ from pyasn1.type import univ
 from twisted.conch.ssh import common, sexpy
 from twisted.conch.ssh.common import int_from_bytes, int_to_bytes
 from twisted.python import randbytes
-from twisted.python.compat import iterbytes, long, izip, nativeString, unicode
+from twisted.python.compat import iterbytes, nativeString
 from twisted.python.constants import NamedConstant, Names
 from twisted.python.deprecate import _mutuallyExclusiveArguments
 
@@ -132,7 +132,7 @@ def _normalizePassphrase(passphrase):
     @raises PassphraseNormalizationError: if the passphrase is Unicode and
     cannot be normalized using the available Unicode character database.
     """
-    if isinstance(passphrase, unicode):
+    if isinstance(passphrase, str):
         # The Normalization Process for Stabilized Strings requires aborting
         # with an error if the string contains any unassigned code point.
         if any(unicodedata.category(c) == 'Cn' for c in passphrase):
@@ -199,7 +199,7 @@ class Key:
         @rtype: L{Key}
         @return: The loaded key.
         """
-        if isinstance(data, unicode):
+        if isinstance(data, str):
             data = data.encode("utf-8")
         passphrase = _normalizePassphrase(passphrase)
         if type is None:
@@ -562,7 +562,7 @@ class Key:
                 raise BadKeyError('RSA key failed to decode properly')
 
             n, e, d, p, q, dmp1, dmq1, iqmp = [
-                long(value) for value in decodedKey[1:9]
+                int(value) for value in decodedKey[1:9]
                 ]
             return cls(
                 rsa.RSAPrivateNumbers(
@@ -576,7 +576,7 @@ class Key:
                 ).private_key(default_backend())
             )
         elif kind == b'DSA':
-            p, q, g, y, x = [long(value) for value in decodedKey[1: 6]]
+            p, q, g, y, x = [int(value) for value in decodedKey[1: 6]]
             if len(decodedKey) < 6:
                 raise BadKeyError('DSA key failed to decode properly')
             return cls(
@@ -1369,7 +1369,7 @@ class Key:
                 comment = extra
             else:
                 passphrase = extra
-        if isinstance(comment, unicode):
+        if isinstance(comment, str):
             comment = comment.encode("utf-8")
         passphrase = _normalizePassphrase(passphrase)
         method = getattr(self, '_toString_%s' % (type.upper(),), None)
@@ -1502,7 +1502,7 @@ class Key:
             objData = (0, data['p'], data['q'], data['g'], data['y'],
                        data['x'])
         asn1Sequence = univ.Sequence()
-        for index, value in izip(itertools.count(), objData):
+        for index, value in zip(itertools.count(), objData):
             asn1Sequence.setComponentByPosition(index, univ.Integer(value))
         asn1Data = berEncoder.encode(asn1Sequence)
         if passphrase:

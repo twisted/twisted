@@ -23,7 +23,6 @@ from twisted.internet import defer
 from twisted.mail import pop3
 from twisted.protocols import loopback
 from twisted.python import failure
-from twisted.python.compat import intToBytes
 from twisted.test.proto_helpers import LineSendingProtocol
 from twisted.trial import unittest, util
 import twisted.cred.checkers
@@ -335,19 +334,19 @@ Subject: urgent
 Someone set up us the bomb!
 '''
 
-    expectedOutput = (b'''\
+    expectedOutput = b'''\
 +OK <moshez>\015
 +OK Authentication succeeded\015
 +OK \015
 1 0\015
 .\015
-+OK ''' + intToBytes(len(message)) + b'''\015
++OK %d\015
 Subject: urgent\015
 \015
 Someone set up us the bomb!\015
 .\015
 +OK \015
-''')
+''' % (len(message),)
 
     def setUp(self):
         """
@@ -494,7 +493,7 @@ class DummyMailbox(pop3.Mailbox):
         """
         if i >= len(self.messages):
             raise self.exceptionType()
-        return intToBytes(i)
+        return b'%d' % (i,)
 
 
     def deleteMessage(self, i):

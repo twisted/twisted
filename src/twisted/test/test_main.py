@@ -7,11 +7,11 @@ Test that twisted scripts can be invoked as modules.
 
 
 import sys
+from io import StringIO
 
 from twisted.application.twist._options import TwistOptions
 from twisted.scripts import trial
 from twisted.internet import defer, reactor
-from twisted.python.compat import NativeStringIO as StringIO
 from twisted.test.test_process import Accumulator
 from twisted.trial.unittest import TestCase
 

@@ -11,7 +11,7 @@ VT102 and VT220 terminal manipulation.
 from zope.interface import implementer, Interface
 
 from twisted.internet import protocol, defer, interfaces as iinternet
-from twisted.python.compat import intToBytes, iterbytes, networkString
+from twisted.python.compat import iterbytes, networkString
 
 
 
@@ -708,33 +708,29 @@ class ServerProtocol(protocol.Protocol):
     def cursorUp(self, n=1):
         assert n >= 1
         self.cursorPos.y = max(self.cursorPos.y - n, 0)
-        self.write(b'\x1b[' + intToBytes(n) +  b'A')
+        self.write(b'\x1b[%dA' % (n,))
 
 
     def cursorDown(self, n=1):
         assert n >= 1
         self.cursorPos.y = min(self.cursorPos.y + n, self.termSize.y - 1)
-        self.write(b'\x1b[' + intToBytes(n) + b'B')
+        self.write(b'\x1b[%dB' % (n,))
 
 
     def cursorForward(self, n=1):
         assert n >= 1
         self.cursorPos.x = min(self.cursorPos.x + n, self.termSize.x - 1)
-        self.write(b'\x1b[' + intToBytes(n) + b'C')
+        self.write(b'\x1b[%dC' % (n,))
 
 
     def cursorBackward(self, n=1):
         assert n >= 1
         self.cursorPos.x = max(self.cursorPos.x - n, 0)
-        self.write(b'\x1b[' + intToBytes(n) + b'D')
+        self.write(b'\x1b[%dD' % (n,))
 
 
     def cursorPosition(self, column, line):
-        self.write(b'\x1b[' +
-                   intToBytes(line + 1)  +
-                   b';' +
-                   intToBytes(column + 1) +
-                   b'H')
+        self.write(b'\x1b[%d;%dH' % (line + 1, column + 1))
 
 
     def cursorHome(self):
@@ -772,23 +768,23 @@ class ServerProtocol(protocol.Protocol):
 
     def setModes(self, modes):
         # XXX Support ANSI-Compatible private modes
-        modesBytes = b';'.join([intToBytes(mode) for mode in modes])
+        modesBytes = b';'.join(b'%d' % (mode,) for mode in modes)
         self.write(b'\x1b[' + modesBytes + b'h')
 
 
     def setPrivateModes(self, modes):
-        modesBytes = b';'.join([intToBytes(mode) for mode in modes])
+        modesBytes = b';'.join(b'%d' % (mode,) for mode in modes)
         self.write(b'\x1b[?' + modesBytes + b'h')
 
 
     def resetModes(self, modes):
         # XXX Support ANSI-Compatible private modes
-        modesBytes = b';'.join([intToBytes(mode) for mode in modes])
+        modesBytes = b';'.join(b'%d' % (mode,) for mode in modes)
         self.write(b'\x1b[' + modesBytes + b'l')
 
 
     def resetPrivateModes(self, modes):
-        modesBytes = b';'.join([intToBytes(mode) for mode in modes])
+        modesBytes = b';'.join(b'%d' % (mode,) for mode in modes)
         self.write(b'\x1b[?' + modesBytes + b'l')
 
 
@@ -901,27 +897,27 @@ class ServerProtocol(protocol.Protocol):
 
 
     def deleteCharacter(self, n=1):
-        self.write(b'\x1b[' + intToBytes(n) + b'P')
+        self.write(b'\x1b[%dP' % (n,))
 
 
     def insertLine(self, n=1):
-        self.write(b'\x1b[' + intToBytes(n) + b'L')
+        self.write(b'\x1b[%dL' % (n,))
 
 
     def deleteLine(self, n=1):
-        self.write(b'\x1b[' + intToBytes(n) + b'M')
+        self.write(b'\x1b[%dM' % (n,))
 
 
     def setScrollRegion(self, first=None, last=None):
         if first is not None:
-            first = intToBytes(first)
+            first = b'%d' % (first,)
         else:
             first = b''
         if last is not None:
-            last = intToBytes(last)
+            last = b'%d' % (last,)
         else:
             last = b''
-        self.write(b'\x1b[' + first + b';' + last + b'r')
+        self.write(b'\x1b[%b;%br' % (first, last))
 
 
     def resetScrollRegion(self):
@@ -1246,11 +1242,7 @@ class ClientProtocol(protocol.Protocol):
         def n(self, proto, handler, buf):
             if buf == b'6':
                 x, y = handler.reportCursorPosition()
-                proto.transport.write(b'\x1b['
-                                      + intToBytes(x+1)
-                                      + b';'
-                                      + intToBytes(y+1)
-                                      + b'R')
+                proto.transport.write(b'\x1b[%d;%dR' % (x + 1, y + 1))
             else:
                 handler.unhandledControlSequence(b'\x1b[' + buf + b'n')
 

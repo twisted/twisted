@@ -7,7 +7,8 @@ An API for storing HTTP header names and values.
 """
 
 
-from twisted.python.compat import comparable, cmp, unicode
+from twisted.python.compat import comparable, cmp
+
 
 
 def _dashCapitalize(name):
@@ -108,7 +109,7 @@ class Headers:
         @return: C{name}, encoded if required, lowercased
         @rtype: L{bytes}
         """
-        if isinstance(name, unicode):
+        if isinstance(name, str):
             return name.lower().encode('iso-8859-1')
         return name.lower()
 
@@ -123,7 +124,7 @@ class Headers:
         @return: C{value}, encoded if required
         @rtype: L{bytes}
         """
-        if isinstance(value, unicode):
+        if isinstance(value, str):
             return value.encode('utf8')
         return value
 
@@ -260,7 +261,7 @@ class Headers:
         encodedName = self._encodeName(name)
         values = self._rawHeaders.get(encodedName, default)
 
-        if isinstance(name, unicode) and values is not default:
+        if isinstance(name, str) and values is not default:
             return self._decodeValues(values)
         return values
 

@@ -11,7 +11,6 @@ from hashlib import sha1
 from unittest import skipIf
 
 from twisted.internet import defer
-from twisted.python.compat import unicode
 from twisted.trial import unittest
 from twisted.words.protocols.jabber import client, error, jid, xmlstream
 from twisted.words.protocols.jabber.sasl import SASLInitiatingInitializer
@@ -149,9 +148,9 @@ class IQAuthInitializerTests(InitiatingInitializerHarness, unittest.TestCase):
             The server checks the credentials and responds with an empty result
             signalling success.
             """
-            self.assertEqual('user', unicode(iq.query.username))
-            self.assertEqual('secret', unicode(iq.query.password))
-            self.assertEqual('resource', unicode(iq.query.resource))
+            self.assertEqual('user', str(iq.query.username))
+            self.assertEqual('secret', str(iq.query.password))
+            self.assertEqual('resource', str(iq.query.resource))
 
             # Send server response
             response = xmlstream.toResponse(iq, 'result')
@@ -205,10 +204,10 @@ class IQAuthInitializerTests(InitiatingInitializerHarness, unittest.TestCase):
             The server checks the credentials and responds with an empty result
             signalling success.
             """
-            self.assertEqual('user', unicode(iq.query.username))
+            self.assertEqual('user', str(iq.query.username))
             self.assertEqual(sha1(b'12345secret').hexdigest(),
-                              unicode(iq.query.digest))
-            self.assertEqual('resource', unicode(iq.query.resource))
+                             str(iq.query.digest))
+            self.assertEqual('resource', str(iq.query.resource))
 
             # Send server response
             response = xmlstream.toResponse(iq, 'result')

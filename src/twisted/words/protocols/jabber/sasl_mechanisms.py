@@ -16,7 +16,8 @@ from hashlib import md5
 
 from zope.interface import Interface, Attribute, implementer
 
-from twisted.python.compat import iteritems, networkString
+from twisted.python.compat import networkString
+
 
 
 class ISASLMechanism(Interface):
@@ -220,7 +221,7 @@ class DigestMD5:
         """
 
         directive_list = []
-        for name, value in iteritems(directives):
+        for name, value in directives.items():
             if name in (b'username', b'realm', b'cnonce',
                         b'nonce', b'digest-uri', b'authzid', b'cipher'):
                 directive = name + b'=' + value

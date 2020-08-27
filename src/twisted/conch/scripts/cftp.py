@@ -21,7 +21,6 @@ from twisted.conch.client import connect, default, options
 from twisted.conch.ssh import connection, common
 from twisted.conch.ssh import channel, filetransfer
 from twisted.protocols import basic
-from twisted.python.compat import unicode
 from twisted.internet import reactor, stdio, defer, utils
 from twisted.python import log, usage, failure
 from twisted.python.filepath import FilePath
@@ -171,7 +170,7 @@ class StdioClient(basic.LineReceiver):
         self._newLine()
 
     def _writeToTransport(self, msg):
-        if isinstance(msg, unicode):
+        if isinstance(msg, str):
             msg = msg.encode("utf-8")
         return self.transport.write(msg)
 
@@ -247,7 +246,7 @@ class StdioClient(basic.LineReceiver):
 
     def _cbCommand(self, result):
         if result is not None:
-            if isinstance(result, unicode):
+            if isinstance(result, str):
                 result = result.encode("utf-8")
             self._writeToTransport(result)
             if not result.endswith(b'\n'):
@@ -541,7 +540,7 @@ class StdioClient(basic.LineReceiver):
         if isinstance(previousResult, failure.Failure):
             self._printFailure(previousResult)
         elif previousResult:
-            if isinstance(previousResult, unicode):
+            if isinstance(previousResult, str):
                 previousResult = previousResult.encode("utf-8")
             self._writeToTransport(previousResult)
             if not previousResult.endswith(b'\n'):
@@ -732,7 +731,7 @@ class StdioClient(basic.LineReceiver):
 
     def cmd_VERSION(self, ignored):
         version = "SFTP version %i" % self.client.version
-        if isinstance(version, unicode):
+        if isinstance(version, str):
             version = version.encode("utf-8")
         return version
 

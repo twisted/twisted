@@ -71,7 +71,7 @@ import datetime
 from zope.interface import implementer
 
 # Twisted Imports
-from twisted.python.compat import unicode, long, nativeString
+from twisted.python.compat import nativeString
 from twisted.python.reflect import namedObject, qual, namedAny
 from twisted.persisted.crefutil import NotKnown, _Tuple, _InstanceMethod
 from twisted.persisted.crefutil import _DictKeyAndValue, _Dereference
@@ -82,12 +82,6 @@ from twisted.spread.interfaces import IJellyable, IUnjellyable
 from twisted.python.deprecate import deprecatedModuleAttribute
 from incremental import Version
 
-
-# On Python 3 and higher, ClassType and InstanceType
-# are gone.  Use an empty tuple to pass to isinstance()
-# tests without throwing an exception.
-_OldStyleClass = ()
-_OldStyleInstance = ()
 
 _SetTypes = [set]
 _ImmutableSetTypes = [frozenset]
@@ -144,9 +138,9 @@ unjellyableFactoryRegistry = {}
 
 def _createBlank(cls):
     """
-    Given an object, if that object is a type (or a legacy old-style class),
-    return a new, blank instance of that type which has not had C{__init__}
-    called on it.  If the object is not a type, return C{None}.
+    Given an object, if that object is a type, return a new, blank instance
+    of that type which has not had C{__init__} called on it.  If the object
+    is not a type, return L{None}.
 
     @param cls: The type (or class) to create an instance of.
     @type cls: L{type} or something else that cannot be
@@ -162,7 +156,6 @@ def _createBlank(cls):
 def _newInstance(cls, state):
     """
     Make a new instance of a class without calling its __init__ method.
-    Supports both new- and old-style classes.
 
     @param state: A C{dict} used to update C{inst.__dict__} either directly or
         via C{__setstate__}, if available.
@@ -462,10 +455,8 @@ class _Jellier:
             self.preserved[id(object)] = sexp
         return sexp
 
-    constantTypes = {bytes: 1, unicode: 1, int: 1, float: 1, long: 1}
 
-
-    def _checkMutable(self,obj):
+    def _checkMutable(self, obj):
         objId = id(obj)
         if objId in self.cooked:
             return self.cooked[objId]
@@ -483,7 +474,7 @@ class _Jellier:
         objType = type(obj)
         if self.taster.isTypeAllowed(qual(objType).encode('utf-8')):
             # "Immutable" Types
-            if objType in (bytes, int, long, float):
+            if objType in (bytes, int, float):
                 return obj
             elif isinstance(obj, types.MethodType):
                 aSelf = obj.__self__
@@ -491,7 +482,7 @@ class _Jellier:
                 aClass = aSelf.__class__
                 return [b"method", aFunc.__name__, self.jelly(aSelf),
                         self.jelly(aClass)]
-            elif objType is unicode:
+            elif objType is str:
                 return [b'unicode', obj.encode('UTF-8')]
             elif isinstance(obj, type(None)):
                 return [b'None']
@@ -505,7 +496,7 @@ class _Jellier:
                 if obj.tzinfo:
                     raise NotImplementedError(
                         "Currently can't jelly datetime objects with tzinfo")
-                return [b'datetime', ' '.join([unicode(x) for x in (
+                return [b'datetime', ' '.join([str(x) for x in (
                     obj.year, obj.month, obj.day, obj.hour,
                     obj.minute, obj.second, obj.microsecond)]
                 ).encode('utf-8')]
@@ -513,16 +504,16 @@ class _Jellier:
                 if obj.tzinfo:
                     raise NotImplementedError(
                         "Currently can't jelly datetime objects with tzinfo")
-                return [b'time', ' '.join([unicode(x) for x in (
+                return [b'time', ' '.join([str(x) for x in (
                     obj.hour, obj.minute, obj.second, obj.microsecond)]
                 ).encode('utf-8')]
             elif objType is datetime.date:
-                return [b'date', ' '.join([unicode(x) for x in (
+                return [b'date', ' '.join([str(x) for x in (
                     obj.year, obj.month, obj.day)]).encode('utf-8')]
             elif objType is datetime.timedelta:
-                return [b'timedelta', ' '.join([unicode(x) for x in (
+                return [b'timedelta', ' '.join([str(x) for x in (
                     obj.days, obj.seconds, obj.microseconds)]).encode('utf-8')]
-            elif issubclass(objType, (type, _OldStyleClass)):
+            elif issubclass(objType, type):
                 return [b'class', qual(obj).encode('utf-8')]
             elif objType is decimal.Decimal:
                 return self.jelly_decimal(obj)
@@ -565,9 +556,6 @@ class _Jellier:
                             qual(obj.__class__), sxp)
                 return self.preserve(obj, sxp)
         else:
-            if objType is _OldStyleInstance:
-                raise InsecureJelly("Class not allowed for instance: %s %s" %
-                                    (obj.__class__, obj))
             raise InsecureJelly("Type not allowed for object: %s %s" %
                                 (objType, obj))
 
@@ -615,7 +603,7 @@ class _Jellier:
         if sxp is None:
             sxp = []
         sxp.append(unpersistable_atom)
-        if isinstance(reason, unicode):
+        if isinstance(reason, str):
             reason = reason.encode("utf-8")
         sxp.append(reason)
         return sxp
@@ -690,7 +678,7 @@ class _Unjellier:
         is nonetheless allowed.
 
         @param cls: the class of the instance we are unjellying.
-        @type cls: L{_OldStyleClass} or L{type}
+        @type cls: L{type}
 
         @param state: The jellied representation of the object's state; its
             C{__dict__} unless it has a C{__setstate__} that takes something
@@ -707,7 +695,7 @@ class _Unjellier:
 
 
     def _unjelly_unicode(self, exp):
-        return unicode(exp[0], "UTF-8")
+        return str(exp[0], "UTF-8")
 
 
     def _unjelly_decimal(self, exp):
@@ -866,7 +854,7 @@ class _Unjellier:
             raise InsecureJelly("module %s not allowed" % modName)
         klaus = namedObject(cname)
         objType = type(klaus)
-        if objType not in (_OldStyleClass, type):
+        if objType is not type:
             raise InsecureJelly(
                 "class %r unjellied to something that isn't a class: %r" % (
                     cname, klaus))
@@ -924,7 +912,7 @@ class _Unjellier:
         im_name = rest[0]
         im_self = self.unjelly(rest[1])
         im_class = self.unjelly(rest[2])
-        if not isinstance(im_class, (type, _OldStyleClass)):
+        if not isinstance(im_class, type):
             raise InsecureJelly("Method found with non-class class.")
         if im_name in im_class.__dict__:
             if im_self is None:
@@ -1022,7 +1010,7 @@ class SecurityOptions:
         name.
         """
         for typ in types:
-            if isinstance(typ, unicode):
+            if isinstance(typ, str):
                 typ = typ.encode('utf-8')
             if not isinstance(typ, bytes):
                 typ = qual(typ)

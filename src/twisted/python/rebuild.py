@@ -23,24 +23,6 @@ from twisted.python import log, reflect
 
 lastRebuild = time.time()
 
-def _isClassType(t):
-    """
-    Compare to types.ClassType in a py2/3-compatible way
-
-    Python 2 used comparison to types.ClassType to check for old-style
-    classes Python 3 has no concept of old-style classes, so if
-    ClassType doesn't exist, it can't be an old-style class - return
-    False in that case.
-
-    Note that the type() of new-style classes is NOT ClassType, and
-    so this should return False for new-style classes in python 2
-    as well.
-    """
-    _ClassType = getattr(types, 'ClassType', None)
-    if _ClassType is None:
-        return False
-    return t == _ClassType
-
 
 
 class Sensitive:
@@ -77,8 +59,6 @@ class Sensitive:
                 return getattr(anObject.im_class, anObject.__name__)
             else:
                 return getattr(anObject.__self__, anObject.__name__)
-        elif _isClassType(t):
-            return latestClass(anObject)
         else:
             log.msg('warning returning anObject!')
             return anObject
@@ -111,20 +91,16 @@ def latestClass(oldClass):
     newClass = getattr(module, oldClass.__name__)
     newBases = [latestClass(base) for base in newClass.__bases__]
 
+    if newClass.__module__ == "builtins":
+        # builtin members can't be reloaded sanely
+        return newClass
+
     try:
         # This makes old-style stuff work
         newClass.__bases__ = tuple(newBases)
         return newClass
     except TypeError:
-        if newClass.__module__ in ("__builtin__", "builtins"):
-            # __builtin__ members can't be reloaded sanely
-            return newClass
-
         ctor = type(newClass)
-        # The value of type(newClass) is the metaclass
-        # in both Python 2 and 3, except if it was old-style.
-        if _isClassType(ctor):
-            ctor = getattr(newClass, '__metaclass__', type)
         return ctor(newClass.__name__, tuple(newBases),
                     dict(newClass.__dict__))
 
@@ -185,16 +161,7 @@ def rebuild(module, doLog=1):
     if doLog:
         log.msg('  (scanning {}): '.format(str(module.__name__)))
     for k, v in d.items():
-        if _isClassType(type(v)):
-            # ClassType exists on Python 2.x and earlier.
-            # Failure condition -- instances of classes with buggy
-            # __hash__/__cmp__ methods referenced at the module level...
-            if v.__module__ == module.__name__:
-                classes[v] = 1
-                if doLog:
-                    log.logfile.write("c")
-                    log.logfile.flush()
-        elif type(v) == types.FunctionType:
+        if issubclass(type(v), types.FunctionType):
             if v.__globals__ is module.__dict__:
                 functions[v] = 1
                 if doLog:
@@ -276,25 +243,13 @@ def rebuild(module, doLog=1):
             except Exception:
                 continue
             if fromOldModule(v):
-                if _isClassType(type(v)):
-                    if doLog:
-                        log.logfile.write("c")
-                        log.logfile.flush()
-                    nv = latestClass(v)
-                else:
-                    if doLog:
-                        log.logfile.write("f")
-                        log.logfile.flush()
-                    nv = latestFunction(v)
+                if doLog:
+                    log.logfile.write("f")
+                    log.logfile.flush()
+                nv = latestFunction(v)
                 changed = 1
                 setattr(mod, k, nv)
-            else:
-                # Replace bases of non-module classes just to be sure.
-                if _isClassType(type(v)):
-                    for base in v.__bases__:
-                        if fromOldModule(base):
-                            latestClass(v)
-        if doLog and not changed and ((modcount % 10) == 0) :
+        if doLog and not changed and ((modcount % 10) == 0):
             log.logfile.write(".")
             log.logfile.flush()
 

@@ -56,7 +56,6 @@ from twisted.internet import protocol, reactor, task
 from twisted.persisted import styles
 from twisted.protocols import basic
 from twisted.python import _textattributes, log, reflect
-from twisted.python.compat import unicode
 
 NUL = chr(0)
 CR = chr(0o15)
@@ -273,7 +272,7 @@ class IRC(protocol.Protocol):
 
     def sendLine(self, line):
         line = line + CR + LF
-        if isinstance(line, unicode):
+        if isinstance(line, str):
             useEncoding = self.encoding if self.encoding else "utf-8"
             line = line.encode(useEncoding)
         self.transport.write(line)
@@ -1229,7 +1228,7 @@ class IRCClient(basic.LineReceiver):
 
     def _reallySendLine(self, line):
         quoteLine = lowQuote(line)
-        if isinstance(quoteLine, unicode):
+        if isinstance(quoteLine, str):
             quoteLine = quoteLine.encode("utf-8")
         quoteLine += b'\r'
         return basic.LineReceiver.sendLine(self, quoteLine)
@@ -2635,7 +2634,7 @@ class IRCClient(basic.LineReceiver):
             self.register(self.nickname)
 
     def dataReceived(self, data):
-        if isinstance(data, unicode):
+        if isinstance(data, str):
             data = data.encode("utf-8")
         data = data.replace(b'\r', b'')
         basic.LineReceiver.dataReceived(self, data)

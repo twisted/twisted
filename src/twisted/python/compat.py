@@ -26,7 +26,6 @@ import inspect
 import os
 import platform
 import socket
-import struct
 import sys
 import urllib.parse as urllib_parse
 import warnings
@@ -42,6 +41,10 @@ from types import MethodType as _MethodType
 from urllib.parse import quote as urlquote
 from urllib.parse import unquote as urlunquote
 
+from incremental import Version
+
+from twisted.python.deprecate import deprecated, deprecatedModuleAttribute
+
 
 if sys.version_info >= (3, 7, 0):
     _PY37PLUS = True
@@ -54,20 +57,80 @@ else:
     _PYPY = False
 
 FileType = IOBase
+deprecatedModuleAttribute(
+    Version('Twisted', 'NEXT', 0, 0),
+    "Obsolete alias for io.IOBase",
+    __name__, 'FileType')
+
 frozenset = frozenset
+deprecatedModuleAttribute(
+    Version('Twisted', 'NEXT', 0, 0),
+    "Obsolete alias for frozenset builtin type",
+    __name__, 'frozenset')
+
 InstanceType = object
+deprecatedModuleAttribute(
+    Version('Twisted', 'NEXT', 0, 0),
+    "Old-style classes don't exist in Python 3",
+    __name__, 'InstanceType')
+
 izip = zip
+deprecatedModuleAttribute(
+    Version('Twisted', 'NEXT', 0, 0),
+    "Obsolete alias for zip() builtin",
+    __name__, 'izip')
+
 long = int
+deprecatedModuleAttribute(
+    Version('Twisted', 'NEXT', 0, 0),
+    "Obsolete alias for int builtin type",
+    __name__, 'long')
+
 range = range
+deprecatedModuleAttribute(
+    Version('Twisted', 'NEXT', 0, 0),
+    "Obsolete alias for range() builtin",
+    __name__, 'range')
+
 raw_input = input
+deprecatedModuleAttribute(
+    Version('Twisted', 'NEXT', 0, 0),
+    "Obsolete alias for input() builtin",
+    __name__, 'raw_input')
+
 set = set
+deprecatedModuleAttribute(
+    Version('Twisted', 'NEXT', 0, 0),
+    "Obsolete alias for set builtin type",
+    __name__, 'set')
+
 StringType = str
+deprecatedModuleAttribute(
+    Version('Twisted', 'NEXT', 0, 0),
+    "Obsolete alias for str builtin type",
+    __name__, 'StringType')
+
 unichr = chr
+deprecatedModuleAttribute(
+    Version('Twisted', 'NEXT', 0, 0),
+    "Obsolete alias for chr() builtin",
+    __name__, 'unichr')
+
 unicode = str
+deprecatedModuleAttribute(
+    Version('Twisted', 'NEXT', 0, 0),
+    "Obsolete alias for str builtin type",
+    __name__, 'unicode')
+
 xrange = range
+deprecatedModuleAttribute(
+    Version('Twisted', 'NEXT', 0, 0),
+    "Obsolete alias for range() builtin",
+    __name__, 'xrange')
 
 
 
+@deprecated(Version('Twisted', 'NEXT', 0, 0), replacement="d.items()")
 def iteritems(d):
     """
     Return an iterable of the items of C{d}.
@@ -79,6 +142,7 @@ def iteritems(d):
 
 
 
+@deprecated(Version('Twisted', 'NEXT', 0, 0), replacement="d.values()")
 def itervalues(d):
     """
     Return an iterable of the values of C{d}.
@@ -90,6 +154,7 @@ def itervalues(d):
 
 
 
+@deprecated(Version('Twisted', 'NEXT', 0, 0), replacement="list(d.items())")
 def items(d):
     """
     Return a list of the items of C{d}.
@@ -214,7 +279,7 @@ def comparable(klass):
 
 
 
-def ioType(fileIshObject, default=unicode):
+def ioType(fileIshObject, default=str):
     """
     Determine the type which will be returned from the given file object's
     read() and accepted by its write() method as an argument.
@@ -246,7 +311,7 @@ def ioType(fileIshObject, default=unicode):
     """
     if isinstance(fileIshObject, TextIOBase):
         # If it's for text I/O, then it's for text I/O.
-        return unicode
+        return str
     if isinstance(fileIshObject, IOBase):
         # If it's for I/O but it's _not_ for text I/O, it's for bytes I/O.
         return bytes
@@ -254,9 +319,9 @@ def ioType(fileIshObject, default=unicode):
     import codecs
     if isinstance(fileIshObject, (codecs.StreamReader, codecs.StreamWriter)):
         # On StreamReaderWriter, the 'encoding' attribute has special meaning;
-        # it is unambiguously unicode.
+        # it is unambiguously text.
         if encoding:
-            return unicode
+            return str
         else:
             return bytes
     return default
@@ -271,8 +336,8 @@ def nativeString(s):
     @raise UnicodeError: The input string is not ASCII encodable/decodable.
     @raise TypeError: The input is neither C{bytes} nor C{unicode}.
     """
-    if not isinstance(s, (bytes, unicode)):
-        raise TypeError("%r is neither bytes nor unicode" % s)
+    if not isinstance(s, (bytes, str)):
+        raise TypeError("%r is neither bytes nor str" % s)
     if isinstance(s, bytes):
         return s.decode("ascii")
     else:
@@ -314,6 +379,8 @@ def _matchingString(constantString, inputString):
 
 
 
+@deprecated(Version('Twisted', 'NEXT', 0, 0),
+            replacement="raise exception.with_traceback(traceback)")
 def reraise(exception, traceback):
     """
     Re-raise an exception, with an optional traceback.
@@ -344,17 +411,15 @@ def iterbytes(originalBytes):
 
 
 
-def intToBytes(i):
+@deprecated(Version('Twisted', 'NEXT', 0, 0), replacement="b'%d'")
+def intToBytes(i: int) -> bytes:
     """
     Convert the given integer into C{bytes}, as ASCII-encoded Arab numeral.
-
-    In other words, this is equivalent to calling C{bytes} in Python 2 on an
-    integer.
 
     @param i: The C{int} to convert to C{bytes}.
     @rtype: C{bytes}
     """
-    return ("%d" % i).encode("ascii")
+    return b"%d" % (i,)
 
 
 
@@ -380,30 +445,30 @@ def lazyByteSlice(object, offset=0, size=None):
 
 
 
-def networkString(s):
+def networkString(s: str) -> bytes:
     """
-    Convert the native string type to L{bytes} if it is not already L{bytes}
-    using ASCII encoding if conversion is necessary.
+    Convert a string to L{bytes} using ASCII encoding.
 
     This is useful for sending text-like bytes that are constructed using
     string interpolation.  For example::
 
         networkString("Hello %d" % (n,))
 
-    @param s: A native string to convert to bytes if necessary.
+    @param s: A string to convert to bytes.
     @type s: L{str}
 
-    @raise UnicodeError: The input string is not ASCII encodable/decodable.
-    @raise TypeError: The input is neither L{bytes} nor L{unicode}.
+    @raise UnicodeError: The input string is not ASCII encodable.
+    @raise TypeError: The input is not L{str}.
 
     @rtype: L{bytes}
     """
-    if not isinstance(s, unicode):
-        raise TypeError("Can only convert text to bytes on Python 3")
+    if not isinstance(s, str):
+        raise TypeError("Can only convert strings to bytes")
     return s.encode('ascii')
 
 
 
+@deprecated(Version('Twisted', 'NEXT', 0, 0), replacement="os.environb")
 def bytesEnviron():
     """
     Return a L{dict} of L{os.environ} where all text-strings are encoded into
@@ -500,6 +565,53 @@ _pypy3BlockingHack()
 
 
 
+deprecatedModuleAttribute(
+    Version('Twisted', 'NEXT', 0, 0),
+    "Use functools.reduce() directly",
+    __name__, 'reduce')
+
+deprecatedModuleAttribute(
+    Version('Twisted', 'NEXT', 0, 0),
+    "Use io.StringIO directly",
+    __name__, 'NativeStringIO')
+
+deprecatedModuleAttribute(
+    Version('Twisted', 'NEXT', 0, 0),
+    "Import urllib.parse directly",
+    __name__, 'urllib_parse')
+
+deprecatedModuleAttribute(
+    Version('Twisted', 'NEXT', 0, 0),
+    "Use html.escape directly",
+    __name__, 'escape')
+
+deprecatedModuleAttribute(
+    Version('Twisted', 'NEXT', 0, 0),
+    "Use urllib.parse.quote() directly",
+    __name__, 'urlquote')
+
+deprecatedModuleAttribute(
+    Version('Twisted', 'NEXT', 0, 0),
+    "Use urllib.parse.unquote() directly",
+    __name__, 'urlunquote')
+
+deprecatedModuleAttribute(
+    Version('Twisted', 'NEXT', 0, 0),
+    "Use http.cookiejar directly",
+    __name__, 'cookielib')
+
+deprecatedModuleAttribute(
+    Version('Twisted', 'NEXT', 0, 0),
+    "Use sys.intern() directly",
+    __name__, 'intern')
+
+deprecatedModuleAttribute(
+    Version('Twisted', 'NEXT', 0, 0),
+    "Use collections.abc.Sequence directly",
+    __name__, 'Sequence')
+
+
+
 __all__ = [
     "reraise",
     "execfile",
@@ -508,7 +620,6 @@ __all__ = [
     "set",
     "cmp",
     "comparable",
-    "OrderedDict",
     "nativeString",
     "NativeStringIO",
     "networkString",

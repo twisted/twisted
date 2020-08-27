@@ -7,8 +7,8 @@ Tests for  XML-RPC support in L{twisted.web.xmlrpc}.
 """
 
 
-from twisted.python.compat import nativeString, networkString, NativeStringIO
-from io import BytesIO
+from twisted.python.compat import nativeString, networkString
+from io import BytesIO, StringIO
 from unittest import skipIf
 
 import datetime
@@ -42,7 +42,7 @@ class AsyncXMLRPCTests(unittest.TestCase):
     def setUp(self):
         self.request = DummyRequest([''])
         self.request.method = 'POST'
-        self.request.content = NativeStringIO(
+        self.request.content = StringIO(
             payloadTemplate % ('async', xmlrpclib.dumps(())))
 
         result = self.result = defer.Deferred()
@@ -909,8 +909,9 @@ class XMLRPCWithRequestTests(unittest.TestCase):
         """
         request = DummyRequest('/RPC2')
         request.method = "POST"
-        request.content = NativeStringIO(xmlrpclib.dumps(
+        request.content = StringIO(xmlrpclib.dumps(
             ("foo",), 'withRequest'))
+
         def valid(n, request):
             data = xmlrpclib.loads(request.written[0])
             self.assertEqual(data, (('POST foo',), None))

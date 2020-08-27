@@ -12,7 +12,7 @@ from hashlib import sha1, sha256, sha384, sha512
 from zope.interface import Attribute, implementer, Interface
 
 from twisted.conch import error
-from twisted.python.compat import long
+
 
 
 class _IKexAlgorithm(Interface):
@@ -38,11 +38,11 @@ class _IFixedGroupKexAlgorithm(_IKexAlgorithm):
     """
 
     prime = Attribute(
-        "A L{long} giving the prime number used in Diffie-Hellman key "
+        "An L{int} giving the prime number used in Diffie-Hellman key "
         "exchange, or L{None} if not applicable.")
 
     generator = Attribute(
-        "A L{long} giving the generator number used in Diffie-Hellman key "
+        "An L{int} giving the generator number used in Diffie-Hellman key "
         "exchange, or L{None} if not applicable. (This is not related to "
         "Python generator functions.)")
 
@@ -155,16 +155,17 @@ class _DHGroup14SHA1:
     preference = 8
     hashProcessor = sha1
     # Diffie-Hellman primes from Oakley Group 14 (RFC 3526, 3).
-    prime = long('32317006071311007300338913926423828248817941241140239112842'
-        '00975140074170663435422261968941736356934711790173790970419175460587'
-        '32091950288537589861856221532121754125149017745202702357960782362488'
-        '84246189477587641105928646099411723245426622522193230540919037680524'
-        '23551912567971587011700105805587765103886184728025797605490356973256'
-        '15261670813393617995413364765591603683178967290731783845896806396719'
-        '00977202194168647225871031411336429319536193471636533209717077448227'
-        '98858856536920864529663607725026895550592836275112117409697299806841'
-        '05543595848665832916421362182310789909994486524682624169720359118525'
-        '07045361090559')
+    prime = int('323170060713110073003389139264238282488179412411402391128420'
+                '097514007417066343542226196894173635693471179017379097041917'
+                '546058732091950288537589861856221532121754125149017745202702'
+                '357960782362488842461894775876411059286460994117232454266225'
+                '221932305409190376805242355191256797158701170010580558776510'
+                '388618472802579760549035697325615261670813393617995413364765'
+                '591603683178967290731783845896806396719009772021941686472258'
+                '710314113364293195361934716365332097170774482279885885653692'
+                '086452966360772502689555059283627511211740969729980684105543'
+                '595848665832916421362182310789909994486524682624169720359118'
+                '52507045361090559')
     generator = 2
 
 
@@ -255,7 +256,7 @@ def getDHGeneratorAndPrime(kexAlgorithm):
     @param kexAlgorithm: The key exchange algorithm name.
     @type kexAlgorithm: L{bytes}
 
-    @return: A L{tuple} containing L{long} generator and L{long} prime.
+    @return: A L{tuple} containing L{int} generator and L{int} prime.
     @rtype: L{tuple}
     """
     kex = getKex(kexAlgorithm)

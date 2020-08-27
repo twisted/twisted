@@ -287,7 +287,7 @@ class SSHUserAuthClientTests(TestCase):
             self.assertEqual(prompt, "raw_input prompt")
             return "raw_input"
 
-        self.patch(default, 'raw_input', raw_input)
+        self.patch(default, '_input', raw_input)
         d = client.getGenericAnswers(
             b"Name", b"Instruction", [
                 (b"pass prompt", False), (b"raw_input prompt", True)])

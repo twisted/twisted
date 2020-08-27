@@ -19,8 +19,10 @@ __all__ = [
     ]
 
 
+from collections.abc import Sequence
+
 from twisted.web._responses import RESPONSES
-from twisted.python.compat import unicode, nativeString, intToBytes, Sequence
+from twisted.python.compat import nativeString
 
 
 
@@ -78,7 +80,7 @@ class Error(Exception):
             # If we're given an int, convert it to a bytestring
             # downloadPage gives a bytes, Agent gives an int, and it worked by
             # accident previously, so just make it keep working.
-            code = intToBytes(code)
+            code = b'%d' % (code,)
 
         self.status = code
         self.message = message
@@ -340,14 +342,14 @@ class FlattenerError(Exception):
         # only for an isinstance() check.
         from twisted.web.template import Tag
 
-        if isinstance(obj, (bytes, str, unicode)):
+        if isinstance(obj, (bytes, str)):
             # It's somewhat unlikely that there will ever be a str in the roots
             # list.  However, something like a MemoryError during a str.replace
             # call (eg, replacing " with &quot;) could possibly cause this.
             # Likewise, UTF-8 encoding a unicode string to a byte string might
             # fail like this.
             if len(obj) > 40:
-                if isinstance(obj, unicode):
+                if isinstance(obj, str):
                     ellipsis = u'<...>'
                 else:
                     ellipsis = b'<...>'

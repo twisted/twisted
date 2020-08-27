@@ -30,7 +30,7 @@ from twisted.internet.error import ConnectionRefusedError
 from twisted.internet.defer import Deferred, gatherResults, succeed
 from twisted.protocols.policies import WrappingFactory
 from twisted.python import failure, log
-from twisted.python.compat import iterbytes, range
+from twisted.python.compat import iterbytes
 from twisted.cred.error import UnauthorizedLogin, UnhandledCredentials
 from twisted.cred import portal, checkers, credentials
 

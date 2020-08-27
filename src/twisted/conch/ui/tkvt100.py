@@ -86,13 +86,16 @@ class VT100Frame(Tkinter.Frame):
         if items:
             [self.canvas.delete(item) for item in items]
         if bg:
-            self.canvas.create_rectangle(canvasX, canvasY, canvasX+fontWidth-1, canvasY+fontHeight-1, fill=bg, outline=bg)
-        self.canvas.create_text(canvasX, canvasY, anchor=Tkinter.NW, font=ttyFont, text=ch, fill=fg)
-        self.x+=1
-            
+            self.canvas.create_rectangle(
+                canvasX, canvasY,
+                canvasX + fontWidth - 1, canvasY+fontHeight - 1,
+                fill=bg, outline=bg)
+        self.canvas.create_text(
+            canvasX, canvasY, anchor=Tkinter.NW, font=ttyFont, text=ch,
+            fill=fg)
+        self.x += 1
+
     def write(self, data):
-        #print self.x,self.y,repr(data)
-        #if len(data)>5: raw_input()
         self.ansiParser.parseString(data)
         self.canvas.delete(self.cursor)
         canvasX = self.x*fontWidth + 1

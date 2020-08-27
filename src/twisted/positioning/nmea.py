@@ -22,6 +22,7 @@ U{http://www.nmea.org/content/nmea_standards/nmea_0183_v_410.asp}.
 
 import operator
 import datetime
+from functools import reduce
 
 from zope.interface import implementer
 from constantly import Values, ValueConstant
@@ -29,7 +30,8 @@ from constantly import Values, ValueConstant
 from twisted.positioning import base, ipositioning, _sentence
 from twisted.positioning.base import Angles
 from twisted.protocols.basic import LineReceiver
-from twisted.python.compat import reduce, izip, nativeString, iterbytes
+from twisted.python.compat import nativeString, iterbytes
+
 
 
 class GPGGAFixQualities(Values):
@@ -199,7 +201,7 @@ class NMEAProtocol(LineReceiver, _sentence._PositioningSentenceProducerMixin):
             raise ValueError("unknown sentence type %s" % sentenceType)
 
         sentenceData = {"type": sentenceType}
-        for key, value in izip(keys, contents):
+        for key, value in zip(keys, contents):
             if key is not None and value != "":
                 sentenceData[key] = value
 

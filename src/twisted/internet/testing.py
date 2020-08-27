@@ -7,6 +7,7 @@ Assorted functionality which is commonly useful when writing unit tests.
 """
 
 
+from collections.abc import Sequence
 from io import BytesIO
 from socket import AF_INET, AF_INET6
 from typing import Any, Callable
@@ -15,7 +16,6 @@ from zope.interface import implementer, implementedBy
 from zope.interface.verify import verifyClass
 
 from twisted.python import failure
-from twisted.python.compat import unicode, intToBytes, Sequence
 from twisted.internet.defer import Deferred
 from twisted.internet.interfaces import (
     ITransport, IConsumer, IPushProducer, IConnector,
@@ -230,8 +230,8 @@ class StringTransport:
 
     # ITransport
     def write(self, data):
-        if isinstance(data, unicode):  # no, really, I mean it
-            raise TypeError("Data must not be unicode")
+        if isinstance(data, str):  # no, really, I mean it
+            raise TypeError("Data must not be string")
         self.io.write(data)
 
 
@@ -908,7 +908,7 @@ class NonStreamingProducer:
         if self.consumer is None or self.counter >= 10:
             raise RuntimeError("BUG: resume after unregister/stop.")
         else:
-            self.consumer.write(intToBytes(self.counter))
+            self.consumer.write(b'%d' % (self.counter,))
             self.counter += 1
             if self.counter == 10:
                 self.consumer.unregisterProducer()

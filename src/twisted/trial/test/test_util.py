@@ -9,10 +9,10 @@ Tests for L{twisted.trial.util}
 
 import os
 import sys
+from io import StringIO
 
 from zope.interface import implementer
 
-from twisted.python.compat import NativeStringIO
 from twisted.python import filepath
 from twisted.internet.interfaces import IProcessTransport
 from twisted.internet import defer
@@ -534,7 +534,7 @@ class RemoveSafelyTests(SynchronousTestCase):
             raise OSError()
 
         # Patch stdout so we can check the print statements in _removeSafely
-        out = NativeStringIO()
+        out = StringIO()
         self.patch(sys, 'stdout', out)
 
         # Set up a trial directory with a _trial_marker
@@ -570,7 +570,7 @@ class RemoveSafelyTests(SynchronousTestCase):
             raise OSError("path movement failed")
 
         # Patch stdout so we can check the print statements in _removeSafely
-        out = NativeStringIO()
+        out = StringIO()
         self.patch(sys, 'stdout', out)
 
         # Set up a trial directory with a _trial_marker

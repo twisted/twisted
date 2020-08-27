@@ -13,7 +13,6 @@ for use in streaming XML applications.
 
 from zope.interface import implementer, Interface, Attribute
 
-from twisted.python.compat import StringType, iteritems, itervalues
 from twisted.web import sux
 
 
@@ -69,7 +68,7 @@ class _ListSerializer:
             return
 
         # Shortcut, check to see if elem is actually a string (aka Cdata)
-        if isinstance(elem, StringType):
+        if isinstance(elem, str):
             write(escapeToXml(elem))
             return
 
@@ -78,7 +77,7 @@ class _ListSerializer:
         uri = elem.uri
         defaultUri, currentDefaultUri = elem.defaultUri, defaultUri
 
-        for p, u in iteritems(elem.localPrefixes):
+        for p, u in elem.localPrefixes.items():
             self.prefixes[u] = p
         self.prefixStack.append(list(elem.localPrefixes.keys()))
 
@@ -110,7 +109,7 @@ class _ListSerializer:
            (uri != defaultUri or not prefix or not inScope):
             write(" xmlns='%s'" % (defaultUri))
 
-        for p, u in iteritems(elem.localPrefixes):
+        for p, u in elem.localPrefixes.items():
             write(" xmlns:%s='%s'" % (p, u))
 
         # Serialize attributes
@@ -427,7 +426,7 @@ class Element:
         self.localPrefixes = localPrefixes or {}
         self.uri, self.name = qname
         if defaultUri is None and \
-           self.uri not in itervalues(self.localPrefixes):
+           self.uri not in self.localPrefixes.values():
             self.defaultUri = self.uri
         else:
             self.defaultUri = defaultUri
@@ -462,7 +461,7 @@ class Element:
         Retrieve the first CData (content) node
         """
         for n in self.children:
-            if isinstance(n, StringType):
+            if isinstance(n, str):
                 return n
         return ""
 

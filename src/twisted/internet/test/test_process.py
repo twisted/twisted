@@ -24,7 +24,7 @@ from twisted.internet.test.reactormixins import ReactorBuilder
 from twisted.python.log import msg, err
 from twisted.python.runtime import platform
 from twisted.python.filepath import FilePath, _asFilesystemBytes
-from twisted.python.compat import networkString, items, unicode
+from twisted.python.compat import networkString
 from twisted.internet import utils
 from twisted.internet.interfaces import IReactorProcess, IProcessTransport
 from twisted.internet.defer import Deferred, inlineCallbacks, succeed
@@ -582,7 +582,7 @@ sys.stdout.flush()""".format(twistedRoot.path))
         # Only required if the test fails on systems that support
         # the process module.
         if process is not None:
-            for pid, handler in items(process.reapProcessHandlers):
+            for pid, handler in list(process.reapProcessHandlers.items()):
                 if handler is not transport:
                     continue
                 process.unregisterReapProcessHandler(pid, handler)
@@ -809,10 +809,11 @@ class ProcessTestsBuilder(ProcessTestsBuilderBase):
         """
         us = b"twisted.internet.test.process_cli"
 
-        args = [b'hello', b'"', b' \t|<>^&', br'"\\"hello\\"', br'"foo\ bar baz\""']
+        args = [b'hello', b'"', b' \t|<>^&', br'"\\"hello\\"',
+                br'"foo\ bar baz\""']
         # Ensure that all non-NUL characters can be passed too.
         allChars = "".join(map(chr, range(1, 255)))
-        if isinstance(allChars, unicode):
+        if isinstance(allChars, str):
             allChars.encode("utf-8")
 
         reactor = self.buildReactor()

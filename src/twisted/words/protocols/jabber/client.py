@@ -4,7 +4,6 @@
 # See LICENSE for details.
 
 
-from twisted.python.compat import unicode
 from twisted.words.protocols.jabber import error, sasl, xmlstream
 from twisted.words.protocols.jabber.jid import JID
 from twisted.words.xish import domish, utility, xpath
@@ -126,9 +125,9 @@ class IQAuthInitializer:
         # Prefer digest over plaintext
         if DigestAuthQry.matches(iq):
             digest = xmlstream.hashPassword(self.xmlstream.sid, password)
-            reply.query.addElement("digest", content=unicode(digest))
+            reply.query.addElement("digest", content=str(digest))
         else:
-            reply.query.addElement("password", content = password)
+            reply.query.addElement("password", content=password)
 
         d = reply.send()
         d.addCallbacks(self._cbAuth, self._ebAuth)
@@ -275,7 +274,7 @@ class BindInitializer(xmlstream.BaseFeatureInitiatingInitializer):
 
     def onBind(self, iq):
         if iq.bind:
-            self.xmlstream.authenticator.jid = JID(unicode(iq.bind.jid))
+            self.xmlstream.authenticator.jid = JID(str(iq.bind.jid))
 
 
 

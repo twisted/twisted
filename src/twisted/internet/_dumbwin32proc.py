@@ -21,20 +21,21 @@ import win32security
 
 import pywintypes
 
-# Security attributes for pipes
-PIPE_ATTRS_INHERITABLE = win32security.SECURITY_ATTRIBUTES()
-PIPE_ATTRS_INHERITABLE.bInheritHandle = 1
-
 from zope.interface import implementer
 from twisted.internet.interfaces import IProcessTransport, IConsumer, IProducer
 
-from twisted.python.compat import items
 from twisted.python.win32 import quoteArguments
 
 from twisted.internet import error
 
 from twisted.internet import _pollingfile
 from twisted.internet._baseprocess import BaseProcess
+
+
+
+# Security attributes for pipes
+PIPE_ATTRS_INHERITABLE = win32security.SECURITY_ATTRIBUTES()
+PIPE_ATTRS_INHERITABLE.bInheritHandle = 1
 
 
 
@@ -180,15 +181,8 @@ class Process(_pollingfile._PollingTimer, BaseProcess):
 
         env = os.environ.copy()
         env.update(environment or {})
-        newenv = {}
-        for key, value in items(env):
-
-            key = os.fsdecode(key)
-            value = os.fsdecode(value)
-
-            newenv[key] = value
-
-        env = newenv
+        env = {os.fsdecode(key): os.fsdecode(value)
+               for key, value in env.items()}
 
         # Make sure all the arguments are Unicode.
         args = [os.fsdecode(x) for x in args]

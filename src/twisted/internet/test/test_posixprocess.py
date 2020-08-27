@@ -19,7 +19,6 @@ else:
     from twisted.internet import process
     platformSkip = ""
 
-from twisted.python.compat import range
 from twisted.trial.unittest import TestCase
 
 
