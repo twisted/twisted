@@ -13,7 +13,7 @@ from twisted.words.xish import domish
 NS_XMPP_SASL = 'urn:ietf:params:xml:ns:xmpp-sasl'
 
 @implementer(sasl_mechanisms.ISASLMechanism)
-class DummySASLMechanism(object):
+class DummySASLMechanism:
     """
     Dummy SASL mechanism.
 

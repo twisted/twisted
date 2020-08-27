@@ -225,7 +225,7 @@ class STDLibLogObserverTests(unittest.TestCase):
 
 
 
-class StdlibLoggingContainer(object):
+class StdlibLoggingContainer:
     """
     Continer for a test configuration of stdlib logging objects.
     """

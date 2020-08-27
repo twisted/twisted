@@ -165,7 +165,7 @@ class TwistTests(twisted.trial.unittest.TestCase):
 
         runners = []
 
-        class Runner(object):
+        class Runner:
             def __init__(self, **kwargs):
                 self.args = kwargs
                 self.runs = 0

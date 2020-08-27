@@ -284,7 +284,7 @@ class ProcessReader(abstract.FileDescriptor):
 
 
 
-class _BaseProcess(BaseProcess, object):
+class _BaseProcess(BaseProcess):
     """
     Base class for Process and PTYProcess.
     """
@@ -490,7 +490,7 @@ class _BaseProcess(BaseProcess, object):
         os.execvpe(executable, args, environment)
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """
         String representation of a process.
         """
@@ -499,7 +499,7 @@ class _BaseProcess(BaseProcess, object):
 
 
 
-class _FDDetector(object):
+class _FDDetector:
     """
     This class contains the logic necessary to decide which of the available
     system techniques should be used to detect the open file descriptors for

@@ -19,7 +19,7 @@ from twisted.internet.abstract import FileDescriptor
 from twisted.protocols.tls import TLSMemoryBIOFactory, TLSMemoryBIOProtocol
 
 
-class _BypassTLS(object):
+class _BypassTLS:
     """
     L{_BypassTLS} is used as the transport object for the TLS protocol object
     used to implement C{startTLS}.  Its methods skip any TLS logic which
@@ -157,7 +157,7 @@ def startTLS(transport, contextFactory, normal, bypass):
 
 
 
-class ConnectionMixin(object):
+class ConnectionMixin:
     """
     A mixin for L{twisted.internet.abstract.FileDescriptor} which adds an
     L{ITLSTransport} implementation.
@@ -243,7 +243,7 @@ class ConnectionMixin(object):
 
 
 
-class ClientMixin(object):
+class ClientMixin:
     """
     A mixin for L{twisted.internet.tcp.Client} which just marks it as a client
     for the purposes of the default TLS handshake.
@@ -256,7 +256,7 @@ class ClientMixin(object):
 
 
 
-class ServerMixin(object):
+class ServerMixin:
     """
     A mixin for L{twisted.internet.tcp.Server} which just marks it as a server
     for the purposes of the default TLS handshake.

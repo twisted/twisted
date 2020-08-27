@@ -31,7 +31,7 @@ class DummyAccount(basesupport.AbstractAccount):
         self.loginCallbackCalled = True
         return basesupport.AbstractAccount._cb_logOn(self, result)
 
-class DummyUI(object):
+class DummyUI:
     """
     Provide just the interface required to be passed to AbstractAccount.logOn.
     """

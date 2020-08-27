@@ -27,6 +27,7 @@ import uuid
 
 import email.utils
 
+from base64 import decodebytes, encodebytes
 from itertools import chain
 from io import BytesIO
 from typing import Any, List
@@ -40,10 +41,8 @@ from twisted.internet import error
 from twisted.internet.defer import maybeDeferred
 from twisted.python import log, text
 from twisted.python.compat import (
-    _bytesChr, unichr as chr, _b64decodebytes as decodebytes,
-    _b64encodebytes as encodebytes,
-    intToBytes, iterbytes, long, nativeString, networkString, unicode,
-    _matchingString, _get_async_param,
+    unichr as chr, intToBytes, iterbytes, long, nativeString, networkString,
+    unicode, _matchingString, _get_async_param,
 )
 from twisted.internet import interfaces
 
@@ -115,7 +114,7 @@ def _swapAllPairs(of, that, ifIs):
             for first, second in of]
 
 
-class MessageSet(object):
+class MessageSet:
     """
     A set of message identifiers usable by both L{IMAP4Client} and
     L{IMAP4Server} via L{IMailboxIMAP.store} and
@@ -399,7 +398,7 @@ class MessageSet(object):
         return res
 
 
-    def __str__(self):
+    def __str__(self) -> str:
         p = []
         for low, high in self.ranges:
             if low == high:
@@ -414,17 +413,15 @@ class MessageSet(object):
         return ','.join(p)
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return '<MessageSet %s>' % (str(self),)
 
 
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
         if isinstance(other, MessageSet):
             return self.ranges == other.ranges
-        return False
+        return NotImplemented
 
-    def __ne__(self, other):
-        return not self.__eq__(other)
 
 
 class LiteralString:
@@ -535,7 +532,7 @@ class Command:
         self.lines = []
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "<imap4.Command {!r} {!r} {!r} {!r} {!r}>".format(
             self.command, self.args, self.wantResponse, self.continuation,
             self.lines
@@ -573,7 +570,7 @@ class Command:
 # Some definitions (SP, CTL, DQUOTE) are also from the ABNF RFC -
 # <https://tools.ietf.org/html/rfc2234>.
 _SP = b' '
-_CTL = b''.join(_bytesChr(ch) for ch in chain(range(0x21), range(0x80, 0x100)))
+_CTL = bytes(chain(range(0x21), range(0x80, 0x100)))
 
 # It is easier to define ATOM-CHAR in terms of what it does not match than in
 # terms of what it does match.
@@ -584,7 +581,9 @@ _nativeNonAtomChars = _nonAtomChars.decode('charmap')
 _nonAtomRE = re.compile('[' + _nativeNonAtomChars + ']')
 
 # This is all the bytes that match the ATOM-CHAR from the grammar in the RFC.
-_atomChars = b''.join(_bytesChr(ch) for ch in list(range(0x100)) if _bytesChr(ch) not in _nonAtomChars)
+_atomChars = bytes(ch for ch in range(0x100) if ch not in _nonAtomChars)
+
+
 
 @implementer(IMailboxListener)
 class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
@@ -2399,11 +2398,12 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
 
 
     def do_COPY(self, tag, messages, mailbox, uid=0):
-        mailbox = self._parseMbox(mailbox)
+        mailbox = _parseMbox(mailbox)
         maybeDeferred(self.account.select, mailbox
-            ).addCallback(self._cbCopySelectedMailbox, tag, messages, mailbox, uid
-            ).addErrback(self._ebCopySelectedMailbox, tag
-            )
+                      ).addCallback(self._cbCopySelectedMailbox, tag, messages,
+                                    mailbox, uid
+                                    ).addErrback(self._ebCopySelectedMailbox,
+                                                 tag)
     select_COPY = (do_COPY, arg_seqset, arg_finalastring)
 
 
@@ -4951,7 +4951,7 @@ class DontQuoteMe:
         self.value = value
 
 
-    def __str__(self):
+    def __str__(self) -> str:
         return str(self.value)
 
 
@@ -5052,7 +5052,7 @@ def collapseNestedLists(items):
 
 
 @implementer(IAccount)
-class MemoryAccountWithoutNamespaces(object):
+class MemoryAccountWithoutNamespaces:
     mailboxes = None
     subscriptions = None
     top_id = 0
@@ -5309,7 +5309,7 @@ def _getMessageStructure(message):
 
 
 
-class _MessageStructure(object):
+class _MessageStructure:
     """
     L{_MessageStructure} is a helper base class for message structure classes
     representing the structure of particular kinds of messages, as defined by
@@ -5880,7 +5880,7 @@ class _FetchParser:
         partialBegin = None
         partialLength = None
 
-        def __str__(self):
+        def __str__(self) -> str:
             return nativeString(self.__bytes__())
 
         def __bytes__(self):
@@ -5918,7 +5918,7 @@ class _FetchParser:
         fields = None
         part = None
 
-        def __str__(self):
+        def __str__(self) -> str:
             return nativeString(self.__bytes__())
 
 

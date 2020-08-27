@@ -86,7 +86,7 @@ class IPIDFile(Interface):
 
 
 @implementer(IPIDFile)
-class PIDFile(object):
+class PIDFile:
     """
     Concrete implementation of L{IPIDFile} based on C{IFilePath}.
 
@@ -220,7 +220,7 @@ class PIDFile(object):
 
 
 @implementer(IPIDFile)
-class NonePIDFile(object):
+class NonePIDFile:
     """
     PID file implementation that does nothing.
 

@@ -143,7 +143,7 @@ def connect(client, destination):
 
 
 
-class FakeSocket(object):
+class FakeSocket:
     """
     A fake for L{socket.socket} objects.
 
@@ -249,7 +249,7 @@ class FakeProtocol(Protocol):
 
 
 @implementer(IReactorFDSet)
-class _FakeFDSetReactor(object):
+class _FakeFDSetReactor:
     """
     An in-memory implementation of L{IReactorFDSet}, which records the current
     sets of active L{IReadDescriptor} and L{IWriteDescriptor}s.
@@ -309,7 +309,7 @@ class TCPServerTests(TestCase):
     """
     def setUp(self):
         self.reactor = _FakeFDSetReactor()
-        class FakePort(object):
+        class FakePort:
             _realPortNumber = 3
         self.skt = FakeSocket(b"")
         self.protocol = Protocol()
@@ -450,7 +450,7 @@ class TCP6Creator(TCPCreator):
 
 
 @implementer(IResolverSimple)
-class FakeResolver(object):
+class FakeResolver:
     """
     A resolver implementation based on a C{dict} mapping names to addresses.
     """
@@ -969,7 +969,7 @@ class _IExhaustsFileDescriptors(Interface):
 
 @implementer(_IExhaustsFileDescriptors)
 @attr.s
-class _ExhaustsFileDescriptors(object):
+class _ExhaustsFileDescriptors:
     """
     A class that triggers C{EMFILE} by creating as many file
     descriptors as necessary.
@@ -1282,7 +1282,7 @@ class AssertPeerClosedOnEMFILETests(SynchronousTestCase):
     Tests for L{assertPeerClosedOnEMFILE}.
     """
     @implementer(_IExhaustsFileDescriptors)
-    class NullExhauster(object):
+    class NullExhauster:
         """
         An exhauster that does nothing.
         """
@@ -1438,7 +1438,7 @@ class StreamTransportTestsMixin(LogObserverMixin):
 
 
 
-class ConnectToTCPListenerMixin(object):
+class ConnectToTCPListenerMixin:
     """
     Provides L{connectToListener} for TCP transports.
 
@@ -1520,7 +1520,7 @@ class SocketTCPMixin(ConnectToTCPListenerMixin):
 
 
 
-class TCPPortTestsMixin(object):
+class TCPPortTestsMixin:
     """
     Tests for L{IReactorTCP.listenTCP}
     """
@@ -2111,7 +2111,7 @@ class TCPConnectionTestsBuilder(ReactorBuilder):
 
 
 
-class WriteSequenceTestsMixin(object):
+class WriteSequenceTestsMixin:
     """
     Test for L{twisted.internet.abstract.FileDescriptor.writeSequence}.
     """
@@ -2184,7 +2184,7 @@ class WriteSequenceTestsMixin(object):
         buffered, and then resumes it.
         """
         @implementer(IPushProducer)
-        class SaveActionProducer(object):
+        class SaveActionProducer:
             client = None
             server = None
 
@@ -2240,7 +2240,7 @@ class WriteSequenceTestsMixin(object):
         test = self
 
         @implementer(IPullProducer)
-        class SaveActionProducer(object):
+        class SaveActionProducer:
             client = None
 
             def __init__(self):
@@ -2280,7 +2280,7 @@ class WriteSequenceTestsMixin(object):
 
 
 
-class TCPTransportServerAddressTestMixin(object):
+class TCPTransportServerAddressTestMixin:
     """
     Test mixing for TCP server address building and log prefix.
     """
@@ -2815,7 +2815,7 @@ class ResumeThrowsClient(ProducerAbortingClient):
 
 
 
-class AbortConnectionMixin(object):
+class AbortConnectionMixin:
     """
     Unit tests for L{ITransport.abortConnection}.
     """

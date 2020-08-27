@@ -5,7 +5,7 @@
 
 
 
-class MonkeyPatcher(object):
+class MonkeyPatcher:
     """
     Cover up attributes with new objects. Neat for monkey-patching things for
     unit-testing purposes.

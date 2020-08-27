@@ -10,7 +10,7 @@ L{twisted.trial.unittest.TestCase}.
 from twisted.trial.unittest import SynchronousTestCase, TestCase
 
 
-class TestCaseMixin(object):
+class TestCaseMixin:
     """
     L{TestCase} tests.
     """

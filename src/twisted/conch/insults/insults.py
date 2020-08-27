@@ -58,7 +58,7 @@ class ITerminalProtocol(Interface):
 
 
 @implementer(ITerminalProtocol)
-class TerminalProtocol(object):
+class TerminalProtocol:
     def makeConnection(self, terminal):
         # assert ITerminalTransport.providedBy(transport), "TerminalProtocol.makeConnection must be passed an ITerminalTransport implementor"
         self.terminal = terminal
@@ -454,7 +454,7 @@ _KEY_NAMES = ('UP_ARROW', 'DOWN_ARROW', 'RIGHT_ARROW', 'LEFT_ARROW',
 
               'ALT', 'SHIFT', 'CONTROL')
 
-class _const(object):
+class _const:
     """
     @ivar name: A string naming this constant
     """
@@ -462,7 +462,7 @@ class _const(object):
         self.name = name
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return '[' + self.name + ']'
 
 

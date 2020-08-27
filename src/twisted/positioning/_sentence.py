@@ -7,7 +7,7 @@ from typing import Set
 
 
 
-class _BaseSentence(object):
+class _BaseSentence:
     """
     A base sentence class for a particular protocol.
 
@@ -72,7 +72,7 @@ class _BaseSentence(object):
             raise AttributeError(msg)
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """
         Returns a textual representation of this sentence.
 
@@ -90,7 +90,7 @@ class _BaseSentence(object):
 
 
 
-class _PositioningSentenceProducerMixin(object):
+class _PositioningSentenceProducerMixin:
     """
     A mixin for certain protocols that produce positioning sentences.
 

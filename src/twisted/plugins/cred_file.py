@@ -29,7 +29,7 @@ invalidFileWarning = 'Warning: not a valid file'
 
 
 @implementer(ICheckerFactory, plugin.IPlugin)
-class FileCheckerFactory(object):
+class FileCheckerFactory:
     """
     A factory for instances of L{FilePasswordDB}.
     """

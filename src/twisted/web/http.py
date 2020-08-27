@@ -33,7 +33,7 @@ __all__ = [
     'NO_CONTENT', 'RESET_CONTENT', 'PARTIAL_CONTENT', 'MULTI_STATUS',
 
     'MULTIPLE_CHOICE', 'MOVED_PERMANENTLY', 'FOUND', 'SEE_OTHER',
-    'NOT_MODIFIED', 'USE_PROXY', 'TEMPORARY_REDIRECT',
+    'NOT_MODIFIED', 'USE_PROXY', 'TEMPORARY_REDIRECT', 'PERMANENT_REDIRECT',
 
     'BAD_REQUEST', 'UNAUTHORIZED', 'PAYMENT_REQUIRED', 'FORBIDDEN', 'NOT_FOUND',
     'NOT_ALLOWED', 'NOT_ACCEPTABLE', 'PROXY_AUTH_REQUIRED', 'REQUEST_TIMEOUT',
@@ -102,7 +102,7 @@ from twisted.web._responses import (ACCEPTED, BAD_GATEWAY, BAD_REQUEST,
                                     OK, PARTIAL_CONTENT, PAYMENT_REQUIRED,
                                     PRECONDITION_FAILED, PROXY_AUTH_REQUIRED,
                                     REQUEST_ENTITY_TOO_LARGE, REQUEST_TIMEOUT,
-                                    REQUEST_URI_TOO_LONG,
+                                    REQUEST_URI_TOO_LONG, PERMANENT_REDIRECT,
                                     REQUESTED_RANGE_NOT_SATISFIABLE,
                                     RESET_CONTENT, RESPONSES, SEE_OTHER,
                                     SERVICE_UNAVAILABLE, SWITCHING,
@@ -446,7 +446,7 @@ class _IDeprecatedHTTPChannelToRequestInterface(Interface):
         """
 
 
-    def __eq__(other):
+    def __eq__(other: object) -> bool:
         """
         Determines if two requests are the same object.
 
@@ -455,11 +455,10 @@ class _IDeprecatedHTTPChannelToRequestInterface(Interface):
 
         @return: L{True} when the two are the same object and L{False}
             when not.
-        @rtype: L{bool}
         """
 
 
-    def __ne__(other):
+    def __ne__(other: object) -> bool:
         """
         Determines if two requests are not the same object.
 
@@ -468,7 +467,6 @@ class _IDeprecatedHTTPChannelToRequestInterface(Interface):
 
         @return: L{True} when the two are not the same object and
             L{False} when they are.
-        @rtype: L{bool}
         """
 
 
@@ -948,7 +946,7 @@ class Request:
         self.process()
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """
         Return a string description of the request including such information
         as the request method and request URI.
@@ -1609,7 +1607,7 @@ class Request:
             self.channel.loseConnection()
 
 
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
         """
         Determines if two requests are the same object.
 
@@ -1627,27 +1625,6 @@ class Request:
         # instanceby turning request != proxy into proxy != request.
         if isinstance(other, Request):
             return self is other
-        return NotImplemented
-
-
-    def __ne__(self, other):
-        """
-        Determines if two requests are not the same object.
-
-        @param other: Another object whose identity will be compared
-            to this instance's.
-
-        @return: L{True} when the two are not the same object and
-            L{False} when they are.
-        @rtype: L{bool}
-        """
-        # When other is not an instance of request, return
-        # NotImplemented so that Python uses other.__ne__ to perform
-        # the comparison.  This ensures that a Request proxy generated
-        # by proxyForInterface can compare equal to an actual Request
-        # instance by turning request != proxy into proxy != request.
-        if isinstance(other, Request):
-            return self is not other
         return NotImplemented
 
 
@@ -1701,7 +1678,7 @@ class _MalformedChunkedDataError(Exception):
 
 
 
-class _IdentityTransferDecoder(object):
+class _IdentityTransferDecoder:
     """
     Protocol for accumulating bytes up to a specified length.  This handles the
     case where no I{Transfer-Encoding} is specified.
@@ -1776,7 +1753,7 @@ class _IdentityTransferDecoder(object):
 
 
 
-class _ChunkedTransferDecoder(object):
+class _ChunkedTransferDecoder:
     """
     Protocol for decoding I{chunked} Transfer-Encoding, as defined by RFC 2616,
     section 3.6.1.  This protocol can interpret the contents of a request or
@@ -1902,7 +1879,7 @@ class _ChunkedTransferDecoder(object):
 
 
 @implementer(interfaces.IPushProducer)
-class _NoPushProducer(object):
+class _NoPushProducer:
     """
     A no-op version of L{interfaces.IPushProducer}, used to abstract over the
     possibility that a L{HTTPChannel} transport does not provide
@@ -2750,7 +2727,7 @@ def combinedLogFormatter(timestamp, request):
 
 
 @implementer(interfaces.IAddress)
-class _XForwardedForAddress(object):
+class _XForwardedForAddress:
     """
     L{IAddress} which represents the client IP to log for a request, as gleaned
     from an X-Forwarded-For header.

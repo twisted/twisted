@@ -17,7 +17,7 @@ from ._format import formatEventAsClassicLogText
 
 
 @implementer(ILogObserver)
-class FileLogObserver(object):
+class FileLogObserver:
     """
     Log observer that writes to a file-like object.
     """

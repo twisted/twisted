@@ -448,7 +448,7 @@ class PythonPathTests(TestCase):
         Make sure that the behavior when encountering an unknown importer
         type is not catastrophic failure.
         """
-        class SecretImporter(object):
+        class SecretImporter:
             pass
 
         def hook(name):

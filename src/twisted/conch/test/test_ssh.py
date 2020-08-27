@@ -35,7 +35,7 @@ else:
 
 
 
-class ConchTestRealm(object):
+class ConchTestRealm:
     """
     A realm which expects a particular avatarId to log in once and creates a
     L{ConchTestAvatar} for that request.
@@ -132,7 +132,7 @@ class ConchTestAvatar(avatar.ConchUser):
 
 
 
-class ConchSessionForTestAvatar(object):
+class ConchSessionForTestAvatar:
     """
     An ISession adapter for ConchTestAvatar.
     """

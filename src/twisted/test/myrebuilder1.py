@@ -3,7 +3,7 @@ class A:
     def a(self):
         return 'a'
 
-class B(A, object):
+class B(A):
     def b(self):
         return 'b'
 

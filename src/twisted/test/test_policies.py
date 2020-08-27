@@ -182,7 +182,7 @@ class WrapperTests(unittest.TestCase):
         If the wrapped factory doesn't have a L{logPrefix} method,
         L{WrappingFactory.logPrefix} falls back to the factory class name.
         """
-        class NoFactory(object):
+        class NoFactory:
             pass
 
         server = NoFactory()
@@ -208,7 +208,7 @@ class WrapperTests(unittest.TestCase):
         If the wrapped protocol doesn't have a L{logPrefix} method,
         L{ProtocolWrapper.logPrefix} falls back to the protocol class name.
         """
-        class NoProtocol(object):
+        class NoProtocol:
             pass
 
         server = Server()
@@ -293,7 +293,7 @@ class WrapperTests(unittest.TestCase):
         C{startedConnecting} on the underlying factory.
         """
         result = []
-        class Factory(object):
+        class Factory:
             def startedConnecting(self, connector):
                 result.append(connector)
 
@@ -309,7 +309,7 @@ class WrapperTests(unittest.TestCase):
         C{clientConnectionLost} on the underlying factory.
         """
         result = []
-        class Factory(object):
+        class Factory:
             def clientConnectionLost(self, connector, reason):
                 result.append((connector, reason))
 
@@ -326,7 +326,7 @@ class WrapperTests(unittest.TestCase):
         C{clientConnectionFailed} on the underlying factory.
         """
         result = []
-        class Factory(object):
+        class Factory:
             def clientConnectionFailed(self, connector, reason):
                 result.append((connector, reason))
 

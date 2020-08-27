@@ -157,7 +157,7 @@ class UnhandledCommand(RuntimeError):
 
 
 
-class _CommandDispatcherMixin(object):
+class _CommandDispatcherMixin:
     """
     Dispatch commands to handlers based on their name.
 
@@ -3201,17 +3201,19 @@ class DccFileReceive(DccFileReceiveBasic):
 
         # self.transport.log(logmsg)
 
-    def __str__(self):
+    def __str__(self) -> str:
         if not self.connected:
             return "<Unconnected DccFileReceive object at %x>" % (id(self),)
-        from_ = self.transport.getPeer()
+        transport = self.transport
+        assert transport is not None
+        from_ = transport.getPeer()
         if self.fromUser:
             from_ = "%s (%s)" % (self.fromUser, from_)
 
         s = ("DCC transfer of '%s' from %s" % (self.filename, from_))
         return s
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         s = ("<%s at %x: GET %s>"
              % (self.__class__, id(self), self.filename))
         return s

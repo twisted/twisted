@@ -192,7 +192,7 @@ class LocalWorkerAMP(AMP):
 
 
 @implementer(IAddress)
-class LocalWorkerAddress(object):
+class LocalWorkerAddress:
     """
     A L{IAddress} implementation meant to provide stub addresses for
     L{ITransport.getPeer} and L{ITransport.getHost}.
@@ -201,7 +201,7 @@ class LocalWorkerAddress(object):
 
 
 @implementer(ITransport)
-class LocalWorkerTransport(object):
+class LocalWorkerTransport:
     """
     A stub transport implementation used to support L{AMP} over a
     L{ProcessProtocol} transport.

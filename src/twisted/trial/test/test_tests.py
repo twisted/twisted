@@ -42,7 +42,7 @@ from twisted.trial._asyncrunner import (
     )
 
 
-class ResultsTestMixin(object):
+class ResultsTestMixin:
     """
     Provide useful APIs for test cases that are about test cases.
     """
@@ -73,7 +73,7 @@ class ResultsTestMixin(object):
         self.assertEqual(self.reporter.testsRun, numTests)
 
 
-class SuccessMixin(object):
+class SuccessMixin:
     """
     Tests for the reporting of successful tests in L{twisted.trial.unittest.TestCase}.
     """
@@ -630,7 +630,7 @@ class ReactorCleanupTests(unittest.SynchronousTestCase):
 
 
 
-class FixtureMixin(object):
+class FixtureMixin:
     """
     Tests for fixture helper methods (e.g. setUp, tearDown).
     """
@@ -732,7 +732,7 @@ class AsynchronousSuppressionTests(SuppressionMixin, unittest.TestCase):
 
 
 
-class GCMixin(object):
+class GCMixin:
     """
     I provide a few mock tests that log setUp, tearDown, test execution and
     garbage collection. I'm used to test whether gc.collect gets called.
@@ -872,7 +872,7 @@ class UnhandledDeferredTests(unittest.SynchronousTestCase):
         self.flushLoggedErrors()
 
 
-class AddCleanupMixin(object):
+class AddCleanupMixin:
     """
     Test the addCleanup method of TestCase.
     """
@@ -998,7 +998,7 @@ class AsynchronousAddCleanupTests(AddCleanupMixin, unittest.TestCase):
                          self.test.log)
 
 
-class SuiteClearingMixin(object):
+class SuiteClearingMixin:
     """
     Tests for our extension that allows us to clear out a L{TestSuite}.
     """
@@ -1052,7 +1052,7 @@ class AsynchronousSuiteClearingTests(SuiteClearingMixin, unittest.TestCase):
     TestCase = unittest.TestCase
 
 
-class TestDecoratorMixin(object):
+class TestDecoratorMixin:
     """
     Tests for our test decoration features.
     """
@@ -1223,7 +1223,7 @@ class AsynchronousTestDecoratorTests(TestDecoratorMixin, unittest.TestCase):
     TestCase = unittest.TestCase
 
 
-class MonkeyPatchMixin(object):
+class MonkeyPatchMixin:
     """
     Tests for the patch() helper method in L{unittest.TestCase}.
     """
@@ -1302,7 +1302,7 @@ class AsynchronousMonkeyPatchTests(MonkeyPatchMixin, unittest.TestCase):
     TestCase = unittest.TestCase
 
 
-class IterateTestsMixin(object):
+class IterateTestsMixin:
     """
     L{_iterateTests} returns a list of all test cases in a test suite or test
     case.

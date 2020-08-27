@@ -56,7 +56,7 @@ class DummyPerspective(pb.Avatar):
 
 
 @implementer(portal.IRealm)
-class DummyRealm(object):
+class DummyRealm:
     def requestAvatar(self, avatarId, mind, *interfaces):
         for iface in interfaces:
             if iface is pb.IPerspective:
@@ -177,7 +177,7 @@ def connectServerAndClient(test, clientFactory, serverFactory):
 
 
 
-class _ReconnectingFakeConnectorState(object):
+class _ReconnectingFakeConnectorState:
     """
     Manages connection notifications for a
     L{_ReconnectingFakeConnector} instance.
@@ -446,13 +446,13 @@ class Observer(pb.Referenceable):
         other.callRemote('unobserve',self)
 
 
-class NewStyleCopy(pb.Copyable, pb.RemoteCopy, object):
+class NewStyleCopy(pb.Copyable, pb.RemoteCopy):
     def __init__(self, s):
         self.s = s
 pb.setUnjellyableForClass(NewStyleCopy, NewStyleCopy)
 
 
-class NewStyleCopy2(pb.Copyable, pb.RemoteCopy, object):
+class NewStyleCopy2(pb.Copyable, pb.RemoteCopy):
     allocated = 0
     initialized = 0
     value = 1
@@ -469,7 +469,7 @@ class NewStyleCopy2(pb.Copyable, pb.RemoteCopy, object):
 pb.setUnjellyableForClass(NewStyleCopy2, NewStyleCopy2)
 
 
-class NewStyleCacheCopy(pb.Cacheable, pb.RemoteCache, object):
+class NewStyleCacheCopy(pb.Cacheable, pb.RemoteCache):
     def getStateToCacheAndObserveFor(self, perspective, observer):
         return self.__dict__
 
@@ -1240,7 +1240,7 @@ class MyPerspective(pb.Avatar):
 
 
 
-class TestRealm(object):
+class TestRealm:
     """
     A realm which repeatedly gives out a single instance of L{MyPerspective}
     for non-anonymous logins and which gives out a new instance of L{Echoer}

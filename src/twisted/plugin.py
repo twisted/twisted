@@ -37,7 +37,7 @@ class IPlugin(Interface):
 
 
 
-class CachedPlugin(object):
+class CachedPlugin:
     def __init__(self, dropin, name, description, provided):
         self.dropin = dropin
         self.name = name
@@ -45,7 +45,7 @@ class CachedPlugin(object):
         self.provided = provided
         self.dropin.plugins.append(self)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return '<CachedPlugin %r/%r (provides %r)>' % (
             self.name, self.dropin.moduleName,
             ', '.join([i.__name__ for i in self.provided]))
@@ -66,7 +66,7 @@ class CachedPlugin(object):
 
 
 
-class CachedDropin(object):
+class CachedDropin:
     """
     A collection of L{CachedPlugin} instances from a particular module in a
     plugin package.

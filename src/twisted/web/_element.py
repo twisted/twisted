@@ -11,7 +11,7 @@ from twisted.web.error import MissingRenderMethod, UnexposedMethodError
 from twisted.web.error import MissingTemplateLoader
 
 
-class Expose(object):
+class Expose:
     """
     Helper for exposing methods for various uses using a simple decorator-style
     callable.
@@ -124,7 +124,7 @@ def renderer():
 
 
 @implementer(IRenderable)
-class Element(object):
+class Element:
     """
     Base for classes which can render part of a page.
 

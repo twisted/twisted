@@ -259,7 +259,7 @@ class OptionalDependenciesTests(SynchronousTestCase):
 
 
 
-class FakeModule(object):
+class FakeModule:
     """
     A fake module, suitable for dependency injection in testing.
     """

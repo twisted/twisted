@@ -516,7 +516,7 @@ class TooLong(AmpError):
         self.keyName = keyName
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         hdr = self.isKey and "key" or "value"
         if not self.isKey:
             hdr += ' ' + repr(self.keyName)
@@ -535,7 +535,7 @@ class BadLocalReturn(AmpError):
         self.enclosed = enclosed
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return self.message + " " + self.enclosed.getBriefTraceback()
 
     __str__ = __repr__
@@ -720,7 +720,7 @@ class AmpBox(dict):
         """
         proto.sendBox(self)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return 'AmpBox(%s)' % (dict.__repr__(self),)
 
 # amp.Box => AmpBox
@@ -734,7 +734,7 @@ class QuitBox(AmpBox):
     __slots__ = []  # type: List[str]
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return 'QuitBox(**%s)' % (super(QuitBox, self).__repr__(),)
 
 
@@ -766,7 +766,7 @@ class _SwitchBox(AmpBox):
         self.innerProto = innerProto
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return '_SwitchBox(%r, **%s)' % (self.innerProto,
                                          dict.__repr__(self),)
 
@@ -1235,7 +1235,7 @@ CommandLocator = CommandLocator.__metaclass__(  # type: ignore[assignment,misc]
 
 
 @implementer(IResponderLocator)
-class SimpleStringLocator(object):
+class SimpleStringLocator:
     """
     Implement the L{AMP.locateResponder} method to do simple, string-based
     dispatch.
@@ -2222,7 +2222,7 @@ class ProtocolSwitchCommand(Command):
 
 
 @implementer(IFileDescriptorReceiver)
-class _DescriptorExchanger(object):
+class _DescriptorExchanger:
     """
     L{_DescriptorExchanger} is a mixin for L{BinaryBoxProtocol} which adds
     support for receiving file descriptors, a feature offered by
@@ -2612,7 +2612,7 @@ class AMP(BinaryBoxProtocol, BoxDispatcher,
         return secondResponder
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """
         A verbose string representation which gives us information about this
         AMP connection.

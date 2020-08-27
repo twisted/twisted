@@ -19,7 +19,7 @@ _missingProcessExited = ("Since Twisted 8.2, IProcessProtocol.processExited "
 
 
 
-class BaseProcess(object):
+class BaseProcess:
     pid = None  # type: Optional[int]
     status = None  # type: Optional[int]
     lostProcess = 0

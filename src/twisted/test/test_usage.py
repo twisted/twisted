@@ -619,7 +619,7 @@ class FlagFunctionTests(unittest.TestCase):
     Tests for L{usage.flagFunction}.
     """
 
-    class SomeClass(object):
+    class SomeClass:
         """
         Dummy class for L{usage.flagFunction} tests.
         """

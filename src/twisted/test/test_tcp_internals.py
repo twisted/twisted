@@ -164,7 +164,7 @@ class SelectReactorTests(TestCase):
 
         @param socketErrorNumber: The errno to simulate from accept.
         """
-        class FakeSocket(object):
+        class FakeSocket:
             """
             Pretend to be a socket in an overloaded system.
             """
@@ -308,7 +308,7 @@ class SelectReactorTests(TestCase):
         maximumNumberOfAccepts = 123
         acceptCalls = [0]
 
-        class FakeSocketWithAcceptLimit(object):
+        class FakeSocketWithAcceptLimit:
             """
             Pretend to be a socket in an overloaded system whose
             C{accept} method can only be called
@@ -357,7 +357,7 @@ class SelectReactorTests(TestCase):
             if isinstance(error, (int, compat.long))
         ) + 1
 
-        class FakeSocketWithUnknownAcceptError(object):
+        class FakeSocketWithUnknownAcceptError:
             """
             Pretend to be a socket in an overloaded system whose
             C{accept} method can only be called

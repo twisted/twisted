@@ -10,7 +10,7 @@ synchronization.
 
 from functools import wraps
 
-class DummyLock(object):
+class DummyLock:
     """
     Hack to allow locks to be unpickled on an unthreaded system.
     """
@@ -87,7 +87,7 @@ def init(with_threads=1):
             if threadingmodule is not None:
                 threaded = True
 
-                class XLock(threadingmodule._RLock, object):
+                class XLock(threadingmodule._RLock):
                     def __reduce__(self):
                         return (unpickle_lock, ())
 

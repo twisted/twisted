@@ -14,7 +14,7 @@ from twisted.cred import credentials
 from twisted.web.iweb import ICredentialFactory
 
 @implementer(ICredentialFactory)
-class DigestCredentialFactory(object):
+class DigestCredentialFactory:
     """
     Wrapper for L{digest.DigestCredentialFactory} that implements the
     L{ICredentialFactory} interface.

@@ -12,14 +12,14 @@ from twisted.trial import unittest
 from twisted.web import client
 
 @implementer(interfaces.IStreamClientEndpoint)
-class DummyEndPoint(object):
+class DummyEndPoint:
 
     """An endpoint that does not connect anywhere"""
 
     def __init__(self, someString):
         self.someString = someString
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return 'DummyEndPoint({})'.format(self.someString)
 
     def connect(self, factory):

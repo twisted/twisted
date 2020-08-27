@@ -36,8 +36,7 @@ from twisted.internet._idna import _idnaText
 from twisted.python import log
 from twisted.python import util
 from twisted.python.compat import (long, unicode, networkString,
-                                   nativeString, iteritems, _keys, _bytesChr,
-                                   iterbytes)
+                                   nativeString, iteritems, iterbytes)
 from twisted.python.runtime import platform
 
 from twisted.mail.interfaces import (IClientAuthentication,
@@ -289,7 +288,7 @@ class Address:
 
         return b''.join(res)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return nativeString(bytes(self))
 
 
@@ -300,7 +299,7 @@ class Address:
             return b''
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "%s.%s(%s)" % (self.__module__, self.__class__.__name__,
                               repr(str(self)))
 
@@ -332,13 +331,13 @@ class User:
         protocol isn't picklabe, but we want User to be, so skip it in
         the pickle.
         """
-        return { 'dest' : self.dest,
-                 'helo' : self.helo,
-                 'protocol' : None,
-                 'orig' : self.orig }
+        return {'dest': self.dest,
+                'helo': self.helo,
+                'protocol': None,
+                'orig': self.orig}
 
 
-    def __str__(self):
+    def __str__(self) -> str:
         return nativeString(bytes(self.dest))
 
 
@@ -1618,7 +1617,7 @@ class ESMTP(SMTP):
         @rtype: L{dict} with L{bytes} keys and a value of either L{None} or a
             L{list} of L{bytes}.
         """
-        ext = {b'AUTH': _keys(self.challengers)}
+        ext = {b'AUTH': list(self.challengers.keys())}
         if self.canStartTLS and not self.startedTLS:
             ext[b'STARTTLS'] = None
         return ext
@@ -2212,7 +2211,7 @@ def xtext_encode(s, errors=None):
         if ch == '+' or ch == '=' or o < 33 or o > 126:
             r.append(networkString('+%02X' % (o,)))
         else:
-            r.append(_bytesChr(o))
+            r.append(bytes((o,)))
     return (b''.join(r), len(s))
 
 

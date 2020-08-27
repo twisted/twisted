@@ -19,7 +19,7 @@ from twisted.python import util
 
 
 @implementer(IAddress)
-class SSHTransportAddress(util.FancyEqMixin, object):
+class SSHTransportAddress(util.FancyEqMixin):
     """
     Object representing an SSH Transport endpoint.
 
@@ -38,7 +38,7 @@ class SSHTransportAddress(util.FancyEqMixin, object):
         self.address = address
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return 'SSHTransportAddress(%r)' % (self.address,)
 
 

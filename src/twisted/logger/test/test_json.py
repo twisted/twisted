@@ -134,11 +134,11 @@ class SaveLoadTests(TestCase):
         in the same string formatting; any extractable fields will retain their
         data types.
         """
-        class Reprable(object):
+        class Reprable:
             def __init__(self, value):
                 self.value = value
 
-            def __repr__(self):
+            def __repr__(self) -> str:
                 return("reprable")
 
         inputEvent = {
@@ -154,7 +154,7 @@ class SaveLoadTests(TestCase):
         L{extractField} can extract fields from an object that's been saved and
         loaded from JSON.
         """
-        class Obj(object):
+        class Obj:
             def __init__(self):
                 self.value = 345
 
@@ -181,10 +181,6 @@ class SaveLoadTests(TestCase):
         except ZeroDivisionError:
             f = Failure()
             log.failure("a message about failure", f)
-        import sys
-        if sys.exc_info()[0] is not None:
-            # Make sure we don't get the same Failure by accident.
-            sys.exc_clear()
         self.assertEqual(len(events), 1)
         loaded = eventFromJSON(self.savedEventJSON(events[0]))['log_failure']
         self.assertIsInstance(loaded, Failure)

@@ -58,7 +58,7 @@ def spameater(*spam, **eggs):
 
 
 @implementer(smtp.IMessage)
-class BrokenMessage(object):
+class BrokenMessage:
     """
     L{BrokenMessage} is an L{IMessage} which raises an unexpected exception
     from its C{eomReceived} method.  This is useful for creating a server which
@@ -81,7 +81,7 @@ class BrokenMessage(object):
 
 
 
-class DummyMessage(object):
+class DummyMessage:
     """
     L{BrokenMessage} is an L{IMessage} which saves the message delivered to it
     to its domain object.
@@ -111,7 +111,7 @@ class DummyMessage(object):
 
 
 
-class DummyDomain(object):
+class DummyDomain:
     """
     L{DummyDomain} is an L{IDomain} which keeps track of messages delivered to
     it in memory.
@@ -334,7 +334,7 @@ class SMTPClientTests(TestCase, LoopbackMixin):
 
 
 
-class DummySMTPMessage(object):
+class DummySMTPMessage:
 
     def __init__(self, protocol, users):
         self.protocol = protocol
@@ -515,7 +515,7 @@ class DummyChecker:
 
 
 @implementer(smtp.IMessageDelivery)
-class SimpleDelivery(object):
+class SimpleDelivery:
     """
     L{SimpleDelivery} is a message delivery factory with no interesting
     behavior.
@@ -1010,7 +1010,7 @@ class SMTPSenderFactoryRetryTests(TestCase):
 
 
 @implementer(IRealm)
-class SingletonRealm(object):
+class SingletonRealm:
     """
     Trivial realm implementation which is constructed with an interface and an
     avatar and returns that avatar when asked for that interface.
@@ -1027,7 +1027,7 @@ class SingletonRealm(object):
 
 
 
-class NotImplementedDelivery(object):
+class NotImplementedDelivery:
     """
     Non-implementation of L{smtp.IMessageDelivery} which only has methods which
     raise L{NotImplementedError}.  Subclassed by various tests to provide the
@@ -1190,7 +1190,7 @@ class SMTPServerTests(TestCase):
         L{smtp.SMTP} instance's portal is responded to with the correct error
         code.
         """
-        class DisallowAnonymousAccess(object):
+        class DisallowAnonymousAccess:
             """
             Checker for L{IAnonymous} which rejects authentication attempts.
             """

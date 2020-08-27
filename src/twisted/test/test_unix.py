@@ -225,7 +225,7 @@ class UnixSocketTests(unittest.TestCase):
         class being used and the filename on which the port is listening or
         indicates that the port is not listening.
         """
-        class NewStyleFactory(object):
+        class NewStyleFactory:
             def doStart(self):
                 pass
 
@@ -365,7 +365,7 @@ class DatagramUnixSocketTests(unittest.TestCase):
         new-style protocol class being used and the filename on which the port
         is listening or indicates that the port is not listening.
         """
-        class NewStyleProtocol(object):
+        class NewStyleProtocol:
             def makeConnection(self, transport):
                 pass
 

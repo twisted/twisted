@@ -94,7 +94,7 @@ def shouldLogEvent(predicates, event):
 
 
 @implementer(ILogObserver)
-class FilteringLogObserver(object):
+class FilteringLogObserver:
     """
     L{ILogObserver} that wraps another L{ILogObserver}, but filters out events
     based on applying a series of L{ILogFilterPredicate}s.
@@ -136,7 +136,7 @@ class FilteringLogObserver(object):
 
 
 @implementer(ILogFilterPredicate)
-class LogLevelFilterPredicate(object):
+class LogLevelFilterPredicate:
     """
     L{ILogFilterPredicate} that filters out events with a log level lower than
     the log level for the event's namespace.

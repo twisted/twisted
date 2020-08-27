@@ -44,7 +44,7 @@ class ISASLMechanism(Interface):
 
 
 @implementer(ISASLMechanism)
-class Anonymous(object):
+class Anonymous:
     """
     Implements the ANONYMOUS SASL authentication mechanism.
 
@@ -63,7 +63,7 @@ class Anonymous(object):
 
 
 @implementer(ISASLMechanism)
-class Plain(object):
+class Plain:
     """
     Implements the PLAIN SASL authentication mechanism.
 
@@ -101,7 +101,7 @@ class Plain(object):
 
 
 @implementer(ISASLMechanism)
-class DigestMD5(object):
+class DigestMD5:
     """
     Implements the DIGEST-MD5 SASL authentication mechanism.
 

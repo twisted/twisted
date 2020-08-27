@@ -288,7 +288,7 @@ class OptionsTests(twisted.trial.unittest.TestCase):
         L{TwistOptions.selectDefaultLogObserver} will not override an already
         selected observer.
         """
-        class TTYFile(object):
+        class TTYFile:
             def isatty(self):
                 return True
 

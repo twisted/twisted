@@ -15,7 +15,7 @@ from ._convenience import Quit
 NoMoreWork = object()
 
 @implementer(IWorker)
-class MemoryWorker(object):
+class MemoryWorker:
     """
     An L{IWorker} that queues work for later performance.
 

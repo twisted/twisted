@@ -26,7 +26,7 @@ RFC4034_TIME_FORMAT = '%Y%m%d%H%M%S'
 
 
 
-class SerialNumber(FancyStrMixin, object):
+class SerialNumber(FancyStrMixin):
     """
     An RFC1982 Serial Number.
 
@@ -75,7 +75,7 @@ class SerialNumber(FancyStrMixin, object):
         self._number = int(number) % self._modulo
 
 
-    def _convertOther(self, other):
+    def _convertOther(self, other: object) -> 'SerialNumber':
         """
         Check that a foreign object is suitable for use in the comparison or
         arithmetic magic methods of this L{SerialNumber} instance. Raise
@@ -97,7 +97,7 @@ class SerialNumber(FancyStrMixin, object):
         return other
 
 
-    def __str__(self):
+    def __str__(self) -> str:
         """
         Return a string representation of this L{SerialNumber} instance.
 
@@ -114,32 +114,25 @@ class SerialNumber(FancyStrMixin, object):
         return self._number
 
 
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
         """
         Allow rich equality comparison with another L{SerialNumber} instance.
-
-        @type other: L{SerialNumber}
         """
-        other = self._convertOther(other)
+        try:
+            other = self._convertOther(other)
+        except TypeError:
+            return NotImplemented
         return other._number == self._number
 
 
-    def __ne__(self, other):
-        """
-        Allow rich equality comparison with another L{SerialNumber} instance.
-
-        @type other: L{SerialNumber}
-        """
-        return not self.__eq__(other)
-
-
-    def __lt__(self, other):
+    def __lt__(self, other: object) -> bool:
         """
         Allow I{less than} comparison with another L{SerialNumber} instance.
-
-        @type other: L{SerialNumber}
         """
-        other = self._convertOther(other)
+        try:
+            other = self._convertOther(other)
+        except TypeError:
+            return NotImplemented
         return (
             (self._number < other._number
              and (other._number - self._number) < self._halfRing)
@@ -149,14 +142,14 @@ class SerialNumber(FancyStrMixin, object):
         )
 
 
-    def __gt__(self, other):
+    def __gt__(self, other: object) -> bool:
         """
         Allow I{greater than} comparison with another L{SerialNumber} instance.
-
-        @type other: L{SerialNumber}
-        @rtype: L{bool}
         """
-        other = self._convertOther(other)
+        try:
+            other = self._convertOther(other)
+        except TypeError:
+            return NotImplemented
         return (
             (self._number < other._number
              and (other._number - self._number) > self._halfRing)
@@ -166,31 +159,31 @@ class SerialNumber(FancyStrMixin, object):
         )
 
 
-    def __le__(self, other):
+    def __le__(self, other: object) -> bool:
         """
         Allow I{less than or equal} comparison with another L{SerialNumber}
         instance.
-
-        @type other: L{SerialNumber}
-        @rtype: L{bool}
         """
-        other = self._convertOther(other)
+        try:
+            other = self._convertOther(other)
+        except TypeError:
+            return NotImplemented
         return self == other or self < other
 
 
-    def __ge__(self, other):
+    def __ge__(self, other: object) -> bool:
         """
         Allow I{greater than or equal} comparison with another L{SerialNumber}
         instance.
-
-        @type other: L{SerialNumber}
-        @rtype: L{bool}
         """
-        other = self._convertOther(other)
+        try:
+            other = self._convertOther(other)
+        except TypeError:
+            return NotImplemented
         return self == other or self > other
 
 
-    def __add__(self, other):
+    def __add__(self, other: object) -> 'SerialNumber':
         """
         Allow I{addition} with another L{SerialNumber} instance.
 
@@ -210,12 +203,13 @@ class SerialNumber(FancyStrMixin, object):
 
         @see: U{http://tools.ietf.org/html/rfc1982#section-3.1}
 
-        @type other: L{SerialNumber}
-        @rtype: L{SerialNumber}
         @raises: L{ArithmeticError} if C{other} is more than C{_maxAdd}
             ie more than half the maximum value of this serial number.
         """
-        other = self._convertOther(other)
+        try:
+            other = self._convertOther(other)
+        except TypeError:
+            return NotImplemented
         if other._number <= self._maxAdd:
             return SerialNumber(
                 (self._number + other._number) % self._modulo,

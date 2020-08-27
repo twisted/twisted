@@ -42,7 +42,7 @@ class IRealm(Interface):
         """
 
 
-class Portal(object):
+class Portal:
     """
     A mediator between clients and a realm.
 

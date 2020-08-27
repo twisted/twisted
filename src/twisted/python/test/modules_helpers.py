@@ -12,7 +12,7 @@ import sys
 from twisted.python.filepath import FilePath
 
 
-class TwistedModulesMixin(object):
+class TwistedModulesMixin:
     """
     A mixin for C{twisted.trial.unittest.SynchronousTestCase} providing useful
     methods for manipulating Python's module system.

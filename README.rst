@@ -4,6 +4,7 @@ Twisted
 |pypi|_
 |travis|_
 |circleci|_
+|mypy|_
 
 For information on changes in this release, see the `NEWS <NEWS.rst>`_ file.
 
@@ -111,3 +112,6 @@ Again, see the included `LICENSE <LICENSE>`_ file for specific legal details.
 
 .. |circleci| image:: https://circleci.com/gh/twisted/twisted.svg?style=svg
 .. _circleci: https://circleci.com/gh/twisted/twisted
+
+.. |mypy| image:: https://github.com/twisted/twisted/workflows/mypy/badge.svg
+.. _mypy: https://github.com/twisted/twisted
