@@ -466,7 +466,7 @@ class _TCPServerEndpoint:
     A TCP server endpoint interface
     """
 
-    def __init__(self, reactor, port, backlog, interface):
+    def __init__(self, reactor, port, backlog, interface, reusePort):
         """
         @param reactor: An L{IReactorTCP} provider.
 
@@ -478,11 +478,15 @@ class _TCPServerEndpoint:
 
         @param interface: The hostname to bind to
         @type interface: str
+
+        @param reusePort: allow multiple processes to listen to the same port
+        @type reusePort: bool
         """
         self._reactor = reactor
         self._port = port
         self._backlog = backlog
         self._interface = interface
+        self._reusePort = reusePort
 
 
     def listen(self, protocolFactory):
@@ -490,11 +494,18 @@ class _TCPServerEndpoint:
         Implement L{IStreamServerEndpoint.listen} to listen on a TCP
         socket
         """
-        return defer.execute(self._reactor.listenTCP,
-                             self._port,
-                             protocolFactory,
-                             backlog=self._backlog,
-                             interface=self._interface)
+        if self._reusePort:
+            return defer.execute(self._reactor.listenTCPReusePort,
+                                 self._port,
+                                 protocolFactory,
+                                 backlog=self._backlog,
+                                 interface=self._interface)
+        else:
+            return defer.execute(self._reactor.listenTCP,
+                                 self._port,
+                                 protocolFactory,
+                                 backlog=self._backlog,
+                                 interface=self._interface)
 
 
 
@@ -502,7 +513,7 @@ class TCP4ServerEndpoint(_TCPServerEndpoint):
     """
     Implements TCP server endpoint with an IPv4 configuration
     """
-    def __init__(self, reactor, port, backlog=50, interface=''):
+    def __init__(self, reactor, port, backlog=50, interface='', reusePort=False):
         """
         @param reactor: An L{IReactorTCP} provider.
 
@@ -514,8 +525,12 @@ class TCP4ServerEndpoint(_TCPServerEndpoint):
 
         @param interface: The hostname to bind to, defaults to '' (all)
         @type interface: str
+
+        @param reusePort: allow multiple processes to listen to the same port
+        @type reusePort: bool
         """
-        _TCPServerEndpoint.__init__(self, reactor, port, backlog, interface)
+        _TCPServerEndpoint.__init__(self, reactor, port, backlog, interface,
+                reusePort)
 
 
 
@@ -523,7 +538,8 @@ class TCP6ServerEndpoint(_TCPServerEndpoint):
     """
     Implements TCP server endpoint with an IPv6 configuration
     """
-    def __init__(self, reactor, port, backlog=50, interface='::'):
+    def __init__(self, reactor, port, backlog=50, interface='::',
+            reusePort=False):
         """
         @param reactor: An L{IReactorTCP} provider.
 
@@ -535,8 +551,12 @@ class TCP6ServerEndpoint(_TCPServerEndpoint):
 
         @param interface: The hostname to bind to, defaults to C{::} (all)
         @type interface: str
+
+        @param reusePort: allow multiple processes to listen to the same port
+        @type reusePort: bool
         """
-        _TCPServerEndpoint.__init__(self, reactor, port, backlog, interface)
+        _TCPServerEndpoint.__init__(self, reactor, port, backlog, interface,
+                reusePort)
 
 
 

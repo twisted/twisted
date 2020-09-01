@@ -1392,7 +1392,8 @@ class TCP4EndpointsTests(EndpointTestCaseMixin, unittest.TestCase):
                                              **listenArgs),
                 (address.port, factory,
                  listenArgs.get('backlog', 50),
-                 listenArgs.get('interface', '')),
+                 listenArgs.get('interface', ''),
+                 listenArgs.get('reusePort', False)),
                 address)
 
 
@@ -1501,7 +1502,8 @@ class TCP6EndpointsTests(EndpointTestCaseMixin, unittest.TestCase):
                                              **listenArgs),
                 (address.port, factory,
                  listenArgs.get('backlog', 50),
-                 interface),
+                 interface,
+                 listenArgs.get('reusePort', False)),
                 address)
 
 
