@@ -33,7 +33,7 @@ __all__ = [
     'NO_CONTENT', 'RESET_CONTENT', 'PARTIAL_CONTENT', 'MULTI_STATUS',
 
     'MULTIPLE_CHOICE', 'MOVED_PERMANENTLY', 'FOUND', 'SEE_OTHER',
-    'NOT_MODIFIED', 'USE_PROXY', 'TEMPORARY_REDIRECT',
+    'NOT_MODIFIED', 'USE_PROXY', 'TEMPORARY_REDIRECT', 'PERMANENT_REDIRECT',
 
     'BAD_REQUEST', 'UNAUTHORIZED', 'PAYMENT_REQUIRED', 'FORBIDDEN', 'NOT_FOUND',
     'NOT_ALLOWED', 'NOT_ACCEPTABLE', 'PROXY_AUTH_REQUIRED', 'REQUEST_TIMEOUT',
@@ -56,73 +56,71 @@ __all__ = [
     ]
 
 
-# system imports
-import tempfile
-import base64, binascii
+import base64
+import binascii
+import calendar
 import cgi
 import math
-import time
-import calendar
-import warnings
 import os
 import re
+# system imports
+import tempfile
+import time
+import warnings
 from io import BytesIO
-
 from urllib.parse import (
     ParseResultBytes, urlparse as _urlparse, unquote_to_bytes as unquote)
 
 from zope.interface import Attribute, Interface, implementer, provider
 
 # twisted imports
-from twisted.python.compat import (
-    _PY3, long, unicode, intToBytes, networkString, nativeString, _PY37PLUS)
-from twisted.python.deprecate import deprecated
-from twisted.python import log
-from twisted.logger import Logger
-from twisted.python.failure import Failure
 from incremental import Version
-from twisted.python.components import proxyForInterface
-from twisted.internet import interfaces, protocol, address
+from twisted.logger import Logger
+from twisted.internet import address, interfaces, protocol
+from twisted.internet._producer_helpers import _PullToPush
 from twisted.internet.defer import Deferred
 from twisted.internet.interfaces import IProtocol
-from twisted.internet._producer_helpers import _PullToPush
-from twisted.protocols import policies, basic
-
-from twisted.web.iweb import (
-    IRequest, IAccessLogFormatter, INonQueuedRequestFactory)
+from twisted.python.compat import _PY37PLUS, nativeString, networkString
+from twisted.python.components import proxyForInterface
+from twisted.python import log
+from twisted.python.deprecate import deprecated
+from twisted.python.failure import Failure
+from twisted.protocols import basic, policies
+# twisted imports
+from twisted.web._responses import (ACCEPTED, BAD_GATEWAY, BAD_REQUEST,
+                                    CONFLICT, CREATED, EXPECTATION_FAILED,
+                                    FORBIDDEN, FOUND, GATEWAY_TIMEOUT, GONE,
+                                    HTTP_VERSION_NOT_SUPPORTED,
+                                    INSUFFICIENT_STORAGE_SPACE,
+                                    INTERNAL_SERVER_ERROR, LENGTH_REQUIRED,
+                                    MOVED_PERMANENTLY, MULTI_STATUS,
+                                    MULTIPLE_CHOICE, NO_CONTENT,
+                                    NON_AUTHORITATIVE_INFORMATION,
+                                    NOT_ACCEPTABLE, NOT_ALLOWED, NOT_EXTENDED,
+                                    NOT_FOUND, NOT_IMPLEMENTED, NOT_MODIFIED,
+                                    OK, PARTIAL_CONTENT, PAYMENT_REQUIRED,
+                                    PRECONDITION_FAILED, PROXY_AUTH_REQUIRED,
+                                    REQUEST_ENTITY_TOO_LARGE, REQUEST_TIMEOUT,
+                                    REQUEST_URI_TOO_LONG, PERMANENT_REDIRECT,
+                                    REQUESTED_RANGE_NOT_SATISFIABLE,
+                                    RESET_CONTENT, RESPONSES, SEE_OTHER,
+                                    SERVICE_UNAVAILABLE, SWITCHING,
+                                    TEMPORARY_REDIRECT, UNAUTHORIZED,
+                                    UNSUPPORTED_MEDIA_TYPE, USE_PROXY)
 from twisted.web.http_headers import Headers, _sanitizeLinearWhitespace
+from twisted.web.iweb import (IAccessLogFormatter, INonQueuedRequestFactory,
+                              IRequest)
+
+
 
 try:
     from twisted.web._http2 import H2Connection
     H2_ENABLED = True
 except ImportError:
-    H2Connection = None
     H2_ENABLED = False
 
 
-from twisted.web._responses import (
-    SWITCHING,
 
-    OK, CREATED, ACCEPTED, NON_AUTHORITATIVE_INFORMATION, NO_CONTENT,
-    RESET_CONTENT, PARTIAL_CONTENT, MULTI_STATUS,
-
-    MULTIPLE_CHOICE, MOVED_PERMANENTLY, FOUND, SEE_OTHER, NOT_MODIFIED,
-    USE_PROXY, TEMPORARY_REDIRECT,
-
-    BAD_REQUEST, UNAUTHORIZED, PAYMENT_REQUIRED, FORBIDDEN, NOT_FOUND,
-    NOT_ALLOWED, NOT_ACCEPTABLE, PROXY_AUTH_REQUIRED, REQUEST_TIMEOUT,
-    CONFLICT, GONE, LENGTH_REQUIRED, PRECONDITION_FAILED,
-    REQUEST_ENTITY_TOO_LARGE, REQUEST_URI_TOO_LONG, UNSUPPORTED_MEDIA_TYPE,
-    REQUESTED_RANGE_NOT_SATISFIABLE, EXPECTATION_FAILED,
-
-    INTERNAL_SERVER_ERROR, NOT_IMPLEMENTED, BAD_GATEWAY, SERVICE_UNAVAILABLE,
-    GATEWAY_TIMEOUT, HTTP_VERSION_NOT_SUPPORTED, INSUFFICIENT_STORAGE_SPACE,
-    NOT_EXTENDED,
-
-    RESPONSES)
-
-
-_intTypes = (int, long)
 
 # A common request timeout -- 1 minute. This is roughly what nginx uses, and
 # so it seems to be a good choice for us too.
@@ -164,22 +162,22 @@ def urlparse(url):
     """
     Parse an URL into six components.
 
-    This is similar to C{urlparse.urlparse}, but rejects C{unicode} input
+    This is similar to C{urlparse.urlparse}, but rejects C{str} input
     and always produces C{bytes} output.
 
     @type url: C{bytes}
 
-    @raise TypeError: The given url was a C{unicode} string instead of a
+    @raise TypeError: The given url was a C{str} string instead of a
         C{bytes}.
 
     @return: The scheme, net location, path, params, query string, and fragment
         of the URL - all as C{bytes}.
     @rtype: C{ParseResultBytes}
     """
-    if isinstance(url, unicode):
+    if isinstance(url, str):
         raise TypeError("url must be bytes, not unicode")
     scheme, netloc, path, params, query, fragment = _urlparse(url)
-    if isinstance(scheme, unicode):
+    if isinstance(scheme, str):
         scheme = scheme.encode('ascii')
         netloc = netloc.encode('ascii')
         path = path.encode('ascii')
@@ -445,7 +443,7 @@ class _IDeprecatedHTTPChannelToRequestInterface(Interface):
         """
 
 
-    def __eq__(other):
+    def __eq__(other: object) -> bool:
         """
         Determines if two requests are the same object.
 
@@ -454,11 +452,10 @@ class _IDeprecatedHTTPChannelToRequestInterface(Interface):
 
         @return: L{True} when the two are the same object and L{False}
             when not.
-        @rtype: L{bool}
         """
 
 
-    def __ne__(other):
+    def __ne__(other: object) -> bool:
         """
         Determines if two requests are not the same object.
 
@@ -467,7 +464,6 @@ class _IDeprecatedHTTPChannelToRequestInterface(Interface):
 
         @return: L{True} when the two are not the same object and
             L{False} when they are.
-        @rtype: L{bool}
         """
 
 
@@ -731,8 +727,8 @@ class Request:
     finished = 0
     code = OK
     code_message = RESPONSES[OK]
-    method = "(no method yet)"
-    clientproto = b"(no clientproto yet)"
+    method = b"(no method yet)"  # type: bytes
+    clientproto = b"(no clientproto yet)"  # type: bytes
     uri = "(no uri yet)"
     startedWriting = 0
     chunked = 0
@@ -802,6 +798,7 @@ class Request:
 
     # methods for channel - end users should not use these
 
+    @deprecated(Version("Twisted", 16, 3, 0))
     def noLongerQueued(self):
         """
         Notify the object that it is no longer queued.
@@ -915,14 +912,7 @@ class Request:
                     else:
                         cgiArgs = cgi.parse_multipart(self.content, pdict)
 
-                    if not _PY37PLUS and _PY3:
-                        # The parse_multipart function on Python 3
-                        # decodes the header bytes as iso-8859-1 and
-                        # returns a str key -- we want bytes so encode
-                        # it back
-                        self.args.update({x.encode('iso-8859-1'): y
-                                          for x, y in cgiArgs.items()})
-                    elif _PY37PLUS:
+                    if _PY37PLUS:
                         # The parse_multipart function on Python 3.7+
                         # decodes the header bytes as iso-8859-1 and
                         # decodes the body bytes as utf8 with
@@ -932,9 +922,13 @@ class Request:
                             [z.encode('utf8', "surrogateescape")
                              if isinstance(z, str) else z for z in y]
                             for x, y in cgiArgs.items()})
-
                     else:
-                        self.args.update(cgiArgs)
+                        # The parse_multipart function on Python 3
+                        # decodes the header bytes as iso-8859-1 and
+                        # returns a str key -- we want bytes so encode
+                        # it back
+                        self.args.update({x.encode('iso-8859-1'): y
+                                          for x, y in cgiArgs.items()})
                 except Exception as e:
                     # It was a bad request, or we got a signal.
                     self.channel._respondToBadRequestAndDisconnect()
@@ -949,7 +943,7 @@ class Request:
         self.process()
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """
         Return a string description of the request including such information
         as the request method and request URI.
@@ -1125,7 +1119,7 @@ class Request:
         if not self.startedWriting:
             self.startedWriting = 1
             version = self.clientproto
-            code = intToBytes(self.code)
+            code = b'%d' % (self.code,)
             reason = self.code_message
             headers = []
 
@@ -1189,26 +1183,26 @@ class Request:
         L{twisted.web.server.Session} class for details.
 
         @param k: cookie name
-        @type k: L{bytes} or L{unicode}
+        @type k: L{bytes} or L{str}
 
         @param v: cookie value
-        @type v: L{bytes} or L{unicode}
+        @type v: L{bytes} or L{str}
 
         @param expires: cookie expire attribute value in
             "Wdy, DD Mon YYYY HH:MM:SS GMT" format
-        @type expires: L{bytes} or L{unicode}
+        @type expires: L{bytes} or L{str}
 
         @param domain: cookie domain
-        @type domain: L{bytes} or L{unicode}
+        @type domain: L{bytes} or L{str}
 
         @param path: cookie path
-        @type path: L{bytes} or L{unicode}
+        @type path: L{bytes} or L{str}
 
         @param max_age: cookie expiration in seconds from reception
-        @type max_age: L{bytes} or L{unicode}
+        @type max_age: L{bytes} or L{str}
 
         @param comment: cookie comment
-        @type comment: L{bytes} or L{unicode}
+        @type comment: L{bytes} or L{str}
 
         @param secure: direct browser to send the cookie on encrypted
             connections only
@@ -1222,10 +1216,10 @@ class Request:
             Direct browsers not to send this cookie on cross-origin requests.
             Please see:
             U{https://tools.ietf.org/html/draft-west-first-party-cookies-07}
-        @type sameSite: L{None}, L{bytes} or L{unicode}
+        @type sameSite: L{None}, L{bytes} or L{str}
 
         @raises: L{DeprecationWarning} if an argument is not L{bytes} or
-            L{unicode}.
+            L{str}.
             L{ValueError} if the value for C{sameSite} is not supported.
         """
         def _ensureBytes(val):
@@ -1233,7 +1227,7 @@ class Request:
             Ensure that C{val} is bytes, encoding using UTF-8 if
             needed.
 
-            @param val: L{bytes} or L{unicode}
+            @param val: L{bytes} or L{str}
 
             @return: L{bytes}
             """
@@ -1248,7 +1242,7 @@ class Request:
 
 
         def _sanitize(val):
-            """
+            r"""
             Replace linear whitespace (C{\r}, C{\n}, C{\r\n}) and
             semicolons C{;} in C{val} with a single space.
 
@@ -1290,7 +1284,7 @@ class Request:
         @type code: L{int}
         @type message: L{bytes}
         """
-        if not isinstance(code, _intTypes):
+        if not isinstance(code, int):
             raise TypeError("HTTP response code must be int or long")
         self.code = code
         if message:
@@ -1475,11 +1469,12 @@ class Request:
         if port == default:
             hostHeader = host
         else:
-            hostHeader = host + b":" + intToBytes(port)
+            hostHeader = b'%b:%d' % (host, port)
         self.requestHeaders.setRawHeaders(b"host", [hostHeader])
         self.host = address.IPv4Address("TCP", host, port)
 
 
+    @deprecated(Version('Twisted', 18, 4, 0), replacement="getClientAddress")
     def getClientIP(self):
         """
         Return the IP address of the client who submitted this request.
@@ -1544,7 +1539,7 @@ class Request:
             bas, upw = authh.split()
             if bas.lower() != b"basic":
                 raise ValueError()
-            upw = base64.decodestring(upw)
+            upw = base64.b64decode(upw)
             self.user, self.password = upw.split(b':', 1)
         except (binascii.Error, ValueError):
             self.user = self.password = b''
@@ -1609,7 +1604,7 @@ class Request:
             self.channel.loseConnection()
 
 
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
         """
         Determines if two requests are the same object.
 
@@ -1630,27 +1625,6 @@ class Request:
         return NotImplemented
 
 
-    def __ne__(self, other):
-        """
-        Determines if two requests are not the same object.
-
-        @param other: Another object whose identity will be compared
-            to this instance's.
-
-        @return: L{True} when the two are not the same object and
-            L{False} when they are.
-        @rtype: L{bool}
-        """
-        # When other is not an instance of request, return
-        # NotImplemented so that Python uses other.__ne__ to perform
-        # the comparison.  This ensures that a Request proxy generated
-        # by proxyForInterface can compare equal to an actual Request
-        # instance by turning request != proxy into proxy != request.
-        if isinstance(other, Request):
-            return self is not other
-        return NotImplemented
-
-
     def __hash__(self):
         """
         A C{Request} is hashable so that it can be used as a mapping key.
@@ -1659,15 +1633,6 @@ class Request:
         """
         return id(self)
 
-
-
-Request.getClientIP = deprecated(
-    Version('Twisted', 18, 4, 0),
-    replacement="getClientAddress",
-)(Request.getClientIP)
-
-Request.noLongerQueued = deprecated(
-    Version("Twisted", 16, 3, 0))(Request.noLongerQueued)
 
 
 class _DataLoss(Exception):
@@ -1704,7 +1669,7 @@ class _MalformedChunkedDataError(Exception):
 
 
 
-class _IdentityTransferDecoder(object):
+class _IdentityTransferDecoder:
     """
     Protocol for accumulating bytes up to a specified length.  This handles the
     case where no I{Transfer-Encoding} is specified.
@@ -1779,7 +1744,7 @@ class _IdentityTransferDecoder(object):
 
 
 
-class _ChunkedTransferDecoder(object):
+class _ChunkedTransferDecoder:
     """
     Protocol for decoding I{chunked} Transfer-Encoding, as defined by RFC 2616,
     section 3.6.1.  This protocol can interpret the contents of a request or
@@ -1905,7 +1870,7 @@ class _ChunkedTransferDecoder(object):
 
 
 @implementer(interfaces.IPushProducer)
-class _NoPushProducer(object):
+class _NoPushProducer:
     """
     A no-op version of L{interfaces.IPushProducer}, used to abstract over the
     possibility that a L{HTTPChannel} transport does not provide
@@ -1918,7 +1883,6 @@ class _NoPushProducer(object):
         Tells a producer that it has produced too much data to process for
         the time being, and to stop until resumeProducing() is called.
         """
-        pass
 
 
     def resumeProducing(self):
@@ -1928,7 +1892,6 @@ class _NoPushProducer(object):
         This tells a producer to re-add itself to the main loop and produce
         more data for its consumer.
         """
-        pass
 
 
     def registerProducer(self, producer, streaming):
@@ -1938,14 +1901,18 @@ class _NoPushProducer(object):
         @param producer: The producer to register.
         @param streaming: Whether this is a streaming producer or not.
         """
-        pass
 
 
     def unregisterProducer(self):
         """
         Stop consuming data from a producer, without disconnecting.
         """
-        pass
+
+
+    def stopProducing(self):
+        """
+        IProducer.stopProducing
+        """
 
 
 
@@ -2699,16 +2666,16 @@ def _escape(s):
     quotes were double quotes.
 
     @param s: The string to escape.
-    @type s: L{bytes} or L{unicode}
+    @type s: L{bytes} or L{str}
 
     @return: An escaped string.
-    @rtype: L{unicode}
+    @rtype: L{str}
     """
     if not isinstance(s, bytes):
         s = s.encode("ascii")
 
     r = repr(s)
-    if not isinstance(r, unicode):
+    if not isinstance(r, str):
         r = r.decode("ascii")
     if r.startswith(u"b"):
         r = r[1:]
@@ -2751,7 +2718,7 @@ def combinedLogFormatter(timestamp, request):
 
 
 @implementer(interfaces.IAddress)
-class _XForwardedForAddress(object):
+class _XForwardedForAddress:
     """
     L{IAddress} which represents the client IP to log for a request, as gleaned
     from an X-Forwarded-For header.
@@ -2766,7 +2733,7 @@ class _XForwardedForAddress(object):
 
 
 
-class _XForwardedForRequest(proxyForInterface(IRequest, "_request")):
+class _XForwardedForRequest(proxyForInterface(IRequest, "_request")):  # type: ignore[misc]  # noqa
     """
     Add a layer on top of another request that only uses the value of an
     X-Forwarded-For header as the result of C{getClientAddress}.
@@ -2824,7 +2791,7 @@ def proxiedLogFormatter(timestamp, request):
 
 
 
-class _GenericHTTPChannelProtocol(proxyForInterface(IProtocol, "_channel")):
+class _GenericHTTPChannelProtocol(proxyForInterface(IProtocol, "_channel")):  # type: ignore[misc]  # noqa
     """
     A proxy object that wraps one of the HTTP protocol objects, and switches
     between them depending on TLS negotiated protocol.
@@ -3056,7 +3023,11 @@ class HTTPFactory(protocol.ServerFactory):
         timestamps.
     """
 
-    protocol = _genericHTTPChannelProtocolFactory
+    # We need to ignore the mypy error here, because
+    # _genericHTTPChannelProtocolFactory is a callable which returns a proxy
+    # to a Protocol, instead of a concrete Protocol object, as expected in
+    # the protocol.Factory interface
+    protocol = _genericHTTPChannelProtocolFactory  # type: ignore[assignment]
 
     logPath = None
 

@@ -96,7 +96,7 @@ class ConnectableProtocol(Protocol):
 
 
 
-class EndpointCreator(object):
+class EndpointCreator:
     """
     Create client and server endpoints that know how to connect to each other.
     """
@@ -223,7 +223,7 @@ class _AcceptOneClient(ServerFactory):
 
 
 
-class _SimplePullProducer(object):
+class _SimplePullProducer:
     """
     A pull producer which writes one byte whenever it is resumed.  For use by
     C{test_unregisterProducerAfterDisconnect}.
@@ -286,7 +286,7 @@ class ClosingLaterProtocol(ConnectableProtocol):
 
 
 
-class ConnectionTestsMixin(object):
+class ConnectionTestsMixin:
     """
     This mixin defines test methods which should apply to most L{ITransport}
     implementations.
@@ -413,7 +413,7 @@ class ConnectionTestsMixin(object):
 
 
 
-class LogObserverMixin(object):
+class LogObserverMixin:
     """
     Mixin for L{TestCase} subclasses which want to observe log events.
     """
@@ -425,7 +425,7 @@ class LogObserverMixin(object):
 
 
 
-class BrokenContextFactory(object):
+class BrokenContextFactory:
     """
     A context factory with a broken C{getContext} method, for exercising the
     error handling for such a case.
@@ -437,7 +437,7 @@ class BrokenContextFactory(object):
 
 
 
-class StreamClientTestsMixin(object):
+class StreamClientTestsMixin:
     """
     This mixin defines tests applicable to SOCK_STREAM client implementations.
 

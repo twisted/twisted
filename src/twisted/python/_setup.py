@@ -145,7 +145,7 @@ _CONSOLE_SCRIPTS = [
 
 
 
-class ConditionalExtension(Extension, object):
+class ConditionalExtension(Extension):
     """
     An extension module that will only be compiled if certain conditions are
     met.
@@ -278,7 +278,7 @@ def getSetupArgs(extensions=_EXTENSIONS, readme='README.rst'):
 
 
 
-class BuildPy3(build_py, object):
+class BuildPy3(build_py):
     """
     A version of build_py that doesn't install the modules that aren't yet
     ported to Python 3.
@@ -292,10 +292,10 @@ class BuildPy3(build_py, object):
 
 
 
-## Helpers and distutil tweaks
+# Helpers and distutil tweaks
 
 
-class build_ext_twisted(build_ext.build_ext, object):
+class build_ext_twisted(build_ext.build_ext):  # type: ignore[name-defined]  # noqa
     """
     Allow subclasses to easily detect and customize Extensions to
     build at install-time.

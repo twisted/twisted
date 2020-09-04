@@ -6,9 +6,10 @@ Test code for policies.
 """
 
 
+from io import StringIO
+
 from zope.interface import Interface, implementer, implementedBy
 
-from twisted.python.compat import NativeStringIO
 from twisted.trial import unittest
 from twisted.test.proto_helpers import StringTransport
 from twisted.test.proto_helpers import StringTransportWithDisconnection
@@ -17,10 +18,7 @@ from twisted.internet import protocol, reactor, address, defer, task
 from twisted.protocols import policies
 
 
-try:
-    import builtins
-except ImportError:
-    import __builtin__ as builtins
+import builtins
 
 
 
@@ -185,7 +183,7 @@ class WrapperTests(unittest.TestCase):
         If the wrapped factory doesn't have a L{logPrefix} method,
         L{WrappingFactory.logPrefix} falls back to the factory class name.
         """
-        class NoFactory(object):
+        class NoFactory:
             pass
 
         server = NoFactory()
@@ -211,7 +209,7 @@ class WrapperTests(unittest.TestCase):
         If the wrapped protocol doesn't have a L{logPrefix} method,
         L{ProtocolWrapper.logPrefix} falls back to the protocol class name.
         """
-        class NoProtocol(object):
+        class NoProtocol:
             pass
 
         server = Server()
@@ -296,7 +294,7 @@ class WrapperTests(unittest.TestCase):
         C{startedConnecting} on the underlying factory.
         """
         result = []
-        class Factory(object):
+        class Factory:
             def startedConnecting(self, connector):
                 result.append(connector)
 
@@ -312,7 +310,7 @@ class WrapperTests(unittest.TestCase):
         C{clientConnectionLost} on the underlying factory.
         """
         result = []
-        class Factory(object):
+        class Factory:
             def clientConnectionLost(self, connector, reason):
                 result.append((connector, reason))
 
@@ -329,7 +327,7 @@ class WrapperTests(unittest.TestCase):
         C{clientConnectionFailed} on the underlying factory.
         """
         result = []
-        class Factory(object):
+        class Factory:
             def clientConnectionFailed(self, connector, reason):
                 result.append((connector, reason))
 
@@ -360,7 +358,8 @@ class WrapperTests(unittest.TestCase):
 
 
 class WrappingFactory(policies.WrappingFactory):
-    protocol = lambda s, f, p: p
+    def protocol(self, f, p):
+        return p
 
     def startFactory(self):
         policies.WrappingFactory.startFactory(self)
@@ -938,11 +937,14 @@ class WriteSequenceEchoProtocol(EchoProtocol):
         else:
             EchoProtocol.dataReceived(self, bytes)
 
+
+
 class TestLoggingFactory(policies.TrafficLoggingFactory):
     openFile = None
+
     def open(self, name):
         assert self.openFile is None, "open() called too many times"
-        self.openFile = NativeStringIO()
+        self.openFile = StringIO()
         return self.openFile
 
 
@@ -1019,7 +1021,7 @@ class LoggingFactoryTests(unittest.TestCase):
             Mock for the open call to prevent actually opening a log file.
             """
             open_calls.append((args, kwargs))
-            io = NativeStringIO()
+            io = StringIO()
             io.name = args[0]
             open_rvalues.append(io)
             return io

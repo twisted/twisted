@@ -42,7 +42,7 @@ def exit(status, message=None):
 try:
     import posix as Status
 except ImportError:
-    class Status(object):
+    class Status:  # type: ignore[no-redef]
         """
         Object to hang C{EX_*} values off of as a substitute for L{posix}.
         """

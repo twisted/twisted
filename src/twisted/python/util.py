@@ -26,9 +26,9 @@ else:
     setgroups = _setgroups
     getgroups = _getgroups
 
-from typing import Sequence
+from typing import (Callable, ClassVar, Mapping, MutableMapping, Sequence,
+                    Union, Tuple, cast)
 
-from twisted.python.compat import _PY3, unicode
 from incremental import Version
 from twisted.python.deprecate import deprecatedModuleAttribute
 
@@ -43,7 +43,7 @@ deprecatedModuleAttribute(
 
 
 
-class InsensitiveDict:
+class InsensitiveDict(MutableMapping):
     """
     Dictionary, that has case-insensitive keys.
 
@@ -52,8 +52,7 @@ class InsensitiveDict:
     looked up in lowercase and returned in lowercase by .keys() and .items().
     """
     """
-    Modified recipe at
-    http://aspn.activestate.com/ASPN/Cookbook/Python/Recipe/66315 originally
+    Modified recipe at http://code.activestate.com/recipes/66315/ originally
     contributed by Sami Hangaslammi.
     """
 
@@ -61,8 +60,9 @@ class InsensitiveDict:
         """
         Create an empty dictionary, or update from 'dict'.
         """
+        super().__init__()
         self.data = {}
-        self.preserve=preserve
+        self.preserve = preserve
         if dict:
             self.update(dict)
 
@@ -73,7 +73,7 @@ class InsensitiveDict:
 
 
     def _lowerOrReturn(self, key):
-        if isinstance(key, bytes) or isinstance(key, unicode):
+        if isinstance(key, bytes) or isinstance(key, str):
             return key.lower()
         else:
             return key
@@ -108,7 +108,7 @@ class InsensitiveDict:
 
     def _doPreserve(self, key):
         if not self.preserve and (isinstance(key, bytes)
-                                  or isinstance(key, unicode)):
+                                  or isinstance(key, str)):
             return key.lower()
         else:
             return key
@@ -164,7 +164,7 @@ class InsensitiveDict:
             self[k] = v
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """
         String representation of the dictionary.
         """
@@ -175,6 +175,8 @@ class InsensitiveDict:
     def iterkeys(self):
         for v in self.data.values():
             yield self._doPreserve(v[0])
+
+    __iter__ = iterkeys
 
 
     def itervalues(self):
@@ -187,8 +189,23 @@ class InsensitiveDict:
             yield self._doPreserve(k), v
 
 
+    _notFound = object()
+
+    def pop(self, key, default=_notFound):
+        """
+        @see: L{dict.pop}
+        @since: Twisted NEXT
+        """
+        try:
+            return self.data.pop(self._lowerOrReturn(key))[1]
+        except KeyError:
+            if default is self._notFound:
+                raise
+            return default
+
+
     def popitem(self):
-        i=self.items()[0]
+        i = self.items()[0]
         del self[i[0]]
         return i
 
@@ -206,11 +223,14 @@ class InsensitiveDict:
         return len(self.data)
 
 
-    def __eq__(self, other):
-        for k,v in self.items():
-            if not (k in other) or not (other[k]==v):
-                return 0
-        return len(self)==len(other)
+    def __eq__(self, other: object) -> bool:
+        if isinstance(other, Mapping):
+            for k, v in self.items():
+                if k not in other or other[k] != v:
+                    return False
+            return len(self) == len(other)
+        else:
+            return NotImplemented
 
 
 
@@ -475,10 +495,6 @@ class LineLog:
     def str(self):
         return bytes(self)
 
-    if not _PY3:
-        def __str__(self):
-            return self.__bytes__()
-
 
     def __bytes__(self):
         return b'\n'.join(filter(None, self.log))
@@ -508,7 +524,7 @@ def raises(exception, f, *args, **kwargs):
 
 
 
-class IntervalDifferential(object):
+class IntervalDifferential:
     """
     Given a list of intervals, generate the amount of time to sleep between
     "instants".
@@ -545,7 +561,7 @@ class IntervalDifferential(object):
 
 
 
-class _IntervalDifferentialIterator(object):
+class _IntervalDifferentialIterator:
     def __init__(self, i, d):
 
         self.intervals = [[e, e, n] for (e, n) in zip(i, range(len(i)))]
@@ -607,19 +623,25 @@ class FancyStrMixin:
     might be used for a float.
     """
     # Override in subclasses:
-    showAttributes = ()  # type: Sequence[str]
+    showAttributes = ()  # type: Sequence[Union[str, Tuple[str, str, str], Tuple[str, Callable]]]  # noqa
 
 
-    def __str__(self):
-        r = ['<', (hasattr(self, 'fancybasename') and self.fancybasename)
-             or self.__class__.__name__]
+    def __str__(self) -> str:
+        r = ['<', getattr(self, 'fancybasename', self.__class__.__name__)]
+        # The casts help mypy understand which type from the Union applies
+        # in each 'if' case.
+        #   https://github.com/python/mypy/issues/9171
         for attr in self.showAttributes:
             if isinstance(attr, str):
                 r.append(' %s=%r' % (attr, getattr(self, attr)))
             elif len(attr) == 2:
-                r.append((' %s=' % (attr[0],)) + attr[1](getattr(self, attr[0])))
+                attr = cast(Tuple[str, Callable], attr)
+                r.append((' %s=' % (attr[0],))
+                         + attr[1](getattr(self, attr[0])))
             else:
-                r.append((' %s=' + attr[2]) % (attr[1], getattr(self, attr[0])))
+                attr = cast(Tuple[str, str, str], attr)
+                r.append((' %s=' + attr[2])
+                         % (attr[1], getattr(self, attr[0])))
         r.append('>')
         return ''.join(r)
 
@@ -634,19 +656,18 @@ class FancyEqMixin:
     Comparison is done using the list of attributes defined in
     C{compareAttributes}.
     """
-    compareAttributes = ()  # type: Sequence[str]
+    compareAttributes = ()  # type: ClassVar[Sequence[str]]
 
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
         if not self.compareAttributes:
             return self is other
         if isinstance(self, other.__class__):
-            return (
-                [getattr(self, name) for name in self.compareAttributes] ==
-                [getattr(other, name) for name in self.compareAttributes])
+            return all(getattr(self, name) == getattr(other, name)
+                       for name in self.compareAttributes)
         return NotImplemented
 
 
-    def __ne__(self, other):
+    def __ne__(self, other: object) -> bool:
         result = self.__eq__(other)
         if result is NotImplemented:
             return result
@@ -735,74 +756,6 @@ def switchUID(uid, gid, euid=False):
         else:
             initgroups(uid, gid)
             setuid(uid)
-
-
-
-class SubclassableCStringIO(object):
-    """
-    A wrapper around cStringIO to allow for subclassing.
-    """
-    __csio = None
-
-    def __init__(self, *a, **kw):
-        from cStringIO import StringIO
-        self.__csio = StringIO(*a, **kw)
-
-
-    def __iter__(self):
-        return self.__csio.__iter__()
-
-
-    def next(self):
-        return self.__csio.next()
-
-
-    def close(self):
-        return self.__csio.close()
-
-
-    def isatty(self):
-        return self.__csio.isatty()
-
-
-    def seek(self, pos, mode=0):
-        return self.__csio.seek(pos, mode)
-
-
-    def tell(self):
-        return self.__csio.tell()
-
-
-    def read(self, n=-1):
-        return self.__csio.read(n)
-
-
-    def readline(self, length=None):
-        return self.__csio.readline(length)
-
-
-    def readlines(self, sizehint=0):
-        return self.__csio.readlines(sizehint)
-
-
-    def truncate(self, size=None):
-        return self.__csio.truncate(size)
-
-
-    def write(self, s):
-        return self.__csio.write(s)
-
-
-    def writelines(self, list):
-        return self.__csio.writelines(list)
-
-
-    def flush(self):
-        return self.__csio.flush()
-
-
-    def getvalue(self):
-        return self.__csio.getvalue()
 
 
 
@@ -1023,16 +976,7 @@ __all__ = [
     "getPassword", "println", "makeStatBar", "OrderedDict",
     "InsensitiveDict", "spewer", "searchupwards", "LineLog",
     "raises", "IntervalDifferential", "FancyStrMixin", "FancyEqMixin",
-    "switchUID", "SubclassableCStringIO", "mergeFunctionMetadata",
+    "switchUID", "mergeFunctionMetadata",
     "nameToLabel", "uidFromString", "gidFromString", "runAsEffectiveUser",
     "untilConcludes", "runWithWarningsSuppressed",
 ]
-
-
-if _PY3:
-    __notported__ = ["SubclassableCStringIO", "makeStatBar"]
-    for name in __all__[:]:
-        if name in __notported__:
-            __all__.remove(name)
-            del globals()[name]
-    del name, __notported__

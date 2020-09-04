@@ -8,13 +8,16 @@ Test cases for twisted.mail.smtp module.
 
 import inspect
 import base64
+import re
 
 from io import BytesIO
+from unittest import skipIf
+from typing import Any, List, Optional, Type, Tuple
 
 from zope.interface import implementer, directlyProvides
 
 from twisted.python.util import LineLog
-from twisted.trial import unittest
+from twisted.trial.unittest import TestCase
 from twisted.protocols import basic, loopback
 from twisted.internet import defer, protocol, reactor, interfaces
 from twisted.internet import address, error, task
@@ -40,9 +43,13 @@ try:
 except ImportError:
     sslSkip = "OpenSSL not present"
 else:
-    sslSkip = None
+    sslSkip = ""
 
-import re
+
+
+if not interfaces.IReactorSSL.providedBy(reactor):
+    sslSkip = "Reactor doesn't support SSL"
+
 
 
 def spameater(*spam, **eggs):
@@ -51,7 +58,7 @@ def spameater(*spam, **eggs):
 
 
 @implementer(smtp.IMessage)
-class BrokenMessage(object):
+class BrokenMessage:
     """
     L{BrokenMessage} is an L{IMessage} which raises an unexpected exception
     from its C{eomReceived} method.  This is useful for creating a server which
@@ -74,7 +81,7 @@ class BrokenMessage(object):
 
 
 
-class DummyMessage(object):
+class DummyMessage:
     """
     L{BrokenMessage} is an L{IMessage} which saves the message delivered to it
     to its domain object.
@@ -104,7 +111,7 @@ class DummyMessage(object):
 
 
 
-class DummyDomain(object):
+class DummyDomain:
     """
     L{DummyDomain} is an L{IDomain} which keeps track of messages delivered to
     it in memory.
@@ -211,7 +218,7 @@ class FakeSMTPServer(basic.LineReceiver):
 
 
 
-class SMTPClientTests(unittest.TestCase, LoopbackMixin):
+class SMTPClientTests(TestCase, LoopbackMixin):
     """
     Tests for L{smtp.SMTPClient}.
     """
@@ -327,7 +334,7 @@ class SMTPClientTests(unittest.TestCase, LoopbackMixin):
 
 
 
-class DummySMTPMessage(object):
+class DummySMTPMessage:
 
     def __init__(self, protocol, users):
         self.protocol = protocol
@@ -383,26 +390,26 @@ class DummyESMTP(DummyProto, smtp.ESMTP):
 
 
 class AnotherTestCase:
-    serverClass = None
-    clientClass = None
+    serverClass = None  # type: Optional[Type[protocol.Protocol]]
+    clientClass = None  # type: Optional[Type[smtp.SMTPClient]]
 
-    messages = [ (b'foo.com', b'moshez@foo.com', [b'moshez@bar.com'],
-                  b'moshez@foo.com', [b'moshez@bar.com'], b'''\
+    messages = [(b'foo.com', b'moshez@foo.com', [b'moshez@bar.com'],
+                 b'moshez@foo.com', [b'moshez@bar.com'], b'''\
 From: Moshe
 To: Moshe
 
 Hi,
 how are you?
 '''),
-                 (b'foo.com', b'tttt@rrr.com', [b'uuu@ooo', b'yyy@eee'],
-                  b'tttt@rrr.com', [b'uuu@ooo', b'yyy@eee'], b'''\
+                (b'foo.com', b'tttt@rrr.com', [b'uuu@ooo', b'yyy@eee'],
+                 b'tttt@rrr.com', [b'uuu@ooo', b'yyy@eee'], b'''\
 Subject: pass
 
 ..rrrr..
 '''),
-                 (b'foo.com', b'@this,@is,@ignored:foo@bar.com',
-                  [b'@ignore,@this,@too:bar@foo.com'],
-                  b'foo@bar.com', [b'bar@foo.com'], b'''\
+                (b'foo.com', b'@this,@is,@ignored:foo@bar.com',
+                 [b'@ignore,@this,@too:bar@foo.com'],
+                 b'foo@bar.com', [b'bar@foo.com'], b'''\
 Subject: apa
 To: foo
 
@@ -416,7 +423,7 @@ To: foo
         (b'', b'220.*\r\n$', None, None),
         (b'HELO foo.com\r\n', b'250.*\r\n$', None, None),
         (b'RSET\r\n', b'250.*\r\n$', None, None),
-        ]
+        ]  # type: List[Tuple[bytes, bytes, Any, Any]]
     for helo_, from_, to_, realfrom, realto, msg in messages:
         data.append((b'MAIL FROM:<' + from_ + b'>\r\n', b'250.*\r\n',
                      None, None))
@@ -474,13 +481,13 @@ To: foo
 
 
 
-class AnotherESMTPTests(AnotherTestCase, unittest.TestCase):
+class AnotherESMTPTests(AnotherTestCase, TestCase):
     serverClass = DummyESMTP
     clientClass = MyESMTPClient
 
 
 
-class AnotherSMTPTests(AnotherTestCase, unittest.TestCase):
+class AnotherSMTPTests(AnotherTestCase, TestCase):
     serverClass = DummySMTP
     clientClass = MySMTPClient
 
@@ -508,7 +515,7 @@ class DummyChecker:
 
 
 @implementer(smtp.IMessageDelivery)
-class SimpleDelivery(object):
+class SimpleDelivery:
     """
     L{SimpleDelivery} is a message delivery factory with no interesting
     behavior.
@@ -536,7 +543,7 @@ class DummyRealm:
 
 
 
-class AuthTests(unittest.TestCase, LoopbackMixin):
+class AuthTests(TestCase, LoopbackMixin):
     def test_crammd5Auth(self):
         """
         L{ESMTPClient} can authenticate using the I{CRAM-MD5} SASL mechanism.
@@ -605,7 +612,7 @@ class AuthTests(unittest.TestCase, LoopbackMixin):
 
 
 
-class SMTPHelperTests(unittest.TestCase):
+class SMTPHelperTests(TestCase):
     def testMessageID(self):
         d = {}
         for i in range(1000):
@@ -687,10 +694,8 @@ class NoticeTLSClient(MyESMTPClient):
 
 
 
-class TLSTests(unittest.TestCase, LoopbackMixin):
-    if sslSkip is not None:
-        skip = sslSkip
-
+@skipIf(sslSkip, sslSkip)
+class TLSTests(TestCase, LoopbackMixin):
 
     def testTLS(self):
         clientCTX = ClientTLSContext()
@@ -705,13 +710,9 @@ class TLSTests(unittest.TestCase, LoopbackMixin):
 
         return self.loopback(server, client).addCallback(check)
 
-if not interfaces.IReactorSSL.providedBy(reactor):
-    for case in (TLSTests,):
-        case.skip = "Reactor doesn't support SSL"
 
 
-
-class EmptyLineTests(unittest.TestCase):
+class EmptyLineTests(TestCase):
 
     def test_emptyLineSyntaxError(self):
         """
@@ -731,7 +732,7 @@ class EmptyLineTests(unittest.TestCase):
 
 
 
-class TimeoutTests(unittest.TestCase, LoopbackMixin):
+class TimeoutTests(TestCase, LoopbackMixin):
     """
     Check that SMTP client factories correctly use the timeout.
     """
@@ -909,7 +910,7 @@ class MultipleDeliveryFactorySMTPServerFactory(protocol.ServerFactory):
 
 
 
-class SMTPSenderFactoryTests(unittest.TestCase):
+class SMTPSenderFactoryTests(TestCase):
     """
     Tests for L{smtp.SMTPSenderFactory}.
     """
@@ -948,7 +949,7 @@ class SMTPSenderFactoryTests(unittest.TestCase):
 
 
 
-class SMTPSenderFactoryRetryTests(unittest.TestCase):
+class SMTPSenderFactoryRetryTests(TestCase):
     """
     Tests for the retry behavior of L{smtp.SMTPSenderFactory}.
     """
@@ -1009,7 +1010,7 @@ class SMTPSenderFactoryRetryTests(unittest.TestCase):
 
 
 @implementer(IRealm)
-class SingletonRealm(object):
+class SingletonRealm:
     """
     Trivial realm implementation which is constructed with an interface and an
     avatar and returns that avatar when asked for that interface.
@@ -1026,7 +1027,7 @@ class SingletonRealm(object):
 
 
 
-class NotImplementedDelivery(object):
+class NotImplementedDelivery:
     """
     Non-implementation of L{smtp.IMessageDelivery} which only has methods which
     raise L{NotImplementedError}.  Subclassed by various tests to provide the
@@ -1045,7 +1046,7 @@ class NotImplementedDelivery(object):
 
 
 
-class SMTPServerTests(unittest.TestCase):
+class SMTPServerTests(TestCase):
     """
     Test various behaviors of L{twisted.mail.smtp.SMTP} and
     L{twisted.mail.smtp.ESMTP}.
@@ -1189,7 +1190,7 @@ class SMTPServerTests(unittest.TestCase):
         L{smtp.SMTP} instance's portal is responded to with the correct error
         code.
         """
-        class DisallowAnonymousAccess(object):
+        class DisallowAnonymousAccess:
             """
             Checker for L{IAnonymous} which rejects authentication attempts.
             """
@@ -1255,7 +1256,7 @@ class SMTPServerTests(unittest.TestCase):
 
 
 
-class ESMTPAuthenticationTests(unittest.TestCase):
+class ESMTPAuthenticationTests(TestCase):
     def assertServerResponse(self, bytes, response):
         """
         Assert that when the given bytes are delivered to the ESMTP server
@@ -1490,7 +1491,7 @@ class ESMTPAuthenticationTests(unittest.TestCase):
 
 
 
-class SMTPClientErrorTests(unittest.TestCase):
+class SMTPClientErrorTests(TestCase):
     """
     Tests for L{smtp.SMTPClientError}.
     """
@@ -1529,7 +1530,7 @@ class SMTPClientErrorTests(unittest.TestCase):
 
 
 
-class SenderMixinSentMailTests(unittest.TestCase):
+class SenderMixinSentMailTests(TestCase):
     """
     Tests for L{smtp.SenderMixin.sentMail}, used in particular by
     L{smtp.SMTPSenderFactory} and L{smtp.ESMTPSenderFactory}.
@@ -1559,7 +1560,7 @@ class SenderMixinSentMailTests(unittest.TestCase):
 
 
 
-class ESMTPDowngradeTestCase(unittest.TestCase):
+class ESMTPDowngradeTestCase(TestCase):
     """
     Tests for the ESMTP -> SMTP downgrade functionality in L{smtp.ESMTPClient}.
     """
@@ -1638,12 +1639,11 @@ class ESMTPDowngradeTestCase(unittest.TestCase):
 
 
 
-class SSLTestCase(unittest.TestCase):
+@skipIf(sslSkip, sslSkip)
+class SSLTestCase(TestCase):
     """
     Tests for the TLS negotiation done by L{smtp.ESMTPClient}.
     """
-    if sslSkip is not None:
-        skip = sslSkip
 
     SERVER_GREETING = b"220 localhost NO UCE NO UBE NO RELAY PROBES ESMTP\r\n"
     EHLO_RESPONSE = b"250-localhost Hello 127.0.0.1, nice to meet you\r\n"
@@ -1816,7 +1816,7 @@ class AbortableStringTransport(StringTransport):
 
 
 
-class SendmailTests(unittest.TestCase):
+class SendmailTests(TestCase):
     """
     Tests for L{twisted.mail.smtp.sendmail}.
     """

@@ -29,7 +29,7 @@ class WouldDeadlock(Exception):
 
 
 
-class FakeThread(object):
+class FakeThread:
     """
     A fake L{threading.Thread}.
 
@@ -56,7 +56,7 @@ class FakeThread(object):
 
 
 
-class FakeQueue(object):
+class FakeQueue:
     """
     A fake L{Queue} implementing C{put} and C{get}.
 
@@ -93,7 +93,7 @@ class FakeQueue(object):
 
 
 
-class FakeLock(object):
+class FakeLock:
     """
     A stand-in for L{threading.Lock}.
 
@@ -294,13 +294,14 @@ class LockWorkerTests(SynchronousTestCase):
         L{AlreadyQuit} will be raised.
         """
         class RacyLockWorker(LockWorker):
-            def _lock_get(self):
+            @property
+            def _lock(self):
                 self.quit()
                 return self.__dict__['_lock']
-            def _lock_set(self, value):
-                self.__dict__['_lock'] = value
 
-            _lock = property(_lock_get, _lock_set)
+            @_lock.setter
+            def _lock(self, value):
+                self.__dict__['_lock'] = value
 
         worker = RacyLockWorker(FakeLock(), local())
         self.assertRaises(AlreadyQuit, worker.do, list)

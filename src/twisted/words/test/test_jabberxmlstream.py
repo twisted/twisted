@@ -5,7 +5,7 @@
 Tests for L{twisted.words.protocols.jabber.xmlstream}.
 """
 
-
+from unittest import skipIf
 from twisted.trial import unittest
 
 from zope.interface.verify import verifyObject
@@ -14,19 +14,19 @@ from twisted.internet import defer, task
 from twisted.internet.error import ConnectionLost
 from twisted.internet.interfaces import IProtocolFactory
 from twisted.python import failure
-from twisted.python.compat import unicode
 from twisted.test import proto_helpers
 from twisted.words.test.test_xmlstream import GenericXmlStreamFactoryTestsMixin
 from twisted.words.xish import domish
 from twisted.words.protocols.jabber import error, ijabber, jid, xmlstream
 
 try:
-    from twisted.internet import ssl
+    from twisted.internet import ssl as _ssl
 except ImportError:
     ssl = None
-    skipWhenNoSSL = "SSL not available"
+    skipWhenNoSSL = (True, "SSL not available")
 else:
-    skipWhenNoSSL = None
+    ssl = _ssl
+    skipWhenNoSSL = (False, "")
     from twisted.internet.ssl import CertificateOptions
     from twisted.internet._sslverify import ClientTLSOptions
 
@@ -658,10 +658,10 @@ class ListenAuthenticatorTests(unittest.TestCase):
         xs = self.xmlstream
         xs.makeConnection(proto_helpers.StringTransport())
         xs.dataReceived("<stream:stream xmlns='jabber:client' "
-                         "xmlns:stream='http://etherx.jabber.org/streams' "
-                         "from='example.org' to='example.com' id='12345' "
-                         "version='1.0'>")
-        self.assertIsInstance(xs.sid, unicode)
+                        "xmlns:stream='http://etherx.jabber.org/streams' "
+                        "from='example.org' to='example.com' id='12345' "
+                        "version='1.0'>")
+        self.assertIsInstance(xs.sid, str)
 
 
 
@@ -695,6 +695,7 @@ class TLSInitiatingInitializerTests(unittest.TestCase):
         self.assertTrue(self.init.required)
 
 
+    @skipIf(*skipWhenNoSSL)
     def test_wantedSupported(self):
         """
         When TLS is wanted and SSL available, StartTLS is initiated.
@@ -715,9 +716,8 @@ class TLSInitiatingInitializerTests(unittest.TestCase):
 
         return d
 
-    test_wantedSupported.skip = skipWhenNoSSL
 
-
+    @skipIf(*skipWhenNoSSL)
     def test_certificateVerify(self):
         """
         The server certificate will be verified.
@@ -738,9 +738,8 @@ class TLSInitiatingInitializerTests(unittest.TestCase):
         self.assertEqual(['TLS', 'reset', 'header'], self.done)
         return d
 
-    test_certificateVerify.skip = skipWhenNoSSL
 
-
+    @skipIf(*skipWhenNoSSL)
     def test_certificateVerifyContext(self):
         """
         A custom contextFactory is passed through to startTLS.
@@ -764,8 +763,6 @@ class TLSInitiatingInitializerTests(unittest.TestCase):
         self.xmlstream.dataReceived("<proceed xmlns='%s'/>" % NS_XMPP_TLS)
         self.assertEqual(['TLS', 'reset', 'header'], self.done)
         return d
-
-    test_certificateVerifyContext.skip = skipWhenNoSSL
 
 
     def test_wantedNotSupportedNotRequired(self):
@@ -958,7 +955,7 @@ class ToResponseTests(unittest.TestCase):
         self.assertFalse(response.hasAttribute('type'))
 
 
-class DummyFactory(object):
+class DummyFactory:
     """
     Dummy XmlStream factory that only registers bootstrap observers.
     """
@@ -1028,7 +1025,7 @@ class XMPPHandlerTests(unittest.TestCase):
         """
         Test that data is passed on for sending by the stream manager.
         """
-        class DummyStreamManager(object):
+        class DummyStreamManager:
             def __init__(self):
                 self.outlist = []
 
@@ -1352,7 +1349,7 @@ class XmlStreamServerFactoryTests(GenericXmlStreamFactoryTestsMixin):
         """
         Set up a server factory with an authenticator factory function.
         """
-        class TestAuthenticator(object):
+        class TestAuthenticator:
             def __init__(self):
                 self.xmlstreams = []
 

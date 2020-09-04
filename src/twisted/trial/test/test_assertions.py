@@ -19,31 +19,32 @@ import unittest as pyunit
 from twisted.python.util import FancyEqMixin
 from twisted.python.reflect import (
     prefixedMethods, accumulateMethods, fullyQualifiedName)
-from twisted.python.deprecate import deprecated
+from twisted.python.deprecate import deprecated, deprecatedModuleAttribute
 from incremental import Version, getVersionString
 from twisted.python.failure import Failure
 from twisted.trial import unittest
 from twisted.internet.defer import Deferred, fail, succeed
 
-class MockEquality(FancyEqMixin, object):
+class MockEquality(FancyEqMixin):
     compareAttributes = ("name",)
 
     def __init__(self, name):
         self.name = name
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "MockEquality(%s)" % (self.name,)
 
 
-class ComparisonError(object):
+class ComparisonError:
     """
     An object which raises exceptions from its comparison methods.
     """
     def _error(self, other):
         raise ValueError("Comparison is broken")
 
-    __eq__ = __ne__ = _error
+    __eq__ = _error
+    __ne__ = _error
 
 
 
@@ -749,7 +750,7 @@ class SynchronousAssertionsTests(unittest.SynchronousTestCase):
         """
         self.assertDictEqual({'a': 1}, {'a': 1})
     if getattr(unittest.SynchronousTestCase, 'assertDictEqual', None) is None:
-        test_assertDictEqual.skip = (
+        test_assertDictEqual.skip = (  # type: ignore[attr-defined]
             "assertDictEqual is not available on this version of Python")
 
 
@@ -1260,7 +1261,7 @@ class ResultOfCoroutineAssertionsTests(unittest.SynchronousTestCase):
         except self.failureException as e:
             self.assertIn(self.failure.getTraceback(), str(e))
 
-    test_successResultOfWithFailureHasTraceback.todo = (
+    test_successResultOfWithFailureHasTraceback.todo = (  # type: ignore[attr-defined]  # noqa
         "Tracebacks aren't preserved by exceptions later wrapped in Failures"
     )
 
@@ -1331,7 +1332,7 @@ class ResultOfCoroutineAssertionsTests(unittest.SynchronousTestCase):
         except self.failureException as e:
             self.assertIn(self.failure.getTraceback(), str(e))
 
-    test_failureResultOfWithWrongExceptionOneExpectedExceptionHasTB.todo = (
+    test_failureResultOfWithWrongExceptionOneExpectedExceptionHasTB.todo = (  # type: ignore[attr-defined]  # noqa
         "Tracebacks aren't preserved by exceptions later wrapped in Failures"
     )
 
@@ -1371,7 +1372,7 @@ class ResultOfCoroutineAssertionsTests(unittest.SynchronousTestCase):
         except self.failureException as e:
             self.assertIn(self.failure.getTraceback(), str(e))
 
-    test_failureResultOfWithWrongExceptionMultiExpectedExceptionsHasTB.todo = (
+    test_failureResultOfWithWrongExceptionMultiExpectedExceptionsHasTB.todo = (  # type: ignore[attr-defined]  # noqa
         "Tracebacks aren't preserved by exceptions later wrapped in Failures"
     )
 
@@ -1671,3 +1672,104 @@ def oldMethodReplaced(x):
     mythical 'newMethod'.
     """
     return 2 * x
+
+
+
+class GetDeprecatedModuleAttributeTests(unittest.SynchronousTestCase):
+    """
+    Test L{SynchronousTestCase.getDeprecatedModuleAttribute}
+
+    @ivar version: The version at which L{test_assertions.somethingOld}
+        is marked deprecated.
+    @type version: L{incremental.Version}
+    """
+
+    version = Version("Bar", 1, 2, 3)
+
+
+    def test_deprecated(self):
+        """
+        L{getDeprecatedModuleAttribute} returns the specified attribute and
+        consumes the deprecation warning that generates.
+        """
+        self.assertIs(
+            _somethingOld,
+            self.getDeprecatedModuleAttribute(
+                __name__, "somethingOld", self.version,
+            ),
+        )
+        self.assertEqual([], self.flushWarnings())
+
+
+    def test_message(self):
+        """
+        The I{message} argument to L{getDeprecatedModuleAttribute} matches the
+        prefix of the deprecation message.
+        """
+        self.assertIs(
+            _somethingOld,
+            self.getDeprecatedModuleAttribute(
+                __name__, "somethingOld", self.version, message="It's old",
+            ),
+        )
+        self.assertEqual([], self.flushWarnings())
+
+
+    def test_messageMismatch(self):
+        """
+        L{getDeprecatedModuleAttribute} fails the test if the I{message} isn't
+        part of the deprecation message prefix.
+        """
+        self.assertRaises(
+            self.failureException,
+            self.getDeprecatedModuleAttribute,
+            __name__,
+            "somethingOld",
+            self.version,
+            "It's shiny and new",  # Doesn't match.
+        )
+        self.assertEqual([], self.flushWarnings())
+
+
+    def test_notDeprecated(self):
+        """
+        L{getDeprecatedModuleAttribute} fails the test when used to get an
+        attribute that isn't actually deprecated.
+        """
+        self.assertRaises(
+            self.failureException,
+            self.getDeprecatedModuleAttribute,
+            __name__,
+            "somethingNew",
+            self.version,
+        )
+
+
+
+def somethingOld():
+    """
+    A deprecated module attribute. Used by
+    L{GetDeprecatedModuleAttributeTests.test_deprecated}.
+    """
+
+
+
+# A non-deprecated alias of _somethingOld.
+_somethingOld = somethingOld
+
+
+
+deprecatedModuleAttribute(
+    GetDeprecatedModuleAttributeTests.version,
+    "It's old and clunky",
+    __name__,
+    "somethingOld",
+)
+
+
+
+def somethingNew():
+    """
+    A module attribute that is not deprecated. Used by
+    L{GetDeprecatedModuleAttributeTests.test_notDeprecated}.
+    """

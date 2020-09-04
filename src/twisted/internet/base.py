@@ -8,13 +8,14 @@ Very basic functionality for a Reactor implementation.
 
 
 import socket  # needed only for sync-dns
-from typing import List
+from typing import Any, Callable, List
 from zope.interface import implementer, classImplements
 
 import sys
 import warnings
 from heapq import heappush, heappop, heapify
 
+import builtins
 import traceback
 
 from twisted.internet.interfaces import (
@@ -30,7 +31,6 @@ from twisted.internet._resolver import (
     SimpleResolverComplexifier as _SimpleResolverComplexifier,
 )
 from twisted.python import log, failure, reflect
-from twisted.python.compat import unicode, iteritems
 from twisted.python.runtime import seconds as runtimeSeconds, platform
 from twisted.internet.defer import Deferred, DeferredList
 
@@ -160,27 +160,33 @@ class DelayedCall:
         return not (self.cancelled or self.called)
 
 
-    def __le__(self, other):
+    def __le__(self, other: object) -> bool:
         """
         Implement C{<=} operator between two L{DelayedCall} instances.
 
         Comparison is based on the C{time} attribute (unadjusted by the
         delayed time).
         """
-        return self.time <= other.time
+        if isinstance(other, DelayedCall):
+            return self.time <= other.time
+        else:
+            return NotImplemented
 
 
-    def __lt__(self, other):
+    def __lt__(self, other: object) -> bool:
         """
         Implement C{<} operator between two L{DelayedCall} instances.
 
         Comparison is based on the C{time} attribute (unadjusted by the
         delayed time).
         """
-        return self.time < other.time
+        if isinstance(other, DelayedCall):
+            return self.time < other.time
+        else:
+            return NotImplemented
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """
         Implement C{repr()} for L{DelayedCall} instances.
 
@@ -226,7 +232,7 @@ class DelayedCall:
 
 
 @implementer(IResolverSimple)
-class ThreadedResolver(object):
+class ThreadedResolver:
     """
     L{ThreadedResolver} uses a reactor, a threadpool, and
     L{socket.gethostbyname} to perform name lookups without blocking the
@@ -307,7 +313,7 @@ class BlockingResolver:
             return defer.succeed(address)
 
 
-class _ThreePhaseEvent(object):
+class _ThreePhaseEvent:
     """
     Collection of callables (with arguments) which can be invoked as a group in
     a particular order.
@@ -449,7 +455,7 @@ class _ThreePhaseEvent(object):
 
 
 @implementer(IReactorPluggableNameResolver, IReactorPluggableResolver)
-class PluggableResolverMixin(object):
+class PluggableResolverMixin:
     """
     A mixin which implements the pluggable resolver reactor interfaces.
 
@@ -719,14 +725,16 @@ class ReactorBase(PluggableResolverMixin):
             event.fireEvent()
 
 
-    def addSystemEventTrigger(self, _phase, _eventType, _f, *args, **kw):
+    def addSystemEventTrigger(self, phase: str, eventType: str,
+                              callable: Callable[..., Any], *args, **kw):
         """See twisted.internet.interfaces.IReactorCore.addSystemEventTrigger.
         """
-        assert callable(_f), "%s is not callable" % _f
-        if _eventType not in self._eventTriggers:
-            self._eventTriggers[_eventType] = _ThreePhaseEvent()
-        return (_eventType, self._eventTriggers[_eventType].addTrigger(
-            _phase, _f, *args, **kw))
+        assert builtins.callable(callable), \
+               "{} is not callable".format(callable)
+        if eventType not in self._eventTriggers:
+            self._eventTriggers[eventType] = _ThreePhaseEvent()
+        return (eventType, self._eventTriggers[eventType].addTrigger(
+            phase, callable, *args, **kw))
 
 
     def removeSystemEventTrigger(self, triggerID):
@@ -736,14 +744,15 @@ class ReactorBase(PluggableResolverMixin):
         self._eventTriggers[eventType].removeTrigger(handle)
 
 
-    def callWhenRunning(self, _callable, *args, **kw):
+    def callWhenRunning(self, callable: Callable[..., Any], *args, **kw):
         """See twisted.internet.interfaces.IReactorCore.callWhenRunning.
         """
         if self.running:
-            _callable(*args, **kw)
+            callable(*args, **kw)
         else:
             return self.addSystemEventTrigger('after', 'startup',
-                                              _callable, *args, **kw)
+                                              callable, *args, **kw)
+
 
     def startRunning(self):
         """
@@ -775,22 +784,30 @@ class ReactorBase(PluggableResolverMixin):
         """
         self.running = True
 
+
+    def run(self):
+        # IReactorCore.run
+        raise NotImplementedError()
+
+
     # IReactorTime
 
     seconds = staticmethod(runtimeSeconds)
 
-    def callLater(self, _seconds, _f, *args, **kw):
+    def callLater(self, delay, callable: Callable[..., Any], *args, **kw):
         """See twisted.internet.interfaces.IReactorTime.callLater.
         """
-        assert callable(_f), "%s is not callable" % _f
-        assert _seconds >= 0, \
-               "%s is not greater than or equal to 0 seconds" % (_seconds,)
-        tple = DelayedCall(self.seconds() + _seconds, _f, args, kw,
+        assert builtins.callable(callable), \
+               "{} is not callable".format(callable)
+        assert delay >= 0, \
+               "{} is not greater than or equal to 0 seconds".format(delay)
+        tple = DelayedCall(self.seconds() + delay, callable, args, kw,
                            self._cancelCallLater,
                            self._moveCallLaterSooner,
                            seconds=self.seconds)
         self._newTimedCalls.append(tple)
         return tple
+
 
     def _moveCallLaterSooner(self, tple):
         # Linear time find: slow.
@@ -958,7 +975,13 @@ class ReactorBase(PluggableResolverMixin):
         #
         # -exarkun
 
-        defaultEncoding = sys.getfilesystemencoding()
+        # If any of the following environment variables:
+        #  - PYTHONUTF8
+        #  - PYTHONIOENCODING
+        #
+        # are set before the Python interpreter runs, they will affect the
+        # value of sys.stdout.encoding
+        defaultEncoding = sys.stdout.encoding
 
         # Common check function
         def argChecker(arg):
@@ -969,7 +992,7 @@ class ReactorBase(PluggableResolverMixin):
             returned.  This forces unicode encoding to happen now, rather than
             implicitly later.
             """
-            if isinstance(arg, unicode):
+            if isinstance(arg, str):
                 try:
                     arg = arg.encode(defaultEncoding)
                 except UnicodeEncodeError:
@@ -985,23 +1008,30 @@ class ReactorBase(PluggableResolverMixin):
 
         outputArgs = []
         for arg in args:
-            arg = argChecker(arg)
-            if arg is None:
-                raise TypeError("Arguments contain a non-string value")
+            _arg = argChecker(arg)
+            if _arg is None:
+                raise TypeError(
+                    "Arguments contain a non-string value: {}".format(arg))
             else:
-                outputArgs.append(arg)
+                outputArgs.append(_arg)
 
         outputEnv = None
         if env is not None:
             outputEnv = {}
-            for key, val in iteritems(env):
-                key = argChecker(key)
-                if key is None:
-                    raise TypeError("Environment contains a non-string key")
-                val = argChecker(val)
-                if val is None:
-                    raise TypeError("Environment contains a non-string value")
-                outputEnv[key] = val
+            for key, val in env.items():
+                _key = argChecker(key)
+                if _key is None:
+                    raise TypeError(
+                        "Environment contains a "
+                        "non-string key: {}, using encoding: {}".format(
+                            key, sys.stdout.encoding))
+                _val = argChecker(val)
+                if _val is None:
+                    raise TypeError(
+                        "Environment contains a "
+                        "non-string value: {}, using encoding {}".format(
+                            val, sys.stdout.encoding))
+                outputEnv[_key] = _val
         return outputArgs, outputEnv
 
     # IReactorThreads
@@ -1177,7 +1207,7 @@ class BaseConnector:
             reflect.qual(self.__class__) + " did not implement "
             "getDestination")
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "<%s instance at 0x%x %s %s>" % (
             reflect.qual(self.__class__), id(self), self.state,
             self.getDestination())
@@ -1207,7 +1237,7 @@ class BasePort(abstract.FileDescriptor):
 
 
 
-class _SignalReactorMixin(object):
+class _SignalReactorMixin:
     """
     Private mixin to manage signals: it installs signal handlers at start time,
     and define run method.

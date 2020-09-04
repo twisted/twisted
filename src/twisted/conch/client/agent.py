@@ -12,11 +12,12 @@ import os
 
 from twisted.conch.ssh import agent, channel, keys
 from twisted.internet import protocol, reactor
-from twisted.python import log
+from twisted.logger import Logger
 
 
 
 class SSHAgentClient(agent.SSHAgentClient):
+    _log = Logger()
 
     def __init__(self):
         agent.SSHAgentClient.__init__(self)
@@ -28,7 +29,7 @@ class SSHAgentClient(agent.SSHAgentClient):
 
 
     def _cbPublicKeys(self, blobcomm):
-        log.msg('got %i public keys' % len(blobcomm))
+        self._log.debug('got {num_keys} public keys', num_keys=len(blobcomm))
         self.blobs = [x[0] for x in blobcomm]
 
 

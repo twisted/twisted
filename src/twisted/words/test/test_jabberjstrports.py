@@ -12,6 +12,7 @@ from twisted.words.protocols.jabber import jstrports
 from twisted.application.internet import TCPClient
 
 
+
 class JabberStrPortsPlaceHolderTests(unittest.TestCase):
     """
     Tests for L{jstrports}

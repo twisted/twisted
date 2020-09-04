@@ -7,33 +7,25 @@ L{twisted.cred.strcred}.
 
 
 import os
-from typing import List, Sequence, Type
+from io import StringIO
+from typing import Sequence, Type
+from unittest import skipIf
 from zope.interface import Interface
 
 from twisted import plugin
-from twisted.trial import unittest
+from twisted.trial.unittest import TestCase
 from twisted.cred import credentials, checkers, error, strcred
 from twisted.plugins import cred_file, cred_anonymous, cred_unix
 from twisted.python import usage
-from twisted.python.compat import NativeStringIO
 from twisted.python.filepath import FilePath
 from twisted.python.fakepwd import UserDatabase
 from twisted.python.reflect import requireModule
 
-try:
-    import crypt
-except ImportError:
-    crypt = None
 
-try:
-    import pwd
-except ImportError:
-    pwd = None
 
-try:
-    import spwd
-except ImportError:
-    spwd = None
+crypt = requireModule("crypt")
+pwd = requireModule("pwd")
+spwd = requireModule("spwd")
 
 
 
@@ -49,7 +41,7 @@ def getInvalidAuthType():
 
 
 
-class PublicAPITests(unittest.TestCase):
+class PublicAPITests(TestCase):
 
     def test_emptyDescription(self):
         """
@@ -72,7 +64,7 @@ class PublicAPITests(unittest.TestCase):
 
 
 
-class StrcredFunctionsTests(unittest.TestCase):
+class StrcredFunctionsTests(TestCase):
 
     def test_findCheckerFactories(self):
         """
@@ -93,7 +85,7 @@ class StrcredFunctionsTests(unittest.TestCase):
 
 
 
-class MemoryCheckerTests(unittest.TestCase):
+class MemoryCheckerTests(TestCase):
 
     def setUp(self):
         self.admin = credentials.UsernamePassword('admin', 'asdf')
@@ -150,7 +142,7 @@ class MemoryCheckerTests(unittest.TestCase):
 
 
 
-class AnonymousCheckerTests(unittest.TestCase):
+class AnonymousCheckerTests(TestCase):
 
     def test_isChecker(self):
         """
@@ -174,7 +166,11 @@ class AnonymousCheckerTests(unittest.TestCase):
 
 
 
-class UnixCheckerTests(unittest.TestCase):
+@skipIf(not pwd, "Required module not available: pwd")
+@skipIf(not crypt, "Required module not available: crypt")
+@skipIf(not spwd, "Required module not available: spwd")
+class UnixCheckerTests(TestCase):
+
     users = {
         'admin': 'asdf',
         'alice': 'foo',
@@ -281,27 +277,12 @@ class UnixCheckerTests(unittest.TestCase):
             self.badPassBytes), error.UnauthorizedLogin)
 
 
-    if None in (pwd, spwd, crypt):
-        availability = []  # type: List[str]
-        for module, name in ((pwd, "pwd"), (spwd, "spwd"), (crypt, "crypt")):
-            if module is None:
-                availability += [name]
-        for method in (test_unixCheckerSucceeds,
-                       test_unixCheckerSucceedsBytes,
-                       test_unixCheckerFailsUsername,
-                       test_unixCheckerFailsUsernameBytes,
-                       test_unixCheckerFailsPassword,
-                       test_unixCheckerFailsPasswordBytes):
-            method.skip = ("Required module(s) are unavailable: " +
-                           ", ".join(availability))
 
-
-class CryptTests(unittest.TestCase):
+@skipIf(not crypt, "Required module is unavailable: crypt")
+class CryptTests(TestCase):
     """
     L{crypt} has functions for encrypting password.
     """
-    if not crypt:
-        skip = "Required module is unavailable: crypt"
 
     def test_verifyCryptedPassword(self):
         """
@@ -347,9 +328,21 @@ class CryptTests(unittest.TestCase):
                                                      password.encode("utf-8"))
             self.assertFalse(result)
 
+    def test_verifyCryptedPasswordOSError(self):
+        """
+        L{cred_unix.verifyCryptedPassword} when OSError is raised
+        """
+        def mockCrypt(password, salt):
+            raise OSError("")
+
+        password = "sample password ^%$"
+        cryptedCorrect = crypt.crypt(password, "ab")
+        self.patch(crypt, "crypt", mockCrypt)
+        self.assertFalse(cred_unix.verifyCryptedPassword(cryptedCorrect,
+                                                         password))
 
 
-class FileDBCheckerTests(unittest.TestCase):
+class FileDBCheckerTests(TestCase):
     """
     C{--auth=file:...} file checker.
     """
@@ -422,7 +415,7 @@ class FileDBCheckerTests(unittest.TestCase):
         should produce a warning.
         """
         oldOutput = cred_file.theFileCheckerFactory.errorOutput
-        newOutput = NativeStringIO()
+        newOutput = StringIO()
         cred_file.theFileCheckerFactory.errorOutput = newOutput
         strcred.makeChecker('file:' + self._fakeFilename())
         cred_file.theFileCheckerFactory.errorOutput = oldOutput
@@ -430,22 +423,14 @@ class FileDBCheckerTests(unittest.TestCase):
 
 
 
-class SSHCheckerTests(unittest.TestCase):
+@skipIf(not requireModule('cryptography'), 'cryptography is not available')
+@skipIf(not requireModule('pyasn1'), 'pyasn1 is not available')
+class SSHCheckerTests(TestCase):
     """
-    Tests for the C{--auth=sshkey:...} checker.  The majority of the tests for the
-    ssh public key database checker are in
+    Tests for the C{--auth=sshkey:...} checker.  The majority of the
+    tests for the ssh public key database checker are in
     L{twisted.conch.test.test_checkers.SSHPublicKeyCheckerTestCase}.
     """
-
-    skip = None
-
-    if requireModule('cryptography') is None:
-        skip = 'cryptography is not available'
-
-    if requireModule('pyasn1') is None:
-        skip = 'pyasn1 is not available'
-
-
     def test_isChecker(self):
         """
         Verifies that strcred.makeChecker('sshkey') returns an object
@@ -465,7 +450,7 @@ class DummyOptions(usage.Options, strcred.AuthOptionMixin):
 
 
 
-class CheckerOptionsTests(unittest.TestCase):
+class CheckerOptionsTests(TestCase):
 
     def test_createsList(self):
         """
@@ -545,7 +530,7 @@ class CheckerOptionsTests(unittest.TestCase):
         The C{--help-auth} argument correctly displays all
         available authentication plugins, then exits.
         """
-        newStdout = NativeStringIO()
+        newStdout = StringIO()
         options = DummyOptions()
         options.authOutput = newStdout
         self.assertRaises(SystemExit, options.parseOptions, ['--help-auth'])
@@ -555,10 +540,10 @@ class CheckerOptionsTests(unittest.TestCase):
 
     def test_displaysHelpCorrectly(self):
         """
-        The C{--help-auth-for} argument will correctly display the help file for a
-        particular authentication plugin.
+        The C{--help-auth-for} argument will correctly display the help file
+        for a particular authentication plugin.
         """
-        newStdout = NativeStringIO()
+        newStdout = StringIO()
         options = DummyOptions()
         options.authOutput = newStdout
         self.assertRaises(
@@ -601,7 +586,7 @@ class OptionsSupportsNoInterfaces(usage.Options, strcred.AuthOptionMixin):
 
 
 
-class LimitingInterfacesTests(unittest.TestCase):
+class LimitingInterfacesTests(TestCase):
     """
     Tests functionality that allows an application to limit the
     credential interfaces it can support. For the purposes of this
@@ -742,7 +727,7 @@ class LimitingInterfacesTests(unittest.TestCase):
                 break
         self.assertNotIdentical(invalidFactory, None)
         # Capture output and make sure the warning is there
-        newStdout = NativeStringIO()
+        newStdout = StringIO()
         options.authOutput = newStdout
         self.assertRaises(SystemExit, options.parseOptions,
                           ['--help-auth-type', 'anonymous'])

@@ -39,7 +39,7 @@ from twisted.python._release import (
 if os.name != 'posix':
     skip = "Release toolchain only supported on POSIX."
 else:
-    skip = None
+    skip = ""
 
 testingSphinxConf = u"master_doc = 'index'\n"
 
@@ -132,7 +132,7 @@ def genVersion(*args, **kwargs):
 
 
 
-class StructureAssertingMixin(object):
+class StructureAssertingMixin:
     """
     A mixin for L{TestCase} subclasses which provides some methods for
     asserting the structure and contents of directories and files on the
@@ -396,7 +396,8 @@ class APIBuilderTests(ExternalTempdirTestCase):
     """
     Tests for L{APIBuilder}.
     """
-    skip = pydoctorSkip
+    if pydoctorSkip:
+        skip = pydoctorSkip
 
     @doNotFailOnNetworkError
     def test_build(self):
@@ -540,7 +541,7 @@ class APIBuilderTests(ExternalTempdirTestCase):
             u"def _bar():\n"
             u"    '{}'\n"
             u"@deprecated(Version('Twisted', 14, 2, 3), replacement='stuff')\n"
-            u"class Baz(object):\n"
+            u"class Baz:\n"
             u"    pass"
             u"".format(docstring, privateDocstring).encode("utf-8"))
 
@@ -911,7 +912,8 @@ class GitCommandTest(CommandsTestMixin, ExternalTempdirTestCase):
     L{GitCommand}.
     """
     createCommand = GitCommand
-    skip = gitSkip
+    if gitSkip:
+        skip = gitSkip
 
 
     def makeRepository(self, root):

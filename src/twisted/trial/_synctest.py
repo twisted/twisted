@@ -16,12 +16,16 @@ import tempfile
 import types
 import warnings
 from dis import findlinestarts as _findlinestarts
+from typing import Optional, Tuple
 
 from twisted.python import failure, log, monkey
 from twisted.python.reflect import fullyQualifiedName
 from twisted.python.util import runWithWarningsSuppressed
 from twisted.python.deprecate import (
-    getDeprecationWarningString, warnAboutFunction
+    DEPRECATION_WARNING_FORMAT,
+    getDeprecationWarningString,
+    getVersionString,
+    warnAboutFunction,
 )
 from twisted.internet.defer import ensureDeferred
 
@@ -30,7 +34,7 @@ from twisted.trial import itrial, util
 import unittest as pyunit
 
 # Python 2.7 and higher has skip support built-in
-SkipTest = pyunit.SkipTest
+from unittest import SkipTest
 
 
 
@@ -41,7 +45,7 @@ class FailTest(AssertionError):
 
 
 
-class Todo(object):
+class Todo:
     """
     Internal object used to mark a L{TestCase} as 'todo'. Tests marked 'todo'
     are reported differently in Trial L{TestResult}s. If todo'd tests fail,
@@ -63,7 +67,7 @@ class Todo(object):
         self.errors = errors
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "<Todo reason=%r errors=%r>" % (self.reason, self.errors)
 
 
@@ -107,7 +111,7 @@ def makeTodo(value):
 
 
 
-class _Warning(object):
+class _Warning:
     """
     A L{_Warning} instance represents one warning emitted through the Python
     warning system (L{warnings}).  This is used to insulate callers of
@@ -196,7 +200,7 @@ class UnsupportedTrialFeature(Exception):
 
 
 
-class PyUnitResultAdapter(object):
+class PyUnitResultAdapter:
     """
     Wrap a C{TestResult} from the standard library's C{unittest} so that it
     supports the extended result types from Trial, and also supports
@@ -269,7 +273,7 @@ class PyUnitResultAdapter(object):
 
 
 
-class _AssertRaisesContext(object):
+class _AssertRaisesContext:
     """
     A helper for implementing C{assertRaises}.  This is a context manager and a
     helper method to support the non-context manager version of
@@ -363,7 +367,7 @@ class _AssertRaisesContext(object):
 
 
 
-class _Assertions(pyunit.TestCase, object):
+class _Assertions(pyunit.TestCase):
     """
     Replaces many of the built-in TestCase assertions. In general, these
     assertions provide better error messages and are easier to use in
@@ -428,7 +432,11 @@ class _Assertions(pyunit.TestCase, object):
             return context
 
         return context._handle(lambda: f(*args, **kwargs))
-    failUnlessRaises = assertRaises
+
+    # unittest.TestCase.assertRaises() is defined with 4 arguments
+    # but we define it with 5 arguments.  So we need to tell mypy
+    # to ignore the following assignment to failUnlessRaises
+    failUnlessRaises = assertRaises  # type: ignore[assignment]
 
 
     def assertEqual(self, first, second, msg=None):
@@ -527,7 +535,8 @@ class _Assertions(pyunit.TestCase, object):
     failIfIn = assertNotIn
 
 
-    def assertNotAlmostEqual(self, first, second, places=7, msg=None):
+    def assertNotAlmostEqual(self, first, second, places=7, msg=None,
+                             delta=None):
         """
         Fail if the two objects are equal as determined by their
         difference rounded to the given number of decimal places
@@ -548,7 +557,8 @@ class _Assertions(pyunit.TestCase, object):
     failIfAlmostEquals = assertNotAlmostEqual
 
 
-    def assertAlmostEqual(self, first, second, places=7, msg=None):
+    def assertAlmostEqual(self, first, second, places=7, msg=None,
+                          delta=None):
         """
         Fail if the two objects are unequal as determined by their
         difference rounded to the given number of decimal places
@@ -828,30 +838,8 @@ class _Assertions(pyunit.TestCase, object):
             )
 
 
-    def assertRegex(self, text, regex, msg=None):
-        """
-        Fail the test if a C{regexp} search of C{text} fails.
 
-        @param text: Text which is under test.
-        @type text: L{str}
-
-        @param regex: A regular expression object or a string containing a
-            regular expression suitable for use by re.search().
-        @type regex: L{str} or L{re.RegexObject}
-
-        @param msg: Text used as the error message on failure.
-        @type msg: L{str}
-        """
-        if sys.version_info[:2] > (2, 7):
-            super(_Assertions, self).assertRegex(text, regex, msg)
-        else:
-            # Python 2.7 has unittest.assertRegexpMatches() which was
-            # renamed to unittest.assertRegex() in Python 3.2
-            super(_Assertions, self).assertRegexpMatches(text, regex, msg)
-
-
-
-class _LogObserver(object):
+class _LogObserver:
     """
     Observes the Twisted logs and catches any errors.
 
@@ -995,7 +983,7 @@ class SynchronousTestCase(_Assertions):
             testMethod, self, sys.modules.get(self.__class__.__module__)]
 
 
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
         """
         Override the comparison defined by the base TestCase which considers
         instances of the same class with the same _testMethodName to be
@@ -1004,11 +992,10 @@ class SynchronousTestCase(_Assertions):
         method twice.  Most likely, trial should stop using a set to hold
         tests, but until it does, this is necessary on Python 2.6. -exarkun
         """
-        return self is other
-
-
-    def __ne__(self, other):
-        return self is not other
+        if isinstance(other, SynchronousTestCase):
+            return self is other
+        else:
+            return NotImplemented
 
 
     def __hash__(self):
@@ -1022,15 +1009,25 @@ class SynchronousTestCase(_Assertions):
         return desc
 
 
-    def getSkip(self):
+    def getSkip(self) -> Tuple[bool, Optional[str]]:
         """
         Return the skip reason set on this test, if any is set. Checks on the
         instance first, then the class, then the module, then packages. As
-        soon as it finds something with a C{skip} attribute, returns that.
-        Returns L{None} if it cannot find anything. See L{TestCase} docstring
-        for more details.
+        soon as it finds something with a C{skip} attribute, returns that in
+        a tuple (L{True}, L{str}).
+        If the C{skip} attribute does not exist, look for C{__unittest_skip__}
+        and C{__unittest_skip_why__} attributes which are set by the standard
+        library L{unittest.skip} function.
+        Returns (L{False}, L{None}) if it cannot find anything.
+        See L{TestCase} docstring for more details.
         """
-        return util.acquireAttribute(self._parents, 'skip', None)
+        skipReason = util.acquireAttribute(self._parents, 'skip', None)
+        doSkip = skipReason is not None
+        if skipReason is None:
+            doSkip = getattr(self, "__unittest_skip__", False)
+            if doSkip:
+                skipReason = getattr(self, "__unittest_skip_why__", "")
+        return (doSkip, skipReason)
 
 
     def getTodo(self):
@@ -1073,8 +1070,9 @@ class SynchronousTestCase(_Assertions):
         else:
             result = new_result
         result.startTest(self)
-        if self.getSkip(): # don't run test methods that are marked as .skip
-            result.addSkip(self, self.getSkip())
+        (doSkip, skipReason) = self.getSkip()
+        if doSkip:  # don't run test methods that are marked as .skip
+            result.addSkip(self, skipReason)
             result.stopTest(self)
             return
 
@@ -1227,6 +1225,54 @@ class SynchronousTestCase(_Assertions):
             {'message': w.message, 'category': w.category,
              'filename': w.filename, 'lineno': w.lineno}
             for w in toFlush]
+
+
+    def getDeprecatedModuleAttribute(self, moduleName, name, version, message=None):
+        """
+        Retrieve a module attribute which should have been deprecated,
+        and assert that we saw the appropriate deprecation warning.
+
+        @type moduleName: C{str}
+        @param moduleName: Fully-qualified Python name of the module containing
+            the deprecated attribute; if called from the same module as the
+            attributes are being deprecated in, using the C{__name__} global can
+            be helpful
+
+        @type name: C{str}
+        @param name: Attribute name which we expect to be deprecated
+
+        @param version: The first L{version<twisted.python.versions.Version>} that
+            the module attribute was deprecated.
+
+        @type message: C{str}
+        @param message: (optional) The expected deprecation message for the module attribute
+
+        @return: The given attribute from the named module
+
+        @raise FailTest: if no warnings were emitted on getattr, or if the
+            L{DeprecationWarning} emitted did not produce the canonical
+            please-use-something-else message that is standard for Twisted
+            deprecations according to the given version and replacement.
+
+        @since: Twisted NEXT
+        """
+        fqpn = moduleName + '.' + name
+        module = sys.modules[moduleName]
+        attr = getattr(module, name)
+        warningsShown = self.flushWarnings([self.getDeprecatedModuleAttribute])
+        if len(warningsShown) == 0:
+            self.fail('%s is not deprecated.' % (fqpn,))
+
+        observedWarning = warningsShown[0]['message']
+        expectedWarning = DEPRECATION_WARNING_FORMAT % {
+            'fqpn': fqpn,
+            'version': getVersionString(version)}
+        if message is not None:
+            expectedWarning = expectedWarning + ': ' + message
+        self.assert_(observedWarning.startswith(expectedWarning),
+                     'Expected %r to start with %r' % (observedWarning, expectedWarning))
+
+        return attr
 
 
     def callDeprecated(self, version, f, *args, **kwargs):

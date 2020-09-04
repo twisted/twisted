@@ -35,7 +35,6 @@ from twisted import copyright
 from twisted.cred import portal, credentials, error as ecred
 from twisted.internet import defer, protocol
 from twisted.python import log, failure, reflect
-from twisted.python.compat import itervalues, unicode
 from twisted.python.components import registerAdapter
 from twisted.spread import pb
 from twisted.words import iwords, ewords
@@ -43,7 +42,7 @@ from twisted.words.protocols import irc
 
 
 @implementer(iwords.IGroup)
-class Group(object):
+class Group:
     def __init__(self, name):
         self.name = name
         self.users = {}
@@ -69,7 +68,7 @@ class Group(object):
         if user.name not in self.users:
             additions = []
             self.users[user.name] = user
-            for p in itervalues(self.users):
+            for p in self.users.values():
                 if p is not user:
                     d = defer.maybeDeferred(p.userJoined, self, user)
                     d.addErrback(self._ebUserCall, p=p)
@@ -85,7 +84,7 @@ class Group(object):
             pass
         else:
             removals = []
-            for p in itervalues(self.users):
+            for p in self.users.values():
                 if p is not user:
                     d = defer.maybeDeferred(p.userLeft, self, user, reason)
                     d.addErrback(self._ebUserCall, p=p)
@@ -101,7 +100,7 @@ class Group(object):
     def receive(self, sender, recipient, message):
         assert recipient is self
         receives = []
-        for p in itervalues(self.users):
+        for p in self.users.values():
             if p is not sender:
                 d = defer.maybeDeferred(p.receive, sender, self, message)
                 d.addErrback(self._ebUserCall, p=p)
@@ -113,7 +112,7 @@ class Group(object):
     def setMetadata(self, meta):
         self.meta = meta
         sets = []
-        for p in itervalues(self.users):
+        for p in self.users.values():
             d = defer.maybeDeferred(p.groupMetaUpdate, self, meta)
             d.addErrback(self._ebUserCall, p=p)
             sets.append(d)
@@ -127,7 +126,7 @@ class Group(object):
 
 
 @implementer(iwords.IUser)
-class User(object):
+class User:
     realm = None
     mind = None
 
@@ -937,27 +936,36 @@ class PBMind(pb.Referenceable):
     def __init__(self):
         pass
 
+
     def jellyFor(self, jellier):
         qual = reflect.qual(PBMind)
-        if isinstance(qual, unicode):
+        if isinstance(qual, str):
             qual = qual.encode("utf-8")
         return qual, jellier.invoker.registerReference(self)
+
 
     def remote_userJoined(self, user, group):
         pass
 
+
     def remote_userLeft(self, user, group, reason):
         pass
 
+
     def remote_receive(self, sender, recipient, message):
         pass
+
 
     def remote_groupMetaUpdate(self, group, meta):
         pass
 
 
+
 @implementer(iwords.IChatClient)
 class PBMindReference(pb.RemoteReference):
+
+    name = ""
+
     def receive(self, sender, recipient, message):
         if iwords.IGroup.providedBy(recipient):
             rec = PBGroup(self.realm, self.avatar, recipient)
@@ -969,11 +977,13 @@ class PBMindReference(pb.RemoteReference):
             rec,
             message)
 
+
     def groupMetaUpdate(self, group, meta):
         return self.callRemote(
             'groupMetaUpdate',
             PBGroup(self.realm, self.avatar, group),
             meta)
+
 
     def userJoined(self, group, user):
         return self.callRemote(
@@ -981,13 +991,18 @@ class PBMindReference(pb.RemoteReference):
             PBGroup(self.realm, self.avatar, group),
             PBUser(self.realm, self.avatar, user))
 
+
     def userLeft(self, group, user, reason=None):
         return self.callRemote(
             'userLeft',
             PBGroup(self.realm, self.avatar, group),
             PBUser(self.realm, self.avatar, user),
             reason)
+
+
+
 pb.setUnjellyableForClass(PBMind, PBMindReference)
+
 
 
 class PBGroup(pb.Referenceable):
@@ -1003,10 +1018,10 @@ class PBGroup(pb.Referenceable):
 
     def jellyFor(self, jellier):
         qual = reflect.qual(self.__class__)
-        if isinstance(qual, unicode):
+        if isinstance(qual, str):
             qual = qual.encode("utf-8")
         group = self.group.name
-        if isinstance(group, unicode):
+        if isinstance(group, str):
             group = group.encode("utf-8")
         return qual, group, jellier.invoker.registerReference(self)
 
@@ -1028,12 +1043,49 @@ class PBGroupReference(pb.RemoteReference):
             self.name = self.name.decode('utf-8')
         return pb.RemoteReference.unjellyFor(self, unjellier, [clsName, ref])
 
+
     def leave(self, reason=None):
         return self.callRemote("leave", reason)
 
+
     def send(self, message):
         return self.callRemote("send", message)
+
+
+    def add(self, user):
+        # IGroup.add
+        pass
+
+
+    def iterusers(self):
+        # IGroup.iterusers
+        pass
+
+
+    def receive(self, sender, recipient, message):
+        # IGroup.receive
+        pass
+
+
+    def remove(self, user, reason=None):
+        # IGroup.remove
+        pass
+
+
+    def setMetadata(self, meta):
+        # IGroup.setMetadata
+        pass
+
+
+    def size(self):
+        # IGroup.size
+        pass
+
+
+
 pb.setUnjellyableForClass(PBGroup, PBGroupReference)
+
+
 
 class PBUser(pb.Referenceable):
     def __init__(self, realm, avatar, user):
@@ -1053,7 +1105,7 @@ class ChatAvatar(pb.Referenceable):
 
     def jellyFor(self, jellier):
         qual = reflect.qual(self.__class__)
-        if isinstance(qual, unicode):
+        if isinstance(qual, str):
             qual = qual.encode("utf-8")
         return qual, jellier.invoker.registerReference(self)
 
@@ -1068,7 +1120,44 @@ class ChatAvatar(pb.Referenceable):
         d = self.avatar.realm.getGroup(groupName)
         d.addCallback(cbGroup)
         return d
+
+
+    @property
+    def name(self):
+        # IChatClient.name
+        pass
+
+
+    @name.setter
+    def name(self, value):
+        # IChatClient.name
+        pass
+
+
+    def groupMetaUpdate(self, group, meta):
+        # IChatClient.groupMetaUpdate
+        pass
+
+
+    def receive(self, sender, recipient, message):
+        # IChatClient.receive
+        pass
+
+
+    def userJoined(self, group, user):
+        # IChatClient.userJoined
+        pass
+
+
+    def userLeft(self, group, user, reason=None):
+        # IChatClient.userLeft
+        pass
+
+
+
 registerAdapter(ChatAvatar, iwords.IUser, pb.IPerspective)
+
+
 
 class AvatarReference(pb.RemoteReference):
     def join(self, groupName):
@@ -1084,7 +1173,7 @@ pb.setUnjellyableForClass(ChatAvatar, AvatarReference)
 
 
 @implementer(portal.IRealm, iwords.IChatService)
-class WordsRealm(object):
+class WordsRealm:
     _encoding = 'utf-8'
 
     def __init__(self, name):
@@ -1125,6 +1214,11 @@ class WordsRealm(object):
             raise NotImplementedError(self, interfaces)
 
         return self.getUser(avatarId).addCallback(gotAvatar)
+
+
+    def itergroups(self):
+        # IChatServer.itergroups
+        pass
 
 
     # IChatService, mostly.
@@ -1226,7 +1320,7 @@ class InMemoryWordsRealm(WordsRealm):
 
 
     def itergroups(self):
-        return defer.succeed(itervalues(self.groups))
+        return defer.succeed(self.groups.values())
 
 
     def addUser(self, user):

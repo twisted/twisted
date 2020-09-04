@@ -6,10 +6,9 @@ Tests for L{twisted.internet.base}.
 """
 
 import socket
-try:
-    from Queue import Queue
-except ImportError:
-    from queue import Queue
+from queue import Queue
+from unittest import skipIf
+from typing import Any, Callable
 
 from zope.interface import implementer
 
@@ -23,9 +22,17 @@ from twisted.internet.base import ThreadedResolver, DelayedCall, ReactorBase
 from twisted.internet.task import Clock
 from twisted.trial.unittest import TestCase, SkipTest
 
+try:
+    import signal as _signal
+except ImportError:
+    signal = None
+else:
+    signal = _signal
+
+
 
 @implementer(IReactorTime, IReactorThreads)
-class FakeReactor(object):
+class FakeReactor:
     """
     A fake reactor implementation which just supports enough reactor APIs for
     L{ThreadedResolver}.
@@ -42,8 +49,8 @@ class FakeReactor(object):
         self._threadCalls = Queue()
 
 
-    def callFromThread(self, f, *args, **kwargs):
-        self._threadCalls.put((f, args, kwargs))
+    def callFromThread(self, callable: Callable[..., Any], *args, **kwargs):
+        self._threadCalls.put((callable, args, kwargs))
 
 
     def _runThreadCalls(self):
@@ -53,6 +60,26 @@ class FakeReactor(object):
 
     def _stop(self):
         self._threadpool.stop()
+
+
+    def getDelayedCalls(self):
+        # IReactorTime.getDelayedCalls
+        pass
+
+
+    def seconds(self):
+        # IReactorTime.seconds
+        pass
+
+
+    def callInThread(self, callable: Callable[..., Any], *args, **kwargs):
+        # IReactorInThreads.callInThread
+        pass
+
+
+    def suggestThreadPoolSize(self, size):
+        # IReactorThreads.suggestThreadPoolSize
+        pass
 
 
 
@@ -166,7 +193,7 @@ class ThreadedResolverTests(TestCase):
         calls = []
 
         @implementer(IResolverSimple)
-        class FakeResolver(object):
+        class FakeResolver:
             def getHostByName(self, name, timeouts=()):
                 calls.append(name)
                 return Deferred()
@@ -207,7 +234,7 @@ def nothing():
 
 
 
-class DelayedCallMixin(object):
+class DelayedCallMixin:
     """
     L{DelayedCall}
     """
@@ -396,6 +423,7 @@ class TestSpySignalCapturingReactor(ReactorBase):
 
 
 
+@skipIf(not signal, "signal module not available")
 class ReactorBaseSignalTests(TestCase):
 
     """
@@ -441,10 +469,3 @@ class ReactorBaseSignalTests(TestCase):
         reactor = TestSpySignalCapturingReactor()
         reactor.sigBreak(signal.SIGBREAK, None)
         self.assertEquals(signal.SIGBREAK, reactor._exitSignal)
-
-
-
-try:
-    import signal
-except ImportError:
-    ReactorBaseSignalTests.skip = "signal module not available"

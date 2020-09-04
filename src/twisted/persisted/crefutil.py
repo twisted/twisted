@@ -10,7 +10,8 @@ Utility classes for dealing with circular references.
 
 
 from twisted.python import log, reflect
-from twisted.python.compat import range, _constructMethod
+from twisted.python.compat import _constructMethod
+
 
 
 class NotKnown:

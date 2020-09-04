@@ -18,7 +18,7 @@ To mark a method, function, or class as being deprecated do this::
         ...
 
     @deprecated(Version("Twisted", 16, 0, 0))
-    class BadClass(object):
+    class BadClass:
         '''
         Docstring for BadClass.
         '''
@@ -32,7 +32,7 @@ To deprecate properties you can use::
     from incremental import Version
     from twisted.python.deprecate import deprecatedProperty
 
-    class OtherwiseUndeprecatedClass(object):
+    class OtherwiseUndeprecatedClass:
 
         @deprecatedProperty(Version('Twisted', 16, 0, 0))
         def badProperty(self):
@@ -64,6 +64,14 @@ the attributes being deprecated are in the same module as the
 L{deprecatedModuleAttribute} call is being made from, the C{__name__} global
 can be used as the C{moduleName} parameter.
 
+
+To mark an optional, keyword parameter of a function or method as deprecated
+without deprecating the function itself, you can use::
+
+    @deprecatedKeywordParameter(Version("Twisted", 19, 2, 0), 'baz')
+    def someFunction(foo, bar=0, baz=None):
+        ...
+
 See also L{incremental.Version}.
 
 @type DEPRECATION_WARNING_FORMAT: C{str}
@@ -79,16 +87,18 @@ __all__ = [
     'getWarningMethod',
     'setWarningMethod',
     'deprecatedModuleAttribute',
+    'deprecatedKeywordParameter',
     ]
 
 
-import sys, inspect
+import inspect
+import typing
+import sys
 from warnings import warn, warn_explicit
 from dis import findlinestarts
 from functools import wraps
 
-from incremental import getVersionString
-from twisted.python.compat import _PY3
+from incremental import Version, getVersionString
 
 DEPRECATION_WARNING_FORMAT = '%(fqpn)s was deprecated in %(version)s'
 
@@ -355,21 +365,8 @@ def deprecatedProperty(version, replacement=None):
 
 
     def deprecationDecorator(function):
-        if _PY3:
-            warningString = getDeprecationWarningString(
-                function, version, None, replacement)
-        else:
-            # Because Python 2 sucks, we need to implement our own here -- lack
-            # of __qualname__ means that we kinda have to stack walk. It maybe
-            # probably works. Probably. -Amber
-            functionName = function.__name__
-            className = inspect.stack()[1][3]  # wow hax
-            moduleName = function.__module__
-
-            fqdn = "%s.%s.%s" % (moduleName, className, functionName)
-
-            warningString = _getDeprecationWarningString(
-                fqdn, version, None, replacement)
+        warningString = getDeprecationWarningString(
+            function, version, None, replacement)
 
         @wraps(function)
         def deprecatedFunction(*args, **kwargs):
@@ -411,7 +408,7 @@ def setWarningMethod(newMethod):
 
 
 
-class _InternalState(object):
+class _InternalState:
     """
     An L{_InternalState} is a helper object for a L{_ModuleProxy}, so that it
     can easily access its own attributes, bypassing its logic for delegating to
@@ -434,7 +431,7 @@ class _InternalState(object):
 
 
 
-class _ModuleProxy(object):
+class _ModuleProxy:
     """
     Python module wrapper to hook module-level attribute access.
 
@@ -468,7 +465,7 @@ class _ModuleProxy(object):
         state._lastWasPath = False
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """
         Get a string containing the type of the module proxy and a
         representation of the wrapped module object.
@@ -517,7 +514,7 @@ class _ModuleProxy(object):
 
 
 
-class _DeprecatedAttribute(object):
+class _DeprecatedAttribute:
     """
     Wrapper for deprecated attributes.
 
@@ -793,4 +790,68 @@ def _mutuallyExclusiveArguments(argumentPairs):
                         (this, that, _fullyQualifiedName(wrappee)))
             return wrappee(*args, **kwargs)
         return wrapped
+    return wrapper
+
+
+
+_Tc = typing.TypeVar('_Tc', bound=typing.Callable[..., typing.Any])
+
+
+
+def deprecatedKeywordParameter(version: Version,
+                               name: str,
+                               replacement: typing.Optional[str] = None
+                               ) -> typing.Callable[[_Tc], _Tc]:
+    """
+    Return a decorator that marks a keyword parameter of a callable
+    as deprecated. A warning will be emitted if a caller supplies
+    a value for the parameter, whether the caller uses a keyword or
+    positional syntax.
+
+    @type version: L{incremental.Version}
+    @param version: The version in which the parameter will be marked as
+        having been deprecated.
+
+    @type name: L{str}
+    @param name: The name of the deprecated parameter.
+
+    @type replacement: L{str}
+    @param replacement: Optional text indicating what should be used in
+        place of the deprecated parameter.
+
+    @since: Twisted NEXT
+    """
+    def wrapper(wrappee: _Tc) -> _Tc:
+        warningString = _getDeprecationWarningString(
+            'The %r parameter to %s' % (
+                name,
+                _fullyQualifiedName(wrappee)
+            ),
+            version,
+            replacement=replacement)
+
+        doc = 'The %r parameter was deprecated in %s' % (
+            name, getVersionString(version)
+        )
+        if replacement:
+            doc = doc + '; ' + _getReplacementString(replacement)
+        doc += '.'
+
+        params = inspect.signature(wrappee).parameters
+        if name in params and \
+           params[name].kind == inspect.Parameter.POSITIONAL_OR_KEYWORD:
+            parameterIndex = list(params).index(name)
+
+            def checkDeprecatedParameter(*args, **kwargs):
+                if len(args) > parameterIndex or name in kwargs:
+                    warn(warningString, DeprecationWarning, stacklevel=2)
+                return wrappee(*args, **kwargs)
+        else:
+            def checkDeprecatedParameter(*args, **kwargs):
+                if name in kwargs:
+                    warn(warningString, DeprecationWarning, stacklevel=2)
+                return wrappee(*args, **kwargs)
+        decorated = typing.cast(_Tc, wraps(wrappee)(checkDeprecatedParameter))
+        _appendToDocstring(decorated, doc)
+        return decorated
     return wrapper

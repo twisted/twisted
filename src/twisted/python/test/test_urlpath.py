@@ -8,10 +8,10 @@ Tests for L{twisted.python.urlpath}.
 
 from twisted.trial import unittest
 from twisted.python import urlpath
-from twisted.python.compat import _PY3
 
 
-class _BaseURLPathTests(object):
+
+class _BaseURLPathTests:
     """
     Tests for instantiated L{urlpath.URLPath}s.
     """
@@ -40,7 +40,7 @@ class _BaseURLPathTests(object):
 
         @param stringType: a callable to parameterize this test for different
             text types.
-        @type stringType: 1-argument callable taking L{unicode} and returning
+        @type stringType: 1-argument callable taking L{str} and returning
             L{str} or L{bytes}.
         """
         self.path.scheme = stringType(u"https")
@@ -261,21 +261,20 @@ class StringURLPathTests(_BaseURLPathTests, unittest.TestCase):
 
     def test_mustBeStr(self):
         """
-        C{URLPath.fromString} must take a L{str} or L{unicode} argument.
+        C{URLPath.fromString} must take a L{str} or L{str} argument.
         """
         with self.assertRaises(ValueError):
             urlpath.URLPath.fromString(None)
 
-        if _PY3:
-            with self.assertRaises(ValueError):
-                urlpath.URLPath.fromString(b"someurl")
+        with self.assertRaises(ValueError):
+            urlpath.URLPath.fromString(b"someurl")
 
 
 
 class UnicodeURLPathTests(_BaseURLPathTests, unittest.TestCase):
     """
     Tests for interacting with a L{URLPath} created with C{fromString} and a
-    L{unicode} argument.
+    L{str} argument.
     """
     def setUp(self):
         self.path = urlpath.URLPath.fromString(

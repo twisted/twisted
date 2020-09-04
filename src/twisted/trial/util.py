@@ -51,7 +51,7 @@ class DirtyReactorAggregateError(Exception):
         self.selectables = selectables
 
 
-    def __str__(self):
+    def __str__(self) -> str:
         """
         Return a multi-line message describing all of the unclean state.
         """
@@ -68,7 +68,7 @@ class DirtyReactorAggregateError(Exception):
 
 
 
-class _Janitor(object):
+class _Janitor:
     """
     The guy that cleans up after you.
 

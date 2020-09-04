@@ -444,7 +444,7 @@ class NonePIDFileTests(twisted.trial.unittest.TestCase):
 
 
 @implementer(IFilePath)
-class DummyFilePath(object):
+class DummyFilePath:
     """
     In-memory L{IFilePath}.
     """
@@ -474,3 +474,70 @@ class DummyFilePath(object):
 
     def exists(self):
         return self._exists
+
+
+    def sep(self):
+        # IFilePath.sep
+        raise NotImplementedError("Unimplemented: DummyFilePath.sep")
+
+
+    def child(self, name):
+        # IFilePath.child
+        raise NotImplementedError("Unimplemented: DummyFilePath.child")
+
+
+    def changed(self):
+        # IFilePath.changed
+        raise NotImplementedError("Unimplemented: DummyFilePath.changed")
+
+
+    def getsize(self):
+        # IFilePath.getsize
+        raise NotImplementedError("Unimplemented: DummyFilePath.getsize")
+
+
+    def getModificationTime(self):
+        # IFilePath.getModificationTime
+        raise NotImplementedError(
+            "Unimplemented: DummyFilePath.getModificationTime")
+
+
+    def getStatusChangeTime(self):
+        # IFilePath.getStatusChangeTime
+        raise NotImplementedError(
+            "Unimplemented: DummyFilePath.getStatusChangeTime")
+
+
+    def getAccessTime(self):
+        # IFilePath.getAccessTime
+        raise NotImplementedError("Unimplemented: DummyFilePath.getAccessTime")
+
+
+    def isdir(self):
+        # IFilePath.isdir
+        raise NotImplementedError("Unimplemented: DummyFilePath.isdir")
+
+
+    def isfile(self):
+        # IFilePath.isfile
+        raise NotImplementedError("Unimplemented: DummyFilePath.isfile")
+
+
+    def children(self):
+        # IFilePath.children
+        raise NotImplementedError("Unimplemented: DummyFilePath.children")
+
+
+    def basename(self):
+        # IFilePath.basename
+        raise NotImplementedError("Unimplemented: DummyFilePath.basename")
+
+
+    def parent(self):
+        # IFilePath.parent
+        raise NotImplementedError("Unimplemented: DummyFilePath.parent")
+
+
+    def sibling(self, name):
+        # IFilePath.sibling
+        raise NotImplementedError("Unimplemented: DummyFilePath.sibling")

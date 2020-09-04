@@ -14,7 +14,7 @@ from twisted.trial import unittest
 if requireModule('twisted.python._inotify') is not None:
     from twisted.internet import inotify
 else:
-    inotify = None
+    inotify = None  # type: ignore[assignment]
 
 
 

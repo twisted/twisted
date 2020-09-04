@@ -9,9 +9,8 @@ import getpass
 import sys
 import subprocess
 
-from io import BytesIO, StringIO
+from io import StringIO
 
-from twisted.python.compat import unicode, _PY3
 from twisted.python.reflect import requireModule
 
 from twisted.python.filepath import FilePath
@@ -58,10 +57,7 @@ class KeyGenTests(TestCase):
         """
         Patch C{sys.stdout} so tests can make assertions about what's printed.
         """
-        if _PY3:
-            self.stdout = StringIO()
-        else:
-            self.stdout = BytesIO()
+        self.stdout = StringIO()
         self.patch(sys, 'stdout', self.stdout)
 
 
@@ -375,10 +371,11 @@ class KeyGenTests(TestCase):
         keyPath = base.child('custom_key').path
 
         import twisted.conch.scripts.ckeygen
-        self.patch(twisted.conch.scripts.ckeygen, 'raw_input', lambda _: keyPath)
+        self.patch(twisted.conch.scripts.ckeygen, '_inputSaveFile',
+                   lambda _: keyPath)
         key = Key.fromString(privateRSA_openssh)
         _saveKey(key, {'filename': None, 'no-passphrase': True,
-            'format': 'md5-hex'})
+                       'format': 'md5-hex'})
 
         persistedKeyContent = base.child('custom_key').getContent()
         persistedKey = key.fromString(persistedKeyContent, None, b'')
@@ -426,7 +423,7 @@ class KeyGenTests(TestCase):
         FilePath(filename).setContent(privateRSA_openssh)
         displayPublicKey({'filename': filename})
         displayed = self.stdout.getvalue().strip('\n')
-        if isinstance(displayed, unicode):
+        if isinstance(displayed, str):
             displayed = displayed.encode("ascii")
         self.assertEqual(
             displayed,
@@ -443,7 +440,7 @@ class KeyGenTests(TestCase):
         FilePath(filename).setContent(privateRSA_openssh_encrypted)
         displayPublicKey({'filename': filename, 'pass': 'encrypted'})
         displayed = self.stdout.getvalue().strip('\n')
-        if isinstance(displayed, unicode):
+        if isinstance(displayed, str):
             displayed = displayed.encode("ascii")
         self.assertEqual(
             displayed,
@@ -461,7 +458,7 @@ class KeyGenTests(TestCase):
         self.patch(getpass, 'getpass', lambda x: 'encrypted')
         displayPublicKey({'filename': filename})
         displayed = self.stdout.getvalue().strip('\n')
-        if isinstance(displayed, unicode):
+        if isinstance(displayed, str):
             displayed = displayed.encode("ascii")
         self.assertEqual(
             displayed,
@@ -580,10 +577,8 @@ class KeyGenTests(TestCase):
         error = self.assertRaises(
             SystemExit, changePassPhrase, {'filename': filename})
 
-        if _PY3:
-            expected = "Could not change passphrase: cannot guess the type of b'foobar'"
-        else:
-            expected = "Could not change passphrase: cannot guess the type of 'foobar'"
+        expected = ("Could not change passphrase: cannot "
+                    "guess the type of b'foobar'")
         self.assertEqual(expected, str(error))
         self.assertEqual(b'foobar', FilePath(filename).getContent())
 
@@ -629,12 +624,8 @@ class KeyGenTests(TestCase):
             SystemExit, changePassPhrase,
             {'filename': filename, 'newpass': 'newencrypt'})
 
-        if _PY3:
-            expected = (
-                "Could not change passphrase: cannot guess the type of b''")
-        else:
-            expected = (
-                "Could not change passphrase: cannot guess the type of ''")
+        expected = (
+            "Could not change passphrase: cannot guess the type of b''")
         self.assertEqual(expected, str(error))
 
         self.assertEqual(privateRSA_openssh, FilePath(filename).getContent())

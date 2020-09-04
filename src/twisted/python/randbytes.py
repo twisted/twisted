@@ -9,18 +9,12 @@ Cryptographically secure random implementation, with fallback on normal random.
 
 import os
 import random
-import string
 import warnings
-
-from twisted.python.compat import _PY3
 
 getrandbits = getattr(random, 'getrandbits', None)
 
-if _PY3:
-    _fromhex = bytes.fromhex
-else:
-    def _fromhex(hexBytes):
-        return hexBytes.decode('hex')
+_fromhex = bytes.fromhex
+
 
 
 class SecureRandomNotAvailable(RuntimeError):
@@ -37,7 +31,7 @@ class SourceNotAvailable(RuntimeError):
 
 
 
-class RandomFactory(object):
+class RandomFactory:
     """
     Factory providing L{secureRandom} and L{insecureRandom} methods.
 
@@ -102,24 +96,16 @@ class RandomFactory(object):
         raise SourceNotAvailable("random.getrandbits is not available")
 
 
-    if _PY3:
-        _maketrans = bytes.maketrans
-        def _randModule(self, nbytes):
-            """
-            Wrapper around the C{random} module.
-            """
-            return b"".join([
-                    bytes([random.choice(self._BYTES)]) for i in range(nbytes)])
-    else:
-        _maketrans = string.maketrans
-        def _randModule(self, nbytes):
-            """
-            Wrapper around the C{random} module.
-            """
-            return b"".join([
-                    random.choice(self._BYTES) for i in range(nbytes)])
-
+    _maketrans = bytes.maketrans
     _BYTES = _maketrans(b'', b'')
+
+
+    def _randModule(self, nbytes):
+        """
+        Wrapper around the C{random} module.
+        """
+        return b"".join([
+                bytes([random.choice(self._BYTES)]) for i in range(nbytes)])
 
 
     def insecureRandom(self, nbytes):

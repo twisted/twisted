@@ -11,7 +11,7 @@ from twisted.python import randbytes
 
 
 
-class SecureRandomTestCaseBase(object):
+class SecureRandomTestCaseBase:
     """
     Base class for secureRandom test cases.
     """

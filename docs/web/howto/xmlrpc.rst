@@ -419,6 +419,24 @@ prints:
 
 
 
+Debugging with an XML-RPC client
+--------------------------------
+
+
+
+Sometimes an XML-RPC server may send non-standard XML-RPC responses to your
+client. In those cases, you can access the raw XML-RPC responses from the
+server with :api:`twisted.web.xmlrpc <twisted.web.xmlrpc>`'s ``QueryFactory``.
+
+You can simply log the response content strings for debugging, or implement
+your own custom XML-RPC marshaller to handle the non-standard XML-RPC
+responses.
+
+An example Twisted application that does this can be found in
+``docs/web/examples/xmlrpc-debug.py`` .
+
+
+
 
 Serving SOAP and XML-RPC simultaneously
 ---------------------------------------

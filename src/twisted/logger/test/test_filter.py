@@ -5,7 +5,8 @@
 Test cases for L{twisted.logger._filter}.
 """
 
-from zope.interface.verify import verifyObject, BrokenMethodImplementation
+from zope.interface.exceptions import BrokenMethodImplementation
+from zope.interface.verify import verifyObject
 
 from twisted.trial import unittest
 
@@ -70,7 +71,7 @@ class FilteringLogObserverTests(unittest.TestCase):
             dict(count=3),
         ]
 
-        class Filters(object):
+        class Filters:
             @staticmethod
             def twoMinus(event):
                 """

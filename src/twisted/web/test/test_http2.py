@@ -45,7 +45,7 @@ except ImportError:
 
 
 # Define some helpers for the rest of these tests.
-class FrameFactory(object):
+class FrameFactory:
     """
     A class containing lots of helper methods and state to build frames. This
     allows test cases to easily build correct HTTP/2 frames to feed to
@@ -167,7 +167,7 @@ class FrameFactory(object):
 
 
 
-class FrameBuffer(object):
+class FrameBuffer:
     """
     A test object that converts data received from Twisted's HTTP/2 stack and
     turns it into a sequence of hyperframe frame objects.
@@ -391,7 +391,7 @@ DummyProducerHandlerProxy = _makeRequestProxyFactory(DummyProducerHandler)
 
 
 
-class NotifyingRequestFactory(object):
+class NotifyingRequestFactory:
     """
     A L{http.Request} factory that calls L{http.Request.notifyFinish} on all
     L{http.Request} objects before it returns them, and squirrels the resulting
@@ -422,7 +422,7 @@ NotifyingRequestFactoryProxy = _makeRequestProxyFactory(
 
 
 
-class HTTP2TestHelpers(object):
+class HTTP2TestHelpers:
     """
     A superclass that contains no tests but provides test helpers for HTTP/2
     tests.

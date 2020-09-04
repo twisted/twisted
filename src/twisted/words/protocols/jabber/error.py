@@ -9,8 +9,8 @@ XMPP Error support.
 
 
 import copy
+from typing import Optional
 
-from twisted.python.compat import unicode
 from twisted.words.xish import domish
 
 NS_XML = "http://www.w3.org/XML/1998/namespace"
@@ -83,7 +83,7 @@ class BaseError(Exception):
     @type appCondition: object providing L{domish.IElement}.
     """
 
-    namespace = None
+    namespace = None  # type: Optional[str]
 
     def __init__(self, condition, text=None, textLang=None, appCondition=None):
         Exception.__init__(self)
@@ -93,7 +93,7 @@ class BaseError(Exception):
         self.appCondition = appCondition
 
 
-    def __str__(self):
+    def __str__(self) -> str:
         message = "%s with condition %r" % (self.__class__.__name__,
                                             self.condition)
 
@@ -254,7 +254,7 @@ def _parseError(error, errorNamespace):
     for element in error.elements():
         if element.uri == errorNamespace:
             if element.name == 'text':
-                text = unicode(element)
+                text = str(element)
                 textLang = element.getAttribute((NS_XML, 'lang'))
             else:
                 condition = element.name
@@ -313,8 +313,8 @@ def exceptionFromStanza(stanza):
             appCondition = error['appCondition']
 
             if not condition and code:
-               condition, type = CODES_TO_CONDITIONS[code]
-               text = unicode(stanza.error)
+                condition, type = CODES_TO_CONDITIONS[code]
+                text = str(stanza.error)
         else:
             children.append(element)
 

@@ -17,21 +17,16 @@ This is a web server which integrates with the twisted.internet infrastructure.
 import copy
 import os
 import re
-try:
-    from urllib import quote
-except ImportError:
-    from urllib.parse import quote as _quote
-
-    def quote(string, *args, **kwargs):
-        return _quote(
-            string.decode('charmap'), *args, **kwargs).encode('charmap')
+from html import escape
+from typing import List, Optional
+from urllib.parse import quote as _quote
 
 import zlib
 from binascii import hexlify
 
 from zope.interface import implementer
 
-from twisted.python.compat import networkString, nativeString, intToBytes
+from twisted.python.compat import networkString, nativeString
 from twisted.spread.pb import Copyable, ViewPoint
 from twisted.internet import address, interfaces
 from twisted.internet.error import AlreadyCalled, AlreadyCancelled
@@ -44,7 +39,6 @@ from twisted.web.error import UnsupportedMethod
 
 from incremental import Version
 from twisted.python.deprecate import deprecatedModuleAttribute
-from twisted.python.compat import escape
 from twisted.logger import Logger
 
 NOT_DONE_YET = 1
@@ -78,6 +72,13 @@ string_date_time = http.stringToDatetime
 supportedMethods = (b'GET', b'HEAD', b'POST')
 
 
+
+def quote(string, *args, **kwargs):
+    return _quote(
+        string.decode('charmap'), *args, **kwargs).encode('charmap')
+
+
+
 def _addressToTuple(addr):
     if isinstance(addr, address.IPv4Address):
         return ('INET', addr.host, addr.port)
@@ -108,7 +109,8 @@ class Request(Copyable, http.Request, components.Componentized):
 
     site = None
     appRootURL = None
-    prepath = postpath = None
+    prepath = None  # type: Optional[List[bytes]]
+    postpath = None  # type: Optional[bytes]
     __pychecker__ = 'unusednames=issuer'
     _inFakeHead = False
     _encoder = None
@@ -321,7 +323,7 @@ class Request(Copyable, http.Request, components.Componentized):
                     )
                     # Oh well, I guess we won't include the content length.
                 else:
-                    self.setHeader(b'content-length', intToBytes(len(body)))
+                    self.setHeader(b'content-length', b'%d' % (len(body),))
 
                 self._inFakeHead = False
                 self.method = b"HEAD"
@@ -372,12 +374,10 @@ class Request(Copyable, http.Request, components.Componentized):
                     slf=self,
                     resrc=resrc
                 )
-                self.setHeader(b'content-length',
-                               intToBytes(len(body)))
+                self.setHeader(b'content-length', b'%d' % (len(body),))
             self.write(b'')
         else:
-            self.setHeader(b'content-length',
-                           intToBytes(len(body)))
+            self.setHeader(b'content-length', b'%d' % (len(body),))
             self.write(body)
         self.finish()
 
@@ -408,7 +408,7 @@ class Request(Copyable, http.Request, components.Componentized):
 
         self.setResponseCode(http.INTERNAL_SERVER_ERROR)
         self.setHeader(b'content-type', b"text/html")
-        self.setHeader(b'content-length', intToBytes(len(body)))
+        self.setHeader(b'content-length', b'%d' % (len(body),))
         self.write(body)
         self.finish()
         return reason
@@ -616,7 +616,7 @@ class Request(Copyable, http.Request, components.Componentized):
 
 
 @implementer(iweb._IRequestEncoderFactory)
-class GzipEncoderFactory(object):
+class GzipEncoderFactory:
     """
     @cvar compressLevel: The compression level used by the compressor, default
         to 9 (highest).
@@ -648,7 +648,7 @@ class GzipEncoderFactory(object):
 
 
 @implementer(iweb._IRequestEncoder)
-class _GzipEncoder(object):
+class _GzipEncoder:
     """
     An encoder which supports gzip.
 

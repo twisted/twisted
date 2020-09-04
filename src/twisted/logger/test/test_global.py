@@ -63,11 +63,11 @@ class LogBeginnerTests(unittest.TestCase):
         self.publisher = LogPublisher()
         self.errorStream = io.StringIO()
 
-        class NotSys(object):
+        class NotSys:
             stdout = object()
             stderr = object()
 
-        class NotWarnings(object):
+        class NotWarnings:
             def __init__(self):
                 self.warnings = []
 

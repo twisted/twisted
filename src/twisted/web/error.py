@@ -19,8 +19,10 @@ __all__ = [
     ]
 
 
+from collections.abc import Sequence
+
 from twisted.web._responses import RESPONSES
-from twisted.python.compat import unicode, nativeString, intToBytes, Sequence
+from twisted.python.compat import nativeString
 
 
 
@@ -78,14 +80,14 @@ class Error(Exception):
             # If we're given an int, convert it to a bytestring
             # downloadPage gives a bytes, Agent gives an int, and it worked by
             # accident previously, so just make it keep working.
-            code = intToBytes(code)
+            code = b'%d' % (code,)
 
         self.status = code
         self.message = message
         self.response = response
 
 
-    def __str__(self):
+    def __str__(self) -> str:
         return nativeString(self.status + b" " + self.message)
 
 
@@ -221,7 +223,7 @@ class UnsupportedMethod(Exception):
                 "but my first argument is not a sequence.")
 
 
-    def __str__(self):
+    def __str__(self) -> str:
         return "Expected one of %r" % (self.allowedMethods,)
 
 
@@ -254,7 +256,7 @@ class MissingRenderMethod(RenderError):
         self.renderName = renderName
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return '%r: %r had no render method named %r' % (
             self.__class__.__name__, self.element, self.renderName)
 
@@ -272,7 +274,7 @@ class MissingTemplateLoader(RenderError):
         self.element = element
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return '%r: %r had no loader' % (self.__class__.__name__,
                                          self.element)
 
@@ -340,14 +342,14 @@ class FlattenerError(Exception):
         # only for an isinstance() check.
         from twisted.web.template import Tag
 
-        if isinstance(obj, (bytes, str, unicode)):
+        if isinstance(obj, (bytes, str)):
             # It's somewhat unlikely that there will ever be a str in the roots
             # list.  However, something like a MemoryError during a str.replace
             # call (eg, replacing " with &quot;) could possibly cause this.
             # Likewise, UTF-8 encoding a unicode string to a byte string might
             # fail like this.
             if len(obj) > 40:
-                if isinstance(obj, unicode):
+                if isinstance(obj, str):
                     ellipsis = u'<...>'
                 else:
                     ellipsis = b'<...>'
@@ -365,7 +367,7 @@ class FlattenerError(Exception):
             return ascii(obj)
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """
         Present a string representation which includes a template traceback, so
         we can tell where this error occurred in the template, as well as in
@@ -394,7 +396,7 @@ class FlattenerError(Exception):
             str(self._exception) + '\n')
 
 
-    def __str__(self):
+    def __str__(self) -> str:
         return repr(self)
 
 

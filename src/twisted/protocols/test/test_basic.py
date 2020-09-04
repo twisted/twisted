@@ -10,17 +10,17 @@ import sys
 import struct
 from io import BytesIO
 
-from typing import List
+from typing import List, Optional, Type
 from zope.interface.verify import verifyObject
 
-from twisted.python.compat import _PY3, iterbytes
+from twisted.python.compat import iterbytes
+from twisted.python.failure import Failure
 from twisted.trial import unittest
 from twisted.protocols import basic
 from twisted.internet import protocol, task
+from twisted.internet.protocol import connectionDone
 from twisted.internet.interfaces import IProducer
 from twisted.test import proto_helpers
-
-_PY3NEWSTYLESKIP = "All classes are new style on Python 3."
 
 
 
@@ -559,7 +559,7 @@ class TestMixin:
     closed = 0
 
 
-    def connectionLost(self, reason):
+    def connectionLost(self, reason: Failure = connectionDone):
         self.closed = 1
 
 
@@ -574,8 +574,8 @@ class TestNetstring(TestMixin, basic.NetstringReceiver):
 
 class LPTestCaseMixin:
 
-    illegalStrings = []  # type: List[bytes]
-    protocol = None
+    illegalStrings = []  # type: Optional[List[bytes]]
+    protocol = None  # type: Optional[Type[protocol.Protocol]]
 
 
     def getProtocol(self):
@@ -838,10 +838,10 @@ class IntNTestCaseMixin(LPTestCaseMixin):
     TestCase mixin for int-prefixed protocols.
     """
 
-    protocol = None
-    strings = None
-    illegalStrings = None
-    partialStrings = None
+    protocol = None  # type: Optional[Type[protocol.Protocol]]
+    strings = None  # type: Optional[List[bytes]]
+    illegalStrings = None  # type: Optional[List[bytes]]
+    partialStrings = None  # type: Optional[List[bytes]]
 
     def test_receive(self):
         """
@@ -912,7 +912,7 @@ class IntNTestCaseMixin(LPTestCaseMixin):
 
 
 
-class RecvdAttributeMixin(object):
+class RecvdAttributeMixin:
     """
     Mixin defining tests for string receiving protocols with a C{recvd}
     attribute which should be settable by application code, to be combined with
@@ -1088,25 +1088,6 @@ class Int16Tests(unittest.SynchronousTestCase, IntNTestCaseMixin,
 
 
 
-class NewStyleTestInt16(TestInt16, object):
-    """
-    A new-style class version of TestInt16
-    """
-
-
-
-class NewStyleInt16Tests(Int16Tests):
-    """
-    This test case verifies that IntNStringReceiver still works when inherited
-    by a new-style class.
-    """
-    if _PY3:
-        skip = _PY3NEWSTYLESKIP
-
-    protocol = NewStyleTestInt16
-
-
-
 class TestInt8(TestMixin, basic.Int8StringReceiver):
     """
     A L{basic.Int8StringReceiver} storing received strings in an array.
@@ -1148,7 +1129,7 @@ class Int8Tests(unittest.SynchronousTestCase, IntNTestCaseMixin,
 
 
 
-class OnlyProducerTransport(object):
+class OnlyProducerTransport:
     """
     Transport which isn't really a transport, just looks like one to
     someone not looking very hard.

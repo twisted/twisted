@@ -17,10 +17,11 @@ from zope.interface import implementer
 from incremental import Version
 
 from twisted.internet import defer, protocol, reactor
-from twisted.python import log, _textattributes
+from twisted.python import _textattributes
 from twisted.python.compat import iterbytes
 from twisted.python.deprecate import deprecated, deprecatedModuleAttribute
 from twisted.conch.insults import insults
+from twisted.logger import Logger
 
 FOREGROUND = 30
 BACKGROUND = 40
@@ -124,6 +125,7 @@ class TerminalBuffer(protocol.Protocol):
 
     fill = b' '
     void = object()
+    _log = Logger()
 
     def getCharacter(self, x, y):
         return self.lines[y][x]
@@ -356,14 +358,20 @@ class TerminalBuffer(protocol.Protocol):
                 try:
                     v = int(a)
                 except ValueError:
-                    log.msg("Unknown graphic rendition attribute: " + repr(a))
+                    self._log.error(
+                        "Unknown graphic rendition attribute: {attr!r}",
+                        attr=a
+                    )
                 else:
                     if FOREGROUND <= v <= FOREGROUND + N_COLORS:
                         self.graphicRendition['foreground'] = v - FOREGROUND
                     elif BACKGROUND <= v <= BACKGROUND + N_COLORS:
                         self.graphicRendition['background'] = v - BACKGROUND
                     else:
-                        log.msg("Unknown graphic rendition attribute: " + repr(a))
+                        self._log.error(
+                            "Unknown graphic rendition attribute: {attr!r}",
+                            attr=a
+                        )
 
 
     def eraseLine(self):
@@ -454,6 +462,64 @@ class TerminalBuffer(protocol.Protocol):
                     buf.append(self.fill)
             lines.append(b''.join(buf[:length]))
         return b'\n'.join(lines)
+
+
+    def getHost(self):
+        # ITransport.getHost
+        raise NotImplementedError("Unimplemented: TerminalBuffer.getHost")
+
+
+    def getPeer(self):
+        # ITransport.getPeer
+        raise NotImplementedError("Unimplemented: TerminalBuffer.getPeer")
+
+
+    def loseConnection(self):
+        # ITransport.loseConnection
+        raise NotImplementedError(
+            "Unimplemented: TerminalBuffer.loseConnection")
+
+
+    def writeSequence(self, data):
+        # ITransport.writeSequence
+        raise NotImplementedError(
+            "Unimplemented: TerminalBuffer.writeSequence")
+
+
+    def horizontalTabulationSet(self):
+        # ITerminalTransport.horizontalTabulationSet
+        raise NotImplementedError(
+            "Unimplemented: TerminalBuffer.horizontalTabulationSet")
+
+
+    def tabulationClear(self):
+        # TerminalTransport.tabulationClear
+        raise NotImplementedError(
+            "Unimplemented: TerminalBuffer.tabulationClear")
+
+
+    def tabulationClearAll(self):
+        # TerminalTransport.tabulationClearAll
+        raise NotImplementedError(
+            "Unimplemented: TerminalBuffer.tabulationClearAll")
+
+
+    def doubleHeightLine(self, top=True):
+        # ITerminalTransport.doubleHeightLine
+        raise NotImplementedError(
+            "Unimplemented: TerminalBuffer.doubleHeightLine")
+
+
+    def singleWidthLine(self):
+        # ITerminalTransport.singleWidthLine
+        raise NotImplementedError(
+            "Unimplemented: TerminalBuffer.singleWidthLine")
+
+
+    def doubleWidthLine(self):
+        # ITerminalTransport.doubleWidthLine
+        raise NotImplementedError(
+            "Unimplemented: TerminalBuffer.doubleWidthLine")
 
 
 

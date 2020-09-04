@@ -19,7 +19,7 @@ from twisted.internet.interfaces import IReactorUDP, IUDPTransport
 
 
 @implementer(IUDPTransport)
-class MemoryDatagramTransport(object):
+class MemoryDatagramTransport:
     """
     This L{IUDPTransport} implementation enforces the usual connection rules
     and captures sent traffic in a list for later inspection.

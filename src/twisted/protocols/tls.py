@@ -49,7 +49,6 @@ except TypeError as e:
 
 from zope.interface import implementer, providedBy, directlyProvides
 
-from twisted.python.compat import unicode
 from twisted.python.failure import Failure
 from twisted.internet.interfaces import (
     ISystemHandle, INegotiated, IPushProducer, ILoggingContext,
@@ -64,7 +63,7 @@ from twisted.protocols.policies import ProtocolWrapper, WrappingFactory
 
 
 @implementer(IPushProducer)
-class _ProducerMembrane(object):
+class _ProducerMembrane:
     """
     Stand-in for producer registered with a L{TLSMemoryBIOProtocol} transport.
 
@@ -456,8 +455,8 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
         If C{loseConnection} was called, subsequent calls to C{write} will
         drop the bytes on the floor.
         """
-        if isinstance(bytes, unicode):
-            raise TypeError("Must write bytes to a TLS transport, not unicode.")
+        if isinstance(bytes, str):
+            raise TypeError("Must write bytes to a TLS transport, not str.")
         # Writes after loseConnection are not supported, unless a producer has
         # been registered, in which case writes can happen until the producer
         # is unregistered:
@@ -624,7 +623,7 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
 
 
 @implementer(IOpenSSLClientConnectionCreator, IOpenSSLServerConnectionCreator)
-class _ContextFactoryToConnectionFactory(object):
+class _ContextFactoryToConnectionFactory:
     """
     Adapter wrapping a L{twisted.internet.interfaces.IOpenSSLContextFactory}
     into a L{IOpenSSLClientConnectionCreator} or

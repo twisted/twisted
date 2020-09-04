@@ -6,56 +6,30 @@
 Different styles of persisted objects.
 """
 
-
-# System Imports
-import types
-import pickle
-try:
-    import copy_reg
-except ImportError:
-    import copyreg as copy_reg
 import copy
+import copyreg as copy_reg
 import inspect
-
+import pickle
+import types
 from typing import Dict
-from twisted.python.compat import _PY3, _PYPY
+from twisted.python.compat import _PYPY
+from twisted.python import log, reflect
+from io import StringIO as _cStringIO
 
-# Twisted Imports
-from twisted.python import log
-from twisted.python import reflect
+
 
 oldModules = {}  # type: Dict[str, types.ModuleType]
 
 
-try:
-    import cPickle
-except ImportError:
-    cPickle = None
-
-if cPickle is None or cPickle.PicklingError is pickle.PicklingError:
-    _UniversalPicklingError = pickle.PicklingError
-else:
-    class _UniversalPicklingError(pickle.PicklingError,
-                                  cPickle.PicklingError):
-        """
-        A PicklingError catchable by both L{cPickle.PicklingError} and
-        L{pickle.PicklingError} handlers.
-        """
+_UniversalPicklingError = pickle.PicklingError
 
 
-## First, let's register support for some stuff that really ought to
-## be registerable...
 
 def pickleMethod(method):
     'support function for copy_reg to pickle method refs'
-    if _PY3:
-        return (unpickleMethod, (method.__name__,
-                                 method.__self__,
-                                 method.__self__.__class__))
-    else:
-        return (unpickleMethod, (method.im_func.__name__,
-                                 method.im_self,
-                                 method.im_class))
+    return (unpickleMethod, (method.__name__,
+                             method.__self__,
+                             method.__self__.__class__))
 
 
 
@@ -74,9 +48,7 @@ def _methodFunction(classObject, methodName):
     @rtype: L{types.FunctionType}
     """
     methodObject = getattr(classObject, methodName)
-    if _PY3:
-        return methodObject
-    return methodObject.im_func
+    return methodObject
 
 
 
@@ -107,16 +79,15 @@ def unpickleMethod(im_name, im_self, im_class):
             raise
         return unpickleMethod(im_name, im_self, im_self.__class__)
     else:
-        if _PY3:
-            maybeClass = ()
-        else:
-            maybeClass = tuple([im_class])
+        maybeClass = ()
         bound = types.MethodType(methodFunction, im_self, *maybeClass)
         return bound
 
 
 
-copy_reg.pickle(types.MethodType, pickleMethod, unpickleMethod)
+copy_reg.pickle(types.MethodType, pickleMethod)
+
+
 
 def _pickleFunction(f):
     """
@@ -157,11 +128,15 @@ def _unpickleFunction(fullyQualifiedName):
 
 
 
-copy_reg.pickle(types.FunctionType, _pickleFunction, _unpickleFunction)
+copy_reg.pickle(types.FunctionType, _pickleFunction)
+
+
 
 def pickleModule(module):
     'support function for copy_reg to pickle module refs'
     return unpickleModule, (module.__name__,)
+
+
 
 def unpickleModule(name):
     'support function for copy_reg to unpickle module refs'
@@ -169,12 +144,11 @@ def unpickleModule(name):
         log.msg("Module has moved: %s" % name)
         name = oldModules[name]
         log.msg(name)
-    return __import__(name,{},{},'x')
+    return __import__(name, {}, {}, 'x')
 
 
-copy_reg.pickle(types.ModuleType,
-                pickleModule,
-                unpickleModule)
+
+copy_reg.pickle(types.ModuleType, pickleModule)
 
 
 
@@ -255,13 +229,6 @@ def unpickleStringI(val, sek):
 
 
 
-try:
-    from cStringIO import InputType, OutputType, StringIO as _cStringIO
-except ImportError:
-    from io import StringIO as _cStringIO
-else:
-    copy_reg.pickle(OutputType, pickleStringO, unpickleStringO)
-    copy_reg.pickle(InputType, pickleStringI, unpickleStringI)
 
 
 
@@ -305,6 +272,8 @@ def doUpgrade():
     versionedsToUpgrade = {}
     upgraded = {}
 
+
+
 def requireUpgrade(obj):
     """Require that a Versioned instance be upgraded completely first.
     """
@@ -313,6 +282,8 @@ def requireUpgrade(obj):
         upgraded[objID] = 1
         obj.versionUpgrade()
         return obj
+
+
 
 def _aybabtu(c):
     """
@@ -330,6 +301,8 @@ def _aybabtu(c):
             l.append(b)
     # return all except the unwanted classes
     return l[2:]
+
+
 
 class Versioned:
     """
@@ -358,6 +331,7 @@ class Versioned:
         versionedsToUpgrade[id(self)] = self
         self.__dict__ = state
 
+
     def __getstate__(self, dict=None):
         """Get state, adding a version number to it on its way out.
         """
@@ -371,8 +345,10 @@ class Versioned:
                     if slot in dct:
                         del dct[slot]
             if 'persistenceVersion' in base.__dict__:
-                dct['%s.persistenceVersion' % reflect.qual(base)] = base.persistenceVersion
+                dct['{}.persistenceVersion'.format(
+                    reflect.qual(base))] = base.persistenceVersion
         return dct
+
 
     def versionUpgrade(self):
         """(internal) Do a version upgrade.

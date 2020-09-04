@@ -13,7 +13,6 @@ L{stringprep<twisted.words.protocols.jabber.xmpp_stringprep>}.
 """
 
 from typing import Dict
-from twisted.python.compat import _PY3, unicode
 from twisted.words.protocols.jabber.xmpp_stringprep import (
     nodeprep, resourceprep, nameprep)
 
@@ -31,8 +30,8 @@ def parse(jidstring):
     Parse given JID string into its respective parts and apply stringprep.
 
     @param jidstring: string representation of a JID.
-    @type jidstring: L{unicode}
-    @return: tuple of (user, host, resource), each of type L{unicode} as
+    @type jidstring: L{str}
+    @return: tuple of (user, host, resource), each of type L{str} as
              the parsed and stringprep'd parts of the given JID. If the
              given string did not have a user or resource part, the respective
              field in the tuple will hold L{None}.
@@ -77,18 +76,18 @@ def prep(user, host, resource):
     Perform stringprep on all JID fragments.
 
     @param user: The user part of the JID.
-    @type user: L{unicode}
+    @type user: L{str}
     @param host: The host part of the JID.
-    @type host: L{unicode}
+    @type host: L{str}
     @param resource: The resource part of the JID.
-    @type resource: L{unicode}
+    @type resource: L{str}
     @return: The given parts with stringprep applied.
     @rtype: L{tuple}
     """
 
     if user:
         try:
-            user = nodeprep.prepare(unicode(user))
+            user = nodeprep.prepare(str(user))
         except UnicodeError:
             raise InvalidFormat("Invalid character in username")
     else:
@@ -98,13 +97,13 @@ def prep(user, host, resource):
         raise InvalidFormat("Server address required.")
     else:
         try:
-            host = nameprep.prepare(unicode(host))
+            host = nameprep.prepare(str(host))
         except UnicodeError:
             raise InvalidFormat("Invalid character in hostname")
 
     if resource:
         try:
-            resource = resourceprep.prepare(unicode(resource))
+            resource = resourceprep.prepare(str(resource))
         except UnicodeError:
             raise InvalidFormat("Invalid character in resource")
     else:
@@ -134,7 +133,7 @@ def internJID(jidstring):
 
 
 
-class JID(object):
+class JID:
     """
     Represents a stringprep'd Jabber ID.
 
@@ -163,7 +162,7 @@ class JID(object):
         A bare JID does not have a resource part, so this returns either
         C{user@host} or just C{host}.
 
-        @rtype: L{unicode}
+        @rtype: L{str}
         """
         if self.user:
             return u"%s@%s" % (self.user, self.host)
@@ -192,7 +191,7 @@ class JID(object):
         """
         Return the string representation of this JID.
 
-        @rtype: L{unicode}
+        @rtype: L{str}
         """
         if self.user:
             if self.resource:
@@ -205,7 +204,7 @@ class JID(object):
             else:
                 return self.host
 
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
         """
         Equality comparison.
 
@@ -220,18 +219,6 @@ class JID(object):
         else:
             return NotImplemented
 
-    def __ne__(self, other):
-        """
-        Inequality comparison.
-
-        This negates L{__eq__} for comparison with JIDs and uses the default
-        comparison for other types.
-        """
-        result = self.__eq__(other)
-        if result is NotImplemented:
-            return result
-        else:
-            return not result
 
     def __hash__(self):
         """
@@ -243,6 +230,7 @@ class JID(object):
         """
         return hash((self.user, self.host, self.resource))
 
+
     def __unicode__(self):
         """
         Get unicode representation.
@@ -253,10 +241,10 @@ class JID(object):
 
         return self.full()
 
-    if _PY3:
-        __str__ = __unicode__
+    __str__ = __unicode__
 
-    def __repr__(self):
+
+    def __repr__(self) -> str:
         """
         Get object representation.
 

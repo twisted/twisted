@@ -11,13 +11,12 @@ examination.
 from string import Formatter
 from collections import defaultdict
 
-from twisted.python.compat import unicode
 
 aFormatter = Formatter()
 
 
 
-class KeyFlattener(object):
+class KeyFlattener:
     """
     A L{KeyFlattener} computes keys for the things within curly braces in
     PEP-3101-style format strings as parsed by L{string.Formatter.parse}.
@@ -111,7 +110,7 @@ def flattenEvent(event):
         if conversion == "r":
             conversionFunction = repr
         else:  # Above: if conversion is not "r", it's "s"
-            conversionFunction = unicode
+            conversionFunction = str
 
         if callit:
             fieldValue = fieldValue()
@@ -174,5 +173,5 @@ def flatFormat(event):
         if fieldName is not None:
             key = keyFlattener.flatKey(
                     fieldName, formatSpec, conversion or "s")
-            s.append(unicode(fieldValues[key]))
+            s.append(str(fieldValues[key]))
     return u"".join(s)

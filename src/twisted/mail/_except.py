@@ -6,7 +6,7 @@ Exceptions in L{twisted.mail}.
 """
 
 
-from twisted.python.compat import _PY3, unicode
+
 
 
 class IMAP4Exception(Exception):
@@ -35,19 +35,19 @@ class MailboxException(IMAP4Exception):
 
 
 class MailboxCollision(MailboxException):
-    def __str__(self):
+    def __str__(self) -> str:
         return 'Mailbox named %s already exists' % self.args
 
 
 
 class NoSuchMailbox(MailboxException):
-    def __str__(self):
+    def __str__(self) -> str:
         return 'No mailbox named %s exists' % self.args
 
 
 
 class ReadOnlyMailbox(MailboxException):
-    def __str__(self):
+    def __str__(self) -> str:
         return 'Mailbox open in read-only state'
 
 
@@ -68,10 +68,10 @@ class NoSupportedAuthentication(IMAP4Exception):
         self.serverSupports = serverSupports
         self.clientSupports = clientSupports
 
-    def __str__(self):
+    def __str__(self) -> str:
         return (IMAP4Exception.__str__(self)
-            + ': Server supports %r, client supports %r'
-            % (self.serverSupports, self.clientSupports))
+                + ': Server supports %r, client supports %r'
+                % (self.serverSupports, self.clientSupports))
 
 
 
@@ -136,11 +136,8 @@ class SMTPClientError(SMTPError):
         self.retry = retry
 
 
-    def __str__(self):
-        if _PY3:
-            return self.__bytes__().decode("utf-8")
-        else:
-            return self.__bytes__()
+    def __str__(self) -> str:
+        return self.__bytes__().decode("utf-8")
 
 
     def __bytes__(self):
@@ -152,7 +149,7 @@ class SMTPClientError(SMTPError):
             res.append(self.log)
             res.append(b'')
         for (i, r) in enumerate(res):
-            if isinstance(r, unicode):
+            if isinstance(r, str):
                 res[i] = r.encode('utf-8')
         return b'\n'.join(res)
 
@@ -279,7 +276,7 @@ class SMTPServerError(SMTPError):
         self.resp = resp
 
 
-    def __str__(self):
+    def __str__(self) -> str:
         return "%.3d %s" % (self.code, self.resp)
 
 
@@ -292,7 +289,7 @@ class SMTPAddressError(SMTPServerError):
         self.addr = Address(addr)
 
 
-    def __str__(self):
+    def __str__(self) -> str:
         return "%.3d <%s>... %s" % (self.code, self.addr, self.resp)
 
 

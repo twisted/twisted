@@ -55,12 +55,17 @@ class HalfCloseProtocol(protocol.Protocol):
         reactor.stop()
 
 
+    def writeConnectionLost(self):
+        # IHalfCloseableProtocol.writeConnectionLost
+        pass
+
+
 
 if __name__ == '__main__':
     reflect.namedAny(sys.argv[1]).install()
     log.startLogging(open(sys.argv[2], 'wb'))
     from twisted.internet import reactor
-    protocol = HalfCloseProtocol()
-    stdio.StandardIO(protocol)
-    reactor.run()
-    sys.exit(protocol.exitCode)
+    halfCloseProtocol = HalfCloseProtocol()
+    stdio.StandardIO(halfCloseProtocol)
+    reactor.run()  # type: ignore[attr-defined]
+    sys.exit(halfCloseProtocol.exitCode)

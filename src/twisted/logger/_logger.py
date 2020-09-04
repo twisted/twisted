@@ -14,7 +14,7 @@ from ._levels import InvalidLogLevelError, LogLevel
 
 
 
-class Logger(object):
+class Logger:
     """
     A L{Logger} emits log messages to an observer.  You should instantiate it
     as a class or module attribute, as documented in L{this module's
@@ -26,7 +26,7 @@ class Logger(object):
     @type source: L{object}
     @ivar source: The object which is emitting events via this logger
 
-    @type: L{ILogObserver}
+    @type observer: L{ILogObserver}
     @ivar observer: The observer that this logger will send events to.
     """
 
@@ -78,7 +78,7 @@ class Logger(object):
         When used as a descriptor, i.e.::
 
             # File: athing.py
-            class Something(object):
+            class Something:
                 log = Logger()
                 def hello(self):
                     self.log.info("Hello")
@@ -104,7 +104,7 @@ class Logger(object):
         )
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "<%s %r>" % (self.__class__.__name__, self.namespace)
 
 

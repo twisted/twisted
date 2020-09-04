@@ -5,6 +5,7 @@
 Tests for L{twisted.python.sendmsg}.
 """
 
+import os
 import sys
 import errno
 import warnings
@@ -15,15 +16,16 @@ from socket import SOL_SOCKET, AF_INET, AF_INET6, socket, error
 try:
     from socket import AF_UNIX, socketpair
 except ImportError:
-    nonUNIXSkip = "Platform does not support AF_UNIX sockets"
+    nonUNIXSkip = True
 else:
-    nonUNIXSkip = None
+    nonUNIXSkip = False
+
+from unittest import skipIf
 
 from twisted.internet import reactor
 from twisted.internet.defer import Deferred, inlineCallbacks
 from twisted.internet.error import ProcessDone
 from twisted.internet.protocol import ProcessProtocol
-from twisted.python.compat import intToBytes, bytesEnviron
 from twisted.python.filepath import FilePath
 from twisted.python.runtime import platform
 
@@ -31,24 +33,26 @@ from twisted.trial.unittest import TestCase
 
 if platform.isLinux():
     from socket import MSG_DONTWAIT
-    dontWaitSkip = None
+    dontWaitSkip = False
 else:
     # It would be nice to be able to test flags on more platforms, but finding
     # a flag that works *at all* is somewhat challenging.
-    dontWaitSkip = "MSG_DONTWAIT is only known to work as intended on Linux"
+    dontWaitSkip = True
 
 
 try:
     from twisted.python.sendmsg import sendmsg, recvmsg
     from twisted.python.sendmsg import SCM_RIGHTS, getSocketFamily
 except ImportError:
-    importSkip = "Platform doesn't support sendmsg."
+    doImportSkip = True
+    importSkipReason = "Platform doesn't support sendmsg."
 else:
-    importSkip = None
+    doImportSkip = False
+    importSkipReason = ""
 
 
 
-class _FDHolder(object):
+class _FDHolder:
     """
     A wrapper around a FD that will remember if it has been closed or not.
     """
@@ -99,7 +103,7 @@ class ExitedWithStderr(Exception):
     A process exited with some stderr.
     """
 
-    def __str__(self):
+    def __str__(self) -> str:
         """
         Dump the errors in a pretty way in the event of a subprocess traceback.
         """
@@ -161,16 +165,16 @@ def _spawn(script, outputFD):
 
     @rtype: L{StartStopProcessProtocol}
     """
-    pyExe = FilePath(sys.executable).asBytesMode().path
-    env = bytesEnviron()
-    env[b"PYTHONPATH"] = FilePath(
-        pathsep.join(sys.path)).asBytesMode().path
+    pyExe = FilePath(sys.executable).asTextMode().path
+    env = dict(os.environ)
+    env["PYTHONPATH"] = FilePath(
+        pathsep.join(sys.path)).asTextMode().path
     sspp = StartStopProcessProtocol()
     reactor.spawnProcess(
         sspp, pyExe, [
             pyExe,
-            FilePath(__file__).sibling(script + ".py").asBytesMode().path,
-            intToBytes(outputFD),
+            FilePath(__file__).sibling(script + ".py").asTextMode().path,
+            b'%d' % (outputFD,),
         ],
         env=env,
         childFDs={0: "w", 1: "r", 2: "r", outputFD: outputFD}
@@ -179,13 +183,11 @@ def _spawn(script, outputFD):
 
 
 
+@skipIf(doImportSkip, importSkipReason)
 class SendmsgTests(TestCase):
     """
     Tests for the Python2/3 compatible L{sendmsg} interface.
     """
-    if importSkip is not None:
-        skip = importSkip
-
     def setUp(self):
         """
         Create a pair of UNIX sockets.
@@ -264,6 +266,8 @@ class SendmsgTests(TestCase):
         self.assertEqual(result, (b"hello, world!", [], 0))
 
 
+    @skipIf(dontWaitSkip,
+            "MSG_DONTWAIT is only known to work as intended on Linux")
     def test_flags(self):
         """
         The C{flags} argument to L{sendmsg} is passed on to the underlying
@@ -283,8 +287,6 @@ class SendmsgTests(TestCase):
             self.fail(
                 "Failed to fill up the send buffer, "
                 "or maybe send1msg blocked for a while")
-    if dontWaitSkip is not None:
-        test_flags.skip = dontWaitSkip
 
 
     @inlineCallbacks
@@ -313,13 +315,11 @@ class SendmsgTests(TestCase):
 
 
 
+@skipIf(doImportSkip, importSkipReason)
 class GetSocketFamilyTests(TestCase):
     """
     Tests for L{getSocketFamily}.
     """
-    if importSkip is not None:
-        skip = importSkip
-
     def _socket(self, addressFamily):
         """
         Create a new socket using the given address family and return that
@@ -347,11 +347,10 @@ class GetSocketFamilyTests(TestCase):
         self.assertEqual(AF_INET6, getSocketFamily(self._socket(AF_INET6)))
 
 
+    @skipIf(nonUNIXSkip, "Platform does not support AF_UNIX sockets")
     def test_unix(self):
         """
         When passed the file descriptor of a socket created with the C{AF_UNIX}
         address family, L{getSocketFamily} returns C{AF_UNIX}.
         """
         self.assertEqual(AF_UNIX, getSocketFamily(self._socket(AF_UNIX)))
-    if nonUNIXSkip is not None:
-        test_unix.skip = nonUNIXSkip

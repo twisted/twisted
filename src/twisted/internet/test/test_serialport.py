@@ -12,11 +12,11 @@ from twisted.internet.error import ConnectionDone
 try:
     from twisted.internet import serialport
 except ImportError:
-    serialport = None
+    serialport = None  # type: ignore[assignment]
 
 
 
-class DoNothing(object):
+class DoNothing:
     """
     Object with methods that do nothing.
     """

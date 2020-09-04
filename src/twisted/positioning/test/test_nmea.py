@@ -9,7 +9,6 @@ import datetime
 from operator import attrgetter
 from zope.interface import implementer
 
-from twisted.python.compat import iteritems, intToBytes
 from twisted.positioning import base, nmea, ipositioning
 from twisted.positioning.test.receiver import MockPositioningReceiver
 from twisted.trial.unittest import TestCase
@@ -35,7 +34,7 @@ $GPGSV,3,3,11,22,42,067,42,24,14,311,43,27,05,244,00,,,,*4D
 
 
 @implementer(ipositioning.INMEAReceiver)
-class NMEATestReceiver(object):
+class NMEATestReceiver:
     """
     An NMEA receiver for testing.
 
@@ -94,7 +93,7 @@ class CallbackTests(TestCase):
             'GPRMC': [b'$GPRMC*4b']
         }
 
-        for sentenceType, sentences in iteritems(sentencesByType):
+        for sentenceType, sentences in sentencesByType.items():
             for sentence in sentences:
                 self.protocol.lineReceived(sentence)
                 self.assertEqual(self.sentenceTypes, set([sentenceType]))
@@ -175,7 +174,7 @@ class ChecksumTests(TestCase):
         validate = nmea._validateChecksum
 
         bareSentence, checksum = GPGGA.split(b"*")
-        badChecksum = intToBytes(int(checksum, 16) + 1)
+        badChecksum = b'%d' % (int(checksum, 16) + 1,)
         sentences = [bareSentence + b"*" + badChecksum]
 
         for s in sentences:
@@ -183,7 +182,7 @@ class ChecksumTests(TestCase):
 
 
 
-class NMEAReceiverSetup(object):
+class NMEAReceiverSetup:
     """
     A mixin for tests that need an NMEA receiver (and a protocol attached to
     it).
@@ -523,7 +522,7 @@ class FixUnitsTests(TestCase):
         Tests that when no C{valueKey} is provided, C{unitKey} is used, minus
         C{"Units"} at the end.
         """
-        class FakeSentence(object):
+        class FakeSentence:
             """
             A fake sentence that just has a "foo" attribute.
             """
@@ -540,7 +539,7 @@ class FixUnitsTests(TestCase):
         Tests that if a unit key is provided but the unit isn't, the unit is
         automatically determined from the unit key.
         """
-        class FakeSentence(object):
+        class FakeSentence:
             """
             A fake sentence that just has "foo" and "fooUnits" attributes.
             """
@@ -562,7 +561,7 @@ class FixUnitsTests(TestCase):
 
 
 
-class FixerTestMixin(object):
+class FixerTestMixin:
     """
     Mixin for tests for the fixers on L{nmea.NMEAAdapter} that adapt
     from NMEA-specific notations to generic Python objects.

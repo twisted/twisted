@@ -4,9 +4,11 @@
 """
 Tests for error handling in PB.
 """
+
+from io import StringIO
+
 from twisted.internet import reactor, defer
 from twisted.python import log
-from twisted.python.compat import NativeStringIO
 from twisted.python.reflect import qual
 from twisted.spread import pb, flavors, jelly
 from twisted.trial import unittest
@@ -418,7 +420,7 @@ class PBFailureUnsafeTests(PBFailureTests):
 
 
 
-class DummyInvoker(object):
+class DummyInvoker:
     """
     A behaviorless object to be used as the invoker parameter to
     L{jelly.jelly}.
@@ -478,7 +480,7 @@ class FailureJellyingTests(unittest.TestCase):
         """
         original = pb.CopyableFailure(Exception("some reason"))
         copied = jelly.unjelly(jelly.jelly(original, invoker=DummyInvoker()))
-        output = NativeStringIO()
+        output = StringIO()
         copied.printTraceback(output)
         exception = qual(Exception)
         expectedOutput = ("Traceback from remote host -- "

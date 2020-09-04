@@ -12,7 +12,6 @@ from textwrap import dedent
 
 from twisted.conch.test import keydata
 from twisted.python import randbytes
-from twisted.python.compat import long
 from twisted.python.filepath import FilePath
 from twisted.python.reflect import requireModule
 from twisted.trial import unittest
@@ -404,7 +403,7 @@ SUrCyZXsNh6VXwjs3gKQ
 
         self.assertRaises(
             keys.BadKeyError,
-            keys.Key.fromString, data=b'{' + base64.encodestring(sexp) + b'}',
+            keys.Key.fromString, data=b'{' + base64.b64encode(sexp) + b'}',
             )
 
 
@@ -449,12 +448,31 @@ SUrCyZXsNh6VXwjs3gKQ
         """
         Test that keys are correctly generated from Agent v3 strings.
         """
-        self._testPrivateFromString(keydata.privateRSA_agentv3, 'RSA',
-                keydata.RSAData)
-        self._testPrivateFromString(keydata.privateDSA_agentv3, 'DSA',
-                keydata.DSAData)
-        self.assertRaises(keys.BadKeyError, keys.Key.fromString,
-                b'\x00\x00\x00\x07ssh-foo'+ b'\x00\x00\x00\x01\x01'*5)
+        self._testPrivateFromString(
+            keydata.privateRSA_agentv3, 'RSA', keydata.RSAData)
+        self._testPrivateFromString(
+            keydata.privateDSA_agentv3, 'DSA', keydata.DSAData)
+        self.assertRaises(
+            keys.BadKeyError, keys.Key.fromString,
+            b'\x00\x00\x00\x07ssh-foo' + b'\x00\x00\x00\x01\x01' * 5)
+
+
+    def test_fromStringNormalizesUnicodePassphrase(self):
+        """
+        L{keys.Key.fromString} applies Normalization Form KC to Unicode
+        passphrases.
+        """
+        key = keys.Key(self.rsaObj)
+        key_data = key.toString(
+            'openssh', passphrase=u'verschl\u00FCsselt'.encode('UTF-8'))
+        self.assertEqual(
+            keys.Key.fromString(key_data, passphrase=u'verschlu\u0308sselt'),
+            key)
+        # U+FFFF is a "noncharacter" and guaranteed to have General_Category
+        # Cn (Unassigned).
+        self.assertRaises(
+            keys.PassphraseNormalizationError, keys.Key.fromString,
+            key_data, passphrase=u'unassigned \uFFFF')
 
 
     def test_fromStringErrors(self):
@@ -628,7 +646,7 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
         """
         Test that the PublicKey object is initialized correctly.
         """
-        obj = keys.Key._fromRSAComponents(n=long(5), e=long(3))._keyObject
+        obj = keys.Key._fromRSAComponents(n=5, e=3)._keyObject
         key = keys.Key(obj)
         self.assertEqual(key._keyObject, obj)
 
@@ -640,7 +658,7 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
         rsa1 = keys.Key(self.rsaObj)
         rsa2 = keys.Key(self.rsaObj)
         rsa3 = keys.Key(
-            keys.Key._fromRSAComponents(n=long(5), e=long(3))._keyObject)
+            keys.Key._fromRSAComponents(n=5, e=3)._keyObject)
         dsa = keys.Key(self.dsaObj)
         self.assertTrue(rsa1 == rsa2)
         self.assertFalse(rsa1 == rsa3)
@@ -656,7 +674,7 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
         rsa1 = keys.Key(self.rsaObj)
         rsa2 = keys.Key(self.rsaObj)
         rsa3 = keys.Key(
-            keys.Key._fromRSAComponents(n=long(5), e=long(3))._keyObject)
+            keys.Key._fromRSAComponents(n=5, e=3)._keyObject)
         dsa = keys.Key(self.dsaObj)
         self.assertFalse(rsa1 != rsa2)
         self.assertTrue(rsa1 != rsa3)
@@ -1273,6 +1291,24 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
         """
         key = keys.Key.fromString(keydata.privateDSA_openssh)
         self.assertEqual(key.toString('agentv3'), keydata.privateDSA_agentv3)
+
+
+    def test_toStringNormalizesUnicodePassphrase(self):
+        """
+        L{keys.Key.toString} applies Normalization Form KC to Unicode
+        passphrases.
+        """
+        key = keys.Key(self.rsaObj)
+        key_data = key.toString('openssh', passphrase=u'verschlu\u0308sselt')
+        self.assertEqual(
+            keys.Key.fromString(
+                key_data, passphrase=u'verschl\u00FCsselt'.encode('UTF-8')),
+            key)
+        # U+FFFF is a "noncharacter" and guaranteed to have General_Category
+        # Cn (Unassigned).
+        self.assertRaises(
+            keys.PassphraseNormalizationError, key.toString,
+            'openssh', passphrase=u'unassigned \uFFFF')
 
 
     def test_toStringErrors(self):

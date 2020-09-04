@@ -9,10 +9,7 @@ L{twisted.python.threadpool}.
 
 
 from threading import Thread, Lock, local as LocalStorage
-try:
-    from Queue import Queue
-except ImportError:
-    from queue import Queue
+from queue import Queue
 
 from twisted.python.log import err
 

@@ -8,6 +8,7 @@ Test cases for twisted.python._shellcomp
 
 import sys
 from io import BytesIO
+from typing import List, Optional
 
 from twisted.trial import unittest
 from twisted.python import _shellcomp, usage, reflect
@@ -37,18 +38,18 @@ class ZshScriptTestMeta(type):
 
 
 
-class ZshScriptTestMixin(object):
+class ZshScriptTestMixin:
     """
     Integration test helper to show that C{usage.Options} classes can have zsh
     completion functions generated for them without raising errors.
 
-    In your subclasses set a class variable like so:
+    In your subclasses set a class variable like so::
 
-    #            | cmd name | Fully Qualified Python Name of Options class |
-    #
-    generateFor = [('conch',  'twisted.conch.scripts.conch.ClientOptions'),
-                   ('twistd', 'twisted.scripts.twistd.ServerOptions'),
-                   ]
+      #            | cmd name | Fully Qualified Python Name of Options class |
+      #
+      generateFor = [('conch',  'twisted.conch.scripts.conch.ClientOptions'),
+                     ('twistd', 'twisted.scripts.twistd.ServerOptions'),
+                     ]
 
     Each package that contains Twisted scripts should contain one TestCase
     subclass which also inherits from this mixin, and contains a C{generateFor}
@@ -447,13 +448,13 @@ class FighterAceOptions(usage.Options):
                  'Enable a small chance that your machine guns will jam!'],
                 ['verbose', 'v',
                  'Verbose logging (may be specified more than once)'],
-                ]
+                ]  # type: List[List[Optional[str]]]
 
     optParameters = [['pilot-name', None, "What's your name, Ace?",
                       'Manfred von Richthofen'],
                      ['detail', 'd',
                       'Select the level of rendering detail (1-5)', '3'],
-            ]
+                     ]  # type: List[List[Optional[str]]]
 
     subCommands = [['server', None, FighterAceServerOptions,
                     'Start FighterAce game-server.'],

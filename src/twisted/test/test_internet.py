@@ -9,26 +9,28 @@ Tests for lots of functionality provided by L{twisted.internet}.
 import os
 import sys
 import time
+from unittest import skipIf
 
-from twisted.python.compat import _PY3
-from twisted.trial import unittest
+from twisted.trial.unittest import TestCase
 from twisted.internet import reactor, protocol, error, abstract, defer
 from twisted.internet import interfaces, base
+from twisted.internet.defer import Deferred, passthru
 from twisted.internet.tcp import Connector
+from twisted.python import util
 
 try:
-    from twisted.internet import ssl
+    from twisted.internet import ssl as _ssl
 except ImportError:
     ssl = None
-if ssl and not ssl.supported:
+else:
+    ssl = _ssl
+
+if ssl and not ssl.supported:  # type: ignore[attr-defined]
     ssl = None
 
-from twisted.internet.defer import Deferred, passthru
-if not _PY3:
-    from twisted.python import util
 
 
-class ThreePhaseEventTests(unittest.TestCase):
+class ThreePhaseEventTests(TestCase):
     """
     Tests for the private implementation helpers for system event triggers.
     """
@@ -345,7 +347,7 @@ class ThreePhaseEventTests(unittest.TestCase):
 
 
 
-class SystemEventTests(unittest.TestCase):
+class SystemEventTests(TestCase):
     """
     Tests for the reactor's implementation of the C{fireSystemEvent},
     C{addSystemEventTrigger}, and C{removeSystemEventTrigger} methods of the
@@ -649,7 +651,7 @@ class SystemEventTests(unittest.TestCase):
 
 
 
-class TimeTests(unittest.TestCase):
+class TimeTests(TestCase):
     """
     Tests for the IReactorTime part of the reactor.
     """
@@ -844,7 +846,9 @@ class TimeTests(unittest.TestCase):
 
 
 
-class CallFromThreadStopsAndWakeUpTests(unittest.TestCase):
+class CallFromThreadStopsAndWakeUpTests(TestCase):
+    @skipIf(not interfaces.IReactorThreads(reactor, None),
+            "Nothing to wake up for without thread support")
     def testWakeUp(self):
         # Make sure other threads can wake up the reactor
         d = Deferred()
@@ -855,8 +859,6 @@ class CallFromThreadStopsAndWakeUpTests(unittest.TestCase):
         reactor.callInThread(wake)
         return d
 
-    if interfaces.IReactorThreads(reactor, None) is None:
-        testWakeUp.skip = "Nothing to wake up for without thread support"
 
     def _stopCallFromThreadCallback(self):
         self.stopped = True
@@ -886,7 +888,8 @@ class CallFromThreadStopsAndWakeUpTests(unittest.TestCase):
         return d
 
 
-class DelayedTests(unittest.TestCase):
+
+class DelayedTests(TestCase):
     def setUp(self):
         self.finished = 0
         self.counter = 0
@@ -1014,7 +1017,11 @@ class ChildResolveProtocol(protocol.ProcessProtocol):
         self.onCompletion = None
 
 
-class ResolveTests(unittest.TestCase):
+
+@skipIf(not interfaces.IReactorProcess(reactor, None),
+        "cannot run test: reactor doesn't support IReactorProcess")
+class ResolveTests(TestCase):
+
     def testChildResolve(self):
         # I've seen problems with reactor.run under gtk2reactor. Spawn a
         # child which just does reactor.resolve after the reactor has
@@ -1040,34 +1047,28 @@ class ResolveTests(unittest.TestCase):
             # If the output is "done 127.0.0.1\n" we don't really care what
             # else happened.
             output = b''.join(output)
-            if _PY3:
-                expected_output = (b'done 127.0.0.1' +
-                                   os.linesep.encode("ascii"))
-            else:
-                expected_output = b'done 127.0.0.1\n'
+            expected_output = (b'done 127.0.0.1' +
+                               os.linesep.encode("ascii"))
             if output != expected_output:
                 self.fail((
-                    "The child process failed to produce the desired results:\n"
-                    "   Reason for termination was: %r\n"
-                    "   Output stream was: %r\n"
-                    "   Error stream was: %r\n") % (reason.getErrorMessage(), output, b''.join(error)))
+                    "The child process failed to produce "
+                    "the desired results:\n"
+                    "   Reason for termination was: {!r}\n"
+                    "   Output stream was: {!r}\n"
+                    "   Error stream was: {!r}\n").format(
+                    reason.getErrorMessage(), output, b''.join(error)))
 
         helperDeferred.addCallback(cbFinished)
         return helperDeferred
 
-if not interfaces.IReactorProcess(reactor, None):
-    ResolveTests.skip = (
-        "cannot run test: reactor doesn't support IReactorProcess")
 
 
-
-class CallFromThreadTests(unittest.TestCase):
+@skipIf(not interfaces.IReactorThreads(reactor, None),
+        "Nothing to test without thread support")
+class CallFromThreadTests(TestCase):
     """
     Task scheduling from threads tests.
     """
-    if interfaces.IReactorThreads(reactor, None) is None:
-        skip = "Nothing to test without thread support"
-
     def setUp(self):
         self.counter = 0
         self.deferred = Deferred()
@@ -1143,7 +1144,8 @@ class MyFactory(protocol.Factory):
     protocol = MyProtocol
 
 
-class ProtocolTests(unittest.TestCase):
+
+class ProtocolTests(TestCase):
 
     def testFactory(self):
         factory = MyFactory()
@@ -1152,7 +1154,7 @@ class ProtocolTests(unittest.TestCase):
         self.assertIsInstance(protocol, factory.protocol)
 
 
-class DummyProducer(object):
+class DummyProducer:
     """
     Very uninteresting producer implementation used by tests to ensure the
     right methods are called by the consumer with which it is registered.
@@ -1234,7 +1236,7 @@ class ReentrantProducer(DummyProducer):
 
 
 
-class ProducerTests(unittest.TestCase):
+class ProducerTests(TestCase):
     """
     Test abstract.FileDescriptor's consumer interface.
     """
@@ -1363,38 +1365,42 @@ class ProducerTests(unittest.TestCase):
 
 
 
-class PortStringificationTests(unittest.TestCase):
-    if interfaces.IReactorTCP(reactor, None) is not None:
-        def testTCP(self):
-            p = reactor.listenTCP(0, protocol.ServerFactory())
-            portNo = p.getHost().port
-            self.assertNotEqual(str(p).find(str(portNo)), -1,
-                                "%d not found in %s" % (portNo, p))
-            return p.stopListening()
-
-    if interfaces.IReactorUDP(reactor, None) is not None:
-        def testUDP(self):
-            p = reactor.listenUDP(0, protocol.DatagramProtocol())
-            portNo = p.getHost().port
-            self.assertNotEqual(str(p).find(str(portNo)), -1,
-                                "%d not found in %s" % (portNo, p))
-            return p.stopListening()
-
-    if interfaces.IReactorSSL(reactor, None) is not None and ssl:
-        def testSSL(self, ssl=ssl):
-            pem = util.sibpath(__file__, 'server.pem')
-            p = reactor.listenSSL(0, protocol.ServerFactory(), ssl.DefaultOpenSSLContextFactory(pem, pem))
-            portNo = p.getHost().port
-            self.assertNotEqual(str(p).find(str(portNo)), -1,
-                                "%d not found in %s" % (portNo, p))
-            return p.stopListening()
-
-        if _PY3:
-            testSSL.skip = ("Re-enable once the Python 3 SSL port is done.")
+class PortStringificationTests(TestCase):
+    @skipIf(not interfaces.IReactorTCP(reactor, None),
+            "IReactorTCP is needed")
+    def testTCP(self):
+        p = reactor.listenTCP(0, protocol.ServerFactory())
+        portNo = p.getHost().port
+        self.assertNotEqual(str(p).find(str(portNo)), -1,
+                            "%d not found in %s" % (portNo, p))
+        return p.stopListening()
 
 
+    @skipIf(not interfaces.IReactorUDP(reactor, None),
+            "IReactorUDP is needed")
+    def testUDP(self):
+        p = reactor.listenUDP(0, protocol.DatagramProtocol())
+        portNo = p.getHost().port
+        self.assertNotEqual(str(p).find(str(portNo)), -1,
+                            "%d not found in %s" % (portNo, p))
+        return p.stopListening()
 
-class ConnectorReprTests(unittest.TestCase):
+
+    @skipIf(not interfaces.IReactorSSL(reactor, None),
+            "IReactorSSL is needed")
+    @skipIf(not ssl, "SSL support is missing")
+    def testSSL(self, ssl=ssl):
+        pem = util.sibpath(__file__, 'server.pem')
+        p = reactor.listenSSL(0, protocol.ServerFactory(),
+                              ssl.DefaultOpenSSLContextFactory(pem, pem))
+        portNo = p.getHost().port
+        self.assertNotEqual(str(p).find(str(portNo)), -1,
+                            "%d not found in %s" % (portNo, p))
+        return p.stopListening()
+
+
+
+class ConnectorReprTests(TestCase):
     def test_tcp_repr(self):
         c = Connector('localhost', 666, object(), 0, object())
         expect = "<twisted.internet.tcp.Connector instance at 0x%x " \

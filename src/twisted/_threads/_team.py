@@ -16,7 +16,7 @@ from ._convenience import Quit
 
 
 
-class Statistics(object):
+class Statistics:
     """
     Statistics about a L{Team}'s current activity.
 
@@ -41,7 +41,7 @@ class Statistics(object):
 
 
 @implementer(IWorker)
-class Team(object):
+class Team:
     """
     A composite L{IWorker} implementation.
 

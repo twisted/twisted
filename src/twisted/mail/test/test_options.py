@@ -10,13 +10,8 @@ from twisted.trial.unittest import TestCase
 from twisted.python.usage import UsageError
 from twisted.mail import protocols
 from twisted.mail.tap import Options, makeService
-from twisted.python.reflect import requireModule
 from twisted.internet import endpoints, defer
 
-if requireModule('OpenSSL') is None:
-    sslSkip = 'Missing OpenSSL package.'
-else:
-    sslSkip = None
 
 
 class OptionsTests(TestCase):
@@ -145,7 +140,7 @@ class OptionsTests(TestCase):
 
 
 
-class SpyEndpoint(object):
+class SpyEndpoint:
     """
     SpyEndpoint remembers what factory it is told to listen with.
     """

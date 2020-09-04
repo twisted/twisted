@@ -10,5 +10,5 @@
 # in the second line
 # The class declaration is irrelevant
 
-class Foo(object):
+class Foo:
     pass

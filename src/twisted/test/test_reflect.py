@@ -10,8 +10,6 @@ import os
 import weakref
 from collections import deque
 
-from twisted.python.compat import _PY3
-from twisted.trial import unittest
 from twisted.trial.unittest import SynchronousTestCase as TestCase
 from twisted.python import reflect
 from twisted.python.reflect import (
@@ -19,7 +17,7 @@ from twisted.python.reflect import (
     addMethodNamesToDict, fullyQualifiedName)
 
 
-class Base(object):
+class Base:
     """
     A no-op class which can be used to verify the behavior of
     method-discovering APIs.
@@ -39,7 +37,7 @@ class Sub(Base):
 
 
 
-class Separate(object):
+class Separate:
     """
     A no-op class with methods with differing prefixes.
     """
@@ -160,7 +158,7 @@ class AddMethodNamesToDictTests(TestCase):
         If C{baseClass} is passed to L{addMethodNamesToDict}, only methods which
         are a subclass of C{baseClass} are added to the result dictionary.
         """
-        class Alternate(object):
+        class Alternate:
             pass
 
         class Child(Separate, Alternate):
@@ -173,7 +171,7 @@ class AddMethodNamesToDictTests(TestCase):
 
 
 
-class Summer(object):
+class Summer:
     """
     A class we look up as part of the LookupsTests.
     """
@@ -380,19 +378,19 @@ class LookupsTests(TestCase):
 
 
 
-class Breakable(object):
+class Breakable:
 
     breakRepr = False
     breakStr = False
 
-    def __str__(self):
+    def __str__(self) -> str:
         if self.breakStr:
             raise RuntimeError("str!")
         else:
             return '<Breakable>'
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         if self.breakRepr:
             raise RuntimeError("repr!")
         else:
@@ -403,11 +401,11 @@ class Breakable(object):
 class BrokenType(Breakable, type):
     breakName = False
 
-    def get___name__(self):
+    @property
+    def __name__(self):
         if self.breakName:
             raise RuntimeError("no name")
         return 'BrokenType'
-    __name__ = property(get___name__)
 
 
 
@@ -418,7 +416,7 @@ BTBase = BrokenType('BTBase', (Breakable,),
 
 
 class NoClassAttr(Breakable):
-    __class__ = property(lambda x: x.not_class)
+    __class__ = property(lambda x: x.not_class)  # type: ignore[assignment]
 
 
 
@@ -544,15 +542,6 @@ class SafeStrTests(TestCase):
         self.assertEqual(reflect.safe_str(x), 'a')
 
 
-    def test_workingUtf8_2(self):
-        """
-        L{safe_str} for C{str} with utf-8 encoded data should return the
-        value unchanged.
-        """
-        x = b't\xc3\xbcst'
-        self.assertEqual(reflect.safe_str(x), x)
-
-
     def test_workingUtf8_3(self):
         """
         L{safe_str} for C{bytes} with utf-8 encoded data should return
@@ -560,16 +549,6 @@ class SafeStrTests(TestCase):
         """
         x = b't\xc3\xbcst'
         self.assertEqual(reflect.safe_str(x), x.decode('utf-8'))
-
-    if _PY3:
-        # TODO: after something like python.compat.nativeUtf8String is
-        # introduced, use that one for assertEqual. Then we can combine
-        # test_workingUtf8_* tests into one without needing _PY3.
-        # nativeUtf8String is needed for Python 3 anyway.
-        test_workingUtf8_2.skip = ("Skip Python 2 specific test for utf-8 str")
-    else:
-        test_workingUtf8_3.skip = (
-            "Skip Python 3 specific test for utf-8 bytes")
 
 
     def test_brokenUtf8(self):
@@ -748,11 +727,8 @@ class FullyQualifiedNameTests(TestCase):
             "%s.%s.test_unboundMethod" % (__name__, self.__class__.__name__))
 
 
-class ObjectGrepTests(unittest.TestCase):
-    if _PY3:
-        # This is to be removed when fixing #6986
-        skip = "twisted.python.reflect.objgrep hasn't been ported to Python 3"
 
+class ObjectGrepTests(TestCase):
 
     def test_dictionary(self):
         """
@@ -870,21 +846,10 @@ class ObjectGrepTests(unittest.TestCase):
         self.assertIn("[1]", reflect.objgrep(D, o, reflect.isSame))
 
 
-class GetClassTests(unittest.TestCase):
-    if _PY3:
-        oldClassNames = ['type']
-    else:
-        oldClassNames = ['class', 'classobj']
 
-    def test_old(self):
-        class OldClass:
-            pass
-        old = OldClass()
-        self.assertIn(reflect.getClass(OldClass).__name__, self.oldClassNames)
-        self.assertEqual(reflect.getClass(old).__name__, 'OldClass')
-
+class GetClassTests(TestCase):
     def test_new(self):
-        class NewClass(object):
+        class NewClass:
             pass
         new = NewClass()
         self.assertEqual(reflect.getClass(NewClass).__name__, 'type')

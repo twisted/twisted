@@ -6,6 +6,7 @@ Test ssh/channel.py.
 """
 
 
+from unittest import skipIf
 from zope.interface.verify import verifyObject
 
 try:
@@ -16,12 +17,12 @@ try:
     from twisted.internet import interfaces
     from twisted.internet.address import IPv4Address
     from twisted.test.proto_helpers import StringTransport
-    skipTest = None
+    skipTest = ""
 except ImportError:
     skipTest = 'Conch SSH not supported.'
-    SSHService = object
-from twisted.trial import unittest
-from twisted.python.compat import intToBytes
+    SSHService = object  # type: ignore[assignment,misc]
+from twisted.trial.unittest import TestCase
+
 
 
 class MockConnection(SSHService):
@@ -93,12 +94,11 @@ def connectSSHTransport(service, hostAddress=None, peerAddress=None):
 
 
 
-class ChannelTests(unittest.TestCase):
+@skipIf(skipTest, skipTest)
+class ChannelTests(TestCase):
     """
     Tests for L{SSHChannel}.
     """
-
-    skip = skipTest
 
     def setUp(self):
         """
@@ -175,14 +175,13 @@ class ChannelTests(unittest.TestCase):
             channel.SSHChannel(localWindow=1).__bytes__(),
             b'<SSHChannel None (lw 1 rw 0)>')
 
-
     def test_logPrefix(self):
         """
         Test that SSHChannel.logPrefix gives the name of the channel, the
         local channel ID and the underlying connection.
         """
-        self.assertEqual(self.channel.logPrefix(), 'SSHChannel channel '
-                '(unknown) on MockConnection')
+        self.assertEqual(self.channel.logPrefix(),
+                         'SSHChannel channel (unknown) on MockConnection')
 
 
     def test_addWindowBytes(self):
@@ -313,7 +312,7 @@ class ChannelTests(unittest.TestCase):
         Test that writeSequence is equivalent to write(''.join(sequece)).
         """
         self.channel.addWindowBytes(20)
-        self.channel.writeSequence(map(intToBytes, range(10)))
+        self.channel.writeSequence(b'%d' % (i,) for i in range(10))
         self.assertEqual(self.conn.data[self.channel], [b'0123456789'])
 
 

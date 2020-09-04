@@ -13,13 +13,19 @@ from binascii import hexlify, unhexlify
 from twisted.trial import unittest
 from twisted.python.compat import nativeString, networkString
 from twisted.python import components
+from twisted.python.versions import Version
 from twisted.internet import defer
 from twisted.cred import checkers, credentials, portal, error
 
 try:
     from crypt import crypt
 except ImportError:
-    crypt = None
+    crypt = None  # type: ignore[assignment,misc]
+
+
+
+# The Twisted version in which UsernameHashedPassword is first deprecated.
+_uhpVersion = Version("Twisted", "NEXT", 0, 0)
 
 
 
@@ -31,7 +37,7 @@ class ITestable(Interface):
 
 
 
-class TestAvatar(object):
+class TestAvatar:
     """
     A test avatar.
     """
@@ -68,7 +74,7 @@ class IDerivedCredentials(credentials.IUsernamePassword):
 
 
 @implementer(IDerivedCredentials, ITestable)
-class DerivedCredentials(object):
+class DerivedCredentials:
 
     def __init__(self, username, password):
         self.username = username
@@ -81,7 +87,7 @@ class DerivedCredentials(object):
 
 
 @implementer(portal.IRealm)
-class TestRealm(object):
+class TestRealm:
     """
     A basic test realm.
     """
@@ -239,8 +245,9 @@ class OnDiskDatabaseTests(unittest.TestCase):
 
     def testRequestAvatarId_hashed(self):
         self.db = checkers.FilePasswordDB(self.dbfile)
-        creds = [credentials.UsernameHashedPassword(u, p)
-                 for u, p in self.users]
+        UsernameHashedPassword = self.getDeprecatedModuleAttribute(
+            'twisted.cred.credentials', 'UsernameHashedPassword', _uhpVersion)
+        creds = [UsernameHashedPassword(u, p) for u, p in self.users]
         d = defer.gatherResults(
             [defer.maybeDeferred(self.db.requestAvatarId, c) for c in creds])
         d.addCallback(self.assertEqual, [u for u, p in self.users])
@@ -298,7 +305,9 @@ class HashedPasswordOnDiskDatabaseTests(unittest.TestCase):
 
 
     def testHashedCredentials(self):
-        hashedCreds = [credentials.UsernameHashedPassword(
+        UsernameHashedPassword = self.getDeprecatedModuleAttribute(
+            'twisted.cred.credentials', 'UsernameHashedPassword', _uhpVersion)
+        hashedCreds = [UsernameHashedPassword(
             u, self.hash(None, p, u[:2])) for u, p in self.users]
         d = defer.DeferredList([self.port.login(c, None, ITestable)
                                 for c in hashedCreds], consumeErrors=True)
@@ -317,18 +326,18 @@ class HashedPasswordOnDiskDatabaseTests(unittest.TestCase):
 
 
 
-class CheckersMixin(object):
+class CheckersMixin:
     """
     L{unittest.TestCase} mixin for testing that some checkers accept
     and deny specified credentials.
 
     Subclasses must provide
-    - C{getCheckers} which returns a sequence of
-      L{checkers.ICredentialChecker}
-    - C{getGoodCredentials} which returns a list of 2-tuples of
-      credential to check and avaterId to expect.
-    - C{getBadCredentials} which returns a list of credentials
-      which are expected to be unauthorized.
+      - C{getCheckers} which returns a sequence of
+        L{checkers.ICredentialChecker}
+      - C{getGoodCredentials} which returns a list of 2-tuples of
+        credential to check and avaterId to expect.
+      - C{getBadCredentials} which returns a list of credentials
+        which are expected to be unauthorized.
     """
 
     @defer.inlineCallbacks
@@ -355,7 +364,7 @@ class CheckersMixin(object):
 
 
 
-class HashlessFilePasswordDBMixin(object):
+class HashlessFilePasswordDBMixin:
     credClass = credentials.UsernamePassword
     diskHash = None
     networkHash = staticmethod(lambda x: x)
@@ -408,16 +417,18 @@ class HashlessFilePasswordDBMixin(object):
 
 
 class LocallyHashedFilePasswordDBMixin(HashlessFilePasswordDBMixin):
-    diskHash = staticmethod(lambda x: hexlify(x))
+    @staticmethod
+    def diskHash(x):
+        return hexlify(x)
 
 
 
 class NetworkHashedFilePasswordDBMixin(HashlessFilePasswordDBMixin):
     networkHash = staticmethod(lambda x: hexlify(x))
 
-    class credClass(credentials.UsernameHashedPassword):
+    class credClass(credentials.UsernamePassword):
         def checkPassword(self, password):
-            return unhexlify(self.hashed) == password
+            return unhexlify(self.password) == password
 
 
 
@@ -438,3 +449,21 @@ class NetworkHashedFilePasswordDBCheckerTests(NetworkHashedFilePasswordDBMixin,
                                               CheckersMixin,
                                               unittest.TestCase):
     pass
+
+
+
+class UsernameHashedPasswordTests(unittest.TestCase):
+    """
+    UsernameHashedPassword is a deprecated class that is functionally
+    equivalent to UsernamePassword.
+    """
+
+    def test_deprecation(self):
+        """
+        Tests that UsernameHashedPassword is deprecated.
+        """
+        self.getDeprecatedModuleAttribute(
+            'twisted.cred.credentials',
+            'UsernameHashedPassword',
+            _uhpVersion,
+            'Use twisted.cred.credentials.UsernamePassword instead.')

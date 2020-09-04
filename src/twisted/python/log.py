@@ -15,7 +15,6 @@ from datetime import datetime
 
 from zope.interface import Interface
 
-from twisted.python.compat import unicode, _PY3
 from twisted.python import context
 from twisted.python import reflect
 from twisted.python import util
@@ -369,7 +368,7 @@ def _safeFormat(fmtString, fmtDict):
     Try to format a string, swallowing all errors to always return a string.
 
     @note: For backward-compatibility reasons, this function ensures that it
-        returns a native string, meaning C{bytes} in Python 2 and C{unicode} in
+        returns a native string, meaning L{bytes} in Python 2 and L{str} in
         Python 3.
 
     @param fmtString: a C{%}-format string
@@ -402,12 +401,8 @@ def _safeFormat(fmtString, fmtDict):
                         'MESSAGE DETAILS, MESSAGE LOST')
 
     # Return a native string
-    if _PY3:
-        if isinstance(text, bytes):
-            text = text.decode("utf-8")
-    else:
-        if isinstance(text, unicode):
-            text = text.encode("utf-8")
+    if isinstance(text, bytes):
+        text = text.decode("utf-8")
 
     return text
 
@@ -561,7 +556,7 @@ class FileLogObserver(_GlobalStartStopMixIn):
 
 
 
-class PythonLoggingObserver(_GlobalStartStopMixIn, object):
+class PythonLoggingObserver(_GlobalStartStopMixIn):
     """
     Output twisted messages to Python standard library L{logging} module.
 
@@ -639,8 +634,6 @@ class StdioOnnaStick:
 
 
     def write(self, data):
-        if not _PY3 and isinstance(data, unicode):
-            data = data.encode(self.encoding)
         d = (self.buf + data).split('\n')
         self.buf = d[-1]
         messages = d[0:-1]
@@ -650,8 +643,6 @@ class StdioOnnaStick:
 
     def writelines(self, lines):
         for line in lines:
-            if not _PY3 and isinstance(line, unicode):
-                line = line.encode(self.encoding)
             msg(line, printed=1, isError=self.isError)
 
 

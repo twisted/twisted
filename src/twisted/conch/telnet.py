@@ -14,145 +14,137 @@ import struct
 from zope.interface import implementer
 
 from twisted.internet import protocol, interfaces as iinternet, defer
-from twisted.python import log
-from twisted.python.compat import _bytesChr as chr, iterbytes
+from twisted.python.compat import iterbytes
+from twisted.logger import Logger
 
-MODE = chr(1)
+
+
+def _chr(i: int) -> bytes:
+    """Create a byte sequence of length 1.
+
+    U{RFC 854<https://tools.ietf.org/html/rfc854>} specifies codes in decimal,
+    but Python can only handle L{bytes} literals in octal or hexadecimal.
+    This helper function bridges that gap.
+
+    @param i: The value of the only byte in the sequence.
+    """
+    return bytes((i,))
+
+
+
+MODE = _chr(1)
 EDIT = 1
 TRAPSIG = 2
 MODE_ACK = 4
 SOFT_TAB = 8
 LIT_ECHO = 16
 
-# Characters gleaned from the various (and conflicting) RFCs.  Not all of these are correct.
+# Characters gleaned from the various (and conflicting) RFCs. Not all of these
+# are correct.
 
-NULL =           chr(0)   # No operation.
-BEL =            chr(7)   # Produces an audible or
-                          # visible signal (which does
-                          # NOT move the print head).
-BS =             chr(8)   # Moves the print head one
-                          # character position towards
-                          # the left margin.
-HT =             chr(9)   # Moves the printer to the
-                          # next horizontal tab stop.
-                          # It remains unspecified how
-                          # either party determines or
-                          # establishes where such tab
-                          # stops are located.
-LF =             chr(10)  # Moves the printer to the
-                          # next print line, keeping the
-                          # same horizontal position.
-VT =             chr(11)  # Moves the printer to the
-                          # next vertical tab stop.  It
-                          # remains unspecified how
-                          # either party determines or
-                          # establishes where such tab
-                          # stops are located.
-FF =             chr(12)  # Moves the printer to the top
-                          # of the next page, keeping
-                          # the same horizontal position.
-CR =             chr(13)  # Moves the printer to the left
-                          # margin of the current line.
+NULL = _chr(0)  # No operation.
+BEL = _chr(7)  # Produces an audible or visible signal (which does NOT move the
+# print head).
+BS = _chr(8)  # Moves the print head one character position towards the left
+# margin.
+HT = _chr(9)  # Moves the printer to the next horizontal tab stop. It remains
+# unspecified how either party determines or establishes where such tab stops
+# are located.
+LF = _chr(10)  # Moves the printer to the next print line, keeping the same
+# horizontal position.
+VT = _chr(11)  # Moves the printer to the next vertical tab stop. It remains
+# unspecified how either party determines or establishes where such tab stops
+# are located.
+FF = _chr(12)  # Moves the printer to the top of the next page, keeping the same
+# horizontal position.
+CR = _chr(13)  # Moves the printer to the left margin of the current line.
 
-ECHO  =          chr(1)   # User-to-Server:  Asks the server to send
-                          # Echos of the transmitted data.
-SGA =            chr(3)   # Suppress Go Ahead.  Go Ahead is silly
-                          # and most modern servers should suppress
-                          # it.
-NAWS =           chr(31)  # Negotiate About Window Size.  Indicate that
-                          # information about the size of the terminal
-                          # can be communicated.
-LINEMODE =       chr(34)  # Allow line buffering to be
-                          # negotiated about.
+ECHO = _chr(1)  # User-to-Server:  Asks the server to send Echos of the
+# transmitted data.
+SGA = _chr(3)  # Suppress Go Ahead.  Go Ahead is silly and most modern servers
+# should suppress it.
+NAWS = _chr(31)  # Negotiate About Window Size.  Indicate that information about
+# the size of the terminal can be communicated.
+LINEMODE = _chr(34)  # Allow line buffering to be negotiated about.
 
-SE =             chr(240) # End of subnegotiation parameters.
-NOP =            chr(241) # No operation.
-DM =             chr(242) # "Data Mark": The data stream portion
-                          # of a Synch.  This should always be
-                          # accompanied by a TCP Urgent
-                          # notification.
-BRK =            chr(243) # NVT character Break.
-IP =             chr(244) # The function Interrupt Process.
-AO =             chr(245) # The function Abort Output
-AYT =            chr(246) # The function Are You There.
-EC =             chr(247) # The function Erase Character.
-EL =             chr(248) # The function Erase Line
-GA =             chr(249) # The Go Ahead signal.
-SB =             chr(250) # Indicates that what follows is
-                          # subnegotiation of the indicated
-                          # option.
-WILL =           chr(251) # Indicates the desire to begin
-                          # performing, or confirmation that
-                          # you are now performing, the
-                          # indicated option.
-WONT =           chr(252) # Indicates the refusal to perform,
-                          # or continue performing, the
-                          # indicated option.
-DO =             chr(253) # Indicates the request that the
-                          # other party perform, or
-                          # confirmation that you are expecting
-                          # the other party to perform, the
-                          # indicated option.
-DONT =           chr(254) # Indicates the demand that the
-                          # other party stop performing,
-                          # or confirmation that you are no
-                          # longer expecting the other party
-                          # to perform, the indicated option.
-IAC =            chr(255) # Data Byte 255.  Introduces a
-                          # telnet command.
+EOR = _chr(239)  # End of Record (RFC 885)
+SE = _chr(240)  # End of subnegotiation parameters.
+NOP = _chr(241)  # No operation.
+DM = _chr(242)  # "Data Mark": The data stream portion of a Synch. This should
+# always be accompanied by a TCP Urgent notification.
+BRK = _chr(243)  # NVT character Break.
+IP = _chr(244)  # The function Interrupt Process.
+AO = _chr(245)  # The function Abort Output
+AYT = _chr(246)  # The function Are You There.
+EC = _chr(247)  # The function Erase Character.
+EL = _chr(248)  # The function Erase Line
+GA = _chr(249)  # The Go Ahead signal.
+SB = _chr(250)  # Indicates that what follows is subnegotiation of the indicated
+# option.
+WILL = _chr(251)  # Indicates the desire to begin performing, or confirmation
+# that you are now performing, the indicated option.
+WONT = _chr(252)  # Indicates the refusal to perform, or continue performing,
+# the indicated option.
+DO = _chr(253)  # Indicates the request that the other party perform, or
+# confirmation that you are expecting the other party to perform, the indicated
+# option.
+DONT = _chr(254)  # Indicates the demand that the other party stop performing,
+# or confirmation that you are no longer expecting the other party to perform,
+# the indicated option.
+IAC = _chr(255)  # Data Byte 255. Introduces a telnet command.
 
-LINEMODE_MODE = chr(1)
-LINEMODE_EDIT = chr(1)
-LINEMODE_TRAPSIG = chr(2)
-LINEMODE_MODE_ACK = chr(4)
-LINEMODE_SOFT_TAB = chr(8)
-LINEMODE_LIT_ECHO = chr(16)
-LINEMODE_FORWARDMASK = chr(2)
-LINEMODE_SLC = chr(3)
-LINEMODE_SLC_SYNCH = chr(1)
-LINEMODE_SLC_BRK = chr(2)
-LINEMODE_SLC_IP = chr(3)
-LINEMODE_SLC_AO = chr(4)
-LINEMODE_SLC_AYT = chr(5)
-LINEMODE_SLC_EOR = chr(6)
-LINEMODE_SLC_ABORT = chr(7)
-LINEMODE_SLC_EOF = chr(8)
-LINEMODE_SLC_SUSP = chr(9)
-LINEMODE_SLC_EC = chr(10)
-LINEMODE_SLC_EL = chr(11)
+LINEMODE_MODE = _chr(1)
+LINEMODE_EDIT = _chr(1)
+LINEMODE_TRAPSIG = _chr(2)
+LINEMODE_MODE_ACK = _chr(4)
+LINEMODE_SOFT_TAB = _chr(8)
+LINEMODE_LIT_ECHO = _chr(16)
+LINEMODE_FORWARDMASK = _chr(2)
+LINEMODE_SLC = _chr(3)
+LINEMODE_SLC_SYNCH = _chr(1)
+LINEMODE_SLC_BRK = _chr(2)
+LINEMODE_SLC_IP = _chr(3)
+LINEMODE_SLC_AO = _chr(4)
+LINEMODE_SLC_AYT = _chr(5)
+LINEMODE_SLC_EOR = _chr(6)
+LINEMODE_SLC_ABORT = _chr(7)
+LINEMODE_SLC_EOF = _chr(8)
+LINEMODE_SLC_SUSP = _chr(9)
+LINEMODE_SLC_EC = _chr(10)
+LINEMODE_SLC_EL = _chr(11)
 
-LINEMODE_SLC_EW = chr(12)
-LINEMODE_SLC_RP = chr(13)
-LINEMODE_SLC_LNEXT = chr(14)
-LINEMODE_SLC_XON = chr(15)
-LINEMODE_SLC_XOFF = chr(16)
-LINEMODE_SLC_FORW1 = chr(17)
-LINEMODE_SLC_FORW2 = chr(18)
-LINEMODE_SLC_MCL = chr(19)
-LINEMODE_SLC_MCR = chr(20)
-LINEMODE_SLC_MCWL = chr(21)
-LINEMODE_SLC_MCWR = chr(22)
-LINEMODE_SLC_MCBOL = chr(23)
-LINEMODE_SLC_MCEOL = chr(24)
-LINEMODE_SLC_INSRT = chr(25)
-LINEMODE_SLC_OVER = chr(26)
-LINEMODE_SLC_ECR = chr(27)
-LINEMODE_SLC_EWR = chr(28)
-LINEMODE_SLC_EBOL = chr(29)
-LINEMODE_SLC_EEOL = chr(30)
+LINEMODE_SLC_EW = _chr(12)
+LINEMODE_SLC_RP = _chr(13)
+LINEMODE_SLC_LNEXT = _chr(14)
+LINEMODE_SLC_XON = _chr(15)
+LINEMODE_SLC_XOFF = _chr(16)
+LINEMODE_SLC_FORW1 = _chr(17)
+LINEMODE_SLC_FORW2 = _chr(18)
+LINEMODE_SLC_MCL = _chr(19)
+LINEMODE_SLC_MCR = _chr(20)
+LINEMODE_SLC_MCWL = _chr(21)
+LINEMODE_SLC_MCWR = _chr(22)
+LINEMODE_SLC_MCBOL = _chr(23)
+LINEMODE_SLC_MCEOL = _chr(24)
+LINEMODE_SLC_INSRT = _chr(25)
+LINEMODE_SLC_OVER = _chr(26)
+LINEMODE_SLC_ECR = _chr(27)
+LINEMODE_SLC_EWR = _chr(28)
+LINEMODE_SLC_EBOL = _chr(29)
+LINEMODE_SLC_EEOL = _chr(30)
 
-LINEMODE_SLC_DEFAULT = chr(3)
-LINEMODE_SLC_VALUE = chr(2)
-LINEMODE_SLC_CANTCHANGE = chr(1)
-LINEMODE_SLC_NOSUPPORT = chr(0)
-LINEMODE_SLC_LEVELBITS = chr(3)
+LINEMODE_SLC_DEFAULT = _chr(3)
+LINEMODE_SLC_VALUE = _chr(2)
+LINEMODE_SLC_CANTCHANGE = _chr(1)
+LINEMODE_SLC_NOSUPPORT = _chr(0)
+LINEMODE_SLC_LEVELBITS = _chr(3)
 
-LINEMODE_SLC_ACK = chr(128)
-LINEMODE_SLC_FLUSHIN = chr(64)
-LINEMODE_SLC_FLUSHOUT = chr(32)
-LINEMODE_EOF = chr(236)
-LINEMODE_SUSP = chr(237)
-LINEMODE_ABORT = chr(238)
+LINEMODE_SLC_ACK = _chr(128)
+LINEMODE_SLC_FLUSHIN = _chr(64)
+LINEMODE_SLC_FLUSHOUT = _chr(32)
+LINEMODE_EOF = _chr(236)
+LINEMODE_SUSP = _chr(237)
+LINEMODE_ABORT = _chr(238)
 
 class ITelnetProtocol(iinternet.IProtocol):
     def unhandledCommand(command, argument):
@@ -314,8 +306,9 @@ class TelnetError(Exception):
 
 
 class NegotiationError(TelnetError):
-    def __str__(self):
-        return self.__class__.__module__ + '.' + self.__class__.__name__ + ':' + repr(self.args[0])
+    def __str__(self) -> str:
+        return (self.__class__.__module__ + '.' + self.__class__.__name__ + ':'
+                + repr(self.args[0]))
 
 
 
@@ -341,6 +334,8 @@ class AlreadyNegotiating(NegotiationError):
 
 @implementer(ITelnetProtocol)
 class TelnetProtocol(protocol.Protocol):
+    _log = Logger()
+
     def unhandledCommand(self, command, argument):
         pass
 
@@ -449,7 +444,7 @@ class Telnet(protocol.Protocol):
             negotiating = False
             onResult = None
 
-            def __str__(self):
+            def __str__(self) -> str:
                 return self.state + ('*' * self.negotiating)
 
 
@@ -458,7 +453,7 @@ class Telnet(protocol.Protocol):
             self.him = self._Perspective()
 
 
-        def __repr__(self):
+        def __repr__(self) -> str:
             return '<_OptionState us=%s him=%s>' % (self.us, self.him)
 
 
@@ -571,7 +566,7 @@ class Telnet(protocol.Protocol):
                 elif b == SB:
                     self.state = 'subnegotiation'
                     self.commands = []
-                elif b in (NOP, DM, BRK, IP, AO, AYT, EC, EL, GA):
+                elif b in (EOR, NOP, DM, BRK, IP, AO, AYT, EC, EL, GA):
                     self.state = 'data'
                     if appDataBuffer:
                         self.applicationDataReceived(b''.join(appDataBuffer))
@@ -1006,11 +1001,15 @@ class TelnetBootstrapProtocol(TelnetProtocol, ProtocolTransportMixin):
         self.transport.negotiationMap[LINEMODE] = self.telnet_LINEMODE
 
         for opt in (LINEMODE, NAWS, SGA):
-            self.transport.do(opt).addErrback(log.err)
+            self.transport.do(opt).addErrback(
+                lambda f: self._log.failure('Error do {opt!r}', f, opt=opt))
         for opt in (ECHO,):
-            self.transport.will(opt).addErrback(log.err)
+            self.transport.will(opt).addErrback(
+                lambda f: self._log.failure(
+                    'Error setting will {opt!r}', f, opt=opt))
 
-        self.protocol = self.protocolFactory(*self.protocolArgs, **self.protocolKwArgs)
+        self.protocol = self.protocolFactory(*self.protocolArgs,
+                                             **self.protocolKwArgs)
 
         try:
             factory = self.factory
@@ -1045,7 +1044,7 @@ class TelnetBootstrapProtocol(TelnetProtocol, ProtocolTransportMixin):
 
     def enableRemote(self, opt):
         if opt == LINEMODE:
-            self.transport.requestNegotiation(LINEMODE, MODE + chr(TRAPSIG))
+            self.transport.requestNegotiation(LINEMODE, MODE + LINEMODE_TRAPSIG)
             return True
         elif opt == NAWS:
             return True
@@ -1064,7 +1063,8 @@ class TelnetBootstrapProtocol(TelnetProtocol, ProtocolTransportMixin):
             width, height = struct.unpack('!HH', b''.join(data))
             self.protocol.terminalProtocol.terminalSize(width, height)
         else:
-            log.msg("Wrong number of NAWS bytes")
+            self._log.error("Wrong number of NAWS bytes: {nbytes}",
+                            nbytes=len(data))
 
     linemodeSubcommands = {
         LINEMODE_SLC: 'SLC'}
@@ -1101,7 +1101,7 @@ class StatefulTelnetProtocol(basic.LineReceiver, TelnetProtocol):
             if self.state == oldState:
                 self.state = newState
             else:
-                log.msg("Warning: state changed and new state returned")
+                self._log.warn("state changed and new state returned")
 
 
     def telnet_Discard(self, line):

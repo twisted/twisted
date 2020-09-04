@@ -4,10 +4,9 @@
 # See LICENSE for details.
 
 
-from twisted.python.compat import _coercedUnicode, unicode
-from twisted.words.protocols.jabber import xmlstream, sasl, error
+from twisted.words.protocols.jabber import error, sasl, xmlstream
 from twisted.words.protocols.jabber.jid import JID
-from twisted.words.xish import domish, xpath, utility
+from twisted.words.xish import domish, utility, xpath
 
 NS_XMPP_STREAMS = 'urn:ietf:params:xml:ns:xmpp-streams'
 NS_XMPP_BIND = 'urn:ietf:params:xml:ns:xmpp-bind'
@@ -77,7 +76,7 @@ class IQ(domish.Element):
 
 
 
-class IQAuthInitializer(object):
+class IQAuthInitializer:
     """
     Non-SASL Authentication initializer for the initiating entity.
 
@@ -115,7 +114,7 @@ class IQAuthInitializer(object):
 
     def _cbAuthQuery(self, iq):
         jid = self.xmlstream.authenticator.jid
-        password = _coercedUnicode(self.xmlstream.authenticator.password)
+        password = self.xmlstream.authenticator.password
 
         # Construct auth request
         reply = xmlstream.IQ(self.xmlstream, "set")
@@ -126,9 +125,9 @@ class IQAuthInitializer(object):
         # Prefer digest over plaintext
         if DigestAuthQry.matches(iq):
             digest = xmlstream.hashPassword(self.xmlstream.sid, password)
-            reply.query.addElement("digest", content=unicode(digest))
+            reply.query.addElement("digest", content=str(digest))
         else:
-            reply.query.addElement("password", content = password)
+            reply.query.addElement("password", content=password)
 
         d = reply.send()
         d.addCallbacks(self._cbAuth, self._ebAuth)
@@ -237,7 +236,7 @@ class BasicAuthenticator(xmlstream.ConnectAuthenticator):
 
 
 
-class CheckVersionInitializer(object):
+class CheckVersionInitializer:
     """
     Initializer that checks if the minimum common stream version number is 1.0.
     """
@@ -275,7 +274,7 @@ class BindInitializer(xmlstream.BaseFeatureInitiatingInitializer):
 
     def onBind(self, iq):
         if iq.bind:
-            self.xmlstream.authenticator.jid = JID(unicode(iq.bind.jid))
+            self.xmlstream.authenticator.jid = JID(str(iq.bind.jid))
 
 
 
@@ -304,8 +303,8 @@ def XMPPClientFactory(jid, password, configurationForTLS=None):
     This returns a L{xmlstream.XmlStreamFactory} with an L{XMPPAuthenticator}
     object to perform the stream initialization steps (such as authentication).
 
-    @see: The notes at L{XMPPAuthenticator} describe how the L{jid} and
-    L{password} parameters are to be used.
+    @see: The notes at L{XMPPAuthenticator} describe how the C{jid} and
+    C{password} parameters are to be used.
 
     @param jid: Jabber ID to connect with.
     @type jid: L{jid.JID}
@@ -316,10 +315,10 @@ def XMPPClientFactory(jid, password, configurationForTLS=None):
     @param configurationForTLS: An object which creates appropriately
         configured TLS connections. This is passed to C{startTLS} on the
         transport and is preferably created using
-        L{twisted.internet.ssl.optionsForClientTLS}. If C{None}, the default is
+        L{twisted.internet.ssl.optionsForClientTLS}. If L{None}, the default is
         to verify the server certificate against the trust roots as provided by
         the platform. See L{twisted.internet._sslverify.platformTrust}.
-    @type configurationForTLS: L{IOpenSSLClientConnectionCreator} or C{None}
+    @type configurationForTLS: L{IOpenSSLClientConnectionCreator} or L{None}
 
     @return: XML stream factory.
     @rtype: L{xmlstream.XmlStreamFactory}

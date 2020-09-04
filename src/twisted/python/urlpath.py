@@ -7,9 +7,9 @@ L{URLPath}, a representation of a URL.
 """
 
 
-from twisted.python.compat import (
-    nativeString, unicode, urllib_parse as urlparse, urlunquote, urlquote
-)
+from urllib.parse import quote as urlquote, unquote as urlunquote, urlunsplit
+
+from twisted.python.compat import nativeString
 
 from hyperlink import URL as _URL
 
@@ -36,7 +36,7 @@ def _rereconstituter(name):
 
 
 
-class URLPath(object):
+class URLPath:
     """
     A representation of a URL.
 
@@ -70,8 +70,8 @@ class URLPath(object):
         Reconstitute this L{URLPath} from all its given attributes.
         """
         urltext = urlquote(
-            urlparse.urlunsplit((self._scheme, self._netloc,
-                                 self._path, self._query, self._fragment)),
+            urlunsplit((self._scheme, self._netloc, self._path, self._query,
+                        self._fragment)),
             safe=_allascii
         )
         self._url = _URL.fromText(urltext.encode("ascii").decode("ascii"))
@@ -136,7 +136,7 @@ class URLPath(object):
         @return: a new L{URLPath} derived from the given string.
         @rtype: L{URLPath}
         """
-        if not isinstance(url, (str, unicode)):
+        if not isinstance(url, str):
             raise ValueError("'url' must be a str or unicode")
         if isinstance(url, bytes):
             # On Python 2, accepting 'str' (for compatibility) means we might
@@ -276,14 +276,14 @@ class URLPath(object):
         return self._fromURL(self._url.click(st.decode("ascii")))
 
 
-    def __str__(self):
+    def __str__(self) -> str:
         """
         The L{str} of a L{URLPath} is its URL text.
         """
         return nativeString(self._url.asURI().asText())
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """
         The L{repr} of a L{URLPath} is an eval-able expression which will
         construct a similar L{URLPath}.

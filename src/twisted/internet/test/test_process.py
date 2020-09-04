@@ -17,14 +17,14 @@ import sys
 import threading
 import twisted
 import subprocess
+from unittest import skipIf
 
 from twisted.trial.unittest import TestCase
 from twisted.internet.test.reactormixins import ReactorBuilder
 from twisted.python.log import msg, err
 from twisted.python.runtime import platform
 from twisted.python.filepath import FilePath, _asFilesystemBytes
-from twisted.python.compat import (networkString, range, items,
-                                   bytesEnviron, unicode)
+from twisted.python.compat import networkString
 from twisted.internet import utils
 from twisted.internet.interfaces import IReactorProcess, IProcessTransport
 from twisted.internet.defer import Deferred, inlineCallbacks, succeed
@@ -36,23 +36,21 @@ from twisted.internet.error import ProcessDone, ProcessTerminated
 pyExe = FilePath(sys.executable)._asBytesPath()
 twistedRoot = FilePath(twisted.__file__).parent().parent()
 
-_uidgidSkip = None
-if platform.isWindows():
-    resource = None
-    process = None
-    _uidgidSkip = "Cannot change UID/GID on Windows"
-
-    properEnv = dict(os.environ)
-    properEnv["PYTHONPATH"] = os.pathsep.join(sys.path)
-else:
+_uidgidSkip = False
+_uidgidSkipReason = ""
+properEnv = dict(os.environ)
+properEnv["PYTHONPATH"] = os.pathsep.join(sys.path)
+try:
     import resource
     from twisted.internet import process
     if os.getuid() != 0:
-        _uidgidSkip = "Cannot change UID/GID except as root"
-
-    properEnv = bytesEnviron()
-    properEnv[b"PYTHONPATH"] = os.pathsep.join(sys.path).encode(
-        sys.getfilesystemencoding())
+        _uidgidSkip = True
+        _uidgidSkipReason = "Cannot change UID/GID except as root"
+except ImportError:
+    resource = None  # type: ignore[assignment]
+    process = None  # type: ignore[assignment]
+    _uidgidSkip = True
+    _uidgidSkipReason = "Cannot change UID/GID on Windows"
 
 
 
@@ -211,6 +209,8 @@ class ProcessTestsBuilderBase(ReactorBuilder):
         self._writeTest(write)
 
 
+    @skipIf(getattr(signal, 'SIGCHLD', None) is None,
+            "Platform lacks SIGCHLD, early-spawnProcess test can't work.")
     def test_spawnProcessEarlyIsReaped(self):
         """
         If, before the reactor is started with L{IReactorCore.run}, a
@@ -264,10 +264,6 @@ class ProcessTestsBuilderBase(ReactorBuilder):
 
         # Make sure the reactor stopped because the Deferred fired.
         self.assertTrue(result)
-
-    if getattr(signal, 'SIGCHLD', None) is None:
-        test_spawnProcessEarlyIsReaped.skip = (
-            "Platform lacks SIGCHLD, early-spawnProcess test can't work.")
 
 
     def test_processExitedWithSignal(self):
@@ -474,7 +470,7 @@ sys.stdout.flush()""".format(twistedRoot.path))
 
         @reactor.callWhenRunning
         def whenRunning():
-            class TracebackCatcher(ProcessProtocol, object):
+            class TracebackCatcher(ProcessProtocol):
                 errReceived = output.write
                 def processEnded(self, reason):
                     reactor.stop()
@@ -542,24 +538,22 @@ sys.stdout.flush()""".format(twistedRoot.path))
         self.assertEqual(0, container[0].value.exitCode)
 
 
+    @skipIf(_uidgidSkip, _uidgidSkipReason)
     def test_changeUID(self):
         """
         If a value is passed for L{IReactorProcess.spawnProcess}'s C{uid}, the
         child process is run with that UID.
         """
         self._changeIDTest("uid")
-    if _uidgidSkip is not None:
-        test_changeUID.skip = _uidgidSkip
 
 
+    @skipIf(_uidgidSkip, _uidgidSkipReason)
     def test_changeGID(self):
         """
         If a value is passed for L{IReactorProcess.spawnProcess}'s C{gid}, the
         child process is run with that GID.
         """
         self._changeIDTest("gid")
-    if _uidgidSkip is not None:
-        test_changeGID.skip = _uidgidSkip
 
 
     def test_processExitedRaises(self):
@@ -588,7 +582,7 @@ sys.stdout.flush()""".format(twistedRoot.path))
         # Only required if the test fails on systems that support
         # the process module.
         if process is not None:
-            for pid, handler in items(process.reapProcessHandlers):
+            for pid, handler in list(process.reapProcessHandlers.items()):
                 if handler is not transport:
                     continue
                 process.unregisterReapProcessHandler(pid, handler)
@@ -815,10 +809,11 @@ class ProcessTestsBuilder(ProcessTestsBuilderBase):
         """
         us = b"twisted.internet.test.process_cli"
 
-        args = [b'hello', b'"', b' \t|<>^&', br'"\\"hello\\"', br'"foo\ bar baz\""']
+        args = [b'hello', b'"', b' \t|<>^&', br'"\\"hello\\"',
+                br'"foo\ bar baz\""']
         # Ensure that all non-NUL characters can be passed too.
         allChars = "".join(map(chr, range(1, 255)))
-        if isinstance(allChars, unicode):
+        if isinstance(allChars, str):
             allChars.encode("utf-8")
 
         reactor = self.buildReactor()
@@ -974,22 +969,22 @@ class ProcessIsUnimportableOnUnsupportedPlatormsTests(TestCase):
     Tests to ensure that L{twisted.internet.process} is unimportable on
     platforms where it does not work (namely Windows).
     """
+    @skipIf(not platform.isWindows(), "Only relevant on Windows.")
     def test_unimportableOnWindows(self):
         """
         L{twisted.internet.process} is unimportable on Windows.
         """
         with self.assertRaises(ImportError):
             import twisted.internet.process
-            twisted.internet.process # shh pyflakes
-
-    if not platform.isWindows():
-        test_unimportableOnWindows.skip = "Only relevant on Windows."
+            twisted.internet.process  # shh pyflakes
 
 
 
 class ReapingNonePidsLogsProperly(TestCase):
     try:
-        os.waitpid(None, None)
+        # ignore mypy error, since we are testing passing
+        # the wrong type to waitpid
+        os.waitpid(None, None)  # type: ignore[arg-type]
     except Exception as e:
         expected_message = str(e)
         expected_type = type(e)

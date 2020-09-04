@@ -9,46 +9,43 @@ Handling of RSA, DSA, ECDSA, and Ed25519 keys.
 
 import binascii
 import itertools
-
-from hashlib import md5, sha256
-import base64
 import struct
+import unicodedata
 import warnings
+from base64 import b64encode, decodebytes, encodebytes
+from hashlib import md5, sha256
 
 import bcrypt
+from cryptography import utils
 from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes, serialization
-from cryptography.hazmat.primitives.asymmetric import (
-    dsa, ec, ed25519, padding, rsa)
-from cryptography.hazmat.primitives.serialization import (
-    load_pem_private_key, load_ssh_public_key)
-from cryptography import utils
+from cryptography.hazmat.primitives.asymmetric import (dsa, ec, ed25519,
+                                                       padding, rsa)
+from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+from cryptography.hazmat.primitives.serialization import (load_pem_private_key,
+                                                          load_ssh_public_key)
+from pyasn1.codec.ber import decoder as berDecoder
+from pyasn1.codec.ber import encoder as berEncoder
+from pyasn1.error import PyAsn1Error
+from pyasn1.type import univ
+from twisted.conch.ssh import common, sexpy
+from twisted.conch.ssh.common import int_from_bytes, int_to_bytes
+from twisted.python import randbytes
+from twisted.python.compat import iterbytes, nativeString
+from twisted.python.constants import NamedConstant, Names
+from twisted.python.deprecate import _mutuallyExclusiveArguments
 
 try:
 
     from cryptography.hazmat.primitives.asymmetric.utils import (
         encode_dss_signature, decode_dss_signature)
 except ImportError:
-    from cryptography.hazmat.primitives.asymmetric.utils import (
+    from cryptography.hazmat.primitives.asymmetric.utils import (  # type: ignore[no-redef,attr-defined]  # noqa
         encode_rfc6979_signature as encode_dss_signature,
         decode_rfc6979_signature as decode_dss_signature)
-from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 
-from pyasn1.error import PyAsn1Error
-from pyasn1.type import univ
-from pyasn1.codec.ber import decoder as berDecoder
-from pyasn1.codec.ber import encoder as berEncoder
 
-from twisted.conch.ssh import common, sexpy
-from twisted.conch.ssh.common import int_from_bytes, int_to_bytes
-from twisted.python import randbytes
-from twisted.python.compat import (
-    iterbytes, long, izip, nativeString, unicode, _PY3,
-    _b64decodebytes as decodebytes, _b64encodebytes as encodebytes,
-    _bytesChr as chr)
-from twisted.python.constants import NamedConstant, Names
-from twisted.python.deprecate import _mutuallyExclusiveArguments
 
 # Curve lookup table
 _curveTable = {
@@ -108,7 +105,47 @@ class FingerprintFormats(Names):
 
 
 
-class Key(object):
+class PassphraseNormalizationError(Exception):
+    """
+    Raised when a passphrase contains Unicode characters that cannot be
+    normalized using the available Unicode character database.
+    """
+
+
+
+def _normalizePassphrase(passphrase):
+    """
+    Normalize a passphrase, which may be Unicode.
+
+    If the passphrase is Unicode, this follows the requirements of U{NIST
+    800-63B, section
+    5.1.1.2<https://pages.nist.gov/800-63-3/sp800-63b.html#memsecretver>}
+    for Unicode characters in memorized secrets: it applies the
+    Normalization Process for Stabilized Strings using NFKC normalization.
+    The passphrase is then encoded using UTF-8.
+
+    @type passphrase: L{bytes} or L{unicode} or L{None}
+    @param passphrase: The passphrase to normalize.
+
+    @return: The normalized passphrase, if any.
+    @rtype: L{bytes} or L{None}
+    @raises PassphraseNormalizationError: if the passphrase is Unicode and
+    cannot be normalized using the available Unicode character database.
+    """
+    if isinstance(passphrase, str):
+        # The Normalization Process for Stabilized Strings requires aborting
+        # with an error if the string contains any unassigned code point.
+        if any(unicodedata.category(c) == 'Cn' for c in passphrase):
+            # Perhaps not very helpful, but we don't want to leak any other
+            # information about the passphrase.
+            raise PassphraseNormalizationError()
+        return unicodedata.normalize('NFKC', passphrase).encode('UTF-8')
+    else:
+        return passphrase
+
+
+
+class Key:
     """
     An object representing a key.  A key can be either a public or
     private key.  A public key can verify a signature; a private key can
@@ -162,10 +199,9 @@ class Key(object):
         @rtype: L{Key}
         @return: The loaded key.
         """
-        if isinstance(data, unicode):
+        if isinstance(data, str):
             data = data.encode("utf-8")
-        if isinstance(passphrase, unicode):
-            passphrase = passphrase.encode("utf-8")
+        passphrase = _normalizePassphrase(passphrase)
         if type is None:
             type = cls._guessStringType(data)
         if type is None:
@@ -511,9 +547,9 @@ class Key(object):
 
         try:
             decodedKey = berDecoder.decode(keyData)[0]
-        except PyAsn1Error as e:
+        except PyAsn1Error as asn1Error:
             raise BadKeyError(
-                'Failed to decode key (Bad Passphrase?): %s' % (e,))
+                'Failed to decode key (Bad Passphrase?): {}'.format(asn1Error))
 
         if kind == b'EC':
             return cls(
@@ -526,7 +562,7 @@ class Key(object):
                 raise BadKeyError('RSA key failed to decode properly')
 
             n, e, d, p, q, dmp1, dmq1, iqmp = [
-                long(value) for value in decodedKey[1:9]
+                int(value) for value in decodedKey[1:9]
                 ]
             return cls(
                 rsa.RSAPrivateNumbers(
@@ -540,7 +576,7 @@ class Key(object):
                 ).private_key(default_backend())
             )
         elif kind == b'DSA':
-            p, q, g, y, x = [long(value) for value in decodedKey[1: 6]]
+            p, q, g, y, x = [int(value) for value in decodedKey[1: 6]]
             if len(decodedKey) < 6:
                 raise BadKeyError('DSA key failed to decode properly')
             return cls(
@@ -903,25 +939,16 @@ class Key(object):
         """
         self._keyObject = keyObject
 
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
         """
         Return True if other represents an object with the same key.
         """
-        if type(self) == type(other):
+        if isinstance(other, Key):
             return self.type() == other.type() and self.data() == other.data()
         else:
             return NotImplemented
 
-    def __ne__(self, other):
-        """
-        Return True if other represents anything other than this key.
-        """
-        result = self.__eq__(other)
-        if result == NotImplemented:
-            return result
-        return not result
-
-    def __repr__(self):
+    def __repr__(self) -> str:
         """
         Return a pretty representation of this object.
         """
@@ -935,7 +962,7 @@ class Key(object):
                 out = '<Elliptic Curve Private Key (%s bits)' % (name[-3:],)
 
             for k, v in sorted(data.items()):
-                if _PY3 and k == 'curve':
+                if k == 'curve':
                     out += "\ncurve:\n\t%s" % (name,)
                 else:
                     out += "\n%s:\n\t%s" % (k, v)
@@ -1017,8 +1044,7 @@ class Key(object):
         @rtype: L{str}
         """
         if format is FingerprintFormats.SHA256_BASE64:
-            return nativeString(base64.b64encode(
-                sha256(self.blob()).digest()))
+            return nativeString(b64encode(sha256(self.blob()).digest()))
         elif format is FingerprintFormats.MD5_HEX:
             return nativeString(
                 b':'.join([binascii.hexlify(x)
@@ -1230,6 +1256,7 @@ class Key(object):
         Specification in OpenSSH PROTOCOL.agent
 
         RSA keys::
+
             string 'ssh-rsa'
             integer n
             integer e
@@ -1239,6 +1266,7 @@ class Key(object):
             integer q
 
         DSA keys::
+
             string 'ssh-dss'
             integer p
             integer q
@@ -1247,6 +1275,7 @@ class Key(object):
             integer x
 
         EC keys::
+
             string 'ecdsa-sha2-[identifier]'
             integer x
             integer y
@@ -1254,7 +1283,8 @@ class Key(object):
 
             identifier is the NIST standard curve name.
 
-        Ed25519 keys:
+        Ed25519 keys::
+
             string 'ssh-ed25519'
             string a
             string k || a
@@ -1339,10 +1369,9 @@ class Key(object):
                 comment = extra
             else:
                 passphrase = extra
-        if isinstance(comment, unicode):
+        if isinstance(comment, str):
             comment = comment.encode("utf-8")
-        if isinstance(passphrase, unicode):
-            passphrase = passphrase.encode("utf-8")
+        passphrase = _normalizePassphrase(passphrase)
         method = getattr(self, '_toString_%s' % (type.upper(),), None)
         if method is None:
             raise BadKeyError('unknown key type: %s' % (type,))
@@ -1406,7 +1435,7 @@ class Key(object):
         padByte = 0
         while len(privKeyList) % blockSize:
             padByte += 1
-            privKeyList += chr(padByte & 0xFF)
+            privKeyList += bytes((padByte & 0xFF,))
         if passphrase:
             encKey = bcrypt.kdf(passphrase, salt, keySize + ivSize, 100)
             encryptor = Cipher(
@@ -1473,7 +1502,7 @@ class Key(object):
             objData = (0, data['p'], data['q'], data['g'], data['y'],
                        data['x'])
         asn1Sequence = univ.Sequence()
-        for index, value in izip(itertools.count(), objData):
+        for index, value in zip(itertools.count(), objData):
             asn1Sequence.setComponentByPosition(index, univ.Integer(value))
         asn1Data = berEncoder.encode(asn1Sequence)
         if passphrase:
@@ -1486,7 +1515,7 @@ class Key(object):
             bb = md5(ba + passphrase + iv).digest()
             encKey = (ba + bb)[:24]
             padLen = 8 - (len(asn1Data) % 8)
-            asn1Data += chr(padLen) * padLen
+            asn1Data += bytes((padLen,)) * padLen
 
             encryptor = Cipher(
                 algorithms.TripleDES(encKey),

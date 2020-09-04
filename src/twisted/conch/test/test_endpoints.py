@@ -15,7 +15,7 @@ from zope.interface.verify import verifyObject, verifyClass
 from zope.interface import implementer
 
 from twisted.logger import globalLogPublisher, LogLevel
-from twisted.python.compat import iteritems, networkString
+from twisted.python.compat import networkString
 from twisted.python.failure import Failure
 from twisted.python.filepath import FilePath
 from twisted.python.log import msg
@@ -60,9 +60,15 @@ if requireModule('cryptography') and requireModule('pyasn1.type'):
     from twisted.conch.ssh.transport import SSHClientTransport
 else:
     skip = "can't run w/o cryptography and pyasn1"
-    SSHFactory = SSHUserAuthServer = SSHConnection = Key = SSHChannel = \
-        SSHAgentServer = KnownHostsFile = SSHPublicKeyChecker = ConchUser = \
-        object
+    SSHFactory = object  # type: ignore[assignment,misc]
+    SSHUserAuthServer = object  # type: ignore[assignment,misc]
+    SSHConnection = object  # type: ignore[assignment,misc]
+    Key = object  # type: ignore[assignment,misc,misc]
+    SSHChannel = object  # type: ignore[assignment,misc]
+    SSHAgentServer = object  # type: ignore[assignment,misc]
+    KnownHostsFile = object  # type: ignore[assignment,misc]
+    SSHPublicKeyChecker = object  # type: ignore[assignment,misc]
+    ConchUser = object  # type: ignore[assignment,misc]
 
 from twisted.test.proto_helpers import StringTransport
 from twisted.test.iosim import FakeTransport, connect
@@ -140,7 +146,7 @@ class UnsatisfiedExecSession(SSHChannel):
 
 
 
-class TrivialRealm(object):
+class TrivialRealm:
     def __init__(self):
         self.channelLookup = {}
 
@@ -161,7 +167,7 @@ class AddressSpyFactory(Factory):
 
 
 
-class FixedResponseUI(object):
+class FixedResponseUI:
     def __init__(self, result):
         self.result = result
 
@@ -226,13 +232,13 @@ class CommandFactory(SSHFactory):
 
 
 @implementer(IAddress)
-class MemoryAddress(object):
+class MemoryAddress:
     pass
 
 
 
 @implementer(IStreamClientEndpoint)
-class SingleUseMemoryEndpoint(object):
+class SingleUseMemoryEndpoint:
     """
     L{SingleUseMemoryEndpoint} is a client endpoint which allows one connection
     to be set up and then exposes an API for moving around bytes related to
@@ -269,7 +275,7 @@ class SingleUseMemoryEndpoint(object):
 
 
 
-class SSHCommandClientEndpointTestsMixin(object):
+class SSHCommandClientEndpointTestsMixin:
     """
     Tests for L{SSHCommandClientEndpoint}, an L{IStreamClientEndpoint}
     implementations which connects a protocol with the stdin and stdout of a
@@ -1050,8 +1056,7 @@ class NewConnectionTests(TestCase, SSHCommandClientEndpointTestsMixin):
             OpenSSH-formatted private keys.
         @type users: L{dict}
         """
-        mapping = dict([(k,[Key.fromString(v).public()])
-                        for k, v in iteritems(users)])
+        mapping = {k: [Key.fromString(v).public()] for k, v in users.items()}
         checker = SSHPublicKeyChecker(InMemorySSHKeyDB(mapping))
         portal.registerChecker(checker)
 
@@ -1381,7 +1386,7 @@ class ExistingConnectionHelperTests(TestCase):
 
 
 
-class _PTYPath(object):
+class _PTYPath:
     """
     A L{FilePath}-like object which can be opened to create a L{_ReadFile} with
     certain contents.

@@ -25,12 +25,13 @@ Stanzas.
 
 from binascii import hexlify
 from hashlib import sha1
+from sys import intern
+from typing import Optional, Tuple
 from zope.interface import directlyProvides, implementer
 
 from twisted.internet import defer, protocol
 from twisted.internet.error import ConnectionLost
 from twisted.python import failure, log, randbytes
-from twisted.python.compat import intern, iteritems, itervalues, unicode
 from twisted.words.protocols.jabber import error, ijabber, jid
 from twisted.words.xish import domish, xmlstream
 from twisted.words.xish.xmlstream import STREAM_CONNECTED_EVENT
@@ -41,9 +42,9 @@ from twisted.words.xish.xmlstream import STREAM_ERROR_EVENT
 try:
     from twisted.internet import ssl
 except ImportError:
-    ssl = None
+    ssl = None  # type: ignore[assignment]
 if ssl and not ssl.supported:
-    ssl = None
+    ssl = None  # type: ignore[assignment]
 
 STREAM_AUTHD_EVENT = intern("//event/stream/authd")
 INIT_FAILED_EVENT = intern("//event/xmpp/initfailed")
@@ -62,9 +63,9 @@ def hashPassword(sid, password):
     @param password: The password to be hashed.
     @type password: C{unicode}.
     """
-    if not isinstance(sid, unicode):
+    if not isinstance(sid, str):
         raise TypeError("The session identifier must be a unicode object")
-    if not isinstance(password, unicode):
+    if not isinstance(password, str):
         raise TypeError("The password must be a unicode object")
     input = u"%s%s" % (sid, password)
     return sha1(input.encode('utf-8')).hexdigest()
@@ -163,7 +164,7 @@ class ConnectAuthenticator(Authenticator):
     Authenticator for initiating entities.
     """
 
-    namespace = None
+    namespace = None  # type: Optional[str]
 
     def __init__(self, otherHost):
         self.otherHost = otherHost
@@ -262,7 +263,7 @@ class ListenAuthenticator(Authenticator):
     Authenticator for receiving entities.
     """
 
-    namespace = None
+    namespace = None  # type: Optional[str]
 
     def associateWithStream(self, xmlstream):
         """
@@ -290,7 +291,7 @@ class ListenAuthenticator(Authenticator):
             self.xmlstream.thisEntity = jid.internJID(rootElement["to"])
 
         self.xmlstream.prefixes = {}
-        for prefix, uri in iteritems(rootElement.localPrefixes):
+        for prefix, uri in rootElement.localPrefixes.items():
             self.xmlstream.prefixes[uri] = prefix
 
         self.xmlstream.sid = hexlify(randbytes.secureRandom(8)).decode('ascii')
@@ -306,7 +307,7 @@ class FeatureNotAdvertized(Exception):
 
 
 @implementer(ijabber.IInitiatingInitializer)
-class BaseFeatureInitiatingInitializer(object):
+class BaseFeatureInitiatingInitializer:
     """
     Base class for initializers with a stream feature.
 
@@ -321,7 +322,7 @@ class BaseFeatureInitiatingInitializer(object):
     @type required: C{bool}
     """
 
-    feature = None
+    feature = None  # type: Optional[Tuple[str, str]]
 
     def __init__(self, xs, required=False):
         self.xmlstream = xs
@@ -572,7 +573,7 @@ class XmlStream(xmlstream.XmlStream):
         """
         # set up optional extra namespaces
         localPrefixes = {}
-        for uri, prefix in iteritems(self.prefixes):
+        for uri, prefix in self.prefixes.items():
             if uri != NS_STREAMS:
                 localPrefixes[prefix] = uri
 
@@ -780,7 +781,7 @@ def upgradeWithIQResponseTracker(xs):
         """
         iqDeferreds = xs.iqDeferreds
         xs.iqDeferreds = {}
-        for d in itervalues(iqDeferreds):
+        for d in iqDeferreds.values():
             d.errback(ConnectionLost())
 
     xs.iqDeferreds = {}
@@ -899,7 +900,7 @@ def toResponse(stanza, stanzaType=None):
 
 
 @implementer(ijabber.IXMPPHandler)
-class XMPPHandler(object):
+class XMPPHandler:
     """
     XMPP protocol handler.
 
@@ -974,7 +975,7 @@ class XMPPHandler(object):
 
 
 @implementer(ijabber.IXMPPHandlerCollection)
-class XMPPHandlerCollection(object):
+class XMPPHandlerCollection:
     """
     Collection of XMPP subprotocol handlers.
 

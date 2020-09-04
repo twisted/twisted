@@ -6,15 +6,28 @@ from zope.interface import implementer
 from twisted.conch.error import ConchError
 from twisted.conch.interfaces import IConchUser
 from twisted.conch.ssh.connection import OPEN_UNKNOWN_CHANNEL_TYPE
-from twisted.python import log
 from twisted.python.compat import nativeString
+from twisted.logger import Logger
+
 
 
 @implementer(IConchUser)
 class ConchUser:
+    _log = Logger()
+
     def __init__(self):
         self.channelLookup = {}
         self.subsystemLookup = {}
+
+
+    @property
+    def conn(self):
+        return self._conn
+
+
+    @conn.setter
+    def conn(self, value):
+        self._conn = value
 
 
     def lookupChannel(self, channelType, windowSize, maxPacket, data):
@@ -28,7 +41,8 @@ class ConchUser:
 
 
     def lookupSubsystem(self, subsystem, data):
-        log.msg(repr(self.subsystemLookup))
+        self._log.debug('Subsystem lookup: {subsystem!r}',
+                        subsystem=self.subsystemLookup)
         klass = self.subsystemLookup.get(subsystem, None)
         if not klass:
             return False

@@ -8,8 +8,9 @@ Tests for L{twisted.words.protocols.jabber.client}
 
 from hashlib import sha1
 
+from unittest import skipIf
+
 from twisted.internet import defer
-from twisted.python.compat import unicode
 from twisted.trial import unittest
 from twisted.words.protocols.jabber import client, error, jid, xmlstream
 from twisted.words.protocols.jabber.sasl import SASLInitiatingInitializer
@@ -18,10 +19,10 @@ from twisted.words.xish import utility
 try:
     from twisted.internet import ssl
 except ImportError:
-    ssl = None
-    skipWhenNoSSL = "SSL not available"
+    ssl = None  # type: ignore[assignment]
+    skipWhenNoSSL = (True, "SSL not available")
 else:
-    skipWhenNoSSL = None
+    skipWhenNoSSL = (False, "")
 
 IQ_AUTH_GET = '/iq[@type="get"]/query[@xmlns="jabber:iq:auth"]'
 IQ_AUTH_SET = '/iq[@type="set"]/query[@xmlns="jabber:iq:auth"]'
@@ -55,7 +56,7 @@ class CheckVersionInitializerTests(unittest.TestCase):
 
 
 
-class InitiatingInitializerHarness(object):
+class InitiatingInitializerHarness:
     """
     Testing harness for interacting with XML stream initializers.
 
@@ -147,9 +148,9 @@ class IQAuthInitializerTests(InitiatingInitializerHarness, unittest.TestCase):
             The server checks the credentials and responds with an empty result
             signalling success.
             """
-            self.assertEqual('user', unicode(iq.query.username))
-            self.assertEqual('secret', unicode(iq.query.password))
-            self.assertEqual('resource', unicode(iq.query.resource))
+            self.assertEqual('user', str(iq.query.username))
+            self.assertEqual('secret', str(iq.query.password))
+            self.assertEqual('resource', str(iq.query.resource))
 
             # Send server response
             response = xmlstream.toResponse(iq, 'result')
@@ -203,10 +204,10 @@ class IQAuthInitializerTests(InitiatingInitializerHarness, unittest.TestCase):
             The server checks the credentials and responds with an empty result
             signalling success.
             """
-            self.assertEqual('user', unicode(iq.query.username))
+            self.assertEqual('user', str(iq.query.username))
             self.assertEqual(sha1(b'12345secret').hexdigest(),
-                              unicode(iq.query.digest))
-            self.assertEqual('resource', unicode(iq.query.resource))
+                             str(iq.query.digest))
+            self.assertEqual('resource', str(iq.query.resource))
 
             # Send server response
             response = xmlstream.toResponse(iq, 'result')
@@ -465,6 +466,7 @@ class XMPPAuthenticatorTests(unittest.TestCase):
         self.assertFalse(session.required)
 
 
+    @skipIf(*skipWhenNoSSL)
     def test_tlsConfiguration(self):
         """
         A TLS configuration is passed to the TLS initializer.
@@ -491,6 +493,3 @@ class XMPPAuthenticatorTests(unittest.TestCase):
 
         self.assertIsInstance(tls, xmlstream.TLSInitiatingInitializer)
         self.assertIs(configurationForTLS, configs[0])
-
-
-    test_tlsConfiguration.skip = skipWhenNoSSL

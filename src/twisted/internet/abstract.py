@@ -8,30 +8,25 @@ Support for generic select()able objects.
 
 
 from socket import AF_INET, AF_INET6, inet_pton, error
+from typing import List, Sequence
 
 from zope.interface import implementer
 
 # Twisted Imports
-from twisted.python.compat import unicode, lazyByteSlice, _PY3
+from twisted.python.compat import lazyByteSlice
 from twisted.python import reflect, failure
 from twisted.internet import interfaces, main
 
-if _PY3:
-    # Python 3.4+ can join bytes and memoryviews; using a
-    # memoryview prevents the slice from copying
-    def _concatenate(bObj, offset, bArray):
-        return b''.join([memoryview(bObj)[offset:]] + bArray)
-else:
-    from __builtin__ import buffer
 
-    def _concatenate(bObj, offset, bArray):
-        # Avoid one extra string copy by using a buffer to limit what
-        # we include in the result.
-        return buffer(bObj, offset) + b"".join(bArray)
+
+# Python 3.4+ can join bytes and memoryviews; using a
+# memoryview prevents the slice from copying
+def _concatenate(bObj, offset, bArray):
+    return b''.join([memoryview(bObj)[offset:]] + bArray)
 
 
 
-class _ConsumerMixin(object):
+class _ConsumerMixin:
     """
     L{IConsumer} implementations can mix this in to get C{registerProducer} and
     C{unregisterProducer} methods which take care of keeping track of a
@@ -123,14 +118,14 @@ class _ConsumerMixin(object):
 
 
 @implementer(interfaces.ILoggingContext)
-class _LogOwner(object):
+class _LogOwner:
     """
     Mixin to help implement L{interfaces.ILoggingContext} for transports which
     have a protocol, the log prefix of which should also appear in the
     transport's log prefix.
     """
 
-    def _getLogPrefix(self, applicationObject):
+    def _getLogPrefix(self, applicationObject) -> str:
         """
         Determine the log prefix to use for messages related to
         C{applicationObject}, which may or may not be an
@@ -175,16 +170,18 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
 
     SEND_LIMIT = 128*1024
 
-    def __init__(self, reactor=None):
+    def __init__(self, reactor: interfaces.IReactorFDSet = None):
         """
         @param reactor: An L{IReactorFDSet} provider which this descriptor will
             use to get readable and writeable event notifications.  If no value
             is given, the global reactor will be used.
         """
         if not reactor:
-            from twisted.internet import reactor
+            from twisted.internet import reactor as _reactor
+            reactor = _reactor  # type: ignore[assignment]
         self.reactor = reactor
-        self._tempDataBuffer = [] # will be added to dataBuffer in doWrite
+        # will be added to dataBuffer in doWrite
+        self._tempDataBuffer = []  # type: List[bytes]
         self._tempDataLen = 0
 
 
@@ -207,7 +204,7 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
         self.stopWriting()
 
 
-    def writeSomeData(self, data):
+    def writeSomeData(self, data: bytes):
         """
         Write as much as possible of the given data, immediately.
 
@@ -304,9 +301,19 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
         # in current code should never be called
         self.connectionLost(reason)
 
-    def readConnectionLost(self, reason):
+    def readConnectionLost(self, reason: failure.Failure):
         # override in subclasses
         self.connectionLost(reason)
+
+
+    def getHost(self):
+        # ITransport.getHost
+        raise NotImplementedError()
+
+
+    def getPeer(self):
+        # ITransport.getPeer
+        raise NotImplementedError()
 
 
     def _isSendBufferFull(self):
@@ -336,7 +343,7 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
                 self.producer.pauseProducing()
 
 
-    def write(self, data):
+    def write(self, data: bytes):
         """Reliably write some data.
 
         The data is buffered until the underlying file descriptor is ready
@@ -344,8 +351,8 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
         buffer and this descriptor has a registered streaming producer, its
         C{pauseProducing()} method will be called.
         """
-        if isinstance(data, unicode): # no, really, I mean it
-            raise TypeError("Data must not be unicode")
+        if isinstance(data, str):  # no, really, I mean it
+            raise TypeError("Data must not be string")
         if not self.connected or self._writeDisconnected:
             return
         if data:
@@ -355,7 +362,7 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
             self.startWriting()
 
 
-    def writeSequence(self, iovec):
+    def writeSequence(self, iovec: Sequence[bytes]):
         """
         Reliably write a sequence of data.
 
@@ -372,8 +379,8 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
         data is written to the underlying file descriptor.
         """
         for i in iovec:
-            if isinstance(i, unicode): # no, really, I mean it
-                raise TypeError("Data must not be unicode")
+            if isinstance(i, str):  # no, really, I mean it
+                raise TypeError("Data must not be string")
         if not self.connected or not iovec or self._writeDisconnected:
             return
         self._tempDataBuffer.extend(iovec)
@@ -383,7 +390,7 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
         self.startWriting()
 
 
-    def loseConnection(self, _connDone=failure.Failure(main.CONNECTION_DONE)):
+    def loseConnection(self):
         """Close the connection at the next available opportunity.
 
         Call this to cause this FileDescriptor to lose its connection.  It will
@@ -402,7 +409,7 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
                 # doWrite won't trigger the connection close anymore
                 self.stopReading()
                 self.stopWriting()
-                self.connectionLost(_connDone)
+                self.connectionLost(failure.Failure(main.CONNECTION_DONE))
             else:
                 self.stopReading()
                 self.startWriting()
@@ -482,7 +489,7 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
 
 
 
-def isIPAddress(addr, family=AF_INET):
+def isIPAddress(addr, family: int = AF_INET) -> bool:
     """
     Determine whether the given string represents an IP address of the given
     family; by default, an IPv4 address.
@@ -527,7 +534,7 @@ def isIPAddress(addr, family=AF_INET):
 
 
 
-def isIPv6Address(addr):
+def isIPv6Address(addr: str) -> bool:
     """
     Determine whether the given string represents an IPv6 address.
 

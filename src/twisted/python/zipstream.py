@@ -13,7 +13,6 @@ import zlib
 import struct
 
 
-_fileHeaderSize = struct.calcsize(zipfile.structFileHeader)
 
 class ChunkingZipFile(zipfile.ZipFile):
     """
@@ -34,7 +33,7 @@ class ChunkingZipFile(zipfile.ZipFile):
 
         self.fp.seek(zinfo.header_offset, 0)
 
-        fheader = self.fp.read(_fileHeaderSize)
+        fheader = self.fp.read(zipfile.sizeFileHeader)
         if fheader[0:4] != zipfile.stringFileHeader:
             raise zipfile.BadZipfile("Bad magic number for file header")
 
@@ -67,7 +66,7 @@ class ChunkingZipFile(zipfile.ZipFile):
 
 
 
-class _FileEntry(object):
+class _FileEntry:
     """
     Abstract superclass of both compressed and uncompressed variants of
     file-like objects within a zip archive.

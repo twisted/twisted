@@ -10,6 +10,7 @@ L{twisted.internet.endpoints}.
 from errno import EPERM
 from socket import AF_INET, AF_INET6, SOCK_STREAM, IPPROTO_TCP, gaierror
 from unicodedata import normalize
+from unittest import skipIf
 from types import FunctionType
 
 from zope.interface import implementer, providedBy, provider
@@ -77,8 +78,10 @@ try:
     testPrivateCertificate = PrivateCertificate.loadPEM(pemPath.getContent())
 
     skipSSL = False
-except ImportError:
-    skipSSL = "OpenSSL is required to construct SSL Endpoints"
+    skipSSLReason = ""
+except ImportError as e:
+    skipSSL = True
+    skipSSLReason = str(e)
 
 
 
@@ -294,7 +297,7 @@ class WrappingFactoryTests(unittest.TestCase):
         wrapped protocol's class name is returned from
         L{_WrappingProtocol.logPrefix}.
         """
-        class NoProtocol(object):
+        class NoProtocol:
             pass
         factory = TestFactory()
         factory.protocol = NoProtocol
@@ -484,7 +487,7 @@ class WrappingFactoryTests(unittest.TestCase):
 
 
 
-class ClientEndpointTestCaseMixin(object):
+class ClientEndpointTestCaseMixin:
     """
     Generic test methods to be mixed into all client endpoint test classes.
     """
@@ -626,7 +629,7 @@ class ClientEndpointTestCaseMixin(object):
 
 
 
-class ServerEndpointTestCaseMixin(object):
+class ServerEndpointTestCaseMixin:
     """
     Generic test methods to be mixed into all client endpoint test classes.
     """
@@ -737,7 +740,7 @@ class SpecificFactory(Factory):
 
 
 
-class FakeStdio(object):
+class FakeStdio:
     """
     A L{stdio.StandardIO} like object that simply captures its constructor
     arguments.
@@ -819,7 +822,7 @@ class StubApplicationProtocol(protocol.Protocol):
 
 
 @implementer(interfaces.IProcessTransport)
-class MemoryProcessTransport(StringTransportWithDisconnection, object):
+class MemoryProcessTransport(StringTransportWithDisconnection):
     """
     A fake L{IProcessTransport} provider to be used in tests.
     """
@@ -858,6 +861,11 @@ class MemoryProcessTransport(StringTransportWithDisconnection, object):
         self.signals.append(signal)
 
 
+    def pid(self):
+        # IProcessTransport.pid
+        pass
+
+
 
 verifyClass(interfaces.IConsumer, MemoryProcessTransport)
 verifyClass(interfaces.IPushProducer, MemoryProcessTransport)
@@ -866,7 +874,7 @@ verifyClass(interfaces.IProcessTransport, MemoryProcessTransport)
 
 
 @implementer(interfaces.IReactorProcess)
-class MemoryProcessReactor(object):
+class MemoryProcessReactor:
     """
     A fake L{IReactorProcess} provider to be used in tests.
     """
@@ -1081,7 +1089,7 @@ class ProcessEndpointTransportTests(unittest.TestCase):
         the underlying process transport.
         """
         @implementer(IPushProducer)
-        class AProducer(object):
+        class AProducer:
             pass
         aProducer = AProducer()
         self.endpointTransport.registerProducer(aProducer, False)
@@ -1672,7 +1680,7 @@ def deterministicResolvingReactor(reactor, expectedAddresses=(),
         hostMap = {}
     hostMap = hostMap.copy()
     @implementer(IHostnameResolver)
-    class SimpleNameResolver(object):
+    class SimpleNameResolver:
         @staticmethod
         def resolveHostName(resolutionReceiver, hostName, portNumber=0,
                             addressTypes=None, transportSemantics='TCP'):
@@ -1734,7 +1742,7 @@ class SimpleHostnameResolverTests(unittest.SynchronousTestCase):
         self.resolutionCompleteCallCount = 0
 
         @provider(interfaces.IResolutionReceiver)
-        class _Receiver(object):
+        class _Receiver:
             @staticmethod
             def resolutionBegan(resolutionInProgress):
                 self.resolutionBeganCalls.append(resolutionInProgress)
@@ -2697,14 +2705,12 @@ class HostnameEndpointsFasterConnectionTests(unittest.TestCase):
 
 
 
+@skipIf(skipSSL, skipSSLReason)
 class SSL4EndpointsTests(EndpointTestCaseMixin,
                          unittest.TestCase):
     """
     Tests for SSL Endpoints.
     """
-    if skipSSL:
-        skip = skipSSL
-
     def expectedServers(self, reactor):
         """
         @return: List of calls to L{IReactorSSL.listenSSL}
@@ -3076,6 +3082,7 @@ class ServerStringTests(unittest.TestCase):
         self.assertEqual(server._interface, "10.0.0.1")
 
 
+    @skipIf(skipSSL, skipSSLReason)
     def test_ssl(self):
         """
         When passed an SSL strports description, L{endpoints.serverFromString}
@@ -3098,6 +3105,7 @@ class ServerStringTests(unittest.TestCase):
         self.assertIsInstance(ctx, ContextType)
 
 
+    @skipIf(skipSSL, skipSSLReason)
     def test_sslWithDefaults(self):
         """
         An SSL string endpoint description with minimal arguments returns
@@ -3124,6 +3132,7 @@ class ServerStringTests(unittest.TestCase):
     SSL_CHAIN_TEMPLATE = "ssl:1234:privateKey=%s:extraCertChain=%s"
 
 
+    @skipIf(skipSSL, skipSSLReason)
     def test_sslChainLoads(self):
         """
         Specifying a chain file loads the contained certificates in the right
@@ -3149,6 +3158,7 @@ class ServerStringTests(unittest.TestCase):
                          expectedChainCerts[1].digest('sha1'))
 
 
+    @skipIf(skipSSL, skipSSLReason)
     def test_sslChainFileMustContainCert(self):
         """
         If C{extraCertChain} is passed, it has to contain at least one valid
@@ -3175,6 +3185,7 @@ class ServerStringTests(unittest.TestCase):
                           " certificates in PEM format.") % (fp.path,))
 
 
+    @skipIf(skipSSL, skipSSLReason)
     def test_sslDHparameters(self):
         """
         If C{dhParameters} are specified, they are passed as
@@ -3192,6 +3203,7 @@ class ServerStringTests(unittest.TestCase):
         self.assertEqual(FilePath(fileName), cf.dhParameters._dhFile)
 
 
+    @skipIf(skipSSL, skipSSLReason)
     def test_sslNoTrailingNewlinePem(self):
         """
         Lack of a trailing newline in key and cert .pem files should not
@@ -3215,14 +3227,6 @@ class ServerStringTests(unittest.TestCase):
         self.assertEqual(server._sslContextFactory.method, TLSv1_METHOD)
         ctx = server._sslContextFactory.getContext()
         self.assertIsInstance(ctx, ContextType)
-
-
-    if skipSSL:
-        test_ssl.skip = test_sslWithDefaults.skip = skipSSL
-        test_sslChainLoads.skip = skipSSL
-        test_sslChainFileMustContainCert.skip = skipSSL
-        test_sslDHparameters.skip = skipSSL
-        test_sslNoTrailingNewlinePem.skip = skipSSL
 
 
     def test_unix(self):
@@ -3477,14 +3481,11 @@ class ClientStringTests(unittest.TestCase):
 
 
 
+@skipIf(skipSSL, skipSSLReason)
 class SSLClientStringTests(unittest.TestCase):
     """
     Tests for L{twisted.internet.endpoints.clientFromString} which require SSL.
     """
-
-    if skipSSL:
-        skip = skipSSL
-
     def test_ssl(self):
         """
         When passed an SSL strports description, L{clientFromString} returns a
@@ -3519,9 +3520,9 @@ class SSLClientStringTests(unittest.TestCase):
             if x.basename().lower().endswith('.pem')
         ]
         addedCerts = []
-        class ListCtx(object):
+        class ListCtx:
             def get_cert_store(self):
-                class Store(object):
+                class Store:
                     def add_cert(self, cert):
                         addedCerts.append(cert)
                 return Store()
@@ -3953,7 +3954,7 @@ class ConnectProtocolTests(unittest.TestCase):
 
 
 
-class UppercaseWrapperProtocol(policies.ProtocolWrapper, object):
+class UppercaseWrapperProtocol(policies.ProtocolWrapper):
     """
     A wrapper protocol which uppercases all strings passed through it.
     """
@@ -3989,7 +3990,7 @@ class UppercaseWrapperProtocol(policies.ProtocolWrapper, object):
 
 
 
-class UppercaseWrapperFactory(policies.WrappingFactory, object):
+class UppercaseWrapperFactory(policies.WrappingFactory):
     """
     A wrapper factory which uppercases all strings passed through it.
     """
@@ -3997,7 +3998,7 @@ class UppercaseWrapperFactory(policies.WrappingFactory, object):
 
 
 
-class NetstringTracker(basic.NetstringReceiver, object):
+class NetstringTracker(basic.NetstringReceiver):
     """
     A netstring receiver which keeps track of the strings received.
 
@@ -4123,14 +4124,11 @@ def connectionCreatorFromEndpoint(memoryReactor, tlsEndpoint):
 
 
 
+@skipIf(skipSSL, skipSSLReason)
 class WrapClientTLSParserTests(unittest.TestCase):
     """
     Tests for L{_TLSClientEndpointParser}.
     """
-
-    if skipSSL:
-        skip = skipSSL
-
     def test_hostnameEndpointConstruction(self):
         """
         A L{HostnameEndpoint} is constructed from parameters passed to

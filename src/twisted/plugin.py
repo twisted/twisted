@@ -16,24 +16,12 @@ import sys
 
 from zope.interface import Interface, providedBy
 
-def _determinePickleModule():
-    """
-    Determine which 'pickle' API module to use.
-    """
-    try:
-        import cPickle
-        return cPickle
-    except ImportError:
-        import pickle
-        return pickle
-
-pickle = _determinePickleModule()
+import pickle
 
 from twisted.python.components import getAdapterFactory
 from twisted.python.reflect import namedAny
 from twisted.python import log
 from twisted.python.modules import getModule
-from twisted.python.compat import iteritems
 
 
 
@@ -48,7 +36,7 @@ class IPlugin(Interface):
 
 
 
-class CachedPlugin(object):
+class CachedPlugin:
     def __init__(self, dropin, name, description, provided):
         self.dropin = dropin
         self.name = name
@@ -56,7 +44,7 @@ class CachedPlugin(object):
         self.provided = provided
         self.dropin.plugins.append(self)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return '<CachedPlugin %r/%r (provides %r)>' % (
             self.name, self.dropin.moduleName,
             ', '.join([i.__name__ for i in self.provided]))
@@ -77,7 +65,7 @@ class CachedPlugin(object):
 
 
 
-class CachedDropin(object):
+class CachedDropin:
     """
     A collection of L{CachedPlugin} instances from a particular module in a
     plugin package.
@@ -104,7 +92,7 @@ class CachedDropin(object):
 def _generateCacheEntry(provider):
     dropin = CachedDropin(provider.__name__,
                           provider.__doc__)
-    for k, v in iteritems(provider.__dict__):
+    for k, v in provider.__dict__.items():
         plugin = IPlugin(v, None)
         if plugin is not None:
             # Instantiated for its side-effects.
@@ -148,7 +136,7 @@ def getCache(module):
             buckets[fpp] = []
         bucket = buckets[fpp]
         bucket.append(plugmod)
-    for pseudoPackagePath, bucket in iteritems(buckets):
+    for pseudoPackagePath, bucket in buckets.items():
         dropinPath = pseudoPackagePath.child('dropin.cache')
         try:
             lastCached = dropinPath.getModificationTime()
@@ -210,7 +198,7 @@ def getPlugins(interface, package=None):
     if package is None:
         import twisted.plugins as package
     allDropins = getCache(package)
-    for key, dropin in iteritems(allDropins):
+    for key, dropin in allDropins.items():
         for plugin in dropin.plugins:
             try:
                 adapted = interface(plugin, None)

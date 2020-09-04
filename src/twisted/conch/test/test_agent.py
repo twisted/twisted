@@ -13,7 +13,7 @@ from twisted.test import iosim
 try:
     import cryptography
 except ImportError:
-    cryptography = None
+    cryptography = None  # type: ignore[assignment]
 
 try:
     import pyasn1
@@ -23,13 +23,13 @@ except ImportError:
 if cryptography and pyasn1:
     from twisted.conch.ssh import keys, agent
 else:
-    keys = agent = None
+    keys = agent = None  # type: ignore[assignment]
 
 from twisted.conch.test import keydata
 from twisted.conch.error import ConchError, MissingKeyStoreError
 
 
-class StubFactory(object):
+class StubFactory:
     """
     Mock factory that provides the keys attribute required by the
     SSHAgentServerProtocol

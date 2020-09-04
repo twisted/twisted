@@ -16,6 +16,7 @@ import tempfile
 import signal
 import time
 from hashlib import md5
+from unittest import skipIf
 
 from zope.interface.verify import verifyClass
 from zope.interface import Interface, implementer
@@ -42,15 +43,16 @@ from twisted.names import dns
 from twisted.names.dns import RRHeader, Record_CNAME, Record_MX
 from twisted.names.error import DNSNameError
 from twisted.python import failure, log
-from twisted.python.compat import range
 from twisted.python.filepath import FilePath
+from twisted.python.runtime import platformType
 from twisted.test.proto_helpers import (LineSendingProtocol,
                                         MemoryReactorClock, StringTransport)
-from twisted.trial import unittest
+from twisted.trial.unittest import TestCase
 
 
 
-class DomainWithDefaultsTests(unittest.TestCase):
+@skipIf(platformType != "posix", "twisted.mail only works on posix")
+class DomainWithDefaultsTests(TestCase):
     def testMethods(self):
         d = dict([(x, x + 10) for x in range(10)])
         d = mail.mail.DomainWithDefaultDict(d, 'Default')
@@ -159,7 +161,8 @@ class DomainWithDefaultsTests(unittest.TestCase):
 
 
 
-class BounceTests(unittest.TestCase):
+@skipIf(platformType != "posix", "twisted.mail only works on posix")
+class BounceTests(TestCase):
     def setUp(self):
         self.domain = mail.mail.BounceDomain()
 
@@ -181,7 +184,8 @@ class BounceTests(unittest.TestCase):
 
 
 
-class BounceWithSMTPServerTests(unittest.TestCase):
+@skipIf(platformType != "posix", "twisted.mail only works on posix")
+class BounceWithSMTPServerTests(TestCase):
     """
     Tests for L{twisted.mail.mail.BounceDomain} with
     L{twisted.mail.smtp.SMTPServer}.
@@ -217,7 +221,8 @@ class BounceWithSMTPServerTests(unittest.TestCase):
 
 
 
-class FileMessageTests(unittest.TestCase):
+@skipIf(platformType != "posix", "twisted.mail only works on posix")
+class FileMessageTests(TestCase):
     def setUp(self):
         self.name = "fileMessage.testFile"
         self.final = "final.fileMessage.testFile"
@@ -268,7 +273,8 @@ class FileMessageTests(unittest.TestCase):
 
 
 
-class MailServiceTests(unittest.TestCase):
+@skipIf(platformType != "posix", "twisted.mail only works on posix")
+class MailServiceTests(TestCase):
     def setUp(self):
         self.service = mail.mail.MailService()
 
@@ -298,7 +304,8 @@ class MailServiceTests(unittest.TestCase):
 
 
 
-class StringListMailboxTests(unittest.TestCase):
+@skipIf(platformType != "posix", "twisted.mail only works on posix")
+class StringListMailboxTests(TestCase):
     """
     Tests for L{StringListMailbox}, an in-memory only implementation of
     L{pop3.IMailbox}.
@@ -379,7 +386,9 @@ class StringListMailboxTests(unittest.TestCase):
 
 
 
-class FailingMaildirMailboxAppendMessageTask(mail.maildir._MaildirMailboxAppendMessageTask):
+@skipIf(platformType != "posix", "twisted.mail only works on posix")
+class FailingMaildirMailboxAppendMessageTask(
+ mail.maildir._MaildirMailboxAppendMessageTask):
     _openstate = True
     _writestate = True
     _renamestate = True
@@ -407,7 +416,7 @@ class FailingMaildirMailboxAppendMessageTask(mail.maildir._MaildirMailboxAppendM
 
 
 
-class _AppendTestMixin(object):
+class _AppendTestMixin:
     """
     Mixin for L{MaildirMailbox.appendMessage} test cases which defines a helper
     for serially appending multiple messages to a mailbox.
@@ -430,7 +439,8 @@ class _AppendTestMixin(object):
 
 
 
-class MaildirAppendStringTests(unittest.TestCase, _AppendTestMixin):
+@skipIf(platformType != "posix", "twisted.mail only works on posix")
+class MaildirAppendStringTests(TestCase, _AppendTestMixin):
     """
     Tests for L{MaildirMailbox.appendMessage} when invoked with a C{str}.
     """
@@ -510,7 +520,8 @@ class MaildirAppendStringTests(unittest.TestCase, _AppendTestMixin):
 
 
 
-class MaildirAppendFileTests(unittest.TestCase, _AppendTestMixin):
+@skipIf(platformType != "posix", "twisted.mail only works on posix")
+class MaildirAppendFileTests(TestCase, _AppendTestMixin):
     """
     Tests for L{MaildirMailbox.appendMessage} when invoked with a C{str}.
     """
@@ -551,7 +562,8 @@ class MaildirAppendFileTests(unittest.TestCase, _AppendTestMixin):
 
 
 
-class MaildirTests(unittest.TestCase):
+@skipIf(platformType != "posix", "twisted.mail only works on posix")
+class MaildirTests(TestCase):
     def setUp(self):
         self.d = self.mktemp()
         mail.maildir.initializeMaildir(self.d)
@@ -643,7 +655,8 @@ class MaildirTests(unittest.TestCase):
 
 
 
-class AbstractMaildirDomainTests(unittest.TestCase):
+@skipIf(platformType != "posix", "twisted.mail only works on posix")
+class AbstractMaildirDomainTests(TestCase):
     """
     Tests for L{twisted.mail.maildir.AbstractMaildirDomain}.
     """
@@ -656,7 +669,8 @@ class AbstractMaildirDomainTests(unittest.TestCase):
 
 
 
-class MaildirDirdbmDomainTests(unittest.TestCase):
+@skipIf(platformType != "posix", "twisted.mail only works on posix")
+class MaildirDirdbmDomainTests(TestCase):
     """
     Tests for L{MaildirDirdbmDomain}.
     """
@@ -773,11 +787,11 @@ class MaildirDirdbmDomainTests(unittest.TestCase):
 
 
 @implementer(mail.mail.IAliasableDomain)
-class StubAliasableDomain(object):
+class StubAliasableDomain:
     """
     Minimal testable implementation of IAliasableDomain.
     """
-    def exists(self, user):
+    def exists(self, user, memo=None):
         """
         No test coverage for invocations of this method on domain objects,
         so we just won't implement it.
@@ -811,7 +825,8 @@ class StubAliasableDomain(object):
 
 
 
-class ServiceDomainTests(unittest.TestCase):
+@skipIf(platformType != "posix", "twisted.mail only works on posix")
+class ServiceDomainTests(TestCase):
     def setUp(self):
         self.S = mail.mail.MailService()
         self.D = mail.protocols.DomainDeliveryBase(self.S, None)
@@ -899,7 +914,8 @@ class ServiceDomainTests(unittest.TestCase):
 
 
 
-class VirtualPOP3Tests(unittest.TestCase):
+@skipIf(platformType != "posix", "twisted.mail only works on posix")
+class VirtualPOP3Tests(TestCase):
     def setUp(self):
         self.tmpdir = self.mktemp()
         self.S = mail.mail.MailService()
@@ -980,7 +996,8 @@ class empty(smtp.User):
 
 
 
-class RelayTests(unittest.TestCase):
+@skipIf(platformType != "posix", "twisted.mail only works on posix")
+class RelayTests(TestCase):
     def testExists(self):
         service = mail.mail.MailService()
         domain = mail.relay.DomainQueuer(service)
@@ -1017,7 +1034,8 @@ class RelayTests(unittest.TestCase):
 
 
 
-class RelayerTests(unittest.TestCase):
+@skipIf(platformType != "posix", "twisted.mail only works on posix")
+class RelayerTests(TestCase):
     def setUp(self):
         self.tmpdir = self.mktemp()
         os.mkdir(self.tmpdir)
@@ -1083,7 +1101,8 @@ class Manager:
 
 
 
-class ManagedRelayerTests(unittest.TestCase):
+@skipIf(platformType != "posix", "twisted.mail only works on posix")
+class ManagedRelayerTests(TestCase):
     def setUp(self):
         self.manager = Manager()
         self.messages = list(range(0, 20, 2))
@@ -1120,7 +1139,8 @@ class ManagedRelayerTests(unittest.TestCase):
 
 
 
-class DirectoryQueueTests(unittest.TestCase):
+@skipIf(platformType != "posix", "twisted.mail only works on posix")
+class DirectoryQueueTests(TestCase):
     def setUp(self):
         # This is almost a test case itself.
         self.tmpdir = self.mktemp()
@@ -1246,7 +1266,8 @@ def tearDownDNS(self):
 
 
 
-class MXTests(unittest.TestCase):
+@skipIf(platformType != "posix", "twisted.mail only works on posix")
+class MXTests(TestCase):
     """
     Tests for L{mail.relaymanager.MXCalculator}.
     """
@@ -1299,7 +1320,7 @@ class MXTests(unittest.TestCase):
         @type correctMailExchange: C{str}
         @rtype: L{Deferred}
         """
-        class DummyResolver(object):
+        class DummyResolver:
             def lookupMailExchange(self, name):
                 if name == domain:
                     return defer.succeed((
@@ -1433,7 +1454,7 @@ class MXTests(unittest.TestCase):
         ip = '1.2.3.4'
         domain = 'example.org'
 
-        class DummyResolver(object):
+        class DummyResolver:
             """
             Fake resolver which will respond to an MX lookup with an empty
             result set.
@@ -1466,7 +1487,7 @@ class MXTests(unittest.TestCase):
         L{MXCalculator.getMX} ultimately fires with a Record_MX instance which
         gives the address in the A record for the name.
         """
-        class DummyResolver(object):
+        class DummyResolver:
             """
             Fake resolver which will fail an MX lookup but then succeed a
             getHostByName call.
@@ -1493,7 +1514,7 @@ class MXTests(unittest.TestCase):
         canonical = "canonical.example.com"
         exchange = "mail.example.com"
 
-        class DummyResolver(object):
+        class DummyResolver:
             """
             Fake resolver which will return a CNAME for an MX lookup of a name
             which is an alias and an MX for an MX lookup of the canonical name.
@@ -1526,7 +1547,7 @@ class MXTests(unittest.TestCase):
         the length specified, the returned L{Deferred} should errback with
         L{CanonicalNameChainTooLong}.
         """
-        class DummyResolver(object):
+        class DummyResolver:
             """
             Fake resolver which generates a CNAME chain of infinite length in
             response to MX lookups.
@@ -1566,7 +1587,7 @@ class MXTests(unittest.TestCase):
         canonical = "canonical.example.com"
         exchange = "mail.example.com"
 
-        class DummyResolver(object):
+        class DummyResolver:
             def lookupMailExchange(self, domain):
                 if domain != alias or lookedUp:
                     # Don't give back any results for anything except the alias
@@ -1596,7 +1617,7 @@ class MXTests(unittest.TestCase):
         firstAlias = "cname1.example.com"
         secondAlias = "cname2.example.com"
 
-        class DummyResolver(object):
+        class DummyResolver:
             def lookupMailExchange(self, domain):
                 return defer.succeed((
                         [RRHeader(name=firstAlias,
@@ -1656,7 +1677,8 @@ class MXTests(unittest.TestCase):
 
 
 
-class LiveFireExerciseTests(unittest.TestCase):
+@skipIf(platformType != "posix", "twisted.mail only works on posix")
+class LiveFireExerciseTests(TestCase):
     if interfaces.IReactorUDP(reactor, None) is None:
         skip = "UDP support is required to determining MX records"
 
@@ -1821,7 +1843,8 @@ class LineBufferMessage:
 
 
 
-class AliasTests(unittest.TestCase):
+@skipIf(platformType != "posix", "twisted.mail only works on posix")
+class AliasTests(TestCase):
     lines = [
         'First line',
         'Next line',
@@ -1912,7 +1935,7 @@ class AliasTests(unittest.TestCase):
 
 
 
-class DummyDomain(object):
+class DummyDomain:
     """
     Test domain for L{AddressAliasTests}.
     """
@@ -1935,7 +1958,8 @@ class DummyDomain(object):
 
 
 
-class AddressAliasTests(unittest.TestCase):
+@skipIf(platformType != "posix", "twisted.mail only works on posix")
+class AddressAliasTests(TestCase):
     """
     Tests for L{twisted.mail.alias.AddressAlias}.
     """
@@ -1981,7 +2005,7 @@ class AddressAliasTests(unittest.TestCase):
 
 
 
-class DummyProcess(object):
+class DummyProcess:
     __slots__ = ['onEnd']
 
 
@@ -2006,7 +2030,7 @@ class MockAliasGroup(mail.alias.AliasGroup):
 
 
 
-class StubProcess(object):
+class StubProcess:
     """
     Fake implementation of L{IProcessTransport}.
 
@@ -2031,7 +2055,8 @@ class StubProcess(object):
 
 
 
-class ProcessAliasTests(unittest.TestCase):
+@skipIf(platformType != "posix", "twisted.mail only works on posix")
+class ProcessAliasTests(TestCase):
     """
     Tests for alias resolution.
     """
@@ -2317,7 +2342,7 @@ class TestDomain:
 
 
 
-class DummyQueue(object):
+class DummyQueue:
     """
     A fake relay queue to use for testing.
 
@@ -2402,7 +2427,7 @@ class DummyQueue(object):
 
 
 
-class DummySmartHostSMTPRelayingManager(object):
+class DummySmartHostSMTPRelayingManager:
     """
     A fake smart host to use for testing.
 
@@ -2425,7 +2450,8 @@ class DummySmartHostSMTPRelayingManager(object):
 
 
 
-class _AttemptManagerTests(unittest.TestCase):
+@skipIf(platformType != "posix", "twisted.mail only works on posix")
+class _AttemptManagerTests(TestCase):
     """
     Test the behavior of L{_AttemptManager}.
 
@@ -2634,12 +2660,3 @@ class _AttemptManagerTests(unittest.TestCase):
         self.quietAttemptMgr.notifyNoConnection('quietRelayer')
         self.assertFalse(self.eventLog)
         self.reactor.advance(60)
-
-
-
-from twisted.python.runtime import platformType
-import types
-if platformType != "posix":
-    for o in locals().values():
-        if isinstance(o, (types.ClassType, type)) and issubclass(o, unittest.TestCase):
-            o.skip = "twisted.mail only works on posix"

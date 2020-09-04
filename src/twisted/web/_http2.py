@@ -16,8 +16,6 @@ it has stabilised, it'll be made public.
 
 
 import io
-import warnings
-import sys
 
 from collections import deque
 from typing import List
@@ -49,19 +47,6 @@ __all__ = []  # type: List[str]
 
 
 _END_STREAM_SENTINEL = object()
-
-
-# Python versions 2.7.3 and older don't have a memoryview object that plays
-# well with the struct module, which h2 needs. On those versions, just refuse
-# to import.
-if sys.version_info < (2, 7, 4):
-    warnings.warn(
-        "HTTP/2 cannot be enabled because this version of Python is too "
-        "old, and does not fully support memoryview objects.",
-        UserWarning,
-        stacklevel=2,
-    )
-    raise ImportError("HTTP/2 not supported on this Python version.")
 
 
 
@@ -201,7 +186,7 @@ class H2Connection(Protocol, TimeoutMixin):
             elif isinstance(event, h2.events.ConnectionTerminated):
                 self.transport.loseConnection()
                 self.connectionLost(
-                    ConnectionLost("Remote peer sent GOAWAY"),
+                    Failure(ConnectionLost("Remote peer sent GOAWAY")),
                     _cancelTimeouts=False,
                 )
 
@@ -350,7 +335,7 @@ class H2Connection(Protocol, TimeoutMixin):
         This tells the L{H2Connection} that its consumer has died, so it must
         stop producing data for good.
         """
-        self.connectionLost(ConnectionLost("Producing stopped"))
+        self.connectionLost(Failure(ConnectionLost("Producing stopped")))
 
 
     def pauseProducing(self):
@@ -525,7 +510,8 @@ class H2Connection(Protocol, TimeoutMixin):
         """
         stream = self.streams[event.stream_id]
         stream.connectionLost(
-            ConnectionLost("Stream reset with code %s" % event.error_code)
+            Failure(
+                ConnectionLost("Stream reset with code %s" % event.error_code))
         )
         self._requestDone(event.stream_id)
 
@@ -813,7 +799,7 @@ class H2Connection(Protocol, TimeoutMixin):
         stillActive = self._tryToWriteControlData()
         if stillActive:
             stream = self.streams[streamID]
-            stream.connectionLost(ConnectionLost("Invalid request"))
+            stream.connectionLost(Failure(ConnectionLost("Invalid request")))
             self._requestDone(streamID)
 
 
@@ -856,19 +842,23 @@ class H2Connection(Protocol, TimeoutMixin):
             self._bufferedControlFrames.append(bufferedBytes)
             self._bufferedControlFrameBytes += len(bufferedBytes)
 
-            if self._bufferedControlFrameBytes >= self._maxBufferedControlFrameBytes:
+            if (self._bufferedControlFrameBytes >=
+                    self._maxBufferedControlFrameBytes):
+                maxBuffCtrlFrameBytes = self._maxBufferedControlFrameBytes
                 self._log.error(
                     "Maximum number of control frame bytes buffered: "
-                    "{bufferedControlFrameBytes} > = {maxBufferedControlFrameBytes}. "
+                    "{bufferedControlFrameBytes} > = "
+                    "{maxBufferedControlFrameBytes}. "
                     "Aborting connection to client: {client} ",
                     bufferedControlFrameBytes=self._bufferedControlFrameBytes,
-                    maxBufferedControlFrameBytes=self._maxBufferedControlFrameBytes,
+                    maxBufferedControlFrameBytes=maxBuffCtrlFrameBytes,
                     client=self.transport.getPeer(),
                 )
-                # We've exceeded a reasonable buffer size for max buffered control frames.
-                # This is a denial of service risk, so we're going to drop this connection.
+                # We've exceeded a reasonable buffer size for max buffered
+                # control frames. This is a denial of service risk, so we're
+                # going to drop this connection.
                 self.transport.abortConnection()
-                self.connectionLost(ExcessiveBufferingError())
+                self.connectionLost(Failure(ExcessiveBufferingError()))
                 return False
             return True
 
@@ -886,7 +876,7 @@ class H2Connection(Protocol, TimeoutMixin):
 
 
 @implementer(ITransport, IConsumer, IPushProducer)
-class H2Stream(object):
+class H2Stream:
     """
     A class representing a single HTTP/2 stream.
 

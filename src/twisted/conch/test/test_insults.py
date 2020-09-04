@@ -2,6 +2,8 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
+from typing import Optional, Type
+
 from twisted.trial import unittest
 from twisted.test.proto_helpers import StringTransport
 
@@ -12,7 +14,8 @@ from twisted.conch.insults.insults import (CS_UK, CS_US, CS_DRAWING,
                                            BLINK, UNDERLINE)
 from twisted.conch.insults.insults import G0, G1
 from twisted.conch.insults.insults import modes, privateModes
-from twisted.python.compat import intToBytes, iterbytes
+from twisted.internet.protocol import Protocol
+from twisted.python.compat import iterbytes
 from twisted.python.constants import ValueConstant, Values
 
 import textwrap
@@ -135,7 +138,7 @@ C1SevenBit = _makeControlFunctionSymbols(
 
 
 
-class Mock(object):
+class Mock:
     callReturnValue = default
 
     def __init__(self, methods=None, callReturnValue=default):
@@ -201,18 +204,27 @@ def testByte%(groupName)s(self):
 
     self.verifyResults(transport, proto, parser)
 """
-class ByteGroupingsMixin(MockMixin):
-    protocolFactory = None
 
-    for word, n in [('Pairs', 2), ('Triples', 3), ('Quads', 4), ('Quints', 5), ('Sexes', 6)]:
+
+
+class ByteGroupingsMixin(MockMixin):
+    protocolFactory = None  # type: Optional[Type[Protocol]]
+
+    for word, n in [('Pairs', 2), ('Triples', 3), ('Quads', 4), ('Quints', 5),
+                    ('Sexes', 6)]:
         exec(_byteGroupingTestTemplate % {'groupName': word, 'bytesPer': n})
     del word, n
 
     def verifyResults(self, transport, proto, parser):
-        result = self.assertCall(occurrences(proto).pop(0), "makeConnection", (parser,))
+        result = self.assertCall(occurrences(proto).pop(0), "makeConnection",
+                                 (parser,))
         self.assertEqual(occurrences(result), [])
 
+
+
 del _byteGroupingTestTemplate
+
+
 
 class ServerArrowKeysTests(ByteGroupingsMixin, unittest.TestCase):
     protocolFactory = ServerProtocol
@@ -310,12 +322,11 @@ class ClientControlSequencesTests(unittest.TestCase, MockMixin):
         self.assertFalse(occurrences(result))
 
     def testSimpleCardinals(self):
-        self.parser.dataReceived(
-            b''.join(
-                    [b''.join([b'\x1b[' + n + ch
-                             for n in (b'', intToBytes(2), intToBytes(20), intToBytes(200))]
-                           ) for ch in iterbytes(b'BACD')
-                    ]))
+        self.parser.dataReceived(b''.join(
+            b'\x1b[' + n + ch
+            for ch in iterbytes(b'BACD')
+            for n in (b'', b'2', b'20', b'200')
+            ))
         occs = occurrences(self.proto)
 
         for meth in ("Down", "Up", "Forward", "Backward"):
@@ -440,16 +451,20 @@ class ClientControlSequencesTests(unittest.TestCase, MockMixin):
 
 
     def testModes(self):
-        self.parser.dataReceived(
-            b"\x1b[" + b';'.join(map(intToBytes, [modes.KAM, modes.IRM, modes.LNM])) + b"h")
-        self.parser.dataReceived(
-            b"\x1b[" + b';'.join(map(intToBytes, [modes.KAM, modes.IRM, modes.LNM])) + b"l")
+        self.parser.dataReceived(b"\x1b[" + b';'.join(
+            b"%d" % (m,) for m in [modes.KAM, modes.IRM, modes.LNM]
+            ) + b"h")
+        self.parser.dataReceived(b"\x1b[" + b';'.join(
+            b"%d" % (m,) for m in [modes.KAM, modes.IRM, modes.LNM]
+            ) + b"l")
         occs = occurrences(self.proto)
 
-        result = self.assertCall(occs.pop(0), "setModes", ([modes.KAM, modes.IRM, modes.LNM],))
+        result = self.assertCall(occs.pop(0), "setModes",
+                                 ([modes.KAM, modes.IRM, modes.LNM],))
         self.assertFalse(occurrences(result))
 
-        result = self.assertCall(occs.pop(0), "resetModes", ([modes.KAM, modes.IRM, modes.LNM],))
+        result = self.assertCall(occs.pop(0), "resetModes",
+                                 ([modes.KAM, modes.IRM, modes.LNM],))
         self.assertFalse(occurrences(result))
         self.assertFalse(occs)
 
@@ -702,7 +717,7 @@ class ServerProtocolOutputTests(unittest.TestCase):
         self.protocol.setModes(modesToSet)
         self.assertEqual(self.transport.value(),
                          self.CSI +
-                         b';'.join(map(intToBytes, modesToSet)) +
+                         b';'.join(b'%d' % (m,) for m in modesToSet) +
                          CSFinalByte.SM.value)
 
 
@@ -718,7 +733,7 @@ class ServerProtocolOutputTests(unittest.TestCase):
         self.protocol.setModes(privateModesToSet)
         self.assertEqual(self.transport.value(),
                          self.CSI +
-                         b';'.join(map(intToBytes, privateModesToSet)) +
+                         b';'.join(b'%d' % (m,) for m in privateModesToSet) +
                          CSFinalByte.SM.value)
 
 
@@ -731,7 +746,7 @@ class ServerProtocolOutputTests(unittest.TestCase):
         self.protocol.resetModes(modesToSet)
         self.assertEqual(self.transport.value(),
                          self.CSI +
-                         b';'.join(map(intToBytes, modesToSet)) +
+                         b';'.join(b'%d' % (m,) for m in modesToSet) +
                          CSFinalByte.RM.value)
 
 
@@ -764,7 +779,7 @@ class ServerProtocolOutputTests(unittest.TestCase):
         self.protocol.selectGraphicRendition(str(BLINK), str(UNDERLINE))
         self.assertEqual(self.transport.value(),
                          self.CSI +
-                         intToBytes(BLINK) + b';' + intToBytes(UNDERLINE) +
+                         b'%d;%d' % (BLINK, UNDERLINE) +
                          CSFinalByte.SGR.value)
 
 

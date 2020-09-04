@@ -54,7 +54,7 @@ class TLSMixin:
             "twisted.internet.gtk2reactor.Gtk2Reactor": msg}
 
 
-class ContextGeneratingMixin(object):
+class ContextGeneratingMixin:
     import twisted
     _pem = FilePath(
         networkString(twisted.__file__)).sibling(b"test").child(b"server.pem")
@@ -76,7 +76,7 @@ class ContextGeneratingMixin(object):
 
 
 @implementer(IStreamClientEndpoint)
-class StartTLSClientEndpoint(object):
+class StartTLSClientEndpoint:
     """
     An endpoint which wraps another one and adds a TLS layer immediately when
     connections are set up.
@@ -138,7 +138,7 @@ class StartTLSClientCreator(EndpointCreator, ContextGeneratingMixin):
 
 
 
-class BadContextTestsMixin(object):
+class BadContextTestsMixin:
     """
     Mixin for L{ReactorBuilder} subclasses which defines a helper for testing
     the handling of broken context factories.

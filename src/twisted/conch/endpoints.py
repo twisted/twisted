@@ -76,7 +76,7 @@ class _ISSHConnectionCreator(Interface):
 
 
 
-class SSHCommandAddress(object):
+class SSHCommandAddress:
     """
     An L{SSHCommandAddress} instance represents the address of an SSH server, a
     username which was used to authenticate with that server, and a command
@@ -520,7 +520,7 @@ class _CommandTransport(SSHClientTransport):
 
 
 @implementer(IStreamClientEndpoint)
-class SSHCommandClientEndpoint(object):
+class SSHCommandClientEndpoint:
     """
     L{SSHCommandClientEndpoint} exposes the command-executing functionality of
     SSH servers.
@@ -689,7 +689,7 @@ class SSHCommandClientEndpoint(object):
 
 
 
-class _ReadFile(object):
+class _ReadFile:
     """
     A weakly file-like object which can be used with L{KnownHostsFile} to
     respond in the negative to all prompts for decisions.
@@ -731,7 +731,7 @@ class _ReadFile(object):
 
 
 @implementer(_ISSHConnectionCreator)
-class _NewConnectionHelper(object):
+class _NewConnectionHelper:
     """
     L{_NewConnectionHelper} implements L{_ISSHConnectionCreator} by
     establishing a brand new SSH connection, securing it, and authenticating.
@@ -834,7 +834,7 @@ class _NewConnectionHelper(object):
 
 
 @implementer(_ISSHConnectionCreator)
-class _ExistingConnectionHelper(object):
+class _ExistingConnectionHelper:
     """
     L{_ExistingConnectionHelper} implements L{_ISSHConnectionCreator} by
     handing out an existing SSH connection which is supplied to its

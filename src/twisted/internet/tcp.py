@@ -20,7 +20,9 @@ import attr
 from zope.interface import Interface, implementer
 
 from twisted.logger import Logger
-from twisted.python.compat import lazyByteSlice, unicode
+from twisted.internet.interfaces import (
+    IHalfCloseableProtocol, ITCPTransport, ISystemHandle, IListeningPort)
+from twisted.python.compat import lazyByteSlice
 from twisted.python.runtime import platformType
 from twisted.python import versions, deprecate
 
@@ -31,17 +33,20 @@ try:
         ConnectionMixin as _TLSConnectionMixin,
         ClientMixin as _TLSClientMixin,
         ServerMixin as _TLSServerMixin)
+    from twisted.internet.interfaces import ITLSTransport
 except ImportError:
     # There is no version of startTLS available
-    class _TLSConnectionMixin(object):
+    ITLSTransport = Interface  # type: ignore[misc,assignment]
+
+    class _TLSConnectionMixin:  # type: ignore[no-redef]
         TLS = False
 
 
-    class _TLSClientMixin(object):
+    class _TLSClientMixin:  # type: ignore[no-redef]
         pass
 
 
-    class _TLSServerMixin(object):
+    class _TLSServerMixin:  # type: ignore[no-redef]
         pass
 
 
@@ -63,7 +68,8 @@ if platformType == 'win32':
     # Nor ENOMEM
     ENOMEM = object()
     EAGAIN = EWOULDBLOCK
-    from errno import WSAECONNRESET as ECONNABORTED
+    from errno import (  # type: ignore[attr-defined]
+        WSAECONNRESET as ECONNABORTED)
 
     from twisted.python.win32 import formatError as strerror
 else:
@@ -91,15 +97,12 @@ from twisted.internet.task import deferLater
 from twisted.python import log, failure, reflect
 from twisted.python.util import untilConcludes
 from twisted.internet.error import CannotListenError
-from twisted.internet import abstract, main, interfaces, error
+from twisted.internet import abstract, main, error
 from twisted.internet.protocol import Protocol
 
 # Not all platforms have, or support, this flag.
 _AI_NUMERICSERV = getattr(socket, "AI_NUMERICSERV", 0)
 
-
-# The type for service names passed to socket.getservbyname:
-_portNameType = (str, unicode)
 
 
 def _getrealname(addr):
@@ -138,7 +141,7 @@ def _getsockname(skt):
 
 
 
-class _SocketCloser(object):
+class _SocketCloser:
     """
     @ivar _shouldShutdown: Set to C{True} if C{shutdown} should be called
         before calling C{close} on the underlying socket.
@@ -172,7 +175,7 @@ class _SocketCloser(object):
 
 
 
-class _AbortingMixin(object):
+class _AbortingMixin:
     """
     Common implementation of C{abortConnection}.
 
@@ -199,7 +202,7 @@ class _AbortingMixin(object):
 
 
 
-@implementer(interfaces.ITCPTransport, interfaces.ISystemHandle)
+@implementer(ITLSTransport, ITCPTransport, ISystemHandle)
 class Connection(_TLSConnectionMixin, abstract.FileDescriptor, _SocketCloser,
                  _AbortingMixin):
     """
@@ -287,7 +290,7 @@ class Connection(_TLSConnectionMixin, abstract.FileDescriptor, _SocketCloser,
             self.socket.shutdown(1)
         except socket.error:
             pass
-        p = interfaces.IHalfCloseableProtocol(self.protocol, None)
+        p = IHalfCloseableProtocol(self.protocol, None)
         if p:
             try:
                 p.writeConnectionLost()
@@ -298,7 +301,7 @@ class Connection(_TLSConnectionMixin, abstract.FileDescriptor, _SocketCloser,
 
 
     def readConnectionLost(self, reason):
-        p = interfaces.IHalfCloseableProtocol(self.protocol, None)
+        p = IHalfCloseableProtocol(self.protocol, None)
         if p:
             try:
                 p.readConnectionLost()
@@ -352,7 +355,7 @@ class Connection(_TLSConnectionMixin, abstract.FileDescriptor, _SocketCloser,
 
 
 
-class _BaseBaseClient(object):
+class _BaseBaseClient:
     """
     Code shared with other (non-POSIX) reactors for management of general
     outgoing connections.
@@ -686,7 +689,7 @@ def _resolveIPv6(ip, port):
 
 
 
-class _BaseTCPClient(object):
+class _BaseTCPClient:
     """
     Code shared with other (non-POSIX) reactors for management of outgoing TCP
     connections (both TCPv4 and TCPv6).
@@ -770,7 +773,7 @@ class _BaseTCPClient(object):
         return self._addressType('TCP', *self.realAddress)
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         s = '<%s to %s at %x>' % (self.__class__, self.addr, id(self))
         return s
 
@@ -830,7 +833,7 @@ class Server(_TLSServerMixin, Connection):
         self.startReading()
         self.connected = 1
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """
         A string representation of this connection.
         """
@@ -964,7 +967,7 @@ class _IFileDescriptorReservation(Interface):
 
 @implementer(_IFileDescriptorReservation)
 @attr.s
-class _FileDescriptorReservation(object):
+class _FileDescriptorReservation:
     """
     L{_IFileDescriptorReservation} implementation.
 
@@ -1018,7 +1021,7 @@ class _FileDescriptorReservation(object):
         self._fileDescriptor = None
 
 
-    def __exit__(self, excValue, excType, traceback):
+    def __exit__(self, excType, excValue, traceback):
         """
         See L{_IFileDescriptorReservation.__exit__}.
         """
@@ -1031,7 +1034,7 @@ class _FileDescriptorReservation(object):
 
 
 @implementer(_IFileDescriptorReservation)
-class _NullFileDescriptorReservation(object):
+class _NullFileDescriptorReservation:
     """
     A null implementation of L{_IFileDescriptorReservation}.
     """
@@ -1060,7 +1063,7 @@ class _NullFileDescriptorReservation(object):
         """
 
 
-    def __exit__(self, excValue, excType, traceback):
+    def __exit__(self, excType, excValue, traceback):
         """
         Do nothing.  See L{_IFileDescriptorReservation.__exit__}.
 
@@ -1101,7 +1104,7 @@ class _NullFileDescriptorReservation(object):
 if platformType == 'win32':
     _reservedFD = _NullFileDescriptorReservation()
 else:
-    _reservedFD = _FileDescriptorReservation(lambda: open(os.devnull))
+    _reservedFD = _FileDescriptorReservation(lambda: open(os.devnull))  # type: ignore[assignment] # noqa
 
 
 # Linux and other UNIX-like operating systems return EMFILE when a
@@ -1124,7 +1127,7 @@ _ACCEPT_ERRORS = (EMFILE, ENOBUFS, ENFILE, ENOMEM, ECONNABORTED)
 
 
 @attr.s
-class _BuffersLogs(object):
+class _BuffersLogs:
     """
     A context manager that buffers any log events until after its
     block exits.
@@ -1236,7 +1239,7 @@ def _accept(logger, accepts, listener, reservedFD):
 
 
 
-@implementer(interfaces.IListeningPort)
+@implementer(IListeningPort)
 class Port(base.BasePort, _SocketCloser):
     """
     A TCP server port, listening for connections.
@@ -1331,12 +1334,14 @@ class Port(base.BasePort, _SocketCloser):
         return self
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         if self._realPortNumber is not None:
             return "<%s of %s on %s>" % (self.__class__,
-                self.factory.__class__, self._realPortNumber)
+                                         self.factory.__class__,
+                                         self._realPortNumber)
         else:
-            return "<%s of %s (not listening)>" % (self.__class__, self.factory.__class__)
+            return "<%s of %s (not listening)>" % (self.__class__,
+                                                   self.factory.__class__)
 
     def createInternetSocket(self):
         s = base.BasePort.createInternetSocket(self)
@@ -1527,8 +1532,9 @@ class Connector(base.BaseConnector):
     """
     _addressType = address.IPv4Address
 
-    def __init__(self, host, port, factory, timeout, bindAddress, reactor=None):
-        if isinstance(port, _portNameType):
+    def __init__(self, host, port, factory, timeout, bindAddress,
+                 reactor=None):
+        if isinstance(port, str):
             try:
                 port = socket.getservbyname(port, 'tcp')
             except socket.error as e:

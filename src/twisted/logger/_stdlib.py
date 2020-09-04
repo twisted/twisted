@@ -10,7 +10,7 @@ import logging as stdlibLogging
 
 from zope.interface import implementer
 
-from twisted.python.compat import _PY3, currentframe, unicode
+from twisted.python.compat import currentframe
 from ._levels import LogLevel
 from ._format import formatEvent
 from ._observer import ILogObserver
@@ -43,7 +43,7 @@ fromStdlibLogLevelMapping = _reverseLogLevelMapping()
 
 
 @implementer(ILogObserver)
-class STDLibLogObserver(object):
+class STDLibLogObserver:
     """
     Log observer that writes to the python standard library's C{logging}
     module.
@@ -97,10 +97,7 @@ class STDLibLogObserver(object):
         """
         f = currentframe(self.stackDepth)
         co = f.f_code
-        if _PY3:
-            extra = (None,)
-        else:
-            extra = ()
+        extra = (None,)
         return (co.co_filename, f.f_lineno, co.co_name) + extra
 
 
@@ -121,7 +118,7 @@ class STDLibLogObserver(object):
 
 
 
-class StringifiableFromEvent(object):
+class StringifiableFromEvent:
     """
     An object that implements C{__str__()} in order to defer the work of
     formatting until it's converted into a C{str}.
@@ -139,9 +136,6 @@ class StringifiableFromEvent(object):
 
 
     def __bytes__(self):
-        return unicode(self).encode("utf-8")
+        return str(self).encode("utf-8")
 
-    if _PY3:
-        __str__ = __unicode__
-    else:
-        __str__ = __bytes__
+    __str__ = __unicode__

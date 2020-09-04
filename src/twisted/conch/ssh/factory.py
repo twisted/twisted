@@ -11,7 +11,7 @@ Maintainer: Paul Swartz
 
 
 from twisted.internet import protocol
-from twisted.python import log
+from twisted.logger import Logger
 
 from twisted.conch import error
 from twisted.conch.ssh import (_kex, transport, userauth, connection)
@@ -23,6 +23,7 @@ class SSHFactory(protocol.Factory):
     """
     A Factory for SSH servers.
     """
+    _log = Logger()
     protocol = transport.SSHServerTransport
 
     services = {
@@ -56,8 +57,8 @@ class SSHFactory(protocol.Factory):
         t = protocol.Factory.buildProtocol(self, addr)
         t.supportedPublicKeys = self.privateKeys.keys()
         if not self.primes:
-            log.msg('disabling non-fixed-group key exchange algorithms '
-                    'because we cannot find moduli file')
+            self._log.info('disabling non-fixed-group key exchange algorithms '
+                           'because we cannot find moduli file')
             t.supportedKeyExchanges = [
                 kexAlgorithm for kexAlgorithm in t.supportedKeyExchanges
                 if _kex.isFixedGroup(kexAlgorithm) or

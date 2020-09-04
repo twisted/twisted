@@ -7,22 +7,26 @@
 
 You will find these useful if you're adding a new protocol to IM.
 """
-
-# Abstract representation of chat "model" classes
+from typing import Type
 
 from twisted.words.im.locals import OFFLINE, OfflineError
 
-from twisted.internet.protocol import Protocol
-
+from twisted.internet.protocol import connectionDone, Protocol
+from twisted.python.failure import Failure
 from twisted.python.reflect import prefixedMethods
 from twisted.persisted import styles
 
 from twisted.internet import error
 
+
+
+# Abstract representation of chat "model" classes
+
 class AbstractGroup:
     def __init__(self, name, account):
         self.name = name
         self.account = account
+
 
     def getGroupCommands(self):
         """finds group commands
@@ -31,6 +35,7 @@ class AbstractGroup:
         called with no arguments
         """
         return prefixedMethods(self, "imgroup_")
+
 
     def getTargetCommands(self, target):
         """finds group commands
@@ -43,27 +48,34 @@ class AbstractGroup:
         """
         return prefixedMethods(self, "imtarget_")
 
+
     def join(self):
         if not self.account.client:
             raise OfflineError
         self.account.client.joinGroup(self.name)
+
 
     def leave(self):
         if not self.account.client:
             raise OfflineError
         self.account.client.leaveGroup(self.name)
 
-    def __repr__(self):
+
+    def __repr__(self) -> str:
         return '<%s %r>' % (self.__class__, self.name)
 
-    def __str__(self):
+
+    def __str__(self) -> str:
         return '%s@%s' % (self.name, self.account.accountName)
+
+
 
 class AbstractPerson:
     def __init__(self, name, baseAccount):
         self.name = name
         self.account = baseAccount
         self.status = OFFLINE
+
 
     def getPersonCommands(self):
         """finds person commands
@@ -73,17 +85,22 @@ class AbstractPerson:
         """
         return prefixedMethods(self, "imperson_")
 
+
     def getIdleTime(self):
         """
         Returns a string.
         """
         return '--'
 
-    def __repr__(self):
+
+    def __repr__(self) -> str:
         return '<%s %r/%s>' % (self.__class__, self.name, self.status)
 
-    def __str__(self):
+
+    def __str__(self) -> str:
         return '%s@%s' % (self.name, self.account.accountName)
+
+
 
 class AbstractClientMixin:
     """Designed to be mixed in to a Protocol implementing class.
@@ -92,6 +109,8 @@ class AbstractClientMixin:
 
     @ivar _logonDeferred: Fired when I am done logging in.
     """
+    _protoBase = None  # type: Type[Protocol]
+
     def __init__(self, account, chatui, logonDeferred):
         for base in self.__class__.__bases__:
             if issubclass(base, Protocol):
@@ -103,18 +122,22 @@ class AbstractClientMixin:
         self.chat = chatui
         self._logonDeferred = logonDeferred
 
+
     def connectionMade(self):
         self._protoBase.connectionMade(self)
 
-    def connectionLost(self, reason):
+
+    def connectionLost(self, reason: Failure = connectionDone):
         self.account._clientLost(self, reason)
         self.unregisterAsAccountClient()
-        return self._protoBase.connectionLost(self, reason)
+        return self._protoBase.connectionLost(self, reason)  # type: ignore[arg-type]  # noqa
+
 
     def unregisterAsAccountClient(self):
         """Tell the chat UI that I have `signed off'.
         """
         self.chat.unregisterAccountClient(self)
+
 
 
 class AbstractAccount(styles.Versioned):
@@ -163,11 +186,13 @@ class AbstractAccount(styles.Versioned):
         self._groups = {}
         self._persons = {}
 
+
     def upgrateToVersion2(self):
         # Added in CVS revision 1.16.
         for k in ('_groups', '_persons'):
             if not hasattr(self, k):
                 setattr(self, k, {})
+
 
     def __getstate__(self):
         state = styles.Versioned.__getstate__(self)
@@ -178,8 +203,10 @@ class AbstractAccount(styles.Versioned):
                 pass
         return state
 
+
     def isOnline(self):
         return self._isOnline
+
 
     def logOn(self, chatui):
         """Log on to this account.
@@ -204,6 +231,7 @@ class AbstractAccount(styles.Versioned):
         else:
             raise error.ConnectError("Connection in progress")
 
+
     def getGroup(self, name):
         """Group factory.
 
@@ -216,6 +244,7 @@ class AbstractAccount(styles.Versioned):
             self._groups[name] = group
         return group
 
+
     def getPerson(self, name):
         """Person factory.
 
@@ -227,6 +256,7 @@ class AbstractAccount(styles.Versioned):
             person = self._personFactory(name, self)
             self._persons[name] = person
         return person
+
 
     def _startLogOn(self, chatui):
         """Start the sign on process.
@@ -243,6 +273,7 @@ class AbstractAccount(styles.Versioned):
         self.client = client
         return client
 
+
     def _loginFailed(self, reason):
         """Errorback for L{logOn}.
 
@@ -252,8 +283,9 @@ class AbstractAccount(styles.Versioned):
         @returntype: Failure
         """
         self._isConnecting = 0
-        self._isOnline = 0 # just in case
+        self._isOnline = 0  # just in case
         return reason
+
 
     def _clientLost(self, client, reason):
         self.client = None
@@ -261,7 +293,8 @@ class AbstractAccount(styles.Versioned):
         self._isOnline = 0
         return reason
 
-    def __repr__(self):
+
+    def __repr__(self) -> str:
         return "<%s: %s (%s@%s:%s)>" % (self.__class__,
                                         self.accountName,
                                         self.username,

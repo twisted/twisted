@@ -20,6 +20,7 @@ from stat import S_ISREG, S_ISDIR, S_IMODE, S_ISBLK, S_ISSOCK
 from stat import S_IRUSR, S_IWUSR, S_IXUSR
 from stat import S_IRGRP, S_IWGRP, S_IXGRP
 from stat import S_IROTH, S_IWOTH, S_IXOTH
+from typing import Union
 
 from zope.interface import Interface, Attribute, implementer
 
@@ -27,16 +28,14 @@ from zope.interface import Interface, Attribute, implementer
 # things import this module, and it would be good if it could easily be
 # modified for inclusion in the standard library.  --glyph
 
-from twisted.python.compat import comparable, cmp, unicode
-from twisted.python.deprecate import deprecated
+from twisted.python.compat import comparable, cmp
 from twisted.python.runtime import platform
-from incremental import Version
-
+from twisted.python.util import FancyEqMixin
 from twisted.python.win32 import ERROR_FILE_NOT_FOUND, ERROR_PATH_NOT_FOUND
 from twisted.python.win32 import ERROR_INVALID_NAME, ERROR_DIRECTORY, O_BINARY
 from twisted.python.win32 import WindowsError
 
-from twisted.python.util import FancyEqMixin
+
 
 _CREATE_FLAGS = (os.O_EXCL |
                  os.O_CREAT |
@@ -273,7 +272,7 @@ def _secureEnoughString(path):
 
 
 
-class AbstractFilePath(object):
+class AbstractFilePath:
     """
     Abstract implementation of an L{IFilePath}; must be completed by a
     subclass.
@@ -502,7 +501,7 @@ class AbstractFilePath(object):
 
 
 
-class RWX(FancyEqMixin, object):
+class RWX(FancyEqMixin):
     """
     A class representing read/write/execute permissions for a single user
     category (i.e. user/owner, group, or other/world).  Instantiate with
@@ -526,7 +525,7 @@ class RWX(FancyEqMixin, object):
         self.execute = executable
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "RWX(read=%s, write=%s, execute=%s)" % (
             self.read, self.write, self.execute)
 
@@ -550,7 +549,7 @@ class RWX(FancyEqMixin, object):
 
 
 
-class Permissions(FancyEqMixin, object):
+class Permissions(FancyEqMixin):
     """
     A class representing read/write/execute permissions.  Instantiate with any
     portion of the file's mode that includes the permission bits.
@@ -578,7 +577,7 @@ class Permissions(FancyEqMixin, object):
         )
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "[%s | %s | %s]" % (
             str(self.user), str(self.group), str(self.other))
 
@@ -596,17 +595,8 @@ class Permissions(FancyEqMixin, object):
             [x.shorthand() for x in (self.user, self.group, self.other)])
 
 
-class _SpecialNoValue(object):
-    """
-    An object that represents 'no value', to be used in deprecating statinfo.
 
-    Please remove once statinfo is removed.
-    """
-    pass
-
-
-
-def _asFilesystemBytes(path, encoding=None):
+def _asFilesystemBytes(path: Union[bytes, str], encoding: str = "") -> bytes:
     """
     Return C{path} as a string of L{bytes} suitable for use on this system's
     filesystem.
@@ -618,10 +608,10 @@ def _asFilesystemBytes(path, encoding=None):
 
     @return: L{bytes}
     """
-    if type(path) == bytes:
+    if isinstance(path, bytes):
         return path
     else:
-        if encoding is None:
+        if not encoding:
             encoding = sys.getfilesystemencoding()
         return path.encode(encoding)
 
@@ -640,7 +630,7 @@ def _asFilesystemText(path, encoding=None):
 
     @return: L{unicode}
     """
-    if type(path) == unicode:
+    if type(path) == str:
         return path
     else:
         if encoding is None:
@@ -706,22 +696,6 @@ class FilePath(AbstractFilePath):
 
     @type path: L{bytes} or L{unicode}
     @ivar path: The path from which 'downward' traversal is permitted.
-
-    @ivar statinfo: (WARNING: statinfo is deprecated as of Twisted 15.0.0 and
-        will become a private attribute)
-        The currently cached status information about the file on
-        the filesystem that this L{FilePath} points to.  This attribute is
-        L{None} if the file is in an indeterminate state (either this
-        L{FilePath} has not yet had cause to call C{stat()} yet or
-        L{FilePath.changed} indicated that new information is required), 0 if
-        C{stat()} was called and returned an error (i.e. the path did not exist
-        when C{stat()} was called), or a C{stat_result} object that describes
-        the last known status of the underlying file (or directory, as the case
-        may be).  Trust me when I tell you that you do not want to use this
-        attribute.  Instead, use the methods on L{FilePath} which give you
-        information about it, like C{getsize()}, C{isdir()},
-        C{getModificationTime()}, and so on.
-    @type statinfo: L{int} or L{None} or L{os.stat_result}
     """
     _statinfo = None
     path = None
@@ -791,7 +765,7 @@ class FilePath(AbstractFilePath):
 
         @return: L{bytes} mode L{FilePath}
         """
-        if type(self.path) == unicode:
+        if type(self.path) == str:
             return self.clonePath(self._asBytesPath(encoding=encoding))
         return self
 
@@ -1377,7 +1351,7 @@ class FilePath(AbstractFilePath):
         return splitext(self.path)
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return 'FilePath(%r)' % (self.path,)
 
 
@@ -1733,33 +1707,5 @@ class FilePath(AbstractFilePath):
             destination.changed()
 
 
-    def statinfo(self, value=_SpecialNoValue):
-        """
-        FilePath.statinfo is deprecated.
 
-        @param value: value to set statinfo to, if setting a value
-        @return: C{_statinfo} if getting, L{None} if setting
-        """
-        # This is a pretty awful hack to use the deprecated decorator to
-        # deprecate a class attribute.  Ideally, there would just be a
-        # statinfo property and a statinfo property setter, but the
-        # 'deprecated' decorator does not produce the correct FQDN on class
-        # methods.  So the property stuff needs to be set outside the class
-        # definition - but the getter and setter both need the same function
-        # in order for the 'deprecated' decorator to produce the right
-        # deprecation string.
-        if value is _SpecialNoValue:
-            return self._statinfo
-        else:
-            self._statinfo = value
-
-
-# This is all a terrible hack to get statinfo deprecated
-_tmp = deprecated(
-    Version('Twisted', 15, 0, 0),
-    "other FilePath methods such as getsize(), "
-    "isdir(), getModificationTime(), etc.")(FilePath.statinfo)
-FilePath.statinfo = property(_tmp, _tmp)
-
-
-FilePath.clonePath = FilePath
+FilePath.clonePath = FilePath  # type: ignore[attr-defined]

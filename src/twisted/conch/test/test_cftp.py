@@ -7,28 +7,19 @@ Tests for L{twisted.conch.scripts.cftp}.
 """
 
 import locale
-import time, sys, os, operator, getpass, struct
+import getpass
+import operator
+import os
+import struct
+import sys
+import time
+from unittest import skipIf
 from io import BytesIO
 
 from twisted.python.filepath import FilePath
+from twisted.python.procutils import which
 from twisted.python.reflect import requireModule
 from zope.interface import implementer
-
-pyasn1 = requireModule('pyasn1')
-cryptography = requireModule('cryptography')
-unix = requireModule('twisted.conch.unix')
-
-_reason = None
-if cryptography and pyasn1:
-    try:
-        from twisted.conch.scripts import cftp
-        from twisted.conch.scripts.cftp import SSHSession
-        from twisted.conch.ssh import filetransfer
-        from twisted.conch.test.test_filetransfer import FileTransferForTestAvatar
-        from twisted.conch.test import test_ssh, test_conch
-        from twisted.conch.test.test_conch import FakeStdio
-    except ImportError:
-        pass
 
 from twisted.conch import ls
 from twisted.conch.interfaces import ISFTPFile
@@ -38,7 +29,6 @@ from twisted.cred import portal
 from twisted.internet import reactor, protocol, interfaces, defer, error
 from twisted.internet.utils import getProcessOutputAndValue, getProcessValue
 from twisted.python import log
-from twisted.python.compat import _PY3, unicode
 from twisted.python.fakepwd import UserDatabase
 from twisted.test.proto_helpers import StringTransport
 from twisted.internet.task import Clock
@@ -46,7 +36,30 @@ from twisted.trial.unittest import TestCase
 
 
 
+pyasn1 = requireModule('pyasn1')
+cryptography = requireModule('cryptography')
+unix = requireModule('twisted.conch.unix')
 
+if cryptography and pyasn1:
+    try:
+        from twisted.conch.scripts import cftp
+        from twisted.conch.scripts.cftp import SSHSession
+        from twisted.conch.ssh import filetransfer
+        from twisted.conch.test.test_filetransfer import (
+            FileTransferForTestAvatar)
+        from twisted.conch.test import test_ssh, test_conch
+        from twisted.conch.test.test_conch import FakeStdio
+    except ImportError:
+        pass
+
+skipTests = False
+if None in (unix, cryptography, pyasn1,
+            interfaces.IReactorProcess(reactor, None)):
+    skipTests = True
+
+
+
+@skipIf(skipTests, "don't run w/o spawnProcess or cryptography or pyasn1")
 class SSHSessionTests(TestCase):
     """
     Tests for L{twisted.conch.scripts.cftp.SSHSession}.
@@ -164,6 +177,21 @@ class ListingTests(TestCase):
             '!---------    0 0        0               0 Aug 29 09:33 foo')
 
 
+    # If alternate locale is not available, the next test will be
+    # skipped, please install this locale for it to run
+    currentLocale = locale.getlocale()
+    try:
+        try:
+            locale.setlocale(locale.LC_ALL, "es_AR.UTF8")
+        except locale.Error:
+            localeSkip = True
+        else:
+            localeSkip = False
+    finally:
+        locale.setlocale(locale.LC_ALL, currentLocale)
+
+
+    @skipIf(localeSkip, "The es_AR.UTF8 locale is not installed.")
     def test_localeIndependent(self):
         """
         The month name in the date is locale independent.
@@ -183,17 +211,6 @@ class ListingTests(TestCase):
         self.assertEqual(
             self._lsInTimezone('Pacific/Auckland', stat),
             '!---------    0 0        0               0 Aug 29 09:33 foo')
-
-    # If alternate locale is not available, the previous test will be
-    # skipped, please install this locale for it to run
-    currentLocale = locale.getlocale()
-    try:
-        try:
-            locale.setlocale(locale.LC_ALL, "es_AR.UTF8")
-        except locale.Error:
-            test_localeIndependent.skip = "The es_AR.UTF8 locale is not installed."
-    finally:
-        locale.setlocale(locale.LC_ALL, currentLocale)
 
 
     def test_newSingleDigitDayOfMonth(self):
@@ -216,7 +233,7 @@ class ListingTests(TestCase):
 
 
 
-class InMemorySSHChannel(StringTransport, object):
+class InMemorySSHChannel(StringTransport):
     """
     Minimal implementation of a L{SSHChannel} like class which only reads and
     writes data from memory.
@@ -233,7 +250,7 @@ class InMemorySSHChannel(StringTransport, object):
 
 
 
-class FilesystemAccessExpectations(object):
+class FilesystemAccessExpectations:
     """
     A test helper used to support expected filesystem access.
     """
@@ -274,7 +291,7 @@ class FilesystemAccessExpectations(object):
 
 
 
-class InMemorySFTPClient(object):
+class InMemorySFTPClient:
     """
     A L{filetransfer.FileTransferClient} which does filesystem operations in
     memory, without touching the local disc or the network interface.
@@ -336,6 +353,21 @@ class InMemoryRemoteFile(BytesIO):
         self._closed = True
 
 
+    def getAttrs(self):
+        # ISFTPFile.getAttrs
+        pass
+
+
+    def readChunk(self, offset, length):
+        # ISFTPFile.readChunk
+        pass
+
+
+    def setAttrs(self, attrs):
+        # ISFTPFile.getAttrs
+        pass
+
+
     def getvalue(self):
         """
         Get current data of file.
@@ -346,6 +378,7 @@ class InMemoryRemoteFile(BytesIO):
 
 
 
+@skipIf(skipTests, "don't run w/o spawnProcess or cryptography or pyasn1")
 class StdioClientTests(TestCase):
     """
     Tests for L{cftp.StdioClient}.
@@ -422,7 +455,7 @@ class StdioClientTests(TestCase):
         """
         # Local import to avoid win32 issues.
         import tty
-        class FakeFcntl(object):
+        class FakeFcntl:
             def ioctl(self, fd, opt, mutate):
                 if opt != tty.TIOCGWINSZ:
                     self.fail("Only window-size queries supported.")
@@ -451,10 +484,7 @@ class StdioClientTests(TestCase):
 
         self.client._printProgressBar(wrapper, startTime)
 
-        if _PY3:
-            result = b"\rb'sample' 40% 4.0kB 2.0kBps 00:03 "
-        else:
-            result = "\rsample 40% 4.0kB 2.0kBps 00:03 "
+        result = b"\rb'sample' 40% 4.0kB 2.0kBps 00:03 "
         self.assertEqual(self.client.transport.value(), result)
 
 
@@ -473,10 +503,7 @@ class StdioClientTests(TestCase):
 
         self.client._printProgressBar(wrapper, startTime)
 
-        if _PY3:
-            result = b"\rb'sample'  0% 0.0B 0.0Bps 00:00 "
-        else:
-            result = "\rsample  0% 0.0B 0.0Bps 00:00 "
+        result = b"\rb'sample'  0% 0.0B 0.0Bps 00:00 "
         self.assertEqual(self.client.transport.value(), result)
 
 
@@ -491,10 +518,7 @@ class StdioClientTests(TestCase):
 
         self.client._printProgressBar(wrapper, 0)
 
-        if _PY3:
-            result = b"\rb'empty-file'100% 0.0B 0.0Bps 00:00 "
-        else:
-            result = "\rempty-file100% 0.0B 0.0Bps 00:00 "
+        result = b"\rb'empty-file'100% 0.0B 0.0Bps 00:00 "
         self.assertEqual(result, self.client.transport.value())
 
 
@@ -569,8 +593,7 @@ class StdioClientTests(TestCase):
 
         """
         output = self.client.transport.value()
-        if _PY3:
-            output = output.decode("utf-8")
+        output = output.decode("utf-8")
         output = output.split('\n\r')
 
         expectedOutput = []
@@ -851,7 +874,7 @@ class SFTPTestProcess(protocol.ProcessProtocol):
         """
         self._expectingCommand = defer.Deferred()
         self.clearBuffer()
-        if isinstance(command, unicode):
+        if isinstance(command, str):
             command = command.encode("utf-8")
         self.transport.write(command + b'\n')
         return self._expectingCommand
@@ -945,6 +968,7 @@ class CFTPClientTestBase(SFTPTestBase):
 
 
 
+@skipIf(skipTests, "don't run w/o spawnProcess or cryptography or pyasn1")
 class OurServerCmdLineClientTests(CFTPClientTestBase):
     """
     Functional tests which launch a SFTP server over TCP on localhost and check
@@ -977,14 +1001,14 @@ class OurServerCmdLineClientTests(CFTPClientTestBase):
         encodedCmds = []
         encodedEnv = {}
         for cmd in cmds:
-            if isinstance(cmd, unicode):
+            if isinstance(cmd, str):
                 cmd = cmd.encode("utf-8")
             encodedCmds.append(cmd)
         for var in env:
             val = env[var]
-            if isinstance(var, unicode):
+            if isinstance(var, str):
                 var = var.encode("utf-8")
-            if isinstance(val, unicode):
+            if isinstance(val, str):
                 val = val.encode("utf-8")
             encodedEnv[var] = val
         log.msg(encodedCmds)
@@ -1042,7 +1066,7 @@ class OurServerCmdLineClientTests(CFTPClientTestBase):
             """
             cmds = []
             for cmd in output:
-                if _PY3 and isinstance(cmd, bytes):
+                if isinstance(cmd, bytes):
                     cmd = cmd.decode("utf-8")
                 cmds.append(cmd)
             return cmds[:3] + cmds[4:]
@@ -1098,7 +1122,7 @@ class OurServerCmdLineClientTests(CFTPClientTestBase):
         d = self.runCommand('?')
 
         helpText = cftp.StdioClient(None).cmd_HELP('').strip()
-        if isinstance(helpText, unicode):
+        if isinstance(helpText, str):
             helpText = helpText.encode("utf-8")
         d.addCallback(self.assertEqual, helpText)
         return d
@@ -1121,8 +1145,9 @@ class OurServerCmdLineClientTests(CFTPClientTestBase):
         # XXX - not actually a unit test
         expectedOutput = ("Transferred %s/testfile1 to %s/test file2"
                           % (self.testDir.path, self.testDir.path))
-        if isinstance(expectedOutput, unicode):
+        if isinstance(expectedOutput, str):
             expectedOutput = expectedOutput.encode("utf-8")
+
         def _checkGet(result):
             self.assertTrue(result.endswith(expectedOutput))
             self.assertFilesEqual(self.testDir.child('testfile1'),
@@ -1320,6 +1345,7 @@ class OurServerCmdLineClientTests(CFTPClientTestBase):
 
 
 
+@skipIf(skipTests, "don't run w/o spawnProcess or cryptography or pyasn1")
 class OurServerBatchFileTests(CFTPClientTestBase):
     """
     Functional tests which launch a SFTP server over localhost and checks csftp
@@ -1424,6 +1450,8 @@ exit
 
 
 
+@skipIf(skipTests, "don't run w/o spawnProcess or cryptography or pyasn1")
+@skipIf(not which('sftp'), "no sftp command-line client available")
 class OurServerSftpClientTests(CFTPClientTestBase):
     """
     Test the sftp server against sftp command line client.
@@ -1489,19 +1517,3 @@ class OurServerSftpClientTests(CFTPClientTestBase):
         d.addCallback(hasPAKT)
         d.addCallback(lambda args: getProcessOutputAndValue('sftp', args))
         return d.addCallback(check)
-
-
-
-if None in (unix, cryptography, pyasn1,
-            interfaces.IReactorProcess(reactor, None)):
-    if _reason is None:
-        _reason = "don't run w/o spawnProcess or cryptography or pyasn1"
-    OurServerCmdLineClientTests.skip = _reason
-    OurServerBatchFileTests.skip = _reason
-    OurServerSftpClientTests.skip = _reason
-    StdioClientTests.skip = _reason
-    SSHSessionTests.skip = _reason
-else:
-    from twisted.python.procutils import which
-    if not which('sftp'):
-        OurServerSftpClientTests.skip = "no sftp command-line client available"

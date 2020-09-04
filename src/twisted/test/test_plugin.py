@@ -13,23 +13,16 @@ import functools
 import os
 import sys
 import time
+from typing import Callable
 
+from importlib import invalidate_caches as invalidateImportCaches
 from zope.interface import Interface
 
 from twisted.trial import unittest
-from twisted.python.compat import _PY3, _PYPY
 from twisted.python.log import textFromEventDict, addObserver, removeObserver
 from twisted.python.filepath import FilePath
 
 from twisted import plugin
-
-if _PY3:
-    from importlib import invalidate_caches as invalidateImportCaches
-else:
-    def invalidateImportCaches():
-        """
-        On python 2, import caches don't need to be invalidated.
-        """
 
 
 
@@ -109,7 +102,7 @@ class PluginTests(unittest.TestCase):
         self.package.child('dropin.cache').remove()
 
 
-    def _withCacheness(meth):
+    def _withCacheness(meth: Callable):
         """
         This is a paranoid test wrapper, that calls C{meth} 2 times, clear the
         cache, and calls it 2 other times. It's supposed to ensure that the
@@ -127,6 +120,7 @@ class PluginTests(unittest.TestCase):
         return wrapped
 
 
+    @_withCacheness
     def test_cache(self):
         """
         Check that the cache returned by L{plugin.getCache} hold the plugin
@@ -162,8 +156,6 @@ class PluginTests(unittest.TestCase):
         import mypackage.testplugin as tp
         self.assertIs(realPlugin, tp.TestPlugin)
 
-    test_cache = _withCacheness(test_cache)
-
 
     def test_cacheRepr(self):
         """
@@ -180,6 +172,7 @@ class PluginTests(unittest.TestCase):
         )
 
 
+    @_withCacheness
     def test_plugins(self):
         """
         L{plugin.getPlugins} should return the list of plugins matching the
@@ -196,9 +189,8 @@ class PluginTests(unittest.TestCase):
             names.remove(p.__name__)
             p.test()
 
-    test_plugins = _withCacheness(test_plugins)
 
-
+    @_withCacheness
     def test_detectNewFiles(self):
         """
         Check that L{plugin.getPlugins} is able to detect plugins added at
@@ -227,9 +219,8 @@ class PluginTests(unittest.TestCase):
                 sys.modules['mypackage.pluginextra'],
                 True)
 
-    test_detectNewFiles = _withCacheness(test_detectNewFiles)
 
-
+    @_withCacheness
     def test_detectFilesChanged(self):
         """
         Check that if the content of a plugin change, L{plugin.getPlugins} is
@@ -262,9 +253,8 @@ class PluginTests(unittest.TestCase):
                 sys.modules['mypackage.pluginextra'],
                 True)
 
-    test_detectFilesChanged = _withCacheness(test_detectFilesChanged)
 
-
+    @_withCacheness
     def test_detectFilesRemoved(self):
         """
         Check that when a dropin file is removed, L{plugin.getPlugins} doesn't
@@ -283,9 +273,8 @@ class PluginTests(unittest.TestCase):
         plgs = list(plugin.getPlugins(ITestPlugin, self.module))
         self.assertEqual(1, len(plgs))
 
-    test_detectFilesRemoved = _withCacheness(test_detectFilesRemoved)
 
-
+    @_withCacheness
     def test_nonexistentPathEntry(self):
         """
         Test that getCache skips over any entries in a plugin package's
@@ -301,9 +290,8 @@ class PluginTests(unittest.TestCase):
         finally:
             self.module.__path__.remove(path)
 
-    test_nonexistentPathEntry = _withCacheness(test_nonexistentPathEntry)
 
-
+    @_withCacheness
     def test_nonDirectoryChildEntry(self):
         """
         Test that getCache skips over any entries in a plugin package's
@@ -319,8 +307,6 @@ class PluginTests(unittest.TestCase):
             self.assertEqual(len(plgs), 1)
         finally:
             self.module.__path__.remove(child)
-
-    test_nonDirectoryChildEntry = _withCacheness(test_nonDirectoryChildEntry)
 
 
     def test_deployedMode(self):
@@ -382,7 +368,7 @@ def pluginFileContents(name):
         "from twisted.test.test_plugin import ITestPlugin\n"
         "\n"
         "@provider(IPlugin, ITestPlugin)\n"
-        "class {0}(object):\n"
+        "class {0}:\n"
         "    pass\n"
     ).format(name).encode('ascii')
 
@@ -549,15 +535,11 @@ class DeveloperSetupTests(unittest.TestCase):
         os.utime(mypath.path, (x, x))
         pyc = mypath.sibling('stale.pyc')
         # compile it
-        if _PY3:
-            # On python 3, don't use the __pycache__ directory; the intention
-            # of scanning for .pyc files is for configurations where you want
-            # to intentionally include them, which means we _don't_ scan for
-            # them inside cache directories.
-            extra = dict(legacy=True)
-        else:
-            # On python 2 this option doesn't exist.
-            extra = dict()
+        # On python 3, don't use the __pycache__ directory; the intention
+        # of scanning for .pyc files is for configurations where you want
+        # to intentionally include them, which means we _don't_ scan for
+        # them inside cache directories.
+        extra = dict(legacy=True)
         compileall.compile_dir(self.appPackage.path, quiet=1, **extra)
         os.utime(pyc.path, (x, x))
         # Eliminate the other option.
@@ -571,10 +553,6 @@ class DeveloperSetupTests(unittest.TestCase):
         mypath.setContent(pluginFileContents('two'))
         self.failIfIn('one', self.getAllPlugins())
         self.assertIn('two', self.getAllPlugins())
-
-    if _PYPY and not _PY3:
-        test_freshPyReplacesStalePyc.skip = (
-            "PyPy2 will not normally import lone .pyc files.")
 
 
     def test_newPluginsOnReadOnlyPath(self):

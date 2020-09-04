@@ -14,7 +14,8 @@ import os
 from time import time as _uniquefloat
 
 from twisted.python.runtime import platform
-from twisted.python.compat import _PY3
+
+
 
 def unique():
     return str(int(_uniquefloat() * 1000))
@@ -44,12 +45,14 @@ else:
         from win32api import OpenProcess
         import pywintypes
     except ImportError:
-        kill = None
+        kill = None  # type: ignore[assignment,misc]
     else:
         ERROR_ACCESS_DENIED = 5
         ERROR_INVALID_PARAMETER = 87
 
-        def kill(pid, signal):
+        # typing ignored due to:
+        # https://github.com/python/typeshed/issues/4249
+        def kill(pid, signal):  # type: ignore[misc]
             try:
                 OpenProcess(0, 0, pid)
             except pywintypes.error as e:
@@ -65,7 +68,9 @@ else:
     _open = open
 
 
-    def symlink(value, filename):
+    # typing ignored due to:
+    # https://github.com/python/typeshed/issues/4249
+    def symlink(value, filename):  # type: ignore[misc]
         """
         Write a file at C{filename} with the contents of C{value}. See the
         above comment block as to why this is needed.
@@ -77,10 +82,7 @@ else:
 
         # Python 3 does not support the 'commit' flag of fopen in the MSVCRT
         # (http://msdn.microsoft.com/en-us/library/yeby3zcb%28VS.71%29.aspx)
-        if _PY3:
-            mode = 'w'
-        else:
-            mode = 'wc'
+        mode = 'w'
 
         with _open(newvalname, mode) as f:
             f.write(value)
@@ -94,7 +96,9 @@ else:
             raise
 
 
-    def readlink(filename):
+    # typing ignored due to:
+    # https://github.com/python/typeshed/issues/4249
+    def readlink(filename):  # type: ignore[misc]
         """
         Read the contents of C{filename}. See the above comment block as to why
         this is needed.
@@ -111,13 +115,15 @@ else:
             return result
 
 
-    def rmlink(filename):
+    # typing ignored due to:
+    # https://github.com/python/typeshed/issues/4249
+    def rmlink(filename):  # type: ignore[misc]
         os.remove(os.path.join(filename, 'symlink'))
         os.rmdir(filename)
 
 
 
-class FilesystemLock(object):
+class FilesystemLock:
     """
     A mutex.
 

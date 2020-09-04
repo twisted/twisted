@@ -16,7 +16,6 @@ from twisted.internet.tcp import (
     _SocketCloser, Connector as TCPConnector, _AbortingMixin, _BaseBaseClient,
     _BaseTCPClient, _resolveIPv6, _getsockname)
 from twisted.python import log, failure, reflect
-from twisted.python.compat import _PY3, nativeString
 
 from twisted.internet.iocpreactor import iocpsupport as _iocp, abstract
 from twisted.internet.iocpreactor.interfaces import IReadWriteHandle
@@ -27,15 +26,20 @@ from twisted.internet.iocpreactor.const import ERROR_CONNECTION_REFUSED
 from twisted.internet.iocpreactor.const import ERROR_NETWORK_UNREACHABLE
 
 try:
-    from twisted.internet._newtls import startTLS as _startTLS
+    from twisted.internet._newtls import startTLS as __startTLS
 except ImportError:
     _startTLS = None
+else:
+    _startTLS = __startTLS
+
 
 # ConnectEx returns these. XXX: find out what it does for timeout
 connectExErrors = {
-        ERROR_CONNECTION_REFUSED: errno.WSAECONNREFUSED,
-        ERROR_NETWORK_UNREACHABLE: errno.WSAENETUNREACH,
+        ERROR_CONNECTION_REFUSED: errno.WSAECONNREFUSED,  # type: ignore[attr-defined]  # noqa
+        ERROR_NETWORK_UNREACHABLE: errno.WSAENETUNREACH,  # type: ignore[attr-defined]  # noqa
         }
+
+
 
 @implementer(IReadWriteHandle, interfaces.ITCPTransport,
              interfaces.ISystemHandle)
@@ -237,6 +241,18 @@ class Connection(abstract.FileHandle, _SocketCloser, _AbortingMixin):
         else:
             abstract.FileHandle.unregisterProducer(self)
 
+
+    def getHost(self):
+        # ITCPTransport.getHost
+        pass
+
+
+    def getPeer(self):
+        # ITCPTransport.getPeer
+        pass
+
+
+
 if _startTLS is not None:
     classImplements(Connection, interfaces.ITLSTransport)
 
@@ -369,7 +385,7 @@ class Server(Connection):
         self.startReading()
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """
         A string representation of this connection.
         """
@@ -434,7 +450,7 @@ class Port(_SocketCloser, _LogOwner):
             self._addressType = address.IPv6Address
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         if self._realPortNumber is not None:
             return "<%s of %s on %s>" % (self.__class__,
                                          self.factory.__class__,
@@ -570,14 +586,6 @@ class Port(_SocketCloser, _LogOwner):
                 struct.pack('P', self.socket.fileno()))
             family, lAddr, rAddr = _iocp.get_accept_addrs(evt.newskt.fileno(),
                                                           evt.buff)
-            if not _PY3:
-                # In _makesockaddr(), we use the Win32 API which
-                # gives us an address of the form: (unicode host, port).
-                # Only on Python 2 do we need to convert it to a
-                # non-unicode str.
-                # On Python 3, we leave it alone as unicode.
-                lAddr = (nativeString(lAddr[0]), lAddr[1])
-                rAddr = (nativeString(rAddr[0]), rAddr[1])
             assert family == self.addressFamily
 
             # Build an IPv6 address that includes the scopeID, if necessary

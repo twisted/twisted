@@ -6,7 +6,6 @@ Tests for L{twisted.words.protocols.jabber.error}.
 """
 
 
-from twisted.python.compat import unicode
 from twisted.trial import unittest
 
 from twisted.words.protocols.jabber import error
@@ -35,7 +34,7 @@ class BaseErrorTests(unittest.TestCase):
         e = error.BaseError('feature-not-implemented', u'text')
         element = e.getElement()
         self.assertEqual(len(element.children), 2)
-        self.assertEqual(unicode(element.text), 'text')
+        self.assertEqual(str(element.text), 'text')
         self.assertEqual(element.text.getAttribute((NS_XML, 'lang')), None)
 
     def test_getElementTextLang(self):
@@ -45,7 +44,7 @@ class BaseErrorTests(unittest.TestCase):
         e = error.BaseError('feature-not-implemented', u'text', 'en_US')
         element = e.getElement()
         self.assertEqual(len(element.children), 2)
-        self.assertEqual(unicode(element.text), 'text')
+        self.assertEqual(str(element.text), 'text')
         self.assertEqual(element.text[(NS_XML, 'lang')], 'en_US')
 
     def test_getElementAppCondition(self):

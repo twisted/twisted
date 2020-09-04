@@ -32,8 +32,10 @@ Maintainer: Ralph Meijer
 """
 
 
+from sys import intern
+from typing import Type
+
 from twisted.python import failure
-from twisted.python.compat import intern, unicode
 from twisted.internet import protocol
 from twisted.words.xish import domish, utility
 
@@ -157,7 +159,7 @@ class XmlStream(protocol.Protocol, utility.EventDispatcher):
         if domish.IElement.providedBy(obj):
             obj = obj.toXml()
 
-        if isinstance(obj, unicode):
+        if isinstance(obj, str):
             obj = obj.encode('utf-8')
 
         if self.rawDataOutFn:
@@ -167,7 +169,7 @@ class XmlStream(protocol.Protocol, utility.EventDispatcher):
 
 
 
-class BootstrapMixin(object):
+class BootstrapMixin:
     """
     XmlStream factory mixin to install bootstrap event observers.
 
@@ -263,7 +265,7 @@ class XmlStreamFactory(XmlStreamFactoryMixin,
     Factory for XmlStream protocol objects as a reconnection client.
     """
 
-    protocol = XmlStream
+    protocol = XmlStream  # type: Type[protocol.Protocol]
 
     def buildProtocol(self, addr):
         """

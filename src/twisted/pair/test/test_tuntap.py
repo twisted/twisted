@@ -15,7 +15,6 @@ from collections import deque
 from itertools import cycle
 from signal import SIGINT
 
-from twisted.python.compat import intToBytes, _PY3
 from twisted.python.reflect import ObjectNotFound, namedAny
 
 try:
@@ -23,7 +22,7 @@ try:
 except (ObjectNotFound, AttributeError):
     platformSkip = "Platform is missing fcntl/ioctl support"
 else:
-    platformSkip = None
+    platformSkip = ""
 
 from zope.interface import Interface, implementer
 from zope.interface.verify import verifyObject
@@ -53,7 +52,7 @@ _RealSystem = object
 _IInputOutputSystem = Interface
 
 
-if platformSkip is None:
+if not platformSkip:
     from twisted.pair.testing import (
         _PI_SIZE, Tunnel, MemoryIOSystem, _IPv4, _H, _ethernet, _ip, _udp)
 
@@ -66,7 +65,7 @@ else:
 
 
 @implementer(IReactorFDSet)
-class ReactorFDSet(object):
+class ReactorFDSet:
     """
     An implementation of L{IReactorFDSet} which only keeps track of which
     descriptors have been registered for reading and writing.
@@ -124,7 +123,7 @@ class FSSetClock(Clock, ReactorFDSet):
 
 
 
-class TunHelper(object):
+class TunHelper:
     """
     A helper for tests of tun-related functionality (ip-level tunnels).
     """
@@ -206,7 +205,7 @@ class TunHelper(object):
 
 
 
-class TapHelper(object):
+class TapHelper:
     """
     A helper for tests of tap-related functionality (ethernet-level tunnels).
     """
@@ -327,7 +326,7 @@ class TunnelTests(SynchronousTestCase):
 
 
 
-class TunnelDeviceTestsMixin(object):
+class TunnelDeviceTestsMixin:
     """
     A mixin defining tests that apply to L{_IInputOutputSystem}
     implementations.
@@ -441,7 +440,7 @@ class TunnelDeviceTestsMixin(object):
         # guarantees for UDP - not even over localhost.
         for i in range(100):
             key = randrange(2 ** 64)
-            message = b"hello world:" + intToBytes(key)
+            message = b"hello world:%d" % (key,)
             source = self.system.sendUDP(message, (self._TUNNEL_REMOTE, 12345))
 
             # Likewise try receiving each of those datagrams a lot of times.
@@ -475,7 +474,7 @@ class TunnelDeviceTestsMixin(object):
         # Construct a unique application payload so the receiving side can
         # unambiguously identify the datagram we sent.
         key = randrange(2 ** 64)
-        message = b"hello world:" + intToBytes(key)
+        message = b"hello world:%d" % (key,)
 
         # To avoid really inconvenient test failures where the test just hangs
         # forever, set up a timeout for blocking socket operations.  This
@@ -507,7 +506,7 @@ class TunnelDeviceTestsMixin(object):
 
 
 
-class FakeDeviceTestsMixin(object):
+class FakeDeviceTestsMixin:
     """
     Define a mixin for use with test cases that require an
     L{_IInputOutputSystem} provider.  This mixin hands out L{MemoryIOSystem}
@@ -537,9 +536,12 @@ class FakeTapDeviceTests(FakeDeviceTestsMixin,
     """
     Run various tap-type tunnel unit tests against an in-memory I/O system.
     """
-FakeTapDeviceTests.helper = TapHelper(
+
+
+
+setattr(FakeTapDeviceTests, "helper", TapHelper(
     FakeTapDeviceTests._TUNNEL_REMOTE, FakeTapDeviceTests._TUNNEL_LOCAL,
-    pi=False)
+    pi=False))
 
 
 
@@ -549,9 +551,12 @@ class FakeTapDeviceWithPITests(FakeDeviceTestsMixin,
     Run various tap-type tunnel unit tests against an in-memory I/O system with
     the PI header enabled.
     """
-FakeTapDeviceWithPITests.helper = TapHelper(
+
+
+
+setattr(FakeTapDeviceWithPITests, "helper", TapHelper(
     FakeTapDeviceTests._TUNNEL_REMOTE, FakeTapDeviceTests._TUNNEL_LOCAL,
-    pi=True)
+    pi=True))
 
 
 
@@ -560,8 +565,11 @@ class FakeTunDeviceTests(FakeDeviceTestsMixin,
     """
     Run various tun-type tunnel unit tests against an in-memory I/O system.
     """
-FakeTunDeviceTests.helper = TunHelper(
-    FakeTunDeviceTests._TUNNEL_REMOTE, FakeTunDeviceTests._TUNNEL_LOCAL)
+
+
+
+setattr(FakeTunDeviceTests, "helper", TunHelper(
+    FakeTunDeviceTests._TUNNEL_REMOTE, FakeTunDeviceTests._TUNNEL_LOCAL))
 
 
 
@@ -646,7 +654,7 @@ class TestRealSystem(_RealSystem):
 
 
 
-class RealDeviceTestsMixin(object):
+class RealDeviceTestsMixin:
     """
     Define a mixin for use with test cases that require an
     L{_IInputOutputSystem} provider.  This mixin hands out L{TestRealSystem}
@@ -725,7 +733,7 @@ class TuntapPortTests(SynchronousTestCase):
 
 
 
-class TunnelTestsMixin(object):
+class TunnelTestsMixin:
     """
     A mixin defining tests for L{TuntapPort}.
 
@@ -1144,20 +1152,13 @@ class TunnelTestsMixin(object):
         tunnel type and interface and the protocol associated with the port.
         """
         self.port.startListening()
-        if _PY3:
-            self.assertRegex(str(self.port),
-                             fullyQualifiedName(self.protocol.__class__))
+        self.assertRegex(str(self.port),
+                         fullyQualifiedName(self.protocol.__class__))
 
-            expected = " listening on %s/%s>" % (
-                self._tunnelTypeOnly(self.helper.TUNNEL_TYPE).name,
-                self.system.getTunnel(self.port).name)
-            self.assertTrue(str(self.port).find(expected) != -1)
-        else:
-            expected = "<%s listening on %s/%s>" % (
-                fullyQualifiedName(self.protocol.__class__),
-                self._tunnelTypeOnly(self.helper.TUNNEL_TYPE).name,
-                self.system.getTunnel(self.port).name)
-            self.assertEqual(expected, str(self.port))
+        expected = " listening on %s/%s>" % (
+            self._tunnelTypeOnly(self.helper.TUNNEL_TYPE).name,
+            self.system.getTunnel(self.port).name)
+        self.assertTrue(str(self.port).find(expected) != -1)
 
 
     def test_unlisteningString(self):
@@ -1165,19 +1166,13 @@ class TunnelTestsMixin(object):
         The string representation of a L{TuntapPort} instance includes the
         tunnel type and interface and the protocol associated with the port.
         """
-        if _PY3:
-            self.assertRegex(str(self.port),
-                             fullyQualifiedName(self.protocol.__class__))
+        self.assertRegex(str(self.port),
+                         fullyQualifiedName(self.protocol.__class__))
 
-            expected = " not listening on %s/%s>" % (
-                self._tunnelTypeOnly(self.helper.TUNNEL_TYPE).name,
-                self.name)
-            self.assertTrue(str(self.port).find(expected) != -1)
-        else:
-            expected = "<%s not listening on %s/%s>" % (
-                fullyQualifiedName(self.protocol.__class__),
-                self._tunnelTypeOnly(self.helper.TUNNEL_TYPE).name, self.name)
-            self.assertEqual(expected, str(self.port))
+        expected = " not listening on %s/%s>" % (
+            self._tunnelTypeOnly(self.helper.TUNNEL_TYPE).name,
+            self.name)
+        self.assertTrue(str(self.port).find(expected) != -1)
 
 
     def test_logPrefix(self):
@@ -1230,14 +1225,9 @@ class TunnelAddressTests(SynchronousTestCase):
         The string representation of a L{TunnelAddress} instance includes the
         class name and the values of the C{type} and C{name} attributes.
         """
-        if _PY3:
-            self.assertRegex(
-                repr(TunnelAddress(TunnelFlags.IFF_TUN, name=b"device")),
-                "TunnelAddress type=IFF_TUN name=b'device'>")
-        else:
-            self.assertEqual(
-                "<TunnelAddress type=IFF_TUN name='device'>",
-                repr(TunnelAddress(TunnelFlags.IFF_TUN, name=b"device")))
+        self.assertRegex(
+            repr(TunnelAddress(TunnelFlags.IFF_TUN, name=b"device")),
+            "TunnelAddress type=IFF_TUN name=b'device'>")
 
 
 
@@ -1349,8 +1339,14 @@ class IPRecordingProtocol(AbstractDatagramProtocol):
         self.received = []
 
 
-    def datagramReceived(self, datagram, partial=False):
+    def datagramReceived(self, datagram, partial=False, dest=None, source=None,
+                         protocol=None):
         self.received.append(datagram)
+
+
+    def addProto(self, num, proto):
+        # IRawPacketProtocol.addProto
+        pass
 
 
 
@@ -1387,7 +1383,7 @@ class TapTests(TunnelTestsMixin, SynchronousTestCase):
 
 
 
-class IOSystemTestsMixin(object):
+class IOSystemTestsMixin:
     """
     Tests that apply to any L{_IInputOutputSystem} implementation.
     """

@@ -21,6 +21,7 @@ import attr
 import traceback
 import types
 import warnings
+from asyncio import iscoroutine
 from sys import exc_info, version_info
 from functools import wraps
 from incremental import Version
@@ -42,8 +43,9 @@ except ImportError:
         def run(f, *args, **kwargs):
             return f(*args, **kwargs)
 
-
-    def _copy_context():
+    # typing ignored due to:
+    # https://github.com/python/typeshed/issues/4249
+    def _copy_context():  # type: ignore[misc]
         return _NoContext
 
 log = Logger()
@@ -725,7 +727,7 @@ class Deferred:
                 chain.pop()
 
 
-    def __str__(self):
+    def __str__(self) -> str:
         """
         Return a string representation of this C{Deferred}.
         """
@@ -916,13 +918,9 @@ def ensureDeferred(coro):
 
     @rtype: L{Deferred}
     """
-    from types import GeneratorType
 
-    if version_info >= (3, 4, 0):
-        from asyncio import iscoroutine
-
-        if iscoroutine(coro) or isinstance(coro, GeneratorType):
-            return _cancellableInlineCallbacks(coro)
+    if iscoroutine(coro) or isinstance(coro, types.GeneratorType):
+        return _cancellableInlineCallbacks(coro)
 
     if not isinstance(coro, Deferred):
         raise ValueError("%r is not a coroutine or a Deferred" % (coro,))
@@ -995,7 +993,7 @@ class FirstError(Exception):
         self.index = index
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """
         The I{repr} of L{FirstError} instances includes the repr of the
         wrapped failure's exception and the index of the L{FirstError}.
@@ -1003,7 +1001,7 @@ class FirstError(Exception):
         return 'FirstError[#%d, %r]' % (self.index, self.subFailure.value)
 
 
-    def __str__(self):
+    def __str__(self) -> str:
         """
         The I{str} of L{FirstError} instances includes the I{str} of the
         entire wrapped failure (including its traceback and exception) and
@@ -1375,7 +1373,7 @@ def returnValue(val):
 
 
 @attr.s
-class _CancellationStatus(object):
+class _CancellationStatus:
     """
     Cancellation status of an L{inlineCallbacks} invocation.
 
@@ -1537,7 +1535,7 @@ def _cancellableInlineCallbacks(g):
 
         @param result: An L{_InternalInlineCallbacksCancelledError} from
             C{cancel()}.
-        @return: A new L{Deferred} that the C{@}L{inlineCallback} generator
+        @return: A new L{Deferred} that the C{@}L{inlineCallbacks} generator
             can callback or errback through.
         """
         result.trap(_InternalInlineCallbacksCancelledError)
@@ -1637,7 +1635,7 @@ def inlineCallbacks(f):
 
 ## DeferredLock/DeferredQueue
 
-class _ConcurrencyPrimitive(object):
+class _ConcurrencyPrimitive:
     def __init__(self):
         self.waiting = []
 
@@ -1843,7 +1841,7 @@ class QueueUnderflow(Exception):
 
 
 
-class DeferredQueue(object):
+class DeferredQueue:
     """
     An event driven queue.
 

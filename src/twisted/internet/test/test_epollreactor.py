@@ -5,18 +5,22 @@
 Tests for L{twisted.internet.epollreactor}.
 """
 
+from unittest import skipIf
 
 from twisted.trial.unittest import TestCase
-try:
-    from twisted.internet.epollreactor import _ContinuousPolling
-except ImportError:
-    _ContinuousPolling = None
+from twisted.internet.posixbase import _ContinuousPolling
 from twisted.internet.task import Clock
 from twisted.internet.error import ConnectionDone
 
 
+try:
+    from twisted.internet import epollreactor
+except ImportError:
+    epollreactor = None  # type: ignore[assignment,misc]
 
-class Descriptor(object):
+
+
+class Descriptor:
     """
     Records reads and writes, as if it were a C{FileDescriptor}.
     """
@@ -43,6 +47,7 @@ class Descriptor(object):
 
 
 
+@skipIf(not epollreactor, "epoll not supported in this environment.")
 class ContinuousPollingTests(TestCase):
     """
     L{_ContinuousPolling} can be used to read and write from C{FileDescriptor}
@@ -242,6 +247,3 @@ class ContinuousPollingTests(TestCase):
         writer = object()
         poller.addWriter(writer)
         self.assertIn(writer, poller.getWriters())
-
-    if _ContinuousPolling is None:
-        skip = "epoll not supported in this environment."

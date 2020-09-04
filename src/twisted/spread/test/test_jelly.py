@@ -8,14 +8,15 @@ Test cases for L{jelly} object serialization.
 
 import datetime
 import decimal
+from unittest import skipIf
 
-from twisted.python.compat import unicode
-from twisted.spread import jelly, pb
+from twisted.spread import banana, jelly, pb
 from twisted.trial import unittest
+from twisted.trial.unittest import TestCase
 from twisted.test.proto_helpers import StringTransport
 
 
-class TestNode(jelly.Jellyable, object):
+class TestNode(jelly.Jellyable):
     """
     An object to test jellyfying of new style class instances.
     """
@@ -75,14 +76,14 @@ class C:
 
 
 
-class D(object):
+class D:
     """
     Dummy new-style class.
     """
 
 
 
-class E(object):
+class E:
     """
     Dummy new-style class with slots.
     """
@@ -114,7 +115,20 @@ class SimpleJellyTest:
 
 
 
-class JellyTests(unittest.TestCase):
+def jellyRoundTrip(testCase, toSerialize):
+    """
+    Verify that the given object round-trips through jelly & banana and comes
+    out equivalent to the input.
+    """
+    jellied = jelly.jelly(toSerialize)
+    encoded = banana.encode(jellied)
+    decoded = banana.decode(encoded)
+    unjellied = jelly.unjelly(decoded)
+    testCase.assertEqual(toSerialize, unjellied)
+
+
+
+class JellyTests(TestCase):
     """
     Testcases for L{jelly} module serialization.
 
@@ -193,16 +207,6 @@ class JellyTests(unittest.TestCase):
         self.assertEqual(n.x, 1)
 
 
-    def test_typeOldStyle(self):
-        """
-        Test that an old style class type can be jellied and unjellied
-        to the original type.
-        """
-        t = [C]
-        r = jelly.unjelly(jelly.jelly(t))
-        self.assertEqual(t, r)
-
-
     def test_typeNewStyle(self):
         """
         Test that a new style class type can be jellied and unjellied
@@ -236,6 +240,22 @@ class JellyTests(unittest.TestCase):
         output = jelly.unjelly(c)
         self.assertEqual(inputList, output)
         self.assertIsNot(inputList, output)
+
+
+    def test_bananaTimeTypes(self):
+        """
+        Jellying L{datetime.time}, L{datetime.timedelta}, L{datetime.datetime},
+        and L{datetime.date} objects should result in jellied objects which can
+        be serialized and unserialized with banana.
+        """
+        sampleDate = datetime.date(2020, 7, 11)
+        sampleTime = datetime.time(1, 16, 5, 344)
+        sampleDateTime = datetime.datetime.combine(sampleDate, sampleTime)
+        sampleTimeDelta = sampleDateTime - datetime.datetime(2020, 7, 3)
+        jellyRoundTrip(self, sampleDate)
+        jellyRoundTrip(self, sampleTime)
+        jellyRoundTrip(self, sampleDateTime)
+        jellyRoundTrip(self, sampleTimeDelta)
 
 
     def test_decimal(self):
@@ -328,6 +348,7 @@ class JellyTests(unittest.TestCase):
         self._testSecurity(inputList, b"frozenset")
 
 
+    @skipIf(not jelly._sets, "sets.Set is gone in Python 3 and higher")
     def test_oldSets(self):
         """
         Test jellying C{sets.Set}: it should serialize to the same thing as
@@ -344,10 +365,9 @@ class JellyTests(unittest.TestCase):
         else:
             self.assertIsInstance(output[0], set)
 
-    if not jelly._sets:
-        test_oldSets.skip = "sets.Set is gone in Python 3 and higher"
 
-
+    @skipIf(not jelly._sets, "sets.ImmutableSets is gone in Python 3 "
+                             "and higher")
     def test_oldImmutableSets(self):
         """
         Test jellying C{sets.ImmutableSet}: it should serialize to the same
@@ -364,10 +384,6 @@ class JellyTests(unittest.TestCase):
             self.assertIsInstance(output[0], jelly._sets.ImmutableSet)
         else:
             self.assertIsInstance(output[0], frozenset)
-
-    if not jelly._sets:
-        test_oldImmutableSets.skip = (
-            "sets.ImmutableSets is gone in Python 3 and higher")
 
 
     def test_simple(self):
@@ -398,8 +414,8 @@ class JellyTests(unittest.TestCase):
         self.assertIs(z[0][0], z)
 
 
-    def test_unicode(self):
-        x = unicode('blah')
+    def test_str(self):
+        x = str('blah')
         y = jelly.unjelly(jelly.jelly(x))
         self.assertEqual(x, y)
         self.assertEqual(type(x), type(y))
@@ -583,7 +599,7 @@ class JellyTests(unittest.TestCase):
 
 
 
-class JellyDeprecationTests(unittest.TestCase):
+class JellyDeprecationTests(TestCase):
     """
     Tests for deprecated Jelly things
     """
@@ -636,7 +652,7 @@ class ClassB(pb.Copyable, pb.RemoteCopy):
 
 
 
-class CircularReferenceTests(unittest.TestCase):
+class CircularReferenceTests(TestCase):
     """
     Tests for circular references handling in the jelly/unjelly process.
     """

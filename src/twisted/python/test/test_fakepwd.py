@@ -8,12 +8,12 @@ Tests for L{twisted.python.fakepwd}.
 try:
     import pwd
 except ImportError:
-    pwd = None
+    pwd = None  # type: ignore[assignment]
 
 try:
     import spwd
 except ImportError:
-    spwd = None
+    spwd = None  # type: ignore[assignment]
 
 import os
 from operator import getitem
@@ -51,7 +51,7 @@ INVALID_UID = findInvalidUID()
 
 
 
-class UserDatabaseTestsMixin(object):
+class UserDatabaseTestsMixin:
     """
     L{UserDatabaseTestsMixin} defines tests which apply to any user database
     implementation.  Subclasses should mix it in, implement C{setUp} to create
@@ -244,7 +244,7 @@ class PwdModuleTests(TestCase, UserDatabaseTestsMixin):
 
 
 
-class ShadowDatabaseTestsMixin(object):
+class ShadowDatabaseTestsMixin:
     """
     L{ShadowDatabaseTestsMixin} defines tests which apply to any shadow user
     database implementation.  Subclasses should mix it in, implement C{setUp} to

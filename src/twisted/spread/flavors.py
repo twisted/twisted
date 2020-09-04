@@ -27,7 +27,7 @@ import sys
 from zope.interface import implementer, Interface
 
 from twisted.python import log, reflect
-from twisted.python.compat import _PY3, unicode, comparable, cmp
+from twisted.python.compat import comparable, cmp
 from .jelly import (
     setUnjellyableForClass, setUnjellyableForClassTree,
     setUnjellyableFactoryForClass, unjellyableRegistry, Jellyable, Unjellyable,
@@ -396,9 +396,8 @@ class RemoteCopy(Unjellyable):
         object's dictionary (or a filtered approximation of it depending
         on my peer's perspective).
         """
-        if _PY3:
-            state = {x.decode('utf8') if isinstance(x, bytes)
-                     else x:y for x,y in state.items()}
+        state = {x.decode('utf8') if isinstance(x, bytes)
+                 else x: y for x, y in state.items()}
         self.__dict__ = state
 
     def unjellyFor(self, unjellier, jellyList):
@@ -604,7 +603,7 @@ class RemoteCacheObserver:
         self.cached = cached
         self.perspective = perspective
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "<RemoteCacheObserver(%s, %s, %s) at %s>" % (
             self.broker, self.cached, self.perspective, id(self))
 
@@ -626,7 +625,7 @@ class RemoteCacheObserver:
         """(internal) action method.
         """
         cacheID = self.broker.cachedRemotelyAs(self.cached)
-        if isinstance(_name, unicode):
+        if isinstance(_name, str):
             _name = _name.encode("utf-8")
         if cacheID is None:
             from pb import ProtocolError

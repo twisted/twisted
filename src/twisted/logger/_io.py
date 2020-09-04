@@ -12,7 +12,7 @@ from ._levels import LogLevel
 
 
 
-class LoggingFile(object):
+class LoggingFile:
     """
     File-like object that turns C{write()} calls into logging events.
 

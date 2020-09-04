@@ -26,7 +26,6 @@ from zope.interface import implementer
 
 from twisted.python import log, failure
 from twisted.python.util import switchUID
-from twisted.python.compat import items, range, _PY3
 from twisted.internet import fdesc, abstract, error
 from twisted.internet.main import CONNECTION_LOST, CONNECTION_DONE
 from twisted.internet._baseprocess import BaseProcess
@@ -284,7 +283,7 @@ class ProcessReader(abstract.FileDescriptor):
 
 
 
-class _BaseProcess(BaseProcess, object):
+class _BaseProcess(BaseProcess):
     """
     Base class for Process and PTYProcess.
     """
@@ -423,31 +422,27 @@ class _BaseProcess(BaseProcess, object):
                     # write(2, err) is a useful thing to attempt.
 
                     try:
-                        stderr = os.fdopen(2, 'wb')
+                        # On Python 3, print_exc takes a text stream, but
+                        # on Python 2 it still takes a byte stream.  So on
+                        # Python 3 we will wrap up the byte stream returned
+                        # by os.fdopen using TextIOWrapper.
+
+                        # We hard-code UTF-8 as the encoding here, rather
+                        # than looking at something like
+                        # getfilesystemencoding() or sys.stderr.encoding,
+                        # because we want an encoding that will be able to
+                        # encode the full range of code points.  We are
+                        # (most likely) talking to the parent process on
+                        # the other end of this pipe and not the filesystem
+                        # or the original sys.stderr, so there's no point
+                        # in trying to match the encoding of one of those
+                        # objects.
+
+                        stderr = io.TextIOWrapper(os.fdopen(2, 'wb'),
+                                                  encoding="utf-8")
                         msg = ("Upon execvpe {0} {1} in environment id {2}"
                                "\n:").format(executable, str(args),
                                              id(environment))
-
-                        if _PY3:
-
-                            # On Python 3, print_exc takes a text stream, but
-                            # on Python 2 it still takes a byte stream.  So on
-                            # Python 3 we will wrap up the byte stream returned
-                            # by os.fdopen using TextIOWrapper.
-
-                            # We hard-code UTF-8 as the encoding here, rather
-                            # than looking at something like
-                            # getfilesystemencoding() or sys.stderr.encoding,
-                            # because we want an encoding that will be able to
-                            # encode the full range of code points.  We are
-                            # (most likely) talking to the parent process on
-                            # the other end of this pipe and not the filesystem
-                            # or the original sys.stderr, so there's no point
-                            # in trying to match the encoding of one of those
-                            # objects.
-
-                            stderr = io.TextIOWrapper(stderr, encoding="utf-8")
-
                         stderr.write(msg)
                         traceback.print_exc(file=stderr)
                         stderr.flush()
@@ -494,7 +489,7 @@ class _BaseProcess(BaseProcess, object):
         os.execvpe(executable, args, environment)
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """
         String representation of a process.
         """
@@ -503,7 +498,7 @@ class _BaseProcess(BaseProcess, object):
 
 
 
-class _FDDetector(object):
+class _FDDetector:
     """
     This class contains the logic necessary to decide which of the available
     system techniques should be used to detect the open file descriptors for
@@ -690,10 +685,11 @@ class Process(_BaseProcess):
             return r, w
 
         # fdmap.keys() are filenos of pipes that are used by the child.
-        fdmap = {} # maps childFD to parentFD
+        fdmap = {}  # maps childFD to parentFD
         try:
-            for childFD, target in items(childFDs):
-                if debug: print("[%d]" % childFD, target)
+            for childFD, target in childFDs.items():
+                if debug:
+                    print("[%d]" % childFD, target)
                 if target == "r":
                     # we need a pipe that the parent can read from
                     readFD, writeFD = pipe()
@@ -723,7 +719,7 @@ class Process(_BaseProcess):
         self.proto = proto
 
         # arrange for the parent-side pipes to be read and written
-        for childFD, parentFD in items(helpers):
+        for childFD, parentFD in helpers.items():
             os.close(fdmap[childFD])
             if childFDs[childFD] == "r":
                 reader = self.processReaderFactory(reactor, self, childFD,
@@ -811,15 +807,17 @@ class Process(_BaseProcess):
                     # we can't replace child-fd yet, as some other mapping
                     # still needs the fd it wants to target. We must preserve
                     # that old fd by duping it to a new home.
-                    newtarget = os.dup(child) # give it a safe home
-                    if debug: print("os.dup(%d) -> %d" % (child, newtarget),
-                                    file=errfd)
-                    os.close(child) # close the original
-                    for c, p in items(fdmap):
+                    newtarget = os.dup(child)  # give it a safe home
+                    if debug:
+                        print("os.dup(%d) -> %d" % (child, newtarget),
+                              file=errfd)
+                    os.close(child)  # close the original
+                    for c, p in list(fdmap.items()):
                         if p == child:
-                            fdmap[c] = newtarget # update all pointers
+                            fdmap[c] = newtarget  # update all pointers
                 # now it should be available
-                if debug: print("os.dup2(%d,%d)" % (target, child), file=errfd)
+                if debug:
+                    print("os.dup2(%d,%d)" % (target, child), file=errfd)
                 os.dup2(target, child)
 
         # At this point, the child has everything it needs. We want to close
@@ -956,6 +954,16 @@ class Process(_BaseProcess):
             self.reapProcess()
             return
         _BaseProcess.maybeCallProcessEnded(self)
+
+
+    def getHost(self):
+        # ITransport.getHost
+        raise NotImplementedError()
+
+
+    def getPeer(self):
+        # ITransport.getPeer
+        raise NotImplementedError()
 
 
 
@@ -1122,3 +1130,13 @@ class PTYProcess(abstract.FileDescriptor, _BaseProcess):
         Write some data to the open process.
         """
         return fdesc.writeToFD(self.fd, data)
+
+
+    def closeChildFD(self, descriptor):
+        # IProcessTransport
+        raise NotImplementedError()
+
+
+    def writeToChild(self, childFD, data):
+        # IProcessTransport
+        raise NotImplementedError()

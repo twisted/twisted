@@ -18,7 +18,6 @@ from twisted.internet.protocol import (
     Protocol, ClientCreator, Factory, ProtocolToConsumerAdapter,
     ConsumerToProtocolAdapter, FileWrapper)
 from twisted.logger import LogLevel, globalLogPublisher
-from twisted.python.compat import _PY3
 from twisted.python.failure import Failure
 from twisted.test.proto_helpers import MemoryReactorClock, StringTransport
 from twisted.trial.unittest import TestCase
@@ -463,7 +462,7 @@ class AdapterTests(TestCase):
         """
         result = []
         @implementer(IConsumer)
-        class Consumer(object):
+        class Consumer:
             def write(self, d):
                 result.append(d)
 
@@ -505,15 +504,7 @@ class FileWrapperTests(TestCase):
         self.assertEqual(wrapper.file.getvalue(), b"test1test2")
 
         wrapper = FileWrapper(BytesIO())
-        if _PY3:
-            # In Python 3, b"".join([u"a", u"b"]) will raise a TypeError
-            self.assertRaises(TypeError,
-                              wrapper.writeSequence,
-                              [u"test3", u"test4"])
-        else:
-            # In Python 2, b"".join([u"a", u"b"])
-            # will give u"ab", but writing unicode to BytesIO
-            # will throw an exception which will be caught
-            # and ignored by FileWrapper.handle_exception()
-            wrapper.writeSequence([u"test3", u"test4"])
-            self.assertTrue(len(wrapper.file.getvalue()) == 0)
+        # In Python 3, b"".join([u"a", u"b"]) will raise a TypeError
+        self.assertRaises(TypeError,
+                          wrapper.writeSequence,
+                          [u"test3", u"test4"])

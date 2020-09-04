@@ -14,13 +14,13 @@ from twisted.internet import udp
 from twisted.python.runtime import platformType
 
 if platformType == 'win32':
-    from errno import WSAEWOULDBLOCK as EWOULDBLOCK
+    from errno import WSAEWOULDBLOCK as EWOULDBLOCK  # type: ignore[attr-defined]  # noqa
 else:
     from errno import EWOULDBLOCK
 
 
 
-class StringUDPSocket(object):
+class StringUDPSocket:
     """
     A fake UDP socket object, which returns a fixed sequence of strings and/or
     socket errors.  Useful for testing.

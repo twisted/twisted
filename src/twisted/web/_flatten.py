@@ -13,14 +13,9 @@ from io import BytesIO
 from sys import exc_info
 from types import GeneratorType
 from traceback import extract_tb
+from inspect import iscoroutine
 
-try:
-    from inspect import iscoroutine
-except ImportError:
-    def iscoroutine(*args, **kwargs):
-        return False
-
-from twisted.python.compat import unicode, nativeString, iteritems
+from twisted.python.compat import nativeString
 from twisted.internet.defer import Deferred, ensureDeferred
 from twisted.web._stan import Tag, slot, voidElements, Comment, CDATA, CharRef
 from twisted.web.error import UnfilledSlot, UnsupportedType, FlattenerError
@@ -43,11 +38,10 @@ def escapeForContent(data):
     @return: The quoted form of C{data}.  If C{data} is unicode, return a utf-8
         encoded string.
     """
-    if isinstance(data, unicode):
+    if isinstance(data, str):
         data = data.encode('utf-8')
-    data = data.replace(b'&', b'&amp;'
-        ).replace(b'<', b'&lt;'
-        ).replace(b'>', b'&gt;')
+    data = data.replace(
+        b'&', b'&amp;').replace(b'<', b'&lt;').replace(b'>', b'&gt;')
     return data
 
 
@@ -68,7 +62,7 @@ def attributeEscapingDoneOutside(data):
     @return: The string, unchanged, except for encoding.
     @rtype: C{bytes}
     """
-    if isinstance(data, unicode):
+    if isinstance(data, str):
         return data.encode("utf-8")
     return data
 
@@ -129,7 +123,7 @@ def escapedCDATA(data):
     @return: The quoted form of C{data}. If C{data} is unicode, return a utf-8
         encoded string.
     """
-    if isinstance(data, unicode):
+    if isinstance(data, str):
         data = data.encode('utf-8')
     return data.replace(b']]>', b']]]]><![CDATA[>')
 
@@ -146,7 +140,7 @@ def escapedComment(data):
     @return: The quoted form of C{data}. If C{data} is unicode, return a utf-8
         encoded string.
     """
-    if isinstance(data, unicode):
+    if isinstance(data, str):
         data = data.encode('utf-8')
     data = data.replace(b'--', b'- - ').replace(b'>', b'&gt;')
     if data and data[-1:] == b'-':
@@ -213,7 +207,7 @@ def _flattenElement(request, root, write, slotData, renderFactory,
                   renderFactory=renderFactory, write=write):
         return _flattenElement(request, newRoot, write, slotData,
                                renderFactory, dataEscaper)
-    if isinstance(root, (bytes, unicode)):
+    if isinstance(root, (bytes, str)):
         write(dataEscaper(root))
     elif isinstance(root, slot):
         slotValue = _getSlotValue(root.name, slotData, root.default)
@@ -243,13 +237,13 @@ def _flattenElement(request, root, write, slotData, renderFactory,
             return
 
         write(b'<')
-        if isinstance(root.tagName, unicode):
+        if isinstance(root.tagName, str):
             tagName = root.tagName.encode('ascii')
         else:
             tagName = root.tagName
         write(tagName)
-        for k, v in iteritems(root.attributes):
-            if isinstance(k, unicode):
+        for k, v in root.attributes.items():
+            if isinstance(k, str):
                 k = k.encode('ascii')
             write(b' ' + k + b'="')
             # Serialize the contents of the attribute, wrapping the results of

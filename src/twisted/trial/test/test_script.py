@@ -7,9 +7,9 @@ import re
 import sys
 import textwrap
 import types
+from io import StringIO
 
 from twisted.python import util
-from twisted.python.compat import NativeStringIO
 from twisted.python.filepath import FilePath
 from twisted.python.usage import UsageError
 from twisted.scripts import trial
@@ -62,7 +62,7 @@ class ForceGarbageCollectionTests(unittest.SynchronousTestCase):
         Return a L{TrialRunner} object that is safe to use in tests.
         """
         runner = trial._makeRunner(self.config)
-        runner.stream = NativeStringIO()
+        runner.stream = StringIO()
         return runner
 
 
@@ -200,7 +200,7 @@ class TestModuleTests(unittest.SynchronousTestCase):
         Check that --testmodule displays a meaningful error message when
         passed a non-existent filename.
         """
-        buffy = NativeStringIO()
+        buffy = StringIO()
         stderr, sys.stderr = sys.stderr, buffy
         filename = 'test_thisbetternoteverexist.py'
         try:
@@ -224,7 +224,7 @@ class TestModuleTests(unittest.SynchronousTestCase):
         Check that --testmodule does *not* support module names as arguments
         and that it displays a meaningful error message.
         """
-        buffy = NativeStringIO()
+        buffy = StringIO()
         stderr, sys.stderr = sys.stderr, buffy
         moduleName = 'twisted.trial.test.test_script'
         try:
@@ -849,7 +849,7 @@ class HelpOrderTests(unittest.TestCase):
         """
         --help-orders prints each of the available orders and then exits.
         """
-        self.patch(sys, "stdout", NativeStringIO())
+        self.patch(sys, "stdout", StringIO())
 
         exc = self.assertRaises(
             SystemExit, trial.Options().parseOptions, ["--help-orders"])

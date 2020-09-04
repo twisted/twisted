@@ -5,37 +5,34 @@
 
 
 import warnings
-
 from binascii import hexlify
-from constantly import Names, NamedConstant
+from functools import lru_cache
 from hashlib import md5
+
+from zope.interface import Interface, implementer
 
 from OpenSSL import SSL, crypto
 from OpenSSL._util import lib as pyOpenSSLlib
 
-from twisted.internet.abstract import isIPAddress, isIPv6Address
-from twisted.python import log
-from twisted.python.randbytes import secureRandom
-from ._idna import _idnaBytes
-
-from zope.interface import Interface, implementer
-from constantly import Flags, FlagConstant
+import attr
+from constantly import FlagConstant, Flags, NamedConstant, Names
 from incremental import Version
 
+from twisted.internet.abstract import isIPAddress, isIPv6Address
 from twisted.internet.defer import Deferred
-from twisted.internet.error import VerifyError, CertificateError
+from twisted.internet.error import CertificateError, VerifyError
 from twisted.internet.interfaces import (
-    IAcceptableCiphers, ICipher, IOpenSSLClientConnectionCreator,
-    IOpenSSLContextFactory
+    IAcceptableCiphers,
+    ICipher,
+    IOpenSSLClientConnectionCreator,
+    IOpenSSLContextFactory,
 )
-
-from twisted.python import util
-from twisted.python.deprecate import _mutuallyExclusiveArguments
-from twisted.python.compat import nativeString, unicode
+from twisted.python import log, util
+from twisted.python.compat import nativeString
+from twisted.python.deprecate import _mutuallyExclusiveArguments, deprecated
 from twisted.python.failure import Failure
-from twisted.python.util import FancyEqMixin
-
-from twisted.python.deprecate import deprecated
+from twisted.python.randbytes import secureRandom
+from ._idna import _idnaBytes
 
 
 
@@ -174,7 +171,8 @@ def _selectVerifyImplementation():
     try:
         from service_identity import VerificationError
         from service_identity.pyopenssl import (
-            verify_hostname, verify_ip_address
+            verify_hostname,
+            verify_ip_address,
         )
         return verify_hostname, verify_ip_address, VerificationError
     except ImportError as e:
@@ -335,7 +333,7 @@ class DistinguishedName(dict):
             setattr(x509name, k, nativeString(v))
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return '<DN %s>' % (dict.__repr__(self)[1:-1])
 
 
@@ -372,9 +370,11 @@ class DistinguishedName(dict):
             if v is not None:
                 l.append((label, nativeString(v)))
         lablen += 2
-        for n, (label, attr) in enumerate(l):
-            l[n] = (label.rjust(lablen)+': '+ attr)
+        for n, (label, attrib) in enumerate(l):
+            l[n] = (label.rjust(lablen) + ': ' + attrib)
         return '\n'.join(l)
+
+
 
 DN = DistinguishedName
 
@@ -449,20 +449,16 @@ class Certificate(CertBase):
     """
     An x509 certificate.
     """
-    def __repr__(self):
+    def __repr__(self) -> str:
         return '<%s Subject=%s Issuer=%s>' % (self.__class__.__name__,
                                               self.getSubject().commonName,
                                               self.getIssuer().commonName)
 
 
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
         if isinstance(other, Certificate):
             return self.dump() == other.dump()
-        return False
-
-
-    def __ne__(self, other):
-        return not self.__eq__(other)
+        return NotImplemented
 
 
     @classmethod
@@ -623,7 +619,7 @@ class PrivateCertificate(Certificate):
     """
     An x509 certificate and private key.
     """
-    def __repr__(self):
+    def __repr__(self) -> str:
         return Certificate.__repr__(self) + ' with ' + repr(self.privateKey)
 
 
@@ -765,7 +761,7 @@ class PublicKey:
         return self.keyHash() == otherKey.keyHash()
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return '<%s %s>' % (self.__class__.__name__, self.keyHash())
 
 
@@ -807,10 +803,12 @@ class KeyPair(PublicKey):
         return crypto.dump_privatekey(format, self.original)
 
 
+    @deprecated(Version("Twisted", 15, 0, 0), "a real persistence system")
     def __getstate__(self):
         return self.dump()
 
 
+    @deprecated(Version("Twisted", 15, 0, 0), "a real persistence system")
     def __setstate__(self, state):
         self.__init__(crypto.load_privatekey(crypto.FILETYPE_ASN1, state))
 
@@ -917,11 +915,6 @@ class KeyPair(PublicKey):
             self.signRequestObject(dn, self.requestObject(dn), serialNumber),
             self)
 
-KeyPair.__getstate__ = deprecated(Version("Twisted", 15, 0, 0),
-    "a real persistence system")(KeyPair.__getstate__)
-KeyPair.__setstate__ = deprecated(Version("Twisted", 15, 0, 0),
-    "a real persistence system")(KeyPair.__setstate__)
-
 
 
 class IOpenSSLTrustRoot(Interface):
@@ -947,7 +940,7 @@ class IOpenSSLTrustRoot(Interface):
 
 
 @implementer(IOpenSSLTrustRoot)
-class OpenSSLCertificateAuthorities(object):
+class OpenSSLCertificateAuthorities:
     """
     Trust an explicitly specified set of certificates, represented by a list of
     L{OpenSSL.crypto.X509} objects.
@@ -1003,11 +996,11 @@ def trustRootFromCertificates(certificates):
 
 
 @implementer(IOpenSSLTrustRoot)
-class OpenSSLDefaultPaths(object):
+class OpenSSLDefaultPaths:
     """
     Trust the set of default verify paths that OpenSSL was built with, as
     specified by U{SSL_CTX_set_default_verify_paths
-    <https://www.openssl.org/docs/ssl/SSL_CTX_load_verify_locations.html>}.
+    <https://www.openssl.org/docs/man1.1.1/man3/SSL_CTX_load_verify_locations.html>}.
     """
 
     def _addCACertsToContext(self, context):
@@ -1118,7 +1111,7 @@ def _tolerateErrors(wrapped):
 
 
 @implementer(IOpenSSLClientConnectionCreator)
-class ClientTLSOptions(object):
+class ClientTLSOptions:
     """
     Client creator for TLS.
 
@@ -1297,7 +1290,7 @@ def optionsForClientTLS(hostname, trustRoot=None, clientCertificate=None,
                 arg=kw.popitem()[0]
             )
         )
-    if not isinstance(hostname, unicode):
+    if not isinstance(hostname, str):
         raise TypeError(
             "optionsForClientTLS requires text for host names, not "
             + hostname.__class__.__name__
@@ -1317,7 +1310,7 @@ def optionsForClientTLS(hostname, trustRoot=None, clientCertificate=None,
 
 
 @implementer(IOpenSSLContextFactory)
-class OpenSSLCertificateOptions(object):
+class OpenSSLCertificateOptions:
     """
     A L{CertificateOptions <twisted.internet.ssl.CertificateOptions>} specifies
     the security properties for a client or server TLS connection used with
@@ -1754,32 +1747,23 @@ OpenSSLCertificateOptions.__setstate__ = deprecated(
 
 
 @implementer(ICipher)
-class OpenSSLCipher(FancyEqMixin, object):
+@attr.s(frozen=True)
+class OpenSSLCipher:
     """
     A representation of an OpenSSL cipher.
+
+    @ivar fullName: The full name of the cipher. For example
+        C{u"ECDHE-RSA-AES256-GCM-SHA384"}.
+    @type fullName: L{unicode}
     """
-    compareAttributes = ('fullName',)
-
-    def __init__(self, fullName):
-        """
-        @param fullName: The full name of the cipher. For example
-            C{u"ECDHE-RSA-AES256-GCM-SHA384"}.
-        @type fullName: L{unicode}
-        """
-        self.fullName = fullName
-
-
-    def __repr__(self):
-        """
-        A runnable representation of the cipher.
-        """
-        return 'OpenSSLCipher({0!r})'.format(self.fullName)
+    fullName = attr.ib()
 
 
 
+@lru_cache(maxsize=32)
 def _expandCipherString(cipherString, method, options):
     """
-    Expand C{cipherString} according to C{method} and C{options} to a list
+    Expand C{cipherString} according to C{method} and C{options} to a tuple
     of explicit ciphers that are supported by the current platform.
 
     @param cipherString: An OpenSSL cipher string to expand.
@@ -1793,7 +1777,7 @@ def _expandCipherString(cipherString, method, options):
 
     @return: The effective list of explicit ciphers that results from the
         arguments on the current platform.
-    @rtype: L{list} of L{ICipher}
+    @rtype: L{tuple} of L{ICipher}
     """
     ctx = SSL.Context(method)
     ctx.set_options(options)
@@ -1805,33 +1789,53 @@ def _expandCipherString(cipherString, method, options):
         # that lacks a corresponding OpenSSL error if the cipher list
         # consists only of these after a call to set_cipher_list.
         if not e.args[0]:
-            return []
+            return tuple()
         if e.args[0][0][2] == 'no cipher match':
-            return []
+            return tuple()
         else:
             raise
     conn = SSL.Connection(ctx, None)
     ciphers = conn.get_cipher_list()
-    if isinstance(ciphers[0], unicode):
-        return [OpenSSLCipher(cipher) for cipher in ciphers]
+    if isinstance(ciphers[0], str):
+        return tuple(OpenSSLCipher(cipher) for cipher in ciphers)
     else:
-        return [OpenSSLCipher(cipher.decode('ascii')) for cipher in ciphers]
+        return tuple(
+            OpenSSLCipher(cipher.decode('ascii')) for cipher in ciphers
+        )
+
+
+
+@lru_cache(maxsize=128)
+def _selectCiphers(wantedCiphers, availableCiphers):
+    """
+    Caclulate the acceptable list of ciphers from the ciphers we want and the
+    ciphers we have support for.
+
+    @param wantedCiphers: The ciphers we want to use.
+    @type wantedCiphers: L{tuple} of L{OpenSSLCipher}
+
+    @param availableCiphers: The ciphers we have available to use.
+    @type availableCiphers: L{tuple} of L{OpenSSLCipher}
+
+    @rtype: L{tuple} of L{OpenSSLCipher}
+    """
+    return tuple(
+        [cipher for cipher in wantedCiphers if cipher in availableCiphers]
+    )
 
 
 
 @implementer(IAcceptableCiphers)
-class OpenSSLAcceptableCiphers(object):
+class OpenSSLAcceptableCiphers:
     """
     A representation of ciphers that are acceptable for TLS connections.
     """
     def __init__(self, ciphers):
-        self._ciphers = ciphers
+        self._ciphers = tuple(ciphers)
 
 
     def selectCiphers(self, availableCiphers):
-        return [cipher
-                for cipher in self._ciphers
-                if cipher in availableCiphers]
+        return _selectCiphers(self._ciphers, tuple(availableCiphers))
 
 
     @classmethod
@@ -1883,7 +1887,7 @@ _defaultCurveName = u"prime256v1"
 
 
 
-class _ChooseDiffieHellmanEllipticCurve(object):
+class _ChooseDiffieHellmanEllipticCurve:
     """
     Chooses the best elliptic curve for Elliptic Curve Diffie-Hellman
     key exchange, and provides a C{configureECDHCurve} method to set
@@ -1980,7 +1984,7 @@ class _ChooseDiffieHellmanEllipticCurve(object):
 
 
 
-class OpenSSLDiffieHellmanParameters(object):
+class OpenSSLDiffieHellmanParameters:
     """
     A representation of key generation parameters that are required for
     Diffie-Hellman key exchange.

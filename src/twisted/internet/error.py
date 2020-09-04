@@ -14,10 +14,10 @@ from incremental import Version
 
 
 class BindError(Exception):
-    """An error occurred binding to an interface"""
+    __doc__ = MESSAGE = "An error occurred binding to an interface"
 
-    def __str__(self):
-        s = self.__doc__
+    def __str__(self) -> str:
+        s = self.MESSAGE
         if self.args:
             s = '%s: %s' % (s, ' '.join(self.args))
         s = '%s.' % s
@@ -41,10 +41,10 @@ class CannotListenError(BindError):
         self.port = port
         self.socketError = socketError
 
-    def __str__(self):
+    def __str__(self) -> str:
         iface = self.interface or 'any'
         return "Couldn't listen on %s:%s: %s." % (iface, self.port,
-                                                 self.socketError)
+                                                  self.socketError)
 
 
 
@@ -56,10 +56,10 @@ class MulticastJoinError(Exception):
 
 
 class MessageLengthError(Exception):
-    """Message is too long to send"""
+    __doc__ = MESSAGE = "Message is too long to send"
 
-    def __str__(self):
-        s = self.__doc__
+    def __str__(self) -> str:
+        s = self.MESSAGE
         if self.args:
             s = '%s: %s' % (s, ' '.join(self.args))
         s = '%s.' % s
@@ -68,10 +68,10 @@ class MessageLengthError(Exception):
 
 
 class DNSLookupError(IOError):
-    """DNS lookup failed"""
+    __doc__ = MESSAGE = "DNS lookup failed"
 
-    def __str__(self):
-        s = self.__doc__
+    def __str__(self) -> str:
+        s = self.MESSAGE
         if self.args:
             s = '%s: %s' % (s, ' '.join(self.args))
         s = '%s.' % s
@@ -83,17 +83,18 @@ class ConnectInProgressError(Exception):
     """A connect operation was started and isn't done yet."""
 
 
+
 # connection errors
 
 class ConnectError(Exception):
-    """An error occurred while connecting"""
+    __doc__ = MESSAGE = "An error occurred while connecting"
 
     def __init__(self, osError=None, string=""):
         self.osError = osError
         Exception.__init__(self, string)
 
-    def __str__(self):
-        s = self.__doc__ or self.__class__.__name__
+    def __str__(self) -> str:
+        s = self.MESSAGE
         if self.osError:
             s = '%s: %s' % (s, self.osError)
         if self.args[0]:
@@ -104,71 +105,69 @@ class ConnectError(Exception):
 
 
 class ConnectBindError(ConnectError):
-    """Couldn't bind"""
+    __doc__ = MESSAGE = "Couldn't bind"
 
 
 
 class UnknownHostError(ConnectError):
-    """Hostname couldn't be looked up"""
+    __doc__ = MESSAGE = "Hostname couldn't be looked up"
 
 
 
 class NoRouteError(ConnectError):
-    """No route to host"""
+    __doc__ = MESSAGE = "No route to host"
 
 
 
 class ConnectionRefusedError(ConnectError):
-    """Connection was refused by other side"""
+    __doc__ = MESSAGE = "Connection was refused by other side"
 
 
 
 class TCPTimedOutError(ConnectError):
-    """TCP connection timed out"""
+    __doc__ = MESSAGE = "TCP connection timed out"
 
 
 
 class BadFileError(ConnectError):
-    """File used for UNIX socket is no good"""
+    __doc__ = MESSAGE = "File used for UNIX socket is no good"
 
 
 
 class ServiceNameUnknownError(ConnectError):
-    """Service name given as port is unknown"""
+    __doc__ = MESSAGE = "Service name given as port is unknown"
 
 
 
 class UserError(ConnectError):
-    """User aborted connection"""
+    __doc__ = MESSAGE = "User aborted connection"
 
 
 
 class TimeoutError(UserError):
-    """User timeout caused connection failure"""
+    __doc__ = MESSAGE = "User timeout caused connection failure"
 
 
 
 class SSLError(ConnectError):
-    """An SSL error occurred"""
+    __doc__ = MESSAGE = "An SSL error occurred"
 
 
 
 class VerifyError(Exception):
-    """Could not verify something that was supposed to be signed.
-    """
+    __doc__ = MESSAGE = \
+        "Could not verify something that was supposed to be signed."
 
 
 
 class PeerVerifyError(VerifyError):
-    """The peer rejected our verify error.
-    """
+    __doc__ = MESSAGE = "The peer rejected our verify error."
 
 
 
 class CertificateError(Exception):
-    """
-    We did not find a certificate where we expected to find one.
-    """
+    __doc__ = MESSAGE = \
+        "We did not find a certificate where we expected to find one."
 
 
 
@@ -180,8 +179,8 @@ try:
         errno.ETIMEDOUT: TCPTimedOutError,
     }
     if hasattr(errno, "WSAECONNREFUSED"):
-        errnoMapping[errno.WSAECONNREFUSED] = ConnectionRefusedError
-        errnoMapping[errno.WSAENETUNREACH] = NoRouteError
+        errnoMapping[errno.WSAECONNREFUSED] = ConnectionRefusedError  # type: ignore[attr-defined]  # noqa
+        errnoMapping[errno.WSAENETUNREACH] = NoRouteError  # type: ignore[attr-defined]  # noqa
 except ImportError:
     errnoMapping = {}
 
@@ -216,14 +215,17 @@ class ConnectionClosed(Exception):
 
 
 class ConnectionLost(ConnectionClosed):
-    """Connection to the other side was lost in a non-clean fashion"""
+    __doc__ = MESSAGE = """
+    Connection to the other side was lost in a non-clean fashion
+    """
 
-    def __str__(self):
-        s = self.__doc__.strip().splitlines()[0]
+    def __str__(self) -> str:
+        s = self.MESSAGE.strip().splitlines()[:1]
         if self.args:
-            s = '%s: %s' % (s, ' '.join(self.args))
-        s = '%s.' % s
-        return s
+            s.append(': ')
+            s.append(' '.join(self.args))
+        s.append('.')
+        return ''.join(s)
 
 
 
@@ -234,25 +236,16 @@ class ConnectionAborted(ConnectionLost):
 
     @since: 11.1
     """
-
-    def __str__(self):
-        s = [(
-            "Connection was aborted locally using"
-            " ITCPTransport.abortConnection"
-        )]
-        if self.args:
-            s.append(': ')
-            s.append(' '.join(self.args))
-        s.append('.')
-        return ''.join(s)
+    MESSAGE = "Connection was aborted locally using " \
+              "ITCPTransport.abortConnection"
 
 
 
 class ConnectionDone(ConnectionClosed):
-    """Connection was closed cleanly"""
+    __doc__ = MESSAGE = "Connection was closed cleanly"
 
-    def __str__(self):
-        s = self.__doc__
+    def __str__(self) -> str:
+        s = self.MESSAGE
         if self.args:
             s = '%s: %s' % (s, ' '.join(self.args))
         s = '%s.' % s
@@ -270,19 +263,21 @@ class FileDescriptorOverrun(ConnectionLost):
     fewer bytes have been written than file descriptors have been sent, the
     connection is closed with this exception.
     """
+    MESSAGE = "A mis-use of IUNIXTransport.sendFileDescriptor caused " \
+              "the connection to be closed."
 
 
 
 class ConnectionFdescWentAway(ConnectionLost):
-    """Uh""" #TODO
+    __doc__ = MESSAGE = "Uh"  # TODO
 
 
 
 class AlreadyCalled(ValueError):
-    """Tried to cancel an already-called event"""
+    __doc__ = MESSAGE = "Tried to cancel an already-called event"
 
-    def __str__(self):
-        s = self.__doc__
+    def __str__(self) -> str:
+        s = self.MESSAGE
         if self.args:
             s = '%s: %s' % (s, ' '.join(self.args))
         s = '%s.' % s
@@ -291,10 +286,10 @@ class AlreadyCalled(ValueError):
 
 
 class AlreadyCancelled(ValueError):
-    """Tried to cancel an already-cancelled event"""
+    __doc__ = MESSAGE = "Tried to cancel an already-cancelled event"
 
-    def __str__(self):
-        s = self.__doc__
+    def __str__(self) -> str:
+        s = self.MESSAGE
         if self.args:
             s = '%s: %s' % (s, ' '.join(self.args))
         s = '%s.' % s
@@ -326,7 +321,7 @@ deprecate.deprecatedModuleAttribute(
 
 
 class ProcessDone(ConnectionDone):
-    """A process has ended without apparent errors"""
+    __doc__ = MESSAGE = "A process has ended without apparent errors"
 
     def __init__(self, status):
         Exception.__init__(self, "process finished with exit code 0")
@@ -337,7 +332,7 @@ class ProcessDone(ConnectionDone):
 
 
 class ProcessTerminated(ConnectionLost):
-    """
+    __doc__ = MESSAGE = """
     A process has ended with a probable error condition
 
     @ivar exitCode: See L{__init__}
@@ -379,10 +374,11 @@ class ProcessExitedAlready(Exception):
 
 
 class NotConnectingError(RuntimeError):
-    """The Connector was not connecting when it was asked to stop connecting"""
+    __doc__ = MESSAGE = \
+        "The Connector was not connecting when it was asked to stop connecting"
 
-    def __str__(self):
-        s = self.__doc__
+    def __str__(self) -> str:
+        s = self.MESSAGE
         if self.args:
             s = '%s: %s' % (s, ' '.join(self.args))
         s = '%s.' % s
@@ -391,10 +387,11 @@ class NotConnectingError(RuntimeError):
 
 
 class NotListeningError(RuntimeError):
-    """The Port was not listening when it was asked to stop listening"""
+    __doc__ = MESSAGE = \
+        "The Port was not listening when it was asked to stop listening"
 
-    def __str__(self):
-        s = self.__doc__
+    def __str__(self) -> str:
+        s = self.MESSAGE
         if self.args:
             s = '%s: %s' % (s, ' '.join(self.args))
         s = '%s.' % s

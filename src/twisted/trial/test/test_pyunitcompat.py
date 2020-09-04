@@ -5,6 +5,7 @@
 import sys
 import traceback
 
+from unittest import skipIf
 from zope.interface import implementer
 
 from twisted.python.failure import Failure
@@ -67,7 +68,7 @@ class PyUnitResultTests(SynchronousTestCase):
         C{run} does *not* provide L{IReporter}.
         """
         @implementer(IReporter)
-        class StubReporter(object):
+        class StubReporter:
             """
             A reporter which records data about calls made to it.
 
@@ -227,9 +228,9 @@ class PyUnitResultTests(SynchronousTestCase):
         the L{pyunit.TestResult}.
         """
         class SkipTest(SynchronousTestCase):
+            @skipIf(True, "Let's skip!")
             def test_skip(self):
                 1/0
-            test_skip.skip = "Let's skip!"
 
         test = SkipTest('test_skip')
         result = pyunit.TestResult()

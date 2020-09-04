@@ -14,14 +14,14 @@ import warnings
 
 
 from io import BytesIO as StringIO
-
+from unittest import skipIf
 from zope.interface.verify import verifyObject
 
 from twisted.internet import abstract, interfaces
 from twisted.python.runtime import platform
 from twisted.python.filepath import FilePath
 from twisted.python import compat, log
-from twisted.python.compat import intToBytes, networkString
+from twisted.python.compat import networkString
 from twisted.trial.unittest import TestCase
 from twisted.web import static, http, script, resource
 from twisted.web.server import UnsupportedMethod
@@ -199,6 +199,7 @@ class StaticFileTests(TestCase):
         return d
 
 
+    @skipIf(platform.isWindows(), "Cannot remove read permission on Windows")
     def test_forbiddenResource(self):
         """
         If the file in the filesystem which would satisfy a request cannot be
@@ -219,8 +220,6 @@ class StaticFileTests(TestCase):
             self.assertEqual(request.responseCode, 403)
         d.addCallback(cbRendered)
         return d
-    if platform.isWindows():
-        test_forbiddenResource.skip = "Cannot remove read permission on Windows"
 
 
     def test_undecodablePath(self):
@@ -333,6 +332,9 @@ class StaticFileTests(TestCase):
         return d
 
 
+    @skipIf(sys.getfilesystemencoding().lower() not in ('utf-8', 'mcbs'),
+            "Cannot write unicode filenames with file system encoding of"
+            " {}".format(sys.getfilesystemencoding()))
     def test_staticFileUnicodeFileName(self):
         """
         A request for a existing unicode file path encoded as UTF-8
@@ -357,10 +359,6 @@ class StaticFileTests(TestCase):
                 networkString(str(len(content))))
         d.addCallback(cbRendered)
         return d
-    if sys.getfilesystemencoding().lower() not in ('utf-8', 'mcbs'):
-        test_staticFileUnicodeFileName.skip = (
-            "Cannot write unicode filenames with file system encoding of"
-            " %s" % (sys.getfilesystemencoding(),))
 
 
     def test_staticFileDeletedGetChild(self):
@@ -639,7 +637,8 @@ class StaticMakeProducerTests(TestCase):
         with resource.openForReading() as file:
             resource.makeProducer(request, file)
             self.assertEqual(
-                {b'content-type': networkString(contentType), b'content-length': intToBytes(length),
+                {b'content-type': networkString(contentType),
+                 b'content-length': b'%d' % (length,),
                  b'content-encoding': networkString(contentEncoding)},
                 self.contentHeaders(request))
 
@@ -801,7 +800,8 @@ class StaticMakeProducerTests(TestCase):
             expectedLength = 5
             for boundary, offset, size in producer.rangeInfo:
                 expectedLength += len(boundary)
-            self.assertEqual(intToBytes(expectedLength), contentHeaders[b'content-length'])
+            self.assertEqual(b'%d' % (expectedLength,),
+                             contentHeaders[b'content-length'])
             # Content-type should be set to a value indicating a multipart
             # response and the boundary used to separate the parts.
             self.assertIn(b'content-type', contentHeaders)
@@ -1305,7 +1305,7 @@ class RangeTests(TestCase):
         self.assertEqual(self.request.responseCode, http.OK)
         self.assertEqual(
             self.request.responseHeaders.getRawHeaders(b'content-length')[0],
-            intToBytes(len(self.payload)))
+            b'%d' % (len(self.payload),))
 
 
     def parseMultipartBody(self, body, boundary):
@@ -1442,7 +1442,7 @@ class RangeTests(TestCase):
             self.request.responseHeaders.getRawHeaders(b'content-range')[0],
             b'bytes 3-43/64')
         self.assertEqual(
-            intToBytes(len(written)),
+            b'%d' % (len(written),),
             self.request.responseHeaders.getRawHeaders(b'content-length')[0])
 
 
@@ -1462,7 +1462,7 @@ class RangeTests(TestCase):
             self.request.responseHeaders.getRawHeaders(b'content-range')[0],
             b'bytes 40-63/64')
         self.assertEqual(
-            intToBytes(len(written)),
+            b'%d' % (len(written),),
             self.request.responseHeaders.getRawHeaders(b'content-length')[0])
 
 
@@ -1478,7 +1478,7 @@ class RangeTests(TestCase):
         self.assertEqual(b''.join(self.request.written), self.payload)
         self.assertEqual(
             self.request.responseHeaders.getRawHeaders(b'content-length')[0],
-            intToBytes(len(self.payload)))
+            b'%d' % (len(self.payload),))
 
 
     def test_invalidStartBytePos(self):
@@ -1714,6 +1714,7 @@ class DirectoryListerTests(TestCase):
              'type': '[text/diff]'}])
 
 
+    @skipIf(not platform._supportsSymlinks(), "No symlink support")
     def test_brokenSymlink(self):
         """
         If on the file in the listing points to a broken symlink, it should not
@@ -1732,9 +1733,6 @@ class DirectoryListerTests(TestCase):
         dirs, files = lister._getFilesAndDirectories(directory)
         self.assertEqual(dirs, [])
         self.assertEqual(files, [])
-
-    if not platform._supportsSymlinks():
-        test_brokenSymlink.skip = "No symlink support"
 
 
     def test_childrenNotFound(self):

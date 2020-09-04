@@ -14,6 +14,7 @@ import os
 import time
 import warnings
 
+from html import escape
 from typing import Any, Dict, Callable
 from zope.interface import implementer
 
@@ -22,9 +23,7 @@ from twisted.web import resource
 from twisted.web import http
 from twisted.web.util import redirectTo
 
-from twisted.python.compat import (_PY3, intToBytes, nativeString,
-                                   networkString)
-from twisted.python.compat import escape
+from twisted.python.compat import nativeString, networkString
 
 from twisted.python import components, filepath, log
 from twisted.internet import abstract, interfaces
@@ -34,10 +33,7 @@ from twisted.python.url import URL
 from incremental import Version
 from twisted.python.deprecate import deprecated
 
-if _PY3:
-    from urllib.parse import quote, unquote
-else:
-    from urllib import quote, unquote
+from urllib.parse import quote, unquote
 
 dangerousPathError = resource.NoResource("Invalid request URL.")
 
@@ -66,7 +62,7 @@ class Data(resource.Resource):
 
     def render_GET(self, request):
         request.setHeader(b"content-type", networkString(self.type))
-        request.setHeader(b"content-length", intToBytes(len(self.data)))
+        request.setHeader(b"content-length", b'%d' % (len(self.data),))
         if request.method == b"HEAD":
             return b''
         return self.data
@@ -280,20 +276,8 @@ class File(resource.Resource, filepath.FilePath):
         @return: A resource that renders the directory to HTML.
         @rtype: L{DirectoryLister}
         """
-        if _PY3:
-            path = self.path
-            names = self.listNames()
-        else:
-            # DirectoryLister works in terms of native strings, so on
-            # Python 2, ensure we have a bytes paths for this
-            # directory and its contents.  We use the asBytesMode
-            # method inherited from FilePath to ensure consistent
-            # encoding of the actual path.  This returns a FilePath
-            # instance even when called on subclasses, however, so we
-            # have to create a new File instance.
-            nativeStringPath = self.createSimilarFile(self.asBytesMode().path)
-            path = nativeStringPath.path
-            names = nativeStringPath.listNames()
+        path = self.path
+        names = self.listNames()
         return DirectoryLister(path,
                                names,
                                self.contentTypes,
@@ -576,9 +560,11 @@ class File(resource.Resource, filepath.FilePath):
         rangeInfo.append((finalBoundary, 0, 0))
         request.setResponseCode(http.PARTIAL_CONTENT)
         request.setHeader(
-            b'content-type', networkString('multipart/byteranges; boundary="%s"' % (nativeString(boundary),)))
+            b'content-type',
+            networkString('multipart/byteranges; boundary="%s"'
+                          % (nativeString(boundary),)))
         request.setHeader(
-            b'content-length', intToBytes(contentLength + len(finalBoundary)))
+            b'content-length', b'%d' % (contentLength + len(finalBoundary),))
         return rangeInfo
 
 
@@ -595,7 +581,7 @@ class File(resource.Resource, filepath.FilePath):
         """
         if size is None:
             size = self.getFileSize()
-        request.setHeader(b'content-length', intToBytes(size))
+        request.setHeader(b'content-length', b'%d' % (size,))
         if self.type:
             request.setHeader(b'content-type', networkString(self.type))
         if self.encoding:
@@ -716,7 +702,7 @@ class File(resource.Resource, filepath.FilePath):
 
 
 @implementer(interfaces.IPullProducer)
-class StaticProducer(object):
+class StaticProducer:
     """
     Superclass for classes that implement the business of producing.
 
@@ -1031,9 +1017,8 @@ h1 {padding: 0.1em; background-color: #777; color: white; border-bottom: thin wh
         dirs = []
 
         for path in directory:
-            if _PY3:
-                if isinstance(path, bytes):
-                    path = path.decode("utf8")
+            if isinstance(path, bytes):
+                path = path.decode("utf8")
 
             url = quote(path, "/")
             escapedPath = escape(path)
@@ -1091,13 +1076,12 @@ h1 {padding: 0.1em; background-color: #777; color: white; border-bottom: thin wh
             escape(unquote(nativeString(request.uri))),)
 
         done = self.template % {"header": header, "tableContent": tableContent}
-        if _PY3:
-            done = done.encode("utf8")
+        done = done.encode("utf8")
 
         return done
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return '<DirectoryLister of %r>' % self.path
 
     __str__ = __repr__

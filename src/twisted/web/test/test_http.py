@@ -12,7 +12,10 @@ import random
 
 import hamcrest
 
-from urllib.parse import urlparse, urlunsplit, clear_cache, parse_qs
+from urllib.parse import urlparse, urlunsplit, parse_qs
+from urllib.parse import clear_cache  # type: ignore[attr-defined]
+from unittest import skipIf
+from typing import Sequence, Union
 
 from io import BytesIO
 from itertools import cycle
@@ -23,8 +26,7 @@ from zope.interface import (
 )
 from zope.interface.verify import verifyObject
 
-from twisted.python.compat import (iterbytes, long, networkString,
-                                   unicode, intToBytes)
+from twisted.python.compat import iterbytes, networkString
 from twisted.python.components import proxyForInterface
 from twisted.python.failure import Failure
 from twisted.trial import unittest
@@ -54,7 +56,7 @@ from ._util import (
 
 
 
-class _IDeprecatedHTTPChannelToRequestInterfaceProxy(proxyForInterface(
+class _IDeprecatedHTTPChannelToRequestInterfaceProxy(proxyForInterface(  # type: ignore[misc]  # noqa
         http._IDeprecatedHTTPChannelToRequestInterface)):
     """
     Proxy L{_IDeprecatedHTTPChannelToRequestInterface}.  Used to
@@ -149,7 +151,7 @@ class DummyHTTPHandler(http.Request):
         self.setHeader(b"Request", self.uri)
         self.setHeader(b"Command", self.method)
         self.setHeader(b"Version", self.clientproto)
-        self.setHeader(b"Content-Length", intToBytes(len(request)))
+        self.setHeader(b"Content-Length", b'%d' % (len(request),))
         self.write(request)
         self.finish()
 
@@ -218,7 +220,7 @@ def parametrizeTimeoutMixin(protocol, reactor):
     return protocol
 
 
-class ResponseTestMixin(object):
+class ResponseTestMixin:
     """
     A mixin that provides a simple means of comparing an actual response string
     to an expected response string by performing the minimal parsing.
@@ -269,7 +271,7 @@ class HTTP1_0Tests(unittest.TestCase, ResponseTestMixin):
          b"Command: GET",
          b"Version: HTTP/1.0",
          b"Content-Length: 13",
-         b"'''\nNone\n'''\n")]
+         b"'''\nNone\n'''\n")]  # type: Union[Sequence[Sequence[bytes]], bytes]
 
     def test_buffer(self):
         """
@@ -771,6 +773,7 @@ class GenericHTTPChannelTests(unittest.TestCase):
         return a._negotiatedProtocol
 
 
+    @skipIf(not http.H2_ENABLED, "HTTP/2 support not present")
     def test_h2CancelsH11Timeout(self):
         """
         When the transport is switched to H2, the HTTPChannel timeouts are
@@ -820,9 +823,6 @@ class GenericHTTPChannelTests(unittest.TestCase):
             ),
         )
 
-    if not http.H2_ENABLED:
-        test_h2CancelsH11Timeout.skip = "HTTP/2 support not present"
-
 
     def test_protocolUnspecified(self):
         """
@@ -856,6 +856,7 @@ class GenericHTTPChannelTests(unittest.TestCase):
         self.assertEqual(negotiatedProtocol, b'http/1.1')
 
 
+    @skipIf(not http.H2_ENABLED, "HTTP/2 support not present")
     def test_http2_present(self):
         """
         If the transport reports that HTTP/2 is negotiated and HTTP/2 is
@@ -865,10 +866,9 @@ class GenericHTTPChannelTests(unittest.TestCase):
         b.negotiatedProtocol = b'h2'
         negotiatedProtocol = self._negotiatedProtocolForTransportInstance(b)
         self.assertEqual(negotiatedProtocol, b'h2')
-    if not http.H2_ENABLED:
-        test_http2_present.skip = "HTTP/2 support not present"
 
 
+    @skipIf(http.H2_ENABLED, "HTTP/2 support present")
     def test_http2_absent(self):
         """
         If the transport reports that HTTP/2 is negotiated and HTTP/2 is not
@@ -881,8 +881,6 @@ class GenericHTTPChannelTests(unittest.TestCase):
             self._negotiatedProtocolForTransportInstance,
             b,
         )
-    if http.H2_ENABLED:
-        test_http2_absent.skip = "HTTP/2 support present"
 
 
     def test_unknownProtocol(self):
@@ -921,6 +919,7 @@ class GenericHTTPChannelTests(unittest.TestCase):
         self.assertEqual(protocol._channel.callLater, clock.callLater)
 
 
+    @skipIf(not http.H2_ENABLED, "HTTP/2 support not present")
     def test_genericHTTPChannelCallLaterUpgrade(self):
         """
         If C{callLater} is patched onto the L{http._GenericHTTPChannelProtocol}
@@ -944,12 +943,9 @@ class GenericHTTPChannelTests(unittest.TestCase):
 
         self.assertEqual(protocol.callLater, clock.callLater)
         self.assertEqual(protocol._channel.callLater, clock.callLater)
-    if not http.H2_ENABLED:
-        test_genericHTTPChannelCallLaterUpgrade.skip = (
-            "HTTP/2 support not present"
-        )
 
 
+    @skipIf(not http.H2_ENABLED, "HTTP/2 support not present")
     def test_unregistersProducer(self):
         """
         The L{_GenericHTTPChannelProtocol} will unregister its proxy channel
@@ -977,9 +973,6 @@ class GenericHTTPChannelTests(unittest.TestCase):
 
         # ...it should have the new H2 channel as its producer
         self.assertIs(transport.producer, genericProtocol._channel)
-
-    if not http.H2_ENABLED:
-        test_unregistersProducer.skip = "HTTP/2 support not present"
 
 
 
@@ -1604,7 +1597,7 @@ class ParsingTests(unittest.TestCase):
                 requests.append(self)
 
         for u, p in [(b"foo", b"bar"), (b"hello", b"there:z")]:
-            s = base64.encodestring(b":".join((u, p))).strip()
+            s = base64.b64encode(b":".join((u, p)))
             f = b"GET / HTTP/1.0\nAuthorization: Basic " + s + b"\n\n"
             self.runRequest(f, Request, 0)
             req = requests.pop()
@@ -2209,9 +2202,9 @@ Hello,
 
         u = b"foo"
         p = b"bar"
-        s = base64.encodestring(b":".join((u, p))).strip()
+        s = base64.b64encode(b":".join((u, p)))
         f = b"GET / HTTP/1.0\nAuthorization: Basic " + s + b"\n\n"
-        self.patch(base64, 'decodestring', lambda x: [])
+        self.patch(base64, 'b64decode', lambda x: [])
         self.runRequest(f, Request, 0)
         req = requests.pop()
         self.assertEqual((b'', b''), req.credentials)
@@ -2379,11 +2372,11 @@ class QueryArgumentsTests(unittest.TestCase):
             if decode:
                 urlToStandardImplementation = url.decode('ascii')
 
-            # stdlib urlparse will give back whatever type we give it.  To be
-            # able to compare the values meaningfully, if it gives back unicode,
-            # convert all the values to bytes.
+            # stdlib urlparse will give back whatever type we give it.
+            # To be able to compare the values meaningfully, if it gives back
+            # unicode, convert all the values to bytes.
             standardResult = urlparse(urlToStandardImplementation)
-            if isinstance(standardResult.scheme, unicode):
+            if isinstance(standardResult.scheme, str):
                 # The choice of encoding is basically irrelevant.  The values
                 # are all in ASCII.  UTF-8 is, of course, the correct choice.
                 expected = (standardResult.scheme.encode('utf-8'),
@@ -2624,11 +2617,11 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
 
     def test_setResponseCodeAcceptsLongIntegers(self):
         """
-        L{http.Request.setResponseCode} accepts C{long} for the code
+        L{http.Request.setResponseCode} accepts L{int} for the code
         parameter.
         """
         req = http.Request(DummyChannel(), False)
-        req.setResponseCode(long(1))
+        req.setResponseCode(1)
 
 
     def test_setLastModifiedNeverSet(self):
@@ -3486,9 +3479,9 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         """
         eqCalls = []
 
-        class _NotARequest(object):
+        class _NotARequest:
 
-            def __eq__(self, other):
+            def __eq__(self, other: object) -> bool:
                 eqCalls.append(other)
                 return True
 
@@ -3506,9 +3499,9 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         """
         eqCalls = []
 
-        class _NotARequest(object):
+        class _NotARequest:
 
-            def __ne__(self, other):
+            def __ne__(self, other: object) -> bool:
                 eqCalls.append(other)
                 return True
 

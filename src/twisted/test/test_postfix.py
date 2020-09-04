@@ -35,7 +35,7 @@ class PostfixTCPMapQuoteTests(unittest.TestCase):
 
 
 
-class PostfixTCPMapServerTestCase(object):
+class PostfixTCPMapServerTestCase:
     data = {
         # 'key': 'value',
         }  # type: Dict[bytes, bytes]

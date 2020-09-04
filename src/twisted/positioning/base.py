@@ -12,7 +12,7 @@ from functools import partial
 from operator import attrgetter
 from zope.interface import implementer
 from constantly import Names, NamedConstant
-from typing import Sequence
+from typing import ClassVar, Sequence
 
 from twisted.python.util import FancyEqMixin
 from twisted.positioning import ipositioning
@@ -60,7 +60,7 @@ class Directions(Names):
 
 
 @implementer(ipositioning.IPositioningReceiver)
-class BasePositioningReceiver(object):
+class BasePositioningReceiver:
     """
     A base positioning receiver.
 
@@ -134,7 +134,7 @@ class InvalidChecksum(Exception):
 
 
 
-class Angle(FancyEqMixin, object):
+class Angle(FancyEqMixin):
     """
     An object representing an angle.
 
@@ -160,7 +160,9 @@ class Angle(FancyEqMixin, object):
     }
 
 
-    compareAttributes = 'angleType', 'inDecimalDegrees'  # type: Sequence[str]
+    compareAttributes = (
+        'angleType', 'inDecimalDegrees'
+        )  # type: ClassVar[Sequence[str]]
 
 
     def __init__(self, angle=None, angleType=None):
@@ -254,7 +256,7 @@ class Angle(FancyEqMixin, object):
         return self._angle
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """
         Returns a string representation of this angle.
 
@@ -371,7 +373,7 @@ class Heading(Angle):
     compareAttributes = list(Angle.compareAttributes) + ["variation"]
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """
         Returns a string representation of this angle.
 
@@ -442,7 +444,7 @@ class Coordinate(Angle):
 
 
 
-class Altitude(FancyEqMixin, object):
+class Altitude(FancyEqMixin):
     """
     An altitude.
 
@@ -497,7 +499,7 @@ class Altitude(FancyEqMixin, object):
         return self._altitude
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """
         Returns a string representation of this altitude.
 
@@ -508,7 +510,7 @@ class Altitude(FancyEqMixin, object):
 
 
 
-class _BaseSpeed(FancyEqMixin, object):
+class _BaseSpeed(FancyEqMixin):
     """
     An object representing the abstract concept of the speed (rate of
     movement) of a mobile object.
@@ -567,7 +569,7 @@ class _BaseSpeed(FancyEqMixin, object):
         return self._speed
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """
         Returns a string representation of this speed object.
 
@@ -616,7 +618,7 @@ class Climb(_BaseSpeed):
 
 
 
-class PositionError(FancyEqMixin, object):
+class PositionError(FancyEqMixin):
     """
     Position error information.
 
@@ -752,22 +754,39 @@ class PositionError(FancyEqMixin, object):
             raise
 
 
-    pdop = property(fget=lambda self: self._getDOP('pdop'),
-                    fset=lambda self, value: self._setDOP('pdop', value))
+    @property
+    def pdop(self):
+        return self._getDOP('pdop')
+
+    @pdop.setter
+    def pdop(self, value):
+        return self._setDOP('pdop', value)
 
 
-    hdop = property(fget=lambda self: self._getDOP('hdop'),
-                    fset=lambda self, value: self._setDOP('hdop', value))
+    @property
+    def hdop(self):
+        return self._getDOP('hdop')
 
 
-    vdop = property(fget=lambda self: self._getDOP('vdop'),
-                    fset=lambda self, value: self._setDOP('vdop', value))
+    @hdop.setter
+    def hdop(self, value):
+        return self._setDOP('hdop', value)
+
+
+    @property
+    def vdop(self):
+        return self._getDOP('vdop')
+
+
+    @vdop.setter
+    def vdop(self, value):
+        return self._setDOP('vdop', value)
 
 
     _REPR_TEMPLATE = "<PositionError (pdop: %s, hdop: %s, vdop: %s)>"
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """
         Returns a string representation of positioning information object.
 
@@ -778,7 +797,7 @@ class PositionError(FancyEqMixin, object):
 
 
 
-class BeaconInformation(object):
+class BeaconInformation:
     """
     Information about positioning beacons (a generalized term for the reference
     objects that help you determine your position, such as satellites or cell
@@ -803,7 +822,7 @@ class BeaconInformation(object):
         self.usedBeacons = set()
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """
         Returns a string representation of this beacon information object.
 
@@ -830,7 +849,7 @@ class BeaconInformation(object):
 
 
 @implementer(ipositioning.IPositioningBeacon)
-class PositioningBeacon(object):
+class PositioningBeacon:
     """
     A positioning beacon.
 
@@ -859,7 +878,7 @@ class PositioningBeacon(object):
         return hash(self.identifier)
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """
         Returns a string representation of this beacon.
 
@@ -909,7 +928,7 @@ class Satellite(PositioningBeacon):
         self.signalToNoiseRatio = signalToNoiseRatio
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """
         Returns a string representation of this Satellite.
 

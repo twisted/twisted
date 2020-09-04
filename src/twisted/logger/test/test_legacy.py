@@ -8,7 +8,8 @@ Test cases for L{twisted.logger._legacy}.
 from time import time
 import logging as py_logging
 
-from zope.interface.verify import verifyObject, BrokenMethodImplementation
+from zope.interface.exceptions import BrokenMethodImplementation
+from zope.interface.verify import verifyObject
 
 from twisted.trial import unittest
 
@@ -45,8 +46,8 @@ class LegacyLogObserverWrapperTests(unittest.TestCase):
         """
         L{LegacyLogObserverWrapper} returns the expected string.
         """
-        class LegacyObserver(object):
-            def __repr__(self):
+        class LegacyObserver:
+            def __repr__(self) -> str:
                 return "<Legacy Observer>"
 
             def __call__(self):

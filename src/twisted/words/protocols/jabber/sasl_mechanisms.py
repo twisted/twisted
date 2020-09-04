@@ -16,7 +16,8 @@ from hashlib import md5
 
 from zope.interface import Interface, Attribute, implementer
 
-from twisted.python.compat import iteritems, networkString
+from twisted.python.compat import networkString
+
 
 
 class ISASLMechanism(Interface):
@@ -44,7 +45,7 @@ class ISASLMechanism(Interface):
 
 
 @implementer(ISASLMechanism)
-class Anonymous(object):
+class Anonymous:
     """
     Implements the ANONYMOUS SASL authentication mechanism.
 
@@ -56,9 +57,14 @@ class Anonymous(object):
         return None
 
 
+    def getResponse(self, challenge):
+        # ISASLMechanism.getResponse
+        pass
+
+
 
 @implementer(ISASLMechanism)
-class Plain(object):
+class Plain:
     """
     Implements the PLAIN SASL authentication mechanism.
 
@@ -89,9 +95,14 @@ class Plain(object):
                 self.password.encode('utf-8'))
 
 
+    def getResponse(self, challenge):
+        # ISASLMechanism.getResponse
+        pass
+
+
 
 @implementer(ISASLMechanism)
-class DigestMD5(object):
+class DigestMD5:
     """
     Implements the DIGEST-MD5 SASL authentication mechanism.
 
@@ -210,7 +221,7 @@ class DigestMD5(object):
         """
 
         directive_list = []
-        for name, value in iteritems(directives):
+        for name, value in directives.items():
             if name in (b'username', b'realm', b'cnonce',
                         b'nonce', b'digest-uri', b'authzid', b'cipher'):
                 directive = name + b'=' + value

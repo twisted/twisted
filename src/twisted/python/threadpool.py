@@ -41,7 +41,6 @@ class ThreadPool:
     max = 20
     joined = False
     started = False
-    workers = 0
     name = None
 
     threadFactory = threading.Thread
@@ -127,7 +126,7 @@ class ThreadPool:
 
         @return: an object with a C{qsize} method.
         """
-        class NotAQueue(object):
+        class NotAQueue:
             def qsize(q):
                 """
                 Pretend to be a Python threading Queue and return the

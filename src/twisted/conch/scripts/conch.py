@@ -9,13 +9,14 @@
 # Implementation module for the `conch` command.
 #
 
-from twisted.conch.client import connect, default, options
+from twisted.conch.client import connect, default
+from twisted.conch.client.options import ConchOptions
 from twisted.conch.error import ConchError
 from twisted.conch.ssh import connection, common
 from twisted.conch.ssh import session, forwarding, channel
 from twisted.internet import reactor, stdio, task
 from twisted.python import log, usage
-from twisted.python.compat import ioType, networkString, unicode
+from twisted.python.compat import ioType, networkString
 
 import os
 import sys
@@ -28,7 +29,7 @@ from typing import List, Tuple
 
 
 
-class ClientOptions(options.ConchOptions):
+class ClientOptions(ConchOptions):
 
     synopsis = """Usage:   conch [options] host [command]
 """
@@ -481,7 +482,7 @@ class SSHSession(channel.SSHChannel):
     def extReceived(self, t, data):
         if t == connection.EXTENDED_DATA_STDERR:
             log.msg('got {} stderr data'.format(len(data)))
-            if ioType(sys.stderr) == unicode:
+            if ioType(sys.stderr) == str:
                 sys.stderr.buffer.write(data)
             else:
                 sys.stderr.write(data)

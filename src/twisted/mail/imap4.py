@@ -27,6 +27,7 @@ import uuid
 
 import email.utils
 
+from base64 import decodebytes, encodebytes
 from itertools import chain
 from io import BytesIO
 from typing import Any, List
@@ -40,10 +41,7 @@ from twisted.internet import error
 from twisted.internet.defer import maybeDeferred
 from twisted.python import log, text
 from twisted.python.compat import (
-    _bytesChr, unichr as chr, _b64decodebytes as decodebytes,
-    _b64encodebytes as encodebytes,
-    intToBytes, iterbytes, long, nativeString, networkString, unicode,
-    _matchingString, _PY3, _get_async_param,
+    iterbytes, nativeString, networkString, _matchingString, _get_async_param,
 )
 from twisted.internet import interfaces
 
@@ -115,7 +113,7 @@ def _swapAllPairs(of, that, ifIs):
             for first, second in of]
 
 
-class MessageSet(object):
+class MessageSet:
     """
     A set of message identifiers usable by both L{IMAP4Client} and
     L{IMAP4Server} via L{IMailboxIMAP.store} and
@@ -197,39 +195,37 @@ class MessageSet(object):
             self.ranges = start[:]
             self.clean()
         else:
-            self.add(start,end)
+            self.add(start, end)
 
 
-    # Ooo.  A property.
-    def last():
-        def _setLast(self, value):
-            if self._last is not self._empty:
-                raise ValueError("last already set")
+    @property
+    def last(self):
+        """
+        Replaces all occurrences of "*".  This should be the
+        largest number in use.  Must be set before attempting to
+        use the MessageSet as a container.
 
-            self._last = value
-            for i, (l, h) in enumerate(self.ranges):
-                if l is None:
-                    l = value
-                if h is None:
-                    h = value
-                if l > h:
-                    l, h = h, l
-                self.ranges[i] = (l, h)
-            self.clean()
+        @raises: L{ValueError} if a largest value has already
+        been set.
+        """
+        return self._last
 
-        def _getLast(self):
-            return self._last
 
-        doc = '''
-              Replaces all occurrences of "*".  This should be the
-              largest number in use.  Must be set before attempting to
-              use the MessageSet as a container.
+    @last.setter
+    def last(self, value):
+        if self._last is not self._empty:
+            raise ValueError("last already set")
 
-              @raises: L{ValueError} if a largest value has already
-                  been set.
-              '''
-        return _getLast, _setLast, None, doc
-    last = property(*last())
+        self._last = value
+        for i, (low, high) in enumerate(self.ranges):
+            if low is None:
+                low = value
+            if high is None:
+                high = value
+            if low > high:
+                low, high = high, low
+            self.ranges[i] = (low, high)
+        self.clean()
 
 
     def add(self, start, end=_empty):
@@ -401,7 +397,7 @@ class MessageSet(object):
         return res
 
 
-    def __str__(self):
+    def __str__(self) -> str:
         p = []
         for low, high in self.ranges:
             if low == high:
@@ -416,17 +412,15 @@ class MessageSet(object):
         return ','.join(p)
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return '<MessageSet %s>' % (str(self),)
 
 
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
         if isinstance(other, MessageSet):
             return self.ranges == other.ranges
-        return False
+        return NotImplemented
 
-    def __ne__(self, other):
-        return not self.__eq__(other)
 
 
 class LiteralString:
@@ -537,7 +531,7 @@ class Command:
         self.lines = []
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "<imap4.Command {!r} {!r} {!r} {!r} {!r}>".format(
             self.command, self.args, self.wantResponse, self.continuation,
             self.lines
@@ -575,22 +569,20 @@ class Command:
 # Some definitions (SP, CTL, DQUOTE) are also from the ABNF RFC -
 # <https://tools.ietf.org/html/rfc2234>.
 _SP = b' '
-_CTL = b''.join(_bytesChr(ch) for ch in chain(range(0x21), range(0x80, 0x100)))
+_CTL = bytes(chain(range(0x21), range(0x80, 0x100)))
 
 # It is easier to define ATOM-CHAR in terms of what it does not match than in
 # terms of what it does match.
 _nonAtomChars = b']\\\\(){%*"' + _SP + _CTL
 
 # _nonAtomRE is only used in Query, so it uses native strings.
-if _PY3:
-    #
-    _nativeNonAtomChars = _nonAtomChars.decode('charmap')
-else:
-    _nativeNonAtomChars = _nonAtomChars
+_nativeNonAtomChars = _nonAtomChars.decode('charmap')
 _nonAtomRE = re.compile('[' + _nativeNonAtomChars + ']')
 
 # This is all the bytes that match the ATOM-CHAR from the grammar in the RFC.
-_atomChars = b''.join(_bytesChr(ch) for ch in list(range(0x100)) if _bytesChr(ch) not in _nonAtomChars)
+_atomChars = bytes(ch for ch in range(0x100) if ch not in _nonAtomChars)
+
+
 
 @implementer(IMailboxListener)
 class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
@@ -1352,10 +1344,11 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
             return
 
         flags = [networkString(flag) for flag in mbox.getFlags()]
-        self.sendUntaggedResponse(intToBytes(mbox.getMessageCount()) + b' EXISTS')
-        self.sendUntaggedResponse(intToBytes(mbox.getRecentCount()) + b' RECENT')
+        self.sendUntaggedResponse(b'%d EXISTS' % (mbox.getMessageCount(),))
+        self.sendUntaggedResponse(b'%d RECENT' % (mbox.getRecentCount(),))
         self.sendUntaggedResponse(b'FLAGS (' + b' '.join(flags) + b')')
-        self.sendPositiveResponse(None, b'[UIDVALIDITY ' + intToBytes(mbox.getUIDValidity()) + b']')
+        self.sendPositiveResponse(None, b'[UIDVALIDITY %d]'
+                                        % (mbox.getUIDValidity(),))
 
         s = mbox.isWriteable() and b'READ-WRITE' or b'READ-ONLY'
         mbox.addListener(self)
@@ -1580,7 +1573,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
 
 
     def __cbAppend(self, result, tag, mbox):
-        self.sendUntaggedResponse(intToBytes(mbox.getMessageCount()) + b' EXISTS')
+        self.sendUntaggedResponse(b'%d EXISTS' % (mbox.getMessageCount(),))
         self.sendPositiveResponse(tag, b'APPEND complete')
 
 
@@ -1667,7 +1660,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
 
     def __cbExpunge(self, result, tag):
         for e in result:
-            self.sendUntaggedResponse(intToBytes(e) + b' EXPUNGE')
+            self.sendUntaggedResponse(b'%d EXPUNGE' % (e,))
         self.sendPositiveResponse(tag, b'EXPUNGE completed')
 
 
@@ -1743,10 +1736,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
             # messages.
             if self._searchFilter(copy.deepcopy(query), msgId, msg,
                                   lastSequenceId, lastMessageId):
-                if uid:
-                    searchResults.append(intToBytes(msg.getUID()))
-                else:
-                    searchResults.append(intToBytes(msgId))
+                searchResults.append(b'%d' % (msg.getUID() if uid else msgId,))
 
         if i == 4:
             from twisted.internet import reactor
@@ -2229,10 +2219,10 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
                 sign = b"+"
             else:
                 sign = b"-"
-            odate = odate + sign + intToBytes(
-                ((abs(ttup[9]) // 3600) * 100 +
-                 (abs(ttup[9]) % 3600) // 60)
-            ).zfill(4)
+            odate = odate + sign + b'%04d' % (
+                (abs(ttup[9]) // 3600) * 100 +
+                (abs(ttup[9]) % 3600) // 60,
+                )
         _w(b'INTERNALDATE ' + _quote(odate))
 
 
@@ -2256,7 +2246,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
     def spew_rfc822size(self, id, msg, _w=None, _f=None):
         if _w is None:
             _w = self.transport.write
-        _w(b'RFC822.SIZE ' + intToBytes(msg.getSize()))
+        _w(b'RFC822.SIZE %d' % (msg.getSize(),))
 
 
     def spew_rfc822(self, id, msg, _w=None, _f=None):
@@ -2277,7 +2267,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
     def spew_uid(self, id, msg, _w=None, _f=None):
         if _w is None:
             _w = self.transport.write
-        _w(b'UID ' + intToBytes(msg.getUID()))
+        _w(b'UID %d' % (msg.getUID(),))
 
 
     def spew_bodystructure(self, id, msg, _w=None, _f=None):
@@ -2329,10 +2319,13 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         wbuf = WriteBuffer(self.transport)
         write = wbuf.write
         flush = wbuf.flush
+
         def start():
-            write(b'* ' + intToBytes(id) + b' FETCH (')
+            write(b'* %d FETCH (' % (id,))
+
         def finish():
             write(b')\r\n')
+
         def space():
             write(b' ')
 
@@ -2387,15 +2380,13 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         if result and not silent:
             for (k, v) in result.items():
                 if uid:
-                    uidstr = b' UID ' + intToBytes(mbox.getUID(k))
+                    uidstr = b' UID %d' % (mbox.getUID(k),)
                 else:
                     uidstr = b''
 
                 flags = [networkString(flag) for flag in v]
                 self.sendUntaggedResponse(
-                    intToBytes(k) +
-                    b' FETCH (FLAGS ('+ b' '.join(flags) + b')' +
-                    uidstr + b')')
+                    b'%d FETCH (FLAGS (%b)%b)' % (k, b' '.join(flags), uidstr))
         self.sendPositiveResponse(tag, b'STORE completed')
 
 
@@ -2405,11 +2396,12 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
 
 
     def do_COPY(self, tag, messages, mailbox, uid=0):
-        mailbox = self._parseMbox(mailbox)
+        mailbox = _parseMbox(mailbox)
         maybeDeferred(self.account.select, mailbox
-            ).addCallback(self._cbCopySelectedMailbox, tag, messages, mailbox, uid
-            ).addErrback(self._ebCopySelectedMailbox, tag
-            )
+                      ).addCallback(self._cbCopySelectedMailbox, tag, messages,
+                                    mailbox, uid
+                                    ).addErrback(self._ebCopySelectedMailbox,
+                                                 tag)
     select_COPY = (do_COPY, arg_seqset, arg_finalastring)
 
 
@@ -2507,19 +2499,15 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
     def flagsChanged(self, newFlags):
         for (mId, flags) in newFlags.items():
             encodedFlags = [networkString(flag) for flag in flags]
-            msg = intToBytes(mId) + (
-                b' FETCH (FLAGS (' + b' '.join(encodedFlags) + b'))'
-            )
+            msg = b'%d FETCH (FLAGS (%b))' % (mId, b' '.join(encodedFlags))
             self.sendUntaggedResponse(msg, isAsync=True)
 
 
     def newMessages(self, exists, recent):
         if exists is not None:
-            self.sendUntaggedResponse(
-                intToBytes(exists) + b' EXISTS', isAsync=True)
+            self.sendUntaggedResponse(b'%d EXISTS' % (exists,), isAsync=True)
         if recent is not None:
-            self.sendUntaggedResponse(
-                intToBytes(recent) + b' RECENT', isAsync=True)
+            self.sendUntaggedResponse(b'%d RECENT' % (recent,), isAsync=True)
 
 
 
@@ -3186,14 +3174,10 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         # they should receive namespaces and delimiters as native
         # strings.  Both cases are possible because of the imap4-utf-7
         # encoding.
-        if _PY3:
-            def _prepareNamespaceOrDelimiter(namespaceList):
-                return [
-                    element.decode('imap4-utf-7') for element in namespaceList
-                ]
-        else:
-            def _prepareNamespaceOrDelimiter(element):
-                return element
+        def _prepareNamespaceOrDelimiter(namespaceList):
+            return [
+                element.decode('imap4-utf-7') for element in namespaceList
+            ]
 
         for parts in lines:
             if len(parts) == 4 and parts[0] == b'NAMESPACE':
@@ -3527,11 +3511,10 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
                 #
                 # Mailbox names contain the hierarchical delimiter, so
                 # it too should be a native string.
-                if _PY3:
-                    # delimiter
-                    parts[2] = parts[2].decode('imap4-utf-7')
-                    # mailbox
-                    parts[3] = parts[3].decode('imap4-utf-7')
+                # delimiter
+                parts[2] = parts[2].decode('imap4-utf-7')
+                # mailbox
+                parts[3] = parts[3].decode('imap4-utf-7')
 
                 results.append(tuple(parts[1:]))
         return results
@@ -3644,14 +3627,11 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
 
         encodedFlags = [networkString(flag) for flag in flags]
 
-        cmd = b''.join([
-            _prepareMailboxName(mailbox),
-            b" (", b" ".join(encodedFlags), b")",
-            date,
-            b" {", intToBytes(L), b"}",
-        ])
+        cmd = b'%b (%b)%b {%d}' % (
+            _prepareMailboxName(mailbox), b" ".join(encodedFlags), date, L)
 
-        d = self.sendCommand(Command(b'APPEND', cmd, (), self.__cbContinueAppend, message))
+        d = self.sendCommand(
+            Command(b'APPEND', cmd, (), self.__cbContinueAppend, message))
         return d
 
 
@@ -3746,8 +3726,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         """
         # Queries should be encoded as ASCII unless a charset
         # identifier is provided.  See #9201.
-        if _PY3:
-            queries = [query.encode('charmap') for query in queries]
+        queries = [query.encode('charmap') for query in queries]
 
         if kwarg.get('uid'):
             cmd = b'UID SEARCH'
@@ -4119,16 +4098,12 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         # return native (byte) strings, while on Python 3 it should
         # decode bytes to native strings via charmap, ensuring data
         # fidelity at the cost of mojibake.
-        if _PY3:
-            def nativeStringResponse(thing):
-                if isinstance(thing, bytes):
-                    return thing.decode('charmap')
-                elif isinstance(thing, list):
-                    return [nativeStringResponse(subthing)
-                            for subthing in thing]
-        else:
-            def nativeStringResponse(thing):
-                return thing
+        def nativeStringResponse(thing):
+            if isinstance(thing, bytes):
+                return thing.decode('charmap')
+            elif isinstance(thing, list):
+                return [nativeStringResponse(subthing)
+                        for subthing in thing]
 
         values = {}
         unstructured = []
@@ -4355,8 +4330,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
 
         # APPEND components should be encoded as ASCII unless a
         # charset identifier is provided.  See #9201.
-        if _PY3:
-            cmd = cmd.encode('charmap')
+        cmd = cmd.encode('charmap')
 
         d = self.sendCommand(Command(fetch, cmd, wantResponse=(b'FETCH',)))
         d.addCallback(self._cbFetch, (), False)
@@ -4958,8 +4932,8 @@ def _quote(s):
 
 
 
-def _literal(s):
-    return b'{' + intToBytes(len(s)) + b'}\r\n' + s
+def _literal(s: bytes) -> bytes:
+    return b'{%d}\r\n%b' % (len(s), s)
 
 
 
@@ -4968,7 +4942,7 @@ class DontQuoteMe:
         self.value = value
 
 
-    def __str__(self):
+    def __str__(self) -> str:
         return str(self.value)
 
 
@@ -4987,7 +4961,7 @@ def _needsQuote(s):
 
 
 def _parseMbox(name):
-    if isinstance(name, unicode):
+    if isinstance(name, str):
         return name
     try:
         return name.decode('imap4-utf-7')
@@ -4998,7 +4972,7 @@ def _parseMbox(name):
 
 
 def _prepareMailboxName(name):
-    if not isinstance(name, unicode):
+    if not isinstance(name, str):
         name = name.decode("charmap")
     name = name.encode('imap4-utf-7')
     if _needsQuote(name):
@@ -5040,27 +5014,27 @@ def collapseNestedLists(items):
     """
     pieces = []
     for i in items:
-        if isinstance(i, unicode):
+        if isinstance(i, str):
             # anything besides ASCII will have to wait for an RFC 5738
             # implementation.  See
             # https://twistedmatrix.com/trac/ticket/9258
             i = i.encode("ascii")
         if i is None:
             pieces.extend([b' ', b'NIL'])
-        elif isinstance(i, (int, long)):
+        elif isinstance(i, int):
             pieces.extend([b' ', networkString(str(i))])
         elif isinstance(i, DontQuoteMe):
             pieces.extend([b' ', i.value])
         elif isinstance(i, bytes):
             # XXX warning
             if _needsLiteral(i):
-                pieces.extend([b' ', b'{', intToBytes(len(i)), b'}',
+                pieces.extend([b' ', b'{%d}' % (len(i),),
                                IMAP4Server.delimiter, i])
             else:
                 pieces.extend([b' ', _quote(i)])
         elif hasattr(i, 'read'):
             d = i.read()
-            pieces.extend([b' ', b'{', intToBytes(len(d)), b'}',
+            pieces.extend([b' ', b'{%d}' % (len(d),),
                            IMAP4Server.delimiter, d])
         else:
             pieces.extend([b' ', b'(' + collapseNestedLists(i) + b')'])
@@ -5069,7 +5043,7 @@ def collapseNestedLists(items):
 
 
 @implementer(IAccount)
-class MemoryAccountWithoutNamespaces(object):
+class MemoryAccountWithoutNamespaces:
     mailboxes = None
     subscriptions = None
     top_id = 0
@@ -5211,6 +5185,11 @@ class MemoryAccount(MemoryAccountWithoutNamespaces):
         return None
 
 
+    def getUserNamespaces(self):
+        # INamespacePresenter.getUserNamespaces
+        return None
+
+
 
 _statusRequestDict = {
     'MESSAGES': 'getMessageCount',
@@ -5321,7 +5300,7 @@ def _getMessageStructure(message):
 
 
 
-class _MessageStructure(object):
+class _MessageStructure:
     """
     L{_MessageStructure} is a helper base class for message structure classes
     representing the structure of particular kinds of messages, as defined by
@@ -5892,7 +5871,7 @@ class _FetchParser:
         partialBegin = None
         partialLength = None
 
-        def __str__(self):
+        def __str__(self) -> str:
             return nativeString(self.__bytes__())
 
         def __bytes__(self):
@@ -5900,7 +5879,7 @@ class _FetchParser:
             part = b''
             separator = b''
             if self.part:
-                part = b'.'.join([unicode(x + 1).encode("ascii")
+                part = b'.'.join([str(x + 1).encode("ascii")
                                   for x in self.part])
                 separator = b'.'
 #            if self.peek:
@@ -5915,7 +5894,7 @@ class _FetchParser:
             elif self.empty:
                 base += b'[' + part + b']'
             if self.partialBegin is not None:
-                base += b'<' + intToBytes(self.partialBegin) + b'.' + intToBytes(self.partialLength) + b'>'
+                base += b'<%d.%d>' % (self.partialBegin, self.partialLength)
             return base
 
 
@@ -5930,7 +5909,7 @@ class _FetchParser:
         fields = None
         part = None
 
-        def __str__(self):
+        def __str__(self) -> str:
             return nativeString(self.__bytes__())
 
 
@@ -6209,7 +6188,7 @@ class FileProducer:
     def resumeProducing(self):
         b = b''
         if self.firstWrite:
-            b = b'{' + intToBytes(self._size()) + b'}\r\n'
+            b = b'{%d}\r\n' % (self._size(),)
             self.firstWrite = False
         if not self.f:
             return
@@ -6365,12 +6344,23 @@ class StreamWriter(codecs.StreamWriter):
         return encoder(s)
 
 
+
 _codecInfo = codecs.CodecInfo(encoder, decoder, StreamReader, StreamWriter)
 
 
+
 def imap4_utf_7(name):
-    if name == 'imap4-utf-7':
+    # In Python 3.9, codecs.lookup() was changed to normalize the codec name
+    # in the same way as encodings.normalize_encoding().  The docstring
+    # for encodings.normalize_encoding() describes how the codec name is
+    # normalized.  We need to replace '-' with '_' to be compatible with
+    # older Python versions.
+    #  See:  https://bugs.python.org/issue37751
+    #        https://github.com/python/cpython/pull/17997
+    if name.replace('-', '_') == 'imap4_utf_7':
         return _codecInfo
+
+
 
 codecs.register(imap4_utf_7)
 

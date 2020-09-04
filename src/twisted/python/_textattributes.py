@@ -21,12 +21,12 @@ Serializing a formatting structure is done with L{flatten}.
 """
 
 
-from typing import Sequence
+from typing import ClassVar, Sequence
 from twisted.python.util import FancyEqMixin
 
 
 
-class _Attribute(FancyEqMixin, object):
+class _Attribute(FancyEqMixin):
     """
     A text attribute.
 
@@ -37,14 +37,14 @@ class _Attribute(FancyEqMixin, object):
     @type children: C{list}
     @ivar children: Child attributes.
     """
-    compareAttributes = ('children',)  # type: Sequence[str]
+    compareAttributes = ('children',)  # type: ClassVar[Sequence[str]]
 
 
     def __init__(self):
         self.children = []
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return '<%s %r>' % (type(self).__name__, vars(self))
 
 
@@ -168,7 +168,7 @@ class _BackgroundColorAttr(_ColorAttr):
 
 
 
-class _ColorAttribute(object):
+class _ColorAttribute:
     """
     A color text attribute.
 
@@ -195,7 +195,7 @@ class _ColorAttribute(object):
 
 
 
-class CharacterAttributesMixin(object):
+class CharacterAttributesMixin:
     """
     Mixin for character attributes that implements a C{__getattr__} method
     returning a new C{_NormalAttr} instance when attempting to access
@@ -211,12 +211,12 @@ class CharacterAttributesMixin(object):
 
 
 
-class DefaultFormattingState(FancyEqMixin, object):
+class DefaultFormattingState(FancyEqMixin):
     """
     A character attribute that does nothing, thus applying no attributes to
     text.
     """
-    compareAttributes = ('_dummy',)
+    compareAttributes = ('_dummy',)  # type: ClassVar[Sequence[str]]
 
     _dummy = 0
 

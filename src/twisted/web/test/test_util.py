@@ -8,20 +8,20 @@ Tests for L{twisted.web.util}.
 
 import gc
 
+from twisted.internet import defer
+from twisted.python.compat import networkString
 from twisted.python.failure import Failure
 from twisted.trial.unittest import SynchronousTestCase, TestCase
-from twisted.internet import defer
-from twisted.python.compat import _PY3, intToBytes, networkString
 from twisted.web import resource, util
 from twisted.web.error import FlattenerError
 from twisted.web.http import FOUND
 from twisted.web.server import Request
 from twisted.web.template import TagLoader, flattenString, tags
 from twisted.web.test.requesthelper import DummyChannel, DummyRequest
-from twisted.web.util import DeferredResource
-from twisted.web.util import _SourceFragmentElement, _FrameElement
-from twisted.web.util import _StackElement, FailureElement, formatFailure
-from twisted.web.util import redirectTo, _SourceLineElement
+from twisted.web.util import (DeferredResource, FailureElement, ParentRedirect,
+                              _FrameElement, _SourceFragmentElement,
+                              _SourceLineElement, _StackElement, formatFailure,
+                              redirectTo)
 
 
 
@@ -29,6 +29,7 @@ class RedirectToTests(TestCase):
     """
     Tests for L{redirectTo}.
     """
+
 
     def test_headersAndCode(self):
         """
@@ -56,6 +57,63 @@ class RedirectToTests(TestCase):
         request.method = b'GET'
         targetURL = u'http://target.example.com/4321'
         self.assertRaises(TypeError, redirectTo, targetURL, request)
+
+
+
+class ParentRedirectTests(SynchronousTestCase):
+    """
+    Test L{ParentRedirect}.
+    """
+    def doLocationTest(self, requestPath: bytes):
+        """
+        Render a response to a request with path *requestPath*
+
+        @param requestPath: A slash-separated path like C{b'/foo/bar'}.
+
+        @returns: The value of the I{Location} header.
+        """
+        request = Request(DummyChannel(), True)
+        request.method = b'GET'
+        request.prepath = requestPath.lstrip(b'/').split(b'/')
+
+        resource = ParentRedirect()
+        resource.render(request)
+
+        [location] = request.responseHeaders.getRawHeaders(b'Location')
+        return location
+
+
+    def test_locationRoot(self):
+        """
+        At the URL root issue a redirect to the current URL, removing any query
+        string.
+        """
+        self.assertEqual(b'http://10.0.0.1/', self.doLocationTest(b'/'))
+        self.assertEqual(b'http://10.0.0.1/',
+                         self.doLocationTest(b'/?biff=baff'))
+
+
+    def test_locationToRoot(self):
+        """
+        A request for a resource one level down from the URL root produces
+        a redirect to the root.
+        """
+        self.assertEqual(b'http://10.0.0.1/', self.doLocationTest(b'/foo'))
+        self.assertEqual(b'http://10.0.0.1/',
+                         self.doLocationTest(b'/foo?bar=sproiiing'))
+
+
+    def test_locationUpOne(self):
+        """
+        Requests for resources directly under the path C{/foo/} produce
+        redirects to C{/foo/}.
+        """
+        self.assertEqual(b'http://10.0.0.1/foo/',
+                         self.doLocationTest(b'/foo/'))
+        self.assertEqual(b'http://10.0.0.1/foo/',
+                         self.doLocationTest(b'/foo/bar'))
+        self.assertEqual(b'http://10.0.0.1/foo/',
+                         self.doLocationTest(b'/foo/bar?biz=baz'))
 
 
 
@@ -120,25 +178,14 @@ class FailureElementTests(TestCase):
             u'raised.',
         ]
         d = flattenString(None, element)
-        if _PY3:
-            stringToCheckFor = ''.join([
-                '<div class="snippet%sLine"><span>%d</span><span>%s</span>'
-                '</div>' % (
-                    ["", "Highlight"][lineNumber == 1],
-                    self.base + lineNumber,
-                    (u" \N{NO-BREAK SPACE}" * 4 + sourceLine))
-                for (lineNumber, sourceLine)
-                in enumerate(source)]).encode("utf8")
-
-        else:
-            stringToCheckFor = ''.join([
-                '<div class="snippet%sLine"><span>%d</span><span>%s</span>'
-                '</div>' % (
-                    ["", "Highlight"][lineNumber == 1],
-                    self.base + lineNumber,
-                    (u" \N{NO-BREAK SPACE}" * 4 + sourceLine).encode('utf8'))
-                for (lineNumber, sourceLine)
-                in enumerate(source)])
+        stringToCheckFor = ''.join([
+            '<div class="snippet%sLine"><span>%d</span><span>%s</span>'
+            '</div>' % (
+                ["", "Highlight"][lineNumber == 1],
+                self.base + lineNumber,
+                (u" \N{NO-BREAK SPACE}" * 4 + sourceLine))
+            for (lineNumber, sourceLine)
+            in enumerate(source)]).encode("utf8")
 
         d.addCallback(self.assertEqual, stringToCheckFor)
         return d
@@ -172,8 +219,7 @@ class FailureElementTests(TestCase):
             TagLoader(tags.span(render="lineNumber")),
             self.frame)
         d = flattenString(None, element)
-        d.addCallback(
-            self.assertEqual, b"<span>" + intToBytes(self.base + 1) + b"</span>")
+        d.addCallback(self.assertEqual, b"<span>%d</span>" % (self.base + 1,))
         return d
 
 
@@ -248,10 +294,7 @@ class FailureElementTests(TestCase):
         element = FailureElement(
             self.failure, TagLoader(tags.span(render="type")))
         d = flattenString(None, element)
-        if _PY3:
-            exc = b"builtins.Exception"
-        else:
-            exc = b"exceptions.Exception"
+        exc = b"builtins.Exception"
         d.addCallback(
             self.assertEqual, b"<span>" + exc + b"</span>")
         return d
@@ -296,10 +339,7 @@ class FormatFailureTests(TestCase):
             result = formatFailure(Failure())
 
         self.assertIsInstance(result, bytes)
-        if _PY3:
-            self.assertTrue(all(ch < 128 for ch in result))
-        else:
-            self.assertTrue(all(ord(ch) < 128 for ch in result))
+        self.assertTrue(all(ch < 128 for ch in result))
         # Indentation happens to rely on NO-BREAK SPACE
         self.assertIn(b"&#160;", result)
 

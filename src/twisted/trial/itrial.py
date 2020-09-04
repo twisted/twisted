@@ -9,7 +9,7 @@ Maintainer: Jonathan Lange
 
 
 import zope.interface as zi
-from zope.interface import Attribute
+
 
 
 class ITestCase(zi.Interface):
@@ -60,20 +60,11 @@ class IReporter(zi.Interface):
     I report results from a run of a test suite.
     """
 
-    stream = zi.Attribute(
-        "Deprecated in Twisted 8.0. "
-        "The io-stream that this reporter will write to")
-    tbformat = zi.Attribute("Either 'default', 'brief', or 'verbose'")
-    args = zi.Attribute(
-        "Additional string argument passed from the command line")
     shouldStop = zi.Attribute(
-        """
-        A boolean indicating that this reporter would like the test run to stop.
-        """)
-    separator = Attribute(
-        "Deprecated in Twisted 8.0. "
-        "A value which will occasionally be passed to the L{write} method.")
-    testsRun = Attribute(
+        "A boolean indicating that this reporter would like the "
+        "test run to stop."
+        )
+    testsRun = zi.Attribute(
         """
         The number of tests that seem to have been run according to this
         reporter.
@@ -93,50 +84,6 @@ class IReporter(zi.Interface):
         Report the status of a single test method
 
         @param method: an object that is adaptable to ITestMethod
-        """
-
-
-    def startSuite(name):
-        """
-        Deprecated in Twisted 8.0.
-
-        Suites which wish to appear in reporter output should call this
-        before running their tests.
-        """
-
-
-    def endSuite(name):
-        """
-        Deprecated in Twisted 8.0.
-
-        Called at the end of a suite, if and only if that suite has called
-        C{startSuite}.
-        """
-
-
-    def cleanupErrors(errs):
-        """
-        Deprecated in Twisted 8.0.
-
-        Called when the reactor has been left in a 'dirty' state
-
-        @param errs: a list of L{twisted.python.failure.Failure}s
-        """
-
-
-    def upDownError(userMeth, warn=True, printStatus=True):
-        """
-        Deprecated in Twisted 8.0.
-
-        Called when an error occurs in a setUp* or tearDown* method
-
-        @param warn: indicates whether or not the reporter should emit a
-                     warning about the error
-        @type warn: Boolean
-        @param printStatus: indicates whether or not the reporter should
-                            print the name of the method and the status
-                            message appropriate for the type of error
-        @type printStatus: Boolean
         """
 
 
@@ -207,38 +154,6 @@ class IReporter(zi.Interface):
             for skipping the test.
         """
 
-
-    def printSummary():
-        """
-        Deprecated in Twisted 8.0, use L{done} instead.
-
-        Present a summary of the test results.
-        """
-
-
-    def printErrors():
-        """
-        Deprecated in Twisted 8.0, use L{done} instead.
-
-        Present the errors that have occurred during the test run. This method
-        will be called after all tests have been run.
-        """
-
-
-    def write(string):
-        """
-        Deprecated in Twisted 8.0, use L{done} instead.
-
-        Display a string to the user, without appending a new line.
-        """
-
-
-    def writeln(string):
-        """
-        Deprecated in Twisted 8.0, use L{done} instead.
-
-        Display a string to the user, appending a new line.
-        """
 
     def wasSuccessful():
         """

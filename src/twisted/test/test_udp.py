@@ -9,9 +9,9 @@ Tests for implementations of L{IReactorUDP} and L{IReactorMulticast}.
 
 import os
 
-from twisted.trial import unittest
+from unittest import skipIf
+from twisted.trial.unittest import TestCase
 
-from twisted.python.compat import intToBytes
 from twisted.internet.defer import Deferred, gatherResults, maybeDeferred
 from twisted.internet import protocol, reactor, error, defer, interfaces, udp
 from twisted.python import runtime
@@ -115,7 +115,9 @@ class BadClient(protocol.DatagramProtocol):
 
 
 
-class UDPTests(unittest.TestCase):
+@skipIf(not interfaces.IReactorUDP(reactor, None),
+        "This reactor does not support UDP")
+class UDPTests(TestCase):
 
     def test_oldAddress(self):
         """
@@ -268,7 +270,8 @@ class UDPTests(unittest.TestCase):
         return d
 
 
-
+    @skipIf(os.environ.get("INFRASTRUCTURE") == "AZUREPIPELINES",
+            "Hangs on Pipelines due to firewall")
     def test_connectionRefused(self):
         """
         A L{ConnectionRefusedError} exception is raised when a connection
@@ -293,8 +296,8 @@ class UDPTests(unittest.TestCase):
             client.transport.connect("127.0.0.1", 80)
 
             for i in range(10):
-                client.transport.write(intToBytes(i))
-                server.transport.write(intToBytes(i), ("127.0.0.1", 80))
+                client.transport.write(b'%d' % (i,))
+                server.transport.write(b'%d' % (i,), ("127.0.0.1", 80))
 
             return self.assertFailure(
                 connectionRefused,
@@ -310,9 +313,6 @@ class UDPTests(unittest.TestCase):
 
         d.addCallback(cbFinished)
         return d
-
-    if os.environ.get("INFRASTRUCTURE") == "AZUREPIPELINES":
-        test_connectionRefused.skip = "Hangs on Pipelines due to firewall"
 
 
     def test_badConnect(self):
@@ -385,12 +385,13 @@ class UDPTests(unittest.TestCase):
             if not attempts:
                 try:
                     self.fail("Not enough packets received")
-                except:
+                except Exception:
                     finalDeferred.errback()
 
-            self.failIfIdentical(client.transport, None, "UDP Protocol lost its transport")
+            self.failIfIdentical(client.transport, None,
+                                 "UDP Protocol lost its transport")
 
-            packet = intToBytes(attempts.pop(0))
+            packet = b'%d' % (attempts.pop(0),)
             packetDeferred = defer.Deferred()
             client.setDeferred(packetDeferred)
             client.transport.write(packet, (addr.host, addr.port))
@@ -455,8 +456,14 @@ class UDPTests(unittest.TestCase):
 
 
 
-class ReactorShutdownInteractionTests(unittest.TestCase):
+@skipIf(not interfaces.IReactorUDP(reactor, None),
+        "This reactor does not support UDP")
+class ReactorShutdownInteractionTests(TestCase):
     """Test reactor shutdown interaction"""
+
+    if not interfaces.IReactorUDP(reactor, None):
+        skip = "This reactor does not support UDP"
+
 
     def setUp(self):
         """Start a UDP port"""
@@ -504,13 +511,16 @@ class ReactorShutdownInteractionTests(unittest.TestCase):
 
 
 
-class MulticastTests(unittest.TestCase):
+@skipIf(not interfaces.IReactorMulticast(reactor, None),
+        "This reactor does not support multicast")
+class MulticastTests(TestCase):
 
-    if (
-        os.environ.get("INFRASTRUCTURE") == "AZUREPIPELINES" and
-        runtime.platform.isMacOSX()
-    ):
+    if (os.environ.get("INFRASTRUCTURE") == "AZUREPIPELINES" and
+       runtime.platform.isMacOSX()):
         skip = "Does not work on Azure Pipelines"
+
+    if not interfaces.IReactorMulticast(reactor, None):
+        skip = "This reactor does not support multicast"
 
     def setUp(self):
         self.server = Server()
@@ -612,6 +622,9 @@ class MulticastTests(unittest.TestCase):
         return d
 
 
+    # FIXME: https://twistedmatrix.com/trac/ticket/7780
+    @skipIf(runtime.platform.isWindows() and not runtime.platform.isVista(),
+            "Windows' UDP multicast is not yet fully supported.")
     def test_joinFailure(self):
         """
         Test that an attempt to join an address which is not a multicast
@@ -621,10 +634,6 @@ class MulticastTests(unittest.TestCase):
         return self.assertFailure(
             self.client.transport.joinGroup("127.0.0.1"),
             error.MulticastJoinError)
-    if runtime.platform.isWindows() and not runtime.platform.isVista():
-        # FIXME: https://twistedmatrix.com/trac/ticket/7780
-        test_joinFailure.skip = (
-            "Windows' UDP multicast is not yet fully supported.")
 
 
     def test_multicast(self):
@@ -657,6 +666,10 @@ class MulticastTests(unittest.TestCase):
         return joined
 
 
+    @skipIf(runtime.platform.isWindows(),
+            "on non-linux platforms it appears multiple "
+            "processes can listen, but not multiple sockets "
+            "in same process?")
     def test_multiListen(self):
         """
         Test that multiple sockets can listen on the same multicast port and
@@ -698,14 +711,3 @@ class MulticastTests(unittest.TestCase):
             return result
         joined.addBoth(cleanup)
         return joined
-    if runtime.platform.isWindows():
-        test_multiListen.skip = ("on non-linux platforms it appears multiple "
-                                 "processes can listen, but not multiple sockets "
-                                 "in same process?")
-
-
-if not interfaces.IReactorUDP(reactor, None):
-    UDPTests.skip = "This reactor does not support UDP"
-    ReactorShutdownInteractionTests.skip = "This reactor does not support UDP"
-if not interfaces.IReactorMulticast(reactor, None):
-    MulticastTests.skip = "This reactor does not support multicast"

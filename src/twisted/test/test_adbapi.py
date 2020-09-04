@@ -9,7 +9,7 @@ from twisted.trial import unittest
 
 import os
 import stat
-from typing import Dict
+from typing import Dict, Optional
 
 from twisted.enterprise.adbapi import ConnectionPool, ConnectionLost
 from twisted.enterprise.adbapi import Connection, Transaction
@@ -25,7 +25,7 @@ CREATE TABLE simple (
 
 
 
-class ADBAPITestBase(object):
+class ADBAPITestBase:
     """
     Test the asynchronous DB-API code.
     """
@@ -267,7 +267,7 @@ class ADBAPITestBase(object):
 
 
 
-class ReconnectTestBase(object):
+class ReconnectTestBase:
     """
     Test the asynchronous DB-API code with reconnect.
     """
@@ -350,7 +350,7 @@ class ReconnectTestBase(object):
 
 
 
-class DBTestConnector(object):
+class DBTestConnector:
     """
     A class which knows how to test for the presence of
     and establish a connection to a relational database.
@@ -359,25 +359,26 @@ class DBTestConnector(object):
     you must create a database named DB_NAME with a user DB_USER
     and password DB_PASS with full access rights to database DB_NAME.
     """
-    TEST_PREFIX = None # used for creating new test cases
+    # used for creating new test cases
+    TEST_PREFIX = None  # type: Optional[str]
 
     DB_NAME = "twisted_test"
     DB_USER = 'twisted_test'
     DB_PASS = 'twisted_test'
 
-    DB_DIR = None # directory for database storage
+    DB_DIR = None  # directory for database storage
 
-    nulls_ok = True # nulls supported
-    trailing_spaces_ok = True # trailing spaces in strings preserved
-    can_rollback = True # rollback supported
-    test_failures = True # test bad sql?
-    escape_slashes = True # escape \ in sql?
-    good_sql = ConnectionPool.good_sql
-    early_reconnect = True # cursor() will fail on closed connection
-    can_clear = True # can try to clear out tables when starting
+    nulls_ok = True  # nulls supported
+    trailing_spaces_ok = True  # trailing spaces in strings preserved
+    can_rollback = True  # rollback supported
+    test_failures = True  # test bad sql?
+    escape_slashes = True  # escape \ in sql?
+    good_sql = ConnectionPool.good_sql  # type: Optional[str]
+    early_reconnect = True  # cursor() will fail on closed connection
+    can_clear = True  # can try to clear out tables when starting
 
-    num_iterations = 50 # number of iterations for test loops
-                        # (lower this for slow db's)
+    # number of iterations for test loop (lower this for slow db's)
+    num_iterations = 50
 
     def setUp(self):
         self.DB_DIR = self.mktemp()
@@ -637,7 +638,7 @@ makeSQLTests(ReconnectTestBase, 'ReconnectTests', globals())
 
 
 
-class FakePool(object):
+class FakePool:
     """
     A fake L{ConnectionPool} for tests.
 
@@ -676,7 +677,7 @@ class ConnectionTests(unittest.TestCase):
         If an error happens during rollback, L{ConnectionLost} is raised but
         the original error is logged.
         """
-        class ConnectionRollbackRaise(object):
+        class ConnectionRollbackRaise:
             def rollback(self):
                 raise RuntimeError("problem!")
 
@@ -699,7 +700,7 @@ class TransactionTests(unittest.TestCase):
         If the cursor creation raises an error in L{Transaction.reopen}, it
         reconnects but log the error occurred.
         """
-        class ConnectionCursorRaise(object):
+        class ConnectionCursorRaise:
             count = 0
 
             def reconnect(self):
@@ -719,7 +720,7 @@ class TransactionTests(unittest.TestCase):
 
 
 
-class NonThreadPool(object):
+class NonThreadPool:
     def callInThreadWithCallback(self, onResult, f, *a, **kw):
         success = True
         try:
@@ -745,7 +746,7 @@ class DummyConnectionPool(ConnectionPool):
 
 
 
-class EventReactor(object):
+class EventReactor:
     """
     Partial L{IReactorCore} implementation with simple event-related
     methods.
@@ -788,7 +789,7 @@ class ConnectionPoolTests(unittest.TestCase):
         If rollback fails, L{ConnectionPool.runWithConnection} raises the
         original exception and log the error of the rollback.
         """
-        class ConnectionRollbackRaise(object):
+        class ConnectionRollbackRaise:
             def __init__(self, pool):
                 pass
 
@@ -814,7 +815,7 @@ class ConnectionPoolTests(unittest.TestCase):
         """
         L{ConnectionPool._close} logs exceptions.
         """
-        class ConnectionCloseRaise(object):
+        class ConnectionCloseRaise:
             def close(self):
                 raise RuntimeError("problem!")
 
@@ -831,14 +832,14 @@ class ConnectionPoolTests(unittest.TestCase):
         If rollback fails, L{ConnectionPool.runInteraction} raises the
         original exception and log the error of the rollback.
         """
-        class ConnectionRollbackRaise(object):
+        class ConnectionRollbackRaise:
             def __init__(self, pool):
                 pass
 
             def rollback(self):
                 raise RuntimeError("problem!")
 
-        class DummyTransaction(object):
+        class DummyTransaction:
             def __init__(self, pool, connection):
                 pass
 

@@ -7,7 +7,6 @@ Twisted Python: Utilities and Enhancements for Python.
 
 
 # Deprecating twisted.python.constants.
-from .compat import unicode
 from .versions import Version
 from .deprecate import deprecatedModuleAttribute
 
@@ -25,4 +24,3 @@ deprecatedModuleAttribute(
 
 del Version
 del deprecatedModuleAttribute
-del unicode

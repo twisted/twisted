@@ -16,7 +16,6 @@ headers for each of the allowed authentication schemes.
 
 from twisted.cred import error
 from twisted.cred.credentials import Anonymous
-from twisted.python.compat import unicode
 from twisted.python.components import proxyForInterface
 from twisted.web import util
 from twisted.web.resource import ErrorPage, IResource
@@ -26,7 +25,7 @@ from zope.interface import implementer
 
 
 @implementer(IResource)
-class UnauthorizedResource(object):
+class UnauthorizedResource:
     """
     Simple IResource to escape Resource dispatch
     """
@@ -42,18 +41,18 @@ class UnauthorizedResource(object):
         Send www-authenticate headers to the client
         """
         def ensureBytes(s):
-            return s.encode('ascii') if isinstance(s, unicode) else s
+            return s.encode('ascii') if isinstance(s, str) else s
 
         def generateWWWAuthenticate(scheme, challenge):
-            l = []
+            lst = []
             for k, v in challenge.items():
                 k = ensureBytes(k)
                 v = ensureBytes(v)
-                l.append(k + b"=" + quoteString(v))
-            return b" ".join([scheme, b", ".join(l)])
+                lst.append(k + b"=" + quoteString(v))
+            return b" ".join([scheme, b", ".join(lst)])
 
         def quoteString(s):
-            return b'"' + s.replace(b'\\', b'\\\\').replace(b'"', b'\\"') + b'"'
+            return b'"' + s.replace(b'\\', br'\\').replace(b'"', br'\"') + b'"'
 
         request.setResponseCode(401)
         for fact in self._credentialFactories:
@@ -73,9 +72,14 @@ class UnauthorizedResource(object):
         return self
 
 
+    def putChild(self, path, child):
+        # IResource.putChild
+        raise NotImplementedError()
+
+
 
 @implementer(IResource)
-class HTTPAuthSessionWrapper(object):
+class HTTPAuthSessionWrapper:
     """
     Wrap a portal, enforcing supported header-based authentication schemes.
 
@@ -233,3 +237,8 @@ class HTTPAuthSessionWrapper(object):
             if fact.scheme == scheme:
                 return (fact, b' '.join(elements[1:]))
         return (None, None)
+
+
+    def putChild(self, path, child):
+        # IResource.putChild
+        raise NotImplementedError()

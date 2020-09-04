@@ -2,10 +2,12 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-import os, sys, socket
+import os
+import socket
 import subprocess
+import sys
 from itertools import count
-
+from unittest import skipIf
 from zope.interface import implementer
 from twisted.python.reflect import requireModule
 from twisted.conch.error import ConchError
@@ -15,15 +17,14 @@ from twisted.internet.error import ProcessExitedAlready
 from twisted.internet.task import LoopingCall
 from twisted.internet.utils import getProcessValue
 from twisted.python import filepath, log, runtime
-from twisted.python.compat import unicode, _PYPY
-from twisted.trial import unittest
+from twisted.python.compat import _PYPY
+from twisted.trial.unittest import SkipTest, TestCase
 from twisted.conch.test.test_ssh import ConchTestRealm
 from twisted.python.procutils import which
 
 from twisted.conch.test.keydata import publicRSA_openssh, privateRSA_openssh
 from twisted.conch.test.keydata import publicDSA_openssh, privateDSA_openssh
 from twisted.python.filepath import FilePath
-from twisted.trial.unittest import SkipTest
 
 try:
     from twisted.conch.test.test_ssh import ConchTestServerFactory, \
@@ -31,28 +32,27 @@ try:
 except ImportError:
     pass
 
-try:
-    import pyasn1
-except ImportError:
-    pyasn1 = None
-
+pyasn1 = requireModule('pyasn1')
 cryptography = requireModule("cryptography")
+
 if cryptography:
     from twisted.conch.avatar import ConchUser
     from twisted.conch.ssh.session import ISession, SSHSession, wrapProtocol
 else:
     from twisted.conch.interfaces import ISession
 
-    class ConchUser:
+    class ConchUser:  # type: ignore[no-redef]
         pass
 try:
     from twisted.conch.scripts.conch import (
-        SSHSession as StdioInteractingSession
+        SSHSession as _StdioInteractingSession
     )
 except ImportError as e:
     StdioInteractingSession = None
     _reason = str(e)
     del e
+else:
+    StdioInteractingSession = _StdioInteractingSession
 
 
 
@@ -76,7 +76,7 @@ def _has_ipv6():
 HAS_IPV6 = _has_ipv6()
 
 
-class FakeStdio(object):
+class FakeStdio:
     """
     A fake for testing L{twisted.conch.scripts.conch.SSHSession.eofReceived} and
     L{twisted.conch.scripts.cftp.SSHSession.eofReceived}.
@@ -94,7 +94,7 @@ class FakeStdio(object):
 
 
 
-class StdioInteractingSessionTests(unittest.TestCase):
+class StdioInteractingSessionTests(TestCase):
     """
     Tests for L{twisted.conch.scripts.conch.SSHSession}.
     """
@@ -318,7 +318,7 @@ from twisted.conch.scripts.%s import run
 run()""" % mod]
     madeArgs = []
     for arg in start + list(args):
-        if isinstance(arg, unicode):
+        if isinstance(arg, str):
             arg = arg.encode("utf-8")
         madeArgs.append(arg)
     return madeArgs
@@ -339,10 +339,14 @@ class ConchServerSetupMixin:
     if _PYPY:
         skip = 'PyPy known_host not working yet on Travis.'
 
-    realmFactory = staticmethod(lambda: ConchTestRealm(b'testuser'))
+
+    @staticmethod
+    def realmFactory():
+        return ConchTestRealm(b'testuser')
+
 
     def _createFiles(self):
-        for f in ['rsa_test','rsa_test.pub','dsa_test','dsa_test.pub',
+        for f in ['rsa_test', 'rsa_test.pub', 'dsa_test', 'dsa_test.pub',
                   'kh_test']:
             if os.path.exists(f):
                 os.remove(f)
@@ -528,6 +532,26 @@ class RekeyAvatar(ConchUser):
         """
 
 
+    def eofReceived(self):
+        # ISession.eofReceived
+        pass
+
+
+    def execCommand(self, proto, command):
+        # ISession.execCommand
+        pass
+
+
+    def getPty(self, term, windowSize, modes):
+        # ISession.getPty
+        pass
+
+
+    def windowChanged(self, newWindowSize):
+        # ISession.windowChanged
+        pass
+
+
 
 class RekeyRealm:
     """
@@ -611,7 +635,7 @@ class OpenSSHClientMixin:
             cmds = (cmdline % port).split()
             encodedCmds = []
             for cmd in cmds:
-                if isinstance(cmd, unicode):
+                if isinstance(cmd, str):
                     cmd = cmd.encode("utf-8")
                 encodedCmds.append(cmd)
             reactor.spawnProcess(process, which('ssh')[0], encodedCmds)
@@ -621,7 +645,7 @@ class OpenSSHClientMixin:
 
 
 class OpenSSHKeyExchangeTests(ConchServerSetupMixin, OpenSSHClientMixin,
-                              unittest.TestCase):
+                              TestCase):
     """
     Tests L{SSHTransportBase}'s key exchange algorithm compatibility with
     OpenSSH.
@@ -649,7 +673,7 @@ class OpenSSHKeyExchangeTests(ConchServerSetupMixin, OpenSSHClientMixin,
             pass
 
         if keyExchangeAlgo not in kexAlgorithms:
-            raise unittest.SkipTest(
+            raise SkipTest(
                 "{} not supported by ssh client".format(
                     keyExchangeAlgo))
 
@@ -717,17 +741,18 @@ class OpenSSHKeyExchangeTests(ConchServerSetupMixin, OpenSSHClientMixin,
         The list of key exchange algorithms supported
         by OpenSSH client is obtained with C{ssh -Q kex}.
         """
-        self.assertRaises(unittest.SkipTest,
+        self.assertRaises(SkipTest,
                           self.assertExecuteWithKexAlgorithm,
                           'unsupported-algorithm')
 
 
 
 class OpenSSHClientForwardingTests(ForwardingMixin, OpenSSHClientMixin,
-                                      unittest.TestCase):
+                                   TestCase):
     """
     Connection forwarding tests run against the OpenSSL command line client.
     """
+    @skipIf(not HAS_IPV6, "Requires IPv6 support")
     def test_localToRemoteForwardingV6(self):
         """
         Forwarding of arbitrary IPv6 TCP connections via SSH.
@@ -739,20 +764,18 @@ class OpenSSHClientForwardingTests(ForwardingMixin, OpenSSHClientMixin,
                          % (localPort, self.echoPortV6))
         d.addCallback(self.assertEqual, b'test\n')
         return d
-    if not HAS_IPV6:
-        test_localToRemoteForwardingV6.skip = "Requires IPv6 support"
 
 
 
 class OpenSSHClientRekeyTests(RekeyTestsMixin, OpenSSHClientMixin,
-                                 unittest.TestCase):
+                              TestCase):
     """
     Rekeying tests run against the OpenSSL command line client.
     """
 
 
 
-class CmdLineClientTests(ForwardingMixin, unittest.TestCase):
+class CmdLineClientTests(ForwardingMixin, TestCase):
     """
     Connection forwarding tests run against the Conch command line client.
     """
@@ -783,17 +806,18 @@ class CmdLineClientTests(ForwardingMixin, unittest.TestCase):
         encodedCmds = []
         encodedEnv = {}
         for cmd in cmds:
-            if isinstance(cmd, unicode):
+            if isinstance(cmd, str):
                 cmd = cmd.encode("utf-8")
             encodedCmds.append(cmd)
         for var in env:
             val = env[var]
-            if isinstance(var, unicode):
+            if isinstance(var, str):
                 var = var.encode("utf-8")
-            if isinstance(val, unicode):
+            if isinstance(val, str):
                 val = val.encode("utf-8")
             encodedEnv[var] = val
-        reactor.spawnProcess(process, sys.executable, encodedCmds, env=encodedEnv)
+        reactor.spawnProcess(process, sys.executable, encodedCmds,
+                             env=encodedEnv)
         return process.deferred
 
 
