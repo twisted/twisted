@@ -9,7 +9,6 @@ Tests for L{twisted.python.compat}.
 
 import codecs
 import io
-import socket
 import sys
 import traceback
 
@@ -17,10 +16,9 @@ from unittest import skipIf
 from twisted.trial.unittest import TestCase, SynchronousTestCase
 
 from twisted.python.compat import (
-    reduce, execfile, _PYPY, comparable, cmp, nativeString,
-    networkString, unicode as unicodeCompat, lazyByteSlice, reraise,
-    NativeStringIO, iterbytes, intToBytes, ioType, bytesEnviron, iteritems,
-    unichr, raw_input, _get_async_param,
+    execfile, _PYPY, comparable, cmp, nativeString,
+    networkString, lazyByteSlice, reraise,
+    iterbytes, intToBytes, ioType, bytesEnviron, _get_async_param,
 )
 from twisted.python.filepath import FilePath
 from twisted.python.runtime import platform
@@ -36,7 +34,7 @@ class IOTypeTests(SynchronousTestCase):
         """
         An L{io.StringIO} accepts and returns text.
         """
-        self.assertEqual(ioType(io.StringIO()), unicodeCompat)
+        self.assertEqual(ioType(io.StringIO()), str)
 
 
     def test_3BytesIO(self):
@@ -51,7 +49,7 @@ class IOTypeTests(SynchronousTestCase):
         A file opened via 'io.open' in text mode accepts and returns text.
         """
         with io.open(self.mktemp(), "w") as f:
-            self.assertEqual(ioType(f), unicodeCompat)
+            self.assertEqual(ioType(f), str)
 
 
     def test_3openBinaryMode(self):
@@ -76,7 +74,7 @@ class IOTypeTests(SynchronousTestCase):
         When passed an encoding, however, the L{codecs} module returns unicode.
         """
         with codecs.open(self.mktemp(), 'wb', encoding='utf-8') as f:
-            self.assertEqual(ioType(f), unicodeCompat)
+            self.assertEqual(ioType(f), str)
 
 
     def test_defaultToText(self):
@@ -84,7 +82,7 @@ class IOTypeTests(SynchronousTestCase):
         When passed an object about which no sensible decision can be made, err
         on the side of unicode.
         """
-        self.assertEqual(ioType(object()), unicodeCompat)
+        self.assertEqual(ioType(object()), str)
 
 
 
@@ -132,14 +130,6 @@ class CompatTests(SynchronousTestCase):
         b = list(d)
         b.sort()
         self.assertEqual(b, ['a', 'b', 'r', 's'])
-
-
-    def test_reduce(self):
-        """
-        L{reduce} should behave like the builtin reduce.
-        """
-        self.assertEqual(15, reduce(lambda x, y: x + y, [1, 2, 3, 4, 5]))
-        self.assertEqual(16, reduce(lambda x, y: x + y, [1, 2, 3, 4, 5], 1))
 
 
 
@@ -444,30 +434,12 @@ class StringTests(SynchronousTestCase):
         self.assertRaises(TypeError, nativeString, 1)
 
 
-    def test_unicode(self):
-        """
-        C{compat.unicode} is C{str} on Python 3, C{unicode} on Python 2.
-        """
-        self.assertIs(unicodeCompat, str)
-
-
-    def test_nativeStringIO(self):
-        """
-        L{NativeStringIO} is a file-like object that stores native strings in
-        memory.
-        """
-        f = NativeStringIO()
-        f.write("hello")
-        f.write(" there")
-        self.assertEqual(f.getvalue(), "hello there")
-
-
 
 class NetworkStringTests(SynchronousTestCase):
     """
     Tests for L{networkString}.
     """
-    def test_unicode(self):
+    def test_str(self):
         """
         L{networkString} returns a C{unicode} object passed to it encoded into
         a C{bytes} instance.
@@ -609,49 +581,11 @@ class BytesEnvironTests(TestCase):
         result = bytesEnviron()
         types = set()
 
-        for key, val in iteritems(result):
+        for key, val in result.items():
             types.add(type(key))
             types.add(type(val))
 
         self.assertEqual(list(types), [bytes])
-
-
-
-class UnichrTests(TestCase):
-    """
-    Tests for L{unichr}.
-    """
-
-    def test_unichr(self):
-        """
-        unichar exists and returns a unicode string with the given code point.
-        """
-        self.assertEqual(unichr(0x2603), u"\N{SNOWMAN}")
-
-
-
-class RawInputTests(TestCase):
-    """
-    Tests for L{raw_input}
-    """
-    def test_raw_input(self):
-        """
-        L{twisted.python.compat.raw_input}
-        """
-        class FakeStdin:
-            def readline(self):
-                return "User input\n"
-
-        class FakeStdout:
-            data = ""
-            def write(self, data):
-                self.data += data
-
-        self.patch(sys, "stdin", FakeStdin())
-        stdout = FakeStdout()
-        self.patch(sys, "stdout", stdout)
-        self.assertEqual(raw_input("Prompt"), "User input")
-        self.assertEqual(stdout.data, "Prompt")
 
 
 

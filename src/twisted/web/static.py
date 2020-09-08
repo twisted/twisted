@@ -14,6 +14,7 @@ import os
 import time
 import warnings
 
+from html import escape
 from typing import Any, Dict, Callable
 from zope.interface import implementer
 
@@ -22,9 +23,7 @@ from twisted.web import resource
 from twisted.web import http
 from twisted.web.util import redirectTo
 
-from twisted.python.compat import (intToBytes, nativeString,
-                                   networkString)
-from twisted.python.compat import escape
+from twisted.python.compat import nativeString, networkString
 
 from twisted.python import components, filepath, log
 from twisted.internet import abstract, interfaces
@@ -63,7 +62,7 @@ class Data(resource.Resource):
 
     def render_GET(self, request):
         request.setHeader(b"content-type", networkString(self.type))
-        request.setHeader(b"content-length", intToBytes(len(self.data)))
+        request.setHeader(b"content-length", b'%d' % (len(self.data),))
         if request.method == b"HEAD":
             return b''
         return self.data
@@ -561,9 +560,11 @@ class File(resource.Resource, filepath.FilePath):
         rangeInfo.append((finalBoundary, 0, 0))
         request.setResponseCode(http.PARTIAL_CONTENT)
         request.setHeader(
-            b'content-type', networkString('multipart/byteranges; boundary="%s"' % (nativeString(boundary),)))
+            b'content-type',
+            networkString('multipart/byteranges; boundary="%s"'
+                          % (nativeString(boundary),)))
         request.setHeader(
-            b'content-length', intToBytes(contentLength + len(finalBoundary)))
+            b'content-length', b'%d' % (contentLength + len(finalBoundary),))
         return rangeInfo
 
 
@@ -580,7 +581,7 @@ class File(resource.Resource, filepath.FilePath):
         """
         if size is None:
             size = self.getFileSize()
-        request.setHeader(b'content-length', intToBytes(size))
+        request.setHeader(b'content-length', b'%d' % (size,))
         if self.type:
             request.setHeader(b'content-type', networkString(self.type))
         if self.encoding:

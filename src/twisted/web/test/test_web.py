@@ -13,7 +13,6 @@ from zope.interface import implementer
 from zope.interface.verify import verifyObject
 
 from twisted.python import reflect, failure
-from twisted.python.compat import unichr
 from twisted.python.filepath import FilePath
 from twisted.trial import unittest
 from twisted.internet import reactor, interfaces
@@ -176,7 +175,7 @@ class SiteTest(unittest.TestCase):
 
         def predictableEntropy(n):
             predictableEntropy.x += 1
-            return (unichr(predictableEntropy.x) * n).encode("charmap")
+            return (chr(predictableEntropy.x) * n).encode("charmap")
         predictableEntropy.x = 0
         self.patch(site, "_entropy", predictableEntropy)
         a = self.getAutoExpiringSession(site)

@@ -8,10 +8,11 @@ Tests for L{twisted.names} example scripts.
 
 import os
 import sys
+from io import StringIO
 
 from twisted.python.filepath import FilePath
 from twisted.trial.unittest import SkipTest, TestCase
-from twisted.python.compat import NativeStringIO
+
 
 
 class ExampleTestBase:
@@ -39,9 +40,9 @@ class ExampleTestBase:
         self.originalModules = sys.modules.copy()
 
         # Python usually expects native strs to be written to sys.stdout/stderr
-        self.fakeErr = NativeStringIO()
+        self.fakeErr = StringIO()
         self.patch(sys, 'stderr', self.fakeErr)
-        self.fakeOut = NativeStringIO()
+        self.fakeOut = StringIO()
         self.patch(sys, 'stdout', self.fakeOut)
 
         # Get documentation root

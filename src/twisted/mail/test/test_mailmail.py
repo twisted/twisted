@@ -9,6 +9,7 @@ command line program I{mailmail}.
 
 import os
 import sys
+from io import StringIO
 from unittest import skipIf
 
 from twisted.copyright import version
@@ -16,7 +17,6 @@ from twisted.internet.defer import Deferred
 from twisted.mail import smtp
 from twisted.mail.scripts import mailmail
 from twisted.mail.scripts.mailmail import parseOptions
-from twisted.python.compat import NativeStringIO
 from twisted.python.failure import Failure
 from twisted.python.runtime import platformType
 from twisted.test.proto_helpers import MemoryReactor
@@ -37,7 +37,7 @@ class OptionsTests(TestCase):
         Override some things in mailmail, so that we capture C{stdout},
         and do not call L{reactor.stop}.
         """
-        self.out = NativeStringIO()
+        self.out = StringIO()
         # Override the mailmail logger, so we capture stderr output
         from twisted.logger import textFileLogObserver, Logger
         logObserver = textFileLogObserver(self.out)
@@ -63,7 +63,7 @@ class OptionsTests(TestCase):
         recipient header in the message text, L{parseOptions} raises
         L{SystemExit} with a string describing the problem.
         """
-        self.patch(sys, 'stdin', NativeStringIO(
+        self.patch(sys, 'stdin', StringIO(
             'Subject: foo\n'
             '\n'
             'Hello, goodbye.\n'))
@@ -117,7 +117,7 @@ class OptionsTests(TestCase):
         The I{--version} option displays the version and raises
         L{SystemExit} with L{None} as the exit code.
         """
-        out = NativeStringIO()
+        out = StringIO()
         self.patch(sys, 'stdout', out)
         systemExitCode = self.assertRaises(SystemExit, parseOptions,
                                            '--version')
@@ -131,7 +131,7 @@ class OptionsTests(TestCase):
         """
         The I{-odb} flag specifies background delivery.
         """
-        stdin = NativeStringIO('\n')
+        stdin = StringIO('\n')
         self.patch(sys, 'stdin', stdin)
         o = parseOptions("-odb")
         self.assertTrue(o.background)
@@ -141,7 +141,7 @@ class OptionsTests(TestCase):
         """
         The I{-odf} flags specifies foreground delivery.
         """
-        stdin = NativeStringIO('\n')
+        stdin = StringIO('\n')
         self.patch(sys, 'stdin', stdin)
         o = parseOptions("-odf")
         self.assertFalse(o.background)
@@ -152,7 +152,7 @@ class OptionsTests(TestCase):
         The I{-t} flags specifies that recipients should be obtained
         from headers.
         """
-        stdin = NativeStringIO(
+        stdin = StringIO(
             'To: Curly <invaliduser2@example.com>\n'
             'Cc: Larry <invaliduser1@example.com>\n'
             'Bcc: Moe <invaliduser3@example.com>\n'
@@ -168,7 +168,7 @@ class OptionsTests(TestCase):
         When a message has no I{From:} header, a I{From:} value can be
         specified with the I{-F} flag.
         """
-        stdin = NativeStringIO(
+        stdin = StringIO(
             'To: invaliduser2@example.com\n'
             'Subject: A wise guy?\n\n')
         self.patch(sys, 'stdin', stdin)
@@ -181,7 +181,7 @@ class OptionsTests(TestCase):
         The I{-F} flag specifies the From: value.  However, I{-F} flag is
         overriden by the value of From: in the e-mail header.
         """
-        stdin = NativeStringIO(
+        stdin = StringIO(
             'To: Curly <invaliduser4@example.com>\n'
             'From: Shemp <invaliduser4@example.com>\n')
         self.patch(sys, 'stdin', stdin)
@@ -199,7 +199,7 @@ class OptionsTests(TestCase):
         set and there should be no failure.
         """
         argv = ("test_mailmail.py", "invaliduser2@example.com", "-oep")
-        stdin = NativeStringIO('\n')
+        stdin = StringIO('\n')
         self.patch(sys, 'argv', argv)
         self.patch(sys, 'stdin', stdin)
         mailmail.run()
@@ -219,7 +219,7 @@ class OptionsTests(TestCase):
         Error messages for illegal UID value, illegal GID value, and illegal
         identity entry will be sent to stderr.
         """
-        stdin = NativeStringIO('\n')
+        stdin = StringIO('\n')
         self.patch(sys, 'stdin', stdin)
 
         filename = self.mktemp()

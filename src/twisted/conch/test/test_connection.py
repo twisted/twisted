@@ -8,7 +8,6 @@ This module tests twisted.conch.ssh.connection.
 import struct
 
 from twisted.conch.ssh import channel
-from twisted.python.compat import long
 from twisted.trial import unittest
 from twisted.conch.test import test_userauth
 from twisted.python.reflect import requireModule
@@ -349,7 +348,8 @@ class ConnectionTests(unittest.TestCase):
         errors = self.flushLoggedErrors(error.ConchError)
         self.assertEqual(
             len(errors), 1, "Expected one error, got: %r" % (errors,))
-        self.assertEqual(errors[0].value.args, (long(123), "error args in wrong order"))
+        self.assertEqual(errors[0].value.args,
+                         (123, "error args in wrong order"))
         self.assertEqual(
             self.transport.packets,
             [(connection.MSG_CHANNEL_OPEN_FAILURE,
@@ -372,14 +372,6 @@ class ConnectionTests(unittest.TestCase):
         deprecated and then removed.
         """
         self._lookupChannelErrorTest(123)
-
-
-    def test_lookupChannelErrorLongCode(self):
-        """
-        Like L{test_lookupChannelError}, but for the case where the failure code
-        is represented as a L{long} instead of a L{int}.
-        """
-        self._lookupChannelErrorTest(long(123))
 
 
     def test_CHANNEL_OPEN_CONFIRMATION(self):

@@ -8,7 +8,6 @@ Test case for L{twisted.protocols.loopback}.
 
 from zope.interface import implementer
 
-from twisted.python.compat import intToBytes
 from twisted.trial import unittest
 from twisted.protocols import basic, loopback
 from twisted.internet import defer
@@ -45,7 +44,7 @@ class DoomProtocol(SimpleProtocol):
         if self.i < 4:
             # by this point we should have connection closed,
             # but just in case we didn't we won't ever send 'Hello 4'
-            self.sendLine(b"Hello " + intToBytes(self.i))
+            self.sendLine(b"Hello %d" % (self.i,))
         SimpleProtocol.lineReceived(self, line)
         if self.lines[-1] == b"Hello 3":
             self.transport.loseConnection()
@@ -236,7 +235,7 @@ class LoopbackAsyncTests(LoopbackTestCaseMixin, unittest.TestCase):
 
 
     def _producertest(self, producerClass):
-        toProduce = list(map(intToBytes, range(0, 10)))
+        toProduce = [b'%d' % (i,) for i in range(0, 10)]
 
         class ProducingProtocol(Protocol):
             def connectionMade(self):

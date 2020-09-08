@@ -8,9 +8,9 @@ An assortment of web server-related utilities.
 
 
 import linecache
+from html import escape
 
 from twisted.python import urlpath
-from twisted.python.compat import escape
 from twisted.python.reflect import fullyQualifiedName
 from twisted.web import resource
 from twisted.web.template import (Element, TagLoader, XMLString, flattenString,

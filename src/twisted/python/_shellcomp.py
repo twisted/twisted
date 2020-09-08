@@ -25,10 +25,12 @@ The main public documentation exists in the L{twisted.python.usage.Options}
 docstring, the L{twisted.python.usage.Completions} docstring, and the
 Options howto.
 """
-import itertools, getopt, inspect
+import getopt
+import inspect
+import itertools
 
 from twisted.python import reflect, util, usage
-from twisted.python.compat import ioType, unicode
+from twisted.python.compat import ioType
 
 
 
@@ -63,7 +65,7 @@ def shellComplete(config, cmdName, words, shellCompFile):
 
     # If given a file with unicode semantics, such as sys.stdout on Python 3,
     # we must get at the the underlying buffer which has bytes semantics.
-    if shellCompFile and ioType(shellCompFile) == unicode:
+    if shellCompFile and ioType(shellCompFile) == str:
         shellCompFile = shellCompFile.buffer
 
     # shellName is provided for forward-compatibility. It is not used,

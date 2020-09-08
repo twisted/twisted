@@ -11,7 +11,6 @@ import time
 
 from twisted.internet import protocol, task
 from twisted.python.filepath import FilePath
-from twisted.python.compat import unicode
 from twisted.test.proto_helpers import StringTransport, StringIOWithoutClosing
 from twisted.trial.unittest import TestCase
 from twisted.words.protocols import irc
@@ -30,11 +29,11 @@ class IRCTestCase(TestCase):
         @type val: L{bytes} or L{unicode} or L{list}
         """
         bufferValue = buf
-        if isinstance(val, unicode):
+        if isinstance(val, str):
             bufferValue = bufferValue.decode("utf-8")
 
         if isinstance(bufferValue, list):
-            if isinstance(val[0], unicode):
+            if isinstance(val[0], str):
                 bufferValue = [b.decode("utf8") for b in bufferValue]
         self.assertEqual(bufferValue, val)
 
@@ -1658,7 +1657,7 @@ class BasicServerFunctionalityTests(IRCTestCase):
         @type s: L{bytes} or L{unicode}
         """
         bufferValue = self.f.getvalue()
-        if isinstance(s, unicode):
+        if isinstance(s, str):
             bufferValue = bufferValue.decode("utf-8")
         self.assertEqual(bufferValue, s)
 

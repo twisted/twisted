@@ -222,9 +222,7 @@ from twisted.internet.error import PeerVerifyError, ConnectionLost
 from twisted.internet.error import ConnectionClosed
 from twisted.internet.defer import Deferred, maybeDeferred, fail
 from twisted.protocols.basic import Int16StringReceiver, StatefulStringProtocol
-from twisted.python.compat import (
-    iteritems, unicode, nativeString, intToBytes, long,
-)
+from twisted.python.compat import nativeString
 
 try:
     from twisted.internet import ssl
@@ -684,13 +682,13 @@ class AmpBox(dict):
         @return: a C{bytes} encoded according to the rules described in the
             module docstring.
         """
-        i = sorted(iteritems(self))
+        i = sorted(self.items())
         L = []
         w = L.append
         for k, v in i:
-            if type(k) == unicode:
+            if type(k) == str:
                 raise TypeError("Unicode key not allowed: %r" % k)
-            if type(v) == unicode:
+            if type(v) == str:
                 raise TypeError(
                     "Unicode value for key %r not allowed: %r" % (k, v))
             if len(k) > MAX_KEY_LENGTH:
@@ -810,7 +808,7 @@ class BoxDispatcher:
 
     _failAllReason = None
     _outstandingRequests = None
-    _counter = long(0)
+    _counter = 0
     boxSender = None
 
     def __init__(self, locator):
@@ -1020,7 +1018,7 @@ class BoxDispatcher:
             if error.check(RemoteAmpError):
                 code = error.value.errorCode
                 desc = error.value.description
-                if isinstance(desc, unicode):
+                if isinstance(desc, str):
                     desc = desc.encode("utf-8", "replace")
                 if error.value.fatal:
                     errorBox = QuitBox()
@@ -1460,8 +1458,9 @@ class Integer(Argument):
     Example: C{123} becomes C{"123"}
     """
     fromString = int
+
     def toString(self, inObject):
-        return intToBytes(inObject)
+        return b'%d' % (inObject,)
 
 
 
@@ -1792,19 +1791,19 @@ class Command:
             if not isinstance(newtype.fatalErrors, dict):
                 newtype.fatalErrors = dict(newtype.fatalErrors)
 
-            for v, k in iteritems(errors):
+            for v, k in errors.items():
                 reverseErrors[k] = v
                 er[v] = k
-            for v, k in iteritems(fatalErrors):
+            for v, k in fatalErrors.items():
                 reverseErrors[k] = v
                 er[v] = k
 
-            for _, name in iteritems(newtype.errors):
+            for _, name in newtype.errors.items():
                 if not isinstance(name, bytes):
                     raise TypeError(
                         "Error names must be byte strings, got: %r"
                         % (name, ))
-            for _, name in iteritems(newtype.fatalErrors):
+            for _, name in newtype.fatalErrors.items():
                 if not isinstance(name, bytes):
                     raise TypeError(
                         "Fatal error names must be byte strings, got: %r"

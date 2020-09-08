@@ -8,13 +8,13 @@ U{Python Web Server Gateway Interface v1.0.1<http://www.python.org/dev/peps/pep-
 
 __metaclass__ = type
 
+from collections.abc import Sequence
 from sys import exc_info
 from warnings import warn
 
 from zope.interface import implementer
 
 from twisted.internet.threads import blockingCallFromThread
-from twisted.python.compat import reraise, Sequence
 from twisted.python.failure import Failure
 from twisted.web.resource import IResource
 from twisted.web.server import NOT_DONE_YET
@@ -363,7 +363,7 @@ class _WSGIResponse:
         This will be called in a non-I/O thread.
         """
         if self.started and excInfo is not None:
-            reraise(excInfo[1], excInfo[2])
+            raise excInfo[1].with_traceback(excInfo[2])
 
         # PEP-3333 mandates that status should be a native string. In practice
         # this is mandated by Twisted's HTTP implementation too, so we enforce

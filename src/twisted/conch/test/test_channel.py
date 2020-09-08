@@ -22,7 +22,7 @@ except ImportError:
     skipTest = 'Conch SSH not supported.'
     SSHService = object  # type: ignore[assignment,misc]
 from twisted.trial.unittest import TestCase
-from twisted.python.compat import intToBytes
+
 
 
 class MockConnection(SSHService):
@@ -312,7 +312,7 @@ class ChannelTests(TestCase):
         Test that writeSequence is equivalent to write(''.join(sequece)).
         """
         self.channel.addWindowBytes(20)
-        self.channel.writeSequence(map(intToBytes, range(10)))
+        self.channel.writeSequence(b'%d' % (i,) for i in range(10))
         self.assertEqual(self.conn.data[self.channel], [b'0123456789'])
 
 

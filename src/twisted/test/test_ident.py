@@ -8,12 +8,12 @@ Test cases for twisted.protocols.ident module.
 
 import builtins
 import struct
+from io import StringIO
 
 from twisted.protocols import ident
 from twisted.python import failure
 from twisted.internet import error
 from twisted.internet import defer
-from twisted.python.compat import NativeStringIO
 
 from twisted.trial import unittest
 from twisted.test.proto_helpers import StringTransport
@@ -218,7 +218,7 @@ class ProcMixinTests(unittest.TestCase):
             Mock for the open call to prevent actually opening /proc/net/tcp.
             """
             open_calls.append((args, kwargs))
-            return NativeStringIO(self.sampleFile)
+            return StringIO(self.sampleFile)
 
         self.patch(builtins, 'open', mocked_open)
 

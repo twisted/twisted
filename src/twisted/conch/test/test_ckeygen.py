@@ -11,7 +11,6 @@ import subprocess
 
 from io import StringIO
 
-from twisted.python.compat import unicode
 from twisted.python.reflect import requireModule
 
 from twisted.python.filepath import FilePath
@@ -372,10 +371,11 @@ class KeyGenTests(TestCase):
         keyPath = base.child('custom_key').path
 
         import twisted.conch.scripts.ckeygen
-        self.patch(twisted.conch.scripts.ckeygen, 'raw_input', lambda _: keyPath)
+        self.patch(twisted.conch.scripts.ckeygen, '_inputSaveFile',
+                   lambda _: keyPath)
         key = Key.fromString(privateRSA_openssh)
         _saveKey(key, {'filename': None, 'no-passphrase': True,
-            'format': 'md5-hex'})
+                       'format': 'md5-hex'})
 
         persistedKeyContent = base.child('custom_key').getContent()
         persistedKey = key.fromString(persistedKeyContent, None, b'')
@@ -423,7 +423,7 @@ class KeyGenTests(TestCase):
         FilePath(filename).setContent(privateRSA_openssh)
         displayPublicKey({'filename': filename})
         displayed = self.stdout.getvalue().strip('\n')
-        if isinstance(displayed, unicode):
+        if isinstance(displayed, str):
             displayed = displayed.encode("ascii")
         self.assertEqual(
             displayed,
@@ -440,7 +440,7 @@ class KeyGenTests(TestCase):
         FilePath(filename).setContent(privateRSA_openssh_encrypted)
         displayPublicKey({'filename': filename, 'pass': 'encrypted'})
         displayed = self.stdout.getvalue().strip('\n')
-        if isinstance(displayed, unicode):
+        if isinstance(displayed, str):
             displayed = displayed.encode("ascii")
         self.assertEqual(
             displayed,
@@ -458,7 +458,7 @@ class KeyGenTests(TestCase):
         self.patch(getpass, 'getpass', lambda x: 'encrypted')
         displayPublicKey({'filename': filename})
         displayed = self.stdout.getvalue().strip('\n')
-        if isinstance(displayed, unicode):
+        if isinstance(displayed, str):
             displayed = displayed.encode("ascii")
         self.assertEqual(
             displayed,

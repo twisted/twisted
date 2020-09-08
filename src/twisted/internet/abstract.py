@@ -13,7 +13,7 @@ from typing import List, Sequence
 from zope.interface import implementer
 
 # Twisted Imports
-from twisted.python.compat import unicode, lazyByteSlice
+from twisted.python.compat import lazyByteSlice
 from twisted.python import reflect, failure
 from twisted.internet import interfaces, main
 
@@ -351,8 +351,8 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
         buffer and this descriptor has a registered streaming producer, its
         C{pauseProducing()} method will be called.
         """
-        if isinstance(data, unicode): # no, really, I mean it
-            raise TypeError("Data must not be unicode")
+        if isinstance(data, str):  # no, really, I mean it
+            raise TypeError("Data must not be string")
         if not self.connected or self._writeDisconnected:
             return
         if data:
@@ -379,8 +379,8 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
         data is written to the underlying file descriptor.
         """
         for i in iovec:
-            if isinstance(i, unicode): # no, really, I mean it
-                raise TypeError("Data must not be unicode")
+            if isinstance(i, str):  # no, really, I mean it
+                raise TypeError("Data must not be string")
         if not self.connected or not iovec or self._writeDisconnected:
             return
         self._tempDataBuffer.extend(iovec)

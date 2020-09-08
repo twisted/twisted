@@ -5,7 +5,8 @@
 Tests for L{twisted.trial._dist.distreporter}.
 """
 
-from twisted.python.compat import NativeStringIO as StringIO
+from io import StringIO
+
 from twisted.trial._dist.distreporter import DistReporter
 from twisted.trial.unittest import TestCase
 from twisted.trial.reporter import TreeReporter

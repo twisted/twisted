@@ -19,8 +19,7 @@ from functools import wraps
 
 from zope.interface import implementer
 
-from twisted.python.compat import networkString
-from twisted.python.compat import nativeString, intToBytes, unicode, itervalues
+from twisted.python.compat import nativeString, networkString
 from twisted.python.deprecate import deprecatedModuleAttribute, deprecated
 from twisted.python.failure import Failure
 from incremental import Version
@@ -87,16 +86,16 @@ class HTTPPageGetter(http.HTTPClient):
         method = _ensureValidMethod(getattr(self.factory, 'method', b'GET'))
         self.sendCommand(method, _ensureValidURI(self.factory.path))
         if self.factory.scheme == b'http' and self.factory.port != 80:
-            host = self.factory.host + b':' + intToBytes(self.factory.port)
+            host = b'%b:%d' % (self.factory.host, self.factory.port)
         elif self.factory.scheme == b'https' and self.factory.port != 443:
-            host = self.factory.host + b':' + intToBytes(self.factory.port)
+            host = b'%b:%d' % (self.factory.host, self.factory.port)
         else:
             host = self.factory.host
         self.sendHeader(b'Host', self.factory.headers.get(b"host", host))
         self.sendHeader(b'User-Agent', self.factory.agent)
         data = getattr(self.factory, 'postdata', None)
         if data is not None:
-            self.sendHeader(b"Content-Length", intToBytes(len(data)))
+            self.sendHeader(b"Content-Length", b'%d' % (len(data),))
 
         cookieData = []
         for (key, value) in self.factory.headers.items():
@@ -362,7 +361,7 @@ class HTTPClientFactory(protocol.ClientFactory):
             self.headers = InsensitiveDict()
         if postdata is not None:
             self.headers.setdefault(b'Content-Length',
-                                    intToBytes(len(postdata)))
+                                    b'%d' % (len(postdata),))
             # just in case a broken http/1.1 decides to keep connection alive
             self.headers.setdefault(b"connection", b"close")
         self.postdata = postdata
@@ -487,16 +486,16 @@ class HTTPDownloader(HTTPClientFactory):
                  timeout=0, cookies=None, followRedirect=True,
                  redirectLimit=20, afterFoundGet=False):
         self.requestedPartial = 0
-        if isinstance(fileOrName, (str, unicode)):
+        if isinstance(fileOrName, str):
             self.fileName = fileOrName
             self.file = None
             if supportPartial and os.path.exists(self.fileName):
                 fileLength = os.path.getsize(self.fileName)
                 if fileLength:
                     self.requestedPartial = fileLength
-                    if headers == None:
+                    if headers is None:
                         headers = {}
-                    headers[b"range"] = b"bytes=" + intToBytes(fileLength) + b"-"
+                    headers[b"range"] = b"bytes=%d-" % (fileLength,)
         else:
             self.file = fileOrName
         HTTPClientFactory.__init__(
@@ -1460,11 +1459,11 @@ class HTTPConnectionPool:
             closed.
         """
         results = []
-        for protocols in itervalues(self._connections):
+        for protocols in self._connections.values():
             for p in protocols:
                 results.append(p.abort())
         self._connections = {}
-        for dc in itervalues(self._timeouts):
+        for dc in self._timeouts.values():
             dc.cancel()
         self._timeouts = {}
         return defer.gatherResults(results).addCallback(lambda ign: None)
@@ -1497,7 +1496,7 @@ class _AgentBase:
             host = b'[' + host + b']'
         if (scheme, port) in ((b'http', 80), (b'https', 443)):
             return host
-        return host + b":" + intToBytes(port)
+        return b'%b:%d' % (host, port)
 
 
     def _requestWithEndpoint(self, key, endpoint, method, parsedURI,

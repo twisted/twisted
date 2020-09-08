@@ -26,8 +26,9 @@ import gc
 import sys
 import weakref
 import unittest as pyunit
+from io import StringIO
 
-from twisted.python.compat import NativeStringIO, _PYPY
+from twisted.python.compat import _PYPY
 from twisted.python.reflect import namedAny
 from twisted.internet import defer, reactor
 from twisted.trial import unittest, reporter, util
@@ -595,7 +596,7 @@ class ReactorCleanupTests(unittest.SynchronousTestCase):
         """
         Setup our test case
         """
-        self.result = reporter.Reporter(NativeStringIO())
+        self.result = reporter.Reporter(StringIO())
         self.loader = runner.TestLoader()
 
 

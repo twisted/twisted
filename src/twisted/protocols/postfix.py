@@ -14,13 +14,14 @@ from twisted.protocols import basic
 from twisted.protocols import policies
 from twisted.internet import protocol, defer
 from twisted.python import log
-from twisted.python.compat import unicode
+
+
 
 # urllib's quote functions just happen to match
 # the postfix semantics.
 def quote(s):
     quoted = _quote(s)
-    if isinstance(quoted, unicode):
+    if isinstance(quoted, str):
         quoted = quoted.encode("ascii")
     return quoted
 

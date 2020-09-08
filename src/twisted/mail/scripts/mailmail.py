@@ -12,12 +12,12 @@ import os
 import sys
 import getpass
 from configparser import ConfigParser
+from io import StringIO
 
 from twisted.copyright import version
 from twisted.internet import reactor
 from twisted.logger import Logger, textFileLogObserver
 from twisted.mail import smtp
-from twisted.python.compat import NativeStringIO
 
 GLOBAL_CFG = "/etc/mailmail"
 LOCAL_CFG = os.path.expanduser("~/.twisted/mailmail")
@@ -142,7 +142,7 @@ def parseOptions(argv):
         'date': [],
     }
 
-    buffer = NativeStringIO()
+    buffer = StringIO()
     while 1:
         write = 1
         line = sys.stdin.readline()
@@ -186,7 +186,7 @@ def parseOptions(argv):
                 pass
 
     buffer.seek(0, 0)
-    o.body = NativeStringIO(buffer.getvalue() + sys.stdin.read())
+    o.body = StringIO(buffer.getvalue() + sys.stdin.read())
     return o
 
 
@@ -329,9 +329,9 @@ def senderror(failure, options):
     recipient = [options.sender]
     sender = '"Internally Generated Message ({})"<postmaster@{}>'.format(
              sys.argv[0], smtp.DNSNAME.decode("ascii"))
-    error = NativeStringIO()
+    error = StringIO()
     failure.printTraceback(file=error)
-    body = NativeStringIO(ERROR_FMT % error.getvalue())
+    body = StringIO(ERROR_FMT % error.getvalue())
     d = smtp.sendmail('localhost', sender, recipient, body)
     d.addBoth(lambda _: reactor.stop())
 

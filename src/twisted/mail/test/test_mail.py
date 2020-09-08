@@ -43,7 +43,6 @@ from twisted.names import dns
 from twisted.names.dns import RRHeader, Record_CNAME, Record_MX
 from twisted.names.error import DNSNameError
 from twisted.python import failure, log
-from twisted.python.compat import range
 from twisted.python.filepath import FilePath
 from twisted.python.runtime import platformType
 from twisted.test.proto_helpers import (LineSendingProtocol,

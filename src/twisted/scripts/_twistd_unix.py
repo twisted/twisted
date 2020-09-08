@@ -10,7 +10,6 @@ import sys
 import traceback
 
 from twisted.python import log, logfile, usage
-from twisted.python.compat import intToBytes
 from twisted.python.util import (
     switchUID, uidFromString, gidFromString, untilConcludes)
 from twisted.application import app, service
@@ -325,7 +324,7 @@ class UnixApplicationRunner(app.ApplicationRunner):
             self.config["statusPipe"] = self.daemonize(reactor)
         if pidfile:
             with open(pidfile, 'wb') as f:
-                f.write(intToBytes(os.getpid()))
+                f.write(b'%d' % (os.getpid(),))
 
 
     def daemonize(self, reactor):

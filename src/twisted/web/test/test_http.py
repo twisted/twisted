@@ -26,8 +26,7 @@ from zope.interface import (
 )
 from zope.interface.verify import verifyObject
 
-from twisted.python.compat import (iterbytes, long, networkString,
-                                   unicode, intToBytes)
+from twisted.python.compat import iterbytes, networkString
 from twisted.python.components import proxyForInterface
 from twisted.python.failure import Failure
 from twisted.trial import unittest
@@ -152,7 +151,7 @@ class DummyHTTPHandler(http.Request):
         self.setHeader(b"Request", self.uri)
         self.setHeader(b"Command", self.method)
         self.setHeader(b"Version", self.clientproto)
-        self.setHeader(b"Content-Length", intToBytes(len(request)))
+        self.setHeader(b"Content-Length", b'%d' % (len(request),))
         self.write(request)
         self.finish()
 
@@ -2373,11 +2372,11 @@ class QueryArgumentsTests(unittest.TestCase):
             if decode:
                 urlToStandardImplementation = url.decode('ascii')
 
-            # stdlib urlparse will give back whatever type we give it.  To be
-            # able to compare the values meaningfully, if it gives back unicode,
-            # convert all the values to bytes.
+            # stdlib urlparse will give back whatever type we give it.
+            # To be able to compare the values meaningfully, if it gives back
+            # unicode, convert all the values to bytes.
             standardResult = urlparse(urlToStandardImplementation)
-            if isinstance(standardResult.scheme, unicode):
+            if isinstance(standardResult.scheme, str):
                 # The choice of encoding is basically irrelevant.  The values
                 # are all in ASCII.  UTF-8 is, of course, the correct choice.
                 expected = (standardResult.scheme.encode('utf-8'),
@@ -2618,11 +2617,11 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
 
     def test_setResponseCodeAcceptsLongIntegers(self):
         """
-        L{http.Request.setResponseCode} accepts C{long} for the code
+        L{http.Request.setResponseCode} accepts L{int} for the code
         parameter.
         """
         req = http.Request(DummyChannel(), False)
-        req.setResponseCode(long(1))
+        req.setResponseCode(1)
 
 
     def test_setLastModifiedNeverSet(self):

@@ -22,7 +22,7 @@ from zope.interface import Interface, implementer
 from twisted.logger import Logger
 from twisted.internet.interfaces import (
     IHalfCloseableProtocol, ITCPTransport, ISystemHandle, IListeningPort)
-from twisted.python.compat import lazyByteSlice, unicode
+from twisted.python.compat import lazyByteSlice
 from twisted.python.runtime import platformType
 from twisted.python import versions, deprecate
 
@@ -103,9 +103,6 @@ from twisted.internet.protocol import Protocol
 # Not all platforms have, or support, this flag.
 _AI_NUMERICSERV = getattr(socket, "AI_NUMERICSERV", 0)
 
-
-# The type for service names passed to socket.getservbyname:
-_portNameType = (str, unicode)
 
 
 def _getrealname(addr):
@@ -1535,8 +1532,9 @@ class Connector(base.BaseConnector):
     """
     _addressType = address.IPv4Address
 
-    def __init__(self, host, port, factory, timeout, bindAddress, reactor=None):
-        if isinstance(port, _portNameType):
+    def __init__(self, host, port, factory, timeout, bindAddress,
+                 reactor=None):
+        if isinstance(port, str):
             try:
                 port = socket.getservbyname(port, 'tcp')
             except socket.error as e:

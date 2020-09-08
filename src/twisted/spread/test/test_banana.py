@@ -9,7 +9,7 @@ from io import BytesIO
 from twisted.trial.unittest import TestCase
 from twisted.spread import banana
 from twisted.python import failure
-from twisted.python.compat import long, iterbytes
+from twisted.python.compat import iterbytes
 from twisted.internet import protocol, main
 from twisted.test.proto_helpers import StringTransport
 
@@ -164,11 +164,10 @@ class BananaTests(BananaTestBase):
         banana without changing value and should come out represented
         as an C{int} (regardless of the type which was encoded).
         """
-        for value in (10151, long(10151)):
-            self.enc.sendEncoded(value)
-            self.enc.dataReceived(self.io.getvalue())
-            self.assertEqual(self.result, 10151)
-            self.assertIsInstance(self.result, int)
+        self.enc.sendEncoded(10151)
+        self.enc.dataReceived(self.io.getvalue())
+        self.assertEqual(self.result, 10151)
+        self.assertIsInstance(self.result, int)
 
 
     def _getSmallest(self):

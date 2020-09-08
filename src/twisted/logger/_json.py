@@ -6,8 +6,6 @@
 Tools for saving and loading log events in a structured format.
 """
 
-import types
-
 from constantly import NamedConstant
 from json import dumps, loads
 from uuid import UUID
@@ -80,14 +78,7 @@ def failureFromJSON(failureDict):
     @return: L{Failure}
     @rtype: L{Failure}
     """
-    # InstanceType() is only available in Python 2 and lower.
-    # __new__ is only available on new-style classes.
-    newFailure = getattr(Failure, "__new__", None)
-    if newFailure is None:
-        f = types.InstanceType(Failure)
-    else:
-        f = newFailure(Failure)
-
+    f = Failure.__new__(Failure)
     typeInfo = failureDict["type"]
     failureDict["type"] = type(typeInfo["__name__"], (), typeInfo)
     f.__dict__ = failureDict

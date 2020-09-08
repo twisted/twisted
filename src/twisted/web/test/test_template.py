@@ -6,6 +6,8 @@ Tests for L{twisted.web.template}
 """
 
 
+from io import StringIO
+
 from zope.interface.verify import verifyObject
 
 from twisted.internet.defer import succeed, gatherResults
@@ -25,7 +27,6 @@ from twisted.web.test._util import FlattenTestCase
 from twisted.web.test.test_web import DummyRequest
 from twisted.web.server import NOT_DONE_YET
 
-from twisted.python.compat import NativeStringIO as StringIO
 from twisted.logger import globalLogPublisher
 from twisted.test.proto_helpers import EventLoggingObserver
 

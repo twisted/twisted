@@ -9,7 +9,6 @@ from hashlib import sha1
 from zope.interface.verify import verifyObject
 
 from twisted.python import failure
-from twisted.python.compat import unicode
 from twisted.trial import unittest
 from twisted.words.protocols.jabber import component, ijabber, xmlstream
 from twisted.words.protocols.jabber.jid import JID
@@ -53,7 +52,7 @@ class ComponentInitiatingInitializerTests(unittest.TestCase):
         self.assertEqual('handshake', handshake.name)
         self.assertEqual('test:component', handshake.uri)
         self.assertEqual(sha1(b'12345' + b'secret').hexdigest(),
-                         unicode(handshake))
+                         str(handshake))
 
         # successful authentication
 

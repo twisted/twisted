@@ -12,7 +12,6 @@ from textwrap import dedent
 
 from twisted.conch.test import keydata
 from twisted.python import randbytes
-from twisted.python.compat import long
 from twisted.python.filepath import FilePath
 from twisted.python.reflect import requireModule
 from twisted.trial import unittest
@@ -647,7 +646,7 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
         """
         Test that the PublicKey object is initialized correctly.
         """
-        obj = keys.Key._fromRSAComponents(n=long(5), e=long(3))._keyObject
+        obj = keys.Key._fromRSAComponents(n=5, e=3)._keyObject
         key = keys.Key(obj)
         self.assertEqual(key._keyObject, obj)
 
@@ -659,7 +658,7 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
         rsa1 = keys.Key(self.rsaObj)
         rsa2 = keys.Key(self.rsaObj)
         rsa3 = keys.Key(
-            keys.Key._fromRSAComponents(n=long(5), e=long(3))._keyObject)
+            keys.Key._fromRSAComponents(n=5, e=3)._keyObject)
         dsa = keys.Key(self.dsaObj)
         self.assertTrue(rsa1 == rsa2)
         self.assertFalse(rsa1 == rsa3)
@@ -675,7 +674,7 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
         rsa1 = keys.Key(self.rsaObj)
         rsa2 = keys.Key(self.rsaObj)
         rsa3 = keys.Key(
-            keys.Key._fromRSAComponents(n=long(5), e=long(3))._keyObject)
+            keys.Key._fromRSAComponents(n=5, e=3)._keyObject)
         dsa = keys.Key(self.dsaObj)
         self.assertFalse(rsa1 != rsa2)
         self.assertTrue(rsa1 != rsa3)

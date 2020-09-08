@@ -10,7 +10,6 @@ import stringprep
 # We require Unicode version 3.2.
 from unicodedata import ucd_3_2_0 as unicodedata
 
-from twisted.python.compat import unichr
 from twisted.python.deprecate import deprecatedModuleAttribute
 from incremental import Version
 
@@ -179,11 +178,11 @@ class NamePrep:
     """
 
     # Prohibited characters.
-    prohibiteds = [unichr(n) for n in chain(range(0x00, 0x2c + 1),
-                                            range(0x2e, 0x2f + 1),
-                                            range(0x3a, 0x40 + 1),
-                                            range(0x5b, 0x60 + 1),
-                                            range(0x7b, 0x7f + 1))]
+    prohibiteds = [chr(n) for n in chain(range(0x00, 0x2c + 1),
+                                         range(0x2e, 0x2f + 1),
+                                         range(0x3a, 0x40 + 1),
+                                         range(0x5b, 0x60 + 1),
+                                         range(0x7b, 0x7f + 1))]
 
     def prepare(self, string):
         result = []

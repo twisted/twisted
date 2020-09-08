@@ -9,7 +9,6 @@ import datetime
 from operator import attrgetter
 from zope.interface import implementer
 
-from twisted.python.compat import iteritems, intToBytes
 from twisted.positioning import base, nmea, ipositioning
 from twisted.positioning.test.receiver import MockPositioningReceiver
 from twisted.trial.unittest import TestCase
@@ -94,7 +93,7 @@ class CallbackTests(TestCase):
             'GPRMC': [b'$GPRMC*4b']
         }
 
-        for sentenceType, sentences in iteritems(sentencesByType):
+        for sentenceType, sentences in sentencesByType.items():
             for sentence in sentences:
                 self.protocol.lineReceived(sentence)
                 self.assertEqual(self.sentenceTypes, set([sentenceType]))
@@ -175,7 +174,7 @@ class ChecksumTests(TestCase):
         validate = nmea._validateChecksum
 
         bareSentence, checksum = GPGGA.split(b"*")
-        badChecksum = intToBytes(int(checksum, 16) + 1)
+        badChecksum = b'%d' % (int(checksum, 16) + 1,)
         sentences = [bareSentence + b"*" + badChecksum]
 
         for s in sentences:

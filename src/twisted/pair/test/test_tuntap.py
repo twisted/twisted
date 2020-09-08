@@ -15,7 +15,6 @@ from collections import deque
 from itertools import cycle
 from signal import SIGINT
 
-from twisted.python.compat import intToBytes
 from twisted.python.reflect import ObjectNotFound, namedAny
 
 try:
@@ -441,7 +440,7 @@ class TunnelDeviceTestsMixin:
         # guarantees for UDP - not even over localhost.
         for i in range(100):
             key = randrange(2 ** 64)
-            message = b"hello world:" + intToBytes(key)
+            message = b"hello world:%d" % (key,)
             source = self.system.sendUDP(message, (self._TUNNEL_REMOTE, 12345))
 
             # Likewise try receiving each of those datagrams a lot of times.
@@ -475,7 +474,7 @@ class TunnelDeviceTestsMixin:
         # Construct a unique application payload so the receiving side can
         # unambiguously identify the datagram we sent.
         key = randrange(2 ** 64)
-        message = b"hello world:" + intToBytes(key)
+        message = b"hello world:%d" % (key,)
 
         # To avoid really inconvenient test failures where the test just hangs
         # forever, set up a timeout for blocking socket operations.  This

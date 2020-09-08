@@ -9,7 +9,6 @@ Parsing for the moduli file, which contains Diffie-Hellman prime groups.
 Maintainer: Paul Swartz
 """
 
-from twisted.python.compat import long
 
 
 def parseModuliFile(filename):
@@ -22,8 +21,8 @@ def parseModuliFile(filename):
             continue
         tim, typ, tst, tri, size, gen, mod = l.split()
         size = int(size) + 1
-        gen = long(gen)
-        mod = long(mod, 16)
+        gen = int(gen)
+        mod = int(mod, 16)
         if size not in primes:
             primes[size] = []
         primes[size].append((gen, mod))
