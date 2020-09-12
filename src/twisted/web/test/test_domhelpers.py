@@ -9,7 +9,6 @@ Specific tests for (some of) the methods in L{twisted.web.domhelpers}.
 from xml.dom import minidom
 from typing import Any, Optional
 
-from twisted.python.compat import unicode
 from twisted.trial.unittest import TestCase
 from twisted.web import domhelpers, microdom
 
@@ -298,9 +297,9 @@ class MiniDOMHelpersTests(DOMHelpersTestsMixin, TestCase):
         node = self.dom.parseString("<foo>bar</foo>")
         text = domhelpers.getNodeText(node)
         self.assertEqual(text, u"bar")
-        self.assertIsInstance(text, unicode)
+        self.assertIsInstance(text, str)
 
         node = self.dom.parseString(u"<foo>\N{SNOWMAN}</foo>".encode('utf-8'))
         text = domhelpers.getNodeText(node)
         self.assertEqual(text, u"\N{SNOWMAN}")
-        self.assertIsInstance(text, unicode)
+        self.assertIsInstance(text, str)

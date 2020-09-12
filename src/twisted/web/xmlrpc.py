@@ -12,12 +12,12 @@ Maintainer: Itamar Shtull-Trauring
 """
 
 
-from twisted.python.compat import intToBytes, nativeString, urllib_parse
-from twisted.python.compat import unicode
+from twisted.python.compat import nativeString
 
 # System Imports
 import base64
 import xmlrpc.client as xmlrpclib
+from urllib.parse import urlparse
 from xmlrpc.client import Fault, Binary, Boolean, DateTime
 
 # Sibling Imports
@@ -186,12 +186,11 @@ class XMLRPC(resource.Resource):
                 content = xmlrpclib.dumps(f, methodresponse=True,
                                           allow_none=self.allowNone)
 
-            if isinstance(content, unicode):
+            if isinstance(content, str):
                 content = content.encode('utf8')
-            request.setHeader(
-                b"content-length", intToBytes(len(content)))
+            request.setHeader(b"content-length", b'%d' % (len(content),))
             request.write(content)
-        except:
+        except Exception:
             self._log.failure('')
         request.finish()
 
@@ -333,7 +332,7 @@ class QueryProtocol(http.HTTPClient):
         self.sendHeader(b'Host', self.factory.host)
         self.sendHeader(b'Content-type', b'text/xml; charset=utf-8')
         payload = self.factory.payload
-        self.sendHeader(b'Content-length', intToBytes(len(payload)))
+        self.sendHeader(b'Content-length', b'%d' % (len(payload),))
 
         if self.factory.user:
             auth = b':'.join([self.factory.user, self.factory.password])
@@ -381,7 +380,8 @@ payloadTemplate = """<?xml version="1.0"?>
 """
 
 
-class _QueryFactory(protocol.ClientFactory):
+
+class QueryFactory(protocol.ClientFactory):
     """
     XML-RPC Client Factory
 
@@ -428,9 +428,9 @@ class _QueryFactory(protocol.ClientFactory):
         """
         self.path, self.host = path, host
         self.user, self.password = user, password
-        self.payload = payloadTemplate % (method,
-            xmlrpclib.dumps(args, allow_none=allowNone))
-        if isinstance(self.payload, unicode):
+        self.payload = payloadTemplate % (method, xmlrpclib.dumps(
+                                                args, allow_none=allowNone))
+        if isinstance(self.payload, str):
             self.payload = self.payload.encode('utf8')
         self.deferred = defer.Deferred(canceller)
         self.useDateTime = useDateTime
@@ -499,10 +499,16 @@ class Proxy:
     @ivar _reactor: The reactor used to create connections.
     @type _reactor: Object providing L{twisted.internet.interfaces.IReactorTCP}
 
-    @ivar queryFactory: Object returning a factory for XML-RPC protocol. Mainly
-        useful for tests.
+    @ivar queryFactory: Object returning a factory for XML-RPC protocol. Use
+        this for testing, or to manipulate the XML-RPC parsing behavior. For
+        example, you may set this to a custom "debugging" factory object that
+        reimplements C{parseResponse} in order to log the raw XML-RPC contents
+        from the server before continuing on with parsing. Another possibility
+        is to implement your own XML-RPC marshaller here to handle non-standard
+        XML-RPC traffic.
+    @type queryFactory: L{twisted.web.xmlrpc.QueryFactory}
     """
-    queryFactory = _QueryFactory
+    queryFactory = QueryFactory
 
     def __init__(self, url, user=None, password=None, allowNone=False,
                  useDateTime=False, connectTimeout=30.0, reactor=reactor):
@@ -514,8 +520,7 @@ class Proxy:
         @type url: L{bytes}
 
         """
-        scheme, netloc, path, params, query, fragment = urllib_parse.urlparse(
-            url)
+        scheme, netloc, path, params, query, fragment = urlparse(url)
         netlocParts = netloc.split(b'@')
         if len(netlocParts) == 2:
             userpass = netlocParts.pop(0).split(b':')

@@ -4,7 +4,6 @@
 # See LICENSE for details.
 
 
-from twisted.python.compat import _coercedUnicode, unicode
 from twisted.words.protocols.jabber import error, sasl, xmlstream
 from twisted.words.protocols.jabber.jid import JID
 from twisted.words.xish import domish, utility, xpath
@@ -77,7 +76,7 @@ class IQ(domish.Element):
 
 
 
-class IQAuthInitializer(object):
+class IQAuthInitializer:
     """
     Non-SASL Authentication initializer for the initiating entity.
 
@@ -115,7 +114,7 @@ class IQAuthInitializer(object):
 
     def _cbAuthQuery(self, iq):
         jid = self.xmlstream.authenticator.jid
-        password = _coercedUnicode(self.xmlstream.authenticator.password)
+        password = self.xmlstream.authenticator.password
 
         # Construct auth request
         reply = xmlstream.IQ(self.xmlstream, "set")
@@ -126,9 +125,9 @@ class IQAuthInitializer(object):
         # Prefer digest over plaintext
         if DigestAuthQry.matches(iq):
             digest = xmlstream.hashPassword(self.xmlstream.sid, password)
-            reply.query.addElement("digest", content=unicode(digest))
+            reply.query.addElement("digest", content=str(digest))
         else:
-            reply.query.addElement("password", content = password)
+            reply.query.addElement("password", content=password)
 
         d = reply.send()
         d.addCallbacks(self._cbAuth, self._ebAuth)
@@ -237,7 +236,7 @@ class BasicAuthenticator(xmlstream.ConnectAuthenticator):
 
 
 
-class CheckVersionInitializer(object):
+class CheckVersionInitializer:
     """
     Initializer that checks if the minimum common stream version number is 1.0.
     """
@@ -275,7 +274,7 @@ class BindInitializer(xmlstream.BaseFeatureInitiatingInitializer):
 
     def onBind(self, iq):
         if iq.bind:
-            self.xmlstream.authenticator.jid = JID(unicode(iq.bind.jid))
+            self.xmlstream.authenticator.jid = JID(str(iq.bind.jid))
 
 
 

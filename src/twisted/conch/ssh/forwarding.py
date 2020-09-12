@@ -13,10 +13,10 @@ import struct
 
 from twisted.internet import protocol, reactor
 from twisted.internet.endpoints import HostnameEndpoint, connectProtocol
-from twisted.python import log
-from twisted.python.compat import unicode
 
 from twisted.conch.ssh import common, channel
+
+
 
 class SSHListenForwardingFactory(protocol.Factory):
     def __init__(self, connection, hostport, klass):
@@ -33,11 +33,13 @@ class SSHListenForwardingFactory(protocol.Factory):
         self.conn.openChannel(channel, channelOpenData)
         return client
 
+
+
 class SSHListenForwardingChannel(channel.SSHChannel):
 
     def channelOpen(self, specificData):
-        log.msg('opened forwarding channel %s' % self.id)
-        if len(self.client.buf)>1:
+        self._log.info('opened forwarding channel {id}', id=self.id)
+        if len(self.client.buf) > 1:
             b = self.client.buf[1:]
             self.write(b)
         self.client.buf = b''
@@ -53,7 +55,7 @@ class SSHListenForwardingChannel(channel.SSHChannel):
 
     def closed(self):
         if hasattr(self, 'client'):
-            log.msg('closing local forwarding channel %s' % self.id)
+            self._log.info('closing local forwarding channel {id}', id=self.id)
             self.client.transport.loseConnection()
             del self.client
 
@@ -103,7 +105,8 @@ class SSHConnectForwardingChannel(channel.SSHChannel):
         """
         See: L{channel.SSHChannel}
         """
-        log.msg("connecting to %s:%i" % self.hostport)
+        self._log.info("connecting to {host}:{port}",
+                       host=self.hostport[0], port=self.hostport[1])
         ep = HostnameEndpoint(
             self._reactor, self.hostport[0], self.hostport[1])
         d = connectProtocol(ep, SSHForwardingClient(self))
@@ -119,7 +122,8 @@ class SSHConnectForwardingChannel(channel.SSHChannel):
         @type  client: L{protocol.Protocol}
         """
         self.client = client
-        log.msg("connected to %s:%i" % self.hostport)
+        self._log.info("connected to {host}:{port}",
+                       host=self.hostport[0], port=self.hostport[1])
         if self.clientBuf:
             self.client.transport.write(self.clientBuf)
             self.clientBuf = None
@@ -135,7 +139,9 @@ class SSHConnectForwardingChannel(channel.SSHChannel):
         @param reason: Reason why connection failed.
         @type  reason: L{twisted.python.failure.Failure}
         """
-        log.msg("failed to connect: %s" % reason)
+        self._log.error("failed to connect to {host}:{port}: {reason}",
+                        host=self.hostport[0], port=self.hostport[1],
+                        reason=reason)
         self.loseConnection()
 
 
@@ -154,7 +160,7 @@ class SSHConnectForwardingChannel(channel.SSHChannel):
         See: L{channel.SSHChannel}
         """
         if self.client:
-            log.msg('closed remote forwarding channel %s' % self.id)
+            self._log.info('closed remote forwarding channel {id}', id=self.id)
             if self.client.channel:
                 self.loseConnection()
             self.client.transport.loseConnection()
@@ -164,7 +170,7 @@ class SSHConnectForwardingChannel(channel.SSHChannel):
 
 def openConnectForwardingClient(remoteWindow, remoteMaxPacket, data, avatar):
     remoteHP, origHP = unpackOpen_direct_tcpip(data)
-    return SSHConnectForwardingChannel(remoteHP, 
+    return SSHConnectForwardingChannel(remoteHP,
                                        remoteWindow=remoteWindow,
                                        remoteMaxPacket=remoteMaxPacket,
                                        avatar=avatar)
@@ -199,9 +205,9 @@ def packOpen_direct_tcpip(destination, source):
     """
     (connHost, connPort) = destination
     (origHost, origPort) = source
-    if isinstance(connHost, unicode):
+    if isinstance(connHost, str):
         connHost = connHost.encode("utf-8")
-    if isinstance(origHost, unicode):
+    if isinstance(origHost, str):
         origHost = origHost.encode("utf-8")
     conn = common.NS(connHost) + struct.pack('>L', connPort)
     orig = common.NS(origHost) + struct.pack('>L', origPort)

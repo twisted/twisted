@@ -45,7 +45,7 @@ from twisted.internet.test.connectionmixins import ConnectableProtocol
 from twisted.internet.test.connectionmixins import ConnectionTestsMixin
 from twisted.internet.test.connectionmixins import StreamClientTestsMixin
 from twisted.internet.test.connectionmixins import runProtocolsWithReactor
-from twisted.python.compat import nativeString, iteritems
+from twisted.python.compat import nativeString
 from twisted.python.failure import Failure
 from twisted.python.log import addObserver, removeObserver, err
 from twisted.python.runtime import platform
@@ -60,7 +60,7 @@ if requireModule("twisted.python.sendmsg") is not None:
 
 
 
-class UNIXFamilyMixin(object):
+class UNIXFamilyMixin:
     """
     Test-helper defining mixin for things related to AF_UNIX sockets.
     """
@@ -626,7 +626,7 @@ class UNIXTestsBuilder(UNIXFamilyMixin, ReactorBuilder, ConnectionTestsMixin):
                              format=format)
 
         for logEvent in events:
-            for k, v in iteritems(expectedEvent):
+            for k, v in expectedEvent.items():
                 if v != logEvent.get(k):
                     break
             else:
@@ -702,7 +702,7 @@ class UNIXDatagramTestsBuilder(UNIXFamilyMixin, ReactorBuilder):
 
 
 
-class SocketUNIXMixin(object):
+class SocketUNIXMixin:
     """
     Mixin which uses L{IReactorSocket.adoptStreamPort} to hand out listening
     UNIX ports.
@@ -747,7 +747,7 @@ class SocketUNIXMixin(object):
 
 
 
-class ListenUNIXMixin(object):
+class ListenUNIXMixin:
     """
     Mixin which uses L{IReactorTCP.listenUNIX} to hand out listening UNIX
     ports.
@@ -780,7 +780,7 @@ class ListenUNIXMixin(object):
 
 
 
-class UNIXPortTestsMixin(object):
+class UNIXPortTestsMixin:
     requiredInterfaces = (IReactorUNIX,)  # type: Optional[Sequence[Type[Interface]]]  # noqa
 
     def getExpectedStartListeningLogMessage(self, port, factory):

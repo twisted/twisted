@@ -27,7 +27,7 @@ import sys
 from zope.interface import implementer, Interface
 
 from twisted.python import log, reflect
-from twisted.python.compat import unicode, comparable, cmp
+from twisted.python.compat import comparable, cmp
 from .jelly import (
     setUnjellyableForClass, setUnjellyableForClassTree,
     setUnjellyableFactoryForClass, unjellyableRegistry, Jellyable, Unjellyable,
@@ -603,7 +603,7 @@ class RemoteCacheObserver:
         self.cached = cached
         self.perspective = perspective
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "<RemoteCacheObserver(%s, %s, %s) at %s>" % (
             self.broker, self.cached, self.perspective, id(self))
 
@@ -625,7 +625,7 @@ class RemoteCacheObserver:
         """(internal) action method.
         """
         cacheID = self.broker.cachedRemotelyAs(self.cached)
-        if isinstance(_name, unicode):
+        if isinstance(_name, str):
             _name = _name.encode("utf-8")
         if cacheID is None:
             from pb import ProtocolError

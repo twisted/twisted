@@ -35,7 +35,6 @@ from twisted import copyright
 from twisted.cred import portal, credentials, error as ecred
 from twisted.internet import defer, protocol
 from twisted.python import log, failure, reflect
-from twisted.python.compat import itervalues, unicode
 from twisted.python.components import registerAdapter
 from twisted.spread import pb
 from twisted.words import iwords, ewords
@@ -43,7 +42,7 @@ from twisted.words.protocols import irc
 
 
 @implementer(iwords.IGroup)
-class Group(object):
+class Group:
     def __init__(self, name):
         self.name = name
         self.users = {}
@@ -69,7 +68,7 @@ class Group(object):
         if user.name not in self.users:
             additions = []
             self.users[user.name] = user
-            for p in itervalues(self.users):
+            for p in self.users.values():
                 if p is not user:
                     d = defer.maybeDeferred(p.userJoined, self, user)
                     d.addErrback(self._ebUserCall, p=p)
@@ -85,7 +84,7 @@ class Group(object):
             pass
         else:
             removals = []
-            for p in itervalues(self.users):
+            for p in self.users.values():
                 if p is not user:
                     d = defer.maybeDeferred(p.userLeft, self, user, reason)
                     d.addErrback(self._ebUserCall, p=p)
@@ -101,7 +100,7 @@ class Group(object):
     def receive(self, sender, recipient, message):
         assert recipient is self
         receives = []
-        for p in itervalues(self.users):
+        for p in self.users.values():
             if p is not sender:
                 d = defer.maybeDeferred(p.receive, sender, self, message)
                 d.addErrback(self._ebUserCall, p=p)
@@ -113,7 +112,7 @@ class Group(object):
     def setMetadata(self, meta):
         self.meta = meta
         sets = []
-        for p in itervalues(self.users):
+        for p in self.users.values():
             d = defer.maybeDeferred(p.groupMetaUpdate, self, meta)
             d.addErrback(self._ebUserCall, p=p)
             sets.append(d)
@@ -127,7 +126,7 @@ class Group(object):
 
 
 @implementer(iwords.IUser)
-class User(object):
+class User:
     realm = None
     mind = None
 
@@ -940,7 +939,7 @@ class PBMind(pb.Referenceable):
 
     def jellyFor(self, jellier):
         qual = reflect.qual(PBMind)
-        if isinstance(qual, unicode):
+        if isinstance(qual, str):
             qual = qual.encode("utf-8")
         return qual, jellier.invoker.registerReference(self)
 
@@ -1019,10 +1018,10 @@ class PBGroup(pb.Referenceable):
 
     def jellyFor(self, jellier):
         qual = reflect.qual(self.__class__)
-        if isinstance(qual, unicode):
+        if isinstance(qual, str):
             qual = qual.encode("utf-8")
         group = self.group.name
-        if isinstance(group, unicode):
+        if isinstance(group, str):
             group = group.encode("utf-8")
         return qual, group, jellier.invoker.registerReference(self)
 
@@ -1106,7 +1105,7 @@ class ChatAvatar(pb.Referenceable):
 
     def jellyFor(self, jellier):
         qual = reflect.qual(self.__class__)
-        if isinstance(qual, unicode):
+        if isinstance(qual, str):
             qual = qual.encode("utf-8")
         return qual, jellier.invoker.registerReference(self)
 
@@ -1174,7 +1173,7 @@ pb.setUnjellyableForClass(ChatAvatar, AvatarReference)
 
 
 @implementer(portal.IRealm, iwords.IChatService)
-class WordsRealm(object):
+class WordsRealm:
     _encoding = 'utf-8'
 
     def __init__(self, name):
@@ -1321,7 +1320,7 @@ class InMemoryWordsRealm(WordsRealm):
 
 
     def itergroups(self):
-        return defer.succeed(itervalues(self.groups))
+        return defer.succeed(self.groups.values())
 
 
     def addUser(self, user):

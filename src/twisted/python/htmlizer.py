@@ -6,11 +6,10 @@
 HTML rendering of Python source.
 """
 
-from twisted.python.compat import _tokenize, escape
-
 import keyword
 import tokenize
 from . import reflect
+from html import escape
 from typing import List
 
 
@@ -112,7 +111,7 @@ def filter(inp, out, writer=HTMLWriter):
     out.write(b'<pre>')
     printer = TokenPrinter(writer(out.write).write).printtoken
     try:
-        for token in _tokenize(inp.readline):
+        for token in tokenize.tokenize(inp.readline):
             (tokenType, string, start, end, line) = token
             printer(tokenType, string, start, end, line)
     except tokenize.TokenError:

@@ -16,7 +16,6 @@ from twisted.conch.ssh.common import NS, getNS, getMP
 from twisted.conch.error import ConchError, MissingKeyStoreError
 from twisted.conch.ssh import keys
 from twisted.internet import defer, protocol
-from twisted.python.compat import itervalues
 
 
 
@@ -183,8 +182,8 @@ class SSHAgentServer(protocol.Protocol):
         resp = []
 
         resp.append(struct.pack('!L', numKeys))
-        for key, comment in itervalues(self.factory.keys):
-            resp.append(NS(key.blob())) # yes, wrapped in an NS
+        for key, comment in self.factory.keys.values():
+            resp.append(NS(key.blob()))  # yes, wrapped in an NS
             resp.append(NS(comment))
         self.sendResponse(AGENT_IDENTITIES_ANSWER, b''.join(resp))
 

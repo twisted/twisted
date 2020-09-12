@@ -24,7 +24,7 @@ else:
 
 
 
-class AddressTestCaseMixin(object):
+class AddressTestCaseMixin:
     def test_addressComparison(self):
         """
         Two different address instances, sharing the same properties are

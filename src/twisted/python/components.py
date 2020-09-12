@@ -30,12 +30,13 @@ interface.
 """
 
 
+from io import StringIO
+
 # zope3 imports
 from zope.interface import interface, declarations
 from zope.interface.adapter import AdapterRegistry
 
 # twisted imports
-from twisted.python.compat import NativeStringIO
 from twisted.python import reflect
 
 
@@ -292,9 +293,9 @@ class ReprableComponentized(Componentized):
     def __init__(self):
         Componentized.__init__(self)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         from pprint import pprint
-        sio = NativeStringIO()
+        sio = StringIO()
         pprint(self._adapterCache, sio)
         return sio.getvalue()
 
@@ -336,7 +337,7 @@ def proxyForInterface(iface, originalAttribute='original'):
 
 
 
-class _ProxiedClassMethod(object):
+class _ProxiedClassMethod:
     """
     A proxied class method.
 
@@ -372,7 +373,7 @@ class _ProxiedClassMethod(object):
 
 
 
-class _ProxyDescriptor(object):
+class _ProxyDescriptor:
     """
     A descriptor which will proxy attribute access, mutation, and
     deletion to the L{_ProxyDescriptor.originalAttribute} of the

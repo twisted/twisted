@@ -13,6 +13,7 @@ import fcntl
 import errno
 import struct
 import warnings
+from typing import Tuple
 
 from collections import namedtuple
 from constantly import Flags, FlagConstant
@@ -71,7 +72,7 @@ class TunnelFlags(Flags):
 
 
 @implementer(interfaces.IAddress)
-class TunnelAddress(FancyStrMixin, FancyEqMixin, object):
+class TunnelAddress(FancyStrMixin, FancyEqMixin):
     """
     A L{TunnelAddress} represents the tunnel to which a L{TuntapPort} is bound.
     """
@@ -201,7 +202,7 @@ class _IInputOutputSystem(Interface):
 
 
 
-class _RealSystem(object):
+class _RealSystem:
     """
     An interface to the parts of the operating system which L{TuntapPort}
     relies on.  This is most of an implementation of L{_IInputOutputSystem}.
@@ -250,8 +251,8 @@ class TuntapPort(abstract.FileDescriptor):
         self.logstr = "%s (%s)" % (logPrefix, self._mode.name)
 
 
-    def __repr__(self):
-        args = (fullyQualifiedName(self.protocol.__class__),)
+    def __repr__(self) -> str:
+        args = (fullyQualifiedName(self.protocol.__class__),)  # type: Tuple[str, ...]  # noqa
         if self.connected:
             args = args + ("",)
         else:

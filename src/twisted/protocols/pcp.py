@@ -90,7 +90,7 @@ class BasicProducerConsumerProxy:
         if self.consumer:
             self.consumer.unregisterProducer()
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return '<%s@%x around %s>' % (self.__class__, id(self), self.consumer)
 
 

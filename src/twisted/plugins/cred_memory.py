@@ -28,7 +28,7 @@ really don't want to use this for anything else. It is a toy.
 
 
 @implementer(ICheckerFactory, plugin.IPlugin)
-class InMemoryCheckerFactory(object):
+class InMemoryCheckerFactory:
     """
     A factory for in-memory credentials checkers.
 

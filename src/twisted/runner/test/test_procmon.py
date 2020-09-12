@@ -17,7 +17,7 @@ from twisted.test.proto_helpers import MemoryReactor
 
 
 
-class DummyProcess(object):
+class DummyProcess:
     """
     An incomplete and fake L{IProcessTransport} implementation for testing how
     L{ProcessMonitor} behaves when its monitored processes exit.

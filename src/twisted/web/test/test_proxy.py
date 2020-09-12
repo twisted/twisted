@@ -107,7 +107,7 @@ class ReverseProxyResourceTests(TestCase):
 
 
 
-class DummyChannel(object):
+class DummyChannel:
     """
     A dummy HTTP channel, that does nothing but holds a transport and saves
     connection lost.
@@ -531,7 +531,7 @@ class ProxyRequestTests(TestCase):
 
 
 
-class DummyFactory(object):
+class DummyFactory:
     """
     A simple holder for C{host} and C{port} information.
     """

@@ -28,7 +28,7 @@ from twisted.logger import Logger
 
 
 @implementer(IHostResolution)
-class HostResolution(object):
+class HostResolution:
     """
     The in-progress resolution of a given hostname.
     """
@@ -72,7 +72,7 @@ _socktypeToType = {
 
 
 @implementer(IHostnameResolver)
-class GAIResolver(object):
+class GAIResolver:
     """
     L{IHostnameResolver} implementation that resolves hostnames by calling
     L{getaddrinfo} in a thread.
@@ -144,7 +144,7 @@ class GAIResolver(object):
 
 
 @implementer(IHostnameResolver)
-class SimpleResolverComplexifier(object):
+class SimpleResolverComplexifier:
     """
     A converter from L{IResolverSimple} to L{IHostnameResolver}.
     """
@@ -208,7 +208,7 @@ class SimpleResolverComplexifier(object):
 
 
 @implementer(IResolutionReceiver)
-class FirstOneWins(object):
+class FirstOneWins:
     """
     An L{IResolutionReceiver} which fires a L{Deferred} with its first result.
     """
@@ -254,7 +254,7 @@ class FirstOneWins(object):
 
 
 @implementer(IResolverSimple)
-class ComplexResolverSimplifier(object):
+class ComplexResolverSimplifier:
     """
     A converter from L{IHostnameResolver} to L{IResolverSimple}
     """

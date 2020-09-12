@@ -89,7 +89,7 @@ class NamedConstantTests(TestCase):
 
 
 
-class _ConstantsTestsMixin(object):
+class _ConstantsTestsMixin:
     """
     Mixin defining test helpers common to multiple types of constants
     collections.
@@ -274,7 +274,7 @@ class NamesTests(TestCase, _ConstantsTestsMixin):
         A constant defined on a L{Names} subclass may be set as an attribute of
         another class and then retrieved using that attribute.
         """
-        class Another(object):
+        class Another:
             something = self.METHOD.GET
 
         self.assertIs(self.METHOD.GET, Another.something)
@@ -286,7 +286,7 @@ class NamesTests(TestCase, _ConstantsTestsMixin):
         another class and then retrieved from an instance of that class using
         that attribute.
         """
-        class Another(object):
+        class Another:
             something = self.METHOD.GET
 
         self.assertIs(self.METHOD.GET, Another().something)
@@ -474,7 +474,7 @@ class ValuesTests(TestCase, _ConstantsTestsMixin):
 
 
 
-class _FlagsTestsMixin(object):
+class _FlagsTestsMixin:
     """
     Mixin defining setup code for any tests for L{Flags} subclasses.
 

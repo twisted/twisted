@@ -15,7 +15,6 @@ from collections import deque
 from itertools import cycle
 from signal import SIGINT
 
-from twisted.python.compat import intToBytes
 from twisted.python.reflect import ObjectNotFound, namedAny
 
 try:
@@ -66,7 +65,7 @@ else:
 
 
 @implementer(IReactorFDSet)
-class ReactorFDSet(object):
+class ReactorFDSet:
     """
     An implementation of L{IReactorFDSet} which only keeps track of which
     descriptors have been registered for reading and writing.
@@ -124,7 +123,7 @@ class FSSetClock(Clock, ReactorFDSet):
 
 
 
-class TunHelper(object):
+class TunHelper:
     """
     A helper for tests of tun-related functionality (ip-level tunnels).
     """
@@ -206,7 +205,7 @@ class TunHelper(object):
 
 
 
-class TapHelper(object):
+class TapHelper:
     """
     A helper for tests of tap-related functionality (ethernet-level tunnels).
     """
@@ -327,7 +326,7 @@ class TunnelTests(SynchronousTestCase):
 
 
 
-class TunnelDeviceTestsMixin(object):
+class TunnelDeviceTestsMixin:
     """
     A mixin defining tests that apply to L{_IInputOutputSystem}
     implementations.
@@ -441,7 +440,7 @@ class TunnelDeviceTestsMixin(object):
         # guarantees for UDP - not even over localhost.
         for i in range(100):
             key = randrange(2 ** 64)
-            message = b"hello world:" + intToBytes(key)
+            message = b"hello world:%d" % (key,)
             source = self.system.sendUDP(message, (self._TUNNEL_REMOTE, 12345))
 
             # Likewise try receiving each of those datagrams a lot of times.
@@ -475,7 +474,7 @@ class TunnelDeviceTestsMixin(object):
         # Construct a unique application payload so the receiving side can
         # unambiguously identify the datagram we sent.
         key = randrange(2 ** 64)
-        message = b"hello world:" + intToBytes(key)
+        message = b"hello world:%d" % (key,)
 
         # To avoid really inconvenient test failures where the test just hangs
         # forever, set up a timeout for blocking socket operations.  This
@@ -507,7 +506,7 @@ class TunnelDeviceTestsMixin(object):
 
 
 
-class FakeDeviceTestsMixin(object):
+class FakeDeviceTestsMixin:
     """
     Define a mixin for use with test cases that require an
     L{_IInputOutputSystem} provider.  This mixin hands out L{MemoryIOSystem}
@@ -655,7 +654,7 @@ class TestRealSystem(_RealSystem):
 
 
 
-class RealDeviceTestsMixin(object):
+class RealDeviceTestsMixin:
     """
     Define a mixin for use with test cases that require an
     L{_IInputOutputSystem} provider.  This mixin hands out L{TestRealSystem}
@@ -734,7 +733,7 @@ class TuntapPortTests(SynchronousTestCase):
 
 
 
-class TunnelTestsMixin(object):
+class TunnelTestsMixin:
     """
     A mixin defining tests for L{TuntapPort}.
 
@@ -1384,7 +1383,7 @@ class TapTests(TunnelTestsMixin, SynchronousTestCase):
 
 
 
-class IOSystemTestsMixin(object):
+class IOSystemTestsMixin:
     """
     Tests that apply to any L{_IInputOutputSystem} implementation.
     """

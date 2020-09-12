@@ -20,32 +20,36 @@ from io import BytesIO
 from twisted.internet import protocol
 from twisted.persisted import styles
 from twisted.python import log
-from twisted.python.compat import iterbytes, long, _bytesChr as chr
+from twisted.python.compat import iterbytes
 from twisted.python.reflect import fullyQualifiedName
+
+
 
 class BananaError(Exception):
     pass
 
+
+
 def int2b128(integer, stream):
     if integer == 0:
-        stream(chr(0))
+        stream(b'\0')
         return
     assert integer > 0, "can only encode positive integers"
     while integer:
-        stream(chr(integer & 0x7f))
+        stream(bytes((integer & 0x7f,)))
         integer = integer >> 7
+
 
 
 def b1282int(st):
     """
-    Convert an integer represented as a base 128 string into an L{int} or
-    L{long}.
+    Convert an integer represented as a base 128 string into an L{int}.
 
     @param st: The integer encoded in a byte string.
     @type st: L{bytes}
 
     @return: The integer value extracted from the byte string.
-    @rtype: L{int} or L{long}
+    @rtype: L{int}
     """
     e = 1
     i = 0
@@ -56,19 +60,22 @@ def b1282int(st):
     return i
 
 
-# delimiter characters.
-LIST     = chr(0x80)
-INT      = chr(0x81)
-STRING   = chr(0x82)
-NEG      = chr(0x83)
-FLOAT    = chr(0x84)
-# "optional" -- these might be refused by a low-level implementation.
-LONGINT  = chr(0x85)
-LONGNEG  = chr(0x86)
-# really optional; this is part of the 'pb' vocabulary
-VOCAB    = chr(0x87)
 
-HIGH_BIT_SET = chr(0x80)
+# delimiter characters.
+LIST = b'\x80'
+INT = b'\x81'
+STRING = b'\x82'
+NEG = b'\x83'
+FLOAT = b'\x84'
+# "optional" -- these might be refused by a low-level implementation.
+LONGINT = b'\x85'
+LONGNEG = b'\x86'
+# really optional; this is part of the 'pb' vocabulary
+VOCAB = b'\x87'
+
+HIGH_BIT_SET = b'\x80'
+
+
 
 def setPrefixLimit(limit):
     """
@@ -333,10 +340,10 @@ class Banana(protocol.Protocol, styles.Ephemeral):
             write(LIST)
             for elem in obj:
                 self._encode(elem, write)
-        elif isinstance(obj, (int, long)):
+        elif isinstance(obj, int):
             if obj < self._smallestLongInt or obj > self._largestLongInt:
                 raise BananaError(
-                    "int/long is too large to send (%d)" % (obj,))
+                    "int is too large to send (%d)" % (obj,))
             if obj < self._smallestInt:
                 int2b128(-obj, write)
                 write(LONGNEG)

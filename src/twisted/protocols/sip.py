@@ -21,7 +21,6 @@ from twisted import cred
 from twisted.internet import protocol, defer, reactor
 from twisted.protocols import basic
 from twisted.python import log
-from twisted.python.compat import iteritems, unicode
 
 PORT = 5060
 
@@ -127,7 +126,7 @@ def unq(s):
 
 _absent = object()
 
-class Via(object):
+class Via:
     """
     A L{Via} is a SIP Via header, representing a segment of the path taken by
     the request.
@@ -353,12 +352,13 @@ class URL:
         return "".join(l)
 
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.toString()
 
 
-    def __repr__(self):
-        return '<URL %s:%s@%s:%r/%s>' % (self.username, self.password, self.host, self.port, self.transport)
+    def __repr__(self) -> str:
+        return '<URL %s:%s@%s:%r/%s>' % (self.username, self.password,
+                                         self.host, self.port, self.transport)
 
 
 
@@ -543,8 +543,9 @@ class Request(Message):
             cleanRequestURL(self.uri)
 
 
-    def __repr__(self):
-        return "<SIP Request %d:%s %s>" % (id(self), self.method, self.uri.toString())
+    def __repr__(self) -> str:
+        return "<SIP Request %d:%s %s>" % (id(self), self.method,
+                                           self.uri.toString())
 
 
     def _getHeaderLine(self):
@@ -565,7 +566,7 @@ class Response(Message):
         self.phrase = phrase
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "<SIP Response %d:%s>" % (id(self), self.code)
 
 
@@ -631,10 +632,10 @@ class MessagesParser(basic.LineReceiver):
 
     def dataReceived(self, data):
         try:
-            if isinstance(data, unicode):
+            if isinstance(data, str):
                 data = data.encode("utf-8")
             basic.LineReceiver.dataReceived(self, data)
-        except:
+        except Exception:
             log.err()
             self.invalidMessage()
 
@@ -831,7 +832,7 @@ class Base(protocol.DatagramProtocol):
         if self.debug:
             log.msg("Sending %r to %r" % (message.toString(), destURL))
         data = message.toString()
-        if isinstance(data, unicode):
+        if isinstance(data, str):
             data = data.encode("utf-8")
         self.transport.write(data, (destURL.host, destURL.port or self.PORT))
 
@@ -1122,7 +1123,7 @@ class RegisterProxy(Proxy):
 
     def unauthorized(self, message, host, port):
         m = self.responseFromRequest(401, message)
-        for (scheme, auth) in iteritems(self.authorizers):
+        for scheme, auth in self.authorizers.items():
             chal = auth.getChallenge((host, port))
             if chal is None:
                 value = '%s realm="%s"' % (scheme.title(), self.host)

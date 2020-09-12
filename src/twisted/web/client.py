@@ -19,8 +19,7 @@ from functools import wraps
 
 from zope.interface import implementer
 
-from twisted.python.compat import networkString
-from twisted.python.compat import nativeString, intToBytes, unicode, itervalues
+from twisted.python.compat import nativeString, networkString
 from twisted.python.deprecate import deprecatedModuleAttribute, deprecated
 from twisted.python.failure import Failure
 from incremental import Version
@@ -87,16 +86,16 @@ class HTTPPageGetter(http.HTTPClient):
         method = _ensureValidMethod(getattr(self.factory, 'method', b'GET'))
         self.sendCommand(method, _ensureValidURI(self.factory.path))
         if self.factory.scheme == b'http' and self.factory.port != 80:
-            host = self.factory.host + b':' + intToBytes(self.factory.port)
+            host = b'%b:%d' % (self.factory.host, self.factory.port)
         elif self.factory.scheme == b'https' and self.factory.port != 443:
-            host = self.factory.host + b':' + intToBytes(self.factory.port)
+            host = b'%b:%d' % (self.factory.host, self.factory.port)
         else:
             host = self.factory.host
         self.sendHeader(b'Host', self.factory.headers.get(b"host", host))
         self.sendHeader(b'User-Agent', self.factory.agent)
         data = getattr(self.factory, 'postdata', None)
         if data is not None:
-            self.sendHeader(b"Content-Length", intToBytes(len(data)))
+            self.sendHeader(b"Content-Length", b'%d' % (len(data),))
 
         cookieData = []
         for (key, value) in self.factory.headers.items():
@@ -362,7 +361,7 @@ class HTTPClientFactory(protocol.ClientFactory):
             self.headers = InsensitiveDict()
         if postdata is not None:
             self.headers.setdefault(b'Content-Length',
-                                    intToBytes(len(postdata)))
+                                    b'%d' % (len(postdata),))
             # just in case a broken http/1.1 decides to keep connection alive
             self.headers.setdefault(b"connection", b"close")
         self.postdata = postdata
@@ -389,7 +388,7 @@ class HTTPClientFactory(protocol.ClientFactory):
         return self._disconnectedDeferred
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "<%s: %s>" % (self.__class__.__name__, self.url)
 
     def setURL(self, url):
@@ -487,16 +486,16 @@ class HTTPDownloader(HTTPClientFactory):
                  timeout=0, cookies=None, followRedirect=True,
                  redirectLimit=20, afterFoundGet=False):
         self.requestedPartial = 0
-        if isinstance(fileOrName, (str, unicode)):
+        if isinstance(fileOrName, str):
             self.fileName = fileOrName
             self.file = None
             if supportPartial and os.path.exists(self.fileName):
                 fileLength = os.path.getsize(self.fileName)
                 if fileLength:
                     self.requestedPartial = fileLength
-                    if headers == None:
+                    if headers is None:
                         headers = {}
-                    headers[b"range"] = b"bytes=" + intToBytes(fileLength) + b"-"
+                    headers[b"range"] = b"bytes=%d-" % (fileLength,)
         else:
             self.file = fileOrName
         HTTPClientFactory.__init__(
@@ -582,7 +581,7 @@ class HTTPDownloader(HTTPClientFactory):
 
 
 
-class URI(object):
+class URI:
     """
     A URI object.
 
@@ -876,7 +875,7 @@ def _requireSSL(decoratee):
 
 
 
-class WebClientContextFactory(object):
+class WebClientContextFactory:
     """
     This class is deprecated.  Please simply use L{Agent} as-is, or if you want
     to customize something, use L{BrowserLikePolicyForHTTPS}.
@@ -920,7 +919,7 @@ class WebClientContextFactory(object):
 
 
 @implementer(IPolicyForHTTPS)
-class BrowserLikePolicyForHTTPS(object):
+class BrowserLikePolicyForHTTPS:
     """
     SSL connection creator for web clients.
     """
@@ -966,7 +965,7 @@ deprecatedModuleAttribute(Version("Twisted", 14, 0, 0),
 
 
 @implementer(IPolicyForHTTPS)
-class HostnameCachingHTTPSPolicy(object):
+class HostnameCachingHTTPSPolicy:
     """
     IPolicyForHTTPS that wraps a L{IPolicyForHTTPS} and caches the created
     L{IOpenSSLClientConnectionCreator}.
@@ -1033,7 +1032,7 @@ class HostnameCachingHTTPSPolicy(object):
 
 
 @implementer(IOpenSSLContextFactory)
-class _ContextFactoryWithContext(object):
+class _ContextFactoryWithContext:
     """
     A L{_ContextFactoryWithContext} is like a
     L{twisted.internet.ssl.ContextFactory} with a pre-created context.
@@ -1065,7 +1064,7 @@ class _ContextFactoryWithContext(object):
 
 
 @implementer(IPolicyForHTTPS)
-class _DeprecatedToCurrentPolicyForHTTPS(object):
+class _DeprecatedToCurrentPolicyForHTTPS:
     """
     Adapt a web context factory to a normal context factory.
 
@@ -1106,7 +1105,7 @@ class _DeprecatedToCurrentPolicyForHTTPS(object):
 
 
 @implementer(IBodyProducer)
-class FileBodyProducer(object):
+class FileBodyProducer:
     """
     L{FileBodyProducer} produces bytes from an input file object incrementally
     and writes them to a consumer.
@@ -1239,7 +1238,7 @@ class _HTTP11ClientFactory(protocol.Factory):
         self._metadata = metadata
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return '_HTTP11ClientFactory({}, {})'.format(
             self._quiescentCallback,
             self._metadata)
@@ -1249,7 +1248,7 @@ class _HTTP11ClientFactory(protocol.Factory):
 
 
 
-class _RetryingHTTP11ClientProtocol(object):
+class _RetryingHTTP11ClientProtocol:
     """
     A wrapper for L{HTTP11ClientProtocol} that automatically retries requests.
 
@@ -1314,7 +1313,7 @@ class _RetryingHTTP11ClientProtocol(object):
 
 
 
-class HTTPConnectionPool(object):
+class HTTPConnectionPool:
     """
     A pool of persistent HTTP connections.
 
@@ -1460,18 +1459,18 @@ class HTTPConnectionPool(object):
             closed.
         """
         results = []
-        for protocols in itervalues(self._connections):
+        for protocols in self._connections.values():
             for p in protocols:
                 results.append(p.abort())
         self._connections = {}
-        for dc in itervalues(self._timeouts):
+        for dc in self._timeouts.values():
             dc.cancel()
         self._timeouts = {}
         return defer.gatherResults(results).addCallback(lambda ign: None)
 
 
 
-class _AgentBase(object):
+class _AgentBase:
     """
     Base class offering common facilities for L{Agent}-type classes.
 
@@ -1497,7 +1496,7 @@ class _AgentBase(object):
             host = b'[' + host + b']'
         if (scheme, port) in ((b'http', 80), (b'https', 443)):
             return host
-        return host + b":" + intToBytes(port)
+        return b'%b:%d' % (host, port)
 
 
     def _requestWithEndpoint(self, key, endpoint, method, parsedURI,
@@ -1534,7 +1533,7 @@ class _AgentBase(object):
 
 
 @implementer(IAgentEndpointFactory)
-class _StandardEndpointFactory(object):
+class _StandardEndpointFactory:
     """
     Standard HTTP endpoint destinations - TCP for HTTP, TCP+TLS for HTTPS.
 
@@ -1785,7 +1784,7 @@ class ProxyAgent(_AgentBase):
 
 
 
-class _FakeUrllib2Request(object):
+class _FakeUrllib2Request:
     """
     A fake C{urllib2.Request} object for C{cookielib} to work with.
 
@@ -1861,7 +1860,7 @@ class _FakeUrllib2Request(object):
 
 
 
-class _FakeUrllib2Response(object):
+class _FakeUrllib2Response:
     """
     A fake C{urllib2.Response} object for C{cookielib} to work with.
 
@@ -1875,7 +1874,7 @@ class _FakeUrllib2Response(object):
 
 
     def info(self):
-        class _Meta(object):
+        class _Meta:
             def getheaders(zelf, name):
                 # PY2
                 headers = self.response.headers.getRawHeaders(name, [])
@@ -1891,7 +1890,7 @@ class _FakeUrllib2Response(object):
 
 
 @implementer(IAgent)
-class CookieAgent(object):
+class CookieAgent:
     """
     L{CookieAgent} extends the basic L{Agent} to add RFC-compliant
     handling of HTTP cookies.  Cookies are written to and extracted
@@ -2030,7 +2029,7 @@ class _GzipProtocol(proxyForInterface(IProtocol)):  # type: ignore[misc]
 
 
 @implementer(IAgent)
-class ContentDecoderAgent(object):
+class ContentDecoderAgent:
     """
     An L{Agent} wrapper to handle encoded content.
 
@@ -2105,7 +2104,7 @@ class ContentDecoderAgent(object):
 
 
 @implementer(IAgent)
-class RedirectAgent(object):
+class RedirectAgent:
     """
     An L{Agent} wrapper which handles HTTP redirects.
 
@@ -2128,7 +2127,7 @@ class RedirectAgent(object):
     """
 
     _redirectResponses = [http.MOVED_PERMANENTLY, http.FOUND,
-                          http.TEMPORARY_REDIRECT]
+                          http.TEMPORARY_REDIRECT, http.PERMANENT_REDIRECT]
     _seeOtherResponses = [http.SEE_OTHER]
 
 
@@ -2221,7 +2220,8 @@ class BrowserLikeRedirectAgent(RedirectAgent):
     @since: 13.1
     """
     _redirectResponses = [http.TEMPORARY_REDIRECT]
-    _seeOtherResponses = [http.MOVED_PERMANENTLY, http.FOUND, http.SEE_OTHER]
+    _seeOtherResponses = [http.MOVED_PERMANENTLY, http.FOUND, http.SEE_OTHER,
+                          http.PERMANENT_REDIRECT]
 
 
 

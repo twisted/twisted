@@ -8,13 +8,13 @@ Tests for L{twisted.web.wsgi}.
 __metaclass__ = type
 
 from sys import exc_info
+from urllib.parse import quote as urlquote
 import tempfile
 import traceback
 import warnings
 
 from zope.interface.verify import verifyObject
 
-from twisted.python.compat import intToBytes, urlquote
 from twisted.python.failure import Failure
 from twisted.python.threadable import getThreadID
 from twisted.python.threadpool import ThreadPool
@@ -1743,9 +1743,7 @@ class StartResponseTests(WSGITestsMixin, TestCase):
             tb1 = reraised[0][2].tb_next
             tb2 = excInfo[2]
             self.assertEqual(
-                # On Python 2 (str is bytes) we need to move back only one
-                # stack frame to skip. On Python 3 we need to move two frames.
-                traceback.extract_tb(tb1)[1 if str is bytes else 2],
+                traceback.extract_tb(tb1)[1],
                 traceback.extract_tb(tb2)[0]
             )
 
@@ -1844,7 +1842,7 @@ class ApplicationTests(WSGITestsMixin, TestCase):
             def __iter__(self):
                 for i in range(3):
                     if self.open:
-                        yield intToBytes(i)
+                        yield b'%d' % (i,)
 
             def close(self):
                 self.open = False
@@ -1885,7 +1883,7 @@ class ApplicationTests(WSGITestsMixin, TestCase):
                 def result():
                     for i in range(3):
                         invoked.append(getThreadID())
-                        yield intToBytes(i)
+                        yield b'%d' % (i,)
                 invoked.append(getThreadID())
                 startResponse('200 OK', [('content-length', '3')])
                 return result()
@@ -2147,7 +2145,7 @@ class ApplicationTests(WSGITestsMixin, TestCase):
         """
         responseContent = b'foo'
 
-        class Application(object):
+        class Application:
             def __init__(self, environ, startResponse):
                 startResponse('200 OK', [])
 

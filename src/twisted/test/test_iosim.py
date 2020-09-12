@@ -60,7 +60,7 @@ class FakeTransportTests(TestCase):
 
 
 @implementer(IPushProducer)
-class StrictPushProducer(object):
+class StrictPushProducer:
     """
     An L{IPushProducer} implementation which produces nothing but enforces
     preconditions on its state transition methods.

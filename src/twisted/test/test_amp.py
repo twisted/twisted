@@ -15,7 +15,6 @@ from zope.interface import implementer
 from zope.interface.verify import verifyClass, verifyObject
 
 from twisted.python import filepath
-from twisted.python.compat import intToBytes
 from twisted.python.failure import Failure
 from twisted.protocols import amp
 from twisted.trial.unittest import TestCase
@@ -79,7 +78,7 @@ class TestProto(protocol.Protocol):
         self.onConnLost.callback(self.data)
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """
         Custom repr for testing to avoid coupling amp tests with repr from
         L{Protocol}
@@ -517,7 +516,7 @@ class ParsingTests(TestCase):
 
 
 
-class FakeLocator(object):
+class FakeLocator:
     """
     This is a fake implementation of the interface implied by
     L{CommandLocator}.
@@ -813,8 +812,10 @@ class CommandLocatorTests(TestCase):
         locator = locatorClass()
         responderCallable = locator.locateResponder(b"simple")
         result = responderCallable(amp.Box(greeting=b"ni hao", cookie=b"5"))
+
         def done(values):
-            self.assertEqual(values, amp.AmpBox(cookieplus=intToBytes(expected)))
+            self.assertEqual(values,
+                             amp.AmpBox(cookieplus=b'%d' % (expected,)))
         return result.addCallback(done)
 
 
@@ -2862,7 +2863,7 @@ class ListOfIntegersTests(TestCase, ListOfTestsMixin):
         b"empty": b"",
         b"single": b"\x00\x0210",
         b"multiple": b"\x00\x011\x00\x0220\x00\x03500",
-        b"huge": b"\x00\x74" + intToBytes(huge),
+        b"huge": b"\x00\x74%d" % (huge,),
         b"negative": b"\x00\x02-1"}
 
     objects = {
@@ -3125,7 +3126,7 @@ class ListOfOptionalTests(TestCase):
 
 
 @implementer(interfaces.IUNIXTransport)
-class UNIXStringTransport(object):
+class UNIXStringTransport:
     """
     An in-memory implementation of L{interfaces.IUNIXTransport} which collects
     all data given to it for later inspection.

@@ -36,8 +36,7 @@ from twisted.mail.imap4 import MessageSet
 from twisted.protocols import loopback
 from twisted.python import failure
 from twisted.python import util, log
-from twisted.python.compat import (intToBytes, range, nativeString,
-                                   networkString, iterbytes)
+from twisted.python.compat import nativeString, networkString, iterbytes
 from twisted.trial.unittest import SynchronousTestCase, TestCase
 
 from twisted.cred.portal import Portal, IRealm
@@ -793,7 +792,7 @@ class IMAP4HelperTests(TestCase):
         def cbProduced(result):
             self.failUnlessIdentical(result, p)
             self.assertEqual(
-                (b'{' + intToBytes(len(b)) + b'}' + b'\r\n' + b),
+                b'{%d}\r\n%b' % (len(b), b),
                 b''.join(c.buffer))
             return result
 
@@ -974,14 +973,15 @@ class IMAP4HelperTests(TestCase):
 
 
         check(
-            b'(BODY.PEEK[HEADER.FIELDS.NOT (subject bcc cc)] {' +
-            intToBytes(len(s)) + b'}\r\n' + s + b')',
+            b'(BODY.PEEK[HEADER.FIELDS.NOT (subject bcc cc)] {%d}\r\n%b)'
+            % (len(s), s),
             [b'BODY.PEEK', [b'HEADER.FIELDS.NOT', [b'subject', b'bcc', b'cc']],
-             s],
+                s],
         )
         check(
-            b'(FLAGS (\Seen) INTERNALDATE "17-Jul-1996 02:44:25 -0700" '
-            b'RFC822.SIZE 4286 ENVELOPE ("Wed, 17 Jul 1996 02:23:25 -0700 (PDT)" '
+            b'(FLAGS (\\Seen) INTERNALDATE "17-Jul-1996 02:44:25 -0700" '
+            b'RFC822.SIZE 4286 ENVELOPE '
+            b'("Wed, 17 Jul 1996 02:23:25 -0700 (PDT)" '
             b'"IMAP4rev1 WG mtg summary and minutes" '
             b'(("Terry Gray" NIL gray cac.washington.edu)) '
             b'(("Terry Gray" NIL gray cac.washington.edu)) '
@@ -1721,7 +1721,7 @@ class SimpleMailbox:
 
 
 @implementer(imap4.IMailboxInfo, imap4.IMailbox)
-class UncloseableMailbox(object):
+class UncloseableMailbox:
     """
     A mailbox that cannot be closed.
     """
@@ -1911,7 +1911,7 @@ class Account(AccountWithoutNamespaces, imap4.MemoryAccount):
 
 
 
-class SimpleServer(imap4.IMAP4Server, object):
+class SimpleServer(imap4.IMAP4Server):
     theAccount = Account(b'testuser')
     def __init__(self, *args, **kw):
         imap4.IMAP4Server.__init__(self, *args, **kw)
@@ -3614,7 +3614,7 @@ class AuthenticatorTests(IMAP4HelperMixin, TestCase):
         """
 
         @implementer(IChallengeResponse, IUsernamePassword)
-        class SPECIALAuth(object):
+        class SPECIALAuth:
 
             def getChallenge(self):
                 return b'SPECIAL'
@@ -3708,7 +3708,7 @@ class AuthenticatorTests(IMAP4HelperMixin, TestCase):
         """
 
         @implementer(IChallengeResponse)
-        class ValueErrorAuthChallenge(object):
+        class ValueErrorAuthChallenge:
             message = b"A challenge failure"
 
             def getChallenge(self):
@@ -3729,7 +3729,7 @@ class AuthenticatorTests(IMAP4HelperMixin, TestCase):
                 """
 
         @implementer(IClientAuthentication)
-        class ValueErrorAuthenticator(object):
+        class ValueErrorAuthenticator:
 
             def getName(self):
                 return b"ERROR"
@@ -3761,7 +3761,7 @@ class AuthenticatorTests(IMAP4HelperMixin, TestCase):
         as Base 64 receives an L{IllegalClientResponse}.
         """
         @implementer(IChallengeResponse)
-        class NotBase64AuthChallenge(object):
+        class NotBase64AuthChallenge:
             message = b"Malformed Response - not base64"
 
             def getChallenge(self):
@@ -4657,7 +4657,7 @@ class HandCraftedTests(IMAP4HelperMixin, TestCase):
 
 
 
-class PreauthIMAP4ClientMixin(object):
+class PreauthIMAP4ClientMixin:
     """
     Mixin for L{SynchronousTestCase} subclasses which
     provides a C{setUp} method which creates an L{IMAP4Client}
@@ -7029,7 +7029,7 @@ class CopyWorkerTests(TestCase):
         msgs = [FakeyMessage({'Header-Counter': str(i)},
                              (),
                              b'Date',
-                             b'Body ' + intToBytes(i),
+                             b'Body %d' % (i,),
                              i + 10, None)
                 for i in range(1, 11)]
         d = f([im for im in zip(range(1, 11), msgs)], 'tag', m)
@@ -7042,8 +7042,8 @@ class CopyWorkerTests(TestCase):
                 self.assertEqual(a[2], b"Date")
 
             seen.sort()
-            exp = [b"Header-Counter: " + intToBytes(i) + b"\r\n\r\nBody " +intToBytes(i) for i in range(1, 11)]
-            exp.sort()
+            exp = sorted(b"Header-Counter: %d\r\n\r\nBody %d" % (i, i)
+                         for i in range(1, 11))
             self.assertEqual(seen, exp)
 
             for (status, result) in results:
@@ -7496,7 +7496,7 @@ class DisconnectionTests(TestCase):
 
 
 
-class SynchronousMailbox(object):
+class SynchronousMailbox:
     """
     Trivial, in-memory mailbox implementation which can produce a message
     synchronously.
@@ -7696,7 +7696,7 @@ class IMAP4ServerFetchTests(TestCase):
 
 
 
-class LiteralTestsMixin(object):
+class LiteralTestsMixin:
     """
     Shared tests for literal classes.
 

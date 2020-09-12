@@ -9,10 +9,10 @@ Tests for L{twisted.trial.util}
 
 import os
 import sys
+from io import StringIO
 
 from zope.interface import implementer
 
-from twisted.python.compat import NativeStringIO
 from twisted.python import filepath
 from twisted.internet.interfaces import IProcessTransport
 from twisted.internet import defer
@@ -248,7 +248,7 @@ Sel2""")
 
 
 
-class StubReactor(object):
+class StubReactor:
     """
     A reactor stub which contains enough functionality to be used with the
     L{_Janitor}.
@@ -295,7 +295,7 @@ class StubReactor(object):
 
 
 
-class StubErrorReporter(object):
+class StubErrorReporter:
     """
     A subset of L{twisted.trial.itrial.IReporter} which records L{addError}
     calls.
@@ -382,7 +382,7 @@ class JanitorTests(SynchronousTestCase):
         The Janitor will kill processes during reactor cleanup.
         """
         @implementer(IProcessTransport)
-        class StubProcessTransport(object):
+        class StubProcessTransport:
             """
             A stub L{IProcessTransport} provider which records signals.
             @ivar signals: The signals passed to L{signalProcess}.
@@ -409,12 +409,12 @@ class JanitorTests(SynchronousTestCase):
         The Janitor returns string representations of the selectables that it
         cleaned up from the reactor cleanup method.
         """
-        class Selectable(object):
+        class Selectable:
             """
             A stub Selectable which only has an interesting string
             representation.
             """
-            def __repr__(self):
+            def __repr__(self) -> str:
                 return "(SELECTABLE!)"
 
         reactor = StubReactor([], [Selectable()])
@@ -534,7 +534,7 @@ class RemoveSafelyTests(SynchronousTestCase):
             raise OSError()
 
         # Patch stdout so we can check the print statements in _removeSafely
-        out = NativeStringIO()
+        out = StringIO()
         self.patch(sys, 'stdout', out)
 
         # Set up a trial directory with a _trial_marker
@@ -570,7 +570,7 @@ class RemoveSafelyTests(SynchronousTestCase):
             raise OSError("path movement failed")
 
         # Patch stdout so we can check the print statements in _removeSafely
-        out = NativeStringIO()
+        out = StringIO()
         self.patch(sys, 'stdout', out)
 
         # Set up a trial directory with a _trial_marker

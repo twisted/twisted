@@ -15,7 +15,7 @@ unix = requireModule('twisted.conch.unix')
 
 
 @implementer(IReactorProcess)
-class MockProcessSpawner(object):
+class MockProcessSpawner:
     """
     An L{IReactorProcess} that logs calls to C{spawnProcess}.
     """
@@ -42,7 +42,7 @@ class MockProcessSpawner(object):
 
 
 
-class StubUnixConchUser(object):
+class StubUnixConchUser:
     """
     Enough of UnixConchUser to exercise SSHSessionForUnixConchUser in the
     tests below.

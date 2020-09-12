@@ -140,7 +140,7 @@ class OptionsTests(TestCase):
 
 
 
-class SpyEndpoint(object):
+class SpyEndpoint:
     """
     SpyEndpoint remembers what factory it is told to listen with.
     """

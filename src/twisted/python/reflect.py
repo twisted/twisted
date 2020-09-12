@@ -16,9 +16,8 @@ import weakref
 import re
 import traceback
 from collections import deque
-from io import StringIO
-from twisted.python.compat import reraise, nativeString
-from twisted.python import compat
+from io import IOBase, StringIO
+from twisted.python.compat import nativeString
 from twisted.python.deprecate import _fullyQualifiedName as fullyQualifiedName
 
 
@@ -248,10 +247,8 @@ def _importAndCheckStack(importName):
         excType, excValue, excTraceback = sys.exc_info()
         while excTraceback:
             execName = excTraceback.tb_frame.f_globals["__name__"]
-            # in Python 2 execName is None when an ImportError is encountered,
-            # where in Python 3 execName is equal to the importName.
-            if execName is None or execName == importName:
-                reraise(excValue, excTraceback)
+            if execName == importName:
+                raise excValue.with_traceback(excTraceback)
             excTraceback = excTraceback.tb_next
         raise _NoModuleFound()
 
@@ -473,12 +470,8 @@ def fullFuncName(func):
 def getClass(obj):
     """
     Return the class or type of object 'obj'.
-    Returns sensible result for oldstyle and newstyle instances and types.
     """
-    if hasattr(obj, '__class__'):
-        return obj.__class__
-    else:
-        return type(obj)
+    return type(obj)
 
 
 
@@ -531,22 +524,25 @@ def accumulateClassList(classObj, attr, listObj, baseClass=None):
         listObj.extend(classObj.__dict__.get(attr, []))
 
 
+
 def isSame(a, b):
     return (a is b)
+
 
 
 def isLike(a, b):
     return (a == b)
 
 
+
 def modgrep(goal):
     return objgrep(sys.modules, goal, isLike, 'sys.modules')
 
 
+
 def isOfType(start, goal):
-    return ((type(start) is goal) or
-            (isinstance(start, compat.InstanceType) and
-             start.__class__ is goal))
+    return (type(start) is goal)
+
 
 
 def findInstances(start, t):
@@ -640,14 +636,11 @@ def objgrep(start, goal, eq=isLike, path='', paths=None, seen=None,
     elif hasattr(start, '__dict__'):
         for k, v in start.__dict__.items():
             objgrep(v, goal, eq, path+'.'+k, *args)
-        if isinstance(start, compat.InstanceType):
-            objgrep(start.__class__, goal, eq, path+'.__class__', *args)
     elif isinstance(start, weakref.ReferenceType):
         objgrep(start(), goal, eq, path+'()', *args)
-    elif (isinstance(start, (compat.StringType,
-                     int, types.FunctionType,
-                     types.BuiltinMethodType, RegexType, float,
-                     type(None), compat.FileType)) or
+    elif (isinstance(start, (str, int, types.FunctionType,
+                             types.BuiltinMethodType, RegexType, float,
+                             type(None), IOBase)) or
           type(start).__name__ in ('wrapper_descriptor',
                                    'method_descriptor', 'member_descriptor',
                                    'getset_descriptor')):

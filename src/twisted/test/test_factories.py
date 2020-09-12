@@ -14,7 +14,7 @@ from twisted.internet.task import Clock
 from twisted.internet.protocol import ReconnectingClientFactory, Protocol
 
 
-class FakeConnector(object):
+class FakeConnector:
     """
     A fake connector class, to be used to mock connections failed or lost.
     """
@@ -39,7 +39,7 @@ class ReconnectingFactoryTests(TestCase):
         connected, it does not subsequently attempt to reconnect if the
         connection is later lost.
         """
-        class NoConnectConnector(object):
+        class NoConnectConnector:
             def stopConnecting(self):
                 raise RuntimeError("Shouldn't be called, we're connected.")
             def connect(self):

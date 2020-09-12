@@ -28,7 +28,6 @@ from twisted.internet import reactor, interfaces, protocol, error, defer
 from twisted.protocols import basic, policies
 
 from twisted.python import log, failure, filepath
-from twisted.python.compat import range, unicode
 from twisted.cred import error as cred_error, portal, credentials, checkers
 
 # constants
@@ -432,7 +431,7 @@ _months = [
 
 
 @implementer(interfaces.IConsumer)
-class DTP(protocol.Protocol, object):
+class DTP(protocol.Protocol):
     isConnected = False
 
     _cons = None
@@ -679,7 +678,7 @@ class DTPFactory(protocol.ClientFactory):
 
 # -- FTP-PI (Protocol Interpreter) --
 
-class ASCIIConsumerWrapper(object):
+class ASCIIConsumerWrapper:
     def __init__(self, cons):
         self.cons = cons
         self.registerProducer = cons.registerProducer
@@ -697,7 +696,7 @@ class ASCIIConsumerWrapper(object):
 
 
 @implementer(interfaces.IConsumer)
-class FileConsumer(object):
+class FileConsumer:
     """
     A consumer for FTP input that writes data to a file.
 
@@ -733,7 +732,7 @@ class FTPOverflowProtocol(basic.LineReceiver):
 
 
 
-class FTP(basic.LineReceiver, policies.TimeoutMixin, object):
+class FTP(basic.LineReceiver, policies.TimeoutMixin):
     """
     Protocol Interpreter for the File Transfer Protocol
 
@@ -797,7 +796,7 @@ class FTP(basic.LineReceiver, policies.TimeoutMixin, object):
 
         @param line: L{bytes} or L{unicode}
         """
-        if isinstance(line, unicode):
+        if isinstance(line, str):
             line = line.encode(self._encoding)
         super(FTP, self).sendLine(line)
 
@@ -1055,7 +1054,7 @@ class FTP(basic.LineReceiver, policies.TimeoutMixin, object):
         @return: Wire format of C{name}.
         @rtype: L{bytes}
         """
-        if isinstance(name, unicode):
+        if isinstance(name, str):
             return name.encode('utf-8')
         return name
 
@@ -1900,7 +1899,7 @@ def _testPermissions(uid, gid, spath, mode='r'):
 
 
 @implementer(IFTPShell)
-class FTPAnonymousShell(object):
+class FTPAnonymousShell:
     """
     An anonymous implementation of IFTPShell
 
@@ -2164,7 +2163,7 @@ class FTPAnonymousShell(object):
 
 
 @implementer(IReadFile)
-class _FileReader(object):
+class _FileReader:
     def __init__(self, fObj):
         self.fObj = fObj
         self._send = False
@@ -2275,7 +2274,7 @@ class FTPShell(FTPAnonymousShell):
 
 
 @implementer(IWriteFile)
-class _FileWriter(object):
+class _FileWriter:
     def __init__(self, fObj):
         self.fObj = fObj
         self._receive = False
@@ -2609,7 +2608,7 @@ class FTPClientBasic(basic.LineReceiver):
         """
         if line is None:
             return
-        elif isinstance(line, unicode):
+        elif isinstance(line, str):
             line = line.encode(self._encoding)
         basic.LineReceiver.sendLine(self, line)
 

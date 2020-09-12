@@ -308,18 +308,18 @@ IOBase.register(FakeFile)  # type: ignore[attr-defined]
 
 
 class EvilStr:
-    def __str__(self):
-        1 // 0
+    def __str__(self) -> str:
+        return str(1 // 0)
 
 
 
 class EvilRepr:
-    def __str__(self):
+    def __str__(self) -> str:
         return "Happy Evil Repr"
 
 
-    def __repr__(self):
-        1 // 0
+    def __repr__(self) -> str:
+        return str(1 // 0)
 
 
 
@@ -712,7 +712,7 @@ class FileObserverTests(LogPublisherTestCaseMixin,
         self._startLoggingCleanup()
         newPublisher = NewLogPublisher()
 
-        class SysModule(object):
+        class SysModule:
             stdout = object()
             stderr = object()
 
@@ -969,8 +969,8 @@ class DefaultObserverTests(unittest.SynchronousTestCase):
         DefaultObserver.emit() does not raise when it observes an error event
         with a message that causes L{repr} to raise.
         """
-        class Ouch(object):
-            def __repr__(self):
+        class Ouch:
+            def __repr__(self) -> str:
                 return str(1 / 0)
 
         message = ("foo", Ouch())

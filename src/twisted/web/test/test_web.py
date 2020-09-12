@@ -13,7 +13,6 @@ from zope.interface import implementer
 from zope.interface.verify import verifyObject
 
 from twisted.python import reflect, failure
-from twisted.python.compat import unichr
 from twisted.python.filepath import FilePath
 from twisted.trial import unittest
 from twisted.internet import reactor, interfaces
@@ -176,7 +175,7 @@ class SiteTest(unittest.TestCase):
 
         def predictableEntropy(n):
             predictableEntropy.x += 1
-            return (unichr(predictableEntropy.x) * n).encode("charmap")
+            return (chr(predictableEntropy.x) * n).encode("charmap")
         predictableEntropy.x = 0
         self.patch(site, "_entropy", predictableEntropy)
         a = self.getAutoExpiringSession(site)
@@ -1244,7 +1243,7 @@ class NewRenderResource(resource.Resource):
 
 
 @implementer(resource.IResource)
-class HeadlessResource(object):
+class HeadlessResource:
     """
     A resource that implements GET but not HEAD.
     """
@@ -1386,8 +1385,8 @@ class NewRenderTests(unittest.TestCase):
         When implemented C{render} method does not return bytes an internal
         server error is returned.
         """
-        class RiggedRepr(object):
-            def __repr__(self):
+        class RiggedRepr:
+            def __repr__(self) -> str:
                 return 'my>repr'
 
         result = RiggedRepr()
@@ -1532,7 +1531,7 @@ class DummyRequestForLogTest(DummyRequest):
 
 
 
-class AccessLogTestsMixin(object):
+class AccessLogTestsMixin:
     """
     A mixin for L{TestCase} subclasses defining tests that apply to
     L{HTTPFactory} and its subclasses.
@@ -1689,7 +1688,7 @@ class CombinedLogFormatterTests(unittest.TestCase):
         A request made from an unknown address type is logged as C{"-"}.
         """
         @implementer(interfaces.IAddress)
-        class UnknowableAddress(object):
+        class UnknowableAddress:
             """
             An L{IAddress} which L{combinedLogFormatter} cannot have
             foreknowledge of.

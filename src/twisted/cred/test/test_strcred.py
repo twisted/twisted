@@ -7,6 +7,7 @@ L{twisted.cred.strcred}.
 
 
 import os
+from io import StringIO
 from typing import Sequence, Type
 from unittest import skipIf
 from zope.interface import Interface
@@ -16,7 +17,6 @@ from twisted.trial.unittest import TestCase
 from twisted.cred import credentials, checkers, error, strcred
 from twisted.plugins import cred_file, cred_anonymous, cred_unix
 from twisted.python import usage
-from twisted.python.compat import NativeStringIO
 from twisted.python.filepath import FilePath
 from twisted.python.fakepwd import UserDatabase
 from twisted.python.reflect import requireModule
@@ -328,6 +328,18 @@ class CryptTests(TestCase):
                                                      password.encode("utf-8"))
             self.assertFalse(result)
 
+    def test_verifyCryptedPasswordOSError(self):
+        """
+        L{cred_unix.verifyCryptedPassword} when OSError is raised
+        """
+        def mockCrypt(password, salt):
+            raise OSError("")
+
+        password = "sample password ^%$"
+        cryptedCorrect = crypt.crypt(password, "ab")
+        self.patch(crypt, "crypt", mockCrypt)
+        self.assertFalse(cred_unix.verifyCryptedPassword(cryptedCorrect,
+                                                         password))
 
 
 class FileDBCheckerTests(TestCase):
@@ -403,7 +415,7 @@ class FileDBCheckerTests(TestCase):
         should produce a warning.
         """
         oldOutput = cred_file.theFileCheckerFactory.errorOutput
-        newOutput = NativeStringIO()
+        newOutput = StringIO()
         cred_file.theFileCheckerFactory.errorOutput = newOutput
         strcred.makeChecker('file:' + self._fakeFilename())
         cred_file.theFileCheckerFactory.errorOutput = oldOutput
@@ -518,7 +530,7 @@ class CheckerOptionsTests(TestCase):
         The C{--help-auth} argument correctly displays all
         available authentication plugins, then exits.
         """
-        newStdout = NativeStringIO()
+        newStdout = StringIO()
         options = DummyOptions()
         options.authOutput = newStdout
         self.assertRaises(SystemExit, options.parseOptions, ['--help-auth'])
@@ -528,10 +540,10 @@ class CheckerOptionsTests(TestCase):
 
     def test_displaysHelpCorrectly(self):
         """
-        The C{--help-auth-for} argument will correctly display the help file for a
-        particular authentication plugin.
+        The C{--help-auth-for} argument will correctly display the help file
+        for a particular authentication plugin.
         """
-        newStdout = NativeStringIO()
+        newStdout = StringIO()
         options = DummyOptions()
         options.authOutput = newStdout
         self.assertRaises(
@@ -715,7 +727,7 @@ class LimitingInterfacesTests(TestCase):
                 break
         self.assertNotIdentical(invalidFactory, None)
         # Capture output and make sure the warning is there
-        newStdout = NativeStringIO()
+        newStdout = StringIO()
         options.authOutput = newStdout
         self.assertRaises(SystemExit, options.parseOptions,
                           ['--help-auth-type', 'anonymous'])

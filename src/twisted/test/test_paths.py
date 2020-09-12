@@ -14,7 +14,6 @@ import time
 from pprint import pformat
 from unittest import skipIf
 
-from twisted.python.compat import long
 from twisted.python.win32 import WindowsError, ERROR_DIRECTORY
 from twisted.python import filepath
 from twisted.python.runtime import platform
@@ -1524,14 +1523,13 @@ class FilePathTests(AbstractFilePathTests):
         Verify that file inode/device/nlinks/uid/gid stats are numbers in
         a POSIX environment
         """
-        numbers = (int, long)
         c = self.path.child(b'file1')
         for p in self.path, c:
-            self.assertIsInstance(p.getInodeNumber(), numbers)
-            self.assertIsInstance(p.getDevice(), numbers)
-            self.assertIsInstance(p.getNumberOfHardLinks(), numbers)
-            self.assertIsInstance(p.getUserID(), numbers)
-            self.assertIsInstance(p.getGroupID(), numbers)
+            self.assertIsInstance(p.getInodeNumber(), int)
+            self.assertIsInstance(p.getDevice(), int)
+            self.assertIsInstance(p.getNumberOfHardLinks(), int)
+            self.assertIsInstance(p.getUserID(), int)
+            self.assertIsInstance(p.getGroupID(), int)
         self.assertEqual(self.path.getUserID(), c.getUserID())
         self.assertEqual(self.path.getGroupID(), c.getGroupID())
 

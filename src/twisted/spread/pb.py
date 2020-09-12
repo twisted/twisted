@@ -35,8 +35,7 @@ from zope.interface import implementer, Interface
 
 # Twisted Imports
 from twisted.python import log, failure, reflect
-from twisted.python.compat import (unicode, _bytesChr as chr, range,
-                                   comparable, cmp)
+from twisted.python.compat import comparable, cmp
 from twisted.internet import defer, protocol
 from twisted.cred.portal import Portal
 from twisted.cred.credentials import IAnonymous, ICredentials
@@ -415,7 +414,7 @@ class Local:
         self.refcount = 1
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "<pb.Local %r ref:%s>" % (self.object, self.refcount)
 
 
@@ -778,7 +777,7 @@ class Broker(banana.Banana):
             L{None} if there is no object which corresponds to the given
             identifier.
         """
-        if isinstance(luid, unicode):
+        if isinstance(luid, str):
             luid = luid.encode('utf8')
 
         lob = self.localObjects.get(luid)
@@ -828,7 +827,7 @@ class Broker(banana.Banana):
         @param name: An ID.
         @param object: The object.
         """
-        if isinstance(name, unicode):
+        if isinstance(name, str):
             name = name.encode('utf8')
 
         assert object is not None
@@ -845,7 +844,7 @@ class Broker(banana.Banana):
         @param name: The name to look up.
         @return: An object which maps to the name.
         """
-        if isinstance(name, unicode):
+        if isinstance(name, str):
             name = name.encode('utf8')
 
         return RemoteReference(None, self, name, 0)
@@ -1180,7 +1179,7 @@ class Broker(banana.Banana):
 
         @param objectID: The object ID.
         """
-        if isinstance(objectID, unicode):
+        if isinstance(objectID, str):
             objectID = objectID.encode('utf8')
         refs = self.localObjects[objectID].decref()
         if refs == 0:
@@ -1268,9 +1267,8 @@ def challenge():
 
     @return: Some random data.
     """
-    crap = b''
-    for x in range(random.randrange(15,25)):
-        crap = crap + chr(random.randint(65,90))
+    crap = bytes(random.randint(65, 90)
+                 for x in range(random.randrange(15, 25)))
     crap = md5(crap).digest()
     return crap
 

@@ -568,7 +568,7 @@ ROOT_SERVERS = [
 
 
 @implementer(IResolverSimple)
-class StubResolver(object):
+class StubResolver:
     """
     An L{IResolverSimple} implementer which traces all getHostByName
     calls and their deferred results. The deferred results can be

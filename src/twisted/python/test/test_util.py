@@ -13,6 +13,7 @@ import shutil
 import sys
 import warnings
 
+from typing import Iterable, Mapping, MutableMapping, Sequence
 from unittest import skipIf
 
 try:
@@ -351,6 +352,17 @@ class InsensitiveDictTests(TestCase):
     Tests for L{util.InsensitiveDict}.
     """
 
+    def test_abc(self):
+        """
+        L{util.InsensitiveDict} implements L{typing.MutableMapping}.
+        """
+        dct = util.InsensitiveDict()
+        self.assertTrue(isinstance(dct, Iterable))
+        self.assertTrue(isinstance(dct, Mapping))
+        self.assertTrue(isinstance(dct, MutableMapping))
+        self.assertFalse(isinstance(dct, Sequence))  # not Reversible
+
+
     def test_preserve(self):
         """
         L{util.InsensitiveDict} preserves the case of keys if constructed with
@@ -598,29 +610,21 @@ class DerivedRecord(Record):
 
 
 
-class EqualToEverything(object):
+class EqualToEverything:
     """
     A class the instances of which consider themselves equal to everything.
     """
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
         return True
 
 
-    def __ne__(self, other):
-        return False
 
-
-
-class EqualToNothing(object):
+class EqualToNothing:
     """
     A class the instances of which consider themselves equal to nothing.
     """
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
         return False
-
-
-    def __ne__(self, other):
-        return True
 
 
 

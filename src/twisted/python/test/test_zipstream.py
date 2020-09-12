@@ -14,7 +14,7 @@ from twisted.python import zipstream, filepath
 from twisted.trial import unittest
 
 
-class FileEntryMixin(object):
+class FileEntryMixin:
     """
     File entry classes should behave as file-like objects
     """

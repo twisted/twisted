@@ -29,7 +29,6 @@ from twisted.cred import portal
 from twisted.internet import reactor, protocol, interfaces, defer, error
 from twisted.internet.utils import getProcessOutputAndValue, getProcessValue
 from twisted.python import log
-from twisted.python.compat import unicode
 from twisted.python.fakepwd import UserDatabase
 from twisted.test.proto_helpers import StringTransport
 from twisted.internet.task import Clock
@@ -234,7 +233,7 @@ class ListingTests(TestCase):
 
 
 
-class InMemorySSHChannel(StringTransport, object):
+class InMemorySSHChannel(StringTransport):
     """
     Minimal implementation of a L{SSHChannel} like class which only reads and
     writes data from memory.
@@ -251,7 +250,7 @@ class InMemorySSHChannel(StringTransport, object):
 
 
 
-class FilesystemAccessExpectations(object):
+class FilesystemAccessExpectations:
     """
     A test helper used to support expected filesystem access.
     """
@@ -292,7 +291,7 @@ class FilesystemAccessExpectations(object):
 
 
 
-class InMemorySFTPClient(object):
+class InMemorySFTPClient:
     """
     A L{filetransfer.FileTransferClient} which does filesystem operations in
     memory, without touching the local disc or the network interface.
@@ -456,7 +455,7 @@ class StdioClientTests(TestCase):
         """
         # Local import to avoid win32 issues.
         import tty
-        class FakeFcntl(object):
+        class FakeFcntl:
             def ioctl(self, fd, opt, mutate):
                 if opt != tty.TIOCGWINSZ:
                     self.fail("Only window-size queries supported.")
@@ -875,7 +874,7 @@ class SFTPTestProcess(protocol.ProcessProtocol):
         """
         self._expectingCommand = defer.Deferred()
         self.clearBuffer()
-        if isinstance(command, unicode):
+        if isinstance(command, str):
             command = command.encode("utf-8")
         self.transport.write(command + b'\n')
         return self._expectingCommand
@@ -1002,14 +1001,14 @@ class OurServerCmdLineClientTests(CFTPClientTestBase):
         encodedCmds = []
         encodedEnv = {}
         for cmd in cmds:
-            if isinstance(cmd, unicode):
+            if isinstance(cmd, str):
                 cmd = cmd.encode("utf-8")
             encodedCmds.append(cmd)
         for var in env:
             val = env[var]
-            if isinstance(var, unicode):
+            if isinstance(var, str):
                 var = var.encode("utf-8")
-            if isinstance(val, unicode):
+            if isinstance(val, str):
                 val = val.encode("utf-8")
             encodedEnv[var] = val
         log.msg(encodedCmds)
@@ -1123,7 +1122,7 @@ class OurServerCmdLineClientTests(CFTPClientTestBase):
         d = self.runCommand('?')
 
         helpText = cftp.StdioClient(None).cmd_HELP('').strip()
-        if isinstance(helpText, unicode):
+        if isinstance(helpText, str):
             helpText = helpText.encode("utf-8")
         d.addCallback(self.assertEqual, helpText)
         return d
@@ -1146,8 +1145,9 @@ class OurServerCmdLineClientTests(CFTPClientTestBase):
         # XXX - not actually a unit test
         expectedOutput = ("Transferred %s/testfile1 to %s/test file2"
                           % (self.testDir.path, self.testDir.path))
-        if isinstance(expectedOutput, unicode):
+        if isinstance(expectedOutput, str):
             expectedOutput = expectedOutput.encode("utf-8")
+
         def _checkGet(result):
             self.assertTrue(result.endswith(expectedOutput))
             self.assertFilesEqual(self.testDir.child('testfile1'),

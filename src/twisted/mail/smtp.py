@@ -35,9 +35,7 @@ from twisted.internet.interfaces import ITLSTransport, ISSLTransport
 from twisted.internet._idna import _idnaText
 from twisted.python import log
 from twisted.python import util
-from twisted.python.compat import (long, unicode, networkString,
-                                   nativeString, iteritems, _keys, _bytesChr,
-                                   iterbytes)
+from twisted.python.compat import networkString, nativeString, iterbytes
 from twisted.python.runtime import platform
 
 from twisted.mail.interfaces import (IClientAuthentication,
@@ -289,7 +287,7 @@ class Address:
 
         return b''.join(res)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return nativeString(bytes(self))
 
 
@@ -300,7 +298,7 @@ class Address:
             return b''
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "%s.%s(%s)" % (self.__module__, self.__class__.__name__,
                               repr(str(self)))
 
@@ -332,13 +330,13 @@ class User:
         protocol isn't picklabe, but we want User to be, so skip it in
         the pickle.
         """
-        return { 'dest' : self.dest,
-                 'helo' : self.helo,
-                 'protocol' : None,
-                 'orig' : self.orig }
+        return {'dest': self.dest,
+                'helo': self.helo,
+                'protocol': None,
+                'orig': self.orig}
 
 
-    def __str__(self):
+    def __str__(self) -> str:
         return nativeString(bytes(self.dest))
 
 
@@ -915,7 +913,7 @@ class SMTPClient(basic.LineReceiver, policies.TimeoutMixin):
     timeout = None
 
     def __init__(self, identity, logsize=10):
-        if isinstance(identity, unicode):
+        if isinstance(identity, str):
             identity = identity.encode('ascii')
 
         self.identity = identity or b''
@@ -1618,7 +1616,7 @@ class ESMTP(SMTP):
         @rtype: L{dict} with L{bytes} keys and a value of either L{None} or a
             L{list} of L{bytes}.
         """
-        ext = {b'AUTH': _keys(self.challengers)}
+        ext = {b'AUTH': list(self.challengers.keys())}
         if self.canStartTLS and not self.startedTLS:
             ext[b'STARTTLS'] = None
         return ext
@@ -1635,7 +1633,7 @@ class ESMTP(SMTP):
 
     def listExtensions(self):
         r = []
-        for (c, v) in iteritems(self.extensions()):
+        for c, v in self.extensions().items():
             if v is not None:
                 if v:
                     # Intentionally omit extensions with empty argument lists
@@ -1880,9 +1878,9 @@ class SMTPSenderFactory(protocol.ClientFactory):
         @param timeout: Period, in seconds, for which to wait for
         server responses, or None to wait forever.
         """
-        assert isinstance(retries, (int, long))
+        assert isinstance(retries, int)
 
-        if isinstance(toEmail, unicode):
+        if isinstance(toEmail, str):
             toEmail = [toEmail.encode('ascii')]
         elif isinstance(toEmail, bytes):
             toEmail = [toEmail]
@@ -2173,13 +2171,13 @@ def sendmail(smtphost, from_addr, to_addrs, msg, senderDomainName=None, port=25,
 
     d = defer.Deferred(cancel)
 
-    if isinstance(username, unicode):
+    if isinstance(username, str):
         username = username.encode("utf-8")
-    if isinstance(password, unicode):
+    if isinstance(password, str):
         password = password.encode("utf-8")
 
     tlsHostname = smtphost
-    if not isinstance(tlsHostname, unicode):
+    if not isinstance(tlsHostname, str):
         tlsHostname = _idnaText(tlsHostname)
 
     factory = ESMTPSenderFactory(
@@ -2212,7 +2210,7 @@ def xtext_encode(s, errors=None):
         if ch == '+' or ch == '=' or o < 33 or o > 126:
             r.append(networkString('+%02X' % (o,)))
         else:
-            r.append(_bytesChr(o))
+            r.append(bytes((o,)))
     return (b''.join(r), len(s))
 
 

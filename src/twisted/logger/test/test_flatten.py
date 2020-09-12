@@ -37,7 +37,7 @@ class FlatFormattingTests(unittest.TestCase):
         """
         counter = count()
 
-        class Ephemeral(object):
+        class Ephemeral:
             attribute = "value"
 
         event1 = dict(
@@ -96,7 +96,7 @@ class FlatFormattingTests(unittest.TestCase):
         L{formatEvent} will prefer the stored C{str()} or C{repr()} value for
         an object, in case the other version.
         """
-        class Unpersistable(object):
+        class Unpersistable:
             """
             Unpersitable object.
             """
@@ -108,7 +108,7 @@ class FlatFormattingTests(unittest.TestCase):
                 """
                 self.destructed = True
 
-            def __repr__(self):
+            def __repr__(self) -> str:
                 if self.destructed:
                     return "post-serialization garbage"
                 else:
@@ -184,11 +184,11 @@ class FlatFormattingTests(unittest.TestCase):
         if event is None:
             counter = count()
 
-            class CountStr(object):
+            class CountStr:
                 """
                 Hack
                 """
-                def __str__(self):
+                def __str__(self) -> str:
                     return str(next(counter))
 
             event = dict(
@@ -240,11 +240,11 @@ class FlatFormattingTests(unittest.TestCase):
 
         @param flattenFirst: callable to flatten an event
         """
-        class ObjectWithRepr(object):
-            def __repr__(self):
+        class ObjectWithRepr:
+            def __repr__(self) -> str:
                 return "repr"
 
-        class Something(object):
+        class Something:
             def __init__(self):
                 self.number = 7
                 self.object = ObjectWithRepr()

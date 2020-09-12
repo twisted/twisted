@@ -25,7 +25,7 @@ try:
         SSHPublicKeyChecker, UNIXAuthorizedKeysFiles)
 
     @implementer(ICheckerFactory, plugin.IPlugin)
-    class SSHKeyCheckerFactory(object):
+    class SSHKeyCheckerFactory:
         """
         Generates checkers that will authenticate a SSH public key
         """

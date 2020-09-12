@@ -4,7 +4,6 @@
 #
 from twisted.conch.ssh.transport import SSHClientTransport, SSHCiphers
 from twisted.python import usage
-from twisted.python.compat import unicode
 
 import sys
 from typing import List, Optional, Union
@@ -77,7 +76,7 @@ class ConchOptions(usage.Options):
 
     def opt_macs(self, macs):
         "Specify MAC algorithms"
-        if isinstance(macs, unicode):
+        if isinstance(macs, str):
             macs = macs.encode("utf-8")
         macs = macs.split(b',')
         for mac in macs:
@@ -87,7 +86,7 @@ class ConchOptions(usage.Options):
 
     def opt_host_key_algorithms(self, hkas):
         "Select host key algorithms"
-        if isinstance(hkas, unicode):
+        if isinstance(hkas, str):
             hkas = hkas.encode("utf-8")
         hkas = hkas.split(b',')
         for hka in hkas:
@@ -97,7 +96,7 @@ class ConchOptions(usage.Options):
 
     def opt_user_authentications(self, uas):
         "Choose how to authenticate to the remote server"
-        if isinstance(uas, unicode):
+        if isinstance(uas, str):
             uas = uas.encode("utf-8")
         self['user-authentications'] = uas.split(b',')
 

@@ -28,7 +28,7 @@ from zope.interface import Interface, Attribute, implementer
 # things import this module, and it would be good if it could easily be
 # modified for inclusion in the standard library.  --glyph
 
-from twisted.python.compat import comparable, cmp, unicode
+from twisted.python.compat import comparable, cmp
 from twisted.python.runtime import platform
 from twisted.python.util import FancyEqMixin
 from twisted.python.win32 import ERROR_FILE_NOT_FOUND, ERROR_PATH_NOT_FOUND
@@ -272,7 +272,7 @@ def _secureEnoughString(path):
 
 
 
-class AbstractFilePath(object):
+class AbstractFilePath:
     """
     Abstract implementation of an L{IFilePath}; must be completed by a
     subclass.
@@ -501,7 +501,7 @@ class AbstractFilePath(object):
 
 
 
-class RWX(FancyEqMixin, object):
+class RWX(FancyEqMixin):
     """
     A class representing read/write/execute permissions for a single user
     category (i.e. user/owner, group, or other/world).  Instantiate with
@@ -525,7 +525,7 @@ class RWX(FancyEqMixin, object):
         self.execute = executable
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "RWX(read=%s, write=%s, execute=%s)" % (
             self.read, self.write, self.execute)
 
@@ -549,7 +549,7 @@ class RWX(FancyEqMixin, object):
 
 
 
-class Permissions(FancyEqMixin, object):
+class Permissions(FancyEqMixin):
     """
     A class representing read/write/execute permissions.  Instantiate with any
     portion of the file's mode that includes the permission bits.
@@ -577,7 +577,7 @@ class Permissions(FancyEqMixin, object):
         )
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "[%s | %s | %s]" % (
             str(self.user), str(self.group), str(self.other))
 
@@ -630,7 +630,7 @@ def _asFilesystemText(path, encoding=None):
 
     @return: L{unicode}
     """
-    if type(path) == unicode:
+    if type(path) == str:
         return path
     else:
         if encoding is None:
@@ -765,7 +765,7 @@ class FilePath(AbstractFilePath):
 
         @return: L{bytes} mode L{FilePath}
         """
-        if type(self.path) == unicode:
+        if type(self.path) == str:
             return self.clonePath(self._asBytesPath(encoding=encoding))
         return self
 
@@ -1351,7 +1351,7 @@ class FilePath(AbstractFilePath):
         return splitext(self.path)
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return 'FilePath(%r)' % (self.path,)
 
 

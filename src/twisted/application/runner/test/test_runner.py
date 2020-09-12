@@ -213,7 +213,7 @@ class RunnerTests(twisted.trial.unittest.TestCase):
         # Patch the log beginner so that we don't try to start the already
         # running (started by trial) logging system.
 
-        class LogBeginner(object):
+        class LogBeginner:
             def beginLoggingTo(self, observers):
                 LogBeginner.observers = observers
 
@@ -401,7 +401,7 @@ class DummyPIDFile(NonePIDFile):
 
 
 
-class DummyExit(object):
+class DummyExit:
     """
     Stub for L{exit} that remembers whether it's been called and, if it has,
     what arguments it was given.
@@ -420,7 +420,7 @@ class DummyExit(object):
 
 
 
-class DummyKill(object):
+class DummyKill:
     """
     Stub for L{os.kill} that remembers whether it's been called and, if it has,
     what arguments it was given.
@@ -435,7 +435,7 @@ class DummyKill(object):
 
 
 
-class DummyStandardIO(object):
+class DummyStandardIO:
     """
     Stub for L{sys} which provides L{BytesIO} streams as stdout and stderr.
     """
@@ -446,7 +446,7 @@ class DummyStandardIO(object):
 
 
 
-class DummyWarningsModule(object):
+class DummyWarningsModule:
     """
     Stub for L{warnings} which provides a C{showwarning} method that is a no-op.
     """

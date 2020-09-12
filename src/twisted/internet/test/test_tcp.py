@@ -25,7 +25,6 @@ from zope.interface import Interface, implementer
 from zope.interface.verify import verifyClass, verifyObject
 
 from twisted.logger import Logger
-from twisted.python.compat import long
 from twisted.python.runtime import platform
 from twisted.python.failure import Failure
 from twisted.python import log
@@ -143,7 +142,7 @@ def connect(client, destination):
 
 
 
-class FakeSocket(object):
+class FakeSocket:
     """
     A fake for L{socket.socket} objects.
 
@@ -249,7 +248,7 @@ class FakeProtocol(Protocol):
 
 
 @implementer(IReactorFDSet)
-class _FakeFDSetReactor(object):
+class _FakeFDSetReactor:
     """
     An in-memory implementation of L{IReactorFDSet}, which records the current
     sets of active L{IReadDescriptor} and L{IWriteDescriptor}s.
@@ -309,7 +308,7 @@ class TCPServerTests(TestCase):
     """
     def setUp(self):
         self.reactor = _FakeFDSetReactor()
-        class FakePort(object):
+        class FakePort:
             _realPortNumber = 3
         self.skt = FakeSocket(b"")
         self.protocol = Protocol()
@@ -450,7 +449,7 @@ class TCP6Creator(TCPCreator):
 
 
 @implementer(IResolverSimple)
-class FakeResolver(object):
+class FakeResolver:
     """
     A resolver implementation based on a C{dict} mapping names to addresses.
     """
@@ -969,7 +968,7 @@ class _IExhaustsFileDescriptors(Interface):
 
 @implementer(_IExhaustsFileDescriptors)
 @attr.s
-class _ExhaustsFileDescriptors(object):
+class _ExhaustsFileDescriptors:
     """
     A class that triggers C{EMFILE} by creating as many file
     descriptors as necessary.
@@ -1282,7 +1281,7 @@ class AssertPeerClosedOnEMFILETests(SynchronousTestCase):
     Tests for L{assertPeerClosedOnEMFILE}.
     """
     @implementer(_IExhaustsFileDescriptors)
-    class NullExhauster(object):
+    class NullExhauster:
         """
         An exhauster that does nothing.
         """
@@ -1438,7 +1437,7 @@ class StreamTransportTestsMixin(LogObserverMixin):
 
 
 
-class ConnectToTCPListenerMixin(object):
+class ConnectToTCPListenerMixin:
     """
     Provides L{connectToListener} for TCP transports.
 
@@ -1520,7 +1519,7 @@ class SocketTCPMixin(ConnectToTCPListenerMixin):
 
 
 
-class TCPPortTestsMixin(object):
+class TCPPortTestsMixin:
     """
     Tests for L{IReactorTCP.listenTCP}
     """
@@ -2111,7 +2110,7 @@ class TCPConnectionTestsBuilder(ReactorBuilder):
 
 
 
-class WriteSequenceTestsMixin(object):
+class WriteSequenceTestsMixin:
     """
     Test for L{twisted.internet.abstract.FileDescriptor.writeSequence}.
     """
@@ -2166,7 +2165,7 @@ class WriteSequenceTestsMixin(object):
                 TypeError,
                 server.transport.writeSequence, [u"Unicode is not kosher"])
 
-            self.assertEqual(str(exc), "Data must not be unicode")
+            self.assertEqual(str(exc), "Data must not be string")
 
             server.transport.loseConnection()
 
@@ -2184,7 +2183,7 @@ class WriteSequenceTestsMixin(object):
         buffered, and then resumes it.
         """
         @implementer(IPushProducer)
-        class SaveActionProducer(object):
+        class SaveActionProducer:
             client = None
             server = None
 
@@ -2240,7 +2239,7 @@ class WriteSequenceTestsMixin(object):
         test = self
 
         @implementer(IPullProducer)
-        class SaveActionProducer(object):
+        class SaveActionProducer:
             client = None
 
             def __init__(self):
@@ -2280,7 +2279,7 @@ class WriteSequenceTestsMixin(object):
 
 
 
-class TCPTransportServerAddressTestMixin(object):
+class TCPTransportServerAddressTestMixin:
     """
     Test mixing for TCP server address building and log prefix.
     """
@@ -2815,7 +2814,7 @@ class ResumeThrowsClient(ProducerAbortingClient):
 
 
 
-class AbortConnectionMixin(object):
+class AbortConnectionMixin:
     """
     Unit tests for L{ITransport.abortConnection}.
     """
@@ -3036,11 +3035,11 @@ class SimpleUtilityTests(TestCase):
         result = _resolveIPv6("::1", 2)
         self.assertEqual(len(result), 4)
         # We can't say anything more useful about these than that they're
-        # integers, because the whole point of getaddrinfo is that you can never
-        # know a-priori know _anything_ about the network interfaces of the
-        # computer that you're on and you have to ask it.
-        self.assertIsInstance(result[2], (int, long)) # flow info
-        self.assertIsInstance(result[3], (int, long)) # scope id
+        # integers, because the whole point of getaddrinfo is that you can
+        # never know a-priori know _anything_ about the network interfaces
+        # of the computer that you're on and you have to ask it.
+        self.assertIsInstance(result[2], int)  # flow info
+        self.assertIsInstance(result[3], int)  # scope id
         # but, luckily, IP presentation format and what it means to be a port
         # number are a little better specified.
         self.assertEqual(result[:2], ("::1", 2))

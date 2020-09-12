@@ -222,9 +222,7 @@ from twisted.internet.error import PeerVerifyError, ConnectionLost
 from twisted.internet.error import ConnectionClosed
 from twisted.internet.defer import Deferred, maybeDeferred, fail
 from twisted.protocols.basic import Int16StringReceiver, StatefulStringProtocol
-from twisted.python.compat import (
-    iteritems, unicode, nativeString, intToBytes, long,
-)
+from twisted.python.compat import nativeString
 
 try:
     from twisted.internet import ssl
@@ -516,7 +514,7 @@ class TooLong(AmpError):
         self.keyName = keyName
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         hdr = self.isKey and "key" or "value"
         if not self.isKey:
             hdr += ' ' + repr(self.keyName)
@@ -535,7 +533,7 @@ class BadLocalReturn(AmpError):
         self.enclosed = enclosed
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return self.message + " " + self.enclosed.getBriefTraceback()
 
     __str__ = __repr__
@@ -684,13 +682,13 @@ class AmpBox(dict):
         @return: a C{bytes} encoded according to the rules described in the
             module docstring.
         """
-        i = sorted(iteritems(self))
+        i = sorted(self.items())
         L = []
         w = L.append
         for k, v in i:
-            if type(k) == unicode:
+            if type(k) == str:
                 raise TypeError("Unicode key not allowed: %r" % k)
-            if type(v) == unicode:
+            if type(v) == str:
                 raise TypeError(
                     "Unicode value for key %r not allowed: %r" % (k, v))
             if len(k) > MAX_KEY_LENGTH:
@@ -720,7 +718,7 @@ class AmpBox(dict):
         """
         proto.sendBox(self)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return 'AmpBox(%s)' % (dict.__repr__(self),)
 
 # amp.Box => AmpBox
@@ -734,7 +732,7 @@ class QuitBox(AmpBox):
     __slots__ = []  # type: List[str]
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return 'QuitBox(**%s)' % (super(QuitBox, self).__repr__(),)
 
 
@@ -766,7 +764,7 @@ class _SwitchBox(AmpBox):
         self.innerProto = innerProto
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return '_SwitchBox(%r, **%s)' % (self.innerProto,
                                          dict.__repr__(self),)
 
@@ -810,7 +808,7 @@ class BoxDispatcher:
 
     _failAllReason = None
     _outstandingRequests = None
-    _counter = long(0)
+    _counter = 0
     boxSender = None
 
     def __init__(self, locator):
@@ -1020,7 +1018,7 @@ class BoxDispatcher:
             if error.check(RemoteAmpError):
                 code = error.value.errorCode
                 desc = error.value.description
-                if isinstance(desc, unicode):
+                if isinstance(desc, str):
                     desc = desc.encode("utf-8", "replace")
                 if error.value.fatal:
                     errorBox = QuitBox()
@@ -1235,7 +1233,7 @@ CommandLocator = CommandLocator.__metaclass__(  # type: ignore[assignment,misc]
 
 
 @implementer(IResponderLocator)
-class SimpleStringLocator(object):
+class SimpleStringLocator:
     """
     Implement the L{AMP.locateResponder} method to do simple, string-based
     dispatch.
@@ -1460,8 +1458,9 @@ class Integer(Argument):
     Example: C{123} becomes C{"123"}
     """
     fromString = int
+
     def toString(self, inObject):
-        return intToBytes(inObject)
+        return b'%d' % (inObject,)
 
 
 
@@ -1792,19 +1791,19 @@ class Command:
             if not isinstance(newtype.fatalErrors, dict):
                 newtype.fatalErrors = dict(newtype.fatalErrors)
 
-            for v, k in iteritems(errors):
+            for v, k in errors.items():
                 reverseErrors[k] = v
                 er[v] = k
-            for v, k in iteritems(fatalErrors):
+            for v, k in fatalErrors.items():
                 reverseErrors[k] = v
                 er[v] = k
 
-            for _, name in iteritems(newtype.errors):
+            for _, name in newtype.errors.items():
                 if not isinstance(name, bytes):
                     raise TypeError(
                         "Error names must be byte strings, got: %r"
                         % (name, ))
-            for _, name in iteritems(newtype.fatalErrors):
+            for _, name in newtype.fatalErrors.items():
                 if not isinstance(name, bytes):
                     raise TypeError(
                         "Fatal error names must be byte strings, got: %r"
@@ -2222,7 +2221,7 @@ class ProtocolSwitchCommand(Command):
 
 
 @implementer(IFileDescriptorReceiver)
-class _DescriptorExchanger(object):
+class _DescriptorExchanger:
     """
     L{_DescriptorExchanger} is a mixin for L{BinaryBoxProtocol} which adds
     support for receiving file descriptors, a feature offered by
@@ -2612,7 +2611,7 @@ class AMP(BinaryBoxProtocol, BoxDispatcher,
         return secondResponder
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """
         A verbose string representation which gives us information about this
         AMP connection.

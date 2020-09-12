@@ -14,7 +14,6 @@ from twisted.internet import defer, task
 from twisted.internet.error import ConnectionLost
 from twisted.internet.interfaces import IProtocolFactory
 from twisted.python import failure
-from twisted.python.compat import unicode
 from twisted.test import proto_helpers
 from twisted.words.test.test_xmlstream import GenericXmlStreamFactoryTestsMixin
 from twisted.words.xish import domish
@@ -659,10 +658,10 @@ class ListenAuthenticatorTests(unittest.TestCase):
         xs = self.xmlstream
         xs.makeConnection(proto_helpers.StringTransport())
         xs.dataReceived("<stream:stream xmlns='jabber:client' "
-                         "xmlns:stream='http://etherx.jabber.org/streams' "
-                         "from='example.org' to='example.com' id='12345' "
-                         "version='1.0'>")
-        self.assertIsInstance(xs.sid, unicode)
+                        "xmlns:stream='http://etherx.jabber.org/streams' "
+                        "from='example.org' to='example.com' id='12345' "
+                        "version='1.0'>")
+        self.assertIsInstance(xs.sid, str)
 
 
 
@@ -956,7 +955,7 @@ class ToResponseTests(unittest.TestCase):
         self.assertFalse(response.hasAttribute('type'))
 
 
-class DummyFactory(object):
+class DummyFactory:
     """
     Dummy XmlStream factory that only registers bootstrap observers.
     """
@@ -1026,7 +1025,7 @@ class XMPPHandlerTests(unittest.TestCase):
         """
         Test that data is passed on for sending by the stream manager.
         """
-        class DummyStreamManager(object):
+        class DummyStreamManager:
             def __init__(self):
                 self.outlist = []
 
@@ -1350,7 +1349,7 @@ class XmlStreamServerFactoryTests(GenericXmlStreamFactoryTestsMixin):
         """
         Set up a server factory with an authenticator factory function.
         """
-        class TestAuthenticator(object):
+        class TestAuthenticator:
             def __init__(self):
                 self.xmlstreams = []
 

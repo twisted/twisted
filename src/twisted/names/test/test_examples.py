@@ -8,13 +8,14 @@ Tests for L{twisted.names} example scripts.
 
 import os
 import sys
+from io import StringIO
 
 from twisted.python.filepath import FilePath
 from twisted.trial.unittest import SkipTest, TestCase
-from twisted.python.compat import NativeStringIO
 
 
-class ExampleTestBase(object):
+
+class ExampleTestBase:
     """
     This is a mixin which adds an example to the path, tests it, and then
     removes it from the path and unimports the modules which the test loaded.
@@ -39,9 +40,9 @@ class ExampleTestBase(object):
         self.originalModules = sys.modules.copy()
 
         # Python usually expects native strs to be written to sys.stdout/stderr
-        self.fakeErr = NativeStringIO()
+        self.fakeErr = StringIO()
         self.patch(sys, 'stderr', self.fakeErr)
-        self.fakeOut = NativeStringIO()
+        self.fakeOut = StringIO()
         self.patch(sys, 'stdout', self.fakeOut)
 
         # Get documentation root

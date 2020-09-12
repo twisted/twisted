@@ -24,7 +24,7 @@ from io import BytesIO, StringIO
 
 
 # Twisted Imports
-from twisted.python.compat import ioType, iteritems, range, unicode
+from twisted.python.compat import ioType
 from twisted.python.util import InsensitiveDict
 from twisted.web.sux import XMLParser, ParseError
 
@@ -74,7 +74,7 @@ def getElementsByTagNameNoCase(iNode, name):
 def _streamWriteWrapper(stream):
     if ioType(stream) == bytes:
         def w(s):
-            if isinstance(s, unicode):
+            if isinstance(s, str):
                 s = s.encode("utf-8")
             stream.write(s)
     else:
@@ -123,14 +123,15 @@ class MismatchedTags(Exception):
          self.endCol) = filename, expect, got, begLine, begCol, endLine, endCol
 
 
-    def __str__(self):
-        return ("expected </%s>, got </%s> line: %s col: %s, began line: %s col: %s"
-                % (self.expect, self.got, self.endLine, self.endCol, self.begLine,
-                   self.begCol))
+    def __str__(self) -> str:
+        return ("expected </%s>, got </%s> line: %s col: %s, "
+                "began line: %s col: %s"
+                % (self.expect, self.got, self.endLine, self.endCol,
+                   self.begLine, self.begCol))
 
 
 
-class Node(object):
+class Node:
     nodeName = "Node"
 
     def __init__(self, parentNode=None):
@@ -456,11 +457,11 @@ class Text(CharacterData):
         w = _streamWriteWrapper(stream)
         if self.raw:
             val = self.nodeValue
-            if not isinstance(val, (str, unicode)):
+            if not isinstance(val, str):
                 val = str(self.nodeValue)
         else:
             v = self.nodeValue
-            if not isinstance(v, (str, unicode)):
+            if not isinstance(v, str):
                 v = str(v)
             if strip:
                 v = ' '.join(v.split())
@@ -468,7 +469,7 @@ class Text(CharacterData):
         w(val)
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "Text(%s" % repr(self.nodeValue) + ')'
 
 
@@ -715,7 +716,7 @@ class Element(Node):
                 assert val is not None
                 writeattr(attr, val)
         if newprefixes:
-            for ns, prefix in iteritems(newprefixes):
+            for ns, prefix in newprefixes.items():
                 if prefix:
                     writeattr('xmlns:'+prefix, ns)
             newprefixes.update(nsprefixes)
@@ -741,7 +742,7 @@ class Element(Node):
             w(" />")
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         rep = "Element(%s" % repr(self.nodeName)
         if self.attributes:
             rep += ", attributes=%r" % (self.attributes,)
@@ -752,7 +753,7 @@ class Element(Node):
         return rep + ')'
 
 
-    def __str__(self):
+    def __str__(self) -> str:
         rep = "<" + self.nodeName
         if self._filename or self._markpos:
             rep += " ("
@@ -1080,7 +1081,7 @@ def parse(readable, *args, **kwargs):
 
 
 def parseString(st, *args, **kw):
-    if isinstance(st, unicode):
+    if isinstance(st, str):
         # this isn't particularly ideal, but it does work.
         return parse(BytesIO(st.encode('UTF-16')), *args, **kw)
     return parse(BytesIO(st), *args, **kw)
@@ -1109,7 +1110,7 @@ class lmx:
     """
 
     def __init__(self, node='div'):
-        if isinstance(node, (str, unicode)):
+        if isinstance(node, str):
             node = Element(node)
         self.node = node
 

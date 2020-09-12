@@ -147,7 +147,7 @@ class _SocketWaker(log.Logger):
 
 
 
-class _FDWaker(log.Logger, object):
+class _FDWaker(log.Logger):
     """
     The I{self-pipe trick<http://cr.yp.to/docs/selfpipe.html>}, used to wake
     up the main loop from another thread or a signal handler.
@@ -271,7 +271,7 @@ class _SIGCHLDWaker(_FDWaker):
 
 
 
-class _DisconnectSelectableMixin(object):
+class _DisconnectSelectableMixin:
     """
     Mixin providing the C{_disconnectSelectable} method.
     """
@@ -596,7 +596,7 @@ class PosixReactorBase(_SignalReactorMixin, _DisconnectSelectableMixin,
         return list(removedReaders | removedWriters)
 
 
-class _PollLikeMixin(object):
+class _PollLikeMixin:
     """
     Mixin for poll-like reactors.
 

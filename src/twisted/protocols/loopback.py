@@ -20,7 +20,7 @@ from twisted.python import failure
 from twisted.internet.interfaces import IAddress
 
 
-class _LoopbackQueue(object):
+class _LoopbackQueue:
     """
     Trivial wrapper around a list to give it an interface like a queue, which
     the addition of also sending notifications by way of a Deferred whenever
@@ -52,13 +52,13 @@ class _LoopbackQueue(object):
 
 
 @implementer(IAddress)
-class _LoopbackAddress(object):
+class _LoopbackAddress:
     pass
 
 
 
 @implementer(interfaces.ITransport, interfaces.IConsumer)
-class _LoopbackTransport(object):
+class _LoopbackTransport:
     disconnecting = False
     producer = None
 

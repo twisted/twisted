@@ -11,10 +11,7 @@ you are sitting at an interactive terminal.  For example, to programmatically
 interact with a known_hosts database, use L{twisted.conch.client.knownhosts}.
 """
 
-
-from twisted.python import log
-from twisted.python.compat import (
-    nativeString, raw_input, _b64decodebytes as decodebytes)
+from twisted.python.compat import nativeString
 from twisted.python.filepath import FilePath
 
 from twisted.conch.error import ConchError
@@ -30,6 +27,7 @@ import getpass
 import io
 import os
 import sys
+from base64 import decodebytes
 
 # The default location of the known hosts file (probably should be parsed out
 # of an ssh config file someday).
@@ -38,6 +36,9 @@ _KNOWN_HOSTS = "~/.ssh/known_hosts"
 
 # This name is bound so that the unit tests can use 'patch' to override it.
 _open = open
+_input = input
+
+
 
 def verifyHostKey(transport, host, pubKey, fingerprint):
     """
@@ -168,7 +169,8 @@ class SSHUserAuthClient(userauth.SSHUserAuthClient):
 
     def serviceStarted(self):
         if 'SSH_AUTH_SOCK' in os.environ and not self.options['noagent']:
-            log.msg('using agent')
+            self._log.debug('using SSH agent {authSock!r}',
+                            authSock=os.environ['SSH_AUTH_SOCK'])
             cc = protocol.ClientCreator(reactor, agent.SSHAgentClient)
             d = cc.connectUNIX(os.environ['SSH_AUTH_SOCK'])
             d.addCallback(self._setAgent)
@@ -239,12 +241,11 @@ class SSHUserAuthClient(userauth.SSHUserAuthClient):
             if key is not None:
                 return key
         files = [x for x in self.options.identitys if x not in self.usedFiles]
-        log.msg(str(self.options.identitys))
-        log.msg(str(files))
+        self._log.debug('public key identities: {identities}\n{files}',
+                        identities=self.options.identitys, files=files)
         if not files:
             return None
         file = files[0]
-        log.msg(file)
         self.usedFiles.append(file)
         file = os.path.expanduser(file)
         file += '.pub'
@@ -307,7 +308,7 @@ class SSHUserAuthClient(userauth.SSHUserAuthClient):
             for prompt, echo in prompts:
                 prompt = prompt.decode("utf-8")
                 if echo:
-                    responses.append(raw_input(prompt))
+                    responses.append(_input(prompt))
                 else:
                     responses.append(getpass.getpass(prompt))
         return defer.succeed(responses)

@@ -6,6 +6,8 @@ Tests for L{twisted.web.template}
 """
 
 
+from io import StringIO
+
 from zope.interface.verify import verifyObject
 
 from twisted.internet.defer import succeed, gatherResults
@@ -25,7 +27,6 @@ from twisted.web.test._util import FlattenTestCase
 from twisted.web.test.test_web import DummyRequest
 from twisted.web.server import NOT_DONE_YET
 
-from twisted.python.compat import NativeStringIO as StringIO
 from twisted.logger import globalLogPublisher
 from twisted.test.proto_helpers import EventLoggingObserver
 
@@ -102,7 +103,7 @@ class ElementTests(TestCase):
         A L{MissingTemplateLoader} instance can be repr()'d without error.
         """
         class PrettyReprElement(Element):
-            def __repr__(self):
+            def __repr__(self) -> str:
                 return 'Pretty Repr Element'
         self.assertIn('Pretty Repr Element',
                       repr(MissingTemplateLoader(PrettyReprElement())))
@@ -125,7 +126,7 @@ class ElementTests(TestCase):
         A L{MissingRenderMethod} instance can be repr()'d without error.
         """
         class PrettyReprElement(Element):
-            def __repr__(self):
+            def __repr__(self) -> str:
                 return 'Pretty Repr Element'
         s = repr(MissingRenderMethod(PrettyReprElement(),
                                      'expectedMethod'))
@@ -151,7 +152,7 @@ class ElementTests(TestCase):
         L{Element.render} loads a document from the C{loader} attribute and
         returns it.
         """
-        class TemplateLoader(object):
+        class TemplateLoader:
             def load(self):
                 return "result"
 
@@ -217,7 +218,7 @@ class XMLFileReprTests(TestCase):
 
 
 
-class XMLLoaderTestsMixin(object):
+class XMLLoaderTestsMixin:
     """
     @ivar templateString: Simple template to use to exercise the loaders.
 
@@ -675,7 +676,7 @@ class FailingElement(Element):
 
 
 
-class FakeSite(object):
+class FakeSite:
     """
     A minimal L{Site} object that we can use to test displayTracebacks
     """

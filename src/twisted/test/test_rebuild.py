@@ -14,7 +14,7 @@ f = crash_test_dummy.foo
 
 class Foo: pass
 class Bar(Foo): pass
-class Baz(object): pass
+class Baz: pass
 class Buz(Bar, Baz): pass
 
 class HashRaisesRuntimeError:
@@ -182,23 +182,15 @@ class RebuildTests(TestCase):
 
         # Test types.MethodType on method in class
         self.assertEqual(TestSensitive.test_method,
-            testSensitive.latestVersionOf(TestSensitive.test_method))
+                         testSensitive.latestVersionOf(
+                             TestSensitive.test_method))
         # Test types.MethodType on method in instance of class
         self.assertEqual(testSensitive.test_method,
-            testSensitive.latestVersionOf(testSensitive.test_method))
+                         testSensitive.latestVersionOf(
+                             testSensitive.test_method))
         # Test a class
         self.assertEqual(TestSensitive,
-            testSensitive.latestVersionOf(TestSensitive))
-
-        class Foo:
-            """
-            Dummy class
-            """
-
-        foo = Foo()
-
-        # Test types.InstanceType
-        self.assertEqual(foo, testSensitive.latestVersionOf(foo))
+                         testSensitive.latestVersionOf(TestSensitive))
 
         def myFunction():
             """
@@ -229,7 +221,7 @@ class NewStyleTests(TestCase):
         Try to rebuild a new style class with slots defined.
         """
         classDefinition = (
-            "class SlottedClass(object):\n"
+            "class SlottedClass:\n"
             "    __slots__ = ['a']\n")
 
         exec(classDefinition, self.m.__dict__)

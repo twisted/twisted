@@ -53,7 +53,7 @@ class PyunitTest(pyunit.TestCase):
         pass
 
 
-class NotATest(object):
+class NotATest:
     def test_foo(self):
         pass
 
@@ -77,7 +77,7 @@ Do NOT change the names the tests in this module.
 
 from twisted.trial import unittest
 
-class X(object):
+class X:
 
     def test_foo(self):
         pass

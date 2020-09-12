@@ -26,7 +26,6 @@ from twisted.internet import reactor
 from twisted.internet.defer import Deferred, inlineCallbacks
 from twisted.internet.error import ProcessDone
 from twisted.internet.protocol import ProcessProtocol
-from twisted.python.compat import intToBytes
 from twisted.python.filepath import FilePath
 from twisted.python.runtime import platform
 
@@ -53,7 +52,7 @@ else:
 
 
 
-class _FDHolder(object):
+class _FDHolder:
     """
     A wrapper around a FD that will remember if it has been closed or not.
     """
@@ -104,7 +103,7 @@ class ExitedWithStderr(Exception):
     A process exited with some stderr.
     """
 
-    def __str__(self):
+    def __str__(self) -> str:
         """
         Dump the errors in a pretty way in the event of a subprocess traceback.
         """
@@ -175,7 +174,7 @@ def _spawn(script, outputFD):
         sspp, pyExe, [
             pyExe,
             FilePath(__file__).sibling(script + ".py").asTextMode().path,
-            intToBytes(outputFD),
+            b'%d' % (outputFD,),
         ],
         env=env,
         childFDs={0: "w", 1: "r", 2: "r", outputFD: outputFD}

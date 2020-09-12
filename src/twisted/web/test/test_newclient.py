@@ -179,7 +179,7 @@ class MakeStatefulDispatcherTests(TestCase):
 
 
 
-class _HTTPParserTests(object):
+class _HTTPParserTests:
     """
     Base test class for L{HTTPParser} which is responsible for the bulk of
     the task of parsing HTTP bytes.
