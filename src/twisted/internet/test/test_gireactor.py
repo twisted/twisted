@@ -6,7 +6,6 @@ GI/GTK3 reactor tests.
 """
 
 
-import os
 import sys
 from unittest import skipIf
 try:
@@ -27,11 +26,9 @@ else:
         gtk3reactor = _gtk3reactor
         from gi.repository import Gtk
 
-from twisted.python.runtime import platform
 from twisted.internet.error import ReactorAlreadyRunning
 from twisted.trial.unittest import TestCase, SkipTest
 from twisted.internet.test.reactormixins import ReactorBuilder
-from twisted.test.test_twisted import SetAsideModule
 
 # Skip all tests if gi is unavailable:
 if gireactor is None:
@@ -187,29 +184,3 @@ class PygtkCompatibilityTests(TestCase):
             raise SkipTest("This version of gi doesn't include pygtkcompat.")
         import gobject
         self.assertTrue(gobject.__name__.startswith("gi."))
-
-
-
-class Gtk3ReactorTests(TestCase):
-    """
-    Tests for L{gtk3reactor}.
-    """
-
-    @skipIf(platform.getType() != "posix" or platform.isMacOSX(),
-            "This test is only relevant when using X11")
-    def test_requiresDISPLAY(self):
-        """
-        On X11, L{gtk3reactor} is unimportable if the C{DISPLAY} environment
-        variable is not set.
-        """
-        display = os.environ.get("DISPLAY", None)
-        if display is not None:
-            self.addCleanup(os.environ.__setitem__, "DISPLAY", display)
-            del os.environ["DISPLAY"]
-        with SetAsideModule("twisted.internet.gtk3reactor"):
-            exc = self.assertRaises(ImportError,
-                                    __import__, "twisted.internet.gtk3reactor")
-            self.assertEqual(
-                exc.args[0],
-                "Gtk3 requires X11, and no DISPLAY environment "
-                "variable is set")
