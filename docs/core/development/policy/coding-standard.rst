@@ -76,15 +76,15 @@ Indentation is 4 spaces per indent.
 Tabs are not allowed.
 It is preferred that every block appears on a new line, so that control structure indentation is always visible.
 
-Lines are flowed at 89 columns.
+Lines are flowed at 88 columns per `The Black Code Style <https://github.com/psf/black/blob/master/docs/the_black_code_style.md>`_.
 They must not have trailing whitespace.
-Long lines must be wrapped using implied line continuation inside parentheses; backslashes aren't allowed.
+Long lines must be wrapped using implied line continuation inside parentheses; backslashes aren't allowed except when wrapping ``with`` statement clauses.
 To handle long import lines, please wrap them inside parentheses:
 
 .. code-block:: python
 
     from very.long.package import (
-        foo, bar, baz, qux, quux, quuux
+        foo, bar, baz, qux, quux, quuux,
     )
 
 
