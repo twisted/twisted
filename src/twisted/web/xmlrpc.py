@@ -307,8 +307,8 @@ class XMLRPCIntrospection(XMLRPC):
         method = self._xmlrpc_parent.lookupProcedure(method)
         return getattr(method, "signature", None) or ""
 
-    xmlrpc_methodSignature.signature = [
-        ["array", "string"],  # type: ignore[attr-defined] # noqa
+    xmlrpc_methodSignature.signature = [  # type: ignore[attr-defined]
+        ["array", "string"],
         ["string", "string"],
     ]
 

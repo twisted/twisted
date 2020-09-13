@@ -317,8 +317,8 @@ class _IProcessTransportWithConsumerAndProducer(
 
 
 class _ProcessEndpointTransport(
-    proxyForInterface(
-        _IProcessTransportWithConsumerAndProducer,  # type: ignore[misc]  # noqa
+    proxyForInterface(  # type: ignore[misc]
+        _IProcessTransportWithConsumerAndProducer,
         "_process",
     )
 ):

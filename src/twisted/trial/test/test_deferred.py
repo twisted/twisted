@@ -120,10 +120,8 @@ class DeferredTests(TestTester):
         self.assertEqual(result.testsRun, 1)
         self.assertTrue(detests.DeferredTests.touched)
 
-    test_passGenerated.supress = [
-        util.suppress(  # type: ignore[attr-defined]
-            message="twisted.internet.defer.deferredGenerator is deprecated"
-        )
+    test_passGenerated.supress = [  # type: ignore[attr-defined]
+        util.suppress(message="twisted.internet.defer.deferredGenerator is deprecated")
     ]
 
     def test_passInlineCallbacks(self):

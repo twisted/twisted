@@ -114,8 +114,8 @@ class Test(XMLRPC):
         """
         return a + b
 
-    xmlrpc_add.signature = [
-        ["int", "int", "int"],  # type: ignore[attr-defined]
+    xmlrpc_add.signature = [  # type: ignore[attr-defined]
+        ["int", "int", "int"],
         ["double", "double", "double"],
     ]
 

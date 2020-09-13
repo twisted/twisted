@@ -38,8 +38,8 @@ class TestSuite(pyunit.TestSuite):
 
 @implementer(itrial.ITestCase)
 class TestDecorator(
-    components.proxyForInterface(
-        itrial.ITestCase, "_originalTest"  # type: ignore[misc]  # noqa
+    components.proxyForInterface(  # type: ignore[misc]
+        itrial.ITestCase, "_originalTest"
     )
 ):
     """

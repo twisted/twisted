@@ -369,10 +369,8 @@ Someone set up us the bomb!\015
         d = loopback.loopbackAsync(protocol, clientProtocol)
         return d.addCallback(check)
 
-    test_loopback.suppress = [
-        util.suppress(  # type: ignore[attr-defined]
-            message="twisted.mail.pop3.POP3Client is deprecated"
-        )
+    test_loopback.suppress = [  # type: ignore[attr-defined]
+        util.suppress(message="twisted.mail.pop3.POP3Client is deprecated")
     ]
 
     def test_incorrectDomain(self):
