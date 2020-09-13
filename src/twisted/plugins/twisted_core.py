@@ -3,11 +3,14 @@
 
 
 from twisted.internet.endpoints import (
-    _SystemdParser, _TCP6ServerParser, _StandardIOParser,
-    _TLSClientEndpointParser)
+    _SystemdParser,
+    _TCP6ServerParser,
+    _StandardIOParser,
+    _TLSClientEndpointParser,
+)
 
 from twisted.protocols.haproxy._parser import (
-    HAProxyServerParser as _HAProxyServerParser
+    HAProxyServerParser as _HAProxyServerParser,
 )
 
 systemdEndpointParser = _SystemdParser()

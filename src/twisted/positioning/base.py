@@ -23,7 +23,6 @@ MPS_PER_KPH = 0.27777777777777777
 METERS_PER_FOOT = 0.3048
 
 
-
 class Angles(Names):
     """
     The types of angles.
@@ -41,22 +40,22 @@ class Angles(Names):
     @type VARIATION: L{NamedConstant}
 
     """
+
     LATITUDE = NamedConstant()
     LONGITUDE = NamedConstant()
     HEADING = NamedConstant()
     VARIATION = NamedConstant()
 
 
-
 class Directions(Names):
     """
     The four cardinal directions (north, east, south, west).
     """
+
     NORTH = NamedConstant()
     EAST = NamedConstant()
     SOUTH = NamedConstant()
     WEST = NamedConstant()
-
 
 
 @implementer(ipositioning.IPositioningReceiver)
@@ -71,53 +70,46 @@ class BasePositioningReceiver:
     People who want to implement positioning receivers should subclass this
     class and override the specific callbacks they want to handle.
     """
+
     def timeReceived(self, time):
         """
         Implements L{IPositioningReceiver.timeReceived} stub.
         """
-
 
     def headingReceived(self, heading):
         """
         Implements L{IPositioningReceiver.headingReceived} stub.
         """
 
-
     def speedReceived(self, speed):
         """
         Implements L{IPositioningReceiver.speedReceived} stub.
         """
-
 
     def climbReceived(self, climb):
         """
         Implements L{IPositioningReceiver.climbReceived} stub.
         """
 
-
     def positionReceived(self, latitude, longitude):
         """
         Implements L{IPositioningReceiver.positionReceived} stub.
         """
-
 
     def positionErrorReceived(self, positionError):
         """
         Implements L{IPositioningReceiver.positionErrorReceived} stub.
         """
 
-
     def altitudeReceived(self, altitude):
         """
         Implements L{IPositioningReceiver.altitudeReceived} stub.
         """
 
-
     def beaconInformationReceived(self, beaconInformation):
         """
         Implements L{IPositioningReceiver.beaconInformationReceived} stub.
         """
-
 
 
 class InvalidSentence(Exception):
@@ -126,12 +118,10 @@ class InvalidSentence(Exception):
     """
 
 
-
 class InvalidChecksum(Exception):
     """
     An exception raised when the checksum of a sentence is invalid.
     """
-
 
 
 class Angle(FancyEqMixin):
@@ -144,13 +134,13 @@ class Angle(FancyEqMixin):
     @cvar _ANGLE_TYPE_NAMES: English names for angle types.
     @type _ANGLE_TYPE_NAMES: C{dict} of L{Angles} constants to C{str}
     """
+
     _RANGE_EXPRESSIONS = {
         Angles.LATITUDE: lambda latitude: -90.0 < latitude < 90.0,
         Angles.LONGITUDE: lambda longitude: -180.0 < longitude < 180.0,
-        Angles.HEADING: lambda heading:  0 <= heading < 360,
+        Angles.HEADING: lambda heading: 0 <= heading < 360,
         Angles.VARIATION: lambda variation: -180 < variation <= 180,
     }
-
 
     _ANGLE_TYPE_NAMES = {
         Angles.LATITUDE: "Latitude",
@@ -159,11 +149,10 @@ class Angle(FancyEqMixin):
         Angles.HEADING: "Heading",
     }
 
-
     compareAttributes = (
-        'angleType', 'inDecimalDegrees'
-        )  # type: ClassVar[Sequence[str]]
-
+        "angleType",
+        "inDecimalDegrees",
+    )  # type: ClassVar[Sequence[str]]
 
     def __init__(self, angle=None, angleType=None):
         """
@@ -193,7 +182,6 @@ class Angle(FancyEqMixin):
         self.angleType = angleType
         self._angle = angle
 
-
     @property
     def inDecimalDegrees(self):
         """
@@ -204,7 +192,6 @@ class Angle(FancyEqMixin):
         @rtype: C{float} (or L{None})
         """
         return self._angle
-
 
     @property
     def inDegreesMinutesSeconds(self):
@@ -229,7 +216,6 @@ class Angle(FancyEqMixin):
 
         return degrees, minutes, int(decimalSeconds)
 
-
     def setSign(self, sign):
         """
         Sets the sign of this angle.
@@ -245,7 +231,6 @@ class Angle(FancyEqMixin):
 
         self._angle = sign * abs(self._angle)
 
-
     def __float__(self):
         """
         Returns this angle as a float.
@@ -255,7 +240,6 @@ class Angle(FancyEqMixin):
         """
         return self._angle
 
-
     def __repr__(self) -> str:
         """
         Returns a string representation of this angle.
@@ -264,7 +248,6 @@ class Angle(FancyEqMixin):
         @rtype: C{str}
         """
         return "<{s._angleTypeNameRepr} ({s._angleValueRepr})>".format(s=self)
-
 
     @property
     def _angleValueRepr(self):
@@ -280,7 +263,6 @@ class Angle(FancyEqMixin):
             return "%s degrees" % round(self.inDecimalDegrees, 2)
         else:
             return "unknown value"
-
 
     @property
     def _angleTypeNameRepr(self):
@@ -298,7 +280,6 @@ class Angle(FancyEqMixin):
             return "Angle of unknown type"
 
 
-
 class Heading(Angle):
     """
     The heading of a mobile object.
@@ -314,13 +295,13 @@ class Heading(Angle):
         (its value is determined by the angle and variation attributes). The
         value is coerced to being between 0 (inclusive) and 360 (exclusive).
     """
+
     def __init__(self, angle=None, variation=None):
         """
         Initializes an angle with an optional variation.
         """
         Angle.__init__(self, angle, Angles.HEADING)
         self.variation = variation
-
 
     @classmethod
     def fromFloats(cls, angleValue=None, variationValue=None):
@@ -335,7 +316,6 @@ class Heading(Angle):
         """
         variation = Angle(variationValue, Angles.VARIATION)
         return cls(angleValue, variation)
-
 
     @property
     def correctedHeading(self):
@@ -353,7 +333,6 @@ class Heading(Angle):
         angle = (self.inDecimalDegrees - self.variation.inDecimalDegrees) % 360
         return Angle(angle, Angles.HEADING)
 
-
     def setSign(self, sign):
         """
         Sets the sign of the variation of this heading.
@@ -369,9 +348,7 @@ class Heading(Angle):
 
         self.variation.setSign(sign)
 
-
     compareAttributes = list(Angle.compareAttributes) + ["variation"]
-
 
     def __repr__(self) -> str:
         """
@@ -386,8 +363,10 @@ class Heading(Angle):
             variationRepr = repr(self.variation)
 
         return "<%s (%s, %s)>" % (
-            self._angleTypeNameRepr, self._angleValueRepr, variationRepr)
-
+            self._angleTypeNameRepr,
+            self._angleValueRepr,
+            variationRepr,
+        )
 
 
 class Coordinate(Angle):
@@ -399,6 +378,7 @@ class Coordinate(Angle):
         and western hemispheres are negative).
     @type angle: C{float}
     """
+
     def __init__(self, angle, coordinateType=None):
         """
         Initializes a coordinate.
@@ -413,12 +393,12 @@ class Coordinate(Angle):
             L{Angles.LONGITUDE} or L{None} if unknown.
         """
         if coordinateType not in [Angles.LATITUDE, Angles.LONGITUDE, None]:
-            raise ValueError("coordinateType must be one of Angles.LATITUDE, "
-                             "Angles.LONGITUDE or None, was {!r}"
-                             .format(coordinateType))
+            raise ValueError(
+                "coordinateType must be one of Angles.LATITUDE, "
+                "Angles.LONGITUDE or None, was {!r}".format(coordinateType)
+            )
 
         Angle.__init__(self, angle, coordinateType)
-
 
     @property
     def hemisphere(self):
@@ -443,7 +423,6 @@ class Coordinate(Angle):
             raise ValueError("unknown coordinate type (cant find hemisphere)")
 
 
-
 class Altitude(FancyEqMixin):
     """
     An altitude.
@@ -455,7 +434,8 @@ class Altitude(FancyEqMixin):
     @ivar inFeet: As above, but expressed in feet.
     @type inFeet: C{float}
     """
-    compareAttributes = 'inMeters',
+
+    compareAttributes = ("inMeters",)
 
     def __init__(self, altitude):
         """
@@ -465,7 +445,6 @@ class Altitude(FancyEqMixin):
         @type altitude: C{float}
         """
         self._altitude = altitude
-
 
     @property
     def inFeet(self):
@@ -477,7 +456,6 @@ class Altitude(FancyEqMixin):
         """
         return self._altitude / METERS_PER_FOOT
 
-
     @property
     def inMeters(self):
         """
@@ -488,7 +466,6 @@ class Altitude(FancyEqMixin):
         """
         return self._altitude
 
-
     def __float__(self):
         """
         Returns the altitude represented by this object expressed in meters.
@@ -497,7 +474,6 @@ class Altitude(FancyEqMixin):
         @rtype: C{float}
         """
         return self._altitude
-
 
     def __repr__(self) -> str:
         """
@@ -509,7 +485,6 @@ class Altitude(FancyEqMixin):
         return "<Altitude (%s m)>" % (self._altitude,)
 
 
-
 class _BaseSpeed(FancyEqMixin):
     """
     An object representing the abstract concept of the speed (rate of
@@ -517,7 +492,8 @@ class _BaseSpeed(FancyEqMixin):
 
     This primarily has behavior for converting between units and comparison.
     """
-    compareAttributes = 'inMetersPerSecond',
+
+    compareAttributes = ("inMetersPerSecond",)
 
     def __init__(self, speed):
         """
@@ -532,7 +508,6 @@ class _BaseSpeed(FancyEqMixin):
         """
         self._speed = speed
 
-
     @property
     def inMetersPerSecond(self):
         """
@@ -543,7 +518,6 @@ class _BaseSpeed(FancyEqMixin):
         @rtype: C{float}
         """
         return self._speed
-
 
     @property
     def inKnots(self):
@@ -556,7 +530,6 @@ class _BaseSpeed(FancyEqMixin):
         """
         return self._speed / MPS_PER_KNOT
 
-
     def __float__(self):
         """
         Returns the speed represented by this object expressed in meters per
@@ -567,7 +540,6 @@ class _BaseSpeed(FancyEqMixin):
         @rtype: C{float}
         """
         return self._speed
-
 
     def __repr__(self) -> str:
         """
@@ -580,11 +552,11 @@ class _BaseSpeed(FancyEqMixin):
         return "<%s (%s m/s)>" % (self.__class__.__name__, speedValue)
 
 
-
 class Speed(_BaseSpeed):
     """
     The speed (rate of movement) of a mobile object.
     """
+
     def __init__(self, speed):
         """
         Initializes a L{Speed} object.
@@ -601,11 +573,11 @@ class Speed(_BaseSpeed):
         _BaseSpeed.__init__(self, speed)
 
 
-
 class Climb(_BaseSpeed):
     """
     The climb ("vertical speed") of an object.
     """
+
     def __init__(self, climb):
         """
         Initializes a L{Climb} object.
@@ -615,7 +587,6 @@ class Climb(_BaseSpeed):
         @type climb: C{float}
         """
         _BaseSpeed.__init__(self, climb)
-
 
 
 class PositionError(FancyEqMixin):
@@ -639,7 +610,8 @@ class PositionError(FancyEqMixin):
     @ivar vdop: The vertical dilution of precision. L{None} if unknown.
     @type vdop: C{float} or L{None}
     """
-    compareAttributes = 'pdop', 'hdop', 'vdop'
+
+    compareAttributes = "pdop", "hdop", "vdop"
 
     def __init__(self, pdop=None, hdop=None, vdop=None, testInvariant=False):
         """
@@ -664,9 +636,7 @@ class PositionError(FancyEqMixin):
         self._testInvariant = testInvariant
         self._testDilutionOfPositionInvariant()
 
-
     _ALLOWABLE_TRESHOLD = 0.01
-
 
     def _testDilutionOfPositionInvariant(self):
         """
@@ -685,30 +655,28 @@ class PositionError(FancyEqMixin):
             if x is None:
                 return
 
-        delta = abs(self.pdop - (self.hdop**2 + self.vdop**2)**.5)
+        delta = abs(self.pdop - (self.hdop ** 2 + self.vdop ** 2) ** 0.5)
         if delta > self._ALLOWABLE_TRESHOLD:
-            raise ValueError("invalid combination of dilutions of precision: "
-                             "position: %s, horizontal: %s, vertical: %s"
-                             % (self.pdop, self.hdop, self.vdop))
-
+            raise ValueError(
+                "invalid combination of dilutions of precision: "
+                "position: %s, horizontal: %s, vertical: %s"
+                % (self.pdop, self.hdop, self.vdop)
+            )
 
     _DOP_EXPRESSIONS = {
-        'pdop': [
+        "pdop": [
             lambda self: float(self._pdop),
-            lambda self: (self._hdop**2 + self._vdop**2)**.5,
+            lambda self: (self._hdop ** 2 + self._vdop ** 2) ** 0.5,
         ],
-
-        'hdop': [
+        "hdop": [
             lambda self: float(self._hdop),
-            lambda self: (self._pdop**2 - self._vdop**2)**.5,
+            lambda self: (self._pdop ** 2 - self._vdop ** 2) ** 0.5,
         ],
-
-        'vdop': [
+        "vdop": [
             lambda self: float(self._vdop),
-            lambda self: (self._pdop**2 - self._hdop**2)**.5,
+            lambda self: (self._pdop ** 2 - self._hdop ** 2) ** 0.5,
         ],
     }
-
 
     def _getDOP(self, dopType):
         """
@@ -725,7 +693,6 @@ class PositionError(FancyEqMixin):
                 return dopExpression(self)
             except TypeError:
                 continue
-
 
     def _setDOP(self, dopType, value):
         """
@@ -753,38 +720,31 @@ class PositionError(FancyEqMixin):
             setattr(self, attributeName, oldValue)
             raise
 
-
     @property
     def pdop(self):
-        return self._getDOP('pdop')
+        return self._getDOP("pdop")
 
     @pdop.setter
     def pdop(self, value):
-        return self._setDOP('pdop', value)
-
+        return self._setDOP("pdop", value)
 
     @property
     def hdop(self):
-        return self._getDOP('hdop')
-
+        return self._getDOP("hdop")
 
     @hdop.setter
     def hdop(self, value):
-        return self._setDOP('hdop', value)
-
+        return self._setDOP("hdop", value)
 
     @property
     def vdop(self):
-        return self._getDOP('vdop')
-
+        return self._getDOP("vdop")
 
     @vdop.setter
     def vdop(self, value):
-        return self._setDOP('vdop', value)
-
+        return self._setDOP("vdop", value)
 
     _REPR_TEMPLATE = "<PositionError (pdop: %s, hdop: %s, vdop: %s)>"
-
 
     def __repr__(self) -> str:
         """
@@ -794,7 +754,6 @@ class PositionError(FancyEqMixin):
         @rtype: C{str}
         """
         return self._REPR_TEMPLATE % (self.pdop, self.hdop, self.vdop)
-
 
 
 class BeaconInformation:
@@ -811,6 +770,7 @@ class BeaconInformation:
         beacons for which it is unknown if they are used or not.
     @type usedBeacons: C{set} of L{IPositioningBeacon}
     """
+
     def __init__(self, seenBeacons=()):
         """
         Initializes a beacon information object.
@@ -820,7 +780,6 @@ class BeaconInformation:
         """
         self.seenBeacons = set(seenBeacons)
         self.usedBeacons = set()
-
 
     def __repr__(self) -> str:
         """
@@ -836,16 +795,19 @@ class BeaconInformation:
         usedBeacons = sortedBeacons(self.usedBeacons)
         unusedBeacons = sortedBeacons(self.seenBeacons - self.usedBeacons)
 
-        template = ("<BeaconInformation ("
-                    "used beacons ({numUsed}): {usedBeacons}, "
-                    "unused beacons: {unusedBeacons})>")
+        template = (
+            "<BeaconInformation ("
+            "used beacons ({numUsed}): {usedBeacons}, "
+            "unused beacons: {unusedBeacons})>"
+        )
 
-        formatted = template.format(numUsed=len(self.usedBeacons),
-                                    usedBeacons=usedBeacons,
-                                    unusedBeacons=unusedBeacons)
+        formatted = template.format(
+            numUsed=len(self.usedBeacons),
+            usedBeacons=usedBeacons,
+            unusedBeacons=unusedBeacons,
+        )
 
         return formatted
-
 
 
 @implementer(ipositioning.IPositioningBeacon)
@@ -858,6 +820,7 @@ class PositioningBeacon:
     @type identifier: Pretty much anything that can be used as a unique
         identifier. Depends on the implementation.
     """
+
     def __init__(self, identifier):
         """
         Initializes a positioning beacon.
@@ -866,7 +829,6 @@ class PositioningBeacon:
         @type identifier: Can be pretty much anything (see ivar documentation).
         """
         self.identifier = identifier
-
 
     def __hash__(self):
         """
@@ -877,7 +839,6 @@ class PositioningBeacon:
         """
         return hash(self.identifier)
 
-
     def __repr__(self) -> str:
         """
         Returns a string representation of this beacon.
@@ -886,7 +847,6 @@ class PositioningBeacon:
         @rtype: C{str}
         """
         return "<Beacon ({s.identifier})>".format(s=self)
-
 
 
 class Satellite(PositioningBeacon):
@@ -901,11 +861,10 @@ class Satellite(PositioningBeacon):
     @ivar signalToNoiseRatio: The signal to noise ratio of the signal coming
         from this satellite.
     """
-    def __init__(self,
-                 identifier,
-                 azimuth=None,
-                 elevation=None,
-                 signalToNoiseRatio=None):
+
+    def __init__(
+        self, identifier, azimuth=None, elevation=None, signalToNoiseRatio=None
+    ):
         """
         Initializes a satellite object.
 
@@ -927,7 +886,6 @@ class Satellite(PositioningBeacon):
         self.elevation = elevation
         self.signalToNoiseRatio = signalToNoiseRatio
 
-
     def __repr__(self) -> str:
         """
         Returns a string representation of this Satellite.
@@ -935,32 +893,33 @@ class Satellite(PositioningBeacon):
         @return: The string representation.
         @rtype: C{str}
         """
-        template = ("<Satellite ({s.identifier}), "
-                    "azimuth: {s.azimuth}, "
-                    "elevation: {s.elevation}, "
-                    "snr: {s.signalToNoiseRatio}>")
+        template = (
+            "<Satellite ({s.identifier}), "
+            "azimuth: {s.azimuth}, "
+            "elevation: {s.elevation}, "
+            "snr: {s.signalToNoiseRatio}>"
+        )
 
         return template.format(s=self)
 
 
-
 __all__ = [
-    'Altitude',
-    'Angle',
-    'Angles',
-    'BasePositioningReceiver',
-    'BeaconInformation',
-    'Climb',
-    'Coordinate',
-    'Directions',
-    'Heading',
-    'InvalidChecksum',
-    'InvalidSentence',
-    'METERS_PER_FOOT',
-    'MPS_PER_KNOT',
-    'MPS_PER_KPH',
-    'PositionError',
-    'PositioningBeacon',
-    'Satellite',
-    'Speed'
+    "Altitude",
+    "Angle",
+    "Angles",
+    "BasePositioningReceiver",
+    "BeaconInformation",
+    "Climb",
+    "Coordinate",
+    "Directions",
+    "Heading",
+    "InvalidChecksum",
+    "InvalidSentence",
+    "METERS_PER_FOOT",
+    "MPS_PER_KNOT",
+    "MPS_PER_KPH",
+    "PositionError",
+    "PositioningBeacon",
+    "Satellite",
+    "Speed",
 ]

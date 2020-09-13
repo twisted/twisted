@@ -15,7 +15,6 @@ from twisted.internet import protocol, reactor
 from twisted.logger import Logger
 
 
-
 class SSHAgentClient(agent.SSHAgentClient):
     _log = Logger()
 
@@ -23,15 +22,12 @@ class SSHAgentClient(agent.SSHAgentClient):
         agent.SSHAgentClient.__init__(self)
         self.blobs = []
 
-
     def getPublicKeys(self):
         return self.requestIdentities().addCallback(self._cbPublicKeys)
 
-
     def _cbPublicKeys(self, blobcomm):
-        self._log.debug('got {num_keys} public keys', num_keys=len(blobcomm))
+        self._log.debug("got {num_keys} public keys", num_keys=len(blobcomm))
         self.blobs = [x[0] for x in blobcomm]
-
 
     def getPublicKey(self):
         """
@@ -43,26 +39,21 @@ class SSHAgentClient(agent.SSHAgentClient):
         return None
 
 
-
 class SSHAgentForwardingChannel(channel.SSHChannel):
-
     def channelOpen(self, specificData):
         cc = protocol.ClientCreator(reactor, SSHAgentForwardingLocal)
-        d = cc.connectUNIX(os.environ['SSH_AUTH_SOCK'])
+        d = cc.connectUNIX(os.environ["SSH_AUTH_SOCK"])
         d.addCallback(self._cbGotLocal)
-        d.addErrback(lambda x:self.loseConnection())
-        self.buf = ''
-
+        d.addErrback(lambda x: self.loseConnection())
+        self.buf = ""
 
     def _cbGotLocal(self, local):
         self.local = local
         self.dataReceived = self.local.transport.write
         self.local.dataReceived = self.write
 
-
     def dataReceived(self, data):
         self.buf += data
-
 
     def closed(self):
         if self.local:

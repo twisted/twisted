@@ -24,6 +24,7 @@ from time import mktime as mktime_real
 # called more than once in a process lifetime.  I think this is
 # just a platform bug, so let's work around it.  -glyph
 
+
 def mktime(t9):
     """
     Call L{mktime_real}, and if it raises L{OverflowError}, catch it and raise
@@ -38,11 +39,7 @@ def mktime(t9):
     try:
         return mktime_real(t9)
     except OverflowError:
-        raise SkipTest(
-            "Platform cannot construct time zone for {0!r}"
-            .format(t9)
-        )
-
+        raise SkipTest("Platform cannot construct time zone for {0!r}".format(t9))
 
 
 def setTZ(name):
@@ -65,7 +62,6 @@ def setTZ(name):
     tzset()
 
 
-
 def addTZCleanup(testCase):
     """
     Add cleanup hooks to a test case to reset timezone to original value.
@@ -80,7 +76,6 @@ def addTZCleanup(testCase):
         setTZ(tzIn)
 
 
-
 class FixedOffsetTimeZoneTests(TestCase):
     """
     Tests for L{FixedOffsetTimeZone}.
@@ -92,9 +87,7 @@ class FixedOffsetTimeZoneTests(TestCase):
         standard C{TZ} environment variable and L{tzset} API.
         """
         if tzset is None:
-            raise SkipTest(
-                "Platform cannot change timezone; unable to verify offsets."
-            )
+            raise SkipTest("Platform cannot change timezone; unable to verify offsets.")
 
         def testForTimeZone(name, expectedOffsetDST, expectedOffsetSTD):
             setTZ(name)
@@ -105,14 +98,8 @@ class FixedOffsetTimeZoneTests(TestCase):
             tzDST = FixedOffsetTimeZone.fromLocalTimeStamp(localDST)
             tzSTD = FixedOffsetTimeZone.fromLocalTimeStamp(localSTD)
 
-            self.assertEqual(
-                tzDST.tzname(localDST),
-                "UTC{0}".format(expectedOffsetDST)
-            )
-            self.assertEqual(
-                tzSTD.tzname(localSTD),
-                "UTC{0}".format(expectedOffsetSTD)
-            )
+            self.assertEqual(tzDST.tzname(localDST), "UTC{0}".format(expectedOffsetDST))
+            self.assertEqual(tzSTD.tzname(localSTD), "UTC{0}".format(expectedOffsetSTD))
 
             self.assertEqual(tzDST.dst(localDST), timedelta(0))
             self.assertEqual(tzSTD.dst(localSTD), timedelta(0))
@@ -133,12 +120,10 @@ class FixedOffsetTimeZoneTests(TestCase):
                 return timedelta(hours=hours, minutes=minutes)
 
             self.assertEqual(
-                tzDST.utcoffset(localDST),
-                timeDeltaFromOffset(expectedOffsetDST)
+                tzDST.utcoffset(localDST), timeDeltaFromOffset(expectedOffsetDST)
             )
             self.assertEqual(
-                tzSTD.utcoffset(localSTD),
-                timeDeltaFromOffset(expectedOffsetSTD)
+                tzSTD.utcoffset(localSTD), timeDeltaFromOffset(expectedOffsetSTD)
             )
 
         addTZCleanup(self)

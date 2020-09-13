@@ -7,22 +7,24 @@ Twisted Python: Utilities and Enhancements for Python.
 
 
 # Deprecating twisted.python.constants.
-from .compat import unicode
 from .versions import Version
 from .deprecate import deprecatedModuleAttribute
 
 deprecatedModuleAttribute(
     Version("Twisted", 16, 5, 0),
     "Please use constantly from PyPI instead.",
-    "twisted.python", "constants")
+    "twisted.python",
+    "constants",
+)
 
 
 deprecatedModuleAttribute(
-    Version('Twisted', 17, 5, 0),
+    Version("Twisted", 17, 5, 0),
     "Please use hyperlink from PyPI instead.",
-    "twisted.python", "url")
+    "twisted.python",
+    "url",
+)
 
 
 del Version
 del deprecatedModuleAttribute
-del unicode

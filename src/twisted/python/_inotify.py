@@ -13,12 +13,10 @@ import ctypes
 import ctypes.util
 
 
-
 class INotifyError(Exception):
     """
     Unify all the possible exceptions that can be raised by the INotify API.
     """
-
 
 
 def init():
@@ -29,7 +27,6 @@ def init():
     if fd < 0:
         raise INotifyError("INotify initialization error.")
     return fd
-
 
 
 def add(fd, path, mask):
@@ -50,7 +47,6 @@ def add(fd, path, mask):
     if wd < 0:
         raise INotifyError("Failed to add watch on '%r' - (%r)" % (path, wd))
     return wd
-
 
 
 def remove(fd, wd):
@@ -80,7 +76,6 @@ def remove(fd, wd):
     libc.inotify_rm_watch(fd, wd)
 
 
-
 def initializeModule(libc):
     """
     Initialize the module, checking if the expected APIs exist and setting the
@@ -93,17 +88,14 @@ def initializeModule(libc):
     libc.inotify_init.argtypes = []
     libc.inotify_init.restype = ctypes.c_int
 
-    libc.inotify_rm_watch.argtypes = [
-        ctypes.c_int, ctypes.c_int]
+    libc.inotify_rm_watch.argtypes = [ctypes.c_int, ctypes.c_int]
     libc.inotify_rm_watch.restype = ctypes.c_int
 
-    libc.inotify_add_watch.argtypes = [
-        ctypes.c_int, ctypes.c_char_p, ctypes.c_uint32]
+    libc.inotify_add_watch.argtypes = [ctypes.c_int, ctypes.c_char_p, ctypes.c_uint32]
     libc.inotify_add_watch.restype = ctypes.c_int
 
 
-
-name = ctypes.util.find_library('c')
+name = ctypes.util.find_library("c")
 if not name:
     raise ImportError("Can't find C library.")
 libc = ctypes.cdll.LoadLibrary(name)

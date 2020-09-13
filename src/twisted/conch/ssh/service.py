@@ -12,7 +12,6 @@ from typing import Dict
 from twisted.logger import Logger
 
 
-
 class SSHService(object):
     name = None  # type: bytes  # this is the ssh name for the service
     protocolMessages = {}  # type: Dict[int, str]  # map #'s -> protocol names
@@ -32,20 +31,21 @@ class SSHService(object):
         """
 
     def logPrefix(self):
-        return "SSHService %r on %s" % (self.name,
-                                        self.transport.transport.logPrefix())
+        return "SSHService %r on %s" % (self.name, self.transport.transport.logPrefix())
 
     def packetReceived(self, messageNum, packet):
         """
         called when we receive a packet on the transport
         """
-        #print self.protocolMessages
+        # print self.protocolMessages
         if messageNum in self.protocolMessages:
             messageType = self.protocolMessages[messageNum]
-            f = getattr(self,'ssh_%s' % messageType[4:],
-                        None)
+            f = getattr(self, "ssh_%s" % messageType[4:], None)
             if f is not None:
                 return f(packet)
-        self._log.info("couldn't handle {messageNum} {packet!r}",
-                       messageNum=messageNum, packet=packet)
+        self._log.info(
+            "couldn't handle {messageNum} {packet!r}",
+            messageNum=messageNum,
+            packet=packet,
+        )
         self.transport.sendUnimplemented()

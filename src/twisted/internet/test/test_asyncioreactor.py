@@ -19,12 +19,12 @@ else:
     doSkip = False
 
 
-
 @skipIf(doSkip, "Requires asyncio.")
 class AsyncioSelectorReactorTests(ReactorBuilder, SynchronousTestCase):
     """
     L{AsyncioSelectorReactor} tests.
     """
+
     def test_defaultEventLoopFromGlobalPolicy(self):
         """
         L{AsyncioSelectorReactor} wraps the global policy's event loop
@@ -47,7 +47,6 @@ class AsyncioSelectorReactorTests(ReactorBuilder, SynchronousTestCase):
         self.runReactor(reactor, timeout=1)
         self.assertEqual(result, [True])
 
-
     def test_seconds(self):
         """L{seconds} should return a plausible epoch time."""
         reactor = AsyncioSelectorReactor()
@@ -58,7 +57,6 @@ class AsyncioSelectorReactorTests(ReactorBuilder, SynchronousTestCase):
 
         # less than 2120-01-01
         self.assertLess(result, 4733510400)
-
 
     def test_delayedCallResetToLater(self):
         """
@@ -80,7 +78,6 @@ class AsyncioSelectorReactorTests(ReactorBuilder, SynchronousTestCase):
         self.assertIsNotNone(timer_called_at[0])
         self.assertGreater(timer_called_at[0] - start_time, 0.4)
 
-
     def test_delayedCallResetToEarlier(self):
         """
         L{DelayedCall.reset()} properly reschedules timer to earlier time
@@ -99,14 +96,14 @@ class AsyncioSelectorReactorTests(ReactorBuilder, SynchronousTestCase):
 
         import io
         from contextlib import redirect_stderr
+
         stderr = io.StringIO()
         with redirect_stderr(stderr):
             reactor.run()
 
-        self.assertEqual(stderr.getvalue(), '')
+        self.assertEqual(stderr.getvalue(), "")
         self.assertIsNotNone(timer_called_at[0])
         self.assertLess(timer_called_at[0] - start_time, 0.4)
-
 
     def test_noCycleReferencesInCallLater(self):
         """
