@@ -284,7 +284,7 @@ class FailureTests(SynchronousTestCase):
 
           --- <exception caught here> ---
             File "twisted/test/test_failure.py", line 39, in getDivisionFailure
-              1/0
+              1 / 0
             exceptions.ZeroDivisionError: float division
 
         @param captureVars: Enables L{Failure.captureVars}.
@@ -401,7 +401,7 @@ class FailureTests(SynchronousTestCase):
     def test_RaiseExceptionWithTB(self):
         f = getDivisionFailure()
         innerline = self._getInnermostFrameLine(f)
-        self.assertEqual(innerline, "1/0")
+        self.assertEqual(innerline, "1 / 0")
 
     def test_stringExceptionConstruction(self):
         """
@@ -856,7 +856,7 @@ class ExtendedGeneratorTests(SynchronousTestCase):
         self.assertEqual(stuff[0][0], ZeroDivisionError)
         self.assertIsInstance(stuff[0][1], ZeroDivisionError)
 
-        self.assertEqual(traceback.extract_tb(stuff[0][2])[-1][-1], "1/0")
+        self.assertEqual(traceback.extract_tb(stuff[0][2])[-1][-1], "1 / 0")
 
     def test_findFailureInGenerator(self):
         """
