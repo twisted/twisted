@@ -1750,16 +1750,17 @@ class BasicServerFunctionalityTests(IRCTestCase):
             timestamp,
             ["#fakeusers", "#fakemisc"],
         )
-        expected = "\r\n".join(
-            [
-                ":%(hostname)s 311 %(req)s %(targ)s target host.com * :Target User",
-                ":%(hostname)s 312 %(req)s %(targ)s irc.host.com :A fake server",
-                ":%(hostname)s 317 %(req)s %(targ)s 12 %(timestamp)s :seconds idle, signon time",
-                ":%(hostname)s 319 %(req)s %(targ)s :#fakeusers #fakemisc",
-                ":%(hostname)s 318 %(req)s %(targ)s :End of WHOIS list.",
-                "",
-            ]
-        ) % dict(hostname=hostname, timestamp=timestamp, req=req, targ=targ)
+        lines = [
+            ":%(hostname)s 311 %(req)s %(targ)s target host.com * :Target User",
+            ":%(hostname)s 312 %(req)s %(targ)s irc.host.com :A fake server",
+            ":%(hostname)s 317 %(req)s %(targ)s 12 %(timestamp)s :seconds idle, signon time",
+            ":%(hostname)s 319 %(req)s %(targ)s :#fakeusers #fakemisc",
+            ":%(hostname)s 318 %(req)s %(targ)s :End of WHOIS list.",
+            "",
+        ]
+        expected = "\r\n".join(lines) % dict(
+            hostname=hostname, timestamp=timestamp, req=req, targ=targ
+        )
         self.check(expected)
 
 
