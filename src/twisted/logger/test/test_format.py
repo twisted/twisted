@@ -528,7 +528,7 @@ class EventAsTextTests(unittest.TestCase):
         event["log_failure"] = f
         eventText = eventAsText(event, includeTimestamp=True, includeSystem=False)
         self.assertIn("Traceback", eventText)
-        self.assertIn(r"CapturedError(b'\xff\xfet\x00e\x00s\x00t\x00')", eventText)
+        self.assertIn(r'CapturedError(b"\xff\xfet\x00e\x00s\x00t\x00")', eventText)
 
     def test_eventAsTextSystemOnly(self):
         """
