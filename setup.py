@@ -13,7 +13,7 @@ import setuptools
 if __name__ == "__main__":
 
     _setup = {}
-    with open('src/twisted/python/_setup.py') as f:
+    with open("src/twisted/python/_setup.py") as f:
         exec(f.read(), _setup)
 
     try:

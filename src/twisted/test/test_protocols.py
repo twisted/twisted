@@ -31,7 +31,6 @@ class WireTests(unittest.TestCase):
         a.dataReceived(b"you")
         self.assertEqual(t.value(), b"helloworldhowareyou")
 
-
     def test_who(self):
         """
         Test wire.Who protocol.
@@ -41,7 +40,6 @@ class WireTests(unittest.TestCase):
         a.makeConnection(t)
         self.assertEqual(t.value(), b"root\r\n")
 
-
     def test_QOTD(self):
         """
         Test wire.QOTD protocol.
@@ -49,9 +47,7 @@ class WireTests(unittest.TestCase):
         t = proto_helpers.StringTransport()
         a = wire.QOTD()
         a.makeConnection(t)
-        self.assertEqual(t.value(),
-                          b"An apple a day keeps the doctor away.\r\n")
-
+        self.assertEqual(t.value(), b"An apple a day keeps the doctor away.\r\n")
 
     def test_discard(self):
         """
@@ -66,7 +62,6 @@ class WireTests(unittest.TestCase):
         a.dataReceived(b"are")
         a.dataReceived(b"you")
         self.assertEqual(t.value(), b"")
-
 
 
 class TestableProxyClientFactory(portforward.ProxyClientFactory):
@@ -84,7 +79,6 @@ class TestableProxyClientFactory(portforward.ProxyClientFactory):
         proto = portforward.ProxyClientFactory.buildProtocol(self, addr)
         self.protoInstance = proto
         return proto
-
 
 
 class TestableProxyFactory(portforward.ProxyFactory):
@@ -112,7 +106,6 @@ class TestableProxyFactory(portforward.ProxyFactory):
         return proto
 
 
-
 class PortforwardingTests(unittest.TestCase):
     """
     Test port forwarding.
@@ -122,7 +115,6 @@ class PortforwardingTests(unittest.TestCase):
         self.serverProtocol = wire.Echo()
         self.clientProtocol = protocol.Protocol()
         self.openPorts = []
-
 
     def tearDown(self):
         try:
@@ -143,8 +135,8 @@ class PortforwardingTests(unittest.TestCase):
         except AttributeError:
             pass
         return defer.gatherResults(
-            [defer.maybeDeferred(p.stopListening) for p in self.openPorts])
-
+            [defer.maybeDeferred(p.stopListening) for p in self.openPorts]
+        )
 
     def test_portforward(self):
         """
@@ -152,13 +144,14 @@ class PortforwardingTests(unittest.TestCase):
         """
         realServerFactory = protocol.ServerFactory()
         realServerFactory.protocol = lambda: self.serverProtocol
-        realServerPort = reactor.listenTCP(0, realServerFactory,
-                                           interface='127.0.0.1')
+        realServerPort = reactor.listenTCP(0, realServerFactory, interface="127.0.0.1")
         self.openPorts.append(realServerPort)
-        self.proxyServerFactory = TestableProxyFactory('127.0.0.1',
-                                realServerPort.getHost().port)
-        proxyServerPort = reactor.listenTCP(0, self.proxyServerFactory,
-                                            interface='127.0.0.1')
+        self.proxyServerFactory = TestableProxyFactory(
+            "127.0.0.1", realServerPort.getHost().port
+        )
+        proxyServerPort = reactor.listenTCP(
+            0, self.proxyServerFactory, interface="127.0.0.1"
+        )
         self.openPorts.append(proxyServerPort)
 
         nBytes = 1000
@@ -168,24 +161,22 @@ class PortforwardingTests(unittest.TestCase):
         def testDataReceived(data):
             received.extend(iterbytes(data))
             if len(received) >= nBytes:
-                self.assertEqual(b''.join(received), b'x' * nBytes)
+                self.assertEqual(b"".join(received), b"x" * nBytes)
                 d.callback(None)
 
         self.clientProtocol.dataReceived = testDataReceived
 
         def testConnectionMade():
-            self.clientProtocol.transport.write(b'x' * nBytes)
+            self.clientProtocol.transport.write(b"x" * nBytes)
 
         self.clientProtocol.connectionMade = testConnectionMade
 
         clientFactory = protocol.ClientFactory()
         clientFactory.protocol = lambda: self.clientProtocol
 
-        reactor.connectTCP(
-            '127.0.0.1', proxyServerPort.getHost().port, clientFactory)
+        reactor.connectTCP("127.0.0.1", proxyServerPort.getHost().port, clientFactory)
 
         return d
-
 
     def test_registerProducers(self):
         """
@@ -193,8 +184,8 @@ class PortforwardingTests(unittest.TestCase):
         vice versa.
         """
         # create a ProxyServer instance
-        addr = address.IPv4Address('TCP', '127.0.0.1', 0)
-        server = portforward.ProxyFactory('127.0.0.1', 0).buildProtocol(addr)
+        addr = address.IPv4Address("TCP", "127.0.0.1", 0)
+        server = portforward.ProxyFactory("127.0.0.1", 0).buildProtocol(addr)
 
         # set the reactor for this test
         reactor = proto_helpers.MemoryReactor()
@@ -223,7 +214,6 @@ class PortforwardingTests(unittest.TestCase):
         self.assertTrue(serverTransport.streaming)
 
 
-
 class StringTransportTests(unittest.TestCase):
     """
     Test L{proto_helpers.StringTransport} helper behaviour.
@@ -234,4 +224,4 @@ class StringTransportTests(unittest.TestCase):
         Test that L{proto_helpers.StringTransport} doesn't accept unicode data.
         """
         s = proto_helpers.StringTransport()
-        self.assertRaises(TypeError, s.write, u'foo')
+        self.assertRaises(TypeError, s.write, "foo")

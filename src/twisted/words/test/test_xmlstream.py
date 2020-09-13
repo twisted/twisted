@@ -11,6 +11,7 @@ from twisted.python import failure
 from twisted.trial import unittest
 from twisted.words.xish import domish, utility, xmlstream
 
+
 class XmlStreamTests(unittest.TestCase):
     def setUp(self):
         self.connectionLostMsg = "no reason"
@@ -19,14 +20,13 @@ class XmlStreamTests(unittest.TestCase):
         self.xmlstream.transport = self
         self.xmlstream.transport.write = self.outlist.append
 
-
     def loseConnection(self):
         """
         Stub loseConnection because we are a transport.
         """
-        self.xmlstream.connectionLost(failure.Failure(
-            Exception(self.connectionLostMsg)))
-
+        self.xmlstream.connectionLost(
+            failure.Failure(Exception(self.connectionLostMsg))
+        )
 
     def test_send(self):
         """
@@ -37,7 +37,6 @@ class XmlStreamTests(unittest.TestCase):
         self.xmlstream.send(b"<root>")
         self.assertEqual(self.outlist[0], b"<root>")
 
-
     def test_receiveRoot(self):
         """
         Receiving the starttag of the root element results in stream start.
@@ -47,12 +46,10 @@ class XmlStreamTests(unittest.TestCase):
         def streamStartEvent(rootelem):
             streamStarted.append(None)
 
-        self.xmlstream.addObserver(xmlstream.STREAM_START_EVENT,
-                                   streamStartEvent)
+        self.xmlstream.addObserver(xmlstream.STREAM_START_EVENT, streamStartEvent)
         self.xmlstream.connectionMade()
         self.xmlstream.dataReceived("<root>")
         self.assertEqual(1, len(streamStarted))
-
 
     def test_receiveBadXML(self):
         """
@@ -67,10 +64,8 @@ class XmlStreamTests(unittest.TestCase):
         def streamEndEvent(_):
             streamEnd.append(None)
 
-        self.xmlstream.addObserver(xmlstream.STREAM_ERROR_EVENT,
-                                   streamErrorEvent)
-        self.xmlstream.addObserver(xmlstream.STREAM_END_EVENT,
-                                   streamEndEvent)
+        self.xmlstream.addObserver(xmlstream.STREAM_ERROR_EVENT, streamErrorEvent)
+        self.xmlstream.addObserver(xmlstream.STREAM_END_EVENT, streamEndEvent)
         self.xmlstream.connectionMade()
 
         self.xmlstream.dataReceived("<root>")
@@ -82,7 +77,6 @@ class XmlStreamTests(unittest.TestCase):
         self.assertTrue(streamError[0].check(domish.ParserError))
         self.assertEqual(1, len(streamEnd))
 
-
     def test_streamEnd(self):
         """
         Ending the stream fires a L{STREAM_END_EVENT}.
@@ -92,15 +86,12 @@ class XmlStreamTests(unittest.TestCase):
         def streamEndEvent(reason):
             streamEnd.append(reason)
 
-        self.xmlstream.addObserver(xmlstream.STREAM_END_EVENT,
-                                   streamEndEvent)
+        self.xmlstream.addObserver(xmlstream.STREAM_END_EVENT, streamEndEvent)
         self.xmlstream.connectionMade()
         self.loseConnection()
         self.assertEqual(1, len(streamEnd))
         self.assertIsInstance(streamEnd[0], failure.Failure)
-        self.assertEqual(streamEnd[0].getErrorMessage(),
-                self.connectionLostMsg)
-
+        self.assertEqual(streamEnd[0].getErrorMessage(), self.connectionLostMsg)
 
 
 class DummyProtocol(protocol.Protocol, utility.EventDispatcher):
@@ -119,7 +110,6 @@ class DummyProtocol(protocol.Protocol, utility.EventDispatcher):
         utility.EventDispatcher.__init__(self)
 
 
-
 class BootstrapMixinTests(unittest.TestCase):
     """
     Tests for L{xmlstream.BootstrapMixin}.
@@ -129,7 +119,6 @@ class BootstrapMixinTests(unittest.TestCase):
 
     def setUp(self):
         self.factory = xmlstream.BootstrapMixin()
-
 
     def test_installBootstraps(self):
         """
@@ -141,12 +130,11 @@ class BootstrapMixinTests(unittest.TestCase):
             called.append(data)
 
         dispatcher = DummyProtocol()
-        self.factory.addBootstrap('//event/myevent', cb)
+        self.factory.addBootstrap("//event/myevent", cb)
         self.factory.installBootstraps(dispatcher)
 
-        dispatcher.dispatch(None, '//event/myevent')
+        dispatcher.dispatch(None, "//event/myevent")
         self.assertEqual(1, len(called))
-
 
     def test_addAndRemoveBootstrap(self):
         """
@@ -158,15 +146,14 @@ class BootstrapMixinTests(unittest.TestCase):
         def cb(data):
             called.append(data)
 
-        self.factory.addBootstrap('//event/myevent', cb)
-        self.factory.removeBootstrap('//event/myevent', cb)
+        self.factory.addBootstrap("//event/myevent", cb)
+        self.factory.removeBootstrap("//event/myevent", cb)
 
         dispatcher = DummyProtocol()
         self.factory.installBootstraps(dispatcher)
 
-        dispatcher.dispatch(None, '//event/myevent')
+        dispatcher.dispatch(None, "//event/myevent")
         self.assertFalse(called)
-
 
 
 class GenericXmlStreamFactoryTestsMixin(BootstrapMixinTests):
@@ -177,7 +164,6 @@ class GenericXmlStreamFactoryTestsMixin(BootstrapMixinTests):
     def setUp(self):
         self.factory = xmlstream.XmlStreamFactory()
 
-
     def test_buildProtocolInstallsBootstraps(self):
         """
         The protocol factory installs bootstrap event handlers on the protocol.
@@ -187,13 +173,12 @@ class GenericXmlStreamFactoryTestsMixin(BootstrapMixinTests):
         def cb(data):
             called.append(data)
 
-        self.factory.addBootstrap('//event/myevent', cb)
+        self.factory.addBootstrap("//event/myevent", cb)
 
         xs = self.factory.buildProtocol(None)
-        xs.dispatch(None, '//event/myevent')
+        xs.dispatch(None, "//event/myevent")
 
         self.assertEqual(1, len(called))
-
 
     def test_buildProtocolStoresFactory(self):
         """
@@ -201,7 +186,6 @@ class GenericXmlStreamFactoryTestsMixin(BootstrapMixinTests):
         """
         xs = self.factory.buildProtocol(None)
         self.assertIdentical(self.factory, xs.factory)
-
 
 
 class XmlStreamFactoryMixinTests(GenericXmlStreamFactoryTestsMixin):
@@ -213,7 +197,6 @@ class XmlStreamFactoryMixinTests(GenericXmlStreamFactoryTestsMixin):
         self.factory = xmlstream.XmlStreamFactoryMixin(None, test=None)
         self.factory.protocol = DummyProtocol
 
-
     def test_buildProtocolFactoryArguments(self):
         """
         Arguments passed to the factory are passed to protocol on
@@ -222,4 +205,4 @@ class XmlStreamFactoryMixinTests(GenericXmlStreamFactoryTestsMixin):
         xs = self.factory.buildProtocol(None)
 
         self.assertEqual((None,), xs.args)
-        self.assertEqual({'test': None}, xs.kwargs)
+        self.assertEqual({"test": None}, xs.kwargs)

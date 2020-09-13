@@ -15,28 +15,29 @@ import os
 
 # errors
 
+
 class DirectoryExists(OSError):
     """
     Some directory exists when it shouldn't.
     """
-    pass
 
+    pass
 
 
 class DirectoryDoesntExist(OSError):
     """
     Some directory doesn't exist when it should.
     """
-    pass
 
+    pass
 
 
 class CommandFailed(OSError):
     pass
 
 
-
 # utilities
+
 
 def sh(command, null=True, prompt=False):
     """
@@ -47,7 +48,7 @@ def sh(command, null=True, prompt=False):
     print("--$", command)
 
     if prompt:
-        if input("run ?? ").startswith('n'):
+        if input("run ?? ").startswith("n"):
             return
     if null:
         command = "%s > /dev/null" % command
@@ -55,9 +56,8 @@ def sh(command, null=True, prompt=False):
         raise CommandFailed(command)
 
 
-
 def runChdirSafe(f, *args, **kw):
-    origdir = os.path.abspath('.')
+    origdir = os.path.abspath(".")
     try:
         return f(*args, **kw)
     finally:

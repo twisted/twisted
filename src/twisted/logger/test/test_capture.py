@@ -11,14 +11,12 @@ from twisted.trial.unittest import TestCase
 from .._capture import capturedLogs
 
 
-
 class LogCaptureTests(TestCase):
     """
     Tests for L{LogCaptureTests}.
     """
 
     log = Logger()
-
 
     def test_capture(self):
         """

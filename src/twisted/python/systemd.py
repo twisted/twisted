@@ -10,7 +10,7 @@ feature are supported.
 """
 
 
-__all__ = ['ListenFDs']
+__all__ = ["ListenFDs"]
 
 from os import getpid
 
@@ -31,6 +31,7 @@ class ListenFDs:
     @ivar _descriptors: A C{list} of C{int} giving the descriptors which were
         inherited.
     """
+
     _START = 3
 
     def __init__(self, descriptors):
@@ -39,7 +40,6 @@ class ListenFDs:
             C{inheritedDescriptors}.
         """
         self._descriptors = descriptors
-
 
     @classmethod
     def fromEnvironment(cls, environ=None, start=None):
@@ -65,21 +65,20 @@ class ListenFDs:
         descriptors = []
 
         try:
-            pid = int(environ['LISTEN_PID'])
+            pid = int(environ["LISTEN_PID"])
         except (KeyError, ValueError):
             pass
         else:
             if pid == getpid():
                 try:
-                    count = int(environ['LISTEN_FDS'])
+                    count = int(environ["LISTEN_FDS"])
                 except (KeyError, ValueError):
                     pass
                 else:
                     descriptors = range(start, start + count)
-                    del environ['LISTEN_PID'], environ['LISTEN_FDS']
+                    del environ["LISTEN_PID"], environ["LISTEN_FDS"]
 
         return cls(descriptors)
-
 
     def inheritedDescriptors(self):
         """

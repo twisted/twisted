@@ -22,6 +22,7 @@ class YieldFromTests(TestCase):
         """
         L{ensureDeferred} will turn a coroutine into a L{Deferred}.
         """
+
         def run():
             d = Deferred()
             d.callback("bar")
@@ -47,11 +48,11 @@ class YieldFromTests(TestCase):
         res = self.successResultOf(d)
         self.assertEqual(res, "foo")
 
-
     def test_basic(self):
         """
         L{ensureDeferred} allows a function to C{yield from} a L{Deferred}.
         """
+
         def run():
             d = Deferred()
             d.callback("foo")
@@ -62,12 +63,12 @@ class YieldFromTests(TestCase):
         res = self.successResultOf(d)
         self.assertEqual(res, "foo")
 
-
     def test_exception(self):
         """
         An exception in a generator wrapped with L{ensureDeferred} will cause
         the returned L{Deferred} to fire with a failure.
         """
+
         def run():
             d = Deferred()
             d.callback("foo")
@@ -78,7 +79,6 @@ class YieldFromTests(TestCase):
         res = self.failureResultOf(d)
         self.assertEqual(type(res.value), ValueError)
         self.assertEqual(res.value.args, ("Oh no!",))
-
 
     def test_twoDeep(self):
         """
@@ -95,7 +95,6 @@ class YieldFromTests(TestCase):
             yield from d
             sections.append(3)
             return "Yay!"
-
 
         def run():
             sections.append(1)
@@ -124,11 +123,11 @@ class YieldFromTests(TestCase):
         res = self.successResultOf(d)
         self.assertEqual(res, "Yay!")
 
-
     def test_reraise(self):
         """
         Yielding from an already failed Deferred will raise the exception.
         """
+
         def test():
             try:
                 yield from fail(ValueError("Boom"))
@@ -139,7 +138,6 @@ class YieldFromTests(TestCase):
 
         res = self.successResultOf(ensureDeferred(test()))
         self.assertEqual(res, 1)
-
 
     def test_chained(self):
         """

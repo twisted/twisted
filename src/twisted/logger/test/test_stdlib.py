@@ -31,9 +31,10 @@ def nextLine():
     @rtype: 2-L{tuple} of L{str}, L{int}
     """
     caller = currentframe(1)
-    return (getsourcefile(sys.modules[caller.f_globals['__name__']]),
-            caller.f_lineno + 1)
-
+    return (
+        getsourcefile(sys.modules[caller.f_globals["__name__"]]),
+        caller.f_lineno + 1,
+    )
 
 
 class STDLibLogObserverTests(unittest.TestCase):
@@ -51,7 +52,6 @@ class STDLibLogObserverTests(unittest.TestCase):
         except BrokenMethodImplementation as e:
             self.fail(e)
 
-
     def py_logger(self):
         """
         Create a logging object we can use to test with.
@@ -62,7 +62,6 @@ class STDLibLogObserverTests(unittest.TestCase):
         logger = StdlibLoggingContainer()
         self.addCleanup(logger.close)
         return logger
-
 
     def logEvent(self, *events):
         """
@@ -80,12 +79,12 @@ class STDLibLogObserverTests(unittest.TestCase):
         observer = STDLibLogObserver(
             # Add 1 to default stack depth to skip *this* frame, since
             # tests will want to know about their own frames.
-            stackDepth=STDLibLogObserver.defaultStackDepth + 1
+            stackDepth=STDLibLogObserver.defaultStackDepth
+            + 1
         )
         for event in events:
             observer(event)
         return pl.bufferedHandler.records, pl.outputAsText()
-
 
     def test_name(self):
         """
@@ -95,7 +94,6 @@ class STDLibLogObserverTests(unittest.TestCase):
 
         self.assertEqual(len(records), 1)
         self.assertEqual(records[0].name, "twisted")
-
 
     def test_levels(self):
         """
@@ -132,7 +130,6 @@ class STDLibLogObserverTests(unittest.TestCase):
         for i in range(len(records)):
             self.assertEqual(records[i].levelno, events[i]["py_levelno"])
 
-
     def test_callerInfo(self):
         """
         C{pathname}, C{lineno}, C{exc_info}, C{func} is set properly on
@@ -150,7 +147,6 @@ class STDLibLogObserverTests(unittest.TestCase):
         # documented.
         # self.assertEqual(records[0].func, "test_callerInfo")
 
-
     def test_basicFormat(self):
         """
         Basic formattable event passes the format along correctly.
@@ -159,9 +155,8 @@ class STDLibLogObserverTests(unittest.TestCase):
         records, output = self.logEvent(event)
 
         self.assertEqual(len(records), 1)
-        self.assertEqual(str(records[0].msg), u"Hello, dude!")
+        self.assertEqual(str(records[0].msg), "Hello, dude!")
         self.assertEqual(records[0].args, ())
-
 
     def test_basicFormatRendered(self):
         """
@@ -171,9 +166,7 @@ class STDLibLogObserverTests(unittest.TestCase):
         records, output = self.logEvent(event)
 
         self.assertEqual(len(records), 1)
-        self.assertTrue(output.endswith(u":Hello, dude!\n"),
-                        repr(output))
-
+        self.assertTrue(output.endswith(":Hello, dude!\n"), repr(output))
 
     def test_noFormat(self):
         """
@@ -184,24 +177,24 @@ class STDLibLogObserverTests(unittest.TestCase):
         self.assertEqual(len(records), 1)
         self.assertEqual(str(records[0].msg), "")
 
-
     def test_failure(self):
         """
         An event with a failure logs the failure details as well.
         """
+
         def failing_func():
             1 / 0
+
         try:
             failing_func()
         except ZeroDivisionError:
             failure = Failure()
-        event = dict(log_format='Hi mom', who='me', log_failure=failure)
+        event = dict(log_format="Hi mom", who="me", log_failure=failure)
         records, output = self.logEvent(event)
         self.assertEqual(len(records), 1)
-        self.assertIn(u'Hi mom', output)
-        self.assertIn(u'in failing_func', output)
-        self.assertIn(u'ZeroDivisionError', output)
-
+        self.assertIn("Hi mom", output)
+        self.assertIn("in failing_func", output)
+        self.assertIn("ZeroDivisionError", output)
 
     def test_cleanedFailure(self):
         """
@@ -209,20 +202,21 @@ class STDLibLogObserverTests(unittest.TestCase):
         logging such a failure still results in the exception details being
         logged.
         """
+
         def failing_func():
             1 / 0
+
         try:
             failing_func()
         except ZeroDivisionError:
             failure = Failure()
         failure.cleanFailure()
-        event = dict(log_format='Hi mom', who='me', log_failure=failure)
+        event = dict(log_format="Hi mom", who="me", log_failure=failure)
         records, output = self.logEvent(event)
         self.assertEqual(len(records), 1)
-        self.assertIn(u'Hi mom', output)
-        self.assertIn(u'in failing_func', output)
-        self.assertIn(u'ZeroDivisionError', output)
-
+        self.assertIn("Hi mom", output)
+        self.assertIn("in failing_func", output)
+        self.assertIn("ZeroDivisionError", output)
 
 
 class StdlibLoggingContainer:
@@ -242,7 +236,6 @@ class StdlibLoggingContainer:
         self.streamHandler, self.output = handlerAndBytesIO()
         self.rootLogger.addHandler(self.streamHandler)
 
-
     def close(self):
         """
         Close the logger.
@@ -253,7 +246,6 @@ class StdlibLoggingContainer:
         self.streamHandler.close()
         self.output.close()
 
-
     def outputAsText(self):
         """
         Get the output to the underlying stream as text.
@@ -262,7 +254,6 @@ class StdlibLoggingContainer:
         @rtype: L{unicode}
         """
         return self.output.getvalue().decode("utf-8")
-
 
 
 def handlerAndBytesIO():
@@ -283,7 +274,6 @@ def handlerAndBytesIO():
     return handler, output
 
 
-
 class BufferedHandler(py_logging.Handler):
     """
     A L{py_logging.Handler} that remembers all logged records in a list.
@@ -295,7 +285,6 @@ class BufferedHandler(py_logging.Handler):
         """
         py_logging.Handler.__init__(self)
         self.records = []
-
 
     def emit(self, record):
         """

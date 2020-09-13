@@ -15,7 +15,6 @@ from collections import defaultdict
 aFormatter = Formatter()
 
 
-
 class KeyFlattener:
     """
     A L{KeyFlattener} computes keys for the things within curly braces in
@@ -27,7 +26,6 @@ class KeyFlattener:
         Initialize a L{KeyFlattener}.
         """
         self.keys = defaultdict(lambda: 0)
-
 
     def flatKey(self, fieldName, formatSpec, conversion):
         """
@@ -47,20 +45,16 @@ class KeyFlattener:
             L{KeyFlattener}'s lifetime.
         @rtype: L{str}
         """
-        result = (
-            "{fieldName}!{conversion}:{formatSpec}"
-            .format(
-                fieldName=fieldName,
-                formatSpec=(formatSpec or ""),
-                conversion=(conversion or ""),
-            )
+        result = "{fieldName}!{conversion}:{formatSpec}".format(
+            fieldName=fieldName,
+            formatSpec=(formatSpec or ""),
+            conversion=(conversion or ""),
         )
         self.keys[result] += 1
         n = self.keys[result]
         if n != 1:
             result += "/" + str(self.keys[result])
         return result
-
 
 
 def flattenEvent(event):
@@ -82,8 +76,8 @@ def flattenEvent(event):
 
     keyFlattener = KeyFlattener()
 
-    for (literalText, fieldName, formatSpec, conversion) in (
-        aFormatter.parse(event["log_format"])
+    for (literalText, fieldName, formatSpec, conversion) in aFormatter.parse(
+        event["log_format"]
     ):
         if fieldName is None:
             continue
@@ -98,7 +92,7 @@ def flattenEvent(event):
             # We've already seen and handled this key
             continue
 
-        if fieldName.endswith(u"()"):
+        if fieldName.endswith("()"):
             fieldName = fieldName[:-2]
             callit = True
         else:
@@ -121,7 +115,6 @@ def flattenEvent(event):
 
     if fields:
         event["log_flattened"] = fields
-
 
 
 def extractField(field, event):
@@ -153,7 +146,6 @@ def extractField(field, event):
     return event["log_flattened"][key]
 
 
-
 def flatFormat(event):
     """
     Format an event which has been flattened with L{flattenEvent}.
@@ -171,7 +163,6 @@ def flatFormat(event):
     for literalText, fieldName, formatSpec, conversion in formatFields:
         s.append(literalText)
         if fieldName is not None:
-            key = keyFlattener.flatKey(
-                    fieldName, formatSpec, conversion or "s")
+            key = keyFlattener.flatKey(fieldName, formatSpec, conversion or "s")
             s.append(str(fieldValues[key]))
-    return u"".join(s)
+    return "".join(s)

@@ -51,86 +51,109 @@ if sys.version_info >= (3, 7, 0):
 else:
     _PY37PLUS = False
 
-if platform.python_implementation() == 'PyPy':
+if platform.python_implementation() == "PyPy":
     _PYPY = True
 else:
     _PYPY = False
 
 FileType = IOBase
 deprecatedModuleAttribute(
-    Version('Twisted', 'NEXT', 0, 0),
+    Version("Twisted", "NEXT", 0, 0),
     "Obsolete alias for io.IOBase",
-    __name__, 'FileType')
+    __name__,
+    "FileType",
+)
 
 frozenset = frozenset
 deprecatedModuleAttribute(
-    Version('Twisted', 'NEXT', 0, 0),
+    Version("Twisted", "NEXT", 0, 0),
     "Obsolete alias for frozenset builtin type",
-    __name__, 'frozenset')
+    __name__,
+    "frozenset",
+)
 
 InstanceType = object
 deprecatedModuleAttribute(
-    Version('Twisted', 'NEXT', 0, 0),
+    Version("Twisted", "NEXT", 0, 0),
     "Old-style classes don't exist in Python 3",
-    __name__, 'InstanceType')
+    __name__,
+    "InstanceType",
+)
 
 izip = zip
 deprecatedModuleAttribute(
-    Version('Twisted', 'NEXT', 0, 0),
+    Version("Twisted", "NEXT", 0, 0),
     "Obsolete alias for zip() builtin",
-    __name__, 'izip')
+    __name__,
+    "izip",
+)
 
 long = int
 deprecatedModuleAttribute(
-    Version('Twisted', 'NEXT', 0, 0),
+    Version("Twisted", "NEXT", 0, 0),
     "Obsolete alias for int builtin type",
-    __name__, 'long')
+    __name__,
+    "long",
+)
 
 range = range
 deprecatedModuleAttribute(
-    Version('Twisted', 'NEXT', 0, 0),
+    Version("Twisted", "NEXT", 0, 0),
     "Obsolete alias for range() builtin",
-    __name__, 'range')
+    __name__,
+    "range",
+)
 
 raw_input = input
 deprecatedModuleAttribute(
-    Version('Twisted', 'NEXT', 0, 0),
+    Version("Twisted", "NEXT", 0, 0),
     "Obsolete alias for input() builtin",
-    __name__, 'raw_input')
+    __name__,
+    "raw_input",
+)
 
 set = set
 deprecatedModuleAttribute(
-    Version('Twisted', 'NEXT', 0, 0),
+    Version("Twisted", "NEXT", 0, 0),
     "Obsolete alias for set builtin type",
-    __name__, 'set')
+    __name__,
+    "set",
+)
 
 StringType = str
 deprecatedModuleAttribute(
-    Version('Twisted', 'NEXT', 0, 0),
+    Version("Twisted", "NEXT", 0, 0),
     "Obsolete alias for str builtin type",
-    __name__, 'StringType')
+    __name__,
+    "StringType",
+)
 
 unichr = chr
 deprecatedModuleAttribute(
-    Version('Twisted', 'NEXT', 0, 0),
+    Version("Twisted", "NEXT", 0, 0),
     "Obsolete alias for chr() builtin",
-    __name__, 'unichr')
+    __name__,
+    "unichr",
+)
 
 unicode = str
 deprecatedModuleAttribute(
-    Version('Twisted', 'NEXT', 0, 0),
+    Version("Twisted", "NEXT", 0, 0),
     "Obsolete alias for str builtin type",
-    __name__, 'unicode')
+    __name__,
+    "unicode",
+)
 
 xrange = range
 deprecatedModuleAttribute(
-    Version('Twisted', 'NEXT', 0, 0),
+    Version("Twisted", "NEXT", 0, 0),
     "Obsolete alias for range() builtin",
-    __name__, 'xrange')
+    __name__,
+    "xrange",
+)
 
 
-
-@deprecated(Version('Twisted', 'NEXT', 0, 0), replacement="d.items()")
+@deprecated(Version("Twisted", "NEXT", 0, 0), replacement="d.items()")
 def iteritems(d):
     """
     Return an iterable of the items of C{d}.
@@ -141,8 +164,7 @@ def iteritems(d):
     return d.items()
 
 
-
-@deprecated(Version('Twisted', 'NEXT', 0, 0), replacement="d.values()")
+@deprecated(Version("Twisted", "NEXT", 0, 0), replacement="d.values()")
 def itervalues(d):
     """
     Return an iterable of the values of C{d}.
@@ -153,8 +175,7 @@ def itervalues(d):
     return d.values()
 
 
-
-@deprecated(Version('Twisted', 'NEXT', 0, 0), replacement="list(d.items())")
+@deprecated(Version("Twisted", "NEXT", 0, 0), replacement="list(d.items())")
 def items(d):
     """
     Return a list of the items of C{d}.
@@ -163,7 +184,6 @@ def items(d):
     @rtype: L{list}
     """
     return list(d.items())
-
 
 
 def currentframe(n=0):
@@ -182,7 +202,6 @@ def currentframe(n=0):
     for x in range(n + 1):
         f = f.f_back
     return f
-
 
 
 def execfile(filename, globals, locals=None):
@@ -204,7 +223,6 @@ def execfile(filename, globals, locals=None):
     exec(code, globals, locals)
 
 
-
 def cmp(a, b):
     """
     Compare two objects.
@@ -220,7 +238,6 @@ def cmp(a, b):
         return 1
 
 
-
 def comparable(klass):
     """
     Class decorator that ensures support for the special C{__cmp__} method.
@@ -228,12 +245,12 @@ def comparable(klass):
     C{__eq__}, C{__lt__}, etc. methods are added to the class, relying on
     C{__cmp__} to implement their comparisons.
     """
+
     def __eq__(self, other: object) -> bool:
         c = self.__cmp__(other)
         if c is NotImplemented:
             return c
         return c == 0
-
 
     def __ne__(self, other: object) -> bool:
         c = self.__cmp__(other)
@@ -241,13 +258,11 @@ def comparable(klass):
             return c
         return c != 0
 
-
     def __lt__(self, other: object) -> bool:
         c = self.__cmp__(other)
         if c is NotImplemented:
             return c
         return c < 0
-
 
     def __le__(self, other: object) -> bool:
         c = self.__cmp__(other)
@@ -255,13 +270,11 @@ def comparable(klass):
             return c
         return c <= 0
 
-
     def __gt__(self, other: object) -> bool:
         c = self.__cmp__(other)
         if c is NotImplemented:
             return c
         return c > 0
-
 
     def __ge__(self, other: object) -> bool:
         c = self.__cmp__(other)
@@ -276,7 +289,6 @@ def comparable(klass):
     klass.__eq__ = __eq__
     klass.__ne__ = __ne__
     return klass
-
 
 
 def ioType(fileIshObject, default=str):
@@ -315,8 +327,9 @@ def ioType(fileIshObject, default=str):
     if isinstance(fileIshObject, IOBase):
         # If it's for I/O but it's _not_ for text I/O, it's for bytes I/O.
         return bytes
-    encoding = getattr(fileIshObject, 'encoding', None)
+    encoding = getattr(fileIshObject, "encoding", None)
     import codecs
+
     if isinstance(fileIshObject, (codecs.StreamReader, codecs.StreamWriter)):
         # On StreamReaderWriter, the 'encoding' attribute has special meaning;
         # it is unambiguously text.
@@ -325,7 +338,6 @@ def ioType(fileIshObject, default=str):
         else:
             return bytes
     return default
-
 
 
 def nativeString(s):
@@ -344,7 +356,6 @@ def nativeString(s):
         # Ensure we're limited to ASCII subset:
         s.encode("ascii")
     return s
-
 
 
 def _matchingString(constantString, inputString):
@@ -378,9 +389,10 @@ def _matchingString(constantString, inputString):
         return otherType
 
 
-
-@deprecated(Version('Twisted', 'NEXT', 0, 0),
-            replacement="raise exception.with_traceback(traceback)")
+@deprecated(
+    Version("Twisted", "NEXT", 0, 0),
+    replacement="raise exception.with_traceback(traceback)",
+)
 def reraise(exception, traceback):
     """
     Re-raise an exception, with an optional traceback.
@@ -395,7 +407,6 @@ def reraise(exception, traceback):
     raise exception.with_traceback(traceback)
 
 
-
 def iterbytes(originalBytes):
     """
     Return an iterable wrapper for a C{bytes} object that provides the behavior
@@ -407,11 +418,10 @@ def iterbytes(originalBytes):
     @param originalBytes: A C{bytes} object that will be wrapped.
     """
     for i in range(len(originalBytes)):
-        yield originalBytes[i:i+1]
+        yield originalBytes[i : i + 1]
 
 
-
-@deprecated(Version('Twisted', 'NEXT', 0, 0), replacement="b'%d'")
+@deprecated(Version("Twisted", "NEXT", 0, 0), replacement="b'%d'")
 def intToBytes(i: int) -> bytes:
     """
     Convert the given integer into C{bytes}, as ASCII-encoded Arab numeral.
@@ -420,7 +430,6 @@ def intToBytes(i: int) -> bytes:
     @rtype: C{bytes}
     """
     return b"%d" % (i,)
-
 
 
 def lazyByteSlice(object, offset=0, size=None):
@@ -441,8 +450,7 @@ def lazyByteSlice(object, offset=0, size=None):
     if size is None:
         return view[offset:]
     else:
-        return view[offset:(offset + size)]
-
+        return view[offset : (offset + size)]
 
 
 def networkString(s: str) -> bytes:
@@ -464,11 +472,10 @@ def networkString(s: str) -> bytes:
     """
     if not isinstance(s, str):
         raise TypeError("Can only convert strings to bytes")
-    return s.encode('ascii')
+    return s.encode("ascii")
 
 
-
-@deprecated(Version('Twisted', 'NEXT', 0, 0), replacement="os.environb")
+@deprecated(Version("Twisted", "NEXT", 0, 0), replacement="os.environb")
 def bytesEnviron():
     """
     Return a L{dict} of L{os.environ} where all text-strings are encoded into
@@ -482,7 +489,6 @@ def bytesEnviron():
         target[os.environ.encodekey(x)] = os.environ.encodevalue(y)
 
     return target
-
 
 
 def _constructMethod(cls, name, self):
@@ -505,7 +511,6 @@ def _constructMethod(cls, name, self):
     return _MethodType(func, self)
 
 
-
 def _get_async_param(isAsync=None, **kwargs):
     """
     Provide a backwards-compatible way to get async param value that does not
@@ -522,16 +527,17 @@ def _get_async_param(isAsync=None, **kwargs):
     @return: Final isAsync param value
     @rtype: L{bool}
     """
-    if 'async' in kwargs:
+    if "async" in kwargs:
         warnings.warn(
             "'async' keyword argument is deprecated, please use isAsync",
-            DeprecationWarning, stacklevel=2)
-    if isAsync is None and 'async' in kwargs:
-        isAsync = kwargs.pop('async')
+            DeprecationWarning,
+            stacklevel=2,
+        )
+    if isAsync is None and "async" in kwargs:
+        isAsync = kwargs.pop("async")
     if kwargs:
         raise TypeError
     return bool(isAsync)
-
 
 
 def _pypy3BlockingHack():
@@ -554,62 +560,72 @@ def _pypy3BlockingHack():
             return realFromFD(fd, family, type, *passproto)
         finally:
             fcntl(fd, F_SETFL, flags)
+
     realFromFD = socket.fromfd
     if realFromFD.__name__ == fromFDWithoutModifyingFlags.__name__:
         return
     socket.fromfd = fromFDWithoutModifyingFlags
 
 
-
 _pypy3BlockingHack()
 
 
-
 deprecatedModuleAttribute(
-    Version('Twisted', 'NEXT', 0, 0),
+    Version("Twisted", "NEXT", 0, 0),
     "Use functools.reduce() directly",
-    __name__, 'reduce')
+    __name__,
+    "reduce",
+)
 
 deprecatedModuleAttribute(
-    Version('Twisted', 'NEXT', 0, 0),
+    Version("Twisted", "NEXT", 0, 0),
     "Use io.StringIO directly",
-    __name__, 'NativeStringIO')
+    __name__,
+    "NativeStringIO",
+)
 
 deprecatedModuleAttribute(
-    Version('Twisted', 'NEXT', 0, 0),
+    Version("Twisted", "NEXT", 0, 0),
     "Import urllib.parse directly",
-    __name__, 'urllib_parse')
+    __name__,
+    "urllib_parse",
+)
 
 deprecatedModuleAttribute(
-    Version('Twisted', 'NEXT', 0, 0),
-    "Use html.escape directly",
-    __name__, 'escape')
+    Version("Twisted", "NEXT", 0, 0), "Use html.escape directly", __name__, "escape"
+)
 
 deprecatedModuleAttribute(
-    Version('Twisted', 'NEXT', 0, 0),
+    Version("Twisted", "NEXT", 0, 0),
     "Use urllib.parse.quote() directly",
-    __name__, 'urlquote')
+    __name__,
+    "urlquote",
+)
 
 deprecatedModuleAttribute(
-    Version('Twisted', 'NEXT', 0, 0),
+    Version("Twisted", "NEXT", 0, 0),
     "Use urllib.parse.unquote() directly",
-    __name__, 'urlunquote')
+    __name__,
+    "urlunquote",
+)
 
 deprecatedModuleAttribute(
-    Version('Twisted', 'NEXT', 0, 0),
+    Version("Twisted", "NEXT", 0, 0),
     "Use http.cookiejar directly",
-    __name__, 'cookielib')
+    __name__,
+    "cookielib",
+)
 
 deprecatedModuleAttribute(
-    Version('Twisted', 'NEXT', 0, 0),
-    "Use sys.intern() directly",
-    __name__, 'intern')
+    Version("Twisted", "NEXT", 0, 0), "Use sys.intern() directly", __name__, "intern"
+)
 
 deprecatedModuleAttribute(
-    Version('Twisted', 'NEXT', 0, 0),
+    Version("Twisted", "NEXT", 0, 0),
     "Use collections.abc.Sequence directly",
-    __name__, 'Sequence')
-
+    __name__,
+    "Sequence",
+)
 
 
 __all__ = [
