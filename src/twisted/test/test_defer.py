@@ -1421,7 +1421,7 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         self.assertEqual(len(tb), 3)
         self.assertIn("test_defer", tb[2][0])
         self.assertEqual("getDivisionFailure", tb[2][2])
-        self.assertEqual("1/0", tb[2][3])
+        self.assertEqual("1 / 0", tb[2][3])
 
         self.assertIn("test_defer", tb[0][0])
         self.assertEqual("test_inlineCallbacksTracebacks", tb[0][2])
