@@ -70,13 +70,22 @@ Some of these tests may fail if you:
 * run them as root.
 
 
-Static Code checkers
+Static Code Checkers
 --------------------
 
-You can ensure that code complies to Twisted coding standards::
+You can ensure that code complies to Twisted `coding standards <https://twistedmatrix.com/documents/current/core/development/policy/coding-standard.html>`_::
 
-  $ tox -e lint   # run pyflakes and pycodestyle to check code against coding standards
-  $ tox -e mypy   # run mypy static type checker to check for type errors
+  $ tox -e lint   # run pyflakes to check syntax
+  $ tox -e black  # run Black to check against coding standard
+  $ tox -e mypy   # run MyPy static type checker to check for type errors
+
+To automatically format code according to the coding standards::
+
+  $ tox -e black-reformat
+
+Or, for speed, specify exactly what to format::
+
+  $ tox -e black-reformat -- path/to/file.py
 
 
 Copyright
