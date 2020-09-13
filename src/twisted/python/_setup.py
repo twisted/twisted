@@ -38,12 +38,11 @@ import os
 import platform
 import re
 import sys
-
 from distutils.command import build_ext
 from distutils.errors import CompileError
+
 from setuptools import Extension, find_packages
 from setuptools.command.build_py import build_py
-
 
 STATIC_PACKAGE_METADATA = dict(
     name="Twisted",
@@ -69,6 +68,9 @@ STATIC_PACKAGE_METADATA = dict(
     python_requires=">=3.5",
 )
 
+_test = [
+    "PyHamcrest >= 1.9.0",
+]
 
 _dev = [
     "pyflakes >= 1.0.0",
@@ -77,10 +79,10 @@ _dev = [
     "sphinx >= 1.3.1",
     "towncrier >= 17.4.0",
     "twistedchecker >= 0.7.2",
-    "PyHamcrest >= 1.9.0",
 ]
 
 _EXTRA_OPTIONS = dict(
+    test=_test,
     dev=_dev,
     tls=[
         "pyopenssl >= 16.0.0",
@@ -103,7 +105,8 @@ _EXTRA_OPTIONS = dict(
 )
 
 _PLATFORM_INDEPENDENT = (
-    _EXTRA_OPTIONS["tls"]
+    _EXTRA_OPTIONS["test"]
+    + _EXTRA_OPTIONS["tls"]
     + _EXTRA_OPTIONS["conch"]
     + _EXTRA_OPTIONS["serial"]
     + _EXTRA_OPTIONS["http2"]
@@ -111,6 +114,7 @@ _PLATFORM_INDEPENDENT = (
 )
 
 _EXTRAS_REQUIRE = {
+    "test": _EXTRA_OPTIONS["test"],
     "dev": _EXTRA_OPTIONS["dev"],
     "tls": _EXTRA_OPTIONS["tls"],
     "conch": _EXTRA_OPTIONS["conch"],
