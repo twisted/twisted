@@ -1206,10 +1206,15 @@ class Request:
 
             for name, values in self.responseHeaders.getAllRawHeaders():
                 for value in values:
-                    if (self.method == b"CONNECT" and self.code // 100 == 2 and
-                        name == b"Content-Length"):
-                        self._log.info("Warning: Removing Content-Length"
-                                " header in response to CONNECT request")
+                    if (
+                        self.method == b"CONNECT"
+                        and self.code // 100 == 2
+                        and name == b"Content-Length"
+                    ):
+                        self._log.info(
+                            "Warning: Removing Content-Length"
+                            " header in response to CONNECT request"
+                        )
                         continue
                     headers.append((name, value))
 

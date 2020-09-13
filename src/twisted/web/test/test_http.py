@@ -3679,11 +3679,16 @@ class ConnectRequestTests(unittest.TestCase, ResponseTestMixin):
 
         self.assertResponseEquals(
             transport.value(),
-            [(b"HTTP/1.1 200 OK",
-              b"Version: HTTP/1.1",
-              b"Request: example.org:443",
-              b"Command: CONNECT",
-              b"'''\nNone\n'''")])
+            [
+                (
+                    b"HTTP/1.1 200 OK",
+                    b"Version: HTTP/1.1",
+                    b"Request: example.org:443",
+                    b"Command: CONNECT",
+                    b"'''\nNone\n'''",
+                )
+            ],
+        )
 
 
 def sub(keys, d):
