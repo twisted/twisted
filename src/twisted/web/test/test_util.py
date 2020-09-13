@@ -180,23 +180,27 @@ class FailureElementTests(TestCase):
         source = [
             " \N{NO-BREAK SPACE} \N{NO-BREAK SPACE}message = " '"This is a problem"',
             " \N{NO-BREAK SPACE} \N{NO-BREAK SPACE}raise Exception(message)",
-            "# Figure out the line number from which the exception will be " "raised.",
+            "",
         ]
         d = flattenString(None, element)
-        stringToCheckFor = "".join(
-            [
-                '<div class="snippet%sLine"><span>%d</span><span>%s</span>'
-                "</div>"
-                % (
+
+        stringToCheckFor = ""
+        for (lineNumber, sourceLine) in enumerate(source):
+            template = '<div class="snippet{}Line"><span>{}</span><span>{}</span></div>'
+            if lineNumber <= 1:
+                stringToCheckFor += template.format(
                     ["", "Highlight"][lineNumber == 1],
                     self.base + lineNumber,
                     (" \N{NO-BREAK SPACE}" * 4 + sourceLine),
                 )
-                for (lineNumber, sourceLine) in enumerate(source)
-            ]
-        ).encode("utf8")
+            else:
+                stringToCheckFor += template.format(
+                    "", self.base + lineNumber, ("" + sourceLine)
+                )
 
-        d.addCallback(self.assertEqual, stringToCheckFor)
+        bytesToCheckFor = stringToCheckFor.encode("utf8")
+
+        d.addCallback(self.assertEqual, bytesToCheckFor)
         return d
 
     def test_frameElementFilename(self):
