@@ -25,9 +25,9 @@ class ProxyInfo:
     """
 
     __slots__ = (
-        'header',
-        'source',
-        'destination',
+        "header",
+        "source",
+        "destination",
     )
 
     def __init__(self, header, source, destination):

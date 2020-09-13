@@ -7,13 +7,11 @@ Helpers for URI and method injection tests.
 import string
 
 
-UNPRINTABLE_ASCII = (
-    frozenset(range(0, 128)) -
-    frozenset(bytearray(string.printable, 'ascii'))
+UNPRINTABLE_ASCII = frozenset(range(0, 128)) - frozenset(
+    bytearray(string.printable, "ascii")
 )
 
 NONASCII = frozenset(range(128, 256))
-
 
 
 class MethodInjectionTestsMixin:
@@ -40,7 +38,6 @@ class MethodInjectionTestsMixin:
         """
         raise NotImplementedError()
 
-
     def test_methodWithCLRFRejected(self):
         """
         Issuing a request with a method that contains a carriage
@@ -50,7 +47,6 @@ class MethodInjectionTestsMixin:
             method = b"GET\r\nX-Injected-Header: value"
             self.attemptRequestWithMaliciousMethod(method)
         self.assertRegex(str(cm.exception), "^Invalid method")
-
 
     def test_methodWithUnprintableASCIIRejected(self):
         """
@@ -63,7 +59,6 @@ class MethodInjectionTestsMixin:
                 self.attemptRequestWithMaliciousMethod(method)
             self.assertRegex(str(cm.exception), "^Invalid method")
 
-
     def test_methodWithNonASCIIRejected(self):
         """
         Issuing a request with a method that contains non-ASCII
@@ -74,7 +69,6 @@ class MethodInjectionTestsMixin:
             with self.assertRaises(ValueError) as cm:
                 self.attemptRequestWithMaliciousMethod(method)
             self.assertRegex(str(cm.exception), "^Invalid method")
-
 
 
 class URIInjectionTestsMixin:
@@ -97,7 +91,6 @@ class URIInjectionTestsMixin:
         """
         raise NotImplementedError()
 
-
     def test_hostWithCRLFRejected(self):
         """
         Issuing a request with a URI whose host contains a carriage
@@ -107,7 +100,6 @@ class URIInjectionTestsMixin:
             uri = b"http://twisted\r\n.invalid/path"
             self.attemptRequestWithMaliciousURI(uri)
         self.assertRegex(str(cm.exception), "^Invalid URI")
-
 
     def test_hostWithWithUnprintableASCIIRejected(self):
         """
@@ -120,7 +112,6 @@ class URIInjectionTestsMixin:
                 self.attemptRequestWithMaliciousURI(uri)
             self.assertRegex(str(cm.exception), "^Invalid URI")
 
-
     def test_hostWithNonASCIIRejected(self):
         """
         Issuing a request with a URI whose host contains non-ASCII
@@ -132,7 +123,6 @@ class URIInjectionTestsMixin:
                 self.attemptRequestWithMaliciousURI(uri)
             self.assertRegex(str(cm.exception), "^Invalid URI")
 
-
     def test_pathWithCRLFRejected(self):
         """
         Issuing a request with a URI whose path contains a carriage
@@ -142,7 +132,6 @@ class URIInjectionTestsMixin:
             uri = b"http://twisted.invalid/\r\npath"
             self.attemptRequestWithMaliciousURI(uri)
         self.assertRegex(str(cm.exception), "^Invalid URI")
-
 
     def test_pathWithWithUnprintableASCIIRejected(self):
         """
@@ -154,7 +143,6 @@ class URIInjectionTestsMixin:
             with self.assertRaises(ValueError) as cm:
                 self.attemptRequestWithMaliciousURI(uri)
             self.assertRegex(str(cm.exception), "^Invalid URI")
-
 
     def test_pathWithNonASCIIRejected(self):
         """

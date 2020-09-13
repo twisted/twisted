@@ -15,7 +15,6 @@ from . import IWorker
 from ._convenience import Quit
 
 
-
 class Statistics:
     """
     Statistics about a L{Team}'s current activity.
@@ -32,12 +31,10 @@ class Statistics:
     @type backloggedWorkCount: L{int}
     """
 
-    def __init__(self, idleWorkerCount, busyWorkerCount,
-                 backloggedWorkCount):
+    def __init__(self, idleWorkerCount, busyWorkerCount, backloggedWorkCount):
         self.idleWorkerCount = idleWorkerCount
         self.busyWorkerCount = busyWorkerCount
         self.backloggedWorkCount = backloggedWorkCount
-
 
 
 @implementer(IWorker)
@@ -99,7 +96,6 @@ class Team:
         self._shouldQuitCoordinator = False
         self._toShrink = 0
 
-
     def statistics(self):
         """
         Gather information on the current status of this L{Team}.
@@ -107,7 +103,6 @@ class Team:
         @return: a L{Statistics} describing the current state of this L{Team}.
         """
         return Statistics(len(self._idle), self._busyCount, len(self._pending))
-
 
     def grow(self, n):
         """
@@ -117,6 +112,7 @@ class Team:
         @type n: L{int}
         """
         self._quit.check()
+
         @self._coordinator.do
         def createOneWorker():
             for x in range(n):
@@ -124,7 +120,6 @@ class Team:
                 if worker is None:
                     return
                 self._recycleWorker(worker)
-
 
     def shrink(self, n=None):
         """
@@ -136,7 +131,6 @@ class Team:
         """
         self._quit.check()
         self._coordinator.do(lambda: self._quitIdlers(n))
-
 
     def _quitIdlers(self, n=None):
         """
@@ -154,7 +148,6 @@ class Team:
         if self._shouldQuitCoordinator and self._busyCount == 0:
             self._coordinator.quit()
 
-
     def do(self, task):
         """
         Perform some work in a worker created by C{createWorker}.
@@ -163,7 +156,6 @@ class Team:
         """
         self._quit.check()
         self._coordinator.do(lambda: self._coordinateThisTask(task))
-
 
     def _coordinateThisTask(self, task):
         """
@@ -175,14 +167,14 @@ class Team:
         @param task: the task to dispatch
         @type task: 0-argument callable
         """
-        worker = (self._idle.pop() if self._idle
-                  else self._createWorker())
+        worker = self._idle.pop() if self._idle else self._createWorker()
         if worker is None:
             # The createWorker method may return None if we're out of resources
             # to create workers.
             self._pending.append(task)
             return
         self._busyCount += 1
+
         @worker.do
         def doWork():
             try:
@@ -194,7 +186,6 @@ class Team:
             def idleAndPending():
                 self._busyCount -= 1
                 self._recycleWorker(worker)
-
 
     def _recycleWorker(self, worker):
         """
@@ -216,7 +207,6 @@ class Team:
             self._toShrink -= 1
             self._idle.remove(worker)
             worker.quit()
-
 
     def quit(self):
         """

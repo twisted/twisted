@@ -35,10 +35,8 @@ except ImportError:
 else:
     sendmsg = _sendmsg
 
-if not hasattr(socket, 'AF_UNIX'):
+if not hasattr(socket, "AF_UNIX"):
     raise ImportError("UNIX sockets not supported on this platform")
-
-
 
 
 def _ancillaryDescriptor(fd):
@@ -48,7 +46,6 @@ def _ancillaryDescriptor(fd):
     """
     packed = struct.pack("i", fd)
     return [(socket.SOL_SOCKET, sendmsg.SCM_RIGHTS, packed)]
-
 
 
 class _SendmsgMixin:
@@ -76,7 +73,6 @@ class _SendmsgMixin:
     def __init__(self):
         self._sendmsgQueue = []
 
-
     def _isSendBufferFull(self):
         """
         Determine whether the user-space send buffer for this transport is full
@@ -96,10 +92,11 @@ class _SendmsgMixin:
         # However, since we send only one byte per file descriptor, having lots
         # of elements in _sendmsgQueue incurs more overhead and perhaps slows
         # things down.  Anyway, try this for now, maybe rethink it later.
-        return (
-            len(self._sendmsgQueue) > self._fileDescriptorBufferSize
-            or self._writeSomeDataBase._isSendBufferFull(self))
-
+        return len(
+            self._sendmsgQueue
+        ) > self._fileDescriptorBufferSize or self._writeSomeDataBase._isSendBufferFull(
+            self
+        )
 
     def sendFileDescriptor(self, fileno):
         """
@@ -108,7 +105,6 @@ class _SendmsgMixin:
         self._sendmsgQueue.append(fileno)
         self._maybePauseProducer()
         self.startWriting()
-
 
     def writeSomeData(self, data):
         """
@@ -132,8 +128,11 @@ class _SendmsgMixin:
                 fd = self._sendmsgQueue[index]
                 try:
                     untilConcludes(
-                        sendmsg.sendmsg, self.socket, data[index:index+1],
-                        _ancillaryDescriptor(fd))
+                        sendmsg.sendmsg,
+                        self.socket,
+                        data[index : index + 1],
+                        _ancillaryDescriptor(fd),
+                    )
                 except socket.error as se:
                     if se.args[0] in (EWOULDBLOCK, ENOBUFS):
                         return index
@@ -153,7 +152,6 @@ class _SendmsgMixin:
         except TypeError:
             return result
 
-
     def doRead(self):
         """
         Calls {IProtocol.dataReceived} with all available data and
@@ -167,7 +165,8 @@ class _SendmsgMixin:
         """
         try:
             data, ancillary, flags = untilConcludes(
-                sendmsg.recvmsg, self.socket, self.bufferSize)
+                sendmsg.recvmsg, self.socket, self.bufferSize
+            )
         except socket.error as se:
             if se.args[0] == EWOULDBLOCK:
                 return
@@ -175,8 +174,7 @@ class _SendmsgMixin:
                 return main.CONNECTION_LOST
 
         for cmsgLevel, cmsgType, cmsgData in ancillary:
-            if (cmsgLevel == socket.SOL_SOCKET and
-                cmsgType == sendmsg.SCM_RIGHTS):
+            if cmsgLevel == socket.SOL_SOCKET and cmsgType == sendmsg.SCM_RIGHTS:
                 self._ancillaryLevelSOLSOCKETTypeSCMRIGHTS(cmsgData)
             else:
                 log.msg(
@@ -184,14 +182,16 @@ class _SendmsgMixin:
                         "%(protocolName)s (on %(hostAddress)r) "
                         "received unsupported ancillary data "
                         "(level=%(cmsgLevel)r, type=%(cmsgType)r) "
-                        "from %(peerAddress)r."),
-                    hostAddress=self.getHost(), peerAddress=self.getPeer(),
+                        "from %(peerAddress)r."
+                    ),
+                    hostAddress=self.getHost(),
+                    peerAddress=self.getPeer(),
                     protocolName=self._getLogPrefix(self.protocol),
-                    cmsgLevel=cmsgLevel, cmsgType=cmsgType,
+                    cmsgLevel=cmsgLevel,
+                    cmsgType=cmsgType,
                 )
 
         return self._dataReceived(data)
-
 
     def _ancillaryLevelSOLSOCKETTypeSCMRIGHTS(self, cmsgData):
         """
@@ -207,7 +207,7 @@ class _SendmsgMixin:
         """
 
         fdCount = len(cmsgData) // 4
-        fds = struct.unpack('i'*fdCount, cmsgData)
+        fds = struct.unpack("i" * fdCount, cmsgData)
         if interfaces.IFileDescriptorReceiver.providedBy(self.protocol):
             for fd in fds:
                 self.protocol.fileDescriptorReceived(fd)
@@ -216,8 +216,10 @@ class _SendmsgMixin:
                 format=(
                     "%(protocolName)s (on %(hostAddress)r) does not "
                     "provide IFileDescriptorReceiver; closing file "
-                    "descriptor received (from %(peerAddress)r)."),
-                hostAddress=self.getHost(), peerAddress=self.getPeer(),
+                    "descriptor received (from %(peerAddress)r)."
+                ),
+                hostAddress=self.getHost(),
+                peerAddress=self.getPeer(),
                 protocolName=self._getLogPrefix(self.protocol),
             )
             for fd in fds:
@@ -231,12 +233,10 @@ class _UnsupportedSendmsgMixin:
     """
 
 
-
 if sendmsg:
     _SendmsgMixin = _SendmsgMixin
 else:
     _SendmsgMixin = _UnsupportedSendmsgMixin  # type: ignore[assignment,misc]
-
 
 
 @implementer(interfaces.IUNIXTransport)
@@ -246,7 +246,9 @@ class Server(_SendmsgMixin, tcp.Server):
 
     def __init__(self, sock, protocol, client, server, sessionno, reactor):
         _SendmsgMixin.__init__(self)
-        tcp.Server.__init__(self, sock, protocol, (client, None), server, sessionno, reactor)
+        tcp.Server.__init__(
+            self, sock, protocol, (client, None), server, sessionno, reactor
+        )
 
     @classmethod
     def _fromConnectedSocket(cls, fileDescriptor, factory, reactor):
@@ -276,9 +278,15 @@ class Server(_SendmsgMixin, tcp.Server):
         sessionno = 0
         self = cls(skt, proto, skt.getpeername(), None, sessionno, reactor)
         self.repstr = "<%s #%s on %s>" % (
-            self.protocol.__class__.__name__, self.sessionno, skt.getsockname())
+            self.protocol.__class__.__name__,
+            self.sessionno,
+            skt.getsockname(),
+        )
         self.logstr = "%s,%s,%s" % (
-            self.protocol.__class__.__name__, self.sessionno, skt.getsockname())
+            self.protocol.__class__.__name__,
+            self.sessionno,
+            skt.getsockname(),
+        )
         proto.makeConnection(self)
         return self
 
@@ -287,7 +295,6 @@ class Server(_SendmsgMixin, tcp.Server):
 
     def getPeer(self):
         return address.UNIXAddress(self.hostname or None)
-
 
 
 def _inFilesystemNamespace(path):
@@ -300,7 +307,7 @@ def _inFilesystemNamespace(path):
     path is stored in the filesystem and C{False} if the path is in this
     abstract namespace.
     """
-    return path[:1] not in (b"\0", u"\0")
+    return path[:1] not in (b"\0", "\0")
 
 
 class _UNIXPort:
@@ -313,7 +320,6 @@ class _UNIXPort:
         return address.UNIXAddress(self.socket.getsockname())
 
 
-
 class Port(_UNIXPort, tcp.Port):
     addressFamily = socket.AF_UNIX
     socketType = socket.SOCK_STREAM
@@ -321,10 +327,12 @@ class Port(_UNIXPort, tcp.Port):
     transport = Server
     lockFile = None
 
-    def __init__(self, fileName, factory, backlog=50, mode=0o666, reactor=None,
-                 wantPID = 0):
-        tcp.Port.__init__(self, self._buildAddr(fileName).name, factory,
-                          backlog, reactor=reactor)
+    def __init__(
+        self, fileName, factory, backlog=50, mode=0o666, reactor=None, wantPID=0
+    ):
+        tcp.Port.__init__(
+            self, self._buildAddr(fileName).name, factory, backlog, reactor=reactor
+        )
         self.mode = mode
         self.wantPID = wantPID
         self._preexistingSocket = None
@@ -350,11 +358,13 @@ class Port(_UNIXPort, tcp.Port):
 
     def __repr__(self) -> str:
         factoryName = reflect.qual(self.factory.__class__)
-        if hasattr(self, 'socket'):
-            return '<%s on %r>' % (
-                factoryName, _coerceToFilesystemEncoding('', self.port))
+        if hasattr(self, "socket"):
+            return "<%s on %r>" % (
+                factoryName,
+                _coerceToFilesystemEncoding("", self.port),
+            )
         else:
-            return '<%s (not listening)>' % (factoryName,)
+            return "<%s (not listening)>" % (factoryName,)
 
     def _buildAddr(self, name):
         return address.UNIXAddress(name)
@@ -367,14 +377,17 @@ class Port(_UNIXPort, tcp.Port):
         server to begin listening on the specified port.
         """
         tcp._reservedFD.reserve()
-        log.msg("%s starting on %r" % (
-            self._getLogPrefix(self.factory),
-            _coerceToFilesystemEncoding('', self.port)))
+        log.msg(
+            "%s starting on %r"
+            % (
+                self._getLogPrefix(self.factory),
+                _coerceToFilesystemEncoding("", self.port),
+            )
+        )
         if self.wantPID:
             self.lockFile = lockfile.FilesystemLock(self.port + b".lock")
             if not self.lockFile.lock():
-                raise error.CannotListenError(None, self.port,
-                                              "Cannot acquire lock")
+                raise error.CannotListenError(None, self.port, "Cannot acquire lock")
             else:
                 if not self.lockFile.clean:
                     try:
@@ -410,14 +423,19 @@ class Port(_UNIXPort, tcp.Port):
             self.numberAccepts = 100
             self.startReading()
 
-
     def _logConnectionLostMsg(self):
         """
         Log message for closing socket
         """
-        log.msg('(UNIX Port %s Closed)' % (
-            _coerceToFilesystemEncoding('', self.port,)))
-
+        log.msg(
+            "(UNIX Port %s Closed)"
+            % (
+                _coerceToFilesystemEncoding(
+                    "",
+                    self.port,
+                )
+            )
+        )
 
     def connectionLost(self, reason):
         if _inFilesystemNamespace(self.port):
@@ -427,15 +445,15 @@ class Port(_UNIXPort, tcp.Port):
         tcp.Port.connectionLost(self, reason)
 
 
-
 @implementer(interfaces.IUNIXTransport)
 class Client(_SendmsgMixin, tcp.BaseClient):
     """A client for Unix sockets."""
+
     addressFamily = socket.AF_UNIX
     socketType = socket.SOCK_STREAM
     _writeSomeDataBase = tcp.BaseClient
 
-    def __init__(self, filename, connector, reactor=None, checkPID = 0):
+    def __init__(self, filename, connector, reactor=None, checkPID=0):
         _SendmsgMixin.__init__(self)
         # Normalise the filename using UNIXAddress
         filename = address.UNIXAddress(filename).name
@@ -443,8 +461,7 @@ class Client(_SendmsgMixin, tcp.BaseClient):
         self.realAddress = self.addr = filename
         if checkPID and not lockfile.isLocked(filename + b".lock"):
             self._finishInit(None, None, error.BadFileError(filename), reactor)
-        self._finishInit(self.doConnect, self.createInternetSocket(),
-                         None, reactor)
+        self._finishInit(self.doConnect, self.createInternetSocket(), None, reactor)
 
     def getPeer(self):
         return address.UNIXAddress(self.addr)
@@ -475,24 +492,25 @@ class DatagramPort(_UNIXPort, udp.Port):
     addressFamily = socket.AF_UNIX
 
     def __init__(self, addr, proto, maxPacketSize=8192, mode=0o666, reactor=None):
-        """Initialize with address to listen on.
-        """
-        udp.Port.__init__(self, addr, proto, maxPacketSize=maxPacketSize, reactor=reactor)
+        """Initialize with address to listen on."""
+        udp.Port.__init__(
+            self, addr, proto, maxPacketSize=maxPacketSize, reactor=reactor
+        )
         self.mode = mode
 
-
     def __repr__(self) -> str:
-        protocolName = reflect.qual(self.protocol.__class__,)
-        if hasattr(self, 'socket'):
-            return '<%s on %r>' % (protocolName, self.port)
+        protocolName = reflect.qual(
+            self.protocol.__class__,
+        )
+        if hasattr(self, "socket"):
+            return "<%s on %r>" % (protocolName, self.port)
         else:
-            return '<%s (not listening)>' % (protocolName,)
-
+            return "<%s (not listening)>" % (protocolName,)
 
     def _bindSocket(self):
-        log.msg("%s starting on %s"%(self.protocol.__class__, repr(self.port)))
+        log.msg("%s starting on %s" % (self.protocol.__class__, repr(self.port)))
         try:
-            skt = self.createInternetSocket() # XXX: haha misnamed method
+            skt = self.createInternetSocket()  # XXX: haha misnamed method
             if self.port:
                 skt.bind(self.port)
         except socket.error as le:
@@ -523,9 +541,8 @@ class DatagramPort(_UNIXPort, udp.Port):
                 raise
 
     def connectionLost(self, reason=None):
-        """Cleans up my socket.
-        """
-        log.msg('(Port %s Closed)' % repr(self.port))
+        """Cleans up my socket."""
+        log.msg("(Port %s Closed)" % repr(self.port))
         base.BasePort.connectionLost(self, reason)
         if hasattr(self, "protocol"):
             # we won't have attribute in ConnectedPort, in cases
@@ -543,20 +560,26 @@ class DatagramPort(_UNIXPort, udp.Port):
         self.logstr = reflect.qual(self.protocol.__class__) + " (UDP)"
 
 
-
-@implementer_only(interfaces.IUNIXDatagramConnectedTransport,
-                  *(implementedBy(base.BasePort)))
+@implementer_only(
+    interfaces.IUNIXDatagramConnectedTransport, *(implementedBy(base.BasePort))
+)
 class ConnectedDatagramPort(DatagramPort):
     """
     A connected datagram UNIX socket.
     """
-    def __init__(self, addr, proto, maxPacketSize=8192, mode=0o666,
-                 bindAddress=None, reactor=None):
-        assert isinstance(proto, protocol.ConnectedDatagramProtocol)
-        DatagramPort.__init__(self, bindAddress, proto, maxPacketSize, mode,
-                              reactor)
-        self.remoteaddr = addr
 
+    def __init__(
+        self,
+        addr,
+        proto,
+        maxPacketSize=8192,
+        mode=0o666,
+        bindAddress=None,
+        reactor=None,
+    ):
+        assert isinstance(proto, protocol.ConnectedDatagramProtocol)
+        DatagramPort.__init__(self, bindAddress, proto, maxPacketSize, mode, reactor)
+        self.remoteaddr = addr
 
     def startListening(self):
         try:
@@ -565,7 +588,6 @@ class ConnectedDatagramPort(DatagramPort):
             self._connectToProtocol()
         except:
             self.connectionFailed(failure.Failure())
-
 
     def connectionFailed(self, reason):
         """
@@ -577,7 +599,6 @@ class ConnectedDatagramPort(DatagramPort):
         self.stopListening()
         self.protocol.connectionFailed(reason)
         del self.protocol
-
 
     def doRead(self):
         """
@@ -600,7 +621,6 @@ class ConnectedDatagramPort(DatagramPort):
             except:
                 log.deferr()
 
-
     def write(self, data):
         """
         Write a datagram.
@@ -622,7 +642,6 @@ class ConnectedDatagramPort(DatagramPort):
                 pass
             else:
                 raise
-
 
     def getPeer(self):
         return address.UNIXAddress(self.remoteaddr)

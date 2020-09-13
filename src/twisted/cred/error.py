@@ -6,10 +6,8 @@ Cred errors.
 """
 
 
-
 class Unauthorized(Exception):
     """Standard unauthorized error."""
-
 
 
 class LoginFailed(Exception):
@@ -18,11 +16,8 @@ class LoginFailed(Exception):
     """
 
 
-
 class UnauthorizedLogin(LoginFailed, Unauthorized):
-    """The user was not authorized to log in.
-    """
-
+    """The user was not authorized to log in."""
 
 
 class UnhandledCredentials(LoginFailed):
@@ -31,7 +26,6 @@ class UnhandledCredentials(LoginFailed):
     connected to a Portal without a CredentialChecker that can check all of its
     potential authentication strategies.
     """
-
 
 
 class LoginDenied(LoginFailed):

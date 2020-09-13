@@ -16,9 +16,9 @@ class Foo:
     """
     Helper class.
     """
-    def __init__(self):
-        self.instance_member = 'test-value'
 
+    def __init__(self):
+        self.instance_member = "test-value"
 
     def method(self):
         """
@@ -27,12 +27,10 @@ class Foo:
         return self.instance_member
 
 
-
 class Bar:
     """
     Helper class.
     """
-
 
 
 def sampleFunction():
@@ -41,9 +39,7 @@ def sampleFunction():
     """
 
 
-
 lambdaExample = lambda x: x
-
 
 
 class UniversalPicklingErrorTests(unittest.TestCase):
@@ -57,15 +53,12 @@ class UniversalPicklingErrorTests(unittest.TestCase):
         """
         raise _UniversalPicklingError
 
-
     def test_handledByPickleModule(self):
         """
         Handling L{pickle.PicklingError} handles
         L{_UniversalPicklingError}.
         """
-        self.assertRaises(pickle.PicklingError,
-                          self.raise_UniversalPicklingError)
-
+        self.assertRaises(pickle.PicklingError, self.raise_UniversalPicklingError)
 
 
 class UnpickleMethodTests(unittest.TestCase):
@@ -79,10 +72,9 @@ class UnpickleMethodTests(unittest.TestCase):
         instance passed to it.
         """
         foo = Foo()
-        m = unpickleMethod('method', foo, Foo)
+        m = unpickleMethod("method", foo, Foo)
         self.assertEqual(m, foo.method)
         self.assertIsNot(m, foo.method)
-
 
     def test_instanceCopyMethod(self):
         """
@@ -93,10 +85,9 @@ class UnpickleMethodTests(unittest.TestCase):
         m = copy.copy(foo.method)
         self.assertEqual(m, foo.method)
         self.assertIsNot(m, foo.method)
-        self.assertEqual('test-value', m())
-        foo.instance_member = 'new-value'
-        self.assertEqual('new-value', m())
-
+        self.assertEqual("test-value", m())
+        foo.instance_member = "new-value"
+        self.assertEqual("new-value", m())
 
     def test_instanceBuildingNameNotPresent(self):
         """
@@ -105,10 +96,9 @@ class UnpickleMethodTests(unittest.TestCase):
         and returns a bound method from there.
         """
         foo = Foo()
-        m = unpickleMethod('method', foo, Bar)
+        m = unpickleMethod("method", foo, Bar)
         self.assertEqual(m, foo.method)
         self.assertIsNot(m, foo.method)
-
 
     def test_copyFunction(self):
         """
@@ -118,20 +108,18 @@ class UnpickleMethodTests(unittest.TestCase):
         f = copy.copy(sampleFunction)
         self.assertEqual(f, sampleFunction)
 
-
     def test_primeDirective(self):
         """
         We do not contaminate normal function pickling with concerns from
         Twisted.
         """
-        def expected(n):
-            return "\n".join([
-                    "c" + __name__,
-                    sampleFunction.__name__, "p" + n, "."
-                ]).encode("ascii")
-        self.assertEqual(pickle.dumps(sampleFunction, protocol=0),
-                         expected("0"))
 
+        def expected(n):
+            return "\n".join(
+                ["c" + __name__, sampleFunction.__name__, "p" + n, "."]
+            ).encode("ascii")
+
+        self.assertEqual(pickle.dumps(sampleFunction, protocol=0), expected("0"))
 
     def test_lambdaRaisesPicklingError(self):
         """

@@ -49,10 +49,11 @@ if ssl and not ssl.supported:
 STREAM_AUTHD_EVENT = intern("//event/stream/authd")
 INIT_FAILED_EVENT = intern("//event/xmpp/initfailed")
 
-NS_STREAMS = 'http://etherx.jabber.org/streams'
-NS_XMPP_TLS = 'urn:ietf:params:xml:ns:xmpp-tls'
+NS_STREAMS = "http://etherx.jabber.org/streams"
+NS_XMPP_TLS = "urn:ietf:params:xml:ns:xmpp-tls"
 
 Reset = object()
+
 
 def hashPassword(sid, password):
     """
@@ -67,9 +68,8 @@ def hashPassword(sid, password):
         raise TypeError("The session identifier must be a unicode object")
     if not isinstance(password, str):
         raise TypeError("The password must be a unicode object")
-    input = u"%s%s" % (sid, password)
-    return sha1(input.encode('utf-8')).hexdigest()
-
+    input = "%s%s" % (sid, password)
+    return sha1(input.encode("utf-8")).hexdigest()
 
 
 class Authenticator:
@@ -98,7 +98,6 @@ class Authenticator:
     def __init__(self):
         self.xmlstream = None
 
-
     def connectionMade(self):
         """
         Called by the XmlStream when the underlying socket connection is
@@ -111,7 +110,6 @@ class Authenticator:
         Subclasses can use self.xmlstream.send() to send any initial data to
         the peer.
         """
-
 
     def streamStarted(self, rootElement):
         """
@@ -140,7 +138,6 @@ class Authenticator:
 
         self.xmlstream.version = min(self.xmlstream.version, version)
 
-
     def associateWithStream(self, xmlstream):
         """
         Called by the XmlStreamFactory when a connection has been made
@@ -158,7 +155,6 @@ class Authenticator:
         self.xmlstream = xmlstream
 
 
-
 class ConnectAuthenticator(Authenticator):
     """
     Authenticator for initiating entities.
@@ -169,12 +165,10 @@ class ConnectAuthenticator(Authenticator):
     def __init__(self, otherHost):
         self.otherHost = otherHost
 
-
     def connectionMade(self):
         self.xmlstream.namespace = self.namespace
         self.xmlstream.otherEntity = jid.internJID(self.otherHost)
         self.xmlstream.sendHeader()
-
 
     def initializeStream(self):
         """
@@ -223,7 +217,6 @@ class ConnectAuthenticator(Authenticator):
         d.addCallback(do_next)
         d.addErrback(self.xmlstream.dispatch, INIT_FAILED_EVENT)
 
-
     def streamStarted(self, rootElement):
         """
         Called by the XmlStream when the stream has started.
@@ -242,6 +235,7 @@ class ConnectAuthenticator(Authenticator):
 
         # Setup observer for stream features, if applicable
         if self.xmlstream.version >= (1, 0):
+
             def onFeatures(element):
                 features = {}
                 for feature in element.elements():
@@ -250,12 +244,11 @@ class ConnectAuthenticator(Authenticator):
                 self.xmlstream.features = features
                 self.initializeStream()
 
-            self.xmlstream.addOnetimeObserver('/features[@xmlns="%s"]' %
-                                                  NS_STREAMS,
-                                              onFeatures)
+            self.xmlstream.addOnetimeObserver(
+                '/features[@xmlns="%s"]' % NS_STREAMS, onFeatures
+            )
         else:
             self.initializeStream()
-
 
 
 class ListenAuthenticator(Authenticator):
@@ -275,7 +268,6 @@ class ListenAuthenticator(Authenticator):
         Authenticator.associateWithStream(self, xmlstream)
         self.xmlstream.initiating = False
 
-
     def streamStarted(self, rootElement):
         """
         Called by the XmlStream when the stream has started.
@@ -294,8 +286,7 @@ class ListenAuthenticator(Authenticator):
         for prefix, uri in rootElement.localPrefixes.items():
             self.xmlstream.prefixes[uri] = prefix
 
-        self.xmlstream.sid = hexlify(randbytes.secureRandom(8)).decode('ascii')
-
+        self.xmlstream.sid = hexlify(randbytes.secureRandom(8)).decode("ascii")
 
 
 class FeatureNotAdvertized(Exception):
@@ -303,7 +294,6 @@ class FeatureNotAdvertized(Exception):
     Exception indicating a stream feature was not advertized, while required by
     the initiating entity.
     """
-
 
 
 @implementer(ijabber.IInitiatingInitializer)
@@ -328,7 +318,6 @@ class BaseFeatureInitiatingInitializer:
         self.xmlstream = xs
         self.required = required
 
-
     def initialize(self):
         """
         Initiate the initialization.
@@ -347,7 +336,6 @@ class BaseFeatureInitiatingInitializer:
         else:
             return None
 
-
     def start(self):
         """
         Start the actual initialization.
@@ -356,19 +344,16 @@ class BaseFeatureInitiatingInitializer:
         """
 
 
-
 class TLSError(Exception):
     """
     TLS base exception.
     """
 
 
-
 class TLSFailed(TLSError):
     """
     Exception indicating failed TLS negotiation
     """
-
 
 
 class TLSRequired(TLSError):
@@ -380,7 +365,6 @@ class TLSRequired(TLSError):
     """
 
 
-
 class TLSNotSupported(TLSError):
     """
     Exception indicating missing TLS support.
@@ -388,7 +372,6 @@ class TLSNotSupported(TLSError):
     This exception is raised when the initiating entity wants and requires to
     negotiate TLS when the OpenSSL library is not available.
     """
-
 
 
 class TLSInitiatingInitializer(BaseFeatureInitiatingInitializer):
@@ -405,7 +388,7 @@ class TLSInitiatingInitializer(BaseFeatureInitiatingInitializer):
     @type wanted: C{bool}
     """
 
-    feature = (NS_XMPP_TLS, 'starttls')
+    feature = (NS_XMPP_TLS, "starttls")
     wanted = True
     _deferred = None
     _configurationForTLS = None
@@ -422,17 +405,15 @@ class TLSInitiatingInitializer(BaseFeatureInitiatingInitializer):
         @type configurationForTLS: L{IOpenSSLClientConnectionCreator} or
             C{None}
         """
-        super(TLSInitiatingInitializer, self).__init__(
-                xs, required=required)
+        super(TLSInitiatingInitializer, self).__init__(xs, required=required)
         self._configurationForTLS = configurationForTLS
-
 
     def onProceed(self, obj):
         """
         Proceed with TLS negotiation and reset the XML stream.
         """
 
-        self.xmlstream.removeObserver('/failure', self.onFailure)
+        self.xmlstream.removeObserver("/failure", self.onFailure)
         if self._configurationForTLS:
             ctx = self._configurationForTLS
         else:
@@ -442,11 +423,9 @@ class TLSInitiatingInitializer(BaseFeatureInitiatingInitializer):
         self.xmlstream.sendHeader()
         self._deferred.callback(Reset)
 
-
     def onFailure(self, obj):
-        self.xmlstream.removeObserver('/proceed', self.onProceed)
+        self.xmlstream.removeObserver("/proceed", self.onProceed)
         self._deferred.errback(TLSFailed())
-
 
     def start(self):
         """
@@ -479,7 +458,6 @@ class TLSInitiatingInitializer(BaseFeatureInitiatingInitializer):
         self.xmlstream.addOnetimeObserver("/failure", self.onFailure)
         self.xmlstream.send(domish.Element((NS_XMPP_TLS, "starttls")))
         return self._deferred
-
 
 
 class XmlStream(xmlstream.XmlStream):
@@ -515,18 +493,18 @@ class XmlStream(xmlstream.XmlStream):
     """
 
     version = (1, 0)
-    namespace = 'invalid'
+    namespace = "invalid"
     thisEntity = None
     otherEntity = None
     sid = None
     initiating = True
 
-    _headerSent = False     # True if the stream header has been sent
+    _headerSent = False  # True if the stream header has been sent
 
     def __init__(self, authenticator):
         xmlstream.XmlStream.__init__(self)
 
-        self.prefixes = {NS_STREAMS: 'stream'}
+        self.prefixes = {NS_STREAMS: "stream"}
         self.authenticator = authenticator
         self.initializers = []
         self.features = {}
@@ -534,11 +512,10 @@ class XmlStream(xmlstream.XmlStream):
         # Reset the authenticator
         authenticator.associateWithStream(self)
 
-
     def _callLater(self, *args, **kwargs):
         from twisted.internet import reactor
-        return reactor.callLater(*args, **kwargs)
 
+        return reactor.callLater(*args, **kwargs)
 
     def reset(self):
         """
@@ -551,7 +528,6 @@ class XmlStream(xmlstream.XmlStream):
         self._headerSent = False
         self._initializeStream()
 
-
     def onStreamError(self, errelem):
         """
         Called when a stream:error element has been received.
@@ -562,10 +538,10 @@ class XmlStream(xmlstream.XmlStream):
         @param errelem: The received error element.
         @type errelem: L{domish.Element}
         """
-        self.dispatch(failure.Failure(error.exceptionFromStreamError(errelem)),
-                      STREAM_ERROR_EVENT)
+        self.dispatch(
+            failure.Failure(error.exceptionFromStreamError(errelem)), STREAM_ERROR_EVENT
+        )
         self.transport.loseConnection()
-
 
     def sendHeader(self):
         """
@@ -577,31 +553,30 @@ class XmlStream(xmlstream.XmlStream):
             if uri != NS_STREAMS:
                 localPrefixes[prefix] = uri
 
-        rootElement = domish.Element((NS_STREAMS, 'stream'), self.namespace,
-                                     localPrefixes=localPrefixes)
+        rootElement = domish.Element(
+            (NS_STREAMS, "stream"), self.namespace, localPrefixes=localPrefixes
+        )
 
         if self.otherEntity:
-            rootElement['to'] = self.otherEntity.userhost()
+            rootElement["to"] = self.otherEntity.userhost()
 
         if self.thisEntity:
-            rootElement['from'] = self.thisEntity.userhost()
+            rootElement["from"] = self.thisEntity.userhost()
 
         if not self.initiating and self.sid:
-            rootElement['id'] = self.sid
+            rootElement["id"] = self.sid
 
         if self.version >= (1, 0):
-            rootElement['version'] = "%d.%d" % self.version
+            rootElement["version"] = "%d.%d" % self.version
 
         self.send(rootElement.toXml(prefixes=self.prefixes, closeElement=0))
         self._headerSent = True
-
 
     def sendFooter(self):
         """
         Send stream footer.
         """
-        self.send('</stream:stream>')
-
+        self.send("</stream:stream>")
 
     def sendStreamError(self, streamError):
         """
@@ -625,7 +600,6 @@ class XmlStream(xmlstream.XmlStream):
 
         self.transport.loseConnection()
 
-
     def send(self, obj):
         """
         Send data over the stream.
@@ -636,12 +610,13 @@ class XmlStream(xmlstream.XmlStream):
         it represents a direct child of the stream's root element.
         """
         if domish.IElement.providedBy(obj):
-            obj = obj.toXml(prefixes=self.prefixes,
-                            defaultUri=self.namespace,
-                            prefixesInScope=list(self.prefixes.values()))
+            obj = obj.toXml(
+                prefixes=self.prefixes,
+                defaultUri=self.namespace,
+                prefixesInScope=list(self.prefixes.values()),
+            )
 
         xmlstream.XmlStream.send(self, obj)
-
 
     def connectionMade(self):
         """
@@ -651,7 +626,6 @@ class XmlStream(xmlstream.XmlStream):
         """
         xmlstream.XmlStream.connectionMade(self)
         self.authenticator.connectionMade()
-
 
     def onDocumentStart(self, rootElement):
         """
@@ -677,11 +651,9 @@ class XmlStream(xmlstream.XmlStream):
         xmlstream.XmlStream.onDocumentStart(self, rootElement)
 
         # Setup observer for stream errors
-        self.addOnetimeObserver("/error[@xmlns='%s']" % NS_STREAMS,
-                                self.onStreamError)
+        self.addOnetimeObserver("/error[@xmlns='%s']" % NS_STREAMS, self.onStreamError)
 
         self.authenticator.streamStarted(rootElement)
-
 
 
 class XmlStreamFactory(xmlstream.XmlStreamFactory):
@@ -700,9 +672,7 @@ class XmlStreamFactory(xmlstream.XmlStreamFactory):
         self.authenticator = authenticator
 
 
-
-class XmlStreamServerFactory(xmlstream.BootstrapMixin,
-                             protocol.ServerFactory):
+class XmlStreamServerFactory(xmlstream.BootstrapMixin, protocol.ServerFactory):
     """
     Factory for Jabber XmlStream objects as a server.
 
@@ -718,7 +688,6 @@ class XmlStreamServerFactory(xmlstream.BootstrapMixin,
         xmlstream.BootstrapMixin.__init__(self)
         self.authenticatorFactory = authenticatorFactory
 
-
     def buildProtocol(self, addr):
         """
         Create an instance of XmlStream.
@@ -733,13 +702,11 @@ class XmlStreamServerFactory(xmlstream.BootstrapMixin,
         return xs
 
 
-
 class TimeoutError(Exception):
     """
     Exception raised when no IQ response has been received before the
     configured timeout.
     """
-
 
 
 def upgradeWithIQResponseTracker(xs):
@@ -751,11 +718,12 @@ def upgradeWithIQResponseTracker(xs):
     failure that holds a L{StanzaError<error.StanzaError>} that is
     easier to examine.
     """
+
     def callback(iq):
         """
         Handle iq response by firing associated deferred.
         """
-        if getattr(iq, 'handled', False):
+        if getattr(iq, "handled", False):
             return
 
         try:
@@ -765,11 +733,10 @@ def upgradeWithIQResponseTracker(xs):
         else:
             del xs.iqDeferreds[iq["id"]]
             iq.handled = True
-            if iq['type'] == 'error':
+            if iq["type"] == "error":
                 d.errback(error.exceptionFromStanza(iq))
             else:
                 d.callback(iq)
-
 
     def disconnected(_):
         """
@@ -785,12 +752,11 @@ def upgradeWithIQResponseTracker(xs):
             d.errback(ConnectionLost())
 
     xs.iqDeferreds = {}
-    xs.iqDefaultTimeout = getattr(xs, 'iqDefaultTimeout', None)
+    xs.iqDefaultTimeout = getattr(xs, "iqDefaultTimeout", None)
     xs.addObserver(xmlstream.STREAM_END_EVENT, disconnected)
     xs.addObserver('/iq[@type="result"]', callback)
     xs.addObserver('/iq[@type="error"]', callback)
     directlyProvides(xs, ijabber.IIQResponseTracker)
-
 
 
 class IQ(domish.Element):
@@ -822,7 +788,6 @@ class IQ(domish.Element):
         self["type"] = stanzaType
         self._xmlstream = xmlstream
 
-
     def send(self, to=None):
         """
         Send out this iq.
@@ -842,12 +807,13 @@ class IQ(domish.Element):
             upgradeWithIQResponseTracker(self._xmlstream)
 
         d = defer.Deferred()
-        self._xmlstream.iqDeferreds[self['id']] = d
+        self._xmlstream.iqDeferreds[self["id"]] = d
 
         timeout = self.timeout or self._xmlstream.iqDefaultTimeout
         if timeout is not None:
+
             def onTimeout():
-                del self._xmlstream.iqDeferreds[self['id']]
+                del self._xmlstream.iqDeferreds[self["id"]]
                 d.errback(TimeoutError("IQ timed out"))
 
             call = self._xmlstream._callLater(timeout, onTimeout)
@@ -862,7 +828,6 @@ class IQ(domish.Element):
 
         self._xmlstream.send(self)
         return d
-
 
 
 def toResponse(stanza, stanzaType=None):
@@ -881,22 +846,21 @@ def toResponse(stanza, stanzaType=None):
     @rtype: L{domish.Element}
     """
 
-    toAddr = stanza.getAttribute('from')
-    fromAddr = stanza.getAttribute('to')
-    stanzaID = stanza.getAttribute('id')
+    toAddr = stanza.getAttribute("from")
+    fromAddr = stanza.getAttribute("to")
+    stanzaID = stanza.getAttribute("id")
 
     response = domish.Element((None, stanza.name))
     if toAddr:
-        response['to'] = toAddr
+        response["to"] = toAddr
     if fromAddr:
-        response['from'] = fromAddr
+        response["from"] = fromAddr
     if stanzaID:
-        response['id'] = stanzaID
+        response["id"] = stanzaID
     if stanzaType:
-        response['type'] = stanzaType
+        response["type"] = stanzaType
 
     return response
-
 
 
 @implementer(ijabber.IXMPPHandler)
@@ -912,21 +876,17 @@ class XMPPHandler:
         self.parent = None
         self.xmlstream = None
 
-
     def setHandlerParent(self, parent):
         self.parent = parent
         self.parent.addHandler(self)
-
 
     def disownHandlerParent(self, parent):
         self.parent.removeHandler(self)
         self.parent = None
 
-
     def makeConnection(self, xs):
         self.xmlstream = xs
         self.connectionMade()
-
 
     def connectionMade(self):
         """
@@ -934,7 +894,6 @@ class XMPPHandler:
 
         Can be overridden to perform work before stream initialization.
         """
-
 
     def connectionInitialized(self):
         """
@@ -944,7 +903,6 @@ class XMPPHandler:
         set up observers and start exchanging XML stanzas.
         """
 
-
     def connectionLost(self, reason):
         """
         The XML stream has been closed.
@@ -953,7 +911,6 @@ class XMPPHandler:
         act on it.
         """
         self.xmlstream = None
-
 
     def send(self, obj):
         """
@@ -973,7 +930,6 @@ class XMPPHandler:
         self.parent.send(obj)
 
 
-
 @implementer(ijabber.IXMPPHandlerCollection)
 class XMPPHandlerCollection:
     """
@@ -990,13 +946,11 @@ class XMPPHandlerCollection:
     def __init__(self):
         self.handlers = []
 
-
     def __iter__(self):
         """
         Act as a container for handlers.
         """
         return iter(self.handlers)
-
 
     def addHandler(self, handler):
         """
@@ -1006,13 +960,11 @@ class XMPPHandlerCollection:
         """
         self.handlers.append(handler)
 
-
     def removeHandler(self, handler):
         """
         Remove protocol handler.
         """
         self.handlers.remove(handler)
-
 
 
 class StreamManager(XMPPHandlerCollection):
@@ -1050,7 +1002,6 @@ class StreamManager(XMPPHandlerCollection):
         factory.addBootstrap(STREAM_END_EVENT, self._disconnected)
         self.factory = factory
 
-
     def addHandler(self, handler):
         """
         Add protocol handler.
@@ -1066,7 +1017,6 @@ class StreamManager(XMPPHandlerCollection):
             handler.makeConnection(self.xmlstream)
             handler.connectionInitialized()
 
-
     def _connected(self, xs):
         """
         Called when the transport connection has been established.
@@ -1075,6 +1025,7 @@ class StreamManager(XMPPHandlerCollection):
         and call each handler's C{makeConnection} method with the L{XmlStream}
         instance.
         """
+
         def logDataIn(buf):
             log.msg("RECV: %r" % buf)
 
@@ -1089,7 +1040,6 @@ class StreamManager(XMPPHandlerCollection):
 
         for e in self:
             e.makeConnection(xs)
-
 
     def _authd(self, xs):
         """
@@ -1109,7 +1059,6 @@ class StreamManager(XMPPHandlerCollection):
         for e in self:
             e.connectionInitialized()
 
-
     def initializationFailed(self, reason):
         """
         Called when stream initialization has failed.
@@ -1122,7 +1071,6 @@ class StreamManager(XMPPHandlerCollection):
                        failed.
         @type reason: L{failure.Failure}
         """
-
 
     def _disconnected(self, reason):
         """
@@ -1140,7 +1088,6 @@ class StreamManager(XMPPHandlerCollection):
         for e in self:
             e.connectionLost(reason)
 
-
     def send(self, obj):
         """
         Send data over the XML stream.
@@ -1157,14 +1104,35 @@ class StreamManager(XMPPHandlerCollection):
             self._packetQueue.append(obj)
 
 
-
-__all__ = ['Authenticator', 'BaseFeatureInitiatingInitializer',
-           'ConnectAuthenticator', 'FeatureNotAdvertized',
-           'INIT_FAILED_EVENT', 'IQ', 'ListenAuthenticator', 'NS_STREAMS',
-           'NS_XMPP_TLS', 'Reset', 'STREAM_AUTHD_EVENT',
-           'STREAM_CONNECTED_EVENT', 'STREAM_END_EVENT', 'STREAM_ERROR_EVENT',
-           'STREAM_START_EVENT', 'StreamManager', 'TLSError', 'TLSFailed',
-           'TLSInitiatingInitializer', 'TLSNotSupported', 'TLSRequired',
-           'TimeoutError', 'XMPPHandler', 'XMPPHandlerCollection', 'XmlStream',
-           'XmlStreamFactory', 'XmlStreamServerFactory', 'hashPassword',
-           'toResponse', 'upgradeWithIQResponseTracker']
+__all__ = [
+    "Authenticator",
+    "BaseFeatureInitiatingInitializer",
+    "ConnectAuthenticator",
+    "FeatureNotAdvertized",
+    "INIT_FAILED_EVENT",
+    "IQ",
+    "ListenAuthenticator",
+    "NS_STREAMS",
+    "NS_XMPP_TLS",
+    "Reset",
+    "STREAM_AUTHD_EVENT",
+    "STREAM_CONNECTED_EVENT",
+    "STREAM_END_EVENT",
+    "STREAM_ERROR_EVENT",
+    "STREAM_START_EVENT",
+    "StreamManager",
+    "TLSError",
+    "TLSFailed",
+    "TLSInitiatingInitializer",
+    "TLSNotSupported",
+    "TLSRequired",
+    "TimeoutError",
+    "XMPPHandler",
+    "XMPPHandlerCollection",
+    "XmlStream",
+    "XmlStreamFactory",
+    "XmlStreamServerFactory",
+    "hashPassword",
+    "toResponse",
+    "upgradeWithIQResponseTracker",
+]

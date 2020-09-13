@@ -10,7 +10,6 @@ An API for storing HTTP header names and values.
 from twisted.python.compat import comparable, cmp
 
 
-
 def _dashCapitalize(name):
     """
     Return a byte string which is capitalized using '-' as a word separator.
@@ -21,8 +20,7 @@ def _dashCapitalize(name):
     @return: The given header capitalized using '-' as a word separator.
     @rtype: L{bytes}
     """
-    return b'-'.join([word.capitalize() for word in name.split(b'-')])
-
+    return b"-".join([word.capitalize() for word in name.split(b"-")])
 
 
 def _sanitizeLinearWhitespace(headerComponent):
@@ -37,8 +35,7 @@ def _sanitizeLinearWhitespace(headerComponent):
     @return: The sanitized header key or value.
     @rtype: L{bytes}
     """
-    return b' '.join(headerComponent.splitlines())
-
+    return b" ".join(headerComponent.splitlines())
 
 
 @comparable
@@ -63,14 +60,16 @@ class Headers:
     @ivar _rawHeaders: A L{dict} mapping header names as L{bytes} to L{list}s of
         header values as L{bytes}.
     """
+
     _caseMappings = {
-        b'content-md5': b'Content-MD5',
-        b'dnt': b'DNT',
-        b'etag': b'ETag',
-        b'p3p': b'P3P',
-        b'te': b'TE',
-        b'www-authenticate': b'WWW-Authenticate',
-        b'x-xss-protection': b'X-XSS-Protection'}
+        b"content-md5": b"Content-MD5",
+        b"dnt": b"DNT",
+        b"etag": b"ETag",
+        b"p3p": b"P3P",
+        b"te": b"TE",
+        b"www-authenticate": b"WWW-Authenticate",
+        b"x-xss-protection": b"X-XSS-Protection",
+    }
 
     def __init__(self, rawHeaders=None):
         self._rawHeaders = {}
@@ -78,13 +77,14 @@ class Headers:
             for name, values in rawHeaders.items():
                 self.setRawHeaders(name, values)
 
-
     def __repr__(self) -> str:
         """
         Return a string fully describing the headers set on this object.
         """
-        return '%s(%r)' % (self.__class__.__name__, self._rawHeaders,)
-
+        return "%s(%r)" % (
+            self.__class__.__name__,
+            self._rawHeaders,
+        )
 
     def __cmp__(self, other):
         """
@@ -93,10 +93,9 @@ class Headers:
         """
         if isinstance(other, Headers):
             return cmp(
-                sorted(self._rawHeaders.items()),
-                sorted(other._rawHeaders.items()))
+                sorted(self._rawHeaders.items()), sorted(other._rawHeaders.items())
+            )
         return NotImplemented
-
 
     def _encodeName(self, name):
         """
@@ -110,9 +109,8 @@ class Headers:
         @rtype: L{bytes}
         """
         if isinstance(name, str):
-            return name.lower().encode('iso-8859-1')
+            return name.lower().encode("iso-8859-1")
         return name.lower()
-
 
     def _encodeValue(self, value):
         """
@@ -125,9 +123,8 @@ class Headers:
         @rtype: L{bytes}
         """
         if isinstance(value, str):
-            return value.encode('utf8')
+            return value.encode("utf8")
         return value
-
 
     def _encodeValues(self, values):
         """
@@ -146,7 +143,6 @@ class Headers:
             newValues.append(self._encodeValue(value))
         return newValues
 
-
     def _decodeValues(self, values):
         """
         Decode a L{list} of header values into a L{list} of Unicode strings.
@@ -160,9 +156,8 @@ class Headers:
         newValues = []
 
         for value in values:
-            newValues.append(value.decode('utf8'))
+            newValues.append(value.decode("utf8"))
         return newValues
-
 
     def copy(self):
         """
@@ -171,7 +166,6 @@ class Headers:
         @return: A new L{Headers}
         """
         return self.__class__(self._rawHeaders)
-
 
     def hasHeader(self, name):
         """
@@ -185,7 +179,6 @@ class Headers:
         """
         return self._encodeName(name) in self._rawHeaders
 
-
     def removeHeader(self, name):
         """
         Remove the named header from this header object.
@@ -196,7 +189,6 @@ class Headers:
         @return: L{None}
         """
         self._rawHeaders.pop(self._encodeName(name), None)
-
 
     def setRawHeaders(self, name, values):
         """
@@ -212,15 +204,17 @@ class Headers:
         @return: L{None}
         """
         if not isinstance(values, list):
-            raise TypeError("Header entry %r should be list but found "
-                            "instance of %r instead" % (name, type(values)))
+            raise TypeError(
+                "Header entry %r should be list but found "
+                "instance of %r instead" % (name, type(values))
+            )
 
         name = _sanitizeLinearWhitespace(self._encodeName(name))
-        encodedValues = [_sanitizeLinearWhitespace(v)
-                         for v in self._encodeValues(values)]
+        encodedValues = [
+            _sanitizeLinearWhitespace(v) for v in self._encodeValues(values)
+        ]
 
         self._rawHeaders[name] = self._encodeValues(encodedValues)
-
 
     def addRawHeader(self, name, value):
         """
@@ -240,7 +234,6 @@ class Headers:
             values = [value]
 
         self.setRawHeaders(name, values)
-
 
     def getRawHeaders(self, name, default=None):
         """
@@ -265,7 +258,6 @@ class Headers:
             return self._decodeValues(values)
         return values
 
-
     def getAllRawHeaders(self):
         """
         Return an iterator of key, value pairs of all headers contained in this
@@ -274,7 +266,6 @@ class Headers:
         """
         for k, v in self._rawHeaders.items():
             yield self._canonicalNameCaps(k), v
-
 
     def _canonicalNameCaps(self, name):
         """
@@ -290,5 +281,4 @@ class Headers:
         return self._caseMappings.get(name, _dashCapitalize(name))
 
 
-
-__all__ = ['Headers']
+__all__ = ["Headers"]

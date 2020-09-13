@@ -29,4 +29,4 @@ jobs:
     - name: Lint
       run: |
         python --version
-        tox -q || true  # TODO: Remove this once trunk has been formatted
+        tox -q

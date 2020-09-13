@@ -7,4 +7,5 @@ TwistedPortForward = ServiceMaker(
     "Twisted Port-Forwarding",
     "twisted.tap.portforward",
     "A simple port-forwarder.",
-    "portforward")
+    "portforward",
+)

@@ -16,7 +16,6 @@ from ._levels import InvalidLogLevelError, LogLevel
 from ._observer import ILogObserver
 
 
-
 class PredicateResult(Names):
     """
     Predicate results.
@@ -36,10 +35,10 @@ class PredicateResult(Names):
         if returned by the last predicate being considered, then the event will
         be logged.
     """
+
     yes = NamedConstant()
     no = NamedConstant()
     maybe = NamedConstant()
-
 
 
 class ILogFilterPredicate(Interface):
@@ -53,7 +52,6 @@ class ILogFilterPredicate(Interface):
 
         @returns: a L{PredicateResult}.
         """
-
 
 
 def shouldLogEvent(predicates, event):
@@ -92,7 +90,6 @@ def shouldLogEvent(predicates, event):
     return True
 
 
-
 @implementer(ILogObserver)
 class FilteringLogObserver:
     """
@@ -100,10 +97,7 @@ class FilteringLogObserver:
     based on applying a series of L{ILogFilterPredicate}s.
     """
 
-    def __init__(
-        self, observer, predicates,
-        negativeObserver=lambda event: None
-    ):
+    def __init__(self, observer, predicates, negativeObserver=lambda event: None):
         """
         @param observer: An observer to which this observer will forward
             events when C{predictates} yield a positive result.
@@ -121,7 +115,6 @@ class FilteringLogObserver:
         self._shouldLogEvent = partial(shouldLogEvent, list(predicates))
         self._negativeObserver = negativeObserver
 
-
     def __call__(self, event):
         """
         Forward to next observer if predicate allows it.
@@ -132,7 +125,6 @@ class FilteringLogObserver:
             self._observer(event)
         else:
             self._negativeObserver(event)
-
 
 
 @implementer(ILogFilterPredicate)
@@ -152,7 +144,6 @@ class LogLevelFilterPredicate:
         self._logLevelsByNamespace = {}
         self.defaultLogLevel = defaultLogLevel
         self.clearLogLevels()
-
 
     def logLevelForNamespace(self, namespace):
         """
@@ -187,7 +178,6 @@ class LogLevelFilterPredicate:
 
         return self._logLevelsByNamespace[None]
 
-
     def setLogLevelForNamespace(self, namespace, level):
         """
         Sets the log level for a logging namespace.
@@ -206,7 +196,6 @@ class LogLevelFilterPredicate:
         else:
             self._logLevelsByNamespace[None] = level
 
-
     def clearLogLevels(self):
         """
         Clears all log levels to the default.
@@ -214,17 +203,16 @@ class LogLevelFilterPredicate:
         self._logLevelsByNamespace.clear()
         self._logLevelsByNamespace[None] = self.defaultLogLevel
 
-
     def __call__(self, event):
-        eventLevel     = event.get("log_level", None)
+        eventLevel = event.get("log_level", None)
         namespace = event.get("log_namespace", None)
         namespaceLevel = self.logLevelForNamespace(namespace)
 
         if (
-            eventLevel is None or
-            namespace is None or
-            LogLevel._priorityForLevel(eventLevel) <
-            LogLevel._priorityForLevel(namespaceLevel)
+            eventLevel is None
+            or namespace is None
+            or LogLevel._priorityForLevel(eventLevel)
+            < LogLevel._priorityForLevel(namespaceLevel)
         ):
             return PredicateResult.no
 

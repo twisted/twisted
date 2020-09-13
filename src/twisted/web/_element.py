@@ -23,9 +23,9 @@ class Expose:
     @ivar attributeName: The attribute with which exposed methods will be
     tracked.
     """
+
     def __init__(self, doc=None):
         self.doc = doc
-
 
     def __call__(self, *funcObjs):
         """
@@ -58,12 +58,12 @@ class Expose:
         if not funcObjs:
             raise TypeError("expose() takes at least 1 argument (0 given)")
         for fObj in funcObjs:
-            fObj.exposedThrough = getattr(fObj, 'exposedThrough', [])
+            fObj.exposedThrough = getattr(fObj, "exposedThrough", [])
             fObj.exposedThrough.append(self)
         return funcObjs[0]
 
-
     _nodefault = object()
+
     def get(self, instance, methodName, default=_nodefault):
         """
         Retrieve an exposed method with the given name from the given instance.
@@ -75,13 +75,12 @@ class Expose:
         instance.
         """
         method = getattr(instance, methodName, None)
-        exposedThrough = getattr(method, 'exposedThrough', [])
+        exposedThrough = getattr(method, "exposedThrough", [])
         if self not in exposedThrough:
             if default is self._nodefault:
                 raise UnexposedMethodError(self, methodName)
             return default
         return method
-
 
     @classmethod
     def _withDocumentation(cls, thunk):
@@ -97,6 +96,7 @@ class Expose:
 # Avoid exposing the ugly, private classmethod name in the docs.  Luckily this
 # namespace is private already so this doesn't leak further.
 exposer = Expose._withDocumentation
+
 
 @exposer
 def renderer():
@@ -120,7 +120,6 @@ def renderer():
             <span>Hello, world.</span>
         </div>
     """
-
 
 
 @implementer(IRenderable)
@@ -151,12 +150,12 @@ class Element:
     @ivar loader: The factory which will be used to load documents to
         return from C{render}.
     """
+
     loader = None  # type: Optional[ITemplateLoader]
 
     def __init__(self, loader=None):
         if loader is not None:
             self.loader = loader
-
 
     def lookupRenderMethod(self, name):
         """
@@ -166,7 +165,6 @@ class Element:
         if method is None:
             raise MissingRenderMethod(self, name)
         return method
-
 
     def render(self, request):
         """

@@ -17,10 +17,7 @@ except ImportError:
 from twisted.trial import unittest
 
 from .._format import formatEvent
-from .._flatten import (
-    flattenEvent, extractField, KeyFlattener, aFormatter
-)
-
+from .._flatten import flattenEvent, extractField, KeyFlattener, aFormatter
 
 
 class FlatFormattingTests(unittest.TestCase):
@@ -49,8 +46,11 @@ class FlatFormattingTests(unittest.TestCase):
                 "strrepr: {string!r} "
                 "unistr: {unistr!s}"
             ),
-            callme=lambda: next(counter), object=Ephemeral(),
-            number=7, string="hello", unistr=u"ö"
+            callme=lambda: next(counter),
+            object=Ephemeral(),
+            number=7,
+            string="hello",
+            unistr="ö",
         )
 
         flattenEvent(event1)
@@ -62,44 +62,40 @@ class FlatFormattingTests(unittest.TestCase):
         self.assertEqual(
             formatEvent(event3),
             (
-                u"callable: 0 "
+                "callable: 0 "
                 "attribute: value "
                 "numrepr: 7 "
                 "numstr: 7 "
                 "strrepr: 'hello' "
-                u"unistr: ö"
-            )
+                "unistr: ö"
+            ),
         )
-
 
     def test_formatFlatEventBadFormat(self):
         """
         If the format string is invalid, an error is produced.
         """
         event1 = dict(
-            log_format=(
-                "strrepr: {string!X}"
-            ),
+            log_format=("strrepr: {string!X}"),
             string="hello",
         )
 
         flattenEvent(event1)
         event2 = json.loads(json.dumps(event1))
 
-        self.assertTrue(
-            formatEvent(event2).startswith(u"Unable to format event")
-        )
-
+        self.assertTrue(formatEvent(event2).startswith("Unable to format event"))
 
     def test_formatFlatEventWithMutatedFields(self):
         """
         L{formatEvent} will prefer the stored C{str()} or C{repr()} value for
         an object, in case the other version.
         """
+
         class Unpersistable:
             """
             Unpersitable object.
             """
+
             destructed = False
 
             def selfDestruct(self):
@@ -115,15 +111,12 @@ class FlatFormattingTests(unittest.TestCase):
                     return "un-persistable"
 
         up = Unpersistable()
-        event1 = dict(
-            log_format="unpersistable: {unpersistable}", unpersistable=up
-        )
+        event1 = dict(log_format="unpersistable: {unpersistable}", unpersistable=up)
 
         flattenEvent(event1)
         up.selfDestruct()
 
         self.assertEqual(formatEvent(event1), "unpersistable: un-persistable")
-
 
     def test_keyFlattening(self):
         """
@@ -138,9 +131,7 @@ class FlatFormattingTests(unittest.TestCase):
                 formatSpec,
                 conversion,
             ) in aFormatter.parse(format):
-                return KeyFlattener().flatKey(
-                    fieldName, formatSpec, conversion
-                )
+                return KeyFlattener().flatKey(fieldName, formatSpec, conversion)
 
         # No name
         try:
@@ -173,7 +164,6 @@ class FlatFormattingTests(unittest.TestCase):
         self.assertEqual(sameFlattener.flatKey(*key), "x!:")
         self.assertEqual(sameFlattener.flatKey(*key), "x!:/2")
 
-
     def _test_formatFlatEvent_fieldNamesSame(self, event=None):
         """
         The same format field used twice in one event is rendered twice.
@@ -188,6 +178,7 @@ class FlatFormattingTests(unittest.TestCase):
                 """
                 Hack
                 """
+
                 def __str__(self) -> str:
                     return str(next(counter))
 
@@ -197,17 +188,15 @@ class FlatFormattingTests(unittest.TestCase):
             )
 
         flattenEvent(event)
-        self.assertEqual(formatEvent(event), u"0 1")
+        self.assertEqual(formatEvent(event), "0 1")
 
         return event
-
 
     def test_formatFlatEventFieldNamesSame(self):
         """
         The same format field used twice in one event is rendered twice.
         """
         self._test_formatFlatEvent_fieldNamesSame()
-
 
     def test_formatFlatEventFieldNamesSameAgain(self):
         """
@@ -217,7 +206,6 @@ class FlatFormattingTests(unittest.TestCase):
         event = self._test_formatFlatEvent_fieldNamesSame()
         self._test_formatFlatEvent_fieldNamesSame(event)
 
-
     def test_formatEventFlatTrailingText(self):
         """
         L{formatEvent} will handle a flattened event with tailing text after
@@ -225,14 +213,13 @@ class FlatFormattingTests(unittest.TestCase):
         """
         event = dict(
             log_format="test {x} trailing",
-            x='value',
+            x="value",
         )
         flattenEvent(event)
 
         result = formatEvent(event)
 
-        self.assertEqual(result, u"test value trailing")
-
+        self.assertEqual(result, "test value trailing")
 
     def test_extractField(self, flattenFirst=lambda x: x):
         """
@@ -240,6 +227,7 @@ class FlatFormattingTests(unittest.TestCase):
 
         @param flattenFirst: callable to flatten an event
         """
+
         class ObjectWithRepr:
             def __repr__(self) -> str:
                 return "repr"
@@ -266,56 +254,54 @@ class FlatFormattingTests(unittest.TestCase):
         self.assertEqual(extract("something.number!s"), "7")
         self.assertEqual(extract("something.object!s"), "repr")
 
-
     def test_extractFieldFlattenFirst(self):
         """
         L{extractField} behaves identically if the event is explicitly
         flattened first.
         """
+
         def flattened(evt):
             flattenEvent(evt)
             return evt
-        self.test_extractField(flattened)
 
+        self.test_extractField(flattened)
 
     def test_flattenEventWithoutFormat(self):
         """
         L{flattenEvent} will do nothing to an event with no format string.
         """
-        inputEvent = {'a': 'b', 'c': 1}
+        inputEvent = {"a": "b", "c": 1}
         flattenEvent(inputEvent)
-        self.assertEqual(inputEvent, {'a': 'b', 'c': 1})
-
+        self.assertEqual(inputEvent, {"a": "b", "c": 1})
 
     def test_flattenEventWithInertFormat(self):
         """
         L{flattenEvent} will do nothing to an event with a format string that
         contains no format fields.
         """
-        inputEvent = {'a': 'b', 'c': 1, 'log_format': 'simple message'}
+        inputEvent = {"a": "b", "c": 1, "log_format": "simple message"}
         flattenEvent(inputEvent)
         self.assertEqual(
             inputEvent,
             {
-                'a': 'b',
-                'c': 1,
-                'log_format': 'simple message',
-            }
+                "a": "b",
+                "c": 1,
+                "log_format": "simple message",
+            },
         )
-
 
     def test_flattenEventWithNoneFormat(self):
         """
         L{flattenEvent} will do nothing to an event with log_format set to
         None.
         """
-        inputEvent = {'a': 'b', 'c': 1, 'log_format': None}
+        inputEvent = {"a": "b", "c": 1, "log_format": None}
         flattenEvent(inputEvent)
         self.assertEqual(
             inputEvent,
             {
-                'a': 'b',
-                'c': 1,
-                'log_format': None,
-            }
+                "a": "b",
+                "c": 1,
+                "log_format": None,
+            },
         )

@@ -17,7 +17,6 @@ from twisted.python.filepath import _coerceToFilesystemEncoding
 from twisted.python.runtime import platform
 
 
-
 @implementer(IAddress)
 @attr.s(hash=True)
 class IPv4Address:
@@ -34,10 +33,10 @@ class IPv4Address:
     @ivar port: An integer representing the port number.
     @type port: C{int}
     """
+
     type = attr.ib(validator=attr.validators.in_(["TCP", "UDP"]))
     host = attr.ib()
     port = attr.ib()
-
 
 
 @implementer(IAddress)
@@ -64,6 +63,7 @@ class IPv6Address:
         interface traffic destined for this address must be transmitted over.
     @type scopeID: L{int} or L{str}
     """
+
     type = attr.ib(validator=attr.validators.in_(["TCP", "UDP"]))
     host = attr.ib()
     port = attr.ib()
@@ -71,13 +71,11 @@ class IPv6Address:
     scopeID = attr.ib(default=0)
 
 
-
 @implementer(IAddress)
 class _ProcessAddress:
     """
     An L{interfaces.IAddress} provider for process transports.
     """
-
 
 
 @attr.s(hash=True)
@@ -97,7 +95,6 @@ class HostnameAddress:
     port = attr.ib()
 
 
-
 @attr.s(hash=False, repr=False, eq=False)
 @implementer(IAddress)
 class UNIXAddress:
@@ -108,9 +105,12 @@ class UNIXAddress:
     @type name: C{bytes}
     """
 
-    name = attr.ib(converter=attr.converters.optional(_asFilesystemBytes))  # type: bytes
+    name = attr.ib(
+        converter=attr.converters.optional(_asFilesystemBytes)
+    )  # type: bytes
 
-    if getattr(os.path, 'samefile', None) is not None:
+    if getattr(os.path, "samefile", None) is not None:
+
         def __eq__(self, other: object) -> bool:
             """
             Overriding C{attrs} to ensure the os level samefile
@@ -130,19 +130,19 @@ class UNIXAddress:
                     if not platform.isLinux():
                         raise e
             return res
+
     else:
+
         def __eq__(self, other: object) -> bool:
             if isinstance(other, self.__class__):
                 return self.name == other.name
             return NotImplemented
 
-
     def __repr__(self) -> str:
         name = self.name
         if name:
-            name = _coerceToFilesystemEncoding('', self.name)
-        return 'UNIXAddress(%r)' % (name,)
-
+            name = _coerceToFilesystemEncoding("", self.name)
+        return "UNIXAddress(%r)" % (name,)
 
     def __hash__(self):
         if self.name is None:
@@ -154,18 +154,20 @@ class UNIXAddress:
             return hash(self.name)
 
 
-
 # These are for buildFactory backwards compatibility due to
 # stupidity-induced inconsistency.
+
 
 class _ServerFactoryIPv4Address(IPv4Address):
     """Backwards compatibility hack. Just like IPv4Address in practice."""
 
     def __eq__(self, other: object) -> bool:
         if isinstance(other, tuple):
-            warnings.warn("IPv4Address.__getitem__ is deprecated.  "
-                          "Use attributes instead.",
-                          category=DeprecationWarning, stacklevel=2)
+            warnings.warn(
+                "IPv4Address.__getitem__ is deprecated.  " "Use attributes instead.",
+                category=DeprecationWarning,
+                stacklevel=2,
+            )
             return (self.host, self.port) == other
         elif isinstance(other, IPv4Address):
             a = (self.type, self.host, self.port)

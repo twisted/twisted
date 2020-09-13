@@ -18,19 +18,16 @@ class InvalidProxyHeader(Exception):
     """
 
 
-
 class InvalidNetworkProtocol(InvalidProxyHeader):
     """
     The network protocol was not one of TCP4 TCP6 or UNKNOWN.
     """
 
 
-
 class MissingAddressData(InvalidProxyHeader):
     """
     The address data is missing or incomplete.
     """
-
 
 
 @contextlib.contextmanager
