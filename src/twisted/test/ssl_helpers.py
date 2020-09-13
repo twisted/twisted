@@ -14,14 +14,15 @@ from twisted.python.filepath import FilePath
 
 from OpenSSL import SSL
 
-certPath = nativeString(FilePath(__file__.encode("utf-8")
-                    ).sibling(b"server.pem").path)
+certPath = nativeString(FilePath(__file__.encode("utf-8")).sibling(b"server.pem").path)
 
 
 class ClientTLSContext(ssl.ClientContextFactory):
     isClient = 1
+
     def getContext(self):
         return SSL.Context(SSL.TLSv1_METHOD)
+
 
 class ServerTLSContext:
     isClient = 0

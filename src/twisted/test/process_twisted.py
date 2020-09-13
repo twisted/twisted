@@ -7,9 +7,9 @@
 import os
 import sys
 
-pos = os.path.abspath(sys.argv[0]).find(os.sep+'Twisted')
+pos = os.path.abspath(sys.argv[0]).find(os.sep + "Twisted")
 if pos != -1:
-    sys.path.insert(0, os.path.abspath(sys.argv[0])[:pos+8])
+    sys.path.insert(0, os.path.abspath(sys.argv[0])[: pos + 8])
 sys.path.insert(0, os.curdir)
 # end of preamble
 
@@ -19,38 +19,30 @@ from zope.interface import implementer  # noqa
 from twisted.internet import interfaces  # noqa
 
 
-
 log.startLogging(sys.stderr)
 
 
 from twisted.internet import protocol, reactor, stdio  # noqa
 
 
-
 @implementer(interfaces.IHalfCloseableProtocol)
 class Echo(protocol.Protocol):
-
     def connectionMade(self):
         print("connection made")
 
-
     def dataReceived(self, data):
         self.transport.write(data)
-
 
     def readConnectionLost(self):
         print("readConnectionLost")
         self.transport.loseConnection()
 
-
     def writeConnectionLost(self):
         print("writeConnectionLost")
-
 
     def connectionLost(self, reason):
         print("connectionLost", reason)
         reactor.stop()
-
 
 
 stdio.StandardIO(Echo())

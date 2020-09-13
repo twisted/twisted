@@ -27,13 +27,14 @@ from twisted.python.filepath import FilePath
 from twisted.python.lockfile import FilesystemLock
 
 __all__ = [
-    'DEFAULT_TIMEOUT_DURATION',
-
-    'excInfoOrFailureToExcInfo', 'suppress', 'acquireAttribute']
+    "DEFAULT_TIMEOUT_DURATION",
+    "excInfoOrFailureToExcInfo",
+    "suppress",
+    "acquireAttribute",
+]
 
 DEFAULT_TIMEOUT = object()
 DEFAULT_TIMEOUT_DURATION = 120.0
-
 
 
 class DirtyReactorAggregateError(Exception):
@@ -50,16 +51,17 @@ class DirtyReactorAggregateError(Exception):
         self.delayedCalls = delayedCalls
         self.selectables = selectables
 
-
     def __str__(self) -> str:
         """
         Return a multi-line message describing all of the unclean state.
         """
         msg = "Reactor was unclean."
         if self.delayedCalls:
-            msg += ("\nDelayedCalls: (set "
-                    "twisted.internet.base.DelayedCall.debug = True to "
-                    "debug)\n")
+            msg += (
+                "\nDelayedCalls: (set "
+                "twisted.internet.base.DelayedCall.debug = True to "
+                "debug)\n"
+            )
             msg += "\n".join(map(str, self.delayedCalls))
         if self.selectables:
             msg += "\nSelectables:\n"
@@ -67,8 +69,7 @@ class DirtyReactorAggregateError(Exception):
         return msg
 
 
-
-class _Janitor(object):
+class _Janitor:
     """
     The guy that cleans up after you.
 
@@ -77,6 +78,7 @@ class _Janitor(object):
     @ivar reactor: The reactor to use. If None, the global reactor
         will be used.
     """
+
     def __init__(self, test, result, reactor=None):
         """
         @param test: See L{_Janitor.test}.
@@ -86,7 +88,6 @@ class _Janitor(object):
         self.test = test
         self.result = result
         self.reactor = reactor
-
 
     def postCaseCleanup(self):
         """
@@ -99,7 +100,6 @@ class _Janitor(object):
             self.result.addError(self.test, Failure(aggregate))
             return False
         return True
-
 
     def postClassCleanup(self):
         """
@@ -115,7 +115,6 @@ class _Janitor(object):
             self.result.addError(self.test, Failure(aggregate))
         self._cleanThreads()
 
-
     def _getReactor(self):
         """
         Get either the passed-in reactor or the global reactor.
@@ -125,7 +124,6 @@ class _Janitor(object):
         else:
             from twisted.internet import reactor
         return reactor
-
 
     def _cleanPending(self):
         """
@@ -146,10 +144,17 @@ class _Janitor(object):
                 print("WEIRDNESS! pending timed call not active!")
             delayedCallStrings.append(delayedString)
         return delayedCallStrings
+
     _cleanPending = utils.suppressWarnings(
-        _cleanPending, (('ignore',), {'category': DeprecationWarning,
-                                      'message':
-                                      r'reactor\.iterate cannot be used.*'}))
+        _cleanPending,
+        (
+            ("ignore",),
+            {
+                "category": DeprecationWarning,
+                "message": r"reactor\.iterate cannot be used.*",
+            },
+        ),
+    )
 
     def _cleanThreads(self):
         reactor = self._getReactor()
@@ -161,7 +166,6 @@ class _Janitor(object):
                 # from each other, not methods from each other).
                 reactor._stopThreadPool()
 
-
     def _cleanReactor(self):
         """
         Remove all selectables from the reactor, kill any of them that were
@@ -171,13 +175,14 @@ class _Janitor(object):
         selectableStrings = []
         for sel in reactor.removeAll():
             if interfaces.IProcessTransport.providedBy(sel):
-                sel.signalProcess('KILL')
+                sel.signalProcess("KILL")
             selectableStrings.append(repr(sel))
         return selectableStrings
 
 
-
 _DEFAULT = object()
+
+
 def acquireAttribute(objects, attr, default=_DEFAULT):
     """
     Go through the list 'objects' sequentially until we find one which has
@@ -189,8 +194,7 @@ def acquireAttribute(objects, attr, default=_DEFAULT):
             return getattr(obj, attr)
     if default is not _DEFAULT:
         return default
-    raise AttributeError('attribute %r not found in %r' % (attr, objects))
-
+    raise AttributeError("attribute %r not found in %r" % (attr, objects))
 
 
 def excInfoOrFailureToExcInfo(err):
@@ -208,8 +212,7 @@ def excInfoOrFailureToExcInfo(err):
     return err
 
 
-
-def suppress(action='ignore', **kwarg):
+def suppress(action="ignore", **kwarg):
     """
     Sets up the .suppress tuple properly, pass options to this method as you
     would the stdlib warnings.filterwarnings()
@@ -235,12 +238,12 @@ def suppress(action='ignore', **kwarg):
     return ((action,), kwarg)
 
 
-
 # This should be deleted, and replaced with twisted.application's code; see
 # #6016:
 def profiled(f, outputFile):
     def _(*args, **kwargs):
         import profile
+
         prof = profile.Profile()
         try:
             result = prof.runcall(f, *args, **kwargs)
@@ -249,8 +252,8 @@ def profiled(f, outputFile):
             pass
         prof.print_stats()
         return result
-    return _
 
+    return _
 
 
 @defer.inlineCallbacks
@@ -281,7 +284,6 @@ def _runSequentially(callables, stopOnFirstError=False):
     defer.returnValue(results)
 
 
-
 class _NoTrialMarker(Exception):
     """
     No trial marker file could be found.
@@ -291,7 +293,6 @@ class _NoTrialMarker(Exception):
     """
 
 
-
 def _removeSafely(path):
     """
     Safely remove a path, recursively.
@@ -299,24 +300,28 @@ def _removeSafely(path):
     If C{path} does not contain a node named C{_trial_marker}, a
     L{_NoTrialMarker} exception is raised and the path is not removed.
     """
-    if not path.child(b'_trial_marker').exists():
+    if not path.child(b"_trial_marker").exists():
         raise _NoTrialMarker(
-            '%r is not a trial temporary path, refusing to remove it'
-            % (path,))
+            "%r is not a trial temporary path, refusing to remove it" % (path,)
+        )
     try:
         path.remove()
     except OSError as e:
-        print ("could not remove %r, caught OSError [Errno %s]: %s"
-               % (path, e.errno, e.strerror))
+        print(
+            "could not remove %r, caught OSError [Errno %s]: %s"
+            % (path, e.errno, e.strerror)
+        )
         try:
-            newPath = FilePath(b'_trial_temp_old' +
-                               str(randrange(10000000)).encode("utf-8"))
+            newPath = FilePath(
+                b"_trial_temp_old" + str(randrange(10000000)).encode("utf-8")
+            )
             path.moveTo(newPath)
         except OSError as e:
-            print ("could not rename path, caught OSError [Errno %s]: %s"
-                   % (e.errno,e.strerror))
+            print(
+                "could not rename path, caught OSError [Errno %s]: %s"
+                % (e.errno, e.strerror)
+            )
             raise
-
 
 
 class _WorkingDirectoryBusy(Exception):
@@ -324,7 +329,6 @@ class _WorkingDirectoryBusy(Exception):
     A working directory was specified to the runner, but another test run is
     currently using that directory.
     """
-
 
 
 def _unusedTestDirectory(base):
@@ -349,11 +353,11 @@ def _unusedTestDirectory(base):
     counter = 0
     while True:
         if counter:
-            testdir = base.sibling('%s-%d' % (base.basename(), counter))
+            testdir = base.sibling("%s-%d" % (base.basename(), counter))
         else:
             testdir = base
 
-        testDirLock = FilesystemLock(testdir.path + '.lock')
+        testDirLock = FilesystemLock(testdir.path + ".lock")
         if testDirLock.lock():
             # It is not in use
             if testdir.exists():
@@ -363,18 +367,17 @@ def _unusedTestDirectory(base):
             # Create it anew and mark it as ours so the next _removeSafely on
             # it succeeds.
             testdir.makedirs()
-            testdir.child(b'_trial_marker').setContent(b'')
+            testdir.child(b"_trial_marker").setContent(b"")
             return testdir, testDirLock
         else:
             # It is in use
-            if base.basename() == '_trial_temp':
+            if base.basename() == "_trial_temp":
                 counter += 1
             else:
                 raise _WorkingDirectoryBusy()
 
 
-
-def _listToPhrase(things, finalDelimiter, delimiter=', '):
+def _listToPhrase(things, finalDelimiter, delimiter=", "):
     """
     Produce a string containing each thing in C{things},
     separated by a C{delimiter}, with the last couple being separated
@@ -397,7 +400,7 @@ def _listToPhrase(things, finalDelimiter, delimiter=', '):
     if not isinstance(things, (list, tuple)):
         raise TypeError("Things must be a list or a tuple")
     if not things:
-        return ''
+        return ""
     if len(things) == 1:
         return str(things[0])
     if len(things) == 2:
@@ -406,5 +409,9 @@ def _listToPhrase(things, finalDelimiter, delimiter=', '):
         strThings = []
         for thing in things:
             strThings.append(str(thing))
-        return "%s%s%s %s" % (delimiter.join(strThings[:-1]),
-            delimiter, finalDelimiter, strThings[-1])
+        return "%s%s%s %s" % (
+            delimiter.join(strThings[:-1]),
+            delimiter,
+            finalDelimiter,
+            strThings[-1],
+        )

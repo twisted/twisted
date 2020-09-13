@@ -13,10 +13,12 @@ collapse numerous small writes into a single larger one.
 
 from twisted.internet import reactor
 
+
 class BufferingMixin:
     """
     Mixin which adds write buffering.
     """
+
     _delayedWriteCall = None
     data = None
 
@@ -25,10 +27,8 @@ class BufferingMixin:
     def schedule(self):
         return reactor.callLater(self.DELAY, self.flush)
 
-
     def reschedule(self, token):
         token.reset(self.DELAY)
-
 
     def write(self, data):
         """
@@ -44,7 +44,6 @@ class BufferingMixin:
         else:
             self.reschedule(self._delayedWriteCall)
         self.data.append(data)
-
 
     def flush(self):
         """

@@ -16,9 +16,8 @@ from ._observer import ILogObserver
 _DEFAULT_BUFFER_MAXIMUM = 64 * 1024
 
 
-
 @implementer(ILogObserver)
-class LimitedHistoryLogObserver(object):
+class LimitedHistoryLogObserver:
     """
     L{ILogObserver} that stores events in a buffer of a fixed size::
 
@@ -43,10 +42,8 @@ class LimitedHistoryLogObserver(object):
         """
         self._buffer = deque(maxlen=size)
 
-
     def __call__(self, event):
         self._buffer.append(event)
-
 
     def replayTo(self, otherObserver):
         """

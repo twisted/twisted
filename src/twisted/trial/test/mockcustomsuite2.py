@@ -10,6 +10,7 @@ See L{twisted.trial.test.test_loader.LoaderTest.test_loadModuleWith_testSuite}.
 
 from twisted.trial import unittest, runner
 
+
 class Foo(unittest.SynchronousTestCase):
     def test_foo(self):
         pass

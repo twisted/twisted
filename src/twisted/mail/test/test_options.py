@@ -13,16 +13,15 @@ from twisted.mail.tap import Options, makeService
 from twisted.internet import endpoints, defer
 
 
-
 class OptionsTests(TestCase):
     """
     Tests for the command line option parser used for I{twistd mail}.
     """
+
     def setUp(self):
         self.aliasFilename = self.mktemp()
-        with open(self.aliasFilename, 'w') as aliasFile:
-            aliasFile.write('someuser:\tdifferentuser\n')
-
+        with open(self.aliasFilename, "w") as aliasFile:
+            aliasFile.write("someuser:\tdifferentuser\n")
 
     def testAliasesWithoutDomain(self):
         """
@@ -30,20 +29,22 @@ class OptionsTests(TestCase):
         UsageError.
         """
         self.assertRaises(
-            UsageError,
-            Options().parseOptions,
-            ['--aliases', self.aliasFilename])
-
+            UsageError, Options().parseOptions, ["--aliases", self.aliasFilename]
+        )
 
     def testAliases(self):
         """
         Test that adding an aliases(5) file to an IAliasableDomain at least
         doesn't raise an unhandled exception.
         """
-        Options().parseOptions([
-            '--maildirdbmdomain', 'example.com=example.com',
-            '--aliases', self.aliasFilename])
-
+        Options().parseOptions(
+            [
+                "--maildirdbmdomain",
+                "example.com=example.com",
+                "--aliases",
+                self.aliasFilename,
+            ]
+        )
 
     def _endpointTest(self, service):
         """
@@ -52,27 +53,23 @@ class OptionsTests(TestCase):
         that service.
         """
         options = Options()
-        options.parseOptions(['--' + service, 'tcp:1234'])
+        options.parseOptions(["--" + service, "tcp:1234"])
         self.assertEqual(len(options[service]), 1)
-        self.assertIsInstance(
-            options[service][0], endpoints.TCP4ServerEndpoint)
-
+        self.assertIsInstance(options[service][0], endpoints.TCP4ServerEndpoint)
 
     def test_endpointSMTP(self):
         """
         When I{--smtp} is given a TCP endpoint description as an argument, a
         TCPServerEndpoint is added to the list of SMTP endpoints.
         """
-        self._endpointTest('smtp')
-
+        self._endpointTest("smtp")
 
     def test_endpointPOP3(self):
         """
         When I{--pop3} is given a TCP endpoint description as an argument, a
         TCPServerEndpoint is added to the list of POP3 endpoints.
         """
-        self._endpointTest('pop3')
-
+        self._endpointTest("pop3")
 
     def test_protoDefaults(self):
         """
@@ -81,14 +78,11 @@ class OptionsTests(TestCase):
         options = Options()
         options.parseOptions([])
 
-        self.assertEqual(len(options['pop3']), 1)
-        self.assertIsInstance(
-            options['pop3'][0], endpoints.TCP4ServerEndpoint)
+        self.assertEqual(len(options["pop3"]), 1)
+        self.assertIsInstance(options["pop3"][0], endpoints.TCP4ServerEndpoint)
 
-        self.assertEqual(len(options['smtp']), 1)
-        self.assertIsInstance(
-            options['smtp'][0], endpoints.TCP4ServerEndpoint)
-
+        self.assertEqual(len(options["smtp"]), 1)
+        self.assertIsInstance(options["smtp"][0], endpoints.TCP4ServerEndpoint)
 
     def test_protoDisable(self):
         """
@@ -96,15 +90,14 @@ class OptionsTests(TestCase):
         respectively.
         """
         options = Options()
-        options.parseOptions(['--no-pop3'])
-        self.assertEqual(options._getEndpoints(None, 'pop3'), [])
-        self.assertNotEqual(options._getEndpoints(None, 'smtp'), [])
+        options.parseOptions(["--no-pop3"])
+        self.assertEqual(options._getEndpoints(None, "pop3"), [])
+        self.assertNotEqual(options._getEndpoints(None, "smtp"), [])
 
         options = Options()
-        options.parseOptions(['--no-smtp'])
-        self.assertNotEqual(options._getEndpoints(None, 'pop3'), [])
-        self.assertEqual(options._getEndpoints(None, 'smtp'), [])
-
+        options.parseOptions(["--no-smtp"])
+        self.assertNotEqual(options._getEndpoints(None, "pop3"), [])
+        self.assertEqual(options._getEndpoints(None, "smtp"), [])
 
     def test_allProtosDisabledError(self):
         """
@@ -112,8 +105,8 @@ class OptionsTests(TestCase):
         """
         options = Options()
         self.assertRaises(
-            UsageError, options.parseOptions, (['--no-pop3', '--no-smtp']))
-
+            UsageError, options.parseOptions, (["--no-pop3", "--no-smtp"])
+        )
 
     def test_esmtpWithoutHostname(self):
         """
@@ -121,40 +114,40 @@ class OptionsTests(TestCase):
         raises L{UsageError}.
         """
         options = Options()
-        exc = self.assertRaises(UsageError, options.parseOptions, ['--esmtp'])
+        exc = self.assertRaises(UsageError, options.parseOptions, ["--esmtp"])
         self.assertEqual("--esmtp requires --hostname", str(exc))
-
 
     def test_auth(self):
         """
         Tests that the --auth option registers a checker.
         """
         options = Options()
-        options.parseOptions(['--auth', 'memory:admin:admin:bob:password'])
-        self.assertEqual(len(options['credCheckers']), 1)
-        checker = options['credCheckers'][0]
+        options.parseOptions(["--auth", "memory:admin:admin:bob:password"])
+        self.assertEqual(len(options["credCheckers"]), 1)
+        checker = options["credCheckers"][0]
         interfaces = checker.credentialInterfaces
         registered_checkers = options.service.smtpPortal.checkers
         for iface in interfaces:
             self.assertEqual(checker, registered_checkers[iface])
 
 
-
-class SpyEndpoint(object):
+class SpyEndpoint:
     """
     SpyEndpoint remembers what factory it is told to listen with.
     """
+
     listeningWith = None
+
     def listen(self, factory):
         self.listeningWith = factory
         return defer.succeed(None)
-
 
 
 class MakeServiceTests(TestCase):
     """
     Tests for L{twisted.mail.tap.makeService}
     """
+
     def _endpointServerTest(self, key, factoryClass):
         """
         Configure a service with two endpoints for the protocol associated with
@@ -172,7 +165,6 @@ class MakeServiceTests(TestCase):
         self.assertIsInstance(cleartext.listeningWith, factoryClass)
         self.assertIsInstance(secure.listeningWith, factoryClass)
 
-
     def test_pop3(self):
         """
         If one or more endpoints is included in the configuration passed to
@@ -181,7 +173,6 @@ class MakeServiceTests(TestCase):
         service.
         """
         self._endpointServerTest("pop3", protocols.POP3Factory)
-
 
     def test_smtp(self):
         """

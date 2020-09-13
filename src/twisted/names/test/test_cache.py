@@ -27,31 +27,46 @@ class CachingTests(unittest.TestCase):
         """
         verifyClass(interfaces.IResolver, cache.CacheResolver)
 
-
     def test_lookup(self):
-        c = cache.CacheResolver({
-            dns.Query(name=b'example.com', type=dns.MX, cls=dns.IN):
-                (time.time(), ([], [], []))})
-        return c.lookupMailExchange(b'example.com').addCallback(
-            self.assertEqual, ([], [], []))
-
+        c = cache.CacheResolver(
+            {
+                dns.Query(name=b"example.com", type=dns.MX, cls=dns.IN): (
+                    time.time(),
+                    ([], [], []),
+                )
+            }
+        )
+        return c.lookupMailExchange(b"example.com").addCallback(
+            self.assertEqual, ([], [], [])
+        )
 
     def test_constructorExpires(self):
         """
         Cache entries passed into L{cache.CacheResolver.__init__} get
         cancelled just like entries added with cacheResult
         """
-        r = ([dns.RRHeader(b"example.com", dns.A, dns.IN, 60,
-                           dns.Record_A("127.0.0.1", 60))],
-             [dns.RRHeader(b"example.com", dns.A, dns.IN, 50,
-                           dns.Record_A("127.0.0.1", 50))],
-             [dns.RRHeader(b"example.com", dns.A, dns.IN, 40,
-                           dns.Record_A("127.0.0.1", 40))])
+        r = (
+            [
+                dns.RRHeader(
+                    b"example.com", dns.A, dns.IN, 60, dns.Record_A("127.0.0.1", 60)
+                )
+            ],
+            [
+                dns.RRHeader(
+                    b"example.com", dns.A, dns.IN, 50, dns.Record_A("127.0.0.1", 50)
+                )
+            ],
+            [
+                dns.RRHeader(
+                    b"example.com", dns.A, dns.IN, 40, dns.Record_A("127.0.0.1", 40)
+                )
+            ],
+        )
 
         clock = task.Clock()
         query = dns.Query(name=b"example.com", type=dns.A, cls=dns.IN)
 
-        c = cache.CacheResolver({ query : (clock.seconds(), r)}, reactor=clock)
+        c = cache.CacheResolver({query: (clock.seconds(), r)}, reactor=clock)
 
         # 40 seconds is enough to expire the entry because expiration is based
         # on the minimum TTL.
@@ -59,21 +74,30 @@ class CachingTests(unittest.TestCase):
 
         self.assertNotIn(query, c.cache)
 
-        return self.assertFailure(
-            c.lookupAddress(b"example.com"), dns.DomainError)
-
+        return self.assertFailure(c.lookupAddress(b"example.com"), dns.DomainError)
 
     def test_normalLookup(self):
         """
         When a cache lookup finds a cached entry from 1 second ago, it is
         returned with a TTL of original TTL minus the elapsed 1 second.
         """
-        r = ([dns.RRHeader(b"example.com", dns.A, dns.IN, 60,
-                           dns.Record_A("127.0.0.1", 60))],
-             [dns.RRHeader(b"example.com", dns.A, dns.IN, 50,
-                           dns.Record_A("127.0.0.1", 50))],
-             [dns.RRHeader(b"example.com", dns.A, dns.IN, 40,
-                           dns.Record_A("127.0.0.1", 40))])
+        r = (
+            [
+                dns.RRHeader(
+                    b"example.com", dns.A, dns.IN, 60, dns.Record_A("127.0.0.1", 60)
+                )
+            ],
+            [
+                dns.RRHeader(
+                    b"example.com", dns.A, dns.IN, 50, dns.Record_A("127.0.0.1", 50)
+                )
+            ],
+            [
+                dns.RRHeader(
+                    b"example.com", dns.A, dns.IN, 40, dns.Record_A("127.0.0.1", 40)
+                )
+            ],
+        )
 
         clock = task.Clock()
 
@@ -90,17 +114,27 @@ class CachingTests(unittest.TestCase):
 
         return c.lookupAddress(b"example.com").addCallback(cbLookup)
 
-
     def test_cachedResultExpires(self):
         """
         Once the TTL has been exceeded, the result is removed from the cache.
         """
-        r = ([dns.RRHeader(b"example.com", dns.A, dns.IN, 60,
-                           dns.Record_A("127.0.0.1", 60))],
-             [dns.RRHeader(b"example.com", dns.A, dns.IN, 50,
-                           dns.Record_A("127.0.0.1", 50))],
-             [dns.RRHeader(b"example.com", dns.A, dns.IN, 40,
-                           dns.Record_A("127.0.0.1", 40))])
+        r = (
+            [
+                dns.RRHeader(
+                    b"example.com", dns.A, dns.IN, 60, dns.Record_A("127.0.0.1", 60)
+                )
+            ],
+            [
+                dns.RRHeader(
+                    b"example.com", dns.A, dns.IN, 50, dns.Record_A("127.0.0.1", 50)
+                )
+            ],
+            [
+                dns.RRHeader(
+                    b"example.com", dns.A, dns.IN, 40, dns.Record_A("127.0.0.1", 40)
+                )
+            ],
+        )
 
         clock = task.Clock()
 
@@ -112,9 +146,7 @@ class CachingTests(unittest.TestCase):
 
         self.assertNotIn(query, c.cache)
 
-        return self.assertFailure(
-            c.lookupAddress(b"example.com"), dns.DomainError)
-
+        return self.assertFailure(c.lookupAddress(b"example.com"), dns.DomainError)
 
     def test_expiredTTLLookup(self):
         """
@@ -122,22 +154,38 @@ class CachingTests(unittest.TestCase):
         before it has actually been cleared, the cache does not return the
         expired entry.
         """
-        r = ([dns.RRHeader(b"example.com", dns.A, dns.IN, 60,
-                           dns.Record_A("127.0.0.1", 60))],
-             [dns.RRHeader(b"example.com", dns.A, dns.IN, 50,
-                           dns.Record_A("127.0.0.1", 50))],
-             [dns.RRHeader(b"example.com", dns.A, dns.IN, 40,
-                           dns.Record_A("127.0.0.1", 40))])
+        r = (
+            [
+                dns.RRHeader(
+                    b"example.com", dns.A, dns.IN, 60, dns.Record_A("127.0.0.1", 60)
+                )
+            ],
+            [
+                dns.RRHeader(
+                    b"example.com", dns.A, dns.IN, 50, dns.Record_A("127.0.0.1", 50)
+                )
+            ],
+            [
+                dns.RRHeader(
+                    b"example.com", dns.A, dns.IN, 40, dns.Record_A("127.0.0.1", 40)
+                )
+            ],
+        )
 
         clock = task.Clock()
         # Make sure timeouts never happen, so entries won't get cleared:
         clock.callLater = lambda *args, **kwargs: None
 
-        c = cache.CacheResolver({
-            dns.Query(name=b"example.com", type=dns.A, cls=dns.IN) :
-                (clock.seconds(), r)}, reactor=clock)
+        c = cache.CacheResolver(
+            {
+                dns.Query(name=b"example.com", type=dns.A, cls=dns.IN): (
+                    clock.seconds(),
+                    r,
+                )
+            },
+            reactor=clock,
+        )
 
         clock.advance(60.1)
 
-        return self.assertFailure(
-            c.lookupAddress(b"example.com"), dns.DomainError)
+        return self.assertFailure(c.lookupAddress(b"example.com"), dns.DomainError)
