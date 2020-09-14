@@ -12,11 +12,9 @@ from twisted.python.failure import Failure
 from ._logger import Logger
 
 
-
 OBSERVER_DISABLED = (
     "Temporarily disabling observer {observer} due to exception: {log_failure}"
 )
-
 
 
 class ILogObserver(Interface):
@@ -66,7 +64,6 @@ class ILogObserver(Interface):
         """
 
 
-
 @implementer(ILogObserver)
 class LogPublisher:
     """
@@ -80,7 +77,6 @@ class LogPublisher:
         self._observers = list(observers)
         self.log = Logger(observer=self)
 
-
     def addObserver(self, observer):
         """
         Registers an observer with this publisher.
@@ -91,7 +87,6 @@ class LogPublisher:
             raise TypeError("Observer is not callable: {0!r}".format(observer))
         if observer not in self._observers:
             self._observers.append(observer)
-
 
     def removeObserver(self, observer):
         """
@@ -104,12 +99,12 @@ class LogPublisher:
         except ValueError:
             pass
 
-
     def __call__(self, event):
         """
         Forward events to contained observers.
         """
         if "log_trace" in event:
+
             def trace(observer):
                 """
                 Add tracing information for an observer.
@@ -118,6 +113,7 @@ class LogPublisher:
                 @type observer: L{ILogObserver}
                 """
                 event["log_trace"].append((self, observer))
+
         else:
             trace = None
 
@@ -140,7 +136,6 @@ class LogPublisher:
                 observer=brokenObserver,
             )
 
-
     def _errorLoggerForObserver(self, observer):
         """
         Create an error-logger based on this logger, which does not contain the
@@ -151,8 +146,7 @@ class LogPublisher:
 
         @return: L{None}
         """
-        errorPublisher = LogPublisher(*[
-            obs for obs in self._observers
-            if obs is not observer
-        ])
+        errorPublisher = LogPublisher(
+            *[obs for obs in self._observers if obs is not observer]
+        )
         return Logger(observer=errorPublisher)

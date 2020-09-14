@@ -8,13 +8,16 @@ Tests for L{twisted.protocols.haproxy._parser}.
 from twisted.trial.unittest import SynchronousTestCase as TestCase
 from twisted.test.proto_helpers import MemoryReactor
 from twisted.internet.endpoints import (
-    _WrapperServerEndpoint, TCP4ServerEndpoint, TCP6ServerEndpoint,
-    UNIXServerEndpoint, serverFromString, _parse as parseEndpoint
+    _WrapperServerEndpoint,
+    TCP4ServerEndpoint,
+    TCP6ServerEndpoint,
+    UNIXServerEndpoint,
+    serverFromString,
+    _parse as parseEndpoint,
 )
 
 from .._wrapper import HAProxyWrappingFactory
 from .._parser import unparseEndpoint
-
 
 
 class UnparseEndpointTests(TestCase):
@@ -35,13 +38,11 @@ class UnparseEndpointTests(TestCase):
         """
         self.assertEqual(unparseEndpoint(*parseEndpoint(input)), input)
 
-
     def test_basicUnparse(self):
         """
         An individual word.
         """
         self.check("word")
-
 
     def test_multipleArguments(self):
         """
@@ -49,13 +50,11 @@ class UnparseEndpointTests(TestCase):
         """
         self.check("one:two")
 
-
     def test_keywords(self):
         """
         Keyword arguments.
         """
         self.check("aleph=one:bet=two")
-
 
     def test_colonInArgument(self):
         """
@@ -63,20 +62,17 @@ class UnparseEndpointTests(TestCase):
         """
         self.check("hello\\:colon\\:world")
 
-
     def test_colonInKeywordValue(self):
         """
         Escaped ":" in keyword value.
         """
         self.check("hello=\\:")
 
-
     def test_colonInKeywordName(self):
         """
         Escaped ":" in keyword name.
         """
         self.check("\\:=hello")
-
 
 
 class HAProxyServerParserTests(TestCase):
@@ -109,24 +105,20 @@ class HAProxyServerParserTests(TestCase):
         self.assertIs(endpoint._wrapperFactory, HAProxyWrappingFactory)
         return endpoint
 
-
     def test_tcp4(self):
         """
         Test if the parser generates a wrapped TCP4 endpoint.
         """
-        self.onePrefix('haproxy:tcp:8080', TCP4ServerEndpoint)
-
+        self.onePrefix("haproxy:tcp:8080", TCP4ServerEndpoint)
 
     def test_tcp6(self):
         """
         Test if the parser generates a wrapped TCP6 endpoint.
         """
-        self.onePrefix('haproxy:tcp6:8080', TCP6ServerEndpoint)
-
+        self.onePrefix("haproxy:tcp6:8080", TCP6ServerEndpoint)
 
     def test_unix(self):
         """
         Test if the parser generates a wrapped UNIX endpoint.
         """
-        self.onePrefix('haproxy:unix:address=/tmp/socket', UNIXServerEndpoint)
-
+        self.onePrefix("haproxy:unix:address=/tmp/socket", UNIXServerEndpoint)

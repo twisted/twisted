@@ -10,7 +10,6 @@ from twisted.python.compat import nativeString
 from twisted.logger import Logger
 
 
-
 @implementer(IConchUser)
 class ConchUser:
     _log = Logger()
@@ -19,39 +18,38 @@ class ConchUser:
         self.channelLookup = {}
         self.subsystemLookup = {}
 
-
     @property
     def conn(self):
         return self._conn
 
-
     @conn.setter
     def conn(self, value):
         self._conn = value
-
 
     def lookupChannel(self, channelType, windowSize, maxPacket, data):
         klass = self.channelLookup.get(channelType, None)
         if not klass:
             raise ConchError(OPEN_UNKNOWN_CHANNEL_TYPE, "unknown channel")
         else:
-            return klass(remoteWindow=windowSize,
-                         remoteMaxPacket=maxPacket,
-                         data=data, avatar=self)
-
+            return klass(
+                remoteWindow=windowSize,
+                remoteMaxPacket=maxPacket,
+                data=data,
+                avatar=self,
+            )
 
     def lookupSubsystem(self, subsystem, data):
-        self._log.debug('Subsystem lookup: {subsystem!r}',
-                        subsystem=self.subsystemLookup)
+        self._log.debug(
+            "Subsystem lookup: {subsystem!r}", subsystem=self.subsystemLookup
+        )
         klass = self.subsystemLookup.get(subsystem, None)
         if not klass:
             return False
         return klass(data, avatar=self)
 
-
     def gotGlobalRequest(self, requestType, data):
         # XXX should this use method dispatch?
-        requestType = nativeString(requestType.replace(b'-', b'_'))
+        requestType = nativeString(requestType.replace(b"-", b"_"))
         f = getattr(self, "global_%s" % requestType, None)
         if not f:
             return 0

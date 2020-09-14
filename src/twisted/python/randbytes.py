@@ -11,10 +11,9 @@ import os
 import random
 import warnings
 
-getrandbits = getattr(random, 'getrandbits', None)
+getrandbits = getattr(random, "getrandbits", None)
 
 _fromhex = bytes.fromhex
-
 
 
 class SecureRandomNotAvailable(RuntimeError):
@@ -23,12 +22,10 @@ class SecureRandomNotAvailable(RuntimeError):
     """
 
 
-
 class SourceNotAvailable(RuntimeError):
     """
     Internal exception used when a specific random source is not available.
     """
-
 
 
 class RandomFactory:
@@ -45,7 +42,6 @@ class RandomFactory:
 
     getrandbits = getrandbits
 
-
     def _osUrandom(self, nbytes):
         """
         Wrapper around C{os.urandom} that cleanly manage its absence.
@@ -54,7 +50,6 @@ class RandomFactory:
             return os.urandom(nbytes)
         except (AttributeError, NotImplementedError) as e:
             raise SourceNotAvailable(e)
-
 
     def secureRandom(self, nbytes, fallback=False):
         """
@@ -79,11 +74,11 @@ class RandomFactory:
                 "urandom unavailable - "
                 "proceeding with non-cryptographically secure random source",
                 category=RuntimeWarning,
-                stacklevel=2)
+                stacklevel=2,
+            )
             return self.insecureRandom(nbytes)
         else:
             raise SecureRandomNotAvailable("No secure random source available")
-
 
     def _randBits(self, nbytes):
         """
@@ -95,18 +90,14 @@ class RandomFactory:
             return _fromhex(hexBytes)
         raise SourceNotAvailable("random.getrandbits is not available")
 
-
     _maketrans = bytes.maketrans
-    _BYTES = _maketrans(b'', b'')
-
+    _BYTES = _maketrans(b"", b"")
 
     def _randModule(self, nbytes):
         """
         Wrapper around the C{random} module.
         """
-        return b"".join([
-                bytes([random.choice(self._BYTES)]) for i in range(nbytes)])
-
+        return b"".join([bytes([random.choice(self._BYTES)]) for i in range(nbytes)])
 
     def insecureRandom(self, nbytes):
         """
@@ -123,7 +114,6 @@ class RandomFactory:
                 return getattr(self, src)(nbytes)
             except SourceNotAvailable:
                 pass
-
 
 
 factory = RandomFactory()

@@ -11,25 +11,24 @@ from twisted.web.template import Comment, CDATA, CharRef, Tag
 from twisted.trial.unittest import TestCase
 
 
-
 def proto(*a, **kw):
     """
     Produce a new tag for testing.
     """
-    return Tag('hello')(*a, **kw)
+    return Tag("hello")(*a, **kw)
 
 
 class TagTests(TestCase):
     """
     Tests for L{Tag}.
     """
+
     def test_fillSlots(self):
         """
         L{Tag.fillSlots} returns self.
         """
         tag = proto()
-        self.assertIdentical(tag, tag.fillSlots(test='test'))
-
+        self.assertIdentical(tag, tag.fillSlots(test="test"))
 
     def test_cloneShallow(self):
         """
@@ -38,14 +37,13 @@ class TagTests(TestCase):
         stops.
         """
         innerList = ["inner list"]
-        tag = proto("How are you", innerList,
-                    hello="world", render="aSampleMethod")
-        tag.fillSlots(foo='bar')
+        tag = proto("How are you", innerList, hello="world", render="aSampleMethod")
+        tag.fillSlots(foo="bar")
         tag.filename = "foo/bar"
         tag.lineNumber = 6
         tag.columnNumber = 12
         clone = tag.clone(deep=False)
-        self.assertEqual(clone.attributes['hello'], 'world')
+        self.assertEqual(clone.attributes["hello"], "world")
         self.assertNotIdentical(clone.attributes, tag.attributes)
         self.assertEqual(clone.children, ["How are you", innerList])
         self.assertNotIdentical(clone.children, tag.children)
@@ -57,7 +55,6 @@ class TagTests(TestCase):
         self.assertEqual(clone.columnNumber, 12)
         self.assertEqual(clone.render, "aSampleMethod")
 
-
     def test_cloneDeep(self):
         """
         L{Tag.clone} copies all attributes and children of a tag, including its
@@ -66,14 +63,15 @@ class TagTests(TestCase):
         """
         innerTag = proto("inner")
         innerList = ["inner list"]
-        tag = proto("How are you", innerTag, innerList,
-                    hello="world", render="aSampleMethod")
-        tag.fillSlots(foo='bar')
+        tag = proto(
+            "How are you", innerTag, innerList, hello="world", render="aSampleMethod"
+        )
+        tag.fillSlots(foo="bar")
         tag.filename = "foo/bar"
         tag.lineNumber = 6
         tag.columnNumber = 12
         clone = tag.clone()
-        self.assertEqual(clone.attributes['hello'], 'world')
+        self.assertEqual(clone.attributes["hello"], "world")
         self.assertNotIdentical(clone.attributes, tag.attributes)
         self.assertNotIdentical(clone.children, tag.children)
         # sanity check
@@ -91,51 +89,44 @@ class TagTests(TestCase):
         self.assertEqual(clone.columnNumber, 12)
         self.assertEqual(clone.render, "aSampleMethod")
 
-
     def test_clear(self):
         """
         L{Tag.clear} removes all children from a tag, but leaves its attributes
         in place.
         """
-        tag = proto("these are", "children", "cool", andSoIs='this-attribute')
+        tag = proto("these are", "children", "cool", andSoIs="this-attribute")
         tag.clear()
         self.assertEqual(tag.children, [])
-        self.assertEqual(tag.attributes, {'andSoIs': 'this-attribute'})
-
+        self.assertEqual(tag.attributes, {"andSoIs": "this-attribute"})
 
     def test_suffix(self):
         """
         L{Tag.__call__} accepts Python keywords with a suffixed underscore as
         the DOM attribute of that literal suffix.
         """
-        proto = Tag('div')
+        proto = Tag("div")
         tag = proto()
-        tag(class_='a')
-        self.assertEqual(tag.attributes, {'class': 'a'})
-
+        tag(class_="a")
+        self.assertEqual(tag.attributes, {"class": "a"})
 
     def test_commentReprPy3(self):
         """
         L{Comment.__repr__} returns a value which makes it easy to see what's
         in the comment.
         """
-        self.assertEqual(repr(Comment("hello there")),
-                         "Comment('hello there')")
-
+        self.assertEqual(repr(Comment("hello there")), "Comment('hello there')")
 
     def test_cdataReprPy3(self):
         """
         L{CDATA.__repr__} returns a value which makes it easy to see what's in
         the comment.
         """
-        self.assertEqual(repr(CDATA("test data")),
-                         "CDATA('test data')")
-
+        self.assertEqual(repr(CDATA("test data")), "CDATA('test data')")
 
     def test_charrefRepr(self):
         """
         L{CharRef.__repr__} returns a value which makes it easy to see what
         character is referred to.
         """
-        snowman = ord(u"\N{SNOWMAN}")
+        snowman = ord("\N{SNOWMAN}")
         self.assertEqual(repr(CharRef(snowman)), "CharRef(9731)")

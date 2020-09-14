@@ -34,15 +34,16 @@ class StubFactory:
     Mock factory that provides the keys attribute required by the
     SSHAgentServerProtocol
     """
+
     def __init__(self):
         self.keys = {}
-
 
 
 class AgentTestBase(unittest.TestCase):
     """
     Tests for SSHAgentServer/Client.
     """
+
     if iosim is None:
         skip = "iosim requires SSL, but SSL is not available"
     elif agent is None or keys is None:
@@ -51,7 +52,8 @@ class AgentTestBase(unittest.TestCase):
     def setUp(self):
         # wire up our client <-> server
         self.client, self.server, self.pump = iosim.connectedServerAndClient(
-            agent.SSHAgentServer, agent.SSHAgentClient)
+            agent.SSHAgentServer, agent.SSHAgentClient
+        )
 
         # the server's end of the protocol is stateful and we store it on the
         # factory, for which we only need a mock
@@ -65,20 +67,18 @@ class AgentTestBase(unittest.TestCase):
         self.dsaPublic = keys.Key.fromString(keydata.publicDSA_openssh)
 
 
-
 class ServerProtocolContractWithFactoryTests(AgentTestBase):
     """
     The server protocol is stateful and so uses its factory to track state
     across requests.  This test asserts that the protocol raises if its factory
     doesn't provide the necessary storage for that state.
     """
+
     def test_factorySuppliesKeyStorageForServerProtocol(self):
         # need a message to send into the server
-        msg = struct.pack('!LB',1, agent.AGENTC_REQUEST_IDENTITIES)
-        del self.server.factory.__dict__['keys']
-        self.assertRaises(MissingKeyStoreError,
-                          self.server.dataReceived, msg)
-
+        msg = struct.pack("!LB", 1, agent.AGENTC_REQUEST_IDENTITIES)
+        del self.server.factory.__dict__["keys"]
+        self.assertRaises(MissingKeyStoreError, self.server.dataReceived, msg)
 
 
 class UnimplementedVersionOneServerTests(AgentTestBase):
@@ -94,48 +94,46 @@ class UnimplementedVersionOneServerTests(AgentTestBase):
         """
         assert that we get the correct op code for an RSA identities request
         """
-        d = self.client.sendRequest(agent.AGENTC_REQUEST_RSA_IDENTITIES, b'')
+        d = self.client.sendRequest(agent.AGENTC_REQUEST_RSA_IDENTITIES, b"")
         self.pump.flush()
-        def _cb(packet):
-            self.assertEqual(
-                agent.AGENT_RSA_IDENTITIES_ANSWER, ord(packet[0:1]))
-        return d.addCallback(_cb)
 
+        def _cb(packet):
+            self.assertEqual(agent.AGENT_RSA_IDENTITIES_ANSWER, ord(packet[0:1]))
+
+        return d.addCallback(_cb)
 
     def test_agentc_REMOVE_RSA_IDENTITY(self):
         """
         assert that we get the correct op code for an RSA remove identity request
         """
-        d = self.client.sendRequest(agent.AGENTC_REMOVE_RSA_IDENTITY, b'')
+        d = self.client.sendRequest(agent.AGENTC_REMOVE_RSA_IDENTITY, b"")
         self.pump.flush()
-        return d.addCallback(self.assertEqual, b'')
-
+        return d.addCallback(self.assertEqual, b"")
 
     def test_agentc_REMOVE_ALL_RSA_IDENTITIES(self):
         """
         assert that we get the correct op code for an RSA remove all identities
         request.
         """
-        d = self.client.sendRequest(agent.AGENTC_REMOVE_ALL_RSA_IDENTITIES, b'')
+        d = self.client.sendRequest(agent.AGENTC_REMOVE_ALL_RSA_IDENTITIES, b"")
         self.pump.flush()
-        return d.addCallback(self.assertEqual, b'')
-
+        return d.addCallback(self.assertEqual, b"")
 
 
 if agent is not None:
+
     class CorruptServer(agent.SSHAgentServer):
         """
         A misbehaving server that returns bogus response op codes so that we can
         verify that our callbacks that deal with these op codes handle such
         miscreants.
         """
-        def agentc_REQUEST_IDENTITIES(self, data):
-            self.sendResponse(254, b'')
 
+        def agentc_REQUEST_IDENTITIES(self, data):
+            self.sendResponse(254, b"")
 
         def agentc_SIGN_REQUEST(self, data):
-            self.sendResponse(254, b'')
-
+            self.sendResponse(254, b"")
 
 
 class ClientWithBrokenServerTests(AgentTestBase):
@@ -146,11 +144,11 @@ class ClientWithBrokenServerTests(AgentTestBase):
     def setUp(self):
         AgentTestBase.setUp(self)
         self.client, self.server, self.pump = iosim.connectedServerAndClient(
-            CorruptServer, agent.SSHAgentClient)
+            CorruptServer, agent.SSHAgentClient
+        )
         # the server's end of the protocol is stateful and we store it on the
         # factory, for which we only need a mock
         self.server.factory = StubFactory()
-
 
     def test_signDataCallbackErrorHandling(self):
         """
@@ -162,7 +160,6 @@ class ClientWithBrokenServerTests(AgentTestBase):
         self.pump.flush()
         return self.assertFailure(d, ConchError)
 
-
     def test_requestIdentitiesCallbackErrorHandling(self):
         """
         Assert that L{SSHAgentClient.requestIdentities} raises a ConchError
@@ -172,7 +169,6 @@ class ClientWithBrokenServerTests(AgentTestBase):
         d = self.client.requestIdentities()
         self.pump.flush()
         return self.assertFailure(d, ConchError)
-
 
 
 class AgentKeyAdditionTests(AgentTestBase):
@@ -191,12 +187,13 @@ class AgentKeyAdditionTests(AgentTestBase):
         """
         d = self.client.addIdentity(self.rsaPrivate.privateBlob())
         self.pump.flush()
+
         def _check(ignored):
             serverKey = self.server.factory.keys[self.rsaPrivate.blob()]
             self.assertEqual(self.rsaPrivate, serverKey[0])
-            self.assertEqual(b'', serverKey[1])
-        return d.addCallback(_check)
+            self.assertEqual(b"", serverKey[1])
 
+        return d.addCallback(_check)
 
     def test_addDSAIdentityNoComment(self):
         """
@@ -209,12 +206,13 @@ class AgentKeyAdditionTests(AgentTestBase):
         """
         d = self.client.addIdentity(self.dsaPrivate.privateBlob())
         self.pump.flush()
+
         def _check(ignored):
             serverKey = self.server.factory.keys[self.dsaPrivate.blob()]
             self.assertEqual(self.dsaPrivate, serverKey[0])
-            self.assertEqual(b'', serverKey[1])
-        return d.addCallback(_check)
+            self.assertEqual(b"", serverKey[1])
 
+        return d.addCallback(_check)
 
     def test_addRSAIdentityWithComment(self):
         """
@@ -226,14 +224,16 @@ class AgentKeyAdditionTests(AgentTestBase):
         as sent by the client.
         """
         d = self.client.addIdentity(
-            self.rsaPrivate.privateBlob(), comment=b'My special key')
+            self.rsaPrivate.privateBlob(), comment=b"My special key"
+        )
         self.pump.flush()
+
         def _check(ignored):
             serverKey = self.server.factory.keys[self.rsaPrivate.blob()]
             self.assertEqual(self.rsaPrivate, serverKey[0])
-            self.assertEqual(b'My special key', serverKey[1])
-        return d.addCallback(_check)
+            self.assertEqual(b"My special key", serverKey[1])
 
+        return d.addCallback(_check)
 
     def test_addDSAIdentityWithComment(self):
         """
@@ -245,14 +245,16 @@ class AgentKeyAdditionTests(AgentTestBase):
         as sent by the client.
         """
         d = self.client.addIdentity(
-            self.dsaPrivate.privateBlob(), comment=b'My special key')
+            self.dsaPrivate.privateBlob(), comment=b"My special key"
+        )
         self.pump.flush()
+
         def _check(ignored):
             serverKey = self.server.factory.keys[self.dsaPrivate.blob()]
             self.assertEqual(self.dsaPrivate, serverKey[0])
-            self.assertEqual(b'My special key', serverKey[1])
-        return d.addCallback(_check)
+            self.assertEqual(b"My special key", serverKey[1])
 
+        return d.addCallback(_check)
 
 
 class AgentClientFailureTests(AgentTestBase):
@@ -260,10 +262,9 @@ class AgentClientFailureTests(AgentTestBase):
         """
         verify that the client raises ConchError on AGENT_FAILURE
         """
-        d = self.client.sendRequest(254, b'')
+        d = self.client.sendRequest(254, b"")
         self.pump.flush()
         return self.assertFailure(d, ConchError)
-
 
 
 class AgentIdentityRequestsTests(AgentTestBase):
@@ -274,10 +275,13 @@ class AgentIdentityRequestsTests(AgentTestBase):
     def setUp(self):
         AgentTestBase.setUp(self)
         self.server.factory.keys[self.dsaPrivate.blob()] = (
-            self.dsaPrivate, b'a comment')
+            self.dsaPrivate,
+            b"a comment",
+        )
         self.server.factory.keys[self.rsaPrivate.blob()] = (
-            self.rsaPrivate, b'another comment')
-
+            self.rsaPrivate,
+            b"another comment",
+        )
 
     def test_signDataRSA(self):
         """
@@ -292,7 +296,6 @@ class AgentIdentityRequestsTests(AgentTestBase):
         self.assertEqual(expected, signature)
         self.assertTrue(self.rsaPublic.verify(signature, b"John Hancock"))
 
-
     def test_signDataDSA(self):
         """
         Sign data with a DSA private key and then verify it with the public
@@ -300,13 +303,14 @@ class AgentIdentityRequestsTests(AgentTestBase):
         """
         d = self.client.signData(self.dsaPublic.blob(), b"John Hancock")
         self.pump.flush()
+
         def _check(sig):
             # Cannot do this b/c DSA uses random numbers when signing
             #   expected = self.dsaPrivate.sign("John Hancock")
             #   self.assertEqual(expected, sig)
             self.assertTrue(self.dsaPublic.verify(sig, b"John Hancock"))
-        return d.addCallback(_check)
 
+        return d.addCallback(_check)
 
     def test_signDataRSAErrbackOnUnknownBlob(self):
         """
@@ -318,7 +322,6 @@ class AgentIdentityRequestsTests(AgentTestBase):
         self.pump.flush()
         return self.assertFailure(d, ConchError)
 
-
     def test_requestIdentities(self):
         """
         Assert that we get all of the keys/comments that we add when we issue a
@@ -326,17 +329,18 @@ class AgentIdentityRequestsTests(AgentTestBase):
         """
         d = self.client.requestIdentities()
         self.pump.flush()
+
         def _check(keyt):
             expected = {}
-            expected[self.dsaPublic.blob()] = b'a comment'
-            expected[self.rsaPublic.blob()] = b'another comment'
+            expected[self.dsaPublic.blob()] = b"a comment"
+            expected[self.rsaPublic.blob()] = b"another comment"
 
             received = {}
             for k in keyt:
-                received[keys.Key.fromString(k[0], type='blob').blob()] = k[1]
+                received[keys.Key.fromString(k[0], type="blob").blob()] = k[1]
             self.assertEqual(expected, received)
-        return d.addCallback(_check)
 
+        return d.addCallback(_check)
 
 
 class AgentKeyRemovalTests(AgentTestBase):
@@ -347,10 +351,13 @@ class AgentKeyRemovalTests(AgentTestBase):
     def setUp(self):
         AgentTestBase.setUp(self)
         self.server.factory.keys[self.dsaPrivate.blob()] = (
-            self.dsaPrivate, b'a comment')
+            self.dsaPrivate,
+            b"a comment",
+        )
         self.server.factory.keys[self.rsaPrivate.blob()] = (
-            self.rsaPrivate, b'another comment')
-
+            self.rsaPrivate,
+            b"another comment",
+        )
 
     def test_removeRSAIdentity(self):
         """
@@ -364,8 +371,8 @@ class AgentKeyRemovalTests(AgentTestBase):
             self.assertEqual(1, len(self.server.factory.keys))
             self.assertIn(self.dsaPrivate.blob(), self.server.factory.keys)
             self.assertNotIn(self.rsaPrivate.blob(), self.server.factory.keys)
-        return d.addCallback(_check)
 
+        return d.addCallback(_check)
 
     def test_removeDSAIdentity(self):
         """
@@ -378,8 +385,8 @@ class AgentKeyRemovalTests(AgentTestBase):
         def _check(ignored):
             self.assertEqual(1, len(self.server.factory.keys))
             self.assertIn(self.rsaPrivate.blob(), self.server.factory.keys)
-        return d.addCallback(_check)
 
+        return d.addCallback(_check)
 
     def test_removeAllIdentities(self):
         """
@@ -390,4 +397,5 @@ class AgentKeyRemovalTests(AgentTestBase):
 
         def _check(ignored):
             self.assertEqual(0, len(self.server.factory.keys))
+
         return d.addCallback(_check)

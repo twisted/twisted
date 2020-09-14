@@ -13,14 +13,16 @@ from os import kill
 from attr import attrib, attrs, Factory
 
 from twisted.logger import (
-    globalLogBeginner, textFileLogObserver,
-    FilteringLogObserver, LogLevelFilterPredicate,
-    LogLevel, Logger,
+    globalLogBeginner,
+    textFileLogObserver,
+    FilteringLogObserver,
+    LogLevelFilterPredicate,
+    LogLevel,
+    Logger,
 )
 
 from ._exit import exit, ExitStatus
 from ._pidfile import nonePIDFile, AlreadyRunningError, InvalidPIDFileError
-
 
 
 @attrs(frozen=True)
@@ -74,17 +76,16 @@ class Runner:
 
     _log = Logger()
 
-    _reactor                = attrib()
-    _pidFile                = attrib(default=nonePIDFile)
-    _kill                   = attrib(default=False)
-    _defaultLogLevel        = attrib(default=LogLevel.info)
-    _logFile                = attrib(default=stderr)
+    _reactor = attrib()
+    _pidFile = attrib(default=nonePIDFile)
+    _kill = attrib(default=False)
+    _defaultLogLevel = attrib(default=LogLevel.info)
+    _logFile = attrib(default=stderr)
     _fileLogObserverFactory = attrib(default=textFileLogObserver)
-    _whenRunning            = attrib(default=lambda **_: None)
-    _whenRunningArguments   = attrib(default=Factory(dict))
-    _reactorExited          = attrib(default=lambda **_: None)
+    _whenRunning = attrib(default=lambda **_: None)
+    _whenRunningArguments = attrib(default=Factory(dict))
+    _reactorExited = attrib(default=lambda **_: None)
     _reactorExitedArguments = attrib(default=Factory(dict))
-
 
     def run(self):
         """
@@ -103,7 +104,6 @@ class Runner:
         except AlreadyRunningError:
             exit(ExitStatus.EX_CONFIG, "Already running.")
             return  # When testing, patched exit doesn't exit
-
 
     def killIfRequested(self):
         """
@@ -134,7 +134,6 @@ class Runner:
             exit(ExitStatus.EX_OK)
             return  # When testing, patched exit doesn't exit
 
-
     def startLogging(self):
         """
         Start the L{twisted.logger} logging system.
@@ -149,12 +148,9 @@ class Runner:
             defaultLogLevel=self._defaultLogLevel
         )
 
-        filteringObserver = FilteringLogObserver(
-            fileLogObserver, [logLevelPredicate]
-        )
+        filteringObserver = FilteringLogObserver(fileLogObserver, [logLevelPredicate])
 
         globalLogBeginner.beginLoggingTo([filteringObserver])
-
 
     def startReactor(self):
         """
@@ -166,7 +162,6 @@ class Runner:
         self._log.info("Starting reactor...")
         self._reactor.run()
 
-
     def whenRunning(self):
         """
         Call C{self._whenRunning} with C{self._whenRunningArguments}.
@@ -174,7 +169,6 @@ class Runner:
         @note: This method is called after the reactor starts running.
         """
         self._whenRunning(**self._whenRunningArguments)
-
 
     def reactorExited(self):
         """

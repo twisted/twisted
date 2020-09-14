@@ -22,7 +22,6 @@ defaultContextDict = {}  # type: Dict[Type[object], Dict[str, str]]
 setDefault = defaultContextDict.__setitem__
 
 
-
 class ContextTracker:
     """
     A L{ContextTracker} provides a way to pass arbitrary key/value data up and
@@ -57,9 +56,9 @@ class ContextTracker:
         for the duration of the call, making the data available to the function
         called and restoring the previous data once it is complete..
     """
+
     def __init__(self):
         self.contexts = [defaultContextDict]
-
 
     def callWithContext(self, newContext, func, *args, **kw):
         """
@@ -81,10 +80,9 @@ class ContextTracker:
         """
         self.contexts.append(newContext)
         try:
-            return func(*args,**kw)
+            return func(*args, **kw)
         finally:
             self.contexts.pop()
-
 
     def getContext(self, key, default=None):
         """
@@ -105,7 +103,6 @@ class ContextTracker:
         return default
 
 
-
 class ThreadedContextTracker:
     def __init__(self):
         self.storage = local()
@@ -124,11 +121,9 @@ class ThreadedContextTracker:
         return self.currentContext().getContext(key, default)
 
 
-
 theContextTracker = ThreadedContextTracker()
 call = theContextTracker.callWithContext
 get = theContextTracker.getContext
-
 
 
 def installContextTracker(ctr):

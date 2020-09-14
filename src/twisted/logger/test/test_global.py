@@ -20,7 +20,6 @@ from ..test.test_stdlib import nextLine
 from twisted.python.failure import Failure
 
 
-
 def compareEvents(test, actualEvents, expectedEvents):
     """
     Compare two sequences of log events, examining only the the keys which are
@@ -53,7 +52,6 @@ def compareEvents(test, actualEvents, expectedEvents):
     test.assertEqual(simplifiedActual, expectedEvents)
 
 
-
 class LogBeginnerTests(unittest.TestCase):
     """
     Tests for L{LogBeginner}.
@@ -72,8 +70,7 @@ class LogBeginnerTests(unittest.TestCase):
                 self.warnings = []
 
             def showwarning(
-                self, message, category, filename, lineno,
-                file=None, line=None
+                self, message, category, filename, lineno, file=None, line=None
             ):
                 """
                 Emulate warnings.showwarning.
@@ -102,17 +99,13 @@ class LogBeginnerTests(unittest.TestCase):
                     C{filename} and C{lineno}.
                 @type line: L{str}
                 """
-                self.warnings.append(
-                    (message, category, filename, lineno, file, line)
-                )
+                self.warnings.append((message, category, filename, lineno, file, line))
 
         self.sysModule = NotSys()
         self.warningsModule = NotWarnings()
         self.beginner = LogBeginner(
-            self.publisher, self.errorStream, self.sysModule,
-            self.warningsModule
+            self.publisher, self.errorStream, self.sysModule, self.warningsModule
         )
-
 
     def test_beginLoggingToAddObservers(self):
         """
@@ -132,7 +125,6 @@ class LogBeginnerTests(unittest.TestCase):
         self.assertEqual([event], events1)
         self.assertEqual([event], events2)
 
-
     def test_beginLoggingToBufferedEvents(self):
         """
         Test that events are buffered until C{beginLoggingTo()} is
@@ -151,7 +143,6 @@ class LogBeginnerTests(unittest.TestCase):
 
         self.assertEqual([event], events1)
         self.assertEqual([event], events2)
-
 
     def _bufferLimitTest(self, limit, beginner):
         """
@@ -179,7 +170,6 @@ class LogBeginnerTests(unittest.TestCase):
             list(event["count"] for event in events),
         )
 
-
     def test_defaultBufferLimit(self):
         """
         Up to C{LogBeginner._DEFAULT_BUFFER_SIZE} log events are buffered for
@@ -188,7 +178,6 @@ class LogBeginnerTests(unittest.TestCase):
         limit = LogBeginner._DEFAULT_BUFFER_SIZE
         self._bufferLimitTest(limit, self.beginner)
 
-
     def test_overrideBufferLimit(self):
         """
         The size of the L{LogBeginner} event buffer can be overridden with the
@@ -196,11 +185,13 @@ class LogBeginnerTests(unittest.TestCase):
         """
         limit = 3
         beginner = LogBeginner(
-            self.publisher, self.errorStream, self.sysModule,
-            self.warningsModule, initialBufferSize=limit,
+            self.publisher,
+            self.errorStream,
+            self.sysModule,
+            self.warningsModule,
+            initialBufferSize=limit,
         )
         self._bufferLimitTest(limit, beginner)
-
 
     def test_beginLoggingToTwice(self):
         """
@@ -222,27 +213,27 @@ class LogBeginnerTests(unittest.TestCase):
         warning = dict(
             log_format=MORE_THAN_ONCE_WARNING,
             log_level=LogLevel.warn,
-            fileNow=secondFilename, lineNow=secondLine,
-            fileThen=firstFilename, lineThen=firstLine
+            fileNow=secondFilename,
+            lineNow=secondLine,
+            fileThen=firstFilename,
+            lineThen=firstLine,
         )
 
         compareEvents(
-            self, events1,
+            self,
+            events1,
             [
                 dict(event="prebuffer"),
                 dict(event="postbuffer"),
                 warning,
-                dict(event="postwarn")
-            ]
+                dict(event="postwarn"),
+            ],
         )
         compareEvents(self, events2, [warning, dict(event="postwarn")])
 
         output = fileHandle.getvalue()
-        self.assertIn('<{0}:{1}>'.format(firstFilename, firstLine),
-                      output)
-        self.assertIn('<{0}:{1}>'.format(secondFilename, secondLine),
-                      output)
-
+        self.assertIn("<{0}:{1}>".format(firstFilename, firstLine), output)
+        self.assertIn("<{0}:{1}>".format(secondFilename, secondLine), output)
 
     def test_criticalLogging(self):
         """
@@ -251,8 +242,7 @@ class LogBeginnerTests(unittest.TestCase):
         log = Logger(observer=self.publisher)
         log.info("ignore this")
         log.critical("a critical {message}", message="message")
-        self.assertEqual(self.errorStream.getvalue(), u"a critical message\n")
-
+        self.assertEqual(self.errorStream.getvalue(), "a critical message\n")
 
     def test_criticalLoggingStops(self):
         """
@@ -262,8 +252,7 @@ class LogBeginnerTests(unittest.TestCase):
         log = Logger(observer=self.publisher)
         self.beginner.beginLoggingTo(())
         log.critical("another critical message")
-        self.assertEqual(self.errorStream.getvalue(), u"")
-
+        self.assertEqual(self.errorStream.getvalue(), "")
 
     def test_beginLoggingToRedirectStandardIO(self):
         """
@@ -274,15 +263,10 @@ class LogBeginnerTests(unittest.TestCase):
         x = []
         self.beginner.beginLoggingTo([x.append])
         print("Hello, world.", file=self.sysModule.stdout)
-        compareEvents(
-            self, x, [dict(log_namespace="stdout", log_io="Hello, world.")]
-        )
+        compareEvents(self, x, [dict(log_namespace="stdout", log_io="Hello, world.")])
         del x[:]
         print("Error, world.", file=self.sysModule.stderr)
-        compareEvents(
-            self, x, [dict(log_namespace="stderr", log_io="Error, world.")]
-        )
-
+        compareEvents(self, x, [dict(log_namespace="stderr", log_io="Error, world.")])
 
     def test_beginLoggingToDontRedirect(self):
         """
@@ -294,7 +278,6 @@ class LogBeginnerTests(unittest.TestCase):
         self.beginner.beginLoggingTo((), redirectStandardIO=False)
         self.assertIs(self.sysModule.stdout, oldOut)
         self.assertIs(self.sysModule.stderr, oldErr)
-
 
     def test_beginLoggingToPreservesEncoding(self):
         """
@@ -316,19 +299,14 @@ class LogBeginnerTests(unittest.TestCase):
 
         self.sysModule.stdout.write(b"\x97\x9B\n")
         self.sysModule.stderr.write(b"\xBC\xFC\n")
-        compareEvents(
-            self, x, [dict(log_io=u"\u674e"), dict(log_io=u"\u7469")]
-        )
-
+        compareEvents(self, x, [dict(log_io="\u674e"), dict(log_io="\u7469")])
 
     def test_warningsModule(self):
         """
         L{LogBeginner.beginLoggingTo} will redirect the warnings of its
         warnings module into the logging system.
         """
-        self.warningsModule.showwarning(
-            "a message", DeprecationWarning, __file__, 1
-        )
+        self.warningsModule.showwarning("a message", DeprecationWarning, __file__, 1)
         x = []
         self.beginner.beginLoggingTo([x.append])
         self.warningsModule.showwarning(
@@ -343,20 +321,24 @@ class LogBeginnerTests(unittest.TestCase):
             [
                 ("a message", DeprecationWarning, __file__, 1, None, None),
                 ("yet another", DeprecationWarning, __file__, 3, f, None),
-            ]
+            ],
         )
         compareEvents(
-            self, x,
-            [dict(
-                warning="another message",
-                category=(
-                    DeprecationWarning.__module__ + "." +
-                    DeprecationWarning.__name__
-                ),
-                filename=__file__, lineno=2,
-            )]
+            self,
+            x,
+            [
+                dict(
+                    warning="another message",
+                    category=(
+                        DeprecationWarning.__module__
+                        + "."
+                        + DeprecationWarning.__name__
+                    ),
+                    filename=__file__,
+                    lineno=2,
+                )
+            ],
         )
-
 
     def test_failuresAppendTracebacks(self):
         """
@@ -364,8 +346,8 @@ class LogBeginnerTests(unittest.TestCase):
         """
         f = Failure(Exception("this is not the behavior you are looking for"))
         log = Logger(observer=self.publisher)
-        log.failure('a failure', failure=f)
+        log.failure("a failure", failure=f)
         msg = self.errorStream.getvalue()
-        self.assertIn('a failure', msg)
-        self.assertIn('this is not the behavior you are looking for', msg)
-        self.assertIn('Traceback', msg)
+        self.assertIn("a failure", msg)
+        self.assertIn("this is not the behavior you are looking for", msg)
+        self.assertIn("Traceback", msg)
