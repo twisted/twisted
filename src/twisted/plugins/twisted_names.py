@@ -4,7 +4,5 @@
 from twisted.application.service import ServiceMaker
 
 TwistedNames = ServiceMaker(
-    "Twisted DNS Server",
-    "twisted.names.tap",
-    "A domain name server.",
-    "dns")
+    "Twisted DNS Server", "twisted.names.tap", "A domain name server.", "dns"
+)

@@ -1,7 +1,7 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-# 
+#
 
 """
 Parsing for the moduli file, which contains Diffie-Hellman prime groups.
@@ -10,14 +10,13 @@ Maintainer: Paul Swartz
 """
 
 
-
 def parseModuliFile(filename):
     with open(filename) as f:
         lines = f.readlines()
     primes = {}
     for l in lines:
         l = l.strip()
-        if  not l or l[0]=='#':
+        if not l or l[0] == "#":
             continue
         tim, typ, tst, tri, size, gen, mod = l.split()
         size = int(size) + 1

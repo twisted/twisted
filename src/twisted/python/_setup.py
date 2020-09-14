@@ -54,9 +54,9 @@ STATIC_PACKAGE_METADATA = dict(
     maintainer_email="glyph@twistedmatrix.com",
     url="https://twistedmatrix.com/",
     project_urls={
-        'Documentation': 'https://twistedmatrix.com/documents/current/',
-        'Source': 'https://github.com/twisted/twisted',
-        'Issues': 'https://twistedmatrix.com/trac/report',
+        "Documentation": "https://twistedmatrix.com/documents/current/",
+        "Source": "https://github.com/twisted/twisted",
+        "Issues": "https://twistedmatrix.com/trac/report",
     },
     license="MIT",
     classifiers=[
@@ -66,72 +66,64 @@ STATIC_PACKAGE_METADATA = dict(
         "Programming Language :: Python :: 3.6",
         "Programming Language :: Python :: 3.7",
     ],
-    python_requires='>=3.5',
+    python_requires=">=3.5",
 )
 
 
 _dev = [
-    'pyflakes >= 1.0.0',
-    'twisted-dev-tools >= 0.0.2',
-    'python-subunit',
-    'sphinx >= 1.3.1',
-    'towncrier >= 17.4.0',
-    'twistedchecker >= 0.7.2',
+    "pyflakes >= 1.0.0",
+    "twisted-dev-tools >= 0.0.2",
+    "python-subunit",
+    "sphinx >= 1.3.1",
+    "towncrier >= 17.4.0",
+    "twistedchecker >= 0.7.2",
 ]
 
 _EXTRA_OPTIONS = dict(
     dev=_dev,
     tls=[
-        'pyopenssl >= 16.0.0',
+        "pyopenssl >= 16.0.0",
         # service_identity 18.1.0 added support for validating IP addresses in
         # certificate subjectAltNames
-        'service_identity >= 18.1.0',
-        'idna >= 2.4',
+        "service_identity >= 18.1.0",
+        "idna >= 2.4",
     ],
     conch=[
-        'pyasn1',
-        'cryptography >= 2.6',
-        'appdirs >= 1.4.0',
-        'bcrypt >= 3.0.0',
+        "pyasn1",
+        "cryptography >= 2.6",
+        "appdirs >= 1.4.0",
+        "bcrypt >= 3.0.0",
     ],
-    serial=['pyserial >= 3.0',
-            'pywin32 != 226; platform_system == "Windows"'],
-    macos=['pyobjc-core',
-           'pyobjc-framework-CFNetwork',
-           'pyobjc-framework-Cocoa'],
-    windows=['pywin32 != 226'],
-    http2=['h2 >= 3.0, < 4.0',
-           'priority >= 1.1.0, < 2.0'],
+    serial=["pyserial >= 3.0", 'pywin32 != 226; platform_system == "Windows"'],
+    macos=["pyobjc-core", "pyobjc-framework-CFNetwork", "pyobjc-framework-Cocoa"],
+    windows=["pywin32 != 226"],
+    http2=["h2 >= 3.0, < 4.0", "priority >= 1.1.0, < 2.0"],
     contextvars=['contextvars >= 2.4, < 3; python_version < "3.7"'],
     sniffio=['sniffio >= 1.1, < 2'],
 )
 
 _PLATFORM_INDEPENDENT = (
-    _EXTRA_OPTIONS['tls'] +
-    _EXTRA_OPTIONS['conch'] +
-    _EXTRA_OPTIONS['serial'] +
-    _EXTRA_OPTIONS['http2'] +
-    _EXTRA_OPTIONS['contextvars'] +
-    _EXTRA_OPTIONS['sniffio']
+    _EXTRA_OPTIONS["tls"]
+    + _EXTRA_OPTIONS["conch"]
+    + _EXTRA_OPTIONS["serial"]
+    + _EXTRA_OPTIONS["http2"]
+    + _EXTRA_OPTIONS["contextvars"]
+    + _EXTRA_OPTIONS["sniffio"]
 )
 
 _EXTRAS_REQUIRE = {
-    'dev': _EXTRA_OPTIONS['dev'],
-    'tls': _EXTRA_OPTIONS['tls'],
-    'conch': _EXTRA_OPTIONS['conch'],
-    'serial': _EXTRA_OPTIONS['serial'],
-    'http2': _EXTRA_OPTIONS['http2'],
-    'contextvars': _EXTRA_OPTIONS['contextvars'],
-    'sniffio': _EXTRA_OPTIONS['sniffio'],
-    'all_non_platform': _PLATFORM_INDEPENDENT,
-    'macos_platform': (
-        _EXTRA_OPTIONS['macos'] + _PLATFORM_INDEPENDENT
-    ),
-    'windows_platform': (
-        _EXTRA_OPTIONS['windows'] + _PLATFORM_INDEPENDENT
-    ),
+    "dev": _EXTRA_OPTIONS["dev"],
+    "tls": _EXTRA_OPTIONS["tls"],
+    "conch": _EXTRA_OPTIONS["conch"],
+    "serial": _EXTRA_OPTIONS["serial"],
+    "http2": _EXTRA_OPTIONS["http2"],
+    "contextvars": _EXTRA_OPTIONS["contextvars"],
+    "sniffio": _EXTRA_OPTIONS["sniffio"],
+    "all_non_platform": _PLATFORM_INDEPENDENT,
+    "macos_platform": (_EXTRA_OPTIONS["macos"] + _PLATFORM_INDEPENDENT),
+    "windows_platform": (_EXTRA_OPTIONS["windows"] + _PLATFORM_INDEPENDENT),
 }
-_EXTRAS_REQUIRE['osx_platform'] = _EXTRAS_REQUIRE['macos_platform']
+_EXTRAS_REQUIRE["osx_platform"] = _EXTRAS_REQUIRE["macos_platform"]
 
 # Scripts provided by Twisted on Python 2 and 3.
 _CONSOLE_SCRIPTS = [
@@ -144,8 +136,7 @@ _CONSOLE_SCRIPTS = [
     "trial = twisted.scripts.trial:run",
     "twist = twisted.application.twist._twist:Twist.main",
     "twistd = twisted.scripts.twistd:run",
-    ]
-
+]
 
 
 class ConditionalExtension(Extension):
@@ -158,10 +149,10 @@ class ConditionalExtension(Extension):
         instance of L{build_ext_twisted}, which has useful methods for checking
         things about the platform.
     """
+
     def __init__(self, *args, **kwargs):
         self.condition = kwargs.pop("condition", lambda builder: True)
         Extension.__init__(self, *args, **kwargs)
-
 
 
 # The C extensions used for Twisted.
@@ -169,18 +160,18 @@ _EXTENSIONS = [
     ConditionalExtension(
         "twisted.test.raiser",
         sources=["src/twisted/test/raiser.c"],
-        condition=lambda _: _isCPython),
-
+        condition=lambda _: _isCPython,
+    ),
     ConditionalExtension(
         "twisted.internet.iocpreactor.iocpsupport",
         sources=[
             "src/twisted/internet/iocpreactor/iocpsupport/iocpsupport.c",
             "src/twisted/internet/iocpreactor/iocpsupport/winsock_pointers.c",
-            ],
+        ],
         libraries=["ws2_32"],
-        condition=lambda _: _isCPython and sys.platform == "win32"),
-    ]
-
+        condition=lambda _: _isCPython and sys.platform == "win32",
+    ),
+]
 
 
 def _longDescriptionArgsFromReadme(readme):
@@ -193,27 +184,26 @@ def _longDescriptionArgsFromReadme(readme):
     @return: Keyword arguments to be passed to C{setuptools.setup()}.
     @rtype: C{str}
     """
-    with io.open(readme, encoding='utf-8') as f:
+    with io.open(readme, encoding="utf-8") as f:
         readmeRst = f.read()
 
     # Munge links of the form `NEWS <NEWS.rst>`_ to point at the appropriate
     # location on GitHub so that they function when the long description is
     # displayed on PyPI.
     longDesc = re.sub(
-        r'`([^`]+)\s+<(?!https?://)([^>]+)>`_',
-        r'`\1 <https://github.com/twisted/twisted/blob/trunk/\2>`_',
+        r"`([^`]+)\s+<(?!https?://)([^>]+)>`_",
+        r"`\1 <https://github.com/twisted/twisted/blob/trunk/\2>`_",
         readmeRst,
         flags=re.I,
     )
 
     return {
-        'long_description': longDesc,
-        'long_description_content_type': 'text/x-rst',
+        "long_description": longDesc,
+        "long_description_content_type": "text/x-rst",
     }
 
 
-
-def getSetupArgs(extensions=_EXTENSIONS, readme='README.rst'):
+def getSetupArgs(extensions=_EXTENSIONS, readme="README.rst"):
     """
     Generate arguments for C{setuptools.setup()}
 
@@ -244,10 +234,8 @@ def getSetupArgs(extensions=_EXTENSIONS, readme='README.rst'):
     # Use custome class to build the extensions.
     class my_build_ext(build_ext_twisted):
         conditionalExtensions = extensions
-    command_classes = {
-        'build_ext': my_build_ext,
-        'build_py': BuildPy3
-    }
+
+    command_classes = {"build_ext": my_build_ext, "build_py": BuildPy3}
 
     requirements = [
         "zope.interface >= 4.4.2",
@@ -259,26 +247,25 @@ def getSetupArgs(extensions=_EXTENSIONS, readme='README.rst'):
         "attrs >= 19.2.0",
     ]
 
-    arguments.update(dict(
-        packages=find_packages("src"),
-        use_incremental=True,
-        setup_requires=["incremental >= 16.10.1"],
-        install_requires=requirements,
-        entry_points={
-            'console_scripts': _CONSOLE_SCRIPTS
-        },
-        cmdclass=command_classes,
-        include_package_data=True,
-        exclude_package_data={
-            "": ["*.c", "*.h", "*.pxi", "*.pyx", "build.bat"],
-        },
-        zip_safe=False,
-        extras_require=_EXTRAS_REQUIRE,
-        package_dir={"": "src"},
-    ))
+    arguments.update(
+        dict(
+            packages=find_packages("src"),
+            use_incremental=True,
+            setup_requires=["incremental >= 16.10.1"],
+            install_requires=requirements,
+            entry_points={"console_scripts": _CONSOLE_SCRIPTS},
+            cmdclass=command_classes,
+            include_package_data=True,
+            exclude_package_data={
+                "": ["*.c", "*.h", "*.pxi", "*.pyx", "build.bat"],
+            },
+            zip_safe=False,
+            extras_require=_EXTRAS_REQUIRE,
+            package_dir={"": "src"},
+        )
+    )
 
     return arguments
-
 
 
 class BuildPy3(build_py):
@@ -286,13 +273,14 @@ class BuildPy3(build_py):
     A version of build_py that doesn't install the modules that aren't yet
     ported to Python 3.
     """
+
     def find_package_modules(self, package, package_dir):
         modules = [
-            module for module
-            in build_py.find_package_modules(self, package, package_dir)
-            if ".".join([module[0], module[1]]) not in notPortedModules]
+            module
+            for module in build_py.find_package_modules(self, package, package_dir)
+            if ".".join([module[0], module[1]]) not in notPortedModules
+        ]
         return modules
-
 
 
 # Helpers and distutil tweaks
@@ -312,7 +300,7 @@ class build_ext_twisted(build_ext.build_ext):  # type: ignore[name-defined]  # n
         building on NT, define the WIN32 macro to 1.
         """
         # always define WIN32 under Windows
-        if os.name == 'nt':
+        if os.name == "nt":
             self.define_macros = [("WIN32", 1)]
         else:
             self.define_macros = []
@@ -323,17 +311,14 @@ class build_ext_twisted(build_ext.build_ext):  # type: ignore[name-defined]  # n
         # sendmsg.c. (according to
         # https://stackoverflow.com/questions/1034587).  See the documentation
         # of X/Open CAE in the standards(5) man page of Solaris.
-        if sys.platform.startswith('sunos'):
-            self.define_macros.append(('_XOPEN_SOURCE', 1))
-            self.define_macros.append(('_XOPEN_SOURCE_EXTENDED', 1))
+        if sys.platform.startswith("sunos"):
+            self.define_macros.append(("_XOPEN_SOURCE", 1))
+            self.define_macros.append(("_XOPEN_SOURCE_EXTENDED", 1))
 
-        self.extensions = [
-            x for x in self.conditionalExtensions if x.condition(self)
-        ]
+        self.extensions = [x for x in self.conditionalExtensions if x.condition(self)]
 
         for ext in self.extensions:
             ext.define_macros.extend(self.define_macros)
-
 
     def build_extensions(self):
         """
@@ -342,14 +327,12 @@ class build_ext_twisted(build_ext.build_ext):  # type: ignore[name-defined]  # n
         self.prepare_extensions()
         build_ext.build_ext.build_extensions(self)
 
-
     def _remove_conftest(self):
         for filename in ("conftest.c", "conftest.o", "conftest.obj"):
             try:
                 os.unlink(filename)
             except EnvironmentError:
                 pass
-
 
     def _compile_helper(self, content):
         conftest = open("conftest.c", "w")
@@ -358,13 +341,12 @@ class build_ext_twisted(build_ext.build_ext):  # type: ignore[name-defined]  # n
                 conftest.write(content)
 
             try:
-                self.compiler.compile(["conftest.c"], output_dir='')
+                self.compiler.compile(["conftest.c"], output_dir="")
             except CompileError:
                 return False
             return True
         finally:
             self._remove_conftest()
-
 
     def _check_header(self, header_name):
         """
@@ -373,7 +355,6 @@ class build_ext_twisted(build_ext.build_ext):  # type: ignore[name-defined]  # n
         """
         self.compiler.announce("checking for {} ...".format(header_name), 0)
         return self._compile_helper("#include <{}>\n".format(header_name))
-
 
 
 def _checkCPython(sys=sys, platform=platform) -> bool:
@@ -390,7 +371,6 @@ def _checkCPython(sys=sys, platform=platform) -> bool:
         otherwise.
     """
     return platform.python_implementation() == "CPython"
-
 
 
 _isCPython = _checkCPython()  # type: bool

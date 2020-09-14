@@ -21,7 +21,11 @@ from zope.interface import Interface, implementer
 
 from twisted.logger import Logger
 from twisted.internet.interfaces import (
-    IHalfCloseableProtocol, ITCPTransport, ISystemHandle, IListeningPort)
+    IHalfCloseableProtocol,
+    ITCPTransport,
+    ISystemHandle,
+    IListeningPort,
+)
 from twisted.python.compat import lazyByteSlice
 from twisted.python.runtime import platformType
 from twisted.python import versions, deprecate
@@ -32,7 +36,8 @@ try:
     from twisted.internet._newtls import (
         ConnectionMixin as _TLSConnectionMixin,
         ClientMixin as _TLSClientMixin,
-        ServerMixin as _TLSServerMixin)
+        ServerMixin as _TLSServerMixin,
+    )
     from twisted.internet.interfaces import ITLSTransport
 except ImportError:
     # There is no version of startTLS available
@@ -41,35 +46,31 @@ except ImportError:
     class _TLSConnectionMixin:  # type: ignore[no-redef]
         TLS = False
 
-
     class _TLSClientMixin:  # type: ignore[no-redef]
         pass
-
 
     class _TLSServerMixin:  # type: ignore[no-redef]
         pass
 
 
-if platformType == 'win32':
+if platformType == "win32":
     # no such thing as WSAEPERM or error code 10001
     # according to winsock.h or MSDN
     EPERM = object()
     from errno import WSAEINVAL as EINVAL  # type: ignore[attr-defined]
-    from errno import (  # type: ignore[attr-defined]
-        WSAEWOULDBLOCK as EWOULDBLOCK)
-    from errno import (  # type: ignore[attr-defined]
-        WSAEINPROGRESS as EINPROGRESS)
+    from errno import WSAEWOULDBLOCK as EWOULDBLOCK  # type: ignore[attr-defined]
+    from errno import WSAEINPROGRESS as EINPROGRESS  # type: ignore[attr-defined]
     from errno import WSAEALREADY as EALREADY  # type: ignore[attr-defined]
     from errno import WSAEISCONN as EISCONN  # type: ignore[attr-defined]
     from errno import WSAENOBUFS as ENOBUFS  # type: ignore[attr-defined]
     from errno import WSAEMFILE as EMFILE  # type: ignore[attr-defined]
+
     # No such thing as WSAENFILE, either.
     ENFILE = object()
     # Nor ENOMEM
     ENOMEM = object()
     EAGAIN = EWOULDBLOCK
-    from errno import (  # type: ignore[attr-defined]
-        WSAECONNRESET as ECONNABORTED)
+    from errno import WSAECONNRESET as ECONNABORTED  # type: ignore[attr-defined]
 
     from twisted.python.win32 import formatError as strerror
 else:
@@ -104,7 +105,6 @@ from twisted.internet.protocol import Protocol
 _AI_NUMERICSERV = getattr(socket, "AI_NUMERICSERV", 0)
 
 
-
 def _getrealname(addr):
     """
     Return a 2-tuple of socket IP and port for IPv4 and a 4-tuple of
@@ -117,12 +117,12 @@ def _getrealname(addr):
     """
     if len(addr) == 4:
         # IPv6
-        host = socket.getnameinfo(
-            addr, socket.NI_NUMERICHOST | socket.NI_NUMERICSERV)[0]
+        host = socket.getnameinfo(addr, socket.NI_NUMERICHOST | socket.NI_NUMERICSERV)[
+            0
+        ]
         return tuple([host] + list(addr[1:]))
     else:
         return addr[:2]
-
 
 
 def _getpeername(skt):
@@ -132,13 +132,11 @@ def _getpeername(skt):
     return _getrealname(skt.getpeername())
 
 
-
 def _getsockname(skt):
     """
     See L{_getrealname}.
     """
     return _getrealname(skt.getsockname())
-
 
 
 class _SocketCloser:
@@ -147,6 +145,7 @@ class _SocketCloser:
         before calling C{close} on the underlying socket.
     @type _shouldShutdown: C{bool}
     """
+
     _shouldShutdown = True
 
     def _closeSocket(self, orderly):
@@ -163,8 +162,9 @@ class _SocketCloser:
                 # Set SO_LINGER to 1,0 which, by convention, causes a
                 # connection reset to be sent when close is called,
                 # instead of the standard FIN shutdown sequence.
-                self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_LINGER,
-                                       struct.pack("ii", 1, 0))
+                self.socket.setsockopt(
+                    socket.SOL_SOCKET, socket.SO_LINGER, struct.pack("ii", 1, 0)
+                )
 
         except socket.error:
             pass
@@ -174,7 +174,6 @@ class _SocketCloser:
             pass
 
 
-
 class _AbortingMixin:
     """
     Common implementation of C{abortConnection}.
@@ -182,6 +181,7 @@ class _AbortingMixin:
     @ivar _aborting: Set to C{True} when C{abortConnection} is called.
     @type _aborting: C{bool}
     """
+
     _aborting = False
 
     def abortConnection(self):
@@ -197,14 +197,15 @@ class _AbortingMixin:
         self.stopWriting()
         self.doRead = lambda *args, **kwargs: None
         self.doWrite = lambda *args, **kwargs: None
-        self.reactor.callLater(0, self.connectionLost,
-                               failure.Failure(error.ConnectionAborted()))
-
+        self.reactor.callLater(
+            0, self.connectionLost, failure.Failure(error.ConnectionAborted())
+        )
 
 
 @implementer(ITLSTransport, ITCPTransport, ISystemHandle)
-class Connection(_TLSConnectionMixin, abstract.FileDescriptor, _SocketCloser,
-                 _AbortingMixin):
+class Connection(
+    _TLSConnectionMixin, abstract.FileDescriptor, _SocketCloser, _AbortingMixin
+):
     """
     Superclass of all socket-based FileDescriptors.
 
@@ -215,7 +216,6 @@ class Connection(_TLSConnectionMixin, abstract.FileDescriptor, _SocketCloser,
     @type logstr: C{str}
     """
 
-
     def __init__(self, skt, protocol, reactor=None):
         abstract.FileDescriptor.__init__(self, reactor=reactor)
         self.socket = skt
@@ -223,11 +223,9 @@ class Connection(_TLSConnectionMixin, abstract.FileDescriptor, _SocketCloser,
         self.fileno = skt.fileno
         self.protocol = protocol
 
-
     def getHandle(self):
         """Return the socket for this connection."""
         return self.socket
-
 
     def doRead(self):
         """Calls self.protocol.dataReceived with all available data.
@@ -247,7 +245,6 @@ class Connection(_TLSConnectionMixin, abstract.FileDescriptor, _SocketCloser,
 
         return self._dataReceived(data)
 
-
     def _dataReceived(self, data):
         if not data:
             return main.CONNECTION_DONE
@@ -255,14 +252,14 @@ class Connection(_TLSConnectionMixin, abstract.FileDescriptor, _SocketCloser,
         if rval is not None:
             offender = self.protocol.dataReceived
             warningFormat = (
-                'Returning a value other than None from %(fqpn)s is '
-                'deprecated since %(version)s.')
+                "Returning a value other than None from %(fqpn)s is "
+                "deprecated since %(version)s."
+            )
             warningString = deprecate.getDeprecationWarningString(
-                offender, versions.Version('Twisted', 11, 0, 0),
-                format=warningFormat)
+                offender, versions.Version("Twisted", 11, 0, 0), format=warningFormat
+            )
             deprecate.warnAboutFunction(offender, warningString)
         return rval
-
 
     def writeSomeData(self, data):
         """
@@ -284,7 +281,6 @@ class Connection(_TLSConnectionMixin, abstract.FileDescriptor, _SocketCloser,
             else:
                 return main.CONNECTION_LOST
 
-
     def _closeWriteConnection(self):
         try:
             self.socket.shutdown(1)
@@ -299,7 +295,6 @@ class Connection(_TLSConnectionMixin, abstract.FileDescriptor, _SocketCloser,
                 log.err()
                 self.connectionLost(f)
 
-
     def readConnectionLost(self, reason):
         p = IHalfCloseableProtocol(self.protocol, None)
         if p:
@@ -311,11 +306,8 @@ class Connection(_TLSConnectionMixin, abstract.FileDescriptor, _SocketCloser,
         else:
             self.connectionLost(reason)
 
-
-
     def connectionLost(self, reason):
-        """See abstract.FileDescriptor.connectionLost().
-        """
+        """See abstract.FileDescriptor.connectionLost()."""
         # Make sure we're not called twice, which can happen e.g. if
         # abortConnection() is called from protocol's dataReceived and then
         # code immediately after throws an exception that reaches the
@@ -331,28 +323,27 @@ class Connection(_TLSConnectionMixin, abstract.FileDescriptor, _SocketCloser,
         del self.fileno
         protocol.connectionLost(reason)
 
-
     logstr = "Uninitialized"
 
     def logPrefix(self):
-        """Return the prefix to log with when I own the logging thread.
-        """
+        """Return the prefix to log with when I own the logging thread."""
         return self.logstr
 
     def getTcpNoDelay(self):
-        return operator.truth(self.socket.getsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY))
+        return operator.truth(
+            self.socket.getsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY)
+        )
 
     def setTcpNoDelay(self, enabled):
         self.socket.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, enabled)
 
     def getTcpKeepAlive(self):
-        return operator.truth(self.socket.getsockopt(socket.SOL_SOCKET,
-                                                     socket.SO_KEEPALIVE))
+        return operator.truth(
+            self.socket.getsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE)
+        )
 
     def setTcpKeepAlive(self, enabled):
         self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, enabled)
-
-
 
 
 class _BaseBaseClient:
@@ -433,7 +424,6 @@ class _BaseBaseClient:
         else:
             reactor.callLater(0, self.failIfNotConnected, error)
 
-
     def resolveAddress(self):
         """
         Resolve the name that was passed to this L{_BaseBaseClient}, if
@@ -457,7 +447,6 @@ class _BaseBaseClient:
         else:
             self._setRealAddress(self.addr)
 
-
     def _setRealAddress(self, address):
         """
         Set the resolved address of this L{_BaseBaseClient} and initiate the
@@ -472,12 +461,12 @@ class _BaseBaseClient:
         if len(address) == 4:
             # IPv6, make sure we have the scopeID associated
             hostname = socket.getnameinfo(
-                address, socket.NI_NUMERICHOST | socket.NI_NUMERICSERV)[0]
+                address, socket.NI_NUMERICHOST | socket.NI_NUMERICSERV
+            )[0]
             self.realAddress = tuple([hostname] + list(address[1:]))
         else:
             self.realAddress = address
         self.doConnect()
-
 
     def failIfNotConnected(self, err):
         """
@@ -485,8 +474,7 @@ class _BaseBaseClient:
         cleans everything it can: call connectionFailed, stop read and write,
         delete socket related members.
         """
-        if (self.connected or self.disconnected or
-            not hasattr(self, "connector")):
+        if self.connected or self.disconnected or not hasattr(self, "connector"):
             return
 
         self._stopReadingAndWriting()
@@ -499,14 +487,12 @@ class _BaseBaseClient:
         self.connector.connectionFailed(failure.Failure(err))
         del self.connector
 
-
     def stopConnecting(self):
         """
         If a connection attempt is still outstanding (i.e.  no connection is
         yet established), immediately stop attempting to connect.
         """
         self.failIfNotConnected(error.UserError())
-
 
     def connectionLost(self, reason):
         """
@@ -523,7 +509,6 @@ class _BaseBaseClient:
         else:
             self._commonConnection.connectionLost(self, reason)
             self.connector.connectionLost(reason)
-
 
 
 class BaseClient(_BaseBaseClient, _TLSClientMixin, Connection):
@@ -558,7 +543,6 @@ class BaseClient(_BaseBaseClient, _TLSClientMixin, Connection):
             self.stopReading()
             self.stopWriting()
 
-
     def _collectSocketDetails(self):
         """
         Clean up references to the socket and its file descriptor.
@@ -566,7 +550,6 @@ class BaseClient(_BaseBaseClient, _TLSClientMixin, Connection):
         @see: L{_BaseBaseClient}
         """
         del self.socket, self.fileno
-
 
     def createInternetSocket(self):
         """(internal) Create a non-blocking socket using
@@ -576,7 +559,6 @@ class BaseClient(_BaseBaseClient, _TLSClientMixin, Connection):
         s.setblocking(0)
         fdesc._setCloseOnExec(s.fileno())
         return s
-
 
     def doConnect(self):
         """
@@ -613,13 +595,16 @@ class BaseClient(_BaseBaseClient, _TLSClientMixin, Connection):
                 pass
             # on Windows EINVAL means sometimes that we should keep trying:
             # http://msdn.microsoft.com/library/default.asp?url=/library/en-us/winsock/winsock/connect_2.asp
-            elif ((connectResult in (EWOULDBLOCK, EINPROGRESS, EALREADY)) or
-                  (connectResult == EINVAL and platformType == "win32")):
+            elif (connectResult in (EWOULDBLOCK, EINPROGRESS, EALREADY)) or (
+                connectResult == EINVAL and platformType == "win32"
+            ):
                 self.startReading()
                 self.startWriting()
                 return
             else:
-                self.failIfNotConnected(error.getConnectError((connectResult, strerror(connectResult))))
+                self.failIfNotConnected(
+                    error.getConnectError((connectResult, strerror(connectResult)))
+                )
                 return
 
         # If I have reached this point without raising or returning, that means
@@ -630,7 +615,6 @@ class BaseClient(_BaseBaseClient, _TLSClientMixin, Connection):
         self.stopReading()
         self.stopWriting()
         self._connectDone()
-
 
     def _connectDone(self):
         """
@@ -661,8 +645,8 @@ class BaseClient(_BaseBaseClient, _TLSClientMixin, Connection):
             self.protocol.makeConnection(self)
 
 
-
 _NUMERIC_ONLY = socket.AI_NUMERICHOST | _AI_NUMERICSERV
+
 
 def _resolveIPv6(ip, port):
     """
@@ -686,7 +670,6 @@ def _resolveIPv6(ip, port):
         should be.
     """
     return socket.getaddrinfo(ip, port, 0, 0, 0, _NUMERIC_ONLY)[0][4]
-
 
 
 class _BaseTCPClient:
@@ -754,15 +737,13 @@ class _BaseTCPClient:
                 whenDone = None
         self._finishInit(whenDone, skt, err, reactor)
 
-
     def getHost(self):
         """
         Returns an L{IPv4Address} or L{IPv6Address}.
 
         This indicates the address from which I am connecting.
         """
-        return self._addressType('TCP', *_getsockname(self.socket))
-
+        return self._addressType("TCP", *_getsockname(self.socket))
 
     def getPeer(self):
         """
@@ -770,13 +751,11 @@ class _BaseTCPClient:
 
         This indicates the address that I am connected to.
         """
-        return self._addressType('TCP', *self.realAddress)
-
+        return self._addressType("TCP", *self.realAddress)
 
     def __repr__(self) -> str:
-        s = '<%s to %s at %x>' % (self.__class__, self.addr, id(self))
+        s = "<%s to %s at %x>" % (self.__class__, self.addr, id(self))
         return s
-
 
 
 class Client(_BaseTCPClient, BaseClient):
@@ -785,7 +764,6 @@ class Client(_BaseTCPClient, BaseClient):
 
     Do not create these directly; use L{IReactorTCP.connectTCP}.
     """
-
 
 
 class Server(_TLSServerMixin, Connection):
@@ -802,6 +780,7 @@ class Server(_TLSServerMixin, Connection):
         those methods on L{Server} will go through another layer of TLS if it
         has been enabled).
     """
+
     _base = Connection
 
     _addressType = address.IPv4Address
@@ -823,13 +802,13 @@ class Server(_TLSServerMixin, Connection):
         self.hostname = client[0]
 
         logPrefix = self._getLogPrefix(self.protocol)
-        self.logstr = "%s,%s,%s" % (logPrefix,
-                                    sessionno,
-                                    self.hostname)
+        self.logstr = "%s,%s,%s" % (logPrefix, sessionno, self.hostname)
         if self.server is not None:
-            self.repstr = "<%s #%s on %s>" % (self.protocol.__class__.__name__,
-                                              self.sessionno,
-                                              self.server._realPortNumber)
+            self.repstr = "<%s #%s on %s>" % (
+                self.protocol.__class__.__name__,
+                self.sessionno,
+                self.server._realPortNumber,
+            )
         self.startReading()
         self.connected = 1
 
@@ -839,10 +818,8 @@ class Server(_TLSServerMixin, Connection):
         """
         return self.repstr
 
-
     @classmethod
-    def _fromConnectedSocket(cls, fileDescriptor, addressFamily, factory,
-                             reactor):
+    def _fromConnectedSocket(cls, fileDescriptor, addressFamily, factory, reactor):
         """
         Create a new L{Server} based on an existing connected I{SOCK_STREAM}
         socket.
@@ -865,7 +842,7 @@ class Server(_TLSServerMixin, Connection):
             addressType = address.IPv6Address
         skt = socket.fromfd(fileDescriptor, addressFamily, socket.SOCK_STREAM)
         addr = _getpeername(skt)
-        protocolAddr = addressType('TCP', *addr)
+        protocolAddr = addressType("TCP", *addr)
         localPort = skt.getsockname()[1]
 
         protocol = factory.buildProtocol(protocolAddr)
@@ -875,10 +852,12 @@ class Server(_TLSServerMixin, Connection):
 
         self = cls(skt, protocol, addr, None, addr[1], reactor)
         self.repstr = "<%s #%s on %s>" % (
-            self.protocol.__class__.__name__, self.sessionno, localPort)
+            self.protocol.__class__.__name__,
+            self.sessionno,
+            localPort,
+        )
         protocol.makeConnection(self)
         return self
-
 
     def getHost(self):
         """
@@ -887,8 +866,7 @@ class Server(_TLSServerMixin, Connection):
         This indicates the server's address.
         """
         addr = _getsockname(self.socket)
-        return self._addressType('TCP', *addr)
-
+        return self._addressType("TCP", *addr)
 
     def getPeer(self):
         """
@@ -896,8 +874,7 @@ class Server(_TLSServerMixin, Connection):
 
         This indicates the client's address.
         """
-        return self._addressType('TCP', *self.client)
-
+        return self._addressType("TCP", *self.client)
 
 
 class _IFileDescriptorReservation(Interface):
@@ -934,7 +911,6 @@ class _IFileDescriptorReservation(Interface):
             place; L{False} if it is not open.
         """
 
-
     def reserve():
         """
         Attempt to open the reserved file descriptor; if this fails
@@ -945,13 +921,11 @@ class _IFileDescriptorReservation(Interface):
             whose errno is L{EMFILE}.
         """
 
-
     def __enter__():
         """
         Release the underlying file descriptor so that code within the
         context manager can open a new file.
         """
-
 
     def __exit__(excType, excValue, traceback):
         """
@@ -962,7 +936,6 @@ class _IFileDescriptorReservation(Interface):
         @param excValue: See L{object.__exit__}
         @param traceback: See L{object.__exit__}
         """
-
 
 
 @implementer(_IFileDescriptorReservation)
@@ -976,11 +949,11 @@ class _FileDescriptorReservation:
     @type fileFactory: A L{callable} that accepts no arguments and
         returns an object with a C{close} method.
     """
+
     _log = Logger()
 
     _fileFactory = attr.ib()
     _fileDescriptor = attr.ib(init=False, default=None)
-
 
     def available(self):
         """
@@ -992,7 +965,6 @@ class _FileDescriptorReservation:
         """
         return self._fileDescriptor is not None
 
-
     def reserve(self):
         """
         See L{_IFileDescriptorReservation.reserve}.
@@ -1003,23 +975,21 @@ class _FileDescriptorReservation:
             except (IOError, OSError) as e:
                 if e.errno == EMFILE:
                     self._log.failure(
-                        "Could not reserve EMFILE recovery file descriptor.")
+                        "Could not reserve EMFILE recovery file descriptor."
+                    )
                 else:
                     raise
             else:
                 self._fileDescriptor = fileDescriptor
-
 
     def __enter__(self):
         """
         See L{_IFileDescriptorReservation.__enter__}.
         """
         if self._fileDescriptor is None:
-            raise RuntimeError(
-                "No file reserved.  Have you called my reserve method?")
+            raise RuntimeError("No file reserved.  Have you called my reserve method?")
         self._fileDescriptor.close()
         self._fileDescriptor = None
-
 
     def __exit__(self, excType, excValue, traceback):
         """
@@ -1028,9 +998,7 @@ class _FileDescriptorReservation:
         try:
             self.reserve()
         except Exception:
-            self._log.failure(
-                "Could not re-reserve EMFILE recovery file descriptor.")
-
+            self._log.failure("Could not re-reserve EMFILE recovery file descriptor.")
 
 
 @implementer(_IFileDescriptorReservation)
@@ -1048,12 +1016,10 @@ class _NullFileDescriptorReservation:
         """
         return False
 
-
     def reserve(self):
         """
         Do nothing.  See L{_IFileDescriptorReservation.reserve}.
         """
-
 
     def __enter__(self):
         """
@@ -1061,7 +1027,6 @@ class _NullFileDescriptorReservation:
 
         @return: L{False}
         """
-
 
     def __exit__(self, excType, excValue, traceback):
         """
@@ -1071,7 +1036,6 @@ class _NullFileDescriptorReservation:
         @param excValue: See L{object.__exit__}
         @param traceback: See L{object.__exit__}
         """
-
 
 
 # Don't keep a reserve file descriptor for coping with file descriptor
@@ -1101,7 +1065,7 @@ class _NullFileDescriptorReservation:
 # Windows 7 (6th ed.)
 # Mark E. Russinovich, David A. Solomon, and Alex
 # Ionescu. 2012. Microsoft Press.
-if platformType == 'win32':
+if platformType == "win32":
     _reservedFD = _NullFileDescriptorReservation()
 else:
     _reservedFD = _FileDescriptorReservation(lambda: open(os.devnull))  # type: ignore[assignment] # noqa
@@ -1125,7 +1089,6 @@ else:
 _ACCEPT_ERRORS = (EMFILE, ENOBUFS, ENFILE, ENOMEM, ECONNABORTED)
 
 
-
 @attr.s
 class _BuffersLogs:
     """
@@ -1139,6 +1102,7 @@ class _BuffersLogs:
         written
     @type _observer: L{twisted.logger.ILogObserver}.
     """
+
     _namespace = attr.ib()
     _observer = attr.ib()
     _logs = attr.ib(default=attr.Factory(list))
@@ -1152,7 +1116,6 @@ class _BuffersLogs:
         """
         return Logger(namespace=self._namespace, observer=self._logs.append)
 
-
     def __exit__(self, excValue, excType, traceback):
         """
         Exit a log buffering context and log all buffered events to
@@ -1164,7 +1127,6 @@ class _BuffersLogs:
         """
         for event in self._logs:
             self._observer(event)
-
 
 
 def _accept(logger, accepts, listener, reservedFD):
@@ -1213,30 +1175,31 @@ def _accept(logger, accepts, listener, reservedFD):
                 # descriptor for use by listener.accept()'s clients.
                 # Each client socket will be closed until the listener
                 # returns EAGAIN.
-                logger.info("EMFILE encountered;"
-                            " releasing reserved file descriptor.")
+                logger.info(
+                    "EMFILE encountered;" " releasing reserved file descriptor."
+                )
                 # The following block should not run arbitrary code
                 # that might acquire its own file descriptor.
                 with reservedFD:
-                    clientsToClose = _accept(
-                        logger, accepts, listener, reservedFD)
+                    clientsToClose = _accept(logger, accepts, listener, reservedFD)
                     for clientToClose, closedAddress in clientsToClose:
                         clientToClose.close()
-                        logger.info("EMFILE recovery:"
-                                    " Closed socket from {address}",
-                                    address=closedAddress)
-                    logger.info(
-                        "Re-reserving EMFILE recovery file descriptor.")
+                        logger.info(
+                            "EMFILE recovery:" " Closed socket from {address}",
+                            address=closedAddress,
+                        )
+                    logger.info("Re-reserving EMFILE recovery file descriptor.")
                 return
             elif e.args[0] in _ACCEPT_ERRORS:
-                logger.info("Could not accept new connection ({acceptError})",
-                            acceptError=errorcode[e.args[0]])
+                logger.info(
+                    "Could not accept new connection ({acceptError})",
+                    acceptError=errorcode[e.args[0]],
+                )
                 return
             else:
                 raise
         else:
             yield client, address
-
 
 
 @implementer(IListeningPort)
@@ -1280,10 +1243,10 @@ class Port(base.BasePort, _SocketCloser):
 
     transport = Server
     sessionno = 0
-    interface = ''
+    interface = ""
     backlog = 50
 
-    _type = 'TCP'
+    _type = "TCP"
 
     # Actual port number being listened on, only set to a non-None
     # value when we are actually listening.
@@ -1297,9 +1260,8 @@ class Port(base.BasePort, _SocketCloser):
     _addressType = address.IPv4Address
     _logger = Logger()
 
-    def __init__(self, port, factory, backlog=50, interface='', reactor=None):
-        """Initialize with a numeric port to listen on.
-        """
+    def __init__(self, port, factory, backlog=50, interface="", reactor=None):
+        """Initialize with a numeric port to listen on."""
         base.BasePort.__init__(self, reactor=reactor)
         self.port = port
         self.factory = factory
@@ -1308,7 +1270,6 @@ class Port(base.BasePort, _SocketCloser):
             self.addressFamily = socket.AF_INET6
             self._addressType = address.IPv6Address
         self.interface = interface
-
 
     @classmethod
     def _fromListeningDescriptor(cls, reactor, fd, addressFamily, factory):
@@ -1333,22 +1294,24 @@ class Port(base.BasePort, _SocketCloser):
         self._preexistingSocket = port
         return self
 
-
     def __repr__(self) -> str:
         if self._realPortNumber is not None:
-            return "<%s of %s on %s>" % (self.__class__,
-                                         self.factory.__class__,
-                                         self._realPortNumber)
+            return "<%s of %s on %s>" % (
+                self.__class__,
+                self.factory.__class__,
+                self._realPortNumber,
+            )
         else:
-            return "<%s of %s (not listening)>" % (self.__class__,
-                                                   self.factory.__class__)
+            return "<%s of %s (not listening)>" % (
+                self.__class__,
+                self.factory.__class__,
+            )
 
     def createInternetSocket(self):
         s = base.BasePort.createInternetSocket(self)
         if platformType == "posix" and sys.platform != "cygwin":
             s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         return s
-
 
     def startListening(self):
         """Create and bind my socket, and begin listening on it.
@@ -1380,8 +1343,10 @@ class Port(base.BasePort, _SocketCloser):
         # reflect what the OS actually assigned us.
         self._realPortNumber = skt.getsockname()[1]
 
-        log.msg("%s starting on %s" % (
-                self._getLogPrefix(self.factory), self._realPortNumber))
+        log.msg(
+            "%s starting on %s"
+            % (self._getLogPrefix(self.factory), self._realPortNumber)
+        )
 
         # The order of the next 5 lines is kind of bizarre.  If no one
         # can explain it, perhaps we should re-arrange them.
@@ -1394,7 +1359,7 @@ class Port(base.BasePort, _SocketCloser):
         self.startReading()
 
     def _buildAddr(self, address):
-        return self._addressType('TCP', *address)
+        return self._addressType("TCP", *address)
 
     def doRead(self):
         """
@@ -1411,13 +1376,13 @@ class Port(base.BasePort, _SocketCloser):
                 # in an iteration of the event loop.
                 numAccepts = 1
 
-            with _BuffersLogs(self._logger.namespace,
-                              self._logger.observer) as bufferingLogger:
+            with _BuffersLogs(
+                self._logger.namespace, self._logger.observer
+            ) as bufferingLogger:
                 accepted = 0
-                clients = _accept(bufferingLogger,
-                                  range(numAccepts),
-                                  self.socket,
-                                  _reservedFD)
+                clients = _accept(
+                    bufferingLogger, range(numAccepts), self.socket, _reservedFD
+                )
 
                 for accepted, (skt, addr) in enumerate(clients, 1):
                     fdesc._setCloseOnExec(skt.fileno())
@@ -1426,19 +1391,19 @@ class Port(base.BasePort, _SocketCloser):
                         # IPv6, make sure we get the scopeID if it
                         # exists
                         host = socket.getnameinfo(
-                            addr,
-                            socket.NI_NUMERICHOST | socket.NI_NUMERICSERV)
+                            addr, socket.NI_NUMERICHOST | socket.NI_NUMERICSERV
+                        )
                         addr = tuple([host[0]] + list(addr[1:]))
 
-                    protocol = self.factory.buildProtocol(
-                        self._buildAddr(addr))
+                    protocol = self.factory.buildProtocol(self._buildAddr(addr))
                     if protocol is None:
                         skt.close()
                         continue
                     s = self.sessionno
                     self.sessionno = s + 1
                     transport = self.transport(
-                        skt, protocol, addr, self, s, self.reactor)
+                        skt, protocol, addr, self, s, self.reactor
+                    )
                     protocol.makeConnection(transport)
 
             # Scale our synchronous accept loop according to traffic
@@ -1472,8 +1437,7 @@ class Port(base.BasePort, _SocketCloser):
         self.disconnecting = True
         self.stopReading()
         if self.connected:
-            self.deferred = deferLater(
-                self.reactor, 0, self.connectionLost, connDone)
+            self.deferred = deferLater(self.reactor, 0, self.connectionLost, connDone)
             return self.deferred
 
     stopListening = loseConnection
@@ -1482,8 +1446,7 @@ class Port(base.BasePort, _SocketCloser):
         """
         Log message for closing port
         """
-        log.msg('(%s Port %s Closed)' % (self._type, self._realPortNumber))
-
+        log.msg("(%s Port %s Closed)" % (self._type, self._realPortNumber))
 
     def connectionLost(self, reason):
         """
@@ -1503,12 +1466,9 @@ class Port(base.BasePort, _SocketCloser):
         finally:
             self.disconnecting = False
 
-
     def logPrefix(self):
-        """Returns the name of my class, to prefix log entries with.
-        """
+        """Returns the name of my class, to prefix log entries with."""
         return reflect.qual(self.factory.__class__)
-
 
     def getHost(self):
         """
@@ -1516,8 +1476,7 @@ class Port(base.BasePort, _SocketCloser):
         address of this port.
         """
         addr = _getsockname(self.socket)
-        return self._addressType('TCP', *addr)
-
+        return self._addressType("TCP", *addr)
 
 
 class Connector(base.BaseConnector):
@@ -1530,13 +1489,13 @@ class Connector(base.BaseConnector):
         address.
     @type _addressType: C{type}
     """
+
     _addressType = address.IPv4Address
 
-    def __init__(self, host, port, factory, timeout, bindAddress,
-                 reactor=None):
+    def __init__(self, host, port, factory, timeout, bindAddress, reactor=None):
         if isinstance(port, str):
             try:
-                port = socket.getservbyname(port, 'tcp')
+                port = socket.getservbyname(port, "tcp")
             except socket.error as e:
                 raise error.ServiceNameUnknownError(string="%s (%r)" % (e, port))
         self.host, self.port = host, port
@@ -1544,7 +1503,6 @@ class Connector(base.BaseConnector):
             self._addressType = address.IPv6Address
         self.bindAddress = bindAddress
         base.BaseConnector.__init__(self, factory, timeout, reactor)
-
 
     def _makeTransport(self):
         """
@@ -1555,9 +1513,8 @@ class Connector(base.BaseConnector):
         """
         return Client(self.host, self.port, self.bindAddress, self, self.reactor)
 
-
     def getDestination(self):
         """
         @see: L{twisted.internet.interfaces.IConnector.getDestination}.
         """
-        return self._addressType('TCP', self.host, self.port)
+        return self._addressType("TCP", self.host, self.port)

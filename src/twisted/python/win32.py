@@ -24,12 +24,12 @@ ERROR_DIRECTORY = 267
 
 O_BINARY = getattr(os, "O_BINARY", 0)
 
+
 class FakeWindowsError(OSError):
     """
     Stand-in for sometimes-builtin exception on platforms for which it
     is missing.
     """
-
 
 
 try:
@@ -39,7 +39,9 @@ except NameError:
 
 
 _cmdLineQuoteRe = re.compile(r'(\\*)"')
-_cmdLineQuoteRe2 = re.compile(r'(\\+)\Z')
+_cmdLineQuoteRe2 = re.compile(r"(\\+)\Z")
+
+
 def cmdLineQuote(s):
     """
     Internal method for quoting a single command-line argument.
@@ -52,8 +54,13 @@ def cmdLineQuote(s):
     @return: a quoted string.
     @rtype: C{str}
     """
-    quote = ((" " in s) or ("\t" in s) or ('"' in s) or s == '') and '"' or ''
-    return quote + _cmdLineQuoteRe2.sub(r"\1\1", _cmdLineQuoteRe.sub(r'\1\1\\"', s)) + quote
+    quote = ((" " in s) or ("\t" in s) or ('"' in s) or s == "") and '"' or ""
+    return (
+        quote
+        + _cmdLineQuoteRe2.sub(r"\1\1", _cmdLineQuoteRe.sub(r'\1\1\\"', s))
+        + quote
+    )
+
 
 def quoteArguments(arguments):
     """
@@ -65,7 +72,7 @@ def quoteArguments(arguments):
 
     @return: a single string, with the given sequence quoted as necessary.
     """
-    return ' '.join([cmdLineQuote(a) for a in arguments])
+    return " ".join([cmdLineQuote(a) for a in arguments])
 
 
 class _ErrorFormatter:
@@ -84,11 +91,11 @@ class _ErrorFormatter:
     @ivar errorTab: A mapping from integer error numbers to C{str} messages
         which correspond to those erorrs (like I{socket.errorTab}).
     """
+
     def __init__(self, WinError, FormatMessage, errorTab):
         self.winError = WinError
         self.formatMessage = FormatMessage
         self.errorTab = errorTab
-
 
     @classmethod
     def fromEnvironment(cls):
@@ -109,7 +116,6 @@ class _ErrorFormatter:
         except ImportError:
             errorTab = None
         return cls(WinError, FormatMessage, errorTab)
-
 
     def formatError(self, errorcode):
         """
@@ -135,5 +141,6 @@ class _ErrorFormatter:
             if result is not None:
                 return result
         return os.strerror(errorcode)
+
 
 formatError = _ErrorFormatter.fromEnvironment().formatError

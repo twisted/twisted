@@ -12,8 +12,11 @@ import errno
 from zope.interface import implementer
 
 from twisted.logger import Logger
-from twisted.internet.posixbase import (PosixReactorBase, _NO_FILEDESC,
-                                        _ContinuousPolling)
+from twisted.internet.posixbase import (
+    PosixReactorBase,
+    _NO_FILEDESC,
+    _ContinuousPolling,
+)
 from twisted.python.log import callWithLogger
 from twisted.python.runtime import seconds as runtimeSeconds
 from twisted.internet.interfaces import IReactorFDSet
@@ -50,12 +53,12 @@ def sniffioTaskFactory(loop, coro):
     return current_context.run(tasks.Task, coro=coro, loop=loop)
 
 
-
 @implementer(IReactorFDSet)
 class AsyncioSelectorReactor(PosixReactorBase):
     """
     Reactor running on top of L{asyncio.SelectorEventLoop}.
     """
+
     _asyncClosed = False
     _log = Logger()
 
@@ -75,7 +78,6 @@ class AsyncioSelectorReactor(PosixReactorBase):
         self._timerHandle = None
 
         super().__init__()
-
 
     def _unregisterFDInAsyncio(self, fd):
         """
@@ -132,7 +134,6 @@ class AsyncioSelectorReactor(PosixReactorBase):
         except:
             pass
 
-
     def _readOrWrite(self, selectable, read):
         method = selectable.doRead if read else selectable.doWrite
 
@@ -148,17 +149,15 @@ class AsyncioSelectorReactor(PosixReactorBase):
         if why:
             self._disconnectSelectable(selectable, why, read)
 
-
     def addReader(self, reader):
-        if reader in self._readers.keys() or \
-           reader in self._continuousPolling._readers:
+        if reader in self._readers.keys() or reader in self._continuousPolling._readers:
             return
 
         fd = reader.fileno()
         try:
-            self._asyncioEventloop.add_reader(fd, callWithLogger, reader,
-                                              self._readOrWrite, reader,
-                                              True)
+            self._asyncioEventloop.add_reader(
+                fd, callWithLogger, reader, self._readOrWrite, reader, True
+            )
             self._readers[reader] = fd
         except IOError as e:
             self._unregisterFDInAsyncio(fd)
@@ -170,17 +169,15 @@ class AsyncioSelectorReactor(PosixReactorBase):
             else:
                 raise
 
-
     def addWriter(self, writer):
-        if writer in self._writers.keys() or \
-           writer in self._continuousPolling._writers:
+        if writer in self._writers.keys() or writer in self._continuousPolling._writers:
             return
 
         fd = writer.fileno()
         try:
-            self._asyncioEventloop.add_writer(fd, callWithLogger, writer,
-                                              self._readOrWrite, writer,
-                                              False)
+            self._asyncioEventloop.add_writer(
+                fd, callWithLogger, writer, self._readOrWrite, writer, False
+            )
             self._writers[writer] = fd
         except PermissionError:
             self._unregisterFDInAsyncio(fd)
@@ -195,12 +192,12 @@ class AsyncioSelectorReactor(PosixReactorBase):
             self._unregisterFDInAsyncio(fd)
             raise
 
-
     def removeReader(self, reader):
 
         # First, see if they're trying to remove a reader that we don't have.
-        if not (reader in self._readers.keys() \
-                or self._continuousPolling.isReading(reader)):
+        if not (
+            reader in self._readers.keys() or self._continuousPolling.isReading(reader)
+        ):
             # We don't have it, so just return OK.
             return
 
@@ -219,12 +216,12 @@ class AsyncioSelectorReactor(PosixReactorBase):
 
         self._asyncioEventloop.remove_reader(fd)
 
-
     def removeWriter(self, writer):
 
         # First, see if they're trying to remove a writer that we don't have.
-        if not (writer in self._writers.keys() \
-                or self._continuousPolling.isWriting(writer)):
+        if not (
+            writer in self._writers.keys() or self._continuousPolling.isWriting(writer)
+        ):
             # We don't have it, so just return OK.
             return
 
@@ -244,27 +241,21 @@ class AsyncioSelectorReactor(PosixReactorBase):
 
         self._asyncioEventloop.remove_writer(fd)
 
-
     def removeAll(self):
-        return (self._removeAll(self._readers.keys(), self._writers.keys()) +
-                self._continuousPolling.removeAll())
-
+        return (
+            self._removeAll(self._readers.keys(), self._writers.keys())
+            + self._continuousPolling.removeAll()
+        )
 
     def getReaders(self):
-        return (list(self._readers.keys()) +
-                self._continuousPolling.getReaders())
-
+        return list(self._readers.keys()) + self._continuousPolling.getReaders()
 
     def getWriters(self):
-        return (list(self._writers.keys()) +
-                self._continuousPolling.getWriters())
-
+        return list(self._writers.keys()) + self._continuousPolling.getWriters()
 
     def iterate(self, timeout):
-        self._asyncioEventloop.call_later(timeout + 0.01,
-                                          self._asyncioEventloop.stop)
+        self._asyncioEventloop.call_later(timeout + 0.01, self._asyncioEventloop.stop)
         self._asyncioEventloop.run_forever()
-
 
     def run(self, installSignalHandlers=True):
         self.startRunning(installSignalHandlers=installSignalHandlers)
@@ -272,18 +263,15 @@ class AsyncioSelectorReactor(PosixReactorBase):
         if self._justStopped:
             self._justStopped = False
 
-
     def stop(self):
         super().stop()
         # This will cause runUntilCurrent which in its turn
         # will call fireSystemEvent("shutdown")
         self.callLater(0, lambda: None)
 
-
     def crash(self):
         super().crash()
         self._asyncioEventloop.stop()
-
 
     seconds = staticmethod(runtimeSeconds)
 
@@ -299,8 +287,7 @@ class AsyncioSelectorReactor(PosixReactorBase):
             self._scheduledAt = abs_time
             if self._timerHandle is not None:
                 self._timerHandle.cancel()
-            self._timerHandle = self._asyncioEventloop.call_at(
-                abs_time, self._onTimer)
+            self._timerHandle = self._asyncioEventloop.call_at(abs_time, self._onTimer)
 
     def _moveCallLaterSooner(self, tple):
         PosixReactorBase._moveCallLaterSooner(self, tple)
@@ -313,11 +300,9 @@ class AsyncioSelectorReactor(PosixReactorBase):
             self._reschedule()
         return dc
 
-
     def callFromThread(self, f, *args, **kwargs):
         g = lambda: self.callLater(0, f, *args, **kwargs)
         self._asyncioEventloop.call_soon_threadsafe(g)
-
 
 
 def install(eventloop=None):
@@ -329,4 +314,5 @@ def install(eventloop=None):
     """
     reactor = AsyncioSelectorReactor(eventloop)
     from twisted.internet.main import installReactor
+
     installReactor(reactor)

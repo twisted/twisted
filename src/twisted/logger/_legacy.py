@@ -14,7 +14,6 @@ from ._observer import ILogObserver
 from ._stdlib import fromStdlibLogLevelMapping, StringifiableFromEvent
 
 
-
 @implementer(ILogObserver)
 class LegacyLogObserverWrapper:
     """
@@ -33,13 +32,8 @@ class LegacyLogObserverWrapper:
         """
         self.legacyObserver = legacyObserver
 
-
     def __repr__(self) -> str:
-        return (
-            "{self.__class__.__name__}({self.legacyObserver})"
-            .format(self=self)
-        )
-
+        return "{self.__class__.__name__}({self.legacyObserver})".format(self=self)
 
     def __call__(self, event):
         """
@@ -93,7 +87,6 @@ class LegacyLogObserverWrapper:
         self.legacyObserver(event)
 
 
-
 def publishToNewObserver(observer, eventDict, textFromEventDict):
     """
     Publish an old-style (L{twisted.python.log}) event to a new-style
@@ -126,7 +119,7 @@ def publishToNewObserver(observer, eventDict, textFromEventDict):
         text = textFromEventDict(eventDict)
         if text is not None:
             eventDict["log_text"] = text
-            eventDict["log_format"] = u"{log_text}"
+            eventDict["log_format"] = "{log_text}"
 
     if "log_level" not in eventDict:
         if "logLevel" in eventDict:
@@ -146,7 +139,7 @@ def publishToNewObserver(observer, eventDict, textFromEventDict):
             eventDict["log_level"] = level
 
     if "log_namespace" not in eventDict:
-        eventDict["log_namespace"] = u"log_legacy"
+        eventDict["log_namespace"] = "log_legacy"
 
     if "log_system" not in eventDict and "system" in eventDict:
         eventDict["log_system"] = eventDict["system"]

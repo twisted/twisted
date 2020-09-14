@@ -17,7 +17,6 @@ import stat
 from twisted.python import threadable
 
 
-
 class BaseLogFile:
     """
     The base class for a log file that can be rotated.
@@ -43,16 +42,13 @@ class BaseLogFile:
             self.defaultMode = defaultMode
         self._openFile()
 
-
     @classmethod
     def fromFullPath(cls, filename, *args, **kwargs):
         """
         Construct a log file from a full file path.
         """
         logPath = os.path.abspath(filename)
-        return cls(os.path.basename(logPath),
-                   os.path.dirname(logPath), *args, **kwargs)
-
+        return cls(os.path.basename(logPath), os.path.dirname(logPath), *args, **kwargs)
 
     def shouldRotate(self):
         """
@@ -60,7 +56,6 @@ class BaseLogFile:
         should be rotated.
         """
         raise NotImplementedError
-
 
     def _openFile(self):
         """
@@ -89,7 +84,6 @@ class BaseLogFile:
                 # Probably /dev/null or something?
                 pass
 
-
     def write(self, data):
         """
         Write some data to the file.
@@ -101,16 +95,14 @@ class BaseLogFile:
             self.flush()
             self.rotate()
         if isinstance(data, str):
-            data = data.encode('utf8')
+            data = data.encode("utf8")
         self._file.write(data)
-
 
     def flush(self):
         """
         Flush the file.
         """
         self._file.flush()
-
 
     def close(self):
         """
@@ -122,7 +114,6 @@ class BaseLogFile:
         self._file.close()
         self._file = None
 
-
     def reopen(self):
         """
         Reopen the log file. This is mainly useful if you use an external log
@@ -133,7 +124,6 @@ class BaseLogFile:
         """
         self.close()
         self._openFile()
-
 
     def getCurrentLog(self):
         """
@@ -148,8 +138,15 @@ class LogFile(BaseLogFile):
 
     A rotateLength of None disables automatic log rotation.
     """
-    def __init__(self, name, directory, rotateLength=1000000, defaultMode=None,
-                 maxRotatedFiles=None):
+
+    def __init__(
+        self,
+        name,
+        directory,
+        rotateLength=1000000,
+        defaultMode=None,
+        maxRotatedFiles=None,
+    ):
         """
         Create a log file rotating on length.
 
@@ -223,7 +220,7 @@ class LogFile(BaseLogFile):
         result = []
         for name in glob.glob("%s.*" % self.path):
             try:
-                counter = int(name.split('.')[-1])
+                counter = int(name.split(".")[-1])
                 if counter:
                     result.append(counter)
             except ValueError:
@@ -236,13 +233,13 @@ class LogFile(BaseLogFile):
         del state["size"]
         return state
 
+
 threadable.synchronize(LogFile)
 
 
-
 class DailyLogFile(BaseLogFile):
-    """A log file that is rotated daily (at or after midnight localtime)
-    """
+    """A log file that is rotated daily (at or after midnight localtime)"""
+
     def _openFile(self):
         BaseLogFile._openFile(self)
         self.lastDate = self.toDate(os.stat(self.path)[8])
@@ -264,10 +261,10 @@ class DailyLogFile(BaseLogFile):
     def suffix(self, tupledate):
         """Return the suffix given a (year, month, day) tuple or unixtime"""
         try:
-            return '_'.join(map(str, tupledate))
+            return "_".join(map(str, tupledate))
         except:
             # try taking a float unixtime
-            return '_'.join(map(str, self.toDate(tupledate)))
+            return "_".join(map(str, self.toDate(tupledate)))
 
     def getLog(self, identifier):
         """Given a unix time, return a LogReader for an old log file."""
@@ -306,8 +303,8 @@ class DailyLogFile(BaseLogFile):
         del state["lastDate"]
         return state
 
-threadable.synchronize(DailyLogFile)
 
+threadable.synchronize(DailyLogFile)
 
 
 class LogReader:

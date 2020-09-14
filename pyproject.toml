@@ -51,8 +51,11 @@
         name = "Misc"
         showcontent = false
 
+[tool.black]
+target-version = ['py35', 'py36', 'py37', 'py38']
+
 [tool.isort]
-line_length = 79
+line_length = 88
 sections = "FUTURE,STDLIB,ZOPE,OPENSSL,THIRDPARTY,FIRSTPARTY,LOCALFOLDER"
 default_section = "THIRDPARTY"
 no_lines_before = "LOCALFOLDER"
