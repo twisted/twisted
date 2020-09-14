@@ -24,7 +24,6 @@ class Quit:
         """
         self.isSet = False
 
-
     def set(self):
         """
         Set the flag if it has not been set.
@@ -33,7 +32,6 @@ class Quit:
         """
         self.check()
         self.isSet = True
-
 
     def check(self):
         """

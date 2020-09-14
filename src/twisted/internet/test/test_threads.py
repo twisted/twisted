@@ -21,6 +21,7 @@ class ThreadTestsBuilder(ReactorBuilder):
     """
     Builder for defining tests relating to L{IReactorThreads}.
     """
+
     requiredInterfaces = (IReactorThreads,)
 
     def test_getThreadPool(self):
@@ -33,8 +34,7 @@ class ThreadTestsBuilder(ReactorBuilder):
 
         pool = reactor.getThreadPool()
         self.assertIsInstance(pool, ThreadPool)
-        self.assertFalse(
-            pool.started, "Pool should not start before reactor.run")
+        self.assertFalse(pool.started, "Pool should not start before reactor.run")
 
         def f():
             # Record the state for later assertions
@@ -45,14 +45,9 @@ class ThreadTestsBuilder(ReactorBuilder):
         reactor.callWhenRunning(f)
         self.runReactor(reactor, 2)
 
-        self.assertTrue(
-            state[0], "Pool should start after reactor.run")
-        self.assertFalse(
-            state[1], "Pool should not be joined before reactor.stop")
-        self.assertTrue(
-            pool.joined,
-            "Pool should be stopped after reactor.run returns")
-
+        self.assertTrue(state[0], "Pool should start after reactor.run")
+        self.assertFalse(state[1], "Pool should not be joined before reactor.stop")
+        self.assertTrue(pool.joined, "Pool should be stopped after reactor.run returns")
 
     def test_suggestThreadPoolSize(self):
         """
@@ -63,7 +58,6 @@ class ThreadTestsBuilder(ReactorBuilder):
         reactor.suggestThreadPoolSize(17)
         pool = reactor.getThreadPool()
         self.assertEqual(pool.max, 17)
-
 
     def test_delayedCallFromThread(self):
         """
@@ -107,7 +101,6 @@ class ThreadTestsBuilder(ReactorBuilder):
         # if callFromThread is working.
         self.assertTrue(after - before < 30)
 
-
     def test_callFromThread(self):
         """
         A function scheduled with L{IReactorThreads.callFromThread} invoked
@@ -119,12 +112,11 @@ class ThreadTestsBuilder(ReactorBuilder):
         def threadCall():
             result.append(threading.currentThread())
             reactor.stop()
-        reactor.callLater(0, reactor.callInThread,
-                          reactor.callFromThread, threadCall)
+
+        reactor.callLater(0, reactor.callInThread, reactor.callFromThread, threadCall)
         self.runReactor(reactor, 5)
 
         self.assertEqual(result, [threading.currentThread()])
-
 
     def test_stopThreadPool(self):
         """
@@ -142,7 +134,6 @@ class ThreadTestsBuilder(ReactorBuilder):
         gc.collect()
         self.assertIsNone(threadpool())
 
-
     def test_stopThreadPoolWhenStartedAfterReactorRan(self):
         """
         We must handle the case of shutting down the thread pool when it was
@@ -157,14 +148,15 @@ class ThreadTestsBuilder(ReactorBuilder):
         """
         reactor = self.buildReactor()
         threadPoolRefs = []
+
         def acquireThreadPool():
             threadPoolRefs.append(ref(reactor.getThreadPool()))
             reactor.stop()
+
         reactor.callWhenRunning(acquireThreadPool)
         self.runReactor(reactor)
         gc.collect()
         self.assertIsNone(threadPoolRefs[0]())
-
 
     def test_cleanUpThreadPoolEvenBeforeReactorIsRun(self):
         """
@@ -195,7 +187,6 @@ class ThreadTestsBuilder(ReactorBuilder):
             gc.collect()
             self.assertIsNone(threadPoolRef())
 
-
     def test_isInIOThread(self):
         """
         The reactor registers itself as the I/O thread when it runs so that
@@ -204,13 +195,14 @@ class ThreadTestsBuilder(ReactorBuilder):
         """
         results = []
         reactor = self.buildReactor()
+
         def check():
             results.append(isInIOThread())
             reactor.stop()
+
         reactor.callWhenRunning(check)
         self.runReactor(reactor)
         self.assertEqual([True], results)
-
 
     def test_isNotInIOThread(self):
         """
@@ -220,9 +212,11 @@ class ThreadTestsBuilder(ReactorBuilder):
         """
         results = []
         reactor = self.buildReactor()
+
         def check():
             results.append(isInIOThread())
             reactor.callFromThread(reactor.stop)
+
         reactor.callInThread(check)
         self.runReactor(reactor)
         self.assertEqual([False], results)

@@ -8,7 +8,6 @@ Tools for formatting logging events.
 
 from datetime import datetime as DateTime
 
-from twisted.python.compat import unicode
 from twisted.python.failure import Failure
 from twisted.python.reflect import safe_repr
 from twisted.python._tzhelper import FixedOffsetTimeZone
@@ -16,7 +15,6 @@ from twisted.python._tzhelper import FixedOffsetTimeZone
 from ._flatten import flatFormat, aFormatter
 
 timeFormatRFC3339 = "%Y-%m-%dT%H:%M:%S%z"
-
 
 
 def formatEvent(event):
@@ -42,7 +40,6 @@ def formatEvent(event):
     )
 
 
-
 def formatUnformattableEvent(event, error):
     """
     Formats an event as a L{unicode} that describes the event generically and a
@@ -58,9 +55,8 @@ def formatUnformattableEvent(event, error):
     @rtype: L{unicode}
     """
     try:
-        return (
-            u"Unable to format event {event!r}: {error}"
-            .format(event=event, error=error)
+        return "Unable to format event {event!r}: {error}".format(
+            event=event, error=error
         )
     except BaseException:
         # Yikes, something really nasty happened.
@@ -70,21 +66,21 @@ def formatUnformattableEvent(event, error):
         # logger.
         failure = Failure()
 
-        text = u", ".join(
-            u" = ".join((safe_repr(key), safe_repr(value)))
+        text = ", ".join(
+            " = ".join((safe_repr(key), safe_repr(value)))
             for key, value in event.items()
         )
 
         return (
-            u"MESSAGE LOST: unformattable object logged: {error}\n"
-            u"Recoverable data: {text}\n"
-            u"Exception during formatting:\n{failure}"
-            .format(error=safe_repr(error), failure=failure, text=text)
+            "MESSAGE LOST: unformattable object logged: {error}\n"
+            "Recoverable data: {text}\n"
+            "Exception during formatting:\n{failure}".format(
+                error=safe_repr(error), failure=failure, text=text
+            )
         )
 
 
-
-def formatTime(when, timeFormat=timeFormatRFC3339, default=u"-"):
+def formatTime(when, timeFormat=timeFormatRFC3339, default="-"):
     """
     Format a timestamp as text.
 
@@ -112,13 +108,12 @@ def formatTime(when, timeFormat=timeFormatRFC3339, default=u"-"):
     @return: A formatted time.
     @rtype: L{unicode}
     """
-    if (timeFormat is None or when is None):
+    if timeFormat is None or when is None:
         return default
     else:
         tz = FixedOffsetTimeZone.fromLocalTimeStamp(when)
         datetime = DateTime.fromtimestamp(when, tz)
-        return unicode(datetime.strftime(timeFormat))
-
+        return str(datetime.strftime(timeFormat))
 
 
 def formatEventAsClassicLogText(event, formatTime=formatTime):
@@ -174,9 +169,8 @@ def formatEventAsClassicLogText(event, formatTime=formatTime):
     eventText = eventAsText(event, formatTime=formatTime)
     if not eventText:
         return None
-    eventText = eventText.replace(u"\n", u"\n\t")
-    return eventText + u"\n"
-
+    eventText = eventText.replace("\n", "\n\t")
+    return eventText + "\n"
 
 
 class CallMapping:
@@ -186,6 +180,7 @@ class CallMapping:
 
     Implementation support for L{formatWithCall}.
     """
+
     def __init__(self, submapping):
         """
         @param submapping: Another read-only mapping which will be used to look
@@ -193,19 +188,17 @@ class CallMapping:
         """
         self._submapping = submapping
 
-
     def __getitem__(self, key):
         """
         Look up an item in the submapping for this L{CallMapping}, calling it
         if C{key} ends with C{"()"}.
         """
-        callit = key.endswith(u"()")
+        callit = key.endswith("()")
         realKey = key[:-2] if callit else key
         value = self._submapping[realKey]
         if callit:
             value = value()
         return value
-
 
 
 def formatWithCall(formatString, mapping):
@@ -234,10 +227,7 @@ def formatWithCall(formatString, mapping):
     @return: The string with formatted values interpolated.
     @rtype: L{unicode}
     """
-    return unicode(
-        aFormatter.vformat(formatString, (), CallMapping(mapping))
-    )
-
+    return str(aFormatter.vformat(formatString, (), CallMapping(mapping)))
 
 
 def _formatEvent(event):
@@ -261,13 +251,13 @@ def _formatEvent(event):
 
         format = event.get("log_format", None)
         if format is None:
-            return u""
+            return ""
 
         # Make sure format is unicode.
         if isinstance(format, bytes):
             # If we get bytes, assume it's UTF-8 bytes
             format = format.decode("utf-8")
-        elif not isinstance(format, unicode):
+        elif not isinstance(format, str):
             raise TypeError(
                 "Log format must be unicode or bytes, not {0!r}".format(format)
             )
@@ -276,7 +266,6 @@ def _formatEvent(event):
 
     except BaseException as e:
         return formatUnformattableEvent(event, e)
-
 
 
 def _formatTraceback(failure):
@@ -295,13 +284,10 @@ def _formatTraceback(failure):
     try:
         traceback = failure.getTraceback()
         if isinstance(traceback, bytes):
-            traceback = traceback.decode('utf-8', errors='replace')
+            traceback = traceback.decode("utf-8", errors="replace")
     except BaseException as e:
-        traceback = (
-            u"(UNABLE TO OBTAIN TRACEBACK FROM EVENT):" + unicode(e)
-        )
+        traceback = "(UNABLE TO OBTAIN TRACEBACK FROM EVENT):" + str(e)
     return traceback
-
 
 
 def _formatSystem(event):
@@ -321,29 +307,28 @@ def _formatSystem(event):
     if system is None:
         level = event.get("log_level", None)
         if level is None:
-            levelName = u"-"
+            levelName = "-"
         else:
             levelName = level.name
 
-        system = u"{namespace}#{level}".format(
-            namespace=event.get("log_namespace", u"-"),
+        system = "{namespace}#{level}".format(
+            namespace=event.get("log_namespace", "-"),
             level=levelName,
         )
     else:
         try:
-            system = unicode(system)
+            system = str(system)
         except Exception:
-            system = u"UNFORMATTABLE"
+            system = "UNFORMATTABLE"
     return system
 
 
-
 def eventAsText(
-        event,
-        includeTraceback=True,
-        includeTimestamp=True,
-        includeSystem=True,
-        formatTime=formatTime,
+    event,
+    includeTraceback=True,
+    includeTimestamp=True,
+    includeSystem=True,
+    formatTime=formatTime,
 ):
     r"""
     Format an event as a unicode string.  Optionally, attach timestamp,
@@ -392,28 +377,23 @@ def eventAsText(
     @since: Twisted 18.9.0
     """
     eventText = _formatEvent(event)
-    if includeTraceback and 'log_failure' in event:
-        f = event['log_failure']
+    if includeTraceback and "log_failure" in event:
+        f = event["log_failure"]
         traceback = _formatTraceback(f)
-        eventText = u"\n".join((eventText, traceback))
+        eventText = "\n".join((eventText, traceback))
 
     if not eventText:
         return eventText
 
-    timeStamp = u""
+    timeStamp = ""
     if includeTimestamp:
-        timeStamp = u"".join([formatTime(event.get("log_time", None)), " "])
+        timeStamp = "".join([formatTime(event.get("log_time", None)), " "])
 
-    system = u""
+    system = ""
     if includeSystem:
-        system = u"".join([
-            u"[",
-            _formatSystem(event),
-            u"]",
-            u" "
-        ])
+        system = "".join(["[", _formatSystem(event), "]", " "])
 
-    return u"{timeStamp}{system}{eventText}".format(
+    return "{timeStamp}{system}{eventText}".format(
         timeStamp=timeStamp,
         system=system,
         eventText=eventText,

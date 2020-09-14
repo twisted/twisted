@@ -10,6 +10,7 @@ synchronization.
 
 from functools import wraps
 
+
 class DummyLock:
     """
     Hack to allow locks to be unpickled on an unthreaded system.
@@ -19,7 +20,6 @@ class DummyLock:
         return (unpickle_lock, ())
 
 
-
 def unpickle_lock():
     if threadingmodule is not None:
         return XLock()
@@ -27,24 +27,20 @@ def unpickle_lock():
         return DummyLock()
 
 
-
 unpickle_lock.__safe_for_unpickling__ = True  # type: ignore[attr-defined]
 
 
-
 def _synchPre(self):
-    if '_threadable_lock' not in self.__dict__:
+    if "_threadable_lock" not in self.__dict__:
         _synchLockCreator.acquire()
-        if '_threadable_lock' not in self.__dict__:
-            self.__dict__['_threadable_lock'] = XLock()
+        if "_threadable_lock" not in self.__dict__:
+            self.__dict__["_threadable_lock"] = XLock()
         _synchLockCreator.release()
     self._threadable_lock.acquire()
 
 
-
 def _synchPost(self):
     self._threadable_lock.release()
-
 
 
 def _sync(klass, function):
@@ -55,8 +51,8 @@ def _sync(klass, function):
             return function(self, *args, **kwargs)
         finally:
             _synchPost(self)
-    return sync
 
+    return sync
 
 
 def synchronize(*klasses):
@@ -72,7 +68,6 @@ def synchronize(*klasses):
             for methodName in klass.synchronized:
                 sync = _sync(klass, klass.__dict__[methodName])
                 setattr(klass, methodName, sync)
-
 
 
 def init(with_threads=1):
@@ -93,7 +88,9 @@ def init(with_threads=1):
 
                 _synchLockCreator = XLock()
             else:
-                raise RuntimeError("Cannot initialize threading, platform lacks thread support")
+                raise RuntimeError(
+                    "Cannot initialize threading, platform lacks thread support"
+                )
     else:
         if threaded:
             raise RuntimeError("Cannot uninitialize threads")
@@ -101,25 +98,22 @@ def init(with_threads=1):
             pass
 
 
-
 _dummyID = object()
+
+
 def getThreadID():
     if threadingmodule is None:
         return _dummyID
     return threadingmodule.currentThread().ident
 
 
-
 def isInIOThread():
-    """Are we in the thread responsible for I/O requests (the event loop)?
-    """
+    """Are we in the thread responsible for I/O requests (the event loop)?"""
     return ioThread == getThreadID()
 
 
-
 def registerAsIOThread():
-    """Mark the current thread as responsible for I/O requests.
-    """
+    """Mark the current thread as responsible for I/O requests."""
     global ioThread
     ioThread = getThreadID()
 
@@ -140,5 +134,4 @@ else:
     init(True)
 
 
-
-__all__ = ['isInIOThread', 'registerAsIOThread', 'getThreadID', 'XLock']
+__all__ = ["isInIOThread", "registerAsIOThread", "getThreadID", "XLock"]

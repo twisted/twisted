@@ -8,12 +8,11 @@ File log observer.
 
 from zope.interface import implementer
 
-from twisted.python.compat import ioType, unicode
+from twisted.python.compat import ioType
 from ._observer import ILogObserver
 from ._format import formatTime
 from ._format import timeFormatRFC3339
 from ._format import formatEventAsClassicLogText
-
 
 
 @implementer(ILogObserver)
@@ -21,6 +20,7 @@ class FileLogObserver:
     """
     Log observer that writes to a file-like object.
     """
+
     def __init__(self, outFile, formatEvent):
         """
         @param outFile: A file-like object.  Ideally one should be passed which
@@ -31,14 +31,13 @@ class FileLogObserver:
         @type formatEvent: L{callable} that takes an C{event} argument and
             returns a formatted event as L{unicode}.
         """
-        if ioType(outFile) is not unicode:
+        if ioType(outFile) is not str:
             self._encoding = "utf-8"
         else:
             self._encoding = None
 
         self._outFile = outFile
         self.formatEvent = formatEvent
-
 
     def __call__(self, event):
         """
@@ -50,7 +49,7 @@ class FileLogObserver:
         text = self.formatEvent(event)
 
         if text is None:
-            text = u""
+            text = ""
 
         if self._encoding is not None:
             text = text.encode(self._encoding)
@@ -58,7 +57,6 @@ class FileLogObserver:
         if text:
             self._outFile.write(text)
             self._outFile.flush()
-
 
 
 def textFileLogObserver(outFile, timeFormat=timeFormatRFC3339):
@@ -78,6 +76,7 @@ def textFileLogObserver(outFile, timeFormat=timeFormatRFC3339):
     @return: A file log observer.
     @rtype: L{FileLogObserver}
     """
+
     def formatEvent(event):
         return formatEventAsClassicLogText(
             event, formatTime=lambda e: formatTime(e, timeFormat)

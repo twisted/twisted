@@ -11,7 +11,6 @@ from contextlib import contextmanager
 from twisted.logger import globalLogPublisher
 
 
-
 @contextmanager
 def capturedLogs():
     events = []

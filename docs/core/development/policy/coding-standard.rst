@@ -76,18 +76,19 @@ Indentation is 4 spaces per indent.
 Tabs are not allowed.
 It is preferred that every block appears on a new line, so that control structure indentation is always visible.
 
-Lines are flowed at 79 columns.
+Lines are flowed at 88 columns per `The Black Code Style <https://github.com/psf/black/blob/master/docs/the_black_code_style.md>`_.
 They must not have trailing whitespace.
-Long lines must be wrapped using implied line continuation inside parentheses; backslashes aren't allowed.
+Long lines must be wrapped using implied line continuation inside parentheses; backslashes aren't allowed except when wrapping ``with`` statement clauses.
 To handle long import lines, please wrap them inside parentheses:
 
 .. code-block:: python
 
-    from very.long.package import (foo, bar, baz,
-                                   qux, quux, quuux)
+    from very.long.package import (
+        foo, bar, baz, qux, quux, quuux,
+    )
 
 
-Top-level classes and functions must be separated with 3 blank lines, and class-level functions with 2 blank lines.
+Top-level classes and functions must be separated with 2 blank lines, and class-level functions with 1 blank line.
 The control-L (i.e. ``^L``) form feed character must not be used.
 
 
@@ -228,6 +229,8 @@ Docstrings
 Docstrings should always be used to describe the purpose of methods, functions, classes, and modules.
 Moreover, all methods, functions, classes, and modules must have docstrings.
 In addition to documenting the purpose of the object, the docstring must document all of parameters or attributes of the object.
+
+Docstrings must be reflowed at 79 characters.
 
 When documenting a class with one or more attributes which are initialized directly from the value of a ``__init__`` argument by
 the same name (or differing only in that the attribute is private), it is sufficient to document the ``__init__`` parameter (in the ``__init__`` docstring).

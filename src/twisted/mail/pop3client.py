@@ -16,19 +16,21 @@ from hashlib import md5
 from typing import List
 
 from twisted.python import log
-from twisted.python.compat import intToBytes
 from twisted.internet import defer
 from twisted.protocols import basic
 from twisted.protocols import policies
 from twisted.internet import error
 from twisted.internet import interfaces
 from twisted.mail._except import (
-    InsecureAuthenticationDisallowed, TLSError,
-    TLSNotSupportedError, ServerErrorResponse, LineTooLong)
+    InsecureAuthenticationDisallowed,
+    TLSError,
+    TLSNotSupportedError,
+    ServerErrorResponse,
+    LineTooLong,
+)
 
-OK = b'+OK'
-ERR = b'-ERR'
-
+OK = b"+OK"
+ERR = b"-ERR"
 
 
 class _ListSetter:
@@ -45,6 +47,7 @@ class _ListSetter:
 
     @ivar L: See L{__init__}
     """
+
     def __init__(self, L):
         """
         @type L: L{list} of L{object}
@@ -52,7 +55,6 @@ class _ListSetter:
             passed in.
         """
         self.L = L
-
 
     def setitem(self, itemAndValue):
         """
@@ -70,7 +72,6 @@ class _ListSetter:
         self.L[item] = value
 
 
-
 def _statXform(line):
     """
     Parse the response to a STAT command.
@@ -84,7 +85,6 @@ def _statXform(line):
     """
     numMsgs, totalSize = line.split(None, 1)
     return int(numMsgs), int(totalSize)
-
 
 
 def _listXform(line):
@@ -103,7 +103,6 @@ def _listXform(line):
     """
     index, size = line.split(None, 1)
     return int(index) - 1, int(size)
-
 
 
 def _uidXform(line):
@@ -125,7 +124,6 @@ def _uidXform(line):
     return int(index) - 1, uid
 
 
-
 def _codeStatusSplit(line):
     """
     Parse the first line of a multi-line server response.
@@ -136,11 +134,10 @@ def _codeStatusSplit(line):
     @rtype: 2-tuple of (0) L{bytes}, (1) L{bytes}
     @return: The status indicator and the rest of the server response.
     """
-    parts = line.split(b' ', 1)
+    parts = line.split(b" ", 1)
     if len(parts) == 1:
-        return parts[0], b''
+        return parts[0], b""
     return parts
-
 
 
 def _dotUnquoter(line):
@@ -159,10 +156,9 @@ def _dotUnquoter(line):
     @return: The line without the byte-stuffed termination character at the
         beginning if it was present. Otherwise, the line unchanged.
     """
-    if line.startswith(b'..'):
+    if line.startswith(b".."):
         return line[1:]
     return line
-
 
 
 class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
@@ -246,13 +242,14 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
         values derived by the transform function from each line of a
         multi-line response into a list.
     """
+
     startedTLS = False
     allowInsecureLogin = False
     timeout = 0
     serverChallenge = None
 
     _capCache = None
-    _challengeMagicRe = re.compile(b'(<[^>]+>)')
+    _challengeMagicRe = re.compile(b"(<[^>]+>)")
     _blockedQueue = None
     _waiting = None
     _timedOut = False
@@ -278,14 +275,13 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
         @return: L{None} if the command can run immediately.  Otherwise,
             a deferred that will eventually trigger with the return value of
             the function.
-         """
+        """
         if self._blockedQueue is not None:
             d = defer.Deferred()
             self._blockedQueue.append((d, f, a))
             return d
         self._blockedQueue = []
         return None
-
 
     def _unblock(self):
         """
@@ -308,7 +304,6 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
             # re-set _blockedQueue to an empty list, so we can put the rest
             # of the blocked queue back into it now.
             self._blockedQueue.extend(_blockedQueue)
-
 
     def sendShort(self, cmd, args):
         """
@@ -336,13 +331,12 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
             return d
 
         if args:
-            self.sendLine(cmd + b' ' + args)
+            self.sendLine(cmd + b" " + args)
         else:
             self.sendLine(cmd)
-        self.state = 'SHORT'
+        self.state = "SHORT"
         self._waiting = defer.Deferred()
         return self._waiting
-
 
     def sendLong(self, cmd, args, consumer, xform):
         """
@@ -382,15 +376,14 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
             return d
 
         if args:
-            self.sendLine(cmd + b' ' + args)
+            self.sendLine(cmd + b" " + args)
         else:
             self.sendLine(cmd)
-        self.state = 'LONG_INITIAL'
+        self.state = "LONG_INITIAL"
         self._xform = xform
         self._consumer = consumer
         self._waiting = defer.Deferred()
         return self._waiting
-
 
     # Twisted protocol callback
     def connectionMade(self):
@@ -402,9 +395,8 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
         if self.timeout > 0:
             self.setTimeout(self.timeout)
 
-        self.state = 'WELCOME'
+        self.state = "WELCOME"
         self._blockedQueue = []
-
 
     def timeoutConnection(self):
         """
@@ -412,7 +404,6 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
         """
         self._timedOut = True
         self.transport.loseConnection()
-
 
     def connectionLost(self, reason):
         """
@@ -444,7 +435,6 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
         for w in d:
             w.errback(reason)
 
-
     def lineReceived(self, line):
         """
         Pass a received line to a state machine function and
@@ -458,10 +448,9 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
 
         state = self.state
         self.state = None
-        state = getattr(self, 'state_' + state)(line) or state
+        state = getattr(self, "state_" + state)(line) or state
         if self.state is None:
             self.state = state
-
 
     def lineLengthExceeded(self, buffer):
         """
@@ -476,7 +465,6 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
             waiting, self._waiting = self._waiting, None
             waiting.errback(LineTooLong())
         self.transport.loseConnection()
-
 
     # POP3 Client state logic - don't touch this.
     def state_WELCOME(self, line):
@@ -507,8 +495,7 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
             self.serverGreeting(status)
 
         self._unblock()
-        return 'WAITING'
-
+        return "WAITING"
 
     def state_WAITING(self, line):
         """
@@ -519,7 +506,6 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
         @param line: A line received from the server.
         """
         log.msg("Illegal line from server: " + repr(line))
-
 
     def state_SHORT(self, line):
         """
@@ -542,8 +528,7 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
             deferred.callback(status)
         else:
             deferred.errback(ServerErrorResponse(status))
-        return 'WAITING'
-
+        return "WAITING"
 
     def state_LONG_INITIAL(self, line):
         """
@@ -562,14 +547,13 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
         """
         code, status = _codeStatusSplit(line)
         if code == OK:
-            return 'LONG'
+            return "LONG"
         consumer = self._consumer
         deferred = self._waiting
         self._consumer = self._waiting = self._xform = None
         self._unblock()
         deferred.errback(ServerErrorResponse(status, consumer))
-        return 'WAITING'
-
+        return "WAITING"
 
     def state_LONG(self, line):
         """
@@ -588,20 +572,19 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
         @return: The next state.
         """
         # This is the state for each line of a long response.
-        if line == b'.':
+        if line == b".":
             consumer = self._consumer
             deferred = self._waiting
             self._consumer = self._waiting = self._xform = None
             self._unblock()
             deferred.callback(consumer)
-            return 'WAITING'
+            return "WAITING"
         else:
             if self._xform is not None:
                 self._consumer(self._xform(line))
             else:
                 self._consumer(line)
-            return 'LONG'
-
+            return "LONG"
 
     # Callbacks - override these
     def serverGreeting(self, greeting):
@@ -613,7 +596,6 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
             For servers implementing APOP authentication, this will contain a
             challenge string.
         """
-
 
     # External API - call these (most of 'em anyway)
     def startTLS(self, contextFactory=None):
@@ -639,22 +621,27 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
         """
         tls = interfaces.ITLSTransport(self.transport, None)
         if tls is None:
-            return defer.fail(TLSError(
-                "POP3Client transport does not implement "
-                "interfaces.ITLSTransport"))
+            return defer.fail(
+                TLSError(
+                    "POP3Client transport does not implement "
+                    "interfaces.ITLSTransport"
+                )
+            )
 
         if contextFactory is None:
             contextFactory = self._getContextFactory()
 
         if contextFactory is None:
-            return defer.fail(TLSError(
-                "POP3Client requires a TLS context to "
-                "initiate the STLS handshake"))
+            return defer.fail(
+                TLSError(
+                    "POP3Client requires a TLS context to "
+                    "initiate the STLS handshake"
+                )
+            )
 
         d = self.capabilities()
         d.addCallback(self._startTLS, contextFactory, tls)
         return d
-
 
     def _startTLS(self, caps, contextFactory, tls):
         """
@@ -686,18 +673,21 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
             new server capabilities have been received or fails when the server
             does not support TLS.
         """
-        assert not self.startedTLS, "Client and Server are currently communicating via TLS"
+        assert (
+            not self.startedTLS
+        ), "Client and Server are currently communicating via TLS"
 
-        if b'STLS' not in caps:
-            return defer.fail(TLSNotSupportedError(
-                "Server does not support secure communication "
-                "via TLS / SSL"))
+        if b"STLS" not in caps:
+            return defer.fail(
+                TLSNotSupportedError(
+                    "Server does not support secure communication " "via TLS / SSL"
+                )
+            )
 
-        d = self.sendShort(b'STLS', None)
+        d = self.sendShort(b"STLS", None)
         d.addCallback(self._startedTLS, contextFactory, tls)
         d.addCallback(lambda _: self.capabilities())
         return d
-
 
     def _startedTLS(self, result, context, tls):
         """
@@ -730,7 +720,6 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
         self.startedTLS = True
         return result
 
-
     def _getContextFactory(self):
         """
         Get a context factory with which to negotiate TLS.
@@ -748,7 +737,6 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
             context = ssl.ClientContextFactory()
             context.method = ssl.SSL.TLSv1_METHOD
             return context
-
 
     def login(self, username, password):
         """
@@ -779,7 +767,6 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
         d = self.capabilities()
         d.addCallback(self._login, username, password)
         return d
-
 
     def _login(self, caps, username, password):
         """
@@ -813,7 +800,7 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
         if self.serverChallenge is not None:
             return self._apop(username, password, self.serverChallenge)
 
-        tryTLS = b'STLS' in caps
+        tryTLS = b"STLS" in caps
 
         # If our transport supports switching to TLS, we might want to
         # try to switch to TLS.
@@ -833,7 +820,6 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
             return self._plaintext(username, password)
         else:
             return defer.fail(InsecureAuthenticationDisallowed())
-
 
     def _loginTLS(self, res, username, password):
         """
@@ -861,7 +847,6 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
         """
         return self._plaintext(username, password)
 
-
     def _plaintext(self, username, password):
         """
         Perform a plaintext login.
@@ -880,7 +865,6 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
             status indicator.
         """
         return self.user(username).addCallback(lambda r: self.password(password))
-
 
     def _apop(self, username, password, challenge):
         """
@@ -904,7 +888,6 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
         digest = md5(challenge + password).hexdigest().encode("ascii")
         return self.apop(username, digest)
 
-
     def apop(self, username, digest):
         """
         Send an APOP command to perform authenticated login.
@@ -927,8 +910,7 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
             response minus the status indicator.  On an ERR response, the
             deferred fails with a server error response failure.
         """
-        return self.sendShort(b'APOP', username + b' ' + digest)
-
+        return self.sendShort(b"APOP", username + b" " + digest)
 
     def user(self, username):
         """
@@ -946,8 +928,7 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
             response minus the status indicator.  On an ERR response, the
             deferred fails with a server error response failure.
         """
-        return self.sendShort(b'USER', username)
-
+        return self.sendShort(b"USER", username)
 
     def password(self, password):
         """
@@ -965,8 +946,7 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
             response minus the status indicator.  On an ERR response, the
             deferred fails with a server error response failure.
         """
-        return self.sendShort(b'PASS', password)
-
+        return self.sendShort(b"PASS", password)
 
     def delete(self, index):
         """
@@ -982,8 +962,7 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
             response minus the status indicator.  On an ERR response, the
             deferred fails with a server error response failure.
         """
-        return self.sendShort(b'DELE', intToBytes(index + 1))
-
+        return self.sendShort(b"DELE", b"%d" % (index + 1,))
 
     def _consumeOrSetItem(self, cmd, args, consumer, xform):
         """
@@ -1023,7 +1002,6 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
             return self.sendLong(cmd, args, consumer, xform).addCallback(lambda r: L)
         return self.sendLong(cmd, args, consumer, xform)
 
-
     def _consumeOrAppend(self, cmd, args, consumer, xform):
         """
         Send a command to which a long response is expected and process the
@@ -1059,7 +1037,6 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
             consumer = L.append
             return self.sendLong(cmd, args, consumer, xform).addCallback(lambda r: L)
         return self.sendLong(cmd, args, consumer, xform)
-
 
     def capabilities(self, useCache=True):
         """
@@ -1113,6 +1090,7 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
             return defer.succeed(self._capCache)
 
         cache = {}
+
         def consume(line):
             tmp = line.split()
             if len(tmp) == 1:
@@ -1128,10 +1106,9 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
             self._capCache = cache
             return cache
 
-        d = self._consumeOrAppend(b'CAPA', None, consume, None)
+        d = self._consumeOrAppend(b"CAPA", None, consume, None)
         d.addErrback(capaNotSupported).addCallback(gotCapabilities)
         return d
-
 
     def noop(self):
         """
@@ -1146,7 +1123,6 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
         """
         return self.sendShort(b"NOOP", None)
 
-
     def reset(self):
         """
         Send a RSET command to unmark any messages that have been flagged
@@ -1160,7 +1136,6 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
             deferred fails with a server error response failure.
         """
         return self.sendShort(b"RSET", None)
-
 
     def retrieve(self, index, consumer=None, lines=None):
         """
@@ -1187,13 +1162,13 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
             list of the transformed lines.  Otherwise, it returns the consumer
             itself.
         """
-        idx = intToBytes(index + 1)
+        idx = b"%d" % (index + 1,)
         if lines is None:
-            return self._consumeOrAppend(b'RETR', idx, consumer, _dotUnquoter)
+            return self._consumeOrAppend(b"RETR", idx, consumer, _dotUnquoter)
 
-        return self._consumeOrAppend(b'TOP', idx + b' ' + intToBytes(lines),
-                                     consumer, _dotUnquoter)
-
+        return self._consumeOrAppend(
+            b"TOP", b"%b %d" % (idx, lines), consumer, _dotUnquoter
+        )
 
     def stat(self):
         """
@@ -1208,8 +1183,7 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
             On an ERR response, the deferred fails with a server error
             response failure.
         """
-        return self.sendShort(b'STAT', None).addCallback(_statXform)
-
+        return self.sendShort(b"STAT", None).addCallback(_statXform)
 
     def listSize(self, consumer=None):
         """
@@ -1227,8 +1201,7 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
             received.  When a consumer is not provided, the return value is a
             list of message sizes.  Otherwise, it returns the consumer itself.
         """
-        return self._consumeOrSetItem(b'LIST', None, consumer, _listXform)
-
+        return self._consumeOrSetItem(b"LIST", None, consumer, _listXform)
 
     def listUID(self, consumer=None):
         """
@@ -1246,8 +1219,7 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
             received.  When a consumer is not provided, the return value is a
             list of message sizes.  Otherwise, it returns the consumer itself.
         """
-        return self._consumeOrSetItem(b'UIDL', None, consumer, _uidXform)
-
+        return self._consumeOrSetItem(b"UIDL", None, consumer, _uidXform)
 
     def quit(self):
         """
@@ -1260,8 +1232,7 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
             response minus the status indicator.  On an ERR response, the
             deferred fails with a server error response failure.
         """
-        return self.sendShort(b'QUIT', None)
-
+        return self.sendShort(b"QUIT", None)
 
 
 __all__ = []  # type: List[str]

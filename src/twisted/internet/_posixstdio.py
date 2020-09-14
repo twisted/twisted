@@ -22,9 +22,12 @@ class PipeAddress:
     pass
 
 
-
-@implementer(interfaces.ITransport, interfaces.IProducer,
-             interfaces.IConsumer, interfaces.IHalfCloseableDescriptor)
+@implementer(
+    interfaces.ITransport,
+    interfaces.IProducer,
+    interfaces.IConsumer,
+    interfaces.IHalfCloseableDescriptor,
+)
 class StandardIO:
 
     _reader = None
@@ -37,8 +40,8 @@ class StandardIO:
             from twisted.internet import reactor
         self.protocol = proto
 
-        self._writer = process.ProcessWriter(reactor, self, 'write', stdout)
-        self._reader = process.ProcessReader(reactor, self, 'read', stdin)
+        self._writer = process.ProcessWriter(reactor, self, "write", stdout)
+        self._reader = process.ProcessReader(reactor, self, "read", stdin)
         self._reader.startReading()
         self.protocol.makeConnection(self)
 
@@ -49,16 +52,13 @@ class StandardIO:
         if self._writer is not None:
             self._writer.loseConnection()
 
-
     def write(self, data):
         if self._writer is not None:
             self._writer.write(data)
 
-
     def writeSequence(self, data):
         if self._writer is not None:
             self._writer.writeSequence(data)
-
 
     def loseConnection(self):
         self.disconnecting = True
@@ -69,19 +69,15 @@ class StandardIO:
             # Don't loseConnection, because we don't want to SIGPIPE it.
             self._reader.stopReading()
 
-
     def getPeer(self):
         return PipeAddress()
-
 
     def getHost(self):
         return PipeAddress()
 
-
     # Callbacks from process.ProcessReader/ProcessWriter
     def childDataReceived(self, fd, data):
         self.protocol.dataReceived(data)
-
 
     def childConnectionLost(self, fd, reason):
         if self.disconnected:
@@ -89,13 +85,12 @@ class StandardIO:
 
         if reason.value.__class__ == error.ConnectionDone:
             # Normal close
-            if fd == 'read':
+            if fd == "read":
                 self._readConnectionLost(reason)
             else:
                 self._writeConnectionLost(reason)
         else:
             self.connectionLost(reason)
-
 
     def connectionLost(self, reason):
         self.disconnected = True
@@ -118,7 +113,6 @@ class StandardIO:
         except BaseException:
             log.err()
 
-
     def _writeConnectionLost(self, reason):
         self._writer = None
         if self.disconnecting:
@@ -133,7 +127,6 @@ class StandardIO:
                 log.err()
                 self.connectionLost(failure.Failure())
 
-
     def _readConnectionLost(self, reason):
         self._reader = None
         p = interfaces.IHalfCloseableProtocol(self.protocol, None)
@@ -146,7 +139,6 @@ class StandardIO:
         else:
             self.connectionLost(reason)
 
-
     # IConsumer
     def registerProducer(self, producer, streaming):
         if self._writer is None:
@@ -154,41 +146,33 @@ class StandardIO:
         else:
             self._writer.registerProducer(producer, streaming)
 
-
     def unregisterProducer(self):
         if self._writer is not None:
             self._writer.unregisterProducer()
-
 
     # IProducer
     def stopProducing(self):
         self.loseConnection()
 
-
     def pauseProducing(self):
         if self._reader is not None:
             self._reader.pauseProducing()
-
 
     def resumeProducing(self):
         if self._reader is not None:
             self._reader.resumeProducing()
 
-
     def stopReading(self):
         """Compatibility only, don't use. Call pauseProducing."""
         self.pauseProducing()
-
 
     def startReading(self):
         """Compatibility only, don't use. Call resumeProducing."""
         self.resumeProducing()
 
-
     def readConnectionLost(self, reason):
         # L{IHalfCloseableDescriptor.readConnectionLost}
         raise NotImplementedError()
-
 
     def writeConnectionLost(self, reason):
         # L{IHalfCloseableDescriptor.writeConnectionLost}

@@ -25,22 +25,22 @@ class PluginsTests(unittest.SynchronousTestCase):
         IndexError.
         """
         plugins = [
-            plugin for plugin in getPlugins(IReporter)
-            if plugin.longOpt == longOption]
+            plugin for plugin in getPlugins(IReporter) if plugin.longOpt == longOption
+        ]
         if len(plugins) > 1:
             raise ValueError(
                 "More than one plugin found with long option %r: %r"
-                % (longOption, plugins))
+                % (longOption, plugins)
+            )
         return plugins[0]
-
 
     def test_subunitPlugin(self):
         """
         One of the reporter plugins is the subunit reporter plugin.
         """
-        subunitPlugin = self.getPluginsByLongOption('subunit')
-        self.assertEqual('Subunit Reporter', subunitPlugin.name)
-        self.assertEqual('twisted.trial.reporter', subunitPlugin.module)
-        self.assertEqual('subunit', subunitPlugin.longOpt)
+        subunitPlugin = self.getPluginsByLongOption("subunit")
+        self.assertEqual("Subunit Reporter", subunitPlugin.name)
+        self.assertEqual("twisted.trial.reporter", subunitPlugin.module)
+        self.assertEqual("subunit", subunitPlugin.longOpt)
         self.assertIdentical(None, subunitPlugin.shortOpt)
-        self.assertEqual('SubunitReporter', subunitPlugin.klass)
+        self.assertEqual("SubunitReporter", subunitPlugin.klass)

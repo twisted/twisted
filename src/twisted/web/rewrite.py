@@ -4,8 +4,8 @@
 #
 from twisted.web import resource
 
-class RewriterResource(resource.Resource):
 
+class RewriterResource(resource.Resource):
     def __init__(self, orig, *rewriteRules):
         resource.Resource.__init__(self)
         self.resource = orig
@@ -29,9 +29,10 @@ class RewriterResource(resource.Resource):
 
 
 def tildeToUsers(request):
-    if request.postpath and request.postpath[0][:1]=='~':
-        request.postpath[:1] = ['users', request.postpath[0][1:]]
-        request.path = '/'+'/'.join(request.prepath+request.postpath)
+    if request.postpath and request.postpath[0][:1] == "~":
+        request.postpath[:1] = ["users", request.postpath[0][1:]]
+        request.path = "/" + "/".join(request.prepath + request.postpath)
+
 
 def alias(aliasPath, sourcePath):
     """
@@ -42,11 +43,13 @@ def alias(aliasPath, sourcePath):
     alias static.File directory listings that nicely. However, I can
     still be useful, as many resources will play nice.
     """
-    sourcePath = sourcePath.split('/')
-    aliasPath = aliasPath.split('/')
+    sourcePath = sourcePath.split("/")
+    aliasPath = aliasPath.split("/")
+
     def rewriter(request):
-        if request.postpath[:len(aliasPath)] == aliasPath:
-            after = request.postpath[len(aliasPath):]
+        if request.postpath[: len(aliasPath)] == aliasPath:
+            after = request.postpath[len(aliasPath) :]
             request.postpath = sourcePath + after
-            request.path = '/'+'/'.join(request.prepath+request.postpath)
+            request.path = "/" + "/".join(request.prepath + request.postpath)
+
     return rewriter

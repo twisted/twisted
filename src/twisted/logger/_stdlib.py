@@ -16,7 +16,6 @@ from ._format import formatEvent
 from ._observer import ILogObserver
 
 
-
 # Mappings to Python's logging module
 toStdlibLogLevelMapping = {
     LogLevel.debug: stdlibLogging.DEBUG,
@@ -25,6 +24,7 @@ toStdlibLogLevelMapping = {
     LogLevel.error: stdlibLogging.ERROR,
     LogLevel.critical: stdlibLogging.CRITICAL,
 }
+
 
 def _reverseLogLevelMapping():
     """
@@ -38,8 +38,8 @@ def _reverseLogLevelMapping():
         mapping[stdlibLogging.getLevelName(pyLogLevel)] = logLevel
     return mapping
 
-fromStdlibLogLevelMapping = _reverseLogLevelMapping()
 
+fromStdlibLogLevelMapping = _reverseLogLevelMapping()
 
 
 @implementer(ILogObserver)
@@ -77,7 +77,6 @@ class STDLibLogObserver:
         self.logger.findCaller = self._findCaller
         self.stackDepth = stackDepth
 
-
     def _findCaller(self, stackInfo=False, stackLevel=1):
         """
         Based on the stack depth passed to this L{STDLibLogObserver}, identify
@@ -100,22 +99,18 @@ class STDLibLogObserver:
         extra = (None,)
         return (co.co_filename, f.f_lineno, co.co_name) + extra
 
-
     def __call__(self, event):
         """
         Format an event and bridge it to Python logging.
         """
         level = event.get("log_level", LogLevel.info)
-        failure = event.get('log_failure')
+        failure = event.get("log_failure")
         if failure is None:
             excInfo = None
         else:
-            excInfo = (
-                failure.type, failure.value, failure.getTracebackObject())
+            excInfo = (failure.type, failure.value, failure.getTracebackObject())
         stdlibLevel = toStdlibLogLevelMapping.get(level, stdlibLogging.INFO)
-        self.logger.log(
-            stdlibLevel, StringifiableFromEvent(event), exc_info=excInfo)
-
+        self.logger.log(stdlibLevel, StringifiableFromEvent(event), exc_info=excInfo)
 
 
 class StringifiableFromEvent:
@@ -123,6 +118,7 @@ class StringifiableFromEvent:
     An object that implements C{__str__()} in order to defer the work of
     formatting until it's converted into a C{str}.
     """
+
     def __init__(self, event):
         """
         @param event: An event.
@@ -130,10 +126,8 @@ class StringifiableFromEvent:
         """
         self.event = event
 
-
     def __unicode__(self):
         return formatEvent(self.event)
-
 
     def __bytes__(self):
         return str(self).encode("utf-8")

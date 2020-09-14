@@ -16,7 +16,6 @@ headers for each of the allowed authentication schemes.
 
 from twisted.cred import error
 from twisted.cred.credentials import Anonymous
-from twisted.python.compat import unicode
 from twisted.python.components import proxyForInterface
 from twisted.web import util
 from twisted.web.resource import ErrorPage, IResource
@@ -30,41 +29,40 @@ class UnauthorizedResource:
     """
     Simple IResource to escape Resource dispatch
     """
-    isLeaf = True
 
+    isLeaf = True
 
     def __init__(self, factories):
         self._credentialFactories = factories
-
 
     def render(self, request):
         """
         Send www-authenticate headers to the client
         """
+
         def ensureBytes(s):
-            return s.encode('ascii') if isinstance(s, unicode) else s
+            return s.encode("ascii") if isinstance(s, str) else s
 
         def generateWWWAuthenticate(scheme, challenge):
-            l = []
+            lst = []
             for k, v in challenge.items():
                 k = ensureBytes(k)
                 v = ensureBytes(v)
-                l.append(k + b"=" + quoteString(v))
-            return b" ".join([scheme, b", ".join(l)])
+                lst.append(k + b"=" + quoteString(v))
+            return b" ".join([scheme, b", ".join(lst)])
 
         def quoteString(s):
-            return b'"' + s.replace(b'\\', b'\\\\').replace(b'"', b'\\"') + b'"'
+            return b'"' + s.replace(b"\\", br"\\").replace(b'"', br"\"") + b'"'
 
         request.setResponseCode(401)
         for fact in self._credentialFactories:
             challenge = fact.getChallenge(request)
             request.responseHeaders.addRawHeader(
-                b'www-authenticate',
-                generateWWWAuthenticate(fact.scheme, challenge))
-        if request.method == b'HEAD':
-            return b''
-        return b'Unauthorized'
-
+                b"www-authenticate", generateWWWAuthenticate(fact.scheme, challenge)
+            )
+        if request.method == b"HEAD":
+            return b""
+        return b"Unauthorized"
 
     def getChildWithDefault(self, path, request):
         """
@@ -72,11 +70,9 @@ class UnauthorizedResource:
         """
         return self
 
-
     def putChild(self, path, child):
         # IResource.putChild
         raise NotImplementedError()
-
 
 
 @implementer(IResource)
@@ -91,6 +87,7 @@ class HTTPAuthSessionWrapper:
         will be used to decode I{Authorization} headers into L{ICredentials}
         providers.
     """
+
     isLeaf = False
     _log = Logger()
 
@@ -108,7 +105,6 @@ class HTTPAuthSessionWrapper:
         self._portal = portal
         self._credentialFactories = credentialFactories
 
-
     def _authorizedResource(self, request):
         """
         Get the L{IResource} which the given request is authorized to receive.
@@ -116,7 +112,7 @@ class HTTPAuthSessionWrapper:
         requested from the portal.  If not, an anonymous login attempt will be
         made.
         """
-        authheader = request.getHeader(b'authorization')
+        authheader = request.getHeader(b"authorization")
         if not authheader:
             return util.DeferredResource(self._login(Anonymous()))
 
@@ -133,7 +129,6 @@ class HTTPAuthSessionWrapper:
         else:
             return util.DeferredResource(self._login(credentials))
 
-
     def render(self, request):
         """
         Find the L{IResource} avatar suitable for the given request, if
@@ -141,7 +136,6 @@ class HTTPAuthSessionWrapper:
         requiring authorization or describing an internal server failure.
         """
         return self._authorizedResource(request).render(request)
-
 
     def getChildWithDefault(self, path, request):
         """
@@ -156,7 +150,6 @@ class HTTPAuthSessionWrapper:
         request.postpath.insert(0, request.prepath.pop())
         return self._authorizedResource(request)
 
-
     def _login(self, credentials):
         """
         Get the L{IResource} avatar for the given credentials.
@@ -168,7 +161,6 @@ class HTTPAuthSessionWrapper:
         d.addCallbacks(self._loginSucceeded, self._loginFailed)
         return d
 
-
     def _loginSucceeded(self, args):
         """
         Handle login success by wrapping the resulting L{IResource} avatar
@@ -176,7 +168,8 @@ class HTTPAuthSessionWrapper:
         complete.
         """
         interface, avatar, logout = args
-        class ResourceWrapper(proxyForInterface(IResource, 'resource')):
+
+        class ResourceWrapper(proxyForInterface(IResource, "resource")):
             """
             Wrap an L{IResource} so that whenever it or a child of it
             completes rendering, the cred logout hook will be invoked.
@@ -186,6 +179,7 @@ class HTTPAuthSessionWrapper:
             more than one is rendered, C{logout} will be invoked multiple
             times and probably earlier than desired.
             """
+
             def getChildWithDefault(self, name, request):
                 """
                 Pass through the lookup to the wrapped resource, wrapping
@@ -205,7 +199,6 @@ class HTTPAuthSessionWrapper:
 
         return ResourceWrapper(avatar)
 
-
     def _loginFailed(self, result):
         """
         Handle login failure by presenting either another challenge (for
@@ -222,7 +215,6 @@ class HTTPAuthSessionWrapper:
             )
             return ErrorPage(500, None, None)
 
-
     def _selectParseHeader(self, header):
         """
         Choose an C{ICredentialFactory} from C{_credentialFactories}
@@ -232,13 +224,12 @@ class HTTPAuthSessionWrapper:
             header value to be decoded or a two-tuple of L{None} if no
             factory can decode the header value.
         """
-        elements = header.split(b' ')
+        elements = header.split(b" ")
         scheme = elements[0].lower()
         for fact in self._credentialFactories:
             if fact.scheme == scheme:
-                return (fact, b' '.join(elements[1:]))
+                return (fact, b" ".join(elements[1:]))
         return (None, None)
-
 
     def putChild(self, path, child):
         # IResource.putChild

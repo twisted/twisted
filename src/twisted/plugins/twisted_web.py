@@ -6,6 +6,9 @@ from twisted.application.service import ServiceMaker
 TwistedWeb = ServiceMaker(
     "Twisted Web",
     "twisted.web.tap",
-    ("A general-purpose web server which can serve from a "
-     "filesystem or application resource."),
-    "web")
+    (
+        "A general-purpose web server which can serve from a "
+        "filesystem or application resource."
+    ),
+    "web",
+)
