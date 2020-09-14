@@ -95,6 +95,11 @@ class AsyncioSelectorReactorTests(ReactorBuilder, SynchronousTestCase):
         ),
     )
     def test_newSelectorEventLoopFromDefaultEventLoopPolicy(self):
+        """
+        If we use the L{asyncio.DefaultLoopPolicy} to create a new event loop,
+        and then pass that event loop to a new L{AsyncioSelectorReactor},
+        this reactor should work properly with L{asyncio.Future}.
+        """
         event_loop = DefaultEventLoopPolicy().new_event_loop()
         reactor = AsyncioSelectorReactor(event_loop)
         set_event_loop(event_loop)
