@@ -1,6 +1,4 @@
-from __future__ import print_function
-
-from twisted.internet import reactor, defer, endpoints
+from twisted.internet import reactor, defer
 from twisted.internet.endpoints import TCP4ClientEndpoint, connectProtocol
 from twisted.protocols.amp import AMP
 from ampserver import Sum, Divide

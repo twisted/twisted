@@ -2,8 +2,6 @@
 
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
-from __future__ import print_function
-
 from twisted.conch.ssh import transport, userauth, connection, common, keys, channel
 from twisted.internet import defer, protocol, reactor
 from twisted.python import log
@@ -59,7 +57,7 @@ class SimpleUserAuth(userauth.SSHUserAuthClient):
         answers = []
         for prompt, echo in questions:
             if echo:
-                answer = raw_input(prompt)
+                answer = input(prompt)
             else:
                 answer = getpass.getpass(prompt)
             answers.append(answer)

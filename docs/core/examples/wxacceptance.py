@@ -14,15 +14,13 @@ Please test on Linux, Win32 and macOS:
    (use dialog menu item), when menus are held down, when window is being
    dragged.
 """
-from __future__ import print_function
-
 import sys, time
 
 try:
     from wx import Frame as wxFrame, DefaultPosition as wxDefaultPosition, \
          Size as wxSize, Menu as wxMenu, MenuBar as wxMenuBar, \
          EVT_MENU, MessageDialog as wxMessageDialog, App as wxApp
-except ImportError as e:
+except ImportError:
     from wxPython.wx import *
 
 from twisted.python import log

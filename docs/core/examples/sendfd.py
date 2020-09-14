@@ -80,5 +80,5 @@ def main():
     serverFactory.content = content
     serverFactory.protocol = SendFDProtocol
 
-    port = reactor.listenUNIX(address.path, serverFactory)
+    reactor.listenUNIX(address.path, serverFactory)
     reactor.run()

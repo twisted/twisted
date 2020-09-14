@@ -4,11 +4,7 @@ Demonstrate sending mail via SMTP while employing TLS and performing
 authentication.
 """
 
-from __future__ import print_function
-
 import sys
-
-from OpenSSL.SSL import SSLv3_METHOD
 
 from twisted.mail.smtp import ESMTPSenderFactory
 from twisted.python.usage import Options, UsageError

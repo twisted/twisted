@@ -6,8 +6,6 @@
 """
 An example of using the FTP client
 """
-from __future__ import print_function
-
 # Twisted imports
 from twisted.protocols.ftp import FTPClient, FTPFileListProtocol
 from twisted.internet.protocol import Protocol, ClientCreator
@@ -15,7 +13,6 @@ from twisted.python import usage
 from twisted.internet import reactor
 
 # Standard library imports
-import sys
 from io import BytesIO
 
 

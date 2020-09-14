@@ -6,12 +6,10 @@ gtk2reactor.install()
 
 import gtk
 from gtk import glade
-from twisted import copyright
 from twisted.internet import reactor, defer
-from twisted.python import failure, log, util
+from twisted.python import failure, util
 from twisted.spread import pb
 from twisted.cred.credentials import UsernamePassword
-from twisted.internet import error as netError
 
 
 class LoginDialog:

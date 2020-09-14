@@ -5,14 +5,10 @@
 Demonstration of how L{twisted.internet._threadedselect} might be used (this is
 not an example showing the best way to integrate Twisted with pygame).
 """
-from __future__ import print_function
-
 # import Twisted and install
 from twisted.internet import _threadedselect
 _threadedselect.install()
 from twisted.internet import reactor
-
-import os
 
 import pygame
 from pygame.locals import *
