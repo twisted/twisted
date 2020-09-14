@@ -17,7 +17,6 @@ from twisted.web.resource import Resource
 
 
 class ReportResource(Resource):
-
     def render_GET(self, request):
         path = request.path
         host = request.getHost().host
@@ -39,8 +38,11 @@ class ReportResource(Resource):
     <LI>My URI to me is {uri}
     </UL>
     </body>
-</html>""".format(path=path, host=host, port=port, secure=secure, url=url, uri=uri)
+</html>""".format(
+            path=path, host=host, port=port, secure=secure, url=url, uri=uri
+        )
 
         return output.encode("utf8")
+
 
 resource = ReportResource()

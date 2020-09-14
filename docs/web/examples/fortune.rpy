@@ -23,10 +23,12 @@ from twisted.web.resource import Resource
 from twisted.web import server
 from twisted.internet import utils
 
+
 class FortuneResource(Resource):
     """
     This resource will only respond to HEAD & GET requests.
     """
+
     # Link your fortune program to /usr/games or change the path.
     fortune = "/usr/games/fortune"
 
@@ -39,10 +41,11 @@ class FortuneResource(Resource):
         """
         request.write(b"<pre>\n")
         deferred = utils.getProcessOutput(self.fortune)
-        deferred.addCallback(lambda s:
-                             (request.write(s+b"\n"), request.finish()))
-        deferred.addErrback(lambda s:
-                     (request.write(str(s).encode("utf8")), request.finish()))
+        deferred.addCallback(lambda s: (request.write(s + b"\n"), request.finish()))
+        deferred.addErrback(
+            lambda s: (request.write(str(s).encode("utf8")), request.finish())
+        )
         return server.NOT_DONE_YET
+
 
 resource = FortuneResource()

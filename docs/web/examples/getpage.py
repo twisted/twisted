@@ -16,6 +16,7 @@ from twisted.python.util import println
 
 url = sys.argv[1].encode("ascii")
 getPage(url).addCallbacks(
-    callback=lambda value:(println(value),reactor.stop()),
-    errback=lambda error:(println("an error occurred", error),reactor.stop()))
+    callback=lambda value: (println(value), reactor.stop()),
+    errback=lambda error: (println("an error occurred", error), reactor.stop()),
+)
 reactor.run()

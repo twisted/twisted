@@ -32,13 +32,13 @@ class WriteToStdout(Protocol):
         """
         Print out the html page received.
         """
-        print('Got some:', data)
+        print("Got some:", data)
 
     def connectionLost(self, reason):
         if not reason.check(ResponseDone):
             reason.printTraceback()
         else:
-            print('Response done')
+            print("Response done")
         self.onConnLost.callback(None)
 
 
@@ -47,10 +47,10 @@ def main(reactor, url):
     We create a custom UserAgent and send a GET request to a web server.
     """
     url = url.encode("ascii")
-    userAgent = 'Twisted/{} (httpclient.py)'.format(version.short()).encode("ascii")
+    userAgent = "Twisted/{} (httpclient.py)".format(version.short()).encode("ascii")
     agent = Agent(reactor)
-    d = agent.request(
-        b'GET', url, Headers({b'user-agent': [userAgent]}))
+    d = agent.request(b"GET", url, Headers({b"user-agent": [userAgent]}))
+
     def cbResponse(response):
         """
         Prints out the response returned by the web server.
@@ -58,16 +58,17 @@ def main(reactor, url):
         pprint(vars(response))
         proto = WriteToStdout()
         if response.length is not UNKNOWN_LENGTH:
-            print('The response body will consist of', response.length, 'bytes.')
+            print("The response body will consist of", response.length, "bytes.")
         else:
-            print('The response body length is unknown.')
+            print("The response body length is unknown.")
         response.deliverBody(proto)
         return proto.onConnLost
+
     d.addCallback(cbResponse)
     d.addErrback(log.err)
     d.addBoth(lambda ign: reactor.callWhenRunning(reactor.stop))
     reactor.run()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main(reactor, *sys.argv[1:])

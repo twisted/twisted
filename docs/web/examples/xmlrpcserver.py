@@ -47,7 +47,7 @@ class Echoer(xmlrpc.XMLRPC):
         """
         Return 'hello, world'.
         """
-        return 'hello, world!'
+        return "hello, world!"
 
     def xmlrpc_defer(self):
         """
@@ -71,10 +71,11 @@ class Echoer(xmlrpc.XMLRPC):
 def main():
     from twisted.internet import reactor
     from twisted.web import server
+
     r = Echoer()
     reactor.listenTCP(7080, server.Site(r))
     reactor.run()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

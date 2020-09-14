@@ -19,6 +19,7 @@ import sys
 # the page to "foo".
 url = sys.argv[1].encode("ascii")
 downloadPage(url, "foo").addCallbacks(
-   lambda value:reactor.stop(),
-   lambda error:(println("an error occurred",error),reactor.stop()))
+    lambda value: reactor.stop(),
+    lambda error: (println("an error occurred", error), reactor.stop()),
+)
 reactor.run()
