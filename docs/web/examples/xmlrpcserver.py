@@ -26,7 +26,7 @@ An example session (assuming the server is running):
 
 from twisted.web import xmlrpc
 from twisted.internet import defer
-import xmlrpclib
+from xmlrpc.client import Fault
 
 
 class Echoer(xmlrpc.XMLRPC):
@@ -65,7 +65,7 @@ class Echoer(xmlrpc.XMLRPC):
         """
         Show how we can return a failure code.
         """
-        return xmlrpclib.Fault(7, "Out of cheese.")
+        return Fault(7, "Out of cheese.")
 
 
 def main():

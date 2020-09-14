@@ -25,7 +25,7 @@ def capitalize(value):
     print(repr(value))
     proxy.callRemote('test.capitalize', 'moshe zadka').addCallbacks(printValue, printError)
 
-proxy = Proxy('http://advogato.org/XMLRPC')
+proxy = Proxy(b'http://advogato.org/XMLRPC')
 # The callRemote method accepts a method name and an argument list.
 proxy.callRemote('test.sumprod', 2, 5).addCallbacks(capitalize, printError)
 reactor.run()
