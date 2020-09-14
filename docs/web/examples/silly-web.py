@@ -13,7 +13,7 @@ Usage:
 Then visit http://localhost:19988/.
 """
 
-from twisted.internet import reactor, protocol
+from twisted.internet import reactor
 from twisted.web import server, distrib, static
 from twisted.spread import pb
 

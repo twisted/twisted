@@ -32,7 +32,7 @@ class GuardedResource(resource.Resource):
 
 
     def render(self, request):
-        return "Authorized!"
+        return b"Authorized!"
 
 
 
@@ -51,10 +51,10 @@ class SimpleRealm(object):
 
 def main():
     log.startLogging(sys.stdout)
-    checkers = [InMemoryUsernamePasswordDatabaseDontUse(joe='blow')]
+    checkers = [InMemoryUsernamePasswordDatabaseDontUse(joe=b'blow')]
     wrapper = guard.HTTPAuthSessionWrapper(
         Portal(SimpleRealm(), checkers),
-        [guard.DigestCredentialFactory('md5', 'example.com')])
+        [guard.DigestCredentialFactory('md5', b'example.com')])
     reactor.listenTCP(8889, server.Site(
           resource = wrapper))
     reactor.run()

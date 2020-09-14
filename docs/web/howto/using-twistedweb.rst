@@ -213,8 +213,8 @@ Resources can be arranged in trees using ``putChild`` . ``putChild`` puts a Reso
 
 
     root = Hello()
-    root.putChild('fred', Hello())
-    root.putChild('bob', Hello())
+    root.putChild(b'fred', Hello())
+    root.putChild(b'bob', Hello())
 
 
 
@@ -271,7 +271,7 @@ An ``.rpy`` script must define a variable, ``resource`` , which is the Resource 
 
     class MyResource(Resource):
         def render_GET(self, request):
-            return "<html>Hello, world!</html>"
+            return b"<html>Hello, world!</html>"
 
     resource = MyResource()
 
@@ -389,7 +389,7 @@ manages standard gzip compression. You can use it this way:
     class Simple(Resource):
         isLeaf = True
         def render_GET(self, request):
-            return "<html>Hello, world!</html>"
+            return b"<html>Hello, world!</html>"
 
     resource = Simple()
     wrapped = EncodingResourceWrapper(resource, [GzipEncoderFactory()])
@@ -667,7 +667,7 @@ one adds a ``cgi-bin`` directory for CGI scripts.
     from twisted.web import static, server
 
     root = static.File("/var/www/htdocs")
-    root.putChild("doc", static.File("/usr/share/doc"))
+    root.putChild(b"doc", static.File("/usr/share/doc"))
     endpoint = endpoints.TCP4ServerEndpoint(reactor, 80)
     endpoint.listen(server.Site(root))
     reactor.run()
@@ -683,7 +683,7 @@ one adds a ``cgi-bin`` directory for CGI scripts.
     from twisted.web import static, server, twcgi
 
     root = static.File("/var/www/htdocs")
-    root.putChild("cgi-bin", twcgi.CGIDirectory("/var/www/cgi-bin"))
+    root.putChild(b"cgi-bin", twcgi.CGIDirectory("/var/www/cgi-bin"))
     endpoint = endpoints.TCP4ServerEndpoint(reactor, 80)
     endpoint.listen(server.Site(root))
     reactor.run()

@@ -11,8 +11,6 @@ The example will make a simple XML-RPC request to bugzilla.redhat.com and print
 the raw XML response string from the server.
 """
 
-from __future__ import print_function
-
 from twisted.web.xmlrpc import Proxy
 from twisted.web.xmlrpc import QueryFactory
 from twisted.internet import reactor

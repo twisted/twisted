@@ -18,8 +18,6 @@ HTTP is supported.  HTTPS is not supported.
 See also proxy.py for a simpler proxy example.
 """
 
-from __future__ import print_function
-
 from twisted.internet import reactor
 from twisted.web import proxy, http
 

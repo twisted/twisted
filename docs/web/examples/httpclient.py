@@ -11,8 +11,6 @@ Usage:
 Don't forget the http:// when you type the web address!
 """
 
-from __future__ import print_function
-
 import sys
 from pprint import pprint
 
@@ -48,10 +46,11 @@ def main(reactor, url):
     """
     We create a custom UserAgent and send a GET request to a web server.
     """
-    userAgent = 'Twisted/%s (httpclient.py)' % (version.short(),)
+    url = url.encode("ascii")
+    userAgent = 'Twisted/{} (httpclient.py)'.format(version.short()).encode("ascii")
     agent = Agent(reactor)
     d = agent.request(
-        'GET', url, Headers({'user-agent': [userAgent]}))
+        b'GET', url, Headers({b'user-agent': [userAgent]}))
     def cbResponse(response):
         """
         Prints out the response returned by the web server.

@@ -10,8 +10,6 @@ Usage:
 The example will make an XML-RPC request to advogato.org and display the result.
 """
 
-from __future__ import print_function
-
 from twisted.web.xmlrpc import Proxy
 from twisted.internet import reactor
 
