@@ -36,10 +36,10 @@ Virtual hosts and proxies
 .rpys and ResourceTemplate
 --------------------------
 
-- :download:`hello.rpy.py` - use ``twisted.web.static`` to create a static resource to serve
-- :download:`fortune.rpy.py` - create a resource that returns the output of a process run on the server
-- :download:`report.rpy.py` - display various properties of a resource, including path, host, and port
-- :download:`users.rpy.py` - use ``twisted.web.distrib`` to publish user directories as for a "community web site"
+- :download:`hello.rpy` - use ``twisted.web.static`` to create a static resource to serve
+- :download:`fortune.rpy` - create a resource that returns the output of a process run on the server
+- :download:`report.rpy` - display various properties of a resource, including path, host, and port
+- :download:`users.rpy` - use ``twisted.web.distrib`` to publish user directories as for a "community web site"
 - :download:`simple.rtl` - example use of ``twisted.web.resource.ResourceTemplate``
 
 
