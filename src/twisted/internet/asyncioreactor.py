@@ -74,7 +74,7 @@ class AsyncioSelectorReactor(PosixReactorBase):
         if eventloop is None:
             _eventloop = get_event_loop()  # type: AbstractEventLoop
             if current_async_library_cvar is not None:
-                eventloop.set_task_factory(factory=sniffioTaskFactory)
+                _eventloop.set_task_factory(factory=sniffioTaskFactory)
         else:
             _eventloop = eventloop
 
