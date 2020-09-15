@@ -16,8 +16,9 @@ See sendfd.py for the server side of this example.
 """
 from __future__ import print_function
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     import recvfd
+
     raise SystemExit(recvfd.main())
 
 import os, sys
@@ -33,6 +34,7 @@ from twisted.protocols.basic import LineOnlyReceiver
 from twisted.internet.endpoints import UNIXClientEndpoint
 from twisted.internet import reactor
 
+
 @implementer(IFileDescriptorReceiver)
 class ReceiveFDProtocol(LineOnlyReceiver):
 
@@ -41,11 +43,9 @@ class ReceiveFDProtocol(LineOnlyReceiver):
     def __init__(self):
         self.whenDisconnected = Deferred()
 
-
     def fileDescriptorReceived(self, descriptor):
         # Record the descriptor sent to us
         self.descriptor = descriptor
-
 
     def lineReceived(self, line):
         if self.descriptor is None:
@@ -60,10 +60,8 @@ class ReceiveFDProtocol(LineOnlyReceiver):
         os.close(self.descriptor)
         self.transport.loseConnection()
 
-
     def connectionLost(self, reason):
         self.whenDisconnected.callback(None)
-
 
 
 def main():
@@ -80,8 +78,10 @@ def main():
 
     def succeeded(client):
         return client.whenDisconnected
+
     def failed(reason):
         print("Could not connect:", reason.getErrorMessage())
+
     def disconnected(ignored):
         reactor.stop()
 

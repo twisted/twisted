@@ -18,7 +18,6 @@ from twisted.internet import reactor, tksupport
 
 
 class App(object):
-
     def onQuit(self):
         print("Quit!")
         reactor.stop()
@@ -37,7 +36,7 @@ class App(object):
         b.pack(side=LEFT)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     root = Tk()
     tksupport.install(root)
     app = App(root)
