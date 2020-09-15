@@ -18,6 +18,7 @@ from twisted.internet.asyncioreactor import AsyncioSelectorReactor
 from asyncio import (
     ensure_future,
     get_event_loop,
+    get_event_loop_policy,
     set_event_loop,
     set_event_loop_policy,
     DefaultEventLoopPolicy,
@@ -299,6 +300,15 @@ class AsyncioSelectorReactorTests(ReactorBuilder, SynchronousTestCase):
 class AsyncioSelectorReactorSniffioTests(ReactorBuilder, SynchronousTestCase):
 
     skip = sniffioSkip
+
+    def setUp(self):
+        if hasWindowsSelectorEventLoopPolicy:
+            self.original_policy = get_event_loop_policy()
+            set_event_loop_policy(WindowsSelectorEventLoopPolicy())
+
+    def tearDown(self):
+        if hasWindowsSelectorEventLoopPolicy:
+            set_event_loop_policy(self.original_policy)
 
     def testSniffioNotFoundWhenOutside(self):
         reactor = AsyncioSelectorReactor()  # keep it alive
