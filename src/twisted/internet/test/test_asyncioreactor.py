@@ -16,6 +16,8 @@ from .reactormixins import ReactorBuilder
 
 from twisted.internet.asyncioreactor import AsyncioSelectorReactor
 from asyncio import (
+    ensure_future,
+    get_event_loop,
     set_event_loop,
     set_event_loop_policy,
     DefaultEventLoopPolicy,
@@ -314,7 +316,7 @@ class AsyncioSelectorReactorSniffioTests(ReactorBuilder, SynchronousTestCase):
             return sniffio.current_async_library()
 
         reactor = AsyncioSelectorReactor()
-        future = asyncio.ensure_future(inAsyncio())
+        future = ensure_future(inAsyncio())
         d = defer.Deferred.fromFuture(future)
 
         reactor.run()
@@ -326,7 +328,7 @@ class AsyncioSelectorReactorSniffioTests(ReactorBuilder, SynchronousTestCase):
             reactor.stop()
 
         reactor = AsyncioSelectorReactor()
-        asyncio.ensure_future(inAsyncio())
+        ensure_future(inAsyncio())
 
         reactor.run()
 
@@ -343,14 +345,14 @@ class AsyncioSelectorReactorSniffioTests(ReactorBuilder, SynchronousTestCase):
 
         async def outerAsyncio():
             d = defer.ensureDeferred(innerTwisted())
-            future = d.asFuture(loop=asyncio.get_event_loop())
+            future = d.asFuture(loop=get_event_loop())
             inner = await future
 
             reactor.stop()
 
             return [sniffio.current_async_library(), *inner]
 
-        future = asyncio.ensure_future(outerAsyncio())
+        future = ensure_future(outerAsyncio())
         d = defer.Deferred.fromFuture(future)
 
         reactor.run()
@@ -372,12 +374,12 @@ class AsyncioSelectorReactorSniffioTests(ReactorBuilder, SynchronousTestCase):
 
         async def outerAsyncio():
             d = defer.ensureDeferred(innerTwisted())
-            future = d.asFuture(loop=asyncio.get_event_loop())
+            future = d.asFuture(loop=get_event_loop())
             await future
 
             reactor.stop()
 
-        asyncio.ensure_future(outerAsyncio())
+        ensure_future(outerAsyncio())
 
         reactor.run()
 
@@ -393,7 +395,7 @@ class AsyncioSelectorReactorSniffioTests(ReactorBuilder, SynchronousTestCase):
             return [sniffio.current_async_library()]
 
         async def outerTwisted():
-            future = asyncio.ensure_future(innerAsyncio())
+            future = ensure_future(innerAsyncio())
             d = defer.Deferred.fromFuture(future)
             inner = await d
 
@@ -416,7 +418,7 @@ class AsyncioSelectorReactorSniffioTests(ReactorBuilder, SynchronousTestCase):
             pass
 
         async def outerTwisted():
-            future = asyncio.ensure_future(innerAsyncio())
+            future = ensure_future(innerAsyncio())
             d = defer.Deferred.fromFuture(future)
             await d
 
