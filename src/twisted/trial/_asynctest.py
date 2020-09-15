@@ -193,7 +193,7 @@ class TestCase(SynchronousTestCase):
     @defer.inlineCallbacks
     def deferRunCleanups(self, ignored, result):
         """
-        Run any scheduled cleanups and report errors (if any to the result
+        Run any scheduled cleanups and report errors (if any) to the result.
         object.
         """
         failures = []
