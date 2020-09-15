@@ -70,10 +70,12 @@ except ImportError:
     def _copy_context():  # type: ignore[misc]
         return _NoContext
 
+
 current_async_library_cvar = None
 if _contextvarsSupport:
     try:
         import sniffio
+
         current_async_library_cvar = sniffio.current_async_library_cvar
     except ImportError:
         pass

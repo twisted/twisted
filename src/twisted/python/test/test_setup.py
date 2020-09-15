@@ -183,7 +183,6 @@ class OptionalDependenciesTests(SynchronousTestCase):
         deps = _EXTRAS_REQUIRE["contextvars"]
         self.assertIn('contextvars >= 2.4, < 3; python_version < "3.7"', deps)
 
-
     def test_extrasRequiresSniffioDeps(self):
         """
         L{_EXTRAS_REQUIRES}'s C{sniffio} extra contains setuptools
@@ -191,9 +190,8 @@ class OptionalDependenciesTests(SynchronousTestCase):
         C{sniffio} allows identification of the event loop running the
         active coroutine (Twisted vs. Trio etc).
         """
-        deps = _EXTRAS_REQUIRE['sniffio']
-        self.assertIn('sniffio >= 1.1, < 2', deps)
-
+        deps = _EXTRAS_REQUIRE["sniffio"]
+        self.assertIn("sniffio >= 1.1, < 2", deps)
 
     def test_extrasRequiresAllNonPlatformDeps(self):
         """
@@ -212,7 +210,7 @@ class OptionalDependenciesTests(SynchronousTestCase):
         self.assertIn("h2 >= 3.0, < 4.0", deps)
         self.assertIn("priority >= 1.1.0, < 2.0", deps)
         self.assertIn('contextvars >= 2.4, < 3; python_version < "3.7"', deps)
-        self.assertIn('sniffio >= 1.1, < 2', deps)
+        self.assertIn("sniffio >= 1.1, < 2", deps)
 
     def test_extrasRequiresMacosPlatformDeps(self):
         """
@@ -231,7 +229,7 @@ class OptionalDependenciesTests(SynchronousTestCase):
         self.assertIn("priority >= 1.1.0, < 2.0", deps)
         self.assertIn("pyobjc-core", deps)
         self.assertIn('contextvars >= 2.4, < 3; python_version < "3.7"', deps)
-        self.assertIn('sniffio >= 1.1, < 2', deps)
+        self.assertIn("sniffio >= 1.1, < 2", deps)
 
     def test_extrasRequireMacOSXPlatformDeps(self):
         """
@@ -258,7 +256,7 @@ class OptionalDependenciesTests(SynchronousTestCase):
         self.assertIn("priority >= 1.1.0, < 2.0", deps)
         self.assertIn("pywin32 != 226", deps)
         self.assertIn('contextvars >= 2.4, < 3; python_version < "3.7"', deps)
-        self.assertIn('sniffio >= 1.1, < 2', deps)
+        self.assertIn("sniffio >= 1.1, < 2", deps)
 
 
 class FakeModule:

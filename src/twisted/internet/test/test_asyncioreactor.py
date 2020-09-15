@@ -21,14 +21,14 @@ else:
     doSkip = False
 
 
-contextvars = requireModule('contextvars')
+contextvars = requireModule("contextvars")
 if contextvars:
     contextvarsSkip = None
 else:
     contextvarsSkip = "contextvars is not available"
 
 
-sniffio = requireModule('sniffio')
+sniffio = requireModule("sniffio")
 if sniffio:
     sniffioSkip = contextvarsSkip
 else:
@@ -143,7 +143,6 @@ class AsyncioSelectorReactorTests(ReactorBuilder, SynchronousTestCase):
                 gc.enable()
 
 
-
 class AsyncioSelectorReactorSniffioTests(ReactorBuilder, SynchronousTestCase):
 
     skip = sniffioSkip
@@ -156,7 +155,6 @@ class AsyncioSelectorReactorSniffioTests(ReactorBuilder, SynchronousTestCase):
             sniffio.AsyncLibraryNotFoundError,
             sniffio.current_async_library,
         )
-
 
     def testSniffioFindsAsyncioInCoroutine(self):
         async def inAsyncio():
@@ -172,7 +170,6 @@ class AsyncioSelectorReactorSniffioTests(ReactorBuilder, SynchronousTestCase):
 
         self.assertEqual(self.successResultOf(d), "asyncio")
 
-
     def testSniffioFindsNothingAfterCoroutine(self):
         async def inAsyncio():
             reactor.stop()
@@ -186,7 +183,6 @@ class AsyncioSelectorReactorSniffioTests(ReactorBuilder, SynchronousTestCase):
             sniffio.AsyncLibraryNotFoundError,
             sniffio.current_async_library,
         )
-
 
     def testSniffioFindsTwistedCoroutineInsideAsyncioCoroutine(self):
         reactor = AsyncioSelectorReactor()
@@ -215,9 +211,8 @@ class AsyncioSelectorReactorSniffioTests(ReactorBuilder, SynchronousTestCase):
             sniffio.current_async_library,
         )
 
-
     def testSniffioFindsNothingAfterTwistedCoroutineInsideAsyncioCoroutine(
-            self,
+        self,
     ):
         reactor = AsyncioSelectorReactor()
 
@@ -240,7 +235,6 @@ class AsyncioSelectorReactorSniffioTests(ReactorBuilder, SynchronousTestCase):
             sniffio.current_async_library,
         )
 
-
     def testSniffioFindsAsyncioCoroutineInsideTwistedCoroutine(self):
         reactor = AsyncioSelectorReactor()
 
@@ -262,9 +256,8 @@ class AsyncioSelectorReactorSniffioTests(ReactorBuilder, SynchronousTestCase):
 
         self.assertEqual(self.successResultOf(d), ["twisted", "asyncio"])
 
-
     def testSniffioFindsNothingAfterAsyncioCoroutineInsideTwistedCoroutine(
-            self,
+        self,
     ):
         reactor = AsyncioSelectorReactor()
 

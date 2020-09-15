@@ -32,6 +32,7 @@ from builtins import PermissionError, BrokenPipeError
 
 try:
     from contextvars import copy_context
+
     _contextvarsSupport = True
 except ImportError:
     _contextvarsSupport = False
@@ -40,10 +41,10 @@ current_async_library_cvar = None
 if _contextvarsSupport:
     try:
         import sniffio
+
         current_async_library_cvar = sniffio.current_async_library_cvar
     except ImportError:
         pass
-
 
 
 def sniffioTaskFactory(loop, coro):
