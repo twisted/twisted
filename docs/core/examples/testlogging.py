@@ -14,6 +14,7 @@ from twisted.internet import reactor
 
 import sys, warnings
 
+
 def test(i):
     print("printed", i)
     log.msg("message {}".format(i))
@@ -23,11 +24,14 @@ def test(i):
     except:
         log.err()
 
+
 def startlog():
     log.startLogging(sys.stdout)
 
+
 def end():
     reactor.stop()
+
 
 # pre-reactor run
 test(1)
