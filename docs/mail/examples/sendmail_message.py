@@ -5,6 +5,7 @@ from twisted.internet.task import react
 
 from email.mime.text import MIMEText
 
+
 def main(reactor):
     me = "alice@gmail.com"
     to = ["bob@gmail.com", "charlie@gmail.com"]
@@ -14,12 +15,20 @@ def main(reactor):
     message["From"] = me
     message["To"] = ", ".join(to)
 
-    d = sendmail("smtp.gmail.com", me, to, message,
-                 port=587, username=me, password="*********",
-                 requireAuthentication=True,
-                 requireTransportSecurity=True)
+    d = sendmail(
+        "smtp.gmail.com",
+        me,
+        to,
+        message,
+        port=587,
+        username=me,
+        password="*********",
+        requireAuthentication=True,
+        requireTransportSecurity=True,
+    )
 
     d.addBoth(print)
     return d
+
 
 react(main)
