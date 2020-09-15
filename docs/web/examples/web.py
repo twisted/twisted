@@ -19,11 +19,11 @@ from twisted.web import static, server, vhost, twcgi, script
 
 root = static.File("static")
 root.processors = {
-            '.cgi': twcgi.CGIScript,
-            '.epy': script.PythonScript,
-            '.rpy': script.ResourceScript,
+    ".cgi": twcgi.CGIScript,
+    ".epy": script.PythonScript,
+    ".rpy": script.ResourceScript,
 }
-root.putChild('vhost', vhost.VHostMonsterResource())
+root.putChild(b"vhost", vhost.VHostMonsterResource())
 site = server.Site(root)
 reactor.listenTCP(1999, site)
 reactor.run()

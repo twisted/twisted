@@ -14,36 +14,49 @@ Please test on Linux, Win32 and macOS:
    (use dialog menu item), when menus are held down, when window is being
    dragged.
 """
-from __future__ import print_function
-
 import sys, time
 
 try:
-    from wx import Frame as wxFrame, DefaultPosition as wxDefaultPosition, \
-         Size as wxSize, Menu as wxMenu, MenuBar as wxMenuBar, \
-         EVT_MENU, MessageDialog as wxMessageDialog, App as wxApp
-except ImportError as e:
+    from wx import (
+        Frame as wxFrame,
+        DefaultPosition as wxDefaultPosition,
+        Size as wxSize,
+        Menu as wxMenu,
+        MenuBar as wxMenuBar,
+        EVT_MENU,
+        MessageDialog as wxMessageDialog,
+        App as wxApp,
+    )
+except ImportError:
     from wxPython.wx import *
 
 from twisted.python import log
 from twisted.internet import wxreactor
+
 wxreactor.install()
 from twisted.internet import reactor, defer
 
 
 # set up so that "hello, world" is printed continuously
 dc = None
+
+
 def helloWorld():
     global dc
     print("hello, world", time.time())
     dc = reactor.callLater(0.1, helloWorld)
+
+
 dc = reactor.callLater(0.1, helloWorld)
+
 
 def twoSecondsPassed():
     print("two seconds passed")
 
+
 def printer(s):
     print(s)
+
 
 def shutdown():
     print("shutting down in 3 seconds")
@@ -56,16 +69,19 @@ def shutdown():
     reactor.callLater(3, d.callback, 1)
     return d
 
+
 def startup():
     print("Start up event!")
+
 
 reactor.callLater(2, twoSecondsPassed)
 reactor.addSystemEventTrigger("after", "startup", startup)
 reactor.addSystemEventTrigger("before", "shutdown", shutdown)
 
 
-ID_EXIT  = 101
+ID_EXIT = 101
 ID_DIALOG = 102
+
 
 class MyFrame(wxFrame):
     def __init__(self, parent, ID, title):
@@ -76,17 +92,19 @@ class MyFrame(wxFrame):
         menuBar = wxMenuBar()
         menuBar.Append(menu, "&File")
         self.SetMenuBar(menuBar)
-        EVT_MENU(self, ID_EXIT,  self.DoExit)
-        EVT_MENU(self, ID_DIALOG,  self.DoDialog)
+        EVT_MENU(self, ID_EXIT, self.DoExit)
+        EVT_MENU(self, ID_DIALOG, self.DoDialog)
         # you really ought to do this instead of reactor.stop() in
         # DoExit, but for the sake of testing we'll let closing the
         # window shutdown wx without reactor.stop(), to make sure that
         # still does the right thing.
-        #EVT_CLOSE(self, lambda evt: reactor.stop())
+        # EVT_CLOSE(self, lambda evt: reactor.stop())
 
     def DoDialog(self, event):
-        dl = wxMessageDialog(self, "Check terminal to see if messages are still being "
-                             "printed by Twisted.")
+        dl = wxMessageDialog(
+            self,
+            "Check terminal to see if messages are still being " "printed by Twisted.",
+        )
         dl.ShowModal()
         dl.Destroy()
 
@@ -95,7 +113,6 @@ class MyFrame(wxFrame):
 
 
 class MyApp(wxApp):
-
     def OnInit(self):
         frame = MyFrame(None, -1, "Hello, world")
         frame.Show(True)
@@ -110,5 +127,5 @@ def demo():
     reactor.run()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     demo()

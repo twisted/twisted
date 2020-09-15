@@ -8,7 +8,6 @@ from __future__ import print_function
 from twisted.protocols import basic
 
 
-
 class MyChat(basic.LineReceiver):
     def connectionMade(self):
         print("Got new client!")
@@ -24,7 +23,7 @@ class MyChat(basic.LineReceiver):
             c.message(line)
 
     def message(self, message):
-        self.transport.write(message + b'\n')
+        self.transport.write(message + b"\n")
 
 
 from twisted.internet import protocol
