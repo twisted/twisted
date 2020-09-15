@@ -205,8 +205,6 @@ class TestCase(SynchronousTestCase):
 
         for f in failures:
             result.addError(self, f)
-            if f.check(KeyboardInterrupt):
-                result.stop()
             self._passed = False
 
     def _cleanUp(self, result):
