@@ -92,26 +92,26 @@ class BytesHeadersTests(TestCase):
     def test_rawHeadersTypeCheckingName(self):
         """
         L{Headers.setRawHeaders} requires C{name} to be a L{bytes} or
-        L{unicode} string.
+        L{str} string.
         """
         h = Headers()
         e = self.assertRaises(TypeError, h.setRawHeaders, None, [b"foo"])
         self.assertEqual(
             e.args[0],
-            "Header name is an instance of <class 'NoneType'>, " "not bytes or unicode",
+            "Header name is an instance of <class 'NoneType'>, " "not bytes or str",
         )
 
     def test_rawHeadersTypeCheckingValuesAreString(self):
         """
         L{Headers.setRawHeaders} requires values to a L{list} of L{bytes} or
-        L{unicode} strings.
+        L{str} strings.
         """
         h = Headers()
         e = self.assertRaises(TypeError, h.setRawHeaders, b"key", [b"bar", None])
         self.assertEqual(
             e.args[0],
             "Header value at position 1 is an instance of <class 'NoneType'>, "
-            "not bytes or unicode",
+            "not bytes or str",
         )
 
     def test_addRawHeader(self):
@@ -126,27 +126,26 @@ class BytesHeadersTests(TestCase):
 
     def test_addRawHeaderTypeCheckName(self):
         """
-        L{Headers.addRawHeader} requires C{name} to be a L{bytes} or L{unicode}
+        L{Headers.addRawHeader} requires C{name} to be a L{bytes} or L{str}
         string.
         """
         h = Headers()
         e = self.assertRaises(TypeError, h.addRawHeader, None, b"foo")
         self.assertEqual(
             e.args[0],
-            "Header name is an instance of <class 'NoneType'>, " "not bytes or unicode",
+            "Header name is an instance of <class 'NoneType'>, " "not bytes or str",
         )
 
     def test_addRawHeaderTypeCheckValue(self):
         """
-        L{Headers.addRawHeader} requires value to be a L{bytes} or L{unicode}
+        L{Headers.addRawHeader} requires value to be a L{bytes} or L{str}
         string.
         """
         h = Headers()
         e = self.assertRaises(TypeError, h.addRawHeader, b"key", None)
         self.assertEqual(
             e.args[0],
-            "Header value is an instance of <class 'NoneType'>, "
-            "not bytes or unicode",
+            "Header value is an instance of <class 'NoneType'>, " "not bytes or str",
         )
 
     def test_getRawHeadersNoDefault(self):
@@ -354,7 +353,7 @@ class BytesHeadersTests(TestCase):
 
 class UnicodeHeadersTests(TestCase):
     """
-    Tests for L{Headers}, using L{unicode} arguments for methods.
+    Tests for L{Headers}, using L{str} arguments for methods.
     """
 
     def test_sanitizeLinearWhitespace(self):
@@ -368,8 +367,8 @@ class UnicodeHeadersTests(TestCase):
         """
         The header values passed to L{Headers.__init__} can be retrieved via
         L{Headers.getRawHeaders}. If a L{bytes} argument is given, it returns
-        L{bytes} values, and if a L{unicode} argument is given, it returns
-        L{unicode} values. Both are the same header value, just encoded or
+        L{bytes} values, and if a L{str} argument is given, it returns
+        L{str} values. Both are the same header value, just encoded or
         decoded.
         """
         h = Headers({"Foo": ["bar"]})
@@ -394,7 +393,7 @@ class UnicodeHeadersTests(TestCase):
 
     def test_nameNotEncodable(self):
         """
-        Passing L{unicode} to any function that takes a header name will encode
+        Passing L{str} to any function that takes a header name will encode
         said header name as ISO-8859-1, and if it cannot be encoded, it will
         raise a L{UnicodeDecodeError}.
         """
@@ -409,7 +408,7 @@ class UnicodeHeadersTests(TestCase):
 
     def test_nameEncoding(self):
         """
-        Passing L{unicode} to any function that takes a header name will encode
+        Passing L{str} to any function that takes a header name will encode
         said header name as ISO-8859-1.
         """
         h = Headers()
@@ -426,7 +425,7 @@ class UnicodeHeadersTests(TestCase):
 
     def test_rawHeadersValueEncoding(self):
         """
-        Passing L{unicode} to L{Headers.setRawHeaders} will encode the name as
+        Passing L{str} to L{Headers.setRawHeaders} will encode the name as
         ISO-8859-1 and values as UTF-8.
         """
         h = Headers()

@@ -44,8 +44,8 @@ class Headers:
     """
     Stores HTTP headers in a key and multiple value format.
 
-    Most methods accept L{bytes} and L{unicode}, with an internal L{bytes}
-    representation. When passed L{unicode}, header names (e.g. 'Content-Type')
+    Most methods accept L{bytes} and L{str}, with an internal L{bytes}
+    representation. When passed L{str}, header names (e.g. 'Content-Type')
     are encoded using ISO-8859-1 and header values (e.g.
     'text/html;charset=utf-8') are encoded using UTF-8. Some methods that return
     values will return them in the same type as the name given.
@@ -104,7 +104,7 @@ class Headers:
         bytestring if required.
 
         @param name: A HTTP header name
-        @type name: L{unicode} or L{bytes}
+        @type name: L{str} or L{bytes}
 
         @return: C{name}, encoded if required, lowercased
         @rtype: L{bytes}
@@ -118,7 +118,7 @@ class Headers:
         Encode a single header value to a UTF-8 encoded bytestring if required.
 
         @param value: A single HTTP header value.
-        @type value: L{bytes} or L{unicode}
+        @type value: L{bytes} or L{str}
 
         @return: C{value}, encoded if required
         @rtype: L{bytes}
@@ -133,7 +133,7 @@ class Headers:
         bytestrings if required.
 
         @param values: A list of HTTP header values.
-        @type values: L{list} of L{bytes} or L{unicode} (mixed types allowed)
+        @type values: L{list} of L{bytes} or L{str} (mixed types allowed)
 
         @return: C{values}, with each item encoded if required
         @rtype: L{list} of L{bytes}
@@ -152,7 +152,7 @@ class Headers:
         @type values: L{list} of UTF-8 encoded L{bytes}
 
         @return: C{values}, with each item decoded
-        @rtype: L{list} of L{unicode}
+        @rtype: L{list} of L{str}
         """
         newValues = []
 
@@ -172,7 +172,7 @@ class Headers:
         """
         Check for the existence of a given header.
 
-        @type name: L{bytes} or L{unicode}
+        @type name: L{bytes} or L{str}
         @param name: The name of the HTTP header to check for.
 
         @rtype: L{bool}
@@ -184,7 +184,7 @@ class Headers:
         """
         Remove the named header from this header object.
 
-        @type name: L{bytes} or L{unicode}
+        @type name: L{bytes} or L{str}
         @param name: The name of the HTTP header to remove.
 
         @return: L{None}
@@ -195,16 +195,16 @@ class Headers:
         """
         Sets the raw representation of the given header.
 
-        @type name: L{bytes} or L{unicode}
+        @type name: L{bytes} or L{str}
         @param name: The name of the HTTP header to set the values for.
 
-        @type values: L{list} of L{bytes} or L{unicode} strings
+        @type values: L{list} of L{bytes} or L{str} strings
         @param values: A list of strings each one being a header value of
             the given name.
 
         @raise TypeError: Raised if C{values} is not a L{list} of L{bytes}
-            or L{unicode} strings, or if C{name} is not a L{bytes} or
-            L{unicode} string.
+            or L{str} strings, or if C{name} is not a L{bytes} or
+            L{str} string.
 
         @return: L{None}
         """
@@ -214,17 +214,16 @@ class Headers:
                 "instance of %r instead" % (name, type(values))
             )
 
-        if not isinstance(name, (bytes, unicode)):
+        if not isinstance(name, (bytes, str)):
             raise TypeError(
-                "Header name is an instance of %r, "
-                "not bytes or unicode" % (type(name),)
+                "Header name is an instance of %r, " "not bytes or str" % (type(name),)
             )
 
         for count, value in enumerate(values):
-            if not isinstance(value, (bytes, unicode)):
+            if not isinstance(value, (bytes, str)):
                 raise TypeError(
                     "Header value at position %s is an instance of %r, not "
-                    "bytes or unicode"
+                    "bytes or str"
                     % (
                         count,
                         type(value),
@@ -242,22 +241,21 @@ class Headers:
         """
         Add a new raw value for the given header.
 
-        @type name: L{bytes} or L{unicode}
+        @type name: L{bytes} or L{str}
         @param name: The name of the header for which to set the value.
 
-        @type value: L{bytes} or L{unicode}
+        @type value: L{bytes} or L{str}
         @param value: The value to set for the named header.
         """
-        if not isinstance(name, (bytes, unicode)):
+        if not isinstance(name, (bytes, str)):
             raise TypeError(
-                "Header name is an instance of %r, "
-                "not bytes or unicode" % (type(name),)
+                "Header name is an instance of %r, " "not bytes or str" % (type(name),)
             )
 
-        if not isinstance(value, (bytes, unicode)):
+        if not isinstance(value, (bytes, str)):
             raise TypeError(
                 "Header value is an instance of %r, not "
-                "bytes or unicode" % (type(value),)
+                "bytes or str" % (type(value),)
             )
 
         values = self.getRawHeaders(name)
@@ -276,7 +274,7 @@ class Headers:
         Returns a list of headers matching the given name as the raw string
         given.
 
-        @type name: L{bytes} or L{unicode}
+        @type name: L{bytes} or L{str}
         @param name: The name of the HTTP header to get the values of.
 
         @param default: The value to return if no header with the given C{name}
