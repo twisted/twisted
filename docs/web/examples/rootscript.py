@@ -19,7 +19,7 @@ visiting http://localhost/.
 from twisted.web import vhost, static, script, server
 from twisted.application import internet, service
 
-default = static.Data("text/html", "")
+default = static.Data(b"", "text/html")
 # Setting up vhost resource.
 default.putChild(b"vhost", vhost.VHostMonsterResource())
 resource = vhost.NameVirtualHost()
