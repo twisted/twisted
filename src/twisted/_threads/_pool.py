@@ -56,10 +56,9 @@ def pool(currentLimit, threadFactory=Thread):
             return None
         return ThreadWorker(startThread, Queue())
 
-    team = Team(coordinator=LockWorker(Lock(), LocalStorage()),
-                createWorker=limitedWorkerCreator,
-                logException=err)
+    team = Team(
+        coordinator=LockWorker(Lock(), LocalStorage()),
+        createWorker=limitedWorkerCreator,
+        logException=err,
+    )
     return team
-
-
-

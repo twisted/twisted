@@ -14,8 +14,9 @@ from ._convenience import Quit
 
 _stop = object()
 
+
 @implementer(IExclusiveWorker)
-class ThreadWorker(object):
+class ThreadWorker:
     """
     An L{IExclusiveWorker} implemented based on a single thread and a queue.
 
@@ -40,11 +41,12 @@ class ThreadWorker(object):
         """
         self._q = queue
         self._hasQuit = Quit()
+
         def work():
             for task in iter(queue.get, _stop):
                 task()
-        startThread(work)
 
+        startThread(work)
 
     def do(self, task):
         """
@@ -54,7 +56,6 @@ class ThreadWorker(object):
         """
         self._hasQuit.check()
         self._q.put(task)
-
 
     def quit(self):
         """
@@ -66,9 +67,8 @@ class ThreadWorker(object):
         self._q.put(_stop)
 
 
-
 @implementer(IExclusiveWorker)
-class LockWorker(object):
+class LockWorker:
     """
     An L{IWorker} implemented based on a mutual-exclusion lock.
     """
@@ -85,7 +85,6 @@ class LockWorker(object):
         self._quit = Quit()
         self._lock = lock
         self._local = local
-
 
     def do(self, work):
         """
@@ -112,11 +111,9 @@ class LockWorker(object):
         else:
             working.append(work)
 
-
     def quit(self):
         """
         Quit this L{LockWorker}.
         """
         self._quit.set()
         self._lock = None
-

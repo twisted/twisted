@@ -18,21 +18,25 @@ import time
 
 now = time.ctime()
 
-d = '''\
+d = """\
 <HTML><HEAD><TITLE>Hello Rpy</TITLE>
 
-<H1>Hello World, It is Now %(now)s</H1>
+<H1>Hello World, It is Now {now}</H1>
 
 <UL>
-''' % vars()
+""".format(
+    now=now
+)
 
 for i in range(10):
-    d += "<LI>%(i)s" % vars()
+    d += "<LI>{i}".format(i=i)
 
-d += '''\
+d += """\
 </UL>
 
 </BODY></HTML>
-'''
+"""
 
-resource = static.Data(d, 'text/html')
+data = d.encode("utf8")
+
+resource = static.Data(data, "text/html")

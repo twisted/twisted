@@ -8,20 +8,19 @@ from twisted.conch.insults import text
 from twisted.conch.insults.text import attributes as A
 
 
-
 class FormattedTextTests(unittest.TestCase):
     """
     Tests for assembling formatted text.
     """
+
     def test_trivial(self):
         """
         Using no formatting attributes produces no VT102 control sequences in
         the flattened output.
         """
         self.assertEqual(
-            text.assembleFormattedText(A.normal['Hello, world.']),
-            'Hello, world.')
-
+            text.assembleFormattedText(A.normal["Hello, world."]), "Hello, world."
+        )
 
     def test_bold(self):
         """
@@ -29,9 +28,8 @@ class FormattedTextTests(unittest.TestCase):
         sequence to enable bold when flattened.
         """
         self.assertEqual(
-            text.assembleFormattedText(A.bold['Hello, world.']),
-            '\x1b[1mHello, world.')
-
+            text.assembleFormattedText(A.bold["Hello, world."]), "\x1b[1mHello, world."
+        )
 
     def test_underline(self):
         """
@@ -39,9 +37,9 @@ class FormattedTextTests(unittest.TestCase):
         control sequence to enable underlining when flattened.
         """
         self.assertEqual(
-            text.assembleFormattedText(A.underline['Hello, world.']),
-            '\x1b[4mHello, world.')
-
+            text.assembleFormattedText(A.underline["Hello, world."]),
+            "\x1b[4mHello, world.",
+        )
 
     def test_blink(self):
         """
@@ -49,9 +47,8 @@ class FormattedTextTests(unittest.TestCase):
         sequence to enable blinking when flattened.
         """
         self.assertEqual(
-            text.assembleFormattedText(A.blink['Hello, world.']),
-            '\x1b[5mHello, world.')
-
+            text.assembleFormattedText(A.blink["Hello, world."]), "\x1b[5mHello, world."
+        )
 
     def test_reverseVideo(self):
         """
@@ -59,9 +56,9 @@ class FormattedTextTests(unittest.TestCase):
         VT102 control sequence to enable reversed video when flattened.
         """
         self.assertEqual(
-            text.assembleFormattedText(A.reverseVideo['Hello, world.']),
-            '\x1b[7mHello, world.')
-
+            text.assembleFormattedText(A.reverseVideo["Hello, world."]),
+            "\x1b[7mHello, world.",
+        )
 
     def test_minus(self):
         """
@@ -71,9 +68,10 @@ class FormattedTextTests(unittest.TestCase):
         """
         self.assertEqual(
             text.assembleFormattedText(
-                A.bold[A.blink['Hello', -A.bold[' world'], '.']]),
-            '\x1b[1;5mHello\x1b[0;5m world\x1b[1;5m.')
-
+                A.bold[A.blink["Hello", -A.bold[" world"], "."]]
+            ),
+            "\x1b[1;5mHello\x1b[0;5m world\x1b[1;5m.",
+        )
 
     def test_foreground(self):
         """
@@ -82,9 +80,10 @@ class FormattedTextTests(unittest.TestCase):
         """
         self.assertEqual(
             text.assembleFormattedText(
-                A.normal[A.fg.red['Hello, '], A.fg.green['world!']]),
-            '\x1b[31mHello, \x1b[32mworld!')
-
+                A.normal[A.fg.red["Hello, "], A.fg.green["world!"]]
+            ),
+            "\x1b[31mHello, \x1b[32mworld!",
+        )
 
     def test_background(self):
         """
@@ -93,9 +92,10 @@ class FormattedTextTests(unittest.TestCase):
         """
         self.assertEqual(
             text.assembleFormattedText(
-                A.normal[A.bg.red['Hello, '], A.bg.green['world!']]),
-            '\x1b[41mHello, \x1b[42mworld!')
-
+                A.normal[A.bg.red["Hello, "], A.bg.green["world!"]]
+            ),
+            "\x1b[41mHello, \x1b[42mworld!",
+        )
 
     def test_flattenDeprecated(self):
         """
@@ -110,12 +110,10 @@ class FormattedTextTests(unittest.TestCase):
 
         warningsShown = self.flushWarnings([self.test_flattenDeprecated])
         self.assertEqual(len(warningsShown), 1)
-        self.assertEqual(warningsShown[0]['category'], DeprecationWarning)
+        self.assertEqual(warningsShown[0]["category"], DeprecationWarning)
         self.assertEqual(
-            warningsShown[0]['message'],
-            'twisted.conch.insults.text.flatten was deprecated in Twisted '
-            '13.1.0: Use twisted.conch.insults.text.assembleFormattedText '
-            'instead.')
-
-
-
+            warningsShown[0]["message"],
+            "twisted.conch.insults.text.flatten was deprecated in Twisted "
+            "13.1.0: Use twisted.conch.insults.text.assembleFormattedText "
+            "instead.",
+        )

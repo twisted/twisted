@@ -8,6 +8,7 @@ from twisted.internet import protocol
 
 from io import BytesIO
 
+
 class StatefulProtocol(protocol.Protocol):
     """A Protocol that stores state for you.
 
@@ -16,6 +17,7 @@ class StatefulProtocol(protocol.Protocol):
     state or None to keep same state. Initial state is returned by
     getInitialState (override it).
     """
+
     _sful_data = None, None, 0
 
     def makeConnection(self, transport):
@@ -29,14 +31,16 @@ class StatefulProtocol(protocol.Protocol):
         state, buffer, offset = self._sful_data
         buffer.seek(0, 2)
         buffer.write(data)
-        blen = buffer.tell() # how many bytes total is in the buffer
+        blen = buffer.tell()  # how many bytes total is in the buffer
         buffer.seek(offset)
         while blen - offset >= state[1]:
             d = buffer.read(state[1])
             offset += state[1]
             next = state[0](d)
-            if self.transport.disconnecting: # XXX: argh stupid hack borrowed right from LineReceiver
-                return # dataReceived won't be called again, so who cares about consistent state
+            if (
+                self.transport.disconnecting
+            ):  # XXX: argh stupid hack borrowed right from LineReceiver
+                return  # dataReceived won't be called again, so who cares about consistent state
             if next:
                 state = next
         if offset != 0:
@@ -46,4 +50,3 @@ class StatefulProtocol(protocol.Protocol):
             buffer.write(b)
             offset = 0
         self._sful_data = state, buffer, offset
-

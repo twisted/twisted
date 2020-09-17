@@ -22,11 +22,11 @@ class _MyWindowsException(OSError):
     """
 
 
-
 class ErrorFormatingTests(TestCase):
     """
     Tests for C{_ErrorFormatter.formatError}.
     """
+
     probeErrorCode = ECONNABORTED
     probeMessage = "correct message value"
 
@@ -39,7 +39,6 @@ class ErrorFormatingTests(TestCase):
         message = formatter.formatError(self.probeErrorCode)
         self.assertEqual(message, os.strerror(self.probeErrorCode))
 
-
     def test_emptyErrorTab(self):
         """
         L{_ErrorFormatter.formatError} should use L{os.strerror} to format
@@ -49,10 +48,9 @@ class ErrorFormatingTests(TestCase):
         error = 1
         # Sanity check
         self.assertNotEqual(self.probeErrorCode, error)
-        formatter = _ErrorFormatter(None, None, {error: 'wrong message'})
+        formatter = _ErrorFormatter(None, None, {error: "wrong message"})
         message = formatter.formatError(self.probeErrorCode)
         self.assertEqual(message, os.strerror(self.probeErrorCode))
-
 
     def test_errorTab(self):
         """
@@ -60,10 +58,10 @@ class ErrorFormatingTests(TestCase):
         and contains the requested error code.
         """
         formatter = _ErrorFormatter(
-            None, None, {self.probeErrorCode: self.probeMessage})
+            None, None, {self.probeErrorCode: self.probeMessage}
+        )
         message = formatter.formatError(self.probeErrorCode)
         self.assertEqual(message, self.probeMessage)
-
 
     def test_formatMessage(self):
         """
@@ -71,15 +69,17 @@ class ErrorFormatingTests(TestCase):
         C{formatMessage} if it is supplied.
         """
         formatCalls = []
+
         def formatMessage(errorCode):
             formatCalls.append(errorCode)
             return self.probeMessage
+
         formatter = _ErrorFormatter(
-            None, formatMessage, {self.probeErrorCode: 'wrong message'})
+            None, formatMessage, {self.probeErrorCode: "wrong message"}
+        )
         message = formatter.formatError(self.probeErrorCode)
         self.assertEqual(message, self.probeMessage)
         self.assertEqual(formatCalls, [self.probeErrorCode])
-
 
     def test_winError(self):
         """
@@ -87,16 +87,18 @@ class ErrorFormatingTests(TestCase):
         the exception L{winError} returns, if L{winError} is supplied.
         """
         winCalls = []
+
         def winError(errorCode):
             winCalls.append(errorCode)
             return _MyWindowsException(errorCode, self.probeMessage)
+
         formatter = _ErrorFormatter(
             winError,
-            lambda error: 'formatMessage: wrong message',
-            {self.probeErrorCode: 'errorTab: wrong message'})
+            lambda error: "formatMessage: wrong message",
+            {self.probeErrorCode: "errorTab: wrong message"},
+        )
         message = formatter.formatError(self.probeErrorCode)
         self.assertEqual(message, self.probeMessage)
-
 
     @skipIf(platform.getType() != "win32", "Test will run only on Windows.")
     def test_fromEnvironment(self):
@@ -108,24 +110,29 @@ class ErrorFormatingTests(TestCase):
 
         if formatter.winError is not None:
             from ctypes import WinError
+
             self.assertEqual(
                 formatter.formatError(self.probeErrorCode),
-                WinError(self.probeErrorCode).strerror)
+                WinError(self.probeErrorCode).strerror,
+            )
             formatter.winError = None
 
         if formatter.formatMessage is not None:
             from win32api import FormatMessage
+
             self.assertEqual(
                 formatter.formatError(self.probeErrorCode),
-                FormatMessage(self.probeErrorCode))
+                FormatMessage(self.probeErrorCode),
+            )
             formatter.formatMessage = None
 
         if formatter.errorTab is not None:
             from socket import errorTab
+
             self.assertEqual(
                 formatter.formatError(self.probeErrorCode),
-                errorTab[self.probeErrorCode])
-
+                errorTab[self.probeErrorCode],
+            )
 
     @skipIf(platform.getType() != "win32", "Test will run only on Windows.")
     def test_correctLookups(self):
@@ -137,11 +144,13 @@ class ErrorFormatingTests(TestCase):
         acceptable = [socket.errorTab[ECONNABORTED]]
         try:
             from ctypes import WinError
+
             acceptable.append(WinError(ECONNABORTED).strerror)
         except ImportError:
             pass
         try:
             from win32api import FormatMessage
+
             acceptable.append(FormatMessage(ECONNABORTED))
         except ImportError:
             pass

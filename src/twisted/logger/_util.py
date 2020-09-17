@@ -7,7 +7,6 @@ Logging utilities.
 """
 
 
-
 def formatTrace(trace):
     """
     Format a trace (that is, the contents of the C{log_trace} key of a log
@@ -21,11 +20,12 @@ def formatTrace(trace):
         flow of the message through various observers.
     @rtype: L{unicode}
     """
+
     def formatWithName(obj):
         if hasattr(obj, "name"):
-            return u"{0} ({1})".format(obj, obj.name)
+            return "{0} ({1})".format(obj, obj.name)
         else:
-            return u"{0}".format(obj)
+            return "{0}".format(obj)
 
     result = []
     lineage = []
@@ -38,11 +38,11 @@ def formatTrace(trace):
 
             else:
                 if not lineage:
-                    result.append(u"{0}\n".format(formatWithName(parent)))
+                    result.append("{0}\n".format(formatWithName(parent)))
 
                 lineage.append(parent)
 
-        result.append(u"  " * len(lineage))
-        result.append(u"-> {0}\n".format(formatWithName(child)))
+        result.append("  " * len(lineage))
+        result.append("-> {0}\n".format(formatWithName(child)))
 
-    return u"".join(result)
+    return "".join(result)

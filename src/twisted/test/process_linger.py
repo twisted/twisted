@@ -1,4 +1,3 @@
-
 """Write to a file descriptor and then close it, waiting a few seconds before
 quitting. This serves to make sure SIGCHLD is actually being noticed.
 """

@@ -14,7 +14,6 @@ from .._logger import Logger
 from .._global import globalLogPublisher
 
 
-
 class TestLogger(Logger):
     """
     L{Logger} with an overridden C{emit} method that keeps track of received
@@ -38,20 +37,18 @@ class TestLogger(Logger):
         }
 
 
-
-class LogComposedObject(object):
+class LogComposedObject:
     """
     A regular object, with a logger attached.
     """
+
     log = TestLogger()
 
     def __init__(self, state=None):
         self.state = state
 
-
-    def __str__(self):
+    def __str__(self) -> str:
         return "<LogComposedObject {state}>".format(state=self.state)
-
 
 
 class LoggerTests(unittest.TestCase):
@@ -67,14 +64,12 @@ class LoggerTests(unittest.TestCase):
         log = Logger(namespace)
         self.assertEqual(repr(log), "<Logger {0}>".format(repr(namespace)))
 
-
     def test_namespaceDefault(self):
         """
         Default namespace is module name.
         """
         log = Logger()
         self.assertEqual(log.namespace, __name__)
-
 
     def test_namespaceOMGItsTooHard(self):
         """
@@ -85,10 +80,10 @@ class LoggerTests(unittest.TestCase):
         result = []
         exec(
             "result.append(Logger())",
-            dict(Logger=Logger), locals(),
+            dict(Logger=Logger),
+            locals(),
         )
         self.assertEqual(result[0].namespace, "<unknown>")
-
 
     def test_namespaceAttribute(self):
         """
@@ -106,20 +101,18 @@ class LoggerTests(unittest.TestCase):
         self.assertIs(obj.log.source, obj)
         self.assertIsNone(Logger().source)
 
-
     def test_descriptorObserver(self):
         """
         When used as a descriptor, the observer is propagated.
         """
         observed = []
 
-        class MyObject(object):
+        class MyObject:
             log = Logger(observer=observed.append)
 
         MyObject.log.info("hello")
         self.assertEqual(len(observed), 1)
-        self.assertEqual(observed[0]['log_format'], "hello")
-
+        self.assertEqual(observed[0]["log_format"], "hello")
 
     def test_sourceAvailableForFormatting(self):
         """
@@ -135,7 +128,6 @@ class LoggerTests(unittest.TestCase):
 
         stuff = formatEvent(log.event)
         self.assertIn("Hello, <LogComposedObject hello>.", stuff)
-
 
     def test_basicLogger(self):
         """
@@ -166,44 +158,43 @@ class LoggerTests(unittest.TestCase):
 
             self.assertEqual(formatEvent(log.event), message)
 
-
     def test_sourceOnClass(self):
         """
         C{log_source} event key refers to the class.
         """
+
         def observer(event):
             self.assertEqual(event["log_source"], Thingo)
 
-        class Thingo(object):
+        class Thingo:
             log = TestLogger(observer=observer)
 
         Thingo.log.info()
-
 
     def test_sourceOnInstance(self):
         """
         C{log_source} event key refers to the instance.
         """
+
         def observer(event):
             self.assertEqual(event["log_source"], thingo)
 
-        class Thingo(object):
+        class Thingo:
             log = TestLogger(observer=observer)
 
         thingo = Thingo()
         thingo.log.info()
 
-
     def test_sourceUnbound(self):
         """
         C{log_source} event key is L{None}.
         """
+
         def observer(event):
             self.assertIsNone(event["log_source"])
 
         log = TestLogger(observer=observer)
         log.info()
-
 
     def test_defaultFailure(self):
         """
@@ -221,7 +212,6 @@ class LoggerTests(unittest.TestCase):
         self.assertEqual(log.emitted["level"], LogLevel.critical)
         self.assertEqual(log.emitted["format"], "Whoops")
 
-
     def test_conflictingKwargs(self):
         """
         Make sure that kwargs conflicting with args don't pass through.
@@ -229,18 +219,17 @@ class LoggerTests(unittest.TestCase):
         log = TestLogger()
 
         log.warn(
-            u"*",
+            "*",
             log_format="#",
             log_level=LogLevel.error,
             log_namespace="*namespace*",
             log_source="*source*",
         )
 
-        self.assertEqual(log.event["log_format"], u"*")
+        self.assertEqual(log.event["log_format"], "*")
         self.assertEqual(log.event["log_level"], LogLevel.warn)
         self.assertEqual(log.event["log_namespace"], log.namespace)
         self.assertIsNone(log.event["log_source"])
-
 
     def test_logInvalidLogLevel(self):
         """
@@ -253,11 +242,11 @@ class LoggerTests(unittest.TestCase):
         errors = self.flushLoggedErrors(InvalidLogLevelError)
         self.assertEqual(len(errors), 1)
 
-
     def test_trace(self):
         """
         Tracing keeps track of forwarding to the publisher.
         """
+
         def publisher(event):
             observer(event)
 

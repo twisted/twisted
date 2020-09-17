@@ -14,6 +14,7 @@ from twisted.words.xish import utility
 from twisted.words.xish.domish import Element
 from twisted.words.xish.utility import EventDispatcher
 
+
 class CallbackTracker:
     """
     Test helper for tracking callbacks.
@@ -26,11 +27,9 @@ class CallbackTracker:
         self.called = 0
         self.obj = None
 
-
     def call(self, obj):
         self.called = self.called + 1
         self.obj = obj
-
 
 
 class OrderedCallbackTracker:
@@ -41,18 +40,14 @@ class OrderedCallbackTracker:
     def __init__(self):
         self.callList = []
 
-
     def call1(self, object):
         self.callList.append(self.call1)
-
 
     def call2(self, object):
         self.callList.append(self.call2)
 
-
     def call3(self, object):
         self.callList.append(self.call3)
-
 
 
 class EventDispatcherTests(unittest.TestCase):
@@ -96,7 +91,6 @@ class EventDispatcherTests(unittest.TestCase):
         d.dispatch(pres)
         self.assertEqual(cb2.called, 1)
 
-
     def test_addObserverTwice(self):
         """
         Test adding two observers for the same query.
@@ -115,7 +109,6 @@ class EventDispatcherTests(unittest.TestCase):
         self.assertEqual(cb1.obj, d)
         self.assertEqual(cb2.called, 1)
         self.assertEqual(cb2.obj, d)
-
 
     def test_addObserverInDispatch(self):
         """
@@ -139,7 +132,6 @@ class EventDispatcherTests(unittest.TestCase):
         d.dispatch(msg)
         self.assertEqual(cb.called, 2)
 
-
     def test_addOnetimeObserverInDispatch(self):
         """
         Test for registration of a onetime observer during dispatch.
@@ -162,7 +154,6 @@ class EventDispatcherTests(unittest.TestCase):
         d.dispatch(msg)
         self.assertEqual(cb.called, 1)
 
-
     def testOnetimeDispatch(self):
         d = EventDispatcher()
         msg = Element(("ns", "message"))
@@ -173,7 +164,6 @@ class EventDispatcherTests(unittest.TestCase):
         self.assertEqual(cb.called, 1)
         d.dispatch(msg)
         self.assertEqual(cb.called, 1)
-
 
     def testDispatcherResult(self):
         d = EventDispatcher()
@@ -188,7 +178,6 @@ class EventDispatcherTests(unittest.TestCase):
         result = d.dispatch(pres)
         self.assertEqual(True, result)
 
-
     def testOrderedXPathDispatch(self):
         d = EventDispatcher()
         cb = OrderedCallbackTracker()
@@ -199,10 +188,11 @@ class EventDispatcherTests(unittest.TestCase):
         msg = Element(("ns", "message"))
         msg.addElement("body")
         d.dispatch(msg)
-        self.assertEqual(cb.callList, [cb.call1, cb.call2, cb.call3],
-                          "Calls out of order: %s" %
-                          repr([c.__name__ for c in cb.callList]))
-
+        self.assertEqual(
+            cb.callList,
+            [cb.call1, cb.call2, cb.call3],
+            "Calls out of order: %s" % repr([c.__name__ for c in cb.callList]),
+        )
 
     # Observers are put into CallbackLists that are then put into dictionaries
     # keyed by the event trigger. Upon removal of the last observer for a
@@ -218,12 +208,11 @@ class EventDispatcherTests(unittest.TestCase):
         d = EventDispatcher()
         cb = CallbackTracker()
 
-        d.addObserver('//event/test', cb.call)
-        d.dispatch(None, '//event/test')
+        d.addObserver("//event/test", cb.call)
+        d.dispatch(None, "//event/test")
         self.assertEqual(1, cb.called)
-        d.removeObserver('//event/test', cb.call)
+        d.removeObserver("//event/test", cb.call)
         self.assertEqual(0, len(d._eventObservers.pop(0)))
-
 
     def test_cleanUpRemoveXPathObserver(self):
         """
@@ -234,12 +223,11 @@ class EventDispatcherTests(unittest.TestCase):
         cb = CallbackTracker()
         msg = Element((None, "message"))
 
-        d.addObserver('/message', cb.call)
+        d.addObserver("/message", cb.call)
         d.dispatch(msg)
         self.assertEqual(1, cb.called)
-        d.removeObserver('/message', cb.call)
+        d.removeObserver("/message", cb.call)
         self.assertEqual(0, len(d._xpathObservers.pop(0)))
-
 
     def test_cleanUpOnetimeEventObserver(self):
         """
@@ -249,11 +237,10 @@ class EventDispatcherTests(unittest.TestCase):
         d = EventDispatcher()
         cb = CallbackTracker()
 
-        d.addOnetimeObserver('//event/test', cb.call)
-        d.dispatch(None, '//event/test')
+        d.addOnetimeObserver("//event/test", cb.call)
+        d.dispatch(None, "//event/test")
         self.assertEqual(1, cb.called)
         self.assertEqual(0, len(d._eventObservers.pop(0)))
-
 
     def test_cleanUpOnetimeXPathObserver(self):
         """
@@ -264,11 +251,10 @@ class EventDispatcherTests(unittest.TestCase):
         cb = CallbackTracker()
         msg = Element((None, "message"))
 
-        d.addOnetimeObserver('/message', cb.call)
+        d.addOnetimeObserver("/message", cb.call)
         d.dispatch(msg)
         self.assertEqual(1, cb.called)
         self.assertEqual(0, len(d._xpathObservers.pop(0)))
-
 
     def test_observerRaisingException(self):
         """
@@ -296,10 +282,10 @@ class EventDispatcherTests(unittest.TestCase):
         try:
             utility.CallbackList = OrderedCallbackList
 
-            d.addObserver('//event/test', raiseError)
-            d.addObserver('//event/test', cb.call)
+            d.addObserver("//event/test", raiseError)
+            d.addObserver("//event/test", cb.call)
             try:
-                d.dispatch(None, '//event/test')
+                d.dispatch(None, "//event/test")
             except TestError:
                 self.fail("TestError raised. Should have been logged instead.")
 
@@ -307,7 +293,6 @@ class EventDispatcherTests(unittest.TestCase):
             self.assertEqual(1, cb.called)
         finally:
             utility.CallbackList = originalCallbackList
-
 
 
 class XmlPipeTests(unittest.TestCase):
@@ -318,30 +303,30 @@ class XmlPipeTests(unittest.TestCase):
     def setUp(self):
         self.pipe = utility.XmlPipe()
 
-
     def test_sendFromSource(self):
         """
         Send an element from the source and observe it from the sink.
         """
+
         def cb(obj):
             called.append(obj)
 
         called = []
         self.pipe.sink.addObserver('/test[@xmlns="testns"]', cb)
-        element = Element(('testns', 'test'))
+        element = Element(("testns", "test"))
         self.pipe.source.send(element)
         self.assertEqual([element], called)
-
 
     def test_sendFromSink(self):
         """
         Send an element from the sink and observe it from the source.
         """
+
         def cb(obj):
             called.append(obj)
 
         called = []
         self.pipe.source.addObserver('/test[@xmlns="testns"]', cb)
-        element = Element(('testns', 'test'))
+        element = Element(("testns", "test"))
         self.pipe.sink.send(element)
         self.assertEqual([element], called)

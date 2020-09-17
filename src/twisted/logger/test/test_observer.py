@@ -15,7 +15,6 @@ from .._observer import ILogObserver
 from .._observer import LogPublisher
 
 
-
 class LogPublisherTests(unittest.TestCase):
     """
     Tests for L{LogPublisher}.
@@ -31,7 +30,6 @@ class LogPublisherTests(unittest.TestCase):
         except BrokenMethodImplementation as e:
             self.fail(e)
 
-
     def test_observers(self):
         """
         L{LogPublisher.observers} returns the observers.
@@ -41,7 +39,6 @@ class LogPublisherTests(unittest.TestCase):
 
         publisher = LogPublisher(o1, o2)
         self.assertEqual(set((o1, o2)), set(publisher._observers))
-
 
     def test_addObserver(self):
         """
@@ -55,7 +52,6 @@ class LogPublisherTests(unittest.TestCase):
         publisher.addObserver(o3)
         self.assertEqual(set((o1, o2, o3)), set(publisher._observers))
 
-
     def test_addObserverNotCallable(self):
         """
         L{LogPublisher.addObserver} refuses to add an observer that's
@@ -63,7 +59,6 @@ class LogPublisherTests(unittest.TestCase):
         """
         publisher = LogPublisher()
         self.assertRaises(TypeError, publisher.addObserver, object())
-
 
     def test_removeObserver(self):
         """
@@ -77,7 +72,6 @@ class LogPublisherTests(unittest.TestCase):
         publisher.removeObserver(o2)
         self.assertEqual(set((o1, o3)), set(publisher._observers))
 
-
     def test_removeObserverNotRegistered(self):
         """
         L{LogPublisher.removeObserver} removes an observer that is not
@@ -90,7 +84,6 @@ class LogPublisherTests(unittest.TestCase):
         publisher = LogPublisher(o1, o2)
         publisher.removeObserver(o3)
         self.assertEqual(set((o1, o2)), set(publisher._observers))
-
 
     def test_fanOut(self):
         """
@@ -111,7 +104,6 @@ class LogPublisherTests(unittest.TestCase):
         self.assertIn(event, events1)
         self.assertIn(event, events2)
         self.assertIn(event, events3)
-
 
     def test_observerRaises(self):
         """
@@ -138,15 +130,11 @@ class LogPublisherTests(unittest.TestCase):
         self.assertIn(event, events)
 
         # Verify that the observer raised my exception
-        errors = [
-            e["log_failure"] for e in collector
-            if "log_failure" in e
-        ]
+        errors = [e["log_failure"] for e in collector if "log_failure" in e]
         self.assertEqual(len(errors), 1)
         self.assertIs(errors[0].value, exception)
         # Make sure the exceptional observer does not receive its own error.
         self.assertEqual(len(events), 1)
-
 
     def test_observerRaisesAndLoggerHatesMe(self):
         """
@@ -169,7 +157,6 @@ class LogPublisherTests(unittest.TestCase):
         publisher(event)
 
         # Here, the lack of an exception thus far is a success, of sorts
-
 
     def test_trace(self):
         """

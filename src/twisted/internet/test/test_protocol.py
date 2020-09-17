@@ -13,21 +13,30 @@ from zope.interface.verify import verifyObject
 
 from twisted.internet.defer import CancelledError
 from twisted.internet.interfaces import (
-    IProtocol, ILoggingContext, IProtocolFactory, IConsumer)
+    IProtocol,
+    ILoggingContext,
+    IProtocolFactory,
+    IConsumer,
+)
 from twisted.internet.protocol import (
-    Protocol, ClientCreator, Factory, ProtocolToConsumerAdapter,
-    ConsumerToProtocolAdapter, FileWrapper)
+    Protocol,
+    ClientCreator,
+    Factory,
+    ProtocolToConsumerAdapter,
+    ConsumerToProtocolAdapter,
+    FileWrapper,
+)
 from twisted.logger import LogLevel, globalLogPublisher
 from twisted.python.failure import Failure
 from twisted.test.proto_helpers import MemoryReactorClock, StringTransport
 from twisted.trial.unittest import TestCase
 
 
-
 class ClientCreatorTests(TestCase):
     """
     Tests for L{twisted.internet.protocol.ClientCreator}.
     """
+
     def _basicConnectTest(self, check):
         """
         Helper for implementing a test to verify that one of the I{connect}
@@ -40,6 +49,7 @@ class ClientCreatorTests(TestCase):
             arguments except for the factory are passed on as expected to the
             reactor.  The factory should be returned.
         """
+
         class SomeProtocol(Protocol):
             pass
 
@@ -49,23 +59,23 @@ class ClientCreatorTests(TestCase):
         protocol = factory.buildProtocol(None)
         self.assertIsInstance(protocol, SomeProtocol)
 
-
     def test_connectTCP(self):
         """
         L{ClientCreator.connectTCP} calls C{reactor.connectTCP} with the host
         and port information passed to it, and with a factory which will
         construct the protocol passed to L{ClientCreator.__init__}.
         """
+
         def check(reactor, cc):
-            cc.connectTCP('example.com', 1234, 4321, ('1.2.3.4', 9876))
+            cc.connectTCP("example.com", 1234, 4321, ("1.2.3.4", 9876))
             host, port, factory, timeout, bindAddress = reactor.tcpClients.pop()
-            self.assertEqual(host, 'example.com')
+            self.assertEqual(host, "example.com")
             self.assertEqual(port, 1234)
             self.assertEqual(timeout, 4321)
-            self.assertEqual(bindAddress, ('1.2.3.4', 9876))
+            self.assertEqual(bindAddress, ("1.2.3.4", 9876))
             return factory
-        self._basicConnectTest(check)
 
+        self._basicConnectTest(check)
 
     def test_connectUNIX(self):
         """
@@ -73,15 +83,16 @@ class ClientCreatorTests(TestCase):
         filename passed to it, and with a factory which will construct the
         protocol passed to L{ClientCreator.__init__}.
         """
+
         def check(reactor, cc):
-            cc.connectUNIX('/foo/bar', 123, True)
+            cc.connectUNIX("/foo/bar", 123, True)
             address, factory, timeout, checkPID = reactor.unixClients.pop()
-            self.assertEqual(address, '/foo/bar')
+            self.assertEqual(address, "/foo/bar")
             self.assertEqual(timeout, 123)
             self.assertTrue(checkPID)
             return factory
-        self._basicConnectTest(check)
 
+        self._basicConnectTest(check)
 
     def test_connectSSL(self):
         """
@@ -89,18 +100,28 @@ class ClientCreatorTests(TestCase):
         port, and context factory passed to it, and with a factory which will
         construct the protocol passed to L{ClientCreator.__init__}.
         """
+
         def check(reactor, cc):
             expectedContextFactory = object()
-            cc.connectSSL('example.com', 1234, expectedContextFactory, 4321, ('4.3.2.1', 5678))
-            host, port, factory, contextFactory, timeout, bindAddress = reactor.sslClients.pop()
-            self.assertEqual(host, 'example.com')
+            cc.connectSSL(
+                "example.com", 1234, expectedContextFactory, 4321, ("4.3.2.1", 5678)
+            )
+            (
+                host,
+                port,
+                factory,
+                contextFactory,
+                timeout,
+                bindAddress,
+            ) = reactor.sslClients.pop()
+            self.assertEqual(host, "example.com")
             self.assertEqual(port, 1234)
             self.assertIs(contextFactory, expectedContextFactory)
             self.assertEqual(timeout, 4321)
-            self.assertEqual(bindAddress, ('4.3.2.1', 5678))
+            self.assertEqual(bindAddress, ("4.3.2.1", 5678))
             return factory
-        self._basicConnectTest(check)
 
+        self._basicConnectTest(check)
 
     def _cancelConnectTest(self, connect):
         """
@@ -124,36 +145,38 @@ class ClientCreatorTests(TestCase):
         self.assertTrue(connector._disconnected)
         return self.assertFailure(d, CancelledError)
 
-
     def test_cancelConnectTCP(self):
         """
         The L{Deferred} returned by L{ClientCreator.connectTCP} can be cancelled
         to abort the connection attempt before it completes.
         """
-        def connect(cc):
-            return cc.connectTCP('example.com', 1234)
-        return self._cancelConnectTest(connect)
 
+        def connect(cc):
+            return cc.connectTCP("example.com", 1234)
+
+        return self._cancelConnectTest(connect)
 
     def test_cancelConnectUNIX(self):
         """
         The L{Deferred} returned by L{ClientCreator.connectTCP} can be cancelled
         to abort the connection attempt before it completes.
         """
-        def connect(cc):
-            return cc.connectUNIX('/foo/bar')
-        return self._cancelConnectTest(connect)
 
+        def connect(cc):
+            return cc.connectUNIX("/foo/bar")
+
+        return self._cancelConnectTest(connect)
 
     def test_cancelConnectSSL(self):
         """
         The L{Deferred} returned by L{ClientCreator.connectTCP} can be cancelled
         to abort the connection attempt before it completes.
         """
-        def connect(cc):
-            return cc.connectSSL('example.com', 1234, object())
-        return self._cancelConnectTest(connect)
 
+        def connect(cc):
+            return cc.connectSSL("example.com", 1234, object())
+
+        return self._cancelConnectTest(connect)
 
     def _cancelConnectTimeoutTest(self, connect):
         """
@@ -182,7 +205,6 @@ class ClientCreatorTests(TestCase):
 
         return self.assertFailure(d, CancelledError)
 
-
     def test_cancelConnectTCPTimeout(self):
         """
         L{ClientCreator.connectTCP} inserts a very short delayed call between
@@ -192,15 +214,16 @@ class ClientCreatorTests(TestCase):
         closed, the timeout is cancelled, and the L{Deferred} fails with
         L{CancelledError}.
         """
+
         def connect(reactor, cc):
-            d = cc.connectTCP('example.com', 1234)
+            d = cc.connectTCP("example.com", 1234)
             host, port, factory, timeout, bindAddress = reactor.tcpClients.pop()
             protocol = factory.buildProtocol(None)
             transport = StringTransport()
             protocol.makeConnection(transport)
             return d
-        return self._cancelConnectTimeoutTest(connect)
 
+        return self._cancelConnectTimeoutTest(connect)
 
     def test_cancelConnectUNIXTimeout(self):
         """
@@ -211,15 +234,16 @@ class ClientCreatorTests(TestCase):
         closed, the timeout is cancelled, and the L{Deferred} fails with
         L{CancelledError}.
         """
+
         def connect(reactor, cc):
-            d = cc.connectUNIX('/foo/bar')
+            d = cc.connectUNIX("/foo/bar")
             address, factory, timeout, bindAddress = reactor.unixClients.pop()
             protocol = factory.buildProtocol(None)
             transport = StringTransport()
             protocol.makeConnection(transport)
             return d
-        return self._cancelConnectTimeoutTest(connect)
 
+        return self._cancelConnectTimeoutTest(connect)
 
     def test_cancelConnectSSLTimeout(self):
         """
@@ -230,15 +254,23 @@ class ClientCreatorTests(TestCase):
         closed, the timeout is cancelled, and the L{Deferred} fails with
         L{CancelledError}.
         """
+
         def connect(reactor, cc):
-            d = cc.connectSSL('example.com', 1234, object())
-            host, port, factory, contextFactory, timeout, bindADdress = reactor.sslClients.pop()
+            d = cc.connectSSL("example.com", 1234, object())
+            (
+                host,
+                port,
+                factory,
+                contextFactory,
+                timeout,
+                bindADdress,
+            ) = reactor.sslClients.pop()
             protocol = factory.buildProtocol(None)
             transport = StringTransport()
             protocol.makeConnection(transport)
             return d
-        return self._cancelConnectTimeoutTest(connect)
 
+        return self._cancelConnectTimeoutTest(connect)
 
     def _cancelConnectFailedTimeoutTest(self, connect):
         """
@@ -251,7 +283,8 @@ class ClientCreatorTests(TestCase):
         d, factory = connect(reactor, cc)
         connector = reactor.connectors.pop()
         factory.clientConnectionFailed(
-            connector, Failure(Exception("Simulated failure")))
+            connector, Failure(Exception("Simulated failure"))
+        )
 
         # Sanity check - there is an outstanding delayed call to fire the
         # Deferred.
@@ -264,48 +297,58 @@ class ClientCreatorTests(TestCase):
 
         return self.assertFailure(d, CancelledError)
 
-
     def test_cancelConnectTCPFailedTimeout(self):
         """
         Similar to L{test_cancelConnectTCPTimeout}, but for the case where the
         connection attempt fails.
         """
+
         def connect(reactor, cc):
-            d = cc.connectTCP('example.com', 1234)
+            d = cc.connectTCP("example.com", 1234)
             host, port, factory, timeout, bindAddress = reactor.tcpClients.pop()
             return d, factory
-        return self._cancelConnectFailedTimeoutTest(connect)
 
+        return self._cancelConnectFailedTimeoutTest(connect)
 
     def test_cancelConnectUNIXFailedTimeout(self):
         """
         Similar to L{test_cancelConnectUNIXTimeout}, but for the case where the
         connection attempt fails.
         """
+
         def connect(reactor, cc):
-            d = cc.connectUNIX('/foo/bar')
+            d = cc.connectUNIX("/foo/bar")
             address, factory, timeout, bindAddress = reactor.unixClients.pop()
             return d, factory
-        return self._cancelConnectFailedTimeoutTest(connect)
 
+        return self._cancelConnectFailedTimeoutTest(connect)
 
     def test_cancelConnectSSLFailedTimeout(self):
         """
         Similar to L{test_cancelConnectSSLTimeout}, but for the case where the
         connection attempt fails.
         """
-        def connect(reactor, cc):
-            d = cc.connectSSL('example.com', 1234, object())
-            host, port, factory, contextFactory, timeout, bindADdress = reactor.sslClients.pop()
-            return d, factory
-        return self._cancelConnectFailedTimeoutTest(connect)
 
+        def connect(reactor, cc):
+            d = cc.connectSSL("example.com", 1234, object())
+            (
+                host,
+                port,
+                factory,
+                contextFactory,
+                timeout,
+                bindADdress,
+            ) = reactor.sslClients.pop()
+            return d, factory
+
+        return self._cancelConnectFailedTimeoutTest(connect)
 
 
 class ProtocolTests(TestCase):
     """
     Tests for L{twisted.internet.protocol.Protocol}.
     """
+
     def test_interfaces(self):
         """
         L{Protocol} instances provide L{IProtocol} and L{ILoggingContext}.
@@ -314,15 +357,15 @@ class ProtocolTests(TestCase):
         self.assertTrue(verifyObject(IProtocol, proto))
         self.assertTrue(verifyObject(ILoggingContext, proto))
 
-
     def test_logPrefix(self):
         """
         L{Protocol.logPrefix} returns the protocol class's name.
         """
+
         class SomeThing(Protocol):
             pass
-        self.assertEqual("SomeThing", SomeThing().logPrefix())
 
+        self.assertEqual("SomeThing", SomeThing().logPrefix())
 
     def test_makeConnection(self):
         """
@@ -330,6 +373,7 @@ class ProtocolTests(TestCase):
         then calls C{connectionMade}.
         """
         result = []
+
         class SomeProtocol(Protocol):
             def connectionMade(self):
                 result.append(self.transport)
@@ -338,7 +382,6 @@ class ProtocolTests(TestCase):
         protocol = SomeProtocol()
         protocol.makeConnection(transport)
         self.assertEqual(result, [transport])
-
 
 
 class FactoryTests(TestCase):
@@ -355,30 +398,30 @@ class FactoryTests(TestCase):
         self.assertTrue(verifyObject(IProtocolFactory, factory))
         self.assertTrue(verifyObject(ILoggingContext, factory))
 
-
     def test_logPrefix(self):
         """
         L{Factory.logPrefix} returns the name of the factory class.
         """
+
         class SomeKindOfFactory(Factory):
             pass
 
         self.assertEqual("SomeKindOfFactory", SomeKindOfFactory().logPrefix())
-
 
     def test_defaultBuildProtocol(self):
         """
         L{Factory.buildProtocol} by default constructs a protocol by calling
         its C{protocol} attribute, and attaches the factory to the result.
         """
+
         class SomeProtocol(Protocol):
             pass
+
         f = Factory()
         f.protocol = SomeProtocol
         protocol = f.buildProtocol(None)
         self.assertIsInstance(protocol, SomeProtocol)
         self.assertIs(protocol.factory, f)
-
 
     def test_forProtocol(self):
         """
@@ -386,14 +429,15 @@ class FactoryTests(TestCase):
         additional arguments, and sets its C{protocol} attribute to the given
         Protocol subclass.
         """
+
         class ArgTakingFactory(Factory):
             def __init__(self, *args, **kwargs):
                 self.args, self.kwargs = args, kwargs
+
         factory = ArgTakingFactory.forProtocol(Protocol, 1, 2, foo=12)
         self.assertEqual(factory.protocol, Protocol)
         self.assertEqual(factory.args, (1, 2))
         self.assertEqual(factory.kwargs, {"foo": 12})
-
 
     def test_doStartLoggingStatement(self):
         """
@@ -402,17 +446,14 @@ class FactoryTests(TestCase):
         """
         events = []
         globalLogPublisher.addObserver(events.append)
-        self.addCleanup(
-            lambda: globalLogPublisher.removeObserver(events.append))
+        self.addCleanup(lambda: globalLogPublisher.removeObserver(events.append))
 
         f = Factory()
         f.doStart()
 
-        self.assertIs(events[0]['factory'], f)
-        self.assertEqual(events[0]['log_level'], LogLevel.info)
-        self.assertEqual(events[0]['log_format'],
-                         'Starting factory {factory!r}')
-
+        self.assertIs(events[0]["factory"], f)
+        self.assertEqual(events[0]["log_level"], LogLevel.info)
+        self.assertEqual(events[0]["log_format"], "Starting factory {factory!r}")
 
     def test_doStopLoggingStatement(self):
         """
@@ -421,8 +462,7 @@ class FactoryTests(TestCase):
         """
         events = []
         globalLogPublisher.addObserver(events.append)
-        self.addCleanup(
-            lambda: globalLogPublisher.removeObserver(events.append))
+        self.addCleanup(lambda: globalLogPublisher.removeObserver(events.append))
 
         class MyFactory(Factory):
             numPorts = 1
@@ -430,17 +470,16 @@ class FactoryTests(TestCase):
         f = MyFactory()
         f.doStop()
 
-        self.assertIs(events[0]['factory'], f)
-        self.assertEqual(events[0]['log_level'], LogLevel.info)
-        self.assertEqual(events[0]['log_format'],
-                         'Stopping factory {factory!r}')
-
+        self.assertIs(events[0]["factory"], f)
+        self.assertEqual(events[0]["log_level"], LogLevel.info)
+        self.assertEqual(events[0]["log_format"], "Stopping factory {factory!r}")
 
 
 class AdapterTests(TestCase):
     """
     Tests for L{ProtocolToConsumerAdapter} and L{ConsumerToProtocolAdapter}.
     """
+
     def test_protocolToConsumer(self):
         """
         L{IProtocol} providers can be adapted to L{IConsumer} providers using
@@ -454,15 +493,15 @@ class AdapterTests(TestCase):
         self.assertEqual(result, [b"hello"])
         self.assertIsInstance(consumer, ProtocolToConsumerAdapter)
 
-
     def test_consumerToProtocol(self):
         """
         L{IConsumer} providers can be adapted to L{IProtocol} providers using
         L{ProtocolToConsumerAdapter}.
         """
         result = []
+
         @implementer(IConsumer)
-        class Consumer(object):
+        class Consumer:
             def write(self, d):
                 result.append(d)
 
@@ -471,7 +510,6 @@ class AdapterTests(TestCase):
         protocol.dataReceived(b"hello")
         self.assertEqual(result, [b"hello"])
         self.assertIsInstance(protocol, ConsumerToProtocolAdapter)
-
 
 
 class FileWrapperTests(TestCase):
@@ -491,9 +529,8 @@ class FileWrapperTests(TestCase):
         # BytesIO() cannot accept unicode, so this will
         # cause an exception to be thrown which will be
         # handled by FileWrapper.handle_exception().
-        wrapper.write(u"stuff")
-        self.assertNotEqual(wrapper.file.getvalue(), u"stuff")
-
+        wrapper.write("stuff")
+        self.assertNotEqual(wrapper.file.getvalue(), "stuff")
 
     def test_writeSequence(self):
         """
@@ -505,6 +542,4 @@ class FileWrapperTests(TestCase):
 
         wrapper = FileWrapper(BytesIO())
         # In Python 3, b"".join([u"a", u"b"]) will raise a TypeError
-        self.assertRaises(TypeError,
-                          wrapper.writeSequence,
-                          [u"test3", u"test4"])
+        self.assertRaises(TypeError, wrapper.writeSequence, ["test3", "test4"])

@@ -26,13 +26,9 @@ import inspect
 import os
 import platform
 import socket
-import struct
 import sys
-import tokenize
 import urllib.parse as urllib_parse
 import warnings
-from base64 import decodebytes as _b64decodebytes
-from base64 import encodebytes as _b64encodebytes
 from collections.abc import Sequence
 from functools import reduce
 from html import escape
@@ -45,39 +41,119 @@ from types import MethodType as _MethodType
 from urllib.parse import quote as urlquote
 from urllib.parse import unquote as urlunquote
 
+from incremental import Version
 
-_PY3 = True
-_PY35PLUS = True
+from twisted.python.deprecate import deprecated, deprecatedModuleAttribute
+
 
 if sys.version_info >= (3, 7, 0):
     _PY37PLUS = True
 else:
     _PY37PLUS = False
 
-if platform.python_implementation() == 'PyPy':
+if platform.python_implementation() == "PyPy":
     _PYPY = True
 else:
     _PYPY = False
 
-_shouldEnableNewStyle = lambda: False
-_EXPECT_NEWSTYLE = True
-
-_tokenize = tokenize.tokenize
 FileType = IOBase
+deprecatedModuleAttribute(
+    Version("Twisted", "NEXT", 0, 0),
+    "Obsolete alias for io.IOBase",
+    __name__,
+    "FileType",
+)
+
 frozenset = frozenset
+deprecatedModuleAttribute(
+    Version("Twisted", "NEXT", 0, 0),
+    "Obsolete alias for frozenset builtin type",
+    __name__,
+    "frozenset",
+)
+
 InstanceType = object
+deprecatedModuleAttribute(
+    Version("Twisted", "NEXT", 0, 0),
+    "Old-style classes don't exist in Python 3",
+    __name__,
+    "InstanceType",
+)
+
 izip = zip
+deprecatedModuleAttribute(
+    Version("Twisted", "NEXT", 0, 0),
+    "Obsolete alias for zip() builtin",
+    __name__,
+    "izip",
+)
+
 long = int
+deprecatedModuleAttribute(
+    Version("Twisted", "NEXT", 0, 0),
+    "Obsolete alias for int builtin type",
+    __name__,
+    "long",
+)
+
 range = range
+deprecatedModuleAttribute(
+    Version("Twisted", "NEXT", 0, 0),
+    "Obsolete alias for range() builtin",
+    __name__,
+    "range",
+)
+
 raw_input = input
+deprecatedModuleAttribute(
+    Version("Twisted", "NEXT", 0, 0),
+    "Obsolete alias for input() builtin",
+    __name__,
+    "raw_input",
+)
+
 set = set
+deprecatedModuleAttribute(
+    Version("Twisted", "NEXT", 0, 0),
+    "Obsolete alias for set builtin type",
+    __name__,
+    "set",
+)
+
 StringType = str
+deprecatedModuleAttribute(
+    Version("Twisted", "NEXT", 0, 0),
+    "Obsolete alias for str builtin type",
+    __name__,
+    "StringType",
+)
+
 unichr = chr
+deprecatedModuleAttribute(
+    Version("Twisted", "NEXT", 0, 0),
+    "Obsolete alias for chr() builtin",
+    __name__,
+    "unichr",
+)
+
 unicode = str
+deprecatedModuleAttribute(
+    Version("Twisted", "NEXT", 0, 0),
+    "Obsolete alias for str builtin type",
+    __name__,
+    "unicode",
+)
+
 xrange = range
+deprecatedModuleAttribute(
+    Version("Twisted", "NEXT", 0, 0),
+    "Obsolete alias for range() builtin",
+    __name__,
+    "xrange",
+)
 
 
-
+@deprecated(Version("Twisted", "NEXT", 0, 0), replacement="d.items()")
 def iteritems(d):
     """
     Return an iterable of the items of C{d}.
@@ -88,7 +164,7 @@ def iteritems(d):
     return d.items()
 
 
-
+@deprecated(Version("Twisted", "NEXT", 0, 0), replacement="d.values()")
 def itervalues(d):
     """
     Return an iterable of the values of C{d}.
@@ -99,7 +175,7 @@ def itervalues(d):
     return d.values()
 
 
-
+@deprecated(Version("Twisted", "NEXT", 0, 0), replacement="list(d.items())")
 def items(d):
     """
     Return a list of the items of C{d}.
@@ -108,7 +184,6 @@ def items(d):
     @rtype: L{list}
     """
     return list(d.items())
-
 
 
 def currentframe(n=0):
@@ -127,7 +202,6 @@ def currentframe(n=0):
     for x in range(n + 1):
         f = f.f_back
     return f
-
 
 
 def execfile(filename, globals, locals=None):
@@ -149,7 +223,6 @@ def execfile(filename, globals, locals=None):
     exec(code, globals, locals)
 
 
-
 def cmp(a, b):
     """
     Compare two objects.
@@ -165,7 +238,6 @@ def cmp(a, b):
         return 1
 
 
-
 def comparable(klass):
     """
     Class decorator that ensures support for the special C{__cmp__} method.
@@ -173,42 +245,38 @@ def comparable(klass):
     C{__eq__}, C{__lt__}, etc. methods are added to the class, relying on
     C{__cmp__} to implement their comparisons.
     """
-    def __eq__(self, other):
+
+    def __eq__(self, other: object) -> bool:
         c = self.__cmp__(other)
         if c is NotImplemented:
             return c
         return c == 0
 
-
-    def __ne__(self, other):
+    def __ne__(self, other: object) -> bool:
         c = self.__cmp__(other)
         if c is NotImplemented:
             return c
         return c != 0
 
-
-    def __lt__(self, other):
+    def __lt__(self, other: object) -> bool:
         c = self.__cmp__(other)
         if c is NotImplemented:
             return c
         return c < 0
 
-
-    def __le__(self, other):
+    def __le__(self, other: object) -> bool:
         c = self.__cmp__(other)
         if c is NotImplemented:
             return c
         return c <= 0
 
-
-    def __gt__(self, other):
+    def __gt__(self, other: object) -> bool:
         c = self.__cmp__(other)
         if c is NotImplemented:
             return c
         return c > 0
 
-
-    def __ge__(self, other):
+    def __ge__(self, other: object) -> bool:
         c = self.__cmp__(other)
         if c is NotImplemented:
             return c
@@ -223,8 +291,7 @@ def comparable(klass):
     return klass
 
 
-
-def ioType(fileIshObject, default=unicode):
+def ioType(fileIshObject, default=str):
     """
     Determine the type which will be returned from the given file object's
     read() and accepted by its write() method as an argument.
@@ -256,21 +323,21 @@ def ioType(fileIshObject, default=unicode):
     """
     if isinstance(fileIshObject, TextIOBase):
         # If it's for text I/O, then it's for text I/O.
-        return unicode
+        return str
     if isinstance(fileIshObject, IOBase):
         # If it's for I/O but it's _not_ for text I/O, it's for bytes I/O.
         return bytes
-    encoding = getattr(fileIshObject, 'encoding', None)
+    encoding = getattr(fileIshObject, "encoding", None)
     import codecs
+
     if isinstance(fileIshObject, (codecs.StreamReader, codecs.StreamWriter)):
         # On StreamReaderWriter, the 'encoding' attribute has special meaning;
-        # it is unambiguously unicode.
+        # it is unambiguously text.
         if encoding:
-            return unicode
+            return str
         else:
             return bytes
     return default
-
 
 
 def nativeString(s):
@@ -281,15 +348,14 @@ def nativeString(s):
     @raise UnicodeError: The input string is not ASCII encodable/decodable.
     @raise TypeError: The input is neither C{bytes} nor C{unicode}.
     """
-    if not isinstance(s, (bytes, unicode)):
-        raise TypeError("%r is neither bytes nor unicode" % s)
+    if not isinstance(s, (bytes, str)):
+        raise TypeError("%r is neither bytes nor str" % s)
     if isinstance(s, bytes):
         return s.decode("ascii")
     else:
         # Ensure we're limited to ASCII subset:
         s.encode("ascii")
     return s
-
 
 
 def _matchingString(constantString, inputString):
@@ -323,7 +389,10 @@ def _matchingString(constantString, inputString):
         return otherType
 
 
-
+@deprecated(
+    Version("Twisted", "NEXT", 0, 0),
+    replacement="raise exception.with_traceback(traceback)",
+)
 def reraise(exception, traceback):
     """
     Re-raise an exception, with an optional traceback.
@@ -338,7 +407,6 @@ def reraise(exception, traceback):
     raise exception.with_traceback(traceback)
 
 
-
 def iterbytes(originalBytes):
     """
     Return an iterable wrapper for a C{bytes} object that provides the behavior
@@ -350,22 +418,18 @@ def iterbytes(originalBytes):
     @param originalBytes: A C{bytes} object that will be wrapped.
     """
     for i in range(len(originalBytes)):
-        yield originalBytes[i:i+1]
+        yield originalBytes[i : i + 1]
 
 
-
-def intToBytes(i):
+@deprecated(Version("Twisted", "NEXT", 0, 0), replacement="b'%d'")
+def intToBytes(i: int) -> bytes:
     """
     Convert the given integer into C{bytes}, as ASCII-encoded Arab numeral.
-
-    In other words, this is equivalent to calling C{bytes} in Python 2 on an
-    integer.
 
     @param i: The C{int} to convert to C{bytes}.
     @rtype: C{bytes}
     """
-    return ("%d" % i).encode("ascii")
-
+    return b"%d" % (i,)
 
 
 def lazyByteSlice(object, offset=0, size=None):
@@ -386,45 +450,32 @@ def lazyByteSlice(object, offset=0, size=None):
     if size is None:
         return view[offset:]
     else:
-        return view[offset:(offset + size)]
+        return view[offset : (offset + size)]
 
 
-
-def networkString(s):
+def networkString(s: str) -> bytes:
     """
-    Convert the native string type to L{bytes} if it is not already L{bytes}
-    using ASCII encoding if conversion is necessary.
+    Convert a string to L{bytes} using ASCII encoding.
 
     This is useful for sending text-like bytes that are constructed using
     string interpolation.  For example::
 
         networkString("Hello %d" % (n,))
 
-    @param s: A native string to convert to bytes if necessary.
+    @param s: A string to convert to bytes.
     @type s: L{str}
 
-    @raise UnicodeError: The input string is not ASCII encodable/decodable.
-    @raise TypeError: The input is neither L{bytes} nor L{unicode}.
+    @raise UnicodeError: The input string is not ASCII encodable.
+    @raise TypeError: The input is not L{str}.
 
     @rtype: L{bytes}
     """
-    if not isinstance(s, unicode):
-        raise TypeError("Can only convert text to bytes on Python 3")
-    return s.encode('ascii')
+    if not isinstance(s, str):
+        raise TypeError("Can only convert strings to bytes")
+    return s.encode("ascii")
 
 
-
-def _keys(d):
-    """
-    Return a list of the keys of C{d}.
-
-    @type d: L{dict}
-    @rtype: L{list}
-    """
-    return list(d.keys())
-
-
-
+@deprecated(Version("Twisted", "NEXT", 0, 0), replacement="os.environb")
 def bytesEnviron():
     """
     Return a L{dict} of L{os.environ} where all text-strings are encoded into
@@ -438,7 +489,6 @@ def bytesEnviron():
         target[os.environ.encodekey(x)] = os.environ.encodevalue(y)
 
     return target
-
 
 
 def _constructMethod(cls, name, self):
@@ -461,66 +511,6 @@ def _constructMethod(cls, name, self):
     return _MethodType(func, self)
 
 
-
-def _bytesChr(i):
-    """
-    Like L{chr} but always works on ASCII, returning L{bytes}.
-
-    @param i: The ASCII code point to return.
-    @type i: L{int}
-
-    @rtype: L{bytes}
-    """
-    return bytes([i])
-
-
-
-def _coercedUnicode(s):
-    """
-    Coerce ASCII-only byte strings into unicode for Python 2.
-
-    In Python 2 C{unicode(b'bytes')} returns a unicode string C{'bytes'}. In
-    Python 3, the equivalent C{str(b'bytes')} will return C{"b'bytes'"}
-    instead. This function mimics the behavior for Python 2. It will decode the
-    byte string as ASCII. In Python 3 it simply raises a L{TypeError} when
-    passing a byte string. Unicode strings are returned as-is.
-
-    @param s: The string to coerce.
-    @type s: L{bytes} or L{unicode}
-
-    @raise UnicodeError: The input L{bytes} is not ASCII decodable.
-    @raise TypeError: The input is L{bytes} on Python 3.
-    """
-    if isinstance(s, bytes):
-        if _PY3:
-            raise TypeError("Expected str not %r (bytes)" % (s,))
-        else:
-            return s.decode('ascii')
-    else:
-        return s
-
-
-
-def _bytesRepr(bytestring):
-    """
-    Provide a repr for a byte string that begins with 'b' on both
-    Python 2 and 3.
-
-    @param bytestring: The string to repr.
-    @type bytestring: L{bytes}
-
-    @raise TypeError: The input is not L{bytes}.
-
-    @return: The repr with a leading 'b'.
-    @rtype: L{bytes}
-    """
-    if not isinstance(bytestring, bytes):
-        raise TypeError("Expected bytes not %r" % (bytestring,))
-
-    return repr(bytestring)
-
-
-
 def _get_async_param(isAsync=None, **kwargs):
     """
     Provide a backwards-compatible way to get async param value that does not
@@ -537,16 +527,17 @@ def _get_async_param(isAsync=None, **kwargs):
     @return: Final isAsync param value
     @rtype: L{bool}
     """
-    if 'async' in kwargs:
+    if "async" in kwargs:
         warnings.warn(
             "'async' keyword argument is deprecated, please use isAsync",
-            DeprecationWarning, stacklevel=2)
-    if isAsync is None and 'async' in kwargs:
-        isAsync = kwargs.pop('async')
+            DeprecationWarning,
+            stacklevel=2,
+        )
+    if isAsync is None and "async" in kwargs:
+        isAsync = kwargs.pop("async")
     if kwargs:
         raise TypeError
     return bool(isAsync)
-
 
 
 def _pypy3BlockingHack():
@@ -569,15 +560,72 @@ def _pypy3BlockingHack():
             return realFromFD(fd, family, type, *passproto)
         finally:
             fcntl(fd, F_SETFL, flags)
+
     realFromFD = socket.fromfd
     if realFromFD.__name__ == fromFDWithoutModifyingFlags.__name__:
         return
     socket.fromfd = fromFDWithoutModifyingFlags
 
 
-
 _pypy3BlockingHack()
 
+
+deprecatedModuleAttribute(
+    Version("Twisted", "NEXT", 0, 0),
+    "Use functools.reduce() directly",
+    __name__,
+    "reduce",
+)
+
+deprecatedModuleAttribute(
+    Version("Twisted", "NEXT", 0, 0),
+    "Use io.StringIO directly",
+    __name__,
+    "NativeStringIO",
+)
+
+deprecatedModuleAttribute(
+    Version("Twisted", "NEXT", 0, 0),
+    "Import urllib.parse directly",
+    __name__,
+    "urllib_parse",
+)
+
+deprecatedModuleAttribute(
+    Version("Twisted", "NEXT", 0, 0), "Use html.escape directly", __name__, "escape"
+)
+
+deprecatedModuleAttribute(
+    Version("Twisted", "NEXT", 0, 0),
+    "Use urllib.parse.quote() directly",
+    __name__,
+    "urlquote",
+)
+
+deprecatedModuleAttribute(
+    Version("Twisted", "NEXT", 0, 0),
+    "Use urllib.parse.unquote() directly",
+    __name__,
+    "urlunquote",
+)
+
+deprecatedModuleAttribute(
+    Version("Twisted", "NEXT", 0, 0),
+    "Use http.cookiejar directly",
+    __name__,
+    "cookielib",
+)
+
+deprecatedModuleAttribute(
+    Version("Twisted", "NEXT", 0, 0), "Use sys.intern() directly", __name__, "intern"
+)
+
+deprecatedModuleAttribute(
+    Version("Twisted", "NEXT", 0, 0),
+    "Use collections.abc.Sequence directly",
+    __name__,
+    "Sequence",
+)
 
 
 __all__ = [
@@ -588,7 +636,6 @@ __all__ = [
     "set",
     "cmp",
     "comparable",
-    "OrderedDict",
     "nativeString",
     "NativeStringIO",
     "networkString",
@@ -610,16 +657,9 @@ __all__ = [
     "urlquote",
     "urlunquote",
     "cookielib",
-    "_keys",
-    "_b64encodebytes",
-    "_b64decodebytes",
-    "_bytesChr",
-    "_coercedUnicode",
-    "_bytesRepr",
     "intern",
     "unichr",
     "raw_input",
-    "_tokenize",
     "_get_async_param",
     "Sequence",
 ]

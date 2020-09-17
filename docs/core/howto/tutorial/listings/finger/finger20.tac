@@ -172,10 +172,10 @@ class UserStatusTree(resource.Resource):
         self.service=service
 
         # add a specific child for the path "RPC2"
-        self.putChild("RPC2", UserStatusXR(self.service))
+        self.putChild(b"RPC2", UserStatusXR(self.service))
 
         # need to do this for resources at the root of the site
-        self.putChild("", self)
+        self.putChild(b"", self)
 
     def _cb_render_GET(self, users, request):
         userOutput = ''.join(["<li><a href=\"%s\">%s</a></li>" % (user, user)
@@ -209,7 +209,7 @@ class UserStatus(resource.Resource):
         self.service = service
 
     def _cb_render_GET(self, status, request):
-        request.write("""<html><head><title>%s</title></head>
+        request.write(b"""<html><head><title>%s</title></head>
         <body><h1>%s</h1>
         <p>%s</p>
         </body></html>""" % (self.user, self.user, status))

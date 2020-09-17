@@ -63,9 +63,7 @@ from zope.interface import implementer, implementer_only, implementedBy
 from twisted.internet import tcp, interfaces
 
 
-
 supported = True
-
 
 
 @implementer(interfaces.IOpenSSLContextFactory)
@@ -79,7 +77,6 @@ class ContextFactory:
         raise NotImplementedError
 
 
-
 class DefaultOpenSSLContextFactory(ContextFactory):
     """
     L{DefaultOpenSSLContextFactory} is a factory for server-side SSL context
@@ -89,10 +86,16 @@ class DefaultOpenSSLContextFactory(ContextFactory):
     @ivar _contextFactory: A callable which will be used to create new
         context objects.  This is typically L{OpenSSL.SSL.Context}.
     """
+
     _context = None
 
-    def __init__(self, privateKeyFileName, certificateFileName,
-                 sslmethod=SSL.SSLv23_METHOD, _contextFactory=SSL.Context):
+    def __init__(
+        self,
+        privateKeyFileName,
+        certificateFileName,
+        sslmethod=SSL.SSLv23_METHOD,
+        _contextFactory=SSL.Context,
+    ):
         """
         @param privateKeyFileName: Name of a file containing a private key
         @param certificateFileName: Name of a file containing a certificate
@@ -108,7 +111,6 @@ class DefaultOpenSSLContextFactory(ContextFactory):
         # than later.
         self.cacheContext()
 
-
     def cacheContext(self):
         if self._context is None:
             ctx = self._contextFactory(self.sslmethod)
@@ -119,23 +121,19 @@ class DefaultOpenSSLContextFactory(ContextFactory):
             ctx.use_privatekey_file(self.privateKeyFileName)
             self._context = ctx
 
-
     def __getstate__(self):
         d = self.__dict__.copy()
-        del d['_context']
+        del d["_context"]
         return d
-
 
     def __setstate__(self, state):
         self.__dict__ = state
-
 
     def getContext(self):
         """
         Return an SSL context.
         """
         return self._context
-
 
 
 @implementer(interfaces.IOpenSSLContextFactory)
@@ -157,10 +155,10 @@ class ClientContextFactory:
         return ctx
 
 
-
-@implementer_only(interfaces.ISSLTransport,
-                 *[i for i in implementedBy(tcp.Client)
-                   if i != interfaces.ITLSTransport])
+@implementer_only(
+    interfaces.ISSLTransport,
+    *[i for i in implementedBy(tcp.Client) if i != interfaces.ITLSTransport],
+)
 class Client(tcp.Client):
     """
     I am an SSL client.
@@ -177,7 +175,6 @@ class Client(tcp.Client):
         tcp.Client._connectDone(self)
 
 
-
 @implementer(interfaces.ISSLTransport)
 class Server(tcp.Server):
     """
@@ -188,37 +185,38 @@ class Server(tcp.Server):
         tcp.Server.__init__(self, *args, **kwargs)
         self.startTLS(self.server.ctxFactory)
 
-
     def getPeerCertificate(self):
         # ISSLTransport.getPeerCertificate
         raise NotImplementedError("Server.getPeerCertificate")
-
 
 
 class Port(tcp.Port):
     """
     I am an SSL port.
     """
+
     transport = Server
 
-    _type = 'TLS'
+    _type = "TLS"
 
-    def __init__(self, port, factory, ctxFactory, backlog=50, interface='', reactor=None):
+    def __init__(
+        self, port, factory, ctxFactory, backlog=50, interface="", reactor=None
+    ):
         tcp.Port.__init__(self, port, factory, backlog, interface, reactor)
         self.ctxFactory = ctxFactory
-
 
     def _getLogPrefix(self, factory):
         """
         Override the normal prefix to include an annotation indicating this is a
         port for TLS connections.
         """
-        return tcp.Port._getLogPrefix(self, factory) + ' (TLS)'
-
+        return tcp.Port._getLogPrefix(self, factory) + " (TLS)"
 
 
 class Connector(tcp.Connector):
-    def __init__(self, host, port, factory, contextFactory, timeout, bindAddress, reactor=None):
+    def __init__(
+        self, host, port, factory, contextFactory, timeout, bindAddress, reactor=None
+    ):
         self.contextFactory = contextFactory
         tcp.Connector.__init__(self, host, port, factory, timeout, bindAddress, reactor)
 
@@ -226,35 +224,56 @@ class Connector(tcp.Connector):
         # than after we've set up the transport.
         contextFactory.getContext()
 
-
     def _makeTransport(self):
-        return Client(self.host, self.port, self.bindAddress, self.contextFactory, self, self.reactor)
-
+        return Client(
+            self.host,
+            self.port,
+            self.bindAddress,
+            self.contextFactory,
+            self,
+            self.reactor,
+        )
 
 
 from twisted.internet._sslverify import (
-    KeyPair, DistinguishedName, DN, Certificate,
-    CertificateRequest, PrivateCertificate,
+    KeyPair,
+    DistinguishedName,
+    DN,
+    Certificate,
+    CertificateRequest,
+    PrivateCertificate,
     OpenSSLAcceptableCiphers as AcceptableCiphers,
     OpenSSLCertificateOptions as CertificateOptions,
     OpenSSLDiffieHellmanParameters as DiffieHellmanParameters,
-    platformTrust, OpenSSLDefaultPaths, VerificationError,
-    optionsForClientTLS, ProtocolNegotiationSupport,
+    platformTrust,
+    OpenSSLDefaultPaths,
+    VerificationError,
+    optionsForClientTLS,
+    ProtocolNegotiationSupport,
     protocolNegotiationMechanisms,
     trustRootFromCertificates,
     TLSVersion,
 )
 
 __all__ = [
-    "ContextFactory", "DefaultOpenSSLContextFactory", "ClientContextFactory",
-
-    'DistinguishedName', 'DN',
-    'Certificate', 'CertificateRequest', 'PrivateCertificate',
-    'KeyPair',
-    'AcceptableCiphers', 'CertificateOptions', 'DiffieHellmanParameters',
-    'platformTrust', 'OpenSSLDefaultPaths', 'TLSVersion',
-
-    'VerificationError', 'optionsForClientTLS',
-    'ProtocolNegotiationSupport', 'protocolNegotiationMechanisms',
-    'trustRootFromCertificates',
+    "ContextFactory",
+    "DefaultOpenSSLContextFactory",
+    "ClientContextFactory",
+    "DistinguishedName",
+    "DN",
+    "Certificate",
+    "CertificateRequest",
+    "PrivateCertificate",
+    "KeyPair",
+    "AcceptableCiphers",
+    "CertificateOptions",
+    "DiffieHellmanParameters",
+    "platformTrust",
+    "OpenSSLDefaultPaths",
+    "TLSVersion",
+    "VerificationError",
+    "optionsForClientTLS",
+    "ProtocolNegotiationSupport",
+    "protocolNegotiationMechanisms",
+    "trustRootFromCertificates",
 ]

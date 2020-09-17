@@ -12,11 +12,9 @@ from twisted.python.failure import Failure
 from ._logger import Logger
 
 
-
 OBSERVER_DISABLED = (
     "Temporarily disabling observer {observer} due to exception: {log_failure}"
 )
-
 
 
 class ILogObserver(Interface):
@@ -66,9 +64,8 @@ class ILogObserver(Interface):
         """
 
 
-
 @implementer(ILogObserver)
-class LogPublisher(object):
+class LogPublisher:
     """
     I{ILogObserver} that fans out events to other observers.
 
@@ -79,7 +76,6 @@ class LogPublisher(object):
     def __init__(self, *observers):
         self._observers = list(observers)
         self.log = Logger(observer=self)
-
 
     def addObserver(self, observer):
         """
@@ -92,7 +88,6 @@ class LogPublisher(object):
         if observer not in self._observers:
             self._observers.append(observer)
 
-
     def removeObserver(self, observer):
         """
         Unregisters an observer with this publisher.
@@ -104,12 +99,12 @@ class LogPublisher(object):
         except ValueError:
             pass
 
-
     def __call__(self, event):
         """
         Forward events to contained observers.
         """
         if "log_trace" in event:
+
             def trace(observer):
                 """
                 Add tracing information for an observer.
@@ -118,6 +113,7 @@ class LogPublisher(object):
                 @type observer: L{ILogObserver}
                 """
                 event["log_trace"].append((self, observer))
+
         else:
             trace = None
 
@@ -140,7 +136,6 @@ class LogPublisher(object):
                 observer=brokenObserver,
             )
 
-
     def _errorLoggerForObserver(self, observer):
         """
         Create an error-logger based on this logger, which does not contain the
@@ -151,8 +146,7 @@ class LogPublisher(object):
 
         @return: L{None}
         """
-        errorPublisher = LogPublisher(*[
-            obs for obs in self._observers
-            if obs is not observer
-        ])
+        errorPublisher = LogPublisher(
+            *[obs for obs in self._observers if obs is not observer]
+        )
         return Logger(observer=errorPublisher)

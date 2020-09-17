@@ -18,13 +18,18 @@ class IReactorInstaller(Interface):
     """
     Definition of a reactor which can probably be installed.
     """
-    shortName = Attribute("""
-    A brief string giving the user-facing name of this reactor.
-    """)
 
-    description = Attribute("""
+    shortName = Attribute(
+        """
+    A brief string giving the user-facing name of this reactor.
+    """
+    )
+
+    description = Attribute(
+        """
     A longer string giving a user-facing description of this reactor.
-    """)
+    """
+    )
 
     def install():
         """
@@ -35,29 +40,26 @@ class IReactorInstaller(Interface):
     # can actually be used in the execution environment.
 
 
-
 class NoSuchReactor(KeyError):
     """
     Raised when an attempt is made to install a reactor which cannot be found.
     """
 
 
-
 @implementer(IPlugin, IReactorInstaller)
-class Reactor(object):
+class Reactor:
     """
     @ivar moduleName: The fully-qualified Python name of the module of which
     the install callable is an attribute.
     """
+
     def __init__(self, shortName, moduleName, description):
         self.shortName = shortName
         self.moduleName = moduleName
         self.description = description
 
-
     def install(self):
         namedAny(self.moduleName).install()
-
 
 
 def getReactorTypes():
@@ -65,7 +67,6 @@ def getReactorTypes():
     Return an iterator of L{IReactorInstaller} plugins.
     """
     return getPlugins(IReactorInstaller)
-
 
 
 def installReactor(shortName):
@@ -80,5 +81,6 @@ def installReactor(shortName):
         if installer.shortName == shortName:
             installer.install()
             from twisted.internet import reactor
+
             return reactor
     raise NoSuchReactor(shortName)
