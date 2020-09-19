@@ -16,10 +16,8 @@ def _dashCapitalize(name: bytes) -> bytes:
     Return a byte string which is capitalized using '-' as a word separator.
 
     @param name: The name of the header to capitalize.
-    @type name: L{bytes}
 
     @return: The given header capitalized using '-' as a word separator.
-    @rtype: L{bytes}
     """
     return b"-".join([word.capitalize() for word in name.split(b"-")])
 
@@ -30,10 +28,8 @@ def _sanitizeLinearWhitespace(headerComponent: bytes) -> bytes:
     or value with a single space.
 
     @param headerComponent: The header key or value to sanitize.
-    @type headerComponent: L{bytes}
 
     @return: The sanitized header key or value.
-    @rtype: L{bytes}
     """
     return b" ".join(headerComponent.splitlines())
 
@@ -106,10 +102,8 @@ class Headers:
         bytestring if required.
 
         @param name: A HTTP header name
-        @type name: L{str} or L{bytes}
 
         @return: C{name}, encoded if required, lowercased
-        @rtype: L{bytes}
         """
         if isinstance(name, str):
             return name.lower().encode("iso-8859-1")
@@ -120,10 +114,8 @@ class Headers:
         Encode a single header value to a UTF-8 encoded bytestring if required.
 
         @param value: A single HTTP header value.
-        @type value: L{bytes} or L{str}
 
         @return: C{value}, encoded if required
-        @rtype: L{bytes}
         """
         if isinstance(value, str):
             return value.encode("utf8")
@@ -135,10 +127,8 @@ class Headers:
         bytestrings if required.
 
         @param values: A list of HTTP header values.
-        @type values: L{list} of L{bytes} or L{str} (mixed types allowed)
 
         @return: C{values}, with each item encoded if required
-        @rtype: L{list} of L{bytes}
         """
         newValues = []
 
@@ -151,10 +141,8 @@ class Headers:
         Decode a L{list} of header values into a L{list} of Unicode strings.
 
         @param values: A list of HTTP header values.
-        @type values: L{list} of UTF-8 encoded L{bytes}
 
         @return: C{values}, with each item decoded
-        @rtype: L{list} of L{str}
         """
         newValues = []
 
@@ -174,10 +162,8 @@ class Headers:
         """
         Check for the existence of a given header.
 
-        @type name: L{bytes} or L{str}
         @param name: The name of the HTTP header to check for.
 
-        @rtype: L{bool}
         @return: C{True} if the header exists, otherwise C{False}.
         """
         return self._encodeName(name) in self._rawHeaders
@@ -186,7 +172,6 @@ class Headers:
         """
         Remove the named header from this header object.
 
-        @type name: L{bytes} or L{str}
         @param name: The name of the HTTP header to remove.
 
         @return: L{None}
@@ -199,10 +184,8 @@ class Headers:
         """
         Sets the raw representation of the given header.
 
-        @type name: L{bytes} or L{str}
         @param name: The name of the HTTP header to set the values for.
 
-        @type values: L{list} of L{bytes} or L{str} strings
         @param values: A list of strings each one being a header value of
             the given name.
 
@@ -245,10 +228,8 @@ class Headers:
         """
         Add a new raw value for the given header.
 
-        @type name: L{bytes} or L{str}
         @param name: The name of the header for which to set the value.
 
-        @type value: L{bytes} or L{str}
         @param value: The value to set for the named header.
         """
         if not isinstance(name, (bytes, str)):
@@ -278,14 +259,11 @@ class Headers:
         Returns a list of headers matching the given name as the raw string
         given.
 
-        @type name: L{bytes} or L{str}
         @param name: The name of the HTTP header to get the values of.
 
         @param default: The value to return if no header with the given C{name}
             exists.
 
-        @rtype: L{list} of strings, same type as C{name} (except when
-            C{default} is returned).
         @return: If the named header is present, a L{list} of its
             values.  Otherwise, C{default}.
         """
@@ -309,11 +287,9 @@ class Headers:
         """
         Return the canonical name for the given header.
 
-        @type name: L{bytes}
         @param name: The all-lowercase header name to capitalize in its
             canonical form.
 
-        @rtype: L{bytes}
         @return: The canonical name of the header.
         """
         return self._caseMappings.get(name, _dashCapitalize(name))
