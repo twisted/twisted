@@ -6,7 +6,18 @@
 An API for storing HTTP header names and values.
 """
 
-from typing import List, Iterator, Tuple, Optional, Dict, Union, Any, AnyStr
+from typing import (
+    Any,
+    AnyStr,
+    Dict,
+    Iterator,
+    List,
+    Mapping,
+    Optional,
+    Sequence,
+    Tuple,
+    Union,
+)
 
 from twisted.python.compat import comparable, cmp
 
@@ -68,7 +79,7 @@ class Headers:
 
     def __init__(
         self,
-        rawHeaders: Optional[Dict[AnyStr, List[AnyStr]]] = None,
+        rawHeaders: Optional[Mapping[AnyStr, Sequence[AnyStr]]] = None,
     ):
         self._rawHeaders = {}  # type: Dict[bytes, List[bytes]]
         if rawHeaders is not None:
