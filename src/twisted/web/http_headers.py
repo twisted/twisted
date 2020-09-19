@@ -6,7 +6,7 @@
 An API for storing HTTP header names and values.
 """
 
-from typing import List, Iterator, Tuple, Optional, Dict, Union, Any
+from typing import List, Iterator, Tuple, Optional, Dict, Union, Any, AnyStr
 
 from twisted.python.compat import comparable, cmp
 
@@ -69,7 +69,7 @@ class Headers:
 
     def __init__(
         self,
-        rawHeaders: Optional[Dict[Union[bytes, str], List[Union[bytes, str]]]] = None,
+        rawHeaders: Optional[Dict[AnyStr, List[AnyStr]]] = None,
     ):
         self._rawHeaders = {}  # type: Dict[bytes, List[bytes]]
         if rawHeaders is not None:
@@ -96,7 +96,7 @@ class Headers:
             )
         return NotImplemented
 
-    def _encodeName(self, name: Union[bytes, str]) -> bytes:
+    def _encodeName(self, name: AnyStr) -> bytes:
         """
         Encode the name of a header (eg 'Content-Type') to an ISO-8859-1 encoded
         bytestring if required.
@@ -109,7 +109,7 @@ class Headers:
             return name.lower().encode("iso-8859-1")
         return name.lower()
 
-    def _encodeValue(self, value):
+    def _encodeValue(self, value: AnyStr) -> bytes:
         """
         Encode a single header value to a UTF-8 encoded bytestring if required.
 
@@ -121,7 +121,7 @@ class Headers:
             return value.encode("utf8")
         return value
 
-    def _encodeValues(self, values: List[Union[bytes, str]]) -> List[bytes]:
+    def _encodeValues(self, values: List[AnyStr]) -> List[bytes]:
         """
         Encode a L{list} of header values to a L{list} of UTF-8 encoded
         bytestrings if required.
@@ -158,7 +158,7 @@ class Headers:
         """
         return self.__class__(self._rawHeaders)
 
-    def hasHeader(self, name: Union[bytes, str]) -> bool:
+    def hasHeader(self, name: AnyStr) -> bool:
         """
         Check for the existence of a given header.
 
@@ -168,7 +168,7 @@ class Headers:
         """
         return self._encodeName(name) in self._rawHeaders
 
-    def removeHeader(self, name: Union[bytes, str]) -> None:
+    def removeHeader(self, name: AnyStr) -> None:
         """
         Remove the named header from this header object.
 
@@ -178,9 +178,7 @@ class Headers:
         """
         self._rawHeaders.pop(self._encodeName(name), None)
 
-    def setRawHeaders(
-        self, name: Union[bytes, str], values: List[Union[bytes, str]]
-    ) -> None:
+    def setRawHeaders(self, name: AnyStr, values: List[AnyStr]) -> None:
         """
         Sets the raw representation of the given header.
 
@@ -217,14 +215,14 @@ class Headers:
                     )
                 )
 
-        name = _sanitizeLinearWhitespace(self._encodeName(name))
+        _name = _sanitizeLinearWhitespace(self._encodeName(name))
         encodedValues = [
             _sanitizeLinearWhitespace(v) for v in self._encodeValues(values)
         ]
 
-        self._rawHeaders[name] = encodedValues
+        self._rawHeaders[_name] = encodedValues
 
-    def addRawHeader(self, name: Union[bytes, str], value: Union[bytes, str]) -> None:
+    def addRawHeader(self, name: AnyStr, value: AnyStr) -> None:
         """
         Add a new raw value for the given header.
 
@@ -253,8 +251,8 @@ class Headers:
         self.setRawHeaders(name, values)
 
     def getRawHeaders(
-        self, name: Union[bytes, str], default: Optional[Any] = None
-    ) -> Optional[Union[List[Union[bytes, str]], Any]]:
+        self, name: AnyStr, default: Optional[Any] = None
+    ) -> Optional[Union[List[AnyStr], Any]]:
         """
         Returns a list of headers matching the given name as the raw string
         given.
