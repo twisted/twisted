@@ -39,8 +39,7 @@ class Headers:
     """
     Stores HTTP headers in a key and multiple value format.
 
-    Most methods accept L{bytes} and L{str}, with an internal L{bytes}
-    representation. When passed L{str}, header names (e.g. 'Content-Type')
+    When passed L{str}, header names (e.g. 'Content-Type')
     are encoded using ISO-8859-1 and header values (e.g.
     'text/html;charset=utf-8') are encoded using UTF-8. Some methods that return
     values will return them in the same type as the name given.
