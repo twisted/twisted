@@ -82,7 +82,7 @@ class BytesHeadersTests(TestCase):
         self.assertTrue(h.hasHeader(b"Test"))
         self.assertEqual(h.getRawHeaders(b"test"), rawValue)
 
-    def test_rawHeadersTypeCheckingValuesList(self):
+    def test_rawHeadersTypeCheckingValuesIterable(self):
         """
         L{Headers.setRawHeaders} requires values to be of type list.
         """
@@ -435,7 +435,7 @@ class UnicodeHeadersTests(TestCase):
 
     def test_rawHeadersTypeChecking(self):
         """
-        L{Headers.setRawHeaders} requires values to be of type list.
+        L{Headers.setRawHeaders} requires values to be of type sequence
         """
         h = Headers()
         self.assertRaises(TypeError, h.setRawHeaders, "key", {"Foo": "bar"})

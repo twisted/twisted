@@ -7,7 +7,6 @@ An API for storing HTTP header names and values.
 """
 
 from typing import (
-    Any,
     AnyStr,
     Dict,
     Iterator,
@@ -16,8 +15,8 @@ from typing import (
     Optional,
     Sequence,
     Tuple,
-    Union,
 )
+from collections.abc import Sequence as _Sequence
 
 from twisted.python.compat import comparable, cmp
 
@@ -119,47 +118,6 @@ class Headers:
             return name.lower().encode("iso-8859-1")
         return name.lower()
 
-    def _encodeValue(self, value: AnyStr) -> bytes:
-        """
-        Encode a single header value to a UTF-8 encoded bytestring if required.
-
-        @param value: A single HTTP header value.
-
-        @return: C{value}, encoded if required
-        """
-        if isinstance(value, str):
-            return value.encode("utf8")
-        return value
-
-    def _encodeValues(self, values: List[AnyStr]) -> List[bytes]:
-        """
-        Encode a L{list} of header values to a L{list} of UTF-8 encoded
-        bytestrings if required.
-
-        @param values: A list of HTTP header values.
-
-        @return: C{values}, with each item encoded if required
-        """
-        newValues = []
-
-        for value in values:
-            newValues.append(self._encodeValue(value))
-        return newValues
-
-    def _decodeValues(self, values: List[bytes]) -> List[str]:
-        """
-        Decode a L{list} of header values into a L{list} of Unicode strings.
-
-        @param values: A list of HTTP header values.
-
-        @return: C{values}, with each item decoded
-        """
-        newValues = []
-
-        for value in values:
-            newValues.append(value.decode("utf8"))
-        return newValues
-
     def copy(self):
         """
         Return a copy of itself with the same headers set.
@@ -188,7 +146,7 @@ class Headers:
         """
         self._rawHeaders.pop(self._encodeName(name), None)
 
-    def setRawHeaders(self, name: AnyStr, values: List[AnyStr]) -> None:
+    def setRawHeaders(self, name: AnyStr, values: Sequence[AnyStr]) -> None:
         """
         Sets the raw representation of the given header.
 
@@ -203,9 +161,9 @@ class Headers:
 
         @return: L{None}
         """
-        if not isinstance(values, list):
+        if not isinstance(values, _Sequence):
             raise TypeError(
-                "Header entry %r should be list but found "
+                "Header entry %r should be sequence but found "
                 "instance of %r instead" % (name, type(values))
             )
 
@@ -226,9 +184,13 @@ class Headers:
                 )
 
         _name = _sanitizeLinearWhitespace(self._encodeName(name))
-        encodedValues = [
-            _sanitizeLinearWhitespace(v) for v in self._encodeValues(values)
-        ]
+        encodedValues = []  # type: List[bytes]
+        for v in values:
+            if isinstance(v, str):
+                _v = v.encode("utf8")
+            else:
+                _v = v
+            encodedValues.append(_sanitizeLinearWhitespace(_v))
 
         self._rawHeaders[_name] = encodedValues
 
@@ -261,8 +223,8 @@ class Headers:
         self.setRawHeaders(name, values)
 
     def getRawHeaders(
-        self, name: AnyStr, default: Optional[Any] = None
-    ) -> Optional[Union[List[AnyStr], Any]]:
+        self, name: AnyStr, default: List[AnyStr] = None
+    ) -> Optional[List[AnyStr]]:
         """
         Returns a list of headers matching the given name as the raw string
         given.
@@ -276,10 +238,12 @@ class Headers:
             values.  Otherwise, C{default}.
         """
         encodedName = self._encodeName(name)
-        values = self._rawHeaders.get(encodedName, default)
+        values = self._rawHeaders.get(encodedName, None)
+        if values is None:
+            return default
 
-        if isinstance(name, str) and values is not default and values is not None:
-            return self._decodeValues(values)
+        if isinstance(name, str):
+            return [v if isinstance(v, str) else v.decode("utf8") for v in values]
         return values
 
     def getAllRawHeaders(self) -> Iterator[Tuple[bytes, List[bytes]]]:
