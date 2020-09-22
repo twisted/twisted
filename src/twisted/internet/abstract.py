@@ -8,7 +8,7 @@ Support for generic select()able objects.
 
 
 from socket import AF_INET, AF_INET6, inet_pton, error
-from typing import List, Sequence
+from typing import List, Optional, Sequence
 
 from zope.interface import implementer
 
@@ -169,7 +169,7 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
 
     SEND_LIMIT = 128 * 1024
 
-    def __init__(self, reactor: interfaces.IReactorFDSet = None):
+    def __init__(self, reactor: Optional[interfaces.IReactorFDSet] = None):
         """
         @param reactor: An L{IReactorFDSet} provider which this descriptor will
             use to get readable and writeable event notifications.  If no value
