@@ -14,7 +14,9 @@ from typing import (
     Mapping,
     Optional,
     Sequence,
+    TypeVar,
     Tuple,
+    Union,
 )
 from collections.abc import Sequence as _Sequence
 
@@ -222,9 +224,11 @@ class Headers:
 
         self.setRawHeaders(name, values)
 
+    _T = TypeVar("_T")
+
     def getRawHeaders(
-        self, name: AnyStr, default: List[AnyStr] = None
-    ) -> Optional[List[AnyStr]]:
+        self, name: AnyStr, default: Optional[_T] = None
+    ) -> Union[List[AnyStr], Optional[_T]]:
         """
         Returns a list of headers matching the given name as the raw string
         given.
@@ -238,8 +242,8 @@ class Headers:
             values.  Otherwise, C{default}.
         """
         encodedName = self._encodeName(name)
-        values = self._rawHeaders.get(encodedName, None)
-        if values is None:
+        values = self._rawHeaders.get(encodedName, [])
+        if not values:
             return default
 
         if isinstance(name, str):
