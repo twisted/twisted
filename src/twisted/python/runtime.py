@@ -193,7 +193,7 @@ class Platform:
         except ImportError:
             return False
 
-    def supportsINotify(self) -> bool:
+    def supportsINotify(self):
         """
         Return C{True} if we can use the inotify API on this platform.
 
