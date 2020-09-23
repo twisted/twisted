@@ -6,9 +6,7 @@ Abstract file handle class
 """
 
 from twisted.internet import main, error, interfaces
-from twisted.internet.abstract import (
-    _ConsumerMixin, _LogOwner, _dataMustBeBytes
-)
+from twisted.internet.abstract import _ConsumerMixin, _LogOwner, _dataMustBeBytes
 from twisted.python import failure
 
 from zope.interface import implementer
