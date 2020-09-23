@@ -18,6 +18,11 @@ from twisted.python import reflect, failure
 from twisted.internet import interfaces, main
 
 
+def _dataMustBeBytes(obj):
+    if not isinstance(obj, bytes):  # no, really, I mean it
+        raise TypeError("Data must be bytes")
+
+
 # Python 3.4+ can join bytes and memoryviews; using a
 # memoryview prevents the slice from copying
 def _concatenate(bObj, offset, bArray):
@@ -347,8 +352,7 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
         buffer and this descriptor has a registered streaming producer, its
         C{pauseProducing()} method will be called.
         """
-        if not isinstance(data, bytes):  # no, really, I mean it
-            raise TypeError("Data must be bytes")
+        _dataMustBeBytes(data)
         if not self.connected or self._writeDisconnected:
             return
         if data:
@@ -374,8 +378,7 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
         data is written to the underlying file descriptor.
         """
         for i in iovec:
-            if not isinstance(i, bytes):  # no, really, I mean it
-                raise TypeError("Data must not be str")
+            _dataMustBeBytes(i)
         if not self.connected or not iovec or self._writeDisconnected:
             return
         self._tempDataBuffer.extend(iovec)
