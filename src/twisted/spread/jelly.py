@@ -721,11 +721,8 @@ class _Unjellier:
         return decimal.Decimal((sign, guts, exponent))
 
     def _unjelly_boolean(self, exp):
-        if bool:
-            assert exp[0] in (b"true", b"false")
-            return exp[0] == b"true"
-        else:
-            return Unpersistable("Could not unpersist boolean: %s" % (exp[0],))
+        assert exp[0] in (b"true", b"false")
+        return exp[0] == b"true"
 
     def _unjelly_datetime(self, exp):
         return datetime.datetime(*map(int, exp[0].split()))

@@ -21,6 +21,7 @@ import socket
 import operator
 import struct
 import warnings
+from typing import Optional
 
 from zope.interface import implementer
 
@@ -85,7 +86,7 @@ class Port(base.BasePort):
     socketType = socket.SOCK_DGRAM
     maxThroughput = 256 * 1024
 
-    _realPortNumber = None
+    _realPortNumber = None  # type: Optional[int]
     _preexistingSocket = None
 
     def __init__(self, port, proto, interface="", maxPacketSize=8192, reactor=None):

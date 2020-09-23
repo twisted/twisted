@@ -347,8 +347,8 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
         buffer and this descriptor has a registered streaming producer, its
         C{pauseProducing()} method will be called.
         """
-        if isinstance(data, str):  # no, really, I mean it
-            raise TypeError("Data must not be string")
+        if not isinstance(data, bytes):  # no, really, I mean it
+            raise TypeError("Data must be bytes")
         if not self.connected or self._writeDisconnected:
             return
         if data:
@@ -374,8 +374,8 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
         data is written to the underlying file descriptor.
         """
         for i in iovec:
-            if isinstance(i, str):  # no, really, I mean it
-                raise TypeError("Data must not be string")
+            if not isinstance(i, bytes):  # no, really, I mean it
+                raise TypeError("Data must not be str")
         if not self.connected or not iovec or self._writeDisconnected:
             return
         self._tempDataBuffer.extend(iovec)

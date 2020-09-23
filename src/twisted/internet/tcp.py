@@ -14,6 +14,7 @@ import sys
 import operator
 import os
 import struct
+from typing import Optional
 
 import attr
 
@@ -1250,7 +1251,7 @@ class Port(base.BasePort, _SocketCloser):
 
     # Actual port number being listened on, only set to a non-None
     # value when we are actually listening.
-    _realPortNumber = None
+    _realPortNumber = None  # type: Optional[int]
 
     # An externally initialized socket that we will use, rather than creating
     # our own.
