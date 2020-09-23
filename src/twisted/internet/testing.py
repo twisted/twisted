@@ -231,8 +231,8 @@ class StringTransport:
 
     # ITransport
     def write(self, data):
-        if isinstance(data, str):  # no, really, I mean it
-            raise TypeError("Data must not be string")
+        if not isinstance(data, bytes):  # no, really, I mean it
+            raise TypeError("Data must be bytes")
         self.io.write(data)
 
     def writeSequence(self, data):

@@ -375,7 +375,7 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
         """
         for i in iovec:
             if not isinstance(i, bytes):  # no, really, I mean it
-                raise TypeError("Data must not be str")
+                raise TypeError("Data must be bytes")
         if not self.connected or not iovec or self._writeDisconnected:
             return
         self._tempDataBuffer.extend(iovec)

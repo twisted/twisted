@@ -2116,7 +2116,7 @@ class WriteSequenceTestsMixin:
                 TypeError, server.transport.writeSequence, ["Unicode is not kosher"]
             )
 
-            self.assertEqual(str(exc), "Data must not be string")
+            self.assertEqual(str(exc), "Data must be bytes")
 
             server.transport.loseConnection()
 
