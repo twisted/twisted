@@ -149,7 +149,7 @@ class DeferredGeneratorTests(BaseDefgenTests, unittest.TestCase):
 
     @deprecatedDeferredGenerator
     def _genNothing(self):
-        if 0:
+        if False:
             yield 1  # type: ignore[unreachable]
 
     @deprecatedDeferredGenerator
@@ -232,7 +232,7 @@ class InlineCallbacksTests(BaseDefgenTests, unittest.TestCase):
     _genBuggy = inlineCallbacks(_genBuggy)
 
     def _genNothing(self):
-        if 0:
+        if False:
             yield 1  # type: ignore[unreachable]
 
     _genNothing = inlineCallbacks(_genNothing)
