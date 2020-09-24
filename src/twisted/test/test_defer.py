@@ -3189,7 +3189,7 @@ class CoroutineContextVarsTests(unittest.TestCase):
             async with lock:
                 self.assertTrue(lock.locked)
                 raise Exception("some specific exception")
-        self.assertFalse(lock.locked)
+        self.assertFalse(lock.locked)  # type: ignore[unreachable]
 
     def test_contextvarsWithAsyncAwait(self):
         """

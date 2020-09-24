@@ -5,10 +5,11 @@ from twisted.trial.unittest import TestCase
 from twisted.python.failure import Failure
 
 try:
-    import syslog as stdsyslog
+    import syslog as _stdsyslog
 except ImportError:
-    stdsyslog = None  # type: ignore[assignment]
+    stdsyslog = None
 else:
+    stdsyslog = _stdsyslog
     from twisted.python import syslog
 
 

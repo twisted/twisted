@@ -3055,7 +3055,7 @@ class DccFileReceive(DccFileReceiveBasic):
     fileSize = -1
     destDir = "."
     overwrite = 0
-    fromUser = None
+    fromUser = None  # type: Optional[bytes]
     queryData = None
 
     def __init__(
@@ -3192,8 +3192,8 @@ class DccFileReceive(DccFileReceiveBasic):
         transport = self.transport
         assert transport is not None
         from_ = transport.getPeer()
-        if self.fromUser:
-            from_ = "%s (%s)" % (self.fromUser, from_)
+        if self.fromUser is not None:
+            from_ = "%r (%s)" % (self.fromUser, from_)
 
         s = "DCC transfer of '%s' from %s" % (self.filename, from_)
         return s

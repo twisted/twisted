@@ -16,6 +16,7 @@ from zope.interface import implementer
 
 from twisted.python import log, failure, components
 from twisted.internet import interfaces, error, defer
+from twisted.internet.interfaces import ITransport
 from twisted.logger import _loggerFor
 
 
@@ -495,7 +496,7 @@ class BaseProtocol:
     """
 
     connected = 0
-    transport = None
+    transport = None  # type: Optional[ITransport]
 
     def makeConnection(self, transport):
         """

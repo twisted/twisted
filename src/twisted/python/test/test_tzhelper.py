@@ -8,9 +8,11 @@ Tests for L{twisted.python._tzhelper}.
 from os import environ
 
 try:
-    from time import tzset
+    from time import tzset as _tzset
 except ImportError:
-    tzset = None  # type: ignore[assignment,misc]
+    tzset = None
+else:
+    tzset = _tzset
 
 from twisted.python._tzhelper import FixedOffsetTimeZone
 from twisted.trial.unittest import TestCase, SkipTest

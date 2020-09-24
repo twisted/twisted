@@ -5,7 +5,11 @@
 TCP support for IOCP reactor
 """
 
-import socket, operator, errno, struct
+import errno
+import operator
+import socket
+import struct
+from typing import Optional
 
 from zope.interface import implementer, classImplements
 
@@ -408,7 +412,7 @@ class Port(_SocketCloser, _LogOwner):
 
     # Actual port number being listened on, only set to a non-None
     # value when we are actually listening.
-    _realPortNumber = None
+    _realPortNumber = None  # type: Optional[int]
 
     # A string describing the connections which will be created by this port.
     # Normally this is C{"TCP"}, since this is a TCP port, but when the TLS
