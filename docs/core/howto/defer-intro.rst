@@ -317,7 +317,8 @@ Inline callbacks - using 'yield'
 
 .. note::
 
-    Unless you require Python 2 compatibility, writing coroutines with the functionality described in "Coroutines with async/await" is preferred over ``inlineCallbacks``.
+    Unless your code supports Python 2 (and therefore needs compatibility with older versions of Twisted), writing coroutines with the functionality described in "Coroutines with async/await" is preferred over ``inlineCallbacks``.
+    Coroutines are supported by dedicated Python syntax, are compatible with ``asyncio``, and provide higher performance.
 
 Twisted features a decorator named ``inlineCallbacks`` which allows you to work with Deferreds without writing callback functions.
 
