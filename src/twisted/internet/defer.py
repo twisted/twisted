@@ -868,7 +868,7 @@ class Deferred:
         meaning that it can be used in regular Twisted code. For example::
 
             import treq
-            from twisted.internet.defer import ensureDeferred
+            from twisted.internet.defer import Deferred
             from twisted.internet.task import react
 
             async def crawl(pages):
@@ -881,7 +881,7 @@ class Deferred:
                 pages = [
                     "http://localhost:8080"
                 ]
-                d = ensureDeferred(crawl(pages))
+                d = Deferred.fromCoroutine(crawl(pages))
                 d.addCallback(print)
                 return d
 
