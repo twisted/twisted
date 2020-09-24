@@ -190,22 +190,22 @@ class TestCase(SynchronousTestCase):
             result.stop()
         self._passed = False
 
+    @defer.inlineCallbacks
     def deferRunCleanups(self, ignored, result):
         """
-        Run any scheduled cleanups and report errors (if any to the result
+        Run any scheduled cleanups and report errors (if any) to the result.
         object.
         """
-        d = self._runCleanups()
-        d.addCallback(self._cbDeferRunCleanups, result)
-        return d
+        failures = []
+        for func, args, kwargs in self._cleanups[::-1]:
+            try:
+                yield func(*args, **kwargs)
+            except Exception:
+                failures.append(failure.Failure())
 
-    def _cbDeferRunCleanups(self, cleanupResults, result):
-        for flag, testFailure in cleanupResults:
-            if flag == defer.FAILURE:
-                result.addError(self, testFailure)
-                if testFailure.check(KeyboardInterrupt):
-                    result.stop()
-                self._passed = False
+        for f in failures:
+            result.addError(self, f)
+            self._passed = False
 
     def _cleanUp(self, result):
         try:
@@ -270,22 +270,6 @@ class TestCase(SynchronousTestCase):
         for name, method in self._reactorMethods.items():
             setattr(reactor, name, method)
         self._reactorMethods = {}
-
-    def _runCleanups(self):
-        """
-        Run the cleanups added with L{addCleanup} in order.
-
-        @return: A C{Deferred} that fires when all cleanups are run.
-        """
-
-        def _makeFunction(f, args, kwargs):
-            return lambda: f(*args, **kwargs)
-
-        callables = []
-        while len(self._cleanups) > 0:
-            f, args, kwargs = self._cleanups.pop()
-            callables.append(_makeFunction(f, args, kwargs))
-        return util._runSequentially(callables)
 
     def _runFixturesAndTest(self, result):
         """

@@ -21,7 +21,7 @@ Maintainer: Jonathan Lange
 
 from random import randrange
 
-from twisted.internet import defer, utils, interfaces
+from twisted.internet import utils, interfaces
 from twisted.python.failure import Failure
 from twisted.python.filepath import FilePath
 from twisted.python.lockfile import FilesystemLock
@@ -254,34 +254,6 @@ def profiled(f, outputFile):
         return result
 
     return _
-
-
-@defer.inlineCallbacks
-def _runSequentially(callables, stopOnFirstError=False):
-    """
-    Run the given callables one after the other. If a callable returns a
-    Deferred, wait until it has finished before running the next callable.
-
-    @param callables: An iterable of callables that take no parameters.
-
-    @param stopOnFirstError: If True, then stop running callables as soon as
-        one raises an exception or fires an errback. False by default.
-
-    @return: A L{Deferred} that fires a list of C{(flag, value)} tuples. Each
-        tuple will be either C{(SUCCESS, <return value>)} or C{(FAILURE,
-        <Failure>)}.
-    """
-    results = []
-    for f in callables:
-        d = defer.maybeDeferred(f)
-        try:
-            thing = yield d
-            results.append((defer.SUCCESS, thing))
-        except Exception:
-            results.append((defer.FAILURE, Failure()))
-            if stopOnFirstError:
-                break
-    defer.returnValue(results)
 
 
 class _NoTrialMarker(Exception):
