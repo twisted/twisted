@@ -17,6 +17,7 @@ class ModulesToInstallTests(TestCase):
     """
     Tests for L{notPortedModules}.
     """
+
     def test_notexist(self):
         """
         All modules listed in L{notPortedModules} do not exist on Py3.
@@ -28,6 +29,7 @@ class ModulesToInstallTests(TestCase):
             path = os.path.join(root, *segments)
             alternateSegments = module.split(".") + ["__init__.py"]
             packagePath = os.path.join(root, *alternateSegments)
-            self.assertFalse(os.path.exists(path) or
-                             os.path.exists(packagePath),
-                             "Module {0} exists".format(module))
+            self.assertFalse(
+                os.path.exists(path) or os.path.exists(packagePath),
+                "Module {0} exists".format(module),
+            )

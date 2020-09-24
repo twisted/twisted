@@ -19,3 +19,4 @@ apidocs/
 .automat_visualize
 pip-wheel-metadata/
 .vscode/
+.idea/

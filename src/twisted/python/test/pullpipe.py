@@ -33,7 +33,7 @@ def recvfd(socketfd):
     return (unpackedFD, data)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     fd, description = recvfd(int(sys.argv[1]))
     os.write(fd, b"Test fixture data: " + description + b".\n")
     os.close(fd)

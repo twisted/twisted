@@ -12,7 +12,7 @@ import sys
 from twisted.python.filepath import FilePath
 
 
-class TwistedModulesMixin(object):
+class TwistedModulesMixin:
     """
     A mixin for C{twisted.trial.unittest.SynchronousTestCase} providing useful
     methods for manipulating Python's module system.
@@ -23,24 +23,26 @@ class TwistedModulesMixin(object):
         Replace sys.path, for the duration of the test, with the given value.
         """
         originalSysPath = sys.path[:]
+
         def cleanUpSysPath():
             sys.path[:] = originalSysPath
+
         self.addCleanup(cleanUpSysPath)
         sys.path[:] = sysPath
-
 
     def replaceSysModules(self, sysModules):
         """
         Replace sys.modules, for the duration of the test, with the given value.
         """
         originalSysModules = sys.modules.copy()
+
         def cleanUpSysModules():
             sys.modules.clear()
             sys.modules.update(originalSysModules)
+
         self.addCleanup(cleanUpSysModules)
         sys.modules.clear()
         sys.modules.update(sysModules)
-
 
     def pathEntryWithOnePackage(self, pkgname="test_package"):
         """

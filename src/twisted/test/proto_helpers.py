@@ -10,17 +10,14 @@ instead.
 from twisted.internet import testing
 
 
-
 __all__ = testing.__all__
-
 
 
 AccumulatingProtocol = testing.AccumulatingProtocol
 LineSendingProtocol = testing.LineSendingProtocol
 FakeDatagramTransport = testing.FakeDatagramTransport
 StringTransport = testing.StringTransport
-StringTransportWithDisconnection =\
-    testing.StringTransportWithDisconnection
+StringTransportWithDisconnection = testing.StringTransportWithDisconnection
 StringIOWithoutClosing = testing.StringIOWithoutClosing
 _FakeConnector = testing._FakeConnector
 _FakePort = testing._FakePort

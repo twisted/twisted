@@ -7,4 +7,4 @@ I/O Completion Ports reactor
 
 from twisted.internet.iocpreactor.reactor import install
 
-__all__ = ['install']
+__all__ = ["install"]

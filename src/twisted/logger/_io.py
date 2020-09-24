@@ -11,8 +11,7 @@ import sys
 from ._levels import LogLevel
 
 
-
-class LoggingFile(object):
+class LoggingFile:
     """
     File-like object that turns C{write()} calls into logging events.
 
@@ -26,7 +25,6 @@ class LoggingFile(object):
     """
 
     softspace = 0
-
 
     def __init__(self, logger, level=LogLevel.info, encoding=None):
         """
@@ -52,7 +50,6 @@ class LoggingFile(object):
         self._buffer = ""
         self._closed = False
 
-
     @property
     def closed(self):
         """
@@ -62,7 +59,6 @@ class LoggingFile(object):
         @rtype: L{bool}
         """
         return self._closed
-
 
     @property
     def encoding(self):
@@ -74,7 +70,6 @@ class LoggingFile(object):
         """
         return self._encoding
 
-
     @property
     def mode(self):
         """
@@ -84,7 +79,6 @@ class LoggingFile(object):
         @rtype: L{str}
         """
         return "w"
-
 
     @property
     def newlines(self):
@@ -96,7 +90,6 @@ class LoggingFile(object):
         """
         return None
 
-
     @property
     def name(self):
         """
@@ -106,14 +99,11 @@ class LoggingFile(object):
         @return: A file name.
         @rtype: L{str}
         """
-        return (
-            "<{0} {1}#{2}>".format(
-                self.__class__.__name__,
-                self.log.namespace,
-                self.level.name,
-            )
+        return "<{0} {1}#{2}>".format(
+            self.__class__.__name__,
+            self.log.namespace,
+            self.level.name,
         )
-
 
     def close(self):
         """
@@ -121,13 +111,11 @@ class LoggingFile(object):
         """
         self._closed = True
 
-
     def flush(self):
         """
         No-op; this file does not buffer.
         """
         pass
-
 
     def fileno(self):
         """
@@ -138,7 +126,6 @@ class LoggingFile(object):
         """
         return -1
 
-
     def isatty(self):
         """
         A L{LoggingFile} is not a TTY.
@@ -147,7 +134,6 @@ class LoggingFile(object):
         @rtype: L{bool}
         """
         return False
-
 
     def write(self, string):
         """
@@ -167,8 +153,7 @@ class LoggingFile(object):
         lines = lines[0:-1]
 
         for line in lines:
-            self.log.emit(self.level, format=u"{log_io}", log_io=line)
-
+            self.log.emit(self.level, format="{log_io}", log_io=line)
 
     def writelines(self, lines):
         """
@@ -181,7 +166,6 @@ class LoggingFile(object):
         for line in lines:
             self.write(line)
 
-
     def _unsupported(self, *args):
         """
         Template for unsupported operations.
@@ -191,12 +175,11 @@ class LoggingFile(object):
         """
         raise IOError("unsupported operation")
 
-
-    read       = _unsupported
-    next       = _unsupported
-    readline   = _unsupported
-    readlines  = _unsupported
+    read = _unsupported
+    next = _unsupported
+    readline = _unsupported
+    readlines = _unsupported
     xreadlines = _unsupported
-    seek       = _unsupported
-    tell       = _unsupported
-    truncate   = _unsupported
+    seek = _unsupported
+    tell = _unsupported
+    truncate = _unsupported

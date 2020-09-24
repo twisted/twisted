@@ -94,7 +94,7 @@ The components of a solution
 
 We would still need a way of saying "do *this* only when *that* has finished".
 
-We would need a way of distinguishing between successful completion and interrupted processing, normally modeled with ``try``, ``expect``, ``else``, and ``finally``.
+We would need a way of distinguishing between successful completion and interrupted processing, normally modeled with ``try``, ``except``, ``else``, and ``finally``.
 
 We need a mechanism for getting return failures and exception information from the thing that just executed to the thing that needs to happen next.
 

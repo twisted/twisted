@@ -111,7 +111,7 @@ site:
     class Simple(resource.Resource):
         isLeaf = True
         def render_GET(self, request):
-            return "<html>Hello, world!</html>"
+            return b"<html>Hello, world!</html>"
 
     site = server.Site(Simple())
     endpoint = endpoints.TCP4ServerEndpoint(reactor, 8080)
@@ -183,7 +183,8 @@ Here is a simple Resource object:
             return Resource.getChild(self, name, request)
 
         def render_GET(self, request):
-            return "Hello, world! I am located at %r." % (request.prepath,)
+            output = "Hello, world! I am located at {}.".format(request.prepath)
+            return output.encode("utf8")
 
     resource = Hello()
 
@@ -213,8 +214,8 @@ Resources can be arranged in trees using ``putChild`` . ``putChild`` puts a Reso
 
 
     root = Hello()
-    root.putChild('fred', Hello())
-    root.putChild('bob', Hello())
+    root.putChild(b'fred', Hello())
+    root.putChild(b'bob', Hello())
 
 
 
@@ -271,7 +272,7 @@ An ``.rpy`` script must define a variable, ``resource`` , which is the Resource 
 
     class MyResource(Resource):
         def render_GET(self, request):
-            return "<html>Hello, world!</html>"
+            return b"<html>Hello, world!</html>"
 
     resource = MyResource()
 
@@ -331,7 +332,7 @@ Resource rendering occurs when Twisted Web locates a leaf Resource object to han
 
 
 - Return a string
-- Call ``request.write("stuff")`` as many times as desired, then call ``request.finish()`` and return ``server.NOT_DONE_YET`` (This is deceptive, since you are in fact done with the request, but is the correct way to do this)
+- Call ``request.write(b"stuff")`` as many times as desired, then call ``request.finish()`` and return ``server.NOT_DONE_YET`` (This is deceptive, since you are in fact done with the request, but is the correct way to do this)
 - Request a ``Deferred`` , return ``server.NOT_DONE_YET`` , and call ``request.write("stuff")`` and ``request.finish()`` later, in a callback on the ``Deferred`` .
 
 
@@ -389,7 +390,7 @@ manages standard gzip compression. You can use it this way:
     class Simple(Resource):
         isLeaf = True
         def render_GET(self, request):
-            return "<html>Hello, world!</html>"
+            return b"<html>Hello, world!</html>"
 
     resource = Simple()
     wrapped = EncodingResourceWrapper(resource, [GzipEncoderFactory()])
@@ -667,7 +668,7 @@ one adds a ``cgi-bin`` directory for CGI scripts.
     from twisted.web import static, server
 
     root = static.File("/var/www/htdocs")
-    root.putChild("doc", static.File("/usr/share/doc"))
+    root.putChild(b"doc", static.File("/usr/share/doc"))
     endpoint = endpoints.TCP4ServerEndpoint(reactor, 80)
     endpoint.listen(server.Site(root))
     reactor.run()
@@ -683,7 +684,7 @@ one adds a ``cgi-bin`` directory for CGI scripts.
     from twisted.web import static, server, twcgi
 
     root = static.File("/var/www/htdocs")
-    root.putChild("cgi-bin", twcgi.CGIDirectory("/var/www/cgi-bin"))
+    root.putChild(b"cgi-bin", twcgi.CGIDirectory("/var/www/cgi-bin"))
     endpoint = endpoints.TCP4ServerEndpoint(reactor, 80)
     endpoint.listen(server.Site(root))
     reactor.run()
@@ -889,7 +890,7 @@ use the full power of Python. Here are some simple examples:
     with open("/etc/web/ports") as f:
         for num in map(int, f.read().split()):
             serviceCollection.addCollection(
-                strports.service("tcp:%d" % num, site)
+                strports.service("tcp:{}".format(num), site)
             )
 
 
@@ -1043,7 +1044,7 @@ A very simple Resource Script might look like:
     from twisted.web import resource
     class MyGreatResource(resource.Resource):
         def render_GET(self, request):
-            return "<html>foo</html>"
+            return b"<html>foo</html>"
 
     resource = MyGreatResource()
 
@@ -1071,7 +1072,8 @@ persistent data, might look like:
     class MyResource(resource.Resource):
         def render_GET(self, request):
             counter.increment()
-            return "you are visitor %d" % counter.getValue()
+            output = "you are visitor {}".format(counter.getValue())
+            return output.encode("utf8")
 
     resource = MyResource()
 
@@ -1250,7 +1252,7 @@ your helloworld module/package, which might look like this:
     def application(environ, start_response):
         """Basic WSGI Application"""
         start_response('200 OK', [('Content-type','text/plain')])
-        return ['Hello World!']
+        return [b'Hello World!']
 
 
 
@@ -1289,7 +1291,7 @@ for a site, in the following tac file:
     def application(environ, start_response):
         """A basic WSGI application"""
         start_response('200 OK', [('Content-type','text/plain')])
-        return ['Hello World!']
+        return [b'Hello World!']
 
     # Create the WSGI resource
     wsgiAppAsResource = WSGIResource(reactor, wsgiThreadPool, application)
@@ -1414,9 +1416,9 @@ Here is an example for Twisted Web's reverse proxy:
 
     from twisted.application import internet, service, strports
     from twisted.web import proxy, server, vhost
-    vhostName = 'example.com'
+    vhostName = b'example.com'
     reverseProxy = proxy.ReverseProxyResource('internal', 8538,
-                                              '/vhost.rpy/http/'+vhostName+'/')
+                                              b'/vhost.rpy/http/'+vhostName+b'/')
     root = vhost.NameVirtualHost()
     root.addHost(vhostName, reverseProxy)
     site = server.Site(root)
@@ -1498,7 +1500,7 @@ Here is an example which does that:
     class ExampleResource(Resource):
 
         def render_GET(self, request):
-            request.write("hello world")
+            request.write(b"hello world")
             d = request.notifyFinish()
             d.addCallback(lambda _: println("finished normally"))
             d.addErrback(println, "error")

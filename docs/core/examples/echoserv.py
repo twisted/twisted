@@ -23,5 +23,6 @@ def main():
     reactor.listenTCP(8000, f)
     reactor.run()
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()

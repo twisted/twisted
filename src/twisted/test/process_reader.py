@@ -8,5 +8,3 @@ while 1:
     d = sys.stdin.read()
     if len(d) == 0:
         sys.exit(0)
-        
-

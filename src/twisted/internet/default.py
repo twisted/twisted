@@ -43,7 +43,7 @@ def _getInstallFunction(platform):
                 from twisted.internet.epollreactor import install
             except ImportError:
                 from twisted.internet.pollreactor import install
-        elif platform.getType() == 'posix' and not platform.isMacOSX():
+        elif platform.getType() == "posix" and not platform.isMacOSX():
             from twisted.internet.pollreactor import install
         else:
             from twisted.internet.selectreactor import install

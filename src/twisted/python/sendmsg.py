@@ -14,8 +14,7 @@ from socket import SCM_RIGHTS, CMSG_SPACE
 __all__ = ["sendmsg", "recvmsg", "getSocketFamily", "SCM_RIGHTS"]
 
 
-RecievedMessage = namedtuple('RecievedMessage', ['data', 'ancillary', 'flags'])
-
+RecievedMessage = namedtuple("RecievedMessage", ["data", "ancillary", "flags"])
 
 
 def sendmsg(socket, data, ancillary=[], flags=0):
@@ -39,7 +38,6 @@ def sendmsg(socket, data, ancillary=[], flags=0):
     @return: The return value of the underlying syscall, if it succeeds.
     """
     return socket.sendmsg([data], ancillary, flags)
-
 
 
 def recvmsg(socket, maxSize=8192, cmsgSize=4096, flags=0):
@@ -71,11 +69,9 @@ def recvmsg(socket, maxSize=8192, cmsgSize=4096, flags=0):
     #     cmsg_space = CMSG_SPACE(cmsg_size);
     # Since the default in Python 3's socket is 0, we need to define our
     # own default of 4096. -hawkie
-    data, ancillary, flags = socket.recvmsg(
-        maxSize, CMSG_SPACE(cmsgSize), flags)[0:3]
+    data, ancillary, flags = socket.recvmsg(maxSize, CMSG_SPACE(cmsgSize), flags)[0:3]
 
     return RecievedMessage(data=data, ancillary=ancillary, flags=flags)
-
 
 
 def getSocketFamily(socket):

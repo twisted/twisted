@@ -15,7 +15,6 @@ from twisted.web._flatten import flattenString
 from twisted.web.error import FlattenerError
 
 
-
 def _render(resource, request):
     result = resource.render(request)
     if isinstance(result, bytes):
@@ -31,11 +30,11 @@ def _render(resource, request):
         raise ValueError("Unexpected return value: %r" % (result,))
 
 
-
 class FlattenTestCase(TestCase):
     """
     A test case that assists with testing L{twisted.web._flatten}.
     """
+
     def assertFlattensTo(self, root, target):
         """
         Assert that a root element, when flattened, is equal to a string.
@@ -43,7 +42,6 @@ class FlattenTestCase(TestCase):
         d = flattenString(None, root)
         d.addCallback(lambda s: self.assertEqual(s, target))
         return d
-
 
     def assertFlattensImmediately(self, root, target):
         """
@@ -70,15 +68,13 @@ class FlattenTestCase(TestCase):
             result.raiseException()
         return results[0]
 
-
     def assertFlatteningRaises(self, root, exn):
         """
         Assert flattening a root element raises a particular exception.
         """
-        d = self.assertFailure(self.assertFlattensTo(root, b''), FlattenerError)
+        d = self.assertFailure(self.assertFlattensTo(root, b""), FlattenerError)
         d.addCallback(lambda exc: self.assertIsInstance(exc._exception, exn))
         return d
-
 
 
 def assertIsFilesystemTemporary(case, fileObj):
@@ -96,7 +92,6 @@ def assertIsFilesystemTemporary(case, fileObj):
     # filesystem.  Having a fileno method that returns an int is a somewhat
     # close approximation of this. -exarkun
     case.assertIsInstance(fileObj.fileno(), int)
-
 
 
 __all__ = ["_render", "FlattenTestCase", "assertIsFilesystemTemporary"]

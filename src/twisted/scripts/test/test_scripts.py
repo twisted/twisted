@@ -18,7 +18,6 @@ from twisted.python.filepath import FilePath
 from twisted.python.test.test_shellcomp import ZshScriptTestMixin
 
 
-
 def outputFromPythonScript(script, *args):
     """
     Synchronously run a Python script, with the same Python interpreter that
@@ -40,17 +39,20 @@ def outputFromPythonScript(script, *args):
     with open(devnull, "rb") as nullInput, open(devnull, "wb") as nullError:
         process = Popen(
             [executable, script.path] + list(args),
-            stdout=PIPE, stderr=nullError, stdin=nullInput)
+            stdout=PIPE,
+            stderr=nullError,
+            stdin=nullInput,
+        )
         stdout = process.communicate()[0]
     return stdout
 
 
-
-class ScriptTestsMixin(object):
+class ScriptTestsMixin:
     """
     Mixin for L{TestCase} subclasses which defines a helper function for testing
     a Twisted-using script.
     """
+
     bin = getModule("twisted").pathEntry.filePath.child("bin")
 
     def scriptTest(self, name):
@@ -71,23 +73,22 @@ class ScriptTestsMixin(object):
         """
         script = self.bin.preauthChild(name)
         if not script.exists():
-            raise SkipTest(
-                "Script tests do not apply to installed configuration.")
+            raise SkipTest("Script tests do not apply to installed configuration.")
 
         from twisted.copyright import version
-        scriptVersion = outputFromPythonScript(script, '--version')
+
+        scriptVersion = outputFromPythonScript(script, "--version")
 
         self.assertIn(str(version), scriptVersion)
-
 
 
 class ScriptTests(TestCase, ScriptTestsMixin):
     """
     Tests for the core scripts.
     """
+
     def test_twistd(self):
         self.scriptTest("twistd")
-
 
     def test_twistdPathInsert(self):
         """
@@ -96,23 +97,18 @@ class ScriptTests(TestCase, ScriptTestsMixin):
         """
         script = self.bin.child("twistd")
         if not script.exists():
-            raise SkipTest(
-                "Script tests do not apply to installed configuration.")
+            raise SkipTest("Script tests do not apply to installed configuration.")
         cwd = getcwd()
         self.addCleanup(chdir, cwd)
         testDir = FilePath(self.mktemp())
         testDir.makedirs()
         chdir(testDir.path)
-        testDir.child("bar.tac").setContent(
-            "import sys\n"
-            "print sys.path\n")
-        output = outputFromPythonScript(script, '-ny', 'bar.tac')
+        testDir.child("bar.tac").setContent("import sys\n" "print sys.path\n")
+        output = outputFromPythonScript(script, "-ny", "bar.tac")
         self.assertIn(repr(testDir.path), output)
-
 
     def test_trial(self):
         self.scriptTest("trial")
-
 
     def test_trialPathInsert(self):
         """
@@ -121,28 +117,27 @@ class ScriptTests(TestCase, ScriptTestsMixin):
         """
         script = self.bin.child("trial")
         if not script.exists():
-            raise SkipTest(
-                "Script tests do not apply to installed configuration.")
+            raise SkipTest("Script tests do not apply to installed configuration.")
         cwd = getcwd()
         self.addCleanup(chdir, cwd)
         testDir = FilePath(self.mktemp())
         testDir.makedirs()
         chdir(testDir.path)
         testDir.child("foo.py").setContent("")
-        output = outputFromPythonScript(script, 'foo')
+        output = outputFromPythonScript(script, "foo")
         self.assertIn("PASSED", output)
-
 
     def test_pyhtmlizer(self):
         self.scriptTest("pyhtmlizer")
-
 
 
 class ZshIntegrationTests(TestCase, ZshScriptTestMixin):
     """
     Test that zsh completion functions are generated without error
     """
-    generateFor = [('twistd', 'twisted.scripts.twistd.ServerOptions'),
-                   ('trial', 'twisted.scripts.trial.Options'),
-                   ('pyhtmlizer', 'twisted.scripts.htmlizer.Options'),
-                   ]
+
+    generateFor = [
+        ("twistd", "twisted.scripts.twistd.ServerOptions"),
+        ("trial", "twisted.scripts.trial.Options"),
+        ("pyhtmlizer", "twisted.scripts.htmlizer.Options"),
+    ]

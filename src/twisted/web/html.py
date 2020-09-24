@@ -6,21 +6,21 @@
 """I hold HTML generation helpers.
 """
 
+from html import escape
+from io import StringIO
+
 from twisted.python import log
-from twisted.python.compat import NativeStringIO as StringIO, escape
 from twisted.python.deprecate import deprecated
 from incremental import Version
 
 
-
-@deprecated(Version('Twisted', 15, 3, 0), replacement='twisted.web.template')
+@deprecated(Version("Twisted", 15, 3, 0), replacement="twisted.web.template")
 def PRE(text):
     "Wrap <pre> tags around some text and HTML-escape it."
-    return "<pre>"+escape(text)+"</pre>"
+    return "<pre>" + escape(text) + "</pre>"
 
 
-
-@deprecated(Version('Twisted', 15, 3, 0), replacement='twisted.web.template')
+@deprecated(Version("Twisted", 15, 3, 0), replacement="twisted.web.template")
 def UL(lst):
     io = StringIO()
     io.write("<ul>\n")
@@ -30,8 +30,7 @@ def UL(lst):
     return io.getvalue()
 
 
-
-@deprecated(Version('Twisted', 15, 3, 0), replacement='twisted.web.template')
+@deprecated(Version("Twisted", 15, 3, 0), replacement="twisted.web.template")
 def linkList(lst):
     io = StringIO()
     io.write("<ul>\n")
@@ -41,8 +40,7 @@ def linkList(lst):
     return io.getvalue()
 
 
-
-@deprecated(Version('Twisted', 15, 3, 0), replacement='twisted.web.template')
+@deprecated(Version("Twisted", 15, 3, 0), replacement="twisted.web.template")
 def output(func, *args, **kw):
     """output(func, *args, **kw) -> html string
     Either return the result of a function (which presumably returns an

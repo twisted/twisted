@@ -104,7 +104,7 @@ using the ``twisted-web`` Debian package, and will drop in:
 
     % cat > /etc/local.d/99addmypackage.py
     from mypackage import toplevel
-    default.putChild("mypackage", toplevel.Resource(file="foo/bar", color="blue"))
+    default.putChild(b"mypackage", toplevel.Resource(file="foo/bar", color="blue"))
     ^D
 
 

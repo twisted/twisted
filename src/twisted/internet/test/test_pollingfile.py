@@ -15,7 +15,6 @@ else:
     _pollingfile = None  # type: ignore[assignment]
 
 
-
 @skipIf(_pollingfile is None, "Test will run only on Windows.")
 class PollableWritePipeTests(TestCase):
     """
@@ -28,8 +27,7 @@ class PollableWritePipeTests(TestCase):
         attempt is made to append unicode data to the output buffer.
         """
         p = _pollingfile._PollableWritePipe(1, lambda: None)
-        self.assertRaises(TypeError, p.write, u"test")
-
+        self.assertRaises(TypeError, p.write, "test")
 
     def test_writeSequenceUnicode(self):
         """
@@ -38,5 +36,5 @@ class PollableWritePipeTests(TestCase):
         output buffer.
         """
         p = _pollingfile._PollableWritePipe(1, lambda: None)
-        self.assertRaises(TypeError, p.writeSequence, [u"test"])
-        self.assertRaises(TypeError, p.writeSequence, (u"test", ))
+        self.assertRaises(TypeError, p.writeSequence, ["test"])
+        self.assertRaises(TypeError, p.writeSequence, ("test",))
