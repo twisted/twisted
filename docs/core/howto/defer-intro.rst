@@ -324,6 +324,10 @@ Python 3.5 introduced :pep:`492` ("Coroutines with async and await syntax") and 
 Rather than decorating every function that may ``await`` a Deferred (as you would with functions that ``yield`` Deferreds with ``inlineCallbacks``), you only need to call ``fromCoroutine`` with the outer-most coroutine object to schedule it for execution.
 Coroutines can ``await`` other coroutines once running without needing to use this function themselves.
 
+.. note::
+
+    The :api:`twisted.internet.defer.ensureDeferred <ensureDeferred>` function also provides a way to convert a coroutine to a Deferred, but it's interface is more type-ambiguous; ``Deferred.fromCoroutine`` is meant to replace it.
+
 Awaiting on a Deferred which fires with a Failure will raise the exception inside your coroutine as if it were regular Python.
 If your coroutine raises an exception, it will be translated into a Failure fired on the Deferred that ``Deferred.fromCoroutine`` returns for you.
 Calling ``return`` will cause the Deferred that ``Deferred.fromCoroutine`` returned for you to fire with a result.
