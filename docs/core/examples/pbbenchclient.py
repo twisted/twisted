@@ -5,8 +5,9 @@ from twisted.internet import defer, reactor
 from twisted.cred.credentials import UsernamePassword
 import time
 
+
 class PBBenchClient:
-    hostname = 'localhost'
+    hostname = "localhost"
     portno = pb.portno
     calledThisSecond = 0
 
@@ -19,7 +20,7 @@ class PBBenchClient:
         if thisSecond != self.lastSecond:
             if thisSecond - self.lastSecond > 1:
                 print("WARNING it took more than one second")
-            print('cps:', self.calledThisSecond)
+            print("cps:", self.calledThisSecond)
             self.calledThisSecond = 0
             self.lastSecond = thisSecond
 
@@ -31,13 +32,17 @@ class PBBenchClient:
     def runTest(self):
         factory = pb.PBClientFactory()
         reactor.connectTCP(self.hostname, self.portno, factory)
-        factory.login(UsernamePassword(b"benchmark", b"benchmark")).addCallback(self._cbPerspective)
+        factory.login(UsernamePassword(b"benchmark", b"benchmark")).addCallback(
+            self._cbPerspective
+        )
 
 
 def main():
     PBBenchClient().runTest()
     from twisted.internet import reactor
+
     reactor.run()
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()

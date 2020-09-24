@@ -22,7 +22,7 @@ from xmlrpc.client import Fault, Binary, Boolean, DateTime
 
 # Sibling Imports
 from twisted.web import resource, server, http
-from twisted.internet import defer, protocol, reactor, error
+from twisted.internet import defer, protocol, error
 from twisted.python import reflect, failure
 from twisted.logger import Logger
 
@@ -527,7 +527,7 @@ class Proxy:
         allowNone=False,
         useDateTime=False,
         connectTimeout=30.0,
-        reactor=reactor,
+        reactor=None,
     ):
         """
         @param url: The URL to which to post method calls.  Calls will be made
@@ -537,6 +537,9 @@ class Proxy:
         @type url: L{bytes}
 
         """
+        if reactor is None:
+            from twisted.internet import reactor
+
         scheme, netloc, path, params, query, fragment = urlparse(url)
         netlocParts = netloc.split(b"@")
         if len(netlocParts) == 2:

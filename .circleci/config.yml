@@ -70,31 +70,6 @@ jobs:
       - store_artifacts:
           path: wheelhouse/
 
-  static_checkers:
-    working_directory: ~/static-checkers
-    docker:
-      - image: circleci/python:3.6
-    environment:
-      PYTHON: python3
-    steps:
-      # Get the source.
-      - checkout
-
-      - <<: *preparation_run_group
-
-      # Run each checker in a separate step, but always run all steps to get
-      # a the results from each step.
-      - run:
-          name: Check newsfragment.
-          when: always
-          command: |
-            venv/bin/tox -r -e newsfragment
-      - run:
-          name: Check manifest-checker.
-          when: always
-          command: |
-            venv/bin/tox -r -e manifest-checker
-
   #
   # Documentation tests are slow so we execute them in a separate job.
   #
@@ -126,10 +101,8 @@ workflows:
   version: 2
   all-tests:
     jobs:
-      - static_checkers
       - documentation
       - linux-wheels
       - osx-wheels:
           requires:
-            - static_checkers
             - documentation
