@@ -312,6 +312,64 @@ Because if ``f`` raises, ``g`` will be passed a :api:`twisted.python.failure.Fai
 Otherwise, ``g`` will be passed the asynchronous equivalent of the return value of ``f()`` (i.e. ``y``).
 
 
+Coroutines with async/await
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. note::
+
+    .. versionadded:: 16.4
+
+Python 3.5 introduced :pep:`492` ("Coroutines with async and await syntax") and native coroutines.
+:api:`twisted.internet.defer.Deferred.fromCoroutine <Deferred.fromCoroutine>` allows you to write coroutines with the ``async def`` syntax and ``await`` on Deferreds, similar to ``inlineCallbacks``.
+Rather than decorating every function that may ``await`` a Deferred (as you would with functions that ``yield`` Deferreds with ``inlineCallbacks``), you only need to call ``fromCoroutine`` with the outer-most coroutine object to schedule it for execution.
+Coroutines can ``await`` other coroutines once running without needing to use this function themselves.
+
+Awaiting on a Deferred which fires with a Failure will raise the exception inside your coroutine as if it were regular Python.
+If your coroutine raises an exception, it will be translated into a Failure fired on the Deferred that ``Deferred.fromCoroutine`` returns for you.
+Calling ``return`` will cause the Deferred that ``Deferred.fromCoroutine`` returned for you to fire with a result.
+
+.. code-block:: python3
+
+   import json
+   from twisted.internet.defer import Deferred
+   from twisted.logger import Logger
+   log = Logger()
+
+   async def getUsers():
+       try:
+           return json.loads(await makeRequest("GET", "/users"))
+       except ConnectionError:
+           log.failure("makeRequest failed due to connection error")
+           return []
+
+   def do():
+       d = Deferred.fromCoroutine(getUsers())
+       d.addCallback(print)
+       return d
+
+
+When writing coroutines, you do not need to use :api:`twisted.internet.defer.Deferred.fromCoroutine <Deferred.fromCoroutine>` when you are writing a coroutine which calls other coroutines which await on Deferreds; you can just ``await`` on it directly.
+For example:
+
+.. code-block:: python3
+
+    async def foo():
+        res = await someFunctionThatReturnsADeferred()
+        return res
+
+    async def bar():
+        baz = await someOtherDeferredFunction()
+        fooResult = await foo()
+        return baz + fooResult
+
+    def myDeferredReturningFunction():
+        coro = bar()
+        return Deferred.fromCoroutine(coro)
+
+
+Even though Deferreds were used in both coroutines, only ``bar`` had to be wrapped in :api:`twisted.internet.defer.Deferred.fromCoroutine <Deferred.fromCoroutine>` to return a Deferred.
+
+
 Inline callbacks - using 'yield'
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -395,64 +453,6 @@ With ``inlineCallbacks``, we can rewrite this as:
         returnValue(json.loads(responseBody))
 
 Our exception handling is simplified because we can use Python's familiar ``try`` / ``except`` syntax for handling ``ConnectionError``\ s.
-
-
-Coroutines with async/await
-~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-.. note::
-
-    .. versionadded:: 16.4
-
-Python 3.5 introduced :pep:`492` ("Coroutines with async and await syntax") and native coroutines.
-:api:`twisted.internet.defer.Deferred.fromCoroutine <Deferred.fromCoroutine>` allows you to write coroutines with the ``async def`` syntax and ``await`` on Deferreds, similar to ``inlineCallbacks``.
-Rather than decorating every function that may ``await`` a Deferred (as you would with functions that ``yield`` Deferreds with ``inlineCallbacks``), you only need to call ``fromCoroutine`` with the outer-most coroutine object to schedule it for execution.
-Coroutines can ``await`` other coroutines once running without needing to use this function themselves.
-
-Awaiting on a Deferred which fires with a Failure will raise the exception inside your coroutine as if it were regular Python.
-If your coroutine raises an exception, it will be translated into a Failure fired on the Deferred that ``Deferred.fromCoroutine`` returns for you.
-Calling ``return`` will cause the Deferred that ``Deferred.fromCoroutine`` returned for you to fire with a result.
-
-.. code-block:: python3
-
-   import json
-   from twisted.internet.defer import Deferred
-   from twisted.logger import Logger
-   log = Logger()
-
-   async def getUsers():
-       try:
-           return json.loads(await makeRequest("GET", "/users"))
-       except ConnectionError:
-           log.failure("makeRequest failed due to connection error")
-           return []
-
-   def do():
-       d = Deferred.fromCoroutine(getUsers())
-       d.addCallback(print)
-       return d
-
-
-When writing coroutines, you do not need to use :api:`twisted.internet.defer.Deferred.fromCoroutine <Deferred.fromCoroutine>` when you are writing a coroutine which calls other coroutines which await on Deferreds; you can just ``await`` on it directly.
-For example:
-
-.. code-block:: python3
-
-    async def foo():
-        res = await someFunctionThatReturnsADeferred()
-        return res
-
-    async def bar():
-        baz = await someOtherDeferredFunction()
-        fooResult = await foo()
-        return baz + fooResult
-
-    def myDeferredReturningFunction():
-        coro = bar()
-        return Deferred.fromCoroutine(coro)
-
-
-Even though Deferreds were used in both coroutines, only ``bar`` had to be wrapped in :api:`twisted.internet.defer.Deferred.fromCoroutine <Deferred.fromCoroutine>` to return a Deferred.
 
 
 Conclusion
