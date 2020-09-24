@@ -69,6 +69,13 @@ class TimeoutError(Exception):
     """
 
 
+class NotACoroutineError(TypeError):
+    """
+    This error is raised when a coroutine is expected and something else is
+    encountered.
+    """
+
+
 def logError(err):
     """
     Log and return failure.
@@ -898,7 +905,7 @@ class Deferred:
         @rtype: L{Deferred}
         """
         if not iscoroutine(coro) and not isinstance(coro, types.GeneratorType):
-            raise ValueError("%r is not a coroutine" % (coro,))
+            raise NotACoroutineError("%r is not a coroutine" % (coro,))
 
         return _cancellableInlineCallbacks(coro)
 
@@ -945,10 +952,12 @@ def ensureDeferred(coro):
     else:
         try:
             return Deferred.fromCoroutine(coro)
-        except ValueError:
+        except NotACoroutineError:
             # It's not a coroutine. Raise an exception, but say that it's also
             # not a Deferred so the error makes sense.
-            raise ValueError("%r is not a coroutine or a Deferred" % (coro,))
+            raise NotACoroutineError(
+                "%r is not a coroutine or a Deferred" % (coro,)
+            )
 
 
 class DebugInfo:
