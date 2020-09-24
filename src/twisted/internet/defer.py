@@ -955,9 +955,7 @@ def ensureDeferred(coro):
         except NotACoroutineError:
             # It's not a coroutine. Raise an exception, but say that it's also
             # not a Deferred so the error makes sense.
-            raise NotACoroutineError(
-                "%r is not a coroutine or a Deferred" % (coro,)
-            )
+            raise NotACoroutineError("%r is not a coroutine or a Deferred" % (coro,))
 
 
 class DebugInfo:
