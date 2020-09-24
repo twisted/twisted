@@ -401,8 +401,10 @@ Coroutines with async/await
 
     .. versionadded:: 16.4
 
-On Python 3.5 and higher, the :pep:`492` ("Coroutines with async and await syntax") "await" functionality can be used with Deferreds by the use of :api:`twisted.internet.defer.ensureDeferred <ensureDeferred>`.
-It is similar to ``inlineCallbacks``, except that it uses the ``await`` keyword instead of ``yield``, the ``return`` keyword instead of ``returnValue``, and is a function rather than a decorator.
+On Python 3.5 and higher, the :pep:`492` ("Coroutines with async and await syntax") "await" functionality can be used with Deferreds by the use of :api:`twisted.internet.defer.coroFnToDeferredFn <coroFnToDeferredFn>`.
+
+It is similar to ``inlineCallbacks``, except that it uses the ``await`` keyword instead of ``yield``, the ``return`` keyword instead of ``returnValue``.
+"await" functionality can also be used with Deferreds by the use of :api:`twisted.internet.defer.ensureDeferred <ensureDeferred>`. It is similar to ``coroFnToDeferredFn``, except that it is a function rather than a decorator.
 
 Calling a coroutine (that is, the result of a function defined by ``async def funcname():``) with :api:`twisted.internet.defer.ensureDeferred <ensureDeferred>` will allow you to "await" on Deferreds inside it, and will return a standard Deferred.
 You can mix and match code which uses regular Deferreds, ``inlineCallbacks``, and ``ensureDeferred`` freely.

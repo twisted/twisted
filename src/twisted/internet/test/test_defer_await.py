@@ -9,7 +9,13 @@ Tests for C{await} support in Deferreds.
 import types
 
 from twisted.python.failure import Failure
-from twisted.internet.defer import Deferred, maybeDeferred, ensureDeferred, fail
+from twisted.internet.defer import (
+    Deferred,
+    maybeDeferred,
+    ensureDeferred,
+    fail,
+    coroFnToDeferredFn,
+)
 from twisted.trial.unittest import TestCase
 from twisted.internet.task import Clock
 
@@ -57,6 +63,34 @@ class AwaitTests(TestCase):
 
         # Now it's a Deferred.
         d = ensureDeferred(r)
+        self.assertIsInstance(d, Deferred)
+
+        # The Deferred has the result we want.
+        res = self.successResultOf(d)
+        self.assertEqual(res, "foo")
+
+    def test_coroFnToDeferredFn(self):
+        """
+        L{coroFnToDeferredFn} will wrap a coroutinefunction with a
+        function that returns a L{Deferred}.
+        """
+
+        @coroFnToDeferredFn
+        async def run():
+            d = Deferred()
+            d.callback("bar")
+            await d
+            res = await run2()
+            return res
+
+        async def run2():
+            d = Deferred()
+            d.callback("foo")
+            res = await d
+            return res
+
+        d = run()
+        # it's a Deferred.
         self.assertIsInstance(d, Deferred)
 
         # The Deferred has the result we want.

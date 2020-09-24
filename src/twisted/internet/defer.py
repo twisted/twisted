@@ -18,6 +18,7 @@ Maintainer: Glyph Lefkowitz
 
 
 import attr
+import inspect
 import traceback
 import types
 import warnings
@@ -925,6 +926,48 @@ def ensureDeferred(coro):
 
     # Must be a Deferred
     return coro
+
+
+def coroFnToDeferredFn(corofn):
+    """
+    L{coroFnToDeferredFn} helps you define coroutinefunctions where previously
+    there were functions that returned Deferreds
+
+    Coroutine functions return a coroutine object, similar to how generators
+    work. This function turns that coroutinefunction into a Deferred function,
+    meaning that it can be used in legacy Twisted code. For example::
+
+        import treq
+        from twisted.internet import defer, task
+
+        async def crawl(pages):
+            results = {}
+            for page in pages:
+                results[page] = await treq.content(await treq.get(page))
+            return results
+
+        @defer.coroFnToDeferredFn
+        async def main(reactor):
+            pages = [
+                "http://localhost:8080"
+            ]
+            print(await crawl(pages))
+
+        task.react(main)
+
+    @param corofn: The coroutinefunction to wrap
+    @type coroutinefunction: An C{async def}
+
+    @rtype: typing.Callable
+    """
+
+    assert inspect.iscoroutinefunction(corofn)
+
+    @wraps(corofn)
+    def wrapper(*args, **kwargs):
+        return ensureDeferred(corofn(*args, **kwargs))
+
+    return wrapper
 
 
 class DebugInfo:
