@@ -126,8 +126,15 @@ class DeferredTests(unittest.TestCase):
         """
         Test case that is decorated with L{defer.inlineCallbacks}.
         """
-        self._touchClass(None)
         yield None
+        self._touchClass(None)
+
+    async def test_passCoroutineFunction(self):
+        """
+        Test case that is a coroutine function
+        """
+        await defer.succeed(None)
+        self._touchClass(None)
 
     def test_fail(self):
         return defer.fail(self.failureException("I fail"))

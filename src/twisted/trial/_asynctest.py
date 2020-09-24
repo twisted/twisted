@@ -11,6 +11,7 @@ Maintainer: Jonathan Lange
 
 import inspect
 import warnings
+from collections.abc import Awaitable
 
 from typing import List
 
@@ -26,6 +27,18 @@ from twisted.trial import itrial, util
 from twisted.trial._synctest import FailTest, SkipTest, SynchronousTestCase
 
 _wait_is_running: List[None] = []
+
+
+async def _maybeCoroutine(*args, **kw):
+    try:  # simulate `async def _maybeCoroutine(func, /, *args, **kwargs):`
+        func, *args = args
+    except ValueError:
+        raise TypeError(
+            "_maybeCoroutine() missing 1 required positional argument: 'func'"
+        ) from None
+
+    v = func(*args, **kw)
+    return (await v) if isinstance(v, Awaitable) else v
 
 
 @implementer(itrial.ITestCase)
@@ -119,9 +132,11 @@ class TestCase(SynchronousTestCase):
                 )
             )
             return defer.fail(exc)
-        d = defer.maybeDeferred(
-            utils.runWithWarningsSuppressed, self._getSuppress(), method
-        )
+
+        def runMethod():
+            return defer.ensureDeferred(_maybeCoroutine(method))
+
+        d = utils.runWithWarningsSuppressed(self._getSuppress(), runMethod)
         call = reactor.callLater(timeout, onTimeout, d)
         d.addBoth(lambda x: call.active() and call.cancel() or x)
         return d
@@ -194,22 +209,25 @@ class TestCase(SynchronousTestCase):
             result.stop()
         self._passed = False
 
-    @defer.inlineCallbacks
     def deferRunCleanups(self, ignored, result):
         """
         Run any scheduled cleanups and report errors (if any) to the result.
         object.
         """
-        failures = []
-        for func, args, kwargs in self._cleanups[::-1]:
-            try:
-                yield func(*args, **kwargs)
-            except Exception:
-                failures.append(failure.Failure())
 
-        for f in failures:
-            result.addError(self, f)
-            self._passed = False
+        async def deferRunCleanups():
+            failures = []
+            for func, args, kwargs in self._cleanups[::-1]:
+                try:
+                    await _maybeCoroutine(func, *args, **kwargs)
+                except Exception:
+                    failures.append(failure.Failure())
+
+            for f in failures:
+                result.addError(self, f)
+                self._passed = False
+
+        return defer.ensureDeferred(deferRunCleanups())
 
     def _cleanUp(self, result):
         try:
