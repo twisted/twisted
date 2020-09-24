@@ -29,20 +29,21 @@ import operator
 
 from unittest import skipIf
 
-
 try:
     import fcntl
 except ImportError:
     fcntl = None  # type: ignore[assignment]
 
 try:
-    from twisted.internet import process
+    from twisted.internet import process as _process
     from twisted.internet.process import ProcessReader, ProcessWriter, PTYProcess
 except ImportError:
-    process = None  # type: ignore[misc,assignment]
+    process = None
     ProcessReader = object  # type: ignore[misc,assignment]
     ProcessWriter = object  # type: ignore[misc,assignment]
     PTYProcess = object  # type: ignore[misc,assignment]
+else:
+    process = _process
 
 from zope.interface.verify import verifyObject
 

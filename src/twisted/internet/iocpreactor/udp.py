@@ -5,7 +5,12 @@
 UDP support for IOCP reactor
 """
 
-import socket, operator, struct, warnings, errno
+import errno
+import operator
+import socket
+import struct
+import warnings
+from typing import Optional
 
 from zope.interface import implementer
 
@@ -40,7 +45,7 @@ class Port(abstract.FileHandle):
 
     # Actual port number being listened on, only set to a non-None
     # value when we are actually listening.
-    _realPortNumber = None
+    _realPortNumber = None  # type: Optional[int]
 
     def __init__(self, port, proto, interface="", maxPacketSize=8192, reactor=None):
         """

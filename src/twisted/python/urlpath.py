@@ -139,12 +139,7 @@ class URLPath:
         @rtype: L{URLPath}
         """
         if not isinstance(url, str):
-            raise ValueError("'url' must be a str or unicode")
-        if isinstance(url, bytes):
-            # On Python 2, accepting 'str' (for compatibility) means we might
-            # get 'bytes'.  On py3, this will not work with bytes due to the
-            # check above.
-            return klass.fromBytes(url)
+            raise ValueError("'url' must be a str")
         return klass._fromURL(_URL.fromText(url))
 
     @classmethod
@@ -163,10 +158,6 @@ class URLPath:
         if not isinstance(url, bytes):
             raise ValueError("'url' must be bytes")
         quoted = urlquote(url, safe=_allascii)
-        if isinstance(quoted, bytes):
-            # This will only be bytes on python 2, where we can transform it
-            # into unicode.  On python 3, urlquote always returns str.
-            quoted = quoted.decode("ascii")
         return klass.fromString(quoted)
 
     @classmethod
