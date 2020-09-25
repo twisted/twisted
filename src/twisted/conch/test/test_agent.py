@@ -11,19 +11,20 @@ from twisted.trial import unittest
 from twisted.test import iosim
 
 try:
-    import cryptography
+    import cryptography as _cryptography
 except ImportError:
-    cryptography = None  # type: ignore[assignment]
+    cryptography = None
+else:
+    cryptography = _cryptography
 
 try:
-    import pyasn1
+    import pyasn1 as _pyasn1
 except ImportError:
     pyasn1 = None
-
-if cryptography and pyasn1:
-    from twisted.conch.ssh import keys, agent
 else:
-    keys = agent = None  # type: ignore[assignment]
+    pyasn1 = _pyasn1
+
+from twisted.conch.ssh import keys, agent
 
 from twisted.conch.test import keydata
 from twisted.conch.error import ConchError, MissingKeyStoreError
@@ -43,11 +44,6 @@ class AgentTestBase(unittest.TestCase):
     """
     Tests for SSHAgentServer/Client.
     """
-
-    if iosim is None:
-        skip = "iosim requires SSL, but SSL is not available"
-    elif agent is None or keys is None:
-        skip = "Cannot run without cryptography or PyASN1"
 
     def setUp(self):
         # wire up our client <-> server
@@ -120,20 +116,18 @@ class UnimplementedVersionOneServerTests(AgentTestBase):
         return d.addCallback(self.assertEqual, b"")
 
 
-if agent is not None:
+class CorruptServer(agent.SSHAgentServer):
+    """
+    A misbehaving server that returns bogus response op codes so that we can
+    verify that our callbacks that deal with these op codes handle such
+    miscreants.
+    """
 
-    class CorruptServer(agent.SSHAgentServer):
-        """
-        A misbehaving server that returns bogus response op codes so that we can
-        verify that our callbacks that deal with these op codes handle such
-        miscreants.
-        """
+    def agentc_REQUEST_IDENTITIES(self, data):
+        self.sendResponse(254, b"")
 
-        def agentc_REQUEST_IDENTITIES(self, data):
-            self.sendResponse(254, b"")
-
-        def agentc_SIGN_REQUEST(self, data):
-            self.sendResponse(254, b"")
+    def agentc_SIGN_REQUEST(self, data):
+        self.sendResponse(254, b"")
 
 
 class ClientWithBrokenServerTests(AgentTestBase):
