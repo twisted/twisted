@@ -24,7 +24,12 @@ except ImportError:
 else:
     pyasn1 = _pyasn1
 
-from twisted.conch.ssh import keys, agent
+try:
+    from twisted.conch.ssh import keys as _keys, agent as _agent
+except ImportError:
+    keys = agent = None
+else:
+    keys, agent = _keys, _agent
 
 from twisted.conch.test import keydata
 from twisted.conch.error import ConchError, MissingKeyStoreError
@@ -44,6 +49,9 @@ class AgentTestBase(unittest.TestCase):
     """
     Tests for SSHAgentServer/Client.
     """
+
+    if agent is None or keys is None:
+         skip = "Cannot run without cryptography or PyASN1"
 
     def setUp(self):
         # wire up our client <-> server
@@ -116,18 +124,20 @@ class UnimplementedVersionOneServerTests(AgentTestBase):
         return d.addCallback(self.assertEqual, b"")
 
 
-class CorruptServer(agent.SSHAgentServer):
-    """
-    A misbehaving server that returns bogus response op codes so that we can
-    verify that our callbacks that deal with these op codes handle such
-    miscreants.
-    """
+if agent is not None:
 
-    def agentc_REQUEST_IDENTITIES(self, data):
-        self.sendResponse(254, b"")
+    class CorruptServer(agent.SSHAgentServer):  # type: ignore[name-defined]
+        """
+        A misbehaving server that returns bogus response op codes so that we can
+        verify that our callbacks that deal with these op codes handle such
+        miscreants.
+        """
 
-    def agentc_SIGN_REQUEST(self, data):
-        self.sendResponse(254, b"")
+        def agentc_REQUEST_IDENTITIES(self, data):
+            self.sendResponse(254, b"")
+
+        def agentc_SIGN_REQUEST(self, data):
+            self.sendResponse(254, b"")
 
 
 class ClientWithBrokenServerTests(AgentTestBase):
