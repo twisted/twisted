@@ -247,7 +247,7 @@ class Headers:
             return default
 
         if isinstance(name, str):
-            return [v if isinstance(v, str) else v.decode("utf8") for v in values]
+            return [v.decode("utf8") for v in values]
         return values
 
     def getAllRawHeaders(self) -> Iterator[Tuple[bytes, List[bytes]]]:

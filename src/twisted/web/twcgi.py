@@ -32,7 +32,6 @@ class CGIDirectory(resource.Resource, filepath.FilePath):
             return CGIDirectory(fnp.path)
         else:
             return CGIScript(fnp.path)
-        return resource.NoResource()
 
     def render(self, request):
         notFound = resource.NoResource(
