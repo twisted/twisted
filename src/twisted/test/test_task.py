@@ -1207,7 +1207,7 @@ class ReactTests(unittest.SynchronousTestCase):
         self.assertEqual(0, exitError.code)
 
 
-class ReactCoroFnTests(unittest.SynchronousTestCase):
+class ReactCoroutineFunctionTests(unittest.SynchronousTestCase):
     """
     Tests for L{twisted.internet.task.react} with an C{async def} argument
     """

@@ -867,7 +867,7 @@ def react(main, argv=(), _reactor=None):
           task.react(main, ("alice", "secret"))
 
     @param main: A callable which returns a L{Deferred} or
-        C{async def} C{coroutine}. It should take the reactor as its first
+        coroutine. It should take the reactor as its first
         parameter, followed by the elements of C{argv}.
 
     @param argv: A list of arguments to pass to C{main}. If omitted the
