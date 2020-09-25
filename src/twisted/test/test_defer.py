@@ -1449,7 +1449,9 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         ]
 
         for thing in thingsThatAreNotCoroutines:
-            self.assertRaises(ValueError, defer.Deferred.fromCoroutine, thing)
+            self.assertRaises(
+                defer.NotACoroutineError, defer.Deferred.fromCoroutine, thing
+            )
 
 
 class FirstErrorTests(unittest.SynchronousTestCase):
@@ -2931,7 +2933,7 @@ class EnsureDeferredTests(unittest.TestCase):
         Passing L{defer.ensureDeferred} a non-coroutine and a non-Deferred will
         raise a L{ValueError}.
         """
-        with self.assertRaises(ValueError):
+        with self.assertRaises(NotACoroutineError):
             defer.ensureDeferred("something")
 
     def test_ensureDeferredCoroutine(self):
