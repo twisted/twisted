@@ -93,7 +93,6 @@ class Persistent:
         ext, dumpFunc = self._getStyle()
         if passphrase is not None:
             raise TypeError("passphrase must be None")
-            ext = "e" + ext
         finalname, filename = self._getFilename(filename, ext, tag)
         log.msg("Saving " + self.name + " application to " + finalname + "...")
         self._saveTemp(filename, dumpFunc)
