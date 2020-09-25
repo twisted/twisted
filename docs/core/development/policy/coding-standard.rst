@@ -72,24 +72,19 @@ When you update existing files, if there is no copyright header, add one.
 Whitespace
 ----------
 
-Indentation is 4 spaces per indent.
-Tabs are not allowed.
-It is preferred that every block appears on a new line, so that control structure indentation is always visible.
+Code must be formatted according to the `The Black Code Style <https://github.com/psf/black/blob/master/docs/the_black_code_style.md>`_.
+This entire source tree can be reformatted by running:
 
-Lines are flowed at 88 columns per `The Black Code Style <https://github.com/psf/black/blob/master/docs/the_black_code_style.md>`_.
-They must not have trailing whitespace.
-Long lines must be wrapped using implied line continuation inside parentheses; backslashes aren't allowed except when wrapping ``with`` statement clauses.
-To handle long import lines, please wrap them inside parentheses:
+.. code-block:: console
 
-.. code-block:: python
-
-    from very.long.package import (
-        foo, bar, baz, qux, quux, quuux,
-    )
+    tox -e black-reformat
 
 
-Top-level classes and functions must be separated with 2 blank lines, and class-level functions with 1 blank line.
-The control-L (i.e. ``^L``) form feed character must not be used.
+A single file can be reformatted by running:
+
+.. code-block:: console
+
+    tox -e black-reformat -- path/to/file.py
 
 
 Modules
@@ -229,8 +224,6 @@ Docstrings
 Docstrings should always be used to describe the purpose of methods, functions, classes, and modules.
 Moreover, all methods, functions, classes, and modules must have docstrings.
 In addition to documenting the purpose of the object, the docstring must document all of parameters or attributes of the object.
-
-Docstrings must be reflowed at 79 characters.
 
 When documenting a class with one or more attributes which are initialized directly from the value of a ``__init__`` argument by
 the same name (or differing only in that the attribute is private), it is sufficient to document the ``__init__`` parameter (in the ``__init__`` docstring).
@@ -698,8 +691,11 @@ For example:
 Fallback
 --------
 
-In case of conventions not enforced in this document, the reference documents to use in fallback is `PEP 8 <https://www.python.org/dev/peps/pep-0008/>`_ for Python code and `PEP 7 <https://www.python.org/dev/peps/pep-0007/>`_ for C code.
-For example, the paragraph **Whitespace in Expressions and Statements** in PEP 8 describes what should be done in Twisted code.
+In case of conventions not enforced in this document, the reference documents to use in fallback are:
+
+* `The Black code style <https://github.com/psf/black/blob/master/docs/the_black_code_style.md>`_
+* `PEP 8 <https://www.python.org/dev/peps/pep-0008/>`_ for Python code
+* `PEP 7 <https://www.python.org/dev/peps/pep-0007/>`_ for C code
 
 
 Recommendations

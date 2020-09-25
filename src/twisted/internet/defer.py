@@ -17,12 +17,15 @@ Maintainer: Glyph Lefkowitz
 """
 
 
-import attr
-import traceback
-import types
-import warnings
 from asyncio import iscoroutine
 from functools import wraps
+from sys import exc_info, version_info
+import traceback
+import types
+from typing import Optional
+import warnings
+
+import attr
 from incremental import Version
 from sys import exc_info, version_info
 
@@ -271,7 +274,7 @@ class Deferred:
     # sets it directly.
     debug = False
 
-    _chainedTo = None
+    _chainedTo = None  # type: Optional[Deferred]
 
     def __init__(self, canceller=None):
         """
