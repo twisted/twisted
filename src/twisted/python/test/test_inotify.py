@@ -9,12 +9,18 @@ from twisted.trial.unittest import TestCase
 from twisted.python.filepath import FilePath
 from twisted.python.runtime import platform
 
-if platform.supportsINotify():
-    from ctypes import c_int, c_uint32, c_char_p
+try:
     from twisted.python import _inotify
+except ImportError:
+    inotify = None
+else:
+    inotify = _inotify
+
+if inotify and platform.supportsINotify():
+    from ctypes import c_int, c_uint32, c_char_p
     from twisted.python._inotify import INotifyError, initializeModule, init, add
 else:
-    _inotify = None  # type: ignore[assignment]
+    inotify = None
 
 
 class INotifyTests(TestCase):
@@ -22,7 +28,7 @@ class INotifyTests(TestCase):
     Tests for L{twisted.python._inotify}.
     """
 
-    if _inotify is None:
+    if inotify is None:
         skip = "This platform doesn't support INotify."
 
     def test_missingInit(self):
@@ -114,7 +120,7 @@ class INotifyTests(TestCase):
             def inotify_init(self):
                 return -1
 
-        self.patch(_inotify, "libc", libc())
+        self.patch(inotify, "libc", libc())
         self.assertRaises(INotifyError, init)
 
     def test_failedAddWatch(self):
@@ -127,5 +133,5 @@ class INotifyTests(TestCase):
             def inotify_add_watch(self, fd, path, mask):
                 return -1
 
-        self.patch(_inotify, "libc", libc())
+        self.patch(inotify, "libc", libc())
         self.assertRaises(INotifyError, add, 3, FilePath("/foo"), 0)
