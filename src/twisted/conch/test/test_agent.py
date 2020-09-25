@@ -51,7 +51,7 @@ class AgentTestBase(unittest.TestCase):
     """
 
     if agent is None or keys is None:
-         skip = "Cannot run without cryptography or PyASN1"
+        skip = "Cannot run without cryptography or PyASN1"
 
     def setUp(self):
         # wire up our client <-> server
