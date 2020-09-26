@@ -705,6 +705,7 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         L{defer.maybeDeferred} converts a coroutine that immediately returns
         into a fired L{Deferred}.
         """
+
         async def coro():
             return 1234
 
@@ -716,6 +717,7 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         L{defer.maybeDeferred} converts a coroutine that immediately raises an
         exception into a failed L{Deferred}.
         """
+
         async def coro():
             raise IndentationError()
 
