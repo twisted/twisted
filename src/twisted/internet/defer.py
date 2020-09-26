@@ -167,6 +167,8 @@ def maybeDeferred(f, *args, **kw):
 
     if isinstance(result, Deferred):
         return result
+    elif iscoroutine(result):
+        return _cancellableInlineCallbacks(result)
     elif isinstance(result, failure.Failure):
         return fail(result)
     else:
