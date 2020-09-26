@@ -700,6 +700,61 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         d.errback(failure.Failure(RuntimeError()))
         self.assertImmediateFailure(d2, RuntimeError)
 
+    def test_maybeDeferredCoroutineSync(self):
+        """
+        L{defer.maybeDeferred} converts a coroutine that immediately returns
+        into a fired L{Deferred}.
+        """
+        async def coro():
+            return 1234
+
+        d = defer.maybeDeferred(coro)
+        self.assertEqual(1234, self.successResultOf(d))
+
+    def test_maybeDeferredCoroutineSyncFailure(self):
+        """
+        L{defer.maybeDeferred} converts a coroutine that immediately raises an
+        exception into a failed L{Deferred}.
+        """
+        async def coro():
+            raise IndentationError()
+
+        d = defer.maybeDeferred(coro)
+        self.failureResultOf(d, IndentationError)
+
+    def test_maybeDeferredCoroutineAsync(self):
+        """
+        L{defer.maybeDeferred} converts a coroutine that awaits a L{Deferred}
+        into a deferred that fires with the result of the awaited deferred.
+        """
+        d = defer.Deferred()
+
+        async def coro():
+            return await d
+
+        d2 = defer.maybeDeferred(coro)
+        self.assertNoResult(d2)
+
+        d.callback(2345)
+        self.assertEqual(2345, self.successResultOf(d2))
+
+    def test_maybeDeferredCoroutineAsyncFailure(self):
+        """
+        L{defer.maybeDeferred} converts a coroutine that awaits a L{Deferred}
+        into a deferred that fires with the result of the awaited deferred,
+        passing through any failure.
+        """
+        d = defer.Deferred()
+
+        async def coro():
+            return await d
+
+        d2 = defer.maybeDeferred(coro)
+        self.assertNoResult(d2)
+
+        d.errback(IndentationError())
+        self.failureResultOf(d2, IndentationError)
+
     def test_innerCallbacksPreserved(self):
         """
         When a L{Deferred} encounters a result which is another L{Deferred}
