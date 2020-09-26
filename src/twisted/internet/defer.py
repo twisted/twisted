@@ -145,7 +145,8 @@ def maybeDeferred(f, *args, **kw):
     Invoke a function that may or may not return a L{Deferred}.
 
     Call the given function with the given arguments.  If the returned
-    object is a L{Deferred}, return it.  If the returned object is a L{Failure},
+    object is a L{Deferred}, return it.  If the returned object is a coroutine,
+    execute it per L{ensureDeferred}.  If the returned object is a L{Failure},
     wrap it with L{fail} and return it.  Otherwise, wrap it in L{succeed} and
     return it.  If an exception is raised, convert it to a L{Failure}, wrap it
     in L{fail}, and then return it.
