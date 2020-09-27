@@ -13,27 +13,6 @@ Maintainer: Glyph Lefkowitz
 
 @var _CONTINUE: A marker left in L{Deferred.callback}s to indicate a Deferred
     chain.  Always accompanied by a Deferred instance in the args tuple pointing
-5 conflicting files
-defer.py
-src/twisted/internet/defer.py
-test_asyncioreactor.py
-.../internet/test/test_asyncioreactor.py
-_setup.py
-src/twisted/python/_setup.py
-test_setup.py
-src/twisted/python/test/test_setup.py
-test_defer.py
-src/twisted/test/test_defer.py
-src/twisted/internet/defer.py
-1 conflict
-
-1
-
-# -*- test-case-name: twisted.test.test_defer -*-
-
-2
-
-# Copyright (c) Twisted Matrix Laboratories.
     at the Deferred which is chained to the Deferred which has this marker.
 """
 
