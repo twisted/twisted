@@ -117,7 +117,7 @@ The branch must be available for one week's time.
     The announcement forum for incompatible changes and the waiting period required are subject to change as we discover how effective this method is; the important aspect of this policy is that users have some way of finding out in advance about changes which might affect them.
 
 
-Compatible Changes. Changed not Covered by the Compatibility Policy
+Compatible Changes. Changes not Covered by the Compatibility Policy
 -------------------------------------------------------------------
 
 Here is a non-exhaustive list of changes which are not covered by the compatibility policy.
