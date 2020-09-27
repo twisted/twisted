@@ -8,7 +8,7 @@ Support for generic select()able objects.
 
 
 from socket import AF_INET, AF_INET6, inet_pton, error
-from typing import List, Sequence
+from typing import List, Optional, Sequence
 
 from zope.interface import implementer
 
@@ -16,6 +16,11 @@ from zope.interface import implementer
 from twisted.python.compat import lazyByteSlice
 from twisted.python import reflect, failure
 from twisted.internet import interfaces, main
+
+
+def _dataMustBeBytes(obj):
+    if not isinstance(obj, bytes):  # no, really, I mean it
+        raise TypeError("Data must be bytes")
 
 
 # Python 3.4+ can join bytes and memoryviews; using a
@@ -169,7 +174,7 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
 
     SEND_LIMIT = 128 * 1024
 
-    def __init__(self, reactor: interfaces.IReactorFDSet = None):
+    def __init__(self, reactor: Optional[interfaces.IReactorFDSet] = None):
         """
         @param reactor: An L{IReactorFDSet} provider which this descriptor will
             use to get readable and writeable event notifications.  If no value
@@ -347,8 +352,7 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
         buffer and this descriptor has a registered streaming producer, its
         C{pauseProducing()} method will be called.
         """
-        if isinstance(data, str):  # no, really, I mean it
-            raise TypeError("Data must not be string")
+        _dataMustBeBytes(data)
         if not self.connected or self._writeDisconnected:
             return
         if data:
@@ -374,8 +378,7 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
         data is written to the underlying file descriptor.
         """
         for i in iovec:
-            if isinstance(i, str):  # no, really, I mean it
-                raise TypeError("Data must not be string")
+            _dataMustBeBytes(i)
         if not self.connected or not iovec or self._writeDisconnected:
             return
         self._tempDataBuffer.extend(iovec)

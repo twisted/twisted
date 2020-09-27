@@ -18,9 +18,11 @@ from twisted.internet import defer
 from twisted.cred import checkers, credentials, portal, error
 
 try:
-    from crypt import crypt
+    from crypt import crypt as _crypt
 except ImportError:
-    crypt = None  # type: ignore[assignment,misc]
+    crypt = None
+else:
+    crypt = _crypt
 
 
 # The Twisted version in which UsernameHashedPassword is first deprecated.

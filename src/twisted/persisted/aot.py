@@ -447,8 +447,6 @@ class AOTUnjellier:
             else:
                 raise TypeError("Unsupported AOT type: %s" % t)
 
-        del self.stack[-1]
-
     def unjelly(self, ao):
         try:
             l = [None]

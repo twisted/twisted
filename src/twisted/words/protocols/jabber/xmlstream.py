@@ -40,11 +40,14 @@ from twisted.words.xish.xmlstream import STREAM_END_EVENT
 from twisted.words.xish.xmlstream import STREAM_ERROR_EVENT
 
 try:
-    from twisted.internet import ssl
+    from twisted.internet import ssl as _ssl
 except ImportError:
-    ssl = None  # type: ignore[assignment]
-if ssl and not ssl.supported:
-    ssl = None  # type: ignore[assignment]
+    ssl = None
+else:
+    if not _ssl.supported:
+        ssl = None
+    else:
+        ssl = _ssl
 
 STREAM_AUTHD_EVENT = intern("//event/stream/authd")
 INIT_FAILED_EVENT = intern("//event/xmpp/initfailed")

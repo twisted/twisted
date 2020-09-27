@@ -8,7 +8,7 @@ Very basic functionality for a Reactor implementation.
 
 
 import socket  # needed only for sync-dns
-from typing import Any, Callable, List
+from typing import Any, Callable, List, Optional
 from zope.interface import implementer, classImplements
 
 import sys
@@ -51,7 +51,7 @@ class DelayedCall:
     # enable .debug to record creator call stack, and it will be logged if
     # an exception occurs while the function is being run
     debug = False
-    _repr = None
+    _repr = None  # type: Optional[str]
 
     def __init__(self, time, func, args, kw, cancel, reset, seconds=runtimeSeconds):
         """

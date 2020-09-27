@@ -2116,7 +2116,7 @@ class WriteSequenceTestsMixin:
                 TypeError, server.transport.writeSequence, ["Unicode is not kosher"]
             )
 
-            self.assertEqual(str(exc), "Data must not be string")
+            self.assertEqual(str(exc), "Data must be bytes")
 
             server.transport.loseConnection()
 
@@ -3010,7 +3010,7 @@ class BuffersLogsTests(SynchronousTestCase):
                 self.assertFalse(self.events)
                 raise TestException()
 
-        self.assertEqual(1, len(self.events))
+        self.assertEqual(1, len(self.events))  # type: ignore[unreachable]
         [event] = self.events
         self.assertEqual(event["log_format"], "An event")
         self.assertEqual(event["log_namespace"], self.namespace)
@@ -3166,7 +3166,7 @@ class FileDescriptorReservationTests(SynchronousTestCase):
             with reservedFD:
                 raise AllowedException()
 
-        errors = self.flushLoggedErrors(SuppressedException)
+        errors = self.flushLoggedErrors(SuppressedException)  # type: ignore[unreachable]
         self.assertEqual(len(errors), 1)
 
 

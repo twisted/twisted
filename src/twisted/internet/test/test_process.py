@@ -41,17 +41,20 @@ _uidgidSkipReason = ""
 properEnv = dict(os.environ)
 properEnv["PYTHONPATH"] = os.pathsep.join(sys.path)
 try:
-    import resource
-    from twisted.internet import process
+    import resource as _resource
+    from twisted.internet import process as _process
 
     if os.getuid() != 0:
         _uidgidSkip = True
         _uidgidSkipReason = "Cannot change UID/GID except as root"
 except ImportError:
-    resource = None  # type: ignore[assignment]
-    process = None  # type: ignore[assignment]
+    resource = None
+    process = None
     _uidgidSkip = True
     _uidgidSkipReason = "Cannot change UID/GID on Windows"
+else:
+    resource = _resource
+    process = _process
 
 
 def onlyOnPOSIX(testMethod):

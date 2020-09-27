@@ -51,8 +51,8 @@ def redirectTo(URL: bytes, request) -> bytes:
             def render_GET(self, request):
                 return redirectTo(b"http://example.com/", request)
     """
-    if isinstance(URL, str):
-        raise TypeError("Unicode object not allowed as URL")
+    if not isinstance(URL, bytes):
+        raise TypeError("URL must be bytes")
     request.setHeader(b"Content-Type", b"text/html; charset=utf-8")
     request.redirect(URL)
     # FIXME: The URL should be HTML-escaped.

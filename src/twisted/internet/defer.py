@@ -38,19 +38,21 @@ src/twisted/internet/defer.py
 """
 
 
-import attr
+from asyncio import iscoroutine
+from functools import wraps
+from sys import exc_info, version_info
 import traceback
 import types
+from typing import Optional
 import warnings
-from asyncio import iscoroutine
-from sys import exc_info, version_info
-from functools import wraps
+
+import attr
 from incremental import Version
 
 # Twisted imports
-from twisted.python.compat import cmp, comparable
-from twisted.python import lockfile, failure
 from twisted.logger import Logger
+from twisted.python import lockfile, failure
+from twisted.python.compat import cmp, comparable
 from twisted.python.deprecate import warnAboutFunction, deprecated
 
 try:
@@ -295,7 +297,7 @@ class Deferred:
     # sets it directly.
     debug = False
 
-    _chainedTo = None
+    _chainedTo = None  # type: Optional[Deferred]
 
     def __init__(self, canceller=None):
         """

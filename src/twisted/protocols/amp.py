@@ -200,7 +200,7 @@ import types, warnings
 
 from io import BytesIO
 from struct import pack
-from typing import Any, Callable, Dict, List, Tuple, Type, Union
+from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
 import datetime
 import decimal
 from functools import partial
@@ -222,6 +222,7 @@ from twisted.internet.main import CONNECTION_LOST
 from twisted.internet.error import PeerVerifyError, ConnectionLost
 from twisted.internet.error import ConnectionClosed
 from twisted.internet.defer import Deferred, maybeDeferred, fail
+from twisted.internet.protocol import Protocol
 from twisted.protocols.basic import Int16StringReceiver, StatefulStringProtocol
 from twisted.python.compat import nativeString
 
@@ -2290,7 +2291,7 @@ class BinaryBoxProtocol(
 
     hostCertificate = None
     noPeerCertificate = False  # for tests
-    innerProtocol = None
+    innerProtocol = None  # type: Optional[Protocol]
     innerProtocolClientFactory = None
 
     def __init__(self, boxReceiver):
