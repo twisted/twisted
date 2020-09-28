@@ -184,7 +184,7 @@ Representations
 ^^^^^^^^^^^^^^^
 
 The printable representaions of objects, as returned by ``repr(object)`` and defined by ``def __repr__(self):`` are for debugging and informational purposes.
-Because of this, no application may depend on any object defined by Twisted to provide repr compatability between any release.
+Because of this, no application may depend on any object defined by Twisted to provide repr compatibility between any release.
 
 
 Changes Covered by the Compatibility Policy
