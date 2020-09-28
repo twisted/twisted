@@ -188,7 +188,7 @@ Because of this, applications must not depend on any object defined by Twisted t
 descriptors, slots and weakrefs
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 How an object's attributes are defined and accessed is considered an implementation detail.
-To allow backwards compatibility and attribute may be moved from the instance ``__dict__`` into
+To allow backwards compatibility an attribute may be moved from the instance ``__dict__`` into
 an ``@property`` or other descriptor based accessor.
 
 Assigning attributes to a constructed object, or monkey patching, is not considered a public use. This is to allow creating frozen and/or slotted classes. However if an object is weak referencable, an application may relay on it to remain weak referencable
