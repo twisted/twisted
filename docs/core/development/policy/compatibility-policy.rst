@@ -162,7 +162,7 @@ The most basic thing that can happen between Twisted versions, of course, is tha
 That means that no application may ever rely on, for example, the value of any **func_code** object's **co_code** attribute remaining stable, or the **checksum** of a .py file remaining stable.
 
 **Docstrings** may also change at any time.
-Applications must not depend on any Twisted class, module, or method's ``__doc__`` attribute to remain the same.
+Applications must not depend on any Twisted class, module, or method's metadata attributes such as ``__module__``, ``__name__``, ``__qualname__``, ``__annotations__`` and ``__doc__`` to remain the same.
 
 
 New Attributes
