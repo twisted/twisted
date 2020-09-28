@@ -191,7 +191,7 @@ How an object's attributes are defined and accessed is considered an implementat
 To allow backwards compatibility an attribute may be moved from the instance ``__dict__`` into
 an ``@property`` or other descriptor based accessor.
 
-Assigning attributes to a constructed object, or monkey patching, is not considered a public use. This is to allow creating frozen and/or slotted classes. However if an object is weak referencable, an application may relay on it to remain weak referencable
+Assigning attributes to a constructed object, or monkey patching, is not considered a public use. This is to allow creating frozen and/or slotted classes. However if an object is weak referencable, an application may depend on it remaining weak referencable
 Because of this, applications must not depend on any object defined by Twisted to provide ``__dict__`` or ``__slots__`` compatibility between any release.
 
 Changes Covered by the Compatibility Policy
