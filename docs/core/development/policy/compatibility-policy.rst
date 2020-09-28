@@ -183,7 +183,7 @@ Because of this, applications must not depend on any object defined by Twisted t
 Representations
 ^^^^^^^^^^^^^^^
 
-The printable representations of objects, as returned by ``repr(obj, /)`` and defined by ``def __repr__(self):`` are for debugging and informational purposes.
+The printable representations of objects, as returned by ``repr(<object>)`` and defined by ``def __repr__(self):`` are for debugging and informational purposes.
 Because of this, applications must not depend on any object defined by Twisted to provide repr compatibility between any release.
 descriptors, slots and weakrefs
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
