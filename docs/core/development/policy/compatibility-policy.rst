@@ -162,14 +162,14 @@ The most basic thing that can happen between Twisted versions, of course, is tha
 That means that no application may ever rely on, for example, the value of any **func_code** object's **co_code** attribute remaining stable, or the **checksum** of a .py file remaining stable.
 
 **Docstrings** may also change at any time.
-No application code may expect any Twisted class, module, or method's __doc__ attribute to remain the same.
+Applications must not depend on any Twisted class, module, or method's ``__doc__`` attribute to remain the same.
 
 
 New Attributes
 ^^^^^^^^^^^^^^
 
 New code may also be added.
-No application may ever rely on the output of the ``dir()`` function on any object remaining stable, nor on any object's ``__all__`` attribute, nor on any object's ``__dict__`` not having new keys added to it.
+Applications must not depend on the output of the ``dir()`` function on any object remaining stable, nor on any object's ``__all__`` attribute, nor on any object's ``__dict__`` not having new keys added to it.
 These may happen in any maintenance or bugfix release, no matter how minor.
 
 
@@ -177,14 +177,14 @@ Pickling
 ^^^^^^^^
 
 Even though Python objects can be pickled and unpickled without explicit support for this, whether a particular pickled object can be unpickled after any particular change to the implementation of that object is less certain.
-Because of this, no application may depend on any object defined by Twisted to provide pickle compatibility between any release unless the object explicitly documents this as a feature it has.
+Because of this, applications must not depend on any object defined by Twisted to provide pickle compatibility between any release unless the object explicitly documents this as a feature it has.
 
 
 Representations
 ^^^^^^^^^^^^^^^
 
 The printable representaions of objects, as returned by ``repr(object)`` and defined by ``def __repr__(self):`` are for debugging and informational purposes.
-Because of this, no application may depend on any object defined by Twisted to provide repr compatibility between any release.
+Because of this, applications must not depend on any object defined by Twisted to provide repr compatibility between any release.
 
 
 Changes Covered by the Compatibility Policy
