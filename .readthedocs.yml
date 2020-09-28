@@ -1,0 +1,16 @@
+version: 2
+
+sphinx:
+  builder: html
+  fail_on_warning: true
+
+formats:
+  - pdf
+  - epub
+
+python:
+  version: 2.7
+  system_packages: False
+  install:
+    - method: setuptools
+      path: .
