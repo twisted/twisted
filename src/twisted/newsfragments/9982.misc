@@ -1,1 +1,1 @@
-Exempt ``__repr__``s from compatability policy.
+Exempt ``__repr__``s from compatibility policy.
