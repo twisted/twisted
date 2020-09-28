@@ -9,8 +9,8 @@ formats:
   - epub
 
 python:
-  version: 2.7
+  version: 3.8
   system_packages: False
   install:
-    - method: setuptools
+    - method: pip
       path: .
