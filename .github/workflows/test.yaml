@@ -10,7 +10,7 @@ jobs:
   testing:
     runs-on: ubuntu-20.04
     env:
-      TOXENV: "wheels,alldeps-withcov-posix,coverage-prepare,codecov-push,coveralls-push"
+      TOXENV: "alldeps-withcov-posix,coverage-prepare,codecov-push,coveralls-push"
     strategy:
       matrix:
           python-version: [3.5, 3.6, 3.7, 3.8, 3.9.0-rc.2, pypy3]
@@ -61,7 +61,7 @@ jobs:
     runs-on: ubuntu-20.04
     env:
       DISABLE_IPV6: yes
-      TOXENV: "wheels,alldeps-withcov-posix,coverage-prepare,codecov-push,coveralls-push"
+      TOXENV: "alldeps-withcov-posix,coverage-prepare,codecov-push,coveralls-push"
     strategy:
       matrix:
           python-version: [3.6]
