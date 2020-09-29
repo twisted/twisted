@@ -1323,9 +1323,6 @@ class TCP4EndpointsTests(EndpointTestCaseMixin, unittest.TestCase):
         """
         address = IPv4Address("TCP", "0.0.0.0", 0)
 
-        if listenArgs is None:
-            listenArgs = {}
-
         return (
             endpoints.TCP4ServerEndpoint(reactor, address.port, **listenArgs),
             (
@@ -1437,9 +1434,6 @@ class TCP6EndpointsTests(EndpointTestCaseMixin, unittest.TestCase):
         """
         interface = listenArgs.get("interface", "::")
         address = IPv6Address("TCP", interface, 0)
-
-        if listenArgs is None:
-            listenArgs = {}
 
         return (
             endpoints.TCP6ServerEndpoint(reactor, address.port, **listenArgs),
@@ -2810,9 +2804,6 @@ class SSL4EndpointsTests(EndpointTestCaseMixin, unittest.TestCase):
             L{IReactorSSL.connectSSL}
         """
         address = IPv4Address("TCP", "localhost", 80)
-
-        if connectArgs is None:
-            connectArgs = {}
 
         return (
             endpoints.SSL4ClientEndpoint(
