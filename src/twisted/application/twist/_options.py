@@ -8,11 +8,11 @@ Command line options for C{twist}.
 
 from sys import stdout, stderr
 from textwrap import dedent
+import typing
 from typing import (
     Callable,
     Iterable,
     Mapping,
-    NoReturn,
     Optional,
     Sequence,
     Tuple,
@@ -55,7 +55,7 @@ class TwistOptions(Options):
     def getSynopsis(self) -> str:
         return "{} plugin [plugin_options]".format(Options.getSynopsis(self))
 
-    def opt_version(self) -> NoReturn:
+    def opt_version(self) -> "typing.NoReturn":
         """
         Print version and exit.
         """
