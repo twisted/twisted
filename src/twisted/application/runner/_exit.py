@@ -8,7 +8,7 @@ System exit support.
 
 from enum import IntEnum
 from sys import stdout, stderr, exit as sysexit
-from typing import NoReturn, Optional, Union
+from typing import NoReturn, Union
 
 
 try:
