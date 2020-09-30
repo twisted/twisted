@@ -86,7 +86,7 @@ def exit(status: Union[int, ExitStatus], message: Optional[str] = None) -> NoRet
 
     @param status: An exit status. An appropriate value from L{ExitStatus} is
         recommended.
-    @param message: An options message to print.
+    @param message: An optional message to print.
     """
     if message:
         if status == ExitStatus.EX_OK:
