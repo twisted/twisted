@@ -190,7 +190,7 @@ class TwistOptions(Options):
             # Don't pass plugin.options along in order to avoid resolving the
             # options attribute right away, in case it's a property with a
             # non-trivial getter (eg, one which imports modules).
-            def options(plugin: IServiceMaker) -> Options:
+            def options(plugin: IServiceMaker = plugin) -> Options:
                 return cast(Options, plugin.options())
 
             yield (plugin.tapname, None, options, plugin.description)
