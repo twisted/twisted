@@ -80,7 +80,7 @@ class ExitStatus(IntEnum):
     EX_CONFIG = Status.EX_CONFIG
 
 
-def exit(status: Union[int, ExitStatus], message: Optional[str] = None) -> NoReturn:
+def exit(status: Union[int, ExitStatus], message: str = "") -> NoReturn:
     """
     Exit the python interpreter with the given status and an optional message.
 
