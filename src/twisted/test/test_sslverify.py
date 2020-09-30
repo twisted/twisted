@@ -138,7 +138,7 @@ def counter(counter=itertools.count()):
 
 def makeCertificate(**kw):
     keypair = PKey()
-    keypair.generate_key(TYPE_RSA, 1024)
+    keypair.generate_key(TYPE_RSA, 2048)
 
     certificate = X509()
     certificate.gmtime_adj_notBefore(0)
