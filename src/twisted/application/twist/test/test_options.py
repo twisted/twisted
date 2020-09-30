@@ -6,7 +6,7 @@ Tests for L{twisted.application.twist._options}.
 """
 
 from sys import stdout, stderr
-from typing import Any, Callable, Dict, List, Optional, TextIO, Tuple
+from typing import Callable, Dict, List, Optional, TextIO, Tuple
 
 from ...reactors import NoSuchReactor
 from twisted.copyright import version
