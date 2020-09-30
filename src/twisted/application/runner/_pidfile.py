@@ -86,7 +86,7 @@ class IPIDFile(Interface):
 @implementer(IPIDFile)
 class PIDFile:
     """
-    Concrete implementation of L{IPIDFile} based on C{FilePath}.
+    Concrete implementation of L{IPIDFile}.
 
     This implementation is presently not supported on non-POSIX platforms.
     Specifically, calling L{PIDFile.isRunning} will raise
