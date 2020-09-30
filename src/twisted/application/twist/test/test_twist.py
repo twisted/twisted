@@ -86,9 +86,11 @@ class TwistTests(twisted.trial.unittest.TestCase):
         self.assertTrue(
             self.exit.message.startswith("Error: ")  # type: ignore[union-attr]
         )
-        self.assertTrue(self.exit.message.endswith(  # type: ignore[union-attr]
-            "\n\n{}".format(TwistOptions())
-        ))
+        self.assertTrue(
+            self.exit.message.endswith(  # type: ignore[union-attr]
+                "\n\n{}".format(TwistOptions())
+            )
+        )
 
     def test_service(self) -> None:
         """
