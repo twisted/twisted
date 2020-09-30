@@ -1764,18 +1764,18 @@ class OpenSSLOptionsECDHIntegrationTests(OpenSSLOptionsTestsMixin, TestCase):
         # and OpenSSL only supports ECHDE groups with TLS 1.3:
         # https://wiki.openssl.org/index.php/TLS1.3#Groups
         #
-        # so TLS 1.3 implies ECDHE.  Force this test to use TLS 1.2 to
+        # so TLS 1.3 implies ECDHE.  Force this test to use TLS 1.3 to
         # ensure ECDH is selected when it might not be.
         self.loopback(
             sslverify.OpenSSLCertificateOptions(
                 privateKey=self.sKey,
                 certificate=self.sCert,
                 requireCertificate=False,
-                lowerMaximumSecurityTo=sslverify.TLSVersion.TLSv1_2,
+                lowerMaximumSecurityTo=sslverify.TLSVersion.TLSv1_3,
             ),
             sslverify.OpenSSLCertificateOptions(
                 requireCertificate=False,
-                lowerMaximumSecurityTo=sslverify.TLSVersion.TLSv1_2,
+                lowerMaximumSecurityTo=sslverify.TLSVersion.TLSv1_3,
             ),
             onData=onData,
         )
