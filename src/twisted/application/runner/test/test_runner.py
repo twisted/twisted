@@ -333,7 +333,7 @@ class RunnerTests(twisted.trial.unittest.TestCase):
         arguments = dict(a=object(), b=object(), c=object())
         argumentsSeen = []
 
-        def hook(**arguments: Any) -> None:
+        def hook(**arguments: object) -> None:
             argumentsSeen.append(arguments)
 
         runnerArguments = {
