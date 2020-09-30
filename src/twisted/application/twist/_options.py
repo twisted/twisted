@@ -8,7 +8,16 @@ Command line options for C{twist}.
 
 from sys import stdout, stderr
 from textwrap import dedent
-from typing import Callable, Iterable, List, Mapping, NoReturn, Optional, Tuple, cast
+from typing import (
+    Callable,
+    Iterable,
+    Mapping,
+    NoReturn,
+    Optional,
+    Sequence,
+    Tuple,
+    cast,
+)
 
 from twisted.copyright import version
 from twisted.internet.interfaces import IReactorCore
@@ -152,7 +161,7 @@ class TwistOptions(Options):
                 self["fileLogObserverFactory"] = jsonFileLogObserver
                 self["logFormat"] = "json"
 
-    def parseOptions(self, options: Optional[List[str]] = None) -> None:
+    def parseOptions(self, options: Optional[Sequence[str]] = None) -> None:
         self.selectDefaultLogObserver()
 
         Options.parseOptions(self, options=options)
@@ -161,14 +170,14 @@ class TwistOptions(Options):
             self["reactor"] = self.installReactor(self["reactorName"])
 
     @property
-    def plugins(self) -> Mapping[str, IServiceMaker]:
+    def plugins(self) -> Mapping[Optional[str], IServiceMaker]:
         if "plugins" not in self:
             plugins = {}
             for plugin in getPlugins(IServiceMaker):
                 plugins[plugin.tapname] = plugin
             self["plugins"] = plugins
 
-        return cast(Mapping[str, IServiceMaker], self["plugins"])
+        return cast(Mapping[Optional[str], IServiceMaker], self["plugins"])
 
     @property
     def subCommands(

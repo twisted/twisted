@@ -149,9 +149,9 @@ class Options(dict):
     or doc/core/howto/options.xhtml in your Twisted directory.
     """
 
-    subCommand = None
-    defaultSubCommand = None
-    parent = None
+    subCommand = None  # type: Optional[str]
+    defaultSubCommand = None  # type: Optional[str]
+    parent = None  # type: Optional[Options]
     completionData = None
     _shellCompFile = sys.stdout  # file to use if shell completion is requested
 
