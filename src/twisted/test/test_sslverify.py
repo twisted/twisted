@@ -333,7 +333,7 @@ def loopbackTLSConnection(trustRoot, privateKeyFile, chainedCertFile=None):
             @return: an SSL context using a certificate and key.
             @rtype: C{OpenSSL.SSL.Context}
             """
-            ctx = SSL.Context(SSL.TLSv1_METHOD)
+            ctx = SSL.Context(SSL.SSLv23_METHOD)
             if chainedCertFile is not None:
                 ctx.use_certificate_chain_file(chainedCertFile)
             ctx.use_privatekey_file(privateKeyFile)
