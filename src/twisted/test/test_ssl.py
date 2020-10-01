@@ -161,7 +161,7 @@ def generateCertificateObjects(organization, organizationalUnit):
     @return: a tuple of (key, request, certificate) objects.
     """
     pkey = crypto.PKey()
-    pkey.generate_key(crypto.TYPE_RSA, 1024)
+    pkey.generate_key(crypto.TYPE_RSA, 2048)
     req = crypto.X509Req()
     subject = req.get_subject()
     subject.O = organization
