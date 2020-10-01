@@ -70,39 +70,11 @@ jobs:
       - store_artifacts:
           path: wheelhouse/
 
-  #
-  # Documentation tests are slow so we execute them in a separate job.
-  #
-  documentation:
-    working_directory: ~/documentation
-    docker:
-      - image: circleci/python:3.6
-    environment:
-      PYTHON: python3
-    steps:
-      # Get the source.
-      - checkout
-
-      - <<: *preparation_run_group
-
-      - run:
-          name: Check the narrative documentation.
-          command: |
-            venv/bin/tox -r -e narrativedocs
-
-      - run:
-          name: Check the API documentation.
-          command: |
-            venv/bin/tox -r -e apidocs
-
 # First we run the static checkers, and only if they pass we spin the macOS.
 # in this way we should save some macOS minutes as we only have 1000h per month.
 workflows:
   version: 2
   all-tests:
     jobs:
-      - documentation
       - linux-wheels
-      - osx-wheels:
-          requires:
-            - documentation
+      - osx-wheels
