@@ -8,7 +8,8 @@ System exit support.
 
 from enum import IntEnum
 from sys import stdout, stderr, exit as sysexit
-from typing import NoReturn, Union
+import typing
+from typing import Union
 
 
 try:
@@ -80,7 +81,7 @@ class ExitStatus(IntEnum):
     EX_CONFIG = Status.EX_CONFIG
 
 
-def exit(status: Union[int, ExitStatus], message: str = "") -> NoReturn:
+def exit(status: Union[int, ExitStatus], message: str = "") -> "typing.NoReturn":
     """
     Exit the python interpreter with the given status and an optional message.
 
