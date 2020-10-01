@@ -16,11 +16,14 @@ connections, listeners or connectors are added)::
    kqreactor.install()
 """
 
+import sys
+
+# For mypy's benefit
+assert not sys.platform.startswith("linux")
 
 import errno
 import select
-
-from select import (  # type: ignore[attr-defined]
+from select import (
     KQ_EV_ADD,
     KQ_EV_DELETE,
     KQ_EV_EOF,
