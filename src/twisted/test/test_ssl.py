@@ -244,13 +244,13 @@ if SSL is not None:
     class ServerTLSContext(ssl.DefaultOpenSSLContextFactory):
         """
         A context factory with a default method set to
-        L{OpenSSL.SSL.TLSv1_METHOD}.
+        L{OpenSSL.SSL.SSLv23_METHOD}.
         """
 
         isClient = False
 
         def __init__(self, *args, **kw):
-            kw["sslmethod"] = SSL.TLSv1_METHOD
+            kw["sslmethod"] = SSL.SSLv23_METHOD
             ssl.DefaultOpenSSLContextFactory.__init__(self, *args, **kw)
 
 
