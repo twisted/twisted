@@ -20,8 +20,13 @@ connections, listeners or connectors are added)::
 import errno
 import select
 
-from select import KQ_FILTER_READ, KQ_FILTER_WRITE
-from select import KQ_EV_DELETE, KQ_EV_ADD, KQ_EV_EOF
+from select import (  # type: ignore[attr-defined]
+    KQ_EV_ADD,
+    KQ_EV_DELETE,
+    KQ_EV_EOF,
+    KQ_FILTER_READ,
+    KQ_FILTER_WRITE,
+)
 
 from zope.interface import implementer, declarations, Interface, Attribute
 
