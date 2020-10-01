@@ -31,10 +31,6 @@ jobs:
     - services:
         - docker
       env: PIP=pip TOXENV=wheels
-    # We need a builder without IPv6. This is going to be slower than all the
-    # others, but that's ok.
-    - python: pypy3
-      env: TOXENV=pypy-nodeps-withcov-posix,coverage-prepare,codecov-push,coveralls-push PYPY_VERSION=pypy3.6-7.3.0
 
 addons:
   apt:
