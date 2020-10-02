@@ -38,7 +38,7 @@ class Platform:
     """
 
     type = knownPlatforms.get(os.name)
-    seconds = staticmethod(_timeFunctions.get(type, time.time))  # noqa
+    seconds = staticmethod(_timeFunctions.get(type, time.time))
     _platform = sys.platform
 
     def __init__(self, name=None, platform=None):
