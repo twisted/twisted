@@ -12,7 +12,7 @@ See the constructor of L{ZipArchive} for use.
 import errno
 import os
 import time
-from typing import Dict, List
+from typing import Dict
 
 from zipfile import ZipFile
 

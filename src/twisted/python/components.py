@@ -31,7 +31,7 @@ interface.
 
 
 from io import StringIO
-from typing import Dict, Callable
+from typing import Dict
 
 # zope3 imports
 from zope.interface import interface, declarations
