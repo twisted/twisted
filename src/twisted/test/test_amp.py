@@ -88,18 +88,18 @@ class TestProto(protocol.Protocol):
 
 
 class SimpleSymmetricProtocol(amp.AMP):
-    def sendHello(self, text):
+    def sendHello(self, text: bytes):
         return self.callRemoteString(b"hello", hello=text)
 
-    def amp_HELLO(self, box):
+    def amp_HELLO(self, box: amp.AmpBox):
         return amp.Box(hello=box[b"hello"])
 
 
 class SimpleSymmetricProtocol2(amp.AMPv2):
-    def sendHello(self, text):
+    def sendHello(self, text: bytes):
         return self.callRemoteString(b"hello", hello=text)
 
-    def amp_HELLO(self, box):
+    def amp_HELLO(self, box: amp.AmpBox):
         return amp.Box(hello=box[b"hello"])
 
 

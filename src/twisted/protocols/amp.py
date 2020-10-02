@@ -658,7 +658,7 @@ class AmpBox(dict):
         newBox.update(self)
         return newBox
 
-    def serialize(self, version2=False):
+    def serialize(self, version2: bool = False):
         """
         Convert me into a wire-encoded string.
 
@@ -2368,7 +2368,7 @@ class BinaryBoxProtocol(
         else:
             self._write_box(box)
 
-    def _write_box(self, box):
+    def _write_box(self, box: AmpBox):
         self.transport.write(box.serialize())
 
     def makeConnection(self, transport):
@@ -2635,10 +2635,10 @@ class AMP(BinaryBoxProtocol, BoxDispatcher, CommandLocator, SimpleStringLocator)
 
 
 class AMPv2(AMP):
-    def _write_box(self, box):
+    def _write_box(self, box: AmpBox):
         self.transport.write(box.serialize(version2=True))
 
-    def proto_value(self, string):
+    def proto_value(self, string: bytes):
         # Regular value in one segment
         if len(string) < MAX_VALUE_LENGTH:
             self._currentBox[self._currentKey] = string
@@ -2649,7 +2649,7 @@ class AMPv2(AMP):
         self._currentValue = [string]
         return "valuecont"
 
-    def proto_valuecont(self, string):
+    def proto_valuecont(self, string: bytes):
         self._currentValue.append(string)
 
         if len(string) == MAX_VALUE_LENGTH:
