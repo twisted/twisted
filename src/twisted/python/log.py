@@ -7,11 +7,12 @@ Logging and metrics infrastructure.
 """
 
 
+from abc import ABC, abstractmethod
+from datetime import datetime
 import sys
 import time
+from typing import Dict, Optional
 import warnings
-
-from datetime import datetime
 
 from zope.interface import Interface
 
@@ -444,25 +445,33 @@ def textFromEventDict(eventDict):
     return text
 
 
-class _GlobalStartStopMixIn:
+class _GlobalStartStopObserver(ABC):
     """
     Mix-in for global log observers that can start and stop.
     """
 
-    def start(self):
+    @abstractmethod
+    def emit(self, eventDict: Dict[str, object]) -> None:
+        """
+        Emit the given log event.
+
+        @param eventDict: a log event
+        """
+
+    def start(self) -> None:
         """
         Start observing log events.
         """
         addObserver(self.emit)
 
-    def stop(self):
+    def stop(self) -> None:
         """
         Stop observing log events.
         """
         removeObserver(self.emit)
 
 
-class FileLogObserver(_GlobalStartStopMixIn):
+class FileLogObserver(_GlobalStartStopObserver):
     """
     Log observer that writes to a file-like object.
 
@@ -470,7 +479,7 @@ class FileLogObserver(_GlobalStartStopMixIn):
     @ivar timeFormat: If not L{None}, the format string passed to strftime().
     """
 
-    timeFormat = None
+    timeFormat = None  # type: Optional[str]
 
     def __init__(self, f):
         # Compatibility
@@ -529,7 +538,7 @@ class FileLogObserver(_GlobalStartStopMixIn):
             tzMin,
         )
 
-    def emit(self, eventDict):
+    def emit(self, eventDict: Dict[str, object]) -> None:
         """
         Format the given log event as text and write it to the output file.
 
@@ -548,7 +557,7 @@ class FileLogObserver(_GlobalStartStopMixIn):
         util.untilConcludes(self.flush)  # Hoorj!
 
 
-class PythonLoggingObserver(_GlobalStartStopMixIn):
+class PythonLoggingObserver(_GlobalStartStopObserver):
     """
     Output twisted messages to Python standard library L{logging} module.
 
@@ -565,7 +574,7 @@ class PythonLoggingObserver(_GlobalStartStopMixIn):
         """
         self._newObserver = NewSTDLibLogObserver(loggerName)
 
-    def emit(self, eventDict):
+    def emit(self, eventDict: Dict[str, object]) -> None:
         """
         Receive a twisted log entry, format it and bridge it to python.
 
@@ -706,7 +715,7 @@ if "logfile" not in globals():
     )
 
 
-class DefaultObserver(_GlobalStartStopMixIn):
+class DefaultObserver(_GlobalStartStopObserver):
     """
     Default observer.
 
@@ -716,7 +725,7 @@ class DefaultObserver(_GlobalStartStopMixIn):
 
     stderr = sys.stderr
 
-    def emit(self, eventDict):
+    def emit(self, eventDict: Dict[str, object]) -> None:
         """
         Emit an event dict.
 
