@@ -27,3 +27,20 @@ aliases:
         venv/bin/python -m pip install tox
         venv/bin/python -m pip freeze
         venv/bin/python --version
+
+jobs:
+  no-op:
+    docker:
+      - image: circleci/python:3.6
+    steps:
+      - setup_remote_docker
+      - run:
+          name: No-op
+          command: |
+            echo
+
+workflows:
+  version: 2
+  all-tests:
+    jobs:
+      - no-op
