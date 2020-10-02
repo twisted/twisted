@@ -2369,6 +2369,7 @@ class BinaryBoxProtocol(
             self._write_box(box)
 
     def _write_box(self, box: AmpBox):
+        """Send an AmpBox using the AMPv1 format."""
         self.transport.write(box.serialize())
 
     def makeConnection(self, transport):
@@ -2635,10 +2636,17 @@ class AMP(BinaryBoxProtocol, BoxDispatcher, CommandLocator, SimpleStringLocator)
 
 
 class AMPv2(AMP):
+    """
+    This protocol implements the AMP version 2 protocol that allows values longer than 65535 bytes.
+    """
+
     def _write_box(self, box: AmpBox):
+        """Send an AmpBox using the AMPv2 format."""
         self.transport.write(box.serialize(version2=True))
 
     def proto_value(self, string: bytes) -> str:
+        """Handle the first segment of a value."""
+
         # Regular value in one segment
         if len(string) < MAX_VALUE_LENGTH:
             self._currentBox[self._currentKey] = string
@@ -2650,6 +2658,8 @@ class AMPv2(AMP):
         return "valuecont"
 
     def proto_valuecont(self, string: bytes) -> str:
+        """Handle long values with more than one segment."""
+
         self._currentValue.append(string)
 
         if len(string) == MAX_VALUE_LENGTH:
