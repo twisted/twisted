@@ -893,7 +893,9 @@ class BoxDispatcher:
             result = None
         return result
 
-    def callRemoteString(self, command, requiresAnswer=True, **kw):
+    def callRemoteString(
+        self, command: bytes, requiresAnswer: bool = True, **kw: bytes
+    ) -> Deferred:
         """
         This is a low-level API, designed only for optimizing simple messages
         for which the overhead of parsing is too great.
@@ -2371,6 +2373,7 @@ class BinaryBoxProtocol(
 
     def _write_box(self, box: AmpBox) -> None:
         """Send an AmpBox using the AMPv1 format."""
+        assert self.transport is not None
         self.transport.write(box.serialize())
 
     def makeConnection(self, transport):
@@ -2645,6 +2648,7 @@ class AMPv2(AMP):
 
     def _write_box(self, box: AmpBox) -> None:
         """Send an AmpBox using the AMPv2 format."""
+        assert self.transport is not None
         self.transport.write(box.serialize(version2=True))
 
     def proto_value(self, string: bytes) -> str:
