@@ -1452,7 +1452,7 @@ class AMPTests(TestCase):
             ClientClass=SimpleSymmetricProtocol2,
         )
 
-        def test(length: int):
+        def test(length: int) -> None:
             x = b"H" * length
             c.sendHello(x).addCallback(lambda res: self.assertEqual(x, res[b"hello"]))
 

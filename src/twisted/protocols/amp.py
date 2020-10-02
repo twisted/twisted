@@ -2303,7 +2303,7 @@ class BinaryBoxProtocol(
     _startingTLSBuffer = None
     _locked = False
     _currentKey = None
-    _currentBox = None
+    _currentBox = None  # type: Optional[AmpBox]
 
     _keyLengthLimitExceeded = False
 
@@ -2639,6 +2639,8 @@ class AMPv2(AMP):
     """
     This protocol implements the AMP version 2 protocol that allows values longer than 65535 bytes.
     """
+
+    _currentValue = None  # type: Optional[List[bytes]]
 
     def _write_box(self, box: AmpBox) -> None:
         """Send an AmpBox using the AMPv2 format."""
