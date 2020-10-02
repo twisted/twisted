@@ -88,18 +88,18 @@ class TestProto(protocol.Protocol):
 
 
 class SimpleSymmetricProtocol(amp.AMP):
-    def sendHello(self, text: bytes):
+    def sendHello(self, text: bytes) -> defer.Deferred:
         return self.callRemoteString(b"hello", hello=text)
 
-    def amp_HELLO(self, box: amp.AmpBox):
+    def amp_HELLO(self, box: amp.AmpBox) -> amp.AmpBox:
         return amp.Box(hello=box[b"hello"])
 
 
 class SimpleSymmetricProtocol2(amp.AMPv2):
-    def sendHello(self, text: bytes):
+    def sendHello(self, text: bytes) -> defer.Deferred:
         return self.callRemoteString(b"hello", hello=text)
 
-    def amp_HELLO(self, box: amp.AmpBox):
+    def amp_HELLO(self, box: amp.AmpBox) -> amp.AmpBox:
         return amp.Box(hello=box[b"hello"])
 
 
@@ -1452,7 +1452,7 @@ class AMPTests(TestCase):
             ClientClass=SimpleSymmetricProtocol2,
         )
 
-        def test(length):
+        def test(length: int):
             x = b"H" * length
             c.sendHello(x).addCallback(lambda res: self.assertEqual(x, res[b"hello"]))
 
