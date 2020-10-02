@@ -95,6 +95,14 @@ class SimpleSymmetricProtocol(amp.AMP):
         return amp.Box(hello=box[b"hello"])
 
 
+class SimpleSymmetricProtocol2(amp.AMPv2):
+    def sendHello(self, text):
+        return self.callRemoteString(b"hello", hello=text)
+
+    def amp_HELLO(self, box):
+        return amp.Box(hello=box[b"hello"])
+
+
 class UnfriendlyGreeting(Exception):
     """Greeting was insufficiently kind."""
 
@@ -1434,6 +1442,30 @@ class AMPTests(TestCase):
         self.assertIn(str(len(x)), repr(tl))
         self.assertIn("value", repr(tl))
         self.assertIn("hello", repr(tl))
+
+    def test_longValueVersion2(self):
+        """
+        Verify that sending a long value works with AMP v2.
+        """
+        c, s, p = connectedServerAndClient(
+            ServerClass=SimpleSymmetricProtocol2,
+            ClientClass=SimpleSymmetricProtocol2,
+        )
+
+        def test(length):
+            x = b"H" * length
+            c.sendHello(x).addCallback(lambda res: self.assertEqual(x, res[b"hello"]))
+
+        test(123)
+        test(0xFFFF - 2)
+        test(0xFFFF - 1)
+        test(0xFFFF)
+        test(0xFFFF + 1)
+        test(0xFFFF + 2)
+        test(0xFFFE * 3)
+        test(0xFFFF * 3)
+        test(0x10000 * 3)
+        p.flush()
 
     def test_helloWorldCommand(self):
         """
