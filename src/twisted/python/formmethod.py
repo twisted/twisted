@@ -99,7 +99,7 @@ class String(Argument):
         s = str(val)
         if len(s) < self.min:
             raise InputError("Value must be at least %s characters long" % self.min)
-        if self.max != None and len(s) > self.max:
+        if self.max is not None and len(s) > self.max:
             raise InputError("Value must be at most %s characters long" % self.max)
         return str(val)
 
@@ -121,7 +121,7 @@ class VerifiedPassword(String):
         s = str(vals[0])
         if len(s) < self.min:
             raise InputError("Value must be at least %s characters long" % self.min)
-        if self.max != None and len(s) > self.max:
+        if self.max is not None and len(s) > self.max:
             raise InputError("Value must be at most %s characters long" % self.max)
         return s
 

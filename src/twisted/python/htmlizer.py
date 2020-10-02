@@ -54,7 +54,9 @@ class TokenPrinter:
                 else:
                     type = "variable"
         else:
-            type = tokenize.tok_name.get(type).lower()
+            type = tokenize.tok_name.get(type)
+            assert type is not None
+            type = type.lower()
         self.writer(token, type)
         self.currentCol = ecol
         self.currentLine += token.count(b"\n")
@@ -75,7 +77,7 @@ class HTMLWriter:
 
     def __init__(self, writer):
         self.writer = writer
-        noSpan = []
+        noSpan = []  # type: List[str]
         reflect.accumulateClassList(self.__class__, "noSpan", noSpan)
         self.noSpan = noSpan
 

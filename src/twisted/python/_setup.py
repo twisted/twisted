@@ -38,6 +38,7 @@ import os
 import platform
 import re
 import sys
+from typing import Any, Dict, cast
 
 from distutils.command import build_ext
 from distutils.errors import CompileError
@@ -68,7 +69,7 @@ STATIC_PACKAGE_METADATA = dict(
         "Programming Language :: Python :: 3.8",
     ],
     python_requires=">=3.5",
-)
+)  # type: Dict[str, Any]
 
 
 _dev = [
@@ -323,7 +324,7 @@ class build_ext_twisted(build_ext.build_ext):  # type: ignore[name-defined]  # n
         Check to see which extension modules to build and then build them.
         """
         self.prepare_extensions()
-        build_ext.build_ext.build_extensions(self)
+        build_ext.build_ext.build_extensions(self)  # type: ignore[attr-defined]
 
     def _remove_conftest(self):
         for filename in ("conftest.c", "conftest.o", "conftest.obj"):
@@ -355,7 +356,7 @@ class build_ext_twisted(build_ext.build_ext):  # type: ignore[name-defined]  # n
         return self._compile_helper("#include <{}>\n".format(header_name))
 
 
-def _checkCPython(sys=sys, platform=platform) -> bool:
+def _checkCPython(platform: Any = platform) -> bool:
     """
     Checks if this implementation is CPython.
 
@@ -368,7 +369,7 @@ def _checkCPython(sys=sys, platform=platform) -> bool:
     @return: C{False} if the implementation is definitely not CPython, C{True}
         otherwise.
     """
-    return platform.python_implementation() == "CPython"
+    return cast(bool, platform.python_implementation() == "CPython")
 
 
 _isCPython = _checkCPython()  # type: bool
