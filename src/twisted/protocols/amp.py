@@ -609,7 +609,7 @@ class IncompatibleVersions(AmpError):
 PROTOCOL_ERRORS = {UNHANDLED_ERROR_CODE: UnhandledCommand}
 
 
-class AmpBox(dict):
+class AmpBox(Dict[bytes, bytes]):
     """
     I am a packet in the AMP protocol, much like a
     regular bytes:bytes dictionary.
@@ -682,18 +682,19 @@ class AmpBox(dict):
             w(k)
 
             if version2:
-                v = BytesIO(v)
+                vio = BytesIO(v)
+                del v
 
                 # If the value is an exact multiple of 65535, the last
                 # chunk containing data will be followed by a zero-length chunk
                 # (i.e. when read() returns EOF).
-                chunk = v.read(MAX_VALUE_LENGTH)
+                chunk = vio.read(MAX_VALUE_LENGTH)
                 while True:
                     w(pack("!H", len(chunk)))
                     w(chunk)
                     if len(chunk) != MAX_VALUE_LENGTH:
                         break
-                    chunk = v.read(MAX_VALUE_LENGTH)
+                    chunk = vio.read(MAX_VALUE_LENGTH)
             else:
                 w(pack("!H", len(v)))
                 w(v)
@@ -2302,7 +2303,7 @@ class BinaryBoxProtocol(
     _justStartedTLS = False
     _startingTLSBuffer = None
     _locked = False
-    _currentKey = None
+    _currentKey = None  # type: Optional[bytes]
     _currentBox = None  # type: Optional[AmpBox]
 
     _keyLengthLimitExceeded = False
@@ -2651,6 +2652,8 @@ class AMPv2(AMP):
 
         # Regular value in one segment
         if len(string) < MAX_VALUE_LENGTH:
+            assert self._currentBox is not None
+            assert self._currentKey is not None
             self._currentBox[self._currentKey] = string
             self._currentKey = None
             self.MAX_LENGTH = self._MAX_KEY_LENGTH
@@ -2662,12 +2665,15 @@ class AMPv2(AMP):
     def proto_valuecont(self, string: bytes) -> str:
         """Handle long values with more than one segment."""
 
+        assert self._currentValue is not None
         self._currentValue.append(string)
 
         if len(string) == MAX_VALUE_LENGTH:
             return "valuecont"
 
         # Last segment
+        assert self._currentBox is not None
+        assert self._currentKey is not None
         self._currentBox[self._currentKey] = b"".join(self._currentValue)
         self._currentValue = None
         self._currentKey = None
