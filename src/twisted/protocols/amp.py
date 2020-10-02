@@ -666,7 +666,7 @@ class AmpBox(dict):
             module docstring.
         """
         i = sorted(self.items())
-        L = []
+        L: List[bytes] = []
         w = L.append
         for k, v in i:
             if type(k) == str:
@@ -2368,7 +2368,7 @@ class BinaryBoxProtocol(
         else:
             self._write_box(box)
 
-    def _write_box(self, box: AmpBox):
+    def _write_box(self, box: AmpBox) -> None:
         """Send an AmpBox using the AMPv1 format."""
         self.transport.write(box.serialize())
 
@@ -2640,7 +2640,7 @@ class AMPv2(AMP):
     This protocol implements the AMP version 2 protocol that allows values longer than 65535 bytes.
     """
 
-    def _write_box(self, box: AmpBox):
+    def _write_box(self, box: AmpBox) -> None:
         """Send an AmpBox using the AMPv2 format."""
         self.transport.write(box.serialize(version2=True))
 
