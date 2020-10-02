@@ -666,7 +666,7 @@ class AmpBox(Dict[bytes, bytes]):
             module docstring.
         """
         i = sorted(self.items())
-        L: List[bytes] = []
+        L = []  # type: List[bytes]
         w = L.append
         for k, v in i:
             if type(k) == str:
