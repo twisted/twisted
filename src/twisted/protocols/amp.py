@@ -239,6 +239,7 @@ except ImportError:
 
 __all__ = [
     "AMP",
+    "AMPv2",
     "ANSWER",
     "ASK",
     "AmpBox",
@@ -657,7 +658,7 @@ class AmpBox(dict):
         newBox.update(self)
         return newBox
 
-    def serialize(self):
+    def serialize(self, version2=False):
         """
         Convert me into a wire-encoded string.
 
@@ -674,11 +675,28 @@ class AmpBox(dict):
                 raise TypeError("Unicode value for key %r not allowed: %r" % (k, v))
             if len(k) > MAX_KEY_LENGTH:
                 raise TooLong(True, True, k, None)
-            if len(v) > MAX_VALUE_LENGTH:
+            if len(v) > MAX_VALUE_LENGTH and not version2:
                 raise TooLong(False, True, v, k)
-            for kv in k, v:
-                w(pack("!H", len(kv)))
-                w(kv)
+
+            w(pack("!H", len(k)))
+            w(k)
+
+            if version2:
+                v = BytesIO(v)
+
+                # If the value is an exact multiple of 65535, the last
+                # chunk containing data will be followed by a zero-length chunk
+                # (i.e. when read() returns EOF).
+                chunk = v.read(MAX_VALUE_LENGTH)
+                while True:
+                    w(pack("!H", len(chunk)))
+                    w(chunk)
+                    if len(chunk) != MAX_VALUE_LENGTH:
+                        break
+                    chunk = v.read(MAX_VALUE_LENGTH)
+            else:
+                w(pack("!H", len(v)))
+                w(v)
         w(pack("!H", 0))
         return b"".join(L)
 
@@ -2348,7 +2366,10 @@ class BinaryBoxProtocol(
         if self._startingTLSBuffer is not None:
             self._startingTLSBuffer.append(box)
         else:
-            self.transport.write(box.serialize())
+            self._write_box(box)
+
+    def _write_box(self, box):
+        self.transport.write(box.serialize())
 
     def makeConnection(self, transport):
         """
@@ -2611,6 +2632,11 @@ class AMP(BinaryBoxProtocol, BoxDispatcher, CommandLocator, SimpleStringLocator)
         )
         BinaryBoxProtocol.connectionLost(self, reason)
         self.transport = None
+
+
+class AMPv2(AMP):
+    def _write_box(self, box):
+        self.transport.write(box.serialize(version2=True))
 
 
 class _ParserHelper:
