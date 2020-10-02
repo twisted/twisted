@@ -6,6 +6,7 @@
 import os
 import sys
 import time
+from typing import Callable, Dict, Optional
 import warnings
 
 
@@ -28,7 +29,7 @@ knownPlatforms = {
 _timeFunctions = {
     #'win32': time.clock,
     "win32": time.time,
-}
+}  # type: Dict[Optional[str], Callable]
 
 
 class Platform:
@@ -37,7 +38,7 @@ class Platform:
     """
 
     type = knownPlatforms.get(os.name)
-    seconds = staticmethod(_timeFunctions.get(type, time.time))  # type: ignore[arg-type]  # noqa
+    seconds = staticmethod(_timeFunctions.get(type, time.time))  # noqa
     _platform = sys.platform
 
     def __init__(self, name=None, platform=None):

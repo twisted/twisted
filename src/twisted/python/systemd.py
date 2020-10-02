@@ -13,6 +13,7 @@ feature are supported.
 __all__ = ["ListenFDs"]
 
 from os import getpid
+from typing import List
 
 
 class ListenFDs:
@@ -58,11 +59,13 @@ class ListenFDs:
             descriptors which have been inherited.
         """
         if environ is None:
-            from os import environ
+            from os import environ as _environ
+
+            environ = _environ
         if start is None:
             start = cls._START
 
-        descriptors = []
+        descriptors = []  # type: List[int]
 
         try:
             pid = int(environ["LISTEN_PID"])
@@ -75,7 +78,7 @@ class ListenFDs:
                 except (KeyError, ValueError):
                     pass
                 else:
-                    descriptors = range(start, start + count)
+                    descriptors = list(range(start, start + count))
                     del environ["LISTEN_PID"], environ["LISTEN_FDS"]
 
         return cls(descriptors)

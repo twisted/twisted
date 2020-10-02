@@ -6,10 +6,8 @@
 L{URLPath}, a representation of a URL.
 """
 
-
+from typing import cast
 from urllib.parse import quote as urlquote, unquote as urlunquote, urlunsplit
-
-from twisted.python.compat import nativeString
 
 from hyperlink import URL as _URL
 
@@ -26,7 +24,7 @@ def _rereconstituter(name):
     @return: a descriptor which retrieves the private version of the attribute
         on get and calls rerealize on set.
     """
-    privateName = nativeString("_") + name
+    privateName = "_" + name
     return property(
         lambda self: getattr(self, privateName),
         lambda self, value: (
@@ -264,7 +262,7 @@ class URLPath:
         """
         The L{str} of a L{URLPath} is its URL text.
         """
-        return nativeString(self._url.asURI().asText())
+        return cast(str, self._url.asURI().asText())
 
     def __repr__(self) -> str:
         """
