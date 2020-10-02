@@ -2638,6 +2638,30 @@ class AMPv2(AMP):
     def _write_box(self, box):
         self.transport.write(box.serialize(version2=True))
 
+    def proto_value(self, string):
+        # Regular value in one segment
+        if len(string) < MAX_VALUE_LENGTH:
+            self._currentBox[self._currentKey] = string
+            self._currentKey = None
+            self.MAX_LENGTH = self._MAX_KEY_LENGTH
+            return "key"
+
+        self._currentValue = [string]
+        return "valuecont"
+
+    def proto_valuecont(self, string):
+        self._currentValue.append(string)
+
+        if len(string) == MAX_VALUE_LENGTH:
+            return "valuecont"
+
+        # Last segment
+        self._currentBox[self._currentKey] = b"".join(self._currentValue)
+        self._currentValue = None
+        self._currentKey = None
+        self.MAX_LENGTH = self._MAX_KEY_LENGTH
+        return "key"
+
 
 class _ParserHelper:
     """
