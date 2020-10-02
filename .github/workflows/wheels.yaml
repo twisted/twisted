@@ -55,3 +55,9 @@ jobs:
       run: |
         python --version
         tox -q
+
+    - uses: actions/upload-artifact@v2
+      with:
+        name: twisted-artifact-${{ runner.os }}-${{ matrix.python-version }}
+        path: ${{ github.workspace }}/dist/*.whl
+        if-no-files-found: error
