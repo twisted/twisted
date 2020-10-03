@@ -124,7 +124,7 @@ _EXTRAS_REQUIRE = {
 }
 _EXTRAS_REQUIRE["osx_platform"] = _EXTRAS_REQUIRE["macos_platform"]
 
-# Scripts provided by Twisted on Python 2 and 3.
+# Scripts provided by Twisted
 _CONSOLE_SCRIPTS = [
     "ckeygen = twisted.conch.scripts.ckeygen:run",
     "cftp = twisted.conch.scripts.cftp:run",
