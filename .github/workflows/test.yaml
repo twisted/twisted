@@ -1,0 +1,107 @@
+name: Run tests
+
+on:
+  push:
+    branches: [ trunk ]
+  pull_request:
+    branches: [ trunk ]
+
+jobs:
+  testing:
+    runs-on: ubuntu-20.04
+    env:
+      TOXENV: "alldeps-withcov-posix,coverage-prepare,codecov-push,coveralls-push"
+    strategy:
+      matrix:
+          python-version: [3.5, 3.6, 3.7, 3.8, 3.9.0-rc.2, pypy3]
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Display Python information
+      run: |
+        python --version
+        python -c "import sys; print(sys.prefix)"
+        python -c "import sys; print(sys.exec_prefix)"
+        python -c "import sys; print(sys.executable)"
+        python -c "import struct; print(struct.calcsize('P') * 8)"
+        python -c "print('\nENVIRONMENT VARIABLES\n=====================\n\n')"
+        python -c "import os; [ print(e,v) for (e,v) in os.environ.items() ]" 
+
+    - name: Get pip cache dir
+      id: pip-cache
+      run: |
+        python -c "from pip._internal.locations import USER_CACHE_DIR; print('::set-output name=dir::' + USER_CACHE_DIR)"
+
+    - uses: actions/cache@v2
+      with:
+        path: ${{ steps.pip-cache.outputs.dir }}
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+        restore-keys: |
+            ${{ runner.os }}-pip-
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip tox
+        tox --notest
+
+    - name: Test
+      run: |
+        python --version
+        tox -q
+
+  # We need a builder without IPv6. This is going to be slower than all the
+  # others, but that's ok.
+  testing_no_ipv6:
+    runs-on: ubuntu-20.04
+    env:
+      DISABLE_IPV6: yes
+      TOXENV: "alldeps-withcov-posix,coverage-prepare,codecov-push,coveralls-push"
+    strategy:
+      matrix:
+          python-version: [3.6]
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Get pip cache dir
+      id: pip-cache
+      run: |
+        python -c "from pip._internal.locations import USER_CACHE_DIR; print('::set-output name=dir::' + USER_CACHE_DIR)"
+
+    - uses: actions/cache@v2
+      with:
+        path: ${{ steps.pip-cache.outputs.dir }}
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+        restore-keys: |
+            ${{ runner.os }}-pip-
+
+    - name: Display Python information
+      run: |
+        python --version
+        python -c "import sys; print(sys.prefix)"
+        python -c "import sys; print(sys.exec_prefix)"
+        python -c "import sys; print(sys.executable)"
+        python -c "import struct; print(struct.calcsize('P') * 8)"
+        python -c "print('\nENVIRONMENT VARIABLES\n=====================\n\n')"
+        python -c "import os; [ print(e,v) for (e,v) in os.environ.items() ]" 
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip tox
+        tox --notest
+
+    - name: Test
+      run: |
+        python --version
+        tox -q

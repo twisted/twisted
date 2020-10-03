@@ -275,7 +275,7 @@ cdef object _makesockaddr(sockaddr *addr, Py_ssize_t len):
             raise_error(0, 'WSAAddressToStringW')
         sa_port = ntohs(sin.sin_port)
         host = PyUnicode_FromWideChar(buff, wcslen(buff))
-        host, port = host.rsplit(u':', 1)
+        host, port = host.rsplit(':', 1)
         port = int(port)
         assert port == sa_port
 
@@ -288,7 +288,7 @@ cdef object _makesockaddr(sockaddr *addr, Py_ssize_t len):
             raise_error(0, 'WSAAddressToStringW')
         sa_port = ntohs(sin6.sin6_port)
         host = PyUnicode_FromWideChar(buff, wcslen(buff))
-        host, port = host.rsplit(u':', 1)
+        host, port = host.rsplit(':', 1)
         port = int(port)
         assert host[0] == '['
         assert host[-1] == ']'
@@ -302,14 +302,10 @@ cdef object _makesockaddr(sockaddr *addr, Py_ssize_t len):
 cdef object fillinetaddr(sockaddr_in *dest, object addr):
     cdef unsigned short port
     cdef WCHAR hostStr[256] # slightly larger than longest valid DNS hostname
-    cdef Py_ssize_t hostStrWcharLen = (sizeof(hostStr) / sizeof(WCHAR)) - 1
+    cdef Py_ssize_t hostStrWcharLen = <Py_ssize_t>(sizeof(hostStr) / sizeof(WCHAR)) - 1
     cdef int addrlen = sizeof(sockaddr_in)
     cdef Py_ssize_t rc
     host, port = addr
-
-    if PY_MAJOR_VERSION < 3:
-        if (isinstance(host, str)):
-            host = unicode(host, "utf-8")
 
     memset(hostStr, 0, sizeof(hostStr))
     rc = PyUnicode_AsWideChar(host, hostStr, hostStrWcharLen)
@@ -327,15 +323,11 @@ cdef object fillinet6addr(sockaddr_in6 *dest, object addr):
     cdef unsigned short port
     cdef unsigned long res
     cdef WCHAR hostStr[256]
-    cdef Py_ssize_t hostStrWcharLen = (sizeof(hostStr) / sizeof(WCHAR)) - 1
+    cdef Py_ssize_t hostStrWcharLen = <Py_ssize_t>(sizeof(hostStr) / sizeof(WCHAR)) - 1
     cdef Py_ssize_t rc
     cdef int addrlen = sizeof(sockaddr_in6)
     host, port, flow, scope = addr
     host = host.split("%")[0] # remove scope ID, if any
-
-    if PY_MAJOR_VERSION < 3:
-        if (isinstance(host, str)):
-            host = unicode(host, "utf-8")
 
     memset(hostStr, 0, sizeof(hostStr))
     rc = PyUnicode_AsWideChar(host, hostStr, hostStrWcharLen)

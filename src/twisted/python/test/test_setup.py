@@ -40,7 +40,7 @@ class SetupTests(SynchronousTestCase):
             "whatever", ["whatever.c"], condition=lambda b: False
         )
 
-        args = getSetupArgs(extensions=[good_ext, bad_ext], readme=None)
+        args = getSetupArgs(extensions=[good_ext, bad_ext], readme="")
 
         # ext_modules should be set even though it's not used.  See comment
         # in getSetupArgs
@@ -60,7 +60,7 @@ class SetupTests(SynchronousTestCase):
             "whatever", ["whatever.c"], define_macros=[("whatever", 2)]
         )
 
-        args = getSetupArgs(extensions=[ext], readme=None)
+        args = getSetupArgs(extensions=[ext], readme="")
 
         builder = args["cmdclass"]["build_ext"](Distribution())
         self.patch(os, "name", "nt")
@@ -131,7 +131,7 @@ class OptionalDependenciesTests(SynchronousTestCase):
         self.assertIn("pyflakes >= 1.0.0", deps)
         self.assertIn("twisted-dev-tools >= 0.0.2", deps)
         self.assertIn("python-subunit", deps)
-        self.assertIn("sphinx >= 1.3.1", deps)
+        self.assertIn("sphinx~=3.2", deps)
         self.assertIn("twistedchecker >= 0.7.2", deps)
 
     def test_extrasRequiresTlsDeps(self):
