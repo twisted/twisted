@@ -40,7 +40,7 @@ class SetupTests(SynchronousTestCase):
             "whatever", ["whatever.c"], condition=lambda b: False
         )
 
-        args = getSetupArgs(extensions=[good_ext, bad_ext], readme=None)
+        args = getSetupArgs(extensions=[good_ext, bad_ext], readme="")
 
         # ext_modules should be set even though it's not used.  See comment
         # in getSetupArgs
@@ -60,7 +60,7 @@ class SetupTests(SynchronousTestCase):
             "whatever", ["whatever.c"], define_macros=[("whatever", 2)]
         )
 
-        args = getSetupArgs(extensions=[ext], readme=None)
+        args = getSetupArgs(extensions=[ext], readme="")
 
         builder = args["cmdclass"]["build_ext"](Distribution())
         self.patch(os, "name", "nt")
