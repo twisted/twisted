@@ -219,10 +219,11 @@ class TestAvatar:
     def listShares(self):
         return ["share"]
 
-
+    session_id = 0
+    
 @implementer(portal.IRealm)
 class TestRealm:
-    def requestAvatar(self, avatarId, mind, interfaces):
+    def requestAvatar(self, avatarId, mind, *interfaces):
         log.debug("avatarId={a!r} mind={m!r}", a=avatarId, m=mind)
         return (ISMBServer, TestAvatar(), lambda: None)
 
