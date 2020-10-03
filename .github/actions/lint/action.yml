@@ -1,0 +1,16 @@
+name: 'Lint'
+description: 'Lint'
+runs:
+  using: "composite"
+  steps:
+  - name: Install dependencies
+    shell: bash
+    run: |
+      python -m pip install --upgrade pip tox
+      tox -q --notest -e lint,black,twine
+
+  - name: Lint
+    shell: bash
+    run: |
+      python --version
+      tox -q -e lint,black,twine

@@ -1,0 +1,15 @@
+name: 'mypy'
+description: 'Check code with mypy'
+runs:
+  using: 'composite'
+  steps:
+  - name: Install dependencies
+    shell: bash
+    run: |
+      python -m pip install --upgrade pip tox
+      tox -q -e mypy --notest
+
+  - name: Test with mypy
+    shell: bash
+    run: |
+      tox -q -e mypy

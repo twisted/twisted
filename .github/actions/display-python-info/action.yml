@@ -1,0 +1,16 @@
+name: 'Display Python information'
+description: 'Display Python information'
+runs:
+  using: 'composite'
+
+  steps:
+  - name: Display Python information
+    shell: bash
+    run: |
+      python --version
+      python -c "import sys; print(sys.prefix)"
+      python -c "import sys; print(sys.exec_prefix)"
+      python -c "import sys; print(sys.executable)"
+      python -c "import struct; print(struct.calcsize('P') * 8)"
+      python -c "print('\nENVIRONMENT VARIABLES\n=====================\n\n')"
+      python -c "import os; [ print(e,v) for (e,v) in os.environ.items() ]"

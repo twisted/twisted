@@ -1,0 +1,20 @@
+name: 'Documentation'
+description: 'Check documentation'
+runs:
+  using: 'composite'
+  steps:
+  - name: Install dependencies
+    shell: bash
+    run: |
+      python -m pip install --upgrade pip tox
+      tox -q --notest -e narrativedocs,apidocs
+
+  - name: Check the narrative documentation
+    shell: bash
+    run: |
+      tox -q -e narrativedocs
+
+  - name: Check the API documentation
+    shell: bash
+    run: |
+      tox -q -e apidocs

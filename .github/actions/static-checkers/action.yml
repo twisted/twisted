@@ -1,0 +1,21 @@
+name: 'Static checkers'
+description: 'Static checkers'
+runs:
+  using: 'composite'
+
+  steps:
+  - name: Install dependencies
+    shell: bash 
+    run: |
+      python -m pip install --upgrade pip tox
+      tox -q --notest -e manifest-checker,newsfragment
+
+  - name: Check newsfragment
+    shell: bash 
+    run: |
+      tox -q -e newsfragment
+
+  - name: Check manifest-checker
+    shell: bash 
+    run: |
+      tox -q -e manifest-checker
