@@ -15,7 +15,7 @@ import hashlib
 import attr
 
 from twisted.protocols._smb import base
-from twisted.protocols._smb.base import (byte, short, medium, long, octets)
+from twisted.protocols._smb.base import byte, short, medium, long, octets
 
 import twisted.cred.credentials
 from twisted.python.randbytes import secureRandom
@@ -23,48 +23,55 @@ from twisted.logger import Logger
 
 log = Logger()
 
-NTLM_MESSAGES = ['invalid', 'negotiate', 'challenge', 'auth']
+NTLM_MESSAGES = ["invalid", "negotiate", "challenge", "auth"]
 FLAGS = {
-    'NegotiateUnicode': 0x00000001,
-    'NegotiateOEM': 0x00000002,
-    'RequestTarget': 0x00000004,
-    'Unknown9': 0x00000008,
-    'NegotiateSign': 0x00000010,
-    'NegotiateSeal': 0x00000020,
-    'NegotiateDatagram': 0x00000040,
-    'NegotiateLanManagerKey': 0x00000080,
-    'Unknown8': 0x00000100,
-    'NegotiateNTLM': 0x00000200,
-    'NegotiateNTOnly': 0x00000400,
-    'Anonymous': 0x00000800,
-    'NegotiateOemDomainSupplied': 0x00001000,
-    'NegotiateOemWorkstationSupplied': 0x00002000,
-    'Unknown6': 0x00004000,
-    'NegotiateAlwaysSign': 0x00008000,
-    'TargetTypeDomain': 0x00010000,
-    'TargetTypeServer': 0x00020000,
-    'TargetTypeShare': 0x00040000,
-    'NegotiateExtendedSecurity': 0x00080000,
-    'NegotiateIdentify': 0x00100000,
-    'Unknown5': 0x00200000,
-    'RequestNonNTSessionKey': 0x00400000,
-    'NegotiateTargetInfo': 0x00800000,
-    'Unknown4': 0x01000000,
-    'NegotiateVersion': 0x02000000,
-    'Unknown3': 0x04000000,
-    'Unknown2': 0x08000000,
-    'Unknown1': 0x10000000,
-    'Negotiate128': 0x20000000,
-    'NegotiateKeyExchange': 0x40000000,
-    'Negotiate56': 0x80000000
+    "NegotiateUnicode": 0x00000001,
+    "NegotiateOEM": 0x00000002,
+    "RequestTarget": 0x00000004,
+    "Unknown9": 0x00000008,
+    "NegotiateSign": 0x00000010,
+    "NegotiateSeal": 0x00000020,
+    "NegotiateDatagram": 0x00000040,
+    "NegotiateLanManagerKey": 0x00000080,
+    "Unknown8": 0x00000100,
+    "NegotiateNTLM": 0x00000200,
+    "NegotiateNTOnly": 0x00000400,
+    "Anonymous": 0x00000800,
+    "NegotiateOemDomainSupplied": 0x00001000,
+    "NegotiateOemWorkstationSupplied": 0x00002000,
+    "Unknown6": 0x00004000,
+    "NegotiateAlwaysSign": 0x00008000,
+    "TargetTypeDomain": 0x00010000,
+    "TargetTypeServer": 0x00020000,
+    "TargetTypeShare": 0x00040000,
+    "NegotiateExtendedSecurity": 0x00080000,
+    "NegotiateIdentify": 0x00100000,
+    "Unknown5": 0x00200000,
+    "RequestNonNTSessionKey": 0x00400000,
+    "NegotiateTargetInfo": 0x00800000,
+    "Unknown4": 0x01000000,
+    "NegotiateVersion": 0x02000000,
+    "Unknown3": 0x04000000,
+    "Unknown2": 0x08000000,
+    "Unknown1": 0x10000000,
+    "Negotiate128": 0x20000000,
+    "NegotiateKeyExchange": 0x40000000,
+    "Negotiate56": 0x80000000,
 }
 
 DEFAULT_FLAGS = {
-    "NegotiateUnicode", "NegotiateSign", "RequestTarget", "NegotiateNTLM",
-    "NegotiateAlwaysSign", "NegotiateExtendedSecurity", "NegotiateTargetInfo",
-    "NegotiateVersion", "Negotiate128", "NegotiateKeyExchange", "Negotiate56"
+    "NegotiateUnicode",
+    "NegotiateSign",
+    "RequestTarget",
+    "NegotiateNTLM",
+    "NegotiateAlwaysSign",
+    "NegotiateExtendedSecurity",
+    "NegotiateTargetInfo",
+    "NegotiateVersion",
+    "Negotiate128",
+    "NegotiateKeyExchange",
+    "Negotiate56",
 }
-
 
 
 def flags2set(flags):
@@ -83,7 +90,6 @@ def flags2set(flags):
     return r
 
 
-
 def set2flags(s):
     """
     convert set to C-style flags
@@ -98,7 +104,6 @@ def set2flags(s):
     return flags
 
 
-
 def avpair(code, data):
     """make an AVPAIR structure
     @param code: the attribute ID
@@ -110,9 +115,8 @@ def avpair(code, data):
     if isinstance(data, str):
         data = data.encode("utf-16le")
     elif len(data) % 2 > 0:
-        data += b'\0'
+        data += b"\0"
     return struct.pack("<HH", code, len(data)) + data
-
 
 
 AV_EOL = 0x0000
@@ -134,15 +138,13 @@ PROTOCOL_VERSION = 0x0F
 
 NT_RESP_TYPE = 0x01
 
-MAGIC = b'NTLMSSP\0'
-
+MAGIC = b"NTLMSSP\0"
 
 
 @attr.s
 class HeaderType:
     magic = octets(default=MAGIC, locked=True)
     packet_type = medium()
-
 
 
 @attr.s
@@ -159,7 +161,6 @@ class NegType:
     v_build = short()
     reserved = octets(3)
     v_protocol = byte()
-
 
 
 @attr.s
@@ -191,7 +192,6 @@ class AuthType:
     mic = octets(16)
 
 
-
 @attr.s
 class NtParts:
     response = octets(16)
@@ -201,7 +201,6 @@ class NtParts:
     time = long()
     client_challenge = octets(8)
     reserved2 = octets(4)
-
 
 
 @attr.s
@@ -222,7 +221,6 @@ class ChallengeType:
     v_protocol = byte()
 
 
-
 class NTLMManager(object):
     """
     manage the NTLM subprotocol
@@ -231,6 +229,7 @@ class NTLMManager(object):
                       None prior to this
     @type credential: L{IUsernameHashedPassword}
     """
+
     def __init__(self, domain):
         """
         @param domain: the server NetBIOS domain
@@ -252,7 +251,7 @@ class NTLMManager(object):
             raise base.SMBError("token too small")
         hdr, rem = base.unpack(HeaderType, token, 0, base.DATA)
         try:
-            getattr(self, 'ntlm_' + NTLM_MESSAGES[hdr.packet_type])(rem)
+            getattr(self, "ntlm_" + NTLM_MESSAGES[hdr.packet_type])(rem)
         except IndexError:
             raise base.SMBError("invalid message %d" % hdr.packet_type)
 
@@ -265,40 +264,45 @@ class NTLMManager(object):
     def ntlm_negotiate(self, data):
         neg = base.unpack(NegType, data)
         flags = flags2set(neg.flags)
-        log.debug("""
+        log.debug(
+            """
 NTLM NEGOTIATE
 --------------
 Flags           {flags!r}""",
-                  flags=flags)
-        if 'NegotiateVersion' in flags:
-            log.debug("Version         {major}.{minor} ({build}) {proto:x}",
-                      major=neg.v_major,
-                      minor=neg.v_minor,
-                      build=neg.v_build,
-                      proto=neg.v_protocol)
-        if 'NegotiateUnicode' not in flags:
+            flags=flags,
+        )
+        if "NegotiateVersion" in flags:
+            log.debug(
+                "Version         {major}.{minor} ({build}) {proto:x}",
+                major=neg.v_major,
+                minor=neg.v_minor,
+                build=neg.v_build,
+                proto=neg.v_protocol,
+            )
+        if "NegotiateUnicode" not in flags:
             raise base.SMBError("clients must use Unicode")
-        if 'NegotiateOemDomainSupplied' in flags and neg.domain_len > 0:
-            self.client_domain = \
-                self.token[neg.domain_len:neg.domain_len +
-                           neg.domain_offset].decode('utf-16le')
+        if "NegotiateOemDomainSupplied" in flags and neg.domain_len > 0:
+            self.client_domain = self.token[
+                neg.domain_len : neg.domain_len + neg.domain_offset
+            ].decode("utf-16le")
             log.debug("Client domain   {cd!r}", cd=self.client_domain)
         else:
             self.client_domain = None
-        if ('NegotiateOemWorkstationSupplied' in flags
-                and neg.workstation_len > 0):
-            self.workstation = \
-                self.token[neg.workstation_len:neg.workstation_len +
-                           neg.workstation_offset].decode('utf-16le')
+        if "NegotiateOemWorkstationSupplied" in flags and neg.workstation_len > 0:
+            self.workstation = self.token[
+                neg.workstation_len : neg.workstation_len + neg.workstation_offset
+            ].decode("utf-16le")
             log.debug("Workstation     {wkstn!r}", wkstn=self.workstation)
         else:
             self.workstation = None
         self.flags = DEFAULT_FLAGS & flags
-        if ('NegotiateAlwaysSign' not in self.flags
-                and 'NegotiateSign' not in self.flags):
-            self.flags -= {'Negotiate128', 'Negotiate56'}
-        if 'RequestTarget' in self.flags:
-            self.flags.add('TargetTypeServer')
+        if (
+            "NegotiateAlwaysSign" not in self.flags
+            and "NegotiateSign" not in self.flags
+        ):
+            self.flags -= {"Negotiate128", "Negotiate56"}
+        if "RequestTarget" in self.flags:
+            self.flags.add("TargetTypeServer")
 
     def getChallengeToken(self):
         """generate NTLM CHALLENGE token
@@ -307,29 +311,29 @@ Flags           {flags!r}""",
         """
         header = HeaderType(packet_type=2)
         chal = ChallengeType()
-        if 'RequestTarget' in self.flags:
-            target = socket.gethostname().upper().encode('utf-16le')
+        if "RequestTarget" in self.flags:
+            target = socket.gethostname().upper().encode("utf-16le")
         else:
-            target = b''
-        if 'NegotiateTargetInfo' in self.flags:
-            targetinfo = avpair(
-                AV_COMPUTER_NAME,
-                socket.gethostname().upper()) + avpair(
-                    AV_DOMAIN_NAME, self.server_domain) + avpair(
-                        AV_DNS_COMPUTER_NAME, socket.getfqdn()) + avpair(
-                            AV_DNS_DOMAIN_NAME, b'\0\0') + avpair(
-                                AV_TIMESTAMP,
-                                struct.pack("<Q", base.unixToNTTime(
-                                    time.time()))) + avpair(AV_EOL, b'')
+            target = b""
+        if "NegotiateTargetInfo" in self.flags:
+            targetinfo = (
+                avpair(AV_COMPUTER_NAME, socket.gethostname().upper())
+                + avpair(AV_DOMAIN_NAME, self.server_domain)
+                + avpair(AV_DNS_COMPUTER_NAME, socket.getfqdn())
+                + avpair(AV_DNS_DOMAIN_NAME, b"\0\0")
+                + avpair(
+                    AV_TIMESTAMP, struct.pack("<Q", base.unixToNTTime(time.time()))
+                )
+                + avpair(AV_EOL, b"")
+            )
         else:
-            targetinfo = b''
-        if 'NegotiateVersion' in self.flags:
+            targetinfo = b""
+        if "NegotiateVersion" in self.flags:
             chal.v_protocol = PROTOCOL_VERSION
             chal.v_major, chal.v_minor, chal.v_build = SERVER_VERSION
         chal.challenge = self.challenge = secureRandom(8)
         chal.target_len = chal.target_max_len = len(target)
-        chal.target_offset = base.calcsize(HeaderType) + base.calcsize(
-            ChallengeType)
+        chal.target_offset = base.calcsize(HeaderType) + base.calcsize(ChallengeType)
         chal.targetinfo_len = chal.targetinfo_max_len = len(targetinfo)
         chal.targetinfo_offset = chal.target_offset + len(target)
         chal.flags = set2flags(self.flags)
@@ -342,47 +346,46 @@ Flags           {flags!r}""",
         flags = flags2set(a.flags)
         lm = {}
         if a.lmc_len > 0:
-            raw_lm_response = self.token[a.lmc_offset:a.lmc_offset + a.lmc_len]
-            lm['response'], lm['client_challenge'] = struct.unpack(
-                "16s8s", raw_lm_response)
+            raw_lm_response = self.token[a.lmc_offset : a.lmc_offset + a.lmc_len]
+            lm["response"], lm["client_challenge"] = struct.unpack(
+                "16s8s", raw_lm_response
+            )
         nt = {}
         if a.ntc_len > 0:
-            raw_nt_response = self.token[a.ntc_offset:a.ntc_offset + a.ntc_len]
-            nt['temp'] = raw_nt_response[16:]
-            parts, nt['avpairs'] = base.unpack(NtParts, raw_nt_response, 0,
-                                               base.DATA)
-            nt['response'] = parts.response
-            nt['time'] = parts.time
-            nt['client_challenge'] = parts.client_challenge
+            raw_nt_response = self.token[a.ntc_offset : a.ntc_offset + a.ntc_len]
+            nt["temp"] = raw_nt_response[16:]
+            parts, nt["avpairs"] = base.unpack(NtParts, raw_nt_response, 0, base.DATA)
+            nt["response"] = parts.response
+            nt["time"] = parts.time
+            nt["client_challenge"] = parts.client_challenge
             if parts.resp_type != NT_RESP_TYPE:
                 log.warn("NT response not valid type")
         if not nt and not lm:
-            raise base.SMBError(
-                "one of LM challenge or NT challenge must be provided")
+            raise base.SMBError("one of LM challenge or NT challenge must be provided")
         if a.domain_len > 0:
-            client_domain = self.token[a.domain_offset:a.domain_offset +
-                                       a.domain_len]
-            client_domain = client_domain.decode('utf-16le')
+            client_domain = self.token[a.domain_offset : a.domain_offset + a.domain_len]
+            client_domain = client_domain.decode("utf-16le")
         else:
             client_domain = None
         if a.user_len > 0:
-            user = self.token[a.user_offset:a.user_offset + a.user_len]
-            user = user.decode('utf-16le')
+            user = self.token[a.user_offset : a.user_offset + a.user_len]
+            user = user.decode("utf-16le")
         else:
             raise base.SMBError("username is required")
         if a.workstation_len > 0:
-            workstation = self.token[a.
-                                     workstation_offset:a.workstation_offset +
-                                     a.workstation_len]
-            workstation = workstation.decode('utf-16le')
+            workstation = self.token[
+                a.workstation_offset : a.workstation_offset + a.workstation_len
+            ]
+            workstation = workstation.decode("utf-16le")
         else:
             workstation = None
-        if a.ersk_len > 0 and 'NegotiateKeyExchange' in flags:
-            ersk = self.token[a.ersk_offset:a.ersk_offset + a.ersk_len]
+        if a.ersk_len > 0 and "NegotiateKeyExchange" in flags:
+            ersk = self.token[a.ersk_offset : a.ersk_offset + a.ersk_len]
         else:
             ersk = None
         self.ersk = ersk
-        log.debug("""
+        log.debug(
+            """
 NTLM AUTH
 ---------
 Flags           {flags!r}
@@ -393,22 +396,23 @@ LM response     {lm!r}
 NT response     {nt!r}
 ERSK            {ersk!r}
 """,
-                  flags=flags,
-                  user=user,
-                  wrkstn=workstation,
-                  cd=client_domain,
-                  lm=lm,
-                  nt=nt,
-                  ersk=ersk)
-        if 'NegotiateVersion' in flags:
-            log.debug("Version         {major}.{minor} ({build}) {proto:x}",
-                      major=a.v_major,
-                      minor=a.v_minor,
-                      build=a.v_build,
-                      proto=a.v_protocol)
-        self.credential = NTLMCredential(user, client_domain, lm, nt,
-                                         self.challenge)
-
+            flags=flags,
+            user=user,
+            wrkstn=workstation,
+            cd=client_domain,
+            lm=lm,
+            nt=nt,
+            ersk=ersk,
+        )
+        if "NegotiateVersion" in flags:
+            log.debug(
+                "Version         {major}.{minor} ({build}) {proto:x}",
+                major=a.v_major,
+                minor=a.v_minor,
+                build=a.v_build,
+                proto=a.v_protocol,
+            )
+        self.credential = NTLMCredential(user, client_domain, lm, nt, self.challenge)
 
 
 @implementer(twisted.cred.credentials.IUsernameHashedPassword)
@@ -416,6 +420,7 @@ class NTLMCredential(object):
     """
     A NTLM credential, unverified initially
     """
+
     def __init__(self, user, domain, lm, nt, challenge):
         self.username = user
         self.domain = domain
@@ -429,23 +434,24 @@ class NTLMCredential(object):
     def checkPassword(self, password):
         # code adapted from pysmb ntlm.py
         d = hashlib.new("md4")
-        d.update(password.encode('UTF-16LE'))
+        d.update(password.encode("UTF-16LE"))
         ntlm_hash = d.digest()  # The NT password hash
         # The NTLMv2 password hash. In [MS-NLMP], this is the result of NTOWFv2
         # and LMOWFv2 functions
-        response_key = hmac.new(ntlm_hash, (self.username.upper() +
-                                            self.domain).encode('UTF-16LE'),
-                                'md5').digest()
-        if self.lm and self.lm['response'] != b'\0' * 16:
-            new_resp = hmac.new(response_key,
-                                self.challenge + self.lm['client_challenge'],
-                                'md5').digest()
-            if new_resp != self.lm['response']:
+        response_key = hmac.new(
+            ntlm_hash, (self.username.upper() + self.domain).encode("UTF-16LE"), "md5"
+        ).digest()
+        if self.lm and self.lm["response"] != b"\0" * 16:
+            new_resp = hmac.new(
+                response_key, self.challenge + self.lm["client_challenge"], "md5"
+            ).digest()
+            if new_resp != self.lm["response"]:
                 return False
         if self.nt:
-            new_resp = hmac.new(response_key, self.challenge + self.nt['temp'],
-                                'md5').digest()
-            if new_resp != self.nt['response']:
+            new_resp = hmac.new(
+                response_key, self.challenge + self.nt["temp"], "md5"
+            ).digest()
+            if new_resp != self.nt["response"]:
                 return False
         assert self.nt or self.lm
         return True

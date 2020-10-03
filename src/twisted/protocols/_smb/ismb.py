@@ -8,10 +8,8 @@ Various interfaces for realms, avatars and related objects
 from zope.interface import Interface, Attribute
 
 
-
 class NoSuchShare(Exception):
     pass
-
 
 
 class ISMBServer(Interface):
@@ -43,19 +41,16 @@ class ISMBServer(Interface):
         """
 
 
-
 class IFilesystem(Interface):
     """
     A share representing a filesystem ("disk" in the SMB spec)
     """
 
 
-
 class IPrinter(Interface):
     """
     A share representing a printer
     """
-
 
 
 class IPipe(Interface):

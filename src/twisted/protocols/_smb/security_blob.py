@@ -20,7 +20,6 @@ from twisted.logger import Logger
 log = Logger()
 
 
-
 class BlobManager(object):
     """
     encapsulates the authentication negotiation state
@@ -30,6 +29,7 @@ class BlobManager(object):
     may look silly, but different authentication mechanisms
     may be added over time
     """
+
     def __init__(self, domain):
         """
         @param domain: the server NetBIOS domain
@@ -44,31 +44,35 @@ class BlobManager(object):
 
         @rtype: L{bytes}
         """
-        mech_types = MechTypeList().subtype(explicitTag=tag.Tag(
-            tag.tagClassContext, tag.tagFormatConstructed, 0))
+        mech_types = MechTypeList().subtype(
+            explicitTag=tag.Tag(tag.tagClassContext, tag.tagFormatConstructed, 0)
+        )
         mech_types.setComponentByPosition(
-            0, univ.ObjectIdentifier('1.3.6.1.4.1.311.2.2.10'))
+            0, univ.ObjectIdentifier("1.3.6.1.4.1.311.2.2.10")
+        )
 
-        hints = NegHints().subtype(explicitTag=tag.Tag(
-            tag.tagClassContext, tag.tagFormatConstructed, 3))
+        hints = NegHints().subtype(
+            explicitTag=tag.Tag(tag.tagClassContext, tag.tagFormatConstructed, 3)
+        )
         hints.setComponentByName(
-            'hintName',
-            char.GeneralString(b'not_defined_in_RFC4178@please_ignore').
-            subtype(explicitTag=tag.Tag(tag.tagClassContext,
-                                        tag.tagFormatSimple, 0)))
+            "hintName",
+            char.GeneralString(b"not_defined_in_RFC4178@please_ignore").subtype(
+                explicitTag=tag.Tag(tag.tagClassContext, tag.tagFormatSimple, 0)
+            ),
+        )
 
-        n = NegTokenInit2().subtype(explicitTag=tag.Tag(
-            tag.tagClassContext, tag.tagFormatConstructed, 0))
-        n.setComponentByName('mechTypes', mech_types)
-        n.setComponentByName('negHints', hints)
+        n = NegTokenInit2().subtype(
+            explicitTag=tag.Tag(tag.tagClassContext, tag.tagFormatConstructed, 0)
+        )
+        n.setComponentByName("mechTypes", mech_types)
+        n.setComponentByName("negHints", hints)
 
         nt = NegotiationToken()
-        nt.setComponentByName('negTokenInit', n)
+        nt.setComponentByName("negTokenInit", n)
 
         ct = ContextToken()
-        ct.setComponentByName('thisMech',
-                              univ.ObjectIdentifier('1.3.6.1.5.5.2'))
-        ct.setComponentByName('innerContextToken', nt)
+        ct.setComponentByName("thisMech", univ.ObjectIdentifier("1.3.6.1.5.5.2"))
+        ct.setComponentByName("innerContextToken", nt)
 
         return encoder.encode(ct)
 
@@ -79,9 +83,9 @@ class BlobManager(object):
         @type blob: L{bytes}
         """
         d, _ = decoder.decode(blob, asn1Spec=ContextToken())
-        nt = d.getComponentByName('innerContextToken')
-        n = nt.getComponentByName('negTokenInit')
-        token = n.getComponentByName('mechToken')
+        nt = d.getComponentByName("innerContextToken")
+        n = nt.getComponentByName("negTokenInit")
+        token = n.getComponentByName("mechToken")
         self.manager = ntlm.NTLMManager(self.domain)
         if token:
             self.manager.receiveToken(token.asOctets())
@@ -95,11 +99,10 @@ class BlobManager(object):
         @type blob: L{bytes}
         """
         d, _ = decoder.decode(blob, asn1Spec=NegotiationToken())
-        nt = d.getComponentByName('negTokenResp')
-        token = nt.getComponentByName('responseToken')
+        nt = d.getComponentByName("negTokenResp")
+        token = nt.getComponentByName("responseToken")
         if not token:
-            raise base.SMBError(
-                'security blob does not contain responseToken field')
+            raise base.SMBError("security blob does not contain responseToken field")
         self.manager.receiveToken(token.asOctets())
 
     def generateChallengeBlob(self):
@@ -111,18 +114,21 @@ class BlobManager(object):
         ntlm_data = self.manager.getChallengeToken()
 
         response_token = univ.OctetString(ntlm_data).subtype(
-            explicitTag=tag.Tag(tag.tagClassContext, tag.tagFormatSimple, 2))
-        n = NegTokenResp().subtype(explicitTag=tag.Tag(
-            tag.tagClassContext, tag.tagFormatConstructed, 1))
-        n.setComponentByName('responseToken', response_token)
+            explicitTag=tag.Tag(tag.tagClassContext, tag.tagFormatSimple, 2)
+        )
+        n = NegTokenResp().subtype(
+            explicitTag=tag.Tag(tag.tagClassContext, tag.tagFormatConstructed, 1)
+        )
+        n.setComponentByName("responseToken", response_token)
         n.setComponentByName(
-            'supportedMech',
-            univ.ObjectIdentifier('1.3.6.1.4.1.311.2.2.10').subtype(
-                explicitTag=tag.Tag(tag.tagClassContext, tag.tagFormatSimple,
-                                    1)))
-        n.setComponentByName('negResult', RESULT_ACCEPT_INCOMPLETE)
+            "supportedMech",
+            univ.ObjectIdentifier("1.3.6.1.4.1.311.2.2.10").subtype(
+                explicitTag=tag.Tag(tag.tagClassContext, tag.tagFormatSimple, 1)
+            ),
+        )
+        n.setComponentByName("negResult", RESULT_ACCEPT_INCOMPLETE)
         nt = NegotiationToken()
-        nt.setComponentByName('negTokenResp', n)
+        nt.setComponentByName("negTokenResp", n)
 
         return encoder.encode(nt)
 
@@ -137,18 +143,18 @@ class BlobManager(object):
             result = RESULT_ACCEPT_COMPLETED
         else:
             result = RESULT_REJECT
-        n = NegTokenResp().subtype(explicitTag=tag.Tag(
-            tag.tagClassContext, tag.tagFormatConstructed, 1))
-        n.setComponentByName('negResult', result)
+        n = NegTokenResp().subtype(
+            explicitTag=tag.Tag(tag.tagClassContext, tag.tagFormatConstructed, 1)
+        )
+        n.setComponentByName("negResult", result)
         nt = NegotiationToken()
-        nt.setComponentByName('negTokenResp', n)
+        nt.setComponentByName("negTokenResp", n)
 
         return encoder.encode(nt)
 
     @property
     def credential(self):
         return self.manager.credential
-
 
 
 #
@@ -160,124 +166,163 @@ RESULT_ACCEPT_INCOMPLETE = 1
 RESULT_REJECT = 2
 
 
-
 class NegResultEnumerated(univ.Enumerated):
-    namedValues = namedval.NamedValues(('accept_completed', 0),
-                                       ('accept_incomplete', 1), ('reject', 2))
-    subtypeSpec = univ.Enumerated.subtypeSpec + \
-        constraint.SingleValueConstraint(0, 1, 2)
-
+    namedValues = namedval.NamedValues(
+        ("accept_completed", 0), ("accept_incomplete", 1), ("reject", 2)
+    )
+    subtypeSpec = univ.Enumerated.subtypeSpec + constraint.SingleValueConstraint(
+        0, 1, 2
+    )
 
 
 class MechTypeList(univ.SequenceOf):
     componentType = univ.ObjectIdentifier()
 
 
-
 class ContextFlags(univ.BitString):
-    namedValues = namedval.NamedValues(('delegFlag', 0), ('mutualFlag', 1),
-                                       ('replayFlag', 2), ('sequenceFlag', 3),
-                                       ('anonFlag', 4), ('confFlag', 5),
-                                       ('integFlag', 6))
-
+    namedValues = namedval.NamedValues(
+        ("delegFlag", 0),
+        ("mutualFlag", 1),
+        ("replayFlag", 2),
+        ("sequenceFlag", 3),
+        ("anonFlag", 4),
+        ("confFlag", 5),
+        ("integFlag", 6),
+    )
 
 
 class NegTokenInit(univ.Sequence):
     componentType = namedtype.NamedTypes(
         namedtype.OptionalNamedType(
-            'mechTypes',
-            MechTypeList().subtype(explicitTag=tag.Tag(
-                tag.tagClassContext, tag.tagFormatConstructed, 0))),
+            "mechTypes",
+            MechTypeList().subtype(
+                explicitTag=tag.Tag(tag.tagClassContext, tag.tagFormatConstructed, 0)
+            ),
+        ),
         namedtype.OptionalNamedType(
-            'reqFlags',
-            ContextFlags().subtype(explicitTag=tag.Tag(
-                tag.tagClassContext, tag.tagFormatConstructed, 1))),
+            "reqFlags",
+            ContextFlags().subtype(
+                explicitTag=tag.Tag(tag.tagClassContext, tag.tagFormatConstructed, 1)
+            ),
+        ),
         namedtype.OptionalNamedType(
-            'mechToken',
-            univ.OctetString().subtype(explicitTag=tag.Tag(
-                tag.tagClassContext, tag.tagFormatConstructed, 2))),
+            "mechToken",
+            univ.OctetString().subtype(
+                explicitTag=tag.Tag(tag.tagClassContext, tag.tagFormatConstructed, 2)
+            ),
+        ),
         namedtype.OptionalNamedType(
-            'mechListMIC',
-            univ.OctetString().subtype(implicitTag=tag.Tag(
-                tag.tagClassContext, tag.tagFormatConstructed, 3))))
-
+            "mechListMIC",
+            univ.OctetString().subtype(
+                implicitTag=tag.Tag(tag.tagClassContext, tag.tagFormatConstructed, 3)
+            ),
+        ),
+    )
 
 
 class NegHints(univ.Sequence):
     componentType = namedtype.NamedTypes(
         namedtype.OptionalNamedType(
-            'hintName',
-            char.GeneralString().subtype(explicitTag=tag.Tag(
-                tag.tagClassContext, tag.tagFormatConstructed, 0))),
+            "hintName",
+            char.GeneralString().subtype(
+                explicitTag=tag.Tag(tag.tagClassContext, tag.tagFormatConstructed, 0)
+            ),
+        ),
         namedtype.OptionalNamedType(
-            'hintAddress',
-            univ.OctetString().subtype(explicitTag=tag.Tag(
-                tag.tagClassContext, tag.tagFormatConstructed, 1))))
-
+            "hintAddress",
+            univ.OctetString().subtype(
+                explicitTag=tag.Tag(tag.tagClassContext, tag.tagFormatConstructed, 1)
+            ),
+        ),
+    )
 
 
 class NegTokenInit2(univ.Sequence):
     componentType = namedtype.NamedTypes(
         namedtype.OptionalNamedType(
-            'mechTypes',
-            MechTypeList().subtype(explicitTag=tag.Tag(
-                tag.tagClassContext, tag.tagFormatConstructed, 0))),
+            "mechTypes",
+            MechTypeList().subtype(
+                explicitTag=tag.Tag(tag.tagClassContext, tag.tagFormatConstructed, 0)
+            ),
+        ),
         namedtype.OptionalNamedType(
-            'reqFlags',
-            ContextFlags().subtype(explicitTag=tag.Tag(
-                tag.tagClassContext, tag.tagFormatConstructed, 1))),
+            "reqFlags",
+            ContextFlags().subtype(
+                explicitTag=tag.Tag(tag.tagClassContext, tag.tagFormatConstructed, 1)
+            ),
+        ),
         namedtype.OptionalNamedType(
-            'mechToken',
-            univ.OctetString().subtype(explicitTag=tag.Tag(
-                tag.tagClassContext, tag.tagFormatConstructed, 2))),
+            "mechToken",
+            univ.OctetString().subtype(
+                explicitTag=tag.Tag(tag.tagClassContext, tag.tagFormatConstructed, 2)
+            ),
+        ),
         namedtype.OptionalNamedType(
-            'negHints',
-            NegHints().subtype(explicitTag=tag.Tag(
-                tag.tagClassContext, tag.tagFormatConstructed, 3))),
+            "negHints",
+            NegHints().subtype(
+                explicitTag=tag.Tag(tag.tagClassContext, tag.tagFormatConstructed, 3)
+            ),
+        ),
         namedtype.OptionalNamedType(
-            'mechListMIC',
-            univ.OctetString().subtype(implicitTag=tag.Tag(
-                tag.tagClassContext, tag.tagFormatConstructed, 4))))
-
+            "mechListMIC",
+            univ.OctetString().subtype(
+                implicitTag=tag.Tag(tag.tagClassContext, tag.tagFormatConstructed, 4)
+            ),
+        ),
+    )
 
 
 class NegTokenResp(univ.Sequence):
     componentType = namedtype.NamedTypes(
         namedtype.OptionalNamedType(
-            'negResult',
-            NegResultEnumerated().subtype(explicitTag=tag.Tag(
-                tag.tagClassContext, tag.tagFormatConstructed, 0))),
+            "negResult",
+            NegResultEnumerated().subtype(
+                explicitTag=tag.Tag(tag.tagClassContext, tag.tagFormatConstructed, 0)
+            ),
+        ),
         namedtype.OptionalNamedType(
-            'supportedMech',
-            univ.ObjectIdentifier().subtype(explicitTag=tag.Tag(
-                tag.tagClassContext, tag.tagFormatConstructed, 1))),
+            "supportedMech",
+            univ.ObjectIdentifier().subtype(
+                explicitTag=tag.Tag(tag.tagClassContext, tag.tagFormatConstructed, 1)
+            ),
+        ),
         namedtype.OptionalNamedType(
-            'responseToken',
-            univ.OctetString().subtype(explicitTag=tag.Tag(
-                tag.tagClassContext, tag.tagFormatConstructed, 2))),
+            "responseToken",
+            univ.OctetString().subtype(
+                explicitTag=tag.Tag(tag.tagClassContext, tag.tagFormatConstructed, 2)
+            ),
+        ),
         namedtype.OptionalNamedType(
-            'mechListMIC',
-            univ.OctetString().subtype(explicitTag=tag.Tag(
-                tag.tagClassContext, tag.tagFormatConstructed, 3))))
-
+            "mechListMIC",
+            univ.OctetString().subtype(
+                explicitTag=tag.Tag(tag.tagClassContext, tag.tagFormatConstructed, 3)
+            ),
+        ),
+    )
 
 
 class NegotiationToken(univ.Choice):
     componentType = namedtype.NamedTypes(
         namedtype.NamedType(
-            'negTokenInit',
-            NegTokenInit().subtype(explicitTag=tag.Tag(
-                tag.tagClassContext, tag.tagFormatConstructed, 0))),
+            "negTokenInit",
+            NegTokenInit().subtype(
+                explicitTag=tag.Tag(tag.tagClassContext, tag.tagFormatConstructed, 0)
+            ),
+        ),
         namedtype.NamedType(
-            'negTokenResp',
-            NegTokenResp().subtype(explicitTag=tag.Tag(
-                tag.tagClassContext, tag.tagFormatConstructed, 1))))
-
+            "negTokenResp",
+            NegTokenResp().subtype(
+                explicitTag=tag.Tag(tag.tagClassContext, tag.tagFormatConstructed, 1)
+            ),
+        ),
+    )
 
 
 class ContextToken(univ.Sequence):
     tagSet = univ.Sequence.tagSet.tagImplicitly(
-        tag.Tag(tag.tagClassApplication, tag.tagFormatConstructed, 0))
+        tag.Tag(tag.tagClassApplication, tag.tagFormatConstructed, 0)
+    )
     componentType = namedtype.NamedTypes(
-        namedtype.NamedType('thisMech', univ.ObjectIdentifier()),
-        namedtype.NamedType('innerContextToken', NegotiationToken()))
+        namedtype.NamedType("thisMech", univ.ObjectIdentifier()),
+        namedtype.NamedType("innerContextToken", NegotiationToken()),
+    )

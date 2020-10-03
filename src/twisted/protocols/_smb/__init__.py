@@ -7,4 +7,4 @@ Server Message Block protocol implementation
 
 from twisted.protocols._smb.core import SMBFactory
 
-__all__ = ['SMBFactory']
+__all__ = ["SMBFactory"]

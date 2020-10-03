@@ -16,17 +16,15 @@ from twisted.python.randbytes import secureRandom
 log = Logger()
 
 
-
 class SMBError(Exception):
-    """SMB specific errors
-    """
+    """SMB specific errors"""
+
     def __init__(self, msg, ntstatus=0xC0000001):
         self.msg = msg
         self.ntstatus = ntstatus
 
     def __str__(self):
         return "%s 0x%08x" % (self.msg, self.ntstatus)
-
 
 
 def unixToNTTime(epoch):
@@ -44,9 +42,7 @@ def unixToNTTime(epoch):
     return int(epoch * 10000000.0) + 116444736000000000
 
 
-
-SMB_METADATA = '__smb_metadata'
-
+SMB_METADATA = "__smb_metadata"
 
 
 def default_only(instance, attribute, value):
@@ -54,8 +50,10 @@ def default_only(instance, attribute, value):
     C{attrs} validator that only accepts the default
     """
     assert attribute.default == value, "%s: must be %r, got %r" % (
-        attribute.name, attribute.default, value)
-
+        attribute.name,
+        attribute.default,
+        value,
+    )
 
 
 def byte(default=0, locked=False):
@@ -68,38 +66,42 @@ def byte(default=0, locked=False):
     @param locked: when C{True}, the default is the only valid value
     @type locked: L{bool}
     """
-    return attr.ib(default=default,
-                   type=int,
-                   metadata={SMB_METADATA: "B"},
-                   validator=default_only if locked else None)
-
+    return attr.ib(
+        default=default,
+        type=int,
+        metadata={SMB_METADATA: "B"},
+        validator=default_only if locked else None,
+    )
 
 
 def short(default=0, locked=False):
     """a 16-bit unsigned integer"""
-    return attr.ib(default=default,
-                   type=int,
-                   metadata={SMB_METADATA: "H"},
-                   validator=default_only if locked else None)
-
+    return attr.ib(
+        default=default,
+        type=int,
+        metadata={SMB_METADATA: "H"},
+        validator=default_only if locked else None,
+    )
 
 
 def medium(default=0, locked=False):
     """a 32-bit unsigned integer"""
-    return attr.ib(default=default,
-                   type=int,
-                   metadata={SMB_METADATA: "I"},
-                   validator=default_only if locked else None)
-
+    return attr.ib(
+        default=default,
+        type=int,
+        metadata={SMB_METADATA: "I"},
+        validator=default_only if locked else None,
+    )
 
 
 def long(default=0, locked=False):
     """an 64-bit unsigned integer"""
-    return attr.ib(default=default,
-                   type=int,
-                   metadata={SMB_METADATA: "Q"},
-                   validator=default_only if locked else None)
-
+    return attr.ib(
+        default=default,
+        type=int,
+        metadata={SMB_METADATA: "Q"},
+        validator=default_only if locked else None,
+    )
 
 
 def single(default=0.0):
@@ -107,11 +109,9 @@ def single(default=0.0):
     return attr.ib(default=default, type=float, metadata={SMB_METADATA: "f"})
 
 
-
 def double(default=0.0):
     """a 64-bit float"""
     return attr.ib(default=default, type=float, metadata={SMB_METADATA: "d"})
-
 
 
 def octets(length=None, default=None, locked=False):
@@ -129,28 +129,29 @@ def octets(length=None, default=None, locked=False):
     if length is None:
         length = len(default)
     if default is None:
-        default = b'\0' * length
-    return attr.ib(default=default,
-                   type=bytes,
-                   metadata={SMB_METADATA: str(length) + "s"},
-                   validator=default_only if locked else None)
-
+        default = b"\0" * length
+    return attr.ib(
+        default=default,
+        type=bytes,
+        metadata={SMB_METADATA: str(length) + "s"},
+        validator=default_only if locked else None,
+    )
 
 
 NULL_UUID = uuid_mod.UUID("00000000-0000-0000-0000-000000000000")
 NEW_UUID = attr.Factory(uuid_mod.uuid4)
 
 
-
 def uuid(default=NULL_UUID, locked=False):
     """a universial unique ID"""
     default = _conv_uuid(default)
-    return attr.ib(default=default,
-                   metadata={SMB_METADATA: "16s"},
-                   type=uuid_mod.UUID,
-                   converter=_conv_uuid,
-                   validator=default_only if locked else None)
-
+    return attr.ib(
+        default=default,
+        metadata={SMB_METADATA: "16s"},
+        type=uuid_mod.UUID,
+        converter=_conv_uuid,
+        validator=default_only if locked else None,
+    )
 
 
 def _conv_uuid(x):
@@ -160,7 +161,6 @@ def _conv_uuid(x):
         return uuid_mod.UUID(bytes_le=x)
     else:
         return x
-
 
 
 def pack(obj):
@@ -176,7 +176,6 @@ def pack(obj):
     return strct.pack(*args)
 
 
-
 def _conv_arg(obj, attrib):
     val = getattr(obj, attrib.name)
     if type(val) is uuid_mod.UUID:
@@ -184,12 +183,10 @@ def _conv_arg(obj, attrib):
     return val
 
 
-
 IGNORE = 0
 ERROR = 1
 OFFSET = 2
 DATA = 3
-
 
 
 def unpack(cls, data, offset=0, remainder=IGNORE):
@@ -237,13 +234,11 @@ def unpack(cls, data, offset=0, remainder=IGNORE):
     elif remainder == OFFSET:
         return (obj, offset + strct.size)
     else:
-        return (obj, data[offset + strct.size:])
-
+        return (obj, data[offset + strct.size :])
 
 
 def smb_fields(cls):
     return [i for i in attr.fields(cls) if SMB_METADATA in i.metadata]
-
 
 
 def _get_struct(cls):
@@ -252,11 +247,11 @@ def _get_struct(cls):
         # efficient
         strct = cls._struct
     except AttributeError:
-        strct = struct.Struct("<" + "".join(i.metadata[SMB_METADATA]
-                                            for i in smb_fields(cls)))
+        strct = struct.Struct(
+            "<" + "".join(i.metadata[SMB_METADATA] for i in smb_fields(cls))
+        )
         cls._struct = strct
     return strct
-
 
 
 def calcsize(cls):
@@ -269,9 +264,7 @@ def calcsize(cls):
     return strct.size
 
 
-
 _leint = struct.Struct("<I")
-
 
 
 def int32key(d, val):
@@ -282,13 +275,12 @@ def int32key(d, val):
     @param val: new dictionary value
     @rtype: L{int}
     """
-    assert len(d) < 0xc0000000  # otherwiae dict so big hard to find keys
+    assert len(d) < 0xC0000000  # otherwiae dict so big hard to find keys
     n = 0
     while n == 0 or n in d:
         [n] = _leint.unpack(secureRandom(_leint.size, True))
     d[n] = val
     return n
-
 
 
 @attr.s
@@ -303,6 +295,7 @@ class SMBPacket:
     @ivar hdr: the parsed header
     @ivar body: the parsed body
     """
+
     data = attr.ib()
     _proto = attr.ib()
     hdr = attr.ib(default=None)
@@ -334,13 +327,11 @@ class SMBPacket:
         a new packet associated with the same connection
         @rtype: L{SMBPacket}
         """
-        kwargs['proto'] = self._proto
+        kwargs["proto"] = self._proto
         return SMBPacket(**kwargs)
 
 
-
 BASE_HEADER = struct.Struct("!xBH")
-
 
 
 class SMBPacketReceiver(protocol.Protocol):
@@ -349,6 +340,7 @@ class SMBPacketReceiver(protocol.Protocol):
     mechanism, which consist of a 4-byte header: single null
     and a 24-bit length field.
     """
+
     def __init__(self, packetReceived, ctx):
         """
         @param ctx: context objects for connection
@@ -357,7 +349,7 @@ class SMBPacketReceiver(protocol.Protocol):
         @param packetReceived: callback receives each incoming L{SMBPacket}
         @type packetReceived: C{callable}
         """
-        self.data = b''
+        self.data = b""
         self.ctx = ctx
         self.packetReceived = packetReceived
 
@@ -372,11 +364,11 @@ class SMBPacketReceiver(protocol.Protocol):
         size = (x << 16) + y
         if len(self.data) < size + BASE_HEADER.size:
             return
-        pkt = SMBPacket(data=self.data[BASE_HEADER.size:BASE_HEADER.size +
-                                       size],
-                        proto=self)
+        pkt = SMBPacket(
+            data=self.data[BASE_HEADER.size : BASE_HEADER.size + size], proto=self
+        )
         self.packetReceived(pkt)
-        self.data = self.data[BASE_HEADER.size + size:]
+        self.data = self.data[BASE_HEADER.size + size :]
         self._processData()
 
     def sendPacket(self, data):
@@ -387,7 +379,7 @@ class SMBPacketReceiver(protocol.Protocol):
         @type data: L{bytes}
         """
         size = len(data)
-        assert size < 0xffffff
-        x = (size & 0xff0000) >> 16
-        y = size & 0xffff
+        assert size < 0xFFFFFF
+        x = (size & 0xFF0000) >> 16
+        y = size & 0xFFFF
         self.transport.write(BASE_HEADER.pack(x, y) + data)
