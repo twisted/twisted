@@ -17,23 +17,22 @@ Maintainer: Glyph Lefkowitz
 """
 
 
+import traceback
+import types
+import warnings
 from asyncio import iscoroutine
 from functools import wraps
 from sys import exc_info, version_info
-import traceback
-import types
 from typing import Optional
-import warnings
 
 import attr
 from incremental import Version
-from sys import exc_info, version_info
 
 # Twisted imports
 from twisted.logger import Logger
-from twisted.python import lockfile, failure
+from twisted.python import failure, lockfile
 from twisted.python.compat import cmp, comparable
-from twisted.python.deprecate import warnAboutFunction, deprecated
+from twisted.python.deprecate import deprecated, warnAboutFunction
 
 try:
     from contextvars import copy_context as _copy_context
