@@ -26,6 +26,8 @@ def getDataDirectory(moduleName=None):
     """
     if not moduleName:
         caller = currentframe(1)
-        moduleName = inspect.getmodule(caller).__name__
+        module = inspect.getmodule(caller)
+        assert module is not None
+        moduleName = module.__name__
 
     return appdirs.user_data_dir(moduleName)

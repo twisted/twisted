@@ -91,12 +91,13 @@ __all__ = [
 ]
 
 
-import inspect
-import typing
-import sys
-from warnings import warn, warn_explicit
 from dis import findlinestarts
 from functools import wraps
+import inspect
+from types import ModuleType
+from typing import Any, Callable, Dict, Optional, TypeVar, cast
+import sys
+from warnings import warn, warn_explicit
 
 from incremental import Version, getVersionString
 
@@ -303,7 +304,7 @@ def deprecated(version, replacement=None):
         _appendToDocstring(
             deprecatedFunction, _getDeprecationDocstring(version, replacement)
         )
-        deprecatedFunction.deprecatedVersion = version
+        deprecatedFunction.deprecatedVersion = version  # type: ignore[attr-defined]
         return deprecatedFunction
 
     return deprecationDecorator
@@ -343,7 +344,11 @@ def deprecatedProperty(version, replacement=None):
         def _deprecatedWrapper(self, function):
             @wraps(function)
             def deprecatedFunction(*args, **kwargs):
-                warn(self.warningString, DeprecationWarning, stacklevel=2)
+                warn(
+                    self.warningString,  # type: ignore[attr-defined]
+                    DeprecationWarning,
+                    stacklevel=2,
+                )
                 return function(*args, **kwargs)
 
             return deprecatedFunction
@@ -364,10 +369,10 @@ def deprecatedProperty(version, replacement=None):
         _appendToDocstring(
             deprecatedFunction, _getDeprecationDocstring(version, replacement)
         )
-        deprecatedFunction.deprecatedVersion = version
+        deprecatedFunction.deprecatedVersion = version  # type: ignore[attr-defined]
 
         result = _DeprecatedProperty(deprecatedFunction)
-        result.warningString = warningString
+        result.warningString = warningString  # type: ignore[attr-defined]
         return result
 
     return deprecationDecorator
@@ -582,7 +587,7 @@ def deprecatedModuleAttribute(version, message, moduleName, name):
     """
     module = sys.modules[moduleName]
     if not isinstance(module, _ModuleProxy):
-        module = _ModuleProxy(module)
+        module = cast(ModuleType, _ModuleProxy(module))
         sys.modules[moduleName] = module
 
     _deprecateAttribute(module, name, version, message)
@@ -642,7 +647,7 @@ def _passedArgSpec(argspec, positional, keyword):
         to values that were passed explicitly by the user.
     @rtype: L{dict} mapping L{str} to L{object}
     """
-    result = {}
+    result = {}  # type: Dict[str, object]
     unpassed = len(argspec.args) - len(positional)
     if argspec.keywords is not None:
         kwargs = result[argspec.keywords] = {}
@@ -746,14 +751,8 @@ def _mutuallyExclusiveArguments(argumentPairs):
     """
 
     def wrapper(wrappee):
-        if getattr(inspect, "signature", None):
-            # Python 3
-            spec = inspect.signature(wrappee)
-            _passed = _passedSignature
-        else:
-            # Python 2
-            spec = inspect.getargspec(wrappee)
-            _passed = _passedArgSpec
+        spec = inspect.signature(wrappee)
+        _passed = _passedSignature
 
         @wraps(wrappee)
         def wrapped(*args, **kwargs):
@@ -771,12 +770,12 @@ def _mutuallyExclusiveArguments(argumentPairs):
     return wrapper
 
 
-_Tc = typing.TypeVar("_Tc", bound=typing.Callable[..., typing.Any])
+_Tc = TypeVar("_Tc", bound=Callable[..., Any])
 
 
 def deprecatedKeywordParameter(
-    version: Version, name: str, replacement: typing.Optional[str] = None
-) -> typing.Callable[[_Tc], _Tc]:
+    version: Version, name: str, replacement: Optional[str] = None
+) -> Callable[[_Tc], _Tc]:
     """
     Return a decorator that marks a keyword parameter of a callable
     as deprecated. A warning will be emitted if a caller supplies
@@ -831,7 +830,7 @@ def deprecatedKeywordParameter(
                     warn(warningString, DeprecationWarning, stacklevel=2)
                 return wrappee(*args, **kwargs)
 
-        decorated = typing.cast(_Tc, wraps(wrappee)(checkDeprecatedParameter))
+        decorated = cast(_Tc, wraps(wrappee)(checkDeprecatedParameter))
         _appendToDocstring(decorated, doc)
         return decorated
 
