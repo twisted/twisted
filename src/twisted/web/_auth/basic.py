@@ -20,7 +20,7 @@ from twisted.web.iweb import ICredentialFactory
 
 
 @implementer(ICredentialFactory)
-class BasicCredentialFactory(object):
+class BasicCredentialFactory:
     """
     Credential Factory for HTTP Basic Authentication
 
@@ -29,19 +29,17 @@ class BasicCredentialFactory(object):
         challenges.
     """
 
-    scheme = b'basic'
+    scheme = b"basic"
 
     def __init__(self, authenticationRealm):
         self.authenticationRealm = authenticationRealm
-
 
     def getChallenge(self, request):
         """
         Return a challenge including the HTTP authentication realm with which
         this factory was created.
         """
-        return {'realm': self.authenticationRealm}
-
+        return {"realm": self.authenticationRealm}
 
     def decode(self, response, request):
         """
@@ -49,12 +47,12 @@ class BasicCredentialFactory(object):
         L{credentials.UsernamePassword} instance.
         """
         try:
-            creds = binascii.a2b_base64(response + b'===')
+            creds = binascii.a2b_base64(response + b"===")
         except binascii.Error:
-            raise error.LoginFailed('Invalid credentials')
+            raise error.LoginFailed("Invalid credentials")
 
-        creds = creds.split(b':', 1)
+        creds = creds.split(b":", 1)
         if len(creds) == 2:
             return credentials.UsernamePassword(*creds)
         else:
-            raise error.LoginFailed('Invalid credentials')
+            raise error.LoginFailed("Invalid credentials")

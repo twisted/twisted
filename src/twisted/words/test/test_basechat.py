@@ -13,12 +13,13 @@ class ChatUITests(unittest.TestCase):
     """
     Tests for the L{basechat.ChatUI} chat client.
     """
+
     def setUp(self):
         self.ui = basechat.ChatUI()
-        self.account = basesupport.AbstractAccount("fooAccount", False, "foo",
-                                                   "password", "host", "port")
+        self.account = basesupport.AbstractAccount(
+            "fooAccount", False, "foo", "password", "host", "port"
+        )
         self.person = basesupport.AbstractPerson("foo", self.account)
-
 
     def test_contactChangedNickNoKey(self):
         """
@@ -33,7 +34,6 @@ class ChatUITests(unittest.TestCase):
         self.assertEqual(self.person.name, "foo")
         self.assertEqual(self.person.account, self.account)
 
-
     def test_contactChangedNickNoConversation(self):
         """
         L{basechat.ChatUI.contactChangedNick} changes the name for an
@@ -47,7 +47,6 @@ class ChatUITests(unittest.TestCase):
         self.ui.contactChangedNick(self.person, "bar")
         self.assertEqual(self.person.name, "bar")
         self.assertEqual(self.person.account, self.account)
-
 
     def test_contactChangedNickHasConversation(self):
         """

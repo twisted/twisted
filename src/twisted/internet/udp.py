@@ -21,25 +21,26 @@ import socket
 import operator
 import struct
 import warnings
+from typing import Optional
 
 from zope.interface import implementer
 
 from twisted.python.runtime import platformType
-if platformType == 'win32':
+
+if platformType == "win32":
     from errno import WSAEWOULDBLOCK  # type: ignore[attr-defined]
+    from errno import WSAEINTR, WSAEMSGSIZE, WSAETIMEDOUT  # type: ignore[attr-defined]
     from errno import (  # type: ignore[attr-defined]
-        WSAEINTR, WSAEMSGSIZE, WSAETIMEDOUT)
-    from errno import (  # type: ignore[attr-defined]
-      WSAECONNREFUSED, WSAECONNRESET, WSAENETRESET)
+        WSAECONNREFUSED,
+        WSAECONNRESET,
+        WSAENETRESET,
+    )
     from errno import WSAEINPROGRESS  # type: ignore[attr-defined]
-    from errno import (  # type: ignore[attr-defined]
-        WSAENOPROTOOPT as ENOPROTOOPT)
+    from errno import WSAENOPROTOOPT as ENOPROTOOPT  # type: ignore[attr-defined]
 
     # Classify read and write errors
-    _sockErrReadIgnore = [WSAEINTR, WSAEWOULDBLOCK, WSAEMSGSIZE,
-                          WSAEINPROGRESS]
-    _sockErrReadRefuse = [WSAECONNREFUSED, WSAECONNRESET, WSAENETRESET,
-                          WSAETIMEDOUT]
+    _sockErrReadIgnore = [WSAEINTR, WSAEWOULDBLOCK, WSAEMSGSIZE, WSAEINPROGRESS]
+    _sockErrReadRefuse = [WSAECONNREFUSED, WSAECONNRESET, WSAENETRESET, WSAETIMEDOUT]
 
     # POSIX-compatible write errors
     EMSGSIZE = WSAEMSGSIZE
@@ -49,6 +50,7 @@ if platformType == 'win32':
 else:
     from errno import EWOULDBLOCK, EINTR, EMSGSIZE, ECONNREFUSED, EAGAIN
     from errno import ENOPROTOOPT
+
     _sockErrReadIgnore = [EAGAIN, EINTR, EWOULDBLOCK]
     _sockErrReadRefuse = [ECONNREFUSED]
 
@@ -58,10 +60,9 @@ from twisted.python import log, failure
 from twisted.internet import abstract, error, interfaces
 
 
-
 @implementer(
-    interfaces.IListeningPort, interfaces.IUDPTransport,
-    interfaces.ISystemHandle)
+    interfaces.IListeningPort, interfaces.IUDPTransport, interfaces.ISystemHandle
+)
 class Port(base.BasePort):
     """
     UDP port, listening for packets.
@@ -85,10 +86,10 @@ class Port(base.BasePort):
     socketType = socket.SOCK_DGRAM
     maxThroughput = 256 * 1024
 
-    _realPortNumber = None
+    _realPortNumber = None  # type: Optional[int]
     _preexistingSocket = None
 
-    def __init__(self, port, proto, interface='', maxPacketSize=8192, reactor=None):
+    def __init__(self, port, proto, interface="", maxPacketSize=8192, reactor=None):
         """
         @param port: A port number on which to listen.
         @type port: L{int}
@@ -118,10 +119,10 @@ class Port(base.BasePort):
         self._connectedAddr = None
         self._setAddressFamily()
 
-
     @classmethod
-    def _fromListeningDescriptor(cls, reactor, fd, addressFamily, protocol,
-                                 maxPacketSize):
+    def _fromListeningDescriptor(
+        cls, reactor, fd, addressFamily, protocol, maxPacketSize
+    ):
         """
         Create a new L{Port} based on an existing listening
         I{SOCK_DGRAM} socket.
@@ -152,16 +153,19 @@ class Port(base.BasePort):
         """
         port = socket.fromfd(fd, addressFamily, cls.socketType)
         interface = port.getsockname()[0]
-        self = cls(None, protocol, interface=interface, reactor=reactor,
-                   maxPacketSize=maxPacketSize)
+        self = cls(
+            None,
+            protocol,
+            interface=interface,
+            reactor=reactor,
+            maxPacketSize=maxPacketSize,
+        )
         self._preexistingSocket = port
         return self
 
-
     def __repr__(self) -> str:
         if self._realPortNumber is not None:
-            return "<%s on %s>" % (self.protocol.__class__,
-                                   self._realPortNumber)
+            return "<%s on %s>" % (self.protocol.__class__, self._realPortNumber)
         else:
             return "<%s not connected>" % (self.protocol.__class__,)
 
@@ -180,7 +184,6 @@ class Port(base.BasePort):
         """
         self._bindSocket()
         self._connectToProtocol()
-
 
     def _bindSocket(self):
         """
@@ -208,18 +211,18 @@ class Port(base.BasePort):
         # reflect what the OS actually assigned us.
         self._realPortNumber = skt.getsockname()[1]
 
-        log.msg("%s starting on %s" % (
-                self._getLogPrefix(self.protocol), self._realPortNumber))
+        log.msg(
+            "%s starting on %s"
+            % (self._getLogPrefix(self.protocol), self._realPortNumber)
+        )
 
         self.connected = 1
         self.socket = skt
         self.fileno = self.socket.fileno
 
-
     def _connectToProtocol(self):
         self.protocol.makeConnection(self)
         self.startReading()
-
 
     def doRead(self):
         """
@@ -253,7 +256,6 @@ class Port(base.BasePort):
                 except:
                     log.err()
 
-
     def write(self, datagram, addr=None):
         """
         Write a datagram.
@@ -282,21 +284,24 @@ class Port(base.BasePort):
                     raise
         else:
             assert addr != None
-            if (not abstract.isIPAddress(addr[0])
-                    and not abstract.isIPv6Address(addr[0])
-                    and addr[0] != "<broadcast>"):
+            if (
+                not abstract.isIPAddress(addr[0])
+                and not abstract.isIPv6Address(addr[0])
+                and addr[0] != "<broadcast>"
+            ):
                 raise error.InvalidAddressError(
-                    addr[0],
-                    "write() only accepts IP addresses, not hostnames")
-            if ((abstract.isIPAddress(addr[0]) or addr[0] == "<broadcast>")
-                    and self.addressFamily == socket.AF_INET6):
+                    addr[0], "write() only accepts IP addresses, not hostnames"
+                )
+            if (
+                abstract.isIPAddress(addr[0]) or addr[0] == "<broadcast>"
+            ) and self.addressFamily == socket.AF_INET6:
                 raise error.InvalidAddressError(
-                    addr[0],
-                    "IPv6 port write() called with IPv4 or broadcast address")
-            if (abstract.isIPv6Address(addr[0])
-                    and self.addressFamily == socket.AF_INET):
+                    addr[0], "IPv6 port write() called with IPv4 or broadcast address"
+                )
+            if abstract.isIPv6Address(addr[0]) and self.addressFamily == socket.AF_INET:
                 raise error.InvalidAddressError(
-                    addr[0], "IPv4 port write() called with IPv6 address")
+                    addr[0], "IPv4 port write() called with IPv6 address"
+                )
             try:
                 return self.socket.sendto(datagram, addr)
             except socket.error as se:
@@ -313,7 +318,6 @@ class Port(base.BasePort):
                 else:
                     raise
 
-
     def writeSequence(self, seq, addr):
         """
         Write a datagram constructed from an iterable of L{bytes}.
@@ -329,25 +333,23 @@ class Port(base.BasePort):
         """
         self.write(b"".join(seq), addr)
 
-
     def connect(self, host, port):
         """
         'Connect' to remote server.
         """
         if self._connectedAddr:
-            raise RuntimeError("already connected, reconnecting is not currently supported")
+            raise RuntimeError(
+                "already connected, reconnecting is not currently supported"
+            )
         if not abstract.isIPAddress(host) and not abstract.isIPv6Address(host):
-            raise error.InvalidAddressError(
-                host, 'not an IPv4 or IPv6 address.')
+            raise error.InvalidAddressError(host, "not an IPv4 or IPv6 address.")
         self._connectedAddr = (host, port)
         self.socket.connect((host, port))
 
-
     def _loseConnection(self):
         self.stopReading()
-        if self.connected: # actually means if we are *listening*
+        if self.connected:  # actually means if we are *listening*
             self.reactor.callLater(0, self.connectionLost)
-
 
     def stopListening(self):
         if self.connected:
@@ -357,17 +359,19 @@ class Port(base.BasePort):
         self._loseConnection()
         return result
 
-
     def loseConnection(self):
-        warnings.warn("Please use stopListening() to disconnect port", DeprecationWarning, stacklevel=2)
+        warnings.warn(
+            "Please use stopListening() to disconnect port",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         self.stopListening()
-
 
     def connectionLost(self, reason=None):
         """
         Cleans up my socket.
         """
-        log.msg('(UDP Port %s Closed)' % self._realPortNumber)
+        log.msg("(UDP Port %s Closed)" % self._realPortNumber)
         self._realPortNumber = None
         self.maxThroughput = -1
         base.BasePort.connectionLost(self, reason)
@@ -379,14 +383,12 @@ class Port(base.BasePort):
             self.d.callback(None)
             del self.d
 
-
     def setLogStr(self):
         """
         Initialize the C{logstr} attribute to be used by C{logPrefix}.
         """
         logPrefix = self._getLogPrefix(self.protocol)
         self.logstr = "%s (UDP)" % logPrefix
-
 
     def _setAddressFamily(self):
         """
@@ -398,15 +400,14 @@ class Port(base.BasePort):
             self.addressFamily = socket.AF_INET
         elif self.interface:
             raise error.InvalidAddressError(
-                self.interface, 'not an IPv4 or IPv6 address.')
-
+                self.interface, "not an IPv4 or IPv6 address."
+            )
 
     def logPrefix(self):
         """
         Return the prefix to log with.
         """
         return self.logstr
-
 
     def getHost(self):
         """
@@ -417,10 +418,9 @@ class Port(base.BasePort):
         """
         addr = self.socket.getsockname()
         if self.addressFamily == socket.AF_INET:
-            return address.IPv4Address('UDP', *addr)
+            return address.IPv4Address("UDP", *addr)
         elif self.addressFamily == socket.AF_INET6:
-            return address.IPv6Address('UDP', *(addr[:2]))
-
+            return address.IPv6Address("UDP", *(addr[:2]))
 
     def setBroadcastAllowed(self, enabled):
         """
@@ -429,9 +429,7 @@ class Port(base.BasePort):
         @param enabled: Whether the port may broadcast.
         @type enabled: L{bool}
         """
-        self.socket.setsockopt(
-            socket.SOL_SOCKET, socket.SO_BROADCAST, enabled)
-
+        self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, enabled)
 
     def getBroadcastAllowed(self):
         """
@@ -441,8 +439,8 @@ class Port(base.BasePort):
         @rtype: L{bool}
         """
         return operator.truth(
-            self.socket.getsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST))
-
+            self.socket.getsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST)
+        )
 
 
 class MulticastMixin:
@@ -454,44 +452,35 @@ class MulticastMixin:
         i = self.socket.getsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_IF)
         return socket.inet_ntoa(struct.pack("@i", i))
 
-
     def setOutgoingInterface(self, addr):
         """Returns Deferred of success."""
         return self.reactor.resolve(addr).addCallback(self._setInterface)
-
 
     def _setInterface(self, addr):
         i = socket.inet_aton(addr)
         self.socket.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_IF, i)
         return 1
 
-
     def getLoopbackMode(self):
         return self.socket.getsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_LOOP)
-
 
     def setLoopbackMode(self, mode):
         mode = struct.pack("b", operator.truth(mode))
         self.socket.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_LOOP, mode)
 
-
     def getTTL(self):
         return self.socket.getsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL)
-
 
     def setTTL(self, ttl):
         ttl = struct.pack("B", ttl)
         self.socket.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, ttl)
 
-
     def joinGroup(self, addr, interface=""):
         """Join a multicast group. Returns Deferred of success."""
         return self.reactor.resolve(addr).addCallback(self._joinAddr1, interface, 1)
 
-
     def _joinAddr1(self, addr, interface, join):
         return self.reactor.resolve(interface).addCallback(self._joinAddr2, addr, join)
-
 
     def _joinAddr2(self, interface, addr, join):
         addr = socket.inet_aton(addr)
@@ -505,11 +494,9 @@ class MulticastMixin:
         except socket.error as e:
             return failure.Failure(error.MulticastJoinError(addr, interface, *e.args))
 
-
     def leaveGroup(self, addr, interface=""):
         """Leave multicast group, return Deferred of success."""
         return self.reactor.resolve(addr).addCallback(self._joinAddr1, interface, 0)
-
 
 
 @implementer(interfaces.IMulticastTransport)
@@ -518,14 +505,20 @@ class MulticastPort(MulticastMixin, Port):
     UDP Port that supports multicasting.
     """
 
-    def __init__(self, port, proto, interface='', maxPacketSize=8192,
-                 reactor=None, listenMultiple=False):
+    def __init__(
+        self,
+        port,
+        proto,
+        interface="",
+        maxPacketSize=8192,
+        reactor=None,
+        listenMultiple=False,
+    ):
         """
         @see: L{twisted.internet.interfaces.IReactorMulticast.listenMulticast}
         """
         Port.__init__(self, port, proto, interface, maxPacketSize, reactor)
         self.listenMultiple = listenMultiple
-
 
     def createInternetSocket(self):
         skt = Port.createInternetSocket(self)

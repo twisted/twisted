@@ -5,4 +5,4 @@
 Twisted Enterprise: Database support for Twisted services.
 """
 
-__all__ = ['adbapi']
+__all__ = ["adbapi"]

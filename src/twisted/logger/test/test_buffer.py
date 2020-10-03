@@ -14,7 +14,6 @@ from .._observer import ILogObserver
 from .._buffer import LimitedHistoryLogObserver
 
 
-
 class LimitedHistoryLogObserverTests(unittest.TestCase):
     """
     Tests for L{LimitedHistoryLogObserver}.
@@ -30,13 +29,12 @@ class LimitedHistoryLogObserverTests(unittest.TestCase):
         except BrokenMethodImplementation as e:
             self.fail(e)
 
-
     def test_order(self):
         """
         L{LimitedHistoryLogObserver} saves history in the order it is received.
         """
         size = 4
-        events = [dict(n=n) for n in range(size//2)]
+        events = [dict(n=n) for n in range(size // 2)]
         observer = LimitedHistoryLogObserver(size)
 
         for event in events:
@@ -46,14 +44,13 @@ class LimitedHistoryLogObserverTests(unittest.TestCase):
         observer.replayTo(outEvents.append)
         self.assertEqual(events, outEvents)
 
-
     def test_limit(self):
         """
         When more events than a L{LimitedHistoryLogObserver}'s maximum size are
         buffered, older events will be dropped.
         """
         size = 4
-        events = [dict(n=n) for n in range(size*2)]
+        events = [dict(n=n) for n in range(size * 2)]
         observer = LimitedHistoryLogObserver(size)
 
         for event in events:

@@ -13,12 +13,14 @@ import sys
 from twisted.internet import protocol, reactor
 from twisted.protocols.shoutcast import ShoutcastClient
 
+
 class Test(ShoutcastClient):
     def gotMetaData(self, data):
         print("meta:", data)
 
     def gotMP3Data(self, data):
         pass
+
 
 host = sys.argv[1]
 port = int(sys.argv[2])

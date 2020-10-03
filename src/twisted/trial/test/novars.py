@@ -2,5 +2,6 @@
 # declarations.  This one is supposed to have none.
 # The class declaration is irrelevant
 
-class Bar(object):
+
+class Bar:
     pass

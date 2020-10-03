@@ -11,7 +11,6 @@ from twisted.trial.unittest import TestCase
 from twisted.internet._glibbase import ensureNotImported
 
 
-
 class EnsureNotImportedTests(TestCase):
     """
     L{ensureNotImported} protects against unwanted past and future imports.
@@ -25,10 +24,8 @@ class EnsureNotImportedTests(TestCase):
         """
         modules = {}
         self.patch(sys, "modules", modules)
-        ensureNotImported(["m1", "m2"], "A message.",
-                          preventImports=["m1", "m2", "m3"])
+        ensureNotImported(["m1", "m2"], "A message.", preventImports=["m1", "m2", "m3"])
         self.assertEqual(modules, {"m1": None, "m2": None, "m3": None})
-
 
     def test_ensureWhenNotImportedDontPrevent(self):
         """
@@ -40,7 +37,6 @@ class EnsureNotImportedTests(TestCase):
         ensureNotImported(["m1", "m2"], "A message.")
         self.assertEqual(modules, {})
 
-
     def test_ensureWhenFailedToImport(self):
         """
         If the specified modules have been set to L{None} in C{sys.modules},
@@ -51,7 +47,6 @@ class EnsureNotImportedTests(TestCase):
         ensureNotImported(["m1", "m2"], "A message.", preventImports=["m1", "m2"])
         self.assertEqual(modules, {"m1": None, "m2": None})
 
-
     def test_ensureFailsWhenImported(self):
         """
         If one of the specified modules has been previously imported,
@@ -60,8 +55,12 @@ class EnsureNotImportedTests(TestCase):
         module = object()
         modules = {"m2": module}
         self.patch(sys, "modules", modules)
-        e = self.assertRaises(ImportError, ensureNotImported,
-                              ["m1", "m2"], "A message.",
-                              preventImports=["m1", "m2"])
+        e = self.assertRaises(
+            ImportError,
+            ensureNotImported,
+            ["m1", "m2"],
+            "A message.",
+            preventImports=["m1", "m2"],
+        )
         self.assertEqual(modules, {"m2": module})
         self.assertEqual(e.args, ("A message.",))

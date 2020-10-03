@@ -42,7 +42,6 @@ if getattr(GLib, "threads_init", None) is not None:
     GLib.threads_init()
 
 
-
 class GIReactor(_glibbase.GlibReactorBase):
     """
     GObject-introspection event loop reactor.
@@ -50,8 +49,10 @@ class GIReactor(_glibbase.GlibReactorBase):
     @ivar _gapplication: A C{Gio.Application} instance that was registered
         with C{registerGApplication}.
     """
-    _POLL_DISCONNECTED = (GLib.IOCondition.HUP | GLib.IOCondition.ERR |
-                          GLib.IOCondition.NVAL)
+
+    _POLL_DISCONNECTED = (
+        GLib.IOCondition.HUP | GLib.IOCondition.ERR | GLib.IOCondition.NVAL
+    )
     _POLL_IN = GLib.IOCondition.IN
     _POLL_OUT = GLib.IOCondition.OUT
 
@@ -64,14 +65,12 @@ class GIReactor(_glibbase.GlibReactorBase):
     # By default no Application is registered:
     _gapplication = None
 
-
     def __init__(self, useGtk=False):
         _gtk = None
         if useGtk is True:
             from gi.repository import Gtk as _gtk
 
         _glibbase.GlibReactorBase.__init__(self, GLib, _gtk, useGtk=useGtk)
-
 
     def registerGApplication(self, app):
         """
@@ -84,36 +83,38 @@ class GIReactor(_glibbase.GlibReactorBase):
         not supported.
         """
         if self._gapplication is not None:
-            raise RuntimeError(
-                "Can't register more than one application instance.")
+            raise RuntimeError("Can't register more than one application instance.")
         if self._started:
             raise ReactorAlreadyRunning(
-                "Can't register application after reactor was started.")
+                "Can't register application after reactor was started."
+            )
         if not hasattr(app, "quit"):
-            raise RuntimeError("Application registration is not supported in"
-                               " versions of PyGObject prior to 3.2.")
+            raise RuntimeError(
+                "Application registration is not supported in"
+                " versions of PyGObject prior to 3.2."
+            )
         self._gapplication = app
+
         def run():
             app.hold()
             app.run(None)
+
         self._run = run
 
         self._crash = app.quit
-
 
 
 class PortableGIReactor(_glibbase.PortableGlibReactorBase):
     """
     Portable GObject Introspection event loop reactor.
     """
+
     def __init__(self, useGtk=False):
         _gtk = None
         if useGtk is True:
             from gi.repository import Gtk as _gtk
 
-        _glibbase.PortableGlibReactorBase.__init__(self, GLib, _gtk,
-                                                   useGtk=useGtk)
-
+        _glibbase.PortableGlibReactorBase.__init__(self, GLib, _gtk, useGtk=useGtk)
 
     def registerGApplication(self, app):
         """
@@ -123,7 +124,6 @@ class PortableGIReactor(_glibbase.PortableGlibReactorBase):
         raise NotImplementedError("GApplication is not currently supported on Windows.")
 
 
-
 def install(useGtk=False):
     """
     Configure the twisted mainloop to be run inside the glib mainloop.
@@ -131,14 +131,15 @@ def install(useGtk=False):
     @param useGtk: should GTK+ rather than glib event loop be
         used (this will be slightly slower but does support GUI).
     """
-    if runtime.platform.getType() == 'posix':
+    if runtime.platform.getType() == "posix":
         reactor = GIReactor(useGtk=useGtk)
     else:
         reactor = PortableGIReactor(useGtk=useGtk)
 
     from twisted.internet.main import installReactor
+
     installReactor(reactor)
     return reactor
 
 
-__all__ = ['install']
+__all__ = ["install"]

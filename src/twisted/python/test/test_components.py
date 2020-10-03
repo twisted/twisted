@@ -20,13 +20,16 @@ from twisted.python.components import _addHook, _removeHook, proxyForInterface
 
 class Compo(components.Componentized):
     num = 0
+
     def inc(self):
         self.num = self.num + 1
         return self.num
 
+
 class IAdept(Interface):
     def adaptorFunc():
         raise NotImplementedError()
+
 
 class IElapsed(Interface):
     def elapsedFunc():
@@ -34,26 +37,35 @@ class IElapsed(Interface):
         1!
         """
 
+
 @implementer(IAdept)
 class Adept(components.Adapter):
     def __init__(self, orig):
         self.original = orig
         self.num = 0
+
     def adaptorFunc(self):
         self.num = self.num + 1
         return self.num, self.original.inc()
+
 
 @implementer(IElapsed)
 class Elapsed(components.Adapter):
     def elapsedFunc(self):
         return 1
 
+
 class AComp(components.Componentized):
     pass
+
+
 class BComp(AComp):
     pass
+
+
 class CComp(BComp):
     pass
+
 
 class ITest(Interface):
     pass
@@ -78,17 +90,18 @@ class Test(components.Adapter):
 
 
 @implementer(ITest2)
-class Test2(object):
+class Test2:
     temporaryAdapter = 1
+
     def __init__(self, orig):
         pass
 
 
-
-class RegistryUsingMixin(object):
+class RegistryUsingMixin:
     """
     Mixin for test cases which modify the global registry somehow.
     """
+
     def setUp(self):
         """
         Configure L{twisted.python.components.registerAdapter} to mutate an
@@ -98,25 +111,24 @@ class RegistryUsingMixin(object):
         # module where registerAdapter will use it.  Also ensure that it goes
         # away at the end of the test.
         scratchRegistry = AdapterRegistry()
-        self.patch(components, 'globalRegistry', scratchRegistry)
+        self.patch(components, "globalRegistry", scratchRegistry)
         # Hook the new registry up to the adapter lookup system and ensure that
         # association is also discarded after the test.
         hook = _addHook(scratchRegistry)
         self.addCleanup(_removeHook, hook)
 
 
-
 class ComponentizedTests(unittest.SynchronousTestCase, RegistryUsingMixin):
     """
     Simple test case for caching in Componentized.
     """
+
     def setUp(self):
         RegistryUsingMixin.setUp(self)
 
         components.registerAdapter(Test, AComp, ITest)
         components.registerAdapter(Test, AComp, ITest3)
         components.registerAdapter(Test2, AComp, ITest2)
-
 
     def testComponentized(self):
         components.registerAdapter(Adept, Compo, IAdept)
@@ -149,7 +161,6 @@ class ComponentizedTests(unittest.SynchronousTestCase, RegistryUsingMixin):
         self.assertIsNone(co4)
         self.assertIs(co1, co3)
 
-
     def test_getComponentDefaults(self):
         """
         Test that a default value specified to Componentized.getComponent if
@@ -157,16 +168,9 @@ class ComponentizedTests(unittest.SynchronousTestCase, RegistryUsingMixin):
         """
         componentized = components.Componentized()
         default = object()
-        self.assertIs(
-            componentized.getComponent(ITest, default),
-            default)
-        self.assertIs(
-            componentized.getComponent(ITest, default=default),
-            default)
-        self.assertIs(
-            componentized.getComponent(ITest),
-            None)
-
+        self.assertIs(componentized.getComponent(ITest, default), default)
+        self.assertIs(componentized.getComponent(ITest, default=default), default)
+        self.assertIs(componentized.getComponent(ITest), None)
 
     def test_setAdapter(self):
         """
@@ -179,7 +183,6 @@ class ComponentizedTests(unittest.SynchronousTestCase, RegistryUsingMixin):
         self.assertEqual(component.original, componentized)
         self.assertIsInstance(component, Adept)
 
-
     def test_addAdapter(self):
         """
         C{Componentized.setAdapter} adapts the instance by wrapping it with
@@ -191,7 +194,6 @@ class ComponentizedTests(unittest.SynchronousTestCase, RegistryUsingMixin):
         self.assertEqual(component.original, componentized)
         self.assertIsInstance(component, Adept)
 
-
     def test_setComponent(self):
         """
         C{Componentized.setComponent} stores the given component using the
@@ -201,7 +203,6 @@ class ComponentizedTests(unittest.SynchronousTestCase, RegistryUsingMixin):
         obj = object()
         componentized.setComponent(ITest, obj)
         self.assertIs(componentized.getComponent(ITest), obj)
-
 
     def test_unsetComponent(self):
         """
@@ -214,7 +215,6 @@ class ComponentizedTests(unittest.SynchronousTestCase, RegistryUsingMixin):
         componentized.unsetComponent(ITest)
         self.assertIsNone(componentized.getComponent(ITest))
 
-
     def test_reprableComponentized(self):
         """
         C{ReprableComponentized} has a C{__repr__} that lists its cache.
@@ -224,7 +224,6 @@ class ComponentizedTests(unittest.SynchronousTestCase, RegistryUsingMixin):
         result = repr(rc)
         self.assertIn("ITest", result)
         self.assertIn("hello", result)
-
 
 
 class AdapterTests(unittest.SynchronousTestCase):
@@ -237,10 +236,8 @@ class AdapterTests(unittest.SynchronousTestCase):
         self.assertIsNone(ITest(a, None))
 
 
-
 class IMeta(Interface):
     pass
-
 
 
 @implementer(IMeta)
@@ -249,21 +246,19 @@ class MetaAdder(components.Adapter):
         return self.original.num + num
 
 
-
 @implementer(IMeta)
 class BackwardsAdder(components.Adapter):
     def add(self, num):
         return self.original.num - num
 
 
-
-class MetaNumber(object):
+class MetaNumber:
     """
     Integer wrapper for Interface adaptation tests.
     """
+
     def __init__(self, num):
         self.num = num
-
 
 
 class ComponentNumber(components.Componentized):
@@ -272,77 +267,74 @@ class ComponentNumber(components.Componentized):
         components.Componentized.__init__(self)
 
 
-
 @implementer(IMeta)
 class ComponentAdder(components.Adapter):
     """
     Adder for componentized adapter tests.
     """
+
     def __init__(self, original):
         components.Adapter.__init__(self, original)
         self.num = self.original.num
-
 
     def add(self, num):
         self.num += num
         return self.num
 
 
-
 class IAttrX(Interface):
     """
     Base interface for test of adapter with C{__cmp__}.
     """
+
     def x():
         """
         Return a value.
         """
 
 
-
 class IAttrXX(Interface):
     """
     Adapted interface for test of adapter with C{__cmp__}.
     """
+
     def xx():
         """
         Return a tuple of values.
         """
 
 
-
 @implementer(IAttrX)
-class Xcellent(object):
+class Xcellent:
     """
     L{IAttrX} implementation for test of adapter with C{__cmp__}.
     """
+
     def x(self):
         """
         Return a value.
 
         @return: a value
         """
-        return 'x!'
-
+        return "x!"
 
 
 @comparable
-class DoubleXAdapter(object):
+class DoubleXAdapter:
     """
     Adapter with __cmp__.
     """
+
     num = 42
+
     def __init__(self, original):
         self.original = original
-
 
     def xx(self):
         return (self.original.x(), self.original.x())
 
-
     def __cmp__(self, other):
         return cmp(self.num, other.num)
-
 
 
 class MetaInterfaceTests(RegistryUsingMixin, unittest.SynchronousTestCase):
@@ -365,13 +357,14 @@ class MetaInterfaceTests(RegistryUsingMixin, unittest.SynchronousTestCase):
         # Make sure that a __cmp__ on an adapter doesn't break anything
         components.registerAdapter(DoubleXAdapter, IAttrX, IAttrXX)
         xx = IAttrXX(Xcellent())
-        self.assertEqual(('x!', 'x!'), xx.xx())
+        self.assertEqual(("x!", "x!"), xx.xx())
 
 
 class RegistrationTests(RegistryUsingMixin, unittest.SynchronousTestCase):
     """
     Tests for adapter registration.
     """
+
     def _registerAdapterForClassOrInterface(self, original):
         """
         Register an adapter with L{components.registerAdapter} for the given
@@ -380,20 +373,18 @@ class RegistrationTests(RegistryUsingMixin, unittest.SynchronousTestCase):
         """
         adapter = lambda o: None
         components.registerAdapter(adapter, original, ITest)
-        self.assertIs(
-            components.getAdapterFactory(original, ITest, None),
-            adapter)
-
+        self.assertIs(components.getAdapterFactory(original, ITest, None), adapter)
 
     def test_registerAdapterForClass(self):
         """
         Test that an adapter from a class can be registered and then looked
         up.
         """
-        class TheOriginal(object):
-            pass
-        return self._registerAdapterForClassOrInterface(TheOriginal)
 
+        class TheOriginal:
+            pass
+
+        return self._registerAdapterForClassOrInterface(TheOriginal)
 
     def test_registerAdapterForInterface(self):
         """
@@ -401,7 +392,6 @@ class RegistrationTests(RegistryUsingMixin, unittest.SynchronousTestCase):
         looked up.
         """
         return self._registerAdapterForClassOrInterface(ITest2)
-
 
     def _duplicateAdapterForClassOrInterface(self, original):
         """
@@ -412,24 +402,21 @@ class RegistrationTests(RegistryUsingMixin, unittest.SynchronousTestCase):
         secondAdapter = lambda o: True
         components.registerAdapter(firstAdapter, original, ITest)
         self.assertRaises(
-            ValueError,
-            components.registerAdapter,
-            secondAdapter, original, ITest)
+            ValueError, components.registerAdapter, secondAdapter, original, ITest
+        )
         # Make sure that the original adapter is still around as well
-        self.assertIs(
-            components.getAdapterFactory(original, ITest, None),
-            firstAdapter)
-
+        self.assertIs(components.getAdapterFactory(original, ITest, None), firstAdapter)
 
     def test_duplicateAdapterForClass(self):
         """
         Test that attempting to register a second adapter from a class
         raises the appropriate exception.
         """
-        class TheOriginal(object):
-            pass
-        return self._duplicateAdapterForClassOrInterface(TheOriginal)
 
+        class TheOriginal:
+            pass
+
+        return self._duplicateAdapterForClassOrInterface(TheOriginal)
 
     def test_duplicateAdapterForInterface(self):
         """
@@ -437,7 +424,6 @@ class RegistrationTests(RegistryUsingMixin, unittest.SynchronousTestCase):
         raises the appropriate exception.
         """
         return self._duplicateAdapterForClassOrInterface(ITest2)
-
 
     def _duplicateAdapterForClassOrInterfaceAllowed(self, original):
         """
@@ -447,28 +433,29 @@ class RegistrationTests(RegistryUsingMixin, unittest.SynchronousTestCase):
         """
         firstAdapter = lambda o: False
         secondAdapter = lambda o: True
+
         class TheInterface(Interface):
             pass
+
         components.registerAdapter(firstAdapter, original, TheInterface)
         components.ALLOW_DUPLICATES = True
         try:
             components.registerAdapter(secondAdapter, original, TheInterface)
             self.assertIs(
                 components.getAdapterFactory(original, TheInterface, None),
-                secondAdapter)
+                secondAdapter,
+            )
         finally:
             components.ALLOW_DUPLICATES = False
 
         # It should be rejected again at this point
         self.assertRaises(
-            ValueError,
-            components.registerAdapter,
-            firstAdapter, original, TheInterface)
+            ValueError, components.registerAdapter, firstAdapter, original, TheInterface
+        )
 
         self.assertIs(
-            components.getAdapterFactory(original, TheInterface, None),
-            secondAdapter)
-
+            components.getAdapterFactory(original, TheInterface, None), secondAdapter
+        )
 
     def test_duplicateAdapterForClassAllowed(self):
         """
@@ -476,10 +463,11 @@ class RegistrationTests(RegistryUsingMixin, unittest.SynchronousTestCase):
         value, duplicate registrations from classes are allowed to override
         the original registration.
         """
-        class TheOriginal(object):
-            pass
-        return self._duplicateAdapterForClassOrInterfaceAllowed(TheOriginal)
 
+        class TheOriginal:
+            pass
+
+        return self._duplicateAdapterForClassOrInterfaceAllowed(TheOriginal)
 
     def test_duplicateAdapterForInterfaceAllowed(self):
         """
@@ -487,10 +475,11 @@ class RegistrationTests(RegistryUsingMixin, unittest.SynchronousTestCase):
         value, duplicate registrations from interfaces are allowed to
         override the original registration.
         """
+
         class TheOriginal(Interface):
             pass
-        return self._duplicateAdapterForClassOrInterfaceAllowed(TheOriginal)
 
+        return self._duplicateAdapterForClassOrInterfaceAllowed(TheOriginal)
 
     def _multipleInterfacesForClassOrInterface(self, original):
         """
@@ -499,21 +488,19 @@ class RegistrationTests(RegistryUsingMixin, unittest.SynchronousTestCase):
         """
         adapter = lambda o: None
         components.registerAdapter(adapter, original, ITest, ITest2)
-        self.assertIs(
-            components.getAdapterFactory(original, ITest, None), adapter)
-        self.assertIs(
-            components.getAdapterFactory(original, ITest2, None), adapter)
-
+        self.assertIs(components.getAdapterFactory(original, ITest, None), adapter)
+        self.assertIs(components.getAdapterFactory(original, ITest2, None), adapter)
 
     def test_multipleInterfacesForClass(self):
         """
         Test the registration of an adapter from a class to several
         interfaces at once.
         """
-        class TheOriginal(object):
-            pass
-        return self._multipleInterfacesForClassOrInterface(TheOriginal)
 
+        class TheOriginal:
+            pass
+
+        return self._multipleInterfacesForClassOrInterface(TheOriginal)
 
     def test_multipleInterfacesForInterface(self):
         """
@@ -521,7 +508,6 @@ class RegistrationTests(RegistryUsingMixin, unittest.SynchronousTestCase):
         interfaces at once.
         """
         return self._multipleInterfacesForClassOrInterface(ITest3)
-
 
     def _subclassAdapterRegistrationForClassOrInterface(self, original):
         """
@@ -532,27 +518,27 @@ class RegistrationTests(RegistryUsingMixin, unittest.SynchronousTestCase):
         """
         firstAdapter = lambda o: True
         secondAdapter = lambda o: False
+
         class TheSubclass(original):
             pass
+
         components.registerAdapter(firstAdapter, original, ITest)
         components.registerAdapter(secondAdapter, TheSubclass, ITest)
+        self.assertIs(components.getAdapterFactory(original, ITest, None), firstAdapter)
         self.assertIs(
-            components.getAdapterFactory(original, ITest, None),
-            firstAdapter)
-        self.assertIs(
-            components.getAdapterFactory(TheSubclass, ITest, None),
-            secondAdapter)
-
+            components.getAdapterFactory(TheSubclass, ITest, None), secondAdapter
+        )
 
     def test_subclassAdapterRegistrationForClass(self):
         """
         Test that an adapter to a particular interface can be registered
         from both a class and its subclass.
         """
-        class TheOriginal(object):
-            pass
-        return self._subclassAdapterRegistrationForClassOrInterface(TheOriginal)
 
+        class TheOriginal:
+            pass
+
+        return self._subclassAdapterRegistrationForClassOrInterface(TheOriginal)
 
     def test_subclassAdapterRegistrationForInterface(self):
         """
@@ -562,19 +548,21 @@ class RegistrationTests(RegistryUsingMixin, unittest.SynchronousTestCase):
         return self._subclassAdapterRegistrationForClassOrInterface(ITest2)
 
 
-
 class IProxiedInterface(Interface):
     """
     An interface class for use by L{proxyForInterface}.
     """
 
-    ifaceAttribute = Attribute("""
-        An example declared attribute, which should be proxied.""")
+    ifaceAttribute = Attribute(
+        """
+        An example declared attribute, which should be proxied."""
+    )
 
     def yay(*a, **kw):
         """
         A sample method which should be proxied.
         """
+
 
 class IProxiedSubInterface(IProxiedInterface):
     """
@@ -587,9 +575,8 @@ class IProxiedSubInterface(IProxiedInterface):
         """
 
 
-
 @implementer(IProxiedInterface)
-class Yayable(object):  # type: ignore[misc]
+class Yayable:  # type: ignore[misc]
     # class does not implement Attribute ifaceAttribute
     # so we need to turn off mypy warning
     """
@@ -603,7 +590,6 @@ class Yayable(object):  # type: ignore[misc]
         self.yays = 0
         self.yayArgs = []
 
-
     def yay(self, *a, **kw):
         """
         Increment C{self.yays}.
@@ -613,9 +599,8 @@ class Yayable(object):  # type: ignore[misc]
         return self.yays
 
 
-
 @implementer(IProxiedSubInterface)
-class Booable(object):  # type: ignore[misc]
+class Booable:  # type: ignore[misc]
     # class does not implement Attribute ifaceAttribute
     # so we need to turn off mypy warning
     """
@@ -625,20 +610,17 @@ class Booable(object):  # type: ignore[misc]
     yayed = False
     booed = False
 
-
     def yay(self, *a, **kw):
         """
         Mark the fact that 'yay' has been called.
         """
         self.yayed = True
 
-
     def boo(self):
         """
         Mark the fact that 'boo' has been called.1
         """
         self.booed = True
-
 
 
 class IMultipleMethods(Interface):
@@ -657,8 +639,7 @@ class IMultipleMethods(Interface):
         """
 
 
-
-class MultipleMethodImplementor(object):
+class MultipleMethodImplementor:
     """
     A precise implementation of L{IMultipleMethods}.
     """
@@ -669,13 +650,11 @@ class MultipleMethodImplementor(object):
         """
         return 1
 
-
     def methodTwo(self):
         """
         @return: 2
         """
         return 2
-
 
 
 class ProxyForInterfaceTests(unittest.SynchronousTestCase):
@@ -692,7 +671,6 @@ class ProxyForInterfaceTests(unittest.SynchronousTestCase):
         proxy = proxyForInterface(IProxiedInterface)(original)
         self.assertIs(proxy.original, original)
 
-
     def test_proxyMethod(self):
         """
         The class created from L{proxyForInterface} passes methods on an
@@ -705,13 +683,13 @@ class ProxyForInterfaceTests(unittest.SynchronousTestCase):
         self.assertEqual(proxy.yay(), 2)
         self.assertEqual(yayable.yays, 2)
 
-
     def test_decoratedProxyMethod(self):
         """
         Methods of the class created from L{proxyForInterface} can be used with
         the decorator-helper L{functools.wraps}.
         """
         base = proxyForInterface(IProxiedInterface)
+
         class klass(base):
             @wraps(base.yay)
             def yay(self):
@@ -722,7 +700,6 @@ class ProxyForInterfaceTests(unittest.SynchronousTestCase):
         yayable = klass(original)
         yayable.yay()
         self.assertEqual(2, original.yays)
-
 
     def test_proxyAttribute(self):
         """
@@ -735,7 +712,6 @@ class ProxyForInterfaceTests(unittest.SynchronousTestCase):
         self.assertIs(proxy.ifaceAttribute, yayable.ifaceAttribute)
         self.assertRaises(AttributeError, lambda: proxy.yays)
 
-
     def test_proxySetAttribute(self):
         """
         The attributes that proxy objects proxy should be assignable and affect
@@ -747,7 +723,6 @@ class ProxyForInterfaceTests(unittest.SynchronousTestCase):
         proxy.ifaceAttribute = thingy
         self.assertIs(yayable.ifaceAttribute, thingy)
 
-
     def test_proxyDeleteAttribute(self):
         """
         The attributes that proxy objects proxy should be deletable and affect
@@ -757,8 +732,7 @@ class ProxyForInterfaceTests(unittest.SynchronousTestCase):
         yayable.ifaceAttribute = None
         proxy = proxyForInterface(IProxiedInterface)(yayable)
         del proxy.ifaceAttribute
-        self.assertFalse(hasattr(yayable, 'ifaceAttribute'))
-
+        self.assertFalse(hasattr(yayable, "ifaceAttribute"))
 
     def test_multipleMethods(self):
         """
@@ -770,7 +744,6 @@ class ProxyForInterfaceTests(unittest.SynchronousTestCase):
         self.assertEqual(proxy.methodOne(), 1)
         self.assertEqual(proxy.methodTwo(), 2)
 
-
     def test_subclassing(self):
         """
         It is possible to subclass the result of L{proxyForInterface}.
@@ -780,6 +753,7 @@ class ProxyForInterfaceTests(unittest.SynchronousTestCase):
             """
             A specialized proxy which can decrement the number of yays.
             """
+
             def boo(self):
                 """
                 Decrement the number of yays.
@@ -792,7 +766,6 @@ class ProxyForInterfaceTests(unittest.SynchronousTestCase):
         special.boo()
         self.assertEqual(yayable.yays, -1)
 
-
     def test_proxyName(self):
         """
         The name of a proxy class indicates which interface it proxies.
@@ -800,9 +773,8 @@ class ProxyForInterfaceTests(unittest.SynchronousTestCase):
         proxy = proxyForInterface(IProxiedInterface)
         self.assertEqual(
             proxy.__name__,
-            "(Proxy for "
-            "twisted.python.test.test_components.IProxiedInterface)")
-
+            "(Proxy for " "twisted.python.test.test_components.IProxiedInterface)",
+        )
 
     def test_implements(self):
         """
@@ -810,7 +782,6 @@ class ProxyForInterfaceTests(unittest.SynchronousTestCase):
         """
         proxy = proxyForInterface(IProxiedInterface)
         self.assertTrue(IProxiedInterface.implementedBy(proxy))
-
 
     def test_proxyDescriptorGet(self):
         """
@@ -828,10 +799,13 @@ class ProxyForInterfaceTests(unittest.SynchronousTestCase):
         idiomatic way to ensure that signature works; test_proxyInheritance
         verifies the how-Python-actually-calls-it signature.
         """
-        class Sample(object):
+
+        class Sample:
             called = False
+
             def hello(self):
                 self.called = True
+
         fakeProxy = Sample()
         testObject = Sample()
         fakeProxy.original = testObject
@@ -841,13 +815,13 @@ class ProxyForInterfaceTests(unittest.SynchronousTestCase):
         fakeClassMethod(fakeProxy)
         self.assertTrue(testObject.called)
 
-
     def test_proxyInheritance(self):
         """
         Subclasses of the class returned from L{proxyForInterface} should be
         able to upcall methods by reference to their superclass, as any normal
         Python class can.
         """
+
         class YayableWrapper(proxyForInterface(IProxiedInterface)):
             """
             This class does not override any functionality.
@@ -857,7 +831,9 @@ class ProxyForInterfaceTests(unittest.SynchronousTestCase):
             """
             This class overrides the 'yay' method.
             """
+
             wrappedYays = 1
+
             def yay(self, *a, **k):
                 self.wrappedYays += 1
                 return YayableWrapper.yay(self, *a, **k) + 7
@@ -865,9 +841,7 @@ class ProxyForInterfaceTests(unittest.SynchronousTestCase):
         yayable = Yayable()
         wrapper = EnhancedWrapper(yayable)
         self.assertEqual(wrapper.yay(3, 4, x=5, y=6), 8)
-        self.assertEqual(yayable.yayArgs,
-                          [((3, 4), dict(x=5, y=6))])
-
+        self.assertEqual(yayable.yayArgs, [((3, 4), dict(x=5, y=6))])
 
     def test_interfaceInheritance(self):
         """
@@ -882,7 +856,6 @@ class ProxyForInterfaceTests(unittest.SynchronousTestCase):
         self.assertTrue(booable.yayed)
         self.assertTrue(booable.booed)
 
-
     def test_attributeCustomization(self):
         """
         The original attribute name can be customized via the
@@ -892,8 +865,7 @@ class ProxyForInterfaceTests(unittest.SynchronousTestCase):
         """
         yayable = Yayable()
         yayable.ifaceAttribute = object()
-        proxy = proxyForInterface(
-            IProxiedInterface, originalAttribute='foo')(yayable)
+        proxy = proxyForInterface(IProxiedInterface, originalAttribute="foo")(yayable)
         self.assertIs(proxy.foo, yayable)
 
         # Check the behavior
@@ -903,4 +875,4 @@ class ProxyForInterfaceTests(unittest.SynchronousTestCase):
         proxy.ifaceAttribute = thingy
         self.assertIs(yayable.ifaceAttribute, thingy)
         del proxy.ifaceAttribute
-        self.assertFalse(hasattr(yayable, 'ifaceAttribute'))
+        self.assertFalse(hasattr(yayable, "ifaceAttribute"))

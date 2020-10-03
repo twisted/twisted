@@ -10,10 +10,10 @@ This documentation does not link to pydoctor API as there is no public API yet.
 """
 
 import ast
+from typing import Optional
 
 from pydoctor import model, zopeinterface, astbuilder
 from pydoctor.sphinx import SphinxInventory
-
 
 
 class TwistedSphinxInventory(SphinxInventory):
@@ -41,7 +41,7 @@ class TwistedSphinxInventory(SphinxInventory):
             # We already got a link. Look no further.
             return result
 
-        if name.startswith('zope.interface.'):
+        if name.startswith("zope.interface."):
             # This is a link from zope.interface. which is not advertised in
             # the Sphinx inventory.
             # See if the link is a known broken link which should be handled
@@ -49,18 +49,18 @@ class TwistedSphinxInventory(SphinxInventory):
             # We get the base URL from IInterface which is assume that is
             # always and already well defined in the Sphinx index.
             baseURL, _ = self._links.get(
-                'zope.interface.interfaces.IInterface',
-                (None, None))
+                "zope.interface.interfaces.IInterface", (None, None)
+            )
 
             if baseURL is None:
                 # Most probably the zope.interface inventory was
                 # not loaded.
                 return None
 
-            if name  == 'zope.interface.adapter.AdapterRegistry':
+            if name == "zope.interface.adapter.AdapterRegistry":
                 # FIXME:
                 # https://github.com/zopefoundation/zope.interface/issues/41
-                relativeLink = 'adapter.html'
+                relativeLink = "adapter.html"  # type: Optional[str]
             else:
                 # Not a known exception.
                 relativeLink = None
@@ -68,10 +68,9 @@ class TwistedSphinxInventory(SphinxInventory):
             if relativeLink is None:
                 return None
 
-            return '%s/%s' % (baseURL, relativeLink)
+            return "%s/%s" % (baseURL, relativeLink)
 
         return None
-
 
 
 def getDeprecated(self, decorators):
@@ -82,12 +81,11 @@ def getDeprecated(self, decorators):
     """
     for a in decorators:
         if isinstance(a, ast.Call):
-            fn = self.expandName(''.join(astbuilder.node2dottedname(a.func)))
+            fn = self.expandName("".join(astbuilder.node2dottedname(a.func)))
 
             if fn == "twisted.python.deprecate.deprecated":
                 try:
-                    self._deprecated_info = deprecatedToUsefulText(
-                        self, self.name, a)
+                    self._deprecated_info = deprecatedToUsefulText(self, self.name, a)
                 except AttributeError:
                     raise
                     # It's a reference or something that we can't figure out
@@ -95,9 +93,7 @@ def getDeprecated(self, decorators):
                     pass
 
 
-
 class TwistedModuleVisitor(zopeinterface.ZopeInterfaceModuleVisitor):
-
     def visitClass(self, node):
         """
         Called when a class is visited.
@@ -107,7 +103,6 @@ class TwistedModuleVisitor(zopeinterface.ZopeInterfaceModuleVisitor):
         cls = self.builder.current.contents[node.name]
 
         getDeprecated(cls, list(cls.raw_decorators))
-
 
     def visitFunction(self, node):
         """
@@ -121,14 +116,15 @@ class TwistedModuleVisitor(zopeinterface.ZopeInterfaceModuleVisitor):
             getDeprecated(func, list(func.decorators))
 
 
-
 def versionToUsefulObject(version):
     """
     Change an AST C{Version()} to a real one.
     """
     from incremental import Version
-    return Version(version.args[0].s, *[x.n for x in version.args[1:] if x])
 
+    package = version.args[0].s
+    major = getattr(version.args[1], "n", getattr(version.args[1], "s", None))
+    return Version(package, major, *(x.n for x in version.args[2:] if x))
 
 
 def deprecatedToUsefulText(visitor, name, deprecated):
@@ -149,9 +145,7 @@ def deprecatedToUsefulText(visitor, name, deprecated):
     return _getDeprecationWarningString(name, version, replacement=replacement) + "."
 
 
-
 class TwistedFunction(zopeinterface.ZopeInterfaceFunction):
-
     def docsources(self):
 
         if self.decorators:
@@ -161,17 +155,16 @@ class TwistedFunction(zopeinterface.ZopeInterfaceFunction):
             yield x
 
 
-
 class TwistedASTBuilder(zopeinterface.ZopeInterfaceASTBuilder):
     # Vistor is not a typo...
     ModuleVistor = TwistedModuleVisitor
-
 
 
 class TwistedSystem(zopeinterface.ZopeInterfaceSystem):
     """
     A PyDoctor "system" used to generate the docs.
     """
+
     defaultBuilder = TwistedASTBuilder
     Function = TwistedFunction
 
@@ -180,8 +173,8 @@ class TwistedSystem(zopeinterface.ZopeInterfaceSystem):
         # Use custom SphinxInventory so that we can resolve valid L{} markup
         # for which the Sphinx inventory is not published or broken.
         self.intersphinx = TwistedSphinxInventory(
-            logger=self.msg, project_name=self.projectname)
-
+            logger=self.msg, project_name=self.projectname
+        )
 
     def privacyClass(self, documentable):
         """
@@ -194,16 +187,16 @@ class TwistedSystem(zopeinterface.ZopeInterfaceSystem):
 
         rtype: C{model.PrivacyClass} member
         """
-        if documentable.fullName() == 'twisted.test':
+        if documentable.fullName() == "twisted.test":
             # Match this package exactly, so that proto_helpers
             # below is visible
             return model.PrivacyClass.VISIBLE
 
         current = documentable
         while current:
-            if current.fullName() == 'twisted.test.proto_helpers':
+            if current.fullName() == "twisted.test.proto_helpers":
                 return model.PrivacyClass.VISIBLE
-            if isinstance(current, model.Package) and current.name == 'test':
+            if isinstance(current, model.Package) and current.name == "test":
                 return model.PrivacyClass.HIDDEN
             current = current.parent
 

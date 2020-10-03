@@ -25,19 +25,20 @@ def open(filename):
     return sc
 
 
-
 class Shortcut:
     """
     A shortcut on Win32.
     """
 
-    def __init__(self,
-                 path=None,
-                 arguments=None,
-                 description=None,
-                 workingdir=None,
-                 iconpath=None,
-                 iconidx=0):
+    def __init__(
+        self,
+        path=None,
+        arguments=None,
+        description=None,
+        workingdir=None,
+        iconpath=None,
+        iconidx=0,
+    ):
         """
         @param path: Location of the target
         @param arguments: If path points to an executable, optional arguments
@@ -48,8 +49,10 @@ class Shortcut:
         @param iconidx: If iconpath is set, optional index of the icon desired
         """
         self._base = pythoncom.CoCreateInstance(
-            shell.CLSID_ShellLink, None,
-            pythoncom.CLSCTX_INPROC_SERVER, shell.IID_IShellLink
+            shell.CLSID_ShellLink,
+            None,
+            pythoncom.CLSCTX_INPROC_SERVER,
+            shell.IID_IShellLink,
         )
         if path is not None:
             self.SetPath(os.path.abspath(path))
@@ -62,14 +65,13 @@ class Shortcut:
         if iconpath is not None:
             self.SetIconLocation(os.path.abspath(iconpath), iconidx)
 
-
     def load(self, filename):
         """
         Read a shortcut file from disk.
         """
         self._base.QueryInterface(pythoncom.IID_IPersistFile).Load(
-            os.path.abspath(filename))
-
+            os.path.abspath(filename)
+        )
 
     def save(self, filename):
         """
@@ -78,8 +80,8 @@ class Shortcut:
         The file should be named something.lnk.
         """
         self._base.QueryInterface(pythoncom.IID_IPersistFile).Save(
-            os.path.abspath(filename), 0)
-
+            os.path.abspath(filename), 0
+        )
 
     def __getattr__(self, name):
         return getattr(self._base, name)

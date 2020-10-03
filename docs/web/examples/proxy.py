@@ -18,9 +18,11 @@ See also logging-proxy.py for a proxy with additional features.
 from twisted.web import proxy, http
 from twisted.internet import reactor
 
+
 class ProxyFactory(http.HTTPFactory):
     def buildProtocol(self, addr):
         return proxy.Proxy()
+
 
 reactor.listenTCP(8080, ProxyFactory())
 reactor.run()

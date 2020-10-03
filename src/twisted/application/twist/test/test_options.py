@@ -22,7 +22,6 @@ from .._options import TwistOptions
 import twisted.trial.unittest
 
 
-
 class OptionsTests(twisted.trial.unittest.TestCase):
     """
     Tests for L{TwistOptions}.
@@ -34,7 +33,6 @@ class OptionsTests(twisted.trial.unittest.TestCase):
         """
         self.exit = DummyExit()
         self.patch(_options, "exit", self.exit)
-
 
     def patchOpen(self):
         """
@@ -50,7 +48,6 @@ class OptionsTests(twisted.trial.unittest.TestCase):
             return NotImplemented
 
         self.patch(_options, "openFile", fakeOpen)
-
 
     def patchInstallReactor(self):
         """
@@ -69,17 +66,13 @@ class OptionsTests(twisted.trial.unittest.TestCase):
 
         self.patch(_options, "installReactor", installReactor)
 
-
     def test_synopsis(self):
         """
         L{TwistOptions.getSynopsis} appends arguments.
         """
         options = TwistOptions()
 
-        self.assertTrue(
-            options.getSynopsis().endswith(" plugin [plugin_options]")
-        )
-
+        self.assertTrue(options.getSynopsis().endswith(" plugin [plugin_options]"))
 
     def test_version(self):
         """
@@ -94,7 +87,6 @@ class OptionsTests(twisted.trial.unittest.TestCase):
         self.assertEquals(self.exit.status, ExitStatus.EX_OK)
         self.assertEquals(self.exit.message, version)
 
-
     def test_reactor(self):
         """
         L{TwistOptions.installReactor} installs the chosen reactor and sets
@@ -107,7 +99,6 @@ class OptionsTests(twisted.trial.unittest.TestCase):
 
         self.assertEqual(set(self.installedReactors), set(["fusion"]))
         self.assertEquals(options["reactorName"], "fusion")
-
 
     def test_installCorrectReactor(self):
         """
@@ -122,7 +113,6 @@ class OptionsTests(twisted.trial.unittest.TestCase):
 
         self.assertEqual(set(self.installedReactors), set(["fusion"]))
 
-
     def test_installReactorBogus(self):
         """
         L{TwistOptions.installReactor} raises UsageError if an unknown reactor
@@ -133,15 +123,13 @@ class OptionsTests(twisted.trial.unittest.TestCase):
         options = TwistOptions()
         self.assertRaises(UsageError, options.opt_reactor, "coal")
 
-
     def test_installReactorDefault(self):
         """
         L{TwistOptions.installReactor} returns the currently installed reactor
         when the default reactor name is specified.
         """
         options = TwistOptions()
-        self.assertIdentical(reactor, options.installReactor('default'))
-
+        self.assertIdentical(reactor, options.installReactor("default"))
 
     def test_logLevelValid(self):
         """
@@ -152,7 +140,6 @@ class OptionsTests(twisted.trial.unittest.TestCase):
 
         self.assertIdentical(options["logLevel"], LogLevel.warn)
 
-
     def test_logLevelInvalid(self):
         """
         L{TwistOptions.opt_log_level} with an invalid log level name raises
@@ -161,7 +148,6 @@ class OptionsTests(twisted.trial.unittest.TestCase):
         options = TwistOptions()
 
         self.assertRaises(UsageError, options.opt_log_level, "cheese")
-
 
     def _testLogFile(self, name, expectedStream):
         """
@@ -175,20 +161,17 @@ class OptionsTests(twisted.trial.unittest.TestCase):
 
         self.assertIdentical(options["logFile"], expectedStream)
 
-
     def test_logFileStdout(self):
         """
         L{TwistOptions.opt_log_file} given C{"-"} as a file name uses stdout.
         """
         self._testLogFile("-", stdout)
 
-
     def test_logFileStderr(self):
         """
         L{TwistOptions.opt_log_file} given C{"+"} as a file name uses stderr.
         """
         self._testLogFile("+", stderr)
-
 
     def test_logFileNamed(self):
         """
@@ -200,7 +183,6 @@ class OptionsTests(twisted.trial.unittest.TestCase):
         options.opt_log_file("mylog")
 
         self.assertEqual([("mylog", "a")], self.opened)
-
 
     def test_logFileCantOpen(self):
         """
@@ -215,11 +197,8 @@ class OptionsTests(twisted.trial.unittest.TestCase):
 
         self.assertEquals(self.exit.status, ExitStatus.EX_IOERR)
         self.assertTrue(
-            self.exit.message.startswith(
-                "Unable to open log file 'nocanopen': "
-            )
+            self.exit.message.startswith("Unable to open log file 'nocanopen': ")
         )
-
 
     def _testLogFormat(self, format, expectedObserver):
         """
@@ -231,11 +210,8 @@ class OptionsTests(twisted.trial.unittest.TestCase):
         options = TwistOptions()
         options.opt_log_format(format)
 
-        self.assertIdentical(
-            options["fileLogObserverFactory"], expectedObserver
-        )
+        self.assertIdentical(options["fileLogObserverFactory"], expectedObserver)
         self.assertEqual(options["logFormat"], format)
-
 
     def test_logFormatText(self):
         """
@@ -244,14 +220,12 @@ class OptionsTests(twisted.trial.unittest.TestCase):
         """
         self._testLogFormat("text", textFileLogObserver)
 
-
     def test_logFormatJSON(self):
         """
         L{TwistOptions.opt_log_format} given C{"text"} uses a
         L{textFileLogObserver}.
         """
         self._testLogFormat("json", jsonFileLogObserver)
-
 
     def test_logFormatInvalid(self):
         """
@@ -262,7 +236,6 @@ class OptionsTests(twisted.trial.unittest.TestCase):
 
         self.assertRaises(UsageError, options.opt_log_format, "frommage")
 
-
     def test_selectDefaultLogObserverNoOverride(self):
         """
         L{TwistOptions.selectDefaultLogObserver} will not override an already
@@ -272,23 +245,21 @@ class OptionsTests(twisted.trial.unittest.TestCase):
 
         options = TwistOptions()
         options.opt_log_format("text")  # Ask for text
-        options.opt_log_file("queso")   # File, not a tty
+        options.opt_log_file("queso")  # File, not a tty
         options.selectDefaultLogObserver()
 
         # Because we didn't select a file that is a tty, the default is JSON,
         # but since we asked for text, we should get text.
-        self.assertIdentical(
-            options["fileLogObserverFactory"], textFileLogObserver
-        )
+        self.assertIdentical(options["fileLogObserverFactory"], textFileLogObserver)
         self.assertEqual(options["logFormat"], "text")
-
 
     def test_selectDefaultLogObserverDefaultWithTTY(self):
         """
         L{TwistOptions.selectDefaultLogObserver} will not override an already
         selected observer.
         """
-        class TTYFile(object):
+
+        class TTYFile:
             def isatty(self):
                 return True
 
@@ -299,11 +270,8 @@ class OptionsTests(twisted.trial.unittest.TestCase):
         options.opt_log_file("-")  # stdout, a tty
         options.selectDefaultLogObserver()
 
-        self.assertIdentical(
-            options["fileLogObserverFactory"], textFileLogObserver
-        )
+        self.assertIdentical(options["fileLogObserverFactory"], textFileLogObserver)
         self.assertEqual(options["logFormat"], "text")
-
 
     def test_selectDefaultLogObserverDefaultWithoutTTY(self):
         """
@@ -316,11 +284,8 @@ class OptionsTests(twisted.trial.unittest.TestCase):
         options.opt_log_file("queso")  # File, not a tty
         options.selectDefaultLogObserver()
 
-        self.assertIdentical(
-            options["fileLogObserverFactory"], jsonFileLogObserver
-        )
+        self.assertIdentical(options["fileLogObserverFactory"], jsonFileLogObserver)
         self.assertEqual(options["logFormat"], "json")
-
 
     def test_pluginsType(self):
         """
@@ -333,7 +298,6 @@ class OptionsTests(twisted.trial.unittest.TestCase):
             self.assertIsInstance(name, str)
             self.assertIsInstance(plugins[name], ServiceMaker)
 
-
     def test_pluginsIncludeWeb(self):
         """
         L{TwistOptions.plugins} includes a C{"web"} plug-in.
@@ -343,7 +307,6 @@ class OptionsTests(twisted.trial.unittest.TestCase):
         options = TwistOptions()
 
         self.assertIn("web", options.plugins)
-
 
     def test_subCommandsType(self):
         """
@@ -358,7 +321,6 @@ class OptionsTests(twisted.trial.unittest.TestCase):
             self.assertTrue(callable(parser))
             self.assertIsInstance(doc, str)
 
-
     def test_subCommandsIncludeWeb(self):
         """
         L{TwistOptions.subCommands} includes a sub-command for every plug-in.
@@ -366,12 +328,9 @@ class OptionsTests(twisted.trial.unittest.TestCase):
         options = TwistOptions()
 
         plugins = set(options.plugins)
-        subCommands = set(
-            name for name, shortcut, parser, doc in options.subCommands
-        )
+        subCommands = set(name for name, shortcut, parser, doc in options.subCommands)
 
         self.assertEqual(subCommands, plugins)
-
 
     def test_postOptionsNoSubCommand(self):
         """
