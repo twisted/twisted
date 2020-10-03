@@ -220,7 +220,8 @@ class TestAvatar:
         return ["share"]
 
     session_id = 0
-    
+
+
 @implementer(portal.IRealm)
 class TestRealm:
     def requestAvatar(self, avatarId, mind, *interfaces):
