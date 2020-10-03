@@ -127,12 +127,26 @@ class OptionalDependenciesTests(SynchronousTestCase):
         L{_EXTRAS_REQUIRE}'s C{dev} extra contains setuptools requirements for
         the tools required for Twisted development.
         """
-        deps = _EXTRAS_REQUIRE["dev"]
-        self.assertIn("pyflakes >= 1.0.0", deps)
-        self.assertIn("twisted-dev-tools >= 0.0.2", deps)
-        self.assertIn("python-subunit", deps)
-        self.assertIn("sphinx >= 1.3.1", deps)
-        self.assertIn("twistedchecker >= 0.7.2", deps)
+        self.assertListEqual(
+            _EXTRAS_REQUIRE["dev"],
+            [
+                "pyflakes >= 1.0.0",
+                "twisted-dev-tools >= 0.0.2",
+                "python-subunit",
+                "towncrier >= 17.4.0",
+                "twistedchecker >= 0.7.2",
+                # force upgrades for rtd default packages: https://git.io/JU73V
+                "alabaster~=0.7.12",
+                "commonmark~=0.9.1",
+                "docutils~=0.16.0",
+                "mock~=4.0",
+                "pillow~=7.2",
+                "readthedocs-sphinx-ext~=2.1",
+                "recommonmark~=0.6.0",
+                "sphinx~=3.2",
+                "sphinx-rtd-theme~=0.5.0",
+            ],
+        )
 
     def test_extrasRequiresTlsDeps(self):
         """
