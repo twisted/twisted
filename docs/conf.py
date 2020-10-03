@@ -103,11 +103,6 @@ html_theme_path = ['_themes']
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ['_static']
 
-# Add any extra paths that contain custom files (such as robots.txt or
-# .htaccess) here, relative to this directory. These files are copied
-# directly to the root of the documentation.
-html_extra_path = []
-
 # Output file base name for HTML help builder.
 htmlhelp_basename = 'Twisteddoc'
 
@@ -133,26 +128,6 @@ latex_documents = [
    u'Twisted Matrix Labs', 'manual'),
 ]
 
-# The name of an image file (relative to this directory) to place at the top of
-# the title page.
-#latex_logo = None
-
-# For "manual" documents, if this is true, then toplevel headings are parts,
-# not chapters.
-#latex_use_parts = False
-
-# If true, show page references after internal links.
-#latex_show_pagerefs = False
-
-# If true, show URL addresses after external links.
-#latex_show_urls = False
-
-# Documents to append as an appendix to all manuals.
-#latex_appendices = []
-
-# If false, no module index is generated.
-#latex_domain_indices = True
-
 
 # -- Options for manual page output ---------------------------------------
 
@@ -162,9 +137,6 @@ man_pages = [
     ('index', 'twisted', u'Twisted Documentation',
      [u'Twisted Matrix Labs'], 1)
 ]
-
-# If true, show URL addresses after external links.
-#man_show_urls = False
 
 
 # -- Options for Texinfo output -------------------------------------------
@@ -178,18 +150,6 @@ texinfo_documents = [
    'Miscellaneous'),
 ]
 
-# Documents to append as an appendix to all manuals.
-#texinfo_appendices = []
-
-# If false, no module index is generated.
-#texinfo_domain_indices = True
-
-# How to display URL addresses: 'footnote', 'no', or 'inline'.
-#texinfo_show_urls = 'footnote'
-
-# If true, do not generate a @detailmenu in the "Top" node's menu.
-#texinfo_no_detailmenu = False
-
 
 # -- Options for Epub output ----------------------------------------------
 
@@ -199,72 +159,12 @@ epub_author = u'Twisted Matrix Labs'
 epub_publisher = u'Twisted Matrix Labs'
 epub_copyright = u'2014, Twisted Matrix Labs'
 
-# The basename for the epub file. It defaults to the project name.
-#epub_basename = u'Twisted'
 
-# The HTML theme for the epub output. Since the default themes are not optimized
-# for small screen space, using the same theme for HTML and epub output is
-# usually not wise. This defaults to 'epub', a theme designed to save visual
-# space.
-#epub_theme = 'epub'
-
-# The language of the text. It defaults to the language option
-# or en if the language is not set.
-#epub_language = ''
-
-# The scheme of the identifier. Typical schemes are ISBN or URL.
-#epub_scheme = ''
-
-# The unique identifier of the text. This can be an ISBN number
-# or the project homepage.
-#epub_identifier = ''
-
-# A unique identification for the text.
-#epub_uid = ''
-
-# A tuple containing the cover image and cover page html template filenames.
-#epub_cover = ()
-
-# A sequence of (type, uri, title) tuples for the guide element of content.opf.
-#epub_guide = ()
-
-# HTML files that should be inserted before the pages created by sphinx.
-# The format is a list of tuples containing the path and title.
-#epub_pre_files = []
-
-# HTML files shat should be inserted after the pages created by sphinx.
-# The format is a list of tuples containing the path and title.
-#epub_post_files = []
-
-# A list of files that should not be packed into the epub file.
-#epub_exclude_files = []
-
-# The depth of the table of contents in toc.ncx.
-#epub_tocdepth = 3
-
-# Allow duplicate toc entries.
-#epub_tocdup = True
-
-# Choose between 'default' and 'includehidden'.
-#epub_tocscope = 'default'
-
-# Fix unsupported image types using the PIL.
-#epub_fix_images = False
-
-# Scale large images.
-#epub_max_image_width = 0
-
-# How to display URL addresses: 'footnote', 'no', or 'inline'.
-#epub_show_urls = 'inline'
-
-# If false, no index is generated.
-#epub_use_index = True
+# -- Extension configuration ----------------------------------------------
 
 # Base url for apilinks extension
 apilinks_base_url = 'https://twistedmatrix.com/documents/%s/api/' % (release,)
 traclinks_base_url = 'https://twistedmatrix.com/trac'
-
-# -- Extension configuration ----------------------------------------------
 
 # A dict mapping unique IDs (which can be used to disambiguate references) to a
 # tuple of (<external sphinx documentation URI>, <inventory file location>).
@@ -277,12 +177,3 @@ intersphinx_mapping = {
 # for standard library documentation that does not typically change
 # significantly after release.
 #intersphinx_cache_limit = 5
-
-# Configuration for pydoctor API docs generation from withing Sphinx build
-# system.
-apidocs = {
-  # Source relative to project root directory.
-  'source': 'src',
-  # Destination relative to documentation build destination.
-  'destination': 'api',
-}

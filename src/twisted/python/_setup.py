@@ -88,6 +88,7 @@ _dev = [
     "recommonmark~=0.6.0",
     "sphinx~=3.2",
     "sphinx-rtd-theme~=0.5.0",
+    "pydoctor==20.7.1",
 ]
 
 _EXTRA_OPTIONS = dict(
