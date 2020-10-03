@@ -1,1 +1,1 @@
-fix the readthedocs build, enable readthedocs PR builds and move readthedocs config into .readthedocs.yml
+Fix Read The Docs build and enabled PR builds.
