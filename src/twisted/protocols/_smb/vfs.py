@@ -267,9 +267,10 @@ class AccessViolation(Exception):
 
 
 @implementer(IFile)
-class ThreadFile:
+class _ThreadFile:
     """
-    a file accessed asynchronously using threads
+    a file accessed asynchronously using threads. Should only be created
+    by L{ThreadVfs.openFile}
     """
 
     def __init__(self, fso, filename, flags, attrs):
@@ -401,7 +402,7 @@ class ThreadVfs:
 
     def openFile(self, filename, flags=0, attrs=None):
         return self._deferToThread(
-            ThreadFile, self, self._absPath(filename), flags, attrs
+            _ThreadFile, self, self._absPath(filename), flags, attrs
         )
 
     def removeFile(self, filename):
@@ -492,7 +493,7 @@ try:
     # related to kernel param fs.aio-max-nr
 
     @implementer(IReadDescriptor)
-    class AIOManager:
+    class _AIOManager:
         """
         manager of kernel AIO events
         sits on Twisted event loop wrapping the eventfd
@@ -529,14 +530,14 @@ try:
             self.ctx.submit([libaio.AIOBlock(**kwargs)])
 
     @implementer(IFile)
-    class AIOFile:
+    class _AIOFile:
         """
         async file object implemented using Linux AIO
-        Interface same as L{ThreadFile}
+        Interface same as L{_ThreadFile}
         """
 
         def __init__(self, fso, filename, flags, attrs):
-            self.tf = ThreadFile(fso.tvfs, filename, flags, attrs)
+            self.tf = _ThreadFile(fso.tvfs, filename, flags, attrs)
             self.fd = self.tf.fd
             self.aio = fso.aio
             self.fso = fso.tvfs
@@ -620,6 +621,8 @@ try:
 
         Requires Python package C{libaio} through C{pip} plus the binary library
         package of the same name through C{apt}/C{yum}
+
+        Needs a modern kernel, tested on 5.4
         """
 
         def __init__(self, root, threadpool=None, read_only=False):
@@ -634,14 +637,14 @@ try:
             @type read_only: C{bool}
             """
             self.tvfs = ThreadVfs(root, threadpool, read_only)
-            self.aio = AIOManager()
+            self.aio = _AIOManager()
 
         def unregister(self):
             self.aio.unregister()
 
         def openFile(self, filename, flags=0, attrs=None):
             return self.tvfs._deferToThread(
-                AIOFile, self, self.tvfs._absPath(filename), flags, attrs
+                _AIOFile, self, self.tvfs._absPath(filename), flags, attrs
             )
 
         def removeFile(self, filename):
