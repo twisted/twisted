@@ -11,5 +11,6 @@ python:
   version: 3.8
   system_packages: False
   install:
+    - requirements: docs/rtd-requirements.txt
     - method: pip
       path: .
