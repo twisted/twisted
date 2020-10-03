@@ -38,7 +38,7 @@ import os
 import platform
 import re
 import sys
-from typing import Any, Dict, cast
+from typing import Any, Dict, List, Tuple, cast
 
 from distutils.command import build_ext
 from distutils.errors import CompileError
@@ -149,7 +149,7 @@ class ConditionalExtension(Extension):
         things about the platform.
     """
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: object, **kwargs: object) -> None:
         self.condition = kwargs.pop("condition", lambda builder: True)
         Extension.__init__(self, *args, **kwargs)
 
@@ -173,15 +173,13 @@ _EXTENSIONS = [
 ]
 
 
-def _longDescriptionArgsFromReadme(readme):
+def _longDescriptionArgsFromReadme(readme: str) -> Dict[str, str]:
     """
     Generate a PyPI long description from the readme.
 
     @param readme: Path to the readme reStructuredText file.
-    @type readme: C{str}
 
     @return: Keyword arguments to be passed to C{setuptools.setup()}.
-    @rtype: C{str}
     """
     with io.open(readme, encoding="utf-8") as f:
         readmeRst = f.read()
@@ -202,20 +200,19 @@ def _longDescriptionArgsFromReadme(readme):
     }
 
 
-def getSetupArgs(extensions=_EXTENSIONS, readme="README.rst"):
+def getSetupArgs(
+    extensions: List[ConditionalExtension] = _EXTENSIONS,
+    readme: str = "README.rst",
+) -> Dict[str, Any]:
     """
     Generate arguments for C{setuptools.setup()}
 
     @param extensions: C extension modules to maybe build. This argument is to
         be used for testing.
-    @type extensions: C{list} of C{ConditionalExtension}
-
     @param readme: Path to the readme reStructuredText file. This argument is
         to be used for testing.
-    @type readme: C{str}
 
     @return: The keyword arguments to be used by the setup method.
-    @rtype: L{dict}
     """
     arguments = STATIC_PACKAGE_METADATA.copy()
     if readme:
@@ -273,7 +270,9 @@ class BuildPy3(build_py):
     ported to Python 3.
     """
 
-    def find_package_modules(self, package, package_dir):
+    def find_package_modules(
+        self, package: str, package_dir: str
+    ) -> List[Tuple[str, str, str]]:
         modules = [
             module
             for module in build_py.find_package_modules(self, package, package_dir)
@@ -285,13 +284,13 @@ class BuildPy3(build_py):
 # Helpers and distutil tweaks
 
 
-class build_ext_twisted(build_ext.build_ext):  # type: ignore[name-defined]  # noqa
+class build_ext_twisted(build_ext.build_ext):  # type: ignore[name-defined]
     """
     Allow subclasses to easily detect and customize Extensions to
     build at install-time.
     """
 
-    def prepare_extensions(self):
+    def prepare_extensions(self) -> None:
         """
         Prepare the C{self.extensions} attribute (used by
         L{build_ext.build_ext}) by checking which extensions in
@@ -319,21 +318,21 @@ class build_ext_twisted(build_ext.build_ext):  # type: ignore[name-defined]  # n
         for ext in self.extensions:
             ext.define_macros.extend(self.define_macros)
 
-    def build_extensions(self):
+    def build_extensions(self) -> None:
         """
         Check to see which extension modules to build and then build them.
         """
         self.prepare_extensions()
         build_ext.build_ext.build_extensions(self)  # type: ignore[attr-defined]
 
-    def _remove_conftest(self):
+    def _remove_conftest(self) -> None:
         for filename in ("conftest.c", "conftest.o", "conftest.obj"):
             try:
                 os.unlink(filename)
             except EnvironmentError:
                 pass
 
-    def _compile_helper(self, content):
+    def _compile_helper(self, content: str) -> bool:
         conftest = open("conftest.c", "w")
         try:
             with conftest:
@@ -347,7 +346,7 @@ class build_ext_twisted(build_ext.build_ext):  # type: ignore[name-defined]  # n
         finally:
             self._remove_conftest()
 
-    def _check_header(self, header_name):
+    def _check_header(self, header_name: str) -> bool:
         """
         Check if the given header can be included by trying to compile a file
         that contains only an #include line.
