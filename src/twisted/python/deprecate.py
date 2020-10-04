@@ -793,7 +793,7 @@ def deprecatedKeywordParameter(
     @param replacement: Optional text indicating what should be used in
         place of the deprecated parameter.
 
-    @since: Twisted NEXT
+    @since: Twisted 20.11.0
     """
 
     def wrapper(wrappee: _Tc) -> _Tc:

@@ -186,7 +186,7 @@ class InsensitiveDict(MutableMapping):
     def pop(self, key, default=_notFound):
         """
         @see: L{dict.pop}
-        @since: Twisted NEXT
+        @since: Twisted 20.11.0
         """
         try:
             return self.data.pop(self._lowerOrReturn(key))[1]
