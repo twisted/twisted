@@ -2,6 +2,9 @@
 Extension to trigger the pydoctor API builds as part of the Sphinx build.
 
 This is created to have API docs created on Read the docs.
+
+The API docs build is ignored when this is not running outside of the
+Read The Docs environment.
 """
 import os
 
