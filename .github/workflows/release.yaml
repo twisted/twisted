@@ -43,7 +43,7 @@ jobs:
 
   pypi-upload:
     needs: build-wheels
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-20.04
     strategy:
       matrix:
           os: [ubuntu-20.04, macos-10.15, windows-2019]
@@ -54,7 +54,7 @@ jobs:
 
     - uses: actions/download-artifact@v2
       with:
-        name: twisted-artifact-${{ runner.os }}-${{ matrix.python-version }}
+        name: twisted-artifact-${{ matrix.os }}-${{ matrix.python-version }}
         path: dist
 
     - name: Display structure of downloaded files
