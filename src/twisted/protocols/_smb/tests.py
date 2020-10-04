@@ -7,6 +7,8 @@ import io
 import socket
 import re
 import attr
+import os
+import unittest as python_unittest
 
 from twisted.protocols._smb import base, core, security_blob, ntlm
 from twisted.protocols._smb.ismb import ISMBServer, IFilesystem, NoSuchShare
@@ -280,8 +282,10 @@ def spawn(chat, args, ignoreRCode=False, usePTY=True):
 
 
 TESTPORT = 5445
+SMBCLIENT = "/usr/bin/smbclient"
 
 
+@python_unittest.skipUnless(os.access(SMBCLIENT, os.X_OK), "smbclient unavailable")
 class SambaClientTests(unittest.TestCase):
     def setUp(self):
         # Start the server
@@ -300,7 +304,7 @@ class SambaClientTests(unittest.TestCase):
         return spawn(
             chat,
             [
-                "/usr/bin/smbclient",
+                SMBCLIENT,
                 "\\\\%s\\share" % socket.gethostname(),
                 self.password,
                 "-m",
