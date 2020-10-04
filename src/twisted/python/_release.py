@@ -14,6 +14,7 @@ which must run on multiple platforms (eg the setup.py script).
 
 import os
 import sys
+from io import StringIO
 from typing import Dict
 
 from zope.interface import Interface, implementer
@@ -377,7 +378,7 @@ class SphinxBuilder:
             sys.stdout.write("Unclean build:\n{}\n".format(output))
             raise sys.exit(1)
 
-    def build(self, docDir, buildDir=None, version=""):
+    def build(self, docDir):
         """
         Build the documentation in C{docDir} with Sphinx.
 
@@ -386,35 +387,26 @@ class SphinxBuilder:
             Sphinx "conf.py" file and sphinx source documents.
         @type docDir: L{twisted.python.filepath.FilePath}
 
-        @param buildDir: The directory to build the documentation in.  By
-            default this will be a child directory of {docDir} named "build".
-        @type buildDir: L{twisted.python.filepath.FilePath}
-
-        @param version: The version of Twisted to set in the docs.
-        @type version: C{str}
-
-        @return: the output produced by running the command
-        @rtype: L{str}
+        @return: the error/warning lines produced by running the command.
+        @rtype: List of L{str}
         """
-        if buildDir is None:
-            buildDir = docDir.parent().child("doc")
-
+        buildDir = docDir.child("_build")
         doctreeDir = buildDir.child("doctrees")
+        logFile = buildDir.child('run.log')
 
         output = runCommand(
             [
                 "sphinx-build",
-                "-q",
-                "-b",
-                "html",
-                "-d",
-                doctreeDir.path,
+                "-w", logFile.path,
+                "-b", "html",
+                "-d", doctreeDir.path,
                 docDir.path,
                 buildDir.path,
             ]
-        ).decode("utf-8")
+        )
+        print(output.decode('utf-8'))
 
-        # Delete the doctrees, as we don't want them after the docs are built
+        # Delete the doctrees, as we don't want them after the docs are built.
         doctreeDir.remove()
 
         for path in docDir.walk():
@@ -426,7 +418,8 @@ class SphinxBuilder:
                 if not dest.parent().isdir():
                     dest.parent().makedirs()
                 path.copyTo(dest)
-        return output
+
+        return logFile.getContent().splitlines()
 
 
 def filePathDelta(origin, destination):
@@ -466,7 +459,7 @@ class NotWorkingDirectory(Exception):
 
 class BuildAPIDocsScript:
     """
-    A thing for building API documentation. See L{main}.
+    Helper for building API documentation. See L{main}.
     """
 
     def buildAPIDocs(self, projectRoot, output):
@@ -500,12 +493,26 @@ class BuildAPIDocsScript:
         @param args: The command line arguments to process.  This must contain
             two strings: the path to the root of the Twisted checkout, and a
             path to an output directory.
+
+        @return: The list of build errors.
+        @rtype: List of L{str}
+
         """
         if len(args) != 2:
             sys.exit(
                 "Must specify two arguments: " "Twisted checkout and destination path"
             )
-        self.buildAPIDocs(FilePath(args[0]), FilePath(args[1]))
+
+        original_stdout = sys.stdout
+        try:
+            capture = StringIO()
+            sys.stdout = capture
+            self.buildAPIDocs(FilePath(args[0]), FilePath(args[1]))
+        finally:
+            sys.stdout = original_stdout
+
+        output = capture.getvalue().strip()
+        return output.splitlines()
 
 
 class CheckNewsfragmentScript:

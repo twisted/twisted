@@ -4,9 +4,20 @@
 # See LICENSE for details.
 
 # This script is not meant to be distributed to users of Twisted.
-# It is only for use in making upstream Twisted releases.
+# It is used for:
+# * testing the narrative Sphinx docs (via CI)
+# * getting local version for narrative Sphinx docs (via tox).
 
 import sys
 from twisted.python._release import SphinxBuilder
 
-SphinxBuilder().main(sys.argv[1:])
+errors = SphinxBuilder().main(sys.argv[1:])
+
+if not errors:
+    # Build was successful.
+    sys.exit(0)
+
+for line in errors:
+    # Emit captured Sphinx output as warnings.
+    print(line, file=sys.stderr)
+sys.exit(1)

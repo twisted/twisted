@@ -4,8 +4,6 @@ Extension to trigger the pydoctor API builds as part of the Sphinx build.
 This is created to have API docs created on Read the docs.
 """
 import os
-import sys
-from io import StringIO
 
 from sphinx.parsers import Parser
 from sphinx.util import logging
@@ -58,17 +56,10 @@ class PyDoctorParser(Parser):
          'pydoctor API docs from %s to %s (this is a long process)...' % (
             source, destination))
 
-      original_stdout = sys.stdout
-      try:
-         capture = StringIO()
-         sys.stdout = capture
-         BuildAPIDocsScript().main([source, destination])
-
-         for line in capture.getvalue().splitlines():
-            logger.warning(line)
-
-      finally:
-         sys.stdout = original_stdout
+      errors = BuildAPIDocsScript().main([source, destination])
+      for line in errors:
+         # Emit captured pydoctor output as warnings.
+         logger.warning(line)
 
       logger.info('pydoctor API docs done.')
 
@@ -77,5 +68,10 @@ def setup(app):
    """
    This is called by Sphinx extension system.
    """
+   on_rtd = os.environ.get('READTHEDOCS', None) == 'True'
+   if not on_rtd:
+      logger.info('Skip pydoctor API docs buld without env READTHEDOCS=True')
+      return
+
    app.add_source_suffix('.pydoctor', 'pydoctor')
    app.add_source_parser(PyDoctorParser)

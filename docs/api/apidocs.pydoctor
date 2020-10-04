@@ -1,5 +1,6 @@
 # This triggers building the PyDoctor API docs inside this directory.
 # The directory containing this file will be populated with API docs HTML files.
 
+# It should contain a single non-commented line with the path to source code.
 # Source path as relative to the directory in which this file is located.
 ../../src

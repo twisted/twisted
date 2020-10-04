@@ -1,6 +1,9 @@
 version: 2
 
 sphinx:
+  # This should not fail on errors.
+  # We have a separate build process which fails on errors and shows all
+  # the errors in one go.
   fail_on_warning: False
 
 formats:
