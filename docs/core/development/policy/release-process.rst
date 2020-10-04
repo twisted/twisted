@@ -282,7 +282,7 @@ Announce
    - Twitter, if you feel like it
    - ``#twisted`` topic on IRC (you'll need ops)
 
-#. Run ``python -m incremental Twisted --dev`` to add a `dev0` postfix.
+#. Run ``python -m incremental.update Twisted --dev`` to add a `dev0` postfix.
 
 #. Commit the dev0 update change.
 
