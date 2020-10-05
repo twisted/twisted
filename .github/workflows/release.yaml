@@ -62,9 +62,9 @@ jobs:
       working-directory: dist
 
     - name: Publish package to PyPI
-      if: startsWith(github.ref, 'refs/tags')
+      if: startsWith(github.ref, 'refs/tags') && github.event_name == 'release'
       uses: pypa/gh-action-pypi-publish@v1.4.1
       with:
-        password: ${{ secrets.PYPI_GITHUB_PACKAGE_UPLOAD }}
+        user: __token__
+        password: ${{ secrets.pypi_password }}
         verbose: true
-
