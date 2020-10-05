@@ -1,0 +1,17 @@
+version: 2
+
+sphinx:
+  fail_on_warning: true
+
+formats:
+  - pdf
+  - epub
+
+python:
+  version: 3.8
+  system_packages: False
+  install:
+    - method: pip
+      path: .
+      extra_requirements:
+        - dev

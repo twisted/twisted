@@ -131,7 +131,7 @@ class OptionalDependenciesTests(SynchronousTestCase):
         self.assertIn("pyflakes >= 1.0.0", deps)
         self.assertIn("twisted-dev-tools >= 0.0.2", deps)
         self.assertIn("python-subunit", deps)
-        self.assertIn("sphinx >= 1.3.1", deps)
+        self.assertIn("sphinx~=3.2", deps)
         self.assertIn("twistedchecker >= 0.7.2", deps)
 
     def test_extrasRequiresTlsDeps(self):

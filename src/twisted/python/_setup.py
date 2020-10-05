@@ -76,9 +76,18 @@ _dev = [
     "pyflakes >= 1.0.0",
     "twisted-dev-tools >= 0.0.2",
     "python-subunit",
-    "sphinx >= 1.3.1",
     "towncrier >= 17.4.0",
     "twistedchecker >= 0.7.2",
+    # force upgrades for rtd default packages: https://git.io/JU73V
+    "alabaster~=0.7.12",
+    "commonmark~=0.9.1",
+    "docutils~=0.16.0",
+    "mock~=4.0",
+    "pillow~=7.2",
+    "readthedocs-sphinx-ext~=2.1",
+    "recommonmark~=0.6.0",
+    "sphinx~=3.2",
+    "sphinx-rtd-theme~=0.5.0",
 ]
 
 _EXTRA_OPTIONS = dict(
