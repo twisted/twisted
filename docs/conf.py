@@ -329,8 +329,8 @@ epub_copyright = u'2014, Twisted Matrix Labs'
 # The depth of the table of contents in toc.ncx.
 #epub_tocdepth = 3
 
-# Allow duplicate toc entries.
-#epub_tocdup = True
+# Disallow duplicate toc entries.
+epub_tocdup = False
 
 # Choose between 'default' and 'includehidden'.
 #epub_tocscope = 'default'
