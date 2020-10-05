@@ -5,8 +5,6 @@ on:
     branches: [ trunk ]
   pull_request:
     branches: [ trunk ]
-  release:
-    types: [created]
 
 jobs:
   lint:
@@ -231,31 +229,3 @@ jobs:
       run: |
         python --version
         tox -q -e alldeps-withcov-posix,coverage-prepare,codecov-push,coveralls-push
-
-  pypi-upload:
-    needs: [build-wheels, testing]
-    runs-on: ubuntu-20.04
-    strategy:
-      matrix:
-          os: [ubuntu-20.04, macos-10.15, windows-2019]
-          python-version: [3.5, 3.6, 3.7, 3.8, 3.9.0-rc.2]
-
-    steps:
-    - uses: actions/checkout@v2
-
-    - uses: actions/download-artifact@v2
-      with:
-        name: twisted-artifact-${{ matrix.os }}-${{ matrix.python-version }}
-        path: dist
-
-    - name: Display structure of downloaded files
-      run: ls -R
-      working-directory: dist
-
-    - name: Publish package to PyPI
-      if: startsWith(github.ref, 'refs/tags') && github.event_name == 'release'
-      uses: pypa/gh-action-pypi-publish@v1.4.1
-      with:
-        user: __token__
-        password: ${{ secrets.pypi_password }}
-        verbose: true
