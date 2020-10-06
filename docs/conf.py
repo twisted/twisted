@@ -90,6 +90,8 @@ pygments_style = 'sphinx'
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 
+# See Read The Docs environment variables
+# https://docs.readthedocs.io/en/stable/builds.html#build-environment
 on_rtd = os.environ.get('READTHEDOCS', None) == 'True'
 
 if not on_rtd:
@@ -163,7 +165,18 @@ epub_copyright = u'2014, Twisted Matrix Labs'
 # -- Extension configuration ----------------------------------------------
 
 # Base url for apilinks extension
-apilinks_base_url = 'https://twistedmatrix.com/documents/%s/api/' % (release,)
+apilinks_base_url = '/documents/%s/api/' % (release,)
+if on_rtd:
+    # For a PR the link is like:
+    # https://twisted--1422.org.readthedocs.build/en/1422/
+    # For a release:
+    # https://twisted.readthedocs.io/en/twisted-20.3.0/
+    # https://twisted.readthedocs.io/en/latest/
+    apilinks_base_url = '/%s/%s/api/' % (
+        os.environ['READTHEDOCS_LANGUAGE'],
+        os.environ['READTHEDOCS_VERSION'],
+        )
+
 traclinks_base_url = 'https://twistedmatrix.com/trac'
 
 # A dict mapping unique IDs (which can be used to disambiguate references) to a
