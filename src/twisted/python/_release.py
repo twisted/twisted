@@ -339,7 +339,6 @@ class APIBuilder:
             packagePath.path,
             "--html-output",
             outputPath.path,
-            "--html-write-function-pages",
             "--quiet",
             "--make-html",
         ] + intersphinxes
