@@ -92,7 +92,7 @@ class FormattingTests(unittest.TestCase):
         event = dict(log_format=object(), foo=1, bar=2)
         result = formatEvent(event)
 
-        self.assertIn("Log format must be unicode or bytes", result)
+        self.assertIn("Log format must be str or bytes", result)
         self.assertIn(repr(event), result)
 
     def test_formatUnformattableEvent(self):

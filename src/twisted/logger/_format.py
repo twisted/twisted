@@ -19,8 +19,7 @@ timeFormatRFC3339 = "%Y-%m-%dT%H:%M:%S%z"
 
 def formatEvent(event):
     """
-    Formats an event as a L{unicode}, using the format in
-    C{event["log_format"]}.
+    Formats an event as a L{str}, using the format in C{event["log_format"]}.
 
     This implementation should never raise an exception; if the formatting
     cannot be done, the returned string will describe the event generically so
@@ -30,7 +29,7 @@ def formatEvent(event):
     @type event: L{dict}
 
     @return: A formatted string.
-    @rtype: L{unicode}
+    @rtype: L{str}
     """
     return eventAsText(
         event,
@@ -42,7 +41,7 @@ def formatEvent(event):
 
 def formatUnformattableEvent(event, error):
     """
-    Formats an event as a L{unicode} that describes the event generically and a
+    Formats an event as a L{str} that describes the event generically and a
     formatting error.
 
     @param event: A logging event.
@@ -52,7 +51,7 @@ def formatUnformattableEvent(event, error):
     @type error: L{Exception}
 
     @return: A formatted string.
-    @rtype: L{unicode}
+    @rtype: L{str}
     """
     try:
         return "Unable to format event {event!r}: {error}".format(
@@ -100,13 +99,13 @@ def formatTime(when, timeFormat=timeFormatRFC3339, default="-"):
     @type then: L{float}
 
     @param timeFormat: A time format.
-    @type timeFormat: L{unicode} or L{None}
+    @type timeFormat: L{str} or L{None}
 
     @param default: Text to return if C{when} or C{timeFormat} is L{None}.
-    @type default: L{unicode}
+    @type default: L{str}
 
     @return: A formatted time.
-    @rtype: L{unicode}
+    @rtype: L{str}
     """
     if timeFormat is None or when is None:
         return default
@@ -161,10 +160,10 @@ def formatEventAsClassicLogText(event, formatTime=formatTime):
 
     @param formatTime: A time formatter
     @type formatTime: L{callable} that takes an C{event} argument and returns
-        a L{unicode}
+        a L{str}
 
     @return: A formatted event, or L{None} if no output is appropriate.
-    @rtype: L{unicode} or L{None}
+    @rtype: L{str} or L{None}
     """
     eventText = eventAsText(event, formatTime=formatTime)
     if not eventText:
@@ -203,7 +202,7 @@ class CallMapping:
 
 def formatWithCall(formatString, mapping):
     """
-    Format a string like L{unicode.format}, but:
+    Format a string like L{str.format}, but:
 
         - taking only a name mapping; no positional arguments
 
@@ -220,20 +219,19 @@ def formatWithCall(formatString, mapping):
         'just a string, a function.'
 
     @param formatString: A PEP-3101 format string.
-    @type formatString: L{unicode}
+    @type formatString: L{str}
 
     @param mapping: A L{dict}-like object to format.
 
     @return: The string with formatted values interpolated.
-    @rtype: L{unicode}
+    @rtype: L{str}
     """
     return str(aFormatter.vformat(formatString, (), CallMapping(mapping)))
 
 
 def _formatEvent(event):
     """
-    Formats an event as a L{unicode}, using the format in
-    C{event["log_format"]}.
+    Formats an event as a L{str}, using the format in C{event["log_format"]}.
 
     This implementation should never raise an exception; if the formatting
     cannot be done, the returned string will describe the event generically so
@@ -243,7 +241,7 @@ def _formatEvent(event):
     @type event: L{dict}
 
     @return: A formatted string.
-    @rtype: L{unicode}
+    @rtype: L{str}
     """
     try:
         if "log_flattened" in event:
@@ -253,14 +251,12 @@ def _formatEvent(event):
         if format is None:
             return ""
 
-        # Make sure format is unicode.
+        # Make sure format is a string.
         if isinstance(format, bytes):
             # If we get bytes, assume it's UTF-8 bytes
             format = format.decode("utf-8")
         elif not isinstance(format, str):
-            raise TypeError(
-                "Log format must be unicode or bytes, not {0!r}".format(format)
-            )
+            raise TypeError("Log format must be str or bytes, not {0!r}".format(format))
 
         return formatWithCall(format, event)
 
@@ -279,7 +275,7 @@ def _formatTraceback(failure):
     @type failure: L{twisted.python.failure.Failure}
 
     @return: The formatted traceback.
-    @rtype: L{unicode}
+    @rtype: L{str}
     """
     try:
         traceback = failure.getTraceback()
@@ -301,7 +297,7 @@ def _formatSystem(event):
     @type event: L{dict}
 
     @return: A formatted string representing the "log_system" key.
-    @rtype: L{unicode}
+    @rtype: L{str}
     """
     system = event.get("log_system", None)
     if system is None:
@@ -331,8 +327,8 @@ def eventAsText(
     formatTime=formatTime,
 ):
     r"""
-    Format an event as a unicode string.  Optionally, attach timestamp,
-    traceback, and system information.
+    Format an event as a string.  Optionally, attach timestamp, traceback, and
+    system information.
 
     The full output format is:
     C{u"{timeStamp} [{system}] {event}\n{traceback}\n"} where:
@@ -369,10 +365,10 @@ def eventAsText(
 
     @param formatTime: A time formatter
     @type formatTime: L{callable} that takes an C{event} argument and returns
-        a L{unicode}
+        a L{str}
 
     @return: A formatted string with specified options.
-    @rtype: L{unicode}
+    @rtype: L{str}
 
     @since: Twisted 18.9.0
     """
