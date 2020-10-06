@@ -120,14 +120,14 @@ def formatEventAsClassicLogText(event, formatTime=formatTime):
     Format an event as a line of human-readable text for, e.g. traditional log
     file output.
 
-    The output format is C{u"{timeStamp} [{system}] {event}\\n"}, where:
+    The output format is C{"{timeStamp} [{system}] {event}\\n"}, where:
 
         - C{timeStamp} is computed by calling the given C{formatTime} callable
           on the event's C{"log_time"} value
 
         - C{system} is the event's C{"log_system"} value, if set, otherwise,
-          the C{"log_namespace"} and C{"log_level"}, joined by a C{u"#"}.  Each
-          defaults to C{u"-"} is not set.
+          the C{"log_namespace"} and C{"log_level"}, joined by a C{"#"}.  Each
+          defaults to C{"-"} is not set.
 
         - C{event} is the event, as formatted by L{formatEvent}.
 
@@ -138,17 +138,17 @@ def formatEventAsClassicLogText(event, formatTime=formatTime):
         >>> from twisted.logger import LogLevel
         >>>
         >>> formatEventAsClassicLogText(dict())  # No format, returns None
-        >>> formatEventAsClassicLogText(dict(log_format=u"Hello!"))
+        >>> formatEventAsClassicLogText(dict(log_format="Hello!"))
         u'- [-#-] Hello!\\n'
         >>> formatEventAsClassicLogText(dict(
-        ...     log_format=u"Hello!",
+        ...     log_format="Hello!",
         ...     log_time=time(),
         ...     log_namespace="my_namespace",
         ...     log_level=LogLevel.info,
         ... ))
         u'2013-10-22T17:30:02-0700 [my_namespace#info] Hello!\\n'
         >>> formatEventAsClassicLogText(dict(
-        ...     log_format=u"Hello!",
+        ...     log_format="Hello!",
         ...     log_time=time(),
         ...     log_system="my_system",
         ... ))
@@ -289,8 +289,8 @@ def _formatTraceback(failure):
 def _formatSystem(event):
     """
     Format the system specified in the event in the "log_system" key if set,
-    otherwise the C{"log_namespace"} and C{"log_level"}, joined by a C{u"#"}.
-    Each defaults to C{u"-"} is not set.  If formatting fails completely,
+    otherwise the C{"log_namespace"} and C{"log_level"}, joined by a C{"#"}.
+    Each defaults to C{"-"} is not set.  If formatting fails completely,
     "UNFORMATTABLE" is returned.
 
     @param event: The event containing the system specification.
@@ -331,14 +331,14 @@ def eventAsText(
     system information.
 
     The full output format is:
-    C{u"{timeStamp} [{system}] {event}\n{traceback}\n"} where:
+    C{"{timeStamp} [{system}] {event}\n{traceback}\n"} where:
 
         - C{timeStamp} is the event's C{"log_time"} value formatted with
           the provided C{formatTime} callable.
 
         - C{system} is the event's C{"log_system"} value, if set, otherwise,
-          the C{"log_namespace"} and C{"log_level"}, joined by a C{u"#"}.  Each
-          defaults to C{u"-"} is not set.
+          the C{"log_namespace"} and C{"log_level"}, joined by a C{"#"}.  Each
+          defaults to C{"-"} is not set.
 
         - C{event} is the event, as formatted by L{formatEvent}.
 
