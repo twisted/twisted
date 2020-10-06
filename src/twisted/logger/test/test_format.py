@@ -6,7 +6,6 @@
 Test cases for L{twisted.logger._format}.
 """
 
-from constantly import NamedConstant
 from typing import AnyStr, Optional, cast
 
 try:

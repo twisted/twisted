@@ -164,12 +164,14 @@ class FlatFormattingTests(unittest.TestCase):
         self.assertEqual(keyFromFormat("{foo!s::}"), "foo!s::")
 
         sameFlattener = KeyFlattener()
-        ((
-            literalText,
-            fieldName,
-            formatSpec,
-            conversion,
-        ),) = aFormatter.parse("{x}")
+        (
+            (
+                literalText,
+                fieldName,
+                formatSpec,
+                conversion,
+            ),
+        ) = aFormatter.parse("{x}")
         assert fieldName is not None
 
         self.assertEqual(

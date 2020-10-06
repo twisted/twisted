@@ -8,7 +8,7 @@ and implementation of logic for managing that global state.
 """
 
 import sys
-from typing import Any, IO, Iterable, Optional, Tuple, Type, cast
+from typing import Any, IO, Iterable, Optional, Type
 import warnings
 
 from twisted.python.compat import currentframe
