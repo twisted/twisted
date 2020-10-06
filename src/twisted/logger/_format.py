@@ -202,13 +202,13 @@ class CallMapping:
 
 def formatWithCall(formatString, mapping):
     """
-    Format a string like L{str.format}, but:
+    Format a string like L{str.format()}, but:
 
         - taking only a name mapping; no positional arguments
 
         - with the additional syntax that an empty set of parentheses
           correspond to a formatting item that should be called, and its result
-          C{str}'d, rather than calling C{str} on the element directly as
+          L{str()}'d, rather than calling L{str()} on the element directly as
           normal.
 
     For example::
