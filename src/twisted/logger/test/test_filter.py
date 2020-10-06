@@ -275,13 +275,6 @@ class LogLevelFilterPredicateTests(unittest.TestCase):
                 predicate.logLevelForNamespace(default), predicate.defaultLogLevel
             )
             self.assertEqual(
-                predicate.logLevelForNamespace(""), predicate.defaultLogLevel
-            )
-            self.assertEqual(
-                predicate.logLevelForNamespace(cast(str, None)),
-                predicate.defaultLogLevel,
-            )
-            self.assertEqual(
                 predicate.logLevelForNamespace("rocker.cool.namespace"),
                 predicate.defaultLogLevel,
             )
