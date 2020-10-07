@@ -12,7 +12,7 @@ from heapq import heappush, heappop, heapify
 import socket  # needed only for sync-dns
 import sys
 import traceback
-from typing import Any, Callable, Dict, List, NewType, Optional, Tuple
+from typing import Any, Callable, Dict, List, NewType, Optional, Sequence, Tuple
 import warnings
 
 from zope.interface import implementer, classImplements
@@ -51,7 +51,16 @@ class DelayedCall:
     debug = False
     _repr = None  # type: Optional[str]
 
-    def __init__(self, time, func, args, kw, cancel, reset, seconds=runtimeSeconds):
+    def __init__(
+        self,
+        time: float,
+        func: Callable[..., Any],
+        args: Sequence[object],
+        kw: Dict[str, object],
+        cancel: Callable[["DelayedCall"], None],
+        reset: Callable[["DelayedCall"], None],
+        seconds: Callable[[], float] = runtimeSeconds,
+    ):
         """
         @param time: Seconds from the epoch at which to call C{func}.
         @param func: The callable to call.
@@ -198,11 +207,11 @@ class DelayedCall:
             # This code should be replaced by a utility function in reflect;
             # see ticket #6066:
             if hasattr(self.func, "__qualname__"):
-                func = self.func.__qualname__
+                func = self.func.__qualname__  # type: Optional[str]
             elif hasattr(self.func, "__name__"):
-                func = self.func.func_name
+                func = self.func.func_name  # type: ignore[attr-defined]
                 if hasattr(self.func, "im_class"):
-                    func = self.func.im_class.__name__ + "." + func
+                    func = self.func.im_class.__name__ + "." + func  # type: ignore[attr-defined]
             else:
                 func = reflect.safe_repr(self.func)
         else:
