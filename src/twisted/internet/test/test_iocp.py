@@ -89,6 +89,7 @@ class SupportTests(TestCase):
                 server.setsockopt(
                     SOL_SOCKET, SO_UPDATE_ACCEPT_CONTEXT, pack("P", port.fileno())
                 )
+                # Reset any previous error and stop retrying.
                 socketError = None
                 break
             except OSError as socketError:
