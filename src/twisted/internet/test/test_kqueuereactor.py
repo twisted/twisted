@@ -5,6 +5,9 @@
 Tests for L{twisted.internet.kqueuereactor}.
 """
 
+# For mypy's benefit
+import sys
+assert not sys.platform.startswith("linux")
 
 import errno
 

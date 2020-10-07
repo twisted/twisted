@@ -16,9 +16,8 @@ connections, listeners or connectors are added)::
    kqreactor.install()
 """
 
-import sys
-
 # For mypy's benefit
+import sys
 assert not sys.platform.startswith("linux")
 
 import errno
