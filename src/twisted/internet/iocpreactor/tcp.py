@@ -562,7 +562,7 @@ class Port(_SocketCloser, _LogOwner):
         else:
             # Inherit the properties from the listening port socket as
             # documented in the `Remarks` section of AcceptEx.
-            # https://msdn.microsoft.com/en-us/library/ms737524(v=VS.85).aspx
+            # https://docs.microsoft.com/en-us/windows/win32/api/mswsock/nf-mswsock-acceptex
             # In this way we can call getsockname and getpeername on the
             # accepted socket.
             evt.newskt.setsockopt(

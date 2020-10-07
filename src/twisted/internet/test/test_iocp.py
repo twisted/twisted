@@ -9,7 +9,7 @@ import errno
 import time
 from array import array
 from struct import pack
-from socket import AF_INET6, AF_INET, SOCK_STREAM, SOL_SOCKET, error, socket
+from socket import AF_INET6, AF_INET, SOCK_STREAM, SOL_SOCKET, socket
 from unittest import skipIf
 
 from zope.interface.verify import verifyClass
@@ -33,7 +33,7 @@ except ImportError:
 
 try:
     socket(AF_INET6, SOCK_STREAM).close()
-except error as e:
+except OSError as e:
     ipv6Skip = True
     ipv6SkipReason = str(e)
 
@@ -65,7 +65,7 @@ class SupportTests(TestCase):
         client.setblocking(False)
         try:
             client.connect((localhost, port.getsockname()[1]))
-        except error as e:
+        except OSError as e:
             self.assertIn(e.errno, (errno.EINPROGRESS, errno.EWOULDBLOCK))
 
         server = socket(family, SOCK_STREAM)
@@ -73,6 +73,7 @@ class SupportTests(TestCase):
         buff = array("B", b"\0" * 256)
         self.assertEqual(0, _iocp.accept(port.fileno(), server.fileno(), buff, None))
 
+        socketError = None
         for _ in range(3):
             # Calling setsockopt after _iocp.accept might fail for both IPv4
             # and IPV6 with [Errno 10057] A request to send or receive ...
@@ -83,25 +84,26 @@ class SupportTests(TestCase):
             # we don't implement the event callback.
             # The event callback functionality is tested via the high level
             # tests for general reactor API.
-            # We retry twice as retrying once is not enough.
+            # We retry multiple times to cover.
             try:
                 server.setsockopt(
                     SOL_SOCKET, SO_UPDATE_ACCEPT_CONTEXT, pack("P", port.fileno())
                 )
+                socketError = None
                 break
-            except error as socketError:
+            except OSError as socketError:
                 # getattr is used below to make mypy happy.
-                if socketError.errno == getattr(errno, 'WSAENOTCONN'):
+                if socketError.errno == getattr(errno, "WSAENOTCONN"):
                     # Without a sleep here even retrying 20 times will fail.
                     # This should allow other threads to execute.
-                    time.sleep(0.1)
-                    pass
+                    time.sleep(0.2)
                 else:
-                    # Not the excepted error so we re-raise the error without
-                    # retying.
+                    # This is not the expected error so re-raise the error without retrying.
                     raise
-            # Second try also failed so we just re-raise the error.
-            raise
+
+        if socketError:
+            # Still failing after all the retries.
+            raise socketError
 
         self.assertEqual(
             (family, client.getpeername()[:2], client.getsockname()[:2]),
