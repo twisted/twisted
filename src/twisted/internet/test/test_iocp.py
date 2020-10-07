@@ -77,7 +77,7 @@ class SupportTests(TestCase):
         buff = array("B", b"\0" * 256)
         self.assertEqual(0, _iocp.accept(port.fileno(), server.fileno(), buff, None))
 
-        socketError = None
+        lastError = None
         for _ in range(5):
             # Calling setsockopt after _iocp.accept might fail for both IPv4
             # and IPV6 with [Errno 10057] A request to send or receive ...
@@ -94,11 +94,12 @@ class SupportTests(TestCase):
                     SOL_SOCKET, SO_UPDATE_ACCEPT_CONTEXT, pack("P", port.fileno())
                 )
                 # Reset any previous error and stop retrying.
-                socketError = None
+                lastError = None
                 break
             except OSError as socketError:
+                lastError = socketError
                 # getattr is used below to make mypy happy.
-                if socketError.errno == getattr(errno, "WSAENOTCONN"):
+                if lastError.errno == getattr(errno, "WSAENOTCONN"):
                     # Without a sleep here even retrying 20 times will fail.
                     # This should allow other threads to execute.
                     time.sleep(0.2)
@@ -106,9 +107,9 @@ class SupportTests(TestCase):
                     # This is not the expected error so re-raise the error without retrying.
                     raise
 
-        if socketError:
+        if lastError:
             # Still failing after all the retries.
-            raise socketError
+            raise lastError
 
         self.assertEqual(
             (family, client.getpeername()[:2], client.getsockname()[:2]),
