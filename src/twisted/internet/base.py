@@ -7,17 +7,23 @@ Very basic functionality for a Reactor implementation.
 """
 
 
+import builtins
+from heapq import heappush, heappop, heapify
 import socket  # needed only for sync-dns
-from typing import Any, Callable, List, Optional
+import sys
+import traceback
+from typing import Any, Callable, Dict, List, NewType, Optional, Tuple
+import warnings
+
 from zope.interface import implementer, classImplements
 
-import sys
-import warnings
-from heapq import heappush, heappop, heapify
-
-import builtins
-import traceback
-
+from twisted.internet import fdesc, main, error, abstract, defer, threads
+from twisted.internet._resolver import (
+    GAIResolver as _GAIResolver,
+    ComplexResolverSimplifier as _ComplexResolverSimplifier,
+    SimpleResolverComplexifier as _SimpleResolverComplexifier,
+)
+from twisted.internet.defer import Deferred, DeferredList
 from twisted.internet.interfaces import (
     IReactorCore,
     IReactorTime,
@@ -29,16 +35,8 @@ from twisted.internet.interfaces import (
     IDelayedCall,
     _ISupportsExitSignalCapturing,
 )
-
-from twisted.internet import fdesc, main, error, abstract, defer, threads
-from twisted.internet._resolver import (
-    GAIResolver as _GAIResolver,
-    ComplexResolverSimplifier as _ComplexResolverSimplifier,
-    SimpleResolverComplexifier as _SimpleResolverComplexifier,
-)
 from twisted.python import log, failure, reflect
 from twisted.python.runtime import seconds as runtimeSeconds, platform
-from twisted.internet.defer import Deferred, DeferredList
 
 # This import is for side-effects!  Even if you don't see any code using it
 # in this module, don't delete it.
@@ -316,6 +314,13 @@ class BlockingResolver:
             return defer.succeed(address)
 
 
+_ThreePhaseEventTriggerCallable = Callable[..., None]
+_ThreePhaseEventTrigger = NewType(
+    "_ThreePhaseEventTrigger",
+    Tuple[str, _ThreePhaseEventTriggerCallable, Tuple[object, ...], Dict[str, object]],
+)
+
+
 class _ThreePhaseEvent:
     """
     Collection of callables (with arguments) which can be invoked as a group in
@@ -352,7 +357,13 @@ class _ThreePhaseEvent:
         self.after = []
         self.state = "BASE"
 
-    def addTrigger(self, phase, callable, *args, **kwargs):
+    def addTrigger(
+        self,
+        phase: str,
+        callable: _ThreePhaseEventTriggerCallable,
+        *args: object,
+        **kwargs: object
+    ) -> _ThreePhaseEventTrigger:
         """
         Add a trigger to the indicate phase.
 
@@ -368,9 +379,9 @@ class _ThreePhaseEvent:
         if phase not in ("before", "during", "after"):
             raise KeyError("invalid phase")
         getattr(self, phase).append((callable, args, kwargs))
-        return phase, callable, args, kwargs
+        return _ThreePhaseEventTrigger((phase, callable, args, kwargs))
 
-    def removeTrigger(self, handle):
+    def removeTrigger(self, handle: _ThreePhaseEventTrigger) -> None:
         """
         Remove a previously added trigger callable.
 
@@ -380,9 +391,9 @@ class _ThreePhaseEvent:
         @raise ValueError: If the trigger associated with C{handle} has already
             been removed or if C{handle} is not a valid handle.
         """
-        return getattr(self, "removeTrigger_" + self.state)(handle)
+        getattr(self, "removeTrigger_" + self.state)(handle)
 
-    def removeTrigger_BASE(self, handle):
+    def removeTrigger_BASE(self, handle: _ThreePhaseEventTrigger) -> None:
         """
         Just try to remove the trigger.
 
@@ -397,7 +408,7 @@ class _ThreePhaseEvent:
                 raise KeyError("invalid phase")
             getattr(self, phase).remove((callable, args, kwargs))
 
-    def removeTrigger_BEFORE(self, handle):
+    def removeTrigger_BEFORE(self, handle: _ThreePhaseEventTrigger) -> None:
         """
         Remove the trigger if it has yet to be executed, otherwise emit a
         warning that in the future an exception will be raised when removing an
@@ -418,7 +429,7 @@ class _ThreePhaseEvent:
         else:
             self.removeTrigger_BASE(handle)
 
-    def fireEvent(self):
+    def fireEvent(self) -> None:
         """
         Call the triggers added to this event.
         """
@@ -437,7 +448,7 @@ class _ThreePhaseEvent:
                     beforeResults.append(result)
         DeferredList(beforeResults).addCallback(self._continueFiring)
 
-    def _continueFiring(self, ignored):
+    def _continueFiring(self, ignored: object) -> None:
         """
         Call the during and after phase triggers for this event.
         """
@@ -500,6 +511,9 @@ class PluggableResolverMixin:
         L{IReactorPluggableNameResolver.nameResolver}.
         """
         return self._nameResolver
+
+
+_SystemEventID = NewType("_SystemEventID", Tuple[str, _ThreePhaseEventTrigger])
 
 
 @implementer(IReactorCore, IReactorTime, _ISupportsExitSignalCapturing)
@@ -712,15 +726,24 @@ class ReactorBase(PluggableResolverMixin):
             event.fireEvent()
 
     def addSystemEventTrigger(
-        self, phase: str, eventType: str, callable: Callable[..., Any], *args, **kw
-    ):
+        self,
+        phase: str,
+        eventType: str,
+        callable: Callable[..., Any],
+        *args: object,
+        **kwargs: object
+    ) -> _SystemEventID:
         """See twisted.internet.interfaces.IReactorCore.addSystemEventTrigger."""
         assert builtins.callable(callable), "{} is not callable".format(callable)
         if eventType not in self._eventTriggers:
             self._eventTriggers[eventType] = _ThreePhaseEvent()
-        return (
-            eventType,
-            self._eventTriggers[eventType].addTrigger(phase, callable, *args, **kw),
+        return _SystemEventID(
+            (
+                eventType,
+                self._eventTriggers[eventType].addTrigger(
+                    phase, callable, *args, **kwargs
+                ),
+            )
         )
 
     def removeSystemEventTrigger(self, triggerID):
@@ -728,12 +751,17 @@ class ReactorBase(PluggableResolverMixin):
         eventType, handle = triggerID
         self._eventTriggers[eventType].removeTrigger(handle)
 
-    def callWhenRunning(self, callable: Callable[..., Any], *args, **kw):
+    def callWhenRunning(
+        self, callable: Callable[..., Any], *args: object, **kwargs: object
+    ) -> Optional[_SystemEventID]:
         """See twisted.internet.interfaces.IReactorCore.callWhenRunning."""
         if self.running:
-            callable(*args, **kw)
+            callable(*args, **kwargs)
+            return None
         else:
-            return self.addSystemEventTrigger("after", "startup", callable, *args, **kw)
+            return self.addSystemEventTrigger(
+                "after", "startup", callable, *args, **kwargs
+            )
 
     def startRunning(self):
         """
@@ -772,7 +800,9 @@ class ReactorBase(PluggableResolverMixin):
 
     seconds = staticmethod(runtimeSeconds)
 
-    def callLater(self, delay, callable: Callable[..., Any], *args, **kw):
+    def callLater(
+        self, delay: int, callable: Callable[..., Any], *args: object, **kw: object
+    ) -> DelayedCall:
         """See twisted.internet.interfaces.IReactorTime.callLater."""
         assert builtins.callable(callable), "{} is not callable".format(callable)
         assert delay >= 0, "{} is not greater than or equal to 0 seconds".format(delay)
