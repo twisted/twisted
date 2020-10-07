@@ -11,8 +11,9 @@ listeners or connectors are added)::
     epollreactor.install()
 """
 
-# For mypy's benefit
 import sys
+
+# For mypy's benefit
 assert sys.platform != "darwin"
 
 import errno
