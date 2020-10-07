@@ -77,8 +77,7 @@ class SupportTests(TestCase):
         buff = array("B", b"\0" * 256)
         self.assertEqual(0, _iocp.accept(port.fileno(), server.fileno(), buff, None))
 
-        lastError = None
-        for _ in range(5):
+        for attemptsRemaining in reversed(range(5)):
             # Calling setsockopt after _iocp.accept might fail for both IPv4
             # and IPV6 with [Errno 10057] A request to send or receive ...
             # This is when ERROR_IO_PENDING is returned and means that the
@@ -97,19 +96,21 @@ class SupportTests(TestCase):
                 lastError = None
                 break
             except OSError as socketError:
-                lastError = socketError
+                # The the socket is not yet ready to accept connections,
+                # setsockopt fails.
+                if attemptsRemaining < 0:
+                    # We rant out of retries.
+                    raise
+
                 # getattr is used below to make mypy happy.
-                if lastError.errno == getattr(errno, "WSAENOTCONN"):
-                    # Without a sleep here even retrying 20 times will fail.
-                    # This should allow other threads to execute.
-                    time.sleep(0.2)
-                else:
+                if lastError.errno != getattr(errno, "WSAENOTCONN"):
                     # This is not the expected error so re-raise the error without retrying.
                     raise
 
-        if lastError:
-            # Still failing after all the retries.
-            raise lastError
+            # Without a sleep here even retrying 20 times will fail.
+            # This should allow other threads to execute and hopefully with the next
+            # try setsockopt will succeed.
+            time.sleep(0.2)
 
         self.assertEqual(
             (family, client.getpeername()[:2], client.getsockname()[:2]),
