@@ -77,7 +77,14 @@ class SupportTests(TestCase):
         for _ in range(3):
             # Calling setsockopt after _iocp.accept might fail for both IPv4
             # and IPV6 with [Errno 10057] A request to send or receive ...
-            # so we retry twice as retrying once is not enough.
+            # This is when ERROR_IO_PENDING is returned and means that the
+            # socket is not yet ready and accept will be handled via the
+            # callback event.
+            # For this test, with the purpose of keeping the test simple,
+            # we don't implement the event callback.
+            # The event callback functionality is tested via the high level
+            # tests for general reactor API.
+            # We retry twice as retrying once is not enough.
             try:
                 server.setsockopt(
                     SOL_SOCKET, SO_UPDATE_ACCEPT_CONTEXT, pack("P", port.fileno())
