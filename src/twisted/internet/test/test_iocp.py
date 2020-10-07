@@ -19,7 +19,6 @@ from twisted.python.log import msg
 from twisted.internet.interfaces import IPushProducer
 
 try:
-    from errno import WSAENOTCONN
     from twisted.internet.iocpreactor import iocpsupport as _iocp, tcp, udp
     from twisted.internet.iocpreactor.reactor import (
         IOCPReactor,
@@ -91,7 +90,8 @@ class SupportTests(TestCase):
                 )
                 break
             except error as socketError:
-                if socketError.errno == WSAENOTCONN:
+                # getattr is used below to make mypy happy.
+                if socketError.errno == getattr(errno, 'WSAENOTCONN'):
                     # Without a sleep here even retrying 20 times will fail.
                     # This should allow other threads to execute.
                     time.sleep(0.1)
