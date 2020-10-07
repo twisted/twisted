@@ -22,7 +22,7 @@ class AppdirsTests(unittest.TestCase):
     if not _appdirs:
         skip = "appdirs package not installed"
 
-    def test_moduleName(self):
+    def test_moduleName(self) -> None:
         """
         Calling L{appdirs.getDataDirectory} will return a user data directory
         in the system convention, with the module of the caller as the
@@ -31,7 +31,7 @@ class AppdirsTests(unittest.TestCase):
         res = _appdirs.getDataDirectory()
         self.assertTrue(res.endswith("twisted.python.test.test_appdirs"))
 
-    def test_manual(self):
+    def test_manual(self) -> None:
         """
         Calling L{appdirs.getDataDirectory} with a C{moduleName} argument will
         make a data directory with that name instead.
