@@ -16,26 +16,24 @@ connections, listeners or connectors are added)::
    kqreactor.install()
 """
 
-import sys
-
-# For mypy's benefit
-assert not sys.platform.startswith("linux")
-
 import errno
 import select
-from select import (
-    KQ_EV_ADD,
-    KQ_EV_DELETE,
-    KQ_EV_EOF,
-    KQ_FILTER_READ,
-    KQ_FILTER_WRITE,
-)
 
 from zope.interface import implementer, declarations, Interface, Attribute
 
 from twisted.internet import main, posixbase
 from twisted.internet.interfaces import IReactorFDSet, IReactorDaemonize
 from twisted.python import log, failure
+
+# This is to keep mypy from complaining
+# We don't use type: ignore[attr-defined] on import, because mypy only complains
+# on on some platforms, and then the unused ignore is an issue if the undefined
+# attribute isn't.
+KQ_EV_ADD = getattr(select, "KQ_EV_ADD")
+KQ_EV_DELETE = getattr(select, "KQ_EV_DELETE")
+KQ_EV_EOF = getattr(select, "KQ_EV_EOF")
+KQ_FILTER_READ = getattr(select, "KQ_FILTER_READ")
+KQ_FILTER_WRITE = getattr(select, "KQ_FILTER_WRITE")
 
 
 class _IKQueue(Interface):

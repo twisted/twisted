@@ -11,19 +11,24 @@ listeners or connectors are added)::
     epollreactor.install()
 """
 
-import sys
-
-# For mypy's benefit
-assert sys.platform != "darwin"
-
 import errno
-from select import epoll, EPOLLHUP, EPOLLERR, EPOLLIN, EPOLLOUT
+import select
 
 from zope.interface import implementer
 
 from twisted.internet import posixbase
 from twisted.internet.interfaces import IReactorFDSet
 from twisted.python import log
+
+# This is to keep mypy from complaining
+# We don't use type: ignore[attr-defined] on import, because mypy only complains
+# on on some platforms, and then the unused ignore is an issue if the undefined
+# attribute isn't.
+epoll = getattr(select, "epoll")
+EPOLLHUP = getattr(select, "EPOLLHUP")
+EPOLLERR = getattr(select, "EPOLLERR")
+EPOLLIN = getattr(select, "EPOLLIN")
+EPOLLOUT = getattr(select, "EPOLLOUT")
 
 
 @implementer(IReactorFDSet)
