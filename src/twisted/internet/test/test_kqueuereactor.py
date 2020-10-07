@@ -5,11 +5,6 @@
 Tests for L{twisted.internet.kqueuereactor}.
 """
 
-import sys
-
-# For mypy's benefit
-assert not sys.platform.startswith("linux")
-
 import errno
 
 from zope.interface import implementer
