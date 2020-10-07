@@ -74,7 +74,7 @@ class SupportTests(TestCase):
         self.assertEqual(0, _iocp.accept(port.fileno(), server.fileno(), buff, None))
 
         socketError = None
-        for _ in range(4):
+        for _ in range(5):
             # Calling setsockopt after _iocp.accept might fail for both IPv4
             # and IPV6 with [Errno 10057] A request to send or receive ...
             # This is when ERROR_IO_PENDING is returned and means that the
