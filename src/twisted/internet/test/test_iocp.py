@@ -92,8 +92,6 @@ class SupportTests(TestCase):
                 server.setsockopt(
                     SOL_SOCKET, SO_UPDATE_ACCEPT_CONTEXT, pack("P", port.fileno())
                 )
-                # Reset any previous error and stop retrying.
-                lastError = None
                 break
             except OSError as socketError:
                 # The the socket is not yet ready to accept connections,
@@ -103,7 +101,7 @@ class SupportTests(TestCase):
                     raise
 
                 # getattr is used below to make mypy happy.
-                if lastError.errno != getattr(errno, "WSAENOTCONN"):
+                if socketError.errno != getattr(errno, "WSAENOTCONN"):
                     # This is not the expected error so re-raise the error without retrying.
                     raise
 
