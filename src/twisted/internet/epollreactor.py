@@ -20,15 +20,18 @@ from twisted.internet import posixbase
 from twisted.internet.interfaces import IReactorFDSet
 from twisted.python import log
 
-# This is to keep mypy from complaining
-# We don't use type: ignore[attr-defined] on import, because mypy only complains
-# on on some platforms, and then the unused ignore is an issue if the undefined
-# attribute isn't.
-epoll = getattr(select, "epoll")
-EPOLLHUP = getattr(select, "EPOLLHUP")
-EPOLLERR = getattr(select, "EPOLLERR")
-EPOLLIN = getattr(select, "EPOLLIN")
-EPOLLOUT = getattr(select, "EPOLLOUT")
+try:
+    # This is to keep mypy from complaining
+    # We don't use type: ignore[attr-defined] on import, because mypy only complains
+    # on on some platforms, and then the unused ignore is an issue if the undefined
+    # attribute isn't.
+    epoll = getattr(select, "epoll")
+    EPOLLHUP = getattr(select, "EPOLLHUP")
+    EPOLLERR = getattr(select, "EPOLLERR")
+    EPOLLIN = getattr(select, "EPOLLIN")
+    EPOLLOUT = getattr(select, "EPOLLOUT")
+except AttributeError as e:
+    raise ImportError(e)
 
 
 @implementer(IReactorFDSet)

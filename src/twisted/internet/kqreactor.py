@@ -25,15 +25,18 @@ from twisted.internet import main, posixbase
 from twisted.internet.interfaces import IReactorFDSet, IReactorDaemonize
 from twisted.python import log, failure
 
-# This is to keep mypy from complaining
-# We don't use type: ignore[attr-defined] on import, because mypy only complains
-# on on some platforms, and then the unused ignore is an issue if the undefined
-# attribute isn't.
-KQ_EV_ADD = getattr(select, "KQ_EV_ADD")
-KQ_EV_DELETE = getattr(select, "KQ_EV_DELETE")
-KQ_EV_EOF = getattr(select, "KQ_EV_EOF")
-KQ_FILTER_READ = getattr(select, "KQ_FILTER_READ")
-KQ_FILTER_WRITE = getattr(select, "KQ_FILTER_WRITE")
+try:
+    # This is to keep mypy from complaining
+    # We don't use type: ignore[attr-defined] on import, because mypy only complains
+    # on on some platforms, and then the unused ignore is an issue if the undefined
+    # attribute isn't.
+    KQ_EV_ADD = getattr(select, "KQ_EV_ADD")
+    KQ_EV_DELETE = getattr(select, "KQ_EV_DELETE")
+    KQ_EV_EOF = getattr(select, "KQ_EV_EOF")
+    KQ_FILTER_READ = getattr(select, "KQ_FILTER_READ")
+    KQ_FILTER_WRITE = getattr(select, "KQ_FILTER_WRITE")
+except AttributeError as e:
+    raise ImportError(e)
 
 
 class _IKQueue(Interface):
