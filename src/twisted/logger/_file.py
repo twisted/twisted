@@ -67,7 +67,7 @@ def textFileLogObserver(
         accepts L{unicode} data.  Otherwise, UTF-8 L{bytes} will be used.
     @param timeFormat: The format to use when adding timestamp prefixes to
         logged events.  If L{None}, or for events with no C{"log_timestamp"}
-        key, the default timestamp prefix of C{u"-"} is used.
+        key, the default timestamp prefix of C{"-"} is used.
 
     @return: A file log observer.
     """

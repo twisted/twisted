@@ -234,7 +234,7 @@ class FileLogObserverTests(TestCase):
         """
         A L{FileLogObserver} created by L{jsonFileLogObserver} writes events
         serialzed as JSON text to a file when it observes events.
-        By default, the record separator is C{u"\\x1e"}.
+        By default, the record separator is C{"\\x1e"}.
         """
         self.assertObserverWritesJSON()
 
@@ -242,7 +242,7 @@ class FileLogObserverTests(TestCase):
         """
         A L{FileLogObserver} created by L{jsonFileLogObserver} writes events
         serialzed as JSON text to a file when it observes events.
-        This test sets the record separator to C{u""}.
+        This test sets the record separator to C{""}.
         """
         self.assertObserverWritesJSON(recordSeparator="")
 
@@ -308,7 +308,7 @@ class LogFileReaderTests(TestCase):
     ) -> None:
         """
         Test that L{eventsFromJSONLogFile} reads two pre-defined events from a
-        file: C{{u"x": 1}} and C{{u"y": 2}}.
+        file: C{{"x": 1}} and C{{"y": 2}}.
 
         @param inFile: C{inFile} argument to L{eventsFromJSONLogFile}
         @param recordSeparator: C{recordSeparator} argument to
@@ -324,7 +324,7 @@ class LogFileReaderTests(TestCase):
     def test_readEventsAutoWithRecordSeparator(self) -> None:
         """
         L{eventsFromJSONLogFile} reads events from a file and automatically
-        detects use of C{u"\\x1e"} as the record separator.
+        detects use of C{"\\x1e"} as the record separator.
         """
         with StringIO('\x1e{"x": 1}\n' '\x1e{"y": 2}\n') as fileHandle:
             self._readEvents(fileHandle)
@@ -333,7 +333,7 @@ class LogFileReaderTests(TestCase):
     def test_readEventsAutoEmptyRecordSeparator(self) -> None:
         """
         L{eventsFromJSONLogFile} reads events from a file and automatically
-        detects use of C{u""} as the record separator.
+        detects use of C{""} as the record separator.
         """
         with StringIO('{"x": 1}\n' '{"y": 2}\n') as fileHandle:
             self._readEvents(fileHandle)
@@ -344,7 +344,7 @@ class LogFileReaderTests(TestCase):
         L{eventsFromJSONLogFile} reads events from a file and is told to use
         a specific record separator.
         """
-        # Use u"\x08" (backspace)... because that seems weird enough.
+        # Use "\x08" (backspace)... because that seems weird enough.
         with StringIO('\x08{"x": 1}\n' '\x08{"y": 2}\n') as fileHandle:
             self._readEvents(fileHandle, recordSeparator="\x08")
             self.assertEqual(len(self.errorEvents), 0)
@@ -381,7 +381,7 @@ class LogFileReaderTests(TestCase):
         If the file being read from vends L{str}, strings decode from JSON
         as-is.
         """
-        # The Euro currency sign is u"\u20ac"
+        # The Euro currency sign is "\u20ac"
         with StringIO('\x1e{"currency": "\u20ac"}\n') as fileHandle:
             events = iter(eventsFromJSONLogFile(fileHandle))
 
@@ -398,7 +398,7 @@ class LogFileReaderTests(TestCase):
         with BytesIO(b'\x1e{"currency": "\xe2\x82\xac"}\n') as fileHandle:
             events = iter(eventsFromJSONLogFile(fileHandle))
 
-            # The Euro currency sign is u"\u20ac"
+            # The Euro currency sign is "\u20ac"
             self.assertEqual(next(events), {"currency": "\u20ac"})
             self.assertRaises(StopIteration, next, events)  # No more events
             self.assertEqual(len(self.errorEvents), 0)
@@ -409,7 +409,7 @@ class LogFileReaderTests(TestCase):
         Unicode codepoint, we don't want to see a codec exception and the
         stream is read properly when the additional data arrives.
         """
-        # The Euro currency sign is u"\u20ac" and encodes in UTF-8 as three
+        # The Euro currency sign is "\u20ac" and encodes in UTF-8 as three
         # bytes: b"\xe2\x82\xac".
         with BytesIO(b'\x1e{"x": "\xe2\x82\xac"}\n') as fileHandle:
             events = iter(eventsFromJSONLogFile(fileHandle, bufferSize=8))

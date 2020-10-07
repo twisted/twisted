@@ -211,7 +211,7 @@ class LoggingFileTests(unittest.TestCase):
 
     def test_writeFormat(self) -> None:
         """
-        Log format is C{u"{message}"}.
+        Log format is C{"{message}"}.
         """
         f = self.observedFile()
         f.write("Hello\n")

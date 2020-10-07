@@ -69,7 +69,7 @@ class FileLogObserverTests(TestCase):
     def test_observeWritesEmpty(self) -> None:
         """
         L{FileLogObserver} does not write to the given file when it observes
-        events and C{formatEvent} returns C{u""}.
+        events and C{formatEvent} returns C{""}.
         """
         self._test_observeWrites("", 0)
 
