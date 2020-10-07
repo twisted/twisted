@@ -1,4 +1,3 @@
-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
@@ -10,21 +9,26 @@ without blocking the reactor.
 
 from twisted.internet import stdio
 from twisted.protocols import basic
+from os import linesep
+
 
 class Echo(basic.LineReceiver):
-    from os import linesep as delimiter
+    delimiter = linesep.encode("ascii")
 
     def connectionMade(self):
-        self.transport.write('>>> ')
+        self.transport.write(b">>> ")
 
     def lineReceived(self, line):
-        self.sendLine('Echo: ' + line)
-        self.transport.write('>>> ')
+        self.sendLine(b"Echo: " + line)
+        self.transport.write(b">>> ")
+
 
 def main():
     stdio.StandardIO(Echo())
     from twisted.internet import reactor
+
     reactor.run()
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()

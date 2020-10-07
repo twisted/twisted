@@ -18,8 +18,9 @@ interesting behavior happens on the client side.
 See recvfd.py for the client side of this example.
 """
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     import sendfd
+
     raise SystemExit(sendfd.main())
 
 import sys
@@ -29,6 +30,7 @@ from twisted.python.filepath import FilePath
 from twisted.internet.protocol import Factory
 from twisted.protocols.basic import LineOnlyReceiver
 from twisted.internet import reactor
+
 
 class SendFDProtocol(LineOnlyReceiver):
     def connectionMade(self):
@@ -45,12 +47,12 @@ class SendFDProtocol(LineOnlyReceiver):
         # Send along *at least* one byte, since one file descriptor was sent.
         # In this case, send along the name of the file to let the other side
         # have some idea what they're getting.
-        self.sendLine(self.factory.content.path)
+        encoding = sys.getfilesystemencoding()
+        self.sendLine(self.factory.content.path.encode(encoding))
 
         # Give the other side a minute to deal with this.  If they don't close
         # the connection by then, we will do it for them.
         self.timeoutCall = reactor.callLater(60, self.transport.loseConnection)
-
 
     def connectionLost(self, reason):
         # Clean up the file object, it is no longer needed.
@@ -79,5 +81,5 @@ def main():
     serverFactory.content = content
     serverFactory.protocol = SendFDProtocol
 
-    port = reactor.listenUNIX(address.path, serverFactory)
+    reactor.listenUNIX(address.path, serverFactory)
     reactor.run()

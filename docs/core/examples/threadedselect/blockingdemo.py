@@ -2,7 +2,10 @@
 # See LICENSE for details.
 
 
+from __future__ import print_function
+
 from twisted.internet import _threadedselect
+
 _threadedselect.install()
 
 from twisted.internet.defer import Deferred
@@ -10,7 +13,14 @@ from twisted.python.failure import Failure
 from twisted.internet import reactor
 from twisted.python.runtime import seconds
 from itertools import count
-from Queue import Queue, Empty
+
+try:
+    # Python 3
+    from queue import Queue, Empty
+except ImportError:
+    # Python 2
+    from Queue import Queue, Empty
+
 
 class TwistedManager(object):
     def __init__(self):
@@ -20,7 +30,7 @@ class TwistedManager(object):
 
     def getKey(self):
         # get a unique identifier
-        return self.key.next()
+        return next(self.key)
 
     def start(self):
         # start the reactor
@@ -32,8 +42,9 @@ class TwistedManager(object):
     def stop(self):
         # stop the reactor
         key = self.getKey()
-        reactor.addSystemEventTrigger('after', 'shutdown',
-            self._stopIterating, True, key)
+        reactor.addSystemEventTrigger(
+            "after", "shutdown", self._stopIterating, True, key
+        )
         reactor.stop()
         self.iterate(key)
 
@@ -45,7 +56,7 @@ class TwistedManager(object):
         if isinstance(res, Failure):
             res.raiseException()
         return res
-    
+
     def poll(self, noLongerThan=1.0):
         # poll the reactor for up to noLongerThan seconds
         base = seconds()
@@ -55,7 +66,7 @@ class TwistedManager(object):
                 callback()
         except Empty:
             pass
-    
+
     def iterate(self, key=None):
         # iterate the reactor until it has the result we're looking for
         while key not in self.results:
@@ -63,30 +74,35 @@ class TwistedManager(object):
             callback()
         return self.results.pop(key)
 
+
 def fakeDeferred(msg):
     d = Deferred()
+
     def cb():
-        print "deferred called back"
+        print("deferred called back")
         d.callback(msg)
+
     reactor.callLater(2, cb)
     return d
 
+
 def fakeCallback():
-    print "twisted is still running"
+    print("twisted is still running")
+
 
 def main():
     m = TwistedManager()
-    print "starting"
+    print("starting")
     m.start()
-    print "setting up a 1sec callback"
+    print("setting up a 1sec callback")
     reactor.callLater(1, fakeCallback)
-    print "getting a deferred"
+    print("getting a deferred")
     res = m.getDeferred(fakeDeferred("got it!"))
-    print "got the deferred:", res
-    print "stopping"
+    print("got the deferred:", res)
+    print("stopping")
     m.stop()
-    print "stopped"
+    print("stopped")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

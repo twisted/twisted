@@ -22,7 +22,7 @@ This is the first part of the Twisted tutorial :doc:`Twisted from Scratch, or Th
 
 
 If you're not familiar with 'finger' it's probably because it's not used as
-much nowadays as it used to be. Basically, if you run ``finger nail`` 
+much nowadays as it used to be. Basically, if you run ``finger nail``
 or ``finger nail@example.com`` the target computer spits out some
 information about the user named ``nail`` . For instance:
 
@@ -32,7 +32,7 @@ information about the user named ``nail`` . For instance:
 
 .. code-block:: console
 
-    
+
     Login: nail                           Name: Nail Sharp
     Directory: /home/nail                 Shell: /usr/bin/sh
     Last login Wed Mar 31 18:32 2004 (PST)
@@ -44,10 +44,10 @@ information about the user named ``nail`` . For instance:
 
 
 If the target computer does not have
-the ``fingerd`` :ref:`daemon <core-howto-glossary-daemon>` 
+the ``fingerd`` :ref:`daemon <core-howto-glossary-daemon>`
 running you'll get a "Connection Refused" error. Paranoid sysadmins
 keep ``fingerd`` off or limit the output to hinder crackers
-and harassers. The above format is the standard ``fingerd`` 
+and harassers. The above format is the standard ``fingerd``
 default, but an alternate implementation can output anything it wants,
 such as automated responsibility status for everyone in an
 organization. You can also define pseudo "users", which are
@@ -58,7 +58,7 @@ essentially keywords.
 
 This portion of the tutorial makes use of factories and protocols as
 introduced in the :doc:`Writing a TCP Server howto <../servers>` and
-deferreds as introduced in :doc:`Using Deferreds <../defer>` 
+deferreds as introduced in :doc:`Using Deferreds <../defer>`
 and :doc:`Generating Deferreds <../gendefer>` . Services and
 applications are discussed in :doc:`Using the Twisted Application Framework <../application>` .
 
@@ -140,9 +140,20 @@ Do Nothing
 .. literalinclude:: listings/finger/finger02.py
 
 
-Here, ``reactor.listenTCP`` opens port 1079. (The number 1079 is a
-reminder that eventually we want to run on port 79, the standard port for
-finger servers.)  The specified factory, ``FingerFactory`` , is used to
+Here we use ``endpoints.serverFromString`` to create a Twisted endpoint. An
+endpoint is a Twisted concept that encapsulates one end of a connection. There
+are different endpoints for clients and servers. One of the great advantages of
+endpoints is that they can be described textually using a kind of
+domain-specific language. For example, here, we ask Twisted to create a TCP
+endpoint for a server using the string ``"tcp:1079"``. That, along with the
+call to ``serverFromString``, tells Twisted to look for a TCP endpoint, and
+pass it the port 1079. The endpoint returned from that function can then have
+the ``listen()`` method invoked on it, which causes Twisted to start listening
+on port 1079. (The number 1079 is a reminder that eventually we want to run on
+port 79, the standard port for finger servers.) For more detail on endpoints,
+check out the :doc:`Getting Connected With Endpoints <../endpoints>`.
+
+The factory given to the ``listen()`` method, ``FingerFactory`` , is used to
 handle incoming requests on that port.  Specifically, for each request, the
 reactor calls the factory's ``buildProtocol`` method, which in this
 case causes ``FingerProtocol`` to be instantiated. Since the protocol
@@ -212,7 +223,7 @@ look something like this:
 
 .. code-block:: console
 
-    
+
     $ telnet localhost 1079
     Trying 127.0.0.1...
     Connected to localhost.localdomain.
@@ -334,7 +345,7 @@ Deferred, to which we start to attach *callbacks* .  The
 deferred action in ``FingerFactory`` is actually a
 fast-running expression consisting of one dictionary
 method, ``get`` . Since this action can execute without
-delay, ``FingerFactory.getUser`` 
+delay, ``FingerFactory.getUser``
 uses ``defer.succeed`` to create a Deferred which already has
 a result, meaning its return value will be passed immediately to the
 first callback function, which turns out to
@@ -423,7 +434,7 @@ run a finger server with root privileges? Well, the common solution
 is "privilege shedding" : after binding to the network, become a different,
 less privileged user. We could have done it ourselves, but Twisted has a
 built-in way to do it. We will create a snippet as above, but now we will define
-an application object. That object will have ``uid`` 
+an application object. That object will have ``uid``
 and ``gid`` attributes. When running it (later we will see how) it will
 bind to ports, shed privileges and then run.
 
@@ -457,7 +468,7 @@ networking code.
 
 .. code-block:: console
 
-    
+
     root% twistd -ny finger11.tac # just like before
     root% twistd -y finger11.tac # daemonize, keep pid in twistd.pid
     root% twistd -y finger11.tac --pidfile=finger.pid
@@ -484,18 +495,19 @@ Configuration <core-howto-glossary-tac>` file).
 .. literalinclude:: listings/finger/finger11.tac
 
 
-Instead of using ``reactor.listenTCP`` as in the above
+Instead of using ``endpoints.serverFromString`` as in the above
 examples, here we are using its application-aware
-counterpart, ``internet.TCPServer`` .  Notice that when it is
+counterpart, ``strports.service`` .  Notice that when it is
 instantiated, the application object itself does not reference either
-the protocol or the factory.  Any services (such as TCPServer) which
-have the application as their parent will be started when the
-application is started by twistd.  The application object is more
-useful for returning an object that supports the :api:`twisted.application.service.IService <IService>` , :api:`twisted.application.service.IServiceCollection <IServiceCollection>` , :api:`twisted.application.service.IProcess <IProcess>` ,
-and :api:`twisted.persisted.sob.IPersistable <sob.IPersistable>` 
+the protocol or the factory.  Any services (such as the one we created with
+``strports.service``) which have the application as their parent will be
+started when the application is started by twistd.  The application object is
+more useful for returning an object that supports the
+:api:`twisted.application.service.IService <IService>` , :api:`twisted.application.service.IServiceCollection <IServiceCollection>` , :api:`twisted.application.service.IProcess <IProcess>` ,
+and :api:`twisted.persisted.sob.IPersistable <sob.IPersistable>`
 interfaces with the given parameters; we'll be seeing these in the
-next part of the tutorial. As the parent of the TCPServer we opened,
-the application lets us manage the TCPServer.
+next part of the tutorial. As the parent of the endpoint we opened, the
+application lets us manage the endpoint.
 
 
 

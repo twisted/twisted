@@ -5,13 +5,11 @@
 Demonstration of how L{twisted.internet._threadedselect} might be used (this is
 not an example showing the best way to integrate Twisted with pygame).
 """
-
 # import Twisted and install
 from twisted.internet import _threadedselect
+
 _threadedselect.install()
 from twisted.internet import reactor
-
-import os
 
 import pygame
 from pygame.locals import *
@@ -29,20 +27,28 @@ except ImportError:
 #
 TWISTEDEVENT = USEREVENT
 
+
 def postTwistedEvent(func):
     # if not using pygame.fastevent, this can explode if the queue
     # fills up.. so that's bad.  Use pygame.fastevent, in pygame CVS
     # as of 2005-04-18.
     eventmodule.post(eventmodule.Event(TWISTEDEVENT, iterateTwisted=func))
 
+
 def helloWorld():
-    print "hello, world"
+    print("hello, world")
     reactor.callLater(1, helloWorld)
+
+
 reactor.callLater(1, helloWorld)
 
+
 def twoSecondsPassed():
-    print "two seconds passed"
+    print("two seconds passed")
+
+
 reactor.callLater(2, twoSecondsPassed)
+
 
 def eventIterator():
     while True:
@@ -54,9 +60,10 @@ def eventIterator():
             else:
                 yield event
 
+
 def main():
     pygame.init()
-    if hasattr(eventmodule, 'init'):
+    if hasattr(eventmodule, "init"):
         eventmodule.init()
     screen = pygame.display.set_mode((300, 300))
 
@@ -66,7 +73,7 @@ def main():
     # by appending a value to it.  This ensures that
     # Twisted gets to shut down properly.
     shouldQuit = []
-    reactor.addSystemEventTrigger('after', 'shutdown', shouldQuit.append, True)
+    reactor.addSystemEventTrigger("after", "shutdown", shouldQuit.append, True)
 
     for event in eventIterator():
         if event.type == TWISTEDEVENT:
@@ -80,5 +87,6 @@ def main():
 
     pygame.quit()
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()

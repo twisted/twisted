@@ -37,23 +37,23 @@ example:
 .. code-block:: console
 
     
-    >>> from zope.interface import Interface, Attribute, implements
+    >>> from zope.interface import Interface, Attribute, implementer
     >>> from twisted.python.components import registerAdapter
     >>> from twisted.web.server import Session
     >>> class ICounter(Interface):
     ...     value = Attribute("An int value which counts up once per page view.")
     ...
-    >>> class Counter(object):
-    ...     implements(ICounter)
+    >>> @implementer(ICounter)
+    ... class Counter(object):
     ...     def __init__(self, session):
     ...         self.value = 0
     ...
     >>> registerAdapter(Counter, Session, ICounter)
     >>> ses = Session(None, None)
     >>> data = ICounter(ses)
-    >>> print data
+    >>> print(data)
     <__main__.Counter object at 0x8d535ec>
-    >>> print data is ICounter(ses)
+    >>> print(data is ICounter(ses))
     True
     >>>
 
@@ -127,8 +127,10 @@ example above:
             session = request.getSession()
             counter = ICounter(session)
             counter.value += 1
-            return "Visit #%d for you!" % (counter.value,)
-
+            return (b"<!DOCTYPE html><html><head><meta charset='utf-8'>"
+                    b"<title></title></head><body>"
+                    b"Visit #" + str(counter.value).encode("utf-8") +
+                    b" for you!")
 
 
 
@@ -151,7 +153,7 @@ based on this example:
     
     cache()
     
-    from zope.interface import Interface, Attribute, implements
+    from zope.interface import Interface, Attribute, implementer
     from twisted.python.components import registerAdapter
     from twisted.web.server import Session
     from twisted.web.resource import Resource
@@ -159,8 +161,8 @@ based on this example:
     class ICounter(Interface):
         value = Attribute("An int value which counts up once per page view.")
     
+    @implementer(ICounter)
     class Counter(object):
-        implements(ICounter)
         def __init__(self, session):
             self.value = 0
     
@@ -171,8 +173,11 @@ based on this example:
             session = request.getSession()
             counter = ICounter(session)
             counter.value += 1
-            return "Visit #%d for you!" % (counter.value,)
-    
+            return (b"<!DOCTYPE html><html><head><meta charset='utf-8'>"
+                    b"<title></title></head><body>"
+                    b"Visit #" + str(counter.value).encode("utf-8") +
+                    b" for you!")
+
     resource = CounterResource()
 
 

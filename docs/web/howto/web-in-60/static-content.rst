@@ -21,6 +21,10 @@ First, we need to import some objects:
 
     from twisted.internet import reactor
 
+- And the :api:`twisted.internet.endpoints <endpoints>` module, which gives us tools for, amongst other things, creating listening sockets::
+
+    from twisted.internet import endpoints
+
 Next, we create an instance of the File resource pointed at the directory to serve::
 
     resource = File("/tmp")
@@ -31,7 +35,8 @@ Then we create an instance of the Site factory with that resource::
 
 Now we glue that factory to a TCP port::
 
-    reactor.listenTCP(8888, factory)
+    endpoint = endpoints.TCP4ServerEndpoint(reactor, 8888)
+    endpoint.listen(factory)
 
 Finally, we start the reactor so it can make the program work::
 
@@ -41,11 +46,12 @@ And that's it. Here's the complete program::
 
     from twisted.web.server import Site
     from twisted.web.static import File
-    from twisted.internet import reactor
+    from twisted.internet import reactor, endpoints
 
     resource = File('/tmp')
     factory = Site(resource)
-    reactor.listenTCP(8888, factory)
+    endpoint = endpoints.TCP4ServerEndpoint(reactor, 8888)
+    endpoint.listen(factory)
     reactor.run()
 
 

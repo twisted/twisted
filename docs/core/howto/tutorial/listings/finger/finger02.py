@@ -1,4 +1,4 @@
-from twisted.internet import protocol, reactor
+from twisted.internet import protocol, reactor, endpoints
 
 class FingerProtocol(protocol.Protocol):
     pass
@@ -6,5 +6,6 @@ class FingerProtocol(protocol.Protocol):
 class FingerFactory(protocol.ServerFactory):
     protocol = FingerProtocol
 
-reactor.listenTCP(1079, FingerFactory())
+fingerEndpoint = endpoints.serverFromString(reactor, "tcp:1079")
+fingerEndpoint.listen(FingerFactory())
 reactor.run()

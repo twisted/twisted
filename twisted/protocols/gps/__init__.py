@@ -1,1 +1,0 @@
-"""Global Positioning System protocols."""

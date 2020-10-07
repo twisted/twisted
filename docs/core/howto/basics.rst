@@ -35,7 +35,7 @@ Fetching the application, getting the ``IService`` component, calling ``startSer
 However, ``twistd`` supplies many options which are highly useful for program set up:
 
 - choosing a reactor (for more on reactors, see :doc:`Choosing a Reactor <choosing-reactor>`),
-- logging configuration (see the :doc:`logging <logging>` documentation for more),
+- logging configuration (see the :doc:`logger <logger>` documentation for more),
 - daemonizing (forking to the background),
 - and :doc:`more <application>`.
 
@@ -46,25 +46,10 @@ When a straight Python file which defines an ``Application`` object called ``app
 
 When ``twistd`` runs, it records its process id in a ``twistd.pid`` file (this can be configured via a command line switch).
 In order to shutdown the ``twistd`` process, kill that pid.
-The usual way to do this would be:: 
+The usual way to do this would be::
 
     kill `cat twistd.pid`
 
 To prevent ``twistd`` from daemonizing, you can pass it the ``--no-daemon`` option (or ``-n``, in conjunction with other short options).
 
 As always, the gory details are in the manual page.
-
-
-OS Integration
---------------
-
-If you have an :api:`twisted.application.service.Application <Application>` that runs with ``twistd``, you can deploy it on RedHat Linux or Debian GNU/Linux based systems using the ``tap2deb`` or ``tap2rpm`` tools.
-These take a Twisted ``Application`` file (of any of the supported formats — Python source, XML or pickle), and build a Debian or RPM package (respectively) that installs the ``Application`` as a system service.
-The package includes the ``Application`` file, a default ``/etc/init.d/`` script that starts and stops the process with twistd, and post-installation scripts that configure the ``Application`` to be run in the appropriate init levels.
-
-.. note::
-
-    ``tap2rpm`` and ``tap2deb`` do not package your entire application and dependent code, just the Twisted Application file.
-    You will need to find some other way to package your Python code, such as `distutils <http://docs.python.org/library/distutils.html>`_' ``bdist_rpm`` command.
-
-For more savvy users, these tools also generate the source package, allowing you to modify and polish things which automated software cannot detect (such as dependencies or relationships to virtual packages).

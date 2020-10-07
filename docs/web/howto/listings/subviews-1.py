@@ -1,3 +1,5 @@
+from __future__ import print_function
+
 from twisted.web.template import (
     XMLFile, TagLoader, Element, renderer, flattenString)
 from twisted.python.filepath import FilePath
@@ -22,6 +24,6 @@ class WidgetElement(Element):
         return tag(self._name)
 
 def printResult(result):
-    print result
+    print(result)
 
 flattenString(None, WidgetsElement()).addCallback(printResult)

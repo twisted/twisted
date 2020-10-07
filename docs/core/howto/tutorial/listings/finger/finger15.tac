@@ -1,5 +1,5 @@
 # Read from file, announce on the web!
-from twisted.application import internet, service
+from twisted.application import service, strports
 from twisted.internet import protocol, reactor, defer
 from twisted.protocols import basic
 from twisted.web import resource, server, static
@@ -10,11 +10,11 @@ class FingerProtocol(basic.LineReceiver):
         d = self.factory.getUser(user)
 
         def onError(err):
-            return 'Internal error in server'
+            return b'Internal error in server'
         d.addErrback(onError)
 
         def writeResponse(message):
-            self.transport.write(message + '\r\n')
+            self.transport.write(message + b'\r\n')
             self.transport.loseConnection()
         d.addCallback(writeResponse)
 
@@ -28,16 +28,21 @@ class FingerResource(resource.Resource):
     # we treat the path as the username
     def getChild(self, username, request):
         """
-        'username' is a string.
+        'username' is L{bytes}.
         'request' is a 'twisted.web.server.Request'.
         """
         messagevalue = self.users.get(username)
+        if messagevalue:
+            messagevalue = messagevalue.decode("ascii")
+        if username:
+            username = username.decode("ascii")
         username = cgi.escape(username)
         if messagevalue is not None:
             messagevalue = cgi.escape(messagevalue)
-            text = '<h1>%s</h1><p>%s</p>' % (username,messagevalue)
+            text = '<h1>{}</h1><p>{}</p>'.format(username, messagevalue)
         else:
-            text = '<h1>%s</h1><p>No such user</p>' % username
+            text = '<h1>{}</h1><p>No such user</p>'.format(username)
+        text = text.encode("ascii")
         return static.Data(text, 'text/html')
 
 
@@ -48,15 +53,16 @@ class FingerService(service.Service):
 
     def _read(self):
         self.users.clear()
-        for line in file(self.filename):
-            user, status = line.split(':', 1)
-            user = user.strip()
-            status = status.strip()
-            self.users[user] = status
+        with open(self.filename, "rb") as f:
+            for line in f:
+                user, status = line.split(b':', 1)
+                user = user.strip()
+                status = status.strip()
+                self.users[user] = status
         self.call = reactor.callLater(30, self._read)
 
     def getUser(self, user):
-        return defer.succeed(self.users.get(user, "No such user"))
+        return defer.succeed(self.users.get(user, b"No such user"))
 
     def getFingerFactory(self):
         f = protocol.ServerFactory()
@@ -81,7 +87,7 @@ application = service.Application('finger', uid=1, gid=1)
 f = FingerService('/etc/users')
 serviceCollection = service.IServiceCollection(application)
 f.setServiceParent(serviceCollection)
-internet.TCPServer(79, f.getFingerFactory()
+strports.service("tcp:79", f.getFingerFactory()
                    ).setServiceParent(serviceCollection)
-internet.TCPServer(8000, server.Site(f.getResource())
+strports.service("tcp:8000", server.Site(f.getResource())
                    ).setServiceParent(serviceCollection)

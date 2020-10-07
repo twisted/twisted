@@ -1,3 +1,4 @@
+from __future__ import print_function
 import StringIO
 
 from twisted.application import service
@@ -32,7 +33,7 @@ Hello, how are you, goodbye.
         return StringIO.StringIO(self.mailData)
 
     def sentMail(self, code, resp, numOk, addresses, log):
-        print 'Sent', numOk, 'messages'
+        print('Sent', numOk, 'messages')
 
 class SMTPClientFactory(protocol.ClientFactory):
     protocol = SMTPTutorialClient

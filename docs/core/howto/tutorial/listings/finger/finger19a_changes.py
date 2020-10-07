@@ -6,24 +6,22 @@ class IFingerSetterService(Interface):
 
 # Advantages of latest version
 
+@implementer(IFingerService, IFingerSetterService)
 class MemoryFingerService(service.Service):
-
-    implements([IFingerService, IFingerSetterService])
-
-    def __init__(self, **kwargs):
-        self.users = kwargs
+    def __init__(self, users):
+        self.users = users
 
     def getUser(self, user):
-        return defer.succeed(self.users.get(user, "No such user"))
+        return defer.succeed(self.users.get(user, b"No such user"))
 
     def getUsers(self):
-        return defer.succeed(self.users.keys())
+        return defer.succeed(list(self.users.keys()))
 
     def setUser(self, user, status):
         self.users[user] = status
 
 
-f = MemoryFingerService(moshez='Happy and well')
+f = MemoryFingerService({b'moshez': b'Happy and well'})
 serviceCollection = service.IServiceCollection(application)
-internet.TCPServer(1079, IFingerSetterFactory(f), interface='127.0.0.1'
+strports.service("tcp:1079:interface=127.0.0.1", IFingerSetterFactory(f)
                    ).setServiceParent(serviceCollection)

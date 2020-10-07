@@ -92,6 +92,8 @@ option was seen, 0 otherwise. Here is an example for usage:
 .. code-block:: python
 
     
+    from __future__ import print_function
+    
     class Options(usage.Options):
     
         optFlags = [
@@ -105,17 +107,17 @@ option was seen, 0 otherwise. Here is an example for usage:
     options = Options()
     try:
         options.parseOptions(command_line)
-    except usage.UsageError, errortext:
-        print '%s: %s' % (sys.argv[0], errortext)
-        print '%s: Try --help for usage details.' % (sys.argv[0])
+    except usage.UsageError as errortext:
+        print('{}: {}'.format(sys.argv[0], errortext))
+        print('{}: Try --help for usage details.'.format(sys.argv[0]))
         sys.exit(1)
     if options['fast']:
-        print "fast",
+        print("fast", end='')
     if options['good']:
-        print "good",
+        print("good", end='')
     if options['cheap']:
-        print "cheap",
-    print
+        print("cheap", end='')
+    print()
 
 
 
@@ -130,53 +132,33 @@ access it mostly just like you can access any other dict. Options are stored
 as mapping items in the Options instance: parameters as 'paramname': 'value'
 and flags as 'flagname': 1 or 0.
 
-    
-
-
 
 Inheritance, Or: How I Learned to Stop Worrying and Love the Superclass
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-
-    
-Sometimes there is a need for several option processors with
-a unifying core. Perhaps you want all your commands to
-understand ``-q`` /``--quiet`` means to be
-quiet, or something similar. On the face of it, this looks
-impossible: in Python, the subclass's ``optFlags`` 
-would shadow the superclass's. However,
-``usage.Options`` uses special reflection code to get
-all of the ``optFlags`` defined in the hierarchy. So
-the following:
-
-
-
+Sometimes there is a need for several option processors with a unifying core.
+Perhaps you want all your commands to understand ``-q`` /``--quiet`` means to be quiet, or something similar.
+On the face of it, this looks impossible: in Python, the subclass's ``optFlags`` would shadow the superclass's.
+However, ``usage.Options`` uses special reflection code to get all of the ``optFlags`` defined in the hierarchy. So the following:
 
 .. code-block:: python
 
-    
     class BaseOptions(usage.Options):
-    
+
         optFlags = [["quiet", "q", None]]
-    
+
     class SpecificOptions(BaseOptions):
-    
+
         optFlags = [
             ["fast", "f", None], ["good", "g", None], ["cheap", "c", None]
         ]
 
-
-    
-Is the same as: 
-
-
-
+Is the same as:
 
 .. code-block:: python
 
-    
-    class SpecificOptions(BaseOptions):
-    
+    class SpecificOptions(usage.Options):
+
         optFlags = [
             ["quiet", "q", "Silence output"],
             ["fast", "f", "Run quickly"],
@@ -185,14 +167,9 @@ Is the same as:
         ]
 
 
-
-    
-
 Parameters
 ----------
 
-
-    
 Parameters are specified using the attribute
 ``optParameters`` . They *must* be given a
 default. If you want to make sure you got the parameter from
@@ -209,6 +186,7 @@ Here is an example:
 
 .. code-block:: python
 
+    from __future__ import print_function
     
     from twisted.python import usage
     
@@ -224,22 +202,22 @@ Here is an example:
     config = Options()
     try:
         config.parseOptions() # When given no argument, parses sys.argv[1:]
-    except usage.UsageError, errortext:
-        print '%s: %s' % (sys.argv[0], errortext)
-        print '%s: Try --help for usage details.' % (sys.argv[0])
+    except usage.UsageError as errortext:
+        print('{}: {}'.format(sys.argv[0], errortext))
+        print('{}: Try --help for usage details.'.format(sys.argv[0]))
         sys.exit(1)
     
     if config['user'] is not None:
-        print "Hello", config['user']
-    print "So, you want it:"
+        print("Hello", config['user'])
+    print("So, you want it:")
     
     if config['fast']:
-        print "fast",
+        print("fast", end='')
     if config['good']:
-        print "good",
+        print("good", end='')
     if config['cheap']:
-        print "cheap",
-    print
+        print("cheap", end='')
+    print()
 
 
 
@@ -474,7 +452,7 @@ patch up inconsistencies, and the like. Here is an example:
     
         def postOptions(self):
             if self['fast'] and self['good'] and self['cheap']:
-                raise usage.UsageError, "can't have it all, brother"
+                raise usage.UsageError("can't have it all, brother")
 
 
 

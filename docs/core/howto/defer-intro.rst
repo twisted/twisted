@@ -55,10 +55,12 @@ It can also be written as::
 
 Sometimes it leads us to encode the order when we don't need to, as in this example::
 
+    from __future__ import print_function
+
     total = 0
     for account in accounts:
         total += account.get_balance()
-    print "Total balance $%s" % (total,)
+    print("Total balance ${}".format(total))
 
 But that's normally not such a big deal.
 
@@ -92,7 +94,7 @@ The components of a solution
 
 We would still need a way of saying "do *this* only when *that* has finished".
 
-We would need a way of distinguishing between successful completion and interrupted processing, normally modeled with ``try``, ``expect``, ``else``, and ``finally``.
+We would need a way of distinguishing between successful completion and interrupted processing, normally modeled with ``try``, ``except``, ``else``, and ``finally``.
 
 We need a mechanism for getting return failures and exception information from the thing that just executed to the thing that needs to happen next.
 
@@ -190,7 +192,7 @@ We often want to write code equivalent to this::
 
     try:
         x.get_names()
-    except Exception, e:
+    except Exception as e:
         report_error(e)
 
 How would we write this with :api:`twisted.internet.defer.Deferred <Deferred>`\s?
@@ -216,7 +218,7 @@ Abandoning our contrived examples and reaching for generic variable names, we ge
 
     try:
         y = f()
-    except Exception, e:
+    except Exception as e:
         g(e)
     else:
         h(y)
@@ -241,7 +243,7 @@ That is, what if we wanted to do the equivalent of this generic code::
 
     try:
         y = f()
-    except Exception, e:
+    except Exception as e:
         y = g(e)
     h(y)
 
@@ -269,7 +271,7 @@ What if we want to wrap up a multi-step operation in one exception handler?
     try:
         y = f()
         z = h(y)
-    except Exception, e:
+    except Exception as e:
         g(e)
 
 With :api:`twisted.internet.defer.Deferred <Deferred>`\s, it would look like this::
@@ -310,8 +312,75 @@ Because if ``f`` raises, ``g`` will be passed a :api:`twisted.python.failure.Fai
 Otherwise, ``g`` will be passed the asynchronous equivalent of the return value of ``f()`` (i.e. ``y``).
 
 
+Coroutines with async/await
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. note::
+
+    .. versionadded:: 16.4
+
+Python 3.5 introduced :pep:`492` ("Coroutines with async and await syntax") and native coroutines.
+:api:`twisted.internet.defer.Deferred.fromCoroutine <Deferred.fromCoroutine>` allows you to write coroutines with the ``async def`` syntax and ``await`` on Deferreds, similar to ``inlineCallbacks``.
+Rather than decorating every function that may ``await`` a Deferred (as you would with functions that ``yield`` Deferreds with ``inlineCallbacks``), you only need to call ``fromCoroutine`` with the outer-most coroutine object to schedule it for execution.
+Coroutines can ``await`` other coroutines once running without needing to use this function themselves.
+
+.. note::
+
+    The :api:`twisted.internet.defer.ensureDeferred <ensureDeferred>` function also provides a way to convert a coroutine to a Deferred, but it's interface is more type-ambiguous; ``Deferred.fromCoroutine`` is meant to replace it.
+
+Awaiting on a Deferred which fires with a Failure will raise the exception inside your coroutine as if it were regular Python.
+If your coroutine raises an exception, it will be translated into a Failure fired on the Deferred that ``Deferred.fromCoroutine`` returns for you.
+Calling ``return`` will cause the Deferred that ``Deferred.fromCoroutine`` returned for you to fire with a result.
+
+.. code-block:: python3
+
+   import json
+   from twisted.internet.defer import Deferred
+   from twisted.logger import Logger
+   log = Logger()
+
+   async def getUsers():
+       try:
+           return json.loads(await makeRequest("GET", "/users"))
+       except ConnectionError:
+           log.failure("makeRequest failed due to connection error")
+           return []
+
+   def do():
+       d = Deferred.fromCoroutine(getUsers())
+       d.addCallback(print)
+       return d
+
+
+When writing coroutines, you do not need to use :api:`twisted.internet.defer.Deferred.fromCoroutine <Deferred.fromCoroutine>` when you are writing a coroutine which calls other coroutines which await on Deferreds; you can just ``await`` on it directly.
+For example:
+
+.. code-block:: python3
+
+    async def foo():
+        res = await someFunctionThatReturnsADeferred()
+        return res
+
+    async def bar():
+        baz = await someOtherDeferredFunction()
+        fooResult = await foo()
+        return baz + fooResult
+
+    def myDeferredReturningFunction():
+        coro = bar()
+        return Deferred.fromCoroutine(coro)
+
+
+Even though Deferreds were used in both coroutines, only ``bar`` had to be wrapped in :api:`twisted.internet.defer.Deferred.fromCoroutine <Deferred.fromCoroutine>` to return a Deferred.
+
+
 Inline callbacks - using 'yield'
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. note::
+
+    Unless your code supports Python 2 (and therefore needs compatibility with older versions of Twisted), writing coroutines with the functionality described in "Coroutines with async/await" is preferred over ``inlineCallbacks``.
+    Coroutines are supported by dedicated Python syntax, are compatible with ``asyncio``, and provide higher performance.
 
 Twisted features a decorator named ``inlineCallbacks`` which allows you to work with Deferreds without writing callback functions.
 
@@ -349,7 +418,7 @@ a couple of things are happening here:
 
     .. versionadded:: 15.0
 
-    On Python 3.3 and above, instead of writing ``returnValue(json.loads(responseBody))`` you can instead write ``return json.loads(responseBody)``.
+    On Python 3, instead of writing ``returnValue(json.loads(responseBody))`` you can instead write ``return json.loads(responseBody)``.
     This can be a significant readability advantage, but unfortunately if you need compatibility with Python 2, this isn't an option.
 
 Both versions of ``getUsers`` present exactly the same API to their callers: both return a ``Deferred`` that fires with the parsed JSON body of the request.
@@ -403,6 +472,7 @@ You have been introduced to asynchronous code and have seen how to use :api:`twi
 - Wrap multiple asynchronous operations with one error handler
 - Do something after an asynchronous operation, regardless of whether it succeeded or failed
 - Write code without callbacks using ``inlineCallbacks``
+- Write coroutines that interact with Deferreds using ``Deferred.fromCoroutine``
 
 These are very basic uses of :api:`twisted.internet.defer.Deferred <Deferred>`.
 For detailed information about how they work, how to combine multiple Deferreds, and how to write code that mixes synchronous and asynchronous APIs, see the :doc:`Deferred reference <defer>`.

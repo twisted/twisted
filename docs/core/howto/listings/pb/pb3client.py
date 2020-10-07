@@ -3,12 +3,14 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
+from __future__ import print_function
+
 from twisted.spread import pb
 from twisted.internet import reactor
 
 class Two(pb.Referenceable):
     def remote_print(self, arg):
-        print "Two.print() called with", arg
+        print("Two.print() called with", arg)
 
 def main():
     two = Two()
@@ -19,8 +21,8 @@ def main():
     reactor.run()
 
 def got_obj(obj, two):
-    print "got One:", obj
-    print "giving it our two"
+    print("got One:", obj)
+    print("giving it our two")
     obj.callRemote("takeTwo", two)
 
 main()

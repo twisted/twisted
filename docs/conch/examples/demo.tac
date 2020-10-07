@@ -22,4 +22,7 @@ from twisted.conch import manhole_tap
 manhole_tap.makeService({"telnetPort": "tcp:6023",
                          "sshPort": "tcp:6022",
                          "namespace": {"foo": "bar"},
-                         "passwd": "passwd"}).setServiceParent(application)
+                         "passwd": "passwd",
+                         "sshKeyDir": "<USER DATA DIR>",
+                         "sshKeyName": "server.key",
+                         "sshKeySize": 4096}).setServiceParent(application)

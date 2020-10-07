@@ -372,7 +372,7 @@ change gets us:
 
 
 
-A meagre amount of progress, but the service still raises an
+A meager amount of progress, but the service still raises an
 exception.  This time, it's because we haven't specified
 a *protocol class* for the factory to use.  We'll do that in
 the next example.
@@ -849,7 +849,7 @@ failure of the message transmission to the application:
 
 
     def sentMail(self, code, resp, numOk, addresses, log):
-        print 'Sent', numOk, 'messages'
+        print('Sent', numOk, 'messages')
 
 
 

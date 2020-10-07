@@ -59,7 +59,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'Twisted'
-copyright = u'2014, Twisted Matrix Labs'
+copyright = u'2017, Twisted Matrix Labs'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -302,7 +302,7 @@ epub_copyright = u'2014, Twisted Matrix Labs'
 # The scheme of the identifier. Typical schemes are ISBN or URL.
 #epub_scheme = ''
 
-# The unique identifier of the text. This can be a ISBN number
+# The unique identifier of the text. This can be an ISBN number
 # or the project homepage.
 #epub_identifier = ''
 
@@ -357,8 +357,7 @@ traclinks_base_url = 'https://twistedmatrix.com/trac'
 # tuple of (<external sphinx documentation URI>, <inventory file location>).
 # The inventory file may be None to use the default location at the given URI.
 intersphinx_mapping = {
-    'py2': ('http://docs.python.org/2.7', None),
-    'py3': ('http://docs.python.org/3.3', None),
+    'py3': ('https://docs.python.org/3', None),
 }
 # How long to cache remote inventories. Positive is a number of days,
 # negative means infinite. The default is 5 days, which should be fine

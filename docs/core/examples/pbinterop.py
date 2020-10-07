@@ -4,7 +4,7 @@
 
 """PB interop server."""
 
-from twisted.spread import pb, jelly, flavors
+from twisted.spread import pb, flavors
 from twisted.internet import reactor
 
 
@@ -13,7 +13,7 @@ class Interop(pb.Root):
 
     def __init__(self):
         self.o = pb.Referenceable()
-    
+
     def remote_int(self):
         return 1
 
@@ -21,7 +21,7 @@ class Interop(pb.Root):
         return "string"
 
     def remote_unicode(self):
-        return u"string"
+        return "string"
 
     def remote_float(self):
         return 1.5
@@ -35,7 +35,7 @@ class Interop(pb.Root):
         return l
 
     def remote_dict(self):
-        return {1 : 2}
+        return {1: 2}
 
     def remote_reference(self):
         return self.o
@@ -46,16 +46,16 @@ class Interop(pb.Root):
 
     def _local_success(self, result):
         if result != "hello, world":
-            raise ValueError, "%r != %r" % (result, "hello, world")
+            raise ValueError("{} != {}".format(result, "hello, world"))
 
     def remote_receive(self, obj):
-        expected = [1, 1.5, "hi", u"hi", {1 : 2}]
+        expected = [1, 1.5, "hi", "hi", {1: 2}]
         if obj != expected:
-            raise ValueError, "%r != %r" % (obj, expected)
+            raise ValueError("{} != {}".format(obj, expected))
 
     def remote_self(self, obj):
         if obj != self:
-            raise ValueError, "%r != %r" % (obj, self)
+            raise ValueError("{} != {}".format(obj, self))
 
     def remote_copy(self, x):
         o = flavors.Copyable()
@@ -63,9 +63,6 @@ class Interop(pb.Root):
         return o
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     reactor.listenTCP(8789, pb.PBServerFactory(Interop()))
     reactor.run()
-
-
-

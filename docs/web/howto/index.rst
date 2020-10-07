@@ -6,7 +6,6 @@
 Developer Guides
 ================
 
-
 .. toctree::
    :hidden:
 
@@ -21,20 +20,11 @@ Developer Guides
    glossary
 
 
-
-
-
-
 - Introduction
-
-
 
   - :doc:`Overview of Twisted Web <web-overview>`
 
-
 - Web Applications
-
-
 
   - :doc:`Using twisted.web <using-twistedweb>`
   - :doc:`Web application development <web-development>`
@@ -43,21 +33,10 @@ Developer Guides
   - :doc:`Twisted Web in 60 Seconds: A series of short, complete examples using twisted.web <web-in-60/index>`
   - :doc:`Quixote resource templates <resource-templates>`
 
-
 - Other
-
-
 
   - :doc:`Using the Twisted Web Client <client>`
 
-
 - Appendix
 
-
-
   - :doc:`Glossary <glossary>`
-
-
-
-
-

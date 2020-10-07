@@ -13,7 +13,7 @@ password. See the code in main() to get the correct username & password!
 
 import sys
 
-from zope.interface import implements
+from zope.interface import implementer
 
 from twisted.python import log
 from twisted.internet import reactor
@@ -27,21 +27,20 @@ class GuardedResource(resource.Resource):
     A resource which is protected by guard and requires authentication in order
     to access.
     """
+
     def getChild(self, path, request):
         return self
 
-
     def render(self, request):
-        return "Authorized!"
+        return b"Authorized!"
 
 
-
+@implementer(IRealm)
 class SimpleRealm(object):
     """
     A realm which gives out L{GuardedResource} instances for authenticated
     users.
     """
-    implements(IRealm)
 
     def requestAvatar(self, avatarId, mind, *interfaces):
         if resource.IResource in interfaces:
@@ -49,16 +48,16 @@ class SimpleRealm(object):
         raise NotImplementedError()
 
 
-
 def main():
     log.startLogging(sys.stdout)
-    checkers = [InMemoryUsernamePasswordDatabaseDontUse(joe='blow')]
+    checkers = [InMemoryUsernamePasswordDatabaseDontUse(joe=b"blow")]
     wrapper = guard.HTTPAuthSessionWrapper(
         Portal(SimpleRealm(), checkers),
-        [guard.DigestCredentialFactory('md5', 'example.com')])
-    reactor.listenTCP(8889, server.Site(
-          resource = wrapper))
+        [guard.DigestCredentialFactory("md5", b"example.com")],
+    )
+    reactor.listenTCP(8889, server.Site(resource=wrapper))
     reactor.run()
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()

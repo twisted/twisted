@@ -13,18 +13,17 @@ Run this example by typing in:
 """
 
 
-from Tkinter import Tk, Frame, Button, LEFT
+from tkinter import Tk, Frame, Button, LEFT
 from twisted.internet import reactor, tksupport
 
 
 class App(object):
-
     def onQuit(self):
-        print "Quit!"
+        print("Quit!")
         reactor.stop()
 
     def onButton(self):
-        print "Hello!"
+        print("Hello!")
 
     def __init__(self, master):
         frame = Frame(master)
@@ -37,7 +36,7 @@ class App(object):
         b.pack(side=LEFT)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     root = Tk()
     tksupport.install(root)
     app = App(root)
