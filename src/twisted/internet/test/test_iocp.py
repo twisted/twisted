@@ -54,6 +54,10 @@ class SupportTests(TestCase):
         address family of C{family} and assert that the result of
         L{iocpsupport.get_accept_addrs} is consistent with the result of
         C{socket.getsockname} and C{socket.getpeername}.
+
+        This is a flaky tests.
+        Tweak the failure rate by changing the number of retries and the
+        wait/sleep between retries.
         """
         msg("family = %r" % (family,))
         port = socket(family, SOCK_STREAM)
