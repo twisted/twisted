@@ -80,9 +80,8 @@ class SupportTests(TestCase):
             # so we retry twice as retrying once is not enough.
             try:
                 server.setsockopt(
-                    SOL_SOCKET,
-                    SO_UPDATE_ACCEPT_CONTEXT,
-                    pack("P", port.fileno()))
+                    SOL_SOCKET, SO_UPDATE_ACCEPT_CONTEXT, pack("P", port.fileno())
+                )
                 break
             except error as socketError:
                 if socketError.errno == WSAENOTCONN:
