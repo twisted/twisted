@@ -414,7 +414,7 @@ class LogFileReaderTests(TestCase):
         with BytesIO(b'\x1e{"x": "\xe2\x82\xac"}\n') as fileHandle:
             events = iter(eventsFromJSONLogFile(fileHandle, bufferSize=8))
 
-            self.assertEqual(next(events), {"x": "\u20ac"})  # Got unicode
+            self.assertEqual(next(events), {"x": "\u20ac"})  # Got text
             self.assertRaises(StopIteration, next, events)  # No more events
             self.assertEqual(len(self.errorEvents), 0)
 

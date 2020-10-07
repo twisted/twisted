@@ -19,9 +19,8 @@ class LoggingFile:
     """
     File-like object that turns C{write()} calls into logging events.
 
-    Note that because event formats are C{unicode}, C{bytes} received via
-    C{write()} are converted to C{unicode}, which is the opposite of what
-    C{file} does.
+    Note that because event formats are L{str}, C{bytes} received via C{write()}
+    are converted to C{str}, which is the opposite of what C{file} does.
 
     @ivar softspace: File-like L{'softspace' attribute <file.softspace>}; zero
         or one.

@@ -29,7 +29,7 @@ class FileLogObserver:
     ) -> None:
         """
         @param outFile: A file-like object.  Ideally one should be passed which
-            accepts L{unicode} data.  Otherwise, UTF-8 L{bytes} will be used.
+            accepts text data.  Otherwise, UTF-8 L{bytes} will be used.
         @param formatEvent: A callable that formats an event.
         """
         if ioType(outFile) is not str:
@@ -64,7 +64,7 @@ def textFileLogObserver(
     file-like object.
 
     @param outFile: A file-like object.  Ideally one should be passed which
-        accepts L{unicode} data.  Otherwise, UTF-8 L{bytes} will be used.
+        accepts text data.  Otherwise, UTF-8 L{bytes} will be used.
     @param timeFormat: The format to use when adding timestamp prefixes to
         logged events.  If L{None}, or for events with no C{"log_timestamp"}
         key, the default timestamp prefix of C{"-"} is used.

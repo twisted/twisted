@@ -129,7 +129,7 @@ def extractField(field: str, event: LogEvent) -> Any:
         text that would normally fall between a pair of curly braces in a
         format string: for example, C{"key[2].attribute"}.  If a conversion is
         specified (the thing after the C{"!"} character in a format field) then
-        the result will always be L{unicode}.
+        the result will always be str.
     @param event: A log event.
 
     @return: A value extracted from the field.

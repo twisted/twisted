@@ -56,7 +56,7 @@ class ILogObserver(Interface):
                   importance of and audience for this event.
 
                 - C{"log_namespace"}: a namespace for the emitter of the event,
-                  given as a unicode string.
+                  given as a L{str}.
 
                 - C{"log_system"}: a string indicating the network event or
                   method call which resulted in the message being logged.

@@ -181,7 +181,7 @@ class LoggingFileTests(unittest.TestCase):
 
     def test_writeBytesDecoded(self) -> None:
         """
-        Bytes are decoded to unicode.
+        Bytes are decoded to text.
         """
         f = self.observedFile(encoding="utf-8")
         f.write(b"Hello, Mr. S\xc3\xa1nchez\n")
