@@ -55,7 +55,7 @@ class SupportTests(TestCase):
         L{iocpsupport.get_accept_addrs} is consistent with the result of
         C{socket.getsockname} and C{socket.getpeername}.
 
-        This is a flaky tests.
+        These are flaky tests.
         Tweak the failure rate by changing the number of retries and the
         wait/sleep between retries.
         """
@@ -79,7 +79,7 @@ class SupportTests(TestCase):
 
         for attemptsRemaining in reversed(range(5)):
             # Calling setsockopt after _iocp.accept might fail for both IPv4
-            # and IPV6 with [Errno 10057] A request to send or receive ...
+            # and IPV6 with "[Errno 10057] A request to send or receive ..."
             # This is when ERROR_IO_PENDING is returned and means that the
             # socket is not yet ready and accept will be handled via the
             # callback event.
@@ -96,7 +96,7 @@ class SupportTests(TestCase):
             except OSError as socketError:
                 # The socket is not yet ready to accept connections,
                 # setsockopt fails.
-                if attemptsRemaining < 0:
+                if attemptsRemaining == 0:
                     # We rant out of retries.
                     raise
 
