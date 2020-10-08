@@ -29,8 +29,6 @@ here.
 
 @var _EXTENSIONS: The list of L{ConditionalExtension} used by the setup
     process.
-
-@var notPortedModules: Modules that are not yet ported to Python 3.
 """
 
 import io
@@ -349,22 +347,3 @@ def _checkCPython(platform: Any = platform) -> bool:
 
 
 _isCPython = _checkCPython()  # type: bool
-
-notPortedModules = [
-    "twisted.mail.alias",
-    "twisted.mail.bounce",
-    "twisted.mail.mail",
-    "twisted.mail.maildir",
-    "twisted.mail.pb",
-    "twisted.mail.relaymanager",
-    "twisted.mail.scripts.__init__",
-    "twisted.mail.tap",
-    "twisted.mail.test.test_bounce",
-    "twisted.mail.test.test_mail",
-    "twisted.mail.test.test_options",
-    "twisted.mail.test.test_scripts",
-    "twisted.plugins.twisted_mail",
-    "twisted.protocols.shoutcast",
-    "twisted.web.soap",
-    "twisted.web.test.test_soap",
-]
