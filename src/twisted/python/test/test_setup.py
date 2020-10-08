@@ -17,7 +17,7 @@ from twisted.python import _setup, filepath
 from twisted.python._setup import (
     BuildPy3,
     getSetupArgs,
-    _longDescriptionArgsFromReadme,
+    _longDescriptionFromReadme,
     ConditionalExtension,
     _EXTRAS_REQUIRE,
 )
@@ -40,7 +40,7 @@ class SetupTests(SynchronousTestCase):
             "whatever", ["whatever.c"], condition=lambda b: False
         )
 
-        args = getSetupArgs(extensions=[good_ext, bad_ext], readme="")
+        args = getSetupArgs(extensions=[good_ext, bad_ext])
 
         # ext_modules should be set even though it's not used.  See comment
         # in getSetupArgs
@@ -60,7 +60,7 @@ class SetupTests(SynchronousTestCase):
             "whatever", ["whatever.c"], define_macros=[("whatever", 2)]
         )
 
-        args = getSetupArgs(extensions=[ext], readme="")
+        args = getSetupArgs(extensions=[ext])
 
         builder = args["cmdclass"]["build_ext"](Distribution())
         self.patch(os, "name", "nt")
@@ -366,7 +366,7 @@ class LongDescriptionTests(SynchronousTestCase):
 
     def test_generate(self):
         """
-        L{_longDescriptionArgsFromReadme()} outputs a L{long_description} in
+        L{_longDescriptionFromReadme()} outputs a L{long_description} in
         reStructuredText format. Local links are transformed into absolute ones
         that point at the Twisted GitHub repository.
         """
@@ -385,15 +385,14 @@ class LongDescriptionTests(SynchronousTestCase):
             )
 
         self.assertEqual(
-            {
-                "long_description": """\
+            (
+                """\
 Twisted
 =======
 
 Changes: `NEWS <https://github.com/twisted/twisted/blob/trunk/NEWS.rst>`_.
 Read `the docs <https://twistedmatrix.com/documents/>`_.
 """,
-                "long_description_content_type": "text/x-rst",
-            },
-            _longDescriptionArgsFromReadme(path),
+            ),
+            _longDescriptionFromReadme(path),
         )

@@ -38,12 +38,11 @@ import os
 import platform
 import re
 import sys
-from typing import Any, Dict, List, Tuple, cast
+from typing import Any, Dict, List, cast
 
 from distutils.command import build_ext
 from distutils.errors import CompileError
 from setuptools import Extension, find_packages
-from setuptools.command.build_py import build_py
 
 
 STATIC_PACKAGE_METADATA = dict(
@@ -69,6 +68,37 @@ STATIC_PACKAGE_METADATA = dict(
         "Programming Language :: Python :: 3.8",
     ],
     python_requires=">=3.5",
+    long_description_content_type="text/x-rst",
+    install_requires=[
+        "zope.interface >= 4.4.2",
+        "constantly >= 15.1",
+        "incremental >= 16.10.1",
+        "Automat >= 0.8.0",
+        "hyperlink >= 17.1.1",
+        "PyHamcrest >= 1.9.0",
+        "attrs >= 19.2.0",
+    ],
+    use_incremental=True,
+    setup_requires=["incremental >= 16.10.1"],
+    include_package_data=True,
+    exclude_package_data={
+        "": ["*.c", "*.h", "*.pxi", "*.pyx", "build.bat"],
+    },
+    zip_safe=False,
+    package_dir={"": "src"},
+    entry_points={
+        "console_scripts": [
+            "ckeygen = twisted.conch.scripts.ckeygen:run",
+            "cftp = twisted.conch.scripts.cftp:run",
+            "conch = twisted.conch.scripts.conch:run",
+            "mailmail = twisted.mail.scripts.mailmail:run",
+            "pyhtmlizer = twisted.scripts.htmlizer:run",
+            "tkconch = twisted.conch.scripts.tkconch:run",
+            "trial = twisted.scripts.trial:run",
+            "twist = twisted.application.twist._twist:Twist.main",
+            "twistd = twisted.scripts.twistd:run",
+        ],
+    },
 )  # type: Dict[str, Any]
 
 
@@ -133,19 +163,6 @@ _EXTRAS_REQUIRE = {
 }
 _EXTRAS_REQUIRE["osx_platform"] = _EXTRAS_REQUIRE["macos_platform"]
 
-# Scripts provided by Twisted on Python 2 and 3.
-_CONSOLE_SCRIPTS = [
-    "ckeygen = twisted.conch.scripts.ckeygen:run",
-    "cftp = twisted.conch.scripts.cftp:run",
-    "conch = twisted.conch.scripts.conch:run",
-    "mailmail = twisted.mail.scripts.mailmail:run",
-    "pyhtmlizer = twisted.scripts.htmlizer:run",
-    "tkconch = twisted.conch.scripts.tkconch:run",
-    "trial = twisted.scripts.trial:run",
-    "twist = twisted.application.twist._twist:Twist.main",
-    "twistd = twisted.scripts.twistd:run",
-]
-
 
 class ConditionalExtension(Extension):
     """
@@ -182,7 +199,7 @@ _EXTENSIONS = [
 ]
 
 
-def _longDescriptionArgsFromReadme(readme: str) -> Dict[str, str]:
+def _longDescriptionFromReadme(readme: str) -> str:
     """
     Generate a PyPI long description from the readme.
 
@@ -196,17 +213,12 @@ def _longDescriptionArgsFromReadme(readme: str) -> Dict[str, str]:
     # Munge links of the form `NEWS <NEWS.rst>`_ to point at the appropriate
     # location on GitHub so that they function when the long description is
     # displayed on PyPI.
-    longDesc = re.sub(
+    return re.sub(
         r"`([^`]+)\s+<(?!https?://)([^>]+)>`_",
         r"`\1 <https://github.com/twisted/twisted/blob/trunk/\2>`_",
         readmeRst,
         flags=re.I,
     )
-
-    return {
-        "long_description": longDesc,
-        "long_description_content_type": "text/x-rst",
-    }
 
 
 def getSetupArgs(
@@ -223,71 +235,27 @@ def getSetupArgs(
 
     @return: The keyword arguments to be used by the setup method.
     """
-    arguments = STATIC_PACKAGE_METADATA.copy()
-    if readme:
-        arguments.update(_longDescriptionArgsFromReadme(readme))
 
-    # This is a workaround for distutils behavior; ext_modules isn't
-    # actually used by our custom builder.  distutils deep-down checks
-    # to see if there are any ext_modules defined before invoking
-    # the build_ext command.  We need to trigger build_ext regardless
-    # because it is the thing that does the conditional checks to see
-    # if it should build any extensions.  The reason we have to delay
-    # the conditional checks until then is that the compiler objects
-    # are not yet set up when this code is executed.
-    arguments["ext_modules"] = extensions
     # Use custome class to build the extensions.
     class my_build_ext(build_ext_twisted):
         conditionalExtensions = extensions
 
-    command_classes = {"build_ext": my_build_ext, "build_py": BuildPy3}
-
-    requirements = [
-        "zope.interface >= 4.4.2",
-        "constantly >= 15.1",
-        "incremental >= 16.10.1",
-        "Automat >= 0.8.0",
-        "hyperlink >= 17.1.1",
-        "PyHamcrest >= 1.9.0",
-        "attrs >= 19.2.0",
-    ]
-
-    arguments.update(
-        dict(
-            packages=find_packages("src"),
-            use_incremental=True,
-            setup_requires=["incremental >= 16.10.1"],
-            install_requires=requirements,
-            entry_points={"console_scripts": _CONSOLE_SCRIPTS},
-            cmdclass=command_classes,
-            include_package_data=True,
-            exclude_package_data={
-                "": ["*.c", "*.h", "*.pxi", "*.pyx", "build.bat"],
-            },
-            zip_safe=False,
-            extras_require=_EXTRAS_REQUIRE,
-            package_dir={"": "src"},
-        )
-    )
-
-    return arguments
-
-
-class BuildPy3(build_py):
-    """
-    A version of build_py that doesn't install the modules that aren't yet
-    ported to Python 3.
-    """
-
-    def find_package_modules(
-        self, package: str, package_dir: str
-    ) -> List[Tuple[str, str, str]]:
-        modules = [
-            module
-            for module in build_py.find_package_modules(self, package, package_dir)
-            if ".".join([module[0], module[1]]) not in notPortedModules
-        ]
-        return modules
+    return {
+        "packages": find_packages("src"),
+        "long_description": _longDescriptionFromReadme(readme),
+        # This is a workaround for distutils behavior; ext_modules isn't
+        # actually used by our custom builder.  distutils deep-down checks
+        # to see if there are any ext_modules defined before invoking
+        # the build_ext command.  We need to trigger build_ext regardless
+        # because it is the thing that does the conditional checks to see
+        # if it should build any extensions.  The reason we have to delay
+        # the conditional checks until then is that the compiler objects
+        # are not yet set up when this code is executed.
+        "ext_modules": extensions,
+        "cmdclass": {"build_ext": my_build_ext},
+        "extras_require": _EXTRAS_REQUIRE,
+        **STATIC_PACKAGE_METADATA,
+    }
 
 
 # Helpers and distutil tweaks
