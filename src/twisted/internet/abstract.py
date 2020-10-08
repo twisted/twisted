@@ -8,7 +8,7 @@ Support for generic select()able objects.
 
 
 from socket import AF_INET, AF_INET6, inet_pton, error
-from typing import List, Optional, Sequence
+from typing import Iterable, List, Optional
 
 from zope.interface import implementer
 
@@ -361,7 +361,7 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
             self._maybePauseProducer()
             self.startWriting()
 
-    def writeSequence(self, iovec: Sequence[bytes]) -> None:
+    def writeSequence(self, iovec: Iterable[bytes]) -> None:
         """
         Reliably write a sequence of data.
 

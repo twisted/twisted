@@ -91,7 +91,7 @@ def logError(err):
     return err
 
 
-def succeed(result):
+def succeed(result: object) -> "Deferred":
     """
     Return a L{Deferred} that has already had C{.callback(result)} called.
 
@@ -113,7 +113,7 @@ def succeed(result):
     return d
 
 
-def fail(result=None):
+def fail(result: object = None) -> "Deferred":
     """
     Return a L{Deferred} that has already had C{.errback(result)} called.
 

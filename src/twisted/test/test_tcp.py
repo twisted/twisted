@@ -11,7 +11,7 @@ import random
 import errno
 import hamcrest
 from functools import wraps
-from typing import Optional, Type, Union
+from typing import Optional, Type
 from unittest import skipIf
 
 from zope.interface import implementer
@@ -120,9 +120,7 @@ class MyProtocolFactoryMixin:
 
     protocolConnectionMade = None
     protocolConnectionLost = None
-    protocol = (
-        None
-    )  # type: Optional[Union[Type[protocol.Protocol],Type[protocol.AbstractDatagramProtocol]]]  # noqa
+    protocol = None  # type: Optional[Type[protocol.Protocol]]
     called = 0
 
     def __init__(self):

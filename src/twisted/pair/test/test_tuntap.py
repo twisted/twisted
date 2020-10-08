@@ -1328,7 +1328,7 @@ class TunTests(TunnelTestsMixin, SynchronousTestCase):
     """
 
     factory = Factory()
-    factory.protocol = IPRecordingProtocol
+    factory.protocol = IPRecordingProtocol  # type: ignore[assignment]
     helper = TunHelper(None, None)
 
 
@@ -1350,7 +1350,7 @@ class TapTests(TunnelTestsMixin, SynchronousTestCase):
     """
 
     factory = Factory()
-    factory.protocol = EthernetRecordingProtocol
+    factory.protocol = EthernetRecordingProtocol  # type: ignore[assignment]
     helper = TapHelper(None, None, pi=False)
 
 
