@@ -94,15 +94,15 @@ class SupportTests(TestCase):
                 )
                 break
             except OSError as socketError:
+                # getattr is used below to make mypy happy.
+                if socketError.errno != getattr(errno, "WSAENOTCONN"):
+                    # This is not the expected error so re-raise the error without retrying.
+                    raise
+
                 # The socket is not yet ready to accept connections,
                 # setsockopt fails.
                 if attemptsRemaining == 0:
                     # We rant out of retries.
-                    raise
-
-                # getattr is used below to make mypy happy.
-                if socketError.errno != getattr(errno, "WSAENOTCONN"):
-                    # This is not the expected error so re-raise the error without retrying.
                     raise
 
             # Without a sleep here even retrying 20 times will fail.
