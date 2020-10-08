@@ -397,22 +397,30 @@ class ThrottlingTests(unittest.TestCase):
             return results
 
         def _cleanup(results):
-            for c in c2, c4:
+            """
+            Makes sure reactor is clean, even on test failure.
+            """
+            for c in [c1, c2, c3, c4]:
                 c.transport.loseConnection()
-            return defer.DeferredList(
+
+            deferred = defer.DeferredList(
                 [
                     defer.maybeDeferred(p.stopListening),
+                    c1.dDisconnected,
                     c2.dDisconnected,
+                    c3.dDisconnected,
                     c4.dDisconnected,
                 ]
             )
+            deferred.addBoth(lambda _: results)
+            return deferred
 
         wrapTServer.deferred.addCallback(_connect123)
         wrapTServer.deferred.addCallback(_check123)
         wrapTServer.deferred.addCallback(_lose1)
         wrapTServer.deferred.addCallback(_connect4)
         wrapTServer.deferred.addCallback(_check4)
-        wrapTServer.deferred.addCallback(_cleanup)
+        wrapTServer.deferred.addBoth(_cleanup)
         return wrapTServer.deferred
 
     def test_writeSequence(self):
