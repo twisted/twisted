@@ -8,7 +8,8 @@ Address objects for network connections.
 
 import attr
 import os
-import warnings
+from typing import Optional
+from warnings import warn
 
 from zope.interface import implementer
 from twisted.internet.interfaces import IAddress
@@ -107,7 +108,7 @@ class UNIXAddress:
 
     name = attr.ib(
         converter=attr.converters.optional(_asFilesystemBytes)
-    )  # type: bytes
+    )  # type: Optional[bytes]
 
     if getattr(os.path, "samefile", None) is not None:
 
@@ -163,7 +164,7 @@ class _ServerFactoryIPv4Address(IPv4Address):
 
     def __eq__(self, other: object) -> bool:
         if isinstance(other, tuple):
-            warnings.warn(
+            warn(
                 "IPv4Address.__getitem__ is deprecated.  " "Use attributes instead.",
                 category=DeprecationWarning,
                 stacklevel=2,
