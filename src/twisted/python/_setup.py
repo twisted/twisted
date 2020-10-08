@@ -31,8 +31,8 @@ here.
     process.
 """
 
-import io
 import os
+import pathlib
 import platform
 import re
 import sys
@@ -205,16 +205,13 @@ def _longDescriptionFromReadme(readme: str) -> str:
 
     @return: Keyword arguments to be passed to C{setuptools.setup()}.
     """
-    with io.open(readme, encoding="utf-8") as f:
-        readmeRst = f.read()
-
     # Munge links of the form `NEWS <NEWS.rst>`_ to point at the appropriate
     # location on GitHub so that they function when the long description is
     # displayed on PyPI.
     return re.sub(
         r"`([^`]+)\s+<(?!https?://)([^>]+)>`_",
         r"`\1 <https://github.com/twisted/twisted/blob/trunk/\2>`_",
-        readmeRst,
+        pathlib.Path(readme).read_text(encoding="utf8"),
         flags=re.I,
     )
 
