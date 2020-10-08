@@ -231,7 +231,7 @@ class IResolver(IResolverSimple):
             C{NotImplementedError}.
         """
 
-    def lookupAddress(name: AnyStr, timeout: Sequence[int]) -> Deferred:
+    def lookupAddress(name: str, timeout: Sequence[int]) -> Deferred:
         """
         Perform an A record lookup.
 
@@ -248,7 +248,7 @@ class IResolver(IResolverSimple):
             C{NotImplementedError}.
         """
 
-    def lookupAddress6(name: AnyStr, timeout: Sequence[int]) -> Deferred:
+    def lookupAddress6(name: str, timeout: Sequence[int]) -> Deferred:
         """
         Perform an A6 record lookup.
 
@@ -265,7 +265,7 @@ class IResolver(IResolverSimple):
             C{NotImplementedError}.
         """
 
-    def lookupIPV6Address(name: AnyStr, timeout: Sequence[int]) -> Deferred:
+    def lookupIPV6Address(name: str, timeout: Sequence[int]) -> Deferred:
         """
         Perform an AAAA record lookup.
 
@@ -282,7 +282,7 @@ class IResolver(IResolverSimple):
             C{NotImplementedError}.
         """
 
-    def lookupMailExchange(name: AnyStr, timeout: Sequence[int]) -> Deferred:
+    def lookupMailExchange(name: str, timeout: Sequence[int]) -> Deferred:
         """
         Perform an MX record lookup.
 
@@ -299,7 +299,7 @@ class IResolver(IResolverSimple):
             C{NotImplementedError}.
         """
 
-    def lookupNameservers(name: AnyStr, timeout: Sequence[int]) -> Deferred:
+    def lookupNameservers(name: str, timeout: Sequence[int]) -> Deferred:
         """
         Perform an NS record lookup.
 
@@ -316,7 +316,7 @@ class IResolver(IResolverSimple):
             C{NotImplementedError}.
         """
 
-    def lookupCanonicalName(name: AnyStr, timeout: Sequence[int]) -> Deferred:
+    def lookupCanonicalName(name: str, timeout: Sequence[int]) -> Deferred:
         """
         Perform a CNAME record lookup.
 
@@ -333,7 +333,7 @@ class IResolver(IResolverSimple):
             C{NotImplementedError}.
         """
 
-    def lookupMailBox(name: AnyStr, timeout: Sequence[int]) -> Deferred:
+    def lookupMailBox(name: str, timeout: Sequence[int]) -> Deferred:
         """
         Perform an MB record lookup.
 
@@ -350,7 +350,7 @@ class IResolver(IResolverSimple):
             C{NotImplementedError}.
         """
 
-    def lookupMailGroup(name: AnyStr, timeout: Sequence[int]) -> Deferred:
+    def lookupMailGroup(name: str, timeout: Sequence[int]) -> Deferred:
         """
         Perform an MG record lookup.
 
@@ -367,7 +367,7 @@ class IResolver(IResolverSimple):
             C{NotImplementedError}.
         """
 
-    def lookupMailRename(name: AnyStr, timeout: Sequence[int]) -> Deferred:
+    def lookupMailRename(name: str, timeout: Sequence[int]) -> Deferred:
         """
         Perform an MR record lookup.
 
@@ -384,7 +384,7 @@ class IResolver(IResolverSimple):
             C{NotImplementedError}.
         """
 
-    def lookupPointer(name: AnyStr, timeout: Sequence[int]) -> Deferred:
+    def lookupPointer(name: str, timeout: Sequence[int]) -> Deferred:
         """
         Perform a PTR record lookup.
 
@@ -401,7 +401,7 @@ class IResolver(IResolverSimple):
             C{NotImplementedError}.
         """
 
-    def lookupAuthority(name: AnyStr, timeout: Sequence[int]) -> Deferred:
+    def lookupAuthority(name: str, timeout: Sequence[int]) -> Deferred:
         """
         Perform an SOA record lookup.
 
@@ -418,7 +418,7 @@ class IResolver(IResolverSimple):
             C{NotImplementedError}.
         """
 
-    def lookupNull(name: AnyStr, timeout: Sequence[int]) -> Deferred:
+    def lookupNull(name: str, timeout: Sequence[int]) -> Deferred:
         """
         Perform a NULL record lookup.
 
@@ -435,7 +435,7 @@ class IResolver(IResolverSimple):
             C{NotImplementedError}.
         """
 
-    def lookupWellKnownServices(name: AnyStr, timeout: Sequence[int]) -> Deferred:
+    def lookupWellKnownServices(name: str, timeout: Sequence[int]) -> Deferred:
         """
         Perform a WKS record lookup.
 
@@ -452,7 +452,7 @@ class IResolver(IResolverSimple):
             C{NotImplementedError}.
         """
 
-    def lookupHostInfo(name: AnyStr, timeout: Sequence[int]) -> Deferred:
+    def lookupHostInfo(name: str, timeout: Sequence[int]) -> Deferred:
         """
         Perform a HINFO record lookup.
 
@@ -469,7 +469,7 @@ class IResolver(IResolverSimple):
             C{NotImplementedError}.
         """
 
-    def lookupMailboxInfo(name: AnyStr, timeout: Sequence[int]) -> Deferred:
+    def lookupMailboxInfo(name: str, timeout: Sequence[int]) -> Deferred:
         """
         Perform an MINFO record lookup.
 
@@ -486,7 +486,7 @@ class IResolver(IResolverSimple):
             C{NotImplementedError}.
         """
 
-    def lookupText(name: AnyStr, timeout: Sequence[int]) -> Deferred:
+    def lookupText(name: str, timeout: Sequence[int]) -> Deferred:
         """
         Perform a TXT record lookup.
 
@@ -503,7 +503,7 @@ class IResolver(IResolverSimple):
             C{NotImplementedError}.
         """
 
-    def lookupResponsibility(name: AnyStr, timeout: Sequence[int]) -> Deferred:
+    def lookupResponsibility(name: str, timeout: Sequence[int]) -> Deferred:
         """
         Perform an RP record lookup.
 
@@ -520,7 +520,7 @@ class IResolver(IResolverSimple):
             C{NotImplementedError}.
         """
 
-    def lookupAFSDatabase(name: AnyStr, timeout: Sequence[int]) -> Deferred:
+    def lookupAFSDatabase(name: str, timeout: Sequence[int]) -> Deferred:
         """
         Perform an AFSDB record lookup.
 
@@ -537,7 +537,7 @@ class IResolver(IResolverSimple):
             C{NotImplementedError}.
         """
 
-    def lookupService(name: AnyStr, timeout: Sequence[int]) -> Deferred:
+    def lookupService(name: str, timeout: Sequence[int]) -> Deferred:
         """
         Perform an SRV record lookup.
 
@@ -554,7 +554,7 @@ class IResolver(IResolverSimple):
             C{NotImplementedError}.
         """
 
-    def lookupAllRecords(name: AnyStr, timeout: Sequence[int]) -> Deferred:
+    def lookupAllRecords(name: str, timeout: Sequence[int]) -> Deferred:
         """
         Perform an ALL_RECORD lookup.
 
@@ -571,7 +571,7 @@ class IResolver(IResolverSimple):
             C{NotImplementedError}.
         """
 
-    def lookupSenderPolicy(name: AnyStr, timeout: Sequence[int]) -> Deferred:
+    def lookupSenderPolicy(name: str, timeout: Sequence[int]) -> Deferred:
         """
         Perform a SPF record lookup.
 
@@ -588,7 +588,7 @@ class IResolver(IResolverSimple):
             C{NotImplementedError}.
         """
 
-    def lookupNamingAuthorityPointer(name: AnyStr, timeout: Sequence[int]) -> Deferred:
+    def lookupNamingAuthorityPointer(name: str, timeout: Sequence[int]) -> Deferred:
         """
         Perform a NAPTR record lookup.
 
@@ -605,7 +605,7 @@ class IResolver(IResolverSimple):
             C{NotImplementedError}.
         """
 
-    def lookupZone(name: AnyStr, timeout: Sequence[int]) -> Deferred:
+    def lookupZone(name: str, timeout: Sequence[int]) -> Deferred:
         """
         Perform an AXFR record lookup.
 
