@@ -7,7 +7,6 @@ Interface documentation.
 Maintainer: Itamar Shtull-Trauring
 """
 
-
 from typing import (
     Any,
     AnyStr,
@@ -21,7 +20,6 @@ from typing import (
     Union,
     TYPE_CHECKING,
 )
-from twisted.python.runtime.platform import supportsThreads as _supportsThreads
 from twisted.python.failure import Failure
 from zope.interface import Interface, Attribute
 
@@ -44,7 +42,9 @@ if TYPE_CHECKING:
     from twisted.names.dns import Query
     from twisted.protocols.tls import TLSMemoryBIOProtocol
 
-    if _supportsThreads():
+    from twisted.python.runtime import platform
+
+    if platform.supportsThreads():
         from twisted.python.threadpool import ThreadPool
     else:
         ThreadPool = None  # type: ignore[misc, assignment]
