@@ -55,15 +55,15 @@ class SupportTests(TestCase):
         L{iocpsupport.get_accept_addrs} is consistent with the result of
         C{socket.getsockname} and C{socket.getpeername}.
 
-        A port starts listening (is binded) at the low-level socket without
-        calling accept yet.
+        A port starts listening (is bound) at the low-level socket without
+        calling accept() yet.
         A client is then connected.
-        After the client is connected IOCP accept is called, which is the
-        targeted of these tests.
+        After the client is connected IOCP accept() is called, which is the
+        target of these tests.
 
         Most of the time, the socket is ready instantly, but sometimes
-        the socket is not ready right away after calling IOCP accept.
-        It should not make more than 5 seconds for a socket to be ready, as
+        the socket is not ready right away after calling IOCP accept().
+        It should not take more than 5 seconds for a socket to be ready, as
         the client connection is already made over the loopback interface.
 
         These are flaky tests.
