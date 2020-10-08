@@ -55,9 +55,24 @@ class SupportTests(TestCase):
         L{iocpsupport.get_accept_addrs} is consistent with the result of
         C{socket.getsockname} and C{socket.getpeername}.
 
+        A port starts listening (is binded) at the low-level socket without
+        calling accept yet.
+        A client is then connected.
+        After the client is connected IOCP accept is called, which is the
+        targeted of these tests.
+
+        Most of the time, the socket is ready instantly, but sometimes
+        the socket is not ready right away after calling IOCP accept.
+        It should not make more than 5 seconds for a socket to be ready, as
+        the client connection is already made over the loopback interface.
+
         These are flaky tests.
         Tweak the failure rate by changing the number of retries and the
         wait/sleep between retries.
+
+        If you will need to update the retries to wait more than 5 seconds
+        for the port to be available, then there might a bug in the code and
+        not the test (or a very, very busy VM running the tests).
         """
         msg("family = %r" % (family,))
         port = socket(family, SOCK_STREAM)
