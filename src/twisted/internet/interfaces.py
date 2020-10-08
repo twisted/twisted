@@ -26,7 +26,16 @@ from zope.interface import Interface, Attribute
 if TYPE_CHECKING:
     from socket import AddressFamily
 
-    from OpenSSL.SSL import Connection as OpenSSLConnection, Context as OpenSSLContext
+    try:
+        from OpenSSL.SSL import (
+            Connection as _OpenSSLConnection,
+            Context as _OpenSSLContext,
+        )
+    except ImportError:
+        OpenSSLConnection = OpenSSLContext = Any
+    else:
+        OpenSSLConnection = _OpenSSLConnection
+        OpenSSLContext = _OpenSSLContext
 
     from twisted.internet.abstract import FileDescriptor
     from twisted.internet.address import IPv4Address, IPv6Address, UNIXAddress
@@ -2182,7 +2191,7 @@ class IOpenSSLServerConnectionCreator(Interface):
         Twisted APIs which require a provider of this interface.)
     """
 
-    def serverConnectionForTLS(tlsProtocol: TLSMemoryBIOProtocol) -> OpenSSLConnection:
+    def serverConnectionForTLS(tlsProtocol: TLSMemoryBIOProtocol) -> OpenSSLConnection:  # type: ignore[valid-type]
         """
         Create a connection for the given server protocol.
 
@@ -2206,7 +2215,7 @@ class IOpenSSLClientConnectionCreator(Interface):
         C{contextFactory}.
     """
 
-    def clientConnectionForTLS(tlsProtocol: TLSMemoryBIOProtocol) -> OpenSSLConnection:
+    def clientConnectionForTLS(tlsProtocol: TLSMemoryBIOProtocol) -> OpenSSLConnection:  # type: ignore[valid-type]
         """
         Create a connection for the given client protocol.
 
@@ -2247,7 +2256,7 @@ class IOpenSSLContextFactory(Interface):
     @see: L{twisted.internet.ssl}
     """
 
-    def getContext() -> OpenSSLContext:
+    def getContext() -> OpenSSLContext:  # type: ignore[valid-type]
         """
         Returns a TLS context object, suitable for securing a TLS connection.
         This context object will be appropriately customized for the connection
