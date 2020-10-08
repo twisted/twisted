@@ -40,64 +40,7 @@ from typing import Any, Dict, List, cast
 
 from distutils.command import build_ext
 from distutils.errors import CompileError
-from setuptools import Extension, find_packages
-
-
-STATIC_PACKAGE_METADATA = dict(
-    name="Twisted",
-    description="An asynchronous networking framework written in Python",
-    author="Twisted Matrix Laboratories",
-    author_email="twisted-python@twistedmatrix.com",
-    maintainer="Glyph Lefkowitz",
-    maintainer_email="glyph@twistedmatrix.com",
-    url="https://twistedmatrix.com/",
-    project_urls={
-        "Documentation": "https://twistedmatrix.com/documents/current/",
-        "Source": "https://github.com/twisted/twisted",
-        "Issues": "https://twistedmatrix.com/trac/report",
-    },
-    license="MIT",
-    classifiers=[
-        "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3 :: Only",
-        "Programming Language :: Python :: 3.5",
-        "Programming Language :: Python :: 3.6",
-        "Programming Language :: Python :: 3.7",
-        "Programming Language :: Python :: 3.8",
-    ],
-    python_requires=">=3.5",
-    long_description_content_type="text/x-rst",
-    install_requires=[
-        "zope.interface >= 4.4.2",
-        "constantly >= 15.1",
-        "incremental >= 16.10.1",
-        "Automat >= 0.8.0",
-        "hyperlink >= 17.1.1",
-        "PyHamcrest >= 1.9.0",
-        "attrs >= 19.2.0",
-    ],
-    use_incremental=True,
-    setup_requires=["incremental >= 16.10.1"],
-    include_package_data=True,
-    exclude_package_data={
-        "": ["*.c", "*.h", "*.pxi", "*.pyx", "build.bat"],
-    },
-    zip_safe=False,
-    package_dir={"": "src"},
-    entry_points={
-        "console_scripts": [
-            "ckeygen = twisted.conch.scripts.ckeygen:run",
-            "cftp = twisted.conch.scripts.cftp:run",
-            "conch = twisted.conch.scripts.conch:run",
-            "mailmail = twisted.mail.scripts.mailmail:run",
-            "pyhtmlizer = twisted.scripts.htmlizer:run",
-            "tkconch = twisted.conch.scripts.tkconch:run",
-            "trial = twisted.scripts.trial:run",
-            "twist = twisted.application.twist._twist:Twist.main",
-            "twistd = twisted.scripts.twistd:run",
-        ],
-    },
-)  # type: Dict[str, Any]
+from setuptools import Extension
 
 
 _dev = [
@@ -236,7 +179,6 @@ def getSetupArgs(
         conditionalExtensions = extensions
 
     return {
-        "packages": find_packages("src"),
         "long_description": _longDescriptionFromReadme(readme),
         # This is a workaround for distutils behavior; ext_modules isn't
         # actually used by our custom builder.  distutils deep-down checks
@@ -249,7 +191,6 @@ def getSetupArgs(
         "ext_modules": extensions,
         "cmdclass": {"build_ext": my_build_ext},
         "extras_require": _EXTRAS_REQUIRE,
-        **STATIC_PACKAGE_METADATA,
     }
 
 
