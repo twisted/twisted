@@ -94,7 +94,7 @@ class SupportTests(TestCase):
                 )
                 break
             except OSError as socketError:
-                # The the socket is not yet ready to accept connections,
+                # The socket is not yet ready to accept connections,
                 # setsockopt fails.
                 if attemptsRemaining < 0:
                     # We rant out of retries.
