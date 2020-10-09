@@ -171,7 +171,6 @@ class IResolutionReceiver(Interface):
         well, for future-proofing.
 
         @param address: An address object.
-        @type address: L{IAddress}
         """
 
     def resolutionComplete() -> None:
@@ -855,18 +854,11 @@ class IReactorUDP(Interface):
         Connects a given L{DatagramProtocol} to the given numeric UDP port.
 
         @param port: A port number on which to listen.
-        @type port: C{int}
-
         @param protocol: A L{DatagramProtocol} instance which will be
             connected to the given C{port}.
-        @type protocol: L{DatagramProtocol}
-
         @param interface: The local IPv4 or IPv6 address to which to bind;
             defaults to '', ie all IPv4 addresses.
-        @type interface: C{str}
-
         @param maxPacketSize: The maximum packet size to accept.
-        @type maxPacketSize: C{int}
 
         @return: object which provides L{IListeningPort}.
         """
@@ -1143,13 +1135,9 @@ class IReactorTime(Interface):
         """
         Call a function later.
 
-        @type delay:  C{float}
         @param delay: the number of seconds to wait.
-
         @param callable: the callable object to call later.
-
         @param args: the arguments to call it with.
-
         @param kwargs: the keyword arguments to call it with.
 
         @return: An object which provides L{IDelayedCall} and can be used to
@@ -1540,7 +1528,6 @@ class IReactorFDSet(Interface):
         events by the reactor.
 
         @return: the list of file descriptors monitored for input events.
-        @rtype: C{list} of C{IReadDescriptor}
         """
 
     def getWriters() -> List["IWriteDescriptor"]:
@@ -1549,7 +1536,6 @@ class IReactorFDSet(Interface):
         by the reactor.
 
         @return: the list of file descriptors monitored for output events.
-        @rtype: C{list} of C{IWriteDescriptor}
         """
 
 
@@ -1867,7 +1853,6 @@ class IProcessProtocol(Interface):
         """
         Called when the process has been created.
 
-        @type process: L{IProcessTransport} provider
         @param process: An object representing the process which has been
             created and associated with this protocol.
         """
@@ -1986,7 +1971,6 @@ class IFileDescriptorReceiver(Interface):
         Called when a file descriptor is received over the connection.
 
         @param descriptor: The descriptor which was received.
-        @type descriptor: C{int}
 
         @return: L{None}
         """
@@ -2194,8 +2178,6 @@ class IOpenSSLServerConnectionCreator(Interface):
     def serverConnectionForTLS(tlsProtocol: "TLSMemoryBIOProtocol") -> "OpenSSLConnection":  # type: ignore[valid-type]
         """
         Create a connection for the given server protocol.
-
-        @type tlsProtocol: L{twisted.protocols.tls.TLSMemoryBIOProtocol}.
 
         @return: an OpenSSL connection object configured appropriately for the
             given Twisted protocol.

@@ -105,8 +105,6 @@ def succeed(result: object) -> "Deferred":
 
     @param result: The result to give to the Deferred's 'callback'
            method.
-
-    @rtype: L{Deferred}
     """
     d = Deferred()
     d.callback(result)
@@ -123,8 +121,6 @@ def fail(result: object = None) -> "Deferred":
 
     @raise NoCurrentExceptionError: If C{result} is L{None} but there is no
         current exception state.
-
-    @rtype: L{Deferred}
     """
     d = Deferred()
     d.errback(result)
