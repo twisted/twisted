@@ -39,7 +39,7 @@ class SetupTests(SynchronousTestCase):
         )
 
         path = pathlib.Path(self.mktemp())
-        path.write_text("", encoding="utf8")
+        path.touch(exist_ok=False)
         args = getSetupArgs(extensions=[good_ext, bad_ext], readme=str(path))
 
         # ext_modules should be set even though it's not used.  See comment
@@ -61,7 +61,7 @@ class SetupTests(SynchronousTestCase):
         )
 
         path = pathlib.Path(self.mktemp())
-        path.write_text("", encoding="utf8")
+        path.touch(exist_ok=False)
         args = getSetupArgs(extensions=[ext], readme=str(path))
 
         builder = args["cmdclass"]["build_ext"](Distribution())
