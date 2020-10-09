@@ -32,7 +32,7 @@ if TYPE_CHECKING:
             Context as _OpenSSLContext,
         )
     except ImportError:
-        OpenSSLConnection = OpenSSLContext = Any
+        OpenSSLConnection = OpenSSLContext = object
     else:
         OpenSSLConnection = _OpenSSLConnection
         OpenSSLContext = _OpenSSLContext
@@ -56,7 +56,7 @@ if TYPE_CHECKING:
     if platform.supportsThreads():
         from twisted.python.threadpool import ThreadPool
     else:
-        ThreadPool = None  # type: ignore[misc, assignment]
+        ThreadPool = object  # type: ignore[misc, assignment]
 
 
 class IAddress(Interface):
@@ -104,7 +104,7 @@ class IConnector(Interface):
 
 
 class IResolverSimple(Interface):
-    def getHostByName(name: str, timeout: Sequence[int]) -> Deferred:
+    def getHostByName(name: str, timeout: Sequence[int]) -> "Deferred":
         """
         Resolve the domain name C{name} into an IP address.
 
@@ -222,7 +222,7 @@ class IHostnameResolver(Interface):
 
 
 class IResolver(IResolverSimple):
-    def query(query: Query, timeout: Sequence[int]) -> Deferred:
+    def query(query: "Query", timeout: Sequence[int]) -> "Deferred":
         """
         Dispatch C{query} to the method which can handle its type.
 
@@ -240,7 +240,7 @@ class IResolver(IResolverSimple):
             C{NotImplementedError}.
         """
 
-    def lookupAddress(name: str, timeout: Sequence[int]) -> Deferred:
+    def lookupAddress(name: str, timeout: Sequence[int]) -> "Deferred":
         """
         Perform an A record lookup.
 
@@ -257,7 +257,7 @@ class IResolver(IResolverSimple):
             C{NotImplementedError}.
         """
 
-    def lookupAddress6(name: str, timeout: Sequence[int]) -> Deferred:
+    def lookupAddress6(name: str, timeout: Sequence[int]) -> "Deferred":
         """
         Perform an A6 record lookup.
 
@@ -274,7 +274,7 @@ class IResolver(IResolverSimple):
             C{NotImplementedError}.
         """
 
-    def lookupIPV6Address(name: str, timeout: Sequence[int]) -> Deferred:
+    def lookupIPV6Address(name: str, timeout: Sequence[int]) -> "Deferred":
         """
         Perform an AAAA record lookup.
 
@@ -291,7 +291,7 @@ class IResolver(IResolverSimple):
             C{NotImplementedError}.
         """
 
-    def lookupMailExchange(name: str, timeout: Sequence[int]) -> Deferred:
+    def lookupMailExchange(name: str, timeout: Sequence[int]) -> "Deferred":
         """
         Perform an MX record lookup.
 
@@ -308,7 +308,7 @@ class IResolver(IResolverSimple):
             C{NotImplementedError}.
         """
 
-    def lookupNameservers(name: str, timeout: Sequence[int]) -> Deferred:
+    def lookupNameservers(name: str, timeout: Sequence[int]) -> "Deferred":
         """
         Perform an NS record lookup.
 
@@ -325,7 +325,7 @@ class IResolver(IResolverSimple):
             C{NotImplementedError}.
         """
 
-    def lookupCanonicalName(name: str, timeout: Sequence[int]) -> Deferred:
+    def lookupCanonicalName(name: str, timeout: Sequence[int]) -> "Deferred":
         """
         Perform a CNAME record lookup.
 
@@ -342,7 +342,7 @@ class IResolver(IResolverSimple):
             C{NotImplementedError}.
         """
 
-    def lookupMailBox(name: str, timeout: Sequence[int]) -> Deferred:
+    def lookupMailBox(name: str, timeout: Sequence[int]) -> "Deferred":
         """
         Perform an MB record lookup.
 
@@ -359,7 +359,7 @@ class IResolver(IResolverSimple):
             C{NotImplementedError}.
         """
 
-    def lookupMailGroup(name: str, timeout: Sequence[int]) -> Deferred:
+    def lookupMailGroup(name: str, timeout: Sequence[int]) -> "Deferred":
         """
         Perform an MG record lookup.
 
@@ -376,7 +376,7 @@ class IResolver(IResolverSimple):
             C{NotImplementedError}.
         """
 
-    def lookupMailRename(name: str, timeout: Sequence[int]) -> Deferred:
+    def lookupMailRename(name: str, timeout: Sequence[int]) -> "Deferred":
         """
         Perform an MR record lookup.
 
@@ -393,7 +393,7 @@ class IResolver(IResolverSimple):
             C{NotImplementedError}.
         """
 
-    def lookupPointer(name: str, timeout: Sequence[int]) -> Deferred:
+    def lookupPointer(name: str, timeout: Sequence[int]) -> "Deferred":
         """
         Perform a PTR record lookup.
 
@@ -410,7 +410,7 @@ class IResolver(IResolverSimple):
             C{NotImplementedError}.
         """
 
-    def lookupAuthority(name: str, timeout: Sequence[int]) -> Deferred:
+    def lookupAuthority(name: str, timeout: Sequence[int]) -> "Deferred":
         """
         Perform an SOA record lookup.
 
@@ -427,7 +427,7 @@ class IResolver(IResolverSimple):
             C{NotImplementedError}.
         """
 
-    def lookupNull(name: str, timeout: Sequence[int]) -> Deferred:
+    def lookupNull(name: str, timeout: Sequence[int]) -> "Deferred":
         """
         Perform a NULL record lookup.
 
@@ -444,7 +444,7 @@ class IResolver(IResolverSimple):
             C{NotImplementedError}.
         """
 
-    def lookupWellKnownServices(name: str, timeout: Sequence[int]) -> Deferred:
+    def lookupWellKnownServices(name: str, timeout: Sequence[int]) -> "Deferred":
         """
         Perform a WKS record lookup.
 
@@ -461,7 +461,7 @@ class IResolver(IResolverSimple):
             C{NotImplementedError}.
         """
 
-    def lookupHostInfo(name: str, timeout: Sequence[int]) -> Deferred:
+    def lookupHostInfo(name: str, timeout: Sequence[int]) -> "Deferred":
         """
         Perform a HINFO record lookup.
 
@@ -478,7 +478,7 @@ class IResolver(IResolverSimple):
             C{NotImplementedError}.
         """
 
-    def lookupMailboxInfo(name: str, timeout: Sequence[int]) -> Deferred:
+    def lookupMailboxInfo(name: str, timeout: Sequence[int]) -> "Deferred":
         """
         Perform an MINFO record lookup.
 
@@ -495,7 +495,7 @@ class IResolver(IResolverSimple):
             C{NotImplementedError}.
         """
 
-    def lookupText(name: str, timeout: Sequence[int]) -> Deferred:
+    def lookupText(name: str, timeout: Sequence[int]) -> "Deferred":
         """
         Perform a TXT record lookup.
 
@@ -512,7 +512,7 @@ class IResolver(IResolverSimple):
             C{NotImplementedError}.
         """
 
-    def lookupResponsibility(name: str, timeout: Sequence[int]) -> Deferred:
+    def lookupResponsibility(name: str, timeout: Sequence[int]) -> "Deferred":
         """
         Perform an RP record lookup.
 
@@ -529,7 +529,7 @@ class IResolver(IResolverSimple):
             C{NotImplementedError}.
         """
 
-    def lookupAFSDatabase(name: str, timeout: Sequence[int]) -> Deferred:
+    def lookupAFSDatabase(name: str, timeout: Sequence[int]) -> "Deferred":
         """
         Perform an AFSDB record lookup.
 
@@ -546,7 +546,7 @@ class IResolver(IResolverSimple):
             C{NotImplementedError}.
         """
 
-    def lookupService(name: str, timeout: Sequence[int]) -> Deferred:
+    def lookupService(name: str, timeout: Sequence[int]) -> "Deferred":
         """
         Perform an SRV record lookup.
 
@@ -563,7 +563,7 @@ class IResolver(IResolverSimple):
             C{NotImplementedError}.
         """
 
-    def lookupAllRecords(name: str, timeout: Sequence[int]) -> Deferred:
+    def lookupAllRecords(name: str, timeout: Sequence[int]) -> "Deferred":
         """
         Perform an ALL_RECORD lookup.
 
@@ -580,7 +580,7 @@ class IResolver(IResolverSimple):
             C{NotImplementedError}.
         """
 
-    def lookupSenderPolicy(name: str, timeout: Sequence[int]) -> Deferred:
+    def lookupSenderPolicy(name: str, timeout: Sequence[int]) -> "Deferred":
         """
         Perform a SPF record lookup.
 
@@ -597,7 +597,7 @@ class IResolver(IResolverSimple):
             C{NotImplementedError}.
         """
 
-    def lookupNamingAuthorityPointer(name: str, timeout: Sequence[int]) -> Deferred:
+    def lookupNamingAuthorityPointer(name: str, timeout: Sequence[int]) -> "Deferred":
         """
         Perform a NAPTR record lookup.
 
@@ -614,7 +614,7 @@ class IResolver(IResolverSimple):
             C{NotImplementedError}.
         """
 
-    def lookupZone(name: str, timeout: Sequence[int]) -> Deferred:
+    def lookupZone(name: str, timeout: Sequence[int]) -> "Deferred":
         """
         Perform an AXFR record lookup.
 
@@ -641,7 +641,7 @@ class IResolver(IResolverSimple):
 
 class IReactorTCP(Interface):
     def listenTCP(
-        port: int, factory: ServerFactory, backlog: int, interface: str
+        port: int, factory: "ServerFactory", backlog: int, interface: str
     ) -> "IListeningPort":
         """
         Connects a given protocol factory to the given numeric TCP/IP port.
@@ -664,7 +664,7 @@ class IReactorTCP(Interface):
     def connectTCP(
         host: bytes,
         port: int,
-        factory: ClientFactory,
+        factory: "ClientFactory",
         timeout: float,
         bindAddress: Optional[Tuple[str, int]],
     ) -> IConnector:
@@ -691,8 +691,8 @@ class IReactorSSL(Interface):
     def connectSSL(
         host: str,
         port: int,
-        factory: ClientFactory,
-        contextFactory: ClientContextFactory,
+        factory: "ClientFactory",
+        contextFactory: "ClientContextFactory",
         timeout: float,
         bindAddress: Optional[Tuple[str, int]],
     ) -> IConnector:
@@ -713,7 +713,7 @@ class IReactorSSL(Interface):
 
     def listenSSL(
         port: int,
-        factory: ServerFactory,
+        factory: "ServerFactory",
         contextFactory: "IOpenSSLContextFactory",
         backlog: int,
         interface: str,
@@ -737,7 +737,7 @@ class IReactorUNIX(Interface):
     """
 
     def connectUNIX(
-        address: str, factory: ClientFactory, timeout: float, checkPID: bool
+        address: str, factory: "ClientFactory", timeout: float, checkPID: bool
     ) -> IConnector:
         """
         Connect a client protocol to a UNIX socket.
@@ -754,7 +754,7 @@ class IReactorUNIX(Interface):
         """
 
     def listenUNIX(
-        address: str, factory: Factory, backlog: int, mode: int, wantPID: bool
+        address: str, factory: "Factory", backlog: int, mode: int, wantPID: bool
     ) -> "IListeningPort":
         """
         Listen on a UNIX socket.
@@ -779,7 +779,7 @@ class IReactorUNIXDatagram(Interface):
 
     def connectUNIXDatagram(
         address: str,
-        protocol: ConnectedDatagramProtocol,
+        protocol: "ConnectedDatagramProtocol",
         maxPacketSize: int,
         mode: int,
         bindAddress: Optional[Tuple[str, int]],
@@ -800,7 +800,7 @@ class IReactorUNIXDatagram(Interface):
         """
 
     def listenUNIXDatagram(
-        address: str, protocol: DatagramProtocol, maxPacketSize: int, mode: int
+        address: str, protocol: "DatagramProtocol", maxPacketSize: int, mode: int
     ) -> "IListeningPort":
         """
         Listen on a datagram UNIX socket.
@@ -823,7 +823,7 @@ class IReactorWin32Events(Interface):
     @since: 10.2
     """
 
-    def addEvent(event: object, fd: FileDescriptor, action: str) -> None:
+    def addEvent(event: object, fd: "FileDescriptor", action: str) -> None:
         """
         Add a new win32 event to the event loop.
 
@@ -849,7 +849,7 @@ class IReactorUDP(Interface):
     """
 
     def listenUDP(
-        port: int, protocol: DatagramProtocol, interface: str, maxPacketSize: int
+        port: int, protocol: "DatagramProtocol", interface: str, maxPacketSize: int
     ) -> "IListeningPort":
         """
         Connects a given L{DatagramProtocol} to the given numeric UDP port.
@@ -882,7 +882,7 @@ class IReactorMulticast(Interface):
 
     def listenMulticast(
         port: int,
-        protocol: DatagramProtocol,
+        protocol: "DatagramProtocol",
         interface: str,
         maxPacketSize: int,
         listenMultiple: bool,
@@ -938,7 +938,7 @@ class IReactorSocket(Interface):
     """
 
     def adoptStreamPort(
-        fileDescriptor: int, addressFamily: AddressFamily, factory: ServerFactory
+        fileDescriptor: int, addressFamily: "AddressFamily", factory: "ServerFactory"
     ) -> "IListeningPort":
         """
         Add an existing listening I{SOCK_STREAM} socket to the reactor to
@@ -966,7 +966,7 @@ class IReactorSocket(Interface):
         """
 
     def adoptStreamConnection(
-        fileDescriptor: int, addressFamily: AddressFamily, factory: ServerFactory
+        fileDescriptor: int, addressFamily: "AddressFamily", factory: "ServerFactory"
     ) -> None:
         """
         Add an existing connected I{SOCK_STREAM} socket to the reactor to
@@ -996,8 +996,8 @@ class IReactorSocket(Interface):
 
     def adoptDatagramPort(
         fileDescriptor: int,
-        addressFamily: AddressFamily,
-        protocol: DatagramProtocol,
+        addressFamily: "AddressFamily",
+        protocol: "DatagramProtocol",
         maxPacketSize: int,
     ) -> "IListeningPort":
         """
@@ -1276,7 +1276,7 @@ class IReactorThreads(IReactorFromThreads, IReactorInThreads):
     Internally, this should use a thread pool and dispatch methods to them.
     """
 
-    def getThreadPool() -> ThreadPool:
+    def getThreadPool() -> "ThreadPool":
         """
         Return the threadpool used by L{IReactorInThreads.callInThread}.
         Create it first if necessary.
@@ -1299,7 +1299,7 @@ class IReactorCore(Interface):
         "I{during shutdown} and C{False} the rest of the time."
     )
 
-    def resolve(name: str, timeout: Sequence[int]) -> Deferred:
+    def resolve(name: str, timeout: Sequence[int]) -> "Deferred":
         """
         Return a L{twisted.internet.defer.Deferred} that will resolve
         a hostname.
@@ -2140,12 +2140,12 @@ class ITCPTransport(ITransport):
         to allow detection of lost peers in a non-infinite amount of time.
         """
 
-    def getHost() -> Union[IPv4Address, IPv6Address]:
+    def getHost() -> Union["IPv4Address", "IPv6Address"]:
         """
         Returns L{IPv4Address} or L{IPv6Address}.
         """
 
-    def getPeer() -> Union[IPv4Address, IPv6Address]:
+    def getPeer() -> Union["IPv4Address", "IPv6Address"]:
         """
         Returns L{IPv4Address} or L{IPv6Address}.
         """
@@ -2191,7 +2191,7 @@ class IOpenSSLServerConnectionCreator(Interface):
         Twisted APIs which require a provider of this interface.)
     """
 
-    def serverConnectionForTLS(tlsProtocol: TLSMemoryBIOProtocol) -> OpenSSLConnection:  # type: ignore[valid-type]
+    def serverConnectionForTLS(tlsProtocol: "TLSMemoryBIOProtocol") -> "OpenSSLConnection":  # type: ignore[valid-type]
         """
         Create a connection for the given server protocol.
 
@@ -2215,7 +2215,7 @@ class IOpenSSLClientConnectionCreator(Interface):
         C{contextFactory}.
     """
 
-    def clientConnectionForTLS(tlsProtocol: TLSMemoryBIOProtocol) -> OpenSSLConnection:  # type: ignore[valid-type]
+    def clientConnectionForTLS(tlsProtocol: "TLSMemoryBIOProtocol") -> "OpenSSLConnection":  # type: ignore[valid-type]
         """
         Create a connection for the given client protocol.
 
@@ -2256,7 +2256,7 @@ class IOpenSSLContextFactory(Interface):
     @see: L{twisted.internet.ssl}
     """
 
-    def getContext() -> OpenSSLContext:  # type: ignore[valid-type]
+    def getContext() -> "OpenSSLContext":  # type: ignore[valid-type]
         """
         Returns a TLS context object, suitable for securing a TLS connection.
         This context object will be appropriately customized for the connection
@@ -2472,7 +2472,7 @@ class IUDPTransport(Interface):
         @param port: port to connect to.
         """
 
-    def getHost() -> Union[IPv4Address, IPv6Address]:
+    def getHost() -> Union["IPv4Address", "IPv6Address"]:
         """
         Get this port's host address.
 
@@ -2512,7 +2512,7 @@ class IUNIXDatagramTransport(Interface):
         Write packet to given address.
         """
 
-    def getHost() -> UNIXAddress:
+    def getHost() -> "UNIXAddress":
         """
         Returns L{UNIXAddress}.
         """
@@ -2528,12 +2528,12 @@ class IUNIXDatagramConnectedTransport(Interface):
         Write packet to address we are connected to.
         """
 
-    def getHost() -> UNIXAddress:
+    def getHost() -> "UNIXAddress":
         """
         Returns L{UNIXAddress}.
         """
 
-    def getPeer() -> UNIXAddress:
+    def getPeer() -> "UNIXAddress":
         """
         Returns L{UNIXAddress}.
         """
@@ -2576,7 +2576,7 @@ class IMulticastTransport(Interface):
         Set time to live on multicast packets.
         """
 
-    def joinGroup(addr: str, interface: str) -> Deferred:
+    def joinGroup(addr: str, interface: str) -> "Deferred":
         """
         Join a multicast group. Returns L{Deferred} of success or failure.
 
@@ -2584,7 +2584,7 @@ class IMulticastTransport(Interface):
         L{error.MulticastJoinError}.
         """
 
-    def leaveGroup(addr: str, interface: str) -> Deferred:
+    def leaveGroup(addr: str, interface: str) -> "Deferred":
         """
         Leave multicast group, return L{Deferred} of success.
         """
@@ -2598,7 +2598,7 @@ class IStreamClientEndpoint(Interface):
     @since: 10.1
     """
 
-    def connect(protocolFactory: IProtocolFactory) -> Deferred:
+    def connect(protocolFactory: IProtocolFactory) -> "Deferred":
         """
         Connect the C{protocolFactory} to the location specified by this
         L{IStreamClientEndpoint} provider.
@@ -2619,7 +2619,7 @@ class IStreamServerEndpoint(Interface):
     @since: 10.1
     """
 
-    def listen(protocolFactory: IProtocolFactory) -> Deferred:
+    def listen(protocolFactory: IProtocolFactory) -> "Deferred":
         """
         Listen with C{protocolFactory} at the location specified by this
         L{IStreamServerEndpoint} provider.
