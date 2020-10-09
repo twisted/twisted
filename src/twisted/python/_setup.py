@@ -140,28 +140,9 @@ _EXTENSIONS = [
 ]
 
 
-def _longDescriptionFromReadme(readme: str) -> str:
-    """
-    Generate a PyPI long description from the readme.
-
-    @param readme: Path to the readme reStructuredText file.
-
-    @return: Keyword arguments to be passed to C{setuptools.setup()}.
-    """
-    # Munge links of the form `NEWS <NEWS.rst>`_ to point at the appropriate
-    # location on GitHub so that they function when the long description is
-    # displayed on PyPI.
-    return re.sub(
-        r"`([^`]+)\s+<(?!https?://)([^>]+)>`_",
-        r"`\1 <https://github.com/twisted/twisted/blob/trunk/\2>`_",
-        pathlib.Path(readme).read_text(encoding="utf8"),
-        flags=re.I,
-    )
-
-
 def getSetupArgs(
     extensions: List[ConditionalExtension] = _EXTENSIONS,
-    readme: str = "README.rst",
+    readme: pathlib.Path = pathlib.Path("README.rst"),
 ) -> Dict[str, Any]:
     """
     Generate arguments for C{setuptools.setup()}
@@ -179,7 +160,15 @@ def getSetupArgs(
         conditionalExtensions = extensions
 
     return {
-        "long_description": _longDescriptionFromReadme(readme),
+        # Munge links of the form `NEWS <NEWS.rst>`_ to point at the appropriate
+        # location on GitHub so that they function when the long description is
+        # displayed on PyPI.
+        "long_description": re.sub(
+            r"`([^`]+)\s+<(?!https?://)([^>]+)>`_",
+            r"`\1 <https://github.com/twisted/twisted/blob/trunk/\2>`_",
+            readme.read_text(encoding="utf8"),
+            flags=re.I,
+        ),
         # This is a workaround for distutils behavior; ext_modules isn't
         # actually used by our custom builder.  distutils deep-down checks
         # to see if there are any ext_modules defined before invoking

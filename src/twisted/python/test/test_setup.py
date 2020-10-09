@@ -40,7 +40,7 @@ class SetupTests(SynchronousTestCase):
 
         path = pathlib.Path(self.mktemp())
         path.touch(exist_ok=False)
-        args = getSetupArgs(extensions=[good_ext, bad_ext], readme=str(path))
+        args = getSetupArgs(extensions=[good_ext, bad_ext], readme=path)
 
         # ext_modules should be set even though it's not used.  See comment
         # in getSetupArgs
@@ -62,7 +62,7 @@ class SetupTests(SynchronousTestCase):
 
         path = pathlib.Path(self.mktemp())
         path.touch(exist_ok=False)
-        args = getSetupArgs(extensions=[ext], readme=str(path))
+        args = getSetupArgs(extensions=[ext], readme=path)
 
         builder = args["cmdclass"]["build_ext"](Distribution())
         self.patch(os, "name", "nt")
@@ -333,5 +333,5 @@ class WithPlatformTests(SynchronousTestCase):
                 Read `the docs <https://twistedmatrix.com/documents/>`_.
                 """
             ),
-            getSetupArgs(extensions=[], readme=str(path))["long_description"],
+            getSetupArgs(extensions=[], readme=path)["long_description"],
         )
