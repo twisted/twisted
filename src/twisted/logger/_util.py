@@ -6,29 +6,32 @@
 Logging utilities.
 """
 
+from typing import List
 
-def formatTrace(trace):
+from ._interfaces import LogTrace
+from ._logger import Logger
+
+
+def formatTrace(trace: LogTrace) -> str:
     """
     Format a trace (that is, the contents of the C{log_trace} key of a log
     event) as a visual indication of the message's propagation through various
     observers.
 
     @param trace: the contents of the C{log_trace} key from an event.
-    @type trace: object
 
     @return: A multi-line string with indentation and arrows indicating the
         flow of the message through various observers.
-    @rtype: L{unicode}
     """
 
-    def formatWithName(obj):
+    def formatWithName(obj: object) -> str:
         if hasattr(obj, "name"):
-            return "{0} ({1})".format(obj, obj.name)
+            return "{0} ({1})".format(obj, obj.name)  # type: ignore[attr-defined]
         else:
             return "{0}".format(obj)
 
     result = []
-    lineage = []
+    lineage = []  # type: List[Logger]
 
     for parent, child in trace:
         if not lineage or lineage[-1] is not parent:
