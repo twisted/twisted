@@ -17,7 +17,7 @@ def accept(long listening, long accepting, object buff, object obj):
     ov = makeOV(obj, buff)
 
     rc = lpAcceptEx(listening, accepting, mem_buffer, 0,
-                    <DWORD>size / 2, <DWORD>size / 2,
+                    <DWORD>(size / 2), <DWORD>(size / 2),
                     &bytes, <OVERLAPPED *>ov)
     if not rc:
         rc = WSAGetLastError()
@@ -37,7 +37,7 @@ def get_accept_addrs(long s, object buff):
 
     PyObject_AsReadBuffer(buff, &mem_buffer, &size)
 
-    lpGetAcceptExSockaddrs(mem_buffer, 0, <DWORD>size / 2, <DWORD>size / 2,
+    lpGetAcceptExSockaddrs(mem_buffer, 0, <DWORD>(size / 2), <DWORD>(size / 2),
                            &localaddr, &locallen, &remoteaddr, &remotelen)
     return remoteaddr.sa_family, _makesockaddr(localaddr, locallen), _makesockaddr(remoteaddr, remotelen)
 

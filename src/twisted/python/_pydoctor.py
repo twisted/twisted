@@ -10,6 +10,7 @@ This documentation does not link to pydoctor API as there is no public API yet.
 """
 
 import ast
+from typing import Optional
 
 from pydoctor import model, zopeinterface, astbuilder
 from pydoctor.sphinx import SphinxInventory
@@ -59,7 +60,7 @@ class TwistedSphinxInventory(SphinxInventory):
             if name == "zope.interface.adapter.AdapterRegistry":
                 # FIXME:
                 # https://github.com/zopefoundation/zope.interface/issues/41
-                relativeLink = "adapter.html"
+                relativeLink = "adapter.html"  # type: Optional[str]
             else:
                 # Not a known exception.
                 relativeLink = None
