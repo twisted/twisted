@@ -313,10 +313,6 @@ class SSHConnection(connection.SSHConnection):
         conn = self
         self.localForwards = []
         self.remoteForwards = {}
-        if not isinstance(self, connection.SSHConnection):
-            # make these fall through
-            del self.__class__.requestRemoteForwarding
-            del self.__class__.cancelRemoteForwarding
         onConnect()
 
     def serviceStopped(self):

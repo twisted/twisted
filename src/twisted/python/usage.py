@@ -20,7 +20,7 @@ import sys
 import getopt
 from os import path
 import textwrap
-from typing import Optional
+from typing import Optional, cast
 
 # Sibling Imports
 from twisted.python import reflect, util
@@ -149,9 +149,9 @@ class Options(dict):
     or doc/core/howto/options.xhtml in your Twisted directory.
     """
 
-    subCommand = None
-    defaultSubCommand = None
-    parent = None
+    subCommand = None  # type: Optional[str]
+    defaultSubCommand = None  # type: Optional[str]
+    parent = None  # type: Optional[Options]
     completionData = None
     _shellCompFile = sys.stdout  # file to use if shell completion is requested
 
@@ -445,7 +445,7 @@ class Options(dict):
     def __str__(self) -> str:
         return self.getSynopsis() + "\n" + self.getUsage(width=None)
 
-    def getSynopsis(self):
+    def getSynopsis(self) -> str:
         """
         Returns a string containing a description of these options and how to
         pass them to the executed file.
@@ -465,28 +465,29 @@ class Options(dict):
             )
         else:
             default = "%s" % ((self.longOpt and "[options]") or "")
-        synopsis = getattr(self, "synopsis", default)
+        synopsis = cast(str, getattr(self, "synopsis", default))
 
         synopsis = synopsis.rstrip()
 
         if self.parent is not None:
+            assert self.parent.subCommand is not None
             synopsis = " ".join(
                 (self.parent.getSynopsis(), self.parent.subCommand, synopsis)
             )
         return synopsis
 
-    def getUsage(self, width=None):
+    def getUsage(self, width: Optional[int] = None) -> str:
         # If subOptions exists by now, then there was probably an error while
         # parsing its options.
         if hasattr(self, "subOptions"):
-            return self.subOptions.getUsage(width=width)
+            return cast(Options, self.subOptions).getUsage(width=width)
 
         if not width:
             width = int(os.environ.get("COLUMNS", "80"))
 
         if hasattr(self, "subCommands"):
             cmdDicts = []
-            for (cmd, short, parser, desc) in self.subCommands:
+            for (cmd, short, parser, desc) in self.subCommands:  # type: ignore[attr-defined]
                 cmdDicts.append(
                     {
                         "long": cmd,
@@ -532,7 +533,7 @@ class Options(dict):
             )
 
         if not (getattr(self, "longdesc", None) is None):
-            longdesc = self.longdesc
+            longdesc = cast(str, self.longdesc)  # type: ignore[attr-defined]
         else:
             import __main__
 
