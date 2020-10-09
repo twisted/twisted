@@ -2273,7 +2273,7 @@ class ITLSTransport(ITCPTransport):
     Once TLS mode is started the transport will implement L{ISSLTransport}.
     """
 
-    def startTLS(contextFactory: Callable[..., Any]) -> None:
+    def startTLS(contextFactory: Union[IOpenSSLClientConnectionCreator, IOpenSSLServerConnectionCreator]) -> None:
         """
         Initiate TLS negotiation.
 
@@ -2283,7 +2283,7 @@ class ITLSTransport(ITCPTransport):
             For clients, use L{twisted.internet.ssl.optionsForClientTLS}; for
             servers, use L{twisted.internet.ssl.CertificateOptions}.
 
-        @type contextFactory: L{IOpenSSLClientConnectionCreator} or
+        @param contextFactory: L{IOpenSSLClientConnectionCreator} or
             L{IOpenSSLServerConnectionCreator}, depending on whether this
             L{ITLSTransport} is a server or not.  If the appropriate interface
             is not provided by the value given for C{contextFactory}, it must
