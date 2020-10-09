@@ -26,6 +26,7 @@ from typing import (
     Sequence,
     Set,
     Tuple,
+    TYPE_CHECKING,
     Union,
     cast,
 )
@@ -57,10 +58,12 @@ from twisted.internet.interfaces import (
     IWriteDescriptor,
 )
 from twisted.internet.protocol import ClientFactory
-from twisted.internet.tcp import Client
 from twisted.python import log, reflect
 from twisted.python.failure import Failure
 from twisted.python.runtime import seconds as runtimeSeconds, platform
+
+if TYPE_CHECKING:
+    from twisted.internet.tcp import Client
 
 # This import is for side-effects!  Even if you don't see any code using it
 # in this module, don't delete it.
@@ -1233,7 +1236,7 @@ class BaseConnector(ABC):
             self.transport.loseConnection()
 
     @abstractmethod
-    def _makeTransport(self) -> Client:
+    def _makeTransport(self) -> "Client":
         pass
 
     def connect(self) -> None:

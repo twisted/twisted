@@ -17,8 +17,8 @@ from typing import (
     Optional,
     Sequence,
     Tuple,
-    Union,
     TYPE_CHECKING,
+    Union,
 )
 from twisted.python.failure import Failure
 from zope.interface import Interface, Attribute
