@@ -1368,8 +1368,9 @@ class _SignalReactorMixin:
         signal.signal(signal.SIGTERM, reactorBaseSelf.sigTerm)
 
         # Catch Ctrl-Break in windows
-        if hasattr(signal, "SIGBREAK"):
-            signal.signal(signal.SIGBREAK, reactorBaseSelf.sigBreak)
+        SIGBREAK = getattr(signal, "SIGBREAK", None)
+        if SIGBREAK is not None:
+            signal.signal(SIGBREAK, reactorBaseSelf.sigBreak)
 
     def startRunning(self, installSignalHandlers: bool = True) -> None:
         """
