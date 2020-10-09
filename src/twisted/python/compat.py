@@ -38,6 +38,7 @@ from io import StringIO as NativeStringIO
 from io import TextIOBase
 from sys import intern
 from types import MethodType as _MethodType
+from typing import Any, cast
 from urllib.parse import quote as urlquote
 from urllib.parse import unquote as urlunquote
 
@@ -200,6 +201,7 @@ def currentframe(n=0):
     """
     f = inspect.currentframe()
     for x in range(n + 1):
+        assert f is not None
         f = f.f_back
     return f
 
@@ -246,38 +248,38 @@ def comparable(klass):
     C{__cmp__} to implement their comparisons.
     """
 
-    def __eq__(self, other: object) -> bool:
-        c = self.__cmp__(other)
+    def __eq__(self: Any, other: object) -> bool:
+        c = cast(bool, self.__cmp__(other))
         if c is NotImplemented:
             return c
         return c == 0
 
-    def __ne__(self, other: object) -> bool:
-        c = self.__cmp__(other)
+    def __ne__(self: Any, other: object) -> bool:
+        c = cast(bool, self.__cmp__(other))
         if c is NotImplemented:
             return c
         return c != 0
 
-    def __lt__(self, other: object) -> bool:
-        c = self.__cmp__(other)
+    def __lt__(self: Any, other: object) -> bool:
+        c = cast(bool, self.__cmp__(other))
         if c is NotImplemented:
             return c
         return c < 0
 
-    def __le__(self, other: object) -> bool:
-        c = self.__cmp__(other)
+    def __le__(self: Any, other: object) -> bool:
+        c = cast(bool, self.__cmp__(other))
         if c is NotImplemented:
             return c
         return c <= 0
 
-    def __gt__(self, other: object) -> bool:
-        c = self.__cmp__(other)
+    def __gt__(self: Any, other: object) -> bool:
+        c = cast(bool, self.__cmp__(other))
         if c is NotImplemented:
             return c
         return c > 0
 
-    def __ge__(self, other: object) -> bool:
-        c = self.__cmp__(other)
+    def __ge__(self: Any, other: object) -> bool:
+        c = cast(bool, self.__cmp__(other))
         if c is NotImplemented:
             return c
         return c >= 0
@@ -484,11 +486,10 @@ def bytesEnviron():
     This function is POSIX only; environment variables are always text strings
     on Windows.
     """
-    target = dict()
-    for x, y in os.environ.items():
-        target[os.environ.encodekey(x)] = os.environ.encodevalue(y)
+    encodekey = os.environ.encodekey  # type: ignore[attr-defined]
+    encodevalue = os.environ.encodevalue  # type: ignore[attr-defined]
 
-    return target
+    return {encodekey(x): encodevalue(y) for x, y in os.environ.items()}
 
 
 def _constructMethod(cls, name, self):

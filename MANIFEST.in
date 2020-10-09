@@ -23,6 +23,7 @@ exclude appveyor.yml
 exclude .coveralls.yml
 exclude .circleci
 exclude .git-blame-ignore-revs
+exclude .readthedocs.yml
 recursive-exclude .circleci *
 exclude azure-pipelines
 recursive-exclude azure-pipelines *

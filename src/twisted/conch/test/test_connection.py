@@ -206,8 +206,6 @@ class ConnectionTests(unittest.TestCase):
 
     if not cryptography:
         skip = "Cannot run without cryptography"
-    if test_userauth.transport is None:
-        skip = "Cannot run without both cryptography and pyasn1"
 
     def setUp(self):
         self.transport = test_userauth.FakeTransport(None)
@@ -829,9 +827,6 @@ class CleanConnectionShutdownTests(unittest.TestCase):
 
     if not cryptography:
         skip = "Cannot run without cryptography"
-
-    if test_userauth.transport is None:
-        skip = "Cannot run without both cryptography and pyasn1"
 
     def setUp(self):
         self.transport = test_userauth.FakeTransport(None)

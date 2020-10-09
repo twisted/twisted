@@ -11,7 +11,6 @@ from zope.interface import implementer, Interface
 from binascii import hexlify, unhexlify
 
 from twisted.trial import unittest
-from twisted.python.compat import nativeString, networkString
 from twisted.python import components
 from twisted.python.versions import Version
 from twisted.internet import defer
@@ -269,8 +268,12 @@ class HashedPasswordOnDiskDatabaseTests(unittest.TestCase):
         self.port = portal.Portal(r)
         self.port.registerChecker(self.db)
 
-    def hash(self, u, p, s):
-        return networkString(crypt(nativeString(p), nativeString(s)))
+    def hash(self, u: bytes, p: bytes, s: bytes) -> bytes:
+        hashed_password = crypt(p.decode("ascii"), s.decode("ascii"))  # type: ignore[misc]
+        # workaround for pypy3 3.6.9 which returns bytes from crypt.crypt()
+        if isinstance(hashed_password, bytes):
+            return hashed_password
+        return hashed_password.encode("ascii")
 
     def testGoodCredentials(self):
         goodCreds = [credentials.UsernamePassword(u, p) for u, p in self.users]
@@ -289,7 +292,7 @@ class HashedPasswordOnDiskDatabaseTests(unittest.TestCase):
 
     def testBadCredentials(self):
         badCreds = [
-            credentials.UsernamePassword(u, "wrong password") for u, p in self.users
+            credentials.UsernamePassword(u, b"wrong password") for u, p in self.users
         ]
         d = defer.DeferredList(
             [self.port.login(c, None, ITestable) for c in badCreds], consumeErrors=True
