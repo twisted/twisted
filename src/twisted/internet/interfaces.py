@@ -2255,7 +2255,11 @@ class ITLSTransport(ITCPTransport):
     Once TLS mode is started the transport will implement L{ISSLTransport}.
     """
 
-    def startTLS(contextFactory: Union[IOpenSSLClientConnectionCreator, IOpenSSLServerConnectionCreator]) -> None:
+    def startTLS(
+        contextFactory: Union[
+            IOpenSSLClientConnectionCreator, IOpenSSLServerConnectionCreator
+        ]
+    ) -> None:
         """
         Initiate TLS negotiation.
 
