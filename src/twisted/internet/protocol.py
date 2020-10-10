@@ -11,7 +11,7 @@ Twisted.  The Protocol class contains some introductory material.
 
 
 import random
-from typing import Optional, Tuple, Type
+from typing import Callable, Optional, Tuple
 from zope.interface import implementer
 
 from twisted.python import log, failure, components
@@ -29,8 +29,7 @@ class Factory:
     self.protocol.
     """
 
-    # Put a subclass of Protocol here:
-    protocol = None  # type: Optional[Type["Protocol"]]
+    protocol = None  # type: Optional[Callable[[], Protocol]]
 
     numPorts = 0
     noisy = True
