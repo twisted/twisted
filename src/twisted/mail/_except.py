@@ -123,17 +123,14 @@ class SMTPClientError(SMTPError):
     def __str__(self) -> str:
         return self.__bytes__().decode("utf-8")
 
-    def __bytes__(self):
+    def __bytes__(self) -> bytes:
         if self.code > 0:
-            res = ["{:03d} {}".format(self.code, self.resp)]
+            res = ["{:03d} {}".format(self.code, self.resp).encode("utf-8")]
         else:
-            res = [self.resp]
+            res = [self.resp.encode("utf-8")]
         if self.log:
             res.append(self.log)
             res.append(b"")
-        for (i, r) in enumerate(res):
-            if isinstance(r, str):
-                res[i] = r.encode("utf-8")
         return b"\n".join(res)
 
 

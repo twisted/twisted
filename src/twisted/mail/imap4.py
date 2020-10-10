@@ -15,22 +15,20 @@ To do::
   Make APPEND recognize (again) non-existent mailboxes before accepting the literal
 """
 
+from base64 import decodebytes, encodebytes
 import binascii
 import codecs
 import copy
+import email.utils
 import functools
+from itertools import chain
+from io import BytesIO
 import re
 import string
 import tempfile
 import time
+from typing import Any, List, cast
 import uuid
-
-import email.utils
-
-from base64 import decodebytes, encodebytes
-from itertools import chain
-from io import BytesIO
-from typing import Any, List
 
 from zope.interface import implementer
 
@@ -418,7 +416,7 @@ class MessageSet:
 
     def __eq__(self, other: object) -> bool:
         if isinstance(other, MessageSet):
-            return self.ranges == other.ranges
+            return cast(bool, self.ranges == other.ranges)
         return NotImplemented
 
 
@@ -5703,29 +5701,29 @@ class _FetchParser:
         partialLength = None
 
         def __str__(self) -> str:
-            return nativeString(self.__bytes__())
+            return self.__bytes__().decode("ascii")
 
-        def __bytes__(self):
+        def __bytes__(self) -> bytes:
             base = b"BODY"
             part = b""
             separator = b""
-            if self.part:
-                part = b".".join([str(x + 1).encode("ascii") for x in self.part])
-                separator = b"."
+            # if self.part:
+            #    part = b".".join([str(x + 1).encode("ascii") for x in self.part])
+            #    separator = b"."
             #            if self.peek:
             #                base += '.PEEK'
             if self.header:
-                base += (
+                base += (  # type: ignore[unreachable]
                     b"[" + part + separator + str(self.header).encode("ascii") + b"]"
                 )
             elif self.text:
-                base += b"[" + part + separator + b"TEXT]"
+                base += b"[" + part + separator + b"TEXT]"  # type: ignore[unreachable]
             elif self.mime:
-                base += b"[" + part + separator + b"MIME]"
+                base += b"[" + part + separator + b"MIME]"  # type: ignore[unreachable]
             elif self.empty:
                 base += b"[" + part + b"]"
             if self.partialBegin is not None:
-                base += b"<%d.%d>" % (self.partialBegin, self.partialLength)
+                base += b"<%d.%d>" % (self.partialBegin, self.partialLength)  # type: ignore[unreachable]
             return base
 
     class BodyStructure:
@@ -5739,12 +5737,12 @@ class _FetchParser:
         part = None
 
         def __str__(self) -> str:
-            return nativeString(self.__bytes__())
+            return self.__bytes__().decode("ascii")
 
-        def __bytes__(self):
+        def __bytes__(self) -> bytes:
             base = b"HEADER"
             if self.fields:
-                base += b".FIELDS"
+                base += b".FIELDS"  # type: ignore[unreachable]
                 if self.negate:
                     base += b".NOT"
                 fields = []
@@ -5757,7 +5755,7 @@ class _FetchParser:
             if self.part:
                 # TODO: _FetchParser never assigns Header.part - dead
                 # code?
-                base = b".".join([(x + 1).__bytes__() for x in self.part]) + b"." + base
+                base = b".".join([(x + 1).__bytes__() for x in self.part]) + b"." + base  # type: ignore[unreachable]
             return base
 
     class Text:

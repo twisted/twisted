@@ -634,7 +634,7 @@ class Failure(BaseException):
         else:
             return None
 
-    def getErrorMessage(self):
+    def getErrorMessage(self) -> str:
         """
         Get a string of the exception which caused this Failure.
         """
@@ -642,7 +642,7 @@ class Failure(BaseException):
             return self.value.getErrorMessage()
         return reflect.safe_str(self.value)
 
-    def getBriefTraceback(self):
+    def getBriefTraceback(self) -> str:
         io = StringIO()
         self.printBriefTraceback(file=io)
         return io.getvalue()

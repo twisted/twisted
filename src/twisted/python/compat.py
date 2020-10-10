@@ -38,7 +38,7 @@ from io import StringIO as NativeStringIO
 from io import TextIOBase
 from sys import intern
 from types import MethodType as _MethodType
-from typing import Any, cast
+from typing import Any, AnyStr, cast
 from urllib.parse import quote as urlquote
 from urllib.parse import unquote as urlunquote
 
@@ -309,7 +309,7 @@ def ioType(fileIshObject, default=str):
 
     @return: There are 3 possible return values:
 
-            1. L{unicode}, if the file is unambiguously opened in text mode.
+            1. L{str}, if the file is unambiguously opened in text mode.
 
             2. L{bytes}, if the file is unambiguously opened in binary mode.
 
@@ -342,7 +342,7 @@ def ioType(fileIshObject, default=str):
     return default
 
 
-def nativeString(s):
+def nativeString(s: AnyStr) -> str:
     """
     Convert C{bytes} or C{unicode} to the native C{str} type, using ASCII
     encoding if conversion is necessary.
