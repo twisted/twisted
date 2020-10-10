@@ -106,21 +106,22 @@ class SMTPClientError(SMTPError):
     ):
         """
         @param code: The SMTP response code associated with this error.
-
         @param resp: The string response associated with this error.
-
         @param log: A string log of the exchange leading up to and including
             the error.
-        @type log: L{bytes}
-
         @param isFatal: A boolean indicating whether this connection can
             proceed or not. If True, the connection will be dropped.
-
         @param retry: A boolean indicating whether the delivery should be
             retried. If True and the factory indicates further retries are
             desirable, they will be attempted, otherwise the delivery will be
             failed.
         """
+        if isinstance(resp, str):  # type: ignore[unreachable]
+            resp = resp.encode("utf-8")  # type: ignore[unreachable]
+
+        if isinstance(log, str):  # type: ignore[unreachable]
+            log = log.encode("utf-8")  # type: ignore[unreachable]
+
         self.code = code
         self.resp = resp
         self.log = log
@@ -133,7 +134,7 @@ class SMTPClientError(SMTPError):
 
     def __bytes__(self) -> bytes:
         if self.code > 0:
-            res = ["{:03d} {!r}".format(self.code, self.resp).encode("utf-8")]
+            res = ["{:03d} ".format(self.code).encode("utf-8") + self.resp]
         else:
             res = [self.resp]
         if self.log:
