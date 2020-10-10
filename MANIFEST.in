@@ -17,7 +17,6 @@ recursive-include docs README
 include NEWS.rst README.rst INSTALL.rst CONTRIBUTING.md LICENSE code_of_conduct.md
 
 # Exclude admin scripts and things only useful when running from a source checkout
-exclude pyproject.toml
 exclude codecov.yml
 exclude appveyor.yml
 exclude .coveralls.yml
