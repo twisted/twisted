@@ -52,13 +52,10 @@ from functools import reduce
 from os import path
 from typing import Optional
 
-from incremental import Version
-
 from twisted.internet import protocol, reactor, task
 from twisted.persisted import styles
 from twisted.protocols import basic
 from twisted.python import _textattributes, log, reflect
-from twisted.python.deprecate import deprecated
 
 NUL = chr(0)
 CR = chr(0o15)
@@ -2752,7 +2749,6 @@ class DccFileReceiveBasic(protocol.Protocol, styles.Ephemeral):
         self.transport.write(struct.pack("!i", self.bytesReceived))
 
 
-@deprecated(Version("Twisted", "NEXT", 0, 0))
 class DccSendProtocol(protocol.Protocol, styles.Ephemeral):
     """
     Protocol for an outgoing Direct Client Connection SEND.
@@ -2826,7 +2822,6 @@ class DccSendProtocol(protocol.Protocol, styles.Ephemeral):
             self.file.close()
 
 
-@deprecated(Version("Twisted", "NEXT", 0, 0))
 class DccSendFactory(protocol.Factory):
     protocol = DccSendProtocol  # type: ignore[assignment]
 
@@ -2939,7 +2934,6 @@ class DccChat(basic.LineReceiver, styles.Ephemeral):
         self.client.privmsg(self.remoteParty, self.client.nickname, line)
 
 
-@deprecated(Version("Twisted", "NEXT", 0, 0))
 class DccChatFactory(protocol.ClientFactory):
     protocol = DccChat  # type: ignore[assignment]
     noisy = False
