@@ -63,7 +63,7 @@ class FixedOffsetTimeZone(TZInfo):
         return cls(TimeDelta(hours=hours, minutes=minutes), name)
 
     @classmethod
-    def fromLocalTimeStamp(cls, timeStamp: int) -> "FixedOffsetTimeZone":
+    def fromLocalTimeStamp(cls, timeStamp: float) -> "FixedOffsetTimeZone":
         """
         Create a time zone with a fixed offset corresponding to a time stamp in
         the system's locally configured time zone.
