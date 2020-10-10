@@ -143,7 +143,7 @@ _CONSOLE_SCRIPTS = [
     "tkconch = twisted.conch.scripts.tkconch:run",
     "trial = twisted.scripts.trial:run",
     "twist = twisted.application.twist._twist:Twist.main",
-    "twistd = twisted.scripts.twistd:run",
+    "twistd = twisted.scripts.twistd:set_path_then_run",
 ]
 
 

@@ -3,6 +3,7 @@
 # See LICENSE for details.
 
 
+import atexit
 import sys
 import os
 import pdb
@@ -707,4 +708,7 @@ def _exitWithSignal(sig):
     @type sig:  C{int}
     """
     signal.signal(sig, signal.SIG_DFL)
-    os.kill(os.getpid(), sig)
+    try:
+        atexit._run_exitfuncs()
+    finally:
+        os.kill(os.getpid(), sig)

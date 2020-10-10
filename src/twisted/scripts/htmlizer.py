@@ -71,3 +71,7 @@ def run():
         with open(filename, "rb") as f:
             htmlizer.filter(f, output, htmlizer.SmallerHTMLWriter)
         output.write(footer.encode("utf-8"))
+
+
+if __name__ == "__main__":
+    sys.exit(run())

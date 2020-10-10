@@ -362,4 +362,4 @@ def _saveKey(key, options):
 
 
 if __name__ == "__main__":
-    run()
+    sys.exit(run())
