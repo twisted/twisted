@@ -29,47 +29,18 @@ here.
 
 @var _EXTENSIONS: The list of L{ConditionalExtension} used by the setup
     process.
-
-@var notPortedModules: Modules that are not yet ported to Python 3.
 """
 
-import io
 import os
+import pathlib
 import platform
 import re
 import sys
-from typing import Any, Dict, List, Tuple, cast
+from typing import Any, Dict, List, cast
 
 from distutils.command import build_ext
 from distutils.errors import CompileError
-from setuptools import Extension, find_packages
-from setuptools.command.build_py import build_py
-
-
-STATIC_PACKAGE_METADATA = dict(
-    name="Twisted",
-    description="An asynchronous networking framework written in Python",
-    author="Twisted Matrix Laboratories",
-    author_email="twisted-python@twistedmatrix.com",
-    maintainer="Glyph Lefkowitz",
-    maintainer_email="glyph@twistedmatrix.com",
-    url="https://twistedmatrix.com/",
-    project_urls={
-        "Documentation": "https://twistedmatrix.com/documents/current/",
-        "Source": "https://github.com/twisted/twisted",
-        "Issues": "https://twistedmatrix.com/trac/report",
-    },
-    license="MIT",
-    classifiers=[
-        "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3 :: Only",
-        "Programming Language :: Python :: 3.5",
-        "Programming Language :: Python :: 3.6",
-        "Programming Language :: Python :: 3.7",
-        "Programming Language :: Python :: 3.8",
-    ],
-    python_requires=">=3.5",
-)  # type: Dict[str, Any]
+from setuptools import Extension
 
 
 _dev = [
@@ -133,19 +104,6 @@ _EXTRAS_REQUIRE = {
 }
 _EXTRAS_REQUIRE["osx_platform"] = _EXTRAS_REQUIRE["macos_platform"]
 
-# Scripts provided by Twisted
-_CONSOLE_SCRIPTS = [
-    "ckeygen = twisted.conch.scripts.ckeygen:run",
-    "cftp = twisted.conch.scripts.cftp:run",
-    "conch = twisted.conch.scripts.conch:run",
-    "mailmail = twisted.mail.scripts.mailmail:run",
-    "pyhtmlizer = twisted.scripts.htmlizer:run",
-    "tkconch = twisted.conch.scripts.tkconch:run",
-    "trial = twisted.scripts.trial:run",
-    "twist = twisted.application.twist._twist:Twist.main",
-    "twistd = twisted.scripts.twistd:run",
-]
-
 
 class ConditionalExtension(Extension):
     """
@@ -182,36 +140,9 @@ _EXTENSIONS = [
 ]
 
 
-def _longDescriptionArgsFromReadme(readme: str) -> Dict[str, str]:
-    """
-    Generate a PyPI long description from the readme.
-
-    @param readme: Path to the readme reStructuredText file.
-
-    @return: Keyword arguments to be passed to C{setuptools.setup()}.
-    """
-    with io.open(readme, encoding="utf-8") as f:
-        readmeRst = f.read()
-
-    # Munge links of the form `NEWS <NEWS.rst>`_ to point at the appropriate
-    # location on GitHub so that they function when the long description is
-    # displayed on PyPI.
-    longDesc = re.sub(
-        r"`([^`]+)\s+<(?!https?://)([^>]+)>`_",
-        r"`\1 <https://github.com/twisted/twisted/blob/trunk/\2>`_",
-        readmeRst,
-        flags=re.I,
-    )
-
-    return {
-        "long_description": longDesc,
-        "long_description_content_type": "text/x-rst",
-    }
-
-
 def getSetupArgs(
     extensions: List[ConditionalExtension] = _EXTENSIONS,
-    readme: str = "README.rst",
+    readme: pathlib.Path = pathlib.Path("README.rst"),
 ) -> Dict[str, Any]:
     """
     Generate arguments for C{setuptools.setup()}
@@ -223,71 +154,33 @@ def getSetupArgs(
 
     @return: The keyword arguments to be used by the setup method.
     """
-    arguments = STATIC_PACKAGE_METADATA.copy()
-    if readme:
-        arguments.update(_longDescriptionArgsFromReadme(readme))
 
-    # This is a workaround for distutils behavior; ext_modules isn't
-    # actually used by our custom builder.  distutils deep-down checks
-    # to see if there are any ext_modules defined before invoking
-    # the build_ext command.  We need to trigger build_ext regardless
-    # because it is the thing that does the conditional checks to see
-    # if it should build any extensions.  The reason we have to delay
-    # the conditional checks until then is that the compiler objects
-    # are not yet set up when this code is executed.
-    arguments["ext_modules"] = extensions
     # Use custome class to build the extensions.
     class my_build_ext(build_ext_twisted):
         conditionalExtensions = extensions
 
-    command_classes = {"build_ext": my_build_ext, "build_py": BuildPy3}
-
-    requirements = [
-        "zope.interface >= 4.4.2",
-        "constantly >= 15.1",
-        "incremental >= 16.10.1",
-        "Automat >= 0.8.0",
-        "hyperlink >= 17.1.1",
-        "PyHamcrest >= 1.9.0",
-        "attrs >= 19.2.0",
-    ]
-
-    arguments.update(
-        dict(
-            packages=find_packages("src"),
-            use_incremental=True,
-            setup_requires=["incremental >= 16.10.1"],
-            install_requires=requirements,
-            entry_points={"console_scripts": _CONSOLE_SCRIPTS},
-            cmdclass=command_classes,
-            include_package_data=True,
-            exclude_package_data={
-                "": ["*.c", "*.h", "*.pxi", "*.pyx", "build.bat"],
-            },
-            zip_safe=False,
-            extras_require=_EXTRAS_REQUIRE,
-            package_dir={"": "src"},
-        )
-    )
-
-    return arguments
-
-
-class BuildPy3(build_py):
-    """
-    A version of build_py that doesn't install the modules that aren't yet
-    ported to Python 3.
-    """
-
-    def find_package_modules(
-        self, package: str, package_dir: str
-    ) -> List[Tuple[str, str, str]]:
-        modules = [
-            module
-            for module in build_py.find_package_modules(self, package, package_dir)
-            if ".".join([module[0], module[1]]) not in notPortedModules
-        ]
-        return modules
+    return {
+        # Munge links of the form `NEWS <NEWS.rst>`_ to point at the appropriate
+        # location on GitHub so that they function when the long description is
+        # displayed on PyPI.
+        "long_description": re.sub(
+            r"`([^`]+)\s+<(?!https?://)([^>]+)>`_",
+            r"`\1 <https://github.com/twisted/twisted/blob/trunk/\2>`_",
+            readme.read_text(encoding="utf8"),
+            flags=re.I,
+        ),
+        # This is a workaround for distutils behavior; ext_modules isn't
+        # actually used by our custom builder.  distutils deep-down checks
+        # to see if there are any ext_modules defined before invoking
+        # the build_ext command.  We need to trigger build_ext regardless
+        # because it is the thing that does the conditional checks to see
+        # if it should build any extensions.  The reason we have to delay
+        # the conditional checks until then is that the compiler objects
+        # are not yet set up when this code is executed.
+        "ext_modules": extensions,
+        "cmdclass": {"build_ext": my_build_ext},
+        "extras_require": _EXTRAS_REQUIRE,
+    }
 
 
 # Helpers and distutil tweaks
@@ -381,22 +274,3 @@ def _checkCPython(platform: Any = platform) -> bool:
 
 
 _isCPython = _checkCPython()  # type: bool
-
-notPortedModules = [
-    "twisted.mail.alias",
-    "twisted.mail.bounce",
-    "twisted.mail.mail",
-    "twisted.mail.maildir",
-    "twisted.mail.pb",
-    "twisted.mail.relaymanager",
-    "twisted.mail.scripts.__init__",
-    "twisted.mail.tap",
-    "twisted.mail.test.test_bounce",
-    "twisted.mail.test.test_mail",
-    "twisted.mail.test.test_options",
-    "twisted.mail.test.test_scripts",
-    "twisted.plugins.twisted_mail",
-    "twisted.protocols.shoutcast",
-    "twisted.web.soap",
-    "twisted.web.test.test_soap",
-]
