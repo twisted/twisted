@@ -203,7 +203,7 @@ from io import BytesIO
 from itertools import count
 from struct import pack
 from types import MethodType
-from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union, cast
+from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
 import warnings
 
 from zope.interface import Interface, implementer
