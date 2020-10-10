@@ -5707,9 +5707,9 @@ class _FetchParser:
             base = b"BODY"
             part = b""
             separator = b""
-            # if self.part:
-            #    part = b".".join([str(x + 1).encode("ascii") for x in self.part])
-            #    separator = b"."
+            if self.part:
+                part = b".".join([str(x + 1).encode("ascii") for x in self.part])  # type: ignore[unreachable]
+                separator = b"."
             #            if self.peek:
             #                base += '.PEEK'
             if self.header:
