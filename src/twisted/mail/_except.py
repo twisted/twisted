@@ -5,6 +5,8 @@
 Exceptions in L{twisted.mail}.
 """
 
+from typing import Optional
+
 
 class IMAP4Exception(Exception):
     pass
@@ -94,7 +96,13 @@ class SMTPClientError(SMTPError):
     """
 
     def __init__(
-        self, code, resp, log=None, addresses=None, isFatal=False, retry=False
+        self,
+        code: int,
+        resp: bytes,
+        log: Optional[bytes] = None,
+        addresses: Optional[object] = None,
+        isFatal: bool = False,
+        retry: bool = False,
     ):
         """
         @param code: The SMTP response code associated with this error.
@@ -125,9 +133,9 @@ class SMTPClientError(SMTPError):
 
     def __bytes__(self) -> bytes:
         if self.code > 0:
-            res = ["{:03d} {}".format(self.code, self.resp).encode("utf-8")]
+            res = ["{:03d} {!r}".format(self.code, self.resp).encode("utf-8")]
         else:
-            res = [self.resp.encode("utf-8")]
+            res = [self.resp]
         if self.log:
             res.append(self.log)
             res.append(b"")
