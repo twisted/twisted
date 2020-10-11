@@ -431,7 +431,7 @@ class FileMessage:
         @type line: L{bytes}
         @param line: A received line.
         """
-        self.fp.write(line + "\n")
+        self.fp.write(line + b"\n")
 
     def eomReceived(self):
         """
