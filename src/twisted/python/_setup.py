@@ -178,7 +178,7 @@ def getSetupArgs(
     class my_build_ext(build_ext_twisted):
         conditionalExtensions = extensions
 
-    def _extension_kwargs():
+    def _extension_kwargs() -> Dict[str, object]:
         if not extensions:
             return {}
 
