@@ -49,7 +49,6 @@ _dev = [
     "python-subunit",
     "towncrier >= 17.4.0",
     "twistedchecker >= 0.7.2",
-    "twisted-raiser >= 0.0.1",
     # force upgrades for rtd default packages: https://git.io/JU73V
     "alabaster~=0.7.12",
     "commonmark~=0.9.1",
@@ -84,13 +83,14 @@ _EXTRA_OPTIONS = dict(
     contextvars=['contextvars >= 2.4, < 3; python_version < "3.7"'],
 )
 
-_PLATFORM_INDEPENDENT = (
-    _EXTRA_OPTIONS["tls"]
-    + _EXTRA_OPTIONS["conch"]
-    + _EXTRA_OPTIONS["serial"]
-    + _EXTRA_OPTIONS["http2"]
-    + _EXTRA_OPTIONS["contextvars"]
-)
+_PLATFORM_INDEPENDENT = [
+    *_EXTRA_OPTIONS["tls"],
+    *_EXTRA_OPTIONS["conch"],
+    *_EXTRA_OPTIONS["serial"],
+    *_EXTRA_OPTIONS["http2"],
+    *_EXTRA_OPTIONS["contextvars"],
+    "twisted-raiser >= 0.0.1",
+]
 
 _EXTRAS_REQUIRE = {
     "dev": _EXTRA_OPTIONS["dev"],
