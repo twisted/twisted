@@ -196,45 +196,45 @@ has several features:
 
 __metaclass__ = type
 
-import types, warnings
-
-from io import BytesIO
-from struct import pack
-from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
 import datetime
 import decimal
 from functools import partial
+from io import BytesIO
 from itertools import count
+from struct import pack
+from types import MethodType
+from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
+import warnings
 
 from zope.interface import Interface, implementer
 
-from twisted.python.reflect import accumulateClassDict
-from twisted.python.failure import Failure
+from twisted.internet.defer import Deferred, maybeDeferred, fail
+from twisted.internet.error import ConnectionClosed
+from twisted.internet.error import PeerVerifyError, ConnectionLost
+from twisted.internet.interfaces import IFileDescriptorReceiver
+from twisted.internet.main import CONNECTION_LOST
+from twisted.internet.protocol import Protocol
+from twisted.protocols.basic import Int16StringReceiver, StatefulStringProtocol
+from twisted.python import log, filepath
 from twisted.python._tzhelper import (
     FixedOffsetTimeZone as _FixedOffsetTZInfo,
     UTC as utc,
 )
-
-from twisted.python import log, filepath
-
-from twisted.internet.interfaces import IFileDescriptorReceiver
-from twisted.internet.main import CONNECTION_LOST
-from twisted.internet.error import PeerVerifyError, ConnectionLost
-from twisted.internet.error import ConnectionClosed
-from twisted.internet.defer import Deferred, maybeDeferred, fail
-from twisted.internet.protocol import Protocol
-from twisted.protocols.basic import Int16StringReceiver, StatefulStringProtocol
 from twisted.python.compat import nativeString
+from twisted.python.failure import Failure
+from twisted.python.reflect import accumulateClassDict
 
 try:
-    from twisted.internet import ssl
+    from twisted.internet import ssl as _ssl
 
-    if ssl.supported:
+    if _ssl.supported:
         from twisted.internet.ssl import CertificateOptions, Certificate, DN, KeyPair
     else:
-        ssl = None  # type: ignore[assignment]
+        ssl = None
 except ImportError:
-    ssl = None  # type: ignore[assignment]
+    ssl = None
+else:
+    ssl = _ssl
 
 
 __all__ = [
@@ -514,7 +514,7 @@ class BadLocalReturn(AmpError):
     A bad value was returned from a local command; we were unable to coerce it.
     """
 
-    def __init__(self, message, enclosed):
+    def __init__(self, message: str, enclosed: Failure) -> None:
         AmpError.__init__(self)
         self.message = message
         self.enclosed = enclosed
@@ -1193,7 +1193,7 @@ class CommandLocator:
         cd = self._commandDispatch
         if name in cd:
             commandClass, responderFunc = cd[name]
-            responderMethod = types.MethodType(responderFunc, self)
+            responderMethod = MethodType(responderFunc, self)
             return self._wrapWithSerialization(responderMethod, commandClass)
 
 

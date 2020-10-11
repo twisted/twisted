@@ -6,11 +6,6 @@
 Exception definitions for L{twisted.web}.
 """
 
-try:
-    from future_builtins import ascii
-except ImportError:
-    pass
-
 __all__ = [
     "Error",
     "PageRedirect",
@@ -27,9 +22,10 @@ __all__ = [
 
 
 from collections.abc import Sequence
+from typing import cast
 
-from twisted.web._responses import RESPONSES
 from twisted.python.compat import nativeString
+from twisted.web._responses import RESPONSES
 
 
 def _codeToMessage(code):
@@ -397,14 +393,17 @@ class FlattenerError(Exception):
             )
         else:
             traceback = ""
-        return (
-            "Exception while flattening:\n"
-            + roots
-            + traceback
-            + self._exception.__class__.__name__
-            + ": "
-            + str(self._exception)
-            + "\n"
+        return cast(
+            str,
+            (
+                "Exception while flattening:\n"
+                + roots
+                + traceback
+                + self._exception.__class__.__name__
+                + ": "
+                + str(self._exception)
+                + "\n"
+            ),
         )
 
     def __str__(self) -> str:
