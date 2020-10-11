@@ -89,7 +89,7 @@ _PLATFORM_INDEPENDENT = [
     *_EXTRA_OPTIONS["serial"],
     *_EXTRA_OPTIONS["http2"],
     *_EXTRA_OPTIONS["contextvars"],
-    "twisted-raiser >= 0.0.1",
+    "twisted-raiser ~= 1.0",
 ]
 
 _EXTRAS_REQUIRE = {
