@@ -344,11 +344,11 @@ def ioType(fileIshObject, default=str):
 
 def nativeString(s: AnyStr) -> str:
     """
-    Convert C{bytes} or C{unicode} to the native C{str} type, using ASCII
-    encoding if conversion is necessary.
+    Convert C{bytes} or C{str} to C{str} type, using ASCII encoding if
+    conversion is necessary.
 
     @raise UnicodeError: The input string is not ASCII encodable/decodable.
-    @raise TypeError: The input is neither C{bytes} nor C{unicode}.
+    @raise TypeError: The input is neither C{bytes} nor C{str}.
     """
     if not isinstance(s, (bytes, str)):
         raise TypeError("%r is neither bytes nor str" % s)
@@ -368,15 +368,15 @@ def _matchingString(constantString, inputString):
     C{os.path.join}, that constant would be C{os.path.sep}) involved in the
     parsing or processing, that must be of a matching type in order to use
     string operations on it.  L{_matchingString} will take a constant string
-    (either L{bytes} or L{unicode}) and convert it to the same type as the
+    (either L{bytes} or L{str}) and convert it to the same type as the
     input string.  C{constantString} should contain only characters from ASCII;
     to ensure this, it will be encoded or decoded regardless.
 
     @param constantString: A string literal used in processing.
-    @type constantString: L{unicode} or L{bytes}
+    @type constantString: L{str} or L{bytes}
 
     @param inputString: A byte string or text string provided by the user.
-    @type inputString: L{unicode} or L{bytes}
+    @type inputString: L{str} or L{bytes}
 
     @return: C{constantString} converted into the same type as C{inputString}
     @rtype: the type of C{inputString}
