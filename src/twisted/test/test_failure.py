@@ -22,10 +22,7 @@ from twisted.python import failure
 from twisted.trial.unittest import SynchronousTestCase
 
 
-try:
-    from twisted.test import raiser  # type: ignore[attr-defined]
-except ImportError:
-    raiser = None
+from twisted_raiser import raiser
 
 
 def getDivisionFailure(*args, **kwargs):

@@ -49,6 +49,7 @@ _dev = [
     "python-subunit",
     "towncrier >= 17.4.0",
     "twistedchecker >= 0.7.2",
+    "twisted-raiser >= 0.0.1",
     # force upgrades for rtd default packages: https://git.io/JU73V
     "alabaster~=0.7.12",
     "commonmark~=0.9.1",
@@ -121,23 +122,41 @@ class ConditionalExtension(Extension):
         Extension.__init__(self, *args, **kwargs)
 
 
+def _checkCPython(platform: Any = platform) -> bool:
+    """
+    Checks if this implementation is CPython.
+
+    This uses C{platform.python_implementation}.
+
+    This takes C{sys} and C{platform} kwargs that by default use the real
+    modules. You shouldn't care about these -- they are for testing purposes
+    only.
+
+    @return: C{False} if the implementation is definitely not CPython, C{True}
+        otherwise.
+    """
+    return cast(bool, platform.python_implementation() == "CPython")
+
+
+_isCPython = _checkCPython()  # type: bool
+
+
 # The C extensions used for Twisted.
-_EXTENSIONS = [
-    ConditionalExtension(
-        "twisted.test.raiser",
-        sources=["src/twisted/test/raiser.c"],
-        condition=lambda _: _isCPython,
-    ),
-    ConditionalExtension(
-        "twisted.internet.iocpreactor.iocpsupport",
-        sources=[
-            "src/twisted/internet/iocpreactor/iocpsupport/iocpsupport.c",
-            "src/twisted/internet/iocpreactor/iocpsupport/winsock_pointers.c",
-        ],
-        libraries=["ws2_32"],
-        condition=lambda _: _isCPython and sys.platform == "win32",
-    ),
-]
+_EXTENSIONS = (
+    [
+        ConditionalExtension(
+            "twisted.internet.iocpreactor.iocpsupport",
+            sources=[
+                "src/twisted/internet/iocpreactor/iocpsupport/iocpsupport.c",
+                "src/twisted/internet/iocpreactor/iocpsupport/winsock_pointers.c",
+            ],
+            libraries=["ws2_32"],
+            condition=lambda _: True,
+        ),
+    ]
+    if _isCPython and sys.platform == "win32"
+    else []
+)
 
 
 def getSetupArgs(
@@ -159,6 +178,23 @@ def getSetupArgs(
     class my_build_ext(build_ext_twisted):
         conditionalExtensions = extensions
 
+    def _extension_kwargs():
+        if not extensions:
+            return {}
+
+        # This is a workaround for distutils behavior; ext_modules isn't
+        # actually used by our custom builder.  distutils deep-down checks
+        # to see if there are any ext_modules defined before invoking
+        # the build_ext command.  We need to trigger build_ext regardless
+        # because it is the thing that does the conditional checks to see
+        # if it should build any extensions.  The reason we have to delay
+        # the conditional checks until then is that the compiler objects
+        # are not yet set up when this code is executed.
+        return {
+            "ext_modules": extensions,
+            "cmdclass": {"build_ext": my_build_ext},
+        }
+
     return {
         # Munge links of the form `NEWS <NEWS.rst>`_ to point at the appropriate
         # location on GitHub so that they function when the long description is
@@ -169,17 +205,8 @@ def getSetupArgs(
             readme.read_text(encoding="utf8"),
             flags=re.I,
         ),
-        # This is a workaround for distutils behavior; ext_modules isn't
-        # actually used by our custom builder.  distutils deep-down checks
-        # to see if there are any ext_modules defined before invoking
-        # the build_ext command.  We need to trigger build_ext regardless
-        # because it is the thing that does the conditional checks to see
-        # if it should build any extensions.  The reason we have to delay
-        # the conditional checks until then is that the compiler objects
-        # are not yet set up when this code is executed.
-        "ext_modules": extensions,
-        "cmdclass": {"build_ext": my_build_ext},
         "extras_require": _EXTRAS_REQUIRE,
+        **_extension_kwargs(),
     }
 
 
@@ -255,22 +282,3 @@ class build_ext_twisted(build_ext.build_ext):  # type: ignore[name-defined]
         """
         self.compiler.announce("checking for {} ...".format(header_name), 0)
         return self._compile_helper("#include <{}>\n".format(header_name))
-
-
-def _checkCPython(platform: Any = platform) -> bool:
-    """
-    Checks if this implementation is CPython.
-
-    This uses C{platform.python_implementation}.
-
-    This takes C{sys} and C{platform} kwargs that by default use the real
-    modules. You shouldn't care about these -- they are for testing purposes
-    only.
-
-    @return: C{False} if the implementation is definitely not CPython, C{True}
-        otherwise.
-    """
-    return cast(bool, platform.python_implementation() == "CPython")
-
-
-_isCPython = _checkCPython()  # type: bool
