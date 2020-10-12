@@ -117,7 +117,7 @@ class SupportTests(TestCase):
                 # The socket is not yet ready to accept connections,
                 # setsockopt fails.
                 if attemptsRemaining == 0:
-                    # We rant out of retries.
+                    # We ran out of retries.
                     raise
 
             # Without a sleep here even retrying 20 times will fail.
