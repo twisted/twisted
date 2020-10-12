@@ -437,13 +437,13 @@ class _const:
     @ivar name: A string naming this constant
     """
 
-    def __init__(self, name):
+    def __init__(self, name: str) -> None:
         self.name = name
 
     def __repr__(self) -> str:
         return "[" + self.name + "]"
 
-    def __bytes__(self):
+    def __bytes__(self) -> bytes:
         return ("[" + self.name + "]").encode("ascii")
 
 

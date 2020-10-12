@@ -10,6 +10,7 @@ and serializing such structures to an XML string representation, optimized
 for use in streaming XML applications.
 """
 
+from typing import cast
 
 from zope.interface import implementer, Interface, Attribute
 
@@ -524,7 +525,7 @@ class Element:
             c[-1] = c[-1] + text
         else:
             c.append(text)
-        return c[-1]
+        return cast(str, c[-1])
 
     def addElement(self, name, defaultUri=None, content=None):
         if isinstance(name, tuple):
