@@ -685,8 +685,7 @@ class XmlStreamServerFactory(xmlstream.BootstrapMixin, protocol.ServerFactory):
                                 with the XmlStream.
     """
 
-    # Type is wrong.  See: https://twistedmatrix.com/trac/ticket/10007#ticket
-    protocol = XmlStream  # type: ignore[assignment]
+    protocol = XmlStream
 
     def __init__(self, authenticatorFactory):
         xmlstream.BootstrapMixin.__init__(self)

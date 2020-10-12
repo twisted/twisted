@@ -71,7 +71,7 @@ class ManagedRelayerMixin:
         self.manager.notifyDone(self.factory)
 
 
-class SMTPManagedRelayer(ManagedRelayerMixin, relay.SMTPRelayer):  # type: ignore[misc]
+class SMTPManagedRelayer(ManagedRelayerMixin, relay.SMTPRelayer):
     """
     An SMTP managed relayer.
 
@@ -102,7 +102,7 @@ class SMTPManagedRelayer(ManagedRelayerMixin, relay.SMTPRelayer):  # type: ignor
         relay.SMTPRelayer.__init__(self, messages, *args, **kw)
 
 
-class ESMTPManagedRelayer(ManagedRelayerMixin, relay.ESMTPRelayer):  # type: ignore[misc]
+class ESMTPManagedRelayer(ManagedRelayerMixin, relay.ESMTPRelayer):
     """
     An ESMTP managed relayer.
 

@@ -61,8 +61,7 @@ class DNSServerFactory(protocol.ServerFactory):
     @type _messageFactory: C{callable}
     """
 
-    # Type is wrong.  See: https://twistedmatrix.com/trac/ticket/10004#ticket
-    protocol = dns.DNSProtocol  # type: ignore[assignment]
+    protocol = dns.DNSProtocol
     cache = None
     _messageFactory = dns.Message
 

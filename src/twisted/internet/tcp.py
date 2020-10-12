@@ -11,6 +11,7 @@ End users shouldn't use this module directly - use the reactor APIs instead.
 # System Imports
 import socket
 import sys
+import operator
 import os
 import struct
 from typing import Optional
@@ -330,13 +331,17 @@ class Connection(
         return self.logstr
 
     def getTcpNoDelay(self):
-        return bool(self.socket.getsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY))
+        return operator.truth(
+            self.socket.getsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY)
+        )
 
     def setTcpNoDelay(self, enabled):
         self.socket.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, enabled)
 
     def getTcpKeepAlive(self):
-        return bool(self.socket.getsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE))
+        return operator.truth(
+            self.socket.getsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE)
+        )
 
     def setTcpKeepAlive(self, enabled):
         self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, enabled)

@@ -91,7 +91,7 @@ def logError(err):
     return err
 
 
-def succeed(result: object) -> "Deferred":
+def succeed(result):
     """
     Return a L{Deferred} that has already had C{.callback(result)} called.
 
@@ -105,13 +105,15 @@ def succeed(result: object) -> "Deferred":
 
     @param result: The result to give to the Deferred's 'callback'
            method.
+
+    @rtype: L{Deferred}
     """
     d = Deferred()
     d.callback(result)
     return d
 
 
-def fail(result: object = None) -> "Deferred":
+def fail(result=None):
     """
     Return a L{Deferred} that has already had C{.errback(result)} called.
 
@@ -121,6 +123,8 @@ def fail(result: object = None) -> "Deferred":
 
     @raise NoCurrentExceptionError: If C{result} is L{None} but there is no
         current exception state.
+
+    @rtype: L{Deferred}
     """
     d = Deferred()
     d.errback(result)

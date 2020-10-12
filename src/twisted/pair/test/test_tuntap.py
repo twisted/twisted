@@ -1328,8 +1328,7 @@ class TunTests(TunnelTestsMixin, SynchronousTestCase):
     """
 
     factory = Factory()
-    # Type is wrong. See: https://twistedmatrix.com/trac/ticket/10008#ticket
-    factory.protocol = IPRecordingProtocol  # type: ignore[assignment]
+    factory.protocol = IPRecordingProtocol
     helper = TunHelper(None, None)
 
 
@@ -1351,8 +1350,7 @@ class TapTests(TunnelTestsMixin, SynchronousTestCase):
     """
 
     factory = Factory()
-    # Type is wrong. See: https://twistedmatrix.com/trac/ticket/10008#ticket
-    factory.protocol = EthernetRecordingProtocol  # type: ignore[assignment]
+    factory.protocol = EthernetRecordingProtocol
     helper = TapHelper(None, None, pi=False)
 
 

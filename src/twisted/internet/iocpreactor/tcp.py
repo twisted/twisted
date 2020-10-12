@@ -6,6 +6,7 @@ TCP support for IOCP reactor
 """
 
 import errno
+import operator
 import socket
 import struct
 from typing import Optional
@@ -140,13 +141,17 @@ class Connection(abstract.FileHandle, _SocketCloser, _AbortingMixin):
         return self.logstr
 
     def getTcpNoDelay(self):
-        return bool(self.socket.getsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY))
+        return operator.truth(
+            self.socket.getsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY)
+        )
 
     def setTcpNoDelay(self, enabled):
         self.socket.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, enabled)
 
     def getTcpKeepAlive(self):
-        return bool(self.socket.getsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE))
+        return operator.truth(
+            self.socket.getsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE)
+        )
 
     def setTcpKeepAlive(self, enabled):
         self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, enabled)
