@@ -80,7 +80,7 @@ class DelayedCall:
 
     # enable .debug to record creator call stack, and it will be logged if
     # an exception occurs while the function is being run
-    debug = False
+    debug = True
     _repr = None  # type: Optional[str]
 
     def __init__(
