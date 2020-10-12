@@ -196,7 +196,8 @@ class _WrappingFactory(ClientFactory):
         that is managing the current or previous connection attempt.
     """
 
-    protocol = _WrappingProtocol
+    # Type is wrong.  See https://twistedmatrix.com/trac/ticket/10005#ticket
+    protocol = _WrappingProtocol  # type: ignore[assignment]
 
     def __init__(self, wrappedFactory):
         """

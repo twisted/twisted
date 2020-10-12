@@ -6,7 +6,6 @@ UDP support for IOCP reactor
 """
 
 import errno
-import operator
 import socket
 import struct
 import warnings
@@ -331,9 +330,7 @@ class Port(abstract.FileHandle):
         @return: Whether this port may broadcast.
         @rtype: L{bool}
         """
-        return operator.truth(
-            self.socket.getsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST)
-        )
+        return bool(self.socket.getsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST))
 
 
 class MulticastMixin:
@@ -360,7 +357,7 @@ class MulticastMixin:
         return self.socket.getsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_LOOP)
 
     def setLoopbackMode(self, mode):
-        mode = struct.pack("b", operator.truth(mode))
+        mode = struct.pack("b", bool(mode))
         self.socket.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_LOOP, mode)
 
     def getTTL(self):
