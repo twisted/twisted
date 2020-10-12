@@ -225,12 +225,12 @@ def uniquify(lst):
     Make the elements of a list unique by inserting them into a dictionary.
     This must not change the order of the input lst.
     """
-    dct = {}
+    seen = set()
     result = []
     for k in lst:
-        if k not in dct:
+        if k not in seen:
             result.append(k)
-        dct[k] = 1
+        seen.add(k)
     return result
 
 

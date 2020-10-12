@@ -410,8 +410,6 @@ if cryptography is not None and pyasn1 is not None:
 
         def receiveUnimplemented(self, seqID):
             raise unittest.FailTest("got unimplemented: seqid %s" % (seqID,))
-            self.expectedLoseConnection = 1
-            self.loseConnection()
 
     class ConchTestServer(ConchTestBase, transport.SSHServerTransport):
         def connectionLost(self, reason):

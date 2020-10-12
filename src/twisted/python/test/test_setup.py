@@ -5,19 +5,17 @@
 Tests for parts of our release automation system.
 """
 
-
 import os
+import pathlib
+import textwrap
 
 from pkg_resources import parse_requirements
 from setuptools.dist import Distribution
-import twisted
 from twisted.trial.unittest import SynchronousTestCase
 
-from twisted.python import _setup, filepath
+from twisted.python import _setup
 from twisted.python._setup import (
-    BuildPy3,
     getSetupArgs,
-    _longDescriptionArgsFromReadme,
     ConditionalExtension,
     _EXTRAS_REQUIRE,
 )
@@ -40,7 +38,9 @@ class SetupTests(SynchronousTestCase):
             "whatever", ["whatever.c"], condition=lambda b: False
         )
 
-        args = getSetupArgs(extensions=[good_ext, bad_ext], readme="")
+        path = pathlib.Path(self.mktemp())
+        path.touch(exist_ok=False)
+        args = getSetupArgs(extensions=[good_ext, bad_ext], readme=path)
 
         # ext_modules should be set even though it's not used.  See comment
         # in getSetupArgs
@@ -60,7 +60,9 @@ class SetupTests(SynchronousTestCase):
             "whatever", ["whatever.c"], define_macros=[("whatever", 2)]
         )
 
-        args = getSetupArgs(extensions=[ext], readme="")
+        path = pathlib.Path(self.mktemp())
+        path.touch(exist_ok=False)
+        args = getSetupArgs(extensions=[ext], readme=path)
 
         builder = args["cmdclass"]["build_ext"](Distribution())
         self.patch(os, "name", "nt")
@@ -294,69 +296,6 @@ class WithPlatformTests(SynchronousTestCase):
         """
         self.assertFalse(_setup._checkCPython(platform=fakeOtherPlatform))
 
-
-class BuildPy3Tests(SynchronousTestCase):
-    """
-    Tests for L{BuildPy3}.
-    """
-
-    maxDiff = None
-
-    def test_find_package_modules(self):
-        """
-        Will filter the found modules excluding the modules listed in
-        L{twisted.python.dist3}.
-        """
-        distribution = Distribution()
-        distribution.script_name = "setup.py"
-        distribution.script_args = "build_py"
-        builder = BuildPy3(distribution)
-
-        # Rig the dist3 data so that we can reduce the scope of this test and
-        # reduce the risk of getting false failures, while doing a minimum
-        # level of patching.
-        self.patch(
-            _setup,
-            "notPortedModules",
-            [
-                "twisted.spread.test.test_pbfailure",
-            ],
-        )
-        twistedPackageDir = filepath.FilePath(twisted.__file__).parent()
-        packageDir = twistedPackageDir.child("spread").child("test")
-
-        result = builder.find_package_modules("twisted.spread.test", packageDir.path)
-
-        self.assertEqual(
-            sorted(
-                [
-                    (
-                        "twisted.spread.test",
-                        "__init__",
-                        packageDir.child("__init__.py").path,
-                    ),
-                    (
-                        "twisted.spread.test",
-                        "test_banana",
-                        packageDir.child("test_banana.py").path,
-                    ),
-                    (
-                        "twisted.spread.test",
-                        "test_jelly",
-                        packageDir.child("test_jelly.py").path,
-                    ),
-                    (
-                        "twisted.spread.test",
-                        "test_pb",
-                        packageDir.child("test_pb.py").path,
-                    ),
-                ]
-            ),
-            sorted(result),
-        )
-
-
-class LongDescriptionTests(SynchronousTestCase):
     """
     Tests for C{_getLongDescriptionArgs()}
 
@@ -366,34 +305,33 @@ class LongDescriptionTests(SynchronousTestCase):
 
     def test_generate(self):
         """
-        L{_longDescriptionArgsFromReadme()} outputs a L{long_description} in
+        L{getSetupArgs()} outputs a L{long_description} in
         reStructuredText format. Local links are transformed into absolute ones
         that point at the Twisted GitHub repository.
         """
-        path = self.mktemp()
-        with open(path, "w") as f:
-            f.write(
-                "\n".join(
-                    [
-                        "Twisted",
-                        "=======",
-                        "",
-                        "Changes: `NEWS <NEWS.rst>`_.",
-                        "Read `the docs <https://twistedmatrix.com/documents/>`_.\n",
-                    ]
-                )
-            )
+        path = pathlib.Path(self.mktemp())
+        path.write_text(
+            textwrap.dedent(
+                """\
+                Twisted
+                =======
+
+                Changes: `NEWS <NEWS.rst>`_.
+                Read `the docs <https://twistedmatrix.com/documents/>`_.
+                """
+            ),
+            encoding="utf8",
+        )
 
         self.assertEqual(
-            {
-                "long_description": """\
-Twisted
-=======
+            textwrap.dedent(
+                """\
+                Twisted
+                =======
 
-Changes: `NEWS <https://github.com/twisted/twisted/blob/trunk/NEWS.rst>`_.
-Read `the docs <https://twistedmatrix.com/documents/>`_.
-""",
-                "long_description_content_type": "text/x-rst",
-            },
-            _longDescriptionArgsFromReadme(path),
+                Changes: `NEWS <https://github.com/twisted/twisted/blob/trunk/NEWS.rst>`_.
+                Read `the docs <https://twistedmatrix.com/documents/>`_.
+                """
+            ),
+            getSetupArgs(extensions=[], readme=path)["long_description"],
         )

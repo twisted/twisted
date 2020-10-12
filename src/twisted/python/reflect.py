@@ -8,15 +8,17 @@ with Python's reflection capabilities.
 """
 
 
-import sys
-import types
-import os
-import pickle
-import weakref
-import re
-import traceback
 from collections import deque
 from io import IOBase, StringIO
+import os
+import pickle
+import re
+import sys
+import traceback
+import types
+from typing import Type, Union
+import weakref
+
 from twisted.python.compat import nativeString
 from twisted.python.deprecate import _fullyQualifiedName as fullyQualifiedName
 
@@ -372,7 +374,7 @@ def _determineClassName(x):
             return "<BROKEN CLASS AT 0x%x>" % id(c)
 
 
-def _safeFormat(formatter, o):
+def _safeFormat(formatter: Union[types.FunctionType, Type[str]], o: object) -> str:
     """
     Helper function for L{safe_repr} and L{safe_str}.
 
@@ -414,14 +416,12 @@ def safe_repr(o):
         return _safeFormat(repr, o)
 
 
-def safe_str(o):
+def safe_str(o: object) -> str:
     """
     Returns a string representation of an object, or a string containing a
     traceback, if that object's __str__ raised an exception.
 
     @param o: Any object.
-
-    @rtype: C{str}
     """
     if isinstance(o, bytes):
         # If o is bytes and seems to holds a utf-8 encoded string,
