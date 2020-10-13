@@ -110,10 +110,11 @@ jobs:
     runs-on: windows-latest
     env:
       TOXENV: "alldeps-withcov-posix,coverage-prepare,codecov-push,coveralls-push"
-      TWISTED_REACTOR: "iocp"
+      TWISTED_REACTOR: "${{ matrix.reactor }}"
     strategy:
       matrix:
-          python-version:  3.7, 3.8]
+          python-version:  [3.7, 3.8]
+          reactor: ['select', 'iocp']
 
     steps:
     - uses: actions/checkout@v2
