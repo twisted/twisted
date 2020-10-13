@@ -355,6 +355,9 @@ class ThrottlingTests(unittest.TestCase):
     def test_limit(self):
         """
         Full test using a custom server limiting number of connections.
+
+        FIXME: https://twistedmatrix.com/trac/ticket/10012
+        This is a flaky test.
         """
         server = Server()
         c1, c2, c3, c4 = [SimpleProtocol() for i in range(4)]
