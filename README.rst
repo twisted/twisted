@@ -2,7 +2,6 @@ Twisted
 =======
 
 |pypi|_
-|travis|_
 |circleci|_
 |mypy|_
 
@@ -115,9 +114,6 @@ Again, see the included `LICENSE <LICENSE>`_ file for specific legal details.
 
 .. |pypi| image:: https://img.shields.io/pypi/v/twisted.svg
 .. _pypi: https://pypi.python.org/pypi/twisted
-
-.. |travis| image:: https://travis-ci.org/twisted/twisted.svg?branch=trunk
-.. _travis: https://travis-ci.org/twisted/twisted
 
 .. |circleci| image:: https://circleci.com/gh/twisted/twisted.svg?style=svg
 .. _circleci: https://circleci.com/gh/twisted/twisted
