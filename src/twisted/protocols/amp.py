@@ -805,7 +805,7 @@ class BoxDispatcher:
     """
 
     _failAllReason = None
-    _outstandingRequests = None
+    _outstandingRequests = None  # type: Optional[Dict[bytes, Deferred]]
     _counter = 0
     boxSender = None
 
@@ -841,7 +841,7 @@ class BoxDispatcher:
         for key, value in OR:
             value.errback(reason)
 
-    def _nextTag(self):
+    def _nextTag(self) -> bytes:
         """
         Generate protocol-local serial numbers for _ask keys.
 
@@ -850,7 +850,9 @@ class BoxDispatcher:
         self._counter += 1
         return b"%x" % (self._counter,)
 
-    def _sendBoxCommand(self, command, box, requiresAnswer=True):
+    def _sendBoxCommand(
+        self, command: bytes, box: AmpBox, requiresAnswer: bool = True
+    ) -> Optional[Deferred]:
         """
         Send a command across the wire with the given C{amp.Box}.
 
@@ -887,15 +889,17 @@ class BoxDispatcher:
         if requiresAnswer:
             box[ASK] = tag
         box._sendTo(self.boxSender)
+
+        result = None  # type: Optional[Deferred]
         if requiresAnswer:
+            assert self._outstandingRequests is not None
             result = self._outstandingRequests[tag] = Deferred()
-        else:
-            result = None
+
         return result
 
     def callRemoteString(
         self, command: bytes, requiresAnswer: bool = True, **kw: bytes
-    ) -> Deferred:
+    ) -> Optional[Deferred]:
         """
         This is a low-level API, designed only for optimizing simple messages
         for which the overhead of parsing is too great.
