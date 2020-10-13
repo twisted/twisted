@@ -804,7 +804,7 @@ class BoxDispatcher:
     @type boxSender: L{IBoxSender}
     """
 
-    _failAllReason = None
+    _failAllReason = None  # type: Optional[Failure]
     _outstandingRequests = None  # type: Optional[Dict[bytes, Deferred]]
     _counter = 0
     boxSender = None
