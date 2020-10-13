@@ -582,6 +582,12 @@ class ProcessTests(unittest.TestCase):
         d.addCallback(check)
         return d
 
+    @skipIf(
+        os.environ.get("CI", "").lower() == "true"
+        and runtime.platform.getType() == "win32"
+        and sys.version_info[0:2] in [(3, 7), (3, 8)],
+        "See https://twistedmatrix.com/trac/ticket/10014",
+    )
     def test_manyProcesses(self):
         def _check(results, protocols):
             for p in protocols:
