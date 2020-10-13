@@ -155,7 +155,7 @@ _EXTENSIONS = (
         ),
     ]
     if _isCPython and sys.platform == "win32"
-    else []
+    else []  # avoid adding ext_modules kwarg, to prevent platform tags
 )
 
 
