@@ -890,7 +890,7 @@ class BoxDispatcher:
             box[ASK] = tag
         box._sendTo(self.boxSender)
 
-        result = None  # type: Optional[Deferred]
+        result = None
         if requiresAnswer:
             assert self._outstandingRequests is not None
             result = self._outstandingRequests[tag] = Deferred()
