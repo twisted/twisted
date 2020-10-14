@@ -689,10 +689,8 @@ class StringListMailbox:
         """
         Return an in-memory file-like object with the contents of a message.
 
-        @type i: L{int}
         @param i: The 0-based index of a message.
 
-        @rtype: L{IO[bytes]}
         @return: An in-memory file-like object containing the message.
 
         @raise IndexError: When the index does not correspond to a message in
