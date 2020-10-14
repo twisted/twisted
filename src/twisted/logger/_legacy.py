@@ -22,7 +22,7 @@ if TYPE_CHECKING:
 @implementer(ILogObserver)
 class LegacyLogObserverWrapper:
     """
-    L{ILogObserver} that wraps a L{twisted.python.log.ILegacyLogObserver}.
+    L{ILogObserver} that wraps a L{twisted.python.log.ILogObserver}.
 
     Received (new-style) events are modified prior to forwarding to
     the legacy observer to ensure compatibility with observers that
