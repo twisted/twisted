@@ -180,6 +180,7 @@ class StubSessionForStubAvatarWithEnv(StubSessionForStubAvatar):
     @ivar environ: a L{dict} of environment variables passed to the setEnv
     method.
     """
+
     def __init__(self, avatar):
         super(StubSessionForStubAvatarWithEnv, self).__init__(avatar)
         self.environ = {}
@@ -194,11 +195,12 @@ class StubSessionForStubAvatarWithEnv(StubSessionForStubAvatar):
         (Real applications should normally implement an allowed list rather
         than a blocked list.)
         """
-        if name == b'FAIL':
-            raise RuntimeError('disallowed environment variable name')
-        elif name == b'IGNORED':
+        if name == b"FAIL":
+            raise RuntimeError("disallowed environment variable name")
+        elif name == b"IGNORED":
             raise session.EnvironmentVariableNotPermitted(
-                'ignored environment variable name')
+                "ignored environment variable name"
+            )
         else:
             self.environ[name] = value
 
@@ -737,7 +739,7 @@ class SessionInterfaceTests(RegistryUsingMixin, TestCase):
                 b"env", common.NS(b"NAME") + common.NS(b"value")
             )
         )
-        self.assertEqual(self.session.session.environ, {b'NAME': b'value'})
+        self.assertEqual(self.session.session.environ, {b"NAME": b"value"})
 
     def test_setEnvNotProvidingISessionSetEnv(self):
         """

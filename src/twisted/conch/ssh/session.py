@@ -139,7 +139,9 @@ class SSHSession(channel.SSHChannel):
                 "{session} does not provide ISessionSetEnv interface. "
                 "It should be decorated with @implementer(ISession, "
                 "ISessionSetEnv) to support env variables.",
-                avatar=self.avatar, session=self.session)
+                avatar=self.avatar,
+                session=self.session,
+            )
             return 0
         name, value, data = common.getNS(data, 2)
         try:
