@@ -97,13 +97,13 @@ Procedure for Exceptions to this Policy
 
 **Every change is unique.**
 
-Sometimes, we'll want to make a change that fits with this spirit of this document (keeping Twisted working for applications which rely upon it) but may not fit with the letter of the procedure described above (the change modifies behavior of an existing API sufficiently that something might break).
-Generally, the reason that one would want to do this is to give applications a performance enhancement or bug fix that could break behavior that unanticipated, hypothetical uses of an existing API, but we don't want well-behaved applications to pay the penalty of a deprecation/adopt-a-new-API/removal cycle in order to get the benefits of the improvement if they don't need to.
+Sometimes, we'll want to make a change that fits with the spirit of this document (keeping Twisted working for applications which rely upon it) but may not fit with the letter of the procedure described above (the change modifies behavior of an existing API sufficiently that something might break).
+Generally, the reason that one would want to do this is to give applications a performance enhancement or bug fix that could break behavior in undesirable hypothetical uses of an existing API, but we don't want well-behaved applications to pay the penalty of a deprecation/adopt-a-new-API/removal cycle in order to get the benefits of the improvement if they don't need to.
 
 If this is the case for your change, it's possible to make such a modification without a deprecation/removal cycle.
 However, we must give users an opportunity to discover whether a particular incompatible change affects them: we should not trust our own assessments of how code uses the API.
 In order to propose an incompatible change, start a discussion on the mailing list.
-Make sure that it is eye-catching so those who don't read all list messages in depth will notice it, by prefixing the subject with **INCOMPATIBLE CHANGE:** (capitalized like so).
+Make sure that it is eye-catching, so those who don't read all list messages in depth will notice it, by prefixing the subject with **INCOMPATIBLE CHANGE:** (capitalized like so).
 Always include a link to the ticket, and branch (if relevant).
 
 In order to **conclude** such a discussion, there must be a branch available so that developers can run their unit tests against it to mechanically verify that their understanding of their own code is correct.
