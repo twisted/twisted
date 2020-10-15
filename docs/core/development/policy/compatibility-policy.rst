@@ -132,8 +132,6 @@ By doing so, there's no chance anything could access these objects by going thro
 
 Test code and test helpers are considered private API and should not be imported outside
 of the Twisted testing infrastructure.
-As an exception to this, :api:`twisted.test.proto_helpers` is considered a public API
-(see `#6435 <https://twistedmatrix.com/trac/ticket/6435>`_ for more discussion).
 
 
 Private Changes
