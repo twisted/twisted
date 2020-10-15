@@ -1711,7 +1711,7 @@ class Descriptor(Integer):
 
         @return: A byte string which can be used by the receiver to reconstruct
             the file descriptor.
-        @type: C{str}
+        @rtype: C{bytes}
         """
         identifier = proto._sendFileDescriptor(inObject)
         outString = Integer.toStringProto(self, identifier, proto)
