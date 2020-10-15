@@ -1550,24 +1550,22 @@ def _inlineCallbacks(
             # The contextvars backport and our no-op shim add an extra frame.
             if version_info < (3, 7):
                 appCodeTrace = appCodeTrace.tb_next
-
-            # type note: a number of ignore[union-attr] cases follow…
-            # It seems mypy isn't processing "assert is not None" as expected
-            # in some cases here.
+                assert appCodeTrace is not None
 
             if isFailure:
                 # If we invoked this generator frame by throwing an exception
                 # into it, then throwExceptionIntoGenerator will consume an
                 # additional stack frame itself, so we need to skip that too.
-                appCodeTrace = appCodeTrace.tb_next  # type: ignore[union-attr]
+                appCodeTrace = appCodeTrace.tb_next
+                assert appCodeTrace is not None
 
             # Now that we've identified the frame being exited by the
             # exception, let's figure out if returnValue was called from it
             # directly.  returnValue itself consumes a stack frame, so the
             # application code will have a tb_next, but it will *not* have a
             # second tb_next.
-            assert appCodeTrace.tb_next is not None  # type: ignore[union-attr]
-            if appCodeTrace.tb_next.tb_next:  # type: ignore[union-attr]
+            assert appCodeTrace.tb_next is not None
+            if appCodeTrace.tb_next.tb_next:
                 # If returnValue was invoked non-local to the frame which it is
                 # exiting, identify the frame that ultimately invoked
                 # returnValue so that we can warn the user, as this behavior is
@@ -1584,14 +1582,14 @@ def _inlineCallbacks(
                 lineno = ultimateTrace.tb_lineno
 
                 assert ultimateTrace.tb_frame is not None
-                assert appCodeTrace.tb_frame is not None  # type: ignore[union-attr]
+                assert appCodeTrace.tb_frame is not None
                 warnings.warn_explicit(
                     "returnValue() in %r causing %r to exit: "
                     "returnValue should only be invoked by functions decorated "
                     "with inlineCallbacks"
                     % (
                         ultimateTrace.tb_frame.f_code.co_name,
-                        appCodeTrace.tb_frame.f_code.co_name,  # type: ignore[union-attr]
+                        appCodeTrace.tb_frame.f_code.co_name,
                     ),
                     DeprecationWarning,
                     filename,
