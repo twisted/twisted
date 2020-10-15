@@ -926,7 +926,7 @@ class MXCalculator:
         """
         @type resolver: L{IResolver <twisted.internet.interfaces.IResolver>}
             provider or L{None}
-        @param: A resolver.
+        @param resolver: A resolver.
 
         @type clock: L{IReactorTime <twisted.internet.interfaces.IReactorTime>}
             provider or L{None}

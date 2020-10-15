@@ -209,7 +209,7 @@ class GroupConversation:
         """
         Send text to the group.
 
-        @param: The text to be sent.
+        @param text: The text to be sent.
         @type text: C{str}
         """
         self.group.sendGroupMessage(text, None)
@@ -367,7 +367,7 @@ class ChatUI:
         @param person: The person whose conversation window we want to get.
 
         @type Class: L{IConversation<interfaces.IConversation>} implementor
-        @param: The kind of conversation window we want. If the conversation
+        @param Class: The kind of conversation window we want. If the conversation
             window for this person didn't already exist, create one of this type.
 
         @type stayHidden: C{bool}
@@ -396,7 +396,7 @@ class ChatUI:
         @param group: The group whose conversation window we want to get.
 
         @type Class: L{IConversation<interfaces.IConversation>} implementor
-        @param: The kind of conversation window we want. If the conversation
+        @param Class: The kind of conversation window we want. If the conversation
             window for this person didn't already exist, create one of this type.
 
         @type stayHidden: C{bool}
