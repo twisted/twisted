@@ -19,7 +19,6 @@ from typing import (
     Any,
     Callable,
     Generator,
-    Iterator,
     List,
     Literal,
     Mapping,
