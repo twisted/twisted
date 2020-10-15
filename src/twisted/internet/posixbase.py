@@ -7,6 +7,7 @@ Posix reactor base class
 """
 
 
+import contextlib
 import socket
 import errno
 import os
@@ -117,16 +118,15 @@ class _SocketWaker(log.Logger):
         """Initialize."""
         self.reactor = reactor
         # Following select_trigger (from asyncore)'s example;
-        server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        try:
+        with contextlib.closing(
+            socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        ) as server:
             client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             client.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
             server.bind(("127.0.0.1", 0))
             server.listen(1)
             client.connect(server.getsockname())
             reader, clientaddr = server.accept()
-        finally:
-            server.close()
         client.setblocking(0)
         reader.setblocking(0)
         self.r = reader
