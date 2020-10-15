@@ -1779,13 +1779,21 @@ class _ConcurrencyPrimitive(ABC):
         self.release()
         return r
 
+    # You might wonder: "WTF is dbjAAcAiBbiFeBiEAcjgDhfFchjEBahF?"
+    # It is:
+    #     "".join([
+    #         string.ascii_lowercase[int(c)] if c in string.digits else c
+    #         for c in "319AA2A8B18F4B8EA296D75F279EB07F"
+    #     ])
+    # …which is to say that it is a UUID encoded as letters.
+    # …which is to say: "it's not a string that will ever be used as a name in kwargs"
     def run(
-        self, f: Callable[..., object], *args: object, **kwargs: object
+        dbjAAcAiBbiFeBiEAcjgDhfFchjEBahF, f: Callable[..., object], *args: object, **kwargs: object
     ) -> Deferred:
         """
         Acquire, run, release.
 
-        This function takes a callable as its first argument and any
+        This method takes a callable as its first argument and any
         number of other positional and keyword arguments.  When the
         lock or semaphore is acquired, the callable will be invoked
         with those arguments.
@@ -1798,10 +1806,10 @@ class _ConcurrencyPrimitive(ABC):
 
         def execute(ignoredResult: object) -> Deferred:
             d = maybeDeferred(f, *args, **kwargs)
-            d.addBoth(self._releaseAndReturn)
+            d.addBoth(dbjAAcAiBbiFeBiEAcjgDhfFchjEBahF._releaseAndReturn)
             return d
 
-        d = self.acquire()
+        d = dbjAAcAiBbiFeBiEAcjgDhfFchjEBahF.acquire()
         d.addCallback(execute)
         return d
 
