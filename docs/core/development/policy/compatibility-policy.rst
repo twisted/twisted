@@ -185,13 +185,12 @@ Representations
 
 The printable representations of objects, as returned by ``repr(<object>)`` and defined by ``def __repr__(self):`` are for debugging and informational purposes.
 Because of this, applications must not depend on any object defined by Twisted to provide repr compatibility between any release.
-descriptors, slots and weakrefs
+Descriptors, Slots and Weak References
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 How an object's attributes are defined and accessed is considered an implementation detail.
-To allow backwards compatibility an attribute may be moved from the instance ``__dict__`` into
-an ``@property`` or other descriptor based accessor.
+To allow backwards compatibility, an attribute may be moved from the instance ``__dict__`` into an ``@property`` or other descriptor based accessor.
 
-Adding new attributes to a constructed object, or monkey patching, is not considered a public use. This is to allow creating slotted classes.
+Adding new attributes to a constructed object, or monkey patching, is not considered a public use. This restriction allows both creating and converting to slotted classes.
 Because of this, applications must not depend on any object defined by Twisted to provide ``__dict__`` or ``__slots__`` compatibility between any release.
 
 Changes Covered by the Compatibility Policy
