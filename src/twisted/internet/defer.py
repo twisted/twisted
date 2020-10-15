@@ -20,7 +20,6 @@ from typing import (
     Callable,
     Generator,
     List,
-    Literal,
     Mapping,
     NoReturn,
     Optional,
@@ -30,6 +29,7 @@ from typing import (
     Union,
     cast,
 )
+from typing_extensions import Literal
 import warnings
 
 import attr
