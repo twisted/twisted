@@ -118,12 +118,15 @@ class _SocketWaker(log.Logger):
         self.reactor = reactor
         # Following select_trigger (from asyncore)'s example;
         server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        client.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
-        server.bind(("127.0.0.1", 0))
-        server.listen(1)
-        client.connect(server.getsockname())
-        reader, clientaddr = server.accept()
+        try:
+            client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            client.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+            server.bind(("127.0.0.1", 0))
+            server.listen(1)
+            client.connect(server.getsockname())
+            reader, clientaddr = server.accept()
+        finally:
+            server.close()
         client.setblocking(0)
         reader.setblocking(0)
         self.r = reader
@@ -146,6 +149,9 @@ class _SocketWaker(log.Logger):
             self.r.recv(8192)
         except socket.error:
             pass
+
+    def __del__(self):
+        self.connectionLost("__del__")
 
     def connectionLost(self, reason):
         self.r.close()
