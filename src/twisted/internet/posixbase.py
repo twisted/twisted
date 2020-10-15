@@ -328,7 +328,7 @@ class PosixReactorBase(_SignalReactorMixin, _DisconnectSelectableMixin, ReactorB
         the reactor. On Windows we use a pair of sockets.
         """
         if not self.waker:
-            self.waker = self._wakerFactory(self)
+            self.waker = self._wakerFactory()
             self._internalReaders.add(self.waker)
             self.addReader(self.waker)
 
