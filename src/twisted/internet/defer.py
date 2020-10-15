@@ -1788,7 +1788,10 @@ class _ConcurrencyPrimitive(ABC):
     # …which is to say that it is a UUID encoded as letters.
     # …which is to say: "it's not a string that will ever be used as a name in kwargs"
     def run(
-        dbjAAcAiBbiFeBiEAcjgDhfFchjEBahF, f: Callable[..., object], *args: object, **kwargs: object
+        dbjAAcAiBbiFeBiEAcjgDhfFchjEBahF,
+        f: Callable[..., object],
+        *args: object,
+        **kwargs: object
     ) -> Deferred:
         """
         Acquire, run, release.
