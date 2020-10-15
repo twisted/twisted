@@ -70,9 +70,9 @@ class ContextTracker:
 
         @param func: A callable which will be called.
 
-        @param *args: Any additional positional arguments to pass to C{func}.
+        @param args: Any additional positional arguments to pass to C{func}.
 
-        @param **kw: Any additional keyword arguments to pass to C{func}.
+        @param kw: Any additional keyword arguments to pass to C{func}.
 
         @return: Whatever is returned by C{func}
 

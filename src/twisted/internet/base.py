@@ -422,8 +422,8 @@ class _ThreePhaseEvent:
         @param phase: One of C{'before'}, C{'during'}, or C{'after'}.
 
         @param callable: An object to be called when this event is triggered.
-        @param *args: Positional arguments to pass to C{callable}.
-        @param **kwargs: Keyword arguments to pass to C{callable}.
+        @param args: Positional arguments to pass to C{callable}.
+        @param kwargs: Keyword arguments to pass to C{callable}.
 
         @return: An opaque handle which may be passed to L{removeTrigger} to
             reverse the effects of calling this method.

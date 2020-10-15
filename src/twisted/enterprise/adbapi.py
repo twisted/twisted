@@ -266,9 +266,9 @@ class ConnectionPool:
             B{Note} that this function is B{not} run in the main thread: it
             must be threadsafe.
 
-        @param *args: positional arguments to be passed to func
+        @param args: positional arguments to be passed to func
 
-        @param **kw: keyword arguments to be passed to func
+        @param kw: keyword arguments to be passed to func
 
         @return: a L{Deferred} which will fire the return value of
             C{func(Transaction(...), *args, **kw)}, or a
@@ -311,10 +311,10 @@ class ConnectionPool:
         @param interaction: a callable object whose first argument is an
             L{adbapi.Transaction}.
 
-        @param *args: additional positional arguments to be passed to
+        @param args: additional positional arguments to be passed to
             interaction
 
-        @param **kw: keyword arguments to be passed to interaction
+        @param kw: keyword arguments to be passed to interaction
 
         @return: a Deferred which will fire the return value of
             C{interaction(Transaction(...), *args, **kw)}, or a

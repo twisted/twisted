@@ -29,8 +29,8 @@ def deferToThreadPool(reactor, threadpool, f, *args, **kwargs):
         method of C{twisted.python.threadpool.ThreadPool}.
 
     @param f: The function to call.
-    @param *args: positional arguments to pass to f.
-    @param **kwargs: keyword arguments to pass to f.
+    @param args: positional arguments to pass to f.
+    @param kwargs: keyword arguments to pass to f.
 
     @return: A Deferred which fires a callback with the result of f, or an
         errback with a L{twisted.python.failure.Failure} if f throws an
@@ -54,8 +54,8 @@ def deferToThread(f, *args, **kwargs):
     Run a function in a thread and return the result as a Deferred.
 
     @param f: The function to call.
-    @param *args: positional arguments to pass to f.
-    @param **kwargs: keyword arguments to pass to f.
+    @param args: positional arguments to pass to f.
+    @param kwargs: keyword arguments to pass to f.
 
     @return: A Deferred which fires a callback with the result of f,
     or an errback with a L{twisted.python.failure.Failure} if f throws

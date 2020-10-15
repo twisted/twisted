@@ -3409,8 +3409,8 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         @type mailbox: L{str}
         @param mailbox: The name of the mailbox to query
 
-        @type *names: L{bytes}
-        @param *names: The status names to query.  These may be any number of:
+        @type names: L{bytes}
+        @param names: The status names to query.  These may be any number of:
             C{'MESSAGES'}, C{'RECENT'}, C{'UIDNEXT'}, C{'UIDVALIDITY'}, and
             C{'UNSEEN'}.
 
