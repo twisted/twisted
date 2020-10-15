@@ -6,18 +6,11 @@
 Support for results that aren't immediately available.
 
 Maintainer: Glyph Lefkowitz
-
-@var _NO_RESULT: The result used to represent the fact that there is no
-    result. B{Never ever ever use this as an actual result for a Deferred}.  You
-    have been warned.
-
-@var _CONTINUE: A marker left in L{Deferred.callback}s to indicate a Deferred
-    chain.  Always accompanied by a Deferred instance in the args tuple pointing
-    at the Deferred which is chained to the Deferred which has this marker.
 """
 
 from abc import ABC, abstractmethod
 from asyncio import AbstractEventLoop, Future, iscoroutine
+from enum import Enum, auto
 from functools import wraps
 from sys import exc_info, version_info
 import traceback
@@ -28,6 +21,7 @@ from typing import (
     Generator,
     Iterator,
     List,
+    Literal,
     Mapping,
     NoReturn,
     Optional,
@@ -248,6 +242,20 @@ def _cancelledToTimedOutError(value: _T, timeout: float) -> _T:
     return value
 
 
+class _Sentinel(Enum):
+    """
+    @cvar _NO_RESULT: The result used to represent the fact that there is no
+        result. B{Never ever ever use this as an actual result for a Deferred}.  You
+        have been warned.
+    @cvar _CONTINUE: A marker left in L{Deferred.callback}s to indicate a Deferred
+        chain.  Always accompanied by a Deferred instance in the args tuple pointing
+        at the Deferred which is chained to the Deferred which has this marker.
+    """
+
+    _NO_RESULT = auto()
+    _CONTINUE = auto()
+
+
 # type note: this should be Callable[[object, ...], object] but mypy doesn't allow
 #   Callable[[object], object] is next best, but disallows valid callback signatures
 DeferredCallback = Callable[..., object]
@@ -259,22 +267,18 @@ _CallbackOrderedArguments = Tuple[object, ...]
 _CallbackKeywordArguments = Mapping[str, object]
 _Callbacks = Tuple[
     Tuple[
-        DeferredCallback,
+        Union[DeferredCallback, Literal[_Sentinel._CONTINUE]],
         _CallbackOrderedArguments,
         _CallbackKeywordArguments,
     ],
     Tuple[
-        Union[DeferredErrback, DeferredCallback],
+        Union[DeferredErrback, DeferredCallback, Literal[_Sentinel._CONTINUE]],
         _CallbackOrderedArguments,
         _CallbackKeywordArguments,
     ],
 ]
 
 _NONE_KWARGS = MappingProxyType({})  # type: _CallbackKeywordArguments
-
-# See module docstring.
-_NO_RESULT = object()
-_CONTINUE = cast(DeferredCallback, object())
 
 
 _DeferredT = TypeVar("_DeferredT", bound="Deferred")
@@ -666,11 +670,11 @@ class Deferred:
 
     def _continuation(self) -> _Callbacks:
         """
-        Build a tuple of callback and errback with L{_CONTINUE}.
+        Build a tuple of callback and errback with L{_Sentinel._CONTINUE}.
         """
         return (
-            (_CONTINUE, (self,), _NONE_KWARGS),
-            (_CONTINUE, (self,), _NONE_KWARGS),
+            (_Sentinel._CONTINUE, (self,), _NONE_KWARGS),
+            (_Sentinel._CONTINUE, (self,), _NONE_KWARGS),
         )
 
     def _runCallbacks(self) -> None:
@@ -731,7 +735,7 @@ class Deferred:
                     callback, args, kwargs = item[1]
 
                 # Avoid recursion if we can.
-                if callback is _CONTINUE:
+                if callback is _Sentinel._CONTINUE:
                     # Give the waiting Deferred our current result and then
                     # forget about that result ourselves.
                     chainee = cast(Deferred, args[0])
@@ -770,9 +774,11 @@ class Deferred:
                     if isinstance(current.result, Deferred):
                         # The result is another Deferred.  If it has a result,
                         # we can take it and keep going.
-                        resultResult = getattr(current.result, "result", _NO_RESULT)
+                        resultResult = getattr(
+                            current.result, "result", _Sentinel._NO_RESULT
+                        )
                         if (
-                            resultResult is _NO_RESULT
+                            resultResult is _Sentinel._NO_RESULT
                             or isinstance(resultResult, Deferred)
                             or current.result.paused
                         ):
@@ -820,11 +826,11 @@ class Deferred:
         Return a string representation of this C{Deferred}.
         """
         cname = self.__class__.__name__
-        result = getattr(self, "result", _NO_RESULT)
+        result = getattr(self, "result", _Sentinel._NO_RESULT)
         myID = id(self)
         if self._chainedTo is not None:
             result = " waiting on Deferred at 0x%x" % (id(self._chainedTo),)
-        elif result is _NO_RESULT:
+        elif result is _Sentinel._NO_RESULT:
             result = ""
         else:
             result = " current result: %r" % (result,)
@@ -841,8 +847,8 @@ class Deferred:
             # If we're paused, we have no result to give
             return self
 
-        result = getattr(self, "result", _NO_RESULT)
-        if result is _NO_RESULT:
+        result = getattr(self, "result", _Sentinel._NO_RESULT)
+        if result is _Sentinel._NO_RESULT:
             return self
         if isinstance(result, Failure):
             # Clear the failure on debugInfo so it doesn't raise "unhandled
@@ -1283,7 +1289,7 @@ class waitForDeferred:
     See L{deferredGenerator}.
     """
 
-    result = _NO_RESULT  # type: Any
+    result = _Sentinel._NO_RESULT  # type: Any
 
     def __init__(self, d: Deferred) -> None:
         warnings.warn(
@@ -1303,7 +1309,7 @@ class waitForDeferred:
     def getResult(self) -> Any:
         if isinstance(self.result, Failure):
             self.result.raiseException()
-        self.result is not _NO_RESULT
+        self.result is not _Sentinel._NO_RESULT
         return self.result
 
 
