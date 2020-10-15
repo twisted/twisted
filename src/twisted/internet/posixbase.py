@@ -118,11 +118,11 @@ class _SocketWaker(log.Logger):
         """Initialize."""
         self.reactor = reactor
         # Following select_trigger (from asyncore)'s example;
+        client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        client.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
         with contextlib.closing(
             socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         ) as server:
-            client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            client.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
             server.bind(("127.0.0.1", 0))
             server.listen(1)
             client.connect(server.getsockname())
