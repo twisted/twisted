@@ -838,7 +838,7 @@ class Deferred:
 
     __repr__ = __str__
 
-    def __iter__(self) -> Iterator["Deferred"]:
+    def __iter__(self: _DeferredT) -> _DeferredT:
         return self
 
     @_extraneous
