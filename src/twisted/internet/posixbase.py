@@ -114,8 +114,7 @@ class _SocketWaker(log.Logger):
 
     disconnected = 0
 
-    # maybe also pull out the reactor parameter everywhere
-    def __init__(self, reactor):
+    def __init__(self):
         """Initialize."""
         # Following select_trigger (from asyncore)'s example;
         client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -178,9 +177,8 @@ class _FDWaker(log.Logger):
     i = None
     o = None
 
-    def __init__(self, reactor):
+    def __init__(self):
         """Initialize."""
-        self.reactor = reactor
         self.i, self.o = os.pipe()
         fdesc.setNonBlocking(self.i)
         fdesc._setCloseOnExec(self.i)
@@ -243,8 +241,8 @@ class _SIGCHLDWaker(_FDWaker):
     @see: L{twisted.internet._signals}
     """
 
-    def __init__(self, reactor):
-        _FDWaker.__init__(self, reactor)
+    def __init__(self):
+        _FDWaker.__init__(self)
 
     def install(self):
         """
@@ -344,7 +342,7 @@ class PosixReactorBase(_SignalReactorMixin, _DisconnectSelectableMixin, ReactorB
         _SignalReactorMixin._handleSignals(self)
         if platformType == "posix" and processEnabled:
             if not self._childWaker:
-                self._childWaker = _SIGCHLDWaker(self)
+                self._childWaker = _SIGCHLDWaker()
                 self._internalReaders.add(self._childWaker)
                 self.addReader(self._childWaker)
             self._childWaker.install()
