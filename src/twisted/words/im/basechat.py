@@ -331,7 +331,7 @@ class ChatUI:
         @type client: L{IClient<interfaces.IClient>} provider
         @param client: The client account for the person who has just signed on.
 
-        @rtype client: L{IClient<interfaces.IClient>} provider
+        @rtype: L{IClient<interfaces.IClient>} provider
         @return: The client, so that it may be used in a callback chain.
         """
         self.onlineClients.append(client)

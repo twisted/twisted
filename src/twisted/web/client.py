@@ -1069,7 +1069,7 @@ class _ContextFactoryWithContext:
         L{_DeprecatedToCurrentPolicyForHTTPS._webContextFactory}.
 
         @return: A context.
-        @rtype context: L{OpenSSL.SSL.Context}
+        @rtype: L{OpenSSL.SSL.Context}
         """
         return self._context
 
