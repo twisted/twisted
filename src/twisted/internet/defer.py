@@ -920,7 +920,9 @@ def _cancelledToTimedOutError(value, timeout):
     @type timeout: L{int}
 
     @rtype: C{value}
-    @raise: L{TimeoutError}
+    @raise TimeoutError: If C{value} is a L{Failure} that is a L{CancelledError}.
+    @raise Exception: If C{value} is a L{Failure} that is not a L{CancelledError},
+        it is re-raised.
 
     @since: 16.5
     """
