@@ -10,7 +10,7 @@ Maintainer: Glyph Lefkowitz
 
 from abc import ABC, abstractmethod
 from asyncio import AbstractEventLoop, Future, iscoroutine
-from enum import Enum, auto
+from enum import Enum
 from functools import wraps
 from sys import exc_info, version_info
 import traceback
@@ -251,8 +251,8 @@ class _Sentinel(Enum):
         at the Deferred which is chained to the Deferred which has this marker.
     """
 
-    _NO_RESULT = auto()
-    _CONTINUE = auto()
+    _NO_RESULT = object()
+    _CONTINUE = object()
 
 
 # type note: this should be Callable[[object, ...], object] but mypy doesn't allow
