@@ -1276,8 +1276,8 @@ class FilePath(AbstractFilePath):
             are relative to this L{FilePath}.
         @rtype: L{list}
 
-        @raise: Anything the platform L{os.listdir} implementation might raise
-            (typically L{OSError}).
+        @raise OSError: Any exception the platform L{os.listdir} implementation
+            may raise.
         """
         return listdir(self.path)
 
