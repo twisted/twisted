@@ -1320,7 +1320,7 @@ class IRCClient(basic.LineReceiver):
         Called with daemon information about the server, usually at logon.
 
         @type info: C{str}
-        @param when: A string describing what software the server is running, probably.
+        @param info: A string describing what software the server is running, probably.
         """
 
     def myInfo(self, servername, version, umodes, cmodes):

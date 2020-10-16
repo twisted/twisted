@@ -401,7 +401,7 @@ class TestLoader:
         """
         Find and load tests, given C{name}.
 
-        @param name: The qualified name of the thing to load.
+        @param _name: The qualified name of the thing to load.
         @param recurse: A boolean. If True, inspect modules within packages
             within the given package (and so on), otherwise, only inspect
             modules in the package itself.

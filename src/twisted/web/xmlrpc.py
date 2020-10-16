@@ -317,8 +317,8 @@ def addIntrospection(xmlrpc):
     """
     Add Introspection support to an XMLRPC server.
 
-    @param parent: the XMLRPC server to add Introspection support to.
-    @type parent: L{XMLRPC}
+    @param xmlrpc: the XMLRPC server to add Introspection support to.
+    @type xmlrpc: L{XMLRPC}
     """
     xmlrpc.putSubHandler("system", XMLRPCIntrospection(xmlrpc))
 
