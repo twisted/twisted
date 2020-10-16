@@ -1285,9 +1285,7 @@ class Request:
             U{https://tools.ietf.org/html/draft-west-first-party-cookies-07}
         @type sameSite: L{None}, L{bytes} or L{str}
 
-        @raises: L{DeprecationWarning} if an argument is not L{bytes} or
-            L{str}.
-            L{ValueError} if the value for C{sameSite} is not supported.
+        @raise ValueError: If the value for C{sameSite} is not supported.
         """
 
         def _ensureBytes(val):
