@@ -101,7 +101,7 @@ def blockingCallFromThread(reactor, f, *a, **kw):
     @return: the result of the L{Deferred} returned by C{f}, or the result
         of C{f} if it returns anything other than a L{Deferred}.
 
-    @raise: If C{f} raises a synchronous exception,
+    @raise Exception: If C{f} raises a synchronous exception,
         C{blockingCallFromThread} will raise that exception.  If C{f}
         returns a L{Deferred} which fires with a L{Failure},
         C{blockingCallFromThread} will raise that failure's exception (see

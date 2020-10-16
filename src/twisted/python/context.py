@@ -76,7 +76,7 @@ class ContextTracker:
 
         @return: Whatever is returned by C{func}
 
-        @raise: Whatever is raised by C{func}.
+        @raise Exception: Whatever is raised by C{func}.
         """
         self.contexts.append(newContext)
         try:

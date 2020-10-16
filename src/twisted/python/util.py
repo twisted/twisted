@@ -757,7 +757,7 @@ def untilConcludes(f, *a, **kw):
 
     @return: Whatever C{f} returns.
 
-    @raise: Whatever C{f} raises, except for C{IOError} or C{OSError} with
+    @raise Exception: Whatever C{f} raises, except for C{OSError} with
         C{errno} set to C{EINTR}.
     """
     while True:

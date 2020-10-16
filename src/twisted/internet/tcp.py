@@ -913,8 +913,8 @@ class _IFileDescriptorReservation(Interface):
         because of C{EMFILE}, internal state is reset so that another
         reservation attempt can be made.
 
-        @raises: Any exception except an L{OSError} or L{IOError}
-            whose errno is L{EMFILE}.
+        @raises Exception: Any exception except an L{OSError} whose
+            errno is L{EMFILE}.
         """
 
     def __enter__():

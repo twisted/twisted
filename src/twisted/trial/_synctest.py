@@ -1252,7 +1252,7 @@ class SynchronousTestCase(_Assertions):
 
         @return: Whatever C{f} returns.
 
-        @raise: Whatever C{f} raises.  If any exception is
+        @raise Exception: Whatever C{f} raises.  If any exception is
             raised by C{f}, though, no assertions will be made about emitted
             deprecations.
 
