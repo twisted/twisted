@@ -222,7 +222,7 @@ class _ModuleIteratorHelper:
 
         to retrieve this module.
 
-        @raise: KeyError if the module is not found.
+        @raise KeyError: if the module is not found.
 
         @return: a PythonModule.
         """

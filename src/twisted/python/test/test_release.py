@@ -747,8 +747,7 @@ class SphinxBuilderTests(TestCase):
             C{fileDir}.
         @type fileName: L{str}
 
-        @raise: L{FailTest <twisted.trial.unittest.FailTest>} if
-            C{fileDir.child(fileName)}:
+        @raise FailTest: If C{fileDir.child(fileName)}:
 
                 1. Does not exist.
 

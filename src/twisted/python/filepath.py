@@ -439,7 +439,7 @@ class AbstractFilePath:
         @param ancestor: an instance of the same class as self, ostensibly an
         ancestor of self.
 
-        @raise: ValueError if the 'ancestor' parameter is not actually an
+        @raise ValueError: If the C{ancestor} parameter is not actually an
         ancestor, i.e. a path for /x/y/z is passed as an ancestor for /a/b/c/d.
 
         @return: a list of strs

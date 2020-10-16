@@ -564,7 +564,7 @@ class TestLoader:
         within the given package (and so on), otherwise, only inspect modules
         in the package itself.
 
-        @raise: TypeError if 'package' is not a package.
+        @raise TypeError: If C{package} is not a package.
 
         @return: a TestSuite created with my suiteFactory, containing all the
         tests.

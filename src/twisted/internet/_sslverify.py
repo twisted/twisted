@@ -477,7 +477,7 @@ class Certificate(CertBase):
 
         @rtype: C{Class}
 
-        @raise: L{CertificateError}, if the given transport does not have a peer
+        @raise CertificateError: if the given transport does not have a peer
             certificate.
         """
         return _handleattrhelper(Class, transport, "peer")
@@ -491,7 +491,7 @@ class Certificate(CertBase):
 
         @rtype: C{Class}
 
-        @raise: L{CertificateError}, if the given transport does not have a host
+        @raise CertificateError: if the given transport does not have a host
             certificate.
         """
         return _handleattrhelper(Class, transport, "host")
