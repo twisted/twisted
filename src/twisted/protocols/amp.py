@@ -1073,7 +1073,6 @@ class BoxDispatcher:
 
         Dispatch it to a local handler call it.
 
-        @param proto: an AMP instance.
         @param box: an AmpBox to be dispatched.
         """
         cmd = box[COMMAND]

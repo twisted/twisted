@@ -2652,9 +2652,6 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         As described by HTTP standard we should be patient and accept the
         whole request from the client before sending a polite bad request
         response, even in the case when clients send tons of data.
-
-        @param transport: Transport handling connection to the client.
-        @type transport: L{interfaces.ITransport}
         """
         self.transport.write(b"HTTP/1.1 400 Bad Request\r\n\r\n")
         self.loseConnection()

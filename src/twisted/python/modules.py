@@ -777,8 +777,6 @@ def iterModules():
     """
     Iterate all modules and top-level packages on the global Python path, but
     do not descend into packages.
-
-    @param importPackages: Import packages as they are seen.
     """
     return theSystemPath.iterModules()
 
