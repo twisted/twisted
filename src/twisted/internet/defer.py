@@ -202,7 +202,7 @@ def timeout(deferred: "Deferred") -> None:
     deferred.errback(Failure(TimeoutError("Callback timed out")))
 
 
-def passthru(arg: object) -> Any:
+def passthru(arg: _T) -> _T:
     return arg
 
 
