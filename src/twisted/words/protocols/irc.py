@@ -885,7 +885,7 @@ class ServerSupportedFeatures(_CommandDispatcherMixin):
         @type param: C{str}
 
         @rtype: C{(str, list)}
-        @return C{(key, arguments)}
+        @return: C{(key, arguments)}
         """
         if "=" not in param:
             param += "="
@@ -2639,7 +2639,7 @@ class IRCClient(basic.LineReceiver):
         Get user modes that require parameters for correct parsing.
 
         @rtype: C{[str, str]}
-        @return C{[add, remove]}
+        @return: C{[add, remove]}
         """
         return ["", ""]
 
@@ -2648,7 +2648,7 @@ class IRCClient(basic.LineReceiver):
         Get channel modes that require parameters for correct parsing.
 
         @rtype: C{[str, str]}
-        @return C{[add, remove]}
+        @return: C{[add, remove]}
         """
         # PREFIX modes are treated as "type B" CHANMODES, they always take
         # parameter.
