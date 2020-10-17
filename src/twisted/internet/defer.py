@@ -369,14 +369,14 @@ class Deferred:
             self._debugInfo.creator = traceback.format_stack()[:-1]
 
     def addCallbacks(
-        self: _DeferredT,
+        self,
         callback: DeferredCallback,
         errback: DeferredErrback = passthru,
         callbackArgs: _CallbackOrderedArguments = (),
         callbackKeywords: _CallbackKeywordArguments = _NONE_KWARGS,
         errbackArgs: _CallbackOrderedArguments = (),
         errbackKeywords: _CallbackKeywordArguments = _NONE_KWARGS,
-    ) -> _DeferredT:
+    ) -> Deferred:
         """
         Add a pair of callbacks (success and error) to this L{Deferred}.
 
@@ -412,8 +412,8 @@ class Deferred:
         return self
 
     def addCallback(
-        self: _DeferredT, callback: DeferredCallback, *args: object, **kwargs: object
-    ) -> _DeferredT:
+        self, callback: DeferredCallback, *args: object, **kwargs: object
+    ) -> Deferred:
         """
         Convenience method for adding just a callback.
 
@@ -422,8 +422,8 @@ class Deferred:
         return self.addCallbacks(callback, callbackArgs=args, callbackKeywords=kwargs)
 
     def addErrback(
-        self: _DeferredT, errback: DeferredErrback, *args: object, **kwargs: object
-    ) -> _DeferredT:
+        self, errback: DeferredErrback, *args: object, **kwargs: object
+    ) -> Deferred:
         """
         Convenience method for adding just an errback.
 
@@ -434,8 +434,8 @@ class Deferred:
         )
 
     def addBoth(
-        self: _DeferredT, callback: DeferredCallback, *args: object, **kwargs: object
-    ) -> _DeferredT:
+        self, callback: DeferredCallback, *args: object, **kwargs: object
+    ) -> Deferred:
         """
         Convenience method for adding a single callable as both a callback
         and an errback.
@@ -515,7 +515,7 @@ class Deferred:
         self.addBoth(cancelTimeout)
         return self
 
-    def chainDeferred(self: _DeferredT, d: "Deferred") -> _DeferredT:
+    def chainDeferred(self, d: "Deferred") -> Deferred:
         """
         Chain another L{Deferred} to this L{Deferred}.
 
