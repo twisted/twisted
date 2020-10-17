@@ -29,20 +29,21 @@ import operator
 
 from unittest import skipIf
 
-
 try:
     import fcntl
 except ImportError:
     fcntl = None  # type: ignore[assignment]
 
 try:
-    from twisted.internet import process
+    from twisted.internet import process as _process
     from twisted.internet.process import ProcessReader, ProcessWriter, PTYProcess
 except ImportError:
-    process = None  # type: ignore[misc,assignment]
+    process = None
     ProcessReader = object  # type: ignore[misc,assignment]
     ProcessWriter = object  # type: ignore[misc,assignment]
     PTYProcess = object  # type: ignore[misc,assignment]
+else:
+    process = _process
 
 from zope.interface.verify import verifyObject
 
@@ -549,6 +550,12 @@ class ProcessTests(unittest.TestCase):
         p.transport.closeStdin()
         return finished.addCallback(afterProcessEnd)
 
+    @skipIf(
+        os.environ.get("CI", "").lower() == "true"
+        and runtime.platform.getType() == "win32"
+        and sys.version_info[0:2] in [(3, 7), (3, 8)],
+        "See https://twistedmatrix.com/trac/ticket/10014",
+    )
     def test_process(self):
         """
         Test running a process: check its output, it exitCode, some property of
@@ -581,6 +588,12 @@ class ProcessTests(unittest.TestCase):
         d.addCallback(check)
         return d
 
+    @skipIf(
+        os.environ.get("CI", "").lower() == "true"
+        and runtime.platform.getType() == "win32"
+        and sys.version_info[0:2] in [(3, 7), (3, 8)],
+        "See https://twistedmatrix.com/trac/ticket/10014",
+    )
     def test_manyProcesses(self):
         def _check(results, protocols):
             for p in protocols:

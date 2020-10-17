@@ -31,6 +31,7 @@ interface.
 
 
 from io import StringIO
+from typing import Dict
 
 # zope3 imports
 from zope.interface import interface, declarations
@@ -80,7 +81,7 @@ def getAdapterFactory(fromInterface, toInterface, default):
     self = globalRegistry
     if not isinstance(fromInterface, interface.InterfaceClass):
         fromInterface = declarations.implementedBy(fromInterface)
-    factory = self.lookup1(fromInterface, toInterface)
+    factory = self.lookup1(fromInterface, toInterface)  # type: ignore[attr-defined]
     if factory is None:
         factory = default
     return factory
@@ -332,7 +333,7 @@ def proxyForInterface(iface, originalAttribute="original"):
     def __init__(self, original):
         setattr(self, originalAttribute, original)
 
-    contents = {"__init__": __init__}
+    contents = {"__init__": __init__}  # type: Dict[str, object]
     for name in iface:
         contents[name] = _ProxyDescriptor(name, originalAttribute)
     proxy = type("(Proxy for %s)" % (reflect.qual(iface),), (object,), contents)

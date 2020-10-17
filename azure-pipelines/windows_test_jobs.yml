@@ -32,4 +32,3 @@ jobs:
         platform: windows
         pythonVersion: ${{ pyver.value }}
         windowsReactor: ${{ parameters.reactor }}
-        allowFailure: ${{ eq(pyver.value, '3.8') }}

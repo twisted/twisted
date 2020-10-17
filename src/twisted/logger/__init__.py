@@ -34,12 +34,9 @@ In the first example above, the namespace would be C{some.module}, and in the
 second example, it would be C{some.module.Foo}.
 
 @var globalLogPublisher: The L{LogPublisher} that all L{Logger} instances that
-    are not otherwise parameterized will point to by default.
-@type globalLogPublisher: L{LogPublisher}
-
+    are not otherwise parameterized will publish events to by default.
 @var globalLogBeginner: The L{LogBeginner} used to activate the main log
     observer, whether it's a log file, or an observer pointing at stderr.
-@type globalLogBeginner: L{LogBeginner}
 """
 
 __all__ = [
@@ -54,11 +51,13 @@ __all__ = [
     "eventAsText",
     # From ._flatten
     "extractField",
+    # From ._interfaces
+    "ILogObserver",
+    "LogEvent",
     # From ._logger
     "Logger",
     "_loggerFor",
     # From ._observer
-    "ILogObserver",
     "LogPublisher",
     # From ._buffer
     "LimitedHistoryLogObserver",
@@ -101,9 +100,11 @@ from ._format import (
     eventAsText,
 )
 
+from ._interfaces import ILogObserver, LogEvent
+
 from ._logger import Logger, _loggerFor
 
-from ._observer import ILogObserver, LogPublisher
+from ._observer import LogPublisher
 
 from ._buffer import LimitedHistoryLogObserver
 

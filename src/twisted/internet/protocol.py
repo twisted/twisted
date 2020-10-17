@@ -11,11 +11,12 @@ Twisted.  The Protocol class contains some introductory material.
 
 
 import random
-from typing import Optional, Type, Union
+from typing import Callable, Optional, Tuple
 from zope.interface import implementer
 
 from twisted.python import log, failure, components
 from twisted.internet import interfaces, error, defer
+from twisted.internet.interfaces import ITransport
 from twisted.logger import _loggerFor
 
 
@@ -28,10 +29,7 @@ class Factory:
     self.protocol.
     """
 
-    # Put a subclass of Protocol here:
-    protocol = (
-        None
-    )  # type: Optional[Union[Type['Protocol'], Type['AbstractDatagramProtocol']]]  # noqa
+    protocol = None  # type: Optional[Callable[[], Protocol]]
 
     numPorts = 0
     noisy = True
@@ -114,7 +112,7 @@ class Factory:
         directly.
         """
 
-    def buildProtocol(self, addr):
+    def buildProtocol(self, addr: Tuple[str, int]) -> "Protocol":
         """
         Create an instance of a subclass of Protocol.
 
@@ -129,6 +127,7 @@ class Factory:
 
         @param addr: an object implementing L{twisted.internet.interfaces.IAddress}
         """
+        assert self.protocol is not None
         p = self.protocol()
         p.factory = self
         return p
@@ -495,7 +494,7 @@ class BaseProtocol:
     """
 
     connected = 0
-    transport = None
+    transport = None  # type: Optional[ITransport]
 
     def makeConnection(self, transport):
         """
@@ -543,6 +542,8 @@ class Protocol(BaseProtocol):
     Some subclasses exist already to help you write common types of protocols:
     see the L{twisted.protocols.basic} module for a few of them.
     """
+
+    factory = None  # type: Optional[Factory]
 
     def logPrefix(self):
         """

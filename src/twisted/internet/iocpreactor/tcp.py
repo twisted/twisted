@@ -5,7 +5,10 @@
 TCP support for IOCP reactor
 """
 
-import socket, operator, errno, struct
+import errno
+import socket
+import struct
+from typing import Optional
 
 from zope.interface import implementer, classImplements
 
@@ -137,17 +140,13 @@ class Connection(abstract.FileHandle, _SocketCloser, _AbortingMixin):
         return self.logstr
 
     def getTcpNoDelay(self):
-        return operator.truth(
-            self.socket.getsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY)
-        )
+        return bool(self.socket.getsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY))
 
     def setTcpNoDelay(self, enabled):
         self.socket.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, enabled)
 
     def getTcpKeepAlive(self):
-        return operator.truth(
-            self.socket.getsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE)
-        )
+        return bool(self.socket.getsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE))
 
     def setTcpKeepAlive(self, enabled):
         self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, enabled)
@@ -408,7 +407,7 @@ class Port(_SocketCloser, _LogOwner):
 
     # Actual port number being listened on, only set to a non-None
     # value when we are actually listening.
-    _realPortNumber = None
+    _realPortNumber = None  # type: Optional[int]
 
     # A string describing the connections which will be created by this port.
     # Normally this is C{"TCP"}, since this is a TCP port, but when the TLS
@@ -556,6 +555,11 @@ class Port(_SocketCloser, _LogOwner):
             )
             return False
         else:
+            # Inherit the properties from the listening port socket as
+            # documented in the `Remarks` section of AcceptEx.
+            # https://docs.microsoft.com/en-us/windows/win32/api/mswsock/nf-mswsock-acceptex
+            # In this way we can call getsockname and getpeername on the
+            # accepted socket.
             evt.newskt.setsockopt(
                 socket.SOL_SOCKET,
                 SO_UPDATE_ACCEPT_CONTEXT,

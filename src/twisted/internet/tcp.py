@@ -11,9 +11,9 @@ End users shouldn't use this module directly - use the reactor APIs instead.
 # System Imports
 import socket
 import sys
-import operator
 import os
 import struct
+from typing import Optional
 
 import attr
 
@@ -330,17 +330,13 @@ class Connection(
         return self.logstr
 
     def getTcpNoDelay(self):
-        return operator.truth(
-            self.socket.getsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY)
-        )
+        return bool(self.socket.getsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY))
 
     def setTcpNoDelay(self, enabled):
         self.socket.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, enabled)
 
     def getTcpKeepAlive(self):
-        return operator.truth(
-            self.socket.getsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE)
-        )
+        return bool(self.socket.getsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE))
 
     def setTcpKeepAlive(self, enabled):
         self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, enabled)
@@ -1250,7 +1246,7 @@ class Port(base.BasePort, _SocketCloser):
 
     # Actual port number being listened on, only set to a non-None
     # value when we are actually listening.
-    _realPortNumber = None
+    _realPortNumber = None  # type: Optional[int]
 
     # An externally initialized socket that we will use, rather than creating
     # our own.

@@ -13,14 +13,18 @@ import errno
 from base64 import decodebytes
 
 try:
-    import pwd
+    import pwd as _pwd
 except ImportError:
-    pwd = None  # type: ignore[assignment]
+    pwd = None
+else:
+    pwd = _pwd
 
 try:
-    import spwd
+    import spwd as _spwd
 except ImportError:
-    spwd = None  # type: ignore[assignment]
+    spwd = None
+else:
+    spwd = _spwd
 
 from zope.interface import providedBy, implementer, Interface
 

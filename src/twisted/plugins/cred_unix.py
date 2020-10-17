@@ -42,7 +42,10 @@ def verifyCryptedPassword(crypted, pw):
     if isinstance(crypted, bytes):
         crypted = crypted.decode("utf-8")
     try:
-        return crypt.crypt(pw, crypted) == crypted
+        crypted_check = crypt.crypt(pw, crypted)
+        if isinstance(crypted_check, bytes):
+            crypted_check = crypted_check.decode("utf-8")
+        return crypted_check == crypted
     except OSError:
         return False
 

@@ -567,7 +567,7 @@ class UNIXTestsBuilder(UNIXFamilyMixin, ReactorBuilder, ConnectionTestsMixin):
             data = b"some data"
             ancillary = [(None, None, b"")]
             flags = 0
-            return sendmsg.RecievedMessage(data, ancillary, flags)
+            return sendmsg.ReceivedMessage(data, ancillary, flags)
 
         events = []
         addObserver(events.append)

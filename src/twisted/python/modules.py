@@ -64,6 +64,7 @@ from os.path import dirname, split as splitpath
 
 import sys
 import inspect
+from typing import cast
 import warnings
 import zipimport
 
@@ -400,7 +401,7 @@ class PythonModule(_ModuleIteratorHelper):
         PythonModules with the same name are equal.
         """
         if isinstance(other, PythonModule):
-            return other.name == self.name
+            return cast(bool, other.name == self.name)
         return NotImplemented
 
     def walkModules(self, importPackages=False):

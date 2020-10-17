@@ -18,9 +18,9 @@ Please do not use this module directly.
 
 # System Imports
 import socket
-import operator
 import struct
 import warnings
+from typing import Optional
 
 from zope.interface import implementer
 
@@ -85,7 +85,7 @@ class Port(base.BasePort):
     socketType = socket.SOCK_DGRAM
     maxThroughput = 256 * 1024
 
-    _realPortNumber = None
+    _realPortNumber = None  # type: Optional[int]
     _preexistingSocket = None
 
     def __init__(self, port, proto, interface="", maxPacketSize=8192, reactor=None):
@@ -437,9 +437,7 @@ class Port(base.BasePort):
         @return: Whether this port may broadcast.
         @rtype: L{bool}
         """
-        return operator.truth(
-            self.socket.getsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST)
-        )
+        return bool(self.socket.getsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST))
 
 
 class MulticastMixin:
@@ -464,7 +462,7 @@ class MulticastMixin:
         return self.socket.getsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_LOOP)
 
     def setLoopbackMode(self, mode):
-        mode = struct.pack("b", operator.truth(mode))
+        mode = struct.pack("b", bool(mode))
         self.socket.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_LOOP, mode)
 
     def getTTL(self):

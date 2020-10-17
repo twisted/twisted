@@ -5,7 +5,11 @@
 UDP support for IOCP reactor
 """
 
-import socket, operator, struct, warnings, errno
+import errno
+import socket
+import struct
+import warnings
+from typing import Optional
 
 from zope.interface import implementer
 
@@ -40,7 +44,7 @@ class Port(abstract.FileHandle):
 
     # Actual port number being listened on, only set to a non-None
     # value when we are actually listening.
-    _realPortNumber = None
+    _realPortNumber = None  # type: Optional[int]
 
     def __init__(self, port, proto, interface="", maxPacketSize=8192, reactor=None):
         """
@@ -326,9 +330,7 @@ class Port(abstract.FileHandle):
         @return: Whether this port may broadcast.
         @rtype: L{bool}
         """
-        return operator.truth(
-            self.socket.getsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST)
-        )
+        return bool(self.socket.getsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST))
 
 
 class MulticastMixin:
@@ -355,7 +357,7 @@ class MulticastMixin:
         return self.socket.getsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_LOOP)
 
     def setLoopbackMode(self, mode):
-        mode = struct.pack("b", operator.truth(mode))
+        mode = struct.pack("b", bool(mode))
         self.socket.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_LOOP, mode)
 
     def getTTL(self):

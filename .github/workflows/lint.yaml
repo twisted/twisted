@@ -8,10 +8,9 @@ on:
 
 jobs:
   lint:
-
     runs-on: ubuntu-20.04
     env:
-      TOXENV: "lint,black,manifest-checker,twine"
+      TOXENV: "lint,black,twine"
 
     steps:
     - uses: actions/checkout@v2

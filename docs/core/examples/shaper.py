@@ -11,6 +11,7 @@ costing you more bandwidth than you are saving by limiting the rate!
 """
 
 from twisted.protocols import htb
+
 # for picklability
 import shaper
 
@@ -30,13 +31,15 @@ class WebClientBucket(htb.Bucket):
     # One kB/s thereafter.
     rate = 1000
 
+
 webFilter = htb.FilterByHost(serverFilter)
 webFilter.bucketFactory = shaper.WebClientBucket
 
-servertype = "web" # "chargen"
+servertype = "web"  # "chargen"
 
 if servertype == "web":
     from twisted.web import server, static
+
     site = server.Site(static.File("/var/www"))
     site.protocol = htb.ShapedProtocolFactory(site.protocol, webFilter)
 elif servertype == "chargen":
@@ -45,8 +48,9 @@ elif servertype == "chargen":
 
     site = protocol.ServerFactory()
     site.protocol = htb.ShapedProtocolFactory(wire.Chargen, webFilter)
-    #site.protocol = wire.Chargen
+    # site.protocol = wire.Chargen
 
 from twisted.internet import reactor
+
 reactor.listenTCP(8000, site)
 reactor.run()

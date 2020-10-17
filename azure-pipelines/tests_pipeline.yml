@@ -12,6 +12,7 @@ pr:
 variables:
   INFRASTRUCTURE: "AZUREPIPELINES"
   TRIAL_REPORTER: "verbose"
+  CI: "true"
 
 jobs:
 

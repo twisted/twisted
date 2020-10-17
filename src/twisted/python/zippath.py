@@ -9,9 +9,10 @@ See the constructor of L{ZipArchive} for use.
 """
 
 
+import errno
 import os
 import time
-import errno
+from typing import Dict
 
 from zipfile import ZipFile
 
@@ -219,7 +220,7 @@ class ZipArchive(ZipPath):
         self.pathInArchive = _coerceToFilesystemEncoding(archivePathname, "")
         # zipfile is already wasting O(N) memory on cached ZipInfo instances,
         # so there's no sense in trying to do this lazily or intelligently
-        self.childmap = {}  # map parent: list of children
+        self.childmap = {}  # type: Dict[str, Dict[str, int]]
 
         for name in self.zipfile.namelist():
             name = _coerceToFilesystemEncoding(self.path, name).split(self.sep)

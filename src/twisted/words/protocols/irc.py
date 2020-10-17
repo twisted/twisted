@@ -2823,7 +2823,7 @@ class DccSendProtocol(protocol.Protocol, styles.Ephemeral):
 
 
 class DccSendFactory(protocol.Factory):
-    protocol = DccSendProtocol
+    protocol = DccSendProtocol  # type: ignore[assignment]
 
     def __init__(self, file):
         self.file = file
@@ -2935,7 +2935,7 @@ class DccChat(basic.LineReceiver, styles.Ephemeral):
 
 
 class DccChatFactory(protocol.ClientFactory):
-    protocol = DccChat
+    protocol = DccChat  # type: ignore[assignment]
     noisy = False
 
     def __init__(self, client, queryData):
@@ -3055,7 +3055,7 @@ class DccFileReceive(DccFileReceiveBasic):
     fileSize = -1
     destDir = "."
     overwrite = 0
-    fromUser = None
+    fromUser = None  # type: Optional[bytes]
     queryData = None
 
     def __init__(
@@ -3191,9 +3191,9 @@ class DccFileReceive(DccFileReceiveBasic):
             return "<Unconnected DccFileReceive object at %x>" % (id(self),)
         transport = self.transport
         assert transport is not None
-        from_ = transport.getPeer()
-        if self.fromUser:
-            from_ = "%s (%s)" % (self.fromUser, from_)
+        from_ = str(transport.getPeer())
+        if self.fromUser is not None:
+            from_ = "%r (%s)" % (self.fromUser, from_)
 
         s = "DCC transfer of '%s' from %s" % (self.filename, from_)
         return s
