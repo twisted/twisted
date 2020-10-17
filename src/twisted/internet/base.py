@@ -727,7 +727,8 @@ class ReactorBase(PluggableResolverMixin):
         """
         Handle a SIGINT interrupt.
 
-        @param args: See handler specification in L{signal.signal}
+        @param number: See handler specification in L{signal.signal}
+        @param frame: See handler specification in L{signal.signal}
         """
         log.msg("Received SIGINT, shutting down.")
         self.callFromThread(self.stop)
@@ -737,7 +738,8 @@ class ReactorBase(PluggableResolverMixin):
         """
         Handle a SIGBREAK interrupt.
 
-        @param args: See handler specification in L{signal.signal}
+        @param number: See handler specification in L{signal.signal}
+        @param frame: See handler specification in L{signal.signal}
         """
         log.msg("Received SIGBREAK, shutting down.")
         self.callFromThread(self.stop)
@@ -747,7 +749,8 @@ class ReactorBase(PluggableResolverMixin):
         """
         Handle a SIGTERM interrupt.
 
-        @param args: See handler specification in L{signal.signal}
+        @param number: See handler specification in L{signal.signal}
+        @param frame: See handler specification in L{signal.signal}
         """
         log.msg("Received SIGTERM, shutting down.")
         self.callFromThread(self.stop)
