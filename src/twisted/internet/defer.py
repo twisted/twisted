@@ -280,9 +280,6 @@ _Callbacks = Tuple[
 _NONE_KWARGS = MappingProxyType({})  # type: _CallbackKeywordArguments
 
 
-_DeferredT = TypeVar("_DeferredT", bound="Deferred")
-
-
 class Deferred:
     """
     This is a callback which will be put off until later.
@@ -376,7 +373,7 @@ class Deferred:
         callbackKeywords: _CallbackKeywordArguments = _NONE_KWARGS,
         errbackArgs: _CallbackOrderedArguments = (),
         errbackKeywords: _CallbackKeywordArguments = _NONE_KWARGS,
-    ) -> Deferred:
+    ) -> "Deferred":
         """
         Add a pair of callbacks (success and error) to this L{Deferred}.
 
@@ -413,7 +410,7 @@ class Deferred:
 
     def addCallback(
         self, callback: DeferredCallback, *args: object, **kwargs: object
-    ) -> Deferred:
+    ) -> "Deferred":
         """
         Convenience method for adding just a callback.
 
@@ -423,7 +420,7 @@ class Deferred:
 
     def addErrback(
         self, errback: DeferredErrback, *args: object, **kwargs: object
-    ) -> Deferred:
+    ) -> "Deferred":
         """
         Convenience method for adding just an errback.
 
@@ -435,7 +432,7 @@ class Deferred:
 
     def addBoth(
         self, callback: DeferredCallback, *args: object, **kwargs: object
-    ) -> Deferred:
+    ) -> "Deferred":
         """
         Convenience method for adding a single callable as both a callback
         and an errback.
@@ -452,11 +449,11 @@ class Deferred:
         )
 
     def addTimeout(
-        self: _DeferredT,
+        self,
         timeout: float,
         clock: IReactorTime,
         onTimeoutCancel: Callable[[object, float], object] = _cancelledToTimedOutError,
-    ) -> _DeferredT:
+    ) -> "Deferred":
         """
         Time out this L{Deferred} by scheduling it to be cancelled after
         C{timeout} seconds.
@@ -515,7 +512,7 @@ class Deferred:
         self.addBoth(cancelTimeout)
         return self
 
-    def chainDeferred(self, d: "Deferred") -> Deferred:
+    def chainDeferred(self, d: "Deferred") -> "Deferred":
         """
         Chain another L{Deferred} to this L{Deferred}.
 
@@ -837,11 +834,11 @@ class Deferred:
 
     __repr__ = __str__
 
-    def __iter__(self: _DeferredT) -> _DeferredT:
+    def __iter__(self) -> "Deferred":
         return self
 
     @_extraneous
-    def send(self: _DeferredT, value: object = None) -> _DeferredT:
+    def send(self, value: object = None) -> "Deferred":
         if self.paused:
             # If we're paused, we have no result to give
             return self
@@ -905,7 +902,7 @@ class Deferred:
         return future
 
     @classmethod
-    def fromFuture(cls: Type[_DeferredT], future: Future) -> _DeferredT:
+    def fromFuture(cls, future: Future) -> "Deferred":
         """
         Adapt an L{Future} to a L{Deferred}.
 
@@ -955,8 +952,6 @@ class Deferred:
 
         return self
 
-    # type note: Not using _DeferredT here because _cancellableInlineCallbacks
-    # is not a method and doesn't otherwise accept the Deferred class to create
     @classmethod
     def fromCoroutine(cls, coro: CoroutineType) -> "Deferred":
         """
@@ -1315,7 +1310,7 @@ class waitForDeferred:
 _DeferableGenerator = Generator[object, None, None]
 
 
-def _deferGenerator(g: _DeferableGenerator, deferred: _DeferredT) -> _DeferredT:
+def _deferGenerator(g: _DeferableGenerator, deferred: Deferred) -> Deferred:
     """
     See L{deferredGenerator}.
     """
@@ -1347,10 +1342,7 @@ def _deferGenerator(g: _DeferableGenerator, deferred: _DeferredT) -> _DeferredT:
         # early here and give a nicer error message to the user in case
         # they yield a Deferred.
         if isinstance(result, Deferred):
-            # type note: We expect a successful return to be of type _DeferredT
-            # but a failed case, which is akin to an exception, isn't that...
-            # Ignoring this for now.
-            return fail(TypeError("Yield waitForDeferred(d), not d!"))  # type: ignore[return-value]
+            return fail(TypeError("Yield waitForDeferred(d), not d!"))
 
         if isinstance(result, waitForDeferred):
             # a waitForDeferred was yielded, get the result.
