@@ -173,27 +173,27 @@ class ConnectionPool:
         @param dbapiName: an import string to use to obtain a DB-API compatible
             module (e.g. C{'pyPgSQL.PgSQL'})
 
-        @param cp_min: the minimum number of connections in pool (default 3)
+        @keyword cp_min: the minimum number of connections in pool (default 3)
 
-        @param cp_max: the maximum number of connections in pool (default 5)
+        @keyword cp_max: the maximum number of connections in pool (default 5)
 
-        @param cp_noisy: generate informational log messages during operation
+        @keyword cp_noisy: generate informational log messages during operation
             (default C{False})
 
-        @param cp_openfun: a callback invoked after every C{connect()} on the
+        @keyword cp_openfun: a callback invoked after every C{connect()} on the
             underlying DB-API object. The callback is passed a new DB-API
             connection object. This callback can setup per-connection state
             such as charset, timezone, etc.
 
-        @param cp_reconnect: detect connections which have failed and reconnect
+        @keyword cp_reconnect: detect connections which have failed and reconnect
             (default C{False}). Failed connections may result in
             L{ConnectionLost} exceptions, which indicate the query may need to
             be re-sent.
 
-        @param cp_good_sql: an sql query which should always succeed and change
+        @keyword cp_good_sql: an sql query which should always succeed and change
             no state (default C{'select 1'})
 
-        @param cp_reactor: use this reactor instead of the global reactor
+        @keyword cp_reactor: use this reactor instead of the global reactor
             (added in Twisted 10.2).
         @type cp_reactor: L{IReactorCore} provider
         """

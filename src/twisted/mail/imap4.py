@@ -3583,7 +3583,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         Any non-zero number of queries are accepted by this method, as returned
         by the C{Query}, C{Or}, and C{Not} functions.
 
-        @param uid: if true, the server is asked to return message UIDs instead
+        @keyword uid: if true, the server is asked to return message UIDs instead
             of message sequence numbers.  (This is a keyword-only argument.)
         @type uid: L{bool}
 

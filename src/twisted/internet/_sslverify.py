@@ -1218,7 +1218,7 @@ def optionsForClientTLS(
         the list are preferred over those later in the list.
     @type acceptableProtocols: L{list} of L{bytes}
 
-    @param extraCertificateOptions: keyword-only argument; this is a dictionary
+    @keyword extraCertificateOptions: keyword-only argument; this is a dictionary
         of additional keyword arguments to be presented to
         L{CertificateOptions}. Please avoid using this unless you absolutely
         need to; any time you need to pass an option here that is a bug in this

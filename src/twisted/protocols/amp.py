@@ -2138,11 +2138,11 @@ class StartTLS(Command):
         """
         Create a StartTLS command.  (This is private.  Use AMP.callRemote.)
 
-        @param tls_localCertificate: the PrivateCertificate object to use to
+        @keyword tls_localCertificate: the PrivateCertificate object to use to
         secure the connection.  If it's None, or unspecified, an ephemeral DH
         key is used instead.
 
-        @param tls_verifyAuthorities: a list of Certificate objects which
+        @keyword tls_verifyAuthorities: a list of Certificate objects which
         represent root certificates to verify our peer with.
         """
         if ssl is None:
