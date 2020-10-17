@@ -3574,7 +3574,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
                 ids.append(self._intOrRaise(parts[0], parts))
         return ids
 
-    def search(self, *queries, **kwarg):
+    def search(self, *queries, uid=False):
         """
         Search messages in the currently selected mailbox
 
@@ -3583,8 +3583,8 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         Any non-zero number of queries are accepted by this method, as returned
         by the C{Query}, C{Or}, and C{Not} functions.
 
-        @keyword uid: if true, the server is asked to return message UIDs instead
-            of message sequence numbers.  (This is a keyword-only argument.)
+        @param uid: if true, the server is asked to return message UIDs instead
+            of message sequence numbers.
         @type uid: L{bool}
 
         @rtype: L{Deferred}
@@ -3596,10 +3596,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         # identifier is provided.  See #9201.
         queries = [query.encode("charmap") for query in queries]
 
-        if kwarg.get("uid"):
-            cmd = b"UID SEARCH"
-        else:
-            cmd = b"SEARCH"
+        cmd = b"UID SEARCH" if uid else b"SEARCH"
         args = b" ".join(queries)
         d = self.sendCommand(Command(cmd, args, wantResponse=(cmd,)))
         d.addCallback(self.__cbSearch)
