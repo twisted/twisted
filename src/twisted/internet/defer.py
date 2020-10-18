@@ -243,22 +243,24 @@ def _cancelledToTimedOutError(value: _T, timeout: float) -> _T:
 
 class _Sentinel(Enum):
     """
-    @cvar _NO_RESULT: The result used to represent the fact that there is no
-        result. B{Never ever ever use this as an actual result for a Deferred}.  You
-        have been warned.
-    @cvar _CONTINUE: A marker left in L{Deferred.callback}s to indicate a Deferred
-        chain.  Always accompanied by a Deferred instance in the args tuple pointing
-        at the Deferred which is chained to the Deferred which has this marker.
+    @cvar _NO_RESULT:
+        The result used to represent the fact that there is no result.
+        B{Never ever ever use this as an actual result for a Deferred}.
+        You have been warned.
+    @cvar _CONTINUE:
+        A marker left in L{Deferred.callback}s to indicate a Deferred chain.
+        Always accompanied by a Deferred instance in the args tuple pointing at
+        the Deferred which is chained to the Deferred which has this marker.
     """
 
     _NO_RESULT = object()
     _CONTINUE = object()
 
 
-# type note: this should be Callable[[object, ...], object] but mypy doesn't allow
+# type note: this should be Callable[[object, ...], object] but mypy doesn't allow.
 #   Callable[[object], object] is next best, but disallows valid callback signatures
 DeferredCallback = Callable[..., object]
-# type note: this should be Callable[[Failure, ...], object] but mypy doesn't allow
+# type note: this should be Callable[[Failure, ...], object] but mypy doesn't allow.
 #   Callable[[Failure], object] is next best, but disallows valid callback signatures
 DeferredErrback = Callable[..., object]
 
@@ -1775,16 +1777,12 @@ class _ConcurrencyPrimitive(ABC):
         return r
 
     # You might wonder: "WTF is dbjAAcAiBbiFeBiEAcjgDhfFchjEBahF?"
-    # It is:
-    #     "".join([
-    #         string.ascii_lowercase[int(c)] if c in string.digits else c
-    #         for c in "319AA2A8B18F4B8EA296D75F279EB07F"
-    #     ])
-    # …which is to say that it is a UUID encoded as letters.
-    # …which is to say: "it's not a string that will ever be used as a name in kwargs"
-    # Positional-only arguments, starting in Python 3.8, would be a better alternative.
+    # It's self_ + a GUID, which is to say: "it's not a string that will ever
+    # be used as a name in kwargs".
+    # Positional-only arguments, starting in Python 3.8, would be a better
+    # alternative.
     def run(
-        dbjAAcAiBbiFeBiEAcjgDhfFchjEBahF,
+        self_319AA2A8B18F4B8EA296D75F279EB07F,
         f: Callable[..., object],
         *args: object,
         **kwargs: object
@@ -1805,10 +1803,10 @@ class _ConcurrencyPrimitive(ABC):
 
         def execute(ignoredResult: object) -> Deferred:
             d = maybeDeferred(f, *args, **kwargs)
-            d.addBoth(dbjAAcAiBbiFeBiEAcjgDhfFchjEBahF._releaseAndReturn)
+            d.addBoth(self_319AA2A8B18F4B8EA296D75F279EB07F._releaseAndReturn)
             return d
 
-        d = dbjAAcAiBbiFeBiEAcjgDhfFchjEBahF.acquire()
+        d = self_319AA2A8B18F4B8EA296D75F279EB07F.acquire()
         d.addCallback(execute)
         return d
 
