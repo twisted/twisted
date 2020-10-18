@@ -349,7 +349,7 @@ class Deferred(Generic[_DeferredResultT]):
     # sets it directly.
     debug = False
 
-    _chainedTo = None  # type: Optional[Deferred[object]]
+    _chainedTo = None  # type: Optional[Deferred[Any]]
 
     def __init__(
         self, canceller: Optional[Callable[["Deferred"], None]] = None
@@ -726,7 +726,7 @@ class Deferred(Generic[_DeferredResultT]):
         # added its _continuation() to the callbacks list of a second Deferred
         # and then that second Deferred being fired.  ie, if ever had _chainedTo
         # set to something other than None, you might end up on this stack.
-        chain = [self]  # type: List[Deferred[object]]
+        chain = [self]  # type: List[Deferred[Any]]
 
         while chain:
             current = chain[-1]
@@ -940,7 +940,7 @@ class Deferred(Generic[_DeferredResultT]):
         """
 
         class Adaptor:
-            def __init__(self, actual: Deferred[object]) -> None:
+            def __init__(self, actual: Deferred[Any]) -> None:
                 self.actual = actual
 
             def __call__(self, result: Future) -> None:
