@@ -104,7 +104,16 @@ jobs:
       uses: pypa/gh-action-pypi-publish@v1.4.1
       with:
         user: __token__
-        password: ${{ secrets.pypi_password }}
+        password: ${{ secrets.PYPI_UPLOAD_TOKEN }}
+        verbose: true
+
+    - name: Publish package to Test PyPI
+      if: startsWith(github.ref, 'refs/tags') && github.event_name == 'release'
+      uses: pypa/gh-action-pypi-publish@v1.4.1
+      with:
+        user: __token__
+        password: ${{ secrets.TEST_PYPI_UPLOAD_TOKEN }}
+        repository_url: https://test.pypi.org/legacy/
         verbose: true
 
   pypi-upload-src-dist:
@@ -131,5 +140,15 @@ jobs:
       uses: pypa/gh-action-pypi-publish@v1.4.1
       with:
         user: __token__
-        password: ${{ secrets.pypi_password }}
+        password: ${{ secrets.PYPI_UPLOAD_TOKEN  }}
         verbose: true
+
+    - name: Publish package to Test PyPI
+      if: startsWith(github.ref, 'refs/tags') && github.event_name == 'release'
+      uses: pypa/gh-action-pypi-publish@v1.4.1
+      with:
+        user: __token__
+        password: ${{ secrets.TEST_PYPI_UPLOAD_TOKEN }}
+        repository_url: https://test.pypi.org/legacy/
+        verbose: true
+
