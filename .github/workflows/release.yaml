@@ -35,7 +35,7 @@ jobs:
 
     - name: Build src dist
       run: |
-        python setup.py sdist --formats=bztar -d dist
+        python setup.py sdist --formats=gztar -d dist
 
     - uses: actions/upload-artifact@v2
       with:
