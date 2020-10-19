@@ -1,1 +1,0 @@
-xmlrpc's QueryFactory class is now public, more explanation for xmlrpc's queryFactory, and new xmlrpc-debug.py example script for debugging raw XML-RPC traffic.

@@ -1,1 +1,0 @@
-The parameters to twisted.internet.base.ReactorBase.addSystemEventTrigger(), twisted.internet.base.ReactorBase.callWhenRunning(), twisted.internet.base.ReactorBase.callLater(), twisted.internet.task.Clock.callLater() have been renamed to match the parameters defined in the following interfaces: twisted.internet.interfaces.IReactorCore, twisted.internet.interfaces.IReactorTime.
