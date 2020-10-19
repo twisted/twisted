@@ -148,6 +148,7 @@ class EchoProtocol(protocol.Protocol):
         self.transport.write(data)
 
 
+@implementer(session.ISession, session.ISessionSetEnv)
 class ExampleSession(object):
     """
     This selects what to do for each type of session which is requested by the
@@ -194,8 +195,9 @@ class ExampleSession(object):
         pass
 
 
-components.registerAdapter(ExampleSession, ExampleAvatar, session.ISession)
-components.registerAdapter(ExampleSession, ExampleAvatar, session.ISessionSetEnv)
+components.registerAdapter(
+    ExampleSession, ExampleAvatar, session.ISession, session.ISessionSetEnv
+)
 
 
 class ExampleFactory(factory.SSHFactory):
