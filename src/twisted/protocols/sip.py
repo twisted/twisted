@@ -9,13 +9,13 @@ Documented in RFC 2543.
 [Superseded by 3261]
 """
 
+from collections import OrderedDict
 import socket
 import time
+from typing import Dict, List
 import warnings
 
-from typing import Dict
 from zope.interface import implementer, Interface
-from collections import OrderedDict
 
 from twisted import cred
 from twisted.internet import protocol, defer, reactor
@@ -339,8 +339,8 @@ class URL:
         else:
             self.headers = headers
 
-    def toString(self):
-        l = []
+    def toString(self) -> str:
+        l = []  # type: List[str]
         w = l.append
         w("sip:")
         if self.username != None:

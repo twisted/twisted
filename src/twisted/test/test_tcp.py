@@ -11,7 +11,7 @@ import random
 import errno
 import hamcrest
 from functools import wraps
-from typing import Optional, Type, Union
+from typing import Callable, Optional
 from unittest import skipIf
 
 from zope.interface import implementer
@@ -23,6 +23,7 @@ from twisted.internet import protocol, reactor, defer, interfaces
 from twisted.internet import error
 from twisted.internet.address import IPv4Address
 from twisted.internet.interfaces import IHalfCloseableProtocol, IPullProducer
+from twisted.internet.protocol import Protocol
 from twisted.protocols import policies
 from twisted.python.runtime import platform
 from twisted.test.proto_helpers import AccumulatingProtocol
@@ -120,9 +121,7 @@ class MyProtocolFactoryMixin:
 
     protocolConnectionMade = None
     protocolConnectionLost = None
-    protocol = (
-        None
-    )  # type: Optional[Union[Type[protocol.Protocol],Type[protocol.AbstractDatagramProtocol]]]  # noqa
+    protocol = None  # type: Optional[Callable[[], Protocol]]
     called = 0
 
     def __init__(self):

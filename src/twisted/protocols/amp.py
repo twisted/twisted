@@ -196,49 +196,50 @@ has several features:
 
 __metaclass__ = type
 
-import types, warnings
-
-from io import BytesIO
-from struct import pack
-from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
 import datetime
 import decimal
 from functools import partial
+from io import BytesIO
 from itertools import count
+from struct import pack
+from types import MethodType
+from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
+import warnings
 
 from zope.interface import Interface, implementer
 
-from twisted.python.reflect import accumulateClassDict
-from twisted.python.failure import Failure
+from twisted.internet.defer import Deferred, maybeDeferred, fail
+from twisted.internet.error import ConnectionClosed
+from twisted.internet.error import PeerVerifyError, ConnectionLost
+from twisted.internet.interfaces import IFileDescriptorReceiver
+from twisted.internet.main import CONNECTION_LOST
+from twisted.internet.protocol import Protocol
+from twisted.protocols.basic import Int16StringReceiver, StatefulStringProtocol
+from twisted.python import log, filepath
 from twisted.python._tzhelper import (
     FixedOffsetTimeZone as _FixedOffsetTZInfo,
     UTC as utc,
 )
-
-from twisted.python import log, filepath
-
-from twisted.internet.interfaces import IFileDescriptorReceiver
-from twisted.internet.main import CONNECTION_LOST
-from twisted.internet.error import PeerVerifyError, ConnectionLost
-from twisted.internet.error import ConnectionClosed
-from twisted.internet.defer import Deferred, maybeDeferred, fail
-from twisted.internet.protocol import Protocol
-from twisted.protocols.basic import Int16StringReceiver, StatefulStringProtocol
 from twisted.python.compat import nativeString
+from twisted.python.failure import Failure
+from twisted.python.reflect import accumulateClassDict
 
 try:
-    from twisted.internet import ssl
+    from twisted.internet import ssl as _ssl
 
-    if ssl.supported:
+    if _ssl.supported:
         from twisted.internet.ssl import CertificateOptions, Certificate, DN, KeyPair
     else:
-        ssl = None  # type: ignore[assignment]
+        ssl = None
 except ImportError:
-    ssl = None  # type: ignore[assignment]
+    ssl = None
+else:
+    ssl = _ssl
 
 
 __all__ = [
     "AMP",
+    "AMPv2",
     "ANSWER",
     "ASK",
     "AmpBox",
@@ -514,7 +515,7 @@ class BadLocalReturn(AmpError):
     A bad value was returned from a local command; we were unable to coerce it.
     """
 
-    def __init__(self, message, enclosed):
+    def __init__(self, message: str, enclosed: Failure) -> None:
         AmpError.__init__(self)
         self.message = message
         self.enclosed = enclosed
@@ -608,7 +609,7 @@ class IncompatibleVersions(AmpError):
 PROTOCOL_ERRORS = {UNHANDLED_ERROR_CODE: UnhandledCommand}
 
 
-class AmpBox(dict):
+class AmpBox(Dict[bytes, bytes]):
     """
     I am a packet in the AMP protocol, much like a
     regular bytes:bytes dictionary.
@@ -657,7 +658,7 @@ class AmpBox(dict):
         newBox.update(self)
         return newBox
 
-    def serialize(self):
+    def serialize(self, version2: bool = False) -> bytes:
         """
         Convert me into a wire-encoded string.
 
@@ -665,7 +666,7 @@ class AmpBox(dict):
             module docstring.
         """
         i = sorted(self.items())
-        L = []
+        L = []  # type: List[bytes]
         w = L.append
         for k, v in i:
             if type(k) == str:
@@ -674,11 +675,29 @@ class AmpBox(dict):
                 raise TypeError("Unicode value for key %r not allowed: %r" % (k, v))
             if len(k) > MAX_KEY_LENGTH:
                 raise TooLong(True, True, k, None)
-            if len(v) > MAX_VALUE_LENGTH:
+            if len(v) > MAX_VALUE_LENGTH and not version2:
                 raise TooLong(False, True, v, k)
-            for kv in k, v:
-                w(pack("!H", len(kv)))
-                w(kv)
+
+            w(pack("!H", len(k)))
+            w(k)
+
+            if version2:
+                vio = BytesIO(v)
+                del v
+
+                # If the value is an exact multiple of 65535, the last
+                # chunk containing data will be followed by a zero-length chunk
+                # (i.e. when read() returns EOF).
+                chunk = vio.read(MAX_VALUE_LENGTH)
+                while True:
+                    w(pack("!H", len(chunk)))
+                    w(chunk)
+                    if len(chunk) != MAX_VALUE_LENGTH:
+                        break
+                    chunk = vio.read(MAX_VALUE_LENGTH)
+            else:
+                w(pack("!H", len(v)))
+                w(v)
         w(pack("!H", 0))
         return b"".join(L)
 
@@ -785,8 +804,8 @@ class BoxDispatcher:
     @type boxSender: L{IBoxSender}
     """
 
-    _failAllReason = None
-    _outstandingRequests = None
+    _failAllReason = None  # type: Optional[Failure]
+    _outstandingRequests = None  # type: Optional[Dict[bytes, Deferred]]
     _counter = 0
     boxSender = None
 
@@ -822,7 +841,7 @@ class BoxDispatcher:
         for key, value in OR:
             value.errback(reason)
 
-    def _nextTag(self):
+    def _nextTag(self) -> bytes:
         """
         Generate protocol-local serial numbers for _ask keys.
 
@@ -831,7 +850,9 @@ class BoxDispatcher:
         self._counter += 1
         return b"%x" % (self._counter,)
 
-    def _sendBoxCommand(self, command, box, requiresAnswer=True):
+    def _sendBoxCommand(
+        self, command: bytes, box: AmpBox, requiresAnswer: bool = True
+    ) -> Optional[Deferred]:
         """
         Send a command across the wire with the given C{amp.Box}.
 
@@ -868,13 +889,17 @@ class BoxDispatcher:
         if requiresAnswer:
             box[ASK] = tag
         box._sendTo(self.boxSender)
+
+        result = None
         if requiresAnswer:
+            assert self._outstandingRequests is not None
             result = self._outstandingRequests[tag] = Deferred()
-        else:
-            result = None
+
         return result
 
-    def callRemoteString(self, command, requiresAnswer=True, **kw):
+    def callRemoteString(
+        self, command: bytes, requiresAnswer: bool = True, **kw: bytes
+    ) -> Optional[Deferred]:
         """
         This is a low-level API, designed only for optimizing simple messages
         for which the overhead of parsing is too great.
@@ -1193,7 +1218,7 @@ class CommandLocator:
         cd = self._commandDispatch
         if name in cd:
             commandClass, responderFunc = cd[name]
-            responderMethod = types.MethodType(responderFunc, self)
+            responderMethod = MethodType(responderFunc, self)
             return self._wrapWithSerialization(responderMethod, commandClass)
 
 
@@ -2284,8 +2309,8 @@ class BinaryBoxProtocol(
     _justStartedTLS = False
     _startingTLSBuffer = None
     _locked = False
-    _currentKey = None
-    _currentBox = None
+    _currentKey = None  # type: Optional[bytes]
+    _currentBox = None  # type: Optional[AmpBox]
 
     _keyLengthLimitExceeded = False
 
@@ -2348,7 +2373,12 @@ class BinaryBoxProtocol(
         if self._startingTLSBuffer is not None:
             self._startingTLSBuffer.append(box)
         else:
-            self.transport.write(box.serialize())
+            self._write_box(box)
+
+    def _write_box(self, box: AmpBox) -> None:
+        """Send an AmpBox using the AMPv1 format."""
+        assert self.transport is not None
+        self.transport.write(box.serialize())
 
     def makeConnection(self, transport):
         """
@@ -2611,6 +2641,52 @@ class AMP(BinaryBoxProtocol, BoxDispatcher, CommandLocator, SimpleStringLocator)
         )
         BinaryBoxProtocol.connectionLost(self, reason)
         self.transport = None
+
+
+class AMPv2(AMP):
+    """
+    This protocol implements the AMP version 2 protocol that allows values longer than 65535 bytes.
+    """
+
+    _currentValue = None  # type: Optional[List[bytes]]
+
+    def _write_box(self, box: AmpBox) -> None:
+        """Send an AmpBox using the AMPv2 format."""
+        assert self.transport is not None
+        self.transport.write(box.serialize(version2=True))
+
+    def proto_value(self, string: bytes) -> str:
+        """Handle the first segment of a value."""
+
+        # Regular value in one segment
+        if len(string) < MAX_VALUE_LENGTH:
+            assert self._currentBox is not None
+            assert self._currentKey is not None
+            self._currentBox[self._currentKey] = string
+            self._currentKey = None
+            self.MAX_LENGTH = self._MAX_KEY_LENGTH
+            return "key"
+
+        self._currentValue = [string]
+        return "valuecont"
+
+    def proto_valuecont(self, string: bytes) -> str:
+        """Handle long values with more than one segment."""
+
+        assert self._currentValue is not None
+        self._currentValue.append(string)
+
+        if len(string) == MAX_VALUE_LENGTH:
+            return "valuecont"
+
+        # Last segment
+        assert self._currentBox is not None
+        assert self._currentKey is not None
+        self._currentBox[self._currentKey] = b"".join(self._currentValue)
+        self._currentValue = None
+        self._currentKey = None
+        self.MAX_LENGTH = self._MAX_KEY_LENGTH
+        return "key"
 
 
 class _ParserHelper:
