@@ -118,6 +118,7 @@ jobs:
 
   pypi-upload-src-dist:
     needs: build-src-dist
+    runs-on: ${{ matrix.os }}
     strategy:
       matrix:
           os: [ubuntu-20.04]
