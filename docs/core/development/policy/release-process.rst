@@ -184,29 +184,10 @@ Prepare the branch
 #. Commit the version and ``README.rst`` changes.
 #. Submit the ticket for review
 #. Pause until the ticket is reviewed and accepted.
-#. Tag the release.
+#. Tag the release. Github Actions will upload the dist to PyPI
 
    - ``git tag -s twisted-$RELEASE -m "Tag $RELEASE release"``
    - ``git push --tags``
-
-
-Cut the tarballs & installers
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-#. Using a checkout of the release branch or the release tag (with no local changes!), build the tarballs:
-
-   - ``python setup.py sdist --formats=bztar -d /tmp/twisted-release``
-
-#. Build Windows wheel
-
-   - Download the latest ``.whl`` files from `Buildbot <https://buildbot.twistedmatrix.com/builds/twisted-packages/>`_ and save them in the staging directory
-
-#. Sign the tarballs and Windows installers.
-   (You will need a PGP key for this - use something like Seahorse to generate one, if you don't have one.)
-
-   - MD5: ``md5sum Tw* | gpg -a --clearsign > /tmp/twisted-release/twisted-$RELEASE-md5sums.txt``
-   - SHA512: ``shasum -a 512 Tw* | gpg -a --clearsign > /tmp/twisted-release/twisted-$RELEASE-shasums.txt``
-   - Compare these to an ​example of ``twisted-$RELEASE-md5sums.txt`` - they should look the same.
 
 
 Update documentation
@@ -230,29 +211,6 @@ Update documentation
 #. Update the Read The Docs default to point to the release branch (via the `dashboard <https://readthedocs.org/projects/twisted/>`_).
 
 
-Distribute
-~~~~~~~~~~
-
-#. Create a tarball with the contents of the release directory: ``cd /tmp/twisted-release; tar -cvjf ../release.tar.bz2 *``
-
-#. Upload to the official upload locations (see #2888)
-
-   - ``cd ~; git clone https://github.com/twisted-infra/braid``
-   - ``cd braid``
-   - ``virtualenv ~/dev/braid; source ~/dev/braid/bin/activate; cd ~/braid; python setup.py develop;``
-   - ``cd ~/braid; fab config.production t-web.uploadRelease:$RELEASE,/tmp/release.tar.bz2``
-
-#. Test the generated docs
-
-   - Browse to ``http://twistedmatrix.com/documents/$RELEASE/``
-   - Make sure that there is content in each of the directories and that it looks good
-   - Follow each link on `the documentation page <https://twistedmatrix.com/trac/wiki/Documentation>`_, replace current with ``$RELEASE`` (e.g. 10.0.0) and look for any obvious breakage
-
-#. Change the "current" symlink
-
-   - Upload release: ``fab config.production t-web.updateCurrentDocumentation:$RELEASE``
-
-
 Announce
 ~~~~~~~~
 
@@ -267,11 +225,6 @@ Announce
    - Add a new md5sum link
    - Add a new shasum link
    - Save the page, check all links
-
-#. Update PyPI records & upload files
-
-   - ``pip install -U twine``
-   - ``twine upload /tmp/twisted-release/Twisted-$RELEASE*``
 
 #. Write the release announcement (see below)
 
