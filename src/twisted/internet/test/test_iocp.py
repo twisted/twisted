@@ -171,7 +171,7 @@ class SupportTests(TestCase):
         self._acceptAddressTest(AF_INET6, "::1")
 
 
-class IOCPReactorTests(ReactorBuilder):
+class IOCPReactorTests(ReactorBuilder, TestCase):
 
     reactorFactory = IOCPReactor
 
