@@ -35,7 +35,7 @@ prune .github
 include src/twisted/py.typed
 
 # Include test-running utilities for downstream packagers
-include mypy.ini tox.ini .coveragerc
+include mypy.ini .coveragerc
 
 # Include our docs templates
 recursive-include src/twisted/python/_pydoctortemplates *.html
