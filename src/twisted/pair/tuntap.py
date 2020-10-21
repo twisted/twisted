@@ -351,7 +351,7 @@ class TuntapPort(abstract.FileDescriptor):
         """
         Write a datagram constructed from a L{list} of L{bytes}.
 
-        @param datagram: The data that will make up the complete datagram to be
+        @param seq: The data that will make up the complete datagram to be
             written.
         @type seq: L{list} of L{bytes}
         """

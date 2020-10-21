@@ -768,7 +768,7 @@ class Deferred:
 
     def asFuture(self, loop):
         """
-        Adapt a L{Deferred} into a L{asyncio.Future} which is bound to C{loop}.
+        Adapt this L{Deferred} into a L{asyncio.Future} which is bound to C{loop}.
 
         @note: converting a L{Deferred} to an L{asyncio.Future} consumes both
             its result and its errors, so this method implicitly converts
@@ -779,9 +779,6 @@ class Deferred:
 
         @param loop: The asyncio event loop to bind the L{asyncio.Future} to.
         @type loop: L{asyncio.AbstractEventLoop} or similar
-
-        @param deferred: The Deferred to adapt.
-        @type deferred: L{Deferred}
 
         @return: A Future which will fire when the Deferred fires.
         @rtype: L{asyncio.Future}
@@ -920,7 +917,9 @@ def _cancelledToTimedOutError(value, timeout):
     @type timeout: L{int}
 
     @rtype: C{value}
-    @raise: L{TimeoutError}
+    @raise TimeoutError: If C{value} is a L{Failure} that is a L{CancelledError}.
+    @raise Exception: If C{value} is a L{Failure} that is not a L{CancelledError},
+        it is re-raised.
 
     @since: 16.5
     """

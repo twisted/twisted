@@ -796,7 +796,7 @@ class _NewConnectionHelper:
 
         @return: A L{KnownHostsFile} instance pointed at the user's personal
             I{known hosts} file.
-        @type: L{KnownHostsFile}
+        @rtype: L{KnownHostsFile}
         """
         return KnownHostsFile.fromPath(FilePath(expanduser(cls._KNOWN_HOSTS)))
 

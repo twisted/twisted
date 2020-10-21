@@ -2928,10 +2928,10 @@ class FTPClient(FTPClientBasic):
         This method issues the I{RNFR}/I{RNTO} command sequence to rename
         C{pathFrom} to C{pathTo}.
 
-        @param: pathFrom: the absolute path to the file to be renamed
+        @param pathFrom: the absolute path to the file to be renamed
         @type pathFrom: C{str}
 
-        @param: pathTo: the absolute path to rename the file to.
+        @param pathTo: the absolute path to rename the file to.
         @type pathTo: C{str}
 
         @return: A L{Deferred} which fires when the rename operation has

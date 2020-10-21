@@ -61,7 +61,7 @@ class _ListSetter:
         Add the value at the specified position, padding out missing entries.
 
         @type itemAndValue: C{tuple}
-        @param item: A tuple of (item, value).  The I{item} is the 0-based
+        @param itemAndValue: A tuple of (item, value).  The I{item} is the 0-based
         index in the list at which the value should be placed.  The value is
         is an L{object} to put in the list.
         """
