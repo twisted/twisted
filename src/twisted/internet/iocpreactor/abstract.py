@@ -329,6 +329,8 @@ class FileHandle(_ConsumerMixin, _LogOwner):
         """
         Close the connection at the next available opportunity.
 
+        This is the same code from twisted.internet.abstract.FileDescriptor.loseConnection
+
         Call this to cause this FileDescriptor to lose its connection.  It will
         first write any data that it has buffered.
 

@@ -49,6 +49,7 @@ from twisted.internet.test.connectionmixins import (
     ConnectableProtocol,
     EndpointCreator,
     runProtocolsWithReactor,
+    runProtocolsWithReactorInstance,
     Stop,
     BrokenContextFactory,
 )
@@ -2043,11 +2044,14 @@ class TCPConnectionTestsBuilder(ReactorBuilder):
         {writeConnectionLost}, the connection is closed correctly.
 
         This rather obscure case used to fail (see ticket #3037).
+        This also covers a code branch for ticket #9553.
         """
 
         @implementer(IHalfCloseableProtocol)
         class ListenerProtocol(ConnectableProtocol):
             def readConnectionLost(self):
+                # Force the existence of a writer in an attempt to cover #9553.
+                self.transport.startWriting()
                 self.transport.loseWriteConnection()
 
             def writeConnectionLost(self):
@@ -2058,7 +2062,63 @@ class TCPConnectionTestsBuilder(ReactorBuilder):
                 self.transport.loseConnection()
 
         # If test fails, reactor won't stop and we'll hit timeout:
-        runProtocolsWithReactor(self, ListenerProtocol(), Client(), TCPCreator())
+        server = ListenerProtocol()
+        client = Client()
+        reactor = self.buildReactor()
+        reactor._handleSignals()
+        # We might have the waker readers.
+        initial_readers = reactor.getReaders()
+
+        runProtocolsWithReactorInstance(reactor, self, server, client, TCPCreator())
+
+        # Check that the reactor is clean.
+        self.assertEqual([], reactor.getWriters())
+        self.assertCountEqual(initial_readers, reactor.getReaders())
+
+    def test_connectClientToServer(self):
+        """
+        This just check that a client can connect to a server and exchange
+        data.
+        """
+
+        class ListenerProtocol(ConnectableProtocol):
+            """
+            A server protocol collecting the received data.
+
+            This is still an ConnectableProtocol to work with `runProtocolsWithReactor`
+            but doesn't implements the interface.
+            """
+
+            data = []
+
+            def connectionMade(self):
+                self.transport.write(b"server-data")
+
+            def dataReceived(self, data):
+                self.data.append(data)
+
+        class Client(ConnectableProtocol):
+            """
+            A client protocol collecting the received data and closing
+            the connection after the data was received from the server.
+            """
+
+            data = []
+
+            def connectionMade(self):
+                self.transport.write(b"client-data")
+
+            def dataReceived(self, data):
+                self.data.append(data)
+                self.transport.loseConnection()
+
+        server = ListenerProtocol()
+        client = Client()
+
+        runProtocolsWithReactor(self, server, client, TCPCreator())
+
+        self.assertEqual([b"client-data"], server.data)
+        self.assertEqual([b"server-data"], client.data)
 
 
 class WriteSequenceTestsMixin:
