@@ -2044,7 +2044,35 @@ class TCPConnectionTestsBuilder(ReactorBuilder):
         {writeConnectionLost}, the connection is closed correctly.
 
         This rather obscure case used to fail (see ticket #3037).
+        """
+
+        @implementer(IHalfCloseableProtocol)
+        class ListenerProtocol(ConnectableProtocol):
+            def readConnectionLost(self):
+                self.transport.loseWriteConnection()
+
+            def writeConnectionLost(self):
+                self.transport.loseConnection()
+
+        class Client(ConnectableProtocol):
+            def connectionMade(self):
+                self.transport.loseConnection()
+
+        # If test fails, reactor won't stop and we'll hit timeout:
+        runProtocolsWithReactor(self, ListenerProtocol(), Client(), TCPCreator())
+
+    def test_doubleHalfCloseReactorCleanup(self):
+        """
+        If one side half-closes its connection, and then the other side of the
+        connection calls C{loseWriteConnection}, and then C{loseConnection} in
+        {writeConnectionLost}, the connection is closed correctly.
+
+        This rather obscure case used to fail (see ticket #3037).
         This also covers a code branch for ticket #9553.
+
+        This is the generic tests for most reactors.
+        This tests is overwritten for IOCP reactor, as IOCP reactor doesn't
+        have getReaders() and getWriters().
         """
 
         @implementer(IHalfCloseableProtocol)
@@ -2062,13 +2090,16 @@ class TCPConnectionTestsBuilder(ReactorBuilder):
                 self.transport.loseConnection()
 
         # If test fails, reactor won't stop and we'll hit timeout:
-        server = ListenerProtocol()
-        client = Client()
         reactor = self.buildReactor()
         reactor._handleSignals()
         # We might have the waker readers.
-        initial_readers = reactor.getReaders()
+        try:
+            initial_readers = reactor.getReaders()
+        except NotImplementedError:
+            raise SkipTest("Reactor does not implements IReadDescriptor.")
 
+        server = ListenerProtocol()
+        client = Client()
         runProtocolsWithReactorInstance(reactor, self, server, client, TCPCreator())
 
         # Check that the reactor is clean.

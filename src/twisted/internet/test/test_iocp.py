@@ -12,11 +12,23 @@ from struct import pack
 from socket import AF_INET6, AF_INET, SOCK_STREAM, SOL_SOCKET, socket
 from unittest import skipIf
 
+from zope.interface import implementer
 from zope.interface.verify import verifyClass
 
 from twisted.trial.unittest import TestCase
 from twisted.python.log import msg
-from twisted.internet.interfaces import IPushProducer
+from twisted.internet.interfaces import IPushProducer, IHalfCloseableProtocol
+
+from twisted.internet.test.connectionmixins import (
+    ConnectableProtocol,
+    runProtocolsWithReactorInstance,
+)
+from twisted.internet.test.reactormixins import (
+    ReactorBuilder,
+)
+from twisted.internet.test.test_tcp import (
+    TCPCreator,
+)
 
 try:
     from twisted.internet.iocpreactor import iocpsupport as _iocp, tcp, udp
@@ -159,7 +171,10 @@ class SupportTests(TestCase):
         self._acceptAddressTest(AF_INET6, "::1")
 
 
-class IOCPReactorTests(TestCase):
+class IOCPReactorTests(ReactorBuilder):
+
+    reactorFactory = IOCPReactor
+
     def test_noPendingTimerEvents(self):
         """
         Test reactor behavior (doIteration) when there are no pending time
@@ -206,3 +221,39 @@ class IOCPReactorTests(TestCase):
         self.assertEqual(fd.counter, EVENTS_PER_LOOP)
         ir.doIteration(0)
         self.assertEqual(fd.counter, EVENTS_PER_LOOP + 1)
+
+    def test_doubleHalfClose(self):
+        """
+        If one side half-closes its connection, and then the other side of the
+        connection calls C{loseWriteConnection}, and then C{loseConnection} in
+        {writeConnectionLost}, the connection is closed correctly.
+
+        This covers a code branch for ticket #9553.
+        """
+
+        @implementer(IHalfCloseableProtocol)
+        class ListenerProtocol(ConnectableProtocol):
+            def readConnectionLost(self):
+                # Force the existence of a writer in an attempt to cover #9553.
+                self.transport.startWriting()
+                self.transport.loseWriteConnection()
+
+            def writeConnectionLost(self):
+                self.transport.loseConnection()
+
+        class Client(ConnectableProtocol):
+            def connectionMade(self):
+                self.transport.loseConnection()
+
+        # If test fails, reactor won't stop and we'll hit timeout:
+        server = ListenerProtocol()
+        client = Client()
+        reactor = self.buildReactor()
+        reactor._handleSignals()
+        # We might have the waker readers.
+        initial_handlers = reactor.handlers.copy()
+
+        runProtocolsWithReactorInstance(reactor, self, server, client, TCPCreator())
+
+        # Check that the reactor is clean.
+        self.assertCountEqual(initial_handlers, reactor.handlers)
