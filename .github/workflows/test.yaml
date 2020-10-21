@@ -3,6 +3,8 @@ name: Run tests
 on:
   push:
     branches: [ trunk ]
+    tags:
+      - twisted-*
   pull_request:
     branches: [ trunk ]
 
@@ -10,7 +12,7 @@ jobs:
   testing:
     runs-on: ubuntu-20.04
     env:
-      TOXENV: "alldeps-withcov-posix,coverage-prepare,codecov-push,coveralls-push"
+      TOXENV: "alldeps-withcov-posix,coverage-prepare,codecov-push,coveralls-push,release"
     strategy:
       matrix:
           python-version: [3.5, 3.6, 3.7, 3.8, 3.9.0-rc.2, pypy3]
@@ -111,3 +113,33 @@ jobs:
       run: |
         python --version
         tox -q
+
+    - name: upload dist
+      uses: actions/upload-artifact@v2
+      with:
+        name: py${{ matrix.python-version }}_dist
+        path: dist
+
+
+  all-successful:
+    # https://github.community/t/is-it-possible-to-require-all-github-actions-tasks-to-pass-without-enumerating-them/117957/4?u=graingert
+    runs-on: ubuntu-20.04
+    needs: [testing]
+    steps:
+      - name: Download dists for PyPI
+        uses: actions/download-artifact@v2
+        with:
+          name: py3.8_dist
+          path: dist
+
+      - name: Display structure of downloaded files
+        run: ls -R
+
+      - name: Publish to PyPI for a new tag
+        if: startsWith(github.ref, 'refs/tags')
+        uses: pypa/gh-action-pypi-publish@v1.3.1
+        with:
+          password: ${{ secrets.PYPI_UPLOAD_TOKEN }}
+
+      - name: note that all tests succeeded
+        run: echo "🎉"
