@@ -36,7 +36,7 @@ jobs:
     - name: Get pip cache dir
       id: pip-cache
       run: |
-        python -c "from pip._internal.locations import USER_CACHE_DIR; print('::set-output name=dir::' + USER_CACHE_DIR)"
+        echo "::set-output name=dir::$(pip cache dir)"
 
     - uses: actions/cache@v2
       with:
@@ -77,7 +77,7 @@ jobs:
     - name: Get pip cache dir
       id: pip-cache
       run: |
-        python -c "from pip._internal.locations import USER_CACHE_DIR; print('::set-output name=dir::' + USER_CACHE_DIR)"
+        echo "::set-output name=dir::$(pip cache dir)"
 
     - uses: actions/cache@v2
       with:
