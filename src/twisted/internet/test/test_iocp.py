@@ -41,6 +41,7 @@ try:
     from twisted.internet.iocpreactor.const import SO_UPDATE_ACCEPT_CONTEXT
     from twisted.internet.iocpreactor.abstract import FileHandle
 except ImportError:
+    IOCPReactor = None
     skip = "This test only applies to IOCPReactor"
 
 try:
@@ -251,9 +252,9 @@ class IOCPReactorTests(ReactorBuilder, TestCase):
         reactor = self.buildReactor()
         reactor._handleSignals()
         # We might have the waker readers.
-        initial_handlers = reactor.handlers.copy()
+        initial_handles = reactor.handles.copy()
 
         runProtocolsWithReactorInstance(reactor, self, server, client, TCPCreator())
 
         # Check that the reactor is clean.
-        self.assertCountEqual(initial_handlers, reactor.handlers)
+        self.assertCountEqual(initial_handles, reactor.handles)
