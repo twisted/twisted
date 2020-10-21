@@ -1582,7 +1582,7 @@ class Key:
         @type comment: L{bytes}
 
         @param passphrase: Passphrase for a private key.
-        @type comment: L{bytes}
+        @type passphrase: L{bytes}
 
         @rtype: L{bytes}
         """
