@@ -6,6 +6,7 @@ Tests for L{twisted.internet.iocpreactor}.
 """
 
 import errno
+import sys
 import time
 from array import array
 from struct import pack
@@ -41,6 +42,9 @@ try:
     from twisted.internet.iocpreactor.const import SO_UPDATE_ACCEPT_CONTEXT
     from twisted.internet.iocpreactor.abstract import FileHandle
 except ImportError:
+    if sys.platform == "win32":
+        raise
+
     IOCPReactor = None
     skip = "This test only applies to IOCPReactor"
 

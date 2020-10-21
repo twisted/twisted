@@ -85,7 +85,7 @@ def calcHA2(algo, pszMethod, pszDigestUri, pszQop, pszHEntity):
     """
     Compute H(A2) from RFC 2617.
 
-    @param pszAlg: The name of the algorithm to use to calculate the digest.
+    @param algo: The name of the algorithm to use to calculate the digest.
         Currently supported are md5, md5-sess, and sha.
     @param pszMethod: The request method.
     @param pszDigestUri: The request URI.

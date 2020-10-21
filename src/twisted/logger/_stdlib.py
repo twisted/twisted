@@ -72,7 +72,7 @@ class STDLibLogObserver:
         self, name: str = "twisted", stackDepth: int = defaultStackDepth
     ) -> None:
         """
-        @param loggerName: logger identifier.
+        @param name: logger identifier.
         @param stackDepth: The depth of the stack to investigate for caller
             metadata.
         """

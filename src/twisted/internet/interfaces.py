@@ -1588,9 +1588,6 @@ class IFileDescriptor(ILoggingContext):
 
     def fileno() -> object:
         """
-        @raise: If the descriptor no longer has a valid file descriptor
-            number associated with it.
-
         @return: The platform-specified representation of a file descriptor
             number.  Or C{-1} if the descriptor no longer has a valid file
             descriptor number associated with it.  As long as the descriptor

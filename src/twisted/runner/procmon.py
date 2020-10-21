@@ -245,8 +245,7 @@ class ProcessMonitor(service.Service):
             The default of C{None} means inheriting the laucnhing process's
             working directory.
         @type env: C{dict}
-        @raises: C{KeyError} if a process with the given name already
-            exists
+        @raise KeyError: If a process with the given name already exists.
         """
         if name in self._processes:
             raise KeyError("remove %s first" % (name,))

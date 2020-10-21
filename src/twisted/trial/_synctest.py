@@ -1085,7 +1085,7 @@ class SynchronousTestCase(_Assertions):
         C{TestCase} stores each error logged during the run of the test and
         reports them as errors during the cleanup phase (after C{tearDown}).
 
-        @param *errorTypes: If unspecified, flush all errors. Otherwise, only
+        @param errorTypes: If unspecified, flush all errors. Otherwise, only
         flush errors that match the given types.
 
         @return: A list of failures that have been removed.
@@ -1252,7 +1252,7 @@ class SynchronousTestCase(_Assertions):
 
         @return: Whatever C{f} returns.
 
-        @raise: Whatever C{f} raises.  If any exception is
+        @raise Exception: Whatever C{f} raises.  If any exception is
             raised by C{f}, though, no assertions will be made about emitted
             deprecations.
 

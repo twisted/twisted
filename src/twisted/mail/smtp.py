@@ -1173,7 +1173,7 @@ class SMTPClient(basic.LineReceiver, policies.TimeoutMixin):
 
         @param code: the code returned by the SMTP Server
         @param resp: The string response returned from the SMTP Server
-        @param numOK: the number of addresses accepted by the remote host.
+        @param numOk: the number of addresses accepted by the remote host.
         @param addresses: is a list of tuples (address, code, resp) listing
                           the response to each RCPT command.
         @param log: is the SMTP session log

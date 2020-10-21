@@ -222,7 +222,7 @@ class _ModuleIteratorHelper:
 
         to retrieve this module.
 
-        @raise: KeyError if the module is not found.
+        @raise KeyError: if the module is not found.
 
         @return: a PythonModule.
         """
@@ -380,7 +380,7 @@ class PythonModule(_ModuleIteratorHelper):
 
         @return: a genuine python module.
 
-        @raise: any type of exception.  Importing modules is a risky business;
+        @raise Exception: Importing modules is a risky business;
         the erorrs of any code run at module scope may be raised from here, as
         well as ImportError if something bizarre happened to the system path
         between the discovery of this PythonModule object and the attempt to
@@ -777,8 +777,6 @@ def iterModules():
     """
     Iterate all modules and top-level packages on the global Python path, but
     do not descend into packages.
-
-    @param importPackages: Import packages as they are seen.
     """
     return theSystemPath.iterModules()
 

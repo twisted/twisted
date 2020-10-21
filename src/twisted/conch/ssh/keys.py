@@ -1570,13 +1570,19 @@ class Key:
     def _toString_OPENSSH(self, subtype=None, comment=None, passphrase=None):
         """
         Return a public or private OpenSSH string.  See
-        _fromString_PUBLIC_OPENSSH and _fromPrivateOpenSSH_PEM for the
-        string formats.  If extra is present, it represents a comment for a
-        public key, or a passphrase for a private key.
+        L{_fromString_PUBLIC_OPENSSH} and L{_fromPrivateOpenSSH_PEM} for the
+        string formats.
 
-        @param extra: Comment for a public key or passphrase for a
-            private key
-        @type extra: L{bytes}
+        @param subtype: A subtype to emit.  Only supported for private keys,
+            for which the currently supported subtypes are C{'PEM'} and C{'v1'}.
+            If not given, an appropriate default is used.
+        @type subtype: L{str} or L{None}
+
+        @param comment: Comment for a public key.
+        @type comment: L{bytes}
+
+        @param passphrase: Passphrase for a private key.
+        @type passphrase: L{bytes}
 
         @rtype: L{bytes}
         """

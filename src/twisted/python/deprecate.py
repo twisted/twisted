@@ -601,7 +601,7 @@ def warnAboutFunction(offender, warningString):
     from L{warnings.warn} in that it is not limited to deprecating the behavior
     of a function currently on the call stack.
 
-    @param function: The function that is being deprecated.
+    @param offender: The function that is being deprecated.
 
     @param warningString: The string that should be emitted by this warning.
     @type warningString: C{str}
