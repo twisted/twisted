@@ -824,7 +824,7 @@ class Site(http.HTTPFactory):
         @param uid: Unique ID of the session.
         @type uid: L{bytes}.
 
-        @raise: L{KeyError} if the session is not found.
+        @raise KeyError: If the session is not found.
         """
         return self.sessions[uid]
 

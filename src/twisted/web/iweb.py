@@ -214,7 +214,7 @@ class IRequest(Interface):
         @see: {twisted.web.server.Request.prepath}
 
         @return: An absolute URL.
-        @type: L{bytes}
+        @rtype: L{bytes}
         """
 
     def rememberRootURL():
@@ -228,7 +228,7 @@ class IRequest(Interface):
         Get a previously-remembered URL.
 
         @return: An absolute URL.
-        @type: L{bytes}
+        @rtype: L{bytes}
         """
 
     # Methods for outgoing response

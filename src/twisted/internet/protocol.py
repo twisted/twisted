@@ -255,10 +255,10 @@ class ClientCreator:
         @param method: A callable which will actually start the connection
             attempt.  For example, C{reactor.connectTCP}.
 
-        @param *args: Positional arguments to pass to C{method}, excluding the
+        @param args: Positional arguments to pass to C{method}, excluding the
             factory.
 
-        @param **kwargs: Keyword arguments to pass to C{method}.
+        @param kwargs: Keyword arguments to pass to C{method}.
 
         @return: A L{Deferred} which fires with an instance of the protocol
             class passed to this L{ClientCreator}'s initializer or fails if the

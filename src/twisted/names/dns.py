@@ -741,7 +741,7 @@ class _OPTHeader(tputil.FancyStrMixin, tputil.FancyEqMixin):
     ):
         """
         @type udpPayloadSize: L{int}
-        @param payload: The number of octets of the largest UDP
+        @param udpPayloadSize: The number of octets of the largest UDP
             payload that can be reassembled and delivered in the
             requestor's network stack.
 

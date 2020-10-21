@@ -75,7 +75,7 @@ def installReactor(shortName):
 
     @raise NoSuchReactor: If no reactor is found with a matching C{shortName}.
 
-    @raise: anything that the specified reactor can raise when installed.
+    @raise Exception: Anything that the specified reactor can raise when installed.
     """
     for installer in getReactorTypes():
         if installer.shortName == shortName:

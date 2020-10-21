@@ -822,9 +822,9 @@ def deferLater(clock, delay, callable=None, *args, **kw):
 
     @param callable: The object to call after the delay.
 
-    @param *args: The positional arguments to pass to C{callable}.
+    @param args: The positional arguments to pass to C{callable}.
 
-    @param **kw: The keyword arguments to pass to C{callable}.
+    @param kw: The keyword arguments to pass to C{callable}.
 
     @rtype: L{defer.Deferred}
 

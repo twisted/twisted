@@ -1048,7 +1048,6 @@ class BoxDispatcher:
 
         Dispatch it to a local handler call it.
 
-        @param proto: an AMP instance.
         @param box: an AmpBox to be dispatched.
         """
         cmd = box[COMMAND]
@@ -1686,7 +1685,7 @@ class Descriptor(Integer):
 
         @return: A byte string which can be used by the receiver to reconstruct
             the file descriptor.
-        @type: C{str}
+        @rtype: C{bytes}
         """
         identifier = proto._sendFileDescriptor(inObject)
         outString = Integer.toStringProto(self, identifier, proto)
@@ -2110,12 +2109,12 @@ class StartTLS(Command):
 
     responseType = _TLSBox
 
-    def __init__(self, **kw):
+    def __init__(self, *, tls_localCertificate=None, tls_verifyAuthorities=None, **kw):
         """
         Create a StartTLS command.  (This is private.  Use AMP.callRemote.)
 
         @param tls_localCertificate: the PrivateCertificate object to use to
-        secure the connection.  If it's None, or unspecified, an ephemeral DH
+        secure the connection.  If it's L{None}, or unspecified, an ephemeral DH
         key is used instead.
 
         @param tls_verifyAuthorities: a list of Certificate objects which
@@ -2123,8 +2122,12 @@ class StartTLS(Command):
         """
         if ssl is None:
             raise RuntimeError("TLS not available.")
-        self.certificate = kw.pop("tls_localCertificate", _NoCertificate(True))
-        self.authorities = kw.pop("tls_verifyAuthorities", None)
+        self.certificate = (
+            _NoCertificate(True)
+            if tls_localCertificate is None
+            else tls_localCertificate
+        )
+        self.authorities = tls_verifyAuthorities
         Command.__init__(self, **kw)
 
     def _doCommand(self, proto):

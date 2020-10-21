@@ -477,7 +477,7 @@ class Certificate(CertBase):
 
         @rtype: C{Class}
 
-        @raise: L{CertificateError}, if the given transport does not have a peer
+        @raise CertificateError: if the given transport does not have a peer
             certificate.
         """
         return _handleattrhelper(Class, transport, "peer")
@@ -491,7 +491,7 @@ class Certificate(CertBase):
 
         @rtype: C{Class}
 
-        @raise: L{CertificateError}, if the given transport does not have a host
+        @raise CertificateError: if the given transport does not have a host
             certificate.
         """
         return _handleattrhelper(Class, transport, "host")
@@ -1177,7 +1177,12 @@ class ClientTLSOptions:
 
 
 def optionsForClientTLS(
-    hostname, trustRoot=None, clientCertificate=None, acceptableProtocols=None, **kw
+    hostname,
+    trustRoot=None,
+    clientCertificate=None,
+    acceptableProtocols=None,
+    *,
+    extraCertificateOptions=None
 ):
     """
     Create a L{client connection creator <IOpenSSLClientConnectionCreator>} for
@@ -1218,28 +1223,19 @@ def optionsForClientTLS(
         the list are preferred over those later in the list.
     @type acceptableProtocols: L{list} of L{bytes}
 
-    @param extraCertificateOptions: keyword-only argument; this is a dictionary
-        of additional keyword arguments to be presented to
-        L{CertificateOptions}. Please avoid using this unless you absolutely
-        need to; any time you need to pass an option here that is a bug in this
-        interface.
+    @param extraCertificateOptions: A dictionary of additional keyword arguments
+        to be presented to L{CertificateOptions}. Please avoid using this unless
+        you absolutely need to; any time you need to pass an option here that is
+        a bug in this interface.
     @type extraCertificateOptions: L{dict}
-
-    @param kw: (Backwards compatibility hack to allow keyword-only arguments on
-        Python 2. Please ignore; arbitrary keyword arguments will be errors.)
-    @type kw: L{dict}
 
     @return: A client connection creator.
     @rtype: L{IOpenSSLClientConnectionCreator}
     """
-    extraCertificateOptions = kw.pop("extraCertificateOptions", None) or {}
+    if extraCertificateOptions is None:
+        extraCertificateOptions = {}
     if trustRoot is None:
         trustRoot = platformTrust()
-    if kw:
-        raise TypeError(
-            "optionsForClientTLS() got an unexpected keyword argument"
-            " '{arg}'".format(arg=kw.popitem()[0])
-        )
     if not isinstance(hostname, str):
         raise TypeError(
             "optionsForClientTLS requires text for host names, not "

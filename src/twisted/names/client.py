@@ -258,7 +258,7 @@ class Resolver(common.ResolverBase):
         issue a query to it using C{*args}, and arrange for it to be
         disconnected from its transport after the query completes.
 
-        @param *args: Positional arguments to be passed to
+        @param args: Positional arguments to be passed to
             L{DNSDatagramProtocol.query}.
 
         @return: A L{Deferred} which will be called back with the result of the
