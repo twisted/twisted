@@ -8,20 +8,19 @@ Tests for twisted.names.dns.
 
 
 from io import BytesIO
-
 import struct
+from typing import cast
 
 from zope.interface.verify import verifyClass
 
-from twisted.python.failure import Failure
-from twisted.python.util import FancyEqMixin, FancyStrMixin
 from twisted.internet import address, task
 from twisted.internet.error import CannotListenError, ConnectionDone
-from twisted.trial import unittest
 from twisted.names import dns
-
+from twisted.python.failure import Failure
+from twisted.python.util import FancyEqMixin, FancyStrMixin
 from twisted.test import proto_helpers
 from twisted.test.testutils import ComparisonTestsMixin
+from twisted.trial import unittest
 
 RECORD_TYPES = [
     dns.Record_NS,
@@ -4841,12 +4840,15 @@ class Foo:
         """
         Call L{dns._compactRepr} to generate a string representation.
         """
-        return dns._compactRepr(
-            self,
-            alwaysShow="alwaysShowField".split(),
-            fieldNames="field1 field2 alwaysShowField".split(),
-            flagNames="flagTrue flagFalse".split(),
-            sectionNames="section1 section2".split(),
+        return cast(
+            str,
+            dns._compactRepr(
+                self,
+                alwaysShow="alwaysShowField".split(),
+                fieldNames="field1 field2 alwaysShowField".split(),
+                flagNames="flagTrue flagFalse".split(),
+                sectionNames="section1 section2".split(),
+            ),
         )
 
 

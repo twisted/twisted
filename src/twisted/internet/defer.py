@@ -91,7 +91,7 @@ def logError(err):
     return err
 
 
-def succeed(result):
+def succeed(result: object) -> "Deferred":
     """
     Return a L{Deferred} that has already had C{.callback(result)} called.
 
@@ -105,15 +105,13 @@ def succeed(result):
 
     @param result: The result to give to the Deferred's 'callback'
            method.
-
-    @rtype: L{Deferred}
     """
     d = Deferred()
     d.callback(result)
     return d
 
 
-def fail(result=None):
+def fail(result: object = None) -> "Deferred":
     """
     Return a L{Deferred} that has already had C{.errback(result)} called.
 
@@ -123,8 +121,6 @@ def fail(result=None):
 
     @raise NoCurrentExceptionError: If C{result} is L{None} but there is no
         current exception state.
-
-    @rtype: L{Deferred}
     """
     d = Deferred()
     d.errback(result)
@@ -772,7 +768,7 @@ class Deferred:
 
     def asFuture(self, loop):
         """
-        Adapt a L{Deferred} into a L{asyncio.Future} which is bound to C{loop}.
+        Adapt this L{Deferred} into a L{asyncio.Future} which is bound to C{loop}.
 
         @note: converting a L{Deferred} to an L{asyncio.Future} consumes both
             its result and its errors, so this method implicitly converts
@@ -783,9 +779,6 @@ class Deferred:
 
         @param loop: The asyncio event loop to bind the L{asyncio.Future} to.
         @type loop: L{asyncio.AbstractEventLoop} or similar
-
-        @param deferred: The Deferred to adapt.
-        @type deferred: L{Deferred}
 
         @return: A Future which will fire when the Deferred fires.
         @rtype: L{asyncio.Future}
@@ -924,7 +917,9 @@ def _cancelledToTimedOutError(value, timeout):
     @type timeout: L{int}
 
     @rtype: C{value}
-    @raise: L{TimeoutError}
+    @raise TimeoutError: If C{value} is a L{Failure} that is a L{CancelledError}.
+    @raise Exception: If C{value} is a L{Failure} that is not a L{CancelledError},
+        it is re-raised.
 
     @since: 16.5
     """

@@ -155,12 +155,12 @@ class NMEAProtocol(LineReceiver, _sentence._PositioningSentenceProducerMixin):
     @cvar _SENTENCE_CONTENTS: Has the field names in an NMEA sentence for each
         sentence type (in order, obviously).
     @type _SENTENCE_CONTENTS: C{dict} of bytestrings to C{list}s of C{str}
-    @param _receiver: A receiver for NMEAProtocol sentence objects.
-    @type _receiver: L{INMEAReceiver}
-    @param _sentenceCallback: A function that will be called with a new
+    @param receiver: A receiver for NMEAProtocol sentence objects.
+    @type receiver: L{INMEAReceiver}
+    @param sentenceCallback: A function that will be called with a new
         L{NMEASentence} when it is created. Useful for massaging data from
         particularly misbehaving NMEA receivers.
-    @type _sentenceCallback: unary callable
+    @type sentenceCallback: unary callable
     """
 
     def __init__(self, receiver, sentenceCallback=None):
@@ -865,9 +865,9 @@ class NMEAAdapter:
 
         If the adapter state has no beacon information, does nothing.
 
-        @param beaconInformation: The beacon information object that beacon
+        @param newBeaconInformation: The beacon information object that beacon
             information will be merged into (if necessary).
-        @type beaconInformation: L{twisted.positioning.base.BeaconInformation}
+        @type newBeaconInformation: L{twisted.positioning.base.BeaconInformation}
         """
         old = self._state.get("_partialBeaconInformation")
         if old is None:

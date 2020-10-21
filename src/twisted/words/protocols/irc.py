@@ -885,7 +885,7 @@ class ServerSupportedFeatures(_CommandDispatcherMixin):
         @type param: C{str}
 
         @rtype: C{(str, list)}
-        @return C{(key, arguments)}
+        @return: C{(key, arguments)}
         """
         if "=" not in param:
             param += "="
@@ -1320,7 +1320,7 @@ class IRCClient(basic.LineReceiver):
         Called with daemon information about the server, usually at logon.
 
         @type info: C{str}
-        @param when: A string describing what software the server is running, probably.
+        @param info: A string describing what software the server is running, probably.
         """
 
     def myInfo(self, servername, version, umodes, cmodes):
@@ -2639,7 +2639,7 @@ class IRCClient(basic.LineReceiver):
         Get user modes that require parameters for correct parsing.
 
         @rtype: C{[str, str]}
-        @return C{[add, remove]}
+        @return: C{[add, remove]}
         """
         return ["", ""]
 
@@ -2648,7 +2648,7 @@ class IRCClient(basic.LineReceiver):
         Get channel modes that require parameters for correct parsing.
 
         @rtype: C{[str, str]}
-        @return C{[add, remove]}
+        @return: C{[add, remove]}
         """
         # PREFIX modes are treated as "type B" CHANMODES, they always take
         # parameter.
@@ -2823,7 +2823,7 @@ class DccSendProtocol(protocol.Protocol, styles.Ephemeral):
 
 
 class DccSendFactory(protocol.Factory):
-    protocol = DccSendProtocol
+    protocol = DccSendProtocol  # type: ignore[assignment]
 
     def __init__(self, file):
         self.file = file
@@ -2935,7 +2935,7 @@ class DccChat(basic.LineReceiver, styles.Ephemeral):
 
 
 class DccChatFactory(protocol.ClientFactory):
-    protocol = DccChat
+    protocol = DccChat  # type: ignore[assignment]
     noisy = False
 
     def __init__(self, client, queryData):
@@ -3191,7 +3191,7 @@ class DccFileReceive(DccFileReceiveBasic):
             return "<Unconnected DccFileReceive object at %x>" % (id(self),)
         transport = self.transport
         assert transport is not None
-        from_ = transport.getPeer()
+        from_ = str(transport.getPeer())
         if self.fromUser is not None:
             from_ = "%r (%s)" % (self.fromUser, from_)
 

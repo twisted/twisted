@@ -38,7 +38,7 @@ from io import StringIO as NativeStringIO
 from io import TextIOBase
 from sys import intern
 from types import MethodType as _MethodType
-from typing import Any, cast
+from typing import Any, AnyStr, cast
 from urllib.parse import quote as urlquote
 from urllib.parse import unquote as urlunquote
 
@@ -309,7 +309,7 @@ def ioType(fileIshObject, default=str):
 
     @return: There are 3 possible return values:
 
-            1. L{unicode}, if the file is unambiguously opened in text mode.
+            1. L{str}, if the file is unambiguously opened in text mode.
 
             2. L{bytes}, if the file is unambiguously opened in binary mode.
 
@@ -342,13 +342,13 @@ def ioType(fileIshObject, default=str):
     return default
 
 
-def nativeString(s):
+def nativeString(s: AnyStr) -> str:
     """
-    Convert C{bytes} or C{unicode} to the native C{str} type, using ASCII
-    encoding if conversion is necessary.
+    Convert C{bytes} or C{str} to C{str} type, using ASCII encoding if
+    conversion is necessary.
 
     @raise UnicodeError: The input string is not ASCII encodable/decodable.
-    @raise TypeError: The input is neither C{bytes} nor C{unicode}.
+    @raise TypeError: The input is neither C{bytes} nor C{str}.
     """
     if not isinstance(s, (bytes, str)):
         raise TypeError("%r is neither bytes nor str" % s)
@@ -368,15 +368,15 @@ def _matchingString(constantString, inputString):
     C{os.path.join}, that constant would be C{os.path.sep}) involved in the
     parsing or processing, that must be of a matching type in order to use
     string operations on it.  L{_matchingString} will take a constant string
-    (either L{bytes} or L{unicode}) and convert it to the same type as the
+    (either L{bytes} or L{str}) and convert it to the same type as the
     input string.  C{constantString} should contain only characters from ASCII;
     to ensure this, it will be encoded or decoded regardless.
 
     @param constantString: A string literal used in processing.
-    @type constantString: L{unicode} or L{bytes}
+    @type constantString: L{str} or L{bytes}
 
     @param inputString: A byte string or text string provided by the user.
-    @type inputString: L{unicode} or L{bytes}
+    @type inputString: L{str} or L{bytes}
 
     @return: C{constantString} converted into the same type as C{inputString}
     @rtype: the type of C{inputString}

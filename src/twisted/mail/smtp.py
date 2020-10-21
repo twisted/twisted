@@ -357,9 +357,9 @@ class Address:
         return b"".join(res)
 
     def __str__(self) -> str:
-        return nativeString(bytes(self))
+        return self.__bytes__().decode("ascii")
 
-    def __bytes__(self):
+    def __bytes__(self) -> bytes:
         if self.local or self.domain:
             return b"@".join((self.local, self.domain))
         else:
@@ -403,9 +403,9 @@ class User:
         }
 
     def __str__(self) -> str:
-        return nativeString(bytes(self.dest))
+        return self.__bytes__().decode("ascii")
 
-    def __bytes__(self):
+    def __bytes__(self) -> bytes:
         return bytes(self.dest)
 
 
@@ -1173,7 +1173,7 @@ class SMTPClient(basic.LineReceiver, policies.TimeoutMixin):
 
         @param code: the code returned by the SMTP Server
         @param resp: The string response returned from the SMTP Server
-        @param numOK: the number of addresses accepted by the remote host.
+        @param numOk: the number of addresses accepted by the remote host.
         @param addresses: is a list of tuples (address, code, resp) listing
                           the response to each RCPT command.
         @param log: is the SMTP session log

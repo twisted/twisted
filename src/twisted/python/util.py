@@ -225,12 +225,12 @@ def uniquify(lst):
     Make the elements of a list unique by inserting them into a dictionary.
     This must not change the order of the input lst.
     """
-    dct = {}
+    seen = set()
     result = []
     for k in lst:
-        if k not in dct:
+        if k not in seen:
             result.append(k)
-        dct[k] = 1
+        seen.add(k)
     return result
 
 
@@ -751,13 +751,13 @@ def untilConcludes(f, *a, **kw):
 
     @param f: A function to call.
 
-    @param *a: Positional arguments to pass to C{f}.
+    @param a: Positional arguments to pass to C{f}.
 
-    @param **kw: Keyword arguments to pass to C{f}.
+    @param kw: Keyword arguments to pass to C{f}.
 
     @return: Whatever C{f} returns.
 
-    @raise: Whatever C{f} raises, except for C{IOError} or C{OSError} with
+    @raise Exception: Whatever C{f} raises, except for C{OSError} with
         C{errno} set to C{EINTR}.
     """
     while True:
@@ -902,8 +902,8 @@ def runAsEffectiveUser(euid, egid, function, *args, **kwargs):
     @param function: the function run with the specific permission.
     @type function: any callable
 
-    @param *args: arguments passed to C{function}
-    @param **kwargs: keyword arguments passed to C{function}
+    @param args: arguments passed to C{function}
+    @param kwargs: keyword arguments passed to C{function}
     """
     uid, gid = os.geteuid(), os.getegid()
     if uid == euid and gid == egid:
