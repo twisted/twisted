@@ -15,7 +15,7 @@ jobs:
       TOXENV: "alldeps-withcov-posix,coverage-prepare,codecov-push,coveralls-push,release"
     strategy:
       matrix:
-          python-version: [3.5, 3.6, 3.7, 3.8, 3.9.0-rc.2, pypy3]
+          python-version: [3.5, 3.6, 3.7, 3.8, 3.9, pypy3]
 
     steps:
     - uses: actions/checkout@v2
@@ -129,7 +129,7 @@ jobs:
       - name: Download dists for PyPI
         uses: actions/download-artifact@v2
         with:
-          name: py3.8_dist
+          name: py3.9_dist
           path: dist
 
       - name: Display structure of downloaded files
