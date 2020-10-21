@@ -73,7 +73,7 @@ class _FormattingState(_textattributes._FormattingStateMixin):
         """
         Add a character attribute to a copy of this formatting state.
 
-        @param **kw: An optional attribute name and value can be provided with
+        @param kw: An optional attribute name and value can be provided with
             a keyword argument.
 
         @return: A formatting state instance with the new attribute.

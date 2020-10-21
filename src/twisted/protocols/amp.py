@@ -1048,7 +1048,6 @@ class BoxDispatcher:
 
         Dispatch it to a local handler call it.
 
-        @param proto: an AMP instance.
         @param box: an AmpBox to be dispatched.
         """
         cmd = box[COMMAND]
@@ -1686,7 +1685,7 @@ class Descriptor(Integer):
 
         @return: A byte string which can be used by the receiver to reconstruct
             the file descriptor.
-        @type: C{str}
+        @rtype: C{bytes}
         """
         identifier = proto._sendFileDescriptor(inObject)
         outString = Integer.toStringProto(self, identifier, proto)
@@ -2114,11 +2113,11 @@ class StartTLS(Command):
         """
         Create a StartTLS command.  (This is private.  Use AMP.callRemote.)
 
-        @param tls_localCertificate: the PrivateCertificate object to use to
+        @keyword tls_localCertificate: the PrivateCertificate object to use to
         secure the connection.  If it's None, or unspecified, an ephemeral DH
         key is used instead.
 
-        @param tls_verifyAuthorities: a list of Certificate objects which
+        @keyword tls_verifyAuthorities: a list of Certificate objects which
         represent root certificates to verify our peer with.
         """
         if ssl is None:

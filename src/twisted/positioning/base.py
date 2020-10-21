@@ -312,7 +312,7 @@ class Heading(Angle):
         @type angleValue: C{float}
         @param variationValue: The value of the variation of this heading.
         @type variationValue: C{float}
-        @return A C{Heading } with the given values.
+        @return: A L{Heading} with the given values.
         """
         variation = Angle(variationValue, Angles.VARIATION)
         return cls(angleValue, variation)

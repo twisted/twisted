@@ -401,7 +401,7 @@ class TestLoader:
         """
         Find and load tests, given C{name}.
 
-        @param name: The qualified name of the thing to load.
+        @param _name: The qualified name of the thing to load.
         @param recurse: A boolean. If True, inspect modules within packages
             within the given package (and so on), otherwise, only inspect
             modules in the package itself.
@@ -564,7 +564,7 @@ class TestLoader:
         within the given package (and so on), otherwise, only inspect modules
         in the package itself.
 
-        @raise: TypeError if 'package' is not a package.
+        @raise TypeError: If C{package} is not a package.
 
         @return: a TestSuite created with my suiteFactory, containing all the
         tests.
