@@ -2109,21 +2109,25 @@ class StartTLS(Command):
 
     responseType = _TLSBox
 
-    def __init__(self, **kw):
+    def __init__(self, *, tls_localCertificate=None, tls_verifyAuthorities=None, **kw):
         """
         Create a StartTLS command.  (This is private.  Use AMP.callRemote.)
 
-        @keyword tls_localCertificate: the PrivateCertificate object to use to
-        secure the connection.  If it's None, or unspecified, an ephemeral DH
+        @param tls_localCertificate: the PrivateCertificate object to use to
+        secure the connection.  If it's L{None}, or unspecified, an ephemeral DH
         key is used instead.
 
-        @keyword tls_verifyAuthorities: a list of Certificate objects which
+        @param tls_verifyAuthorities: a list of Certificate objects which
         represent root certificates to verify our peer with.
         """
         if ssl is None:
             raise RuntimeError("TLS not available.")
-        self.certificate = kw.pop("tls_localCertificate", _NoCertificate(True))
-        self.authorities = kw.pop("tls_verifyAuthorities", None)
+        self.certificate = (
+            _NoCertificate(True)
+            if tls_localCertificate is None
+            else tls_localCertificate
+        )
+        self.authorities = tls_verifyAuthorities
         Command.__init__(self, **kw)
 
     def _doCommand(self, proto):
