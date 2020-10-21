@@ -38,10 +38,13 @@ jobs:
       run: |
         echo "::set-output name=dir::$(pip cache dir)"
 
-    - uses: actions/cache@v2
+    - name: pip cache
+      uses: actions/cache@v2
       with:
         path: ${{ steps.pip-cache.outputs.dir }}
-        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+        key:
+          ${{ runner.os }}-pip-${{ hashFiles('pyproject.toml', 'setup.py',
+          'setup.cfg', 'tox.ini') }}
         restore-keys: |
             ${{ runner.os }}-pip-
 
@@ -79,10 +82,13 @@ jobs:
       run: |
         echo "::set-output name=dir::$(pip cache dir)"
 
-    - uses: actions/cache@v2
+    - name: pip cache
+      uses: actions/cache@v2
       with:
         path: ${{ steps.pip-cache.outputs.dir }}
-        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+        key:
+          ${{ runner.os }}-pip-${{ hashFiles('pyproject.toml', 'setup.py',
+          'setup.cfg', 'tox.ini') }}
         restore-keys: |
             ${{ runner.os }}-pip-
 
