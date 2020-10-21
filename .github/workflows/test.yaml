@@ -60,6 +60,12 @@ jobs:
         python --version
         tox -q
 
+    - name: upload dist
+      uses: actions/upload-artifact@v2
+      with:
+        name: py${{ matrix.python-version }}_dist
+        path: dist
+
   # We need a builder without IPv6. This is going to be slower than all the
   # others, but that's ok.
   testing_no_ipv6:
@@ -113,12 +119,6 @@ jobs:
       run: |
         python --version
         tox -q
-
-    - name: upload dist
-      uses: actions/upload-artifact@v2
-      with:
-        name: py${{ matrix.python-version }}_dist
-        path: dist
 
 
   all-successful:
