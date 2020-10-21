@@ -18,7 +18,6 @@ include NEWS.rst README.rst INSTALL.rst CONTRIBUTING.md LICENSE code_of_conduct.
 
 # Exclude admin scripts and things only useful when running from a source checkout
 exclude codecov.yml
-exclude appveyor.yml
 exclude .coveralls.yml
 exclude .circleci
 exclude .git-blame-ignore-revs
