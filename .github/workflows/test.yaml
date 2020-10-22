@@ -121,7 +121,7 @@ jobs:
         tox -q
 
 
-  all-successful:
+  pypi-publish:
     # https://github.community/t/is-it-possible-to-require-all-github-actions-tasks-to-pass-without-enumerating-them/117957/4?u=graingert
     runs-on: ubuntu-20.04
     needs: [testing]
