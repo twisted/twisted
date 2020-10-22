@@ -844,6 +844,12 @@ class BoxDispatcher:
     ) -> None:
         ...
 
+    @overload
+    def _sendBoxCommand(
+        self, command: bytes, box: AmpBox, requiresAnswer: bool = True
+    ) -> Optional[Deferred]:
+        ...
+
     def _sendBoxCommand(
         self, command: bytes, box: AmpBox, requiresAnswer: bool = True
     ) -> Optional[Deferred]:
