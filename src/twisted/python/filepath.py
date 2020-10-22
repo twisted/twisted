@@ -33,7 +33,7 @@ from twisted.python.runtime import platform
 from twisted.python.util import FancyEqMixin
 from twisted.python.win32 import ERROR_FILE_NOT_FOUND, ERROR_PATH_NOT_FOUND
 from twisted.python.win32 import ERROR_INVALID_NAME, ERROR_DIRECTORY, O_BINARY
-from twisted.python.win32 import WindowsError
+from twisted.python.win32 import WindowsError as _OSErrorOrFakeWindowsError
 
 
 _CREATE_FLAGS = os.O_EXCL | os.O_CREAT | os.O_RDWR | O_BINARY
@@ -225,7 +225,7 @@ class UnlistableError(OSError):
     while still being catchable as an independent type.
 
     @ivar originalException: the actual original exception instance, either an
-        L{OSError} or a L{WindowsError}.
+        L{OSError} or a L{_OSErrorOrFakeWindowsError}.
     """
 
     def __init__(self, originalException):
@@ -238,7 +238,7 @@ class UnlistableError(OSError):
         self.originalException = originalException
 
 
-class _WindowsUnlistableError(UnlistableError, WindowsError):
+class _WindowsUnlistableError(UnlistableError, _OSErrorOrFakeWindowsError):
     """
     This exception is raised on Windows, for compatibility with previous
     releases of FilePath where unportable programs may have done "except
@@ -315,7 +315,7 @@ class AbstractFilePath:
         """
         try:
             subnames = self.listdir()
-        except OSError as winErrObj:
+        except _OSErrorOrFakeWindowsError as winErrObj:
             # Under Python 3.3 and higher on Windows, WindowsError is an
             # alias for OSError.  OSError has a winerror attribute and an
             # errno attribute.
