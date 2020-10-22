@@ -225,7 +225,9 @@ def messageid(uniq=None, N=lambda: next(_gen)):
     else:
         uniq = "." + uniq
 
-    return "<{}.{}.{}{}.{}@{}>".format(datetime, pid, rand, uniq, N(), DNSNAME)
+    return "<{}.{}.{}{}.{}@{}>".format(
+        datetime, pid, rand, uniq, N(), DNSNAME.decode()
+    ).encode()
 
 
 def quoteaddr(addr):
