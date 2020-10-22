@@ -203,7 +203,8 @@ from io import BytesIO
 from itertools import count
 from struct import pack
 from types import MethodType
-from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
+from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union, overload
+from typing_extensions import Literal
 import warnings
 
 from zope.interface import Interface, implementer
@@ -831,6 +832,18 @@ class BoxDispatcher:
         self._counter += 1
         return b"%x" % (self._counter,)
 
+    @overload
+    def _sendBoxCommand(
+        self, command: bytes, box: AmpBox, requiresAnswer: Literal[True] = True
+    ) -> Deferred:
+        ...
+
+    @overload
+    def _sendBoxCommand(
+        self, command: bytes, box: AmpBox, requiresAnswer: Literal[False]
+    ) -> None:
+        ...
+
     def _sendBoxCommand(
         self, command: bytes, box: AmpBox, requiresAnswer: bool = True
     ) -> Optional[Deferred]:
@@ -877,6 +890,18 @@ class BoxDispatcher:
             result = self._outstandingRequests[tag] = Deferred()
 
         return result
+
+    @overload
+    def callRemoteString(
+        self, command: bytes, requiresAnswer: Literal[True] = True, **kw: bytes
+    ) -> Deferred:
+        ...
+
+    @overload
+    def callRemoteString(
+        self, command: bytes, requiresAnswer: Literal[False], **kw: bytes
+    ) -> None:
+        ...
 
     def callRemoteString(
         self, command: bytes, requiresAnswer: bool = True, **kw: bytes
