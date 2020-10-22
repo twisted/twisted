@@ -77,14 +77,14 @@ This entire source tree can be reformatted by running:
 
 .. code-block:: console
 
-    tox -e black-reformat
+    tox -e lint
 
 
-A single file can be reformatted by running:
+Only changed files can be reformatted by running:
 
 .. code-block:: console
 
-    tox -e black-reformat -- path/to/file.py
+    pipx run pre-commit run
 
 
 Modules

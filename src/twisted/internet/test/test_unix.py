@@ -730,7 +730,7 @@ class SocketUNIXMixin:
     requiredInterfaces = (
         IReactorUNIX,
         IReactorSocket,
-    )  # type: Optional[Sequence[Type[Interface]]]  # noqa
+    )  # type: Optional[Sequence[Type[Interface]]]
 
     def getListeningPort(self, reactor, factory):
         """
@@ -799,9 +799,7 @@ class ListenUNIXMixin:
 
 
 class UNIXPortTestsMixin:
-    requiredInterfaces = (
-        IReactorUNIX,
-    )  # type: Optional[Sequence[Type[Interface]]]  # noqa
+    requiredInterfaces = (IReactorUNIX,)  # type: Optional[Sequence[Type[Interface]]]
 
     def getExpectedStartListeningLogMessage(self, port, factory):
         """

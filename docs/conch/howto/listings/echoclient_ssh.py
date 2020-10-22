@@ -3,10 +3,11 @@
 # See LICENSE for details.
 from __future__ import print_function
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     import sys
     import echoclient_ssh
     from twisted.internet.task import react
+
     react(echoclient_ssh.main, sys.argv[1:])
 
 import os, getpass
@@ -23,24 +24,32 @@ from twisted.conch.endpoints import SSHCommandClientEndpoint
 
 class EchoOptions(Options):
     optParameters = [
-        ("host", "h", "localhost",
-         "hostname of the SSH server to which to connect"),
-        ("port", "p", 22,
-         "port number of SSH server to which to connect", int),
-        ("username", "u", getpass.getuser(),
-         "username with which to authenticate with the SSH server"),
-        ("identity", "i", None,
-         "file from which to read a private key to use for authentication"),
-        ("password", None, None,
-         "password to use for authentication"),
-        ("knownhosts", "k", "~/.ssh/known_hosts",
-         "file containing known ssh server public key data"),
-        ]
+        ("host", "h", "localhost", "hostname of the SSH server to which to connect"),
+        ("port", "p", 22, "port number of SSH server to which to connect", int),
+        (
+            "username",
+            "u",
+            getpass.getuser(),
+            "username with which to authenticate with the SSH server",
+        ),
+        (
+            "identity",
+            "i",
+            None,
+            "file from which to read a private key to use for authentication",
+        ),
+        ("password", None, None, "password to use for authentication"),
+        (
+            "knownhosts",
+            "k",
+            "~/.ssh/known_hosts",
+            "file containing known ssh server public key data",
+        ),
+    ]
 
     optFlags = [
         ["no-agent", None, "Disable use of key agent"],
-        ]
-
+    ]
 
 
 class NoiseProtocol(Protocol):
@@ -49,22 +58,18 @@ class NoiseProtocol(Protocol):
         self.strings = ["bif", "pow", "zot"]
         self.sendNoise()
 
-
     def sendNoise(self):
         if self.strings:
             self.transport.write(self.strings.pop(0) + "\n")
         else:
             self.transport.loseConnection()
 
-
     def dataReceived(self, data):
         print("Server says:", data)
         self.sendNoise()
 
-
     def connectionLost(self, reason):
         self.finished.callback(None)
-
 
 
 def readKey(path):
@@ -75,10 +80,10 @@ def readKey(path):
         return Key.fromFile(path, passphrase=passphrase)
 
 
-
 class ConnectionParameters(object):
-    def __init__(self, reactor, host, port, username, password, keys,
-                 knownHosts, agent):
+    def __init__(
+        self, reactor, host, port, username, password, keys, knownHosts, agent
+    ):
         self.reactor = reactor
         self.host = host
         self.port = port
@@ -87,7 +92,6 @@ class ConnectionParameters(object):
         self.keys = keys
         self.knownHosts = knownHosts
         self.agent = agent
-
 
     @classmethod
     def fromCommandLine(cls, reactor, argv):
@@ -109,21 +113,31 @@ class ConnectionParameters(object):
         if config["no-agent"] or "SSH_AUTH_SOCK" not in os.environ:
             agentEndpoint = None
         else:
-            agentEndpoint = UNIXClientEndpoint(
-                reactor, os.environ["SSH_AUTH_SOCK"])
+            agentEndpoint = UNIXClientEndpoint(reactor, os.environ["SSH_AUTH_SOCK"])
 
         return cls(
-            reactor, config["host"], config["port"],
-            config["username"], config["password"], keys,
-            knownHosts, agentEndpoint)
-
+            reactor,
+            config["host"],
+            config["port"],
+            config["username"],
+            config["password"],
+            keys,
+            knownHosts,
+            agentEndpoint,
+        )
 
     def endpointForCommand(self, command):
         return SSHCommandClientEndpoint.newConnection(
-            self.reactor, command, self.username, self.host,
-            port=self.port, keys=self.keys, password=self.password,
-            agentEndpoint=self.agent, knownHosts=self.knownHosts)
-
+            self.reactor,
+            command,
+            self.username,
+            self.host,
+            port=self.port,
+            keys=self.keys,
+            password=self.password,
+            agentEndpoint=self.agent,
+            knownHosts=self.knownHosts,
+        )
 
 
 def main(reactor, *argv):

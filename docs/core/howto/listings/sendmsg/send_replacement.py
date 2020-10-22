@@ -11,6 +11,7 @@ from socket import socketpair
 
 from twisted.python.sendmsg import sendmsg, recvmsg
 
+
 def main():
     foo, bar = socketpair()
     sent = sendmsg(foo, b"Hello, world")
@@ -19,5 +20,6 @@ def main():
     print("Received", repr(received))
     print("Extra stuff, boring in this case", flags, ancillary)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()

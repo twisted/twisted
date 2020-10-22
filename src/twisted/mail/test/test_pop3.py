@@ -1422,7 +1422,7 @@ class IndexErrorCommandTests(CommandMixin, unittest.TestCase):
         """
         return CommandMixin.test_LISTWithBadArgument(self)
 
-    test_LISTWithBadArgument.suppress = [_listMessageSuppression]  # type: ignore[attr-defined]  # noqa
+    test_LISTWithBadArgument.suppress = [_listMessageSuppression]  # type: ignore[attr-defined]
 
     def test_UIDLWithBadArgument(self):
         """
@@ -1432,7 +1432,7 @@ class IndexErrorCommandTests(CommandMixin, unittest.TestCase):
         """
         return CommandMixin.test_UIDLWithBadArgument(self)
 
-    test_UIDLWithBadArgument.suppress = [_getUidlSuppression]  # type: ignore[attr-defined]  # noqa
+    test_UIDLWithBadArgument.suppress = [_getUidlSuppression]  # type: ignore[attr-defined]
 
     def test_TOPWithBadArgument(self):
         """
@@ -1442,7 +1442,7 @@ class IndexErrorCommandTests(CommandMixin, unittest.TestCase):
         """
         return CommandMixin.test_TOPWithBadArgument(self)
 
-    test_TOPWithBadArgument.suppress = [_listMessageSuppression]  # type: ignore[attr-defined]  # noqa
+    test_TOPWithBadArgument.suppress = [_listMessageSuppression]  # type: ignore[attr-defined]
 
     def test_RETRWithBadArgument(self):
         """
@@ -1452,7 +1452,7 @@ class IndexErrorCommandTests(CommandMixin, unittest.TestCase):
         """
         return CommandMixin.test_RETRWithBadArgument(self)
 
-    test_RETRWithBadArgument.suppress = [_listMessageSuppression]  # type: ignore[attr-defined]  # noqa
+    test_RETRWithBadArgument.suppress = [_listMessageSuppression]  # type: ignore[attr-defined]
 
 
 class ValueErrorCommandTests(CommandMixin, unittest.TestCase):

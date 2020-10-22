@@ -380,7 +380,7 @@ class _IEncodingResource(Interface):
 
 
 @implementer(_IEncodingResource)
-class EncodingResourceWrapper(proxyForInterface(IResource)):  # type: ignore[misc] # noqa
+class EncodingResourceWrapper(proxyForInterface(IResource)):  # type: ignore[misc]
     """
     Wrap a L{IResource}, potentially applying an encoding to the response body
     generated.

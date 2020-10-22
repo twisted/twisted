@@ -83,7 +83,7 @@ def registerReapProcessHandler(pid, process):
         raise RuntimeError("Try to register an already registered process.")
     try:
         auxPID, status = os.waitpid(pid, os.WNOHANG)
-    except:  # noqa
+    except:
         log.msg("Failed to reap {}:".format(pid))
         log.err()
 
@@ -302,7 +302,7 @@ class _BaseProcess(BaseProcess):
                     pid = None
                 else:
                     raise
-        except:  # noqa
+        except:
             log.msg("Failed to reap {}:".format(self.pid))
             log.err()
             pid = None

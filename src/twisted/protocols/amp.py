@@ -1977,7 +1977,7 @@ class Command:
 # Python 3 ignores the __metaclass__ attribute and has instead new syntax
 # for setting the metaclass. Unfortunately it's not valid Python 2 syntax
 # so we work-around it by recreating Command using the metaclass here.
-Command = Command.__metaclass__("Command", (Command,), {})  # type: ignore[assignment,misc]  # noqa
+Command = Command.__metaclass__("Command", (Command,), {})  # type: ignore[assignment,misc]
 
 
 class _NoCertificate:

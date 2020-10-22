@@ -354,12 +354,12 @@ class ReactorBuilder:
         """
         classes = (
             {}
-        )  # type: Dict[str, Union[Type['ReactorBuilder'], Type[SynchronousTestCase]]]   # noqa
+        )  # type: Dict[str, Union[Type['ReactorBuilder'], Type[SynchronousTestCase]]]
         for reactor in cls._reactors:
             shortReactorName = reactor.split(".")[-1]
             name = (cls.__name__ + "." + shortReactorName + "Tests").replace(".", "_")
 
-            class testcase(cls, SynchronousTestCase):  # type: ignore[valid-type,misc]   # noqa
+            class testcase(cls, SynchronousTestCase):  # type: ignore[valid-type,misc]
                 __module__ = cls.__module__
                 if reactor in cls.skippedReactors:
                     skip = cls.skippedReactors[reactor]

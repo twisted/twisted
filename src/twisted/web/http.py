@@ -2731,7 +2731,7 @@ class _XForwardedForAddress:
         self.host = host
 
 
-class _XForwardedForRequest(proxyForInterface(IRequest, "_request")):  # type: ignore[misc]  # noqa
+class _XForwardedForRequest(proxyForInterface(IRequest, "_request")):  # type: ignore[misc]
     """
     Add a layer on top of another request that only uses the value of an
     X-Forwarded-For header as the result of C{getClientAddress}.
@@ -2791,7 +2791,7 @@ def proxiedLogFormatter(timestamp, request):
     return combinedLogFormatter(timestamp, _XForwardedForRequest(request))
 
 
-class _GenericHTTPChannelProtocol(proxyForInterface(IProtocol, "_channel")):  # type: ignore[misc]  # noqa
+class _GenericHTTPChannelProtocol(proxyForInterface(IProtocol, "_channel")):  # type: ignore[misc]
     """
     A proxy object that wraps one of the HTTP protocol objects, and switches
     between them depending on TLS negotiated protocol.
