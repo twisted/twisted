@@ -8,6 +8,7 @@ from __future__ import print_function
 from twisted.spread import pb
 from twisted.internet import reactor
 
+
 def main():
     foo = Foo()
     factory = pb.PBClientFactory()
@@ -15,9 +16,11 @@ def main():
     factory.getRootObject().addCallback(foo.step1)
     reactor.run()
 
+
 # keeping globals around is starting to get ugly, so we use a simple class
 # instead. Instead of hooking one function to the next, we hook one method
 # to the next.
+
 
 class Foo:
     def __init__(self):
@@ -34,5 +37,6 @@ class Foo:
         print("giving it back to one")
         print("one is", self.oneRef)
         self.oneRef.callRemote("checkTwo", two)
+
 
 main()

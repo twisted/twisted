@@ -16,7 +16,6 @@ toPath = here.child("src")
 
 for fn in fromPath.walk():
     if fn.isfile():
-        os.system("git mv {it} src/{it}"
-                  .format(it="/".join(fn.segmentsFrom(here))))
+        os.system("git mv {it} src/{it}".format(it="/".join(fn.segmentsFrom(here))))
 
-os.system('git clean -fd')
+os.system("git clean -fd")

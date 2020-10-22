@@ -1,8 +1,6 @@
 import sys
 import io
-from twisted.logger import (
-    eventsFromJSONLogFile, textFileLogObserver
-)
+from twisted.logger import eventsFromJSONLogFile, textFileLogObserver
 
 output = textFileLogObserver(sys.stdout)
 

@@ -2,8 +2,8 @@ from twisted.internet.protocol import Factory
 from twisted.protocols.basic import LineReceiver
 from twisted.internet import reactor
 
-class Chat(LineReceiver):
 
+class Chat(LineReceiver):
     def __init__(self, users):
         self.users = users
         self.name = None
@@ -39,9 +39,8 @@ class Chat(LineReceiver):
 
 
 class ChatFactory(Factory):
-
     def __init__(self):
-        self.users = {} # maps user names to Chat instances
+        self.users = {}  # maps user names to Chat instances
 
     def buildProtocol(self, addr):
         return Chat(self.users)
