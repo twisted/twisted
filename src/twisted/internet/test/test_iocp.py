@@ -45,7 +45,7 @@ except ImportError:
     if sys.platform == "win32":
         raise
 
-    IOCPReactor = None
+    IOCPReactor = None  # type: ignore[assignment, misc]
     skip = "This test only applies to IOCPReactor"
 
 try:
@@ -178,7 +178,7 @@ class SupportTests(TestCase):
 
 class IOCPReactorTests(ReactorBuilder, TestCase):
 
-    reactorFactory = IOCPReactor
+    reactorFactory = IOCPReactor  # type: ignore[assignment]
 
     def test_noPendingTimerEvents(self):
         """
