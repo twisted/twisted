@@ -152,8 +152,8 @@ class FilesystemLock:
         @rtype: C{bool}
         @return: True if the lock is acquired, false otherwise.
 
-        @raise: Any exception os.symlink() may raise, other than
-        EEXIST.
+        @raise OSError: Any exception L{os.symlink()} may raise,
+            other than L{errno.EEXIST}.
         """
         clean = True
         while True:
@@ -212,8 +212,8 @@ class FilesystemLock:
 
         This deletes the directory with the given name.
 
-        @raise: Any exception os.readlink() may raise, or
-        ValueError if the lock is not owned by this process.
+        @raise OSError: Any exception L{os.readlink()} may raise.
+        @raise ValueError: If the lock is not owned by this process.
         """
         pid = readlink(self.name)
         if int(pid) != os.getpid():

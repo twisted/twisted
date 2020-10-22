@@ -239,7 +239,6 @@ else:
 
 __all__ = [
     "AMP",
-    "AMPv2",
     "ANSWER",
     "ASK",
     "AmpBox",
@@ -609,7 +608,7 @@ class IncompatibleVersions(AmpError):
 PROTOCOL_ERRORS = {UNHANDLED_ERROR_CODE: UnhandledCommand}
 
 
-class AmpBox(Dict[bytes, bytes]):
+class AmpBox(dict):
     """
     I am a packet in the AMP protocol, much like a
     regular bytes:bytes dictionary.
@@ -658,7 +657,7 @@ class AmpBox(Dict[bytes, bytes]):
         newBox.update(self)
         return newBox
 
-    def serialize(self, version2: bool = False) -> bytes:
+    def serialize(self):
         """
         Convert me into a wire-encoded string.
 
@@ -666,7 +665,7 @@ class AmpBox(Dict[bytes, bytes]):
             module docstring.
         """
         i = sorted(self.items())
-        L = []  # type: List[bytes]
+        L = []
         w = L.append
         for k, v in i:
             if type(k) == str:
@@ -675,29 +674,11 @@ class AmpBox(Dict[bytes, bytes]):
                 raise TypeError("Unicode value for key %r not allowed: %r" % (k, v))
             if len(k) > MAX_KEY_LENGTH:
                 raise TooLong(True, True, k, None)
-            if len(v) > MAX_VALUE_LENGTH and not version2:
+            if len(v) > MAX_VALUE_LENGTH:
                 raise TooLong(False, True, v, k)
-
-            w(pack("!H", len(k)))
-            w(k)
-
-            if version2:
-                vio = BytesIO(v)
-                del v
-
-                # If the value is an exact multiple of 65535, the last
-                # chunk containing data will be followed by a zero-length chunk
-                # (i.e. when read() returns EOF).
-                chunk = vio.read(MAX_VALUE_LENGTH)
-                while True:
-                    w(pack("!H", len(chunk)))
-                    w(chunk)
-                    if len(chunk) != MAX_VALUE_LENGTH:
-                        break
-                    chunk = vio.read(MAX_VALUE_LENGTH)
-            else:
-                w(pack("!H", len(v)))
-                w(v)
+            for kv in k, v:
+                w(pack("!H", len(kv)))
+                w(kv)
         w(pack("!H", 0))
         return b"".join(L)
 
@@ -804,8 +785,8 @@ class BoxDispatcher:
     @type boxSender: L{IBoxSender}
     """
 
-    _failAllReason = None  # type: Optional[Failure]
-    _outstandingRequests = None  # type: Optional[Dict[bytes, Deferred]]
+    _failAllReason = None
+    _outstandingRequests = None
     _counter = 0
     boxSender = None
 
@@ -841,7 +822,7 @@ class BoxDispatcher:
         for key, value in OR:
             value.errback(reason)
 
-    def _nextTag(self) -> bytes:
+    def _nextTag(self):
         """
         Generate protocol-local serial numbers for _ask keys.
 
@@ -850,9 +831,7 @@ class BoxDispatcher:
         self._counter += 1
         return b"%x" % (self._counter,)
 
-    def _sendBoxCommand(
-        self, command: bytes, box: AmpBox, requiresAnswer: bool = True
-    ) -> Optional[Deferred]:
+    def _sendBoxCommand(self, command, box, requiresAnswer=True):
         """
         Send a command across the wire with the given C{amp.Box}.
 
@@ -889,17 +868,13 @@ class BoxDispatcher:
         if requiresAnswer:
             box[ASK] = tag
         box._sendTo(self.boxSender)
-
-        result = None
         if requiresAnswer:
-            assert self._outstandingRequests is not None
             result = self._outstandingRequests[tag] = Deferred()
-
+        else:
+            result = None
         return result
 
-    def callRemoteString(
-        self, command: bytes, requiresAnswer: bool = True, **kw: bytes
-    ) -> Optional[Deferred]:
+    def callRemoteString(self, command, requiresAnswer=True, **kw):
         """
         This is a low-level API, designed only for optimizing simple messages
         for which the overhead of parsing is too great.
@@ -1073,7 +1048,6 @@ class BoxDispatcher:
 
         Dispatch it to a local handler call it.
 
-        @param proto: an AMP instance.
         @param box: an AmpBox to be dispatched.
         """
         cmd = box[COMMAND]
@@ -1711,7 +1685,7 @@ class Descriptor(Integer):
 
         @return: A byte string which can be used by the receiver to reconstruct
             the file descriptor.
-        @type: C{str}
+        @rtype: C{bytes}
         """
         identifier = proto._sendFileDescriptor(inObject)
         outString = Integer.toStringProto(self, identifier, proto)
@@ -2135,12 +2109,12 @@ class StartTLS(Command):
 
     responseType = _TLSBox
 
-    def __init__(self, **kw):
+    def __init__(self, *, tls_localCertificate=None, tls_verifyAuthorities=None, **kw):
         """
         Create a StartTLS command.  (This is private.  Use AMP.callRemote.)
 
         @param tls_localCertificate: the PrivateCertificate object to use to
-        secure the connection.  If it's None, or unspecified, an ephemeral DH
+        secure the connection.  If it's L{None}, or unspecified, an ephemeral DH
         key is used instead.
 
         @param tls_verifyAuthorities: a list of Certificate objects which
@@ -2148,8 +2122,12 @@ class StartTLS(Command):
         """
         if ssl is None:
             raise RuntimeError("TLS not available.")
-        self.certificate = kw.pop("tls_localCertificate", _NoCertificate(True))
-        self.authorities = kw.pop("tls_verifyAuthorities", None)
+        self.certificate = (
+            _NoCertificate(True)
+            if tls_localCertificate is None
+            else tls_localCertificate
+        )
+        self.authorities = tls_verifyAuthorities
         Command.__init__(self, **kw)
 
     def _doCommand(self, proto):
@@ -2309,8 +2287,8 @@ class BinaryBoxProtocol(
     _justStartedTLS = False
     _startingTLSBuffer = None
     _locked = False
-    _currentKey = None  # type: Optional[bytes]
-    _currentBox = None  # type: Optional[AmpBox]
+    _currentKey = None
+    _currentBox = None
 
     _keyLengthLimitExceeded = False
 
@@ -2373,12 +2351,7 @@ class BinaryBoxProtocol(
         if self._startingTLSBuffer is not None:
             self._startingTLSBuffer.append(box)
         else:
-            self._write_box(box)
-
-    def _write_box(self, box: AmpBox) -> None:
-        """Send an AmpBox using the AMPv1 format."""
-        assert self.transport is not None
-        self.transport.write(box.serialize())
+            self.transport.write(box.serialize())
 
     def makeConnection(self, transport):
         """
@@ -2641,52 +2614,6 @@ class AMP(BinaryBoxProtocol, BoxDispatcher, CommandLocator, SimpleStringLocator)
         )
         BinaryBoxProtocol.connectionLost(self, reason)
         self.transport = None
-
-
-class AMPv2(AMP):
-    """
-    This protocol implements the AMP version 2 protocol that allows values longer than 65535 bytes.
-    """
-
-    _currentValue = None  # type: Optional[List[bytes]]
-
-    def _write_box(self, box: AmpBox) -> None:
-        """Send an AmpBox using the AMPv2 format."""
-        assert self.transport is not None
-        self.transport.write(box.serialize(version2=True))
-
-    def proto_value(self, string: bytes) -> str:
-        """Handle the first segment of a value."""
-
-        # Regular value in one segment
-        if len(string) < MAX_VALUE_LENGTH:
-            assert self._currentBox is not None
-            assert self._currentKey is not None
-            self._currentBox[self._currentKey] = string
-            self._currentKey = None
-            self.MAX_LENGTH = self._MAX_KEY_LENGTH
-            return "key"
-
-        self._currentValue = [string]
-        return "valuecont"
-
-    def proto_valuecont(self, string: bytes) -> str:
-        """Handle long values with more than one segment."""
-
-        assert self._currentValue is not None
-        self._currentValue.append(string)
-
-        if len(string) == MAX_VALUE_LENGTH:
-            return "valuecont"
-
-        # Last segment
-        assert self._currentBox is not None
-        assert self._currentKey is not None
-        self._currentBox[self._currentKey] = b"".join(self._currentValue)
-        self._currentValue = None
-        self._currentKey = None
-        self.MAX_LENGTH = self._MAX_KEY_LENGTH
-        return "key"
 
 
 class _ParserHelper:

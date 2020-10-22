@@ -200,7 +200,7 @@ class URLPath:
 
         @param keepQuery: Whether to keep the query parameters on the returned
             L{URLPath}.
-        @type: keepQuery: L{bool}
+        @type keepQuery: L{bool}
 
         @return: a new L{URLPath}
         """
@@ -215,7 +215,7 @@ class URLPath:
 
         @param keepQuery: Whether to keep the query parameters on the returned
             L{URLPath}.
-        @type: keepQuery: L{bool}
+        @type keepQuery: L{bool}
 
         @return: a new L{URLPath}
         """
@@ -227,7 +227,7 @@ class URLPath:
 
         @param keepQuery: Whether to keep the query parameters on the returned
             L{URLPath}.
-        @type: keepQuery: L{bool}
+        @type keepQuery: L{bool}
 
         @return: a new L{URLPath}
         """
@@ -239,7 +239,7 @@ class URLPath:
 
         @param keepQuery: Whether to keep the query parameters on the returned
             L{URLPath}.
-        @type: keepQuery: L{bool}
+        @type keepQuery: L{bool}
 
         @return: a new L{URLPath}
         """

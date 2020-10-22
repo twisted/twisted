@@ -68,7 +68,7 @@ def quoteArguments(arguments):
     a similar API.  This allows the list passed to C{reactor.spawnProcess} to
     match the child process's C{sys.argv} properly.
 
-    @param arglist: an iterable of C{str}, each unquoted.
+    @param arguments: an iterable of C{str}, each unquoted.
 
     @return: a single string, with the given sequence quoted as necessary.
     """

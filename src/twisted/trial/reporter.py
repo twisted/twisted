@@ -454,7 +454,7 @@ class Reporter(TestResult):
         Safely write to the reporter's stream.
 
         @param format: A format string to write.
-        @param *args: The arguments for the format string.
+        @param args: The arguments for the format string.
         """
         s = str(format)
         assert isinstance(s, type(""))
@@ -470,7 +470,7 @@ class Reporter(TestResult):
         the format string.
 
         @param format: A format string to write.
-        @param *args: The arguments for the format string.
+        @param args: The arguments for the format string.
         """
         self._write(format, *args)
         self._write("\n")
