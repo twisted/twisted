@@ -18,26 +18,83 @@ class HTML(Raw):
         self.html = html
 
 
-server_lore = """<div class="py-listing">
-<pre><span class="py-src-keyword">class</span> <span class="py-src-identifier">ServerObject</span><span class="py-src-op">(</span><span class="py-src-parameter">pb</span><span class="py-src-op">.</span><span class="py-src-parameter">Referenceable</span><span class="py-src-op">)</span><span class="py-src-op">:</span><span class="py-src-newline"></span>
-<span class="py-src-indent">    </span><span class="py-src-keyword">def</span> <span class="py-src-identifier">remote_add</span><span class="py-src-op">(</span><span class="py-src-parameter">self</span><span class="py-src-op">,</span> <span class="py-src-parameter">one</span><span class="py-src-op">,</span> <span class="py-src-parameter">two</span><span class="py-src-op">)</span><span class="py-src-op">:</span><span class="py-src-newline">
-</span><span class="py-src-indent">        </span><span class="py-src-variable">answer</span> <span class="py-src-op">=</span> <span class="py-src-variable">one</span> <span class="py-src-op">+</span> <span class="py-src-variable">two</span><span class="py-src-newline">
-</span>        <span class="py-src-keyword">print</span> <span class="py-src-string">&quot;returning result:&quot;</span><span class="py-src-op">,</span> <span class="py-src-variable">answer</span><span class="py-src-newline">
-</span>        <span class="py-src-keyword">return</span> <span class="py-src-variable">answer</span><span class="py-src-endmarker"></span></pre>
-<div class="py-caption">Server Code</div>
-</div>
-"""
+server_lore = (
+    '<div class="py-listing">\n'
+    '<pre><span class="py-src-keyword">class</span> <span '
+    'class="py-src-identifier">ServerObject</span><span '
+    'class="py-src-op">(</span><span class="py-src-parameter">pb</span><span '
+    'class="py-src-op">.</span><span '
+    'class="py-src-parameter">Referenceable</span><span '
+    'class="py-src-op">)</span><span class="py-src-op">:</span><span '
+    'class="py-src-newline"></span>\n'
+    '<span class="py-src-indent">    </span><span '
+    'class="py-src-keyword">def</span> <span '
+    'class="py-src-identifier">remote_add</span><span '
+    'class="py-src-op">(</span><span class="py-src-parameter">self</span><span '
+    'class="py-src-op">,</span> <span class="py-src-parameter">one</span><span '
+    'class="py-src-op">,</span> <span class="py-src-parameter">two</span><span '
+    'class="py-src-op">)</span><span class="py-src-op">:</span><span '
+    'class="py-src-newline">\n'
+    '</span><span class="py-src-indent">        </span><span '
+    'class="py-src-variable">answer</span> <span class="py-src-op">=</span> <span '
+    'class="py-src-variable">one</span> <span class="py-src-op">+</span> <span '
+    'class="py-src-variable">two</span><span class="py-src-newline">\n'
+    '</span>        <span class="py-src-keyword">print</span> <span '
+    'class="py-src-string">&quot;returning result:&quot;</span><span '
+    'class="py-src-op">,</span> <span class="py-src-variable">answer</span><span '
+    'class="py-src-newline">\n'
+    '</span>        <span class="py-src-keyword">return</span> <span '
+    'class="py-src-variable">answer</span><span '
+    'class="py-src-endmarker"></span></pre>\n'
+    '<div class="py-caption">Server Code</div>\n'
+    "</div>\n"
+)
 
-client_lore = """<div class="py-listing"><pre>
-<span class="py-src-nl"></span>    <span class="py-src-dedent"></span><span class="py-src-keyword">def</span> <span class="py-src-identifier">got_RemoteReference</span><span class="py-src-op">(</span><span class="py-src-parameter">remoteref</span><span class="py-src-op">)</span><span class="py-src-op">:</span><span class="py-src-newline">
-</span>        <span class="py-src-keyword">print</span> <span class="py-src-string">&quot;asking it to add&quot;</span><span class="py-src-newline">
-</span>        <span class="py-src-variable">deferred</span> <span class="py-src-op">=</span> <span class="py-src-variable">remoteref</span><span class="py-src-op">.</span><span class="py-src-variable">callRemote</span><span class="py-src-op">(</span><span class="py-src-string">&quot;add&quot;</span><span class="py-src-op">,</span> <span class="py-src-number">1</span><span class="py-src-op">,</span> <span class="py-src-number">2</span><span class="py-src-op">)</span><span class="py-src-newline">
-</span>        <span class="py-src-variable">deferred</span><span class="py-src-op">.</span><span class="py-src-variable">addCallbacks</span><span class="py-src-op">(</span><span class="py-src-variable">add_done</span><span class="py-src-op">,</span> <span class="py-src-variable">err</span><span class="py-src-op">)</span><span class="py-src-newline">
-</span>        <span class="py-src-comment"># this Deferred fires when the method call is complete
-</span>    <span class="py-src-dedent"></span><span class="py-src-keyword">def</span> <span class="py-src-identifier">add_done</span><span class="py-src-op">(</span><span class="py-src-parameter">result</span><span class="py-src-op">)</span><span class="py-src-op">:</span><span class="py-src-newline">
-</span><span class="py-src-indent">        </span><span class="py-src-keyword">print</span> <span class="py-src-string">&quot;addition complete, result is&quot;</span><span class="py-src-op">,</span> <span class="py-src-variable">result</span><span class="py-src-newline">
-</span><span class="py-src-endmarker"></span></pre><div class="py-caption">Client Code</div></div>
-"""
+
+client_lore = (
+    '<div class="py-listing"><pre>\n'
+    '<span class="py-src-nl"></span>    <span class="py-src-dedent"></span><span '
+    'class="py-src-keyword">def</span> <span '
+    'class="py-src-identifier">got_RemoteReference</span><span '
+    'class="py-src-op">(</span><span '
+    'class="py-src-parameter">remoteref</span><span '
+    'class="py-src-op">)</span><span class="py-src-op">:</span><span '
+    'class="py-src-newline">\n'
+    '</span>        <span class="py-src-keyword">print</span> <span '
+    'class="py-src-string">&quot;asking it to add&quot;</span><span '
+    'class="py-src-newline">\n'
+    '</span>        <span class="py-src-variable">deferred</span> <span '
+    'class="py-src-op">=</span> <span '
+    'class="py-src-variable">remoteref</span><span '
+    'class="py-src-op">.</span><span '
+    'class="py-src-variable">callRemote</span><span '
+    'class="py-src-op">(</span><span '
+    'class="py-src-string">&quot;add&quot;</span><span class="py-src-op">,</span> '
+    '<span class="py-src-number">1</span><span class="py-src-op">,</span> <span '
+    'class="py-src-number">2</span><span class="py-src-op">)</span><span '
+    'class="py-src-newline">\n'
+    '</span>        <span class="py-src-variable">deferred</span><span '
+    'class="py-src-op">.</span><span '
+    'class="py-src-variable">addCallbacks</span><span '
+    'class="py-src-op">(</span><span class="py-src-variable">add_done</span><span '
+    'class="py-src-op">,</span> <span class="py-src-variable">err</span><span '
+    'class="py-src-op">)</span><span class="py-src-newline">\n'
+    '</span>        <span class="py-src-comment"># this Deferred fires when the '
+    "method call is complete\n"
+    '</span>    <span class="py-src-dedent"></span><span '
+    'class="py-src-keyword">def</span> <span '
+    'class="py-src-identifier">add_done</span><span '
+    'class="py-src-op">(</span><span class="py-src-parameter">result</span><span '
+    'class="py-src-op">)</span><span class="py-src-op">:</span><span '
+    'class="py-src-newline">\n'
+    '</span><span class="py-src-indent">        </span><span '
+    'class="py-src-keyword">print</span> <span '
+    'class="py-src-string">&quot;addition complete, result is&quot;</span><span '
+    'class="py-src-op">,</span> <span class="py-src-variable">result</span><span '
+    'class="py-src-newline">\n'
+    '</span><span class="py-src-endmarker"></span></pre><div '
+    'class="py-caption">Client Code</div></div>\n'
+)
 
 
 # title graphic: PB peanut butter jar, "Twist(ed)" on lid
