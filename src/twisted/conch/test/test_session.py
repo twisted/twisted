@@ -183,7 +183,10 @@ class StubSessionForStubAvatarWithEnv(StubSessionForStubAvatar):
 
     def __init__(self, avatar):
         super(StubSessionForStubAvatarWithEnv, self).__init__(avatar)
+        # The representation of the environment as updated by remote requests.
         self.environ = {}
+        # A snapshot of the environment when PTY request is received.
+        self.environAtPty = {}
 
     def setEnv(self, name, value):
         """
@@ -203,6 +206,13 @@ class StubSessionForStubAvatarWithEnv(StubSessionForStubAvatar):
             )
         else:
             self.environ[name] = value
+
+    def getPty(self, term, windowSize, modes):
+        """
+        Just a simple implementation which records the current environment
+        when PTY is requested.
+        """
+        self.environAtPty = self.environ.copy()
 
 
 class EchoTransport:
@@ -453,11 +463,18 @@ class SessionInterfaceTests(RegistryUsingMixin, TestCase):
         values.
         """
         RegistryUsingMixin.setUp(self)
+        self.session = self.getSSHSession()
         if register_adapters:
             components.registerAdapter(
                 StubSessionForStubAvatarWithEnv, StubAvatar, session.ISession
             )
-        self.session = session.SSHSession(
+        self.session = self.getSSHSession()
+
+    def getSSHSession(self, register_adapters=True):
+        """
+        Return a new SSH session.
+        """
+        return session.SSHSession(
             remoteWindow=500,
             remoteMaxPacket=100,
             conn=StubConnection(),
@@ -697,20 +714,27 @@ class SessionInterfaceTests(RegistryUsingMixin, TestCase):
         calling getPty with the terminal type, the window size, and any modes
         the client gave us.
         """
+        # Cleanup the registered adapters from setUp.
+        self.doCleanups()
+        components.registerAdapter(
+            StubSessionForStubAvatar, StubAvatar, session.ISession
+        )
+        test_session = self.getSSHSession()
+
         # 'bad' terminal type fails
-        ret = self.session.requestReceived(
+        ret = test_session.requestReceived(
             b"pty_req", session.packRequest_pty_req(b"bad", (1, 2, 3, 4), b"")
         )
         self.assertFalse(ret)
-        self.assertSessionIsStubSession()
+        self.assertIsInstance(test_session.session, StubSessionForStubAvatar)
         self.assertRequestRaisedRuntimeError()
         # 'good' terminal type succeeds
         self.assertTrue(
-            self.session.requestReceived(
+            test_session.requestReceived(
                 b"pty_req", session.packRequest_pty_req(b"good", (1, 2, 3, 4), b"")
             )
         )
-        self.assertEqual(self.session.session.ptyRequest, (b"good", (1, 2, 3, 4), []))
+        self.assertEqual(test_session.session.ptyRequest, (b"good", (1, 2, 3, 4), []))
 
     def test_setEnv(self):
         """
@@ -740,6 +764,46 @@ class SessionInterfaceTests(RegistryUsingMixin, TestCase):
             )
         )
         self.assertEqual(self.session.session.environ, {b"NAME": b"value"})
+
+    def test_setEnvSessionShare(self):
+        """
+        Multiple setenv requests will share the same session.
+        """
+        test_session = self.getSSHSession()
+
+        self.assertTrue(
+            test_session.requestReceived(
+                b"env", common.NS(b"Key1") + common.NS(b"Value 1")
+            )
+        )
+        self.assertTrue(
+            test_session.requestReceived(
+                b"env", common.NS(b"Key2") + common.NS(b"Value2")
+            )
+        )
+
+        self.assertIsInstance(test_session.session, StubSessionForStubAvatarWithEnv)
+        self.assertEqual(
+            {b"Key1": b"Value 1", b"Key2": b"Value2"}, test_session.session.environ
+        )
+
+    def test_setEnvMultiplexShare(self):
+        """
+        Calling another session service after setenv will provide the
+        previous session with the environment variables.
+        """
+        test_session = self.getSSHSession()
+
+        test_session.requestReceived(b"env", common.NS(b"Key1") + common.NS(b"Value 1"))
+        test_session.requestReceived(b"env", common.NS(b"Key2") + common.NS(b"Value2"))
+        test_session.requestReceived(
+            b"pty_req", session.packRequest_pty_req(b"term", (0, 0, 0, 0), b"")
+        )
+
+        self.assertIsInstance(test_session.session, StubSessionForStubAvatarWithEnv)
+        self.assertEqual(
+            {b"Key1": b"Value 1", b"Key2": b"Value2"}, test_session.session.environAtPty
+        )
 
     def test_setEnvNotProvidingISessionSetEnv(self):
         """
