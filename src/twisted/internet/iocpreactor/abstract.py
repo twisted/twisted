@@ -346,7 +346,7 @@ class FileHandle(_ConsumerMixin, _LogOwner):
             if self._writeDisconnected:
                 # doWrite won't trigger the connection close anymore
                 self.stopReading()
-                self.stopWriting
+                self.stopWriting()
                 self.connectionLost(_connDone)
             else:
                 self.stopReading()
