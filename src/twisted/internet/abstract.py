@@ -7,7 +7,7 @@ Support for generic select()able objects.
 """
 
 
-from socket import AF_INET, AF_INET6, inet_pton, error
+from socket import AF_INET, AF_INET6, inet_pton
 from typing import Iterable, List, Optional
 
 from zope.interface import implementer

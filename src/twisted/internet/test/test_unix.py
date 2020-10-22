@@ -9,7 +9,7 @@ Tests for implementations of L{IReactorUNIX}.
 from stat import S_IMODE
 from os import stat, close, urandom, unlink, fstat
 from tempfile import mktemp, mkstemp
-from socket import AF_INET, SOCK_STREAM, SOL_SOCKET, socket, error
+from socket import AF_INET, SOCK_STREAM, SOL_SOCKET, socket
 from pprint import pformat
 from hashlib import md5
 from struct import pack
