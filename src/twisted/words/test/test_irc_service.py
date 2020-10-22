@@ -49,7 +49,7 @@ class IRCUserTests(IRCTestCase):
         has a UTF8 nick and is set to UTF8 encoding, the message will be
         written to the transport.
         """
-        expectedResult = ().encode("utf-8")
+        expectedResult = ":example.com тест ник\r\n".encode()
 
         self.ircUser.irc_NICK("", ["\u043d\u0438\u043a".encode()])
         self.stringTransport.clear()
