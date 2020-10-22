@@ -1500,9 +1500,7 @@ class TCPPortTestsMixin:
     Tests for L{IReactorTCP.listenTCP}
     """
 
-    requiredInterfaces = (
-        IReactorTCP,
-    )  # type: Optional[Sequence[Type[Interface]]]  # noqa
+    requiredInterfaces = (IReactorTCP,)  # type: Optional[Sequence[Type[Interface]]]
 
     def getExpectedStartListeningLogMessage(self, port, factory):
         """
@@ -2066,9 +2064,7 @@ class WriteSequenceTestsMixin:
     Test for L{twisted.internet.abstract.FileDescriptor.writeSequence}.
     """
 
-    requiredInterfaces = (
-        IReactorTCP,
-    )  # type: Optional[Sequence[Type[Interface]]]  # noqa
+    requiredInterfaces = (IReactorTCP,)  # type: Optional[Sequence[Type[Interface]]]
 
     def setWriteBufferSize(self, transport, value):
         """

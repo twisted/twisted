@@ -56,7 +56,7 @@ else:
 
 
 @implementer(IReactorFDSet)
-class SelectReactor(posixbase.PosixReactorBase, _extraBase):  # type: ignore[misc,valid-type]  # noqa
+class SelectReactor(posixbase.PosixReactorBase, _extraBase):  # type: ignore[misc,valid-type]
     """
     A select() based reactor - runs on all POSIX platforms and on Win32.
 

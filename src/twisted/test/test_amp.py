@@ -136,9 +136,7 @@ class Hello(amp.Command):
 
     response = [(b"hello", amp.String()), (b"print", amp.Unicode(optional=True))]
 
-    errors = {
-        UnfriendlyGreeting: b"UNFRIENDLY"
-    }  # type: Dict[Type[Exception], bytes]  # noqa
+    errors = {UnfriendlyGreeting: b"UNFRIENDLY"}  # type: Dict[Type[Exception], bytes]
 
     fatalErrors = {DeathThreat: b"DEAD"}  # type: Dict[Type[Exception], bytes]
 
@@ -2139,9 +2137,7 @@ class BaseCommand(amp.Command):
     This provides a command that will be subclassed.
     """
 
-    errors = {
-        InheritedError: b"INHERITED_ERROR"
-    }  # type: Dict[Type[Exception], bytes]  # noqa
+    errors = {InheritedError: b"INHERITED_ERROR"}  # type: Dict[Type[Exception], bytes]
 
 
 class InheritedCommand(BaseCommand):
@@ -2160,7 +2156,7 @@ class AddErrorsCommand(BaseCommand):
     arguments = [(b"other", amp.Boolean())]
     errors = {
         OtherInheritedError: b"OTHER_INHERITED_ERROR"
-    }  # type: Dict[Type[Exception], bytes]  # noqa
+    }  # type: Dict[Type[Exception], bytes]
 
 
 class NormalCommandProtocol(amp.AMP):

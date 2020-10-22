@@ -1542,7 +1542,7 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, TestCase):
         self.assertTrue(opts.fixBrokenPeers)
         self.assertTrue(opts.enableSessionTickets)
 
-    test_certificateOptionsSerialization.suppress = [  # type: ignore[attr-defined]  # noqa
+    test_certificateOptionsSerialization.suppress = [  # type: ignore[attr-defined]
         util.suppress(
             category=DeprecationWarning,
             message="twisted\.internet\._sslverify\.*__[gs]etstate__",

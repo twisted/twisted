@@ -27,7 +27,7 @@ class Options(usage.Options, strcred.AuthOptionMixin):
             socket.gethostname(),
             "Name of this server; purely an informative",
         )
-    ]  # type: List[Sequence[Optional[str]]]  # noqa
+    ]  # type: List[Sequence[Optional[str]]]
 
     compData = usage.Completions(multiUse=["group"])
 

@@ -42,7 +42,7 @@ class ClientOptions(options.ConchOptions):
         ["batchfile", "b", None, "File to read commands from, or '-' for stdin."],
         ["requests", "R", 5, "Number of requests to make before waiting for a reply."],
         ["subsystem", "s", "sftp", "Subsystem/server program to connect to."],
-    ]  # type: List[List[Optional[Union[str, int]]]]  # noqa
+    ]  # type: List[List[Optional[Union[str, int]]]]
 
     compData = usage.Completions(
         descriptions={"buffersize": "Size of send/receive buffer (default: 32768)"},
@@ -779,7 +779,7 @@ version                         Print the SFTP version.
             return matchedFiles
 
     def _abbrevSize(self, size):
-        # from http://mail.python.org/pipermail/python-list/1999-December/018395.html  # noqa
+        # from http://mail.python.org/pipermail/python-list/1999-December/018395.html
         _abbrevs = [
             (1 << 50, "PB"),
             (1 << 40, "TB"),

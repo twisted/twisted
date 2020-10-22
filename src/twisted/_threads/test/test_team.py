@@ -15,7 +15,7 @@ from twisted.python.failure import Failure
 from .. import IWorker, Team, createMemoryWorker, AlreadyQuit
 
 
-class ContextualWorker(proxyForInterface(IWorker, "_realWorker")):  # type: ignore[misc]  # noqa
+class ContextualWorker(proxyForInterface(IWorker, "_realWorker")):  # type: ignore[misc]
     """
     A worker implementation that supplies a context.
     """

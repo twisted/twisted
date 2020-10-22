@@ -117,7 +117,7 @@ class AbstractClientMixin:
     def connectionLost(self, reason: Failure = connectionDone):
         self.account._clientLost(self, reason)
         self.unregisterAsAccountClient()
-        return self._protoBase.connectionLost(self, reason)  # type: ignore[arg-type]  # noqa
+        return self._protoBase.connectionLost(self, reason)  # type: ignore[arg-type]
 
     def unregisterAsAccountClient(self):
         """Tell the chat UI that I have `signed off'."""

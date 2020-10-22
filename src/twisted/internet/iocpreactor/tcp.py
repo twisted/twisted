@@ -44,8 +44,8 @@ else:
 
 # ConnectEx returns these. XXX: find out what it does for timeout
 connectExErrors = {
-    ERROR_CONNECTION_REFUSED: errno.WSAECONNREFUSED,  # type: ignore[attr-defined]  # noqa
-    ERROR_NETWORK_UNREACHABLE: errno.WSAENETUNREACH,  # type: ignore[attr-defined]  # noqa
+    ERROR_CONNECTION_REFUSED: errno.WSAECONNREFUSED,  # type: ignore[attr-defined]
+    ERROR_NETWORK_UNREACHABLE: errno.WSAENETUNREACH,  # type: ignore[attr-defined]
 }
 
 

@@ -609,7 +609,7 @@ class FancyStrMixin:
     """
 
     # Override in subclasses:
-    showAttributes = ()  # type: Sequence[Union[str, Tuple[str, str, str], Tuple[str, Callable]]]  # noqa
+    showAttributes = ()  # type: Sequence[Union[str, Tuple[str, str, str], Tuple[str, Callable]]]
 
     def __str__(self) -> str:
         r = ["<", getattr(self, "fancybasename", self.__class__.__name__)]
