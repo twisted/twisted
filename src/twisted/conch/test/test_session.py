@@ -716,6 +716,7 @@ class SessionInterfaceTests(RegistryUsingMixin, TestCase):
         """
         # Cleanup the registered adapters from setUp.
         self.doCleanups()
+        self.setUp(register_adapters=False)
         components.registerAdapter(
             StubSessionForStubAvatar, StubAvatar, session.ISession
         )
