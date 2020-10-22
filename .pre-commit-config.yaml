@@ -1,6 +1,6 @@
 repos:
   - repo: https://github.com/asottile/pyupgrade
-    rev: v2.7.2
+    rev: v2.7.3
     hooks:
       - id: pyupgrade
         args: ["--py3-plus"]
@@ -11,7 +11,7 @@ repos:
       - id: black
 
   - repo: https://gitlab.com/pycqa/flake8
-    rev: 3.8.3
+    rev: 3.8.4
     hooks:
       - id: flake8
 
@@ -21,7 +21,7 @@ repos:
       - id: yesqa
 
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v3.2.0
+    rev: v3.3.0
     hooks:
       - id: check-merge-conflict
       - id: check-toml
@@ -29,6 +29,6 @@ repos:
       - id: mixed-line-ending
 
   - repo: https://github.com/mgedmin/check-manifest
-    rev: "0.43"
+    rev: "0.44"
     hooks:
       - id: check-manifest
