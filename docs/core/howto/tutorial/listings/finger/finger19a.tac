@@ -207,7 +207,7 @@ class MemoryFingerService(service.Service):
 
 
 application = service.Application('finger', uid=1, gid=1)
-f = MemoryFingerService({b'moshez': b'Happy and well')
+f = MemoryFingerService({b'moshez': b'Happy and well'})
 serviceCollection = service.IServiceCollection(application)
 strports.service("tcp:79", IFingerFactory(f)
                    ).setServiceParent(serviceCollection)
