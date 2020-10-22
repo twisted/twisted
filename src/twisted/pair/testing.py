@@ -328,7 +328,7 @@ class MemoryIOSystem:
     def __init__(self):
         self._devices = {}
         self._openFiles = {}
-        self.permissions = set(["open", "ioctl"])
+        self.permissions = {"open", "ioctl"}
 
     def getTunnel(self, port):
         """

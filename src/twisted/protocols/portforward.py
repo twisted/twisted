@@ -23,7 +23,7 @@ class Proxy(protocol.Protocol):
             self.peer.transport.loseConnection()
             self.peer = None
         elif self.noisy:
-            log.msg("Unable to connect to peer: %s" % (reason,))
+            log.msg("Unable to connect to peer: {}".format(reason))
 
     def dataReceived(self, data):
         self.peer.transport.write(data)

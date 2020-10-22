@@ -420,7 +420,7 @@ class StdioClient(basic.LineReceiver):
         lf.close()
         if self.useProgressBar:
             self._writeToTransport("\n")
-        return "Transferred %s to %s" % (rf.name, lf.name)
+        return "Transferred {} to {}".format(rf.name, lf.name)
 
     def cmd_PUT(self, rest):
         """
@@ -590,7 +590,7 @@ class StdioClient(basic.LineReceiver):
         rf.close()
         if self.useProgressBar:
             self._writeToTransport("\n")
-        return "Transferred %s to %s" % (lf.name, rf.name)
+        return "Transferred {} to {}".format(lf.name, rf.name)
 
     def cmd_LCD(self, path):
         os.chdir(path)
@@ -845,7 +845,7 @@ version                         Print the SFTP version.
             self._abbrevTime(timeLeft),
         )
         spaces = (winSize[1] - (len(front) + len(back) + 1)) * " "
-        command = "\r%s%s%s" % (front, spaces, back)
+        command = "\r{}{}{}".format(front, spaces, back)
         self._writeToTransport(command)
 
     def _getFilename(self, line):
@@ -873,7 +873,7 @@ version                         Print the SFTP version.
                     elif c == "\\":  # quoted character
                         del line[i]
                         if line[i] not in "'\"\\":
-                            raise IndexError("bad quote: \\%s" % (line[i],))
+                            raise IndexError("bad quote: \\{}".format(line[i]))
                         ret.append(line[i])
                     else:
                         ret.append(line[i])

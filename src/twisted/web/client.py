@@ -76,9 +76,7 @@ class HTTPPageGetter(http.HTTPClient):
 
     _completelyDone = True
 
-    _specialHeaders = set(
-        (b"host", b"user-agent", b"cookie", b"content-length"),
-    )
+    _specialHeaders = {b"host", b"user-agent", b"cookie", b"content-length"}
 
     def connectionMade(self):
         method = _ensureValidMethod(getattr(self.factory, "method", b"GET"))
@@ -394,7 +392,7 @@ class HTTPClientFactory(protocol.ClientFactory):
         return self._disconnectedDeferred
 
     def __repr__(self) -> str:
-        return "<%s: %s>" % (self.__class__.__name__, self.url)
+        return "<{}: {}>".format(self.__class__.__name__, self.url)
 
     def setURL(self, url):
         _ensureValidURI(url.strip())
@@ -1612,7 +1610,7 @@ class _StandardEndpointFactory:
             )
             return wrapClientTLS(connectionCreator, endpoint)
         else:
-            raise SchemeNotSupported("Unsupported scheme: %r" % (uri.scheme,))
+            raise SchemeNotSupported("Unsupported scheme: {!r}".format(uri.scheme))
 
 
 @implementer(IAgent)

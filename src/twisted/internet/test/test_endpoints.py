@@ -3118,7 +3118,7 @@ class ServerStringTests(unittest.TestCase):
         """
         reactor = object()
         server = endpoints.serverFromString(
-            reactor, "ssl:4321:privateKey=%s" % (escapedPEMPathName,)
+            reactor, "ssl:4321:privateKey={}".format(escapedPEMPathName)
         )
         self.assertIsInstance(server, endpoints.SSL4ServerEndpoint)
         self.assertIs(server._reactor, reactor)
@@ -3207,7 +3207,7 @@ class ServerStringTests(unittest.TestCase):
         reactor = object()
         server = endpoints.serverFromString(
             reactor,
-            "ssl:4321:privateKey={0}:certKey={1}:dhParameters={2}".format(
+            "ssl:4321:privateKey={}:certKey={}:dhParameters={}".format(
                 escapedPEMPathName, escapedPEMPathName, fileName
             ),
         )
@@ -3751,7 +3751,7 @@ class SystemdEndpointPluginTests(unittest.TestCase):
             if isinstance(p, self._parserClass):
                 break
         else:
-            self.fail("Did not find systemd parser in %r" % (parsers,))
+            self.fail("Did not find systemd parser in {!r}".format(parsers))
 
     def test_interface(self):
         """
@@ -3833,7 +3833,7 @@ class TCP6ServerEndpointPluginTests(unittest.TestCase):
             if isinstance(p, self._parserClass):
                 break
         else:
-            self.fail("Did not find TCP6ServerEndpoint parser in %r" % (parsers,))
+            self.fail("Did not find TCP6ServerEndpoint parser in {!r}".format(parsers))
 
     def test_interface(self):
         """
@@ -3851,7 +3851,7 @@ class TCP6ServerEndpointPluginTests(unittest.TestCase):
         'tcp6' endpoint string description.
         """
         ep = endpoints.serverFromString(
-            MemoryReactor(), "tcp6:8080:backlog=12:interface=\:\:1"
+            MemoryReactor(), r"tcp6:8080:backlog=12:interface=\:\:1"
         )
         self.assertIsInstance(ep, endpoints.TCP6ServerEndpoint)
         self.assertIsInstance(ep._reactor, MemoryReactor)
@@ -3877,7 +3877,7 @@ class StandardIOEndpointPluginTests(unittest.TestCase):
             if isinstance(p, self._parserClass):
                 break
         else:
-            self.fail("Did not find StandardIOEndpoint parser in %r" % (parsers,))
+            self.fail("Did not find StandardIOEndpoint parser in {!r}".format(parsers))
 
     def test_interface(self):
         """

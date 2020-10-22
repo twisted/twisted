@@ -248,14 +248,17 @@ class SerializationTests(FlattenTestCase, XMLAssertionMixin):
         def verifyComment(c):
             self.assertTrue(
                 c.startswith(b"<!--"),
-                "%r does not start with the comment prefix" % (c,),
+                "{!r} does not start with the comment prefix".format(c),
             )
             self.assertTrue(
-                c.endswith(b"-->"), "%r does not end with the comment suffix" % (c,)
+                c.endswith(b"-->"),
+                "{!r} does not end with the comment suffix".format(c),
             )
             # If it is shorter than 7, then the prefix and suffix overlap
             # illegally.
-            self.assertTrue(len(c) >= 7, "%r is too short to be a legal comment" % (c,))
+            self.assertTrue(
+                len(c) >= 7, "{!r} is too short to be a legal comment".format(c)
+            )
             content = c[4:-3]
             self.assertNotIn(b"--", content)
             self.assertNotIn(b">", content)

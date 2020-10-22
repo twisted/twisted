@@ -1951,7 +1951,7 @@ class CookieJarTests(TestCase, CookieTestsMixin):
         fake urllib2 response instances.
         """
         jar = self.makeCookieJar()[0]
-        cookies = dict([(c.name, c) for c in jar])
+        cookies = {c.name: c for c in jar}
 
         cookie = cookies["foo"]
         self.assertEqual(cookie.version, 0)

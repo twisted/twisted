@@ -240,7 +240,9 @@ class ServerOptionsTests(TestCase):
         self.assertEqual(
             indexes,
             sorted(indexes),
-            "reactor descriptions were not in alphabetical order: %r" % (helpOutput,),
+            "reactor descriptions were not in alphabetical order: {!r}".format(
+                helpOutput
+            ),
         )
 
     def test_postOptionsSubCommandCausesNoSave(self):

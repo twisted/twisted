@@ -685,7 +685,7 @@ class TCPClientTestsBase(ReactorBuilder, ConnectionTestsMixin, StreamClientTests
         if clientFactory.failReason:
             self.fail(clientFactory.failReason.getTraceback())
 
-        transportRepr = "<%s to %s at %x>" % (
+        transportRepr = "<{} to {} at {:x}>".format(
             transportData["instance"].__class__,
             transportData["instance"].addr,
             id(transportData["instance"]),
@@ -744,7 +744,7 @@ class TCPClientTestsBase(ReactorBuilder, ConnectionTestsMixin, StreamClientTests
         self.runReactor(reactor)
 
         self.assertEqual(
-            len(results), 1, "more than one callback result: %s" % (results,)
+            len(results), 1, "more than one callback result: {}".format(results)
         )
 
         if isinstance(results[0], Failure):
@@ -1512,7 +1512,7 @@ class TCPPortTestsMixin:
         """
         Get the expected connection lost message for a TCP port.
         """
-        return "(TCP Port %s Closed)" % (port.getHost().port,)
+        return "(TCP Port {} Closed)".format(port.getHost().port)
 
     def test_portGetHostOnIPv4(self):
         """

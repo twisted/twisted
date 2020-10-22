@@ -294,9 +294,13 @@ def createFactoryCopy(state):
     """
     stateId = state.get("id", None)
     if stateId is None:
-        raise RuntimeError("factory copy state has no 'id' member %s" % (repr(state),))
+        raise RuntimeError(
+            "factory copy state has no 'id' member {}".format(repr(state))
+        )
     if not stateId in SimpleFactoryCopy.allIDs:
-        raise RuntimeError("factory class has no ID: %s" % (SimpleFactoryCopy.allIDs,))
+        raise RuntimeError(
+            "factory class has no ID: {}".format(SimpleFactoryCopy.allIDs)
+        )
     inst = SimpleFactoryCopy.allIDs[stateId]
     if not inst:
         raise RuntimeError("factory method found no object with id")
@@ -666,7 +670,7 @@ class BrokerTests(unittest.TestCase):
             pass
 
     def thunkErrorBad(self, error):
-        self.fail("This should cause a return value, not %s" % (error,))
+        self.fail("This should cause a return value, not {}".format(error))
 
     def thunkResultGood(self, result):
         self.thunkResult = result
@@ -675,7 +679,7 @@ class BrokerTests(unittest.TestCase):
         pass
 
     def thunkResultBad(self, result):
-        self.fail("This should cause an error, not %s" % (result,))
+        self.fail("This should cause an error, not {}".format(result))
 
     def test_reference(self):
         c, s, pump = connectedServerAndClient(test=self)
@@ -738,7 +742,9 @@ class BrokerTests(unittest.TestCase):
             pump.pump()
         expected = pb.MAX_BROKER_REFS - 1
         self.assertTrue(s.transport.closed, "transport was not closed")
-        self.assertEqual(len(l), expected, "expected %s got %s" % (expected, len(l)))
+        self.assertEqual(
+            len(l), expected, "expected {} got {}".format(expected, len(l))
+        )
 
     def test_copy(self):
         c, s, pump = connectedServerAndClient(test=self)
@@ -928,7 +934,7 @@ class BrokerTests(unittest.TestCase):
         self.assertEqual(
             self.thunkResult,
             ID,
-            "ID not correct on factory object %s" % (self.thunkResult,),
+            "ID not correct on factory object {}".format(self.thunkResult),
         )
 
 
@@ -1104,7 +1110,7 @@ class DisconnectionTests(unittest.TestCase):
     """
 
     def error(self, *args):
-        raise RuntimeError("I shouldn't have been called: %s" % (args,))
+        raise RuntimeError("I shouldn't have been called: {}".format(args))
 
     def gotDisconnected(self):
         """

@@ -339,7 +339,7 @@ class ReactorBuilder:
         reactor.run()
         if timedOut:
             raise TestTimeoutError(
-                "reactor still running after %s seconds" % (timeout,)
+                "reactor still running after {} seconds".format(timeout)
             )
         else:
             timedOutCall.cancel()

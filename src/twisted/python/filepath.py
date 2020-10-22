@@ -456,7 +456,7 @@ class AbstractFilePath:
             p = p.parent()
         if f == ancestor and segments:
             return segments
-        raise ValueError("%r not parent of %r" % (ancestor, self))
+        raise ValueError("{!r} not parent of {!r}".format(ancestor, self))
 
     # new in 8.0
     def __hash__(self):
@@ -511,7 +511,7 @@ class RWX(FancyEqMixin):
         self.execute = executable
 
     def __repr__(self) -> str:
-        return "RWX(read=%s, write=%s, execute=%s)" % (
+        return "RWX(read={}, write={}, execute={})".format(
             self.read,
             self.write,
             self.execute,
@@ -565,7 +565,7 @@ class Permissions(FancyEqMixin):
         ]
 
     def __repr__(self) -> str:
-        return "[%s | %s | %s]" % (str(self.user), str(self.group), str(self.other))
+        return "[{} | {} | {}]".format(str(self.user), str(self.group), str(self.other))
 
     def shorthand(self):
         """
@@ -791,15 +791,17 @@ class FilePath(AbstractFilePath):
 
         if platform.isWindows() and path.count(colon):
             # Catch paths like C:blah that don't have a slash
-            raise InsecurePath("%r contains a colon." % (path,))
+            raise InsecurePath("{!r} contains a colon.".format(path))
 
         norm = normpath(path)
         if sep in norm:
-            raise InsecurePath("%r contains one or more directory separators" % (path,))
+            raise InsecurePath(
+                "{!r} contains one or more directory separators".format(path)
+            )
 
         newpath = abspath(joinpath(ourPath, norm))
         if not newpath.startswith(ourPath):
-            raise InsecurePath("%r is not a child of %s" % (newpath, ourPath))
+            raise InsecurePath("{!r} is not a child of {}".format(newpath, ourPath))
         return self.clonePath(newpath)
 
     def preauthChild(self, path):
@@ -817,7 +819,7 @@ class FilePath(AbstractFilePath):
 
         newpath = abspath(joinpath(ourPath, normpath(path)))
         if not newpath.startswith(ourPath):
-            raise InsecurePath("%s is not a child of %s" % (newpath, ourPath))
+            raise InsecurePath("{} is not a child of {}".format(newpath, ourPath))
         return self.clonePath(newpath)
 
     def childSearchPreauth(self, *paths):
@@ -1293,7 +1295,7 @@ class FilePath(AbstractFilePath):
         return splitext(self.path)
 
     def __repr__(self) -> str:
-        return "FilePath(%r)" % (self.path,)
+        return "FilePath({!r})".format(self.path)
 
     def touch(self):
         """

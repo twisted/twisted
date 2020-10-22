@@ -1135,7 +1135,7 @@ class TunnelTestsMixin:
         self.port.startListening()
         self.assertRegex(str(self.port), fullyQualifiedName(self.protocol.__class__))
 
-        expected = " listening on %s/%s>" % (
+        expected = " listening on {}/{}>".format(
             self._tunnelTypeOnly(self.helper.TUNNEL_TYPE).name,
             self.system.getTunnel(self.port).name,
         )
@@ -1148,7 +1148,7 @@ class TunnelTestsMixin:
         """
         self.assertRegex(str(self.port), fullyQualifiedName(self.protocol.__class__))
 
-        expected = " not listening on %s/%s>" % (
+        expected = " not listening on {}/{}>".format(
             self._tunnelTypeOnly(self.helper.TUNNEL_TYPE).name,
             self.name,
         )

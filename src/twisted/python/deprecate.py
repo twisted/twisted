@@ -121,17 +121,17 @@ def _fullyQualifiedName(obj):
 
     if inspect.isclass(obj) or inspect.isfunction(obj):
         moduleName = obj.__module__
-        return "%s.%s" % (moduleName, name)
+        return "{}.{}".format(moduleName, name)
     elif inspect.ismethod(obj):
         try:
             cls = obj.im_class
         except AttributeError:
             # Python 3 eliminates im_class, substitutes __module__ and
             # __qualname__ to provide similar information.
-            return "%s.%s" % (obj.__module__, obj.__qualname__)
+            return "{}.{}".format(obj.__module__, obj.__qualname__)
         else:
             className = _fullyQualifiedName(cls)
-            return "%s.%s" % (className, name)
+            return "{}.{}".format(className, name)
     return name
 
 
@@ -153,7 +153,7 @@ def _getReplacementString(replacement):
     """
     if callable(replacement):
         replacement = _fullyQualifiedName(replacement)
-    return "please use %s instead" % (replacement,)
+    return "please use {} instead".format(replacement)
 
 
 def _getDeprecationDocstring(version, replacement=None):
@@ -170,9 +170,9 @@ def _getDeprecationDocstring(version, replacement=None):
     @return: a string like "Deprecated in Twisted 27.2.0; please use
         twisted.timestream.tachyon.flux instead."
     """
-    doc = "Deprecated in %s" % (getVersionString(version),)
+    doc = "Deprecated in {}".format(getVersionString(version))
     if replacement:
-        doc = "%s; %s" % (doc, _getReplacementString(replacement))
+        doc = "{}; {}".format(doc, _getReplacementString(replacement))
     return doc + "."
 
 
@@ -205,7 +205,9 @@ def _getDeprecationWarningString(fqpn, version, format=None, replacement=None):
         format = DEPRECATION_WARNING_FORMAT
     warningString = format % {"fqpn": fqpn, "version": getVersionString(version)}
     if replacement:
-        warningString = "%s; %s" % (warningString, _getReplacementString(replacement))
+        warningString = "{}; {}".format(
+            warningString, _getReplacementString(replacement)
+        )
     return warningString
 
 
@@ -455,7 +457,7 @@ class _ModuleProxy:
         representation of the wrapped module object.
         """
         state = _InternalState(self)
-        return "<%s module=%r>" % (type(self).__name__, state._module)
+        return "<{} module={!r}>".format(type(self).__name__, state._module)
 
     def __setattr__(self, name, value):
         """
@@ -798,12 +800,12 @@ def deprecatedKeywordParameter(
 
     def wrapper(wrappee: _Tc) -> _Tc:
         warningString = _getDeprecationWarningString(
-            "The %r parameter to %s" % (name, _fullyQualifiedName(wrappee)),
+            "The {!r} parameter to {}".format(name, _fullyQualifiedName(wrappee)),
             version,
             replacement=replacement,
         )
 
-        doc = "The %r parameter was deprecated in %s" % (
+        doc = "The {!r} parameter was deprecated in {}".format(
             name,
             getVersionString(version),
         )

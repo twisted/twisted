@@ -801,12 +801,10 @@ class FTP(basic.LineReceiver, policies.TimeoutMixin):
             if err.check(FTPCmdError):
                 self.sendLine(err.value.response())
             elif err.check(TypeError) and any(
-                (
-                    msg in err.value.args[0]
-                    for msg in ("takes exactly", "required positional argument")
-                )
+                msg in err.value.args[0]
+                for msg in ("takes exactly", "required positional argument")
             ):
-                self.reply(SYNTAX_ERR, "%s requires an argument." % (cmd,))
+                self.reply(SYNTAX_ERR, "{} requires an argument.".format(cmd))
             else:
                 log.msg("Unexpected FTP error")
                 log.err(err)
@@ -888,7 +886,7 @@ class FTP(basic.LineReceiver, policies.TimeoutMixin):
             else:
                 return dtpPort
         raise error.CannotListenError(
-            "", portn, "No port available in range %s" % (self.passivePortRange,)
+            "", portn, "No port available in range {}".format(self.passivePortRange)
         )
 
     def ftp_USER(self, username):
@@ -1564,7 +1562,7 @@ class FTPFactory(policies.LimitTotalConnectionsFactory):
     userAnonymous = "anonymous"
     timeOut = 600
 
-    welcomeMessage = "Twisted %s FTP Server" % (copyright.version,)
+    welcomeMessage = "Twisted {} FTP Server".format(copyright.version)
 
     passivePortRange = range(0, 1)
 
@@ -1810,7 +1808,7 @@ def _testPermissions(uid, gid, spath, mode="r"):
         oth = stat.S_IWOTH
         amode = os.W_OK
     else:
-        raise ValueError("Invalid mode %r: must specify 'r' or 'w'" % (mode,))
+        raise ValueError("Invalid mode {!r}: must specify 'r' or 'w'".format(mode))
 
     access = False
     if os.path.exists(spath):
@@ -2220,7 +2218,7 @@ class BaseFTPRealm:
         @rtype: L{FilePath}
         """
         raise NotImplementedError(
-            "%r did not override getHomeDirectory" % (self.__class__,)
+            "{!r} did not override getHomeDirectory".format(self.__class__)
         )
 
     def requestAvatar(self, avatarId, mind, *interfaces):
@@ -2413,7 +2411,7 @@ def decodeHostPort(line):
         if x < 0 or x > 255:
             raise ValueError("Out of range", line, x)
     a, b, c, d, e, f = parsed
-    host = "%s.%s.%s.%s" % (a, b, c, d)
+    host = "{}.{}.{}.{}".format(a, b, c, d)
     port = (int(e) << 8) + int(f)
     return host, port
 
@@ -2650,7 +2648,7 @@ class FTPClientBasic(basic.LineReceiver):
             self.nextDeferred.errback(failure.Failure(CommandFailed(response)))
         else:
             # This shouldn't happen unless something screwed up.
-            log.msg("Server sent invalid response code %s" % (code,))
+            log.msg("Server sent invalid response code {}".format(code))
             self.nextDeferred.errback(failure.Failure(BadResponse(response)))
 
         # Run the next command

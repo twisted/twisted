@@ -41,7 +41,7 @@ class LogPublisherTests(unittest.TestCase):
         o2 = cast(ILogObserver, lambda e: None)
 
         publisher = LogPublisher(o1, o2)
-        self.assertEqual(set((o1, o2)), set(publisher._observers))
+        self.assertEqual({o1, o2}, set(publisher._observers))
 
     def test_addObserver(self) -> None:
         """
@@ -53,7 +53,7 @@ class LogPublisherTests(unittest.TestCase):
 
         publisher = LogPublisher(o1, o2)
         publisher.addObserver(o3)
-        self.assertEqual(set((o1, o2, o3)), set(publisher._observers))
+        self.assertEqual({o1, o2, o3}, set(publisher._observers))
 
     def test_addObserverNotCallable(self) -> None:
         """
@@ -73,7 +73,7 @@ class LogPublisherTests(unittest.TestCase):
 
         publisher = LogPublisher(o1, o2, o3)
         publisher.removeObserver(o2)
-        self.assertEqual(set((o1, o3)), set(publisher._observers))
+        self.assertEqual({o1, o3}, set(publisher._observers))
 
     def test_removeObserverNotRegistered(self) -> None:
         """
@@ -86,7 +86,7 @@ class LogPublisherTests(unittest.TestCase):
 
         publisher = LogPublisher(o1, o2)
         publisher.removeObserver(o3)
-        self.assertEqual(set((o1, o2)), set(publisher._observers))
+        self.assertEqual({o1, o2}, set(publisher._observers))
 
     def test_fanOut(self) -> None:
         """

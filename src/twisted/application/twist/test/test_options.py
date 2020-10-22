@@ -104,7 +104,7 @@ class OptionsTests(twisted.trial.unittest.TestCase):
         options = TwistOptions()
         options.opt_reactor("fusion")
 
-        self.assertEqual(set(self.installedReactors), set(["fusion"]))
+        self.assertEqual(set(self.installedReactors), {"fusion"})
         self.assertEquals(options["reactorName"], "fusion")
 
     def test_installCorrectReactor(self) -> None:
@@ -118,7 +118,7 @@ class OptionsTests(twisted.trial.unittest.TestCase):
         options.subCommand = "test-subcommand"
         options.parseOptions(["--reactor=fusion"])
 
-        self.assertEqual(set(self.installedReactors), set(["fusion"]))
+        self.assertEqual(set(self.installedReactors), {"fusion"})
 
     def test_installReactorBogus(self) -> None:
         """
@@ -340,7 +340,7 @@ class OptionsTests(twisted.trial.unittest.TestCase):
         options = TwistOptions()
 
         plugins = set(options.plugins)
-        subCommands = set(name for name, shortcut, parser, doc in options.subCommands)
+        subCommands = {name for name, shortcut, parser, doc in options.subCommands}
 
         self.assertEqual(subCommands, plugins)
 

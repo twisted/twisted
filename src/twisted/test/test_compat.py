@@ -112,7 +112,7 @@ class CompatTests(SynchronousTestCase):
 
         a.discard("d")
 
-        b = set(["r", "s"])
+        b = {"r", "s"}
         d = a.union(b)
         b = list(d)
         b.sort()

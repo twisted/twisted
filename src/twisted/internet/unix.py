@@ -277,12 +277,12 @@ class Server(_SendmsgMixin, tcp.Server):
         # FIXME: is this a suitable sessionno?
         sessionno = 0
         self = cls(skt, proto, skt.getpeername(), None, sessionno, reactor)
-        self.repstr = "<%s #%s on %s>" % (
+        self.repstr = "<{} #{} on {}>".format(
             self.protocol.__class__.__name__,
             self.sessionno,
             skt.getsockname(),
         )
-        self.logstr = "%s,%s,%s" % (
+        self.logstr = "{},{},{}".format(
             self.protocol.__class__.__name__,
             self.sessionno,
             skt.getsockname(),
@@ -359,12 +359,12 @@ class Port(_UNIXPort, tcp.Port):
     def __repr__(self) -> str:
         factoryName = reflect.qual(self.factory.__class__)
         if hasattr(self, "socket"):
-            return "<%s on %r>" % (
+            return "<{} on {!r}>".format(
                 factoryName,
                 _coerceToFilesystemEncoding("", self.port),
             )
         else:
-            return "<%s (not listening)>" % (factoryName,)
+            return "<{} (not listening)>".format(factoryName)
 
     def _buildAddr(self, name):
         return address.UNIXAddress(name)
@@ -503,12 +503,12 @@ class DatagramPort(_UNIXPort, udp.Port):
             self.protocol.__class__,
         )
         if hasattr(self, "socket"):
-            return "<%s on %r>" % (protocolName, self.port)
+            return "<{} on {!r}>".format(protocolName, self.port)
         else:
-            return "<%s (not listening)>" % (protocolName,)
+            return "<{} (not listening)>".format(protocolName)
 
     def _bindSocket(self):
-        log.msg("%s starting on %s" % (self.protocol.__class__, repr(self.port)))
+        log.msg("{} starting on {}".format(self.protocol.__class__, repr(self.port)))
         try:
             skt = self.createInternetSocket()  # XXX: haha misnamed method
             if self.port:

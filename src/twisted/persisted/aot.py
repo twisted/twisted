@@ -61,7 +61,7 @@ class InstanceMethod:
         self.instance = inst
 
     def getSource(self):
-        return "InstanceMethod(%r, %r, \n\0%s)" % (
+        return "InstanceMethod({!r}, {!r}, \n\0{})".format(
             self.name,
             self.klass,
             prettify(self.instance),
@@ -109,10 +109,10 @@ class Instance:
             stateDict = None
         if stateDict is not None:
             try:
-                return "Instance(%r, %s)" % (self.klass, dictToKW(stateDict))
+                return "Instance({!r}, {})".format(self.klass, dictToKW(stateDict))
             except NonFormattableDict:
-                return "Instance(%r, %s)" % (self.klass, prettify(stateDict))
-        return "Instance(%r, %s)" % (self.klass, prettify(self.state))
+                return "Instance({!r}, {})".format(self.klass, prettify(stateDict))
+        return "Instance({!r}, {})".format(self.klass, prettify(self.state))
 
 
 class Ref:
@@ -128,14 +128,14 @@ class Ref:
     def setRef(self, num):
         if self.refnum:
             raise ValueError(
-                "Error setting id %s, I already have %s" % (num, self.refnum)
+                "Error setting id {}, I already have {}".format(num, self.refnum)
             )
         self.refnum = num
 
     def setObj(self, obj):
         if self.obj:
             raise ValueError(
-                "Error setting obj %s, I already have %s" % (obj, self.obj)
+                "Error setting obj {}, I already have {}".format(obj, self.obj)
             )
         self.obj = obj
 
@@ -165,7 +165,7 @@ class Copyreg:
         self.state = state
 
     def getSource(self):
-        return "Copyreg(%r, %s)" % (self.loadfunc, prettify(self.state))
+        return "Copyreg({!r}, {})".format(self.loadfunc, prettify(self.state))
 
 
 ###############
@@ -194,7 +194,7 @@ def dictToKW(d):
             raise NonFormattableDict("%r ain't a string" % k)
         if not r.match(k):
             raise NonFormattableDict("%r ain't an identifier" % k)
-        out.append("\n\0%s=%s," % (k, prettify(v)))
+        out.append("\n\0{}={},".format(k, prettify(v)))
     return "".join(out)
 
 
@@ -211,7 +211,7 @@ def prettify(obj):
         elif t is dict:
             out = ["{"]
             for k, v in obj.items():
-                out.append("\n\0%s: %s," % (prettify(k), prettify(v)))
+                out.append("\n\0{}: {},".format(prettify(k), prettify(v)))
             out.append(len(obj) and "\n\0}" or "}")
             return "".join(out)
 

@@ -129,11 +129,11 @@ class IRCUserTests(IRCTestCase):
         self.ircUser.irc_PASS("", ["pass"])
         self.ircUser.irc_NICK("", ["john"])
 
-        version = "Your host is example.com, running version %s" % (
+        version = "Your host is example.com, running version {}".format(
             self.factory._serverInfo["serviceVersion"],
         )
 
-        creation = "This server was created on %s" % (
+        creation = "This server was created on {}".format(
             self.factory._serverInfo["creationDate"],
         )
 

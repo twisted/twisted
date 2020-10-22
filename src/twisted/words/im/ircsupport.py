@@ -51,7 +51,7 @@ class IRCGroup(basesupport.AbstractGroup):
             raise locals.OfflineError
         reason = "for great justice!"
         self.account.client.sendLine(
-            "KICK #%s %s :%s" % (self.name, target.name, reason)
+            "KICK #{} {} :{}".format(self.name, target.name, reason)
         )
 
     ### Interface Implementation

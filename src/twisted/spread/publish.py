@@ -65,7 +65,7 @@ class RemotePublished(flavors.RemoteCache):
     _wasCleanWhenLoaded = 0
 
     def getFileName(self, ext="pub"):
-        return "%s-%s-%s.%s" % (
+        return "{}-{}-{}.{}".format(
             self.service,
             self.perspective,
             str(self.publishedID),

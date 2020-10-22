@@ -262,7 +262,7 @@ class ClassicLogFormattingTests(unittest.TestCase):
         """
 
         def formatTime(t: Optional[float]) -> str:
-            return "__{0}__".format(t)
+            return "__{}__".format(t)
 
         event = dict(log_format="XYZZY", log_time=12345)
         self.assertEqual(

@@ -272,7 +272,7 @@ class PythonAttribute:
         self.pythonValue = pythonValue
 
     def __repr__(self) -> str:
-        return "PythonAttribute<%r>" % (self.name,)
+        return "PythonAttribute<{!r}>".format(self.name)
 
     def isLoaded(self):
         """
@@ -334,7 +334,7 @@ class PythonModule(_ModuleIteratorHelper):
         """
         Return a string representation including the module name.
         """
-        return "PythonModule<%r>" % (self.name,)
+        return "PythonModule<{!r}>".format(self.name)
 
     def isLoaded(self):
         """
@@ -458,7 +458,7 @@ class PathEntry(_ModuleIteratorHelper):
         return self
 
     def __repr__(self) -> str:
-        return "PathEntry<%r>" % (self.filePath,)
+        return "PathEntry<{!r}>".format(self.filePath)
 
     def _packagePaths(self):
         yield self.filePath
@@ -741,7 +741,7 @@ class PythonPath:
         """
         Display my sysPath and moduleDict in a string representation.
         """
-        return "PythonPath(%r,%r)" % (self.sysPath, self.moduleDict)
+        return "PythonPath({!r},{!r})".format(self.sysPath, self.moduleDict)
 
     def iterModules(self):
         """

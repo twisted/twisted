@@ -208,7 +208,7 @@ class SSHUserAuthClient(userauth.SSHUserAuthClient):
         if prompt:
             prompt = nativeString(prompt)
         else:
-            prompt = "%s@%s's password: " % (
+            prompt = "{}@{}'s password: ".format(
                 nativeString(self.user),
                 self.transport.transport.getPeer().host,
             )

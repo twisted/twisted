@@ -759,7 +759,7 @@ class TLSMemoryBIOFactory(WrappingFactory):
             logPrefix = self.wrappedFactory.logPrefix()
         else:
             logPrefix = self.wrappedFactory.__class__.__name__
-        return "%s (TLS)" % (logPrefix,)
+        return "{} (TLS)".format(logPrefix)
 
     def _applyProtocolNegotiation(self, connection):
         """

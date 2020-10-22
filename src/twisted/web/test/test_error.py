@@ -297,10 +297,10 @@ class FlattenerErrorTests(unittest.TestCase):
         self.assertTrue(
             re.match(
                 "Exception while flattening:\n"
-                "  R\(a\)\n"
-                "  R\(b\)\n"
+                "  R\\(a\\)\n"
+                "  R\\(b\\)\n"
                 '  File "[^"]*", line [0-9]*, in makeFlattenerError\n'
-                '    raise RuntimeError\("oh noes"\)\n'
+                '    raise RuntimeError\\("oh noes"\\)\n'
                 "RuntimeError: oh noes\n$",
                 repr(e),
                 re.M | re.S,
@@ -318,7 +318,7 @@ class FlattenerErrorTests(unittest.TestCase):
             re.match(
                 "Exception while flattening:\n"
                 '  File "[^"]*", line [0-9]*, in makeFlattenerError\n'
-                '    raise RuntimeError\("oh noes"\)\n'
+                '    raise RuntimeError\\("oh noes"\\)\n'
                 "RuntimeError: oh noes\n$",
                 repr(e),
                 re.M | re.S,

@@ -33,10 +33,8 @@ from twisted.internet.interfaces import IProcessTransport
 
 if platform.isWindows():
     raise ImportError(
-        (
-            "twisted.internet.process does not work on Windows. "
-            "Use the reactor.spawnProcess() API instead."
-        )
+        "twisted.internet.process does not work on Windows. "
+        "Use the reactor.spawnProcess() API instead."
     )
 
 try:
@@ -330,7 +328,7 @@ class _BaseProcess(BaseProcess):
         @type signalID: C{str} or C{int}
         """
         if signalID in ("HUP", "STOP", "INT", "KILL", "TERM"):
-            signalID = getattr(signal, "SIG%s" % (signalID,))
+            signalID = getattr(signal, "SIG{}".format(signalID))
         if self.pid is None:
             raise ProcessExitedAlready()
         try:
@@ -424,9 +422,9 @@ class _BaseProcess(BaseProcess):
                         # objects.
 
                         stderr = io.TextIOWrapper(os.fdopen(2, "wb"), encoding="utf-8")
-                        msg = (
-                            "Upon execvpe {0} {1} in environment id {2}" "\n:"
-                        ).format(executable, str(args), id(environment))
+                        msg = ("Upon execvpe {} {} in environment id {}" "\n:").format(
+                            executable, str(args), id(environment)
+                        )
                         stderr.write(msg)
                         traceback.print_exc(file=stderr)
                         stderr.flush()
@@ -474,7 +472,7 @@ class _BaseProcess(BaseProcess):
         """
         String representation of a process.
         """
-        return "<%s pid=%s status=%s>" % (
+        return "<{} pid={} status={}>".format(
             self.__class__.__name__,
             self.pid,
             self.status,
@@ -698,7 +696,7 @@ class Process(_BaseProcess):
                     fdmap[childFD] = readFD  # child reads from this
                     helpers[childFD] = writeFD  # parent writes to this
                 else:
-                    assert type(target) == int, "%r should be an int" % (target,)
+                    assert type(target) == int, "{!r} should be an int".format(target)
                     fdmap[childFD] = target  # parent ignores this
             if debug:
                 print("fdmap", fdmap)

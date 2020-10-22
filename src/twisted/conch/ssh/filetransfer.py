@@ -282,7 +282,7 @@ class FileTransferServer(FileTransferBase):
         d.addErrback(self._ebStatus, requestId, b"opendir failed")
 
     def _cbOpenDirectory(self, dirObj, requestId):
-        handle = networkString((str(hash(dirObj))))
+        handle = networkString(str(hash(dirObj)))
         if handle in self.openDirs:
             raise KeyError("already opened this directory")
         self.openDirs[handle] = [dirObj, iter(dirObj)]

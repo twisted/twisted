@@ -480,7 +480,7 @@ class Reporter(TestResult):
         if warn:
             tbStr = self._formatFailureTraceback(error)
             log.msg(tbStr)
-            msg = "caught exception in %s, your TestCase is broken\n\n%s" % (
+            msg = "caught exception in {}, your TestCase is broken\n\n{}".format(
                 method,
                 tbStr,
             )
@@ -633,12 +633,14 @@ class Reporter(TestResult):
                 self._writeln(case.id())
 
     def _printExpectedFailure(self, error, todo):
-        return "Reason: %r\n%s" % (todo.reason, self._formatFailureTraceback(error))
+        return "Reason: {!r}\n{}".format(
+            todo.reason, self._formatFailureTraceback(error)
+        )
 
     def _printUnexpectedSuccess(self, todo):
-        ret = "Reason: %r\n" % (todo.reason,)
+        ret = "Reason: {!r}\n".format(todo.reason)
         if todo.errors:
-            ret += "Expected errors: %s\n" % (", ".join(todo.errors),)
+            ret += "Expected errors: {}\n".format(", ".join(todo.errors))
         return ret
 
     def _printErrors(self):
@@ -879,7 +881,7 @@ class _AnsiColorizer:
         @param color: A string label for a color. e.g. 'red', 'white'.
         """
         color = self._colors[color]
-        self.stream.write("\x1b[%s;1m%s\x1b[0m" % (color, text))
+        self.stream.write("\x1b[{};1m{}\x1b[0m".format(color, text))
 
 
 class _Win32Colorizer:
@@ -1201,9 +1203,9 @@ class TreeReporter(Reporter):
         for seg in segments:
             if indentLevel < len(self._lastTest):
                 if seg != self._lastTest[indentLevel]:
-                    self._write("%s%s\n" % (self.indent * indentLevel, seg))
+                    self._write("{}{}\n".format(self.indent * indentLevel, seg))
             else:
-                self._write("%s%s\n" % (self.indent * indentLevel, seg))
+                self._write("{}{}\n".format(self.indent * indentLevel, seg))
             indentLevel += 1
         self._lastTest = segments
 

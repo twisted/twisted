@@ -189,7 +189,7 @@ class _InstanceFactory(ClientFactory):
         self.deferred = deferred
 
     def __repr__(self) -> str:
-        return "<ClientCreator factory: %r>" % (self.instance,)
+        return "<ClientCreator factory: {!r}>".format(self.instance)
 
     def buildProtocol(self, addr):
         """
@@ -394,7 +394,7 @@ class ReconnectingClientFactory(ClientFactory):
         """
         if not self.continueTrying:
             if self.noisy:
-                log.msg("Abandoning %s on explicit request" % (connector,))
+                log.msg("Abandoning {} on explicit request".format(connector))
             return
 
         if connector is None:

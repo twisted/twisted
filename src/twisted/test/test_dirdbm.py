@@ -65,17 +65,19 @@ class DirDbmTests(unittest.TestCase):
         self.assertEqual(
             keys,
             dbkeys,
-            ".keys() output didn't match: %s != %s" % (repr(keys), repr(dbkeys)),
+            ".keys() output didn't match: {} != {}".format(repr(keys), repr(dbkeys)),
         )
         self.assertEqual(
             values,
             dbvalues,
-            ".values() output didn't match: %s != %s" % (repr(values), repr(dbvalues)),
+            ".values() output didn't match: {} != {}".format(
+                repr(values), repr(dbvalues)
+            ),
         )
         self.assertEqual(
             items,
             dbitems,
-            "items() didn't match: %s != %s" % (repr(items), repr(dbitems)),
+            "items() didn't match: {} != {}".format(repr(items), repr(dbitems)),
         )
 
         copyPath = self.mktemp()
@@ -89,7 +91,9 @@ class DirDbmTests(unittest.TestCase):
         self.assertEqual(
             dbkeys,
             copykeys,
-            ".copyTo().keys() didn't match: %s != %s" % (repr(dbkeys), repr(copykeys)),
+            ".copyTo().keys() didn't match: {} != {}".format(
+                repr(dbkeys), repr(copykeys)
+            ),
         )
         self.assertEqual(
             dbvalues,

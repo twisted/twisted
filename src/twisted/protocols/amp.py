@@ -555,18 +555,20 @@ class RemoteAmpError(AmpError):
         # Backslash-escape errorCode. Python 3.5 can do this natively
         # ("backslashescape") but Python 2.7 and Python 3.4 can't.
         errorCodeForMessage = "".join(
-            "\\x%2x" % (c,) if c >= 0x80 else chr(c) for c in errorCode
+            "\\x{:2x}".format(c) if c >= 0x80 else chr(c) for c in errorCode
         )
 
         if othertb:
-            message = "Code<%s>%s: %s\n%s" % (
+            message = "Code<{}>{}: {}\n{}".format(
                 errorCodeForMessage,
                 localwhat,
                 description,
                 othertb,
             )
         else:
-            message = "Code<%s>%s: %s" % (errorCodeForMessage, localwhat, description)
+            message = "Code<{}>{}: {}".format(
+                errorCodeForMessage, localwhat, description
+            )
 
         super(RemoteAmpError, self).__init__(message)
         self.local = local
@@ -671,7 +673,9 @@ class AmpBox(dict):
             if type(k) == str:
                 raise TypeError("Unicode key not allowed: %r" % k)
             if type(v) == str:
-                raise TypeError("Unicode value for key %r not allowed: %r" % (k, v))
+                raise TypeError(
+                    "Unicode value for key {!r} not allowed: {!r}".format(k, v)
+                )
             if len(k) > MAX_KEY_LENGTH:
                 raise TooLong(True, True, k, None)
             if len(v) > MAX_VALUE_LENGTH:
@@ -699,7 +703,7 @@ class AmpBox(dict):
         proto.sendBox(self)
 
     def __repr__(self) -> str:
-        return "AmpBox(%s)" % (dict.__repr__(self),)
+        return "AmpBox({})".format(dict.__repr__(self))
 
 
 # amp.Box => AmpBox
@@ -715,7 +719,7 @@ class QuitBox(AmpBox):
     __slots__ = []  # type: List[str]
 
     def __repr__(self) -> str:
-        return "QuitBox(**%s)" % (super(QuitBox, self).__repr__(),)
+        return "QuitBox(**{})".format(super(QuitBox, self).__repr__())
 
     def _sendTo(self, proto):
         """
@@ -744,7 +748,7 @@ class _SwitchBox(AmpBox):
         self.innerProto = innerProto
 
     def __repr__(self) -> str:
-        return "_SwitchBox(%r, **%s)" % (
+        return "_SwitchBox({!r}, **{})".format(
             self.innerProto,
             dict.__repr__(self),
         )
@@ -1053,7 +1057,7 @@ class BoxDispatcher:
         cmd = box[COMMAND]
         responder = self.locator.locateResponder(cmd)
         if responder is None:
-            description = "Unhandled Command: %r" % (cmd,)
+            description = "Unhandled Command: {!r}".format(cmd)
             return fail(
                 RemoteAmpError(
                     UNHANDLED_ERROR_CODE,
@@ -1472,7 +1476,7 @@ class Float(Argument):
 
     def toString(self, inString):
         if not isinstance(inString, float):
-            raise ValueError("Bad float value %r" % (inString,))
+            raise ValueError("Bad float value {!r}".format(inString))
         return str(inString).encode("ascii")
 
 
@@ -1487,7 +1491,7 @@ class Boolean(Argument):
         elif inString == b"False":
             return False
         else:
-            raise TypeError("Bad boolean value: %r" % (inString,))
+            raise TypeError("Bad boolean value: {!r}".format(inString))
 
     def toString(self, inObject):
         if inObject:
@@ -1756,12 +1760,12 @@ class Command:
             for name, _ in newtype.arguments:
                 if not isinstance(name, bytes):
                     raise TypeError(
-                        "Argument names must be byte strings, got: %r" % (name,)
+                        "Argument names must be byte strings, got: {!r}".format(name)
                     )
             for name, _ in newtype.response:
                 if not isinstance(name, bytes):
                     raise TypeError(
-                        "Response names must be byte strings, got: %r" % (name,)
+                        "Response names must be byte strings, got: {!r}".format(name)
                     )
 
             errors = {}  # type: Dict[Type[Exception], bytes]
@@ -1784,12 +1788,12 @@ class Command:
             for _, name in newtype.errors.items():
                 if not isinstance(name, bytes):
                     raise TypeError(
-                        "Error names must be byte strings, got: %r" % (name,)
+                        "Error names must be byte strings, got: {!r}".format(name)
                     )
             for _, name in newtype.fatalErrors.items():
                 if not isinstance(name, bytes):
                     raise TypeError(
-                        "Fatal error names must be byte strings, got: %r" % (name,)
+                        "Fatal error names must be byte strings, got: {!r}".format(name)
                     )
 
             return newtype
@@ -1832,7 +1836,7 @@ class Command:
                 forgotten.append(pythonName)
         if forgotten:
             raise InvalidSignature(
-                "forgot %s for %s" % (", ".join(forgotten), self.commandName)
+                "forgot {} for {}".format(", ".join(forgotten), self.commandName)
             )
         forgotten = []
 
@@ -1876,7 +1880,7 @@ class Command:
 
         for intendedArg in objects:
             if intendedArg not in allowedNames:
-                raise InvalidSignature("%s is not a valid argument" % (intendedArg,))
+                raise InvalidSignature("{} is not a valid argument".format(intendedArg))
         return _objectsToStrings(objects, cls.arguments, cls.commandType(), proto)
 
     @classmethod
@@ -2582,10 +2586,10 @@ class AMP(BinaryBoxProtocol, BoxDispatcher, CommandLocator, SimpleStringLocator)
         AMP connection.
         """
         if self.innerProtocol is not None:
-            innerRepr = " inner %r" % (self.innerProtocol,)
+            innerRepr = " inner {!r}".format(self.innerProtocol)
         else:
             innerRepr = ""
-        return "<%s%s at 0x%x>" % (self.__class__.__name__, innerRepr, id(self))
+        return "<{}{} at 0x{:x}>".format(self.__class__.__name__, innerRepr, id(self))
 
     def makeConnection(self, transport):
         """
@@ -2800,7 +2804,7 @@ class DateTime(Argument):
         s = nativeString(s)
 
         if len(s) != 32:
-            raise ValueError("invalid date format %r" % (s,))
+            raise ValueError("invalid date format {!r}".format(s))
 
         values = [int(s[p]) for p in self._positions]
         sign = s[26]

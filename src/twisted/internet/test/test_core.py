@@ -36,7 +36,7 @@ class ObjectModelIntegrationMixin:
         mro = inspect.getmro(type(instance))
         for subclass in mro:
             self.assertTrue(
-                issubclass(subclass, object), "%r is not new-style" % (subclass,)
+                issubclass(subclass, object), "{!r} is not new-style".format(subclass)
             )
 
 

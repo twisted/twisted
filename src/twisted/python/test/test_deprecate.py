@@ -134,7 +134,7 @@ class ModuleProxyTests(SynchronousTestCase):
         proxy = self._makeProxy()
         realModule = object.__getattribute__(proxy, "_module")
         self.assertEqual(
-            repr(proxy), "<%s module=%r>" % (type(proxy).__name__, realModule)
+            repr(proxy), "<{} module={!r}>".format(type(proxy).__name__, realModule)
         )
 
 
@@ -439,7 +439,8 @@ def callTestFunction():
         @raise C{self.failureType}: If the paths are not the same.
         """
         self.assertTrue(
-            normcase(first.path) == normcase(second.path), "%r != %r" % (first, second)
+            normcase(first.path) == normcase(second.path),
+            "{!r} != {!r}".format(first, second),
         )
 
     def test_renamedFile(self):
@@ -529,7 +530,7 @@ def callTestFunction():
             msg.endswith(
                 "module.py:9: DeprecationWarning: A Warning String\n" "  return a\n"
             ),
-            "Unexpected warning string: %r" % (msg,),
+            "Unexpected warning string: {!r}".format(msg),
         )
 
 

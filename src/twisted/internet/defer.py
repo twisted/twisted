@@ -732,12 +732,12 @@ class Deferred:
         result = getattr(self, "result", _NO_RESULT)
         myID = id(self)
         if self._chainedTo is not None:
-            result = " waiting on Deferred at 0x%x" % (id(self._chainedTo),)
+            result = " waiting on Deferred at 0x{:x}".format(id(self._chainedTo))
         elif result is _NO_RESULT:
             result = ""
         else:
-            result = " current result: %r" % (result,)
-        return "<%s at 0x%x%s>" % (cname, myID, result)
+            result = " current result: {!r}".format(result)
+        return "<{} at 0x{:x}{}>".format(cname, myID, result)
 
     __repr__ = __str__
 
@@ -900,7 +900,7 @@ class Deferred:
         @rtype: L{Deferred}
         """
         if not iscoroutine(coro) and not isinstance(coro, types.GeneratorType):
-            raise NotACoroutineError("%r is not a coroutine" % (coro,))
+            raise NotACoroutineError("{!r} is not a coroutine".format(coro))
 
         return _cancellableInlineCallbacks(coro)
 
@@ -952,7 +952,9 @@ def ensureDeferred(coro):
         except NotACoroutineError:
             # It's not a coroutine. Raise an exception, but say that it's also
             # not a Deferred so the error makes sense.
-            raise NotACoroutineError("%r is not a coroutine or a Deferred" % (coro,))
+            raise NotACoroutineError(
+                "{!r} is not a coroutine or a Deferred".format(coro)
+            )
 
 
 class DebugInfo:
@@ -1232,7 +1234,7 @@ class waitForDeferred:
 
         if not isinstance(d, Deferred):
             raise TypeError(
-                "You must give waitForDeferred a Deferred. You gave it %r." % (d,)
+                "You must give waitForDeferred a Deferred. You gave it {!r}.".format(d)
             )
         self.d = d
 

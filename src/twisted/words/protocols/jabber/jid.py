@@ -165,7 +165,7 @@ class JID:
         @rtype: L{str}
         """
         if self.user:
-            return "%s@%s" % (self.user, self.host)
+            return "{}@{}".format(self.user, self.host)
         else:
             return self.host
 
@@ -195,12 +195,12 @@ class JID:
         """
         if self.user:
             if self.resource:
-                return "%s@%s/%s" % (self.user, self.host, self.resource)
+                return "{}@{}/{}".format(self.user, self.host, self.resource)
             else:
-                return "%s@%s" % (self.user, self.host)
+                return "{}@{}".format(self.user, self.host)
         else:
             if self.resource:
-                return "%s/%s" % (self.host, self.resource)
+                return "{}/{}".format(self.host, self.resource)
             else:
                 return self.host
 

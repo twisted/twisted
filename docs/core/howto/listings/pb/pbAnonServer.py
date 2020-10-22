@@ -48,7 +48,9 @@ class MyPerspective(Avatar):
         Print a simple message which gives the argument this method was
         called with and this avatar's name.
         """
-        print("I am %s.  perspective_foo(%s) called on %s." % (self.name, arg, self))
+        print(
+            "I am {}.  perspective_foo({}) called on {}.".format(self.name, arg, self)
+        )
 
 
 @implementer(IRealm)

@@ -95,7 +95,7 @@ class LoggingFile:
 
         @return: A file name.
         """
-        return "<{0} {1}#{2}>".format(
+        return "<{} {}#{}>".format(
             self.__class__.__name__,
             self.log.namespace,
             self.level.name,

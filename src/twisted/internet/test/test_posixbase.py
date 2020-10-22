@@ -84,7 +84,7 @@ class PosixReactorBaseTests(TestCase):
         reactor.addReader(reader)
         reactor.addWriter(writer)
         removed = reactor._removeAll(reactor._readers, reactor._writers)
-        self.assertEqual(set(removed), set([reader, writer]))
+        self.assertEqual(set(removed), {reader, writer})
         self.assertNotIn(reader, reactor._readers)
         self.assertNotIn(writer, reactor._writers)
 

@@ -224,7 +224,7 @@ class Resource:
         if not isinstance(path, bytes):
             warnings.warn(
                 "Path segment must be bytes; "
-                "passing {0} has never worked, and "
+                "passing {} has never worked, and "
                 "will raise an exception in the future.".format(type(path)),
                 category=DeprecationWarning,
                 stacklevel=2,

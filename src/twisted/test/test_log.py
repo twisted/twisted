@@ -283,7 +283,7 @@ class LogTests(unittest.SynchronousTestCase):
         publisher.addObserver(fail)
 
         publisher.msg("Hello!")
-        self.assertEqual(set(publisher.observers), set([logError, fail]))
+        self.assertEqual(set(publisher.observers), {logError, fail})
         self.assertEqual(len(errors), 1)
         self.assertIsInstance(errors[0], RuntimeError)
 
@@ -343,7 +343,7 @@ class LogPublisherTestCaseMixin:
         setting, if it was modified by L{setUp}.
         """
         for chunk in self.out:
-            self.assertIsInstance(chunk, str, "%r was not a string" % (chunk,))
+            self.assertIsInstance(chunk, str, "{!r} was not a string".format(chunk))
 
         if self._origEncoding is not None:
             sys.setdefaultencoding(self._origEncoding)
@@ -748,7 +748,7 @@ class FileObserverTests(LogPublisherTestCaseMixin, unittest.SynchronousTestCase)
 
         self.assertTrue(
             result.startswith(prefix),
-            "{0!r} does not start with {1!r}".format(result, prefix),
+            "{!r} does not start with {!r}".format(result, prefix),
         )
 
     def test_emitNewline(self):
@@ -768,7 +768,7 @@ class FileObserverTests(LogPublisherTestCaseMixin, unittest.SynchronousTestCase)
 
         self.assertTrue(
             result.endswith(suffix),
-            "{0!r} does not end with {1!r}".format(result, suffix),
+            "{!r} does not end with {!r}".format(result, suffix),
         )
 
 
@@ -816,7 +816,7 @@ class PythonLoggingObserverTests(unittest.SynchronousTestCase):
         output = self.out.getvalue()
         self.assertTrue(
             output.startswith(prefix),
-            "Does not start with {0!r}: {1!r}".format(prefix, output),
+            "Does not start with {!r}: {!r}".format(prefix, output),
         )
 
     def test_formatString(self):

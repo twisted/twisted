@@ -500,7 +500,7 @@ class PermissionsTests(BytesTestCase):
 
         def _rwxFromStat(statModeInt, who):
             def getPermissionBit(what, who):
-                return (statModeInt & getattr(stat, "S_I%s%s" % (what, who))) > 0
+                return (statModeInt & getattr(stat, "S_I{}{}".format(what, who))) > 0
 
             return filepath.RWX(
                 *[getPermissionBit(what, who) for what in ("R", "W", "X")]
@@ -515,17 +515,17 @@ class PermissionsTests(BytesTestCase):
                     self.assertEqual(
                         perm.user,
                         _rwxFromStat(chmodVal, "USR"),
-                        "%s: got user: %s" % (chmodString, perm.user),
+                        "{}: got user: {}".format(chmodString, perm.user),
                     )
                     self.assertEqual(
                         perm.group,
                         _rwxFromStat(chmodVal, "GRP"),
-                        "%s: got group: %s" % (chmodString, perm.group),
+                        "{}: got group: {}".format(chmodString, perm.group),
                     )
                     self.assertEqual(
                         perm.other,
                         _rwxFromStat(chmodVal, "OTH"),
-                        "%s: got other: %s" % (chmodString, perm.other),
+                        "{}: got other: {}".format(chmodString, perm.other),
                     )
         perm = filepath.Permissions(0o777)
         for who in ("user", "group", "other"):
@@ -856,7 +856,7 @@ class FilePathTests(AbstractFilePathTests):
         ts = self.path.temporarySibling(testExtension)
         self.assertTrue(
             ts.basename().endswith(testExtension),
-            "%s does not end with %s" % (ts.basename(), testExtension),
+            "{} does not end with {}".format(ts.basename(), testExtension),
         )
 
     def test_removeDirectory(self):
@@ -1552,7 +1552,9 @@ class SetContentTests(BytesTestCase):
         self.assertEqual(len(opened), 1, "expected exactly one opened file")
         self.assertTrue(
             opened[0].basename().endswith(extension),
-            "%s does not end with %r extension" % (opened[0].basename(), extension),
+            "{} does not end with {!r} extension".format(
+                opened[0].basename(), extension
+            ),
         )
 
     def test_defaultExtension(self):
@@ -1921,6 +1923,6 @@ class UnicodeFilePathTests(TestCase):
         C{asTextMode} with an C{encoding} argument that can't be used to encode
         the unicode path raises a L{UnicodeError}.
         """
-        fp = filepath.FilePath(b"\u2603")
+        fp = filepath.FilePath(br"\u2603")
         with self.assertRaises(UnicodeError):
             fp.asTextMode(encoding="utf-32")

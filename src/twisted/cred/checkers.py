@@ -25,10 +25,8 @@ class ICredentialsChecker(Interface):
     """
 
     credentialInterfaces = Attribute(
-        (
-            "A list of sub-interfaces of L{ICredentials} which specifies which I "
-            "may check."
-        )
+        "A list of sub-interfaces of L{ICredentials} which specifies which I "
+        "may check."
     )
 
     def requestAvatarId(credentials):

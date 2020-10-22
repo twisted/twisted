@@ -217,7 +217,7 @@ class FilesystemLock:
         """
         pid = readlink(self.name)
         if int(pid) != os.getpid():
-            raise ValueError("Lock %r not owned by this process" % (self.name,))
+            raise ValueError("Lock {!r} not owned by this process".format(self.name))
         rmlink(self.name)
         self.locked = False
 

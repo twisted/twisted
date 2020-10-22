@@ -880,7 +880,7 @@ class InputStreamTestMixin(WSGITestsMixin):
 
     def getFileType(self):
         raise NotImplementedError(
-            "%s.getFile must be implemented" % (self.__class__.__name__,)
+            "{}.getFile must be implemented".format(self.__class__.__name__)
         )
 
     def _renderAndReturnReaderResult(self, reader, content):
@@ -1484,7 +1484,7 @@ class StartResponseTests(WSGITestsMixin, TestCase):
 
         def checkMessage(error):
             self.assertEqual(
-                "header must be (str, str) tuple, not (%r, 'value')" % (key,),
+                "header must be (str, str) tuple, not ({!r}, 'value')".format(key),
                 str(error),
             )
 
@@ -1506,7 +1506,7 @@ class StartResponseTests(WSGITestsMixin, TestCase):
 
         def checkMessage(error):
             self.assertEqual(
-                "header must be (str, str) tuple, not ('key', %r)" % (value,),
+                "header must be (str, str) tuple, not ('key', {!r})".format(value),
                 str(error),
             )
 
@@ -1989,7 +1989,7 @@ class ApplicationTests(WSGITestsMixin, TestCase):
         d, requestFactory = self.requestFactoryFactory(ThreadVerifier)
 
         def cbRendered(ignored):
-            self.assertEqual(set(invoked), set([getThreadID()]))
+            self.assertEqual(set(invoked), {getThreadID()})
 
         d.addCallback(cbRendered)
 
@@ -2022,7 +2022,7 @@ class ApplicationTests(WSGITestsMixin, TestCase):
         d, requestFactory = self.requestFactoryFactory(ThreadVerifier)
 
         def cbRendered(ignored):
-            self.assertEqual(set(invoked), set([getThreadID()]))
+            self.assertEqual(set(invoked), {getThreadID()})
 
         d.addCallback(cbRendered)
 
@@ -2054,7 +2054,7 @@ class ApplicationTests(WSGITestsMixin, TestCase):
         d, requestFactory = self.requestFactoryFactory(ThreadVerifier)
 
         def cbRendered(ignored):
-            self.assertEqual(set(invoked), set([getThreadID()]))
+            self.assertEqual(set(invoked), {getThreadID()})
 
         d.addCallback(cbRendered)
 

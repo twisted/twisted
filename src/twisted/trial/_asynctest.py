@@ -65,14 +65,16 @@ class TestCase(SynchronousTestCase):
 
         def _cb(ignore):
             raise self.failureException(
-                "did not catch an error, instead got %r" % (ignore,)
+                "did not catch an error, instead got {!r}".format(ignore)
             )
 
         def _eb(failure):
             if failure.check(*expectedFailures):
                 return failure.value
             else:
-                output = "\nExpected: %r\nGot:\n%s" % (expectedFailures, str(failure))
+                output = "\nExpected: {!r}\nGot:\n{}".format(
+                    expectedFailures, str(failure)
+                )
                 raise self.failureException(output)
 
         return deferred.addCallbacks(_cb, _eb)
@@ -86,7 +88,7 @@ class TestCase(SynchronousTestCase):
 
         def onTimeout(d):
             e = defer.TimeoutError(
-                "%r (%s) still running at %s secs" % (self, methodName, timeout)
+                "{!r} ({}) still running at {} secs".format(self, methodName, timeout)
             )
             f = failure.Failure(e)
             # try to errback the deferred that the test returns (for no gorram
@@ -112,7 +114,9 @@ class TestCase(SynchronousTestCase):
         method = getattr(self, methodName)
         if inspect.isgeneratorfunction(method):
             exc = TypeError(
-                "%r is a generator function and therefore will never run" % (method,)
+                "{!r} is a generator function and therefore will never run".format(
+                    method
+                )
             )
             return defer.fail(exc)
         d = defer.maybeDeferred(

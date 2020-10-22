@@ -97,7 +97,7 @@ class PerformanceTester(object):
         Writes the table header for the report.
         """
         self.writeLineSeparator()
-        self.outputFile.write("| %s |\n" % (" | ".join(self.headers),))
+        self.outputFile.write("| {} |\n".format(" | ".join(self.headers)))
         self.writeLineSeparator()
 
     def writeLineSeparator(self):

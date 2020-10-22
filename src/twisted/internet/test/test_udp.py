@@ -91,7 +91,7 @@ class DatagramTransportTestsMixin(LogObserverMixin):
         loggedMessages = self.observe()
         reactor = self.buildReactor()
         p = self.getListeningPort(reactor, DatagramProtocol())
-        expectedMessage = "(UDP Port %s Closed)" % (p.getHost().port,)
+        expectedMessage = "(UDP Port {} Closed)".format(p.getHost().port)
 
         def stopReactor(ignored):
             reactor.stop()

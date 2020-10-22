@@ -224,8 +224,8 @@ class LogBeginnerTests(unittest.TestCase):
         compareEvents(self, events2, [warning, dict(event="postwarn")])
 
         output = fileHandle.getvalue()
-        self.assertIn("<{0}:{1}>".format(firstFilename, firstLine), output)
-        self.assertIn("<{0}:{1}>".format(secondFilename, secondLine), output)
+        self.assertIn("<{}:{}>".format(firstFilename, firstLine), output)
+        self.assertIn("<{}:{}>".format(secondFilename, secondLine), output)
 
     def test_criticalLogging(self) -> None:
         """

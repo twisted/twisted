@@ -107,7 +107,7 @@ def assertWrapperExceptionTypes(self, deferred, mainType, reasonTypes):
         self.assertEqual(
             len(err.reasons),
             len(reasonTypes),
-            "len(%s) != len(%s)" % (err.reasons, reasonTypes),
+            "len({}) != len({})".format(err.reasons, reasonTypes),
         )
         return err
 

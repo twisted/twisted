@@ -340,7 +340,7 @@ class CFReactor(PosixReactorBase):
         """
         Implement L{IReactorFDSet.removeAll}.
         """
-        allDesc = set([descr for src, cfs, descr, rw in self._fdmap.values()])
+        allDesc = {descr for src, cfs, descr, rw in self._fdmap.values()}
         allDesc -= set(self._internalReaders)
         for desc in allDesc:
             self.removeReader(desc)

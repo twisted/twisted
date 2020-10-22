@@ -750,7 +750,7 @@ class _BaseTCPClient:
         return self._addressType("TCP", *self.realAddress)
 
     def __repr__(self) -> str:
-        s = "<%s to %s at %x>" % (self.__class__, self.addr, id(self))
+        s = "<{} to {} at {:x}>".format(self.__class__, self.addr, id(self))
         return s
 
 
@@ -798,9 +798,9 @@ class Server(_TLSServerMixin, Connection):
         self.hostname = client[0]
 
         logPrefix = self._getLogPrefix(self.protocol)
-        self.logstr = "%s,%s,%s" % (logPrefix, sessionno, self.hostname)
+        self.logstr = "{},{},{}".format(logPrefix, sessionno, self.hostname)
         if self.server is not None:
-            self.repstr = "<%s #%s on %s>" % (
+            self.repstr = "<{} #{} on {}>".format(
                 self.protocol.__class__.__name__,
                 self.sessionno,
                 self.server._realPortNumber,
@@ -847,7 +847,7 @@ class Server(_TLSServerMixin, Connection):
             return
 
         self = cls(skt, protocol, addr, None, addr[1], reactor)
-        self.repstr = "<%s #%s on %s>" % (
+        self.repstr = "<{} #{} on {}>".format(
             self.protocol.__class__.__name__,
             self.sessionno,
             localPort,
@@ -1292,13 +1292,13 @@ class Port(base.BasePort, _SocketCloser):
 
     def __repr__(self) -> str:
         if self._realPortNumber is not None:
-            return "<%s of %s on %s>" % (
+            return "<{} of {} on {}>".format(
                 self.__class__,
                 self.factory.__class__,
                 self._realPortNumber,
             )
         else:
-            return "<%s of %s (not listening)>" % (
+            return "<{} of {} (not listening)>".format(
                 self.__class__,
                 self.factory.__class__,
             )
@@ -1442,7 +1442,7 @@ class Port(base.BasePort, _SocketCloser):
         """
         Log message for closing port
         """
-        log.msg("(%s Port %s Closed)" % (self._type, self._realPortNumber))
+        log.msg("({} Port {} Closed)".format(self._type, self._realPortNumber))
 
     def connectionLost(self, reason):
         """
@@ -1493,7 +1493,7 @@ class Connector(base.BaseConnector):
             try:
                 port = socket.getservbyname(port, "tcp")
             except socket.error as e:
-                raise error.ServiceNameUnknownError(string="%s (%r)" % (e, port))
+                raise error.ServiceNameUnknownError(string="{} ({!r})".format(e, port))
         self.host, self.port = host, port
         if abstract.isIPv6Address(host):
             self._addressType = address.IPv6Address
