@@ -770,7 +770,7 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
         send a successful response to the client.
 
         @type result: C{tuple}
-        @param interface_avatar_logout: The first item of the tuple is a
+        @param result: The first item of the tuple is a
             C{zope.interface.Interface} which is the interface
             supported by the avatar.  The second item of the tuple is a
             L{IMailbox} provider which is the mailbox for the

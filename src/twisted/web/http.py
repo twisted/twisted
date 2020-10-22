@@ -1285,9 +1285,7 @@ class Request:
             U{https://tools.ietf.org/html/draft-west-first-party-cookies-07}
         @type sameSite: L{None}, L{bytes} or L{str}
 
-        @raises: L{DeprecationWarning} if an argument is not L{bytes} or
-            L{str}.
-            L{ValueError} if the value for C{sameSite} is not supported.
+        @raise ValueError: If the value for C{sameSite} is not supported.
         """
 
         def _ensureBytes(val):
@@ -2654,9 +2652,6 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         As described by HTTP standard we should be patient and accept the
         whole request from the client before sending a polite bad request
         response, even in the case when clients send tons of data.
-
-        @param transport: Transport handling connection to the client.
-        @type transport: L{interfaces.ITransport}
         """
         self.transport.write(b"HTTP/1.1 400 Bad Request\r\n\r\n")
         self.loseConnection()

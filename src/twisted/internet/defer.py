@@ -244,7 +244,9 @@ def _cancelledToTimedOutError(value: _T, timeout: float) -> _T:
     @param value: Anything
     @param timeout: The timeout
 
-    @raise: L{TimeoutError}
+    @raise TimeoutError: If C{value} is a L{Failure} that is a L{CancelledError}.
+    @raise Exception: If C{value} is a L{Failure} that is not a L{CancelledError},
+        it is re-raised.
 
     @since: 16.5
     """
@@ -880,7 +882,7 @@ class Deferred(Generic[_DeferredResultT]):
 
     def asFuture(self, loop: AbstractEventLoop) -> Future:
         """
-        Adapt a L{Deferred} into a L{Future} which is bound to C{loop}.
+        Adapt this L{Deferred} into a L{Future} which is bound to C{loop}.
 
         @note: converting a L{Deferred} to an L{Future} consumes both
             its result and its errors, so this method implicitly converts
@@ -934,9 +936,9 @@ class Deferred(Generic[_DeferredResultT]):
 
         @since: Twisted 17.5.0
 
-        @param future: The Future to adapt.
+        @param future: The L{Future} to adapt.
 
-        @return: A Deferred which will fire when the Future fires.
+        @return: A L{Deferred} which will fire when the L{Future} fires.
         """
 
         class Adaptor:
