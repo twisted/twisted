@@ -4,7 +4,7 @@
 Twisted moved the C{twisted} hierarchy to the C{src} hierarchy, but C{git}
 doesn't know how to track moves of directories, only files.  Therefore any
 files added in branches after this move will be added into ./twisted/ and need
-to be moved over into
+to be moved over into.
 """
 
 import os
