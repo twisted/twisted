@@ -1880,7 +1880,7 @@ def _loadCAsFromDir(directoryPath):
             continue
         try:
             data = child.getContent()
-        except IOError:
+        except OSError:
             # Permission denied, corrupt disk, we don't care.
             continue
         try:

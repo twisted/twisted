@@ -14,7 +14,7 @@ from twisted.mail import smtp
 
 
 @implementer(smtp.IMessage)
-class FileMessage(object):
+class FileMessage:
     def __init__(self, fileObj):
         self.fileObj = fileObj
 

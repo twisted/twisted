@@ -67,7 +67,7 @@ def loadLocalVariables(filename):
 
     See http://www.gnu.org/software/emacs/manual/html_node/File-Variables.html
     """
-    with open(filename, "r") as f:
+    with open(filename) as f:
         lines = [f.readline(), f.readline()]
     for line in lines:
         try:
@@ -121,7 +121,7 @@ def _maybeFindSourceLine(testThing):
 
     try:
         return inspect.getsourcelines(testThing)[1]
-    except (IOError, TypeError):
+    except (OSError, TypeError):
         # either testThing is a module, which raised a TypeError, or the file
         # couldn't be read
         return -1
@@ -569,8 +569,8 @@ def _wrappedPdb():
     for path in (".pdbrc", "pdbrc"):
         if os.path.exists(path):
             try:
-                rcFile = open(path, "r")
-            except IOError:
+                rcFile = open(path)
+            except OSError:
                 pass
             else:
                 with rcFile:

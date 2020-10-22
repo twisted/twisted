@@ -10,7 +10,6 @@ Usage:
     $ sudo python endpointconstructor.py [<docker API path>]
 """
 
-from __future__ import print_function
 
 from sys import argv
 
@@ -23,7 +22,7 @@ from twisted.web.client import Agent, readBody
 
 
 @implementer(IAgentEndpointFactory)
-class DockerEndpointFactory(object):
+class DockerEndpointFactory:
     """
     Connect to Docker's Unix socket.
     """

@@ -220,14 +220,14 @@ class _ReconnectingFakeConnector(_FakeConnector):
         @param state: The state instance
         @type state: L{_ReconnectingFakeConnectorState}
         """
-        super(_ReconnectingFakeConnector, self).__init__(address)
+        super().__init__(address)
         self._state = state
 
     def connect(self):
         """
         A C{connect} implementation that calls C{reconnectCallback}
         """
-        super(_ReconnectingFakeConnector, self).connect()
+        super().connect()
         self._state.notifyAll()
 
 

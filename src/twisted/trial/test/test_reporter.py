@@ -44,13 +44,13 @@ class BrokenStream:
         if self.written:
             return self.fObj.write(s)
         self.written = True
-        raise IOError(errno.EINTR, "Interrupted write")
+        raise OSError(errno.EINTR, "Interrupted write")
 
     def flush(self):
         if self.flushed:
             return self.fObj.flush()
         self.flushed = True
-        raise IOError(errno.EINTR, "Interrupted flush")
+        raise OSError(errno.EINTR, "Interrupted flush")
 
 
 class StringTest(unittest.SynchronousTestCase):

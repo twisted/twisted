@@ -165,7 +165,7 @@ class LoggingFile:
 
         @param args: Arguments.
         """
-        raise IOError("unsupported operation")
+        raise OSError("unsupported operation")
 
     read = _unsupported
     next = _unsupported

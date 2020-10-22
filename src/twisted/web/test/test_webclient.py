@@ -546,7 +546,7 @@ class WebClientTests(unittest.TestCase):
     def testDownloadPageError1(self):
         class errorfile:
             def write(self, data):
-                raise IOError("badness happened during write")
+                raise OSError("badness happened during write")
 
             def close(self):
                 pass
@@ -560,7 +560,7 @@ class WebClientTests(unittest.TestCase):
                 pass
 
             def close(self):
-                raise IOError("badness happened during close")
+                raise OSError("badness happened during close")
 
         ef = errorfile()
         return self.assertFailure(client.downloadPage(self.getURL("file"), ef), IOError)

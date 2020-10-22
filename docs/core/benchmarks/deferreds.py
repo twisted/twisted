@@ -7,7 +7,6 @@ See how fast deferreds are.
 This is mainly useful to compare cdefer.Deferred to defer.Deferred
 """
 
-from __future__ import print_function
 
 from twisted.internet import defer
 from twisted.python.compat import range

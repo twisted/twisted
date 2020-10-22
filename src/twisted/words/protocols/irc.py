@@ -2786,7 +2786,7 @@ class DccSendProtocol(protocol.Protocol, styles.Ephemeral):
 
     def __init__(self, file):
         if type(file) is str:
-            self.file = open(file, "r")
+            self.file = open(file)
 
     def connectionMade(self):
         self.connected = 1

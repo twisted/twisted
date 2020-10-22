@@ -260,7 +260,7 @@ class UNIXTestsBuilder(UNIXFamilyMixin, ReactorBuilder, ConnectionTestsMixin):
         """
 
         def raiseSocketError(self):
-            raise error("FakeBasePort forced socket.error")
+            raise OSError("FakeBasePort forced socket.error")
 
         self.patch(base.BasePort, "createInternetSocket", raiseSocketError)
         reactor = self.buildReactor()

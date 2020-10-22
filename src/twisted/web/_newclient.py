@@ -26,8 +26,6 @@ Various other classes in this module support this usage:
     response.
 """
 
-__metaclass__ = type
-
 import re
 
 from zope.interface import implementer

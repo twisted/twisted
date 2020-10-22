@@ -2,7 +2,6 @@
 # this code is essentially the same as
 # the first example in howto/pb-usage
 
-from __future__ import print_function
 
 from twisted.spread import pb
 from twisted.internet import reactor, endpoints

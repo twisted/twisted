@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 # Twisted documentation build configuration file, created by
 # sphinx-quickstart on Tue Jan 14 11:31:15 2014.

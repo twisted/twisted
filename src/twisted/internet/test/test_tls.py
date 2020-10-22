@@ -6,8 +6,6 @@ Tests for implementations of L{ITLSTransport}.
 """
 
 
-__metaclass__ = type
-
 from typing import Optional, Sequence, Type
 from zope.interface import implementer, Interface
 

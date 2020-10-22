@@ -34,7 +34,7 @@ def testNames(tests):
 
 class FinderPy3Tests(packages.SysPathManglingTest):
     def setUp(self):
-        super(FinderPy3Tests, self).setUp()
+        super().setUp()
         self.loader = runner.TestLoader()
 
     def test_findNonModule(self):
@@ -581,8 +581,7 @@ class PackageOrderingTests(packages.SysPathManglingTest):
                         if attr.name.split(".")[-1].startswith("test"):
                             testMethods.append(attr)
                     sortedMethods = sorted(testMethods, key=sorter)  # THREE
-                    for methinfo in sortedMethods:
-                        yield methinfo
+                    yield from sortedMethods
 
     def loadSortedPackages(self, sorter=runner.name):
         """

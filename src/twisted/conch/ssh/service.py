@@ -12,7 +12,7 @@ from typing import Dict
 from twisted.logger import Logger
 
 
-class SSHService(object):
+class SSHService:
     name = None  # type: bytes  # this is the ssh name for the service
     protocolMessages = {}  # type: Dict[int, str]  # map #'s -> protocol names
     transport = None  # gets set later

@@ -6,8 +6,6 @@ An implementation of
 U{Python Web Server Gateway Interface v1.0.1<http://www.python.org/dev/peps/pep-3333/>}.
 """
 
-__metaclass__ = type
-
 from collections.abc import Sequence
 from sys import exc_info
 from warnings import warn

@@ -1065,11 +1065,11 @@ class NoticingClient(IRCClientWithoutLogin):
 
     def __getattribute__(self, name):
         if name.startswith("__") and name.endswith("__"):
-            return super(NoticingClient, self).__getattribute__(name)
+            return super().__getattribute__(name)
         try:
-            args = super(NoticingClient, self).__getattribute__("methods")[name]
+            args = super().__getattribute__("methods")[name]
         except KeyError:
-            return super(NoticingClient, self).__getattribute__(name)
+            return super().__getattribute__(name)
         else:
             return self.makeMethod(name, args)
 

@@ -27,8 +27,6 @@ To run the script:
 """
 
 
-from __future__ import print_function
-
 # twisted imports
 from twisted.words.protocols import irc
 from twisted.internet import reactor, protocol

@@ -52,7 +52,7 @@ def reverseNameFromIPAddress(address):
     """
     try:
         socket.inet_pton(socket.AF_INET, address)
-    except socket.error:
+    except OSError:
         return reverseNameFromIPv6Address(address)
     else:
         return reverseNameFromIPv4Address(address)

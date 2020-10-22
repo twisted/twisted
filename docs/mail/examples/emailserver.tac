@@ -7,7 +7,6 @@
 """
 A toy email server.
 """
-from __future__ import print_function
 
 from zope.interface import implementer
 

@@ -32,7 +32,7 @@ class WorkerReporter(TestResult):
             distributed manager which collects all test results.
         @type ampProtocol: C{AMP}
         """
-        super(WorkerReporter, self).__init__()
+        super().__init__()
         self.ampProtocol = ampProtocol
 
     def _getFailure(self, error):
@@ -56,7 +56,7 @@ class WorkerReporter(TestResult):
         """
         Send a success over.
         """
-        super(WorkerReporter, self).addSuccess(test)
+        super().addSuccess(test)
         testName = test.id()
         self.ampProtocol.callRemote(managercommands.AddSuccess, testName=testName)
 
@@ -64,7 +64,7 @@ class WorkerReporter(TestResult):
         """
         Send an error over.
         """
-        super(WorkerReporter, self).addError(test, error)
+        super().addError(test, error)
         testName = test.id()
         failure = self._getFailure(error)
         error = failure.getErrorMessage()
@@ -82,7 +82,7 @@ class WorkerReporter(TestResult):
         """
         Send a Failure over.
         """
-        super(WorkerReporter, self).addFailure(test, fail)
+        super().addFailure(test, fail)
         testName = test.id()
         failure = self._getFailure(fail)
         fail = failure.getErrorMessage()
@@ -100,7 +100,7 @@ class WorkerReporter(TestResult):
         """
         Send a skip over.
         """
-        super(WorkerReporter, self).addSkip(test, reason)
+        super().addSkip(test, reason)
         reason = str(reason)
         testName = test.id()
         self.ampProtocol.callRemote(
@@ -122,7 +122,7 @@ class WorkerReporter(TestResult):
         """
         Send an expected failure over.
         """
-        super(WorkerReporter, self).addExpectedFailure(test, error, todo)
+        super().addExpectedFailure(test, error, todo)
         errorMessage = error.getErrorMessage()
         testName = test.id()
         self.ampProtocol.callRemote(
@@ -136,7 +136,7 @@ class WorkerReporter(TestResult):
         """
         Send an unexpected success over.
         """
-        super(WorkerReporter, self).addUnexpectedSuccess(test, todo)
+        super().addUnexpectedSuccess(test, todo)
         testName = test.id()
         self.ampProtocol.callRemote(
             managercommands.AddUnexpectedSuccess,

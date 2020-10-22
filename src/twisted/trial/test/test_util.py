@@ -593,8 +593,7 @@ class ListToPhraseTests(SynchronousTestCase):
         """
 
         def sample():
-            for i in range(2):
-                yield i
+            yield from range(2)
 
         error = self.assertRaises(TypeError, util._listToPhrase, sample, "and")
         self.assertEqual(str(error), "Things must be a list or a tuple")

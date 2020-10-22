@@ -495,7 +495,7 @@ sys.stdout.flush()""".format(
             reactor.spawnProcess(TracebackCatcher(), pyExe, [pyExe, b"-c", b""])
 
         self.runReactor(reactor, timeout=30)
-        self.assertIn("\N{SNOWMAN}".encode("utf-8"), output.getvalue())
+        self.assertIn("\N{SNOWMAN}".encode(), output.getvalue())
 
     def test_timelyProcessExited(self):
         """

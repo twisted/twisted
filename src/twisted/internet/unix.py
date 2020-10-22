@@ -133,7 +133,7 @@ class _SendmsgMixin:
                         data[index : index + 1],
                         _ancillaryDescriptor(fd),
                     )
-                except socket.error as se:
+                except OSError as se:
                     if se.args[0] in (EWOULDBLOCK, ENOBUFS):
                         return index
                     else:
@@ -167,7 +167,7 @@ class _SendmsgMixin:
             data, ancillary, flags = untilConcludes(
                 sendmsg.recvmsg, self.socket, self.bufferSize
             )
-        except socket.error as se:
+        except OSError as se:
             if se.args[0] == EWOULDBLOCK:
                 return
             else:
@@ -410,7 +410,7 @@ class Port(_UNIXPort, tcp.Port):
             else:
                 skt = self.createInternetSocket()
                 skt.bind(self.port)
-        except socket.error as le:
+        except OSError as le:
             raise error.CannotListenError(None, self.port, le)
         else:
             if _inFilesystemNamespace(self.port):
@@ -513,7 +513,7 @@ class DatagramPort(_UNIXPort, udp.Port):
             skt = self.createInternetSocket()  # XXX: haha misnamed method
             if self.port:
                 skt.bind(self.port)
-        except socket.error as le:
+        except OSError as le:
             raise error.CannotListenError(None, self.port, le)
         if self.port and _inFilesystemNamespace(self.port):
             # Make the socket readable and writable to the world.
@@ -526,7 +526,7 @@ class DatagramPort(_UNIXPort, udp.Port):
         """Write a datagram."""
         try:
             return self.socket.sendto(datagram, address)
-        except socket.error as se:
+        except OSError as se:
             no = se.args[0]
             if no == EINTR:
                 return self.write(datagram, address)
@@ -610,7 +610,7 @@ class ConnectedDatagramPort(DatagramPort):
                 data, addr = self.socket.recvfrom(self.maxPacketSize)
                 read += len(data)
                 self.protocol.datagramReceived(data)
-            except socket.error as se:
+            except OSError as se:
                 no = se.args[0]
                 if no in (EAGAIN, EINTR, EWOULDBLOCK):
                     return
@@ -627,7 +627,7 @@ class ConnectedDatagramPort(DatagramPort):
         """
         try:
             return self.socket.send(data)
-        except socket.error as se:
+        except OSError as se:
             no = se.args[0]
             if no == EINTR:
                 return self.write(data)

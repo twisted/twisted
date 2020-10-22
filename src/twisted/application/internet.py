@@ -1175,7 +1175,7 @@ class ClientService(service.Service):
         if self.running:
             self._log.warn("Duplicate ClientService.startService {log_source}")
             return
-        super(ClientService, self).startService()
+        super().startService()
         self._machine.start()
 
     def stopService(self):
@@ -1185,7 +1185,7 @@ class ClientService(service.Service):
         @return: a L{Deferred} that fires when all outstanding connections are
             closed and all in-progress connection attempts halted.
         """
-        super(ClientService, self).stopService()
+        super().stopService()
         return self._machine.stop()
 
 

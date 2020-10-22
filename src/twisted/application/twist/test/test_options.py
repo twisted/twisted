@@ -49,7 +49,7 @@ class OptionsTests(twisted.trial.unittest.TestCase):
 
         def fakeOpen(name: str, mode: Optional[str] = None) -> NotImplemented:
             if name == "nocanopen":
-                raise IOError(None, None, name)
+                raise OSError(None, None, name)
 
             self.opened.append((name, mode))
             return NotImplemented

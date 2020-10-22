@@ -330,7 +330,7 @@ class LogPublisherTestCaseMixin:
         self.lp.addObserver(self.flo.emit)
 
         try:
-            str("\N{VULGAR FRACTION ONE HALF}")
+            "\N{VULGAR FRACTION ONE HALF}"
         except UnicodeEncodeError:
             pass
         # This is the behavior we want - don't change anything.
@@ -882,7 +882,7 @@ class PythonLoggingIntegrationTests(unittest.SynchronousTestCase):
 
         class MyObserver(log.PythonLoggingObserver):
             def emit(self, eventDict):
-                super(MyObserver, self).emit(eventDict)
+                super().emit(eventDict)
 
         obs = MyObserver()
         l = []

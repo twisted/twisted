@@ -357,7 +357,7 @@ class BlockingResolver:
     ) -> Deferred:
         try:
             address = socket.gethostbyname(name)
-        except socket.error:
+        except OSError:
             msg = "address {!r} not found".format(name)
             err = error.DNSLookupError(msg)
             return defer.fail(err)
@@ -605,7 +605,7 @@ class ReactorBase(PluggableResolverMixin):
     __name__ = "twisted.internet.reactor"
 
     def __init__(self) -> None:
-        super(ReactorBase, self).__init__()
+        super().__init__()
         self.threadCallQueue = []  # type: List[_ThreadCall]
         self._eventTriggers = {}  # type: Dict[str, _ThreePhaseEvent]
         self._pendingTimedCalls = []  # type: List[DelayedCall]

@@ -56,7 +56,7 @@ class SimpleConfFile:
         """
         close = False
         if file is None and self.defaultFilename:
-            file = open(self.defaultFilename, "r")
+            file = open(self.defaultFilename)
             close = True
 
         try:

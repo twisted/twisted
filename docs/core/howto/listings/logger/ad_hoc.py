@@ -1,7 +1,7 @@
 from twisted.logger import Logger
 
 
-class AdHoc(object):
+class AdHoc:
     log = Logger(namespace="ad_hoc")
 
     def __init__(self, a, b):

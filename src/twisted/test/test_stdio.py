@@ -133,7 +133,7 @@ class StandardInputOutputTests(TestCase):
 
         def processEnded(reason):
             # Copy the child's log to ours so it's more visible.
-            with open(errorLogFile, "r") as f:
+            with open(errorLogFile) as f:
                 for line in f:
                     log.msg("Child logged: " + line.rstrip())
 

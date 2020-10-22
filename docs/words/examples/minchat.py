@@ -11,7 +11,6 @@ To run the script:
 $ python minchat.py
 """
 
-from __future__ import print_function
 
 from twisted.words.im import basechat, baseaccount, ircsupport
 

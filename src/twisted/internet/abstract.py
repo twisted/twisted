@@ -518,7 +518,7 @@ def isIPAddress(addr: str, family: int = AF_INET) -> bool:
         # This might be a native implementation or the one from
         # twisted.python.compat.
         inet_pton(family, addr)
-    except (ValueError, error):
+    except (ValueError, OSError):
         return False
     return True
 

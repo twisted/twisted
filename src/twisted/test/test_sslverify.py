@@ -729,7 +729,7 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, TestCase):
         Same as L{OpenSSLOptionsTestsMixin.setUp}, but it also patches
         L{sslverify._ChooseDiffieHellmanEllipticCurve}.
         """
-        super(OpenSSLOptionsTests, self).setUp()
+        super().setUp()
         self.patch(
             sslverify,
             "_ChooseDiffieHellmanEllipticCurve",

@@ -5,8 +5,6 @@
 Tests for L{twisted.web._newclient}.
 """
 
-__metaclass__ = type
-
 from typing import Optional
 
 from zope.interface import implementer

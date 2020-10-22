@@ -158,7 +158,7 @@ class Options(dict):
     _shellCompFile = sys.stdout  # file to use if shell completion is requested
 
     def __init__(self):
-        super(Options, self).__init__()
+        super().__init__()
 
         self.opts = self
         self.defaults = {}

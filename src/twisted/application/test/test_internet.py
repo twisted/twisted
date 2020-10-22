@@ -558,7 +558,7 @@ class ClientServiceTests(SynchronousTestCase):
             protocol = protocolType
 
             def buildProtocol(self, addr):
-                result = super(RememberingFactory, self).buildProtocol(addr)
+                result = super().buildProtocol(addr)
                 applicationProtocols.append(result)
                 return result
 

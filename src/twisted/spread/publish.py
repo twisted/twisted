@@ -78,7 +78,7 @@ class RemotePublished(flavors.RemoteCache):
         try:
             with open(self.getFileName(), "rb") as dataFile:
                 data = dataFile.read()
-        except IOError:
+        except OSError:
             recent = 0
         else:
             newself = jelly.unjelly(banana.decode(data))

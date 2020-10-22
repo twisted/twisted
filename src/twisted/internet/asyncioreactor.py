@@ -151,7 +151,7 @@ class AsyncioSelectorReactor(PosixReactorBase):
                 fd, callWithLogger, reader, self._readOrWrite, reader, True
             )
             self._readers[reader] = fd
-        except IOError as e:
+        except OSError as e:
             self._unregisterFDInAsyncio(fd)
             if e.errno == errno.EPERM:
                 # epoll(7) doesn't support certain file descriptors,

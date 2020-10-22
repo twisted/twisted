@@ -265,7 +265,7 @@ class SendmsgTests(TestCase):
         for i in range(8 * 1024):
             try:
                 sendmsg(self.input, b"x" * 1024, flags=MSG_DONTWAIT)
-            except error as e:
+            except OSError as e:
                 self.assertEqual(e.args[0], errno.EAGAIN)
                 break
         else:

@@ -166,11 +166,11 @@ class _SocketCloser:
                     socket.SOL_SOCKET, socket.SO_LINGER, struct.pack("ii", 1, 0)
                 )
 
-        except socket.error:
+        except OSError:
             pass
         try:
             skt.close()
-        except socket.error:
+        except OSError:
             pass
 
 
@@ -237,7 +237,7 @@ class Connection(
         """
         try:
             data = self.socket.recv(self.bufferSize)
-        except socket.error as se:
+        except OSError as se:
             if se.args[0] == EWOULDBLOCK:
                 return
             else:
@@ -275,7 +275,7 @@ class Connection(
 
         try:
             return untilConcludes(self.socket.send, limitedData)
-        except socket.error as se:
+        except OSError as se:
             if se.args[0] in (EWOULDBLOCK, ENOBUFS):
                 return 0
             else:
@@ -284,7 +284,7 @@ class Connection(
     def _closeWriteConnection(self):
         try:
             self.socket.shutdown(1)
-        except socket.error:
+        except OSError:
             pass
         p = IHalfCloseableProtocol(self.protocol, None)
         if p:
@@ -584,7 +584,7 @@ class BaseClient(_BaseBaseClient, _TLSClientMixin, Connection):
         # cleaned up some day, though.
         try:
             connectResult = self.socket.connect_ex(self.realAddress)
-        except socket.error as se:
+        except OSError as se:
             connectResult = se.args[0]
         if connectResult:
             if connectResult == EISCONN:
@@ -718,7 +718,7 @@ class _BaseTCPClient:
             self._requiresResolution = True
         try:
             skt = self.createInternetSocket()
-        except socket.error as se:
+        except OSError as se:
             err = error.ConnectBindError(se.args[0], se.args[1])
             whenDone = None
         if whenDone and bindAddress is not None:
@@ -728,7 +728,7 @@ class _BaseTCPClient:
                 else:
                     bindinfo = bindAddress
                 skt.bind(bindinfo)
-            except socket.error as se:
+            except OSError as se:
                 err = error.ConnectBindError(se.args[0], se.args[1])
                 whenDone = None
         self._finishInit(whenDone, skt, err, reactor)
@@ -968,7 +968,7 @@ class _FileDescriptorReservation:
         if self._fileDescriptor is None:
             try:
                 fileDescriptor = self._fileFactory()
-            except (IOError, OSError) as e:
+            except OSError as e:
                 if e.errno == EMFILE:
                     self._log.failure(
                         "Could not reserve EMFILE recovery file descriptor."
@@ -1154,7 +1154,7 @@ def _accept(logger, accepts, listener, reservedFD):
     for _ in accepts:
         try:
             client, address = listener.accept()
-        except socket.error as e:
+        except OSError as e:
             if e.args[0] in (EWOULDBLOCK, EAGAIN):
                 # No more clients.
                 return
@@ -1325,7 +1325,7 @@ class Port(base.BasePort, _SocketCloser):
                 else:
                     addr = (self.interface, self.port)
                 skt.bind(addr)
-            except socket.error as le:
+            except OSError as le:
                 raise CannotListenError(self.interface, self.port, le)
             skt.listen(self.backlog)
         else:
@@ -1492,7 +1492,7 @@ class Connector(base.BaseConnector):
         if isinstance(port, str):
             try:
                 port = socket.getservbyname(port, "tcp")
-            except socket.error as e:
+            except OSError as e:
                 raise error.ServiceNameUnknownError(string="{} ({!r})".format(e, port))
         self.host, self.port = host, port
         if abstract.isIPv6Address(host):

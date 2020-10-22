@@ -769,7 +769,7 @@ class FTP(basic.LineReceiver, policies.TimeoutMixin):
         """
         if isinstance(line, str):
             line = line.encode(self._encoding)
-        super(FTP, self).sendLine(line)
+        super().sendLine(line)
 
     def connectionMade(self):
         self.state = self.UNAUTH
@@ -1883,7 +1883,7 @@ class FTPAnonymousShell:
             return defer.fail(IsADirectoryError(path))
         try:
             f = p.open("r")
-        except (IOError, OSError) as e:
+        except OSError as e:
             return errnoToFailure(e.errno, path)
         except:
             return defer.fail()
@@ -1906,7 +1906,7 @@ class FTPAnonymousShell:
         # For now, just see if we can os.listdir() it
         try:
             p.listdir()
-        except (IOError, OSError) as e:
+        except OSError as e:
             return errnoToFailure(e.errno, path)
         except:
             return defer.fail()
@@ -1918,7 +1918,7 @@ class FTPAnonymousShell:
         if p.isdir():
             try:
                 statResult = self._statNode(p, keys)
-            except (IOError, OSError) as e:
+            except OSError as e:
                 return errnoToFailure(e.errno, path)
             except:
                 return defer.fail()
@@ -1955,7 +1955,7 @@ class FTPAnonymousShell:
             if keys:
                 try:
                     ent.extend(self._statNode(filePath, keys))
-                except (IOError, OSError) as e:
+                except OSError as e:
                     return errnoToFailure(e.errno, fileName)
                 except:
                     return defer.fail()
@@ -2105,7 +2105,7 @@ class FTPShell(FTPAnonymousShell):
         p = self._path(path)
         try:
             p.makedirs()
-        except (IOError, OSError) as e:
+        except OSError as e:
             return errnoToFailure(e.errno, path)
         except:
             return defer.fail()
@@ -2121,7 +2121,7 @@ class FTPShell(FTPAnonymousShell):
             return defer.fail(IsNotADirectoryError(path))
         try:
             os.rmdir(p.path)
-        except (IOError, OSError) as e:
+        except OSError as e:
             return errnoToFailure(e.errno, path)
         except:
             return defer.fail()
@@ -2137,7 +2137,7 @@ class FTPShell(FTPAnonymousShell):
             return defer.fail(IsADirectoryError(path))
         try:
             p.remove()
-        except (IOError, OSError) as e:
+        except OSError as e:
             return errnoToFailure(e.errno, path)
         except:
             return defer.fail()
@@ -2149,7 +2149,7 @@ class FTPShell(FTPAnonymousShell):
         tp = self._path(toPath)
         try:
             os.rename(fp.path, tp.path)
-        except (IOError, OSError) as e:
+        except OSError as e:
             return errnoToFailure(e.errno, fromPath)
         except:
             return defer.fail()
@@ -2174,7 +2174,7 @@ class FTPShell(FTPAnonymousShell):
             return defer.fail(IsADirectoryError(path))
         try:
             fObj = p.open("w")
-        except (IOError, OSError) as e:
+        except OSError as e:
             return errnoToFailure(e.errno, path)
         except:
             return defer.fail()

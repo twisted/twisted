@@ -106,7 +106,7 @@ def isInKnownHosts(host, pubKey, options):
     kh_file = options["known-hosts"] or _KNOWN_HOSTS
     try:
         known_hosts = open(os.path.expanduser(kh_file), "rb")
-    except IOError:
+    except OSError:
         return 0
     with known_hosts:
         for line in known_hosts.readlines():
@@ -200,7 +200,7 @@ class SSHUserAuthClient(userauth.SSHUserAuthClient):
             try:
                 p = getpass.getpass(prompt)
                 return p
-            except (KeyboardInterrupt, IOError):
+            except (KeyboardInterrupt, OSError):
                 print()
                 raise ConchError("PEBKAC")
 

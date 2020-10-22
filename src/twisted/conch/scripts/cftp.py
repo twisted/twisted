@@ -823,7 +823,7 @@ version                         Print the SFTP version.
         total = f.total
         try:
             winSize = struct.unpack("4H", fcntl.ioctl(0, tty.TIOCGWINSZ, "12345679"))
-        except IOError:
+        except OSError:
             winSize = [None, 80]
         if diff == 0.0:
             speed = 0.0

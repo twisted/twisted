@@ -5,8 +5,6 @@
 Tests for L{twisted.web.wsgi}.
 """
 
-__metaclass__ = type
-
 from sys import exc_info
 from urllib.parse import quote as urlquote
 import tempfile

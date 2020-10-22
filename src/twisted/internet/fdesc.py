@@ -87,7 +87,7 @@ def readFromFD(fd, callback):
     """
     try:
         output = os.read(fd, 8192)
-    except (OSError, IOError) as ioe:
+    except OSError as ioe:
         if ioe.args[0] in (errno.EAGAIN, errno.EINTR):
             return
         else:
@@ -112,7 +112,7 @@ def writeToFD(fd, data):
     """
     try:
         return os.write(fd, data)
-    except (OSError, IOError) as io:
+    except OSError as io:
         if io.errno in (errno.EAGAIN, errno.EINTR):
             return 0
         return CONNECTION_LOST

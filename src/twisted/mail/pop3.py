@@ -331,8 +331,7 @@ def formatListResponse(msgs):
     @return: Yields a series of strings which make up a complete LIST response.
     """
     yield successResponse(b"%d" % (len(msgs),))
-    for ele in formatListLines(msgs):
-        yield ele
+    yield from formatListLines(msgs)
     yield b".\r\n"
 
 
@@ -374,8 +373,7 @@ def formatUIDListResponse(msgs, getUidl):
     @return: Yields a series of strings which make up a complete UIDL response.
     """
     yield successResponse("")
-    for ele in formatUIDListLines(msgs, getUidl):
-        yield ele
+    yield from formatUIDListLines(msgs, getUidl)
     yield b".\r\n"
 
 

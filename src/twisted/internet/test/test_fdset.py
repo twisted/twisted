@@ -5,8 +5,6 @@
 Tests for implementations of L{IReactorFDSet}.
 """
 
-__metaclass__ = type
-
 import os
 import socket
 import traceback
@@ -34,7 +32,7 @@ def socketpair():
             client.setblocking(False)
             try:
                 client.connect(("127.0.0.1", serverSocket.getsockname()[1]))
-            except socket.error as e:
+            except OSError as e:
                 if e.args[0] not in (EINPROGRESS, EWOULDBLOCK):
                     raise
             server, addr = serverSocket.accept()

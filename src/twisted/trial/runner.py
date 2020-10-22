@@ -203,7 +203,7 @@ class LoggedSuite(TestSuite):
         """
         observer = _logObserver
         observer._add()
-        super(LoggedSuite, self).run(result)
+        super().run(result)
         observer._remove()
         for error in observer.getErrors():
             result.addError(TestHolder(NOT_IN_TEST), error)
@@ -225,7 +225,7 @@ class TrialSuite(TestSuite):
                 newTests.append(test)
             tests = newTests
         suite = LoggedSuite(tests)
-        super(TrialSuite, self).__init__([suite])
+        super().__init__([suite])
 
     def _bail(self):
         from twisted.internet import reactor
@@ -331,7 +331,7 @@ class ErrorHolder(TestHolder):
         @param error: The error to be added to the result. Can be an `exc_info`
         tuple or a L{twisted.python.failure.Failure}.
         """
-        super(ErrorHolder, self).__init__(description)
+        super().__init__(description)
         self.error = util.excInfoOrFailureToExcInfo(error)
 
     def __repr__(self) -> str:

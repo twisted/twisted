@@ -49,7 +49,7 @@ class PingPongProtocol(DatagramProtocol):
             log.msg(b"RECV " + datagram)
 
 
-class Broadcaster(object):
+class Broadcaster:
     def ping(self, proto):
         proto.sendPing()
 

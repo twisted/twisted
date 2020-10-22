@@ -239,7 +239,7 @@ class FileBodyProducerTests(TestCase):
 
         class BrokenFile:
             def read(self, count):
-                raise IOError("Simulated bad thing")
+                raise OSError("Simulated bad thing")
 
         producer = FileBodyProducer(BrokenFile(), self.cooperator)
         complete = producer.startProducing(FileConsumer(BytesIO()))
@@ -1059,7 +1059,7 @@ class AgentTests(
         L{ValueError} saying such.
         """
         uri = URI.fromBytes(b"http://example.com:80")
-        uri.host = "\u2603.com".encode("utf8")
+        uri.host = "\u2603.com".encode()
 
         with self.assertRaises(ValueError) as e:
             self.agent._getEndpoint(uri)
@@ -1572,7 +1572,7 @@ class AgentHTTPSTests(TestCase, FakeReactorAndConnectMixin, IntegrationTestingMi
             return client.Agent(reactor, contextFactory=Policy())
 
         (
-            super(AgentHTTPSTests, self).integrationTest(
+            super().integrationTest(
                 hostName,
                 expectedAddress,
                 addressType,

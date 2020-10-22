@@ -20,7 +20,7 @@ from twisted.python import failure
 
 class TestableLoopingCall(task.LoopingCall):
     def __init__(self, clock, *a, **kw):
-        super(TestableLoopingCall, self).__init__(*a, **kw)
+        super().__init__(*a, **kw)
         self.clock = clock
 
 

@@ -194,8 +194,6 @@ has several features:
 """
 
 
-__metaclass__ = type
-
 import datetime
 import decimal
 from functools import partial
@@ -570,7 +568,7 @@ class RemoteAmpError(AmpError):
                 errorCodeForMessage, localwhat, description
             )
 
-        super(RemoteAmpError, self).__init__(message)
+        super().__init__(message)
         self.local = local
         self.errorCode = errorCode
         self.description = description
@@ -645,7 +643,7 @@ class AmpBox(dict):
         @raise UnicodeEncodeError: When a native string key cannot be coerced
             to an ASCII byte string (Python 3 only).
         """
-        super(AmpBox, self).__init__(*args, **kw)
+        super().__init__(*args, **kw)
         nonByteNames = [n for n in self if not isinstance(n, bytes)]
         for nonByteName in nonByteNames:
             byteName = nonByteName.encode("ascii")
@@ -719,13 +717,13 @@ class QuitBox(AmpBox):
     __slots__ = []  # type: List[str]
 
     def __repr__(self) -> str:
-        return "QuitBox(**{})".format(super(QuitBox, self).__repr__())
+        return "QuitBox(**{})".format(super().__repr__())
 
     def _sendTo(self, proto):
         """
         Immediately call loseConnection after sending.
         """
-        super(QuitBox, self)._sendTo(proto)
+        super()._sendTo(proto)
         proto.transport.loseConnection()
 
 
@@ -744,7 +742,7 @@ class _SwitchBox(AmpBox):
         @param innerProto: the protocol instance to switch to.
         @type innerProto: an IProtocol provider.
         """
-        super(_SwitchBox, self).__init__(**kw)
+        super().__init__(**kw)
         self.innerProto = innerProto
 
     def __repr__(self) -> str:
@@ -758,7 +756,7 @@ class _SwitchBox(AmpBox):
         Send me; I am the last box on the connection.  All further traffic will be
         over the new protocol.
         """
-        super(_SwitchBox, self)._sendTo(proto)
+        super()._sendTo(proto)
         proto._lockForSwitch()
         proto._switchTo(self.innerProto)
 
@@ -2172,7 +2170,7 @@ class ProtocolSwitchCommand(Command):
         """
 
         self.protoToSwitchToFactory = _protoToSwitchToFactory
-        super(ProtocolSwitchCommand, self).__init__(**kw)
+        super().__init__(**kw)
 
     @classmethod
     def makeResponse(cls, innerProto, proto):
@@ -2184,7 +2182,7 @@ class ProtocolSwitchCommand(Command):
         switch to the new protocol unless an acknowledgement is received.  If
         an error is received, switch back.
         """
-        d = super(ProtocolSwitchCommand, self)._doCommand(proto)
+        d = super()._doCommand(proto)
         proto._lockForSwitch()
 
         def switchNow(ign):

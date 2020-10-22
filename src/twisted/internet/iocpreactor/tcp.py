@@ -99,7 +99,7 @@ class Connection(abstract.FileHandle, _SocketCloser, _AbortingMixin):
     def _closeWriteConnection(self):
         try:
             self.socket.shutdown(1)
-        except socket.error:
+        except OSError:
             pass
         p = interfaces.IHalfCloseableProtocol(self.protocol, None)
         if p:
@@ -447,7 +447,7 @@ class Port(_SocketCloser, _LogOwner):
             else:
                 addr = (self.interface, self.port)
             skt.bind(addr)
-        except socket.error as le:
+        except OSError as le:
             raise error.CannotListenError(self.interface, self.port, le)
 
         self.addrLen = _iocp.maxAddrLen(skt.fileno())

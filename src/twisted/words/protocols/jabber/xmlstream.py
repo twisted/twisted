@@ -408,7 +408,7 @@ class TLSInitiatingInitializer(BaseFeatureInitiatingInitializer):
         @type configurationForTLS: L{IOpenSSLClientConnectionCreator} or
             C{None}
         """
-        super(TLSInitiatingInitializer, self).__init__(xs, required=required)
+        super().__init__(xs, required=required)
         self._configurationForTLS = configurationForTLS
 
     def onProceed(self, obj):

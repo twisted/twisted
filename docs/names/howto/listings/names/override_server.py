@@ -20,7 +20,7 @@ from twisted.internet import reactor, defer
 from twisted.names import client, dns, error, server
 
 
-class DynamicResolver(object):
+class DynamicResolver:
     """
     A resolver which calculates the answers to certain queries based on the
     query type and name.

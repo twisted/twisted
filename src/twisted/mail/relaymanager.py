@@ -1136,5 +1136,5 @@ class MXCalculator:
             d.addCallbacks(cbResolved, ebResolved)
             return d
         elif failure.check(error.DNSNameError):
-            raise IOError("No MX found for {!r}".format(domain))
+            raise OSError("No MX found for {!r}".format(domain))
         return failure

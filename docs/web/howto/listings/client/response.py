@@ -1,5 +1,3 @@
-from __future__ import print_function
-
 from pprint import pformat
 
 from twisted.internet import reactor

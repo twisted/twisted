@@ -1,5 +1,3 @@
-from __future__ import division, print_function
-
 import time
 
 from twisted.python.compat import range

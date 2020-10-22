@@ -6,8 +6,6 @@ Tests for implementations of L{IReactorCore}.
 """
 
 
-__metaclass__ = type
-
 import signal
 import time
 import inspect

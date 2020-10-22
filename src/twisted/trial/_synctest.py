@@ -366,7 +366,7 @@ class _Assertions(pyunit.TestCase):
 
         @param condition: any object that defines __nonzero__
         """
-        super(_Assertions, self).assertFalse(condition, msg)
+        super().assertFalse(condition, msg)
         return condition
 
     assertNot = assertFalse
@@ -379,7 +379,7 @@ class _Assertions(pyunit.TestCase):
 
         @param condition: any object that defines __nonzero__
         """
-        super(_Assertions, self).assertTrue(condition, msg)
+        super().assertTrue(condition, msg)
         return condition
 
     assert_ = assertTrue
@@ -421,7 +421,7 @@ class _Assertions(pyunit.TestCase):
         @param msg: A string describing the failure that's included in the
             exception.
         """
-        super(_Assertions, self).assertEqual(first, second, msg)
+        super().assertEqual(first, second, msg)
         return first
 
     failUnlessEqual = assertEqual
@@ -937,7 +937,7 @@ class SynchronousTestCase(_Assertions):
     failureException = FailTest
 
     def __init__(self, methodName="runTest"):
-        super(SynchronousTestCase, self).__init__(methodName)
+        super().__init__(methodName)
         self._passed = False
         self._cleanups = []
         self._testMethodName = methodName
@@ -962,7 +962,7 @@ class SynchronousTestCase(_Assertions):
         return hash((self.__class__, self._testMethodName))
 
     def shortDescription(self):
-        desc = super(SynchronousTestCase, self).shortDescription()
+        desc = super().shortDescription()
         if desc is None:
             return self._testMethodName
         return desc

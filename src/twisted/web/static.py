@@ -642,7 +642,7 @@ class File(resource.Resource, filepath.FilePath):
 
         try:
             fileForReading = self.openForReading()
-        except IOError as e:
+        except OSError as e:
             if e.errno == errno.EACCES:
                 return self.forbidden.render(request)
             else:

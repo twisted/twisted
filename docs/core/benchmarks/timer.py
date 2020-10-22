@@ -4,7 +4,6 @@
 """
 Helper stuff for benchmarks.
 """
-from __future__ import print_function
 
 import gc
 

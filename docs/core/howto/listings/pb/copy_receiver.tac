@@ -11,7 +11,6 @@ See the twistd(1) man page or
 http://twistedmatrix.com/documents/current/howto/application for details.
 """
 
-from __future__ import print_function
 
 import sys
 

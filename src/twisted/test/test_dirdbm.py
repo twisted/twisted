@@ -190,7 +190,7 @@ class DirDbmTests(unittest.TestCase):
 
         def _writeFail(path, data):
             path.setContent(data)
-            raise IOError("fail to write")
+            raise OSError("fail to write")
 
         self.dbm[b"failkey"] = b"test"
         self.patch(self.dbm, "_writeFile", _writeFail)

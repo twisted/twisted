@@ -190,7 +190,7 @@ class LogFileTests(TestCase):
         # do the test
         try:
             f = open(os.path.join(self.dir, "xxx"), "w")
-        except (OSError, IOError):
+        except OSError:
             pass
         else:
             f.close()

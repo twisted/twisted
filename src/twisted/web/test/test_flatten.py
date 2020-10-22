@@ -138,7 +138,7 @@ class SerializationTests(FlattenTestCase, XMLAssertionMixin):
         class WithRenderer(Element):
             def __init__(self, value, loader):
                 self.value = value
-                super(WithRenderer, self).__init__(loader)
+                super().__init__(loader)
 
             @renderer
             def stuff(self, request, tag):

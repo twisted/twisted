@@ -560,7 +560,7 @@ class HTTPDownloader(HTTPClientFactory):
             try:
                 if not self.file:
                     self.file = self.openFile(partialContent)
-            except IOError:
+            except OSError:
                 # raise
                 self.deferred.errback(Failure())
 
@@ -569,7 +569,7 @@ class HTTPDownloader(HTTPClientFactory):
             return
         try:
             self.file.write(data)
-        except IOError:
+        except OSError:
             # raise
             self.file = None
             self.deferred.errback(Failure())
@@ -594,7 +594,7 @@ class HTTPDownloader(HTTPClientFactory):
             return
         try:
             self.file.close()
-        except IOError:
+        except OSError:
             self.deferred.errback(Failure())
             return
         self.deferred.callback(self.value)

@@ -7,8 +7,6 @@ L{IReactorSocket}.
 """
 
 
-__metaclass__ = type
-
 import socket
 
 from zope.interface import implementer
@@ -42,7 +40,7 @@ def _has_ipv6():
         sock = socket.socket(socket.AF_INET6)
         sock.bind(("::1", 0))
         has_ipv6 = True
-    except socket.error:
+    except OSError:
         pass
 
     if sock:

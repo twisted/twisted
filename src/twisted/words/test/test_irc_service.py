@@ -49,13 +49,11 @@ class IRCUserTests(IRCTestCase):
         has a UTF8 nick and is set to UTF8 encoding, the message will be
         written to the transport.
         """
-        expectedResult = (
-            ":example.com \u0442\u0435\u0441\u0442 " "\u043d\u0438\u043a\r\n"
-        ).encode("utf-8")
+        expectedResult = ().encode("utf-8")
 
-        self.ircUser.irc_NICK("", ["\u043d\u0438\u043a".encode("utf-8")])
+        self.ircUser.irc_NICK("", ["\u043d\u0438\u043a".encode()])
         self.stringTransport.clear()
-        self.ircUser.sendMessage("\u0442\u0435\u0441\u0442".encode("utf-8"))
+        self.ircUser.sendMessage("\u0442\u0435\u0441\u0442".encode())
         self.assertEqualBufferValue(self.stringTransport.value(), expectedResult)
 
     def test_invalidEncodingNick(self):

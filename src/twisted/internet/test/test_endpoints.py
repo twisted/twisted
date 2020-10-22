@@ -785,9 +785,7 @@ class MemoryProcessTransport(StringTransportWithDisconnection):
     """
 
     def __init__(self, protocol=None):
-        super(MemoryProcessTransport, self).__init__(
-            hostAddress=_ProcessAddress(), peerAddress=_ProcessAddress()
-        )
+        super().__init__(hostAddress=_ProcessAddress(), peerAddress=_ProcessAddress())
         self.signals = []
         self.closedChildFDs = set()
         self.protocol = Protocol()
@@ -3590,7 +3588,7 @@ class SSLClientStringTests(unittest.TestCase):
                 # There is a duplicate of thing2.pem, so ignore anything that
                 # looks like it.
                 if data == casPath.child("thing2.pem").getContent():
-                    raise IOError(EPERM)
+                    raise OSError(EPERM)
                 else:
                     return data
 
@@ -3952,7 +3950,7 @@ class UppercaseWrapperProtocol(policies.ProtocolWrapper):
         @param data: The string to uppercase.
         @type data: L{bytes}
         """
-        super(UppercaseWrapperProtocol, self).dataReceived(data.upper())
+        super().dataReceived(data.upper())
 
     def write(self, data):
         """
@@ -3961,7 +3959,7 @@ class UppercaseWrapperProtocol(policies.ProtocolWrapper):
         @param data: The string to uppercase.
         @type data: L{bytes}
         """
-        super(UppercaseWrapperProtocol, self).write(data.upper())
+        super().write(data.upper())
 
     def writeSequence(self, seq):
         """

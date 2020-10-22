@@ -400,7 +400,7 @@ class EncodingResourceWrapper(proxyForInterface(IResource)):  # type: ignore[mis
     """
 
     def __init__(self, original, encoders):
-        super(EncodingResourceWrapper, self).__init__(original)
+        super().__init__(original)
         self._encoders = encoders
 
     def getEncoder(self, request):

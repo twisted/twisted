@@ -395,7 +395,7 @@ class JellyTests(TestCase):
         self.assertIs(z[0][0], z)
 
     def test_str(self):
-        x = str("blah")
+        x = "blah"
         y = jelly.unjelly(jelly.jelly(x))
         self.assertEqual(x, y)
         self.assertEqual(type(x), type(y))

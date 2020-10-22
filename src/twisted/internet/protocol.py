@@ -853,7 +853,7 @@ class FileWrapper:
         self.closed = 1
         try:
             self.file.close()
-        except (IOError, OSError):
+        except OSError:
             self.handleException()
 
     def getPeer(self):

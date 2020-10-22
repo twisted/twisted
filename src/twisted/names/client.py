@@ -145,7 +145,7 @@ class Resolver(common.ResolverBase):
 
         try:
             resolvConf = self._openFile(self.resolv)
-        except IOError as e:
+        except OSError as e:
             if e.errno == errno.ENOENT:
                 # Missing resolv.conf is treated the same as an empty resolv.conf
                 self.parseConfig(())

@@ -1815,7 +1815,7 @@ class DaemonizeTests(TestCase):
         def raisingWrite(fd, data):
             written.append((fd, data))
             if len(written) == 1:
-                raise IOError(errno.EINTR)
+                raise OSError(errno.EINTR)
 
         self.mockos.write = raisingWrite
         with AlternateReactor(FakeDaemonizingReactor()):
@@ -1844,7 +1844,7 @@ class DaemonizeTests(TestCase):
         def raisingRead(fd, size):
             read.append((fd, size))
             if len(read) == 1:
-                raise IOError(errno.EINTR)
+                raise OSError(errno.EINTR)
             return b"0"
 
         self.mockos.read = raisingRead
@@ -2072,7 +2072,7 @@ class StubApplicationRunnerWithSignal(twistd._SomeApplicationRunner):
     loggerFactory = CrippledAppLogger
 
     def __init__(self, config):
-        super(StubApplicationRunnerWithSignal, self).__init__(config)
+        super().__init__(config)
         self._signalValue = None
 
     def preApplication(self):

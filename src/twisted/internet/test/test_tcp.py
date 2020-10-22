@@ -7,8 +7,6 @@ L{IReactorSocket}.
 """
 
 
-__metaclass__ = type
-
 import errno
 import gc
 import io
@@ -109,7 +107,7 @@ s = None
 try:
     s = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
     s.bind(("::1", 0))
-except socket.error as e:
+except OSError as e:
     ipv6Skip = True
     ipv6SkipReason = str(e)
 else:
@@ -996,7 +994,7 @@ class _ExhaustsFileDescriptors:
             while True:
                 try:
                     fd = self._fileDescriptorFactory()
-                except (IOError, OSError) as e:
+                except OSError as e:
                     if e.errno == errno.EMFILE:
                         break
                     raise
@@ -1585,7 +1583,7 @@ class TCPPortTestsMixin:
         client.setblocking(False)
         try:
             connect(client, (port.getHost().host, port.getHost().port))
-        except socket.error as e:
+        except OSError as e:
             self.assertIn(e.errno, (errno.EINPROGRESS, errno.EWOULDBLOCK))
 
         self.runReactor(reactor)
@@ -1667,7 +1665,7 @@ class TCPPortTestsMixin:
         client.setblocking(False)
         try:
             connect(client, (port.getHost().host, port.getHost().port))
-        except socket.error as e:
+        except OSError as e:
             self.assertIn(e.errno, (errno.EINPROGRESS, errno.EWOULDBLOCK))
         self.runReactor(reactor)
         return factory.address

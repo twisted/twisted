@@ -248,7 +248,7 @@ class InMemorySSHChannel(StringTransport):
         """
         self.conn = conn
         self.localClosed = 0
-        super(InMemorySSHChannel, self).__init__()
+        super().__init__()
 
 
 class FilesystemAccessExpectations:

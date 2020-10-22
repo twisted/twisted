@@ -776,7 +776,7 @@ class OverrideLocatorAMP(amp.AMP):
             result = self.expectations[name]
             return result
         else:
-            return super(OverrideLocatorAMP, self).lookupFunction(name)
+            return super().lookupFunction(name)
 
     def greetingResponder(self, greeting, cookie):
         self.greetings.append((greeting, cookie))

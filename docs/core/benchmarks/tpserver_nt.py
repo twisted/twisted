@@ -1,5 +1,4 @@
 """Non-twisted throughput server."""
-from __future__ import print_function
 
 import socket, signal, sys
 

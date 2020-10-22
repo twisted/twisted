@@ -57,8 +57,6 @@ the modules outside the standard library's python-files directory::
 """
 
 
-__metaclass__ = type
-
 # let's try to keep path imports to a minimum...
 from os.path import dirname, split as splitpath
 
@@ -182,8 +180,7 @@ class _ModuleIteratorHelper:
         """
         yield self
         for package in self.iterModules():
-            for module in package.walkModules(importPackages=importPackages):
-                yield module
+            yield from package.walkModules(importPackages=importPackages)
 
     def _subModuleName(self, mn):
         """
@@ -407,7 +404,7 @@ class PythonModule(_ModuleIteratorHelper):
     def walkModules(self, importPackages=False):
         if importPackages and self.isPackage():
             self.load()
-        return super(PythonModule, self).walkModules(importPackages=importPackages)
+        return super().walkModules(importPackages=importPackages)
 
     def _subModuleName(self, mn):
         """
@@ -748,8 +745,7 @@ class PythonPath:
         Yield all top-level modules on my sysPath.
         """
         for entry in self.iterEntries():
-            for module in entry.iterModules():
-                yield module
+            yield from entry.iterModules()
 
     def walkModules(self, importPackages=False):
         """
@@ -757,8 +753,7 @@ class PythonPath:
         submodule in each package or entry.
         """
         for package in self.iterModules():
-            for module in package.walkModules(importPackages=False):
-                yield module
+            yield from package.walkModules(importPackages=False)
 
 
 theSystemPath = PythonPath()

@@ -7,8 +7,6 @@ Scheduling utility methods and classes.
 """
 
 
-__metaclass__ = type
-
 import sys
 import time
 import warnings

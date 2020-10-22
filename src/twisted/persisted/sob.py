@@ -169,7 +169,7 @@ def loadValueFromFile(filename, variable):
     @param filename: string
     @param variable: string
     """
-    with open(filename, "r") as fileObj:
+    with open(filename) as fileObj:
         data = fileObj.read()
     d = {"__file__": filename}
     codeObj = compile(data, filename, "exec")

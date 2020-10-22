@@ -92,8 +92,7 @@ class CooperatorTests(unittest.TestCase):
         c = task.Cooperator()
 
         def myiter():
-            for myiter.value in range(3):
-                yield myiter.value
+            yield from range(3)
 
         myiter.value = -1
         d = c.coiterate(myiter())

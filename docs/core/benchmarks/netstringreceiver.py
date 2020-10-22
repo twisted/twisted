@@ -1,6 +1,5 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
-from __future__ import print_function
 
 from twisted.protocols.test import test_basic
 from twisted.python.compat import range, raw_input
@@ -25,7 +24,7 @@ increase it. Stop when the performance starts to deteriorate ;-).
 """
 
 
-class PerformanceTester(object):
+class PerformanceTester:
     """
     A class for testing the performance of some
     """

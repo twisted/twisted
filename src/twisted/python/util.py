@@ -302,7 +302,7 @@ def _getpass(prompt):
 
     try:
         return getpass.getpass(prompt)
-    except IOError as e:
+    except OSError as e:
         if e.errno == errno.EINTR:
             raise KeyboardInterrupt
         raise
@@ -763,7 +763,7 @@ def untilConcludes(f, *a, **kw):
     while True:
         try:
             return f(*a, **kw)
-        except (IOError, OSError) as e:
+        except OSError as e:
             if e.args[0] == errno.EINTR:
                 continue
             raise

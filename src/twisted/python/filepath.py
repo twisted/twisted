@@ -315,7 +315,7 @@ class AbstractFilePath:
         """
         try:
             subnames = self.listdir()
-        except WindowsError as winErrObj:
+        except OSError as winErrObj:
             # Under Python 3.3 and higher on Windows, WindowsError is an
             # alias for OSError.  OSError has a winerror attribute and an
             # errno attribute.
@@ -1308,7 +1308,7 @@ class FilePath(AbstractFilePath):
         """
         try:
             self.open("a").close()
-        except IOError:
+        except OSError:
             pass
         utime(self.path, None)
 

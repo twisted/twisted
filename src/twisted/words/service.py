@@ -1235,7 +1235,7 @@ class WordsRealm:
 
 class InMemoryWordsRealm(WordsRealm):
     def __init__(self, *a, **kw):
-        super(InMemoryWordsRealm, self).__init__(*a, **kw)
+        super().__init__(*a, **kw)
         self.users = {}
         self.groups = {}
 

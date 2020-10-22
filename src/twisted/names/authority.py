@@ -44,7 +44,7 @@ def getSerial(filename="/tmp/twisted-names.serial"):
     finally:
         os.umask(o)
 
-    with open(filename, "r") as serialFile:
+    with open(filename) as serialFile:
         lastSerial, zoneID = serialFile.readline().split()
 
     zoneID = (lastSerial == serial) and (int(zoneID) + 1) or 0

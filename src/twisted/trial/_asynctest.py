@@ -54,7 +54,7 @@ class TestCase(SynchronousTestCase):
         L{SynchronousTestCase.runTest} will be used as the test method. This is
         mostly useful for testing Trial.
         """
-        super(TestCase, self).__init__(methodName)
+        super().__init__(methodName)
 
     def assertFailure(self, deferred, *expectedFailures):
         """
@@ -304,7 +304,7 @@ class TestCase(SynchronousTestCase):
         If the function C{f} returns a Deferred, C{TestCase} will wait until the
         Deferred has fired before proceeding to the next function.
         """
-        return super(TestCase, self).addCleanup(f, *args, **kwargs)
+        return super().addCleanup(f, *args, **kwargs)
 
     def getSuppress(self):
         return self._getSuppress()

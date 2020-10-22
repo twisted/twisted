@@ -55,14 +55,14 @@ class IOTypeTests(SynchronousTestCase):
         """
         A file opened via 'io.open' in text mode accepts and returns text.
         """
-        with io.open(self.mktemp(), "w") as f:
+        with open(self.mktemp(), "w") as f:
             self.assertEqual(ioType(f), str)
 
     def test_3openBinaryMode(self):
         """
         A file opened via 'io.open' in binary mode accepts and returns bytes.
         """
-        with io.open(self.mktemp(), "wb") as f:
+        with open(self.mktemp(), "wb") as f:
             self.assertEqual(ioType(f), bytes)
 
     def test_codecsOpenBytes(self):

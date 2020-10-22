@@ -36,7 +36,7 @@ class TwistedSphinxInventory(SphinxInventory):
             found.
         @rtype: L{str} or L{None}
         """
-        result = super(TwistedSphinxInventory, self).getLink(name)
+        result = super().getLink(name)
         if result is not None:
             # We already got a link. Look no further.
             return result
@@ -98,7 +98,7 @@ class TwistedModuleVisitor(zopeinterface.ZopeInterfaceModuleVisitor):
         """
         Called when a class is visited.
         """
-        super(TwistedModuleVisitor, self).visitClass(node)
+        super().visitClass(node)
 
         cls = self.builder.current.contents[node.name]
 
@@ -108,7 +108,7 @@ class TwistedModuleVisitor(zopeinterface.ZopeInterfaceModuleVisitor):
         """
         Called when a class is visited.
         """
-        super(TwistedModuleVisitor, self).visitFunction(node)
+        super().visitFunction(node)
 
         func = self.builder.current.contents[node.name]
 
@@ -151,8 +151,7 @@ class TwistedFunction(zopeinterface.ZopeInterfaceFunction):
         if self.decorators:
             getDeprecated(self, list(self.decorators))
 
-        for x in super(TwistedFunction, self).docsources():
-            yield x
+        yield from super().docsources()
 
 
 class TwistedASTBuilder(zopeinterface.ZopeInterfaceASTBuilder):
@@ -169,7 +168,7 @@ class TwistedSystem(zopeinterface.ZopeInterfaceSystem):
     Function = TwistedFunction
 
     def __init__(self, options=None):
-        super(TwistedSystem, self).__init__(options=options)
+        super().__init__(options=options)
         # Use custom SphinxInventory so that we can resolve valid L{} markup
         # for which the Sphinx inventory is not published or broken.
         self.intersphinx = TwistedSphinxInventory(
@@ -200,4 +199,4 @@ class TwistedSystem(zopeinterface.ZopeInterfaceSystem):
                 return model.PrivacyClass.HIDDEN
             current = current.parent
 
-        return super(TwistedSystem, self).privacyClass(documentable)
+        return super().privacyClass(documentable)

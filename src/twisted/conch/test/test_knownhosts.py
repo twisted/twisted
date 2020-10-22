@@ -992,7 +992,7 @@ class FakeFile:
         Append the given item to the 'outchunks' list.
         """
         if self.closed:
-            raise IOError("the file was closed")
+            raise OSError("the file was closed")
         self.outchunks.append(chunk)
 
     def close(self):
@@ -1090,7 +1090,7 @@ class ConsoleUITests(TestCase):
         """
 
         def raiseIt():
-            raise IOError()
+            raise OSError()
 
         ui = ConsoleUI(raiseIt)
         d = ui.prompt("This is a test.")

@@ -260,7 +260,7 @@ class StaticFileTests(TestCase):
         markerResponse = b"custom-forbidden-response"
 
         def failingOpenForReading():
-            raise IOError(errno.EACCES, "")
+            raise OSError(errno.EACCES, "")
 
         class CustomForbiddenResource(resource.Resource):
             def render(self, request):

@@ -13,8 +13,6 @@ available reactor implementations.
 """
 
 
-__metaclass__ = type
-
 __all__ = ["TestTimeoutError", "ReactorBuilder", "needsRunningReactor"]
 
 import os

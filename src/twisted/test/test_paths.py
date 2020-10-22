@@ -245,7 +245,7 @@ class FakeWindowsPath(filepath.FilePath):
         # On Windows, if winerror is set in the constructor,
         # the errno value in the constructor is ignored, and OSError internally
         # maps the winerror value to an errno value.
-        raise WindowsError(
+        raise OSError(
             None,
             "A directory's validness was called into question",
             self.path,
@@ -306,13 +306,13 @@ class ExplodingFile:
         """
         @raise IOError: Always raised.
         """
-        raise IOError()
+        raise OSError()
 
     def write(self, what):
         """
         @raise IOError: Always raised.
         """
-        raise IOError()
+        raise OSError()
 
     def close(self):
         """
@@ -1597,7 +1597,7 @@ class UnicodeFilePathTests(TestCase):
         subpath will return a bytes-mode FilePath.
         """
         fp = filepath.FilePath("./parent-mon\u20acy")
-        child = fp.child("child-mon\u20acy".encode("utf-8"))
+        child = fp.child("child-mon\u20acy".encode())
         self.assertEqual(type(child.path), bytes)
 
     def test_UnicodeInstantiationUnicodeChild(self):
@@ -1624,7 +1624,7 @@ class UnicodeFilePathTests(TestCase):
         subpath will return a bytes-mode FilePath.
         """
         fp = filepath.FilePath("./parent-mon\u20acy")
-        child = fp.preauthChild("child-mon\u20acy".encode("utf-8"))
+        child = fp.preauthChild("child-mon\u20acy".encode())
         self.assertEqual(type(child.path), bytes)
 
     def test_BytesInstantiation(self):
@@ -1641,7 +1641,7 @@ class UnicodeFilePathTests(TestCase):
         subpath will return a bytes-mode FilePath.
         """
         fp = filepath.FilePath(b"./")
-        child = fp.child("child-mon\u20acy".encode("utf-8"))
+        child = fp.child("child-mon\u20acy".encode())
         self.assertEqual(type(child.path), bytes)
 
     def test_BytesInstantiationUnicodeChild(self):
@@ -1649,7 +1649,7 @@ class UnicodeFilePathTests(TestCase):
         Calling L{FilePath.child} on a bytes-mode L{FilePath} with a text
         subpath will return a text-mode FilePath.
         """
-        fp = filepath.FilePath("parent-mon\u20acy".encode("utf-8"))
+        fp = filepath.FilePath("parent-mon\u20acy".encode())
         child = fp.child("mon\u20acy")
         self.assertEqual(type(child.path), str)
 
@@ -1658,8 +1658,8 @@ class UnicodeFilePathTests(TestCase):
         Calling L{FilePath.preauthChild} on a bytes-mode L{FilePath} with a
         bytes subpath will return a bytes-mode FilePath.
         """
-        fp = filepath.FilePath("./parent-mon\u20acy".encode("utf-8"))
-        child = fp.preauthChild("child-mon\u20acy".encode("utf-8"))
+        fp = filepath.FilePath("./parent-mon\u20acy".encode())
+        child = fp.preauthChild("child-mon\u20acy".encode())
         self.assertEqual(type(child.path), bytes)
 
     def test_BytesInstantiationUnicodePreauthChild(self):
@@ -1667,7 +1667,7 @@ class UnicodeFilePathTests(TestCase):
         Calling L{FilePath.preauthChild} on a bytes-mode L{FilePath} with a text
         subpath will return a text-mode FilePath.
         """
-        fp = filepath.FilePath("./parent-mon\u20acy".encode("utf-8"))
+        fp = filepath.FilePath("./parent-mon\u20acy".encode())
         child = fp.preauthChild("mon\u20acy")
         self.assertEqual(type(child.path), str)
 
@@ -1685,7 +1685,7 @@ class UnicodeFilePathTests(TestCase):
         """
         The repr of a L{bytes} L{FilePath} shouldn't burst into flames.
         """
-        fp = filepath.FilePath("/parent-mon\u20acy".encode("utf-8"))
+        fp = filepath.FilePath("/parent-mon\u20acy".encode())
         reprOutput = repr(fp)
         self.assertEqual("FilePath(b'/parent-mon\\xe2\\x82\\xacy')", reprOutput)
 

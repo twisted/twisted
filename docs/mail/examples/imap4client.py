@@ -9,7 +9,6 @@ Simple IMAP4 client which displays the subjects of all messages in a
 particular mailbox.
 """
 
-from __future__ import print_function
 
 import sys
 

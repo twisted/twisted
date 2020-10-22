@@ -322,7 +322,7 @@ class LogReader:
         The comments about binary-mode for L{BaseLogFile._openFile} also apply
         here.
         """
-        self._file = open(name, "r")  # Optional[BinaryIO]
+        self._file = open(name)  # Optional[BinaryIO]
 
     def readLines(self, lines=10):
         """Read a list of lines from the log file.
