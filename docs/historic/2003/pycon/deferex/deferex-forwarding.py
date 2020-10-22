@@ -1,3 +1,4 @@
+from __future__ import absolute_import
 from twisted.spread import pb
 
 class LocalForwarder(flavors.Referenceable):

@@ -1,5 +1,6 @@
 #! /usr/bin/python
 
+from __future__ import absolute_import
 from slides import Lecture, NumSlide, Slide, Bullet, SubBullet, PRE, URL
 
 class Raw:
