@@ -9,5 +9,6 @@ class Echo(DatagramProtocol):
         print("received %r from %s" % (data, addr))
         self.transport.write(data, addr)
 
-reactor.listenUDP(9999, Echo(), interface='::')
+
+reactor.listenUDP(9999, Echo(), interface="::")
 reactor.run()

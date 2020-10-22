@@ -27,20 +27,20 @@ class DockerEndpointFactory(object):
     """
     Connect to Docker's Unix socket.
     """
+
     def __init__(self, reactor):
         self.reactor = reactor
-
 
     def endpointForURI(self, uri):
         return UNIXClientEndpoint(self.reactor, b"/var/run/docker.sock")
 
 
-
 def main(reactor, path=b"/containers/json?all=1"):
     agent = Agent.usingEndpointFactory(reactor, DockerEndpointFactory(reactor))
-    d = agent.request(b'GET', b"unix://localhost" + path)
+    d = agent.request(b"GET", b"unix://localhost" + path)
     d.addCallback(readBody)
     d.addCallback(print)
     return d
+
 
 react(main, argv[1:])

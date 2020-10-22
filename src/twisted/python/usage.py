@@ -1007,4 +1007,4 @@ def portCoerce(value):
     return value
 
 
-portCoerce.coerceDoc = "Must be an int between 0 and 65535."  # type: ignore[attr-defined]  # noqa
+portCoerce.coerceDoc = "Must be an int between 0 and 65535."  # type: ignore[attr-defined]

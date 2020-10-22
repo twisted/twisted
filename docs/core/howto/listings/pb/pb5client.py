@@ -9,6 +9,7 @@ from twisted.spread import pb
 from twisted.internet import reactor
 from twisted.cred import credentials
 
+
 def main():
     factory = pb.PBClientFactory()
     reactor.connectTCP("localhost", 8800, factory)
@@ -16,9 +17,11 @@ def main():
     def1.addCallback(connected)
     reactor.run()
 
+
 def connected(perspective):
     print("got perspective ref:", perspective)
     print("asking it to foo(12)")
     perspective.callRemote("foo", 12)
+
 
 main()

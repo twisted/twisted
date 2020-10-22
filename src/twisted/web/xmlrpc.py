@@ -293,7 +293,7 @@ class XMLRPCIntrospection(XMLRPC):
         method = self._xmlrpc_parent.lookupProcedure(method)
         return getattr(method, "help", None) or getattr(method, "__doc__", None) or ""
 
-    xmlrpc_methodHelp.signature = [["string", "string"]]  # type: ignore[attr-defined] # noqa
+    xmlrpc_methodHelp.signature = [["string", "string"]]  # type: ignore[attr-defined]
 
     def xmlrpc_methodSignature(self, method):
         """

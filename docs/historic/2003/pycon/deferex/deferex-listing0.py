@@ -1,4 +1,3 @@
-
 class DocumentProcessor:
     def __init__(self):
         self.loadDocuments(self.callback, mySrv, "hello")

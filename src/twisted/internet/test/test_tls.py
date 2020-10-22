@@ -53,9 +53,7 @@ else:
 
 
 class TLSMixin:
-    requiredInterfaces = [
-        IReactorSSL
-    ]  # type: Optional[Sequence[Type[Interface]]]  # noqa
+    requiredInterfaces = [IReactorSSL]  # type: Optional[Sequence[Type[Interface]]]
 
     if platform.isWindows():
         msg = (

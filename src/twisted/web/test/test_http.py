@@ -59,7 +59,7 @@ from ._util import (
 
 
 class _IDeprecatedHTTPChannelToRequestInterfaceProxy(
-    proxyForInterface(  # type: ignore[misc]  # noqa
+    proxyForInterface(  # type: ignore[misc]
         http._IDeprecatedHTTPChannelToRequestInterface
     )
 ):

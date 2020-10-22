@@ -28,23 +28,25 @@ from twisted.cred import checkers, portal
 from twisted.internet import protocol
 
 
-
 def makeService(args):
     checker = checkers.InMemoryUsernamePasswordDatabaseDontUse(username=b"password")
 
     f = protocol.ServerFactory()
-    f.protocol = lambda: TelnetTransport(TelnetBootstrapProtocol,
-                                         insults.ServerProtocol,
-                                         args['protocolFactory'],
-                                         *args.get('protocolArgs', ()),
-                                         **args.get('protocolKwArgs', {}))
-    tsvc = internet.TCPServer(args['telnet'], f)
+    f.protocol = lambda: TelnetTransport(
+        TelnetBootstrapProtocol,
+        insults.ServerProtocol,
+        args["protocolFactory"],
+        *args.get("protocolArgs", ()),
+        **args.get("protocolKwArgs", {}),
+    )
+    tsvc = internet.TCPServer(args["telnet"], f)
 
     def chainProtocolFactory():
         return insults.ServerProtocol(
-            args['protocolFactory'],
-            *args.get('protocolArgs', ()),
-            **args.get('protocolKwArgs', {}))
+            args["protocolFactory"],
+            *args.get("protocolArgs", ()),
+            **args.get("protocolKwArgs", {}),
+        )
 
     rlm = TerminalRealm()
     rlm.chainedProtocolFactory = chainProtocolFactory
@@ -52,16 +54,21 @@ def makeService(args):
     f = ConchFactory(ptl)
     f.publicKeys[b"ssh-rsa"] = keys.Key.fromFile("ssh-keys/ssh_host_rsa_key.pub")
     f.privateKeys[b"ssh-rsa"] = keys.Key.fromFile("ssh-keys/ssh_host_rsa_key")
-    csvc = internet.TCPServer(args['ssh'], f)
+    csvc = internet.TCPServer(args["ssh"], f)
 
     m = service.MultiService()
     tsvc.setServiceParent(m)
     csvc.setServiceParent(m)
     return m
 
+
 application = service.Application("Interactive Python Interpreter")
 
-makeService({'protocolFactory': ColoredManhole,
-             'protocolArgs': (None,),
-             'telnet': 6023,
-             'ssh': 6022}).setServiceParent(application)
+makeService(
+    {
+        "protocolFactory": ColoredManhole,
+        "protocolArgs": (None,),
+        "telnet": 6023,
+        "ssh": 6022,
+    }
+).setServiceParent(application)

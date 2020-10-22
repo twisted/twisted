@@ -5,7 +5,6 @@ from twisted.internet import reactor
 
 
 class MulticastPingPong(DatagramProtocol):
-
     def startProtocol(self):
         """
         Called after protocol has started listening.
@@ -25,6 +24,5 @@ class MulticastPingPong(DatagramProtocol):
 
 # We use listenMultiple=True so that we can run MulticastServer.py and
 # MulticastClient.py on same machine:
-reactor.listenMulticast(9999, MulticastPingPong(),
-                        listenMultiple=True)
+reactor.listenMulticast(9999, MulticastPingPong(), listenMultiple=True)
 reactor.run()

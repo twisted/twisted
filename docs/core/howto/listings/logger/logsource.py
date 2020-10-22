@@ -1,5 +1,6 @@
 from twisted.logger import Logger
 
+
 class MyObject(object):
     log = Logger()
 
@@ -9,7 +10,8 @@ class MyObject(object):
     def doSomething(self, something):
         self.log.info(
             "Object with value {log_source.value!r} doing {something}.",
-            something=something
+            something=something,
         )
+
 
 MyObject(7).doSomething("a task")
