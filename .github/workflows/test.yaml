@@ -118,7 +118,7 @@ jobs:
 
   pypi-publish:
     # https://github.community/t/is-it-possible-to-require-all-github-actions-tasks-to-pass-without-enumerating-them/117957/4?u=graingert
-    name: Prepare release and optional publish on new tag
+    name: Check release and optional publish on new tag
     runs-on: ubuntu-20.04
     steps:
     - uses: actions/checkout@v2
@@ -138,12 +138,12 @@ jobs:
     - name: Display structure of files to be pusehed
       run: ls -R dist/
 
-    - name: Publish to PyPI on a new tag
+    - name: Publish to PyPI on a new twisted-* tag
       # Testing:
       # TEST_PYPI_UPLOAD_TOKEN
       # repository_url: https://test.pypi.org/legacy/
       # Prod secret: PYPI_UPLOAD_TOKEN
-      #if: startsWith(github.ref, 'refs/tags')
+      #if: startsWith(github.ref, 'refs/tags/twisted-')
       uses: pypa/gh-action-pypi-publish@v1.3.1
       with:
         password: ${{ secrets.TEST_PYPI_UPLOAD_TOKEN }}
