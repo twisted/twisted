@@ -1,7 +1,10 @@
 version: 2
 
 sphinx:
-  fail_on_warning: true
+  # This should not fail on errors.
+  # We have a separate build process which fails on errors and shows all
+  # the errors in one go.
+  fail_on_warning: false
 
 formats:
   - pdf

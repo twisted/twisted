@@ -13,7 +13,7 @@ Outcomes
 By the end of a Twisted release we'll have:
 
 - Wheel and sdist package published on `PyPI Twisted project <https://pypi.org/project/Twisted/>`_.
-- Updated documentation (API & howtos) on `Twisted Read The Docs <https://twisted.readthedocs.io/en/latest/`_
+- Updated documentation (API & howtos) on `Twisted Read The Docs <https://twisted.readthedocs.io/en/latest/>`_
 - Announcement email sent to Twisted main list
 - A `GitHub Release <https://github.com/twisted/twisted/releases>`_ with the associated tag in our Git repository
 
