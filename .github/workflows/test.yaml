@@ -119,7 +119,7 @@ jobs:
   pypi-publish:
     # https://github.community/t/is-it-possible-to-require-all-github-actions-tasks-to-pass-without-enumerating-them/117957/4?u=graingert
     runs-on: ubuntu-20.04
-    needs: [testing]
+    needs: [testing, testing_no_ipv6]
     steps:
     - uses: actions/checkout@v2
 
