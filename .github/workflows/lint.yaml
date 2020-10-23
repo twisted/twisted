@@ -14,8 +14,8 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
-      # Need history on all branches for newsfragment to work
       with:
+        # Need history on all branches for newsfragment to work.
         fetch-depth: 0
 
     - name: Set up Python
