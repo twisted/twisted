@@ -1,10 +1,10 @@
-
 class IFingerSetterService(Interface):
-
     def setUser(user, status):
         """Set the user's status to something"""
 
+
 # Advantages of latest version
+
 
 @implementer(IFingerService, IFingerSetterService)
 class MemoryFingerService(service.Service):
@@ -21,7 +21,8 @@ class MemoryFingerService(service.Service):
         self.users[user] = status
 
 
-f = MemoryFingerService({b'moshez': b'Happy and well'})
+f = MemoryFingerService({b"moshez": b"Happy and well"})
 serviceCollection = service.IServiceCollection(application)
-strports.service("tcp:1079:interface=127.0.0.1", IFingerSetterFactory(f)
-                   ).setServiceParent(serviceCollection)
+strports.service(
+    "tcp:1079:interface=127.0.0.1", IFingerSetterFactory(f)
+).setServiceParent(serviceCollection)

@@ -168,7 +168,7 @@ def _nicebyteslist(list):
     @param list: The list of bytes to represent.
     @rtype: L{str}
     """
-    return "[%s]" % (", ".join([_nicebytes(b) for b in list]),)
+    return "[{}]".format(", ".join([_nicebytes(b) for b in list]))
 
 
 def randomSource():
@@ -260,13 +260,13 @@ EXT_QUERIES = {
     ALL_RECORDS: "ALL_RECORDS",
 }
 
-REV_TYPES = dict([(v, k) for (k, v) in chain(QUERY_TYPES.items(), EXT_QUERIES.items())])
+REV_TYPES = {v: k for (k, v) in chain(QUERY_TYPES.items(), EXT_QUERIES.items())}
 
 IN, CS, CH, HS = range(1, 5)
 ANY = 255
 
 QUERY_CLASSES = {IN: "IN", CS: "CS", CH: "CH", HS: "HS", ANY: "ANY"}
-REV_CLASSES = dict([(v, k) for (k, v) in QUERY_CLASSES.items()])
+REV_CLASSES = {v: k for (k, v) in QUERY_CLASSES.items()}
 
 
 # Opcodes
@@ -478,7 +478,7 @@ class IEncodableRecord(IEncodable, IRecord):
 class Charstr:
     def __init__(self, string=b""):
         if not isinstance(string, bytes):
-            raise ValueError("%r is not a byte string" % (string,))
+            raise ValueError("{!r} is not a byte string".format(string))
         self.string = string
 
     def encode(self, strio, compDict=None):
@@ -683,10 +683,10 @@ class Query:
             self.type, EXT_QUERIES.get(self.type, "UNKNOWN (%d)" % self.type)
         )
         c = QUERY_CLASSES.get(self.cls, "UNKNOWN (%d)" % self.cls)
-        return "<Query %s %s %s>" % (self.name, t, c)
+        return "<Query {} {} {}>".format(self.name, t, c)
 
     def __repr__(self) -> str:
-        return "Query(%r, %r, %r)" % (self.name.name, self.type, self.cls)
+        return "Query({!r}, {!r}, {!r})".format(self.name.name, self.type, self.cls)
 
 
 @implementer(IEncodable)
@@ -741,7 +741,7 @@ class _OPTHeader(tputil.FancyStrMixin, tputil.FancyEqMixin):
     ):
         """
         @type udpPayloadSize: L{int}
-        @param payload: The number of octets of the largest UDP
+        @param udpPayloadSize: The number of octets of the largest UDP
             payload that can be reassembled and delivered in the
             requestor's network stack.
 
@@ -1243,7 +1243,7 @@ class Record_A(tputil.FancyEqMixin):
         return hash(self.address)
 
     def __str__(self) -> str:
-        return "<A address=%s ttl=%s>" % (self.dottedQuad(), self.ttl)
+        return "<A address={} ttl={}>".format(self.dottedQuad(), self.ttl)
 
     __repr__ = __str__
 
@@ -2360,7 +2360,7 @@ def _getDisplayableArguments(obj, alwaysShow, fieldNames):
         defaultValue = signature.parameters[name].default
         fieldValue = getattr(obj, name, defaultValue)
         if (name in alwaysShow) or (fieldValue != defaultValue):
-            displayableArgs.append(" %s=%r" % (name, fieldValue))
+            displayableArgs.append(" {}={!r}".format(name, fieldValue))
 
     return displayableArgs
 
@@ -2405,12 +2405,12 @@ def _compactRepr(
     out = ["<", obj.__class__.__name__] + displayableArgs
 
     if setFlags:
-        out.append(" flags=%s" % (",".join(setFlags),))
+        out.append(" flags={}".format(",".join(setFlags)))
 
     for name in sectionNames:
         section = getattr(obj, name, [])
         if section:
-            out.append(" %s=%r" % (name, section))
+            out.append(" {}={!r}".format(name, section))
 
     out.append(">")
 

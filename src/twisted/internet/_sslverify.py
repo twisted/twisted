@@ -327,7 +327,9 @@ class DistinguishedName(dict):
 
     def __setattr__(self, attr, value):
         if attr not in _x509names:
-            raise AttributeError("%s is not a valid OpenSSL X509 name field" % (attr,))
+            raise AttributeError(
+                "{} is not a valid OpenSSL X509 name field".format(attr)
+            )
         realAttr = _x509names[attr]
         if not isinstance(value, bytes):
             value = value.encode("ascii")
@@ -408,15 +410,21 @@ def _handleattrhelper(Class, transport, methodName):
     and null certificates and raises the appropriate exception or returns the
     appropriate certificate object.
     """
-    method = getattr(transport.getHandle(), "get_%s_certificate" % (methodName,), None)
+    method = getattr(
+        transport.getHandle(), "get_{}_certificate".format(methodName), None
+    )
     if method is None:
         raise CertificateError(
-            "non-TLS transport %r did not have %s certificate" % (transport, methodName)
+            "non-TLS transport {!r} did not have {} certificate".format(
+                transport, methodName
+            )
         )
     cert = method()
     if cert is None:
         raise CertificateError(
-            "TLS transport %r did not have %s certificate" % (transport, methodName)
+            "TLS transport {!r} did not have {} certificate".format(
+                transport, methodName
+            )
         )
     return Class(cert)
 
@@ -427,7 +435,7 @@ class Certificate(CertBase):
     """
 
     def __repr__(self) -> str:
-        return "<%s Subject=%s Issuer=%s>" % (
+        return "<{} Subject={} Issuer={}>".format(
             self.__class__.__name__,
             self.getSubject().commonName,
             self.getIssuer().commonName,
@@ -477,7 +485,7 @@ class Certificate(CertBase):
 
         @rtype: C{Class}
 
-        @raise: L{CertificateError}, if the given transport does not have a peer
+        @raise CertificateError: if the given transport does not have a peer
             certificate.
         """
         return _handleattrhelper(Class, transport, "peer")
@@ -491,7 +499,7 @@ class Certificate(CertBase):
 
         @rtype: C{Class}
 
-        @raise: L{CertificateError}, if the given transport does not have a host
+        @raise CertificateError: if the given transport does not have a host
             certificate.
         """
         return _handleattrhelper(Class, transport, "host")
@@ -576,7 +584,7 @@ class CertificateRequest(CertBase):
         dn._copyFrom(req.get_subject())
         if not req.verify(req.get_pubkey()):
             raise VerifyError(
-                "Can't verify that request for %r is self-signed." % (dn,)
+                "Can't verify that request for {!r} is self-signed.".format(dn)
             )
         return Class(req)
 
@@ -729,7 +737,7 @@ class PublicKey:
         return self.keyHash() == otherKey.keyHash()
 
     def __repr__(self) -> str:
-        return "<%s %s>" % (self.__class__.__name__, self.keyHash())
+        return "<{} {}>".format(self.__class__.__name__, self.keyHash())
 
     def keyHash(self):
         """
@@ -753,7 +761,7 @@ class PublicKey:
         return h.hexdigest()
 
     def inspect(self):
-        return "Public Key with Hash: %s" % (self.keyHash(),)
+        return "Public Key with Hash: {}".format(self.keyHash())
 
 
 class KeyPair(PublicKey):
@@ -835,7 +843,9 @@ class KeyPair(PublicKey):
         def verified(value):
             if not value:
                 raise VerifyError(
-                    "DN callback %r rejected request DN %r" % (verifyDNCallback, dn)
+                    "DN callback {!r} rejected request DN {!r}".format(
+                        verifyDNCallback, dn
+                    )
                 )
             return self.signRequestObject(
                 issuerDistinguishedName,
@@ -1177,7 +1187,12 @@ class ClientTLSOptions:
 
 
 def optionsForClientTLS(
-    hostname, trustRoot=None, clientCertificate=None, acceptableProtocols=None, **kw
+    hostname,
+    trustRoot=None,
+    clientCertificate=None,
+    acceptableProtocols=None,
+    *,
+    extraCertificateOptions=None
 ):
     """
     Create a L{client connection creator <IOpenSSLClientConnectionCreator>} for
@@ -1218,28 +1233,19 @@ def optionsForClientTLS(
         the list are preferred over those later in the list.
     @type acceptableProtocols: L{list} of L{bytes}
 
-    @param extraCertificateOptions: keyword-only argument; this is a dictionary
-        of additional keyword arguments to be presented to
-        L{CertificateOptions}. Please avoid using this unless you absolutely
-        need to; any time you need to pass an option here that is a bug in this
-        interface.
+    @param extraCertificateOptions: A dictionary of additional keyword arguments
+        to be presented to L{CertificateOptions}. Please avoid using this unless
+        you absolutely need to; any time you need to pass an option here that is
+        a bug in this interface.
     @type extraCertificateOptions: L{dict}
-
-    @param kw: (Backwards compatibility hack to allow keyword-only arguments on
-        Python 2. Please ignore; arbitrary keyword arguments will be errors.)
-    @type kw: L{dict}
 
     @return: A client connection creator.
     @rtype: L{IOpenSSLClientConnectionCreator}
     """
-    extraCertificateOptions = kw.pop("extraCertificateOptions", None) or {}
+    if extraCertificateOptions is None:
+        extraCertificateOptions = {}
     if trustRoot is None:
         trustRoot = platformTrust()
-    if kw:
-        raise TypeError(
-            "optionsForClientTLS() got an unexpected keyword argument"
-            " '{arg}'".format(arg=kw.popitem()[0])
-        )
     if not isinstance(hostname, str):
         raise TypeError(
             "optionsForClientTLS requires text for host names, not "
@@ -1494,10 +1500,8 @@ class OpenSSLCertificateOptions:
             if raiseMinimumTo:
                 if lowerMaximumSecurityTo and raiseMinimumTo > lowerMaximumSecurityTo:
                     raise ValueError(
-                        (
-                            "raiseMinimumTo needs to be lower than "
-                            "lowerMaximumSecurityTo"
-                        )
+                        "raiseMinimumTo needs to be lower than "
+                        "lowerMaximumSecurityTo"
                     )
 
                 if raiseMinimumTo > self._defaultMinimumTLSVersion:
@@ -1519,10 +1523,8 @@ class OpenSSLCertificateOptions:
                 and insecurelyLowerMinimumTo > lowerMaximumSecurityTo
             ):
                 raise ValueError(
-                    (
-                        "insecurelyLowerMinimumTo needs to be lower than "
-                        "lowerMaximumSecurityTo"
-                    )
+                    "insecurelyLowerMinimumTo needs to be lower than "
+                    "lowerMaximumSecurityTo"
                 )
 
             excludedVersions = _getExcludedTLSProtocols(

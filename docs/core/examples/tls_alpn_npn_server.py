@@ -33,7 +33,6 @@ To test this, use OpenSSL's s_client command, with either or both of the
 Alternatively, use the tls_alpn_npn_client.py script found in the examples
 directory.
 """
-from __future__ import print_function
 
 from OpenSSL import crypto
 

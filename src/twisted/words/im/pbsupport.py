@@ -101,7 +101,7 @@ class TwistedWordsClient(pb.Referenceable, basesupport.AbstractClientMixin):
     """
 
     def __init__(self, acct, serviceName, perspectiveName, chatui, _logonDeferred=None):
-        self.accountName = "%s (%s:%s)" % (
+        self.accountName = "{} ({}:{})".format(
             acct.accountName,
             serviceName,
             perspectiveName,

@@ -142,7 +142,7 @@ class XMLRPC(resource.Resource):
                 request.content.read(), use_datetime=self.useDateTime
             )
         except Exception as e:
-            f = Fault(self.FAILURE, "Can't deserialize input: %s" % (e,))
+            f = Fault(self.FAILURE, "Can't deserialize input: {}".format(e))
             self._cbRender(f, request)
         else:
             try:
@@ -177,7 +177,7 @@ class XMLRPC(resource.Resource):
                     result, methodresponse=True, allow_none=self.allowNone
                 )
             except Exception as e:
-                f = Fault(self.FAILURE, "Can't serialize output: %s" % (e,))
+                f = Fault(self.FAILURE, "Can't serialize output: {}".format(e))
                 content = xmlrpclib.dumps(
                     f, methodresponse=True, allow_none=self.allowNone
                 )
@@ -293,7 +293,7 @@ class XMLRPCIntrospection(XMLRPC):
         method = self._xmlrpc_parent.lookupProcedure(method)
         return getattr(method, "help", None) or getattr(method, "__doc__", None) or ""
 
-    xmlrpc_methodHelp.signature = [["string", "string"]]  # type: ignore[attr-defined] # noqa
+    xmlrpc_methodHelp.signature = [["string", "string"]]  # type: ignore[attr-defined]
 
     def xmlrpc_methodSignature(self, method):
         """
@@ -317,8 +317,8 @@ def addIntrospection(xmlrpc):
     """
     Add Introspection support to an XMLRPC server.
 
-    @param parent: the XMLRPC server to add Introspection support to.
-    @type parent: L{XMLRPC}
+    @param xmlrpc: the XMLRPC server to add Introspection support to.
+    @type xmlrpc: L{XMLRPC}
     """
     xmlrpc.putSubHandler("system", XMLRPCIntrospection(xmlrpc))
 

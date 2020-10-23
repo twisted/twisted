@@ -233,7 +233,7 @@ class Ephemeral:
 
             if getattr(gc, "get_referrers", None):
                 for r in gc.get_referrers(self):
-                    log.msg(" referred to by %s" % (r,))
+                    log.msg(" referred to by {}".format(r))
         return None
 
     def __setstate__(self, state):
@@ -386,5 +386,7 @@ class Versioned:
                     method(self)
                 else:
                     log.msg(
-                        "Warning: cannot upgrade %s to version %s" % (base, persistVers)
+                        "Warning: cannot upgrade {} to version {}".format(
+                            base, persistVers
+                        )
                     )

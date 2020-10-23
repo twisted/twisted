@@ -96,8 +96,8 @@ class _InstanceMethod(NotKnown):
     def __call__(self, *args, **kw):
         import traceback
 
-        log.msg("instance method %s.%s" % (reflect.qual(self.my_class), self.name))
-        log.msg("being called with %r %r" % (args, kw))
+        log.msg("instance method {}.{}".format(reflect.qual(self.my_class), self.name))
+        log.msg("being called with {!r} {!r}".format(args, kw))
         traceback.print_stack(file=log.logfile)
         assert 0
 
@@ -143,7 +143,9 @@ class _Defer(Deferred, NotKnown):
     def __setitem__(self, n, obj):
         if self.wasset:
             raise RuntimeError(
-                "setitem should only be called once, setting %r to %r" % (n, obj)
+                "setitem should only be called once, setting {!r} to {!r}".format(
+                    n, obj
+                )
             )
         else:
             self.wasset = 1

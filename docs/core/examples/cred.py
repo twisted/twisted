@@ -2,8 +2,6 @@
 # See LICENSE for details.
 
 
-from __future__ import print_function
-
 import sys
 from zope.interface import implementer, Interface
 

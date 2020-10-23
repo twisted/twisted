@@ -166,11 +166,11 @@ class _SocketCloser:
                     socket.SOL_SOCKET, socket.SO_LINGER, struct.pack("ii", 1, 0)
                 )
 
-        except socket.error:
+        except OSError:
             pass
         try:
             skt.close()
-        except socket.error:
+        except OSError:
             pass
 
 
@@ -237,7 +237,7 @@ class Connection(
         """
         try:
             data = self.socket.recv(self.bufferSize)
-        except socket.error as se:
+        except OSError as se:
             if se.args[0] == EWOULDBLOCK:
                 return
             else:
@@ -275,7 +275,7 @@ class Connection(
 
         try:
             return untilConcludes(self.socket.send, limitedData)
-        except socket.error as se:
+        except OSError as se:
             if se.args[0] in (EWOULDBLOCK, ENOBUFS):
                 return 0
             else:
@@ -284,7 +284,7 @@ class Connection(
     def _closeWriteConnection(self):
         try:
             self.socket.shutdown(1)
-        except socket.error:
+        except OSError:
             pass
         p = IHalfCloseableProtocol(self.protocol, None)
         if p:
@@ -584,7 +584,7 @@ class BaseClient(_BaseBaseClient, _TLSClientMixin, Connection):
         # cleaned up some day, though.
         try:
             connectResult = self.socket.connect_ex(self.realAddress)
-        except socket.error as se:
+        except OSError as se:
             connectResult = se.args[0]
         if connectResult:
             if connectResult == EISCONN:
@@ -718,7 +718,7 @@ class _BaseTCPClient:
             self._requiresResolution = True
         try:
             skt = self.createInternetSocket()
-        except socket.error as se:
+        except OSError as se:
             err = error.ConnectBindError(se.args[0], se.args[1])
             whenDone = None
         if whenDone and bindAddress is not None:
@@ -728,7 +728,7 @@ class _BaseTCPClient:
                 else:
                     bindinfo = bindAddress
                 skt.bind(bindinfo)
-            except socket.error as se:
+            except OSError as se:
                 err = error.ConnectBindError(se.args[0], se.args[1])
                 whenDone = None
         self._finishInit(whenDone, skt, err, reactor)
@@ -750,7 +750,7 @@ class _BaseTCPClient:
         return self._addressType("TCP", *self.realAddress)
 
     def __repr__(self) -> str:
-        s = "<%s to %s at %x>" % (self.__class__, self.addr, id(self))
+        s = "<{} to {} at {:x}>".format(self.__class__, self.addr, id(self))
         return s
 
 
@@ -798,9 +798,9 @@ class Server(_TLSServerMixin, Connection):
         self.hostname = client[0]
 
         logPrefix = self._getLogPrefix(self.protocol)
-        self.logstr = "%s,%s,%s" % (logPrefix, sessionno, self.hostname)
+        self.logstr = "{},{},{}".format(logPrefix, sessionno, self.hostname)
         if self.server is not None:
-            self.repstr = "<%s #%s on %s>" % (
+            self.repstr = "<{} #{} on {}>".format(
                 self.protocol.__class__.__name__,
                 self.sessionno,
                 self.server._realPortNumber,
@@ -847,7 +847,7 @@ class Server(_TLSServerMixin, Connection):
             return
 
         self = cls(skt, protocol, addr, None, addr[1], reactor)
-        self.repstr = "<%s #%s on %s>" % (
+        self.repstr = "<{} #{} on {}>".format(
             self.protocol.__class__.__name__,
             self.sessionno,
             localPort,
@@ -913,8 +913,8 @@ class _IFileDescriptorReservation(Interface):
         because of C{EMFILE}, internal state is reset so that another
         reservation attempt can be made.
 
-        @raises: Any exception except an L{OSError} or L{IOError}
-            whose errno is L{EMFILE}.
+        @raises Exception: Any exception except an L{OSError} whose
+            errno is L{EMFILE}.
         """
 
     def __enter__():
@@ -968,7 +968,7 @@ class _FileDescriptorReservation:
         if self._fileDescriptor is None:
             try:
                 fileDescriptor = self._fileFactory()
-            except (IOError, OSError) as e:
+            except OSError as e:
                 if e.errno == EMFILE:
                     self._log.failure(
                         "Could not reserve EMFILE recovery file descriptor."
@@ -1064,7 +1064,7 @@ class _NullFileDescriptorReservation:
 if platformType == "win32":
     _reservedFD = _NullFileDescriptorReservation()
 else:
-    _reservedFD = _FileDescriptorReservation(lambda: open(os.devnull))  # type: ignore[assignment] # noqa
+    _reservedFD = _FileDescriptorReservation(lambda: open(os.devnull))  # type: ignore[assignment]
 
 
 # Linux and other UNIX-like operating systems return EMFILE when a
@@ -1154,7 +1154,7 @@ def _accept(logger, accepts, listener, reservedFD):
     for _ in accepts:
         try:
             client, address = listener.accept()
-        except socket.error as e:
+        except OSError as e:
             if e.args[0] in (EWOULDBLOCK, EAGAIN):
                 # No more clients.
                 return
@@ -1292,13 +1292,13 @@ class Port(base.BasePort, _SocketCloser):
 
     def __repr__(self) -> str:
         if self._realPortNumber is not None:
-            return "<%s of %s on %s>" % (
+            return "<{} of {} on {}>".format(
                 self.__class__,
                 self.factory.__class__,
                 self._realPortNumber,
             )
         else:
-            return "<%s of %s (not listening)>" % (
+            return "<{} of {} (not listening)>".format(
                 self.__class__,
                 self.factory.__class__,
             )
@@ -1325,7 +1325,7 @@ class Port(base.BasePort, _SocketCloser):
                 else:
                     addr = (self.interface, self.port)
                 skt.bind(addr)
-            except socket.error as le:
+            except OSError as le:
                 raise CannotListenError(self.interface, self.port, le)
             skt.listen(self.backlog)
         else:
@@ -1442,7 +1442,7 @@ class Port(base.BasePort, _SocketCloser):
         """
         Log message for closing port
         """
-        log.msg("(%s Port %s Closed)" % (self._type, self._realPortNumber))
+        log.msg("({} Port {} Closed)".format(self._type, self._realPortNumber))
 
     def connectionLost(self, reason):
         """
@@ -1492,8 +1492,8 @@ class Connector(base.BaseConnector):
         if isinstance(port, str):
             try:
                 port = socket.getservbyname(port, "tcp")
-            except socket.error as e:
-                raise error.ServiceNameUnknownError(string="%s (%r)" % (e, port))
+            except OSError as e:
+                raise error.ServiceNameUnknownError(string="{} ({!r})".format(e, port))
         self.host, self.port = host, port
         if abstract.isIPv6Address(host):
             self._addressType = address.IPv6Address

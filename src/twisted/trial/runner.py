@@ -101,7 +101,7 @@ def filenameToModule(fn):
     @raise ValueError: If C{fn} does not exist.
     """
     if not os.path.exists(fn):
-        raise ValueError("%r doesn't exist" % (fn,))
+        raise ValueError("{!r} doesn't exist".format(fn))
     try:
         ret = reflect.namedAny(reflect.filenameToModuleName(fn))
     except (ValueError, AttributeError):
@@ -145,7 +145,7 @@ def _resolveDirectory(fn):
         if initFile:
             fn = os.path.join(fn, initFile)
         else:
-            raise ValueError("%r is not a package directory" % (fn,))
+            raise ValueError("{!r} is not a package directory".format(fn))
     return fn
 
 
@@ -203,7 +203,7 @@ class LoggedSuite(TestSuite):
         """
         observer = _logObserver
         observer._add()
-        super(LoggedSuite, self).run(result)
+        super().run(result)
         observer._remove()
         for error in observer.getErrors():
             result.addError(TestHolder(NOT_IN_TEST), error)
@@ -225,7 +225,7 @@ class TrialSuite(TestSuite):
                 newTests.append(test)
             tests = newTests
         suite = LoggedSuite(tests)
-        super(TrialSuite, self).__init__([suite])
+        super().__init__([suite])
 
     def _bail(self):
         from twisted.internet import reactor
@@ -331,11 +331,11 @@ class ErrorHolder(TestHolder):
         @param error: The error to be added to the result. Can be an `exc_info`
         tuple or a L{twisted.python.failure.Failure}.
         """
-        super(ErrorHolder, self).__init__(description)
+        super().__init__(description)
         self.error = util.excInfoOrFailureToExcInfo(error)
 
     def __repr__(self) -> str:
-        return "<ErrorHolder description=%r error=%r>" % (
+        return "<ErrorHolder description={!r} error={!r}>".format(
             self.description,
             self.error[1],
         )
@@ -401,7 +401,7 @@ class TestLoader:
         """
         Find and load tests, given C{name}.
 
-        @param name: The qualified name of the thing to load.
+        @param _name: The qualified name of the thing to load.
         @param recurse: A boolean. If True, inspect modules within packages
             within the given package (and so on), otherwise, only inspect
             modules in the package itself.
@@ -501,7 +501,7 @@ class TestLoader:
         ## a custom suite.
         ## OR, should I add another method
         if not isinstance(module, types.ModuleType):
-            raise TypeError("%r is not a module" % (module,))
+            raise TypeError("{!r} is not a module".format(module))
         if hasattr(module, "testSuite"):
             return module.testSuite()
         elif hasattr(module, "test_suite"):
@@ -525,9 +525,9 @@ class TestLoader:
         @param klass: The class to load tests from.
         """
         if not isinstance(klass, type):
-            raise TypeError("%r is not a class" % (klass,))
+            raise TypeError("{!r} is not a class".format(klass))
         if not isTestCase(klass):
-            raise ValueError("%r is not a test case" % (klass,))
+            raise ValueError("{!r} is not a test case".format(klass))
         names = self.getTestCaseNames(klass)
         tests = self.sort(
             [self._makeCase(klass, self.methodPrefix + name) for name in names]
@@ -564,13 +564,13 @@ class TestLoader:
         within the given package (and so on), otherwise, only inspect modules
         in the package itself.
 
-        @raise: TypeError if 'package' is not a package.
+        @raise TypeError: If C{package} is not a package.
 
         @return: a TestSuite created with my suiteFactory, containing all the
         tests.
         """
         if not isPackage(package):
-            raise TypeError("%r is not a package" % (package,))
+            raise TypeError("{!r} is not a package".format(package))
         pkgobj = modules.getModule(package.__name__)
         if recurse:
             discovery = pkgobj.walkModules()
@@ -666,7 +666,7 @@ class TestLoader:
             # We've found a test suite.
             return obj
         else:
-            raise TypeError("don't know how to make test from: %s" % (obj,))
+            raise TypeError("don't know how to make test from: {}".format(obj))
 
     def loadByName(self, name, recurse=False):
         """

@@ -78,7 +78,7 @@ class _MaildirNameGenerator:
         t = self._clock.seconds()
         seconds = str(int(t))
         microseconds = "%07d" % (int((t - int(t)) * 10e6),)
-        return "%s.M%sP%sQ%s.%s" % (seconds, microseconds, self.p, self.n, self.s)
+        return "{}.M{}P{}Q{}.{}".format(seconds, microseconds, self.p, self.n, self.s)
 
 
 _generateMaildirName = _MaildirNameGenerator(reactor).generate
@@ -256,7 +256,7 @@ class AbstractMaildirDomain:
         filename = os.path.join(dir, "tmp", fname)
         fp = open(filename, "w")
         return MaildirMessage(
-            "%s@%s" % (name, domain), fp, filename, os.path.join(dir, "new", fname)
+            "{}@{}".format(name, domain), fp, filename, os.path.join(dir, "new", fname)
         )
 
     def willRelay(self, user, protocol):
@@ -689,10 +689,8 @@ class StringListMailbox:
         """
         Return an in-memory file-like object with the contents of a message.
 
-        @type i: L{int}
         @param i: The 0-based index of a message.
 
-        @rtype: L{IO[bytes]}
         @return: An in-memory file-like object containing the message.
 
         @raise IndexError: When the index does not correspond to a message in

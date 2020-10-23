@@ -12,7 +12,7 @@ class LoopbackRelay(loopback.LoopbackRelay):
     clearCall = None
 
     def logPrefix(self):
-        return "LoopbackRelay(%r)" % (self.target.__class__.__name__,)
+        return "LoopbackRelay({!r})".format(self.target.__class__.__name__)
 
     def write(self, data):
         loopback.LoopbackRelay.write(self, data)

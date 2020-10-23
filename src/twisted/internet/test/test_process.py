@@ -301,7 +301,7 @@ class ProcessTestsBuilderBase(ReactorBuilder):
                 msg("childConnectionLost(%d)" % (fd,))
 
             def processExited(self, reason):
-                msg("processExited(%r)" % (reason,))
+                msg("processExited({!r})".format(reason))
                 # Protect the Deferred from the failure so that it follows
                 # the callback chain.  This doesn't use the errback chain
                 # because it wants to make sure reason is a Failure.  An
@@ -310,7 +310,7 @@ class ProcessTestsBuilderBase(ReactorBuilder):
                 exited.callback([reason])
 
             def processEnded(self, reason):
-                msg("processEnded(%r)" % (reason,))
+                msg("processEnded({!r})".format(reason))
 
         reactor = self.buildReactor()
         reactor.callWhenRunning(
@@ -395,7 +395,7 @@ class ProcessTestsBuilderBase(ReactorBuilder):
         source = networkString(
             """
 import sys
-sys.path.insert(0, '{0}')
+sys.path.insert(0, '{}')
 from twisted.internet import process
 sys.stdout.write(repr(process._listOpenFDs()))
 sys.stdout.flush()""".format(
@@ -495,7 +495,7 @@ sys.stdout.flush()""".format(
             reactor.spawnProcess(TracebackCatcher(), pyExe, [pyExe, b"-c", b""])
 
         self.runReactor(reactor, timeout=30)
-        self.assertIn("\N{SNOWMAN}".encode("utf-8"), output.getvalue())
+        self.assertIn("\N{SNOWMAN}".encode(), output.getvalue())
 
     def test_timelyProcessExited(self):
         """
@@ -534,7 +534,7 @@ sys.stdout.flush()""".format(
 
         @param which: Either C{b"uid"} or C{b"gid"}.
         """
-        program = ["import os", "raise SystemExit(os.get%s() != 1)" % (which,)]
+        program = ["import os", "raise SystemExit(os.get{}() != 1)".format(which)]
 
         container = []
 
@@ -700,10 +700,10 @@ class ProcessTestsBuilder(ProcessTestsBuilderBase):
                 lost.append(childFD)
 
             def processExited(self, reason):
-                msg("processExited(%r)" % (reason,))
+                msg("processExited({!r})".format(reason))
 
             def processEnded(self, reason):
-                msg("processEnded(%r)" % (reason,))
+                msg("processEnded({!r})".format(reason))
                 ended.callback([reason])
 
         reactor = self.buildReactor()
@@ -719,7 +719,7 @@ class ProcessTestsBuilder(ProcessTestsBuilderBase):
         def cbEnded(args):
             (failure,) = args
             failure.trap(ProcessDone)
-            self.assertEqual(set(lost), set([0, 1, 2]))
+            self.assertEqual(set(lost), {0, 1, 2})
 
         ended.addCallback(cbEnded)
 
@@ -752,7 +752,7 @@ class ProcessTestsBuilder(ProcessTestsBuilderBase):
                     allLost.callback(None)
 
             def processExited(self, reason):
-                msg("processExited(%r)" % (reason,))
+                msg("processExited({!r})".format(reason))
                 # See test_processExitedWithSignal
                 exited.callback([reason])
                 self.transport.loseConnection()
@@ -777,14 +777,14 @@ class ProcessTestsBuilder(ProcessTestsBuilderBase):
         def cbExited(args):
             (failure,) = args
             failure.trap(ProcessDone)
-            msg("cbExited; lost = %s" % (lost,))
+            msg("cbExited; lost = {}".format(lost))
             self.assertEqual(lost, [])
             return allLost
 
         exited.addCallback(cbExited)
 
         def cbAllLost(ignored):
-            self.assertEqual(set(lost), set([0, 1, 2]))
+            self.assertEqual(set(lost), {0, 1, 2})
 
         exited.addCallback(cbAllLost)
 
@@ -813,9 +813,9 @@ class ProcessTestsBuilder(ProcessTestsBuilderBase):
 
         scriptFile = self.makeSourceFile(
             [
-                "#!%s" % (pyExe.decode("ascii"),),
+                "#!{}".format(pyExe.decode("ascii")),
                 "import sys",
-                "sys.stdout.write('%s')" % (shebangOutput.decode("ascii"),),
+                "sys.stdout.write('{}')".format(shebangOutput.decode("ascii")),
                 "sys.stdout.flush()",
             ]
         )

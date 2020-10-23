@@ -59,7 +59,7 @@ from ._util import (
 
 
 class _IDeprecatedHTTPChannelToRequestInterfaceProxy(
-    proxyForInterface(  # type: ignore[misc]  # noqa
+    proxyForInterface(  # type: ignore[misc]
         http._IDeprecatedHTTPChannelToRequestInterface
     )
 ):
@@ -1655,7 +1655,7 @@ class ParsingTests(unittest.TestCase):
         """
         requestLines = [b"GET / HTTP/1.0"]
         for i in range(http.HTTPChannel.maxHeaders + 2):
-            requestLines.append(networkString("%s: foo" % (i,)))
+            requestLines.append(networkString("{}: foo".format(i)))
         requestLines.extend([b"", b""])
 
         self.assertRequestRejected(requestLines)
@@ -3668,7 +3668,7 @@ def sub(keys, d):
         corresponding values in C{d}.
     @rtype: L{dict}
     """
-    return dict([(k, d[k]) for k in keys])
+    return {k: d[k] for k in keys}
 
 
 class DeprecatedRequestAttributesTests(unittest.TestCase):

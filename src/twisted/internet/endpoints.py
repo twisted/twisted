@@ -1715,7 +1715,7 @@ def _matchPluginToPrefix(plugins, endpointType):
     for plugin in plugins:
         if _matchingString(plugin.prefix.lower(), endpointType) == endpointType:
             return plugin
-    raise ValueError("Unknown endpoint type: '%s'" % (endpointType,))
+    raise ValueError("Unknown endpoint type: '{}'".format(endpointType))
 
 
 def serverFromString(reactor, description):
@@ -1880,7 +1880,7 @@ def _loadCAsFromDir(directoryPath):
             continue
         try:
             data = child.getContent()
-        except IOError:
+        except OSError:
             # Permission denied, corrupt disk, we don't care.
             continue
         try:
@@ -1985,15 +1985,14 @@ def _parseClientSSL(*args, **kwargs):
 
     Valid positional arguments to this function are host and port.
 
-    @param caCertsDir: The one parameter which is not part of
+    @keyword caCertsDir: The one parameter which is not part of
         L{IReactorSSL.connectSSL}'s signature, this is a path name used to
         construct a list of certificate authority certificates.  The directory
         will be scanned for files ending in C{.pem}, all of which will be
         considered valid certificate authorities for this connection.
-
     @type caCertsDir: L{str}
 
-    @param hostname: The hostname to use for validating the server's
+    @keyword hostname: The hostname to use for validating the server's
         certificate.
     @type hostname: L{unicode}
 

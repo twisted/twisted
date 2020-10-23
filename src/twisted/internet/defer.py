@@ -732,12 +732,12 @@ class Deferred:
         result = getattr(self, "result", _NO_RESULT)
         myID = id(self)
         if self._chainedTo is not None:
-            result = " waiting on Deferred at 0x%x" % (id(self._chainedTo),)
+            result = " waiting on Deferred at 0x{:x}".format(id(self._chainedTo))
         elif result is _NO_RESULT:
             result = ""
         else:
-            result = " current result: %r" % (result,)
-        return "<%s at 0x%x%s>" % (cname, myID, result)
+            result = " current result: {!r}".format(result)
+        return "<{} at 0x{:x}{}>".format(cname, myID, result)
 
     __repr__ = __str__
 
@@ -768,7 +768,7 @@ class Deferred:
 
     def asFuture(self, loop):
         """
-        Adapt a L{Deferred} into a L{asyncio.Future} which is bound to C{loop}.
+        Adapt this L{Deferred} into a L{asyncio.Future} which is bound to C{loop}.
 
         @note: converting a L{Deferred} to an L{asyncio.Future} consumes both
             its result and its errors, so this method implicitly converts
@@ -779,9 +779,6 @@ class Deferred:
 
         @param loop: The asyncio event loop to bind the L{asyncio.Future} to.
         @type loop: L{asyncio.AbstractEventLoop} or similar
-
-        @param deferred: The Deferred to adapt.
-        @type deferred: L{Deferred}
 
         @return: A Future which will fire when the Deferred fires.
         @rtype: L{asyncio.Future}
@@ -903,7 +900,7 @@ class Deferred:
         @rtype: L{Deferred}
         """
         if not iscoroutine(coro) and not isinstance(coro, types.GeneratorType):
-            raise NotACoroutineError("%r is not a coroutine" % (coro,))
+            raise NotACoroutineError("{!r} is not a coroutine".format(coro))
 
         return _cancellableInlineCallbacks(coro)
 
@@ -920,7 +917,9 @@ def _cancelledToTimedOutError(value, timeout):
     @type timeout: L{int}
 
     @rtype: C{value}
-    @raise: L{TimeoutError}
+    @raise TimeoutError: If C{value} is a L{Failure} that is a L{CancelledError}.
+    @raise Exception: If C{value} is a L{Failure} that is not a L{CancelledError},
+        it is re-raised.
 
     @since: 16.5
     """
@@ -953,7 +952,9 @@ def ensureDeferred(coro):
         except NotACoroutineError:
             # It's not a coroutine. Raise an exception, but say that it's also
             # not a Deferred so the error makes sense.
-            raise NotACoroutineError("%r is not a coroutine or a Deferred" % (coro,))
+            raise NotACoroutineError(
+                "{!r} is not a coroutine or a Deferred".format(coro)
+            )
 
 
 class DebugInfo:
@@ -1233,7 +1234,7 @@ class waitForDeferred:
 
         if not isinstance(d, Deferred):
             raise TypeError(
-                "You must give waitForDeferred a Deferred. You gave it %r." % (d,)
+                "You must give waitForDeferred a Deferred. You gave it {!r}.".format(d)
             )
         self.d = d
 

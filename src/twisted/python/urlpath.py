@@ -200,7 +200,7 @@ class URLPath:
 
         @param keepQuery: Whether to keep the query parameters on the returned
             L{URLPath}.
-        @type: keepQuery: L{bool}
+        @type keepQuery: L{bool}
 
         @return: a new L{URLPath}
         """
@@ -215,7 +215,7 @@ class URLPath:
 
         @param keepQuery: Whether to keep the query parameters on the returned
             L{URLPath}.
-        @type: keepQuery: L{bool}
+        @type keepQuery: L{bool}
 
         @return: a new L{URLPath}
         """
@@ -227,7 +227,7 @@ class URLPath:
 
         @param keepQuery: Whether to keep the query parameters on the returned
             L{URLPath}.
-        @type: keepQuery: L{bool}
+        @type keepQuery: L{bool}
 
         @return: a new L{URLPath}
         """
@@ -239,7 +239,7 @@ class URLPath:
 
         @param keepQuery: Whether to keep the query parameters on the returned
             L{URLPath}.
-        @type: keepQuery: L{bool}
+        @type keepQuery: L{bool}
 
         @return: a new L{URLPath}
         """
@@ -269,7 +269,7 @@ class URLPath:
         The L{repr} of a L{URLPath} is an eval-able expression which will
         construct a similar L{URLPath}.
         """
-        return "URLPath(scheme=%r, netloc=%r, path=%r, query=%r, fragment=%r)" % (
+        return "URLPath(scheme={!r}, netloc={!r}, path={!r}, query={!r}, fragment={!r})".format(
             self.scheme,
             self.netloc,
             self.path,

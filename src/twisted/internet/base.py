@@ -263,7 +263,7 @@ class DelayedCall:
                 L.append(
                     ", ".join(
                         [
-                            "%s=%s" % (k, reflect.safe_repr(v))
+                            "{}={}".format(k, reflect.safe_repr(v))
                             for (k, v) in self.kw.items()
                         ]
                     )
@@ -295,7 +295,9 @@ class ThreadedResolver:
         self._runningQueries = {}  # type: Dict[Deferred, Tuple[Deferred, IDelayedCall]]
 
     def _fail(self, name: str, err: str) -> Failure:
-        lookupError = error.DNSLookupError("address %r not found: %s" % (name, err))
+        lookupError = error.DNSLookupError(
+            "address {!r} not found: {}".format(name, err)
+        )
         return Failure(lookupError)
 
     def _cleanup(self, name: str, lookupDeferred: Deferred) -> None:
@@ -355,8 +357,8 @@ class BlockingResolver:
     ) -> Deferred:
         try:
             address = socket.gethostbyname(name)
-        except socket.error:
-            msg = "address %r not found" % (name,)
+        except OSError:
+            msg = "address {!r} not found".format(name)
             err = error.DNSLookupError(msg)
             return defer.fail(err)
         else:
@@ -422,8 +424,8 @@ class _ThreePhaseEvent:
         @param phase: One of C{'before'}, C{'during'}, or C{'after'}.
 
         @param callable: An object to be called when this event is triggered.
-        @param *args: Positional arguments to pass to C{callable}.
-        @param **kwargs: Keyword arguments to pass to C{callable}.
+        @param args: Positional arguments to pass to C{callable}.
+        @param kwargs: Keyword arguments to pass to C{callable}.
 
         @return: An opaque handle which may be passed to L{removeTrigger} to
             reverse the effects of calling this method.
@@ -603,7 +605,7 @@ class ReactorBase(PluggableResolverMixin):
     __name__ = "twisted.internet.reactor"
 
     def __init__(self) -> None:
-        super(ReactorBase, self).__init__()
+        super().__init__()
         self.threadCallQueue = []  # type: List[_ThreadCall]
         self._eventTriggers = {}  # type: Dict[str, _ThreePhaseEvent]
         self._pendingTimedCalls = []  # type: List[DelayedCall]
@@ -727,7 +729,8 @@ class ReactorBase(PluggableResolverMixin):
         """
         Handle a SIGINT interrupt.
 
-        @param args: See handler specification in L{signal.signal}
+        @param number: See handler specification in L{signal.signal}
+        @param frame: See handler specification in L{signal.signal}
         """
         log.msg("Received SIGINT, shutting down.")
         self.callFromThread(self.stop)
@@ -737,7 +740,8 @@ class ReactorBase(PluggableResolverMixin):
         """
         Handle a SIGBREAK interrupt.
 
-        @param args: See handler specification in L{signal.signal}
+        @param number: See handler specification in L{signal.signal}
+        @param frame: See handler specification in L{signal.signal}
         """
         log.msg("Received SIGBREAK, shutting down.")
         self.callFromThread(self.stop)
@@ -747,7 +751,8 @@ class ReactorBase(PluggableResolverMixin):
         """
         Handle a SIGTERM interrupt.
 
-        @param args: See handler specification in L{signal.signal}
+        @param number: See handler specification in L{signal.signal}
+        @param frame: See handler specification in L{signal.signal}
         """
         log.msg("Received SIGTERM, shutting down.")
         self.callFromThread(self.stop)
@@ -1132,7 +1137,7 @@ class ReactorBase(PluggableResolverMixin):
             See
             L{twisted.internet.interfaces.IReactorFromThreads.callFromThread}.
             """
-            assert callable(f), "%s is not callable" % (f,)
+            assert callable(f), "{} is not callable".format(f)
             # lists are thread-safe in CPython, but not in Jython
             # this is probably a bug in Jython, but until fixed this code
             # won't work in Jython.
@@ -1199,7 +1204,7 @@ class ReactorBase(PluggableResolverMixin):
         def callFromThread(
             self, f: Callable[..., Any], *args: object, **kwargs: object
         ) -> None:
-            assert callable(f), "%s is not callable" % (f,)
+            assert callable(f), "{} is not callable".format(f)
             # See comment in the other callFromThread implementation.
             self.threadCallQueue.append((f, args, kwargs))
 
@@ -1302,7 +1307,7 @@ class BaseConnector(ABC):
         )
 
     def __repr__(self) -> str:
-        return "<%s instance at 0x%x %s %s>" % (
+        return "<{} instance at 0x{:x} {} {}>".format(
             reflect.qual(self.__class__),
             id(self),
             self.state,

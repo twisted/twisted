@@ -9,7 +9,6 @@ Select reactor
 
 from time import sleep
 import select
-import socket
 import sys
 from errno import EINTR, EBADF
 
@@ -56,7 +55,7 @@ else:
 
 
 @implementer(IReactorFDSet)
-class SelectReactor(posixbase.PosixReactorBase, _extraBase):  # type: ignore[misc,valid-type]  # noqa
+class SelectReactor(posixbase.PosixReactorBase, _extraBase):  # type: ignore[misc,valid-type]
     """
     A select() based reactor - runs on all POSIX platforms and on Win32.
 
@@ -110,7 +109,7 @@ class SelectReactor(posixbase.PosixReactorBase, _extraBase):  # type: ignore[mis
             log.err()
             self._preenDescriptors()
             return
-        except (select.error, socket.error, IOError) as se:
+        except OSError as se:
             # select(2) encountered an error, perhaps while calling the fileno()
             # method of a socket.  (Python 2.6 socket.error is an IOError
             # subclass, but on Python 2.5 and earlier it is not.)

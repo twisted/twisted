@@ -405,7 +405,7 @@ def toChunk(data):
 
     @returns: a tuple of C{bytes} representing the chunked encoding of data
     """
-    return (networkString("%x" % (len(data),)), b"\r\n", data, b"\r\n")
+    return (networkString("{:x}".format(len(data))), b"\r\n", data, b"\r\n")
 
 
 def fromChunk(data):
@@ -832,7 +832,9 @@ class Request:
             self._log.failure(
                 "",
                 Failure(
-                    RuntimeError("Producer was not unregistered for %s" % (self.uri,))
+                    RuntimeError(
+                        "Producer was not unregistered for {}".format(self.uri)
+                    )
                 ),
             )
             self.unregisterProducer()
@@ -1009,7 +1011,7 @@ class Request:
         @return: A string loosely describing this L{Request} object.
         @rtype: L{str}
         """
-        return "<%s at 0x%x method=%s uri=%s clientproto=%s>" % (
+        return "<{} at 0x{:x} method={} uri={} clientproto={}>".format(
             self.__class__.__name__,
             id(self),
             nativeString(self.method),
@@ -1285,9 +1287,7 @@ class Request:
             U{https://tools.ietf.org/html/draft-west-first-party-cookies-07}
         @type sameSite: L{None}, L{bytes} or L{str}
 
-        @raises: L{DeprecationWarning} if an argument is not L{bytes} or
-            L{str}.
-            L{ValueError} if the value for C{sameSite} is not supported.
+        @raise ValueError: If the value for C{sameSite} is not supported.
         """
 
         def _ensureBytes(val):
@@ -1892,7 +1892,7 @@ class _ChunkedTransferDecoder:
         data = self._buffer + data
         self._buffer = b""
         while data:
-            data = getattr(self, "_dataReceived_%s" % (self.state,))(data)
+            data = getattr(self, "_dataReceived_{}".format(self.state))(data)
 
     def noMoreData(self):
         """
@@ -2654,9 +2654,6 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         As described by HTTP standard we should be patient and accept the
         whole request from the client before sending a polite bad request
         response, even in the case when clients send tons of data.
-
-        @param transport: Transport handling connection to the client.
-        @type transport: L{interfaces.ITransport}
         """
         self.transport.write(b"HTTP/1.1 400 Bad Request\r\n\r\n")
         self.loseConnection()
@@ -2736,7 +2733,7 @@ class _XForwardedForAddress:
         self.host = host
 
 
-class _XForwardedForRequest(proxyForInterface(IRequest, "_request")):  # type: ignore[misc]  # noqa
+class _XForwardedForRequest(proxyForInterface(IRequest, "_request")):  # type: ignore[misc]
     """
     Add a layer on top of another request that only uses the value of an
     X-Forwarded-For header as the result of C{getClientAddress}.
@@ -2796,7 +2793,7 @@ def proxiedLogFormatter(timestamp, request):
     return combinedLogFormatter(timestamp, _XForwardedForRequest(request))
 
 
-class _GenericHTTPChannelProtocol(proxyForInterface(IProtocol, "_channel")):  # type: ignore[misc]  # noqa
+class _GenericHTTPChannelProtocol(proxyForInterface(IProtocol, "_channel")):  # type: ignore[misc]
     """
     A proxy object that wraps one of the HTTP protocol objects, and switches
     between them depending on TLS negotiated protocol.

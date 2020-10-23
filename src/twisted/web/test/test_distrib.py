@@ -144,7 +144,7 @@ class DistribTests(TestCase):
         """
         mainPort, mainAddr = self._setupDistribServer(child)
         agent = client.Agent(reactor)
-        url = "http://%s:%s/child" % (mainAddr.host, mainAddr.port)
+        url = "http://{}:{}/child".format(mainAddr.host, mainAddr.port)
         url = url.encode("ascii")
         d = agent.request(b"GET", url, **kwargs)
         d.addCallback(client.readBody)

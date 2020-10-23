@@ -228,7 +228,7 @@ class _CommandChannel(SSHChannel):
         coreDumped, data = bool(ord(data[0:1])), data[1:]
         errorMessage, data = getNS(data)
         languageTag, data = getNS(data)
-        signalName = "SIG%s" % (nativeString(shortSignalName),)
+        signalName = "SIG{}".format(nativeString(shortSignalName))
         signalID = getattr(signal, signalName, -1)
         self._log.info(
             "Process exited with signal {shortSignalName!r};"
@@ -796,7 +796,7 @@ class _NewConnectionHelper:
 
         @return: A L{KnownHostsFile} instance pointed at the user's personal
             I{known hosts} file.
-        @type: L{KnownHostsFile}
+        @rtype: L{KnownHostsFile}
         """
         return KnownHostsFile.fromPath(FilePath(expanduser(cls._KNOWN_HOSTS)))
 

@@ -140,7 +140,7 @@ class SubcommandAction(usage.Completer):
     def _shellCode(self, optName, shellType):
         if shellType == usage._ZSH:
             return "*::subcmd:->subcmd"
-        raise NotImplementedError("Unknown shellType %r" % (shellType,))
+        raise NotImplementedError("Unknown shellType {!r}".format(shellType))
 
 
 class ZshBuilder:
@@ -384,7 +384,7 @@ class ZshArgumentsGenerator:
 
         @return: L{None}
 
-        @raises: ValueError: if C{Completer} with C{repeat=True} is found and
+        @raise ValueError: If C{Completer} with C{repeat=True} is found and
             is not the last item in the C{extraActions} list.
         """
         for i, action in enumerate(self.extraActions):
@@ -408,7 +408,7 @@ class ZshArgumentsGenerator:
         """
         Ensure that none of the option names given in the metadata are typoed
         @return: L{None}
-        @raise ValueError: Raised if unknown option names have been found.
+        @raise ValueError: If unknown option names have been found.
         """
 
         def err(name):
@@ -518,8 +518,8 @@ class ZshArgumentsGenerator:
             shortField = ""
 
         descr = self.getDescription(longname)
-        descriptionField = descr.replace("[", "\[")
-        descriptionField = descriptionField.replace("]", "\]")
+        descriptionField = descr.replace("[", r"\[")
+        descriptionField = descriptionField.replace("]", r"\]")
         descriptionField = "[%s]" % descriptionField
 
         actionField = self.getAction(longname)
@@ -574,7 +574,7 @@ class ZshArgumentsGenerator:
             return action._shellCode(longname, usage._ZSH)
 
         if longname in self.paramNameToDefinition:
-            return ":%s:_files" % (longname,)
+            return ":{}:_files".format(longname)
         return ""
 
     def getDescription(self, longname):

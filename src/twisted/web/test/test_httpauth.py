@@ -61,7 +61,7 @@ class BasicAuthTestsMixin:
         Override this in a subclass.
         """
         raise NotImplementedError(
-            "%r did not implement makeRequest" % (self.__class__,)
+            "{!r} did not implement makeRequest".format(self.__class__)
         )
 
     def test_interface(self):

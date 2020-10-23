@@ -213,7 +213,7 @@ class StructureAssertingMixin:
                 self.assertEqual(actual, expectation)
             children.remove(pathSegment)
         if children:
-            self.fail("There were extra children in %s: %s" % (root.path, children))
+            self.fail("There were extra children in {}: {}".format(root.path, children))
 
 
 class ProjectTests(ExternalTempdirTestCase):
@@ -449,10 +449,10 @@ class APIBuilderTests(ExternalTempdirTestCase):
         indexPath = outputPath.child("index.html")
 
         self.assertTrue(
-            indexPath.exists(), "API index %r did not exist." % (outputPath.path,)
+            indexPath.exists(), "API index {!r} did not exist.".format(outputPath.path)
         )
         self.assertIn(
-            '<a href="%s">%s</a>' % (projectURL, projectName),
+            '<a href="{}">{}</a>'.format(projectURL, projectName),
             indexPath.getContent(),
             "Project name/location not in file contents.",
         )
@@ -460,7 +460,7 @@ class APIBuilderTests(ExternalTempdirTestCase):
         quuxPath = outputPath.child("quux.html")
         self.assertTrue(
             quuxPath.exists(),
-            "Package documentation file %r did not exist." % (quuxPath.path,),
+            "Package documentation file {!r} did not exist.".format(quuxPath.path),
         )
         self.assertIn(
             docstring,
@@ -468,7 +468,7 @@ class APIBuilderTests(ExternalTempdirTestCase):
             "Docstring not in package documentation file.",
         )
         self.assertIn(
-            '<a href="%s/%s">View Source</a>' % (sourceURL, packageName),
+            '<a href="{}/{}">View Source</a>'.format(sourceURL, packageName),
             quuxPath.getContent(),
         )
         self.assertIn(
@@ -578,7 +578,7 @@ class APIBuilderTests(ExternalTempdirTestCase):
         quuxPath = outputPath.child("quux.html")
         self.assertTrue(
             quuxPath.exists(),
-            "Package documentation file %r did not exist." % (quuxPath.path,),
+            "Package documentation file {!r} did not exist.".format(quuxPath.path),
         )
 
         self.assertIn(
@@ -747,8 +747,7 @@ class SphinxBuilderTests(TestCase):
             C{fileDir}.
         @type fileName: L{str}
 
-        @raise: L{FailTest <twisted.trial.unittest.FailTest>} if
-            C{fileDir.child(fileName)}:
+        @raise FailTest: If C{fileDir.child(fileName)}:
 
                 1. Does not exist.
 

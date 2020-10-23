@@ -194,8 +194,6 @@ has several features:
 """
 
 
-__metaclass__ = type
-
 import datetime
 import decimal
 from functools import partial
@@ -555,20 +553,22 @@ class RemoteAmpError(AmpError):
         # Backslash-escape errorCode. Python 3.5 can do this natively
         # ("backslashescape") but Python 2.7 and Python 3.4 can't.
         errorCodeForMessage = "".join(
-            "\\x%2x" % (c,) if c >= 0x80 else chr(c) for c in errorCode
+            "\\x{:2x}".format(c) if c >= 0x80 else chr(c) for c in errorCode
         )
 
         if othertb:
-            message = "Code<%s>%s: %s\n%s" % (
+            message = "Code<{}>{}: {}\n{}".format(
                 errorCodeForMessage,
                 localwhat,
                 description,
                 othertb,
             )
         else:
-            message = "Code<%s>%s: %s" % (errorCodeForMessage, localwhat, description)
+            message = "Code<{}>{}: {}".format(
+                errorCodeForMessage, localwhat, description
+            )
 
-        super(RemoteAmpError, self).__init__(message)
+        super().__init__(message)
         self.local = local
         self.errorCode = errorCode
         self.description = description
@@ -643,7 +643,7 @@ class AmpBox(dict):
         @raise UnicodeEncodeError: When a native string key cannot be coerced
             to an ASCII byte string (Python 3 only).
         """
-        super(AmpBox, self).__init__(*args, **kw)
+        super().__init__(*args, **kw)
         nonByteNames = [n for n in self if not isinstance(n, bytes)]
         for nonByteName in nonByteNames:
             byteName = nonByteName.encode("ascii")
@@ -671,7 +671,9 @@ class AmpBox(dict):
             if type(k) == str:
                 raise TypeError("Unicode key not allowed: %r" % k)
             if type(v) == str:
-                raise TypeError("Unicode value for key %r not allowed: %r" % (k, v))
+                raise TypeError(
+                    "Unicode value for key {!r} not allowed: {!r}".format(k, v)
+                )
             if len(k) > MAX_KEY_LENGTH:
                 raise TooLong(True, True, k, None)
             if len(v) > MAX_VALUE_LENGTH:
@@ -699,7 +701,7 @@ class AmpBox(dict):
         proto.sendBox(self)
 
     def __repr__(self) -> str:
-        return "AmpBox(%s)" % (dict.__repr__(self),)
+        return "AmpBox({})".format(dict.__repr__(self))
 
 
 # amp.Box => AmpBox
@@ -715,13 +717,13 @@ class QuitBox(AmpBox):
     __slots__ = []  # type: List[str]
 
     def __repr__(self) -> str:
-        return "QuitBox(**%s)" % (super(QuitBox, self).__repr__(),)
+        return "QuitBox(**{})".format(super().__repr__())
 
     def _sendTo(self, proto):
         """
         Immediately call loseConnection after sending.
         """
-        super(QuitBox, self)._sendTo(proto)
+        super()._sendTo(proto)
         proto.transport.loseConnection()
 
 
@@ -740,11 +742,11 @@ class _SwitchBox(AmpBox):
         @param innerProto: the protocol instance to switch to.
         @type innerProto: an IProtocol provider.
         """
-        super(_SwitchBox, self).__init__(**kw)
+        super().__init__(**kw)
         self.innerProto = innerProto
 
     def __repr__(self) -> str:
-        return "_SwitchBox(%r, **%s)" % (
+        return "_SwitchBox({!r}, **{})".format(
             self.innerProto,
             dict.__repr__(self),
         )
@@ -754,7 +756,7 @@ class _SwitchBox(AmpBox):
         Send me; I am the last box on the connection.  All further traffic will be
         over the new protocol.
         """
-        super(_SwitchBox, self)._sendTo(proto)
+        super()._sendTo(proto)
         proto._lockForSwitch()
         proto._switchTo(self.innerProto)
 
@@ -1048,13 +1050,12 @@ class BoxDispatcher:
 
         Dispatch it to a local handler call it.
 
-        @param proto: an AMP instance.
         @param box: an AmpBox to be dispatched.
         """
         cmd = box[COMMAND]
         responder = self.locator.locateResponder(cmd)
         if responder is None:
-            description = "Unhandled Command: %r" % (cmd,)
+            description = "Unhandled Command: {!r}".format(cmd)
             return fail(
                 RemoteAmpError(
                     UNHANDLED_ERROR_CODE,
@@ -1473,7 +1474,7 @@ class Float(Argument):
 
     def toString(self, inString):
         if not isinstance(inString, float):
-            raise ValueError("Bad float value %r" % (inString,))
+            raise ValueError("Bad float value {!r}".format(inString))
         return str(inString).encode("ascii")
 
 
@@ -1488,7 +1489,7 @@ class Boolean(Argument):
         elif inString == b"False":
             return False
         else:
-            raise TypeError("Bad boolean value: %r" % (inString,))
+            raise TypeError("Bad boolean value: {!r}".format(inString))
 
     def toString(self, inObject):
         if inObject:
@@ -1686,7 +1687,7 @@ class Descriptor(Integer):
 
         @return: A byte string which can be used by the receiver to reconstruct
             the file descriptor.
-        @type: C{str}
+        @rtype: C{bytes}
         """
         identifier = proto._sendFileDescriptor(inObject)
         outString = Integer.toStringProto(self, identifier, proto)
@@ -1757,12 +1758,12 @@ class Command:
             for name, _ in newtype.arguments:
                 if not isinstance(name, bytes):
                     raise TypeError(
-                        "Argument names must be byte strings, got: %r" % (name,)
+                        "Argument names must be byte strings, got: {!r}".format(name)
                     )
             for name, _ in newtype.response:
                 if not isinstance(name, bytes):
                     raise TypeError(
-                        "Response names must be byte strings, got: %r" % (name,)
+                        "Response names must be byte strings, got: {!r}".format(name)
                     )
 
             errors = {}  # type: Dict[Type[Exception], bytes]
@@ -1785,12 +1786,12 @@ class Command:
             for _, name in newtype.errors.items():
                 if not isinstance(name, bytes):
                     raise TypeError(
-                        "Error names must be byte strings, got: %r" % (name,)
+                        "Error names must be byte strings, got: {!r}".format(name)
                     )
             for _, name in newtype.fatalErrors.items():
                 if not isinstance(name, bytes):
                     raise TypeError(
-                        "Fatal error names must be byte strings, got: %r" % (name,)
+                        "Fatal error names must be byte strings, got: {!r}".format(name)
                     )
 
             return newtype
@@ -1833,7 +1834,7 @@ class Command:
                 forgotten.append(pythonName)
         if forgotten:
             raise InvalidSignature(
-                "forgot %s for %s" % (", ".join(forgotten), self.commandName)
+                "forgot {} for {}".format(", ".join(forgotten), self.commandName)
             )
         forgotten = []
 
@@ -1877,7 +1878,7 @@ class Command:
 
         for intendedArg in objects:
             if intendedArg not in allowedNames:
-                raise InvalidSignature("%s is not a valid argument" % (intendedArg,))
+                raise InvalidSignature("{} is not a valid argument".format(intendedArg))
         return _objectsToStrings(objects, cls.arguments, cls.commandType(), proto)
 
     @classmethod
@@ -1978,7 +1979,7 @@ class Command:
 # Python 3 ignores the __metaclass__ attribute and has instead new syntax
 # for setting the metaclass. Unfortunately it's not valid Python 2 syntax
 # so we work-around it by recreating Command using the metaclass here.
-Command = Command.__metaclass__("Command", (Command,), {})  # type: ignore[assignment,misc]  # noqa
+Command = Command.__metaclass__("Command", (Command,), {})  # type: ignore[assignment,misc]
 
 
 class _NoCertificate:
@@ -2110,12 +2111,12 @@ class StartTLS(Command):
 
     responseType = _TLSBox
 
-    def __init__(self, **kw):
+    def __init__(self, *, tls_localCertificate=None, tls_verifyAuthorities=None, **kw):
         """
         Create a StartTLS command.  (This is private.  Use AMP.callRemote.)
 
         @param tls_localCertificate: the PrivateCertificate object to use to
-        secure the connection.  If it's None, or unspecified, an ephemeral DH
+        secure the connection.  If it's L{None}, or unspecified, an ephemeral DH
         key is used instead.
 
         @param tls_verifyAuthorities: a list of Certificate objects which
@@ -2123,8 +2124,12 @@ class StartTLS(Command):
         """
         if ssl is None:
             raise RuntimeError("TLS not available.")
-        self.certificate = kw.pop("tls_localCertificate", _NoCertificate(True))
-        self.authorities = kw.pop("tls_verifyAuthorities", None)
+        self.certificate = (
+            _NoCertificate(True)
+            if tls_localCertificate is None
+            else tls_localCertificate
+        )
+        self.authorities = tls_verifyAuthorities
         Command.__init__(self, **kw)
 
     def _doCommand(self, proto):
@@ -2165,7 +2170,7 @@ class ProtocolSwitchCommand(Command):
         """
 
         self.protoToSwitchToFactory = _protoToSwitchToFactory
-        super(ProtocolSwitchCommand, self).__init__(**kw)
+        super().__init__(**kw)
 
     @classmethod
     def makeResponse(cls, innerProto, proto):
@@ -2177,7 +2182,7 @@ class ProtocolSwitchCommand(Command):
         switch to the new protocol unless an acknowledgement is received.  If
         an error is received, switch back.
         """
-        d = super(ProtocolSwitchCommand, self)._doCommand(proto)
+        d = super()._doCommand(proto)
         proto._lockForSwitch()
 
         def switchNow(ign):
@@ -2579,10 +2584,10 @@ class AMP(BinaryBoxProtocol, BoxDispatcher, CommandLocator, SimpleStringLocator)
         AMP connection.
         """
         if self.innerProtocol is not None:
-            innerRepr = " inner %r" % (self.innerProtocol,)
+            innerRepr = " inner {!r}".format(self.innerProtocol)
         else:
             innerRepr = ""
-        return "<%s%s at 0x%x>" % (self.__class__.__name__, innerRepr, id(self))
+        return "<{}{} at 0x{:x}>".format(self.__class__.__name__, innerRepr, id(self))
 
     def makeConnection(self, transport):
         """
@@ -2797,7 +2802,7 @@ class DateTime(Argument):
         s = nativeString(s)
 
         if len(s) != 32:
-            raise ValueError("invalid date format %r" % (s,))
+            raise ValueError("invalid date format {!r}".format(s))
 
         values = [int(s[p]) for p in self._positions]
         sign = s[26]

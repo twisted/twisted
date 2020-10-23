@@ -105,7 +105,7 @@ class Runner:
 
             try:
                 pid = pidFile.read()
-            except EnvironmentError:
+            except OSError:
                 exit(ExitStatus.EX_IOERR, "Unable to read PID file.")
                 # When testing, patched exit doesn't exit
                 return  # type: ignore[unreachable]

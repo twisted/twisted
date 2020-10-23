@@ -168,7 +168,7 @@ class ThreadPool:
         @return: A distinctive name for the thread.
         @rtype: native L{str}
         """
-        return "PoolThread-%s-%s" % (self.name or id(self), self.workers)
+        return "PoolThread-{}-{}".format(self.name or id(self), self.workers)
 
     def stopAWorker(self):
         """
@@ -302,6 +302,6 @@ class ThreadPool:
         Dump some plain-text informational messages to the log about the state
         of this L{ThreadPool}.
         """
-        log.msg("waiters: %s" % (self.waiters,))
-        log.msg("workers: %s" % (self.working,))
-        log.msg("total: %s" % (self.threads,))
+        log.msg("waiters: {}".format(self.waiters))
+        log.msg("workers: {}".format(self.working))
+        log.msg("total: {}".format(self.threads))

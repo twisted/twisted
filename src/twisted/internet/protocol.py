@@ -189,7 +189,7 @@ class _InstanceFactory(ClientFactory):
         self.deferred = deferred
 
     def __repr__(self) -> str:
-        return "<ClientCreator factory: %r>" % (self.instance,)
+        return "<ClientCreator factory: {!r}>".format(self.instance)
 
     def buildProtocol(self, addr):
         """
@@ -255,10 +255,10 @@ class ClientCreator:
         @param method: A callable which will actually start the connection
             attempt.  For example, C{reactor.connectTCP}.
 
-        @param *args: Positional arguments to pass to C{method}, excluding the
+        @param args: Positional arguments to pass to C{method}, excluding the
             factory.
 
-        @param **kwargs: Keyword arguments to pass to C{method}.
+        @param kwargs: Keyword arguments to pass to C{method}.
 
         @return: A L{Deferred} which fires with an instance of the protocol
             class passed to this L{ClientCreator}'s initializer or fails if the
@@ -394,7 +394,7 @@ class ReconnectingClientFactory(ClientFactory):
         """
         if not self.continueTrying:
             if self.noisy:
-                log.msg("Abandoning %s on explicit request" % (connector,))
+                log.msg("Abandoning {} on explicit request".format(connector))
             return
 
         if connector is None:
@@ -853,7 +853,7 @@ class FileWrapper:
         self.closed = 1
         try:
             self.file.close()
-        except (IOError, OSError):
+        except OSError:
             self.handleException()
 
     def getPeer(self):

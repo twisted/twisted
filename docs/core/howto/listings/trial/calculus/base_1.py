@@ -1,8 +1,7 @@
 # -*- test-case-name: calculus.test.test_base_1 -*-
 
 
-
-class Calculation(object):
+class Calculation:
     def add(self, a, b):
         pass
 

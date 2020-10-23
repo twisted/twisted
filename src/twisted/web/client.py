@@ -76,9 +76,7 @@ class HTTPPageGetter(http.HTTPClient):
 
     _completelyDone = True
 
-    _specialHeaders = set(
-        (b"host", b"user-agent", b"cookie", b"content-length"),
-    )
+    _specialHeaders = {b"host", b"user-agent", b"cookie", b"content-length"}
 
     def connectionMade(self):
         method = _ensureValidMethod(getattr(self.factory, "method", b"GET"))
@@ -394,7 +392,7 @@ class HTTPClientFactory(protocol.ClientFactory):
         return self._disconnectedDeferred
 
     def __repr__(self) -> str:
-        return "<%s: %s>" % (self.__class__.__name__, self.url)
+        return "<{}: {}>".format(self.__class__.__name__, self.url)
 
     def setURL(self, url):
         _ensureValidURI(url.strip())
@@ -562,7 +560,7 @@ class HTTPDownloader(HTTPClientFactory):
             try:
                 if not self.file:
                     self.file = self.openFile(partialContent)
-            except IOError:
+            except OSError:
                 # raise
                 self.deferred.errback(Failure())
 
@@ -571,7 +569,7 @@ class HTTPDownloader(HTTPClientFactory):
             return
         try:
             self.file.write(data)
-        except IOError:
+        except OSError:
             # raise
             self.file = None
             self.deferred.errback(Failure())
@@ -596,7 +594,7 @@ class HTTPDownloader(HTTPClientFactory):
             return
         try:
             self.file.close()
-        except IOError:
+        except OSError:
             self.deferred.errback(Failure())
             return
         self.deferred.callback(self.value)
@@ -950,9 +948,6 @@ class BrowserLikePolicyForHTTPS:
         <twisted.internet.interfaces.IOpenSSLClientConnectionCreator>} for a
         given network location.
 
-        @param tls: The TLS protocol to create a connection for.
-        @type tls: L{twisted.protocols.tls.TLSMemoryBIOProtocol}
-
         @param hostname: The hostname part of the URI.
         @type hostname: L{bytes}
 
@@ -1069,7 +1064,7 @@ class _ContextFactoryWithContext:
         L{_DeprecatedToCurrentPolicyForHTTPS._webContextFactory}.
 
         @return: A context.
-        @rtype context: L{OpenSSL.SSL.Context}
+        @rtype: L{OpenSSL.SSL.Context}
         """
         return self._context
 
@@ -1615,7 +1610,7 @@ class _StandardEndpointFactory:
             )
             return wrapClientTLS(connectionCreator, endpoint)
         else:
-            raise SchemeNotSupported("Unsupported scheme: %r" % (uri.scheme,))
+            raise SchemeNotSupported("Unsupported scheme: {!r}".format(uri.scheme))
 
 
 @implementer(IAgent)

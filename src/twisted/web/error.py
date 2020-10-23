@@ -224,7 +224,7 @@ class UnsupportedMethod(Exception):
             )
 
     def __str__(self) -> str:
-        return "Expected one of %r" % (self.allowedMethods,)
+        return "Expected one of {!r}".format(self.allowedMethods)
 
 
 class SchemeNotSupported(Exception):
@@ -254,7 +254,7 @@ class MissingRenderMethod(RenderError):
         self.renderName = renderName
 
     def __repr__(self) -> str:
-        return "%r: %r had no render method named %r" % (
+        return "{!r}: {!r} had no render method named {!r}".format(
             self.__class__.__name__,
             self.element,
             self.renderName,
@@ -274,7 +274,7 @@ class MissingTemplateLoader(RenderError):
         self.element = element
 
     def __repr__(self) -> str:
-        return "%r: %r had no loader" % (self.__class__.__name__, self.element)
+        return "{!r}: {!r} had no loader".format(self.__class__.__name__, self.element)
 
 
 class UnexposedMethodError(Exception):

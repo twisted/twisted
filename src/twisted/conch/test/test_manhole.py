@@ -289,7 +289,7 @@ class ManholeLoopbackMixin:
         return continuing
 
     def test_ControlBackslash(self):
-        """
+        r"""
         Evaluate cancelling with CTRL-\.
         """
         self._testwrite(b"cancelled line")

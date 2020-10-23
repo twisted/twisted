@@ -56,7 +56,7 @@ class SimpleConfFile:
         """
         close = False
         if file is None and self.defaultFilename:
-            file = open(self.defaultFilename, "r")
+            file = open(self.defaultFilename)
             close = True
 
         try:
@@ -161,7 +161,7 @@ class InetdConf(SimpleConfFile):
                 serviceName = "unknown"
             except:
                 raise UnknownService(
-                    "Unknown service: %s (%s)" % (serviceName, protocol)
+                    "Unknown service: {} ({})".format(serviceName, protocol)
                 )
 
         self.services.append(
@@ -197,7 +197,7 @@ class ServicesConf(SimpleConfFile):
             port = int(port)
         except:
             raise InvalidServicesConfError(
-                "Invalid port/protocol: %s" % (repr(portAndProtocol),)
+                "Invalid port/protocol: {}".format(repr(portAndProtocol))
             )
 
         self.services[(name, protocol)] = port

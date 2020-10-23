@@ -46,7 +46,7 @@ class _BasicProfiler:
         has to be explicit because some of these modules are removed by
         distributions due to them being non-free.
         """
-        s = "Failed to import module %s: %s" % (module, e)
+        s = "Failed to import module {}: {}".format(module, e)
         s += """
 This is most likely caused by your operating system not including
 the module due to it being non-free. Either do not use the option
@@ -129,7 +129,7 @@ class AppProfiler:
             profiler = self.profilers[self.profiler](profileOutput, saveStats)
             self.run = profiler.run
         else:
-            raise SystemExit("Unsupported profiler name: %s" % (self.profiler,))
+            raise SystemExit("Unsupported profiler name: {}".format(self.profiler))
 
 
 class AppLogger:
@@ -492,10 +492,10 @@ class ReactorSelectionMixin:
             try:
                 namedModule(r.moduleName)
                 self.messageOutput.write(
-                    "    %-4s\t%s\n" % (r.shortName, r.description)
+                    "    {:<4}\t{}\n".format(r.shortName, r.description)
                 )
             except ImportError as e:
-                notWorkingReactors += "    !%-4s\t%s (%s)\n" % (
+                notWorkingReactors += "    !{:<4}\t{} ({})\n".format(
                     r.shortName,
                     r.description,
                     e.args[0],
@@ -646,7 +646,7 @@ class ServerOptions(usage.Options, ReactorSelectionMixin):
                 self["logger"] = namedAny(self["logger"])
             except Exception as e:
                 raise usage.UsageError(
-                    "Logger '%s' could not be imported: %s" % (self["logger"], e)
+                    "Logger '{}' could not be imported: {}".format(self["logger"], e)
                 )
 
     @property
@@ -672,7 +672,7 @@ def run(runApp, ServerOptions):
         config.parseOptions()
     except usage.error as ue:
         print(config)
-        print("%s: %s" % (sys.argv[0], ue))
+        print("{}: {}".format(sys.argv[0], ue))
     else:
         runApp(config)
 

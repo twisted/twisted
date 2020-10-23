@@ -6,6 +6,7 @@ Tests for L{twisted.internet.iocpreactor}.
 """
 
 import errno
+import sys
 import time
 from array import array
 from struct import pack
@@ -29,6 +30,9 @@ try:
     from twisted.internet.iocpreactor.const import SO_UPDATE_ACCEPT_CONTEXT
     from twisted.internet.iocpreactor.abstract import FileHandle
 except ImportError:
+    if sys.platform == "win32":
+        raise
+
     skip = "This test only applies to IOCPReactor"
 
 try:
@@ -74,7 +78,7 @@ class SupportTests(TestCase):
         for the port to be available, then there might a bug in the code and
         not the test (or a very, very busy VM running the tests).
         """
-        msg("family = %r" % (family,))
+        msg("family = {!r}".format(family))
         port = socket(family, SOCK_STREAM)
         self.addCleanup(port.close)
         port.bind(("", 0))

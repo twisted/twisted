@@ -331,8 +331,7 @@ def formatListResponse(msgs):
     @return: Yields a series of strings which make up a complete LIST response.
     """
     yield successResponse(b"%d" % (len(msgs),))
-    for ele in formatListLines(msgs):
-        yield ele
+    yield from formatListLines(msgs)
     yield b".\r\n"
 
 
@@ -374,8 +373,7 @@ def formatUIDListResponse(msgs, getUidl):
     @return: Yields a series of strings which make up a complete UIDL response.
     """
     yield successResponse("")
-    for ele in formatUIDListLines(msgs, getUidl):
-        yield ele
+    yield from formatUIDListLines(msgs, getUidl)
     yield b".\r\n"
 
 
@@ -770,7 +768,7 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
         send a successful response to the client.
 
         @type result: C{tuple}
-        @param interface_avatar_logout: The first item of the tuple is a
+        @param result: The first item of the tuple is a
             C{zope.interface.Interface} which is the interface
             supported by the avatar.  The second item of the tuple is a
             L{IMailbox} provider which is the mailbox for the

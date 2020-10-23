@@ -225,7 +225,9 @@ def messageid(uniq=None, N=lambda: next(_gen)):
     else:
         uniq = "." + uniq
 
-    return "<%s.%s.%s%s.%s@%s>" % (datetime, pid, rand, uniq, N(), DNSNAME)
+    return "<{}.{}.{}{}.{}@{}>".format(
+        datetime, pid, rand, uniq, N(), DNSNAME.decode()
+    ).encode()
 
 
 def quoteaddr(addr):
@@ -318,7 +320,9 @@ class Address:
                     # Now in domain
                     domain = [b""]
             elif len(atl[0]) == 1 and not self.atomre.match(atl[0]) and atl[0] != b".":
-                raise AddressError("Parse error at %r of %r" % (atl[0], (addr, atl)))
+                raise AddressError(
+                    "Parse error at {!r} of {!r}".format(atl[0], (addr, atl))
+                )
             else:
                 if not domain:
                     local.append(atl[0])
@@ -366,7 +370,9 @@ class Address:
             return b""
 
     def __repr__(self) -> str:
-        return "%s.%s(%s)" % (self.__module__, self.__class__.__name__, repr(str(self)))
+        return "{}.{}({})".format(
+            self.__module__, self.__class__.__name__, repr(str(self))
+        )
 
 
 class User:
@@ -799,7 +805,7 @@ class SMTP(basic.LineOnlyReceiver, policies.TimeoutMixin):
             self.deliveryFactory = None
             self.delivery = avatar
         else:
-            raise RuntimeError("%s is not a supported interface" % (iface.__name__,))
+            raise RuntimeError("{} is not a supported interface".format(iface.__name__))
         self._onLogout = logout
         self.challenger = None
 
@@ -1173,7 +1179,7 @@ class SMTPClient(basic.LineReceiver, policies.TimeoutMixin):
 
         @param code: the code returned by the SMTP Server
         @param resp: The string response returned from the SMTP Server
-        @param numOK: the number of addresses accepted by the remote host.
+        @param numOk: the number of addresses accepted by the remote host.
         @param addresses: is a list of tuples (address, code, resp) listing
                           the response to each RCPT command.
         @param log: is the SMTP session log
@@ -1836,7 +1842,7 @@ class SenderMixin:
             for addr, acode, aresp in addresses:
                 if acode not in SUCCESS:
                     errlog.append(
-                        (addr + b": " + networkString("%03d" % (acode,)) + b" " + aresp)
+                        addr + b": " + networkString("%03d" % (acode,)) + b" " + aresp
                     )
 
             errlog.append(log.str())
@@ -2232,7 +2238,7 @@ def xtext_encode(s, errors=None):
     for ch in iterbytes(s):
         o = ord(ch)
         if ch == "+" or ch == "=" or o < 33 or o > 126:
-            r.append(networkString("+%02X" % (o,)))
+            r.append(networkString("+{:02X}".format(o)))
         else:
             r.append(bytes((o,)))
     return (b"".join(r), len(s))
