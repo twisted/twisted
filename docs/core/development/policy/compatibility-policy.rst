@@ -183,8 +183,8 @@ Representations
 
 The printable representations of objects, as returned by ``repr(<object>)`` and defined by ``def __repr__(self):`` are for debugging and informational purposes.
 Because of this, applications must not depend on any object defined by Twisted to provide repr compatibility between any release.
-Descriptors, Slots and Weak References
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Attribute Access
+^^^^^^^^^^^^^^^^
 How an object's attributes are defined and accessed is considered an implementation detail.
 To allow backwards compatibility, an attribute may be moved from the instance ``__dict__`` into an ``@property`` or other descriptor based accessor.
 
