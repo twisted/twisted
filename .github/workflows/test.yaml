@@ -121,7 +121,6 @@ jobs:
     runs-on: ubuntu-20.04
     needs: [testing]
     steps:
-
     - uses: actions/checkout@v2
 
     - name: Set up Python
@@ -135,16 +134,16 @@ jobs:
         rm -rf dist/*
         tox -e release-prepare
 
-      - name: Display structure of files to be pusehed
-        run: ls -R dist/
+    - name: Display structure of files to be pusehed
+      run: ls -R dist/
 
-        # Testing:
-        # TEST_PYPI_UPLOAD_TOKEN
-        # repository_url: https://test.pypi.org/legacy/
-        # Prod secret: PYPI_UPLOAD_TOKEN
-      - name: Publish to PyPI on a new tag
-        if: startsWith(github.ref, 'refs/tags')
-        uses: pypa/gh-action-pypi-publish@v1.3.1
-        with:
-          password: ${{ secrets.TEST_PYPI_UPLOAD_TOKEN }}
-          repository_url: https://test.pypi.org/legacy/
+    - name: Publish to PyPI on a new tag
+      # Testing:
+      # TEST_PYPI_UPLOAD_TOKEN
+      # repository_url: https://test.pypi.org/legacy/
+      # Prod secret: PYPI_UPLOAD_TOKEN
+      if: startsWith(github.ref, 'refs/tags')
+      uses: pypa/gh-action-pypi-publish@v1.3.1
+      with:
+        password: ${{ secrets.TEST_PYPI_UPLOAD_TOKEN }}
+        repository_url: https://test.pypi.org/legacy/
