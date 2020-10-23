@@ -135,7 +135,7 @@ jobs:
         rm -rf dist/*
         tox -e release-prepare
 
-    - name: Display structure of files to be pusehed
+    - name: Display structure of files to be pushed
       run: ls -R dist/
 
     - name: Publish to PyPI - optional
