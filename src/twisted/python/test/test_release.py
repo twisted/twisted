@@ -412,9 +412,6 @@ class APIBuilderTests(ExternalTempdirTestCase):
     Tests for L{APIBuilder}.
     """
 
-    if pydoctorSkip:
-        skip = pydoctorSkip
-
     @doNotFailOnNetworkError
     def test_build(self):
         """
@@ -686,6 +683,7 @@ class FilePathDeltaTests(TestCase):
         )
 
 
+@skipIf(sphinxSkip, sphinxSkip)
 class SphinxBuilderTests(TestCase):
     """
     Tests for L{SphinxBuilder}.
@@ -704,8 +702,6 @@ class SphinxBuilderTests(TestCase):
     @ivar sourceDir: A L{FilePath} representing a directory to be used for
         containing the source files for a Sphinx project.
     """
-
-    skip = sphinxSkip
 
     confContent = """\
                   source_suffix = '.rst'
@@ -925,6 +921,7 @@ class CommandsTestMixin(StructureAssertingMixin):
         self.assertStructure(exportDir, structure)
 
 
+@skipIf(gitSkip, gitSkip)
 class GitCommandTest(CommandsTestMixin, ExternalTempdirTestCase):
     """
     Specific L{CommandsTestMixin} related to Git repositories through
@@ -932,8 +929,6 @@ class GitCommandTest(CommandsTestMixin, ExternalTempdirTestCase):
     """
 
     createCommand = GitCommand
-    if gitSkip:
-        skip = gitSkip
 
     def makeRepository(self, root):
         """
@@ -961,13 +956,12 @@ class GitCommandTest(CommandsTestMixin, ExternalTempdirTestCase):
         runCommand(["git", "-C", repository.path, "commit", "-m", "hop"])
 
 
+@skipIf(gitSkip, gitSkip)
 class RepositoryCommandDetectionTest(ExternalTempdirTestCase):
     """
     Test the L{getRepositoryCommand} to access the right set of VCS commands
     depending on the repository manipulated.
     """
-
-    skip = gitSkip
 
     def setUp(self):
         self.repos = FilePath(self.mktemp())
@@ -1000,12 +994,11 @@ class VCSCommandInterfaceTests(TestCase):
         self.assertTrue(IVCSCommand.implementedBy(GitCommand))
 
 
+@skipIf(gitSkip, gitSkip)
 class CheckNewsfragmentScriptTests(ExternalTempdirTestCase):
     """
     L{CheckNewsfragmentScript}.
     """
-
-    skip = gitSkip
 
     def setUp(self):
         self.origin = FilePath(self.mktemp())
