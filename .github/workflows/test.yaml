@@ -131,7 +131,7 @@ jobs:
     - name: Test
       run: |
         python --version
-        python -m pip install --upgrade pip tox
+        python -m pip install --upgrade pip tox pep517
         rm -rf dist/*
         tox -e release-prepare
 
