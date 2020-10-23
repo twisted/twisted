@@ -1,5 +1,3 @@
-from __future__ import print_function
-
 from twisted.protocols import amp
 
 

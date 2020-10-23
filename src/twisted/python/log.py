@@ -617,7 +617,7 @@ class StdioOnnaStick:
         pass
 
     def read(self):
-        raise IOError("can't read from the log!")
+        raise OSError("can't read from the log!")
 
     readline = read
     readlines = read

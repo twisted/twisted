@@ -123,7 +123,7 @@ class IRCReplyBot(irc.IRCClient):
         if self.nickname.lower() == channel.lower():
             d = self.factory.getUser(msg.encode("ascii"))
             d.addErrback(catchError)
-            d.addCallback(lambda m: "Status of %s: %s" % (msg, m))
+            d.addCallback(lambda m: "Status of {}: {}".format(msg, m))
             d.addCallback(lambda m: self.msg(user, m))
 
 
@@ -175,7 +175,7 @@ class UserStatusTree(resource.Resource):
 
     def _cb_render_GET(self, users, request):
         userOutput = "".join(
-            ['<li><a href="%s">%s</a></li>' % (user, user) for user in users]
+            ['<li><a href="{}">{}</a></li>'.format(user, user) for user in users]
         )
         request.write(
             """

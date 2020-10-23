@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 # Twisted documentation build configuration file, created by
 # sphinx-quickstart on Tue Jan 14 11:31:15 2014.
@@ -350,7 +349,7 @@ epub_copyright = "2014, Twisted Matrix Labs"
 # epub_use_index = True
 
 # Base url for apilinks extension
-apilinks_base_url = "https://twistedmatrix.com/documents/%s/api/" % (release,)
+apilinks_base_url = "https://twistedmatrix.com/documents/{}/api/".format(release)
 traclinks_base_url = "https://twistedmatrix.com/trac"
 
 # -- Extension configuration ----------------------------------------------

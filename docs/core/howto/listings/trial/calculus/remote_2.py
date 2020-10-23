@@ -6,7 +6,7 @@ from twisted.python import log
 from calculus.base_3 import Calculation
 
 
-class CalculationProxy(object):
+class CalculationProxy:
     def __init__(self):
         self.calc = Calculation()
         for m in ["add", "subtract", "multiply", "divide"]:

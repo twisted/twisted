@@ -142,7 +142,7 @@ class XMLRPC(resource.Resource):
                 request.content.read(), use_datetime=self.useDateTime
             )
         except Exception as e:
-            f = Fault(self.FAILURE, "Can't deserialize input: %s" % (e,))
+            f = Fault(self.FAILURE, "Can't deserialize input: {}".format(e))
             self._cbRender(f, request)
         else:
             try:
@@ -177,7 +177,7 @@ class XMLRPC(resource.Resource):
                     result, methodresponse=True, allow_none=self.allowNone
                 )
             except Exception as e:
-                f = Fault(self.FAILURE, "Can't serialize output: %s" % (e,))
+                f = Fault(self.FAILURE, "Can't serialize output: {}".format(e))
                 content = xmlrpclib.dumps(
                     f, methodresponse=True, allow_none=self.allowNone
                 )

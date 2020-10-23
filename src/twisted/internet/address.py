@@ -143,7 +143,7 @@ class UNIXAddress:
         name = self.name
         if name:
             name = _coerceToFilesystemEncoding("", self.name)
-        return "UNIXAddress(%r)" % (name,)
+        return "UNIXAddress({!r})".format(name)
 
     def __hash__(self):
         if self.name is None:

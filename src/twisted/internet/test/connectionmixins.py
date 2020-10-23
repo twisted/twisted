@@ -190,7 +190,7 @@ def _getWriters(reactor):
         return reactor.handles
     else:
         # Cannot tell what is going on.
-        raise Exception("Cannot find writers on %r" % (reactor,))
+        raise Exception("Cannot find writers on {!r}".format(reactor))
 
 
 class _AcceptOneClient(ServerFactory):
@@ -243,7 +243,7 @@ class Stop(ClientFactory):
 
     def clientConnectionFailed(self, connector, reason):
         self.failReason = reason
-        msg("Stop(CF) cCFailed: %s" % (reason.getErrorMessage(),))
+        msg("Stop(CF) cCFailed: {}".format(reason.getErrorMessage()))
         self.reactor.stop()
 
 
@@ -262,7 +262,7 @@ class ClosingLaterProtocol(ConnectableProtocol):
         msg("ClosingLaterProtocol.connectionMade")
 
     def dataReceived(self, bytes):
-        msg("ClosingLaterProtocol.dataReceived %r" % (bytes,))
+        msg("ClosingLaterProtocol.dataReceived {!r}".format(bytes))
         self.transport.loseConnection()
 
     def connectionLost(self, reason):
@@ -326,7 +326,7 @@ class ConnectionTestsMixin:
         )
 
         def listening(port):
-            msg("Listening on %r" % (port.getHost(),))
+            msg("Listening on {!r}".format(port.getHost()))
             endpoint = self.endpoints.client(reactor, port.getHost())
 
             lostConnectionDeferred = Deferred()
@@ -334,13 +334,13 @@ class ConnectionTestsMixin:
             client = endpoint.connect(ClientFactory.forProtocol(protocol))
 
             def write(proto):
-                msg("About to write to %r" % (proto,))
+                msg("About to write to {!r}".format(proto))
                 proto.transport.write(b"x")
 
             client.addCallbacks(write, lostConnectionDeferred.errback)
 
             def disconnected(proto):
-                msg("%r disconnected" % (proto,))
+                msg("{!r} disconnected".format(proto))
                 proto.transport.write(b"some bytes to get lost")
                 proto.transport.writeSequence([b"some", b"more"])
                 finished.append(True)
@@ -374,13 +374,13 @@ class ConnectionTestsMixin:
         )
 
         def listening(port):
-            msg("Listening on %r" % (port.getHost(),))
+            msg("Listening on {!r}".format(port.getHost()))
             endpoint = self.endpoints.client(reactor, port.getHost())
 
             client = endpoint.connect(ClientFactory.forProtocol(lambda: clientProtocol))
 
             def disconnect(proto):
-                msg("About to disconnect %r" % (proto,))
+                msg("About to disconnect {!r}".format(proto))
                 proto.transport.loseConnection()
 
             client.addCallback(disconnect)

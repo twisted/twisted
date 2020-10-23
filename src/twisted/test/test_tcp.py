@@ -243,7 +243,7 @@ class ListeningTests(TestCase):
             portNumber = port.getHost().port
             self.assertEqual(
                 repr(serverProto.transport),
-                "<AccumulatingProtocol #0 on %s>" % (portNumber,),
+                "<AccumulatingProtocol #0 on {}>".format(portNumber),
             )
             serverProto.transport.loseConnection()
             clientProto.transport.loseConnection()
@@ -873,11 +873,11 @@ class WriterProtocol(protocol.Protocol):
         self.transport.writeSequence(seq)
         peer = self.transport.getPeer()
         if peer.type != "TCP":
-            msg("getPeer returned non-TCP socket: %s" % (peer,))
+            msg("getPeer returned non-TCP socket: {}".format(peer))
             self.factory.problem = 1
         us = self.transport.getHost()
         if us.type != "TCP":
-            msg("getHost returned non-TCP socket: %s" % (us,))
+            msg("getHost returned non-TCP socket: {}".format(us))
             self.factory.problem = 1
         self.factory.done = 1
 
@@ -1073,7 +1073,7 @@ class WriteDataTests(TestCase):
             return client.lostReason
 
         clientConnectionLost.addCallback(cbClientLost)
-        msg("Connecting to %s:%s" % (addr.host, addr.port))
+        msg("Connecting to {}:{}".format(addr.host, addr.port))
         reactor.connectTCP(addr.host, addr.port, client)
 
         # By the end of the test, the client should have received notification

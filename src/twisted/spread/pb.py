@@ -240,7 +240,7 @@ class Avatar:
         try:
             state = method(*args, **kw)
         except TypeError:
-            log.msg("%s didn't accept %s and %s" % (method, args, kw))
+            log.msg("{} didn't accept {} and {}".format(method, args, kw))
             raise
         return broker.serialize(state, self, method, args, kw)
 
@@ -409,7 +409,7 @@ class Local:
         self.refcount = 1
 
     def __repr__(self) -> str:
-        return "<pb.Local %r ref:%s>" % (self.object, self.refcount)
+        return "<pb.Local {!r} ref:{}>".format(self.object, self.refcount)
 
     def incref(self):
         """
@@ -616,7 +616,9 @@ class Broker(banana.Banana):
         """
 
         if vnum != self.version:
-            raise ProtocolError("Version Incompatibility: %s %s" % (self.version, vnum))
+            raise ProtocolError(
+                "Version Incompatibility: {} {}".format(self.version, vnum)
+            )
 
     def sendCall(self, *exp):
         """

@@ -13,7 +13,6 @@ authenticated.  Success anonymous login requests are given an instance of
 MyPerspective with the name "Anonymous".
 """
 
-from __future__ import print_function
 
 from sys import stdout
 
@@ -48,11 +47,13 @@ class MyPerspective(Avatar):
         Print a simple message which gives the argument this method was
         called with and this avatar's name.
         """
-        print("I am %s.  perspective_foo(%s) called on %s." % (self.name, arg, self))
+        print(
+            "I am {}.  perspective_foo({}) called on {}.".format(self.name, arg, self)
+        )
 
 
 @implementer(IRealm)
-class MyRealm(object):
+class MyRealm:
     """
     Trivial realm which supports anonymous and named users by creating
     avatars which are instances of MyPerspective for either.

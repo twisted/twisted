@@ -81,9 +81,9 @@ class Port(abstract.FileHandle):
 
     def __repr__(self) -> str:
         if self._realPortNumber is not None:
-            return "<%s on %s>" % (self.protocol.__class__, self._realPortNumber)
+            return "<{} on {}>".format(self.protocol.__class__, self._realPortNumber)
         else:
-            return "<%s not connected>" % (self.protocol.__class__,)
+            return "<{} not connected>".format(self.protocol.__class__)
 
     def getHandle(self):
         """
@@ -108,7 +108,7 @@ class Port(abstract.FileHandle):
         try:
             skt = self.createSocket()
             skt.bind((self.interface, self.port))
-        except socket.error as le:
+        except OSError as le:
             raise error.CannotListenError(self.interface, self.port, le)
 
         # Make sure that if we listened on port 0, we update that to
@@ -180,7 +180,7 @@ class Port(abstract.FileHandle):
             assert addr in (None, self._connectedAddr)
             try:
                 return self.socket.send(datagram)
-            except socket.error as se:
+            except OSError as se:
                 no = se.args[0]
                 if no == errno.WSAEINTR:
                     return self.write(datagram)
@@ -215,7 +215,7 @@ class Port(abstract.FileHandle):
                 )
             try:
                 return self.socket.sendto(datagram, addr)
-            except socket.error as se:
+            except OSError as se:
                 no = se.args[0]
                 if no == errno.WSAEINTR:
                     return self.write(datagram, addr)
@@ -385,7 +385,7 @@ class MulticastMixin:
             cmd = socket.IP_DROP_MEMBERSHIP
         try:
             self.socket.setsockopt(socket.IPPROTO_IP, cmd, addr + interface)
-        except socket.error as e:
+        except OSError as e:
             return failure.Failure(error.MulticastJoinError(addr, interface, *e.args))
 
     def leaveGroup(self, addr, interface=""):

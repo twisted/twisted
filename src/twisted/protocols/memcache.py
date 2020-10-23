@@ -227,7 +227,9 @@ class MemCacheProtocol(LineReceiver, TimeoutMixin):
             cmd.success(cmd.values)
         else:
             raise RuntimeError(
-                "Unexpected END response to %s command" % (nativeString(cmd.command),)
+                "Unexpected END response to {} command".format(
+                    nativeString(cmd.command)
+                )
             )
 
     def cmd_NOT_FOUND(self):
@@ -391,7 +393,9 @@ class MemCacheProtocol(LineReceiver, TimeoutMixin):
             return fail(RuntimeError("not connected"))
         if not isinstance(key, bytes):
             return fail(
-                ClientError("Invalid type for key: %s, expecting bytes" % (type(key),))
+                ClientError(
+                    "Invalid type for key: {}, expecting bytes".format(type(key))
+                )
             )
         if len(key) > self.MAX_KEY_LENGTH:
             return fail(ClientError("Key too long"))
@@ -506,14 +510,16 @@ class MemCacheProtocol(LineReceiver, TimeoutMixin):
             return fail(RuntimeError("not connected"))
         if not isinstance(key, bytes):
             return fail(
-                ClientError("Invalid type for key: %s, expecting bytes" % (type(key),))
+                ClientError(
+                    "Invalid type for key: {}, expecting bytes".format(type(key))
+                )
             )
         if len(key) > self.MAX_KEY_LENGTH:
             return fail(ClientError("Key too long"))
         if not isinstance(val, bytes):
             return fail(
                 ClientError(
-                    "Invalid type for value: %s, expecting bytes" % (type(val),)
+                    "Invalid type for value: {}, expecting bytes".format(type(val))
                 )
             )
         if cas:
@@ -628,7 +634,7 @@ class MemCacheProtocol(LineReceiver, TimeoutMixin):
             if not isinstance(key, bytes):
                 return fail(
                     ClientError(
-                        "Invalid type for key: %s, expecting bytes" % (type(key),)
+                        "Invalid type for key: {}, expecting bytes".format(type(key))
                     )
                 )
             if len(key) > self.MAX_KEY_LENGTH:
@@ -640,7 +646,7 @@ class MemCacheProtocol(LineReceiver, TimeoutMixin):
         fullcmd = b" ".join([cmd] + keys)
         self.sendLine(fullcmd)
         if multiple:
-            values = dict([(key, (0, b"", None)) for key in keys])
+            values = {key: (0, b"", None) for key in keys}
             cmdObj = Command(cmd, keys=keys, values=values, multiple=True)
         else:
             cmdObj = Command(
@@ -704,7 +710,9 @@ class MemCacheProtocol(LineReceiver, TimeoutMixin):
             return fail(RuntimeError("not connected"))
         if not isinstance(key, bytes):
             return fail(
-                ClientError("Invalid type for key: %s, expecting bytes" % (type(key),))
+                ClientError(
+                    "Invalid type for key: {}, expecting bytes".format(type(key))
+                )
             )
         self.sendLine(b"delete " + key)
         cmdObj = Command(b"delete", key=key)

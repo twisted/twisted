@@ -7,7 +7,6 @@ and an instance of a Protocol class which has had L{twisted.conch.mixin}'s
 L{BufferingMixin<twisted.conch.mixin.BufferingMixin>} mixed in to perform
 Nagle-like write coalescing.
 """
-from __future__ import print_function
 
 from sys import stdout
 from pprint import pprint

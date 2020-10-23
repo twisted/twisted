@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
-from __future__ import print_function
 
 if __name__ == "__main__":
     import sys
@@ -76,11 +75,11 @@ def readKey(path):
     try:
         return Key.fromFile(path)
     except EncryptedKeyError:
-        passphrase = getpass.getpass("%r keyphrase: " % (path,))
+        passphrase = getpass.getpass("{!r} keyphrase: ".format(path))
         return Key.fromFile(path, passphrase=passphrase)
 
 
-class ConnectionParameters(object):
+class ConnectionParameters:
     def __init__(
         self, reactor, host, port, username, password, keys, knownHosts, agent
     ):

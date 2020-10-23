@@ -5,7 +5,6 @@
 Demonstration of sending bytes over a TCP connection using sendmsg.
 """
 
-from __future__ import print_function
 
 from socket import socketpair
 

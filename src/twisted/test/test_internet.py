@@ -1229,13 +1229,13 @@ class ReentrantProducer(DummyProducer):
     """
 
     def __init__(self, consumer, methodName, *methodArgs):
-        super(ReentrantProducer, self).__init__()
+        super().__init__()
         self.consumer = consumer
         self.methodName = methodName
         self.methodArgs = methodArgs
 
     def resumeProducing(self):
-        super(ReentrantProducer, self).resumeProducing()
+        super().resumeProducing()
         getattr(self.consumer, self.methodName)(*self.methodArgs)
 
 

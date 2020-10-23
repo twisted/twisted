@@ -294,7 +294,7 @@ class FileDescriptorTests(TestCase):
         for fd in process._listOpenFDs():
             try:
                 fcntl.fcntl(fd, fcntl.F_GETFL)
-            except IOError as err:
+            except OSError as err:
                 self.assertEqual(
                     errno.EBADF,
                     err.errno,

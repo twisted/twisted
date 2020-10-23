@@ -71,7 +71,7 @@ def hashPassword(sid, password):
         raise TypeError("The session identifier must be a unicode object")
     if not isinstance(password, str):
         raise TypeError("The password must be a unicode object")
-    input = "%s%s" % (sid, password)
+    input = "{}{}".format(sid, password)
     return sha1(input.encode("utf-8")).hexdigest()
 
 
@@ -408,7 +408,7 @@ class TLSInitiatingInitializer(BaseFeatureInitiatingInitializer):
         @type configurationForTLS: L{IOpenSSLClientConnectionCreator} or
             C{None}
         """
-        super(TLSInitiatingInitializer, self).__init__(xs, required=required)
+        super().__init__(xs, required=required)
         self._configurationForTLS = configurationForTLS
 
     def onProceed(self, obj):

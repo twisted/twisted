@@ -215,7 +215,7 @@ class ConnectionPool:
         self.connkw = connkw
 
         for arg in self.CP_ARGS:
-            cpArg = "cp_%s" % (arg,)
+            cpArg = "cp_{}".format(arg)
             if cpArg in connkw:
                 setattr(self, arg, connkw[cpArg])
                 del connkw[cpArg]
@@ -409,7 +409,7 @@ class ConnectionPool:
         conn = self.connections.get(tid)
         if conn is None:
             if self.noisy:
-                log.msg("adbapi connecting: %s" % (self.dbapiName,))
+                log.msg("adbapi connecting: {}".format(self.dbapiName))
             conn = self.dbapi.connect(*self.connargs, **self.connkw)
             if self.openfun is not None:
                 self.openfun(conn)
@@ -433,7 +433,7 @@ class ConnectionPool:
 
     def _close(self, conn):
         if self.noisy:
-            log.msg("adbapi closing: %s" % (self.dbapiName,))
+            log.msg("adbapi closing: {}".format(self.dbapiName))
         try:
             conn.close()
         except:

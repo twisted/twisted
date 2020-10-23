@@ -182,7 +182,7 @@ class Banana(protocol.Protocol, styles.Ephemeral):
         listStack = self.listStack
         gotItem = self.gotItem
         while buffer:
-            assert self.buffer != buffer, "This ain't right: %s %s" % (
+            assert self.buffer != buffer, "This ain't right: {} {}".format(
                 repr(self.buffer),
                 repr(buffer),
             )
@@ -247,7 +247,7 @@ class Banana(protocol.Protocol, styles.Ephemeral):
                     gotItem(item)
                 else:
                     raise NotImplementedError(
-                        "Invalid item for pb protocol {0!r}".format(item)
+                        "Invalid item for pb protocol {!r}".format(item)
                     )
             elif typebyte == FLOAT:
                 if len(rest) >= 8:
@@ -256,7 +256,7 @@ class Banana(protocol.Protocol, styles.Ephemeral):
                 else:
                     return
             else:
-                raise NotImplementedError(("Invalid Type Byte %r" % (typebyte,)))
+                raise NotImplementedError("Invalid Type Byte {!r}".format(typebyte))
             while listStack and (len(listStack[-1][1]) == listStack[-1][0]):
                 item = listStack.pop()[1]
                 gotItem(item)
@@ -371,7 +371,7 @@ class Banana(protocol.Protocol, styles.Ephemeral):
                 write(obj)
         else:
             raise BananaError(
-                "Banana cannot send {0} objects: {1!r}".format(
+                "Banana cannot send {} objects: {!r}".format(
                     fullyQualifiedName(type(obj)), obj
                 )
             )

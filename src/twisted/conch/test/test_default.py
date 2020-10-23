@@ -179,7 +179,7 @@ class SSHUserAuthClientTests(TestCase):
 
         def _getPassword(prompt):
             self.assertEqual(
-                prompt, "Enter passphrase for key '%s': " % (self.rsaFile.path,)
+                prompt, "Enter passphrase for key '{}': ".format(self.rsaFile.path)
             )
             return nativeString(passphrase)
 

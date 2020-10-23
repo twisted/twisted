@@ -7,8 +7,6 @@ Scheduling utility methods and classes.
 """
 
 
-__metaclass__ = type
-
 import sys
 import time
 import warnings
@@ -281,7 +279,7 @@ class LoopingCall:
         else:
             func = reflect.safe_repr(self.f)
 
-        return "LoopingCall<%r>(%s, *%s, **%s)" % (
+        return "LoopingCall<{!r}>({}, *{}, **{})".format(
             self.interval,
             func,
             reflect.safe_repr(self.a),

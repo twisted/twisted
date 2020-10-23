@@ -1,5 +1,3 @@
-from __future__ import print_function
-
 from twisted.internet import reactor
 from twisted.python import log, compat
 from twisted.web.client import Agent, CookieAgent

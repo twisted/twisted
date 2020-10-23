@@ -188,7 +188,7 @@ demo webserver that has the Test class from twisted.web.demo in it."""
         try:
             application = reflect.namedAny(name)
         except (AttributeError, ValueError):
-            raise usage.UsageError("No such WSGI application: %r" % (name,))
+            raise usage.UsageError("No such WSGI application: {!r}".format(name))
         pool = threadpool.ThreadPool()
         reactor.callWhenRunning(pool.start)
         reactor.addSystemEventTrigger("after", "shutdown", pool.stop)

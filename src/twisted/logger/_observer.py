@@ -40,7 +40,7 @@ class LogPublisher:
         @param observer: An L{ILogObserver} to add.
         """
         if not callable(observer):
-            raise TypeError("Observer is not callable: {0!r}".format(observer))
+            raise TypeError("Observer is not callable: {!r}".format(observer))
         if observer not in self._observers:
             self._observers.append(observer)
 

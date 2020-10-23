@@ -123,7 +123,7 @@ class DictClient(basic.LineReceiver):
             code = int(line[:3])
             line = line[4:]
         method = getattr(
-            self, "dictCode_%s_%s" % (code, self.state), self.dictCode_default
+            self, "dictCode_{}_{}".format(code, self.state), self.dictCode_default
         )
         method(line)
 
@@ -164,7 +164,7 @@ class DictClient(basic.LineReceiver):
         )
         self.data = None  # should be None
         self.state = "define"
-        command = "DEFINE %s %s" % (
+        command = "DEFINE {} {}".format(
             makeAtom(database.encode("UTF-8")),
             makeWord(word.encode("UTF-8")),
         )
@@ -178,7 +178,7 @@ class DictClient(basic.LineReceiver):
         self.result = None
         self.data = None
         self.state = "match"
-        command = "MATCH %s %s %s" % (
+        command = "MATCH {} {} {}".format(
             makeAtom(database),
             makeAtom(strategy),
             makeAtom(word),

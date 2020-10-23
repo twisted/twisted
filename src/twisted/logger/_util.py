@@ -26,9 +26,9 @@ def formatTrace(trace: LogTrace) -> str:
 
     def formatWithName(obj: object) -> str:
         if hasattr(obj, "name"):
-            return "{0} ({1})".format(obj, obj.name)  # type: ignore[attr-defined]
+            return "{} ({})".format(obj, obj.name)  # type: ignore[attr-defined]
         else:
-            return "{0}".format(obj)
+            return "{}".format(obj)
 
     result = []
     lineage = []  # type: List[Logger]
@@ -41,11 +41,11 @@ def formatTrace(trace: LogTrace) -> str:
 
             else:
                 if not lineage:
-                    result.append("{0}\n".format(formatWithName(parent)))
+                    result.append("{}\n".format(formatWithName(parent)))
 
                 lineage.append(parent)
 
         result.append("  " * len(lineage))
-        result.append("-> {0}\n".format(formatWithName(child)))
+        result.append("-> {}\n".format(formatWithName(child)))
 
     return "".join(result)

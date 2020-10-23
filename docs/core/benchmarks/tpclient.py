@@ -1,5 +1,4 @@
 """Throughput test."""
-from __future__ import print_function
 
 import time, sys
 from twisted.internet import reactor, protocol

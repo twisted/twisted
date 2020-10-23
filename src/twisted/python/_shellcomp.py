@@ -140,7 +140,7 @@ class SubcommandAction(usage.Completer):
     def _shellCode(self, optName, shellType):
         if shellType == usage._ZSH:
             return "*::subcmd:->subcmd"
-        raise NotImplementedError("Unknown shellType %r" % (shellType,))
+        raise NotImplementedError("Unknown shellType {!r}".format(shellType))
 
 
 class ZshBuilder:
@@ -518,8 +518,8 @@ class ZshArgumentsGenerator:
             shortField = ""
 
         descr = self.getDescription(longname)
-        descriptionField = descr.replace("[", "\[")
-        descriptionField = descriptionField.replace("]", "\]")
+        descriptionField = descr.replace("[", r"\[")
+        descriptionField = descriptionField.replace("]", r"\]")
         descriptionField = "[%s]" % descriptionField
 
         actionField = self.getAction(longname)
@@ -574,7 +574,7 @@ class ZshArgumentsGenerator:
             return action._shellCode(longname, usage._ZSH)
 
         if longname in self.paramNameToDefinition:
-            return ":%s:_files" % (longname,)
+            return ":{}:_files".format(longname)
         return ""
 
     def getDescription(self, longname):

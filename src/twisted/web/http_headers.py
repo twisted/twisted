@@ -91,7 +91,7 @@ class Headers:
         """
         Return a string fully describing the headers set on this object.
         """
-        return "%s(%r)" % (
+        return "{}({!r})".format(
             self.__class__.__name__,
             self._rawHeaders,
         )

@@ -7,7 +7,6 @@
 Message should only be printed second time around.
 """
 
-from __future__ import print_function
 
 from twisted.python import log
 from twisted.internet import reactor

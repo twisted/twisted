@@ -57,7 +57,7 @@ class DemoProtocol(insults.TerminalProtocol):
         self.terminal.write("> ")
 
     def unhandledControlSequence(self, seq):
-        log.msg("Client sent something weird: %r" % (seq,))
+        log.msg("Client sent something weird: {!r}".format(seq))
 
     def keystrokeReceived(self, keyID, modifier):
         if keyID == "\r":

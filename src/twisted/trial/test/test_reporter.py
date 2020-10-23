@@ -44,13 +44,13 @@ class BrokenStream:
         if self.written:
             return self.fObj.write(s)
         self.written = True
-        raise IOError(errno.EINTR, "Interrupted write")
+        raise OSError(errno.EINTR, "Interrupted write")
 
     def flush(self):
         if self.flushed:
             return self.fObj.flush()
         self.flushed = True
-        raise IOError(errno.EINTR, "Interrupted flush")
+        raise OSError(errno.EINTR, "Interrupted flush")
 
 
 class StringTest(unittest.SynchronousTestCase):
@@ -76,7 +76,7 @@ class StringTest(unittest.SynchronousTestCase):
                     % (line_number, exp.pattern, out),
                 )
             else:
-                raise TypeError("don't know what to do with object %r" % (exp,))
+                raise TypeError("don't know what to do with object {!r}".format(exp))
 
 
 class TestResultTests(unittest.SynchronousTestCase):
@@ -148,7 +148,7 @@ class ErrorReportingTests(StringTest):
                 "twisted.trial.test.erroneous.FoolishError: "
                 "I am a broken setUp method"
             ),
-            "%s.%s.test_noop" % (cls.__module__, cls.__name__),
+            "{}.{}.test_noop".format(cls.__module__, cls.__name__),
         ]
         self.stringComparison(match, output)
 
@@ -206,10 +206,8 @@ class ErrorReportingTests(StringTest):
 
         if reflect.qual(reactor).startswith("twisted.internet.asyncioreactor"):
             raise self.skipTest(
-                (
-                    "This test does not work on the asyncio reactor, as the "
-                    "traceback comes from inside asyncio, not Twisted."
-                )
+                "This test does not work on the asyncio reactor, as the "
+                "traceback comes from inside asyncio, not Twisted."
             )
 
         test = erroneous.DelayedCall("testHiddenException")
@@ -224,7 +222,7 @@ class ErrorReportingTests(StringTest):
             ),
             re.compile(
                 r'^\s+self\.fail\("Deliberate failure to mask the '
-                'hidden exception"\)$'
+                r'hidden exception"\)$'
             ),
             "twisted.trial.unittest.FailTest: "
             "Deliberate failure to mask the hidden exception",
@@ -234,8 +232,8 @@ class ErrorReportingTests(StringTest):
             "Traceback (most recent call last):",
             re.compile(r"^\s+File .* in runUntilCurrent"),
             re.compile(r"^\s+.*"),
-            re.compile('^\s+File .*erroneous\.py", line \d+, in go'),
-            re.compile("^\s+raise RuntimeError\(self.hiddenExceptionMsg\)"),
+            re.compile(r'^\s+File .*erroneous\.py", line \d+, in go'),
+            re.compile(r"^\s+raise RuntimeError\(self.hiddenExceptionMsg\)"),
             errorQual + ": something blew up",
             "twisted.trial.test.erroneous.DelayedCall.testHiddenException",
         ]

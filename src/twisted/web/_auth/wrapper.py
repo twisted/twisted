@@ -195,7 +195,7 @@ class HTTPAuthSessionWrapper:
                 called.
                 """
                 request.notifyFinish().addBoth(lambda ign: logout())
-                return super(ResourceWrapper, self).render(request)
+                return super().render(request)
 
         return ResourceWrapper(avatar)
 

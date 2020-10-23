@@ -1,5 +1,3 @@
-from __future__ import print_function
-
 from twisted.logger import extractField
 
 fmt = "message from {log_source} " "where a is {log_source.a} and b is {log_source.b}"

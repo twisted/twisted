@@ -1,6 +1,3 @@
-from __future__ import print_function
-
-
 class MyExc(Exception):
     "A sample exception."
 

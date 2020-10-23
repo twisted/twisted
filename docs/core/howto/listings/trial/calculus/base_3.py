@@ -1,9 +1,7 @@
 # -*- test-case-name: calculus.test.test_base_3 -*-
 
-from __future__ import division
 
-
-class Calculation(object):
+class Calculation:
     def _make_ints(self, *args):
         try:
             return [int(arg) for arg in args]

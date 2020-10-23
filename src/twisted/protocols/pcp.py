@@ -92,7 +92,7 @@ class BasicProducerConsumerProxy:
             self.consumer.unregisterProducer()
 
     def __repr__(self) -> str:
-        return "<%s@%x around %s>" % (self.__class__, id(self), self.consumer)
+        return "<{}@{:x} around {}>".format(self.__class__, id(self), self.consumer)
 
 
 class ProducerConsumerProxy(BasicProducerConsumerProxy):

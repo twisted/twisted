@@ -67,7 +67,7 @@ except ImportError:
     )
 
     def WSAEnumNetworkEvents(fd, event):
-        return set([FD_READ])
+        return {FD_READ}
 
 
 from win32event import CreateEvent, MsgWaitForMultipleObjects

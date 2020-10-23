@@ -1,5 +1,3 @@
-from __future__ import print_function
-
 from twisted.python import log
 from twisted.internet import reactor
 from twisted.internet.defer import Deferred

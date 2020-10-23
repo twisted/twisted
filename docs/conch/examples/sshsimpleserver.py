@@ -148,7 +148,7 @@ class ExampleAvatar(avatar.ConchUser):
 
 
 @implementer(portal.IRealm)
-class ExampleRealm(object):
+class ExampleRealm:
     """
     When using Twisted Cred, the pluggable authentication framework, the
     C{requestAvatar} method should return a L{avatar.ConchUser} instance
@@ -182,7 +182,7 @@ class EchoProtocol(protocol.Protocol):
         self.transport.write(data)
 
 
-class ExampleSession(object):
+class ExampleSession:
     """
     This selects what to do for each type of session which is requested by the
     client via the SSH channel of type I{session}.

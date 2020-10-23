@@ -62,7 +62,7 @@ from twisted.trial.unittest import TestCase
 class DomainWithDefaultsTests(TestCase):
     @skipIf(sys.version_info >= (3,), "not ported to Python 3")
     def testMethods(self):
-        d = dict([(x, x + 10) for x in range(10)])
+        d = {x: x + 10 for x in range(10)}
         d = mail.mail.DomainWithDefaultDict(d, "Default")
 
         self.assertEqual(len(d), 10)
@@ -2352,7 +2352,7 @@ class DummyQueue:
         @return: The envelope file and a message receiver for a new message in
             the queue.
         """
-        fname = "%s_%s" % (time.time(), id(self))
+        fname = "{}_{}".format(time.time(), id(self))
         headerFile = open(os.path.join(self.directory, fname + "-H"), "wb")
         tempFilename = os.path.join(self.directory, fname + "-C")
         finalFilename = os.path.join(self.directory, fname + "-D")

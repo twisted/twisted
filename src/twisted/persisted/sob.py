@@ -59,11 +59,11 @@ class Persistent:
             finalname = filename
             filename = finalname + "-2"
         elif tag:
-            filename = "%s-%s-2.%s" % (self.name, tag, ext)
-            finalname = "%s-%s.%s" % (self.name, tag, ext)
+            filename = "{}-{}-2.{}".format(self.name, tag, ext)
+            finalname = "{}-{}.{}".format(self.name, tag, ext)
         else:
-            filename = "%s-2.%s" % (self.name, ext)
-            finalname = "%s.%s" % (self.name, ext)
+            filename = "{}-2.{}".format(self.name, ext)
+            finalname = "{}.{}".format(self.name, ext)
         return finalname, filename
 
     def _saveTemp(self, filename, dumpFunc):
@@ -169,7 +169,7 @@ def loadValueFromFile(filename, variable):
     @param filename: string
     @param variable: string
     """
-    with open(filename, "r") as fileObj:
+    with open(filename) as fileObj:
         data = fileObj.read()
     d = {"__file__": filename}
     codeObj = compile(data, filename, "exec")

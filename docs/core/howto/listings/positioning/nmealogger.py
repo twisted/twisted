@@ -4,7 +4,6 @@
 """
 Connects to an NMEA device, logs beacon information and position.
 """
-from __future__ import print_function
 
 import sys
 from twisted.internet import reactor, serialport
