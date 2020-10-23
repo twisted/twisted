@@ -1,0 +1,9 @@
+# This triggers building the PyDoctor API docs inside this directory.
+# The directory containing this file will be populated with
+# pydoctor generated API docs HTML files.
+#
+# This is only triggered on Read The Docs environment.
+#
+# It should contain a single non-commented line with the path to source code.
+# Source path as relative to the directory in which this file is located.
+../../src
