@@ -12,7 +12,7 @@ jobs:
   testing:
     runs-on: ubuntu-20.04
     env:
-      TOXENV: "alldeps-withcov-posix,coverage-prepare,codecov-push,coveralls-push,release"
+      TOXENV: "alldeps-withcov-posix,coverage-prepare,codecov-push,coveralls-push"
     strategy:
       matrix:
           python-version: [3.5, 3.6, 3.7, 3.8, 3.9, pypy3]
@@ -33,7 +33,7 @@ jobs:
         python -c "import sys; print(sys.executable)"
         python -c "import struct; print(struct.calcsize('P') * 8)"
         python -c "print('\nENVIRONMENT VARIABLES\n=====================\n\n')"
-        python -c "import os; [ print(e,v) for (e,v) in os.environ.items() ]" 
+        python -c "import os; [ print(e,v) for (e,v) in os.environ.items() ]"
 
     - name: Get pip cache dir
       id: pip-cache
@@ -60,11 +60,6 @@ jobs:
         python --version
         tox -q
 
-    - name: upload dist
-      uses: actions/upload-artifact@v2
-      with:
-        name: py${{ matrix.python-version }}_dist
-        path: dist
 
   # We need a builder without IPv6. This is going to be slower than all the
   # others, but that's ok.
@@ -108,7 +103,7 @@ jobs:
         python -c "import sys; print(sys.executable)"
         python -c "import struct; print(struct.calcsize('P') * 8)"
         python -c "print('\nENVIRONMENT VARIABLES\n=====================\n\n')"
-        python -c "import os; [ print(e,v) for (e,v) in os.environ.items() ]" 
+        python -c "import os; [ print(e,v) for (e,v) in os.environ.items() ]"
 
     - name: Install dependencies
       run: |
@@ -126,20 +121,30 @@ jobs:
     runs-on: ubuntu-20.04
     needs: [testing]
     steps:
-      - name: Download dists for PyPI
-        uses: actions/download-artifact@v2
-        with:
-          name: py3.9_dist
-          path: dist
 
-      - name: Display structure of downloaded files
-        run: ls -R
+    - uses: actions/checkout@v2
 
-      - name: Publish to PyPI for a new tag
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: 3.9
+
+    - name: Test
+      run: |
+        python --version
+        rm -rf dist/*
+        tox -e release-prepare
+
+      - name: Display structure of files to be pusehed
+        run: ls -R dist/
+
+        # Testing:
+        # TEST_PYPI_UPLOAD_TOKEN
+        # repository_url: https://test.pypi.org/legacy/
+        # Prod secret: PYPI_UPLOAD_TOKEN
+      - name: Publish to PyPI on a new tag
         if: startsWith(github.ref, 'refs/tags')
         uses: pypa/gh-action-pypi-publish@v1.3.1
         with:
-          password: ${{ secrets.PYPI_UPLOAD_TOKEN }}
-
-      - name: note that all tests succeeded
-        run: echo "🎉"
+          password: ${{ secrets.TEST_PYPI_UPLOAD_TOKEN }}
+          repository_url: https://test.pypi.org/legacy/
