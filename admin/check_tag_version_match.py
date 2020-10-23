@@ -21,7 +21,7 @@ branch_version = pep517.meta.load(".").version
 run_version = sys.argv[1]
 
 if not run_version.startswith(TAG_PREFIX):
-    print("Not a twisted release tag name.")
+    print("Not a twisted release tag name '{}.".format(run_version))
     sys.exit(1)
 
 run_version = run_version[len(TAG_PREFIX) :]

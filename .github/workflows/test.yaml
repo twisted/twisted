@@ -140,7 +140,7 @@ jobs:
 
     - name: Check matched tag version and branch version
       #if: startsWith(github.ref, 'refs/tags/twisted-')
-      run: python admin/check_tag_version_match.py "$GITHUB_REF"
+      run: python admin/check_tag_version_match.py "${{ github.ref }}"
 
     - name: Publish to PyPI - optional
       # Testing secret TEST_PYPI_UPLOAD_TOKEN
