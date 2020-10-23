@@ -19,12 +19,14 @@ import tempfile
 import shutil
 
 from io import BytesIO, StringIO
+from unittest import skipIf
 
 from twisted.trial.unittest import TestCase, FailTest, SkipTest
 
 from twisted.python.procutils import which
 from twisted.python import release
 from twisted.python.filepath import FilePath
+from twisted.python.reflect import requireModule
 
 from incremental import Version
 
@@ -49,22 +51,18 @@ from twisted.python._release import (
 if os.name != "posix":
     skip = "Release toolchain only supported on POSIX."
 else:
-    skip = ""
+    skip = None
 
 testingSphinxConf = "master_doc = 'index'\n"
 
 try:
-    import pydoctor.driver
-
+    requireModule("pydoctor.driver")
     # it might not be installed, or it might use syntax not available in
     # this version of Python.
 except (ImportError, SyntaxError):
     pydoctorSkip = "Pydoctor is not present."
 else:
-    if getattr(pydoctor, "version_info", (0,)) < (0, 1):
-        pydoctorSkip = "Pydoctor is too old."
-    else:
-        pydoctorSkip = skip
+    pydoctorSkip = skip
 
 
 if not skip and which("sphinx-build"):
@@ -408,6 +406,7 @@ class DoNotFailTests(TestCase):
             self.assertIsInstance(e, FailTest)
 
 
+@skipIf(pydoctorSkip, pydoctorSkip)
 class APIBuilderTests(ExternalTempdirTestCase):
     """
     Tests for L{APIBuilder}.
@@ -453,7 +452,7 @@ class APIBuilderTests(ExternalTempdirTestCase):
         )
         self.assertIn(
             '<a href="{}">{}</a>'.format(projectURL, projectName),
-            indexPath.getContent(),
+            indexPath.getContent().decode("ascii"),
             "Project name/location not in file contents.",
         )
 
@@ -464,24 +463,24 @@ class APIBuilderTests(ExternalTempdirTestCase):
         )
         self.assertIn(
             docstring,
-            quuxPath.getContent(),
+            quuxPath.getContent().decode("ascii"),
             "Docstring not in package documentation file.",
         )
         self.assertIn(
             '<a href="{}/{}">View Source</a>'.format(sourceURL, packageName),
-            quuxPath.getContent(),
+            quuxPath.getContent().decode("ascii"),
         )
         self.assertIn(
             '<a class="functionSourceLink" href="%s/%s/__init__.py#L1">'
             % (sourceURL, packageName),
-            quuxPath.getContent(),
+            quuxPath.getContent().decode("ascii"),
         )
-        self.assertIn(privateDocstring, quuxPath.getContent())
+        self.assertIn(privateDocstring, quuxPath.getContent().decode("ascii"))
 
         # There should also be a page for the foo function in quux.
         self.assertTrue(quuxPath.sibling("quux.foo.html").exists())
 
-        self.assertEqual(stdout.getvalue(), "")
+        self.assertEqual(stdout.getvalue(), b"")
 
     @doNotFailOnNetworkError
     def test_buildWithPolicy(self):
@@ -499,7 +498,9 @@ class APIBuilderTests(ExternalTempdirTestCase):
         packagePath.child("__init__.py").setContent(
             "def foo():\n" "    '{}'\n".format(docstring).encode("utf-8")
         )
-        packagePath.child("_version.py").setContent(genVersion("twisted", 1, 0, 0))
+        packagePath.child("_version.py").setContent(
+            genVersion("twisted", 1, 0, 0).encode("ascii")
+        )
         outputPath = FilePath(self.mktemp())
 
         script = BuildAPIDocsScript()
@@ -522,7 +523,7 @@ class APIBuilderTests(ExternalTempdirTestCase):
         )
         self.assertIn(
             docstring,
-            twistedPath.getContent(),
+            twistedPath.getContent().decode("ascii"),
             "Docstring not in package documentation file.",
         )
         # Here we check that it figured out the correct version based on the
@@ -547,27 +548,25 @@ class APIBuilderTests(ExternalTempdirTestCase):
         packageName = "quux"
         projectURL = "scheme:project"
         sourceURL = "scheme:source"
-        docstring = "text in docstring"
-        privateDocstring = "should also appear in output"
 
         inputPath = FilePath(self.mktemp()).child(packageName)
         inputPath.makedirs()
         inputPath.child("__init__.py").setContent(
-            "from twisted.python.deprecate import deprecated\n"
-            "from incremental import Version\n"
-            "@deprecated(Version('Twisted', 15, 0, 0), "
-            "'Baz')\n"
-            "def foo():\n"
-            "    '{}'\n"
-            "from twisted.python import deprecate\n"
-            "import incremental\n"
-            "@deprecate.deprecated(incremental.Version('Twisted', 16, 0, 0))\n"
-            "def _bar():\n"
-            "    '{}'\n"
-            "@deprecated(Version('Twisted', 14, 2, 3), replacement='stuff')\n"
-            "class Baz:\n"
-            "    pass"
-            "".format(docstring, privateDocstring).encode("utf-8")
+            b"from twisted.python.deprecate import deprecated\n"
+            b"from incremental import Version\n"
+            b"from twisted.python import deprecate\n"
+            b"import incremental\n"
+            b"\n"
+            b"@deprecated(Version('Twisted', 15, 0, 0), "
+            b"'Baz')\n"
+            b"def foo():\n"
+            b"    'text in foo docstring'\n"
+            b"@deprecate.deprecated(incremental.Version('Twisted', 16, 0, 0))\n"
+            b"def _bar():\n"
+            b"    'should also appear in _bar output'\n"
+            b"@deprecated(Version('Twisted', 14, 2, 3), replacement='stuff')\n"
+            b"class Baz:\n"
+            b"    pass"
         )
 
         outputPath = FilePath(self.mktemp())
@@ -582,31 +581,31 @@ class APIBuilderTests(ExternalTempdirTestCase):
         )
 
         self.assertIn(
-            docstring,
+            b"text in foo docstring",
             quuxPath.getContent(),
             "Docstring not in package documentation file.",
         )
         self.assertIn(
-            "foo was deprecated in Twisted 15.0.0; please use Baz instead.",
+            b"foo was deprecated in Twisted 15.0.0; please use Baz instead.",
             quuxPath.getContent(),
         )
-        self.assertIn("_bar was deprecated in Twisted 16.0.0.", quuxPath.getContent())
-        self.assertIn(privateDocstring, quuxPath.getContent())
+        self.assertIn(b"_bar was deprecated in Twisted 16.0.0.", quuxPath.getContent())
+        self.assertIn(b"should also appear in _bar output", quuxPath.getContent())
 
         # There should also be a page for the foo function in quux.
         self.assertTrue(quuxPath.sibling("quux.foo.html").exists())
 
         self.assertIn(
-            "foo was deprecated in Twisted 15.0.0; please use Baz instead.",
+            b"foo was deprecated in Twisted 15.0.0; please use Baz instead.",
             quuxPath.sibling("quux.foo.html").getContent(),
         )
 
         self.assertIn(
-            "Baz was deprecated in Twisted 14.2.3; please use stuff instead.",
+            b"Baz was deprecated in Twisted 14.2.3; please use stuff instead.",
             quuxPath.sibling("quux.Baz.html").getContent(),
         )
 
-        self.assertEqual(stdout.getvalue(), "")
+        self.assertEqual(stdout.getvalue(), b"")
 
     def test_apiBuilderScriptMainRequiresTwoArguments(self):
         """
@@ -621,13 +620,27 @@ class APIBuilderTests(ExternalTempdirTestCase):
     def test_apiBuilderScriptMain(self):
         """
         The API building script invokes the same code that
-        L{test_buildWithPolicy} tests.
+        L{test_buildWithPolicy} tests and captures the standard output
+        returning it as list of lines.
         """
         script = BuildAPIDocsScript()
         calls = []
-        script.buildAPIDocs = lambda a, b: calls.append((a, b))
-        script.main(["hello", "there"])
+
+        def buildAPIDocs_mock(a, b):
+            """
+            Injected method to unit test the main script behavior without
+            calling the whole pydoctor build.
+            """
+            calls.append((a, b))
+            print("First line.")
+            print("Second line...")
+
+        script.buildAPIDocs = buildAPIDocs_mock
+
+        result = script.main(["hello", "there"])
+
         self.assertEqual(calls, [(FilePath("hello"), FilePath("there"))])
+        self.assertEqual(["First line.", "Second line..."], result)
 
 
 class FilePathDeltaTests(TestCase):
