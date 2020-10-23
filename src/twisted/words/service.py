@@ -61,7 +61,9 @@ class Group:
                 self.remove(user, err.getErrorMessage())
 
     def add(self, user):
-        assert iwords.IChatClient.providedBy(user), "%r is not a chat client" % (user,)
+        assert iwords.IChatClient.providedBy(user), "{!r} is not a chat client".format(
+            user
+        )
         if user.name not in self.users:
             additions = []
             self.users[user.name] = user
@@ -210,11 +212,13 @@ class IRCUser(irc.IRC):
 
     # IChatClient implementation
     def userJoined(self, group, user):
-        self.join("%s!%s@%s" % (user.name, user.name, self.hostname), "#" + group.name)
+        self.join(
+            "{}!{}@{}".format(user.name, user.name, self.hostname), "#" + group.name
+        )
 
     def userLeft(self, group, user, reason=None):
         self.part(
-            "%s!%s@%s" % (user.name, user.name, self.hostname),
+            "{}!{}@{}".format(user.name, user.name, self.hostname),
             "#" + group.name,
             (reason or "leaving"),
         )
@@ -231,7 +235,9 @@ class IRCUser(irc.IRC):
         text = message.get("text", "<an unrepresentable message>")
         for L in text.splitlines():
             self.privmsg(
-                "%s!%s@%s" % (sender.name, sender.name, self.hostname), recipientName, L
+                "{}!{}@{}".format(sender.name, sender.name, self.hostname),
+                recipientName,
+                L,
             )
 
     def groupMetaUpdate(self, group, meta):
@@ -242,7 +248,7 @@ class IRCUser(irc.IRC):
                 self.name,
                 "#" + group.name,
                 topic,
-                "%s!%s@%s" % (author, author, self.hostname),
+                "{}!{}@{}".format(author, author, self.hostname),
             )
 
     # irc.IRC callbacks - starting with login related stuff.
@@ -361,7 +367,7 @@ class IRCUser(irc.IRC):
 
     def _cbLogin(self, result):
         (iface, avatar, logout) = result
-        assert iface is iwords.IUser, "Realm is buggy, got %r" % (iface,)
+        assert iface is iwords.IUser, "Realm is buggy, got {!r}".format(iface)
 
         # Let them send messages to the world
         del self.irc_PRIVMSG
@@ -1229,7 +1235,7 @@ class WordsRealm:
 
 class InMemoryWordsRealm(WordsRealm):
     def __init__(self, *a, **kw):
-        super(InMemoryWordsRealm, self).__init__(*a, **kw)
+        super().__init__(*a, **kw)
         self.users = {}
         self.groups = {}
 

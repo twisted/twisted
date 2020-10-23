@@ -18,7 +18,7 @@ class InvalidLogLevelError(Exception):
         """
         @param level: A log level from L{LogLevel}.
         """
-        super(InvalidLogLevelError, self).__init__(str(level))
+        super().__init__(str(level))
         self.level = level
 
 

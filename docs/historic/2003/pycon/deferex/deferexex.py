@@ -1,8 +1,6 @@
 # DEFERred EXecution EXamples
 
 ### make sure errors come out in order
-from __future__ import absolute_import
-from __future__ import print_function
 import sys
 from twisted.python import log
 

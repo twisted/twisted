@@ -116,7 +116,7 @@ class PlainEntry(_BaseEntry):
 
     def __init__(self, hostnames, keyType, publicKey, comment):
         self._hostnames = hostnames
-        super(PlainEntry, self).__init__(keyType, publicKey, comment)
+        super().__init__(keyType, publicKey, comment)
 
     @classmethod
     def fromString(cls, string):
@@ -259,7 +259,7 @@ class HashedEntry(_BaseEntry, FancyEqMixin):
     def __init__(self, hostSalt, hostHash, keyType, publicKey, comment):
         self._hostSalt = hostSalt
         self._hostHash = hostHash
-        super(HashedEntry, self).__init__(keyType, publicKey, comment)
+        super().__init__(keyType, publicKey, comment)
 
     @classmethod
     def fromString(cls, string):
@@ -382,7 +382,7 @@ class KnownHostsFile:
 
         try:
             fp = self._savePath.open()
-        except IOError:
+        except OSError:
             return
 
         with fp:

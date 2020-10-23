@@ -160,7 +160,7 @@ CTRL_E = b"\x05"
 
 
 class Manhole(recvline.HistoricRecvLine):
-    """
+    r"""
     Mediator between a fancy line source and an interactive interpreter.
 
     This accepts lines from its transport and passes them on to a

@@ -36,7 +36,7 @@ class MockEquality(FancyEqMixin):
         self.name = name
 
     def __repr__(self) -> str:
-        return "MockEquality(%s)" % (self.name,)
+        return "MockEquality({})".format(self.name)
 
 
 class ComparisonError:
@@ -123,9 +123,9 @@ class AssertFalseTests(unittest.SynchronousTestCase):
         @param method: The test method to test.
         """
         for notTrue in [0, 0.0, False, None, (), []]:
-            result = method(notTrue, "failed on %r" % (notTrue,))
+            result = method(notTrue, "failed on {!r}".format(notTrue))
             if result != notTrue:
-                self.fail("Did not return argument %r" % (notTrue,))
+                self.fail("Did not return argument {!r}".format(notTrue))
 
     def _assertFalseTrue(self, method):
         """
@@ -135,12 +135,12 @@ class AssertFalseTests(unittest.SynchronousTestCase):
         """
         for true in [1, True, "cat", [1, 2], (3, 4)]:
             try:
-                method(true, "failed on %r" % (true,))
+                method(true, "failed on {!r}".format(true))
             except self.failureException as e:
                 self.assertIn(
-                    "failed on %r" % (true,),
+                    "failed on {!r}".format(true),
                     str(e),
-                    "Raised incorrect exception on %r: %r" % (true, e),
+                    "Raised incorrect exception on {!r}: {!r}".format(true, e),
                 )
             else:
                 self.fail(
@@ -201,12 +201,12 @@ class AssertTrueTests(unittest.SynchronousTestCase):
         """
         for notTrue in [0, 0.0, False, None, (), []]:
             try:
-                method(notTrue, "failed on %r" % (notTrue,))
+                method(notTrue, "failed on {!r}".format(notTrue))
             except self.failureException as e:
                 self.assertIn(
-                    "failed on %r" % (notTrue,),
+                    "failed on {!r}".format(notTrue),
                     str(e),
-                    "Raised incorrect exception on %r: %r" % (notTrue, e),
+                    "Raised incorrect exception on {!r}: {!r}".format(notTrue, e),
                 )
             else:
                 self.fail(
@@ -224,9 +224,9 @@ class AssertTrueTests(unittest.SynchronousTestCase):
         @param method: The test method to test.
         """
         for true in [1, True, "cat", [1, 2], (3, 4)]:
-            result = method(true, "failed on %r" % (true,))
+            result = method(true, "failed on {!r}".format(true))
             if result != true:
-                self.fail("Did not return argument %r" % (true,))
+                self.fail("Did not return argument {!r}".format(true))
 
     def test_assertTrueFalse(self):
         """
@@ -294,10 +294,12 @@ class SynchronousAssertionsTests(unittest.SynchronousTestCase):
                 got = str(ourFailure)
                 expected = str(theirFailure)
                 if expected != got:
-                    self.fail("Expected: %r; Got: %r" % (expected, got))
+                    self.fail("Expected: {!r}; Got: {!r}".format(expected, got))
 
         if not raised:
-            self.fail("Call to assertEqual(%r, %r) didn't fail" % (first, second))
+            self.fail(
+                "Call to assertEqual({!r}, {!r}) didn't fail".format(first, second)
+            )
 
     def test_assertEqual_basic(self):
         self._testEqualPair("cat", "cat")
@@ -350,7 +352,9 @@ class SynchronousAssertionsTests(unittest.SynchronousTestCase):
             pass
         else:
             self.fail(
-                "Comparing %r and %r should have raised an exception" % (apple, orange)
+                "Comparing {!r} and {!r} should have raised an exception".format(
+                    apple, orange
+                )
             )
 
     def _raiseError(self, error):
@@ -389,7 +393,7 @@ class SynchronousAssertionsTests(unittest.SynchronousTestCase):
         )
         self.assertTrue(
             isinstance(x, self.failureException),
-            "Expected %r instance to be returned" % (self.failureException,),
+            "Expected {!r} instance to be returned".format(self.failureException),
         )
         try:
             x = self.failUnlessRaises(
@@ -433,7 +437,7 @@ class SynchronousAssertionsTests(unittest.SynchronousTestCase):
             self.assertTrue(
                 message.startswith(expected),
                 "Exception message did not begin with expected information: "
-                "{0}".format(message),
+                "{}".format(message),
             )
         else:
             self.fail("Mismatched exception type should have caused test failure.")  # type: ignore[unreachable]
@@ -476,7 +480,7 @@ class SynchronousAssertionsTests(unittest.SynchronousTestCase):
             if typeError:
                 errors.append("expected TypeError in exception message")
             if errors:
-                self.fail("; ".join(errors), "message = {0}".format(message))
+                self.fail("; ".join(errors), "message = {}".format(message))
         else:
             self.fail("Mismatched exception type should have caused test failure.")  # type: ignore[unreachable]
 
@@ -693,7 +697,7 @@ class SynchronousAssertionsTests(unittest.SynchronousTestCase):
         A = type("A", (object,), {})
         a = A()
         error = self.assertRaises(self.failureException, self.assertNotIsInstance, a, A)
-        self.assertEqual(str(error), "%r is an instance of %s" % (a, A))
+        self.assertEqual(str(error), "{!r} is an instance of {}".format(a, A))
 
     def test_assertNotIsInstanceErrorMultipleClasses(self):
         """
@@ -1036,7 +1040,7 @@ class ResultOfAssertionsTests(unittest.SynchronousTestCase):
             self.failureResultOf(fail(self.failure), KeyError)
         except self.failureException as e:
             self.assertIn(
-                "Failure of type ({0}.{1}) expected on".format(
+                "Failure of type ({}.{}) expected on".format(
                     KeyError.__module__, KeyError.__name__
                 ),
                 str(e),
@@ -1067,7 +1071,7 @@ class ResultOfAssertionsTests(unittest.SynchronousTestCase):
             self.failureResultOf(fail(self.failure), KeyError, IOError)
         except self.failureException as e:
             self.assertIn(
-                "Failure of type ({0}.{1} or {2}.{3}) expected on".format(
+                "Failure of type ({}.{} or {}.{}) expected on".format(
                     KeyError.__module__,
                     KeyError.__name__,
                     IOError.__module__,
@@ -1282,7 +1286,7 @@ class ResultOfCoroutineAssertionsTests(unittest.SynchronousTestCase):
             self.failureResultOf(self.raisesException(), KeyError)
         except self.failureException as e:
             self.assertIn(
-                "Failure of type ({0}.{1}) expected on".format(
+                "Failure of type ({}.{}) expected on".format(
                     KeyError.__module__, KeyError.__name__
                 ),
                 str(e),
@@ -1317,7 +1321,7 @@ class ResultOfCoroutineAssertionsTests(unittest.SynchronousTestCase):
             self.failureResultOf(self.raisesException(), KeyError, IOError)
         except self.failureException as e:
             self.assertIn(
-                "Failure of type ({0}.{1} or {2}.{3}) expected on".format(
+                "Failure of type ({}.{} or {}.{}) expected on".format(
                     KeyError.__module__,
                     KeyError.__name__,
                     IOError.__module__,
@@ -1499,12 +1503,12 @@ class AssertionNamesTests(unittest.SynchronousTestCase):
                 continue
             if name.endswith("Equal"):
                 self.assertTrue(
-                    hasattr(self, name + "s"), "%s but no %ss" % (name, name)
+                    hasattr(self, name + "s"), "{} but no {}s".format(name, name)
                 )
                 self.assertEqual(value, getattr(self, name + "s"))
             if name.endswith("Equals"):
                 self.assertTrue(
-                    hasattr(self, name[:-1]), "%s but no %s" % (name, name[:-1])
+                    hasattr(self, name[:-1]), "{} but no {}".format(name, name[:-1])
                 )
                 self.assertEqual(value, getattr(self, name[:-1]))
 

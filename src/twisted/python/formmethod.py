@@ -189,11 +189,15 @@ class IntegerRange(Integer):
             return result
         if result < self.min:
             raise InputError(
-                "Value %s is too small, it should be at least %s" % (result, self.min)
+                "Value {} is too small, it should be at least {}".format(
+                    result, self.min
+                )
             )
         if result > self.max:
             raise InputError(
-                "Value %s is too large, it should be at most %s" % (result, self.max)
+                "Value {} is too large, it should be at most {}".format(
+                    result, self.max
+                )
             )
         return result
 

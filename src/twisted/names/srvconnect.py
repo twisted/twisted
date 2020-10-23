@@ -225,7 +225,7 @@ class SRVConnector:
                 return str(chosen.target), chosen.port
 
         raise RuntimeError(
-            "Impossible %s pickServer result." % (self.__class__.__name__,)
+            "Impossible {} pickServer result.".format(self.__class__.__name__)
         )
 
     def _reallyConnect(self):

@@ -12,7 +12,7 @@ from twisted.mail import smtp
 
 
 @implementer(smtp.IMessage)
-class FileMessage(object):
+class FileMessage:
     def __init__(self, fileObj):
         self.fileObj = fileObj
 
@@ -29,7 +29,7 @@ class FileMessage(object):
 
 
 @implementer(smtp.IMessageDelivery)
-class TutorialDelivery(object):
+class TutorialDelivery:
     counter = 0
 
     def validateTo(self, user):
@@ -45,7 +45,7 @@ class TutorialDelivery(object):
 
 
 @implementer(smtp.IMessageDeliveryFactory)
-class TutorialDeliveryFactory(object):
+class TutorialDeliveryFactory:
     def getMessageDelivery(self):
         return TutorialDelivery()
 

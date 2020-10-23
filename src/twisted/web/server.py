@@ -750,7 +750,7 @@ class Session(components.Componentized):
             self._expireCall.reset(self.sessionTimeout)
 
 
-version = networkString("TwistedWeb/%s" % (copyright.version,))
+version = networkString("TwistedWeb/{}".format(copyright.version))
 
 
 @implementer(interfaces.IProtocolNegotiationFactory)

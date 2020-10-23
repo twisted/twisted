@@ -300,9 +300,9 @@ def namedAny(name):
                 moduleNames.pop()
         else:
             if len(names) == 1:
-                raise ModuleNotFound("No module named %r" % (name,))
+                raise ModuleNotFound("No module named {!r}".format(name))
             else:
-                raise ObjectNotFound("%r does not name an object" % (name,))
+                raise ObjectNotFound("{!r} does not name an object".format(name))
 
     obj = topLevelPackage
     for n in names[1:]:
@@ -340,7 +340,7 @@ def filenameToModuleName(fn):
     while 1:
         fullName = os.path.dirname(fullName)
         if os.path.exists(os.path.join(fullName, initPy)):
-            modName = "%s.%s" % (
+            modName = "{}.{}".format(
                 nativeString(os.path.basename(fullName)),
                 nativeString(modName),
             )
@@ -393,7 +393,7 @@ def _safeFormat(formatter: Union[types.FunctionType, Type[str]], o: object) -> s
     traceback.print_exc(file=io)
     className = _determineClassName(o)
     tbValue = io.getvalue()
-    return "<%s instance at 0x%x with %s error:\n %s>" % (
+    return "<{} instance at 0x{:x} with {} error:\n {}>".format(
         className,
         id(o),
         formatter.__name__,
@@ -452,7 +452,7 @@ class QueueMethod:
 def fullFuncName(func):
     qualName = str(pickle.whichmodule(func, func.__name__)) + "." + func.__name__
     if namedObject(qualName) is not func:
-        raise Exception("Couldn't find %s as %s." % (func, qualName))
+        raise Exception("Couldn't find {} as {}.".format(func, qualName))
     return qualName
 
 

@@ -56,7 +56,9 @@ class ExampleTestBase:
         for childName in self.exampleRelativePath.split("/"):
             here = here.child(childName)
             if not here.exists():
-                raise SkipTest("Examples (%s) not found - cannot test" % (here.path,))
+                raise SkipTest(
+                    "Examples ({}) not found - cannot test".format(here.path)
+                )
         self.examplePath = here
 
         # Add the example parent folder to the Python path

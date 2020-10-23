@@ -8,7 +8,6 @@ Client which will talk to the server run by pbAnonServer.py, logging in
 either anonymously or with username/password credentials.
 """
 
-from __future__ import print_function
 
 from sys import stdout
 

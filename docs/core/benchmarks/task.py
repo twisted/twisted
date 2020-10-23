@@ -1,7 +1,6 @@
 """
 Benchmarks for L{twisted.internet.task}.
 """
-from __future__ import print_function
 
 from timer import timeit
 

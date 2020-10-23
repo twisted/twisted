@@ -50,10 +50,8 @@ def calcHA1(
 
     if preHA1 and (pszUserName or pszRealm or pszPassword):
         raise TypeError(
-            (
-                "preHA1 is incompatible with the pszUserName, "
-                "pszRealm, and pszPassword arguments"
-            )
+            "preHA1 is incompatible with the pszUserName, "
+            "pszRealm, and pszPassword arguments"
         )
 
     if preHA1 is None:

@@ -7,7 +7,7 @@ Support for generic select()able objects.
 """
 
 
-from socket import AF_INET, AF_INET6, inet_pton, error
+from socket import AF_INET, AF_INET6, inet_pton
 from typing import Iterable, List, Optional
 
 from zope.interface import implementer
@@ -518,7 +518,7 @@ def isIPAddress(addr: str, family: int = AF_INET) -> bool:
         # This might be a native implementation or the one from
         # twisted.python.compat.
         inet_pton(family, addr)
-    except (ValueError, error):
+    except (ValueError, OSError):
         return False
     return True
 

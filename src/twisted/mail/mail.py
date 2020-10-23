@@ -172,7 +172,7 @@ class DomainWithDefaultDict:
         @return: A string containing the mapping of domain names to domain
             objects.
         """
-        return "<DomainWithDefaultDict %s>" % (self.domains,)
+        return "<DomainWithDefaultDict {}>".format(self.domains)
 
     def __repr__(self) -> str:
         """
@@ -182,7 +182,7 @@ class DomainWithDefaultDict:
         @return: A pseudo-executable string describing the underlying domain
             mapping of this object.
         """
-        return "DomainWithDefaultDict(%s)" % (self.domains,)
+        return "DomainWithDefaultDict({})".format(self.domains)
 
     def get(self, key, default=None):
         """
@@ -700,7 +700,7 @@ class FileMonitoringService(internet.TimerService):
             except:
                 now = 0
             if now > mtime:
-                log.msg("%s changed, notifying listener" % (name,))
+                log.msg("{} changed, notifying listener".format(name))
                 self.files[self.index][3] = now
                 callback(name)
         self._setupMonitor()

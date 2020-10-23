@@ -284,7 +284,7 @@ class PrintableCharactersTests(ByteGroupingsMixin, unittest.TestCase):
             self.assertEqual(occurrences(result), [])
 
         occs = occurrences(proto)
-        self.assertFalse(occs, "%r should have been []" % (occs,))
+        self.assertFalse(occs, "{!r} should have been []".format(occs))
 
 
 class ServerFunctionKeysTests(ByteGroupingsMixin, unittest.TestCase):
@@ -587,7 +587,7 @@ class ClientControlSequencesTests(unittest.TestCase, MockMixin):
         self.parser.dataReceived(data)
         while calls:
             self.assertCall(occs.pop(0), *calls.pop(0))
-        self.assertFalse(occs, "No other calls should happen: %r" % (occs,))
+        self.assertFalse(occs, "No other calls should happen: {!r}".format(occs))
 
     def test_shiftInAfterApplicationData(self):
         """

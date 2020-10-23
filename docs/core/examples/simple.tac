@@ -1,7 +1,6 @@
 # You can run this .tac file directly with:
 #    twistd -ny simple.tac
 
-from __future__ import print_function
 
 from twisted.application import service, internet
 from twisted.protocols import wire

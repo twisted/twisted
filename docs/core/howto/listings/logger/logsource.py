@@ -1,7 +1,7 @@
 from twisted.logger import Logger
 
 
-class MyObject(object):
+class MyObject:
     log = Logger()
 
     def __init__(self, value):

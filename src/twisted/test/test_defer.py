@@ -549,7 +549,9 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         d2.unpause()
         assert (
             self.callbackResults[0][0] == 2
-        ), "Result should have been from second deferred:%s" % (self.callbackResults,)
+        ), "Result should have been from second deferred:{}".format(
+            self.callbackResults
+        )
 
     def test_chainedPausedDeferredWithResult(self):
         """
@@ -1197,7 +1199,7 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         pattern = "Callback returned the Deferred it was attached to"
         self.assertTrue(
             re.search(pattern, warning["message"]),
-            "\nExpected match: %r\nGot: %r" % (pattern, warning["message"]),
+            "\nExpected match: {!r}\nGot: {!r}".format(pattern, warning["message"]),
         )
 
     def test_circularChainException(self):
@@ -1225,7 +1227,7 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         """
         d = defer.Deferred()
         address = id(d)
-        self.assertEqual(repr(d), "<Deferred at 0x%x>" % (address,))
+        self.assertEqual(repr(d), "<Deferred at 0x{:x}>".format(address))
 
     def test_reprWithResult(self):
         """
@@ -1235,7 +1237,7 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         d = defer.Deferred()
         d.callback("orange")
         self.assertEqual(
-            repr(d), "<Deferred at 0x%x current result: 'orange'>" % (id(d),)
+            repr(d), "<Deferred at 0x{:x} current result: 'orange'>".format(id(d))
         )
 
     def test_reprWithChaining(self):
@@ -1248,7 +1250,8 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         b = defer.Deferred()
         b.chainDeferred(a)
         self.assertEqual(
-            repr(a), "<Deferred at 0x%x waiting on Deferred at 0x%x>" % (id(a), id(b))
+            repr(a),
+            "<Deferred at 0x{:x} waiting on Deferred at 0x{:x}>".format(id(a), id(b)),
         )
 
     def test_boundedStackDepth(self):
@@ -1471,7 +1474,7 @@ class FirstErrorTests(unittest.SynchronousTestCase):
             f = failure.Failure()
 
         error = defer.FirstError(f, 3)
-        self.assertEqual(repr(error), "FirstError[#3, %s]" % (repr(exc),))
+        self.assertEqual(repr(error), "FirstError[#3, {}]".format(repr(exc)))
 
     def test_str(self):
         """
@@ -1485,7 +1488,7 @@ class FirstErrorTests(unittest.SynchronousTestCase):
             f = failure.Failure()
 
         error = defer.FirstError(f, 5)
-        self.assertEqual(str(error), "FirstError[#5, %s]" % (str(f),))
+        self.assertEqual(str(error), "FirstError[#5, {}]".format(str(f)))
 
     def test_comparison(self):
         """
@@ -2001,7 +2004,7 @@ class LogTests(unittest.SynchronousTestCase):
         expected = "Unhandled Error\nTraceback "
         self.assertTrue(
             msg.startswith(expected),
-            "Expected message starting with: {0!r}".format(expected),
+            "Expected message starting with: {!r}".format(expected),
         )
 
     def test_errorLogDebugInfo(self):
@@ -2026,7 +2029,7 @@ class LogTests(unittest.SynchronousTestCase):
         expected = "(debug:  I"
         self.assertTrue(
             msg.startswith(expected),
-            "Expected message starting with: {0!r}".format(expected),
+            "Expected message starting with: {!r}".format(expected),
         )
 
     def test_chainedErrorCleanup(self):

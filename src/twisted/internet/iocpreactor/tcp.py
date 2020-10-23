@@ -99,7 +99,7 @@ class Connection(abstract.FileHandle, _SocketCloser, _AbortingMixin):
     def _closeWriteConnection(self):
         try:
             self.socket.shutdown(1)
-        except socket.error:
+        except OSError:
             pass
         p = interfaces.IHalfCloseableProtocol(self.protocol, None)
         if p:
@@ -357,8 +357,8 @@ class Server(Connection):
         self.clientAddr = clientAddr
         self.sessionno = sessionno
         logPrefix = self._getLogPrefix(self.protocol)
-        self.logstr = "%s,%s,%s" % (logPrefix, sessionno, self.clientAddr.host)
-        self.repstr = "<%s #%s on %s>" % (
+        self.logstr = "{},{},{}".format(logPrefix, sessionno, self.clientAddr.host)
+        self.repstr = "<{} #{} on {}>".format(
             self.protocol.__class__.__name__,
             self.sessionno,
             self.serverAddr.port,
@@ -427,13 +427,13 @@ class Port(_SocketCloser, _LogOwner):
 
     def __repr__(self) -> str:
         if self._realPortNumber is not None:
-            return "<%s of %s on %s>" % (
+            return "<{} of {} on {}>".format(
                 self.__class__,
                 self.factory.__class__,
                 self._realPortNumber,
             )
         else:
-            return "<%s of %s (not listening)>" % (
+            return "<{} of {} (not listening)>".format(
                 self.__class__,
                 self.factory.__class__,
             )
@@ -447,7 +447,7 @@ class Port(_SocketCloser, _LogOwner):
             else:
                 addr = (self.interface, self.port)
             skt.bind(addr)
-        except socket.error as le:
+        except OSError as le:
             raise error.CannotListenError(self.interface, self.port, le)
 
         self.addrLen = _iocp.maxAddrLen(skt.fileno())
@@ -490,7 +490,7 @@ class Port(_SocketCloser, _LogOwner):
         """
         Log message for closing port
         """
-        log.msg("(%s Port %s Closed)" % (self._type, self._realPortNumber))
+        log.msg("({} Port {} Closed)".format(self._type, self._realPortNumber))
 
     def connectionLost(self, reason):
         """

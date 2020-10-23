@@ -104,7 +104,7 @@ else:
         """
         try:
             fObj = _open(os.path.join(filename, "symlink"), "r")
-        except IOError as e:
+        except OSError as e:
             if e.errno == errno.ENOENT or e.errno == errno.EIO:
                 raise OSError(e.errno, None)
             raise
@@ -168,7 +168,7 @@ class FilesystemLock:
                 if e.errno == errno.EEXIST:
                     try:
                         pid = readlink(self.name)
-                    except (IOError, OSError) as e:
+                    except OSError as e:
                         if e.errno == errno.ENOENT:
                             # The lock has vanished, try to claim it in the
                             # next iteration through the loop.
@@ -217,7 +217,7 @@ class FilesystemLock:
         """
         pid = readlink(self.name)
         if int(pid) != os.getpid():
-            raise ValueError("Lock %r not owned by this process" % (self.name,))
+            raise ValueError("Lock {!r} not owned by this process".format(self.name))
         rmlink(self.name)
         self.locked = False
 

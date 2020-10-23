@@ -131,7 +131,7 @@ class IRCReplyBot(irc.IRCClient):
         if self.nickname.lower() == channel.lower():
             d = self.factory.getUser(msg)
             d.addErrback(catchError)
-            d.addCallback(lambda m: "Status of %s: %s" % (msg, m))
+            d.addCallback(lambda m: "Status of {}: {}".format(msg, m))
             d.addCallback(lambda m: self.msg(user, m))
 
 
@@ -181,7 +181,7 @@ class UserStatusTree(resource.Resource):
         d = self.service.getUsers()
 
         def formatUsers(users):
-            l = ['<li><a href="%s">%s</a></li>' % (user, user) for user in users]
+            l = ['<li><a href="{}">{}</a></li>'.format(user, user) for user in users]
             return "<ul>" + "".join(l) + "</ul>"
 
         d.addCallback(formatUsers)
@@ -267,7 +267,7 @@ class LocalFingerService(service.Service):
             return defer.succeed(b"No such user")
         try:
             f = open(os.path.join(entry[5], ".plan"))
-        except (IOError, OSError):
+        except OSError:
             return defer.succeed(b"No such user")
         with f:
             data = f.read()

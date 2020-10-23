@@ -26,8 +26,6 @@ Various other classes in this module support this usage:
     response.
 """
 
-__metaclass__ = type
-
 import re
 
 from zope.interface import implementer
@@ -229,18 +227,16 @@ class HTTPParser(LineReceiver):
     # HTTP headers delimited by \n instead of \r\n.
     delimiter = b"\n"
 
-    CONNECTION_CONTROL_HEADERS = set(
-        [
-            b"content-length",
-            b"connection",
-            b"keep-alive",
-            b"te",
-            b"trailers",
-            b"transfer-encoding",
-            b"upgrade",
-            b"proxy-connection",
-        ]
-    )
+    CONNECTION_CONTROL_HEADERS = {
+        b"content-length",
+        b"connection",
+        b"keep-alive",
+        b"te",
+        b"trailers",
+        b"transfer-encoding",
+        b"upgrade",
+        b"proxy-connection",
+    }
 
     def connectionMade(self):
         self.headers = Headers()
@@ -355,7 +351,7 @@ class HTTPClientParser(HTTPParser):
     @ivar _everReceivedData: C{True} if any bytes have been received.
     """
 
-    NO_BODY_CODES = set([NO_CONTENT, NOT_MODIFIED])
+    NO_BODY_CODES = {NO_CONTENT, NOT_MODIFIED}
 
     _transferDecoders = {
         b"chunked": _ChunkedTransferDecoder,
@@ -1034,7 +1030,7 @@ def makeStatefulDispatcher(name, template):
         func = getattr(self, "_" + name + "_" + self._state, None)
         if func is None:
             raise RuntimeError(
-                "%r has no %s method in state %s" % (self, name, self._state)
+                "{!r} has no {} method in state {}".format(self, name, self._state)
             )
         return func(*args, **kwargs)
 

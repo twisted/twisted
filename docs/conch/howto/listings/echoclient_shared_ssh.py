@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
-from __future__ import print_function
 
 if __name__ == "__main__":
     import sys

@@ -733,7 +733,7 @@ class SSHTransportBase(protocol.Protocol):
         """
         if messageNum < 50 and messageNum in messages:
             messageType = messages[messageNum][4:]
-            f = getattr(self, "ssh_%s" % (messageType,), None)
+            f = getattr(self, "ssh_{}".format(messageType), None)
             if f is not None:
                 f(payload)
             else:
@@ -1263,7 +1263,9 @@ class SSHTransportBase(protocol.Protocol):
             return x25519.X25519PrivateKey.generate()
         else:
             raise UnsupportedAlgorithm(
-                "Cannot generate elliptic curve private key for %r" % (self.kexAlg,)
+                "Cannot generate elliptic curve private key for {!r}".format(
+                    self.kexAlg
+                )
             )
 
     def _encodeECPublicKey(self, ecPub):
@@ -1290,7 +1292,7 @@ class SSHTransportBase(protocol.Protocol):
             )
         else:
             raise UnsupportedAlgorithm(
-                "Cannot encode elliptic curve public key for %r" % (self.kexAlg,)
+                "Cannot encode elliptic curve public key for {!r}".format(self.kexAlg)
             )
 
     def _generateECSharedSecret(self, ecPriv, theirECPubBytes):
@@ -1322,7 +1324,9 @@ class SSHTransportBase(protocol.Protocol):
             sharedSecret = ecPriv.exchange(theirECPub)
         else:
             raise UnsupportedAlgorithm(
-                "Cannot generate elliptic curve shared secret for %r" % (self.kexAlg,)
+                "Cannot generate elliptic curve shared secret for {!r}".format(
+                    self.kexAlg
+                )
             )
 
         return _mpFromBytes(sharedSecret)

@@ -201,7 +201,7 @@ class SSHPublicKeyDatabase:
                 continue
             try:
                 lines = filepath.open()
-            except IOError as e:
+            except OSError as e:
                 if e.errno == errno.EACCES:
                     lines = runAsEffectiveUser(ouid, ogid, filepath.open)
                 else:
@@ -392,9 +392,8 @@ def _keysFromFilepaths(filepaths, parseKey):
         if fp.exists():
             try:
                 with fp.open() as f:
-                    for key in readAuthorizedKeyFile(f, parseKey):
-                        yield key
-            except (IOError, OSError) as e:
+                    yield from readAuthorizedKeyFile(f, parseKey)
+            except OSError as e:
                 _log.error("Unable to read {path!r}: {error!s}", path=fp.path, error=e)
 
 

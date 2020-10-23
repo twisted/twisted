@@ -776,7 +776,7 @@ class OverrideLocatorAMP(amp.AMP):
             result = self.expectations[name]
             return result
         else:
-            return super(OverrideLocatorAMP, self).lookupFunction(name)
+            return super().lookupFunction(name)
 
     def greetingResponder(self, greeting, cookie):
         self.greetings.append((greeting, cookie))
@@ -1233,7 +1233,7 @@ class AMPTests(TestCase):
         ]:
             self.assertTrue(
                 interface.implementedBy(implementation),
-                "%s does not implements(%s)" % (implementation, interface),
+                "{} does not implements({})".format(implementation, interface),
             )
 
     def test_helloWorld(self):
@@ -1392,7 +1392,7 @@ class AMPTests(TestCase):
         is set.
         """
         a = amp.AMP()
-        self.assertEqual(repr(a), "<AMP at 0x%x>" % (id(a),))
+        self.assertEqual(repr(a), "<AMP at 0x{:x}>".format(id(a)))
 
     @skipIf(skipSSL, "SSL not available")
     def test_simpleSSLRepr(self):

@@ -82,7 +82,7 @@ def main(_fdopen=os.fdopen):
     while True:
         try:
             r = protocolIn.read(1)
-        except IOError as e:
+        except OSError as e:
             if e.args[0] == errno.EINTR:
                 continue
             else:

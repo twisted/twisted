@@ -729,7 +729,7 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, TestCase):
         Same as L{OpenSSLOptionsTestsMixin.setUp}, but it also patches
         L{sslverify._ChooseDiffieHellmanEllipticCurve}.
         """
-        super(OpenSSLOptionsTests, self).setUp()
+        super().setUp()
         self.patch(
             sslverify,
             "_ChooseDiffieHellmanEllipticCurve",
@@ -1413,8 +1413,8 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, TestCase):
             "country name",
             "email address",
         ]:
-            self.assertIn(k, s, "%r was not in inspect output." % (k,))
-            self.assertIn(k.title(), s, "%r was not in inspect output." % (k,))
+            self.assertIn(k, s, "{!r} was not in inspect output.".format(k))
+            self.assertIn(k.title(), s, "{!r} was not in inspect output.".format(k))
 
     def testInspectDistinguishedNameWithoutAllFields(self):
         n = sslverify.DN(localityName=b"locality name")
@@ -1427,8 +1427,8 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, TestCase):
             "country name",
             "email address",
         ]:
-            self.assertNotIn(k, s, "%r was in inspect output." % (k,))
-            self.assertNotIn(k.title(), s, "%r was in inspect output." % (k,))
+            self.assertNotIn(k, s, "{!r} was in inspect output.".format(k))
+            self.assertNotIn(k.title(), s, "{!r} was in inspect output.".format(k))
         self.assertIn("locality name", s)
         self.assertIn("Locality Name", s)
 
@@ -1545,7 +1545,7 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, TestCase):
     test_certificateOptionsSerialization.suppress = [  # type: ignore[attr-defined]
         util.suppress(
             category=DeprecationWarning,
-            message="twisted\.internet\._sslverify\.*__[gs]etstate__",
+            message=r"twisted\.internet\._sslverify\.*__[gs]etstate__",
         )
     ]
 

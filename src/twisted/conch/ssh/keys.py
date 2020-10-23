@@ -199,10 +199,10 @@ class Key:
         if type is None:
             type = cls._guessStringType(data)
         if type is None:
-            raise BadKeyError("cannot guess the type of %r" % (data,))
-        method = getattr(cls, "_fromString_%s" % (type.upper(),), None)
+            raise BadKeyError("cannot guess the type of {!r}".format(data))
+        method = getattr(cls, "_fromString_{}".format(type.upper()), None)
         if method is None:
-            raise BadKeyError("no _fromString method for %s" % (type,))
+            raise BadKeyError("no _fromString method for {}".format(type))
         if method.__code__.co_argcount == 2:  # No passphrase
             if passphrase:
                 raise BadKeyError("key not encrypted")
@@ -265,7 +265,7 @@ class Key:
             a, rest = common.getNS(rest)
             return cls._fromEd25519Components(a)
         else:
-            raise BadKeyError("unknown blob type: %s" % (keyType,))
+            raise BadKeyError("unknown blob type: {}".format(keyType))
 
     @classmethod
     def _fromString_PRIVATE_BLOB(cls, blob):
@@ -340,7 +340,7 @@ class Key:
             k = combined[:32]
             return cls._fromEd25519Components(a, k=k)
         else:
-            raise BadKeyError("unknown blob type: %s" % (keyType,))
+            raise BadKeyError("unknown blob type: {}".format(keyType))
 
     @classmethod
     def _fromString_PUBLIC_OPENSSH(cls, data):
@@ -418,7 +418,7 @@ class Key:
                 keySize = int(cipher[3:6]) // 8
                 ivSize = blockSize
             else:
-                raise BadKeyError("unknown encryption type %r" % (cipher,))
+                raise BadKeyError("unknown encryption type {!r}".format(cipher))
             if kdf == b"bcrypt":
                 salt, rest = common.getNS(kdfOptions)
                 rounds = struct.unpack("!L", rest[:4])[0]
@@ -431,7 +431,7 @@ class Key:
                     ignore_few_rounds=True,
                 )
             else:
-                raise BadKeyError("unknown KDF type %r" % (kdf,))
+                raise BadKeyError("unknown KDF type {!r}".format(kdf))
             if (len(encPrivKeyList) % blockSize) != 0:
                 raise BadKeyError("bad padding")
             decryptor = Cipher(
@@ -502,7 +502,7 @@ class Key:
                 _, cipherIVInfo = lines[2].split(b" ", 1)
                 cipher, ivdata = cipherIVInfo.rstrip().split(b",", 1)
             except ValueError:
-                raise BadKeyError("invalid DEK-info %r" % (lines[2],))
+                raise BadKeyError("invalid DEK-info {!r}".format(lines[2]))
 
             if cipher in (b"AES-128-CBC", b"AES-256-CBC"):
                 algorithmClass = algorithms.AES
@@ -515,7 +515,7 @@ class Key:
                 if len(ivdata) != 16:
                     raise BadKeyError("DES encrypted key with a bad IV")
             else:
-                raise BadKeyError("unknown encryption type %r" % (cipher,))
+                raise BadKeyError("unknown encryption type {!r}".format(cipher))
 
             # Extract keyData for decoding
             iv = bytes(
@@ -580,7 +580,7 @@ class Key:
                 ).private_key(backend=default_backend())
             )
         else:
-            raise BadKeyError("unknown key type %s" % (kind,))
+            raise BadKeyError("unknown key type {}".format(kind))
 
     @classmethod
     def _fromString_PRIVATE_OPENSSH(cls, data, passphrase):
@@ -641,7 +641,7 @@ class Key:
         elif sexp[1][0] == b"rsa-pkcs1-sha1":
             return cls._fromRSAComponents(n=kd[b"n"], e=kd[b"e"])
         else:
-            raise BadKeyError("unknown lsh key type %s" % (sexp[1][0],))
+            raise BadKeyError("unknown lsh key type {}".format(sexp[1][0]))
 
     @classmethod
     def _fromString_PRIVATE_LSH(cls, data):
@@ -679,7 +679,7 @@ class Key:
             )
 
         else:
-            raise BadKeyError("unknown lsh key type %s" % (sexp[1][0],))
+            raise BadKeyError("unknown lsh key type {}".format(sexp[1][0]))
 
     @classmethod
     def _fromString_AGENTV3(cls, data):
@@ -728,7 +728,7 @@ class Key:
             q, data = common.getMP(data)
             return cls._fromRSAComponents(n=n, e=e, d=d, p=p, q=q, u=u)
         else:
-            raise BadKeyError("unknown key type %s" % (keyType,))
+            raise BadKeyError("unknown key type {}".format(keyType))
 
     @classmethod
     def _guessStringType(cls, data):
@@ -950,15 +950,15 @@ class Key:
             name = data["curve"].decode("utf-8")
 
             if self.isPublic():
-                out = "<Elliptic Curve Public Key (%s bits)" % (name[-3:],)
+                out = "<Elliptic Curve Public Key ({} bits)".format(name[-3:])
             else:
-                out = "<Elliptic Curve Private Key (%s bits)" % (name[-3:],)
+                out = "<Elliptic Curve Private Key ({} bits)".format(name[-3:])
 
             for k, v in sorted(data.items()):
                 if k == "curve":
-                    out += "\ncurve:\n\t%s" % (name,)
+                    out += "\ncurve:\n\t{}".format(name)
                 else:
-                    out += "\n%s:\n\t%s" % (k, v)
+                    out += "\n{}:\n\t{}".format(k, v)
 
             return out + ">\n"
         else:
@@ -971,14 +971,14 @@ class Key:
                 )
             ]
             for k, v in sorted(self.data().items()):
-                lines.append("attr %s:" % (k,))
+                lines.append("attr {}:".format(k))
                 by = v if self.type() == "Ed25519" else common.MP(v)[4:]
                 while by:
                     m = by[:15]
                     by = by[15:]
                     o = ""
                     for c in iterbytes(m):
-                        o = o + "%02x:" % (ord(c),)
+                        o = o + "{:02x}:".format(ord(c))
                     if len(m) < 15:
                         o = o[:-1]
                     lines.append("\t" + o)
@@ -1053,7 +1053,9 @@ class Key:
                 )
             )
         else:
-            raise BadFingerPrintFormat("Unsupported fingerprint format: %s" % (format,))
+            raise BadFingerPrintFormat(
+                "Unsupported fingerprint format: {}".format(format)
+            )
 
     def type(self):
         """
@@ -1076,7 +1078,7 @@ class Key:
         ):
             return "Ed25519"
         else:
-            raise RuntimeError("unknown type of object: %r" % (self._keyObject,))
+            raise RuntimeError("unknown type of object: {!r}".format(self._keyObject))
 
     def sshType(self):
         """
@@ -1189,7 +1191,7 @@ class Key:
             }
 
         else:
-            raise RuntimeError("Unexpected key type: %s" % (self._keyObject,))
+            raise RuntimeError("Unexpected key type: {}".format(self._keyObject))
 
     def blob(self):
         """
@@ -1249,7 +1251,7 @@ class Key:
         elif type == "Ed25519":
             return common.NS(b"ssh-ed25519") + common.NS(data["a"])
         else:
-            raise BadKeyError("unknown key type: %s" % (type,))
+            raise BadKeyError("unknown key type: {}".format(type))
 
     def privateBlob(self):
         """
@@ -1332,7 +1334,7 @@ class Key:
                 + common.NS(data["k"] + data["a"])
             )
         else:
-            raise BadKeyError("unknown key type: %s" % (type,))
+            raise BadKeyError("unknown key type: {}".format(type))
 
     @_mutuallyExclusiveArguments(
         [
@@ -1395,9 +1397,9 @@ class Key:
         if isinstance(comment, str):
             comment = comment.encode("utf-8")
         passphrase = _normalizePassphrase(passphrase)
-        method = getattr(self, "_toString_%s" % (type.upper(),), None)
+        method = getattr(self, "_toString_{}".format(type.upper()), None)
         if method is None:
-            raise BadKeyError("unknown key type: %s" % (type,))
+            raise BadKeyError("unknown key type: {}".format(type))
         return method(subtype=subtype, comment=comment, passphrase=passphrase)
 
     def _toPublicOpenSSH(self, comment=None):
@@ -1544,7 +1546,7 @@ class Key:
         asn1Data = berEncoder.encode(asn1Sequence)
         if passphrase:
             iv = randbytes.secureRandom(8)
-            hexiv = "".join(["%02X" % (ord(x),) for x in iterbytes(iv)])
+            hexiv = "".join(["{:02X}".format(ord(x)) for x in iterbytes(iv)])
             hexiv = hexiv.encode("ascii")
             lines.append(b"Proc-Type: 4,ENCRYPTED")
             lines.append(b"DEK-Info: DES-EDE3-CBC," + hexiv + b"\n")
@@ -1594,7 +1596,7 @@ class Key:
         elif subtype is None or subtype == "PEM":
             return self._toPrivateOpenSSH_PEM(passphrase=passphrase)
         else:
-            raise ValueError("unknown subtype %s" % (subtype,))
+            raise ValueError("unknown subtype {}".format(subtype))
 
     def _toString_LSH(self, **kwargs):
         """
@@ -1635,7 +1637,7 @@ class Key:
                     ]
                 )
             else:
-                raise BadKeyError("unknown key type %s" % (type,))
+                raise BadKeyError("unknown key type {}".format(type))
             return b"{" + encodebytes(keyData).replace(b"\n", b"") + b"}"
         else:
             if type == "RSA":
@@ -1676,7 +1678,7 @@ class Key:
                     ]
                 )
             else:
-                raise BadKeyError("unknown key type %s'" % (type,))
+                raise BadKeyError("unknown key type {}'".format(type))
 
     def _toString_AGENTV3(self, **kwargs):
         """

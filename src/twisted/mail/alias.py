@@ -205,7 +205,7 @@ class AddressAlias(AliasBase):
         @rtype: L{bytes}
         @return: A string containing the destination address.
         """
-        return "<Address %s>" % (self.alias,)
+        return "<Address {}>".format(self.alias)
 
     def createMessageReceiver(self):
         """
@@ -314,7 +314,7 @@ class FileWrapper:
         @rtype: L{bytes}
         @return: A string containing the file name of the message.
         """
-        return "<FileWrapper %s>" % (self.finalname,)
+        return "<FileWrapper {}>".format(self.finalname)
 
 
 @implementer(IAlias)
@@ -344,7 +344,7 @@ class FileAlias(AliasBase):
         @rtype: L{bytes}
         @return: A string containing the name of the file.
         """
-        return "<File %s>" % (self.filename,)
+        return "<File {}>".format(self.filename)
 
     def createMessageReceiver(self):
         """
@@ -481,7 +481,7 @@ class MessageWrapper:
         self._timeoutCallID = None
         self.protocol.transport.signalProcess("KILL")
         exc = ProcessAliasTimeout(
-            "No answer after %s seconds" % (self.completionTimeout,)
+            "No answer after {} seconds".format(self.completionTimeout)
         )
         self.protocol.onEnd = None
         self.completion.errback(failure.Failure(exc))
@@ -498,7 +498,7 @@ class MessageWrapper:
         @rtype: L{bytes}
         @return: A string containing the name of the process.
         """
-        return "<ProcessWrapper %s>" % (self.processName,)
+        return "<ProcessWrapper {}>".format(self.processName)
 
 
 class ProcessAliasProtocol(protocol.ProcessProtocol):
@@ -566,7 +566,7 @@ class ProcessAlias(AliasBase):
         @rtype: L{bytes}
         @return: A string containing the command used to invoke the process.
         """
-        return "<Process %s>" % (self.path,)
+        return "<Process {}>".format(self.path)
 
     def spawnProcess(self, proto, program, path):
         """
@@ -660,7 +660,7 @@ class MultiWrapper:
         @rtype: L{bytes}
         @return: A string containing a list of the message receivers.
         """
-        return "<GroupWrapper %r>" % (map(str, self.objs),)
+        return "<GroupWrapper {!r}>".format(map(str, self.objs))
 
 
 @implementer(IAlias)
@@ -701,7 +701,7 @@ class AliasGroup(AliasBase):
                 try:
                     f = open(addr[1:])
                 except:
-                    log.err("Invalid filename in alias file %r" % (addr[1:],))
+                    log.err("Invalid filename in alias file {!r}".format(addr[1:]))
                 else:
                     with f:
                         addr = " ".join([l.strip() for l in f])

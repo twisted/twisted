@@ -8,7 +8,7 @@ class PythonSource:
         self.content = content
 
     def toHTML(self):
-        return '<pre class="python">%s</pre>' % (self.content,)
+        return '<pre class="python">{}</pre>'.format(self.content)
 
 
 class Raw:

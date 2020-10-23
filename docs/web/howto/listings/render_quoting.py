@@ -1,5 +1,3 @@
-from __future__ import print_function
-
 from twisted.web.template import flattenString
 from quoting_element import ExampleElement
 

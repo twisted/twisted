@@ -1,5 +1,3 @@
-from __future__ import print_function
-
 from twisted.web.template import Element, renderer, XMLFile, flattenString
 from twisted.python.filepath import FilePath
 

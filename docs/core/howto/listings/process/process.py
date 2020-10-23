@@ -3,7 +3,6 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-from __future__ import print_function
 
 from twisted.internet import protocol
 from twisted.internet import reactor

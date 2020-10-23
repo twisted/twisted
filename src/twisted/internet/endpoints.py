@@ -1715,7 +1715,7 @@ def _matchPluginToPrefix(plugins, endpointType):
     for plugin in plugins:
         if _matchingString(plugin.prefix.lower(), endpointType) == endpointType:
             return plugin
-    raise ValueError("Unknown endpoint type: '%s'" % (endpointType,))
+    raise ValueError("Unknown endpoint type: '{}'".format(endpointType))
 
 
 def serverFromString(reactor, description):
@@ -1880,7 +1880,7 @@ def _loadCAsFromDir(directoryPath):
             continue
         try:
             data = child.getContent()
-        except IOError:
+        except OSError:
             # Permission denied, corrupt disk, we don't care.
             continue
         try:

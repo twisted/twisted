@@ -6,7 +6,6 @@ Demonstration of copying a file descriptor over an AF_UNIX connection using
 sendmsg.
 """
 
-from __future__ import print_function
 
 from os import pipe, read, write
 from socket import SOL_SOCKET, socketpair

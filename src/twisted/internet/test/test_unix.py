@@ -9,7 +9,7 @@ Tests for implementations of L{IReactorUNIX}.
 from stat import S_IMODE
 from os import stat, close, urandom, unlink, fstat
 from tempfile import mktemp, mkstemp
-from socket import AF_INET, SOCK_STREAM, SOL_SOCKET, socket, error
+from socket import AF_INET, SOCK_STREAM, SOL_SOCKET, socket
 from pprint import pformat
 from hashlib import md5
 from struct import pack
@@ -203,7 +203,9 @@ class ReceiveFileDescriptor(ConnectableProtocol):
         """
         if self.waiting is not None:
             self.waiting.errback(
-                Failure(Exception("Received bytes (%r) before descriptor." % (data,)))
+                Failure(
+                    Exception("Received bytes ({!r}) before descriptor.".format(data))
+                )
             )
             self.waiting = None
 
@@ -258,7 +260,7 @@ class UNIXTestsBuilder(UNIXFamilyMixin, ReactorBuilder, ConnectionTestsMixin):
         """
 
         def raiseSocketError(self):
-            raise error("FakeBasePort forced socket.error")
+            raise OSError("FakeBasePort forced socket.error")
 
         self.patch(base.BasePort, "createInternetSocket", raiseSocketError)
         reactor = self.buildReactor()
@@ -805,13 +807,13 @@ class UNIXPortTestsMixin:
         """
         Get the message expected to be logged when a UNIX port starts listening.
         """
-        return "%s starting on %r" % (factory, nativeString(port.getHost().name))
+        return "{} starting on {!r}".format(factory, nativeString(port.getHost().name))
 
     def getExpectedConnectionLostLogMsg(self, port):
         """
         Get the expected connection lost message for a UNIX port
         """
-        return "(UNIX Port %s Closed)" % (nativeString(port.getHost().name),)
+        return "(UNIX Port {} Closed)".format(nativeString(port.getHost().name))
 
 
 class UNIXPortTestsBuilder(

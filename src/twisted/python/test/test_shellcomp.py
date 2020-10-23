@@ -177,13 +177,11 @@ class ZshTests(unittest.TestCase):
         ag = _shellcomp.ZshArgumentsGenerator(opts, "ace", BytesIO())
 
         expected = {
-            "albatros": set(["anatra", "b", "bristol", "f", "fokker", "s", "spad"]),
-            "anatra": set(
-                ["a", "albatros", "b", "bristol", "f", "fokker", "s", "spad"]
-            ),
-            "bristol": set(["a", "albatros", "anatra", "f", "fokker", "s", "spad"]),
-            "fokker": set(["a", "albatros", "anatra", "b", "bristol", "s", "spad"]),
-            "spad": set(["a", "albatros", "anatra", "b", "bristol", "f", "fokker"]),
+            "albatros": {"anatra", "b", "bristol", "f", "fokker", "s", "spad"},
+            "anatra": {"a", "albatros", "b", "bristol", "f", "fokker", "s", "spad"},
+            "bristol": {"a", "albatros", "anatra", "f", "fokker", "s", "spad"},
+            "fokker": {"a", "albatros", "anatra", "b", "bristol", "s", "spad"},
+            "spad": {"a", "albatros", "anatra", "b", "bristol", "f", "fokker"},
         }
 
         self.assertEqual(ag.excludes, expected)
@@ -590,8 +588,8 @@ testOutput1 = b"""#compdef silly
 
 _arguments -s -A "-*" \\
 ':output file (*):_files -g "*"' \\
-"(--accuracy)-a[Select the level of accuracy (1-3)]:Accuracy'\`?:(1 2 3)" \\
-"(-a)--accuracy=[Select the level of accuracy (1-3)]:Accuracy'\`?:(1 2 3)" \\
+"(--accuracy)-a[Select the level of accuracy (1-3)]:Accuracy'\\`?:(1 2 3)" \\
+"(-a)--accuracy=[Select the level of accuracy (1-3)]:Accuracy'\\`?:(1 2 3)" \\
 '(--color --gray -g)-c[Color on]' \\
 '(--gray -c -g)--color[Color on]' \\
 '(--color --gray -c)-g[Turn on gray-scale output]' \\
@@ -610,8 +608,8 @@ testOutput2 = b"""#compdef silly2
 _arguments -s -A "-*" \\
 '*::subcmd:->subcmd' \\
 ':output file (*):_files -g "*"' \\
-"(--accuracy)-a[Select the level of accuracy (1-3)]:Accuracy'\`?:(1 2 3)" \\
-"(-a)--accuracy=[Select the level of accuracy (1-3)]:Accuracy'\`?:(1 2 3)" \\
+"(--accuracy)-a[Select the level of accuracy (1-3)]:Accuracy'\\`?:(1 2 3)" \\
+"(-a)--accuracy=[Select the level of accuracy (1-3)]:Accuracy'\\`?:(1 2 3)" \\
 '(--another-param)-P[another-param]:another-param:_files' \\
 '(-P)--another-param=[another-param]:another-param:_files' \\
 '(--color --gray -g)-c[Color on]' \\

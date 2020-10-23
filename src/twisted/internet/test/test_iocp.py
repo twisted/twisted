@@ -78,7 +78,7 @@ class SupportTests(TestCase):
         for the port to be available, then there might a bug in the code and
         not the test (or a very, very busy VM running the tests).
         """
-        msg("family = %r" % (family,))
+        msg("family = {!r}".format(family))
         port = socket(family, SOCK_STREAM)
         self.addCleanup(port.close)
         port.bind(("", 0))

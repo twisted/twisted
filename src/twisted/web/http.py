@@ -405,7 +405,7 @@ def toChunk(data):
 
     @returns: a tuple of C{bytes} representing the chunked encoding of data
     """
-    return (networkString("%x" % (len(data),)), b"\r\n", data, b"\r\n")
+    return (networkString("{:x}".format(len(data))), b"\r\n", data, b"\r\n")
 
 
 def fromChunk(data):
@@ -832,7 +832,9 @@ class Request:
             self._log.failure(
                 "",
                 Failure(
-                    RuntimeError("Producer was not unregistered for %s" % (self.uri,))
+                    RuntimeError(
+                        "Producer was not unregistered for {}".format(self.uri)
+                    )
                 ),
             )
             self.unregisterProducer()
@@ -1009,7 +1011,7 @@ class Request:
         @return: A string loosely describing this L{Request} object.
         @rtype: L{str}
         """
-        return "<%s at 0x%x method=%s uri=%s clientproto=%s>" % (
+        return "<{} at 0x{:x} method={} uri={} clientproto={}>".format(
             self.__class__.__name__,
             id(self),
             nativeString(self.method),
@@ -1890,7 +1892,7 @@ class _ChunkedTransferDecoder:
         data = self._buffer + data
         self._buffer = b""
         while data:
-            data = getattr(self, "_dataReceived_%s" % (self.state,))(data)
+            data = getattr(self, "_dataReceived_{}".format(self.state))(data)
 
     def noMoreData(self):
         """

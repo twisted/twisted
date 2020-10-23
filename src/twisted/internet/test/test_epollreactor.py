@@ -208,7 +208,7 @@ class ContinuousPollingTests(TestCase):
         self.assertEqual(poller.getReaders(), [])
         self.assertEqual(poller.getWriters(), [])
         self.assertEqual(len(removed), 3)
-        self.assertEqual(set(removed), set([reader, writer, both]))
+        self.assertEqual(set(removed), {reader, writer, both})
 
     def test_getReaders(self):
         """

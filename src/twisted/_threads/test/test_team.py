@@ -33,7 +33,7 @@ class ContextualWorker(proxyForInterface(IWorker, "_realWorker")):  # type: igno
 
         @param work: the work to pass on to the real worker.
         """
-        super(ContextualWorker, self).do(lambda: call(self._context, work))
+        super().do(lambda: call(self._context, work))
 
 
 class TeamTests(SynchronousTestCase):

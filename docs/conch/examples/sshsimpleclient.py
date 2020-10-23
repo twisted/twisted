@@ -47,7 +47,7 @@ class SimpleTransport(transport.SSHClientTransport):
 
 class SimpleUserAuth(userauth.SSHUserAuthClient):
     def getPassword(self):
-        return defer.succeed(getpass.getpass("%s@%s's password: " % (USER, HOST)))
+        return defer.succeed(getpass.getpass("{}@{}'s password: ".format(USER, HOST)))
 
     def getGenericAnswers(self, name, instruction, questions):
         print(name)
