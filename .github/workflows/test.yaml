@@ -149,5 +149,4 @@ jobs:
       if: startsWith(github.ref, 'refs/tags/twisted-')
       uses: pypa/gh-action-pypi-publish@v1.3.1
       with:
-        password: ${{ secrets.TEST_PYPI_UPLOAD_TOKEN }}
-        repository_url: https://test.pypi.org/legacy/
+        password: ${{ secrets.PYPI_UPLOAD_TOKEN }}
