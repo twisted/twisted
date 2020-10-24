@@ -90,3 +90,11 @@ class SkipAttributeOnMethods(TestCase):
 
     def test_shouldNotSkip(self):
         self.assertTrue(True, "Test should run and not be skipped")
+
+    def test_emptyStringSkip(self):
+        """
+        A skip attribute with empty string should not skip the tests.
+        """
+        self.assertTrue(True, "Test should run and not be skipped")
+
+    test_emptyStringSkip.skip = ""

@@ -49,36 +49,36 @@ from twisted.python._release import (
 )
 
 if os.name != "posix":
-    generalSkip, skipText = True, "Release toolchain only supported on POSIX."
+    skip = "Release toolchain only supported on POSIX."
 else:
-    generalSkip, skipText = False, "Release toolchain only supported on POSIX."
+    skip = ""
 
 testingSphinxConf = "master_doc = 'index'\n"
 
 if requireModule("pydoctor.driver"):
-    pydoctorSkip, pydoctorSkipText = generalSkip, skipText
+    pydoctorSkip, pydoctorSkipText = False, ""
 else:
     # it might not be installed, or it might use syntax not available in
     # this version of Python.
     pydoctorSkip, pydoctorSkipText = True, "Pydoctor is not present."
 
 
-if not generalSkip and which("sphinx-build"):
+if which("sphinx-build"):
     sphinxSkip, sphinxSkipText = False, ""
 else:
     sphinxSkip, sphinxSkipText = True, "Sphinx not available."
 
 
-if not generalSkip and which("git"):
+if which("git"):
     gitVersion = runCommand(["git", "--version"]).split(b" ")[2].split(b".")
 
     # We want git 2.0 or above.
     if int(gitVersion[0]) >= 2:
-        gitSkip, gitSkipText = generalSkip, skipText
+        gitSkip, gitSkipText = False, ""
     else:
-        gitSkip, gitSkipText = False, "old git is present"
+        gitSkip, gitSkipText = True, "old git is present"
 else:
-    gitSkip, gitSkipText = False, "git is not present."
+    gitSkip, gitSkipText = True, "git is not present."
 
 
 class ExternalTempdirTestCase(TestCase):
