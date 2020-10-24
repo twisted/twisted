@@ -97,4 +97,4 @@ class SkipAttributeOnMethods(TestCase):
         """
         self.assertTrue(True, "Test should run and not be skipped")
 
-    test_emptyStringSkip.skip = ""
+    test_emptyStringSkip.skip = ""  # type: ignore[attr-defined]
