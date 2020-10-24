@@ -55,14 +55,12 @@ else:
 
 testingSphinxConf = "master_doc = 'index'\n"
 
-try:
-    requireModule("pydoctor.driver")
+if requireModule("pydoctor.driver"):
+    pydoctorSkip, pydoctorSkipText = generalSkip, skipText
+else:
     # it might not be installed, or it might use syntax not available in
     # this version of Python.
-except (ImportError, SyntaxError):
     pydoctorSkip, pydoctorSkipText = True, "Pydoctor is not present."
-else:
-    pydoctorSkip, pydoctorSkipText = generalSkip, skipText
 
 
 if not generalSkip and which("sphinx-build"):
