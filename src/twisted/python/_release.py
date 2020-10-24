@@ -14,6 +14,7 @@ which must run on multiple platforms (eg the setup.py script).
 
 import os
 import sys
+from contextlib import redirect_stdout
 from io import StringIO
 from typing import Dict
 
@@ -513,13 +514,9 @@ class BuildAPIDocsScript:
                 "Must specify two arguments: " "Twisted checkout and destination path"
             )
 
-        original_stdout = sys.stdout
-        try:
-            capture = StringIO()
-            sys.stdout = capture
+        capture = StringIO()
+        with redirect_stdout(capture):
             self.buildAPIDocs(FilePath(args[0]), FilePath(args[1]))
-        finally:
-            sys.stdout = original_stdout
 
         output = capture.getvalue().strip()
         return output.splitlines()

@@ -49,9 +49,9 @@ from twisted.python._release import (
 )
 
 if os.name != "posix":
-    skip = "Release toolchain only supported on POSIX."
+    generalSkip, skipText = True, "Release toolchain only supported on POSIX."
 else:
-    skip = None
+    generalSkip, skipText = False, "Release toolchain only supported on POSIX."
 
 testingSphinxConf = "master_doc = 'index'\n"
 
@@ -60,27 +60,27 @@ try:
     # it might not be installed, or it might use syntax not available in
     # this version of Python.
 except (ImportError, SyntaxError):
-    pydoctorSkip = "Pydoctor is not present."
+    pydoctorSkip, pydoctorSkipText = True, "Pydoctor is not present."
 else:
-    pydoctorSkip = skip
+    pydoctorSkip, pydoctorSkipText = generalSkip, skipText
 
 
-if not skip and which("sphinx-build"):
-    sphinxSkip = None
+if not generalSkip and which("sphinx-build"):
+    sphinxSkip, sphinxSkipText = False, ""
 else:
-    sphinxSkip = "Sphinx not available."
+    sphinxSkip, sphinxSkipText = True, "Sphinx not available."
 
 
-if not skip and which("git"):
+if not generalSkip and which("git"):
     gitVersion = runCommand(["git", "--version"]).split(b" ")[2].split(b".")
 
     # We want git 2.0 or above.
     if int(gitVersion[0]) >= 2:
-        gitSkip = skip
+        gitSkip, gitSkipText = generalSkip, skipText
     else:
-        gitSkip = "old git is present"
+        gitSkip, gitSkipText = False, "old git is present"
 else:
-    gitSkip = "git is not present."
+    gitSkip, gitSkipText = False, "git is not present."
 
 
 class ExternalTempdirTestCase(TestCase):
@@ -406,7 +406,7 @@ class DoNotFailTests(TestCase):
             self.assertIsInstance(e, FailTest)
 
 
-@skipIf(pydoctorSkip, pydoctorSkip)
+@skipIf(pydoctorSkip, pydoctorSkipText)
 class APIBuilderTests(ExternalTempdirTestCase):
     """
     Tests for L{APIBuilder}.
@@ -683,7 +683,7 @@ class FilePathDeltaTests(TestCase):
         )
 
 
-@skipIf(sphinxSkip, sphinxSkip)
+@skipIf(sphinxSkip, sphinxSkipText)
 class SphinxBuilderTests(TestCase):
     """
     Tests for L{SphinxBuilder}.
@@ -921,7 +921,7 @@ class CommandsTestMixin(StructureAssertingMixin):
         self.assertStructure(exportDir, structure)
 
 
-@skipIf(gitSkip, gitSkip)
+@skipIf(gitSkip, gitSkipText)
 class GitCommandTest(CommandsTestMixin, ExternalTempdirTestCase):
     """
     Specific L{CommandsTestMixin} related to Git repositories through
@@ -956,7 +956,7 @@ class GitCommandTest(CommandsTestMixin, ExternalTempdirTestCase):
         runCommand(["git", "-C", repository.path, "commit", "-m", "hop"])
 
 
-@skipIf(gitSkip, gitSkip)
+@skipIf(gitSkip, gitSkipText)
 class RepositoryCommandDetectionTest(ExternalTempdirTestCase):
     """
     Test the L{getRepositoryCommand} to access the right set of VCS commands
@@ -994,7 +994,7 @@ class VCSCommandInterfaceTests(TestCase):
         self.assertTrue(IVCSCommand.implementedBy(GitCommand))
 
 
-@skipIf(gitSkip, gitSkip)
+@skipIf(gitSkip, gitSkipText)
 class CheckNewsfragmentScriptTests(ExternalTempdirTestCase):
     """
     L{CheckNewsfragmentScript}.
