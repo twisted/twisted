@@ -60,7 +60,7 @@ master_doc = "index"
 
 # General information about the project.
 project = "Twisted"
-copyright = "2017, Twisted Matrix Labs"
+copyright = "2020, Twisted Matrix Labs"
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -160,7 +160,7 @@ texinfo_documents = [
 epub_title = "Twisted"
 epub_author = "Twisted Matrix Labs"
 epub_publisher = "Twisted Matrix Labs"
-epub_copyright = "2014, Twisted Matrix Labs"
+epub_copyright = "2020, Twisted Matrix Labs"
 
 
 # -- Extension configuration ----------------------------------------------

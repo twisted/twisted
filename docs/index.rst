@@ -21,7 +21,6 @@ Contents:
 
 
 .. toctree::
-    :maxdepth: 2
-    :includehidden:
+    :maxdepth: 1
 
     historic/index
