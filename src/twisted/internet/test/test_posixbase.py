@@ -289,3 +289,12 @@ class ConnectedDatagramPortTests(TestCase):
         port.stopListening = stopListening
         port.connectionFailed("goodbye")
         self.assertTrue(self.called)
+
+
+class WakerTests(TestCase):
+    def test_noWakerConstructionWarnings(self):
+        waker = _Waker(reactor=None)
+        warnings = self.flushWarnings()
+        # explicitly close the sockets
+        waker.connectionLost(None)
+        self.assertEqual(len(warnings), 0)
