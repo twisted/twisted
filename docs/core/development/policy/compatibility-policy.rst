@@ -97,13 +97,13 @@ Procedure for Exceptions to this Policy
 
 **Every change is unique.**
 
-Sometimes, we'll want to make a change that fits with this spirit of this document (keeping Twisted working for applications which rely upon it) but may not fit with the letter of the procedure described above (the change modifies behavior of an existing API sufficiently that something might break).
-Generally, the reason that one would want to do this is to give applications a performance enhancement or bug fix that could break behavior that unanticipated, hypothetical uses of an existing API, but we don't want well-behaved applications to pay the penalty of a deprecation/adopt-a-new-API/removal cycle in order to get the benefits of the improvement if they don't need to.
+Sometimes, we'll want to make a change that fits with the spirit of this document (keeping Twisted working for applications which rely upon it) but may not fit with the letter of the procedure described above (the change modifies behavior of an existing API sufficiently that something might break).
+Generally, the reason that one would want to do this is to give applications a performance enhancement or bug fix that could break behavior in unintended hypothetical uses of an existing API, but we don't want well-behaved applications to pay the penalty of a deprecation/adopt-a-new-API/removal cycle in order to get the benefits of the improvement if they don't need to.
 
 If this is the case for your change, it's possible to make such a modification without a deprecation/removal cycle.
 However, we must give users an opportunity to discover whether a particular incompatible change affects them: we should not trust our own assessments of how code uses the API.
 In order to propose an incompatible change, start a discussion on the mailing list.
-Make sure that it is eye-catching so those who don't read all list messages in depth will notice it, by prefixing the subject with **INCOMPATIBLE CHANGE:** (capitalized like so).
+Make sure that it is eye-catching, so those who don't read all list messages in depth will notice it, by prefixing the subject with **INCOMPATIBLE CHANGE:** (capitalized like so).
 Always include a link to the ticket, and branch (if relevant).
 
 In order to **conclude** such a discussion, there must be a branch available so that developers can run their unit tests against it to mechanically verify that their understanding of their own code is correct.
@@ -117,7 +117,7 @@ The branch must be available for one week's time.
     The announcement forum for incompatible changes and the waiting period required are subject to change as we discover how effective this method is; the important aspect of this policy is that users have some way of finding out in advance about changes which might affect them.
 
 
-Compatible Changes. Changed not Covered by the Compatibility Policy
+Compatible Changes. Changes not Covered by the Compatibility Policy
 -------------------------------------------------------------------
 
 Here is a non-exhaustive list of changes which are not covered by the compatibility policy.
@@ -132,8 +132,6 @@ By doing so, there's no chance anything could access these objects by going thro
 
 Test code and test helpers are considered private API and should not be imported outside
 of the Twisted testing infrastructure.
-As an exception to this, :api:`twisted.test.proto_helpers` is considered a public API
-(see `#6435 <https://twistedmatrix.com/trac/ticket/6435>`_ for more discussion).
 
 
 Private Changes
@@ -162,14 +160,14 @@ The most basic thing that can happen between Twisted versions, of course, is tha
 That means that no application may ever rely on, for example, the value of any **func_code** object's **co_code** attribute remaining stable, or the **checksum** of a .py file remaining stable.
 
 **Docstrings** may also change at any time.
-No application code may expect any Twisted class, module, or method's __doc__ attribute to remain the same.
+Applications must not depend on any Twisted class, module, or method's metadata attributes such as ``__module__``, ``__name__``, ``__qualname__``, ``__annotations__`` and ``__doc__`` to remain the same.
 
 
 New Attributes
 ^^^^^^^^^^^^^^
 
 New code may also be added.
-No application may ever rely on the output of the ``dir()`` function on any object remaining stable, nor on any object's ``__all__`` attribute, nor on any object's ``__dict__`` not having new keys added to it.
+Applications must not depend on the output of the ``dir()`` function on any object remaining stable, nor on any object's ``__all__`` attribute, nor on any object's ``__dict__`` not having new keys added to it.
 These may happen in any maintenance or bugfix release, no matter how minor.
 
 
@@ -177,8 +175,21 @@ Pickling
 ^^^^^^^^
 
 Even though Python objects can be pickled and unpickled without explicit support for this, whether a particular pickled object can be unpickled after any particular change to the implementation of that object is less certain.
-Because of this, no application may depend on any object defined by Twisted to provide pickle compatibility between any release unless the object explicitly documents this as a feature it has.
+Because of this, applications must not depend on any object defined by Twisted to provide pickle compatibility between any release unless the object explicitly documents this as a feature it has.
 
+
+Representations
+^^^^^^^^^^^^^^^
+
+The printable representations of objects, as returned by ``repr(<object>)`` and defined by ``def __repr__(self):`` are for debugging and informational purposes.
+Because of this, applications must not depend on any object defined by Twisted to provide repr compatibility between any release.
+Attribute Access
+^^^^^^^^^^^^^^^^
+How an object's attributes are defined and accessed is considered an implementation detail.
+To allow backwards compatibility, an attribute may be moved from the instance ``__dict__`` into an ``@property`` or other descriptor based accessor.
+
+Adding new attributes to a constructed object, or monkey patching, is not considered a public use. This restriction allows both creating and converting to slotted classes.
+Because of this, applications must not depend on any object defined by Twisted to provide ``__dict__`` or ``__slots__`` compatibility between any release.
 
 Changes Covered by the Compatibility Policy
 -------------------------------------------
