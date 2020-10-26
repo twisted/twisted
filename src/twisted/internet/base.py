@@ -618,7 +618,7 @@ class ReactorBase(PluggableResolverMixin):
         # reactor internal readers, e.g. the waker.
         # Using Any as the type here… unable to find a suitable defined interface
         self._internalReaders = set()  # type: Set[Any]
-        self.waker = None  # type: Any
+        self._waker = None  # type: Any
 
         # Arrange for the running attribute to change to True at the right time
         # and let a subclass possibly do other things at that time (eg install
@@ -644,8 +644,8 @@ class ReactorBase(PluggableResolverMixin):
         """
         Wake up the event loop.
         """
-        if self.waker:
-            self.waker.wakeUp()
+        if self._waker:
+            self._waker.wakeUp()
         # if the waker isn't installed, the reactor isn't running, and
         # therefore doesn't need to be woken up
 

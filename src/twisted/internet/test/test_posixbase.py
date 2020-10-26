@@ -47,9 +47,9 @@ class PosixReactorBaseTests(TestCase):
     """
 
     def _checkWaker(self, reactor):
-        self.assertIsInstance(reactor.waker, _Waker)
-        self.assertIn(reactor.waker, reactor._internalReaders)
-        self.assertIn(reactor.waker, reactor._readers)
+        self.assertIsInstance(reactor._waker, _Waker)
+        self.assertIn(reactor._waker, reactor._internalReaders)
+        self.assertIn(reactor._waker, reactor._readers)
 
     def test_wakerIsInternalReader(self):
         """

@@ -99,7 +99,7 @@ class ThreadedSelectReactor(posixbase.PosixReactorBase):
 
     def wakeUp(self):
         # we want to wake up from any thread
-        self.waker.wakeUp()
+        self._waker.wakeUp()
 
     def callLater(self, *args, **kw):
         tple = posixbase.PosixReactorBase.callLater(self, *args, **kw)
