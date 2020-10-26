@@ -290,7 +290,7 @@ class Connection(
         if p:
             try:
                 p.writeConnectionLost()
-            except:
+            except BaseException:
                 f = failure.Failure()
                 log.err()
                 self.connectionLost(f)
@@ -300,7 +300,7 @@ class Connection(
         if p:
             try:
                 p.readConnectionLost()
-            except:
+            except BaseException:
                 log.err()
                 self.connectionLost(failure.Failure())
         else:

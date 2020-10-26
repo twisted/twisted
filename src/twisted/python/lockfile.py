@@ -90,7 +90,7 @@ else:
 
         try:
             rename(newlinkname, filename)
-        except:
+        except BaseException:
             os.remove(newvalname)
             os.rmdir(newlinkname)
             raise

@@ -36,7 +36,7 @@ def socketpair():
                 if e.args[0] not in (EINPROGRESS, EWOULDBLOCK):
                     raise
             server, addr = serverSocket.accept()
-        except:
+        except BaseException:
             client.close()
             raise
     finally:

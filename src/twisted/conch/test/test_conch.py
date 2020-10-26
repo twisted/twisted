@@ -646,7 +646,7 @@ class OpenSSHKeyExchangeTests(ConchServerSetupMixin, OpenSSHClientMixin, TestCas
             if not isinstance(output, str):
                 output = output.decode("utf-8")
             kexAlgorithms = output.split()
-        except:
+        except BaseException:
             pass
 
         if keyExchangeAlgo not in kexAlgorithms:

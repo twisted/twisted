@@ -905,7 +905,7 @@ class CFTPClientTestBase(SFTPTestBase):
         for f in ["dsa_test.pub", "dsa_test", "kh_test"]:
             try:
                 os.remove(f)
-            except:
+            except BaseException:
                 pass
         return SFTPTestBase.tearDown(self)
 

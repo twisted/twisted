@@ -450,7 +450,7 @@ class IRC(protocol.Protocol):
                 method(prefix, params)
             else:
                 self.irc_unknown(prefix, command, params)
-        except:
+        except BaseException:
             log.deferr()
 
     def irc_unknown(self, prefix, command, params):
@@ -2690,7 +2690,7 @@ class IRCClient(basic.LineReceiver):
                 method(prefix, params)
             else:
                 self.irc_unknown(prefix, command, params)
-        except:
+        except BaseException:
             log.deferr()
 
     def __getstate__(self):
@@ -2856,7 +2856,7 @@ def fileSize(file):
         try:
             stat_ = os.fstat(fileno)
             size = stat_[stat.ST_SIZE]
-        except:
+        except BaseException:
             pass
         else:
             return size
@@ -2864,7 +2864,7 @@ def fileSize(file):
     if hasattr(file, "name") and path.exists(file.name):
         try:
             size = path.getsize(file.name)
-        except:
+        except BaseException:
             pass
         else:
             return size
@@ -2876,7 +2876,7 @@ def fileSize(file):
                 size = file.tell()
             finally:
                 file.seek(0, 0)
-        except:
+        except BaseException:
             pass
         else:
             return size

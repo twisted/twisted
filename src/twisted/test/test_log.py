@@ -71,7 +71,7 @@ class TextFromEventDictTests(unittest.SynchronousTestCase):
         """
         try:
             raise RuntimeError()
-        except:
+        except BaseException:
             eventDict = dict(
                 message=(), isError=1, failure=failure.Failure(), why="foo"
             )
@@ -84,7 +84,7 @@ class TextFromEventDictTests(unittest.SynchronousTestCase):
         """
         try:
             raise RuntimeError()
-        except:
+        except BaseException:
             eventDict = dict(message=(), isError=1, failure=failure.Failure())
             text = log.textFromEventDict(eventDict)
             self.assertTrue(text.startswith("Unhandled Error\n"))

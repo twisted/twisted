@@ -153,7 +153,7 @@ class Port(abstract.FileHandle):
                 self.protocol.datagramReceived(
                     bytes(evt.buff[:data]), _iocp.makesockaddr(evt.addr_buff)
                 )
-            except:
+            except BaseException:
                 log.err()
 
     def doRead(self):

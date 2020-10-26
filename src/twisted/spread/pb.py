@@ -648,7 +648,7 @@ class Broker(banana.Banana):
         for notifier in self.connects:
             try:
                 notifier()
-            except:
+            except BaseException:
                 log.deferr()
         self.connects = None
         self.factory.clientConnectionMade(self)
@@ -658,7 +658,7 @@ class Broker(banana.Banana):
         for notifier in self.failures:
             try:
                 notifier()
-            except:
+            except BaseException:
                 log.deferr()
         self.failures = None
 
@@ -677,7 +677,7 @@ class Broker(banana.Banana):
             for d in self.waitingForAnswers.values():
                 try:
                     d.errback(failure.Failure(PBConnectionLost(reason)))
-                except:
+                except BaseException:
                     log.deferr()
         # Assure all Cacheable.stoppedObserving are called
         for lobj in self.remotelyCachedObjects.values():
@@ -687,14 +687,14 @@ class Broker(banana.Banana):
                 cacheable.stoppedObserving(
                     perspective, RemoteCacheObserver(self, cacheable, perspective)
                 )
-            except:
+            except BaseException:
                 log.deferr()
         # Loop on a copy to prevent notifiers to mixup
         # the list by calling dontNotifyOnDisconnect
         for notifier in self.disconnects[:]:
             try:
                 notifier()
-            except:
+            except BaseException:
                 log.deferr()
         self.disconnects = None
         self.waitingForAnswers = None
@@ -730,7 +730,7 @@ class Broker(banana.Banana):
         if self.connects is None:
             try:
                 notifier()
-            except:
+            except BaseException:
                 log.err()
         else:
             self.connects.append(notifier)
@@ -968,7 +968,7 @@ class Broker(banana.Banana):
         try:
             netArgs = self.serialize(args, perspective=perspective, method=message)
             netKw = self.serialize(kw, perspective=perspective, method=message)
-        except:
+        except BaseException:
             return defer.fail(failure.Failure())
         requestID = self.newRequestID()
         if answerRequired:
@@ -1062,7 +1062,7 @@ class Broker(banana.Banana):
                     self._sendError(e, requestID)
                 else:
                     self._sendError(CopyableFailure(e), requestID)
-        except:
+        except BaseException:
             if answerRequired:
                 log.msg("Peer will receive following PB traceback:", isError=True)
                 f = CopyableFailure()
@@ -1214,7 +1214,7 @@ class Broker(banana.Banana):
                 cacheable.stoppedObserving(
                     perspective, RemoteCacheObserver(self, cacheable, perspective)
                 )
-            except:
+            except BaseException:
                 log.deferr()
             puid = cacheable.processUniqueID()
             del self.remotelyCachedLUIDs[puid]

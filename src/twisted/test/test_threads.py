@@ -109,7 +109,7 @@ class ReactorThreadsTests(TestCase):
                 for i in range(100000):
                     try:
                         reactor.callFromThread(lambda: None)
-                    except:
+                    except BaseException:
                         self.failure = failure.Failure()
                         break
                 waiter.set()

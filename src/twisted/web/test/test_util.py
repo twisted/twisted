@@ -138,7 +138,7 @@ class FailureElementTests(TestCase):
 
         try:
             lineNumberProbeAlsoBroken()
-        except:
+        except BaseException:
             self.failure = Failure(captureVars=True)
             self.frame = self.failure.frames[-1]
 
@@ -329,7 +329,7 @@ class FormatFailureTests(TestCase):
         """
         try:
             raise Exception("Fake bug")
-        except:
+        except BaseException:
             result = formatFailure(Failure())
 
         self.assertIsInstance(result, bytes)

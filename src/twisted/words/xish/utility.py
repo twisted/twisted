@@ -102,7 +102,7 @@ class CallbackList:
         for key, (methodwrapper, onetime) in list(self.callbacks.items()):
             try:
                 methodwrapper(*args, **kwargs)
-            except:
+            except BaseException:
                 log.err()
 
             if onetime:

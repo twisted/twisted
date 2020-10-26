@@ -73,7 +73,7 @@ class Protocol(basic.LineReceiver):
                 f(*line.split()[1:])
             except TypeError:
                 self.sendLine(b"Wrong number of arguments.")
-            except:
+            except BaseException:
                 self.sendLine(b"Server error (probably your fault)")
 
     def cmd_ANON(self):

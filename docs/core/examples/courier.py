@@ -100,7 +100,7 @@ class MailProcessor(basic.LineReceiver):
             with open(self.messageFilename) as f:
                 emailParser.parse(f)
             self.sendLine(b"200 Ok")
-        except:
+        except BaseException:
             trace_dump()
             self.sendLine(b"435 " + FILTERNAME.encode("ascii") + b" processing error")
 

@@ -179,7 +179,7 @@ class Team:
         def doWork():
             try:
                 task()
-            except:
+            except BaseException:
                 self._logException()
 
             @self._coordinator.do

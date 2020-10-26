@@ -670,7 +670,7 @@ class FileMonitoringService(internet.TimerService):
         """
         try:
             mtime = os.path.getmtime(name)
-        except:
+        except BaseException:
             mtime = 0
         self.files.append([interval, name, callback, mtime])
         self.intervals.addInterval(interval)
@@ -697,7 +697,7 @@ class FileMonitoringService(internet.TimerService):
             name, callback, mtime = self.files[self.index][1:]
             try:
                 now = os.path.getmtime(name)
-            except:
+            except BaseException:
                 now = 0
             if now > mtime:
                 log.msg("{} changed, notifying listener".format(name))

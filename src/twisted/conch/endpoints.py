@@ -786,7 +786,7 @@ class _NewConnectionHelper:
         """
         try:
             return self.tty.open("rb+")
-        except:
+        except BaseException:
             # Give back a file-like object from which can be read a byte string
             # that KnownHostsFile recognizes as rejecting some option (b"no").
             return _ReadFile(b"no")
