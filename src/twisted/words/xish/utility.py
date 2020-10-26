@@ -293,11 +293,16 @@ class EventDispatcher:
         if event != None:
             # Named event
             observers = self._eventObservers
-            match = lambda query, obj: query == event
+
+            def match(query, obj):
+                return query == event
+
         else:
             # XPath event
             observers = self._xpathObservers
-            match = lambda query, obj: query.matches(obj)
+
+            def match(query, obj):
+                return query.matches(obj)
 
         priorities = list(observers.keys())
         priorities.sort()

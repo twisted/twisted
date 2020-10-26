@@ -39,7 +39,8 @@ def sampleFunction():
     """
 
 
-lambdaExample = lambda x: x
+def lambdaExample(x):
+    return x
 
 
 class UniversalPicklingErrorTests(unittest.TestCase):

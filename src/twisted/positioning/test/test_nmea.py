@@ -737,7 +737,10 @@ class CoordinateFixerTests(FixerTestMixin, TestCase):
         when you pass nonexistent coordinate types (not latitude or
         longitude).
         """
-        getSign = lambda: self.adapter._getHemisphereSign("BOGUS_VALUE")
+
+        def getSign():
+            return self.adapter._getHemisphereSign("BOGUS_VALUE")
+
         self.assertRaises(ValueError, getSign)
 
 

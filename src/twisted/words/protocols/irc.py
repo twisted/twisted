@@ -839,7 +839,9 @@ class ServerSupportedFeatures(_CommandDispatcherMixin):
         @return: Sequence of C{(name, processedValue)}
         """
         if valueProcessor is None:
-            valueProcessor = lambda x: x
+
+            def valueProcessor(x):
+                return x
 
         def _parse():
             for param in params:
