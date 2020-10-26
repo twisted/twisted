@@ -417,7 +417,7 @@ class Options(dict):
             else:
                 # XXX: This won't raise a TypeError if it's called
                 # with a value when it shouldn't be.
-                def fn(name, value=None, m=method):
+                def fn(name, value=None, m=method):  # type: ignore[misc]
                     return m()
 
             dispatch[prettyName] = fn
