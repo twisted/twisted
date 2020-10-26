@@ -182,7 +182,7 @@ class StubSessionForStubAvatarWithEnv(StubSessionForStubAvatar):
     """
 
     def __init__(self, avatar):
-        super(StubSessionForStubAvatarWithEnv, self).__init__(avatar)
+        super().__init__(avatar)
         # The representation of the environment as updated by remote requests.
         self.environ = {}
         # A snapshot of the environment when PTY request is received.
