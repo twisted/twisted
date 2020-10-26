@@ -94,7 +94,9 @@ class BaseError(Exception):
         self.appCondition = appCondition
 
     def __str__(self) -> str:
-        message = "%s with condition %r" % (self.__class__.__name__, self.condition)
+        message = "{} with condition {!r}".format(
+            self.__class__.__name__, self.condition
+        )
 
         if self.text:
             message += ": " + self.text

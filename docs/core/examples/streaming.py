@@ -10,7 +10,6 @@ want, and it sends the result set back to the user, one result per line,
 and finally closes the connection.
 """
 
-from __future__ import print_function
 
 from sys import stdout
 from random import randrange
@@ -23,7 +22,7 @@ from twisted.protocols.basic import LineReceiver
 
 
 @implementer(interfaces.IPushProducer)
-class Producer(object):
+class Producer:
     """
     Send back the requested number of random integers to the client.
     """

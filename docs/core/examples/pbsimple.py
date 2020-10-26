@@ -1,7 +1,6 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-from __future__ import print_function
 
 from twisted.spread import pb
 from twisted.internet import reactor

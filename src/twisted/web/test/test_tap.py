@@ -218,7 +218,7 @@ class ServiceTests(TestCase):
         options = Options()
         for name in [__name__ + ".nosuchthing", "foo."]:
             exc = self.assertRaises(UsageError, options.parseOptions, ["--wsgi", name])
-            self.assertEqual(str(exc), "No such WSGI application: %r" % (name,))
+            self.assertEqual(str(exc), "No such WSGI application: {!r}".format(name))
 
     @skipIf(requireModule("OpenSSL.SSL") is not None, "SSL module is available.")
     def test_HTTPSFailureOnMissingSSL(self):

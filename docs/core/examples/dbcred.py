@@ -17,7 +17,7 @@ from zope.interface import implementer
 
 
 @implementer(ICredentialsChecker)
-class DBCredentialsChecker(object):
+class DBCredentialsChecker:
     """
     This class checks the credentials of incoming connections
     against a user table in a database.

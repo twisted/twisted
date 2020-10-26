@@ -231,12 +231,12 @@ class TestProcessProtocol(protocol.ProcessProtocol):
         if childFD == 1:
             self.stages.append(2)
             if self.data != b"abcd":
-                raise RuntimeError("Data was %r instead of 'abcd'" % (self.data,))
+                raise RuntimeError("Data was {!r} instead of 'abcd'".format(self.data))
             self.transport.write(b"1234")
         elif childFD == 2:
             self.stages.append(3)
             if self.err != b"1234":
-                raise RuntimeError("Err was %r instead of '1234'" % (self.err,))
+                raise RuntimeError("Err was {!r} instead of '1234'".format(self.err))
             self.transport.write(b"abcd")
             self.stages.append(4)
         elif childFD == 0:
@@ -309,7 +309,7 @@ class SignalProtocol(protocol.ProcessProtocol):
         is set up and ready to receive the signal) by sending the signal to
         it.  Also log all output to help with debugging.
         """
-        msg("Received %r from child stdout" % (data,))
+        msg("Received {!r} from child stdout".format(data))
         if not self.signaled:
             self.signaled = True
             self.transport.signalProcess(self.signal)
@@ -319,7 +319,7 @@ class SignalProtocol(protocol.ProcessProtocol):
         Log all data received from the child's stderr to help with
         debugging.
         """
-        msg("Received %r from child stderr" % (data,))
+        msg("Received {!r} from child stderr".format(data))
 
     def processEnded(self, reason):
         """
@@ -329,10 +329,10 @@ class SignalProtocol(protocol.ProcessProtocol):
         of the exited process. Otherwise, errback with a C{ValueError}
         describing the problem.
         """
-        msg("Child exited: %r" % (reason.getTraceback(),))
+        msg("Child exited: {!r}".format(reason.getTraceback()))
         if not reason.check(error.ProcessTerminated):
             return self.deferred.errback(
-                ValueError("wrong termination: %s" % (reason,))
+                ValueError("wrong termination: {}".format(reason))
             )
         v = reason.value
         if isinstance(self.signal, str):
@@ -342,7 +342,7 @@ class SignalProtocol(protocol.ProcessProtocol):
         if v.exitCode is not None:
             return self.deferred.errback(
                 ValueError(
-                    "SIG%s: exitCode is %s, not None" % (self.signal, v.exitCode)
+                    "SIG{}: exitCode is {}, not None".format(self.signal, v.exitCode)
                 )
             )
         if v.signal != signalValue:
@@ -354,7 +354,7 @@ class SignalProtocol(protocol.ProcessProtocol):
             )
         if os.WTERMSIG(v.status) != signalValue:
             return self.deferred.errback(
-                ValueError("SIG%s: %s" % (self.signal, os.WTERMSIG(v.status)))
+                ValueError("SIG{}: {}".format(self.signal, os.WTERMSIG(v.status)))
             )
         self.deferred.callback(None)
 
@@ -582,7 +582,7 @@ class ProcessTests(unittest.TestCase):
 
                 for f in glob.glob(process_tester.test_file_match):
                     os.remove(f)
-            except:
+            except BaseException:
                 pass
 
         d.addCallback(check)
@@ -863,11 +863,13 @@ class FDChecker(protocol.ProcessProtocol):
                 self.transport.writeToChild(3, b"efgh")
                 return
         if self.state == 2:
-            self.fail("read '%s' on fd %s during state 2" % (childFD, data))
+            self.fail("read '{}' on fd {} during state 2".format(childFD, data))
             return
         if self.state == 3:
             if childFD != 1:
-                self.fail("read '%s' on fd %s (not 1) during state 3" % (childFD, data))
+                self.fail(
+                    "read '{}' on fd {} (not 1) during state 3".format(childFD, data)
+                )
                 return
             self.data += data
             if len(self.data) == 6:
@@ -877,7 +879,7 @@ class FDChecker(protocol.ProcessProtocol):
                 self.state = 4
             return
         if self.state == 4:
-            self.fail("read '%s' on fd %s during state 4" % (childFD, data))
+            self.fail("read '{}' on fd {} during state 4".format(childFD, data))
             return
 
     def childConnectionLost(self, childFD):
@@ -996,7 +998,7 @@ class PosixProcessBase:
         elif usrbinLoc.exists():
             return usrbinLoc._asBytesPath()
         else:
-            raise RuntimeError("%s not found in /bin or /usr/bin" % (commandName,))
+            raise RuntimeError("{} not found in /bin or /usr/bin".format(commandName))
 
     def test_normalTermination(self):
         cmd = self.getCommand("true")
@@ -1695,7 +1697,7 @@ class MockProcessTests(unittest.TestCase):
         p = TrivialProcessProtocol(d)
         reactor.spawnProcess(p, cmd, [b"ouch"], env=None, usePTY=False)
         # It should close the first read pipe, and the 2 last write pipes
-        self.assertEqual(set(self.mockos.closed), set([-1, -4, -6]))
+        self.assertEqual(set(self.mockos.closed), {-1, -4, -6})
         self.assertEqual(self.mockos.actions, [("fork", False), "waitpid"])
 
     def test_mockForkInParentGarbageCollectorEnabled(self):
@@ -1772,7 +1774,7 @@ class MockProcessTests(unittest.TestCase):
         before are closed and don't leak.
         """
         self._mockWithForkError()
-        self.assertEqual(set(self.mockos.closed), set([-1, -4, -6, -2, -3, -5]))
+        self.assertEqual(set(self.mockos.closed), {-1, -4, -6, -2, -3, -5})
 
     def test_mockForkErrorGivenFDs(self):
         """
@@ -1800,7 +1802,7 @@ class MockProcessTests(unittest.TestCase):
             None,
             childFDs={0: "r", 1: -11, 2: -13},
         )
-        self.assertEqual(set(self.mockos.closed), set([-1, -2]))
+        self.assertEqual(set(self.mockos.closed), {-1, -2})
 
     def test_mockForkErrorClosePTY(self):
         """
@@ -1812,7 +1814,7 @@ class MockProcessTests(unittest.TestCase):
         protocol = TrivialProcessProtocol(None)
         self.assertRaises(OSError, reactor.spawnProcess, protocol, None, usePTY=True)
         self.assertEqual(self.mockos.actions, [("fork", False)])
-        self.assertEqual(set(self.mockos.closed), set([-12, -13]))
+        self.assertEqual(set(self.mockos.closed), {-12, -13})
 
     def test_mockForkErrorPTYGivenFDs(self):
         """
@@ -1998,7 +2000,7 @@ class MockProcessTests(unittest.TestCase):
         protocol = TrivialProcessProtocol(None)
         self.assertRaises(OSError, reactor.spawnProcess, protocol, None)
         self.assertEqual(self.mockos.actions, [])
-        self.assertEqual(set(self.mockos.closed), set([-4, -3, -2, -1]))
+        self.assertEqual(set(self.mockos.closed), {-4, -3, -2, -1})
 
     def test_kill(self):
         """
@@ -2083,7 +2085,7 @@ class PosixProcessTests(unittest.TestCase, PosixProcessBase):
             [
                 pyExe,
                 b"-c",
-                networkString("import sys; sys.stderr.write" "('{0}')".format(value)),
+                networkString("import sys; sys.stderr.write" "('{}')".format(value)),
             ],
             env=None,
             path="/tmp",
@@ -2189,12 +2191,12 @@ class Win32SignalProtocol(SignalProtocol):
         """
         if not reason.check(error.ProcessTerminated):
             return self.deferred.errback(
-                ValueError("wrong termination: %s" % (reason,))
+                ValueError("wrong termination: {}".format(reason))
             )
         v = reason.value
         if v.exitCode != 1:
             return self.deferred.errback(
-                ValueError("Wrong exit code: %s" % (v.exitCode,))
+                ValueError("Wrong exit code: {}".format(v.exitCode))
             )
         self.deferred.callback(None)
 
@@ -2468,7 +2470,7 @@ class Win32CreateProcessFlagsTests(unittest.TestCase):
 
     @defer.inlineCallbacks
     def test_flags(self):
-        """
+        r"""
         Verify that the flags passed to win32process.CreateProcess() prevent a
         new console window from being created. Use the following script
         to test this interactively::

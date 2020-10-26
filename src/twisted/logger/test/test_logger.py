@@ -71,7 +71,7 @@ class LoggerTests(unittest.TestCase):
         """
         namespace = "bleargh"
         log = Logger(namespace)
-        self.assertEqual(repr(log), "<Logger {0}>".format(repr(namespace)))
+        self.assertEqual(repr(log), "<Logger {}>".format(repr(namespace)))
 
     def test_namespaceDefault(self) -> None:
         """
@@ -101,7 +101,7 @@ class LoggerTests(unittest.TestCase):
         """
         obj = LogComposedObject()
 
-        expectedNamespace = "{0}.{1}".format(
+        expectedNamespace = "{}.{}".format(
             obj.__module__,
             obj.__class__.__name__,
         )

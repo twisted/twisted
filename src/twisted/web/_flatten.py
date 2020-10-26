@@ -352,7 +352,7 @@ def _writeFlattenedData(state, write, result):
             element = next(state)
         except StopIteration:
             result.callback(None)
-        except:
+        except BaseException:
             result.errback()
         else:
 

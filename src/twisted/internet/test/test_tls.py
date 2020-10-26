@@ -6,8 +6,6 @@ Tests for implementations of L{ITLSTransport}.
 """
 
 
-__metaclass__ = type
-
 from typing import Optional, Sequence, Type
 from zope.interface import implementer, Interface
 
@@ -53,9 +51,7 @@ else:
 
 
 class TLSMixin:
-    requiredInterfaces = [
-        IReactorSSL
-    ]  # type: Optional[Sequence[Type[Interface]]]  # noqa
+    requiredInterfaces = [IReactorSSL]  # type: Optional[Sequence[Type[Interface]]]
 
     if platform.isWindows():
         msg = (
@@ -341,7 +337,7 @@ class TLSPortTestsBuilder(
         """
         Get the expected connection lost message for a TLS port.
         """
-        return "(TLS Port %s Closed)" % (port.getHost().port,)
+        return "(TLS Port {} Closed)".format(port.getHost().port)
 
     def test_badContext(self):
         """

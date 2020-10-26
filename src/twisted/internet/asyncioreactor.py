@@ -123,7 +123,7 @@ class AsyncioSelectorReactor(PosixReactorBase):
         """
         try:
             self._asyncioEventloop._selector.unregister(fd)
-        except:
+        except BaseException:
             pass
 
     def _readOrWrite(self, selectable, read):
@@ -151,7 +151,7 @@ class AsyncioSelectorReactor(PosixReactorBase):
                 fd, callWithLogger, reader, self._readOrWrite, reader, True
             )
             self._readers[reader] = fd
-        except IOError as e:
+        except OSError as e:
             self._unregisterFDInAsyncio(fd)
             if e.errno == errno.EPERM:
                 # epoll(7) doesn't support certain file descriptors,
@@ -180,7 +180,7 @@ class AsyncioSelectorReactor(PosixReactorBase):
         except BrokenPipeError:
             # The kqueuereactor will raise this if there is a broken pipe
             self._unregisterFDInAsyncio(fd)
-        except:
+        except BaseException:
             self._unregisterFDInAsyncio(fd)
             raise
 

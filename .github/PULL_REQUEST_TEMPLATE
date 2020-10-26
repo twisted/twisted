@@ -7,7 +7,7 @@ Please note that the trac ticket, news fragment, and review submission portions 
 ## Contributor Checklist:
 
 * [ ] The associated ticket in Trac is here: https://twistedmatrix.com/trac/ticket/<!-- Create a new one at https://twistedmatrix.com/trac/newticket and replace this comment with the ticket number. -->
-* [ ] I ran `tox -e black-reformat` to format my patch to meet the [Twisted Coding Standard](https://twistedmatrix.com/documents/current/core/development/policy/coding-standard.html)
+* [ ] I ran `tox -e lint` to format my patch to meet the [Twisted Coding Standard](https://twistedmatrix.com/documents/current/core/development/policy/coding-standard.html)
 * [ ] I ran additional checks listed at [Getting Your Patch Accepted](https://twistedmatrix.com/trac/wiki/TwistedDevelopment#GettingYourPatchAccepted)
 * [ ] I have created a newsfragment in src/twisted/newsfragments/ (see: [News files](https://twistedmatrix.com/trac/wiki/ReviewProcess#Newsfiles))
 * [ ] I have updated the automated tests.

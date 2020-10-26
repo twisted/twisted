@@ -109,7 +109,7 @@ class ReactorThreadsTests(TestCase):
                 for i in range(100000):
                     try:
                         reactor.callFromThread(lambda: None)
-                    except:
+                    except BaseException:
                         self.failure = failure.Failure()
                         break
                 waiter.set()
@@ -413,11 +413,15 @@ class StartupBehaviorTests(TestCase):
         def programFinished(result):
             (out, err, reason) = result
             if reason.check(error.ProcessTerminated):
-                self.fail("Process did not exit cleanly (out: %s err: %s)" % (out, err))
+                self.fail(
+                    "Process did not exit cleanly (out: {} err: {})".format(out, err)
+                )
 
             if err:
-                log.msg("Unexpected output on standard error: %s" % (err,))
-            self.assertFalse(out, "Expected no output, instead received:\n%s" % (out,))
+                log.msg("Unexpected output on standard error: {}".format(err))
+            self.assertFalse(
+                out, "Expected no output, instead received:\n{}".format(out)
+            )
 
         def programTimeout(err):
             err.trap(error.TimeoutError)

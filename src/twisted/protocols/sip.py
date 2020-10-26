@@ -236,24 +236,24 @@ class Via:
         """
         Serialize this header for use in a request or response.
         """
-        s = "SIP/2.0/%s %s:%s" % (self.transport, self.host, self.port)
+        s = "SIP/2.0/{} {}:{}".format(self.transport, self.host, self.port)
         if self.hidden:
             s += ";hidden"
         for n in "ttl", "branch", "maddr", "received":
             value = getattr(self, n)
             if value is not None:
-                s += ";%s=%s" % (n, value)
+                s += ";{}={}".format(n, value)
         if self.rportRequested:
             s += ";rport"
         elif self.rportValue is not None:
-            s += ";rport=%s" % (self.rport,)
+            s += ";rport={}".format(self.rport)
 
         etc = sorted(self.otherParams.items())
         for k, v in etc:
             if v is None:
                 s += ";" + k
             else:
-                s += ";%s=%s" % (k, v)
+                s += ";{}={}".format(k, v)
         return s
 
 
@@ -271,7 +271,7 @@ def parseViaHeader(value):
     result = {}
     pname, pversion, transport = protocolinfo.split("/")
     if pname != "SIP" or pversion != "2.0":
-        raise ValueError("wrong protocol or version: %r" % (value,))
+        raise ValueError("wrong protocol or version: {!r}".format(value))
     result["transport"] = transport
     if ":" in by:
         host, port = by.split(":")
@@ -356,7 +356,7 @@ class URL:
         for n in ("transport", "ttl", "maddr", "method", "tag"):
             v = getattr(self, n)
             if v != None:
-                w(";%s=%s" % (n, v))
+                w(";{}={}".format(n, v))
         for v in self.other:
             w(";%s" % v)
         if self.headers:
@@ -364,7 +364,7 @@ class URL:
             w(
                 "&".join(
                     [
-                        ("%s=%s" % (specialCases.get(h) or dashCapitalize(h), v))
+                        ("{}={}".format(specialCases.get(h) or dashCapitalize(h), v))
                         for (h, v) in self.headers.items()
                     ]
                 )
@@ -375,7 +375,7 @@ class URL:
         return self.toString()
 
     def __repr__(self) -> str:
-        return "<URL %s:%s@%s:%r/%s>" % (
+        return "<URL {}:{}@{}:{!r}/{}>".format(
             self.username,
             self.password,
             self.host,
@@ -530,7 +530,7 @@ class Message:
         s = "%s\r\n" % self._getHeaderLine()
         for n, vs in self.headers.items():
             for v in vs:
-                s += "%s: %s\r\n" % (specialCases.get(n) or dashCapitalize(n), v)
+                s += "{}: {}\r\n".format(specialCases.get(n) or dashCapitalize(n), v)
         s += "\r\n"
         s += self.body
         return s
@@ -557,7 +557,7 @@ class Request(Message):
         return "<SIP Request %d:%s %s>" % (id(self), self.method, self.uri.toString())
 
     def _getHeaderLine(self):
-        return "%s %s SIP/2.0" % (self.method, self.uri.toString())
+        return "{} {} SIP/2.0".format(self.method, self.uri.toString())
 
 
 class Response(Message):
@@ -576,7 +576,7 @@ class Response(Message):
         return "<SIP Response %d:%s>" % (id(self), self.code)
 
     def _getHeaderLine(self):
-        return "SIP/2.0 %s %s" % (self.code, self.phrase)
+        return "SIP/2.0 {} {}".format(self.code, self.phrase)
 
 
 class MessagesParser(basic.LineReceiver):
@@ -764,7 +764,7 @@ class Base(protocol.DatagramProtocol):
         for m in self.messages:
             self._fixupNAT(m, addr)
             if self.debug:
-                log.msg("Received %r from %r" % (m.toString(), addr))
+                log.msg("Received {!r} from {!r}".format(m.toString(), addr))
             if isinstance(m, Request):
                 self.handle_request(m, addr)
             else:
@@ -818,7 +818,7 @@ class Base(protocol.DatagramProtocol):
         if destURL.transport not in ("udp", None):
             raise RuntimeError("only UDP currently supported")
         if self.debug:
-            log.msg("Sending %r to %r" % (message.toString(), destURL))
+            log.msg("Sending {!r} to {!r}".format(message.toString(), destURL))
         data = message.toString()
         if isinstance(data, str):
             data = data.encode("utf-8")
@@ -932,7 +932,7 @@ class Proxy(Base):
             d = f(message, addr)
         except SIPError as e:
             self.deliverResponse(self.responseFromRequest(e.code, message))
-        except:
+        except BaseException:
             log.err()
             self.deliverResponse(self.responseFromRequest(500, message))
         else:
@@ -1094,9 +1094,9 @@ class RegisterProxy(Proxy):
         for scheme, auth in self.authorizers.items():
             chal = auth.getChallenge((host, port))
             if chal is None:
-                value = '%s realm="%s"' % (scheme.title(), self.host)
+                value = '{} realm="{}"'.format(scheme.title(), self.host)
             else:
-                value = '%s %s,realm="%s"' % (scheme.title(), chal, self.host)
+                value = '{} {},realm="{}"'.format(scheme.title(), chal, self.host)
             m.headers.setdefault("www-authenticate", []).append(value)
         self.deliverResponse(m)
 
@@ -1108,7 +1108,7 @@ class RegisterProxy(Proxy):
                 c = a.decode(parts[1])
             except SIPError:
                 raise
-            except:
+            except BaseException:
                 log.err()
                 self.deliverResponse(self.responseFromRequest(500, message))
             else:
@@ -1243,7 +1243,9 @@ class InMemoryRegistry:
             dc.reset(3600)
         else:
             dc = reactor.callLater(3600, self._expireRegistration, logicalURL.username)
-        log.msg("Registered %s at %s" % (logicalURL.toString(), physicalURL.toString()))
+        log.msg(
+            "Registered {} at {}".format(logicalURL.toString(), physicalURL.toString())
+        )
         self.users[logicalURL.username] = (dc, physicalURL)
         return defer.succeed(Registration(int(dc.getTime() - time.time()), physicalURL))
 

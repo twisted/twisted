@@ -255,7 +255,7 @@ class SingleUseMemoryEndpoint:
 
         try:
             protocol = factory.buildProtocol(MemoryAddress())
-        except:
+        except BaseException:
             return fail()
         else:
             self.pump = connect(
@@ -307,7 +307,7 @@ class SSHCommandClientEndpointTestsMixin:
         Override this to implement creation in an interesting way the endpoint.
         """
         raise NotImplementedError(
-            "%r did not implement create" % (self.__class__.__name__,)
+            "{!r} did not implement create".format(self.__class__.__name__)
         )
 
     def assertClientTransportState(self, client, immediateClose):
@@ -332,7 +332,7 @@ class SSHCommandClientEndpointTestsMixin:
         attempted initiated using C{self.reactor}.
         """
         raise NotImplementedError(
-            "%r did not implement finishConnection" % (self.__class__.__name__,)
+            "{!r} did not implement finishConnection".format(self.__class__.__name__)
         )
 
     def connectedServerAndClient(self, serverFactory, clientFactory):
@@ -1504,13 +1504,13 @@ class NewConnectionHelperTests(TestCase):
         knownHosts.addHostKey(b"127.0.0.1", key)
         knownHosts.save()
 
-        msg("Created known_hosts file at %r" % (path.path,))
+        msg("Created known_hosts file at {!r}".format(path.path))
 
         # Unexpand ${HOME} to make sure ~ syntax is respected.
         home = os.path.expanduser("~/")
         default = path.path.replace(home, "~/")
         self.patch(_NewConnectionHelper, "_KNOWN_HOSTS", default)
-        msg("Patched _KNOWN_HOSTS with %r" % (default,))
+        msg("Patched _KNOWN_HOSTS with {!r}".format(default))
 
         loaded = _NewConnectionHelper._knownHosts()
         self.assertTrue(loaded.hasHostKey(b"127.0.0.1", key))

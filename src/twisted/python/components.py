@@ -67,7 +67,7 @@ def registerAdapter(adapterFactory, origInterface, *interfaceClasses):
     for interfaceClass in interfaceClasses:
         factory = self.registered([origInterface], interfaceClass)
         if factory is not None and not ALLOW_DUPLICATES:
-            raise ValueError("an adapter (%s) was already registered." % (factory,))
+            raise ValueError("an adapter ({}) was already registered.".format(factory))
     for interfaceClass in interfaceClasses:
         self.register([origInterface], interfaceClass, "", adapterFactory)
 
@@ -336,7 +336,7 @@ def proxyForInterface(iface, originalAttribute="original"):
     contents = {"__init__": __init__}  # type: Dict[str, object]
     for name in iface:
         contents[name] = _ProxyDescriptor(name, originalAttribute)
-    proxy = type("(Proxy for %s)" % (reflect.qual(iface),), (object,), contents)
+    proxy = type("(Proxy for {})".format(reflect.qual(iface)), (object,), contents)
     declarations.classImplements(proxy, iface)
     return proxy
 

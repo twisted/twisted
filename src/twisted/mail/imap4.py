@@ -412,7 +412,7 @@ class MessageSet:
         return ",".join(p)
 
     def __repr__(self) -> str:
-        return "<MessageSet %s>" % (str(self),)
+        return "<MessageSet {}>".format(str(self))
 
     def __eq__(self, other: object) -> bool:
         if isinstance(other, MessageSet):
@@ -648,7 +648,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
 
     # Search terms the implementation of which needs to be passed both the last
     # message identifier (UID) and the last sequence id.
-    _requiresLastMessageInfo = set([b"OR", b"NOT", b"UID"])
+    _requiresLastMessageInfo = {b"OR", b"NOT", b"UID"}
 
     state = "unauth"
 
@@ -1260,7 +1260,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         (iface, avatar, logout) = result
         if iface is not IAccount:
             self.sendBadResponse(tag, b"Server error: login returned unexpected value")
-            log.err("__cbLogin called with %r, IAccount expected" % (iface,))
+            log.err("__cbLogin called with {!r}, IAccount expected".format(iface))
         else:
             self.account = avatar
             self._onLogout = logout
@@ -1357,7 +1357,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
             result = self.account.create(name)
         except MailboxException as c:
             self.sendNegativeResponse(tag, networkString(str(c)))
-        except:
+        except BaseException:
             self.sendBadResponse(
                 tag, b"Server error encountered while creating mailbox"
             )
@@ -1380,7 +1380,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
             self.account.delete(name)
         except MailboxException as m:
             self.sendNegativeResponse(tag, str(m).encode("imap4-utf-7"))
-        except:
+        except BaseException:
             self.sendBadResponse(
                 tag, b"Server error encountered while deleting mailbox"
             )
@@ -1404,7 +1404,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
             self.sendBadResponse(tag, b"Invalid command syntax")
         except MailboxException as m:
             self.sendNegativeResponse(tag, networkString(str(m)))
-        except:
+        except BaseException:
             self.sendBadResponse(
                 tag, b"Server error encountered while renaming mailbox"
             )
@@ -1421,7 +1421,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
             self.account.subscribe(name)
         except MailboxException as m:
             self.sendNegativeResponse(tag, networkString(str(m)))
-        except:
+        except BaseException:
             self.sendBadResponse(
                 tag, b"Server error encountered while subscribing to mailbox"
             )
@@ -1438,7 +1438,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
             self.account.unsubscribe(name)
         except MailboxException as m:
             self.sendNegativeResponse(tag, networkString(str(m)))
-        except:
+        except BaseException:
             self.sendBadResponse(
                 tag, b"Server error encountered while unsubscribing from mailbox"
             )
@@ -2620,11 +2620,11 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         if f:
             try:
                 f(tag, rest)
-            except:
+            except BaseException:
                 log.err()
                 self.transport.loseConnection()
         else:
-            log.err("Cannot dispatch: %s, %r, %r" % (self.state, tag, rest))
+            log.err("Cannot dispatch: {}, {!r}, {!r}".format(self.state, tag, rest))
             self.transport.loseConnection()
 
     def response_UNAUTH(self, tag, rest):
@@ -2710,7 +2710,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
                 values, _ = self._parseFetchPairs(response[2])
                 flags.setdefault(mId, []).extend(values.get("FLAGS", ()))
             else:
-                log.msg("Unhandled unsolicited response: %s" % (response,))
+                log.msg("Unhandled unsolicited response: {}".format(response))
 
         if flags:
             self.flagsChanged(flags)
@@ -3198,7 +3198,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
                         nativeString(flag) for flag in content[1]
                     )
                 else:
-                    log.err("Unhandled SELECT response (2): %s" % (split,))
+                    log.err("Unhandled SELECT response (2): {}".format(split))
             elif len(split) == 2:
                 # Handle FLAGS, EXISTS, and RECENT
                 if split[0].upper() == b"FLAGS":
@@ -3212,11 +3212,11 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
                     elif split[1].upper() == b"RECENT":
                         datum["RECENT"] = self._intOrRaise(split[0], split)
                     else:
-                        log.err("Unhandled SELECT response (0): %s" % (split,))
+                        log.err("Unhandled SELECT response (0): {}".format(split))
                 else:
-                    log.err("Unhandled SELECT response (1): %s" % (split,))
+                    log.err("Unhandled SELECT response (1): {}".format(split))
             else:
-                log.err("Unhandled SELECT response (4): %s" % (split,))
+                log.err("Unhandled SELECT response (4): {}".format(split))
         return datum
 
     def create(self, name):
@@ -3328,7 +3328,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
             delimiter and the mailbox name are L{str}s.
         """
         cmd = b"LIST"
-        args = ('"%s" "%s"' % (reference, wildcard)).encode("imap4-utf-7")
+        args = ('"{}" "{}"'.format(reference, wildcard)).encode("imap4-utf-7")
         resp = (b"LIST",)
         d = self.sendCommand(Command(cmd, args, wantResponse=resp))
         d.addCallback(self.__cbList, b"LIST")
@@ -4575,7 +4575,7 @@ def Query(sorted=0, **kwarg):
         elif isinstance(v, int):
             cmd.extend([k, "%d" % (v,)])
         else:
-            cmd.extend([k, "%s" % (v,)])
+            cmd.extend([k, "{}".format(v)])
     if len(cmd) > 1:
         return "(" + " ".join(cmd) + ")"
     else:
@@ -4591,12 +4591,12 @@ def Or(*args):
     elif len(args) == 2:
         return "(OR %s %s)" % args
     else:
-        return "(OR %s %s)" % (args[0], Or(*args[1:]))
+        return "(OR {} {})".format(args[0], Or(*args[1:]))
 
 
 def Not(query):
     """The negation of a query"""
-    return "(NOT %s)" % (query,)
+    return "(NOT {})".format(query)
 
 
 def wildcardToRegexp(wildcard, delim=None):
@@ -4818,7 +4818,7 @@ def _parseMbox(name):
         return name
     try:
         return name.decode("imap4-utf-7")
-    except:
+    except BaseException:
         log.err()
         raise IllegalMailboxEncoding(name)
 
@@ -4957,7 +4957,7 @@ class MemoryAccountWithoutNamespaces:
         # delete it from our ken.
         if len(self._inferiorNames(name)) > 1:
             raise MailboxException(
-                'Name "%s" has inferior hierarchical names' % (name,)
+                'Name "{}" has inferior hierarchical names'.format(name)
             )
         del self.mailboxes[name]
 
@@ -4996,7 +4996,7 @@ class MemoryAccountWithoutNamespaces:
     def unsubscribe(self, name):
         name = _parseMbox(name.upper())
         if name not in self.subscriptions:
-            raise MailboxException("Not currently subscribed to %s" % (name,))
+            raise MailboxException("Not currently subscribed to {}".format(name))
         self.subscriptions.remove(name)
 
     def listMailboxes(self, ref, wildcard):
@@ -5561,7 +5561,7 @@ def iterateInReactor(i):
             r = next(i)
         except StopIteration:
             d.callback(last)
-        except:
+        except BaseException:
             d.errback()
         else:
             if isinstance(r, defer.Deferred):
@@ -5607,12 +5607,12 @@ class MessageProducer:
         if self.msg.isMultipart():
             content = headers.get("content-type")
             parts = [x.split("=", 1) for x in content.split(";")[1:]]
-            parts = dict([(k.lower().strip(), v) for (k, v) in parts])
+            parts = {k.lower().strip(): v for (k, v) in parts}
             boundary = parts.get("boundary")
             if boundary is None:
                 # Bastards
-                boundary = "----=%s" % (self._uuid4().hex,)
-                headers["content-type"] += '; boundary="%s"' % (boundary,)
+                boundary = "----={}".format(self._uuid4().hex)
+                headers["content-type"] += '; boundary="{}"'.format(boundary)
             else:
                 if boundary.startswith('"') and boundary.endswith('"'):
                     boundary = boundary[1:-1]
@@ -5790,7 +5790,7 @@ class _FetchParser:
                 state = self.state.pop()
                 try:
                     used = getattr(self, "state_" + state)(s)
-                except:
+                except BaseException:
                     self.state.append(state)
                     raise
                 else:
@@ -5881,7 +5881,7 @@ class _FetchParser:
         elif l.startswith(b"body"):
             used = 4
         else:
-            raise Exception("Nothing recognized in fetch_att: %s" % (l,))
+            raise Exception("Nothing recognized in fetch_att: {}".format(l))
 
         self.pending_body = b
         self.state.extend(("got_body", "maybe_partial", "maybe_section"))
@@ -5899,7 +5899,7 @@ class _FetchParser:
         self.state.extend(("section", "part_number"))
         return 1
 
-    _partExpr = re.compile(b"(\d+(?:\.\d+)*)\.?")
+    _partExpr = re.compile(br"(\d+(?:\.\d+)*)\.?")
 
     def state_part_number(self, s):
         m = self._partExpr.match(s)
@@ -5939,7 +5939,7 @@ class _FetchParser:
             elif l.startswith(b"header.fields"):
                 used += 13
             else:
-                raise Exception("Unhandled section contents: %r" % (l,))
+                raise Exception("Unhandled section contents: {!r}".format(l))
 
             self.pending_body.header = h
             self.state.extend(("finish_section", "header_list", "whitespace"))
@@ -6067,14 +6067,14 @@ def parseTime(s):
     }
     m = re.match("%(day)s-%(mon)s-%(year)s" % expr, s)
     if not m:
-        raise ValueError("Cannot parse time string %r" % (s,))
+        raise ValueError("Cannot parse time string {!r}".format(s))
     d = m.groupdict()
     try:
         d["mon"] = 1 + (months.index(d["mon"].lower()) % 12)
         d["year"] = int(d["year"])
         d["day"] = int(d["day"])
     except ValueError:
-        raise ValueError("Cannot parse time string %r" % (s,))
+        raise ValueError("Cannot parse time string {!r}".format(s))
     else:
         return time.struct_time((d["year"], d["mon"], d["day"], 0, 0, 0, -1, -1, -1))
 

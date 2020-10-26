@@ -447,7 +447,7 @@ class PyPgSQLConnector(DBTestConnector):
     def can_connect(self):
         try:
             from pyPgSQL import PgSQL
-        except:
+        except BaseException:
             return False
         try:
             conn = PgSQL.connect(
@@ -455,7 +455,7 @@ class PyPgSQLConnector(DBTestConnector):
             )
             conn.close()
             return True
-        except:
+        except BaseException:
             return False
 
     def getPoolArgs(self):
@@ -475,7 +475,7 @@ class PsycopgConnector(DBTestConnector):
     def can_connect(self):
         try:
             import psycopg
-        except:
+        except BaseException:
             return False
         try:
             conn = psycopg.connect(
@@ -483,7 +483,7 @@ class PsycopgConnector(DBTestConnector):
             )
             conn.close()
             return True
-        except:
+        except BaseException:
             return False
 
     def getPoolArgs(self):
@@ -507,7 +507,7 @@ class MySQLConnector(DBTestConnector):
     def can_connect(self):
         try:
             import MySQLdb
-        except:
+        except BaseException:
             return False
         try:
             conn = MySQLdb.connect(
@@ -515,7 +515,7 @@ class MySQLConnector(DBTestConnector):
             )
             conn.close()
             return True
-        except:
+        except BaseException:
             return False
 
     def getPoolArgs(self):
@@ -541,7 +541,7 @@ class FirebirdConnector(DBTestConnector):
             self.startDB()
             self.stopDB()
             return True
-        except:
+        except BaseException:
             return False
 
     def startDB(self):

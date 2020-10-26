@@ -43,7 +43,7 @@ class _Attribute(FancyEqMixin):
         self.children = []
 
     def __repr__(self) -> str:
-        return "<%s %r>" % (type(self).__name__, vars(self))
+        return "<{} {!r}>".format(type(self).__name__, vars(self))
 
     def __getitem__(self, item):
         assert isinstance(item, (list, tuple, _Attribute, str))

@@ -62,7 +62,7 @@ from twisted.trial.unittest import TestCase
 class DomainWithDefaultsTests(TestCase):
     @skipIf(sys.version_info >= (3,), "not ported to Python 3")
     def testMethods(self):
-        d = dict([(x, x + 10) for x in range(10)])
+        d = {x: x + 10 for x in range(10)}
         d = mail.mail.DomainWithDefaultDict(d, "Default")
 
         self.assertEqual(len(d), 10)
@@ -229,15 +229,15 @@ class FileMessageTests(TestCase):
     def tearDown(self):
         try:
             self.f.close()
-        except:
+        except BaseException:
             pass
         try:
             os.remove(self.name)
-        except:
+        except BaseException:
             pass
         try:
             os.remove(self.final)
-        except:
+        except BaseException:
             pass
 
     def testFinalName(self):
@@ -1204,7 +1204,7 @@ def tearDownDNS(self):
     dl.append(defer.maybeDeferred(self.udpPort.stopListening))
     try:
         self.resolver._parseCall.cancel()
-    except:
+    except BaseException:
         pass
     return defer.DeferredList(dl)
 
@@ -2282,7 +2282,7 @@ class TestDomain:
             return lambda: mail.alias.AddressAlias(user, None, None)
         try:
             a = self.aliases[user]
-        except:
+        except BaseException:
             raise smtp.SMTPBadRcpt(user)
         else:
             aliases = a.resolve(self.aliases, memo)
@@ -2352,7 +2352,7 @@ class DummyQueue:
         @return: The envelope file and a message receiver for a new message in
             the queue.
         """
-        fname = "%s_%s" % (time.time(), id(self))
+        fname = "{}_{}".format(time.time(), id(self))
         headerFile = open(os.path.join(self.directory, fname + "-H"), "wb")
         tempFilename = os.path.join(self.directory, fname + "-C")
         finalFilename = os.path.join(self.directory, fname + "-D")

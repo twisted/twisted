@@ -160,7 +160,7 @@ def execute(
     """
     try:
         result = callable(*args, **kwargs)
-    except:
+    except BaseException:
         # type note: returning a failing Deferred is akin to raising...
         #   it's awkward to express that with typing a return value, where
         #   exceptions are not factored in
@@ -190,7 +190,7 @@ def maybeDeferred(
     """
     try:
         result = f(*args, **kwargs)
-    except:
+    except BaseException:
         # type note: returning a failing Deferred is akin to raising...
         #   it's awkward to express that with typing a return value, where
         #   exceptions are not factored in
@@ -782,7 +782,7 @@ class Deferred(Generic[_DeferredResultT]):
                             )
                     finally:
                         current._runningCallbacks = False
-                except:
+                except BaseException:
                     # Including full frame information in the Failure is quite
                     # expensive, so we avoid it unless self.debug is set.
                     current.result = Failure(captureVars=self.debug)
@@ -845,12 +845,12 @@ class Deferred(Generic[_DeferredResultT]):
         result = getattr(self, "result", _Sentinel._NO_RESULT)
         myID = id(self)
         if self._chainedTo is not None:
-            result = " waiting on Deferred at 0x%x" % (id(self._chainedTo),)
+            result = " waiting on Deferred at 0x{:x}".format(id(self._chainedTo))
         elif result is _Sentinel._NO_RESULT:
             result = ""
         else:
-            result = " current result: %r" % (result,)
-        return "<%s at 0x%x%s>" % (cname, myID, result)
+            result = " current result: {!r}".format(result)
+        return "<{} at 0x{:x}{}>".format(cname, myID, result)
 
     __repr__ = __str__
 
@@ -948,7 +948,7 @@ class Deferred(Generic[_DeferredResultT]):
             def __call__(self, result: Future) -> None:
                 try:
                     extracted = result.result()
-                except:
+                except BaseException:
                     extracted = Failure()
                 self.actual.callback(extracted)
 
@@ -1010,7 +1010,7 @@ class Deferred(Generic[_DeferredResultT]):
         @raise ValueError: If C{coro} is not a coroutine or generator.
         """
         if not iscoroutine(coro) and not isinstance(coro, GeneratorType):
-            raise NotACoroutineError("%r is not a coroutine" % (coro,))
+            raise NotACoroutineError("{!r} is not a coroutine".format(coro))
 
         return _cancellableInlineCallbacks(coro)
 
@@ -1034,7 +1034,9 @@ def ensureDeferred(coro: Union[CoroutineType, Deferred]) -> Deferred:
         except NotACoroutineError:
             # It's not a coroutine. Raise an exception, but say that it's also
             # not a Deferred so the error makes sense.
-            raise NotACoroutineError("%r is not a coroutine or a Deferred" % (coro,))
+            raise NotACoroutineError(
+                "{!r} is not a coroutine or a Deferred".format(coro)
+            )
 
 
 class DebugInfo:
@@ -1248,7 +1250,7 @@ class DeferredList(Deferred):
             for deferred in self._deferredList:
                 try:
                     deferred.cancel()
-                except:
+                except BaseException:
                     log.failure("Exception raised from user supplied canceller")
 
 
@@ -1316,7 +1318,7 @@ class waitForDeferred:
 
         if not isinstance(d, Deferred):
             raise TypeError(
-                "You must give waitForDeferred a Deferred. You gave it %r." % (d,)
+                "You must give waitForDeferred a Deferred. You gave it {!r}.".format(d)
             )
         self.d = d
 
@@ -1354,7 +1356,7 @@ def _deferGenerator(g: _DeferableGenerator, deferred: Deferred) -> Deferred:
         except StopIteration:
             deferred.callback(result)
             return deferred
-        except:
+        except BaseException:
             deferred.errback()
             return deferred
 
@@ -1619,7 +1621,7 @@ def _inlineCallbacks(
 
             status.deferred.callback(e.value)
             return
-        except:
+        except BaseException:
             status.deferred.errback()
             return
 

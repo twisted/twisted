@@ -56,7 +56,7 @@ class Options:
 def getlogin():
     try:
         return os.getlogin()
-    except:
+    except BaseException:
         return getpass.getuser()
 
 
@@ -177,7 +177,7 @@ def parseOptions(argv):
         for a in o.excludeAddresses:
             try:
                 o.to.remove(a)
-            except:
+            except BaseException:
                 pass
 
     buffer.seek(0, 0)

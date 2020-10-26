@@ -122,7 +122,7 @@ class TwistOptions(Options):
 
         try:
             self["logFile"] = openFile(fileName, "a")
-        except EnvironmentError as e:
+        except OSError as e:
             exit(
                 ExitStatus.EX_IOERR,
                 "Unable to open log file {!r}: {}".format(fileName, e),

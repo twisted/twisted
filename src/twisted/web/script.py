@@ -176,7 +176,7 @@ class PythonScript(resource.Resource):
         }
         try:
             execfile(self.filename, namespace, namespace)
-        except IOError as e:
+        except OSError as e:
             if e.errno == 2:  # file not found
                 request.setResponseCode(http.NOT_FOUND)
                 request.write(resource.NoResource("File not found.").render(request))

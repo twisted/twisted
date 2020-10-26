@@ -59,7 +59,7 @@ from ._util import (
 
 
 class _IDeprecatedHTTPChannelToRequestInterfaceProxy(
-    proxyForInterface(  # type: ignore[misc]  # noqa
+    proxyForInterface(  # type: ignore[misc]
         http._IDeprecatedHTTPChannelToRequestInterface
     )
 ):
@@ -1137,7 +1137,7 @@ class IdentityTransferEncodingTests(TestCase):
         def finish(bytes):
             try:
                 decoder.dataReceived(b"foo")
-            except:
+            except BaseException:
                 failures.append(Failure())
 
         decoder = _IdentityTransferDecoder(5, self.data.append, finish)
@@ -1323,7 +1323,7 @@ class ChunkedTransferEncodingTests(unittest.TestCase):
         def finished(extra):
             try:
                 parser.noMoreData()
-            except:
+            except BaseException:
                 errors.append(Failure())
             else:
                 successes.append(True)
@@ -1655,7 +1655,7 @@ class ParsingTests(unittest.TestCase):
         """
         requestLines = [b"GET / HTTP/1.0"]
         for i in range(http.HTTPChannel.maxHeaders + 2):
-            requestLines.append(networkString("%s: foo" % (i,)))
+            requestLines.append(networkString("{}: foo".format(i)))
         requestLines.extend([b"", b""])
 
         self.assertRequestRejected(requestLines)
@@ -3668,7 +3668,7 @@ def sub(keys, d):
         corresponding values in C{d}.
     @rtype: L{dict}
     """
-    return dict([(k, d[k]) for k in keys])
+    return {k: d[k] for k in keys}
 
 
 class DeprecatedRequestAttributesTests(unittest.TestCase):

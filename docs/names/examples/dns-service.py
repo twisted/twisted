@@ -44,7 +44,9 @@ def printResult(records, domainname):
             domainname + " IN \n " + "\n ".join(str(x.payload) for x in answers) + "\n"
         )
     else:
-        sys.stderr.write("ERROR: No SRV records found for name %r\n" % (domainname,))
+        sys.stderr.write(
+            "ERROR: No SRV records found for name {!r}\n".format(domainname)
+        )
 
 
 def printError(failure, domainname):
@@ -53,7 +55,7 @@ def printError(failure, domainname):
     resolved.
     """
     failure.trap(error.DNSNameError)
-    sys.stderr.write("ERROR: domain name not found %r\n" % (domainname,))
+    sys.stderr.write("ERROR: domain name not found {!r}\n".format(domainname))
 
 
 def main(reactor, *argv):
@@ -62,7 +64,7 @@ def main(reactor, *argv):
         options.parseOptions(argv)
     except usage.UsageError as errortext:
         sys.stderr.write(str(options) + "\n")
-        sys.stderr.write("ERROR: %s\n" % (errortext,))
+        sys.stderr.write("ERROR: {}\n".format(errortext))
         raise SystemExit(1)
 
     resolver = client.Resolver("/etc/resolv.conf")

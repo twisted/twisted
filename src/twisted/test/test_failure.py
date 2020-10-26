@@ -107,7 +107,9 @@ class FailureTests(SynchronousTestCase):
         @param prefix: The string that C{s} should start with.
         @type prefix: C{str}
         """
-        self.assertTrue(s.startswith(prefix), "%r is not the start of %r" % (prefix, s))
+        self.assertTrue(
+            s.startswith(prefix), "{!r} is not the start of {!r}".format(prefix, s)
+        )
 
     def assertEndsWith(self, s, suffix):
         """
@@ -118,7 +120,9 @@ class FailureTests(SynchronousTestCase):
         @param suffix: The string that C{s} should end with.
         @type suffix: C{str}
         """
-        self.assertTrue(s.endswith(suffix), "%r is not the end of %r" % (suffix, s))
+        self.assertTrue(
+            s.endswith(suffix), "{!r} is not the end of {!r}".format(suffix, s)
+        )
 
     def assertTracebackFormat(self, tb, prefix, suffix):
         """
@@ -194,7 +198,7 @@ class FailureTests(SynchronousTestCase):
             f.count,
             (f.pickled and " (pickled) ") or " ",
         )
-        end = "%s: %s\n*--- End of Failure #%s ---\n" % (
+        end = "{}: {}\n*--- End of Failure #{} ---\n".format(
             reflect.qual(f.type),
             reflect.safe_str(f.value),
             f.count,
@@ -252,13 +256,13 @@ class FailureTests(SynchronousTestCase):
         tb = out.getvalue()
         stack = ""
         for method, filename, lineno, localVars, globalVars in f.frames:
-            stack += "%s:%s:%s\n" % (filename, lineno, method)
+            stack += "{}:{}:{}\n".format(filename, lineno, method)
 
         zde = repr(ZeroDivisionError)
         self.assertTracebackFormat(
             tb,
-            "Traceback: %s: " % (zde,),
-            "%s\n%s" % (failure.EXCEPTION_CAUGHT_HERE, stack),
+            "Traceback: {}: ".format(zde),
+            "{}\n{}".format(failure.EXCEPTION_CAUGHT_HERE, stack),
         )
 
         if captureVars:
@@ -299,8 +303,8 @@ class FailureTests(SynchronousTestCase):
         tb = out.getvalue()
         stack = ""
         for method, filename, lineno, localVars, globalVars in f.frames:
-            stack += '  File "%s", line %s, in %s\n' % (filename, lineno, method)
-            stack += "    %s\n" % (linecache.getline(filename, lineno).strip(),)
+            stack += '  File "{}", line {}, in {}\n'.format(filename, lineno, method)
+            stack += "    {}\n".format(linecache.getline(filename, lineno).strip())
 
         self.assertTracebackFormat(
             tb,

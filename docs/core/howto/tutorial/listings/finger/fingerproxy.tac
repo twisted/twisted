@@ -9,8 +9,8 @@ from zope.interface import Interface, implementer
 def catchError(err):
     return "Internal error in server"
 
-class IFingerService(Interface):
 
+class IFingerService(Interface):
     def getUser(user):
         """Return a deferred returning L{bytes}"""
 
@@ -19,23 +19,23 @@ class IFingerService(Interface):
 
 
 class IFingerFactory(Interface):
-
     def getUser(user):
         """Return a deferred returning L{bytes}"""
 
     def buildProtocol(addr):
         """Return a protocol returning L{bytes}"""
 
-class FingerProtocol(basic.LineReceiver):
 
+class FingerProtocol(basic.LineReceiver):
     def lineReceived(self, user):
         d = self.factory.getUser(user)
         d.addErrback(catchError)
+
         def writeValue(value):
             self.transport.write(value)
             self.transport.loseConnection()
-        d.addCallback(writeValue)
 
+        d.addCallback(writeValue)
 
 
 @implementer(IFingerFactory)
@@ -50,12 +50,10 @@ class FingerFactoryFromService(protocol.ClientFactory):
         return self.service.getUser(user)
 
 
-components.registerAdapter(FingerFactoryFromService,
-                           IFingerService,
-                           IFingerFactory)
+components.registerAdapter(FingerFactoryFromService, IFingerService, IFingerFactory)
+
 
 class FingerClient(protocol.Protocol):
-
     def connectionMade(self):
         self.transport.write(self.factory.user + b"\r\n")
         self.buf = []
@@ -64,7 +62,8 @@ class FingerClient(protocol.Protocol):
         self.buf.append(data)
 
     def connectionLost(self, reason):
-        self.factory.gotData(''.join(self.buf))
+        self.factory.gotData("".join(self.buf))
+
 
 class FingerClientFactory(protocol.ClientFactory):
 
@@ -90,13 +89,12 @@ def finger(user, host, port=79):
 
 @implementer(IFingerService)
 class ProxyFingerService(service.Service):
-
     def getUser(self, user):
         try:
-            user, host = user.split('@', 1)
-        except:
+            user, host = user.split("@", 1)
+        except BaseException:
             user = user.strip()
-            host = '127.0.0.1'
+            host = "127.0.0.1"
         ret = finger(user, host)
         ret.addErrback(lambda _: "Could not connect to remote host")
         return ret
@@ -104,7 +102,9 @@ class ProxyFingerService(service.Service):
     def getUsers(self):
         return defer.succeed([])
 
-application = service.Application('finger', uid=1, gid=1)
+
+application = service.Application("finger", uid=1, gid=1)
 f = ProxyFingerService()
 strports.service("tcp:7779", IFingerFactory(f)).setServiceParent(
-    service.IServiceCollection(application))
+    service.IServiceCollection(application)
+)

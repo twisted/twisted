@@ -5,8 +5,6 @@
 Tests for L{twisted.web._newclient}.
 """
 
-__metaclass__ = type
-
 from typing import Optional
 
 from zope.interface import implementer
@@ -107,7 +105,7 @@ def assertWrapperExceptionTypes(self, deferred, mainType, reasonTypes):
         self.assertEqual(
             len(err.reasons),
             len(reasonTypes),
-            "len(%s) != len(%s)" % (err.reasons, reasonTypes),
+            "len({}) != len({})".format(err.reasons, reasonTypes),
         )
         return err
 

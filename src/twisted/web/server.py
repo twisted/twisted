@@ -227,7 +227,7 @@ class Request(Copyable, http.Request, components.Componentized):
                 if encoder is not None:
                     self._encoder = encoder
             self.render(resrc)
-        except:
+        except BaseException:
             self.processingFailed(failure.Failure())
 
     def write(self, data):
@@ -750,7 +750,7 @@ class Session(components.Componentized):
             self._expireCall.reset(self.sessionTimeout)
 
 
-version = networkString("TwistedWeb/%s" % (copyright.version,))
+version = networkString("TwistedWeb/{}".format(copyright.version))
 
 
 @implementer(interfaces.IProtocolNegotiationFactory)

@@ -13,8 +13,6 @@ available reactor implementations.
 """
 
 
-__metaclass__ = type
-
 __all__ = ["TestTimeoutError", "ReactorBuilder", "needsRunningReactor"]
 
 import os
@@ -272,7 +270,7 @@ class ReactorBuilder:
                 )
         try:
             reactor = self.reactorFactory()
-        except:
+        except BaseException:
             # Unfortunately, not all errors which result in a reactor
             # being unusable are detectable without actually
             # instantiating the reactor.  So we catch some more here
@@ -339,7 +337,7 @@ class ReactorBuilder:
         reactor.run()
         if timedOut:
             raise TestTimeoutError(
-                "reactor still running after %s seconds" % (timeout,)
+                "reactor still running after {} seconds".format(timeout)
             )
         else:
             timedOutCall.cancel()
@@ -354,12 +352,12 @@ class ReactorBuilder:
         """
         classes = (
             {}
-        )  # type: Dict[str, Union[Type['ReactorBuilder'], Type[SynchronousTestCase]]]   # noqa
+        )  # type: Dict[str, Union[Type['ReactorBuilder'], Type[SynchronousTestCase]]]
         for reactor in cls._reactors:
             shortReactorName = reactor.split(".")[-1]
             name = (cls.__name__ + "." + shortReactorName + "Tests").replace(".", "_")
 
-            class testcase(cls, SynchronousTestCase):  # type: ignore[valid-type,misc]   # noqa
+            class testcase(cls, SynchronousTestCase):  # type: ignore[valid-type,misc]
                 __module__ = cls.__module__
                 if reactor in cls.skippedReactors:
                     skip = cls.skippedReactors[reactor]

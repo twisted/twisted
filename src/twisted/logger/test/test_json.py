@@ -259,7 +259,7 @@ class FileLogObserverTests(TestCase):
         logger = Logger(observer=publisher)
         try:
             1 / 0
-        except:
+        except BaseException:
             logger.failure("failed as expected")
         reader = StringIO(io.getvalue())
         deserialized = list(eventsFromJSONLogFile(reader))

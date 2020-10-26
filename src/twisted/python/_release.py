@@ -119,7 +119,7 @@ class GitCommand:
             runCommand(["git", "rev-parse"], cwd=path.path)
         except (CalledProcessError, OSError):
             raise NotWorkingDirectory(
-                "%s does not appear to be a Git repository." % (path.path,)
+                "{} does not appear to be a Git repository.".format(path.path)
             )
 
     @staticmethod
@@ -194,7 +194,9 @@ def getRepositoryCommand(directory):
         # It's not Git, but that's okay, eat the error
         pass
 
-    raise NotWorkingDirectory("No supported VCS can be found in %s" % (directory.path,))
+    raise NotWorkingDirectory(
+        "No supported VCS can be found in {}".format(directory.path)
+    )
 
 
 class Project:
@@ -211,7 +213,7 @@ class Project:
         self.directory = directory
 
     def __repr__(self) -> str:
-        return "%s(%r)" % (self.__class__.__name__, self.directory)
+        return "{}({!r})".format(self.__class__.__name__, self.directory)
 
     def getVersion(self):
         """

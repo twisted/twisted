@@ -19,7 +19,6 @@ tls_alpn_npn_server.py from the directory that contains this example.
 It assumes that you have a self-signed server certificate, named
 `server-cert.pem` and located in the working directory.
 """
-from __future__ import print_function
 
 from twisted.internet import ssl, protocol, endpoints, task, defer
 from twisted.python.filepath import FilePath

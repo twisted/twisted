@@ -263,7 +263,7 @@ class DelayedCall:
                 L.append(
                     ", ".join(
                         [
-                            "%s=%s" % (k, reflect.safe_repr(v))
+                            "{}={}".format(k, reflect.safe_repr(v))
                             for (k, v) in self.kw.items()
                         ]
                     )
@@ -297,7 +297,9 @@ class ThreadedResolver:
         )  # type: Dict[Deferred[str], Tuple[Deferred[str], IDelayedCall]]
 
     def _fail(self, name: str, err: str) -> Failure:
-        lookupError = error.DNSLookupError("address %r not found: %s" % (name, err))
+        lookupError = error.DNSLookupError(
+            "address {!r} not found: {}".format(name, err)
+        )
         return Failure(lookupError)
 
     def _cleanup(self, name: str, lookupDeferred: Deferred[str]) -> None:
@@ -357,8 +359,8 @@ class BlockingResolver:
     ) -> Deferred[str]:
         try:
             address = socket.gethostbyname(name)
-        except socket.error:
-            msg = "address %r not found" % (name,)
+        except OSError:
+            msg = "address {!r} not found".format(name)
             err = error.DNSLookupError(msg)
             # type note: returning a failing Deferred is akin to raising...
             #   it's awkward to express that with typing a return value, where
@@ -498,7 +500,7 @@ class _ThreePhaseEvent:
             self.finishedBefore.append((callable, args, kwargs))
             try:
                 result = callable(*args, **kwargs)
-            except:
+            except BaseException:
                 log.err()
             else:
                 if isinstance(result, Deferred):
@@ -516,7 +518,7 @@ class _ThreePhaseEvent:
                 callable, args, kwargs = phase.pop(0)
                 try:
                     callable(*args, **kwargs)
-                except:
+                except BaseException:
                     log.err()
 
 
@@ -608,7 +610,7 @@ class ReactorBase(PluggableResolverMixin):
     __name__ = "twisted.internet.reactor"
 
     def __init__(self) -> None:
-        super(ReactorBase, self).__init__()
+        super().__init__()
         self.threadCallQueue = []  # type: List[_ThreadCall]
         self._eventTriggers = {}  # type: Dict[str, _ThreePhaseEvent]
         self._pendingTimedCalls = []  # type: List[DelayedCall]
@@ -975,7 +977,7 @@ class ReactorBase(PluggableResolverMixin):
             for (f, a, kw) in self.threadCallQueue:
                 try:
                     f(*a, **kw)
-                except:
+                except BaseException:
                     log.err()
                 count += 1
                 if count == total:
@@ -1002,7 +1004,7 @@ class ReactorBase(PluggableResolverMixin):
             try:
                 call.called = 1
                 call.func(*call.args, **call.kw)
-            except:
+            except BaseException:
                 log.deferr()
                 if hasattr(call, "creator"):
                     e = "\n"
@@ -1142,7 +1144,7 @@ class ReactorBase(PluggableResolverMixin):
             See
             L{twisted.internet.interfaces.IReactorFromThreads.callFromThread}.
             """
-            assert callable(f), "%s is not callable" % (f,)
+            assert callable(f), "{} is not callable".format(f)
             # lists are thread-safe in CPython, but not in Jython
             # this is probably a bug in Jython, but until fixed this code
             # won't work in Jython.
@@ -1209,7 +1211,7 @@ class ReactorBase(PluggableResolverMixin):
         def callFromThread(
             self, f: Callable[..., Any], *args: object, **kwargs: object
         ) -> None:
-            assert callable(f), "%s is not callable" % (f,)
+            assert callable(f), "{} is not callable".format(f)
             # See comment in the other callFromThread implementation.
             self.threadCallQueue.append((f, args, kwargs))
 
@@ -1312,7 +1314,7 @@ class BaseConnector(ABC):
         )
 
     def __repr__(self) -> str:
-        return "<%s instance at 0x%x %s %s>" % (
+        return "<{} instance at 0x{:x} {} {}>".format(
             reflect.qual(self.__class__),
             id(self),
             self.state,
@@ -1425,7 +1427,7 @@ class _SignalReactorMixin:
                     t2 = reactorBaseSelf.timeout()
                     t = reactorBaseSelf.running and t2
                     reactorBaseSelf.doIteration(t)
-            except:
+            except BaseException:
                 log.msg("Unexpected error in main loop.")
                 log.err()
             else:

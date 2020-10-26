@@ -59,7 +59,7 @@ class FixedOffsetTimeZone(TZInfo):
             hours = -hours
             minutes = -minutes
         elif sign != "+":
-            raise ValueError("Invalid sign for timezone %r" % (sign,))
+            raise ValueError("Invalid sign for timezone {!r}".format(sign))
         return cls(TimeDelta(hours=hours, minutes=minutes), name)
 
     @classmethod
