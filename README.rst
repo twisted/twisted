@@ -1,5 +1,5 @@
 Twisted
-=======
+========
 
 |pypi|_
 |circleci|_
