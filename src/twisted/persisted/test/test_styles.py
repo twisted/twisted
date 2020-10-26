@@ -39,10 +39,6 @@ def sampleFunction():
     """
 
 
-def lambdaExample(x):
-    return x
-
-
 class UniversalPicklingErrorTests(unittest.TestCase):
     """
     Tests the L{_UniversalPicklingError} exception.
@@ -126,4 +122,4 @@ class UnpickleMethodTests(unittest.TestCase):
         """
         Pickling a C{lambda} function ought to raise a L{pickle.PicklingError}.
         """
-        self.assertRaises(pickle.PicklingError, pickle.dumps, lambdaExample)
+        self.assertRaises(pickle.PicklingError, pickle.dumps, lambda x: x)
