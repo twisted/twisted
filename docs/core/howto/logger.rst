@@ -113,7 +113,7 @@ Capturing Failures
 
     try:
         1 / 0
-    except:
+    except BaseException:
         log.failure("Math is hard!")
 
 The emitted event will have the ``"log_failure"`` key set, which is a :api:`twisted.python.failure.Failure <Failure>` that captures the exception.

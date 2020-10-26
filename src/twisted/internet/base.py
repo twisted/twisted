@@ -495,7 +495,7 @@ class _ThreePhaseEvent:
             self.finishedBefore.append((callable, args, kwargs))
             try:
                 result = callable(*args, **kwargs)
-            except:
+            except BaseException:
                 log.err()
             else:
                 if isinstance(result, Deferred):
@@ -513,7 +513,7 @@ class _ThreePhaseEvent:
                 callable, args, kwargs = phase.pop(0)
                 try:
                     callable(*args, **kwargs)
-                except:
+                except BaseException:
                     log.err()
 
 
@@ -970,7 +970,7 @@ class ReactorBase(PluggableResolverMixin):
             for (f, a, kw) in self.threadCallQueue:
                 try:
                     f(*a, **kw)
-                except:
+                except BaseException:
                     log.err()
                 count += 1
                 if count == total:
@@ -997,7 +997,7 @@ class ReactorBase(PluggableResolverMixin):
             try:
                 call.called = 1
                 call.func(*call.args, **call.kw)
-            except:
+            except BaseException:
                 log.deferr()
                 if hasattr(call, "creator"):
                     e = "\n"
@@ -1420,7 +1420,7 @@ class _SignalReactorMixin:
                     t2 = reactorBaseSelf.timeout()
                     t = reactorBaseSelf.running and t2
                     reactorBaseSelf.doIteration(t)
-            except:
+            except BaseException:
                 log.msg("Unexpected error in main loop.")
                 log.err()
             else:

@@ -56,7 +56,7 @@ class Connection:
             curs.close()
             self._connection.commit()
             return
-        except:
+        except BaseException:
             log.err(None, "Rollback failed")
 
         self._pool.disconnect(self._connection)
@@ -104,7 +104,7 @@ class Transaction:
         try:
             self._cursor = self._connection.cursor()
             return
-        except:
+        except BaseException:
             if not self._pool.reconnect:
                 raise
             else:
@@ -284,11 +284,11 @@ class ConnectionPool:
             result = func(conn, *args, **kw)
             conn.commit()
             return result
-        except:
+        except BaseException:
             excType, excValue, excTraceback = sys.exc_info()
             try:
                 conn.rollback()
-            except:
+            except BaseException:
                 log.err(None, "Rollback failed")
             compat.reraise(excValue, excTraceback)
 
@@ -436,7 +436,7 @@ class ConnectionPool:
             log.msg("adbapi closing: {}".format(self.dbapiName))
         try:
             conn.close()
-        except:
+        except BaseException:
             log.err(None, "Connection close failed")
 
     def _runInteraction(self, interaction, *args, **kw):
@@ -447,11 +447,11 @@ class ConnectionPool:
             trans.close()
             conn.commit()
             return result
-        except:
+        except BaseException:
             excType, excValue, excTraceback = sys.exc_info()
             try:
                 conn.rollback()
-            except:
+            except BaseException:
                 log.err(None, "Rollback failed")
             compat.reraise(excValue, excTraceback)
 

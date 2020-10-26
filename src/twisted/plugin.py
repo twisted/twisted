@@ -141,7 +141,7 @@ def getCache(module):
             lastCached = dropinPath.getModificationTime()
             with dropinPath.open("r") as f:
                 dropinDotCache = pickle.load(f)
-        except:
+        except BaseException:
             dropinDotCache = {}
             lastCached = 0
 
@@ -156,7 +156,7 @@ def getCache(module):
                 needsWrite = True
                 try:
                     provider = pluginModule.load()
-                except:
+                except BaseException:
                     # dropinDotCache.pop(pluginKey, None)
                     log.err()
                 else:
@@ -179,7 +179,7 @@ def getCache(module):
                     path=dropinPath.path,
                     errno=e.errno,
                 )
-            except:
+            except BaseException:
                 log.err(None, "Unexpected error while writing cache file")
         allCachesCombined.update(dropinDotCache)
     return allCachesCombined
@@ -204,7 +204,7 @@ def getPlugins(interface, package=None):
         for plugin in dropin.plugins:
             try:
                 adapted = interface(plugin, None)
-            except:
+            except BaseException:
                 log.err()
             else:
                 if adapted is not None:

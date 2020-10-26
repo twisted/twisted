@@ -120,7 +120,7 @@ def isInKnownHosts(host, pubKey, options):
                 continue
             try:
                 decodedKey = decodebytes(encodedKey)
-            except:
+            except BaseException:
                 continue
             if decodedKey == pubKey:
                 return 1

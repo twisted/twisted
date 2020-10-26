@@ -582,7 +582,7 @@ class ProcessTests(unittest.TestCase):
 
                 for f in glob.glob(process_tester.test_file_match):
                     os.remove(f)
-            except:
+            except BaseException:
                 pass
 
         d.addCallback(check)

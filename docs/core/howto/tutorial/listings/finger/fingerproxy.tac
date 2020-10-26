@@ -92,7 +92,7 @@ class ProxyFingerService(service.Service):
     def getUser(self, user):
         try:
             user, host = user.split("@", 1)
-        except:
+        except BaseException:
             user = user.strip()
             host = "127.0.0.1"
         ret = finger(user, host)

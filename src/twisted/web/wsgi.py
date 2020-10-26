@@ -510,7 +510,7 @@ class _WSGIResponse:
             close = getattr(appIterator, "close", None)
             if close is not None:
                 close()
-        except:
+        except BaseException:
 
             def wsgiError(started, type, value, traceback):
                 self._log.failure(

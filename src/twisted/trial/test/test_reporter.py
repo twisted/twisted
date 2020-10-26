@@ -1404,7 +1404,7 @@ class AdaptedReporterTests(unittest.SynchronousTestCase):
         """
         try:
             raise exceptionInstance
-        except:
+        except BaseException:
             return Failure()
 
     def getWrappedResult(self):

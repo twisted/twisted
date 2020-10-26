@@ -3156,7 +3156,7 @@ class DNSMixin:
 
         try:
             writeMessage(m)
-        except:
+        except BaseException:
             return defer.fail()
 
         resultDeferred = defer.Deferred()
@@ -3220,7 +3220,7 @@ class DNSDatagramProtocol(DNSMixin, protocol.DatagramProtocol):
         except EOFError:
             log.msg("Truncated packet (%d bytes) from %s" % (len(data), addr))
             return
-        except:
+        except BaseException:
             # Nothing should trigger this, but since we're potentially
             # invoking a lot of different decoding methods, we might as well
             # be extra cautious.  Anything that triggers this is itself
@@ -3235,7 +3235,7 @@ class DNSDatagramProtocol(DNSMixin, protocol.DatagramProtocol):
             # XXX we shouldn't need this hack of catching exception on callback()
             try:
                 d.callback(m)
-            except:
+            except BaseException:
                 log.err()
         else:
             if m.id not in self.resends:
@@ -3334,7 +3334,7 @@ class DNSProtocol(DNSMixin, protocol.Protocol):
                     # XXX we shouldn't need this hack
                     try:
                         d.callback(m)
-                    except:
+                    except BaseException:
                         log.err()
 
                 self.buffer = self.buffer[self.length :]

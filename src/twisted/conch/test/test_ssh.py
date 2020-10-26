@@ -108,7 +108,7 @@ class ConchTestAvatar(avatar.ConchUser):
                 ),
                 interface=host,
             )
-        except:
+        except BaseException:
             log.err(None, "something went wrong with remote->local forwarding")
             return 0
         else:

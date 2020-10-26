@@ -263,7 +263,7 @@ class _WrappingFactory(ClientFactory):
             proto = self._wrappedFactory.buildProtocol(addr)
             if proto is None:
                 raise error.NoProtocol()
-        except:
+        except BaseException:
             self._onConnection.errback()
         else:
             return self.protocol(self._onConnection, proto)
@@ -473,7 +473,7 @@ class ProcessEndpoint:
                 self._usePTY,
                 self._childFDs,
             )
-        except:
+        except BaseException:
             return defer.fail()
         else:
             return defer.succeed(proto)
@@ -603,7 +603,7 @@ class TCP4ClientEndpoint:
                 bindAddress=self._bindAddress,
             )
             return wf._onConnection
-        except:
+        except BaseException:
             return defer.fail()
 
 
@@ -677,7 +677,7 @@ class TCP6ClientEndpoint:
                 bindAddress=self._bindAddress,
             )
             return wf._onConnection
-        except:
+        except BaseException:
             return defer.fail()
 
 
@@ -1190,7 +1190,7 @@ class SSL4ClientEndpoint:
                 bindAddress=self._bindAddress,
             )
             return wf._onConnection
-        except:
+        except BaseException:
             return defer.fail()
 
 
@@ -1267,7 +1267,7 @@ class UNIXClientEndpoint:
                 self._path, wf, timeout=self._timeout, checkPID=self._checkPID
             )
             return wf._onConnection
-        except:
+        except BaseException:
             return defer.fail()
 
 
@@ -1314,7 +1314,7 @@ class AdoptedStreamServerEndpoint:
                 self.fileno, self.addressFamily, factory
             )
             self._close(self.fileno)
-        except:
+        except BaseException:
             return defer.fail()
         return defer.succeed(port)
 

@@ -252,7 +252,7 @@ class Port(base.BasePort):
                     addr = addr[:2]
                 try:
                     self.protocol.datagramReceived(data, addr)
-                except:
+                except BaseException:
                     log.err()
 
     def write(self, datagram, addr=None):

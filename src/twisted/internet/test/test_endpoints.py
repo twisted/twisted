@@ -1845,7 +1845,7 @@ class _HostnameEndpointMemoryReactorMixin(ClientEndpointTestCaseMixin):
         """
         try:
             result = f(*args, **kwargs)
-        except:
+        except BaseException:
             return defer.fail()
         else:
             return defer.succeed(result)

@@ -73,7 +73,7 @@ def instantiateShootErrback():
     d = defer.Deferred()
     try:
         1 / 0
-    except:
+    except BaseException:
         d.errback()
     d.addErrback(lambda x: None)
 

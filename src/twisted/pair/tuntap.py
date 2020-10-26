@@ -320,13 +320,13 @@ class TuntapPort(abstract.FileDescriptor):
                     return
                 else:
                     raise
-            except:
+            except BaseException:
                 raise
             read += len(data)
             # TODO pkt.isPartial()?
             try:
                 self.protocol.datagramReceived(data, partial=0)
-            except:
+            except BaseException:
                 cls = fullyQualifiedName(self.protocol.__class__)
                 log.err(
                     None, "Unhandled exception from {}.datagramReceived".format(cls)

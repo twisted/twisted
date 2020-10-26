@@ -97,7 +97,7 @@ class UnixConchUser(ConchUser):
                 ),
                 interface=hostToBind,
             )
-        except:
+        except BaseException:
             return 0
         else:
             self.listeners[(hostToBind, portToBind)] = listener

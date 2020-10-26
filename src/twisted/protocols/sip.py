@@ -932,7 +932,7 @@ class Proxy(Base):
             d = f(message, addr)
         except SIPError as e:
             self.deliverResponse(self.responseFromRequest(e.code, message))
-        except:
+        except BaseException:
             log.err()
             self.deliverResponse(self.responseFromRequest(500, message))
         else:
@@ -1108,7 +1108,7 @@ class RegisterProxy(Proxy):
                 c = a.decode(parts[1])
             except SIPError:
                 raise
-            except:
+            except BaseException:
                 log.err()
                 self.deliverResponse(self.responseFromRequest(500, message))
             else:
