@@ -106,6 +106,8 @@ DEPRECATION_WARNING_FORMAT = "%(fqpn)s was deprecated in %(version)s"
 # Notionally, part of twisted.python.reflect, but defining it there causes a
 # cyclic dependency between this module and that module.  Define it here,
 # instead, and let reflect import it to re-expose to the public.
+
+
 def _fullyQualifiedName(obj):
     """
     Return the fully qualified name of a module, class, method or function.
