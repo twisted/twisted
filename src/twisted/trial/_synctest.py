@@ -148,7 +148,7 @@ def _setWarningRegistryToNone(modules):
         if v is not None:
             try:
                 v.__warningregistry__ = None
-            except:
+            except BaseException:
                 # Don't specify a particular exception type to handle in case
                 # some wacky object raises some wacky exception in response to
                 # the setattr attempt.
@@ -1044,7 +1044,7 @@ class SynchronousTestCase(_Assertions):
         for w in self.flushWarnings():
             try:
                 warnings.warn_explicit(**w)
-            except:
+            except BaseException:
                 result.addError(self, failure.Failure())
 
         result.stopTest(self)
@@ -1366,7 +1366,7 @@ class SynchronousTestCase(_Assertions):
             runWithWarningsSuppressed(suppress, method)
         except SkipTest as e:
             result.addSkip(self, self._getSkipReason(method, e))
-        except:
+        except BaseException:
             reason = failure.Failure()
             if todo is None or not todo.expected(reason):
                 if reason.check(self.failureException):
@@ -1420,7 +1420,7 @@ class SynchronousTestCase(_Assertions):
             f, args, kwargs = self._cleanups.pop()
             try:
                 f(*args, **kwargs)
-            except:
+            except BaseException:
                 f = failure.Failure()
                 result.addError(self, f)
 

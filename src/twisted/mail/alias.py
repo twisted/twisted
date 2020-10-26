@@ -291,7 +291,7 @@ class FileWrapper:
         self.fp.seek(0, 0)
         try:
             f = open(self.finalname, "a")
-        except:
+        except BaseException:
             return defer.fail(failure.Failure())
 
         with f:
@@ -700,7 +700,7 @@ class AliasGroup(AliasBase):
             if addr.startswith(":"):
                 try:
                     f = open(addr[1:])
-                except:
+                except BaseException:
                     log.err("Invalid filename in alias file {!r}".format(addr[1:]))
                 else:
                     with f:

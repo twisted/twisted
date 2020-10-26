@@ -340,7 +340,7 @@ def getPassword(
                 try:
                     old = sys.stdin, sys.stdout
                     sys.stdin = sys.stdout = open("/dev/tty", "r+")
-                except:
+                except BaseException:
                     raise RuntimeError("Cannot obtain a TTY")
             else:
                 password = sys.stdin.readline()

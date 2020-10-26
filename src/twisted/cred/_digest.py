@@ -29,6 +29,8 @@ algorithms = {
 }
 
 # DigestCalcHA1
+
+
 def calcHA1(
     pszAlg, pszUserName, pszRealm, pszPassword, pszNonce, pszCNonce, preHA1=None
 ):

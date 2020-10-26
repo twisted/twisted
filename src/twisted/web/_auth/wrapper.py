@@ -123,7 +123,7 @@ class HTTPAuthSessionWrapper:
             credentials = factory.decode(respString, request)
         except error.LoginFailed:
             return UnauthorizedResource(self._credentialFactories)
-        except:
+        except BaseException:
             self._log.failure("Unexpected failure from credentials factory")
             return ErrorPage(500, None, None)
         else:

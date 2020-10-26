@@ -129,7 +129,7 @@ class IOCPReactor(
                 why = _NO_FILEDESC
             if why:
                 return  # ignore handles that were closed
-        except:
+        except BaseException:
             why = sys.exc_info()[1]
             log.err()
         if why:

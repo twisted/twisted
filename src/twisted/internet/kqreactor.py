@@ -171,7 +171,7 @@ class KQueueReactor(posixbase.PosixReactorBase):
         wasLost = False
         try:
             fd = reader.fileno()
-        except:
+        except BaseException:
             fd = -1
         if fd == -1:
             for fd, fdes in self._selectables.items():
@@ -197,7 +197,7 @@ class KQueueReactor(posixbase.PosixReactorBase):
         wasLost = False
         try:
             fd = writer.fileno()
-        except:
+        except BaseException:
             fd = -1
         if fd == -1:
             for fd, fdes in self._selectables.items():
@@ -295,7 +295,7 @@ class KQueueReactor(posixbase.PosixReactorBase):
                     if filter == KQ_FILTER_WRITE:
                         inRead = False
                         why = selectable.doWrite()
-            except:
+            except BaseException:
                 # Any exception from application code gets logged and will
                 # cause us to disconnect the selectable.
                 why = failure.Failure()

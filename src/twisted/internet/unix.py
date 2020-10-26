@@ -398,7 +398,7 @@ class Port(_UNIXPort, tcp.Port):
                         # exception that actually propagates.
                         if stat.S_ISSOCK(os.stat(self.port).st_mode):
                             os.remove(self.port)
-                    except:
+                    except BaseException:
                         pass
 
         self.factory.doStart()
@@ -586,7 +586,7 @@ class ConnectedDatagramPort(DatagramPort):
             self._bindSocket()
             self.socket.connect(self.remoteaddr)
             self._connectToProtocol()
-        except:
+        except BaseException:
             self.connectionFailed(failure.Failure())
 
     def connectionFailed(self, reason):
@@ -618,7 +618,7 @@ class ConnectedDatagramPort(DatagramPort):
                     self.protocol.connectionRefused()
                 else:
                     raise
-            except:
+            except BaseException:
                 log.deferr()
 
     def write(self, data):

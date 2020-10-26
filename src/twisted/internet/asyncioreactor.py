@@ -123,7 +123,7 @@ class AsyncioSelectorReactor(PosixReactorBase):
         """
         try:
             self._asyncioEventloop._selector.unregister(fd)
-        except:
+        except BaseException:
             pass
 
     def _readOrWrite(self, selectable, read):
@@ -180,7 +180,7 @@ class AsyncioSelectorReactor(PosixReactorBase):
         except BrokenPipeError:
             # The kqueuereactor will raise this if there is a broken pipe
             self._unregisterFDInAsyncio(fd)
-        except:
+        except BaseException:
             self._unregisterFDInAsyncio(fd)
             raise
 

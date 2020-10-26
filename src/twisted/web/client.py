@@ -584,7 +584,7 @@ class HTTPDownloader(HTTPClientFactory):
             if self.file:
                 try:
                     self.file.close()
-                except:
+                except BaseException:
                     self._log.failure("Error closing HTTPDownloader file")
             self.deferred.errback(reason)
 
@@ -1432,7 +1432,7 @@ class HTTPConnectionPool:
                 raise RuntimeError(
                     "BUG: Non-quiescent protocol added to connection pool."
                 )
-            except:
+            except BaseException:
                 self._log.failure(
                     "BUG: Non-quiescent protocol added to connection pool."
                 )

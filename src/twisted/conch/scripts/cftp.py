@@ -88,7 +88,7 @@ def handleError():
     exitStatus = 2
     try:
         reactor.stop()
-    except:
+    except BaseException:
         pass
     log.err(failure.Failure())
     raise
@@ -517,7 +517,7 @@ class StdioClient(basic.LineReceiver):
             try:
                 currentFile = files.pop(0)
                 localStream = open(currentFile, "rb")
-            except:
+            except BaseException:
                 self._printFailure(failure.Failure())
                 currentFile = None
 

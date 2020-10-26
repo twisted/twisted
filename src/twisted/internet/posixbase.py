@@ -688,7 +688,7 @@ class _PollLikeMixin:
                         # disconnect us.
                         why = selectable.doWrite()
                         inRead = False
-            except:
+            except BaseException:
                 # Any exception from application code gets logged and will
                 # cause us to disconnect the selectable.
                 why = sys.exc_info()[1]

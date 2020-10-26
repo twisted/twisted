@@ -606,7 +606,7 @@ class CompleterNotImplementedTests(unittest.TestCase):
         for cls in classes:
             try:
                 action = cls()
-            except:
+            except BaseException:
                 action = cls(None)
             self.assertRaises(
                 NotImplementedError, action._shellCode, None, "bad_shell_type"

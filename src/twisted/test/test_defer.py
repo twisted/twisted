@@ -51,7 +51,7 @@ def getDivisionFailure(*args, **kwargs):
     """
     try:
         1 / 0
-    except:
+    except BaseException:
         f = failure.Failure(*args, **kwargs)
     return f
 
@@ -1333,7 +1333,7 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         exc = GenericError("Bang")
         try:
             raise exc
-        except:
+        except BaseException:
             d.errback()
         d.addErrback(l.append)
         fail = l[0]
@@ -1354,7 +1354,7 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         exc = GenericError("Bang")
         try:
             raise exc
-        except:
+        except BaseException:
             d.errback()
         d.addErrback(l.append)
         fail = l[0]
@@ -1412,7 +1412,7 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         d = defer.Deferred()
         try:
             f.raiseException()
-        except:
+        except BaseException:
             d.errback()
 
         def ic(d):
@@ -1470,7 +1470,7 @@ class FirstErrorTests(unittest.SynchronousTestCase):
         exc = ValueError("some text")
         try:
             raise exc
-        except:
+        except BaseException:
             f = failure.Failure()
 
         error = defer.FirstError(f, 3)
@@ -1484,7 +1484,7 @@ class FirstErrorTests(unittest.SynchronousTestCase):
         exc = ValueError("some text")
         try:
             raise exc
-        except:
+        except BaseException:
             f = failure.Failure()
 
         error = defer.FirstError(f, 5)
@@ -1498,7 +1498,7 @@ class FirstErrorTests(unittest.SynchronousTestCase):
         """
         try:
             1 // 0
-        except:
+        except BaseException:
             firstFailure = failure.Failure()
 
         one = defer.FirstError(firstFailure, 13)
@@ -1506,7 +1506,7 @@ class FirstErrorTests(unittest.SynchronousTestCase):
 
         try:
             raise ValueError("bar")
-        except:
+        except BaseException:
             secondFailure = failure.Failure()
 
         another = defer.FirstError(secondFailure, 9)

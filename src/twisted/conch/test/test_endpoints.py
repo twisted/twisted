@@ -255,7 +255,7 @@ class SingleUseMemoryEndpoint:
 
         try:
             protocol = factory.buildProtocol(MemoryAddress())
-        except:
+        except BaseException:
             return fail()
         else:
             self.pump = connect(

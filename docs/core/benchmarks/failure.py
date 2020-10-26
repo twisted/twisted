@@ -47,7 +47,7 @@ def fail(n):
     for i in R:
         try:
             eval("deepFailure%d_0" % n)()
-        except:
+        except BaseException:
             failure.Failure()
 
 
@@ -55,7 +55,7 @@ def fail_str(n):
     for i in R:
         try:
             eval("deepFailure%d_0" % n)()
-        except:
+        except BaseException:
             str(failure.Failure())
 
 
@@ -67,7 +67,7 @@ def fail_easy(n):
     for i in R:
         try:
             failure.Failure(PythonException())
-        except:
+        except BaseException:
             pass
 
 

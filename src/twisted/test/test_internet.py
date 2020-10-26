@@ -740,7 +740,7 @@ class TimeTests(TestCase):
         def check():
             try:
                 self.assertEqual(called, [])
-            except:
+            except BaseException:
                 d.errback()
             else:
                 d.callback(None)
@@ -768,7 +768,7 @@ class TimeTests(TestCase):
         def later():
             try:
                 self.assertRaises(error.AlreadyCalled, call.cancel)
-            except:
+            except BaseException:
                 d.errback()
             else:
                 d.callback(None)
@@ -786,7 +786,7 @@ class TimeTests(TestCase):
         def check():
             try:
                 self.assertRaises(error.AlreadyCalled, call.cancel)
-            except:
+            except BaseException:
                 d.errback()
             else:
                 d.callback(None)
@@ -873,7 +873,7 @@ class CallFromThreadStopsAndWakeUpTests(TestCase):
     def _callFromThreadCallback2(self, d):
         try:
             self.assertTrue(self.stopped)
-        except:
+        except BaseException:
             # Send the error to the deferred
             d.errback()
         else:

@@ -422,6 +422,7 @@ class _CommandTransport(SSHClientTransport):
         # and to signal to other parts of this implementation (in particular
         # connectionLost) that it has already been fired and does not need to
         # be fired again.
+
         def readyFired(result):
             self.connectionReady = None
             return result
@@ -785,7 +786,7 @@ class _NewConnectionHelper:
         """
         try:
             return self.tty.open("rb+")
-        except:
+        except BaseException:
             # Give back a file-like object from which can be read a byte string
             # that KnownHostsFile recognizes as rejecting some option (b"no").
             return _ReadFile(b"no")

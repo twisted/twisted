@@ -584,7 +584,7 @@ class TestLoader:
         for modinfo in self.sort(discovered):
             try:
                 module = modinfo.load()
-            except:
+            except BaseException:
                 thingToAdd = ErrorHolder(modinfo.name, failure.Failure())
             else:
                 thingToAdd = self.loadModule(module)
@@ -600,7 +600,7 @@ class TestLoader:
         if isinstance(module, str):
             try:
                 module = reflect.namedAny(module)
-            except:
+            except BaseException:
                 return ErrorHolder(module, failure.Failure())
         if not inspect.ismodule(module):
             warnings.warn("trial only supports doctesting modules")
@@ -679,7 +679,7 @@ class TestLoader:
         """
         try:
             return self.suiteFactory([self.findByName(name, recurse=recurse)])
-        except:
+        except BaseException:
             return self.suiteFactory([ErrorHolder(name, failure.Failure())])
 
     loadTestsFromName = loadByName
@@ -698,7 +698,7 @@ class TestLoader:
         for name in names:
             try:
                 things.append(self.loadByName(name, recurse=recurse))
-            except:
+            except BaseException:
                 errors.append(ErrorHolder(name, failure.Failure()))
         things.extend(errors)
         return self.suiteFactory(self._uniqueTests(things))

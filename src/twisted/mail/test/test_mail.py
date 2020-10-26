@@ -229,15 +229,15 @@ class FileMessageTests(TestCase):
     def tearDown(self):
         try:
             self.f.close()
-        except:
+        except BaseException:
             pass
         try:
             os.remove(self.name)
-        except:
+        except BaseException:
             pass
         try:
             os.remove(self.final)
-        except:
+        except BaseException:
             pass
 
     def testFinalName(self):
@@ -1204,7 +1204,7 @@ def tearDownDNS(self):
     dl.append(defer.maybeDeferred(self.udpPort.stopListening))
     try:
         self.resolver._parseCall.cancel()
-    except:
+    except BaseException:
         pass
     return defer.DeferredList(dl)
 
@@ -2282,7 +2282,7 @@ class TestDomain:
             return lambda: mail.alias.AddressAlias(user, None, None)
         try:
             a = self.aliases[user]
-        except:
+        except BaseException:
             raise smtp.SMTPBadRcpt(user)
         else:
             aliases = a.resolve(self.aliases, memo)
