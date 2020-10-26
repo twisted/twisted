@@ -183,7 +183,7 @@ class EchoProtocol(protocol.Protocol):
 
 
 @implementer(session.ISession, session.ISessionSetEnv)
-class ExampleSession:.
+class ExampleSession:
     """
     This selects what to do for each type of session which is requested by the
     client via the SSH channel of type I{session}.
