@@ -6,8 +6,6 @@ Tests for implementations of L{IReactorThreads}.
 """
 
 
-__metaclass__ = type
-
 from weakref import ref
 import gc, threading
 

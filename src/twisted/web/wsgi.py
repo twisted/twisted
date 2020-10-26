@@ -6,8 +6,6 @@ An implementation of
 U{Python Web Server Gateway Interface v1.0.1<http://www.python.org/dev/peps/pep-3333/>}.
 """
 
-__metaclass__ = type
-
 from collections.abc import Sequence
 from sys import exc_info
 from warnings import warn
@@ -365,7 +363,9 @@ class _WSGIResponse:
         # on both Python 2 and Python 3.
         if not isinstance(status, str):
             raise TypeError(
-                "status must be str, not %r (%s)" % (status, type(status).__name__)
+                "status must be str, not {!r} ({})".format(
+                    status, type(status).__name__
+                )
             )
 
         # PEP-3333 mandates that headers should be a plain list, but in
@@ -405,7 +405,9 @@ class _WSGIResponse:
 
             # However, the sequence MUST contain only 2 elements.
             if len(header) != 2:
-                raise TypeError("header must be a (str, str) tuple, not %r" % (header,))
+                raise TypeError(
+                    "header must be a (str, str) tuple, not {!r}".format(header)
+                )
 
             # Both elements MUST be native strings. Non-native strings will be
             # rejected by the underlying HTTP machinery in any case, but we
@@ -413,7 +415,7 @@ class _WSGIResponse:
             for elem in header:
                 if not isinstance(elem, str):
                     raise TypeError(
-                        "header must be (str, str) tuple, not %r" % (header,)
+                        "header must be (str, str) tuple, not {!r}".format(header)
                     )
 
         self.status = status
@@ -508,7 +510,7 @@ class _WSGIResponse:
             close = getattr(appIterator, "close", None)
             if close is not None:
                 close()
-        except:
+        except BaseException:
 
             def wsgiError(started, type, value, traceback):
                 self._log.failure(

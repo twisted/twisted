@@ -379,7 +379,7 @@ class INotify(FileDescriptor):
         path = path.asBytesMode()
         wd = self._isWatched(path)
         if wd is None:
-            raise KeyError("%r is not watched" % (path,))
+            raise KeyError("{!r} is not watched".format(path))
         else:
             self._rmWatch(wd)
 

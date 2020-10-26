@@ -405,7 +405,7 @@ def toChunk(data):
 
     @returns: a tuple of C{bytes} representing the chunked encoding of data
     """
-    return (networkString("%x" % (len(data),)), b"\r\n", data, b"\r\n")
+    return (networkString("{:x}".format(len(data))), b"\r\n", data, b"\r\n")
 
 
 def fromChunk(data):
@@ -832,7 +832,9 @@ class Request:
             self._log.failure(
                 "",
                 Failure(
-                    RuntimeError("Producer was not unregistered for %s" % (self.uri,))
+                    RuntimeError(
+                        "Producer was not unregistered for {}".format(self.uri)
+                    )
                 ),
             )
             self.unregisterProducer()
@@ -1009,7 +1011,7 @@ class Request:
         @return: A string loosely describing this L{Request} object.
         @rtype: L{str}
         """
-        return "<%s at 0x%x method=%s uri=%s clientproto=%s>" % (
+        return "<{} at 0x{:x} method={} uri={} clientproto={}>".format(
             self.__class__.__name__,
             id(self),
             nativeString(self.method),
@@ -1595,7 +1597,7 @@ class Request:
             self.user, self.password = upw.split(b":", 1)
         except (binascii.Error, ValueError):
             self.user = self.password = b""
-        except:
+        except BaseException:
             self._log.failure("")
             self.user = self.password = b""
 
@@ -1610,7 +1612,7 @@ class Request:
         """
         try:
             return self.user
-        except:
+        except BaseException:
             pass
         self._authorize()
         return self.user
@@ -1626,7 +1628,7 @@ class Request:
         """
         try:
             return self.password
-        except:
+        except BaseException:
             pass
         self._authorize()
         return self.password
@@ -1890,7 +1892,7 @@ class _ChunkedTransferDecoder:
         data = self._buffer + data
         self._buffer = b""
         while data:
-            data = getattr(self, "_dataReceived_%s" % (self.state,))(data)
+            data = getattr(self, "_dataReceived_{}".format(self.state))(data)
 
     def noMoreData(self):
         """
@@ -2731,7 +2733,7 @@ class _XForwardedForAddress:
         self.host = host
 
 
-class _XForwardedForRequest(proxyForInterface(IRequest, "_request")):  # type: ignore[misc]  # noqa
+class _XForwardedForRequest(proxyForInterface(IRequest, "_request")):  # type: ignore[misc]
     """
     Add a layer on top of another request that only uses the value of an
     X-Forwarded-For header as the result of C{getClientAddress}.
@@ -2791,7 +2793,7 @@ def proxiedLogFormatter(timestamp, request):
     return combinedLogFormatter(timestamp, _XForwardedForRequest(request))
 
 
-class _GenericHTTPChannelProtocol(proxyForInterface(IProtocol, "_channel")):  # type: ignore[misc]  # noqa
+class _GenericHTTPChannelProtocol(proxyForInterface(IProtocol, "_channel")):  # type: ignore[misc]
     """
     A proxy object that wraps one of the HTTP protocol objects, and switches
     between them depending on TLS negotiated protocol.

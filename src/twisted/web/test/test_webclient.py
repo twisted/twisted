@@ -508,7 +508,9 @@ class WebClientTests(unittest.TestCase):
         called back with the contents of the page.
         """
         d = client.getPage(self.getURL("host"), timeout=100)
-        d.addCallback(self.assertEqual, networkString("127.0.0.1:%s" % (self.portno,)))
+        d.addCallback(
+            self.assertEqual, networkString("127.0.0.1:{}".format(self.portno))
+        )
         return d
 
     def test_timeoutTriggering(self):
@@ -544,7 +546,7 @@ class WebClientTests(unittest.TestCase):
     def testDownloadPageError1(self):
         class errorfile:
             def write(self, data):
-                raise IOError("badness happened during write")
+                raise OSError("badness happened during write")
 
             def close(self):
                 pass
@@ -558,7 +560,7 @@ class WebClientTests(unittest.TestCase):
                 pass
 
             def close(self):
-                raise IOError("badness happened during close")
+                raise OSError("badness happened during close")
 
         ef = errorfile()
         return self.assertFailure(client.downloadPage(self.getURL("file"), ef), IOError)

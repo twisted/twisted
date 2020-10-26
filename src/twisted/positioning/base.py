@@ -362,7 +362,7 @@ class Heading(Angle):
         else:
             variationRepr = repr(self.variation)
 
-        return "<%s (%s, %s)>" % (
+        return "<{} ({}, {})>".format(
             self._angleTypeNameRepr,
             self._angleValueRepr,
             variationRepr,
@@ -482,7 +482,7 @@ class Altitude(FancyEqMixin):
         @return: The string representation.
         @rtype: C{str}
         """
-        return "<Altitude (%s m)>" % (self._altitude,)
+        return "<Altitude ({} m)>".format(self._altitude)
 
 
 class _BaseSpeed(FancyEqMixin):
@@ -549,7 +549,7 @@ class _BaseSpeed(FancyEqMixin):
         @rtype: C{str}
         """
         speedValue = round(self.inMetersPerSecond, 2)
-        return "<%s (%s m/s)>" % (self.__class__.__name__, speedValue)
+        return "<{} ({} m/s)>".format(self.__class__.__name__, speedValue)
 
 
 class Speed(_BaseSpeed):
@@ -568,7 +568,7 @@ class Speed(_BaseSpeed):
         @raises ValueError: Raised if C{speed} is negative.
         """
         if speed < 0:
-            raise ValueError("negative speed: %r" % (speed,))
+            raise ValueError("negative speed: {!r}".format(speed))
 
         _BaseSpeed.__init__(self, speed)
 

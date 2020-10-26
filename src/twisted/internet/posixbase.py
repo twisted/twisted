@@ -134,7 +134,7 @@ class _SocketWaker(log.Logger):
         """Send a byte to my connection."""
         try:
             util.untilConcludes(self.w.send, b"x")
-        except socket.error as e:
+        except OSError as e:
             if e.args[0] != errno.WSAEWOULDBLOCK:
                 raise
 
@@ -144,7 +144,7 @@ class _SocketWaker(log.Logger):
         """
         try:
             self.r.recv(8192)
-        except socket.error:
+        except OSError:
             pass
 
     def connectionLost(self, reason):
@@ -195,7 +195,7 @@ class _FDWaker(log.Logger):
         for fd in self.i, self.o:
             try:
                 os.close(fd)
-            except IOError:
+            except OSError:
                 pass
         del self.i, self.o
 
@@ -688,7 +688,7 @@ class _PollLikeMixin:
                         # disconnect us.
                         why = selectable.doWrite()
                         inRead = False
-            except:
+            except BaseException:
                 # Any exception from application code gets logged and will
                 # cause us to disconnect the selectable.
                 why = sys.exc_info()[1]

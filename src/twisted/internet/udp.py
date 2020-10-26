@@ -164,9 +164,9 @@ class Port(base.BasePort):
 
     def __repr__(self) -> str:
         if self._realPortNumber is not None:
-            return "<%s on %s>" % (self.protocol.__class__, self._realPortNumber)
+            return "<{} on {}>".format(self.protocol.__class__, self._realPortNumber)
         else:
-            return "<%s not connected>" % (self.protocol.__class__,)
+            return "<{} not connected>".format(self.protocol.__class__)
 
     def getHandle(self):
         """
@@ -199,7 +199,7 @@ class Port(base.BasePort):
             try:
                 skt = self.createInternetSocket()
                 skt.bind((self.interface, self.port))
-            except socket.error as le:
+            except OSError as le:
                 raise error.CannotListenError(self.interface, self.port, le)
         else:
             # Re-use the externally specified socket
@@ -231,7 +231,7 @@ class Port(base.BasePort):
         while read < self.maxThroughput:
             try:
                 data, addr = self.socket.recvfrom(self.maxPacketSize)
-            except socket.error as se:
+            except OSError as se:
                 no = se.args[0]
                 if no in _sockErrReadIgnore:
                     return
@@ -252,7 +252,7 @@ class Port(base.BasePort):
                     addr = addr[:2]
                 try:
                     self.protocol.datagramReceived(data, addr)
-                except:
+                except BaseException:
                     log.err()
 
     def write(self, datagram, addr=None):
@@ -271,7 +271,7 @@ class Port(base.BasePort):
             assert addr in (None, self._connectedAddr)
             try:
                 return self.socket.send(datagram)
-            except socket.error as se:
+            except OSError as se:
                 no = se.args[0]
                 if no == EINTR:
                     return self.write(datagram)
@@ -303,7 +303,7 @@ class Port(base.BasePort):
                 )
             try:
                 return self.socket.sendto(datagram, addr)
-            except socket.error as se:
+            except OSError as se:
                 no = se.args[0]
                 if no == EINTR:
                     return self.write(datagram, addr)
@@ -488,7 +488,7 @@ class MulticastMixin:
             cmd = socket.IP_DROP_MEMBERSHIP
         try:
             self.socket.setsockopt(socket.IPPROTO_IP, cmd, addr + interface)
-        except socket.error as e:
+        except OSError as e:
             return failure.Failure(error.MulticastJoinError(addr, interface, *e.args))
 
     def leaveGroup(self, addr, interface=""):
@@ -524,7 +524,7 @@ class MulticastPort(MulticastMixin, Port):
             if hasattr(socket, "SO_REUSEPORT"):
                 try:
                     skt.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
-                except socket.error as le:
+                except OSError as le:
                     # RHEL6 defines SO_REUSEPORT but it doesn't work
                     if le.errno == ENOPROTOOPT:
                         pass

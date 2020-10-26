@@ -327,7 +327,9 @@ class DistinguishedName(dict):
 
     def __setattr__(self, attr, value):
         if attr not in _x509names:
-            raise AttributeError("%s is not a valid OpenSSL X509 name field" % (attr,))
+            raise AttributeError(
+                "{} is not a valid OpenSSL X509 name field".format(attr)
+            )
         realAttr = _x509names[attr]
         if not isinstance(value, bytes):
             value = value.encode("ascii")
@@ -408,15 +410,21 @@ def _handleattrhelper(Class, transport, methodName):
     and null certificates and raises the appropriate exception or returns the
     appropriate certificate object.
     """
-    method = getattr(transport.getHandle(), "get_%s_certificate" % (methodName,), None)
+    method = getattr(
+        transport.getHandle(), "get_{}_certificate".format(methodName), None
+    )
     if method is None:
         raise CertificateError(
-            "non-TLS transport %r did not have %s certificate" % (transport, methodName)
+            "non-TLS transport {!r} did not have {} certificate".format(
+                transport, methodName
+            )
         )
     cert = method()
     if cert is None:
         raise CertificateError(
-            "TLS transport %r did not have %s certificate" % (transport, methodName)
+            "TLS transport {!r} did not have {} certificate".format(
+                transport, methodName
+            )
         )
     return Class(cert)
 
@@ -427,7 +435,7 @@ class Certificate(CertBase):
     """
 
     def __repr__(self) -> str:
-        return "<%s Subject=%s Issuer=%s>" % (
+        return "<{} Subject={} Issuer={}>".format(
             self.__class__.__name__,
             self.getSubject().commonName,
             self.getIssuer().commonName,
@@ -576,7 +584,7 @@ class CertificateRequest(CertBase):
         dn._copyFrom(req.get_subject())
         if not req.verify(req.get_pubkey()):
             raise VerifyError(
-                "Can't verify that request for %r is self-signed." % (dn,)
+                "Can't verify that request for {!r} is self-signed.".format(dn)
             )
         return Class(req)
 
@@ -729,7 +737,7 @@ class PublicKey:
         return self.keyHash() == otherKey.keyHash()
 
     def __repr__(self) -> str:
-        return "<%s %s>" % (self.__class__.__name__, self.keyHash())
+        return "<{} {}>".format(self.__class__.__name__, self.keyHash())
 
     def keyHash(self):
         """
@@ -753,7 +761,7 @@ class PublicKey:
         return h.hexdigest()
 
     def inspect(self):
-        return "Public Key with Hash: %s" % (self.keyHash(),)
+        return "Public Key with Hash: {}".format(self.keyHash())
 
 
 class KeyPair(PublicKey):
@@ -835,7 +843,9 @@ class KeyPair(PublicKey):
         def verified(value):
             if not value:
                 raise VerifyError(
-                    "DN callback %r rejected request DN %r" % (verifyDNCallback, dn)
+                    "DN callback {!r} rejected request DN {!r}".format(
+                        verifyDNCallback, dn
+                    )
                 )
             return self.signRequestObject(
                 issuerDistinguishedName,
@@ -1058,7 +1068,7 @@ def _tolerateErrors(wrapped):
     def infoCallback(connection, where, ret):
         try:
             return wrapped(connection, where, ret)
-        except:
+        except BaseException:
             f = Failure()
             log.err(f, "Error during info_callback")
             connection.get_app_data().failVerification(f)
@@ -1490,10 +1500,8 @@ class OpenSSLCertificateOptions:
             if raiseMinimumTo:
                 if lowerMaximumSecurityTo and raiseMinimumTo > lowerMaximumSecurityTo:
                     raise ValueError(
-                        (
-                            "raiseMinimumTo needs to be lower than "
-                            "lowerMaximumSecurityTo"
-                        )
+                        "raiseMinimumTo needs to be lower than "
+                        "lowerMaximumSecurityTo"
                     )
 
                 if raiseMinimumTo > self._defaultMinimumTLSVersion:
@@ -1515,10 +1523,8 @@ class OpenSSLCertificateOptions:
                 and insecurelyLowerMinimumTo > lowerMaximumSecurityTo
             ):
                 raise ValueError(
-                    (
-                        "insecurelyLowerMinimumTo needs to be lower than "
-                        "lowerMaximumSecurityTo"
-                    )
+                    "insecurelyLowerMinimumTo needs to be lower than "
+                    "lowerMaximumSecurityTo"
                 )
 
             excludedVersions = _getExcludedTLSProtocols(
@@ -1906,7 +1912,7 @@ class _ChooseDiffieHellmanEllipticCurve:
         ctxPtr = ctx._context
         try:
             self._openSSLlib.SSL_CTX_set_ecdh_auto(ctxPtr, True)
-        except:
+        except BaseException:
             pass
 
     def _configureOpenSSL101(self, ctx):
@@ -1919,7 +1925,7 @@ class _ChooseDiffieHellmanEllipticCurve:
         """
         try:
             ctx.set_tmp_ecdh(self._ecCurve)
-        except:
+        except BaseException:
             pass
 
     def _configureOpenSSL101NoCurves(self, ctx):

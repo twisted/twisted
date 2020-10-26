@@ -95,7 +95,7 @@ class LoggingFile:
 
         @return: A file name.
         """
-        return "<{0} {1}#{2}>".format(
+        return "<{} {}#{}>".format(
             self.__class__.__name__,
             self.log.namespace,
             self.level.name,
@@ -165,7 +165,7 @@ class LoggingFile:
 
         @param args: Arguments.
         """
-        raise IOError("unsupported operation")
+        raise OSError("unsupported operation")
 
     read = _unsupported
     next = _unsupported

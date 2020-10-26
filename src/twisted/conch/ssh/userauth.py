@@ -143,16 +143,18 @@ class SSHUserAuthServer(service.SSHService):
         if kind not in self.supportedAuthentications:
             return defer.fail(error.ConchError("unsupported authentication, failing"))
         kind = nativeString(kind.replace(b"-", b"_"))
-        f = getattr(self, "auth_%s" % (kind,), None)
+        f = getattr(self, "auth_{}".format(kind), None)
         if f:
             ret = f(data)
             if not ret:
                 return defer.fail(
-                    error.ConchError("%s return None instead of a Deferred" % (kind,))
+                    error.ConchError(
+                        "{} return None instead of a Deferred".format(kind)
+                    )
                 )
             else:
                 return ret
-        return defer.fail(error.ConchError("bad auth type: %s" % (kind,)))
+        return defer.fail(error.ConchError("bad auth type: {}".format(kind)))
 
     def ssh_USERAUTH_REQUEST(self, packet):
         """
@@ -191,7 +193,7 @@ class SSHUserAuthServer(service.SSHService):
         service = self.transport.factory.getService(self.transport, self.nextService)
         if not service:
             raise error.ConchError(
-                "could not get next service: %s" % (self.nextService,)
+                "could not get next service: {}".format(self.nextService)
             )
         self._log.debug(
             "{user!r} authenticated with {method!r}", user=self.user, method=self.method
@@ -267,7 +269,7 @@ class SSHUserAuthServer(service.SSHService):
         try:
             pubKey = keys.Key.fromString(blob)
         except keys.BadKeyError:
-            error = "Unsupported key type %s or bad key" % (algName.decode("ascii"),)
+            error = "Unsupported key type {} or bad key".format(algName.decode("ascii"))
             self._log.error(error)
             return defer.fail(UnauthorizedLogin(error))
 

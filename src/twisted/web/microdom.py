@@ -813,11 +813,11 @@ class Element(Node):
     def __repr__(self) -> str:
         rep = "Element(%s" % repr(self.nodeName)
         if self.attributes:
-            rep += ", attributes=%r" % (self.attributes,)
+            rep += ", attributes={!r}".format(self.attributes)
         if self._filename:
-            rep += ", filename=%r" % (self._filename,)
+            rep += ", filename={!r}".format(self._filename)
         if self._markpos:
-            rep += ", markpos=%r" % (self._markpos,)
+            rep += ", markpos={!r}".format(self._markpos)
         return rep + ")"
 
     def __str__(self) -> str:

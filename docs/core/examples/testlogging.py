@@ -7,7 +7,6 @@
 Message should only be printed second time around.
 """
 
-from __future__ import print_function
 
 from twisted.python import log
 from twisted.internet import reactor
@@ -21,7 +20,7 @@ def test(i):
     warnings.warn("warning {}".format(i))
     try:
         raise RuntimeError("error {}".format(i))
-    except:
+    except BaseException:
         log.err()
 
 

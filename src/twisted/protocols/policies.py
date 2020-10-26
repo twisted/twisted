@@ -32,7 +32,7 @@ def _wrappedLogPrefix(wrapper, wrapped):
         logPrefix = wrapped.logPrefix()
     else:
         logPrefix = wrapped.__class__.__name__
-    return "%s (%s)" % (logPrefix, wrapper.__class__.__name__)
+    return "{} ({})".format(logPrefix, wrapper.__class__.__name__)
 
 
 class ProtocolWrapper(Protocol):

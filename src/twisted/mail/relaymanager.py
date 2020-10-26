@@ -469,7 +469,7 @@ class Queue:
         @return: The envelope file and a message receiver for a new message in
             the queue.
         """
-        fname = "%s_%s_%s_%s" % (os.getpid(), time.time(), self.n, id(self))
+        fname = "{}_{}_{}_{}".format(os.getpid(), time.time(), self.n, id(self))
         self.n = self.n + 1
         headerFile = open(os.path.join(self.directory, fname + "-H"), "wb")
         tempFilename = os.path.join(self.directory, fname + "-C")
@@ -1088,7 +1088,7 @@ class MXCalculator:
             # try to look up an A record.  This provides behavior described as
             # a special case in RFC 974 in the section headed I{Interpreting
             # the List of MX RRs}.
-            return Failure(error.DNSNameError("No MX records for %r" % (domain,)))
+            return Failure(error.DNSNameError("No MX records for {!r}".format(domain)))
 
     def _ebMX(self, failure, domain):
         """
@@ -1118,7 +1118,9 @@ class MXCalculator:
         if self.fallbackToDomain:
             failure.trap(error.DNSNameError)
             log.msg(
-                "MX lookup failed; attempting to use hostname (%s) directly" % (domain,)
+                "MX lookup failed; attempting to use hostname ({}) directly".format(
+                    domain
+                )
             )
 
             # Alright, I admit, this is a bit icky.
@@ -1134,5 +1136,5 @@ class MXCalculator:
             d.addCallbacks(cbResolved, ebResolved)
             return d
         elif failure.check(error.DNSNameError):
-            raise IOError("No MX found for %r" % (domain,))
+            raise OSError("No MX found for {!r}".format(domain))
         return failure

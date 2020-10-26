@@ -234,7 +234,7 @@ class Homogenous(Constrained):
             return 1
         else:
             raise ConstraintViolation(
-                "%s of incorrect type (%s)" % (entity, self.entityType)
+                "{} of incorrect type ({})".format(entity, self.entityType)
             )
 
     def getNameType(self):

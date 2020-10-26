@@ -331,8 +331,7 @@ def formatListResponse(msgs):
     @return: Yields a series of strings which make up a complete LIST response.
     """
     yield successResponse(b"%d" % (len(msgs),))
-    for ele in formatListLines(msgs):
-        yield ele
+    yield from formatListLines(msgs)
     yield b".\r\n"
 
 
@@ -374,8 +373,7 @@ def formatUIDListResponse(msgs, getUidl):
     @return: Yields a series of strings which make up a complete UIDL response.
     """
     yield successResponse("")
-    for ele in formatUIDListLines(msgs, getUidl):
-        yield ele
+    yield from formatUIDListLines(msgs, getUidl)
     yield b".\r\n"
 
 
@@ -619,7 +617,7 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
                     v = str(v).encode("utf-8")
             except NotImplementedError:
                 pass
-            except:
+            except BaseException:
                 log.err()
             else:
                 baseCaps.append(b"IMPLEMENTATION " + v)
@@ -630,7 +628,7 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
                     v = str(v).encode("utf-8")
             except NotImplementedError:
                 pass
-            except:
+            except BaseException:
                 log.err()
             else:
                 if v is None:
@@ -648,7 +646,7 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
                     v = str(v).encode("utf-8")
             except NotImplementedError:
                 pass
-            except:
+            except BaseException:
                 log.err()
             else:
                 if self.factory.perUserLoginDelay():
@@ -662,7 +660,7 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
                 v = self.factory.challengers
             except AttributeError:
                 pass
-            except:
+            except BaseException:
                 log.err()
             else:
                 baseCaps.append(b"SASL " + b" ".join(v.keys()))
@@ -1231,7 +1229,7 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
         """
         try:
             self.mbox.undeleteMessages()
-        except:
+        except BaseException:
             log.err()
             self.failResponse()
         else:
@@ -1551,7 +1549,7 @@ class POP3Client(basic.LineOnlyReceiver):
             method = getattr(self, "handle_" + command.decode("utf-8"), default)
             if method is not None:
                 method(*args)
-        except:
+        except BaseException:
             log.err()
 
     def lineReceived(self, line):

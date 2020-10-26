@@ -353,7 +353,7 @@ def generatePredictableKey(transport):
             x, dh.DHPublicNumbers(y, dh.DHParameterNumbers(p, g))
         ).private_key(default_backend())
     except ValueError:
-        print("\np=%s\ng=%s\nx=%s\n" % (p, g, x))
+        print("\np={}\ng={}\nx={}\n".format(p, g, x))
         raise
     transport.dhSecretKeyPublicMP = common.MP(
         transport.dhSecretKey.public_key().public_numbers().y
@@ -462,9 +462,7 @@ class BaseSSHTransportBaseCase:
     Base case for TransportBase tests.
     """
 
-    klass = (
-        MockTransportBase
-    )  # type: Optional[Type[transport.SSHTransportBase]]  # noqa
+    klass = MockTransportBase  # type: Optional[Type[transport.SSHTransportBase]]
 
 
 class BaseSSHTransportTests(BaseSSHTransportBaseCase, TransportTestCase):
@@ -1370,7 +1368,7 @@ class ServerSSHTransportBaseCase(ServerAndClientSSHTransportBaseCase):
 
     klass = (
         transport.SSHServerTransport
-    )  # type: Optional[Type[transport.SSHTransportBase]] # noqa
+    )  # type: Optional[Type[transport.SSHTransportBase]]
 
     def setUp(self):
         TransportTestCase.setUp(self)
@@ -1925,7 +1923,7 @@ class ClientSSHTransportBaseCase(ServerAndClientSSHTransportBaseCase):
 
     klass = (
         transport.SSHClientTransport
-    )  # type: Optional[Type[transport.SSHTransportBase]]  # noqa
+    )  # type: Optional[Type[transport.SSHTransportBase]]
 
     def verifyHostKey(self, pubKey, fingerprint):
         """
@@ -2721,7 +2719,7 @@ class SSHCiphersTests(TestCase):
             self.assertEqual(
                 mac,
                 binascii.hexlify(outMAC.makeMAC(seqid, shortened)),
-                "Failed HMAC test vector; key=%r data=%r" % (key, data),
+                "Failed HMAC test vector; key={!r} data={!r}".format(key, data),
             )
 
 

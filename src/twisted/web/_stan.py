@@ -64,7 +64,7 @@ class slot:
         self.columnNumber = columnNumber
 
     def __repr__(self) -> str:
-        return "slot(%r)" % (self.name,)
+        return "slot({!r})".format(self.name)
 
 
 class Tag:
@@ -262,7 +262,7 @@ class Tag:
             rstr += ", attributes=%r" % self.attributes
         if self.children:
             rstr += ", children=%r" % self.children
-        return "Tag(%r%s)" % (self.tagName, rstr)
+        return "Tag({!r}{})".format(self.tagName, rstr)
 
 
 voidElements = (
@@ -302,7 +302,7 @@ class CDATA:
         self.data = data
 
     def __repr__(self) -> str:
-        return "CDATA(%r)" % (self.data,)
+        return "CDATA({!r})".format(self.data)
 
 
 class Comment:
@@ -319,7 +319,7 @@ class Comment:
         self.data = data
 
     def __repr__(self) -> str:
-        return "Comment(%r)" % (self.data,)
+        return "Comment({!r})".format(self.data)
 
 
 class CharRef:

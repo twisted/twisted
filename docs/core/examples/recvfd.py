@@ -14,7 +14,6 @@ socket the server side of this example is already listening on.  For example:
 
 See sendfd.py for the server side of this example.
 """
-from __future__ import print_function
 
 if __name__ == "__main__":
     import recvfd

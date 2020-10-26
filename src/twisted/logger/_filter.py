@@ -84,7 +84,7 @@ def shouldLogEvent(predicates: Iterable[ILogFilterPredicate], event: LogEvent) -
             return False
         if result == PredicateResult.maybe:
             continue
-        raise TypeError("Invalid predicate result: {0!r}".format(result))
+        raise TypeError("Invalid predicate result: {!r}".format(result))
     return True
 
 

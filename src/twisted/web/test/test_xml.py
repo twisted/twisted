@@ -230,13 +230,21 @@ alert("I hate you");
         # however this assertion tests preserving case for start and
         # end tags while still matching stuff like <bOrk></BoRk>
         self.assertEqual(d.documentElement.toxml(), s)
-        self.assertTrue(d.isEqualToDocument(d2), "%r != %r" % (d.toxml(), d2.toxml()))
-        self.assertTrue(d2.isEqualToDocument(d3), "%r != %r" % (d2.toxml(), d3.toxml()))
+        self.assertTrue(
+            d.isEqualToDocument(d2), "{!r} != {!r}".format(d.toxml(), d2.toxml())
+        )
+        self.assertTrue(
+            d2.isEqualToDocument(d3), "{!r} != {!r}".format(d2.toxml(), d3.toxml())
+        )
         # caseInsensitive=0 on the left, NOT perserveCase=1 on the right
         ## XXX THIS TEST IS TURNED OFF UNTIL SOMEONE WHO CARES ABOUT FIXING IT DOES
         # self.assertFalse(d3.isEqualToDocument(d2), "%r == %r" % (d3.toxml(), d2.toxml()))
-        self.assertTrue(d3.isEqualToDocument(d4), "%r != %r" % (d3.toxml(), d4.toxml()))
-        self.assertTrue(d4.isEqualToDocument(d5), "%r != %r" % (d4.toxml(), d5.toxml()))
+        self.assertTrue(
+            d3.isEqualToDocument(d4), "{!r} != {!r}".format(d3.toxml(), d4.toxml())
+        )
+        self.assertTrue(
+            d4.isEqualToDocument(d5), "{!r} != {!r}".format(d4.toxml(), d5.toxml())
+        )
 
     def test_differentQuotes(self):
         s = "<test a=\"a\" b='b' />"
@@ -475,7 +483,7 @@ alert("I hate you");
             ("&hello monkey", "&amp;hello monkey"),
         ]:
             d = microdom.parseString(
-                "%s<pre>%s</pre>" % (prefix, i), beExtremelyLenient=1
+                "{}<pre>{}</pre>".format(prefix, i), beExtremelyLenient=1
             )
             self.assertEqual(d.documentElement.toxml(), "<pre>%s</pre>" % o)
         # non-space preserving

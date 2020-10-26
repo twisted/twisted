@@ -136,9 +136,7 @@ class Hello(amp.Command):
 
     response = [(b"hello", amp.String()), (b"print", amp.Unicode(optional=True))]
 
-    errors = {
-        UnfriendlyGreeting: b"UNFRIENDLY"
-    }  # type: Dict[Type[Exception], bytes]  # noqa
+    errors = {UnfriendlyGreeting: b"UNFRIENDLY"}  # type: Dict[Type[Exception], bytes]
 
     fatalErrors = {DeathThreat: b"DEAD"}  # type: Dict[Type[Exception], bytes]
 
@@ -778,7 +776,7 @@ class OverrideLocatorAMP(amp.AMP):
             result = self.expectations[name]
             return result
         else:
-            return super(OverrideLocatorAMP, self).lookupFunction(name)
+            return super().lookupFunction(name)
 
     def greetingResponder(self, greeting, cookie):
         self.greetings.append((greeting, cookie))
@@ -1235,7 +1233,7 @@ class AMPTests(TestCase):
         ]:
             self.assertTrue(
                 interface.implementedBy(implementation),
-                "%s does not implements(%s)" % (implementation, interface),
+                "{} does not implements({})".format(implementation, interface),
             )
 
     def test_helloWorld(self):
@@ -1394,7 +1392,7 @@ class AMPTests(TestCase):
         is set.
         """
         a = amp.AMP()
-        self.assertEqual(repr(a), "<AMP at 0x%x>" % (id(a),))
+        self.assertEqual(repr(a), "<AMP at 0x{:x}>".format(id(a)))
 
     @skipIf(skipSSL, "SSL not available")
     def test_simpleSSLRepr(self):
@@ -2139,9 +2137,7 @@ class BaseCommand(amp.Command):
     This provides a command that will be subclassed.
     """
 
-    errors = {
-        InheritedError: b"INHERITED_ERROR"
-    }  # type: Dict[Type[Exception], bytes]  # noqa
+    errors = {InheritedError: b"INHERITED_ERROR"}  # type: Dict[Type[Exception], bytes]
 
 
 class InheritedCommand(BaseCommand):
@@ -2160,7 +2156,7 @@ class AddErrorsCommand(BaseCommand):
     arguments = [(b"other", amp.Boolean())]
     errors = {
         OtherInheritedError: b"OTHER_INHERITED_ERROR"
-    }  # type: Dict[Type[Exception], bytes]  # noqa
+    }  # type: Dict[Type[Exception], bytes]
 
 
 class NormalCommandProtocol(amp.AMP):

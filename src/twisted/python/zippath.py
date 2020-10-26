@@ -66,7 +66,7 @@ class ZipPath(AbstractFilePath):
         ]
         parts.extend(self.pathInArchive.split(self.sep))
         ossep = _coerceToFilesystemEncoding(self.sep, os.sep)
-        return "ZipPath(%r)" % (ossep.join(parts),)
+        return "ZipPath({!r})".format(ossep.join(parts))
 
     @property
     def sep(self):
@@ -266,7 +266,7 @@ class ZipArchive(ZipPath):
         return FilePath(self.zipfile.filename).getStatusChangeTime()
 
     def __repr__(self) -> str:
-        return "ZipArchive(%r)" % (os.path.abspath(self.path),)
+        return "ZipArchive({!r})".format(os.path.abspath(self.path))
 
 
 __all__ = ["ZipArchive", "ZipPath"]

@@ -137,7 +137,7 @@ class CredTests(unittest.TestCase):
         # whitebox
         self.assertEqual(iface, ITestable)
         self.assertTrue(
-            iface.providedBy(impl), "%s does not implement %s" % (impl, iface)
+            iface.providedBy(impl), "{} does not implement {}".format(impl, iface)
         )
 
         # greybox
@@ -159,7 +159,7 @@ class CredTests(unittest.TestCase):
         # whitebox
         self.assertEqual(iface, ITestable)
         self.assertTrue(
-            iface.providedBy(impl), "%s does not implement %s" % (impl, iface)
+            iface.providedBy(impl), "{} does not implement {}".format(impl, iface)
         )
 
         # greybox

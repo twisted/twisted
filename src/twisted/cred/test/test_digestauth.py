@@ -32,7 +32,7 @@ class FakeDigestCredentialFactory(DigestCredentialFactory):
     """
 
     def __init__(self, *args, **kwargs):
-        super(FakeDigestCredentialFactory, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.privateKey = b"0"
 
     def _generateNonce(self):
