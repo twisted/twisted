@@ -214,6 +214,7 @@ class Team:
         """
         self._quit.set()
         # In case all the workers are idle when we do this.
+
         @self._coordinator.do
         def startFinishing():
             self._shouldQuitCoordinator = True
