@@ -825,8 +825,8 @@ class Process(_BaseProcess):
 
         old = []
         for fd in fdmap.values():
-            if not fd in old:
-                if not fd in fdmap.keys():
+            if fd not in old:
+                if fd not in fdmap.keys():
                     old.append(fd)
         if debug:
             print("old", old, file=errfd)

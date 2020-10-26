@@ -297,7 +297,7 @@ def createFactoryCopy(state):
         raise RuntimeError(
             "factory copy state has no 'id' member {}".format(repr(state))
         )
-    if not stateId in SimpleFactoryCopy.allIDs:
+    if stateId not in SimpleFactoryCopy.allIDs:
         raise RuntimeError(
             "factory class has no ID: {}".format(SimpleFactoryCopy.allIDs)
         )

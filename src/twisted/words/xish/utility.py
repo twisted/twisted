@@ -69,7 +69,7 @@ class CallbackList:
         @type kwargs: C{dict}
         """
 
-        if not method in self.callbacks:
+        if method not in self.callbacks:
             self.callbacks[method] = (_MethodWrapper(method, *args, **kwargs), onetime)
 
     def removeCallback(self, method):
