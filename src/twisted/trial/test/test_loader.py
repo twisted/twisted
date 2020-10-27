@@ -613,7 +613,7 @@ class PackageOrderingTests(packages.SysPathManglingTest):
         def sillySorter(s):
             # This has to work on fully-qualified class names and class
             # objects, which is silly, but it's the "spec", such as it is.
-            #             if isinstance(s, type) or isinstance(s, types.ClassType):
+            #             if isinstance(s, type):
             #                 return s.__module__+'.'+s.__name__
             n = runner.name(s)
             d = md5(n.encode("utf8")).hexdigest()

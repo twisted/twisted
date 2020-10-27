@@ -2725,7 +2725,7 @@ class Message(tputil.FancyEqMixin):
 
         @return: An object which implements L{IRecord} or L{None} if none
             can be found for the given type.
-        @rtype: L{types.ClassType}
+        @rtype: C{Type[IRecord]}
         """
         return self._recordTypes.get(type, UnknownRecord)
 

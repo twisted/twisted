@@ -497,7 +497,7 @@ def _constructMethod(cls, name, self):
     Construct a bound method.
 
     @param cls: The class that the method should be bound to.
-    @type cls: L{types.ClassType} or L{type}.
+    @type cls: L{type}
 
     @param name: The name of the method.
     @type name: native L{str}
