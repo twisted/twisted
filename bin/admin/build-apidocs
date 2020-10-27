@@ -7,6 +7,10 @@
 # It is used for:
 # * testing the API docs (via CI)
 # * getting local version for API docs (via tox).
+#
+# The script is also used by pydoctor CI tests: tox -e twisted-apidoc
+# https://github.com/twisted/pydoctor/blob/master/tox.ini
+#
 
 import sys
 from twisted.python._release import BuildAPIDocsScript
