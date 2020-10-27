@@ -447,7 +447,7 @@ class APIBuilderTests(ExternalTempdirTestCase):
         )
         self.assertIn(
             '<a href="{}">{}</a>'.format(projectURL, projectName),
-            indexPath.getContent().decode("ascii"),
+            indexPath.getContent().decode(),
             "Project name/location not in file contents.",
         )
 
@@ -458,19 +458,19 @@ class APIBuilderTests(ExternalTempdirTestCase):
         )
         self.assertIn(
             docstring,
-            quuxPath.getContent().decode("ascii"),
+            quuxPath.getContent().decode(),
             "Docstring not in package documentation file.",
         )
         self.assertIn(
             '<a href="{}/{}">View Source</a>'.format(sourceURL, packageName),
-            quuxPath.getContent().decode("ascii"),
+            quuxPath.getContent().decode(),
         )
         self.assertIn(
             '<a class="functionSourceLink" href="%s/%s/__init__.py#L1">'
             % (sourceURL, packageName),
-            quuxPath.getContent().decode("ascii"),
+            quuxPath.getContent().decode(),
         )
-        self.assertIn(privateDocstring, quuxPath.getContent().decode("ascii"))
+        self.assertIn(privateDocstring, quuxPath.getContent().decode())
 
         # There should also be a page for the foo function in quux.
         self.assertTrue(quuxPath.sibling("quux.foo.html").exists())
@@ -494,7 +494,7 @@ class APIBuilderTests(ExternalTempdirTestCase):
             "def foo():\n" "    '{}'\n".format(docstring).encode("utf-8")
         )
         packagePath.child("_version.py").setContent(
-            genVersion("twisted", 1, 0, 0).encode("ascii")
+            genVersion("twisted", 1, 0, 0).encode()
         )
         outputPath = FilePath(self.mktemp())
 
@@ -518,7 +518,7 @@ class APIBuilderTests(ExternalTempdirTestCase):
         )
         self.assertIn(
             docstring,
-            twistedPath.getContent().decode("ascii"),
+            twistedPath.getContent().decode(),
             "Docstring not in package documentation file.",
         )
         # Here we check that it figured out the correct version based on the

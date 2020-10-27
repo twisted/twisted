@@ -981,7 +981,7 @@ class SynchronousTestCase(_Assertions):
         """
         skipReason = util.acquireAttribute(self._parents, "skip", None)
         doSkip = skipReason not in [None, ""]
-        if skipReason in [None, ""]:
+        if skipReason is None:
             doSkip = getattr(self, "__unittest_skip__", False)
             if doSkip:
                 skipReason = getattr(self, "__unittest_skip_why__", "")
