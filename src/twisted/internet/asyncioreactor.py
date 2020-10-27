@@ -35,8 +35,8 @@ class AsyncioSelectorReactor(PosixReactorBase):
     On POSIX platforms, the default event loop is
     L{asyncio.SelectorEventLoop}.
     On Windows, the default event loop on Python 3.7 and older
-    is L{asyncio.WindowsSelectorEventLoop}, but on Python 3.8 and newer
-    the default event loop is L{asyncio.WindowsProactorEventLoop} which
+    is C{asyncio.WindowsSelectorEventLoop}, but on Python 3.8 and newer
+    the default event loop is C{asyncio.WindowsProactorEventLoop} which
     is incompatible with L{AsyncioSelectorReactor}.
     Applications that use L{AsyncioSelectorReactor} on Windows
     with Python 3.8+ must call
