@@ -216,8 +216,8 @@ class DomainWithDefaultDict:
         dictionary.
 
         Using the returned iterator while adding or deleting entries from the
-        dictionary may result in a L{RuntimeError <exceptions.RuntimeError>} or
-        failing to iterate over all the domain name/domain object pairs.
+        dictionary may result in a L{RuntimeError} or failing to iterate over
+        all the domain name/domain object pairs.
 
         @rtype: iterator over 2-L{tuple} of (E{1}) L{bytes},
             (E{2}) L{IDomain} provider or L{None}
@@ -230,8 +230,8 @@ class DomainWithDefaultDict:
         Return an iterator over the domain names in this dictionary.
 
         Using the returned iterator while adding or deleting entries from the
-        dictionary may result in a L{RuntimeError <exceptions.RuntimeError>} or
-        failing to iterate over all the domain names.
+        dictionary may result in a L{RuntimeError} or failing to iterate over
+        all the domain names.
 
         @rtype: iterator over L{bytes}
         @return: An iterator over the domain names.
@@ -243,8 +243,8 @@ class DomainWithDefaultDict:
         Return an iterator over the domain objects in this dictionary.
 
         Using the returned iterator while adding or deleting entries from the
-        dictionary may result in a L{RuntimeError <exceptions.RuntimeError>}
-        or failing to iterate over all the domain objects.
+        dictionary may result in a L{RuntimeError} or failing to iterate over
+        all the domain objects.
 
         @rtype: iterator over L{IDomain} provider or
             L{None}

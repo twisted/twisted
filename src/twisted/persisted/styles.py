@@ -148,7 +148,7 @@ def pickleStringO(stringo):
     on Python 2.
 
     @param stringo: The string output to pickle.
-    @type stringo: L{cStringIO.OutputType}
+    @type stringo: C{cStringIO.OutputType}
     """
     "support function for copy_reg to pickle StringIO.OutputTypes"
     return unpickleStringO, (stringo.getvalue(), stringo.tell())
@@ -167,7 +167,7 @@ def unpickleStringO(val, sek):
     @type sek: L{int}
 
     @return: a file-like object which you can write bytes to.
-    @rtype: L{cStringIO.OutputType} on Python 2, L{io.StringIO} on Python 3.
+    @rtype: C{cStringIO.OutputType} on Python 2, L{io.StringIO} on Python 3.
     """
     x = _cStringIO()
     x.write(val)
@@ -183,7 +183,7 @@ def pickleStringI(stringi):
     on Python 2.
 
     @param stringi: The string input to pickle.
-    @type stringi: L{cStringIO.InputType}
+    @type stringi: C{cStringIO.InputType}
 
     @return: a 2-tuple of (C{unpickleStringI}, (bytes, pointer))
     @rtype: 2-tuple of (function, (bytes, int))
@@ -206,7 +206,7 @@ def unpickleStringI(val, sek):
     @type sek: L{int}
 
     @return: a file-like object which you can read bytes from.
-    @rtype: L{cStringIO.OutputType} on Python 2, L{io.StringIO} on Python 3.
+    @rtype: C{cStringIO.OutputType} on Python 2, L{io.StringIO} on Python 3.
     """
     x = _cStringIO(val)
     x.seek(sek)
