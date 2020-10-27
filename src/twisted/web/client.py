@@ -733,7 +733,7 @@ def _urljoin(base, url):
     @return: An absolute URL resulting from the combination of C{base} and
         C{url}.
 
-    @see: L{urlparse.urljoin}
+    @see: L{urllib.parse.urljoin()}
 
     @see: U{https://tools.ietf.org/html/draft-ietf-httpbis-p2-semantics-22#section-7.1.2}
     """
