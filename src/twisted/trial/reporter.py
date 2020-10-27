@@ -296,7 +296,7 @@ class _AdaptedReporter(TestResultDecorator):
         See L{itrial.IReporter}.
 
         @type test: A L{pyunit.TestCase}.
-        @type failure: A L{failure.Failure} or L{exceptions.AssertionError}
+        @type failure: A L{failure.Failure} or L{AssertionError}
         @type todo: A L{unittest.Todo} or None
 
         When C{todo} is L{None} a generic C{unittest.Todo} is built.
