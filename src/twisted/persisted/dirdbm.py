@@ -134,7 +134,7 @@ class DirDBM:
             new = old.siblingExtension(".new")  # New entry
         try:
             self._writeFile(new, v)
-        except:
+        except BaseException:
             new.remove()
             raise
         else:

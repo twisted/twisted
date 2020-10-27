@@ -80,7 +80,7 @@ class _ErrorFormatter:
     Formatter for Windows error messages.
 
     @ivar winError: A callable which takes one integer error number argument
-        and returns an L{exceptions.WindowsError} instance for that error (like
+        and returns a L{WindowsError} instance for that error (like
         L{ctypes.WinError}).
 
     @ivar formatMessage: A callable which takes one integer error number

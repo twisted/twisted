@@ -33,7 +33,7 @@ def worksLike(obj):
         print(" InsecureJelly: you tried to send something unsafe to them")
     except (MyException, MyOtherException):
         print(" remote raised a MyException")  # or MyOtherException
-    except:
+    except BaseException:
         print(" something else happened")
     else:
         print(" method successful, response:", response)

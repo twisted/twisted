@@ -20,7 +20,7 @@ def test(i):
     warnings.warn("warning {}".format(i))
     try:
         raise RuntimeError("error {}".format(i))
-    except:
+    except BaseException:
         log.err()
 
 

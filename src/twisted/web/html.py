@@ -49,7 +49,7 @@ def output(func, *args, **kw):
     """
     try:
         return func(*args, **kw)
-    except:
+    except BaseException:
         log.msg("Error calling {!r}:".format(func))
         log.err()
         return PRE("An error occurred.")

@@ -283,7 +283,7 @@ class CGIProcessProtocol(protocol.ProcessProtocol, pb.Viewable):
                             try:
                                 # "XXX <description>" sometimes happens.
                                 statusNum = int(headerText[:3])
-                            except:
+                            except BaseException:
                                 self._log.error("malformed status header")
                             else:
                                 self.request.setResponseCode(statusNum)

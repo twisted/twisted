@@ -270,7 +270,7 @@ class ReactorBuilder:
                 )
         try:
             reactor = self.reactorFactory()
-        except:
+        except BaseException:
             # Unfortunately, not all errors which result in a reactor
             # being unusable are detectable without actually
             # instantiating the reactor.  So we catch some more here

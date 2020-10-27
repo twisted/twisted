@@ -1137,7 +1137,7 @@ class IdentityTransferEncodingTests(TestCase):
         def finish(bytes):
             try:
                 decoder.dataReceived(b"foo")
-            except:
+            except BaseException:
                 failures.append(Failure())
 
         decoder = _IdentityTransferDecoder(5, self.data.append, finish)
@@ -1323,7 +1323,7 @@ class ChunkedTransferEncodingTests(unittest.TestCase):
         def finished(extra):
             try:
                 parser.noMoreData()
-            except:
+            except BaseException:
                 errors.append(Failure())
             else:
                 successes.append(True)

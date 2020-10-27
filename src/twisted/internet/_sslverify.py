@@ -1068,7 +1068,7 @@ def _tolerateErrors(wrapped):
     def infoCallback(connection, where, ret):
         try:
             return wrapped(connection, where, ret)
-        except:
+        except BaseException:
             f = Failure()
             log.err(f, "Error during info_callback")
             connection.get_app_data().failVerification(f)
@@ -1912,7 +1912,7 @@ class _ChooseDiffieHellmanEllipticCurve:
         ctxPtr = ctx._context
         try:
             self._openSSLlib.SSL_CTX_set_ecdh_auto(ctxPtr, True)
-        except:
+        except BaseException:
             pass
 
     def _configureOpenSSL101(self, ctx):
@@ -1925,7 +1925,7 @@ class _ChooseDiffieHellmanEllipticCurve:
         """
         try:
             ctx.set_tmp_ecdh(self._ecCurve)
-        except:
+        except BaseException:
             pass
 
     def _configureOpenSSL101NoCurves(self, ctx):

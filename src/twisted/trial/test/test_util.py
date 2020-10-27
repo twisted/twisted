@@ -466,7 +466,7 @@ class ExcInfoTests(SynchronousTestCase):
         """
         try:
             1 / 0
-        except:
+        except BaseException:
             f = Failure()
         self.assertEqual((f.type, f.value, f.tb), excInfoOrFailureToExcInfo(f))
 

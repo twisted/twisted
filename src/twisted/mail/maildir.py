@@ -228,7 +228,7 @@ class AbstractMaildirDomain:
             return lambda: self.startMessage(user)
         try:
             a = self.alias[user.dest.local]
-        except:
+        except BaseException:
             raise smtp.SMTPBadRcpt(user)
         else:
             aliases = a.resolve(self.alias, memo)
@@ -412,7 +412,7 @@ class _MaildirMailboxAppendMessageTask:
         """
         try:
             self.oswrite(self.fh, data)
-        except:
+        except BaseException:
             self.fail()
 
     def fail(self, err=None):

@@ -500,7 +500,7 @@ class CooperativeTask:
             result = next(self._iterator)
         except StopIteration:
             self._completeWith(TaskDone(), self._iterator)
-        except:
+        except BaseException:
             self._completeWith(TaskFailed(), Failure())
         else:
             if isinstance(result, defer.Deferred):

@@ -147,7 +147,7 @@ class SelectReactor(posixbase.PosixReactorBase, _extraBase):  # type: ignore[mis
     def _doReadOrWrite(self, selectable, method):
         try:
             why = getattr(selectable, method)()
-        except:
+        except BaseException:
             why = sys.exc_info()[1]
             log.err()
         if why:

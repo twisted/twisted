@@ -519,7 +519,7 @@ class SSHUserAuthClient(userauth.SSHUserAuthClient):
             return
         try:
             return keys.Key.fromFile(file).blob()
-        except:
+        except BaseException:
             return self.getPublicKey()  # try again
 
     def getPrivateKey(self):

@@ -59,7 +59,16 @@ class LoggingFileTests(unittest.TestCase):
         """
         L{LoggingFile.softspace} is 0.
         """
-        self.assertEqual(LoggingFile.softspace, 0)
+        self.assertEqual(LoggingFile(self.logger).softspace, 0)
+
+        warningsShown = self.flushWarnings([self.test_softspace])
+        self.assertEqual(len(warningsShown), 1)
+        self.assertEqual(warningsShown[0]["category"], DeprecationWarning)
+        deprecatedClass = "twisted.logger._io.LoggingFile.softspace"
+        self.assertEqual(
+            warningsShown[0]["message"],
+            "%s was deprecated in Twisted NEXT" % (deprecatedClass),
+        )
 
     def test_readOnlyAttributes(self) -> None:
         """

@@ -124,7 +124,7 @@ class ThreadedSelectReactor(posixbase.PosixReactorBase):
             for selectable in selList:
                 try:
                     select.select([selectable], [selectable], [selectable], 0)
-                except:
+                except BaseException:
                     log.msg("bad descriptor %s" % selectable)
                 else:
                     selDict[selectable] = 1
@@ -136,7 +136,7 @@ class ThreadedSelectReactor(posixbase.PosixReactorBase):
                 fn(*args)
         except SystemExit:
             pass  # Exception indicates this thread should exit
-        except:
+        except BaseException:
             f = failure.Failure()
             self._sendToMain("Failure", f)
 
@@ -273,7 +273,7 @@ class ThreadedSelectReactor(posixbase.PosixReactorBase):
                 why = _NO_FILENO
             elif handfn() == -1:
                 why = _NO_FILEDESC
-        except:
+        except BaseException:
             why = sys.exc_info()[1]
             log.err()
         if why:

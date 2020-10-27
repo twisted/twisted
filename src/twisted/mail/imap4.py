@@ -1357,7 +1357,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
             result = self.account.create(name)
         except MailboxException as c:
             self.sendNegativeResponse(tag, networkString(str(c)))
-        except:
+        except BaseException:
             self.sendBadResponse(
                 tag, b"Server error encountered while creating mailbox"
             )
@@ -1380,7 +1380,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
             self.account.delete(name)
         except MailboxException as m:
             self.sendNegativeResponse(tag, str(m).encode("imap4-utf-7"))
-        except:
+        except BaseException:
             self.sendBadResponse(
                 tag, b"Server error encountered while deleting mailbox"
             )
@@ -1404,7 +1404,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
             self.sendBadResponse(tag, b"Invalid command syntax")
         except MailboxException as m:
             self.sendNegativeResponse(tag, networkString(str(m)))
-        except:
+        except BaseException:
             self.sendBadResponse(
                 tag, b"Server error encountered while renaming mailbox"
             )
@@ -1421,7 +1421,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
             self.account.subscribe(name)
         except MailboxException as m:
             self.sendNegativeResponse(tag, networkString(str(m)))
-        except:
+        except BaseException:
             self.sendBadResponse(
                 tag, b"Server error encountered while subscribing to mailbox"
             )
@@ -1438,7 +1438,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
             self.account.unsubscribe(name)
         except MailboxException as m:
             self.sendNegativeResponse(tag, networkString(str(m)))
-        except:
+        except BaseException:
             self.sendBadResponse(
                 tag, b"Server error encountered while unsubscribing from mailbox"
             )
@@ -2620,7 +2620,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         if f:
             try:
                 f(tag, rest)
-            except:
+            except BaseException:
                 log.err()
                 self.transport.loseConnection()
         else:
@@ -4818,7 +4818,7 @@ def _parseMbox(name):
         return name
     try:
         return name.decode("imap4-utf-7")
-    except:
+    except BaseException:
         log.err()
         raise IllegalMailboxEncoding(name)
 
@@ -5561,7 +5561,7 @@ def iterateInReactor(i):
             r = next(i)
         except StopIteration:
             d.callback(last)
-        except:
+        except BaseException:
             d.errback()
         else:
             if isinstance(r, defer.Deferred):
@@ -5790,7 +5790,7 @@ class _FetchParser:
                 state = self.state.pop()
                 try:
                     used = getattr(self, "state_" + state)(s)
-                except:
+                except BaseException:
                     self.state.append(state)
                     raise
                 else:

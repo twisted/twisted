@@ -288,7 +288,7 @@ class UnixApplicationRunner(app.ApplicationRunner):
                 log.msg("Warning: No permission to delete pid file")
             else:
                 log.err(e, "Failed to unlink PID file:")
-        except:
+        except BaseException:
             log.err(None, "Failed to unlink PID file:")
 
     def setupEnvironment(self, chroot, rundir, nodaemon, umask, pidfile):

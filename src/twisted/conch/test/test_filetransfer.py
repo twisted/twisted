@@ -652,6 +652,7 @@ class FileTransferCloseTests(TestCase):
         # make a server connection
         conn = connection.SSHConnection()
         # server connections have a 'self.transport.avatar'.
+
         class DummyTransport:
             def __init__(self):
                 self.transport = self

@@ -149,7 +149,7 @@ class ProcessTestsBuilderBase(ReactorBuilder):
             transport = reactor.spawnProcess(protocol, pyExe, [pyExe, b"-c", program])
             try:
                 write(transport, bytesToSend)
-            except:
+            except BaseException:
                 err(None, "Unhandled exception while writing")
                 transport.signalProcess("KILL")
 

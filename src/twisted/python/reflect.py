@@ -359,7 +359,7 @@ def qual(clazz):
 def _determineClass(x):
     try:
         return x.__class__
-    except:
+    except BaseException:
         return type(x)
 
 
@@ -367,10 +367,10 @@ def _determineClassName(x):
     c = _determineClass(x)
     try:
         return c.__name__
-    except:
+    except BaseException:
         try:
             return str(c)
-        except:
+        except BaseException:
             return "<BROKEN CLASS AT 0x%x>" % id(c)
 
 
@@ -412,7 +412,7 @@ def safe_repr(o):
     """
     try:
         return repr(o)
-    except:
+    except BaseException:
         return _safeFormat(repr, o)
 
 
@@ -428,11 +428,11 @@ def safe_str(o: object) -> str:
         # convert it to str.
         try:
             return o.decode("utf-8")
-        except:
+        except BaseException:
             pass
     try:
         return str(o)
-    except:
+    except BaseException:
         return _safeFormat(str, o)
 
 

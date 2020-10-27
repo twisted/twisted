@@ -123,7 +123,7 @@ class StandardIO:
         if p:
             try:
                 p.writeConnectionLost()
-            except:
+            except BaseException:
                 log.err()
                 self.connectionLost(failure.Failure())
 
@@ -133,7 +133,7 @@ class StandardIO:
         if p:
             try:
                 p.readConnectionLost()
-            except:
+            except BaseException:
                 log.err()
                 self.connectionLost(failure.Failure())
         else:
