@@ -59,7 +59,7 @@ class LoggingFileTests(unittest.TestCase):
         """
         L{LoggingFile.softspace} is 0.
         """
-        self.assertEqual(LoggingFile.softspace, 0)
+        self.assertEqual(LoggingFile(self.logger).softspace, 0)
 
     def test_readOnlyAttributes(self) -> None:
         """
