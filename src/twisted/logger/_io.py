@@ -34,7 +34,7 @@ class LoggingFile:
     def softspace(self):
         return self._softspace
 
-    @softspace.setter
+    @softspace.setter  # type: ignore[no-redef]
     def softspace(self, value):
         self._softspace = value
 
