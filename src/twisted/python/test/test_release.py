@@ -59,7 +59,7 @@ class ExternalTempdirTestCase(TestCase):
         """
         Make our own directory.
         """
-        newDir = tempfile.mkdtemp(dir="/tmp/")
+        newDir = tempfile.mkdtemp(dir=tempfile.gettempdir())
         self.addCleanup(shutil.rmtree, newDir)
         return newDir
 
