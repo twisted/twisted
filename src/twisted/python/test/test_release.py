@@ -443,7 +443,7 @@ class APIBuilderTests(ExternalTempdirTestCase):
         # There should also be a page for the foo function in quux.
         self.assertTrue(quuxPath.sibling("quux.foo.html").exists())
 
-        self.assertEqual(stdout.getvalue(), "")
+        self.assertEqual(stdout.getvalue(), b"")
 
     @doNotFailOnNetworkError
     def test_buildWithPolicy(self):
@@ -572,7 +572,7 @@ class APIBuilderTests(ExternalTempdirTestCase):
             quuxPath.sibling("quux.Baz.html").getContent().decode(),
         )
 
-        self.assertEqual(stdout.getvalue(), "")
+        self.assertEqual(stdout.getvalue(), b"")
 
     def test_apiBuilderScriptMainRequiresTwoArguments(self):
         """
