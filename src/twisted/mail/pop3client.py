@@ -195,7 +195,7 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
         so the first response to a capabilities command can be used for
         later lookups.
 
-    @type _challengeMagicRe: L{RegexObject <re.RegexObject>}
+    @type _challengeMagicRe: L{Pattern <re.Pattern.search>}
     @ivar _challengeMagicRe: A regular expression which matches the
         challenge in the server greeting.
 

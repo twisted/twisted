@@ -492,7 +492,7 @@ def _classOfMethod(methodObject):
     @type methodObject: L{types.MethodType}
 
     @return: a class
-    @rtype: L{types.ClassType} or L{type}
+    @rtype: L{type}
     """
     return methodObject.__self__.__class__
 

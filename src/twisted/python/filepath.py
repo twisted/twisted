@@ -653,13 +653,6 @@ class FilePath(AbstractFilePath):
     Even if you pass me a relative path, I will convert that to an absolute
     path internally.
 
-    Note: although time-related methods do return floating-point results, they
-    may still be only second resolution depending on the platform and the last
-    value passed to L{os.stat_float_times}.  If you want greater-than-second
-    precision, call C{os.stat_float_times(True)}, or use Python 2.5.
-    Greater-than-second precision is only available in Windows on Python2.5 and
-    later.
-
     The type of C{path} when instantiating decides the mode of the L{FilePath}.
     That is, C{FilePath(b"/")} will return a L{bytes} mode L{FilePath}, and
     C{FilePath(u"/")} will return a L{unicode} mode L{FilePath}.

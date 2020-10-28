@@ -37,7 +37,7 @@ def _methodFunction(classObject, methodName):
     it's on and a method name.
 
     @param classObject: A class to retrieve the method's function from.
-    @type classObject: L{type} or L{types.ClassType}
+    @type classObject: L{type}
 
     @param methodName: The name of the method whose function to retrieve.
     @type methodName: native L{str}
@@ -60,7 +60,7 @@ def unpickleMethod(im_name, im_self, im_class):
     @type im_self: L{object}
 
     @param im_class: The class where the method was declared.
-    @type im_class: L{types.ClassType} or L{type} or L{None}
+    @type im_class: L{type} or L{None}
     """
     if im_self is None:
         return getattr(im_class, im_name)
