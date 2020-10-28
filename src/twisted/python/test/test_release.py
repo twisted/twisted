@@ -19,12 +19,14 @@ import tempfile
 import shutil
 
 from io import BytesIO, StringIO
+from unittest import skipIf
 
 from twisted.trial.unittest import TestCase, FailTest, SkipTest
 
 from twisted.python.procutils import which
 from twisted.python import release
 from twisted.python.filepath import FilePath
+from twisted.python.reflect import requireModule
 
 from incremental import Version
 
@@ -45,44 +47,6 @@ from twisted.python._release import (
     getRepositoryCommand,
     IVCSCommand,
 )
-
-if os.name != "posix":
-    skip = "Release toolchain only supported on POSIX."
-else:
-    skip = ""
-
-testingSphinxConf = "master_doc = 'index'\n"
-
-try:
-    import pydoctor.driver
-
-    # it might not be installed, or it might use syntax not available in
-    # this version of Python.
-except (ImportError, SyntaxError):
-    pydoctorSkip = "Pydoctor is not present."
-else:
-    if getattr(pydoctor, "version_info", (0,)) < (0, 1):
-        pydoctorSkip = "Pydoctor is too old."
-    else:
-        pydoctorSkip = skip
-
-
-if not skip and which("sphinx-build"):
-    sphinxSkip = None
-else:
-    sphinxSkip = "Sphinx not available."
-
-
-if not skip and which("git"):
-    gitVersion = runCommand(["git", "--version"]).split(b" ")[2].split(b".")
-
-    # We want git 2.0 or above.
-    if int(gitVersion[0]) >= 2:
-        gitSkip = skip
-    else:
-        gitSkip = "old git is present"
-else:
-    gitSkip = "git is not present."
 
 
 class ExternalTempdirTestCase(TestCase):
@@ -408,13 +372,11 @@ class DoNotFailTests(TestCase):
             self.assertIsInstance(e, FailTest)
 
 
+@skipIf(not requireModule("pydoctor"), "Pydoctor is not present.")
 class APIBuilderTests(ExternalTempdirTestCase):
     """
     Tests for L{APIBuilder}.
     """
-
-    if pydoctorSkip:
-        skip = pydoctorSkip
 
     @doNotFailOnNetworkError
     def test_build(self):
@@ -673,6 +635,7 @@ class FilePathDeltaTests(TestCase):
         )
 
 
+@skipIf(not which("sphinx-build"), "Sphinx not available.")
 class SphinxBuilderTests(TestCase):
     """
     Tests for L{SphinxBuilder}.
@@ -691,8 +654,6 @@ class SphinxBuilderTests(TestCase):
     @ivar sourceDir: A L{FilePath} representing a directory to be used for
         containing the source files for a Sphinx project.
     """
-
-    skip = sphinxSkip
 
     confContent = """\
                   source_suffix = '.rst'
@@ -912,6 +873,19 @@ class CommandsTestMixin(StructureAssertingMixin):
         self.assertStructure(exportDir, structure)
 
 
+try:
+    gitVersion = runCommand(["git", "--version"]).split(b" ")[2].split(b".")
+except FileNotFoundError:
+    gitSkip, gitSkipText = True, "git is not present."
+else:
+    # We want git 2.0 or above.
+    if int(gitVersion[0]) >= 2:
+        gitSkip, gitSkipText = False, ""
+    else:
+        gitSkip, gitSkipText = True, "old git is present"
+
+
+@skipIf(gitSkip, gitSkipText)
 class GitCommandTest(CommandsTestMixin, ExternalTempdirTestCase):
     """
     Specific L{CommandsTestMixin} related to Git repositories through
@@ -919,8 +893,6 @@ class GitCommandTest(CommandsTestMixin, ExternalTempdirTestCase):
     """
 
     createCommand = GitCommand
-    if gitSkip:
-        skip = gitSkip
 
     def makeRepository(self, root):
         """
@@ -948,13 +920,12 @@ class GitCommandTest(CommandsTestMixin, ExternalTempdirTestCase):
         runCommand(["git", "-C", repository.path, "commit", "-m", "hop"])
 
 
+@skipIf(gitSkip, gitSkipText)
 class RepositoryCommandDetectionTest(ExternalTempdirTestCase):
     """
     Test the L{getRepositoryCommand} to access the right set of VCS commands
     depending on the repository manipulated.
     """
-
-    skip = gitSkip
 
     def setUp(self):
         self.repos = FilePath(self.mktemp())
@@ -987,12 +958,11 @@ class VCSCommandInterfaceTests(TestCase):
         self.assertTrue(IVCSCommand.implementedBy(GitCommand))
 
 
+@skipIf(gitSkip, gitSkipText)
 class CheckNewsfragmentScriptTests(ExternalTempdirTestCase):
     """
     L{CheckNewsfragmentScript}.
     """
-
-    skip = gitSkip
 
     def setUp(self):
         self.origin = FilePath(self.mktemp())
