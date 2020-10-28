@@ -151,7 +151,7 @@ class StructureAssertingMixin:
                 child.createDirectory()
                 self.createStructure(child, dirDict[x])
             else:
-                child.setContent(dirDict[x].replace("\n", os.linesep).encode("utf-8"))
+                child.setContent(dirDict[x].replace("\n", os.linesep).encode())
 
     def assertStructure(self, root, dirDict):
         """
@@ -173,7 +173,7 @@ class StructureAssertingMixin:
                 self.assertTrue(child.isdir(), "{} is not a dir!".format(child.path))
                 self.assertStructure(child, expectation)
             else:
-                actual = child.getContent().decode("utf-8").replace(os.linesep, "\n")
+                actual = child.getContent().decode().replace(os.linesep, "\n")
                 self.assertEqual(actual, expectation)
             children.remove(pathSegment)
         if children:
@@ -218,7 +218,7 @@ class ProjectTests(ExternalTempdirTestCase):
                 directory.createDirectory()
             directory.child("__init__.py").setContent(b"")
         directory.child("newsfragments").createDirectory()
-        directory.child("_version.py").setContent(genVersion(*version).encode("utf-8"))
+        directory.child("_version.py").setContent(genVersion(*version).encode())
         return Project(directory)
 
     def makeProjects(self, *versions):
@@ -400,7 +400,7 @@ class APIBuilderTests(ExternalTempdirTestCase):
             "def foo():\n"
             "    '{}'\n"
             "def _bar():\n"
-            "    '{}'".format(docstring, privateDocstring).encode("utf-8")
+            "    '{}'".format(docstring, privateDocstring).encode()
         )
 
         outputPath = FilePath(self.mktemp())
@@ -459,7 +459,7 @@ class APIBuilderTests(ExternalTempdirTestCase):
         packagePath = projectRoot.child("twisted")
         packagePath.makedirs()
         packagePath.child("__init__.py").setContent(
-            "def foo():\n" "    '{}'\n".format(docstring).encode("utf-8")
+            "def foo():\n" "    '{}'\n".format(docstring).encode()
         )
         packagePath.child("_version.py").setContent(genVersion("twisted", 1, 0, 0))
         outputPath = FilePath(self.mktemp())
@@ -529,7 +529,7 @@ class APIBuilderTests(ExternalTempdirTestCase):
             "@deprecated(Version('Twisted', 14, 2, 3), replacement='stuff')\n"
             "class Baz:\n"
             "    pass"
-            "".format(docstring, privateDocstring).encode("utf-8")
+            "".format(docstring, privateDocstring).encode()
         )
 
         outputPath = FilePath(self.mktemp())
@@ -693,8 +693,8 @@ class SphinxBuilderTests(TestCase):
         files.  This includes a single source file ('index.rst') and the
         smallest 'conf.py' file possible in order to find that source file.
         """
-        self.sourceDir.child("conf.py").setContent(self.confContent.encode("utf-8"))
-        self.sourceDir.child("index.rst").setContent(self.indexContent.encode("utf-8"))
+        self.sourceDir.child("conf.py").setContent(self.confContent.encode())
+        self.sourceDir.child("index.rst").setContent(self.indexContent.encode())
 
     def verifyFileExists(self, fileDir, fileName):
         """
