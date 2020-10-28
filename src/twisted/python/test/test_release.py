@@ -415,7 +415,7 @@ class APIBuilderTests(ExternalTempdirTestCase):
         )
         self.assertIn(
             '<a href="{}">{}</a>'.format(projectURL, projectName),
-            indexPath.getContent(),
+            indexPath.getContent().decode(),
             "Project name/location not in file contents.",
         )
 
@@ -426,19 +426,19 @@ class APIBuilderTests(ExternalTempdirTestCase):
         )
         self.assertIn(
             docstring,
-            quuxPath.getContent(),
+            quuxPath.getContent().decode(),
             "Docstring not in package documentation file.",
         )
         self.assertIn(
             '<a href="{}/{}">View Source</a>'.format(sourceURL, packageName),
-            quuxPath.getContent(),
+            quuxPath.getContent().decode(),
         )
         self.assertIn(
             '<a class="functionSourceLink" href="%s/%s/__init__.py#L1">'
             % (sourceURL, packageName),
-            quuxPath.getContent(),
+            quuxPath.getContent().decode(),
         )
-        self.assertIn(privateDocstring, quuxPath.getContent())
+        self.assertIn(privateDocstring, quuxPath.getContent().decode())
 
         # There should also be a page for the foo function in quux.
         self.assertTrue(quuxPath.sibling("quux.foo.html").exists())
@@ -461,7 +461,9 @@ class APIBuilderTests(ExternalTempdirTestCase):
         packagePath.child("__init__.py").setContent(
             "def foo():\n" "    '{}'\n".format(docstring).encode()
         )
-        packagePath.child("_version.py").setContent(genVersion("twisted", 1, 0, 0))
+        packagePath.child("_version.py").setContent(
+            genVersion("twisted", 1, 0, 0).encode()
+        )
         outputPath = FilePath(self.mktemp())
 
         script = BuildAPIDocsScript()
@@ -472,8 +474,8 @@ class APIBuilderTests(ExternalTempdirTestCase):
             indexPath.exists(), "API index {} did not exist.".format(outputPath.path)
         )
         self.assertIn(
-            b'<a href="http://twistedmatrix.com/">Twisted</a>',
-            indexPath.getContent(),
+            '<a href="http://twistedmatrix.com/">Twisted</a>',
+            indexPath.getContent().decode(),
             "Project name/location not in file contents.",
         )
 
@@ -484,15 +486,15 @@ class APIBuilderTests(ExternalTempdirTestCase):
         )
         self.assertIn(
             docstring,
-            twistedPath.getContent(),
+            twistedPath.getContent().decode(),
             "Docstring not in package documentation file.",
         )
         # Here we check that it figured out the correct version based on the
         # source code.
         self.assertIn(
-            b'<a href="https://github.com/twisted/twisted/tree/'
-            b'twisted-1.0.0/src/twisted">View Source</a>',
-            twistedPath.getContent(),
+            '<a href="https://github.com/twisted/twisted/tree/'
+            'twisted-1.0.0/src/twisted">View Source</a>',
+            twistedPath.getContent().decode(),
         )
 
         self.assertEqual(stdout.getvalue(), b"")
@@ -545,27 +547,29 @@ class APIBuilderTests(ExternalTempdirTestCase):
 
         self.assertIn(
             docstring,
-            quuxPath.getContent(),
+            quuxPath.getContent().decode(),
             "Docstring not in package documentation file.",
         )
         self.assertIn(
             "foo was deprecated in Twisted 15.0.0; please use Baz instead.",
-            quuxPath.getContent(),
+            quuxPath.getContent().decode(),
         )
-        self.assertIn("_bar was deprecated in Twisted 16.0.0.", quuxPath.getContent())
-        self.assertIn(privateDocstring, quuxPath.getContent())
+        self.assertIn(
+            "_bar was deprecated in Twisted 16.0.0.", quuxPath.getContent().decode()
+        )
+        self.assertIn(privateDocstring, quuxPath.getContent().decode())
 
         # There should also be a page for the foo function in quux.
         self.assertTrue(quuxPath.sibling("quux.foo.html").exists())
 
         self.assertIn(
             "foo was deprecated in Twisted 15.0.0; please use Baz instead.",
-            quuxPath.sibling("quux.foo.html").getContent(),
+            quuxPath.sibling("quux.foo.html").getContent().decode(),
         )
 
         self.assertIn(
             "Baz was deprecated in Twisted 14.2.3; please use stuff instead.",
-            quuxPath.sibling("quux.Baz.html").getContent(),
+            quuxPath.sibling("quux.Baz.html").getContent().decode(),
         )
 
         self.assertEqual(stdout.getvalue(), "")
