@@ -877,16 +877,19 @@ class CommandsTestMixin(StructureAssertingMixin):
         self.assertStructure(exportDir, structure)
 
 
-try:
-    gitVersion = runCommand(["git", "--version"]).split(b" ")[2].split(b".")
-except FileNotFoundError:
-    gitSkip, gitSkipText = True, "git is not present."
+if os.name != "posix":
+    gitSkip, gitSkipText = True, "Release toolchain only supported on POSIX."
 else:
-    # We want git 2.0 or above.
-    if int(gitVersion[0]) >= 2:
-        gitSkip, gitSkipText = False, ""
+    try:
+        gitVersion = runCommand(["git", "--version"]).split(b" ")[2].split(b".")
+    except FileNotFoundError:
+        gitSkip, gitSkipText = True, "git is not present."
     else:
-        gitSkip, gitSkipText = True, "old git is present"
+        # We want git 2.0 or above.
+        if int(gitVersion[0]) >= 2:
+            gitSkip, gitSkipText = False, ""
+        else:
+            gitSkip, gitSkipText = True, "old git is present"
 
 
 @skipIf(gitSkip, gitSkipText)
