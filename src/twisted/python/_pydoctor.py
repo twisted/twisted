@@ -87,7 +87,6 @@ def getDeprecated(self, decorators):
                 try:
                     self._deprecated_info = deprecatedToUsefulText(self, self.name, a)
                 except AttributeError:
-                    raise
                     # It's a reference or something that we can't figure out
                     # from the AST.
                     pass
