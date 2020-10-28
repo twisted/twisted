@@ -94,26 +94,32 @@ def getDeprecated(self, decorators):
 
 
 class TwistedModuleVisitor(zopeinterface.ZopeInterfaceModuleVisitor):
-    def visitClass(self, node):
+    def visit_ClassDef(self, node):
         """
-        Called when a class is visited.
+        Called when a class definition is visited.
         """
-        super().visitClass(node)
+        super().visit_ClassDef(node)
+        try:
+            cls = self.builder.current.contents[node.name]
+        except KeyError:
+            # Classes inside functions are ignored.
+            return
 
-        cls = self.builder.current.contents[node.name]
+        getDeprecated(cls, cls.raw_decorators)
 
-        getDeprecated(cls, list(cls.raw_decorators))
-
-    def visitFunction(self, node):
+    def visit_FunctionDef(self, node):
         """
-        Called when a class is visited.
+        Called when a function definition is visited.
         """
-        super().visitFunction(node)
-
-        func = self.builder.current.contents[node.name]
+        super().visit_FunctionDef(node)
+        try:
+            func = self.builder.current.contents[node.name]
+        except KeyError:
+            # Inner functions are ignored.
+            return
 
         if func.decorators:
-            getDeprecated(func, list(func.decorators))
+            getDeprecated(func, func.decorators)
 
 
 def versionToUsefulObject(version):
