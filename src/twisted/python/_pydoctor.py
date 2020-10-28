@@ -146,6 +146,9 @@ def deprecatedToUsefulText(visitor, name, deprecated):
             replacement = deprecated.args[1].s
     else:
         replacement = None
+        for keyword in deprecated.keywords:
+            if keyword.arg == "replacement":
+                replacement = keyword.value.s
 
     return _getDeprecationWarningString(name, version, replacement=replacement) + "."
 
