@@ -151,15 +151,6 @@ def deprecatedToUsefulText(visitor, name, deprecated):
     return _getDeprecationWarningString(name, version, replacement=replacement) + "."
 
 
-class TwistedFunction(zopeinterface.ZopeInterfaceFunction):
-    def docsources(self):
-
-        if self.decorators:
-            getDeprecated(self, list(self.decorators))
-
-        yield from super().docsources()
-
-
 class TwistedASTBuilder(zopeinterface.ZopeInterfaceASTBuilder):
     # Vistor is not a typo...
     ModuleVistor = TwistedModuleVisitor
@@ -171,7 +162,6 @@ class TwistedSystem(zopeinterface.ZopeInterfaceSystem):
     """
 
     defaultBuilder = TwistedASTBuilder
-    Function = TwistedFunction
 
     def __init__(self, options=None):
         super().__init__(options=options)
