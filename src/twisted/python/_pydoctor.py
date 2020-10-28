@@ -81,7 +81,7 @@ def getDeprecated(self, decorators):
     """
     for a in decorators:
         if isinstance(a, ast.Call):
-            fn = self.expandName("".join(astbuilder.node2dottedname(a.func)))
+            fn = astbuilder.node2fullname(a.func, self)
 
             if fn == "twisted.python.deprecate.deprecated":
                 try:
