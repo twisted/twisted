@@ -19,6 +19,7 @@ import tempfile
 import shutil
 
 from io import BytesIO, StringIO
+from typing import Optional
 from unittest import skipIf
 
 from twisted.trial.unittest import TestCase, FailTest, SkipTest
@@ -47,6 +48,11 @@ from twisted.python._release import (
     getRepositoryCommand,
     IVCSCommand,
 )
+
+if os.name != "posix":
+    skip = "Release toolchain only supported on POSIX."  # type: Optional[str]
+else:
+    skip = None
 
 
 class ExternalTempdirTestCase(TestCase):
