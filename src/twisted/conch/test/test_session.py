@@ -72,7 +72,7 @@ class StubAvatar:
             return self.subsystem
 
 
-@implementer(session.ISession, session.ISessionSetEnv)
+@implementer(session.ISession)
 class StubSessionForStubAvatar:
     """
     A stub ISession implementation for our StubAvatar.  The instance
@@ -82,8 +82,6 @@ class StubSessionForStubAvatar:
     @ivar avatar: the L{StubAvatar} we are adapting.
     @ivar ptyRequest: if present, the terminal, window size, and modes passed
         to the getPty method.
-    @ivar environ: a L{dict} of environment variables passed to the setEnv
-        method.
     @ivar windowChange: if present, the window size passed to the
         windowChangned method.
     @ivar shellProtocol: if present, the L{SSHSessionProcessProtocol} passed
@@ -106,7 +104,6 @@ class StubSessionForStubAvatar:
         """
         self.avatar = avatar
         self.shellProtocol = None
-        self.environ = {}
 
     def getPty(self, terminal, window, modes):
         """
@@ -117,25 +114,6 @@ class StubSessionForStubAvatar:
             self.ptyRequest = (terminal, window, modes)
         else:
             raise RuntimeError("not getting a pty")
-
-    def setEnv(self, name, value):
-        """
-        If the requested environment variable is 'FAIL', fail.  If it is
-        'IGNORED', raise EnvironmentVariableNotPermitted, which should cause
-        it to be silently ignored.  Otherwise, store the requested
-        environment variable.
-
-        (Real applications should normally implement an allowed list rather
-        than a blocked list.)
-        """
-        if name == b"FAIL":
-            raise RuntimeError("disallowed environment variable name")
-        elif name == b"IGNORED":
-            raise session.EnvironmentVariableNotPermitted(
-                "ignored environment variable name"
-            )
-        else:
-            self.environ[name] = value
 
     def windowChanged(self, window):
         """
@@ -186,6 +164,55 @@ class StubSessionForStubAvatar:
         Note that close has been received.
         """
         self.gotClosed = True
+
+
+@implementer(session.ISessionSetEnv)
+class StubSessionForStubAvatarWithEnv(StubSessionForStubAvatar):
+    """
+    Same as StubSessionForStubAvatar, but supporting environment variables
+    setting.
+
+    End users would want to have the same class annotated with
+    C{@implementer(session.ISession, session.ISessionSetEnv)}. The interfaces
+    are split for backwards compatibility, so we split it here to test
+    this compatibility too.
+
+    @ivar environ: a L{dict} of environment variables passed to the setEnv
+    method.
+    """
+
+    def __init__(self, avatar):
+        super().__init__(avatar)
+        # The representation of the environment as updated by remote requests.
+        self.environ = {}
+        # A snapshot of the environment when PTY request is received.
+        self.environAtPty = {}
+
+    def setEnv(self, name, value):
+        """
+        If the requested environment variable is 'FAIL', fail.  If it is
+        'IGNORED', raise EnvironmentVariableNotPermitted, which should cause
+        it to be silently ignored.  Otherwise, store the requested
+        environment variable.
+
+        (Real applications should normally implement an allowed list rather
+        than a blocked list.)
+        """
+        if name == b"FAIL":
+            raise RuntimeError("disallowed environment variable name")
+        elif name == b"IGNORED":
+            raise session.EnvironmentVariableNotPermitted(
+                "ignored environment variable name"
+            )
+        else:
+            self.environ[name] = value
+
+    def getPty(self, term, windowSize, modes):
+        """
+        Just a simple implementation which records the current environment
+        when PTY is requested.
+        """
+        self.environAtPty = self.environ.copy()
 
 
 class EchoTransport:
@@ -429,17 +456,25 @@ class SessionInterfaceTests(RegistryUsingMixin, TestCase):
     if not cryptography:
         skip = "cannot run without cryptography"
 
-    def setUp(self):
+    def setUp(self, register_adapters=True):
         """
         Make an SSHSession object to test.  Give the channel some window
         so that it's allowed to send packets.  500 and 100 are arbitrary
         values.
         """
         RegistryUsingMixin.setUp(self)
-        components.registerAdapter(
-            StubSessionForStubAvatar, StubAvatar, session.ISession
-        )
-        self.session = session.SSHSession(
+        self.session = self.getSSHSession()
+        if register_adapters:
+            components.registerAdapter(
+                StubSessionForStubAvatarWithEnv, StubAvatar, session.ISession
+            )
+        self.session = self.getSSHSession()
+
+    def getSSHSession(self, register_adapters=True):
+        """
+        Return a new SSH session.
+        """
+        return session.SSHSession(
             remoteWindow=500,
             remoteMaxPacket=100,
             conn=StubConnection(),
@@ -679,20 +714,28 @@ class SessionInterfaceTests(RegistryUsingMixin, TestCase):
         calling getPty with the terminal type, the window size, and any modes
         the client gave us.
         """
+        # Cleanup the registered adapters from setUp.
+        self.doCleanups()
+        self.setUp(register_adapters=False)
+        components.registerAdapter(
+            StubSessionForStubAvatar, StubAvatar, session.ISession
+        )
+        test_session = self.getSSHSession()
+
         # 'bad' terminal type fails
-        ret = self.session.requestReceived(
+        ret = test_session.requestReceived(
             b"pty_req", session.packRequest_pty_req(b"bad", (1, 2, 3, 4), b"")
         )
         self.assertFalse(ret)
-        self.assertSessionIsStubSession()
+        self.assertIsInstance(test_session.session, StubSessionForStubAvatar)
         self.assertRequestRaisedRuntimeError()
         # 'good' terminal type succeeds
         self.assertTrue(
-            self.session.requestReceived(
+            test_session.requestReceived(
                 b"pty_req", session.packRequest_pty_req(b"good", (1, 2, 3, 4), b"")
             )
         )
-        self.assertEqual(self.session.session.ptyRequest, (b"good", (1, 2, 3, 4), []))
+        self.assertEqual(test_session.session.ptyRequest, (b"good", (1, 2, 3, 4), []))
 
     def test_setEnv(self):
         """
@@ -701,14 +744,11 @@ class SessionInterfaceTests(RegistryUsingMixin, TestCase):
         ISessionSetEnv adapter for the avatar, then calling setEnv with the
         environment variable name and value.
         """
-        components.registerAdapter(
-            StubSessionForStubAvatar, StubAvatar, session.ISessionSetEnv
-        )
         # Blocked environment variable name fails.
         self.assertFalse(
             self.session.requestReceived(b"env", common.NS(b"FAIL") + common.NS(b"bad"))
         )
-        self.assertIsInstance(self.session._sessionSetEnv, StubSessionForStubAvatar)
+        self.assertIsInstance(self.session.session, StubSessionForStubAvatarWithEnv)
         self.assertRequestRaisedRuntimeError()
         # An environment variable name for which setEnv raises
         # EnvironmentVariableNotPermitted is silently ignored.
@@ -724,13 +764,60 @@ class SessionInterfaceTests(RegistryUsingMixin, TestCase):
                 b"env", common.NS(b"NAME") + common.NS(b"value")
             )
         )
-        self.assertEqual(self.session._sessionSetEnv.environ, {b"NAME": b"value"})
+        self.assertEqual(self.session.session.environ, {b"NAME": b"value"})
 
-    def test_setEnvWithoutAdapter(self):
+    def test_setEnvSessionShare(self):
+        """
+        Multiple setenv requests will share the same session.
+        """
+        test_session = self.getSSHSession()
+
+        self.assertTrue(
+            test_session.requestReceived(
+                b"env", common.NS(b"Key1") + common.NS(b"Value 1")
+            )
+        )
+        self.assertTrue(
+            test_session.requestReceived(
+                b"env", common.NS(b"Key2") + common.NS(b"Value2")
+            )
+        )
+
+        self.assertIsInstance(test_session.session, StubSessionForStubAvatarWithEnv)
+        self.assertEqual(
+            {b"Key1": b"Value 1", b"Key2": b"Value2"}, test_session.session.environ
+        )
+
+    def test_setEnvMultiplexShare(self):
+        """
+        Calling another session service after setenv will provide the
+        previous session with the environment variables.
+        """
+        test_session = self.getSSHSession()
+
+        test_session.requestReceived(b"env", common.NS(b"Key1") + common.NS(b"Value 1"))
+        test_session.requestReceived(b"env", common.NS(b"Key2") + common.NS(b"Value2"))
+        test_session.requestReceived(
+            b"pty_req", session.packRequest_pty_req(b"term", (0, 0, 0, 0), b"")
+        )
+
+        self.assertIsInstance(test_session.session, StubSessionForStubAvatarWithEnv)
+        self.assertEqual(
+            {b"Key1": b"Value 1", b"Key2": b"Value2"}, test_session.session.environAtPty
+        )
+
+    def test_setEnvNotProvidingISessionSetEnv(self):
         """
         If the avatar does not have an ISessionSetEnv adapter, then a
         request to pass an environment variable fails gracefully.
         """
+        # Cleanup the registered adapters.
+        self.doCleanups()
+        self.setUp(register_adapters=False)
+        # Register a ISession adapter that does not support ISessionSetEnv.
+        components.registerAdapter(
+            StubSessionForStubAvatar, StubAvatar, session.ISession
+        )
         self.assertFalse(
             self.session.requestReceived(
                 b"env", common.NS(b"NAME") + common.NS(b"value")
@@ -837,20 +924,6 @@ class SessionWithNoAvatarTests(RegistryUsingMixin, TestCase):
             b"pty_req", session.packRequest_pty_req(b"term", (0, 0, 0, 0), b"")
         )
         self.assertSessionProvidesISession()
-
-    def test_requestEnvGetsSession(self):
-        """
-        If an ISessionSetEnv adapter isn't already present, request_env
-        should get one.
-        """
-        components.registerAdapter(
-            StubSessionForStubAvatar, StubAvatar, session.ISessionSetEnv
-        )
-        self.session.requestReceived(b"env", common.NS(b"NAME") + common.NS(b"value"))
-        self.assertTrue(
-            session.ISessionSetEnv.providedBy(self.session._sessionSetEnv),
-            "ISessionSetEnv not provided by %r" % self.session._sessionSetEnv,
-        )
 
     def test_requestWindowChangeGetsSession(self):
         """

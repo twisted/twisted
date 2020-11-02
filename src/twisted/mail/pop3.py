@@ -1437,7 +1437,7 @@ class POP3Client(basic.LineOnlyReceiver):
     @type command: L{bytes}
     @ivar command: The command most recently sent to the server.
 
-    @type welcomeRe: L{RegexObject <re.RegexObject>}
+    @type welcomeRe: L{Pattern <re.Pattern.search>}
     @ivar welcomeRe: A regular expression which matches the APOP challenge in
         the server greeting.
 
