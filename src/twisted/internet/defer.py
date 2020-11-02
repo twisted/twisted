@@ -17,10 +17,9 @@ import traceback
 from types import CoroutineType, GeneratorType, MappingProxyType
 from typing import (
     Any,
-    # Awaitable,
+    Awaitable,
     Callable,
     Generator,
-    Generic,
     List,
     Mapping,
     NoReturn,
@@ -211,7 +210,7 @@ def maybeDeferred(
     Version("Twisted", 17, 1, 0),
     replacement="twisted.internet.defer.Deferred.addTimeout",
 )
-def timeout(deferred: "Deferred") -> None:
+def timeout(deferred: "Deferred[object]") -> None:
     deferred.errback(Failure(TimeoutError("Callback timed out")))
 
 
@@ -300,7 +299,7 @@ _NONE_KWARGS = MappingProxyType({})  # type: _CallbackKeywordArguments
 _DeferredResultT = TypeVar("_DeferredResultT")
 
 
-class Deferred(Generic[_DeferredResultT]):
+class Deferred(Awaitable[_DeferredResultT]):
     """
     This is a callback which will be put off until later.
 
@@ -354,7 +353,7 @@ class Deferred(Generic[_DeferredResultT]):
     _chainedTo = None  # type: Optional[Deferred[Any]]
 
     def __init__(
-        self, canceller: Optional[Callable[["Deferred"], None]] = None
+        self, canceller: Optional[Callable[["Deferred[Any]"], None]] = None
     ) -> None:
         """
         Initialize a L{Deferred}.
@@ -839,7 +838,7 @@ class Deferred(Generic[_DeferredResultT]):
 
     def __str__(self) -> str:
         """
-        Return a string representation of this C{Deferred}.
+        Return a string representation of this L{Deferred}.
         """
         cname = self.__class__.__name__
         result = getattr(self, "result", _Sentinel._NO_RESULT)
@@ -854,11 +853,11 @@ class Deferred(Generic[_DeferredResultT]):
 
     __repr__ = __str__
 
-    def __iter__(self) -> "Deferred":
+    def __iter__(self) -> "Deferred[Any]":
         return self
 
     @_extraneous
-    def send(self, value: object = None) -> "Deferred":
+    def send(self, value: object = None) -> "Deferred[Any]":
         if self.paused:
             # If we're paused, we have no result to give
             return self
@@ -877,7 +876,9 @@ class Deferred(Generic[_DeferredResultT]):
             raise StopIteration(result)
 
     # For PEP-492 support (async/await)
-    __await__ = __iter__
+    # type note: base class "Awaitable" defined the type as:
+    #     Callable[[], Generator[Any, None, _DeferredResultT]]
+    __await__ = __iter__  # type: ignore[assignment]
     __next__ = send
 
     def asFuture(self, loop: AbstractEventLoop) -> Future:
@@ -922,7 +923,9 @@ class Deferred(Generic[_DeferredResultT]):
         return future
 
     @classmethod
-    def fromFuture(cls, future: Future) -> "Deferred":
+    def fromFuture(
+        cls, future: Future[_DeferredResultT]
+    ) -> "Deferred[_DeferredResultT]":
         """
         Adapt an L{Future} to a L{Deferred}.
 
@@ -973,7 +976,7 @@ class Deferred(Generic[_DeferredResultT]):
         return self
 
     @classmethod
-    def fromCoroutine(cls, coro: CoroutineType) -> "Deferred":
+    def fromCoroutine(cls, coro: CoroutineType) -> "Deferred[Any]":
         """
         Schedule the execution of a coroutine that awaits on L{Deferred}s,
         wrapping it in a L{Deferred} that will fire on success/failure of the
@@ -1015,7 +1018,9 @@ class Deferred(Generic[_DeferredResultT]):
         return _cancellableInlineCallbacks(coro)
 
 
-def ensureDeferred(coro: Union[CoroutineType, Deferred]) -> Deferred:
+def ensureDeferred(
+    coro: Union[CoroutineType, Deferred[_DeferredResultT]]
+) -> Deferred[_DeferredResultT]:
     """
     Schedule the execution of a coroutine that awaits/yields from L{Deferred}s,
     wrapping it in a L{Deferred} that will fire on success/failure of the
@@ -1332,7 +1337,9 @@ class waitForDeferred:
 _DeferableGenerator = Generator[object, None, None]
 
 
-def _deferGenerator(g: _DeferableGenerator, deferred: Deferred) -> Deferred:
+def _deferGenerator(
+    g: _DeferableGenerator, deferred: Deferred[object]
+) -> Deferred[Any]:
     """
     See L{deferredGenerator}.
     """
