@@ -49,7 +49,7 @@ from twisted.python._release import (
     IVCSCommand,
 )
 
-if sys.platform == "win32":
+if sys.platform != "win32":
     skip = None
 else:
     skip = "Release toolchain only supported on POSIX."
