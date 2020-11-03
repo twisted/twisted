@@ -55,7 +55,6 @@ else:
     skip = "Release toolchain only supported on POSIX."
 
 
-
 class ExternalTempdirTestCase(TestCase):
     """
     A test case which has mkdir make directories outside of the usual spot, so
