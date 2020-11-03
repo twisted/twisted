@@ -53,14 +53,14 @@ class SkippingMixin:
         This test is not skipepd as the skip attribute is the empty string.
         """
 
-    test_no_skip_empty_attribute.skip = ""
+    test_no_skip_empty_attribute.skip = ""  # type: ignore[attr-defined]
 
     def test_no_skip_none_attribute(self):
         """
         This test is not skipepd as the skip attribute is None.
         """
 
-    test_no_skip_empty_attribute.skip = None
+    test_no_skip_empty_attribute.skip = None  # type: ignore[attr-defined]
 
 
 class SynchronousSkipping(SkippingMixin, SynchronousTestCase):
