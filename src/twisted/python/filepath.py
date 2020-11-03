@@ -937,8 +937,7 @@ class FilePath(AbstractFilePath):
                 "Appending not supported when " "alwaysCreate == True"
             )
             return self.create()
-        # This hack is necessary because of a bug in Python 2.7 on Windows:
-        # http://bugs.python.org/issue7686
+        # Make sure we open with exactly one "b" in the mode.
         mode = mode.replace("b", "")
         return open(self.path, mode + "b")
 
