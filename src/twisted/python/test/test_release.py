@@ -49,10 +49,11 @@ from twisted.python._release import (
     IVCSCommand,
 )
 
-if os.name != "posix":
-    skip = "Release toolchain only supported on POSIX."  # type: Optional[str]
-else:
+if sys.platform == "win32":
     skip = None
+else:
+    skip = "Release toolchain only supported on POSIX."
+
 
 
 class ExternalTempdirTestCase(TestCase):
@@ -883,22 +884,6 @@ class CommandsTestMixin(StructureAssertingMixin):
         self.assertStructure(exportDir, structure)
 
 
-if os.name != "posix":
-    gitSkip, gitSkipText = True, "Release toolchain only supported on POSIX."
-else:
-    try:
-        gitVersion = runCommand(["git", "--version"]).split(b" ")[2].split(b".")
-    except FileNotFoundError:
-        gitSkip, gitSkipText = True, "git is not present."
-    else:
-        # We want git 2.0 or above.
-        if int(gitVersion[0]) >= 2:
-            gitSkip, gitSkipText = False, ""
-        else:
-            gitSkip, gitSkipText = True, "old git is present"
-
-
-@skipIf(gitSkip, gitSkipText)
 class GitCommandTest(CommandsTestMixin, ExternalTempdirTestCase):
     """
     Specific L{CommandsTestMixin} related to Git repositories through
@@ -933,7 +918,6 @@ class GitCommandTest(CommandsTestMixin, ExternalTempdirTestCase):
         runCommand(["git", "-C", repository.path, "commit", "-m", "hop"])
 
 
-@skipIf(gitSkip, gitSkipText)
 class RepositoryCommandDetectionTest(ExternalTempdirTestCase):
     """
     Test the L{getRepositoryCommand} to access the right set of VCS commands
@@ -971,7 +955,6 @@ class VCSCommandInterfaceTests(TestCase):
         self.assertTrue(IVCSCommand.implementedBy(GitCommand))
 
 
-@skipIf(gitSkip, gitSkipText)
 class CheckNewsfragmentScriptTests(ExternalTempdirTestCase):
     """
     L{CheckNewsfragmentScript}.
