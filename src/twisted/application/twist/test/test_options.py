@@ -52,7 +52,7 @@ class OptionsTests(twisted.trial.unittest.TestCase):
                 raise OSError(None, None, name)
 
             self.opened.append((name, mode))
-            return NotImplemented
+            return NotImplemented  # type: ignore[no-any-return]
 
         self.patch(_options, "openFile", fakeOpen)
 
