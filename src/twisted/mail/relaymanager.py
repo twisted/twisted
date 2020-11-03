@@ -456,7 +456,7 @@ class Queue:
         @type message: L{bytes}
         @param message: The base filename of a message.
 
-        @rtype: L{file}
+        @rtype: file
         @return: The envelope file for the message.
         """
         return open(os.path.join(self.directory, message + "-H"), "rb")
@@ -465,7 +465,7 @@ class Queue:
         """
         Create a new message in the queue.
 
-        @rtype: 2-L{tuple} of (0) L{file}, (1) L{FileMessage}
+        @rtype: 2-L{tuple} of (0) file, (1) L{FileMessage}
         @return: The envelope file and a message receiver for a new message in
             the queue.
         """
