@@ -1850,7 +1850,7 @@ class SSHClientTransport(SSHTransportBase):
         @param pubKey: the public key blob for the server's public key.
         @type pubKey: L{str}
         @param f: the server's Diffie-Hellman public key.
-        @type f: L{long}
+        @type f: L{int}
         @param signature: the server's signature, verifying that it has the
             correct private key.
         @type signature: L{str}
@@ -1910,7 +1910,7 @@ class SSHClientTransport(SSHTransportBase):
         @param pubKey: the public key blob for the server's public key.
         @type pubKey: L{str}
         @param f: the server's Diffie-Hellman public key.
-        @type f: L{long}
+        @type f: L{int}
         @param signature: the server's signature, verifying that it has the
             correct private key.
         @type signature: L{str}
