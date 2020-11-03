@@ -472,7 +472,7 @@ class Deferred(Awaitable[_DeferredResultT]):
         timeout: float,
         clock: IReactorTime,
         onTimeoutCancel: Callable[[object, float], object] = _cancelledToTimedOutError,
-    ) -> "Deferred":
+    ) -> "Deferred[_DeferredResultT]":
         """
         Time out this L{Deferred} by scheduling it to be cancelled after
         C{timeout} seconds.
@@ -531,7 +531,7 @@ class Deferred(Awaitable[_DeferredResultT]):
         self.addBoth(cancelTimeout)
         return self
 
-    def chainDeferred(self, d: "Deferred") -> "Deferred[Any]":
+    def chainDeferred(self, d: "Deferred[object]") -> "Deferred[None]":
         """
         Chain another L{Deferred} to this L{Deferred}.
 
@@ -539,7 +539,7 @@ class Deferred(Awaitable[_DeferredResultT]):
         or errback, as appropriate. It is merely a shorthand way of performing
         the following::
 
-            self.addCallbacks(d.callback, d.errback)
+            d1.addCallbacks(d2.callback, d2.errback)
 
         When you chain a deferred d2 to another deferred d1 with
         d1.chainDeferred(d2), you are making d2 participate in the callback
@@ -1131,7 +1131,7 @@ class FirstError(Exception):
 _DeferredListResult = Tuple[bool, object]
 
 
-class DeferredList(Deferred):
+class DeferredList(Deferred[object]):
     """
     L{DeferredList} is a tool for collecting the results of several Deferreds.
 
@@ -1667,7 +1667,7 @@ def _cancellableInlineCallbacks(gen: _InlineCallbacksGenerator) -> Deferred[obje
     @return: L{Deferred} for the C{@}L{inlineCallbacks} that is cancellable.
     """
 
-    def cancel(it: Deferred) -> None:
+    def cancel(it: Deferred[object]) -> None:
         it.callbacks, tmp = [], it.callbacks
         it.addErrback(handleCancel)
         it.callbacks.extend(tmp)
@@ -2036,7 +2036,7 @@ class DeferredQueue:
     def __init__(
         self, size: Optional[int] = None, backlog: Optional[int] = None
     ) -> None:
-        self.waiting = []  # type: List[Deferred]
+        self.waiting = []  # type: List[Deferred[object]]
         self.pending = []  # type: List[object]
         self.size = size
         self.backlog = backlog

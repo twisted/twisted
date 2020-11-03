@@ -1335,7 +1335,7 @@ class IReactorCore(Interface):
         "I{during shutdown} and C{False} the rest of the time."
     )
 
-    def resolve(name: str, timeout: Sequence[int]) -> "Deferred":
+    def resolve(name: str, timeout: Sequence[int]) -> "Deferred[str]":
         """
         Return a L{twisted.internet.defer.Deferred} that will resolve
         a hostname.
@@ -2607,7 +2607,7 @@ class IMulticastTransport(Interface):
         Set time to live on multicast packets.
         """
 
-    def joinGroup(addr: str, interface: str) -> "Deferred":
+    def joinGroup(addr: str, interface: str) -> "Deferred[None]":
         """
         Join a multicast group. Returns L{Deferred} of success or failure.
 
@@ -2615,7 +2615,7 @@ class IMulticastTransport(Interface):
         L{error.MulticastJoinError}.
         """
 
-    def leaveGroup(addr: str, interface: str) -> "Deferred":
+    def leaveGroup(addr: str, interface: str) -> "Deferred[None]":
         """
         Leave multicast group, return L{Deferred} of success.
         """
@@ -2629,7 +2629,7 @@ class IStreamClientEndpoint(Interface):
     @since: 10.1
     """
 
-    def connect(protocolFactory: IProtocolFactory) -> "Deferred":
+    def connect(protocolFactory: IProtocolFactory) -> "Deferred[IProtocol]":
         """
         Connect the C{protocolFactory} to the location specified by this
         L{IStreamClientEndpoint} provider.
@@ -2650,7 +2650,7 @@ class IStreamServerEndpoint(Interface):
     @since: 10.1
     """
 
-    def listen(protocolFactory: IProtocolFactory) -> "Deferred":
+    def listen(protocolFactory: IProtocolFactory) -> "Deferred[IListeningPort]":
         """
         Listen with C{protocolFactory} at the location specified by this
         L{IStreamServerEndpoint} provider.

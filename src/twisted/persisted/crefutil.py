@@ -132,7 +132,7 @@ class _Dereference(NotKnown):
 from twisted.internet.defer import Deferred
 
 
-class _Defer(Deferred, NotKnown):
+class _Defer(Deferred[object], NotKnown):
     def __init__(self):
         Deferred.__init__(self)
         NotKnown.__init__(self)
