@@ -161,7 +161,7 @@ class SkipMethodsMixin(ResultsTestMixin):
         """
         Assert that there are three tests.
         """
-        self.assertCount(3)
+        self.assertCount(5)
 
     def test_results(self):
         """
@@ -174,8 +174,8 @@ class SkipMethodsMixin(ResultsTestMixin):
         self.assertTrue(self.reporter.wasSuccessful())
         self.assertEqual(self.reporter.errors, [])
         self.assertEqual(self.reporter.failures, [])
-        self.assertEqual(len(self.reporter.skips), 3)
-        self.assertEqual(self.reporter.successes, 0)
+        self.assertEqual(len(self.reporter.skips), 2)
+        self.assertEqual(self.reporter.successes, 3)
 
     def test_setUp(self):
         """
@@ -197,10 +197,8 @@ class SkipMethodsMixin(ResultsTestMixin):
         Test that reasons work
         """
         self.suite(self.reporter)
-        prefix = "test_"
-        # whiteboxing reporter
         for test, reason in self.reporter.skips:
-            self.assertEqual(test.shortDescription()[len(prefix) :], str(reason))
+            self.assertEqual(test.shortDescription(), str(reason))
 
     def test_deprecatedSkipWithoutReason(self):
         """
