@@ -307,7 +307,7 @@ class IRequest(Interface):
 
         @param when: The last time the resource being returned was modified, in
             seconds since the epoch.
-        @type when: L{int}, L{long} or L{float}
+        @type when: L{int} or L{float}
 
         @return: If I am a C{If-Modified-Since} conditional request and the time
             given is not newer than the condition, I return

@@ -1936,7 +1936,7 @@ class Command:
         the behavior is undefined.
 
         @param methodfunc: A function which will later become a method, which
-        has a keyword signature compatible with this command's L{argument} list
+        has a keyword signature compatible with this command's L{arguments} list
         and returns a dictionary with a set of keys compatible with this
         command's L{response} list.
 

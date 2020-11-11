@@ -1062,7 +1062,7 @@ class Request:
         @rtype: C{bytes} or C{str} or L{None}
         @return: The value of the specified header, or L{None} if that header
             was not present in the request. The string type of the result
-            matches the type of L{key}.
+            matches the type of C{key}.
         """
         value = self.requestHeaders.getRawHeaders(key)
         if value is not None:

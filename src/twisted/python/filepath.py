@@ -20,7 +20,7 @@ from stat import S_ISREG, S_ISDIR, S_IMODE, S_ISBLK, S_ISSOCK
 from stat import S_IRUSR, S_IWUSR, S_IXUSR
 from stat import S_IRGRP, S_IWGRP, S_IXGRP
 from stat import S_IROTH, S_IWOTH, S_IXOTH
-from typing import Union
+from typing import IO, Union, cast
 
 from zope.interface import Interface, Attribute, implementer
 
@@ -667,12 +667,11 @@ class FilePath(AbstractFilePath):
     @ivar alwaysCreate: When opening this file, only succeed if the file does
         not already exist.
 
-    @type path: L{bytes} or L{unicode}
     @ivar path: The path from which 'downward' traversal is permitted.
     """
 
     _statinfo = None
-    path = None
+    path = None  # type: Union[bytes, str]
 
     def __init__(self, path, alwaysCreate=False):
         """
@@ -917,7 +916,7 @@ class FilePath(AbstractFilePath):
         """
         os.symlink(self.path, linkFilePath.path)
 
-    def open(self, mode="r"):
+    def open(self, mode: str = "r") -> IO[bytes]:
         """
         Open this file using C{mode} or for writing if C{alwaysCreate} is
         C{True}.
@@ -926,19 +925,16 @@ class FilePath(AbstractFilePath):
         to include C{"b"} in C{mode}.
 
         @param mode: The mode to open the file in.  Default is C{"r"}.
-        @type mode: L{str}
         @raises AssertionError: If C{"a"} is included in the mode and
             C{alwaysCreate} is C{True}.
-        @rtype: L{file}
-        @return: An open L{file} object.
+        @return: An open file-like object.
         """
         if self.alwaysCreate:
             assert "a" not in mode, (
                 "Appending not supported when " "alwaysCreate == True"
             )
             return self.create()
-        # This hack is necessary because of a bug in Python 2.7 on Windows:
-        # http://bugs.python.org/issue7686
+        # Make sure we open with exactly one "b" in the mode.
         mode = mode.replace("b", "")
         return open(self.path, mode + "b")
 
@@ -1468,7 +1464,7 @@ class FilePath(AbstractFilePath):
         """
         self.alwaysCreate = val
 
-    def create(self):
+    def create(self) -> IO[bytes]:
         """
         Exclusively create a file, only if this file previously did not exist.
 
@@ -1480,7 +1476,7 @@ class FilePath(AbstractFilePath):
         # settable via fdopen, so this file is slightly less functional than the
         # one returned from 'open' by default.  send a patch to Python...
 
-        return os.fdopen(fdint, "w+b")
+        return cast(IO[bytes], os.fdopen(fdint, "w+b"))
 
     def temporarySibling(self, extension=b""):
         """
