@@ -104,7 +104,7 @@ class LoopingCall:
         elapsed, or if the callable itself blocks for longer than an interval,
         preventing I{itself} from being called.
 
-        When running with an interval if 0, count will be always 1.
+        When running with an interval of 0, count will be always 1.
 
         @param countCallable: A callable that will be invoked each time the
             resulting LoopingCall is run, with an integer specifying the number
