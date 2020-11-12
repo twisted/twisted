@@ -12,7 +12,9 @@ import itertools
 import datetime
 
 from unittest import skipIf
+from typing import Optional, List
 
+import attr
 from zope.interface import implementer
 from twisted.python.reflect import requireModule
 from twisted.test.test_twisted import SetAsideModule
@@ -2896,6 +2898,7 @@ class DiffieHellmanParametersTests(TestCase):
         self.assertEqual(self.filePath, params._dhFile)
 
 
+@attr.s(frozen=True, slots=True)
 class FakeLibState:
     """
     State for L{FakeLib}
@@ -2913,18 +2916,16 @@ class FakeLibState:
     @type ecdhValues: L{list} of L{boolean}s
     """
 
-    __slots__ = ("setECDHAutoRaises", "ecdhContexts", "ecdhValues")
-
-    def __init__(self, setECDHAutoRaises):
-        self.setECDHAutoRaises = setECDHAutoRaises
-        self.ecdhContexts = []
-        self.ecdhValues = []
+    setECDHAutoRaises = attr.ib(type=Optional[BaseException])
+    ecdhContexts = attr.ib(
+        type=List[SSL.Context], default=attr.Factory(list), init=False
+    )
+    ecdhValues = attr.ib(type=List[bool], default=attr.Factory(list), init=False)
 
 
 class FakeLib:
     """
     An introspectable fake of cryptography's lib object.
-
     @param state: A L{FakeLibState} instance that contains this fake's
         state.
     """
@@ -2987,6 +2988,7 @@ class FakeLibTests(TestCase):
         self.assertEqual(state.ecdhValues, [True])
 
 
+@attr.s(frozen=True, slots=True)
 class FakeCryptoState:
     """
     State for L{FakeCrypto}
@@ -3003,20 +3005,11 @@ class FakeCryptoState:
     @type getEllipticCurveCalls: L{list}
     """
 
-    __slots__ = (
-        "getEllipticCurveRaises",
-        "getEllipticCurveReturns",
-        "getEllipticCurveCalls",
+    getEllipticCurveRaises = attr.ib(type=Optional[BaseException])
+    getEllipticCurveReturns = attr.ib(type=Optional[str])
+    getEllipticCurveCalls = attr.ib(
+        type=List[str], default=attr.Factory(list), init=False
     )
-
-    def __init__(
-        self,
-        getEllipticCurveRaises,
-        getEllipticCurveReturns,
-    ):
-        self.getEllipticCurveRaises = getEllipticCurveRaises
-        self.getEllipticCurveReturns = getEllipticCurveReturns
-        self.getEllipticCurveCalls = []
 
 
 class FakeCrypto:

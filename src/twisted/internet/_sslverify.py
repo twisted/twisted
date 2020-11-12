@@ -257,6 +257,7 @@ _x509names = {
 }
 
 
+@attr.s(slots=True)
 class DistinguishedName(dict):
     """
     Identify and describe an entity.
@@ -299,8 +300,6 @@ class DistinguishedName(dict):
         b'US'
 
     """
-
-    __slots__ = ()
 
     def __init__(self, **kw):
         for k, v in kw.items():

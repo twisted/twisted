@@ -204,6 +204,7 @@ from types import MethodType
 from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
 import warnings
 
+import attr
 from zope.interface import Interface, implementer
 
 from twisted.internet.defer import Deferred, maybeDeferred, fail
@@ -608,15 +609,12 @@ class IncompatibleVersions(AmpError):
 PROTOCOL_ERRORS = {UNHANDLED_ERROR_CODE: UnhandledCommand}
 
 
+@attr.s(slots=True)
 class AmpBox(dict):
     """
     I am a packet in the AMP protocol, much like a
     regular bytes:bytes dictionary.
     """
-
-    # be like a regular dictionary don't magically
-    # acquire a __dict__...
-    __slots__ = []  # type: List[str]
 
     def __init__(self, *args, **kw):
         """
@@ -709,12 +707,11 @@ class AmpBox(dict):
 Box = AmpBox
 
 
+@attr.s(slots=True)
 class QuitBox(AmpBox):
     """
     I am an AmpBox that, upon being sent, terminates the connection.
     """
-
-    __slots__ = []  # type: List[str]
 
     def __repr__(self) -> str:
         return "QuitBox(**{})".format(super().__repr__())
@@ -727,13 +724,14 @@ class QuitBox(AmpBox):
         proto.transport.loseConnection()
 
 
+@attr.s(slots=True)
 class _SwitchBox(AmpBox):
     """
     Implementation detail of ProtocolSwitchCommand: I am an AmpBox which sets
     up state for the protocol to switch.
     """
 
-    # DON'T set __slots__ here; we do have an attribute.
+    innerProto = attr.ib()
 
     def __init__(self, innerProto, **kw):
         """
@@ -2038,12 +2036,11 @@ class _NoCertificate:
         return occo
 
 
+@attr.s(slots=True)
 class _TLSBox(AmpBox):
     """
     I am an AmpBox that, upon being sent, initiates a TLS connection.
     """
-
-    __slots__ = []  # type: List[str]
 
     def __init__(self):
         if ssl is None:

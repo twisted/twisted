@@ -10,6 +10,8 @@ import datetime
 import decimal
 from unittest import skipIf
 
+import attr
+
 from twisted.spread import banana, jelly, pb
 from twisted.trial import unittest
 from twisted.trial.unittest import TestCase
@@ -78,16 +80,14 @@ class D:
     """
 
 
+@attr.s(slots=True)
 class E:
     """
     Dummy new-style class with slots.
     """
 
-    __slots__ = ("x", "y")
-
-    def __init__(self, x=None, y=None):
-        self.x = x
-        self.y = y
+    x = attr.ib(default=None)
+    y = attr.ib(default=None)
 
     def __getstate__(self):
         return {"x": self.x, "y": self.y}

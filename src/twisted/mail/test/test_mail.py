@@ -19,7 +19,9 @@ import signal
 import time
 from hashlib import md5
 from unittest import skipIf
+from typing import Optional
 
+import attr
 from zope.interface.verify import verifyClass
 from zope.interface import Interface, implementer
 
@@ -1967,8 +1969,9 @@ class AddressAliasTests(TestCase):
         self.assertEqual(self.alias.resolve({}), None)
 
 
+@attr.s(slots=True)
 class DummyProcess:
-    __slots__ = ["onEnd"]
+    onEnd = attr.ib(type=Optional[defer.Deferred])
 
 
 class MockProcessAlias(mail.alias.ProcessAlias):

@@ -7,11 +7,15 @@ IProxyInfo implementation.
 """
 
 from zope.interface import implementer
+import attr
+
+from twisted.internet.interfaces import IAddress
 
 from ._interfaces import IProxyInfo
 
 
 @implementer(IProxyInfo)
+@attr.s(slots=True)
 class ProxyInfo:
     """
     A data container for parsed PROXY protocol information.
@@ -24,13 +28,6 @@ class ProxyInfo:
     @type destination: L{twisted.internet.interfaces.IAddress}
     """
 
-    __slots__ = (
-        "header",
-        "source",
-        "destination",
-    )
-
-    def __init__(self, header, source, destination):
-        self.header = header
-        self.source = source
-        self.destination = destination
+    header = attr.ib(type=bytes)
+    source = attr.ib(type=IAddress)
+    destination = attr.ib(type=IAddress)
