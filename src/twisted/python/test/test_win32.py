@@ -34,3 +34,41 @@ class CommandLineQuotingTests(unittest.TestCase):
         quoted empty string.
         """
         self.assertEqual(win32.cmdLineQuote(""), '""')
+
+
+class DeprecationTests(unittest.TestCase):
+    """
+    Tests for deprecated (Fake)WindowsError.
+    """
+
+    def test_deprecation_FakeWindowsError(self):
+        """Importing C{FakeWindowsError} should trigger a L{DeprecationWarning}."""
+
+        def import_FakeWindowsError():
+            from twisted.python.win32 import FakeWindowsError
+
+            FakeWindowsError  # pretend to use, for flake8
+
+        self.assertWarns(
+            DeprecationWarning,
+            "twisted.python.win32.FakeWindowsError was deprecated in Twisted NEXT: "
+            "Catch OSError and check presence of 'winerror' attribute.",
+            __file__,
+            import_FakeWindowsError,
+        )
+
+    def test_deprecation_WindowsError(self):
+        """Importing C{WindowsError} should trigger a L{DeprecationWarning}."""
+
+        def import_WindowsError():
+            from twisted.python.win32 import WindowsError
+
+            WindowsError  # pretend to use, for flake8
+
+        self.assertWarns(
+            DeprecationWarning,
+            "twisted.python.win32.WindowsError was deprecated in Twisted NEXT: "
+            "Catch OSError and check presence of 'winerror' attribute.",
+            __file__,
+            import_WindowsError,
+        )
