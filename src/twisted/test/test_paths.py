@@ -14,7 +14,7 @@ import time
 from pprint import pformat
 from unittest import skipIf
 
-from twisted.python.win32 import WindowsError, ERROR_DIRECTORY
+from twisted.python.win32 import ERROR_DIRECTORY
 from twisted.python import filepath
 from twisted.python.runtime import platform
 
