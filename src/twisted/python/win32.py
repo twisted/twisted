@@ -16,7 +16,7 @@ import re
 import os
 
 
-# http://msdn.microsoft.com/library/default.asp?url=/library/en-us/debug/base/system_error_codes.asp
+# https://docs.microsoft.com/en-us/windows/win32/debug/system-error-codes
 ERROR_FILE_NOT_FOUND = 2
 ERROR_PATH_NOT_FOUND = 3
 ERROR_INVALID_NAME = 123
