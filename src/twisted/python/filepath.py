@@ -337,20 +337,7 @@ class AbstractFilePath:
             # code while the winerror attribute contains a Windows error code.
             # Windows error codes aren't the same as POSIX error codes,
             # so we need to handle them differently.
-
-            # Under Python 2.4 on Windows, WindowsError only has an errno
-            # attribute.  It is bound to the Windows error code.
-
-            # For simplicity of code and to keep the number of paths through
-            # this suite minimal, we grab the Windows error code under either
-            # version.
-
-            # Furthermore, attempting to use os.listdir on a non-existent path
-            # in Python 2.4 will result in a Windows error code of
-            # ERROR_PATH_NOT_FOUND.  However, in Python 2.5,
-            # ERROR_FILE_NOT_FOUND results instead. -exarkun
-            winerror = getattr(winErrObj, "winerror", winErrObj.errno)
-            if winerror not in (
+            if winErrObj.winerror not in (
                 ERROR_PATH_NOT_FOUND,
                 ERROR_FILE_NOT_FOUND,
                 ERROR_INVALID_NAME,
