@@ -33,7 +33,6 @@ from twisted.python.runtime import platform
 from twisted.python.util import FancyEqMixin
 from twisted.python.win32 import ERROR_FILE_NOT_FOUND, ERROR_PATH_NOT_FOUND
 from twisted.python.win32 import ERROR_INVALID_NAME, ERROR_DIRECTORY, O_BINARY
-from twisted.python.win32 import WindowsError as _OSErrorOrFakeWindowsError
 
 
 _CREATE_FLAGS = os.O_EXCL | os.O_CREAT | os.O_RDWR | O_BINARY
@@ -224,11 +223,10 @@ class UnlistableError(OSError):
     This error will try to look as much like the original error as possible,
     while still being catchable as an independent type.
 
-    @ivar originalException: the actual original exception instance, either an
-        L{OSError} or a L{_OSErrorOrFakeWindowsError}.
+    @ivar originalException: the actual original exception instance.
     """
 
-    def __init__(self, originalException):
+    def __init__(self, originalException: OSError):
         """
         Create an UnlistableError exception.
 
@@ -236,17 +234,6 @@ class UnlistableError(OSError):
         """
         self.__dict__.update(originalException.__dict__)
         self.originalException = originalException
-
-
-class _WindowsUnlistableError(UnlistableError, _OSErrorOrFakeWindowsError):
-    """
-    This exception is raised on Windows, for compatibility with previous
-    releases of FilePath where unportable programs may have done "except
-    WindowsError:" around a call to children().
-
-    It is private because all application code may portably catch
-    L{UnlistableError} instead.
-    """
 
 
 def _secureEnoughString(path):
@@ -315,56 +302,30 @@ class AbstractFilePath:
         """
         try:
             subnames = self.listdir()
-        except _OSErrorOrFakeWindowsError as winErrObj:
+        except OSError as ose:
             # Under Python 3.3 and higher on Windows, WindowsError is an
             # alias for OSError.  OSError has a winerror attribute and an
             # errno attribute.
-
-            # Under Python 2, WindowsError is an OSError subclass.
-
-            # Under Python 2.5 and higher on Windows, WindowsError has a
-            # winerror attribute and an errno attribute.
-
+            #
             # The winerror attribute is bound to the Windows error code while
             # the errno attribute is bound to a translation of that code to a
             # perhaps equivalent POSIX error number.
             #
             # For further details, refer to:
             # https://docs.python.org/3/library/exceptions.html#OSError
-
-            # If not for this clause OSError would be handling all of these
-            # errors on Windows.  The errno attribute contains a POSIX error
-            # code while the winerror attribute contains a Windows error code.
-            # Windows error codes aren't the same as POSIX error codes,
-            # so we need to handle them differently.
-
-            # Under Python 2.4 on Windows, WindowsError only has an errno
-            # attribute.  It is bound to the Windows error code.
-
-            # For simplicity of code and to keep the number of paths through
-            # this suite minimal, we grab the Windows error code under either
-            # version.
-
-            # Furthermore, attempting to use os.listdir on a non-existent path
-            # in Python 2.4 will result in a Windows error code of
-            # ERROR_PATH_NOT_FOUND.  However, in Python 2.5,
-            # ERROR_FILE_NOT_FOUND results instead. -exarkun
-            winerror = getattr(winErrObj, "winerror", winErrObj.errno)
-            if winerror not in (
+            if getattr(ose, "winerror", None) in (
                 ERROR_PATH_NOT_FOUND,
                 ERROR_FILE_NOT_FOUND,
                 ERROR_INVALID_NAME,
                 ERROR_DIRECTORY,
             ):
-                raise
-            raise _WindowsUnlistableError(winErrObj)
-        except OSError as ose:
-            if ose.errno not in (errno.ENOENT, errno.ENOTDIR):
-                # Other possible errors here, according to linux manpages:
-                # EACCES, EMIFLE, ENFILE, ENOMEM.  None of these seem like the
-                # sort of thing which should be handled normally. -glyph
-                raise
-            raise UnlistableError(ose)
+                raise UnlistableError(ose)
+            if ose.errno in (errno.ENOENT, errno.ENOTDIR):
+                raise UnlistableError(ose)
+            # Other possible errors here, according to linux manpages:
+            # EACCES, EMIFLE, ENFILE, ENOMEM.  None of these seem like the
+            # sort of thing which should be handled normally. -glyph
+            raise
         return [self.child(name) for name in subnames]
 
     def walk(self, descend=None):
