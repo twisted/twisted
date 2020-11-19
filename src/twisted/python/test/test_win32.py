@@ -6,7 +6,7 @@ Tests for L{twisted.python.win32}.
 """
 
 from twisted.trial import unittest
-from twisted.python import win32
+from twisted.python import reflect, win32
 
 
 class CommandLineQuotingTests(unittest.TestCase):
@@ -44,31 +44,21 @@ class DeprecationTests(unittest.TestCase):
     def test_deprecation_FakeWindowsError(self):
         """Importing C{FakeWindowsError} should trigger a L{DeprecationWarning}."""
 
-        def import_FakeWindowsError():
-            from twisted.python.win32 import FakeWindowsError
-
-            FakeWindowsError  # pretend to use, for flake8
-
         self.assertWarns(
             DeprecationWarning,
             "twisted.python.win32.FakeWindowsError was deprecated in Twisted NEXT: "
             "Catch OSError and check presence of 'winerror' attribute.",
-            __file__,
-            import_FakeWindowsError,
+            reflect.__file__,
+            lambda: reflect.namedAny("twisted.python.win32.FakeWindowsError"),
         )
 
     def test_deprecation_WindowsError(self):
         """Importing C{WindowsError} should trigger a L{DeprecationWarning}."""
 
-        def import_WindowsError():
-            from twisted.python.win32 import WindowsError
-
-            WindowsError  # pretend to use, for flake8
-
         self.assertWarns(
             DeprecationWarning,
             "twisted.python.win32.WindowsError was deprecated in Twisted NEXT: "
             "Catch OSError and check presence of 'winerror' attribute.",
-            __file__,
-            import_WindowsError,
+            reflect.__file__,
+            lambda: reflect.namedAny("twisted.python.win32.WindowsError"),
         )
