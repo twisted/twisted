@@ -16,22 +16,22 @@ class CommandLineQuotingTests(unittest.TestCase):
 
     def test_argWithoutSpaces(self):
         """
-        Calling C{cmdLineQuote} with an argument with no spaces should
-        return the argument unchanged.
+        Calling C{cmdLineQuote} with an argument with no spaces returns
+        the argument unchanged.
         """
         self.assertEqual(win32.cmdLineQuote("an_argument"), "an_argument")
 
     def test_argWithSpaces(self):
         """
-        Calling C{cmdLineQuote} with an argument containing spaces should
-        return the argument surrounded by quotes.
+        Calling C{cmdLineQuote} with an argument containing spaces returns
+        the argument surrounded by quotes.
         """
         self.assertEqual(win32.cmdLineQuote("An Argument"), '"An Argument"')
 
     def test_emptyStringArg(self):
         """
-        Calling C{cmdLineQuote} with an empty string should return a
-        quoted empty string.
+        Calling C{cmdLineQuote} with an empty string returns a quoted empty
+        string.
         """
         self.assertEqual(win32.cmdLineQuote(""), '""')
 
@@ -42,7 +42,7 @@ class DeprecationTests(unittest.TestCase):
     """
 
     def test_deprecation_FakeWindowsError(self):
-        """Importing C{FakeWindowsError} should trigger a L{DeprecationWarning}."""
+        """Importing C{FakeWindowsError} triggers a L{DeprecationWarning}."""
 
         self.assertWarns(
             DeprecationWarning,
@@ -53,7 +53,7 @@ class DeprecationTests(unittest.TestCase):
         )
 
     def test_deprecation_WindowsError(self):
-        """Importing C{WindowsError} should trigger a L{DeprecationWarning}."""
+        """Importing C{WindowsError} triggers a L{DeprecationWarning}."""
 
         self.assertWarns(
             DeprecationWarning,
