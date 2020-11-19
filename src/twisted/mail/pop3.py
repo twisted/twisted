@@ -1677,11 +1677,13 @@ class POP3Client(basic.LineOnlyReceiver):
 
 
 from twisted.mail.pop3client import POP3Client as AdvancedPOP3Client
-from twisted.mail.pop3client import InsecureAuthenticationDisallowed
-from twisted.mail.pop3client import ServerErrorResponse
-from twisted.mail.pop3client import LineTooLong
-from twisted.mail.pop3client import TLSError
-from twisted.mail.pop3client import TLSNotSupportedError
+from twisted.mail._except import (
+    InsecureAuthenticationDisallowed,
+    ServerErrorResponse,
+    LineTooLong,
+    TLSError,
+    TLSNotSupportedError,
+)
 
 __all__ = [
     # Interfaces
