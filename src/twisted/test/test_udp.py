@@ -307,6 +307,66 @@ class UDPTests(TestCase):
         d.addCallback(cbFinished)
         return d
 
+    def test_server_read_failure(self):
+        """
+        When a server fails to successfully read a packet the server should
+        still be able to process future packets.
+        The IOCP reactor had a historical problem where a failure to read caused
+        the reactor to ignore any future reads. This test should prevent a regression.
+
+        Note: This test assumes no one is listening on port 80 UDP.
+        """
+        client = GoodClient()
+        clientStarted = client.startedDeferred = defer.Deferred()
+        client_port = reactor.listenUDP(0, client, interface="127.0.0.1")
+        test_data_to_send = b"Sending test packet to server"
+
+        server = Server()
+        serverStarted = server.startedDeferred = defer.Deferred()
+        serverGotData = server.packetReceived = defer.Deferred()
+        server_port = reactor.listenUDP(0, server, interface="127.0.0.1")
+
+        server_client_started_d = defer.DeferredList(
+            [clientStarted, serverStarted], fireOnOneErrback=True
+        )
+
+        def cbClientAndServerStarted(ignored):
+            # Server has started. Now the server can send a
+            # packet to a random port no one is listening on. On windows, for example, this
+            # will cause an ICMP message to come back on the port telling us no one is listening.
+            # We need to be able to gracefully handle this situation and continue processing
+            # requests.
+            server.transport.write(
+                b"write to port no one is listening to", ("127.0.0.1", 80)
+            )
+            client.transport.write(
+                test_data_to_send, ("127.0.0.1", server_port._realPortNumber)
+            )
+
+        server_client_started_d.addCallback(cbClientAndServerStarted)
+
+        all_data_sent = defer.DeferredList(
+            [server_client_started_d, serverGotData], fireOnOneErrback=True
+        )
+
+        def verify_server_got_data(ignored):
+            self.assertEqual(server.packets[0][0], test_data_to_send)
+
+        all_data_sent.addCallback(verify_server_got_data)
+
+        def cleanup(ignored):
+            return defer.DeferredList(
+                [
+                    defer.maybeDeferred(client_port.stopListening),
+                    defer.maybeDeferred(server_port.stopListening),
+                ],
+                fireOnOneErrback=True,
+            )
+
+        all_data_sent.addCallback(cleanup)
+
+        return all_data_sent
+
     def test_badConnect(self):
         """
         A call to the transport's connect method fails with an
