@@ -1578,3 +1578,29 @@ class POP3MiscTests(unittest.TestCase):
         mod = twisted.mail.pop3
         for attr in mod.__all__:
             self.assertTrue(hasattr(mod, attr))
+
+
+class POP3ClientDeprecationTests(unittest.TestCase):
+    """
+    Tests for the now deprecated L{twisted.mail.pop3client} module.
+    """
+
+    def test_deprecation(self):
+        """
+        A deprecation warning is emitted when directly importing the now
+        deprected pop3client module.
+
+        This test might fail is some other code has already imported it.
+        No code should use the deprected module.
+        """
+        from twisted.mail import pop3client
+
+        warningsShown = self.flushWarnings(offendingFunctions=[self.test_deprecation])
+        self.assertEqual(warningsShown[0]["category"], DeprecationWarning)
+        self.assertEqual(
+            warningsShown[0]["message"],
+            "twisted.mail.pop3client was deprecated in NEXT. "
+            "Use twisted.mail.pop3 instead.",
+        )
+        self.assertEqual(len(warningsShown), 1)
+        pop3client  # Fake usage to please pyflakes.
