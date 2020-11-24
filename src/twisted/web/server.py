@@ -30,12 +30,18 @@ from twisted.python.compat import networkString, nativeString
 from twisted.spread.pb import Copyable, ViewPoint
 from twisted.internet import address, interfaces
 from twisted.internet.error import AlreadyCalled, AlreadyCancelled
+from twisted.protocols.policies import ProtocolWrapper, WrappingFactory
 from twisted.web import iweb, http, util
 from twisted.web.http import unquote
 from twisted.python import reflect, failure, components
 from twisted import copyright
 from twisted.web import resource
 from twisted.web.error import UnsupportedMethod
+
+try:
+    from twisted.protocols.tls import TLSMemoryBIOFactory
+except ImportError:
+    TLSMemoryBIOFactory = None
 
 from incremental import Version
 from twisted.python.deprecate import deprecatedModuleAttribute
@@ -878,3 +884,80 @@ class Site(http.HTTPFactory):
             baseProtocols.insert(0, b"h2")
 
         return baseProtocols
+
+
+class HTTPSRedirectProtocolWrapper(ProtocolWrapper):
+    """
+    Wraps the TLS protocol and redirect to HTTPS if an HTTP request is
+    detected after a connection is made.
+    """
+
+    def dataReceived(self, data):
+        """
+        Only called when initial connection data is received over SSL.
+
+        After that, the dataReceived method of the wrapped protocol is called.
+
+        It checks if an HTTP request is made over HTTPS port, instead of an
+        SSL handshake.
+        """
+
+        def get_http_host(data):
+            """
+            Return the value of the Host header found inside `data` HTTP
+            raw request.
+            """
+            parts = data.split(b"\r\n")
+            if len(parts) == 1:
+                return b""
+
+            for part in parts:
+                if not part.lower().startswith(b"host"):
+                    continue
+
+                segments = part.split(b":", 1)
+                if len(segments) != 2:
+                    return b""
+
+                return segments[1].strip()
+
+            return b""
+
+        # We only want to handle the first package.
+        self.dataReceived = self.wrappedProtocol.dataReceived
+
+        host = get_http_host(data)
+
+        if not host:
+            # Just forward the data to the wrapped protocol.
+            return self.dataReceived(data)
+
+        self.transport.write(
+            b"HTTP/1.1 301 Moved Permanently\r\n"
+            b"Location: https://%s\r\n"
+            b"Cache-Control: no-store, no-cache\r\n"
+            b"Connection: close\r\n"
+            b"Content-Length: 8\r\n"
+            b"\r\n"
+            b"redirect" % (host,)
+        )
+        self.transport.loseConnection()
+        return b""
+
+
+if TLSMemoryBIOFactory:
+
+    class HTTPSSite(TLSMemoryBIOFactory):
+        """
+        An HTTPS web site what handles TLS setup and HTTP to HTTPS redirection..
+        """
+
+        def __init__(self, contextFactory, *args, **kwargs):
+            self._site = Site(*args, **kwargs)
+            super().__init__(contextFactory, isClient=False, wrappedFactory=self._site)
+
+        def buildProtocol(self, addr):
+            protocol = self.protocol(self, self.wrappedFactory.buildProtocol(addr))
+            return HTTPSRedirectProtocolWrapper(
+                factory=WrappingFactory(self._site), wrappedProtocol=protocol
+            )

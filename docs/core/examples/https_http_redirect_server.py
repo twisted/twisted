@@ -29,7 +29,7 @@ To test this, use curl. For example:
 
 from OpenSSL import crypto
 
-from twisted.internet.endpoints import HTTPSServerEndpoint
+from twisted.internet.endpoints import TCP4ServerEndpoint
 from twisted.internet import reactor, ssl
 from twisted.python.filepath import FilePath
 from twisted.web import static, server
@@ -47,8 +47,8 @@ options = ssl.CertificateOptions(
     certificate=certificate,
 )
 
-site = server.Site(static.File("."))
+site = server.HTTPSSite(options, static.File("."))
 
-endpoint = HTTPSServerEndpoint(reactor, LISTEN_PORT, options)
+endpoint = TCP4ServerEndpoint(reactor, LISTEN_PORT)
 endpoint.listen(site)
 reactor.run()
