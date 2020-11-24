@@ -1,2 +1,2 @@
-twisted.internet.endpoints.HTTPSServerEndpoint was added to help creating
-an HTTPS server what will redirect HTTP request to HTTPS.
+twisted.web.server.HTTPSSite was added as an HTTPS factory that can
+redirect HTTP request to HTTPS.

@@ -2,13 +2,7 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 """
-https_http_redirect_server
-~~~~~~~~~~~~~~~~~~~
-
-This test script demonstrates the usage of the HTTP to HTTPS same port
-redirect.
-
-It detect an HTTP request over an HTTPS port and return an HTTP redirection.
+This demonstrates the usage of the HTTP to HTTPS same port redirect.
 
 Before using this, you should generate a new RSA private key and an associated
 X.509 certificate and place it in the working directory as `server-key.pem`
@@ -26,7 +20,6 @@ To test this, use curl. For example:
     # See that HTTPS works
     curl -kv https://localhost:8443
 """
-
 from OpenSSL import crypto
 
 from twisted.internet.endpoints import TCP4ServerEndpoint

@@ -78,29 +78,13 @@ Site Objects
 .. _web-howto-using-twistedweb-sites:
 
 
-
-
-
-
-
-
 Site objects serve as the glue between a port to listen for HTTP requests on, and a root Resource object.
 
-
-
-
 When using ``twistd -n web --path /foo/bar/baz`` , a Site object is created with a root Resource that serves files out of the given path.
-
-
-
 
 You can also create a ``Site`` instance by hand, passing
 it a ``Resource`` object which will serve as the root of the
 site:
-
-
-
-
 
 .. code-block:: python
 
@@ -118,8 +102,11 @@ site:
     endpoint.listen(site)
     reactor.run()
 
+An HTTPS site that automatically redirect HTTP request to HTTPS can be created using the :api:`twisted.web.server.HTTPSSite <HTTPSSite>` factory together with a plain TCP port.
 
+:download:`echoclient_ssh.py <../examples/https_http_redirect_server.py>`
 
+.. literalinclude:: ../examples/https_http_redirect_server.py
 
 
 Resource objects
