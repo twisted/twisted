@@ -26,6 +26,7 @@ from twisted.internet.endpoints import TCP4ServerEndpoint
 from twisted.internet import reactor, ssl
 from twisted.python.filepath import FilePath
 from twisted.web import static, server
+from twisted.web.resource import Resource
 
 # The port that the server will listen on.
 LISTEN_PORT = 8443
@@ -40,8 +41,21 @@ options = ssl.CertificateOptions(
     certificate=certificate,
 )
 
-site = server.HTTPSSite(options, static.File("."))
+class TestResource(Resource):
+    """
+    A simple resource that can help debug the site creation.
+    """
+    def render(self, request):
+        """
+        Add your breakpoint here.
+        """
+        return b'ok'
+
+root = static.File(".")
+root.putChild(b"test", TestResource())
+site_factory = server.Site(root)
+https_site = server.HTTPSSiteWrapper(options, site_factory)
 
 endpoint = TCP4ServerEndpoint(reactor, LISTEN_PORT)
-endpoint.listen(site)
+endpoint.listen(https_site)
 reactor.run()

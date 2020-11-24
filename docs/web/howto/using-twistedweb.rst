@@ -104,7 +104,7 @@ site:
 
 An HTTPS site that automatically redirect HTTP request to HTTPS can be created using the :api:`twisted.web.server.HTTPSSite <HTTPSSite>` factory together with a plain TCP port.
 
-:download:`echoclient_ssh.py <../examples/https_http_redirect_server.py>`
+:download:`https_http_redirect_server.py <../examples/https_http_redirect_server.py>`
 
 .. literalinclude:: ../examples/https_http_redirect_server.py
 

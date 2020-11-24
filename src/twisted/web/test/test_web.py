@@ -8,9 +8,18 @@ Tests for various parts of L{twisted.web}.
 import os
 import zlib
 from io import BytesIO
+from unittest import skipIf
 
 from zope.interface import implementer
 from zope.interface.verify import verifyObject
+
+try:
+    from twisted.internet.ssl import CertificateOptions
+    skipSSL = False
+    skipSSLReason = ""
+except ImportError as e:
+    skipSSL = True
+    skipSSLReason = "OpenSSL is not available"
 
 from twisted.python import reflect, failure
 from twisted.python.filepath import FilePath
@@ -18,6 +27,7 @@ from twisted.trial import unittest
 from twisted.internet import reactor, interfaces
 from twisted.internet.address import IPv4Address, IPv6Address
 from twisted.internet.task import Clock
+from twisted.internet.testing import StringTransportWithDisconnection
 from twisted.web import server, resource
 from twisted.web import iweb, http, error
 
@@ -25,6 +35,7 @@ from twisted.web.test.requesthelper import DummyChannel, DummyRequest
 from twisted.web.static import Data
 from twisted.logger import globalLogPublisher, LogLevel
 from twisted.test.proto_helpers import EventLoggingObserver
+from twisted.test.test_sslverify import makeCertificate
 
 from ._util import (
     assertIsFilesystemTemporary,
@@ -200,6 +211,155 @@ class SiteTest(unittest.TestCase):
         site = server.Site(resource.Resource())
 
         self.assertRaises(KeyError, site.getSession, b"no-such-uid")
+
+
+@skipIf(not skipSSL, 'OpenSSL is available.')
+class HTTPSSiteWrapperTestNoSSL(unittest.TestCase):
+    """
+    Unit tests for L{server.HTTPSSiteWrapper} without OpenSSL.
+    """
+
+    def test_init(self):
+        """
+        Raises C{NotImplementedError} when it's initialized without
+        OpenSSL availability.
+        """
+        error = self.assertRaises(
+            NotImplementedError,
+            server.HTTPSSiteWrapper,
+            contextFactory='ignored',
+            site='ignored',
+            )
+
+        self.assertEqual("OpenSSL not available. Try `pip install twisted[tls]`.", error.args[0])
+
+
+@skipIf(skipSSL, skipSSLReason)
+class HTTPSSiteWrapperTest(unittest.TestCase):
+    """
+    Tests for L{server.HTTPSSiteWrapper} with OpenSSL.
+    """
+    key, cert = makeCertificate(
+        O=b"Server Test Certificate", CN=b"server"
+    )
+
+    def getHTTPSSite(self):
+        """
+        Return a HTTPS site wrapper
+        """
+        site = server.Site(resource.Resource())
+        site.timeOut = None
+        contextFactory = CertificateOptions(
+            privateKey=self.key,
+            certificate=self.cert,
+            requireCertificate=False,
+        )
+        return server.HTTPSSiteWrapper(contextFactory, site)
+
+    def getConnectedProtocol(self, factory, transport):
+        """
+        Return a protocol that is already connected to transport.
+        """
+        protocol = factory.buildProtocol(('1.2.3.4', 1234))
+        protocol.makeConnection(transport)
+        transport.protocol = protocol
+        self.assertTrue(transport.connected)
+        return protocol
+
+    def test_tls_hello(self):
+        """
+        It will not disconnect when receiving initial TLS handshake data.
+        """
+        transport = StringTransportWithDisconnection()
+        https_site = self.getHTTPSSite()
+        protocol = self.getConnectedProtocol(https_site, transport)
+
+        self.assertTrue(transport.connected)
+        protocol.dataReceived(b"\x16\x03\x01\x02\x00\x01\x00\x01\xfc")
+
+        self.assertTrue(transport.connected)
+        self.assertEqual(b"", transport.io.getvalue())
+
+    def test_redirect(self):
+        """
+        Will return an HTTP redirection when the first data is an HTTP
+        request.
+        """
+        transport = StringTransportWithDisconnection()
+        https_site = self.getHTTPSSite()
+        protocol = self.getConnectedProtocol(https_site, transport)
+
+        protocol.dataReceived(
+            b'GET / HTTP/1.1\r\n'
+            b'Server: test\r\n'
+            b'Host: localhost\r\n'
+            b'\r\n'
+            )
+
+        self.assertFalse(transport.connected)
+        self.assertEqual(
+            b"HTTP/1.1 301 Moved Permanently\r\n"
+            b"Location: https://localhost\r\n"
+            b"Cache-Control: no-store, no-cache\r\n"
+            b"Connection: close\r\n"
+            b"Content-Length: 8\r\n"
+            b"\r\n"
+            b"redirect",
+            transport.io.getvalue())
+
+    def test_http_no_host(self):
+        """
+        It will disconnect without an HTTP redirection when receiving
+        an HTTP request without an host header.
+        """
+        transport = StringTransportWithDisconnection()
+        https_site = self.getHTTPSSite()
+        protocol = self.getConnectedProtocol(https_site, transport)
+
+        protocol.dataReceived(
+            b'GET / HTTP/1.1\r\n'
+            b'Server: test\r\n'
+            b'\r\n'
+            )
+
+        self.assertFalse(transport.connected)
+        self.assertEqual(b"", transport.io.getvalue())
+
+    def test_http_invalid_host(self):
+        """
+        It will disconnect without an HTTP redirection when receiving
+        an HTTP request with an invalid host header.
+        """
+        transport = StringTransportWithDisconnection()
+        https_site = self.getHTTPSSite()
+        protocol = self.getConnectedProtocol(https_site, transport)
+
+        protocol.dataReceived(
+            b'GET / HTTP/1.1\r\n'
+            b'Host\r\n'
+            b'\r\n'
+            )
+
+        self.assertFalse(transport.connected)
+        self.assertEqual(b"", transport.io.getvalue())
+
+    def test_http_empty_host(self):
+        """
+        It will disconnect without an HTTP redirection when receiving
+        an HTTP request with an empty host header.
+        """
+        transport = StringTransportWithDisconnection()
+        https_site = self.getHTTPSSite()
+        protocol = self.getConnectedProtocol(https_site, transport)
+
+        protocol.dataReceived(
+            b'GET / HTTP/1.1\r\n'
+            b'Host:  \r\n'
+            b'\r\n'
+            )
+
+        self.assertFalse(transport.connected)
+        self.assertEqual(b"", transport.io.getvalue())
 
 
 class SessionTests(unittest.TestCase):

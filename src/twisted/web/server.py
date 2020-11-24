@@ -41,7 +41,7 @@ from twisted.web.error import UnsupportedMethod
 try:
     from twisted.protocols.tls import TLSMemoryBIOFactory
 except ImportError:
-    TLSMemoryBIOFactory = None
+    TLSMemoryBIOFactory = object
 
 from incremental import Version
 from twisted.python.deprecate import deprecatedModuleAttribute
@@ -886,7 +886,7 @@ class Site(http.HTTPFactory):
         return baseProtocols
 
 
-class HTTPSRedirectProtocolWrapper(ProtocolWrapper):
+class _HTTPSRedirectProtocolWrapper(ProtocolWrapper):
     """
     Wraps the TLS protocol and redirect to HTTPS if an HTTP request is
     detected after a connection is made.
@@ -945,19 +945,24 @@ class HTTPSRedirectProtocolWrapper(ProtocolWrapper):
         return b""
 
 
-if TLSMemoryBIOFactory:
+class HTTPSSiteWrapper(TLSMemoryBIOFactory):
+    """
+    An HTTPS L{Site} wrapper that handles TLS setup and HTTP to HTTPS redirection.
+    """
 
-    class HTTPSSite(TLSMemoryBIOFactory):
-        """
-        An HTTPS web site what handles TLS setup and HTTP to HTTPS redirection..
-        """
-
-        def __init__(self, contextFactory, *args, **kwargs):
-            self._site = Site(*args, **kwargs)
-            super().__init__(contextFactory, isClient=False, wrappedFactory=self._site)
-
-        def buildProtocol(self, addr):
-            protocol = self.protocol(self, self.wrappedFactory.buildProtocol(addr))
-            return HTTPSRedirectProtocolWrapper(
-                factory=WrappingFactory(self._site), wrappedProtocol=protocol
+    def __init__(self, contextFactory, site):
+        if TLSMemoryBIOFactory is object:
+            raise NotImplementedError(
+                "OpenSSL not available. Try `pip install twisted[tls]`."
             )
+        self._site = site
+        super().__init__(contextFactory, isClient=False, wrappedFactory=self._site)
+
+    def buildProtocol(self, addr):
+        protocol = self.protocol(self, self.wrappedFactory.buildProtocol(addr))
+        return _HTTPSRedirectProtocolWrapper(
+            factory=WrappingFactory(self._site), wrappedProtocol=protocol
+        )
+
+    def __getattr__(self, name):
+        return getattr(self._site, name)
