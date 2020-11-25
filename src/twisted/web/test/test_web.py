@@ -15,11 +15,14 @@ from zope.interface.verify import verifyObject
 
 try:
     from twisted.internet.ssl import CertificateOptions
+    from twisted.protocols.tls import TLSMemoryBIOFactory
+
     skipSSL = False
     skipSSLReason = ""
-except ImportError as e:
+except ImportError
     skipSSL = True
     skipSSLReason = "OpenSSL is not available"
+
 
 from twisted.python import reflect, failure
 from twisted.python.filepath import FilePath
@@ -28,12 +31,13 @@ from twisted.internet import reactor, interfaces
 from twisted.internet.address import IPv4Address, IPv6Address
 from twisted.internet.task import Clock
 from twisted.internet.testing import StringTransportWithDisconnection
-from twisted.web import server, resource
+from twisted.web import client, server, resource
 from twisted.web import iweb, http, error
 
 from twisted.web.test.requesthelper import DummyChannel, DummyRequest
 from twisted.web.static import Data
 from twisted.logger import globalLogPublisher, LogLevel
+from twisted.test import iosim
 from twisted.test.proto_helpers import EventLoggingObserver
 from twisted.test.test_sslverify import makeCertificate
 
@@ -213,7 +217,7 @@ class SiteTest(unittest.TestCase):
         self.assertRaises(KeyError, site.getSession, b"no-such-uid")
 
 
-@skipIf(not skipSSL, 'OpenSSL is available.')
+@skipIf(not skipSSL, "OpenSSL is available.")
 class HTTPSSiteWrapperTestNoSSL(unittest.TestCase):
     """
     Unit tests for L{server.HTTPSSiteWrapper} without OpenSSL.
@@ -227,11 +231,25 @@ class HTTPSSiteWrapperTestNoSSL(unittest.TestCase):
         error = self.assertRaises(
             NotImplementedError,
             server.HTTPSSiteWrapper,
-            contextFactory='ignored',
-            site='ignored',
-            )
+            contextFactory="ignored",
+            site="ignored",
+        )
 
-        self.assertEqual("OpenSSL not available. Try `pip install twisted[tls]`.", error.args[0])
+        self.assertEqual(
+            "OpenSSL not available. Try `pip install twisted[tls]`.", error.args[0]
+        )
+
+
+class StaticResource(resource.Resource):
+    """
+    A resource that always respond with the same content.
+    """
+
+    def __init__(self, response):
+        self._response = response
+
+    def render(self, request):
+        return self._response
 
 
 @skipIf(skipSSL, skipSSLReason)
@@ -239,15 +257,16 @@ class HTTPSSiteWrapperTest(unittest.TestCase):
     """
     Tests for L{server.HTTPSSiteWrapper} with OpenSSL.
     """
-    key, cert = makeCertificate(
-        O=b"Server Test Certificate", CN=b"server"
-    )
+
+    key, cert = makeCertificate(O=b"Server Test Certificate", CN=b"server")
 
     def getHTTPSSite(self):
         """
         Return a HTTPS site wrapper
         """
-        site = server.Site(resource.Resource())
+        root = resource.Resource()
+        root.putChild(b"test", StaticResource(b"test-response"))
+        site = server.Site(root)
         site.timeOut = None
         contextFactory = CertificateOptions(
             privateKey=self.key,
@@ -260,7 +279,7 @@ class HTTPSSiteWrapperTest(unittest.TestCase):
         """
         Return a protocol that is already connected to transport.
         """
-        protocol = factory.buildProtocol(('1.2.3.4', 1234))
+        protocol = factory.buildProtocol(("1.2.3.4", 1234))
         protocol.makeConnection(transport)
         transport.protocol = protocol
         self.assertTrue(transport.connected)
@@ -290,11 +309,8 @@ class HTTPSSiteWrapperTest(unittest.TestCase):
         protocol = self.getConnectedProtocol(https_site, transport)
 
         protocol.dataReceived(
-            b'GET / HTTP/1.1\r\n'
-            b'Server: test\r\n'
-            b'Host: localhost\r\n'
-            b'\r\n'
-            )
+            b"GET / HTTP/1.1\r\n" b"Server: test\r\n" b"Host: localhost\r\n" b"\r\n"
+        )
 
         self.assertFalse(transport.connected)
         self.assertEqual(
@@ -305,7 +321,8 @@ class HTTPSSiteWrapperTest(unittest.TestCase):
             b"Content-Length: 8\r\n"
             b"\r\n"
             b"redirect",
-            transport.io.getvalue())
+            transport.io.getvalue(),
+        )
 
     def test_http_no_host(self):
         """
@@ -316,11 +333,7 @@ class HTTPSSiteWrapperTest(unittest.TestCase):
         https_site = self.getHTTPSSite()
         protocol = self.getConnectedProtocol(https_site, transport)
 
-        protocol.dataReceived(
-            b'GET / HTTP/1.1\r\n'
-            b'Server: test\r\n'
-            b'\r\n'
-            )
+        protocol.dataReceived(b"GET / HTTP/1.1\r\n" b"Server: test\r\n" b"\r\n")
 
         self.assertFalse(transport.connected)
         self.assertEqual(b"", transport.io.getvalue())
@@ -334,11 +347,7 @@ class HTTPSSiteWrapperTest(unittest.TestCase):
         https_site = self.getHTTPSSite()
         protocol = self.getConnectedProtocol(https_site, transport)
 
-        protocol.dataReceived(
-            b'GET / HTTP/1.1\r\n'
-            b'Host\r\n'
-            b'\r\n'
-            )
+        protocol.dataReceived(b"GET / HTTP/1.1\r\n" b"Host\r\n" b"\r\n")
 
         self.assertFalse(transport.connected)
         self.assertEqual(b"", transport.io.getvalue())
@@ -352,14 +361,49 @@ class HTTPSSiteWrapperTest(unittest.TestCase):
         https_site = self.getHTTPSSite()
         protocol = self.getConnectedProtocol(https_site, transport)
 
-        protocol.dataReceived(
-            b'GET / HTTP/1.1\r\n'
-            b'Host:  \r\n'
-            b'\r\n'
-            )
+        protocol.dataReceived(b"GET / HTTP/1.1\r\n" b"Host:  \r\n" b"\r\n")
 
         self.assertFalse(transport.connected)
         self.assertEqual(b"", transport.io.getvalue())
+
+    def test_http_request(self):
+        """
+        It will redirect any HTTP request.
+        """
+        https_site = self.getHTTPSSite()
+        clientFactory = client.HTTPClientFactory(
+            url=b"http://example.com/test",
+            followRedirect=False,
+        )
+
+        cProto, _, _ = iosim.connectedServerAndClient(
+            ServerClass=lambda: https_site.buildProtocol(("1.2.3.4", 1234)),
+            ClientClass=lambda: clientFactory.buildProtocol(None),
+        )
+        failure = self.failureResultOf(cProto.factory.deferred)
+        self.assertEqual(b"301", failure.value.status)
+        self.assertEqual(b"https://example.com", failure.value.location)
+
+    def test_https_request(self):
+        """
+        It will respond to HTTPS requests based on the site content.
+        """
+        https_site = self.getHTTPSSite()
+        clientFactory = client.HTTPClientFactory(
+            url=b"https://example.com/test",
+            followRedirect=False,
+        )
+        clientTLSFactory = TLSMemoryBIOFactory(
+            CertificateOptions(requireCertificate=False), True, clientFactory
+        )
+
+        cProto, _, _ = iosim.connectedServerAndClient(
+            ServerClass=lambda: https_site.buildProtocol(("1.2.3.4", 1234)),
+            ClientClass=lambda: clientTLSFactory.buildProtocol(("1.2.3.4", 1234)),
+        )
+
+        result = self.successResultOf(cProto.factory.wrappedFactory.deferred)
+        self.assertEqual(b"test-response", result)
 
 
 class SessionTests(unittest.TestCase):

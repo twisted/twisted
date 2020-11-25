@@ -41,15 +41,18 @@ options = ssl.CertificateOptions(
     certificate=certificate,
 )
 
+
 class TestResource(Resource):
     """
     A simple resource that can help debug the site creation.
     """
+
     def render(self, request):
         """
         Add your breakpoint here.
         """
-        return b'ok'
+        return b"ok"
+
 
 root = static.File(".")
 root.putChild(b"test", TestResource())

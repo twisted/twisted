@@ -27,6 +27,7 @@ from binascii import hexlify
 from zope.interface import implementer
 
 from twisted.python.compat import networkString, nativeString
+from twisted.python.reflect import requireModule
 from twisted.spread.pb import Copyable, ViewPoint
 from twisted.internet import address, interfaces
 from twisted.internet.error import AlreadyCalled, AlreadyCancelled
@@ -37,15 +38,12 @@ from twisted.python import reflect, failure, components
 from twisted import copyright
 from twisted.web import resource
 from twisted.web.error import UnsupportedMethod
-
-try:
-    from twisted.protocols.tls import TLSMemoryBIOFactory
-except ImportError:
-    TLSMemoryBIOFactory = object
-
 from incremental import Version
 from twisted.python.deprecate import deprecatedModuleAttribute
 from twisted.logger import Logger
+
+TLSMemoryBIOFactory = requireModule("twisted.protocols.tls.TLSMemoryBIOFactory", object)
+
 
 NOT_DONE_YET = 1
 
