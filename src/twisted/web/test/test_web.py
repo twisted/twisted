@@ -19,10 +19,9 @@ try:
 
     skipSSL = False
     skipSSLReason = ""
-except ImportError
+except ImportError:
     skipSSL = True
     skipSSLReason = "OpenSSL is not available"
-
 
 from twisted.python import reflect, failure
 from twisted.python.filepath import FilePath
@@ -258,11 +257,15 @@ class HTTPSSiteWrapperTest(unittest.TestCase):
     Tests for L{server.HTTPSSiteWrapper} with OpenSSL.
     """
 
-    key, cert = makeCertificate(O=b"Server Test Certificate", CN=b"server")
+    if not skipSSL:
+        key, cert = makeCertificate(O=b"Server Test Certificate", CN=b"server")
 
     def getHTTPSSite(self):
         """
-        Return a HTTPS site wrapper
+        Helper to generate HTTPS site wrappers.
+
+        @return: An HTTPS site with a test resource.
+        @rtype name: L{server.HTTPSSiteWrapper}.
         """
         root = resource.Resource()
         root.putChild(b"test", StaticResource(b"test-response"))
@@ -277,7 +280,14 @@ class HTTPSSiteWrapperTest(unittest.TestCase):
 
     def getConnectedProtocol(self, factory, transport):
         """
-        Return a protocol that is already connected to transport.
+        @param factory: The factory for which the connection is made.
+        @type factory: L{twisted.internet.interfaces.IProtocolFactory}.
+
+        @param transport: The transport connected to the new protocol C{import}.
+        @type transport: L{twisted.internet.interfaces.ITransport}.
+
+        @return: A protocol that is already connected to transport.
+        @rtype: L{twisted.internet.interfaces.IProtocol}
         """
         protocol = factory.buildProtocol(("1.2.3.4", 1234))
         protocol.makeConnection(transport)
@@ -369,6 +379,9 @@ class HTTPSSiteWrapperTest(unittest.TestCase):
     def test_http_request(self):
         """
         It will redirect any HTTP request.
+
+        This uses an functional test in which an HTTP client is used to create
+        the request and handle the response.
         """
         https_site = self.getHTTPSSite()
         clientFactory = client.HTTPClientFactory(
@@ -377,8 +390,8 @@ class HTTPSSiteWrapperTest(unittest.TestCase):
         )
 
         cProto, _, _ = iosim.connectedServerAndClient(
-            ServerClass=lambda: https_site.buildProtocol(("1.2.3.4", 1234)),
-            ClientClass=lambda: clientFactory.buildProtocol(None),
+            ServerClass=lambda: https_site.buildProtocol((b"1.2.3.4", 1234)),
+            ClientClass=lambda: clientFactory.buildProtocol((b"1.2.3.4", 1234)),
         )
         failure = self.failureResultOf(cProto.factory.deferred)
         self.assertEqual(b"301", failure.value.status)
@@ -387,6 +400,8 @@ class HTTPSSiteWrapperTest(unittest.TestCase):
     def test_https_request(self):
         """
         It will respond to HTTPS requests based on the site content.
+
+        This is an functional tests that does an TLS handshake.
         """
         https_site = self.getHTTPSSite()
         clientFactory = client.HTTPClientFactory(
@@ -398,8 +413,8 @@ class HTTPSSiteWrapperTest(unittest.TestCase):
         )
 
         cProto, _, _ = iosim.connectedServerAndClient(
-            ServerClass=lambda: https_site.buildProtocol(("1.2.3.4", 1234)),
-            ClientClass=lambda: clientTLSFactory.buildProtocol(("1.2.3.4", 1234)),
+            ServerClass=lambda: https_site.buildProtocol((b"1.2.3.4", 1234)),
+            ClientClass=lambda: clientTLSFactory.buildProtocol((b"1.2.3.4", 1234)),
         )
 
         result = self.successResultOf(cProto.factory.wrappedFactory.deferred)

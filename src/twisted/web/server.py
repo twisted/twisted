@@ -27,7 +27,6 @@ from binascii import hexlify
 from zope.interface import implementer
 
 from twisted.python.compat import networkString, nativeString
-from twisted.python.reflect import requireModule
 from twisted.spread.pb import Copyable, ViewPoint
 from twisted.internet import address, interfaces
 from twisted.internet.error import AlreadyCalled, AlreadyCancelled
@@ -42,7 +41,10 @@ from incremental import Version
 from twisted.python.deprecate import deprecatedModuleAttribute
 from twisted.logger import Logger
 
-TLSMemoryBIOFactory = requireModule("twisted.protocols.tls.TLSMemoryBIOFactory", object)
+try:
+    from twisted.protocols.tls import TLSMemoryBIOFactory
+except ImportError:
+    TLSMemoryBIOFactory = object
 
 
 NOT_DONE_YET = 1
@@ -898,12 +900,21 @@ class _HTTPSRedirectProtocolWrapper(ProtocolWrapper):
 
         It checks if an HTTP request is made over HTTPS port, instead of an
         SSL handshake.
+
+        @param data: The data received from the remote HTTP client peer.
+        @type data: L{bytes}.
         """
 
         def get_http_host(data):
             """
             Return the value of the Host header found inside `data` HTTP
             raw request.
+
+            @param data: The first data chunk received from the remote HTTP client peer.
+            @type data: L{bytes}.
+
+            @return: The value of the Host header. It returns the empty string when the value could not be extracted.
+            @rtype: L{bytes}
             """
             parts = data.split(b"\r\n")
             if len(parts) == 1:
@@ -940,7 +951,6 @@ class _HTTPSRedirectProtocolWrapper(ProtocolWrapper):
             b"redirect" % (host,)
         )
         self.transport.loseConnection()
-        return b""
 
 
 class HTTPSSiteWrapper(TLSMemoryBIOFactory):
@@ -949,6 +959,14 @@ class HTTPSSiteWrapper(TLSMemoryBIOFactory):
     """
 
     def __init__(self, contextFactory, site):
+        """
+        @param contextFactory: An SSL context factory defining SSL parameters for
+            the SSL server.
+        @type contextFactory: L{twisted.internet.interfaces.IOpenSSLContextFactory}
+
+        @param site: The HTTP that is wrapped.
+        @type site: L{Site}.
+        """
         if TLSMemoryBIOFactory is object:
             raise NotImplementedError(
                 "OpenSSL not available. Try `pip install twisted[tls]`."
@@ -957,6 +975,15 @@ class HTTPSSiteWrapper(TLSMemoryBIOFactory):
         super().__init__(contextFactory, isClient=False, wrappedFactory=self._site)
 
     def buildProtocol(self, addr):
+        """
+        Create a protocol to handle the HTTP client connection.
+
+        @param addr: The address the connection is coming from.
+        @type addr: A tuple of (L{bytes}, L{int}).
+
+        @return: A protocol to handle the new connection.
+        @rtype: L{twisted.internet.interfaces.IProtocol}
+        """
         protocol = self.protocol(self, self.wrappedFactory.buildProtocol(addr))
         return _HTTPSRedirectProtocolWrapper(
             factory=WrappingFactory(self._site), wrappedProtocol=protocol
