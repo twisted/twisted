@@ -16,19 +16,19 @@ from twisted.python.compat import iterbytes
 try:
     from twisted.protocols.tls import TLSMemoryBIOProtocol, TLSMemoryBIOFactory
     from twisted.protocols.tls import _PullToPush, _ProducerMembrane
-    from OpenSSL.crypto import X509Type
+    from OpenSSL import crypto
     from OpenSSL.SSL import (
         TLSv1_METHOD,
         TLSv1_1_METHOD,
         TLSv1_2_METHOD,
         Error,
         Context,
-        ConnectionType,
+        Connection,
         WantReadError,
     )
 except ImportError:
     # Skip the whole test module if it can't be imported.
-    skip = "pyOpenSSL 0.10 or newer required for twisted.protocol.tls"
+    skip = "pyOpenSSL 16.0.0 or newer required for twisted.protocol.tls"
     TLSv1_METHOD = TLSv1_1_METHOD = TLSv1_2_METHOD = None
 else:
     from twisted.internet.ssl import PrivateCertificate, optionsForClientTLS
@@ -380,7 +380,7 @@ class TLSMemoryBIOTests(TestCase):
         proto = TLSMemoryBIOProtocol(wrapperFactory, Protocol())
         transport = StringTransport()
         proto.makeConnection(transport)
-        self.assertIsInstance(proto.getHandle(), ConnectionType)
+        self.assertIsInstance(proto.getHandle(), Connection)
 
     def test_makeConnection(self):
         """
@@ -493,7 +493,7 @@ class TLSMemoryBIOTests(TestCase):
     def test_getPeerCertificate(self):
         """
         L{TLSMemoryBIOProtocol.getPeerCertificate} returns the
-        L{OpenSSL.crypto.X509Type} instance representing the peer's
+        L{OpenSSL.crypto.X509} instance representing the peer's
         certificate.
         """
         # Set up a client and server so there's a certificate to grab.
@@ -520,7 +520,7 @@ class TLSMemoryBIOTests(TestCase):
         def cbHandshook(ignored):
             # Grab the server's certificate and check it out
             cert = sslClientProtocol.getPeerCertificate()
-            self.assertIsInstance(cert, X509Type)
+            self.assertIsInstance(cert, crypto.X509)
             self.assertEqual(
                 cert.digest("sha1"),
                 # openssl x509 -noout -sha1 -fingerprint -in server.pem
