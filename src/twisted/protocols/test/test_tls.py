@@ -1902,6 +1902,7 @@ class IProtocolNegotiationFactoryTests(TestCase):
             A protocol that triggers a callback when data is first received
             or a failure if connection is lost before receiving any data.
             """
+
             def __init__(self, notifier, data):
                 self.notifier = notifier
                 self._data = data
