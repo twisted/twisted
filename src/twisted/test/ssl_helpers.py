@@ -27,8 +27,11 @@ class ClientTLSContext(ssl.ClientContextFactory):
 class ServerTLSContext:
     isClient = 0
 
-    def __init__(self, filename=certPath, method=SSL.SSLv23_METHOD):
+    def __init__(self, filename=certPath, method=None):
         self.filename = filename
+        if method is None:
+            method = SSL.SSLv23_METHOD
+
         self._method = method
 
     def getContext(self):

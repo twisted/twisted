@@ -140,7 +140,9 @@ class AccumulatingProtocol(Protocol):
             log.err(reason)
 
 
-def buildTLSProtocol(server=False, transport=None, fakeConnection=None):
+def buildTLSProtocol(
+    server=False, transport=None, fakeConnection=None, serverMethod=None
+):
     """
     Create a protocol hooked up to a TLS transport hooked up to a
     StringTransport.
@@ -162,7 +164,7 @@ def buildTLSProtocol(server=False, transport=None, fakeConnection=None):
         contextFactory = HardCodedConnection()
     else:
         if server:
-            contextFactory = ServerTLSContext()
+            contextFactory = ServerTLSContext(method=serverMethod)
         else:
             contextFactory = ClientTLSContext()
     wrapperFactory = TLSMemoryBIOFactory(contextFactory, not server, clientFactory)
@@ -1114,7 +1116,9 @@ class TLSProducerTests(TestCase):
         self.assertEqual(bool(allowEmpty or value), True)
         return value
 
-    def setupStreamingProducer(self, transport=None, fakeConnection=None, server=False):
+    def setupStreamingProducer(
+        self, transport=None, fakeConnection=None, server=False, serverMethod=None
+    ):
         class HistoryStringTransport(StringTransport):
             def __init__(self):
                 StringTransport.__init__(self)
@@ -1133,7 +1137,10 @@ class TLSProducerTests(TestCase):
                 StringTransport.stopProducing(self)
 
         applicationProtocol, tlsProtocol = buildTLSProtocol(
-            transport=transport, fakeConnection=fakeConnection, server=server
+            transport=transport,
+            fakeConnection=fakeConnection,
+            server=server,
+            serverMethod=serverMethod,
         )
         producer = HistoryStringTransport()
         applicationProtocol.transport.registerProducer(producer, True)
@@ -1163,9 +1170,13 @@ class TLSProducerTests(TestCase):
         If we write some data to a TLS connection that is blocked waiting for a
         renegotiation with its peer, it will pause and resume its registered
         producer exactly once.
+
+        Renegociation only works on TLSv1.2 or less.
         """
         clientProtocol, clientTransport, _ = self.setupStreamingProducer()
-        serverProtocol, serverTransport, _ = self.setupStreamingProducer(server=True)
+        serverProtocol, serverTransport, serverProducer = self.setupStreamingProducer(
+            server=True, serverMethod=TLSv1_2_METHOD
+        )
 
         # Do the initial handshake.
         self.flushTwoTLSProtocols(clientTransport, serverTransport)
@@ -1179,6 +1190,8 @@ class TLSProducerTests(TestCase):
         # no public API for this yet because it's (mostly) unnecessary, but we
         # have to be prepared for a peer to do it to us
         tlsc = clientTransport._tlsConnection
+        # Make sure we are on TLSv1.2 as otherwise renegociation is not supported
+        self.assertEqual("TLSv1.2", tlsc.get_cipher_version())
         tlsc.renegotiate()
 
         self.assertRaises(WantReadError, tlsc.do_handshake)
@@ -1205,8 +1218,8 @@ class TLSProducerTests(TestCase):
         serverProtocol.transport.unregisterProducer()
         self.flushTwoTLSProtocols(clientTransport, serverTransport)
         self.assertEqual(serverTransport.transport.disconnecting, True)
-        self.assertEqual(b"".join(c.received), payload)
-        self.assertEqual(sp.producerHistory, ["pause", "resume"])
+        self.assertEqual([b"data from server", b"payload"], clientProtocol.received)
+        self.assertEqual(serverProducer.producerHistory, ["pause", "resume"])
 
     def test_streamingProducerPausedInNormalMode(self):
         """
