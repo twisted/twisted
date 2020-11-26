@@ -18,14 +18,26 @@ certPath = nativeString(FilePath(__file__.encode("utf-8")).sibling(b"server.pem"
 
 
 class ClientTLSContext(ssl.ClientContextFactory):
+    """
+    SSL Context Factory for client-side connections.
+    """
+
     isClient = 1
+    _context = None
 
     def getContext(self):
-        return SSL.Context(SSL.SSLv23_METHOD)
+        if self._context is None:
+            self._context = SSL.Context(SSL.SSLv23_METHOD)
+        return self._context
 
 
 class ServerTLSContext:
+    """
+    SSL Context Factory for server-side connections.
+    """
+
     isClient = 0
+    _context = None
 
     def __init__(self, filename=certPath, method=None):
         self.filename = filename
@@ -35,7 +47,9 @@ class ServerTLSContext:
         self._method = method
 
     def getContext(self):
-        ctx = SSL.Context(self._method)
-        ctx.use_certificate_file(self.filename)
-        ctx.use_privatekey_file(self.filename)
-        return ctx
+        if self._context is None:
+            self._context = SSL.Context(self._method)
+            self._context.use_certificate_file(self.filename)
+            self._context.use_privatekey_file(self.filename)
+
+        return self._context

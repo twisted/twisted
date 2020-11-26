@@ -26,6 +26,7 @@ try:
         Connection,
         WantReadError,
     )
+    from twisted.internet._sslverify import _setAcceptableProtocols
 except ImportError:
     # Skip the whole test module if it can't be imported.
     skip = "pyOpenSSL 16.0.0 or newer required for twisted.protocol.tls"
@@ -1876,17 +1877,6 @@ class ServerNegotiationFactory(ServerFactory):
 class IProtocolNegotiationFactoryTests(TestCase):
     """
     Tests for L{IProtocolNegotiationFactory} inside L{TLSMemoryBIOFactory}.
-
-    These tests expressly don't include the case where both server and client
-    advertise protocols but don't have any overlap. This is because the
-    behaviour here is platform-dependent and changes from version to version.
-    Prior to version 1.1.0 of OpenSSL, failing the ALPN negotiation does not
-    fail the handshake. At least in 1.0.2h, failing NPN *does* fail the
-    handshake, at least with the callback implemented by PyOpenSSL.
-
-    This is sufficiently painful to test that we simply don't. It's not
-    necessary to validate that our offering logic works anyway: all we need to
-    see is that it works in the successful case and that it degrades properly.
     """
 
     def handshakeProtocols(self, clientProtocols, serverProtocols):
@@ -1901,7 +1891,7 @@ class IProtocolNegotiationFactoryTests(TestCase):
             after the TLS handshake is complete.
         @type serverProtocols: L{list} of L{bytes}
 
-        @return: A L{Deferred} that fires with a L{tuple} of client L{Protocol} and server L{Protocol}.
+        @return: A L{Deferred} that fires with a L{tuple} of client L{Protocol} and server L{Protocol} on a successful data exchange. It fires with a failure when TLS handshake fails.
         @rtype: L{Deferred}
         """
 
@@ -1912,6 +1902,11 @@ class IProtocolNegotiationFactoryTests(TestCase):
 
             def connectionMade(self):
                 self.transport.writeSequence(list(iterbytes(self._data)))
+
+            def connectionLost(self, reason):
+                if self.notifier is not None:
+                    self.notifier.errback(reason)
+                    self.notifier = None
 
             def dataReceived(self, data):
                 if self.notifier is not None:
@@ -1924,7 +1919,9 @@ class IProtocolNegotiationFactoryTests(TestCase):
             clientDataReceived, b"data from client"
         )
 
-        clientContextFactory, _ = HandshakeCallbackContextFactory.factoryAndDeferred()
+        clientContextFactory = ClientTLSContext()
+        # See why ClientNegotiationFactory is not working.
+        _setAcceptableProtocols(clientContextFactory.getContext(), clientProtocols)
         wrapperFactory = TLSMemoryBIOFactory(clientContextFactory, True, clientFactory)
         sslClientProtocol = wrapperFactory.buildProtocol(None)
 
@@ -1939,8 +1936,11 @@ class IProtocolNegotiationFactoryTests(TestCase):
         sslServerProtocol = wrapperFactory.buildProtocol(None)
 
         loopbackAsync(sslServerProtocol, sslClientProtocol)
-        deferred = gatherResults([clientDataReceived, serverDataReceived])
+        deferred = gatherResults(
+            [clientDataReceived, serverDataReceived], consumeErrors=True
+        )
         deferred.addCallback(lambda _: (sslClientProtocol, sslServerProtocol))
+        deferred.addErrback(lambda firstError: firstError.value.args[0])
         return deferred
 
     def test_negotiationWithNoProtocols(self):
@@ -1962,7 +1962,10 @@ class IProtocolNegotiationFactoryTests(TestCase):
         When factories support L{IProtocolNegotiationFactory} and support
         overlapping protocols, the first protocol is negotiated.
         """
-        deferred = self.handshakeProtocols([b"h2", b"http/1.1"], [b"h2", b"http/1.1"])
+        deferred = self.handshakeProtocols(
+            clientProtocols=[b"http/1.1", b"h2", b"client"],
+            serverProtocols=[b"h2", b"http/1.1", b"server"],
+        )
 
         def checkNegotiatedProtocol(result):
             client, server = result
@@ -1973,17 +1976,25 @@ class IProtocolNegotiationFactoryTests(TestCase):
 
     def test_negotiationNoOverlap(self):
         """
-        When there is no overlap between client and server,
-        nothing is negotiated.
+        When there is no overlap between client and server the connetion fails.
+
+        This test might fail on older OpenSSL version.
+        Prior to version 1.1.0 of OpenSSL, failing the ALPN negotiation does not
+        fail the handshake. It does fail in OpenSSL 1.1.1.
+
+        At least in 1.0.2h, failing NPN *does* fail the
+        handshake, at least with the callback implemented by PyOpenSSL.
         """
         deferred = self.handshakeProtocols([b"h2"], [b"http/1.1"])
 
-        def checkNegotiatedProtocol(result):
-            client, server = result
-            self.assertEqual(client.negotiatedProtocol, None)
-            self.assertEqual(server.negotiatedProtocol, None)
+        def checkNegotiationResult(failure):
+            """
+            Called when connection failed.
+            """
+            # Since we don't know if client or server fails first, just check that we have an SSL.Error.
+            failure.trap(Error)
 
-        return deferred.addCallback(checkNegotiatedProtocol)
+        return deferred.addErrback(checkNegotiationResult)
 
     def test_negotiationClientOnly(self):
         """
