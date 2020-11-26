@@ -1164,23 +1164,35 @@ class TLSProducerTests(TestCase):
         renegotiation with its peer, it will pause and resume its registered
         producer exactly once.
         """
-        c, ct, cp = self.setupStreamingProducer()
-        s, st, sp = self.setupStreamingProducer(server=True)
+        clientProtocol, clientTransport, _ = self.setupStreamingProducer()
+        serverProtocol, serverTransport, _ = self.setupStreamingProducer(server=True)
 
-        self.flushTwoTLSProtocols(ct, st)
+        # Do the initial handshake.
+        self.flushTwoTLSProtocols(clientTransport, serverTransport)
+        # Check the connection is working by exchanging data between client and server.
+        clientProtocol.transport.write(b"data from client")
+        serverProtocol.transport.write(b"data from server")
+        self.flushTwoTLSProtocols(clientTransport, serverTransport)
+        self.assertEqual([b"data from server"], clientProtocol.received)
+        self.assertEqual([b"data from client"], serverProtocol.received)
+
         # no public API for this yet because it's (mostly) unnecessary, but we
         # have to be prepared for a peer to do it to us
-        tlsc = ct._tlsConnection
+        tlsc = clientTransport._tlsConnection
         tlsc.renegotiate()
+
         self.assertRaises(WantReadError, tlsc.do_handshake)
-        ct._flushSendBIO()
-        st.dataReceived(self.drain(ct.transport))
+
+        clientTransport._flushSendBIO()
+        serverTransport.dataReceived(self.drain(clientTransport.transport))
         payload = b"payload"
-        s.transport.write(payload)
-        s.transport.loseConnection()
+        serverProtocol.transport.write(payload)
+        serverProtocol.transport.loseConnection()
+
         # give the client the server the client's response...
-        ct.dataReceived(self.drain(st.transport))
-        messageThatUnblocksTheServer = self.drain(ct.transport)
+        clientTransport.dataReceived(self.drain(serverTransport.transport))
+        messageThatUnblocksTheServer = self.drain(clientTransport.transport)
+
         # split it into just enough chunks that it would provoke the producer
         # with an incorrect implementation...
         for fragment in (
@@ -1188,11 +1200,11 @@ class TLSProducerTests(TestCase):
             messageThatUnblocksTheServer[1:2],
             messageThatUnblocksTheServer[2:],
         ):
-            st.dataReceived(fragment)
-        self.assertEqual(st.transport.disconnecting, False)
-        s.transport.unregisterProducer()
-        self.flushTwoTLSProtocols(ct, st)
-        self.assertEqual(st.transport.disconnecting, True)
+            serverTransport.dataReceived(fragment)
+        self.assertEqual(serverTransport.transport.disconnecting, False)
+        serverProtocol.transport.unregisterProducer()
+        self.flushTwoTLSProtocols(clientTransport, serverTransport)
+        self.assertEqual(serverTransport.transport.disconnecting, True)
         self.assertEqual(b"".join(c.received), payload)
         self.assertEqual(sp.producerHistory, ["pause", "resume"])
 
