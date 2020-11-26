@@ -1876,21 +1876,17 @@ class IProtocolNegotiationFactoryTests(TestCase):
             after the TLS handshake is complete.
         @type serverProtocols: L{list} of L{bytes}
 
-        @return: A L{tuple} of four different items: the client L{Protocol},
-            the server L{Protocol}, a L{Deferred} that fires when the client
-            first receives bytes (and so the TLS connection is complete), and a
-            L{Deferred} that fires when the server first receives bytes.
-        @rtype: A L{tuple} of (L{Protocol}, L{Protocol}, L{Deferred},
-            L{Deferred})
+        @return: A L{Deferred} that fires with a L{tuple} of client L{Protocol} and server L{Protocol}.
+        @rtype: L{Deferred}
         """
-        data = b"some bytes"
 
         class NotifyingSender(Protocol):
-            def __init__(self, notifier):
+            def __init__(self, notifier, data=b"some bytes"):
                 self.notifier = notifier
+                self._data = data
 
             def connectionMade(self):
-                self.transport.writeSequence(list(iterbytes(data)))
+                self.transport.writeSequence(list(iterbytes(self._data)))
 
             def dataReceived(self, data):
                 if self.notifier is not None:
@@ -1899,7 +1895,9 @@ class IProtocolNegotiationFactoryTests(TestCase):
 
         clientDataReceived = Deferred()
         clientFactory = ClientNegotiationFactory(clientProtocols)
-        clientFactory.protocol = lambda: NotifyingSender(clientDataReceived)
+        clientFactory.protocol = lambda: NotifyingSender(
+            clientDataReceived, b"data from client"
+        )
 
         clientContextFactory, _ = HandshakeCallbackContextFactory.factoryAndDeferred()
         wrapperFactory = TLSMemoryBIOFactory(clientContextFactory, True, clientFactory)
@@ -1907,100 +1905,85 @@ class IProtocolNegotiationFactoryTests(TestCase):
 
         serverDataReceived = Deferred()
         serverFactory = ServerNegotiationFactory(serverProtocols)
-        serverFactory.protocol = lambda: NotifyingSender(serverDataReceived)
+        serverFactory.protocol = lambda: NotifyingSender(
+            serverDataReceived, b"data from server"
+        )
 
         serverContextFactory = ServerTLSContext()
         wrapperFactory = TLSMemoryBIOFactory(serverContextFactory, False, serverFactory)
         sslServerProtocol = wrapperFactory.buildProtocol(None)
 
         loopbackAsync(sslServerProtocol, sslClientProtocol)
-        return (
-            sslClientProtocol,
-            sslServerProtocol,
-            clientDataReceived,
-            serverDataReceived,
-        )
+        deferred = gatherResults([clientDataReceived, serverDataReceived])
+        deferred.addCallback(lambda _: (sslClientProtocol, sslServerProtocol))
+        return deferred
 
     def test_negotiationWithNoProtocols(self):
         """
         When factories support L{IProtocolNegotiationFactory} but don't
         advertise support for any protocols, no protocols are negotiated.
         """
-        (
-            client,
-            server,
-            clientDataReceived,
-            serverDataReceived,
-        ) = self.handshakeProtocols([], [])
+        deferred = self.handshakeProtocols([], [])
 
-        def checkNegotiatedProtocol(ignored):
+        def checkNegotiatedProtocol(result):
+            client, server = result
             self.assertEqual(client.negotiatedProtocol, None)
             self.assertEqual(server.negotiatedProtocol, None)
 
-        clientDataReceived.addCallback(lambda ignored: serverDataReceived)
-        serverDataReceived.addCallback(checkNegotiatedProtocol)
-
-        return clientDataReceived
+        return deferred.addCallback(checkNegotiatedProtocol)
 
     def test_negotiationWithProtocolOverlap(self):
         """
         When factories support L{IProtocolNegotiationFactory} and support
         overlapping protocols, the first protocol is negotiated.
         """
-        (
-            client,
-            server,
-            clientDataReceived,
-            serverDataReceived,
-        ) = self.handshakeProtocols([b"h2", b"http/1.1"], [b"h2", b"http/1.1"])
+        deferred = self.handshakeProtocols([b"h2", b"http/1.1"], [b"h2", b"http/1.1"])
 
-        def checkNegotiatedProtocol(ignored):
+        def checkNegotiatedProtocol(result):
+            client, server = result
             self.assertEqual(client.negotiatedProtocol, b"h2")
             self.assertEqual(server.negotiatedProtocol, b"h2")
 
-        clientDataReceived.addCallback(lambda ignored: serverDataReceived)
-        serverDataReceived.addCallback(checkNegotiatedProtocol)
+        return deferred.addCallback(checkNegotiatedProtocol)
 
-        return clientDataReceived
+    def test_negotiationNoOverlap(self):
+        """
+        When there is no overlap between client and server,
+        nothing is negotiated.
+        """
+        deferred = self.handshakeProtocols([b"h2"], [b"http/1.1"])
+
+        def checkNegotiatedProtocol(result):
+            client, server = result
+            self.assertEqual(client.negotiatedProtocol, None)
+            self.assertEqual(server.negotiatedProtocol, None)
+
+        return deferred.addCallback(checkNegotiatedProtocol)
 
     def test_negotiationClientOnly(self):
         """
         When factories support L{IProtocolNegotiationFactory} and only the
         client advertises, nothing is negotiated.
         """
-        (
-            client,
-            server,
-            clientDataReceived,
-            serverDataReceived,
-        ) = self.handshakeProtocols([b"h2", b"http/1.1"], [])
+        deferred = self.handshakeProtocols([b"h2", b"http/1.1"], [])
 
-        def checkNegotiatedProtocol(ignored):
+        def checkNegotiatedProtocol(result):
+            client, server = result
             self.assertEqual(client.negotiatedProtocol, None)
             self.assertEqual(server.negotiatedProtocol, None)
 
-        clientDataReceived.addCallback(lambda ignored: serverDataReceived)
-        serverDataReceived.addCallback(checkNegotiatedProtocol)
-
-        return clientDataReceived
+        return deferred.addCallback(checkNegotiatedProtocol)
 
     def test_negotiationServerOnly(self):
         """
         When factories support L{IProtocolNegotiationFactory} and only the
         server advertises, nothing is negotiated.
         """
-        (
-            client,
-            server,
-            clientDataReceived,
-            serverDataReceived,
-        ) = self.handshakeProtocols([], [b"h2", b"http/1.1"])
+        deferred = self.handshakeProtocols([], [b"h2", b"http/1.1"])
 
-        def checkNegotiatedProtocol(ignored):
+        def checkNegotiatedProtocol(result):
+            client, server = result
             self.assertEqual(client.negotiatedProtocol, None)
             self.assertEqual(server.negotiatedProtocol, None)
 
-        clientDataReceived.addCallback(lambda ignored: serverDataReceived)
-        serverDataReceived.addCallback(checkNegotiatedProtocol)
-
-        return clientDataReceived
+        return deferred.addCallback(checkNegotiatedProtocol)
