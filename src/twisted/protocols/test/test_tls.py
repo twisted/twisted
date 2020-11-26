@@ -1172,7 +1172,7 @@ class TLSProducerTests(TestCase):
         renegotiation with its peer, it will pause and resume its registered
         producer exactly once.
 
-        Renegociation only works on TLSv1.2 or less.
+        Renegotiation only works on TLSv1.2 or less.
         """
         clientProtocol, clientTransport, _ = self.setupStreamingProducer()
         serverProtocol, serverTransport, serverProducer = self.setupStreamingProducer(
@@ -1891,12 +1891,18 @@ class IProtocolNegotiationFactoryTests(TestCase):
             after the TLS handshake is complete.
         @type serverProtocols: L{list} of L{bytes}
 
-        @return: A L{Deferred} that fires with a L{tuple} of client L{Protocol} and server L{Protocol} on a successful data exchange. It fires with a failure when TLS handshake fails.
+        @return: A L{Deferred} that fires with a L{tuple} of client L{Protocol}
+            and server L{Protocol} on a successful data exchange.
+            It fires with a failure when TLS handshake fails.
         @rtype: L{Deferred}
         """
 
         class NotifyingSender(Protocol):
-            def __init__(self, notifier, data=b"some bytes"):
+            """
+            A protocol that triggers a callback when data is first received
+            or a failure if connection is lost before receiving any data.
+            """
+            def __init__(self, notifier, data):
                 self.notifier = notifier
                 self._data = data
 
