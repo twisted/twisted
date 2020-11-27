@@ -1362,11 +1362,11 @@ class Request:
         Set an HTTP response header.  Overrides any previously set values for
         this header.
 
-        @type k: L{bytes} or L{str}
-        @param k: The name of the header for which to set the value.
+        @type name: L{bytes} or L{str}
+        @param name: The name of the header for which to set the value.
 
-        @type v: L{bytes} or L{str}
-        @param v: The value to set for the named header. A L{str} will be
+        @type value: L{bytes} or L{str}
+        @param value: The value to set for the named header. A L{str} will be
             UTF-8 encoded, which may not interoperable with other
             implementations. Avoid passing non-ASCII characters if possible.
         """
@@ -2484,7 +2484,7 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         Write a list of strings to the HTTP response.
 
         @param iovec: A list of byte strings to write to the stream.
-        @type data: L{list} of L{bytes}
+        @type iovec: L{list} of L{bytes}
 
         @return: L{None}
         """
