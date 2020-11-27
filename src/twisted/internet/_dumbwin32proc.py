@@ -284,7 +284,7 @@ class Process(_pollingfile._PollingTimer, BaseProcess):
         """
         Write data to the process' stdin.
 
-        @type data: C{list} of C{bytes}
+        @type seq: C{list} of C{bytes}
         """
         self.stdin.writeSequence(seq)
 

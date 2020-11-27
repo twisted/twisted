@@ -27,7 +27,7 @@ def unparseEndpoint(args, kwargs):
 
     @param kwargs: C{:} and then C{=}-separated keyword arguments
 
-    @type arguments: L{tuple} of native L{str}
+    @type kwargs: L{tuple} of native L{str}
 
     @return: a string equivalent to the original format which this was parsed
         as.

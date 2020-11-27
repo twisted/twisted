@@ -846,9 +846,9 @@ def uidFromString(uidString):
     """
     Convert a user identifier, as a string, into an integer UID.
 
-    @type uid: C{str}
-    @param uid: A string giving the base-ten representation of a UID or the
-        name of a user which can be converted to a UID via L{pwd.getpwnam}.
+    @type uidString: C{str}
+    @param uidString: A string giving the base-ten representation of a UID or
+        the name of a user which can be converted to a UID via L{pwd.getpwnam}.
 
     @rtype: C{int}
     @return: The integer UID corresponding to the given string.
@@ -868,9 +868,9 @@ def gidFromString(gidString):
     """
     Convert a group identifier, as a string, into an integer GID.
 
-    @type uid: C{str}
-    @param uid: A string giving the base-ten representation of a GID or the
-        name of a group which can be converted to a GID via L{grp.getgrnam}.
+    @type gidString: C{str}
+    @param gidString: A string giving the base-ten representation of a GID or
+        the name of a group which can be converted to a GID via L{grp.getgrnam}.
 
     @rtype: C{int}
     @return: The integer GID corresponding to the given string.

@@ -142,7 +142,7 @@ class Port(base.BasePort):
 
         @param protocol: A C{DatagramProtocol} instance which will be
             connected to the C{port}.
-        @type proto: L{twisted.internet.protocol.DatagramProtocol}
+        @type protocol: L{twisted.internet.protocol.DatagramProtocol}
 
         @param maxPacketSize: The maximum packet size to accept.
         @type maxPacketSize: L{int}
