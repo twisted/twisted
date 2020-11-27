@@ -63,7 +63,7 @@ def main(_fdopen=os.fdopen):
     Main function to be run if __name__ == "__main__".
 
     @param _fdopen: If specified, the function to use in place of C{os.fdopen}.
-    @param _fdopen: C{callable}
+    @type _fdopen: C{callable}
     """
     config = WorkerOptions()
     config.parseOptions()

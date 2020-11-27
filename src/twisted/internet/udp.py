@@ -138,7 +138,7 @@ class Port(base.BasePort):
 
         @param addressFamily: The address family (sometimes called I{domain}) of
             the existing socket.  For example, L{socket.AF_INET}.
-        @param addressFamily: L{int}
+        @type addressFamily: L{int}
 
         @param protocol: A C{DatagramProtocol} instance which will be
             connected to the C{port}.
