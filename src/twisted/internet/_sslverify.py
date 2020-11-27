@@ -1870,7 +1870,7 @@ class _ChooseDiffieHellmanEllipticCurve:
     @see: L{OpenSSL.SSL.OPENSSL_VERSION_NUMBER}
 
     @param openSSLlib: The OpenSSL C{cffi} library module.
-    @param openSSLlib: The OpenSSL L{crypto} module.
+    @param openSSLcrypto: The OpenSSL L{crypto} module.
 
     @see: L{crypto}
     """
