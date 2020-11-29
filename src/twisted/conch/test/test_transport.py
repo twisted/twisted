@@ -2242,6 +2242,21 @@ class ClientSSHTransportDHGroupExchangeBaseCase(ClientSSHTransportBaseCase):
     Diffie-Hellman group exchange tests for SSHClientTransport.
     """
 
+    """
+    1536-bit modulus from RFC 3526
+    """
+    P1536 = int(
+        "FFFFFFFFFFFFFFFFC90FDAA22168C234C4C6628B80DC1CD1"
+        "29024E088A67CC74020BBEA63B139B22514A08798E3404DD"
+        "EF9519B3CD3A431B302B0A6DF25F14374FE1356D6D51C245"
+        "E485B576625E7EC6F44C42E9A637ED6B0BFF5CB6F406B7ED"
+        "EE386BFB5A899FA5AE9F24117C4B1FE649286651ECE45B3D"
+        "C2007CB8A163BF0598DA48361C55D39A69163FA8FD24CF5F"
+        "83655D23DCA3AD961C62F356208552BB9ED529077096966D"
+        "670C354E4ABC9804F1746C08CA237327FFFFFFFFFFFFFFFF",
+        16,
+    )
+
     def test_KEXINIT_groupexchange(self):
         """
         KEXINIT packet with a group-exchange key exchange results
@@ -2266,14 +2281,14 @@ class ClientSSHTransportDHGroupExchangeBaseCase(ClientSSHTransportBaseCase):
         KEX_DH_GEX_INIT message with the client's Diffie-Hellman public key.
         """
         self.test_KEXINIT_groupexchange()
-        self.proto.ssh_KEX_DH_GEX_GROUP(
-            b"\x00\x00\x00\x03\x00\xfe\xf3\x00\x00\x00\x01\x02"
-        )
-        self.assertEqual(self.proto.p, 65267)
+        self.proto.ssh_KEX_DH_GEX_GROUP(common.MP(self.P1536) + common.MP(2))
+        self.assertEqual(self.proto.p, self.P1536)
         self.assertEqual(self.proto.g, 2)
         x = self.proto.dhSecretKey.private_numbers().x
-        self.assertEqual(common.MP(x)[5:], b"\x99" * 2)
-        self.assertEqual(self.proto.dhSecretKeyPublicMP, common.MP(pow(2, x, 65267)))
+        self.assertEqual(common.MP(x)[5:], b"\x99" * 192)
+        self.assertEqual(
+            self.proto.dhSecretKeyPublicMP, common.MP(pow(2, x, self.P1536))
+        )
         self.assertEqual(
             self.packets[1:],
             [(transport.MSG_KEX_DH_GEX_INIT, self.proto.dhSecretKeyPublicMP)],
@@ -2300,7 +2315,7 @@ class ClientSSHTransportDHGroupExchangeBaseCase(ClientSSHTransportBaseCase):
         # Here is the wire format for advertised min, pref and max DH sizes.
         h.update(b"\x00\x00\x04\x00\x00\x00\x08\x00\x00\x00\x20\x00")
         # And the selected group parameters.
-        h.update(b"\x00\x00\x00\x03\x00\xfe\xf3\x00\x00\x00\x01\x02")
+        h.update(common.MP(self.P1536) + common.MP(2))
         h.update(self.proto.dhSecretKeyPublicMP)
         h.update(fMP)
         h.update(sharedSecret)
