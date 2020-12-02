@@ -156,10 +156,20 @@ class ResolverBase:
         # XXX - this should do A and AAAA lookups, not ANY (see RFC 8482).
         # https://twistedmatrix.com/trac/ticket/9691
         d = self.lookupAllRecords(name, timeout)
-        d.addCallback(self._cbRecords, name, effort)
+        d.addCallback(self._cbRecords, name, effort, timeout)
         return d
 
-    def _cbRecords(self, records, name, effort):
+    def _cbRecords(self, records, name, effort, timeout):
+        (ans, auth, add) = records
+        result = extractRecord(self, dns.Name(name), ans + auth + add, effort)
+        if not result:
+            # ANY lookup doesn't provide IP in most cases. Lookup A
+            d = self.lookupAddress(name, timeout)
+            d.addCallback(self._cbRecordsA, name, effort)
+            return d
+        return result
+
+    def _cbRecordsA(self, records, name, effort):
         (ans, auth, add) = records
         result = extractRecord(self, dns.Name(name), ans + auth + add, effort)
         if not result:
