@@ -62,7 +62,9 @@ def main(reactor, *argv):
         raise SystemExit(1)
 
     hostname = options["hostname"]
-    d = client.getHostByName(hostname)
+    d = client.createResolver(servers=[("8.8.8.8", 53), ("8.8.4.4", 53)]).getHostByName(
+        hostname
+    )
     d.addCallback(printResult, hostname)
     d.addErrback(printError, hostname)
     return d
