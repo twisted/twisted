@@ -108,7 +108,7 @@ class Platform:
         @return: C{True} if the current platform has been detected as Vista
         """
         if getattr(sys, "getwindowsversion", None) is not None:
-            return sys.getwindowsversion()[0] == 6
+            return sys.getwindowsversion()[0] == 6  # type: ignore[no-any-return, attr-defined]
         else:
             return False
 
