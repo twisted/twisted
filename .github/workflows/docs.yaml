@@ -28,7 +28,7 @@ jobs:
       with:
         path: ${{ steps.pip-cache.outputs.dir }}
         key:
-          ${{ runner.os }}-pip-${{ hashFiles('pyproject.toml', 'setup.py',
+          ${{ runner.os }}-test-pip-${{ hashFiles('pyproject.toml', 'setup.py',
           'setup.cfg', 'tox.ini') }}
         restore-keys: |
             ${{ runner.os }}-pip-
