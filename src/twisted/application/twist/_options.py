@@ -184,7 +184,7 @@ class TwistOptions(Options):
         self,
     ) -> Iterable[Tuple[str, None, Callable[[IServiceMaker], Options], str]]:
         plugins = self.plugins
-        for name in sorted(plugins):
+        for name in sorted(plugins, key=lambda x: (x is None, x)):
             plugin = plugins[name]
 
             # Don't pass plugin.options along in order to avoid resolving the
