@@ -25,7 +25,7 @@ jobs:
 
     - name: Install dependencies
       run: |
-        python -m pip install --upgrade pip tox
+        python -m pip install --upgrade tox
         tox --notest -e narrativedocs,apidocs
 
     - name: Check the narrative documentation
