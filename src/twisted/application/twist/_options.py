@@ -170,21 +170,21 @@ class TwistOptions(Options):
             self["reactor"] = self.installReactor(self["reactorName"])
 
     @property
-    def plugins(self) -> Mapping[Optional[str], IServiceMaker]:
+    def plugins(self) -> Mapping[str, IServiceMaker]:
         if "plugins" not in self:
             plugins = {}
             for plugin in getPlugins(IServiceMaker):
                 plugins[plugin.tapname] = plugin
             self["plugins"] = plugins
 
-        return cast(Mapping[Optional[str], IServiceMaker], self["plugins"])
+        return cast(Mapping[str, IServiceMaker], self["plugins"])
 
     @property
     def subCommands(
         self,
     ) -> Iterable[Tuple[str, None, Callable[[IServiceMaker], Options], str]]:
         plugins = self.plugins
-        for name in sorted(plugins, key=lambda x: (x is None, x)):
+        for name in sorted(plugins):
             plugin = plugins[name]
 
             # Don't pass plugin.options along in order to avoid resolving the
