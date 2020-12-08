@@ -35,7 +35,7 @@ jobs:
 
     - name: Install dependencies
       run: |
-        python -m pip install --upgrade pip tox virtualenv==20.2.1
+        python -m pip install --upgrade pip tox
         tox --notest -e narrativedocs,apidocs
 
     - name: Check the narrative documentation
