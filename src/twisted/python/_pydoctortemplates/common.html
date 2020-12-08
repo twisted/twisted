@@ -35,18 +35,13 @@
 
       <div class="page-header">
         <t:slot name="heading"><h1>Heading</h1></t:slot>
-
-        <span id="partOf">
-          <t:slot name="part">Part of something</t:slot>
-          <a t:render="source">View Source</a>
-          <a t:render="inhierarchy">(View In Hierarchy)</a>
-        </span>
       </div>
 
       <div class="extrasDocstring">
         <t:slot name="extras">
-          A docstring.
+          Inheritance info.
         </t:slot>
+        <p><a t:render="inhierarchy">View In Hierarchy</a></p>
       </div>
 
       <t:transparent t:render="deprecated" />
