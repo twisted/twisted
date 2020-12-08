@@ -223,8 +223,7 @@ class MessageSet:
         largest number in use.  Must be set before attempting to
         use the MessageSet as a container.
 
-        @raises: L{ValueError} if a largest value has already
-        been set.
+        @raises ValueError: if a largest value has already been set.
         """
         return self._last
 
