@@ -107,10 +107,7 @@ class Platform:
 
         @return: C{True} if the current platform has been detected as Vista
         """
-        if getattr(sys, "getwindowsversion", None) is not None:
-            return sys.getwindowsversion()[0] == 6
-        else:
-            return False
+        return sys.platform == "win32" and sys.getwindowsversion().major == 6
 
     def isLinux(self) -> bool:
         """

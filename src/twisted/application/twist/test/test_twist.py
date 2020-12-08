@@ -108,8 +108,10 @@ class TwistTests(twisted.trial.unittest.TestCase):
         options = Twist.options(["twist", "web"])
 
         reactor = options["reactor"]
+        subCommand = options.subCommand
+        assert subCommand is not None
         service = Twist.service(
-            plugin=options.plugins[options.subCommand],
+            plugin=options.plugins[subCommand],
             options=options.subOptions,
         )
 
