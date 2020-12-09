@@ -267,87 +267,6 @@ class NoDocumentsFound(Exception):
     """
 
 
-class APIBuilder:
-    """
-    Generate API documentation from source files using
-    U{pydoctor<https://github.com/twisted/pydoctor>}.  This requires
-    pydoctor to be installed and usable.
-    """
-
-    def build(self, projectName, projectURL, sourceURL, packagePath, outputPath):
-        """
-        Call pydoctor's entry point with options which will generate HTML
-        documentation for the specified package's API.
-
-        @type projectName: C{str}
-        @param projectName: The name of the package for which to generate
-            documentation.
-
-        @type projectURL: C{str}
-        @param projectURL: The location (probably an HTTP URL) of the project
-            on the web.
-
-        @type sourceURL: C{str}
-        @param sourceURL: The location (probably an HTTP URL) of the root of
-            the source browser for the project.
-
-        @type packagePath: L{FilePath}
-        @param packagePath: The path to the top-level of the package named by
-            C{projectName}.
-
-        @type outputPath: L{FilePath}
-        @param outputPath: An existing directory to which the generated API
-            documentation will be written.
-        """
-        intersphinxes = []
-
-        for intersphinx in intersphinxURLs:
-            intersphinxes.append("--intersphinx")
-            intersphinxes.append(intersphinx)
-
-        # Super awful monkeypatch that will selectively use our templates.
-        from pydoctor.templatewriter import util
-
-        originalTemplatefile = util.templatefile
-
-        def templatefile(filename):
-
-            if filename in ["summary.html", "index.html", "common.html"]:
-                twistedPythonDir = FilePath(__file__).parent()
-                templatesDir = twistedPythonDir.child("_pydoctortemplates")
-                return templatesDir.child(filename).path
-            else:
-                return originalTemplatefile(filename)
-
-        monkeyPatch = MonkeyPatcher((util, "templatefile", templatefile))
-        monkeyPatch.patch()
-
-        from pydoctor.driver import main
-
-        args = [
-            "--project-name",
-            projectName,
-            "--project-url",
-            projectURL,
-            "--system-class",
-            "twisted.python._pydoctor.TwistedSystem",
-            "--project-base-dir",
-            packagePath.parent().path,
-            "--html-viewsource-base",
-            sourceURL,
-            "--add-package",
-            packagePath.path,
-            "--html-output",
-            outputPath.path,
-            "--html-write-function-pages",
-            "--quiet",
-            "--make-html",
-        ] + intersphinxes
-        main(args)
-
-        monkeyPatch.restore()
-
-
 class SphinxBuilder:
     """
     Generate HTML documentation using Sphinx.
@@ -484,14 +403,55 @@ class BuildAPIDocsScript:
             "https://github.com/twisted/twisted/tree/"
             "twisted-%s" % (versionString,) + "/src"
         )
-        apiBuilder = APIBuilder()
-        apiBuilder.build(
-            "Twisted",
-            "http://twistedmatrix.com/",
+        projectName = "Twisted"
+        projectURL = "http://twistedmatrix.com/"
+        packagePath = projectRoot.child("twisted")
+
+        intersphinxes = []
+        for intersphinx in intersphinxURLs:
+            intersphinxes.append("--intersphinx")
+            intersphinxes.append(intersphinx)
+
+        # Super awful monkeypatch that will selectively use our templates.
+        from pydoctor.templatewriter import util
+
+        originalTemplatefile = util.templatefile
+
+        def templatefile(filename):
+
+            if filename in ["summary.html", "index.html", "common.html"]:
+                twistedPythonDir = FilePath(__file__).parent()
+                templatesDir = twistedPythonDir.child("_pydoctortemplates")
+                return templatesDir.child(filename).path
+            else:
+                return originalTemplatefile(filename)
+
+        monkeyPatch = MonkeyPatcher((util, "templatefile", templatefile))
+        monkeyPatch.patch()
+
+        from pydoctor.driver import main
+
+        args = intersphinxes + [
+            "--project-name",
+            projectName,
+            "--project-url",
+            projectURL,
+            "--system-class",
+            "twisted.python._pydoctor.TwistedSystem",
+            "--project-base-dir",
+            packagePath.parent().path,
+            "--html-viewsource-base",
             sourceURL,
-            projectRoot.child("twisted"),
-            output,
-        )
+            "--html-output",
+            output.path,
+            "--html-write-function-pages",
+            "--quiet",
+            "--make-html",
+            packagePath.path,
+        ]
+        main(args)
+
+        monkeyPatch.restore()
 
     def main(self, args):
         """
