@@ -35,7 +35,10 @@ jobs:
 
     - name: Install dependencies
       run: |
+        echo "::group::Pre-deps "
         python -m pip install --upgrade pip tox
+        echo "::endgroup::"
+
         tox --notest -e narrativedocs,apidocs
 
     - name: Check the narrative documentation
