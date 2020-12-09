@@ -442,7 +442,7 @@ class APIBuilderTests(ExternalTempdirTestCase):
             "Docstring not in package documentation file.",
         )
         self.assertIn(
-            '<a href="{}/{}">View Source</a>'.format(sourceURL, packageName),
+            '<a href="{}/{}/__init__.py">(source)</a>'.format(sourceURL, packageName),
             quuxPath.getContent().decode(),
         )
         self.assertIn(
@@ -505,7 +505,7 @@ class APIBuilderTests(ExternalTempdirTestCase):
         # source code.
         self.assertIn(
             '<a href="https://github.com/twisted/twisted/tree/'
-            'twisted-1.0.0/src/twisted">View Source</a>',
+            'twisted-1.0.0/src/twisted/__init__.py">(source)</a>',
             twistedPath.getContent().decode(),
         )
 
