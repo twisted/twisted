@@ -52,6 +52,9 @@ if sys.platform != "win32":
 else:
     skip = "Release toolchain only supported on POSIX."
 
+if sys.version_info[0:2] in [(3, 5)]:
+    skip = "Release toolchain not supported on this Python version."
+
 
 class ExternalTempdirTestCase(TestCase):
     """
