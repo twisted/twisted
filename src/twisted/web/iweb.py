@@ -307,7 +307,7 @@ class IRequest(Interface):
 
         @param when: The last time the resource being returned was modified, in
             seconds since the epoch.
-        @type when: L{int}, L{long} or L{float}
+        @type when: L{int} or L{float}
 
         @return: If I am a C{If-Modified-Since} conditional request and the time
             given is not newer than the condition, I return
@@ -413,9 +413,9 @@ class ICredentialFactory(Interface):
         """
         Generate a new challenge to be sent to a client.
 
-        @type peer: L{twisted.web.http.Request}
-        @param peer: The request the response to which this challenge will be
-            included.
+        @type request: L{twisted.web.http.Request}
+        @param request: The request the response to which this challenge will
+            be included.
 
         @rtype: L{dict}
         @return: A mapping from L{str} challenge fields to associated L{str}

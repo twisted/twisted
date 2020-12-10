@@ -48,37 +48,10 @@ from twisted.python._release import (
     IVCSCommand,
 )
 
-if os.name != "posix":
+if sys.platform != "win32":
+    skip = None
+else:
     skip = "Release toolchain only supported on POSIX."
-else:
-    skip = ""
-
-testingSphinxConf = "master_doc = 'index'\n"
-
-if requireModule("pydoctor.driver"):
-    pydoctorSkip, pydoctorSkipText = False, ""
-else:
-    # it might not be installed, or it might use syntax not available in
-    # this version of Python.
-    pydoctorSkip, pydoctorSkipText = True, "Pydoctor is not present."
-
-
-if which("sphinx-build"):
-    sphinxSkip, sphinxSkipText = False, ""
-else:
-    sphinxSkip, sphinxSkipText = True, "Sphinx not available."
-
-
-if which("git"):
-    gitVersion = runCommand(["git", "--version"]).split(b" ")[2].split(b".")
-
-    # We want git 2.0 or above.
-    if int(gitVersion[0]) >= 2:
-        gitSkip, gitSkipText = False, ""
-    else:
-        gitSkip, gitSkipText = True, "old git is present"
-else:
-    gitSkip, gitSkipText = True, "git is not present."
 
 
 class ExternalTempdirTestCase(TestCase):
@@ -91,7 +64,7 @@ class ExternalTempdirTestCase(TestCase):
         """
         Make our own directory.
         """
-        newDir = tempfile.mkdtemp(dir="/tmp/")
+        newDir = tempfile.mkdtemp(dir=tempfile.gettempdir())
         self.addCleanup(shutil.rmtree, newDir)
         return newDir
 
@@ -183,7 +156,7 @@ class StructureAssertingMixin:
                 child.createDirectory()
                 self.createStructure(child, dirDict[x])
             else:
-                child.setContent(dirDict[x].replace("\n", os.linesep).encode("utf-8"))
+                child.setContent(dirDict[x].replace("\n", os.linesep).encode())
 
     def assertStructure(self, root, dirDict):
         """
@@ -205,7 +178,7 @@ class StructureAssertingMixin:
                 self.assertTrue(child.isdir(), "{} is not a dir!".format(child.path))
                 self.assertStructure(child, expectation)
             else:
-                actual = child.getContent().decode("utf-8").replace(os.linesep, "\n")
+                actual = child.getContent().decode().replace(os.linesep, "\n")
                 self.assertEqual(actual, expectation)
             children.remove(pathSegment)
         if children:
@@ -250,7 +223,7 @@ class ProjectTests(ExternalTempdirTestCase):
                 directory.createDirectory()
             directory.child("__init__.py").setContent(b"")
         directory.child("newsfragments").createDirectory()
-        directory.child("_version.py").setContent(genVersion(*version).encode("utf-8"))
+        directory.child("_version.py").setContent(genVersion(*version).encode())
         return Project(directory)
 
     def makeProjects(self, *versions):
@@ -404,7 +377,14 @@ class DoNotFailTests(TestCase):
             self.assertIsInstance(e, FailTest)
 
 
-@skipIf(pydoctorSkip, pydoctorSkipText)
+pydoctor = requireModule("pydoctor")
+
+
+@skipIf(pydoctor is None, "Pydoctor is not present.")
+@skipIf(
+    pydoctor is not None and pydoctor.__version__ < Version("pydoctor", 20, 12, 1),
+    "Pydoctor 20.12.1 or later is required.",
+)
 class APIBuilderTests(ExternalTempdirTestCase):
     """
     Tests for L{APIBuilder}.
@@ -432,7 +412,7 @@ class APIBuilderTests(ExternalTempdirTestCase):
             "def foo():\n"
             "    '{}'\n"
             "def _bar():\n"
-            "    '{}'".format(docstring, privateDocstring).encode("utf-8")
+            "    '{}'".format(docstring, privateDocstring).encode()
         )
 
         outputPath = FilePath(self.mktemp())
@@ -462,7 +442,7 @@ class APIBuilderTests(ExternalTempdirTestCase):
             "Docstring not in package documentation file.",
         )
         self.assertIn(
-            '<a href="{}/{}">View Source</a>'.format(sourceURL, packageName),
+            '<a href="{}/{}/__init__.py">(source)</a>'.format(sourceURL, packageName),
             quuxPath.getContent().decode(),
         )
         self.assertIn(
@@ -491,7 +471,7 @@ class APIBuilderTests(ExternalTempdirTestCase):
         packagePath = projectRoot.child("twisted")
         packagePath.makedirs()
         packagePath.child("__init__.py").setContent(
-            "def foo():\n" "    '{}'\n".format(docstring).encode("utf-8")
+            "def foo():\n" "    '{}'\n".format(docstring).encode()
         )
         packagePath.child("_version.py").setContent(
             genVersion("twisted", 1, 0, 0).encode()
@@ -506,8 +486,8 @@ class APIBuilderTests(ExternalTempdirTestCase):
             indexPath.exists(), "API index {} did not exist.".format(outputPath.path)
         )
         self.assertIn(
-            b'<a href="http://twistedmatrix.com/">Twisted</a>',
-            indexPath.getContent(),
+            '<a href="http://twistedmatrix.com/">Twisted</a>',
+            indexPath.getContent().decode(),
             "Project name/location not in file contents.",
         )
 
@@ -524,9 +504,9 @@ class APIBuilderTests(ExternalTempdirTestCase):
         # Here we check that it figured out the correct version based on the
         # source code.
         self.assertIn(
-            b'<a href="https://github.com/twisted/twisted/tree/'
-            b'twisted-1.0.0/src/twisted">View Source</a>',
-            twistedPath.getContent(),
+            '<a href="https://github.com/twisted/twisted/tree/'
+            'twisted-1.0.0/src/twisted/__init__.py">(source)</a>',
+            twistedPath.getContent().decode(),
         )
 
         self.assertEqual(stdout.getvalue(), b"")
@@ -544,24 +524,27 @@ class APIBuilderTests(ExternalTempdirTestCase):
         projectURL = "scheme:project"
         sourceURL = "scheme:source"
 
+        docstring = "text in docstring"
+        privateDocstring = "should also appear in output"
+
         inputPath = FilePath(self.mktemp()).child(packageName)
         inputPath.makedirs()
         inputPath.child("__init__.py").setContent(
-            b"from twisted.python.deprecate import deprecated\n"
-            b"from incremental import Version\n"
-            b"from twisted.python import deprecate\n"
-            b"import incremental\n"
-            b"\n"
-            b"@deprecated(Version('Twisted', 15, 0, 0), "
-            b"'Baz')\n"
-            b"def foo():\n"
-            b"    'text in foo docstring'\n"
-            b"@deprecate.deprecated(incremental.Version('Twisted', 16, 0, 0))\n"
-            b"def _bar():\n"
-            b"    'should also appear in _bar output'\n"
-            b"@deprecated(Version('Twisted', 14, 2, 3), replacement='stuff')\n"
-            b"class Baz:\n"
-            b"    pass"
+            "from twisted.python.deprecate import deprecated\n"
+            "from incremental import Version\n"
+            "@deprecated(Version('Twisted', 15, 0, 0), "
+            "'Baz')\n"
+            "def foo():\n"
+            "    '{}'\n"
+            "from twisted.python import deprecate\n"
+            "import incremental\n"
+            "@deprecate.deprecated(incremental.Version('Twisted', 16, 0, 0))\n"
+            "def _bar():\n"
+            "    '{}'\n"
+            "@deprecated(Version('Twisted', 14, 2, 3), replacement='stuff')\n"
+            "class Baz:\n"
+            "    pass"
+            "".format(docstring, privateDocstring).encode()
         )
 
         outputPath = FilePath(self.mktemp())
@@ -576,33 +559,31 @@ class APIBuilderTests(ExternalTempdirTestCase):
         )
 
         self.assertIn(
-            b"text in foo docstring",
-            quuxPath.getContent(),
+            docstring,
+            quuxPath.getContent().decode(),
             "Docstring not in package documentation file.",
         )
         self.assertIn(
-            b"foo was deprecated in Twisted 15.0.0; please use Baz instead.",
-            quuxPath.getContent(),
+            "foo was deprecated in Twisted 15.0.0; please use Baz instead.",
+            quuxPath.getContent().decode(),
         )
-        # FIXME:https://github.com/twisted/pydoctor/issues/234
-        # The assertion should be reneabled after pydoctor is fixed.
-        # self.assertIn(b"_bar was deprecated in Twisted 16.0.0.", quuxPath.getContent())
-        # self.assertIn(b"should also appear in _bar output", quuxPath.getContent())
+        self.assertIn(
+            "_bar was deprecated in Twisted 16.0.0.", quuxPath.getContent().decode()
+        )
+        self.assertIn(privateDocstring, quuxPath.getContent().decode())
 
         # There should also be a page for the foo function in quux.
         self.assertTrue(quuxPath.sibling("quux.foo.html").exists())
 
         self.assertIn(
-            b"foo was deprecated in Twisted 15.0.0; please use Baz instead.",
-            quuxPath.sibling("quux.foo.html").getContent(),
+            "foo was deprecated in Twisted 15.0.0; please use Baz instead.",
+            quuxPath.sibling("quux.foo.html").getContent().decode(),
         )
 
-        # FIXME:https://github.com/twisted/pydoctor/issues/234
-        # The assertion should be reneabled after pydoctor is fixed.
-        # self.assertIn(
-        #     b"Baz was deprecated in Twisted 14.2.3; please use stuff instead.",
-        #     quuxPath.sibling("quux.Baz.html").getContent(),
-        # )
+        self.assertIn(
+            "Baz was deprecated in Twisted 14.2.3; please use stuff instead.",
+            quuxPath.sibling("quux.Baz.html").getContent().decode(),
+        )
 
         self.assertEqual(stdout.getvalue(), b"")
 
@@ -685,7 +666,7 @@ class FilePathDeltaTests(TestCase):
         )
 
 
-@skipIf(sphinxSkip, sphinxSkipText)
+@skipIf(not which("sphinx-build"), "Sphinx not available.")
 class SphinxBuilderTests(TestCase):
     """
     Tests for L{SphinxBuilder}.
@@ -743,8 +724,8 @@ class SphinxBuilderTests(TestCase):
         files.  This includes a single source file ('index.rst') and the
         smallest 'conf.py' file possible in order to find that source file.
         """
-        self.sourceDir.child("conf.py").setContent(self.confContent.encode("utf-8"))
-        self.sourceDir.child("index.rst").setContent(self.indexContent.encode("utf-8"))
+        self.sourceDir.child("conf.py").setContent(self.confContent.encode())
+        self.sourceDir.child("index.rst").setContent(self.indexContent.encode())
 
     def verifyFileExists(self, fileDir, fileName):
         """
@@ -923,7 +904,6 @@ class CommandsTestMixin(StructureAssertingMixin):
         self.assertStructure(exportDir, structure)
 
 
-@skipIf(gitSkip, gitSkipText)
 class GitCommandTest(CommandsTestMixin, ExternalTempdirTestCase):
     """
     Specific L{CommandsTestMixin} related to Git repositories through
@@ -958,7 +938,6 @@ class GitCommandTest(CommandsTestMixin, ExternalTempdirTestCase):
         runCommand(["git", "-C", repository.path, "commit", "-m", "hop"])
 
 
-@skipIf(gitSkip, gitSkipText)
 class RepositoryCommandDetectionTest(ExternalTempdirTestCase):
     """
     Test the L{getRepositoryCommand} to access the right set of VCS commands
@@ -996,7 +975,6 @@ class VCSCommandInterfaceTests(TestCase):
         self.assertTrue(IVCSCommand.implementedBy(GitCommand))
 
 
-@skipIf(gitSkip, gitSkipText)
 class CheckNewsfragmentScriptTests(ExternalTempdirTestCase):
     """
     L{CheckNewsfragmentScript}.

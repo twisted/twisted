@@ -319,7 +319,7 @@ class ProcessTerminated(ConnectionLost):
     def __init__(self, exitCode=None, signal=None, status=None):
         """
         @param exitCode: The exit status of the process.  This is roughly like
-            the value you might pass to L{os.exit}.  This is L{None} if the
+            the value you might pass to L{os._exit}.  This is L{None} if the
             process exited due to a signal.
         @type exitCode: L{int} or L{None}
 

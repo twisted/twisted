@@ -799,7 +799,7 @@ class _OPTHeader(tputil.FancyStrMixin, tputil.FancyEqMixin):
         """
         Encode this L{_OPTHeader} instance to bytes.
 
-        @type strio: L{file}
+        @type strio: file
         @param strio: the byte representation of this L{_OPTHeader}
             will be written to this file.
 
@@ -825,7 +825,7 @@ class _OPTHeader(tputil.FancyStrMixin, tputil.FancyEqMixin):
         """
         Decode bytes into an L{_OPTHeader} instance.
 
-        @type strio: L{file}
+        @type strio: file
         @param strio: Bytes will be read from this file until the full
             L{_OPTHeader} is decoded.
 
@@ -909,7 +909,7 @@ class _OPTVariableOption(tputil.FancyStrMixin, tputil.FancyEqMixin):
         """
         Encode this L{_OPTVariableOption} to bytes.
 
-        @type strio: L{file}
+        @type strio: file
         @param strio: the byte representation of this
             L{_OPTVariableOption} will be written to this file.
 
@@ -924,7 +924,7 @@ class _OPTVariableOption(tputil.FancyStrMixin, tputil.FancyEqMixin):
         """
         Decode bytes into an L{_OPTVariableOption} instance.
 
-        @type strio: L{file}
+        @type strio: file
         @param strio: Bytes will be read from this file until the full
             L{_OPTVariableOption} is decoded.
 
@@ -2725,7 +2725,7 @@ class Message(tputil.FancyEqMixin):
 
         @return: An object which implements L{IRecord} or L{None} if none
             can be found for the given type.
-        @rtype: L{types.ClassType}
+        @rtype: C{Type[IRecord]}
         """
         return self._recordTypes.get(type, UnknownRecord)
 

@@ -245,8 +245,7 @@ class ESMTPManagedRelayerFactory(SMTPManagedRelayerFactory):
             (0) L{bytes}, (1), L{int}
         @param args: Positional arguments for L{SMTPClient.__init__}
 
-        @type pKwArgs: L{dict}
-        @param pKwArgs: Keyword arguments for L{SMTPClient.__init__}
+        @param kw: Keyword arguments for L{SMTPClient.__init__}
         """
         self.secret = secret
         self.contextFactory = contextFactory
@@ -456,7 +455,7 @@ class Queue:
         @type message: L{bytes}
         @param message: The base filename of a message.
 
-        @rtype: L{file}
+        @rtype: file
         @return: The envelope file for the message.
         """
         return open(os.path.join(self.directory, message + "-H"), "rb")
@@ -465,7 +464,7 @@ class Queue:
         """
         Create a new message in the queue.
 
-        @rtype: 2-L{tuple} of (0) L{file}, (1) L{FileMessage}
+        @rtype: 2-L{tuple} of (0) file, (1) L{FileMessage}
         @return: The envelope file and a message receiver for a new message in
             the queue.
         """

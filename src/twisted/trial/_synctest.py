@@ -980,7 +980,7 @@ class SynchronousTestCase(_Assertions):
         See L{TestCase} docstring for more details.
         """
         skipReason = util.acquireAttribute(self._parents, "skip", None)
-        doSkip = skipReason not in [None, ""]
+        doSkip = skipReason is not None
         if skipReason is None:
             doSkip = getattr(self, "__unittest_skip__", False)
             if doSkip:

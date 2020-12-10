@@ -173,7 +173,7 @@ class StubSessionForStubAvatarWithEnv(StubSessionForStubAvatar):
     setting.
 
     End users would want to have the same class annotated with
-    @implementer(session.ISession, session.ISessionSetEnv). The interfaces
+    C{@implementer(session.ISession, session.ISessionSetEnv)}. The interfaces
     are split for backwards compatibility, so we split it here to test
     this compatibility too.
 

@@ -78,7 +78,7 @@ class LocalWorkerAMP(AMP):
 
         @param error: An C{Exception} instance.
 
-        @param error: The class name of the C{error} class.
+        @param errorClass: The class name of the C{error} class.
 
         @param frames: A flat list of strings representing the information need
             to approximatively rebuild C{Failure} frames.

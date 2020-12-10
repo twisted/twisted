@@ -37,7 +37,7 @@ class ThreadWorker:
 
         @param queue: A L{Queue} to use to give tasks to the thread created by
             C{startThread}.
-        @param queue: L{Queue}
+        @type queue: L{Queue}
         """
         self._q = queue
         self._hasQuit = Quit()

@@ -1437,7 +1437,7 @@ class POP3Client(basic.LineOnlyReceiver):
     @type command: L{bytes}
     @ivar command: The command most recently sent to the server.
 
-    @type welcomeRe: L{RegexObject <re.RegexObject>}
+    @type welcomeRe: L{Pattern <re.Pattern.search>}
     @ivar welcomeRe: A regular expression which matches the APOP challenge in
         the server greeting.
 
@@ -1676,12 +1676,14 @@ class POP3Client(basic.LineOnlyReceiver):
         self.sendShort(b"QUIT")
 
 
-from twisted.mail.pop3client import POP3Client as AdvancedPOP3Client
-from twisted.mail.pop3client import InsecureAuthenticationDisallowed
-from twisted.mail.pop3client import ServerErrorResponse
-from twisted.mail.pop3client import LineTooLong
-from twisted.mail.pop3client import TLSError
-from twisted.mail.pop3client import TLSNotSupportedError
+from twisted.mail._pop3client import POP3Client as AdvancedPOP3Client
+from twisted.mail._except import (
+    InsecureAuthenticationDisallowed,
+    ServerErrorResponse,
+    LineTooLong,
+    TLSError,
+    TLSNotSupportedError,
+)
 
 __all__ = [
     # Interfaces

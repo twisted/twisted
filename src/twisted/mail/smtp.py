@@ -2137,7 +2137,7 @@ def sendmail(
 
     @param to_addrs: A list of addresses to send this mail to.  A string will
         be treated as a list of one address.
-    @type to_addr: L{list} of L{bytes} or L{bytes}
+    @type to_addrs: L{list} of L{bytes} or L{bytes}
 
     @param msg: The message, including headers, either as a file or a string.
         File-like objects need to support read() and close(). Lines must be
