@@ -86,7 +86,6 @@ recursive-include docs *.txt
 recursive-include docs *.users
 recursive-include docs *.xml
 recursive-include docs Makefile
-exclude docs/api/apidocs.pydoctor
 prune docs/_build
 
 # Don't have the real old historic docs

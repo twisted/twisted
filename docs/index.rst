@@ -15,10 +15,7 @@ Contents:
     pair/index
     web/index
     words/index
-
-
-* `API Documentation <api/index.html>`_
-
+    api/index
 
 .. toctree::
     :maxdepth: 1

@@ -14,8 +14,6 @@ which must run on multiple platforms (eg the setup.py script).
 
 import os
 import sys
-from contextlib import redirect_stdout
-from io import StringIO
 from typing import Dict
 
 from zope.interface import Interface, implementer
@@ -468,7 +466,7 @@ class NotWorkingDirectory(Exception):
 
 class BuildAPIDocsScript:
     """
-    Helper for building API documentation. See L{main}.
+    A thing for building API documentation. See L{main}.
     """
 
     def buildAPIDocs(self, projectRoot, output):
@@ -502,22 +500,12 @@ class BuildAPIDocsScript:
         @param args: The command line arguments to process.  This must contain
             two strings: the path to the root of the Twisted checkout, and a
             path to an output directory.
-
-        @return: The list of build errors.
-        @rtype: List of L{str}
-
         """
         if len(args) != 2:
             sys.exit(
                 "Must specify two arguments: " "Twisted checkout and destination path"
             )
-
-        capture = StringIO()
-        with redirect_stdout(capture):
-            self.buildAPIDocs(FilePath(args[0]), FilePath(args[1]))
-
-        output = capture.getvalue().strip()
-        return output.splitlines()
+        self.buildAPIDocs(FilePath(args[0]), FilePath(args[1]))
 
 
 class CheckNewsfragmentScript:

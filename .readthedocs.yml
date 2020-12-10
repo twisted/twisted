@@ -1,7 +1,8 @@
 version: 2
 
 sphinx:
-  # This should not fail on errors.
+  # This should not fail on errors so that we can view the rended Read The Docs.
+  # pages even on errors.
   # We have a separate build process which fails on errors and shows all
   # the errors in one go.
   fail_on_warning: False

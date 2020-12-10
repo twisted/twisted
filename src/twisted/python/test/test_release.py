@@ -523,7 +523,6 @@ class APIBuilderTests(ExternalTempdirTestCase):
         packageName = "quux"
         projectURL = "scheme:project"
         sourceURL = "scheme:source"
-
         docstring = "text in docstring"
         privateDocstring = "should also appear in output"
 
@@ -600,27 +599,13 @@ class APIBuilderTests(ExternalTempdirTestCase):
     def test_apiBuilderScriptMain(self):
         """
         The API building script invokes the same code that
-        L{test_buildWithPolicy} tests and captures the standard output
-        returning it as list of lines.
+        L{test_buildWithPolicy} tests.
         """
         script = BuildAPIDocsScript()
         calls = []
-
-        def buildAPIDocs_mock(a, b):
-            """
-            Injected method to unit test the main script behavior without
-            calling the whole pydoctor build.
-            """
-            calls.append((a, b))
-            print("First line.")
-            print("Second line...")
-
-        script.buildAPIDocs = buildAPIDocs_mock
-
-        result = script.main(["hello", "there"])
-
+        script.buildAPIDocs = lambda a, b: calls.append((a, b))
+        script.main(["hello", "there"])
         self.assertEqual(calls, [(FilePath("hello"), FilePath("there"))])
-        self.assertEqual(["First line.", "Second line..."], result)
 
 
 class FilePathDeltaTests(TestCase):

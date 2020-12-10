@@ -13,6 +13,8 @@
 
 import sys
 import os
+import pathlib
+import subprocess
 
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
@@ -30,6 +32,7 @@ needs_sphinx = "1.2"
 # ones.
 extensions = [
     "sphinx.ext.intersphinx",
+    "pydoctor.sphinx_ext.build_apidocs",
 ]
 
 try:
@@ -41,7 +44,6 @@ except ImportError:
 
 extensions.append("apilinks")
 extensions.append("traclinks")
-extensions.append("apidocs")
 
 from twisted import version as twisted_version_object
 
@@ -177,6 +179,45 @@ if on_rtd:
         os.environ["READTHEDOCS_LANGUAGE"],
         os.environ["READTHEDOCS_VERSION"],
     )
+
+# Try to find URL fragment for the GitHub source page based on current
+# branch or tag.
+_git_reference = subprocess.getoutput("git rev-parse --abbrev-ref HEAD")
+if _git_reference == "HEAD":
+    # It looks like the branch has no name.
+    # Fallback to commit ID.
+    _git_reference = subprocess.getoutput("git rev-parse HEAD")
+
+if os.environ.get("READTHEDOCS", "") == "True":
+    rtd_version = os.environ.get("READTHEDOCS_VERSION", "")
+    if "." in rtd_version:
+        # It looks like we have a tag build.
+        _git_reference = rtd_version
+
+_source_root = pathlib.Path(__file__).parent.parent / "src"
+pydoctor_args = [
+    "--quiet",
+    "--make-html",
+    "--html-write-function-pages",
+    f"--html-viewsource-base=https://github.com/twisted/twisted/tree/{_git_reference}/src",
+    "--project-name=Twisted",
+    "--project-url=https://twistedmatrix.com/",
+    "--system-class=twisted.python._pydoctor.TwistedSystem",
+    "--docformat=epytext",
+    "--intersphinx=https://docs.python.org/3/objects.inv",
+    "--intersphinx=https://cryptography.io/en/latest/objects.inv",
+    "--intersphinx=https://pyopenssl.readthedocs.io/en/stable/objects.inv",
+    "--intersphinx=https://hyperlink.readthedocs.io/en/stable/objects.inv",
+    "--intersphinx=https://twisted.github.io/constantly/docs/objects.inv",
+    "--intersphinx=https://twisted.github.io/incremental/docs/objects.inv",
+    "--intersphinx=https://hyper-h2.readthedocs.io/en/stable/objects.inv",
+    "--intersphinx=https://priority.readthedocs.io/en/stable/objects.inv",
+    "--intersphinx=https://zopeinterface.readthedocs.io/en/latest/objects.inv",
+    "--intersphinx=https://automat.readthedocs.io/en/latest/objects.inv",
+    f"--project-base-dir={_source_root}",
+    "--html-output={outdir}/api",
+    str(_source_root / "twisted"),
+]
 
 traclinks_base_url = "https://twistedmatrix.com/trac"
 

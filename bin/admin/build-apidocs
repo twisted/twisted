@@ -15,13 +15,4 @@
 import sys
 from twisted.python._release import BuildAPIDocsScript
 
-errors = BuildAPIDocsScript().main(sys.argv[1:])
-
-if not errors:
-    # Build was successful.
-    sys.exit(0)
-
-for line in errors:
-    # Emit captured pydoctor output as warnings.
-    print(line, file=sys.stderr)
-sys.exit(1)
+BuildAPIDocsScript().main(sys.argv[1:])
