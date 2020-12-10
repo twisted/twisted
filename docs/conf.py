@@ -167,7 +167,13 @@ epub_copyright = "2020, Twisted Matrix Labs"
 
 
 # -- Extension configuration ----------------------------------------------
-_git_reference = subprocess.getoutput("git rev-parse --abbrev-ref HEAD")
+_git_reference = subprocess.run(
+    ["git", "rev-parse", "--abbrev-ref", "HEAD"],
+    text=True,
+    encoding="utf8",
+    capture_output=True,
+    check=True,
+).stdout
 
 
 print("== Environment dump for {} ===".format(_git_reference))
