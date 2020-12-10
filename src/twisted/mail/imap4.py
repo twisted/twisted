@@ -219,17 +219,20 @@ class MessageSet:
     @property
     def last(self):
         """
-        Replaces all occurrences of "*".  This should be the
-        largest number in use.  Must be set before attempting to
-        use the MessageSet as a container.
-
-        @raises: L{ValueError} if a largest value has already
-        been set.
+        The largest number in use.
+        This is undefined until it has been set by assigning to this property.
         """
         return self._last
 
     @last.setter
     def last(self, value):
+        """
+        Replaces all occurrences of "*".  This should be the
+        largest number in use.  Must be set before attempting to
+        use the MessageSet as a container.
+
+        @raises ValueError: if a largest value has already been set.
+        """
         if self._last is not self._empty:
             raise ValueError("last already set")
 
