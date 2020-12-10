@@ -15,6 +15,7 @@ import sys
 import os
 import pathlib
 import subprocess
+from pprint import pprint
 
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
@@ -166,6 +167,12 @@ epub_copyright = "2020, Twisted Matrix Labs"
 
 
 # -- Extension configuration ----------------------------------------------
+_git_reference = subprocess.getoutput("git rev-parse --abbrev-ref HEAD")
+
+
+print("== Environment dump for {} ===".format(_git_reference))
+pprint(dict(os.environ))
+print("======")
 
 # Base url for apilinks extension
 apilinks_base_url = "/documents/{}/api/".format(release)
@@ -173,8 +180,8 @@ if on_rtd:
     # For a PR the link is like:
     # https://twisted--1422.org.readthedocs.build/en/1422/
     # For a release:
-    # https://twisted.readthedocs.io/en/twisted-20.3.0/
-    # https://twisted.readthedocs.io/en/latest/
+    # https://docs.twistedmatrix.com/en/twisted-20.3.0/
+    # https://docs.twistedmatrix.com/en/latest/
     apilinks_base_url = "/{}/{}/api/".format(
         os.environ["READTHEDOCS_LANGUAGE"],
         os.environ["READTHEDOCS_VERSION"],
@@ -182,7 +189,7 @@ if on_rtd:
 
 # Try to find URL fragment for the GitHub source page based on current
 # branch or tag.
-_git_reference = subprocess.getoutput("git rev-parse --abbrev-ref HEAD")
+
 if _git_reference == "HEAD":
     # It looks like the branch has no name.
     # Fallback to commit ID.
