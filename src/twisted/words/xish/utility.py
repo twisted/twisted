@@ -7,28 +7,26 @@
 Event Dispatching and Callback utilities.
 """
 
-from __future__ import absolute_import, division
 
 from twisted.python import log
-from twisted.python.compat import iteritems
 from twisted.words.xish import xpath
 
-class _MethodWrapper(object):
+
+class _MethodWrapper:
     """
     Internal class for tracking method calls.
     """
+
     def __init__(self, method, *args, **kwargs):
         self.method = method
         self.args = args
         self.kwargs = kwargs
-
 
     def __call__(self, *args, **kwargs):
         nargs = self.args + args
         nkwargs = self.kwargs.copy()
         nkwargs.update(kwargs)
         self.method(*nargs, **nkwargs)
-
 
 
 class CallbackList:
@@ -56,7 +54,6 @@ class CallbackList:
     def __init__(self):
         self.callbacks = {}
 
-
     def addCallback(self, onetime, method, *args, **kwargs):
         """
         Add callback.
@@ -72,10 +69,8 @@ class CallbackList:
         @type kwargs: C{dict}
         """
 
-        if not method in self.callbacks:
-            self.callbacks[method] = (_MethodWrapper(method, *args, **kwargs),
-                                      onetime)
-
+        if method not in self.callbacks:
+            self.callbacks[method] = (_MethodWrapper(method, *args, **kwargs), onetime)
 
     def removeCallback(self, method):
         """
@@ -86,7 +81,6 @@ class CallbackList:
 
         if method in self.callbacks:
             del self.callbacks[method]
-
 
     def callback(self, *args, **kwargs):
         """
@@ -108,12 +102,11 @@ class CallbackList:
         for key, (methodwrapper, onetime) in list(self.callbacks.items()):
             try:
                 methodwrapper(*args, **kwargs)
-            except:
+            except BaseException:
                 log.err()
 
             if onetime:
                 del self.callbacks[key]
-
 
     def isEmpty(self):
         """
@@ -123,7 +116,6 @@ class CallbackList:
         """
 
         return len(self.callbacks) == 0
-
 
 
 class EventDispatcher:
@@ -172,16 +164,15 @@ class EventDispatcher:
         self._eventObservers = {}
         self._xpathObservers = {}
         self._dispatchDepth = 0  # Flag indicating levels of dispatching
-                                 # in progress
-        self._updateQueue = [] # Queued updates for observer ops
-
+        # in progress
+        self._updateQueue = []  # Queued updates for observer ops
 
     def _getEventAndObservers(self, event):
         if isinstance(event, xpath.XPathQuery):
             # Treat as xpath
             observers = self._xpathObservers
         else:
-            if self.prefix == event[:len(self.prefix)]:
+            if self.prefix == event[: len(self.prefix)]:
                 # Treat as event
                 observers = self._eventObservers
             else:
@@ -191,7 +182,6 @@ class EventDispatcher:
 
         return event, observers
 
-
     def addOnetimeObserver(self, event, observerfn, priority=0, *args, **kwargs):
         """
         Register a one-time observer for an event.
@@ -200,7 +190,6 @@ class EventDispatcher:
         for a description of the parameters.
         """
         self._addObserver(True, event, observerfn, priority, *args, **kwargs)
-
 
     def addObserver(self, event, observerfn, priority=0, *args, **kwargs):
         """
@@ -225,12 +214,15 @@ class EventDispatcher:
         """
         self._addObserver(False, event, observerfn, priority, *args, **kwargs)
 
-
     def _addObserver(self, onetime, event, observerfn, priority, *args, **kwargs):
         # If this is happening in the middle of the dispatch, queue
         # it up for processing after the dispatch completes
         if self._dispatchDepth > 0:
-            self._updateQueue.append(lambda:self._addObserver(onetime, event, observerfn, priority, *args, **kwargs))
+            self._updateQueue.append(
+                lambda: self._addObserver(
+                    onetime, event, observerfn, priority, *args, **kwargs
+                )
+            )
             return
 
         event, observers = self._getEventAndObservers(event)
@@ -248,7 +240,6 @@ class EventDispatcher:
 
         cbl.addCallback(onetime, observerfn, *args, **kwargs)
 
-
     def removeObserver(self, event, observerfn):
         """
         Remove callable as observer for an event.
@@ -264,14 +255,14 @@ class EventDispatcher:
         # If this is happening in the middle of the dispatch, queue
         # it up for processing after the dispatch completes
         if self._dispatchDepth > 0:
-            self._updateQueue.append(lambda:self.removeObserver(event, observerfn))
+            self._updateQueue.append(lambda: self.removeObserver(event, observerfn))
             return
 
         event, observers = self._getEventAndObservers(event)
 
         emptyLists = []
-        for priority, priorityObservers in iteritems(observers):
-            for query, callbacklist in iteritems(priorityObservers):
+        for priority, priorityObservers in observers.items():
+            for query, callbacklist in priorityObservers.items():
                 if event == query:
                     callbacklist.removeCallback(observerfn)
                     if callbacklist.isEmpty():
@@ -279,7 +270,6 @@ class EventDispatcher:
 
         for priority, query in emptyLists:
             del observers[priority][query]
-
 
     def dispatch(self, obj, event=None):
         """
@@ -315,7 +305,7 @@ class EventDispatcher:
 
         emptyLists = []
         for priority in priorities:
-            for query, callbacklist in iteritems(observers[priority]):
+            for query, callbacklist in observers[priority].items():
                 if match(query, obj):
                     callbacklist.callback(obj)
                     foundTarget = True
@@ -339,8 +329,7 @@ class EventDispatcher:
         return foundTarget
 
 
-
-class XmlPipe(object):
+class XmlPipe:
     """
     XML stream pipe.
 

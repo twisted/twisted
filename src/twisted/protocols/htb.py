@@ -20,6 +20,7 @@ shaper for the Linux kernel<http://luxik.cdi.cz/~devik/qos/htb/>}.
 # time.time.  time.time, it has been pointed out, can go backwards.  Is
 # the same true of os.times?
 from time import time
+from typing import Optional
 from zope.interface import implementer, Interface
 
 from twisted.protocols import pcp
@@ -41,8 +42,8 @@ class Bucket:
     @type rate: C{int}
     """
 
-    maxburst = None
-    rate = None
+    maxburst = None  # type: Optional[int]
+    rate = None  # type: Optional[int]
 
     _refcount = 0
 
@@ -58,7 +59,6 @@ class Bucket:
         self.content = 0
         self.parentBucket = parentBucket
         self.lastDrip = time()
-
 
     def add(self, amount):
         """
@@ -83,7 +83,6 @@ class Bucket:
             allowable = self.parentBucket.add(allowable)
         self.content += allowable
         return allowable
-
 
     def drip(self):
         """
@@ -117,6 +116,7 @@ class IBucketFilter(Interface):
         @returntype: L{Bucket}
         """
 
+
 @implementer(IBucketFilter)
 class HierarchicalBucketFilter:
     """
@@ -127,8 +127,9 @@ class HierarchicalBucketFilter:
     @cvar sweepInterval: Seconds between sweeping out the bucket cache.
     @type sweepInterval: C{int}
     """
+
     bucketFactory = Bucket
-    sweepInterval = None
+    sweepInterval = None  # type: Optional[int]
 
     def __init__(self, parentFilter=None):
         self.buckets = {}
@@ -144,8 +145,9 @@ class HierarchicalBucketFilter:
 
         @returntype: L{Bucket}
         """
-        if ((self.sweepInterval is not None)
-            and ((time() - self.lastSweep) > self.sweepInterval)):
+        if (self.sweepInterval is not None) and (
+            (time() - self.lastSweep) > self.sweepInterval
+        ):
             self.sweep()
 
         if self.parentFilter:
@@ -187,6 +189,7 @@ class FilterByHost(HierarchicalBucketFilter):
     """
     A Hierarchical Bucket filter with a L{Bucket} for each host.
     """
+
     sweepInterval = 60 * 20
 
     def getBucketKey(self, transport):
@@ -197,6 +200,7 @@ class FilterByServer(HierarchicalBucketFilter):
     """
     A Hierarchical Bucket filter with a L{Bucket} for each service.
     """
+
     sweepInterval = None
 
     def getBucketKey(self, transport):
@@ -207,6 +211,7 @@ class ShapedConsumer(pcp.ProducerConsumerProxy):
     """
     Wraps a C{Consumer} and shapes the rate at which it receives data.
     """
+
     # Providing a Pull interface means I don't have to try to schedule
     # traffic with callLaters.
     iAmStreaming = False
@@ -238,9 +243,11 @@ class ShapedTransport(ShapedConsumer):
     will be attempting to access attributes this does not proxy as a
     C{Consumer} (e.g. C{loseConnection}).
     """
+
     # Ugh.  We only wanted to filter IConsumer, not ITransport.
 
     iAmStreaming = False
+
     def __getattr__(self, name):
         # Because people will be doing things like .getPeer and
         # .loseConnection on me.
@@ -260,6 +267,7 @@ class ShapedProtocolFactory:
     Where C{SomeServerFactory} is a L{twisted.internet.protocol.Factory}, and
     C{bucketFilter} is an instance of L{HierarchicalBucketFilter}.
     """
+
     def __init__(self, protoClass, bucketFilter):
         """
         Tell me what to wrap and where to get buckets.
@@ -287,9 +295,11 @@ class ShapedProtocolFactory:
         """
         proto = self.protocol(*a, **kw)
         origMakeConnection = proto.makeConnection
+
         def makeConnection(transport):
             bucket = self.bucketFilter.getBucketFor(transport)
             shapedTransport = ShapedTransport(transport, bucket)
             return origMakeConnection(shapedTransport)
+
         proto.makeConnection = makeConnection
         return proto

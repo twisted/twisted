@@ -14,22 +14,19 @@ the recipient and sends on the message.
 import email.utils
 import os
 import time
-
-try:
-    import cPickle as pickle
-except ImportError:
-    import pickle
+import pickle
+from typing import Type
 
 from twisted.python import log
 from twisted.python.failure import Failure
 from twisted.mail import relay
 from twisted.mail import bounce
 from twisted.internet import protocol
+from twisted.internet.protocol import connectionDone
 from twisted.internet.defer import Deferred, DeferredList
 from twisted.internet.error import DNSLookupError
 from twisted.mail import smtp
 from twisted.application import internet
-
 
 
 class ManagedRelayerMixin:
@@ -39,9 +36,17 @@ class ManagedRelayerMixin:
     Notify the manager about successful mail, failed mail
     and broken connections
     """
+
     def __init__(self, manager):
         self.manager = manager
 
+    @property
+    def factory(self):
+        return self._factory
+
+    @factory.setter
+    def factory(self, value):
+        self._factory = value
 
     def sentMail(self, code, resp, numOk, addresses, log):
         """
@@ -57,8 +62,7 @@ class ManagedRelayerMixin:
         del self.messages[0]
         del self.names[0]
 
-
-    def connectionLost(self, reason):
+    def connectionLost(self, reason: Failure = connectionDone):
         """
         called when connection is broken
 
@@ -67,8 +71,7 @@ class ManagedRelayerMixin:
         self.manager.notifyDone(self.factory)
 
 
-
-class SMTPManagedRelayer(ManagedRelayerMixin, relay.SMTPRelayer):
+class SMTPManagedRelayer(ManagedRelayerMixin, relay.SMTPRelayer):  # type: ignore[misc]
     """
     An SMTP managed relayer.
 
@@ -79,6 +82,7 @@ class SMTPManagedRelayer(ManagedRelayerMixin, relay.SMTPRelayer):
     @ivar factory: The factory that created this relayer.  This must be set by
         the factory.
     """
+
     def __init__(self, messages, manager, *args, **kw):
         """
         @type messages: L{list} of L{bytes}
@@ -98,14 +102,14 @@ class SMTPManagedRelayer(ManagedRelayerMixin, relay.SMTPRelayer):
         relay.SMTPRelayer.__init__(self, messages, *args, **kw)
 
 
-
-class ESMTPManagedRelayer(ManagedRelayerMixin, relay.ESMTPRelayer):
+class ESMTPManagedRelayer(ManagedRelayerMixin, relay.ESMTPRelayer):  # type: ignore[misc]
     """
     An ESMTP managed relayer.
 
     This managed relayer is an ESMTP client which is responsible for sending a
     set of messages and keeping an attempt manager informed about its progress.
     """
+
     def __init__(self, messages, manager, *args, **kw):
         """
         @type messages: L{list} of L{bytes}
@@ -130,7 +134,6 @@ class ESMTPManagedRelayer(ManagedRelayerMixin, relay.ESMTPRelayer):
         relay.ESMTPRelayer.__init__(self, messages, *args, **kw)
 
 
-
 class SMTPManagedRelayerFactory(protocol.ClientFactory):
     """
     A factory to create an L{SMTPManagedRelayer}.
@@ -152,7 +155,8 @@ class SMTPManagedRelayerFactory(protocol.ClientFactory):
     @type pKwArgs: L{dict}
     @ivar pKwArgs: Keyword arguments for L{SMTPClient.__init__}
     """
-    protocol = SMTPManagedRelayer
+
+    protocol = SMTPManagedRelayer  # type: Type[protocol.Protocol]
 
     def __init__(self, messages, manager, *args, **kw):
         """
@@ -174,7 +178,6 @@ class SMTPManagedRelayerFactory(protocol.ClientFactory):
         self.pArgs = args
         self.pKwArgs = kw
 
-
     def buildProtocol(self, addr):
         """
         Create an L{SMTPManagedRelayer}.
@@ -185,11 +188,11 @@ class SMTPManagedRelayerFactory(protocol.ClientFactory):
         @rtype: L{SMTPManagedRelayer}
         @return: A managed relayer for SMTP.
         """
-        protocol = self.protocol(self.messages, self.manager, *self.pArgs,
-            **self.pKwArgs)
+        protocol = self.protocol(
+            self.messages, self.manager, *self.pArgs, **self.pKwArgs
+        )
         protocol.factory = self
         return protocol
-
 
     def clientConnectionFailed(self, connector, reason):
         """
@@ -206,7 +209,6 @@ class SMTPManagedRelayerFactory(protocol.ClientFactory):
         self.manager.notifyDone(self)
 
 
-
 class ESMTPManagedRelayerFactory(SMTPManagedRelayerFactory):
     """
     A factory to create an L{ESMTPManagedRelayer}.
@@ -221,6 +223,7 @@ class ESMTPManagedRelayerFactory(SMTPManagedRelayerFactory):
     @ivar secret: See L{__init__}
     @ivar contextFactory: See L{__init__}
     """
+
     protocol = ESMTPManagedRelayer
 
     def __init__(self, messages, manager, secret, contextFactory, *args, **kw):
@@ -242,14 +245,11 @@ class ESMTPManagedRelayerFactory(SMTPManagedRelayerFactory):
             (0) L{bytes}, (1), L{int}
         @param args: Positional arguments for L{SMTPClient.__init__}
 
-        @type pKwArgs: L{dict}
-        @param pKwArgs: Keyword arguments for L{SMTPClient.__init__}
+        @param kw: Keyword arguments for L{SMTPClient.__init__}
         """
         self.secret = secret
         self.contextFactory = contextFactory
-        SMTPManagedRelayerFactory.__init__(self, messages, manager, *args,
-                **kw)
-
+        SMTPManagedRelayerFactory.__init__(self, messages, manager, *args, **kw)
 
     def buildProtocol(self, addr):
         """
@@ -262,11 +262,16 @@ class ESMTPManagedRelayerFactory(SMTPManagedRelayerFactory):
         @return: A managed relayer for ESMTP.
         """
         s = self.secret and self.secret(addr)
-        protocol = self.protocol(self.messages, self.manager, s,
-            self.contextFactory, *self.pArgs, **self.pKwArgs)
+        protocol = self.protocol(
+            self.messages,
+            self.manager,
+            s,
+            self.contextFactory,
+            *self.pArgs,
+            **self.pKwArgs,
+        )
         protocol.factory = self
         return protocol
-
 
 
 class Queue:
@@ -289,6 +294,7 @@ class Queue:
     @ivar noisy: A flag which determines whether informational log messages
         will be generated (C{True}) or not (C{False}).
     """
+
     noisy = True
 
     def __init__(self, directory):
@@ -302,7 +308,6 @@ class Queue:
         self.directory = directory
         self._init()
 
-
     def _init(self):
         """
         Initialize volatile state.
@@ -312,7 +317,6 @@ class Queue:
         self.relayed = {}
         self.readDirectory()
 
-
     def __getstate__(self):
         """
         Create a representation of the non-volatile state of the queue.
@@ -320,8 +324,7 @@ class Queue:
         @rtype: L{dict} mapping L{bytes} to L{object}
         @return: The non-volatile state of the queue.
         """
-        return {'directory': self.directory}
-
+        return {"directory": self.directory}
 
     def __setstate__(self, state):
         """
@@ -334,17 +337,15 @@ class Queue:
         self.__dict__.update(state)
         self._init()
 
-
     def readDirectory(self):
         """
         Scan the message directory for new messages.
         """
         for message in os.listdir(self.directory):
             # Skip non data files
-            if message[-2:] != '-D':
+            if message[-2:] != "-D":
                 continue
             self.addMessage(message[:-2])
-
 
     def getWaiting(self):
         """
@@ -354,7 +355,6 @@ class Queue:
         @return: The base filenames of messages waiting to be relayed.
         """
         return self.waiting.keys()
-
 
     def hasWaiting(self):
         """
@@ -367,7 +367,6 @@ class Queue:
         """
         return len(self.waiting) > 0
 
-
     def getRelayed(self):
         """
         Return the base filenames of messages in the process of being relayed.
@@ -377,7 +376,6 @@ class Queue:
             relayed.
         """
         return self.relayed.keys()
-
 
     def setRelaying(self, message):
         """
@@ -389,7 +387,6 @@ class Queue:
         del self.waiting[message]
         self.relayed[message] = 1
 
-
     def setWaiting(self, message):
         """
         Mark a message as waiting to be relayed.
@@ -399,7 +396,6 @@ class Queue:
         """
         del self.relayed[message]
         self.waiting[message] = 1
-
 
     def addMessage(self, message):
         """
@@ -412,8 +408,7 @@ class Queue:
         if message not in self.relayed:
             self.waiting[message] = 1
             if self.noisy:
-                log.msg('Set ' + message + ' waiting')
-
+                log.msg("Set " + message + " waiting")
 
     def done(self, message):
         """
@@ -423,10 +418,9 @@ class Queue:
         @param message: The base filename of a message.
         """
         message = os.path.basename(message)
-        os.remove(self.getPath(message) + '-D')
-        os.remove(self.getPath(message) + '-H')
+        os.remove(self.getPath(message) + "-D")
+        os.remove(self.getPath(message) + "-H")
         del self.relayed[message]
-
 
     def getPath(self, message):
         """
@@ -439,7 +433,6 @@ class Queue:
         @return: The full base pathname of the message.
         """
         return os.path.join(self.directory, message)
-
 
     def getEnvelope(self, message):
         """
@@ -455,7 +448,6 @@ class Queue:
         with self.getEnvelopeFile(message) as f:
             return pickle.load(f)
 
-
     def getEnvelopeFile(self, message):
         """
         Return the envelope file for a message in the queue.
@@ -463,34 +455,32 @@ class Queue:
         @type message: L{bytes}
         @param message: The base filename of a message.
 
-        @rtype: L{file}
+        @rtype: file
         @return: The envelope file for the message.
         """
-        return open(os.path.join(self.directory, message + '-H'), 'rb')
-
+        return open(os.path.join(self.directory, message + "-H"), "rb")
 
     def createNewMessage(self):
         """
         Create a new message in the queue.
 
-        @rtype: 2-L{tuple} of (0) L{file}, (1) L{FileMessage}
+        @rtype: 2-L{tuple} of (0) file, (1) L{FileMessage}
         @return: The envelope file and a message receiver for a new message in
             the queue.
         """
-        fname = "%s_%s_%s_%s" % (os.getpid(), time.time(), self.n, id(self))
+        fname = "{}_{}_{}_{}".format(os.getpid(), time.time(), self.n, id(self))
         self.n = self.n + 1
-        headerFile = open(os.path.join(self.directory, fname + '-H'), 'wb')
-        tempFilename = os.path.join(self.directory, fname + '-C')
-        finalFilename = os.path.join(self.directory, fname + '-D')
-        messageFile = open(tempFilename, 'wb')
+        headerFile = open(os.path.join(self.directory, fname + "-H"), "wb")
+        tempFilename = os.path.join(self.directory, fname + "-C")
+        finalFilename = os.path.join(self.directory, fname + "-D")
+        messageFile = open(tempFilename, "wb")
 
         from twisted.mail.mail import FileMessage
-        return headerFile, FileMessage(messageFile, tempFilename,
-                                       finalFilename)
+
+        return headerFile, FileMessage(messageFile, tempFilename, finalFilename)
 
 
-
-class _AttemptManager(object):
+class _AttemptManager:
     """
     A manager for an attempt to relay a set of messages to a mail exchange
     server.
@@ -501,6 +491,7 @@ class _AttemptManager(object):
     @ivar _completionDeferreds: Deferreds which are to be notified when the
         attempt to relay is finished.
     """
+
     def __init__(self, manager, noisy=True, reactor=None):
         """
         @type manager: L{SmartHostSMTPRelayingManager}
@@ -522,7 +513,6 @@ class _AttemptManager(object):
             from twisted.internet import reactor
         self.reactor = reactor
 
-
     def getCompletionDeferred(self):
         """
         Return a deferred which will fire when the attempt to relay is
@@ -534,7 +524,6 @@ class _AttemptManager(object):
         """
         self._completionDeferreds.append(Deferred())
         return self._completionDeferreds[-1]
-
 
     def _finish(self, relay, message):
         """
@@ -550,7 +539,6 @@ class _AttemptManager(object):
         self.manager.managed[relay].remove(os.path.basename(message))
         self.manager.queue.done(message)
 
-
     def notifySuccess(self, relay, message):
         """
         Remove a message from the relay queue after it has been successfully
@@ -565,7 +553,6 @@ class _AttemptManager(object):
         if self.noisy:
             log.msg("success sending %s, removing from queue" % message)
         self._finish(relay, message)
-
 
     def notifyFailure(self, relay, message):
         """
@@ -586,7 +573,8 @@ class _AttemptManager(object):
         with self.manager.queue.getEnvelopeFile(message) as fp:
             from_, to = pickle.load(fp)
         from_, to, bounceMessage = bounce.generateBounce(
-            open(self.manager.queue.getPath(message) + '-D'), from_, to)
+            open(self.manager.queue.getPath(message) + "-D"), from_, to
+        )
         fp, outgoingMessage = self.manager.queue.createNewMessage()
         with fp:
             pickle.dump([from_, to], fp)
@@ -594,7 +582,6 @@ class _AttemptManager(object):
             outgoingMessage.lineReceived(line)
         outgoingMessage.eomReceived()
         self._finish(relay, self.manager.queue.getPath(message))
-
 
     def notifyDone(self, relay):
         """
@@ -618,7 +605,6 @@ class _AttemptManager(object):
         for d in notifications:
             d.callback(None)
 
-
     def notifyNoConnection(self, relay):
         """
         When a connection to the mail exchange server cannot be established,
@@ -639,9 +625,9 @@ class _AttemptManager(object):
 
         def setWaiting(queue, messages):
             map(queue.setWaiting, messages)
+
         self.reactor.callLater(30, setWaiting, self.manager.queue, msgs)
         del self.manager.managed[relay]
-
 
 
 class SmartHostSMTPRelayingManager:
@@ -689,7 +675,8 @@ class SmartHostSMTPRelayingManager:
     @ivar managed: A mapping of factory for a managed relayer to
         filenames of messages the managed relayer is responsible for.
     """
-    factory = SMTPManagedRelayerFactory
+
+    factory = SMTPManagedRelayerFactory  # type: Type[protocol.ClientFactory]
 
     PORT = 25
 
@@ -720,7 +707,6 @@ class SmartHostSMTPRelayingManager:
         self.fArgs = ()
         self.fKwArgs = {}
 
-
     def __getstate__(self):
         """
         Create a representation of the non-volatile state of this object.
@@ -729,9 +715,8 @@ class SmartHostSMTPRelayingManager:
         @return: The non-volatile state of the queue.
         """
         dct = self.__dict__.copy()
-        del dct['managed']
+        del dct["managed"]
         return dct
-
 
     def __setstate__(self, state):
         """
@@ -744,7 +729,6 @@ class SmartHostSMTPRelayingManager:
         self.__dict__.update(state)
         self.managed = {}
 
-
     def checkState(self):
         """
         Check the state of the relay queue and, if possible, launch relayers to
@@ -756,13 +740,12 @@ class SmartHostSMTPRelayingManager:
             this call have disconnected.
         """
         self.queue.readDirectory()
-        if (len(self.managed) >= self.maxConnections):
+        if len(self.managed) >= self.maxConnections:
             return
         if not self.queue.hasWaiting():
             return
 
         return self._checkStateMX()
-
 
     def _checkStateMX(self):
         nextMessages = self.queue.getWaiting()
@@ -772,7 +755,7 @@ class SmartHostSMTPRelayingManager:
         for msg in nextMessages:
             from_, to = self.queue.getEnvelope(msg)
             name, addr = email.utils.parseaddr(to)
-            parts = addr.split('@', 1)
+            parts = addr.split("@", 1)
             if len(parts) != 2:
                 log.err("Illegal message destination: " + to)
                 continue
@@ -794,14 +777,13 @@ class SmartHostSMTPRelayingManager:
             relayAttemptDeferred = manager.getCompletionDeferred()
             connectSetupDeferred = self.mxcalc.getMX(domain)
             connectSetupDeferred.addCallback(lambda mx: str(mx.name))
-            connectSetupDeferred.addCallback(self._cbExchange, self.PORT,
-                factory)
-            connectSetupDeferred.addErrback(lambda err: (
-                relayAttemptDeferred.errback(err), err)[1])
+            connectSetupDeferred.addCallback(self._cbExchange, self.PORT, factory)
+            connectSetupDeferred.addErrback(
+                lambda err: (relayAttemptDeferred.errback(err), err)[1]
+            )
             connectSetupDeferred.addErrback(self._ebExchange, factory, domain)
             relays.append(relayAttemptDeferred)
         return DeferredList(relays)
-
 
     def _cbExchange(self, address, port, factory):
         """
@@ -821,8 +803,8 @@ class SmartHostSMTPRelayingManager:
             exchange server.
         """
         from twisted.internet import reactor
-        reactor.connectTCP(address, port, factory)
 
+        reactor.connectTCP(address, port, factory)
 
     def _ebExchange(self, failure, factory, domain):
         """
@@ -841,16 +823,16 @@ class SmartHostSMTPRelayingManager:
         @type domain: L{bytes}
         @param domain: A domain.
         """
-        log.err('Error setting up managed relay factory for ' + domain)
+        log.err("Error setting up managed relay factory for " + domain)
         log.err(failure)
 
         def setWaiting(queue, messages):
             map(queue.setWaiting, messages)
 
         from twisted.internet import reactor
+
         reactor.callLater(30, setWaiting, self.queue, self.managed[factory])
         del self.managed[factory]
-
 
 
 class SmartHostESMTPRelayingManager(SmartHostSMTPRelayingManager):
@@ -863,8 +845,8 @@ class SmartHostESMTPRelayingManager(SmartHostSMTPRelayingManager):
         relayer. See L{ESMTPManagedRelayerFactory.__init__} for parameters to
         the callable.
     """
-    factory = ESMTPManagedRelayerFactory
 
+    factory = ESMTPManagedRelayerFactory
 
 
 def _checkState(manager):
@@ -875,7 +857,6 @@ def _checkState(manager):
     @param manager: A relaying manager.
     """
     manager.checkState()
-
 
 
 def RelayStateHelper(manager, delay):
@@ -895,7 +876,6 @@ def RelayStateHelper(manager, delay):
     return internet.TimerService(delay, _checkState, manager)
 
 
-
 class CanonicalNameLoop(Exception):
     """
     An error indicating that when trying to look up a mail exchange host, a set
@@ -904,14 +884,12 @@ class CanonicalNameLoop(Exception):
     """
 
 
-
 class CanonicalNameChainTooLong(Exception):
     """
     An error indicating that when trying to look up a mail exchange host, too
     many canonical name records which point to other canonical name records
     were encountered and resolution was abandoned.
     """
-
 
 
 class MXCalculator:
@@ -939,6 +917,7 @@ class MXCalculator:
         hostname directly when no mail exchange can be found (C{True}) or
         not (C{False}).
     """
+
     timeOutBadMX = 60 * 60  # One hour
     fallbackToDomain = True
 
@@ -946,7 +925,7 @@ class MXCalculator:
         """
         @type resolver: L{IResolver <twisted.internet.interfaces.IResolver>}
             provider or L{None}
-        @param: A resolver.
+        @param resolver: A resolver.
 
         @type clock: L{IReactorTime <twisted.internet.interfaces.IReactorTime>}
             provider or L{None}
@@ -955,12 +934,12 @@ class MXCalculator:
         self.badMXs = {}
         if resolver is None:
             from twisted.names.client import createResolver
+
             resolver = createResolver()
         self.resolver = resolver
         if clock is None:
             from twisted.internet import reactor as clock
         self.clock = clock
-
 
     def markBad(self, mx):
         """
@@ -970,7 +949,6 @@ class MXCalculator:
         @param mx: The hostname of a mail exchange host.
         """
         self.badMXs[str(mx)] = self.clock.seconds() + self.timeOutBadMX
-
 
     def markGood(self, mx):
         """
@@ -983,7 +961,6 @@ class MXCalculator:
             del self.badMXs[mx]
         except KeyError:
             pass
-
 
     def getMX(self, domain, maximumCanonicalChainLength=3):
         """
@@ -1005,10 +982,10 @@ class MXCalculator:
         mailExchangeDeferred = self.resolver.lookupMailExchange(domain)
         mailExchangeDeferred.addCallback(self._filterRecords)
         mailExchangeDeferred.addCallback(
-            self._cbMX, domain, maximumCanonicalChainLength)
+            self._cbMX, domain, maximumCanonicalChainLength
+        )
         mailExchangeDeferred.addErrback(self._ebMX, domain)
         return mailExchangeDeferred
-
 
     def _filterRecords(self, records):
         """
@@ -1029,7 +1006,6 @@ class MXCalculator:
         for answer in records[0]:
             recordBag.setdefault(str(answer.name), []).append(answer.payload)
         return recordBag
-
 
     def _cbMX(self, answers, domain, cnamesLeft):
         """
@@ -1111,9 +1087,7 @@ class MXCalculator:
             # try to look up an A record.  This provides behavior described as
             # a special case in RFC 974 in the section headed I{Interpreting
             # the List of MX RRs}.
-            return Failure(
-                error.DNSNameError("No MX records for %r" % (domain,)))
-
+            return Failure(error.DNSNameError("No MX records for {!r}".format(domain)))
 
     def _ebMX(self, failure, domain):
         """
@@ -1142,7 +1116,11 @@ class MXCalculator:
 
         if self.fallbackToDomain:
             failure.trap(error.DNSNameError)
-            log.msg("MX lookup failed; attempting to use hostname (%s) directly" % (domain,))
+            log.msg(
+                "MX lookup failed; attempting to use hostname ({}) directly".format(
+                    domain
+                )
+            )
 
             # Alright, I admit, this is a bit icky.
             d = self.resolver.getHostByName(domain)
@@ -1157,5 +1135,5 @@ class MXCalculator:
             d.addCallbacks(cbResolved, ebResolved)
             return d
         elif failure.check(error.DNSNameError):
-            raise IOError("No MX found for %r" % (domain,))
+            raise OSError("No MX found for {!r}".format(domain))
         return failure

@@ -7,7 +7,6 @@ Plugin-based system for enumerating available reactors and installing one of
 them.
 """
 
-from __future__ import absolute_import, division
 
 from zope.interface import Interface, Attribute, implementer
 
@@ -19,13 +18,18 @@ class IReactorInstaller(Interface):
     """
     Definition of a reactor which can probably be installed.
     """
-    shortName = Attribute("""
-    A brief string giving the user-facing name of this reactor.
-    """)
 
-    description = Attribute("""
+    shortName = Attribute(
+        """
+    A brief string giving the user-facing name of this reactor.
+    """
+    )
+
+    description = Attribute(
+        """
     A longer string giving a user-facing description of this reactor.
-    """)
+    """
+    )
 
     def install():
         """
@@ -36,29 +40,26 @@ class IReactorInstaller(Interface):
     # can actually be used in the execution environment.
 
 
-
 class NoSuchReactor(KeyError):
     """
     Raised when an attempt is made to install a reactor which cannot be found.
     """
 
 
-
 @implementer(IPlugin, IReactorInstaller)
-class Reactor(object):
+class Reactor:
     """
     @ivar moduleName: The fully-qualified Python name of the module of which
     the install callable is an attribute.
     """
+
     def __init__(self, shortName, moduleName, description):
         self.shortName = shortName
         self.moduleName = moduleName
         self.description = description
 
-
     def install(self):
         namedAny(self.moduleName).install()
-
 
 
 def getReactorTypes():
@@ -68,18 +69,18 @@ def getReactorTypes():
     return getPlugins(IReactorInstaller)
 
 
-
 def installReactor(shortName):
     """
     Install the reactor with the given C{shortName} attribute.
 
     @raise NoSuchReactor: If no reactor is found with a matching C{shortName}.
 
-    @raise: anything that the specified reactor can raise when installed.
+    @raise Exception: Anything that the specified reactor can raise when installed.
     """
     for installer in getReactorTypes():
         if installer.shortName == shortName:
             installer.install()
             from twisted.internet import reactor
+
             return reactor
     raise NoSuchReactor(shortName)

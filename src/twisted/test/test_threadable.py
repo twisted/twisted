@@ -5,24 +5,26 @@
 Tests for L{twisted.python.threadable}.
 """
 
-from __future__ import division, absolute_import
 
-import sys, pickle
+import pickle
+import sys
+
+from unittest import skipIf
 
 try:
     import threading
 except ImportError:
-    threadingSkip = "Platform lacks thread support"
+    threadingSkip = True
 else:
-    threadingSkip = None
+    threadingSkip = False
 
-from twisted.python.compat import _PY3
-from twisted.trial import unittest
+from twisted.trial.unittest import SynchronousTestCase, FailTest
 
 from twisted.python import threadable
 
+
 class TestObject:
-    synchronized = ['aMethod']
+    synchronized = ["aMethod"]
 
     x = -1
     y = 1
@@ -33,24 +35,19 @@ class TestObject:
             self.z = self.x + self.y
             assert self.z == 0, "z == %d, not 0 as expected" % (self.z,)
 
+
 threadable.synchronize(TestObject)
 
-class SynchronizationTests(unittest.SynchronousTestCase):
+
+class SynchronizationTests(SynchronousTestCase):
     def setUp(self):
         """
         Reduce the CPython check interval so that thread switches happen much
         more often, hopefully exercising more possible race conditions.  Also,
         delay actual test startup until the reactor has been started.
         """
-        if _PY3:
-            if getattr(sys, 'getswitchinterval', None) is not None:
-                self.addCleanup(sys.setswitchinterval, sys.getswitchinterval())
-                sys.setswitchinterval(0.0000001)
-        else:
-            if getattr(sys, 'getcheckinterval', None) is not None:
-                self.addCleanup(sys.setcheckinterval, sys.getcheckinterval())
-                sys.setcheckinterval(7)
-
+        self.addCleanup(sys.setswitchinterval, sys.getswitchinterval())
+        sys.setswitchinterval(0.0000001)
 
     def test_synchronizedName(self):
         """
@@ -59,7 +56,7 @@ class SynchronizationTests(unittest.SynchronousTestCase):
         """
         self.assertEqual("aMethod", TestObject.aMethod.__name__)
 
-
+    @skipIf(threadingSkip, "Platform does not support threads")
     def test_isInIOThread(self):
         """
         L{threadable.isInIOThread} returns C{True} if and only if it is called
@@ -68,15 +65,16 @@ class SynchronizationTests(unittest.SynchronousTestCase):
         threadable.registerAsIOThread()
         foreignResult = []
         t = threading.Thread(
-            target=lambda: foreignResult.append(threadable.isInIOThread()))
+            target=lambda: foreignResult.append(threadable.isInIOThread())
+        )
         t.start()
         t.join()
-        self.assertFalse(
-            foreignResult[0], "Non-IO thread reported as IO thread")
+        self.assertFalse(foreignResult[0], "Non-IO thread reported as IO thread")
         self.assertTrue(
-            threadable.isInIOThread(), "IO thread reported as not IO thread")
+            threadable.isInIOThread(), "IO thread reported as not IO thread"
+        )
 
-
+    @skipIf(threadingSkip, "Platform does not support threads")
     def testThreadedSynchronization(self):
         o = TestObject()
 
@@ -99,12 +97,7 @@ class SynchronizationTests(unittest.SynchronousTestCase):
             t.join()
 
         if errors:
-            raise unittest.FailTest(errors)
-
-    if threadingSkip is not None:
-        testThreadedSynchronization.skip = threadingSkip
-        test_isInIOThread.skip = threadingSkip
-
+            raise FailTest(errors)
 
     def testUnthreadedSynchronization(self):
         o = TestObject()
@@ -112,8 +105,8 @@ class SynchronizationTests(unittest.SynchronousTestCase):
             o.aMethod()
 
 
-
-class SerializationTests(unittest.SynchronousTestCase):
+class SerializationTests(SynchronousTestCase):
+    @skipIf(threadingSkip, "Platform does not support threads")
     def testPickling(self):
         lock = threadable.XLock()
         lockType = type(lock)
@@ -121,12 +114,8 @@ class SerializationTests(unittest.SynchronousTestCase):
         newLock = pickle.loads(lockPickle)
         self.assertIsInstance(newLock, lockType)
 
-    if threadingSkip is not None:
-        testPickling.skip = threadingSkip
-
-
     def testUnpickling(self):
-        lockPickle = b'ctwisted.python.threadable\nunpickle_lock\np0\n(tp1\nRp2\n.'
+        lockPickle = b"ctwisted.python.threadable\nunpickle_lock\np0\n(tp1\nRp2\n."
         lock = pickle.loads(lockPickle)
         newPickle = pickle.dumps(lock, 2)
         pickle.loads(newPickle)

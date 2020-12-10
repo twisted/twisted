@@ -11,21 +11,19 @@ from .._levels import InvalidLogLevelError
 from .._levels import LogLevel
 
 
-
 class LogLevelTests(unittest.TestCase):
     """
     Tests for L{LogLevel}.
     """
 
-    def test_levelWithName(self):
+    def test_levelWithName(self) -> None:
         """
         Look up log level by name.
         """
         for level in LogLevel.iterconstants():
             self.assertIs(LogLevel.levelWithName(level.name), level)
 
-
-    def test_levelWithInvalidName(self):
+    def test_levelWithInvalidName(self) -> None:
         """
         You can't make up log level names.
         """

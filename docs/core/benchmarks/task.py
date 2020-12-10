@@ -1,12 +1,11 @@
-
 """
 Benchmarks for L{twisted.internet.task}.
 """
-from __future__ import print_function
 
 from timer import timeit
 
 from twisted.internet import task
+
 
 def test_performance():
     """
@@ -23,5 +22,6 @@ def test_performance():
 def main():
     print("LoopingCall large advance takes", timeit(test_performance, iter=1))
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()

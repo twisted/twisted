@@ -7,17 +7,20 @@
 
 You will find these useful if you're adding a new protocol to IM.
 """
-
-# Abstract representation of chat "model" classes
+from typing import Type
 
 from twisted.words.im.locals import OFFLINE, OfflineError
 
-from twisted.internet.protocol import Protocol
-
+from twisted.internet.protocol import connectionDone, Protocol
+from twisted.python.failure import Failure
 from twisted.python.reflect import prefixedMethods
 from twisted.persisted import styles
 
 from twisted.internet import error
+
+
+# Abstract representation of chat "model" classes
+
 
 class AbstractGroup:
     def __init__(self, name, account):
@@ -53,11 +56,12 @@ class AbstractGroup:
             raise OfflineError
         self.account.client.leaveGroup(self.name)
 
-    def __repr__(self):
-        return '<%s %r>' % (self.__class__, self.name)
+    def __repr__(self) -> str:
+        return "<{} {!r}>".format(self.__class__, self.name)
 
-    def __str__(self):
-        return '%s@%s' % (self.name, self.account.accountName)
+    def __str__(self) -> str:
+        return "{}@{}".format(self.name, self.account.accountName)
+
 
 class AbstractPerson:
     def __init__(self, name, baseAccount):
@@ -77,13 +81,14 @@ class AbstractPerson:
         """
         Returns a string.
         """
-        return '--'
+        return "--"
 
-    def __repr__(self):
-        return '<%s %r/%s>' % (self.__class__, self.name, self.status)
+    def __repr__(self) -> str:
+        return "<{} {!r}/{}>".format(self.__class__, self.name, self.status)
 
-    def __str__(self):
-        return '%s@%s' % (self.name, self.account.accountName)
+    def __str__(self) -> str:
+        return "{}@{}".format(self.name, self.account.accountName)
+
 
 class AbstractClientMixin:
     """Designed to be mixed in to a Protocol implementing class.
@@ -92,6 +97,9 @@ class AbstractClientMixin:
 
     @ivar _logonDeferred: Fired when I am done logging in.
     """
+
+    _protoBase = None  # type: Type[Protocol]
+
     def __init__(self, account, chatui, logonDeferred):
         for base in self.__class__.__bases__:
             if issubclass(base, Protocol):
@@ -106,14 +114,13 @@ class AbstractClientMixin:
     def connectionMade(self):
         self._protoBase.connectionMade(self)
 
-    def connectionLost(self, reason):
+    def connectionLost(self, reason: Failure = connectionDone):
         self.account._clientLost(self, reason)
         self.unregisterAsAccountClient()
-        return self._protoBase.connectionLost(self, reason)
+        return self._protoBase.connectionLost(self, reason)  # type: ignore[arg-type]
 
     def unregisterAsAccountClient(self):
-        """Tell the chat UI that I have `signed off'.
-        """
+        """Tell the chat UI that I have `signed off'."""
         self.chat.unregisterAccountClient(self)
 
 
@@ -165,13 +172,13 @@ class AbstractAccount(styles.Versioned):
 
     def upgrateToVersion2(self):
         # Added in CVS revision 1.16.
-        for k in ('_groups', '_persons'):
+        for k in ("_groups", "_persons"):
             if not hasattr(self, k):
                 setattr(self, k, {})
 
     def __getstate__(self):
         state = styles.Versioned.__getstate__(self)
-        for k in ('client', '_isOnline', '_isConnecting'):
+        for k in ("client", "_isOnline", "_isConnecting"):
             try:
                 del state[k]
             except KeyError:
@@ -252,7 +259,7 @@ class AbstractAccount(styles.Versioned):
         @returntype: Failure
         """
         self._isConnecting = 0
-        self._isOnline = 0 # just in case
+        self._isOnline = 0  # just in case
         return reason
 
     def _clientLost(self, client, reason):
@@ -261,9 +268,11 @@ class AbstractAccount(styles.Versioned):
         self._isOnline = 0
         return reason
 
-    def __repr__(self):
-        return "<%s: %s (%s@%s:%s)>" % (self.__class__,
-                                        self.accountName,
-                                        self.username,
-                                        self.host,
-                                        self.port)
+    def __repr__(self) -> str:
+        return "<{}: {} ({}@{}:{})>".format(
+            self.__class__,
+            self.accountName,
+            self.username,
+            self.host,
+            self.port,
+        )

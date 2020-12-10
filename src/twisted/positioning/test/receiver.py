@@ -4,7 +4,6 @@
 Receivers for use in tests.
 """
 
-from __future__ import absolute_import, division
 
 from twisted.positioning import base, ipositioning
 
@@ -20,12 +19,12 @@ class MockPositioningReceiver(base.BasePositioningReceiver):
         C{True}.
     @type called: C{dict}
     """
+
     def __init__(self):
         self.clear()
 
         for methodName in ipositioning.IPositioningReceiver:
             self._addCallback(methodName)
-
 
     def clear(self):
         """
@@ -34,12 +33,12 @@ class MockPositioningReceiver(base.BasePositioningReceiver):
         """
         self.called = {}
 
-
     def _addCallback(self, name):
         """
         Adds a callback of the given name, setting C{self.called[name]} to
         C{True} when called.
         """
+
         def callback(*a, **kw):
             self.called[name] = True
 

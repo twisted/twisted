@@ -7,7 +7,6 @@ Helper classes for twisted.test.test_ssl.
 They are in a separate module so they will not prevent test_ssl importing if
 pyOpenSSL is unavailable.
 """
-from __future__ import division, absolute_import
 
 from twisted.python.compat import nativeString
 from twisted.internet import ssl
@@ -15,19 +14,20 @@ from twisted.python.filepath import FilePath
 
 from OpenSSL import SSL
 
-certPath = nativeString(FilePath(__file__.encode("utf-8")
-                    ).sibling(b"server.pem").path)
+certPath = nativeString(FilePath(__file__.encode("utf-8")).sibling(b"server.pem").path)
 
 
 class ClientTLSContext(ssl.ClientContextFactory):
     isClient = 1
+
     def getContext(self):
-        return SSL.Context(SSL.TLSv1_METHOD)
+        return SSL.Context(SSL.SSLv23_METHOD)
+
 
 class ServerTLSContext:
     isClient = 0
 
-    def __init__(self, filename=certPath, method=SSL.TLSv1_METHOD):
+    def __init__(self, filename=certPath, method=SSL.SSLv23_METHOD):
         self.filename = filename
         self._method = method
 

@@ -12,13 +12,11 @@ from twisted.plugin import IPlugin
 from twisted.test.test_plugin import ITestPlugin
 
 
-
 @provider(ITestPlugin, IPlugin)
 class FourthTestPlugin:
+    @staticmethod
     def test1():
         pass
-    test1 = staticmethod(test1)
-
 
 
 @provider(ITestPlugin, IPlugin)
@@ -26,6 +24,7 @@ class FifthTestPlugin:
     """
     More documentation: I hate you.
     """
+
+    @staticmethod
     def test1():
         pass
-    test1 = staticmethod(test1)

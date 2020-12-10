@@ -30,17 +30,13 @@ fix::
 """
 
 from twisted.internet import task
-from twisted.python.compat import _PY3
 
-if _PY3:
-    import tkinter.simpledialog as tkSimpleDialog
-    import tkinter.messagebox as tkMessageBox
-else:
-    import tkSimpleDialog, tkMessageBox
-
+import tkinter.simpledialog as tkSimpleDialog
+import tkinter.messagebox as tkMessageBox
 
 
 _task = None
+
 
 def install(widget, ms=10, reactor=None):
     """Install a Tkinter.Tk() object into the reactor."""
@@ -48,6 +44,7 @@ def install(widget, ms=10, reactor=None):
     global _task
     _task = task.LoopingCall(widget.update)
     _task.start(ms / 1000.0, False)
+
 
 def uninstall():
     """Remove the root Tk widget from the reactor.
@@ -61,18 +58,22 @@ def uninstall():
 
 def installTkFunctions():
     import twisted.python.util
+
     twisted.python.util.getPassword = getPassword
 
 
-def getPassword(prompt = '', confirm = 0):
+def getPassword(prompt="", confirm=0):
     while 1:
-        try1 = tkSimpleDialog.askstring('Password Dialog', prompt, show='*')
+        try1 = tkSimpleDialog.askstring("Password Dialog", prompt, show="*")
         if not confirm:
             return try1
-        try2 = tkSimpleDialog.askstring('Password Dialog', 'Confirm Password', show='*')
+        try2 = tkSimpleDialog.askstring("Password Dialog", "Confirm Password", show="*")
         if try1 == try2:
             return try1
         else:
-            tkMessageBox.showerror('Password Mismatch', 'Passwords did not match, starting over')
+            tkMessageBox.showerror(
+                "Password Mismatch", "Passwords did not match, starting over"
+            )
+
 
 __all__ = ["install", "uninstall"]

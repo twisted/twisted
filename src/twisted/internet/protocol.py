@@ -9,19 +9,18 @@ Start here if you are looking to write a new protocol implementation for
 Twisted.  The Protocol class contains some introductory material.
 """
 
-from __future__ import division, absolute_import
 
 import random
+from typing import Callable, Optional, Tuple
 from zope.interface import implementer
 
 from twisted.python import log, failure, components
 from twisted.internet import interfaces, error, defer
+from twisted.internet.interfaces import ITransport
 from twisted.logger import _loggerFor
-from twisted.python._oldstyle import _oldStyle
 
 
 @implementer(interfaces.IProtocolFactory, interfaces.ILoggingContext)
-@_oldStyle
 class Factory:
     """
     This is a factory which produces protocols.
@@ -30,8 +29,7 @@ class Factory:
     self.protocol.
     """
 
-    # Put a subclass of Protocol here:
-    protocol = None
+    protocol = None  # type: Optional[Callable[[], Protocol]]
 
     numPorts = 0
     noisy = True
@@ -56,13 +54,11 @@ class Factory:
         factory.protocol = protocol
         return factory
 
-
     def logPrefix(self):
         """
         Describe this factory for log messages.
         """
         return self.__class__.__name__
-
 
     def doStart(self):
         """
@@ -72,11 +68,9 @@ class Factory:
         """
         if not self.numPorts:
             if self.noisy:
-                _loggerFor(self).info("Starting factory {factory!r}",
-                                      factory=self)
+                _loggerFor(self).info("Starting factory {factory!r}", factory=self)
             self.startFactory()
         self.numPorts = self.numPorts + 1
-
 
     def doStop(self):
         """
@@ -91,10 +85,8 @@ class Factory:
         self.numPorts = self.numPorts - 1
         if not self.numPorts:
             if self.noisy:
-                _loggerFor(self).info("Stopping factory {factory!r}",
-                                      factory=self)
+                _loggerFor(self).info("Stopping factory {factory!r}", factory=self)
             self.stopFactory()
-
 
     def startFactory(self):
         """
@@ -108,7 +100,6 @@ class Factory:
         as connecting to a database, opening files, etcetera.
         """
 
-
     def stopFactory(self):
         """
         This will be called before I stop listening on all Ports/Connectors.
@@ -121,8 +112,7 @@ class Factory:
         directly.
         """
 
-
-    def buildProtocol(self, addr):
+    def buildProtocol(self, addr: Tuple[str, int]) -> "Protocol":
         """
         Create an instance of a subclass of Protocol.
 
@@ -137,10 +127,10 @@ class Factory:
 
         @param addr: an object implementing L{twisted.internet.interfaces.IAddress}
         """
+        assert self.protocol is not None
         p = self.protocol()
         p.factory = self
         return p
-
 
 
 class ClientFactory(Factory):
@@ -160,7 +150,6 @@ class ClientFactory(Factory):
         @param connector: a Connector object.
         """
 
-
     def clientConnectionFailed(self, connector, reason):
         """
         Called when a connection has failed to connect.
@@ -170,7 +159,6 @@ class ClientFactory(Factory):
         @type reason: L{twisted.python.failure.Failure}
         """
 
-
     def clientConnectionLost(self, connector, reason):
         """
         Called when an established connection is lost.
@@ -179,7 +167,6 @@ class ClientFactory(Factory):
 
         @type reason: L{twisted.python.failure.Failure}
         """
-
 
 
 class _InstanceFactory(ClientFactory):
@@ -201,10 +188,8 @@ class _InstanceFactory(ClientFactory):
         self.instance = instance
         self.deferred = deferred
 
-
-    def __repr__(self):
-        return "<ClientCreator factory: %r>" % (self.instance, )
-
+    def __repr__(self) -> str:
+        return "<ClientCreator factory: {!r}>".format(self.instance)
 
     def buildProtocol(self, addr):
         """
@@ -212,10 +197,10 @@ class _InstanceFactory(ClientFactory):
         waiting L{Deferred} to indicate success establishing the connection.
         """
         self.pending = self.reactor.callLater(
-            0, self.fire, self.deferred.callback, self.instance)
+            0, self.fire, self.deferred.callback, self.instance
+        )
         self.deferred = None
         return self.instance
-
 
     def clientConnectionFailed(self, connector, reason):
         """
@@ -223,9 +208,9 @@ class _InstanceFactory(ClientFactory):
         indicate the connection could not be established.
         """
         self.pending = self.reactor.callLater(
-            0, self.fire, self.deferred.errback, reason)
+            0, self.fire, self.deferred.errback, reason
+        )
         self.deferred = None
-
 
     def fire(self, func, value):
         """
@@ -236,8 +221,6 @@ class _InstanceFactory(ClientFactory):
         func(value)
 
 
-
-@_oldStyle
 class ClientCreator:
     """
     Client connections that do not require a factory.
@@ -265,7 +248,6 @@ class ClientCreator:
         self.args = args
         self.kwargs = kwargs
 
-
     def _connect(self, method, *args, **kwargs):
         """
         Initiate a connection attempt.
@@ -273,25 +255,27 @@ class ClientCreator:
         @param method: A callable which will actually start the connection
             attempt.  For example, C{reactor.connectTCP}.
 
-        @param *args: Positional arguments to pass to C{method}, excluding the
+        @param args: Positional arguments to pass to C{method}, excluding the
             factory.
 
-        @param **kwargs: Keyword arguments to pass to C{method}.
+        @param kwargs: Keyword arguments to pass to C{method}.
 
         @return: A L{Deferred} which fires with an instance of the protocol
             class passed to this L{ClientCreator}'s initializer or fails if the
             connection cannot be set up for some reason.
         """
+
         def cancelConnect(deferred):
             connector.disconnect()
             if f.pending is not None:
                 f.pending.cancel()
+
         d = defer.Deferred(cancelConnect)
         f = _InstanceFactory(
-            self.reactor, self.protocolClass(*self.args, **self.kwargs), d)
+            self.reactor, self.protocolClass(*self.args, **self.kwargs), d
+        )
         connector = method(factory=f, *args, **kwargs)
         return d
-
 
     def connectTCP(self, host, port, timeout=30, bindAddress=None):
         """
@@ -305,9 +289,12 @@ class ClientCreator:
             connection cannot be set up for some reason.
         """
         return self._connect(
-            self.reactor.connectTCP, host, port, timeout=timeout,
-            bindAddress=bindAddress)
-
+            self.reactor.connectTCP,
+            host,
+            port,
+            timeout=timeout,
+            bindAddress=bindAddress,
+        )
 
     def connectUNIX(self, address, timeout=30, checkPID=False):
         """
@@ -321,9 +308,8 @@ class ClientCreator:
             connection cannot be set up for some reason.
         """
         return self._connect(
-            self.reactor.connectUNIX, address, timeout=timeout,
-            checkPID=checkPID)
-
+            self.reactor.connectUNIX, address, timeout=timeout, checkPID=checkPID
+        )
 
     def connectSSL(self, host, port, contextFactory, timeout=30, bindAddress=None):
         """
@@ -337,10 +323,13 @@ class ClientCreator:
             connection cannot be set up for some reason.
         """
         return self._connect(
-            self.reactor.connectSSL, host, port,
-            contextFactory=contextFactory, timeout=timeout,
-            bindAddress=bindAddress)
-
+            self.reactor.connectSSL,
+            host,
+            port,
+            contextFactory=contextFactory,
+            timeout=timeout,
+            bindAddress=bindAddress,
+        )
 
 
 class ReconnectingClientFactory(ClientFactory):
@@ -364,13 +353,14 @@ class ReconnectingClientFactory(ClientFactory):
         attempts, after which no further connection attempts will be made. If
         this is not explicitly set, no maximum is applied.
     """
+
     maxDelay = 3600
     initialDelay = 1.0
     # Note: These highly sensitive factors have been precisely measured by
     # the National Institute of Science and Technology.  Take extreme care
     # in altering them, or you may damage your Internet!
     # (Seriously: <http://physics.nist.gov/cuu/Constants/index.html>)
-    factor = 2.7182818284590451 # (math.e)
+    factor = 2.7182818284590451  # (math.e)
     # Phi = 1.6180339887498948 # (Phi is acceptable for use as a
     # factor if e is too large for your application.)
 
@@ -388,18 +378,15 @@ class ReconnectingClientFactory(ClientFactory):
 
     continueTrying = 1
 
-
     def clientConnectionFailed(self, connector, reason):
         if self.continueTrying:
             self.connector = connector
             self.retry()
 
-
     def clientConnectionLost(self, connector, unused_reason):
         if self.continueTrying:
             self.connector = connector
             self.retry()
-
 
     def retry(self, connector=None):
         """
@@ -407,7 +394,7 @@ class ReconnectingClientFactory(ClientFactory):
         """
         if not self.continueTrying:
             if self.noisy:
-                log.msg("Abandoning %s on explicit request" % (connector,))
+                log.msg("Abandoning {} on explicit request".format(connector))
             return
 
         if connector is None:
@@ -419,26 +406,31 @@ class ReconnectingClientFactory(ClientFactory):
         self.retries += 1
         if self.maxRetries is not None and (self.retries > self.maxRetries):
             if self.noisy:
-                log.msg("Abandoning %s after %d retries." %
-                        (connector, self.retries))
+                log.msg("Abandoning %s after %d retries." % (connector, self.retries))
             return
 
         self.delay = min(self.delay * self.factor, self.maxDelay)
         if self.jitter:
-            self.delay = random.normalvariate(self.delay,
-                                              self.delay * self.jitter)
+            self.delay = random.normalvariate(self.delay, self.delay * self.jitter)
 
         if self.noisy:
-            log.msg("%s will retry in %d seconds" % (connector, self.delay,))
+            log.msg(
+                "%s will retry in %d seconds"
+                % (
+                    connector,
+                    self.delay,
+                )
+            )
 
         def reconnector():
             self._callID = None
             connector.connect()
+
         if self.clock is None:
             from twisted.internet import reactor
+
             self.clock = reactor
         self._callID = self.clock.callLater(self.delay, reconnector)
-
 
     def stopTrying(self):
         """
@@ -455,7 +447,6 @@ class ReconnectingClientFactory(ClientFactory):
             except error.NotConnectingError:
                 pass
 
-
     def resetDelay(self):
         """
         Call this method after a successful connection: it resets the delay and
@@ -466,7 +457,6 @@ class ReconnectingClientFactory(ClientFactory):
         self._callID = None
         self.continueTrying = 1
 
-
     def __getstate__(self):
         """
         Remove all of the state which is mutated by connection attempts and
@@ -475,12 +465,17 @@ class ReconnectingClientFactory(ClientFactory):
         behave just as this one did when it was first instantiated.
         """
         state = self.__dict__.copy()
-        for key in ['connector', 'retries', 'delay',
-                    'continueTrying', '_callID', 'clock']:
+        for key in [
+            "connector",
+            "retries",
+            "delay",
+            "continueTrying",
+            "_callID",
+            "clock",
+        ]:
             if key in state:
                 del state[key]
         return state
-
 
 
 class ServerFactory(Factory):
@@ -489,8 +484,6 @@ class ServerFactory(Factory):
     """
 
 
-
-@_oldStyle
 class BaseProtocol:
     """
     This is the abstract superclass of all protocols.
@@ -499,8 +492,9 @@ class BaseProtocol:
     easily be shared, but otherwise the direct subclasses of this class are more
     interesting, L{Protocol} and L{ProcessProtocol}.
     """
+
     connected = 0
-    transport = None
+    transport = None  # type: Optional[ITransport]
 
     def makeConnection(self, transport):
         """
@@ -513,7 +507,6 @@ class BaseProtocol:
         self.transport = transport
         self.connectionMade()
 
-
     def connectionMade(self):
         """
         Called when a connection is made.
@@ -525,6 +518,7 @@ class BaseProtocol:
         stops blocking and a socket has been received.  If you need to
         send any greeting or initial message, do it here.
         """
+
 
 connectionDone = failure.Failure(error.ConnectionDone())
 connectionDone.cleanFailure()
@@ -549,6 +543,8 @@ class Protocol(BaseProtocol):
     see the L{twisted.protocols.basic} module for a few of them.
     """
 
+    factory = None  # type: Optional[Factory]
+
     def logPrefix(self):
         """
         Return a prefix matching the class name, to identify log messages
@@ -556,8 +552,7 @@ class Protocol(BaseProtocol):
         """
         return self.__class__.__name__
 
-
-    def dataReceived(self, data):
+    def dataReceived(self, data: bytes):
         """
         Called whenever data is received.
 
@@ -572,7 +567,7 @@ class Protocol(BaseProtocol):
             differing chunk sizes, down to one byte at a time.
         """
 
-    def connectionLost(self, reason=connectionDone):
+    def connectionLost(self, reason: failure.Failure = connectionDone):
         """
         Called when the connection is shut down.
 
@@ -583,49 +578,41 @@ class Protocol(BaseProtocol):
         """
 
 
-
 @implementer(interfaces.IConsumer)
 class ProtocolToConsumerAdapter(components.Adapter):
-
-    def write(self, data):
+    def write(self, data: bytes):
         self.original.dataReceived(data)
-
 
     def registerProducer(self, producer, streaming):
         pass
-
 
     def unregisterProducer(self):
         pass
 
 
-components.registerAdapter(ProtocolToConsumerAdapter, interfaces.IProtocol,
-                           interfaces.IConsumer)
-
+components.registerAdapter(
+    ProtocolToConsumerAdapter, interfaces.IProtocol, interfaces.IConsumer
+)
 
 
 @implementer(interfaces.IProtocol)
 class ConsumerToProtocolAdapter(components.Adapter):
-
-    def dataReceived(self, data):
+    def dataReceived(self, data: bytes):
         self.original.write(data)
 
-
-    def connectionLost(self, reason):
+    def connectionLost(self, reason: failure.Failure):
         pass
-
 
     def makeConnection(self, transport):
         pass
-
 
     def connectionMade(self):
         pass
 
 
-components.registerAdapter(ConsumerToProtocolAdapter, interfaces.IConsumer,
-                           interfaces.IProtocol)
-
+components.registerAdapter(
+    ConsumerToProtocolAdapter, interfaces.IConsumer, interfaces.IProtocol
+)
 
 
 @implementer(interfaces.IProcessProtocol)
@@ -635,26 +622,23 @@ class ProcessProtocol(BaseProtocol):
     stdin, stdout, and stderr file descriptors.
     """
 
-    def childDataReceived(self, childFD, data):
+    def childDataReceived(self, childFD: int, data: bytes):
         if childFD == 1:
             self.outReceived(data)
         elif childFD == 2:
             self.errReceived(data)
 
-
-    def outReceived(self, data):
+    def outReceived(self, data: bytes):
         """
         Some data was received from stdout.
         """
 
-
-    def errReceived(self, data):
+    def errReceived(self, data: bytes):
         """
         Some data was received from stderr.
         """
 
-
-    def childConnectionLost(self, childFD):
+    def childConnectionLost(self, childFD: int):
         if childFD == 0:
             self.inConnectionLost()
         elif childFD == 1:
@@ -662,34 +646,29 @@ class ProcessProtocol(BaseProtocol):
         elif childFD == 2:
             self.errConnectionLost()
 
-
     def inConnectionLost(self):
         """
         This will be called when stdin is closed.
         """
-
 
     def outConnectionLost(self):
         """
         This will be called when stdout is closed.
         """
 
-
     def errConnectionLost(self):
         """
         This will be called when stderr is closed.
         """
 
-
-    def processExited(self, reason):
+    def processExited(self, reason: failure.Failure):
         """
         This will be called when the subprocess exits.
 
         @type reason: L{twisted.python.failure.Failure}
         """
 
-
-    def processEnded(self, reason):
+    def processEnded(self, reason: failure.Failure):
         """
         Called when the child process exits and all file descriptors
         associated with it have been closed.
@@ -698,11 +677,10 @@ class ProcessProtocol(BaseProtocol):
         """
 
 
-
-@_oldStyle
 class AbstractDatagramProtocol:
     """
-    Abstract protocol for datagram-oriented transports, e.g. IP, ICMP, ARP, UDP.
+    Abstract protocol for datagram-oriented transports, e.g. IP, ICMP, ARP,
+    UDP.
     """
 
     transport = None
@@ -711,9 +689,8 @@ class AbstractDatagramProtocol:
 
     def __getstate__(self):
         d = self.__dict__.copy()
-        d['transport'] = None
+        d["transport"] = None
         return d
-
 
     def doStart(self):
         """
@@ -726,7 +703,6 @@ class AbstractDatagramProtocol:
                 log.msg("Starting protocol %s" % self)
             self.startProtocol()
         self.numPorts = self.numPorts + 1
-
 
     def doStop(self):
         """
@@ -742,7 +718,6 @@ class AbstractDatagramProtocol:
                 log.msg("Stopping protocol %s" % self)
             self.stopProtocol()
 
-
     def startProtocol(self):
         """
         Called when a transport is connected to this protocol.
@@ -750,14 +725,12 @@ class AbstractDatagramProtocol:
         Will only be called once, even if multiple ports are connected.
         """
 
-
     def stopProtocol(self):
         """
         Called when the transport is disconnected.
 
         Will only be called once, after all ports are disconnected.
         """
-
 
     def makeConnection(self, transport):
         """
@@ -770,15 +743,13 @@ class AbstractDatagramProtocol:
         self.transport = transport
         self.doStart()
 
-
-    def datagramReceived(self, datagram, addr):
+    def datagramReceived(self, datagram: bytes, addr):
         """
         Called when a datagram is received.
 
-        @param datagram: the string received from the transport.
+        @param datagram: the bytes received from the transport.
         @param addr: tuple of source of datagram.
         """
-
 
 
 @implementer(interfaces.ILoggingContext)
@@ -799,7 +770,6 @@ class DatagramProtocol(AbstractDatagramProtocol):
         """
         return self.__class__.__name__
 
-
     def connectionRefused(self):
         """
         Called due to error from write in connected mode.
@@ -807,7 +777,6 @@ class DatagramProtocol(AbstractDatagramProtocol):
         Note this is a result of ICMP message generated by *previous*
         write.
         """
-
 
 
 class ConnectedDatagramProtocol(DatagramProtocol):
@@ -824,7 +793,7 @@ class ConnectedDatagramProtocol(DatagramProtocol):
         @param datagram: the string received from the transport.
         """
 
-    def connectionFailed(self, failure):
+    def connectionFailed(self, failure: failure.Failure):
         """
         Called if connecting failed.
 
@@ -832,9 +801,7 @@ class ConnectedDatagramProtocol(DatagramProtocol):
         """
 
 
-
 @implementer(interfaces.ITransport)
-@_oldStyle
 class FileWrapper:
     """
     A wrapper around a file-like object to make it behave as a Transport.
@@ -851,20 +818,17 @@ class FileWrapper:
     def __init__(self, file):
         self.file = file
 
-
-    def write(self, data):
+    def write(self, data: bytes):
         try:
             self.file.write(data)
-        except:
+        except BaseException:
             self.handleException()
-
 
     def _checkProducer(self):
         # Cheating; this is called at "idle" times to allow producers to be
         # found and dealt with
         if self.producer:
             self.producer.resumeProducing()
-
 
     def registerProducer(self, producer, streaming):
         """
@@ -875,59 +839,59 @@ class FileWrapper:
         if not streaming:
             producer.resumeProducing()
 
-
     def unregisterProducer(self):
         self.producer = None
-
 
     def stopConsuming(self):
         self.unregisterProducer()
         self.loseConnection()
 
-
     def writeSequence(self, iovec):
         self.write(b"".join(iovec))
-
 
     def loseConnection(self):
         self.closed = 1
         try:
             self.file.close()
-        except (IOError, OSError):
+        except OSError:
             self.handleException()
-
 
     def getPeer(self):
         # FIXME: https://twistedmatrix.com/trac/ticket/7820
         # According to ITransport, this should return an IAddress!
-        return 'file', 'file'
-
+        return "file", "file"
 
     def getHost(self):
         # FIXME: https://twistedmatrix.com/trac/ticket/7820
         # According to ITransport, this should return an IAddress!
-        return 'file'
-
+        return "file"
 
     def handleException(self):
         pass
-
 
     def resumeProducing(self):
         # Never sends data anyways
         pass
 
-
     def pauseProducing(self):
         # Never sends data anyways
         pass
-
 
     def stopProducing(self):
         self.loseConnection()
 
 
-__all__ = ["Factory", "ClientFactory", "ReconnectingClientFactory", "connectionDone",
-           "Protocol", "ProcessProtocol", "FileWrapper", "ServerFactory",
-           "AbstractDatagramProtocol", "DatagramProtocol", "ConnectedDatagramProtocol",
-           "ClientCreator"]
+__all__ = [
+    "Factory",
+    "ClientFactory",
+    "ReconnectingClientFactory",
+    "connectionDone",
+    "Protocol",
+    "ProcessProtocol",
+    "FileWrapper",
+    "ServerFactory",
+    "AbstractDatagramProtocol",
+    "DatagramProtocol",
+    "ConnectedDatagramProtocol",
+    "ClientCreator",
+]

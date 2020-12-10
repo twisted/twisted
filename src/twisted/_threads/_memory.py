@@ -6,7 +6,6 @@
 Implementation of an in-memory worker that defers execution.
 """
 
-from __future__ import absolute_import, division, print_function
 
 from zope.interface import implementer
 
@@ -15,8 +14,9 @@ from ._convenience import Quit
 
 NoMoreWork = object()
 
+
 @implementer(IWorker)
-class MemoryWorker(object):
+class MemoryWorker:
     """
     An L{IWorker} that queues work for later performance.
 
@@ -31,7 +31,6 @@ class MemoryWorker(object):
         self._quit = Quit()
         self._pending = pending()
 
-
     def do(self, work):
         """
         Queue some work for to perform later; see L{createMemoryWorker}.
@@ -41,14 +40,12 @@ class MemoryWorker(object):
         self._quit.check()
         self._pending.append(work)
 
-
     def quit(self):
         """
         Quit this worker.
         """
         self._quit.set()
         self._pending.append(NoMoreWork)
-
 
 
 def createMemoryWorker():
@@ -60,6 +57,7 @@ def createMemoryWorker():
         that will perform one element of that work.
     @rtype: 2-L{tuple} of (L{IWorker}, L{callable})
     """
+
     def perform():
         if not worker._pending:
             return False
@@ -67,5 +65,6 @@ def createMemoryWorker():
             return False
         worker._pending.pop(0)()
         return True
+
     worker = MemoryWorker()
     return (worker, perform)

@@ -6,7 +6,7 @@ This example demostrates how to render a page using a third-party template
 system.
 
 Usage:
-    $ twistd -n web --process=.rtl=twisted.web.script.ResourceTemplate --path /path/to/examples/
+    $ twistd -n web --path /path/to/examples --process=.rtl=twisted.web.script.ResourceTemplate
 
 And make sure Quixote is installed.
 """
@@ -17,7 +17,7 @@ from twisted.web.resource import Resource
 class ExampleResource(Resource):
 
     def render_GET(self, request):
-        """\
+        output = """\
 <HTML>
     <HEAD><TITLE> Welcome To Twisted Python </title></head>
 
@@ -26,6 +26,7 @@ class ExampleResource(Resource):
             '<LI>';i
         """</ul></body>
 </html>"""
+        return output.encode("utf8")
 
 
 resource = ExampleResource()

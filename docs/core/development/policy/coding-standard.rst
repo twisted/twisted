@@ -24,8 +24,8 @@ Testing
 Overview
 ~~~~~~~~
 
-Twisted development should always be `test-driven <http://en.wikipedia.org/wiki/Test-driven_development>`_ .
-The complete test suite in the head of the Git trunk is required to be passing on `supported platforms <http://buildbot.twistedmatrix.com/supported>`_ at all times.
+Twisted development should always be `test-driven <https://en.wikipedia.org/wiki/Test-driven_development>`_ .
+The complete test suite in the head of the Git trunk is required to be passing on `supported platforms <https://buildbot.twistedmatrix.com/supported>`_ at all times.
 Regressions in the test suite are addressed by reverting whatever revisions introduced them.
 
 
@@ -72,23 +72,19 @@ When you update existing files, if there is no copyright header, add one.
 Whitespace
 ----------
 
-Indentation is 4 spaces per indent.
-Tabs are not allowed.
-It is preferred that every block appears on a new line, so that control structure indentation is always visible.
+Code must be formatted according to the `The Black Code Style <https://github.com/psf/black/blob/master/docs/the_black_code_style.md>`_.
+This entire source tree can be reformatted by running:
 
-Lines are flowed at 79 columns.
-They must not have trailing whitespace.
-Long lines must be wrapped using implied line continuation inside parentheses; backslashes aren't allowed.
-To handle long import lines, please wrap them inside parentheses:
+.. code-block:: console
 
-.. code-block:: python
-
-    from very.long.package import (foo, bar, baz,
-                                   qux, quux, quuux)
+    tox -e lint
 
 
-Top-level classes and functions must be separated with 3 blank lines, and class-level functions with 2 blank lines.
-The control-L (i.e. ``^L``) form feed character must not be used.
+Only changed files can be reformatted by running:
+
+.. code-block:: console
+
+    pipx run pre-commit run
 
 
 Modules
@@ -322,7 +318,7 @@ For example,
 Comments
 --------
 
-Start by reading the `PEP8 Comments section <http://www.python.org/dev/peps/pep-0008/#comments>`_.
+Start by reading the `PEP8 Comments section <https://www.python.org/dev/peps/pep-0008/#comments>`_.
 Ignore `Documentation Strings` section from PEP8 as Twisted uses a different docstring standard.
 
 `FIXME/TODO` comments must have an associated ticket and contain a reference to it in the form of a full URL to the ticket.
@@ -397,15 +393,15 @@ This makes the script more portable but note that it is not a foolproof method.
 Always make sure that ``/usr/bin/env`` exists or use a softlink/symbolic link to point it to the correct path.
 Python's distutils will rewrite the shebang line upon installation so this policy only covers the source files in version control.
 
-#. For core scripts, add an entry to ``_CONSOLE_SCRIPTS`` in ``src/twisted/python/_setup.py``:
+#. For core scripts, add an entry point to ``"console_scripts"`` in ``setup.cfg``:
 
-   .. code-block:: python
+   .. code-block:: cfg
 
-       _CONSOLE_SCRIPTS = [
+       [options.entry_points]
+       console_scripts =
            ...
-           "twistd = twisted.scripts.twistd:run",
-           "yourmodule" = "twisted.scripts.yourmodule:run",
-       ]
+           twistd = twisted.scripts.twistd:run
+           yourmodule = twisted.scripts.yourmodule:run
 
 #. And end with:
 
@@ -648,7 +644,7 @@ C code must be optional, and work across multiple platforms (MSVC++9/10/14 for P
 
 C code should be kept in external bindings packages which Twisted depends on.
 If creating new C extension modules, using `cffi <https://cffi.readthedocs.io/en/latest/>`_ is highly encouraged, as it will perform well on PyPy and CPython, and be easier to use on Python 2 and 3.
-Consider optimizing for `PyPy <http://pypy.org/performance.html>`_ instead of creating bespoke C code.
+Consider optimizing for `PyPy <https://pypy.org/performance.html>`_ instead of creating bespoke C code.
 
 
 Commit Messages
@@ -674,7 +670,7 @@ Source Control
 
 Twisted currently uses Git for source control.
 All development must occur using branches; when a task is considered complete another Twisted developer may review it and if no problems are found, it may be merged into trunk.
-The Twisted wiki has `a start <http://twistedmatrix.com/trac/wiki/TwistedDevelopment>`_.
+The Twisted wiki has `a start <https://twistedmatrix.com/trac/wiki/TwistedDevelopment>`_.
 
 If you wish to ignore certain files, create a ``.gitignore`` file, or edit it if it exists.
 For example:
@@ -695,8 +691,11 @@ For example:
 Fallback
 --------
 
-In case of conventions not enforced in this document, the reference documents to use in fallback is `PEP 8 <http://www.python.org/dev/peps/pep-0008/>`_ for Python code and `PEP 7 <http://www.python.org/dev/peps/pep-0007/>`_ for C code.
-For example, the paragraph **Whitespace in Expressions and Statements** in PEP 8 describes what should be done in Twisted code.
+In case of conventions not enforced in this document, the reference documents to use in fallback are:
+
+* `The Black code style <https://github.com/psf/black/blob/master/docs/the_black_code_style.md>`_
+* `PEP 8 <https://www.python.org/dev/peps/pep-0008/>`_ for Python code
+* `PEP 7 <https://www.python.org/dev/peps/pep-0007/>`_ for C code
 
 
 Recommendations

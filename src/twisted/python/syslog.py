@@ -8,18 +8,15 @@ Classes and utility functions for integrating Twisted and syslog.
 You probably want to call L{startLogging}.
 """
 
-syslog = __import__('syslog')
+syslog = __import__("syslog")
 
 from twisted.python import log
-from twisted.python._oldstyle import _oldStyle
 
 # These defaults come from the Python syslog docs.
 DEFAULT_OPTIONS = 0
 DEFAULT_FACILITY = syslog.LOG_USER
 
 
-
-@_oldStyle
 class SyslogObserver:
     """
     A log observer for logging to syslog.
@@ -31,11 +28,11 @@ class SyslogObserver:
     facility by setting the 'C{syslogPriority}' and 'C{syslogFacility}' keys in
     the event dict.
     """
+
     openlog = syslog.openlog
     syslog = syslog.syslog
 
-    def __init__(self, prefix, options=DEFAULT_OPTIONS,
-                 facility=DEFAULT_FACILITY):
+    def __init__(self, prefix, options=DEFAULT_OPTIONS, facility=DEFAULT_FACILITY):
         """
         @type prefix: C{str}
         @param prefix: The syslog prefix to use.
@@ -50,7 +47,6 @@ class SyslogObserver:
             classification for messages sent to syslog by this observer).
         """
         self.openlog(prefix, options, facility)
-
 
     def emit(self, eventDict):
         """
@@ -73,16 +69,16 @@ class SyslogObserver:
         # Figure out what syslog parameters we might need to use.
         priority = syslog.LOG_INFO
         facility = 0
-        if eventDict['isError']:
+        if eventDict["isError"]:
             priority = syslog.LOG_ALERT
-        if 'syslogPriority' in eventDict:
-            priority = int(eventDict['syslogPriority'])
-        if 'syslogFacility' in eventDict:
-            facility = int(eventDict['syslogFacility'])
+        if "syslogPriority" in eventDict:
+            priority = int(eventDict["syslogPriority"])
+        if "syslogFacility" in eventDict:
+            facility = int(eventDict["syslogFacility"])
 
         # Break the message up into lines and send them.
-        lines = text.split('\n')
-        while lines[-1:] == ['']:
+        lines = text.split("\n")
+        while lines[-1:] == [""]:
             lines.pop()
 
         firstLine = True
@@ -90,14 +86,15 @@ class SyslogObserver:
             if firstLine:
                 firstLine = False
             else:
-                line = '\t' + line
-            self.syslog(priority | facility,
-                        '[%s] %s' % (eventDict['system'], line))
+                line = "\t" + line
+            self.syslog(
+                priority | facility, "[{}] {}".format(eventDict["system"], line)
+            )
 
 
-
-def startLogging(prefix='Twisted', options=DEFAULT_OPTIONS,
-                 facility=DEFAULT_FACILITY, setStdout=1):
+def startLogging(
+    prefix="Twisted", options=DEFAULT_OPTIONS, facility=DEFAULT_FACILITY, setStdout=1
+):
     """
     Send all Twisted logging output to syslog from now on.
 

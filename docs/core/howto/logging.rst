@@ -44,7 +44,7 @@ functions:
   
       try:
           x = 1 / 0
-      except:
+      except BaseException:
           log.err()   # will log the ZeroDivisionError
 
 :api:`twisted.python.log.startLogging <startLogging>` 

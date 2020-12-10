@@ -17,27 +17,31 @@ from twisted.internet import address
 from twisted.python import compat
 
 from ._exceptions import (
-    convertError, InvalidProxyHeader, InvalidNetworkProtocol,
-    MissingAddressData
+    convertError,
+    InvalidProxyHeader,
+    InvalidNetworkProtocol,
+    MissingAddressData,
 )
 from . import _info
 from . import _interfaces
+
 
 class NetFamily(Values):
     """
     Values for the 'family' field.
     """
+
     UNSPEC = ValueConstant(0x00)
     INET = ValueConstant(0x10)
     INET6 = ValueConstant(0x20)
     UNIX = ValueConstant(0x30)
 
 
-
 class NetProtocol(Values):
     """
     Values for 'protocol' field.
     """
+
     UNSPEC = ValueConstant(0)
     STREAM = ValueConstant(1)
     DGRAM = ValueConstant(2)
@@ -45,35 +49,35 @@ class NetProtocol(Values):
 
 _HIGH = 0b11110000
 _LOW = 0b00001111
-_LOCALCOMMAND = 'LOCAL'
-_PROXYCOMMAND = 'PROXY'
+_LOCALCOMMAND = "LOCAL"
+_PROXYCOMMAND = "PROXY"
+
 
 @implementer(_interfaces.IProxyParser)
-class V2Parser(object):
+class V2Parser:
     """
     PROXY protocol version two header parser.
 
     Version two of the PROXY protocol is a binary format.
     """
 
-    PREFIX = b'\x0D\x0A\x0D\x0A\x00\x0D\x0A\x51\x55\x49\x54\x0A'
+    PREFIX = b"\x0D\x0A\x0D\x0A\x00\x0D\x0A\x51\x55\x49\x54\x0A"
     VERSIONS = [32]
     COMMANDS = {0: _LOCALCOMMAND, 1: _PROXYCOMMAND}
     ADDRESSFORMATS = {
         # TCP4
-        17: '!4s4s2H',
-        18: '!4s4s2H',
+        17: "!4s4s2H",
+        18: "!4s4s2H",
         # TCP6
-        33: '!16s16s2H',
-        34: '!16s16s2H',
+        33: "!16s16s2H",
+        34: "!16s16s2H",
         # UNIX
-        49: '!108s108s',
-        50: '!108s108s',
+        49: "!108s108s",
+        50: "!108s108s",
     }
 
     def __init__(self):
-        self.buffer = b''
-
+        self.buffer = b""
 
     def feed(self, data):
         """
@@ -94,15 +98,14 @@ class V2Parser(object):
         if len(self.buffer) < 16:
             raise InvalidProxyHeader()
 
-        size = struct.unpack('!H', self.buffer[14:16])[0] + 16
+        size = struct.unpack("!H", self.buffer[14:16])[0] + 16
         if len(self.buffer) < size:
             return (None, None)
 
         header, remaining = self.buffer[:size], self.buffer[size:]
-        self.buffer = b''
+        self.buffer = b""
         info = self.parse(header)
         return (info, remaining)
-
 
     @staticmethod
     def _bytesToIPv4(bytestring):
@@ -116,11 +119,9 @@ class V2Parser(object):
         @return: a dotted-quad notation IPv4 address.
         @rtype: L{bytes}
         """
-        return b'.'.join(
-            ('%i' % (ord(b),)).encode('ascii')
-            for b in compat.iterbytes(bytestring)
+        return b".".join(
+            ("%i" % (ord(b),)).encode("ascii") for b in compat.iterbytes(bytestring)
         )
-
 
     @staticmethod
     def _bytesToIPv6(bytestring):
@@ -135,11 +136,10 @@ class V2Parser(object):
         @rtype: L{bytes}
         """
         hexString = binascii.b2a_hex(bytestring)
-        return b':'.join(
-            ('%x' % (int(hexString[b:b+4], 16),)).encode('ascii')
+        return b":".join(
+            ("{:x}".format(int(hexString[b : b + 4], 16))).encode("ascii")
             for b in range(0, 32, 4)
         )
-
 
     @classmethod
     def parse(cls, line):
@@ -178,26 +178,23 @@ class V2Parser(object):
         with convertError(ValueError, InvalidNetworkProtocol):
             family = NetFamily.lookupByValue(family)
             netproto = NetProtocol.lookupByValue(netproto)
-        if (
-                family is NetFamily.UNSPEC or
-                netproto is NetProtocol.UNSPEC
-        ):
+        if family is NetFamily.UNSPEC or netproto is NetProtocol.UNSPEC:
             return _info.ProxyInfo(line, None, None)
 
         addressFormat = cls.ADDRESSFORMATS[familyProto]
-        addrInfo = line[16:16+struct.calcsize(addressFormat)]
+        addrInfo = line[16 : 16 + struct.calcsize(addressFormat)]
         if family is NetFamily.UNIX:
             with convertError(struct.error, MissingAddressData):
                 source, dest = struct.unpack(addressFormat, addrInfo)
             return _info.ProxyInfo(
                 line,
-                address.UNIXAddress(source.rstrip(b'\x00')),
-                address.UNIXAddress(dest.rstrip(b'\x00')),
+                address.UNIXAddress(source.rstrip(b"\x00")),
+                address.UNIXAddress(dest.rstrip(b"\x00")),
             )
 
-        addrType = 'TCP'
+        addrType = "TCP"
         if netproto is NetProtocol.DGRAM:
-            addrType = 'UDP'
+            addrType = "UDP"
         addrCls = address.IPv4Address
         addrParser = cls._bytesToIPv4
         if family is NetFamily.INET6:

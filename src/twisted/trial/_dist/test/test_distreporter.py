@@ -5,11 +5,11 @@
 Tests for L{twisted.trial._dist.distreporter}.
 """
 
-from twisted.python.compat import NativeStringIO as StringIO
+from io import StringIO
+
 from twisted.trial._dist.distreporter import DistReporter
 from twisted.trial.unittest import TestCase
 from twisted.trial.reporter import TreeReporter
-
 
 
 class DistReporterTests(TestCase):
@@ -22,7 +22,6 @@ class DistReporterTests(TestCase):
         self.distReporter = DistReporter(TreeReporter(self.stream))
         self.test = TestCase()
 
-
     def test_startSuccessStop(self):
         """
         Success output only gets sent to the stream after the test has stopped.
@@ -34,7 +33,6 @@ class DistReporterTests(TestCase):
         self.distReporter.stopTest(self.test)
         self.assertNotEqual(self.stream.getvalue(), "")
 
-
     def test_startErrorStop(self):
         """
         Error output only gets sent to the stream after the test has stopped.
@@ -45,7 +43,6 @@ class DistReporterTests(TestCase):
         self.assertEqual(self.stream.getvalue(), "")
         self.distReporter.stopTest(self.test)
         self.assertNotEqual(self.stream.getvalue(), "")
-
 
     def test_forwardedMethods(self):
         """

@@ -32,7 +32,6 @@ provide the necessary C signal handler which writes to the pipe to be
 registered with C{SA_RESTART}.
 """
 
-from __future__ import division, absolute_import
 
 import signal
 
@@ -53,12 +52,13 @@ def installHandler(fd):
     if fd == -1:
         signal.signal(signal.SIGCHLD, signal.SIG_DFL)
     else:
+
         def noopSignalHandler(*args):
             pass
+
         signal.signal(signal.SIGCHLD, noopSignalHandler)
         signal.siginterrupt(signal.SIGCHLD, False)
     return signal.set_wakeup_fd(fd)
-
 
 
 def isDefaultHandler():

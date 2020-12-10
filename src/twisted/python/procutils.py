@@ -5,7 +5,6 @@
 Utilities for dealing with processes.
 """
 
-from __future__ import division, absolute_import
 
 import os
 
@@ -29,17 +28,17 @@ def which(name, flags=os.X_OK):
     @param flags: Arguments to L{os.access}.
 
     @rtype: C{list}
-    @param: A list of the full paths to files found, in the order in which they
+    @return: A list of the full paths to files found, in the order in which they
     were found.
     """
     result = []
-    exts = list(filter(None, os.environ.get('PATHEXT', '').split(os.pathsep)))
-    path = os.environ.get('PATH', None)
+    exts = list(filter(None, os.environ.get("PATHEXT", "").split(os.pathsep)))
+    path = os.environ.get("PATH", None)
 
     if path is None:
         return []
 
-    for p in os.environ.get('PATH', '').split(os.pathsep):
+    for p in os.environ.get("PATH", "").split(os.pathsep):
         p = os.path.join(p, name)
         if os.access(p, flags):
             result.append(p)

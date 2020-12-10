@@ -28,6 +28,7 @@ class ContactsList:
     @ivar clients: The signed-on clients.
     @type clients: C{list} of L{IClient<interfaces.IClient>} providers
     """
+
     def __init__(self, chatui):
         """
         @param chatui: The GUI chat client associated with this contacts list.
@@ -38,7 +39,6 @@ class ContactsList:
         self.onlineContacts = {}
         self.clients = []
 
-
     def setContactStatus(self, person):
         """
         Inform the user that a person's status has changed.
@@ -48,13 +48,12 @@ class ContactsList:
         """
         if person.name not in self.contacts:
             self.contacts[person.name] = person
-        if person.name not in self.onlineContacts and \
-                (person.status == ONLINE or person.status == AWAY):
+        if person.name not in self.onlineContacts and (
+            person.status == ONLINE or person.status == AWAY
+        ):
             self.onlineContacts[person.name] = person
-        if person.name in self.onlineContacts and \
-                person.status == OFFLINE:
+        if person.name in self.onlineContacts and person.status == OFFLINE:
             del self.onlineContacts[person.name]
-
 
     def registerAccountClient(self, client):
         """
@@ -63,9 +62,8 @@ class ContactsList:
         @param client: The client being added to your list of account clients.
         @type client: L{IClient<interfaces.IClient>} provider
         """
-        if not client in self.clients:
+        if client not in self.clients:
             self.clients.append(client)
-
 
     def unregisterAccountClient(self, client):
         """
@@ -78,7 +76,6 @@ class ContactsList:
         """
         if client in self.clients:
             self.clients.remove(client)
-
 
     def contactChangedNick(self, person, newnick):
         """
@@ -102,7 +99,6 @@ class ContactsList:
                 self.onlineContacts[newnick] = person
 
 
-
 class Conversation:
     """
     A GUI window of a conversation with a specific person.
@@ -113,6 +109,7 @@ class Conversation:
     @ivar chatui: The GUI chat client associated with this conversation.
     @type chatui: L{ChatUI}
     """
+
     def __init__(self, person, chatui):
         """
         @param person: The person who you're having this conversation with.
@@ -124,20 +121,17 @@ class Conversation:
         self.chatui = chatui
         self.person = person
 
-
     def show(self):
         """
         Display the ConversationWindow.
         """
         raise NotImplementedError("Subclasses must implement this method")
 
-
     def hide(self):
         """
         Hide the ConversationWindow.
         """
         raise NotImplementedError("Subclasses must implement this method")
-
 
     def sendText(self, text):
         """
@@ -147,7 +141,6 @@ class Conversation:
         @type text: C{str}
         """
         self.person.sendMessage(text, None)
-
 
     def showMessage(self, text, metadata=None):
         """
@@ -161,7 +154,6 @@ class Conversation:
         """
         raise NotImplementedError("Subclasses must implement this method")
 
-
     def contactChangedNick(self, person, newnick):
         """
         Change a person's name.
@@ -173,7 +165,6 @@ class Conversation:
         @type newnick: C{str}
         """
         self.person.name = newnick
-
 
 
 class GroupConversation:
@@ -189,6 +180,7 @@ class GroupConversation:
     @ivar members: The names of the people in this conversation.
     @type members: C{list} of C{str}
     """
+
     def __init__(self, group, chatui):
         """
         @param chatui: The GUI chat client associated with this conversation.
@@ -201,13 +193,11 @@ class GroupConversation:
         self.group = group
         self.members = []
 
-
     def show(self):
         """
         Display the GroupConversationWindow.
         """
         raise NotImplementedError("Subclasses must implement this method")
-
 
     def hide(self):
         """
@@ -215,16 +205,14 @@ class GroupConversation:
         """
         raise NotImplementedError("Subclasses must implement this method")
 
-
     def sendText(self, text):
         """
         Send text to the group.
 
-        @param: The text to be sent.
+        @param text: The text to be sent.
         @type text: C{str}
         """
         self.group.sendGroupMessage(text, None)
-
 
     def showGroupMessage(self, sender, text, metadata=None):
         """
@@ -241,7 +229,6 @@ class GroupConversation:
         """
         raise NotImplementedError("Subclasses must implement this method")
 
-
     def setGroupMembers(self, members):
         """
         Set the list of members in the group.
@@ -250,7 +237,6 @@ class GroupConversation:
         @type members: C{list} of C{str}
         """
         self.members = members
-
 
     def setTopic(self, topic, author):
         """
@@ -265,7 +251,6 @@ class GroupConversation:
         """
         raise NotImplementedError("Subclasses must implement this method")
 
-
     def memberJoined(self, member):
         """
         Add the given member to the list of members in the group conversation
@@ -274,9 +259,8 @@ class GroupConversation:
         @param member: The person joining the group conversation.
         @type member: C{str}
         """
-        if not member in self.members:
+        if member not in self.members:
             self.members.append(member)
-
 
     def memberChangedNick(self, oldnick, newnick):
         """
@@ -293,7 +277,6 @@ class GroupConversation:
             self.members.remove(oldnick)
             self.members.append(newnick)
 
-
     def memberLeft(self, member):
         """
         Delete the given member from the list of members in the group
@@ -304,7 +287,6 @@ class GroupConversation:
         """
         if member in self.members:
             self.members.remove(member)
-
 
 
 class ChatUI:
@@ -333,6 +315,7 @@ class ChatUI:
     @type contactsList: L{ContactsList}
     @ivar contactsList: A contacts list.
     """
+
     def __init__(self):
         self.conversations = {}
         self.groupConversations = {}
@@ -341,7 +324,6 @@ class ChatUI:
         self.onlineClients = []
         self.contactsList = ContactsList(self)
 
-
     def registerAccountClient(self, client):
         """
         Notify the user that an account has been signed on to.
@@ -349,13 +331,12 @@ class ChatUI:
         @type client: L{IClient<interfaces.IClient>} provider
         @param client: The client account for the person who has just signed on.
 
-        @rtype client: L{IClient<interfaces.IClient>} provider
+        @rtype: L{IClient<interfaces.IClient>} provider
         @return: The client, so that it may be used in a callback chain.
         """
         self.onlineClients.append(client)
         self.contactsList.registerAccountClient(client)
         return client
-
 
     def unregisterAccountClient(self, client):
         """
@@ -368,7 +349,6 @@ class ChatUI:
         self.onlineClients.remove(client)
         self.contactsList.unregisterAccountClient(client)
 
-
     def getContactsList(self):
         """
         Get the contacts list associated with this chat window.
@@ -377,7 +357,6 @@ class ChatUI:
         @return: The contacts list associated with this chat window.
         """
         return self.contactsList
-
 
     def getConversation(self, person, Class=Conversation, stayHidden=False):
         """
@@ -388,7 +367,7 @@ class ChatUI:
         @param person: The person whose conversation window we want to get.
 
         @type Class: L{IConversation<interfaces.IConversation>} implementor
-        @param: The kind of conversation window we want. If the conversation
+        @param Class: The kind of conversation window we want. If the conversation
             window for this person didn't already exist, create one of this type.
 
         @type stayHidden: C{bool}
@@ -408,9 +387,7 @@ class ChatUI:
             conv.show()
         return conv
 
-
-    def getGroupConversation(self, group, Class=GroupConversation,
-                             stayHidden=False):
+    def getGroupConversation(self, group, Class=GroupConversation, stayHidden=False):
         """
         For the given group object, return the group conversation window or
         create and return a new group conversation window if it doesn't exist.
@@ -419,7 +396,7 @@ class ChatUI:
         @param group: The group whose conversation window we want to get.
 
         @type Class: L{IConversation<interfaces.IConversation>} implementor
-        @param: The kind of conversation window we want. If the conversation
+        @param Class: The kind of conversation window we want. If the conversation
             window for this person didn't already exist, create one of this type.
 
         @type stayHidden: C{bool}
@@ -438,7 +415,6 @@ class ChatUI:
         else:
             conv.show()
         return conv
-
 
     def getPerson(self, name, client):
         """
@@ -461,7 +437,6 @@ class ChatUI:
             p = account.getPerson(name)
             self.persons[name, account] = p
         return p
-
 
     def getGroup(self, name, client):
         """
@@ -487,7 +462,6 @@ class ChatUI:
             g = account.getGroup(name)
             self.groups[name, account] = g
         return g
-
 
     def contactChangedNick(self, person, newnick):
         """

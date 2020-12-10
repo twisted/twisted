@@ -6,12 +6,11 @@
 Common functionality used within the implementation of various workers.
 """
 
-from __future__ import absolute_import, division, print_function
 
 from ._ithreads import AlreadyQuit
 
 
-class Quit(object):
+class Quit:
     """
     A flag representing whether a worker has been quit.
 
@@ -25,7 +24,6 @@ class Quit(object):
         """
         self.isSet = False
 
-
     def set(self):
         """
         Set the flag if it has not been set.
@@ -34,7 +32,6 @@ class Quit(object):
         """
         self.check()
         self.isSet = True
-
 
     def check(self):
         """
