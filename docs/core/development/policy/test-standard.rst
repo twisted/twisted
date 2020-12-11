@@ -237,7 +237,7 @@ Real I/O
 Most unit tests should avoid performing real, platform-implemented I/O operations.
 Real I/O is slow, unreliable, and unwieldy.
 
-When implementing a protocol, :api:`twisted.test.proto_helpers.StringTransport` can be used instead of a real TCP transport.
+When implementing a protocol, :api:`twisted.internet.testing.StringTransport` can be used instead of a real TCP transport.
 ``StringTransport`` is fast, deterministic, and can easily be used to exercise all possible network behaviors.
 
 If you need pair a client to a server and have them talk to each other, use ``twisted.test.iosim.connect`` with ``twisted.test.iosim.FakeTransport`` transports.
