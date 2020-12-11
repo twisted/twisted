@@ -196,9 +196,9 @@ Here we are using the Google DNS server IP addresses and the standard DNS port (
 
 Installing a Resolver in the Reactor
 ------------------------------------
-You can also install a custom resolver into the reactor using the :api:`twisted.internet.interfaces.IReactoryPluggable <IReactorPluggable>` interface.
+You can also install a custom resolver into the reactor using the :api:`twisted.internet.interfaces.IReactorPluggableNameResolver <IReactorPluggableNameResolver>` interface.
 
-The reactor uses its installed resolver whenever it needs to resolve hostnames; for example, when you supply a hostname to :api:`twisted.internet.interfaces.IReactoryTCP.connectTCP <connectTCP>`.
+The reactor uses its installed resolver whenever it needs to resolve hostnames; for example, when you supply a hostname to :api:`twisted.internet.interfaces.IReactorTCP.connectTCP <connectTCP>`.
 
 Here's a short example that shows how to install an alternative resolver for the global reactor:
 
