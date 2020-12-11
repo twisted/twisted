@@ -340,7 +340,7 @@ Implementing an observer
 ------------------------
 
 An observer must provide the :api:`twisted.logger.ILogObserver <ILogObserver>` interface.
-That interface simply describes a 1-argument callable that takes a ``dict`` , so a simple implementation may simply use the handy :api:`zope.interface.provider <provider>` decorator on a function that takes one argument:
+That interface simply describes a 1-argument callable that takes a ``dict`` , so a simple implementation may simply use the handy :py:class:`provider <zope.interface.provider>` decorator on a function that takes one argument:
 
 .. code-block:: python
 
